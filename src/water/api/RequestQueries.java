@@ -1,7 +1,9 @@
 package water.api;
 
-import java.util.*;
-import water.web.RString;
+import java.util.ArrayList;
+import java.util.Properties;
+
+import water.util.RString;
 
 /**
  *

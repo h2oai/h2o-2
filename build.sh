@@ -29,7 +29,7 @@ JAR_ROOT=lib
 
 # additional dependencies, relative to this file, but all dependencies should be
 # inside the JAR_ROOT tree so that they are packed to the jar file properly
-DEPENDENCIES="${JAR_ROOT}/jama/*${SEP}${JAR_ROOT}/sigar/*${SEP}${JAR_ROOT}/apache/*${SEP}${JAR_ROOT}/junit/*${SEP}${JAR_ROOT}/gson/*${SEP}${JAR_ROOT}/javassist.jar${SEP}${JAR_ROOT}/poi/*${SEP}${JAR_ROOT}/trove/*${SEP}${JAR_ROOT}/s3/*"
+DEPENDENCIES="${JAR_ROOT}/jama/*${SEP}${JAR_ROOT}/apache/*${SEP}${JAR_ROOT}/junit/*${SEP}${JAR_ROOT}/gson/*${SEP}${JAR_ROOT}/javassist.jar${SEP}${JAR_ROOT}/poi/*${SEP}${JAR_ROOT}/trove/*${SEP}${JAR_ROOT}/s3/*"
 
 DEFAULT_HADOOP_VERSION="1.0.0"
 OUTDIR="build"
@@ -100,12 +100,6 @@ function build_classes() {
         $TESTSRC/test/*java
 }
 
-function build_h2o_jar() {
-    local JAR_FILE="${JAR_ROOT}/h2o_core.jar"
-    echo "creating jar file... ${JAR_FILE}"
-    "$JAR" -cfm ${JAR_FILE} manifest.txt -C ${CLASSES} .
-}
-
 function build_initializer() {
     echo "building initializer..."
     local CLASSPATH="${JAR_ROOT}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/*"
@@ -121,7 +115,10 @@ function build_jar() {
     JAR_TIME=`date "+%H.%M.%S-%m%d%y"`
     local JAR_FILE="${OUTDIR}/h2o.jar"
     echo "creating jar file... ${JAR_FILE}"
+    # include all libraries
     "$JAR" -cfm ${JAR_FILE} manifest.txt -C ${JAR_ROOT} .
+    # include H2O classes
+    "$JAR" uf ${JAR_FILE} -C "${CLASSES}" .
     "$ZIP" -qd ${JAR_FILE} javassist.jar 
     echo "copying jar file... ${JAR_FILE} to ${OUTDIR}/h2o-${JAR_TIME}.jar"
     cp ${JAR_FILE} ${OUTDIR}/h2o-${JAR_TIME}.jar
@@ -135,7 +132,6 @@ clean
 if [ "$1" = "clean" ]; then exit 0; fi
 build_classes
 if [ "$1" = "compile" ]; then exit 0; fi
-build_h2o_jar
 build_initializer
 build_jar
 if [ "$1" = "build" ]; then exit 0; fi

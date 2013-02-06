@@ -4,8 +4,8 @@ import hex.rf.RFModel;
 import hex.rf.Tree;
 import water.AutoBuffer;
 import water.ValueArray;
+import water.util.RString;
 import water.util.TreeRenderer;
-import water.web.RString;
 
 import com.google.gson.JsonObject;
 

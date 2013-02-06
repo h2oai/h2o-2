@@ -6,7 +6,7 @@ import java.util.Properties;
 import java.util.BitSet;
 
 import water.*;
-import water.web.RString;
+import water.util.RString;
 
 import com.google.gson.JsonObject;
 

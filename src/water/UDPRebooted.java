@@ -58,7 +58,6 @@ public class UDPRebooted extends UDP {
 
   // Try to gracefully close/shutdown all i/o channels.
   public static void closeAll() {
-    try { H2O._webSocket.close(); } catch( IOException x ) { }
     try { H2O._udpSocket.close(); } catch( IOException x ) { }
     try { H2O._apiSocket.close(); } catch( IOException x ) { }
     try { TCPReceiverThread.SOCK.close(); } catch( IOException x ) { }

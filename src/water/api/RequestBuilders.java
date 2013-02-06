@@ -9,7 +9,7 @@ import java.util.Map.Entry;
 import water.H2O;
 import water.PrettyPrint;
 import water.util.JsonUtil;
-import water.web.RString;
+import water.util.RString;
 
 import com.google.common.base.Throwables;
 import com.google.gson.*;

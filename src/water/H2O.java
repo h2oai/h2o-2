@@ -35,7 +35,6 @@ public final class H2O {
 
   // The default port for finding a Cloud
   static final int DEFAULT_PORT = 54321;
-  public static int WEB_PORT; // The HTML/web interface port - attach your browser here!
   public static int UDP_PORT; // Fast/small UDP transfers
   public static int API_PORT; // RequestServer and the new API HTTP port
 
@@ -389,7 +388,6 @@ public final class H2O {
     public String hdfs_datanode; // Datanode root
     public String hdfs_nopreload; // do not preload HDFS keys
     public String aws_credentials; // do not preload HDFS keys
-    public String nosigar; // Disable Sigar-based statistics
     public String keepice; // Do not delete ice on startup
     public String soft = null; // soft launch for demos
     public String auth; // Require authentication for the webpages
@@ -490,11 +488,7 @@ public final class H2O {
     // Start the TCPReceiverThread, to listen for TCP requests from other Cloud
     // Nodes. There should be only 1 of these, and it never shuts down.
     new TCPReceiverThread().start();
-
-    water.web.Server.start();
-
     water.api.RequestServer.start();
-
   }
 
   /** Finalizes the node startup.
@@ -506,7 +500,6 @@ public final class H2O {
     try { Thread.sleep(1000); } catch( InterruptedException e ) { }
   }
 
-  public static ServerSocket _webSocket;
   public static DatagramChannel _udpSocket;
   public static ServerSocket _apiSocket;
 
@@ -517,11 +510,10 @@ public final class H2O {
   static void initializeNetworkSockets( ) {
     // Assign initial ports
     InetAddress inet = findInetAddressForSelf();
-    WEB_PORT = OPT_ARGS.port != 0 ? OPT_ARGS.port : DEFAULT_PORT;
+    API_PORT = OPT_ARGS.port != 0 ? OPT_ARGS.port : DEFAULT_PORT;
 
     while (true) {
-      UDP_PORT = WEB_PORT+1;
-      API_PORT = UDP_PORT+1;
+      UDP_PORT = API_PORT+1;
       try {
         // kbn. seems like we need to set SO_REUSEADDR before binding?
         // http://www.javadocexamples.com/java/net/java.net.ServerSocket.html#setReuseAddress:boolean
@@ -533,17 +525,14 @@ public final class H2O {
         // Enabling SO_REUSEADDR prior to binding the socket using bind(SocketAddress)
         // allows the socket to be bound even though a previous connection is in a timeout state.
         // cnc: this is busted on windows.  Back to the old code.
-        _webSocket = new ServerSocket(WEB_PORT);
         _apiSocket = new ServerSocket(API_PORT);
         _udpSocket = DatagramChannel.open();
         _udpSocket.socket().setReuseAddress(true);
         _udpSocket.socket().bind(new InetSocketAddress(inet, UDP_PORT));
         break;
       } catch (IOException e) {
-        try { if( _webSocket != null ) _webSocket.close(); } catch( IOException ohwell ) { }
         try { if( _apiSocket != null ) _apiSocket.close(); } catch( IOException ohwell ) { }
         Closeables.closeQuietly(_udpSocket);
-        _webSocket = null;
         _apiSocket = null;
         _udpSocket = null;
         if( OPT_ARGS.port != 0 )
@@ -553,10 +542,12 @@ public final class H2O {
               ", " + (OPT_ARGS.port+2) +
               " are not available, change -port PORT and try again.");
       }
-      WEB_PORT += 3; // used to be 2 for only WEB + UDP
+      API_PORT += 2;
     }
     SELF = H2ONode.self(inet);
-    System.out.println("[h2o] HTTP listening on port: "+WEB_PORT+", TCP/UDP port: "+UDP_PORT+", API HTTP port "+API_PORT);
+    System.out.println("[h2o] Internal communication uses port: "+UDP_PORT);
+    System.out.println("[h2o] Listening for HTTP and REST traffic on");
+    System.out.println("[h2o]\t\thttp:/"+inet+":"+_apiSocket.getLocalPort()+"/");
 
     NAME = OPT_ARGS.name==null? System.getProperty("user.name") : OPT_ARGS.name;
     // Read a flatfile of allowed nodes
