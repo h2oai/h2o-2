@@ -32,10 +32,6 @@ public class Cloud extends Request {
       node.addProperty(FREE_DISK, hb.get_free_disk());
       node.addProperty(MAX_DISK, hb.get_max_disk());
       node.addProperty(NUM_CPUS, (int)hb._num_cpus);
-      node.addProperty(CPU_UTIL, hb.get_cpu_util());
-      node.addProperty(CPU_LOAD_1, pos_neg(hb.get_cpu_load1()));
-      node.addProperty(CPU_LOAD_5, pos_neg(hb.get_cpu_load5()));
-      node.addProperty(CPU_LOAD_15, pos_neg(hb.get_cpu_load15()));
       node.addProperty(FJ_THREADS_HI, (int)hb._fjthrds_hi);
       node.addProperty(FJ_QUEUE_HI, (int)hb._fjqueue_hi);
       node.addProperty(FJ_THREADS_LO, (int)hb._fjthrds_lo);

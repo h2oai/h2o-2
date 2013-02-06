@@ -30,7 +30,6 @@ public class Boot extends ClassLoader {
 
   private final ZipFile _h2oJar;
   private final File _parentDir;
-  File _binlib;
 
   // javassist support for rewriting class files
   private ClassPool _pool; // The pool of altered classes
@@ -101,17 +100,12 @@ public class Boot extends ClassLoader {
 
       // Make all the embedded jars visible to the custom class loader
       extractInternalFiles(); // Extract e.g. SIGAR's .dll & .so files
-      File binlib = internalFile("binlib");
-      System.setProperty("org.hyperic.sigar.path", binlib.getAbsolutePath());
-      addInternalJars("sigar");
       addInternalJars("apache");
       addInternalJars("gson");
       addInternalJars("junit");
       addInternalJars("jama");
       addInternalJars("poi");
       addInternalJars("s3");
-    } else {
-      System.setProperty("org.hyperic.sigar.path", "lib/binlib");
     }
 
     // Figure out the correct main class to call

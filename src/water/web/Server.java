@@ -51,7 +51,6 @@ public class Server extends NanoHTTPD {
     _pages.put("GLM",new GLM());
     _pages.put("glm",new GLM());
     _pages.put("Glm",new GLM());
-    _pages.put("Network",new Network());
     _pages.put("Parse",new Parse());
     //_pages.put("PR",new ProgressReport());
     //_pages.put("ProgressReport",new ProgressReport());

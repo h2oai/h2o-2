@@ -18,8 +18,8 @@ public class TestRunner {
 
   public static void main(String[] args) throws Exception {
     H2O.main(new String[] {});
-    //Key fkey = TestUtil.load_test_file("smalldata/covtype/covtype.20k.data");
-    File f = new File("smalldata/test/rmodels/iris_x-iris-1-4_y-species_ntree-500.rdata");
+    File f = new File("smalldata/covtype/covtype.20k.data");
+    //File f = new File("smalldata/test/rmodels/iris_x-iris-1-4_y-species_ntree-500.rdata");
     Key key = TestUtil.load_test_file(f, "test");
     // Key dest = Key.make("test");
     //ParseDataset.parse(dest, DKV.get(fkey));

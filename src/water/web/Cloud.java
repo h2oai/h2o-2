@@ -51,12 +51,6 @@ public class Cloud extends H2OPage {
       row.replace("free_disk",PrettyPrint.bytes(hb.get_free_disk()));
       row.replace("max_disk" ,PrettyPrint.bytes(hb.get_max_disk ()));
 
-      row.replace("cpu_util" ,pos_neg(hb.get_cpu_util()));
-
-      row.replace("cpu_load_1" ,pos_neg(hb.get_cpu_load1()));
-      row.replace("cpu_load_5" ,pos_neg(hb.get_cpu_load5()));
-      row.replace("cpu_load_15",pos_neg(hb.get_cpu_load15()));
-
       int fjq_hi = hb._fjqueue_hi;
       int fjt_hi = hb._fjthrds_hi;
       if(fjq_hi > HeartBeatThread.QUEUEDEPTH)
