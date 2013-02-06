@@ -22,14 +22,18 @@ public class ScorecardModel {
 
   /** Score this model on the specified row of data.  */
   public double score(final Map<String, Comparable> row ) {
+    //System.out.println("ScorecardModel.score:");
     double score = _initialScore;
     for (String k : _features.keySet()) {
       RuleTable ruleTable = _features.get(k);
       if(ruleTable!=null) {
-        System.out.println("ScorecardModel.score(): " + ruleTable.toString());
-        score += ruleTable.score(row.get(k));
+        //System.out.print(ruleTable.toString());
+        double s = ruleTable.score(row.get(k));
+        //System.out.println(" subscore= "+s);
+        score += s;
       }
     }
+    //System.out.println("final score="+score);
     return score;
   }
 
@@ -91,7 +95,14 @@ public class ScorecardModel {
   public static class LessOrEqual<T extends Comparable<T>> extends Predicate<T> {
     T _value;
     public LessOrEqual(T value) { _value = value; }
-    @Override boolean match(T value) { return value!=null && _value.compareTo(value) >= 0; }
+    @Override boolean match(T value) { 
+      if( value != null && _value != null && value.getClass() != _value.getClass() ) {
+        if(value.getClass() == Long.class &&
+           _value.getClass() == Double.class )
+          return ((Long)value).longValue() <= ((Double)_value).doubleValue();
+      }
+      return value!=null && _value.compareTo(value) >= 0; 
+    }
     @Override public String toString() { return "X<=" + _value; }
   }
 
@@ -124,6 +135,7 @@ public class ScorecardModel {
     @Override boolean match(T value) { return value!=null && _value.compareTo(value) == 0; }
     @Override public String toString() { return "X==" + _value; }
   }
+
   public static abstract class CompoundPredicate<T> extends Predicate<T> {
     Predicate<T> _l,_r;
     public final void add(Predicate<T> pred) {
