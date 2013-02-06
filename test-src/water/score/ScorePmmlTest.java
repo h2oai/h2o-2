@@ -169,26 +169,29 @@ public class ScorePmmlTest {
     return sb.toString();
   }
 
+  static final String simplePmml = makePmml(
+      makeDataDictionary(
+          makeDataField("x", DataType.DOUBLE),
+          makeDataField("y", DataType.DOUBLE),
+          makeDataField("res", DataType.DOUBLE)),
+      makeScorecard(
+          makeMiningSchema(
+              makeMiningField("res", "predicted"),
+              makeMiningField("x", "active"),
+              makeMiningField("y", "active")),
+          makeOutputSchema("res", DataType.DOUBLE),
+          makeCharacteristic("x_check",
+              makeAttribute(1.0, makeSimplePredicate("x", SimpleOp.LT, 0.0)),
+              makeAttribute(2.0, makeSimplePredicate("x", SimpleOp.GE, 0.0))),
+          makeCharacteristic("y_check",
+              makeAttribute(1.0, makeSimplePredicate("y", SimpleOp.LE, 0.0)),
+              makeAttribute(2.0, makeSimplePredicate("y", SimpleOp.GT, 0.0)))
+              ));
+
   @Test
   public void testBasic() throws Exception {
-    String pmml = makePmml(
-        makeDataDictionary(
-            makeDataField("x", DataType.DOUBLE),
-            makeDataField("y", DataType.DOUBLE),
-            makeDataField("res", DataType.DOUBLE)),
-        makeScorecard(
-            makeMiningSchema(
-                makeMiningField("res", "predicted"),
-                makeMiningField("x", "active"),
-                makeMiningField("y", "active")),
-            makeOutputSchema("res", DataType.DOUBLE),
-            makeCharacteristic("x_check",
-                makeAttribute(1.0, makeSimplePredicate("x", SimpleOp.LT, 0.0)),
-                makeAttribute(2.0, makeSimplePredicate("x", SimpleOp.GE, 0.0))),
-            makeCharacteristic("y_check",
-                makeAttribute(1.0, makeSimplePredicate("y", SimpleOp.LE, 0.0)),
-                makeAttribute(2.0, makeSimplePredicate("y", SimpleOp.GT, 0.0)))
-                ));
+
+    String pmml = simplePmml;
 
     double[][] tests = new double[][] {
         { -1.0, -1.0, 2.0 },
@@ -360,6 +363,7 @@ public class ScorePmmlTest {
     String pmml = makePmml(
         makeDataDictionary(
             makeDataField("x", DataType.STRING),
+            makeDataField("y", DataType.STRING),
             makeDataField("res", DataType.DOUBLE)),
         makeScorecard(
             makeMiningSchema(
@@ -369,33 +373,34 @@ public class ScorePmmlTest {
             makeCharacteristic("x_check",
                 makeAttribute(1.0,
                     makeSetPredicate("x", SimpleSetOp.IN, "asdf", "qwer"))),
-            makeCharacteristic("x_check",
+            makeCharacteristic("y_check",
                 makeAttribute(2.0,
-                    makeSetPredicate("x", SimpleSetOp.NOT_IN, "qwer", "monkey", "ninja")))
+                    makeSetPredicate("y", SimpleSetOp.NOT_IN, "qwer", "monkey", "ninja")))
                 ));
 
     Object[][] tests = new Object[][] {
-        {  "asdf", 3.0 },
-        {  "qwer", 1.0 },
-        {  "monkey", 0.0 },
-        { "cowboy", 2.0 },
-        {  "", 2.0 },
-        {  null, 2.0 },
-        {  "ASDF", 2.0 },
+        {  "asdf",   "asdf", 3.0 },
+        {  "qwer",   "qwer", 1.0 },
+        {  "monkey", "monkey", 0.0 },
+        {  "cowboy", "cowboy", 2.0 },
+        {  "",       "",       2.0 },
+        {  null,     null,     2.0 },
+        {  "ASDF",   "ASDF",   2.0 },
     };
 
     for( Object[] t : tests) {
       HashMap<String, Comparable> m = new HashMap<String, Comparable>();
       m.put("x", (Comparable) t[0]);
+      m.put("y", (Comparable) t[1]);
 
       ScorecardModel scm     = getSCM(pmml);
       double predictedScore  = scm.score(m);
-      Assert.assertEquals((Double)t[1], predictedScore, 0.00001);
+      Assert.assertEquals((Double)t[2], predictedScore, 0.00001);
     }
   }
 
   @Test
-  public void testMissingParams() throws Exception {
+  public void testMissingParams1() throws Exception {
     String pmml = makePmml(
         makeDataDictionary(
             makeDataField("x", DataType.DOUBLE),
@@ -425,9 +430,84 @@ public class ScorePmmlTest {
     Assert.assertEquals(1.0, scm.score(m), 0.00001);
   }
 
+  @Test
+  public void testMissingParams2() throws Exception {
+    String pmml = makePmml(
+        makeDataDictionary(
+            makeDataField("x", DataType.STRING),
+            makeDataField("res", DataType.DOUBLE)),
+        makeScorecard(
+            makeMiningSchema(
+                makeMiningField("res", "predicted"),
+                makeMiningField("x", "active")),
+            makeOutputSchema("res", DataType.DOUBLE),
+            makeCharacteristic("x_check",
+                makeAttribute(  0.0, makeSimplePredicate("x", SimpleOp.EQ, "XY")),
+                makeAttribute(  1.0, makeSimplePredicate("x", SimpleOp.EQ, "X")),
+                makeAttribute(  2.0, makeSimplePredicate("x", SimpleOp.EQ, "Y")),
+                makeAttribute(100.0, makeCompoundPredicate(
+                                         CompoundOp.OR,
+                                         makeSimplePredicate("x", SimpleOp.MISSING, 0.0),
+                                         makeSimplePredicate("x", SimpleOp.EQ, ""))),
+                makeAttribute(100.0, makeCompoundPredicate(
+                     CompoundOp.AND,
+                     makeSimplePredicate("x", SimpleOp.MISSING, 0.0),
+                     makeSimplePredicate("x", SimpleOp.EQ, ""))
+                     )
+                )));
+    Object[][] tests = new Object[][] {
+        {  "XY",   0.0 },
+        {  "X",    1.0 },
+        {  "Y",    2.0 },
+        {  "",   100.0 },
+        {  null, 100.0 },
+        {  "BLUDICKA", 0.0 },
+    };
+
+    ScorecardModel scm = getSCM(pmml);
+    for( Object[] t : tests) {
+      HashMap<String, Comparable> m = new HashMap<String, Comparable>();
+      m.put("x", (Comparable) t[0]);
+      m.put("dummy", (Comparable) t[0]);
+
+      double predictedScore  = scm.score(m);
+      Assert.assertEquals((Double)t[1], predictedScore, 0.00001);
+    }
+  }
+
+  @Test
+  public void testWrongTypes() throws Exception {
+
+    String pmml = simplePmml;
+
+    Object[][] tests = new Object[][] {
+        { -1.0,   "Y",  2.0 },
+        {  "X",   1.0,  3.0 },
+        {  1.0,   true, 3.0 },
+        {  false, 1.0,  4.0 },
+        {  1890L, 0.0,  3.0 },
+        {  0.0,   12L,  3.0 },
+        {  2222,  0.0,  3.0 },
+        {  0.0,   99,   3.0 },
+    };
+
+    for( Object[] t : tests) {
+      HashMap<String, Comparable> m = new HashMap<String, Comparable>();
+      m.put("x", (Comparable) t[0]);
+      m.put("y", (Comparable) t[1]);
+
+      ScorecardModel scm     = getSCM(pmml);
+      double predictedScore  = scm.score(m);
+
+      Assert.assertEquals((Double)t[2], predictedScore, 0.00001);
+    }
+  }
+
+
+
+
   private ScorecardModel getSCM(final String pmml) throws Exception {
     ScorecardModel scm     = PMMLParser.load(new ByteArrayInputStream(pmml.getBytes()));
-    System.err.println("ScorePmmlTest.testBasic(): " + scm.toString());
     return scm;
   }
 }

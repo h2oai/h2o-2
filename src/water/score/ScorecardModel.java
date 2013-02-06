@@ -20,6 +20,19 @@ public class ScorecardModel {
 
   private ScorecardModel(final String name, double initialScore) { _name = name; _initialScore = initialScore; _features = new HashMap<String, ScorecardModel.RuleTable>(); }
 
+  /** Score this model on the specified row of data.  */
+  public double score(final Map<String, Comparable> row ) {
+    double score = _initialScore;
+    for (String k : _features.keySet()) {
+      RuleTable ruleTable = _features.get(k);
+      if(ruleTable!=null) {
+        System.out.println("ScorecardModel.score(): " + ruleTable.toString());
+        score += ruleTable.score(row.get(k));
+      }
+    }
+    return score;
+  }
+
   /** Feature decision table */
   public static class RuleTable<T> {
     final String     _name;
@@ -29,6 +42,8 @@ public class ScorecardModel {
     public RuleTable(final String name, final DataTypes type, final Rule<T>[] decisions) { _name = name; _type = type; _rule = decisions; }
 
     double score(T value) {
+      /* The code introduced by cyprien, but I do not see test case for this flow.
+       * But I leave here for now intentionally.
       if(value instanceof String) {
         switch(_type) {
           case BOOLEAN:
@@ -47,7 +62,7 @@ public class ScorecardModel {
         value = (T) new Long(((Integer) value).intValue());
       } else if(value instanceof Float) {
         value = (T) new Double(((Float) value).floatValue());
-      }
+      } */
 
       double score = 0;
       for (Rule r : _rule) score += r.score(value);
@@ -76,26 +91,26 @@ public class ScorecardModel {
   public static class LessOrEqual<T extends Comparable<T>> extends Predicate<T> {
     T _value;
     public LessOrEqual(T value) { _value = value; }
-    @Override boolean match(T value) { return _value.compareTo(value) >= 0; }
-    @Override public String toString() { return "X <= " + _value; }
+    @Override boolean match(T value) { return value!=null && _value.compareTo(value) >= 0; }
+    @Override public String toString() { return "X<=" + _value; }
   }
 
   public static class LessThan<T extends Comparable<T>> extends LessOrEqual<T> {
     public LessThan(T value) { super(value); }
-    @Override boolean match(T value) { return _value.compareTo(value) > 0; }
-    @Override public String toString() { return "X < " + _value; }
+    @Override boolean match(T value) { return value!=null && _value.compareTo(value) > 0; }
+    @Override public String toString() { return "X<" + _value; }
   }
 
   public static class GreaterOrEqual<T extends Comparable<T>> extends LessThan<T> {
     public GreaterOrEqual(T value) { super(value); }
-    @Override boolean match(T value) { return ! super.match(value); }
-    @Override public String toString() { return "X >= " + _value; }
+    @Override boolean match(T value) { return value!=null && ! super.match(value); }
+    @Override public String toString() { return "X>=" + _value; }
   }
 
   public static class GreaterThan<T extends Comparable<T>> extends LessOrEqual<T> {
     public GreaterThan(T value) { super(value); }
-    @Override boolean match(T value) { return ! super.match(value); }
-    @Override public String toString() { return "X > " + _value; }
+    @Override boolean match(T value) { return value!=null && ! super.match(value); }
+    @Override public String toString() { return "X>" + _value; }
   }
 
   public static class IsMissing<T> extends Predicate<T> {
@@ -107,13 +122,13 @@ public class ScorecardModel {
     T _value;
     public Equals(T value) { _value = value; }
     @Override boolean match(T value) { return value!=null && _value.compareTo(value) == 0; }
-    @Override public String toString() { return "X ==" + _value; }
+    @Override public String toString() { return "X==" + _value; }
   }
   public static abstract class CompoundPredicate<T> extends Predicate<T> {
     Predicate<T> _l,_r;
     public final void add(Predicate<T> pred) {
       assert _l== null || _r==null : "Predicate already filled";
-      if (_l!=null) _l = pred; else _r = pred;
+      if (_l==null) _l = pred; else _r = pred;
     }
   }
   public static class And<T> extends CompoundPredicate<T> {
@@ -121,30 +136,30 @@ public class ScorecardModel {
     @Override public String toString() { return "(" + _l.toString() + " and " + _r.toString() + ")"; }
   }
   public static class Or<T> extends CompoundPredicate<T> {
-    @Override final boolean match(T value) { return _l.match(value) && _r.match(value); }
+    @Override final boolean match(T value) { return _l.match(value) || _r.match(value); }
     @Override public String toString() { return "(" + _l.toString() + " or " + _r.toString() + ")"; }
   }
 
-  public static class IsNotIn<T> extends Predicate<T> {
+  public static abstract class SetPredicate<T> extends Predicate<T> {
     public T[] _values;
-    public IsNotIn(T[] value) { _values = value; }
+    public SetPredicate(T[] value) { _values = value; }
+  }
+
+  public static class IsIn<T> extends SetPredicate<T> {
+    public IsIn(T[] value) { super(value); }
     @Override boolean match(T value) {
       for (T t : _values) if (t.equals(value)) return true;
       return false;
     }
+    @Override public String toString() {
+      String x = "";
+      for (T s: _values) x += s.toString() + " ";
+      return "X is in {" + x + "}"; }
   }
 
-  /** Score this model on this row of data.  */
-  public double score(final Map<String, Comparable> row ) {
-    double score = _initialScore;
-    for (String k : row.keySet()) {
-      RuleTable ruleTable = _features.get(k);
-      if(ruleTable!=null) {
-        System.out.println("ScorecardModel.score(): " + ruleTable.toString());
-        score += ruleTable.score(row.get(k));
-      }
-    }
-    return score;
+  public static class IsNotIn<T> extends IsIn<T> {
+    public IsNotIn(T[] value) { super(value); }
+    @Override boolean match(T value) { return ! super.match(value); }
   }
 
   @Override
