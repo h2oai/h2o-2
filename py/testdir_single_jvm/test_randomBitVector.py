@@ -41,14 +41,14 @@ class Basic(unittest.TestCase):
             execResultInspect, min_value = h2e.exec_expr(h2o.nodes[0], execExpr,
                 resultKey=resultKey, timeoutSecs=4)
 
-            num_columns = execResultInspect['num_columns']
+            num_cols = execResultInspect['num_cols']
             num_rows = execResultInspect['num_rows']
             row_size = execResultInspect['row_size']
 
             # FIX! is this right?
-            if (num_columns != 1):
-                raise Exception("Wrong num_columns in randomBitVector result.  expected: %d, actual: %d" %\
-                    (1, num_columns))
+            if (num_cols != 1):
+                raise Exception("Wrong num_cols in randomBitVector result.  expected: %d, actual: %d" %\
+                    (1, num_cols))
 
             if (num_rows != expectedRows):
                 raise Exception("Wrong num_rows in randomBitVector result.  expected: %d, actual: %d" %\
@@ -61,13 +61,13 @@ class Basic(unittest.TestCase):
             # count the zeroes and ones in the created data
             actualZeroes = 0
             actualOnes = 0
-            rowData = execResultInspect["row_data"]
+            rowData = execResultInspect["rows"]
             inspect = h2o_cmd.runInspect(key="Result.hex")
-            row_data = inspect["row_data"][0]
+            rows = inspect["rows"][0]
 
             for i in range (expectedRows):
-                # row_data = execResultInspect["row_data"][0]
-                # value = execResultInspect["row_data"][0]["0"]
+                # row_data = execResultInspect["rows"][0]
+                # value = execResultInspect["rows"][0]["0"]
                 value = rowData[i]["bits"]
                 if value == 0:
                     actualZeroes += 1

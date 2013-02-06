@@ -57,7 +57,7 @@ class Basic(unittest.TestCase):
             inspectNew = h2o_cmd.runInspect(h2o.nodes[nodeX], destination_key, offset=offset, view=view)
             # FIX! get min/max/mean/variance for a col too?
             constantNames = [
-                'num_columns',
+                'num_cols',
                 'num_rows',
                 ]
             if inspect is not None:
@@ -66,19 +66,19 @@ class Basic(unittest.TestCase):
 
             return inspectNew
 
-        # going to use this to compare against future. num_rows/num_columns should always
+        # going to use this to compare against future. num_rows/num_cols should always
         # be the same, regardless of the view. just a coarse sanity check
         origInspect = inspect_and_check(0,destination_key,0,1)
         h2o.verboseprint(h2o.dump_json(origInspect))
 
         num_rows = origInspect['num_rows']
-        num_columns = origInspect['num_columns']
+        num_cols = origInspect['num_cols']
 
         lenNodes = len(h2o.nodes)
         for i in range (1000):
             # we want to use the boundary conditions, so have two level of random choices
             offset = good_choices(num_rows)
-            view = good_choices(num_columns)
+            view = good_choices(num_cols)
             # randomize the node used
             nodeX = random.randint(0,lenNodes-1)
             print "nodeX:", nodeX, "offset:", offset, "view:", view

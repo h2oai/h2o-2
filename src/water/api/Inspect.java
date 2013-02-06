@@ -6,6 +6,7 @@ import hex.KMeans.KMeansModel;
 import java.util.HashMap;
 
 import water.*;
+import water.ValueArray.Column;
 import water.api.GLM.GLMBuilder;
 import water.parser.CsvParser;
 
@@ -20,14 +21,15 @@ public class Inspect extends Request {
   private final Int                            _view         = new Int(VIEW, 100, 0, 10000);
 
   static {
-    _displayNames.put(OFFSET, "Offset");
-    _displayNames.put(SIZE, "Size");
     _displayNames.put(BASE, "Base");
-    _displayNames.put(SCALE, "Scale");
-    _displayNames.put(MIN, "Min");
+    _displayNames.put(ENUM_DOMAIN_SIZE, "Enum Domain");
     _displayNames.put(MAX, "Max");
-    _displayNames.put(BADAT, "Bad");
     _displayNames.put(MEAN, "&mu;");
+    _displayNames.put(MIN, "Min");
+    _displayNames.put(NUM_MISSING_VALUES, "Missing");
+    _displayNames.put(OFFSET, "Offset");
+    _displayNames.put(SCALE, "Scale");
+    _displayNames.put(SIZE, "Size");
     _displayNames.put(VARIANCE, "&sigma;");
   }
 
@@ -90,11 +92,11 @@ public class Inspect extends Request {
     if( rows_cols != null && rows_cols[1] != 0 ) { // Able to parse sanely?
       double bytes_per_row = (double) bs.length / rows_cols[0];
       long rows = (long) (v.length() / bytes_per_row);
-      result.addProperty(ROWS, "~" + rows); // approx rows
-      result.addProperty(COLS, rows_cols[1]);
+      result.addProperty(NUM_ROWS, "~" + rows); // approx rows
+      result.addProperty(NUM_COLS, rows_cols[1]);
     } else {
-      result.addProperty(ROWS, "unknown");
-      result.addProperty(COLS, "unknown");
+      result.addProperty(NUM_ROWS, "unknown");
+      result.addProperty(NUM_COLS, "unknown");
     }
     result.addProperty(VALUE_SIZE, v.length());
 
@@ -106,6 +108,9 @@ public class Inspect extends Request {
   }
 
   public Response serveValueArray(final ValueArray va) {
+    if( _offset.value() > va._numrows )
+      return Response.error("Value only has " + va._numrows + " rows");
+
     JsonObject result = new JsonObject();
     result.addProperty(VALUE_TYPE, "parsed");
     result.addProperty(KEY, va._key.toString());
@@ -114,60 +119,27 @@ public class Inspect extends Request {
     result.addProperty(ROW_SIZE, va._rowsize);
     result.addProperty(VALUE_SIZE, va.length());
 
-    if( _offset.value() == INFO_PAGE ) {
-      JsonArray rows = new JsonArray();
-      JsonObject row;
+    JsonArray cols = new JsonArray();
+    JsonArray rows = new JsonArray();
 
-      rows.add(row = new JsonObject());
-      row.addProperty(ROW, OFFSET);
-      for( int i = 0; i < va._cols.length; i++ )
-        row.addProperty(va._cols[i]._name, (int) va._cols[i]._off);
+    for( int i = 0; i < va._cols.length; i++ ) {
+      Column c = va._cols[i];
+      JsonObject json = new JsonObject();
+      json.addProperty(NAME, c._name);
+      json.addProperty(OFFSET, (int) c._off);
+      json.addProperty(SIZE, Math.abs(c._size));
+      json.addProperty(BASE, c._base);
+      json.addProperty(SCALE, (int) c._scale);
+      json.addProperty(MIN, c._min);
+      json.addProperty(MAX, c._max);
+      json.addProperty(MEAN, c._mean);
+      json.addProperty(VARIANCE, c._sigma);
+      json.addProperty(NUM_MISSING_VALUES, va._numrows - c._n);
+      json.addProperty(ENUM_DOMAIN_SIZE, c._domain != null ? c._domain.length : 0);
+      cols.add(json);
+    }
 
-      rows.add(row = new JsonObject());
-      row.addProperty(ROW, SIZE);
-      for( int i = 0; i < va._cols.length; i++ )
-        row.addProperty(va._cols[i]._name, Math.abs(va._cols[i]._size));
-
-      rows.add(row = new JsonObject());
-      row.addProperty(ROW, BASE);
-      for( int i = 0; i < va._cols.length; i++ )
-        row.addProperty(va._cols[i]._name, va._cols[i]._base);
-
-      rows.add(row = new JsonObject());
-      row.addProperty(ROW, SCALE);
-      for( int i = 0; i < va._cols.length; i++ )
-        row.addProperty(va._cols[i]._name, (int) va._cols[i]._scale);
-
-      rows.add(row = new JsonObject());
-      row.addProperty(ROW, MIN);
-      for( int i = 0; i < va._cols.length; i++ )
-        row.addProperty(va._cols[i]._name, va._cols[i]._min);
-
-      rows.add(row = new JsonObject());
-      row.addProperty(ROW, MAX);
-      for( int i = 0; i < va._cols.length; i++ )
-        row.addProperty(va._cols[i]._name, va._cols[i]._max);
-
-      rows.add(row = new JsonObject());
-      row.addProperty(ROW, MEAN);
-      for( int i = 0; i < va._cols.length; i++ )
-        row.addProperty(va._cols[i]._name, va._cols[i]._mean);
-
-      rows.add(row = new JsonObject());
-      row.addProperty(ROW, VARIANCE);
-      for( int i = 0; i < va._cols.length; i++ )
-        row.addProperty(va._cols[i]._name, va._cols[i]._sigma);
-
-      rows.add(row = new JsonObject());
-      row.addProperty(ROW, BADAT);
-      for( int i = 0; i < va._cols.length; i++ )
-        row.addProperty(va._cols[i]._name, va._numrows - va._cols[i]._n);
-
-      result.add(ROW_DATA, rows);
-    } else {
-      if( _offset.value() > va._numrows )
-        return Response.error("Value only has " + va._numrows + " rows");
-      JsonArray rows = new JsonArray();
+    if( _offset.value() != INFO_PAGE ) {
       long endRow = Math.min(_offset.value() + _view.value(), va._numrows);
       long startRow = Math.min(_offset.value(), va._numrows - _view.value());
       for( long row = Math.max(0, startRow); row < endRow; ++row ) {
@@ -177,8 +149,10 @@ public class Inspect extends Request {
           format(obj, va, row, i);
         rows.add(obj);
       }
-      result.add(ROW_DATA, rows);
     }
+
+    result.add(COLS, cols);
+    result.add(ROWS, rows);
 
     Response r = Response.done(result);
     r.setBuilder(ROOT_OBJECT, new ObjectBuilder() {
@@ -186,11 +160,11 @@ public class Inspect extends Request {
       public String build(Response response, JsonObject object, String contextName) {
         String s = html(va);
         Table t = new Table(argumentsToJson(), _offset.value(), _view.value(), va);
-        s += t.build(response, object.get(ROW_DATA), ROW_DATA);
+        s += t.build(response, object.get(ROWS), ROWS);
         return s;
       }
     });
-    r.setBuilder(ROW_DATA + "." + ROW, new ArrayRowElementBuilder() {
+    r.setBuilder(ROWS + "." + ROW, new ArrayRowElementBuilder() {
       @Override
       public String elementToString(JsonElement elm, String contextName) {
         String s = _displayNames.get(elm.getAsString());
@@ -200,20 +174,21 @@ public class Inspect extends Request {
     return r;
   }
 
-  private final void format(JsonObject obj, ValueArray va, long rowIdx, int colIdx) {
+  private static void format(JsonObject obj, ValueArray va, long rowIdx, int colIdx) {
     if( rowIdx < 0 || rowIdx >= va._numrows )
       return;
     if( colIdx >= va._cols.length )
       return;
     ValueArray.Column c = va._cols[colIdx];
+    String name = c._name != null ? c._name : "" + colIdx;
     if( va.isNA(rowIdx, colIdx) ) {
-      obj.addProperty(c._name, "NA");
+      obj.addProperty(name, "NA");
     } else if( c._domain != null ) {
-      obj.addProperty(c._name, c._domain[(int) va.data(rowIdx, colIdx)]);
+      obj.addProperty(name, c._domain[(int) va.data(rowIdx, colIdx)]);
     } else if( (c._size > 0) && (c._scale == 1) ) {
-      obj.addProperty(c._name, va.data(rowIdx, colIdx));
+      obj.addProperty(name, va.data(rowIdx, colIdx));
     } else {
-      obj.addProperty(c._name, va.datad(rowIdx, colIdx));
+      obj.addProperty(name, va.datad(rowIdx, colIdx));
     }
   }
 
@@ -251,42 +226,75 @@ public class Inspect extends Request {
     @Override
     public String build(Response response, JsonArray array, String contextName) {
       StringBuilder sb = new StringBuilder();
+      if( array.size() == 0 ) { // Fake row, needed by builder
+        array = new JsonArray();
+        JsonObject fake = new JsonObject();
+        fake.addProperty(ROW, 0);
+        for( int i = 0; i < _va._cols.length; ++i )
+          format(fake, _va, 0, i);
+        array.add(fake);
+      }
       sb.append(header(array));
 
-      if( _offset != INFO_PAGE ) {
-        JsonObject row = new JsonObject();
+      JsonObject row = new JsonObject();
 
-        row.addProperty(ROW, MIN);
+      row.addProperty(ROW, MIN);
+      for( int i = 0; i < _va._cols.length; i++ )
+        row.addProperty(_va._cols[i]._name, _va._cols[i]._min);
+      sb.append(defaultBuilder(row).build(response, row, contextName));
+
+      row.addProperty(ROW, MAX);
+      for( int i = 0; i < _va._cols.length; i++ )
+        row.addProperty(_va._cols[i]._name, _va._cols[i]._max);
+      sb.append(defaultBuilder(row).build(response, row, contextName));
+
+      row.addProperty(ROW, MEAN);
+      for( int i = 0; i < _va._cols.length; i++ )
+        row.addProperty(_va._cols[i]._name, _va._cols[i]._mean);
+      sb.append(defaultBuilder(row).build(response, row, contextName));
+
+      row.addProperty(ROW, VARIANCE);
+      for( int i = 0; i < _va._cols.length; i++ )
+        row.addProperty(_va._cols[i]._name, _va._cols[i]._sigma);
+      sb.append(defaultBuilder(row).build(response, row, contextName));
+
+      row.addProperty(ROW, NUM_MISSING_VALUES);
+      for( int i = 0; i < _va._cols.length; i++ )
+        row.addProperty(_va._cols[i]._name, _va._numrows - _va._cols[i]._n);
+      sb.append(defaultBuilder(row).build(response, row, contextName));
+
+      if( _offset == INFO_PAGE ) {
+        row.addProperty(ROW, OFFSET);
         for( int i = 0; i < _va._cols.length; i++ )
-          row.addProperty(_va._cols[i]._name, _va._cols[i]._min);
+          row.addProperty(_va._cols[i]._name, (int) _va._cols[i]._off);
         sb.append(defaultBuilder(row).build(response, row, contextName));
 
-        row.addProperty(ROW, MAX);
+        row.addProperty(ROW, SIZE);
         for( int i = 0; i < _va._cols.length; i++ )
-          row.addProperty(_va._cols[i]._name, _va._cols[i]._max);
+          row.addProperty(_va._cols[i]._name, Math.abs(_va._cols[i]._size));
         sb.append(defaultBuilder(row).build(response, row, contextName));
 
-        row.addProperty(ROW, MEAN);
+        row.addProperty(ROW, BASE);
         for( int i = 0; i < _va._cols.length; i++ )
-          row.addProperty(_va._cols[i]._name, _va._cols[i]._mean);
+          row.addProperty(_va._cols[i]._name, _va._cols[i]._base);
         sb.append(defaultBuilder(row).build(response, row, contextName));
 
-        row.addProperty(ROW, VARIANCE);
+        row.addProperty(ROW, SCALE);
         for( int i = 0; i < _va._cols.length; i++ )
-          row.addProperty(_va._cols[i]._name, _va._cols[i]._sigma);
+          row.addProperty(_va._cols[i]._name, (int) _va._cols[i]._scale);
         sb.append(defaultBuilder(row).build(response, row, contextName));
 
-        row.addProperty(ROW, BADAT);
+        row.addProperty(ROW, ENUM_DOMAIN_SIZE);
         for( int i = 0; i < _va._cols.length; i++ )
-          row.addProperty(_va._cols[i]._name, _va._numrows - _va._cols[i]._n);
+          row.addProperty(_va._cols[i]._name, _va._cols[i]._domain != null ? _va._cols[i]._domain.length : 0);
         sb.append(defaultBuilder(row).build(response, row, contextName));
-      }
-
-      for( JsonElement e : array ) {
-        Builder builder = response.getBuilderFor(contextName + "_ROW");
-        if( builder == null )
-          builder = defaultBuilder(e);
-        sb.append(builder.build(response, e, contextName));
+      } else {
+        for( JsonElement e : array ) {
+          Builder builder = response.getBuilderFor(contextName + "_ROW");
+          if( builder == null )
+            builder = defaultBuilder(e);
+          sb.append(builder.build(response, e, contextName));
+        }
       }
 
       sb.append(footer(array));

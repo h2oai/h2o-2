@@ -69,15 +69,15 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             csvPathname = importFolderPath + "/" + csvFilename
             num_rows = inspect['num_rows']
-            num_columns = inspect['num_columns']
+            num_cols = inspect['num_cols']
 
             print "\n" + csvPathname, \
                 "    num_rows:", "{:,}".format(num_rows), \
-                "    num_columns:", "{:,}".format(num_columns)
+                "    num_cols:", "{:,}".format(num_cols)
 
             max_iter = 30 
             # assume the last col is the output!
-            y = num_columns-1
+            y = num_cols-1
             kwargs = {
                 'y': y, 
                 'family': 'poisson',

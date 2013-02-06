@@ -83,7 +83,7 @@ public class Score extends Request {
                       : C._domain[(int)d[i]]);
     }
     rows.add(obj);
-    res.add(ROW_DATA, rows);
+    res.add(ROWS, rows);
 
     // Score the row on the model.  May destroy 'd'.
     double response = M.score(d,null);

@@ -9,8 +9,7 @@ import water.*;
 import water.parser.ParseDataset;
 
 /**
- * Builds a cloud by duplicating current JVM settings in different processes or
- * machines, and runs tests.
+ * Builds a cloud by duplicating current JVM settings in different processes or machines, and runs tests.
  */
 public class TestRunner {
   static final String USER = "cyprien";
@@ -19,13 +18,13 @@ public class TestRunner {
   public static void main(String[] args) throws Exception {
     H2O.main(new String[] {});
     File f = new File("smalldata/covtype/covtype.20k.data");
-    //File f = new File("smalldata/test/rmodels/iris_x-iris-1-4_y-species_ntree-500.rdata");
+    // File f = new File("smalldata/test/rmodels/iris_x-iris-1-4_y-species_ntree-500.rdata");
     Key key = TestUtil.load_test_file(f, "test");
-    // Key dest = Key.make("test");
-    //ParseDataset.parse(dest, DKV.get(fkey));
+    Key dest = Key.make("test.hex");
+    ParseDataset.parse(dest, DKV.get(key));
 
     Desktop desktop = Desktop.getDesktop();
-    desktop.browse(new URI("http://localhost:54323/Inspect.html?key=test"));
+    desktop.browse(new URI("http://localhost:54323/Inspect.html?key=test.hex"));
 
     BufferedReader console = new BufferedReader(new InputStreamReader(System.in));
     console.readLine();
