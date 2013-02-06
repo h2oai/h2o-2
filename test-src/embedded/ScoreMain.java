@@ -21,6 +21,7 @@ class ScoreMain {
     sampleAppInit(args);
 
     // Load a PMML model
+    System.out.println("Loading model to score");
     FileInputStream fis = new FileInputStream("../../../demo/SampleScorecard.pmml");
     water.score.ScorecardModel scm = water.parser.PMMLParser.load(fis);
     
@@ -32,7 +33,7 @@ class ScoreMain {
   }
 
   public static void sampleAppInit(String[] args) throws Exception {
-    System.out.println("Sample App Init Code Goes Here");
+    System.out.println("Sample App Init Code Goes Here; loading data to score");
 
     // Make data available.  In this case, parse a simple text file and inject
     // pairs into a HashMap.
@@ -48,7 +49,6 @@ class ScoreMain {
         }
       }
     }
-    System.err.println(ROW);
   }
 
   static String trim( String x ) { return x.trim().replaceAll("\"",""); }
@@ -64,8 +64,16 @@ class ScoreMain {
 
   public static void sampleAppDoesStuff(water.score.ScorecardModel scm) {
 
-    System.out.println("score="+scm.score(ROW));
-
+    System.out.println("Initial score="+scm.score(ROW));
+    for( int i=0; i<10000; i++ )
+      scm.score(ROW);
+    long start = System.currentTimeMillis();
+    final int ITER=100000;
+    for( int i=0; i<ITER; i++ )
+      scm.score(ROW);
+    long now = System.currentTimeMillis();
+    long delta = now-start;
+    System.out.println(""+ITER+" in "+delta+"ms = "+((double)delta*1000*1000/ITER)+" microsec/score");
 
   }
 }
