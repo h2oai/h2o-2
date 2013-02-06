@@ -25,7 +25,7 @@ public abstract class PersistIce {
   static {
     ROOT = (H2O.OPT_ARGS.ice_root==null) ? DEFAULT_ROOT : H2O.OPT_ARGS.ice_root;
     H2O.OPT_ARGS.ice_root = ROOT;
-    iceRoot = new File(ROOT+File.separator+ICE_DIR+H2O.WEB_PORT);
+    iceRoot = new File(ROOT+File.separator+ICE_DIR+H2O.API_PORT);
     // Make the directory as-needed
     iceRoot.mkdirs();
     if( !(iceRoot.isDirectory() && iceRoot.canRead() && iceRoot.canWrite()) )

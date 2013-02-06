@@ -231,7 +231,7 @@ nodes = []
 
 def write_flatfile(node_count=2, base_port=54321, hosts=None):
     # always create the flatfile. 
-    ports_per_node = 3
+    ports_per_node = 2
     pff = open(flatfile_name(), "w+")
     if hosts is None:
         ip = get_ip_address()
@@ -272,7 +272,7 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         timeoutSecs=20, retryDelaySecs=0.5, cleanup=True, **kwargs):
     # moved to here from unit_main. so will run with nosetests too!
     clean_sandbox()
-    ports_per_node = 3 # 3 because we have the API port now too
+    ports_per_node = 2 
     node_list = []
     try:
         # if no hosts list, use psutil method on local host.
@@ -490,13 +490,9 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25):
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
 
 class H2O(object):
-    def __url(self, loc, port=None,new=True):
+    def __url(self, loc, port=None):
         # always use the new api port
-        if new is False:
-            if port is None: port = self.port
-        else:
-            if port is None: port = self.port + 2
-
+        if port is None: port = self.port
         u = 'http://%s:%d/%s' % (self.http_addr, port, loc)
         return u 
 
