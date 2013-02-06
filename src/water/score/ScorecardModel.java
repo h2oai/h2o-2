@@ -95,13 +95,16 @@ public class ScorecardModel {
   public static class LessOrEqual<T extends Comparable<T>> extends Predicate<T> {
     T _value;
     public LessOrEqual(T value) { _value = value; }
-    @Override boolean match(T value) { 
+    @Override boolean match(T value) {
       if( value != null && _value != null && value.getClass() != _value.getClass() ) {
         if(value.getClass() == Long.class &&
-           _value.getClass() == Double.class )
-          return ((Long)value).longValue() <= ((Double)_value).doubleValue();
+           _value.getClass() == Double.class ) {
+          long   val1 = ((Long)((Object)value)).longValue();
+          double val2 = ((Double)((Object)_value)).doubleValue();
+          return val1 <= val2;
+        }
       }
-      return value!=null && _value.compareTo(value) >= 0; 
+      return value!=null && _value.compareTo(value) >= 0;
     }
     @Override public String toString() { return "X<=" + _value; }
   }
