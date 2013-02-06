@@ -74,6 +74,7 @@ public class RFRunner {
     String statType = "gini";// split type
     int seed = 42;              // seed
     String ignores;
+    int features = -1;
     boolean stratify;
     String strata;
   }
@@ -84,7 +85,7 @@ public class RFRunner {
     String rawKeys;
     String parsedKeys;
     String h2oArgs = "";                                      // args for the spawned h2o
-    String jvmArgs = " -Xmx1g";                               // args for the spawned jvm
+    String jvmArgs = " -Xmx3g";                               // args for the spawned jvm
     String resultDB = "/tmp/results.csv";                     // output file
   }
 
@@ -281,7 +282,7 @@ public class RFRunner {
         {"smalldata//test/test_var.csv",null} };
     testIt( "", files, //files
         new int[]{50}/*trees*/, new int[]{10000} /*bin*/, null/*sample*/,
-         new String[]{"entropy"}, null/*ignore*/, null, null);// seeds ,  staras    int[] szTrees = new int[]{10};
+         new String[]{"entropy"}, null/*ignore*/, null, null,null);// seeds ,  staras    int[] szTrees = new int[]{10};
   }
 
   private static final String path = "../";
@@ -289,59 +290,91 @@ public class RFRunner {
   public static void cT() {
     testIt( path+"datasets/bench/covtype/h2o", new String[][]{{"train.csv","test.csv"}}, //files
        fromToStride(50,500,10)/*trees*/, new int[]{10000} /*bin*/, new int[]{50}/*sample*/,
-        new String[]{"entropy"}, null/*ignore*/, null, null);// seeds ,  staras
+        new String[]{"entropy"}, null/*ignore*/, null, null,null);// seeds ,  staras
   }
 
   public static void cT2() {
     testIt( path+"datasets/bench/covtype/h2o", new String[][]{{"train.csv","test.csv"}}, //files
        fromToStride(50,500,10)/*trees*/, new int[]{10000} /*bin*/, new int[]{50}/*sample*/,
-        new String[]{"entropy"}, null/*ignore*/, null, new String[]{null,"2:5000,3:5000,4:5000,5:5000,6:5000","0:5000,1:5000,2:5000,3:5000,4:5000,5:5000,6:5000"});// seeds ,  staras
+        new String[]{"entropy"}, null/*ignore*/, null, new String[]{null,"2:5000,3:5000,4:5000,5:5000,6:5000","0:5000,1:5000,2:5000,3:5000,4:5000,5:5000,6:5000"},null);// seeds ,  staras
   }
 
   public static void cT3() {
     testIt( path+"datasets/bench/covtype/h2o", new String[][]{{"train.csv","test.csv"}}, //files
         new int[]{150} /*trees*/, new int[]{10000} /*bin*/, fromToStride(1,99,1)/*sample*/,
-        new String[]{"entropy"}, null/*ignore*/, null, null);// seeds ,  staras
+        new String[]{"entropy"}, null/*ignore*/, null, null,null);// seeds ,  staras
   }
 
   public static void cT4() {
     testIt( path+"datasets/bench/covtype/h2o", new String[][]{{"train.csv","test.csv"}}, //files
         new int[]{150} /*trees*/, new int[]{10000} /*bin*/, new int[]{50} /*sample*/,
-        new String[]{"entropy"}, fromToStride(0,53,1)/*ignore*/, null, null);// seeds ,  staras
+        new String[]{"entropy"}, stringIt(fromToStride(0,53,1))/*ignore*/, null, null,null);// seeds ,  staras
   }
+  public static void cT5() {
+    testIt( path+"datasets/bench/covtype/h2o", new String[][]{{"train.csv","test.csv"}}, //files
+        new int[]{200,300} /*trees*/, new int[]{10000} /*bin*/, new int[]{50,60,70,80} /*sample*/,
+        new String[]{"entropy"}, new String[]{"1,2,6,7,8"}/*ignore*/, null, null,null);// seeds ,  staras
+  }
+  public static void cT6() {
+    testIt( path+"datasets/bench/covtype/h2o", new String[][]{{"train.csv","test.csv"}}, //files
+        new int[]{200,300} /*trees*/, new int[]{10000} /*bin*/, new int[]{50,60,70,80} /*sample*/,
+        new String[]{"entropy"}, new String[]{"1,2,6,7,8"}/*ignore*/, null, null,fromToStride(1,53,1));// seeds ,  staras
+  }
+  public static void cT7() {
+    testIt( path+"datasets/bench/covtype/h2o", new String[][]{{"train.csv","test.csv"}}, //files
+        new int[]{300} /*trees*/, new int[]{10000} /*bin*/, new int[]{50,60,70,80} /*sample*/,
+        new String[]{"entropy"}, new String[]{"1,2,6,7,8"}/*ignore*/, null, null,new int[]{30});// seeds ,  staras
+  }
+
+
+  public static void kCS1() {
+    special.put(path+"datasets/bench/kaggle.creditsample/h2o/train.csv","-classcol=1");
+    testIt( path+"datasets/bench/kaggle.creditsample/h2o", new String[][]{{"train.csv","test.csv"}}, //files
+        new int[]{20} /*trees*/, new int[]{2048} /*bin*/, new int[]{67} /*sample*/,
+        new String[]{"entropy"}, null/*ignore*/, null, null,null);// seeds ,  staras
+  }
+
 
   static String javaCmd_;
   static PrintStream out_;
   static OptArgs args_;
 
+  public static String[] stringIt(int[] vs) {
+    String[] res = new String[vs.length];
+    for(int i=0;i<res.length;i++) res[i]=Integer.toString(vs[i]);
+    return res;
+  }
   public static void  testIt(String path, String[][] files, int[] tree_size,
                              int[] bin_limits, int[] samples, String[] stats,
-                             int[] ignores, int[] seeds, String[] stratas)  {
+                             String[] ignores, int[] seeds, String[] stratas,
+                             int[]features)  {
     if (path==null) path="";
     if (files==null) files = new String[][]{{"smalldata/iris/iris.csv",null}};
     if (tree_size==null) tree_size=new int[]{100};
     if (bin_limits==null) bin_limits = new int[]{10000};
     if (samples==null) samples=new int[]{67};
     if (stats==null) stats=new String[]{"entropy"};
-    if (ignores==null) ignores=new int[]{-1};
+    if (ignores==null) ignores=new String[]{null};
     if (seeds==null) seeds = new int[]{3};
     if (stratas==null) stratas = new String[]{null};
-    int experiments = files.length * tree_size.length*stats.length*samples.length*seeds.length *bin_limits.length*ignores.length*stratas.length;
+    if (features==null) features = new int[]{-1};
+    int experiments = files.length*tree_size.length*stats.length*samples.length*seeds.length *
+          bin_limits.length*ignores.length*stratas.length*features.length;
     String[] commands = new String[experiments];
     for(int i=0;i<files.length;i++) {
       files[i][0]=path+"/"+files[i][0]; if (files[i][1]!=null) files[i][1]=path+"/"+files[i][1];
     }
     int i = 0;
-    for(int ig : ignores) for(String [] f : files)  for (int sz :tree_size)
+    for(String ig : ignores) for(String [] f : files)  for (int sz :tree_size)
       for(String stat : stats) for(int  smpl : samples)  for(int  bl : bin_limits)
-            for(int seed : seeds) for(String strata: stratas) {
+            for(int seed : seeds) for(String strata: stratas) for(int feat:features) {
               RFArgs rfa = new RFArgs();
               rfa.seed = seed; rfa.statType = stat; rfa.file = f[0];
               if (f[1]!=null) rfa.validationFile = f[1];
               rfa.ntrees = sz; rfa.sample= smpl; rfa.binLimit = bl;
-              if (ig!=-1) rfa.ignores=Integer.toString(ig);
+              if (ig!=null) rfa.ignores=ig; rfa.features= feat;
               if (strata!= null) { rfa.stratify = true; rfa.strata = strata;}
-              String add = special.get(f)==null? "" : (" "+special.get(f));
+              String add = special.get(f[0])==null? "" : (" "+special.get(f[0]));
               commands[i++] = javaCmd_ + " " + rfa + add;
             }
     try { for( String cmd : commands)runTest(cmd, args_.resultDB, out_, true);
@@ -386,7 +419,7 @@ public class RFRunner {
     new Arguments(args).extract(ARGS);
     out_= new PrintStream(new File("/tmp/RFRunner.stdout.txt"));
     javaCmd_ =   ARGS.jvmArgs + " " + JAR + " " + MAIN;
-    cT2(); cT3(); cT4();
+    cT6(); //kCS1(); //cT5();// cT2(); cT3(); cT4();
   }
 
   @org.junit.Test
