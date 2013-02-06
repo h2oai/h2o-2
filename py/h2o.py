@@ -456,6 +456,10 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25):
         cloud_name = c['cloud_name']
         node_name  = c['node_name']
 
+        if 'nodes' not in c:
+            emsg = "\nH2O didn't include a list of nodes in get_cloud response after initial cloud build"
+            raise Exception(emsg)
+
         cnodes      = c['nodes'] # list of dicts 
         if (cloud_size > node_count):
             print "\nNodes in current cloud:"
