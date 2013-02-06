@@ -1,0 +1,58 @@
+NAME: 	National Health and Nutrition Survey (NHANES3.DAT)
+SIZE:	17,030 observations, 16 variables
+
+SOURCE:	Hosmer and Lemeshow (2000) Applied Logistic Regression: Second 
+	Edition.  These data are copyrighted by John Wiley & Sons Inc. and must 
+	be acknowledged and used accordingly.
+
+
+DESCRIPTIVE ABSTRACT:
+
+These data are described in Table 6.3 page 215 in the source text.
+
+
+LIST OF VARIABLES:
+
+Variable  Description               Codes/Values           Name
+___________________________________________________________________
+
+1         Respondent Identification  	                   SEQN
+          Number    
+
+2         Pseudo-PSU                1,2                    SDPPSU6
+
+3         Pseudo-stratum            01 - 49                SDPSTRA6     
+
+4         Statistical weight        225.93 - 139744.9      WTPFHX6
+
+5         Age                       years                  HSAGEIR
+
+6         Sex                       0 = Female, 1 = Male   HSSEX
+
+7         Race                      1 = White              DMARACER
+                                    2 = Black 
+				    3 = Other 
+
+8         Body Weight               pounds                 BMPWTLBS
+
+9         Standing Height           inches                 BMPHTIN
+
+10        Average Systolic BP       mm Hg                  PEPMNK1R
+
+11        Average Diastolic BP      mm Hg                  PEPMNK5R
+
+12        Has respondent smoked     1 = Yes, 2 = No        HAR1
+          > 100 cigarettes in life 
+
+13        Does repondent smoke      1 = Yes, 2 = No        HAR3
+          cigarettes now?
+
+14        Smoking                   1 = if HAR1 = 2        SMOKE
+                                    2 = if HAR1=1 & HAR3=2
+                                    3 = if HAR1=1 & HAR3=1
+
+15        Serum Cholesterol         mg/100ml               TCP
+
+16        High Blood Pressure       0 if PEPMNK1R <= 140   HBP
+                                    1 if PEPMNK1R > 140
+______________________________________________________________________

@@ -1,0 +1,7 @@
+
+1.0
+--------------------
+ * Simplify ValueVector
+ * NIO for communication between nodes
+ * Newer simpler web-api via single JSON
+ * HEX: GLM, RandomForest, LinearRegression, covariance

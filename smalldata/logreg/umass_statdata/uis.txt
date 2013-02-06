@@ -1,0 +1,38 @@
+NAME:	UMASS Aids Research Unit [Logistic] (UIS.DAT)
+SIZE:	575 observations, 9 variables
+
+SOURCE: Hosmer and Lemeshow (2000) Applied Logistic Regression: Second Edition.
+	These data are copyrighted by John Wiley & Sons Inc. and must be acknowledged 
+	and used accordingly.  
+
+
+DESCRIPTIVE ABSTRACT:
+
+These data are described in Section 1.6.4 page 26 of the source text.
+
+
+LIST OF VARIABLES:
+
+Variable	Description			Codes/Values		Name
+_____________________________________________________________________________
+
+1		Identification Code		1-575			ID
+2		Age at Enrollment		Years			AGE			
+3		Beck Depression Score at 	0.000-54.000		BECK
+		Admission
+4		IV Drug Use History 		1 = Never, 		IVHX
+		at Admission 			2 = Previous 
+						3 = Recent 
+5		Number of Prior Drug 		0-40			NDRUGTX
+		Treatments 
+6		Subject's Race			0 = White               RACE
+						1 = Other
+7		Treatment Randomization 	0 = Short               REAT
+		Assignment			1 = Long		 
+8		Treatment Site			0 = A                   SITE  
+						1 = B
+9		Remained Drug Free 		1 = Remained Drug 	DFREE
+		for 12 Months	     	            Free
+			 			0 = Otherwise
+_________________________________________________________________________________
+

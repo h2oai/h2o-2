@@ -1,0 +1,33 @@
+NAME:  Longitudinal Low Birth Weight Study (CLSLOWBWT.DAT)
+SIZE:  488 observations, 8 variables.
+
+SOURCE:  Hosmer and Lemeshow (2000) Applied Logistic Regression: 
+	 Second Edition.  These data are copyrighted by John Wiley &
+	 Sons Inc. and must be acknowledged and used accordingly.
+
+
+LIST OF VARIABLES:
+
+Variable	Description		Codes/Values		Name
+______________________________________________________________________
+
+1	Identification Code		ID Number		ID
+
+2	Birth Number			1-4			BIRTH
+
+3	Smoking Status 			0 = No, 1 = Yes		SMOKE
+	During Pregnancy
+
+4	Race				1 = White, 2 = Black 	RACE
+					3  = Other
+
+5	Age of Mother			Years			AGE
+
+6	Weight of Mother at 		Pounds			LWT
+	Last Menstrual Period
+
+7	Birth Weight			Grams			BWT
+
+8	Low Birth Weight		1 = BWT <=2500g,	LOW
+					0 = BWT >2500g
+________________________________________________________________________

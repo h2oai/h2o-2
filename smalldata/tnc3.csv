@@ -1,0 +1,1310 @@
+"pclass","name","sex","age","sibsp","parch","ticket","fare","cabin","embarked","boat","body","home.dest","survived"
+1," Allen_ Miss. Elisabeth Walton"," female",29,0,0," 24160",211.3375," B5"," S"," 2"," -1"," St Louis_ MO",1
+1," Allison_ Master. Hudson Trevor"," male",0.92,1,2," 113781",151.5500," C22 C26"," S"," 11"," -1"," Montreal_ PQ / Chesterville_ ON",1
+1," Allison_ Miss. Helen Loraine"," female",2,1,2," 113781",151.5500," C22 C26"," S"," -1"," -1"," Montreal_ PQ / Chesterville_ ON",0
+1," Allison_ Mr. Hudson Joshua Creighton"," male",30,1,2," 113781",151.5500," C22 C26"," S"," -1"," 135"," Montreal_ PQ / Chesterville_ ON",0
+1," Allison_ Mrs. Hudson J C (Bessie Waldo Daniels)"," female",25,1,2," 113781",151.5500," C22 C26"," S"," -1"," -1"," Montreal_ PQ / Chesterville_ ON",0
+1," Anderson_ Mr. Harry"," male",48,0,0," 19952",26.5500," E12"," S"," 3"," -1"," New York_ NY",1
+1," Andrews_ Miss. Kornelia Theodosia"," female",63,1,0," 13502",77.9583," D7"," S"," 10"," -1"," Hudson_ NY",1
+1," Andrews_ Mr. Thomas Jr"," male",39,0,0," 112050",0.0000," A36"," S"," -1"," -1"," Belfast_ NI",0
+1," Appleton_ Mrs. Edward Dale (Charlotte Lamson)"," female",53,2,0," 11769",51.4792," C101"," S"," D"," -1"," Bayside_ Queens_ NY",1
+1," Artagaveytia_ Mr. Ramon"," male",71,0,0," PC 17609",49.5042," -1"," C"," -1"," 22"," Montevideo_ Uruguay",0
+1," Astor_ Col. John Jacob"," male",47,1,0," PC 17757",227.5250," C62 C64"," C"," -1"," 124"," New York_ NY",0
+1," Astor_ Mrs. John Jacob (Madeleine Talmadge Force)"," female",18,1,0," PC 17757",227.5250," C62 C64"," C"," 4"," -1"," New York_ NY",1
+1," Aubart_ Mme. Leontine Pauline"," female",24,0,0," PC 17477",69.3000," B35"," C"," 9"," -1"," Paris_ France",1
+1," Barber_ Miss. Ellen ""Nellie"""," female",26,0,0," 19877",78.8500," -1"," S"," 6"," -1"," -1",1
+1," Barkworth_ Mr. Algernon Henry Wilson"," male",80,0,0," 27042",30.0000," A23"," S"," B"," -1"," Hessle_ Yorks",1
+1," Baumann_ Mr. John D"," male"," -1",0,0," PC 17318",25.9250," -1"," S"," -1"," -1"," New York_ NY",0
+1," Baxter_ Mr. Quigg Edmond"," male",24,0,1," PC 17558",247.5208," B58 B60"," C"," -1"," -1"," Montreal_ PQ",0
+1," Baxter_ Mrs. James (Helene DeLaudeniere Chaput)"," female",50,0,1," PC 17558",247.5208," B58 B60"," C"," 6"," -1"," Montreal_ PQ",1
+1," Bazzani_ Miss. Albina"," female",32,0,0," 11813",76.2917," D15"," C"," 8"," -1"," -1",1
+1," Beattie_ Mr. Thomson"," male",36,0,0," 13050",75.2417," C6"," C"," A"," -1"," Winnipeg_ MN",0
+1," Beckwith_ Mr. Richard Leonard"," male",37,1,1," 11751",52.5542," D35"," S"," 5"," -1"," New York_ NY",1
+1," Beckwith_ Mrs. Richard Leonard (Sallie Monypeny)"," female",47,1,1," 11751",52.5542," D35"," S"," 5"," -1"," New York_ NY",1
+1," Behr_ Mr. Karl Howell"," male",26,0,0," 111369",30.0000," C148"," C"," 5"," -1"," New York_ NY",1
+1," Bidois_ Miss. Rosalie"," female",42,0,0," PC 17757",227.5250," -1"," C"," 4"," -1"," -1",1
+1," Bird_ Miss. Ellen"," female",29,0,0," PC 17483",221.7792," C97"," S"," 8"," -1"," -1",1
+1," Birnbaum_ Mr. Jakob"," male",25,0,0," 13905",26.0000," -1"," C"," -1"," 148"," San Francisco_ CA",0
+1," Bishop_ Mr. Dickinson H"," male",25,1,0," 11967",91.0792," B49"," C"," 7"," -1"," Dowagiac_ MI",1
+1," Bishop_ Mrs. Dickinson H (Helen Walton)"," female",19,1,0," 11967",91.0792," B49"," C"," 7"," -1"," Dowagiac_ MI",1
+1," Bissette_ Miss. Amelia"," female",35,0,0," PC 17760",135.6333," C99"," S"," 8"," -1"," -1",1
+1," Bjornstrom-Steffansson_ Mr. Mauritz Hakan"," male",28,0,0," 110564",26.5500," C52"," S"," D"," -1"," Stockholm_ Sweden / Washington_ DC",1
+1," Blackwell_ Mr. Stephen Weart"," male",45,0,0," 113784",35.5000," T"," S"," -1"," -1"," Trenton_ NJ",0
+1," Blank_ Mr. Henry"," male",40,0,0," 112277",31.0000," A31"," C"," 7"," -1"," Glen Ridge_ NJ",1
+1," Bonnell_ Miss. Caroline"," female",30,0,0," 36928",164.8667," C7"," S"," 8"," -1"," Youngstown_ OH",1
+1," Bonnell_ Miss. Elizabeth"," female",58,0,0," 113783",26.5500," C103"," S"," 8"," -1"," Birkdale_ England Cleveland_ Ohio",1
+1," Borebank_ Mr. John James"," male",42,0,0," 110489",26.5500," D22"," S"," -1"," -1"," London / Winnipeg_ MB",0
+1," Bowen_ Miss. Grace Scott"," female",45,0,0," PC 17608",262.3750," -1"," C"," 4"," -1"," Cooperstown_ NY",1
+1," Bowerman_ Miss. Elsie Edith"," female",22,0,1," 113505",55.0000," E33"," S"," 6"," -1"," St Leonards-on-Sea_ England Ohio",1
+1," Bradley_ Mr. George (""George Arthur Brayton"")"," male"," -1",0,0," 111427",26.5500," -1"," S"," 9"," -1"," Los Angeles_ CA",1
+1," Brady_ Mr. John Bertram"," male",41,0,0," 113054",30.5000," A21"," S"," -1"," -1"," Pomeroy_ WA",0
+1," Brandeis_ Mr. Emil"," male",48,0,0," PC 17591",50.4958," B10"," C"," -1"," 208"," Omaha_ NE",0
+1," Brewe_ Dr. Arthur Jackson"," male"," -1",0,0," 112379",39.6000," -1"," C"," -1"," -1"," Philadelphia_ PA",0
+1," Brown_ Mrs. James Joseph (Margaret Tobin)"," female",44,0,0," PC 17610",27.7208," B4"," C"," 6"," -1"," Denver_ CO",1
+1," Brown_ Mrs. John Murray (Caroline Lane Lamson)"," female",59,2,0," 11769",51.4792," C101"," S"," D"," -1"," Belmont_ MA",1
+1," Bucknell_ Mrs. William Robert (Emma Eliza Ward)"," female",60,0,0," 11813",76.2917," D15"," C"," 8"," -1"," Philadelphia_ PA",1
+1," Burns_ Miss. Elizabeth Margaret"," female",41,0,0," 16966",134.5000," E40"," C"," 3"," -1"," -1",1
+1," Butt_ Major. Archibald Willingham"," male",45,0,0," 113050",26.5500," B38"," S"," -1"," -1"," Washington_ DC",0
+1," Cairns_ Mr. Alexander"," male"," -1",0,0," 113798",31.0000," -1"," S"," -1"," -1"," -1",0
+1," Calderhead_ Mr. Edward Pennington"," male",42,0,0," PC 17476",26.2875," E24"," S"," 5"," -1"," New York_ NY",1
+1," Candee_ Mrs. Edward (Helen Churchill Hungerford)"," female",53,0,0," PC 17606",27.4458," -1"," C"," 6"," -1"," Washington_ DC",1
+1," Cardeza_ Mr. Thomas Drake Martinez"," male",36,0,1," PC 17755",512.3292," B51 B53 B55"," C"," 3"," -1"," Austria-Hungary / Germantown_ Philadelphia_ PA",1
+1," Cardeza_ Mrs. James Warburton Martinez (Charlotte Wardle Drake)"," female",58,0,1," PC 17755",512.3292," B51 B53 B55"," C"," 3"," -1"," Germantown_ Philadelphia_ PA",1
+1," Carlsson_ Mr. Frans Olof"," male",33,0,0," 695",5.0000," B51 B53 B55"," S"," -1"," -1"," New York_ NY",0
+1," Carrau_ Mr. Francisco M"," male",28,0,0," 113059",47.1000," -1"," S"," -1"," -1"," Montevideo_ Uruguay",0
+1," Carrau_ Mr. Jose Pedro"," male",17,0,0," 113059",47.1000," -1"," S"," -1"," -1"," Montevideo_ Uruguay",0
+1," Carter_ Master. William Thornton II"," male",11,1,2," 113760",120.0000," B96 B98"," S"," 4"," -1"," Bryn Mawr_ PA",1
+1," Carter_ Miss. Lucile Polk"," female",14,1,2," 113760",120.0000," B96 B98"," S"," 4"," -1"," Bryn Mawr_ PA",1
+1," Carter_ Mr. William Ernest"," male",36,1,2," 113760",120.0000," B96 B98"," S"," C"," -1"," Bryn Mawr_ PA",1
+1," Carter_ Mrs. William Ernest (Lucile Polk)"," female",36,1,2," 113760",120.0000," B96 B98"," S"," 4"," -1"," Bryn Mawr_ PA",1
+1," Case_ Mr. Howard Brown"," male",49,0,0," 19924",26.0000," -1"," S"," -1"," -1"," Ascot_ Berkshire / Rochester_ NY",0
+1," Cassebeer_ Mrs. Henry Arthur Jr (Eleanor Genevieve Fosdick)"," female"," -1",0,0," 17770",27.7208," -1"," C"," 5"," -1"," New York_ NY",1
+1," Cavendish_ Mr. Tyrell William"," male",36,1,0," 19877",78.8500," C46"," S"," -1"," 172"," Little Onn Hall_ Staffs",0
+1," Cavendish_ Mrs. Tyrell William (Julia Florence Siegel)"," female",76,1,0," 19877",78.8500," C46"," S"," 6"," -1"," Little Onn Hall_ Staffs",1
+1," Chaffee_ Mr. Herbert Fuller"," male",46,1,0," W.E.P. 5734",61.1750," E31"," S"," -1"," -1"," Amenia_ ND",0
+1," Chaffee_ Mrs. Herbert Fuller (Carrie Constance Toogood)"," female",47,1,0," W.E.P. 5734",61.1750," E31"," S"," 4"," -1"," Amenia_ ND",1
+1," Chambers_ Mr. Norman Campbell"," male",27,1,0," 113806",53.1000," E8"," S"," 5"," -1"," New York_ NY / Ithaca_ NY",1
+1," Chambers_ Mrs. Norman Campbell (Bertha Griggs)"," female",33,1,0," 113806",53.1000," E8"," S"," 5"," -1"," New York_ NY / Ithaca_ NY",1
+1," Chaudanson_ Miss. Victorine"," female",36,0,0," PC 17608",262.3750," B61"," C"," 4"," -1"," -1",1
+1," Cherry_ Miss. Gladys"," female",30,0,0," 110152",86.5000," B77"," S"," 8"," -1"," London_ England",1
+1," Chevre_ Mr. Paul Romaine"," male",45,0,0," PC 17594",29.7000," A9"," C"," 7"," -1"," Paris_ France",1
+1," Chibnall_ Mrs. (Edith Martha Bowerman)"," female"," -1",0,1," 113505",55.0000," E33"," S"," 6"," -1"," St Leonards-on-Sea_ England Ohio",1
+1," Chisholm_ Mr. Roderick Robert Crispin"," male"," -1",0,0," 112051",0.0000," -1"," S"," -1"," -1"," Liverpool_ England / Belfast",0
+1," Clark_ Mr. Walter Miller"," male",27,1,0," 13508",136.7792," C89"," C"," -1"," -1"," Los Angeles_ CA",0
+1," Clark_ Mrs. Walter Miller (Virginia McDowell)"," female",26,1,0," 13508",136.7792," C89"," C"," 4"," -1"," Los Angeles_ CA",1
+1," Cleaver_ Miss. Alice"," female",22,0,0," 113781",151.5500," -1"," S"," 11"," -1"," -1",1
+1," Clifford_ Mr. George Quincy"," male"," -1",0,0," 110465",52.0000," A14"," S"," -1"," -1"," Stoughton_ MA",0
+1," Colley_ Mr. Edward Pomeroy"," male",47,0,0," 5727",25.5875," E58"," S"," -1"," -1"," Victoria_ BC",0
+1," Compton_ Miss. Sara Rebecca"," female",39,1,1," PC 17756",83.1583," E49"," C"," 14"," -1"," Lakewood_ NJ",1
+1," Compton_ Mr. Alexander Taylor Jr"," male",37,1,1," PC 17756",83.1583," E52"," C"," -1"," -1"," Lakewood_ NJ",0
+1," Compton_ Mrs. Alexander Taylor (Mary Eliza Ingersoll)"," female",64,0,2," PC 17756",83.1583," E45"," C"," 14"," -1"," Lakewood_ NJ",1
+1," Cornell_ Mrs. Robert Clifford (Malvina Helen Lamson)"," female",55,2,0," 11770",25.7000," C101"," S"," 2"," -1"," New York_ NY",1
+1," Crafton_ Mr. John Bertram"," male"," -1",0,0," 113791",26.5500," -1"," S"," -1"," -1"," Roachdale_ IN",0
+1," Crosby_ Capt. Edward Gifford"," male",70,1,1," WE/P 5735",71.0000," B22"," S"," -1"," 269"," Milwaukee_ WI",0
+1," Crosby_ Miss. Harriet R"," female",36,0,2," WE/P 5735",71.0000," B22"," S"," 7"," -1"," Milwaukee_ WI",1
+1," Crosby_ Mrs. Edward Gifford (Catherine Elizabeth Halstead)"," female",64,1,1," 112901",26.5500," B26"," S"," 7"," -1"," Milwaukee_ WI",1
+1," Cumings_ Mr. John Bradley"," male",39,1,0," PC 17599",71.2833," C85"," C"," -1"," -1"," New York_ NY",0
+1," Cumings_ Mrs. John Bradley (Florence Briggs Thayer)"," female",38,1,0," PC 17599",71.2833," C85"," C"," 4"," -1"," New York_ NY",1
+1," Daly_ Mr. Peter Denis "," male",51,0,0," 113055",26.5500," E17"," S"," 5 9"," -1"," Lima_ Peru",1
+1," Daniel_ Mr. Robert Williams"," male",27,0,0," 113804",30.5000," -1"," S"," 3"," -1"," Philadelphia_ PA",1
+1," Daniels_ Miss. Sarah"," female",33,0,0," 113781",151.5500," -1"," S"," 8"," -1"," -1",1
+1," Davidson_ Mr. Thornton"," male",31,1,0," F.C. 12750",52.0000," B71"," S"," -1"," -1"," Montreal_ PQ",0
+1," Davidson_ Mrs. Thornton (Orian Hays)"," female",27,1,2," F.C. 12750",52.0000," B71"," S"," 3"," -1"," Montreal_ PQ",1
+1," Dick_ Mr. Albert Adrian"," male",31,1,0," 17474",57.0000," B20"," S"," 3"," -1"," Calgary_ AB",1
+1," Dick_ Mrs. Albert Adrian (Vera Gillespie)"," female",17,1,0," 17474",57.0000," B20"," S"," 3"," -1"," Calgary_ AB",1
+1," Dodge_ Dr. Washington"," male",53,1,1," 33638",81.8583," A34"," S"," 13"," -1"," San Francisco_ CA",1
+1," Dodge_ Master. Washington"," male",4,0,2," 33638",81.8583," A34"," S"," 5"," -1"," San Francisco_ CA",1
+1," Dodge_ Mrs. Washington (Ruth Vidaver)"," female",54,1,1," 33638",81.8583," A34"," S"," 5"," -1"," San Francisco_ CA",1
+1," Douglas_ Mr. Walter Donald"," male",50,1,0," PC 17761",106.4250," C86"," C"," -1"," 62"," Deephaven_ MN / Cedar Rapids_ IA",0
+1," Douglas_ Mrs. Frederick Charles (Mary Helene Baxter)"," female",27,1,1," PC 17558",247.5208," B58 B60"," C"," 6"," -1"," Montreal_ PQ",1
+1," Douglas_ Mrs. Walter Donald (Mahala Dutton)"," female",48,1,0," PC 17761",106.4250," C86"," C"," 2"," -1"," Deephaven_ MN / Cedar Rapids_ IA",1
+1," Duff Gordon_ Lady. (Lucille Christiana Sutherland) (""Mrs Morgan"")"," female",48,1,0," 11755",39.6000," A16"," C"," 1"," -1"," London / Paris",1
+1," Duff Gordon_ Sir. Cosmo Edmund (""Mr Morgan"")"," male",49,1,0," PC 17485",56.9292," A20"," C"," 1"," -1"," London / Paris",1
+1," Dulles_ Mr. William Crothers"," male",39,0,0," PC 17580",29.7000," A18"," C"," -1"," 133"," Philadelphia_ PA",0
+1," Earnshaw_ Mrs. Boulton (Olive Potter)"," female",23,0,1," 11767",83.1583," C54"," C"," 7"," -1"," Mt Airy_ Philadelphia_ PA",1
+1," Endres_ Miss. Caroline Louise"," female",38,0,0," PC 17757",227.5250," C45"," C"," 4"," -1"," New York_ NY",1
+1," Eustis_ Miss. Elizabeth Mussey"," female",54,1,0," 36947",78.2667," D20"," C"," 4"," -1"," Brookline_ MA",1
+1," Evans_ Miss. Edith Corse"," female",36,0,0," PC 17531",31.6792," A29"," C"," -1"," -1"," New York_ NY",0
+1," Farthing_ Mr. John"," male"," -1",0,0," PC 17483",221.7792," C95"," S"," -1"," -1"," -1",0
+1," Flegenheim_ Mrs. Alfred (Antoinette)"," female"," -1",0,0," PC 17598",31.6833," -1"," S"," 7"," -1"," New York_ NY",1
+1," Fleming_ Miss. Margaret"," female"," -1",0,0," 17421",110.8833," -1"," C"," 4"," -1"," -1",1
+1," Flynn_ Mr. John Irwin (""Irving"")"," male",36,0,0," PC 17474",26.3875," E25"," S"," 5"," -1"," Brooklyn_ NY",1
+1," Foreman_ Mr. Benjamin Laventall"," male",30,0,0," 113051",27.7500," C111"," C"," -1"," -1"," New York_ NY",0
+1," Fortune_ Miss. Alice Elizabeth"," female",24,3,2," 19950",263.0000," C23 C25 C27"," S"," 10"," -1"," Winnipeg_ MB",1
+1," Fortune_ Miss. Ethel Flora"," female",28,3,2," 19950",263.0000," C23 C25 C27"," S"," 10"," -1"," Winnipeg_ MB",1
+1," Fortune_ Miss. Mabel Helen"," female",23,3,2," 19950",263.0000," C23 C25 C27"," S"," 10"," -1"," Winnipeg_ MB",1
+1," Fortune_ Mr. Charles Alexander"," male",19,3,2," 19950",263.0000," C23 C25 C27"," S"," -1"," -1"," Winnipeg_ MB",0
+1," Fortune_ Mr. Mark"," male",64,1,4," 19950",263.0000," C23 C25 C27"," S"," -1"," -1"," Winnipeg_ MB",0
+1," Fortune_ Mrs. Mark (Mary McDougald)"," female",60,1,4," 19950",263.0000," C23 C25 C27"," S"," 10"," -1"," Winnipeg_ MB",1
+1," Francatelli_ Miss. Laura Mabel"," female",30,0,0," PC 17485",56.9292," E36"," C"," 1"," -1"," -1",1
+1," Franklin_ Mr. Thomas Parham"," male"," -1",0,0," 113778",26.5500," D34"," S"," -1"," -1"," Westcliff-on-Sea_ Essex",0
+1," Frauenthal_ Dr. Henry William"," male",50,2,0," PC 17611",133.6500," -1"," S"," 5"," -1"," New York_ NY",1
+1," Frauenthal_ Mr. Isaac Gerald"," male",43,1,0," 17765",27.7208," D40"," C"," 5"," -1"," New York_ NY",1
+1," Frauenthal_ Mrs. Henry William (Clara Heinsheimer)"," female"," -1",1,0," PC 17611",133.6500," -1"," S"," 5"," -1"," New York_ NY",1
+1," Frolicher_ Miss. Hedwig Margaritha"," female",22,0,2," 13568",49.5000," B39"," C"," 5"," -1"," Zurich_ Switzerland",1
+1," Frolicher-Stehli_ Mr. Maxmillian"," male",60,1,1," 13567",79.2000," B41"," C"," 5"," -1"," Zurich_ Switzerland",1
+1," Frolicher-Stehli_ Mrs. Maxmillian (Margaretha Emerentia Stehli)"," female",48,1,1," 13567",79.2000," B41"," C"," 5"," -1"," Zurich_ Switzerland",1
+1," Fry_ Mr. Richard"," male"," -1",0,0," 112058",0.0000," B102"," S"," -1"," -1"," -1",0
+1," Futrelle_ Mr. Jacques Heath"," male",37,1,0," 113803",53.1000," C123"," S"," -1"," -1"," Scituate_ MA",0
+1," Futrelle_ Mrs. Jacques Heath (Lily May Peel)"," female",35,1,0," 113803",53.1000," C123"," S"," D"," -1"," Scituate_ MA",1
+1," Gee_ Mr. Arthur H"," male",47,0,0," 111320",38.5000," E63"," S"," -1"," 275"," St Anne's-on-Sea_ Lancashire",0
+1," Geiger_ Miss. Amalie"," female",35,0,0," 113503",211.5000," C130"," C"," 4"," -1"," -1",1
+1," Gibson_ Miss. Dorothy Winifred"," female",22,0,1," 112378",59.4000," -1"," C"," 7"," -1"," New York_ NY",1
+1," Gibson_ Mrs. Leonard (Pauline C Boeson)"," female",45,0,1," 112378",59.4000," -1"," C"," 7"," -1"," New York_ NY",1
+1," Giglio_ Mr. Victor"," male",24,0,0," PC 17593",79.2000," B86"," C"," -1"," -1"," -1",0
+1," Goldenberg_ Mr. Samuel L"," male",49,1,0," 17453",89.1042," C92"," C"," 5"," -1"," Paris_ France / New York_ NY",1
+1," Goldenberg_ Mrs. Samuel L (Edwiga Grabowska)"," female"," -1",1,0," 17453",89.1042," C92"," C"," 5"," -1"," Paris_ France / New York_ NY",1
+1," Goldschmidt_ Mr. George B"," male",71,0,0," PC 17754",34.6542," A5"," C"," -1"," -1"," New York_ NY",0
+1," Gracie_ Col. Archibald IV"," male",53,0,0," 113780",28.5000," C51"," C"," B"," -1"," Washington_ DC",1
+1," Graham_ Miss. Margaret Edith"," female",19,0,0," 112053",30.0000," B42"," S"," 3"," -1"," Greenwich_ CT",1
+1," Graham_ Mr. George Edward"," male",38,0,1," PC 17582",153.4625," C91"," S"," -1"," 147"," Winnipeg_ MB",0
+1," Graham_ Mrs. William Thompson (Edith Junkins)"," female",58,0,1," PC 17582",153.4625," C125"," S"," 3"," -1"," Greenwich_ CT",1
+1," Greenfield_ Mr. William Bertram"," male",23,0,1," PC 17759",63.3583," D10 D12"," C"," 7"," -1"," New York_ NY",1
+1," Greenfield_ Mrs. Leo David (Blanche Strouse)"," female",45,0,1," PC 17759",63.3583," D10 D12"," C"," 7"," -1"," New York_ NY",1
+1," Guggenheim_ Mr. Benjamin"," male",46,0,0," PC 17593",79.2000," B82 B84"," C"," -1"," -1"," New York_ NY",0
+1," Harder_ Mr. George Achilles"," male",25,1,0," 11765",55.4417," E50"," C"," 5"," -1"," Brooklyn_ NY",1
+1," Harder_ Mrs. George Achilles (Dorothy Annan)"," female",25,1,0," 11765",55.4417," E50"," C"," 5"," -1"," Brooklyn_ NY",1
+1," Harper_ Mr. Henry Sleeper"," male",48,1,0," PC 17572",76.7292," D33"," C"," 3"," -1"," New York_ NY",1
+1," Harper_ Mrs. Henry Sleeper (Myna Haxtun)"," female",49,1,0," PC 17572",76.7292," D33"," C"," 3"," -1"," New York_ NY",1
+1," Harrington_ Mr. Charles H"," male"," -1",0,0," 113796",42.4000," -1"," S"," -1"," -1"," -1",0
+1," Harris_ Mr. Henry Birkhardt"," male",45,1,0," 36973",83.4750," C83"," S"," -1"," -1"," New York_ NY",0
+1," Harris_ Mrs. Henry Birkhardt (Irene Wallach)"," female",35,1,0," 36973",83.4750," C83"," S"," D"," -1"," New York_ NY",1
+1," Harrison_ Mr. William"," male",40,0,0," 112059",0.0000," B94"," S"," -1"," 110"," -1",0
+1," Hassab_ Mr. Hammad"," male",27,0,0," PC 17572",76.7292," D49"," C"," 3"," -1"," -1",1
+1," Hawksford_ Mr. Walter James"," male"," -1",0,0," 16988",30.0000," D45"," S"," 3"," -1"," Kingston_ Surrey",1
+1," Hays_ Miss. Margaret Bechstein"," female",24,0,0," 11767",83.1583," C54"," C"," 7"," -1"," New York_ NY",1
+1," Hays_ Mr. Charles Melville"," male",55,1,1," 12749",93.5000," B69"," S"," -1"," 307"," Montreal_ PQ",0
+1," Hays_ Mrs. Charles Melville (Clara Jennings Gregg)"," female",52,1,1," 12749",93.5000," B69"," S"," 3"," -1"," Montreal_ PQ",1
+1," Head_ Mr. Christopher"," male",42,0,0," 113038",42.5000," B11"," S"," -1"," -1"," London / Middlesex",0
+1," Hilliard_ Mr. Herbert Henry"," male"," -1",0,0," 17463",51.8625," E46"," S"," -1"," -1"," Brighton_ MA",0
+1," Hipkins_ Mr. William Edward"," male",55,0,0," 680",50.0000," C39"," S"," -1"," -1"," London / Birmingham",0
+1," Hippach_ Miss. Jean Gertrude"," female",16,0,1," 111361",57.9792," B18"," C"," 4"," -1"," Chicago_ IL",1
+1," Hippach_ Mrs. Louis Albert (Ida Sophia Fischer)"," female",44,0,1," 111361",57.9792," B18"," C"," 4"," -1"," Chicago_ IL",1
+1," Hogeboom_ Mrs. John C (Anna Andrews)"," female",51,1,0," 13502",77.9583," D11"," S"," 10"," -1"," Hudson_ NY",1
+1," Holverson_ Mr. Alexander Oskar"," male",42,1,0," 113789",52.0000," -1"," S"," -1"," 38"," New York_ NY",0
+1," Holverson_ Mrs. Alexander Oskar (Mary Aline Towner)"," female",35,1,0," 113789",52.0000," -1"," S"," 8"," -1"," New York_ NY",1
+1," Homer_ Mr. Harry (""Mr E Haven"")"," male",35,0,0," 111426",26.5500," -1"," C"," 15"," -1"," Indianapolis_ IN",1
+1," Hoyt_ Mr. Frederick Maxfield"," male",38,1,0," 19943",90.0000," C93"," S"," D"," -1"," New York_ NY /  Stamford CT",1
+1," Hoyt_ Mr. William Fisher"," male"," -1",0,0," PC 17600",30.6958," -1"," C"," 14"," -1"," New York_ NY",0
+1," Hoyt_ Mrs. Frederick Maxfield (Jane Anne Forby)"," female",35,1,0," 19943",90.0000," C93"," S"," D"," -1"," New York_ NY /  Stamford CT",1
+1," Icard_ Miss. Amelie"," female",38,0,0," 113572",80.0000," B28"," -1"," 6"," -1"," -1",1
+1," Isham_ Miss. Ann Elizabeth"," female",50,0,0," PC 17595",28.7125," C49"," C"," -1"," -1"," Paris_ France New York_ NY",0
+1," Ismay_ Mr. Joseph Bruce"," male",49,0,0," 112058",0.0000," B52 B54 B56"," S"," C"," -1"," Liverpool",1
+1," Jones_ Mr. Charles Cresson"," male",46,0,0," 694",26.0000," -1"," S"," -1"," 80"," Bennington_ VT",0
+1," Julian_ Mr. Henry Forbes"," male",50,0,0," 113044",26.0000," E60"," S"," -1"," -1"," London",0
+1," Keeping_ Mr. Edwin"," male",32.5,0,0," 113503",211.5000," C132"," C"," -1"," 45"," -1",0
+1," Kent_ Mr. Edward Austin"," male",58,0,0," 11771",29.7000," B37"," C"," -1"," 258"," Buffalo_ NY",0
+1," Kenyon_ Mr. Frederick R"," male",41,1,0," 17464",51.8625," D21"," S"," -1"," -1"," Southington / Noank_ CT",0
+1," Kenyon_ Mrs. Frederick R (Marion)"," female"," -1",1,0," 17464",51.8625," D21"," S"," 8"," -1"," Southington / Noank_ CT",1
+1," Kimball_ Mr. Edwin Nelson Jr"," male",42,1,0," 11753",52.5542," D19"," S"," 5"," -1"," Boston_ MA",1
+1," Kimball_ Mrs. Edwin Nelson Jr (Gertrude Parsons)"," female",45,1,0," 11753",52.5542," D19"," S"," 5"," -1"," Boston_ MA",1
+1," Klaber_ Mr. Herman"," male"," -1",0,0," 113028",26.5500," C124"," S"," -1"," -1"," Portland_ OR",0
+1," Kreuchen_ Miss. Emilie"," female",39,0,0," 24160",211.3375," -1"," S"," 2"," -1"," -1",1
+1," Leader_ Dr. Alice (Farnham)"," female",49,0,0," 17465",25.9292," D17"," S"," 8"," -1"," New York_ NY",1
+1," LeRoy_ Miss. Bertha"," female",30,0,0," PC 17761",106.4250," -1"," C"," 2"," -1"," -1",1
+1," Lesurer_ Mr. Gustave J"," male",35,0,0," PC 17755",512.3292," B101"," C"," 3"," -1"," -1",1
+1," Lewy_ Mr. Ervin G"," male"," -1",0,0," PC 17612",27.7208," -1"," C"," -1"," -1"," Chicago_ IL",0
+1," Lindeberg-Lind_ Mr. Erik Gustaf (""Mr Edward Lingrey"")"," male",42,0,0," 17475",26.5500," -1"," S"," -1"," -1"," Stockholm_ Sweden",0
+1," Lindstrom_ Mrs. Carl Johan (Sigrid Posse)"," female",55,0,0," 112377",27.7208," -1"," C"," 6"," -1"," Stockholm_ Sweden",1
+1," Lines_ Miss. Mary Conover"," female",16,0,1," PC 17592",39.4000," D28"," S"," 9"," -1"," Paris_ France",1
+1," Lines_ Mrs. Ernest H (Elizabeth Lindsey James)"," female",51,0,1," PC 17592",39.4000," D28"," S"," 9"," -1"," Paris_ France",1
+1," Long_ Mr. Milton Clyde"," male",29,0,0," 113501",30.0000," D6"," S"," -1"," 126"," Springfield_ MA",0
+1," Longley_ Miss. Gretchen Fiske"," female",21,0,0," 13502",77.9583," D9"," S"," 10"," -1"," Hudson_ NY",1
+1," Loring_ Mr. Joseph Holland"," male",30,0,0," 113801",45.5000," -1"," S"," -1"," -1"," London / New York_ NY",0
+1," Lurette_ Miss. Elise"," female",58,0,0," PC 17569",146.5208," B80"," C"," -1"," -1"," -1",1
+1," Madill_ Miss. Georgette Alexandra"," female",15,0,1," 24160",211.3375," B5"," S"," 2"," -1"," St Louis_ MO",1
+1," Maguire_ Mr. John Edward"," male",30,0,0," 110469",26.0000," C106"," S"," -1"," -1"," Brockton_ MA",0
+1," Maioni_ Miss. Roberta"," female",16,0,0," 110152",86.5000," B79"," S"," 8"," -1"," -1",1
+1," Marechal_ Mr. Pierre"," male"," -1",0,0," 11774",29.7000," C47"," C"," 7"," -1"," Paris_ France",1
+1," Marvin_ Mr. Daniel Warner"," male",19,1,0," 113773",53.1000," D30"," S"," -1"," -1"," New York_ NY",0
+1," Marvin_ Mrs. Daniel Warner (Mary Graham Carmichael Farquarson)"," female",18,1,0," 113773",53.1000," D30"," S"," 10"," -1"," New York_ NY",1
+1," Mayne_ Mlle. Berthe Antonine (""Mrs de Villiers"")"," female",24,0,0," PC 17482",49.5042," C90"," C"," 6"," -1"," Belgium  Montreal_ PQ",1
+1," McCaffry_ Mr. Thomas Francis"," male",46,0,0," 13050",75.2417," C6"," C"," -1"," 292"," Vancouver_ BC",0
+1," McCarthy_ Mr. Timothy J"," male",54,0,0," 17463",51.8625," E46"," S"," -1"," 175"," Dorchester_ MA",0
+1," McGough_ Mr. James Robert"," male",36,0,0," PC 17473",26.2875," E25"," S"," 7"," -1"," Philadelphia_ PA",1
+1," Meyer_ Mr. Edgar Joseph"," male",28,1,0," PC 17604",82.1708," -1"," C"," -1"," -1"," New York_ NY",0
+1," Meyer_ Mrs. Edgar Joseph (Leila Saks)"," female"," -1",1,0," PC 17604",82.1708," -1"," C"," 6"," -1"," New York_ NY",1
+1," Millet_ Mr. Francis Davis"," male",65,0,0," 13509",26.5500," E38"," S"," -1"," 249"," East Bridgewater_ MA",0
+1," Minahan_ Dr. William Edward"," male",44,2,0," 19928",90.0000," C78"," Q"," -1"," 230"," Fond du Lac_ WI",0
+1," Minahan_ Miss. Daisy E"," female",33,1,0," 19928",90.0000," C78"," Q"," 14"," -1"," Green Bay_ WI",1
+1," Minahan_ Mrs. William Edward (Lillian E Thorpe)"," female",37,1,0," 19928",90.0000," C78"," Q"," 14"," -1"," Fond du Lac_ WI",1
+1," Mock_ Mr. Philipp Edmund"," male",30,1,0," 13236",57.7500," C78"," C"," 11"," -1"," New York_ NY",1
+1," Molson_ Mr. Harry Markland"," male",55,0,0," 113787",30.5000," C30"," S"," -1"," -1"," Montreal_ PQ",0
+1," Moore_ Mr. Clarence Bloomfield"," male",47,0,0," 113796",42.4000," -1"," S"," -1"," -1"," Washington_ DC",0
+1," Natsch_ Mr. Charles H"," male",37,0,1," PC 17596",29.7000," C118"," C"," -1"," -1"," Brooklyn_ NY",0
+1," Newell_ Miss. Madeleine"," female",31,1,0," 35273",113.2750," D36"," C"," 6"," -1"," Lexington_ MA",1
+1," Newell_ Miss. Marjorie"," female",23,1,0," 35273",113.2750," D36"," C"," 6"," -1"," Lexington_ MA",1
+1," Newell_ Mr. Arthur Webster"," male",58,0,2," 35273",113.2750," D48"," C"," -1"," 122"," Lexington_ MA",0
+1," Newsom_ Miss. Helen Monypeny"," female",19,0,2," 11752",26.2833," D47"," S"," 5"," -1"," New York_ NY",1
+1," Nicholson_ Mr. Arthur Ernest"," male",64,0,0," 693",26.0000," -1"," S"," -1"," 263"," Isle of Wight_ England",0
+1," Oliva y Ocana_ Dona. Fermina"," female",39,0,0," PC 17758",108.9000," C105"," C"," 8"," -1"," -1",1
+1," Omont_ Mr. Alfred Fernand"," male"," -1",0,0," F.C. 12998",25.7417," -1"," C"," 7"," -1"," Paris_ France",1
+1," Ostby_ Miss. Helene Ragnhild"," female",22,0,1," 113509",61.9792," B36"," C"," 5"," -1"," Providence_ RI",1
+1," Ostby_ Mr. Engelhart Cornelius"," male",65,0,1," 113509",61.9792," B30"," C"," -1"," 234"," Providence_ RI",0
+1," Ovies y Rodriguez_ Mr. Servando"," male",28.5,0,0," PC 17562",27.7208," D43"," C"," -1"," 189"," ?Havana_ Cuba",0
+1," Parr_ Mr. William Henry Marsh"," male"," -1",0,0," 112052",0.0000," -1"," S"," -1"," -1"," Belfast",0
+1," Partner_ Mr. Austen"," male",45.5,0,0," 113043",28.5000," C124"," S"," -1"," 166"," Surbiton Hill_ Surrey",0
+1," Payne_ Mr. Vivian Ponsonby"," male",23,0,0," 12749",93.5000," B24"," S"," -1"," -1"," Montreal_ PQ",0
+1," Pears_ Mr. Thomas Clinton"," male",29,1,0," 113776",66.6000," C2"," S"," -1"," -1"," Isleworth_ England",0
+1," Pears_ Mrs. Thomas (Edith Wearne)"," female",22,1,0," 113776",66.6000," C2"," S"," 8"," -1"," Isleworth_ England",1
+1," Penasco y Castellana_ Mr. Victor de Satode"," male",18,1,0," PC 17758",108.9000," C65"," C"," -1"," -1"," Madrid_ Spain",0
+1," Penasco y Castellana_ Mrs. Victor de Satode (Maria Josefa Perez de Soto y Vallejo)"," female",17,1,0," PC 17758",108.9000," C65"," C"," 8"," -1"," Madrid_ Spain",1
+1," Perreault_ Miss. Anne"," female",30,0,0," 12749",93.5000," B73"," S"," 3"," -1"," -1",1
+1," Peuchen_ Major. Arthur Godfrey"," male",52,0,0," 113786",30.5000," C104"," S"," 6"," -1"," Toronto_ ON",1
+1," Porter_ Mr. Walter Chamberlain"," male",47,0,0," 110465",52.0000," C110"," S"," -1"," 207"," Worcester_ MA",0
+1," Potter_ Mrs. Thomas Jr (Lily Alexenia Wilson)"," female",56,0,1," 11767",83.1583," C50"," C"," 7"," -1"," Mt Airy_ Philadelphia_ PA",1
+1," Reuchlin_ Jonkheer. John George"," male",38,0,0," 19972",0.0000," -1"," S"," -1"," -1"," Rotterdam_ Netherlands",0
+1," Rheims_ Mr. George Alexander Lucien"," male"," -1",0,0," PC 17607",39.6000," -1"," S"," A"," -1"," Paris /  New York_ NY",1
+1," Ringhini_ Mr. Sante"," male",22,0,0," PC 17760",135.6333," -1"," C"," -1"," 232"," -1",0
+1," Robbins_ Mr. Victor"," male"," -1",0,0," PC 17757",227.5250," -1"," C"," -1"," -1"," -1",0
+1," Robert_ Mrs. Edward Scott (Elisabeth Walton McMillan)"," female",43,0,1," 24160",211.3375," B3"," S"," 2"," -1"," St Louis_ MO",1
+1," Roebling_ Mr. Washington Augustus II"," male",31,0,0," PC 17590",50.4958," A24"," S"," -1"," -1"," Trenton_ NJ",0
+1," Romaine_ Mr. Charles Hallace (""Mr C Rolmane"")"," male",45,0,0," 111428",26.5500," -1"," S"," 9"," -1"," New York_ NY",1
+1," Rood_ Mr. Hugh Roscoe"," male"," -1",0,0," 113767",50.0000," A32"," S"," -1"," -1"," Seattle_ WA",0
+1," Rosenbaum_ Miss. Edith Louise"," female",33,0,0," PC 17613",27.7208," A11"," C"," 11"," -1"," Paris_ France",1
+1," Rosenshine_ Mr. George (""Mr George Thorne"")"," male",46,0,0," PC 17585",79.2000," -1"," C"," -1"," 16"," New York_ NY",0
+1," Ross_ Mr. John Hugo"," male",36,0,0," 13049",40.1250," A10"," C"," -1"," -1"," Winnipeg_ MB",0
+1," Rothes_ the Countess. of (Lucy Noel Martha Dyer-Edwards)"," female",33,0,0," 110152",86.5000," B77"," S"," 8"," -1"," London  Vancouver_ BC",1
+1," Rothschild_ Mr. Martin"," male",55,1,0," PC 17603",59.4000," -1"," C"," -1"," -1"," New York_ NY",0
+1," Rothschild_ Mrs. Martin (Elizabeth L. Barrett)"," female",54,1,0," PC 17603",59.4000," -1"," C"," 6"," -1"," New York_ NY",1
+1," Rowe_ Mr. Alfred G"," male",33,0,0," 113790",26.5500," -1"," S"," -1"," 109"," London",0
+1," Ryerson_ Master. John Borie"," male",13,2,2," PC 17608",262.3750," B57 B59 B63 B66"," C"," 4"," -1"," Haverford_ PA / Cooperstown_ NY",1
+1," Ryerson_ Miss. Emily Borie"," female",18,2,2," PC 17608",262.3750," B57 B59 B63 B66"," C"," 4"," -1"," Haverford_ PA / Cooperstown_ NY",1
+1," Ryerson_ Miss. Susan Parker ""Suzette"""," female",21,2,2," PC 17608",262.3750," B57 B59 B63 B66"," C"," 4"," -1"," Haverford_ PA / Cooperstown_ NY",1
+1," Ryerson_ Mr. Arthur Larned"," male",61,1,3," PC 17608",262.3750," B57 B59 B63 B66"," C"," -1"," -1"," Haverford_ PA / Cooperstown_ NY",0
+1," Ryerson_ Mrs. Arthur Larned (Emily Maria Borie)"," female",48,1,3," PC 17608",262.3750," B57 B59 B63 B66"," C"," 4"," -1"," Haverford_ PA / Cooperstown_ NY",1
+1," Saalfeld_ Mr. Adolphe"," male"," -1",0,0," 19988",30.5000," C106"," S"," 3"," -1"," Manchester_ England",1
+1," Sagesser_ Mlle. Emma"," female",24,0,0," PC 17477",69.3000," B35"," C"," 9"," -1"," -1",1
+1," Salomon_ Mr. Abraham L"," male"," -1",0,0," 111163",26.0000," -1"," S"," 1"," -1"," New York_ NY",1
+1," Schabert_ Mrs. Paul (Emma Mock)"," female",35,1,0," 13236",57.7500," C28"," C"," 11"," -1"," New York_ NY",1
+1," Serepeca_ Miss. Augusta"," female",30,0,0," 113798",31.0000," -1"," C"," 4"," -1"," -1",1
+1," Seward_ Mr. Frederic Kimber"," male",34,0,0," 113794",26.5500," -1"," S"," 7"," -1"," New York_ NY",1
+1," Shutes_ Miss. Elizabeth W"," female",40,0,0," PC 17582",153.4625," C125"," S"," 3"," -1"," New York_ NY / Greenwich CT",1
+1," Silverthorne_ Mr. Spencer Victor"," male",35,0,0," PC 17475",26.2875," E24"," S"," 5"," -1"," St Louis_ MO",1
+1," Silvey_ Mr. William Baird"," male",50,1,0," 13507",55.9000," E44"," S"," -1"," -1"," Duluth_ MN",0
+1," Silvey_ Mrs. William Baird (Alice Munger)"," female",39,1,0," 13507",55.9000," E44"," S"," 11"," -1"," Duluth_ MN",1
+1," Simonius-Blumer_ Col. Oberst Alfons"," male",56,0,0," 13213",35.5000," A26"," C"," 3"," -1"," Basel_ Switzerland",1
+1," Sloper_ Mr. William Thompson"," male",28,0,0," 113788",35.5000," A6"," S"," 7"," -1"," New Britain_ CT",1
+1," Smart_ Mr. John Montgomery"," male",56,0,0," 113792",26.5500," -1"," S"," -1"," -1"," New York_ NY",0
+1," Smith_ Mr. James Clinch"," male",56,0,0," 17764",30.6958," A7"," C"," -1"," -1"," St James_ Long Island_ NY",0
+1," Smith_ Mr. Lucien Philip"," male",24,1,0," 13695",60.0000," C31"," S"," -1"," -1"," Huntington_ WV",0
+1," Smith_ Mr. Richard William"," male"," -1",0,0," 113056",26.0000," A19"," S"," -1"," -1"," Streatham_ Surrey",0
+1," Smith_ Mrs. Lucien Philip (Mary Eloise Hughes)"," female",18,1,0," 13695",60.0000," C31"," S"," 6"," -1"," Huntington_ WV",1
+1," Snyder_ Mr. John Pillsbury"," male",24,1,0," 21228",82.2667," B45"," S"," 7"," -1"," Minneapolis_ MN",1
+1," Snyder_ Mrs. John Pillsbury (Nelle Stevenson)"," female",23,1,0," 21228",82.2667," B45"," S"," 7"," -1"," Minneapolis_ MN",1
+1," Spedden_ Master. Robert Douglas"," male",6,0,2," 16966",134.5000," E34"," C"," 3"," -1"," Tuxedo Park_ NY",1
+1," Spedden_ Mr. Frederic Oakley"," male",45,1,1," 16966",134.5000," E34"," C"," 3"," -1"," Tuxedo Park_ NY",1
+1," Spedden_ Mrs. Frederic Oakley (Margaretta Corning Stone)"," female",40,1,1," 16966",134.5000," E34"," C"," 3"," -1"," Tuxedo Park_ NY",1
+1," Spencer_ Mr. William Augustus"," male",57,1,0," PC 17569",146.5208," B78"," C"," -1"," -1"," Paris_ France",0
+1," Spencer_ Mrs. William Augustus (Marie Eugenie)"," female"," -1",1,0," PC 17569",146.5208," B78"," C"," 6"," -1"," Paris_ France",1
+1," Stahelin-Maeglin_ Dr. Max"," male",32,0,0," 13214",30.5000," B50"," C"," 3"," -1"," Basel_ Switzerland",1
+1," Stead_ Mr. William Thomas"," male",62,0,0," 113514",26.5500," C87"," S"," -1"," -1"," Wimbledon Park_ London / Hayling Island_ Hants",0
+1," Stengel_ Mr. Charles Emil Henry"," male",54,1,0," 11778",55.4417," C116"," C"," 1"," -1"," Newark_ NJ",1
+1," Stengel_ Mrs. Charles Emil Henry (Annie May Morris)"," female",43,1,0," 11778",55.4417," C116"," C"," 5"," -1"," Newark_ NJ",1
+1," Stephenson_ Mrs. Walter Bertram (Martha Eustis)"," female",52,1,0," 36947",78.2667," D20"," C"," 4"," -1"," Haverford_ PA",1
+1," Stewart_ Mr. Albert A"," male"," -1",0,0," PC 17605",27.7208," -1"," C"," -1"," -1"," Gallipolis_ Ohio / ? Paris / New York",0
+1," Stone_ Mrs. George Nelson (Martha Evelyn)"," female",62,0,0," 113572",80.0000," B28"," -1"," 6"," -1"," Cincinatti_ OH",1
+1," Straus_ Mr. Isidor"," male",67,1,0," PC 17483",221.7792," C55 C57"," S"," -1"," 96"," New York_ NY",0
+1," Straus_ Mrs. Isidor (Rosalie Ida Blun)"," female",63,1,0," PC 17483",221.7792," C55 C57"," S"," -1"," -1"," New York_ NY",0
+1," Sutton_ Mr. Frederick"," male",61,0,0," 36963",32.3208," D50"," S"," -1"," 46"," Haddenfield_ NJ",0
+1," Swift_ Mrs. Frederick Joel (Margaret Welles Barron)"," female",48,0,0," 17466",25.9292," D17"," S"," 8"," -1"," Brooklyn_ NY",1
+1," Taussig_ Miss. Ruth"," female",18,0,2," 110413",79.6500," E68"," S"," 8"," -1"," New York_ NY",1
+1," Taussig_ Mr. Emil"," male",52,1,1," 110413",79.6500," E67"," S"," -1"," -1"," New York_ NY",0
+1," Taussig_ Mrs. Emil (Tillie Mandelbaum)"," female",39,1,1," 110413",79.6500," E67"," S"," 8"," -1"," New York_ NY",1
+1," Taylor_ Mr. Elmer Zebley"," male",48,1,0," 19996",52.0000," C126"," S"," 5 7"," -1"," London /  East Orange_ NJ",1
+1," Taylor_ Mrs. Elmer Zebley (Juliet Cummins Wright)"," female"," -1",1,0," 19996",52.0000," C126"," S"," 5 7"," -1"," London /  East Orange_ NJ",1
+1," Thayer_ Mr. John Borland"," male",49,1,1," 17421",110.8833," C68"," C"," -1"," -1"," Haverford_ PA",0
+1," Thayer_ Mr. John Borland Jr"," male",17,0,2," 17421",110.8833," C70"," C"," B"," -1"," Haverford_ PA",1
+1," Thayer_ Mrs. John Borland (Marian Longstreth Morris)"," female",39,1,1," 17421",110.8833," C68"," C"," 4"," -1"," Haverford_ PA",1
+1," Thorne_ Mrs. Gertrude Maybelle"," female"," -1",0,0," PC 17585",79.2000," -1"," C"," D"," -1"," New York_ NY",1
+1," Tucker_ Mr. Gilbert Milligan Jr"," male",31,0,0," 2543",28.5375," C53"," C"," 7"," -1"," Albany_ NY",1
+1," Uruchurtu_ Don. Manuel E"," male",40,0,0," PC 17601",27.7208," -1"," C"," -1"," -1"," Mexico City_ Mexico",0
+1," Van der hoef_ Mr. Wyckoff"," male",61,0,0," 111240",33.5000," B19"," S"," -1"," 245"," Brooklyn_ NY",0
+1," Walker_ Mr. William Anderson"," male",47,0,0," 36967",34.0208," D46"," S"," -1"," -1"," East Orange_ NJ",0
+1," Ward_ Miss. Anna"," female",35,0,0," PC 17755",512.3292," -1"," C"," 3"," -1"," -1",1
+1," Warren_ Mr. Frank Manley"," male",64,1,0," 110813",75.2500," D37"," C"," -1"," -1"," Portland_ OR",0
+1," Warren_ Mrs. Frank Manley (Anna Sophia Atkinson)"," female",60,1,0," 110813",75.2500," D37"," C"," 5"," -1"," Portland_ OR",1
+1," Weir_ Col. John"," male",60,0,0," 113800",26.5500," -1"," S"," -1"," -1"," England Salt Lake City_ Utah",0
+1," White_ Mr. Percival Wayland"," male",54,0,1," 35281",77.2875," D26"," S"," -1"," -1"," Brunswick_ ME",0
+1," White_ Mr. Richard Frasar"," male",21,0,1," 35281",77.2875," D26"," S"," -1"," 169"," Brunswick_ ME",0
+1," White_ Mrs. John Stuart (Ella Holmes)"," female",55,0,0," PC 17760",135.6333," C32"," C"," 8"," -1"," New York_ NY / Briarcliff Manor NY",1
+1," Wick_ Miss. Mary Natalie"," female",31,0,2," 36928",164.8667," C7"," S"," 8"," -1"," Youngstown_ OH",1
+1," Wick_ Mr. George Dennick"," male",57,1,1," 36928",164.8667," -1"," S"," -1"," -1"," Youngstown_ OH",0
+1," Wick_ Mrs. George Dennick (Mary Hitchcock)"," female",45,1,1," 36928",164.8667," -1"," S"," 8"," -1"," Youngstown_ OH",1
+1," Widener_ Mr. George Dunton"," male",50,1,1," 113503",211.5000," C80"," C"," -1"," -1"," Elkins Park_ PA",0
+1," Widener_ Mr. Harry Elkins"," male",27,0,2," 113503",211.5000," C82"," C"," -1"," -1"," Elkins Park_ PA",0
+1," Widener_ Mrs. George Dunton (Eleanor Elkins)"," female",50,1,1," 113503",211.5000," C80"," C"," 4"," -1"," Elkins Park_ PA",1
+1," Willard_ Miss. Constance"," female",21,0,0," 113795",26.5500," -1"," S"," 8 10"," -1"," Duluth_ MN",1
+1," Williams_ Mr. Charles Duane"," male",51,0,1," PC 17597",61.3792," -1"," C"," -1"," -1"," Geneva_ Switzerland / Radnor_ PA",0
+1," Williams_ Mr. Richard Norris II"," male",21,0,1," PC 17597",61.3792," -1"," C"," A"," -1"," Geneva_ Switzerland / Radnor_ PA",1
+1," Williams-Lambert_ Mr. Fletcher Fellows"," male"," -1",0,0," 113510",35.0000," C128"," S"," -1"," -1"," London_ England",0
+1," Wilson_ Miss. Helen Alice"," female",31,0,0," 16966",134.5000," E39 E41"," C"," 3"," -1"," -1",1
+1," Woolner_ Mr. Hugh"," male"," -1",0,0," 19947",35.5000," C52"," S"," D"," -1"," London_ England",1
+1," Wright_ Mr. George"," male",62,0,0," 113807",26.5500," -1"," S"," -1"," -1"," Halifax_ NS",0
+1," Young_ Miss. Marie Grice"," female",36,0,0," PC 17760",135.6333," C32"," C"," 8"," -1"," New York_ NY / Washington_ DC",1
+2," Abelson_ Mr. Samuel"," male",30,1,0," P/PP 3381",24.0000," -1"," C"," -1"," -1"," Russia New York_ NY",0
+2," Abelson_ Mrs. Samuel (Hannah Wizosky)"," female",28,1,0," P/PP 3381",24.0000," -1"," C"," 10"," -1"," Russia New York_ NY",1
+2," Aldworth_ Mr. Charles Augustus"," male",30,0,0," 248744",13.0000," -1"," S"," -1"," -1"," Bryn Mawr_ PA_ USA",0
+2," Andrew_ Mr. Edgardo Samuel"," male",18,0,0," 231945",11.5000," -1"," S"," -1"," -1"," Buenos Aires_ Argentina / New Jersey_ NJ",0
+2," Andrew_ Mr. Frank Thomas"," male",25,0,0," C.A. 34050",10.5000," -1"," S"," -1"," -1"," Cornwall_ England Houghton_ MI",0
+2," Angle_ Mr. William A"," male",34,1,0," 226875",26.0000," -1"," S"," -1"," -1"," Warwick_ England",0
+2," Angle_ Mrs. William A (Florence ""Mary"" Agnes Hughes)"," female",36,1,0," 226875",26.0000," -1"," S"," 11"," -1"," Warwick_ England",1
+2," Ashby_ Mr. John"," male",57,0,0," 244346",13.0000," -1"," S"," -1"," -1"," West Hoboken_ NJ",0
+2," Bailey_ Mr. Percy Andrew"," male",18,0,0," 29108",11.5000," -1"," S"," -1"," -1"," Penzance_ Cornwall / Akron_ OH",0
+2," Baimbrigge_ Mr. Charles Robert"," male",23,0,0," C.A. 31030",10.5000," -1"," S"," -1"," -1"," Guernsey",0
+2," Ball_ Mrs. (Ada E Hall)"," female",36,0,0," 28551",13.0000," D"," S"," 10"," -1"," Bristol_ Avon / Jacksonville_ FL",1
+2," Banfield_ Mr. Frederick James"," male",28,0,0," C.A./SOTON 34068",10.5000," -1"," S"," -1"," -1"," Plymouth_ Dorset / Houghton_ MI",0
+2," Bateman_ Rev. Robert James"," male",51,0,0," S.O.P. 1166",12.5250," -1"," S"," -1"," 174"," Jacksonville_ FL",0
+2," Beane_ Mr. Edward"," male",32,1,0," 2908",26.0000," -1"," S"," 13"," -1"," Norwich / New York_ NY",1
+2," Beane_ Mrs. Edward (Ethel Clarke)"," female",19,1,0," 2908",26.0000," -1"," S"," 13"," -1"," Norwich / New York_ NY",1
+2," Beauchamp_ Mr. Henry James"," male",28,0,0," 244358",26.0000," -1"," S"," -1"," -1"," England",0
+2," Becker_ Master. Richard F"," male",1,2,1," 230136",39.0000," F4"," S"," 11"," -1"," Guntur_ India / Benton Harbour_ MI",1
+2," Becker_ Miss. Marion Louise"," female",4,2,1," 230136",39.0000," F4"," S"," 11"," -1"," Guntur_ India / Benton Harbour_ MI",1
+2," Becker_ Miss. Ruth Elizabeth"," female",12,2,1," 230136",39.0000," F4"," S"," 13"," -1"," Guntur_ India / Benton Harbour_ MI",1
+2," Becker_ Mrs. Allen Oliver (Nellie E Baumgardner)"," female",36,0,3," 230136",39.0000," F4"," S"," 11"," -1"," Guntur_ India / Benton Harbour_ MI",1
+2," Beesley_ Mr. Lawrence"," male",34,0,0," 248698",13.0000," D56"," S"," 13"," -1"," London",1
+2," Bentham_ Miss. Lilian W"," female",19,0,0," 28404",13.0000," -1"," S"," 12"," -1"," Rochester_ NY",1
+2," Berriman_ Mr. William John"," male",23,0,0," 28425",13.0000," -1"," S"," -1"," -1"," St Ives_ Cornwall / Calumet_ MI",0
+2," Botsford_ Mr. William Hull"," male",26,0,0," 237670",13.0000," -1"," S"," -1"," -1"," Elmira_ NY / Orange_ NJ",0
+2," Bowenur_ Mr. Solomon"," male",42,0,0," 211535",13.0000," -1"," S"," -1"," -1"," London",0
+2," Bracken_ Mr. James H"," male",27,0,0," 220367",13.0000," -1"," S"," -1"," -1"," Lake Arthur_ Chavez County_ NM",0
+2," Brown_ Miss. Amelia ""Mildred"""," female",24,0,0," 248733",13.0000," F33"," S"," 11"," -1"," London / Montreal_ PQ",1
+2," Brown_ Miss. Edith Eileen"," female",15,0,2," 29750",39.0000," -1"," S"," 14"," -1"," Cape Town_ South Africa / Seattle_ WA",1
+2," Brown_ Mr. Thomas William Solomon"," male",60,1,1," 29750",39.0000," -1"," S"," -1"," -1"," Cape Town_ South Africa / Seattle_ WA",0
+2," Brown_ Mrs. Thomas William Solomon (Elizabeth Catherine Ford)"," female",40,1,1," 29750",39.0000," -1"," S"," 14"," -1"," Cape Town_ South Africa / Seattle_ WA",1
+2," Bryhl_ Miss. Dagmar Jenny Ingeborg "," female",20,1,0," 236853",26.0000," -1"," S"," 12"," -1"," Skara_ Sweden / Rockford_ IL",1
+2," Bryhl_ Mr. Kurt Arnold Gottfrid"," male",25,1,0," 236853",26.0000," -1"," S"," -1"," -1"," Skara_ Sweden / Rockford_ IL",0
+2," Buss_ Miss. Kate"," female",36,0,0," 27849",13.0000," -1"," S"," 9"," -1"," Sittingbourne_ England / San Diego_ CA",1
+2," Butler_ Mr. Reginald Fenton"," male",25,0,0," 234686",13.0000," -1"," S"," -1"," 97"," Southsea_ Hants",0
+2," Byles_ Rev. Thomas Roussel Davids"," male",42,0,0," 244310",13.0000," -1"," S"," -1"," -1"," London",0
+2," Bystrom_ Mrs. (Karolina)"," female",42,0,0," 236852",13.0000," -1"," S"," -1"," -1"," New York_ NY",1
+2," Caldwell_ Master. Alden Gates"," male",0.83,0,2," 248738",29.0000," -1"," S"," 13"," -1"," Bangkok_ Thailand / Roseville_ IL",1
+2," Caldwell_ Mr. Albert Francis"," male",26,1,1," 248738",29.0000," -1"," S"," 13"," -1"," Bangkok_ Thailand / Roseville_ IL",1
+2," Caldwell_ Mrs. Albert Francis (Sylvia Mae Harbaugh)"," female",22,1,1," 248738",29.0000," -1"," S"," 13"," -1"," Bangkok_ Thailand / Roseville_ IL",1
+2," Cameron_ Miss. Clear Annie"," female",35,0,0," F.C.C. 13528",21.0000," -1"," S"," 14"," -1"," Mamaroneck_ NY",1
+2," Campbell_ Mr. William"," male"," -1",0,0," 239853",0.0000," -1"," S"," -1"," -1"," Belfast",0
+2," Carbines_ Mr. William"," male",19,0,0," 28424",13.0000," -1"," S"," -1"," 18"," St Ives_ Cornwall / Calumet_ MI",0
+2," Carter_ Mrs. Ernest Courtenay (Lilian Hughes)"," female",44,1,0," 244252",26.0000," -1"," S"," -1"," -1"," London",0
+2," Carter_ Rev. Ernest Courtenay"," male",54,1,0," 244252",26.0000," -1"," S"," -1"," -1"," London",0
+2," Chapman_ Mr. Charles Henry"," male",52,0,0," 248731",13.5000," -1"," S"," -1"," 130"," Bronx_ NY",0
+2," Chapman_ Mr. John Henry"," male",37,1,0," SC/AH 29037",26.0000," -1"," S"," -1"," 17"," Cornwall / Spokane_ WA",0
+2," Chapman_ Mrs. John Henry (Sara Elizabeth Lawry)"," female",29,1,0," SC/AH 29037",26.0000," -1"," S"," -1"," -1"," Cornwall / Spokane_ WA",0
+2," Christy_ Miss. Julie Rachel"," female",25,1,1," 237789",30.0000," -1"," S"," 12"," -1"," London",1
+2," Christy_ Mrs. (Alice Frances)"," female",45,0,2," 237789",30.0000," -1"," S"," 12"," -1"," London",1
+2," Clarke_ Mr. Charles Valentine"," male",29,1,0," 2003",26.0000," -1"," S"," -1"," -1"," England / San Francisco_ CA",0
+2," Clarke_ Mrs. Charles V (Ada Maria Winfield)"," female",28,1,0," 2003",26.0000," -1"," S"," 14"," -1"," England / San Francisco_ CA",1
+2," Coleridge_ Mr. Reginald Charles"," male",29,0,0," W./C. 14263",10.5000," -1"," S"," -1"," -1"," Hartford_ Huntingdonshire",0
+2," Collander_ Mr. Erik Gustaf"," male",28,0,0," 248740",13.0000," -1"," S"," -1"," -1"," Helsinki_ Finland Ashtabula_ Ohio",0
+2," Collett_ Mr. Sidney C Stuart"," male",24,0,0," 28034",10.5000," -1"," S"," 9"," -1"," London / Fort Byron_ NY",1
+2," Collyer_ Miss. Marjorie ""Lottie"""," female",8,0,2," C.A. 31921",26.2500," -1"," S"," 14"," -1"," Bishopstoke_ Hants / Fayette Valley_ ID",1
+2," Collyer_ Mr. Harvey"," male",31,1,1," C.A. 31921",26.2500," -1"," S"," -1"," -1"," Bishopstoke_ Hants / Fayette Valley_ ID",0
+2," Collyer_ Mrs. Harvey (Charlotte Annie Tate)"," female",31,1,1," C.A. 31921",26.2500," -1"," S"," 14"," -1"," Bishopstoke_ Hants / Fayette Valley_ ID",1
+2," Cook_ Mrs. (Selena Rogers)"," female",22,0,0," W./C. 14266",10.5000," F33"," S"," 14"," -1"," Pennsylvania",1
+2," Corbett_ Mrs. Walter H (Irene Colvin)"," female",30,0,0," 237249",13.0000," -1"," S"," -1"," -1"," Provo_ UT",0
+2," Corey_ Mrs. Percy C (Mary Phyllis Elizabeth Miller)"," female"," -1",0,0," F.C.C. 13534",21.0000," -1"," S"," -1"," -1"," Upper Burma_ India Pittsburgh_ PA",0
+2," Cotterill_ Mr. Henry ""Harry"""," male",21,0,0," 29107",11.5000," -1"," S"," -1"," -1"," Penzance_ Cornwall / Akron_ OH",0
+2," Cunningham_ Mr. Alfred Fleming"," male"," -1",0,0," 239853",0.0000," -1"," S"," -1"," -1"," Belfast",0
+2," Davies_ Master. John Morgan Jr"," male",8,1,1," C.A. 33112",36.7500," -1"," S"," 14"," -1"," St Ives_ Cornwall / Hancock_ MI",1
+2," Davies_ Mr. Charles Henry"," male",18,0,0," S.O.C. 14879",73.5000," -1"," S"," -1"," -1"," Lyndhurst_ England",0
+2," Davies_ Mrs. John Morgan (Elizabeth Agnes Mary White) "," female",48,0,2," C.A. 33112",36.7500," -1"," S"," 14"," -1"," St Ives_ Cornwall / Hancock_ MI",1
+2," Davis_ Miss. Mary"," female",28,0,0," 237668",13.0000," -1"," S"," 13"," -1"," London / Staten Island_ NY",1
+2," de Brito_ Mr. Jose Joaquim"," male",32,0,0," 244360",13.0000," -1"," S"," -1"," -1"," Portugal / Sau Paulo_ Brazil",0
+2," Deacon_ Mr. Percy William"," male",17,0,0," S.O.C. 14879",73.5000," -1"," S"," -1"," -1"," -1",0
+2," del Carlo_ Mr. Sebastiano"," male",29,1,0," SC/PARIS 2167",27.7208," -1"," C"," -1"," 295"," Lucca_ Italy / California",0
+2," del Carlo_ Mrs. Sebastiano (Argenia Genovesi)"," female",24,1,0," SC/PARIS 2167",27.7208," -1"," C"," 12"," -1"," Lucca_ Italy / California",1
+2," Denbury_ Mr. Herbert"," male",25,0,0," C.A. 31029",31.5000," -1"," S"," -1"," -1"," Guernsey / Elizabeth_ NJ",0
+2," Dibden_ Mr. William"," male",18,0,0," S.O.C. 14879",73.5000," -1"," S"," -1"," -1"," New Forest_ England",0
+2," Doling_ Miss. Elsie"," female",18,0,1," 231919",23.0000," -1"," S"," -1"," -1"," Southampton",1
+2," Doling_ Mrs. John T (Ada Julia Bone)"," female",34,0,1," 231919",23.0000," -1"," S"," -1"," -1"," Southampton",1
+2," Downton_ Mr. William James"," male",54,0,0," 28403",26.0000," -1"," S"," -1"," -1"," Holley_ NY",0
+2," Drew_ Master. Marshall Brines"," male",8,0,2," 28220",32.5000," -1"," S"," 10"," -1"," Greenport_ NY",1
+2," Drew_ Mr. James Vivian"," male",42,1,1," 28220",32.5000," -1"," S"," -1"," -1"," Greenport_ NY",0
+2," Drew_ Mrs. James Vivian (Lulu Thorne Christian)"," female",34,1,1," 28220",32.5000," -1"," S"," 10"," -1"," Greenport_ NY",1
+2," Duran y More_ Miss. Asuncion"," female",27,1,0," SC/PARIS 2149",13.8583," -1"," C"," 12"," -1"," Barcelona_ Spain / Havana_ Cuba",1
+2," Duran y More_ Miss. Florentina"," female",30,1,0," SC/PARIS 2148",13.8583," -1"," C"," 12"," -1"," Barcelona_ Spain / Havana_ Cuba",1
+2," Eitemiller_ Mr. George Floyd"," male",23,0,0," 29751",13.0000," -1"," S"," -1"," -1"," England / Detroit_ MI",0
+2," Enander_ Mr. Ingvar"," male",21,0,0," 236854",13.0000," -1"," S"," -1"," -1"," Goteborg_ Sweden / Rockford_ IL",0
+2," Fahlstrom_ Mr. Arne Jonas"," male",18,0,0," 236171",13.0000," -1"," S"," -1"," -1"," Oslo_ Norway Bayonne_ NJ",0
+2," Faunthorpe_ Mr. Harry"," male",40,1,0," 2926",26.0000," -1"," S"," -1"," 286"," England / Philadelphia_ PA",0
+2," Faunthorpe_ Mrs. Lizzie (Elizabeth Anne Wilkinson)"," female",29,1,0," 2926",26.0000," -1"," S"," 16"," -1"," -1",1
+2," Fillbrook_ Mr. Joseph Charles"," male",18,0,0," C.A. 15185",10.5000," -1"," S"," -1"," -1"," Cornwall / Houghton_ MI",0
+2," Fox_ Mr. Stanley Hubert"," male",36,0,0," 229236",13.0000," -1"," S"," -1"," 236"," Rochester_ NY",0
+2," Frost_ Mr. Anthony Wood ""Archie"""," male"," -1",0,0," 239854",0.0000," -1"," S"," -1"," -1"," Belfast",0
+2," Funk_ Miss. Annie Clemmer"," female",38,0,0," 237671",13.0000," -1"," S"," -1"," -1"," Janjgir_ India / Pennsylvania",0
+2," Fynney_ Mr. Joseph J"," male",35,0,0," 239865",26.0000," -1"," S"," -1"," 322"," Liverpool / Montreal_ PQ",0
+2," Gale_ Mr. Harry"," male",38,1,0," 28664",21.0000," -1"," S"," -1"," -1"," Cornwall / Clear Creek_ CO",0
+2," Gale_ Mr. Shadrach"," male",34,1,0," 28664",21.0000," -1"," S"," -1"," -1"," Cornwall / Clear Creek_ CO",0
+2," Garside_ Miss. Ethel"," female",34,0,0," 243880",13.0000," -1"," S"," 12"," -1"," Brooklyn_ NY",1
+2," Gaskell_ Mr. Alfred"," male",16,0,0," 239865",26.0000," -1"," S"," -1"," -1"," Liverpool / Montreal_ PQ",0
+2," Gavey_ Mr. Lawrence"," male",26,0,0," 31028",10.5000," -1"," S"," -1"," -1"," Guernsey / Elizabeth_ NJ",0
+2," Gilbert_ Mr. William"," male",47,0,0," C.A. 30769",10.5000," -1"," S"," -1"," -1"," Cornwall",0
+2," Giles_ Mr. Edgar"," male",21,1,0," 28133",11.5000," -1"," S"," -1"," -1"," Cornwall / Camden_ NJ",0
+2," Giles_ Mr. Frederick Edward"," male",21,1,0," 28134",11.5000," -1"," S"," -1"," -1"," Cornwall / Camden_ NJ",0
+2," Giles_ Mr. Ralph"," male",24,0,0," 248726",13.5000," -1"," S"," -1"," 297"," West Kensington_ London",0
+2," Gill_ Mr. John William"," male",24,0,0," 233866",13.0000," -1"," S"," -1"," 155"," Clevedon_ England",0
+2," Gillespie_ Mr. William Henry"," male",34,0,0," 12233",13.0000," -1"," S"," -1"," -1"," Vancouver_ BC",0
+2," Givard_ Mr. Hans Kristensen"," male",30,0,0," 250646",13.0000," -1"," S"," -1"," 305"," -1",0
+2," Greenberg_ Mr. Samuel"," male",52,0,0," 250647",13.0000," -1"," S"," -1"," 19"," Bronx_ NY",0
+2," Hale_ Mr. Reginald"," male",30,0,0," 250653",13.0000," -1"," S"," -1"," 75"," Auburn_ NY",0
+2," Hamalainen_ Master. Viljo"," male",0.67,1,1," 250649",14.5000," -1"," S"," 4"," -1"," Detroit_ MI",1
+2," Hamalainen_ Mrs. William (Anna)"," female",24,0,2," 250649",14.5000," -1"," S"," 4"," -1"," Detroit_ MI",1
+2," Harbeck_ Mr. William H"," male",44,0,0," 248746",13.0000," -1"," S"," -1"," 35"," Seattle_ WA / Toledo_ OH",0
+2," Harper_ Miss. Annie Jessie ""Nina"""," female",6,0,1," 248727",33.0000," -1"," S"," 11"," -1"," Denmark Hill_ Surrey / Chicago",1
+2," Harper_ Rev. John"," male",28,0,1," 248727",33.0000," -1"," S"," -1"," -1"," Denmark Hill_ Surrey / Chicago",0
+2," Harris_ Mr. George"," male",62,0,0," S.W./PP 752",10.5000," -1"," S"," 15"," -1"," London",1
+2," Harris_ Mr. Walter"," male",30,0,0," W/C 14208",10.5000," -1"," S"," -1"," -1"," Walthamstow_ England",0
+2," Hart_ Miss. Eva Miriam"," female",7,0,2," F.C.C. 13529",26.2500," -1"," S"," 14"," -1"," Ilford_ Essex / Winnipeg_ MB",1
+2," Hart_ Mr. Benjamin"," male",43,1,1," F.C.C. 13529",26.2500," -1"," S"," -1"," -1"," Ilford_ Essex / Winnipeg_ MB",0
+2," Hart_ Mrs. Benjamin (Esther Ada Bloomfield)"," female",45,1,1," F.C.C. 13529",26.2500," -1"," S"," 14"," -1"," Ilford_ Essex / Winnipeg_ MB",1
+2," Herman_ Miss. Alice"," female",24,1,2," 220845",65.0000," -1"," S"," 9"," -1"," Somerset / Bernardsville_ NJ",1
+2," Herman_ Miss. Kate"," female",24,1,2," 220845",65.0000," -1"," S"," 9"," -1"," Somerset / Bernardsville_ NJ",1
+2," Herman_ Mr. Samuel"," male",49,1,2," 220845",65.0000," -1"," S"," -1"," -1"," Somerset / Bernardsville_ NJ",0
+2," Herman_ Mrs. Samuel (Jane Laver)"," female",48,1,2," 220845",65.0000," -1"," S"," 9"," -1"," Somerset / Bernardsville_ NJ",1
+2," Hewlett_ Mrs. (Mary D Kingcome) "," female",55,0,0," 248706",16.0000," -1"," S"," 13"," -1"," India / Rapid City_ SD",1
+2," Hickman_ Mr. Leonard Mark"," male",24,2,0," S.O.C. 14879",73.5000," -1"," S"," -1"," -1"," West Hampstead_ London / Neepawa_ MB",0
+2," Hickman_ Mr. Lewis"," male",32,2,0," S.O.C. 14879",73.5000," -1"," S"," -1"," 256"," West Hampstead_ London / Neepawa_ MB",0
+2," Hickman_ Mr. Stanley George"," male",21,2,0," S.O.C. 14879",73.5000," -1"," S"," -1"," -1"," West Hampstead_ London / Neepawa_ MB",0
+2," Hiltunen_ Miss. Marta"," female",18,1,1," 250650",13.0000," -1"," S"," -1"," -1"," Kontiolahti_ Finland / Detroit_ MI",0
+2," Hocking_ Miss. Ellen ""Nellie"""," female",20,2,1," 29105",23.0000," -1"," S"," 4"," -1"," Cornwall / Akron_ OH",1
+2," Hocking_ Mr. Richard George"," male",23,2,1," 29104",11.5000," -1"," S"," -1"," -1"," Cornwall / Akron_ OH",0
+2," Hocking_ Mr. Samuel James Metcalfe"," male",36,0,0," 242963",13.0000," -1"," S"," -1"," -1"," Devonport_ England",0
+2," Hocking_ Mrs. Elizabeth (Eliza Needs)"," female",54,1,3," 29105",23.0000," -1"," S"," 4"," -1"," Cornwall / Akron_ OH",1
+2," Hodges_ Mr. Henry Price"," male",50,0,0," 250643",13.0000," -1"," S"," -1"," 149"," Southampton",0
+2," Hold_ Mr. Stephen"," male",44,1,0," 26707",26.0000," -1"," S"," -1"," -1"," England / Sacramento_ CA",0
+2," Hold_ Mrs. Stephen (Annie Margaret Hill)"," female",29,1,0," 26707",26.0000," -1"," S"," 10"," -1"," England / Sacramento_ CA",1
+2," Hood_ Mr. Ambrose Jr"," male",21,0,0," S.O.C. 14879",73.5000," -1"," S"," -1"," -1"," New Forest_ England",0
+2," Hosono_ Mr. Masabumi"," male",42,0,0," 237798",13.0000," -1"," S"," 10"," -1"," Tokyo_ Japan",1
+2," Howard_ Mr. Benjamin"," male",63,1,0," 24065",26.0000," -1"," S"," -1"," -1"," Swindon_ England",0
+2," Howard_ Mrs. Benjamin (Ellen Truelove Arman)"," female",60,1,0," 24065",26.0000," -1"," S"," -1"," -1"," Swindon_ England",0
+2," Hunt_ Mr. George Henry"," male",33,0,0," SCO/W 1585",12.2750," -1"," S"," -1"," -1"," Philadelphia_ PA",0
+2," Ilett_ Miss. Bertha"," female",17,0,0," SO/C 14885",10.5000," -1"," S"," -1"," -1"," Guernsey",1
+2," Jacobsohn_ Mr. Sidney Samuel"," male",42,1,0," 243847",27.0000," -1"," S"," -1"," -1"," London",0
+2," Jacobsohn_ Mrs. Sidney Samuel (Amy Frances Christy)"," female",24,2,1," 243847",27.0000," -1"," S"," 12"," -1"," London",1
+2," Jarvis_ Mr. John Denzil"," male",47,0,0," 237565",15.0000," -1"," S"," -1"," -1"," North Evington_ England",0
+2," Jefferys_ Mr. Clifford Thomas"," male",24,2,0," C.A. 31029",31.5000," -1"," S"," -1"," -1"," Guernsey / Elizabeth_ NJ",0
+2," Jefferys_ Mr. Ernest Wilfred"," male",22,2,0," C.A. 31029",31.5000," -1"," S"," -1"," -1"," Guernsey / Elizabeth_ NJ",0
+2," Jenkin_ Mr. Stephen Curnow"," male",32,0,0," C.A. 33111",10.5000," -1"," S"," -1"," -1"," St Ives_ Cornwall / Houghton_ MI",0
+2," Jerwan_ Mrs. Amin S (Marie Marthe Thuillard)"," female",23,0,0," SC/AH Basle 541",13.7917," D"," C"," 11"," -1"," New York_ NY",1
+2," Kantor_ Mr. Sinai"," male",34,1,0," 244367",26.0000," -1"," S"," -1"," 283"," Moscow / Bronx_ NY",0
+2," Kantor_ Mrs. Sinai (Miriam Sternin)"," female",24,1,0," 244367",26.0000," -1"," S"," 12"," -1"," Moscow / Bronx_ NY",1
+2," Karnes_ Mrs. J Frank (Claire Bennett)"," female",22,0,0," F.C.C. 13534",21.0000," -1"," S"," -1"," -1"," India / Pittsburgh_ PA",0
+2," Keane_ Miss. Nora A"," female"," -1",0,0," 226593",12.3500," E101"," Q"," 10"," -1"," Harrisburg_ PA",1
+2," Keane_ Mr. Daniel"," male",35,0,0," 233734",12.3500," -1"," Q"," -1"," -1"," -1",0
+2," Kelly_ Mrs. Florence ""Fannie"""," female",45,0,0," 223596",13.5000," -1"," S"," 9"," -1"," London / New York_ NY",1
+2," Kirkland_ Rev. Charles Leonard"," male",57,0,0," 219533",12.3500," -1"," Q"," -1"," -1"," Glasgow / Bangor_ ME",0
+2," Knight_ Mr. Robert J"," male"," -1",0,0," 239855",0.0000," -1"," S"," -1"," -1"," Belfast",0
+2," Kvillner_ Mr. Johan Henrik Johannesson"," male",31,0,0," C.A. 18723",10.5000," -1"," S"," -1"," 165"," Sweden / Arlington_ NJ",0
+2," Lahtinen_ Mrs. William (Anna Sylfven)"," female",26,1,1," 250651",26.0000," -1"," S"," -1"," -1"," Minneapolis_ MN",0
+2," Lahtinen_ Rev. William"," male",30,1,1," 250651",26.0000," -1"," S"," -1"," -1"," Minneapolis_ MN",0
+2," Lamb_ Mr. John Joseph"," male"," -1",0,0," 240261",10.7083," -1"," Q"," -1"," -1"," -1",0
+2," Laroche_ Miss. Louise"," female",1,1,2," SC/Paris 2123",41.5792," -1"," C"," 14"," -1"," Paris / Haiti",1
+2," Laroche_ Miss. Simonne Marie Anne Andree"," female",3,1,2," SC/Paris 2123",41.5792," -1"," C"," 14"," -1"," Paris / Haiti",1
+2," Laroche_ Mr. Joseph Philippe Lemercier"," male",25,1,2," SC/Paris 2123",41.5792," -1"," C"," -1"," -1"," Paris / Haiti",0
+2," Laroche_ Mrs. Joseph (Juliette Marie Louise Lafargue)"," female",22,1,2," SC/Paris 2123",41.5792," -1"," C"," 14"," -1"," Paris / Haiti",1
+2," Lehmann_ Miss. Bertha"," female",17,0,0," SC 1748",12.0000," -1"," C"," 12"," -1"," Berne_ Switzerland / Central City_ IA",1
+2," Leitch_ Miss. Jessie Wills"," female"," -1",0,0," 248727",33.0000," -1"," S"," 11"," -1"," London / Chicago_ IL",1
+2," Lemore_ Mrs. (Amelia Milley)"," female",34,0,0," C.A. 34260",10.5000," F33"," S"," 14"," -1"," Chicago_ IL",1
+2," Levy_ Mr. Rene Jacques"," male",36,0,0," SC/Paris 2163",12.8750," D"," C"," -1"," -1"," Montreal_ PQ",0
+2," Leyson_ Mr. Robert William Norman"," male",24,0,0," C.A. 29566",10.5000," -1"," S"," -1"," 108"," -1",0
+2," Lingane_ Mr. John"," male",61,0,0," 235509",12.3500," -1"," Q"," -1"," -1"," -1",0
+2," Louch_ Mr. Charles Alexander"," male",50,1,0," SC/AH 3085",26.0000," -1"," S"," -1"," 121"," Weston-Super-Mare_ Somerset",0
+2," Louch_ Mrs. Charles Alexander (Alice Adelaide Slow)"," female",42,1,0," SC/AH 3085",26.0000," -1"," S"," -1"," -1"," Weston-Super-Mare_ Somerset",1
+2," Mack_ Mrs. (Mary)"," female",57,0,0," S.O./P.P. 3",10.5000," E77"," S"," -1"," 52"," Southampton / New York_ NY",0
+2," Malachard_ Mr. Noel"," male"," -1",0,0," 237735",15.0458," D"," C"," -1"," -1"," Paris",0
+2," Mallet_ Master. Andre"," male",1,0,2," S.C./PARIS 2079",37.0042," -1"," C"," 10"," -1"," Paris / Montreal_ PQ",1
+2," Mallet_ Mr. Albert"," male",31,1,1," S.C./PARIS 2079",37.0042," -1"," C"," -1"," -1"," Paris / Montreal_ PQ",0
+2," Mallet_ Mrs. Albert (Antoinette Magnin)"," female",24,1,1," S.C./PARIS 2079",37.0042," -1"," C"," 10"," -1"," Paris / Montreal_ PQ",1
+2," Mangiavacchi_ Mr. Serafino Emilio"," male"," -1",0,0," SC/A.3 2861",15.5792," -1"," C"," -1"," -1"," New York_ NY",0
+2," Matthews_ Mr. William John"," male",30,0,0," 28228",13.0000," -1"," S"," -1"," -1"," St Austall_ Cornwall",0
+2," Maybery_ Mr. Frank Hubert"," male",40,0,0," 239059",16.0000," -1"," S"," -1"," -1"," Weston-Super-Mare / Moose Jaw_ SK",0
+2," McCrae_ Mr. Arthur Gordon"," male",32,0,0," 237216",13.5000," -1"," S"," -1"," 209"," Sydney_ Australia",0
+2," McCrie_ Mr. James Matthew"," male",30,0,0," 233478",13.0000," -1"," S"," -1"," -1"," Sarnia_ ON",0
+2," McKane_ Mr. Peter David"," male",46,0,0," 28403",26.0000," -1"," S"," -1"," -1"," Rochester_ NY",0
+2," Mellinger_ Miss. Madeleine Violet"," female",13,0,1," 250644",19.5000," -1"," S"," 14"," -1"," England / Bennington_ VT",1
+2," Mellinger_ Mrs. (Elizabeth Anne Maidment)"," female",41,0,1," 250644",19.5000," -1"," S"," 14"," -1"," England / Bennington_ VT",1
+2," Mellors_ Mr. William John"," male",19,0,0," SW/PP 751",10.5000," -1"," S"," B"," -1"," Chelsea_ London",1
+2," Meyer_ Mr. August"," male",39,0,0," 248723",13.0000," -1"," S"," -1"," -1"," Harrow-on-the-Hill_ Middlesex",0
+2," Milling_ Mr. Jacob Christian"," male",48,0,0," 234360",13.0000," -1"," S"," -1"," 271"," Copenhagen_ Denmark",0
+2," Mitchell_ Mr. Henry Michael"," male",70,0,0," C.A. 24580",10.5000," -1"," S"," -1"," -1"," Guernsey / Montclair_ NJ and/or Toledo_ Ohio",0
+2," Montvila_ Rev. Juozas"," male",27,0,0," 211536",13.0000," -1"," S"," -1"," -1"," Worcester_ MA",0
+2," Moraweck_ Dr. Ernest"," male",54,0,0," 29011",14.0000," -1"," S"," -1"," -1"," Frankfort_ KY",0
+2," Morley_ Mr. Henry Samuel (""Mr Henry Marshall"")"," male",39,0,0," 250655",26.0000," -1"," S"," -1"," -1"," -1",0
+2," Mudd_ Mr. Thomas Charles"," male",16,0,0," S.O./P.P. 3",10.5000," -1"," S"," -1"," -1"," Halesworth_ England",0
+2," Myles_ Mr. Thomas Francis"," male",62,0,0," 240276",9.6875," -1"," Q"," -1"," -1"," Cambridge_ MA",0
+2," Nasser_ Mr. Nicholas"," male",32.5,1,0," 237736",30.0708," -1"," C"," -1"," 43"," New York_ NY",0
+2," Nasser_ Mrs. Nicholas (Adele Achem)"," female",14,1,0," 237736",30.0708," -1"," C"," -1"," -1"," New York_ NY",1
+2," Navratil_ Master. Edmond Roger"," male",2,1,1," 230080",26.0000," F2"," S"," D"," -1"," Nice_ France",1
+2," Navratil_ Master. Michel M"," male",3,1,1," 230080",26.0000," F2"," S"," D"," -1"," Nice_ France",1
+2," Navratil_ Mr. Michel (""Louis M Hoffman"")"," male",36.5,0,2," 230080",26.0000," F2"," S"," -1"," 15"," Nice_ France",0
+2," Nesson_ Mr. Israel"," male",26,0,0," 244368",13.0000," F2"," S"," -1"," -1"," Boston_ MA",0
+2," Nicholls_ Mr. Joseph Charles"," male",19,1,1," C.A. 33112",36.7500," -1"," S"," -1"," 101"," Cornwall / Hancock_ MI",0
+2," Norman_ Mr. Robert Douglas"," male",28,0,0," 218629",13.5000," -1"," S"," -1"," 287"," Glasgow",0
+2," Nourney_ Mr. Alfred (""Baron von Drachstedt"")"," male",20,0,0," SC/PARIS 2166",13.8625," D38"," C"," 7"," -1"," Cologne_ Germany",1
+2," Nye_ Mrs. (Elizabeth Ramell)"," female",29,0,0," C.A. 29395",10.5000," F33"," S"," 11"," -1"," Folkstone_ Kent / New York_ NY",1
+2," Otter_ Mr. Richard"," male",39,0,0," 28213",13.0000," -1"," S"," -1"," -1"," Middleburg Heights_ OH",0
+2," Oxenham_ Mr. Percy Thomas"," male",22,0,0," W./C. 14260",10.5000," -1"," S"," 13"," -1"," Pondersend_ England / New Durham_ NJ",1
+2," Padro y Manent_ Mr. Julian"," male"," -1",0,0," SC/PARIS 2146",13.8625," -1"," C"," 9"," -1"," Spain / Havana_ Cuba",1
+2," Pain_ Dr. Alfred"," male",23,0,0," 244278",10.5000," -1"," S"," -1"," -1"," Hamilton_ ON",0
+2," Pallas y Castello_ Mr. Emilio"," male",29,0,0," SC/PARIS 2147",13.8583," -1"," C"," 9"," -1"," Spain / Havana_ Cuba",1
+2," Parker_ Mr. Clifford Richard"," male",28,0,0," SC 14888",10.5000," -1"," S"," -1"," -1"," St Andrews_ Guernsey",0
+2," Parkes_ Mr. Francis ""Frank"""," male"," -1",0,0," 239853",0.0000," -1"," S"," -1"," -1"," Belfast",0
+2," Parrish_ Mrs. (Lutie Davis)"," female",50,0,1," 230433",26.0000," -1"," S"," 12"," -1"," Woodford County_ KY",1
+2," Pengelly_ Mr. Frederick William"," male",19,0,0," 28665",10.5000," -1"," S"," -1"," -1"," Gunnislake_ England / Butte_ MT",0
+2," Pernot_ Mr. Rene"," male"," -1",0,0," SC/PARIS 2131",15.0500," -1"," C"," -1"," -1"," -1",0
+2," Peruschitz_ Rev. Joseph Maria"," male",41,0,0," 237393",13.0000," -1"," S"," -1"," -1"," -1",0
+2," Phillips_ Miss. Alice Frances Louisa"," female",21,0,1," S.O./P.P. 2",21.0000," -1"," S"," 12"," -1"," Ilfracombe_ Devon",1
+2," Phillips_ Miss. Kate Florence (""Mrs Kate Louise Phillips Marshall"")"," female",19,0,0," 250655",26.0000," -1"," S"," 11"," -1"," Worcester_ England",1
+2," Phillips_ Mr. Escott Robert"," male",43,0,1," S.O./P.P. 2",21.0000," -1"," S"," -1"," -1"," Ilfracombe_ Devon",0
+2," Pinsky_ Mrs. (Rosa)"," female",32,0,0," 234604",13.0000," -1"," S"," 9"," -1"," Russia",1
+2," Ponesell_ Mr. Martin"," male",34,0,0," 250647",13.0000," -1"," S"," -1"," -1"," Denmark / New York_ NY",0
+2," Portaluppi_ Mr. Emilio Ilario Giuseppe"," male",30,0,0," C.A. 34644",12.7375," -1"," C"," 14"," -1"," Milford_ NH",1
+2," Pulbaum_ Mr. Franz"," male",27,0,0," SC/PARIS 2168",15.0333," -1"," C"," -1"," -1"," Paris",0
+2," Quick_ Miss. Phyllis May"," female",2,1,1," 26360",26.0000," -1"," S"," 11"," -1"," Plymouth_ Devon / Detroit_ MI",1
+2," Quick_ Miss. Winifred Vera"," female",8,1,1," 26360",26.0000," -1"," S"," 11"," -1"," Plymouth_ Devon / Detroit_ MI",1
+2," Quick_ Mrs. Frederick Charles (Jane Richards)"," female",33,0,2," 26360",26.0000," -1"," S"," 11"," -1"," Plymouth_ Devon / Detroit_ MI",1
+2," Reeves_ Mr. David"," male",36,0,0," C.A. 17248",10.5000," -1"," S"," -1"," -1"," Brighton_ Sussex",0
+2," Renouf_ Mr. Peter Henry"," male",34,1,0," 31027",21.0000," -1"," S"," 12"," -1"," Elizabeth_ NJ",0
+2," Renouf_ Mrs. Peter Henry (Lillian Jefferys)"," female",30,3,0," 31027",21.0000," -1"," S"," -1"," -1"," Elizabeth_ NJ",1
+2," Reynaldo_ Ms. Encarnacion"," female",28,0,0," 230434",13.0000," -1"," S"," 9"," -1"," Spain",1
+2," Richard_ Mr. Emile"," male",23,0,0," SC/PARIS 2133",15.0458," -1"," C"," -1"," -1"," Paris / Montreal_ PQ",0
+2," Richards_ Master. George Sibley"," male",0.83,1,1," 29106",18.7500," -1"," S"," 4"," -1"," Cornwall / Akron_ OH",1
+2," Richards_ Master. William Rowe"," male",3,1,1," 29106",18.7500," -1"," S"," 4"," -1"," Cornwall / Akron_ OH",1
+2," Richards_ Mrs. Sidney (Emily Hocking)"," female",24,2,3," 29106",18.7500," -1"," S"," 4"," -1"," Cornwall / Akron_ OH",1
+2," Ridsdale_ Miss. Lucy"," female",50,0,0," W./C. 14258",10.5000," -1"," S"," 13"," -1"," London_ England / Marietta_ Ohio and Milwaukee_ WI",1
+2," Rogers_ Mr. Reginald Harry"," male",19,0,0," 28004",10.5000," -1"," S"," -1"," -1"," -1",0
+2," Rugg_ Miss. Emily"," female",21,0,0," C.A. 31026",10.5000," -1"," S"," 12"," -1"," Guernsey / Wilmington_ DE",1
+2," Schmidt_ Mr. August"," male",26,0,0," 248659",13.0000," -1"," S"," -1"," -1"," Newark_ NJ",0
+2," Sedgwick_ Mr. Charles Frederick Waddington"," male",25,0,0," 244361",13.0000," -1"," S"," -1"," -1"," Liverpool",0
+2," Sharp_ Mr. Percival James R"," male",27,0,0," 244358",26.0000," -1"," S"," -1"," -1"," Hornsey_ England",0
+2," Shelley_ Mrs. William (Imanita Parrish Hall)"," female",25,0,1," 230433",26.0000," -1"," S"," 12"," -1"," Deer Lodge_ MT",1
+2," Silven_ Miss. Lyyli Karoliina"," female",18,0,2," 250652",13.0000," -1"," S"," 16"," -1"," Finland / Minneapolis_ MN",1
+2," Sincock_ Miss. Maude"," female",20,0,0," C.A. 33112",36.7500," -1"," S"," 11"," -1"," Cornwall / Hancock_ MI",1
+2," Sinkkonen_ Miss. Anna"," female",30,0,0," 250648",13.0000," -1"," S"," 10"," -1"," Finland / Washington_ DC",1
+2," Sjostedt_ Mr. Ernst Adolf"," male",59,0,0," 237442",13.5000," -1"," S"," -1"," -1"," Sault St Marie_ ON",0
+2," Slayter_ Miss. Hilda Mary"," female",30,0,0," 234818",12.3500," -1"," Q"," 13"," -1"," Halifax_ NS",1
+2," Slemen_ Mr. Richard James"," male",35,0,0," 28206",10.5000," -1"," S"," -1"," -1"," Cornwall",0
+2," Smith_ Miss. Marion Elsie"," female",40,0,0," 31418",13.0000," -1"," S"," 9"," -1"," -1",1
+2," Sobey_ Mr. Samuel James Hayden"," male",25,0,0," C.A. 29178",13.0000," -1"," S"," -1"," -1"," Cornwall / Houghton_ MI",0
+2," Stanton_ Mr. Samuel Ward"," male",41,0,0," 237734",15.0458," -1"," C"," -1"," -1"," New York_ NY",0
+2," Stokes_ Mr. Philip Joseph"," male",25,0,0," F.C.C. 13540",10.5000," -1"," S"," -1"," 81"," Catford_ Kent / Detroit_ MI",0
+2," Swane_ Mr. George"," male",18.5,0,0," 248734",13.0000," F"," S"," -1"," 294"," -1",0
+2," Sweet_ Mr. George Frederick"," male",14,0,0," 220845",65.0000," -1"," S"," -1"," -1"," Somerset / Bernardsville_ NJ",0
+2," Toomey_ Miss. Ellen"," female",50,0,0," F.C.C. 13531",10.5000," -1"," S"," 9"," -1"," Indianapolis_ IN",1
+2," Troupiansky_ Mr. Moses Aaron"," male",23,0,0," 233639",13.0000," -1"," S"," -1"," -1"," -1",0
+2," Trout_ Mrs. William H (Jessie L)"," female",28,0,0," 240929",12.6500," -1"," S"," -1"," -1"," Columbus_ OH",1
+2," Troutt_ Miss. Edwina Celia ""Winnie"""," female",27,0,0," 34218",10.5000," E101"," S"," 16"," -1"," Bath_ England / Massachusetts",1
+2," Turpin_ Mr. William John Robert"," male",29,1,0," 11668",21.0000," -1"," S"," -1"," -1"," Plymouth_ England",0
+2," Turpin_ Mrs. William John Robert (Dorothy Ann Wonnacott)"," female",27,1,0," 11668",21.0000," -1"," S"," -1"," -1"," Plymouth_ England",0
+2," Veal_ Mr. James"," male",40,0,0," 28221",13.0000," -1"," S"," -1"," -1"," Barre_ Co Washington_ VT",0
+2," Walcroft_ Miss. Nellie"," female",31,0,0," F.C.C. 13528",21.0000," -1"," S"," 14"," -1"," Mamaroneck_ NY",1
+2," Ware_ Mr. John James"," male",30,1,0," CA 31352",21.0000," -1"," S"," -1"," -1"," Bristol_ England / New Britain_ CT",0
+2," Ware_ Mr. William Jeffery"," male",23,1,0," 28666",10.5000," -1"," S"," -1"," -1"," -1",0
+2," Ware_ Mrs. John James (Florence Louise Long)"," female",31,0,0," CA 31352",21.0000," -1"," S"," 10"," -1"," Bristol_ England / New Britain_ CT",1
+2," Watson_ Mr. Ennis Hastings"," male"," -1",0,0," 239856",0.0000," -1"," S"," -1"," -1"," Belfast",0
+2," Watt_ Miss. Bertha J"," female",12,0,0," C.A. 33595",15.7500," -1"," S"," 9"," -1"," Aberdeen / Portland_ OR",1
+2," Watt_ Mrs. James (Elizabeth ""Bessie"" Inglis Milne)"," female",40,0,0," C.A. 33595",15.7500," -1"," S"," 9"," -1"," Aberdeen / Portland_ OR",1
+2," Webber_ Miss. Susan"," female",32.5,0,0," 27267",13.0000," E101"," S"," 12"," -1"," England / Hartford_ CT",1
+2," Weisz_ Mr. Leopold"," male",27,1,0," 228414",26.0000," -1"," S"," -1"," 293"," Bromsgrove_ England / Montreal_ PQ",0
+2," Weisz_ Mrs. Leopold (Mathilde Francoise Pede)"," female",29,1,0," 228414",26.0000," -1"," S"," 10"," -1"," Bromsgrove_ England / Montreal_ PQ",1
+2," Wells_ Master. Ralph Lester"," male",2,1,1," 29103",23.0000," -1"," S"," 14"," -1"," Cornwall / Akron_ OH",1
+2," Wells_ Miss. Joan"," female",4,1,1," 29103",23.0000," -1"," S"," 14"," -1"," Cornwall / Akron_ OH",1
+2," Wells_ Mrs. Arthur Henry (""Addie"" Dart Trevaskis)"," female",29,0,2," 29103",23.0000," -1"," S"," 14"," -1"," Cornwall / Akron_ OH",1
+2," West_ Miss. Barbara J"," female",0.92,1,2," C.A. 34651",27.7500," -1"," S"," 10"," -1"," Bournmouth_ England",1
+2," West_ Miss. Constance Mirium"," female",5,1,2," C.A. 34651",27.7500," -1"," S"," 10"," -1"," Bournmouth_ England",1
+2," West_ Mr. Edwy Arthur"," male",36,1,2," C.A. 34651",27.7500," -1"," S"," -1"," -1"," Bournmouth_ England",0
+2," West_ Mrs. Edwy Arthur (Ada Mary Worth)"," female",33,1,2," C.A. 34651",27.7500," -1"," S"," 10"," -1"," Bournmouth_ England",1
+2," Wheadon_ Mr. Edward H"," male",66,0,0," C.A. 24579",10.5000," -1"," S"," -1"," -1"," Guernsey_ England / Edgewood_ RI",0
+2," Wheeler_ Mr. Edwin ""Frederick"""," male"," -1",0,0," SC/PARIS 2159",12.8750," -1"," S"," -1"," -1"," -1",0
+2," Wilhelms_ Mr. Charles"," male",31,0,0," 244270",13.0000," -1"," S"," 9"," -1"," London_ England",1
+2," Williams_ Mr. Charles Eugene"," male"," -1",0,0," 244373",13.0000," -1"," S"," 14"," -1"," Harrow_ England",1
+2," Wright_ Miss. Marion"," female",26,0,0," 220844",13.5000," -1"," S"," 9"," -1"," Yoevil_ England / Cottage Grove_ OR",1
+2," Yrois_ Miss. Henriette (""Mrs Harbeck"")"," female",24,0,0," 248747",13.0000," -1"," S"," -1"," -1"," Paris",0
+3," Abbing_ Mr. Anthony"," male",42,0,0," C.A. 5547",7.5500," -1"," S"," -1"," -1"," -1",0
+3," Abbott_ Master. Eugene Joseph"," male",13,0,2," C.A. 2673",20.2500," -1"," S"," -1"," -1"," East Providence_ RI",0
+3," Abbott_ Mr. Rossmore Edward"," male",16,1,1," C.A. 2673",20.2500," -1"," S"," -1"," 190"," East Providence_ RI",0
+3," Abbott_ Mrs. Stanton (Rosa Hunt)"," female",35,1,1," C.A. 2673",20.2500," -1"," S"," A"," -1"," East Providence_ RI",1
+3," Abelseth_ Miss. Karen Marie"," female",16,0,0," 348125",7.6500," -1"," S"," 16"," -1"," Norway Los Angeles_ CA",1
+3," Abelseth_ Mr. Olaus Jorgensen"," male",25,0,0," 348122",7.6500," F G63"," S"," A"," -1"," Perkins County_ SD",1
+3," Abrahamsson_ Mr. Abraham August Johannes"," male",20,0,0," SOTON/O2 3101284",7.9250," -1"," S"," 15"," -1"," Taalintehdas_ Finland Hoboken_ NJ",1
+3," Abrahim_ Mrs. Joseph (Sophie Halaut Easu)"," female",18,0,0," 2657",7.2292," -1"," C"," C"," -1"," Greensburg_ PA",1
+3," Adahl_ Mr. Mauritz Nils Martin"," male",30,0,0," C 7076",7.2500," -1"," S"," -1"," 72"," Asarum_ Sweden Brooklyn_ NY",0
+3," Adams_ Mr. John"," male",26,0,0," 341826",8.0500," -1"," S"," -1"," 103"," Bournemouth_ England",0
+3," Ahlin_ Mrs. Johan (Johanna Persdotter Larsson)"," female",40,1,0," 7546",9.4750," -1"," S"," -1"," -1"," Sweden Akeley_ MN",0
+3," Aks_ Master. Philip Frank"," male",0.83,0,1," 392091",9.3500," -1"," S"," 11"," -1"," London_ England Norfolk_ VA",1
+3," Aks_ Mrs. Sam (Leah Rosen)"," female",18,0,1," 392091",9.3500," -1"," S"," 13"," -1"," London_ England Norfolk_ VA",1
+3," Albimona_ Mr. Nassef Cassem"," male",26,0,0," 2699",18.7875," -1"," C"," 15"," -1"," Syria Fredericksburg_ VA",1
+3," Alexander_ Mr. William"," male",26,0,0," 3474",7.8875," -1"," S"," -1"," -1"," England Albion_ NY",0
+3," Alhomaki_ Mr. Ilmari Rudolf"," male",20,0,0," SOTON/O2 3101287",7.9250," -1"," S"," -1"," -1"," Salo_ Finland Astoria_ OR",0
+3," Ali_ Mr. Ahmed"," male",24,0,0," SOTON/O.Q. 3101311",7.0500," -1"," S"," -1"," -1"," -1",0
+3," Ali_ Mr. William"," male",25,0,0," SOTON/O.Q. 3101312",7.0500," -1"," S"," -1"," 79"," Argentina",0
+3," Allen_ Mr. William Henry"," male",35,0,0," 373450",8.0500," -1"," S"," -1"," -1"," Lower Clapton_ Middlesex or Erdington_ Birmingham",0
+3," Allum_ Mr. Owen George"," male",18,0,0," 2223",8.3000," -1"," S"," -1"," 259"," Windsor_ England New York_ NY",0
+3," Andersen_ Mr. Albert Karvin"," male",32,0,0," C 4001",22.5250," -1"," S"," -1"," 260"," Bergen_ Norway",0
+3," Andersen-Jensen_ Miss. Carla Christine Nielsine"," female",19,1,0," 350046",7.8542," -1"," S"," 16"," -1"," -1",1
+3," Andersson_ Master. Sigvard Harald Elias"," male",4,4,2," 347082",31.2750," -1"," S"," -1"," -1"," Sweden Winnipeg_ MN",0
+3," Andersson_ Miss. Ebba Iris Alfrida"," female",6,4,2," 347082",31.2750," -1"," S"," -1"," -1"," Sweden Winnipeg_ MN",0
+3," Andersson_ Miss. Ellis Anna Maria"," female",2,4,2," 347082",31.2750," -1"," S"," -1"," -1"," Sweden Winnipeg_ MN",0
+3," Andersson_ Miss. Erna Alexandra"," female",17,4,2," 3101281",7.9250," -1"," S"," D"," -1"," Ruotsinphyhtaa_ Finland New York_ NY",1
+3," Andersson_ Miss. Ida Augusta Margareta"," female",38,4,2," 347091",7.7750," -1"," S"," -1"," -1"," Vadsbro_ Sweden Ministee_ MI",0
+3," Andersson_ Miss. Ingeborg Constanzia"," female",9,4,2," 347082",31.2750," -1"," S"," -1"," -1"," Sweden Winnipeg_ MN",0
+3," Andersson_ Miss. Sigrid Elisabeth"," female",11,4,2," 347082",31.2750," -1"," S"," -1"," -1"," Sweden Winnipeg_ MN",0
+3," Andersson_ Mr. Anders Johan"," male",39,1,5," 347082",31.2750," -1"," S"," -1"," -1"," Sweden Winnipeg_ MN",0
+3," Andersson_ Mr. August Edvard (""Wennerstrom"")"," male",27,0,0," 350043",7.7958," -1"," S"," A"," -1"," -1",1
+3," Andersson_ Mr. Johan Samuel"," male",26,0,0," 347075",7.7750," -1"," S"," -1"," -1"," Hartford_ CT",0
+3," Andersson_ Mrs. Anders Johan (Alfrida Konstantia Brogren)"," female",39,1,5," 347082",31.2750," -1"," S"," -1"," -1"," Sweden Winnipeg_ MN",0
+3," Andreasson_ Mr. Paul Edvin"," male",20,0,0," 347466",7.8542," -1"," S"," -1"," -1"," Sweden Chicago_ IL",0
+3," Angheloff_ Mr. Minko"," male",26,0,0," 349202",7.8958," -1"," S"," -1"," -1"," Bulgaria Chicago_ IL",0
+3," Arnold-Franchi_ Mr. Josef"," male",25,1,0," 349237",17.8000," -1"," S"," -1"," -1"," Altdorf_ Switzerland",0
+3," Arnold-Franchi_ Mrs. Josef (Josefine Franchi)"," female",18,1,0," 349237",17.8000," -1"," S"," -1"," -1"," Altdorf_ Switzerland",0
+3," Aronsson_ Mr. Ernst Axel Algot"," male",24,0,0," 349911",7.7750," -1"," S"," -1"," -1"," Sweden Joliet_ IL",0
+3," Asim_ Mr. Adola"," male",35,0,0," SOTON/O.Q. 3101310",7.0500," -1"," S"," -1"," -1"," -1",0
+3," Asplund_ Master. Carl Edgar"," male",5,4,2," 347077",31.3875," -1"," S"," -1"," -1"," Sweden  Worcester_ MA",0
+3," Asplund_ Master. Clarence Gustaf Hugo"," male",9,4,2," 347077",31.3875," -1"," S"," -1"," -1"," Sweden Worcester_ MA",0
+3," Asplund_ Master. Edvin Rojj Felix"," male",3,4,2," 347077",31.3875," -1"," S"," 15"," -1"," Sweden Worcester_ MA",1
+3," Asplund_ Master. Filip Oscar"," male",13,4,2," 347077",31.3875," -1"," S"," -1"," -1"," Sweden Worcester_ MA",0
+3," Asplund_ Miss. Lillian Gertrud"," female",5,4,2," 347077",31.3875," -1"," S"," 15"," -1"," Sweden Worcester_ MA",1
+3," Asplund_ Mr. Carl Oscar Vilhelm Gustafsson"," male",40,1,5," 347077",31.3875," -1"," S"," -1"," 142"," Sweden  Worcester_ MA",0
+3," Asplund_ Mr. Johan Charles"," male",23,0,0," 350054",7.7958," -1"," S"," 13"," -1"," Oskarshamn_ Sweden Minneapolis_ MN",1
+3," Asplund_ Mrs. Carl Oscar (Selma Augusta Emilia Johansson)"," female",38,1,5," 347077",31.3875," -1"," S"," 15"," -1"," Sweden  Worcester_ MA",1
+3," Assaf Khalil_ Mrs. Mariana (""Miriam"")"," female",45,0,0," 2696",7.2250," -1"," C"," C"," -1"," Ottawa_ ON",1
+3," Assaf_ Mr. Gerios"," male",21,0,0," 2692",7.2250," -1"," C"," -1"," -1"," Ottawa_ ON",0
+3," Assam_ Mr. Ali"," male",23,0,0," SOTON/O.Q. 3101309",7.0500," -1"," S"," -1"," -1"," -1",0
+3," Attalah_ Miss. Malake"," female",17,0,0," 2627",14.4583," -1"," C"," -1"," -1"," -1",0
+3," Attalah_ Mr. Sleiman"," male",30,0,0," 2694",7.2250," -1"," C"," -1"," -1"," Ottawa_ ON",0
+3," Augustsson_ Mr. Albert"," male",23,0,0," 347468",7.8542," -1"," S"," -1"," -1"," Krakoryd_ Sweden Bloomington_ IL",0
+3," Ayoub_ Miss. Banoura"," female",13,0,0," 2687",7.2292," -1"," C"," C"," -1"," Syria Youngstown_ OH",1
+3," Baccos_ Mr. Raffull"," male",20,0,0," 2679",7.2250," -1"," C"," -1"," -1"," -1",0
+3," Backstrom_ Mr. Karl Alfred"," male",32,1,0," 3101278",15.8500," -1"," S"," D"," -1"," Ruotsinphytaa_ Finland New York_ NY",0
+3," Backstrom_ Mrs. Karl Alfred (Maria Mathilda Gustafsson)"," female",33,3,0," 3101278",15.8500," -1"," S"," -1"," -1"," Ruotsinphytaa_ Finland New York_ NY",1
+3," Baclini_ Miss. Eugenie"," female",0.75,2,1," 2666",19.2583," -1"," C"," C"," -1"," Syria New York_ NY",1
+3," Baclini_ Miss. Helene Barbara"," female",0.75,2,1," 2666",19.2583," -1"," C"," C"," -1"," Syria New York_ NY",1
+3," Baclini_ Miss. Marie Catherine"," female",5,2,1," 2666",19.2583," -1"," C"," C"," -1"," Syria New York_ NY",1
+3," Baclini_ Mrs. Solomon (Latifa Qurban)"," female",24,0,3," 2666",19.2583," -1"," C"," C"," -1"," Syria New York_ NY",1
+3," Badman_ Miss. Emily Louisa"," female",18,0,0," A/4 31416",8.0500," -1"," S"," C"," -1"," London Skanteales_ NY",1
+3," Badt_ Mr. Mohamed"," male",40,0,0," 2623",7.2250," -1"," C"," -1"," -1"," -1",0
+3," Balkic_ Mr. Cerin"," male",26,0,0," 349248",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Barah_ Mr. Hanna Assi"," male",20,0,0," 2663",7.2292," -1"," C"," 15"," -1"," -1",1
+3," Barbara_ Miss. Saiide"," female",18,0,1," 2691",14.4542," -1"," C"," -1"," -1"," Syria Ottawa_ ON",0
+3," Barbara_ Mrs. (Catherine David)"," female",45,0,1," 2691",14.4542," -1"," C"," -1"," -1"," Syria Ottawa_ ON",0
+3," Barry_ Miss. Julia"," female",27,0,0," 330844",7.8792," -1"," Q"," -1"," -1"," New York_ NY",0
+3," Barton_ Mr. David John"," male",22,0,0," 324669",8.0500," -1"," S"," -1"," -1"," England New York_ NY",0
+3," Beavan_ Mr. William Thomas"," male",19,0,0," 323951",8.0500," -1"," S"," -1"," -1"," England",0
+3," Bengtsson_ Mr. John Viktor"," male",26,0,0," 347068",7.7750," -1"," S"," -1"," -1"," Krakudden_ Sweden Moune_ IL",0
+3," Berglund_ Mr. Karl Ivar Sven"," male",22,0,0," PP 4348",9.3500," -1"," S"," -1"," -1"," Tranvik_ Finland New York",0
+3," Betros_ Master. Seman"," male"," -1",0,0," 2622",7.2292," -1"," C"," -1"," -1"," -1",0
+3," Betros_ Mr. Tannous"," male",20,0,0," 2648",4.0125," -1"," C"," -1"," -1"," Syria",0
+3," Bing_ Mr. Lee"," male",32,0,0," 1601",56.4958," -1"," S"," C"," -1"," Hong Kong New York_ NY",1
+3," Birkeland_ Mr. Hans Martin Monsen"," male",21,0,0," 312992",7.7750," -1"," S"," -1"," -1"," Brennes_ Norway New York",0
+3," Bjorklund_ Mr. Ernst Herbert"," male",18,0,0," 347090",7.7500," -1"," S"," -1"," -1"," Stockholm_ Sweden New York",0
+3," Bostandyeff_ Mr. Guentcho"," male",26,0,0," 349224",7.8958," -1"," S"," -1"," -1"," Bulgaria Chicago_ IL",0
+3," Boulos_ Master. Akar"," male",6,1,1," 2678",15.2458," -1"," C"," -1"," -1"," Syria Kent_ ON",0
+3," Boulos_ Miss. Nourelain"," female",9,1,1," 2678",15.2458," -1"," C"," -1"," -1"," Syria Kent_ ON",0
+3," Boulos_ Mr. Hanna"," male"," -1",0,0," 2664",7.2250," -1"," C"," -1"," -1"," Syria",0
+3," Boulos_ Mrs. Joseph (Sultana)"," female"," -1",0,2," 2678",15.2458," -1"," C"," -1"," -1"," Syria Kent_ ON",0
+3," Bourke_ Miss. Mary"," female"," -1",0,2," 364848",7.7500," -1"," Q"," -1"," -1"," Ireland Chicago_ IL",0
+3," Bourke_ Mr. John"," male",40,1,1," 364849",15.5000," -1"," Q"," -1"," -1"," Ireland Chicago_ IL",0
+3," Bourke_ Mrs. John (Catherine)"," female",32,1,1," 364849",15.5000," -1"," Q"," -1"," -1"," Ireland Chicago_ IL",0
+3," Bowen_ Mr. David John ""Dai"""," male",21,0,0," 54636",16.1000," -1"," S"," -1"," -1"," Treherbert_ Cardiff_ Wales",0
+3," Bradley_ Miss. Bridget Delia"," female",22,0,0," 334914",7.7250," -1"," Q"," 13"," -1"," Kingwilliamstown_ Co Cork_ Ireland Glens Falls_ NY",1
+3," Braf_ Miss. Elin Ester Maria"," female",20,0,0," 347471",7.8542," -1"," S"," -1"," -1"," Medeltorp_ Sweden Chicago_ IL",0
+3," Braund_ Mr. Lewis Richard"," male",29,1,0," 3460",7.0458," -1"," S"," -1"," -1"," Bridgerule_ Devon",0
+3," Braund_ Mr. Owen Harris"," male",22,1,0," A/5 21171",7.2500," -1"," S"," -1"," -1"," Bridgerule_ Devon",0
+3," Brobeck_ Mr. Karl Rudolf"," male",22,0,0," 350045",7.7958," -1"," S"," -1"," -1"," Sweden Worcester_ MA",0
+3," Brocklebank_ Mr. William Alfred"," male",35,0,0," 364512",8.0500," -1"," S"," -1"," -1"," Broomfield_ Chelmsford_ England",0
+3," Buckley_ Miss. Katherine"," female",18.5,0,0," 329944",7.2833," -1"," Q"," -1"," 299"," Co Cork_ Ireland Roxbury_ MA",0
+3," Buckley_ Mr. Daniel"," male",21,0,0," 330920",7.8208," -1"," Q"," 13"," -1"," Kingwilliamstown_ Co Cork_ Ireland New York_ NY",1
+3," Burke_ Mr. Jeremiah"," male",19,0,0," 365222",6.7500," -1"," Q"," -1"," -1"," Co Cork_ Ireland Charlestown_ MA",0
+3," Burns_ Miss. Mary Delia"," female",18,0,0," 330963",7.8792," -1"," Q"," -1"," -1"," Co Sligo_ Ireland New York_ NY",0
+3," Cacic_ Miss. Manda"," female",21,0,0," 315087",8.6625," -1"," S"," -1"," -1"," -1",0
+3," Cacic_ Miss. Marija"," female",30,0,0," 315084",8.6625," -1"," S"," -1"," -1"," -1",0
+3," Cacic_ Mr. Jego Grga"," male",18,0,0," 315091",8.6625," -1"," S"," -1"," -1"," -1",0
+3," Cacic_ Mr. Luka"," male",38,0,0," 315089",8.6625," -1"," S"," -1"," -1"," Croatia",0
+3," Calic_ Mr. Jovo"," male",17,0,0," 315093",8.6625," -1"," S"," -1"," -1"," -1",0
+3," Calic_ Mr. Petar"," male",17,0,0," 315086",8.6625," -1"," S"," -1"," -1"," -1",0
+3," Canavan_ Miss. Mary"," female",21,0,0," 364846",7.7500," -1"," Q"," -1"," -1"," -1",0
+3," Canavan_ Mr. Patrick"," male",21,0,0," 364858",7.7500," -1"," Q"," -1"," -1"," Ireland Philadelphia_ PA",0
+3," Cann_ Mr. Ernest Charles"," male",21,0,0," A./5. 2152",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Caram_ Mr. Joseph"," male"," -1",1,0," 2689",14.4583," -1"," C"," -1"," -1"," Ottawa_ ON",0
+3," Caram_ Mrs. Joseph (Maria Elias)"," female"," -1",1,0," 2689",14.4583," -1"," C"," -1"," -1"," Ottawa_ ON",0
+3," Carlsson_ Mr. August Sigfrid"," male",28,0,0," 350042",7.7958," -1"," S"," -1"," -1"," Dagsas_ Sweden Fower_ MN",0
+3," Carlsson_ Mr. Carl Robert"," male",24,0,0," 350409",7.8542," -1"," S"," -1"," -1"," Goteborg_ Sweden Huntley_ IL",0
+3," Carr_ Miss. Helen ""Ellen"""," female",16,0,0," 367231",7.7500," -1"," Q"," 16"," -1"," Co Longford_ Ireland New York_ NY",1
+3," Carr_ Miss. Jeannie"," female",37,0,0," 368364",7.7500," -1"," Q"," -1"," -1"," Co Sligo_ Ireland Hartford_ CT",0
+3," Carver_ Mr. Alfred John"," male",28,0,0," 392095",7.2500," -1"," S"," -1"," -1"," St Denys_ Southampton_ Hants",0
+3," Celotti_ Mr. Francesco"," male",24,0,0," 343275",8.0500," -1"," S"," -1"," -1"," London",0
+3," Charters_ Mr. David"," male",21,0,0," A/5. 13032",7.7333," -1"," Q"," -1"," -1"," Ireland New York_ NY",0
+3," Chip_ Mr. Chang"," male",32,0,0," 1601",56.4958," -1"," S"," C"," -1"," Hong Kong New York_ NY",1
+3," Christmann_ Mr. Emil"," male",29,0,0," 343276",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Chronopoulos_ Mr. Apostolos"," male",26,1,0," 2680",14.4542," -1"," C"," -1"," -1"," Greece",0
+3," Chronopoulos_ Mr. Demetrios"," male",18,1,0," 2680",14.4542," -1"," C"," -1"," -1"," Greece",0
+3," Coelho_ Mr. Domingos Fernandeo"," male",20,0,0," SOTON/O.Q. 3101307",7.0500," -1"," S"," -1"," -1"," Portugal",0
+3," Cohen_ Mr. Gurshon ""Gus"""," male",18,0,0," A/5 3540",8.0500," -1"," S"," 12"," -1"," London Brooklyn_ NY",1
+3," Colbert_ Mr. Patrick"," male",24,0,0," 371109",7.2500," -1"," Q"," -1"," -1"," Co Limerick_ Ireland Sherbrooke_ PQ",0
+3," Coleff_ Mr. Peju"," male",36,0,0," 349210",7.4958," -1"," S"," -1"," -1"," Bulgaria Chicago_ IL",0
+3," Coleff_ Mr. Satio"," male",24,0,0," 349209",7.4958," -1"," S"," -1"," -1"," -1",0
+3," Conlon_ Mr. Thomas Henry"," male",31,0,0," 21332",7.7333," -1"," Q"," -1"," -1"," Philadelphia_ PA",0
+3," Connaghton_ Mr. Michael"," male",31,0,0," 335097",7.7500," -1"," Q"," -1"," -1"," Ireland Brooklyn_ NY",0
+3," Connolly_ Miss. Kate"," female",22,0,0," 370373",7.7500," -1"," Q"," 13"," -1"," Ireland",1
+3," Connolly_ Miss. Kate"," female",30,0,0," 330972",7.6292," -1"," Q"," -1"," -1"," Ireland",0
+3," Connors_ Mr. Patrick"," male",70.5,0,0," 370369",7.7500," -1"," Q"," -1"," 171"," -1",0
+3," Cook_ Mr. Jacob"," male",43,0,0," A/5 3536",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Cor_ Mr. Bartol"," male",35,0,0," 349230",7.8958," -1"," S"," -1"," -1"," Austria",0
+3," Cor_ Mr. Ivan"," male",27,0,0," 349229",7.8958," -1"," S"," -1"," -1"," Austria",0
+3," Cor_ Mr. Liudevit"," male",19,0,0," 349231",7.8958," -1"," S"," -1"," -1"," Austria",0
+3," Corn_ Mr. Harry"," male",30,0,0," SOTON/OQ 392090",8.0500," -1"," S"," -1"," -1"," London",0
+3," Coutts_ Master. Eden Leslie ""Neville"""," male",9,1,1," C.A. 37671",15.9000," -1"," S"," 2"," -1"," England Brooklyn_ NY",1
+3," Coutts_ Master. William Loch ""William"""," male",3,1,1," C.A. 37671",15.9000," -1"," S"," 2"," -1"," England Brooklyn_ NY",1
+3," Coutts_ Mrs. William (Winnie ""Minnie"" Treanor)"," female",36,0,2," C.A. 37671",15.9000," -1"," S"," 2"," -1"," England Brooklyn_ NY",1
+3," Coxon_ Mr. Daniel"," male",59,0,0," 364500",7.2500," -1"," S"," -1"," -1"," Merrill_ WI",0
+3," Crease_ Mr. Ernest James"," male",19,0,0," S.P. 3464",8.1583," -1"," S"," -1"," -1"," Bristol_ England Cleveland_ OH",0
+3," Cribb_ Miss. Laura Alice"," female",17,0,1," 371362",16.1000," -1"," S"," 12"," -1"," Bournemouth_ England Newark_ NJ",1
+3," Cribb_ Mr. John Hatfield"," male",44,0,1," 371362",16.1000," -1"," S"," -1"," -1"," Bournemouth_ England Newark_ NJ",0
+3," Culumovic_ Mr. Jeso"," male",17,0,0," 315090",8.6625," -1"," S"," -1"," -1"," Austria-Hungary",0
+3," Daher_ Mr. Shedid"," male",22.5,0,0," 2698",7.2250," -1"," C"," -1"," 9"," -1",0
+3," Dahl_ Mr. Karl Edwart"," male",45,0,0," 7598",8.0500," -1"," S"," 15"," -1"," Australia Fingal_ ND",1
+3," Dahlberg_ Miss. Gerda Ulrika"," female",22,0,0," 7552",10.5167," -1"," S"," -1"," -1"," Norrlot_ Sweden Chicago_ IL",0
+3," Dakic_ Mr. Branko"," male",19,0,0," 349228",10.1708," -1"," S"," -1"," -1"," Austria",0
+3," Daly_ Miss. Margaret Marcella ""Maggie"""," female",30,0,0," 382650",6.9500," -1"," Q"," 15"," -1"," Co Athlone_ Ireland New York_ NY",1
+3," Daly_ Mr. Eugene Patrick"," male",29,0,0," 382651",7.7500," -1"," Q"," 13 15 B"," -1"," Co Athlone_ Ireland New York_ NY",1
+3," Danbom_ Master. Gilbert Sigvard Emanuel"," male",0.33,0,2," 347080",14.4000," -1"," S"," -1"," -1"," Stanton_ IA",0
+3," Danbom_ Mr. Ernst Gilbert"," male",34,1,1," 347080",14.4000," -1"," S"," -1"," 197"," Stanton_ IA",0
+3," Danbom_ Mrs. Ernst Gilbert (Anna Sigrid Maria Brogren)"," female",28,1,1," 347080",14.4000," -1"," S"," -1"," -1"," Stanton_ IA",0
+3," Danoff_ Mr. Yoto"," male",27,0,0," 349219",7.8958," -1"," S"," -1"," -1"," Bulgaria Chicago_ IL",0
+3," Dantcheff_ Mr. Ristiu"," male",25,0,0," 349203",7.8958," -1"," S"," -1"," -1"," Bulgaria Chicago_ IL",0
+3," Davies_ Mr. Alfred J"," male",24,2,0," A/4 48871",24.1500," -1"," S"," -1"," -1"," West Bromwich_ England Pontiac_ MI",0
+3," Davies_ Mr. Evan"," male",22,0,0," SC/A4 23568",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Davies_ Mr. John Samuel"," male",21,2,0," A/4 48871",24.1500," -1"," S"," -1"," -1"," West Bromwich_ England Pontiac_ MI",0
+3," Davies_ Mr. Joseph"," male",17,2,0," A/4 48873",8.0500," -1"," S"," -1"," -1"," West Bromwich_ England Pontiac_ MI",0
+3," Davison_ Mr. Thomas Henry"," male"," -1",1,0," 386525",16.1000," -1"," S"," -1"," -1"," Liverpool_ England Bedford_ OH",0
+3," Davison_ Mrs. Thomas Henry (Mary E Finck)"," female"," -1",1,0," 386525",16.1000," -1"," S"," 16"," -1"," Liverpool_ England Bedford_ OH",1
+3," de Messemaeker_ Mr. Guillaume Joseph"," male",36.5,1,0," 345572",17.4000," -1"," S"," 15"," -1"," Tampico_ MT",1
+3," de Messemaeker_ Mrs. Guillaume Joseph (Emma)"," female",36,1,0," 345572",17.4000," -1"," S"," 13"," -1"," Tampico_ MT",1
+3," de Mulder_ Mr. Theodore"," male",30,0,0," 345774",9.5000," -1"," S"," 11"," -1"," Belgium Detroit_ MI",1
+3," de Pelsmaeker_ Mr. Alfons"," male",16,0,0," 345778",9.5000," -1"," S"," -1"," -1"," -1",0
+3," Dean_ Master. Bertram Vere"," male",1,1,2," C.A. 2315",20.5750," -1"," S"," 10"," -1"," Devon_ England Wichita_ KS",1
+3," Dean_ Miss. Elizabeth Gladys ""Millvina"""," female",0.17,1,2," C.A. 2315",20.5750," -1"," S"," 10"," -1"," Devon_ England Wichita_ KS",1
+3," Dean_ Mr. Bertram Frank"," male",26,1,2," C.A. 2315",20.5750," -1"," S"," -1"," -1"," Devon_ England Wichita_ KS",0
+3," Dean_ Mrs. Bertram (Eva Georgetta Light)"," female",33,1,2," C.A. 2315",20.5750," -1"," S"," 10"," -1"," Devon_ England Wichita_ KS",1
+3," Delalic_ Mr. Redjo"," male",25,0,0," 349250",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Demetri_ Mr. Marinko"," male"," -1",0,0," 349238",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Denkoff_ Mr. Mitto"," male"," -1",0,0," 349225",7.8958," -1"," S"," -1"," -1"," Bulgaria Coon Rapids_ IA",0
+3," Dennis_ Mr. Samuel"," male",22,0,0," A/5 21172",7.2500," -1"," S"," -1"," -1"," -1",0
+3," Dennis_ Mr. William"," male",36,0,0," A/5 21175",7.2500," -1"," S"," -1"," -1"," -1",0
+3," Devaney_ Miss. Margaret Delia"," female",19,0,0," 330958",7.8792," -1"," Q"," C"," -1"," Kilmacowen_ Co Sligo_ Ireland New York_ NY",1
+3," Dika_ Mr. Mirko"," male",17,0,0," 349232",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Dimic_ Mr. Jovan"," male",42,0,0," 315088",8.6625," -1"," S"," -1"," -1"," -1",0
+3," Dintcheff_ Mr. Valtcho"," male",43,0,0," 349226",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Doharr_ Mr. Tannous"," male"," -1",0,0," 2686",7.2292," -1"," C"," -1"," -1"," -1",0
+3," Dooley_ Mr. Patrick"," male",32,0,0," 370376",7.7500," -1"," Q"," -1"," -1"," Ireland New York_ NY",0
+3," Dorking_ Mr. Edward Arthur"," male",19,0,0," A/5. 10482",8.0500," -1"," S"," B"," -1"," England Oglesby_ IL",1
+3," Dowdell_ Miss. Elizabeth"," female",30,0,0," 364516",12.4750," -1"," S"," 13"," -1"," Union Hill_ NJ",1
+3," Doyle_ Miss. Elizabeth"," female",24,0,0," 368702",7.7500," -1"," Q"," -1"," -1"," Ireland New York_ NY",0
+3," Drapkin_ Miss. Jennie"," female",23,0,0," SOTON/OQ 392083",8.0500," -1"," S"," -1"," -1"," London New York_ NY",1
+3," Drazenoic_ Mr. Jozef"," male",33,0,0," 349241",7.8958," -1"," C"," -1"," 51"," Austria Niagara Falls_ NY",0
+3," Duane_ Mr. Frank"," male",65,0,0," 336439",7.7500," -1"," Q"," -1"," -1"," -1",0
+3," Duquemin_ Mr. Joseph"," male",24,0,0," S.O./P.P. 752",7.5500," -1"," S"," D"," -1"," England Albion_ NY",1
+3," Dyker_ Mr. Adolf Fredrik"," male",23,1,0," 347072",13.9000," -1"," S"," -1"," -1"," West Haven_ CT",0
+3," Dyker_ Mrs. Adolf Fredrik (Anna Elisabeth Judith Andersson)"," female",22,1,0," 347072",13.9000," -1"," S"," 16"," -1"," West Haven_ CT",1
+3," Edvardsson_ Mr. Gustaf Hjalmar"," male",18,0,0," 349912",7.7750," -1"," S"," -1"," -1"," Tofta_ Sweden Joliet_ IL",0
+3," Eklund_ Mr. Hans Linus"," male",16,0,0," 347074",7.7750," -1"," S"," -1"," -1"," Karberg_ Sweden Jerome Junction_ AZ",0
+3," Ekstrom_ Mr. Johan"," male",45,0,0," 347061",6.9750," -1"," S"," -1"," -1"," Effington Rut_ SD",0
+3," Elias_ Mr. Dibo"," male"," -1",0,0," 2674",7.2250," -1"," C"," -1"," -1"," -1",0
+3," Elias_ Mr. Joseph"," male",39,0,2," 2675",7.2292," -1"," C"," -1"," -1"," Syria Ottawa_ ON",0
+3," Elias_ Mr. Joseph Jr"," male",17,1,1," 2690",7.2292," -1"," C"," -1"," -1"," -1",0
+3," Elias_ Mr. Tannous"," male",15,1,1," 2695",7.2292," -1"," C"," -1"," -1"," Syria",0
+3," Elsbury_ Mr. William James"," male",47,0,0," A/5 3902",7.2500," -1"," S"," -1"," -1"," Illinois_ USA",0
+3," Emanuel_ Miss. Virginia Ethel"," female",5,0,0," 364516",12.4750," -1"," S"," 13"," -1"," New York_ NY",1
+3," Emir_ Mr. Farred Chehab"," male"," -1",0,0," 2631",7.2250," -1"," C"," -1"," -1"," -1",0
+3," Everett_ Mr. Thomas James"," male",40.5,0,0," C.A. 6212",15.1000," -1"," S"," -1"," 187"," -1",0
+3," Farrell_ Mr. James"," male",40.5,0,0," 367232",7.7500," -1"," Q"," -1"," 68"," Aughnacliff_ Co Longford_ Ireland New York_ NY",0
+3," Finoli_ Mr. Luigi"," male"," -1",0,0," SOTON/O.Q. 3101308",7.0500," -1"," S"," 15"," -1"," Italy Philadelphia_ PA",1
+3," Fischer_ Mr. Eberhard Thelander"," male",18,0,0," 350036",7.7958," -1"," S"," -1"," -1"," -1",0
+3," Fleming_ Miss. Honora"," female"," -1",0,0," 364859",7.7500," -1"," Q"," -1"," -1"," -1",0
+3," Flynn_ Mr. James"," male"," -1",0,0," 364851",7.7500," -1"," Q"," -1"," -1"," -1",0
+3," Flynn_ Mr. John"," male"," -1",0,0," 368323",6.9500," -1"," Q"," -1"," -1"," -1",0
+3," Foley_ Mr. Joseph"," male",26,0,0," 330910",7.8792," -1"," Q"," -1"," -1"," Ireland Chicago_ IL",0
+3," Foley_ Mr. William"," male"," -1",0,0," 365235",7.7500," -1"," Q"," -1"," -1"," Ireland",0
+3," Foo_ Mr. Choong"," male"," -1",0,0," 1601",56.4958," -1"," S"," 13"," -1"," Hong Kong New York_ NY",1
+3," Ford_ Miss. Doolina Margaret ""Daisy"""," female",21,2,2," W./C. 6608",34.3750," -1"," S"," -1"," -1"," Rotherfield_ Sussex_ England Essex Co_ MA",0
+3," Ford_ Miss. Robina Maggie ""Ruby"""," female",9,2,2," W./C. 6608",34.3750," -1"," S"," -1"," -1"," Rotherfield_ Sussex_ England Essex Co_ MA",0
+3," Ford_ Mr. Arthur"," male"," -1",0,0," A/5 1478",8.0500," -1"," S"," -1"," -1"," Bridgwater_ Somerset_ England",0
+3," Ford_ Mr. Edward Watson"," male",18,2,2," W./C. 6608",34.3750," -1"," S"," -1"," -1"," Rotherfield_ Sussex_ England Essex Co_ MA",0
+3," Ford_ Mr. William Neal"," male",16,1,3," W./C. 6608",34.3750," -1"," S"," -1"," -1"," Rotherfield_ Sussex_ England Essex Co_ MA",0
+3," Ford_ Mrs. Edward (Margaret Ann Watson)"," female",48,1,3," W./C. 6608",34.3750," -1"," S"," -1"," -1"," Rotherfield_ Sussex_ England Essex Co_ MA",0
+3," Fox_ Mr. Patrick"," male"," -1",0,0," 368573",7.7500," -1"," Q"," -1"," -1"," Ireland New York_ NY",0
+3," Franklin_ Mr. Charles (Charles Fardon)"," male"," -1",0,0," SOTON/O.Q. 3101314",7.2500," -1"," S"," -1"," -1"," -1",0
+3," Gallagher_ Mr. Martin"," male",25,0,0," 36864",7.7417," -1"," Q"," -1"," -1"," New York_ NY",0
+3," Garfirth_ Mr. John"," male"," -1",0,0," 358585",14.5000," -1"," S"," -1"," -1"," -1",0
+3," Gheorgheff_ Mr. Stanio"," male"," -1",0,0," 349254",7.8958," -1"," C"," -1"," -1"," -1",0
+3," Gilinski_ Mr. Eliezer"," male",22,0,0," 14973",8.0500," -1"," S"," -1"," 47"," -1",0
+3," Gilnagh_ Miss. Katherine ""Katie"""," female",16,0,0," 35851",7.7333," -1"," Q"," 16"," -1"," Co Longford_ Ireland New York_ NY",1
+3," Glynn_ Miss. Mary Agatha"," female"," -1",0,0," 335677",7.7500," -1"," Q"," 13"," -1"," Co Clare_ Ireland Washington_ DC",1
+3," Goldsmith_ Master. Frank John William ""Frankie"""," male",9,0,2," 363291",20.5250," -1"," S"," C D"," -1"," Strood_ Kent_ England Detroit_ MI",1
+3," Goldsmith_ Mr. Frank John"," male",33,1,1," 363291",20.5250," -1"," S"," -1"," -1"," Strood_ Kent_ England Detroit_ MI",0
+3," Goldsmith_ Mr. Nathan"," male",41,0,0," SOTON/O.Q. 3101263",7.8500," -1"," S"," -1"," -1"," Philadelphia_ PA",0
+3," Goldsmith_ Mrs. Frank John (Emily Alice Brown)"," female",31,1,1," 363291",20.5250," -1"," S"," C D"," -1"," Strood_ Kent_ England Detroit_ MI",1
+3," Goncalves_ Mr. Manuel Estanslas"," male",38,0,0," SOTON/O.Q. 3101306",7.0500," -1"," S"," -1"," -1"," Portugal",0
+3," Goodwin_ Master. Harold Victor"," male",9,5,2," CA 2144",46.9000," -1"," S"," -1"," -1"," Wiltshire_ England Niagara Falls_ NY",0
+3," Goodwin_ Master. Sidney Leonard"," male",1,5,2," CA 2144",46.9000," -1"," S"," -1"," -1"," Wiltshire_ England Niagara Falls_ NY",0
+3," Goodwin_ Master. William Frederick"," male",11,5,2," CA 2144",46.9000," -1"," S"," -1"," -1"," Wiltshire_ England Niagara Falls_ NY",0
+3," Goodwin_ Miss. Jessie Allis"," female",10,5,2," CA 2144",46.9000," -1"," S"," -1"," -1"," Wiltshire_ England Niagara Falls_ NY",0
+3," Goodwin_ Miss. Lillian Amy"," female",16,5,2," CA 2144",46.9000," -1"," S"," -1"," -1"," Wiltshire_ England Niagara Falls_ NY",0
+3," Goodwin_ Mr. Charles Edward"," male",14,5,2," CA 2144",46.9000," -1"," S"," -1"," -1"," Wiltshire_ England Niagara Falls_ NY",0
+3," Goodwin_ Mr. Charles Frederick"," male",40,1,6," CA 2144",46.9000," -1"," S"," -1"," -1"," Wiltshire_ England Niagara Falls_ NY",0
+3," Goodwin_ Mrs. Frederick (Augusta Tyler)"," female",43,1,6," CA 2144",46.9000," -1"," S"," -1"," -1"," Wiltshire_ England Niagara Falls_ NY",0
+3," Green_ Mr. George Henry"," male",51,0,0," 21440",8.0500," -1"," S"," -1"," -1"," Dorking_ Surrey_ England",0
+3," Gronnestad_ Mr. Daniel Danielsen"," male",32,0,0," 8471",8.3625," -1"," S"," -1"," -1"," Foresvik_ Norway Portland_ ND",0
+3," Guest_ Mr. Robert"," male"," -1",0,0," 376563",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Gustafsson_ Mr. Alfred Ossian"," male",20,0,0," 7534",9.8458," -1"," S"," -1"," -1"," Waukegan_ Chicago_ IL",0
+3," Gustafsson_ Mr. Anders Vilhelm"," male",37,2,0," 3101276",7.9250," -1"," S"," -1"," 98"," Ruotsinphytaa_ Finland New York_ NY",0
+3," Gustafsson_ Mr. Johan Birger"," male",28,2,0," 3101277",7.9250," -1"," S"," -1"," -1"," Ruotsinphytaa_ Finland New York_ NY",0
+3," Gustafsson_ Mr. Karl Gideon"," male",19,0,0," 347069",7.7750," -1"," S"," -1"," -1"," Myren_ Sweden New York_ NY",0
+3," Haas_ Miss. Aloisia"," female",24,0,0," 349236",8.8500," -1"," S"," -1"," -1"," -1",0
+3," Hagardon_ Miss. Kate"," female",17,0,0," AQ/3. 30631",7.7333," -1"," Q"," -1"," -1"," -1",0
+3," Hagland_ Mr. Ingvald Olai Olsen"," male"," -1",1,0," 65303",19.9667," -1"," S"," -1"," -1"," -1",0
+3," Hagland_ Mr. Konrad Mathias Reiersen"," male"," -1",1,0," 65304",19.9667," -1"," S"," -1"," -1"," -1",0
+3," Hakkarainen_ Mr. Pekka Pietari"," male",28,1,0," STON/O2. 3101279",15.8500," -1"," S"," -1"," -1"," -1",0
+3," Hakkarainen_ Mrs. Pekka Pietari (Elin Matilda Dolck)"," female",24,1,0," STON/O2. 3101279",15.8500," -1"," S"," 15"," -1"," -1",1
+3," Hampe_ Mr. Leon"," male",20,0,0," 345769",9.5000," -1"," S"," -1"," -1"," -1",0
+3," Hanna_ Mr. Mansour"," male",23.5,0,0," 2693",7.2292," -1"," C"," -1"," 188"," -1",0
+3," Hansen_ Mr. Claus Peter"," male",41,2,0," 350026",14.1083," -1"," S"," -1"," -1"," -1",0
+3," Hansen_ Mr. Henrik Juul"," male",26,1,0," 350025",7.8542," -1"," S"," -1"," -1"," -1",0
+3," Hansen_ Mr. Henry Damsgaard"," male",21,0,0," 350029",7.8542," -1"," S"," -1"," 69"," -1",0
+3," Hansen_ Mrs. Claus Peter (Jennie L Howard)"," female",45,1,0," 350026",14.1083," -1"," S"," 11"," -1"," -1",1
+3," Harknett_ Miss. Alice Phoebe"," female"," -1",0,0," W./C. 6609",7.5500," -1"," S"," -1"," -1"," -1",0
+3," Harmer_ Mr. Abraham (David Lishin)"," male",25,0,0," 374887",7.2500," -1"," S"," B"," -1"," -1",0
+3," Hart_ Mr. Henry"," male"," -1",0,0," 394140",6.8583," -1"," Q"," -1"," -1"," -1",0
+3," Hassan_ Mr. Houssein G N"," male",11,0,0," 2699",18.7875," -1"," C"," -1"," -1"," -1",0
+3," Healy_ Miss. Hanora ""Nora"""," female"," -1",0,0," 370375",7.7500," -1"," Q"," 16"," -1"," -1",1
+3," Hedman_ Mr. Oskar Arvid"," male",27,0,0," 347089",6.9750," -1"," S"," 15"," -1"," -1",1
+3," Hee_ Mr. Ling"," male"," -1",0,0," 1601",56.4958," -1"," S"," C"," -1"," -1",1
+3," Hegarty_ Miss. Hanora ""Nora"""," female",18,0,0," 365226",6.7500," -1"," Q"," -1"," -1"," -1",0
+3," Heikkinen_ Miss. Laina"," female",26,0,0," STON/O2. 3101282",7.9250," -1"," S"," -1"," -1"," -1",1
+3," Heininen_ Miss. Wendla Maria"," female",23,0,0," STON/O2. 3101290",7.9250," -1"," S"," -1"," -1"," -1",0
+3," Hellstrom_ Miss. Hilda Maria"," female",22,0,0," 7548",8.9625," -1"," S"," C"," -1"," -1",1
+3," Hendekovic_ Mr. Ignjac"," male",28,0,0," 349243",7.8958," -1"," S"," -1"," 306"," -1",0
+3," Henriksson_ Miss. Jenny Lovisa"," female",28,0,0," 347086",7.7750," -1"," S"," -1"," -1"," -1",0
+3," Henry_ Miss. Delia"," female"," -1",0,0," 382649",7.7500," -1"," Q"," -1"," -1"," -1",0
+3," Hirvonen_ Miss. Hildur E"," female",2,0,1," 3101298",12.2875," -1"," S"," 15"," -1"," -1",1
+3," Hirvonen_ Mrs. Alexander (Helga E Lindqvist)"," female",22,1,1," 3101298",12.2875," -1"," S"," 15"," -1"," -1",1
+3," Holm_ Mr. John Fredrik Alexander"," male",43,0,0," C 7075",6.4500," -1"," S"," -1"," -1"," -1",0
+3," Holthen_ Mr. Johan Martin"," male",28,0,0," C 4001",22.5250," -1"," S"," -1"," -1"," -1",0
+3," Honkanen_ Miss. Eliina"," female",27,0,0," STON/O2. 3101283",7.9250," -1"," S"," -1"," -1"," -1",1
+3," Horgan_ Mr. John"," male"," -1",0,0," 370377",7.7500," -1"," Q"," -1"," -1"," -1",0
+3," Howard_ Miss. May Elizabeth"," female"," -1",0,0," A. 2. 39186",8.0500," -1"," S"," C"," -1"," -1",1
+3," Humblen_ Mr. Adolf Mathias Nicolai Olsen"," male",42,0,0," 348121",7.6500," F G63"," S"," -1"," 120"," -1",0
+3," Hyman_ Mr. Abraham"," male"," -1",0,0," 3470",7.8875," -1"," S"," C"," -1"," -1",1
+3," Ibrahim Shawah_ Mr. Yousseff"," male",30,0,0," 2685",7.2292," -1"," C"," -1"," -1"," -1",0
+3," Ilieff_ Mr. Ylio"," male"," -1",0,0," 349220",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Ilmakangas_ Miss. Ida Livija"," female",27,1,0," STON/O2. 3101270",7.9250," -1"," S"," -1"," -1"," -1",0
+3," Ilmakangas_ Miss. Pieta Sofia"," female",25,1,0," STON/O2. 3101271",7.9250," -1"," S"," -1"," -1"," -1",0
+3," Ivanoff_ Mr. Kanio"," male"," -1",0,0," 349201",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Jalsevac_ Mr. Ivan"," male",29,0,0," 349240",7.8958," -1"," C"," 15"," -1"," -1",1
+3," Jansson_ Mr. Carl Olof"," male",21,0,0," 350034",7.7958," -1"," S"," A"," -1"," -1",1
+3," Jardin_ Mr. Jose Neto"," male"," -1",0,0," SOTON/O.Q. 3101305",7.0500," -1"," S"," -1"," -1"," -1",0
+3," Jensen_ Mr. Hans Peder"," male",20,0,0," 350050",7.8542," -1"," S"," -1"," -1"," -1",0
+3," Jensen_ Mr. Niels Peder"," male",48,0,0," 350047",7.8542," -1"," S"," -1"," -1"," -1",0
+3," Jensen_ Mr. Svend Lauritz"," male",17,1,0," 350048",7.0542," -1"," S"," -1"," -1"," -1",0
+3," Jermyn_ Miss. Annie"," female"," -1",0,0," 14313",7.7500," -1"," Q"," D"," -1"," -1",1
+3," Johannesen-Bratthammer_ Mr. Bernt"," male"," -1",0,0," 65306",8.1125," -1"," S"," 13"," -1"," -1",1
+3," Johanson_ Mr. Jakob Alfred"," male",34,0,0," 3101264",6.4958," -1"," S"," -1"," 143"," -1",0
+3," Johansson Palmquist_ Mr. Oskar Leander"," male",26,0,0," 347070",7.7750," -1"," S"," 15"," -1"," -1",1
+3," Johansson_ Mr. Erik"," male",22,0,0," 350052",7.7958," -1"," S"," -1"," 156"," -1",0
+3," Johansson_ Mr. Gustaf Joel"," male",33,0,0," 7540",8.6542," -1"," S"," -1"," 285"," -1",0
+3," Johansson_ Mr. Karl Johan"," male",31,0,0," 347063",7.7750," -1"," S"," -1"," -1"," -1",0
+3," Johansson_ Mr. Nils"," male",29,0,0," 347467",7.8542," -1"," S"," -1"," -1"," -1",0
+3," Johnson_ Master. Harold Theodor"," male",4,1,1," 347742",11.1333," -1"," S"," 15"," -1"," -1",1
+3," Johnson_ Miss. Eleanor Ileen"," female",1,1,1," 347742",11.1333," -1"," S"," 15"," -1"," -1",1
+3," Johnson_ Mr. Alfred"," male",49,0,0," LINE",0.0000," -1"," S"," -1"," -1"," -1",0
+3," Johnson_ Mr. Malkolm Joackim"," male",33,0,0," 347062",7.7750," -1"," S"," -1"," 37"," -1",0
+3," Johnson_ Mr. William Cahoone Jr"," male",19,0,0," LINE",0.0000," -1"," S"," -1"," -1"," -1",0
+3," Johnson_ Mrs. Oscar W (Elisabeth Vilhelmina Berg)"," female",27,0,2," 347742",11.1333," -1"," S"," 15"," -1"," -1",1
+3," Johnston_ Master. William Arthur ""Willie"""," male"," -1",1,2," W./C. 6607",23.4500," -1"," S"," -1"," -1"," -1",0
+3," Johnston_ Miss. Catherine Helen ""Carrie"""," female"," -1",1,2," W./C. 6607",23.4500," -1"," S"," -1"," -1"," -1",0
+3," Johnston_ Mr. Andrew G"," male"," -1",1,2," W./C. 6607",23.4500," -1"," S"," -1"," -1"," -1",0
+3," Johnston_ Mrs. Andrew G (Elizabeth ""Lily"" Watson)"," female"," -1",1,2," W./C. 6607",23.4500," -1"," S"," -1"," -1"," -1",0
+3," Jonkoff_ Mr. Lalio"," male",23,0,0," 349204",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Jonsson_ Mr. Carl"," male",32,0,0," 350417",7.8542," -1"," S"," 15"," -1"," -1",1
+3," Jonsson_ Mr. Nils Hilding"," male",27,0,0," 350408",7.8542," -1"," S"," -1"," -1"," -1",0
+3," Jussila_ Miss. Katriina"," female",20,1,0," 4136",9.8250," -1"," S"," -1"," -1"," -1",0
+3," Jussila_ Miss. Mari Aina"," female",21,1,0," 4137",9.8250," -1"," S"," -1"," -1"," -1",0
+3," Jussila_ Mr. Eiriik"," male",32,0,0," STON/O 2. 3101286",7.9250," -1"," S"," 15"," -1"," -1",1
+3," Kallio_ Mr. Nikolai Erland"," male",17,0,0," STON/O 2. 3101274",7.1250," -1"," S"," -1"," -1"," -1",0
+3," Kalvik_ Mr. Johannes Halvorsen"," male",21,0,0," 8475",8.4333," -1"," S"," -1"," -1"," -1",0
+3," Karaic_ Mr. Milan"," male",30,0,0," 349246",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Karlsson_ Mr. Einar Gervasius"," male",21,0,0," 350053",7.7958," -1"," S"," 13"," -1"," -1",1
+3," Karlsson_ Mr. Julius Konrad Eugen"," male",33,0,0," 347465",7.8542," -1"," S"," -1"," -1"," -1",0
+3," Karlsson_ Mr. Nils August"," male",22,0,0," 350060",7.5208," -1"," S"," -1"," -1"," -1",0
+3," Karun_ Miss. Manca"," female",4,0,1," 349256",13.4167," -1"," C"," 15"," -1"," -1",1
+3," Karun_ Mr. Franz"," male",39,0,1," 349256",13.4167," -1"," C"," 15"," -1"," -1",1
+3," Kassem_ Mr. Fared"," male"," -1",0,0," 2700",7.2292," -1"," C"," -1"," -1"," -1",0
+3," Katavelas_ Mr. Vassilios (""Catavelas Vassilios"")"," male",18.5,0,0," 2682",7.2292," -1"," C"," -1"," 58"," -1",0
+3," Keane_ Mr. Andrew ""Andy"""," male"," -1",0,0," 12460",7.7500," -1"," Q"," -1"," -1"," -1",0
+3," Keefe_ Mr. Arthur"," male"," -1",0,0," 323592",7.2500," -1"," S"," A"," -1"," -1",0
+3," Kelly_ Miss. Anna Katherine ""Annie Kate"""," female"," -1",0,0," 9234",7.7500," -1"," Q"," 16"," -1"," -1",1
+3," Kelly_ Miss. Mary"," female"," -1",0,0," 14312",7.7500," -1"," Q"," D"," -1"," -1",1
+3," Kelly_ Mr. James"," male",34.5,0,0," 330911",7.8292," -1"," Q"," -1"," 70"," -1",0
+3," Kelly_ Mr. James"," male",44,0,0," 363592",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Kennedy_ Mr. John"," male"," -1",0,0," 368783",7.7500," -1"," Q"," -1"," -1"," -1",1
+3," Khalil_ Mr. Betros"," male"," -1",1,0," 2660",14.4542," -1"," C"," -1"," -1"," -1",0
+3," Khalil_ Mrs. Betros (Zahie ""Maria"" Elias)"," female"," -1",1,0," 2660",14.4542," -1"," C"," -1"," -1"," -1",0
+3," Kiernan_ Mr. John"," male"," -1",1,0," 367227",7.7500," -1"," Q"," -1"," -1"," -1",0
+3," Kiernan_ Mr. Philip"," male"," -1",1,0," 367229",7.7500," -1"," Q"," -1"," -1"," -1",0
+3," Kilgannon_ Mr. Thomas J"," male"," -1",0,0," 36865",7.7375," -1"," Q"," -1"," -1"," -1",0
+3," Kink_ Miss. Maria"," female",22,2,0," 315152",8.6625," -1"," S"," -1"," -1"," -1",0
+3," Kink_ Mr. Vincenz"," male",26,2,0," 315151",8.6625," -1"," S"," -1"," -1"," -1",0
+3," Kink-Heilmann_ Miss. Luise Gretchen"," female",4,0,2," 315153",22.0250," -1"," S"," 2"," -1"," -1",1
+3," Kink-Heilmann_ Mr. Anton"," male",29,3,1," 315153",22.0250," -1"," S"," 2"," -1"," -1",1
+3," Kink-Heilmann_ Mrs. Anton (Luise Heilmann)"," female",26,1,1," 315153",22.0250," -1"," S"," 2"," -1"," -1",1
+3," Klasen_ Miss. Gertrud Emilia"," female",1,1,1," 350405",12.1833," -1"," S"," -1"," -1"," -1",0
+3," Klasen_ Mr. Klas Albin"," male",18,1,1," 350404",7.8542," -1"," S"," -1"," -1"," -1",0
+3," Klasen_ Mrs. (Hulda Kristina Eugenia Lofqvist)"," female",36,0,2," 350405",12.1833," -1"," S"," -1"," -1"," -1",0
+3," Kraeff_ Mr. Theodor"," male"," -1",0,0," 349253",7.8958," -1"," C"," -1"," -1"," -1",0
+3," Krekorian_ Mr. Neshan"," male",25,0,0," 2654",7.2292," F E57"," C"," 10"," -1"," -1",1
+3," Lahoud_ Mr. Sarkis"," male"," -1",0,0," 2624",7.2250," -1"," C"," -1"," -1"," -1",0
+3," Laitinen_ Miss. Kristina Sofia"," female",37,0,0," 4135",9.5875," -1"," S"," -1"," -1"," -1",0
+3," Laleff_ Mr. Kristo"," male"," -1",0,0," 349217",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Lam_ Mr. Ali"," male"," -1",0,0," 1601",56.4958," -1"," S"," C"," -1"," -1",1
+3," Lam_ Mr. Len"," male"," -1",0,0," 1601",56.4958," -1"," S"," -1"," -1"," -1",0
+3," Landergren_ Miss. Aurora Adelia"," female",22,0,0," C 7077",7.2500," -1"," S"," 13"," -1"," -1",1
+3," Lane_ Mr. Patrick"," male"," -1",0,0," 7935",7.7500," -1"," Q"," -1"," -1"," -1",0
+3," Lang_ Mr. Fang"," male",26,0,0," 1601",56.4958," -1"," S"," 14"," -1"," -1",1
+3," Larsson_ Mr. August Viktor"," male",29,0,0," 7545",9.4833," -1"," S"," -1"," -1"," -1",0
+3," Larsson_ Mr. Bengt Edvin"," male",29,0,0," 347067",7.7750," -1"," S"," -1"," -1"," -1",0
+3," Larsson-Rondberg_ Mr. Edvard A"," male",22,0,0," 347065",7.7750," -1"," S"," -1"," -1"," -1",0
+3," Leeni_ Mr. Fahim (""Philip Zenni"")"," male",22,0,0," 2620",7.2250," -1"," C"," 6"," -1"," -1",1
+3," Lefebre_ Master. Henry Forbes"," male"," -1",3,1," 4133",25.4667," -1"," S"," -1"," -1"," -1",0
+3," Lefebre_ Miss. Ida"," female"," -1",3,1," 4133",25.4667," -1"," S"," -1"," -1"," -1",0
+3," Lefebre_ Miss. Jeannie"," female"," -1",3,1," 4133",25.4667," -1"," S"," -1"," -1"," -1",0
+3," Lefebre_ Miss. Mathilde"," female"," -1",3,1," 4133",25.4667," -1"," S"," -1"," -1"," -1",0
+3," Lefebre_ Mrs. Frank (Frances)"," female"," -1",0,4," 4133",25.4667," -1"," S"," -1"," -1"," -1",0
+3," Leinonen_ Mr. Antti Gustaf"," male",32,0,0," STON/O 2. 3101292",7.9250," -1"," S"," -1"," -1"," -1",0
+3," Lemberopolous_ Mr. Peter L"," male",34.5,0,0," 2683",6.4375," -1"," C"," -1"," 196"," -1",0
+3," Lennon_ Miss. Mary"," female"," -1",1,0," 370371",15.5000," -1"," Q"," -1"," -1"," -1",0
+3," Lennon_ Mr. Denis"," male"," -1",1,0," 370371",15.5000," -1"," Q"," -1"," -1"," -1",0
+3," Leonard_ Mr. Lionel"," male",36,0,0," LINE",0.0000," -1"," S"," -1"," -1"," -1",0
+3," Lester_ Mr. James"," male",39,0,0," A/4 48871",24.1500," -1"," S"," -1"," -1"," -1",0
+3," Lievens_ Mr. Rene Aime"," male",24,0,0," 345781",9.5000," -1"," S"," -1"," -1"," -1",0
+3," Lindahl_ Miss. Agda Thorilda Viktoria"," female",25,0,0," 347071",7.7750," -1"," S"," -1"," -1"," -1",0
+3," Lindblom_ Miss. Augusta Charlotta"," female",45,0,0," 347073",7.7500," -1"," S"," -1"," -1"," -1",0
+3," Lindell_ Mr. Edvard Bengtsson"," male",36,1,0," 349910",15.5500," -1"," S"," A"," -1"," -1",0
+3," Lindell_ Mrs. Edvard Bengtsson (Elin Gerda Persson)"," female",30,1,0," 349910",15.5500," -1"," S"," A"," -1"," -1",0
+3," Lindqvist_ Mr. Eino William"," male",20,1,0," STON/O 2. 3101285",7.9250," -1"," S"," 15"," -1"," -1",1
+3," Linehan_ Mr. Michael"," male"," -1",0,0," 330971",7.8792," -1"," Q"," -1"," -1"," -1",0
+3," Ling_ Mr. Lee"," male",28,0,0," 1601",56.4958," -1"," S"," -1"," -1"," -1",0
+3," Lithman_ Mr. Simon"," male"," -1",0,0," S.O./P.P. 251",7.5500," -1"," S"," -1"," -1"," -1",0
+3," Lobb_ Mr. William Arthur"," male",30,1,0," A/5. 3336",16.1000," -1"," S"," -1"," -1"," -1",0
+3," Lobb_ Mrs. William Arthur (Cordelia K Stanlick)"," female",26,1,0," A/5. 3336",16.1000," -1"," S"," -1"," -1"," -1",0
+3," Lockyer_ Mr. Edward"," male"," -1",0,0," 1222",7.8792," -1"," S"," -1"," 153"," -1",0
+3," Lovell_ Mr. John Hall (""Henry"")"," male",20.5,0,0," A/5 21173",7.2500," -1"," S"," -1"," -1"," -1",0
+3," Lulic_ Mr. Nikola"," male",27,0,0," 315098",8.6625," -1"," S"," 15"," -1"," -1",1
+3," Lundahl_ Mr. Johan Svensson"," male",51,0,0," 347743",7.0542," -1"," S"," -1"," -1"," -1",0
+3," Lundin_ Miss. Olga Elida"," female",23,0,0," 347469",7.8542," -1"," S"," 10"," -1"," -1",1
+3," Lundstrom_ Mr. Thure Edvin"," male",32,0,0," 350403",7.5792," -1"," S"," 15"," -1"," -1",1
+3," Lyntakoff_ Mr. Stanko"," male"," -1",0,0," 349235",7.8958," -1"," S"," -1"," -1"," -1",0
+3," MacKay_ Mr. George William"," male"," -1",0,0," C.A. 42795",7.5500," -1"," S"," -1"," -1"," -1",0
+3," Madigan_ Miss. Margaret ""Maggie"""," female"," -1",0,0," 370370",7.7500," -1"," Q"," 15"," -1"," -1",1
+3," Madsen_ Mr. Fridtjof Arne"," male",24,0,0," C 17369",7.1417," -1"," S"," 13"," -1"," -1",1
+3," Maenpaa_ Mr. Matti Alexanteri"," male",22,0,0," STON/O 2. 3101275",7.1250," -1"," S"," -1"," -1"," -1",0
+3," Mahon_ Miss. Bridget Delia"," female"," -1",0,0," 330924",7.8792," -1"," Q"," -1"," -1"," -1",0
+3," Mahon_ Mr. John"," male"," -1",0,0," AQ/4 3130",7.7500," -1"," Q"," -1"," -1"," -1",0
+3," Maisner_ Mr. Simon"," male"," -1",0,0," A/S 2816",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Makinen_ Mr. Kalle Edvard"," male",29,0,0," STON/O 2. 3101268",7.9250," -1"," S"," -1"," -1"," -1",0
+3," Mamee_ Mr. Hanna"," male"," -1",0,0," 2677",7.2292," -1"," C"," 15"," -1"," -1",1
+3," Mangan_ Miss. Mary"," female",30.5,0,0," 364850",7.7500," -1"," Q"," -1"," 61"," -1",0
+3," Mannion_ Miss. Margareth"," female"," -1",0,0," 36866",7.7375," -1"," Q"," 16"," -1"," -1",1
+3," Mardirosian_ Mr. Sarkis"," male"," -1",0,0," 2655",7.2292," F E46"," C"," -1"," -1"," -1",0
+3," Markoff_ Mr. Marin"," male",35,0,0," 349213",7.8958," -1"," C"," -1"," -1"," -1",0
+3," Markun_ Mr. Johann"," male",33,0,0," 349257",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Masselmani_ Mrs. Fatima"," female"," -1",0,0," 2649",7.2250," -1"," C"," C"," -1"," -1",1
+3," Matinoff_ Mr. Nicola"," male"," -1",0,0," 349255",7.8958," -1"," C"," -1"," -1"," -1",0
+3," McCarthy_ Miss. Catherine ""Katie"""," female"," -1",0,0," 383123",7.7500," -1"," Q"," 15 16"," -1"," -1",1
+3," McCormack_ Mr. Thomas Joseph"," male"," -1",0,0," 367228",7.7500," -1"," Q"," -1"," -1"," -1",1
+3," McCoy_ Miss. Agnes"," female"," -1",2,0," 367226",23.2500," -1"," Q"," 16"," -1"," -1",1
+3," McCoy_ Miss. Alicia"," female"," -1",2,0," 367226",23.2500," -1"," Q"," 16"," -1"," -1",1
+3," McCoy_ Mr. Bernard"," male"," -1",2,0," 367226",23.2500," -1"," Q"," 16"," -1"," -1",1
+3," McDermott_ Miss. Brigdet Delia"," female"," -1",0,0," 330932",7.7875," -1"," Q"," 13"," -1"," -1",1
+3," McEvoy_ Mr. Michael"," male"," -1",0,0," 36568",15.5000," -1"," Q"," -1"," -1"," -1",0
+3," McGovern_ Miss. Mary"," female"," -1",0,0," 330931",7.8792," -1"," Q"," 13"," -1"," -1",1
+3," McGowan_ Miss. Anna ""Annie"""," female",15,0,0," 330923",8.0292," -1"," Q"," -1"," -1"," -1",1
+3," McGowan_ Miss. Katherine"," female",35,0,0," 9232",7.7500," -1"," Q"," -1"," -1"," -1",0
+3," McMahon_ Mr. Martin"," male"," -1",0,0," 370372",7.7500," -1"," Q"," -1"," -1"," -1",0
+3," McNamee_ Mr. Neal"," male",24,1,0," 376566",16.1000," -1"," S"," -1"," -1"," -1",0
+3," McNamee_ Mrs. Neal (Eileen O'Leary)"," female",19,1,0," 376566",16.1000," -1"," S"," -1"," 53"," -1",0
+3," McNeill_ Miss. Bridget"," female"," -1",0,0," 370368",7.7500," -1"," Q"," -1"," -1"," -1",0
+3," Meanwell_ Miss. (Marion Ogden)"," female"," -1",0,0," SOTON/O.Q. 392087",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Meek_ Mrs. Thomas (Annie Louise Rowley)"," female"," -1",0,0," 343095",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Meo_ Mr. Alfonzo"," male",55.5,0,0," A.5. 11206",8.0500," -1"," S"," -1"," 201"," -1",0
+3," Mernagh_ Mr. Robert"," male"," -1",0,0," 368703",7.7500," -1"," Q"," -1"," -1"," -1",0
+3," Midtsjo_ Mr. Karl Albert"," male",21,0,0," 345501",7.7750," -1"," S"," 15"," -1"," -1",1
+3," Miles_ Mr. Frank"," male"," -1",0,0," 359306",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Mineff_ Mr. Ivan"," male",24,0,0," 349233",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Minkoff_ Mr. Lazar"," male",21,0,0," 349211",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Mionoff_ Mr. Stoytcho"," male",28,0,0," 349207",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Mitkoff_ Mr. Mito"," male"," -1",0,0," 349221",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Mockler_ Miss. Helen Mary ""Ellie"""," female"," -1",0,0," 330980",7.8792," -1"," Q"," 16"," -1"," -1",1
+3," Moen_ Mr. Sigurd Hansen"," male",25,0,0," 348123",7.6500," F G73"," S"," -1"," 309"," -1",0
+3," Moor_ Master. Meier"," male",6,0,1," 392096",12.4750," E121"," S"," 14"," -1"," -1",1
+3," Moor_ Mrs. (Beila)"," female",27,0,1," 392096",12.4750," E121"," S"," 14"," -1"," -1",1
+3," Moore_ Mr. Leonard Charles"," male"," -1",0,0," A4. 54510",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Moran_ Miss. Bertha"," female"," -1",1,0," 371110",24.1500," -1"," Q"," 16"," -1"," -1",1
+3," Moran_ Mr. Daniel J"," male"," -1",1,0," 371110",24.1500," -1"," Q"," -1"," -1"," -1",0
+3," Moran_ Mr. James"," male"," -1",0,0," 330877",8.4583," -1"," Q"," -1"," -1"," -1",0
+3," Morley_ Mr. William"," male",34,0,0," 364506",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Morrow_ Mr. Thomas Rowan"," male"," -1",0,0," 372622",7.7500," -1"," Q"," -1"," -1"," -1",0
+3," Moss_ Mr. Albert Johan"," male"," -1",0,0," 312991",7.7750," -1"," S"," B"," -1"," -1",1
+3," Moubarek_ Master. Gerios"," male"," -1",1,1," 2661",15.2458," -1"," C"," C"," -1"," -1",1
+3," Moubarek_ Master. Halim Gonios (""William George"")"," male"," -1",1,1," 2661",15.2458," -1"," C"," C"," -1"," -1",1
+3," Moubarek_ Mrs. George (Omine ""Amenia"" Alexander)"," female"," -1",0,2," 2661",15.2458," -1"," C"," C"," -1"," -1",1
+3," Moussa_ Mrs. (Mantoura Boulos)"," female"," -1",0,0," 2626",7.2292," -1"," C"," -1"," -1"," -1",1
+3," Moutal_ Mr. Rahamin Haim"," male"," -1",0,0," 374746",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Mullens_ Miss. Katherine ""Katie"""," female"," -1",0,0," 35852",7.7333," -1"," Q"," 16"," -1"," -1",1
+3," Mulvihill_ Miss. Bertha E"," female",24,0,0," 382653",7.7500," -1"," Q"," 15"," -1"," -1",1
+3," Murdlin_ Mr. Joseph"," male"," -1",0,0," A./5. 3235",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Murphy_ Miss. Katherine ""Kate"""," female"," -1",1,0," 367230",15.5000," -1"," Q"," 16"," -1"," -1",1
+3," Murphy_ Miss. Margaret Jane"," female"," -1",1,0," 367230",15.5000," -1"," Q"," 16"," -1"," -1",1
+3," Murphy_ Miss. Nora"," female"," -1",0,0," 36568",15.5000," -1"," Q"," 16"," -1"," -1",1
+3," Myhrman_ Mr. Pehr Fabian Oliver Malkolm"," male",18,0,0," 347078",7.7500," -1"," S"," -1"," -1"," -1",0
+3," Naidenoff_ Mr. Penko"," male",22,0,0," 349206",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Najib_ Miss. Adele Kiamie ""Jane"""," female",15,0,0," 2667",7.2250," -1"," C"," C"," -1"," -1",1
+3," Nakid_ Miss. Maria (""Mary"")"," female",1,0,2," 2653",15.7417," -1"," C"," C"," -1"," -1",1
+3," Nakid_ Mr. Sahid"," male",20,1,1," 2653",15.7417," -1"," C"," C"," -1"," -1",1
+3," Nakid_ Mrs. Said (Waika ""Mary"" Mowad)"," female",19,1,1," 2653",15.7417," -1"," C"," C"," -1"," -1",1
+3," Nancarrow_ Mr. William Henry"," male",33,0,0," A./5. 3338",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Nankoff_ Mr. Minko"," male"," -1",0,0," 349218",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Nasr_ Mr. Mustafa"," male"," -1",0,0," 2652",7.2292," -1"," C"," -1"," -1"," -1",0
+3," Naughton_ Miss. Hannah"," female"," -1",0,0," 365237",7.7500," -1"," Q"," -1"," -1"," -1",0
+3," Nenkoff_ Mr. Christo"," male"," -1",0,0," 349234",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Nicola-Yarred_ Master. Elias"," male",12,1,0," 2651",11.2417," -1"," C"," C"," -1"," -1",1
+3," Nicola-Yarred_ Miss. Jamila"," female",14,1,0," 2651",11.2417," -1"," C"," C"," -1"," -1",1
+3," Nieminen_ Miss. Manta Josefina"," female",29,0,0," 3101297",7.9250," -1"," S"," -1"," -1"," -1",0
+3," Niklasson_ Mr. Samuel"," male",28,0,0," 363611",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Nilsson_ Miss. Berta Olivia"," female",18,0,0," 347066",7.7750," -1"," S"," D"," -1"," -1",1
+3," Nilsson_ Miss. Helmina Josefina"," female",26,0,0," 347470",7.8542," -1"," S"," 13"," -1"," -1",1
+3," Nilsson_ Mr. August Ferdinand"," male",21,0,0," 350410",7.8542," -1"," S"," -1"," -1"," -1",0
+3," Nirva_ Mr. Iisakki Antino Aijo"," male",41,0,0," SOTON/O2 3101272",7.1250," -1"," S"," -1"," -1"," Finland Sudbury_ ON",0
+3," Niskanen_ Mr. Juha"," male",39,0,0," STON/O 2. 3101289",7.9250," -1"," S"," 9"," -1"," -1",1
+3," Nosworthy_ Mr. Richard Cater"," male",21,0,0," A/4. 39886",7.8000," -1"," S"," -1"," -1"," -1",0
+3," Novel_ Mr. Mansouer"," male",28.5,0,0," 2697",7.2292," -1"," C"," -1"," 181"," -1",0
+3," Nysten_ Miss. Anna Sofia"," female",22,0,0," 347081",7.7500," -1"," S"," 13"," -1"," -1",1
+3," Nysveen_ Mr. Johan Hansen"," male",61,0,0," 345364",6.2375," -1"," S"," -1"," -1"," -1",0
+3," O'Brien_ Mr. Thomas"," male"," -1",1,0," 370365",15.5000," -1"," Q"," -1"," -1"," -1",0
+3," O'Brien_ Mr. Timothy"," male"," -1",0,0," 330979",7.8292," -1"," Q"," -1"," -1"," -1",0
+3," O'Brien_ Mrs. Thomas (Johanna ""Hannah"" Godfrey)"," female"," -1",1,0," 370365",15.5000," -1"," Q"," -1"," -1"," -1",1
+3," O'Connell_ Mr. Patrick D"," male"," -1",0,0," 334912",7.7333," -1"," Q"," -1"," -1"," -1",0
+3," O'Connor_ Mr. Maurice"," male"," -1",0,0," 371060",7.7500," -1"," Q"," -1"," -1"," -1",0
+3," O'Connor_ Mr. Patrick"," male"," -1",0,0," 366713",7.7500," -1"," Q"," -1"," -1"," -1",0
+3," Odahl_ Mr. Nils Martin"," male",23,0,0," 7267",9.2250," -1"," S"," -1"," -1"," -1",0
+3," O'Donoghue_ Ms. Bridget"," female"," -1",0,0," 364856",7.7500," -1"," Q"," -1"," -1"," -1",0
+3," O'Driscoll_ Miss. Bridget"," female"," -1",0,0," 14311",7.7500," -1"," Q"," D"," -1"," -1",1
+3," O'Dwyer_ Miss. Ellen ""Nellie"""," female"," -1",0,0," 330959",7.8792," -1"," Q"," -1"," -1"," -1",1
+3," Ohman_ Miss. Velin"," female",22,0,0," 347085",7.7750," -1"," S"," C"," -1"," -1",1
+3," O'Keefe_ Mr. Patrick"," male"," -1",0,0," 368402",7.7500," -1"," Q"," B"," -1"," -1",1
+3," O'Leary_ Miss. Hanora ""Norah"""," female"," -1",0,0," 330919",7.8292," -1"," Q"," 13"," -1"," -1",1
+3," Olsen_ Master. Artur Karl"," male",9,0,1," C 17368",3.1708," -1"," S"," 13"," -1"," -1",1
+3," Olsen_ Mr. Henry Margido"," male",28,0,0," C 4001",22.5250," -1"," S"," -1"," 173"," -1",0
+3," Olsen_ Mr. Karl Siegwart Andreas"," male",42,0,1," 4579",8.4042," -1"," S"," -1"," -1"," -1",0
+3," Olsen_ Mr. Ole Martin"," male"," -1",0,0," Fa 265302",7.3125," -1"," S"," -1"," -1"," -1",0
+3," Olsson_ Miss. Elina"," female",31,0,0," 350407",7.8542," -1"," S"," -1"," -1"," -1",0
+3," Olsson_ Mr. Nils Johan Goransson"," male",28,0,0," 347464",7.8542," -1"," S"," -1"," -1"," -1",0
+3," Olsson_ Mr. Oscar Wilhelm"," male",32,0,0," 347079",7.7750," -1"," S"," A"," -1"," -1",1
+3," Olsvigen_ Mr. Thor Anderson"," male",20,0,0," 6563",9.2250," -1"," S"," -1"," 89"," Oslo_ Norway Cameron_ WI",0
+3," Oreskovic_ Miss. Jelka"," female",23,0,0," 315085",8.6625," -1"," S"," -1"," -1"," -1",0
+3," Oreskovic_ Miss. Marija"," female",20,0,0," 315096",8.6625," -1"," S"," -1"," -1"," -1",0
+3," Oreskovic_ Mr. Luka"," male",20,0,0," 315094",8.6625," -1"," S"," -1"," -1"," -1",0
+3," Osen_ Mr. Olaf Elon"," male",16,0,0," 7534",9.2167," -1"," S"," -1"," -1"," -1",0
+3," Osman_ Mrs. Mara"," female",31,0,0," 349244",8.6833," -1"," S"," -1"," -1"," -1",1
+3," O'Sullivan_ Miss. Bridget Mary"," female"," -1",0,0," 330909",7.6292," -1"," Q"," -1"," -1"," -1",0
+3," Palsson_ Master. Gosta Leonard"," male",2,3,1," 349909",21.0750," -1"," S"," -1"," 4"," -1",0
+3," Palsson_ Master. Paul Folke"," male",6,3,1," 349909",21.0750," -1"," S"," -1"," -1"," -1",0
+3," Palsson_ Miss. Stina Viola"," female",3,3,1," 349909",21.0750," -1"," S"," -1"," -1"," -1",0
+3," Palsson_ Miss. Torborg Danira"," female",8,3,1," 349909",21.0750," -1"," S"," -1"," -1"," -1",0
+3," Palsson_ Mrs. Nils (Alma Cornelia Berglund)"," female",29,0,4," 349909",21.0750," -1"," S"," -1"," 206"," -1",0
+3," Panula_ Master. Eino Viljami"," male",1,4,1," 3101295",39.6875," -1"," S"," -1"," -1"," -1",0
+3," Panula_ Master. Juha Niilo"," male",7,4,1," 3101295",39.6875," -1"," S"," -1"," -1"," -1",0
+3," Panula_ Master. Urho Abraham"," male",2,4,1," 3101295",39.6875," -1"," S"," -1"," -1"," -1",0
+3," Panula_ Mr. Ernesti Arvid"," male",16,4,1," 3101295",39.6875," -1"," S"," -1"," -1"," -1",0
+3," Panula_ Mr. Jaako Arnold"," male",14,4,1," 3101295",39.6875," -1"," S"," -1"," -1"," -1",0
+3," Panula_ Mrs. Juha (Maria Emilia Ojala)"," female",41,0,5," 3101295",39.6875," -1"," S"," -1"," -1"," -1",0
+3," Pasic_ Mr. Jakob"," male",21,0,0," 315097",8.6625," -1"," S"," -1"," -1"," -1",0
+3," Patchett_ Mr. George"," male",19,0,0," 358585",14.5000," -1"," S"," -1"," -1"," -1",0
+3," Paulner_ Mr. Uscher"," male"," -1",0,0," 3411",8.7125," -1"," C"," -1"," -1"," -1",0
+3," Pavlovic_ Mr. Stefo"," male",32,0,0," 349242",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Peacock_ Master. Alfred Edward"," male",0.75,1,1," SOTON/O.Q. 3101315",13.7750," -1"," S"," -1"," -1"," -1",0
+3," Peacock_ Miss. Treasteall"," female",3,1,1," SOTON/O.Q. 3101315",13.7750," -1"," S"," -1"," -1"," -1",0
+3," Peacock_ Mrs. Benjamin (Edith Nile)"," female",26,0,2," SOTON/O.Q. 3101315",13.7750," -1"," S"," -1"," -1"," -1",0
+3," Pearce_ Mr. Ernest"," male"," -1",0,0," 343271",7.0000," -1"," S"," -1"," -1"," -1",0
+3," Pedersen_ Mr. Olaf"," male"," -1",0,0," 345498",7.7750," -1"," S"," -1"," -1"," -1",0
+3," Peduzzi_ Mr. Joseph"," male"," -1",0,0," A/5 2817",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Pekoniemi_ Mr. Edvard"," male",21,0,0," STON/O 2. 3101294",7.9250," -1"," S"," -1"," -1"," -1",0
+3," Peltomaki_ Mr. Nikolai Johannes"," male",25,0,0," STON/O 2. 3101291",7.9250," -1"," S"," -1"," -1"," -1",0
+3," Perkin_ Mr. John Henry"," male",22,0,0," A/5 21174",7.2500," -1"," S"," -1"," -1"," -1",0
+3," Persson_ Mr. Ernst Ulrik"," male",25,1,0," 347083",7.7750," -1"," S"," 15"," -1"," -1",1
+3," Peter_ Master. Michael J"," male"," -1",1,1," 2668",22.3583," -1"," C"," C"," -1"," -1",1
+3," Peter_ Miss. Anna"," female"," -1",1,1," 2668",22.3583," F E69"," C"," D"," -1"," -1",1
+3," Peter_ Mrs. Catherine (Catherine Rizk)"," female"," -1",0,2," 2668",22.3583," -1"," C"," D"," -1"," -1",1
+3," Peters_ Miss. Katie"," female"," -1",0,0," 330935",8.1375," -1"," Q"," -1"," -1"," -1",0
+3," Petersen_ Mr. Marius"," male",24,0,0," 342441",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Petranec_ Miss. Matilda"," female",28,0,0," 349245",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Petroff_ Mr. Nedelio"," male",19,0,0," 349212",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Petroff_ Mr. Pastcho (""Pentcho"")"," male"," -1",0,0," 349215",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Petterson_ Mr. Johan Emil"," male",25,1,0," 347076",7.7750," -1"," S"," -1"," -1"," -1",0
+3," Pettersson_ Miss. Ellen Natalia"," female",18,0,0," 347087",7.7750," -1"," S"," -1"," -1"," -1",0
+3," Pickard_ Mr. Berk (Berk Trembisky)"," male",32,0,0," SOTON/O.Q. 392078",8.0500," E10"," S"," 9"," -1"," -1",1
+3," Plotcharsky_ Mr. Vasil"," male"," -1",0,0," 349227",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Pokrnic_ Mr. Mate"," male",17,0,0," 315095",8.6625," -1"," S"," -1"," -1"," -1",0
+3," Pokrnic_ Mr. Tome"," male",24,0,0," 315092",8.6625," -1"," S"," -1"," -1"," -1",0
+3," Radeff_ Mr. Alexander"," male"," -1",0,0," 349223",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Rasmussen_ Mrs. (Lena Jacobsen Solvang)"," female"," -1",0,0," 65305",8.1125," -1"," S"," -1"," -1"," -1",0
+3," Razi_ Mr. Raihed"," male"," -1",0,0," 2629",7.2292," -1"," C"," -1"," -1"," -1",0
+3," Reed_ Mr. James George"," male"," -1",0,0," 362316",7.2500," -1"," S"," -1"," -1"," -1",0
+3," Rekic_ Mr. Tido"," male",38,0,0," 349249",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Reynolds_ Mr. Harold J"," male",21,0,0," 342684",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Rice_ Master. Albert"," male",10,4,1," 382652",29.1250," -1"," Q"," -1"," -1"," -1",0
+3," Rice_ Master. Arthur"," male",4,4,1," 382652",29.1250," -1"," Q"," -1"," -1"," -1",0
+3," Rice_ Master. Eric"," male",7,4,1," 382652",29.1250," -1"," Q"," -1"," -1"," -1",0
+3," Rice_ Master. Eugene"," male",2,4,1," 382652",29.1250," -1"," Q"," -1"," -1"," -1",0
+3," Rice_ Master. George Hugh"," male",8,4,1," 382652",29.1250," -1"," Q"," -1"," -1"," -1",0
+3," Rice_ Mrs. William (Margaret Norton)"," female",39,0,5," 382652",29.1250," -1"," Q"," -1"," 327"," -1",0
+3," Riihivouri_ Miss. Susanna Juhantytar ""Sanni"""," female",22,0,0," 3101295",39.6875," -1"," S"," -1"," -1"," -1",0
+3," Rintamaki_ Mr. Matti"," male",35,0,0," STON/O 2. 3101273",7.1250," -1"," S"," -1"," -1"," -1",0
+3," Riordan_ Miss. Johanna ""Hannah"""," female"," -1",0,0," 334915",7.7208," -1"," Q"," 13"," -1"," -1",1
+3," Risien_ Mr. Samuel Beard"," male"," -1",0,0," 364498",14.5000," -1"," S"," -1"," -1"," -1",0
+3," Risien_ Mrs. Samuel (Emma)"," female"," -1",0,0," 364498",14.5000," -1"," S"," -1"," -1"," -1",0
+3," Robins_ Mr. Alexander A"," male",50,1,0," A/5. 3337",14.5000," -1"," S"," -1"," 119"," -1",0
+3," Robins_ Mrs. Alexander A (Grace Charity Laury)"," female",47,1,0," A/5. 3337",14.5000," -1"," S"," -1"," 7"," -1",0
+3," Rogers_ Mr. William John"," male"," -1",0,0," S.C./A.4. 23567",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Rommetvedt_ Mr. Knud Paust"," male"," -1",0,0," 312993",7.7750," -1"," S"," -1"," -1"," -1",0
+3," Rosblom_ Miss. Salli Helena"," female",2,1,1," 370129",20.2125," -1"," S"," -1"," -1"," -1",0
+3," Rosblom_ Mr. Viktor Richard"," male",18,1,1," 370129",20.2125," -1"," S"," -1"," -1"," -1",0
+3," Rosblom_ Mrs. Viktor (Helena Wilhelmina)"," female",41,0,2," 370129",20.2125," -1"," S"," -1"," -1"," -1",0
+3," Roth_ Miss. Sarah A"," female"," -1",0,0," 342712",8.0500," -1"," S"," C"," -1"," -1",1
+3," Rouse_ Mr. Richard Henry"," male",50,0,0," A/5 3594",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Rush_ Mr. Alfred George John"," male",16,0,0," A/4. 20589",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Ryan_ Mr. Edward"," male"," -1",0,0," 383162",7.7500," -1"," Q"," 14"," -1"," -1",1
+3," Ryan_ Mr. Patrick"," male"," -1",0,0," 371110",24.1500," -1"," Q"," -1"," -1"," -1",0
+3," Saad_ Mr. Amin"," male"," -1",0,0," 2671",7.2292," -1"," C"," -1"," -1"," -1",0
+3," Saad_ Mr. Khalil"," male",25,0,0," 2672",7.2250," -1"," C"," -1"," -1"," -1",0
+3," Saade_ Mr. Jean Nassr"," male"," -1",0,0," 2676",7.2250," -1"," C"," -1"," -1"," -1",0
+3," Sadlier_ Mr. Matthew"," male"," -1",0,0," 367655",7.7292," -1"," Q"," -1"," -1"," -1",0
+3," Sadowitz_ Mr. Harry"," male"," -1",0,0," LP 1588",7.5750," -1"," S"," -1"," -1"," -1",0
+3," Saether_ Mr. Simon Sivertsen"," male",38.5,0,0," SOTON/O.Q. 3101262",7.2500," -1"," S"," -1"," 32"," -1",0
+3," Sage_ Master. Thomas Henry"," male"," -1",8,2," CA. 2343",69.5500," -1"," S"," -1"," -1"," -1",0
+3," Sage_ Master. William Henry"," male",14.5,8,2," CA. 2343",69.5500," -1"," S"," -1"," 67"," -1",0
+3," Sage_ Miss. Ada"," female"," -1",8,2," CA. 2343",69.5500," -1"," S"," -1"," -1"," -1",0
+3," Sage_ Miss. Constance Gladys"," female"," -1",8,2," CA. 2343",69.5500," -1"," S"," -1"," -1"," -1",0
+3," Sage_ Miss. Dorothy Edith ""Dolly"""," female"," -1",8,2," CA. 2343",69.5500," -1"," S"," -1"," -1"," -1",0
+3," Sage_ Miss. Stella Anna"," female"," -1",8,2," CA. 2343",69.5500," -1"," S"," -1"," -1"," -1",0
+3," Sage_ Mr. Douglas Bullen"," male"," -1",8,2," CA. 2343",69.5500," -1"," S"," -1"," -1"," -1",0
+3," Sage_ Mr. Frederick"," male"," -1",8,2," CA. 2343",69.5500," -1"," S"," -1"," -1"," -1",0
+3," Sage_ Mr. George John Jr"," male"," -1",8,2," CA. 2343",69.5500," -1"," S"," -1"," -1"," -1",0
+3," Sage_ Mr. John George"," male"," -1",1,9," CA. 2343",69.5500," -1"," S"," -1"," -1"," -1",0
+3," Sage_ Mrs. John (Annie Bullen)"," female"," -1",1,9," CA. 2343",69.5500," -1"," S"," -1"," -1"," -1",0
+3," Salander_ Mr. Karl Johan"," male",24,0,0," 7266",9.3250," -1"," S"," -1"," -1"," -1",0
+3," Salkjelsvik_ Miss. Anna Kristine"," female",21,0,0," 343120",7.6500," -1"," S"," C"," -1"," -1",1
+3," Salonen_ Mr. Johan Werner"," male",39,0,0," 3101296",7.9250," -1"," S"," -1"," -1"," -1",0
+3," Samaan_ Mr. Elias"," male"," -1",2,0," 2662",21.6792," -1"," C"," -1"," -1"," -1",0
+3," Samaan_ Mr. Hanna"," male"," -1",2,0," 2662",21.6792," -1"," C"," -1"," -1"," -1",0
+3," Samaan_ Mr. Youssef"," male"," -1",2,0," 2662",21.6792," -1"," C"," -1"," -1"," -1",0
+3," Sandstrom_ Miss. Beatrice Irene"," female",1,1,1," PP 9549",16.7000," G6"," S"," 13"," -1"," -1",1
+3," Sandstrom_ Mrs. Hjalmar (Agnes Charlotta Bengtsson)"," female",24,0,2," PP 9549",16.7000," G6"," S"," 13"," -1"," -1",1
+3," Sandstrom_ Miss. Marguerite Rut"," female",4,1,1," PP 9549",16.7000," G6"," S"," 13"," -1"," -1",1
+3," Sap_ Mr. Julius"," male",25,0,0," 345768",9.5000," -1"," S"," 11"," -1"," -1",1
+3," Saundercock_ Mr. William Henry"," male",20,0,0," A/5. 2151",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Sawyer_ Mr. Frederick Charles"," male",24.5,0,0," 342826",8.0500," -1"," S"," -1"," 284"," -1",0
+3," Scanlan_ Mr. James"," male"," -1",0,0," 36209",7.7250," -1"," Q"," -1"," -1"," -1",0
+3," Sdycoff_ Mr. Todor"," male"," -1",0,0," 349222",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Shaughnessy_ Mr. Patrick"," male"," -1",0,0," 370374",7.7500," -1"," Q"," -1"," -1"," -1",0
+3," Sheerlinck_ Mr. Jan Baptist"," male",29,0,0," 345779",9.5000," -1"," S"," 11"," -1"," -1",1
+3," Shellard_ Mr. Frederick William"," male"," -1",0,0," C.A. 6212",15.1000," -1"," S"," -1"," -1"," -1",0
+3," Shine_ Miss. Ellen Natalia"," female"," -1",0,0," 330968",7.7792," -1"," Q"," -1"," -1"," -1",1
+3," Shorney_ Mr. Charles Joseph"," male"," -1",0,0," 374910",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Simmons_ Mr. John"," male"," -1",0,0," SOTON/OQ 392082",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Sirayanian_ Mr. Orsen"," male",22,0,0," 2669",7.2292," -1"," C"," -1"," -1"," -1",0
+3," Sirota_ Mr. Maurice"," male"," -1",0,0," 392092",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Sivic_ Mr. Husein"," male",40,0,0," 349251",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Sivola_ Mr. Antti Wilhelm"," male",21,0,0," STON/O 2. 3101280",7.9250," -1"," S"," -1"," -1"," -1",0
+3," Sjoblom_ Miss. Anna Sofia"," female",18,0,0," 3101265",7.4958," -1"," S"," 16"," -1"," -1",1
+3," Skoog_ Master. Harald"," male",4,3,2," 347088",27.9000," -1"," S"," -1"," -1"," -1",0
+3," Skoog_ Master. Karl Thorsten"," male",10,3,2," 347088",27.9000," -1"," S"," -1"," -1"," -1",0
+3," Skoog_ Miss. Mabel"," female",9,3,2," 347088",27.9000," -1"," S"," -1"," -1"," -1",0
+3," Skoog_ Miss. Margit Elizabeth"," female",2,3,2," 347088",27.9000," -1"," S"," -1"," -1"," -1",0
+3," Skoog_ Mr. Wilhelm"," male",40,1,4," 347088",27.9000," -1"," S"," -1"," -1"," -1",0
+3," Skoog_ Mrs. William (Anna Bernhardina Karlsson)"," female",45,1,4," 347088",27.9000," -1"," S"," -1"," -1"," -1",0
+3," Slabenoff_ Mr. Petco"," male"," -1",0,0," 349214",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Slocovski_ Mr. Selman Francis"," male"," -1",0,0," SOTON/OQ 392086",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Smiljanic_ Mr. Mile"," male"," -1",0,0," 315037",8.6625," -1"," S"," -1"," -1"," -1",0
+3," Smith_ Mr. Thomas"," male"," -1",0,0," 384461",7.7500," -1"," Q"," -1"," -1"," -1",0
+3," Smyth_ Miss. Julia"," female"," -1",0,0," 335432",7.7333," -1"," Q"," 13"," -1"," -1",1
+3," Soholt_ Mr. Peter Andreas Lauritz Andersen"," male",19,0,0," 348124",7.6500," F G73"," S"," -1"," -1"," -1",0
+3," Somerton_ Mr. Francis William"," male",30,0,0," A.5. 18509",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Spector_ Mr. Woolf"," male"," -1",0,0," A.5. 3236",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Spinner_ Mr. Henry John"," male",32,0,0," STON/OQ. 369943",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Staneff_ Mr. Ivan"," male"," -1",0,0," 349208",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Stankovic_ Mr. Ivan"," male",33,0,0," 349239",8.6625," -1"," C"," -1"," -1"," -1",0
+3," Stanley_ Miss. Amy Zillah Elsie"," female",23,0,0," CA. 2314",7.5500," -1"," S"," C"," -1"," -1",1
+3," Stanley_ Mr. Edward Roland"," male",21,0,0," A/4 45380",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Storey_ Mr. Thomas"," male",60.5,0,0," 3701"," -1"," -1"," S"," -1"," 261"," -1",0
+3," Stoytcheff_ Mr. Ilia"," male",19,0,0," 349205",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Strandberg_ Miss. Ida Sofia"," female",22,0,0," 7553",9.8375," -1"," S"," -1"," -1"," -1",0
+3," Stranden_ Mr. Juho"," male",31,0,0," STON/O 2. 3101288",7.9250," -1"," S"," 9"," -1"," -1",1
+3," Strilic_ Mr. Ivan"," male",27,0,0," 315083",8.6625," -1"," S"," -1"," -1"," -1",0
+3," Strom_ Miss. Telma Matilda"," female",2,0,1," 347054",10.4625," G6"," S"," -1"," -1"," -1",0
+3," Strom_ Mrs. Wilhelm (Elna Matilda Persson)"," female",29,1,1," 347054",10.4625," G6"," S"," -1"," -1"," -1",0
+3," Sunderland_ Mr. Victor Francis"," male",16,0,0," SOTON/OQ 392089",8.0500," -1"," S"," B"," -1"," -1",1
+3," Sundman_ Mr. Johan Julian"," male",44,0,0," STON/O 2. 3101269",7.9250," -1"," S"," 15"," -1"," -1",1
+3," Sutehall_ Mr. Henry Jr"," male",25,0,0," SOTON/OQ 392076",7.0500," -1"," S"," -1"," -1"," -1",0
+3," Svensson_ Mr. Johan"," male",74,0,0," 347060",7.7750," -1"," S"," -1"," -1"," -1",0
+3," Svensson_ Mr. Johan Cervin"," male",14,0,0," 7538",9.2250," -1"," S"," 13"," -1"," -1",1
+3," Svensson_ Mr. Olof"," male",24,0,0," 350035",7.7958," -1"," S"," -1"," -1"," -1",0
+3," Tenglin_ Mr. Gunnar Isidor"," male",25,0,0," 350033",7.7958," -1"," S"," 13 15"," -1"," -1",1
+3," Theobald_ Mr. Thomas Leonard"," male",34,0,0," 363294",8.0500," -1"," S"," -1"," 176"," -1",0
+3," Thomas_ Master. Assad Alexander"," male",0.42,0,1," 2625",8.5167," -1"," C"," 16"," -1"," -1",1
+3," Thomas_ Mr. Charles P"," male"," -1",1,0," 2621",6.4375," -1"," C"," -1"," -1"," -1",0
+3," Thomas_ Mr. John"," male"," -1",0,0," 2681",6.4375," -1"," C"," -1"," -1"," -1",0
+3," Thomas_ Mr. Tannous"," male"," -1",0,0," 2684",7.2250," -1"," C"," -1"," -1"," -1",0
+3," Thomas_ Mrs. Alexander (Thamine ""Thelma"")"," female",16,1,1," 2625",8.5167," -1"," C"," 14"," -1"," -1",1
+3," Thomson_ Mr. Alexander Morrison"," male"," -1",0,0," 32302",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Thorneycroft_ Mr. Percival"," male"," -1",1,0," 376564",16.1000," -1"," S"," -1"," -1"," -1",0
+3," Thorneycroft_ Mrs. Percival (Florence Kate White)"," female"," -1",1,0," 376564",16.1000," -1"," S"," 10"," -1"," -1",1
+3," Tikkanen_ Mr. Juho"," male",32,0,0," STON/O 2. 3101293",7.9250," -1"," S"," -1"," -1"," -1",0
+3," Tobin_ Mr. Roger"," male"," -1",0,0," 383121",7.7500," F38"," Q"," -1"," -1"," -1",0
+3," Todoroff_ Mr. Lalio"," male"," -1",0,0," 349216",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Tomlin_ Mr. Ernest Portage"," male",30.5,0,0," 364499",8.0500," -1"," S"," -1"," 50"," -1",0
+3," Torber_ Mr. Ernst William"," male",44,0,0," 364511",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Torfa_ Mr. Assad"," male"," -1",0,0," 2673",7.2292," -1"," C"," -1"," -1"," -1",0
+3," Tornquist_ Mr. William Henry"," male",25,0,0," LINE",0.0000," -1"," S"," 15"," -1"," -1",1
+3," Toufik_ Mr. Nakli"," male"," -1",0,0," 2641",7.2292," -1"," C"," -1"," -1"," -1",0
+3," Touma_ Master. Georges Youssef"," male",7,1,1," 2650",15.2458," -1"," C"," C"," -1"," -1",1
+3," Touma_ Miss. Maria Youssef"," female",9,1,1," 2650",15.2458," -1"," C"," C"," -1"," -1",1
+3," Touma_ Mrs. Darwis (Hanne Youssef Razi)"," female",29,0,2," 2650",15.2458," -1"," C"," C"," -1"," -1",1
+3," Turcin_ Mr. Stjepan"," male",36,0,0," 349247",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Turja_ Miss. Anna Sofia"," female",18,0,0," 4138",9.8417," -1"," S"," 15"," -1"," -1",1
+3," Turkula_ Mrs. (Hedwig)"," female",63,0,0," 4134",9.5875," -1"," S"," 15"," -1"," -1",1
+3," van Billiard_ Master. James William"," male"," -1",1,1," A/5. 851",14.5000," -1"," S"," -1"," -1"," -1",0
+3," van Billiard_ Master. Walter John"," male",11.5,1,1," A/5. 851",14.5000," -1"," S"," -1"," 1"," -1",0
+3," van Billiard_ Mr. Austin Blyler"," male",40.5,0,2," A/5. 851",14.5000," -1"," S"," -1"," 255"," -1",0
+3," Van Impe_ Miss. Catharina"," female",10,0,2," 345773",24.1500," -1"," S"," -1"," -1"," -1",0
+3," Van Impe_ Mr. Jean Baptiste"," male",36,1,1," 345773",24.1500," -1"," S"," -1"," -1"," -1",0
+3," Van Impe_ Mrs. Jean Baptiste (Rosalie Paula Govaert)"," female",30,1,1," 345773",24.1500," -1"," S"," -1"," -1"," -1",0
+3," van Melkebeke_ Mr. Philemon"," male"," -1",0,0," 345777",9.5000," -1"," S"," -1"," -1"," -1",0
+3," Vande Velde_ Mr. Johannes Joseph"," male",33,0,0," 345780",9.5000," -1"," S"," -1"," -1"," -1",0
+3," Vande Walle_ Mr. Nestor Cyriel"," male",28,0,0," 345770",9.5000," -1"," S"," -1"," -1"," -1",0
+3," Vanden Steen_ Mr. Leo Peter"," male",28,0,0," 345783",9.5000," -1"," S"," -1"," -1"," -1",0
+3," Vander Cruyssen_ Mr. Victor"," male",47,0,0," 345765",9.0000," -1"," S"," -1"," -1"," -1",0
+3," Vander Planke_ Miss. Augusta Maria"," female",18,2,0," 345764",18.0000," -1"," S"," -1"," -1"," -1",0
+3," Vander Planke_ Mr. Julius"," male",31,3,0," 345763",18.0000," -1"," S"," -1"," -1"," -1",0
+3," Vander Planke_ Mr. Leo Edmondus"," male",16,2,0," 345764",18.0000," -1"," S"," -1"," -1"," -1",0
+3," Vander Planke_ Mrs. Julius (Emelia Maria Vandemoortele)"," female",31,1,0," 345763",18.0000," -1"," S"," -1"," -1"," -1",0
+3," Vartanian_ Mr. David"," male",22,0,0," 2658",7.2250," -1"," C"," 13 15"," -1"," -1",1
+3," Vendel_ Mr. Olof Edvin"," male",20,0,0," 350416",7.8542," -1"," S"," -1"," -1"," -1",0
+3," Vestrom_ Miss. Hulda Amanda Adolfina"," female",14,0,0," 350406",7.8542," -1"," S"," -1"," -1"," -1",0
+3," Vovk_ Mr. Janko"," male",22,0,0," 349252",7.8958," -1"," S"," -1"," -1"," -1",0
+3," Waelens_ Mr. Achille"," male",22,0,0," 345767",9.0000," -1"," S"," -1"," -1"," Antwerp_ Belgium / Stanton_ OH",0
+3," Ware_ Mr. Frederick"," male"," -1",0,0," 359309",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Warren_ Mr. Charles William"," male"," -1",0,0," C.A. 49867",7.5500," -1"," S"," -1"," -1"," -1",0
+3," Webber_ Mr. James"," male"," -1",0,0," SOTON/OQ 3101316",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Wenzel_ Mr. Linhart"," male",32.5,0,0," 345775",9.5000," -1"," S"," -1"," 298"," -1",0
+3," Whabee_ Mrs. George Joseph (Shawneene Abi-Saab)"," female",38,0,0," 2688",7.2292," -1"," C"," C"," -1"," -1",1
+3," Widegren_ Mr. Carl/Charles Peter"," male",51,0,0," 347064",7.7500," -1"," S"," -1"," -1"," -1",0
+3," Wiklund_ Mr. Jakob Alfred"," male",18,1,0," 3101267",6.4958," -1"," S"," -1"," 314"," -1",0
+3," Wiklund_ Mr. Karl Johan"," male",21,1,0," 3101266",6.4958," -1"," S"," -1"," -1"," -1",0
+3," Wilkes_ Mrs. James (Ellen Needs)"," female",47,1,0," 363272",7.0000," -1"," S"," -1"," -1"," -1",1
+3," Willer_ Mr. Aaron (""Abi Weller"")"," male"," -1",0,0," 3410",8.7125," -1"," S"," -1"," -1"," -1",0
+3," Willey_ Mr. Edward"," male"," -1",0,0," S.O./P.P. 751",7.5500," -1"," S"," -1"," -1"," -1",0
+3," Williams_ Mr. Howard Hugh ""Harry"""," male"," -1",0,0," A/5 2466",8.0500," -1"," S"," -1"," -1"," -1",0
+3," Williams_ Mr. Leslie"," male",28.5,0,0," 54636",16.1000," -1"," S"," -1"," 14"," -1",0
+3," Windelov_ Mr. Einar"," male",21,0,0," SOTON/OQ 3101317",7.2500," -1"," S"," -1"," -1"," -1",0
+3," Wirz_ Mr. Albert"," male",27,0,0," 315154",8.6625," -1"," S"," -1"," 131"," -1",0
+3," Wiseman_ Mr. Phillippe"," male"," -1",0,0," A/4. 34244",7.2500," -1"," S"," -1"," -1"," -1",0
+3," Wittevrongel_ Mr. Camille"," male",36,0,0," 345771",9.5000," -1"," S"," -1"," -1"," -1",0
+3," Yasbeck_ Mr. Antoni"," male",27,1,0," 2659",14.4542," -1"," C"," C"," -1"," -1",0
+3," Yasbeck_ Mrs. Antoni (Selini Alexander)"," female",15,1,0," 2659",14.4542," -1"," C"," -1"," -1"," -1",1
+3," Youseff_ Mr. Gerious"," male",45.5,0,0," 2628",7.2250," -1"," C"," -1"," 312"," -1",0
+3," Yousif_ Mr. Wazli"," male"," -1",0,0," 2647",7.2250," -1"," C"," -1"," -1"," -1",0
+3," Yousseff_ Mr. Gerious"," male"," -1",0,0," 2627",14.4583," -1"," C"," -1"," -1"," -1",0
+3," Zabour_ Miss. Hileni"," female",14.5,1,0," 2665",14.4542," -1"," C"," -1"," 328"," -1",0
+3," Zabour_ Miss. Thamine"," female"," -1",1,0," 2665",14.4542," -1"," C"," -1"," -1"," -1",0
+3," Zakarian_ Mr. Mapriededer"," male",26.5,0,0," 2656",7.2250," -1"," C"," -1"," 304"," -1",0
+3," Zakarian_ Mr. Ortin"," male",27,0,0," 2670",7.2250," -1"," C"," -1"," -1"," -1",0
+3," Zimmerman_ Mr. Leo"," male",29,0,0," 315082",7.8750," -1"," S"," -1"," -1"," -1",0

@@ -1,0 +1,17 @@
+   age education wantsMore notUsing using 
+   <25       low       yes       53     6
+   <25       low        no       10     4
+   <25      high       yes      212    52
+   <25      high        no       50    10
+ 25-29       low       yes       60    14
+ 25-29       low        no       19    10
+ 25-29      high       yes      155    54
+ 25-29      high        no       65    27
+ 30-39       low       yes      112    33
+ 30-39       low        no       77    80
+ 30-39      high       yes      118    46
+ 30-39      high        no       68    78
+ 40-49       low       yes       35     6
+ 40-49       low        no       46    48
+ 40-49      high       yes        8     8
+ 40-49      high        no       12    31

@@ -1,0 +1,35 @@
+NAME: 	Prostate Cancer Study (PCS.DATA)
+SIZE:	380 observations, 9 variables
+
+SOURCE:	Hosmer and Lemeshow (2000) Applied Logistic Regression: Second Edition.  
+	These data are copyrighted by John Wiley & Sons Inc. and must be acknowledged 
+	and used accordingly.
+
+
+DESCRIPTIVE ABSTRACT:
+
+These data are described in Section 1.6.3 page 25, of the source text.
+
+
+LIST OF VARIABLES:
+
+Variable	Description			Codes/Values			Name
+________________________________________________________________________________________
+
+1		Identification Code		1 - 380				ID
+2		Tumor Penetration of 		0 = No Penetration, 		CAPSULE
+		Prostatic Capsule		1 = Penetration
+3		Age 				Years				AGE
+4		Race				1= White, 2 = Black		RACE
+5		Results of the Digital 		1 = No Nodule			DPROS
+		Rectal Exam 			2 = Unilobar Nodule (Left)
+						3 = Unilobar Nodule  (Right)
+						4 = Bilobar Nodule
+6		Detection of Capsular 		1 = No, 2 = Yes			DCAPS
+		Involvement in Rectal Exam 
+7		Prostatic Specific 		mg/ml				PSA
+ 		Antigen Value
+8		Tumor Volume Obtained 		cm3				VOL
+		from Ultrasound
+9		Total Gleason Score		0 - 10 				GLEASON
+________________________________________________________________________________________

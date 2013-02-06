@@ -1,0 +1,4 @@
+creditScore,propertyType,ltv,loanAmount,Final Score,Reason Code 1,Reason Code 2,Reason Code 3,Decision
+650,SFR,60,150000,828,LTV is too high,Property type is too risky,Loan amount is too high,Approved
+590,Condo,75,220000,672,Property type is too risky,Loan amount is too high,Loan amount is too high,Approved
+555,PUD,80,340000,604,Loan amount is too high,Loan amount is too high,Loan amount is too high,Referred

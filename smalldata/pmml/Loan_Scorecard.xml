@@ -1,0 +1,165 @@
+<PMML version="4.1" xmlns="http://www.dmg.org/PMML-4_1"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.dmg.org/PMML-4_1 http://dmg.org/v4-1/pmml-4-1.xsd">
+	<Header copyright="Copyright (c) 2012 Zementis, Inc. (www.zementis.com)" description="Scorecard using part of the Loan dataset">
+		<Timestamp>Aug 27, 2012</Timestamp>
+	</Header>
+	<DataDictionary>
+		<DataField name="propertyType" dataType="string" optype="categorical" />
+		<DataField name="creditScore" dataType="double" optype="continuous" />
+		<DataField name="ltv" dataType="double" optype="continuous" />
+		<DataField name="loanAmount" dataType="double" optype="continuous" />
+		<DataField name="resultScore" dataType="double" optype="continuous" />
+	</DataDictionary>
+	<Scorecard modelName="Loan_Scorecard" functionName="regression"
+		useReasonCodes="true" reasonCodeAlgorithm="pointsAbove" initialScore="0"
+		baselineMethod="other">
+		<MiningSchema>
+			<MiningField name="propertyType" usageType="active" />
+			<MiningField name="creditScore" usageType="active" />
+			<MiningField name="ltv" usageType="active" />
+			<MiningField name="loanAmount" usageType="active" />
+			<MiningField name="resultScore" usageType="predicted" />
+		</MiningSchema>
+		<Output>
+			<OutputField name="Final Score" feature="predictedValue"
+				dataType="double" optype="continuous" />
+			<OutputField name="Reason Code 1" rank="1" feature="reasonCode"
+				dataType="string" optype="categorical" />
+			<OutputField name="Reason Code 2" rank="2" feature="reasonCode"
+				dataType="string" optype="categorical" />
+			<OutputField name="Reason Code 3" rank="3" feature="reasonCode"
+				dataType="string" optype="categorical" />
+		</Output>
+		<Characteristics>
+			<Characteristic name="propertyTypeScore" reasonCode="Property type is too risky"
+				baselineScore="97">
+				<Attribute partialScore="128">
+					<SimplePredicate field="propertyType" operator="equal"
+						value="SFR" />
+				</Attribute>
+				<Attribute partialScore="132">
+					<SimplePredicate field="propertyType" operator="equal"
+						value="Condo" />
+				</Attribute>
+				<Attribute partialScore="60">
+					<SimplePredicate field="propertyType" operator="equal"
+						value="2-4 Unit Property" />
+				</Attribute>
+				<Attribute partialScore="68">
+					<SimplePredicate field="propertyType" operator="equal"
+						value="PUD" />
+				</Attribute>
+			</Characteristic>
+			<Characteristic name="ltvScore" reasonCode="LTV is too high"
+				baselineScore="168">
+				<Attribute partialScore="252">
+					<SimplePredicate field="ltv" operator="lessOrEqual"
+						value="60" />
+				</Attribute>
+				<Attribute partialScore="244">
+					<CompoundPredicate booleanOperator="and">
+						<SimplePredicate field="ltv" operator="greaterThan"
+							value="60" />
+						<SimplePredicate field="ltv" operator="lessOrEqual"
+							value="70" />
+					</CompoundPredicate>
+				</Attribute>
+				<Attribute partialScore="132">
+					<CompoundPredicate booleanOperator="and">
+						<SimplePredicate field="ltv" operator="greaterThan"
+							value="70" />
+						<SimplePredicate field="ltv" operator="lessOrEqual"
+							value="80" />
+					</CompoundPredicate>
+				</Attribute>
+				<Attribute partialScore="112">
+					<CompoundPredicate booleanOperator="and">
+						<SimplePredicate field="ltv" operator="greaterThan"
+							value="80" />
+						<SimplePredicate field="ltv" operator="lessOrEqual"
+							value="90" />
+					</CompoundPredicate>
+				</Attribute>
+				<Attribute partialScore="100">
+					<CompoundPredicate booleanOperator="and">
+						<SimplePredicate field="ltv" operator="greaterThan"
+							value="90" />
+						<SimplePredicate field="ltv" operator="lessOrEqual"
+							value="95" />
+					</CompoundPredicate>
+				</Attribute>
+			</Characteristic>
+			<Characteristic name="creditScoreScore" reasonCode="Credit Score is too low"
+				baselineScore="180">
+				<Attribute partialScore="116">
+					<SimplePredicate field="creditScore" operator="lessOrEqual"
+						value="550" />
+				</Attribute>
+				<Attribute partialScore="128">
+					<CompoundPredicate booleanOperator="and">
+						<SimplePredicate field="creditScore" operator="greaterThan"
+							value="550" />
+						<SimplePredicate field="creditScore" operator="lessOrEqual"
+							value="600" />
+					</CompoundPredicate>
+				</Attribute>
+				<Attribute partialScore="148">
+					<CompoundPredicate booleanOperator="and">
+						<SimplePredicate field="creditScore" operator="greaterThan"
+							value="600" />
+						<SimplePredicate field="creditScore" operator="lessOrEqual"
+							value="650" />
+					</CompoundPredicate>
+				</Attribute>
+				<Attribute partialScore="212">
+					<CompoundPredicate booleanOperator="and">
+						<SimplePredicate field="creditScore" operator="greaterThan"
+							value="650" />
+						<SimplePredicate field="creditScore" operator="lessOrEqual"
+							value="700" />
+					</CompoundPredicate>
+				</Attribute>
+				<Attribute partialScore="300">
+					<SimplePredicate field="creditScore" operator="greaterThan"
+						value="700" />
+				</Attribute>
+			</Characteristic>
+			<Characteristic name="loanAmountScore" reasonCode="Loan amount is too high"
+				baselineScore="270">
+				<Attribute partialScore="248">
+					<SimplePredicate field="loanAmount" operator="lessOrEqual"
+						value="100000" />
+				</Attribute>
+				<Attribute partialScore="300">
+					<CompoundPredicate booleanOperator="and">
+						<SimplePredicate field="loanAmount" operator="greaterThan"
+							value="100000" />
+						<SimplePredicate field="loanAmount" operator="lessOrEqual"
+							value="200000" />
+					</CompoundPredicate>
+				</Attribute>
+				<Attribute partialScore="280">
+					<CompoundPredicate booleanOperator="and">
+						<SimplePredicate field="loanAmount" operator="greaterThan"
+							value="200000" />
+						<SimplePredicate field="loanAmount" operator="lessOrEqual"
+							value="300000" />
+					</CompoundPredicate>
+				</Attribute>
+				<Attribute partialScore="276">
+					<CompoundPredicate booleanOperator="and">
+						<SimplePredicate field="loanAmount" operator="greaterThan"
+							value="300000" />
+						<SimplePredicate field="loanAmount" operator="lessOrEqual"
+							value="400000" />
+					</CompoundPredicate>
+				</Attribute>
+				<Attribute partialScore="244">
+					<SimplePredicate field="loanAmount" operator="greaterThan"
+						value="400000" />
+				</Attribute>
+			</Characteristic>
+		</Characteristics>
+	</Scorecard>
+</PMML>

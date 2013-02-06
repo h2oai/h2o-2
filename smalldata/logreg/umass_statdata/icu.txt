@@ -1,0 +1,107 @@
+NAME:  	The ICU Data (ICU.DAT)
+KEYWORDS:  Logistic Regression
+SIZE:  200 observations, 21 variables
+
+SOURCE: Hosmer and Lemeshow (2000) Applied Logistic Regression: Second 
+	Edition.  These data are copyrighted by John Wiley & Sons Inc. and must
+	be acknowledged and used accordingly.  Data were collected at Baystate 
+	Medical Center in Springfield, Massachusetts.
+
+
+DESCRIPTIVE ABSTRACT:
+
+The ICU data set consists of a sample of 200 subjects who were part of
+a much larger study on survival of patients following admission to an adult
+intensive care unit (ICU).  The major goal of this study was to develop a
+logistic regression model to predict the probability of survival to hospital
+discharge of these patients and to study the risk factors associated with 
+ICU mortality.  A number of publications have appeared which have focused on
+various facets of the problem.  The reader wishing to learn more about the
+clinical aspects of this study should start with Lemeshow, Teres, Avrunin,
+and Pastides (1988).
+
+
+LIST OF VARIABLES:
+  
+Column 
+Position  	Name				Codes/Values	Abbreviations
+-------------------------------------------------------------------------------
+6-8		Identification Code		ID Number	ID
+
+11		Vital Status			0 = Lived	STA
+						1 = Died
+
+14-15		Age				Years		AGE
+
+18		Sex				0 = Male	SEX
+						1 = Female
+
+21		Race				1 = White	RACE
+						2 = Black
+						3 = Other
+
+24		Service at ICU Admission	0 = Medical	SER
+						1 = Surgical
+
+27		Cancer Part of Present		0 = No		CAN
+		Problem				1 = Yes
+
+30		History of Chronic Renal	O = No		CRN
+		Failure				1 = Yes
+
+33		Infection Probable at ICU	0 = No		INF
+		Admission			1 = Yes
+
+36		CPR Prior to ICU Admission	0 = No		CPR	
+						1 = Yes
+
+39-41		Systolic Blood Pressure at	mm Hg		SYS
+		ICU Admission
+
+44-46		Heart Rate at ICU Admission	Beats/min	HRA	
+	
+49		Previous Admission to an ICU	0 = No		PRE	
+		within 6 Months			1 = Yes
+	
+52		Type of Admission		0 = Elective	TYP
+						1 = Emergency
+
+55		Long Bone, Multiple, Neck,	0 = No		FRA
+		Single Area, or Hip Fracture	1 = Yes
+
+58		PO2 from Initial Blood Gases	0 = > 60	PO2
+						1 = < 60
+
+61		PH from Initial Blood Gases	0 => 7.25	PH
+						1 =< 7.25
+
+64		PCO2 from initial Blood		0 = < 45	PCO
+		Gases				1 = > 45
+
+67		Bicarbonate from Initial	0 = > 18	BIC
+		Blood Gases			1 = < 18
+
+70		Creatinine from Initial Blood	0 = < 2.0	CRE
+		Gases				1 = > 2.0
+
+73		Level of Consciousness at ICU	O = No Coma	LOC
+		Admission			or Stupor
+						1 = Deep
+						stupor	
+						2 = Coma
+
+----------------------------------------------------------------------------
+
+PEDAGOGICAL NOTES:
+
+These data have been used to fit an ordinary logistic regression 
+model and for various exercises involving logistic regression.
+
+
+REFERENCES:
+
+1.  Hosmer and Lemeshow, Applied Logistic Regression, Wiley, (1989).
+
+2.  Lemeshow, S., Teres, D., Avrunin, J. S., Pastides, H. (1988). Predicting
+    the Outcome of Intensive Care Unit Patients. Journal of the American
+    Statistical Association, 83, 348-356.

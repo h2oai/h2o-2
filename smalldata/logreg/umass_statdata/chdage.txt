@@ -1,0 +1,38 @@
+NAME:  CORONARY HEART DISEASE DATA (CHDAGE.DAT)
+KEYWORDS:  Logistic Regression
+SIZE:  100 Observations, 3 Variables
+
+
+SOURCE: These data come from  Hosmer and Lemeshow (2000) Applied Logistic
+ 	Regression: Second Edition.  These data are copyrighted by John Wiley &
+ 	Sons Inc. and must be acknowledged and used accordingly.
+
+
+DESCRIPTIVE ABSTRACT:
+
+The goal of this study is explore the relationship between age and 
+the presence or absence of CHD in this study population.  
+
+
+LIST OF VARIABLES:
+
+Columns		Variable		Abbreviation
+----------------------------------------------------
+1-3		Identification Code	ID
+9-10		Age			Age
+17		Coronary Heart Disease  CHD
+		(0=absent, 1=present)
+----------------------------------------------------
+
+
+PEDAGOGICAL NOTES:
+
+These data have been used in an introduction to logistic regression.
+These data illustrate the differences between logistic regression and other
+regression techniques and demonstrate the usefulness and purpose of 
+logistic regression.
+
+
+REFERENCES:
+
+1.  Hosmer and Lemeshow, Applied Logistic Regression, Wiley, (1989).

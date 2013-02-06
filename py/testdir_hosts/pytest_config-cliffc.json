@@ -1,0 +1,74 @@
+
+{
+
+     "_comment" : "no password, or None,  means none will be used in ssh. Assumes keys have been exchanged. Watch out for common error: last entry in list can't have comma. Only ip is used. Others ignored, saved here for sometime use. Last ip value used if duplicates? Leading _ means not used. First ip/h2o is used for H2O json communication..vary ip list to direct that. See http://docs.python.org/library/json.html for json->python data types. Note lower case for true/false. null is None, but can just not have an entry. Defaults are in h2o_hosts.py",
+
+    "username": "cliffc", 
+    "password": "cliffc", 
+
+    "h2o_per_host": 1, 
+    "base_port": 53321,
+    "sigar": true,
+    "java_heap_GB": 11,
+
+    "hdfs_name_node": "192.168.1.151",
+    "use_hdfs": true,
+
+    "use_flatfile": false,
+
+    "_ip": [
+        "192.168.1.156"
+    ],
+    "_ip": [
+        "192.168.0.37"
+
+    ],
+    "ip": [
+        "192.168.1.150", 
+        "192.168.1.151", 
+        "192.168.1.152", 
+        "192.168.1.153", 
+        "192.168.1.154", 
+        "192.168.1.155"
+    ],
+    "_ip": [
+        "192.168.1.160", 
+        "192.168.1.161"
+    ],
+    "_ip": [
+        "192.168.1.17", 
+        "192.168.1.155", 
+        "192.168.1.156", 
+        "192.168.1.160", 
+        "192.168.1.161"
+    ],
+    "_ip": [
+        "192.168.1.150", 
+        "192.168.1.151", 
+        "192.168.1.152", 
+        "192.168.1.153", 
+        "192.168.1.154", 
+        "192.168.1.155", 
+        "192.168.1.156", 
+        "192.168.1.160", 
+        "192.168.1.161"
+    ],
+    "_ip": [
+        "192.168.1.17", 
+        "192.168.1.150", 
+        "192.168.1.151", 
+        "192.168.1.152", 
+        "192.168.1.153", 
+        "192.168.1.154", 
+        "192.168.1.155", 
+        "192.168.1.156", 
+        "192.168.1.160", 
+        "192.168.1.161"
+    ],
+    "_ip": [
+        "192.168.0.37", 
+        "192.168.0.35",
+        "192.168.0.33"
+    ]
+}
+

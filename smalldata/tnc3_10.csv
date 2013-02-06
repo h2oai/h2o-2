@@ -1,0 +1,11 @@
+"pclass","name","sex","age","sibsp","parch","ticket","fare","cabin","embarked","boat","body","home.dest","survived"
+1," Allen_ Miss. Elisabeth Walton"," female",29,0,0," 24160",211.3375," B5"," S"," 2"," -1"," St Louis_ MO",1
+1," Allison_ Master. Hudson Trevor"," male",0.92,1,2," 113781",151.5500," C22 C26"," S"," 11"," -1"," Montreal_ PQ / Chesterville_ ON",1
+1," Allison_ Miss. Helen Loraine"," female",2,1,2," 113781",151.5500," C22 C26"," S"," -1"," -1"," Montreal_ PQ / Chesterville_ ON",0
+1," Allison_ Mr. Hudson Joshua Creighton"," male",30,1,2," 113781",151.5500," C22 C26"," S"," -1"," 135"," Montreal_ PQ / Chesterville_ ON",0
+1," Allison_ Mrs. Hudson J C (Bessie Waldo Daniels)"," female",25,1,2," 113781",151.5500," C22 C26"," S"," -1"," -1"," Montreal_ PQ / Chesterville_ ON",0
+1," Anderson_ Mr. Harry"," male",48,0,0," 19952",26.5500," E12"," S"," 3"," -1"," New York_ NY",1
+1," Andrews_ Miss. Kornelia Theodosia"," female",63,1,0," 13502",77.9583," D7"," S"," 10"," -1"," Hudson_ NY",1
+1," Andrews_ Mr. Thomas Jr"," male",39,0,0," 112050",0.0000," A36"," S"," -1"," -1"," Belfast_ NI",0
+1," Appleton_ Mrs. Edward Dale (Charlotte Lamson)"," female",53,2,0," 11769",51.4792," C101"," S"," D"," -1"," Bayside_ Queens_ NY",1
+1," Artagaveytia_ Mr. Ramon"," male",71,0,0," PC 17609",49.5042," -1"," C"," -1"," 22"," Montevideo_ Uruguay",0

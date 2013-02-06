@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project default="main" name="0xbase">
+  <property name="basedir"            value="."/>
+  <property name="build.src"          value="${basedir}/src"/>
+  <property name="build.src.test"     value="${basedir}/test-src"/>
+  <property name="build.lib"          value="${basedir}/lib"/>
+  <property name="build.dir"          value="${basedir}/build"/>
+  <property name="build.classes"      value="${build.dir}/classes"/>
+  <property name="0xbase.jar"         value="${build.dir}/h2o.jar"/>
+  
+  <path id="build.classpath">
+    <pathelement location="${build.lib}/hyperic-sigar-1.6.4/sigar-bin/lib/sigar.jar" />
+    <fileset dir="${build.lib}">
+      <include name="**/*.jar"/>
+    </fileset>
+  </path>
+
+  <target name="init">
+    <tstamp>
+      <format property="build.start" pattern="hh.mm.ss aa d-MMMM-yyyy"/>
+    </tstamp>
+    <echo message="[${build.start}] start build"/>
+    <mkdir dir="${build.dir}"/>
+    <mkdir dir="${build.classes}"/>
+  </target>
+	
+  <target name="main" depends="jar" description="Main target">
+    <echo>Building the product jar file.</echo>
+    <tstamp>
+      <format property="build.end" pattern="hh.mm.ss aa d-MMMM-yyyy"/>
+    </tstamp>
+    <echo message="[${build.end}] end build "/>
+  </target>
+
+  <!-- compile everything -->
+  <target name="compile" depends="init" description="Compilation target">
+    <javac
+        includeantruntime="false" debug="true" target="1.6" source="1.6"
+        srcdir="${build.src}" destdir="${build.classes}" >
+      <compilerarg value="-XDignore.symbol.file" />
+      <compilerarg value="-Xlint:all" />
+      <compilerarg value="-Xlint:-serial" />
+      <compilerarg value="-Xlint:-rawtypes" />
+      <compilerarg value="-Xlint:-unchecked" />
+      <classpath refid="build.classpath"/>
+    </javac>
+    <javac
+        includeantruntime="false" debug="true" target="1.6" source="1.6"
+        srcdir="${build.src.test}" destdir="${build.classes}" >
+      <classpath refid="build.classpath"/>
+    </javac>
+  </target>
+
+ <!-- build hexbase_impl.jar first -->  
+ <!-- hexbase_impl.jar doesnot have init, and supplemental jars -->  
+ <!-- hexbase_impl.jar sits in jar -->
+  <target name="prejar" description="prepare for one jar" depends="compile">
+    <jar
+        jarfile="${build.lib}/hexbase_impl.jar"
+        manifest="${basedir}/manifest.txt"
+        basedir="${build.classes}"
+        includes="*/**/*.class"
+        excludes="init/*"  />
+    <copy todir="${build.lib}/init">
+	 <fileset dir="${build.classes}/init"/>
+    </copy>
+  </target>
+
+ <!-- make one single hexbase.jar -->
+  <target name="jar" description="h2o.jar target" depends="compile, prejar">
+    <tstamp>
+      <format property="jar.time" pattern="hh.mm.ss-d-MMMM-yyyy"/>
+    </tstamp>
+    <jar
+        jarfile="${0xbase.jar}"
+        manifest="${basedir}/manifest.txt"
+        basedir="${build.lib}"
+        excludes="h2o.jar" />
+    <copy file="${build.dir}/h2o.jar" tofile="${build.dir}/h2o-${jar.time}.jar" verbose="true"/>
+  </target>
+
+  <target name="nightly" description="nightly tests" depends="clean,compile,jar">
+    <antcall target="test"/>
+  </target>
+
+  <target name="test" description="tests" depends="compile,jar">
+  	<exec executable="python" dir="${basedir}">
+	 <arg value="${basedir}/py/junit.py"/>
+	</exec>
+  	<exec executable="python" dir="${basedir}/py">
+	 <arg value="${basedir}/py/test.py"/>
+	</exec>
+  </target>
+
+  <target name="clean" description="get rid of any build artifacts">
+  	<delete dir="${build.dir}" />
+    <delete dir="${build.classes}" />
+    <delete dir="${build.classes.test}" />
+    <delete dir="${build.lib}/init"/>
+    <delete file="${build.lib}/hexbase_impl.jar"/>
+  </target>
+</project>

@@ -1,0 +1,83 @@
+NAME:  	LOW BIRTH WEIGHT DATA (LOWBWT.DAT)
+KEYWORDS:  Logistic Regression
+SIZE:  189 observations, 11 variables
+
+SOURCE:  Hosmer and Lemeshow (2000) Applied Logistic Regression: Second 
+	Edition.  These data are copyrighted by John Wiley & Sons Inc. and must 
+	be acknowledged and used accordingly. Data were collected at Baystate
+	Medical Center, Springfield, Massachusetts during 1986.
+
+
+DESCRIPTIVE ABSTRACT:
+
+The goal of this study was to identify risk factors associated with
+giving birth to a low birth weight baby (weighing less than 2500 grams).
+Data were collected on 189 women, 59 of which had low birth weight babies
+and 130 of which had normal birth weight babies.  Four variables which were
+thought to be of importance were age, weight of the subject at her last
+menstrual period, race, and the number of physician visits during the first
+trimester of pregnancy.
+
+
+NOTE:
+
+This data set consists of the complete data.  A paired data set
+created from this low birth weight data may be found in lowbwtm11.dat and
+a 3 to 1 matched data set created from the low birth weight data may be
+found in mlowbwt.dat.
+
+
+LIST OF VARIABLES:
+
+Columns    Variable                                              Abbreviation
+-----------------------------------------------------------------------------
+2-4        Identification Code                                     ID
+   
+10         Low Birth Weight (0 = Birth Weight >= 2500g,            LOW
+                          1 = Birth Weight < 2500g)
+  
+17-18      Age of the Mother in Years                              AGE
+     
+23-25      Weight in Pounds at the Last Menstrual Period           LWT
+     
+32         Race (1 = White, 2 = Black, 3 = Other)                  RACE
+     
+40         Smoking Status During Pregnancy (1 = Yes, 0 = No)       SMOKE
+     
+48         History of Premature Labor (0 = None  1 = One, etc.)    PTL
+     
+55         History of Hypertension (1 = Yes, 0 = No)               HT
+     
+61         Presence of Uterine Irritability (1 = Yes, 0 = No)      UI
+     
+67         Number of Physician Visits During the First Trimester   FTV
+                (0 = None, 1 = One, 2 = Two, etc.)
+     
+73-76      Birth Weight in Grams                                   BWT
+-----------------------------------------------------------------------------
+
+PEDAGOGICAL NOTES:
+        
+These data have been used as an example of fitting a multiple
+logistic regression model.
+
+
+STORY BEHIND THE DATA:
+        
+Low birth weight is an outcome that has been of concern to physicians
+for years. This is due to the fact that infant mortality rates and birth
+defect rates are very high for low birth weight babies. A woman's behavior
+during pregnancy (including diet, smoking habits, and receiving prenatal care)
+can greatly alter the chances of carrying the baby to term and, consequently,
+of delivering a baby of normal birth weight.
+        
+The variables identified in the code sheet given in the table have been
+shown to be associated with low birth weight in the obstetrical literature. The
+goal of the current study was to ascertain if these variables were important
+in the population being served by the medical center where the data were
+collected.
+
+
+References:
+
+1. Hosmer and Lemeshow, Applied Logistic Regression, Wiley, (1989).

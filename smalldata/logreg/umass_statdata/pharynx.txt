@@ -1,0 +1,112 @@
+Name:  	A clinical Trial in the Trt. of Carcinoma of the Oropharynx (PHARYNX.DAT)
+SIZE:  	195 observations, 13 variables.
+
+SOURCE:  The Statistical Analysis of Failure Time Data, by JD Kalbfleisch
+         & RL Prentice, (1980),  Published by John Wiley & Sons 
+
+
+DESCRIPTIVE ABSTRACT:
+
+The .dat file gives the data for a part of a large clinical trial
+carried out by the Radiation Therapy Oncology Group in the United States. 
+The full study included patients with squamous carcinoma of 15 sites in 
+the mouth and throat, with 16 participating institutions, though only data 
+on three sites in the oropharynx reported by the six largest institutions 
+are considered here. Patients entering the study were randomly assigned to 
+one of two treatment groups, radiation therapy alone or radiation therapy 
+together with a chemotherapeutic agent.  One objective of the study was to 
+compare the two treatment policies with respect to patient survival.
+
+
+LIST OF VARIABLES:
+
+Variable		Description
+__________________________________________________________________________________
+
+CASE          Case Number
+
+INST          Participating Institution
+
+SEX           1=male, 2=female
+
+TX	      Treatment: 1=standard, 2=test
+
+GRADE         1=well differentiated, 2=moderately differentiated, 
+              3=poorly differentiated,  9=missing
+
+AGE           In years at time of diagnosis
+
+COND          Condition: 1=no disability, 2=restricted work, 3=requires assistance
+              with self care, 4=bed confined,  9=missing
+
+SITE          1=faucial arch, 2=tonsillar fossa, 3=posterior pillar,
+              4=pharyngeal tongue, 5=posterior wall
+
+T_STAGE       1=primary tumor measuring 2 cm or less in largest diameter,
+              2=primary tumor measuring 2 cm to 4 cm in largest diameter with
+              minimal infiltration in depth, 3=primary tumor measuring more 
+              than 4 cm, 4=massive invasive tumor
+
+N_STAGE       0=no clinical evidence of node metastases, 1=single positive
+              node 3 cm or less in diameter, not fixed, 2=single positive
+              node more than 3 cm in diameter, not fixed, 3=multiple
+              positive nodes or fixed positive nodes 
+
+ENTRY_DT      Date of study entry: Day of year and year, dddyy
+
+STATUS        0=censored,  1=dead
+
+TIME          Survival time in days from day of diagnosis 
+______________________________________________________________________________________
+
+
+STORY BEHIND THE DATA:
+
+Approximately 30% of the survival times are censored owing primarily to 
+patients surviving to the time of analysis. Some patients were lost
+to follow-up because the patient moved or transferred to an institution not
+participating in the study, though these cases were relatively rare. From 
+a statistical point of view, an important feature of these data is the 
+considerable lack of homogeneity between individuals being studied. 
+Of course, as part of the study design, certain criteria for patient 
+eligibility had to be met which eliminated extremes in the extent of disease, 
+but still many factors are not controlled.
+
+This study included measurements of many covariates which would be expected 
+to relate to survival experience. Six such variables are given in the data 
+(sex, T staging, N staging, age, general condition, and grade).   The site 
+of the primary tumor and possible differences between participating 
+institutions require consideration as well.
+     
+The T,N staging classification gives a measure of the extent of the tumor at 
+the primary site and at regional lymph nodes. T=1, refers to a small primary 
+tumor, 2 centimeters or less in largest diameter, whereas T=4 is a massive 
+tumor with extension to adjoining tissue. T=2 and T=3 refer to intermediate
+cases. N=0 refers to there being no clinical evidence of a lymph node 
+metastasis and N=1, N=2, N=3 indicate, in increasing magnitude, the extent of 
+existing lymph node involvement. Patients with classifications T=1,N=0; 
+T=1,N=1;  T=2,N=0; or T=2,N=1, or with distant metastases were excluded 
+from study.
+
+The variable general condition gives a measure of the functional capacity of 
+the patient at the time of diagnosis (1 refers to no disability whereas
+4 denotes bed confinement; 2 and 3 measure intermediate levels). The variable
+grade is a measure of the degree of differentiation of the tumor (the degree
+to which the tumor cell resembles the host cell) from 1 (well differentiated) 
+to 3 (poorly differentiated)
+
+In addition to the primary question whether the combined treatment mode is
+preferable to the conventional radiation therapy, it is of considerable 
+interest to determine the extent to which the several covariates relate to
+subsequent survival.  It is also imperative in answering the primary question 
+to adjust the survivals for possible imbalance that may be present in the 
+study with regard to the other covariates. Such problems are similar to those 
+encountered in the classical theory of linear regression and the analysis of 
+covariance.  Again, the need to accommodate censoring is an important 
+distinguishing point. In many situations it is also important to develop 
+nonparametric and robust procedures since there is frequently little empirical
+or theoretical work to support a particular family of failure time 
+distributions.
+
+
+

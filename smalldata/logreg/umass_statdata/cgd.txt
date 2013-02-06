@@ -1,0 +1,118 @@
+NAME: 	Study of Gamma Interferon in Chronic Granulomatous Disease (CGD.DAT)
+SIZE: 	203 observations, 16 variables.
+
+
+SOURCE:  Counting Processes and Survival Analysis by T. Fleming &
+         D. Harrington (1991), John Wiley & Sons Publishers
+
+
+DESCRIPTIVE ABSTRACT:
+
+The following data are from a placebo controlled randomized trial of gamma 
+interferon in chronic granulotomous disease (CGD). The CGD study, which 
+is described in a report by the International CGD Cooperative Study 
+Group (1991), was designed to have a single interim analysis when the follow-
+up data as of July 15, 1989 were complete. The monitoring committee for the 
+trial terminated the trial at a meeting on September 22, 1989, based on the 
+interim analysis. The treatment given each patient was unblinded at the first 
+scheduled visit for that patient following the decision of the monitoring 
+committee.
+
+The data for each case give the time to initial and any recurrent serious 
+infections, from study entry until the first scheduled visit of the patient 
+after the decision of the monitoring committee. These infections are those 
+observed through the interim analysis date of record (7/15/89) as well as the 
+additional data on occurrence of serious infections between the interim 
+analysis cutoff and the final blinded study visit for each patient. There is 
+a minimum of 1 record per patient, with an additional record for each serious 
+infection occurring up to the study completion date.
+
+
+
+LIST OF VARIABLES:
+
+
+Variable		Description
+_________________________________________________________________________
+
+ID		Case identification number. The first 3 digits denote a 
+                hospital code.
+
+RDT		Date randomized onto study (for S = 1 record), in the 
+                format mmddyy.
+
+IDT		Date of onset of a serious infection, or date the patient 
+                was taken off the study.
+
+Zl		Treatment Code, 1 = Gamma Interferon, 2 = placebo.
+
+Z2		Pattern of inheritance, 1 = X-linked, 2 = autosomal recessive.
+
+Z3		Age, in years.
+
+Z4	     	Height, in cm.
+
+Z5	    	Weight, in kg.
+
+Z6	     	Using corticosteroids at time of study entry, 1 = yes, 2 = no.
+
+Z7	     	Using prophylactic antibiotics at time of study entry, 
+                1 = yes, 2 = no.
+
+Z8	     	Gender, 1 = male, 2 = female.
+
+Z9	     	Hospital category, 1 = US - NIH, 2 = US - other, 
+                3 = Europe-Amsterdam, 4 = Europe-other.
+
+Tl	     	Elapsed time (in days) from randomization (from S = 1 record) 
+                to diagnosis of a serious infection, or if a censored 
+                observation, elapsed time from randomization to censoring date.
+                Computed as IDT-RDT (from S = 1 record).
+
+T2	     	0, for S = 1. If S > 1, T2 = Tl (from previous record) + 1.
+
+D	      	Censoring indicator, 1 = Non-censored observation 
+                (i.e., a serious infection occurred at the date specified by 
+                the IDT field), 2 = censored observation (i.e., the patient 
+                was taken off study at the date specified by the IDT field.) 
+                Note that only patient ID = 238087 had a serious infection
+	        diagnosed on the date he was taken off study.
+
+S	      	Sequence number. For each patient, the infection records are 
+                in sequence number order.
+________________________________________________________________________________
+
+
+STORY BEHIND THE DATA:
+
+Chronic Granulomatous Disease (CGD) is a group of inherited rare disorders of 
+the immune function characterized by recurrent pyogenic infections which 
+usually present early in life and may lead to death in childhood. Phagocytes 
+from CGD patients ingest microorganisms normally but fail to kill them, 
+primarily due to the inability to generate a respiratory burst dependent on 
+the production of superoxide and other toxic oxygen metabolites. Thus, it is 
+the failure to generate microbicidal oxygen metabolites within the phagocytes 
+of CGD patients which confers the greatly increased susceptibility to these 
+severe or even life threatening infections.
+
+There is evidence establishing a role for gamma interferon as an important 
+macrophage activating factor which could restore superoxide anion production 
+and bacterial killing by phagocytes in CGD patients. In order to study the 
+ability of gamma interferon to reduce the rate of serious infections, that 
+is, the rate of infections requiring hospitalization for parenteral 
+antibiotics, a double-blinded clinical trial was conducted in which patients 
+were randomized to placebo vs. gamma interferon. Between October 1988 and 
+March 1989, 128 eligible patients with CGD were accrued by the International 
+CGD Cooperative Study Group. Since the study required delivering placebo 
+injections three times weekly for a twelve month period to one-half of the 
+patients, most being children, there was particular interest in achieving 
+early termination of the trial if early results were extreme. A single 
+interim analysis was to be performed as soon as patient follow-up was 
+available through July 1989, six-months after the date on which one-half of 
+the patients had been accrued.
+
+At the time of interim analysis, twenty of 65 placebo patients and seven of 63
+patients on gamma interferon each had experienced at least one serious 
+infection
+
+
