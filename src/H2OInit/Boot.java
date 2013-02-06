@@ -103,7 +103,6 @@ public class Boot extends ClassLoader {
       extractInternalFiles(); // Extract e.g. SIGAR's .dll & .so files
       File binlib = internalFile("binlib");
       System.setProperty("org.hyperic.sigar.path", binlib.getAbsolutePath());
-      addInternalJars("h2o_core.jar");
       addInternalJars("sigar");
       addInternalJars("apache");
       addInternalJars("gson");
