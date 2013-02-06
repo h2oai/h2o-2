@@ -10,8 +10,18 @@ import java.io.*;
  *  embedded into a larger user application.  It understands how to load and
  *  score all H2O models, but cannot do modeling by itself.
  *
- *  Compile:   javac -cp ".;h2o.jar" ScoreMain.java
- *  Run:       java  -cp ".;h2o.jar" ScoreMain
+ *  In the directory above this one (the 'embedded' package directory),
+ *  extract the h2o_core.jar file.
+ *     $ jar xf h2o.jar h2o_core.jar
+ *  Compile this file:
+ *     $ javac -cp ".;h2o_core.jar" embedded/ScoreMain.java
+ *  And Go!
+ *     $ java -cp ".;h2o_core.jar" embedded/ScoreMain
+ *     Sample App Init Code Goes Here; loading data to score
+ *     Loading model to score
+ *     Initial score=62.1729083
+ *     100000 in 328ms = 3280.0 microsec/score
+ *     Sample App Shuts Down
  */
 class ScoreMain {
   static HashMap<String, Comparable> ROW;
@@ -22,7 +32,7 @@ class ScoreMain {
 
     // Load a PMML model
     System.out.println("Loading model to score");
-    FileInputStream fis = new FileInputStream("../../../demo/SampleScorecard.pmml");
+    FileInputStream fis = new FileInputStream("../../demo/SampleScorecard.pmml");
     water.score.ScorecardModel scm = water.parser.PMMLParser.load(fis);
     
     
@@ -37,7 +47,7 @@ class ScoreMain {
 
     // Make data available.  In this case, parse a simple text file and inject
     // pairs into a HashMap.
-    File f = new File("../../../demo/SampleData.txt");
+    File f = new File("../../demo/SampleData.txt");
     String text = new Scanner( f ).useDelimiter("\\A").next();
     ROW = new HashMap<String, Comparable>();
     String[] toks = text.split("[,\\{\\}]");
