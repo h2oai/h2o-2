@@ -8,7 +8,6 @@
 *stdout.txt
 *~
 bin/
-binlib
 build
 flatfile*
 h2o_work.xml
