@@ -2,8 +2,6 @@
 *.hprof
 *.pyc
 *.swp
-*_*.data
-*_*.data
 *hs_err_pid*
 *stdout.txt
 *~

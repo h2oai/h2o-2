@@ -10,7 +10,7 @@ import org.junit.Test;
 import test.TestUtil;
 import water.parser.PMMLParser;
 
-public class ScoreDataTest extends TestUtil {
+public class ScoreTest extends TestUtil {
   static final HashMap<String, Comparable> ROW;
   static {
     ROW = new HashMap<String, Comparable>();
