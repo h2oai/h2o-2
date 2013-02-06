@@ -22,14 +22,18 @@ public class ScorecardModel {
 
   /** Score this model on the specified row of data.  */
   public double score(final Map<String, Comparable> row ) {
+    System.out.println("ScorecardModel.score:");
     double score = _initialScore;
     for (String k : _features.keySet()) {
       RuleTable ruleTable = _features.get(k);
       if(ruleTable!=null) {
-        System.out.println("ScorecardModel.score(): " + ruleTable.toString());
-        score += ruleTable.score(row.get(k));
+        System.out.print(ruleTable.toString());
+        double s = ruleTable.score(row.get(k));
+        System.out.println(" subscore= "+s);
+        score += s;
       }
     }
+    System.out.println("final score="+score);
     return score;
   }
 
