@@ -1,7 +1,7 @@
 
 package water.api;
 
-import water.web.RString;
+import water.util.RString;
 
 /**
  *

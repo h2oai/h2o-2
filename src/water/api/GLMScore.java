@@ -8,7 +8,7 @@ import hex.GLMSolver.GLMValidation;
 import water.Key;
 import water.ValueArray;
 import water.api.GLM.GLMBuilder;
-import water.web.RString;
+import water.util.RString;
 
 /**
  * Simple web page to trigger glm validation on another dataset.

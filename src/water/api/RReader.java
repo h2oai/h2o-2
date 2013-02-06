@@ -7,7 +7,7 @@ import java.io.IOException;
 import jsr166y.RecursiveAction;
 import water.*;
 import water.RReader.RModel;
-import water.web.RString;
+import water.util.RString;
 
 import com.google.gson.JsonObject;
 

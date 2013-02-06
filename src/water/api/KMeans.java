@@ -2,7 +2,7 @@ package water.api;
 
 import jsr166y.CountedCompleter;
 import water.*;
-import water.web.RString;
+import water.util.RString;
 
 import com.google.gson.JsonObject;
 

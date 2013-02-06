@@ -16,7 +16,7 @@ import java.util.*;
 import java.util.Map.Entry;
 
 import water.*;
-import water.web.RString;
+import water.util.RString;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;

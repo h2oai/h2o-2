@@ -9,7 +9,7 @@ import java.util.*;
 
 import water.*;
 import water.api.RequestArguments.*;
-import water.web.RString;
+import water.util.RString;
 
 import com.google.gson.JsonObject;
 

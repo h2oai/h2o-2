@@ -1,4 +1,4 @@
-package water.web;
+package water.util;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.gson.*;

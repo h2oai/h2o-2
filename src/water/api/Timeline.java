@@ -7,8 +7,8 @@ import java.util.Date;
 import java.util.List;
 
 import water.*;
+import water.util.RString;
 import water.util.TimelineSnapshot;
-import water.web.RString;
 
 import com.google.common.collect.Lists;
 import com.google.gson.*;

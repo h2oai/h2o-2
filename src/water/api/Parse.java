@@ -4,7 +4,7 @@ package water.api;
 import water.Key;
 import water.Value;
 import water.parser.ParseDataset;
-import water.web.RString;
+import water.util.RString;
 
 import com.google.gson.JsonObject;
 

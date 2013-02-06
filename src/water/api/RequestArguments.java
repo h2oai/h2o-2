@@ -10,7 +10,7 @@ import java.util.*;
 import water.*;
 import water.ValueArray.Column;
 import water.util.Check;
-import water.web.RString;
+import water.util.RString;
 
 import com.google.common.base.Objects;
 import com.google.common.collect.Lists;

@@ -8,7 +8,6 @@ import java.io.PrintWriter;
 import org.apache.commons.codec.binary.Base64;
 import water.*;
 import water.ValueArray.Column;
-import water.web.RString;
 
 public class TreeRenderer {
   private static final String DOT_PATH;
