@@ -54,7 +54,6 @@ public class RequestServer extends NanoHTTPD {
     //Request.addToNavbar(registerRequest(new Plot()),        "Basic",         "Plot");
 
     Request.addToNavbar(registerRequest(new Cloud()),    "Cloud Status", "Admin");
-    Request.addToNavbar(registerRequest(new Network()),  "Network",      "Admin");
     Request.addToNavbar(registerRequest(new Timeline()), "Timeline",     "Admin");
     Request.addToNavbar(registerRequest(new JStack()),   "Stack Dump",   "Admin");
     Request.addToNavbar(registerRequest(new PutValue()), "Put Value",    "Admin");

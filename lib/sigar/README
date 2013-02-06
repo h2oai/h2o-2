@@ -1,6 +1,0 @@
-Visit the SIGAR Wiki for documentation, bugs, support, etc.:
-http://sigar.hyperic.com/
-
-Note: sigar.jar is a modified version of original sigar 
-      implementation. The modified version supports UDP 
-      statistics and is available at https://github.com/mmalohlava/sigar 

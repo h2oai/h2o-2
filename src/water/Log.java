@@ -1,11 +1,10 @@
 package water;
 
 import java.io.*;
+import java.lang.management.ManagementFactory;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
-
-import org.hyperic.sigar.Sigar;
 
 public final class Log {
   // @formatter:off
@@ -21,9 +20,20 @@ public final class Log {
   // @formatter:on
 
   static {
-    HOST_AND_PID = "" //
-        + padRight(H2O.findInetAddressForSelf().getHostAddress() + ", ", 17) //
-        + padRight(new Sigar().getPid() + ", ", 8);
+    HOST_AND_PID = ""
+        + padRight(H2O.findInetAddressForSelf().getHostAddress() + ", ", 17)
+        + padRight(getPid() + ", ", 8);
+  }
+
+  private static long getPid() {
+    try {
+      String n = ManagementFactory.getRuntimeMXBean().getName();
+      int i = n.indexOf('@');
+      if( i == -1 ) return -1;
+      return Long.parseLong(n.substring(0,i));
+    } catch( Throwable t ) {
+      return -1;
+    }
   }
 
   public static void write(String s) {
