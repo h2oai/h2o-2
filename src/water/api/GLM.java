@@ -40,8 +40,17 @@ public class GLM extends Request {
   protected final Int _xval = new Int(XVAL, 10, 0, 1000000);
 
   public GLM() {
+    _requestHelp = "Compute a Generalized Linear Model";
+    _key._requestHelp = "Dataset to be trained on.";
+    _y._requestHelp = "Response variable column name, must be a column in the training dataset.";
+    _x._requestHelp = "Predictor columns to be trained on.  Any subset of predictors can be included or ignored in the model.";
     _modelKey._hideInQuery = true;
-    _requestHelp = "Compute a generalized linear model.";
+    _modelKey._requestHelp = "The H2O's Key name for the model";
+    _family._requestHelp = 
+      "Pick the general mathematical family for the trained model.<br><ul>"+
+      "<li><b>gaussian</b> models describe a simple hyper-plane (for a single column this will be a simple line) for the response variable.  This is a suitable model for when you expect the response variable to vary as a linear combination of predictor variables.  An example might be predicting the gas mileage of cars, based on their weight, age, and engine size.</li>"+
+      "<li><b>binomial</b> models form an S-curve response, showing probabilities that vary from 0 to 1.  This is a suitable model for when you expect a simple boolean result (e.g. alive/dead, or fraud/no-fraud).  The model gives a probability of the true event.  An example might be to predict the presence of prostate cancer given the patient age, race, and various blood chemical levels such as PSA.</li>"+
+      "</ul>";
   }
 
 
