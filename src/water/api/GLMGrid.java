@@ -58,7 +58,29 @@ public class GLMGrid extends Request {
   protected final RSeq _alpha = new RSeq(Constants.ALPHA, false, new NumberSequence("0,0.25,0.5,0.75,1.0",false,1),false);
   protected final RSeq _thresholds = new RSeq(Constants.DTHRESHOLDS, false,new NumberSequence("0:1:0.01",false,0.1),false);
 
-
+ 
+  public GLMGrid(){
+    _requestHelp = "Perform grid search over GLM parameters. Calls glm with all parameter combination from user-defined parameter range. Results are ordered according to AUC. For more details see <a href='GLM.help'>GLM help</a>.";
+    _key._requestHelp = "Dataset to be trained on.";
+    _y._requestHelp = "Response variable column name.";
+    _x._requestHelp = "Predictor columns to be trained on. Constant columns will be ignored.";
+    _family._requestHelp =
+      "Pick the general mathematical family for the trained model.<br><ul>"+
+      "<li><b>gaussian</b> models describe a simple hyper-plane (for a single column this will be a simple line) for the response variable.  This is a suitable model for when you expect the response variable to vary as a linear combination of predictor variables.  An example might be predicting the gas mileage of cars, based on their weight, age, and engine size.</li>"+
+      "<li><b>binomial</b> models form an S-curve response, showing probabilities that vary from 0 to 1.  This is a suitable model for when you expect a simple boolean result (e.g. alive/dead, or fraud/no-fraud).  The model gives a probability of the true event.  An example might be to predict the presence of prostate cancer given the patient age, race, and various blood chemical levels such as PSA.</li>"+
+      "</ul>";
+    _link._requestHelp = "Link function to be used.";
+    _lambda._requestHelp = "Range of penalty arguments. Higher lambda means higher penalty is applied on the size of the beta vector.";
+    _alpha._requestHelp = "Range of penalty distribution arguments. Controls distribution of penalty between L1 and L2. 1 means lasso, 0 means ridge regression";
+    _betaEps._requestHelp = "Precision of the vector of coefficients. Computation stops when the maximal difference between two beta vectors is below than Beta epsilon.";
+    _maxIter._requestHelp = "Number of maximum iterations.";
+    _weight._requestHelp = "All rows for which the predicate is true will be weighted by weight. Weight=1 is neutral. Weight = 0.5 treats negative examples as twice more important than positive ones. Weight = 2.0 does the opposite.";
+    _caseMode._requestHelp = "Predicate selection.";
+    _case._requestHelp = "Value to be used to compare against using predicate given by case mode selector to turn the y column into boolean.";
+    _thresholds._requestHelp = "Sequence of decision thresholds to be evaluated during validation (used for ROC curce computation and for picking optimal decision threshold of the resulting classifier).";
+    _xval._requestHelp = "Number of fold used in cross-validation. 0 or 1 means no cross validation.";
+      
+  }
 
 
   @Override protected void queryArgumentValueSet(Argument arg, Properties inputArgs) {
