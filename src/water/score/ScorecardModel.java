@@ -6,8 +6,8 @@ import javassist.*;
 
 /**
  * Scorecard model - decision table.
- *
  */
+@SuppressWarnings("cast")
 public class ScorecardModel {
 
   /** Name */
