@@ -40,10 +40,14 @@ public class GLM extends Request {
   protected final Int _xval = new Int(XVAL, 10, 0, 1000000);
 
   public GLM() {
-    _requestHelp = "Compute a Generalized Linear Model";
-    _key._requestHelp = "Dataset to be trained on.";
-    _y._requestHelp = "Response variable column name, must be a column in the training dataset.";
-    _x._requestHelp = "Predictor columns to be trained on.  Any subset of predictors can be included or ignored in the model.";
+      _requestHelp = _requestHelp = "Compute generalized linear model with penalized maximum likelihood. Penalties include the lasso (L1 penalty), ridge regression (L2 penalty) or elastic net penalty (combination of L1 and L2) penalties. The penalty function is defined as :<br/>" +
+      "<pre>\n" +
+      "       P(&beta;) = 0.5*(1 - &alpha;)*||&beta;||<sub>2</sub><sup>2</sup> + &alpha;*||&beta;||<sub>1</sub><br/>"+
+      "</pre>" +
+      "By setting &alpha; to 0, we get ridge regression, setting it to 1 gets us lasso. <p>See our <a href='https://github.com/0xdata/h2o/wiki/GLM#wiki-Details' target=\"_blank\">wiki</a> for details.<p>";    _key._requestHelp = "Dataset to be trained on.";
+    _y._requestHelp = "Response variable column name.";
+
+    _x._requestHelp = "Predictor columns to be trained on. Constant columns will be ignored.";
     _modelKey._hideInQuery = true;
     _modelKey._requestHelp = "The H2O's Key name for the model";
     _family._requestHelp = 
@@ -51,6 +55,16 @@ public class GLM extends Request {
       "<li><b>gaussian</b> models describe a simple hyper-plane (for a single column this will be a simple line) for the response variable.  This is a suitable model for when you expect the response variable to vary as a linear combination of predictor variables.  An example might be predicting the gas mileage of cars, based on their weight, age, and engine size.</li>"+
       "<li><b>binomial</b> models form an S-curve response, showing probabilities that vary from 0 to 1.  This is a suitable model for when you expect a simple boolean result (e.g. alive/dead, or fraud/no-fraud).  The model gives a probability of the true event.  An example might be to predict the presence of prostate cancer given the patient age, race, and various blood chemical levels such as PSA.</li>"+
       "</ul>";
+    _link._requestHelp = "Link function to be used.";
+    _lambda._requestHelp = "Penalty argument. Higher lambda means higher penalty is applied on the size of the beta vector.";
+    _alpha._requestHelp = "Penalty distribution argument. Controls distribution of penalty between L1 and L2 norm according to the formula above.";
+    _betaEps._requestHelp = "Precision of the vector of coefficients. Computation stops when the maximal difference between two beta vectors is below than Beta epsilon.";
+    _maxIter._requestHelp = "Number of maximum iterations.";
+    _caseWeight._requestHelp = "All rows for which the predicate is true will be weighted by weight. Weight=1 is neutral. Weight = 0.5 treats negative examples as twice more important than positive ones. Weight = 2.0 does the opposite.";
+    _caseMode._requestHelp = "Predicate selection.";
+    _case._requestHelp = "Value to be used to compare against using predicate given by case mode selector to turn the y column into boolean.";
+    _thresholds._requestHelp = "Sequence of decision thresholds to be evaluated during validation (used for ROC curce computation and for picking optimal decision threshold of the resulting classifier).";
+    _xval._requestHelp = "Number of fold used in cross-validation. 0 or 1 means no cross validation.";
   }
 
 
