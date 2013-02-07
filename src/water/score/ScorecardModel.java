@@ -376,7 +376,7 @@ public class ScorecardModel {
       return value!=null && _value.compareTo(value) == 0; 
     }
     @Override boolean match(String s, double d) { 
-      return Double.isNaN(_d) ? ((String)_value).equals(s) : (d==_d);
+      return Double.isNaN(_d) ? ((String)((Object)_value)).equals(s) : (d==_d);
     }
     @Override public String toString() { return "X==" + _value; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) {
