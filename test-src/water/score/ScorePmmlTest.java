@@ -4,6 +4,8 @@ import java.io.ByteArrayInputStream;
 import java.util.HashMap;
 import org.junit.Assert;
 import org.junit.Test;
+
+import water.H2O;
 import water.parser.PMMLParser;
 import water.score.ScorecardModel;
 
@@ -481,14 +483,14 @@ public class ScorePmmlTest {
     String pmml = simplePmml;
 
     Object[][] tests = new Object[][] {
-//        { -1.0,   "Y",  1.0 },
-//        {  "X",   1.0,  2.0 },
+        { -1.0,   "Y",  1.0 },
+        {  "X",   1.0,  2.0 },
         {  1.0,   true, 2.0 },
-//        {  false, 1.0,  2.0 },
-//        {  1890L, 0.0,  3.0 },
-//        {  0.0,   12L,  3.0 },
-//        {  2222,  0.0,  4.0 },
-//        {  0.0,   99,   3.0 },
+        {  false, 1.0,  2.0 },
+        {  1890L, 0.0,  3.0 },
+        {  0.0,   12L,  4.0 },
+        {  2222,  0.0,  3.0 },
+        {  0.0,   99,   4.0 },
     };
 
     for( Object[] t : tests) {

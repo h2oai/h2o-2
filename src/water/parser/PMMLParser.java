@@ -123,9 +123,7 @@ public class PMMLParser extends CustomParser {
 
       Predicate pred = null;
       if (value != null) {
-        String s = ScorecardModel.getString(value);
-        double d = ScorecardModel.getNumber(value);
-        pred = getSimplePred(op, s, d);
+        pred = getSimplePred(op, value);
       } else {
         assert op == Operators.isMissing;
         pred = new ScorecardModel.IsMissing();
@@ -133,13 +131,13 @@ public class PMMLParser extends CustomParser {
       addPred(pred);
     }
 
-    private Predicate getSimplePred(Operators op, String value, double d) {
+    private Predicate getSimplePred(Operators op, String value) {
      switch (op) {
-     case lessOrEqual   : return new ScorecardModel.LessOrEqual(value,d);
-     case lessThan      : return new ScorecardModel.LessThan(value,d);
-     case greaterOrEqual: return new ScorecardModel.GreaterOrEqual(value,d);
-     case greaterThan   : return new ScorecardModel.GreaterThan(value,d);
-     case equal         : return new ScorecardModel.Equals(value,d);
+     case lessOrEqual   : return new ScorecardModel.LessOrEqual(value);
+     case lessThan      : return new ScorecardModel.LessThan(value);
+     case greaterOrEqual: return new ScorecardModel.GreaterOrEqual(value);
+     case greaterThan   : return new ScorecardModel.GreaterThan(value);
+     case equal         : return new ScorecardModel.Equals(value);
      default            : return null;
      }
     }

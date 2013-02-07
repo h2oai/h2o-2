@@ -299,77 +299,70 @@ public class ScorecardModel {
 
   public static abstract class Comparison<T> extends Predicate<T> {
     public final String _value;
-    public final double _d;
-    public Comparison(String value, double d) { _value = value; _d=d;}
+    public final double _num;
+    public final double _bool;
+    public Comparison(String value) {
+      _value = value;
+      _num = getNumber(value);
+      _bool = getBoolean(value);
+    }
   }
 
   /** Less or equal */
   public static class LessOrEqual<T extends Comparable<T>> extends Comparison<T> {
-    public LessOrEqual(String value, double d) { super(value, d); }
+    public LessOrEqual(String value) { super(value); }
     @Override boolean match(T value) {
-      if( _value == value ) return true;
-      if( _value == null || value == null ) return false;
-      if( Double.isNaN(_d) ) {
-        return _value.compareTo(getString(value)) >= 0;
-      }
-      return getNumber(value) <= _d;
+      if( !Double.isNaN(_num) ) return getNumber(value) <= _num;
+      if( !Double.isNaN(_bool) ) return getBoolean(value) <= _bool;
+      return _value.compareTo(getString(value)) >= 0;
     }
-    @Override boolean match(String s, double d) { return d <= _d; }
+    @Override boolean match(String s, double d) { return d <= _num; }
     @Override public String toString() { return "X<=" + _value; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) {
-      return sb.append(jname).append("<=").append(_d);
+      return sb.append(jname).append("<=").append(_num);
     }
   }
 
   public static class LessThan<T extends Comparable<T>> extends Comparison<T> {
-    public LessThan(String value, double d) { super(value, d); }
+    public LessThan(String value) { super(value); }
     @Override boolean match(T value) {
-      if( _value == value ) return false;
-      if( _value == null || value == null ) return false;
-      if( Double.isNaN(_d) ) {
-        return _value.compareTo(getString(value)) > 0;
-      }
-      return getNumber(value) < _d;
+      if( !Double.isNaN(_num) ) return getNumber(value) < _num;
+      if( !Double.isNaN(_bool) ) return getBoolean(value) < _bool;
+      return _value.compareTo(getString(value)) > 0;
     }
-    @Override boolean match(String s, double d) { return d < _d; }
+
+    @Override boolean match(String s, double d) { return d < _num; }
     @Override public String toString() { return "X<" + _value; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) {
-      return sb.append(jname).append("<").append(_d);
+      return sb.append(jname).append("<").append(_num);
     }
   }
 
   public static class GreaterOrEqual<T extends Comparable<T>> extends Comparison<T> {
-    public GreaterOrEqual(String value, double d) { super(value, d); }
+    public GreaterOrEqual(String value) { super(value); }
     @Override boolean match(T value) {
-      if( _value == value ) return true;
-      if( _value == null || value == null ) return false;
-      if( Double.isNaN(_d) ) {
-        return _value.compareTo(getString(value)) <= 0;
-      }
-      return getNumber(value) >= _d;
+      if( !Double.isNaN(_num) ) return getNumber(value) >= _num;
+      if( !Double.isNaN(_bool) ) return getBoolean(value) >= _bool;
+      return _value.compareTo(getString(value)) <= 0;
     }
-
-    @Override boolean match(String s, double d) { return d >= _d; }
+    @Override boolean match(String s, double d) { return d >= _num; }
     @Override public String toString() { return "X>=" + _value; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) {
-      return sb.append(jname).append(">=").append(_d);
+      return sb.append(jname).append(">=").append(_num);
     }
   }
 
   public static class GreaterThan<T extends Comparable<T>> extends Comparison<T> {
-    public GreaterThan(String value, double d) { super(value,d); }
+    public GreaterThan(String value) { super(value); }
     @Override boolean match(T value) {
-      if( _value == value ) return false;
-      if( _value == null || value == null ) return false;
-      if( Double.isNaN(_d) ) {
-        return _value.compareTo(getString(value)) < 0;
-      }
-      return getNumber(value) > _d;
+      if( !Double.isNaN(_num) ) return getNumber(value) > _num;
+      if( !Double.isNaN(_bool) ) return getBoolean(value) > _bool;
+      return _value.compareTo(getString(value)) < 0;
     }
-    @Override boolean match(String s, double d) { return d > _d; }
+    @Override boolean match(String s, double d) { return d > _num; }
     @Override public String toString() { return "X>" + _value; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) {
-      return sb.append(jname).append(">").append(_d);
+      return sb.append(jname).append(">").append(_num);
     }
   }
 
@@ -380,31 +373,32 @@ public class ScorecardModel {
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) {
       return sb.append("Double.isNaN("+jname+")");
     }
+    @Override public StringBuilder toJavaBool( StringBuilder sb, String jname ) {
+      return sb.append("Double.isNaN("+jname+")");
+    }
     @Override public StringBuilder toJavaStr( StringBuilder sb, String jname ) {
       return sb.append(jname).append("==null");
     }
   }
 
   public static class Equals<T extends Comparable<T>> extends Comparison<T> {
-    public Equals(String value, double d) { super(value, d); }
+    public Equals(String value) { super(value); }
     @Override boolean match(T value) {
-      if( _value == value ) return true;
-      if( _value == null || value == null ) return false;
-      if( Double.isNaN(_d) ) {
-        return _value.compareTo(getString(value)) == 0;
-      }
-      return getNumber(value) == _d;
+      if( !Double.isNaN(_num) ) return getNumber(value) == _num;
+      if( !Double.isNaN(_bool) ) return getBoolean(value) == _bool;
+      return _value.compareTo(getString(value)) == 0;
     }
     @Override boolean match(String s, double d) {
-      return Double.isNaN(_d) ? ((String)((Object)_value)).equals(s) : (d==_d);
+      if( !Double.isNaN(_num) ) return d == _num;
+      if( !Double.isNaN(_bool) ) return d == _bool;
+      return _value.equals(s);
     }
     @Override public String toString() { return "X==" + _value; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) {
-      return sb.append(jname).append("==").append(_d);
+      return sb.append(jname).append("==").append(_num);
     }
     @Override StringBuilder toJavaBool( StringBuilder sb, String jname ) {
-      double d = getBoolean(_value);
-      return sb.append(jname).append("==").append(d);
+      return sb.append(jname).append("==").append(_bool);
     }
     @Override StringBuilder toJavaStr( StringBuilder sb, String jname ) {
       String s = ((String)((Object)_value));
@@ -504,7 +498,6 @@ public class ScorecardModel {
     if( o instanceof Double ) return ((Double)o).doubleValue();
     if( o instanceof Long   ) return ((Long  )o).doubleValue();
     if( o instanceof Number ) return ((Number)o).doubleValue();
-    if( o instanceof Boolean ) return ((Boolean)o) ? 1.0 : 0.0;
     if( o instanceof String ) {
       try { return Double.valueOf((String)o); } catch( Throwable t ) { }
     }
@@ -517,7 +510,8 @@ public class ScorecardModel {
     if( o instanceof Boolean ) return ((Boolean)o) ? 1.0 : 0.0;
     if( o instanceof String ) {
       try {
-        return Boolean.parseBoolean((String) o) ? 1.0 : 0.0;
+        if( "true".equalsIgnoreCase((String) o) ) return 1.0;
+        if( "false".equalsIgnoreCase((String) o) ) return 0.0;
       } catch( Throwable t ) { }
     }
     return Double.NaN;
