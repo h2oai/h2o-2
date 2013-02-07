@@ -73,17 +73,23 @@ class ScoreMain {
   }
 
   public static void sampleAppDoesStuff(water.score.ScorecardModel scm) {
-
     System.out.println("Initial score="+scm.score(ROW));
-    for( int i=0; i<10000; i++ )
-      scm.score(ROW);
+    for( int i=0; i<1000; i++ )
+      loop1000(scm);
+    try { Thread.sleep(1000); } catch( Exception e ) { }
+    System.out.println("Timing...");
     long start = System.currentTimeMillis();
     final int ITER=100000;
     for( int i=0; i<ITER; i++ )
-      scm.score(ROW);
+      loop1000(scm);
     long now = System.currentTimeMillis();
     long delta = now-start;
-    System.out.println(""+ITER+" in "+delta+"ms = "+((double)delta*1000*1000/ITER)+" microsec/score");
+    System.out.println(""+ITER+" in "+delta+"ms = "+((double)delta*1000.0*1000.0/(ITER*1000))+" microsec/score");
 
+  }
+
+  public static void loop1000(water.score.ScorecardModel scm) {
+    for( int i=0; i<1000; i++ )
+      scm.score(ROW);
   }
 }
