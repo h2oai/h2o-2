@@ -41,9 +41,9 @@ public class ScorecardModel {
     return jname;
   }
 
-  protected ScorecardModel(final String name, double initialScore) { 
-    _name = name; 
-    _initialScore = initialScore; 
+  protected ScorecardModel(final String name, double initialScore) {
+    _name = name;
+    _initialScore = initialScore;
     _features = new ArrayList();
     _rules = new ArrayList();
   }
@@ -180,7 +180,7 @@ public class ScorecardModel {
       }
       sb.append(_name).append("\");\n");
       sb.append("  if( false ) ;\n");
-      for (Rule r : _rule) 
+      for (Rule r : _rule)
         if( _type == DataTypes.STRING) r.toJavaStr(sb,jname);
         else if( _type == DataTypes.BOOLEAN) r.toJavaBool(sb,jname);
         else r.toJavaNum(sb,jname);
@@ -192,7 +192,7 @@ public class ScorecardModel {
       try {
         CtMethod happyMethod = CtMethod.make(sb.toString(),scClass);
         scClass.addMethod(happyMethod);
-        
+
       } catch( Exception re ) {
         System.err.println("=== crashing ===");
         System.err.println(sb.toString());
@@ -220,7 +220,7 @@ public class ScorecardModel {
       default     : sb.append(" = didx==-1 ? Double.NaN : DS[didx];\n" ); break;
       }
       sb.append("  if( false ) ;\n");
-      for (Rule r : _rule) 
+      for (Rule r : _rule)
         if( _type == DataTypes.STRING) r.toJavaStr(sb,jname);
         else if( _type == DataTypes.BOOLEAN) r.toJavaBool(sb,jname);
         else r.toJavaNum(sb,jname);
@@ -232,7 +232,7 @@ public class ScorecardModel {
       try {
         CtMethod happyMethod = CtMethod.make(sb.toString(),scClass);
         scClass.addMethod(happyMethod);
-        
+
       } catch( Exception re ) {
         System.err.println("=== crashing ===");
         System.err.println(sb.toString());
@@ -278,15 +278,15 @@ public class ScorecardModel {
     boolean match(T value) { return _predicate.match(value); }
     boolean match(String s, double d) { return _predicate.match(s,d); }
     @Override public String toString() { return _predicate.toString() + " => " + _score; }
-    public StringBuilder toJavaNum( StringBuilder sb, String jname ) { 
+    public StringBuilder toJavaNum( StringBuilder sb, String jname ) {
       sb.append("  else if( ");
       return _predicate.toJavaNum(sb,jname).append(" ) score += ").append(_score).append(";\n");
     }
-    public StringBuilder toJavaBool( StringBuilder sb, String jname ) { 
+    public StringBuilder toJavaBool( StringBuilder sb, String jname ) {
       sb.append("  else if( ");
       return _predicate.toJavaBool(sb,jname).append(" ) score += ").append(_score).append(";\n");
     }
-    public StringBuilder toJavaStr( StringBuilder sb, String jname ) { 
+    public StringBuilder toJavaStr( StringBuilder sb, String jname ) {
       sb.append("  else if( ");
       return _predicate.toJavaStr(sb,jname).append(" ) score += ").append(_score).append(";\n");
     }
@@ -360,10 +360,10 @@ public class ScorecardModel {
     @Override boolean match(T value) { return value==null; }
     @Override boolean match(String s, double d) { return Double.isNaN(d); }
     @Override public String toString() { return "isMissing"; }
-    @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) { 
+    @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) {
       return sb.append("Double.isNaN("+jname+")");
     }
-    @Override public StringBuilder toJavaStr( StringBuilder sb, String jname ) { 
+    @Override public StringBuilder toJavaStr( StringBuilder sb, String jname ) {
       return sb.append(jname).append("==null");
     }
   }
@@ -372,10 +372,10 @@ public class ScorecardModel {
     T _value;
     double _d;
     public Equals(T value, double d) { _value = value; _d = d; }
-    @Override boolean match(T value) { 
-      return value!=null && _value.compareTo(value) == 0; 
+    @Override boolean match(T value) {
+      return value!=null && _value.compareTo(value) == 0;
     }
-    @Override boolean match(String s, double d) { 
+    @Override boolean match(String s, double d) {
       return Double.isNaN(_d) ? ((String)((Object)_value)).equals(s) : (d==_d);
     }
     @Override public String toString() { return "X==" + _value; }
@@ -383,11 +383,11 @@ public class ScorecardModel {
       double d = ((Number)((Object)_value)).doubleValue();
       return sb.append(jname).append("==").append(d);
     }
-    @Override StringBuilder toJavaBool( StringBuilder sb, String jname ) { 
+    @Override StringBuilder toJavaBool( StringBuilder sb, String jname ) {
       boolean b = ((Boolean)((Object)_value));
       return sb.append(jname).append("==").append(b);
     }
-    @Override StringBuilder toJavaStr( StringBuilder sb, String jname ) { 
+    @Override StringBuilder toJavaStr( StringBuilder sb, String jname ) {
       String s = ((String)((Object)_value));
       return sb.append("\"").append(s).append("\".equals(").append(jname).append(")");
     }
@@ -452,7 +452,7 @@ public class ScorecardModel {
       for (T s: _values) x += s.toString() + " ";
       return "X is in {" + x + "}"; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) { throw H2O.unimpl(); }
-    @Override StringBuilder toJavaStr( StringBuilder sb, String jname ) { 
+    @Override StringBuilder toJavaStr( StringBuilder sb, String jname ) {
       for( String s : (String[])_values )
         sb.append("\"").append(s).append("\".equals(").append(jname).append(") || ");
       return sb.append("false");
@@ -464,7 +464,7 @@ public class ScorecardModel {
     @Override boolean match(T value) { return ! super.match(value); }
     @Override boolean match(String s, double d) { return ! super.match(s,d); }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) { throw H2O.unimpl(); }
-    @Override StringBuilder toJavaStr( StringBuilder sb, String jname ) { 
+    @Override StringBuilder toJavaStr( StringBuilder sb, String jname ) {
       sb.append("!(");
       super.toJavaStr(sb,jname);
       return sb.append(")");
@@ -501,10 +501,10 @@ public class ScorecardModel {
     public Builder(final String name, double initialScore) { _scm = new ScorecardModel(name, initialScore); }
 
     // JIT the fast version
-    public final ScorecardModel build() { 
+    public final ScorecardModel build() {
       // javassist support for rewriting class files
       _pool = ClassPool.getDefault();
-      try { 
+      try {
         // Make a unique class name
         String cname = xml2jname(_scm._name);
         if( CLASS_NAMES.containsKey(cname) ) {
@@ -524,17 +524,17 @@ public class ScorecardModel {
         String cons = "  public "+cname+"() { super(\""+_scm._name+"\","+_scm._initialScore+"); }";
         CtConstructor happyConst = CtNewConstructor.make(cons,scClass);
         scClass.addConstructor(happyConst);
-        Class myClass = scClass.toClass();
+        Class myClass = scClass.toClass(ScorecardModel.class.getClassLoader(), null);
         ScorecardModel scm = (ScorecardModel)myClass.newInstance();
         scm._features = _scm._features;
         scm._rules    = _scm._rules   ;
         return scm;
-        
+
       } catch( Exception e ) {
         System.err.println("javassist failed: "+e);
         e.printStackTrace();
       }
-      return  _scm; 
+      return  _scm;
     }
 
     public final void addRuleTable(final String featureName, final DataTypes type, final List<Rule> rules) {
