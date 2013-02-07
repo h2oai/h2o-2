@@ -124,12 +124,15 @@ public class PMMLParser extends CustomParser {
       DataTypes ft = _featureTypes.get(featureName);
       Predicate pred = null;
       if (value != null) {
+        Comparable v=null;
+        double d=Double.NaN;
         switch (ft) {
-        case DOUBLE  : pred = getSimplePred(op, Double.valueOf(value)); break;
-        case BOOLEAN : pred = getSimplePred(op, Boolean.valueOf(value)); break;
-        case INT     : pred = getSimplePred(op, Double.valueOf(value).longValue()); break;
-        case STRING  : pred = getSimplePred(op, value); break;
+        case INT     : v = Long   .valueOf(value); d = ((Long   )v).   longValue(); break;
+        case DOUBLE  : v = Double .valueOf(value); d = ((Double )v). doubleValue(); break;
+        case BOOLEAN : v = Boolean.valueOf(value); d = ((Boolean)v).booleanValue() ? 1 : 0; break;
+        case STRING  : v = value;  d = Double.NaN; break;
         }
+        pred = getSimplePred(op, v, d);
       } else {
         assert op == Operators.isMissing;
         pred = new ScorecardModel.IsMissing();
@@ -137,14 +140,14 @@ public class PMMLParser extends CustomParser {
       addPred(pred);
     }
 
-    private <T extends Comparable<T>> Predicate<T> getSimplePred(Operators op, T value) {
+    private <T extends Comparable<T>> Predicate<T> getSimplePred(Operators op, T value, double d) {
      switch (op) {
-      case lessOrEqual   : return new ScorecardModel.LessOrEqual(value);
-      case lessThan      : return new ScorecardModel.LessThan(value);
-      case greaterOrEqual: return new ScorecardModel.GreaterOrEqual(value);
-      case greaterThan   : return new ScorecardModel.GreaterThan(value);
-      case equal         : return new ScorecardModel.Equals(value);
-      default            : return null;
+     case lessOrEqual   : return new ScorecardModel.LessOrEqual(value,d);
+     case lessThan      : return new ScorecardModel.LessThan(value,d);
+     case greaterOrEqual: return new ScorecardModel.GreaterOrEqual(value,d);
+     case greaterThan   : return new ScorecardModel.GreaterThan(value,d);
+     case equal         : return new ScorecardModel.Equals(value,d);
+     default            : return null;
      }
     }
 

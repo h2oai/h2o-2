@@ -59,12 +59,12 @@ class Basic(unittest.TestCase):
                     (1, row_size))
 
             # count the zeroes and ones in the created data
+            
+            execResultDataInspect = h2o_cmd.runInspect(key=resultKey, offset=0)
             actualZeroes = 0
             actualOnes = 0
-            rowData = execResultInspect["rows"]
-            inspect = h2o_cmd.runInspect(key="Result.hex")
-            rows = inspect["rows"][0]
-
+            
+            rowData = execResultDataInspect["rows"]
             for i in range (expectedRows):
                 # row_data = execResultInspect["rows"][0]
                 # value = execResultInspect["rows"][0]["0"]
