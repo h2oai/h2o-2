@@ -58,7 +58,7 @@ public class RequestQueries extends RequestArguments {
             "<div class='container'>"
           + "<div class='row-fluid'>"
           + "<div class='span12'>"
-          + "<h3>Request %REQ_NAME ( <a href='%REQ_NAME.help'>help</a> )</h3>"
+          + "<h3>Request %REQ_NAME <a id='xxx' href='%REQ_NAME.help' rel='tooltip' data-placement='right' title='Click for help...'><i class='icon-question-sign'></i></a></h3>"
           + "<p></p>"
           + "  <dl class='dl-horizontal'><dt></dt><dd>"
           + "    <button class='btn btn-primary' onclick='query_submit()'>Submit</button>"
