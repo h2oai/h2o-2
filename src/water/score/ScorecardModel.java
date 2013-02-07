@@ -110,10 +110,8 @@ public class ScorecardModel {
       for( int i=0; i<_features.size(); i++ )
         _rules.get(i).makeFeatureHashMethod(sb,vars,scClass);
       sb.append("  return score;\n}\n");
-
       CtMethod happyMethod = CtMethod.make(sb.toString(),scClass);
       scClass.addMethod(happyMethod);
-
     } catch( Exception re ) {
       System.err.println("=== crashing ===");
       System.err.println(sb.toString());
@@ -169,14 +167,14 @@ public class ScorecardModel {
                 "  double score = 0;\n");
       switch( _type ) {
       case STRING : sb.append("  String " ); break;
-      case BOOLEAN: sb.append("  boolean "); break;
+      case BOOLEAN: sb.append("  double "); break;
       default     : sb.append("  double " ); break;
       }
       sb.append(jname);
       switch( _type ) {
-      case STRING : sb.append(" = (String)row.get(\""); break;
+      case STRING : sb.append(" = getString (row,\""); break;
       case BOOLEAN: sb.append(" = getBoolean(row,\"" ); break;
-      default     : sb.append(" = getNumber(row,\""  ); break;
+      default     : sb.append(" = getNumber (row,\""  ); break;
       }
       sb.append(_name).append("\");\n");
       sb.append("  if( false ) ;\n");
@@ -192,7 +190,6 @@ public class ScorecardModel {
       try {
         CtMethod happyMethod = CtMethod.make(sb.toString(),scClass);
         scClass.addMethod(happyMethod);
-
       } catch( Exception re ) {
         System.err.println("=== crashing ===");
         System.err.println(sb.toString());
@@ -299,60 +296,80 @@ public class ScorecardModel {
     StringBuilder toJavaBool( StringBuilder sb, String jname ) { throw H2O.unimpl(); }
     StringBuilder toJavaStr( StringBuilder sb, String jname ) { throw H2O.unimpl(); }
   }
+
+  public static abstract class Comparison<T> extends Predicate<T> {
+    public final String _value;
+    public final double _d;
+    public Comparison(String value, double d) { _value = value; _d=d;}
+  }
+
   /** Less or equal */
-  public static class LessOrEqual<T extends Comparable<T>> extends Predicate<T> {
-    T _value;
-    double _d;
-    public LessOrEqual(T value, double d) { _value = value; _d=d;}
+  public static class LessOrEqual<T extends Comparable<T>> extends Comparison<T> {
+    public LessOrEqual(String value, double d) { super(value, d); }
     @Override boolean match(T value) {
-      if( value != null && _value != null && value.getClass() != _value.getClass() ) {
-        if(value.getClass() == Long.class &&
-           _value.getClass() == Double.class ) {
-          long   val1 = ((Long)((Object)value)).longValue();
-          double val2 = ((Double)((Object)_value)).doubleValue();
-          return val1 <= val2;
-        }
+      if( _value == value ) return true;
+      if( _value == null || value == null ) return false;
+      if( Double.isNaN(_d) ) {
+        return _value.compareTo(getString(value)) >= 0;
       }
-      return value!=null && _value.compareTo(value) >= 0;
+      return getNumber(value) <= _d;
     }
     @Override boolean match(String s, double d) { return d <= _d; }
     @Override public String toString() { return "X<=" + _value; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) {
-      double d = ((Number)_value).doubleValue();
-      return sb.append(jname).append("<=").append(d);
+      return sb.append(jname).append("<=").append(_d);
     }
   }
 
-  public static class LessThan<T extends Comparable<T>> extends LessOrEqual<T> {
-    public LessThan(T value, double d) { super(value,d); }
-    @Override boolean match(T value) { return value!=null && _value.compareTo(value) > 0; }
+  public static class LessThan<T extends Comparable<T>> extends Comparison<T> {
+    public LessThan(String value, double d) { super(value, d); }
+    @Override boolean match(T value) {
+      if( _value == value ) return false;
+      if( _value == null || value == null ) return false;
+      if( Double.isNaN(_d) ) {
+        return _value.compareTo(getString(value)) > 0;
+      }
+      return getNumber(value) < _d;
+    }
     @Override boolean match(String s, double d) { return d < _d; }
     @Override public String toString() { return "X<" + _value; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) {
-      double d = ((Number)_value).doubleValue();
-      return sb.append(jname).append("<").append(d);
+      return sb.append(jname).append("<").append(_d);
     }
   }
 
-  public static class GreaterOrEqual<T extends Comparable<T>> extends LessThan<T> {
-    public GreaterOrEqual(T value, double d) { super(value,d); }
-    @Override boolean match(T value) { return value!=null && ! super.match(value); }
+  public static class GreaterOrEqual<T extends Comparable<T>> extends Comparison<T> {
+    public GreaterOrEqual(String value, double d) { super(value, d); }
+    @Override boolean match(T value) {
+      if( _value == value ) return true;
+      if( _value == null || value == null ) return false;
+      if( Double.isNaN(_d) ) {
+        return _value.compareTo(getString(value)) <= 0;
+      }
+      return getNumber(value) >= _d;
+    }
+
     @Override boolean match(String s, double d) { return d >= _d; }
     @Override public String toString() { return "X>=" + _value; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) {
-      double d = ((Number)_value).doubleValue();
-      return sb.append(jname).append(">=").append(d);
+      return sb.append(jname).append(">=").append(_d);
     }
   }
 
-  public static class GreaterThan<T extends Comparable<T>> extends LessOrEqual<T> {
-    public GreaterThan(T value, double d) { super(value,d); }
-    @Override boolean match(T value) { return value!=null && ! super.match(value); }
+  public static class GreaterThan<T extends Comparable<T>> extends Comparison<T> {
+    public GreaterThan(String value, double d) { super(value,d); }
+    @Override boolean match(T value) {
+      if( _value == value ) return false;
+      if( _value == null || value == null ) return false;
+      if( Double.isNaN(_d) ) {
+        return _value.compareTo(getString(value)) < 0;
+      }
+      return getNumber(value) > _d;
+    }
     @Override boolean match(String s, double d) { return d > _d; }
     @Override public String toString() { return "X>" + _value; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) {
-      double d = ((Number)_value).doubleValue();
-      return sb.append(jname).append(">").append(d);
+      return sb.append(jname).append(">").append(_d);
     }
   }
 
@@ -368,24 +385,26 @@ public class ScorecardModel {
     }
   }
 
-  public static class Equals<T extends Comparable<T>> extends Predicate<T> {
-    T _value;
-    double _d;
-    public Equals(T value, double d) { _value = value; _d = d; }
+  public static class Equals<T extends Comparable<T>> extends Comparison<T> {
+    public Equals(String value, double d) { super(value, d); }
     @Override boolean match(T value) {
-      return value!=null && _value.compareTo(value) == 0;
+      if( _value == value ) return true;
+      if( _value == null || value == null ) return false;
+      if( Double.isNaN(_d) ) {
+        return _value.compareTo(getString(value)) == 0;
+      }
+      return getNumber(value) == _d;
     }
     @Override boolean match(String s, double d) {
       return Double.isNaN(_d) ? ((String)((Object)_value)).equals(s) : (d==_d);
     }
     @Override public String toString() { return "X==" + _value; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) {
-      double d = ((Number)((Object)_value)).doubleValue();
-      return sb.append(jname).append("==").append(d);
+      return sb.append(jname).append("==").append(_d);
     }
     @Override StringBuilder toJavaBool( StringBuilder sb, String jname ) {
-      boolean b = ((Boolean)((Object)_value));
-      return sb.append(jname).append("==").append(b);
+      double d = getBoolean(_value);
+      return sb.append(jname).append("==").append(d);
     }
     @Override StringBuilder toJavaStr( StringBuilder sb, String jname ) {
       String s = ((String)((Object)_value));
@@ -477,19 +496,38 @@ public class ScorecardModel {
   }
 
   // Happy Helper Methods for the generated code
-  public double getNumber( HashMap<String,Object> row, String s ) {
-    Object o = row.get(s);
+  public static double getNumber( HashMap<String,Object> row, String s ) {
+    return getNumber(row.get(s));
+  }
+  public static double getNumber( Object o ) {
     // hint to the jit to do a instanceof breakdown tree
     if( o instanceof Double ) return ((Double)o).doubleValue();
     if( o instanceof Long   ) return ((Long  )o).doubleValue();
     if( o instanceof Number ) return ((Number)o).doubleValue();
+    if( o instanceof Boolean ) return ((Boolean)o) ? 1.0 : 0.0;
+    if( o instanceof String ) {
+      try { return Double.valueOf((String)o); } catch( Throwable t ) { }
+    }
     return Double.NaN;
   }
-  public boolean getBoolean( HashMap<String,Object> row, String s ) {
-    Object o = row.get(s);
-    if( o instanceof Boolean ) return ((Boolean)o).booleanValue();
-    if( o instanceof String && "true".equalsIgnoreCase((String)o) ) return true;
-    return false;
+  public static double getBoolean( HashMap<String,Object> row, String s ) {
+    return getBoolean(row.get(s));
+  }
+  public static double getBoolean( Object o ) {
+    if( o instanceof Boolean ) return ((Boolean)o) ? 1.0 : 0.0;
+    if( o instanceof String ) {
+      try {
+        return Boolean.parseBoolean((String) o) ? 1.0 : 0.0;
+      } catch( Throwable t ) { }
+    }
+    return Double.NaN;
+  }
+  public static String getString( HashMap<String,Object> row, String s ) {
+    return getString(row.get(s));
+  }
+  public static String getString( Object o ) {
+    if( o instanceof String ) return (String)o;
+    return o == null ? null : o.toString();
   }
 
 
@@ -524,6 +562,7 @@ public class ScorecardModel {
         String cons = "  public "+cname+"() { super(\""+_scm._name+"\","+_scm._initialScore+"); }";
         CtConstructor happyConst = CtNewConstructor.make(cons,scClass);
         scClass.addConstructor(happyConst);
+
         Class myClass = scClass.toClass(ScorecardModel.class.getClassLoader(), null);
         ScorecardModel scm = (ScorecardModel)myClass.newInstance();
         scm._features = _scm._features;
