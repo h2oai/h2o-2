@@ -222,9 +222,9 @@ def simpleCheckGLMGrid(self, glmGridResult, colX=None, allowFailWarning=False, *
         print "Warning: GLM Grid result destination_key is unparsed, can't interpret. Ignoring for now"
         print "Run with -b arg to look at the browser output, for minimal checking of result"
 
-    cols = inspectGG['cols']
+    ### cols = inspectGG['cols']
     response = inspectGG['response'] # dict
-    rows = inspectGG['rows']
+    ### rows = inspectGG['rows']
     value_size_bytes = inspectGG['value_size_bytes']
 
 # models entries look like this:
