@@ -508,11 +508,11 @@ public class ScorecardModel {
         // Make a unique class name
         String cname = xml2jname(_scm._name);
         if( CLASS_NAMES.containsKey(cname) ) {
-          throw H2O.unimpl();
-          //int i=0;
-          //while( vars.containsKey(jname+i) ) i++;
-          //jname = jname+i;
+          int i=0;
+          while( CLASS_NAMES.containsKey(cname+i) ) i++;
+          cname = cname+i;
         }
+        CLASS_NAMES.put(cname,cname);
 
         CtClass scClass = _pool.makeClass(cname);
         CtClass baseClass = _pool.get("water.score.ScorecardModel"); // Full Name Lookup
