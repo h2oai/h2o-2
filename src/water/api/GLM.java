@@ -40,7 +40,7 @@ public class GLM extends Request {
   protected final Int _xval = new Int(XVAL, 10, 0, 1000000);
 
   public GLM() {
-      _requestHelp = _requestHelp = "Compute generalized linear model with penalized maximum likelihood. Penalties include the lasso (L1 penalty), ridge regression (L2 penalty) or elastic net penalty (combination of L1 and L2) penalties. The penalty function is defined as :<br/>" +
+      _requestHelp = "Compute generalized linear model with penalized maximum likelihood. Penalties include the lasso (L1 penalty), ridge regression (L2 penalty) or elastic net penalty (combination of L1 and L2) penalties. The penalty function is defined as :<br/>" +
       "<pre>\n" +
       "       P(&beta;) = 0.5*(1 - &alpha;)*||&beta;||<sub>2</sub><sup>2</sup> + &alpha;*||&beta;||<sub>1</sub><br/>"+
       "</pre>" +
