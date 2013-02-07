@@ -49,9 +49,13 @@ def checkScalarResult(resultInspect, resultKey):
         if 'rows' not in resultInspect0:
             emsg = "Inspect response: 'rows' missing. Look at the json just printed"
             break 
-
-        # rows is a one element list. that entry is a dict
         rows = resultInspect0["rows"]
+
+        if 'cols' not in resultInspect0:
+            emsg = "Inspect response: 'cols' missing. Look at the json just printed"
+            break 
+        cols = resultInspect0["cols"]
+
         break
 
     if emsg is not None:
@@ -62,18 +66,7 @@ def checkScalarResult(resultInspect, resultKey):
     # Cycle thru rows and extract all the meta-data into a dict?   
     # assume "0" and "row" keys exist for each list entry in rows
     # FIX! the key for the value can be 0 or 1 or ?? (apparently col?) Should change H2O here
-    metaDict = {}
-    for m in rows:
-        # FIX! for now, assume there is just two keys. if it's not 'row', it's the value
-        for key,value in m.items():
-            if key == "row":
-                a = value
-            else: 
-                b = value
-        # make a sane dict from what we found
-        metaDict[a] = b
-    # print what we found
-    # FIX! we could verify the total # of items we found?
+    metaDict = cols[0]
     for key,value in metaDict.items():
         h2o.verboseprint("Inspect metadata:", key, value)
             
