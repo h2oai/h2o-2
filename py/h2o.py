@@ -718,14 +718,14 @@ class H2O(object):
     # this can be used to import just a file or a whole folder
     def import_files(self, path):
         a = self.__check_request(requests.get(
-            self.__url('ImportFiles.json')
+            self.__url('ImportFiles.json'),
             params={ "path": path}))
         verboseprint("\nimport_files result:", dump_json(a))
         return a
 
     def import_s3(self, bucket, repl=None):
         a = self.__check_request(requests.get(
-            self.__url('ImportS3.json')
+            self.__url('ImportS3.json'),
             params={"bucket": bucket}))
         verboseprint("\nimport_s3 result:", dump_json(a))
         return a
