@@ -938,7 +938,7 @@ public class RequestArguments extends RequestStatics {
     }
 
     @Override protected String queryDescription() {
-      return _required ? "any non-empty string" : "any string";
+      return _required ? "Any non-empty string" : "Any string";
     }
 
   }
@@ -1096,8 +1096,8 @@ public class RequestArguments extends RequestStatics {
 
     @Override protected String queryDescription() {
       return ((_min == Integer.MIN_VALUE) && (_max == Integer.MAX_VALUE))
-              ? "integer value"
-              : "integer from "+_min+" to "+_max;
+              ? "Integer value"
+              : "Integer from "+_min+" to "+_max;
     }
   }
 
@@ -1154,8 +1154,8 @@ public class RequestArguments extends RequestStatics {
 
     @Override protected String queryDescription() {
       return ((_min == Long.MIN_VALUE) && (_max == Long.MAX_VALUE))
-              ? "integer value"
-              : "integer from "+_min+" to "+_max;
+              ? "Integer value"
+              : "Integer from "+_min+" to "+_max;
     }
   }
 
@@ -1215,8 +1215,8 @@ public class RequestArguments extends RequestStatics {
 
     @Override protected String queryDescription() {
       return ((_min == Double.NEGATIVE_INFINITY) && (_max == Double.POSITIVE_INFINITY))
-              ? "real value"
-              : "real from "+_min+" to "+_max;
+              ? "Real value"
+              : "Real from "+_min+" to "+_max;
     }
   }
 
@@ -1294,7 +1294,7 @@ public class RequestArguments extends RequestStatics {
     }
 
     @Override protected String queryDescription() {
-      return "Treat "+_classCol+" as a logical column, with values equal to this as true/1 and all other values as false/0";
+      return "Value from the " + _classCol._name + " column.";
     }
   }
 
@@ -1372,7 +1372,7 @@ public class RequestArguments extends RequestStatics {
     }
 
     @Override protected String queryDescription() {
-      return "any of "+Arrays.toString(selectValues());
+      return "Any of "+Arrays.toString(selectValues());
     }
 
   }
@@ -1394,7 +1394,7 @@ public class RequestArguments extends RequestStatics {
     }
 
     @Override protected String queryDescription() {
-      return "existing file or directory";
+      return "Existing file or directory";
     }
 
     @Override
@@ -1435,7 +1435,7 @@ public class RequestArguments extends RequestStatics {
     }
 
     @Override protected String queryDescription() {
-      return "valid H2O key";
+      return "Valid H2O key";
     }
 
   }
@@ -1477,7 +1477,7 @@ public class RequestArguments extends RequestStatics {
     }
 
     @Override protected String queryDescription() {
-      return "an existing H2O key";
+      return "An existing H2O key";
     }
   }
 
@@ -1524,7 +1524,7 @@ public class RequestArguments extends RequestStatics {
     }
 
     @Override protected String queryDescription() {
-      return "an existing H2O HEX key";
+      return "An existing H2O HEX key";
     }
   }
 
@@ -1555,7 +1555,7 @@ public class RequestArguments extends RequestStatics {
       }
     }
 
-    @Override protected String queryDescription() { return "an existing H2O Model key"; }
+    @Override protected String queryDescription() { return "An existing H2O Model key"; }
     @Override protected T defaultValue() { return null; }
   }
 
@@ -1614,7 +1614,7 @@ public class RequestArguments extends RequestStatics {
     }
 
     @Override protected String queryDescription() {
-      return "any of "+Arrays.toString(_values);
+      return "Any of "+Arrays.toString(_values);
     }
   }
 
@@ -1669,7 +1669,7 @@ public class RequestArguments extends RequestStatics {
     }
 
     @Override protected String queryDescription() {
-      return "column of the key "+_key._name;
+      return "Column name";
     }
 
   }
@@ -1758,10 +1758,6 @@ public class RequestArguments extends RequestStatics {
     public void checkLegality(int i, Column c) throws IllegalArgumentException {
       if( i == _classCol.value() )
         throw new IllegalArgumentException("Class column "+i+" cannot be ignored");
-    }
-
-    @Override protected String queryDescription() {
-      return "Columns to ignored";
     }
   }
 
@@ -1898,7 +1894,7 @@ public class RequestArguments extends RequestStatics {
     }
 
     @Override protected String queryDescription() {
-      return "category weight (positive)";
+      return "Category weight (positive)";
     }
 
   }
@@ -2006,7 +2002,7 @@ public class RequestArguments extends RequestStatics {
     }
 
     @Override protected String queryDescription() {
-      return "category strata (integer)";
+      return "Category strata (integer)";
     }
 
     public Map<Integer,Integer> convertToMap() {
@@ -2045,7 +2041,7 @@ public class RequestArguments extends RequestStatics {
     }
 
     @Override protected String queryDescription() {
-      return "key of the RF model";
+      return "Key of the RF model";
     }
   }
 }

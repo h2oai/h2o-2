@@ -40,7 +40,7 @@ class Basic(unittest.TestCase):
         rows = wcl(cvsfile)
 
         self.assertEqual(rows, ary['num_rows'])
-        self.assertEqual(11, ary['num_columns'])
+        self.assertEqual(11, ary['num_cols'])
 
     def test_B_inspect_column_names_multi_space_sep(self):
         self.inspect_columns("smalldata/test/test_26cols_multi_space_sep.csv")
@@ -85,7 +85,7 @@ class Basic(unittest.TestCase):
         ary  = node.inspect(res['destination_key'])
 
         self.assertEqual(rows, ary['num_rows'])
-        self.assertEqual(cols, ary['num_columns'])
+        self.assertEqual(cols, ary['num_cols'])
 
         # check column names
         if not columnNames is None:

@@ -9,7 +9,7 @@ H2O product H2O, the Analytics Engine will scale Classification and Regression.
 - RandomForest, Generalized Linear Modeling (GLM), logistic regression, k-Means, available over R / REST/ JSON-API
 - Basic Linear Algebra as building blocks for custom algorithms
 - High predictive power of the models
-- High speed and scale for modeling and validation over BigData
+- High speed and scale for modeling and scoring over BigData
 
 Data Sources:
 - We read and write from/to HDFS, S3, NoSQL, SQL

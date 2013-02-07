@@ -156,16 +156,16 @@ class Basic(unittest.TestCase):
             # we could specify key2 above but this is fine
             destination_key = parseKey['destination_key']
             inspect = h2o_cmd.runInspect(None, destination_key)
-            num_columns = inspect['num_columns']
+            num_cols = inspect['num_cols']
             num_rows = inspect['num_rows']
-            print "num_columns", num_columns, "num_rows", num_rows
+            print "num_cols", num_cols, "num_rows", num_rows
             ##  print h2o.dump_json(inspect)
 
             # create formula and the x for H2O GLM
             formula = "V" + str(y+1) + " ~ "
             x = None
             col_names = ""
-            for c in range(0,num_columns):
+            for c in range(0,num_cols):
                 # don't add the output col to the RHS of formula
                 if x is None: 
                     col_names += "V" + str(c+1)

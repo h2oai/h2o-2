@@ -25,15 +25,15 @@
                   res.append(data.key);
                   jqconsole.Append(res);
                   jqconsole.Write(': ');
-                  if( data.num_rows == 1 && data.num_columns == 1 ) {
-                    jqconsole.Write(data.row_data[0][0], 'jqconsole-output');
-                  } else if( data.num_columns == 1 ) {
+                  if( data.num_rows == 1 && data.num_cols == 1 ) {
+                    jqconsole.Write(data.rows[0][0], 'jqconsole-output');
+                  } else if( data.num_cols == 1 ) {
                     var msg = data.num_rows + " rows, ";
-                    msg += formatColumn(data.row_data[0], data.num_rows)
+                    msg += formatColumn(data.rows[0], data.num_rows)
                     jqconsole.Write(msg, 'jqconsole-output');
                   } else {
-                    var msg = data.num_columns + " columns, " + data.num_rows + " rows";
-                    msg += "\n" + formatColumn(data.row_data[0], data.num_rows)
+                    var msg = data.num_cols + " columns, " + data.num_rows + " rows";
+                    msg += "\n" + formatColumn(data.rows[0], data.num_rows)
                     jqconsole.Write(msg, 'jqconsole-output');
                   }
                 } else {

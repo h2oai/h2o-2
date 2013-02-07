@@ -82,14 +82,14 @@ class Basic(unittest.TestCase):
 
             # look for nonzero badat count in each col
             for i, colDict in enumerate(cols):
-                badat = colDict['badat']
+                badat = colDict['num_missing_values']
                 if badat != 0:
                     ### print "%s: col: %d, badat: %d" % (csvFilename, i, badat)
                     pass
 
             ### print h2o.dump_json(cols[0])
 
-            num_columns = inspect['num_columns']
+            num_cols = inspect['num_cols']
             num_rows = inspect['num_rows']
             row_size = inspect['row_size']
             ptype = inspect['type']
@@ -97,9 +97,9 @@ class Basic(unittest.TestCase):
             response = inspect['response']
             ptime = response['time']
 
-            print "num_columns: %s, num_rows: %s, row_size: %s, ptype: %s, \
+            print "num_cols: %s, num_rows: %s, row_size: %s, ptype: %s, \
                    value_size_bytes: %s, response: %s, time: %s" % \
-                   (num_columns, num_rows, row_size, ptype, value_size_bytes, response, ptime)
+                   (num_cols, num_rows, row_size, ptype, value_size_bytes, response, ptime)
 
             h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
 

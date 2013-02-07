@@ -54,7 +54,7 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             print "\n" + csvPathname, \
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \
-                "    num_columns:", "{:,}".format(inspect['num_columns'])
+                "    num_cols:", "{:,}".format(inspect['num_cols'])
 
             if (1==0):
                 print "WARNING: just first 33 features. Comparison to allstate"

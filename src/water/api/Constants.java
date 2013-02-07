@@ -16,7 +16,6 @@ public class Constants {
   public static final String ALPHA                 = "alpha";
   public static final String ARGUMENTS             = "arguments";
   public static final String AUC                   = "area_under_curve";
-  public static final String BADAT                 = "badat";
   public static final String BASE                  = "base";
   public static final String BEST_THRESHOLD        = "best_threshold";
   public static final String BETA_EPS              = "beta_epsilon";
@@ -37,7 +36,7 @@ public class Constants {
   public static final String DESCRIPTION           = "description";
   public static final String DEST_KEY              = "destination_key";
   public static final String DTHRESHOLDS           = "thresholds";
-  public static final String ENUM_DOMAIN           = "enum_domain";
+  public static final String ENUM_DOMAIN_SIZE      = "enum_domain_size";
   public static final String EPSILON               = "epsilon";
   public static final String ERROR                 = "error";
   public static final String ESCAPE_NAN            = "escape_nan";
@@ -85,9 +84,10 @@ public class Constants {
   public static final String NODE                  = "node";
   public static final String NODE_NAME             = "node_name";
   public static final String NODES                 = "nodes";
-  public static final String NUM_COLS              = "num_columns";
+  public static final String NUM_COLS              = "num_cols";
   public static final String NUM_CPUS              = "num_cpus";
   public static final String NUM_KEYS              = "num_keys";
+  public static final String NUM_MISSING_VALUES    = "num_missing_values";
   public static final String NUM_ROWS              = "num_rows";
   public static final String NUM_TREES             = "ntree";
   public static final String OBJECT                = "object";
@@ -105,7 +105,6 @@ public class Constants {
   public static final String RESPONSE              = "response";
   public static final String RHO                   = "rho";
   public static final String ROW                   = "row";
-  public static final String ROW_DATA              = "row_data";
   public static final String ROW_SIZE              = "row_size";
   public static final String ROWS                  = "rows";
   public static final String RPCS                  = "rpcs";

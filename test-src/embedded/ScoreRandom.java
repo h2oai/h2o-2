@@ -1,7 +1,9 @@
 package embedded;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.util.*;
-import java.io.*;
+import java.util.Map.Entry;
 
 /**
  *  A Sample Main Class which embeddeds the H2O Scoring Engine
@@ -32,7 +34,7 @@ import java.io.*;
  *     score(Arrays ) 100000000 in 19390716132ns = 193.90716132 nanosec/score
  *     Sample App Shuts Down
  */
-class ScoreMain {
+class ScoreRandom {
   // A JavaScript-like data row; K/V pairs indexed by a String fieldname, and
   // returning either a String or a subclass of Number (Double or Long) or a
   // Boolean.
@@ -134,10 +136,20 @@ class ScoreMain {
     try { Thread.sleep(1000); } catch( Exception e ) { }
     System.out.println("Timing...");
 
-    timeTwo(scm,1);             // thousand
-    timeTwo(scm,1000);          // 1 million
-    timeTwo(scm,10000);         // 10 million
-    timeTwo(scm,100000);        // 100 million
+    Random rand = new Random();
+
+    for( int i = 0; i < 1000; i++ ) {
+      for(Entry<String, Comparable> entry : ROW.entrySet()) {
+        if(entry.getValue() instanceof Double)
+          entry.setValue(rand.nextDouble());
+        if(entry.getValue() instanceof String)
+          entry.setValue("" + rand.nextDouble());
+      }
+
+      timeTwo(scm,1000);          // 1 million
+
+      System.out.println(scm.score(ROW));
+    }
   }
 
   public static void timeTwo(water.score.ScorecardModel scm, int iter ) {
@@ -159,7 +171,7 @@ class ScoreMain {
   }
 
   public static void loop1000(water.score.ScorecardModel scm, boolean mapOrAry) {
-    if( mapOrAry ) 
+    if( mapOrAry )
       for( int i=0; i<1000; i++ )
         scm.score(ROW);
     else
