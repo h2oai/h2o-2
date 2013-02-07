@@ -18,13 +18,13 @@ public class ScorecardModel {
   final double _initialScore;
 
   /** Scorecard features */
-  final Map<String, RuleTable> _features;
+  ArrayList<String> _features;
+  ArrayList<RuleTable> _rules;
 
   final static HashMap<String,String> CLASS_NAMES = new HashMap<String,String>();
 
-
   // Convert an XML name to a java name
-  final static String xml2jname( String xml, HashMap<String,String> vars ) {
+  final static String xml2jname( String xml ) {
     // Convert pname to a valid java name
     StringBuilder nn = new StringBuilder();
     char[] cs = xml.toCharArray();
@@ -38,19 +38,36 @@ public class ScorecardModel {
       }
     }
     String jname = nn.toString();
-    if( vars.containsKey(jname) ) {
-      throw H2O.unimpl();
-      //int i=0;
-      //while( vars.containsKey(jname+i) ) i++;
-      //jname = jname+i;
-    }
     return jname;
   }
 
   protected ScorecardModel(final String name, double initialScore) { 
     _name = name; 
     _initialScore = initialScore; 
-    _features = new HashMap<String, ScorecardModel.RuleTable>(); 
+    _features = new ArrayList();
+    _rules = new ArrayList();
+  }
+
+
+  // A mapping from the dense columns desired by the model, to the above
+  // feature list, computed by asking the model for a mapping (given a list of
+  // features).  Some features may be unused and won't appear in the mapping.
+  // If the data row features list does not mention all the features the model
+  // needs, then this map will contain a -1 for the missing feature index.
+  public int[] columnMapping( String[] features ) {
+    String[] fs = _features.toArray(new String[0]); // The model features
+    int[] map = new int[fs.length];
+    for( int i=0; i<fs.length; i++ ) {
+      map[i] = -1;              // Assume it is missing
+      for( int j=0; j<features.length; j++ ) {
+        if( fs[i].equals(features[j]) ) {
+          if( map[i] != -1 ) throw new IllegalArgumentException("duplicate feature "+fs[i]);
+          map[i] = j;
+        }
+      }
+      if( map[i] == -1 ) System.err.println("[h2o] Warning: feature "+fs[i]+" used by the model is not in the provided feature list from the data");
+    }
+    return map;
   }
 
   /** Score this model on the specified row of data.  */
@@ -60,52 +77,80 @@ public class ScorecardModel {
   // Use the rule interpreter
   public double score0(final HashMap<String, Comparable> row ) {
     double score = _initialScore;
-    for (String k : _features.keySet()) {
-      RuleTable ruleTable = _features.get(k);
-      double s = ruleTable.score(row.get(k));
+    for( int i=0; i<_features.size(); i++ ) {
+      RuleTable ruleTable = _rules.get(i);
+      double s = ruleTable.score(row.get(_features.get(i)));
+      score += s;
+    }
+    return score;
+  }
+  public double score(int[] MAP, String[] SS, double[] DS) {
+    return score0(MAP,SS,DS);
+  }
+  public double score0(int[] MAP, String[] SS, double[] DS) {
+    double score = _initialScore;
+    for( int i=0; i<_features.size(); i++ ) {
+      RuleTable ruleTable = _rules.get(i);
+      int idx = MAP[i];
+      String ss = idx==-1 ? null       : SS[idx];
+      double dd = idx==-1 ? Double.NaN : DS[idx];
+      double s = ruleTable.score(ss,dd);
       score += s;
     }
     return score;
   }
 
-  public String toJava() {
+  public void makeScoreHashMethod(CtClass scClass) {
     // Map of previously extracted PMML names, and their java equivs
     HashMap<String,String> vars = new HashMap<String,String>();
     StringBuilder sb = new StringBuilder();
     sb.append("double score( java.util.HashMap row ) {\n"+
               "  double score = "+_initialScore+";\n");
     try {
-      for (String k : _features.keySet())
-        sb = _features.get(k).toJava(sb,vars);
+      for( int i=0; i<_features.size(); i++ )
+        _rules.get(i).makeFeatureHashMethod(sb,vars,scClass);
       sb.append("  return score;\n}\n");
-    } catch( RuntimeException re ) {
+
+      CtMethod happyMethod = CtMethod.make(sb.toString(),scClass);
+      scClass.addMethod(happyMethod);
+
+    } catch( Exception re ) {
       System.err.println("=== crashing ===");
       System.err.println(sb.toString());
-      throw re;
+      throw new Error(re);
+    } finally {
     }
-    return sb.toString();
+  }
+
+  public void makeScoreAryMethod(CtClass scClass) {
+    // Map of previously extracted PMML names, and their java equivs
+    HashMap<String,String> vars = new HashMap<String,String>();
+    StringBuilder sb = new StringBuilder();
+    sb.append("double score( int[] MAP, java.lang.String[] SS, double[] DS ) {\n"+
+              "  double score = "+_initialScore+";\n");
+    try {
+      for( int i=0; i<_features.size(); i++ )
+        _rules.get(i).makeFeatureAryMethod(sb,vars,scClass,i);
+      sb.append("  return score;\n}\n");
+
+      CtMethod happyMethod = CtMethod.make(sb.toString(),scClass);
+      scClass.addMethod(happyMethod);
+
+    } catch( Exception re ) {
+      System.err.println("=== crashing ===");
+      System.err.println(sb.toString());
+      throw new Error(re);
+    } finally {
+    }
   }
 
   // Return the java-equivalent from the PMML variable name, creating and
   // installing it as needed.  If the value is created, we also emit Java code
   // to emit it at runtime.
-  public static String getName( String pname, DataTypes type, HashMap<String,String> vars, StringBuilder sb ) {
-    String jname = vars.get(pname);
-    if( jname != null ) {
-      throw H2O.unimpl();
-      //return jname;
-    }
-    jname = xml2jname(pname,vars);
-    vars.put(pname,jname);
+  public static String getName( String pname, DataTypes type, StringBuilder sb ) {
+    String jname = xml2jname(pname);
 
     // Emit the code to do the load
-    if( type == DataTypes.STRING ) {
-      sb.append("  String ").append(jname).append(" = (String)row.get(\"").append(pname).append("\");\n");
-    } else if( type == DataTypes.BOOLEAN ) {
-      sb.append("  boolean ").append(jname).append(" = getBoolean(row,\"").append(pname).append("\");\n");
-    } else {
-      sb.append("  double ").append(jname).append(" = getNumber(row,\"").append(pname).append("\");\n");
-    }
     return jname;
   }
 
@@ -117,43 +162,105 @@ public class ScorecardModel {
 
     public RuleTable(final String name, final DataTypes type, final Rule<T>[] decisions) { _name = name; _type = type; _rule = decisions; }
 
-    public StringBuilder toJava( StringBuilder sb, HashMap<String,String> vars ) {
-      String pname = getName(_name,_type,vars,sb);
+    public void makeFeatureHashMethod( StringBuilder sbParent, HashMap<String,String> vars, CtClass scClass ) {
+      String jname = xml2jname(_name);
+      StringBuilder sb = new StringBuilder();
+      sb.append("double ").append(jname).append("( java.util.HashMap row ) {\n"+
+                "  double score = 0;\n");
+      switch( _type ) {
+      case STRING : sb.append("  String " ); break;
+      case BOOLEAN: sb.append("  boolean "); break;
+      default     : sb.append("  double " ); break;
+      }
+      sb.append(jname);
+      switch( _type ) {
+      case STRING : sb.append(" = (String)row.get(\""); break;
+      case BOOLEAN: sb.append(" = getBoolean(row,\"" ); break;
+      default     : sb.append(" = getNumber(row,\""  ); break;
+      }
+      sb.append(_name).append("\");\n");
       sb.append("  if( false ) ;\n");
       for (Rule r : _rule) 
-        if( _type == DataTypes.STRING) r.toJavaStr(sb,pname);
-        else if( _type == DataTypes.BOOLEAN) r.toJavaBool(sb,pname);
-        else r.toJavaNum(sb,pname);
+        if( _type == DataTypes.STRING) r.toJavaStr(sb,jname);
+        else if( _type == DataTypes.BOOLEAN) r.toJavaBool(sb,jname);
+        else r.toJavaNum(sb,jname);
       // close the dangling 'else' from all the prior rules
-      sb.append("\n");
-      return sb;
+      sb.append("  return score;\n}\n");
+      sbParent.append("  score += ").append(jname).append("(row);\n");
+
+      // Now install the method
+      try {
+        CtMethod happyMethod = CtMethod.make(sb.toString(),scClass);
+        scClass.addMethod(happyMethod);
+        
+      } catch( Exception re ) {
+        System.err.println("=== crashing ===");
+        System.err.println(sb.toString());
+        throw new Error(re);
+      } finally {
+      }
     }
 
-    double score(T value) {
-      /* The code introduced by cyprien, but I do not see test case for this flow.
-       * But I leave here for now intentionally.
-      if(value instanceof String) {
-        switch(_type) {
-          case BOOLEAN:
-            value = (T) Boolean.valueOf((String) value);
-            break;
-          case INT:
-            value = (T) new Long(Double.valueOf((String) value).longValue());
-            break;
-          case DOUBLE:
-            value = (T) Double.valueOf((String) value);
-            break;
-          case STRING:
-            break;
-        }
-      } else if(value instanceof Integer) {
-        value = (T) new Long(((Integer) value).intValue());
-      } else if(value instanceof Float) {
-        value = (T) new Double(((Float) value).floatValue());
-      } */
+    public void makeFeatureAryMethod( StringBuilder sbParent, HashMap<String,String> vars, CtClass scClass, int fidx ) {
+      String jname = xml2jname(_name);
+      StringBuilder sb = new StringBuilder();
+      sb.append("double ").append(jname);
+      sb.append("( int[]MAP, java.lang.String[]SS, double[]DS ) {\n"+
+                "  double score = 0;\n"+
+                "  int didx=MAP[").append(fidx).append("];\n");
+      switch( _type ) {
+      case STRING : sb.append("  String " ); break;
+      case BOOLEAN: sb.append("  boolean "); break;
+      default     : sb.append("  double " ); break;
+      }
+      sb.append(jname);
+      switch( _type ) {
+      case STRING : sb.append(" = didx==-1 ? null : SS[didx];\n"); break;
+      case BOOLEAN: sb.append(" = didx==-1 ? false : DS[didx]==1.0;\n"); break;
+      default     : sb.append(" = didx==-1 ? Double.NaN : DS[didx];\n" ); break;
+      }
+      sb.append("  if( false ) ;\n");
+      for (Rule r : _rule) 
+        if( _type == DataTypes.STRING) r.toJavaStr(sb,jname);
+        else if( _type == DataTypes.BOOLEAN) r.toJavaBool(sb,jname);
+        else r.toJavaNum(sb,jname);
+      // close the dangling 'else' from all the prior rules
+      sb.append("  return score;\n}\n");
+      sbParent.append("  score += ").append(jname).append("(MAP,SS,DS);\n");
 
+      // Now install the method
+      try {
+        CtMethod happyMethod = CtMethod.make(sb.toString(),scClass);
+        scClass.addMethod(happyMethod);
+        
+      } catch( Exception re ) {
+        System.err.println("=== crashing ===");
+        System.err.println(sb.toString());
+        throw new Error(re);
+      } finally {
+      }
+    }
+
+    // The rule interpreter
+    double score(T value) {
       double score = 0;
-      for (Rule r : _rule) score += r.score(value);
+      for (Rule r : _rule) {
+        if( r.match(value) ) {
+          score += r._score;
+          break;
+        }
+      }
+      return score;
+    }
+
+    double score(String s, double d) {
+      double score = 0;
+      for (Rule r : _rule) {
+        if( r.match(s,d) ) {
+          score += r._score;
+          break;
+        }
+      }
       return score;
     }
 
@@ -168,7 +275,8 @@ public class ScorecardModel {
     final double _score;
     final Predicate<T> _predicate;
     public Rule(double score, Predicate<T> pred) { _score = score; _predicate = pred; }
-    double score(T value) { return _predicate!=null && _predicate.match(value) ? _score : 0; }
+    boolean match(T value) { return _predicate.match(value); }
+    boolean match(String s, double d) { return _predicate.match(s,d); }
     @Override public String toString() { return _predicate.toString() + " => " + _score; }
     public StringBuilder toJavaNum( StringBuilder sb, String jname ) { 
       sb.append("  else if( ");
@@ -186,6 +294,7 @@ public class ScorecardModel {
 
   public static abstract class Predicate<T> {
     abstract boolean match(T value);
+    abstract boolean match(String s, double d);
     abstract StringBuilder toJavaNum( StringBuilder sb, String jname );
     StringBuilder toJavaBool( StringBuilder sb, String jname ) { throw H2O.unimpl(); }
     StringBuilder toJavaStr( StringBuilder sb, String jname ) { throw H2O.unimpl(); }
@@ -193,7 +302,8 @@ public class ScorecardModel {
   /** Less or equal */
   public static class LessOrEqual<T extends Comparable<T>> extends Predicate<T> {
     T _value;
-    public LessOrEqual(T value) { _value = value; }
+    double _d;
+    public LessOrEqual(T value, double d) { _value = value; _d=d;}
     @Override boolean match(T value) {
       if( value != null && _value != null && value.getClass() != _value.getClass() ) {
         if(value.getClass() == Long.class &&
@@ -205,6 +315,7 @@ public class ScorecardModel {
       }
       return value!=null && _value.compareTo(value) >= 0;
     }
+    @Override boolean match(String s, double d) { return d <= _d; }
     @Override public String toString() { return "X<=" + _value; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) {
       double d = ((Number)_value).doubleValue();
@@ -213,8 +324,9 @@ public class ScorecardModel {
   }
 
   public static class LessThan<T extends Comparable<T>> extends LessOrEqual<T> {
-    public LessThan(T value) { super(value); }
+    public LessThan(T value, double d) { super(value,d); }
     @Override boolean match(T value) { return value!=null && _value.compareTo(value) > 0; }
+    @Override boolean match(String s, double d) { return d < _d; }
     @Override public String toString() { return "X<" + _value; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) {
       double d = ((Number)_value).doubleValue();
@@ -223,8 +335,9 @@ public class ScorecardModel {
   }
 
   public static class GreaterOrEqual<T extends Comparable<T>> extends LessThan<T> {
-    public GreaterOrEqual(T value) { super(value); }
+    public GreaterOrEqual(T value, double d) { super(value,d); }
     @Override boolean match(T value) { return value!=null && ! super.match(value); }
+    @Override boolean match(String s, double d) { return d >= _d; }
     @Override public String toString() { return "X>=" + _value; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) {
       double d = ((Number)_value).doubleValue();
@@ -233,8 +346,9 @@ public class ScorecardModel {
   }
 
   public static class GreaterThan<T extends Comparable<T>> extends LessOrEqual<T> {
-    public GreaterThan(T value) { super(value); }
+    public GreaterThan(T value, double d) { super(value,d); }
     @Override boolean match(T value) { return value!=null && ! super.match(value); }
+    @Override boolean match(String s, double d) { return d > _d; }
     @Override public String toString() { return "X>" + _value; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) {
       double d = ((Number)_value).doubleValue();
@@ -244,6 +358,7 @@ public class ScorecardModel {
 
   public static class IsMissing<T> extends Predicate<T> {
     @Override boolean match(T value) { return value==null; }
+    @Override boolean match(String s, double d) { return Double.isNaN(d); }
     @Override public String toString() { return "isMissing"; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) { 
       return sb.append("Double.isNaN("+jname+")");
@@ -255,8 +370,14 @@ public class ScorecardModel {
 
   public static class Equals<T extends Comparable<T>> extends Predicate<T> {
     T _value;
-    public Equals(T value) { _value = value; }
-    @Override boolean match(T value) { return value!=null && _value.compareTo(value) == 0; }
+    double _d;
+    public Equals(T value, double d) { _value = value; _d = d; }
+    @Override boolean match(T value) { 
+      return value!=null && _value.compareTo(value) == 0; 
+    }
+    @Override boolean match(String s, double d) { 
+      return Double.isNaN(_d) ? ((String)_value).equals(s) : (d==_d);
+    }
     @Override public String toString() { return "X==" + _value; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) {
       double d = ((Number)((Object)_value)).doubleValue();
@@ -298,12 +419,14 @@ public class ScorecardModel {
   }
   public static class And<T> extends CompoundPredicate<T> {
     @Override final boolean match(T value) { return _l.match(value) && _r.match(value); }
+    @Override final boolean match(String s, double d) { return _l.match(s,d) && _r.match(s,d); }
     @Override public String toString() { return "(" + _l.toString() + " and " + _r.toString() + ")"; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) { return makeNum(sb,jname,"&&"); }
     @Override public StringBuilder toJavaStr( StringBuilder sb, String jname ) { return makeStr(sb,jname,"&&"); }
   }
   public static class Or<T> extends CompoundPredicate<T> {
     @Override final boolean match(T value) { return _l.match(value) || _r.match(value); }
+    @Override final boolean match(String s, double d) { return _l.match(s,d) || _r.match(s,d); }
     @Override public String toString() { return "(" + _l.toString() + " or " + _r.toString() + ")"; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) { return makeNum(sb,jname,"||"); }
     @Override public StringBuilder toJavaStr( StringBuilder sb, String jname ) { return makeStr(sb,jname,"||"); }
@@ -318,6 +441,10 @@ public class ScorecardModel {
     public IsIn(T[] value) { super(value); }
     @Override boolean match(T value) {
       for (T t : _values) if (t.equals(value)) return true;
+      return false;
+    }
+    @Override boolean match(String s, double d) {
+      for (String t : (String[])_values) if (t.equals(s)) return true;
       return false;
     }
     @Override public String toString() {
@@ -335,6 +462,7 @@ public class ScorecardModel {
   public static class IsNotIn<T> extends IsIn<T> {
     public IsNotIn(T[] value) { super(value); }
     @Override boolean match(T value) { return ! super.match(value); }
+    @Override boolean match(String s, double d) { return ! super.match(s,d); }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) { throw H2O.unimpl(); }
     @Override StringBuilder toJavaStr( StringBuilder sb, String jname ) { 
       sb.append("!(");
@@ -351,6 +479,9 @@ public class ScorecardModel {
   // Happy Helper Methods for the generated code
   public double getNumber( HashMap<String,Object> row, String s ) {
     Object o = row.get(s);
+    // hint to the jit to do a instanceof breakdown tree
+    if( o instanceof Double ) return ((Double)o).doubleValue();
+    if( o instanceof Long   ) return ((Long  )o).doubleValue();
     if( o instanceof Number ) return ((Number)o).doubleValue();
     return Double.NaN;
   }
@@ -371,35 +502,44 @@ public class ScorecardModel {
 
     // JIT the fast version
     public final ScorecardModel build() { 
-      String java = _scm.toJava();
-      System.err.println(java);
       // javassist support for rewriting class files
       _pool = ClassPool.getDefault();
       try { 
-        String cname = xml2jname(_scm._name,CLASS_NAMES);
+        // Make a unique class name
+        String cname = xml2jname(_scm._name);
+        if( CLASS_NAMES.containsKey(cname) ) {
+          throw H2O.unimpl();
+          //int i=0;
+          //while( vars.containsKey(jname+i) ) i++;
+          //jname = jname+i;
+        }
+
         CtClass scClass = _pool.makeClass(cname);
         CtClass baseClass = _pool.get("water.score.ScorecardModel"); // Full Name Lookup
         scClass.setSuperclass(baseClass);
-        CtMethod happyMethod = CtMethod.make(java,scClass);
-        scClass.addMethod(happyMethod);
+        // Produce the scoring method
+        _scm.makeScoreHashMethod(scClass);
+        _scm.makeScoreAryMethod(scClass);
 
         String cons = "  public "+cname+"() { super(\""+_scm._name+"\","+_scm._initialScore+"); }";
-        System.err.println(cons);
         CtConstructor happyConst = CtNewConstructor.make(cons,scClass);
         scClass.addConstructor(happyConst);
         Class myClass = scClass.toClass();
         ScorecardModel scm = (ScorecardModel)myClass.newInstance();
+        scm._features = _scm._features;
+        scm._rules    = _scm._rules   ;
         return scm;
         
       } catch( Exception e ) {
-        System.err.println("javassit failed: "+e);
+        System.err.println("javassist failed: "+e);
         e.printStackTrace();
       }
       return  _scm; 
     }
 
     public final void addRuleTable(final String featureName, final DataTypes type, final List<Rule> rules) {
-      _scm._features.put(featureName, new RuleTable(featureName, type, rules.toArray(new Rule[rules.size()])));
+      _scm._features.add(featureName);
+      _scm._rules   .add(new RuleTable(featureName, type, rules.toArray(new Rule[rules.size()])));
     }
   }
 
