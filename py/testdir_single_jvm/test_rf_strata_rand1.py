@@ -45,11 +45,12 @@ class Basic(unittest.TestCase):
         print "\nUsing random seed:", SEED
         for trial in range(20):
             # params is mutable. This is default.
-            params = {'ntree': 19}
+            params = {'ntree': 19, 'parallel': 1}
             colX = h2o_rf.pickRandRfParams(paramDict, params)
             kwargs = params.copy()
             # adjust timeoutSecs with the number of trees
-            timeoutSecs = max(60,kwargs['ntree']*11)
+            timeoutSecs = 30 + kwargs['ntree'] * 10 * (kwargs['parallel'] and 1 or 5)
+
             h2o_cmd.runRF(timeoutSecs=20, csvPathname=csvPathname, **kwargs)
             print "Trial #", trial, "completed"
 

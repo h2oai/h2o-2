@@ -18,7 +18,7 @@ paramDict = {
     'gini': [None, 0, 1],
     'depth': [None, 1,10,20,100],
     'bin_limit': [None,5,10,100,1000],
-    'parallel': [None,0,1],
+    'parallel': [1],
     'ignore': [None,0,1,2,3,4,5,6,7,8,9],
     'sample': [None,20,40,60,80,100],
     'seed': [None,'0','1','11111','19823134','1231231'],
@@ -50,13 +50,13 @@ class Basic(unittest.TestCase):
         print "\nUsing random seed:", SEED
         for trial in range(20):
             # params is mutable. This is default.
-            params= {'ntree': 23}
+            params= {'ntree': 23, 'parallel': 1}
             colX = h2o_rf.pickRandRfParams(paramDict, params)
             kwargs = params.copy()
             print kwargs
             # adjust timeoutSecs with the number of trees
             # seems ec2 can be really slow
-            timeoutSecs = 30 + 20*kwargs['ntree']
+            timeoutSecs = 30 + kwargs['ntree'] * 10 * (kwargs['parallel'] and 1 or 5)
             h2o_cmd.runRF(timeoutSecs=timeoutSecs, csvPathname=csvPathname, **kwargs)
             print "Trial #", trial, "completed"
 
