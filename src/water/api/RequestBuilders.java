@@ -51,7 +51,7 @@ public class RequestBuilders extends RequestQueries {
     sb.append(buildResponseHeader(response));
     Builder builder = response.getBuilderFor(ROOT_OBJECT);
     if (builder == null) {
-      sb.append("<h3>"+getClass().getSimpleName()+":</h3>");
+      sb.append("<h3>"+getClass().getSimpleName()+"</h3>");
       builder = OBJECT_BUILDER;
     }
     for( String h : response.getHeaders() ) sb.append(h);

@@ -166,7 +166,7 @@ public class RequestArguments extends RequestStatics {
   // A string used to display the query element part of the argument
   protected static final String _queryHtml =
             "\n<dl class='dl-horizontal'>"
-          +     "<dt style='padding-top:3px'>%ASTERISK %NAME</dt>"
+          +     "<dt style='padding-top:3px'><span rel='tooltip' title='%TOOLTIP_DESCRIPTION' data-placement='left'>%ASTERISK %NAME</span></dt>"
           +     "<dd>%ELEMENT %COMMENT</dd>"
           +  "</dl>"
           ;
@@ -263,6 +263,7 @@ public class RequestArguments extends RequestStatics {
         result.replace("ELEMENT","<div class='alert alert-info' style='padding-top:4px;padding-bottom:4px;margin-bottom:5px'>"+record()._disabledReason+"</div>");
       else
         result.replace("ELEMENT",queryElement());
+      result.replace("TOOLTIP_DESCRIPTION", queryDescription());
       result.replace("COMMENT",queryComment());
       if (_required)
         result.replace("ASTERISK","<span style='color:#ff0000'>* </span>");
