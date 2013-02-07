@@ -62,6 +62,11 @@ def build_cloud_with_hosts(node_count=None, use_flatfile=None,
 
     use_home_for_ice = hostDict.setdefault('use_home_for_ice', False)
 
+    # key file
+    key_filename = hostDict.setdefault('key_filename', None)
+    # host aws configuration
+    aws_credentials = hostDict.setdefault('aws_credentials', None)
+
     # can override the json with a caller's argument
     # FIX! and we support passing othe kwargs from above? but they don't override
     # json, ...so have to fix here if that's desired
@@ -92,7 +97,7 @@ def build_cloud_with_hosts(node_count=None, use_flatfile=None,
     h2o.verboseprint("host config: ", username, password, 
         h2oPerHost, basePort, sigar, useFlatfile, 
         useHdfs, hdfsNameNode, hdfsVersion, hdfsConfig, javaHeapGB, use_home_for_ice,
-        hostList, **kwargs)
+        hostList, key_filename, aws_credentials, **kwargs)
 
     #********************
     global hosts
@@ -106,7 +111,7 @@ def build_cloud_with_hosts(node_count=None, use_flatfile=None,
         hosts = []
         for h in hostList:
             h2o.verboseprint("Connecting to:", h)
-            hosts.append(h2o.RemoteHost(h, username, password))
+            hosts.append(h2o.RemoteHost(addr=h, username=username, password=password, key_filename=key_filename))
    
     # handles hosts=None correctly
     h2o.write_flatfile(node_count=h2oPerHost, base_port=basePort, hosts=hosts)
@@ -127,4 +132,5 @@ def build_cloud_with_hosts(node_count=None, use_flatfile=None,
             hdfs_version=hdfsVersion, hdfs_config=hdfsConfig,
             java_heap_GB=javaHeapGB, java_extra_args=javaExtraArgs,
             use_home_for_ice=use_home_for_ice,
+            aws_credentials=aws_credentials,
             **kwargs)

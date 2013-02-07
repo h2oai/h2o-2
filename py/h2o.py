@@ -267,7 +267,7 @@ def check_port_group(baseport):
             output = p3.communicate()[0]
             print output
 
-# node_count is per host if hosts is specified.
+# node_count is number of H2O instances per host if hosts is specified.
 def build_cloud(node_count=2, base_port=54321, hosts=None, 
         timeoutSecs=20, retryDelaySecs=0.5, cleanup=True, **kwargs):
     # moved to here from unit_main. so will run with nosetests too!
@@ -1266,6 +1266,9 @@ class RemoteHost(object):
 
     def __init__(self, addr, username, password=None, **kwargs):
         import paramiko
+        # To debug paramiko you can use the following code:
+        #paramiko.util.log_to_file('/tmp/paramiko.log')
+        #paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
         self.addr = addr
         self.http_addr = addr
         self.username = username
@@ -1304,6 +1307,9 @@ class RemoteH2O(H2O):
         self.jar = host.upload_file('target/h2o.jar')
         # need to copy the flatfile. We don't always use it (depends on h2o args)
         self.flatfile = host.upload_file(flatfile_name())
+        # distribute AWS credentials
+        if self.aws_credentials:
+            self.aws_credentials = host.upload_file(self.aws_credentials)
 
         if self.use_home_for_ice:
             # this will be the username used to ssh to the host

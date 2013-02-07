@@ -176,3 +176,55 @@ def runRFOnly(node=None, parseKey=None, trees=5,
     h2f.simpleCheckRFView(node, rfView)
 
     return rfView
+         
+def port_live(ip, port):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.connect((ip,port))
+        s.shutdown(2)
+        return True
+    except:
+        return False
+
+def wait_for_live_port(ip, port, retries=3):
+    h2o.verboseprint("Waiting for {0}:{1} {2}times...".format(ip,port,retries))
+    if not port_live(ip,port):
+        count = 0
+        while count < retries:
+            if port_live(ip,port):
+                count += 1
+            else:
+                count = 0
+            time.sleep(1)
+            dot()
+    if not port_live(ip,port):
+        raise Exception("[h2o_cmd] Error waiting for {0}:{1} {2}times...".format(ip,port,retries))
+
+def dot():
+    sys.stdout.write('.')
+    sys.stdout.flush()
+
+def sleep_with_dot(sec, message=None):
+    if message:
+        print message
+    count = 0
+    while count < sec:
+        time.sleep(1)
+        dot()
+        count += 1
+
+def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, timeoutSecs=20, **kwargs):                                                                                                                                                                      
+    if not bucket  : raise Exception('No S3 bucket specified')
+    if not filename: raise Exception('No filename in bucket specified')
+    if not node: node = h2o.nodes[0]
+    
+    import_result = node.import_s3(bucket)
+    s3_key = [f['key'] for f in import_result['succeeded'] if f['file'] == filename ][0]
+    
+    if keyForParseResult is None:
+        myKeyForParseResult = s3_key + '.hex'
+    else:
+        myKeyForParseResult = keyForParseResult
+    return node.parse(s3_key, myKeyForParseResult, timeoutSecs=timeoutSecs, **kwargs)
+
+
