@@ -116,7 +116,9 @@ function build_jar() {
     local JAR_FILE="${OUTDIR}/h2o.jar"
     echo "creating jar file... ${JAR_FILE}"
     # include all libraries
-    "$JAR" -cfm ${JAR_FILE} manifest.txt -C ${JAR_ROOT} .
+    cd ${JAR_ROOT}
+    "$JAR" -cfm ../${JAR_FILE} ../manifest.txt `find . -type f -not -name "*-sources.jar"`
+    cd ..
     # include H2O classes
     "$JAR" uf ${JAR_FILE} -C "${CLASSES}" .
     "$ZIP" -qd ${JAR_FILE} javassist.jar 

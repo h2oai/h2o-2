@@ -24,7 +24,7 @@ public class TestRunner {
     ParseDataset.parse(dest, DKV.get(key));
 
     Desktop desktop = Desktop.getDesktop();
-    desktop.browse(new URI("http://localhost:54323/Inspect.html?key=test.hex"));
+    desktop.browse(new URI("http://localhost:54321/Inspect.html?key=test.hex"));
 
     BufferedReader console = new BufferedReader(new InputStreamReader(System.in));
     console.readLine();
