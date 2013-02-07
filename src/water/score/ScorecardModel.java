@@ -259,15 +259,15 @@ public class ScorecardModel {
     @Override boolean match(T value) { return value!=null && _value.compareTo(value) == 0; }
     @Override public String toString() { return "X==" + _value; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) {
-      double d = ((Number)_value).doubleValue();
+      double d = ((Number)((Object)_value)).doubleValue();
       return sb.append(jname).append("==").append(d);
     }
     @Override StringBuilder toJavaBool( StringBuilder sb, String jname ) { 
-      boolean b = ((Boolean)_value);
+      boolean b = ((Boolean)((Object)_value));
       return sb.append(jname).append("==").append(b);
     }
     @Override StringBuilder toJavaStr( StringBuilder sb, String jname ) { 
-      String s = ((String)_value);
+      String s = ((String)((Object)_value));
       return sb.append("\"").append(s).append("\".equals(").append(jname).append(")");
     }
   }
