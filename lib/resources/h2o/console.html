@@ -6,8 +6,7 @@
     $(function () {
       var jqconsole = $('#console').jqconsole('Welcome to the H\u2082O interactive repl\n', 'H\u2082O> ');
       var formatColumn = function(c, num_rows) {
-        //return c.name +': '+ num_rows +' rows (min '+ c.min +'/mean '+ c.mean +'/max '+ c.max +')';
-        return JSON.stringify(c);
+        return c.name +': '+ num_rows +' rows (min '+ c.min +'/mean '+ c.mean +'/max '+ c.max +')';
       }
       
       var resultNumber = 0;
@@ -28,12 +27,13 @@
                   if( data.num_rows == 1 && data.num_cols == 1 ) {
                     jqconsole.Write(data.rows[0][0], 'jqconsole-output');
                   } else if( data.num_cols == 1 ) {
-                    var msg = data.num_rows + " rows, ";
-                    msg += formatColumn(data.rows[0], data.num_rows)
+                    var msg = formatColumn(data.cols[0], data.num_rows)
                     jqconsole.Write(msg, 'jqconsole-output');
                   } else {
-                    var msg = data.num_cols + " columns, " + data.num_rows + " rows";
-                    msg += "\n" + formatColumn(data.rows[0], data.num_rows)
+                    var msg = data.num_cols + " columns";
+                    for( var i = 0; i < data.num_cols; ++i ) {
+                      msg += "\n" + formatColumn(data.cols[i], data.num_rows)
+                    }
                     jqconsole.Write(msg, 'jqconsole-output');
                   }
                 } else {
