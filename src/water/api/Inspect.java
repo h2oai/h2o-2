@@ -102,7 +102,7 @@ public class Inspect extends Request {
 
     Response r = Response.done(result);
     r.addHeader("<div class='alert'>" //
-        + Parse.link(v._key, "Parse into hex format") + ", or " //
+        + Parse.link(v._key, "Parse into hex format") + " or " //
         + RReader.link(v._key, "from R data") + " </div>");
     return r;
   }
