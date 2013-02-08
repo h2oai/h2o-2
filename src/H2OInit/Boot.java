@@ -27,7 +27,7 @@ public class Boot extends ClassLoader {
   public final byte[] _jarHash;
 
   private final ZipFile _h2oJar;
-  private final File _parentDir;
+  private File _parentDir;
   private Weaver _weaver;
 
   static {
@@ -64,16 +64,11 @@ public class Boot extends ClassLoader {
       is.close();
 
       jar = new ZipFile(path);
-      dir = File.createTempFile("h2o-temp-", "");
-      if( !dir.delete() ) throw new IOException("Failed to remove tmp file: " + dir.getAbsolutePath());
-      if( !dir.mkdir() )  throw new IOException("Failed to create tmp dir: "  + dir.getAbsolutePath());
-      dir.deleteOnExit();
     } else {
       this._jarHash = new byte[16];
       Arrays.fill(this._jarHash, (byte)0xFF);
     }
     _h2oJar = jar;
-    _parentDir = (dir==null) ? new File(".") : dir;
   }
 
   public static void main(String[] args) throws Exception {  _init.boot(args); }
@@ -86,6 +81,22 @@ public class Boot extends ClassLoader {
       _systemLoader = (URLClassLoader)getSystemClassLoader();
       _addUrl = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
       _addUrl.setAccessible(true);
+
+      // Find --ice_root and use it to set the unpack directory
+      String sroot = System.getProperty("java.io.tmpdir");
+      for( int i=0; i<args.length; i++ )
+        if( args[i].startsWith("--ice_root=") )
+          sroot = args[i].substring(11);
+        else if( args[i].equals("--ice_root") && i < args.length-1 )
+          sroot = args[i+1];
+
+      // Make a tmp directory in --ice_root (or java.io.tmpdir) to unpack into
+      File tmproot = new File(sroot);
+      File dir = File.createTempFile("h2o-temp-", "", tmproot);
+      if( !dir.delete() ) throw new IOException("Failed to remove tmp file: " + dir.getAbsolutePath());
+      if( !dir.mkdir() )  throw new IOException("Failed to create tmp dir: "  + dir.getAbsolutePath());
+      dir.deleteOnExit();
+      _parentDir = dir;         // Set a global instead of passing the dir about?
 
       // Make all the embedded jars visible to the custom class loader
       extractInternalFiles(); // Extract e.g. SIGAR's .dll & .so files
@@ -140,12 +151,14 @@ public class Boot extends ClassLoader {
       File out = internalFile(name);
       out.getParentFile().mkdirs();
       try {
+        FileOutputStream fos = new FileOutputStream(out);
         BufferedInputStream  is = new BufferedInputStream (_h2oJar.getInputStream(e));
-        BufferedOutputStream os = new BufferedOutputStream(new FileOutputStream(out));
+        BufferedOutputStream os = new BufferedOutputStream(fos);
         int read;
         byte[] buffer = new byte[4096];
         while( (read = is.read(buffer)) != -1 ) os.write(buffer,0,read);
         os.flush();
+        fos.getFD().sync();     // Force the output; throws SyncFailedException if full
         os.close();
         is.close();
       } catch( FileNotFoundException ex ) {
