@@ -22,7 +22,10 @@
       var startPrompt = function () {
         // Start the prompt with history enabled.
         jqconsole.Prompt(true, function (input) {
-          if( input ) {
+          if( input == '?' || input == 'help' ) {
+            %HELP
+            startPrompt();
+          } else if( input ) {
             $.get('Exec',
               { expression: input, destination_key : 'Result_'+(resultNumber++)+'.hex', escape_nan : true },
               function (data, status, jqXHR) {
