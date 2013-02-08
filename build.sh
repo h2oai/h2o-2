@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 # determine the correct separator of multiple paths
 if [ `uname` = "Darwin" ]
