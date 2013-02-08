@@ -4,21 +4,14 @@ import java.util.ArrayList;
 import water.*;
 import water.ValueArray.Column;
 
-/** A simple class that automates construction of ValueArrays.
- *
- * @author peta
- */
+/** A simple class that automates construction of ValueArrays. */
 public class VABuilder {
   private long _numRows;
-  private byte _persistence;
-  private String _name;
   private ArrayList<Column> _cols = new ArrayList();
 
 
   public VABuilder(String name,long numRows) {
     _numRows = numRows;
-    _persistence = Value.ICE;
-    _name = name;
   }
 
 
@@ -32,6 +25,7 @@ public class VABuilder {
     c._mean = Double.NaN;
     c._sigma = Double.NaN;
     c._domain = null;
+    c._n = _numRows;
     _cols.add(c);
     return this;
   }
@@ -46,6 +40,7 @@ public class VABuilder {
     c._mean = mean;
     c._sigma = Double.NaN;
     c._domain = null;
+    c._n = _numRows;
     _cols.add(c);
     return this;
   }
@@ -60,6 +55,7 @@ public class VABuilder {
     c._mean = mean;
     c._sigma = sigma;
     c._domain = null;
+    c._n = _numRows;
     _cols.add(c);
     return this;
   }
@@ -74,6 +70,7 @@ public class VABuilder {
     c._mean = mean;
     c._sigma = sigma;
     c._domain = null;
+    c._n = _numRows;
     _cols.add(c);
     return this;
   }
@@ -88,6 +85,7 @@ public class VABuilder {
     c._mean = other._mean;
     c._sigma = other._sigma;
     c._domain = null;
+    c._n = _numRows;
     _cols.add(c);
     return this;
   }
