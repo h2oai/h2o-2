@@ -133,11 +133,12 @@ public class Boot extends ClassLoader {
     while( entries.hasMoreElements() ) {
       ZipEntry e = (ZipEntry) entries.nextElement();
       String name = e.getName();
-      File out = internalFile(name);
-      out.getParentFile().mkdirs();
       if( e.isDirectory() ) continue; // mkdirs() will handle these
+      if(! name.endsWith(".jar") ) continue;
 
       // extract the entry
+      File out = internalFile(name);
+      out.getParentFile().mkdirs();
       try {
         BufferedInputStream  is = new BufferedInputStream (_h2oJar.getInputStream(e));
         BufferedOutputStream os = new BufferedOutputStream(new FileOutputStream(out));
