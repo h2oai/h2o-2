@@ -44,12 +44,12 @@ class Basic(unittest.TestCase):
             csvFilename = "p" + "_" + str(size)
             csvPathname = SYNDATASETS_DIR + "/" + csvFilename
             writeRows(csvPathname,row,eol,size)
-            key = csvFilename
-            put = node.put_file(csvPathname, key=key, timeoutSecs=timeoutSecs)
+            key  = csvFilename
+            pkey = node.put_file(csvPathname, key=key, timeoutSecs=timeoutSecs)
             for trial in range(5):
                 key2 = csvFilename + "_" + str(trial) + ".hex"
                 # just parse
-                node.parse(put['key'], key2, timeoutSecs=timeoutSecs, retryDelaySecs=0.00)
+                node.parse(pkey, key2, timeoutSecs=timeoutSecs, retryDelaySecs=0.00)
                 sys.stdout.write('.')
                 sys.stdout.flush()
 

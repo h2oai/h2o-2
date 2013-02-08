@@ -33,8 +33,8 @@ class Basic(unittest.TestCase):
             sys.stdout.write('.')
             sys.stdout.flush()
             h2o.verboseprint("put_file:", cvsfile, "node:", node, "origSize:", origSize)
-            result     = node.put_file(cvsfile)
-            returnSize = result['size']
+            key        = node.put_file(cvsfile)
+            resultSize = node.inspect(key)['value_size']
             self.assertEqual(origSize,returnSize)
 
     # Try to put a file, get file and diff orinal file and returned file.
@@ -46,10 +46,8 @@ class Basic(unittest.TestCase):
             sys.stdout.write('.')
             sys.stdout.flush()
             h2o.verboseprint("put_file", cvsfile, "to", node)
-            result = node.put_file(cvsfile)
+            key = node.put_file(cvsfile)
             h2o.verboseprint("put_file ok for node", nodeTry)
-
-            key    = result['key']
             r      = node.get_key(key)
             f      = open(cvsfile)
             self.diff(r, f)

@@ -24,8 +24,8 @@ class Basic(unittest.TestCase):
             sys.stdout.flush()
 
             csvPathname = h2o.find_file("smalldata/hhp_107_01.data.gz")
-            put = n.put_file(csvPathname)
-            parseKey = n.parse(put['key'])
+            key = n.put_file(csvPathname)
+            parseKey = n.parse(key)
 
             ### print 'Trial:', trial
             trial += 1

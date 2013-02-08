@@ -22,12 +22,11 @@ class Basic(unittest.TestCase):
         #pass
 
     def test_A_putfile(self):
-        cvsfile = h2o.find_file(file_to_put())
-        node    = h2o.nodes[0]
-        result  = node.put_file(cvsfile)
-
+        cvsfile    = h2o.find_file(file_to_put())
+        node       = h2o.nodes[0]
+        key        = node.put_file(cvsfile)
+        resultSize = node.inspect(key)['value_size']
         origSize   = h2o.get_file_size(cvsfile)
-        returnSize = result['size']
         self.assertEqual(origSize,returnSize)
     
     def test_B_putfile_to_all_nodes(self):
@@ -35,17 +34,15 @@ class Basic(unittest.TestCase):
         cvsfile  = h2o.find_file(file_to_put())
         origSize = h2o.get_file_size(cvsfile)
         for node in h2o.nodes:
-            result     = node.put_file(cvsfile)
-            returnSize = result['size']
+            key        = node.put_file(cvsfile)
+            resultSize = node.inspect(key)['value_size']
             self.assertEqual(origSize,returnSize)
     
     def test_C_putfile_and_getfile(self):
 
         cvsfile = h2o.find_file(file_to_put())
         node    = h2o.nodes[0]
-        result  = node.put_file(cvsfile)
-
-        key     = result['key']
+        key     = node.put_file(cvsfile)
         r       = node.get_key(key)
         f       = open(cvsfile)
         self.diff(r, f)
@@ -55,8 +52,7 @@ class Basic(unittest.TestCase):
 
         cvsfile = h2o.find_file(file_to_put())
         for node in h2o.nodes:
-            result = node.put_file(cvsfile)
-            key    = result['key']
+            key    = node.put_file(cvsfile)
             r      = node.get_key(key)
             f      = open(cvsfile)
             self.diff(r, f)

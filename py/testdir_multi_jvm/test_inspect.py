@@ -100,8 +100,7 @@ class Basic(unittest.TestCase):
         return ary
 
     def putfile_and_parse(self, node, f):
-        result  = node.put_file(f)
-        key     = result['key']
+        key = node.put_file(f) 
         return node.parse(key);
 
     
