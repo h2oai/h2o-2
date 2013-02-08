@@ -576,22 +576,19 @@ class H2O(object):
             extraComment = str(value) + "," + str(key) + "," + str(repl))
 
     def put_file(self, f, key=None, timeoutSecs=60):
-        resp1 =  self.__check_request(
-            requests.get(
-                self.__url('WWWFileUpload.json'), 
-                timeout=timeoutSecs,
-                params={"key": key}), 
-            extraComment = str(f) + "," + str(key))
+        if key is None:
+            key = os.path.basename(f)
 
-        verboseprint("\nput_file #1 phase response: ", dump_json(resp1))
-        resp2 = self.__check_request(
+        resp = self.__check_request(
             requests.post(
-                self.__url('Upload.json', port=resp1['port']), 
+                self.__url('PostFile.json'),
+                timeout=timeoutSecs,
+                params={"key": key},
                 files={"file": open(f, 'rb')}),
             extraComment = str(f))
 
-        verboseprint("put_file #2 phase response: ", dump_json(resp2))
-        return resp2[0]
+        verboseprint("\nput_file response: ", dump_json(resp))
+        return key
     
     def get_key(self, key):
         return requests.get(self.__url('Get.html'),

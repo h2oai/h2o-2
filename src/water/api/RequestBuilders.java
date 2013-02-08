@@ -51,7 +51,7 @@ public class RequestBuilders extends RequestQueries {
     sb.append(buildResponseHeader(response));
     Builder builder = response.getBuilderFor(ROOT_OBJECT);
     if (builder == null) {
-      sb.append("<h3>"+getClass().getSimpleName()+":</h3>");
+      sb.append("<h3>"+getClass().getSimpleName()+"</h3>");
       builder = OBJECT_BUILDER;
     }
     for( String h : response.getHeaders() ) sb.append(h);
@@ -879,7 +879,7 @@ public class RequestBuilders extends RequestQueries {
       _query.addProperty(_offsetJSON, offset);
       _query.addProperty(_viewJSON, view);
       if (disabled)
-        return "<li class='disabled'><a href='"+RequestStatics.encodeRedirectArgs(_query)+"'>"+caption+"</a></li>";
+        return "<li class='disabled'><a>"+caption+"</a></li>";
       else
         return "<li><a href='"+RequestStatics.encodeRedirectArgs(_query)+"'>"+caption+"</a></li>";
     }

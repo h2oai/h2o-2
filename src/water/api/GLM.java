@@ -50,7 +50,7 @@ public class GLM extends Request {
     _x._requestHelp = "Predictor columns to be trained on. Constant columns will be ignored.";
     _modelKey._hideInQuery = true;
     _modelKey._requestHelp = "The H2O's Key name for the model";
-    _family._requestHelp = 
+    _family._requestHelp =
       "Pick the general mathematical family for the trained model.<br><ul>"+
       "<li><b>gaussian</b> models describe a simple hyper-plane (for a single column this will be a simple line) for the response variable.  This is a suitable model for when you expect the response variable to vary as a linear combination of predictor variables.  An example might be predicting the gas mileage of cars, based on their weight, age, and engine size.</li>"+
       "<li><b>binomial</b> models form an S-curve response, showing probabilities that vary from 0 to 1.  This is a suitable model for when you expect a simple boolean result (e.g. alive/dead, or fraud/no-fraud).  The model gives a probability of the true event.  An example might be to predict the presence of prostate cancer given the patient age, race, and various blood chemical levels such as PSA.</li>"+
@@ -219,7 +219,8 @@ public class GLM extends Request {
     private static void modelHTML( GLMModel m, JsonObject json, StringBuilder sb ) {
       sb.append("<div class='alert'>Actions: " + (m.isSolved() ? (GLMScore.link(m._selfKey,m._vals[0].bestThreshold(), "Validate on another dataset") + ", "):"") + GLM.link(m._dataKey,m, "Compute new model") + "</div>");
       RString R = new RString(
-          "<div class='alert %succ'>GLM on data <a href='/Inspect.html?"+KEY+"=%key'>%key</a>. %iterations iterations computed in %time. %warnings %action</div>" +
+          "<div class='alert %succ'>GLM on data <a href='/Inspect.html?"+KEY+"=%key'>%key</a>.<br>" +
+          "%iterations iterations computed in %time. %xval %warnings %action</div>" +
           "<h4>GLM Parameters</h4>" +
           " %GLMParams %LSMParams" +
           "<h4>Equation: </h4>" +
@@ -237,12 +238,30 @@ public class GLM extends Request {
         R.replace("succ","alert-warning");
         if(!m.converged())
           R.replace("action","Suggested action: Go to " + (m.isSolved() ? (GLMGrid.link(m, "Grid search") + ", "):"") + " to search for better paramters");
-      } else
+      } else {
         R.replace("succ","alert-success");
+      }
 
       // Basic model stuff
       R.replace("key",m._dataKey);
       R.replace("time",PrettyPrint.msecs(m._time,true));
+
+      int count = 0;
+      long xtime = 0;
+      for( GLMValidation v : m._vals ) {
+        for( Key k : v._modelKeys) {
+          GLMModel m2 = UKV.get(k, new GLMModel());
+          xtime += m2._time;
+          ++count;
+        }
+      }
+      if( xtime > 0 ) {
+        R.replace("xval", "<br>"+count +" cross validations computed in " +
+            PrettyPrint.msecs(xtime, true) +".");
+      } else {
+        R.replace("xval", "");
+      }
+
       R.replace("iterations",m._iterations);
       R.replace("GLMParams",glmParamsHTML(m));
       R.replace("LSMParams",lsmParamsHTML(m));

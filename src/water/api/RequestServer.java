@@ -1,7 +1,5 @@
 package water.api;
 
-import H2OInit.Boot;
-
 import java.io.*;
 import java.net.ServerSocket;
 import java.util.HashMap;
@@ -10,6 +8,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import water.H2O;
 import water.NanoHTTPD;
+import water.api.Upload.PostFile;
+import H2OInit.Boot;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
@@ -38,7 +38,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new ImportUrl()),   "Import URL",   "Data");
     Request.addToNavbar(registerRequest(new ImportS3()),    "Import S3",    "Data");
     Request.addToNavbar(registerRequest(new ExportS3()),    "Export S3",    "Data");
-    Request.addToNavbar(registerRequest(new PutFile()),     "Upload",       "Data");
+    Request.addToNavbar(registerRequest(new Upload()),      "Upload",       "Data");
     Request.addToNavbar(registerRequest(new Get()),         "Download",     "Data");
 
     Request.addToNavbar(registerRequest(new RF()),          "Random Forest", "Model");
@@ -56,7 +56,6 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new Cloud()),    "Cloud Status", "Admin");
     Request.addToNavbar(registerRequest(new Timeline()), "Timeline",     "Admin");
     Request.addToNavbar(registerRequest(new JStack()),   "Stack Dump",   "Admin");
-    Request.addToNavbar(registerRequest(new PutValue()), "Put Value",    "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()), "Shutdown",     "Admin");
 
     Request.addToNavbar(registerRequest(new Tutorials()),           "View All",      "Tutorials");
@@ -64,6 +63,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new TutorialGLMProstate()), "GLM",           "Tutorials");
 
     // internal handlers
+    registerRequest(new PutValue());
     registerRequest(new Exec());
     registerRequest(new ExportS3Progress());
     registerRequest(new GLMGridProgress());
@@ -71,17 +71,18 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new KMeansProgress());
     registerRequest(new ParseProgress());
     registerRequest(new RReaderProgress());
+    registerRequest(new PostFile());
     registerRequest(new PutVector());
     registerRequest(new Remove());
     registerRequest(new RemoveAck());
     registerRequest(new RFTreeView());
+    registerRequest(new TypeaheadKeysRequest("Existing H2O Key", ""));
     registerRequest(new TypeaheadFileRequest());
     registerRequest(new TypeaheadHexKeyRequest());
     registerRequest(new TypeaheadModelKeyRequest()); // Any Key with "__???Model_??????"
     registerRequest(new TypeaheadGLMModelKeyRequest());
     registerRequest(new TypeaheadRFModelKeyRequest());
     registerRequest(new TypeaheadS3BucketRequest());
-    registerRequest(new WWWFileUpload());
 
     // testing hooks
     registerRequest(new TestPoll());
@@ -122,7 +123,7 @@ public class RequestServer extends NanoHTTPD {
 
   // uri serve -----------------------------------------------------------------
 
-  @Override public NanoHTTPD.Response serve( String uri, String method, Properties header, Properties parms, Properties files ) {
+  @Override public NanoHTTPD.Response serve( String uri, String method, Properties header, Properties parms ) {
     // Jack priority for user-visible requests
     Thread.currentThread().setPriority(Thread.MAX_PRIORITY-1);
     // update arguments and determine control variables
@@ -137,8 +138,6 @@ public class RequestServer extends NanoHTTPD {
       // found
       if (request == null)
         return getResource(uri);
-      // otherwise unify get & post arguments
-      parms.putAll(files);
       // Dynamic Request instead of static request
       if( request instanceof Score )
         request = Score.create(parms);

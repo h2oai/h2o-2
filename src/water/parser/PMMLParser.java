@@ -121,18 +121,9 @@ public class PMMLParser extends CustomParser {
       assert _name == null || _name.equals(featureName) : "PMML is not in expected format!";
       _name = featureName;
 
-      DataTypes ft = _featureTypes.get(featureName);
       Predicate pred = null;
       if (value != null) {
-        Comparable v=null;
-        double d=Double.NaN;
-        switch (ft) {
-        case INT     : v = Long   .valueOf(value); d = ((Long   )v).   longValue(); break;
-        case DOUBLE  : v = Double .valueOf(value); d = ((Double )v). doubleValue(); break;
-        case BOOLEAN : v = Boolean.valueOf(value); d = ((Boolean)v).booleanValue() ? 1 : 0; break;
-        case STRING  : v = value;  d = Double.NaN; break;
-        }
-        pred = getSimplePred(op, v, d);
+        pred = getSimplePred(op, value);
       } else {
         assert op == Operators.isMissing;
         pred = new ScorecardModel.IsMissing();
@@ -140,13 +131,13 @@ public class PMMLParser extends CustomParser {
       addPred(pred);
     }
 
-    private <T extends Comparable<T>> Predicate<T> getSimplePred(Operators op, T value, double d) {
+    private Predicate getSimplePred(Operators op, String value) {
      switch (op) {
-     case lessOrEqual   : return new ScorecardModel.LessOrEqual(value,d);
-     case lessThan      : return new ScorecardModel.LessThan(value,d);
-     case greaterOrEqual: return new ScorecardModel.GreaterOrEqual(value,d);
-     case greaterThan   : return new ScorecardModel.GreaterThan(value,d);
-     case equal         : return new ScorecardModel.Equals(value,d);
+     case lessOrEqual   : return new ScorecardModel.LessOrEqual(value);
+     case lessThan      : return new ScorecardModel.LessThan(value);
+     case greaterOrEqual: return new ScorecardModel.GreaterOrEqual(value);
+     case greaterThan   : return new ScorecardModel.GreaterThan(value);
+     case equal         : return new ScorecardModel.Equals(value);
      default            : return null;
      }
     }
