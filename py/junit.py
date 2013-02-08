@@ -2,6 +2,24 @@ import os, json, unittest, time, shutil, sys, getpass
 import h2o
 
 class JUnit(unittest.TestCase):
+    def testScoring(self):
+        (ps, stdout, stderr) = h2o.spawn_cmd('junit', [
+                'java',
+                '-ea', '-jar', h2o.find_file('build/h2o.jar'),
+                '-mainClass', 'org.junit.runner.JUnitCore',
+                # The tests
+                'water.score.ScorePmmlTest',
+                'water.score.ScoreTest',
+                ])
+
+        rc = ps.wait(None)
+        out = file(stdout).read()
+        err = file(stderr).read()
+        if rc is None:
+            ps.terminate()
+            raise Exception("junit timed out.\nstdout:\n%s\n\nstderr:\n%s" % (out, err))
+        elif rc != 0:
+            raise Exception("junit failed.\nstdout:\n%s\n\nstderr:\n%s" % (out, err))
 
     def testAll(self):
         try:
