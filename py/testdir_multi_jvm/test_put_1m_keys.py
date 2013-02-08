@@ -19,8 +19,8 @@ class Basic(unittest.TestCase):
         h2b.browseTheCloud()
 
         trial = 0
-        for i in range(50):
-            for j in range(1,1000):
+        for i in range(5):
+            for j in range(1,10000):
                 # bounce it around the nodes in the cloud
                 nodeX = random.randint(0,lenNodes-1) 
                 # print nodeX 
