@@ -13,7 +13,7 @@ public class ConcurrentKeyTest extends TestUtil {
   // Test
   @Test
   public void testParse() {
-    for( int i=0; i<100; i++ ) {
+    for( int i=0; i<1/*00*/; i++ ) {// One iteration to keep it fast
       System.out.println(i);
       //Key k1 = loadAndParseKey("h.hex","smalldata/fail2_24_100000_10.csv.gz");
       Key k1 = loadAndParseKey("h.hex","smalldata/fail1_100x11000.csv.gz");
