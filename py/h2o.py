@@ -592,7 +592,6 @@ class H2O(object):
     
     def get_key(self, key):
         return requests.get(self.__url('Get.html'),
-            prefetch=False,
             params={"key": key})
 
     def poll_url(self, response, timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=None):
