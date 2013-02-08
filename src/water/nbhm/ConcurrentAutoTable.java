@@ -132,7 +132,6 @@ public class ConcurrentAutoTable implements Serializable {
       AtomicLongFieldUpdater.newUpdater(CAT.class, "_resizers");
 
     private final CAT _next;
-    private volatile long _sum_cache;
     private volatile long _fuzzy_sum_cache;
     private volatile long _fuzzy_time;
     private static final int MAX_SPIN=2;
@@ -140,7 +139,6 @@ public class ConcurrentAutoTable implements Serializable {
 
     CAT( CAT next, int sz, long init ) {
       _next = next;
-      _sum_cache = Long.MIN_VALUE;
       _t = new long[sz];
       _t[0] = init;
     }
@@ -155,8 +153,6 @@ public class ConcurrentAutoTable implements Serializable {
       // Peel loop; try once fast
       long old = t[idx];
       if( (old&mask) != 0 ) return old; // Failed for bit-set under mask
-      if( _sum_cache != Long.MIN_VALUE )
-        _sum_cache = Long.MIN_VALUE; // Blow out cache
       boolean ok = CAS( t, idx, old&~mask, old+x );
       if( ok ) return old;      // Got it
       // Try harder
@@ -199,21 +195,10 @@ public class ConcurrentAutoTable implements Serializable {
     // before the add.  Writers can be updating the table furiously, so the
     // sum is only locally accurate.
     public long sum( long mask ) {
-      long sum = _sum_cache;
-      if( sum != Long.MIN_VALUE ) return sum;
-      sum = _next == null ? 0 : _next.sum(mask); // Recursively get cached sum
-      final long old_sum = sum;                  // Hang onto prior sums
+      long sum = _next == null ? 0 : _next.sum(mask); // Recursively get cached sum
       final long[] t = _t;
       for( int i=0; i<t.length; i++ )
         sum += t[i]&(~mask);
-      _sum_cache = sum;         // Cache includes recursive counts; volatile write
-      // We might have read the array whilst it was changing and just cached a
-      // stale result.  Read it again (its the old read-twice-see-if-equal hack).
-      long sum2 = old_sum;
-      for( int i=0; i<t.length; i++ )
-        sum2 += t[i]&(~mask);
-      if( sum != sum2 )              // Array is changing?
-        _sum_cache = Long.MIN_VALUE; // Blow off caching
       return sum;
     }
 
@@ -242,8 +227,6 @@ public class ConcurrentAutoTable implements Serializable {
         }
       }
       if( _next != null ) _next.all_or(mask);
-      if( _sum_cache != Long.MIN_VALUE )
-        _sum_cache = Long.MIN_VALUE; // Blow out cache
     }
     
     public void all_and( long mask ) {
@@ -256,8 +239,6 @@ public class ConcurrentAutoTable implements Serializable {
         }
       }
       if( _next != null ) _next.all_and(mask);
-      if( _sum_cache != Long.MIN_VALUE )
-        _sum_cache = Long.MIN_VALUE; // Blow out cache
     }
     
     // Set/stomp all table slots.  No CAS.
@@ -266,15 +247,13 @@ public class ConcurrentAutoTable implements Serializable {
       for( int i=0; i<t.length; i++ ) 
         t[i] = val;
       if( _next != null ) _next.all_set(val);
-      if( _sum_cache != Long.MIN_VALUE )
-        _sum_cache = Long.MIN_VALUE; // Blow out cache
     }
 
     String toString( long mask ) { return Long.toString(sum(mask)); }
     
     public void print() { 
       long[] t = _t;
-      System.out.print("[sum="+_sum_cache+","+t[0]);
+      System.out.print("["+t[0]);
       for( int i=1; i<t.length; i++ ) 
         System.out.print(","+t[i]);
       System.out.print("]");
