@@ -34,8 +34,8 @@ class Basic(unittest.TestCase):
             sys.stdout.flush()
             h2o.verboseprint("put_file:", cvsfile, "node:", node, "origSize:", origSize)
             key        = node.put_file(cvsfile)
-            resultSize = node.inspect(key)['value_size']
-            self.assertEqual(origSize,returnSize)
+            resultSize = node.inspect(key)['value_size_bytes']
+            self.assertEqual(origSize,resultSize)
 
     # Try to put a file, get file and diff orinal file and returned file.
     def test_B_putfile_and_getfile_to_all_nodes(self):
