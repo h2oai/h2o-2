@@ -8,7 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import water.H2O;
 import water.NanoHTTPD;
-import water.api.PutFile.PutFileImpl;
+import water.api.Upload.PostFile;
 import H2OInit.Boot;
 
 import com.google.common.io.ByteStreams;
@@ -38,7 +38,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new ImportUrl()),   "Import URL",   "Data");
     Request.addToNavbar(registerRequest(new ImportS3()),    "Import S3",    "Data");
     Request.addToNavbar(registerRequest(new ExportS3()),    "Export S3",    "Data");
-    Request.addToNavbar(registerRequest(new PutFile()),     "Upload",       "Data");
+    Request.addToNavbar(registerRequest(new Upload()),      "Upload",       "Data");
     Request.addToNavbar(registerRequest(new Get()),         "Download",     "Data");
 
     Request.addToNavbar(registerRequest(new RF()),          "Random Forest", "Model");
@@ -71,7 +71,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new KMeansProgress());
     registerRequest(new ParseProgress());
     registerRequest(new RReaderProgress());
-    registerRequest(new PutFileImpl());
+    registerRequest(new PostFile());
     registerRequest(new PutVector());
     registerRequest(new Remove());
     registerRequest(new RemoveAck());

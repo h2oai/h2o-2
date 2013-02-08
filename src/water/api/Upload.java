@@ -3,7 +3,7 @@ package water.api;
 
 import com.google.gson.JsonObject;
 
-public class PutFile extends HTMLOnlyRequest {
+public class Upload extends HTMLOnlyRequest {
   protected String build(Response response) {
     return "<script type='text/javascript' src='jquery.fileupload/js/vendor/jquery.ui.widget.js'></script>"
     + "<script type='text/javascript' src='jquery.fileupload/js/jquery.iframe-transport.js'></script>"
@@ -24,7 +24,7 @@ public class PutFile extends HTMLOnlyRequest {
     + "</div>";
   }
 
-  public static class PutFileImpl extends JSONOnlyRequest {
+  public static class PostFile extends JSONOnlyRequest {
     @Override protected Response serve() {
       return Response.done(new JsonObject());
     }
