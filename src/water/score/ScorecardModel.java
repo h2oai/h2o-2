@@ -7,7 +7,6 @@ import javassist.*;
 /**
  * Scorecard model - decision table.
  */
-@SuppressWarnings("cast")
 public class ScorecardModel {
 
   /** Name */
@@ -153,12 +152,12 @@ public class ScorecardModel {
   }
 
   /** Feature decision table */
-  public static class RuleTable<T> {
+  public static class RuleTable {
     final String     _name;
-    final Rule<T>[]  _rule;
+    final Rule[]  _rule;
     final DataTypes  _type;
 
-    public RuleTable(final String name, final DataTypes type, final Rule<T>[] decisions) { _name = name; _type = type; _rule = decisions; }
+    public RuleTable(final String name, final DataTypes type, final Rule[] decisions) { _name = name; _type = type; _rule = decisions; }
 
     public void makeFeatureHashMethod( StringBuilder sbParent, HashMap<String,String> vars, CtClass scClass ) {
       String jname = xml2jname(_name);
@@ -239,7 +238,7 @@ public class ScorecardModel {
     }
 
     // The rule interpreter
-    double score(T value) {
+    double score(Object value) {
       double score = 0;
       for (Rule r : _rule) {
         if( r.match(value) ) {
@@ -268,11 +267,11 @@ public class ScorecardModel {
   }
 
   /** Scorecard decision rule */
-  public static class Rule<T> {
+  public static class Rule {
     final double _score;
-    final Predicate<T> _predicate;
-    public Rule(double score, Predicate<T> pred) { _score = score; _predicate = pred; }
-    boolean match(T value) { return _predicate.match(value); }
+    final Predicate _predicate;
+    public Rule(double score, Predicate pred) { _score = score; _predicate = pred; }
+    boolean match(Object value) { return _predicate.match(value); }
     boolean match(String s, double d) { return _predicate.match(s,d); }
     @Override public String toString() { return _predicate.toString() + " => " + _score; }
     public StringBuilder toJavaNum( StringBuilder sb, String jname ) {
@@ -289,15 +288,15 @@ public class ScorecardModel {
     }
   }
 
-  public static abstract class Predicate<T> {
-    abstract boolean match(T value);
+  public static abstract class Predicate {
+    abstract boolean match(Object value);
     abstract boolean match(String s, double d);
     abstract StringBuilder toJavaNum( StringBuilder sb, String jname );
     StringBuilder toJavaBool( StringBuilder sb, String jname ) { throw H2O.unimpl(); }
     StringBuilder toJavaStr( StringBuilder sb, String jname ) { throw H2O.unimpl(); }
   }
 
-  public static abstract class Comparison<T> extends Predicate<T> {
+  public static abstract class Comparison extends Predicate {
     public final String _value;
     public final double _num;
     public final double _bool;
@@ -309,9 +308,9 @@ public class ScorecardModel {
   }
 
   /** Less or equal */
-  public static class LessOrEqual<T extends Comparable<T>> extends Comparison<T> {
+  public static class LessOrEqual extends Comparison {
     public LessOrEqual(String value) { super(value); }
-    @Override boolean match(T value) {
+    @Override boolean match(Object value) {
       if( !Double.isNaN(_num) ) return getNumber(value) <= _num;
       if( !Double.isNaN(_bool) ) return getBoolean(value) <= _bool;
       return _value.compareTo(getString(value)) >= 0;
@@ -323,9 +322,9 @@ public class ScorecardModel {
     }
   }
 
-  public static class LessThan<T extends Comparable<T>> extends Comparison<T> {
+  public static class LessThan extends Comparison {
     public LessThan(String value) { super(value); }
-    @Override boolean match(T value) {
+    @Override boolean match(Object value) {
       if( !Double.isNaN(_num) ) return getNumber(value) < _num;
       if( !Double.isNaN(_bool) ) return getBoolean(value) < _bool;
       return _value.compareTo(getString(value)) > 0;
@@ -338,9 +337,9 @@ public class ScorecardModel {
     }
   }
 
-  public static class GreaterOrEqual<T extends Comparable<T>> extends Comparison<T> {
+  public static class GreaterOrEqual extends Comparison {
     public GreaterOrEqual(String value) { super(value); }
-    @Override boolean match(T value) {
+    @Override boolean match(Object value) {
       if( !Double.isNaN(_num) ) return getNumber(value) >= _num;
       if( !Double.isNaN(_bool) ) return getBoolean(value) >= _bool;
       return _value.compareTo(getString(value)) <= 0;
@@ -352,9 +351,9 @@ public class ScorecardModel {
     }
   }
 
-  public static class GreaterThan<T extends Comparable<T>> extends Comparison<T> {
+  public static class GreaterThan extends Comparison {
     public GreaterThan(String value) { super(value); }
-    @Override boolean match(T value) {
+    @Override boolean match(Object value) {
       if( !Double.isNaN(_num) ) return getNumber(value) > _num;
       if( !Double.isNaN(_bool) ) return getBoolean(value) > _bool;
       return _value.compareTo(getString(value)) < 0;
@@ -366,8 +365,8 @@ public class ScorecardModel {
     }
   }
 
-  public static class IsMissing<T> extends Predicate<T> {
-    @Override boolean match(T value) { return value==null; }
+  public static class IsMissing extends Predicate {
+    @Override boolean match(Object value) { return value==null; }
     @Override boolean match(String s, double d) { return Double.isNaN(d); }
     @Override public String toString() { return "isMissing"; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) {
@@ -381,9 +380,9 @@ public class ScorecardModel {
     }
   }
 
-  public static class Equals<T extends Comparable<T>> extends Comparison<T> {
+  public static class Equals extends Comparison {
     public Equals(String value) { super(value); }
-    @Override boolean match(T value) {
+    @Override boolean match(Object value) {
       if( !Double.isNaN(_num) ) return getNumber(value) == _num;
       if( !Double.isNaN(_bool) ) return getBoolean(value) == _bool;
       return _value.compareTo(getString(value)) == 0;
@@ -401,14 +400,13 @@ public class ScorecardModel {
       return sb.append(jname).append("==").append(_bool);
     }
     @Override StringBuilder toJavaStr( StringBuilder sb, String jname ) {
-      String s = ((String)((Object)_value));
-      return sb.append("\"").append(s).append("\".equals(").append(jname).append(")");
+      return sb.append("\"").append(_value).append("\".equals(").append(jname).append(")");
     }
   }
 
-  public static abstract class CompoundPredicate<T> extends Predicate<T> {
-    Predicate<T> _l,_r;
-    public final void add(Predicate<T> pred) {
+  public static abstract class CompoundPredicate extends Predicate {
+    Predicate _l,_r;
+    public final void add(Predicate pred) {
       assert _l== null || _r==null : "Predicate already filled";
       if (_l==null) _l = pred; else _r = pred;
     }
@@ -430,39 +428,39 @@ public class ScorecardModel {
       return sb;
     }
   }
-  public static class And<T> extends CompoundPredicate<T> {
-    @Override final boolean match(T value) { return _l.match(value) && _r.match(value); }
+  public static class And extends CompoundPredicate {
+    @Override final boolean match(Object value) { return _l.match(value) && _r.match(value); }
     @Override final boolean match(String s, double d) { return _l.match(s,d) && _r.match(s,d); }
     @Override public String toString() { return "(" + _l.toString() + " and " + _r.toString() + ")"; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) { return makeNum(sb,jname,"&&"); }
     @Override public StringBuilder toJavaStr( StringBuilder sb, String jname ) { return makeStr(sb,jname,"&&"); }
   }
-  public static class Or<T> extends CompoundPredicate<T> {
-    @Override final boolean match(T value) { return _l.match(value) || _r.match(value); }
+  public static class Or extends CompoundPredicate {
+    @Override final boolean match(Object value) { return _l.match(value) || _r.match(value); }
     @Override final boolean match(String s, double d) { return _l.match(s,d) || _r.match(s,d); }
     @Override public String toString() { return "(" + _l.toString() + " or " + _r.toString() + ")"; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) { return makeNum(sb,jname,"||"); }
     @Override public StringBuilder toJavaStr( StringBuilder sb, String jname ) { return makeStr(sb,jname,"||"); }
   }
 
-  public static abstract class SetPredicate<T> extends Predicate<T> {
-    public T[] _values;
-    public SetPredicate(T[] value) { _values = value; }
+  public static abstract class SetPredicate extends Predicate {
+    public Object[] _values;
+    public SetPredicate(Object[] value) { _values = value; }
   }
 
-  public static class IsIn<T> extends SetPredicate<T> {
-    public IsIn(T[] value) { super(value); }
-    @Override boolean match(T value) {
-      for (T t : _values) if (t.equals(value)) return true;
+  public static class IsIn extends SetPredicate {
+    public IsIn(Object[] value) { super(value); }
+    @Override boolean match(Object value) {
+      for( Object t : _values ) if (t.equals(value)) return true;
       return false;
     }
     @Override boolean match(String s, double d) {
-      for (String t : (String[])_values) if (t.equals(s)) return true;
+      for( String t : (String[])_values ) if (t.equals(s)) return true;
       return false;
     }
     @Override public String toString() {
       String x = "";
-      for (T s: _values) x += s.toString() + " ";
+      for( Object s: _values ) x += s.toString() + " ";
       return "X is in {" + x + "}"; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) { throw H2O.unimpl(); }
     @Override StringBuilder toJavaStr( StringBuilder sb, String jname ) {
@@ -472,9 +470,9 @@ public class ScorecardModel {
     }
   }
 
-  public static class IsNotIn<T> extends IsIn<T> {
-    public IsNotIn(T[] value) { super(value); }
-    @Override boolean match(T value) { return ! super.match(value); }
+  public static class IsNotIn extends IsIn {
+    public IsNotIn(Object[] value) { super(value); }
+    @Override boolean match(Object value) { return ! super.match(value); }
     @Override boolean match(String s, double d) { return ! super.match(s,d); }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) { throw H2O.unimpl(); }
     @Override StringBuilder toJavaStr( StringBuilder sb, String jname ) {
