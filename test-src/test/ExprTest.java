@@ -1,11 +1,10 @@
 package test;
-import org.junit.AfterClass;
 import static org.junit.Assert.*;
-import org.junit.BeforeClass;
+
 import org.junit.Test;
+
 import water.*;
 import water.exec.*;
-import water.parser.ParseDataset;
 
 public class ExprTest extends TestUtil {
   int i = 0;
@@ -14,12 +13,12 @@ public class ExprTest extends TestUtil {
     Key k1=null,k2=null,kg=null,k3=null,ki=null;
     try {
       k1 = loadAndParseKey("h.hex","smalldata/cars.csv");
-      ValueArray va1 = ValueArray.value(k1);
+      ValueArray.value(k1);
       k2 = executeExpression("g=colSwap(h.hex,2,factor(h.hex[2]))");
       kg = Key.make("g");
       ValueArray va2 = ValueArray.value(kg);
       ValueArray.Column col = va2._cols[2];
-      assertEquals(col._domain,new String[]{"3","4","5","6","8"});
+      assertArrayEquals(col._domain,new String[]{"3","4","5","6","8"});
       k3 = executeExpression("i=colSwap(h.hex,2,h.hex[2]==3?1:0)");
       ki = Key.make("i");
     } finally {
@@ -34,7 +33,7 @@ public class ExprTest extends TestUtil {
   // Test a big slice
   @Test public void testMultiChunkFile() {
     Key k1 = loadAndParseKey("hhp.hex","smalldata/hhp.cut3.214.data.gz");
-    ValueArray va1 = ValueArray.value(k1);
+    ValueArray.value(k1);
     Key k2 = executeExpression("g=slice(hhp.hex,1,131248)");
     Key kg = Key.make("g");
     ValueArray va2 = ValueArray.value(kg);
@@ -55,7 +54,7 @@ public class ExprTest extends TestUtil {
     Key k1=null, k2=null, kg=null;
     try {
       k1 = loadAndParseKey("kaggle.hex","smalldata/kaggle/creditsample-training.csv.gz");
-      ValueArray va1 = ValueArray.value(k1);
+      ValueArray.value(k1);
       k2 = executeExpression("g=randomFilter(kaggle.hex,5432,1232123)");
       kg = Key.make("g");
       ValueArray va2 = ValueArray.value(kg);
