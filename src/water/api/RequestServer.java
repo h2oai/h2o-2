@@ -1,7 +1,5 @@
 package water.api;
 
-import H2OInit.Boot;
-
 import java.io.*;
 import java.net.ServerSocket;
 import java.util.HashMap;
@@ -10,6 +8,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import water.H2O;
 import water.NanoHTTPD;
+import water.api.PutFile.PutFileImpl;
+import H2OInit.Boot;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
@@ -71,6 +71,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new KMeansProgress());
     registerRequest(new ParseProgress());
     registerRequest(new RReaderProgress());
+    registerRequest(new PutFileImpl());
     registerRequest(new PutVector());
     registerRequest(new Remove());
     registerRequest(new RemoveAck());
@@ -81,7 +82,6 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new TypeaheadGLMModelKeyRequest());
     registerRequest(new TypeaheadRFModelKeyRequest());
     registerRequest(new TypeaheadS3BucketRequest());
-    registerRequest(new WWWFileUpload());
 
     // testing hooks
     registerRequest(new TestPoll());
@@ -122,7 +122,7 @@ public class RequestServer extends NanoHTTPD {
 
   // uri serve -----------------------------------------------------------------
 
-  @Override public NanoHTTPD.Response serve( String uri, String method, Properties header, Properties parms, Properties files ) {
+  @Override public NanoHTTPD.Response serve( String uri, String method, Properties header, Properties parms ) {
     // Jack priority for user-visible requests
     Thread.currentThread().setPriority(Thread.MAX_PRIORITY-1);
     // update arguments and determine control variables
@@ -137,8 +137,6 @@ public class RequestServer extends NanoHTTPD {
       // found
       if (request == null)
         return getResource(uri);
-      // otherwise unify get & post arguments
-      parms.putAll(files);
       // Dynamic Request instead of static request
       if( request instanceof Score )
         request = Score.create(parms);

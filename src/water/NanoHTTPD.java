@@ -65,7 +65,7 @@ public class NanoHTTPD
    * @param header	Header entries, percent decoded
    * @return HTTP response, see class Response for details
    */
-  public Response serve( String uri, String method, Properties header, Properties parms, Properties files )
+  public Response serve( String uri, String method, Properties header, Properties parms )
   {
     myOut.println( method + " '" + uri + "' " );
 
@@ -82,13 +82,6 @@ public class NanoHTTPD
       String value = (String)e.nextElement();
       myOut.println( "  PRM: '" + value + "' = '" +
           parms.getProperty( value ) + "'" );
-    }
-    e = files.propertyNames();
-    while ( e.hasMoreElements())
-    {
-      String value = (String)e.nextElement();
-      myOut.println( "  UPLOADED: '" + value + "' = '" +
-          files.getProperty( value ) + "'" );
     }
 
     return serveFile( uri, header, myRootDir, true );
@@ -296,7 +289,6 @@ public class NanoHTTPD
         Properties pre = new Properties();
         Properties parms = new Properties();
         Properties header = new Properties();
-        Properties files = new Properties();
 
         // Decode the header into parms and header java properties
         decodeHeader(hin, pre, parms, header);
@@ -361,8 +353,7 @@ public class NanoHTTPD
               sendError( HTTP_BADREQUEST, "BAD REQUEST: Content type is multipart/form-data but boundary syntax error. Usage: GET /example/file.html" );
             st.nextToken();
             String boundary = st.nextToken();
-
-            decodeMultipartDataInMemory(boundary,is,parms,files);
+            fileUpload(boundary,is,parms);
           } else {
             // Handle application/x-www-form-urlencoded
             String postLine = "";
@@ -383,7 +374,7 @@ public class NanoHTTPD
         }
 
         // Ok, now do the serve()
-        Response r = serve( uri, method, header, parms, files );
+        Response r = serve( uri, method, header, parms );
         if ( r == null )
           sendError( HTTP_INTERNALERROR, "SERVER INTERNAL ERROR: Serve() returned a null response." );
         else
@@ -514,87 +505,31 @@ public class NanoHTTPD
       return sz;
     }
 
-    /**
-     * Decodes the Multipart Body data and put it
-     * into java Properties' key - value pairs.
-     **/
-    private void decodeMultipartDataInMemory(String boundary, InputStream in, Properties parms, Properties files) throws InterruptedException {
+    private void fileUpload(String boundary, InputStream in, Properties parms) throws InterruptedException {
       try {
-        String line = readLine(in); //in.readLine(); //readLine(in);
-        while (line!=null) {
-          int i = line.indexOf(boundary);
-          if (i!=2)
-            sendError( HTTP_BADREQUEST, "BAD REQUEST: Content type is multipart/form-data but next chunk does not start with boundary. Usage: GET /example/file.html" );
-          if (line.substring(i+boundary.length()).startsWith("--"))
-            return;
-          // read the header
-          Properties item = new Properties();
+        String line = readLine(in);
+        int i = line.indexOf(boundary);
+        if (i!=2)
+          sendError( HTTP_BADREQUEST, "BAD REQUEST: Content type is multipart/form-data but next chunk does not start with boundary. Usage: GET /example/file.html" );
+        if (line.substring(i+boundary.length()).startsWith("--"))
+          return;
+        // read the header
+        Properties item = new Properties();
+        line = readLine(in);
+        while ((line != null) && (line.trim().length()>0)) {
+          int p = line.indexOf(':');
+          if (p != -1)
+            item.put( line.substring(0,p).trim().toLowerCase(), line.substring(p+1).trim());
           line = readLine(in);
-          while ((line != null) && (line.trim().length()>0)) {
-            int p = line.indexOf(':');
-            if (p != -1)
-              item.put( line.substring(0,p).trim().toLowerCase(), line.substring(p+1).trim());
-            line = readLine(in);
+        }
+        // analyze the header
+        if (line!=null) {
+          String contentDisposition = item.getProperty("content-disposition");
+          if (contentDisposition == null) {
+            sendError( HTTP_BADREQUEST, "BAD REQUEST: Content type is multipart/form-data but no content-disposition info found. Usage: GET /example/file.html" );
           }
-          // analyze the header
-          if (line!=null) {
-            String contentDisposition = item.getProperty("content-disposition");
-            if (contentDisposition == null) {
-              sendError( HTTP_BADREQUEST, "BAD REQUEST: Content type is multipart/form-data but no content-disposition info found. Usage: GET /example/file.html" );
-            }
-            StringTokenizer st = new StringTokenizer( contentDisposition , "; " );
-            Properties disposition = new Properties();
-            while ( st.hasMoreTokens())	{
-              String token = st.nextToken();
-              int p = token.indexOf( '=' );
-              if (p!=-1)
-                disposition.put( token.substring(0,p).trim().toLowerCase(), token.substring(p+1).trim());
-            }
-            String pname = disposition.getProperty("name");
-            pname = pname.substring(1,pname.length()-1);
-            String value = "";
-            if (item.getProperty("content-type") == null) {
-              while (line != null && line.indexOf(boundary) == -1)
-              {
-                line = readLine(in);
-                if ( line != null)
-                {
-                  int d = line.indexOf(boundary);
-                  if (d == -1)
-                    value+=line;
-                  else
-                    value+=line.substring(0,d-2);
-                }
-              }
-            } else {
-              // now it gets interresting, it is a file
-              File tmp = File.createTempFile(pname, "tmp");
-              FileOutputStream s = new FileOutputStream(tmp);
-              byte[] buf = new byte[10240];
-              byte[] pending = new byte[] { '\r', '\n' };
-              int p = 0;
-              while (true) {
-                int sz = readBufOrLine(in, buf);
-                if (new String(buf,0,Math.min(sz,boundary.length()+2)).indexOf(boundary)==2) {
-                  line = new String(buf,0,sz);
-                  break;
-                }
-                if (p!=0) {
-                  s.write(pending,2-p,p);
-                  p = 0;
-                }
-                if ((sz>0) && (buf[sz-1]=='\n')) {
-                  p = ((sz>1) && (buf[sz-2]=='\r')) ? 2 : 1;
-                }
-                s.write(buf,0,sz-p);
-              }
-              s.close();
-              files.put(pname, tmp.getAbsolutePath());
-              value = disposition.getProperty("filename");
-              value = value.substring(1,value.length()-1);
-            }
-            parms.put(pname, value);
-          }
+          String key = parms.getProperty("key");
+          ValueArray.readPut(key, new InputStreamWrapper(in, boundary.getBytes()));
         }
       } catch (IOException e) {
         sendError( HTTP_INTERNALERROR, "SERVER INTERNAL ERROR: IOException: " + e.getMessage());
@@ -733,7 +668,96 @@ public class NanoHTTPD
     }
 
     private Socket mySocket;
+  }
 
+  private static final class InputStreamWrapper extends InputStream {
+    static final byte[] BOUNDARY_PREFIX = { '\r', '\n', '-', '-' };
+    final InputStream _wrapped;
+    final byte[] _boundary;
+    final byte[] _lookAheadBuf;
+    int _lookAheadLen;
+
+    public InputStreamWrapper(InputStream is, byte[] boundary) {
+      _wrapped = is;
+      _lookAheadBuf = new byte[boundary.length];
+      _lookAheadLen = 0;
+
+      _boundary = Arrays.copyOf(BOUNDARY_PREFIX, BOUNDARY_PREFIX.length + boundary.length);
+      System.arraycopy(boundary, 0, _boundary, BOUNDARY_PREFIX.length, boundary.length);
+    }
+
+    @Override public void close() throws IOException { _wrapped.close(); }
+    @Override public int available() throws IOException { return _wrapped.available(); }
+    @Override public long skip(long n) throws IOException { return _wrapped.skip(n); }
+    @Override public void mark(int readlimit) { _wrapped.mark(readlimit); }
+    @Override public void reset() throws IOException { _wrapped.reset(); }
+    @Override public boolean markSupported() { return _wrapped.markSupported(); }
+
+    @Override public int read() throws IOException { throw new UnsupportedOperationException(); }
+    @Override public int read(byte[] b) throws IOException { return read(b, 0, b.length); }
+    @Override public int read(byte[] b, int off, int len) throws IOException {
+      if(_lookAheadLen == -1)
+        return -1;
+      int readLen = readInternal(b, off, len);
+      if (readLen != -1) {
+        int pos = findBoundary(b, off, readLen);
+        if (pos != -1) {
+          _lookAheadLen = -1;
+          return pos - off;
+        }
+      }
+      return readLen;
+    }
+
+    private int readInternal(byte b[], int off, int len) throws IOException {
+      if (len < _lookAheadLen ) {
+        System.arraycopy(_lookAheadBuf, 0, b, off, len);
+        _lookAheadLen -= len;
+        System.arraycopy(_lookAheadBuf, len, _lookAheadBuf, 0, _lookAheadLen);
+        return len;
+      }
+
+      if (_lookAheadLen > 0) {
+        System.arraycopy(_lookAheadBuf, 0, b, off, _lookAheadLen);
+        off += _lookAheadLen;
+        len -= _lookAheadLen;
+        int r = Math.max(_wrapped.read(b, off, len), 0) + _lookAheadLen;
+        _lookAheadLen = 0;
+        return r;
+      } else {
+        return _wrapped.read(b, off, len);
+      }
+    }
+
+    private int findBoundary(byte[] b, int off, int len) throws IOException {
+      int bidx = -1; // start index of boundary
+      int idx = 0; // actual index in boundary[]
+      for(int i = off; i < off+len; i++) {
+        if (_boundary[idx] != b[i]) { // reset
+          idx = 0;
+          bidx = -1;
+        }
+        if (_boundary[idx] == b[i]) {
+          if (idx == 0) bidx = i;
+          if (++idx == _boundary.length) return bidx; // boundary found
+        }
+      }
+      if (bidx != -1) { // it seems that there is boundary but we did not match all boundary length
+        assert _lookAheadLen == 0; // There should not be not read lookahead
+        _lookAheadLen = _boundary.length - idx;
+        int readLen = _wrapped.read(_lookAheadBuf, 0, _lookAheadLen);
+        if (readLen < _boundary.length - idx) { // There is not enough data to match boundary
+          _lookAheadLen = readLen;
+          return -1;
+        }
+        for (int i = 0; i < _boundary.length - idx; i++) {
+          if (_boundary[i+idx] != _lookAheadBuf[i]) return -1; // There is not boundary => preserve lookahed buffer
+        }
+        // Boundary found => do not care about lookAheadBuffer since all remaining data are ignored
+      }
+
+      return bidx;
+    }
   }
 
   /**

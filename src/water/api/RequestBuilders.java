@@ -879,7 +879,7 @@ public class RequestBuilders extends RequestQueries {
       _query.addProperty(_offsetJSON, offset);
       _query.addProperty(_viewJSON, view);
       if (disabled)
-        return "<li class='disabled'><a href='"+RequestStatics.encodeRedirectArgs(_query)+"'>"+caption+"</a></li>";
+        return "<li class='disabled'><a>"+caption+"</a></li>";
       else
         return "<li><a href='"+RequestStatics.encodeRedirectArgs(_query)+"'>"+caption+"</a></li>";
     }
