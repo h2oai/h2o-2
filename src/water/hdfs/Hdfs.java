@@ -1,9 +1,10 @@
 package water.hdfs;
 
-import H2OInit.Boot;
+import java.io.File;
 
 import water.H2O;
 import water.Log;
+import H2OInit.Boot;
 
 public class Hdfs {
   private static final String DEFAULT_HDFS_VERSION = "cdh4";
@@ -22,8 +23,14 @@ public class Hdfs {
       // If HDFS URI is MapR-fs - Switch two MapR version of hadoop
       version = version.equals("mapr") || (H2O.OPT_ARGS.hdfs.startsWith("maprfs://")) ? MAPRFS_HDFS_VERSION : version;
       try {
-        if( Boot._init.fromJar() )
-          Boot._init.addInternalJars("hadoop/"+version+"/");
+        if( Boot._init.fromJar() ) {
+          File f = new File(version);
+          if( f.exists() ) {
+            Boot._init.addExternalJars(f);
+          } else {
+            Boot._init.addInternalJars("hadoop/"+version+"/");
+          }
+        }
       } catch(Exception e) {
         e.printStackTrace();
         Log.die("[hdfs] Unable to initialize hadoop version " + version +
