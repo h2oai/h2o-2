@@ -180,13 +180,6 @@ public abstract class PersistHdfs {
     //}
   }
 
-  static public void fileDelete(Value v) {
-    assert !v.isPersisted(); // Upper layers already cleared out
-    throw H2O.unimpl();
-    //File f = getFileForKey(v._key);
-    //f.delete();
-  }
-
   static public Value lazyArrayChunk( Key key ) {
     Key arykey = ValueArray.getArrayKey(key);  // From the base file key
     long off = ValueArray.getChunkOffset(key); // The offset

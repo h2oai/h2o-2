@@ -112,18 +112,12 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   }
 
   /** Remove dead Values from disk */
-  void removePersist() {
+  void removeIce() {
     // do not yank memory, as we could have a racing get hold on to this
     //  free_mem();
-    if( !isPersisted() ) return; // Never hit disk?
-    clrdsk();                   // Not persisted now
-    switch( _persist&BACKEND_MASK ) {
-    case ICE : PersistIce .fileDelete(this); break;
-    case HDFS: PersistHdfs.fileDelete(this); break;
-    case NFS : PersistNFS .fileDelete(this); break;
-    case S3  : PersistS3  .fileDelete(this); break;
-    default  : throw H2O.unimpl();
-    }
+    if( !isPersisted() || !onICE() ) return; // Never hit disk?
+    clrdsk();  // Not persisted now
+    PersistIce.fileDelete(this);
   }
   /** Load some or all of completely persisted Values */
   byte[] loadPersist() {
@@ -150,12 +144,12 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   /** Set persistence to HDFS from ICE */
   public void setHdfs() {
     assert onICE();
-    byte[] mem = get();         // Get into stable memory
-    removePersist();           // Remove from ICE disk
+    byte[] mem = get();    // Get into stable memory
+    removeIce();           // Remove from ICE disk
     _persist = Value.HDFS|Value.NOTdsk;
-    assert onHDFS();            // Flip to HDFS
-    _mem = mem; // Close a rare race with the H2O cleaner zapping _mem whilst removing from ice
-    storePersist();            // Store back to HDFS
+    assert onHDFS();       // Flip to HDFS
+    _mem = mem; // Close a race with the H2O cleaner zapping _mem while removing from ice
+    storePersist();        // Store back to HDFS
   }
 
 
