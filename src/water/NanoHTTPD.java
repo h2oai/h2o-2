@@ -679,11 +679,10 @@ public class NanoHTTPD
 
     public InputStreamWrapper(InputStream is, byte[] boundary) {
       _wrapped = is;
-      _lookAheadBuf = new byte[boundary.length];
-      _lookAheadLen = 0;
-
       _boundary = Arrays.copyOf(BOUNDARY_PREFIX, BOUNDARY_PREFIX.length + boundary.length);
       System.arraycopy(boundary, 0, _boundary, BOUNDARY_PREFIX.length, boundary.length);
+      _lookAheadBuf = new byte[_boundary.length];
+      _lookAheadLen = 0;
     }
 
     @Override public void close() throws IOException { _wrapped.close(); }
@@ -750,9 +749,9 @@ public class NanoHTTPD
           _lookAheadLen = readLen;
           return -1;
         }
-        for (int i = 0; i < _boundary.length - idx; i++) {
-          if (_boundary[i+idx] != _lookAheadBuf[i]) return -1; // There is not boundary => preserve lookahed buffer
-        }
+        for (int i = 0; i < _boundary.length - idx; i++)
+          if (_boundary[i+idx] != _lookAheadBuf[i])
+            return -1; // There is not boundary => preserve lookahead buffer
         // Boundary found => do not care about lookAheadBuffer since all remaining data are ignored
       }
 
