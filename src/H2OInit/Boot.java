@@ -85,9 +85,9 @@ public class Boot extends ClassLoader {
       // Find --ice_root and use it to set the unpack directory
       String sroot = System.getProperty("java.io.tmpdir");
       for( int i=0; i<args.length; i++ )
-        if( args[i].startsWith("--ice_root=") )
+        if( args[i].startsWith("--ice_root=") || args[i].startsWith("-ice_root=") )
           sroot = args[i].substring(11);
-        else if( args[i].equals("--ice_root") && i < args.length-1 )
+        else if( (args[i].equals("--ice_root") || args[i].startsWith("-ice_root")) && i < args.length-1 )
           sroot = args[i+1];
 
       // Make a tmp directory in --ice_root (or java.io.tmpdir) to unpack into
