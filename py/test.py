@@ -35,5 +35,11 @@ class Basic(unittest.TestCase):
         h2o_cmd.runRF(trees=50, timeoutSecs=15, 
                 csvPathname = h2o.find_file('smalldata/parity_128_4_100_quad.data'))
 
+    def test_E_ParseManyCols(self):
+        csvFilename='smalldata/fail1_100x11000.csv.gz'
+        parseKey = h2o_cmd.parseFile(None, csvFilename, timeoutSecs=10)
+        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], offset=-1, view=5)
+
+
 if __name__ == '__main__':
     h2o.unit_main()
