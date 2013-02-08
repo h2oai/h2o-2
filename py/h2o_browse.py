@@ -10,7 +10,7 @@ def browseTheCloud():
     # disable browser stuff for jenkins
     if not h2o.browse_disable:
         # after cloud building, node[0] should have the right info for us
-        port = h2o.nodes[0].port + 2
+        port = h2o.nodes[0].port
         cloud_url = "http://" + h2o.nodes[0].http_addr + ":" + str(port) + "/Cloud.html"
 
         # Open URL in new window, raising the window if possible.
