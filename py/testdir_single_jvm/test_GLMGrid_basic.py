@@ -20,7 +20,7 @@ class Basic(unittest.TestCase):
         csvFilename = "benign.csv"
         print "\nStarting", csvFilename 
         csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename)
+        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
         # columns start at 0
         # cols 0-13. 3 is output
         # no member id in this one
@@ -62,7 +62,7 @@ class Basic(unittest.TestCase):
         print "\nStarting", csvFilename
         # columns start at 0
         csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename)
+        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
 
         y = "1"
         xList = []  
