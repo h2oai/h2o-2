@@ -33,6 +33,7 @@
           } else if( input == 'h2o-matrix' ) {
             var c = $('#console')
             c.matrix({'height':c.height(),'width':c.width()})
+            jqconsole.Write("There is no spoon\n", 'jqconsole-output');
             startPrompt();
           } else if( input ) {
             $.get('Exec',
