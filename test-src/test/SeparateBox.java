@@ -100,9 +100,7 @@ public class SeparateBox implements Separate {
     args.add("-vrzute");
     args.add(ssh(_user, _key));
     args.add("--delete");
-    // args.add("−−delete−excluded");
     args.add("--chmod=u=rwx");
-    // args.add("-L");
 
     args.add("--exclude");
     args.add("'build/*.jar'");
