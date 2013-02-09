@@ -46,6 +46,7 @@ class Basic(unittest.TestCase):
             writeRows(csvPathname,row,eol,size)
             key  = csvFilename
             pkey = node.put_file(csvPathname, key=key, timeoutSecs=timeoutSecs)
+            print h2o.dump_json(pkey)
             for trial in range(5):
                 key2 = csvFilename + "_" + str(trial) + ".hex"
                 # just parse
