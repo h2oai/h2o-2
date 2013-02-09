@@ -27,13 +27,13 @@
       var startPrompt = function () {
         // Start the prompt with history enabled.
         jqconsole.Prompt(true, function (input) {
-          if( input == '?' || input == 'help' ) {
-            %HELP
-            startPrompt();
-          } else if( input == 'h2o-matrix' ) {
+          if( input == 'matrix' ) {
             var c = $('#console')
             c.matrix({'height':c.height(),'width':c.width()})
             jqconsole.Write("There is no spoon\n", 'jqconsole-output');
+          }
+          if( input == '?' || input == 'help' ) {
+            %HELP
             startPrompt();
           } else if( input ) {
             $.get('Exec',
