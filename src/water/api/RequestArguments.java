@@ -11,6 +11,7 @@ import water.*;
 import water.ValueArray.Column;
 import water.util.Check;
 import water.util.RString;
+import java.lang.ThreadLocal;
 
 import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
@@ -956,7 +957,7 @@ public class RequestArguments extends RequestStatics {
     public NumberSequence(String str, boolean mul, double defaultStep){
       this(parseArray(str,mul,defaultStep),str);
     }
-
+           
     private static double [] parseArray(String input, boolean mul, double defaultStep){
       String str = input.trim().toLowerCase();
       if( str.startsWith("seq") ) {
@@ -1008,11 +1009,16 @@ public class RequestArguments extends RequestStatics {
       return res.toString();
     }
   }
+  
   public class RSeq extends InputText<NumberSequence> {
     boolean _multiplicative;
     NumberSequence _dVal;
     double _defaultStep;
 
+    @Override
+    public String queryComment(){
+      return disabled()?"":"Comma separated list of values. Or range specified as from:to:step" + (_multiplicative?"(*).":"(+).");
+    }
 
     public RSeq(String name, boolean req, boolean mul){
       this(name,req,null,mul);
@@ -1779,14 +1785,35 @@ public class RequestArguments extends RequestStatics {
     public HexNonConstantColumnSelect(String name, H2OHexKey key, H2OHexKeyCol classCol) {
       super(name, key, classCol);
     }
+    ThreadLocal<ArrayList<String>> _constantColumns = new ThreadLocal<ArrayList<String>>();
+    
+   
+    @Override
+    public boolean shouldIgnore(int i, ValueArray.Column ca ) {
+      if(ca._min == ca._max){
+        if(_constantColumns.get() == null)
+          _constantColumns.set(new ArrayList<String>());
+        _constantColumns.get().add(Objects.firstNonNull(ca._name, String.valueOf(i)));
+        return true;
+      }
+      return super.shouldIgnore(i,ca);
+    }
+                             
+
+    String _comment = "";
     @Override protected int[] defaultValue() {
-      int classCol = _classCol.value();
       ValueArray va = _key.value();
-      List<Integer> res = Lists.newArrayList();
-      for( int i=0; i<va._cols.length; i++ )
-        if( va._cols[i]._min != va._cols[i]._max && i!=classCol )
-          res.add(i);
-      return Ints.toArray(res);
+      int [] res = new int[va._cols.length];
+      int selected = 0;
+      for(int i = 0; i < va._cols.length; ++i)
+        if(!shouldIgnore(i,va._cols[i]))
+          res[selected++] = i;
+      return Arrays.copyOfRange(res,0,selected);
+    }
+    @Override
+    public String queryComment(){
+      if(_constantColumns.get() == null || _constantColumns.get().isEmpty())return "";
+      return "Ignoring constant columns " + _constantColumns.get().toString();
     }
   }
 

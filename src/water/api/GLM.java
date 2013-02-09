@@ -226,7 +226,10 @@ public class GLM extends Request {
           "<h4>Equation: </h4>" +
           "<div><code>%modelSrc</code></div>"+
           "<h4>Coefficients</h4>" +
-          "<div>%coefficients</div>");
+          "<div>%coefficients</div>" +
+          "<h4>Normalized Coefficients</h4>" +
+          "<div>%normalized_coefficients</div>"
+                              );
 
       // Warnings
 
@@ -249,7 +252,7 @@ public class GLM extends Request {
       int count = 0;
       long xtime = 0;
       for( GLMValidation v : m._vals ) {
-        for( Key k : v._modelKeys) {
+        if(v._modelKeys != null)for( Key k : v._modelKeys) {
           GLMModel m2 = UKV.get(k, new GLMModel());
           xtime += m2._time;
           ++count;
@@ -271,6 +274,7 @@ public class GLM extends Request {
         JsonObject coefs = json.get("coefficients").getAsJsonObject();
         R.replace("modelSrc",equationHTML(m,coefs));
         R.replace("coefficients",coefsHTML(coefs));
+        R.replace("normalized_coefficients",coefsHTML(json.get("normalized_coefficients").getAsJsonObject()));
       }
       sb.append(R);
       // Validation / scoring
@@ -337,12 +341,18 @@ public class GLM extends Request {
       StringBuilder sb = new StringBuilder();
       sb.append("<table class='table table-bordered table-condensed'>");
       sb.append("<tr>");
-      for( Entry<String,JsonElement> e : coefs.entrySet() )
+      sb.append("<th>").append("Intercept").append("</th>");
+      for( Entry<String,JsonElement> e : coefs.entrySet() ){
+        if(e.getKey().equals("Intercept"))continue;
         sb.append("<th>").append(e.getKey()).append("</th>");
+      }
       sb.append("</tr>");
       sb.append("<tr>");
-      for( Entry<String,JsonElement> e : coefs.entrySet() )
-        sb.append("<td>").append(e.getValue().getAsDouble()).append("</td>");
+      sb.append("<td>").append(coefs.get("Intercept").getAsDouble()).append("</td>");
+      for( Entry<String,JsonElement> e : coefs.entrySet()){
+        if(e.getKey().equals("Intercept"))continue;
+        sb.append("<td>").append(e.getValue().getAsDouble()).append("</td>");        
+      }
       sb.append("</tr>");
       sb.append("</table>");
       return sb.toString();

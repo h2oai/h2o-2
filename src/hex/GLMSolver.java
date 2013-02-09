@@ -495,10 +495,6 @@ public class GLMSolver {
       JsonObject res = new JsonObject();
       res.addProperty("time", _time);
       res.addProperty("isDone", _isDone);
-      JsonArray colNames = new JsonArray();
-      for( String s : _va.colNames() )
-        colNames.add(new JsonPrimitive(s));
-      res.add("column_names",colNames);
       res.addProperty(Constants.MODEL_KEY, _selfKey.toString());
       if( _warnings != null ) {
         JsonArray warnings = new JsonArray();
@@ -510,25 +506,37 @@ public class GLMSolver {
 
       // Get the coefficents out in a pretty format
       JsonObject coefs = new JsonObject();
+      JsonObject normalizedCoefs = new JsonObject();
       double norm = 0.0;        // Reverse any normalization on the intercept
       int idx=0;
+      JsonArray colNames = new JsonArray();
+      
       for( int i=0; i<_va._cols.length-1; i++ ) {
         ValueArray.Column C = _va._cols[i];
         if( C._domain != null )
-          for( String d : C._domain )
-            coefs.addProperty(C._name+"."+d,_beta[idx++]);
+          for( String d : C._domain ){
+            String cname = C._name+"."+d;
+            colNames.add(new JsonPrimitive(cname));
+            normalizedCoefs.addProperty(cname,_beta[idx]);
+            coefs.addProperty(cname,_beta[idx++]);
+          }
         else {
+          colNames.add(new JsonPrimitive(C._name));
+          normalizedCoefs.addProperty(C._name,_beta[idx]);
           double b = _beta[idx]*_normMul[idx];
           coefs.addProperty(C._name,b);
           norm += b*_normSub[idx]; // Also accumulate the intercept adjustment
           idx++;
         }
       }
-
+      res.add("column_names",colNames);
       double icpt = _beta[_beta.length-1];
+      normalizedCoefs.addProperty("Intercept",icpt);
       icpt -= norm;
       coefs.addProperty("Intercept",icpt);
+
       res.add("coefficients", coefs);
+      res.add("normalized_coefficients", normalizedCoefs);
       res.add("LSMParams",_solver.toJson());
       res.add("GLMParams",_glmParams.toJson());
       res.addProperty("iterations", _iterations);
