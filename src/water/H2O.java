@@ -294,7 +294,7 @@ public final class H2O {
     // If the K/V mapping is going away, remove the old guy.
     // If the K/V mapping is changing, let the store cleaner just overwrite.
     // If the K/V mapping is new, let the store cleaner just create
-    if( old != null && val == null ) old.removePersist(); // Remove the old guy
+    if( old != null && val == null ) old.removeIce(); // Remove the old guy
     if( val != null ) dirty_store(); // Start storing the new guy
     return old; // Return success
   }
