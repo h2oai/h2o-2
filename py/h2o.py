@@ -578,7 +578,7 @@ class H2O(object):
     def put_file(self, f, key=None, timeoutSecs=60):
         if key is None:
             key = os.path.basename(f)
-            print "putfile specifying this key:", key
+            ### print "putfile specifying this key:", key
 
         resp = self.__check_request(
             requests.post(
