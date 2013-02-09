@@ -19,7 +19,7 @@ class Basic(unittest.TestCase):
         print "\nStarting benign.csv"
         csvFilename = "benign.csv"
         csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename)
+        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
         # columns start at 0
         y = "3"
         x = ""
@@ -53,7 +53,7 @@ class Basic(unittest.TestCase):
         x = ""
         csvFilename = "prostate.csv"
         csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename)
+        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
 
         for appendx in xrange(9):
             if (appendx == 0):

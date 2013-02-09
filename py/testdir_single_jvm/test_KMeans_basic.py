@@ -19,7 +19,7 @@ class Basic(unittest.TestCase):
         csvFilename = "benign.csv"
         print "\nStarting", csvFilename
         csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename)
+        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
 
         kwargs = {'k': 1, 'epsilon': 1e-6, 'cols': None, 'destination_key': 'benign_k.hex'}
         kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=5, **kwargs)
@@ -29,7 +29,7 @@ class Basic(unittest.TestCase):
         csvFilename = "prostate.csv"
         print "\nStarting", csvFilename
         csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename)
+        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
 
         kwargs = {'k': 1, 'epsilon': 1e-6, 'cols': None, 'destination_key': 'prostate_k.hex'}
         kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=5, **kwargs)

@@ -17,7 +17,7 @@ import copy
 
 def glm_doit(self, csvFilename, csvPathname, timeoutSecs=30):
     print "\nStarting GLM of", csvFilename
-    parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename, timeoutSecs=10)
+    parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", timeoutSecs=10)
     y = "10"
     x = ""
     # Took num_cross_validation_folds out, because GLM doesn't include num_cross_validation_folds time and it's slow

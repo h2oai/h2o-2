@@ -578,6 +578,7 @@ class H2O(object):
     def put_file(self, f, key=None, timeoutSecs=60):
         if key is None:
             key = os.path.basename(f)
+            ### print "putfile specifying this key:", key
 
         resp = self.__check_request(
             requests.post(
@@ -592,7 +593,6 @@ class H2O(object):
     
     def get_key(self, key):
         return requests.get(self.__url('Get.html'),
-            prefetch=False,
             params={"key": key})
 
     def poll_url(self, response, timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=None):
@@ -605,6 +605,7 @@ class H2O(object):
         # ParseProgress status NPE issue (H2O)
         if initialDelaySecs:
             time.sleep(initialDelaySecs)
+        # can end with status = 'redirect' or 'done'
         while status == 'poll':
             # UPDATE: 1/24/13 change to always wait before the first poll..
             # see if it makes a diff to our low rate fails

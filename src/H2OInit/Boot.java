@@ -92,6 +92,8 @@ public class Boot extends ClassLoader {
 
       // Make a tmp directory in --ice_root (or java.io.tmpdir) to unpack into
       File tmproot = new File(sroot);
+      if( !tmproot.mkdirs() && !tmproot.isDirectory() )  throw new IOException("Unable to create ice root: "  + tmproot.getAbsolutePath());
+
       File dir = File.createTempFile("h2o-temp-", "", tmproot);
       if( !dir.delete() ) throw new IOException("Failed to remove tmp file: " + dir.getAbsolutePath());
       if( !dir.mkdir() )  throw new IOException("Failed to create tmp dir: "  + dir.getAbsolutePath());

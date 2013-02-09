@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 # determine the correct separator of multiple paths
 if [ `uname` = "Darwin" ]
@@ -97,7 +97,8 @@ function build_classes() {
         $SRC/water/*/*java \
         $SRC/jsr166y/*java \
         $SRC/H2OInit/*java \
-        $TESTSRC/test/*java
+        $TESTSRC/*/*java \
+        $TESTSRC/*/*/*java
 }
 
 function build_initializer() {

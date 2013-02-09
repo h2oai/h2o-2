@@ -8,7 +8,7 @@ import H2OInit.Boot;
 
 public class Hdfs {
   private static final String DEFAULT_HDFS_VERSION = "cdh4";
-  private static final String MAPRFS_HDFS_VERSION = "0.20.2";
+  private static final String MAPRFS_HDFS_VERSION = "0.20.2mapr";
 
   public static boolean initialize() {
     assert (H2O.OPT_ARGS.hdfs != null);
