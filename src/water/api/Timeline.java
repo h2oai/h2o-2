@@ -194,7 +194,7 @@ public class Timeline extends Request {
       sb.append("<td>").append(object.get(JSON_NANOS).getAsLong()).append("</td>");
       String s = object.get(JSON_SEND).getAsString();
       String r = object.get(JSON_RECV).getAsString();
-      sb.append("<td>"+s+" → "+r+"</td>");
+      sb.append("<td>"+s+" ->"+r+"</td>");
       sb.append("<td>").append(object.get(JSON_TYPE).getAsString()).append("</td>");
       sb.append("<td>").append(object.get(JSON_BYTES).getAsString()).append("</td>");
       sb.append(footer(object, name));
