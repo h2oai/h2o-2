@@ -1,8 +1,13 @@
 <div class='container' style='margin: 0px auto'>
   <link rel="stylesheet" type="text/css" href="h2o/console.css">
   <div id="console"></div>
+  
   <script src="jquery/jqconsole.min.js" type="text/javascript" charset="utf-8"></script>
-  <script>
+  
+  <link rel="stylesheet" type="text/css" href="jquery/jquery.matrix.css" />
+  <script type="text/javascript" src="jquery/jquery.matrix.js"></script>
+  
+  <script type="text/javascript">
     $(function () {
       var jqconsole = $('#console').jqconsole('Welcome to the H\u2082O interactive repl\n', 'H\u2082O> ');
       var toFixed = function(n) {
@@ -24,6 +29,10 @@
         jqconsole.Prompt(true, function (input) {
           if( input == '?' || input == 'help' ) {
             %HELP
+            startPrompt();
+          } else if( input == 'h2o-matrix' ) {
+            var c = $('#console')
+            c.matrix({'height':c.height(),'width':c.width()})
             startPrompt();
           } else if( input ) {
             $.get('Exec',
