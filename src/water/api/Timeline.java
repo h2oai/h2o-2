@@ -173,7 +173,7 @@ public class Timeline extends Request {
       sb.append(header(object, name));
       sb.append("<td>").append(object.get(JSON_LAST_TIME).getAsString()).append("</td>");
       sb.append("<td>lots</td>");
-      sb.append("<td>many → many</td>");
+      sb.append("<td>many -> many</td>");
       sb.append("<td>heartbeat</td>");
       sb.append("<td>");
       sb.append(object.get(JSON_SENDS).getAsLong()).append(" sends, ");
