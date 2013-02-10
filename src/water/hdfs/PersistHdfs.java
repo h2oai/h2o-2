@@ -30,7 +30,11 @@ public abstract class PersistHdfs {
     } else {
       if( H2O.OPT_ARGS.hdfs != null && !H2O.OPT_ARGS.hdfs.isEmpty() ) {
         _conf = new Configuration();
+        // setup default remote Filesystem - for version 0.21 and higher
         _conf.set("fs.defaultFS",H2O.OPT_ARGS.hdfs);
+        // To provide compatibility with version 0.20.0 it is necessary to setup the property
+        // fs.default.name which was in newer version renamed to 'fs.defaultFS'
+        _conf.set("fs.default.name",H2O.OPT_ARGS.hdfs);
       } else {
         _conf = null;
       }
