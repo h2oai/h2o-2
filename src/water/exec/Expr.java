@@ -28,12 +28,26 @@ public abstract class Expr {
     public final String _str;
     public Type _type;
 
-    private Result(Key k, int refCount) {
-      _key = k;
-      _refCount = refCount;
+    private Result(Key k, int refCount, int pos) throws EvaluationException {
+      Value v = DKV.get(k);
+      if( v != null && v._isArray == 0 ) {
+        if( v._max > 100 ) 
+          throw new EvaluationException(pos, "Key "+k+" is neither a Vector nor a simple number");
+        String s = new String(v.get());
+        try { _const = Double.valueOf(s); }
+        catch( NumberFormatException nfe ) {
+          throw new EvaluationException(pos, "Key "+k+" is neither a Vector nor a simple number");
+        }
+        _key = null;
+        _refCount = 1;
+        _type = Type.rtNumberLiteral;
+      } else {
+        _const = 0;
+        _key = k;
+        _refCount = refCount;
+        _type = Type.rtKey;
+      }
       _colIndex = -1;
-      _const = 0;
-      _type = Type.rtKey;
       _str = null;
     }
 
@@ -55,11 +69,11 @@ public abstract class Expr {
       _str = str;
     }
 
-    public static Result temporary(Key k) { return new Result(k, 1); }
+    public static Result temporary(Key k) throws EvaluationException { return new Result(k, 1, 0); }
 
-    public static Result temporary() { return new Result(Key.make(), 1); }
+    public static Result temporary() throws EvaluationException { return new Result(Key.make(), 1, 0); }
 
-    public static Result permanent(Key k) { return new Result(k, -1); }
+    public static Result permanent(Key k) throws EvaluationException { return new Result(k, -1, 0); }
 
     public static Result scalar(double v) { return new Result(v); }
 
