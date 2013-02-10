@@ -1,10 +1,14 @@
 package water.hdfs;
 
-import water.*;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+
 import jsr166y.ForkJoinWorkerThread;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
+
+import water.*;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
@@ -25,7 +29,8 @@ public abstract class PersistHdfs {
       File p = new File(H2O.OPT_ARGS.hdfs_config);
       if (!p.exists())
         Log.die("[h2o,hdfs] Unable to open hdfs configuration file "+p.getAbsolutePath());
-      _conf.addResource(p.getAbsolutePath());
+
+      _conf.addResource(new Path(p.getAbsolutePath()));
       System.out.println("[h2o,hdfs] resource " + p.getAbsolutePath() + " added to the hadoop configuration");
     } else {
       if( H2O.OPT_ARGS.hdfs != null && !H2O.OPT_ARGS.hdfs.isEmpty() ) {
@@ -39,6 +44,7 @@ public abstract class PersistHdfs {
         _conf = null;
       }
     }
+
     ROOT = H2O.OPT_ARGS.hdfs_root == null ? "ice" : H2O.OPT_ARGS.hdfs_root;
     if( H2O.OPT_ARGS.hdfs_config != null || (H2O.OPT_ARGS.hdfs != null && !H2O.OPT_ARGS.hdfs.isEmpty()) ) {
       HDFS_LEN = H2O.OPT_ARGS.hdfs.length();
@@ -52,7 +58,7 @@ public abstract class PersistHdfs {
           System.out.println("[h2o,hdfs] " + H2O.OPT_ARGS.hdfs+ROOT+" loaded " + num + " keys");
         }
       } catch( IOException e ) {
-        System.out.println(e.getMessage());
+        System.err.println(e.getMessage());
         Log.die("[h2o,hdfs] Unable to initialize persistency store home at " + H2O.OPT_ARGS.hdfs+ROOT);
       }
     } else {
