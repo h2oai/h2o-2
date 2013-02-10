@@ -1,10 +1,14 @@
 package water.hdfs;
 
-import water.*;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+
 import jsr166y.ForkJoinWorkerThread;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
+
+import water.*;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
@@ -25,16 +29,22 @@ public abstract class PersistHdfs {
       File p = new File(H2O.OPT_ARGS.hdfs_config);
       if (!p.exists())
         Log.die("[h2o,hdfs] Unable to open hdfs configuration file "+p.getAbsolutePath());
-      _conf.addResource(p.getAbsolutePath());
+
+      _conf.addResource(new Path(p.getAbsolutePath()));
       System.out.println("[h2o,hdfs] resource " + p.getAbsolutePath() + " added to the hadoop configuration");
     } else {
       if( H2O.OPT_ARGS.hdfs != null && !H2O.OPT_ARGS.hdfs.isEmpty() ) {
         _conf = new Configuration();
+        // setup default remote Filesystem - for version 0.21 and higher
         _conf.set("fs.defaultFS",H2O.OPT_ARGS.hdfs);
+        // To provide compatibility with version 0.20.0 it is necessary to setup the property
+        // fs.default.name which was in newer version renamed to 'fs.defaultFS'
+        _conf.set("fs.default.name",H2O.OPT_ARGS.hdfs);
       } else {
         _conf = null;
       }
     }
+
     ROOT = H2O.OPT_ARGS.hdfs_root == null ? "ice" : H2O.OPT_ARGS.hdfs_root;
     if( H2O.OPT_ARGS.hdfs_config != null || (H2O.OPT_ARGS.hdfs != null && !H2O.OPT_ARGS.hdfs.isEmpty()) ) {
       HDFS_LEN = H2O.OPT_ARGS.hdfs.length();
@@ -48,7 +58,7 @@ public abstract class PersistHdfs {
           System.out.println("[h2o,hdfs] " + H2O.OPT_ARGS.hdfs+ROOT+" loaded " + num + " keys");
         }
       } catch( IOException e ) {
-        System.out.println(e.getMessage());
+        System.err.println(e.getMessage());
         Log.die("[h2o,hdfs] Unable to initialize persistency store home at " + H2O.OPT_ARGS.hdfs+ROOT);
       }
     } else {

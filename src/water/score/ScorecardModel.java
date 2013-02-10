@@ -313,7 +313,9 @@ public class ScorecardModel {
     @Override boolean match(Object value) {
       if( !Double.isNaN(_num) ) return getNumber(value) <= _num;
       if( !Double.isNaN(_bool) ) return getBoolean(value) <= _bool;
-      return _value.compareTo(getString(value)) >= 0;
+      String s = getString(value);
+      if( s==null ) return false;
+      return _value.compareTo(s) >= 0;
     }
     @Override boolean match(String s, double d) { return d <= _num; }
     @Override public String toString() { return "X<=" + _value; }
@@ -327,9 +329,10 @@ public class ScorecardModel {
     @Override boolean match(Object value) {
       if( !Double.isNaN(_num) ) return getNumber(value) < _num;
       if( !Double.isNaN(_bool) ) return getBoolean(value) < _bool;
-      return _value.compareTo(getString(value)) > 0;
+      String s = getString(value);
+      if( s==null ) return false;
+      return _value.compareTo(s) > 0;
     }
-
     @Override boolean match(String s, double d) { return d < _num; }
     @Override public String toString() { return "X<" + _value; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) {
@@ -342,7 +345,9 @@ public class ScorecardModel {
     @Override boolean match(Object value) {
       if( !Double.isNaN(_num) ) return getNumber(value) >= _num;
       if( !Double.isNaN(_bool) ) return getBoolean(value) >= _bool;
-      return _value.compareTo(getString(value)) <= 0;
+      String s = getString(value);
+      if( s==null ) return false;
+      return _value.compareTo(s) <= 0;
     }
     @Override boolean match(String s, double d) { return d >= _num; }
     @Override public String toString() { return "X>=" + _value; }
@@ -356,7 +361,9 @@ public class ScorecardModel {
     @Override boolean match(Object value) {
       if( !Double.isNaN(_num) ) return getNumber(value) > _num;
       if( !Double.isNaN(_bool) ) return getBoolean(value) > _bool;
-      return _value.compareTo(getString(value)) < 0;
+      String s = getString(value);
+      if( s==null ) return false;
+      return _value.compareTo(s) < 0;
     }
     @Override boolean match(String s, double d) { return d > _num; }
     @Override public String toString() { return "X>" + _value; }
@@ -385,7 +392,9 @@ public class ScorecardModel {
     @Override boolean match(Object value) {
       if( !Double.isNaN(_num) ) return getNumber(value) == _num;
       if( !Double.isNaN(_bool) ) return getBoolean(value) == _bool;
-      return _value.compareTo(getString(value)) == 0;
+      String s = getString(value);
+      if( s==null ) return false;
+      return _value.compareTo(s) == 0;
     }
     @Override boolean match(String s, double d) {
       if( !Double.isNaN(_num) ) return d == _num;

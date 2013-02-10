@@ -108,6 +108,7 @@ public class Boot extends ClassLoader {
       addInternalJars("jama");
       addInternalJars("poi");
       addInternalJars("s3");
+      addInternalJars("jets3t");
     }
 
     // Figure out the correct main class to call
