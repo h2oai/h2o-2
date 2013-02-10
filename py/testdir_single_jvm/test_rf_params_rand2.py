@@ -66,7 +66,7 @@ class Basic(unittest.TestCase):
             # adjust timeoutSecs with the number of trees
             # seems ec2 can be really slow
             timeoutSecs = 30 + 15 * (kwargs['parallel'] and 1 or 5)
-            h2o_cmd.runRF(timeoutSecs=120, retryDelaySecs=1, csvPathname=csvPathname, **kwargs)
+            h2o_cmd.runRF(timeoutSecs=timeoutSecs, retryDelaySecs=1, csvPathname=csvPathname, **kwargs)
             print "Trial #", trial, "completed"
 
 if __name__ == '__main__':

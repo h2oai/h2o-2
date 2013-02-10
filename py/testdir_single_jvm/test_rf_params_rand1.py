@@ -78,7 +78,7 @@ class Basic(unittest.TestCase):
             print kwargs
             # slower if parallel=0
             timeoutSecs = 30 + kwargs['ntree'] * 6 * (kwargs['parallel'] and 1 or 5)
-            h2o_cmd.runRF(timeoutSecs=20, csvPathname=csvPathname, **kwargs)
+            h2o_cmd.runRF(timeoutSecs=timeoutSecs, csvPathname=csvPathname, **kwargs)
             print "Trial #", trial, "completed"
 
 if __name__ == '__main__':
