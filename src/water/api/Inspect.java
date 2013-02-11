@@ -1,16 +1,17 @@
 package water.api;
 
+import com.google.gson.*;
 import hex.GLMSolver.GLMModel;
 import hex.KMeans.KMeansModel;
-
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
 import java.util.HashMap;
-
+import java.util.zip.*;
 import water.*;
 import water.ValueArray.Column;
 import water.api.GLM.GLMBuilder;
 import water.parser.CsvParser;
-
-import com.google.gson.*;
 
 public class Inspect extends Request {
   private static final HashMap<String, String> _displayNames = new HashMap<String, String>();
@@ -83,14 +84,52 @@ public class Inspect extends Request {
     return serveUnparsedValue(val);
   }
 
+  // Look at unparsed data
   private final Response serveUnparsedValue(Value v) {
     JsonObject result = new JsonObject();
     result.addProperty(VALUE_TYPE, "unparsed");
 
-    byte[] bs = v.getFirstBytes();
+    // See if we can make sense of the first few rows.
+    byte[] bs = v.getFirstBytes(); // Read some bytes
+    int zipped_len = bs.length;    // Bytes while compressed (if any)
+    int off = 0;
+    // First decrypt compression
+    InputStream is = null;
+    try {
+      switch( water.parser.ParseDataset.guessCompressionMethod(v) ) {
+      case NONE:                  // No compression
+        off = bs.length;          // All bytes ready already
+        break;
+      case ZIP : {
+        ZipInputStream zis = new ZipInputStream(v.openStream());
+        ZipEntry ze = zis.getNextEntry(); // Get the *FIRST* entry
+        // There is at least one entry in zip file and it is not a directory.
+        if( ze != null || !ze.isDirectory() ) is = zis;
+        break;
+      }
+      case GZIP:
+        is = new GZIPInputStream(v.openStream());
+        break;
+      }
+      // If reading from a compressed stream, estimate we can read 2x uncompressed
+      if( is != null ) bs = new byte[bs.length*2];
+      // Now read from the (possibly compressed) stream
+      while( off < bs.length ) {
+        int len = is.read(bs,off,bs.length-off);
+        if( len == -1 ) break;
+        off += len;
+      }
+    } catch( IOException ioe ) { // Stop at any io error
+    } finally {
+      try { if( is != null ) is.close(); } catch( IOException ioe ) {}
+    }
+    if( off < bs.length ) bs = Arrays.copyOf(bs,off); // Trim array to length read
+
+    // Now try to interpret the unzipped data as a CSV
     int[] rows_cols = CsvParser.inspect(bs);
     if( rows_cols != null && rows_cols[1] != 0 ) { // Able to parse sanely?
-      double bytes_per_row = (double) bs.length / rows_cols[0];
+      System.err.println("zlen="+zipped_len+" rows="+rows_cols[0]+" bs.len="+bs.length);
+      double bytes_per_row = (double) zipped_len / rows_cols[0];
       long rows = (long) (v.length() / bytes_per_row);
       result.addProperty(NUM_ROWS, "~" + rows); // approx rows
       result.addProperty(NUM_COLS, rows_cols[1]);
@@ -100,10 +139,37 @@ public class Inspect extends Request {
     }
     result.addProperty(VALUE_SIZE, v.length());
 
+    // Now inject the first few raw rows into the JSON response.
+    JsonArray ary = new JsonArray();
+    boolean bad = false;
+    int start=0;
+    for( int i=0; i<bs.length; i++ ) {
+      if( bs[i] >= 128 || (bs[i] < 32 && !Character.isWhitespace(bs[i])) )
+        bad = true;
+      if( bs[i] == '\n' ) {
+        ary.add(new JsonPrimitive(new String(bs,start,i-start)));
+        if( ary.size() >= 5 ) break;
+        start = i+1;
+      }
+    }
+    if( ary.size() < 5 )
+      ary.add(new JsonPrimitive(new String(bs,start,bs.length-start)));
+    if( !bad )                  // Only add rows if they look sane
+      result.add(ROWS,ary);
+
+    // The builder Response
     Response r = Response.done(result);
+    // Some nice links in the response
     r.addHeader("<div class='alert'>" //
         + Parse.link(v._key, "Parse into hex format") + " or " //
         + RReader.link(v._key, "from R data") + " </div>");
+    // Set the builder for showing the rows
+    r.setBuilder(ROWS,new ArrayBuilder(){
+        public String caption(JsonArray array, String name) {
+          return "<h4>First few sample rows</h4>";
+        }
+      });
+
     return r;
   }
 

@@ -16,10 +16,10 @@ import com.google.common.io.Closeables;
  */
 @SuppressWarnings("fallthrough")
 public final class ParseDataset {
-  static enum Compression { NONE, ZIP, GZIP }
+  public static enum Compression { NONE, ZIP, GZIP }
 
   // Guess
-  private static Compression guessCompressionMethod(Value dataset) {
+  public static Compression guessCompressionMethod(Value dataset) {
     byte[] b = dataset.getFirstBytes(); // First chunk
     AutoBuffer ab = new AutoBuffer(b);
 
@@ -31,8 +31,8 @@ public final class ParseDataset {
     return Compression.NONE;
   }
 
-  // Parse the dataset (uncompressed, zippped) as a CSV-style thingy and produce a structured dataset as a
-  // result.
+  // Parse the dataset (uncompressed, zippped) as a CSV-style thingy and
+  // produce a structured dataset as a result.
   private static void parseImpl( Key result, Value dataset ) {
     if( dataset.isHex() )
       throw new IllegalArgumentException("This is a binary structured dataset; "
