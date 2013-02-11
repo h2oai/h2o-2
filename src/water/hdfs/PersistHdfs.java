@@ -2,6 +2,8 @@ package water.hdfs;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 import jsr166y.ForkJoinWorkerThread;
 
@@ -45,11 +47,12 @@ public abstract class PersistHdfs {
       }
     }
 
-    ROOT = H2O.OPT_ARGS.hdfs_root == null ? "ice" : H2O.OPT_ARGS.hdfs_root;
+    ROOT = H2O.OPT_ARGS.hdfs_root == null ? "/" : H2O.OPT_ARGS.hdfs_root;
     if( H2O.OPT_ARGS.hdfs_config != null || (H2O.OPT_ARGS.hdfs != null && !H2O.OPT_ARGS.hdfs.isEmpty()) ) {
       HDFS_LEN = H2O.OPT_ARGS.hdfs.length();
       try {
-        _fs = FileSystem.get(_conf);
+        URI rootURI = new URI(ROOT);
+        _fs = FileSystem.get(rootURI, _conf);
         if (H2O.OPT_ARGS.hdfs_nopreload==null) {
           // This code blocks alot, and does not have FJBlock support coded in
           assert !(Thread.currentThread() instanceof ForkJoinWorkerThread);
@@ -60,6 +63,10 @@ public abstract class PersistHdfs {
       } catch( IOException e ) {
         System.err.println(e.getMessage());
         Log.die("[h2o,hdfs] Unable to initialize persistency store home at " + H2O.OPT_ARGS.hdfs+ROOT);
+      } catch( URISyntaxException e ) {
+        System.err.println(e.getMessage());
+        Log.die("[h2o,hdfs] Unable to parse root URI: " + ROOT);
+
       }
     } else {
       HDFS_LEN = 0;
