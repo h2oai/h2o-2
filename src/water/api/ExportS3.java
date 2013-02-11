@@ -16,7 +16,7 @@ public class ExportS3 extends Request {
 
     @Override
     protected String parse(String input) throws IllegalArgumentException {
-      PersistS3.checkCredentials();
+      PersistS3.getClient();
       return input;
     }
 

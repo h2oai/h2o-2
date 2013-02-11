@@ -708,7 +708,11 @@ public final class H2O {
     PersistIce.initialize();
     PersistNFS.initialize();
     if( OPT_ARGS.hdfs!=null ) Hdfs.initialize();
-    if( OPT_ARGS.aws_credentials!=null ) PersistS3.initialize();
+    if( OPT_ARGS.aws_credentials != null ) {
+      try {
+        PersistS3.getClient();
+      } catch( IllegalArgumentException iae ) { }
+    }
   }
 
 

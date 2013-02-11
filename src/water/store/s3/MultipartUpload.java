@@ -7,6 +7,7 @@ import java.util.List;
 import water.*;
 import water.util.ByteBufferInputStream;
 
+import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.*;
 
 /**
@@ -46,10 +47,10 @@ public class MultipartUpload extends MRTask {
       object = value._key.toString();
 
     String uploadId = null;
-
+    AmazonS3 s3 = PersistS3.getClient();
     try {
       InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(bucket, object);
-      InitiateMultipartUploadResult initResponse = PersistS3.S3.initiateMultipartUpload(initRequest);
+      InitiateMultipartUploadResult initResponse = s3.initiateMultipartUpload(initRequest);
       uploadId = initResponse.getUploadId();
 
       MultipartUpload task = new MultipartUpload();
@@ -66,16 +67,15 @@ public class MultipartUpload extends MRTask {
 
       CompleteMultipartUploadRequest compRequest = new CompleteMultipartUploadRequest( //
           bucket, object, uploadId, partETags);
-      PersistS3.S3.completeMultipartUpload(compRequest);
+      s3.completeMultipartUpload(compRequest);
+
       Progress progress = new Progress();
       progress._confirmed = true;
       UKV.put(dest, progress);
     } catch( Exception e ) {
       try {
-        PersistS3.S3.abortMultipartUpload(new AbortMultipartUploadRequest(bucket, object, uploadId));
-      } catch( Exception _ ) {
-      }
-
+        s3.abortMultipartUpload(new AbortMultipartUploadRequest(bucket, object, uploadId));
+      } catch( Exception _ ) { }
       Progress progress = new Progress();
       progress._error = e.toString();
       UKV.put(dest, progress);
@@ -114,7 +114,8 @@ public class MultipartUpload extends MRTask {
           .withPartSize(length) //
           .withInputStream(new ByteBufferInputStream(buffers));
 
-      PartETag result = PersistS3.S3.uploadPart(uploadRequest).getPartETag();
+      AmazonS3 s3 = PersistS3.getClient();
+      PartETag result = s3.uploadPart(uploadRequest).getPartETag();
       _parts = new int[1];
       _parts[0] = result.getPartNumber();
       _etags = new String[1];
@@ -143,9 +144,7 @@ public class MultipartUpload extends MRTask {
   }
 
   private static ValueArray va(Value value) {
-    if( value._isArray != 0 )
-      return ValueArray.value(value);
-
+    if( value._isArray != 0 ) return ValueArray.value(value);
     return new ValueArray(value._key, value.length(), Value.S3);
   }
 

@@ -6,6 +6,7 @@ import water.DKV;
 import water.Key;
 import water.store.s3.PersistS3;
 
+import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.gson.*;
 
@@ -17,8 +18,8 @@ public class ImportS3 extends Request {
 
     @Override
     protected String parse(String input) throws IllegalArgumentException {
-      PersistS3.checkCredentials();
-      if( !PersistS3.S3.doesBucketExist(input) )
+      AmazonS3 s3 = PersistS3.getClient();
+      if( !s3.doesBucketExist(input) )
         throw new IllegalArgumentException("S3 Bucket " + input + " not found!");
       return input;
     }
@@ -49,7 +50,8 @@ public class ImportS3 extends Request {
     JsonArray succ = new JsonArray();
     JsonArray fail = new JsonArray();
     String bucket = _bucket.value();
-    for( S3ObjectSummary obj : PersistS3.S3.listObjects(bucket).getObjectSummaries() ) {
+    AmazonS3 s3 = PersistS3.getClient();
+    for( S3ObjectSummary obj : s3.listObjects(bucket).getObjectSummaries() ) {
       try {
         Key k = PersistS3.loadKey(obj);
         JsonObject o = new JsonObject();
