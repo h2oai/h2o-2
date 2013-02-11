@@ -320,7 +320,7 @@ public class GLMSolver {
       _responseCol = colIds[colIds.length-1];
 
       // A mapping from the model's columns to the data's columns
-      _modelDataMap = columnMapping(ary.colNames());
+      _modelDataMap = colIds;
       assert isCompatible(_modelDataMap); // Should be checked by the caller
 
       // Come up with a mapping expanding the categorical columns.
@@ -441,7 +441,7 @@ public class GLMSolver {
       if( !isCompatible(modelDataMap) ) // This dataset is compatible or not?
         throw new GLMException("incompatible dataset");
 
-      GLMValidationTask valTsk = new GLMValidationTask(ary,s,_modelDataMap,_colCatMap,_normSub,_normMul);
+      GLMValidationTask valTsk = new GLMValidationTask(ary,s,modelDataMap,_colCatMap,_normSub,_normMul);
       valTsk._beta = _beta;
       valTsk._f = _glmParams._f;
       valTsk._l = _glmParams._l;
@@ -510,7 +510,7 @@ public class GLMSolver {
       double norm = 0.0;        // Reverse any normalization on the intercept
       int idx=0;
       JsonArray colNames = new JsonArray();
-      
+
       for( int i=0; i<_va._cols.length-1; i++ ) {
         ValueArray.Column C = _va._cols[i];
         if( C._domain != null )
