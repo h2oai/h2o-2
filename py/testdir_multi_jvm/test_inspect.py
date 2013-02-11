@@ -65,16 +65,9 @@ class Basic(unittest.TestCase):
         self.inspect_columns("smalldata/test/test_all_raw_top10rows.csv", rows=12, cols=89, 
             columnNames=['Randm','Month','applicationid','zip','sex','Day_Week','TimeofDay','WebApp','entereddate','age','AnsweredSurvey','Srvy_Plan2DD','Srvy_bythngs_online','Has_bnk_AC','PlasticTypeID','FeePlanID','clientkey','PlasticType','PlanType','Activated','OnDD','Verified','RegisteredOnline','Channel','Appid','Population','HouseholdsPerZipCode','WhitePopulation','BlackPopulation','HispanicPopulation','AsianPopulation','HawaiianPopulation','IndianPopulation','OtherPopulation','MalePopulation','FemalePopulation','PersonsPerHousehold','AverageHouseValue','IncomePerHousehold','MedianAge','MedianAgeMale','MedianAgeFemale','Elevation','CityType','TimeZone','DayLightSaving','MSA','PMSA','CSA','CBSA','CBSA_Div','NumberOfBusinesses','NumberOfEmployees','BusinessFirstQuarterPayroll','BusinessAnnualPayroll','GrowthRank','GrowthHousingUnits2003','GrowthHousingUnits2004','GrowthIncreaseNumber','GrowthIncreasePercentage','CBSAPop2003','CBSADivPop2003','DeliveryResidential','DeliveryBusiness','DeliveryTotal','PopulationEstimate','LandArea','WaterArea','id','Experian_pass','Innovis_pass','TU_pass','Choicepoint_pass','LN_pass','Experian_Cx','Innovis_Cx','TU_Cx','Choicepoint_Cx','LN_Cx','checkpointscore','levelonedecisioncode','grade','white_percent','black_percent','hispanic_percent','male_percent','female_percent','region','division' ])
 
-    
-    def test_H_domains_and_column_names(self):
-        cinsp = self.inspect_columns("smalldata/test/test_domains_and_column_names.csv", rows=4, cols=3, columnNames=['A1', 'A2', 'A3'], columnTypes=['int','int','enum'])
-        # check domain of 3rd column - it should contains values 'one,two,three,four' 
-        # but it must not contain the name of 3rd column ('A3')
-        # H2O can return the lists in any order. This should check that there are 4 in the matching set?
-        intersect = set.intersection( 
-            set(cinsp['cols'][2]['enum_domain']),  
-            set(['one', 'two', 'three', 'four']))
-        self.assertEqual(4,len(intersect))
+    def test_H_enum_domain_size(self):
+        cinsp = self.inspect_columns("smalldata/test/test_enum_domain_size.csv", rows=4, cols=3, columnNames=['A1', 'A2', 'A3'], columnTypes=['int','int','enum'])
+        self.assertEqual(4, cinsp['cols'][2]['enum_domain_size'])
 
     # Shared test implementation for smalldata/test/test_26cols_*.csv
     def inspect_columns(self, filename, rows=1, cols=26, columnNames=crange('A', 'Z'), columnTypes=None):
