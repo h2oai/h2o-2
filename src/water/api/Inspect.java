@@ -128,7 +128,6 @@ public class Inspect extends Request {
     // Now try to interpret the unzipped data as a CSV
     int[] rows_cols = CsvParser.inspect(bs);
     if( rows_cols != null && rows_cols[1] != 0 ) { // Able to parse sanely?
-      System.err.println("zlen="+zipped_len+" rows="+rows_cols[0]+" bs.len="+bs.length);
       double bytes_per_row = (double) zipped_len / rows_cols[0];
       long rows = (long) (v.length() / bytes_per_row);
       result.addProperty(NUM_ROWS, "~" + rows); // approx rows
