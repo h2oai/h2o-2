@@ -2,91 +2,96 @@ package water.hdfs;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-
-import jsr166y.ForkJoinWorkerThread;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 
 import water.*;
+import water.api.Constants;
+import H2OInit.Boot;
 
+import com.google.common.base.Objects;
+import com.google.common.base.Strings;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
+import com.google.gson.*;
 
 /** Persistence backend for HDFS */
 public abstract class PersistHdfs {
+  private static final String DEFAULT_HDFS_VERSION = "cdh4";
+  private static final String MAPRFS_HDFS_VERSION = "0.20.2mapr";
+
   static         final String KEY_PREFIX="hdfs:";
   static         final int    KEY_PREFIX_LEN = KEY_PREFIX.length();
-  static         final int    HDFS_LEN;
-  static private final Configuration _conf;
-  static private       FileSystem _fs;
-  static         final String ROOT;
+  static private final Configuration CONF;
 
-  static void initialize() {}
+  public static void initialize() { }
   static {
+    // Load the HDFS backend for existing hadoop installations.
+    // understands -hdfs=hdfs://server:port OR -hdfs=maprfs:///mapr/node_name/volume
+    //             -hdfs-root=root
+    //             -hdfs-config=config file
+    String version = Objects.firstNonNull(H2O.OPT_ARGS.hdfs_version, DEFAULT_HDFS_VERSION);
+
+    // If HDFS URI is MapR-fs - Switch two MapR version of hadoop
+    if( "mapr".equals(version) ||
+        Strings.nullToEmpty(H2O.OPT_ARGS.hdfs).startsWith("maprsfs://") ) {
+      version = MAPRFS_HDFS_VERSION;
+    }
+    try {
+      if( Boot._init.fromJar() ) {
+        File f = new File(version);
+        if( f.exists() ) {
+          Boot._init.addExternalJars(f);
+        } else {
+          Boot._init.addInternalJars("hadoop/"+version+"/");
+        }
+      }
+    } catch(Exception e) {
+      e.printStackTrace();
+      Log.die("[hdfs] Unable to initialize hadoop version " + version +
+          " please use different version.");
+    }
+
+    Configuration conf = null;
     if( H2O.OPT_ARGS.hdfs_config!=null ) {
-      _conf = new Configuration();
+      conf = new Configuration();
       File p = new File(H2O.OPT_ARGS.hdfs_config);
       if (!p.exists())
         Log.die("[h2o,hdfs] Unable to open hdfs configuration file "+p.getAbsolutePath());
-
-      _conf.addResource(new Path(p.getAbsolutePath()));
+      conf.addResource(new Path(p.getAbsolutePath()));
       System.out.println("[h2o,hdfs] resource " + p.getAbsolutePath() + " added to the hadoop configuration");
     } else {
       if( H2O.OPT_ARGS.hdfs != null && !H2O.OPT_ARGS.hdfs.isEmpty() ) {
-        _conf = new Configuration();
+        conf = new Configuration();
         // setup default remote Filesystem - for version 0.21 and higher
-        _conf.set("fs.defaultFS",H2O.OPT_ARGS.hdfs);
+        conf.set("fs.defaultFS",H2O.OPT_ARGS.hdfs);
         // To provide compatibility with version 0.20.0 it is necessary to setup the property
         // fs.default.name which was in newer version renamed to 'fs.defaultFS'
-        _conf.set("fs.default.name",H2O.OPT_ARGS.hdfs);
-      } else {
-        _conf = null;
+        conf.set("fs.default.name",H2O.OPT_ARGS.hdfs);
       }
     }
-
-    ROOT = H2O.OPT_ARGS.hdfs_root == null ? "/" : H2O.OPT_ARGS.hdfs_root;
-    if( H2O.OPT_ARGS.hdfs_config != null || (H2O.OPT_ARGS.hdfs != null && !H2O.OPT_ARGS.hdfs.isEmpty()) ) {
-      HDFS_LEN = H2O.OPT_ARGS.hdfs.length();
-      try {
-        URI rootURI = new URI(ROOT);
-        _fs = FileSystem.get(rootURI, _conf);
-        if (H2O.OPT_ARGS.hdfs_nopreload==null) {
-          // This code blocks alot, and does not have FJBlock support coded in
-          assert !(Thread.currentThread() instanceof ForkJoinWorkerThread);
-          _fs.listStatus(new Path(ROOT)); // Initial touch of top-level path
-          int num = addFolder(new Path(ROOT));
-          System.out.println("[h2o,hdfs] " + H2O.OPT_ARGS.hdfs+ROOT+" loaded " + num + " keys");
-        }
-      } catch( IOException e ) {
-        System.err.println(e.getMessage());
-        Log.die("[h2o,hdfs] Unable to initialize persistency store home at " + H2O.OPT_ARGS.hdfs+ROOT);
-      } catch( URISyntaxException e ) {
-        System.err.println(e.getMessage());
-        Log.die("[h2o,hdfs] Unable to parse root URI: " + ROOT);
-
-      }
-    } else {
-      HDFS_LEN = 0;
-    }
+    CONF = conf;
   }
 
-  private static int addFolder(Path p) {
-    int num=0;
+  public static void addFolder(Path p, JsonArray succeeded, JsonArray failed) throws IOException {
+    FileSystem fs = FileSystem.get(p.toUri(), CONF);
+    addFolder(fs, p, succeeded, failed);
+  }
+
+  @SuppressWarnings("deprecation")
+  private static void addFolder(FileSystem fs, Path p, JsonArray succeeded, JsonArray failed) {
     try {
-      for( FileStatus fs : _fs.listStatus(p) ) {
-        Path pfs = fs.getPath();
-        if( fs.isDir() ) {
-          num += addFolder(pfs);
+      for( FileStatus file : fs.listStatus(p) ) {
+        Path pfs = file.getPath();
+        if( file.isDir() ) {
+          addFolder(fs, pfs, succeeded, failed);
         } else {
-          num++;
           Key k = getKeyForPathString(pfs.toString());
-          long size = fs.getLen();
+          long size = file.getLen();
           Value val = null;
           if( pfs.getName().endsWith(".hex") ) { // Hex file?
-            FSDataInputStream s = _fs.open(pfs);
+            FSDataInputStream s = fs.open(pfs);
             int sz = (int)Math.min(1L<<20,size); // Read up to the 1st meg
             byte [] mem = MemoryManager.malloc1(sz);
             s.readFully(mem);
@@ -100,13 +105,17 @@ public abstract class PersistHdfs {
             val = new Value(k,(int)size,Value.HDFS); // Plain Value
           }
           val.setdsk();
-          H2O.putIfAbsent_raw(k,val);
+          DKV.put(k, val);
+
+          JsonObject o = new JsonObject();
+          o.addProperty(Constants.KEY, k.toString());
+          o.addProperty(Constants.FILE, p.toString());
+          succeeded.add(o);
         }
       }
     } catch( IOException e ) {
-      System.err.println("[hdfs] Unable to list the folder " + p.toString()+" : "+e);
+      failed.add(new JsonPrimitive(p.toString()));
     }
-    return num;
   }
 
   // file name implementation -------------------------------------------------
@@ -123,18 +132,15 @@ public abstract class PersistHdfs {
       : "hdfs name bijection: key "+key+" makes '"+str+"' makes key "+getKeyForPathString_impl(str);
     return str;
   }
+
   // Actually we typically want a Path not a String
   public static Path getPathForKey(Key k) {  return new Path(getPathStringForKey(k)); }
 
-  // The actual conversions; str->key and key->str
-  // Convert string 'hdfs://192.168.1.151/datasets/3G_poker_shuffle'
-  // into    key                    'hdfs:datasets/3G_poker_shuffle'
   static Key getKeyForPathString_impl(String str) {
-    assert str.indexOf(H2O.OPT_ARGS.hdfs)==0 : str;
-    return Key.make(KEY_PREFIX+str.substring(HDFS_LEN));
+    return Key.make(KEY_PREFIX+str);
   }
   private static String getPathStringForKey_impl(Key k) {
-    return H2O.OPT_ARGS.hdfs+new String(k._kb,KEY_PREFIX_LEN,k._kb.length-KEY_PREFIX_LEN);
+    return new String(k._kb, KEY_PREFIX_LEN, k._kb.length-KEY_PREFIX_LEN);
   }
 
   // file implementation -------------------------------------------------------
@@ -158,7 +164,9 @@ public abstract class PersistHdfs {
           skip += value_len;
         }
       }
-      s = _fs.open(getPathForKey(k));
+      Path p = getPathForKey(k);
+      FileSystem fs = FileSystem.get(p.toUri(), CONF);
+      s = fs.open(p);
       ByteStreams.skipFully(s, skip);
       ByteStreams.readFully(s, b);
       assert v.isPersisted();
@@ -202,7 +210,9 @@ public abstract class PersistHdfs {
     long off = ValueArray.getChunkOffset(key); // The offset
     long size = 0;
     try {
-      size = _fs.getFileStatus(getPathForKey(arykey)).getLen();
+      Path p = getPathForKey(arykey);
+      FileSystem fs = FileSystem.get(p.toUri(), CONF);
+      size = fs.getFileStatus(p).getLen();
     } catch( IOException e ) {
       System.err.println(e);
       return null;
@@ -227,15 +237,15 @@ public abstract class PersistHdfs {
     FSDataOutputStream s = null;
     try {
       Path p = getPathForKey(key);
-      _fs.mkdirs(p.getParent());
-      s = _fs.create(p);
+      FileSystem fs = FileSystem.get(p.toUri(), CONF);
+      fs.mkdirs(p.getParent());
+      s = fs.create(p);
       byte[] b = f.write(new AutoBuffer()).buf();
       s.write(b);
     } catch( IOException e ) {
       res = e.getMessage(); // Just the exception message, throwing the stack trace away
     } finally {
-      if( s != null )
-        try { s.close(); } catch( IOException e ) { }
+      Closeables.closeQuietly(s);
     }
     return res;
   }
@@ -246,14 +256,15 @@ public abstract class PersistHdfs {
     String res = null;
     FSDataOutputStream s = null;
     try {
-      s = _fs.append(getPathForKey(key));
+      Path p = getPathForKey(key);
+      FileSystem fs = FileSystem.get(p.toUri(), CONF);
+      s = fs.append(p);
       System.err.println("[hdfs] append="+val.get().length);
       s.write(val.get());
     } catch( IOException e ) {
       res = e.getMessage(); // Just the exception message, throwing the stack trace away
     } finally {
-      if( s != null )
-        try { s.close(); } catch( IOException e ) { }
+      Closeables.closeQuietly(s);
     }
     return res;
   }

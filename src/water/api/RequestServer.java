@@ -38,6 +38,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new ImportUrl()),   "Import URL",   "Data");
     Request.addToNavbar(registerRequest(new ImportS3()),    "Import S3",    "Data");
     Request.addToNavbar(registerRequest(new ExportS3()),    "Export S3",    "Data");
+    Request.addToNavbar(registerRequest(new ImportHdfs()),  "Import HDFS",  "Data");
     Request.addToNavbar(registerRequest(new Upload()),      "Upload",       "Data");
     Request.addToNavbar(registerRequest(new Get()),         "Download",     "Data");
 
