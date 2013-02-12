@@ -384,11 +384,9 @@ public final class H2O {
     public String hdfs; // HDFS backend
     public String hdfs_version; // version of the filesystem
     public String hdfs_config; // configuration file of the HDFS
-    public String hdfs_datanode; // Datanode root
-    public String aws_credentials; // do not preload HDFS keys
+    public String aws_credentials; // properties file for aws credentials
     public String keepice; // Do not delete ice on startup
     public String soft = null; // soft launch for demos
-    public String auth; // Require authentication for the webpages
   }
   public static boolean IS_SYSTEM_RUNNING = false;
 
