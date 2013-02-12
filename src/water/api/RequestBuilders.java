@@ -302,7 +302,9 @@ public class RequestBuilders extends RequestQueries {
     public static Response error(String message) {
       JsonObject obj = new JsonObject();
       obj.addProperty(ERROR,message);
-      return new Response(Status.error,obj);
+      Response r = new Response(Status.error,obj);
+      r.setBuilder(ERROR, new PreFormattedBuilder());
+      return r;
     }
 
     /** Returns new done response with given JSON response object.
@@ -756,6 +758,13 @@ public class RequestBuilders extends RequestQueries {
       } catch( Throwable e ) {
         throw Throwables.propagate(e);
       }
+    }
+  }
+
+  public static class PreFormattedBuilder extends ElementBuilder {
+    @Override
+    public String build(String content, String name) {
+      return super.build("<pre>"+content+"</pre>", name);
     }
   }
 

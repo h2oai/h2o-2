@@ -1,18 +1,16 @@
 package water.api;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 
 import org.apache.hadoop.fs.Path;
 
 import water.DKV;
-import water.Key;
-import water.hdfs.HdfsLoader;
 import water.hdfs.PersistHdfs;
-import water.store.s3.PersistS3;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.google.gson.*;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.internal.Streams;
 
 public class ImportHdfs extends Request {
   public class PathArg extends TypeaheadInputText<String> {
@@ -51,7 +49,11 @@ public class ImportHdfs extends Request {
     try {
       PersistHdfs.addFolder(new Path(_path.value()), succ, fail);
     } catch( IOException e ) {
-      return Response.error(e.getMessage());
+      StringBuilder sb = new StringBuilder();
+      PrintWriter pw = new PrintWriter(Streams.writerForAppendable(sb));
+      e.printStackTrace(pw);
+      pw.flush();
+      return Response.error(sb.toString());
     }
     DKV.write_barrier();
 
