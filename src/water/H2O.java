@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import jsr166y.ForkJoinPool;
 import jsr166y.ForkJoinWorkerThread;
 import water.exec.Function;
-import water.hdfs.Hdfs;
+import water.hdfs.HdfsLoader;
 import water.nbhm.NonBlockingHashMap;
 import water.store.s3.PersistS3;
 
@@ -383,10 +383,8 @@ public final class H2O {
     public String ice_root; // ice root directory
     public String hdfs; // HDFS backend
     public String hdfs_version; // version of the filesystem
-    public String hdfs_root; // root of the HDFS installation (for I only)
     public String hdfs_config; // configuration file of the HDFS
     public String hdfs_datanode; // Datanode root
-    public String hdfs_nopreload; // do not preload HDFS keys
     public String aws_credentials; // do not preload HDFS keys
     public String keepice; // Do not delete ice on startup
     public String soft = null; // soft launch for demos
@@ -707,8 +705,12 @@ public final class H2O {
   static void initializePersistence() {
     PersistIce.initialize();
     PersistNFS.initialize();
-    if( OPT_ARGS.hdfs!=null ) Hdfs.initialize();
-    if( OPT_ARGS.aws_credentials!=null ) PersistS3.initialize();
+    HdfsLoader.initialize();
+    if( OPT_ARGS.aws_credentials != null ) {
+      try {
+        PersistS3.getClient();
+      } catch( IllegalArgumentException iae ) { }
+    }
   }
 
 

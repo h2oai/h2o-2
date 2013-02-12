@@ -20,21 +20,15 @@ public abstract class PersistS3 {
   private static void log(String printf, Object... args) {
     System.err.printf("[s3] " + printf + "\n", args);
   }
-
-  public static final AmazonS3 S3;
-  public static final String   HELP;
+  private static final String   HELP = "You can specify a credentials properties file with the -aws_credentials command line switch.";
 
   // Default location of the S3 credentials file
   private static final String  DEFAULT_CREDENTIALS_LOCATION = "AwsCredentials.properties";
   private static final String  KEY_PREFIX                   = "s3:";
   private static final int     KEY_PREFIX_LEN               = KEY_PREFIX.length();
 
-  // Reads the commandline and initializes the S3 client
-  public static void initialize() {
-  }
-
+  private static final AmazonS3 S3;
   static {
-    HELP = "You can specify a credentials properties file with the -aws_credentials command line switch.";
     File credentials = new File(Objects.firstNonNull(H2O.OPT_ARGS.aws_credentials, DEFAULT_CREDENTIALS_LOCATION));
     AmazonS3 s3 = null;
     try {
@@ -48,7 +42,7 @@ public abstract class PersistS3 {
     S3 = s3;
   }
 
-  public static void checkCredentials() {
+  public static AmazonS3 getClient() {
     if( S3 == null ) {
       StringBuilder msg = new StringBuilder();
       msg.append("Unable to load S3 credentials.");
@@ -56,6 +50,7 @@ public abstract class PersistS3 {
         msg.append(HELP);
       throw new IllegalArgumentException(msg.toString());
     }
+    return S3;
   }
 
   public static Key loadKey(S3ObjectSummary obj) throws IOException {
