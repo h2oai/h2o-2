@@ -15,22 +15,19 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.gson.*;
 
 public class ImportHdfs extends Request {
-  public class BucketArg extends TypeaheadInputText<String> {
-    public BucketArg(String name) {
-      super(TypeaheadS3BucketRequest.class, name, true);
+  public class PathArg extends TypeaheadInputText<String> {
+    public PathArg(String name) {
+      super(TypeaheadHdfsPathRequest.class, name, true);
     }
 
     @Override
     protected String parse(String input) throws IllegalArgumentException {
-      AmazonS3 s3 = PersistS3.getClient();
-      if( !s3.doesBucketExist(input) )
-        throw new IllegalArgumentException("S3 Bucket " + input + " not found!");
       return input;
     }
 
     @Override
     protected String queryDescription() {
-      return "existing S3 Bucket";
+      return "existing HDFS path";
     }
 
     @Override
@@ -39,7 +36,7 @@ public class ImportHdfs extends Request {
     }
   }
 
-  protected final Str _path = new Str("path");
+  protected final PathArg _path = new PathArg("path");
 
   public ImportHdfs() {
     _requestHelp = "Imports the given HDFS path.  All nodes in the "
@@ -49,8 +46,6 @@ public class ImportHdfs extends Request {
 
   @Override
   protected Response serve() {
-    HdfsLoader.initialize();
-
     JsonArray succ = new JsonArray();
     JsonArray fail = new JsonArray();
     try {

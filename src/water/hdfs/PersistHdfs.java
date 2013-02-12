@@ -43,6 +43,8 @@ public abstract class PersistHdfs {
     CONF = conf;
   }
 
+  public static Configuration getConf() { return CONF; }
+
   public static void addFolder(Path p, JsonArray succeeded, JsonArray failed) throws IOException {
     FileSystem fs = FileSystem.get(p.toUri(), CONF);
     addFolder(fs, p, succeeded, failed);

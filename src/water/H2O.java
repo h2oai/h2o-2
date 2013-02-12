@@ -705,9 +705,7 @@ public final class H2O {
   static void initializePersistence() {
     PersistIce.initialize();
     PersistNFS.initialize();
-    if( H2O.OPT_ARGS.hdfs != null || H2O.OPT_ARGS.hdfs_config != null ) {
-      HdfsLoader.initialize();
-    }
+    HdfsLoader.initialize();
     if( OPT_ARGS.aws_credentials != null ) {
       try {
         PersistS3.getClient();
