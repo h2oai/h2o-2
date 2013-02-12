@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import jsr166y.ForkJoinPool;
 import jsr166y.ForkJoinWorkerThread;
 import water.exec.Function;
-import water.hdfs.PersistHdfs;
+import water.hdfs.HdfsLoader;
 import water.nbhm.NonBlockingHashMap;
 import water.store.s3.PersistS3;
 
@@ -705,9 +705,8 @@ public final class H2O {
   static void initializePersistence() {
     PersistIce.initialize();
     PersistNFS.initialize();
-    PersistHdfs.initialize();
     if( H2O.OPT_ARGS.hdfs != null || H2O.OPT_ARGS.hdfs_config != null ) {
-      PersistHdfs.initialize();
+      HdfsLoader.initialize();
     }
     if( OPT_ARGS.aws_credentials != null ) {
       try {

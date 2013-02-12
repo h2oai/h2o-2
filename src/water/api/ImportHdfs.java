@@ -6,6 +6,7 @@ import org.apache.hadoop.fs.Path;
 
 import water.DKV;
 import water.Key;
+import water.hdfs.HdfsLoader;
 import water.hdfs.PersistHdfs;
 import water.store.s3.PersistS3;
 
@@ -48,6 +49,8 @@ public class ImportHdfs extends Request {
 
   @Override
   protected Response serve() {
+    HdfsLoader.initialize();
+
     JsonArray succ = new JsonArray();
     JsonArray fail = new JsonArray();
     try {

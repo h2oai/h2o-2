@@ -8,9 +8,7 @@ import org.apache.hadoop.fs.*;
 
 import water.*;
 import water.api.Constants;
-import H2OInit.Boot;
 
-import com.google.common.base.Objects;
 import com.google.common.base.Strings;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
@@ -18,43 +16,14 @@ import com.google.gson.*;
 
 /** Persistence backend for HDFS */
 public abstract class PersistHdfs {
-  private static final String DEFAULT_HDFS_VERSION = "cdh4";
-  private static final String MAPRFS_HDFS_VERSION = "0.20.2mapr";
-
   static         final String KEY_PREFIX="hdfs:";
   static         final int    KEY_PREFIX_LEN = KEY_PREFIX.length();
   static private final Configuration CONF;
 
   public static void initialize() { }
   static {
-    // Load the HDFS backend for existing hadoop installations.
-    // understands -hdfs=hdfs://server:port OR -hdfs=maprfs:///mapr/node_name/volume
-    //             -hdfs-root=root
-    //             -hdfs-config=config file
-    String version = Objects.firstNonNull(H2O.OPT_ARGS.hdfs_version, DEFAULT_HDFS_VERSION);
-
-    // If HDFS URI is MapR-fs - Switch two MapR version of hadoop
-    if( "mapr".equals(version) ||
-        Strings.nullToEmpty(H2O.OPT_ARGS.hdfs).startsWith("maprsfs://") ) {
-      version = MAPRFS_HDFS_VERSION;
-    }
-    try {
-      if( Boot._init.fromJar() ) {
-        File f = new File(version);
-        if( f.exists() ) {
-          Boot._init.addExternalJars(f);
-        } else {
-          Boot._init.addInternalJars("hadoop/"+version+"/");
-        }
-      }
-    } catch(Exception e) {
-      e.printStackTrace();
-      Log.die("[hdfs] Unable to initialize hadoop version " + version +
-          " please use different version.");
-    }
-
     Configuration conf = null;
-    if( H2O.OPT_ARGS.hdfs_config!=null ) {
+    if( H2O.OPT_ARGS.hdfs_config != null ) {
       conf = new Configuration();
       File p = new File(H2O.OPT_ARGS.hdfs_config);
       if (!p.exists())
@@ -62,7 +31,7 @@ public abstract class PersistHdfs {
       conf.addResource(new Path(p.getAbsolutePath()));
       System.out.println("[h2o,hdfs] resource " + p.getAbsolutePath() + " added to the hadoop configuration");
     } else {
-      if( H2O.OPT_ARGS.hdfs != null && !H2O.OPT_ARGS.hdfs.isEmpty() ) {
+      if( !Strings.isNullOrEmpty(H2O.OPT_ARGS.hdfs) ) {
         conf = new Configuration();
         // setup default remote Filesystem - for version 0.21 and higher
         conf.set("fs.defaultFS",H2O.OPT_ARGS.hdfs);
