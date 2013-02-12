@@ -141,7 +141,7 @@ public class Constants {
   public static final String WEIGHTS               = "class_weights";
   public static final String WIDTH                 = "width";
   public static final String X                     = "x";
-  public static final String XVAL                  = "num_cross_validation_folds";
+  public static final String XVAL                  = "n_folds";
   public static final String Y                     = "y";
 
   static { assert Check.staticFinalStrings(Constants.class); }

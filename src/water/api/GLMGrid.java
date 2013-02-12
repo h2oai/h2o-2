@@ -50,7 +50,7 @@ public class GLMGrid extends Request {
   protected final CaseSelect _case = new CaseSelect(_key,_y,_caseMode,JSON_GLM_CASE);
   protected final Real _weight = new Real(JSON_GLM_WEIGHT,1.0);
 
-  protected final Int _xval = new Int(JSON_GLM_XVAL, 10, 0, 1000000);
+  protected final Int _xval = new Int(XVAL, 10, 0, 1000000);
   protected final Real _betaEps = new Real(JSON_GLM_BETA_EPS,GLMSolver.DEFAULT_BETA_EPS);
 
   // Args that ARE Grid Searched
@@ -58,7 +58,7 @@ public class GLMGrid extends Request {
   protected final RSeq _alpha = new RSeq(Constants.ALPHA, false, new NumberSequence("0,0.25,0.5,0.75,1.0",false,1),false);
   protected final RSeq _thresholds = new RSeq(Constants.DTHRESHOLDS, false,new NumberSequence("0:1:0.01",false,0.1),false);
 
- 
+
   public GLMGrid(){
     _requestHelp = "Perform grid search over GLM parameters. Calls glm with all parameter combination from user-defined parameter range. Results are ordered according to AUC. For more details see <a href='GLM.help'>GLM help</a>.";
     _key._requestHelp = "Dataset to be trained on.";
@@ -79,7 +79,7 @@ public class GLMGrid extends Request {
     _case._requestHelp = "Value to be used to compare against using predicate given by case mode selector to turn the y column into boolean.";
     _thresholds._requestHelp = "Sequence of decision thresholds to be evaluated during validation (used for ROC curce computation and for picking optimal decision threshold of the resulting classifier).";
     _xval._requestHelp = "Number of fold used in cross-validation. 0 or 1 means no cross validation.";
-      
+
   }
 
 
