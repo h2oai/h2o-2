@@ -957,7 +957,7 @@ public class RequestArguments extends RequestStatics {
     public NumberSequence(String str, boolean mul, double defaultStep){
       this(parseArray(str,mul,defaultStep),str);
     }
-           
+
     private static double [] parseArray(String input, boolean mul, double defaultStep){
       String str = input.trim().toLowerCase();
       if( str.startsWith("seq") ) {
@@ -1009,7 +1009,7 @@ public class RequestArguments extends RequestStatics {
       return res.toString();
     }
   }
-  
+
   public class RSeq extends InputText<NumberSequence> {
     boolean _multiplicative;
     NumberSequence _dVal;
@@ -1702,17 +1702,40 @@ public class RequestArguments extends RequestStatics {
       addPrerequisite(_key = key);
     }
 
+
     public boolean shouldIgnore(int i, ValueArray.Column ca ) { return false; }
     public void checkLegality(int i, ValueArray.Column c) throws IllegalArgumentException { }
 
-    @Override protected String[] selectValues() {
+    protected Comparator<ValueArray.Column> colComp(){
+      return null;
+    }
+
+    ArrayList<Column> _selectedCols;
+
+    protected void selectColumns(){
       ValueArray va = _key.value();
-      List<String> res = Lists.newArrayList();
+      ArrayList<ValueArray.Column> cols = Lists.newArrayList();
       for (int i = 0; i < va._cols.length; ++i) {
         if( shouldIgnore(i, va._cols[i]) ) continue;
-        res.add(Objects.firstNonNull(va._cols[i]._name, String.valueOf(i)));
+        cols.add(va._cols[i]);
       }
-      return res.toArray(new String[res.size()]);
+      Comparator<Column> cmp = colComp();
+      if(cmp != null)
+        Collections.sort(cols,cmp);
+      _selectedCols = cols;
+    }
+
+    @Override protected String queryElement() {
+      selectColumns();
+      return super.queryElement();
+    }
+
+    @Override protected final String[] selectValues() {
+      String [] res = new String[_selectedCols.size()];
+      int idx = 0;
+      for(Column c:_selectedCols)
+        res[idx++] = Objects.firstNonNull(c._name, String.valueOf(idx));
+      return res;
     }
 
     @Override protected boolean isSelected(String value) {
@@ -1785,9 +1808,48 @@ public class RequestArguments extends RequestStatics {
     public HexNonConstantColumnSelect(String name, H2OHexKey key, H2OHexKeyCol classCol) {
       super(name, key, classCol);
     }
+
+    @Override protected String queryElement() {
+      selectColumns();
+      return super.queryElement();
+    }
+
+    @Override
+    public String [] selectNames(){
+      ValueArray va = _key.value();
+      String [] res = new String [_selectedCols.size()];
+      int idx = 0;
+      for(Column c: _selectedCols){
+        double ratio = c._n/(double)va._numrows;
+        if(ratio < 0.99){
+          res[idx++] = c._name  + " (" + Math.round((1-ratio)*100) + "% NAs)";
+        } else
+          res[idx++] = c._name;
+      }
+      return res;
+    }
+
+
+    @Override protected Comparator<Column> colComp(){
+      ValueArray va = _key.value();
+      final double ratio = 1.0/va._numrows;
+      return new Comparator<ValueArray.Column>() {
+
+        @Override
+        public int compare(Column x, Column y) {
+          double xRatio = x._n*ratio;
+          double yRatio = y._n*ratio;
+          if(xRatio > 0.9 && yRatio > 0.9) return 0;
+          if(xRatio <= 0.9 && yRatio <= 0.9) return Double.compare(1-xRatio, 1-yRatio);
+          if(xRatio <= 0.9) return 1;
+          return -1;
+        }
+      };
+    }
+    double _maxNAsRatio = 0.1;
     ThreadLocal<ArrayList<String>> _constantColumns = new ThreadLocal<ArrayList<String>>();
-    
-   
+    ThreadLocal<Integer> _badColumns = new ThreadLocal<Integer>();
+
     @Override
     public boolean shouldIgnore(int i, ValueArray.Column ca ) {
       if(ca._min == ca._max){
@@ -1796,9 +1858,8 @@ public class RequestArguments extends RequestStatics {
         _constantColumns.get().add(Objects.firstNonNull(ca._name, String.valueOf(i)));
         return true;
       }
-      return super.shouldIgnore(i,ca);
+      return super.shouldIgnore(i, ca);
     }
-                             
 
     String _comment = "";
     @Override protected int[] defaultValue() {
@@ -1807,13 +1868,25 @@ public class RequestArguments extends RequestStatics {
       int selected = 0;
       for(int i = 0; i < va._cols.length; ++i)
         if(!shouldIgnore(i,va._cols[i]))
-          res[selected++] = i;
+          if((1.0 - (double)va._cols[i]._n/va._numrows) <= _maxNAsRatio)
+            res[selected++] = i;
+          else {
+            int val = 0;
+            if(_badColumns.get() != null) val = _badColumns.get();
+            _badColumns.set(val+1);
+          }
+
       return Arrays.copyOfRange(res,0,selected);
     }
     @Override
     public String queryComment(){
       if(_constantColumns.get() == null || _constantColumns.get().isEmpty())return "";
-      return "Ignoring constant columns " + _constantColumns.get().toString();
+      ArrayList<String> ignoredCols = _constantColumns.get();
+      Collections.sort(ignoredCols);
+      if(_badColumns.get() != null && _badColumns.get() > 0)
+        return "<div class='alert'><b> There were " + _badColumns.get() + " bad columns not selected by default. Ignoring " + _constantColumns.get().size() + " constant columns</b>: " + ignoredCols.toString() +"</div>";
+      else
+        return "<div class='alert'><b>Ignoring " + _constantColumns.get().size() + " constant columns</b>: " + ignoredCols.toString() +"</div>";
     }
   }
 
