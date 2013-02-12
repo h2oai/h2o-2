@@ -59,7 +59,10 @@ public class ImportS3 extends Request {
         o.addProperty(FILE, obj.getKey());
         succ.add(o);
       } catch( IOException e ) {
-        fail.add(new JsonPrimitive(obj.getKey()));
+        JsonObject o = new JsonObject();
+        o.addProperty(FILE, obj.getKey());
+        o.addProperty(ERROR, e.getMessage());
+        fail.add(o);
       }
     }
     json.add(SUCCEEDED, succ);

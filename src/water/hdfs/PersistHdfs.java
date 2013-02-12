@@ -85,7 +85,10 @@ public abstract class PersistHdfs {
         }
       }
     } catch( IOException e ) {
-      failed.add(new JsonPrimitive(p.toString()));
+      JsonObject o = new JsonObject();
+      o.addProperty(Constants.FILE, p.toString());
+      o.addProperty(Constants.ERROR, e.getMessage());
+      failed.add(o);
     }
   }
 
