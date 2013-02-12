@@ -31,8 +31,8 @@ public abstract class PersistHdfs {
       conf.addResource(new Path(p.getAbsolutePath()));
       System.out.println("[h2o,hdfs] resource " + p.getAbsolutePath() + " added to the hadoop configuration");
     } else {
+      conf = new Configuration();
       if( !Strings.isNullOrEmpty(H2O.OPT_ARGS.hdfs) ) {
-        conf = new Configuration();
         // setup default remote Filesystem - for version 0.21 and higher
         conf.set("fs.defaultFS",H2O.OPT_ARGS.hdfs);
         // To provide compatibility with version 0.20.0 it is necessary to setup the property
