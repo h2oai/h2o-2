@@ -127,11 +127,7 @@ public class Inspect extends Request {
       }
     } catch( IOException ioe ) { // Stop at any io error
     } finally {
-      try {
-        if( is != null )
-          is.close();
-      } catch( IOException ioe ) {
-      }
+      try { if( is != null ) is.close(); } catch( IOException ioe ) { }
     }
     if( off < bs.length )
       bs = Arrays.copyOf(bs, off); // Trim array to length read
@@ -212,10 +208,7 @@ public class Inspect extends Request {
       json.addProperty(MEAN, c._mean);
       json.addProperty(VARIANCE, c._sigma);
       json.addProperty(NUM_MISSING_VALUES, va._numrows - c._n);
-      if( c._domain != null )
-        json.addProperty(TYPE, "enum");
-      else
-        json.addProperty(TYPE, (c._size > 0 && c._scale == 1.0) ? "int" : "float");
+      json.addProperty(TYPE, c._domain != null ? "enum" : (c.isFloat() ? "int" : "float"));
       json.addProperty(ENUM_DOMAIN_SIZE, c._domain != null ? c._domain.length : 0);
       cols.add(json);
     }
