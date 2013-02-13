@@ -331,12 +331,12 @@ def upload_jar_to_remote_hosts(hosts, slow_connection=False):
         
     if not slow_connection:
         for h in hosts:
-            f = find_file('build/h2o.jar')
+            f = find_file('target/h2o.jar')
             h.upload_file(f, progress=prog)
             # skipping progress indicator for the flatfile
             h.upload_file(flatfile_name())
     else:
-        f = find_file('build/h2o.jar')
+        f = find_file('target/h2o.jar')
         hosts[0].upload_file(f, progress=prog)
         hosts[0].push_file_to_remotes(f, hosts[1:])
 
@@ -1093,7 +1093,7 @@ class ExternalH2O(H2O):
         super(ExternalH2O, self).__init__(*args, **kwargs)
 
     def get_h2o_jar(self):
-        return find_file('build/h2o.jar') # just a likely guess
+        return find_file('target/h2o.jar') # just a likely guess
 
     def get_ice_dir(self):
         return '/tmp/ice%d' % self.port # just a likely guess
@@ -1129,7 +1129,7 @@ class LocalH2O(H2O):
         self.ps = spawn[0]
 
     def get_h2o_jar(self):
-        return find_file('build/h2o.jar')
+        return find_file('target/h2o.jar')
 
     def get_flatfile(self):
         return self.flatfile
@@ -1257,7 +1257,7 @@ class RemoteH2O(H2O):
     def __init__(self, host, *args, **kwargs):
         super(RemoteH2O, self).__init__(*args, **kwargs)
 
-        self.jar = host.upload_file('build/h2o.jar')
+        self.jar = host.upload_file('target/h2o.jar')
         # need to copy the flatfile. We don't always use it (depends on h2o args)
         self.flatfile = host.upload_file(flatfile_name())
 

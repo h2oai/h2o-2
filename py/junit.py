@@ -5,7 +5,7 @@ class JUnit(unittest.TestCase):
     def testScoring(self):
         (ps, stdout, stderr) = h2o.spawn_cmd('junit', [
                 'java',
-                '-ea', '-jar', h2o.find_file('build/h2o.jar'),
+                '-ea', '-jar', h2o.find_file('target/h2o.jar'),
                 '-mainClass', 'org.junit.runner.JUnitCore',
                 # The tests
                 'water.score.ScorePmmlTest',
@@ -33,22 +33,22 @@ class JUnit(unittest.TestCase):
                     '-Dh2o.arg.ice_root='+h2o.tmp_dir('ice.'),
                     '-Dh2o.arg.name='+h2o.cloud_name(),
                     '-Dh2o.arg.ip='+h2o.get_ip_address(),
-                    '-ea', '-jar', h2o.find_file('build/h2o.jar'),
+                    '-ea', '-jar', h2o.find_file('target/h2o.jar'),
                     '-mainClass', 'org.junit.runner.JUnitCore',
                     # The tests
-                    'test.KVTest',
-                    'test.AppendKeyTest',
-                    'test.RandomForestTest',
-                    'test.AutoSerialTest',
-                    'test.DatasetCornerCasesTest',
-                    'test.ExprTest',
-                    'test.KeyToString',
-                    'test.RStringTest',
-                    'test.ParserTest',
-                    'test.MinorityClassTest',
-                    'test.GLMTest',
-                    'test.RBigDataTest',
-                    'test.KMeansTest'
+                    'hex.GLMTest',
+                    'hex.KMeansTest',
+                    'hex.MinorityClassTest',
+                    'hex.rf.RandomForestTest',
+                    'water.AppendKeyTest',
+                    'water.AutoSerialTest',
+                    'water.KVTest',
+                    'water.KeyToString',
+                    'water.api.RStringTest',
+                    'water.exec.ExprTest',
+                    'water.exec.RBigDataTest',
+                    'water.parser.DatasetCornerCasesTest',
+                    'water.parser.ParserTest'
                     ])
 
             rc = ps.wait(None)
@@ -67,9 +67,9 @@ class JUnit(unittest.TestCase):
     #def testMore(self):
     #        (ps, stdout, stderr) = h2o.spawn_cmd('junit', [
     #                'java',
-    #                '-ea', '-jar', h2o.find_file('build/h2o.jar'),
+    #                '-ea', '-jar', h2o.find_file('target/h2o.jar'),
     #                '-mainClass', 'org.junit.runner.JUnitCore',
-    #                'test.RFRunner',
+    #                'hex.rf.RFRunner',
     #                ])
     #
     #        rc = ps.wait(None)
