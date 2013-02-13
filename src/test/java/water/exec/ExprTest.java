@@ -1,10 +1,9 @@
-package test;
+package water.exec;
+
 import static org.junit.Assert.*;
-
 import org.junit.Test;
-
 import water.*;
-import water.exec.*;
+import water.util.TestUtil;
 
 public class ExprTest extends TestUtil {
   int i = 0;

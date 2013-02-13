@@ -3,7 +3,6 @@ package water;
 import java.util.Arrays;
 import java.util.Random;
 import org.junit.*;
-import water.*;
 import water.util.TestUtil;
 
 public class AppendKeyTest extends TestUtil {

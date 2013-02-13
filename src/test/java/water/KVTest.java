@@ -7,7 +7,6 @@ import com.google.gson.JsonObject;
 import hex.LinearRegression;
 import java.io.File;
 import org.junit.*;
-import water.*;
 import water.parser.ParseDataset;
 import water.util.TestUtil;
 
