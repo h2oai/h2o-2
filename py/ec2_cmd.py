@@ -109,6 +109,9 @@ def run_instances(count, ec2_config, waitForSSH=True):
 def ssh_live(ip, port=22):
     return h2o_cmd.port_live(ip,port)
 
+def terminate_reservation(reservation):
+    terminate_instances([ i.id in reservation.instances ])
+
 def terminate_instances(instances):
     '''terminate all the instances given by its ids'''
     if not instances: return
@@ -219,7 +222,7 @@ def main():
     parser.add_argument('action', choices=['create', 'terminate', 'stop', 'reboot', 'start'],  help='EC2 instances action')
     parser.add_argument('--config', help='Configuration file', type=str, default=None)
     parser.add_argument('--instances', help='Number of instances to launch', type=int, default=DEFAULT_NUMBER_OF_INSTANCES)
-    parser.add_argument('--hosts', help='Hosts file describing existing EC2 instances', type=str, default=None)
+    parser.add_argument('--hosts', help='Hosts file describing existing EC2 instances (if not specified default settings are used)', type=str, default=None)
     args = parser.parse_args()
 
     if (args.action == 'create'):
