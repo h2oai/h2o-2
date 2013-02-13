@@ -99,7 +99,7 @@ def run_instances(count, ec2_config, waitForSSH=True):
         return reservation
     except:
         try:
-            terminate_instances(reservation)
+            terminate_reservation(reservation)
         except:
             pass
         raise
