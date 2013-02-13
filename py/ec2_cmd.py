@@ -98,6 +98,7 @@ def run_instances(count, ec2_config, waitForSSH=True):
 
         return reservation
     except:
+        print "Unexpected error:", sys.exc_info()[0]
         try:
             terminate_reservation(reservation)
         except:
@@ -110,7 +111,7 @@ def ssh_live(ip, port=22):
     return h2o_cmd.port_live(ip,port)
 
 def terminate_reservation(reservation):
-    terminate_instances([ i.id in reservation.instances ])
+    terminate_instances([ i.id for i in reservation.instances ])
 
 def terminate_instances(instances):
     '''terminate all the instances given by its ids'''
