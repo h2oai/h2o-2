@@ -227,4 +227,3 @@ def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, t
         myKeyForParseResult = keyForParseResult
     return node.parse(s3_key, myKeyForParseResult, timeoutSecs=timeoutSecs, **kwargs)
 
-
