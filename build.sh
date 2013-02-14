@@ -22,8 +22,8 @@ set -o errexit   ## set -e : exit the script if any statement returns a non-true
 # basic build properties
 # ------------------------------------------------------------------------------
 # This is where the source files (java) are relative to the path of this file
-SRC=src
-TESTSRC=test-src
+    SRC=src/main/java
+TESTSRC=src/test/java
 # and this is where the jar contents is stored relative to this file again
 JAR_ROOT=lib
 
@@ -32,7 +32,7 @@ JAR_ROOT=lib
 DEPENDENCIES="${JAR_ROOT}/jama/*${SEP}${JAR_ROOT}/apache/*${SEP}${JAR_ROOT}/junit/*${SEP}${JAR_ROOT}/gson/*${SEP}${JAR_ROOT}/javassist.jar${SEP}${JAR_ROOT}/poi/*${SEP}${JAR_ROOT}/trove/*${SEP}${JAR_ROOT}/s3/*${SEP}${JAR_ROOT}/jets3t/*"
 
 DEFAULT_HADOOP_VERSION="1.0.0"
-OUTDIR="build"
+OUTDIR="target"
 
 JAVAC=`which javac`
 

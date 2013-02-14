@@ -11,7 +11,7 @@ hosts = [
 # to come up quickly and fight with each other
 for h in hosts:
     print 'Uploading jar to', h
-    h.upload_file(h2o.find_file('build/h2o.jar'))
+    h.upload_file(h2o.find_file('target/h2o.jar'))
 
 nodes = []
 for h in hosts:
