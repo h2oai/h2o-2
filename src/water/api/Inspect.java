@@ -18,11 +18,10 @@ import com.google.gson.*;
 
 public class Inspect extends Request {
   private static final HashMap<String, String> _displayNames = new HashMap<String, String>();
-  private static final long                    INFO_PAGE     = -1;
-
-  private final H2OExistingKey                 _key          = new H2OExistingKey(KEY);
-  private final LongInt                        _offset       = new LongInt(OFFSET, 0L, INFO_PAGE, Long.MAX_VALUE, "");
-  private final Int                            _view         = new Int(VIEW, 100, 0, 10000);
+  private static final long     INFO_PAGE = -1;
+  private final H2OExistingKey _key       = new H2OExistingKey(KEY);
+  private final LongInt        _offset    = new LongInt(OFFSET, 0L, INFO_PAGE, Long.MAX_VALUE, "");
+  private final Int            _view      = new Int(VIEW, 100, 0, 10000);
 
   static {
     _displayNames.put(BASE, "Base");
@@ -87,14 +86,10 @@ public class Inspect extends Request {
     return serveUnparsedValue(val);
   }
 
-  // Look at unparsed data
-  private final Response serveUnparsedValue(Value v) {
-    JsonObject result = new JsonObject();
-    result.addProperty(VALUE_TYPE, "unparsed");
-
+  // Look at unparsed data; guess its setup
+  public static CsvParser.Setup csvGuessValue(Value v) {
     // See if we can make sense of the first few rows.
     byte[] bs = v.getFirstBytes(); // Read some bytes
-    int zipped_len = bs.length; // Bytes while compressed (if any)
     int off = 0;
     // First decrypt compression
     InputStream is = null;
@@ -133,36 +128,27 @@ public class Inspect extends Request {
       bs = Arrays.copyOf(bs, off); // Trim array to length read
 
     // Now try to interpret the unzipped data as a CSV
-    int[] rows_cols = CsvParser.inspect(bs);
-    if( rows_cols != null && rows_cols[1] != 0 ) { // Able to parse sanely?
-      double bytes_per_row = (double) zipped_len / rows_cols[0];
+    return CsvParser.inspect(bs);
+  }
+
+    // Build a response JSON
+  private final Response serveUnparsedValue(Value v) {
+    JsonObject result = new JsonObject();
+    result.addProperty(VALUE_TYPE, "unparsed");
+
+    CsvParser.Setup setup = csvGuessValue(v);
+    if( setup != null && setup._data[1].length > 0 ) { // Able to parse sanely?
+      int zipped_len = v.getFirstBytes().length;
+      double bytes_per_row = (double) zipped_len / setup._numlines;
       long rows = (long) (v.length() / bytes_per_row);
       result.addProperty(NUM_ROWS, "~" + rows); // approx rows
-      result.addProperty(NUM_COLS, rows_cols[1]);
+      result.addProperty(NUM_COLS, setup._data[1].length);
+      result.add(ROWS, new Gson().toJsonTree(setup._data));
     } else {
       result.addProperty(NUM_ROWS, "unknown");
       result.addProperty(NUM_COLS, "unknown");
     }
     result.addProperty(VALUE_SIZE, v.length());
-
-    // Now inject the first few raw rows into the JSON response.
-    JsonArray ary = new JsonArray();
-    boolean bad = false;
-    int start = 0;
-    for( int i = 0; i < bs.length; i++ ) {
-      if( bs[i] >= 128 || (bs[i] < 32 && !Character.isWhitespace(bs[i])) )
-        bad = true;
-      if( bs[i] == '\n' ) {
-        ary.add(new JsonPrimitive(new String(bs, start, i - start)));
-        if( ary.size() >= 5 )
-          break;
-        start = i + 1;
-      }
-    }
-    if( ary.size() < 5 )
-      ary.add(new JsonPrimitive(new String(bs, start, bs.length - start)));
-    if( !bad ) // Only add rows if they look sane
-      result.add(ROWS, ary);
 
     // The builder Response
     Response r = Response.done(result);

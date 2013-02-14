@@ -452,22 +452,29 @@ NEXT_CHAR:
    * columns, the separator used and whether the CSV file had a header or not.
    */
   public static class Setup {
-    final byte separator;
-    final String[] columnNames;
-    final boolean hasHeader;
-    public Setup(byte separator, String[] columnNames, boolean hasHeader) {
-      this.separator = separator;
-      this.columnNames = columnNames;
-      this.hasHeader = hasHeader;
+    public final byte _separator;
+    public final boolean _header;
+    // Row zero is column names.
+    // Remaining rows are parsed from the given data, until we run out
+    // of data or hit some arbitrary display limit.
+    public final String[][] _data;
+    public final int _numlines;        // Number of lines parsed
+    public final byte[] _bits;  // The original bits
+    public Setup(byte separator, boolean header, String[][] data, int numlines, byte[] bits) {
+      _separator = separator;
+      _header = header;
+      _data = data;
+      _numlines = numlines;
+      _bits = bits;
     }
   }
 
-  /** Separators recognized by the parser. You can add new separators to this
-   * list and the parser will automatically attempt to recognie them. In case of
-   * doubt the separators are listed in descending order of probability, with
-   * space being the last one - space must always be the last one as it is used
-   * if all other fails because multiple spaces can be used as a single
-   * separator.
+  /** Separators recognized by the parser.  You can add new separators to this
+   *  list and the parser will automatically attempt to recognize them.  In
+   *  case of doubt the separators are listed in descending order of
+   *  probability, with space being the last one - space must always be the
+   *  last one as it is used if all other fails because multiple spaces can be
+   *  used as a single separator.
    */
   private static byte[] separators = new byte[] { ',', ';', '|', '\t', ' ' };
 
@@ -502,7 +509,7 @@ NEXT_CHAR:
   }
 
   /** Determines the tokens that are inside a line and returns them as strings
-   * in an array. Assumes the given separator.
+   *  in an array.  Assumes the given separator.
    */
   private static String[] determineTokens(String from, byte separator) {
     ArrayList<String> tokens = new ArrayList();
@@ -554,73 +561,74 @@ NEXT_CHAR:
 
   /** Assumption is no numbers in l1 and at least one number in l2.
    *
-   * For simplicity I am using Java's parsing functions. Header means that all
+   * For simplicity I am using Java's parsing functions.  Header means that all
    * tokens in first line are strings and at least one token in the second line
    * is a number.
    */
-  private static Setup guessColumnNames(String[] l1, String[] l2, byte separator) {
+  private static Setup guessColumnNames(String[] l1, String[] l2, byte separator, ArrayList<String> lines, int numlines, byte[] bits) {
     boolean hasNumber = false;
-    for (int i = 0; i < l1.length; ++i) {
+    for( String s : l1 ) {
       try {
-        Double.parseDouble(l1[i].trim());
-        hasNumber = true;
+        Double.parseDouble(s);
+        hasNumber = true;       // Number in 1st row guesses: No Column Header
         break;
-      } catch (NumberFormatException e) {
-        // pass
-      }
+      } catch (NumberFormatException e) { /*Pass - determining if number is possible*/ }
     }
+    boolean hasHeader = false;
     if (!hasNumber) {
-      for (int i = 0; i < l2.length; ++i) {
+      for( String s : l2 ) {
         try {
-          Double.parseDouble(l2[i].trim());
-          hasNumber = true;
+          Double.parseDouble(s);
+          hasHeader = true; // Has number in 2nd row, so guess: has Column Header
           break;
-        } catch (NumberFormatException e) {
-        // pass
-        }
+        } catch (NumberFormatException e) { /*Pass - determining if number is possible*/ }
       }
-    } else {
-      hasNumber = false;
     }
-    if (!hasNumber) {
-      for (int i = 0; i < l1.length; ++i)
-        l1[i] = String.valueOf(i);
+    
+    // Return an array with headers in data[0] and the remaining rows pre-parsed.
+    String[][] data = new String[lines.size()+(hasHeader?0:1)][];
+    int l=0;
+    if( !hasHeader ) {
+      data[l++] = new String[l1.length];
+      for( int i=0; i<l1.length; i++ ) data[0][i] = Integer.toString(i);
     }
-    return new Setup(separator, l1, hasNumber);
+    data[l++] = l1;
+    data[l++] = l2;
+    int m=2;
+    while( l < lines.size() )
+      data[l++] = determineTokens(lines.get(m++), separator);
+    
+    return new Setup(separator, hasHeader, data, numlines, bits);
   }
 
-  /** Determines the CSV parser setup from the first two lines.
+  /** Determines the CSV parser setup from the first two lines.  Also parses
+   *  the next few lines, tossing out comments and blank lines.
    *
-   * A separator is selected if both two lines have the same ammount of them
-   * and the tokenization then returns same number of columns.
+   *  A separator is selected if both two lines have the same ammount of them
+   *  and the tokenization then returns same number of columns.
    */
   public static Setup guessCsvSetup(byte[] bits) {
-    String[] lines = new String[2];
+    ArrayList<String> lines = new ArrayList();
     int offset = 0;
-    while (offset < bits.length) {
+    int numlines = 0;
+    while (offset < bits.length ) {
       int lineStart = offset;
       while ((offset < bits.length) && (bits[offset] != CHAR_CR) && (bits[offset] != CHAR_LF)) ++offset;
       int lineEnd = offset;
       ++offset;
       if ((offset < bits.length) && (bits[offset] == CHAR_LF)) ++offset;
-      if (bits[lineStart] == '#')
-        continue;
+      if (bits[lineStart] == '#') continue; // Ignore comment lines
       if (lineEnd>lineStart) {
-        String line = new String(bits,lineStart, lineEnd-lineStart);
-        if (lines[0] == null) {
-          lines[0] = line;
-        } else {
-          lines[1] = line;
-          break;
-        }
+        numlines++;                           // Estimate data lines in this chunk
+        if( lines.size() < 6 )
+          lines.add(new String(bits,lineStart, lineEnd-lineStart));
       }
     }
     // we do not have enough lines to decide
-    if (lines[1] == null)
-      return null;
+    if( lines.size() < 2 ) return null;
     // when we have two lines, calculate the separator counts on them
-    int[] s1 = determineSeparatorCounts(lines[0]);
-    int[] s2 = determineSeparatorCounts(lines[1]);
+    int[] s1 = determineSeparatorCounts(lines.get(0));
+    int[] s2 = determineSeparatorCounts(lines.get(1));
     // now we have the counts - if both lines have the same number of separators
     // the we assume it is the separator. Separators are ordered by their
     // likelyhoods. If no separators have same counts, space will be used as the
@@ -628,11 +636,11 @@ NEXT_CHAR:
     for (int i = 0; i < s1.length; ++i)
       if (((s1[i] == s2[i]) && (s1[i] != 0)) || (i == separators.length-1)) {
         try {
-          String[] t1 = determineTokens(lines[0], separators[i]);
-          String[] t2 = determineTokens(lines[1], separators[i]);
+          String[] t1 = determineTokens(lines.get(0), separators[i]);
+          String[] t2 = determineTokens(lines.get(1), separators[i]);
           if (t1.length != t2.length)
             continue;
-          return guessColumnNames(t1,t2,separators[i]);
+          return guessColumnNames(t1,t2,separators[i],lines,numlines, bits);
         } catch (Exception e) {
           // pass
         }
@@ -640,23 +648,7 @@ NEXT_CHAR:
     return null;
   }
 
-  public static int[] inspect(byte[] bits) {
-    Setup s = guessCsvSetup(bits);
-    if (s == null)
-      return null;
-    int lines = 0;
-    int offset = 0;
-    while (offset < bits.length) {
-      int lineStart = offset;
-      while ((offset < bits.length) && (bits[offset] != CHAR_CR) && (bits[offset] != CHAR_LF)) ++offset;
-      int lineEnd = offset;
-      ++offset;
-      if ((offset < bits.length) && (bits[offset] == CHAR_LF)) ++offset;
-      if (bits[lineStart] == '#')
-        continue;
-      if (lineEnd>lineStart)
-        ++lines;
-    }
-    return new int[] { lines, s.columnNames.length };
+  public static Setup inspect(byte[] bits) {
+    return guessCsvSetup(bits);
   }
 }

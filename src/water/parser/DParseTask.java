@@ -273,11 +273,11 @@ public final class DParseTask extends MRTask {
         CsvParser.Setup setup = CsvParser.guessCsvSetup(bits);
         if (setup == null)
           throw new Exception("Unable to determine the separator or number of columns on the dataset");
-        _colNames = setup.columnNames;
+        _colNames = setup._data[0];
         setColumnNames(_colNames);
-        _skipFirstLine = setup.hasHeader;
+        _skipFirstLine = setup._header;
         // set the separator
-        this._sep = setup.separator;
+        this._sep = setup._separator;
         // if parsing value array, initialize the nrows array
         if( _sourceDataset._isArray != 0 ) {
           ValueArray ary = ValueArray.value(_sourceDataset);

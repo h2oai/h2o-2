@@ -76,6 +76,10 @@ public class StoreView extends Request {
     return r;
   }
 
+  static private String noNaN( double d ) {
+    return (Double.isNaN(d) || Double.isInfinite(d)) ? "" : Double.toString(d);
+  }
+
   private JsonObject formatKeyRow(H2O cloud, Key key, Value val) {
     JsonObject result = new JsonObject();
     result.addProperty(KEY, key.toString());
@@ -85,6 +89,7 @@ public class StoreView extends Request {
     JsonObject jcols[] = new JsonObject[]{mt,mt,mt,mt,mt};
     long rows = -1;
     int cols = -1;
+    String str = "";
 
     // See if this is a structured ValueArray. Report results from a total parse.
     if( val._isArray != 0 ) {
@@ -92,20 +97,23 @@ public class StoreView extends Request {
       if( ary._cols.length > 1 || ary._cols[0]._size != 1 ) {
         rows = ary._numrows;
         cols = ary._cols.length;
-        for( int i = 0; i < 5; ++i ) {
+        result.addProperty(ROWS,rows); // exact rows
+        result.addProperty(COLS,cols); // exact cols
+        for( int i = 0; i < jcols.length; ++i ) {
           JsonObject col = new JsonObject();
           if (i < cols) {
             ValueArray.Column c = ary._cols[i];
             if (c._size!=0) {
+              col.addProperty(HEADER,c._name);
               if( c._domain==null ) {
-                col.addProperty(MIN, c._min);
-                col.addProperty(MEAN, c._mean);
-                col.addProperty(MAX, c._max);
+                col.addProperty(MIN , noNaN(c._min ));
+                col.addProperty(MEAN, noNaN(c._mean));
+                col.addProperty(MAX , noNaN(c._max ));
               } else if( c._domain.length > 0 ) {
                 int max = c._domain.length;
-                col.addProperty(MIN, c._domain[0]);
+                col.addProperty(MIN , c._domain[0]);
                 col.addProperty(MEAN, c._domain[max/2]);
-                col.addProperty(MAX, c._domain[max-1]);
+                col.addProperty(MAX , c._domain[max-1]);
               }
             }
           }
@@ -116,46 +124,53 @@ public class StoreView extends Request {
 
     // If not a proper ValueArray, estimate by parsing the first 1meg chunk
     if( rows == -1 ) {
-      byte[] bs = DKV.get(key).getFirstBytes();
-      int[] rows_cols = CsvParser.inspect(bs);
-      if( rows_cols != null && rows_cols[1] != 0 ) { // Able to parse sanely?
-        double bytes_per_row = (double)bs.length/rows_cols[0];
-        rows = (long)(val.length()/bytes_per_row);
-        cols = rows_cols[1];
-        result.addProperty(ROWS,"~"+rows); // approx rows
-      } else
+      CsvParser.Setup setup = Inspect.csvGuessValue(val);
+      if( setup != null && setup._data[1].length > 0 ) { // Able to parse sanely?
+        int zipped_len = val.getFirstBytes().length;
+        double bytes_per_row = (double) zipped_len / setup._numlines;
+        rows = (long) (val.length() / bytes_per_row);
+        cols = setup._data[1].length;
+        result.addProperty(ROWS, "~" + rows);
+        result.addProperty(COLS, cols);
+        for( int i=0; i<Math.min(cols,jcols.length); i++ ) {
+          JsonObject col = new JsonObject();
+          col.addProperty(HEADER,setup._data[0][i]); // First 4 rows, including labels
+          col.addProperty(MIN   ,setup._data[1][i]); // as MIN/MEAN/MAX
+          col.addProperty(MEAN  ,setup._data[2][i]);
+          col.addProperty(MAX   ,setup._data[3][i]);
+          jcols[i] = col;
+        }
+      } else {
         result.addProperty(ROWS,""); // no rows
-    } else
-      result.addProperty(ROWS,rows); // exact rows
-    result.addProperty(COLS,rows==-1?"":Integer.toString(cols));
+        result.addProperty(COLS,"");
+      }
+      // Now the first 100 bytes of Value as a String
+      StringBuilder sb = new StringBuilder();
+      byte[] b = setup._bits;   // Unzipped bits, if any
+      int newlines=0;
+      int len = Math.min(b.length,100);
+      for( int i=0; i<len; i++ ) {
+        byte c = b[i];
+        if( c == '&' ) sb.append("&amp;");
+        else if( c == '<' ) sb.append("&lt;");
+        else if( c == '>' ) sb.append("&gt;");
+        else if( c == '\r' ) ;    // ignore windows crlf
+        else if( c == '\n' ) {    // newline
+          if( ++newlines >= 4 ) break; // limit to 4 lines visually
+          sb.append("<br>");           // visual newline
+        } else if( c == ',' && i+1<len && b[i+1]!=' ' )
+          sb.append(", ");
+        else if( c < 32 ) sb.append('?');
+        else sb.append((char)c);
+      }
+      if( val.length() > len ) sb.append("...");
+      str = sb.toString();
+    }
 
-    // Short view of next 5 cols
     for( int i=0; i<jcols.length; i++ )
       result.add("col_"+i,jcols[i]);
 
-    // Now the first 100 bytes of Value as a String
-    byte[] b = new byte[100]; // Amount to read
-    int len=0;
-    try {
-      len = val.openStream().read(b); // Read, which might force loading.
-    } catch( IOException e ) {}
-    StringBuilder sb = new StringBuilder();
-    int newlines=0;
-    for( int i=0; i<len; i++ ) {
-      byte c = b[i];
-      if( c == '&' ) sb.append("&amp;");
-      else if( c == '<' ) sb.append("&lt;");
-      else if( c == '>' ) sb.append("&gt;");
-      else if( c == '\r' ) ;    // ignore windows crlf
-      else if( c == '\n' ) { sb.append("<br>"); if( newlines++ > 5 ) break; }
-      else if( c == ',' && i+1<len && b[i+1]!=' ' )
-        sb.append(", ");
-      else if( c < 32 ) sb.append('?');
-      else sb.append((char)c);
-    }
-    if( val.length() > len ) sb.append("...");
-    result.addProperty(VALUE,sb.toString());
-
+    result.addProperty(VALUE,str); // VALUE last in the JSON
     return result;
   }
 }
