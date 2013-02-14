@@ -1,104 +1,52 @@
 package water.score;
 
 import java.util.*;
-import water.H2O;
 import javassist.*;
+import water.*;
+import java.lang.reflect.Constructor;
 
 /**
  * Scorecard model - decision table.
  */
-public class ScorecardModel {
-
-  /** Name */
-  final String _name;
-  /** Output column */
-  String _predictor;
+public class ScorecardModel extends ScoreModel {
   /** Initial score */
   final double _initialScore;
-
-  /** Scorecard features */
-  ArrayList<String> _features;
-  ArrayList<RuleTable> _rules;
-
-  final static HashMap<String,String> CLASS_NAMES = new HashMap<String,String>();
-
-  // Convert an XML name to a java name
-  final static String xml2jname( String xml ) {
-    // Convert pname to a valid java name
-    StringBuilder nn = new StringBuilder();
-    char[] cs = xml.toCharArray();
-    if( !Character.isJavaIdentifierStart(cs[0]) )
-      nn.append('X');
-    for( char c : cs ) {
-      if( !Character.isJavaIdentifierPart(c) ) {
-        nn.append('_');
-      } else {
-        nn.append(c);
-      }
-    }
-    String jname = nn.toString();
-    return jname;
-  }
-
-  protected ScorecardModel(final String name, double initialScore) {
-    _name = name;
-    _initialScore = initialScore;
-    _features = new ArrayList();
-    _rules = new ArrayList();
-  }
-
-
-  // A mapping from the dense columns desired by the model, to the above
-  // feature list, computed by asking the model for a mapping (given a list of
-  // features).  Some features may be unused and won't appear in the mapping.
-  // If the data row features list does not mention all the features the model
-  // needs, then this map will contain a -1 for the missing feature index.
-  public int[] columnMapping( String[] features ) {
-    String[] fs = _features.toArray(new String[0]); // The model features
-    int[] map = new int[fs.length];
-    for( int i=0; i<fs.length; i++ ) {
-      map[i] = -1;              // Assume it is missing
-      for( int j=0; j<features.length; j++ ) {
-        if( fs[i].equals(features[j]) ) {
-          if( map[i] != -1 ) throw new IllegalArgumentException("duplicate feature "+fs[i]);
-          map[i] = j;
-        }
-      }
-      if( map[i] == -1 ) System.err.println("[h2o] Warning: feature "+fs[i]+" used by the model is not in the provided feature list from the data");
-    }
-    return map;
-  }
+  /** The rules to each for each feature, they map 1-to-1 with the Model's
+   *  column list.  */
+  final RuleTable _rules[];
 
   /** Score this model on the specified row of data.  */
   public double score(final HashMap<String, Comparable> row ) {
-    return score0(row);
+    // By default, use the scoring interpreter.  The Builder JITs a new
+    // subclass with an overloaded 'score(row)' call which has a JIT'd version
+    // of the rules.  i.e., calling 'score(row)' on the returned ScorecardModel
+    // instance runs the fast version, but you can cast to the base version if
+    // you want the interpreter.
+    return score_interpreter(row);
   }
   // Use the rule interpreter
-  public double score0(final HashMap<String, Comparable> row ) {
+  public double score_interpreter(final HashMap<String, Comparable> row ) {
     double score = _initialScore;
-    for( int i=0; i<_features.size(); i++ ) {
-      RuleTable ruleTable = _rules.get(i);
-      double s = ruleTable.score(row.get(_features.get(i)));
-      score += s;
-    }
+    for( int i=0; i<_rules.length; i++ )
+      score += _rules[i].score(row.get(_colNames[i]));
     return score;
   }
   public double score(int[] MAP, String[] SS, double[] DS) {
-    return score0(MAP,SS,DS);
+    return score_interpreter(MAP,SS,DS);
   }
-  public double score0(int[] MAP, String[] SS, double[] DS) {
+  private double score_interpreter(int[] MAP, String[] SS, double[] DS) {
     double score = _initialScore;
-    for( int i=0; i<_features.size(); i++ ) {
-      RuleTable ruleTable = _rules.get(i);
+    for( int i=0; i<_rules.length; i++ ) {
       int idx = MAP[i];
       String ss = idx==-1 ? null       : SS[idx];
       double dd = idx==-1 ? Double.NaN : DS[idx];
-      double s = ruleTable.score(ss,dd);
+      double s = _rules[i].score(ss,dd);
       score += s;
     }
     return score;
   }
 
+  // JIT a score method with signature 'double score(HashMap row)'
   public void makeScoreHashMethod(CtClass scClass) {
     // Map of previously extracted PMML names, and their java equivs
     HashMap<String,String> vars = new HashMap<String,String>();
@@ -106,8 +54,8 @@ public class ScorecardModel {
     sb.append("double score( java.util.HashMap row ) {\n"+
               "  double score = "+_initialScore+";\n");
     try {
-      for( int i=0; i<_features.size(); i++ )
-        _rules.get(i).makeFeatureHashMethod(sb,vars,scClass);
+      for( int i=0; i<_rules.length; i++ )
+        _rules[i].makeFeatureHashMethod(sb,vars,scClass);
       sb.append("  return score;\n}\n");
       CtMethod happyMethod = CtMethod.make(sb.toString(),scClass);
       scClass.addMethod(happyMethod);
@@ -126,8 +74,8 @@ public class ScorecardModel {
     sb.append("double score( int[] MAP, java.lang.String[] SS, double[] DS ) {\n"+
               "  double score = "+_initialScore+";\n");
     try {
-      for( int i=0; i<_features.size(); i++ )
-        _rules.get(i).makeFeatureAryMethod(sb,vars,scClass,i);
+      for( int i=0; i<_rules.length; i++ )
+        _rules[i].makeFeatureAryMethod(sb,vars,scClass,i);
       sb.append("  return score;\n}\n");
 
       CtMethod happyMethod = CtMethod.make(sb.toString(),scClass);
@@ -153,11 +101,15 @@ public class ScorecardModel {
 
   /** Feature decision table */
   public static class RuleTable {
-    final String     _name;
-    final Rule[]  _rule;
-    final DataTypes  _type;
+    final String _name;
+    final Rule[] _rule;
+    final DataTypes _type;
 
-    public RuleTable(final String name, final DataTypes type, final Rule[] decisions) { _name = name; _type = type; _rule = decisions; }
+    public RuleTable(final String name, final DataTypes type, final Rule[] decisions) { _name = name; _type = type; _rule = decisions; 
+      if( name.startsWith("i") )
+        System.out.println(type);
+      assert type != null;
+    }
 
     public void makeFeatureHashMethod( StringBuilder sbParent, HashMap<String,String> vars, CtClass scClass ) {
       String jname = xml2jname(_name);
@@ -452,35 +404,31 @@ public class ScorecardModel {
     @Override public StringBuilder toJavaStr( StringBuilder sb, String jname ) { return makeStr(sb,jname,"||"); }
   }
 
-  public static abstract class SetPredicate extends Predicate {
-    public Object[] _values;
-    public SetPredicate(Object[] value) { _values = value; }
-  }
-
-  public static class IsIn extends SetPredicate {
-    public IsIn(Object[] value) { super(value); }
+  public static class IsIn extends Predicate {
+    public String[] _values;
+    public IsIn(String[] values) { _values = values; }
     @Override boolean match(Object value) {
-      for( Object t : _values ) if (t.equals(value)) return true;
+      for( String t : _values ) if (t.equals(value)) return true;
       return false;
     }
     @Override boolean match(String s, double d) {
-      for( String t : (String[])_values ) if (t.equals(s)) return true;
+      for( String t : _values ) if (t.equals(s)) return true;
       return false;
     }
     @Override public String toString() {
       String x = "";
-      for( Object s: _values ) x += s.toString() + " ";
+      for( String s: _values ) x += s + " ";
       return "X is in {" + x + "}"; }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) { throw H2O.unimpl(); }
     @Override StringBuilder toJavaStr( StringBuilder sb, String jname ) {
-      for( String s : (String[])_values )
+      for( String s : _values )
         sb.append("\"").append(s).append("\".equals(").append(jname).append(") || ");
       return sb.append("false");
     }
   }
 
   public static class IsNotIn extends IsIn {
-    public IsNotIn(Object[] value) { super(value); }
+    public IsNotIn(String[] values) { super(values); }
     @Override boolean match(Object value) { return ! super.match(value); }
     @Override boolean match(String s, double d) { return ! super.match(s,d); }
     @Override public StringBuilder toJavaNum( StringBuilder sb, String jname ) { throw H2O.unimpl(); }
@@ -493,7 +441,7 @@ public class ScorecardModel {
 
   @Override
   public String toString() {
-    return "ScorecardModel [_name=" + _name + ", _predictor=" + _predictor + ", _initialScore=" + _initialScore + "]";
+    return super.toString()+", _initialScore=" + _initialScore;
   }
 
   // Happy Helper Methods for the generated code
@@ -532,55 +480,52 @@ public class ScorecardModel {
   }
 
 
-  /** Scorecard model builder */
-  public static class Builder {
-    ScorecardModel _scm;
-    private ClassPool _pool; // The pool of altered classes
+  private ScorecardModel(String name, String[] colNames, double initialScore, RuleTable[] rules) {
+    super(name,colNames);
+    assert colNames.length==rules.length;
+    _initialScore = initialScore;
+    _rules = rules;
+  }
+  protected ScorecardModel(ScorecardModel base) {
+    this(base._name,base._colNames,base._initialScore,base._rules);
+  }
 
-    public Builder(final String name, double initialScore) { _scm = new ScorecardModel(name, initialScore); }
 
-    // JIT the fast version
-    public final ScorecardModel build() {
-      // javassist support for rewriting class files
-      _pool = ClassPool.getDefault();
-      try {
-        // Make a unique class name
-        String cname = xml2jname(_scm._name);
-        if( CLASS_NAMES.containsKey(cname) ) {
-          int i=0;
-          while( CLASS_NAMES.containsKey(cname+i) ) i++;
-          cname = cname+i;
-        }
-        CLASS_NAMES.put(cname,cname);
+  /** Scorecard model builder: JIT a subclass with the fast version wired in to
+   *  'score(row)' */
+  public static ScorecardModel make(final String name, final double initialScore, RuleTable[] rules) {
+    // Get the list of features
+    String[] colNames = new String[rules.length];
+    for( int i=0; i<rules.length; i++ )
+      colNames[i] = rules[i]._name;
 
-        CtClass scClass = _pool.makeClass(cname);
-        CtClass baseClass = _pool.get("water.score.ScorecardModel"); // Full Name Lookup
-        scClass.setSuperclass(baseClass);
-        // Produce the scoring method
-        _scm.makeScoreHashMethod(scClass);
-        _scm.makeScoreAryMethod(scClass);
+    // javassist support for rewriting class files
+    ClassPool _pool = ClassPool.getDefault();
+    try {
+      // Make a javassist class in the java hierarchy
+      String cname = uniqueClassName(name);
+      CtClass scClass = _pool.makeClass(cname);
+      CtClass baseClass = _pool.get("water.score.ScorecardModel"); // Full Name Lookup
+      scClass.setSuperclass(baseClass);
+      // Produce the scoring method(s)
+      ScorecardModel scm = new ScorecardModel(name, colNames,initialScore, rules);
+      scm.makeScoreHashMethod(scClass);
+      scm.makeScoreAryMethod(scClass);
+      // Produce a 1-arg constructor
+      String cons = "  public "+cname+"(water.score.ScorecardModel base) { super(base); }";
+      CtConstructor happyConst = CtNewConstructor.make(cons,scClass);
+      scClass.addConstructor(happyConst);
 
-        String cons = "  public "+cname+"() { super(\""+_scm._name+"\","+_scm._initialScore+"); }";
-        CtConstructor happyConst = CtNewConstructor.make(cons,scClass);
-        scClass.addConstructor(happyConst);
+      Class myClass = scClass.toClass(ScorecardModel.class.getClassLoader(), null);
+      Constructor<ScorecardModel> co = myClass.getConstructor(ScorecardModel.class);
+      ScorecardModel jitted_scm = co.newInstance(scm);
+      return jitted_scm;
 
-        Class myClass = scClass.toClass(ScorecardModel.class.getClassLoader(), null);
-        ScorecardModel scm = (ScorecardModel)myClass.newInstance();
-        scm._features = _scm._features;
-        scm._rules    = _scm._rules   ;
-        return scm;
-
-      } catch( Exception e ) {
-        System.err.println("javassist failed: "+e);
-        e.printStackTrace();
-      }
-      return  _scm;
+    } catch( Exception e ) {
+      System.err.println("javassist failed: "+e);
+      e.printStackTrace();
     }
-
-    public final void addRuleTable(final String featureName, final DataTypes type, final List<Rule> rules) {
-      _scm._features.add(featureName);
-      _scm._rules   .add(new RuleTable(featureName, type, rules.toArray(new Rule[rules.size()])));
-    }
+    return null;
   }
 
   /** Features datatypes promoted by PMML spec. */

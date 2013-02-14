@@ -97,8 +97,8 @@ public class PMMLParser extends CustomParser {
     @Override
     public void endElement(String uri, String localName, String qName) throws SAXException {
       if (qName.equals("Characteristic")) {
-        assert _featureTypes.containsKey(_name);
-        _ruleTables.add(new ScorecardModel.RuleTable(_name, _featureTypes.get(_name), _rules.toArray(new Rule[0])));
+        if( _featureTypes.containsKey(_name) ) // Drop broken descriptions
+          _ruleTables.add(new RuleTable(_name, _featureTypes.get(_name), _rules.toArray(new Rule[0])));
         _name = null;
         _rules.clear();
       } else if (qName.equals("Attribute")) {

@@ -40,7 +40,7 @@ public abstract class ScoreModel {
   final static HashSet<String> CLASS_NAMES = new HashSet<String>();
 
   // Make a unique class name for jit'd subclasses of ScoreModel
-  protected static uniqueClassName(String name) {
+  protected static String uniqueClassName(String name) {
     // Make a unique class name
     String cname = xml2jname(name);
     if( CLASS_NAMES.contains(cname) ) {
