@@ -53,7 +53,7 @@ public abstract class Model extends Iced {
     C._name = "response";
     C._domain = classNames;
     C._min = 0.0;
-    C._max = classNames.length-1;
+    C._max = classNames==null ? 0 : classNames.length-1;
     _va = new ValueArray(null,0,8*Cs.length,Cs);
   }
   /** Artificial model.  The 'va' defines the compatible data, but is not
