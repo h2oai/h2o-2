@@ -6,8 +6,9 @@ import org.junit.Assert;
 import org.junit.Test;
 import water.H2O;
 import water.parser.PMMLParser;
+import water.util.TestUtil;
 
-public class ScorePmmlTest {
+public class ScorePmmlTest extends TestUtil {
   private static final String HEADER = "<?xml version='1.0' encoding='UTF-8'?>\n" +
   		"<PMML version='4.1' xmlns='http://www.dmg.org/PMML-4_1' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'>\n" +
   		"  <Header copyright='0xData Testing' description='0xData testing Model'>\n" +
@@ -207,7 +208,7 @@ public class ScorePmmlTest {
       m.put("y", t[1]);
 
       ScorecardModel scm     = getSCM(pmml);
-      double predictedScore  = scm.score(m);
+      double predictedScore  = score2(scm,m);
 
       Assert.assertEquals(t[2], predictedScore, 0.00001);
     }
@@ -277,7 +278,7 @@ public class ScorePmmlTest {
       m.put("x", (Comparable)t[3]);
 
       ScorecardModel scm     = getSCM(pmml);
-      double predictedScore  = scm.score(m);
+      double predictedScore  = score2(scm,m);
 
       Assert.assertEquals((Double)t[4], predictedScore, 0.00001);
     }
@@ -315,7 +316,7 @@ public class ScorePmmlTest {
       m.put("y", t[1]);
 
       ScorecardModel scm     = getSCM(pmml);
-      double predictedScore  = scm.score(m);
+      double predictedScore  = score2(scm,m);
       Assert.assertEquals(t[2], predictedScore, 0.00001);
     }
   }
@@ -352,7 +353,7 @@ public class ScorePmmlTest {
       m.put("x", t[0]);
 
       ScorecardModel scm     = getSCM(pmml);
-      double predictedScore  = scm.score(m);
+      double predictedScore  = score2(scm,m);
       Assert.assertEquals(t[1], predictedScore, 0.00001);
     }
   }
@@ -394,7 +395,7 @@ public class ScorePmmlTest {
       m.put("y", (Comparable) t[1]);
 
       ScorecardModel scm     = getSCM(pmml);
-      double predictedScore  = scm.score(m);
+      double predictedScore  = score2(scm,m);
       Assert.assertEquals((Double)t[2], predictedScore, 0.00001);
     }
   }
@@ -420,14 +421,14 @@ public class ScorePmmlTest {
     ScorecardModel scm     = getSCM(pmml);
 
     HashMap<String, Comparable> m = new HashMap<String, Comparable>();
-    Assert.assertEquals(0.0, scm.score(m), 0.00001);
+    Assert.assertEquals(0.0, score2(scm,m), 0.00001);
 
     m.put("y", 1.0);
-    Assert.assertEquals(2.0, scm.score(m), 0.00001);
+    Assert.assertEquals(2.0, score2(scm,m), 0.00001);
     m.put("x", 2.0);
-    Assert.assertEquals(3.0, scm.score(m), 0.00001);
+    Assert.assertEquals(3.0, score2(scm,m), 0.00001);
     m.remove("y");
-    Assert.assertEquals(1.0, scm.score(m), 0.00001);
+    Assert.assertEquals(1.0, score2(scm,m), 0.00001);
   }
 
   @Test
@@ -470,7 +471,7 @@ public class ScorePmmlTest {
       m.put("x", (Comparable) t[0]);
       m.put("dummy", (Comparable) t[0]);
 
-      double predictedScore  = scm.score(m);
+      double predictedScore  = score2(scm,m);
       Assert.assertEquals((Double)t[1], predictedScore, 0.00001);
     }
   }
@@ -497,18 +498,22 @@ public class ScorePmmlTest {
       m.put("y", (Comparable) t[1]);
 
       ScorecardModel scm     = getSCM(pmml);
-      double predictedScore0 = scm.score0(m); // "interpreter" version
+      double predictedScore0 = score2(scm,m); // "interpreter" version
       Assert.assertEquals((Double)t[2], predictedScore0, 0.00001);
-      double predictedScore1 = scm.score(m); // "compiled" w/hashmap version
+      double predictedScore1 = score2(scm,m); // "compiled" w/hashmap version
       Assert.assertEquals((Double)t[2], predictedScore1, 0.00001);
     }
   }
 
-
+  private static double score2( ScorecardModel scm, HashMap<String, Comparable> m) {
+    double s0 = scm.score_interpreter(m);
+    double s1 = scm.score(m);
+    Assert.assertEquals(s0,s1, 0.0000001);
+    return s0;
+  }
 
 
   private ScorecardModel getSCM(final String pmml) throws Exception {
-    ScorecardModel scm     = PMMLParser.load(new ByteArrayInputStream(pmml.getBytes()));
-    return scm;
+    return (ScorecardModel)PMMLParser.load(new ByteArrayInputStream(pmml.getBytes()));
   }
 }
