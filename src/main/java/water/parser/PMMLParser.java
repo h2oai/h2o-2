@@ -1,20 +1,16 @@
 package water.parser;
 
-import water.score.*;
-import water.score.ScorecardModel.*;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
-
 import javax.xml.parsers.*;
-
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
-
 import water.H2O;
 import water.Key;
+import water.score.*;
+import water.score.ScorecardModel.*;
 
 public class PMMLParser extends CustomParser {
 
@@ -23,7 +19,7 @@ public class PMMLParser extends CustomParser {
     H2O.unimpl();
   }
 
-  public static ScorecardModel load(final InputStream is) throws Exception {
+  public static ScoreModel load(final InputStream is) throws Exception {
     PMMLSaxParser pmmlParser = new PMMLSaxParser(is);
 
     return pmmlParser.parseDocument();
@@ -31,9 +27,11 @@ public class PMMLParser extends CustomParser {
 
   static class PMMLSaxParser extends DefaultHandler {
     final InputStream _is;
-    /** Constructed Scorecard model */
-    ScorecardModel.Builder _scmb;
+    boolean _isScorecardModel;
+    String _modelName;
+    ArrayList<RuleTable> _ruleTables;
     Map<String, DataTypes> _featureTypes;
+    double _initialScore;       // Specific to ScorecardModel
 
     /* Actual parsing state */
     private String     _name;                // table name
@@ -46,28 +44,35 @@ public class PMMLParser extends CustomParser {
     private DataTypes     _expectedArrayType;// specified type of Array tag (type parameters)
 
     public PMMLSaxParser(final InputStream is) {
-      _is = is; _scmb = null;
+      _is = is;
       _rules        = new ArrayList<ScorecardModel.Rule>();
       _predicates   = new Stack<ScorecardModel.Predicate>();
+      _ruleTables   = new ArrayList<RuleTable>();
       _featureTypes = new HashMap<String, DataTypes>();
       _needArrayContent  = false;
       _arrayContent = new ArrayList<String>();
     }
 
-    ScorecardModel parseDocument() throws SAXException, IOException, ParserConfigurationException {
+    ScoreModel parseDocument() throws SAXException, IOException, ParserConfigurationException {
       SAXParserFactory saxFactory = SAXParserFactory.newInstance();
       SAXParser saxParser = saxFactory.newSAXParser();
       saxParser.parse(_is, this);
 
-      return _scmb.build();
+      if( _isScorecardModel ) {
+        return ScorecardModel.make(_modelName,_initialScore,_ruleTables.toArray(new RuleTable[0]));
+      } else {
+        throw H2O.unimpl();
+      }
     }
 
     @Override public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
       if (qName.equals("DataField"))
         _featureTypes.put(attributes.getValue("name"), DataTypes.parse(attributes.getValue("dataType")));
-      else if (qName.equals("Scorecard"))
-        _scmb = new ScorecardModel.Builder(attributes.getValue("modelName"), Double.valueOf(attributes.getValue("initialScore")));
-      else if (qName.equals("Characteristic")) {
+      else if (qName.equals("Scorecard")) {
+        _initialScore = Double.valueOf(attributes.getValue("initialScore"));
+        _isScorecardModel = true;
+        _modelName = attributes.getValue("modelName");
+      } else if (qName.equals("Characteristic")) {
         assert _name == null;
         assert _rules.isEmpty();
       } else if (qName.equals("Attribute")) {
@@ -93,7 +98,7 @@ public class PMMLParser extends CustomParser {
     public void endElement(String uri, String localName, String qName) throws SAXException {
       if (qName.equals("Characteristic")) {
         assert _featureTypes.containsKey(_name);
-        _scmb.addRuleTable(_name, _featureTypes.get(_name), _rules);
+        _ruleTables.add(new ScorecardModel.RuleTable(_name, _featureTypes.get(_name), _rules.toArray(new Rule[0])));
         _name = null;
         _rules.clear();
       } else if (qName.equals("Attribute")) {
@@ -109,7 +114,7 @@ public class PMMLParser extends CustomParser {
       } else if (qName.equals("SimpleSetPredicate")) {
         assert _expectedArraySize == _arrayContent.size();
         assert _expectedArrayType == DataTypes.STRING;
-        ((SetPredicate)_predicates.peek())._values = _arrayContent.toArray(new String[_expectedArraySize]);
+        ((IsIn)_predicates.peek())._values = _arrayContent.toArray(new String[_expectedArraySize]);
         _needArrayContent = false;
         _arrayContent.clear();
       } else if (qName.equals("Array")) {
@@ -158,8 +163,8 @@ public class PMMLParser extends CustomParser {
 
       Predicate pred = null;
       switch(op) {
-      case isIn   : pred = new ScorecardModel.IsIn((String[]) null);    break;
-      case isNotIn: pred = new ScorecardModel.IsNotIn((String[]) null); break;
+      case isIn   : pred = new ScorecardModel.IsIn   (null); break;
+      case isNotIn: pred = new ScorecardModel.IsNotIn(null); break;
       default     : pred = null;
       }
       addPred(pred);
