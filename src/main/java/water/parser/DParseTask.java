@@ -271,8 +271,10 @@ public final class DParseTask extends MRTask {
         // precompute the parser setup, column setup and other settings
         byte [] bits = _sourceDataset.getFirstBytes(); // Can limit to eg 256*1024
         CsvParser.Setup setup = CsvParser.guessCsvSetup(bits);
-        if (setup == null)
-          throw new Exception("Unable to determine the separator or number of columns on the dataset");
+        if (setup._data == null) {
+          _error= "Unable to determine the separator or number of columns on the dataset";
+          return;
+        }
         _colNames = setup._data[0];
         setColumnNames(_colNames);
         _skipFirstLine = setup._header;

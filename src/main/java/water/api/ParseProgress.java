@@ -1,10 +1,10 @@
 package water.api;
 
+import com.google.gson.JsonObject;
 import water.Key;
+import water.UKV;
 import water.Value;
 import water.parser.ParseStatus;
-
-import com.google.gson.JsonObject;
 
 public class ParseProgress extends Request {
   protected final H2OExistingKey _dest = new H2OExistingKey(DEST_KEY);
@@ -30,6 +30,7 @@ public class ParseProgress extends Request {
         ParseStatus ps = v.get(new ParseStatus());
         if( ps._error != null ) {
           r = Response.error(ps._error);
+          UKV.remove(v._key); // delete bad stuff if any
         } else {
           r = Response.poll(response, (float) ps.getProgress());
         }

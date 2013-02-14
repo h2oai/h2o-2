@@ -125,7 +125,7 @@ public class StoreView extends Request {
     // If not a proper ValueArray, estimate by parsing the first 1meg chunk
     if( rows == -1 ) {
       CsvParser.Setup setup = Inspect.csvGuessValue(val);
-      if( setup != null && setup._data[1].length > 0 ) { // Able to parse sanely?
+      if( setup._data != null && setup._data[1].length > 0 ) { // Able to parse sanely?
         int zipped_len = val.getFirstBytes().length;
         double bytes_per_row = (double) zipped_len / setup._numlines;
         rows = (long) (val.length() / bytes_per_row);

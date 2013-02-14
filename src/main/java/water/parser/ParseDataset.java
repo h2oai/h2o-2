@@ -93,7 +93,6 @@ public final class ParseDataset {
     phaseTwo.passTwo();
     if ((phaseTwo._error != null) && !phaseTwo._error.isEmpty()) {
       System.err.println(phaseTwo._error);
-      UKV.remove(result); // delete bad stuff if any
       throw new Exception("The dataset format is not recognized/supported");
     }
   }

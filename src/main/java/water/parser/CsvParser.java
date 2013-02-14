@@ -625,7 +625,7 @@ NEXT_CHAR:
       }
     }
     // we do not have enough lines to decide
-    if( lines.size() < 2 ) return null;
+    if( lines.size() < 2 ) return new Setup((byte)' ',false,null,0,bits);
     // when we have two lines, calculate the separator counts on them
     int[] s1 = determineSeparatorCounts(lines.get(0));
     int[] s2 = determineSeparatorCounts(lines.get(1));
@@ -645,7 +645,7 @@ NEXT_CHAR:
           // pass
         }
       }
-    return null;
+    return new Setup((byte)' ',false,null,0,bits);
   }
 
   public static Setup inspect(byte[] bits) {
