@@ -1,5 +1,3 @@
-package embedded;
-
 import java.util.*;
 import java.io.*;
 
@@ -61,8 +59,8 @@ class ScoreMain {
 
     // Load a PMML model
     System.out.println("Loading model to score");
-    FileInputStream fis = new FileInputStream("../../demo/SampleScorecard.pmml");
-    water.score.ScorecardModel scm = water.parser.PMMLParser.load(fis);
+    FileInputStream fis = new FileInputStream("../../../../demo/SampleScorecard.pmml");
+    water.score.ScoreModel scm = water.parser.PMMLParser.load(fis);
 
     // Pre-compute the row data into arrays.  The expectation is that this
     // mapping is done early by the data producer, and a row of data is passed
@@ -96,7 +94,7 @@ class ScoreMain {
 
     // Make data available.  In this case, parse a simple text file and inject
     // pairs into a HashMap.
-    File f = new File("../../demo/SampleData.txt");
+    File f = new File("../../../../demo/SampleData.txt");
     String text = new Scanner( f ).useDelimiter("\\A").next();
     ROW = new HashMap<String, Comparable>();
     String[] toks = text.split("[,\\{\\}]");
@@ -122,10 +120,11 @@ class ScoreMain {
     return x;
   }
 
-  public static void sampleAppDoesStuff(water.score.ScorecardModel scm) {
-    System.out.println("Initial score0(HashMap)="+scm.score0(ROW));
-    System.out.println("Initial score (HashMap)="+scm.score(ROW));
-    System.out.println("Initial score (Arrays )="+scm.score(MAP,SS,DS));
+  public static void sampleAppDoesStuff(water.score.ScoreModel scm) {
+    System.out.println("Initial score_interpreter(HashMap)="+
+                       ((water.score.ScorecardModel)scm).score_interpreter(ROW));
+    System.out.println("Initial score(HashMap)="+scm.score(ROW));
+    System.out.println("Initial score(Arrays )="+scm.score(MAP,SS,DS));
 
     for( int i=0; i<1000; i++ ) {
       loop1000(scm,true );
@@ -140,12 +139,12 @@ class ScoreMain {
     timeTwo(scm,100000);        // 100 million
   }
 
-  public static void timeTwo(water.score.ScorecardModel scm, int iter ) {
+  public static void timeTwo(water.score.ScoreModel scm, int iter ) {
     timeOne(scm,iter,true );
     timeOne(scm,iter,false);
   }
 
-  public static void timeOne(water.score.ScorecardModel scm, int iter, boolean mapOrAry) {
+  public static void timeOne(water.score.ScoreModel scm, int iter, boolean mapOrAry) {
     //long start = System.currentTimeMillis();
     long start = System.nanoTime();
     for( int i=0; i<iter; i++ )
@@ -158,7 +157,7 @@ class ScoreMain {
     System.out.println("score("+(mapOrAry?"HashMap":"Arrays ")+") "+(iter*1000)+" in "+(long)nanos+"ns = "+(nanos/(iter*1000.0))+" nanosec/score");
   }
 
-  public static void loop1000(water.score.ScorecardModel scm, boolean mapOrAry) {
+  public static void loop1000(water.score.ScoreModel scm, boolean mapOrAry) {
     if( mapOrAry ) 
       for( int i=0; i<1000; i++ )
         scm.score(ROW);
