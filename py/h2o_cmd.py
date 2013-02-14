@@ -1,4 +1,4 @@
-import os, json, unittest, time, shutil, sys
+import os, json, unittest, time, shutil, sys, socket
 import h2o
 import h2o_browse as h2b, h2o_rf as h2f
 
