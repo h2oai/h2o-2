@@ -331,12 +331,12 @@ def upload_jar_to_remote_hosts(hosts, slow_connection=False):
         
     if not slow_connection:
         for h in hosts:
-            f = find_file('build/h2o.jar')
+            f = find_file('target/h2o.jar')
             h.upload_file(f, progress=prog)
             # skipping progress indicator for the flatfile
             h.upload_file(flatfile_name())
     else:
-        f = find_file('build/h2o.jar')
+        f = find_file('target/h2o.jar')
         hosts[0].upload_file(f, progress=prog)
         hosts[0].push_file_to_remotes(f, hosts[1:])
 
@@ -363,7 +363,7 @@ def check_sandbox_for_errors():
             # FIX! aren't we going to get the cloud building info failure messages
             # oh well...if so ..it's a bug! "killing" is temp to detect jar mismatch error
             regex1 = re.compile(
-                'found multiple|exception|error|assert|warn|info|killing|killed|required ports',
+                'found multiple|exception|error|assert|killing|killed|required ports',
                 re.IGNORECASE)
             regex2 = re.compile('Caused',re.IGNORECASE)
             regex3 = re.compile('warn|info', re.IGNORECASE)
@@ -375,11 +375,11 @@ def check_sandbox_for_errors():
             lines = 0 # count per file! errLines accumulates for multiple files.
             for line in sandFile:
                 # JIT reporting looks like this..don't detect that as an error
-                printSingleLine = False
+                printSingleWarning = False
                 foundBad = False
                 if not ' bytes)' in line:
                     # no multiline FSM on this 
-                    printSingleLine = regex3.search(line)
+                    printSingleWarning = regex3.search(line)
                     #   13190  280             sun.nio.ch.DatagramChannelImpl::ensureOpen (16 bytes)
                     foundBad = regex1.search(line) and not ('error rate' in line)
 
@@ -401,10 +401,15 @@ def check_sandbox_for_errors():
                     if foundBad and (lines>4) and not (foundCaused or foundAt):
                         printing = 2 
 
-                if (printing==1 or printSingleLine):
+                if (printing==1):
                     # to avoid extra newline from print. line already has one
                     errLines.append(line)
                     sys.stdout.write(line)
+
+                if (printSingleWarning):
+                    # don't print this one
+                    if not re.search("Unable to load native-hadoop library for your platform", line):
+                        sys.stdout.write(line)
 
             sandFile.close()
 
@@ -1003,14 +1008,19 @@ class H2O(object):
         # FIX! need to be able to specify name node/path for non-0xdata hdfs
         # specifying hdfs stuff when not used shouldn't hurt anything
         if self.use_hdfs:
+            # NOTE: was leaving space. should work, but try =
             args += [
                 '-hdfs hdfs://' + self.hdfs_name_node,
-                '-hdfs_version ' + self.hdfs_version, 
-                '-hdfs_root ' + self.hdfs_root
+                '-hdfs_version=' + self.hdfs_version, 
+                '-hdfs_root=' + self.hdfs_root,
             ]
             if self.hdfs_nopreload:
                 args += [
                     '-hdfs_nopreload ' + self.hdfs_nopreload
+                ]
+            if self.hdfs_config:
+                args += [
+                    '-hdfs_config ' + self.hdfs_config
                 ]
 
         if self.use_flatfile:
@@ -1027,8 +1037,13 @@ class H2O(object):
 
     def __init__(self, 
         use_this_ip_addr=None, port=54321, capture_output=True, sigar=False, use_debugger=None, classpath=None,
-        use_hdfs=False, hdfs_name_node="192.168.1.151", hdfs_root="/datasets", hdfs_version="cdh4",
-        hdfs_nopreload=None, aws_credentials=None,
+        use_hdfs=False, hdfs_root="/datasets", 
+        # hdfs_version="cdh4", hdfs_name_node="192.168.1.151", 
+        hdfs_version="cdh3u5", hdfs_name_node="192.168.1.151", 
+        hdfs_config=None,
+        # FIX not interesting any more?
+        hdfs_nopreload=None, 
+        aws_credentials=None,
         use_flatfile=False, java_heap_GB=None, java_extra_args=None, 
         use_home_for_ice=False, node_id=None, username=None):
 
@@ -1058,6 +1073,7 @@ class H2O(object):
         self.hdfs_name_node = hdfs_name_node
         self.hdfs_version = hdfs_version
         self.hdfs_root = hdfs_root
+        self.hdfs_config = hdfs_config
         self.hdfs_nopreload = hdfs_nopreload
 
         self.use_flatfile = use_flatfile
@@ -1093,7 +1109,7 @@ class ExternalH2O(H2O):
         super(ExternalH2O, self).__init__(*args, **kwargs)
 
     def get_h2o_jar(self):
-        return find_file('build/h2o.jar') # just a likely guess
+        return find_file('target/h2o.jar') # just a likely guess
 
     def get_ice_dir(self):
         return '/tmp/ice%d' % self.port # just a likely guess
@@ -1129,7 +1145,7 @@ class LocalH2O(H2O):
         self.ps = spawn[0]
 
     def get_h2o_jar(self):
-        return find_file('build/h2o.jar')
+        return find_file('target/h2o.jar')
 
     def get_flatfile(self):
         return self.flatfile
@@ -1257,7 +1273,7 @@ class RemoteH2O(H2O):
     def __init__(self, host, *args, **kwargs):
         super(RemoteH2O, self).__init__(*args, **kwargs)
 
-        self.jar = host.upload_file('build/h2o.jar')
+        self.jar = host.upload_file('target/h2o.jar')
         # need to copy the flatfile. We don't always use it (depends on h2o args)
         self.flatfile = host.upload_file(flatfile_name())
 
