@@ -18,9 +18,13 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_A_Basic(self):
-        for n in h2o.nodes:
-            c = n.get_cloud()
-            self.assertEqual(c['cloud_size'], len(h2o.nodes), 'inconsistent cloud size')
+        # if any are wrong, dump node-ordered info from everyone, EC2 debug.
+        expectedSize = len(h2o.nodes)
+        cloudSizes = [n.get_cloud()['cloud_size'] for n in h2o.nodes]
+        for s in cloudSizes:
+            self.assertEqual(s, expectedSize,
+                "Inconsistent cloud size. nodes report %s instead of %d" % \
+                (",".join(str(cloudSizes)), expectedSize))
 
     def test_B_RF_iris2(self):
         h2o_cmd.runRF(trees=6, timeoutSecs=10,
