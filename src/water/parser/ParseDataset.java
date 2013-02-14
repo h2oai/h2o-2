@@ -58,7 +58,7 @@ public final class ParseDataset {
         case NONE: parseUncompressed(result, dataset,CustomParser.Type.CSV); break;
         case ZIP : parseZipped (result, dataset); break;
         case GZIP: parseGZipped (result, dataset); break;
-        default : throw new Error("Uknown compression of dataset!");
+        default : throw new Error("Unknown compression of dataset!");
       }
     } catch( Exception e ) {
       ParseStatus.error(result, e.getMessage());
