@@ -1283,6 +1283,8 @@ class RemoteHost(object):
         else:
             self.ssh.connect(self.addr, username=username, password=password, **kwargs)
 
+        # keep connection - send keepalive packet evety 5minutes
+        self.ssh.get_transport().set_keepalive(300)
         self.uploaded = {}
 
     def remote_h2o(self, *args, **kwargs):
