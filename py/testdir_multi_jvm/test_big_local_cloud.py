@@ -23,8 +23,7 @@ class Basic(unittest.TestCase):
                 h2o.build_cloud(node_count=tryNodes,timeoutSecs=30,use_flatfile=True)
                 print "loop %d: Build cloud of %d in %d s" % (trials, tryNodes, (time.time() - start)) 
 
-                c = h2o.nodes[0].get_cloud()
-                self.assertEqual(c['cloud_size'], len(h2o.nodes), 'inconsistent cloud size')
+                h2o.verify_cloud_size()
                 h2o.tear_down_cloud()
                 # with so many jvms, wait for sticky ports to be freed up..slow os stuff?
                 # changed, to increment the base_port, to avoid reuse immediately

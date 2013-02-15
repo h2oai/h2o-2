@@ -30,14 +30,8 @@ class Basic(unittest.TestCase):
                 h2o.build_cloud(use_this_ip_addr="127.0.0.1", node_count=tryNodes,
                     timeoutSecs=15, retryDelaySecs=1)
                 print "trial #%d: Build cloud of %d in %d secs" % (trial, tryNodes, (time.time() - start)) 
-                ### h2b.browseTheCloud()
 
-                h2o.verboseprint(h2o.nodes)
-                for n in h2o.nodes:
-                    c = n.get_cloud()
-                    h2o.verboseprint(c)
-                    self.assertEqual(c['cloud_size'], len(h2o.nodes), 'inconsistent cloud size')
-
+                h2o.verify_cloud_size()
                 h2o.tear_down_cloud()
 
                 # increment the base_port to avoid sticky ports when we do another

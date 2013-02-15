@@ -439,15 +439,20 @@ def tear_down_cloud(node_list=None):
         check_sandbox_for_errors()
         node_list[:] = []
 
-# don't need this any more? Used before to make sure cloud didn't go away between unittest defs
+# don't need any more? 
+# Used before to make sure cloud didn't go away between unittest defs
 def touch_cloud(node_list=None):
-    # Only need to use this if we're using hosts? 
-    # So far, we don't need hosts as global ..so don't look at it here
-    # won't break if local host, just don't need to call this.
     if not node_list: node_list = nodes
     for n in node_list:
-        # verboseprint("Keeping remote H2O channels alive", n)
         n.is_alive()
+
+def verify_cloud_size():
+    expectedSize = len(nodes)
+    cloudSizes = [n.get_cloud()['cloud_size'] for n in nodes]
+    for s in cloudSizes:
+        if (s != expectedSize):
+            raise Exception("Inconsistent cloud size. nodes report %s instead of %d" % \
+                (",".join(map(str,cloudSizes)), expectedSize))
     
 def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25):
     node.wait_for_node_to_accept_connections(timeoutSecs)

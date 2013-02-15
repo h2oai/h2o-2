@@ -24,9 +24,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             h2o.build_cloud(tryNodes)
             print "Built cloud of %d in %d s" % (tryNodes, (time.time() - start)) 
-
-            c = h2o.nodes[0].get_cloud()
-            self.assertEqual(c['cloud_size'], len(h2o.nodes), 'inconsistent cloud size')
+            h2o.verify_cloud_size()
             h2o.tear_down_cloud()
 
 if __name__ == '__main__':

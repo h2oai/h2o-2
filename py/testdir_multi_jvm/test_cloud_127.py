@@ -20,11 +20,7 @@ class Basic(unittest.TestCase):
             print "Build cloud of %d in %d secs" % (tryNodes, (time.time() - start)) 
 
             h2o.verboseprint(h2o.nodes)
-            for n in h2o.nodes:
-                c = n.get_cloud()
-                h2o.verboseprint(h2o.dump_json(c))
-                self.assertEqual(c['cloud_size'], len(h2o.nodes), 'inconsistent cloud size')
-
+            h2o.verify_cloud_size()
             h2o.tear_down_cloud(h2o.nodes)
 
             # increment the base_port to avoid sticky ports when we do another
