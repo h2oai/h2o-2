@@ -265,12 +265,13 @@ public final class DParseTask extends MRTask {
    *
    * @throws Exception
    */
-  public void passOne() throws Exception {
+  public void passOne(CsvParser.Setup setup) throws Exception {
     switch (_parserType) {
-      case CSV:
+    case CSV:
         // precompute the parser setup, column setup and other settings
         byte [] bits = _sourceDataset.getFirstBytes(); // Can limit to eg 256*1024
-        CsvParser.Setup setup = CsvParser.guessCsvSetup(bits);
+        if( setup == null )
+          setup = CsvParser.guessCsvSetup(bits);
         if (setup._data == null) {
           _error= "Unable to determine the separator or number of columns on the dataset";
           return;

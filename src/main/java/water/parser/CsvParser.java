@@ -588,15 +588,16 @@ NEXT_CHAR:
     // Return an array with headers in data[0] and the remaining rows pre-parsed.
     String[][] data = new String[lines.size()+(hasHeader?0:1)][];
     int l=0;
-    if( !hasHeader ) {
+    if( !hasHeader ) {          // Make junky 0,1,2,3,... headers
       data[l++] = new String[l1.length];
       for( int i=0; i<l1.length; i++ ) data[0][i] = Integer.toString(i);
     }
     data[l++] = l1;
     data[l++] = l2;
     int m=2;
-    while( l < lines.size() )
+    while( m < lines.size() )
       data[l++] = determineTokens(lines.get(m++), separator);
+    assert data.length==l : data.length +" "+l+" has="+hasHeader;
     
     return new Setup(separator, hasHeader, data, numlines, bits);
   }
@@ -620,7 +621,7 @@ NEXT_CHAR:
       if (bits[lineStart] == '#') continue; // Ignore comment lines
       if (lineEnd>lineStart) {
         numlines++;                           // Estimate data lines in this chunk
-        if( lines.size() < 6 )
+        if( lines.size() < 5 )
           lines.add(new String(bits,lineStart, lineEnd-lineStart));
       }
     }
@@ -641,9 +642,7 @@ NEXT_CHAR:
           if (t1.length != t2.length)
             continue;
           return guessColumnNames(t1,t2,separators[i],lines,numlines, bits);
-        } catch (Exception e) {
-          // pass
-        }
+        } catch (Exception e) { /*pass; try another parse attempt*/ }
       }
     return new Setup((byte)' ',false,null,0,bits);
   }

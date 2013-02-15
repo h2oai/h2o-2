@@ -10,20 +10,26 @@ import water.util.RString;
 import com.google.gson.JsonObject;
 
 public class Parse extends Request {
-  protected final H2OExistingKey _source = new H2OExistingKey(SOURCE_KEY);
+  protected final ExistingCSVKey _source = new ExistingCSVKey(SOURCE_KEY);
   protected final NewH2OHexKey _dest = new NewH2OHexKey(DEST_KEY);
   private final Header _header = new Header(HEADER);
 
+  private static class PSetup {
+    final Key _key;
+    final CsvParser.Setup _setup;
+    PSetup( Key key, CsvParser.Setup setup ) { _key=key; _setup=setup; }
+  };
+
   // An H2O Hex Query, which does runs the basic CSV parsing heuristics.
-  public class ExistingCSVKey extends TypeaheadInputText<CsvParser.Setup> {
+  public class ExistingCSVKey extends TypeaheadInputText<PSetup> {
     public ExistingCSVKey(String name) { super(TypeaheadKeysRequest.class, name, true); }
-    @Override protected CsvParser.Setup parse(String input) throws IllegalArgumentException {
+    @Override protected PSetup parse(String input) throws IllegalArgumentException {
       Key k = Key.make(input);
       Value v = DKV.get(k);
       if (v == null) throw new IllegalArgumentException("Key "+input+" not found!");
-      return Inspect.csvGuessValue(v);
+      return new PSetup(k,Inspect.csvGuessValue(v));
     }
-    @Override protected CsvParser.Setup defaultValue() { return null; }
+    @Override protected PSetup defaultValue() { return null; }
     @Override protected String queryDescription() { return "An existing H2O key of CSV text"; }
   }
 
@@ -31,13 +37,13 @@ public class Parse extends Request {
   // A Query String, which defaults to the source Key with a '.hex' suffix
   private class NewH2OHexKey extends Str {
     NewH2OHexKey(String name) {
-      super(name);
+      super(name,null/*not required flag*/);
       addPrerequisite(_source);
     }
     @Override protected String defaultValue() {
-      Value src_v = _source.value();
-      if( src_v == null ) return null;
-      String n = src_v._key.toString();
+      PSetup setup = _source.value();
+      if( setup == null ) return null;
+      String n = setup._key.toString();
       int dot = n.lastIndexOf('.');
       if( dot > 0 ) n = n.substring(0, dot);
       String dst = n+".hex";
@@ -53,32 +59,44 @@ public class Parse extends Request {
     Header(String name) {
       super(name, false, "First row is column headers?");
       addPrerequisite(_source);
+      setRefreshOnChange();
     }
     @Override protected String queryElement() {
       // first determine the value to put in the field
       Record record = record();
       String value = record._originalValue;
       // if no original value was supplied, use the provided one
-      if (value == null) {
-        Boolean v = defaultValue();
-        value = ((v == null) || (v == false)) ? "" : "1" ;
-      }
+      PSetup psetup = _source.value();
+      if (value == null)
+        value = psetup._setup._header ? "1" : "";
       StringBuilder sb = new StringBuilder();
       sb.append("<input value='1' class='span5' type='checkbox' ");
       sb.append("name='").append(_name).append("' ");
       sb.append("id='").append(_name).append("' ");
       if( value.equals("1") ) sb.append("checked");
       sb.append("/>&nbsp;&nbsp;").append(queryDescription()).append("<p>");
-      sb.append("<table class='table table-striped table-bordered'>");
-      sb.append("<th>");
-      sb.append("</th>");
-      sb.append("</table>");
+      String[][] data = psetup._setup._data;
+      if( data != null ) {
+        sb.append("<table class='table table-striped table-bordered'>");
+        int j=psetup._setup._header?0:1; // Skip auto-gen header in data[0]
+        if( value.equals("1") ) { // Obvious header display, if asked for
+          sb.append("<tr><th>Row#</th>");
+          for( String s : data[j++] ) sb.append("<th>").append(s).append("</th>");
+          sb.append("</tr>");
+        }
+        for( int i=j; i<data.length; i++ ) { // The first few rows
+          sb.append("<tr><td>Row ").append(i-j).append("</td>");
+          for( String s : data[i] ) sb.append("<td>").append(s).append("</td>");
+          sb.append("</tr>");
+        }
+        sb.append("</table>");
+      }
       return sb.toString();
     }
   }
 
   public static String link(Key k, String content) {
-    RString rs = new RString("<a href='Parse.html?%key_param=%$key'>%content</a>");
+    RString rs = new RString("<a href='Parse.query?%key_param=%$key'>%content</a>");
     rs.replace("key_param", SOURCE_KEY);
     rs.replace("key", k.toString());
     rs.replace("content", content);
@@ -86,10 +104,13 @@ public class Parse extends Request {
   }
 
   @Override protected Response serve() {
-    Value source = _source.value();
+    PSetup p = _source.value();
+    CsvParser.Setup q = p._setup;
     Key dest = Key.make(_dest.value());
     try {
-      ParseDataset.forkParseDataset(dest, source);
+      // Make a new Setup, with the 'header' flag set according to user wishes.
+      CsvParser.Setup new_setup = new CsvParser.Setup(q._separator,_header.value(),q._data,q._numlines,q._bits);
+      ParseDataset.forkParseDataset(dest, DKV.get(p._key),new_setup);
       JsonObject response = new JsonObject();
       response.addProperty(RequestStatics.DEST_KEY,dest.toString());
 

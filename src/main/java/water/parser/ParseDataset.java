@@ -33,14 +33,14 @@ public final class ParseDataset {
 
   // Parse the dataset (uncompressed, zippped) as a CSV-style thingy and
   // produce a structured dataset as a result.
-  private static void parseImpl( Key result, Value dataset ) {
+  private static void parseImpl( Key result, Value dataset, CsvParser.Setup setup ) {
     if( dataset.isHex() )
       throw new IllegalArgumentException("This is a binary structured dataset; "
           + "parse() only works on text files.");
     try {
       // try if it is XLS file first
       try {
-        parseUncompressed(result,dataset,CustomParser.Type.XLS);
+        parseUncompressed(result,dataset,CustomParser.Type.XLS, setup);
         return;
       } catch (Exception e) {
         // pass
@@ -48,43 +48,47 @@ public final class ParseDataset {
       Compression compression = guessCompressionMethod(dataset);
       if (compression == Compression.ZIP) {
         try {
-          parseUncompressed(result,dataset,CustomParser.Type.XLSX);
+          parseUncompressed(result,dataset,CustomParser.Type.XLSX, setup);
           return;
         } catch (Exception e) {
           // pass
         }
       }
       switch (compression) {
-        case NONE: parseUncompressed(result, dataset,CustomParser.Type.CSV); break;
-        case ZIP : parseZipped (result, dataset); break;
-        case GZIP: parseGZipped (result, dataset); break;
-        default : throw new Error("Unknown compression of dataset!");
+      case NONE: parseUncompressed(result, dataset,CustomParser.Type.CSV, setup); break;
+      case ZIP : parseZipped (result, dataset, setup); break;
+      case GZIP: parseGZipped(result, dataset, setup); break;
+      default : throw new Error("Unknown compression of dataset!");
       }
     } catch( Exception e ) {
       ParseStatus.error(result, e.getMessage());
       throw Throwables.propagate(e);
     }
   }
+  public static void parse( Key result, Value dataset, CsvParser.Setup setup ) {
+    ParseStatus.initialize(result, dataset.length());
+    parseImpl(result, dataset, setup);
+  }
   public static void parse( Key result, Value dataset ) {
     ParseStatus.initialize(result, dataset.length());
-    parseImpl(result, dataset);
+    parseImpl(result, dataset, null);
   }
 
-  public static void forkParseDataset( final Key result, final Value dataset ) {
+  public static void forkParseDataset( final Key result, final Value dataset, final CsvParser.Setup setup ) {
     ParseStatus.initialize(result, dataset.length());
     H2O.FJP_NORM.submit(new RecursiveAction() {
       @Override
       protected void compute() {
-        parseImpl(result, dataset);
+        parseImpl(result, dataset, setup);
       }
     });
   }
 
  // Parse the uncompressed dataset as a CSV-style structure and produce a structured dataset
  // result. This does a distributed parallel parse.
-  public static void parseUncompressed( Key result, Value dataset, CustomParser.Type parserType ) throws Exception {
+  public static void parseUncompressed( Key result, Value dataset, CustomParser.Type parserType, CsvParser.Setup setup ) throws Exception {
     DParseTask phaseOne = DParseTask.createPassOne(dataset, result, parserType);
-    phaseOne.passOne();
+    phaseOne.passOne(setup);
     if ((phaseOne._error != null) && !phaseOne._error.isEmpty()) {
       System.err.println(phaseOne._error);
       throw new Exception("The dataset format is not recognized/supported");
@@ -99,7 +103,7 @@ public final class ParseDataset {
 
   // Unpack zipped CSV-style structure and call method parseUncompressed(...)
   // The method exepct a dataset which contains a ZIP file encapsulating one file.
-  public static void parseZipped( Key result, Value dataset ) throws IOException {
+  public static void parseZipped( Key result, Value dataset, CsvParser.Setup setup ) throws IOException {
     // Dataset contains zipped CSV
     ZipInputStream zis = null;
     Key key = null;
@@ -117,11 +121,11 @@ public final class ParseDataset {
     } finally { Closeables.closeQuietly(zis); }
     if( key == null ) throw new Error("Cannot uncompressed ZIP-compressed dataset!");
     Value uncompressedDataset = DKV.get(key);
-    parse(result, uncompressedDataset);
+    parse(result, uncompressedDataset,setup);
     UKV.remove(key);
   }
 
-  public static void parseGZipped( Key result, Value dataset ) throws IOException {
+  public static void parseGZipped( Key result, Value dataset, CsvParser.Setup setup ) throws IOException {
     GZIPInputStream gzis = null;
     Key key = null;
     try {
@@ -131,7 +135,7 @@ public final class ParseDataset {
 
     if( key == null ) throw new Error("Cannot uncompressed GZIP-compressed dataset!");
     Value uncompressedDataset = DKV.get(key);
-    parse(result, uncompressedDataset);
+    parse(result, uncompressedDataset,setup);
     UKV.remove(key);
   }
 

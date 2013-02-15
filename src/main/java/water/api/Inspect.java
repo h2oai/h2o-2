@@ -137,7 +137,7 @@ public class Inspect extends Request {
     result.addProperty(VALUE_TYPE, "unparsed");
 
     CsvParser.Setup setup = csvGuessValue(v);
-    if( setup != null && setup._data[1].length > 0 ) { // Able to parse sanely?
+    if( setup._data != null && setup._data[1].length > 0 ) { // Able to parse sanely?
       int zipped_len = v.getFirstBytes().length;
       double bytes_per_row = (double) zipped_len / setup._numlines;
       long rows = (long) (v.length() / bytes_per_row);
