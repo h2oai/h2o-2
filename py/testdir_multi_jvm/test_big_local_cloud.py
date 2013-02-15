@@ -19,11 +19,13 @@ class Basic(unittest.TestCase):
                 start = time.time()
                 # start by cleaning sandbox (in build_cloud). 
                 # so nosetest works which doesn't do unit_main
-                h2o.write_flatfile(node_count=tryNodes)
-                h2o.build_cloud(node_count=tryNodes,timeoutSecs=30,use_flatfile=True)
+                h2o.write_flatfile(node_count=tryNodes, base_port=base_port)
+                h2o.build_cloud(node_count=tryNodes,timeoutSecs=30,base_port=base_port,use_flatfile=True)
                 print "loop %d: Build cloud of %d in %d s" % (trials, tryNodes, (time.time() - start)) 
 
-                h2o.verify_cloud_size()
+                for i in range(2):
+                    print "nodes report size: %s consensus: %s expected: %d." % h2o.verify_cloud_size()
+
                 h2o.tear_down_cloud()
                 # with so many jvms, wait for sticky ports to be freed up..slow os stuff?
                 # changed, to increment the base_port, to avoid reuse immediately

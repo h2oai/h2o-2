@@ -295,18 +295,18 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
 
         verboseprint("Attempting Cloud stabilize of", totalNodes, "nodes on", hostCount, "hosts")
         start = time.time()
-        stabilize_cloud(node_list[0], len(node_list), 
+        # UPDATE: best to stabilize on the last node!
+        stabilize_cloud(node_list[-1], len(node_list), 
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
-        verboseprint(len(node_list), " Node 0 stabilized in ", time.time()-start, " secs")
+        verboseprint(len(node_list), "Last added node stabilized in ", time.time()-start, " secs")
         verboseprint("Built cloud: %d node_list, %d hosts, in %d s" % (len(node_list), 
             hostCount, (time.time() - start))) 
 
-        # FIX! using "consensus" in node[0] should mean this is unnecessary?
+        # FIX! using "consensus" in node[-1] should mean this is unnecessary?
         # maybe there's a bug. For now do this. long term: don't want?
-        # For now, only do this for remote case.
-        if hosts is not None:
-            for n in nodes:
-                stabilize_cloud(n, len(nodes), timeoutSecs=15)
+        # UPDATE: do it for all cases now 2/14/13
+        for n in node_list:
+            stabilize_cloud(n, len(node_list), timeoutSecs=timeoutSecs)
 
     except:
         if cleanup:
@@ -449,10 +449,15 @@ def touch_cloud(node_list=None):
 def verify_cloud_size():
     expectedSize = len(nodes)
     cloudSizes = [n.get_cloud()['cloud_size'] for n in nodes]
+    cloudConsensus = [n.get_cloud()['consensus'] for n in nodes]
     for s in cloudSizes:
+        consensusStr = (",".join(map(str,cloudConsensus)))
+        sizeStr =   (",".join(map(str,cloudSizes)))
         if (s != expectedSize):
-            raise Exception("Inconsistent cloud size. nodes report %s instead of %d" % \
-                (",".join(map(str,cloudSizes)), expectedSize))
+            raise Exception("Inconsistent cloud size." + 
+                "nodes report size: %s consensus: %s instead of %d." % \
+                (sizeStr, consensusStr, expectedSize))
+    return (sizeStr, consensusStr, expectedSize)
     
 def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25):
     node.wait_for_node_to_accept_connections(timeoutSecs)
