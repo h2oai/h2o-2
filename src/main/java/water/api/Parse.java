@@ -27,7 +27,10 @@ public class Parse extends Request {
       Key k = Key.make(input);
       Value v = DKV.get(k);
       if (v == null) throw new IllegalArgumentException("Key "+input+" not found!");
-      return new PSetup(k,Inspect.csvGuessValue(v));
+      CsvParser.Setup setup = Inspect.csvGuessValue(v);
+      if( setup._data == null || setup._data[0].length == 0 )
+        throw new IllegalArgumentException("The dataset format is not recognized/supported");
+      return new PSetup(k,setup);
     }
     @Override protected PSetup defaultValue() { return null; }
     @Override protected String queryDescription() { return "An existing H2O key of CSV text"; }
