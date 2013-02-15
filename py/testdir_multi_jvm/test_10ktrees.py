@@ -36,7 +36,7 @@ class Basic(unittest.TestCase):
 
             # broke out the put separately so we can iterate a test just on the RF
             key = h2o.nodes[0].put_file(csvPathname)
-            parseKey = h2o.nodes[0].parse(key)
+            parseKey = h2o.nodes[0].parse(key, key + "_" + str(trial) + ".hex")
 
             h2o.verboseprint("Trial", trial)
             start = time.time()
