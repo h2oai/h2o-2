@@ -733,6 +733,13 @@ class H2O(object):
         verboseprint("\nimport_s3 result:", dump_json(a))
         return a
 
+    def import_hdfs(self, path):
+        a = self.__check_request(requests.get(
+            self.__url('ImportHdfs.json'),
+            params={ "path": path}))
+        verboseprint("\nimport_hdfs result:", dump_json(a))
+        return a
+
     # 'destination_key', 'escape_nan' 'expression'
     def exec_query(self, timeoutSecs=20, **kwargs):
         params_dict = {

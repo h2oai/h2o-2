@@ -1,6 +1,6 @@
 import h2o, h2o_cmd
 
-def setupImportS3(node=None, importS3Path='test-s3-integration'):
+def setupImportS3(node=None, path='test-s3-integration'):
     if not node: node = h2o.nodes[0]
     importS3Result = node.import_s3(importS3Path)
     h2o.dump_json(importS3Result)
@@ -8,7 +8,7 @@ def setupImportS3(node=None, importS3Path='test-s3-integration'):
 
 # assumes you call setupImportS3 first
 def parseImportS3File(node=None, 
-    csvFilename='covtype.data', importS3Path='test-s3-integration', key2=None,
+    csvFilename='covtype.data', path='test-s3-integration', key2=None,
     timeoutSecs=None, retryDelaySecs=None):
 
     if not node: node = h2o.nodes[0]
@@ -29,14 +29,14 @@ def parseImportS3File(node=None,
     print "\nParse result:", parseKey
     return parseKey
 
-def setupImportFolder(node=None, importFolderPath='/home/0xdiag/datasets'):
+def setupImportFolder(node=None, path='/home/0xdiag/datasets'):
     if not node: node = h2o.nodes[0]
     importFolderResult = node.import_files(importFolderPath)
     h2o.dump_json(importFolderResult)
     return importFolderResult
 
 # assumes you call setupImportFolder first
-def parseImportFolderFile(node=None, csvFilename=None, importFolderPath=None, key2=None,
+def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
     timeoutSecs=None, retryDelaySecs=None, initialDelaySecs=None):
     if not node: node = h2o.nodes[0]
     if not csvFilename: raise Exception('parseImportFolderFile: No csvFilename')
@@ -56,10 +56,16 @@ def parseImportFolderFile(node=None, csvFilename=None, importFolderPath=None, ke
     print "\nParse result:", parseKey
     return parseKey
 
+def setupImportHdfs(node=None, path='hdfs://192.168.1.176/datasets'):
+    if not node: node = h2o.nodes[0]
+    importHdfsResult = node.import_hdfs(importHdfsPath)
+    print h2o.dump_json(importHdfsResult)
+    return importHdfsResult
+
 # FIX! can update this to parse from local dir also (import keys from folder?)
 # but everyone needs to have a copy then
-def parseHdfsFile(node=None, csvFilename=None, timeoutSecs=3600, retryDelaySecs=1.0):
-    if not csvFilename: raise Exception('No csvFilename parameter in inspectHdfsFile')
+def parseImportHdfsFile(node=None, csvFilename=None, timeoutSecs=3600, retryDelaySecs=1.0):
+    if not csvFilename: raise Exception('No csvFilename parameter in parseImportHdfsFile')
     if not node: node = h2o.nodes[0]
 
     # assume the hdfs prefix is datasets, for now
@@ -67,9 +73,7 @@ def parseHdfsFile(node=None, csvFilename=None, timeoutSecs=3600, retryDelaySecs=
     
     # FIX! this is ugly..needs to change to use the name node from the config json/h2o args?
     # also the hdfs dir
-    hdfsPrefix = "hdfs://192.168.1.151/datasets/"
-    # temp hack to match current H2O
-    hdfsPrefix = "hdfs:/datasets/"
+    hdfsPrefix = "hdfs:hdfs://192.168.1.176/datasets/"
     hdfsKey = hdfsPrefix + csvFilename
     print "parseHdfsFile hdfsKey:", hdfsKey
 

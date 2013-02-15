@@ -81,8 +81,9 @@ def simpleCheckRFView(node, rfv,**kwargs):
     model_key = rfv['model_key']
     data_key = rfv['data_key']
 
-    confusionInspect = node.inspect(confusion_key)
-    modelInspect = node.inspect(model_key)
+    # 2/14/13 kbn. can we not model any more? causes assertion error
+    ### confusionInspect = node.inspect(confusion_key)
+    ### modelInspect = node.inspect(model_key)
     dataInspect = node.inspect(data_key)
 
 

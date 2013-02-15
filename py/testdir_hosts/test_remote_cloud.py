@@ -25,7 +25,7 @@ class Basic(unittest.TestCase):
     def test_remote_Cloud(self):
         trial = 0
         # FIX! we should increment this from 1 to N? 
-        nodes_per_host = 6
+        nodes_per_host = 1
         for i in range(1,10):
             sys.stdout.write('.')
             sys.stdout.flush()
