@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import jsr166y.ForkJoinTask;
 import jsr166y.RecursiveAction;
 import water.*;
+import water.util.Utils;
 
 class DABuilder {
 

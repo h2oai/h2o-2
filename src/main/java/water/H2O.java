@@ -12,6 +12,7 @@ import water.exec.Function;
 import water.hdfs.HdfsLoader;
 import water.nbhm.NonBlockingHashMap;
 import water.store.s3.PersistS3;
+import water.util.Utils;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
@@ -248,7 +249,7 @@ public final class H2O {
     } catch( Throwable t ) {
       return null;
     } finally {
-      try { if(s != null) s.close(); } catch( Throwable t ) { }
+      Utils.close(s);
     }
   }
 

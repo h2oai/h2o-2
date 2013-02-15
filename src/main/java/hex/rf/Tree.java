@@ -10,6 +10,7 @@ import jsr166y.CountedCompleter;
 import jsr166y.RecursiveTask;
 import water.*;
 import water.Timer;
+import water.util.Utils;
 
 public class Tree extends CountedCompleter {
   static public enum StatType { ENTROPY, GINI };

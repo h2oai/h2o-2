@@ -1,8 +1,12 @@
 package hex;
 
 import java.util.*;
-import com.google.gson.*;
+
 import water.*;
+import water.Jobs.Job;
+import water.Jobs.Progress;
+
+import com.google.gson.*;
 
 /**
  * Scalable K-Means++ (KMeans||)<br>
@@ -15,30 +19,30 @@ public abstract class KMeans {
 
   public static class KMeansModel extends Model {
     public static final String KEY_PREFIX = "__KMeansModel_";
-    public double[][] _clusters; // The cluster centers, normalized according to _va
-    public int        _iteration;
-    public int        _k;
+    public double[][]          _clusters;                    // The cluster centers, normalized according to _va
+    public int                 _k;
 
     // Empty constructor for deserialization
-    public KMeansModel() {}
+    public KMeansModel() {
+    }
 
     KMeansModel(Key selfKey, int cols[], Key dataKey, int k) {
       // Unlike other models, k-means is a discovery-only procedure and does
-      // not require a response-column to train.  This also means the clusters
+      // not require a response-column to train. This also means the clusters
       // are not classes (although, if a class/response is associated with each
       // row we could count the number of each class in each cluster).
-      super(selfKey,cols,dataKey);
+      super(selfKey, cols, dataKey);
       _k = k;
     }
 
-    // Accept only columns with a defined mean.  Used during the Model.<init> call.
-    @Override public boolean columnFilter(ValueArray.Column C) {
+    // Accept only columns with a defined mean. Used during the Model.<init> call.
+    @Override
+    public boolean columnFilter(ValueArray.Column C) {
       return !Double.isNaN(C._mean);
     }
 
     public JsonObject toJson() {
       JsonObject res = new JsonObject();
-      res.addProperty("iterations", _iteration);
       JsonArray ary = new JsonArray();
       for( double[] dd : clusters() ) {
         JsonArray ary2 = new JsonArray();
@@ -46,7 +50,7 @@ public abstract class KMeans {
           ary2.add(new JsonPrimitive(d));
         ary.add(ary2);
       }
-      res.add("clusters",ary);
+      res.add("clusters", ary);
       return res;
     }
 
@@ -54,49 +58,63 @@ public abstract class KMeans {
     public double[][] clusters() {
       double dd[][] = _clusters.clone();
       for( double ds[] : dd )
-        for( int i=0; i<ds.length; i++ ) {
+        for( int i = 0; i < ds.length; i++ ) {
           ValueArray.Column C = _va._cols[i];
           double d = ds[i];
-          if( C._sigma != 0.0 && !Double.isNaN(C._sigma) ) d *= C._sigma;
+          if( C._sigma != 0.0 && !Double.isNaN(C._sigma) )
+            d *= C._sigma;
           d += C._mean;
           ds[i] = d;
         }
       return dd;
     }
 
-    /** Single row scoring, on properly ordered data.  Will return NaN if any
-     *  data element contains a NaN.  Returns the cluster-number, which is
-     *  mostly an internal value.  */
-    protected double score0( double[] data ) {
-      for( int i=0; i<data.length; i++ ) { // Normalize the data before scoring
+    /**
+     * Single row scoring, on properly ordered data. Will return NaN if any data element contains a NaN. Returns the
+     * cluster-number, which is mostly an internal value.
+     */
+    protected double score0(double[] data) {
+      for( int i = 0; i < data.length; i++ ) { // Normalize the data before scoring
         ValueArray.Column C = _va._cols[i];
         double d = data[i] - C._mean;
-        if( C._sigma != 0.0 && !Double.isNaN(C._sigma) ) d /= C._sigma;
+        if( C._sigma != 0.0 && !Double.isNaN(C._sigma) )
+          d /= C._sigma;
         data[i] = d;
       }
-      return closest(_clusters,data);
+      return closest(_clusters, data);
     }
+
     /** Single row scoring, on a compatible ValueArray (when pushed throw the mapping) */
-    protected double score0( ValueArray data, int row, int[] mapping ) {
+    protected double score0(ValueArray data, int row, int[] mapping) {
       throw H2O.unimpl();
     }
 
     /** Bulk scoring API, on a compatible ValueArray (when pushed throw the mapping) */
-    protected double score0( ValueArray data, AutoBuffer ab, int row_in_chunk, int[] mapping ) {
+    protected double score0(ValueArray data, AutoBuffer ab, int row_in_chunk, int[] mapping) {
       throw H2O.unimpl();
     }
   }
 
-  // Return a normalized value.  If missing, return the mean (which we know
+  // Return a normalized value. If missing, return the mean (which we know
   // exists because we filtered out columns with no mean).
-  private static double datad( ValueArray va, AutoBuffer bits, int row, ValueArray.Column C) {
-    if( va.isNA(bits,row,C) ) return C._mean;
+  private static double datad(ValueArray va, AutoBuffer bits, int row, ValueArray.Column C) {
+    if( va.isNA(bits, row, C) )
+      return C._mean;
     double d = va.datad(bits, row, C) - C._mean;
-    return (C._sigma == 0.0 || Double.isNaN(C._sigma)) ? d : d/C._sigma;
+    return (C._sigma == 0.0 || Double.isNaN(C._sigma)) ? d : d / C._sigma;
   }
 
-  static public void run(Key dest, ValueArray va, int k, double epsilon, int... cols) {
-    final KMeansModel res = new KMeansModel(dest,cols,va._key,k);
+  public static void run(Key dest, ValueArray va, int k, double epsilon, int... cols) {
+    Job job = startJob(dest, va, k, epsilon, cols);
+    run(job, va, k, epsilon, cols);
+  }
+
+  public static Job startJob(Key dest, ValueArray va, int k, double epsilon, int... cols) {
+    return Jobs.start("KMeans K: " + k + ", Cols: " + cols.length, dest);
+  }
+
+  public static void run(Job job, ValueArray va, int k, double epsilon, int... cols) {
+    KMeansModel res = new KMeansModel(job._dest, cols, va._key, k);
     // Updated column mapping selection after removing various junk columns
     cols = res.columnMapping(va.colNames());
 
@@ -105,9 +123,11 @@ public abstract class KMeans {
     clusters[0] = new double[cols.length];
     AutoBuffer bits = va.getChunk(0);
     for( int c = 0; c < cols.length; c++ )
-      clusters[0][c] = datad(va,bits, 0, va._cols[cols[c]]);
+      clusters[0][c] = datad(va, bits, 0, va._cols[cols[c]]);
 
-    for( int i = 0; i < 5; i++ ) {
+    int iteration = 0;
+    float expected = 20;
+    while( iteration < 5 ) {
       // Sum squares distances to clusters
       Sqr sqr = new Sqr();
       sqr._arykey = va._key;
@@ -125,12 +145,14 @@ public abstract class KMeans {
       sampler.invoke(va._key);
       clusters = DRemoteTask.merge(clusters, sampler._newClusters);
 
-      res._iteration++;
-      UKV.put(dest, res);
+      if( Jobs.cancelled(job._key) ) {
+        Jobs.remove(job._key);
+        return;
+      }
+      UKV.put(job._progress, new Progress(++iteration / expected));
     }
 
     clusters = recluster(clusters, k);
-    res._clusters = clusters;   // sharing is caring....
 
     // Iterate until no cluster mean moves more than epsilon
     boolean moved = true;
@@ -150,9 +172,16 @@ public abstract class KMeans {
           clusters[cluster][column] = value;
         }
       }
-      res._iteration++;
+
+      float progress = Math.min(++iteration / expected, 1f);
+      UKV.put(job._progress, new Progress(progress));
+      res._clusters = clusters;
+      UKV.put(job._dest, res);
+      if( Jobs.cancelled(job._key) )
+        break;
     }
-    UKV.put(dest, res);
+
+    Jobs.remove(job._key);
   }
 
   public static class Sqr extends MRTask {
@@ -176,7 +205,7 @@ public abstract class KMeans {
 
       for( int row = 0; row < rows; row++ ) {
         for( int column = 0; column < _cols.length; column++ )
-          values[column] = datad(va,bits, row, va._cols[_cols[column]]);
+          values[column] = datad(va, bits, row, va._cols[_cols[column]]);
 
         _sqr += minSqr(_clusters, _clusters.length, values);
       }
@@ -217,7 +246,7 @@ public abstract class KMeans {
 
       for( int row = 0; row < rows; row++ ) {
         for( int column = 0; column < _cols.length; column++ )
-          values[column] = datad(va,bits, row, va._cols[_cols[column]]);
+          values[column] = datad(va, bits, row, va._cols[_cols[column]]);
 
         double sqr = minSqr(_clusters, _clusters.length, values);
 
@@ -274,7 +303,7 @@ public abstract class KMeans {
       // Find closest cluster for each row
       for( int row = 0; row < rows; row++ ) {
         for( int column = 0; column < _cols.length; column++ )
-          values[column] = datad(va,bits, row, va._cols[_cols[column]]);
+          values[column] = datad(va, bits, row, va._cols[_cols[column]]);
 
         int cluster = closest(_clusters, values);
 

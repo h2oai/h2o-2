@@ -15,10 +15,11 @@
 // ============================================================================
 package hex.rng;
 
-import hex.rf.Utils;
 
 import java.util.Random;
 import java.util.concurrent.locks.ReentrantLock;
+
+import water.util.Utils;
 
 /**
  * <p>

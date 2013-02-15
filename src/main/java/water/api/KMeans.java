@@ -2,6 +2,7 @@ package water.api;
 
 import jsr166y.CountedCompleter;
 import water.*;
+import water.Jobs.Job;
 import water.util.RString;
 
 import com.google.gson.JsonObject;
@@ -28,27 +29,30 @@ public class KMeans extends Request {
       int dot = n.lastIndexOf('.');
       if( dot > 0 )
         n = n.substring(0, dot);
-      dest = Key.make(hex.KMeans.KMeansModel.KEY_PREFIX + n + ".kmeans");
+      dest = Key.make(hex.KMeans.KMeansModel.KEY_PREFIX + n + Extensions.KMEANS);
     }
 
+    final Job job = hex.KMeans.startJob(dest, va, k, epsilon, cols);
     try {
-      final Key dest_ = dest;
-      UKV.put(dest, new hex.KMeans.KMeansModel());
-
       H2O.FJP_NORM.submit(new CountedCompleter() {
-          @Override public void compute() {
-            hex.KMeans.run(dest_, va, k, epsilon, cols);
-            tryComplete();
-          }
-          @Override public boolean onExceptionalCompletion( Throwable ex, CountedCompleter caller ) {
-            ex.printStackTrace();  return true; 
-          }
-        });
+        @Override
+        public void compute() {
+          hex.KMeans.run(job, va, k, epsilon, cols);
+          tryComplete();
+        }
+
+        @Override
+        public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
+          ex.printStackTrace();
+          return true;
+        }
+      });
 
       JsonObject response = new JsonObject();
+      response.addProperty(JOB, job._key.toString());
       response.addProperty(DEST_KEY, dest.toString());
 
-      Response r = KMeansProgress.redirect(response, dest);
+      Response r = Progress.redirect(response, job._key, dest);
       r.setBuilder(DEST_KEY, new KeyElementBuilder());
       return r;
     } catch( IllegalArgumentException e ) {

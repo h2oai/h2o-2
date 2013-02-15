@@ -14,6 +14,7 @@ import water.*;
 import water.ValueArray.Column;
 import water.api.GLM.GLMBuilder;
 import water.parser.CsvParser;
+import water.util.Utils;
 
 import com.google.gson.*;
 
@@ -25,15 +26,9 @@ public class Inspect extends Request {
   private final Int            _view      = new Int(VIEW, 100, 0, 10000);
 
   static {
-    _displayNames.put(BASE, "Base");
     _displayNames.put(ENUM_DOMAIN_SIZE, "Enum Domain");
-    _displayNames.put(MAX, "Max");
     _displayNames.put(MEAN, "&mu;");
-    _displayNames.put(MIN, "Min");
     _displayNames.put(NUM_MISSING_VALUES, "Missing");
-    _displayNames.put(OFFSET, "Offset");
-    _displayNames.put(SCALE, "Scale");
-    _displayNames.put(SIZE, "Size");
     _displayNames.put(VARIANCE, "&sigma;");
   }
 
@@ -129,7 +124,7 @@ public class Inspect extends Request {
       }
     } catch( IOException ioe ) { // Stop at any io error
     } finally {
-      try { if( is != null ) is.close(); } catch( IOException ioe ) { }
+      Utils.close(is);
     }
     if( off < bs.length )
       bs = Arrays.copyOf(bs, off); // Trim array to length read
@@ -234,8 +229,9 @@ public class Inspect extends Request {
     r.setBuilder(ROWS + "." + ROW, new ArrayRowElementBuilder() {
       @Override
       public String elementToString(JsonElement elm, String contextName) {
-        String s = _displayNames.get(elm.getAsString());
-        return s != null ? s : super.elementToString(elm, contextName);
+        String json = elm.getAsString();
+        String html = _displayNames.get(json);
+        return html != null ? html : RequestStatics.JSON2HTML(json);
       }
     });
     return r;
@@ -265,7 +261,7 @@ public class Inspect extends Request {
     // @formatter:off
     sb.append(""
         + "<h3>"
-          + "<a style='%delBtnStyle' href='RemoveAck.html?" + keyParam + "'>"
+          + "<a href='RemoveAck.html?" + keyParam + "'>"
           + "<button class='btn btn-danger btn-mini'>X</button></a>"
           + "&nbsp;&nbsp;" + ary._key.toString()
         + "</h3>"

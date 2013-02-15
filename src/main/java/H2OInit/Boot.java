@@ -11,6 +11,8 @@ import java.util.Enumeration;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import water.util.Utils;
+
 
 /** Initializer class for H2O.
  *
@@ -49,7 +51,7 @@ public class Boot extends ClassLoader {
     } catch( NoSuchAlgorithmException e ) {
       throw new RuntimeException(e);
     } finally {
-      try { is.close(); } catch( IOException e ) { }
+      Utils.close(is);
     }
   }
 

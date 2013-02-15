@@ -7,6 +7,7 @@ import java.util.*;
 import water.*;
 import water.Timer;
 import water.util.TestUtil;
+import water.util.Utils;
 
 /**
  * A RandomForest can be used for growing or validation. The former starts with a known target number of trees,

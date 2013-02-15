@@ -54,25 +54,27 @@ public class RequestServer extends NanoHTTPD {
 
     //Request.addToNavbar(registerRequest(new Plot()),        "Basic",         "Plot");
 
-    Request.addToNavbar(registerRequest(new Cloud()),    "Cloud Status", "Admin");
-    Request.addToNavbar(registerRequest(new Timeline()), "Timeline",     "Admin");
-    Request.addToNavbar(registerRequest(new JStack()),   "Stack Dump",   "Admin");
-    Request.addToNavbar(registerRequest(new Shutdown()), "Shutdown",     "Admin");
+    Request.addToNavbar(registerRequest(new Jobs()),        "Jobs",          "Admin");
+    Request.addToNavbar(registerRequest(new Cloud()),       "Cloud Status",  "Admin");
+    Request.addToNavbar(registerRequest(new Timeline()),    "Timeline",      "Admin");
+    Request.addToNavbar(registerRequest(new JStack()),      "Stack Dump",    "Admin");
+    Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",      "Admin");
 
     Request.addToNavbar(registerRequest(new Tutorials()),           "View All",      "Tutorials");
     Request.addToNavbar(registerRequest(new TutorialRFIris()),      "Random Forest", "Tutorials");
     Request.addToNavbar(registerRequest(new TutorialGLMProstate()), "GLM",           "Tutorials");
 
     // internal handlers
-    registerRequest(new PutValue());
+    registerRequest(new Cancel());
     registerRequest(new Exec());
     registerRequest(new ExportS3Progress());
     registerRequest(new GLMGridProgress());
     registerRequest(new GetVector());
-    registerRequest(new KMeansProgress());
     registerRequest(new ParseProgress());
     registerRequest(new RReaderProgress());
     registerRequest(new PostFile());
+    registerRequest(new Progress());
+    registerRequest(new PutValue());
     registerRequest(new PutVector());
     registerRequest(new Remove());
     registerRequest(new RemoveAck());

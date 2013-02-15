@@ -5,6 +5,7 @@ import java.util.BitSet;
 
 import water.*;
 import water.ValueArray.Column;
+import water.util.Utils;
 
 /**A DataAdapter maintains an encoding of the original data. Every raw value (of type float)
  * is represented by a short value. When the number of unique raw value is larger that binLimit,

@@ -5,6 +5,7 @@ import java.util.Random;
 
 import water.*;
 import water.ValueArray.Column;
+import water.util.Utils;
 
 import com.google.common.primitives.Ints;
 

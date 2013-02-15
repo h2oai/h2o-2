@@ -1,7 +1,5 @@
 package water.api;
 
-import java.lang.reflect.Field;
-
 import water.util.Check;
 
 public class Constants {
@@ -13,6 +11,14 @@ public class Constants {
     public static final String MILLIS              = "_ms";
   }
 
+  public static class Extensions {
+    public static final String HEX = ".hex";
+    public static final String JOB = ".job";
+    public static final String KMEANS = ".kmeans";
+  }
+
+  public static final String BUILT_IN_KEY_JOBS                 = "__built_in_key_jobs";
+
   public static final String ALPHA                 = "alpha";
   public static final String ARGUMENTS             = "arguments";
   public static final String AUC                   = "area_under_curve";
@@ -21,6 +27,7 @@ public class Constants {
   public static final String BETA_EPS              = "beta_epsilon";
   public static final String BIN_LIMIT             = "bin_limit";
   public static final String BUCKET                = "bucket";
+  public static final String CANCELLED             = "cancelled";
   public static final String CASE                  = "case";
   public static final String CASE_MODE             = "case_mode";
   public static final String CLASS                 = "response_variable";
@@ -60,6 +67,8 @@ public class Constants {
   public static final String HELP                  = "help";
   public static final String IGNORE                = "ignore";
   public static final String ITEMS                 = "items";
+  public static final String JOB                   = "job";
+  public static final String JOBS                  = "jobs";
   public static final String JSON_H2O              = "h2o";
   public static final String K                     = "k";
   public static final String KEY                   = "key";
@@ -116,6 +125,7 @@ public class Constants {
   public static final String SIZE                  = "size";
   public static final String SOURCE_KEY            = "source_key";
   public static final String STACK_TRACES          = "stack_traces";
+  public static final String START_TIME            = "start_time";
   public static final String STATUS                = "status";
   public static final String STEP                  = "step";
   public static final String STRATA                = "strata";
