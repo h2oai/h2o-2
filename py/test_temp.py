@@ -20,11 +20,18 @@ class Basic(unittest.TestCase):
     def test_A_Basic(self):
         # if any are wrong, dump node-ordered info from everyone, EC2 debug.
         expectedSize = len(h2o.nodes)
-        cloudSizes = [n.get_cloud()['cloud_size'] for n in h2o.nodes]
+        cloudSizes = []
+        for n in h2o.nodes:
+            print h2o.dump_json(n.get_cloud())
+            gc = n.get_cloud()
+            cloudSizes.append(gc['cloud_size'])
+        print cloudSizes
+        csStr = ",".join(cloudSizes))
+        print csStr
         for s in cloudSizes:
             self.assertEqual(s, expectedSize,
                 "Inconsistent cloud size. nodes report %s instead of %d" % \
-                (",".join(str(cloudSizes)), expectedSize))
+                (csStr, expectedSize))
 
     def test_B_RF_iris2(self):
         h2o_cmd.runRF(trees=6, timeoutSecs=10,
@@ -43,9 +50,6 @@ class Basic(unittest.TestCase):
         csvPathname=h2o.find_file('smalldata/fail1_100x11000.csv.gz')
         parseKey = h2o_cmd.parseFile(None, csvPathname, timeoutSecs=10)
         inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], offset=-1, view=5)
-
-    def test_F_StoreView(self):
-        storeView = h2o.nodes[0].store_view()
 
 
 if __name__ == '__main__':

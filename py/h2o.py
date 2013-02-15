@@ -704,7 +704,18 @@ class H2O(object):
                 }),
             ignoreH2oError=ignoreH2oError
             )
-        verboseprint("\ninspect result:", dump_json(a))
+        # too much!
+        ### verboseprint("\ninspect result:", dump_json(a))
+        return a
+
+    # FIX! what params does this take
+    def store_view(self):
+        a = self.__check_request(requests.get(self.__url('StoreView.json'),
+            params={
+                })
+            )
+        # too much!
+        ### verboseprint("\ninspect result:", dump_json(a))
         return a
 
     # H2O doesn't support yet?
