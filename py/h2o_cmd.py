@@ -213,7 +213,8 @@ def sleep_with_dot(sec, message=None):
         dot()
         count += 1
 
-def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, timeoutSecs=20, **kwargs):                                                                                                                                                                      
+def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, timeoutSecs=20, **kwargs):
+    ''' Parse a file stored in S3 bucket'''                                                                                                                                                                       
     if not bucket  : raise Exception('No S3 bucket specified')
     if not filename: raise Exception('No filename in bucket specified')
     if not node: node = h2o.nodes[0]
