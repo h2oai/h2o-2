@@ -7,6 +7,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import water.Arguments;
 import water.util.TestUtil;
+import water.util.Utils;
 
 /** Launch RF in a new vm and records  results.
  */

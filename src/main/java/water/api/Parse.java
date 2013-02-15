@@ -1,10 +1,8 @@
 package water.api;
 
-import java.util.Properties;
-import water.Key;
-import water.DKV;
-import water.Value;
-import water.parser.*;
+import water.*;
+import water.parser.CsvParser;
+import water.parser.ParseDataset;
 import water.util.RString;
 
 import com.google.gson.JsonObject;
@@ -42,7 +40,7 @@ public class Parse extends Request {
       if( dot > 0 ) n = n.substring(0, dot);
       String dst = n+".hex";
       return dst;
-    }    
+    }
     @Override protected String queryDescription() { return "Destination hex key"; }
   }
 

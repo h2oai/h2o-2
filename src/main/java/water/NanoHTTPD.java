@@ -5,6 +5,8 @@ import java.net.Socket;
 import java.net.URLEncoder;
 import java.util.*;
 
+import water.util.Utils;
+
 /**
  * A simple, tiny, nicely embeddable HTTP 1.0 (partially 1.1) server in Java
  *
@@ -389,7 +391,7 @@ public class NanoHTTPD
       } catch ( InterruptedException ie ) {
         // Thrown by sendError, ignore and exit the thread.
       } finally {
-        try { mySocket.close(); } catch( IOException ex ) { }
+        Utils.close(mySocket);
       }
     }
 
@@ -663,7 +665,7 @@ public class NanoHTTPD
       catch( IOException ioe )
       {
         // Couldn't write? No can do.
-        try { mySocket.close(); } catch( Throwable t ) {}
+        Utils.close(mySocket);
       }
     }
 

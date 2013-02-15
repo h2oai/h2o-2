@@ -2,6 +2,8 @@
 
 import java.util.Random;
 
+import water.util.Utils;
+
 
 /**The entropy formula is the classic Shannon entropy gain, which is:
  *

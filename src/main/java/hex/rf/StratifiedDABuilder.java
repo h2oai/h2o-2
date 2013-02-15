@@ -8,6 +8,7 @@ import jsr166y.ForkJoinTask;
 import jsr166y.RecursiveAction;
 import water.*;
 import water.ValueArray.Column;
+import water.util.Utils;
 
 public class StratifiedDABuilder extends DABuilder {
 

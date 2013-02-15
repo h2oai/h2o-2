@@ -4,6 +4,8 @@ import hex.rf.Data.Row;
 
 import java.util.*;
 
+import water.util.Utils;
+
 /** Keeps track of the column distributions and analyzes the column splits in the
  * end producing the single split that will be used for the node. */
 abstract class Statistic {

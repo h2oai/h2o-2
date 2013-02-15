@@ -2,6 +2,8 @@ package hex.rf;
 
 import java.util.Random;
 
+import water.util.Utils;
+
 /** Computes the gini split statistics.
  *
  * The Gini fitness is calculated as a probability that the element will be

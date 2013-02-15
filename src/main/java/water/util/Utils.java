@@ -1,9 +1,12 @@
-package hex.rf;
+package water.util;
 
 import hex.rng.*;
 import hex.rng.H2ORandomRNG.RNGKind;
 import hex.rng.H2ORandomRNG.RNGType;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.net.Socket;
 import java.security.SecureRandom;
 import java.text.DecimalFormat;
 import java.util.Arrays;
@@ -204,4 +207,11 @@ public class Utils {
     a[change] = helper;
   }
 
+  public static void close(Closeable closeable) {
+    try { if( closeable != null ) closeable.close(); } catch( IOException _ ) { }
+  }
+
+  public static void close(Socket s) {
+    try { if( s != null ) s.close(); } catch( IOException _ ) { }
+  }
 }

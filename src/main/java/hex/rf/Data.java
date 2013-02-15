@@ -6,6 +6,7 @@ import hex.rf.Tree.SplitNode;
 import java.util.*;
 
 import water.MemoryManager;
+import water.util.Utils;
 
 public class Data implements Iterable<Row> {
   /** Use stratified sampling */

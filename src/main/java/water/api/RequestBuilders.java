@@ -3,6 +3,7 @@ package water.api;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Map.Entry;
 
@@ -31,9 +32,15 @@ import com.google.gson.*;
 public class RequestBuilders extends RequestQueries {
   public static final String ROOT_OBJECT = "";
 
-  private static ThreadLocal<DecimalFormat> _format = new ThreadLocal<DecimalFormat>() {
+  private static final ThreadLocal<DecimalFormat> _format = new ThreadLocal<DecimalFormat>() {
     protected DecimalFormat initialValue() {
       return new DecimalFormat("###.####");
+    }
+  };
+
+  static final ThreadLocal<SimpleDateFormat> ISO8601 = new ThreadLocal<SimpleDateFormat>() {
+    protected SimpleDateFormat initialValue() {
+      return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
     }
   };
 

@@ -6,6 +6,7 @@ import java.util.*;
 
 import water.*;
 import water.ValueArray.Column;
+import water.util.Utils;
 import water.Timer;
 
 /** Distributed RandomForest */

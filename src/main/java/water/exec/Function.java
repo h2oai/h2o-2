@@ -393,7 +393,7 @@ class RandBitVect extends Function {
       byte[] bits = MemoryManager.malloc1(rows);
       for( int i = 0; i < create; ++i )
         bits[i] = 1;
-      Random r = hex.rf.Utils.getDeterRNG(_seed+cidx);
+      Random r = water.util.Utils.getDeterRNG(_seed+cidx);
       for( int i = rows-1; i >=1; --i) {
         int j = r.nextInt(i+1);
         byte x = bits[i];
