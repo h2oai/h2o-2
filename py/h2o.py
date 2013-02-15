@@ -1067,7 +1067,7 @@ class H2O(object):
         use_this_ip_addr=None, port=54321, capture_output=True, sigar=False, use_debugger=None, classpath=None,
         use_hdfs=False, hdfs_root="/datasets", 
         # hdfs_version="cdh4", hdfs_name_node="192.168.1.151", 
-        hdfs_version="cdh3u5", hdfs_name_node="192.168.1.151", 
+        hdfs_version="cdh3u5", hdfs_name_node="192.168.1.176", 
         hdfs_config=None,
         # FIX not interesting any more?
         hdfs_nopreload=None, 

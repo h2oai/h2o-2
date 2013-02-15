@@ -14,7 +14,7 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # assume we're at 0xdata with it's hdfs namenode
-        h2o.build_cloud(1,use_hdfs=True, hdfs_name_node="192.168.1.151")
+        h2o.build_cloud(1,use_hdfs=True, hdfs_version='cdh3u5', hdfs_name_node="192.168.1.151")
 
     @classmethod
     def tearDownClass(cls):
@@ -22,12 +22,6 @@ class Basic(unittest.TestCase):
 
     def test_B_load_hdfs_and_store_hex_to_hdfs(self):
         print "\nLoad a list of files from 0xdata hdfs, parse, and store the .hex to hdfs"
-        print "CAVEAT: apparently there is no H2O output if you don't have user/group permission"
-        print "to inspect the HDFS root specified. This will look like a 'Key not found' fail."
-        print "You can tell because no keys will have been preloaded from hdfs in the sandbox/*stdout*"
-        print "The username used will be the one that executed this test"
-        print "testdir_hosts/test_from_hdfs_hosts.py will use a config json-specified username (0xdiag)"
-        print "\nClicking on the popup browser on the Node page will show no preloaded hdfs keys"
         print "\nYou can try running as hduser/hduser if fail"
 
         # larger set in my local dir
@@ -75,10 +69,11 @@ class Basic(unittest.TestCase):
         timeoutSecs = 200
         # save the first, for all comparisions, to avoid slow drift with each iteration
         firstglm = {}
+        h2i.setupImportHdfs()
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in hdfs dir 
             print "Loading", csvFilename, 'from HDFS'
-            parseKey = h2i.parseHdfsFile(csvFilename=csvFilename, timeoutSecs=1000)
+            parseKey = h2i.parseImportHdfsFile(csvFilename=csvFilename, path='/datasets', timeoutSecs=1000)
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "parse result:", parseKey['destination_key']
 

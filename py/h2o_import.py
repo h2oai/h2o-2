@@ -56,25 +56,34 @@ def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
     print "\nParse result:", parseKey
     return parseKey
 
-def setupImportHdfs(node=None, path='hdfs://192.168.1.176/datasets'):
+def setupImportHdfs(node=None, path=None):
     if not node: node = h2o.nodes[0]
-    importHdfsResult = node.import_hdfs(importHdfsPath)
+    hdfsPrefix = 'hdfs://' + h2o.nodes[0].hdfs_name_node
+    if path is None:
+        URI = hdfsPrefix + '/datasets'
+    else:
+        URI = hdfsPrefix + path
+
+    importHdfsResult = node.import_hdfs(URI)
     print h2o.dump_json(importHdfsResult)
     return importHdfsResult
 
 # FIX! can update this to parse from local dir also (import keys from folder?)
 # but everyone needs to have a copy then
-def parseImportHdfsFile(node=None, csvFilename=None, timeoutSecs=3600, retryDelaySecs=1.0):
+def parseImportHdfsFile(node=None, csvFilename=None, path=None, timeoutSecs=3600, retryDelaySecs=1.0):
     if not csvFilename: raise Exception('No csvFilename parameter in parseImportHdfsFile')
     if not node: node = h2o.nodes[0]
 
-    # assume the hdfs prefix is datasets, for now
+    # FIX! this is ugly..
     print "\nHacked the test to match the new behavior for key names created from hdfs files"
-    
-    # FIX! this is ugly..needs to change to use the name node from the config json/h2o args?
-    # also the hdfs dir
-    hdfsPrefix = "hdfs:hdfs://192.168.1.176/datasets/"
-    hdfsKey = hdfsPrefix + csvFilename
+    hdfsPrefix = 'hdfs://' + h2o.nodes[0].hdfs_name_node
+    if path is None:
+        URI = hdfsPrefix + '/datasets'
+    else:
+        URI = hdfsPrefix + path
+
+    # double hdfs!
+    hdfsKey = URI + "/" + csvFilename
     print "parseHdfsFile hdfsKey:", hdfsKey
 
     # FIX! getting H2O HPE?

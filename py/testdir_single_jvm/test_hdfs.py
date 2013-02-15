@@ -14,25 +14,15 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # assume we're at 0xdata with it's hdfs namenode
-        h2o.build_cloud(1,use_hdfs=True, hdfs_name_node="192.168.1.151")
+        h2o.build_cloud(1,use_hdfs=True, 
+            hdfs_version='cdh3u5', hdfs_name_node='192.168.1.176')
 
     @classmethod
     def tearDownClass(cls):
-        # hang for many hour, so you can play with the browser
-        # FIX!, should be able to do something that waits till browser is quit?
-        if not h2o.browse_disable:
-            time.sleep(500000)
-
         h2o.tear_down_cloud()
 
     def test_B_hdfs_files(self):
         print "\nLoad a list of files from HDFS, parse and do 1 RF tree"
-        print "CAVEAT: apparently there is no H2O output if you don't have user/group permission"
-        print "to inspect the HDFS root specified. This will look like a 'Key not found' fail." 
-        print "You can tell because no keys will have been preloaded from hdfs in the sandbox/*stdout*"
-        print "The username used will be the one that executed this test"
-        print "testdir_hosts/test_from_hdfs_hosts.py will use a config json-specified username (0xdiag)"
-        print "\nClicking on the popup browser on the Node page will show no preloaded hdfs keys"
         print "\nYou can try running as hduser/hduser if fail"
         # larger set in my local dir
         # fails because classes aren't integers
@@ -79,13 +69,13 @@ class Basic(unittest.TestCase):
         timeoutSecs = 200
         # save the first, for all comparisions, to avoid slow drift with each iteration
         firstglm = {}
+        h2i.setupImportHdfs()
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in hdfs dir 
             print "Loading", csvFilename, 'from HDFS'
-            parseKey = h2i.parseHdfsFile(csvFilename=csvFilename, timeoutSecs=1000)
+            parseKey = h2i.parseImportHdfsFile(csvFilename=csvFilename, path='/datasets', timeoutSecs=1000)
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "parse result:", parseKey['destination_key']
-            # I use this if i want the larger set in my localdir
 
             print "\n" + csvFilename
             start = time.time()

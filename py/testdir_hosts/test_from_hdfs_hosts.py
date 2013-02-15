@@ -24,6 +24,7 @@ class Basic(unittest.TestCase):
         # fails because classes aren't integers
         #    "allstate_claim_prediction_train_set.zip",
         csvFilenameAll = [
+            "covtype.data",
             "covtype.169x.data",
             "TEST-poker1000.csv",
             "leads.csv",
@@ -32,7 +33,6 @@ class Basic(unittest.TestCase):
             "arcene_train.both",
             "bestbuy_test.csv",
             "bestbuy_train.csv",
-            "covtype.data",
             "covtype.4x.shuffle.data",
             "covtype4x.shuffle.data",
             "covtype.13x.data",
@@ -65,10 +65,13 @@ class Basic(unittest.TestCase):
         timeoutSecs = 200
         # save the first, for all comparisions, to avoid slow drift with each iteration
         firstglm = {}
+        h2i.setupImportHdfs()
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in hdfs dir 
             start = time.time()
-            parseKey = h2i.parseHdfsFile(csvFilename=csvFilename, timeoutSecs=1000, retryDelaySecs=1.0)
+            print 'Parsing', csvFilename
+            parseKey = h2i.parseImportHdfsFile(
+                csvFilename=csvFilename, path='/datasets', timeoutSecs=1000, retryDelaySecs=1.0)
             print csvFilename, '\nparse time (python)', time.time() - start, 'seconds'
             print csvFilename, '\nparse time (h2o):', parseKey['response']['time']
             ### print h2o.dump_json(parseKey['response'])
@@ -80,11 +83,11 @@ class Basic(unittest.TestCase):
             ### print h2o.dump_json(inspect)
             cols = inspect['cols']
 
-            # look for nonzero badat count in each col
+            # look for nonzero num_missing_values count in each col
             for i, colDict in enumerate(cols):
-                badat = colDict['num_missing_values']
-                if badat != 0:
-                    ### print "%s: col: %d, badat: %d" % (csvFilename, i, badat)
+                num_missing_values = colDict['num_missing_values']
+                if num_missing_values != 0:
+                    ### print "%s: col: %d, num_missing_values: %d" % (csvFilename, i, num_missing_values)
                     pass
 
             ### print h2o.dump_json(cols[0])
