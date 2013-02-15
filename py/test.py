@@ -24,7 +24,7 @@ class Basic(unittest.TestCase):
         for s in cloudSizes:
             self.assertEqual(s, expectedSize,
                 "Inconsistent cloud size. nodes report %s instead of %d" % \
-                (",".join(str(cloudSizes)), expectedSize))
+                (",".join(map(str,cloudSizes)), expectedSize))
 
     def test_B_RF_iris2(self):
         h2o_cmd.runRF(trees=6, timeoutSecs=10,
