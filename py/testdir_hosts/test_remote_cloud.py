@@ -24,7 +24,7 @@ class Basic(unittest.TestCase):
         pass
 
     def test_remote_Cloud(self):
-        trial = 0
+        trySize = 0
         # FIX! we should increment this from 1 to N? 
         nodes_per_host = 1
         for i in range(1,10):
@@ -38,19 +38,19 @@ class Basic(unittest.TestCase):
             
             h2o.build_cloud(nodes_per_host, hosts=h2o_hosts.hosts, timeoutSecs=60, retryDelaySecs=1)
             h2o.verify_cloud_size()
-            trial += 1
+            trySize += 1
             # FIX! is this really needed? does tear_down_cloud do shutdown command and wait?
-            print "Sending shutdown to cloud, trial", trial
+            print "Sending shutdown to cloud, trySize", trySize
             h2o.nodes[0].shutdown_all()
             time.sleep(1)
 
-            print "Tearing down cloud, trial", trial
+            print "Tearing down cloud, trySize", trySize
             sys.stdout.write('.')
             sys.stdout.flush()
             h2o.tear_down_cloud()
             h2o.clean_sandbox()
             # wait to make sure no sticky ports or anything os-related
-            # here's a typical error that shows up in the looping trials..
+            # here's a typical error that shows up in the looping trySizes..
             # so let's expand the delay if larger number of jvms
             # don't need so much delay for smaller..all os issues.
 
