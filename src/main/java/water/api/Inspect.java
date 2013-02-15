@@ -2,6 +2,7 @@ package water.api;
 
 import hex.GLMSolver.GLMModel;
 import hex.KMeans.KMeansModel;
+import hex.rf.RFModel;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -73,7 +74,7 @@ public class Inspect extends Request {
       return r;
     }
     if( _key.originalValue().startsWith(KMeansModel.KEY_PREFIX) ) {
-      KMeansModel m = new KMeansModel().read(new AutoBuffer(val.get(), 0));
+      KMeansModel m = val.get(new KMeansModel());
       JsonObject res = new JsonObject();
       // Convert to JSON
       res.add("KMeansModel", m.toJson());
@@ -81,6 +82,10 @@ public class Inspect extends Request {
       Response r = Response.done(res);
       // r.setBuilder(""/*top-level do-it-all builder*/,new KMeansBuilder(m));
       return r;
+    }
+    if( _key.originalValue().startsWith(RFModel.KEY_PREFIX) ) {
+      JsonObject res = new JsonObject();
+      return RFView.redirect(res,val._key);
     }
 
     return serveUnparsedValue(val);
