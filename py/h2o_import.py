@@ -2,7 +2,7 @@ import h2o, h2o_cmd
 
 def setupImportS3(node=None, path='test-s3-integration'):
     if not node: node = h2o.nodes[0]
-    importS3Result = node.import_s3(importS3Path)
+    importS3Result = node.import_s3(path)
     h2o.dump_json(importS3Result)
     return importS3Result
 
@@ -14,7 +14,7 @@ def parseImportS3File(node=None,
     if not node: node = h2o.nodes[0]
     if not csvFilename: raise Exception('parseImportS3File: No csvFilename')
 
-    csvPathnameForH2O = "s3:/" + importS3Path + "/" + csvFilename
+    csvPathnameForH2O = "s3:/" + path + "/" + csvFilename
 
     # We like the short parse key2 name. 
     # We don't drop anything from csvFilename, unlike H2O default
@@ -31,7 +31,7 @@ def parseImportS3File(node=None,
 
 def setupImportFolder(node=None, path='/home/0xdiag/datasets'):
     if not node: node = h2o.nodes[0]
-    importFolderResult = node.import_files(importFolderPath)
+    importFolderResult = node.import_files(path)
     h2o.dump_json(importFolderResult)
     return importFolderResult
 
@@ -41,7 +41,7 @@ def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
     if not node: node = h2o.nodes[0]
     if not csvFilename: raise Exception('parseImportFolderFile: No csvFilename')
 
-    csvPathnameForH2O = "nfs:/" + importFolderPath + "/" + csvFilename
+    csvPathnameForH2O = "nfs:/" + path + "/" + csvFilename
 
     # We like the short parse key2 name. 
     # We don't drop anything from csvFilename, unlike H2O default
