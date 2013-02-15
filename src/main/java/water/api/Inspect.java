@@ -119,6 +119,8 @@ public class Inspect extends Request {
         if( len == -1 )
           break;
         off += len;
+        if( off == bs.length )  // Dataset is uncompressing alot!  Need more space...
+          bs = Arrays.copyOf(bs,bs.length*2);
       }
     } catch( IOException ioe ) { // Stop at any io error
     } finally {
