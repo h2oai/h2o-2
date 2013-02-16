@@ -19,7 +19,9 @@ class Basic(unittest.TestCase):
                 start = time.time()
                 # start by cleaning sandbox (in build_cloud). 
                 # so nosetest works which doesn't do unit_main
-                h2o.write_flatfile(node_count=tryNodes, base_port=base_port)
+
+                # done in build_cloud now
+                ### h2o.write_flatfile(node_count=tryNodes, base_port=base_port)
                 h2o.build_cloud(node_count=tryNodes,timeoutSecs=30,base_port=base_port,use_flatfile=True)
                 print "loop %d: Build cloud of %d in %d s" % (trials, tryNodes, (time.time() - start)) 
 

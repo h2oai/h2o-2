@@ -278,6 +278,9 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         # if no hosts list, use psutil method on local host.
         totalNodes = 0
         if hosts is None:
+            # if use_flatfile, we should create it, because tests will just call build_cloud with use_flatfile=True
+            # best to just create it all the time..may or may not be used 
+            write_flatfile(node_count=node_count, base_port=base_port)
             hostCount = 1
             for i in xrange(node_count):
                 verboseprint("psutil starting node", i)
@@ -285,6 +288,8 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
                 node_list.append(newNode)
                 totalNodes += 1
         else:
+            # if use_flatfile, the flatfile was created and uploaded to hosts already
+            # I guess don't recreate it, don't overwrite the one that was copied beforehand.
             hostCount = len(hosts)
             for h in hosts:
                 for i in xrange(node_count):
