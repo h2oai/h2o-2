@@ -21,7 +21,7 @@ class Basic(unittest.TestCase):
         
 
     def s3_default_bucket(self):
-        return 'h2o_airlines'
+        return 'h2o_airlines_unpacked'
 
     def test_RF_1000trees(self):
         s3bucket  = self.s3_default_bucket()  
