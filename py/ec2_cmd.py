@@ -238,6 +238,9 @@ def main():
     else: 
         hosts_config = load_hosts_config(args.hosts)
         invoke_hosts_action(args.action, hosts_config)
+        if (args.action == 'terminate'):
+            log("Deleting {0} host file.".format(args.hosts))
+            os.remove(args.hosts)
 
 if __name__ == '__main__':
     main()
