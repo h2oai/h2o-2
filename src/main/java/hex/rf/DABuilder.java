@@ -87,7 +87,7 @@ class DABuilder {
               dapt.add(f, rowNum, c);
               // if the row contains at least one correct value except class
               // column consider it as correct
-              if( c != ncolumns-1 ) 
+              if( c != ncolumns-1 )
                 rowIsValid |= true;
             }
             // The whole row is invalid in the following cases: all values are NaN or there is no class specified (NaN in class column)

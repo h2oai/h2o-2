@@ -1,11 +1,15 @@
 package hex.rf;
 import java.text.DecimalFormat;
 import java.util.Arrays;
-import java.util.BitSet;
 
+<<<<<<< HEAD:src/main/java/hex/rf/DataAdapter.java
 import water.*;
 import water.ValueArray.Column;
 import water.util.Utils;
+=======
+import water.MemoryManager;
+import water.ValueArray;
+>>>>>>> minor:src/hex/rf/DataAdapter.java
 
 /**A DataAdapter maintains an encoding of the original data. Every raw value (of type float)
  * is represented by a short value. When the number of unique raw value is larger that binLimit,
@@ -29,7 +33,6 @@ final class DataAdapter  {
   /** Maximum arity for a column (not a hard limit) */
   final short _bin_limit;
   /** Number of bad rows */
-  private int _ignoredRows;
 
   DataAdapter(ValueArray ary, RFModel model, int[] modelDataMap, int rows,
               long unique, long seed, short bin_limit, double[] classWt) {
@@ -105,7 +108,6 @@ final class DataAdapter  {
 
   public void markIgnoredRow(int row) {
     _c[_c.length-1].addBad(row);
-    _ignoredRows++;
   }
 
   private static class Col {
