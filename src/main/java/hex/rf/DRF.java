@@ -105,7 +105,6 @@ public final class DRF extends water.DRemoteTask {
     drf._verbose = verbose;
     drf._exclusiveSplitLimit = exclusiveSplitLimit;
 
-    // Again into OptArgs?
     RandomForest.OptArgs _ = new RandomForest.OptArgs();
     _.features = numSplitFeatures;
     _.ntrees   = ntrees;
