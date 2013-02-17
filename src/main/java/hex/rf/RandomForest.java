@@ -4,6 +4,11 @@ import hex.rf.Tree.StatType;
 import hex.rng.H2ORandomRNG.RNGKind;
 import java.io.File;
 import java.util.*;
+<<<<<<< HEAD:src/main/java/hex/rf/RandomForest.java
+=======
+
+import test.TestUtil;
+>>>>>>> minor:src/hex/rf/RandomForest.java
 import water.*;
 import water.Timer;
 import water.util.TestUtil;

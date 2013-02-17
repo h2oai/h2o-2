@@ -13,7 +13,7 @@ import water.util.Utils;
  */
 public class RFRunner {
 
-  static final long MAX_RUNNING_TIME = 20 * 60000; // max runtime is 20 mins
+  static final long MAX_RUNNING_TIME = 400 * 60000; // max runtime is 20 mins
   static final int ERROR_IDX = 3;
   static enum patterns { FINISH, NTREES, FEATURES, ERROR, DEPTH, LEAVES, ROWS };
 
@@ -321,10 +321,9 @@ public class RFRunner {
   }
   public static void cT7() {
     testIt( path+"datasets/bench/covtype/h2o", new String[][]{{"train.csv","test.csv"}}, //files
-        new int[]{300} /*trees*/, new int[]{10000} /*bin*/, new int[]{50,60,70,80} /*sample*/,
+        new int[]{400} /*trees*/, new int[]{10000} /*bin*/, new int[]{50,60,70,80,90} /*sample*/,
         new String[]{"entropy"}, new String[]{"1,2,6,7,8"}/*ignore*/, null, null,new int[]{30});// seeds ,  staras
   }
-
 
   public static void kCS1() {
     special.put(path+"datasets/bench/kaggle.creditsample/h2o/train.csv","-classcol=1");
@@ -418,7 +417,7 @@ public class RFRunner {
     new Arguments(args).extract(ARGS);
     out_= new PrintStream(new File("/tmp/RFRunner.stdout.txt"));
     javaCmd_ =   ARGS.jvmArgs + " " + JAR + " " + MAIN;
-    cT6(); //kCS1(); //cT5();// cT2(); cT3(); cT4();
+    kCS1(); //cT7(); //kCS1(); //cT5();// cT2(); cT3(); cT4();
   }
 
   @org.junit.Test
