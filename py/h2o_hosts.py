@@ -15,6 +15,7 @@ def find_config(base):
 # only these two args override for now. can add more.
 def build_cloud_with_hosts(node_count=None, use_flatfile=None, 
     use_hdfs=None, hdfs_name_node=None, hdfs_config=None,  hdfs_version=None,
+    base_port=None,
     java_heap_GB=None, java_extra_args=None,
     **kwargs):
 
@@ -93,6 +94,9 @@ def build_cloud_with_hosts(node_count=None, use_flatfile=None,
 
     if java_extra_args is not None:
         javaExtraArgs = java_extra_args
+
+    if base_port is not None:
+        basePort = base_port
 
     h2o.verboseprint("host config: ", username, password, 
         h2oPerHost, basePort, sigar, useFlatfile, 

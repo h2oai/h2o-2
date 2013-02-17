@@ -57,6 +57,7 @@ verbose = False
 ipaddr = None
 config_json = False
 debugger = False
+random_udp_drop = False
 
 def parse_our_args():
     parser = argparse.ArgumentParser()
@@ -67,10 +68,11 @@ def parse_our_args():
     parser.add_argument('-ip', '--ip', type=str, help='IP address to use for single host H2O with psutil control')
     parser.add_argument('-cj', '--config_json', help='Use this json format file to provide multi-host defaults. Overrides the default file pytest_config-<username>.json. These are used only if you do build_cloud_with_hosts()')
     parser.add_argument('-dbg', '--debugger', help='Launch java processes with java debug attach mechanisms', action='store_true')
+    parser.add_argument('-rud', '--random_udp_drop', help='Drop 10% of the UDP packets at the receive side', action='store_true')
     parser.add_argument('unittest_args', nargs='*')
 
     args = parser.parse_args()
-    global browse_disable, browse_json, verbose, ipaddr, config_json, debugger
+    global browse_disable, browse_json, verbose, ipaddr, config_json, debugger, random_udp_drop
 
     browse_disable = args.browse_disable or getpass.getuser()=='jenkins'
     browse_json = args.browse_json
@@ -78,6 +80,7 @@ def parse_our_args():
     ipaddr = args.ip
     config_json = args.config_json
     debugger = args.debugger
+    random_udp_drop = args.random_udp_drop
 
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
     # FIX! this isn't working to grab the args we don't care about
@@ -278,6 +281,9 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         # if no hosts list, use psutil method on local host.
         totalNodes = 0
         if hosts is None:
+            # if use_flatfile, we should create it, because tests will just call build_cloud with use_flatfile=True
+            # best to just create it all the time..may or may not be used 
+            write_flatfile(node_count=node_count, base_port=base_port)
             hostCount = 1
             for i in xrange(node_count):
                 verboseprint("psutil starting node", i)
@@ -285,10 +291,12 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
                 node_list.append(newNode)
                 totalNodes += 1
         else:
+            # if use_flatfile, the flatfile was created and uploaded to hosts already
+            # I guess don't recreate it, don't overwrite the one that was copied beforehand.
             hostCount = len(hosts)
             for h in hosts:
                 for i in xrange(node_count):
-                    verboseprint('ssh starting node', i, 'via', h)
+                    verboseprint('ssh starting node', totalNodes, 'via', h)
                     newNode = h.remote_h2o(port=base_port + i*ports_per_node, node_id=totalNodes, **kwargs)
                     node_list.append(newNode)
                     totalNodes += 1
@@ -307,6 +315,8 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         # UPDATE: do it for all cases now 2/14/13
         for n in node_list:
             stabilize_cloud(n, len(node_list), timeoutSecs=timeoutSecs)
+        # best to check for any errors due to cloud building right away?
+        check_sandbox_for_errors()
 
     except:
         if cleanup:
@@ -474,8 +484,7 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25):
         if 'nodes' not in c:
             emsg = "\nH2O didn't include a list of nodes in get_cloud response after initial cloud build"
             raise Exception(emsg)
-
-        cnodes      = c['nodes'] # list of dicts 
+        cnodes     = c['nodes'] # list of dicts 
         if (cloud_size > node_count):
             print "\nNodes in current cloud:"
             for c in cnodes:
@@ -496,14 +505,14 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25):
             print emsg
 
         
-        a = (cloud_size==node_count and consensus)
-        if (a):
+        a = (cloud_size==node_count) and consensus
+        if a:
             verboseprint("\tLocked won't happen until after keys are written")
             verboseprint("\nNodes in current cloud:")
             for c in cnodes:
                 verboseprint(c['name'])
 
-        return(a)
+        return a
 
     node.stabilize(test, error=('A cloud of size %d' % node_count),
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
@@ -553,20 +562,19 @@ class H2O(object):
                     self.__url('TestPoll.json'),
                     params=args))
 
-
     def get_cloud(self):
         a = self.__check_request(requests.get(self.__url('Cloud.json')))
-        # don't want to print everything from get_cloud json (f/j info etc)
-        # but this will check the keys exist!
         consensus  = a['consensus']
         locked     = a['locked']
         cloud_size = a['cloud_size']
         cloud_name = a['cloud_name']
         node_name  = a['node_name']
-        verboseprint('%s%s %s%s %s%s' %(
+        node_id    = self.node_id
+        verboseprint('%s%s %s%s %s%s %s%s' %(
+            "\tnode_id: ", node_id,
             "\tcloud_size: ", cloud_size,
             "\tconsensus: ", consensus,
-            "\tlocked: ", locked
+            "\tlocked: ", locked,
             ))
         return a
 
@@ -963,7 +971,7 @@ class H2O(object):
                             error, timeTakenSecs, numberOfRetries))
             else:
                 msg = error(self, timeTakenSecs, numberOfRetries)
-            raise Exception(msg)
+                raise Exception(msg)
 
     def wait_for_node_to_accept_connections(self,timeoutSecs=15):
         verboseprint("wait_for_node_to_accept_connections")
@@ -1061,6 +1069,11 @@ class H2O(object):
 
         if self.aws_credentials:
             args += [ '--aws_credentials='+self.aws_credentials ]
+
+        # passed thru build_cloud in test, or global from commandline arg
+        if self.random_udp_drop or random_udp_drop:
+            args += ['--random_udp_drop']
+
         return args
 
     def __init__(self, 
@@ -1073,7 +1086,9 @@ class H2O(object):
         hdfs_nopreload=None, 
         aws_credentials=None,
         use_flatfile=False, java_heap_GB=None, java_extra_args=None, 
-        use_home_for_ice=False, node_id=None, username=None):
+        use_home_for_ice=False, node_id=None, username=None,
+        random_udp_drop=False
+        ):
 
         if use_debugger is None: use_debugger = debugger
         self.aws_credentials = aws_credentials
@@ -1115,6 +1130,7 @@ class H2O(object):
         # don't want multiple reports from tearDown and tearDownClass
         # have nodes[0] remember (0 always exists)
         self.sandbox_error_was_reported = False
+        self.random_udp_drop = random_udp_drop
 
     def __str__(self):
         return '%s - http://%s:%d/' % (type(self), self.http_addr, self.port)

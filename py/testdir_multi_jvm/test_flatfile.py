@@ -10,9 +10,8 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # I suppose we really should move flatfile creation for hosts/ec2/and local
-        # into build_cloud. it doesn't need to be here external
-        h2o.write_flatfile(node_count=3)
+        # done in build_cloud now
+        ### h2o.write_flatfile(node_count=3)
         h2o.build_cloud(node_count=3,use_flatfile=True)
 
     @classmethod
@@ -51,8 +50,6 @@ class Basic(unittest.TestCase):
         # always match the gen above!
         # reduce to get intermittent failures to lessen, for now
         for x in xrange (11,60,10):
-            sys.stdout.write('.')
-            sys.stdout.flush()
             csvFilename = "parity_128_4_" + str(x) + "_quad.data"  
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
             # FIX! TBD do we always have to kick off the run from node 0?
@@ -61,6 +58,8 @@ class Basic(unittest.TestCase):
             h2o_cmd.runRF( trees=trees, timeoutSecs=timeoutSecs,
                     csvPathname=csvPathname)
             trees += 10
+            sys.stdout.write('.')
+            sys.stdout.flush()
 
 if __name__ == '__main__':
     h2o.unit_main()
