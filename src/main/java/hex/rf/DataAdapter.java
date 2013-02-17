@@ -2,14 +2,9 @@ package hex.rf;
 import java.text.DecimalFormat;
 import java.util.Arrays;
 
-<<<<<<< HEAD:src/main/java/hex/rf/DataAdapter.java
-import water.*;
-import water.ValueArray.Column;
-import water.util.Utils;
-=======
 import water.MemoryManager;
 import water.ValueArray;
->>>>>>> minor:src/hex/rf/DataAdapter.java
+import water.util.Utils;
 
 /**A DataAdapter maintains an encoding of the original data. Every raw value (of type float)
  * is represented by a short value. When the number of unique raw value is larger that binLimit,

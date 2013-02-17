@@ -2,13 +2,10 @@ package hex.rf;
 
 import hex.rf.Tree.StatType;
 import hex.rng.H2ORandomRNG.RNGKind;
+
 import java.io.File;
 import java.util.*;
-<<<<<<< HEAD:src/main/java/hex/rf/RandomForest.java
-=======
 
-import test.TestUtil;
->>>>>>> minor:src/hex/rf/RandomForest.java
 import water.*;
 import water.Timer;
 import water.util.TestUtil;
@@ -101,9 +98,6 @@ public class RandomForest {
     ARGS.h2oArgs = ARGS.h2oArgs.trim();
     String [] h2oArgs = ARGS.h2oArgs.split("[ \t]+");
     H2O.main(h2oArgs);
-//    new RandomForestTest().kaggle_credit();
-  //  new RandomForestTest().testRF_Iris();
-//System.exit(1);
     ValueArray va;
     // get the input data
     if(ARGS.parsedKey != null) // data already parsed
