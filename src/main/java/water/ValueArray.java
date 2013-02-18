@@ -3,6 +3,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 
+import water.Jobs.Job;
+
 import com.google.common.base.Throwables;
 
 /**
@@ -332,17 +334,22 @@ import com.google.common.base.Throwables;
   // Read a (possibly VERY large file) and put it in the K/V store and return a
   // Value for it. Files larger than 2Meg are broken into arraylets of 1Meg each.
   static public Key readPut(String keyname, InputStream is) throws IOException {
-    return readPut(Key.make(keyname), is);
+    Key key = Key.make(keyname);
+    readPut(key, is);
+    return key;
   }
 
-  static public Key readPut(Key k, InputStream is) throws IOException {
+  static public void readPut(Key k, InputStream is) throws IOException {
+    readPut(k, is, null);
+  }
+
+  static public void readPut(Key k, InputStream is, Job job) throws IOException {
     Futures fs = new Futures();
-    k = readPut(k,is,fs);
+    readPut(k,is,job,fs);
     fs.blockForPending();
-    return k;
   }
 
-  static private Key readPut(Key key, InputStream is, Futures fs) throws IOException {
+  static private void readPut(Key key, InputStream is, Job job, Futures fs) throws IOException {
     // try to read 2-chunks or less into the buffer
     byte[] buf = MemoryManager.malloc1((int)(CHUNK_SZ<<1));
     int off=0;
@@ -354,7 +361,7 @@ import com.google.common.base.Throwables;
       assert is.read(new byte[1]) == -1;
       // it is a single simple value
       UKV.put(key,new Value(key,Arrays.copyOf(buf,off)),fs);
-      return key;
+      return;
     }
     UKV.remove(key);
 
@@ -381,6 +388,9 @@ import com.google.common.base.Throwables;
       if( off<CHUNK_SZ ) break;
       Key ckey = getChunkKey(cidx++,key);
       DKV.put(ckey,new Value(ckey,buf),fs);
+
+      if(job != null && Jobs.cancelled(job._key))
+        return;
     }
     assert is.read(new byte[1]) == -1;
 
@@ -391,7 +401,7 @@ import com.google.common.base.Throwables;
     System.arraycopy(buf,0,newbuf,(int)CHUNK_SZ,off);
     DKV.put(ckey,new Value(ckey,newbuf),fs); // Overwrite the old too-small Value
     UKV.put(key,new ValueArray(key,szl,Value.ICE).value(),fs);
-    return key;
+    return;
   }
 
   // Wrap a InputStream over this ValueArray

@@ -30,7 +30,7 @@ public class Jobs extends Request {
       json.addProperty(DEST_KEY, jobs[i]._dest != null ? jobs[i]._dest.toString() : "");
       json.addProperty(START_TIME, RequestBuilders.ISO8601.get().format(new Date(jobs[i]._startTime)));
       Progress progress = jobs[i]._progress != null ? UKV.get(jobs[i]._progress, new Progress()) : null;
-      json.addProperty(PROGRESS, progress != null ? progress._value : 0f);
+      json.addProperty(PROGRESS, progress != null ? progress.get() : 0f);
       json.addProperty(CANCELLED, water.Jobs.cancelled(jobs[i]._key));
       array.add(json);
     }

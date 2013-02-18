@@ -35,7 +35,7 @@ public class Progress extends Request {
       return Inspect.redirect(response, Key.make(_dest.value()));
 
     Jobs.Progress progress = UKV.get(job._progress, new Jobs.Progress());
-    Response r = Response.poll(response, progress != null ? progress._value : 1f);
+    Response r = Response.poll(response, progress != null ? progress.get() : 1f);
     final String description = job._description;
     r.setBuilder(ROOT_OBJECT, new ObjectBuilder() {
       @Override

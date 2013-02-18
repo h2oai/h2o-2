@@ -1,6 +1,7 @@
 package water.api;
 
 import water.*;
+import water.Jobs.Job;
 import water.parser.CsvParser;
 import water.parser.ParseDataset;
 import water.util.RString;
@@ -111,11 +112,11 @@ public class Parse extends Request {
     try {
       // Make a new Setup, with the 'header' flag set according to user wishes.
       CsvParser.Setup new_setup = new CsvParser.Setup(q._separator,_header.value(),q._data,q._numlines,q._bits);
-      ParseDataset.forkParseDataset(dest, DKV.get(p._key),new_setup);
+      Job job = ParseDataset.forkParseDataset(dest, DKV.get(p._key),new_setup);
       JsonObject response = new JsonObject();
       response.addProperty(RequestStatics.DEST_KEY,dest.toString());
 
-      Response r = ParseProgress.redirect(response, dest);
+      Response r = Progress.redirect(response, job._key, dest);
       r.setBuilder(RequestStatics.DEST_KEY, new KeyElementBuilder());
       return r;
     } catch (IllegalArgumentException e) {

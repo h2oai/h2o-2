@@ -126,7 +126,7 @@ public abstract class KMeans {
       clusters[0][c] = datad(va, bits, 0, va._cols[cols[c]]);
 
     int iteration = 0;
-    float expected = 20;
+    long expected = 20;
     while( iteration < 5 ) {
       // Sum squares distances to clusters
       Sqr sqr = new Sqr();
@@ -149,7 +149,7 @@ public abstract class KMeans {
         Jobs.remove(job._key);
         return;
       }
-      UKV.put(job._progress, new Progress(++iteration / expected));
+      UKV.put(job._progress, new Progress(++iteration, expected));
     }
 
     clusters = recluster(clusters, k);
@@ -173,8 +173,7 @@ public abstract class KMeans {
         }
       }
 
-      float progress = Math.min(++iteration / expected, 1f);
-      UKV.put(job._progress, new Progress(progress));
+      UKV.put(job._progress, new Progress(++iteration, expected));
       res._clusters = clusters;
       UKV.put(job._dest, res);
       if( Jobs.cancelled(job._key) )
