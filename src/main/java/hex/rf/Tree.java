@@ -9,6 +9,7 @@ import java.util.*;
 import jsr166y.CountedCompleter;
 import jsr166y.RecursiveTask;
 import water.*;
+import water.Jobs.Job;
 import water.Timer;
 import water.util.Utils;
 
@@ -34,7 +35,7 @@ public class Tree extends CountedCompleter {
   final int _numSplitFeatures;  // Number of features to check at each splitting (~ split features)
   INode _tree;                  // Root of decision tree
   ThreadLocal<Statistic>[] _stats  = new ThreadLocal[2];
-  final Key _modelKey;
+  final Job _job;
   final int _alltrees;          // Number of trees expected to build a complete model
   final long _seed;             // Pseudo random seed: used to playback sampling
   final int _numrows;           // Used to playback sampling
@@ -45,13 +46,13 @@ public class Tree extends CountedCompleter {
   int _exclusiveSplitLimit;
 
   // Constructor used to define the specs when building the tree from the top
-  public Tree( Data data, int max_depth, double min_error_rate, StatType stat, int numSplitFeatures, long seed, Key modelKey, int treeId, int alltrees, float sample, int rowsize, boolean stratify, int [] strata, int verbose, int exclusiveSplitLimit) {
+  public Tree( Data data, int max_depth, double min_error_rate, StatType stat, int numSplitFeatures, long seed, Job job, int treeId, int alltrees, float sample, int rowsize, boolean stratify, int [] strata, int verbose, int exclusiveSplitLimit) {
     _type             = stat;
     _data             = data;
     _data_id          = treeId; //data.dataId();
     _max_depth        = max_depth-1;
     _numSplitFeatures = numSplitFeatures;
-    _modelKey         = modelKey;
+    _job              = job;
     _alltrees         = alltrees;
     _seed             = seed;
     assert sample <= 1.0f : "Stratify sampling should in interval (0,1] but it is " + sample;
@@ -107,6 +108,9 @@ public class Tree extends CountedCompleter {
 
   // Actually build the tree
   public void compute() {
+    if(Jobs.cancelled(_job._key))
+      return;
+
     Timer timer = new Timer();
     _stats[0] = new ThreadLocal<Statistic>();
     _stats[1] = new ThreadLocal<Statistic>();
@@ -125,7 +129,7 @@ public class Tree extends CountedCompleter {
     _stats = null; // GC
 
     // Atomically improve the Model as well
-    appendKey(_modelKey,toKey());
+    appendKey(_job._key,toKey());
     StringBuilder sb = new StringBuilder("[RF] Tree : ").append(_data_id+1);
     sb.append(" d=").append(_tree.depth()).append(" leaves=").append(_tree.leaves()).append(" done in ").append(timer).append('\n');
     Utils.pln(_tree.toString(sb,  _verbose > 0 ? Integer.MAX_VALUE : 200).toString());

@@ -36,7 +36,7 @@ public class ImportUrl extends Request {
       s = url.openStream();
       if( s == null )
         return Response.error("Unable to open stream to URL "+url.toString());
-      k = ValueArray.readPut(k, s);
+      ValueArray.readPut(k, s);
 
       JsonObject json = new JsonObject();
       json.addProperty(KEY, k.toString());

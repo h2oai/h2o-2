@@ -14,26 +14,67 @@ public abstract class Jobs {
   }
 
   public static class Progress extends Iced {
-    public float _value;
+    public long _value, _limit;
 
     public Progress() {
     }
 
-    public Progress(float value) {
+    public Progress(long value, long limit) {
       _value = value;
+      _limit = limit;
+    }
+
+    public final float get() {
+      return Math.min(1f, _limit == 0 ? 0 : (float) ((double) _value / _limit));
+    }
+
+    public static void update(Key key, final long delta) {
+      new TAtomic<Progress>() {
+        @Override
+        public Progress atomic(Progress old) {
+          old._value += delta;
+          return old;
+        }
+
+        @Override
+        public Progress alloc() {
+          return new Progress();
+        }
+      }.invoke(key);
     }
   }
 
-  private static final Key KEY = Key.make(Constants.BUILT_IN_KEY_JOBS);
+  public static class Fail extends Iced {
+    String _message;
+
+    public Fail(String message) {
+      _message = message;
+    }
+  }
+
+  private static final Key KEY = Key.make(Constants.BUILT_IN_KEY_JOBS, (byte) 0, Key.SINGLETONS);
 
   private static final class List extends Iced {
     Job[] _jobs;
   }
 
   static {
-    List empty = new List();
-    empty._jobs = new Job[0];
-    UKV.put(KEY, empty);
+    new TAtomic<List>() {
+      @Override
+      public List alloc() {
+        return new List();
+      }
+
+      @Override
+      public List atomic(List old) {
+        if( old == null ) {
+          List empty = new List();
+          empty._jobs = new Job[0];
+          return empty;
+        }
+        return old;
+      }
+    }.invoke(KEY);
   }
 
   public static Job[] get() {
@@ -41,13 +82,17 @@ public abstract class Jobs {
   }
 
   public static Job start(String description, Key dest) {
+    return start(description, dest, new Progress());
+  }
+
+  public static Job start(String description, Key dest, Progress progress) {
     final Job job = new Job();
     job._key = Key.make(UUID.randomUUID().toString());
     DKV.put(job._key, new Value(job._key, ""));
     job._description = description;
     job._startTime = System.currentTimeMillis();
     job._progress = Key.make(UUID.randomUUID().toString());
-    UKV.put(job._progress, new Progress(0));
+    UKV.put(job._progress, progress);
     job._dest = dest;
 
     new TAtomic<List>() {

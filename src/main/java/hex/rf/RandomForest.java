@@ -40,7 +40,7 @@ public class RandomForest {
     for (int i = 0; i < ntrees; ++i) {
       long treeSeed = rnd.nextLong() + TREE_SEED_INIT; // make sure that enough bits is initialized
       trees[i] = new Tree( data, maxTreeDepth, minErrorRate, stat, numSplitFeatures, treeSeed,
-                           drf._rfmodel._selfKey,i,drf._ntrees, drf._sample, drf._numrows,
+                           drf._job,i,drf._ntrees, drf._sample, drf._numrows,
                            drf._useStratifySampling, drf._strata,
                            drf._verbose, drf._exclusiveSplitLimit );
       if (!parallelTrees)   DRemoteTask.invokeAll(new Tree[]{trees[i]});

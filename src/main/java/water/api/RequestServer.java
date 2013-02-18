@@ -70,7 +70,6 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new ExportS3Progress());
     registerRequest(new GLMGridProgress());
     registerRequest(new GetVector());
-    registerRequest(new ParseProgress());
     registerRequest(new RReaderProgress());
     registerRequest(new PostFile());
     registerRequest(new Progress());

@@ -1,12 +1,10 @@
 package water.parser;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.GregorianCalendar;
+import java.util.*;
 
 import water.*;
+import water.Jobs.Job;
+import water.Jobs.Progress;
 import water.ValueArray.Column;
 
 /** Class responsible for actual parsing of the datasets.
@@ -56,7 +54,7 @@ public final class DParseTask extends MRTask {
   int _numRows; // number of rows -- works only in second pass FIXME in first pass object
   // 31 bytes
 
-  Key _resultKey;
+  Job _job;
   String _error;
 
   // arrays
@@ -107,7 +105,7 @@ public final class DParseTask extends MRTask {
      */
     public void store() {
       assert _ab.eof();
-      Key k = ValueArray.getChunkKey(_chunkIndex, _resultKey);
+      Key k = ValueArray.getChunkKey(_chunkIndex, _job._dest);
       AtomicUnion u = new AtomicUnion(_ab.bufClose(),_chunkOffset);
       alsoBlockFor(u.fork(k));
       _ab = null; // free mem
@@ -201,10 +199,10 @@ public final class DParseTask extends MRTask {
    *
    * use createPhaseOne() static method instead.
    */
-  private DParseTask(Value dataset, Key resultKey, CustomParser.Type parserType) {
+  private DParseTask(Value dataset, Job job, CustomParser.Type parserType) {
     _parserType = parserType;
     _sourceDataset = dataset;
-    _resultKey = resultKey;
+    _job = job;
     _phase = Pass.ONE;
   }
 
@@ -225,7 +223,7 @@ public final class DParseTask extends MRTask {
     _nrows = other._nrows;
     _skipFirstLine = other._skipFirstLine;
     _myrows = other._myrows; // for simple values, number of rows is kept in the member variable instead of _nrows
-    _resultKey = other._resultKey;
+    _job = other._job;
     _colTypes = other._colTypes;
     _nrows = other._nrows;
     _numRows = other._numRows;
@@ -248,8 +246,8 @@ public final class DParseTask extends MRTask {
    * @param parserType Parser type to use.
    * @return Phase one DRemoteTask object.
    */
-  public static DParseTask createPassOne(Value dataset, Key resultKey, CustomParser.Type parserType) {
-    return new DParseTask(dataset,resultKey,parserType);
+  public static DParseTask createPassOne(Value dataset, Job job, CustomParser.Type parserType) {
+    return new DParseTask(dataset,job,parserType);
   }
 
   /** Executes the phase one of the parser.
@@ -408,8 +406,8 @@ public final class DParseTask extends MRTask {
     // let any pending progress reports finish
     DKV.write_barrier();
     // finally make the value array header
-    ValueArray ary = new ValueArray(_resultKey, _numRows, off, cols);
-    UKV.put(_resultKey, ary.value());
+    ValueArray ary = new ValueArray(_job._dest, _numRows, off, cols);
+    UKV.put(_job._dest, ary.value());
   }
 
   private void createEnums() {
@@ -477,6 +475,8 @@ public final class DParseTask extends MRTask {
    * splitting it into equal sized chunks.
    */
   @Override public void map(Key key) {
+    if(Jobs.cancelled(_job._key))
+      return;
     try {
       Key aryKey = null;
       boolean arraylet = key._kb[0] == Key.ARRAYLET_CHUNK;
@@ -531,7 +531,7 @@ public final class DParseTask extends MRTask {
           assert (false);
       }
 
-      ParseStatus.update(_resultKey, DKV.get(key).length(), _phase);
+      Progress.update(_job._progress, DKV.get(key).length());
     } catch( Exception e ) {
       e.printStackTrace();
       _error = e.getMessage();
@@ -540,6 +540,8 @@ public final class DParseTask extends MRTask {
 
   @Override
   public void reduce(DRemoteTask drt) {
+    if(Jobs.cancelled(_job._key))
+      return;
     try {
       DParseTask other = (DParseTask)drt;
       if(_sigma == null)_sigma = other._sigma;

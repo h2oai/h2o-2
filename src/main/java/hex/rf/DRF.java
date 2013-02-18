@@ -5,15 +5,17 @@ import hex.rf.Tree.StatType;
 import java.util.*;
 
 import water.*;
+import water.Jobs.Job;
 import water.ValueArray.Column;
-import water.util.Utils;
 import water.Timer;
+import water.util.Utils;
 
 /** Distributed RandomForest */
 public final class DRF extends water.DRemoteTask {
   /** The RF Model.  Contains the dataset being worked on, the classification
    *  column, and the training columns.  */
   public RFModel _rfmodel;
+  public Job _job;
 
   // ---------------
   // OPTIONS FOR RF
@@ -89,6 +91,7 @@ public final class DRF extends water.DRemoteTask {
     DRF drf = new DRF();
     drf._rfmodel = new RFModel(modelKey, cols, ary._key,
                                new Key[0], ary._cols.length, sample, numSplitFeatures, ntrees);
+    drf._job = Jobs.start("RandomForest", modelKey);
 
     // Fill in args into DRF
     drf._ntrees = ntrees;
@@ -174,7 +177,10 @@ public final class DRF extends water.DRemoteTask {
     tryComplete();
   }
 
-  public final void reduce( DRemoteTask drt ) { }
+  public final void reduce( DRemoteTask drt ) {
+    if(_job != null)
+      Jobs.remove(_job._key);
+  }
 
   /** Unless otherwise specified each split looks at sqrt(#features). */
   private int howManySplitFeatures(Data t) {
