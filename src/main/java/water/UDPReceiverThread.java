@@ -1,5 +1,6 @@
 package water;
 import java.nio.channels.DatagramChannel;
+import java.util.Random;
 
 /**
  * The Thread that looks for UDP Cloud requests.
@@ -61,6 +62,15 @@ public class UDPReceiverThread extends Thread {
   // Basic packet handling:
   //   - Timeline record it
   static public void basic_packet_handling( AutoBuffer ab ) {
+    // randomly drop 1/10th of the packets
+    if ( H2O.OPT_ARGS.random_udp_drop!= null ) {
+      Random rand = new Random();
+      int roll = rand.nextInt(10);
+      if ( roll == 0 ) {
+            return;
+      }
+    }
+
     // Record the last time we heard from any given Node
     TimeLine.record_recv(ab);
     ab._h2o._last_heard_from = System.currentTimeMillis();
