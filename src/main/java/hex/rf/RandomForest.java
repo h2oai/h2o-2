@@ -145,7 +145,6 @@ public class RandomForest {
       cols[idx++] = i;
     cols[idx++] = classcol;     // Class column last
     assert idx==cols.length;
-Utils.pln(classcol+"!");
     assert ARGS.sample >0 && ARGS.sample<=100;
     assert ARGS.ntrees >=0;
     assert ARGS.binLimit > 0 && ARGS.binLimit <= Short.MAX_VALUE;
