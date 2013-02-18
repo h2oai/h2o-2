@@ -326,9 +326,9 @@ public class RFRunner {
   }
 
   public static void kCS1() {
-    special.put(path+"datasets/bench/kaggle.creditsample/h2o/train.csv","-classcol=1");
+    special.put(path+"datasets/bench/kaggle.creditsample/h2o/train.csv","-classcol=0");
     testIt( path+"datasets/bench/kaggle.creditsample/h2o", new String[][]{{"train.csv","test.csv"}}, //files
-        new int[]{20} /*trees*/, new int[]{2048} /*bin*/, new int[]{67} /*sample*/,
+        new int[]{50,100} /*trees*/, new int[]{100,200,500,1000} /*bin*/, new int[]{80} /*sample*/,
         new String[]{"entropy"}, null/*ignore*/, null, null,null);// seeds ,  staras
   }
 
