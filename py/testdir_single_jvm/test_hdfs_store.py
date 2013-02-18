@@ -14,7 +14,7 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # assume we're at 0xdata with it's hdfs namenode
-        h2o.build_cloud(1,use_hdfs=True, hdfs_version='cdh3u5', hdfs_name_node="192.168.1.151")
+        h2o.build_cloud(1,use_hdfs=True, hdfs_version='cdh3u5', hdfs_name_node="192.168.1.176")
 
     @classmethod
     def tearDownClass(cls):
@@ -80,8 +80,8 @@ class Basic(unittest.TestCase):
             print "\n" + csvFilename
             start = time.time()
             print "Storing", parseKey['destination_key'], 'to HDFS'
-            print "FIX! temporarily disabling since it causes HDFS corruption"
-            ### storeKey = h2o_cmd.runStore2HDFS(key=parseKey['destination_key'], timeoutSecs=1000)
+            ### print "FIX! temporarily disabling since it causes HDFS corruption"
+            storeKey = h2o_cmd.runStore2HDFS(key=parseKey['destination_key'], timeoutSecs=1000)
 
 
             h2b.browseJsonHistoryAsUrlLastMatch("Parse")

@@ -389,9 +389,12 @@ def check_sandbox_for_errors():
                 foundBad = False
                 if not ' bytes)' in line:
                     # no multiline FSM on this 
-                    printSingleWarning = regex3.search(line)
-                    #   13190  280             sun.nio.ch.DatagramChannelImpl::ensureOpen (16 bytes)
-                    foundBad = regex1.search(line) and not ('error rate' in line)
+                    printSingleWarning = regex3.search(line) and not ('[Loaded ' in line)
+                    #   13190  280      ###        sun.nio.ch.DatagramChannelImpl::ensureOpen (16 bytes)
+
+                    # don't detect these class loader info messags as errors
+                    #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
+                    foundBad = regex1.search(line) and not (('error rate' in line) or ('[Loaded ' in line))
 
                 if (printing==0 and foundBad):
                     printing = 1
