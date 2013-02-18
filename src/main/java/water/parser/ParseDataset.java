@@ -65,7 +65,7 @@ public final class ParseDataset {
       default : throw new Error("Unknown compression of dataset!");
       }
     } catch( Exception e ) {
-      UKV.put(job._key, new Fail(e.getMessage()));
+      UKV.put(job._dest, new Fail(e.getMessage()));
       throw Throwables.propagate(e);
     } finally {
       Jobs.remove(job._key);

@@ -410,6 +410,7 @@ public final class H2O {
     startNetworkServices(); // start server services
 
     initializeExpressionEvaluation(); // starts the expression evaluation system
+    initializeJobs(); // job tracker
 
     startupFinalize(); // finalizes the startup & tests (if any)
     // Hang out here until the End of Time
@@ -417,6 +418,10 @@ public final class H2O {
 
   private static void initializeExpressionEvaluation() {
     Function.initializeCommonFunctions();
+  }
+
+  private static void initializeJobs() {
+    Jobs.init();
   }
 
   /** Starts the local k-v store.

@@ -77,6 +77,10 @@ public abstract class Jobs {
     }.invoke(KEY);
   }
 
+  public static void init() {
+    // Loads class to register KEY
+  }
+
   public static Job[] get() {
     return UKV.get(KEY, new List())._jobs;
   }

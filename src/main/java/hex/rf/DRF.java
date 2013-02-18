@@ -4,6 +4,8 @@ import hex.rf.Tree.StatType;
 
 import java.util.*;
 
+import jsr166y.CountedCompleter;
+
 import water.*;
 import water.Jobs.Job;
 import water.ValueArray.Column;
@@ -91,54 +93,61 @@ public final class DRF extends water.DRemoteTask {
     DRF drf = new DRF();
     drf._rfmodel = new RFModel(modelKey, cols, ary._key,
                                new Key[0], ary._cols.length, sample, numSplitFeatures, ntrees);
-    drf._job = Jobs.start("RandomForest", modelKey);
+    boolean ok = false;
+    try {
+      drf._job = Jobs.start("RandomForest", modelKey);
 
-    // Fill in args into DRF
-    drf._ntrees = ntrees;
-    drf._depth = depth;
-    drf._sample = sample;
-    drf._binLimit = binLimit;
-    drf._stat = stat.ordinal();
-    drf._classcol = cols[cols.length-1];
-    drf._seed = seed;
-    drf._parallel = parallelTrees;
-    drf._classWt = classWt;
-    drf._numSplitFeatures = numSplitFeatures;
-    drf._useStratifySampling = stratify;
-    drf._verbose = verbose;
-    drf._exclusiveSplitLimit = exclusiveSplitLimit;
+      // Fill in args into DRF
+      drf._ntrees = ntrees;
+      drf._depth = depth;
+      drf._sample = sample;
+      drf._binLimit = binLimit;
+      drf._stat = stat.ordinal();
+      drf._classcol = cols[cols.length-1];
+      drf._seed = seed;
+      drf._parallel = parallelTrees;
+      drf._classWt = classWt;
+      drf._numSplitFeatures = numSplitFeatures;
+      drf._useStratifySampling = stratify;
+      drf._verbose = verbose;
+      drf._exclusiveSplitLimit = exclusiveSplitLimit;
 
-    RandomForest.OptArgs _ = new RandomForest.OptArgs();
-    _.features = numSplitFeatures;
-    _.ntrees   = ntrees;
-    _.depth    = depth;
-    _.classcol = drf._classcol;
-    _.seed     = seed;
-    _.binLimit = binLimit;
-    _.verbose  = verbose;
-    _.exclusive= exclusiveSplitLimit;
-    String w = "";
-    if (classWt != null) for(int i=0;i<classWt.length;i++) w += i+":"+classWt[i]+",";
-    _.weights=w;
-    _.parallel = parallelTrees ? 1 : 0;
-    _.statType = stat.ordinal() == 1 ? "gini" : "entropy";
-    _.sample = (int)(sample * 100);
-    _.file = "";
+      RandomForest.OptArgs _ = new RandomForest.OptArgs();
+      _.features = numSplitFeatures;
+      _.ntrees   = ntrees;
+      _.depth    = depth;
+      _.classcol = drf._classcol;
+      _.seed     = seed;
+      _.binLimit = binLimit;
+      _.verbose  = verbose;
+      _.exclusive= exclusiveSplitLimit;
+      String w = "";
+      if (classWt != null) for(int i=0;i<classWt.length;i++) w += i+":"+classWt[i]+",";
+      _.weights=w;
+      _.parallel = parallelTrees ? 1 : 0;
+      _.statType = stat.ordinal() == 1 ? "gini" : "entropy";
+      _.sample = (int)(sample * 100);
+      _.file = "";
 
-    if (verbose>0) Utils.pln("Web arguments: " + _ + " key "+ary._key);
+      if (verbose>0) Utils.pln("Web arguments: " + _ + " key "+ary._key);
 
-    // Validate parameters
-    drf.validateInputData();
-    // Start the timer.
-    drf._t_main = new Timer();
-    // Pre-process data in case of stratified sampling: extract minorities
-    if(drf._useStratifySampling)  drf.extractMinorities(ary, strata);
+      // Validate parameters
+      drf.validateInputData();
+      // Start the timer.
+      drf._t_main = new Timer();
+      // Pre-process data in case of stratified sampling: extract minorities
+      if(drf._useStratifySampling)  drf.extractMinorities(ary, strata);
 
-    // Push the RFModel globally first
-    UKV.put(modelKey, drf._rfmodel);
-    DKV.write_barrier();
-    // Launch distributed RF
-    drf.fork(ary._key);
+      // Push the RFModel globally first
+      UKV.put(modelKey, drf._rfmodel);
+      DKV.write_barrier();
+      // Launch distributed RF
+      drf.fork(ary._key);
+      ok = true;
+    } finally {
+      if(!ok)
+        Jobs.remove(drf._job._key);
+    }
     return drf;
   }
 
@@ -177,7 +186,10 @@ public final class DRF extends water.DRemoteTask {
     tryComplete();
   }
 
-  public final void reduce( DRemoteTask drt ) {
+  public final void reduce( DRemoteTask drt ) { }
+
+  @Override
+  public void onCompletion(CountedCompleter caller) {
     if(_job != null)
       Jobs.remove(_job._key);
   }
