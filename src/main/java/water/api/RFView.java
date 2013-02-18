@@ -146,7 +146,7 @@ public class RFView extends Request {
         sb.append("<dt>classification error</dt><dd>").append(String.format("%5.3f %%", 100*cm.get(JSON_CM_CLASS_ERR).getAsFloat())).append("</dd>");
         long rows = cm.get(JSON_CM_ROWS).getAsLong();
         long skippedRows = cm.get(JSON_CM_ROWS_SKIPPED).getAsLong();
-        sb.append("<dt>used / skipped rows </dt><dd>").append(String.format("%d / %d (%3.1f %%)", rows, skippedRows, (double)skippedRows/(skippedRows+rows))).append("</dd>");
+        sb.append("<dt>used / skipped rows </dt><dd>").append(String.format("%d / %d (%3.1f %%)", rows, skippedRows, (double)skippedRows*100/(skippedRows+rows))).append("</dd>");
         sb.append("</dl>");
         sb.append("<table class='table table-striped table-bordered table-condensed'>");
         sb.append("<tr><th>Actual \\ Predicted</th>");
