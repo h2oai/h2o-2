@@ -169,6 +169,7 @@ def dump_hosts_config(ec2_config, reservation, filename='ec2-config-{0}.json'):
     cfg['use_flatfile']    = True
     cfg['h2o_per_host']    = 1
     cfg['java_heap_GB']    = MEMORY_MAPPING[ec2_config['instance_type']]['xmx']
+    cfg['base_port']       = 54321
     cfg['ip'] = [ i.private_ip_address for i in reservation.instances ]
     cfg['instances'] = [ { 'id': i.id, 'private_ip_address': i.private_ip_address, 'public_ip_address': i.ip_address, 'public_dns_name': i.public_dns_name } for i in reservation.instances ]
     cfg['reservation_id']  = reservation.id
