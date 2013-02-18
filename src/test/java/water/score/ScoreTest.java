@@ -21,9 +21,6 @@ public class ScoreTest extends TestUtil {
 
   @Test
   public void testScorecard() throws Exception {
-    File file = find_test_file("smalldata/pmml/Loan_Scorecard.xml");
-    ScorecardModel scm = (ScorecardModel)PMMLParser.load(new FileInputStream(file));
-    Assert.assertEquals(0, scm.score(ROW), 1e-6);
   }
 
   // Load and score a simple PMML RF model against the iris dataset.

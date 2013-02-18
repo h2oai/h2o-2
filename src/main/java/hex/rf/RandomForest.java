@@ -27,11 +27,8 @@ public class RandomForest {
                       int ntrees, int maxTreeDepth, double minErrorRate,
                       StatType stat, boolean parallelTrees,
                       int numSplitFeatures) {
-    // Build <ntrees> trees via the Random Forest algorithm.
     Timer  t_alltrees = new Timer();
     Tree[] trees      = new Tree[ntrees];
-
- //FIXME   String str = data.rows()+" rows and " + data.badRows() + " rows contains NaN.";
     Utils.pln("[RF] number of split features: "+ drf.numSplitFeatures());
     String str = data.rows()+" rows ";
     Utils.pln("[RF] starting RF computation with "+ str);
@@ -46,7 +43,6 @@ public class RandomForest {
       if (!parallelTrees)   DRemoteTask.invokeAll(new Tree[]{trees[i]});
     }
     if(parallelTrees)DRemoteTask.invokeAll(trees);
-
     Utils.pln("All trees ("+ntrees+") done in "+ t_alltrees);
   }
 
@@ -149,7 +145,6 @@ public class RandomForest {
       cols[idx++] = i;
     cols[idx++] = classcol;     // Class column last
     assert idx==cols.length;
-
     assert ARGS.sample >0 && ARGS.sample<=100;
     assert ARGS.ntrees >=0;
     assert ARGS.binLimit > 0 && ARGS.binLimit <= Short.MAX_VALUE;

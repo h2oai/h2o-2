@@ -52,6 +52,8 @@ public class Data implements Iterable<Row> {
   public String colName(int i)   { return _dapt.columnName(i); }
   public float unmap(int col, int split) { return _dapt.unmap(col, split); }
   public int columnArity(int colIndex) { return _dapt.columnArity(colIndex); }
+  /** Transforms given binned index (short) into 0..N-1 corresponding to predictor class */
+  public int unmapClass(int clazz) {return _dapt.unmapClass(clazz); }
   public boolean isFloat(int col){ return _dapt.isFloat(col); }
   public double[] classWt()      { return _dapt._classWt; }
 
