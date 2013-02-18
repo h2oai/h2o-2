@@ -1,0 +1,237 @@
+<?xml version="1.0"?>
+<PMML version="4.0" xmlns="http://www.dmg.org/PMML-4_0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.dmg.org/PMML-4_0 http://www.dmg.org/v4-0/pmml-4-0.xsd">
+ <Header copyright="Copyright (c) 2013 michal" description="Random Forest Tree Model">
+  <Extension name="user" value="michal" extender="Rattle/PMML"/>
+  <Application name="Rattle/PMML" version="1.2.30"/>
+  <Timestamp>2013-02-18 22:57:28</Timestamp>
+ </Header>
+ <DataDictionary numberOfFields="5">
+  <DataField name="satisfaction" optype="categorical" dataType="string">
+   <Value value="high"/>
+   <Value value="low"/>
+   <Value value="medium"/>
+  </DataField>
+  <DataField name="housing" optype="categorical" dataType="string">
+   <Value value="apartments"/>
+   <Value value="atrium"/>
+   <Value value="terraced"/>
+   <Value value="tower"/>
+  </DataField>
+  <DataField name="influence" optype="categorical" dataType="string">
+   <Value value="high"/>
+   <Value value="low"/>
+   <Value value="medium"/>
+  </DataField>
+  <DataField name="contact" optype="categorical" dataType="string">
+   <Value value="high"/>
+   <Value value="low"/>
+  </DataField>
+  <DataField name="n" optype="continuous" dataType="double"/>
+ </DataDictionary>
+ <MiningModel modelName="randomForest_Model" functionName="classification">
+  <MiningSchema>
+   <MiningField name="satisfaction" usageType="predicted"/>
+   <MiningField name="housing" usageType="active"/>
+   <MiningField name="influence" usageType="active"/>
+   <MiningField name="contact" usageType="active"/>
+   <MiningField name="n" usageType="active"/>
+  </MiningSchema>
+  <Segmentation multipleModelMethod="majorityVote">
+   <Segment id="1">
+    <True/>
+    <TreeModel modelName="randomForest_Model" functionName="classification" algorithmName="randomForest" splitCharacteristic="binarySplit">
+     <MiningSchema>
+      <MiningField name="satisfaction" usageType="predicted"/>
+      <MiningField name="housing" usageType="active"/>
+      <MiningField name="influence" usageType="active"/>
+      <MiningField name="contact" usageType="active"/>
+      <MiningField name="n" usageType="active"/>
+     </MiningSchema>
+     <Node id="1">
+      <True/>
+      <Node id="2">
+       <SimpleSetPredicate field="housing" booleanOperator="isIn">
+        <Array n="2" type="string">&quot;apartments&quot;   &quot;atrium&quot;</Array>
+       </SimpleSetPredicate>
+       <Node id="4">
+        <SimplePredicate field="n" operator="lessOrEqual" value="46.5"/>
+        <Node id="8">
+         <SimplePredicate field="n" operator="lessOrEqual" value="8.5"/>
+         <Node id="16" score="medium">
+          <SimplePredicate field="n" operator="lessOrEqual" value="7.5"/>
+         </Node>
+         <Node id="17" score="medium">
+          <SimplePredicate field="n" operator="greaterThan" value="7.5"/>
+         </Node>
+        </Node>
+        <Node id="9">
+         <SimplePredicate field="n" operator="greaterThan" value="8.5"/>
+         <Node id="18" score="high">
+          <SimplePredicate field="n" operator="lessOrEqual" value="9.5"/>
+         </Node>
+         <Node id="19">
+          <SimplePredicate field="n" operator="greaterThan" value="9.5"/>
+          <Node id="28">
+           <SimpleSetPredicate field="influence" booleanOperator="isIn">
+            <Array n="2" type="string">&quot;high&quot;   &quot;low&quot;</Array>
+           </SimpleSetPredicate>
+           <Node id="36">
+            <SimplePredicate field="n" operator="lessOrEqual" value="25.5"/>
+            <Node id="42" score="medium">
+             <SimpleSetPredicate field="influence" booleanOperator="isIn">
+              <Array n="1" type="string">&quot;high&quot;</Array>
+             </SimpleSetPredicate>
+            </Node>
+            <Node id="43">
+             <SimpleSetPredicate field="influence" booleanOperator="isIn">
+              <Array n="2" type="string">&quot;low&quot;   &quot;medium&quot;</Array>
+             </SimpleSetPredicate>
+             <Node id="46">
+              <SimplePredicate field="n" operator="lessOrEqual" value="20"/>
+              <Node id="48" score="high">
+               <SimpleSetPredicate field="housing" booleanOperator="isIn">
+                <Array n="1" type="string">&quot;apartments&quot;</Array>
+               </SimpleSetPredicate>
+              </Node>
+              <Node id="49" score="low">
+               <SimpleSetPredicate field="housing" booleanOperator="isIn">
+                <Array n="3" type="string">&quot;atrium&quot;   &quot;terraced&quot;   &quot;tower&quot;</Array>
+               </SimpleSetPredicate>
+              </Node>
+             </Node>
+             <Node id="47" score="medium">
+              <SimplePredicate field="n" operator="greaterThan" value="20"/>
+             </Node>
+            </Node>
+           </Node>
+           <Node id="37" score="low">
+            <SimplePredicate field="n" operator="greaterThan" value="25.5"/>
+           </Node>
+          </Node>
+          <Node id="29">
+           <SimpleSetPredicate field="influence" booleanOperator="isIn">
+            <Array n="1" type="string">&quot;medium&quot;</Array>
+           </SimpleSetPredicate>
+           <Node id="38" score="low">
+            <SimplePredicate field="n" operator="lessOrEqual" value="29.5"/>
+           </Node>
+           <Node id="39">
+            <SimplePredicate field="n" operator="greaterThan" value="29.5"/>
+            <Node id="44" score="medium">
+             <SimplePredicate field="n" operator="lessOrEqual" value="39"/>
+            </Node>
+            <Node id="45" score="low">
+             <SimplePredicate field="n" operator="greaterThan" value="39"/>
+            </Node>
+           </Node>
+          </Node>
+         </Node>
+        </Node>
+       </Node>
+       <Node id="5">
+        <SimplePredicate field="n" operator="greaterThan" value="46.5"/>
+        <Node id="10" score="high">
+         <SimpleSetPredicate field="influence" booleanOperator="isIn">
+          <Array n="1" type="string">&quot;high&quot;</Array>
+         </SimpleSetPredicate>
+        </Node>
+        <Node id="11" score="low">
+         <SimpleSetPredicate field="influence" booleanOperator="isIn">
+          <Array n="2" type="string">&quot;low&quot;   &quot;medium&quot;</Array>
+         </SimpleSetPredicate>
+        </Node>
+       </Node>
+      </Node>
+      <Node id="3">
+       <SimpleSetPredicate field="housing" booleanOperator="isIn">
+        <Array n="2" type="string">&quot;terraced&quot;   &quot;tower&quot;</Array>
+       </SimpleSetPredicate>
+       <Node id="6">
+        <SimpleSetPredicate field="contact" booleanOperator="isIn">
+         <Array n="1" type="string">&quot;high&quot;</Array>
+        </SimpleSetPredicate>
+        <Node id="12">
+         <SimpleSetPredicate field="housing" booleanOperator="isIn">
+          <Array n="1" type="string">&quot;terraced&quot;</Array>
+         </SimpleSetPredicate>
+         <Node id="20">
+          <SimplePredicate field="n" operator="lessOrEqual" value="27"/>
+          <Node id="30">
+           <SimpleSetPredicate field="influence" booleanOperator="isIn">
+            <Array n="1" type="string">&quot;low&quot;</Array>
+           </SimpleSetPredicate>
+           <Node id="40" score="high">
+            <SimplePredicate field="n" operator="lessOrEqual" value="18"/>
+           </Node>
+           <Node id="41" score="medium">
+            <SimplePredicate field="n" operator="greaterThan" value="18"/>
+           </Node>
+          </Node>
+          <Node id="31" score="high">
+           <SimpleSetPredicate field="influence" booleanOperator="isIn">
+            <Array n="2" type="string">&quot;high&quot;   &quot;medium&quot;</Array>
+           </SimpleSetPredicate>
+          </Node>
+         </Node>
+         <Node id="21" score="low">
+          <SimplePredicate field="n" operator="greaterThan" value="27"/>
+         </Node>
+        </Node>
+        <Node id="13">
+         <SimpleSetPredicate field="housing" booleanOperator="isIn">
+          <Array n="3" type="string">&quot;apartments&quot;   &quot;atrium&quot;   &quot;tower&quot;</Array>
+         </SimpleSetPredicate>
+         <Node id="22">
+          <SimplePredicate field="n" operator="lessOrEqual" value="20"/>
+          <Node id="32" score="medium">
+           <SimplePredicate field="n" operator="lessOrEqual" value="9.5"/>
+          </Node>
+          <Node id="33" score="low">
+           <SimplePredicate field="n" operator="greaterThan" value="9.5"/>
+          </Node>
+         </Node>
+         <Node id="23" score="high">
+          <SimplePredicate field="n" operator="greaterThan" value="20"/>
+         </Node>
+        </Node>
+       </Node>
+       <Node id="7">
+        <SimpleSetPredicate field="contact" booleanOperator="isIn">
+         <Array n="1" type="string">&quot;low&quot;</Array>
+        </SimpleSetPredicate>
+        <Node id="14">
+         <SimplePredicate field="n" operator="lessOrEqual" value="14"/>
+         <Node id="24" score="medium">
+          <SimpleSetPredicate field="influence" booleanOperator="isIn">
+           <Array n="1" type="string">&quot;low&quot;</Array>
+          </SimpleSetPredicate>
+         </Node>
+         <Node id="25" score="medium">
+          <SimpleSetPredicate field="influence" booleanOperator="isIn">
+           <Array n="2" type="string">&quot;high&quot;   &quot;medium&quot;</Array>
+          </SimpleSetPredicate>
+         </Node>
+        </Node>
+        <Node id="15">
+         <SimplePredicate field="n" operator="greaterThan" value="14"/>
+         <Node id="26">
+          <SimplePredicate field="n" operator="lessOrEqual" value="35"/>
+          <Node id="34" score="low">
+           <SimplePredicate field="n" operator="lessOrEqual" value="19.5"/>
+          </Node>
+          <Node id="35" score="low">
+           <SimplePredicate field="n" operator="greaterThan" value="19.5"/>
+          </Node>
+         </Node>
+         <Node id="27" score="high">
+          <SimplePredicate field="n" operator="greaterThan" value="35"/>
+         </Node>
+        </Node>
+       </Node>
+      </Node>
+     </Node>
+    </TreeModel>
+   </Segment>
+  </Segmentation>
+ </MiningModel>
+</PMML>
