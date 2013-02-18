@@ -1,0 +1,203 @@
+<?xml version="1.0"?>
+<PMML version="4.0" xmlns="http://www.dmg.org/PMML-4_0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.dmg.org/PMML-4_0 http://www.dmg.org/v4-0/pmml-4-0.xsd">
+ <Header copyright="Copyright (c) 2013 michal" description="Random Forest Tree Model">
+  <Extension name="user" value="michal" extender="Rattle/PMML"/>
+  <Application name="Rattle/PMML" version="1.2.30"/>
+  <Timestamp>2013-02-18 23:32:58</Timestamp>
+ </Header>
+ <DataDictionary numberOfFields="7">
+  <DataField name="cylinders" optype="categorical" dataType="string">
+   <Value value="3"/>
+   <Value value="4"/>
+   <Value value="5"/>
+   <Value value="6"/>
+   <Value value="8"/>
+  </DataField>
+  <DataField name="economy" optype="continuous" dataType="double"/>
+  <DataField name="displacement" optype="continuous" dataType="double"/>
+  <DataField name="power" optype="continuous" dataType="double"/>
+  <DataField name="weight" optype="continuous" dataType="double"/>
+  <DataField name="speed" optype="continuous" dataType="double"/>
+  <DataField name="year" optype="categorical" dataType="string">
+   <Value value="70"/>
+   <Value value="71"/>
+   <Value value="72"/>
+   <Value value="73"/>
+   <Value value="74"/>
+   <Value value="75"/>
+   <Value value="76"/>
+   <Value value="77"/>
+   <Value value="78"/>
+   <Value value="79"/>
+   <Value value="80"/>
+   <Value value="81"/>
+   <Value value="82"/>
+  </DataField>
+ </DataDictionary>
+ <MiningModel modelName="randomForest_Model" functionName="classification">
+  <MiningSchema>
+   <MiningField name="cylinders" usageType="predicted"/>
+   <MiningField name="economy" usageType="active"/>
+   <MiningField name="displacement" usageType="active"/>
+   <MiningField name="power" usageType="active"/>
+   <MiningField name="weight" usageType="active"/>
+   <MiningField name="speed" usageType="active"/>
+   <MiningField name="year" usageType="active"/>
+  </MiningSchema>
+  <Segmentation multipleModelMethod="majorityVote">
+   <Segment id="1">
+    <True/>
+    <TreeModel modelName="randomForest_Model" functionName="classification" algorithmName="randomForest" splitCharacteristic="binarySplit">
+     <MiningSchema>
+      <MiningField name="cylinders" usageType="predicted"/>
+      <MiningField name="economy" usageType="active"/>
+      <MiningField name="displacement" usageType="active"/>
+      <MiningField name="power" usageType="active"/>
+      <MiningField name="weight" usageType="active"/>
+      <MiningField name="speed" usageType="active"/>
+      <MiningField name="year" usageType="active"/>
+     </MiningSchema>
+     <Node id="1">
+      <True/>
+      <Node id="2">
+       <SimplePredicate field="economy" operator="lessOrEqual" value="20.9"/>
+       <Node id="4">
+        <SimplePredicate field="speed" operator="lessOrEqual" value="15.05"/>
+        <Node id="8">
+         <SimplePredicate field="displacement" operator="lessOrEqual" value="280"/>
+         <Node id="16" score="6">
+          <SimpleSetPredicate field="year" booleanOperator="isIn">
+           <Array n="5" type="string">&quot;71&quot;   &quot;75&quot;   &quot;76&quot;   &quot;78&quot;   &quot;79&quot;</Array>
+          </SimpleSetPredicate>
+         </Node>
+         <Node id="17">
+          <SimpleSetPredicate field="year" booleanOperator="isIn">
+           <Array n="8" type="string">&quot;70&quot;   &quot;72&quot;   &quot;73&quot;   &quot;74&quot;   &quot;77&quot;   &quot;80&quot;   &quot;81&quot;   &quot;82&quot;</Array>
+          </SimpleSetPredicate>
+          <Node id="26" score="3">
+           <SimplePredicate field="displacement" operator="lessOrEqual" value="92"/>
+          </Node>
+          <Node id="27" score="4">
+           <SimplePredicate field="displacement" operator="greaterThan" value="92"/>
+          </Node>
+         </Node>
+        </Node>
+        <Node id="9" score="8">
+         <SimplePredicate field="displacement" operator="greaterThan" value="280"/>
+        </Node>
+       </Node>
+       <Node id="5">
+        <SimplePredicate field="speed" operator="greaterThan" value="15.05"/>
+        <Node id="10" score="8">
+         <SimplePredicate field="economy" operator="lessOrEqual" value="14"/>
+        </Node>
+        <Node id="11">
+         <SimplePredicate field="economy" operator="greaterThan" value="14"/>
+         <Node id="18">
+          <SimplePredicate field="speed" operator="lessOrEqual" value="15.75"/>
+          <Node id="28">
+           <SimplePredicate field="economy" operator="lessOrEqual" value="19.45"/>
+           <Node id="36" score="4">
+            <SimplePredicate field="displacement" operator="lessOrEqual" value="160"/>
+           </Node>
+           <Node id="37" score="6">
+            <SimplePredicate field="displacement" operator="greaterThan" value="160"/>
+           </Node>
+          </Node>
+          <Node id="29">
+           <SimplePredicate field="economy" operator="greaterThan" value="19.45"/>
+           <Node id="38" score="8">
+            <SimplePredicate field="speed" operator="lessOrEqual" value="15.6"/>
+           </Node>
+           <Node id="39" score="4">
+            <SimplePredicate field="speed" operator="greaterThan" value="15.6"/>
+           </Node>
+          </Node>
+         </Node>
+         <Node id="19">
+          <SimplePredicate field="speed" operator="greaterThan" value="15.75"/>
+          <Node id="30" score="4">
+           <SimplePredicate field="weight" operator="lessOrEqual" value="2605.5"/>
+          </Node>
+          <Node id="31" score="6">
+           <SimplePredicate field="weight" operator="greaterThan" value="2605.5"/>
+          </Node>
+         </Node>
+        </Node>
+       </Node>
+      </Node>
+      <Node id="3">
+       <SimplePredicate field="economy" operator="greaterThan" value="20.9"/>
+       <Node id="6">
+        <SimplePredicate field="displacement" operator="lessOrEqual" value="162"/>
+        <Node id="12">
+         <SimplePredicate field="displacement" operator="lessOrEqual" value="70.5"/>
+         <Node id="20" score="3">
+          <SimplePredicate field="economy" operator="lessOrEqual" value="26.35"/>
+         </Node>
+         <Node id="21" score="4">
+          <SimplePredicate field="economy" operator="greaterThan" value="26.35"/>
+         </Node>
+        </Node>
+        <Node id="13">
+         <SimplePredicate field="displacement" operator="greaterThan" value="70.5"/>
+         <Node id="22">
+          <SimplePredicate field="power" operator="lessOrEqual" value="105"/>
+          <Node id="32" score="4">
+           <SimplePredicate field="speed" operator="lessOrEqual" value="19.55"/>
+          </Node>
+          <Node id="33">
+           <SimplePredicate field="speed" operator="greaterThan" value="19.55"/>
+           <Node id="40">
+            <SimplePredicate field="speed" operator="lessOrEqual" value="19.85"/>
+            <Node id="44" score="4">
+             <SimplePredicate field="displacement" operator="lessOrEqual" value="128.5"/>
+            </Node>
+            <Node id="45" score="6">
+             <SimplePredicate field="displacement" operator="greaterThan" value="128.5"/>
+            </Node>
+           </Node>
+           <Node id="41" score="4">
+            <SimplePredicate field="speed" operator="greaterThan" value="19.85"/>
+           </Node>
+          </Node>
+         </Node>
+         <Node id="23">
+          <SimplePredicate field="power" operator="greaterThan" value="105"/>
+          <Node id="34" score="4">
+           <SimplePredicate field="weight" operator="lessOrEqual" value="2695.5"/>
+          </Node>
+          <Node id="35">
+           <SimplePredicate field="weight" operator="greaterThan" value="2695.5"/>
+           <Node id="42" score="3">
+            <SimplePredicate field="displacement" operator="lessOrEqual" value="100.5"/>
+           </Node>
+           <Node id="43" score="4">
+            <SimplePredicate field="displacement" operator="greaterThan" value="100.5"/>
+           </Node>
+          </Node>
+         </Node>
+        </Node>
+       </Node>
+       <Node id="7">
+        <SimplePredicate field="displacement" operator="greaterThan" value="162"/>
+        <Node id="14" score="6">
+         <SimplePredicate field="speed" operator="lessOrEqual" value="17.2"/>
+        </Node>
+        <Node id="15">
+         <SimplePredicate field="speed" operator="greaterThan" value="17.2"/>
+         <Node id="24" score="5">
+          <SimplePredicate field="power" operator="lessOrEqual" value="83.5"/>
+         </Node>
+         <Node id="25" score="8">
+          <SimplePredicate field="power" operator="greaterThan" value="83.5"/>
+         </Node>
+        </Node>
+       </Node>
+      </Node>
+     </Node>
+    </TreeModel>
+   </Segment>
+  </Segmentation>
+ </MiningModel>
+</PMML>
