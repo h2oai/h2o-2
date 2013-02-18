@@ -628,7 +628,7 @@ class H2O(object):
         start = time.time()
         count = 0
         # FIX! temporarily wait 5x the retryDelaySecs delay, before the first poll
-        # ParseProgress status NPE issue (H2O)
+        # Progress status NPE issue (H2O)
         if initialDelaySecs:
             time.sleep(initialDelaySecs)
         # can end with status = 'redirect' or 'done'
@@ -676,10 +676,10 @@ class H2O(object):
                 timeout=timeoutSecs,
                 params=params_dict))
 
-        # Check that the response has the right KMeansProgress url it's going to steer us to.
-        if a['response']['redirect_request']!='KMeansProgress':
+        # Check that the response has the right Progress url it's going to steer us to.
+        if a['response']['redirect_request']!='Progress':
             print dump_json(a)
-            raise Exception('H2O kmeans redirect is not KMeansProgress. KMeans json response precedes.')
+            raise Exception('H2O kmeans redirect is not Progress. KMeans json response precedes.')
         a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
         verboseprint("\nKMeans result:", dump_json(a))
         return a
@@ -698,10 +698,10 @@ class H2O(object):
                 timeout=timeoutSecs,
                 params={"source_key": key, "destination_key": key2}))
 
-        # Check that the response has the right ParseProgress url it's going to steer us to.
-        if a['response']['redirect_request']!='ParseProgress':
+        # Check that the response has the right Progress url it's going to steer us to.
+        if a['response']['redirect_request']!='Progress':
             print dump_json(a)
-            raise Exception('H2O parse redirect is not ParseProgress. Parse json response precedes.')
+            raise Exception('H2O parse redirect is not Progress. Parse json response precedes.')
         a = self.poll_url(a['response'], 
             timeoutSecs=timeoutSecs, retryDelaySecs=0.5, initialDelaySecs=initialDelaySecs)
 
@@ -897,7 +897,7 @@ class H2O(object):
             # don't have to pop, GLMGrid ignores
             print "\nWARNING: norm param is ignored by GLMGrid. Always uses LASSO (L1+L2)."
 
-        # Check that the response has the right ParseProgress url it's going to steer us to.
+        # Check that the response has the right Progress url it's going to steer us to.
         if a['response']['redirect_request']!='GLMGridProgress':
             print dump_json(a)
             raise Exception('H2O GLMGrid redirect is not GLMGridProgress. GLMGrid json response precedes.')

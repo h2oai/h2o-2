@@ -20,7 +20,7 @@ try:
     file = csvPathname = h2o.find_file('smalldata/covtype/covtype.20k.data')
     h2o_cmd.runKMeans(csvPathname=file, key='covtype', k=7)
     print 'Web'
-    webbrowser.open("http://localhost:54323/KMeansProgress.html?destination_key=covtype.kmeans")
+    webbrowser.open("http://localhost:54323/Progress.html?destination_key=covtype.kmeans")
 except KeyboardInterrupt:
     print 'Interrupted'
 finally:
