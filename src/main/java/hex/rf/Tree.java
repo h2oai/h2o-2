@@ -117,7 +117,7 @@ public class Tree extends CountedCompleter {
     left.applyClassWeights();   // Weight the distributions
     Statistic.Split spl = left.split(d, false);
     _tree = spl.isLeafNode()
-      ? new LeafNode(spl._split, d.rows())
+      ? new LeafNode(_data.unmapClass(spl._split), d.rows())
       : new FJBuild (spl, d, 0, _seed).compute();
 
     if (_verbose > 1)
@@ -165,10 +165,10 @@ public class Tree extends CountedCompleter {
       Statistic.Split ls = left.split(res[0], _depth >= _max_depth); // get the splits
       Statistic.Split rs = rite.split(res[1], _depth >= _max_depth);
       if (ls.isLeafNode() || ls.isImpossible())
-            nd._l = new LeafNode(ls._split, res[0].rows()); // create leaf nodes if any
+            nd._l = new LeafNode(_data.unmapClass(ls._split), res[0].rows()); // create leaf nodes if any
       else  fj0 = new FJBuild(ls,res[0],_depth+1, _seed + LTS_INIT);
       if (rs.isLeafNode() || rs.isImpossible())
-            nd._r = new LeafNode(rs._split, res[1].rows());
+            nd._r = new LeafNode(_data.unmapClass(rs._split), res[1].rows());
       else  fj1 = new  FJBuild(rs,res[1],_depth+1, _seed - RTS_INIT);
       // Recursively build the splits, in parallel
       if (_data.rows() > ROWS_FORK_TRESHOLD) {
@@ -209,6 +209,11 @@ public class Tree extends CountedCompleter {
   static class LeafNode extends INode {
     final int _class;    // A category reported by the inner node
     final int _rows;     // A number of classified rows (only meaningful for training)
+    /**
+     * Construct a new leaf node.
+     * @param c - a particular value of class predictor from interval [0,N-1]
+     * @param rows - numbers of rows with the predictor value
+     */
     LeafNode(int c, int rows) {
       assert 0 <= c && c <= 254; // sanity check
       _class = c;               // Class from 0 to _N-1

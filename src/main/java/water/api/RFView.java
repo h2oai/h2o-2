@@ -1,8 +1,6 @@
 package water.api;
 
 import water.Key;
-import water.api.RequestBuilders.Response;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;

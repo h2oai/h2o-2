@@ -70,6 +70,9 @@ final class DataAdapter  {
   public long seed()          { return _seed; }
   public int columns()        { return _c.length;}
   public int classOf(int idx) { return _c[_c.length-1].get(idx); }
+  /** Transforms given binned index (short) from class column into a value from interval [0..N-1]
+   * corresponding to a particular predictor class */
+  public int unmapClass(int clazz) { Col c = _c[_c.length-1]; return (int) (c.raw(clazz) - c.min); }
   /**Returns true if the row has missing data. */
   public long dataId()         { return _dataId; }
   /** The number of possible prediction classes. */
