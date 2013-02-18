@@ -146,7 +146,7 @@ public final class DRF extends water.DRemoteTask {
     Column cs[] = _rfmodel._va._cols;
     Column c = cs[cs.length-1];
     String err = "Response column must be an integer in the interval [2,254]";
-    if(c._size < 0)
+    if(c.isFloat())
       throw new IllegalArgumentException("Regression is not supported: "+err);
     final int classes = (int)(c._max - c._min)+1;
     if( !(2 <= classes && classes <= 254 ) )

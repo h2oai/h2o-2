@@ -55,7 +55,7 @@ public class RFRunner {
   }
   static final String[] RESULTS = new String[] { "err", "classif err", "ntrees", "nvars",  "avg.depth", "avg.leaves", "rows", "time" };
   static final String JAVA         = "java";
-  static final String JAR          = "-jar build/h2o.jar";
+  static final String JAR          = "-jar target/h2o.jar";
   static final String MAIN         = "-mainClass hex.rf.RandomForest";
   static final String[] stat_types = new String[] { "gini", "entropy" };
   static final int[] ntrees        = new int[] { 1, 50, 100, 300 };
