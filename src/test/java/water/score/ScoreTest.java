@@ -33,6 +33,7 @@ public class ScoreTest extends TestUtil {
     // The 500-tree set scores perfectly, takes slightly long to load.
     //File file = find_test_file("smalldata/pmml/iris_rf_500trees.pmml");
     File file = find_test_file("smalldata/pmml/iris_rf_1tree.pmml");
+    //File file = find_test_file("smalldata/pmml/cars-cater-rf-1tree.pmml");
     RFScoreModel rfm = (RFScoreModel)PMMLParser.parse(new BufferedInputStream(new FileInputStream(file)));
   
     Key irisk = loadAndParseKey("iris.hex","smalldata/iris/iris2.csv");
