@@ -1,7 +1,6 @@
 package water.score;
 
-import java.io.File;
-import java.io.FileInputStream;
+import java.io.*;
 import java.util.HashMap;
 import org.junit.Assert;
 import org.junit.Test;
@@ -21,25 +20,36 @@ public class ScoreTest extends TestUtil {
 
   @Test
   public void testScorecard() throws Exception {
+    File file = find_test_file("smalldata/pmml/Loan_Scorecard.xml");
+    ScorecardModel scm = (ScorecardModel)PMMLParser.parse(new FileInputStream(file));
+    Assert.assertEquals(0, scm.score_interpreter(ROW), 1e-6);
+    Assert.assertEquals(0, scm.score(ROW), 1e-6);
   }
 
   // Load and score a simple PMML RF model against the iris dataset.
-  // Not ready, so not turned on.
+  @Test
   public void testRandomForest1() throws Exception {
-    File file = find_test_file("smalldata/pmml/iris_rf_1tree.pmml.xml");
-    ScoreModel rfm = PMMLParser.load(new FileInputStream(file));
+    // The 1-tree set scores with 2 errors.
+    // The 500-tree set scores perfectly, takes slightly long to load.
+    //File file = find_test_file("smalldata/pmml/iris_rf_500trees.pmml");
+    File file = find_test_file("smalldata/pmml/iris_rf_1tree.pmml");
+    RFScoreModel rfm = (RFScoreModel)PMMLParser.parse(new BufferedInputStream(new FileInputStream(file)));
   
-    Key irisk = loadAndParseKey("iris.hex","smalldata/iris/iris.csv");
+    Key irisk = loadAndParseKey("iris.hex","smalldata/iris/iris2.csv");
     ValueArray ary = ValueArray.value(DKV.get(irisk));
     AutoBuffer bits = ary.getChunk(0);
     int rows = ary.rpc(0);
+    int errs = 0;
     for( int i=0; i<rows; i++ ) {
-      StringBuilder sb = new StringBuilder();
+      HashMap<String,Comparable> row = new HashMap();
       for( int j=0; j<ary._cols.length; j++ )
-        sb.append(ary._cols[j]._name).append("=").append(ary.datad(bits,i,j));
-      sb.append("\n");
-      System.err.println(sb.toString());
+        row.put(ary._cols[j]._name,ary.datad(bits,i,j));
+      int pr = (int)rfm.score(row);
+      int ac = (int)ary.data(bits,i,4);
+      if( pr != ac )
+        errs++;
     }
-  
+    Assert.assertEquals(2,errs);
+    UKV.remove(irisk);
   }
 }
