@@ -681,19 +681,20 @@ class H2O(object):
         verboseprint("\nKMeans result:", dump_json(a))
         return a
 
-    def parse(self, key, key2=None, timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, **kwargs):
+    def parse(self, key, key2=None, timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, header=False, **kwargs):
         browseAlso = kwargs.pop('browseAlso',False)
         # this doesn't work. webforums indicate max_retries might be 0 already? (as of 3 months ago)
         # requests.defaults({max_retries : 4})
         # https://github.com/kennethreitz/requests/issues/719
         # it was closed saying Requests doesn't do retries. (documentation implies otherwise)
         verboseprint("\nParsing key:", key, "to key2:", key2, "(if None, means default)")
-
+        parseParams = {"source_key": key, "destination_key": key2}
+        if header: parseParams['header'] = 1
         a = self.__check_request(
             requests.get(
                 url=self.__url('Parse.json'),
                 timeout=timeoutSecs,
-                params={"source_key": key, "destination_key": key2}))
+                params=parseParams))
 
         # Check that the response has the right ParseProgress url it's going to steer us to.
         if a['response']['redirect_request']!='ParseProgress':
