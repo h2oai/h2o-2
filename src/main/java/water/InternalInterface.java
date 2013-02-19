@@ -1,11 +1,14 @@
 package water;
 
-import com.google.gson.JsonObject;
-import hex.GLMSolver.GLMModel;
+import hex.DGLM.GLMModel;
 import hex.KMeans.KMeansModel;
 import hex.rf.RFModel;
+
 import java.io.InputStream;
+
 import water.api.Cloud;
+
+import com.google.gson.JsonObject;
 
 public class InternalInterface implements H2OInit.ExternalInterface {
   public Key makeKey( String key_name ) { return Key.make(key_name); }
@@ -14,7 +17,7 @@ public class InternalInterface implements H2OInit.ExternalInterface {
   public Value  getValue( Object key ) { return UKV.get((Key)key); }
   public byte[] getBytes( Object val ) { return ((Value)val).get(); }
 
-  public Model ingestRFModelFromR( Object key, InputStream is ) { 
+  public Model ingestRFModelFromR( Object key, InputStream is ) {
     return null;
   }
 
@@ -39,7 +42,7 @@ public class InternalInterface implements H2OInit.ExternalInterface {
   }
 
   // Call to map the columns and score
-  public double scoreModel( Object model, String [] colNames, double[] row ) { 
+  public double scoreModel( Object model, String [] colNames, double[] row ) {
     Model M = (Model)model;
     int[] map = M.columnMapping( colNames);
     if( !Model.isCompatible(map) )

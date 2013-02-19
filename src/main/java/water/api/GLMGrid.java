@@ -1,14 +1,15 @@
 package water.api;
 
-import hex.*;
-import hex.GLMSolver.*;
+import hex.DGLM.CaseMode;
+import hex.DGLM.Family;
+import hex.DGLM.GLMModel;
+import hex.DGLM.GLMParams;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.*;
 
 import water.*;
-import water.api.RequestArguments.*;
 import water.util.RString;
 
 import com.google.gson.JsonObject;
@@ -42,7 +43,7 @@ public class GLMGrid extends Request {
 
 
   // Args NOT Grid Searched
-  protected final Int _maxIter = new Int(JSON_GLM_MAX_ITER, GLMSolver.DEFAULT_MAX_ITER, 1, 1000000);
+  protected final Int _maxIter = new Int(JSON_GLM_MAX_ITER, 50, 1, 1000000);
   protected final EnumArgument<Family> _family = new EnumArgument(JSON_GLM_FAMILY,Family.binomial,true);
   protected final LinkArg _link = new LinkArg(_family,JSON_GLM_LINK);
 
@@ -51,7 +52,7 @@ public class GLMGrid extends Request {
   protected final Real _weight = new Real(JSON_GLM_WEIGHT,1.0);
 
   protected final Int _xval = new Int(XVAL, 10, 0, 1000000);
-  protected final Real _betaEps = new Real(JSON_GLM_BETA_EPS,GLMSolver.DEFAULT_BETA_EPS);
+  protected final Real _betaEps = new Real(JSON_GLM_BETA_EPS,1e-4);
 
   // Args that ARE Grid Searched
   protected final RSeq _lambda = new RSeq(Constants.LAMBDA, false, new NumberSequence("1e-8:1e3:100",true,10),true);
@@ -113,13 +114,11 @@ public class GLMGrid extends Request {
     // self, because it's almost always updated locally.
     Key taskey = Key.make("Task"+UUID.randomUUID().toString(),(byte)0,Key.TASK,H2O.SELF);
 
-    GLMParams glmp = new GLMParams();
+    GLMParams glmp = new GLMParams(_family.value());
     glmp._betaEps = _betaEps.value();
     glmp._maxIter = _maxIter.value();
     glmp._caseMode = _caseMode.valid()?_caseMode.value():CaseMode.none;
     glmp._caseVal = _case.valid()?_case.value():Double.NaN;
-    glmp._f = _family.value();
-    glmp._l = glmp._f.defaultLink;
 
     GLMGridStatus task =
       new GLMGridStatus(taskey,       // Self/status/task key

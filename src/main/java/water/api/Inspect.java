@@ -1,6 +1,6 @@
 package water.api;
 
-import hex.GLMSolver.GLMModel;
+import hex.DGLM.GLMModel;
 import hex.KMeans.KMeansModel;
 import hex.rf.RFModel;
 

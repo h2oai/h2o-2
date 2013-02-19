@@ -61,11 +61,17 @@ public abstract class RowVecTask extends MRTask {
       return "Sampling(step="+_step + ",offset=" + _offset + ",complement=" + _complement + ")";
     }
 
+    public double ratio() {
+      double res = 1.0/_step;
+      if(_complement) res = 1.0-res;
+      return res;
+    }
+
+
     public Sampling clone(){
       return new Sampling(this);
     }
   }
-
 
   @Override
   public void map(Key key) {

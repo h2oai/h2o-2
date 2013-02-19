@@ -1,11 +1,11 @@
 package water.api;
 
-import com.google.gson.*;
-import java.util.Arrays;
 import java.util.Properties;
+
 import water.*;
-import water.api.*;
-import hex.GLMSolver.GLMModel;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 
 /**
  * Simple web page to guide model validation.

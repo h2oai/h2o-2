@@ -1,8 +1,11 @@
 package water.api;
 
-import hex.GLMSolver.*;
-import hex.KMeans.*;
-import hex.rf.*;
+import hex.DGLM.CaseMode;
+import hex.DGLM.Family;
+import hex.DGLM.GLMModel;
+import hex.DGLM.Link;
+import hex.KMeans.KMeansModel;
+import hex.rf.RFModel;
 
 import java.io.File;
 import java.util.*;
@@ -11,7 +14,6 @@ import water.*;
 import water.ValueArray.Column;
 import water.util.Check;
 import water.util.RString;
-import java.lang.ThreadLocal;
 
 import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
