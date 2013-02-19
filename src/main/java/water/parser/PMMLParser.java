@@ -177,8 +177,11 @@ public class PMMLParser {
     int len = Integer.parseInt(attrs.get("n"));
     assert attrs.get("type").equals("string");
     String[] ss = new String[len];
-    for( int i=0; i<len; i++ )
-      ss[i] = skipWS().token();
+    for( int i=0; i<len; i++ ) {
+      int b = skipWS().peek();
+      // Allow both quoted and unquoted tokens
+      ss[i] = (b=='&' || b=='"') ? str() : token();
+    }
     skipWS().expect("</Array>");
     return ss;
   }
@@ -202,6 +205,13 @@ public class PMMLParser {
     throw new ParseException("Premature EOF");
   }
   int push( int b ) { return (_buf[_idx++] = b); }
+
+  public int qget() {
+    int b = get();
+    if( b!='&' ) return b;
+    expect("quot;");
+    return '"';
+  }
 
   // Read from stream, skipping whitespace
   public PMMLParser skipWS() {
@@ -250,14 +260,14 @@ public class PMMLParser {
   }
   // Read from stream a "string".  Skips the trailing close-quote
   private String str() {
-    int q = skipWS().get();
+    int q = skipWS().qget();
     if( q!='"' && q!='\'' )
       throw new ParseException("Expected one of ' or \" but found '"+(char)q+"'");
     StringBuilder sb = new StringBuilder();
     int b = get();
     while( b != q ) {
       sb.append((char)b);
-      b = get();
+      b = qget();
     }
     return sb.toString();
   }

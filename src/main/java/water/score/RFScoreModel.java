@@ -61,6 +61,7 @@ public class RFScoreModel extends ScoreModel {
       }
       ab.put1('S');             // 'E' for equals, this is always '>'
       ab.put2(_l._colnum);      // Column number
+      if( _l._pred instanceof IsIn ) throw new ParseException("IsIn predicate not handled in RF Scoring yet");
       assert _l._pred instanceof LessOrEqual;
       assert _r._pred instanceof GreaterThan;
       ab.put4f((float)((LessOrEqual)_l._pred)._num);
