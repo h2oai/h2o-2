@@ -19,14 +19,8 @@ import com.google.gson.*;
 
 
 public abstract class DGLM {
-
-  public enum GLMSolverType {
-    Newton,
-    IRLSM;
-  }
   public static final int DEFAULT_MAX_ITER = 50;
   public static final double DEFAULT_BETA_EPS = 1e-4;
-  private static final double MAX_SQRT = Math.sqrt(Double.MAX_VALUE);
 
   public static class GLMException extends RuntimeException {
     public GLMException(String msg){super(msg);}
@@ -41,7 +35,6 @@ public abstract class DGLM {
     public double _caseWeight = 1.0;
     public CaseMode _caseMode = CaseMode.none;
     public boolean _reweightGram = true;
-    public GLMSolverType _glmSolver = GLMSolverType.Newton;
 
     public GLMParams(Family family){this(family,family.defaultLink);}
 
@@ -116,7 +109,7 @@ public abstract class DGLM {
 //    cauchit(0),
 //    cloglog(0),
 //    sqrt(0),
-    inverse(1.0),
+    inverse(0),
 //    oneOverMu2(0);
     ;
     public final double defaultBeta;
@@ -133,11 +126,13 @@ public abstract class DGLM {
       case log:
         return Math.log(x);
       case inverse:
-        return 1/x;
+        double xx = (x < 0)?Math.min(-1e-5,x):Math.max(1e-5, x);
+        return 1.0/xx;
       default:
         throw new Error("unsupported link function id  " + this);
       }
     }
+
 
     public final double linkInv(double x){
       switch(this){
@@ -148,23 +143,27 @@ public abstract class DGLM {
       case log:
         return Math.exp(x);
       case inverse:
-        return 1/x;
+        double xx = (x < 0)?Math.min(-1e-5,x):Math.max(1e-5, x);
+        return 1.0/xx;
       default:
         throw new Error("unexpected link function id  " + this);
       }
     }
 
-    public final double linkDeriv(double x){
+    public final double linkInvDeriv(double x){
       switch(this){
         case identity:
           return 1;
         case logit:
-          if( x == 1 || x == 0 ) return MAX_SQRT;
-          return 1 / (x * (1 - x));
+          double g = Math.exp(-x);
+          double gg = (g+1)*(g+1);
+          return g /gg;
         case log:
-          return (x == 0)?MAX_SQRT:1/x;
+          //return (x == 0)?MAX_SQRT:1/x;
+          return Math.max(Math.exp(x), Double.MIN_NORMAL);
         case inverse:
-          return -1/(x*x);
+          double xx = (x < 0)?Math.min(-1e-5,x):Math.max(1e-5, x);
+          return -1/(xx*xx);
         default:
           throw new Error("unexpected link function id  " + this);
       }
@@ -182,26 +181,11 @@ public abstract class DGLM {
   public static enum Family {
     gaussian(Link.identity,null),
     binomial(Link.logit,new double[]{Double.NaN,1.0,0.5}),
-    poisson(Link.log,null);
-    //gamma(Link.inverse,null);
+    poisson(Link.log,null),
+    gamma(Link.inverse,null);
     public final Link defaultLink;
     public final double [] defaultArgs;
     Family(Link l, double [] d){defaultLink = l; defaultArgs = d;}
-
-    public double weightApproximation(){
-      switch(this){
-      case gaussian:
-        return 1;
-      case binomial:
-        return 0.25;
-      case poisson:
-        throw new Error("unimplmented");
-//      case gamma:
-//        return Double.NaN;
-      default:
-        throw new Error("unknown family Id " + this);
-      }
-    }
 
     public double aic(double dev, long nobs, int betaLen){
       switch(this){
@@ -211,8 +195,8 @@ public abstract class DGLM {
         return 2*betaLen + dev;
       case poisson:
         return 2*betaLen + dev;
-//      case gamma:
-//        return Double.NaN;
+      case gamma:
+        return Double.NaN;
       default:
         throw new Error("unknown family Id " + this);
       }
@@ -226,8 +210,8 @@ public abstract class DGLM {
         return mu*(1-mu);
       case poisson:
         return mu;
-//      case gamma:
-//        return mu*mu;
+      case gamma:
+        return mu*mu;
       default:
         throw new Error("unknown family Id " + this);
       }
@@ -253,9 +237,9 @@ public abstract class DGLM {
         //ym = Math.exp(ym);
         if(yr == 0)return 2*ym;
         return 2*((yr * Math.log(yr/ym)) - (yr - ym));
-//      case gamma:
-//        if(yr == 0)return -2;
-//        return -2*(Math.log(yr/ym) - (yr - ym)/ym);
+      case gamma:
+        if(yr == 0)return -2;
+        return -2*(Math.log(yr/ym) - (yr - ym)/ym);
       default:
         throw new Error("unknown family Id " + this);
       }
@@ -789,7 +773,6 @@ public abstract class DGLM {
     final Family _family;
     final Link _link;
     double [] _beta;
-    final GLMSolverType _glmSolver;
     final CaseMode _cMode;
     final double _cVal;
 
@@ -800,7 +783,6 @@ public abstract class DGLM {
       _weighted = glmp._family != Family.gaussian;
       _family = glmp._family;
       _link = glmp._link;
-      _glmSolver = glmp._glmSolver;
       _cMode = glmp._caseMode;
       _cVal = glmp._caseVal;
     }
@@ -829,6 +811,7 @@ public abstract class DGLM {
     public final void processRow(Gram gram, double[] x,int[] indexes){
       final int yidx = x.length-1;
       double y = x[yidx];
+      assert ((_family != Family.gamma) || y > 0):"illegal response column, y must be > 0  for family=Gamma.";
       x[yidx] = 1; // put intercept in place of y
       if(_cMode != CaseMode.none)
         y = (_cMode.isCase(y,_cVal))?1:0;
@@ -838,16 +821,13 @@ public abstract class DGLM {
         double p = _link.linkInv(mu);
         double var = _family.variance(p);
         var = Math.max(1e-5, var); // avoid numerical problems with 0 variance
-        switch(_glmSolver){
-        case IRLSM:
-          double dp = _link.linkDeriv(p);
-          w = Math.min(1e5, 1.0/(dp * dp * var));
-          y = mu + (y - p) * dp;
-          break;
-        case Newton:
+        if(_family == Family.binomial || _family == Family.poisson){
           w = var;
           y = mu + (y-p)/var;
-          break;
+        } else {
+          double dp = _link.linkInvDeriv(mu);
+          w = dp*dp/var;
+          y = mu + (y - p)/dp;
         }
       }
       assert w >= 0;
@@ -1005,6 +985,7 @@ public abstract class DGLM {
   public static GLMModel buildModel(DataFrame data, LSMSolver lsm, GLMParams params) {
     double [] beta = new double[data.expandedSz()];
     Arrays.fill(beta, params._link.defaultBeta);
+    if(params._family == Family.gamma)beta[beta.length-1] = 1;
     return buildModel(data, lsm, params, beta);
   }
 

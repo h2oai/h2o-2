@@ -6,7 +6,6 @@ import hex.DGLM.Family;
 import hex.DGLM.GLMException;
 import hex.DGLM.GLMModel;
 import hex.DGLM.GLMParams;
-import hex.DGLM.GLMSolverType;
 import hex.DGLM.GLMValidation;
 import hex.DGLM.Link;
 import hex.DLSM.ADMMSolver;
@@ -45,7 +44,6 @@ public class GLM extends Request {
   // ------------------------------------- ADVANCED SETTINGS ------------------------------------------------------------------------------------
   protected final Bool _standardize = new Bool("standardize", true, "Set to standardize (0 mean, unit variance) the data before training.");
   protected final RSeq _thresholds = new RSeq(DTHRESHOLDS, false, new NumberSequence("0:1:0.01", false, 0.01),false);
-  protected final EnumArgument<GLMSolverType> _glmSolver = new EnumArgument<GLMSolverType>("glm_solver", GLMSolverType.Newton);
   protected final EnumArgument<LSMSolverType> _lsmSolver = new EnumArgument<LSMSolverType>("lsm_solver", LSMSolverType.ADMM);
   protected final Real _betaEps = new Real(BETA_EPS,1e-4);
   protected final Int _maxIter = new Int(MAX_ITER, 50, 1, 1000000);
@@ -125,7 +123,6 @@ public class GLM extends Request {
     } else if (arg == _expertSettings){
       if(_expertSettings.value()){
         _lsmSolver._hideInQuery = false;
-        _glmSolver._hideInQuery = false;
         _thresholds._hideInQuery = false;
         _maxIter._hideInQuery = false;
         _betaEps._hideInQuery = false;
@@ -133,7 +130,6 @@ public class GLM extends Request {
         _standardize._hideInQuery = false;
       } else {
         _lsmSolver._hideInQuery = true;
-        _glmSolver._hideInQuery = true;
         _thresholds._hideInQuery = true;
         _maxIter._hideInQuery = true;
         _betaEps._hideInQuery = true;
@@ -178,7 +174,6 @@ public class GLM extends Request {
     if(_case.valid())
       res._caseVal = _case.value();
     res._caseMode = _caseMode.valid()?_caseMode.value():CaseMode.none;
-    res._glmSolver = _glmSolver.value();
     return res;
   }
 
