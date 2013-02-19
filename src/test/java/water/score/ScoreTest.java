@@ -13,17 +13,17 @@ public class ScoreTest extends TestUtil {
   static {
     ROW = new HashMap<String, Comparable>();
     ROW.put("id", "80457298");
-    ROW.put("string", "AOS");
-    ROW.put("int", "71");
-    ROW.put("long", 399L);
+    ROW.put("name", "AOS");
+    ROW.put("age", "71");
+    ROW.put("income", 399L);
   }
 
   @Test
   public void testScorecard() throws Exception {
-    File file = find_test_file("smalldata/pmml/Loan_Scorecard.xml");
+    File file = find_test_file("smalldata/pmml/SampleScorecard.pmml");
     ScorecardModel scm = (ScorecardModel)PMMLParser.parse(new FileInputStream(file));
-    Assert.assertEquals(0, scm.score_interpreter(ROW), 1e-6);
-    Assert.assertEquals(0, scm.score(ROW), 1e-6);
+    Assert.assertEquals(5.505753, scm.score_interpreter(ROW), 1e-6);
+    Assert.assertEquals(5.505753, scm.score(ROW), 1e-6);
   }
 
   // Load and score a simple PMML RF model against the iris dataset.
