@@ -4,6 +4,7 @@ import water.*;
 import water.Jobs.Job;
 import water.parser.CsvParser;
 import water.parser.ParseDataset;
+import water.parser.CsvParser.Setup;
 import water.util.RString;
 
 import com.google.gson.JsonObject;
@@ -16,7 +17,9 @@ public class Parse extends Request {
   private static class PSetup {
     final Key _key;
     final CsvParser.Setup _setup;
-    PSetup( Key key, CsvParser.Setup setup ) { _key=key; _setup=setup; }
+    final boolean _xls;
+    PSetup( Key key, CsvParser.Setup setup ) { _key=key; _setup=setup; _xls = false;}
+    PSetup( Key key, CsvParser.Setup setup, boolean xls) { _key=key; _setup=setup; _xls = xls;}
   };
 
   // An H2O Hex Query, which does runs the basic CSV parsing heuristics.
@@ -24,6 +27,7 @@ public class Parse extends Request {
     public ExistingCSVKey(String name) { super(TypeaheadKeysRequest.class, name, true); }
     @Override protected PSetup parse(String input) throws IllegalArgumentException {
       Key k = Key.make(input);
+      if(input.endsWith(".xlsx") || input.endsWith(".xls"))return new PSetup(k, new Setup((byte) 0,false,null,0,null), true);;
       Value v = DKV.get(k);
       if (v == null) throw new IllegalArgumentException("Key "+input+" not found!");
       CsvParser.Setup setup = Inspect.csvGuessValue(v);
