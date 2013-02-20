@@ -36,7 +36,7 @@ class Basic(unittest.TestCase):
         rf = h2o_cmd.runRFOnly(parseKey=parseKey, ntree=100, timeoutSecs=14800, bin_limit=20000, out_of_bag_error_estimate=1,gini=0,depth=100,exclusive_split_limit=0,ignore=ignored_cols)
         print "Computation took {0} sec".format(time.time()-start)
         print "Result:",rf
-        #print pp(rf)
+        print pp(rf)
 
 if __name__ == '__main__':
     h2o.unit_main()
