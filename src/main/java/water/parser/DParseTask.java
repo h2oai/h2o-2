@@ -348,6 +348,10 @@ public final class DParseTask extends MRTask {
    * option for their distributed processing.
    */
   public void passTwo() throws Exception {
+    // make sure we delete previous array here, because we insert arraylet header after all chunks are stored in
+    // so if we do not delete it now, it will be deleted by UKV automatically later and destroy our values!
+    if(DKV.get(_job._dest) != null)
+      UKV.remove(_job._dest);
     switch (_parserType) {
       case CSV:
         // for CSV parser just launch the distributed parser on the chunks

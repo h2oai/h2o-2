@@ -48,8 +48,12 @@ public class Parse extends Request {
       String n = setup._key.toString();
       int dot = n.lastIndexOf('.');
       if( dot > 0 ) n = n.substring(0, dot);
-      String dst = n+".hex";
-      return dst;
+      int i = 0;
+      String res = n + ".hex";
+      Key k = Key.make(res);
+      while(DKV.get(k) != null)
+        k = Key.make(res = n + ++i + ".hex");
+      return res;
     }
     @Override protected String queryDescription() { return "Destination hex key"; }
   }

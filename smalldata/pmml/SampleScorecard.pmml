@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PMML version="4.1" xmlns="http://www.dmg.org/PMML-4_1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Header copyright="MyBigDataCo" description="Scorecard model">
+    <Application name="NIH" version="0.1"/>
+    <Timestamp>2012-12-11T15:52:10.8</Timestamp>
+  </Header>
+  <DataDictionary>
+    <DataField name="id" dataType="double" optype="continuous"/>
+    <DataField name="name" dataType="string" optype="categorical"/>
+    <DataField name="age" dataType="int" optype="continuous"/>
+    <DataField name="income" dataType="int" optype="continuous"/>
+  </DataDictionary>
+  <Scorecard modelName="SampleModel" functionName="regression" 
+             useReasonCodes="false" initialScore="0" baselineMethod="other">
+    <MiningSchema>
+      <MiningField name="age" usageType="active"/>
+      <MiningField name="id" usageType="active"/>
+      <MiningField name="name" usageType="active"/>
+      <MiningField name="income" usageType="active"/>
+    </MiningSchema>
+    <Output>
+      <OutputField name="Income" feature="predictedValue" dataType="double" optype="continuous"/>
+    </Output>
+    <Characteristics>
+      <Characteristic name="age_score">
+        <Attribute partialScore="0.2717530">
+          <SimplePredicate field="age" operator="lessOrEqual" value="10"/>
+        </Attribute>
+        <Attribute partialScore="1.2717530">
+          <SimplePredicate field="age" operator="lessOrEqual" value="20"/>
+        </Attribute>
+        <Attribute partialScore="2.2717530">
+          <SimplePredicate field="age" operator="lessOrEqual" value="50"/>
+        </Attribute>
+        <Attribute partialScore="3.2717530">
+          <SimplePredicate field="age" operator="lessOrEqual" value="60"/>
+        </Attribute>
+        <Attribute partialScore="4.2717530">
+          <SimplePredicate field="age" operator="greaterThan" value="60"/>
+        </Attribute>
+      </Characteristic>
+      <Characteristic name="id_score">
+        <Attribute partialScore="2.2627821">
+          <SimplePredicate field="id" operator="isMissing"/>
+        </Attribute>
+        <Attribute partialScore="2.0212652">
+          <SimplePredicate field="id" operator="equal" value="0"/>
+        </Attribute>
+      </Characteristic>
+      <Characteristic name="income_score">
+        <Attribute partialScore="0.862428">
+          <SimplePredicate field="income" operator="lessThan" value="100"/>
+        </Attribute>
+        <Attribute partialScore="0">
+          <SimplePredicate field="income" operator="lessThan" value="200"/>
+        </Attribute>
+        <Attribute partialScore="1.234">
+          <SimplePredicate field="income" operator="greaterThan" value="200"/>
+        </Attribute>
+      </Characteristic>
+    </Characteristics>
+  </Scorecard>
+</PMML>

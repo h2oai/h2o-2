@@ -6,8 +6,6 @@ import java.util.Random;
 import water.*;
 import water.util.Counter;
 
-import com.google.common.base.Throwables;
-
 /**
  * A model is an ensemble of trees that can be serialized and that can be used
  * to classify data.

@@ -87,9 +87,9 @@ public class ScorePmmlTest extends TestUtil {
 
   public static String makeDataDictionary(String... fields) {
     StringBuilder sb = new StringBuilder();
-    sb.append("<DataDictionary\n>");
+    sb.append("<DataDictionary>\n");
     for(String f : fields) sb.append("  ").append(f);
-    sb.append("</DataDictionary\n>");
+    sb.append("</DataDictionary>\n");
     return sb.toString();
   }
   public static String makeDataField(String name, DataType dt) {
@@ -112,9 +112,9 @@ public class ScorePmmlTest extends TestUtil {
 
   public static String makeMiningSchema(String... fields) {
     StringBuilder sb = new StringBuilder();
-    sb.append("<MiningSchema\n>");
+    sb.append("<MiningSchema>\n");
     for(String f : fields) sb.append("  ").append(f);
-    sb.append("</MiningSchema\n>");
+    sb.append("</MiningSchema>\n");
     return sb.toString();
   }
   public static String makeMiningField(String name, String usageType) {
@@ -514,6 +514,6 @@ public class ScorePmmlTest extends TestUtil {
 
 
   private ScorecardModel getSCM(final String pmml) throws Exception {
-    return (ScorecardModel)PMMLParser.load(new ByteArrayInputStream(pmml.getBytes()));
+    return (ScorecardModel)PMMLParser.parse(new ByteArrayInputStream(pmml.getBytes()));
   }
 }
