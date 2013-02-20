@@ -25,14 +25,15 @@ class Basic(unittest.TestCase):
 
     def test_RF_1000trees(self):
         s3bucket  = self.s3_default_bucket()  
-        s3dataset = '1987.csv.bz2'
+        s3dataset = 'year1987.csv'
+        ignored_cols = 'ArrDelay,DepDelay'
        
         start = time.time()
         parseKey = h2o_cmd.parseS3File(bucket=s3bucket, filename=s3dataset,timeoutSecs=14800)
         print "Parsing took {0}".format(time.time()-start)
         
         start = time.time()
-	rf = h2o_cmd.runRFOnly(parseKey=parseKey, ntree=100, timeoutSecs=14800, bin_limit=20000, out_of_bag_error_estimate=1,gini=0,depth=100,exclusive_split_limit=0)
+        rf = h2o_cmd.runRFOnly(parseKey=parseKey, ntree=100, timeoutSecs=14800, bin_limit=20000, out_of_bag_error_estimate=1,gini=0,depth=100,exclusive_split_limit=0,ignore=ignored_cols)
         print "Computation took {0} sec".format(time.time()-start)
         print "Result:",rf
         #print pp(rf)
