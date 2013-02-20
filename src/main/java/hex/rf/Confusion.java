@@ -244,8 +244,9 @@ public class Confusion extends MRTask {
     long[] ept1 = _errorsPerTree;
     long[] ept2 = C._errorsPerTree;
     if (ept1 == null) _errorsPerTree = ept2;
-    else {
-      for (int i = 0; i < ept1.length; i++) ept1[i] += ept2[i];
+    else if (ept2 != null) {
+      if (ept1.length < ept2.length) ept1 = Arrays.copyOf(ept1, ept2.length);
+      for (int i = 0; i < ept2.length; i++) ept1[i] += ept2[i];
     }
   }
 
