@@ -224,8 +224,6 @@ public final class DParseTask extends MRTask {
     _skipFirstLine = other._skipFirstLine;
     _myrows = other._myrows; // for simple values, number of rows is kept in the member variable instead of _nrows
     _job = other._job;
-    _colTypes = other._colTypes;
-    _nrows = other._nrows;
     _numRows = other._numRows;
     _sep = other._sep;
     _decSep = other._decSep;
