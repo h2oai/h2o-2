@@ -29,7 +29,7 @@ class Basic(unittest.TestCase):
         ignored_cols = 'ArrDelay,DepDelay'
        
         start = time.time()
-        parseKey = h2o_cmd.parseS3File(bucket=s3bucket, filename=s3dataset,timeoutSecs=14800)
+        parseKey = h2o_cmd.parseS3File(bucket=s3bucket, filename=s3dataset,timeoutSecs=14800, header=True)
         print "Parsing took {0}".format(time.time()-start)
         
         start = time.time()
