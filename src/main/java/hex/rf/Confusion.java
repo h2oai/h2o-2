@@ -124,7 +124,7 @@ public class Confusion extends MRTask {
     _data = ValueArray.value(DKV.get(_datakey));
     _model = UKV.get(_modelKey, new RFModel());
     _modelDataMap = _model.columnMapping(_data.colNames());
-    assert !_computeOOB || _model._dataKey==_datakey ;
+    assert !_computeOOB || _model._dataKey==_datakey : _computeOOB + " || " + _model._dataKey + " == " + _datakey ;
     Column c = _data._cols[_classcol];
     _N = (int)((c._max - c._min)+1);
     assert _N > 0;
@@ -244,8 +244,9 @@ public class Confusion extends MRTask {
     long[] ept1 = _errorsPerTree;
     long[] ept2 = C._errorsPerTree;
     if (ept1 == null) _errorsPerTree = ept2;
-    else {
-      for (int i = 0; i < ept1.length; i++) ept1[i] += ept2[i];
+    else if (ept2 != null) {
+      if (ept1.length < ept2.length) ept1 = Arrays.copyOf(ept1, ept2.length);
+      for (int i = 0; i < ept2.length; i++) ept1[i] += ept2[i];
     }
   }
 
