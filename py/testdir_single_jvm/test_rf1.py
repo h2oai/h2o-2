@@ -1,7 +1,7 @@
 import os, json, unittest, time, shutil, sys
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd as cmd
+import h2o, h2o_cmd
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -24,13 +24,13 @@ class Basic(unittest.TestCase):
         trees = 6
         timeoutSecs = 20
         csvPathname = h2o.find_file('smalldata/iris/iris2.csv')
-        cmd.runRF(trees=trees, timeoutSecs=timeoutSecs, csvPathname=csvPathname)
+        h2o_cmd.runRF(trees=trees, timeoutSecs=timeoutSecs, csvPathname=csvPathname)
 
     def notest_RF_poker100(self):
         trees = 6
         timeoutSecs = 20
         csvPathname = h2o.find_file('smalldata/poker/poker100')
-        cmd.runRF(trees=trees, timeoutSecs=timeoutSecs, csvPathname=csvPathname)
+        h2o_cmd.runRF(trees=trees, timeoutSecs=timeoutSecs, csvPathname=csvPathname)
 
     def test_GenParity1(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
@@ -58,7 +58,7 @@ class Basic(unittest.TestCase):
             sys.stdout.flush()
             csvFilename = "parity_128_4_" + str(x) + "_quad.data"  
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
-            cmd.runRF(trees=trees, timeoutSecs=timeoutSecs, csvPathname=csvPathname)
+            h2o_cmd.runRF(trees=trees, timeoutSecs=timeoutSecs, csvPathname=csvPathname)
 
             trees += 10
             timeoutSecs += 2
