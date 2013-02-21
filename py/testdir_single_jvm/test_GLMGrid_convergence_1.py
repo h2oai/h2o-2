@@ -99,10 +99,8 @@ class Basic(unittest.TestCase):
                     'num_cross_validation_folds': 2,
                     'beta_epsilon': 1e-4,
                     #***********
-                    # FIX! failed with : separator
-                    'lambda': '1e-8,1e-3,1e-2',
+                    'lambda': '1e-8:1e-3:1e2',
                     'alpha': '0,0.5,.75',
-                    # changed to , separator
                     'thresholds': '0,1,0.2'
                     }
 

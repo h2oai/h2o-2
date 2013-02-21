@@ -544,6 +544,7 @@ class H2O(object):
         rjson = r.json()
         for e in ['error', 'Error', 'errors', 'Errors']:
             if e in rjson:
+                verboseprint(dump_json(rjson))
                 emsg = 'rjson %s in %s: %s' % (e, inspect.stack()[1][3], rjson[e])
                 if ignoreH2oError:
                     # well, we print it..so not totally ignore. test can look at rjson returned
@@ -552,6 +553,7 @@ class H2O(object):
                     raise Exception(emsg)
 
         for w in ['warning', 'Warning', 'warnings', 'Warnings']:
+            verboseprint(dump_json(rjson))
             if w in rjson:
                 print 'rjson %s in %s: %s' % (w, inspect.stack()[1][3], rjson[w])
 

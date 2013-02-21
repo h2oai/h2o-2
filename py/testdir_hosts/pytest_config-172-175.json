@@ -10,7 +10,8 @@
     "sigar": true,
     "java_heap_GB": 28, 
 
-    "hdfs_name_node": "192.168.1.151",
+    "hdfs_name_node": "192.168.1.176",
+    "hdfs_version": "cdh3u5",
     "use_hdfs": false,
 
     "use_flatfile": true,
