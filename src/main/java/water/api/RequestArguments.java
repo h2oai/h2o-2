@@ -1704,24 +1704,23 @@ public class RequestArguments extends RequestStatics {
       addPrerequisite(_key = key);
     }
 
-
     public boolean shouldIgnore(int i, ValueArray.Column ca ) { return false; }
     public void checkLegality(int i, ValueArray.Column c) throws IllegalArgumentException { }
 
-    protected Comparator<ValueArray.Column> colComp(){
+    protected Comparator<Integer> colComp(final ValueArray ary){
       return null;
     }
 
-    ArrayList<Column> _selectedCols;
+    ArrayList<Integer> _selectedCols;
 
     protected void selectColumns(){
       ValueArray va = _key.value();
-      ArrayList<ValueArray.Column> cols = Lists.newArrayList();
+      ArrayList<Integer> cols = Lists.newArrayList();
       for (int i = 0; i < va._cols.length; ++i) {
         if( shouldIgnore(i, va._cols[i]) ) continue;
-        cols.add(va._cols[i]);
+        cols.add(i);
       }
-      Comparator<Column> cmp = colComp();
+      Comparator<Integer> cmp = colComp(va);
       if(cmp != null)
         Collections.sort(cols,cmp);
       _selectedCols = cols;
@@ -1735,8 +1734,7 @@ public class RequestArguments extends RequestStatics {
     @Override protected final String[] selectValues() {
       String [] res = new String[_selectedCols.size()];
       int idx = 0;
-      for(Column c:_selectedCols)
-        res[idx++] = Objects.firstNonNull(c._name, String.valueOf(idx));
+      for(int i:_selectedCols)res[idx++] = String.valueOf(i);
       return res;
     }
 
@@ -1753,7 +1751,7 @@ public class RequestArguments extends RequestStatics {
       ArrayList<Integer> al = new ArrayList();
       for (String col : input.split(",")) {
         col = col.trim();
-        int idx = vaColumnNameToIndex(va, col);
+        int idx = Integer.valueOf(col);// vaColumnNameToIndex(va, col);
         if (idx == -1)
           throw new IllegalArgumentException("Column "+col+" not part of key "+va._key);
         if (al.contains(idx))
@@ -1821,7 +1819,8 @@ public class RequestArguments extends RequestStatics {
       ValueArray va = _key.value();
       String [] res = new String [_selectedCols.size()];
       int idx = 0;
-      for(Column c: _selectedCols){
+      for(int cid: _selectedCols){
+        Column c = va._cols[cid];
         double ratio = c._n/(double)va._numrows;
         if(ratio < 0.99){
           res[idx++] = c._name  + " (" + Math.round((1-ratio)*100) + "% NAs)";
@@ -1832,15 +1831,16 @@ public class RequestArguments extends RequestStatics {
     }
 
 
-    @Override protected Comparator<Column> colComp(){
+    @Override protected Comparator<Integer> colComp(final ValueArray ary){
       ValueArray va = _key.value();
       final double ratio = 1.0/va._numrows;
-      return new Comparator<ValueArray.Column>() {
-
+      return new Comparator<Integer>() {
         @Override
-        public int compare(Column x, Column y) {
-          double xRatio = x._n*ratio;
-          double yRatio = y._n*ratio;
+        public int compare(Integer x, Integer y) {
+          Column xc = ary._cols[x];
+          Column yc = ary._cols[y];
+          double xRatio = xc._n*ratio;
+          double yRatio = yc._n*ratio;
           if(xRatio > 0.9 && yRatio > 0.9) return 0;
           if(xRatio <= 0.9 && yRatio <= 0.9) return Double.compare(1-xRatio, 1-yRatio);
           if(xRatio <= 0.9) return 1;
