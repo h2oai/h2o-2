@@ -9,17 +9,17 @@ zeroList = [
 ]
 
 exprList = [
-        'Result<n> = log(<keyX>[<col1>])',
-        'Result<n> = randomBitVector(19,0) + Result<n-1>',
-        'Result<n> = randomFilter(<keyX>[<col1>],<row>)',
-        'Result<n> = factor(<keyX>[col1])',
-        'Result<n> = slice(<keyX>[<col1>,<row>)',
-        'Result<n> = colSwap(<keyX>,<col1>,(<keyX>[2]==0 ? 54321 : 54321))',
-        'Result<n> = <keyX>[<col1>]',
-        'Result<n> = min(<keyX>[<col1>])',
-        'Result<n> = max(<keyX>[<col1>]) + Result<n-1>',
-        'Result<n> = mean(<keyX>[<col1>]) + Result<n-1>',
-        'Result<n> = sum(<keyX>[<col1>]) + Result.hex',
+        'Result<n>.hex = log(<keyX>[<col1>])',
+        'Result<n>.hex = randomBitVector(19,0,123) + Result<n-1>.hex',
+        'Result<n>.hex = randomFilter(<keyX>,<col1>,<row>)',
+        'Result<n>.hex = factor(<keyX>[<col1>])',
+        'Result<n>.hex = slice(<keyX>[<col1>],<row>)',
+        'Result<n>.hex = colSwap(<keyX>,<col1>,(<keyX>[2]==0 ? 54321 : 54321))',
+        'Result<n>.hex = <keyX>[<col1>]',
+        'Result<n>.hex = min(<keyX>[<col1>])',
+        'Result<n>.hex = max(<keyX>[<col1>]) + Result<n-1>.hex',
+        'Result<n>.hex = mean(<keyX>[<col1>]) + Result<n-1>.hex',
+        'Result<n>.hex = sum(<keyX>[<col1>]) + Result.hex',
     ]
 
 def exec_list_like_other_tests(exprList, lenNodes, csvFilename, key2):
@@ -36,10 +36,11 @@ def exec_list_like_other_tests(exprList, lenNodes, csvFilename, key2):
 
                 execExpr = h2e.fill_in_expr_template(exprTemplate, colX, trial, row, key2)
                 execResultInspect = h2e.exec_expr(h2o.nodes[nodeX], execExpr, 
-                    resultKey="Result"+str(trial))
-                ### print "\nexecResult:", execResultInspect
+                    resultKey="Result"+str(trial)+".hex")
+                print "\nexecResult:", h2o.dump_json(execResultInspect)
 
-                columns = execResultInspect["cols"]
+                
+                columns = execResultInspect[0]["cols"]
                 columnsDict = columns.pop()
                 min = columnsDict["min"]
                 h2o.verboseprint("min: ", min, "trial:", trial)
@@ -71,7 +72,7 @@ class Basic(unittest.TestCase):
         # time.sleep(1500)
         h2o.tear_down_cloud()
 
-    def test_exec_import_hosts(self):
+    def test_exec_import_hosts_bigfiles(self):
         # just do the import folder once
         # importFolderPath = "/home/hduser/hdfs_datasets"
         importFolderPath = "/home/0xdiag/datasets"
