@@ -41,8 +41,8 @@ class Basic(unittest.TestCase):
         print "y:", y
         
         kwargs = {
-            'x': x, 'y':  y, 'num_cross_validation_folds': 2, 
-            'lambda': '1e-8:1e3:100', 
+            'x': x, 'y':  y, 'num_cross_validation_folds': 0, 
+            'lambda': '1e-8:1e-2:100', 
             'alpha': '0,0.5,1',
             'thresholds': '0:1:0.01'
             }
