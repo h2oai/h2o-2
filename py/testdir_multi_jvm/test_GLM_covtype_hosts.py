@@ -42,7 +42,7 @@ class Basic(unittest.TestCase):
         y = "54"
 
         # L2 
-        args = {
+        kwargs = {
             'x': x,
             'y': y,
             'family': 'binomial',
