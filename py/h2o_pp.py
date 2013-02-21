@@ -6,7 +6,10 @@ def pp_rf_result(rf):
     for line in jcm['scores']:
         lineSum  = sum(line)
         errorSum = lineSum - line[c]
-        err = float(errorSum) / lineSum
+        if (lineSum>0): 
+            err = float(errorSum) / lineSum
+        else:
+            err = 0.0
         cm = "{0}\n {1} {2} {3}".format(cm, header[c], ' '.join(map(str,line)), err)
         c += 1
 

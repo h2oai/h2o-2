@@ -794,7 +794,7 @@ class H2O(object):
             }
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
-        print "\nrandom_forest parameters:", params_dict
+        verboseprint("\nrandom_forest parameters:", params_dict)
         a = self.__check_request(requests.get(
             url=self.__url('RF.json'),
             timeout=timeoutSecs,

@@ -228,3 +228,49 @@ def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, t
         myKeyForParseResult = keyForParseResult
     return node.parse(s3_key, myKeyForParseResult, timeoutSecs=timeoutSecs, **kwargs)
 
+def runRFView(node=None, parseKey=None, modelKey=None, ntree=None,
+        timeoutSecs=20, retryDelaySecs=2, **kwargs):
+    if not parseKey: raise Exception('No parse key for RFView specified')
+    if not modelKey: raise Exception('No model key for RFView specified')
+    if not ntree: raise Exception('No number of trees for RFView specified')
+    if not node: node = h2o.nodes[0]
+    
+    dataKey = parseKey['destination_key']
+    h2o.verboseprint("runRFView dataKey: {0}, modelKey: {1}".format(modelKey, dataKey))
+
+    def testRFProgress(n):
+        rfView = n.random_forest_view(dataKey, modelKey, timeoutSecs, **kwargs)
+        status = rfView['response']['status']
+        numberBuilt = rfView['trees']['number_built']
+
+        if status == 'done': 
+            if numberBuilt!=ntree: 
+                raise Exception("RFview done but number_built!=ntree: %s %s", 
+                    numberBuilt, ntree)
+            return True
+        if status != 'poll': raise Exception('Unexpected status: ' + status)
+
+        progress = rfView['response']['progress']
+        progressTotal = rfView['response']['progress_total']
+
+        # don't print the useless first poll. ma
+        if (status!='done'):
+            if numberBuilt==0:
+                h2o.verboseprint(".")
+            else:
+                h2o.verboseprint("\nRFView polling. Status: %s. %s trees done of %s desired" % 
+                    (status, numberBuilt, ntree))
+
+        return (status=='done')
+
+    node.stabilize(
+            testRFProgress,
+            'random forest reporting %d trees' % ntree,
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
+
+    # Re-read results 
+    rfView = node.random_forest_view(dataKey, modelKey, timeoutSecs, **kwargs)
+    h2f.simpleCheckRFView(node, rfView)
+
+    return rfView
+

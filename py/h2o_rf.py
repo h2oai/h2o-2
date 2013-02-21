@@ -1,5 +1,7 @@
 import h2o
+import h2o_cmd
 import random
+import time
 
 def pickRandRfParams(paramDict, params):
     colX = 0
@@ -86,5 +88,28 @@ def simpleCheckRFView(node, rfv,**kwargs):
     ### modelInspect = node.inspect(model_key)
     dataInspect = node.inspect(data_key)
 
+def trainRF(trainParseKey, **kwargs):
+    # Train RF
+    start = time.time()
+    trainResult = h2o_cmd.runRFOnly(parseKey=trainParseKey, **kwargs)
+    rftime      = time.time()-start 
+    h2o.verboseprint("RF train results: ", trainResult)
+    h2o.verboseprint("RF computation took {0} sec".format(rftime))
 
+    trainResult['python_call_timer'] = rftime
+    return trainResult
+
+def scoreRF(scoreParseKey, trainResult, **kwargs):
+    # Run validation on dataset
+    rfModelKey  = trainResult['model_key']
+    ntree       = trainResult['ntree']
+    
+    start = time.time()
+    scoreResult = h2o_cmd.runRFView(modelKey=rfModelKey, parseKey=scoreParseKey, ntree=ntree, **kwargs)
+    rftime      = time.time()-start 
+    h2o.verboseprint("RF score results: ", scoreResult)
+    h2o.verboseprint("RF computation took {0} sec".format(rftime))
+
+    scoreResult['python_call_timer'] = rftime
+    return scoreResult
 
