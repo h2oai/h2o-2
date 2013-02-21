@@ -59,11 +59,13 @@ class Basic(unittest.TestCase):
         return parseKey
 
     def loadTrainData(self):
-        trainKey = self.parseS3File(s3bucket=trainDS['s3bucket'], filename=trainDS['filename'], trainDS.copy())
+        kwargs   = trainDS.copy()
+        trainKey = self.parseS3File(s3bucket=trainDS['s3bucket'], filename=trainDS['filename'], **kwargs)
         return trainKey
     
     def loadScoreData(self):
-        scoreKey = self.parseS3File(s3bucket=scoreDS['s3bucket'], filename=scoreDS['filename'], scoreDS.copy())
+        kwargs   = scoreDS.copy()
+        scoreKey = self.parseS3File(s3bucket=scoreDS['s3bucket'], filename=scoreDS['filename'], **kwargs)
         return trainKey
 
     def test_RF(self):
