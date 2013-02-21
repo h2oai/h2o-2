@@ -133,7 +133,7 @@ class Basic(unittest.TestCase):
 
             y = colCount
             kwargs = {'y': y, 'max_iter': 60, 
-                    'lambda': 1,
+                    'lambda': 1e-4,
                     'alpha': 0,
                     'weight': 1.0,
                     # what about these?

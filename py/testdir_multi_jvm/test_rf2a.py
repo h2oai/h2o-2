@@ -28,7 +28,7 @@ class Basic(unittest.TestCase):
             print "RF start on ", csvPathname, "this will probably take a minute.."
             start = time.time()
             h2o_cmd.runRF(csvPathname=csvPathname, trees=6,
-                    timeoutSecs=60, retryDelaySecs=10)
+                    timeoutSecs=120, retryDelaySecs=10)
             print "RF end on ", csvPathname, 'took', time.time() - start, 'seconds'
 
 if __name__ == '__main__':

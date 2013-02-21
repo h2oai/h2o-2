@@ -728,8 +728,8 @@ class H2O(object):
             'destination_key': key2,
             }
         params_dict.update(kwargs)
-        verboseprint('Parse.Json noise:', kwargs['noise'])
         noise = kwargs.pop('noise', None)
+        verboseprint('Parse.Json noise:', noise)
 
         a = self.__check_request(
             requests.get(

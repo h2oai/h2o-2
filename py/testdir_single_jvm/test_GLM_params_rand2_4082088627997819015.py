@@ -10,7 +10,7 @@ def define_params():
         'family': ['binomial'],
         'num_cross_validation_folds': [2,3],
         'thresholds': [0.1, 0.5, 0.7, 0.9],
-        'lambda': [1e-8, 1e-4,1],
+        'lambda': [1e-8, 1e-4],
         'alpha': [0,0.5,0.75],
         # don't use defaults? problems?
         'beta_epsilon': [0.001, 0.0001],
