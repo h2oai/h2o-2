@@ -116,7 +116,7 @@ public class Inspect extends Request {
       // Now read from the (possibly compressed) stream
       while( off < bs.length ) {
         int len = is.read(bs, off, bs.length - off);
-        if( len == -1 )
+        if( len < 0 )
           break;
         off += len;
         if( off == bs.length )  // Dataset is uncompressing alot!  Need more space...
