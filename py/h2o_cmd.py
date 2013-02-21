@@ -4,7 +4,6 @@ import h2o_browse as h2b, h2o_rf as h2f
 
 def parseFile(node=None, csvPathname=None, key=None, key2=None, 
     timeoutSecs=20, retryDelaySecs=0.5, noise=None):
-    print "noise in parseFile", noise
     if not csvPathname: raise Exception('No file name specified')
     if not node: node = h2o.nodes[0]
     key = node.put_file(csvPathname, key=key, timeoutSecs=timeoutSecs)
