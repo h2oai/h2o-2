@@ -2,7 +2,9 @@ import os, json, unittest, time, shutil, sys
 import h2o
 import h2o_browse as h2b, h2o_rf as h2f
 
-def parseFile(node=None, csvPathname=None, key=None, key2=None, timeoutSecs=20, **kwargs):
+def parseFile(node=None, csvPathname=None, key=None, key2=None, 
+    timeoutSecs=20, retryDelaySecs=0.5, noise=None):
+    print "noise in parseFile", noise
     if not csvPathname: raise Exception('No file name specified')
     if not node: node = h2o.nodes[0]
     key = node.put_file(csvPathname, key=key, timeoutSecs=timeoutSecs)
@@ -11,16 +13,17 @@ def parseFile(node=None, csvPathname=None, key=None, key2=None, timeoutSecs=20, 
         myKey2 = key + '.hex'
     else:
         myKey2 = key2
-    return node.parse(key, myKey2, timeoutSecs=timeoutSecs, **kwargs)
+    return node.parse(key, myKey2, 
+        timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, noise=noise)
 
-def runInspect(node=None,key=None,timeoutSecs=5,**kwargs):
+def runInspect(node=None, key=None, timeoutSecs=5, **kwargs):
     if not key: raise Exception('No key for Inspect specified')
     if not node: node = h2o.nodes[0]
     # FIX! currently there is no such thing as a timeout on node.inspect
     return node.inspect(key, **kwargs)
 
 # Not working in H2O yet, but support the test
-def runStore2HDFS(node=None,key=None,timeoutSecs=5,**kwargs):
+def runStore2HDFS(node=None, key=None, timeoutSecs=5, **kwargs):
     if not key: raise Exception('No key for Inspect specified')
     if not node: node = h2o.nodes[0]
     # FIX! currently there is no such thing as a timeout on node.inspect
@@ -28,53 +31,55 @@ def runStore2HDFS(node=None,key=None,timeoutSecs=5,**kwargs):
 
 # since we'll be doing lots of execs on a parsed file, not useful to have parse+exec
 # retryDelaySecs isn't used, 
-def runExecOnly(node=None,timeoutSecs=20,**kwargs):
+def runExecOnly(node=None, timeoutSecs=20, **kwargs):
     if not node: node = h2o.nodes[0]
     # no such thing as GLMView..don't use retryDelaySecs
     return node.exec_query(timeoutSecs, **kwargs)
 
-def runKMeans(node=None,csvPathname=None,key=None,
-        timeoutSecs=20,retryDelaySecs=2,**kwargs):
+def runKMeans(node=None, csvPathname=None, key=None, 
+        timeoutSecs=20, retryDelaySecs=2, **kwargs):
     # use 1/5th the KMeans timeoutSecs for allowed parse time.
     pto = max(timeoutSecs/5,10)
-    parseKey = parseFile(node, csvPathname, key, timeoutSecs=pto)
-    kmeans = runKMeansOnly(node, parseKey, timeoutSecs, retryDelaySecs,**kwargs)
+    noise = kwargs.pop('noise',None)
+    parseKey = parseFile(node, csvPathname, key, timeoutSecs=pto, noise=noise)
+    kmeans = runKMeansOnly(node, parseKey, timeoutSecs, retryDelaySecs, **kwargs)
     return kmeans
 
-def runKMeansOnly(node=None,parseKey=None,
-        timeoutSecs=20,retryDelaySecs=2,**kwargs):
+def runKMeansOnly(node=None, parseKey=None, 
+        timeoutSecs=20, retryDelaySecs=2, **kwargs):
     if not parseKey: raise Exception('No parsed key for KMeans specified')
     if not node: node = h2o.nodes[0]
     print parseKey['destination_key']
     return node.kmeans(parseKey['destination_key'], None, timeoutSecs, retryDelaySecs, **kwargs)
 
-def runGLM(node=None,csvPathname=None,key=None,
-        timeoutSecs=20,retryDelaySecs=2,**kwargs):
+def runGLM(node=None, csvPathname=None, key=None, 
+        timeoutSecs=20, retryDelaySecs=2, **kwargs):
     # use 1/5th the GLM timeoutSecs for allowed parse time.
     pto = max(timeoutSecs/5,10)
-    parseKey = parseFile(node, csvPathname, key, timeoutSecs=pto)
-    glm = runGLMOnly(node, parseKey, timeoutSecs, retryDelaySecs,**kwargs)
+    noise = kwargs.pop('noise',None)
+    parseKey = parseFile(node, csvPathname, key, timeoutSecs=pto, noise=noise)
+    glm = runGLMOnly(node, parseKey, timeoutSecs, retryDelaySecs, **kwargs)
     return glm
 
-def runGLMOnly(node=None,parseKey=None,
-        timeoutSecs=20,retryDelaySecs=2,**kwargs):
+def runGLMOnly(node=None, parseKey=None, 
+        timeoutSecs=20, retryDelaySecs=2, **kwargs):
     if not parseKey: raise Exception('No parsed key for GLM specified')
     if not node: node = h2o.nodes[0]
     # no such thing as GLMView..don't use retryDelaySecs
     return node.GLM(parseKey['destination_key'], timeoutSecs, **kwargs)
 
 # FIX! how do we run RF score on another model?
-def runGLMScore(node=None, key=None, model_key=None, timeoutSecs=20,retryDelaySecs=2,**kwargs):
+def runGLMScore(node=None, key=None, model_key=None, timeoutSecs=20, retryDelaySecs=2, **kwargs):
     if not node: node = h2o.nodes[0]
-    # no such thing as GLMView..don't use retryDelaySecs
     return node.GLMScore(node, key, model_key, timeoutSecs, **kwargs)
 
-def runGLMGrid(node=None,csvPathname=None,key=None,
-        timeoutSecs=60,retryDelaySecs=2,**kwargs):
+def runGLMGrid(node=None, csvPathname=None, key=None, 
+        timeoutSecs=60, retryDelaySecs=2, **kwargs):
     # use 1/5th the GLM timeoutSecs for allowed parse time.
     pto = max(timeoutSecs/5,10)
-    parseKey = parseFile(node, csvPathname, key, timeoutSecs=pto)
-    glm = runGLMGridOnly(node, parseKey, timeoutSecs, retryDelaySecs,**kwargs)
+    noise = kwargs.pop('noise',None)
+    parseKey = parseFile(node, csvPathname, key, timeoutSecs=pto, noise=noise)
+    glm = runGLMGridOnly(node, parseKey, timeoutSecs, retryDelaySecs, **kwargs)
     return glm
 
 def runGLMGridOnly(node=None,parseKey=None,
@@ -84,19 +89,18 @@ def runGLMGridOnly(node=None,parseKey=None,
     # no such thing as GLMGridView..don't use retryDelaySecs
     return node.GLMGrid(parseKey['destination_key'], timeoutSecs, **kwargs)
 
-# there are more RF parameters in **kwargs. see h2o.py
 def runRF(node=None, csvPathname=None, trees=5, key=None, 
         timeoutSecs=20, retryDelaySecs=2, **kwargs):
     # use 1/5th the RF timeoutSecs for allowed parse time.
     pto = max(timeoutSecs/5,30)
-    parseKey = parseFile(node, csvPathname, key, timeoutSecs=pto)
+    noise = kwargs.pop('noise',None)
+    parseKey = parseFile(node, csvPathname, key, timeoutSecs=pto, noise=noise)
     return runRFOnly(node, parseKey, trees, timeoutSecs, retryDelaySecs, **kwargs)
 
 def runRFTreeView(node=None, n=None, data_key=None, model_key=None, timeoutSecs=20, **kwargs):
     if not node: node = h2o.nodes[0]
     return node.random_forest_treeview(n, data_key, model_key, timeoutSecs, **kwargs)
 
-# there are more RF parameters in **kwargs. see h2o.py
 def runRFOnly(node=None, parseKey=None, trees=5,
         timeoutSecs=20, retryDelaySecs=2, **kwargs):
     if not parseKey: raise Exception('No parsed key for RF specified')
@@ -105,9 +109,6 @@ def runRFOnly(node=None, parseKey=None, trees=5,
     h2o.verboseprint("runRFOnly parseKey:", parseKey)
     Key = parseKey['destination_key']
     rf = node.random_forest(Key, trees, timeoutSecs, **kwargs)
-
-    # {u'Error': u'Only integer or enum columns can be classes!'}
-    # ..this should be covered now by all the error/Error variants in the json result checking?
 
     # FIX! check all of these somehow?
     # if we model_key was given to rf via **kwargs, remove it, since we're passing 

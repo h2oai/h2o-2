@@ -4,7 +4,7 @@ sys.path.extend(['.','..','py'])
 import h2o_cmd, h2o, h2o_hosts
 import time
 
-node_count = 2
+node_count = 16
 base_port = 54321
 class Basic(unittest.TestCase):
     def tearDown(self):

@@ -621,9 +621,19 @@ class H2O(object):
         return requests.get(self.__url('Get.html'),
             params={"key": key})
 
-    def poll_url(self, response, timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=None):
+    # noise is a 2-tuple ("StoreView, none) for url plus args for doing during poll to create noise
+    # no noise if None
+    def poll_url(self, response, timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=None, noise=None):
+        verboseprint('poll_url input: response:', dump_json(response))
+
         url = self.__url(response['redirect_request'])
-        args = response['redirect_request_args']
+        params = response['redirect_request_args']
+
+        if noise is not None:
+            # noise_json should be like "Storeview"
+            (noise_json, noiseParams) = noise
+            noiseUrl = self.__url(noise_json + ".json")
+
         status = 'poll'
         start = time.time()
         count = 0
@@ -636,23 +646,42 @@ class H2O(object):
             # UPDATE: 1/24/13 change to always wait before the first poll..
             # see if it makes a diff to our low rate fails
             time.sleep(retryDelaySecs)
+
+            # every other one?
+            create_noise = noise is not None and ((count%2)==0)
+            if create_noise:
+                urlUsed = noiseUrl
+                paramsUsed = noiseParams
+                msgUsed = "\nNoise during polling with"
+            else:
+                urlUsed = url
+                paramsUsed = params
+                msgUsed = "\nPolling with"
+
             r = self.__check_request(
                 requests.get(
-                    url=url, 
-                    timeout=15, # polling should never take more than 15 secs to respond
-                    params=args))
+                    url=urlUsed,
+                    timeout=15, 
+                    params=paramsUsed))
+
             if ((count%15)==0):
-                verboseprint("Polling with", url, "Response:", dump_json(r['response']))
+                verboseprint(msgUsed, urlUsed, "Response:", dump_json(r['response']))
             # hey, check the sandbox if we've been waiting a long time...rather than wait for timeout
             # to find the badness?
             if ((count%100)==0):
                 check_sandbox_for_errors()
 
-            status = r['response']['status']
+            if (create_noise):
+                # this guarantees the loop is done, so we don't need to worry about 
+                # a 'return r' being interpreted from a noise response
+                status = 'poll'
+            else:
+                status = r['response']['status']
+
             if ((time.time()-start)>timeoutSecs):
                 # show what we're polling with 
-                argsStr =  '&'.join(['%s=%s' % (k,v) for (k,v) in args.items()])
-                emsg = "Timeout: %d secs while polling. status: %s, url: %s?%s" % (timeoutSecs, status, url, argsStr)
+                argsStr =  '&'.join(['%s=%s' % (k,v) for (k,v) in paramsUsed.items()])
+                emsg = "Timeout: %d secs while polling. status: %s, url: %s?%s" % (timeoutSecs, status, urlUsed, argsStr)
                 raise Exception(emsg)
             count += 1
         return r
@@ -684,27 +713,38 @@ class H2O(object):
         verboseprint("\nKMeans result:", dump_json(a))
         return a
 
-    def parse(self, key, key2=None, timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, header=False, **kwargs):
+    # params: header=1, 
+    # noise is a 2-tuple: ("StoreView",params_dict)
+    def parse(self, key, key2=None, timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, **kwargs):
         browseAlso = kwargs.pop('browseAlso',False)
         # this doesn't work. webforums indicate max_retries might be 0 already? (as of 3 months ago)
         # requests.defaults({max_retries : 4})
         # https://github.com/kennethreitz/requests/issues/719
         # it was closed saying Requests doesn't do retries. (documentation implies otherwise)
         verboseprint("\nParsing key:", key, "to key2:", key2, "(if None, means default)")
-        parseParams = {"source_key": key, "destination_key": key2}
-        if header: parseParams['header'] = 1
+        # FIX! noted that H2O will stack trace if dst key = src key. maybe H2O should detect that.
+        params_dict = {
+            'source_key': key,
+            'destination_key': key2,
+            }
+        params_dict.update(kwargs)
+        print 'Parse.Json noise:', kwargs['noise']
+        noise = kwargs.pop('noise', None)
+
         a = self.__check_request(
             requests.get(
                 url=self.__url('Parse.json'),
                 timeout=timeoutSecs,
-                params=parseParams))
+                params=params_dict))
 
         # Check that the response has the right Progress url it's going to steer us to.
         if a['response']['redirect_request']!='Progress':
             print dump_json(a)
             raise Exception('H2O parse redirect is not Progress. Parse json response precedes.')
-        a = self.poll_url(a['response'], 
-            timeoutSecs=timeoutSecs, retryDelaySecs=0.5, initialDelaySecs=initialDelaySecs)
+        # noise is a 2-tuple ("StoreView, none) for url plus args for doing during poll to create noise
+        # no noise if None
+        a = self.poll_url(a['response'],
+            timeoutSecs=timeoutSecs, retryDelaySecs=0.5, initialDelaySecs=initialDelaySecs, noise=noise)
 
         verboseprint("\nParse result:", dump_json(a))
         return a
