@@ -198,7 +198,11 @@ NEXT_CHAR:
           // fallthrough to TOKEN
         // ---------------------------------------------------------------------
         case TOKEN:
-          if (((c >= '0') && (c <= '9')) || (c == '-') || (c == CHAR_DECIMAL_SEPARATOR) || (c == '+')) {
+          if( callback.isString(colIdx) ) { // Forced already to a string col?
+            state = STRING; // Do not attempt a number parse, just do a string parse
+            _str.set(bits, offset, 0);
+            continue MAIN_LOOP;
+          } else if (((c >= '0') && (c <= '9')) || (c == '-') || (c == CHAR_DECIMAL_SEPARATOR) || (c == '+')) {
             state = NUMBER;
             number = 0;
             fractionDigits = 0;
