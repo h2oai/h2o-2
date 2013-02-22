@@ -78,8 +78,6 @@ def simpleCheckRFView(node, rfv,**kwargs):
 
     # just touching these keys to make sure they're good?
     confusion_key = rfv['confusion_key']
-    model_key = rfv['model_key']
-    data_key = rfv['data_key']
 
     # 2/14/13 kbn. can we not model any more? causes assertion error
     ### confusionInspect = node.inspect(confusion_key)

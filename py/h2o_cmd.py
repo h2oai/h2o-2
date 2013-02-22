@@ -68,9 +68,9 @@ def runGLMOnly(node=None, parseKey=None,
     return node.GLM(parseKey['destination_key'], timeoutSecs, **kwargs)
 
 # FIX! how do we run RF score on another model?
-def runGLMScore(node=None, key=None, model_key=None, timeoutSecs=20, retryDelaySecs=2, **kwargs):
+def runGLMScore(node=None, key=None, model_key=None, timeoutSecs=20):
     if not node: node = h2o.nodes[0]
-    return node.GLMScore(node, key, model_key, timeoutSecs, **kwargs)
+    return node.GLMScore(key, model_key, timeoutSecs)
 
 def runGLMGrid(node=None, csvPathname=None, key=None, 
         timeoutSecs=60, retryDelaySecs=2, **kwargs):
@@ -127,6 +127,27 @@ def runRFOnly(node=None, parseKey=None, trees=5,
     # /ip:port of cloud (can't use h2o name)
     rfClass= rf['response_variable']
 
+    rfView = runRFView(node, data_key, model_key, ntree, timeoutSecs, retryDelaySecs, **kwargs)
+    return rfView
+
+# scoring on browser does these:
+# RFView.html?
+# data_key=a5m.hex&
+# model_key=__RFModel_81c5063c-e724-4ebe-bfc1-3ac6838bc628&
+# FIX! why not in model?
+# response_variable=1&
+# FIX why needed?
+# ntree=50&
+# FIX! why not in model
+# class_weights=-1%3D1.0%2C0%3D1.0%2C1%3D1.0&
+# FIX! no longer?
+# out_of_bag_error_estimate=1&
+# FIX! scoring only
+# no_confusion_matrix=1&
+# clear_confusion_matrix=1
+
+def runRFView(node=None, data_key=None, model_key=None, ntree=None, timeoutSecs=15, retryDelaySecs=2, **kwargs):
+    if not node: node = h2o.nodes[0]
     def test(n):
         rfView = n.random_forest_view(data_key, model_key, timeoutSecs, **kwargs)
         status = rfView['response']['status']

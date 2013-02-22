@@ -965,7 +965,6 @@ class H2O(object):
         # maybe separate is more consistent with the core key behavior
         # elsewhere
         params_dict = { 
-            'thresholds': 0.5,
             'key': key,
             'model_key': model_key,
         }
@@ -976,7 +975,7 @@ class H2O(object):
             self.__url('GLMScore.json'),
             timeout=timeoutSecs,
             params=params_dict))
-        verboseprint(parentName, dump_json(a))
+        verboseprint("GLMScore:", dump_json(a))
 
         browseAlso = kwargs.get('browseAlso', False)
         if (browseAlso | browse_json):
