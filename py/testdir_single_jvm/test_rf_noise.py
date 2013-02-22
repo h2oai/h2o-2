@@ -1,6 +1,6 @@
 import os, json, unittest, time, shutil, sys
 # not needed, but in case you move it down to subdir
-sys.path.extend(['.','..'])
+sys.path.extend(['.','..','py'])
 import h2o_cmd
 import h2o
 import h2o_browse as h2b
