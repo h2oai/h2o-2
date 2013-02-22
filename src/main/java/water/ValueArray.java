@@ -5,8 +5,6 @@ import java.util.Arrays;
 
 import water.Jobs.Job;
 
-import com.google.common.base.Throwables;
-
 /**
 * Large Arrays & Arraylets
 *
@@ -91,7 +89,7 @@ import com.google.common.base.Throwables;
     try {
       return (ValueArray)super.clone();
     } catch( CloneNotSupportedException cne ) {
-      throw Throwables.propagate(cne);
+      throw H2O.unimpl();
     }
   }
 
