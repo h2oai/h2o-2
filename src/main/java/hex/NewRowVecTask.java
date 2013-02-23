@@ -46,6 +46,14 @@ public class NewRowVecTask<T extends Iced> extends MRTask {
 
   }
 
+  /**
+   * Struct to keep info about our data. Contains column ids and info about data preprocessing and expansion of vategoricals.
+   *
+   * The last element is ALWAYS treated as response variable and is never normalized nor expanded (if categorical).
+   *
+   * @author tomasnykodym
+   *
+   */
   public static final class DataFrame extends Iced {
     final ValueArray _ary;
     final private Sampling _s;
@@ -56,25 +64,25 @@ public class NewRowVecTask<T extends Iced> extends MRTask {
     final long _nobs;
     public final boolean _standardized;
 
-    public DataFrame(ValueArray ary, int [] colIds, Sampling s, boolean [] standardize, boolean expandCat){
+    public DataFrame(ValueArray ary, int [] colIds, Sampling s, boolean standardize, boolean expandCat){
       _ary = ary;
       _modelDataMap = colIds;
       _s = s;
       _colCatMap = new int[colIds.length+1];
-
       int len=0;
-      for( int i=0; i<colIds.length; i++ ) {
+      for( int i=0; i<colIds.length-1; i++ ) {
         _colCatMap[i] = len;
         ValueArray.Column C = ary._cols[colIds[i]];
         len += ( expandCat && C._domain != null )?C._domain.length:1;
       }
+      // the last element (response variable) is NEVER expanded
+      _colCatMap[colIds.length-1] = len++;
       _colCatMap[colIds.length] = len;
       _normSub = new double[len];
       _normMul = new double[len];
       Arrays.fill(_normMul, 1);
       boolean standardized = false;
-      if(standardize != null)for(int i = 0; i < colIds.length; ++i){
-        if(!standardize[i])continue;
+      if(standardize )for(int i = 0; i < colIds.length-1; ++i){
         standardized = true;
         Column col = ary._cols[colIds[i]];
         if(col._domain == null){

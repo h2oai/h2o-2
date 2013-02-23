@@ -1243,10 +1243,19 @@ public class RequestArguments extends RequestStatics {
     public final EnumArgument<Family> _family;
 
     @Override
+    public String[] selectValues(){
+      if(_key.value() == null || _classCol.value() == null || _key.value()._cols[_classCol.value()]._domain == null)
+        return super.selectValues();
+      return new String[]{CaseMode.eq.toString(), CaseMode.neq.toString()};
+    }
+    @Override
     public CaseMode defaultValue() {
       if(_family.value() == Family.binomial){
         Column c = _key.value()._cols[_classCol.value()];
-        if(c._min < 0 || c._max > 1) return CaseMode.gt;
+        if(c._min < 0 || c._max > 1)
+          return c._domain == null
+            ?CaseMode.gt
+            :CaseMode.eq;
       }
       return CaseMode.none;
     }
