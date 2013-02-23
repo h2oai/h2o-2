@@ -102,38 +102,32 @@ class Basic(unittest.TestCase):
             # out_of_bag_error_estimate=1&
             # no_confusion_matrix=1&
             # clear_confusion_matrix=1
-            print "\nRFView scoring data_key:", dataKeyTest, "params:", kwargs
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, 
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
 
             kwargs['no_confusion_matrix'] = 0
             kwargs['clear_confusion_matrix'] = 0
-            print "\nRFView scoring dataKeyTest:", dataKeyTest, "params:", kwargs
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
 
             kwargs['no_confusion_matrix'] = 0
             kwargs['clear_confusion_matrix'] = 1
-            print "\nRFView scoring dataKeyTest:", dataKeyTest, "params:", kwargs
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, 
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
 
             kwargs['no_confusion_matrix'] = 1
             kwargs['clear_confusion_matrix'] = 0
-            print "\nRFView scoring dataKeyTest:", dataKeyTest, "params:", kwargs
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
 
             kwargs['no_confusion_matrix'] = 1
             kwargs['clear_confusion_matrix'] = 1
-            print "\nRFView scoring dataKeyTest:", dataKeyTest, "params:", kwargs
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, 
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
 
             kwargs['no_confusion_matrix'] = 0
             kwargs['clear_confusion_matrix'] = 0
             kwargs['class_weights'] = '1=1,2=2,3=3,4=4,5=5,6=6,7=7'
-            print "\nRFView scoring dataKeyTest:", dataKeyTest, "params:", kwargs
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
 
