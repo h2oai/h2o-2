@@ -32,6 +32,7 @@ def glm_R_and_compare(csvPathname, family, formula, y, header=False, h2oResults=
         interceptDelta = abs(abs(interceptH2o) - abs(interceptR))
         cDelta = [abs(abs(a) - abs(b)) for a,b in zip(cListH2o, cListR)]
     else:
+        (warningsH2o, cListH2o, interceptH2o) = (None, None, None)
         interceptDelta = None
         cDelta = [None for a in cListR]
 
@@ -193,12 +194,8 @@ class Basic(unittest.TestCase):
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
 
             print "glm end (w/check) on ", csvPathname2, 'took', time.time()-start, 'seconds'
-            h2oResults = h2o_glm.simpleCheckGLM(self, glm, None, 
-                prettyPrint=True, **kwargs)
-            # it's a tuple
-            # h2oResults = (warnings, Clist, intercept)
-
-            # now do it thru R
+            h2oResults = h2o_glm.simpleCheckGLM(self, glm, None, prettyPrint=True, **kwargs)
+            # now do it thru R and compare
             (warningsR, cListR, interceptR) = glm_R_and_compare(csvPathname2, family, formula, y, 
                 header=header, h2oResults=h2oResults)
 
