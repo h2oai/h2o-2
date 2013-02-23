@@ -10,7 +10,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        h2o_hosts.build_cloud_with_hosts(3,use_flatfile=True)
+        h2o_hosts.build_cloud_with_hosts(2,use_flatfile=True)
 
     @classmethod
     def tearDownClass(cls):
