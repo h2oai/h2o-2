@@ -18,7 +18,7 @@ class Basic(unittest.TestCase):
         # don't know if we care
         base_port = 54300
         ports_per_node = 3
-        for tryNodes in range(2,10):
+        for tryNodes in range(2,17):
             h2o.verboseprint("Trying cloud of", tryNodes)
             sys.stdout.write('.')
             sys.stdout.flush()
