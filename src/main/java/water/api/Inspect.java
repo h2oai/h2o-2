@@ -119,8 +119,10 @@ public class Inspect extends Request {
         if( len < 0 )
           break;
         off += len;
-        if( off == bs.length )  // Dataset is uncompressing alot!  Need more space...
+        if( off == bs.length ) {  // Dataset is uncompressing alot!  Need more space...
+          if( bs.length >= ValueArray.CHUNK_SZ ) break; // Already got enough
           bs = Arrays.copyOf(bs,bs.length*2);
+        }
       }
     } catch( IOException ioe ) { // Stop at any io error
     } finally {
