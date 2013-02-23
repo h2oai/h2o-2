@@ -1,4 +1,3 @@
-
 package water.api;
 
 import java.net.InetAddress;
@@ -18,10 +17,12 @@ public class Timeline extends Request {
   private static final String JSON_BYTES = "bytes";
   private static final String JSON_RECV = "recv";
   private static final String JSON_SEND = "send";
+  private static final String JSON_DROP = "drop";
   private static final String JSON_NANOS = "nanos";
   private static final String JSON_TIME = "time";
   private static final String JSON_RECVS = "recvs";
   private static final String JSON_SENDS = "sends";
+  private static final String JSON_DROPS = "drops";
   private static final String JSON_CLOUD = "cloud";
   private static final String JSON_CLOUDS = "clouds";
   private static final String JSON_LAST_TIME = "lastTime";
@@ -71,12 +72,15 @@ public class Timeline extends Request {
 
         int totalSends = 0;
         int totalRecvs = 0;
+        int totalDrops = 0;
         int[] sends = new int[cloud.size()];
         int[] recvs = new int[cloud.size()];
         for(TimelineSnapshot.Event h : heartbeats){
           if( h.isSend() ) {
             ++totalSends;
             ++sends[h.nodeId()];
+          } else if( h.isDropped() ) {
+            ++totalDrops;
           } else {
             ++totalRecvs;
             ++recvs[h.nodeId()];
@@ -89,9 +93,10 @@ public class Timeline extends Request {
 
         hbJson.addProperty(JSON_TYPE, "heartbeat");
         hbJson.addProperty(JSON_FIRST_TIME, sdf.format(new Date(firstMs)));
-        hbJson.addProperty(JSON_LAST_TIME, sdf.format(new Date(lastMs)));
+        hbJson.addProperty(JSON_LAST_TIME , sdf.format(new Date( lastMs)));
         hbJson.addProperty(JSON_SENDS, totalSends);
         hbJson.addProperty(JSON_RECVS, totalRecvs);
+        hbJson.addProperty(JSON_DROPS, totalDrops);
 
         JsonArray cloudListJson = new JsonArray();
         hbJson.add(JSON_CLOUDS, cloudListJson);
@@ -126,7 +131,7 @@ public class Timeline extends Request {
         if( !inet.isMulticastAddress() ){
           int port = -1;
           if(events._sends.containsKey(event) && !events._sends.get(event).isEmpty())
-            port = TimeLine.CLOUD._memary[events._sends.get(event).get(0).nodeId()]._key.getPort();
+            port = cloud._memary[events._sends.get(event).get(0).nodeId()]._key.getPort();
           String portStr = ":" + ((port != -1)?port:"?");
 
           recv = inet.toString() + portStr;
@@ -136,6 +141,8 @@ public class Timeline extends Request {
       } else {
         eventJson.addProperty(JSON_SEND, event.addrString());
         eventJson.addProperty(JSON_RECV, h2o.toString());
+        if( event.isDropped() )
+          eventJson.addProperty(JSON_DROP, "1");
       }
       eventJson.addProperty(JSON_BYTES, UDP.printx16(l0,h8));
     }
@@ -177,7 +184,8 @@ public class Timeline extends Request {
       sb.append("<td>heartbeat</td>");
       sb.append("<td>");
       sb.append(object.get(JSON_SENDS).getAsLong()).append(" sends, ");
-      sb.append(object.get(JSON_RECVS).getAsLong()).append(" recvs");
+      sb.append(object.get(JSON_RECVS).getAsLong()).append(" recvs, ");
+      sb.append(object.get(JSON_DROPS).getAsLong()).append(" drops");
       sb.append("</td>");
       sb.append(footer(object, name));
       return sb.toString();
@@ -189,7 +197,8 @@ public class Timeline extends Request {
       String name = elementName(contextName);
       StringBuilder sb = new StringBuilder();
       sb.append(caption(object, name));
-      sb.append(header(object, name));
+      if( object.get(JSON_DROP) == null ) sb.append("<tr>");
+      else sb.append("<tr style='background-color:Pink'>");
       sb.append("<td>").append(object.get(JSON_TIME).getAsString()).append("</td>");
       sb.append("<td>").append(object.get(JSON_NANOS).getAsLong()).append("</td>");
       String s = object.get(JSON_SEND).getAsString();
@@ -197,7 +206,7 @@ public class Timeline extends Request {
       sb.append("<td>"+s+" -> "+r+"</td>");
       sb.append("<td>").append(object.get(JSON_TYPE).getAsString()).append("</td>");
       sb.append("<td>").append(object.get(JSON_BYTES).getAsString()).append("</td>");
-      sb.append(footer(object, name));
+      sb.append("</tr>");
       return sb.toString();
     }
   }
