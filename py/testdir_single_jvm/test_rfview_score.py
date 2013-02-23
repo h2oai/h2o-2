@@ -74,7 +74,8 @@ class Basic(unittest.TestCase):
 
         for trial in range(5):
             # params is mutable. This is default.
-            params = {'ntree': 13, 'parallel': 1}
+            params = {'ntree': 13, 'parallel': 1} 
+            params['out_of_bag_error_estimate'] = 1
             colX = h2o_rf.pickRandRfParams(paramDict, params)
             kwargs = params.copy()
             # adjust timeoutSecs with the number of trees
