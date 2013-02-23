@@ -38,8 +38,6 @@ paramDict = {
         ]
     }
 
-# 192.168.0.37:54321/RFView.html?data_key=a5m.hex&model_key=__RFModel_81c5063c-e724-4ebe-bfc1-3ac6838bc628&response_variable=1&ntree=50&class_weights=-1%3D1.0%2C0%3D1.0%2C1%3D1.0&out_of_bag_error_estimate=1&no_confusion_matrix=1&clear_confusion_matrix=1
-
 print "Will RF train on one dataset, test on another (multiple params)"
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -94,7 +92,16 @@ class Basic(unittest.TestCase):
 
             ntree = rfv['ntree']
             kwargs.pop('ntree',None)
-            # just redo it
+            # scoring
+            # RFView.html?
+            # dataKeyTest=a5m.hex&
+            # model_key=__RFModel_81c5063c-e724-4ebe-bfc1-3ac6838bc628&
+            # response_variable=1&
+            # ntree=50&
+            # class_weights=-1%3D1.0%2C0%3D1.0%2C1%3D1.0&
+            # out_of_bag_error_estimate=1&
+            # no_confusion_matrix=1&
+            # clear_confusion_matrix=1
             print "\nRFView scoring data_key:", dataKeyTest, "params:", kwargs
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, timeoutSecs, retryDelaySecs=1, **kwargs)
 
@@ -124,16 +131,6 @@ class Basic(unittest.TestCase):
             print "\nRFView scoring dataKeyTest:", dataKeyTest, "params:", kwargs
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, timeoutSecs, retryDelaySecs=1, **kwargs)
 
-# scoring
-# RFView.html?
-# dataKeyTest=a5m.hex&
-# model_key=__RFModel_81c5063c-e724-4ebe-bfc1-3ac6838bc628&
-# response_variable=1&
-# ntree=50&
-# class_weights=-1%3D1.0%2C0%3D1.0%2C1%3D1.0&
-# out_of_bag_error_estimate=1&
-# no_confusion_matrix=1&
-# clear_confusion_matrix=1
             print "Trial #", trial, "completed"
 
 if __name__ == '__main__':
