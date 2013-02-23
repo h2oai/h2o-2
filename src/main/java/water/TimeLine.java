@@ -66,8 +66,11 @@ public class TimeLine extends UDP {
   }
 
   // Record 1 event, the first 16 bytes of this buffer.  This is expected to be
-  // a high-volume multi-thread operation so needs to be fast.
-  private static void record( AutoBuffer b, int sr ) {
+  // a high-volume multi-thread operation so needs to be fast.  "sr" is send-
+  // receive and must be either 0 or 1.  "drop" is whether or not the UDP
+  // packet is dropped as-if a network drop, and must be either 0 (kept) or 2
+  // (dropped).
+  private static void record( AutoBuffer b, int sr, int drop ) {
     final long ms = System.currentTimeMillis(); // Read first, in case we're slow storing values
     final long ns = System.nanoTime();
     final long[] tl = TIMELINE; // Read once, in case the whole array shifts out from under us
@@ -76,12 +79,12 @@ public class TimeLine extends UDP {
     assert deltams < 0x0FFFFFFFFL; // No daily overflow
     if( b.position() < 16 ) b.position(16);
     tl[idx*WORDS_PER_EVENT+0+1] = (deltams)<<32 | (b._h2o.ip4()&0x0FFFFFFFFL);
-    tl[idx*WORDS_PER_EVENT+1+1] = (ns&~1)|sr;
+    tl[idx*WORDS_PER_EVENT+1+1] = (ns&~3)|sr|drop;
     tl[idx*WORDS_PER_EVENT+2+1] = b.get8(0);
     tl[idx*WORDS_PER_EVENT+3+1] = b.get8(8);
   }
-  public static void record_send( AutoBuffer b ) { record(b,0); }
-  public static void record_recv( AutoBuffer b ) { record(b,1); }
+  public static void record_send( AutoBuffer b )           { record(b,0,0); }
+  public static void record_recv( AutoBuffer b, int drop ) { record(b,1,drop); }
 
   // Accessors, for TimeLines that come from all over the system
   public static int length( ) { return MAX_EVENTS; }
@@ -101,10 +104,12 @@ public class TimeLine extends UDP {
     catch( UnknownHostException e ) { }
     return null;
   }
-  // That 2nd long is nanosec, plus the low bit is send/recv
+  // That 2nd long is nanosec, plus the low bit is send/recv & 2nd low is drop
   public static long ns( long[] tl, int idx ) { return tl[idx(tl,idx)+1]; }
   // Returns zero for send, 1 for recv
   public static int send_recv( long[] tl, int idx ) { return (int)(ns(tl,idx)&1); }
+  // Returns zero for kept, 2 for dropped
+  public static int dropped  ( long[] tl, int idx ) { return (int)(ns(tl,idx)&2); }
   // 16 bytes of payload
   public static long l0( long[] tl, int idx ) { return tl[idx(tl,idx)+2]; }
   public static long l8( long[] tl, int idx ) { return tl[idx(tl,idx)+3]; }

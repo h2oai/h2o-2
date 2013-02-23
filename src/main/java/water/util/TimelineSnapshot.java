@@ -33,7 +33,7 @@ public final class TimelineSnapshot implements
     _sends = new HashMap<Event, ArrayList<Event>>();
     _events = new Event[snapshot.length];
 
-    // DEBUG: print out the evetn stack as we got it
+    // DEBUG: print out the event stack as we got it
 //    System.out.println("# of nodes: " + _events.length);
 //    for (int j = 0; j < TimeLine.length(); ++j) {
 //      System.out.print("row# " + j + ":");
@@ -80,8 +80,8 @@ public final class TimelineSnapshot implements
   // contains methods to access event data, move to the next previous event
   // and to test whether two events form valid sender/receiver pair
   //
-  // it is also needed to keep track of sen/rcv dependencies when iterating over
-  // events in timeline
+  // it is also needed to keep track of send/recv dependencies when iterating
+  // over events in timeline
   public class Event {
     int[] _arr = new int[2];
     long[] _val;
@@ -107,29 +107,16 @@ public final class TimelineSnapshot implements
       return false;
     }
 
-    public final int nodeId() {
-      return _arr[0];
-    }
-
-    public final int eventIdx() {
-      return _arr[1];
-    }
-
-    public final int send_recv() {
-      return TimeLine.send_recv(_val, _arr[1]);
-    }
-
-    public final boolean isSend() {
-      return send_recv() == 0;
-    }
-
-    public final boolean isRecv() {
-      return send_recv() == 1;
-    }
-
-    public final InetAddress addrPack() {
-      return TimeLine.inet(_val, _arr[1]);
-    }
+    public final int nodeId   () { return _arr[0];  }
+    public final int eventIdx () { return _arr[1]; }
+    public final int send_recv() { return TimeLine.send_recv(_val, _arr[1]); }
+    public final int dropped  () { return TimeLine.dropped  (_val, _arr[1]); }
+    public final boolean isSend() { return send_recv() == 0; }
+    public final boolean isRecv() { return send_recv() == 1; }
+    public final boolean isDropped() { return dropped() != 0; }
+    public final InetAddress addrPack() { return TimeLine.inet(_val, _arr[1]); }
+    public final long dataLo() { return TimeLine.l0(_val, _arr[1]); }
+    public final long dataHi() { return TimeLine.l8(_val, _arr[1]); }
 
     public final String addrString() {
       InetAddress inet = addrPack();
@@ -140,15 +127,10 @@ public final class TimelineSnapshot implements
     public final int portPack() {
       assert !isSend(); // the port is always sender's port!!!
       int i = (int) TimeLine.l0(_val, _arr[1]);
-      return (0xFFFF) & (i >> 8);
-    }
-
-    public final long dataLo() {
-      return TimeLine.l0(_val, _arr[1]);
-    }
-
-    public final long dataHi() {
-      return TimeLine.l8(_val, _arr[1]);
+      // 1st byte is UDP type, so shift right by 8.
+      // Next 2 bytes are UDP port #, so mask by 0xFFFF.
+      // Want API/user-visible-port#, so -1.
+      return ((0xFFFF) & (i >> 8))-1;
     }
 
     public String toString() {
@@ -162,7 +144,7 @@ public final class TimelineSnapshot implements
           + " -> " + host2);
 
       return "Node(" + nodeId() + ": " + ns() + ") " + udpType.toString()
-          + operation + networkPart + ", data = '"
+          + operation + networkPart + (isDropped()?" DROPPED ":"") + ", data = '"
           + Long.toHexString(this.dataLo()) + ','
           + Long.toHexString(this.dataHi()) + "'";
     }
@@ -192,17 +174,12 @@ public final class TimelineSnapshot implements
       case heartbeat:
       case rebooted:
       case timeline:
-//      case log:
         // compare only first 3 bytes here (udp type and port)
         if ((myl0 & 0xFFFFFFl) != (otherl0 & myl0 & 0xFFFFFFl))
           return false;
         break;
       case ack:
       case ackack:
-//      case atomic:
-//      case getkey:
-//      case getkeys:
-//      case putkey:
       case execlo:
       case exechi:
         // compare 3 ctrl bytes + 4 bytes task #
@@ -383,8 +360,8 @@ public final class TimelineSnapshot implements
       for (int i = 0; i < _events.length; ++i) {
         // TODO: Matt is not sure if the .equals() below is correct
         //  in the world of IO nirvana.
-        if (_cloud._memary[i]._key.getPort() == e.portPack()
-            && _cloud._memary[i]._key.getAddress().equals(e.addrPack())) {
+        if (_cloud._memary[i]._key.htm_port() == e.portPack() &&
+            _cloud._memary[i]._key.getAddress().equals(e.addrPack())) {
           senderIdx = i;
           break;
         }
