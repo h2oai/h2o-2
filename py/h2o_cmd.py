@@ -148,7 +148,7 @@ def runRFOnly(node=None, parseKey=None, trees=5,
 
 def runRFView(node=None, data_key=None, model_key=None, ntree=None, timeoutSecs=15, retryDelaySecs=2, **kwargs):
     if not node: node = h2o.nodes[0]
-    def test(n):
+    def test(n, tries=None):
         rfView = n.random_forest_view(data_key, model_key, timeoutSecs, **kwargs)
         status = rfView['response']['status']
         numberBuilt = rfView['trees']['number_built']
@@ -177,15 +177,16 @@ def runRFView(node=None, data_key=None, model_key=None, ntree=None, timeoutSecs=
                 "progress: %s, progressTotal: %s, ntree: %s, numberBuilt: %s, status: %s" % \
                 (progress, progressTotal, ntree, numberBuilt, status))
 
-        # don't print the useless first poll. ma
-        if (status!='done'):
+        # don't print the useless first poll.
+        # UPDATE: don't look for done. look for not poll was missing completion when looking for done
+        if (status=='poll'):
             if numberBuilt==0:
                 h2o.verboseprint(".")
             else:
-                h2o.verboseprint("\nRFView polling. Status: %s. %s trees done of %s desired" % 
-                    (status, numberBuilt, ntree))
+                h2o.verboseprint("\nRFView polling #", tries,
+                    "Status: %s. %s trees done of %s desired" % (status, numberBuilt, ntree))
 
-        return (status=='done')
+        return (status!='poll')
 
     node.stabilize(
             test,
