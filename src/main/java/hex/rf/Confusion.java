@@ -147,7 +147,7 @@ public class Confusion extends MRTask {
       _model_classes_mapping = new int[respModel._domain.length];
       _data_classes_mapping  = new int[respData._domain.length];
       // compute mapping
-      _N = mergeDomain(respModel._domain, respData._domain, _model_classes_mapping, _data_classes_mapping);
+      _N = alignEnumDomains(respModel._domain, respData._domain, _model_classes_mapping, _data_classes_mapping);
     } else {
       assert respData._domain == null;
       _model_classes_mapping = null;
@@ -372,7 +372,7 @@ public class Confusion extends MRTask {
 
   /** Merge model and data predictor domain to produce domain for CM.
    * The domain is expected to be ordered and containing unique values. */
-  private static int mergeDomain(final String[] modelDomain, final String[] dataDomain, int[] modelMapping, int[] dataMapping) {
+  public static int alignEnumDomains(final String[] modelDomain, final String[] dataDomain, int[] modelMapping, int[] dataMapping) {
     assert modelMapping!=null && modelMapping.length == modelDomain.length;
     assert dataMapping!=null && dataMapping.length == dataDomain.length;
 
@@ -397,22 +397,49 @@ public class Confusion extends MRTask {
     return idx;
   }
 
-  /** Compute confusion matrix domain based on model and data key. */
-  public String[] domain() {
-    String[] result      = new String[_N];
-    String[] modelDomain = _model.response()._domain;
-    String[] dataDomain  = _data._cols[_classcol]._domain;
+  public static String[] domain(final Column modelCol, final Column dataCol) {
+    int[] modelEnumMapping = null;
+    int[] dataEnumMapping  = null;
+    int N = 0;
+
+    if (modelCol._domain!=null) {
+      assert dataCol._domain != null;
+      modelEnumMapping = new int[modelCol._domain.length];
+      dataEnumMapping  = new int[dataCol._domain.length];
+      N = alignEnumDomains(modelCol._domain, dataCol._domain, modelEnumMapping, dataEnumMapping);
+    } else {
+      assert dataCol._domain == null;
+      N = (int) (Math.max(modelCol._max, dataCol._max) - Math.min(modelCol._min, dataCol._min) + 1);
+    }
+    return domain(N, modelCol, dataCol, modelEnumMapping, dataEnumMapping);
+  }
+
+  public static String[] domain(int N, final Column modelCol, final Column dataCol, int[] modelEnumMapping, int[] dataEnumMapping) {
+    String[] result      = new String[N];
+    String[] modelDomain = modelCol._domain;
+    String[] dataDomain  = dataCol._domain;
 
     if (modelDomain!=null) {
       assert dataDomain!=null;
-      for (int i = 0; i < modelDomain.length; i++) result[_model_classes_mapping[i]] = modelDomain[i];
-      for (int i = 0; i < dataDomain.length; i++)  result[_data_classes_mapping [i]] = dataDomain[i];
+      assert modelEnumMapping!=null && modelEnumMapping.length == modelDomain.length;
+      assert dataEnumMapping!=null && dataEnumMapping.length == dataDomain.length;
+
+      for (int i = 0; i < modelDomain.length; i++) result[modelEnumMapping[i]] = modelDomain[i];
+      for (int i = 0; i < dataDomain.length; i++)  result[dataEnumMapping [i]] = dataDomain[i];
     } else {
       assert dataDomain==null;
-      int dmin = (int) Math.min(_model.response()._min, _data._cols[_classcol]._min);
-      int dmax = (int) Math.max(_model.response()._max, _data._cols[_classcol]._max);
+      int dmin = (int) Math.min(modelCol._min, dataCol._min);
+      int dmax = (int) Math.max(modelCol._max, dataCol._max);
       for (int i = dmin; i <= dmax; i++) result[i-dmin] = String.valueOf(i);
     }
     return result;
   }
+
+  /** Compute confusion matrix domain based on model and data key. */
+  public String[] domain() {
+    return domain(_N, _model.response(), _data._cols[_classcol], _model_classes_mapping, _data_classes_mapping);
+  }
+
+  /** Return number of classes - in fact dimension of CM. */
+  public final int dimension() { return _N; }
 }

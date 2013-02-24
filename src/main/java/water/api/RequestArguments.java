@@ -5,6 +5,7 @@ import hex.DGLM.Family;
 import hex.DGLM.GLMModel;
 import hex.DGLM.Link;
 import hex.KMeans.KMeansModel;
+import hex.rf.Confusion;
 import hex.rf.RFModel;
 
 import java.io.File;
@@ -81,6 +82,15 @@ public class RequestArguments extends RequestStatics {
     } catch (NumberFormatException e) {
       return -1;
     }
+  }
+
+  /** Compute union of categories in model column and data column.
+   * The result is ordered and the values are unique. */
+  protected static String[] vaCategoryNames(ValueArray.Column modelCol, ValueArray.Column dataCol, int maxClasses) throws IllegalArgumentException {
+    String[] result = Confusion.domain(modelCol, dataCol);
+    if (result.length > maxClasses)
+      throw new IllegalArgumentException("The column has more than "+maxClasses+" values. Are you sure you have that many classes?");
+    return result;
   }
 
   protected static String[] vaCategoryNames(ValueArray.Column col, int maxClasses) throws IllegalArgumentException {
@@ -1909,23 +1919,35 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
 
   public class H2OCategoryWeights extends MultipleText<double[]> {
-    public final H2OHexKey _key;
+    public final RFModelKey   _modelKey;
+    public final H2OHexKey    _key;
     public final H2OHexKeyCol _classCol;
-    public final double _defaultValue;
+    public final double       _defaultValue;
 
-    public H2OCategoryWeights(String name, H2OHexKey key, H2OHexKeyCol classCol, double defaultValue) {
+    public H2OCategoryWeights(String name, RFModelKey modelKey, H2OHexKey key, H2OHexKeyCol classCol, double defaultValue) {
       super(name,false);
-      _key = key;
+      _modelKey = modelKey;
+      _key      = key;
       _classCol = classCol;
       _defaultValue = defaultValue;
+      if (modelKey!=null) addPrerequisite(modelKey);
       addPrerequisite(key);
       addPrerequisite(classCol);
     }
 
+    public H2OCategoryWeights(String name, H2OHexKey key, H2OHexKeyCol classCol, double defaultValue) {
+      this(name, null, key, classCol, defaultValue);
+    }
+
     protected String[] determineColumnClassNames(int maxClasses) throws IllegalArgumentException {
       ValueArray va = _key.value();
-      ValueArray.Column classCol = va._cols[_classCol.value()];
-      return vaCategoryNames(classCol, maxClasses);
+      ValueArray.Column dataCol = va._cols[_classCol.value()];
+      if (_modelKey!=null) {
+        ValueArray.Column modelCol = _modelKey.value().response();
+        return vaCategoryNames(modelCol, dataCol, maxClasses);
+      } else {
+        return vaCategoryNames(dataCol, maxClasses);
+      }
     }
 
     @Override protected String[] textValues() {
