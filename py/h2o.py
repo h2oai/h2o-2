@@ -648,7 +648,6 @@ class H2O(object):
             # UPDATE: 1/24/13 change to always wait before the first poll..
             # see if it makes a diff to our low rate fails
             time.sleep(retryDelaySecs)
-
             # every other one?
             create_noise = noise is not None and ((count%2)==0)
             if create_noise:
@@ -746,7 +745,7 @@ class H2O(object):
         # noise is a 2-tuple ("StoreView, none) for url plus args for doing during poll to create noise
         # no noise if None
         a = self.poll_url(a['response'],
-            timeoutSecs=timeoutSecs, retryDelaySecs=0.5, initialDelaySecs=initialDelaySecs, noise=noise)
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, initialDelaySecs=initialDelaySecs, noise=noise)
 
         verboseprint("\nParse result:", dump_json(a))
         return a
