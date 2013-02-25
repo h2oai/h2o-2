@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertArrayEquals;
 import hex.rf.Tree.StatType;
 
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import water.*;
@@ -11,7 +12,9 @@ import water.util.TestUtil;
 
 public class RFPredDomainTest extends TestUtil {
 
-  public static final long[] a(long ...p) { return p; }
+  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
+
+  static final long[] a(long ...p) { return p; }
 
   protected void runIrisRF(final String trainDS, final String testDS, double expTestErr, long[][] expCM, String[] expDomain) throws Exception {
     String trainKeyName = "iris_train.hex";
