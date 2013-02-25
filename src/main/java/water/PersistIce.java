@@ -80,6 +80,7 @@ public abstract class PersistIce {
           case 'b':  b = '\\'; break;
           case 'c':  b = ':' ; break;
           case 'd':  b = '.' ; break;
+          case 'q':  b = '"' ; break;
           case 's':  b = '/' ; break;
           case 'z':  b = '\0' ; break;
           default:   System.err.println("Invalid format of filename " + f.getName() + " at index " + i);
@@ -159,6 +160,7 @@ public abstract class PersistIce {
       case '/':  sb.append("%s"); break; // slash
       case ':':  sb.append("%c"); break; // colon
       case '\\': sb.append("%b"); break; // backslash
+      case '"':  sb.append("%q"); break; // quote
       case '\0': sb.append("%z"); break; // nullbit
       default:   sb.append((char)b); break;
       }

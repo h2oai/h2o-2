@@ -63,7 +63,7 @@ public abstract class RowVecTask extends MRTask {
 
     public double ratio() {
       double res = 1.0/_step;
-      if(_complement) res = 1.0-res;
+      if(!_complement) res = 1.0-res;
       return res;
     }
 

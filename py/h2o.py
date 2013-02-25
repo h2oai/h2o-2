@@ -475,7 +475,7 @@ def verify_cloud_size():
 def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25):
     node.wait_for_node_to_accept_connections(timeoutSecs)
     # want node saying cloud = expected size, plus thinking everyone agrees with that.
-    def test(n):
+    def test(n, tries=None):
         c = n.get_cloud()
         # don't want to check everything. But this will check that the keys are returned!
         consensus  = c['consensus']
@@ -666,11 +666,11 @@ class H2O(object):
                     timeout=15, 
                     params=paramsUsed))
 
-            if ((count%15)==0):
+            if ((count%5)==0):
                 verboseprint(msgUsed, urlUsed, "Response:", dump_json(r['response']))
             # hey, check the sandbox if we've been waiting a long time...rather than wait for timeout
             # to find the badness?
-            if ((count%100)==0):
+            if ((count%15)==0):
                 check_sandbox_for_errors()
 
             if (create_noise):
@@ -847,7 +847,7 @@ class H2O(object):
         verboseprint("\nrandom_forest result:", dump_json(a))
         return a
 
-    def random_forest_view(self, data_key, model_key, timeoutSecs=300, **kwargs):
+    def random_forest_view(self, data_key, model_key, timeoutSecs=300, print_params=False, **kwargs):
         # UPDATE: only pass the minimal set of params to RFView. It should get the 
         # rest from the model. what about classWt? It can be different between RF and RFView?
         params_dict = {
@@ -857,7 +857,6 @@ class H2O(object):
             'class_weights': None,
             'response_variable': None, # FIX! apparently this is needed now?
             }
-
         browseAlso = kwargs.pop('browseAlso',False)
 
         # only update params_dict..don't add
@@ -866,15 +865,17 @@ class H2O(object):
             if k in params_dict:
                 params_dict[k] = kwargs[k]
 
+        if print_params:
+            print "\nrandom_forest_view parameters:", params_dict
+
         a = self.__check_request(requests.get(
             self.__url('RFView.json'),
             timeout=timeoutSecs,
             params=params_dict))
-
         verboseprint("\nrandom_forest_view result:", dump_json(a))
+
         if (browseAlso | browse_json):
             h2b.browseJsonHistoryAsUrlLastMatch("RFView")
-
         return a
 
     def random_forest_treeview(self, tree_number, data_key, model_key, 
@@ -1000,13 +1001,13 @@ class H2O(object):
         start = time.time()
         numberOfRetries = 0
         while time.time() - start < timeoutSecs:
-            if test_func(self):
+            if test_func(self, tries=numberOfRetries):
                 break
             time.sleep(retryDelaySecs)
             numberOfRetries += 1
             # hey, check the sandbox if we've been waiting a long time...rather than wait for timeout
             # to find the badness?. can check_sandbox_for_errors at any time 
-            if ((numberOfRetries%100)==0):
+            if ((numberOfRetries%50)==0):
                 check_sandbox_for_errors()
 
         else:
@@ -1020,7 +1021,7 @@ class H2O(object):
 
     def wait_for_node_to_accept_connections(self,timeoutSecs=15):
         verboseprint("wait_for_node_to_accept_connections")
-        def test(n):
+        def test(n, tries=None):
             try:
                 n.get_cloud()
                 return True

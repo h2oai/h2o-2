@@ -9,7 +9,9 @@ import java.util.Arrays;
  * @author <a href="mailto:cliffc@0xdata.com"></a>
  */
 public class HeartBeat extends Iced {
+  public int _hb_version;
   public long _cloud_id_lo, _cloud_id_hi; // UUID for this Cloud
+  public long _jvm_boot_msec;   // Boot time of JVM
   public byte[] _cloud_md5;
   public char _num_cpus;        // Number of CPUs for this Node, limit of 65535
 

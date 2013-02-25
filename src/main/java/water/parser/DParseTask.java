@@ -187,7 +187,10 @@ public final class DParseTask extends MRTask {
   transient final Value _sourceDataset;
   transient int _colIdx;
 
-  public boolean isString(int idx) { return _colTypes[idx]==STRINGCOL; }
+  public boolean isString(int idx) {
+    // in case of idx which is oob, pretend it is a string col (it will be dropped anyways)
+    return idx >= _ncolumns || _colTypes[idx]==STRINGCOL;
+  }
 
   // As this is only used for distributed CSV parser we initialize the values
   // for the CSV parser itself.

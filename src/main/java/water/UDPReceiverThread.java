@@ -15,6 +15,7 @@ import java.util.Random;
 public class UDPReceiverThread extends Thread {
   static private int  _unknown_packets_per_sec = 0;
   static private long _unknown_packet_time = 0;
+  static final Random RANDOM_UDP_DROP = new Random();
   public UDPReceiverThread() {
     super("Direct UDP Receiver");
   }
@@ -62,17 +63,14 @@ public class UDPReceiverThread extends Thread {
   // Basic packet handling:
   //   - Timeline record it
   static public void basic_packet_handling( AutoBuffer ab ) {
-    // randomly drop 1/10th of the packets
-    if ( H2O.OPT_ARGS.random_udp_drop!= null ) {
-      Random rand = new Random();
-      int roll = rand.nextInt(10);
-      if ( roll == 0 ) {
-            return;
-      }
-    }
+    // Randomly drop 1/10th of the packets, as-if broken network.  Dropped
+    // packets are timeline recorded before dropping - and we still will
+    // respond to timelines and suicide packets.
+    int drop = H2O.OPT_ARGS.random_udp_drop!= null &&
+      RANDOM_UDP_DROP.nextInt(10) == 0 ? 2 : 0;
 
     // Record the last time we heard from any given Node
-    TimeLine.record_recv(ab);
+    TimeLine.record_recv(ab,drop);
     ab._h2o._last_heard_from = System.currentTimeMillis();
 
     // Snapshots are handled *IN THIS THREAD*, to prevent more UDP packets from
@@ -88,6 +86,9 @@ public class UDPReceiverThread extends Thread {
     // Suicide packet?  Short-n-sweet...
     if( ctrl == UDP.udp.rebooted.ordinal())
       UDPRebooted.checkForSuicide(ctrl, ab);
+
+    // Drop the packet.
+    if( drop != 0 ) return;
 
     // Get the Cloud we are operating under for this packet
     H2O cloud = H2O.CLOUD;

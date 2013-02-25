@@ -63,7 +63,9 @@ public abstract class DGLM {
     gt(">"),
     lte("<="),
     gte(">="),
-    eq("=");
+    eq("="),
+    neq("!="),
+    ;
     final String _str;
 
     CaseMode(String str){
@@ -94,6 +96,8 @@ public abstract class DGLM {
         return x >= y;
       case eq:
         return x == y;
+      case neq:
+        return x != y;
       default:
         assert false;
         return false;
@@ -385,7 +389,7 @@ public abstract class DGLM {
       int[] modelDataMap = columnMapping(ary.colNames());
       if( !isCompatible(modelDataMap) ) // This dataset is compatible or not?
         throw new GLMException("incompatible dataset");
-      DataFrame data = new DataFrame(ary, modelDataMap, s, null, true);
+      DataFrame data = new DataFrame(ary, modelDataMap, s, false, true);
       GLMValidationFunc f = new GLMValidationFunc(_glmParams,_beta, thresholds,ary._cols[modelDataMap[modelDataMap.length-1]]._mean);
       GLMValidation val = f.apply(data);
       val._modelKey = _selfKey;
@@ -961,8 +965,12 @@ public abstract class DGLM {
   }
 
 
+  public static DataFrame getData(ValueArray ary, int [] xs, int y, Sampling s, boolean standardize){
+    int [] colIds = Arrays.copyOf(xs, xs.length+1);
+    colIds[xs.length] = y;
+    return getData(ary, colIds, s, standardize);
+  }
   public static DataFrame getData(ValueArray ary, int [] colIds, Sampling s, boolean standardize){
-    boolean [] std = new boolean [colIds.length];
     ArrayList<Integer> numeric = new ArrayList<Integer>();
     ArrayList<Integer> categorical = new ArrayList<Integer>();
     for(int i = 0; i < colIds.length-1; ++i){
@@ -977,9 +985,7 @@ public abstract class DGLM {
       for(int i:numeric)colIds[idx++] = i;
       for(int i:categorical)colIds[idx++] = i;
     }
-    Arrays.fill(std, standardize);
-    std[std.length-1] = false; // do not touch response var
-    return new DataFrame(ary, colIds, s, std, true);
+    return new DataFrame(ary, colIds, s, standardize, true);
   }
 
   public static GLMModel buildModel(DataFrame data, LSMSolver lsm, GLMParams params) {
@@ -1021,7 +1027,7 @@ public abstract class DGLM {
             lsm.solve(gram.getXX(), gram.getXY(), gram.getYY(), gramF._beta);
           }
         }
-      } while(++iter != 50 && betaDiff(beta,gramF._beta) > params._betaEps);
+      } while(++iter < params._maxIter && betaDiff(beta,gramF._beta) > params._betaEps);
       if(betaDiff(beta,gramF._beta) > params._betaEps)warns.add("Did not converge!");
     }
     double [] newBeta = gramF._beta;

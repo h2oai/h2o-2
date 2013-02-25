@@ -17,12 +17,17 @@ def pickRandGlmParams(paramDict, params):
             maxCase = max(paramDict['case'])
             minCase = min(paramDict['case'])
             # make sure the combo of case and case_mode makes sense
+            # there needs to be some entries in both effective cases
             if ('case_mode' in params):
                 if ('case' not in params) or (params['case'] is None):
                     params['case'] = 1
-                if params['case_mode']=="<" and params['case']==minCase:
+                elif params['case_mode']=="<" and params['case']==minCase:
                     params['case'] += 1
-                if params['case_mode']==">" and params['case']==maxCase:
+                elif params['case_mode']==">" and params['case']==maxCase:
+                    params['case'] -= 1
+                elif params['case_mode']==">=" and params['case']==minCase:
+                    params['case'] += 1
+                elif params['case_mode']=="<=" and params['case']==maxCase:
                     params['case'] -= 1
 
     return colX

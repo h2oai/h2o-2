@@ -16,6 +16,7 @@ import water.util.Check;
 import water.util.RString;
 
 import com.google.common.base.Objects;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.google.gson.JsonObject;
@@ -471,9 +472,9 @@ public class RequestArguments extends RequestStatics {
         try {
           record._value = parse(input);
           record._valid = true;
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
           record._value = defaultValue();
-          throw new IllegalArgumentException(e.getMessage());
+          Throwables.propagate(e);
         }
       }
     }
@@ -1243,10 +1244,19 @@ public class RequestArguments extends RequestStatics {
     public final EnumArgument<Family> _family;
 
     @Override
+    public String[] selectValues(){
+      if(_key.value() == null || _classCol.value() == null || _key.value()._cols[_classCol.value()]._domain == null)
+        return super.selectValues();
+      return new String[]{CaseMode.eq.toString(), CaseMode.neq.toString()};
+    }
+    @Override
     public CaseMode defaultValue() {
       if(_family.value() == Family.binomial){
         Column c = _key.value()._cols[_classCol.value()];
-        if(c._min < 0 || c._max > 1) return CaseMode.gt;
+        if(c._min < 0 || c._max > 1)
+          return c._domain == null
+            ?CaseMode.gt
+            :CaseMode.eq;
       }
       return CaseMode.none;
     }
@@ -1711,30 +1721,37 @@ public class RequestArguments extends RequestStatics {
       return null;
     }
 
-    ArrayList<Integer> _selectedCols;
+    ArrayList<Integer> _selectedCols; // All the columns I'm willing to show the user
 
-    protected void selectColumns(){
+    // Select which columns I'll show the user
+    @Override protected String queryElement() {
       ValueArray va = _key.value();
       ArrayList<Integer> cols = Lists.newArrayList();
-      for (int i = 0; i < va._cols.length; ++i) {
-        if( shouldIgnore(i, va._cols[i]) ) continue;
-        cols.add(i);
-      }
+      for (int i = 0; i < va._cols.length; ++i)
+        if( !shouldIgnore(i, va._cols[i]) )
+          cols.add(i);
       Comparator<Integer> cmp = colComp(va);
       if(cmp != null)
         Collections.sort(cols,cmp);
       _selectedCols = cols;
-    }
-
-    @Override protected String queryElement() {
-      selectColumns();
       return super.queryElement();
     }
 
+    // "values" to send back and for in URLs.  Use numbers for density (shorter URLs).
     @Override protected final String[] selectValues() {
+      ValueArray va = _key.value();
       String [] res = new String[_selectedCols.size()];
       int idx = 0;
-      for(int i:_selectedCols)res[idx++] = String.valueOf(i);
+      for(int i : _selectedCols) res[idx++] = String.valueOf(i);
+      return res;
+    }
+
+    // "names" to select in the boxes.
+    @Override protected String[] selectNames() {
+      ValueArray va = _key.value();
+      String [] res = new String[_selectedCols.size()];
+      int idx = 0;
+      for(int i:_selectedCols) res[idx++] = va._cols[i]._name;
       return res;
     }
 
@@ -1751,7 +1768,7 @@ public class RequestArguments extends RequestStatics {
       ArrayList<Integer> al = new ArrayList();
       for (String col : input.split(",")) {
         col = col.trim();
-        int idx = Integer.valueOf(col);// vaColumnNameToIndex(va, col);
+        int idx = vaColumnNameToIndex(va, col);
         if (idx == -1)
           throw new IllegalArgumentException("Column "+col+" not part of key "+va._key);
         if (al.contains(idx))
@@ -1807,11 +1824,6 @@ public class RequestArguments extends RequestStatics {
   public class HexNonConstantColumnSelect extends HexNonClassColumnSelect {
     public HexNonConstantColumnSelect(String name, H2OHexKey key, H2OHexKeyCol classCol) {
       super(name, key, classCol);
-    }
-
-    @Override protected String queryElement() {
-      selectColumns();
-      return super.queryElement();
     }
 
     @Override
