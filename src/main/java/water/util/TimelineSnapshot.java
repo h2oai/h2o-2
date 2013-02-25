@@ -1,12 +1,7 @@
 package water.util;
 
 import java.net.InetAddress;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-
+import java.util.*;
 import water.*;
 import water.H2ONode.H2Okey;
 
@@ -19,11 +14,11 @@ import water.H2ONode.H2Okey;
  */
 public final class TimelineSnapshot implements
     Iterable<TimelineSnapshot.Event>, Iterator<TimelineSnapshot.Event> {
-  long[][] _snapshot;
-  Event[] _events;
-  HashMap<Event, Event> _edges;
-  public HashMap<Event, ArrayList<Event>> _sends;
-  H2O _cloud;
+  final long[][] _snapshot;
+  final Event[] _events;
+  final HashMap<Event, Event> _edges;
+  final public HashMap<Event, ArrayList<Event>> _sends;
+  final H2O _cloud;
   boolean _processed;
 
   public TimelineSnapshot(H2O cloud, long[][] snapshot) {
@@ -55,7 +50,7 @@ public final class TimelineSnapshot implements
       }
       if (_events[i] != null)
         processEvent(_events[i]);
-      assert (_events[i] == null) || (_events[i]._arr[1] < 1024);
+      assert (_events[i] == null) || (_events[i]._eventIdx < 1024);
     }
 
     // now build the graph (i.e. go through all the events once)
@@ -72,7 +67,7 @@ public final class TimelineSnapshot implements
         if (!_events[i].next())
           _events[i] = null;
       }
-      assert (_events[i] == null) || (_events[i]._arr[1] < 1024);
+      assert (_events[i] == null) || (_events[i]._eventIdx < 1024);
     }
   }
 
@@ -83,67 +78,74 @@ public final class TimelineSnapshot implements
   // it is also needed to keep track of send/recv dependencies when iterating
   // over events in timeline
   public class Event {
-    int[] _arr = new int[2];
-    long[] _val;
+    public final int _nodeId;   // Which node/column# in the snapshot
+    final long[] _val;          // The column from the snapshot
+    int _eventIdx;              // Which row in the snapshot
+    // For send-packets, the column# is the cloud-wide idx of the sender, and
+    // the packet contains the reciever.  Vice-versa for received packets,
+    // where the column# is the cloud-wide idx of the receiver, and the packet
+    // contains the sender.
+    H2ONode _packh2o;           // The H2O in the packet
     boolean _blocked;
 
     public Event(int nodeId, int eventIdx) {
-      _arr[0] = nodeId;
-      _arr[1] = eventIdx;
+      _nodeId   = nodeId;
+      _eventIdx = eventIdx;
       _val = _snapshot[nodeId];
+      computeH2O(false);
     }
 
-    @Override
-    public final int hashCode() {
-      return Arrays.hashCode(_arr);
+    @Override public final int hashCode() { return (_nodeId <<10)^_eventIdx; }
+    @Override public final boolean equals(Object o) {
+      Event e = (Event)o;
+      return _nodeId==e._nodeId && _eventIdx==e._eventIdx;
     }
 
-    @Override
-    public final boolean equals(Object o) {
-      if (o instanceof Event) {
-        Event other = (Event) o;
-        return (_arr[0] == other._arr[0]) && (_arr[1] == other._arr[1]);
+    // (re)compute the correct H2ONode, if the _eventIdx changes.
+    private boolean computeH2O(boolean b) {
+      H2ONode h2o = null;
+      if( dataLo() != 0 ) {     // Dead/initial packet
+        InetAddress inet = addrPack();
+        if( !inet.isMulticastAddress() ) { // Is multicast?
+          h2o = H2ONode.intern(inet,portPack());
+          if( isSend() && h2o == recoH2O() ) // Another multicast indicator: sending to self
+            h2o = null;                      // Flag as multicast
+        }
       }
-      return false;
+      _packh2o = h2o;
+      return b;                 // For flow-coding
     }
 
-    public final int nodeId   () { return _arr[0];  }
-    public final int eventIdx () { return _arr[1]; }
-    public final int send_recv() { return TimeLine.send_recv(_val, _arr[1]); }
-    public final int dropped  () { return TimeLine.dropped  (_val, _arr[1]); }
+    public final int send_recv() { return TimeLine.send_recv(_val, _eventIdx); }
+    public final int dropped  () { return TimeLine.dropped  (_val, _eventIdx); }
     public final boolean isSend() { return send_recv() == 0; }
     public final boolean isRecv() { return send_recv() == 1; }
     public final boolean isDropped() { return dropped() != 0; }
-    public final InetAddress addrPack() { return TimeLine.inet(_val, _arr[1]); }
-    public final long dataLo() { return TimeLine.l0(_val, _arr[1]); }
-    public final long dataHi() { return TimeLine.l8(_val, _arr[1]); }
-
-    public final String addrString() {
-      InetAddress inet = addrPack();
-      return (inet.isMulticastAddress() ? "multicast" : inet.toString())
-          + (isRecv() ? ":" + portPack() : "");
-    }
-
+    public final InetAddress addrPack() { return TimeLine.inet(_val, _eventIdx); }
+    public final long dataLo() { return TimeLine.l0(_val, _eventIdx); }
+    public final long dataHi() { return TimeLine.l8(_val, _eventIdx); }
+    public long ns() { return TimeLine.ns(_val, _eventIdx); }
+    public long ms() { return TimeLine.ms(_val, _eventIdx) + recoH2O()._heartbeat._jvm_boot_msec; }
+    public H2ONode packH2O() { return _packh2o; } // H2O in packet
+    public H2ONode recoH2O() { return _cloud._memary[_nodeId]; } // H2O recording packet
     public final int portPack() {
-      assert !isSend(); // the port is always sender's port!!!
-      int i = (int) TimeLine.l0(_val, _arr[1]);
+      int i = (int) dataLo();
       // 1st byte is UDP type, so shift right by 8.
       // Next 2 bytes are UDP port #, so mask by 0xFFFF.
-      // Want API/user-visible-port#, so -1.
-      return ((0xFFFF) & (i >> 8))-1;
+      return ((0xFFFF) & (i >> 8));
     }
+    public final String addrString() { return _packh2o==null ? "multicast" : _packh2o.toString(); }
 
     public String toString() {
       int udp_type = (int) (dataLo() & 0xff); // First byte is UDP packet type
       UDP.udp udpType = UDP.udp.UDPS[udp_type];
       String operation = isSend() ? " SEND " : " RECV ";
       String host1 = addrString();
-      String host2 = _cloud._memary[nodeId()]._key.toString() + ":"
-          + _cloud._memary[nodeId()]._key.getPort();
-      String networkPart = isSend() ? (host2 + " -> " + host1) : (host1
-          + " -> " + host2);
-
-      return "Node(" + nodeId() + ": " + ns() + ") " + udpType.toString()
+      String host2 = recoH2O().toString();
+      String networkPart = isSend() 
+        ? (host2 + " -> " + host1) 
+        : (host1 + " -> " + host2);
+      return "Node(" + _nodeId + ": " + ns() + ") " + udpType.toString()
           + operation + networkPart + (isDropped()?" DROPPED ":"") + ", data = '"
           + Long.toHexString(this.dataLo()) + ','
           + Long.toHexString(this.dataHi()) + "'";
@@ -158,32 +160,31 @@ public final class TimelineSnapshot implements
      * @param other
      * @return true iff the two events form valid sender/receiver pair
      */
-    final boolean match(Event other) {
+    final boolean match(Event ev) {
       // check we're matching send and receive
-      if (send_recv() == other.send_recv())
+      if (send_recv() == ev.send_recv())
         return false;
       // compare the packet payload matches
-      long myl0 = dataLo();
-      long otherl0 = other.dataLo();
+      long myl0 =    dataLo();
+      long evl0 = ev.dataLo();
       int my_udp_type = (int) (myl0 & 0xff); // first byte is udp type
-      int other_udp_type = (int) (otherl0 & 0xff); // first byte is udp type
-      if (my_udp_type != other_udp_type)
+      int ev_udp_type = (int) (evl0 & 0xff); // first byte is udp type
+      if (my_udp_type != ev_udp_type)
         return false;
       UDP.udp e = UDP.udp.UDPS[my_udp_type];
       switch (e) {
-      case heartbeat:
       case rebooted:
       case timeline:
-        // compare only first 3 bytes here (udp type and port)
-        if ((myl0 & 0xFFFFFFl) != (otherl0 & myl0 & 0xFFFFFFl))
-          return false;
+        // compare only first 3 bytes here (udp type and port),
+        // but port# is checked below as part of address
         break;
       case ack:
       case ackack:
       case execlo:
       case exechi:
+      case heartbeat:
         // compare 3 ctrl bytes + 4 bytes task #
-        if ((myl0 & 0xFFFFFFFFFFFFFFl) != (otherl0 & 0xFFFFFFFFFFFFFFl))
+        if( (int)(myl0>>24) != (int)(evl0>>24))
           return false;
         break;
       case paxos_accept:
@@ -192,42 +193,39 @@ public final class TimelineSnapshot implements
       case paxos_promise:
       case paxos_proposal:
         // compare ctrl bytes 3 + 12 bytes of payload for paxos
-        if (myl0 != otherl0)
+        if ((myl0>>24) != (evl0>>24))
           return false;
-        if ((dataHi() & 0xFFFFFFFFFFFFFFl) != (other.dataHi() & 0xFFFFFFFFFFFFFFl))
+        if ((dataHi() & 0xFFFFFFFFFFFFFFl) != (ev.dataHi() & 0xFFFFFFFFFFFFFFl))
           return false;
         break;
       default:
         throw new Error("unexpected udp packet type " + e.toString());
       }
 
-      // now compare addresses
-      H2Okey myAddrHost = _cloud._memary[_arr[0]]._key;
-      H2Okey otherAddrHost = _cloud._memary[other._arr[0]]._key;
-      return isSend() ? (myAddrHost.equals(other.addrPack()) && (addrPack()
-          .isMulticastAddress() || addrPack().equals(otherAddrHost)))
-          : (otherAddrHost.equals(addrPack()) && (other.addrPack()
-              .isMulticastAddress() || other.addrPack().equals(myAddrHost)));
+      // Check that port numbers are compatible.  Really check that the
+      // H2ONode's are compatible.  The port#'s got flipped during recording to
+      // allow this check (and a null _packh2o is a multicast).
+      if(    _packh2o!=null &&    _packh2o.index()!=ev._nodeId ) return false;
+      if( ev._packh2o!=null && ev._packh2o.index()!=   _nodeId ) return false;
+      return true;
     }
 
     public final boolean isEmpty() {
-      return (_arr[1] < TimeLine.length()) ? TimeLine.isEmpty(_val, _arr[1])
-          : false;
+      return (_eventIdx < TimeLine.length()) ? TimeLine.isEmpty(_val, _eventIdx) : false;
     }
 
     public final Event clone() {
-      return new Event(_arr[0], _arr[1]);
+      return new Event(_nodeId, _eventIdx);
     }
 
     boolean prev(int minIdx) {
       int min = Math.max(minIdx, -1);
-      if (_arr[1] <= minIdx)
+      if (_eventIdx <= minIdx)
         return false;
-      while (--_arr[1] > min)
+      while (--_eventIdx > min)
         if (!isEmpty())
-          return true;
-      ;
-      return false;
+          return computeH2O(true);
+      return computeH2O(false);
     }
 
     boolean prev() {
@@ -235,7 +233,7 @@ public final class TimelineSnapshot implements
     }
 
     Event previousEvent(int minIdx) {
-      Event res = new Event(_arr[0], _arr[1]);
+      Event res = new Event(_nodeId, _eventIdx);
       return (res.prev(minIdx)) ? res : null;
     }
 
@@ -245,12 +243,12 @@ public final class TimelineSnapshot implements
 
     boolean next(int maxIdx) {
       int max = Math.min(maxIdx, TimeLine.length());
-      if (_arr[1] >= max)
+      if (_eventIdx >= max)
         return false;
-      while (++_arr[1] < max)
+      while (++_eventIdx < max)
         if (!isEmpty())
-          return true;
-      return false;
+          return computeH2O(true);
+      return computeH2O(false);
     }
 
     boolean next() {
@@ -258,7 +256,7 @@ public final class TimelineSnapshot implements
     }
 
     Event nextEvent(int maxIdx) {
-      Event res = new Event(_arr[0], _arr[1]);
+      Event res = new Event(_nodeId, _eventIdx);
       return (res.next(maxIdx)) ? res : null;
     }
 
@@ -269,45 +267,44 @@ public final class TimelineSnapshot implements
     /**
      * Used to determine ordering of events not bound by any dependency.
      *
-     * Events compared according to following rules: Receives go before sends.
-     * For two sends, pick the one with receives with smallest timestamp (ms)
-     * otherwise pick the one with smallest timestamp (ms)
+     * Events compared according to following rules: 
+     *   Receives go before sends.  Since we are only here with unbound events,
+     *   unbound receives means their sender has already appeared and they
+     *   should go adjacent to their sender.
+     *   For two sends, pick the one with receives with smallest timestamp (ms)
+     *   otherwise pick the sender with smallest timestamp (ms)
      *
      * @param other
      *          other Event to compare
      * @return
      */
-    public final int compareTo(Event other) {
-      if (other == null)
-        return -1;
-      int res = other.send_recv() - send_recv(); // recvs should go bfr senfs
-      if (res == 0) {
-        if (isSend()) {
-          // compare by the time of receivers
-          long myMaxMs = 0;
-          long otherMaxMs = 0;
-          ArrayList<Event> myRecvs = _sends.get(this);
-          ArrayList<Event> otherRecvs = _sends.get(other);
-          for (Event e : myRecvs)
-            if (e.ms() > myMaxMs)
-              myMaxMs = e.ms();
-          for (Event e : otherRecvs)
-            if (e.ms() > otherMaxMs)
-              otherMaxMs = e.ms();
-          res = (int) (myMaxMs - otherMaxMs);
-        }
-        if (res == 0)
-          res = (int) (ms() - other.ms());
+    public final int compareTo(Event ev) {
+      if( ev == null ) return -1;
+      if( ev == this ) return  0;
+      if( ev.equals(this) ) return 0;
+      int res = ev.send_recv() - send_recv(); // recvs should go before sends
+      if( res != 0 ) return res;
+      if (isSend()) {
+        // compare by the time of receivers
+        long myMinMs = Long.MAX_VALUE;
+        long evMinMs = Long.MAX_VALUE;
+        ArrayList<Event> myRecvs = _sends.get(this);
+        ArrayList<Event> evRecvs = _sends.get(ev  );
+        for (Event e : myRecvs)
+          if (e.ms() < myMinMs)
+            myMinMs = e.ms();
+        for (Event e : evRecvs)
+          if (e.ms() < evMinMs)
+            evMinMs = e.ms();
+        res = (int) (myMinMs - evMinMs);
+        if( myMinMs == Long.MAX_VALUE && evMinMs != Long.MAX_VALUE ) res = -1;
+        if( myMinMs != Long.MAX_VALUE && evMinMs == Long.MAX_VALUE ) res =  1;
       }
+      if (res == 0)
+        res = (int) (ms() - ev.ms());
+      if( res == 0 )
+        res = (int) (ns() - ev.ns());
       return res;
-    }
-
-    public long ns() {
-      return TimeLine.ns(_val, _arr[1]);
-    }
-
-    public long ms() {
-      return TimeLine.ms(_val, _arr[1]);
     }
   }
 
@@ -323,11 +320,10 @@ public final class TimelineSnapshot implements
   private boolean isSenderRecvPair(Event senderCnd, Event recvCnd) {
     if (senderCnd.isSend() && recvCnd.isRecv() && senderCnd.match(recvCnd)) {
       ArrayList<Event> recvs = _sends.get(senderCnd);
-      if (recvs.isEmpty() || senderCnd.addrPack().isMulticastAddress()) {
-        for (Event e : recvs) {
-          if (e.nodeId() == recvCnd.nodeId())
+      if (recvs.isEmpty() || senderCnd.packH2O()==null ) {
+        for (Event e : recvs)
+          if (e._nodeId == recvCnd._nodeId)
             return false;
-        }
         return true;
       }
     }
@@ -347,7 +343,7 @@ public final class TimelineSnapshot implements
     if (e.isSend()) {
       _sends.put(e, new ArrayList<TimelineSnapshot.Event>());
       for (Event otherE : _events) {
-        if ((otherE != null) && (otherE != e) && otherE._blocked
+        if ((otherE != null) && (otherE != e) && (!otherE.equals(e)) && otherE._blocked
             && otherE.match(e)) {
           _edges.put(otherE, e);
           _sends.get(e).add(otherE);
@@ -356,43 +352,32 @@ public final class TimelineSnapshot implements
       }
     } else { // look for matching send, otherwise set _blocked
       assert !_edges.containsKey(e);
-      int senderIdx = -1;
-      for (int i = 0; i < _events.length; ++i) {
-        // TODO: Matt is not sure if the .equals() below is correct
-        //  in the world of IO nirvana.
-        if (_cloud._memary[i]._key.htm_port() == e.portPack() &&
-            _cloud._memary[i]._key.getAddress().equals(e.addrPack())) {
-          senderIdx = i;
-          break;
-        }
-      }
+      int senderIdx = e.packH2O().index();
       if (senderIdx == -1) { // should not happen?
         // no possible sender - return and do not block
         System.err.println("no sender found! port = " + e.portPack()
             + ", ip = " + e.addrPack().toString());
         return;
       }
-      if (senderIdx != e.nodeId()) {
-        Event senderCnd = _events[senderIdx];
-        if (senderCnd != null) {
+      Event senderCnd = _events[senderIdx];
+      if (senderCnd != null) {
+        if (isSenderRecvPair(senderCnd, e)) {
+          _edges.put(e, senderCnd.clone());
+          _sends.get(senderCnd).add(e);
+          return;
+        }
+        senderCnd = senderCnd.clone();
+        while (senderCnd.prev()) {
           if (isSenderRecvPair(senderCnd, e)) {
-            _edges.put(e, senderCnd.clone());
+            _edges.put(e, senderCnd);
             _sends.get(senderCnd).add(e);
             return;
           }
-          senderCnd = senderCnd.clone();
-          while (senderCnd.prev()) {
-            if (isSenderRecvPair(senderCnd, e)) {
-              _edges.put(e, senderCnd);
-              _sends.get(senderCnd).add(e);
-              return;
-            }
-          }
         }
-        e._blocked = true;// (senderIdx != e.nodeId());
       }
+      e._blocked = true;
     }
-    assert (e == null) || (e._arr[1] < 1024);
+    assert (e == null) || (e._eventIdx < 1024);
   }
 
   @Override
@@ -408,11 +393,11 @@ public final class TimelineSnapshot implements
     for (int i = 0; i < _events.length; ++i)
       if (_events[i] != null && (!_events[i].isEmpty() || _events[i].next())) {
         assert (_events[i] == null)
-            || ((_events[i]._arr[1] < 1024) && !_events[i].isEmpty());
+            || ((_events[i]._eventIdx < 1024) && !_events[i].isEmpty());
         return true;
       } else {
         assert (_events[i] == null)
-            || ((_events[i]._arr[1] < 1024) && !_events[i].isEmpty());
+            || ((_events[i]._eventIdx < 1024) && !_events[i].isEmpty());
         _events[i] = null;
       }
     return false;
@@ -446,8 +431,8 @@ public final class TimelineSnapshot implements
         continue;
       if (_events[i].isRecv()) { // check edge dependency
         Event send = _edges.get(_events[i]);
-        if ((send != null) && (_events[send.nodeId()] != null)
-            && send.eventIdx() >= _events[send.nodeId()].eventIdx())
+        if ((send != null) && (_events[send._nodeId] != null)
+            && send._eventIdx >= _events[send._nodeId]._eventIdx)
           continue;
       }
       selectedIdx = ((selectedIdx == -1) || _events[i]
@@ -475,7 +460,7 @@ public final class TimelineSnapshot implements
     }
     assert (selectedIdx != -1);
     assert (_events[selectedIdx] != null)
-        && ((_events[selectedIdx]._arr[1] < 1024) && !_events[selectedIdx]
+        && ((_events[selectedIdx]._eventIdx < 1024) && !_events[selectedIdx]
             .isEmpty());
     Event res = _events[selectedIdx];
     _events[selectedIdx] = _events[selectedIdx].nextEvent();

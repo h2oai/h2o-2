@@ -2,14 +2,12 @@ package water.api;
 
 import java.net.InetAddress;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 import water.*;
 import water.util.RString;
 import water.util.TimelineSnapshot;
 
-import com.google.common.collect.Lists;
 import com.google.gson.*;
 
 public class Timeline extends Request {
@@ -28,6 +26,7 @@ public class Timeline extends Request {
   private static final String JSON_LAST_TIME = "lastTime";
   private static final String JSON_FIRST_TIME = "firstTime";
   private static final String JSON_TYPE = "type";
+  private static final String JSON_SR = "sr";
   private static final String JSON_EVENTS = "events";
   private static final String JSON_SELF = "self";
   private static final String JSON_NOW = "now";
@@ -50,9 +49,9 @@ public class Timeline extends Request {
     JsonArray eventsJson = new JsonArray();
     resJson.add(JSON_EVENTS, eventsJson);
 
-    List<TimelineSnapshot.Event> heartbeats = Lists.newArrayList();
+    ArrayList<TimelineSnapshot.Event> heartbeats = new ArrayList();
     for( TimelineSnapshot.Event event : events ) {
-      H2ONode h2o = cloud._memary[event.nodeId()];
+      H2ONode h2o = cloud._memary[event._nodeId];
 
       // The event type.  First get payload.
       long l0 = event.dataLo();
@@ -78,12 +77,12 @@ public class Timeline extends Request {
         for(TimelineSnapshot.Event h : heartbeats){
           if( h.isSend() ) {
             ++totalSends;
-            ++sends[h.nodeId()];
+            ++sends[h._nodeId];
           } else if( h.isDropped() ) {
             ++totalDrops;
           } else {
             ++totalRecvs;
-            ++recvs[h.nodeId()];
+            ++recvs[h._nodeId];
           }
         }
         heartbeats.clear();
@@ -100,7 +99,6 @@ public class Timeline extends Request {
 
         JsonArray cloudListJson = new JsonArray();
         hbJson.add(JSON_CLOUDS, cloudListJson);
-
 
         for( int i = 0; i < sends.length; ++i ) {
           JsonObject cloudJson = new JsonObject();
@@ -124,22 +122,14 @@ public class Timeline extends Request {
       eventJson.addProperty(JSON_TIME, date);
       eventJson.addProperty(JSON_NANOS, ns);
       eventJson.addProperty(JSON_TYPE, e.toString());
+      eventJson.addProperty(JSON_SR, event.isSend());
 
       if( event.isSend() ) {
-        String recv = "multicast";
-        InetAddress inet = event.addrPack();
-        if( !inet.isMulticastAddress() ){
-          int port = -1;
-          if(events._sends.containsKey(event) && !events._sends.get(event).isEmpty())
-            port = cloud._memary[events._sends.get(event).get(0).nodeId()]._key.getPort();
-          String portStr = ":" + ((port != -1)?port:"?");
-
-          recv = inet.toString() + portStr;
-        }
         eventJson.addProperty(JSON_SEND, h2o.toString());
+        String recv = event.packH2O() == null ? "multicast" : event.packH2O().toString();
         eventJson.addProperty(JSON_RECV, recv);
       } else {
-        eventJson.addProperty(JSON_SEND, event.addrString());
+        eventJson.addProperty(JSON_SEND, event.packH2O().toString());
         eventJson.addProperty(JSON_RECV, h2o.toString());
         if( event.isDropped() )
           eventJson.addProperty(JSON_DROP, "1");
@@ -199,12 +189,19 @@ public class Timeline extends Request {
       sb.append(caption(object, name));
       if( object.get(JSON_DROP) == null ) sb.append("<tr>");
       else sb.append("<tr style='background-color:Pink'>");
+      boolean isSend = object.get(JSON_SR).getAsBoolean();
       sb.append("<td>").append(object.get(JSON_TIME).getAsString()).append("</td>");
       sb.append("<td>").append(object.get(JSON_NANOS).getAsLong()).append("</td>");
       String s = object.get(JSON_SEND).getAsString();
       String r = object.get(JSON_RECV).getAsString();
-      sb.append("<td>"+s+" -> "+r+"</td>");
-      sb.append("<td>").append(object.get(JSON_TYPE).getAsString()).append("</td>");
+      sb.append("<td>");
+      if(  isSend ) sb.append("<b>").append(s).append("</b>");
+      else sb.append(s);
+      sb.append(" -> ");
+      if( !isSend ) sb.append("<b>").append(r).append("</b>");
+      else sb.append(r);
+      sb.append("</td>");
+      sb.append("<td>").append(object.get(JSON_TYPE ).getAsString()).append("</td>");
       sb.append("<td>").append(object.get(JSON_BYTES).getAsString()).append("</td>");
       sb.append("</tr>");
       return sb.toString();

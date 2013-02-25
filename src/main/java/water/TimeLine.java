@@ -80,7 +80,16 @@ public class TimeLine extends UDP {
     if( b.position() < 16 ) b.position(16);
     tl[idx*WORDS_PER_EVENT+0+1] = (deltams)<<32 | (b._h2o.ip4()&0x0FFFFFFFFL);
     tl[idx*WORDS_PER_EVENT+1+1] = (ns&~3)|sr|drop;
-    tl[idx*WORDS_PER_EVENT+2+1] = b.get8(0);
+    // More complexities: record the *receiver* port in the timeline - but not
+    // in the outgoing UDP packet!  The outgoing packet always has the sender's
+    // port (that's us!) - which means the recorded timeline packet normally
+    // never carries the *receiver* port - meaning the sender's timeline does
+    // not record who he sent to!  With this hack the Timeline record always
+    // contains the info about "the other guy": inet+port for the receiver in
+    // the sender's Timeline, and vice-versa for the receiver's Timeline.
+    long tmp = b.get8(0);
+    if( sr==0 ) tmp = (tmp & ~0xFFFF00) | (b._h2o._key.udp_port()<<8);
+    tl[idx*WORDS_PER_EVENT+2+1] = tmp;
     tl[idx*WORDS_PER_EVENT+3+1] = b.get8(8);
   }
   public static void record_send( AutoBuffer b )           { record(b,0,0); }
@@ -92,7 +101,8 @@ public class TimeLine extends UDP {
   private static int idx(long[] tl, int i ) { return (((int)tl[0]+i)&(MAX_EVENTS-1))*WORDS_PER_EVENT+1; }
   // That first long is complex: compressed CTM and IP4
   private static long x0( long[] tl, int idx ) { return tl[idx(tl,idx)+0]; }
-  public static long ms( long[] tl, int idx ) { return (x0(tl,idx)>>>32)+JVM_BOOT_MSEC; }
+  // ms since boot of JVM
+  public static long ms( long[] tl, int idx ) { return x0(tl,idx)>>>32; }
   public static InetAddress inet( long[] tl, int idx ) {
     int adr = (int)x0(tl,idx);
     byte[] ip4 = new byte[4];

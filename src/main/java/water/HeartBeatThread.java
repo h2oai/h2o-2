@@ -35,6 +35,9 @@ public class HeartBeatThread extends Thread {
   // Singleton, allocated now so I do not allocate during an OOM event.
   static private final H2O.Cleaner.Histo myHisto = new H2O.Cleaner.Histo();
 
+  // uniquely number heartbeats for better timelines
+  static private int HB_VERSION;
+
   // The Run Method.
   // Started by main() on a single thread, this code publishes Cloud membership
   // to the Cloud once a second (across all members).  If anybody disagrees
@@ -50,6 +53,8 @@ public class HeartBeatThread extends Thread {
 
       // Update the interesting health self-info for publication also
       HeartBeat hb = new HeartBeat();
+      hb._hb_version = HB_VERSION++;
+      hb._jvm_boot_msec= TimeLine.JVM_BOOT_MSEC;
       final Runtime run = Runtime.getRuntime();
       hb.set_free_mem  (run. freeMemory());
       hb.set_max_mem   (run.  maxMemory());
