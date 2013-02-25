@@ -25,14 +25,14 @@ def glm_R_and_compare(csvPathname, family, formula, y, header=False, h2oResults=
     # FIX! where do the GLM warnings come from
     warningsR = []
     interceptR = coef[0]
-    cListR = coef[1:]
+    cListR = coef[1:-1]
 
     if h2oResults is not None: # create delta list
-        (warningsH2o, cListH2o, interceptH2o) = h2oResults
-        interceptDelta = abs(abs(interceptH2o) - abs(interceptR))
-        cDelta = [abs(abs(a) - abs(b)) for a,b in zip(cListH2o, cListR)]
+        (warningsH2O, cListH2O, interceptH2O) = h2oResults
+        interceptDelta = abs(abs(interceptH2O) - abs(interceptR))
+        cDelta = [abs(abs(a) - abs(b)) for a,b in zip(cListH2O, cListR)]
     else:
-        (warningsH2o, cListH2o, interceptH2o) = (None, None, None)
+        (warningsH2O, cListH2O, interceptH2O) = (None, None, None)
         interceptDelta = None
         cDelta = [None for a in cListR]
 
@@ -42,18 +42,13 @@ def glm_R_and_compare(csvPathname, family, formula, y, header=False, h2oResults=
 
     print
     printit("intercept", "", interceptR, interceptDelta)
+    print "compare lengths cListH2O, cListR, cDelta:", len(cListH2O), len(cListR), len(cDelta)
+    print "clistH2O:", cListH2O
     print "clistR:", cListR
     print "cn:", cn
     print "cDelta:", cDelta
     for i,cValue in enumerate(cListR):
-        # skip over the output col name
-        if i>=y: 
-            cnIndex = i+1
-        else:
-            cnIndex = i
-        print "i:", i, "cnIndex:", cnIndex
-        printit("coefficient", cn[cnIndex], cValue, cDelta[i])
-        ### printit("coefficient", cn[cnIndex], cValue, 0)
+        printit("coefficient", cn[i], cValue, cDelta[i])
 
     ### print "\nDumping some raw R results (info already printed above)"
     ### print "coef:", ro.r.coef(fit)
