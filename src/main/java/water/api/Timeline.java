@@ -60,12 +60,13 @@ public class Timeline extends Request {
       UDP.udp e = UDP.udp.UDPS[udp_type];
 
       // Accumulate repeated heartbeats
-      if( e == UDP.udp.heartbeat ){
+      if( e == UDP.udp.heartbeat ) {
         heartbeats.add(event);
         continue;
       }
 
-      if( !heartbeats.isEmpty() ){
+      // Now dump out accumulated heartbeats
+      if( !heartbeats.isEmpty() ) {
         long firstMs = heartbeats.get(0).ms();
         long lastMs = heartbeats.get(heartbeats.size()-1).ms();
 
@@ -184,14 +185,12 @@ public class Timeline extends Request {
   private static class BasicEventRowBuild extends ArrayRowBuilder {
     @Override
     public String build(Response response, JsonObject object, String contextName) {
-      String name = elementName(contextName);
       StringBuilder sb = new StringBuilder();
-      sb.append(caption(object, name));
       if( object.get(JSON_DROP) == null ) sb.append("<tr>");
       else sb.append("<tr style='background-color:Pink'>");
-      boolean isSend = object.get(JSON_SR).getAsBoolean();
       sb.append("<td>").append(object.get(JSON_TIME).getAsString()).append("</td>");
       sb.append("<td>").append(object.get(JSON_NANOS).getAsLong()).append("</td>");
+      boolean isSend = object.get(JSON_SR).getAsBoolean();
       String s = object.get(JSON_SEND).getAsString();
       String r = object.get(JSON_RECV).getAsString();
       sb.append("<td>");
