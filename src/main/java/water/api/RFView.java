@@ -15,7 +15,7 @@ public class RFView extends Request {
   protected final H2OHexKey          _dataKey  = new H2OHexKey(DATA_KEY);
   protected final RFModelKey         _modelKey = new RFModelKey(MODEL_KEY);
   protected final HexKeyClassCol     _classCol = new HexKeyClassCol(CLASS, _dataKey);
-  protected final Int                _numTrees = new Int(NUM_TREES,50,0,Integer.MAX_VALUE);
+  protected final Int                _numTrees = new NTree(NUM_TREES, _modelKey);
   protected final H2OCategoryWeights _weights  = new H2OCategoryWeights(WEIGHTS, _modelKey, _dataKey, _classCol, 1);
   protected final Bool               _oobee    = new Bool(OOBEE,false,"Out of bag errors");
   protected final Bool               _noCM     = new Bool(NO_CM, false,"Do not produce confusion matrix");
@@ -32,6 +32,11 @@ public class RFView extends Request {
   public static final String JSON_CM_CLASS_ERR    = "classification_error";
   public static final String JSON_CM_ROWS         = "rows";
   public static final String JSON_CM_ROWS_SKIPPED = "rows_skipped";
+
+  RFView() {
+    // hide in generated query page
+    _oobee._hideInQuery = true;
+  }
 
   public static String link(Key k, String content) {
     RString rs = new RString("<a href='RFView.query?%key_param=%$key'>%content</a>");
@@ -215,5 +220,4 @@ public class RFView extends Request {
       return sb.toString();
     }
   }
-
 }

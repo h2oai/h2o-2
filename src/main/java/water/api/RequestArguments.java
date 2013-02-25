@@ -2181,4 +2181,29 @@ public class RequestArguments extends RequestStatics {
       return "Key of the RF model";
     }
   }
+
+  public class NTree extends Int {
+    final RFModelKey _modelKey;
+
+    public NTree(String name, final RFModelKey modelKey) {
+      super(name, 50, 0, Integer.MAX_VALUE);
+      _modelKey     = modelKey;
+
+      addPrerequisite(modelKey);
+    }
+    @Override
+    protected Integer parse(String input) throws IllegalArgumentException {
+      Integer N = super.parse(input);
+      RFModel model = _modelKey.value();
+      if (N > model.treeCount())
+        throw new IllegalArgumentException("Value "+N+" is higher than number of trees provided by the random forest model ("+model.treeCount()+")!");
+
+      return N;
+    }
+    @Override
+    protected Integer defaultValue() {
+      RFModel model = _modelKey.value();
+      return model != null ? model.treeCount() : 0;
+    }
+  }
 }
