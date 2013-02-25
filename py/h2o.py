@@ -1053,6 +1053,7 @@ class H2O(object):
         if self.java_heap_GB is not None:
             if (1 > self.java_heap_GB > 63):
                 raise Exception('java_heap_GB <1 or >63  (GB): %s' % (self.java_heap_GB))
+            args += [ '-Xms%dG' % self.java_heap_GB ]
             args += [ '-Xmx%dG' % self.java_heap_GB ]
 
         if self.java_extra_args is not None:
