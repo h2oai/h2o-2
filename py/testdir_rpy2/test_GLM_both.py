@@ -25,6 +25,7 @@ def glm_R_and_compare(csvPathname, family, formula, y, header=False, h2oResults=
     # FIX! where do the GLM warnings come from
     warningsR = []
     interceptR = coef[0]
+    # NEW: why did I have to chop off the end of the R list?
     cListR = coef[1:-1]
 
     if h2oResults is not None: # create delta list
@@ -121,17 +122,17 @@ class Basic(unittest.TestCase):
             csvFilenameList = [
                 # col is zero based
                 # FIX! what's wrong here? index error
-                ## ('uis.dat', 'binomial', 8, 5, False),
+                ('uis.dat', 'binomial', 8, 5, False),
                 # ('cgd.dat', 'gaussian', 12, 5, False),
+                # ('meexp.dat', 'gaussian', 3, 10, None),
                 ('pros.dat', 'binomial', 1, 10, False),
                 ('chdage.dat', 'binomial', 2, 5, True),
                 ('icu.dat', 'binomial', 1, 10, False),
                 # how to ignore 6? '1,2,3,4,5', False),
-                # ('clslowbwt.dat', 'binomial', 7, 10, False),
+                ('clslowbwt.dat', 'binomial', 7, 10, False),
             ]
         else:
             csvFilenameList = [
-
                 # leave out ID and birth weight
                 ('icu.dat', 'binomial', 1, 10, None),
                 # need to exclude col 0 (ID) and col 10 (bwt)
@@ -140,6 +141,7 @@ class Basic(unittest.TestCase):
                 ('lowbwt.dat', 'binomial', 1, 10, '2,3,4,5,6,7,8,9'),
                 ('lowbwtm11.dat', 'binomial', 1, 10, None),
                 ('meexp.dat', 'gaussian', 3, 10, None),
+                # FIX! does this one hang in R?
                 ('nhanes3.dat', 'binomial', 15, 10, None),
                 ('pbc.dat', 'gaussian', 1, 10, None),
                 ('pharynx.dat', 'gaussian', 12, 10, None),
