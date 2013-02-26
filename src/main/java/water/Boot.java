@@ -1,4 +1,4 @@
-package H2OInit;
+package water;
 
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
@@ -58,7 +58,6 @@ public class Boot extends ClassLoader {
   private Boot() throws IOException {
     final String ownJar = getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
     ZipFile jar = null;
-    File dir = null;
     if( ownJar.endsWith(".jar") ) { // do nothing if not run from jar
       String path = URLDecoder.decode(ownJar, "UTF-8");
       InputStream is = new FileInputStream(path);
@@ -103,7 +102,7 @@ public class Boot extends ClassLoader {
       _parentDir = dir;         // Set a global instead of passing the dir about?
 
       // Make all the embedded jars visible to the custom class loader
-      extractInternalFiles(); // Extract e.g. SIGAR's .dll & .so files
+      extractInternalFiles(); // Resources
       addInternalJars("apache");
       addInternalJars("gson");
       addInternalJars("junit");
@@ -202,13 +201,14 @@ public class Boot extends ClassLoader {
   // changes the default search order: existing classes first, then my class
   // search, THEN the System or parent loader.
   public synchronized Class loadClass( String name, boolean resolve ) throws ClassNotFoundException {
-    Class z = loadClass2(name,resolve);      // Do all the work in here
-    if( resolve ) resolveClass(z);           // Resolve here instead in the work method
+    assert !name.equals(Weaver.class.getName());
+    Class z = loadClass2(name);      // Do all the work in here
+    if( resolve ) resolveClass(z);   // Resolve here instead in the work method
     return z;
   }
 
   // Run the class lookups in my favorite non-default order.
-  private final Class loadClass2( String name, boolean resolve ) throws ClassNotFoundException {
+  private final Class loadClass2( String name ) throws ClassNotFoundException {
     Class z = findLoadedClass(name); // Look for pre-existing class
     if( z != null ) return z;
     if( _weaver == null ) _weaver = new Weaver();

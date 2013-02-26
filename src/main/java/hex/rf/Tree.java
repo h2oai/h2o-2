@@ -9,7 +9,6 @@ import java.util.*;
 import jsr166y.CountedCompleter;
 import jsr166y.RecursiveTask;
 import water.*;
-import water.Jobs.Job;
 import water.Timer;
 import water.util.Utils;
 
@@ -108,7 +107,7 @@ public class Tree extends CountedCompleter {
 
   // Actually build the tree
   public void compute() {
-    if(!Jobs.cancelled(_job._key)) {
+    if(!_job.cancelled()) {
       Timer timer = new Timer();
       _stats[0] = new ThreadLocal<Statistic>();
       _stats[1] = new ThreadLocal<Statistic>();
@@ -127,7 +126,7 @@ public class Tree extends CountedCompleter {
       _stats = null; // GC
 
       // Atomically improve the Model as well
-      appendKey(_job._dest,toKey());
+      appendKey(_job.dest(),toKey());
       StringBuilder sb = new StringBuilder("[RF] Tree : ").append(_data_id+1);
       sb.append(" d=").append(_tree.depth()).append(" leaves=").append(_tree.leaves()).append(" done in ").append(timer).append('\n');
       Utils.pln(_tree.toString(sb,  _verbose > 0 ? Integer.MAX_VALUE : 200).toString());
@@ -140,7 +139,6 @@ public class Tree extends CountedCompleter {
   // which serializes "for free".
   static void appendKey(Key model, final Key tKey) {
     new TAtomic<RFModel>() {
-      @Override public RFModel alloc() { return new RFModel(); }
       @Override public RFModel atomic(RFModel old) { return RFModel.make(old,tKey); }
     }.invoke(model);
   }

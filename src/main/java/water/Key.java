@@ -38,9 +38,9 @@ public final class Key extends Iced implements Comparable {
 
   public static final byte KEY_OF_KEYS = 1;
 
-  public static final byte TASK = 2;
+  public static final byte BUILT_IN_KEY = 2; // C.f. Constants.BUILT_IN_KEY_*
 
-  public static final byte SINGLETONS = 3;
+  public static final byte JOB = 3;
 
   public static final byte HDFS_INTERNAL_BLOCK = 10;
 
@@ -168,6 +168,8 @@ public final class Key extends Iced implements Comparable {
     hash += (hash << 15);
     _hash = hash+chk; // Add sequential block numbering
   }
+
+  Key() {}
 
   // Make new Keys.  Optimistically attempt interning, but no guarantee.
   static public Key make(byte[] kb, byte rf) {

@@ -6,10 +6,8 @@ import java.util.HashMap;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
-import water.H2O;
-import water.NanoHTTPD;
+import water.*;
 import water.api.Upload.PostFile;
-import H2OInit.Boot;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;

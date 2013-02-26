@@ -1,9 +1,9 @@
 package water.api;
 
-import H2OInit.Boot;
 
 import java.io.*;
 
+import water.Boot;
 import water.exec.Function;
 import water.util.RString;
 

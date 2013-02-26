@@ -1,5 +1,9 @@
 package water;
 
+<<<<<<< Upstream, based on origin/master
+=======
+
+>>>>>>> b533cdf Job management + types
 /**
  * A UDP Heartbeat packet.
  *

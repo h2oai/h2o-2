@@ -1,8 +1,11 @@
 package water.api;
 
 import water.*;
+<<<<<<< Upstream, based on origin/master
 import water.H2O.H2OCountedCompleter;
 import water.Jobs.Job;
+=======
+>>>>>>> b27d3f3 Job management + types
 import water.util.RString;
 
 import com.google.gson.JsonObject;
@@ -39,13 +42,20 @@ public class KMeans extends Request {
             hex.KMeans.run(job, va, k, epsilon, cols);
             tryComplete();
           }
+
+        
+          @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
+            // TODO set job.error
+            ex.printStackTrace();
+            return true;
+          }
         });
 
       JsonObject response = new JsonObject();
-      response.addProperty(JOB, job._key.toString());
+      response.addProperty(JOB, job.self().toString());
       response.addProperty(DEST_KEY, dest.toString());
 
-      Response r = Progress.redirect(response, job._key, dest);
+      Response r = Progress.redirect(response, job.self(), dest);
       r.setBuilder(DEST_KEY, new KeyElementBuilder());
       return r;
     } catch( IllegalArgumentException e ) {

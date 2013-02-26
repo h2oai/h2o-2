@@ -912,7 +912,7 @@ public final class H2O {
           // or HDFS are only made on import (right now), and not reconstructed
           // by inspection of the Key or filesystem.... so we cannot toss them
           // out because they will not be reconstructed merely by loading the Value.
-          if( val._isArray != 0 &&
+          if( val.isArray() &&
               (val._persist & Value.BACKEND_MASK)!=Value.ICE )
             continue; // Cannot throw out
 
@@ -1010,7 +1010,7 @@ public final class H2O {
           Value val = (Value)ov;
           byte[] m = val.mem();
           if( m == null ) continue;
-          if( val._isArray != 0 &&
+          if( val.isArray() &&
               (val._persist & Value.BACKEND_MASK)!=Value.ICE )
             continue; // Cannot throw out
 

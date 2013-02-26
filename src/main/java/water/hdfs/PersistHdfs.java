@@ -134,7 +134,7 @@ public abstract class PersistHdfs {
         skip = ValueArray.getChunkOffset(k); // The offset
         k = ValueArray.getArrayKey(k);       // From the base file key
         if( k.toString().endsWith(".hex") ) { // Hex file?
-          int value_len = DKV.get(k).get().length;  // How long is the ValueArray header?
+          int value_len = DKV.get(k).memOrLoad().length;  // How long is the ValueArray header?
           skip += value_len;
         }
       }
@@ -160,7 +160,7 @@ public abstract class PersistHdfs {
     assert !v.isPersisted();
 
     // Never store arraylets on NFS, instead we'll store the entire array.
-    assert v._isArray==0;
+    assert !v.isArray();
     throw H2O.unimpl();
     //try {
     //  Path p = getPathForKey(v._key);
@@ -193,7 +193,7 @@ public abstract class PersistHdfs {
     }
     long rem = size-off;        // Remainder to be read
     if( arykey.toString().endsWith(".hex") ) { // Hex file?
-      int value_len = DKV.get(arykey).get().length;  // How long is the ValueArray header?
+      int value_len = DKV.get(arykey).memOrLoad().length;  // How long is the ValueArray header?
       rem -= value_len;
     }
     // the last chunk can be fat, so it got packed into the earlier chunk
@@ -233,8 +233,8 @@ public abstract class PersistHdfs {
       Path p = getPathForKey(key);
       FileSystem fs = FileSystem.get(p.toUri(), CONF);
       s = fs.append(p);
-      System.err.println("[hdfs] append="+val.get().length);
-      s.write(val.get());
+      System.err.println("[hdfs] append="+val.memOrLoad().length);
+      s.write(val.memOrLoad());
     } catch( IOException e ) {
       res = e.getMessage(); // Just the exception message, throwing the stack trace away
     } finally {

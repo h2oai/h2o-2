@@ -1541,7 +1541,7 @@ public class RequestArguments extends RequestStatics {
       Value v = DKV.get(k);
       if (v == null)
         throw new IllegalArgumentException("Key "+input+" not found!");
-      if (v._isArray == 0)
+      if (!v.isArray())
         throw new IllegalArgumentException("Key "+input+" is not a valid HEX key");
       ValueArray va = ValueArray.value(v);
       if ((va._cols == null) || (va._cols.length == 0))
@@ -1583,7 +1583,7 @@ public class RequestArguments extends RequestStatics {
         if( input.startsWith(   GLMModel.KEY_PREFIX)  ) m = (T)new    GLMModel();
         if( input.startsWith(KMeansModel.KEY_PREFIX)  ) m = (T)new KMeansModel();
         if( input.startsWith(    RFModel.KEY_PREFIX)  ) m = (T)new     RFModel();
-        return m.read(new AutoBuffer(v.get()));
+        return m.read(new AutoBuffer(v.memOrLoad()));
       } catch(Throwable t) {
         throw new IllegalArgumentException("Key "+input+" is not a Model key");
       }
@@ -2168,7 +2168,7 @@ public class RequestArguments extends RequestStatics {
     }
 
     @Override protected RFModel parse(String input) throws IllegalArgumentException {
-      Value v = UKV.get(Key.make(input));
+      Value v = UKV.getValue(Key.make(input));
       if( v == null )
         throw new IllegalArgumentException("Key "+input+" was not found");
       try {

@@ -8,7 +8,6 @@ import hex.LinearRegression;
 import java.io.File;
 import org.junit.*;
 import water.parser.ParseDataset;
-import water.util.TestUtil;
 
 public class KVTest extends TestUtil {
 
@@ -80,7 +79,7 @@ public class KVTest extends TestUtil {
   // shift-amount is passed in in the Key.
   public static class RemoteBitSet extends MRTask {
     private int _x;
-    public void map( Key key ) { _x = 1<<(DKV.get(key).get()[0]); }
+    public void map( Key key ) { _x = 1<<(DKV.get(key).memOrLoad()[0]); }
     public void reduce( DRemoteTask rbs ) { _x |= ((RemoteBitSet)rbs)._x; }
   }
 
@@ -133,7 +132,7 @@ public class KVTest extends TestUtil {
     public void map( Key key ) {
       _x = new int[256];        // One-time set histogram array
       Value val = DKV.get(key); // Get the Value for the Key
-      byte[] bits = val.get();  // Compute local histogram
+      byte[] bits = val.memOrLoad();  // Compute local histogram
       for( int i=0; i<bits.length; i++ )
         _x[bits[i]&0xFF]++;
     }
@@ -167,7 +166,7 @@ public class KVTest extends TestUtil {
     q.invoke(key);              // Run remotely; block till done
     Value val3 = DKV.get(key);
     assertNotSame(v1,val3);
-    AutoBuffer ab = new AutoBuffer(val3.get());
+    AutoBuffer ab = new AutoBuffer(val3.memOrLoad());
     assertEquals(2,ab.get8(0));
     assertEquals(2,ab.get8(8));
     DKV.remove(key);            // Cleanup after test

@@ -1,8 +1,7 @@
 package water.api;
 
 import water.*;
-import water.Jobs.Job;
-import water.Jobs;
+import water.parser.ParseDataset;
 
 import com.google.gson.JsonObject;
 
@@ -32,8 +31,8 @@ public class Progress extends Request {
   protected Job findJob() {
     Key key = Key.make(_job.value());
     Job job = null;
-    for( Job current : Jobs.get() ) {
-      if( current._key.equals(key) ) {
+    for( Job current : Job.all() ) {
+      if( current.self().equals(key) ) {
         job = current;
         break;
       }

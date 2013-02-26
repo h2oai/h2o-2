@@ -4,13 +4,14 @@ import java.util.Arrays;
 import java.util.Random;
 
 import water.*;
+import water.Job.Progress;
 import water.util.Counter;
 
 /**
  * A model is an ensemble of trees that can be serialized and that can be used
  * to classify data.
  */
-public class RFModel extends Model implements Cloneable {
+public class RFModel extends Model implements Cloneable, Progress {
   /** Number of features these trees are built for */
   public int       _features;
   /** Sampling rate used when building trees. */
@@ -79,6 +80,10 @@ public class RFModel extends Model implements Cloneable {
   public int size()      { return _tkeys.length; }
   public int classes()   { ValueArray.Column C = response();  return (int)(C._max - C._min + 1); }
 
+  @Override public float progress() {
+    return size() / (float) _totalTrees;
+  }
+
   public String name(int atree) {
     if( atree == -1 ) atree = size();
     assert atree <= size();
@@ -87,7 +92,7 @@ public class RFModel extends Model implements Cloneable {
 
   /** Return the bits for a particular tree */
   public byte[] tree( int tree_id ) {
-    return DKV.get(_tkeys[tree_id]).get();
+    return DKV.get(_tkeys[tree_id]).memOrLoad();
   }
 
   /** Bad name, I know.  But free all internal tree keys. */
@@ -156,7 +161,7 @@ public class RFModel extends Model implements Cloneable {
     _td = new Counter();
     _tl = new Counter();
     for( Key tkey : _tkeys ) {
-      long dl = Tree.depth_leaves(new AutoBuffer(DKV.get(tkey).get()));
+      long dl = Tree.depth_leaves(new AutoBuffer(DKV.get(tkey).memOrLoad()));
       _td.add((int) (dl >> 32));
       _tl.add((int) dl);
     }
@@ -168,7 +173,7 @@ public class RFModel extends Model implements Cloneable {
   public long getTreeSeed(int i) {  return Tree.seed(tree(i)); }
 
   /** Single row scoring, on properly ordered data */
-  protected double score0( double[] data ) { 
+  protected double score0( double[] data ) {
     int numClasses = classes();
     int votes[] = new int[numClasses+1/*+1 to catch broken rows*/];
     for( int i = 0; i < treeCount(); i++ )
@@ -178,7 +183,7 @@ public class RFModel extends Model implements Cloneable {
 
   /** Single row scoring, on a compatible ValueArray (when pushed throw the mapping) */
   protected double score0( ValueArray data, int row, int[] mapping ) { throw H2O.unimpl(); }
-    
+
   /** Bulk scoring API, on a compatible ValueArray (when pushed throw the mapping) */
   protected double score0( ValueArray data, AutoBuffer ab, int row_in_chunk, int[] mapping ) { throw H2O.unimpl(); }
 }

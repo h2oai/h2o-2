@@ -9,7 +9,6 @@ import org.junit.Test;
 import water.*;
 import water.DRemoteTask.DFuture;
 import water.parser.ParseDataset;
-import water.util.TestUtil;
 
 public class DatasetCornerCasesTest extends TestUtil {
 

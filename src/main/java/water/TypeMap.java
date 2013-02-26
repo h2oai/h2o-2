@@ -1,9 +1,9 @@
 package water;
 
 import java.util.HashMap;
-import water.DTask;
 
 public class TypeMap {
+  static final short NULL = (short) -1;
 
   static private final String[] CLAZZES = {
     "hex.ConfusionMatrix",

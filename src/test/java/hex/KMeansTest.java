@@ -5,7 +5,6 @@ import java.util.Random;
 import org.junit.*;
 
 import water.*;
-import water.util.TestUtil;
 
 public class KMeansTest extends TestUtil {
 
@@ -62,7 +61,7 @@ public class KMeansTest extends TestUtil {
 
       long stop = System.currentTimeMillis();
       Log.write("KMeansTest.testGaussian rows:" + rows + ", ms:" + (stop - start));
-      KMeans.KMeansModel res = UKV.get(target, new KMeans.KMeansModel());
+      KMeans.KMeansModel res = UKV.get(target);
       double[][] clusters = res.clusters();
 
       for( double[] goal : goals ) {

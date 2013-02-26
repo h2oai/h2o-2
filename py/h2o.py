@@ -1158,7 +1158,7 @@ class H2O(object):
             entries = [ find_file('build/classes'), find_file('lib/javassist.jar') ] 
             entries += glob.glob(find_file('lib')+'/*/*.jar')
             entries += glob.glob(find_file('lib')+'/*/*/*.jar')
-            args += ['-classpath', os.pathsep.join(entries), 'H2OInit.Boot']
+            args += ['-classpath', os.pathsep.join(entries), 'water.Boot']
         else: 
             args += ["-jar", self.get_h2o_jar()]
 

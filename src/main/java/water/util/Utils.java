@@ -214,4 +214,15 @@ public class Utils {
   public static void close(Socket s) {
     try { if( s != null ) s.close(); } catch( IOException _ ) { }
   }
+
+  public static int nextPowerOf2(int value) {
+    value--;
+    value |= value >> 1;
+    value |= value >> 2;
+    value |= value >> 4;
+    value |= value >> 8;
+    value |= value >> 16;
+    value++;
+    return value;
+  }
 }

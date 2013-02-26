@@ -19,7 +19,7 @@ public class NOPTask extends MRTask {
   public void map(Key key) {
     Value v = DKV.get(key);
     if(v != null){
-      byte [] mem = DKV.get(key).get();
+      byte [] mem = DKV.get(key).memOrLoad();
       for(byte b:mem){
         _res ^= b;
       }

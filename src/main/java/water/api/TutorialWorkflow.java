@@ -1,10 +1,11 @@
 package water.api;
 
-import H2OInit.Boot;
 
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Iterator;
+
+import water.Boot;
 
 /**
  * Basic page introducing tutorial for Random Forest on Iris

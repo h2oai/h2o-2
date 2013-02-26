@@ -64,7 +64,7 @@ public abstract class PersistNFS {
     // A perhaps useless cutout: the upper layers should test this first.
     if( v.isPersisted() ) return;
     // Never store arraylets on NFS, instead we'll store the entire array.
-    assert v._isArray==0;
+    assert !v.isArray();
     try {
       File f = getFileForKey(v._key);
       f.mkdirs();

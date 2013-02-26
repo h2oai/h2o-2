@@ -1,32 +1,34 @@
-package water.util;
+package water;
 
 import static org.junit.Assert.*;
-import com.google.common.io.Closeables;
+
 import java.io.*;
 import java.util.Arrays;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import water.*;
+
 import water.parser.ParseDataset;
 
-public class TestUtil {
-  private static int _initial_keycnt = 0;
+import com.google.common.io.Closeables;
 
+public class TestUtil {
   @BeforeClass
   public static void setupCloud() {
     H2O.main(new String[] {});
-    Jobs.init(); // Jobs.KEY must be part of initial keys
-    _initial_keycnt = H2O.store_size();
   }
 
   @AfterClass
   public static void checkLeakedKeys() {
     DKV.write_barrier();
-    int leaked_keys = H2O.store_size() - _initial_keycnt;
-    if( leaked_keys != 0 )
-      for( Key k : H2O.keySet() )
+    int leaked = 0;
+    for( Key k : H2O.keySet() ) {
+      if( !k.equals(Job.LIST) && !k.equals(Types.KEY)) {
         System.err.println("Leaked key: " + k);
-    assertEquals("No keys leaked", 0, leaked_keys);
+        leaked++;
+      }
+    }
+    assertEquals("No keys leaked", 0, leaked);
   }
 
   // Stall test until we see at least X members of the Cloud

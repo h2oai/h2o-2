@@ -9,6 +9,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import water.Log;
+import water.TestUtil;
 
 /**
  * Executes code in a class loader to emulate a separate process.

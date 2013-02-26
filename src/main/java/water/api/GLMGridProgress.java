@@ -3,45 +3,48 @@ package water.api;
 import hex.DGLM.Family;
 import hex.DGLM.GLMModel;
 import hex.DLSM.LSMSolver;
+import hex.GLMGrid.GLMModels;
 
 import java.util.Map;
 
-import water.Key;
-import water.Value;
+import water.*;
 
 import com.google.common.base.Objects;
 import com.google.common.collect.Maps;
 import com.google.gson.*;
 
 public class GLMGridProgress extends Request {
-  protected final H2OExistingKey _taskey = new H2OExistingKey(DEST_KEY);
+  protected final H2OKey _job  = new H2OKey(JOB);
+  protected final H2OKey _dest = new H2OKey(DEST_KEY);
 
-  public static Response redirect(JsonObject resp, Key taskey) {
+  public static Response redirect(JsonObject resp, Key job, Key dest) {
     JsonObject redir = new JsonObject();
-    redir.addProperty(DEST_KEY, taskey.toString());
+    redir.addProperty(JOB, job.toString());
+    redir.addProperty(DEST_KEY, dest.toString());
     return Response.redirect(resp, GLMGridProgress.class, redir);
   }
 
-  @Override protected Response serve() {
-    Value v = _taskey.value();
-    GLMGridStatus status = v.get(new GLMGridStatus());
+  @Override
+  protected Response serve() {
+    Key dest = _dest.value();
+    GLMModels models = UKV.get(dest);
 
     JsonObject response = new JsonObject();
-    response.addProperty(Constants.DEST_KEY, v._key.toString());
+    response.addProperty(Constants.DEST_KEY, dest.toString());
 
-    JsonArray models = new JsonArray();
-    for( GLMModel m : status.computedModels() ) {
+    JsonArray array = new JsonArray();
+    for( GLMModel m : models.sorted() ) {
       JsonObject o = new JsonObject();
       LSMSolver lsm = m._solver;
       o.addProperty(KEY, m._selfKey.toString());
       o.addProperty(LAMBDA, lsm._lambda);
       o.addProperty(ALPHA, lsm._alpha);
-      if(m._glmParams._family == Family.binomial){
+      if(m._glmParams._family == Family.binomial) {
         o.addProperty(BEST_THRESHOLD, m._vals[0].bestThreshold());
         o.addProperty(AUC, m._vals[0].AUC());
         double[] classErr = m._vals[0].classError();
         for( int j = 0; j < classErr.length; ++j ) {
-          o.addProperty(ERROR +"_"+ j, classErr[j]);
+          o.addProperty(ERROR + "_" + j, classErr[j]);
         }
       } else {
         o.addProperty(ERROR, m._vals[0]._err);
@@ -53,27 +56,31 @@ public class GLMGridProgress extends Request {
         }
       }
       o.add(WARNINGS, arr);
-      models.add(o);
+      array.add(o);
     }
-    response.add(MODELS, models);
+    response.add(MODELS, array);
 
-    Response r = status._working
-      ? Response.poll(response,status.progress())
-      : Response.done(response);
+    Response r;
+    if( DKV.get(_job.value()) != null )
+      r = Response.poll(response, models.progress());
+    else
+      r = Response.done(response);
 
     r.setBuilder(Constants.DEST_KEY, new HideBuilder());
     r.setBuilder(MODELS, new GridBuilder2());
-    r.setBuilder(MODELS+"."+KEY, new KeyCellBuilder());
-    r.setBuilder(MODELS+"."+WARNINGS, new WarningCellBuilder());
+    r.setBuilder(MODELS + "." + KEY, new KeyCellBuilder());
+    r.setBuilder(MODELS + "." + WARNINGS, new WarningCellBuilder());
     return r;
   }
 
   private static class GridBuilder2 extends ArrayBuilder {
-    private final Map<String, String> _m = Maps.newHashMap(); {
+    private final Map<String, String> _m = Maps.newHashMap();
+    {
       _m.put(KEY, "Model");
       _m.put(LAMBDA, "&lambda;");
       _m.put(ALPHA, "&alpha;");
     }
+
     @Override
     public String header(String key) {
       return Objects.firstNonNull(_m.get(key), super.header(key));

@@ -3,8 +3,7 @@ package hex;
 import java.util.*;
 
 import water.*;
-import water.Jobs.Job;
-import water.Jobs.Progress;
+import water.Job.Progress;
 
 import com.google.gson.*;
 
@@ -17,22 +16,26 @@ public abstract class KMeans {
   private static final boolean DEBUG = false;
   public static Long           RAND_SEED;
 
-  public static class KMeansModel extends Model {
+  public static class KMeansModel extends Model implements Progress {
     public static final String KEY_PREFIX = "__KMeansModel_";
     public double[][]          _clusters;                    // The cluster centers, normalized according to _va
-    public int                 _k;
+    public int                 _iteration;
 
     // Empty constructor for deserialization
     public KMeansModel() {
     }
 
-    KMeansModel(Key selfKey, int cols[], Key dataKey, int k) {
+    KMeansModel(Key selfKey, int cols[], Key dataKey) {
       // Unlike other models, k-means is a discovery-only procedure and does
       // not require a response-column to train. This also means the clusters
       // are not classes (although, if a class/response is associated with each
       // row we could count the number of each class in each cluster).
       super(selfKey, cols, dataKey);
-      _k = k;
+    }
+
+    @Override
+    public float progress() {
+      return Math.min(1f, _iteration / (float) 20);
     }
 
     // Accept only columns with a defined mean. Used during the Model.<init> call.
@@ -70,8 +73,8 @@ public abstract class KMeans {
     }
 
     /**
-     * Single row scoring, on properly ordered data. Will return NaN if any data element contains a NaN. Returns the
-     * cluster-number, which is mostly an internal value.
+     * Single row scoring, on properly ordered data. Will return NaN if any data element contains a NaN. Returns the cluster-number, which
+     * is mostly an internal value.
      */
     protected double score0(double[] data) {
       for( int i = 0; i < data.length; i++ ) { // Normalize the data before scoring
@@ -110,11 +113,13 @@ public abstract class KMeans {
   }
 
   public static Job startJob(Key dest, ValueArray va, int k, double epsilon, int... cols) {
-    return Jobs.start("KMeans K: " + k + ", Cols: " + cols.length, dest);
+    Job job = new Job("KMeans K: " + k + ", Cols: " + cols.length, dest);
+    job.start();
+    return job;
   }
 
   public static void run(Job job, ValueArray va, int k, double epsilon, int... cols) {
-    KMeansModel res = new KMeansModel(job._dest, cols, va._key, k);
+    KMeansModel res = new KMeansModel(job.dest(), cols, va._key);
     // Updated column mapping selection after removing various junk columns
     cols = res.columnMapping(va.colNames());
 
@@ -125,9 +130,7 @@ public abstract class KMeans {
     for( int c = 0; c < cols.length; c++ )
       clusters[0][c] = datad(va, bits, 0, va._cols[cols[c]]);
 
-    int iteration = 0;
-    long expected = 20;
-    while( iteration < 5 ) {
+    while( res._iteration < 5 ) {
       // Sum squares distances to clusters
       Sqr sqr = new Sqr();
       sqr._arykey = va._key;
@@ -145,14 +148,17 @@ public abstract class KMeans {
       sampler.invoke(va._key);
       clusters = DRemoteTask.merge(clusters, sampler._newClusters);
 
-      if( Jobs.cancelled(job._key) ) {
-        Jobs.remove(job._key);
+      if( job.cancelled() ) {
+        job.remove();
         return;
       }
-      UKV.put(job._progress, new Progress(++iteration, expected));
+
+      res._iteration++;
+      UKV.put(job.dest(), res);
     }
 
     clusters = recluster(clusters, k);
+    res._clusters = clusters;
 
     // Iterate until no cluster mean moves more than epsilon
     boolean moved = true;
@@ -173,14 +179,13 @@ public abstract class KMeans {
         }
       }
 
-      UKV.put(job._progress, new Progress(++iteration, expected));
-      res._clusters = clusters;
-      UKV.put(job._dest, res);
-      if( Jobs.cancelled(job._key) )
+      res._iteration++;
+      UKV.put(job.dest(), res);
+      if( job.cancelled() )
         break;
     }
 
-    Jobs.remove(job._key);
+    job.remove();
   }
 
   public static class Sqr extends MRTask {
