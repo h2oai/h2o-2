@@ -9,7 +9,7 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # default to local unless you've got hosts somewhere in the path to cwd
-        local_host = not 'hosts' in os.getcwd()
+        local_host = h2o.decide_if_localhost()
         if (local_host):
             h2o.build_cloud(3,java_heap_GB=7)
         else:

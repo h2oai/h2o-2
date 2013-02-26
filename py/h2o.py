@@ -55,7 +55,7 @@ browse_disable = True
 browse_json = False
 verbose = False
 ipaddr = None
-config_json = False
+config_json = None
 debugger = False
 random_udp_drop = False
 
@@ -269,6 +269,15 @@ def check_port_group(baseport):
             p3 = Popen(command3Split, stdin=p2.stdout, stdout=PIPE)
             output = p3.communicate()[0]
             print output
+
+def decide_if_localhost():
+    if config_json:
+        print "config_json:", config_json
+        return False
+    if 'hosts' in os.getcwd():
+        print "Will use the username's config json"
+        return False
+    return True
 
 # node_count is per host if hosts is specified.
 def build_cloud(node_count=2, base_port=54321, hosts=None, 
