@@ -1,8 +1,11 @@
 package water.api;
 
-import hex.GLMSolver.*;
-import hex.KMeans.*;
-import hex.rf.*;
+import hex.DGLM.CaseMode;
+import hex.DGLM.Family;
+import hex.DGLM.GLMModel;
+import hex.DGLM.Link;
+import hex.KMeans.KMeansModel;
+import hex.rf.RFModel;
 
 import java.io.File;
 import java.util.*;
@@ -11,9 +14,9 @@ import water.*;
 import water.ValueArray.Column;
 import water.util.Check;
 import water.util.RString;
-import java.lang.ThreadLocal;
 
 import com.google.common.base.Objects;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.google.gson.JsonObject;
@@ -469,9 +472,9 @@ public class RequestArguments extends RequestStatics {
         try {
           record._value = parse(input);
           record._valid = true;
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
           record._value = defaultValue();
-          throw new IllegalArgumentException(e.getMessage());
+          Throwables.propagate(e);
         }
       }
     }
@@ -1241,10 +1244,19 @@ public class RequestArguments extends RequestStatics {
     public final EnumArgument<Family> _family;
 
     @Override
+    public String[] selectValues(){
+      if(_key.value() == null || _classCol.value() == null || _key.value()._cols[_classCol.value()]._domain == null)
+        return super.selectValues();
+      return new String[]{CaseMode.eq.toString(), CaseMode.neq.toString()};
+    }
+    @Override
     public CaseMode defaultValue() {
       if(_family.value() == Family.binomial){
         Column c = _key.value()._cols[_classCol.value()];
-        if(c._min < 0 || c._max > 1) return CaseMode.gt;
+        if(c._min < 0 || c._max > 1)
+          return c._domain == null
+            ?CaseMode.gt
+            :CaseMode.eq;
       }
       return CaseMode.none;
     }
@@ -1702,39 +1714,44 @@ public class RequestArguments extends RequestStatics {
       addPrerequisite(_key = key);
     }
 
-
     public boolean shouldIgnore(int i, ValueArray.Column ca ) { return false; }
     public void checkLegality(int i, ValueArray.Column c) throws IllegalArgumentException { }
 
-    protected Comparator<ValueArray.Column> colComp(){
+    protected Comparator<Integer> colComp(final ValueArray ary){
       return null;
     }
 
-    ArrayList<Column> _selectedCols;
+    ArrayList<Integer> _selectedCols; // All the columns I'm willing to show the user
 
-    protected void selectColumns(){
+    // Select which columns I'll show the user
+    @Override protected String queryElement() {
       ValueArray va = _key.value();
-      ArrayList<ValueArray.Column> cols = Lists.newArrayList();
-      for (int i = 0; i < va._cols.length; ++i) {
-        if( shouldIgnore(i, va._cols[i]) ) continue;
-        cols.add(va._cols[i]);
-      }
-      Comparator<Column> cmp = colComp();
+      ArrayList<Integer> cols = Lists.newArrayList();
+      for (int i = 0; i < va._cols.length; ++i)
+        if( !shouldIgnore(i, va._cols[i]) )
+          cols.add(i);
+      Comparator<Integer> cmp = colComp(va);
       if(cmp != null)
         Collections.sort(cols,cmp);
       _selectedCols = cols;
-    }
-
-    @Override protected String queryElement() {
-      selectColumns();
       return super.queryElement();
     }
 
+    // "values" to send back and for in URLs.  Use numbers for density (shorter URLs).
     @Override protected final String[] selectValues() {
+      ValueArray va = _key.value();
       String [] res = new String[_selectedCols.size()];
       int idx = 0;
-      for(Column c:_selectedCols)
-        res[idx++] = Objects.firstNonNull(c._name, String.valueOf(idx));
+      for(int i : _selectedCols) res[idx++] = String.valueOf(i);
+      return res;
+    }
+
+    // "names" to select in the boxes.
+    @Override protected String[] selectNames() {
+      ValueArray va = _key.value();
+      String [] res = new String[_selectedCols.size()];
+      int idx = 0;
+      for(int i:_selectedCols) res[idx++] = va._cols[i]._name;
       return res;
     }
 
@@ -1809,17 +1826,13 @@ public class RequestArguments extends RequestStatics {
       super(name, key, classCol);
     }
 
-    @Override protected String queryElement() {
-      selectColumns();
-      return super.queryElement();
-    }
-
     @Override
     public String [] selectNames(){
       ValueArray va = _key.value();
       String [] res = new String [_selectedCols.size()];
       int idx = 0;
-      for(Column c: _selectedCols){
+      for(int cid: _selectedCols){
+        Column c = va._cols[cid];
         double ratio = c._n/(double)va._numrows;
         if(ratio < 0.99){
           res[idx++] = c._name  + " (" + Math.round((1-ratio)*100) + "% NAs)";
@@ -1830,15 +1843,16 @@ public class RequestArguments extends RequestStatics {
     }
 
 
-    @Override protected Comparator<Column> colComp(){
+    @Override protected Comparator<Integer> colComp(final ValueArray ary){
       ValueArray va = _key.value();
       final double ratio = 1.0/va._numrows;
-      return new Comparator<ValueArray.Column>() {
-
+      return new Comparator<Integer>() {
         @Override
-        public int compare(Column x, Column y) {
-          double xRatio = x._n*ratio;
-          double yRatio = y._n*ratio;
+        public int compare(Integer x, Integer y) {
+          Column xc = ary._cols[x];
+          Column yc = ary._cols[y];
+          double xRatio = xc._n*ratio;
+          double yRatio = yc._n*ratio;
           if(xRatio > 0.9 && yRatio > 0.9) return 0;
           if(xRatio <= 0.9 && yRatio <= 0.9) return Double.compare(1-xRatio, 1-yRatio);
           if(xRatio <= 0.9) return 1;

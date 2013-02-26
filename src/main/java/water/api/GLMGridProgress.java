@@ -1,8 +1,8 @@
 package water.api;
 
-import hex.GLMSolver.Family;
-import hex.GLMSolver.GLMModel;
-import hex.*;
+import hex.DGLM.Family;
+import hex.DGLM.GLMModel;
+import hex.DLSM.LSMSolver;
 
 import java.util.Map;
 
@@ -36,7 +36,7 @@ public class GLMGridProgress extends Request {
       o.addProperty(KEY, m._selfKey.toString());
       o.addProperty(LAMBDA, lsm._lambda);
       o.addProperty(ALPHA, lsm._alpha);
-      if(m._glmParams._f == Family.binomial){
+      if(m._glmParams._family == Family.binomial){
         o.addProperty(BEST_THRESHOLD, m._vals[0].bestThreshold());
         o.addProperty(AUC, m._vals[0].AUC());
         double[] classErr = m._vals[0].classError();

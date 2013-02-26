@@ -55,7 +55,7 @@ browse_disable = True
 browse_json = False
 verbose = False
 ipaddr = None
-config_json = False
+config_json = None
 debugger = False
 random_udp_drop = False
 
@@ -234,7 +234,7 @@ nodes = []
 
 def write_flatfile(node_count=2, base_port=54321, hosts=None):
     # always create the flatfile. 
-    ports_per_node = 2
+    ports_per_node = 3
     pff = open(flatfile_name(), "w+")
     if hosts is None:
         ip = get_ip_address()
@@ -247,20 +247,20 @@ def write_flatfile(node_count=2, base_port=54321, hosts=None):
     pff.close()
 
 
-def check_port_group(baseport):
+def check_port_group(base_port):
     # UPDATE: don't do this any more
     # for now, only check for jenkins or kevin
     if (1==0):
         username = getpass.getuser()
         if username=='jenkins' or username=='kevin' or username=='michal':
-            # assumes you want to know about 3 ports starting at baseport
+            # assumes you want to know about 3 ports starting at base_port
             command1Split = ['netstat', '-anp']
             command2Split = ['egrep']
             # colon so only match ports. space at end? so no submatches
-            command2Split.append("(%s | %s | %s)" % (baseport, baseport+1, baseport+2) )
+            command2Split.append("(%s | %s | %s)" % (base_port, base_port+1, base_port+2) )
             command3Split = ['wc','-l']
 
-            print "Checking 3 ports starting at ", baseport
+            print "Checking 3 ports starting at ", base_port
             print ' '.join(command2Split)
 
             # use netstat thru subprocess
@@ -271,11 +271,23 @@ def check_port_group(baseport):
             print output
 
 # node_count is number of H2O instances per host if hosts is specified.
+def decide_if_localhost():
+    if config_json:
+        print "config_json:", config_json
+        return False
+    if 'hosts' in os.getcwd():
+        print "Will use the username's config json"
+        return False
+    return True
+
+# node_count is per host if hosts is specified.
 def build_cloud(node_count=2, base_port=54321, hosts=None, 
         timeoutSecs=20, retryDelaySecs=0.5, cleanup=True, **kwargs):
     # moved to here from unit_main. so will run with nosetests too!
     clean_sandbox()
-    ports_per_node = 2 
+    # H2O still checks for collision against 3 ports range 
+    # even if its only using 2
+    ports_per_node = 3 
     node_list = []
     try:
         # if no hosts list, use psutil method on local host.
@@ -291,7 +303,7 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
                 node_list.append(newNode)
                 totalNodes += 1
         else:
-            # if use_flatfile, the flatfile was created and uploaded to hosts already
+            # if hosts, the flatfile was created and uploaded to hosts already
             # I guess don't recreate it, don't overwrite the one that was copied beforehand.
             hostCount = len(hosts)
             for h in hosts:
@@ -389,9 +401,12 @@ def check_sandbox_for_errors():
                 foundBad = False
                 if not ' bytes)' in line:
                     # no multiline FSM on this 
-                    printSingleWarning = regex3.search(line)
-                    #   13190  280             sun.nio.ch.DatagramChannelImpl::ensureOpen (16 bytes)
-                    foundBad = regex1.search(line) and not ('error rate' in line)
+                    printSingleWarning = regex3.search(line) and not ('[Loaded ' in line)
+                    #   13190  280      ###        sun.nio.ch.DatagramChannelImpl::ensureOpen (16 bytes)
+
+                    # don't detect these class loader info messags as errors
+                    #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
+                    foundBad = regex1.search(line) and not (('error rate' in line) or ('[Loaded ' in line))
 
                 if (printing==0 and foundBad):
                     printing = 1
@@ -472,7 +487,7 @@ def verify_cloud_size():
 def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25):
     node.wait_for_node_to_accept_connections(timeoutSecs)
     # want node saying cloud = expected size, plus thinking everyone agrees with that.
-    def test(n):
+    def test(n, tries=None):
         c = n.get_cloud()
         # don't want to check everything. But this will check that the keys are returned!
         consensus  = c['consensus']
@@ -541,6 +556,7 @@ class H2O(object):
         rjson = r.json()
         for e in ['error', 'Error', 'errors', 'Errors']:
             if e in rjson:
+                verboseprint(dump_json(rjson))
                 emsg = 'rjson %s in %s: %s' % (e, inspect.stack()[1][3], rjson[e])
                 if ignoreH2oError:
                     # well, we print it..so not totally ignore. test can look at rjson returned
@@ -549,6 +565,7 @@ class H2O(object):
                     raise Exception(emsg)
 
         for w in ['warning', 'Warning', 'warnings', 'Warnings']:
+            verboseprint(dump_json(rjson))
             if w in rjson:
                 print 'rjson %s in %s: %s' % (w, inspect.stack()[1][3], rjson[w])
 
@@ -618,14 +635,24 @@ class H2O(object):
         return requests.get(self.__url('Get.html'),
             params={"key": key})
 
-    def poll_url(self, response, timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=None):
+    # noise is a 2-tuple ("StoreView, none) for url plus args for doing during poll to create noise
+    # no noise if None
+    def poll_url(self, response, timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=None, noise=None):
+        verboseprint('poll_url input: response:', dump_json(response))
+
         url = self.__url(response['redirect_request'])
-        args = response['redirect_request_args']
+        params = response['redirect_request_args']
+
+        if noise is not None:
+            # noise_json should be like "Storeview"
+            (noise_json, noiseParams) = noise
+            noiseUrl = self.__url(noise_json + ".json")
+
         status = 'poll'
         start = time.time()
         count = 0
         # FIX! temporarily wait 5x the retryDelaySecs delay, before the first poll
-        # ParseProgress status NPE issue (H2O)
+        # Progress status NPE issue (H2O)
         if initialDelaySecs:
             time.sleep(initialDelaySecs)
         # can end with status = 'redirect' or 'done'
@@ -633,23 +660,41 @@ class H2O(object):
             # UPDATE: 1/24/13 change to always wait before the first poll..
             # see if it makes a diff to our low rate fails
             time.sleep(retryDelaySecs)
+            # every other one?
+            create_noise = noise is not None and ((count%2)==0)
+            if create_noise:
+                urlUsed = noiseUrl
+                paramsUsed = noiseParams
+                msgUsed = "\nNoise during polling with"
+            else:
+                urlUsed = url
+                paramsUsed = params
+                msgUsed = "\nPolling with"
+
             r = self.__check_request(
                 requests.get(
-                    url=url, 
-                    timeout=15, # polling should never take more than 15 secs to respond
-                    params=args))
-            if ((count%15)==0):
-                verboseprint("Polling with", url, "Response:", dump_json(r['response']))
+                    url=urlUsed,
+                    timeout=15, 
+                    params=paramsUsed))
+
+            if ((count%5)==0):
+                verboseprint(msgUsed, urlUsed, "Response:", dump_json(r['response']))
             # hey, check the sandbox if we've been waiting a long time...rather than wait for timeout
             # to find the badness?
-            if ((count%100)==0):
+            if ((count%15)==0):
                 check_sandbox_for_errors()
 
-            status = r['response']['status']
+            if (create_noise):
+                # this guarantees the loop is done, so we don't need to worry about 
+                # a 'return r' being interpreted from a noise response
+                status = 'poll'
+            else:
+                status = r['response']['status']
+
             if ((time.time()-start)>timeoutSecs):
                 # show what we're polling with 
-                argsStr =  '&'.join(['%s=%s' % (k,v) for (k,v) in args.items()])
-                emsg = "Timeout: %d secs while polling. status: %s, url: %s?%s" % (timeoutSecs, status, url, argsStr)
+                argsStr =  '&'.join(['%s=%s' % (k,v) for (k,v) in paramsUsed.items()])
+                emsg = "Timeout: %d secs while polling. status: %s, url: %s?%s" % (timeoutSecs, status, urlUsed, argsStr)
                 raise Exception(emsg)
             count += 1
         return r
@@ -673,35 +718,46 @@ class H2O(object):
                 timeout=timeoutSecs,
                 params=params_dict))
 
-        # Check that the response has the right KMeansProgress url it's going to steer us to.
-        if a['response']['redirect_request']!='KMeansProgress':
+        # Check that the response has the right Progress url it's going to steer us to.
+        if a['response']['redirect_request']!='Progress':
             print dump_json(a)
-            raise Exception('H2O kmeans redirect is not KMeansProgress. KMeans json response precedes.')
+            raise Exception('H2O kmeans redirect is not Progress. KMeans json response precedes.')
         a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
         verboseprint("\nKMeans result:", dump_json(a))
         return a
 
-    def parse(self, key, key2=None, timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, header=False, **kwargs):
+    # params: header=1, 
+    # noise is a 2-tuple: ("StoreView",params_dict)
+    def parse(self, key, key2=None, timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, **kwargs):
         browseAlso = kwargs.pop('browseAlso',False)
         # this doesn't work. webforums indicate max_retries might be 0 already? (as of 3 months ago)
         # requests.defaults({max_retries : 4})
         # https://github.com/kennethreitz/requests/issues/719
         # it was closed saying Requests doesn't do retries. (documentation implies otherwise)
         verboseprint("\nParsing key:", key, "to key2:", key2, "(if None, means default)")
-        parseParams = {"source_key": key, "destination_key": key2}
-        if header: parseParams['header'] = 1
+        # FIX! noted that H2O will stack trace if dst key = src key. maybe H2O should detect that.
+        params_dict = {
+            'source_key': key,
+            'destination_key': key2,
+            }
+        params_dict.update(kwargs)
+        noise = kwargs.pop('noise', None)
+        verboseprint('Parse.Json noise:', noise)
+
         a = self.__check_request(
             requests.get(
                 url=self.__url('Parse.json'),
                 timeout=timeoutSecs,
-                params=parseParams))
+                params=params_dict))
 
-        # Check that the response has the right ParseProgress url it's going to steer us to.
-        if a['response']['redirect_request']!='ParseProgress':
+        # Check that the response has the right Progress url it's going to steer us to.
+        if a['response']['redirect_request']!='Progress':
             print dump_json(a)
-            raise Exception('H2O parse redirect is not ParseProgress. Parse json response precedes.')
-        a = self.poll_url(a['response'], 
-            timeoutSecs=timeoutSecs, retryDelaySecs=0.5, initialDelaySecs=initialDelaySecs)
+            raise Exception('H2O parse redirect is not Progress. Parse json response precedes.')
+        # noise is a 2-tuple ("StoreView, none) for url plus args for doing during poll to create noise
+        # no noise if None
+        a = self.poll_url(a['response'],
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, initialDelaySecs=initialDelaySecs, noise=noise)
 
         verboseprint("\nParse result:", dump_json(a))
         return a
@@ -802,7 +858,7 @@ class H2O(object):
         verboseprint("\nrandom_forest result:", dump_json(a))
         return a
 
-    def random_forest_view(self, data_key, model_key, timeoutSecs=300, **kwargs):
+    def random_forest_view(self, data_key, model_key, timeoutSecs=300, print_params=False, **kwargs):
         # UPDATE: only pass the minimal set of params to RFView. It should get the 
         # rest from the model. what about classWt? It can be different between RF and RFView?
         params_dict = {
@@ -812,7 +868,6 @@ class H2O(object):
             'class_weights': None,
             'response_variable': None, # FIX! apparently this is needed now?
             }
-
         browseAlso = kwargs.pop('browseAlso',False)
 
         # only update params_dict..don't add
@@ -821,15 +876,17 @@ class H2O(object):
             if k in params_dict:
                 params_dict[k] = kwargs[k]
 
+        if print_params:
+            print "\nrandom_forest_view parameters:", params_dict
+
         a = self.__check_request(requests.get(
             self.__url('RFView.json'),
             timeout=timeoutSecs,
             params=params_dict))
-
         verboseprint("\nrandom_forest_view result:", dump_json(a))
+
         if (browseAlso | browse_json):
             h2b.browseJsonHistoryAsUrlLastMatch("RFView")
-
         return a
 
     def random_forest_treeview(self, tree_number, data_key, model_key, 
@@ -895,7 +952,7 @@ class H2O(object):
             # don't have to pop, GLMGrid ignores
             print "\nWARNING: norm param is ignored by GLMGrid. Always uses LASSO (L1+L2)."
 
-        # Check that the response has the right ParseProgress url it's going to steer us to.
+        # Check that the response has the right Progress url it's going to steer us to.
         if a['response']['redirect_request']!='GLMGridProgress':
             print dump_json(a)
             raise Exception('H2O GLMGrid redirect is not GLMGridProgress. GLMGrid json response precedes.')
@@ -920,7 +977,6 @@ class H2O(object):
         # maybe separate is more consistent with the core key behavior
         # elsewhere
         params_dict = { 
-            'thresholds': 0.5,
             'key': key,
             'model_key': model_key,
         }
@@ -931,7 +987,7 @@ class H2O(object):
             self.__url('GLMScore.json'),
             timeout=timeoutSecs,
             params=params_dict))
-        verboseprint(parentName, dump_json(a))
+        verboseprint("GLMScore:", dump_json(a))
 
         browseAlso = kwargs.get('browseAlso', False)
         if (browseAlso | browse_json):
@@ -956,13 +1012,13 @@ class H2O(object):
         start = time.time()
         numberOfRetries = 0
         while time.time() - start < timeoutSecs:
-            if test_func(self):
+            if test_func(self, tries=numberOfRetries):
                 break
             time.sleep(retryDelaySecs)
             numberOfRetries += 1
             # hey, check the sandbox if we've been waiting a long time...rather than wait for timeout
             # to find the badness?. can check_sandbox_for_errors at any time 
-            if ((numberOfRetries%100)==0):
+            if ((numberOfRetries%50)==0):
                 check_sandbox_for_errors()
 
         else:
@@ -976,7 +1032,7 @@ class H2O(object):
 
     def wait_for_node_to_accept_connections(self,timeoutSecs=15):
         verboseprint("wait_for_node_to_accept_connections")
-        def test(n):
+        def test(n, tries=None):
             try:
                 n.get_cloud()
                 return True
@@ -1009,6 +1065,7 @@ class H2O(object):
         if self.java_heap_GB is not None:
             if (1 > self.java_heap_GB > 63):
                 raise Exception('java_heap_GB <1 or >63  (GB): %s' % (self.java_heap_GB))
+            args += [ '-Xms%dG' % self.java_heap_GB ]
             args += [ '-Xmx%dG' % self.java_heap_GB ]
 
         if self.java_extra_args is not None:
@@ -1031,8 +1088,18 @@ class H2O(object):
                 '--ip=%s' % self.addr,
                 ]
 
+        # Need to specify port, since there can be multiple ports for an ip in the flatfile
+        if self.port is not None:
+            args += [
+                "--port=%d" % self.port,
+            ]
+
+        if self.use_flatfile:
+            args += [
+                '--flatfile=' + self.flatfile,
+            ]
+
         args += [
-            "--port=%d" % self.port,
             '--ice_root=%s' % self.get_ice_dir(),
             # if I have multiple jenkins projects doing different h2o clouds, I need
             # I need different ports and different cloud name.
@@ -1059,11 +1126,6 @@ class H2O(object):
                 args += [
                     '-hdfs_config ' + self.hdfs_config
                 ]
-
-        if self.use_flatfile:
-            args += [
-                '--flatfile=' + self.flatfile,
-            ]
 
         if not self.sigar:
             args += ['--nosigar']

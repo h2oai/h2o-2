@@ -45,15 +45,18 @@ public class ParserTest extends TestUtil {
     return ((e1 == e2) && Math.abs(a - b) < threshold);
   }
   public static void testParsed(Key k, double[][] expected, Key inputkey) {
+    testParsed(k,expected,inputkey,expected.length);
+  }
+  public static void testParsed(Key k, double[][] expected, Key inputkey, int len) {
     ValueArray va = ValueArray.value(DKV.get(k));
-    Assert.assertEquals(expected.length,va._numrows);
+    Assert.assertEquals(len,va._numrows);
     Assert.assertEquals(expected[0].length,va._cols.length);
-    for (int i = 0; i < va._numrows; ++i)
+    for (int i = 0; i < expected.length; ++i)
       for (int j = 0; j < va._cols.length; ++j) {
         if (Double.isNaN(expected[i][j]))
           Assert.assertFalse(i+" -- "+j, !va.isNA(i,j));
         else
-          Assert.assertTrue(compareDoubles(expected[i][j],va.datad(i,j),0.001));
+          Assert.assertTrue(expected[i][j]+" -- "+va.datad(i,j),compareDoubles(expected[i][j],va.datad(i,j),0.001));
       }
     UKV.remove(k);
     UKV.remove(inputkey);
@@ -283,6 +286,11 @@ public class ParserTest extends TestUtil {
       + "7,,8,\n"
       + ",9,10\n"
       + "11,,,\n"
+      + "0,0,0,z\n"
+      + "0,0,0,z\n"
+      + "0,0,0,z\n"
+      + "0,0,0,z\n"
+      + "0,0,0,z\n"
     };
     double[][] expDouble = new double[][] {
         d(1, 2, 3, 1),
@@ -290,6 +298,11 @@ public class ParserTest extends TestUtil {
         d(7, NaN, 8, NaN),
         d(NaN, 9, 10, NaN),
         d(11, NaN, NaN, NaN),
+        d(0, 0, 0, 2),
+        d(0, 0, 0, 2),
+        d(0, 0, 0, 2),
+        d(0, 0, 0, 2),
+        d(0, 0, 0, 2),
     };
 
     final char separator = ',';
@@ -371,6 +384,6 @@ public class ParserTest extends TestUtil {
     Key fkey = load_test_file("smalldata/test/is_NA.csv");
     Key okey = Key.make("NA.hex");
     ParseDataset.parse(okey,DKV.get(fkey));
-    testParsed(okey,exp,fkey);
+    testParsed(okey,exp,fkey,25);
   }
 }

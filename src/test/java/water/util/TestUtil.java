@@ -15,6 +15,7 @@ public class TestUtil {
   @BeforeClass
   public static void setupCloud() {
     H2O.main(new String[] {});
+    Jobs.init(); // Jobs.KEY must be part of initial keys
     _initial_keycnt = H2O.store_size();
   }
 

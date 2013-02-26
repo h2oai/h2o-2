@@ -1,12 +1,15 @@
 package water.parser;
-import java.io.IOException;
-import java.util.zip.*;
-
-import jsr166y.RecursiveAction;
-import water.*;
 
 import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
+import java.io.IOException;
+import java.util.zip.*;
+import jsr166y.CountedCompleter;
+import water.*;
+import water.Jobs.Fail;
+import water.Jobs.Job;
+import water.Jobs.Progress;
+import water.parser.DParseTask.Pass;
 
 /**
  * Helper class to parse an entire ValueArray data, and produce a structured
@@ -33,14 +36,14 @@ public final class ParseDataset {
 
   // Parse the dataset (uncompressed, zippped) as a CSV-style thingy and
   // produce a structured dataset as a result.
-  private static void parseImpl( Key result, Value dataset, CsvParser.Setup setup ) {
+  private static void parse( Job job, Value dataset, CsvParser.Setup setup ) {
     if( dataset.isHex() )
       throw new IllegalArgumentException("This is a binary structured dataset; "
           + "parse() only works on text files.");
     try {
       // try if it is XLS file first
       try {
-        parseUncompressed(result,dataset,CustomParser.Type.XLS, setup);
+        parseUncompressed(job,dataset,CustomParser.Type.XLS, setup);
         return;
       } catch (Exception e) {
         // pass
@@ -48,46 +51,48 @@ public final class ParseDataset {
       Compression compression = guessCompressionMethod(dataset);
       if (compression == Compression.ZIP) {
         try {
-          parseUncompressed(result,dataset,CustomParser.Type.XLSX, setup);
+          parseUncompressed(job,dataset,CustomParser.Type.XLSX, setup);
           return;
         } catch (Exception e) {
           // pass
         }
       }
       switch (compression) {
-      case NONE: parseUncompressed(result, dataset,CustomParser.Type.CSV, setup); break;
-      case ZIP : parseZipped (result, dataset, setup); break;
-      case GZIP: parseGZipped(result, dataset, setup); break;
+      case NONE: parseUncompressed(job, dataset,CustomParser.Type.CSV, setup); break;
+      case ZIP : parseZipped (job, dataset, setup); break;
+      case GZIP: parseGZipped(job, dataset, setup); break;
       default : throw new Error("Unknown compression of dataset!");
       }
     } catch( Exception e ) {
-      ParseStatus.error(result, e.getMessage());
+      UKV.put(job._dest, new Fail(e.getMessage()));
       throw Throwables.propagate(e);
+    } finally {
+      Jobs.remove(job._key);
     }
   }
-  public static void parse( Key result, Value dataset, CsvParser.Setup setup ) {
-    ParseStatus.initialize(result, dataset.length());
-    parseImpl(result, dataset, setup);
-  }
-  public static void parse( Key result, Value dataset ) {
-    ParseStatus.initialize(result, dataset.length());
-    parseImpl(result, dataset, null);
+
+  public static void parse( Key dest, Value dataset ) {
+    Job job = Jobs.start("Parse", dest);
+    parse(job, dataset, null);
   }
 
-  public static void forkParseDataset( final Key result, final Value dataset, final CsvParser.Setup setup ) {
-    ParseStatus.initialize(result, dataset.length());
-    H2O.FJP_NORM.submit(new RecursiveAction() {
-      @Override
-      protected void compute() {
-        parseImpl(result, dataset, setup);
-      }
-    });
+  public static Job forkParseDataset( final Key dest, final Value dataset, final CsvParser.Setup setup ) {
+    final Job job = Jobs.start("Parse", dest);
+    H2O.FJP_NORM.submit(new CountedCompleter() {
+        @Override public void compute() { parse(job, dataset, setup); tryComplete(); }
+        public boolean onExceptionalCompletion( Throwable ex, CountedCompleter caller ) {
+          ex.printStackTrace();
+          return true;
+        }
+      });
+    return job;
   }
 
- // Parse the uncompressed dataset as a CSV-style structure and produce a structured dataset
- // result. This does a distributed parallel parse.
-  public static void parseUncompressed( Key result, Value dataset, CustomParser.Type parserType, CsvParser.Setup setup ) throws Exception {
-    DParseTask phaseOne = DParseTask.createPassOne(dataset, result, parserType);
+  // Parse the uncompressed dataset as a CSV-style structure and produce a structured dataset
+  // result. This does a distributed parallel parse.
+  public static void parseUncompressed( Job job, Value dataset, CustomParser.Type parserType, CsvParser.Setup setup ) throws Exception {
+    UKV.put(job._progress, new Progress(0, dataset.length() * Pass.values().length));
+    DParseTask phaseOne = DParseTask.createPassOne(dataset, job, parserType);
     phaseOne.passOne(setup);
     if ((phaseOne._error != null) && !phaseOne._error.isEmpty()) {
       System.err.println(phaseOne._error);
@@ -103,7 +108,7 @@ public final class ParseDataset {
 
   // Unpack zipped CSV-style structure and call method parseUncompressed(...)
   // The method exepct a dataset which contains a ZIP file encapsulating one file.
-  public static void parseZipped( Key result, Value dataset, CsvParser.Setup setup ) throws IOException {
+  public static void parseZipped( Job job, Value dataset, CsvParser.Setup setup ) throws IOException {
     // Dataset contains zipped CSV
     ZipInputStream zis = null;
     Key key = null;
@@ -114,18 +119,19 @@ public final class ParseDataset {
       ZipEntry ze = zis.getNextEntry();
       // There is at least one entry in zip file and it is not a directory.
       if (ze != null && !ze.isDirectory()) {
-        key = ValueArray.readPut(new String(dataset._key._kb) + "_UNZIPPED", zis);
+        key = Key.make(new String(dataset._key._kb) + "_UNZIPPED");
+        ValueArray.readPut(key, zis, job);
       }
       // else it is possible to dive into a directory but in this case I would
       // prefer to return error since the ZIP file has not expected format
     } finally { Closeables.closeQuietly(zis); }
     if( key == null ) throw new Error("Cannot uncompressed ZIP-compressed dataset!");
     Value uncompressedDataset = DKV.get(key);
-    parse(result, uncompressedDataset,setup);
+    parse(job, uncompressedDataset,setup);
     UKV.remove(key);
   }
 
-  public static void parseGZipped( Key result, Value dataset, CsvParser.Setup setup ) throws IOException {
+  public static void parseGZipped( Job job, Value dataset, CsvParser.Setup setup ) throws IOException {
     GZIPInputStream gzis = null;
     Key key = null;
     try {
@@ -135,7 +141,7 @@ public final class ParseDataset {
 
     if( key == null ) throw new Error("Cannot uncompressed GZIP-compressed dataset!");
     Value uncompressedDataset = DKV.get(key);
-    parse(result, uncompressedDataset,setup);
+    parse(job, uncompressedDataset,setup);
     UKV.remove(key);
   }
 

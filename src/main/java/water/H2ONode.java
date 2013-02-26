@@ -22,7 +22,7 @@ public class H2ONode extends Iced implements Comparable {
 
   // A JVM is uniquely named by machine IP address and port#
   public static final class H2Okey extends InetSocketAddress {
-    int _ipv4;                  // cheapo ipv4 address
+    final int _ipv4;     // cheapo ipv4 address
     public H2Okey(InetAddress inet, int port) {
       super(inet,port);
       byte[] b = inet.getAddress();
@@ -91,6 +91,19 @@ public class H2ONode extends Iced implements Comparable {
     return h2o;
   }
   public static final H2ONode intern( InetAddress ip, int port ) { return intern(new H2Okey(ip,port)); }
+
+  public static final H2ONode intern( int ip, int port ) { 
+    byte[] b = new byte[4];
+    b[0] = (byte)(ip>> 0);
+    b[1] = (byte)(ip>> 8);
+    b[2] = (byte)(ip>>16);
+    b[3] = (byte)(ip>>24);
+    try {
+      return intern(InetAddress.getByAddress(b),port);
+    } catch( UnknownHostException uhe ) {
+      return null;
+    }
+  }
 
   // Read & return interned from wire
   @Override public AutoBuffer write( AutoBuffer ab ) { return _key.write(ab); }

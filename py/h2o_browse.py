@@ -36,7 +36,7 @@ def browseJsonHistoryAsUrlLastMatch(matchme,swapme=None):
 
         if swapme is not None: url = re.sub(matchme, swapme, url)
         url = re.sub("GLMGridProgress","GLMGridProgress.html",url)
-        url = re.sub("ParseProgress","ParseProgress.html",url)
+        url = re.sub("Progress","Progress.html",url)
         url = re.sub(".json",".html",url)
 
         h2o.verboseprint("browseJsonHistoryAsUrlLastMatch:", url)
@@ -59,7 +59,7 @@ def browseJsonHistoryAsUrl():
             if not re.search(ignoring,h2o.json_url_history[i]):
                 url = h2o.json_url_history[i]
                 url = re.sub("GLMGridProgress","GLMGridProgress.html",url)
-                url = re.sub("ParseProgress","ParseProgress.html",url)
+                url = re.sub("Progress","Progress.html",url)
                 url = re.sub(".json",".html",url)
                 print "browseJsonHistoryAsUrl:", url
                 print "same, decoded:", urllib.unquote(url)

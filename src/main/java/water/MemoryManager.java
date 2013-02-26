@@ -214,6 +214,7 @@ public abstract class MemoryManager {
         case  1: return new byte   [elems];
         case  2: return new short  [elems];
         case  4: return new int    [elems];
+        case  8: return new long   [elems];
         case -4: return new float  [elems];
         case -8: return new double [elems];
         case  0: return new boolean[elems];
@@ -231,6 +232,7 @@ public abstract class MemoryManager {
   public static short  [] malloc2 (int size) { return (short  [])malloc(size,size*2, 2,null,0); }
   public static float  [] malloc4f(int size) { return (float  [])malloc(size,size*4,-4,null,0); }
   public static int    [] malloc4 (int size) { return (int    [])malloc(size,size*4, 4,null,0); }
+  public static long   [] malloc8 (int size) { return (long   [])malloc(size,size*8, 8,null,0); }
   public static double [] malloc8d(int size) { return (double [])malloc(size,size*8,-8,null,0); }
   public static boolean[] mallocZ (int size) { return (boolean[])malloc(size,size*1, 0,null,0); }
   public static byte[] arrayCopyOfRange(byte[] orig, int from, int sz) {

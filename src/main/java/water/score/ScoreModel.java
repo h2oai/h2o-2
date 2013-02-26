@@ -9,7 +9,6 @@ import water.*;
  */
 public abstract class ScoreModel {
   public final String _name;
-
   public final String _colNames[]; // Column names
 
   ScoreModel( String name, String colNames[] ) {
@@ -71,7 +70,6 @@ public abstract class ScoreModel {
     }
     return map;
   }
-
 
   /** Score this model on the specified row of data, where the data is
    *  specified as a collection of K/V pairs - Values are one of String or

@@ -29,8 +29,8 @@ class Basic(unittest.TestCase):
         #    "covtype.13x.shuffle.data",
         #    "3G_poker_shuffle"
         csvFilenameAll = [
-            "covtype20x.data", 
             "billion_rows.csv.gz",
+            # "covtype20x.data", 
             ]
         # csvFilenameList = random.sample(csvFilenameAll,1)
         csvFilenameList = csvFilenameAll

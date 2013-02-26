@@ -1,9 +1,10 @@
 package water.api;
 
 import hex.*;
-import hex.GLMSolver.Family;
-import hex.GLMSolver.GLMModel;
-import hex.GLMSolver.GLMParams;
+import hex.DGLM.Family;
+import hex.DGLM.GLMModel;
+import hex.DGLM.GLMParams;
+import hex.DLSM.ADMMSolver;
 
 import java.util.*;
 
@@ -69,15 +70,14 @@ class GLMGridStatus extends DTask<GLMGridStatus> {
   public void compute() {
     assert _working == true;
     final int N = _alphas.length;
-    GLMModel m = new GLMModel(ValueArray.value(_datakey),_xs,null,_glmp,null);
-
+    GLMModel m = null;
     OUTER:
     for( int l1=1; l1<= _lambdas.length; l1++ )
           for( int a=0; a<_alphas.length; a++) {
             if( _stop ) break OUTER;
-            GLMModel m2 = do_task(m,_lambdas.length-l1,a); // Do a step; get a model
+            m = do_task(m,_lambdas.length-l1,a); // Do a step; get a model
             // Now update this Status.
-            update(_taskey,m2,(_lambdas.length-l1)*N+a);
+            update(_taskey,m,(_lambdas.length-l1)*N+a);
             // Fetch over the 'this' all new bits.  Mostly witness updates to
             // _progress and _stop fields.
             UKV.get(_taskey,this);
@@ -113,10 +113,8 @@ class GLMGridStatus extends DTask<GLMGridStatus> {
   // ---
   // Do a single step (blocking).
   // In this case, run 1 GLM model.
-  private GLMModel do_task(GLMModel m,int l, int alpha) {
-    m = new GLMModel(GLMModel.makeKey(),m,null);
-    m._solver = LSMSolver.makeSolver(_lambdas[l], _alphas[alpha]);
-    m.build();
+  private GLMModel do_task(GLMModel m, int l, int alpha) {
+    m = DGLM.buildModel(DGLM.getData(_ary, _xs, null, true), new ADMMSolver(_lambdas[l], _alphas[alpha]), _glmp);
     if(_xfold <= 1)
       m.validateOn(_ary, null,_ts);
     else
@@ -141,7 +139,7 @@ class GLMGridStatus extends DTask<GLMGridStatus> {
         if(v2 == null)return -1;
         GLMModel m1 = v1.get(new GLMModel());
         GLMModel m2 = v2.get(new GLMModel());
-        if(m1._glmParams._f == Family.binomial){
+        if(m1._glmParams._family == Family.binomial){
           double cval1 = m1._vals[0].AUC(), cval2 = m2._vals[0].AUC();
           if(cval1 == cval2){
             if(m1._vals[0].classError() != null){
@@ -171,11 +169,10 @@ class GLMGridStatus extends DTask<GLMGridStatus> {
       }
     }
     final int N = lastIdx;
-    return new Iterable<GLMSolver.GLMModel>() {
-
+    return new Iterable<GLMModel>() {
       @Override
       public Iterator<GLMModel> iterator() {
-        return new Iterator<GLMSolver.GLMModel>() {
+        return new Iterator<GLMModel>() {
           int _idx = 0;
           @Override
           public void remove() {

@@ -59,8 +59,8 @@ class ScoreMain {
 
     // Load a PMML model
     System.out.println("Loading model to score");
-    FileInputStream fis = new FileInputStream("../../../../demo/SampleScorecard.pmml");
-    water.score.ScoreModel scm = water.parser.PMMLParser.load(fis);
+    InputStream fis = new BufferedInputStream(new FileInputStream("../../../../demo/SampleScorecard.pmml"));
+    water.score.ScoreModel scm = water.parser.PMMLParser.parse(fis);
 
     // Pre-compute the row data into arrays.  The expectation is that this
     // mapping is done early by the data producer, and a row of data is passed

@@ -40,6 +40,8 @@ public final class Key extends Iced implements Comparable {
 
   public static final byte TASK = 2;
 
+  public static final byte SINGLETONS = 3;
+
   public static final byte HDFS_INTERNAL_BLOCK = 10;
 
   public static final byte HDFS_INODE = 11;

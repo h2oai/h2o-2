@@ -72,9 +72,9 @@ public class CsvParser extends CustomParser {
     byte c = bits[offset];
     // skip comments for the first chunk
     if ((_ary == null) || (ValueArray.getChunkIndex(key) == 0)) {
-      while (c == '#') {
-        while ((offset < bits.length) && (bits[offset] != CHAR_CR) && (bits[offset] != CHAR_LF)) ++offset;
-        if ((offset+1 < bits.length) && (bits[offset] == CHAR_CR) && (bits[offset+1] == CHAR_LF)) ++offset;
+      while (c == '#' || c == '@'/*also treat as comments leading '@' from ARFF format*/) {
+        while ((offset   < bits.length) && (bits[offset] != CHAR_CR) && (bits[offset  ] != CHAR_LF)) ++offset;
+        if    ((offset+1 < bits.length) && (bits[offset] == CHAR_CR) && (bits[offset+1] == CHAR_LF)) ++offset;
         ++offset;
         if (offset >= bits.length)
           return;
@@ -198,7 +198,11 @@ NEXT_CHAR:
           // fallthrough to TOKEN
         // ---------------------------------------------------------------------
         case TOKEN:
-          if (((c >= '0') && (c <= '9')) || (c == '-') || (c == CHAR_DECIMAL_SEPARATOR) || (c == '+')) {
+          if( callback.isString(colIdx) ) { // Forced already to a string col?
+            state = STRING; // Do not attempt a number parse, just do a string parse
+            _str.set(bits, offset, 0);
+            continue MAIN_LOOP;
+          } else if (((c >= '0') && (c <= '9')) || (c == '-') || (c == CHAR_DECIMAL_SEPARATOR) || (c == '+')) {
             state = NUMBER;
             number = 0;
             fractionDigits = 0;
@@ -618,7 +622,8 @@ NEXT_CHAR:
       int lineEnd = offset;
       ++offset;
       if ((offset < bits.length) && (bits[offset] == CHAR_LF)) ++offset;
-      if (bits[lineStart] == '#') continue; // Ignore comment lines
+      if (bits[lineStart] == '#') continue; // Ignore      comment lines
+      if (bits[lineStart] == '@') continue; // Ignore ARFF comment lines
       if (lineEnd>lineStart) {
         numlines++;                           // Estimate data lines in this chunk
         if( lines.size() < 5 )

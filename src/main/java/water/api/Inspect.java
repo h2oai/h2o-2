@@ -1,6 +1,6 @@
 package water.api;
 
-import hex.GLMSolver.GLMModel;
+import hex.DGLM.GLMModel;
 import hex.KMeans.KMeansModel;
 import hex.rf.RFModel;
 
@@ -116,11 +116,13 @@ public class Inspect extends Request {
       // Now read from the (possibly compressed) stream
       while( off < bs.length ) {
         int len = is.read(bs, off, bs.length - off);
-        if( len == -1 )
+        if( len < 0 )
           break;
         off += len;
-        if( off == bs.length )  // Dataset is uncompressing alot!  Need more space...
+        if( off == bs.length ) {  // Dataset is uncompressing alot!  Need more space...
+          if( bs.length >= ValueArray.CHUNK_SZ ) break; // Already got enough
           bs = Arrays.copyOf(bs,bs.length*2);
+        }
       }
     } catch( IOException ioe ) { // Stop at any io error
     } finally {

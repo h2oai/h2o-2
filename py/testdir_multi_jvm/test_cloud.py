@@ -18,13 +18,13 @@ class Basic(unittest.TestCase):
         # don't know if we care
         base_port = 54300
         ports_per_node = 3
-        for tryNodes in range(2,10):
+        for tryNodes in range(2,17):
             h2o.verboseprint("Trying cloud of", tryNodes)
             sys.stdout.write('.')
             sys.stdout.flush()
 
             start = time.time()
-            h2o.build_cloud(tryNodes, base_port=base_port)
+            h2o.build_cloud(tryNodes, base_port=base_port, timeoutSecs=max(30,10*tryNodes))
             print "Built cloud of %d in %d s" % (tryNodes, (time.time() - start)) 
             for i in range(2):
                 h2o.verify_cloud_size()

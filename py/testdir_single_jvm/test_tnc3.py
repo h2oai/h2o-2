@@ -41,7 +41,7 @@ class Basic(unittest.TestCase):
         key2 = "tnc3.hex"
         h2b.browseTheCloud()
 
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, timeoutSecs=10)
+        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, timeoutSecs=10, header=1)
         print "Parse result['Key']:", parseKey['destination_key']
         inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
         h2b.browseJsonHistoryAsUrlLastMatch("Inspect")

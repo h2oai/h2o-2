@@ -17,7 +17,7 @@ import copy
 
 def glm_doit(self, csvFilename, csvPathname, timeoutSecs=30):
     print "\nStarting parse of", csvFilename
-    parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename, timeoutSecs=10)
+    parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", timeoutSecs=10)
     y = "10"
     x = ""
     # NOTE: hastie has two values, -1 and 1. To make H2O work if two valued and not 0,1 have
@@ -49,9 +49,8 @@ class Basic(unittest.TestCase):
         global SYNDATASETS_DIR
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
-        global local_host
-        local_host = not 'hosts' in os.getcwd()
-        if (local_host):
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
             h2o.build_cloud(2,java_heap_GB=6)
         else:
             h2o_hosts.build_cloud_with_hosts()

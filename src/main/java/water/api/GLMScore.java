@@ -1,14 +1,15 @@
 package water.api;
 
-import com.google.gson.JsonObject;
-import hex.GLMSolver.Family;
-import hex.GLMSolver.GLMException;
-import hex.GLMSolver.GLMModel;
-import hex.GLMSolver.GLMValidation;
+import hex.DGLM.Family;
+import hex.DGLM.GLMException;
+import hex.DGLM.GLMModel;
+import hex.DGLM.GLMValidation;
 import water.Key;
 import water.ValueArray;
 import water.api.GLM.GLMBuilder;
 import water.util.RString;
+
+import com.google.gson.JsonObject;
 
 /**
  * Simple web page to trigger glm validation on another dataset.
@@ -27,7 +28,7 @@ public class GLMScore extends Request {
   protected void queryArgumentValueSet(water.api.RequestArguments.Argument arg, java.util.Properties inputArgs) {
     if(arg == _modelKey && _modelKey.specified()){
       GLMModel m = _modelKey.value();
-      if(m._glmParams._f == Family.binomial){
+      if(m._glmParams._family == Family.binomial){
         _thresholds._hideInQuery = false;
       }else{
         _thresholds.disable("only for binomial");

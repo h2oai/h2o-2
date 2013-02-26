@@ -58,7 +58,7 @@ public abstract class Model extends Iced {
   }
   /** Artificial model.  The 'va' defines the compatible data, but is not
    *  associated with any real dataset.  Data to be scored on the model has to
-   *  have all the same columns (in any order, extra cols are ok).  The last 
+   *  have all the same columns (in any order, extra cols are ok).  The last
    *  column is the response column.
    */
   public Model( Key key, ValueArray va, Key dataKey ) {
@@ -153,7 +153,7 @@ public abstract class Model extends Iced {
   /** Check if this model is compatible with this collection of column names. */
   public final boolean isCompatible( String[] names ) {
     throw H2O.unimpl();
-    //return isCompatible(columnMapping(names)); 
+    //return isCompatible(columnMapping(names));
   }
 
   /** Check if this dataset is compatible with this model.  All the columns in

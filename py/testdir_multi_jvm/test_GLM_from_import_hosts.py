@@ -13,9 +13,9 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global local_host
-        local_host = not 'hosts' in os.getcwd()
-        if (local_host):
+        localhost = h2o.decide_if_localhost()
+        global localhost
+        if (localhost):
             h2o.build_cloud(3,java_heap_GB=4)
         else:
             h2o_hosts.build_cloud_with_hosts()
@@ -25,7 +25,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM_from_import_hosts(self):
-        if (local_host):
+        if localhost:
             csvFilenameList = [
                 'covtype.data',
                 ]

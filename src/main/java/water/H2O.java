@@ -388,6 +388,7 @@ public final class H2O {
     public String aws_credentials; // properties file for aws credentials
     public String keepice; // Do not delete ice on startup
     public String soft = null; // soft launch for demos
+    public String random_udp_drop = null; // test only, randomly drop udp incoming
   }
   public static boolean IS_SYSTEM_RUNNING = false;
 

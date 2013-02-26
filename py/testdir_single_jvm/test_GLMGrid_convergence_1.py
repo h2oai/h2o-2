@@ -47,9 +47,8 @@ class Basic(unittest.TestCase):
         SEED = 2437856391921621805
         random.seed(SEED)
         print "\nUsing random seed:", SEED
-        global local_host
-        local_host = not 'hosts' in os.getcwd()
-        if (local_host):
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
             h2o.build_cloud(1,use_flatfile=True)
         else:
             h2o_hosts.build_cloud_with_hosts()
@@ -99,9 +98,9 @@ class Basic(unittest.TestCase):
                     'num_cross_validation_folds': 2,
                     'beta_epsilon': 1e-4,
                     #***********
-                    'lambda': '1e-8:1e-3:1e1',
+                    'lambda': '1e-8:1e-3:1e2',
                     'alpha': '0,0.5,.75',
-                    'thresholds': '0:1:0.2'
+                    'thresholds': '0,1,0.2'
                     }
 
             if USEKNOWNFAILURE:

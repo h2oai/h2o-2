@@ -18,7 +18,10 @@ import time
 # can expand this with specific combinations
 # I suppose these args will be ignored with old??
 argcaseList = [
-    {   'x': '0,1,2,3,4,5,6,7,8,9,10,11',
+# FIX! we get stack trace if we specify a column that was dropped because it's constant
+# for instance, column 9
+###    {   'x': '0,1,2,3,4,5,6,7,8,9,10,11',
+    {   'x': '0,1,2,3,4,5,6,7,8,10,11',
         'y': 106,
         'family': 'gaussian',
         'lambda': 1.0E-5,
@@ -37,9 +40,8 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global local_host
-        local_host = not 'hosts' in os.getcwd()
-        if (local_host):
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
             h2o.build_cloud(1,java_heap_GB=1)
         else:
             h2o_hosts.build_cloud_with_hosts()

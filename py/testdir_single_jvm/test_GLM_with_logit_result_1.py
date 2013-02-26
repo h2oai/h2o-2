@@ -90,9 +90,8 @@ class Basic(unittest.TestCase):
         # SEED = 
         random.seed(SEED)
         print "\nUsing random seed:", SEED
-        global local_host
-        local_host = not 'hosts' in os.getcwd()
-        if (local_host):
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
             h2o.build_cloud(1,java_heap_GB=28)
         else:
             h2o_hosts.build_cloud_with_hosts()
@@ -133,7 +132,7 @@ class Basic(unittest.TestCase):
 
             y = colCount
             kwargs = {'y': y, 'max_iter': 60, 
-                    'lambda': 1,
+                    'lambda': 1e-4,
                     'alpha': 0,
                     'weight': 1.0,
                     # what about these?

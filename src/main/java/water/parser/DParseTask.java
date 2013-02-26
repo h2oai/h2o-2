@@ -1,12 +1,10 @@
 package water.parser;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.GregorianCalendar;
+import java.util.*;
 
 import water.*;
+import water.Jobs.Job;
+import water.Jobs.Progress;
 import water.ValueArray.Column;
 
 /** Class responsible for actual parsing of the datasets.
@@ -56,7 +54,7 @@ public final class DParseTask extends MRTask {
   int _numRows; // number of rows -- works only in second pass FIXME in first pass object
   // 31 bytes
 
-  Key _resultKey;
+  Job _job;
   String _error;
 
   // arrays
@@ -107,7 +105,7 @@ public final class DParseTask extends MRTask {
      */
     public void store() {
       assert _ab.eof();
-      Key k = ValueArray.getChunkKey(_chunkIndex, _resultKey);
+      Key k = ValueArray.getChunkKey(_chunkIndex, _job._dest);
       AtomicUnion u = new AtomicUnion(_ab.bufClose(),_chunkOffset);
       alsoBlockFor(u.fork(k));
       _ab = null; // free mem
@@ -189,6 +187,10 @@ public final class DParseTask extends MRTask {
   transient final Value _sourceDataset;
   transient int _colIdx;
 
+  public boolean isString(int idx) {
+    // in case of idx which is oob, pretend it is a string col (it will be dropped anyways)
+    return idx >= _ncolumns || _colTypes[idx]==STRINGCOL;
+  }
 
   // As this is only used for distributed CSV parser we initialize the values
   // for the CSV parser itself.
@@ -201,10 +203,10 @@ public final class DParseTask extends MRTask {
    *
    * use createPhaseOne() static method instead.
    */
-  private DParseTask(Value dataset, Key resultKey, CustomParser.Type parserType) {
+  private DParseTask(Value dataset, Job job, CustomParser.Type parserType) {
     _parserType = parserType;
     _sourceDataset = dataset;
-    _resultKey = resultKey;
+    _job = job;
     _phase = Pass.ONE;
   }
 
@@ -225,9 +227,7 @@ public final class DParseTask extends MRTask {
     _nrows = other._nrows;
     _skipFirstLine = other._skipFirstLine;
     _myrows = other._myrows; // for simple values, number of rows is kept in the member variable instead of _nrows
-    _resultKey = other._resultKey;
-    _colTypes = other._colTypes;
-    _nrows = other._nrows;
+    _job = other._job;
     _numRows = other._numRows;
     _sep = other._sep;
     _decSep = other._decSep;
@@ -239,6 +239,7 @@ public final class DParseTask extends MRTask {
     _sigma = other._sigma;
     _colNames = other._colNames;
     _error = other._error;
+    _invalidValues = other._invalidValues;
   }
 
   /** Creates a phase one dparse task.
@@ -248,8 +249,8 @@ public final class DParseTask extends MRTask {
    * @param parserType Parser type to use.
    * @return Phase one DRemoteTask object.
    */
-  public static DParseTask createPassOne(Value dataset, Key resultKey, CustomParser.Type parserType) {
-    return new DParseTask(dataset,resultKey,parserType);
+  public static DParseTask createPassOne(Value dataset, Job job, CustomParser.Type parserType) {
+    return new DParseTask(dataset,job,parserType);
   }
 
   /** Executes the phase one of the parser.
@@ -350,6 +351,10 @@ public final class DParseTask extends MRTask {
    * option for their distributed processing.
    */
   public void passTwo() throws Exception {
+    // make sure we delete previous array here, because we insert arraylet header after all chunks are stored in
+    // so if we do not delete it now, it will be deleted by UKV automatically later and destroy our values!
+    if(DKV.get(_job._dest) != null)
+      UKV.remove(_job._dest);
     switch (_parserType) {
       case CSV:
         // for CSV parser just launch the distributed parser on the chunks
@@ -408,8 +413,8 @@ public final class DParseTask extends MRTask {
     // let any pending progress reports finish
     DKV.write_barrier();
     // finally make the value array header
-    ValueArray ary = new ValueArray(_resultKey, _numRows, off, cols);
-    UKV.put(_resultKey, ary.value());
+    ValueArray ary = new ValueArray(_job._dest, _numRows, off, cols);
+    UKV.put(_job._dest, ary.value());
   }
 
   private void createEnums() {
@@ -477,6 +482,8 @@ public final class DParseTask extends MRTask {
    * splitting it into equal sized chunks.
    */
   @Override public void map(Key key) {
+    if(Jobs.cancelled(_job._key))
+      return;
     try {
       Key aryKey = null;
       boolean arraylet = key._kb[0] == Key.ARRAYLET_CHUNK;
@@ -531,7 +538,7 @@ public final class DParseTask extends MRTask {
           assert (false);
       }
 
-      ParseStatus.update(_resultKey, DKV.get(key).length(), _phase);
+      Progress.update(_job._progress, DKV.get(key).length());
     } catch( Exception e ) {
       e.printStackTrace();
       _error = e.getMessage();
@@ -540,6 +547,8 @@ public final class DParseTask extends MRTask {
 
   @Override
   public void reduce(DRemoteTask drt) {
+    if(Jobs.cancelled(_job._key))
+      return;
     try {
       DParseTask other = (DParseTask)drt;
       if(_sigma == null)_sigma = other._sigma;
@@ -639,6 +648,17 @@ public final class DParseTask extends MRTask {
     assert (_bases != null);
     assert (_min != null);
     for(int i = 0; i < _ncolumns; ++i){
+      // Entirely toss out numeric columns which are largely broken.
+      if( (_colTypes[i]==ICOL || _colTypes[i]==DCOL || _colTypes[i]==FCOL ) &&
+          (double)_invalidValues[i]/_numRows > 0.2 ) {
+        _enums[i] = null;
+        _max[i] = _min[i] = 0;
+        _scale[i] = 0;
+        _bases[i] = 0;
+        _colTypes[i] = STRINGCOL;
+        continue;
+      }
+
       switch(_colTypes[i]){
       case UCOL: // only missing values
         _colTypes[i] = BYTE;
@@ -704,6 +724,8 @@ public final class DParseTask extends MRTask {
       default: throw H2O.unimpl();
       }
     }
+
+    _invalidValues = null;
   }
 
   /** Advances to new line. In phase two it also must make sure that the

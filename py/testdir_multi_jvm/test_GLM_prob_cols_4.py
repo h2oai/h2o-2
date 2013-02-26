@@ -65,9 +65,8 @@ class test_GLM_prob_cols_4(unittest.TestCase):
         # SEED = 
         random.seed(SEED)
         print "\nUsing random seed:", SEED
-        global local_host
-        local_host = not 'hosts' in os.getcwd()
-        if (local_host):
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
             h2o.build_cloud(2,java_heap_GB=7,use_flatfile=True)
         else:
             h2o_hosts.build_cloud_with_hosts()

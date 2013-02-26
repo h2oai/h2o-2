@@ -1,12 +1,15 @@
 package water.api;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonPrimitive;
-import hex.GLMSolver.GLMModel;
+import hex.DGLM.GLMModel;
 import hex.rf.RFModel;
+
 import java.util.Arrays;
+
 import water.H2O;
 import water.Key;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonPrimitive;
 
 public class TypeaheadKeysRequest extends TypeaheadRequest {
   public TypeaheadKeysRequest(String msg, String filter) { super(msg, filter); }

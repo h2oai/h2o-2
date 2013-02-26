@@ -41,9 +41,9 @@ class Basic(unittest.TestCase):
         # SEED = 
         random.seed(SEED)
         print "\nUsing random seed:", SEED
-        global local_host
-        local_host = not 'hosts' in os.getcwd()
-        if (local_host):
+        global localhost
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
             # h2o.build_cloud(3,java_heap_GB=4)
             h2o.build_cloud(1,java_heap_GB=4)
         else:
@@ -63,7 +63,7 @@ class Basic(unittest.TestCase):
 
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
-        if local_host:
+        if localhost:
             csvFilenameAll = [
                 ("covtype.data", "cA", 5),
                 ("covtype.data", "cB", 5),

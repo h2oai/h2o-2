@@ -1,13 +1,18 @@
 package water.api;
 
 import hex.*;
-import hex.GLMSolver.CaseMode;
-import hex.GLMSolver.Family;
-import hex.GLMSolver.GLMException;
-import hex.GLMSolver.GLMModel;
-import hex.GLMSolver.GLMParams;
-import hex.GLMSolver.GLMValidation;
-import hex.GLMSolver.Link;
+import hex.DGLM.CaseMode;
+import hex.DGLM.Family;
+import hex.DGLM.GLMException;
+import hex.DGLM.GLMModel;
+import hex.DGLM.GLMParams;
+import hex.DGLM.GLMValidation;
+import hex.DGLM.Link;
+import hex.DLSM.ADMMSolver;
+import hex.DLSM.GeneralizedGradientSolver;
+import hex.DLSM.LSMSolver;
+import hex.DLSM.LSMSolverType;
+import hex.NewRowVecTask.DataFrame;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -29,15 +34,20 @@ public class GLM extends Request {
   protected final H2OGLMModelKey _modelKey = new H2OGLMModelKey(MODEL_KEY,false);
   protected final EnumArgument<Family> _family = new EnumArgument(FAMILY,Family.gaussian,true);
   protected final LinkArg _link = new LinkArg(_family,LINK);
-  protected final Real _lambda = new Real(LAMBDA, LSMSolver.DEFAULT_LAMBDA); // TODO I do not know the bounds
-  protected final Real _alpha = new Real(ALPHA, LSMSolver.DEFAULT_ALPHA, 0, 1, "");
-  protected final Real _betaEps = new Real(BETA_EPS,GLMSolver.DEFAULT_BETA_EPS);
-  protected final Int _maxIter = new Int(MAX_ITER, GLMSolver.DEFAULT_MAX_ITER, 1, 1000000);
+  protected final Real _lambda = new Real(LAMBDA, 1e-5); // TODO I do not know the bounds
+  protected final Real _alpha = new Real(ALPHA, 0.5, 0, 1, "");
   protected final Real _caseWeight = new Real(WEIGHT,1.0);
   protected final CaseModeSelect _caseMode = new CaseModeSelect(_key,_y,_family, CASE_MODE,CaseMode.none);
   protected final CaseSelect _case = new CaseSelect(_key,_y,_caseMode,CASE);
-  protected final RSeq _thresholds = new RSeq(DTHRESHOLDS, false, new NumberSequence("0:1:0.01", false, 0.01),false);
   protected final Int _xval = new Int(XVAL, 10, 0, 1000000);
+  protected final Bool _expertSettings = new Bool("expert_settings", false,"Show expert settings.");
+  // ------------------------------------- ADVANCED SETTINGS ------------------------------------------------------------------------------------
+  protected final Bool _standardize = new Bool("standardize", true, "Set to standardize (0 mean, unit variance) the data before training.");
+  protected final RSeq _thresholds = new RSeq(DTHRESHOLDS, false, new NumberSequence("0:1:0.01", false, 0.01),false);
+  protected final EnumArgument<LSMSolverType> _lsmSolver = new EnumArgument<LSMSolverType>("lsm_solver", LSMSolverType.ADMM);
+  protected final Real _betaEps = new Real(BETA_EPS,1e-4);
+  protected final Int _maxIter = new Int(MAX_ITER, 50, 1, 1000000);
+  //protected final Bool _reweightGram = new Bool("reweigthed_gram_xval", false, "Set to force reweighted gram matrix for cross-validation (non-reweighted xval is much faster, less precise).");
 
   public GLM() {
       _requestHelp = "Compute generalized linear model with penalized maximum likelihood. Penalties include the lasso (L1 penalty), ridge regression (L2 penalty) or elastic net penalty (combination of L1 and L2) penalties. The penalty function is defined as :<br/>" +
@@ -65,6 +75,7 @@ public class GLM extends Request {
     _case._requestHelp = "Value to be used to compare against using predicate given by case mode selector to turn the y column into boolean.";
     _thresholds._requestHelp = "Sequence of decision thresholds to be evaluated during validation (used for ROC curce computation and for picking optimal decision threshold of the resulting classifier).";
     _xval._requestHelp = "Number of fold used in cross-validation. 0 or 1 means no cross validation.";
+    _expertSettings.setRefreshOnChange();
   }
 
 
@@ -82,8 +93,8 @@ public class GLM extends Request {
       sb.append(KEY + "=" + k.toString());
       sb.append("&y=" + m.responseName());
       sb.append("&x=" + URLEncoder.encode(m.xcolNames(),"utf8"));
-      sb.append("&family=" + m._glmParams._f.toString());
-      sb.append("&link=" + m._glmParams._l.toString());
+      sb.append("&family=" + m._glmParams._family.toString());
+      sb.append("&link=" + m._glmParams._link.toString());
       sb.append("&lambda=" + m._solver._lambda);
       sb.append("&alpha=" + m._solver._alpha);
       sb.append("&beta_eps=" + m._glmParams._betaEps);
@@ -108,6 +119,22 @@ public class GLM extends Request {
         _caseMode.disable("Only for family binomial");
         _caseWeight.disable("Only for family binomial");
         _thresholds.disable("Only for family binomial");
+      }
+    } else if (arg == _expertSettings){
+      if(_expertSettings.value()){
+        _lsmSolver._hideInQuery = false;
+        _thresholds._hideInQuery = false;
+        _maxIter._hideInQuery = false;
+        _betaEps._hideInQuery = false;
+        //_reweightGram._hideInQuery = false;
+        _standardize._hideInQuery = false;
+      } else {
+        _lsmSolver._hideInQuery = true;
+        _thresholds._hideInQuery = true;
+        _maxIter._hideInQuery = true;
+        _betaEps._hideInQuery = true;
+        //_reweightGram._hideInQuery = true;
+        _standardize._hideInQuery = true;
       }
     }
   }
@@ -136,22 +163,10 @@ public class GLM extends Request {
     return coefficients;
   }
 
-  double [] getFamilyArgs(Family f){
-    double [] res = null;
-    if( f == Family.binomial ) {
-      res = new double []{1.0,1.0};
-     // res[GLMSolver.FAMILY_ARGS_CASE] = _case.value();
-      res[GLMSolver.FAMILY_ARGS_WEIGHT] = _caseWeight.value();
-    }
-    return res;
-  }
-
   GLMParams getGLMParams(){
-    GLMParams res = new GLMParams();
-    res._f = _family.value();
-    res._l = _link.value();
-    if( res._l == Link.familyDefault )
-      res._l = res._f.defaultLink;
+    GLMParams res = new GLMParams(_family.value(),_link.value());
+    if( res._link == Link.familyDefault )
+      res._link = res._family.defaultLink;
     res._maxIter = _maxIter.value();
     res._betaEps = _betaEps.value();
     if(_caseWeight.valid())
@@ -173,15 +188,22 @@ public class GLM extends Request {
       res.addProperty("h2o", H2O.SELF.toString());
 
       GLMParams glmParams = getGLMParams();
-      LSMSolver lsm = LSMSolver.makeSolver(_lambda.value(),_alpha.value());
-      GLMModel m = new GLMModel(ary, columns, lsm, glmParams, null);
-      if(_modelKey.specified()){
-        GLMModel previousModel = _modelKey.value();
-        // set the beta to previous result to have warm start
-        if(previousModel.beta() != null && previousModel.beta().length == m.beta().length)
-          m.setBeta(previousModel.beta());
+
+      LSMSolverType t = _lsmSolver.value();
+      LSMSolver lsm = null;
+      switch(t){
+      case ADMM:
+        lsm = new ADMMSolver(_lambda.value(),_alpha.value());
+        break;
+      case GenGradient:
+        lsm = new GeneralizedGradientSolver(_lambda.value(),_alpha.value());
       }
-      m.build();
+
+      DataFrame data = DGLM.getData(ary, columns, null, _standardize.value());
+
+      GLMModel m = DGLM.buildModel(data, lsm, glmParams);
+
+
       if( m.isSolved() ) {     // Solved at all?
         NumberSequence nseq = _thresholds.value();
         double[] arr = nseq == null ? null : nseq._arr;
@@ -240,7 +262,7 @@ public class GLM extends Request {
         R.replace("warnings",wsb);
         R.replace("succ","alert-warning");
         if(!m.converged())
-          R.replace("action","Suggested action: Go to " + (m.isSolved() ? (GLMGrid.link(m, "Grid search") + ", "):"") + " to search for better paramters");
+          R.replace("action","Suggested action: Go to " + (m.isSolved() ? (GLMGrid.link(m, "Grid search") + ", "):"") + " to search for better parameters");
       } else {
         R.replace("succ","alert-success");
       }
@@ -274,7 +296,8 @@ public class GLM extends Request {
         JsonObject coefs = json.get("coefficients").getAsJsonObject();
         R.replace("modelSrc",equationHTML(m,coefs));
         R.replace("coefficients",coefsHTML(coefs));
-        R.replace("normalized_coefficients",coefsHTML(json.get("normalized_coefficients").getAsJsonObject()));
+        if(json.has("normalized_coefficients"))
+          R.replace("normalized_coefficients",coefsHTML(json.get("normalized_coefficients").getAsJsonObject()));
       }
       sb.append(R);
       // Validation / scoring
@@ -298,8 +321,10 @@ public class GLM extends Request {
     private static String glmParamsHTML( GLMModel m ) {
       StringBuilder sb = new StringBuilder();
       GLMParams glmp = m._glmParams;
-      parm(sb,"family",glmp._f);
-      parm(sb,"link",glmp._l);
+      parm(sb,"family",glmp._family);
+      parm(sb,"link",glmp._link);
+      parm(sb,"&alpha;",m._solver._alpha);
+      parm(sb,"&lambda;",m._solver._lambda);
       parm(sb,EPSILON,glmp._betaEps);
 
       if( glmp._caseMode != CaseMode.none) {
@@ -312,15 +337,15 @@ public class GLM extends Request {
     private static String lsmParamsHTML( GLMModel m ) {
       StringBuilder sb = new StringBuilder();
       LSMSolver lsm = m._solver;
-      parm(sb,LAMBDA,lsm._lambda);
-      parm(sb,ALPHA  ,lsm._alpha);
+      //parm(sb,LAMBDA,lsm._lambda);
+      //parm(sb,ALPHA  ,lsm._alpha);
       return sb.toString();
     }
 
     // Pretty equations
     private static String equationHTML( GLMModel m, JsonObject coefs ) {
       RString eq = null;
-      switch( m._glmParams._l ) {
+      switch( m._glmParams._link ) {
       case identity: eq = new RString("y = %equation");   break;
       case logit:    eq = new RString("y = 1/(1 + Math.exp(-(%equation)))");  break;
       default:       eq = new RString("equation display not implemented"); break;
@@ -351,7 +376,7 @@ public class GLM extends Request {
       sb.append("<td>").append(coefs.get("Intercept").getAsDouble()).append("</td>");
       for( Entry<String,JsonElement> e : coefs.entrySet()){
         if(e.getKey().equals("Intercept"))continue;
-        sb.append("<td>").append(e.getValue().getAsDouble()).append("</td>");        
+        sb.append("<td>").append(e.getValue().getAsDouble()).append("</td>");
       }
       sb.append("</tr>");
       sb.append("</table>");
@@ -462,7 +487,7 @@ public class GLM extends Request {
       sb.append("</td></tr>");
     }
 
-    private static void confusionHTML( GLMSolver.ConfusionMatrix cm, StringBuilder sb) {
+    private static void confusionHTML( ConfusionMatrix cm, StringBuilder sb) {
       if( cm == null ) return;
       sb.append("<table class='table table-bordered table-condensed'>");
       sb.append("<tr><th>Actual / Predicted</th><th>false</th><th>true</th><th>Err</th></tr>");

@@ -17,7 +17,7 @@ def define_params():
         'link': 'familyDefault', 
         'alpha': 0.5, 
         'num_cross_validation_folds': 9, 
-        'lambda': 1
+        'lambda': 1e-4
     }
     return paramDict
 
