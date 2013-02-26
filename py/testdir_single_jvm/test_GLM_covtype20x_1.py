@@ -11,6 +11,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(1,java_heap_GB=4)
@@ -22,7 +23,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_poisson_covtype20x(self):
-        if (localhost):
+        if localhost:
             csvFilenameList = [
                 ('covtype20x.data', 120),
                 ]

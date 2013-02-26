@@ -34,6 +34,7 @@ class Basic(unittest.TestCase):
         # SEED = 
         random.seed(SEED)
         print "\nUsing random seed:", SEED
+        global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(1,java_heap_GB=28)
@@ -61,7 +62,7 @@ class Basic(unittest.TestCase):
             # Have to copy it to /home/0xdiag/datasets!
 
 
-        if (localhost):
+        if localhost:
             csvFilenameList = [
                 # ('rand_logreg_500Kx70.csv.gz', 500, 'rand_500Kx70'),
                 # ('rand_logreg_1Mx70.csv.gz', 500, 'rand_1Mx70'),
