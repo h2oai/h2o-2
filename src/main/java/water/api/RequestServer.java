@@ -48,7 +48,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new KMeans()),      "KMeans",        "Model");
     Request.addToNavbar(registerRequest(new Console()),     "Console",       "Model");
 
-    Request.addToNavbar(registerRequest(new RFView()),      "Random Forest", "Score");
+    Request.addToNavbar(registerRequest(new RFScore()),     "Random Forest", "Score");
     Request.addToNavbar(registerRequest(new GLMScore()),    "GLM",           "Score");
     Request.addToNavbar(registerRequest(new Score()),       "Apply Model",   "Score");
 
@@ -77,6 +77,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new PutVector());
     registerRequest(new Remove());
     registerRequest(new RemoveAck());
+    registerRequest(new RFView());
     registerRequest(new RFTreeView());
     registerRequest(new TypeaheadKeysRequest("Existing H2O Key", ""));
     registerRequest(new TypeaheadFileRequest());

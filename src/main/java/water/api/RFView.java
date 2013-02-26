@@ -1,16 +1,23 @@
 package water.api;
 
+import water.Jobs.Job;
 import water.Key;
+import water.api.RequestBuilders.Response;
 import water.util.RString;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import com.sun.crypto.provider.DESParameters;
+
 import hex.rf.Confusion;
 import hex.rf.RFModel;
 
-public class RFView extends Request {
+/**
+ * RFView shows a progress of random forest building and data scoring.
+ */
+public class RFView extends Progress {
 
   protected final H2OHexKey          _dataKey  = new H2OHexKey(DATA_KEY);
   protected final RFModelKey         _modelKey = new RFModelKey(MODEL_KEY);
@@ -21,26 +28,46 @@ public class RFView extends Request {
   protected final Bool               _noCM     = new Bool(NO_CM, false,"Do not produce confusion matrix");
   protected final Bool               _clearCM  = new Bool(JSON_CLEAR_CM, false, "Clear cache of model confusion matrices");
 
-  public static final String JSON_CONFUSION_KEY = "confusion_key";
-  public static final String JSON_CLEAR_CM      = "clear_confusion_matrix";
+  public static final String JSON_CONFUSION_KEY   = "confusion_key";
+  public static final String JSON_CLEAR_CM        = "clear_confusion_matrix";
 
-  public static final String JSON_CM        = "confusion_matrix";
-  public static final String JSON_CM_TYPE   = "type";
-  public static final String JSON_CM_HEADER = "header";
-  public static final String JSON_CM_MATRIX = "scores";
-  public static final String JSON_CM_TREES  = "used_trees";
+  // JSON keys
+  public static final String JSON_CM              = "confusion_matrix";
+  public static final String JSON_CM_TYPE         = "type";
+  public static final String JSON_CM_HEADER       = "header";
+  public static final String JSON_CM_MATRIX       = "scores";
+  public static final String JSON_CM_TREES        = "used_trees";
   public static final String JSON_CM_CLASS_ERR    = "classification_error";
   public static final String JSON_CM_ROWS         = "rows";
   public static final String JSON_CM_ROWS_SKIPPED = "rows_skipped";
 
+  private final static String[] PARAMS_LIST  = new String[] {DATA_KEY, MODEL_KEY, CLASS, NUM_TREES, WEIGHTS, OOBEE, NO_CM, JSON_CLEAR_CM};
   RFView() {
     // hide in generated query page
     _oobee._hideInQuery = true;
+    _numTrees._readOnly = true;
+
+    _job._hideInQuery   = true;
+    _dest._hideInQuery  = true;
+  }
+
+  public static Response redirect(JsonObject fromPageResponse, Key job, Key model) {
+    JsonObject destPageParams = new JsonObject();
+    destPageParams.addProperty(JOB, job.toString());
+    destPageParams.addProperty(DEST_KEY, model.toString());
+    for (String param : PARAMS_LIST) {
+      if (fromPageResponse.has(param)) destPageParams.addProperty(param, fromPageResponse.get(param).getAsString());
+    }
+    return Response.redirect(fromPageResponse, RFView.class, destPageParams);
   }
 
   public static String link(Key k, String content) {
+    return link(k, DATA_KEY, content);
+  }
+
+  public static String link(Key k, String keyParam, String content) {
     RString rs = new RString("<a href='RFView.query?%key_param=%$key'>%content</a>");
-    rs.replace("key_param", DATA_KEY);
+    rs.replace("key_param", keyParam);
     rs.replace("key", k.toString());
     rs.replace("content", content);
     return rs.toString();
@@ -52,26 +79,39 @@ public class RFView extends Request {
     return Response.redirect(resp, RFView.class, redir);
   }
 
-  @Override protected Response serve() {
-    int tasks = 0;
-    int finished = 0;
+  @Override
+  protected JsonObject defaultJsonResponse() {
+    JsonObject r = super.defaultJsonResponse();
     RFModel model = _modelKey.value();
+    r.addProperty( DATA_KEY, _dataKey.originalValue());
+    r.addProperty(MODEL_KEY, _modelKey.originalValue());
+    r.addProperty(    CLASS, _classCol.value());
+    r.addProperty(NUM_TREES, model._totalTrees);
+    r.addProperty(     MTRY, model._splitFeatures);
+    r.addProperty(    OOBEE, _oobee.value());
+    return r;
+  }
+
+  @Override
+  protected Response jobDone(JsonObject jsonResp) {
+    return Response.done(jsonResp);
+  }
+
+  // NOTE: now it handle jobs only partially
+  @Override protected Response serve() {
+    int tasks        = 0;
+    int finished     = 0;
+    RFModel model    = _modelKey.value();
     double[] weights = _weights.value();
-    JsonObject response = new JsonObject();
 
-    response.addProperty(DATA_KEY, _dataKey.originalValue());
-    response.addProperty(MODEL_KEY, _modelKey.originalValue());
-    response.addProperty(CLASS, _classCol.value());
-    response.addProperty(NUM_TREES, model._totalTrees);
-    response.addProperty(MTRY, -1);
+    tasks    = model._totalTrees;
+    finished = model.size();
 
-    tasks += model._totalTrees;
-    finished += model.size();
-
+    JsonObject response = defaultJsonResponse();
     // CM return and possible computation is requested
     if (!_noCM.value()) {
       tasks += 1;
-      // get the confusion matrix
+      // Get the confusion matrix
       Confusion confusion = Confusion.make(model, _dataKey.value()._key, _classCol.value(), weights, _oobee.value());
       response.addProperty(JSON_CONFUSION_KEY, confusion.keyFor().toString());
       // if the matrix is valid, report it in the JSON
@@ -111,9 +151,14 @@ public class RFView extends Request {
     }
     response.add(Constants.TREES,trees);
 
-    Response r = (finished == tasks) ? Response.done(response) : Response.poll(response, finished, tasks);
+    // Update job
+    Job job  = findJob();
+    if (job!=null && job._progress!=null) water.Jobs.Progress.set(job._progress, finished/tasks);
+
+    // Build a response
+    Response r = (finished == tasks) ? jobDone(response) : Response.poll(response, finished, tasks);
     r.setBuilder(JSON_CM, new ConfusionMatrixBuilder());
-    r.setBuilder(Constants.TREES, new TreeListBuilder());
+    r.setBuilder(TREES, new TreeListBuilder());
     return r;
   }
 

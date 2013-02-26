@@ -132,6 +132,7 @@ public class Tree extends CountedCompleter {
       sb.append(" d=").append(_tree.depth()).append(" leaves=").append(_tree.leaves()).append(" done in ").append(timer).append('\n');
       Utils.pln(_tree.toString(sb,  _verbose > 0 ? Integer.MAX_VALUE : 200).toString());
     }
+    // Wait for completation
     tryComplete();
   }
 

@@ -95,6 +95,7 @@ public class RF extends Request {
     Tree.StatType statType = _gini.value() ? Tree.StatType.GINI : Tree.StatType.ENTROPY;
 
     try {
+      DRF drf =
       hex.rf.DRF.webMain(
               modelKey,         // Key to save the model under
               cols,             // Columns selected from the dataset
@@ -122,10 +123,10 @@ public class RF extends Request {
       if (_ignore.specified())
         response.addProperty(IGNORE, _ignore.originalValue());
       response.addProperty(OOBEE, _oobee.value());
+
+      return RFView.redirect(response, drf._job._key, modelKey);
     } catch (IllegalArgumentException e) {
       return Response.error("Incorrect input data: "+e.getMessage());
     }
-
-    return Response.redirect(response, RFView.class, response);
   }
 }

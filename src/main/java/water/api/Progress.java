@@ -19,6 +19,17 @@ public class Progress extends Request {
 
   @Override
   protected Response serve() {
+    Job job = findJob();
+    JsonObject jsonResponse = defaultJsonResponse();
+
+    if( job == null )
+      return jobDone(jsonResponse);
+
+    return jobInProgress(job, jsonResponse);
+  }
+
+  /** Find job key for this request */
+  protected Job findJob() {
     Key key = Key.make(_job.value());
     Job job = null;
     for( Job current : Jobs.get() ) {
@@ -27,23 +38,38 @@ public class Progress extends Request {
         break;
       }
     }
+    return job;
+  }
 
+  /** Create default Json response with destination key */
+  protected JsonObject defaultJsonResponse() {
     JsonObject response = new JsonObject();
     response.addProperty(RequestStatics.DEST_KEY, _dest.value());
+    return response;
+  }
 
-    if( job == null )
-      return Inspect.redirect(response, Key.make(_dest.value()));
+  /** Return {@link Response} for finished job. */
+  protected Response jobDone(final JsonObject jsonResp) {
+    return Inspect.redirect(jsonResp, Key.make(_dest.value()));
+  }
 
+  /** Return default progress {@link Response}. */
+  protected Response jobInProgress(final Job job, JsonObject jsonResp) {
     Jobs.Progress progress = UKV.get(job._progress, new Jobs.Progress());
-    Response r = Response.poll(response, progress != null ? progress.get() : 1f);
+    Response r = Response.poll(jsonResp, progress != null ? progress.get() : 1f);
+
     final String description = job._description;
-    r.setBuilder(ROOT_OBJECT, new ObjectBuilder() {
+    r.setBuilder(ROOT_OBJECT, defaultProgressBuilder(description));
+    r.setBuilder(RequestStatics.DEST_KEY, new KeyElementBuilder());
+    return r;
+  }
+
+  static final ObjectBuilder defaultProgressBuilder(final String description) {
+    return  new ObjectBuilder() {
       @Override
       public String caption(JsonObject object, String objectName) {
         return "<h3>" + description + "</h3>";
       }
-    });
-    r.setBuilder(RequestStatics.DEST_KEY, new KeyElementBuilder());
-    return r;
+    };
   }
 }

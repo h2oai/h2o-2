@@ -202,6 +202,11 @@ public class RequestArguments extends RequestStatics {
      */
     public boolean _hideInQuery = false;
 
+    /**
+     * True if the argument should be only read-only.
+     */
+    public boolean _readOnly = false;
+
     /** Override this method to provide parsing of the input string to the Java
      * expected value. The input is guaranteed to be non-empty when this method
      * is called and all prerequisities are guaranteed to be valid before this
@@ -523,7 +528,7 @@ public class RequestArguments extends RequestStatics {
         T v = defaultValue();
         value = (v == null) ? "" : v.toString();
       }
-      return "<input class='span5' type='text' name='"+_name+"' id='"+_name+"' placeholder='"+queryDescription()+"' "+ (!value.isEmpty() ? (" value='"+value+"' />") : "/>");
+      return "<input" + (_readOnly ? " disabled" : "")+ " class='span5' type='text' name='"+_name+"' id='"+_name+"' placeholder='"+queryDescription()+"' "+ (!value.isEmpty() ? (" value='"+value+"' />") : "/>");
     }
 
     /** JS refresh is a default jQuery hook to the change() method.
@@ -2195,8 +2200,8 @@ public class RequestArguments extends RequestStatics {
     protected Integer parse(String input) throws IllegalArgumentException {
       Integer N = super.parse(input);
       RFModel model = _modelKey.value();
-      if (N > model.treeCount())
-        throw new IllegalArgumentException("Value "+N+" is higher than number of trees provided by the random forest model ("+model.treeCount()+")!");
+//      if (N > model.treeCount())
+//        throw new IllegalArgumentException("Value "+N+" is higher than number of trees provided by the random forest model ("+model.treeCount()+")!");
 
       return N;
     }

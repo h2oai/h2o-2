@@ -22,16 +22,20 @@ public class RandomForest {
   private static final long ROOT_SEED_ADD  = 0x026244fd935c5111L;
   private static final long TREE_SEED_INIT = 0x1321e74a0192470cL;
 
-  public RandomForest(final DRF drf,
+  /** Build random forest for data stored on this node. */
+  public static void build(
+                      final DRF drf,
                       final Data data,
-                      int ntrees, int maxTreeDepth, double minErrorRate,
-                      StatType stat, boolean parallelTrees,
+                      int ntrees,
+                      int maxTreeDepth,
+                      double minErrorRate,
+                      StatType stat,
+                      boolean parallelTrees,
                       int numSplitFeatures) {
     Timer  t_alltrees = new Timer();
     Tree[] trees      = new Tree[ntrees];
     Utils.pln("[RF] number of split features: "+ drf.numSplitFeatures());
-    String str = data.rows()+" rows ";
-    Utils.pln("[RF] starting RF computation with "+ str);
+    Utils.pln("[RF] starting RF computation with "+ data.rows()+" rows ");
 
     Random rnd = Utils.getRNG(data.seed() + ROOT_SEED_ADD);
     for (int i = 0; i < ntrees; ++i) {

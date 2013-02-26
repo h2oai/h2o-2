@@ -84,6 +84,7 @@ public final class DRF extends water.DRemoteTask {
   /** Key for the training data. */
   public final Key aryKey()           { return _rfmodel._dataKey; }
 
+  /** */
   public static DRF webMain(
     Key modelKey, int[] cols, ValueArray ary, int ntrees, int depth, float sample, short binLimit,
     StatType stat, long seed, boolean parallelTrees, double[] classWt, int numSplitFeatures,
@@ -171,6 +172,7 @@ public final class DRF extends water.DRemoteTask {
 
   /**Inhale the data, build a DataAdapter and kick-off the computation.
    * */
+  @Override
   public final void compute() {
     Timer t_extract = new Timer();
     // Build data adapter for this node.
@@ -182,16 +184,21 @@ public final class DRF extends water.DRemoteTask {
     int ntrees        = howManyTrees();
 
     Utils.pln("[RF] Building "+ntrees+" trees");
-    new RandomForest(this, t, ntrees, _depth, 0.0, StatType.values()[_stat],_parallel,_numSplitFeatures);
+    RandomForest.build(this, t, ntrees, _depth, 0.0, StatType.values()[_stat],_parallel,_numSplitFeatures);
+    // Wait for the running jobs
     tryComplete();
   }
 
+  @Override
   public final void reduce( DRemoteTask drt ) { }
 
   @Override
   public void onCompletion(CountedCompleter caller) {
-    if(_job != null)
-      Jobs.remove(_job._key);
+    System.out.println("DRF.onCompletion(): removing job if it is not null: " + _job);
+    System.out.println("DRF.onCompletion(): keys  :" + _keys.length);
+    System.out.println("DRF.onCompletion(): ntrees:" + _ntrees);
+    /*if(_job != null)
+      Jobs.remove(_job._key);*/
   }
 
   /** Unless otherwise specified each split looks at sqrt(#features). */
