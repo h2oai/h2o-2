@@ -234,7 +234,7 @@ nodes = []
 
 def write_flatfile(node_count=2, base_port=54321, hosts=None):
     # always create the flatfile. 
-    ports_per_node = 2
+    ports_per_node = 3
     pff = open(flatfile_name(), "w+")
     if hosts is None:
         ip = get_ip_address()
@@ -247,20 +247,20 @@ def write_flatfile(node_count=2, base_port=54321, hosts=None):
     pff.close()
 
 
-def check_port_group(baseport):
+def check_port_group(base_port):
     # UPDATE: don't do this any more
     # for now, only check for jenkins or kevin
     if (1==0):
         username = getpass.getuser()
         if username=='jenkins' or username=='kevin' or username=='michal':
-            # assumes you want to know about 3 ports starting at baseport
+            # assumes you want to know about 3 ports starting at base_port
             command1Split = ['netstat', '-anp']
             command2Split = ['egrep']
             # colon so only match ports. space at end? so no submatches
-            command2Split.append("(%s | %s | %s)" % (baseport, baseport+1, baseport+2) )
+            command2Split.append("(%s | %s | %s)" % (base_port, base_port+1, base_port+2) )
             command3Split = ['wc','-l']
 
-            print "Checking 3 ports starting at ", baseport
+            print "Checking 3 ports starting at ", base_port
             print ' '.join(command2Split)
 
             # use netstat thru subprocess
@@ -284,7 +284,9 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         timeoutSecs=20, retryDelaySecs=0.5, cleanup=True, **kwargs):
     # moved to here from unit_main. so will run with nosetests too!
     clean_sandbox()
-    ports_per_node = 2 
+    # H2O still checks for collision against 3 ports range 
+    # even if its only using 2
+    ports_per_node = 3 
     node_list = []
     try:
         # if no hosts list, use psutil method on local host.
@@ -300,7 +302,7 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
                 node_list.append(newNode)
                 totalNodes += 1
         else:
-            # if use_flatfile, the flatfile was created and uploaded to hosts already
+            # if hosts, the flatfile was created and uploaded to hosts already
             # I guess don't recreate it, don't overwrite the one that was copied beforehand.
             hostCount = len(hosts)
             for h in hosts:
@@ -1085,8 +1087,18 @@ class H2O(object):
                 '--ip=%s' % self.addr,
                 ]
 
+        # Need to specify port, since there can be multiple ports for an ip in the flatfile
+        if self.port is not None:
+            args += [
+                "--port=%d" % self.port,
+            ]
+
+        if self.use_flatfile:
+            args += [
+                '--flatfile=' + self.flatfile,
+            ]
+
         args += [
-            "--port=%d" % self.port,
             '--ice_root=%s' % self.get_ice_dir(),
             # if I have multiple jenkins projects doing different h2o clouds, I need
             # I need different ports and different cloud name.
@@ -1113,11 +1125,6 @@ class H2O(object):
                 args += [
                     '-hdfs_config ' + self.hdfs_config
                 ]
-
-        if self.use_flatfile:
-            args += [
-                '--flatfile=' + self.flatfile,
-            ]
 
         if not self.sigar:
             args += ['--nosigar']
