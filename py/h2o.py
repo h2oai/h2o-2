@@ -1317,6 +1317,7 @@ class RemoteHost(object):
             # check if file exists on remote side
             try:
                 sftp.stat(dest)
+                verboseprint("Skipping upload of file {0} because file {1} exists on remote side!".format(f, dest))
             except IOError, e:
                 if e.errno == errno.ENOENT:
                     sftp.put(f, dest, callback=progress)
