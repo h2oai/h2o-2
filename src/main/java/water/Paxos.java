@@ -48,6 +48,7 @@ public abstract class Paxos {
   // received before.  If so, then we need to Promise to honor it.  Also, if we
   // have Accepted prior Proposals, we need to include that info in any Promise.
   static long PROPOSAL_MAX;
+  static long PROPOSAL_MAX_SENT;
 
   // Whether or not we have common knowledge
   public static volatile boolean _commonKnowledge = false;
@@ -88,7 +89,8 @@ public abstract class Paxos {
     // delayed heartbeat packet, or maybe he's missed the Accepted announcement.
     // In either case, pound the news into his head.
     if( cloud._memset.contains(h2o) ) {
-      if( H2O.isIDFromPrevCloud(h2o) ) {
+      // if( H2O.isIDFromPrevCloud(h2o) ) {
+      if ( 1==1 ) {
         // In situations of rapid cloud formation, we could have:
         // A Cloud of {A,B} is voted on.
         // A Cloud of {A,B,C,D} is voted on by A,C,D forming a quorum.  B is slow.
@@ -189,6 +191,12 @@ public abstract class Paxos {
       // think they should be leaders get to toss out proposals.
       ACCEPTED.clear(); // Reset the Accepted count: we got no takings on this new Proposal
       long proposal_num = PROPOSAL_MAX+1;
+      // note PROPOSAL_MAX_SENT never gets zeroed, unlike PROPOSAL_MAX
+      if ( PROPOSAL_MAX_SENT > PROPOSAL_MAX ) {
+        proposal_num = PROPOSAL_MAX_SENT+1;
+      }
+      PROPOSAL_MAX_SENT = proposal_num;
+
       UUID uuid = UUID.randomUUID();
       _state._idLo = uuid.getLeastSignificantBits();
       _state._idHi = uuid.getMostSignificantBits();

@@ -17,20 +17,18 @@ class Basic(unittest.TestCase):
         # FIX! weird timeout H2O exceptions with >8? maybe shouldn't
         # don't know if we care
         base_port = 54300
-        ports_per_node = 3
+        ports_per_node = 2
         for tryNodes in range(2,17):
             h2o.verboseprint("Trying cloud of", tryNodes)
             sys.stdout.write('.')
             sys.stdout.flush()
 
             start = time.time()
-            h2o.build_cloud(tryNodes, base_port=base_port, timeoutSecs=max(30,10*tryNodes))
+            h2o.build_cloud(tryNodes, base_port=base_port, 
+                retryDelaySecs=2, timeoutSecs=max(30,10*tryNodes), java_heap_GB=1)
             print "Built cloud of %d in %d s" % (tryNodes, (time.time() - start)) 
-            for i in range(2):
-                h2o.verify_cloud_size()
-                time.sleep(1)
-
+            h2o.verify_cloud_size()
             h2o.tear_down_cloud()
-            base_port += ports_per_node * tryNodes
+            # base_port += ports_per_node * tryNodes
 if __name__ == '__main__':
     h2o.unit_main()
