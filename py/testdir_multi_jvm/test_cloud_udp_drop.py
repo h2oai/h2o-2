@@ -29,6 +29,6 @@ class Basic(unittest.TestCase):
             print "Built cloud of %d in %d s" % (tryNodes, (time.time() - start)) 
             h2o.verify_cloud_size()
             h2o.tear_down_cloud()
-            base_port += ports_per_node * tryNodes
+            ### base_port += ports_per_node * tryNodes
 if __name__ == '__main__':
     h2o.unit_main()
