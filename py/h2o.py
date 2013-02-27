@@ -1314,8 +1314,14 @@ class RemoteHost(object):
             # log('Uploading to %s: %s -> %s' % (self.http_addr, f, dest))
 
             sftp = self.ssh.open_sftp()
-            sftp.put(f, dest, callback=progress)
-            sftp.close()
+            # check if file exists on remote side
+            try:
+                sftp.stat(dest)
+            except IOError, e:
+                if e.errno == errno.ENOENT:
+                    sftp.put(f, dest, callback=progress)
+            finally:
+                sftp.close()
             self.uploaded[f] = dest
         return self.uploaded[f]
 

@@ -31,11 +31,12 @@ MEMORY_MAPPING = {
     'm3.2xlarge' : { 'xmx' : 24 },  
 }
 
+''' EC2 API default configuration. The corresponding values are replaces by EC2 user config. '''
 EC2_API_RUN_INSTANCE = {
-'image_id'  :None,
-'min_count' :1,
-'max_count' :1,
-'key_name'  :None,
+'image_id'        :None,
+'min_count'       :1,
+'max_count'       :1,
+'key_name'        :None,
 'security_groups' :None,
 'user_data'       :None,
 'addressing_type' :None,
@@ -169,6 +170,7 @@ def dump_hosts_config(ec2_config, reservation, filename='ec2-config-{0}.json'):
     cfg['use_flatfile']    = True
     cfg['h2o_per_host']    = 1
     cfg['java_heap_GB']    = MEMORY_MAPPING[ec2_config['instance_type']]['xmx']
+    cfg['java_extra_args'] = '-XX:MaxDirectMemorySize=1g'
     cfg['base_port']       = 54321
     cfg['ip'] = [ i.private_ip_address for i in reservation.instances ]
     cfg['instances'] = [ { 'id': i.id, 'private_ip_address': i.private_ip_address, 'public_ip_address': i.ip_address, 'public_dns_name': i.public_dns_name } for i in reservation.instances ]
