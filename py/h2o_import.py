@@ -9,7 +9,7 @@ def setupImportS3(node=None, path='test-s3-integration'):
 # assumes you call setupImportS3 first
 def parseImportS3File(node=None, 
     csvFilename='covtype.data', path='test-s3-integration', key2=None,
-    timeoutSecs=None, retryDelaySecs=None):
+    timeoutSecs=30, retryDelaySecs=0.5):
 
     if not node: node = h2o.nodes[0]
     if not csvFilename: raise Exception('parseImportS3File: No csvFilename')
@@ -37,7 +37,7 @@ def setupImportFolder(node=None, path='/home/0xdiag/datasets'):
 
 # assumes you call setupImportFolder first
 def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
-    timeoutSecs=None, retryDelaySecs=None, initialDelaySecs=None):
+    timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=1):
     if not node: node = h2o.nodes[0]
     if not csvFilename: raise Exception('parseImportFolderFile: No csvFilename')
 

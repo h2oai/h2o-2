@@ -31,7 +31,7 @@ def checkScalarResult(resultInspect, resultKey):
     # weird..it's a tuple, not a list? when the extra level of hier is there
     # this works:
     if type(resultInspect) is not dict:
-        print "Trimming resultInspect hier."
+        ### print "Trimming resultInspect hier."
         resultInspect0 = resultInspect[0]
     else:
         resultInspect0 = resultInspect

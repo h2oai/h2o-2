@@ -36,12 +36,15 @@ def exec_list_like_other_tests(exprList, lenNodes, csvFilename, key2):
 
                 execExpr = h2e.fill_in_expr_template(exprTemplate, colX, trial, row, key2)
                 execResultInspect = h2e.exec_expr(h2o.nodes[nodeX], execExpr, 
-                    resultKey="Result"+str(trial)+".hex")
-                print "\nexecResult:", h2o.dump_json(execResultInspect)
-
+                    resultKey="Result"+str(trial)+".hex", timeoutSecs=60)
+                eri0 = execResultInspect[0]
+                eri1 = execResultInspect[1]
+                columns = eri0.pop('cols')
+                columnsDict = columns[0]
+                print "\nexecResult cols[0]:", h2o.dump_json(columnsDict)
+                print "\nexecResult [1] :", h2o.dump_json(eri1)
+                print "\nexecResult rest:", h2o.dump_json(eri0)
                 
-                columns = execResultInspect[0]["cols"]
-                columnsDict = columns.pop()
                 min = columnsDict["min"]
                 h2o.verboseprint("min: ", min, "trial:", trial)
                 ### self.assertEqual(float(min), float(trial),"what can we check here")

@@ -34,9 +34,9 @@ class Basic(unittest.TestCase):
         # SEED = 
         random.seed(SEED)
         print "\nUsing random seed:", SEED
-        global local_host
-        local_host = not 'hosts' in os.getcwd()
-        if (local_host):
+        global localhost
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
             h2o.build_cloud(1,java_heap_GB=28)
         else:
             h2o_hosts.build_cloud_with_hosts()
@@ -62,7 +62,7 @@ class Basic(unittest.TestCase):
             # Have to copy it to /home/0xdiag/datasets!
 
 
-        if (local_host):
+        if localhost:
             csvFilenameList = [
                 # ('rand_logreg_500Kx70.csv.gz', 500, 'rand_500Kx70'),
                 # ('rand_logreg_1Mx70.csv.gz', 500, 'rand_1Mx70'),
@@ -84,7 +84,7 @@ class Basic(unittest.TestCase):
         for csvFilename, timeoutSecs, key2 in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
             parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2,
-                timeoutSecs=2000, retryDelaySecs=1, initialDelaySecs=10)
+                timeoutSecs=2000, retryDelaySecs=5, initialDelaySecs=10)
             inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             csvPathname = importFolderPath + "/" + csvFilename
             num_rows = inspect['num_rows']
