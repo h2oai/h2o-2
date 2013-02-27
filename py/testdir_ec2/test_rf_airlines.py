@@ -25,14 +25,14 @@ trainDS = {
         's3bucket'    : 'h2o_airlines_unpacked',
         'filename'    : 'year1987.csv',
         'timeoutSecs' : 14800,
-        'header'      : True
+        'header'      : 1
         }
 
 scoreDS = {
         's3bucket'    : 'h2o_airlines_unpacked',
         'filename'    : 'year1988.csv',
         'timeoutSecs' : 14800,
-        'header'      : True
+        'header'      : 1
         }
 
 PARSE_TIMEOUT=14800
