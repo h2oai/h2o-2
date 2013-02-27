@@ -32,7 +32,7 @@ class Basic(unittest.TestCase):
                 h2o.tear_down_cloud()
                 # with so many jvms, wait for sticky ports to be freed up..slow os stuff?
                 # changed, to increment the base_port, to avoid reuse immediately
-                time.sleep(4)
+                time.sleep(1)
                 base_port += ports_per_node * tryNodes
 
 

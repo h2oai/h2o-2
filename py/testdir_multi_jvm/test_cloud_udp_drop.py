@@ -27,10 +27,7 @@ class Basic(unittest.TestCase):
             h2o.build_cloud(tryNodes, base_port=base_port, random_udp_drop=True,
                 timeoutSecs=max(30,20*tryNodes), java_heap_GB=1)
             print "Built cloud of %d in %d s" % (tryNodes, (time.time() - start)) 
-            for i in range(2):
-                h2o.verify_cloud_size()
-                time.sleep(1)
-
+            h2o.verify_cloud_size()
             h2o.tear_down_cloud()
             base_port += ports_per_node * tryNodes
 if __name__ == '__main__':
