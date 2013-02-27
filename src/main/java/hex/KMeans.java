@@ -17,7 +17,6 @@ public abstract class KMeans {
   public static Long           RAND_SEED;
 
   public static class KMeansModel extends Model implements Progress {
-    public static final String KEY_PREFIX = "__KMeansModel_";
     public double[][]          _clusters;                    // The cluster centers, normalized according to _va
     public int                 _iteration;
 

@@ -16,7 +16,7 @@ public class KMeansTest extends TestUtil {
   @Test
   public void test1Dimension() {
     Key source = Key.make("datakey");
-    Key target = Key.make(KMeans.KMeansModel.KEY_PREFIX+"datakey.kmeans");
+    Key target = Key.make("datakey.kmeans");
 
     try {
       ValueArray va = va_maker(source, //
@@ -43,7 +43,7 @@ public class KMeansTest extends TestUtil {
 
   public void testGaussian(int rows) {
     Key source = Key.make("datakey");
-    Key target = Key.make(KMeans.KMeansModel.KEY_PREFIX+"datakey.kmeans");
+    Key target = Key.make("datakey.kmeans");
 
     try {
       KMeans.RAND_SEED = 8683452581122892189L;

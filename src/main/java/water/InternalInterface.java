@@ -1,9 +1,5 @@
 package water;
 
-import hex.DGLM.GLMModel;
-import hex.KMeans.KMeansModel;
-import hex.rf.RFModel;
-
 import java.io.InputStream;
 
 import water.api.Cloud;
@@ -30,11 +26,7 @@ public class InternalInterface implements water.ExternalInterface {
       throw new IllegalArgumentException("Key "+sk+" not found!");
     Model M = null;
     try {
-      // TODO - replace me with proper typed Values
-      if( sk.startsWith(   GLMModel.KEY_PREFIX)  ) M = new    GLMModel();
-      if( sk.startsWith(KMeansModel.KEY_PREFIX)  ) M = new KMeansModel();
-      if( sk.startsWith(    RFModel.KEY_PREFIX)  ) M = new     RFModel();
-      M.read(new AutoBuffer(v.memOrLoad()));
+      M = v.get();
     } catch(Throwable t) {
       throw new IllegalArgumentException("Key "+sk+" is not a Model key");
     }

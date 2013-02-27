@@ -9,7 +9,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import water.*;
-import water.util.TestUtil;
 
 /**
  * Note: This test expect cloud of 3 nodes.

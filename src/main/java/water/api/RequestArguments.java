@@ -1578,12 +1578,7 @@ public class RequestArguments extends RequestStatics {
       if (v == null)
         throw new IllegalArgumentException("Key "+input+" not found!");
       try {
-        // TODO - replace me with proper typed Values
-        T m = null;
-        if( input.startsWith(   GLMModel.KEY_PREFIX)  ) m = (T)new    GLMModel();
-        if( input.startsWith(KMeansModel.KEY_PREFIX)  ) m = (T)new KMeansModel();
-        if( input.startsWith(    RFModel.KEY_PREFIX)  ) m = (T)new     RFModel();
-        return m.read(new AutoBuffer(v.memOrLoad()));
+        return v.get();
       } catch(Throwable t) {
         throw new IllegalArgumentException("Key "+input+" is not a Model key");
       }
@@ -1754,7 +1749,6 @@ public class RequestArguments extends RequestStatics {
 
     // "values" to send back and for in URLs.  Use numbers for density (shorter URLs).
     @Override protected final String[] selectValues() {
-      ValueArray va = _key.value();
       String [] res = new String[_selectedCols.size()];
       int idx = 0;
       for(int i : _selectedCols) res[idx++] = String.valueOf(i);

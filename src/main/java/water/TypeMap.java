@@ -1,12 +1,17 @@
 package water;
 
+import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 public class TypeMap {
   static final short NULL = (short) -1;
 
+  // Run main below to update
   static private final String[] CLAZZES = {
     "hex.ConfusionMatrix",
+    "hex.Covariance$COV_Task",
+    "hex.DGLM$GLMModel",
     "hex.DGLM$GLMParams",
     "hex.DGLM$GLMValidation",
     "hex.DGLM$GLMValidationFunc",
@@ -14,15 +19,24 @@ public class TypeMap {
     "hex.DGLM$GramMatrixFunc",
     "hex.DLSM$ADMMSolver",
     "hex.DLSM$GeneralizedGradientSolver",
+    "hex.DLSM$LSMSolver",
+    "hex.GLMGrid$1",
+    "hex.GLMGrid$2",
+    "hex.GLMGrid$GLMModels",
+    "hex.GLMGrid",
+    "hex.KMeans$KMeansModel",
     "hex.KMeans$Lloyds",
     "hex.KMeans$Sampler",
     "hex.KMeans$Sqr",
     "hex.LinearRegression$CalcRegressionTask",
     "hex.LinearRegression$CalcSquareErrorsTasks",
     "hex.LinearRegression$CalcSumsTask",
-    "hex.NewRowVecTask",
     "hex.NewRowVecTask$DataFrame",
-    "hex.RowVecTask$Sampling",
+    "hex.NewRowVecTask$RowFunc",
+    "hex.NewRowVecTask",
+    "hex.NOPTask",
+    "hex.Plot$Pixels",
+    "hex.Plot$Res",
     "hex.rf.Confusion",
     "hex.rf.DRF",
     "hex.rf.MinorityClasses$ClassExtractTask",
@@ -32,26 +46,13 @@ public class TypeMap {
     "hex.rf.MinorityClasses$UnbalancedClass",
     "hex.rf.RFModel",
     "hex.rf.Tree$1",
+    "hex.RowVecTask$Sampling",
+    "hex.RowVecTask",
     "water.AppendKey",
-    "water.H2ONode",
-    "water.H2ONode",
-    "water.HeartBeat",
-    "water.HeartBeat",
-    "water.Jobs$1",
-    "water.Jobs$2",
-    "water.Jobs$3",
-    "water.Jobs$Job",
-    "water.Jobs$Progress$1",
-    "water.KVTest$Atomic2",
-    "water.KVTest$ByteHisto",
-    "water.KVTest$RemoteBitSet",
-    "water.Key",
-    "water.TaskGetKey",
-    "water.TaskInvalidateKey",
-    "water.TaskPutKey",
-    "water.Value",
-    "water.ValueArray",
-    "water.ValueArray$Column",
+    "water.Atomic",
+    "water.AutoSerialTest",
+    "water.DRemoteTask",
+    "water.DTask",
     "water.exec.AddOperator",
     "water.exec.AndOperator",
     "water.exec.BooleanVectorFilter",
@@ -72,7 +73,6 @@ public class TypeMap {
     "water.exec.LeftAnd",
     "water.exec.LeftDiv",
     "water.exec.LeftEq",
-    "water.exec.LeftEq",
     "water.exec.LeftGreater",
     "water.exec.LeftGreaterOrEq",
     "water.exec.LeftLess",
@@ -84,12 +84,21 @@ public class TypeMap {
     "water.exec.LeftSub",
     "water.exec.LessOperator",
     "water.exec.LessOrEqOperator",
+    "water.exec.Log$MRLog",
     "water.exec.MakeEnum$GetEnumTask",
     "water.exec.MakeEnum$PackToEnumTask",
+    "water.exec.Max$MRMax",
+    "water.exec.Mean$MRMean",
+    "water.exec.Min$MRMin",
     "water.exec.ModOperator",
+    "water.exec.MRColumnProducer",
+    "water.exec.MRVectorBinaryOperator",
+    "water.exec.MRVectorTernaryOperator",
+    "water.exec.MRVectorUnaryOperator",
     "water.exec.MulOperator",
     "water.exec.NeqOperator",
     "water.exec.OrOperator",
+    "water.exec.ParametrizedMRVectorUnaryOperator",
     "water.exec.RandBitVect$RandVectBuilder",
     "water.exec.RightAnd",
     "water.exec.RightDiv",
@@ -98,12 +107,46 @@ public class TypeMap {
     "water.exec.RightSub",
     "water.exec.SliceFilter",
     "water.exec.SubOperator",
+    "water.exec.Sum$MRSum",
+    "water.exec.TernaryWithScalarOperator",
+    "water.exec.TernaryWithTwoScalarsOperator",
     "water.exec.UnaryMinus",
-    "water.parser.DParseTask",
+    "water.Freezable",
+    "water.H2ONode",
+    "water.hdfs.TaskStore2HDFS",
+    "water.HeartBeat",
+    "water.Iced",
+    "water.Job$1",
+    "water.Job$2",
+    "water.Job$Fail",
+    "water.Job$List",
+    "water.Job",
+    "water.Key",
+    "water.KVTest$Atomic2",
+    "water.KVTest$ByteHisto",
+    "water.KVTest$RemoteBitSet",
+    "water.Model",
+    "water.MRTask",
+    "water.NOPTask",
     "water.parser.DParseTask$AtomicUnion",
+    "water.parser.DParseTask",
     "water.parser.Enum",
+    "water.parser.ParseDataset$2",
+    "water.parser.ParseDataset$Progress",
+    "water.parser.ParseDataset",
+    "water.RReader$RModel",
+    "water.store.s3.MultipartUpload$1",
+    "water.store.s3.MultipartUpload$Progress",
+    "water.store.s3.MultipartUpload",
+    "water.TaskGetKey",
+    "water.TaskInvalidateKey",
+    "water.TaskPutKey",
+    "water.TAtomic",
     "water.util.FileIntegrityChecker",
     "water.util.JStackCollectorTask",
+    "water.Value",
+    "water.ValueArray$Column",
+    "water.ValueArray",
   };
   static private final HashMap<String,Integer> MAP = new HashMap();
   static {
@@ -111,9 +154,17 @@ public class TypeMap {
       MAP.put(CLAZZES[i],i);
   }
 
+  static int onLoad(String className) {
+   System.out.println(className);;
+    Integer I = MAP.get(className);
+    if(I == null)
+      throw new RuntimeException("TypeMap missing " + className);
+    return I;
+  }
+
   static private final Freezable[] GOLD = new Freezable[CLAZZES.length];
 
-  static public Freezable getType(int id) {
+  static public Freezable newInstance(int id) {
     Freezable f = GOLD[id];
     if( f == null ) {
       try { GOLD[id] = f = (Freezable) Class.forName(CLAZZES[id]).newInstance(); }
@@ -122,9 +173,30 @@ public class TypeMap {
     return f.newInstance();
   }
 
-  static public int getId(Freezable f) {
-    Integer I = MAP.get(f.getClass().getName());
-    assert I != null : "TypeMap missing "+f.getClass().getName();
-    return I;
+  public static void main(String[] args) {
+    Log._dontDie = true; // Ignore class load error, e.g. Request
+    File classes = new File(CLASSES);
+    ArrayList<String> list = new ArrayList<String>();
+    findClasses(classes, list);
+    for(String s : list)
+      System.out.println("    \"" + s + "\",");
+  }
+  private static final String CLASSES = "target/classes";
+  private static void findClasses(File folder, ArrayList<String> list) {
+    for( File file : folder.listFiles() ) {
+      if( file.isDirectory() )
+        findClasses(file, list);
+      else if( file.getPath().endsWith(".class") ) {
+        String name = file.getPath().substring(CLASSES.length() + 1);
+        name = name.replace('\\', '/').replace('/', '.').replace(".class", "");
+        try {
+          Class c = Class.forName(name);
+          if(Freezable.class.isAssignableFrom(c))
+            list.add(c.getName());
+        } catch(Throwable _) {
+          System.out.println("Skipped: " + name);
+        }
+      }
+    }
   }
 }

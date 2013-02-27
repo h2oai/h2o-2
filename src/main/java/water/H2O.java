@@ -5,12 +5,7 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.*;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.PriorityBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 import jsr166y.*;
 import water.exec.Function;
@@ -18,7 +13,6 @@ import water.hdfs.HdfsLoader;
 import water.nbhm.NonBlockingHashMap;
 import water.store.s3.PersistS3;
 import water.util.Utils;
-import H2OInit.Boot;
 
 import com.google.common.io.Closeables;
 
@@ -400,7 +394,7 @@ public final class H2O {
   // Hi-priority work, sorted into individual queues per-priority.
   // Capped at a small number of threads per pool.
   private static final ForkJoinPool2 FJPS[] = new ForkJoinPool2[MAX_PRIORITY+1];
-  static { 
+  static {
     for( int i=MIN_HI_PRIORITY; i<=MAX_PRIORITY; i++ )
       FJPS[i] = new ForkJoinPool2(i,1); // 1 thread per pool
     FJPS[0] = FJP_NORM;
@@ -411,13 +405,13 @@ public final class H2O {
   public static int loQPoolSize() { return FJP_NORM.getPoolSize(); }
 
   // Summarize the hi FJ queue work
-  public static int getHiQueue () { 
+  public static int getHiQueue () {
     int sum=0;
     for( int i=MIN_HI_PRIORITY; i<=MAX_PRIORITY; i++ )
       sum += FJPS[i].getQueuedSubmissionCount();
     return sum;
   }
-  public static int hiQPoolSize() { 
+  public static int hiQPoolSize() {
     int sum=0;
     for( int i=MIN_HI_PRIORITY; i<=MAX_PRIORITY; i++ )
       sum += FJPS[i].getPoolSize();

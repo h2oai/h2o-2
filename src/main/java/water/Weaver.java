@@ -17,7 +17,7 @@ public class Weaver {
       };
 
       for( CtClass c : _serBases ) c.freeze();
-    } catch( Exception e ) {
+    } catch( NotFoundException e ) {
       throw new RuntimeException(e);
     }
   }
@@ -128,13 +128,10 @@ public class Weaver {
 
   private void ensureType(CtClass cc) throws NotFoundException, CannotCompileException {
     CtMethod ccms[] = cc.getDeclaredMethods();
-    if( !hasExisting("frozenType", "()I", ccms) ) {
-      String field = "__h2o_type";
-      cc.addField(CtField.make("static int " + field + " = -1;", cc));
+    if( !hasExisting("frozenType", "()I", ccms) && (cc.getModifiers() & Modifier.ABSTRACT) == 0 ) {
       cc.addMethod(CtNewMethod.make(
           "public int frozenType() {" +
-          "  if(" + field + "<0)" + field + "=water.Types.id(" + cc.getName() + ".class);" +
-          "  return " + field + ";" +
+          "  return " + TypeMap.onLoad(cc.getName()) + ";" +
           "}", cc));
     }
   }
@@ -171,7 +168,7 @@ public class Weaver {
     // We cannot call Iced.xxx, as these methods always throw a
     // RuntimeException (to make sure we noisily fail instead of silently
     // fail).  But we DO need to call the super-chain of serialization methods
-    // - except for DTask.
+    // - stopping at DTask.
     boolean callsuper = true;
     for( CtClass base : _serBases )
       if( cc.getSuperclass() == base ) callsuper = false;

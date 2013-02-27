@@ -3,14 +3,10 @@ package water.parser;
 import java.io.IOException;
 import java.util.UUID;
 import java.util.zip.*;
+
 import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.Job;
-import water.Jobs.Progress;
 import water.parser.DParseTask.Pass;
-
-import com.google.common.base.Throwables;
-import com.google.common.io.Closeables;
 
 import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;

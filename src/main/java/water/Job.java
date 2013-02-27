@@ -1,5 +1,6 @@
 package water;
 
+import java.util.Arrays;
 import java.util.UUID;
 
 import water.api.Constants;
@@ -25,25 +26,12 @@ public class Job extends Iced {
   private long   _startTime;
 
   private static final class List extends Iced {
-    Job[] _jobs;
-  }
-
-  static {
-    new TAtomic<List>() {
-      @Override
-      public List atomic(List old) {
-        if( old == null ) {
-          List empty = new List();
-          empty._jobs = new Job[0];
-          return empty;
-        }
-        return old;
-      }
-    }.invoke(LIST);
+    Job[] _jobs = new Job[0];
   }
 
   public static Job[] all() {
-    return UKV.get(LIST, new List())._jobs;
+    List list = UKV.get(LIST);
+    return list != null ? list._jobs : new Job[0];
   }
 
   public Job(String description, Key dest) {
@@ -59,13 +47,13 @@ public class Job extends Iced {
     new TAtomic<List>() {
       @Override
       public List atomic(List old) {
+        if( old == null ) old = new List();
         Job[] jobs = old._jobs;
-        old._jobs = new Job[jobs.length + 1];
-        System.arraycopy(jobs, 0, old._jobs, 0, jobs.length);
-        old._jobs[old._jobs.length - 1] = Job.this;
+        old._jobs = Arrays.copyOf(jobs,jobs.length+1);
+        old._jobs[jobs.length] = Job.this;
         return old;
       }
-    }.invoke(LIST);
+    }.fork(LIST);
   }
 
   public Job() {
@@ -89,7 +77,7 @@ public class Job extends Iced {
 
   // Overriden for Parse
   public float progress() {
-    Job.Progress dest = UKV.get(dest());
+    Job.Progress dest = (Job.Progress) UKV.get(dest());
     return dest != null ? dest.progress() : 0;
   }
 
@@ -127,23 +115,17 @@ public class Job extends Iced {
     new TAtomic<List>() {
       @Override
       public List atomic(List old) {
+        if( old == null ) old = new List();
         Job[] jobs = old._jobs;
-        int index = -1;
-        for( int i = 0; i < jobs.length; i++ ) {
-          if( jobs[i]._self.equals(_self) ) {
-            index = i;
+        int i;
+        for( i = 0; i < jobs.length; i++ )
+          if( jobs[i]._self.equals(_self) )
             break;
-          }
-        }
-        if( index >= 0 ) {
-          old._jobs = new Job[jobs.length - 1];
-          int n = 0;
-          for( int i = 0; i < jobs.length; i++ )
-            if( i != index )
-              old._jobs[n++] = jobs[i];
-        }
+        if( i == jobs.length ) return null;
+        jobs[i] = jobs[jobs.length-1]; // Compact out the key from the list
+        old._jobs = Arrays.copyOf(jobs,jobs.length-1);
         return old;
       }
-    }.invoke(LIST);
+    }.fork(LIST);
   }
 }

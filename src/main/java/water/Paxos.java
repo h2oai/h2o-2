@@ -111,35 +111,9 @@ public abstract class Paxos {
   static int print( String msg, NonBlockingHashMap<H2Okey,H2ONode> p ) {
     return print(msg,p.values().toArray(new H2ONode[0]));
   }
-<<<<<<< Upstream, based on origin/master
   static int print( String msg, H2ONode h2os[] ) { return print(msg,h2os,""); }
   static int print( String msg, H2ONode h2os[], String msg2 ) {
     if( DEBUG ) System.out.println(msg+Arrays.toString(h2os)+msg2);
-=======
-
-  static void changeLeader( H2ONode newLeader ) {
-    LEADER = newLeader;
-  }
-
-  static void killCloud() {
-    UDPRebooted.T.error.send(H2O.SELF);
-    System.err.println("[h2o] Cloud changing after Keys distributed - fatal error.");
-    System.err.println("[h2o] Received kill "+3+" from "+H2O.SELF);
-    System.exit(-1);
-  }
-
-  static int print( String msg, HashSet<H2ONode> members, State state ) {
-    return print(msg,members," promise:"+state._promise+" old:"+state._oldProposal);
-  }
-  static int print( String msg, H2ONode h2o ) {
-    return print(msg, new HashSet(Arrays.asList(h2o)), "");
-  }
-  static int print( String msg, HashSet<H2ONode> members ) {
-    return print(msg,members,"");
-  }
-  static int print( String msg, HashSet<H2ONode> members, String msg2 ) {
-    if( DEBUG ) System.out.println(msg+members+msg2);
->>>>>>> b533cdf Job management + types
     return 0;                   // handy flow-coding return
   }
 }

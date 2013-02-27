@@ -19,6 +19,7 @@ public class Sandbox {
     for( int i = 0; i < nodes - 1; i++ ) {
       // sites.add(new SeparateCL());
       sites.add(new SeparateVM("VM" + i, null));
+    }
 
     Desktop desktop = Desktop.getDesktop();
     // desktop.browse(new URI("http://localhost:54321/Jobs.html"));
@@ -45,9 +46,6 @@ public class Sandbox {
      // cols[i] = i;
      // KMeans.run(model, ValueArray.value(dest), 7, 1e-3, cols);
 
-     Desktop desktop = Desktop.getDesktop();
-     desktop.browse(new URI("http://localhost:54321/Inspect.html?key=test.hex"));
-
      BufferedReader console = new BufferedReader(new InputStreamReader(System.in));
      console.readLine();
 
@@ -58,16 +56,5 @@ public class Sandbox {
 
     // TODO proper shutdown for remaining threads?
     System.exit(0);
-  }
-
-  /**
-   * Runs the Sandbox on a remote machine.
-   */
-  public static class Remote {
-    public static void main(String[] _) throws Exception {
-      String[] args = new String[] { "init.Boot", "-mainClass", Sandbox.class.getName() };
-      SeparateBox box = new SeparateBox("192.168.1.150", USER, KEY, args);
-      box.waitForEnd();
-    }
   }
 }

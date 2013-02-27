@@ -7,7 +7,6 @@ import hex.rf.Tree.StatType;
 import org.junit.BeforeClass;
 
 import water.*;
-import water.util.TestUtil;
 
 public class RandomForestTest extends TestUtil {
 

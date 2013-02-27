@@ -1,11 +1,7 @@
 package water.api;
 
 import water.*;
-<<<<<<< Upstream, based on origin/master
 import water.H2O.H2OCountedCompleter;
-import water.Jobs.Job;
-=======
->>>>>>> b27d3f3 Job management + types
 import water.util.RString;
 
 import com.google.gson.JsonObject;
@@ -32,24 +28,18 @@ public class KMeans extends Request {
       int dot = n.lastIndexOf('.');
       if( dot > 0 )
         n = n.substring(0, dot);
-      dest = Key.make(hex.KMeans.KMeansModel.KEY_PREFIX + n + Extensions.KMEANS);
+      dest = Key.make(n + Extensions.KMEANS);
     }
 
     final Job job = hex.KMeans.startJob(dest, va, k, epsilon, cols);
     try {
       H2O.submitTask(new H2OCountedCompleter() {
-          @Override public void compute2() {
-            hex.KMeans.run(job, va, k, epsilon, cols);
-            tryComplete();
-          }
-
-        
-          @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
-            // TODO set job.error
-            ex.printStackTrace();
-            return true;
-          }
-        });
+        @Override
+        public void compute2() {
+          hex.KMeans.run(job, va, k, epsilon, cols);
+          tryComplete();
+        }
+      });
 
       JsonObject response = new JsonObject();
       response.addProperty(JOB, job.self().toString());

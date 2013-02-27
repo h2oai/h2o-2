@@ -89,7 +89,8 @@ public final class DRF extends water.DRemoteTask {
       StatType stat, long seed, boolean parallelTrees, double[] classWt, int numSplitFeatures,
       boolean stratify, Map<Integer,Integer> strata, int verbose, int exclusiveSplitLimit) {
     final DRF drf = create(modelKey, cols, ary, ntrees, depth, sample, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, stratify, strata, verbose, exclusiveSplitLimit);
-    drf._job = Jobs.start(jobName(drf), modelKey);
+    drf._job = new Job(jobName(drf), modelKey);
+    drf._job.start();
     return drf.new DRFFuture(drf.fork(drf.aryKey()));
   }
 
@@ -166,7 +167,7 @@ public final class DRF extends water.DRemoteTask {
       // Block to the end of DRF.
       final DRF drf = (DRF) _future.get();
       // Remove DRF job.
-      if (drf._job != null) Jobs.remove(drf._job._key);
+      if (drf._job != null) drf._job.remove();
       return drf;
     }
   }
@@ -213,12 +214,9 @@ public final class DRF extends water.DRemoteTask {
 
   @Override
   public void onCompletion(CountedCompleter caller) {
-    System.out.println("DRF.onCompletion(): removing job if it is not null: " + _job);
     System.out.println("DRF.onCompletion(): keys  :" + _keys.length);
     System.out.println("DRF.onCompletion(): ntrees:" + _ntrees);
     System.out.println("DRF.onCompletion(): caller: " + caller);
-    /*if(_job != null)
-      Jobs.remove(_job._key);*/
   }
 
   /** Unless otherwise specified each split looks at sqrt(#features). */

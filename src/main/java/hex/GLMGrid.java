@@ -41,9 +41,9 @@ public class GLMGrid extends Job {
   public void start() {
     UKV.put(dest(), new GLMModels(_lambdas.length * _alphas.length));
 
-    H2O.FJP_NORM.submit(new DTask() {
+    H2O.submitTask(new DTask() {
       @Override
-      public void compute() {
+      public void compute2() {
         final int N = _alphas.length;
         GLMModel m = null;
         try {
@@ -62,7 +62,7 @@ public class GLMGrid extends Job {
       }
 
       // Not intended for remote or distributed execution; task control runs on one node.
-      public GLMGrid invoke(H2ONode sender) {
+      @Override public GLMGrid invoke(H2ONode sender) {
         throw H2O.unimpl();
       }
     });

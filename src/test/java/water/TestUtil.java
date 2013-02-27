@@ -23,7 +23,7 @@ public class TestUtil {
     DKV.write_barrier();
     int leaked = 0;
     for( Key k : H2O.keySet() ) {
-      if( !k.equals(Job.LIST) && !k.equals(Types.KEY)) {
+      if( !k.equals(Job.LIST)) {
         System.err.println("Leaked key: " + k);
         leaked++;
       }
@@ -180,7 +180,7 @@ public class TestUtil {
           case -4: ab.put4f(f = ((float [])arys[j])[row]);  d = f;  break;
           case -8: ab.put8d(d = ((double[])arys[j])[row]);  d = d;  break;
           // @formatter:on
-          case 2: // Catagoricals or enums
+          case 2: // Categoricals or enums
             String s = ((String[]) arys[j])[row];
             String[] dom = col._domain;
             int k = index(dom, s);

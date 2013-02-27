@@ -80,9 +80,6 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new TypeaheadKeysRequest("Existing H2O Key", ""));
     registerRequest(new TypeaheadFileRequest());
     registerRequest(new TypeaheadHexKeyRequest());
-    registerRequest(new TypeaheadModelKeyRequest()); // Any Key with "__???Model_??????"
-    registerRequest(new TypeaheadGLMModelKeyRequest());
-    registerRequest(new TypeaheadRFModelKeyRequest());
     registerRequest(new TypeaheadS3BucketRequest());
     registerRequest(new TypeaheadHdfsPathRequest());
 
