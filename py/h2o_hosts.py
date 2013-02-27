@@ -125,7 +125,7 @@ def build_cloud_with_hosts(node_count=None, use_flatfile=None,
         h2o.upload_jar_to_remote_hosts(hosts, slow_connection=slow_connection)
         # timeout wants to be larger for large numbers of hosts * h2oPerHost
         # use 60 sec min, 5 sec per node.
-        timeoutSecs = max(60, 5*(len(hosts) * h2oPerHost))
+        timeoutSecs = max(60, 8*(len(hosts) * h2oPerHost))
     else: # for 127.0.0.1 case
         timeoutSecs = 60
 
