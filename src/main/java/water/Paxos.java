@@ -89,7 +89,8 @@ public abstract class Paxos {
     // delayed heartbeat packet, or maybe he's missed the Accepted announcement.
     // In either case, pound the news into his head.
     if( cloud._memset.contains(h2o) ) {
-      if( H2O.isIDFromPrevCloud(h2o) ) {
+      // if( H2O.isIDFromPrevCloud(h2o) ) {
+      if ( 1==1 ) {
         // In situations of rapid cloud formation, we could have:
         // A Cloud of {A,B} is voted on.
         // A Cloud of {A,B,C,D} is voted on by A,C,D forming a quorum.  B is slow.

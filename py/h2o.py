@@ -235,7 +235,7 @@ nodes = []
 
 def write_flatfile(node_count=2, base_port=54321, hosts=None):
     # always create the flatfile. 
-    ports_per_node = 3
+    ports_per_node = 2
     pff = open(flatfile_name(), "w+")
     if hosts is None:
         ip = get_ip_address()
@@ -288,7 +288,10 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
     clean_sandbox()
     # H2O still checks for collision against 3 ports range 
     # even if its only using 2
-    ports_per_node = 3 
+    # FIX! apparently junit.py assumes 2 ports per node? 
+    # H2O.java says 3 ports to check if there's an error, but I believe 2 is right
+    # will have to update to 2 everywhere
+    ports_per_node = 2 
     node_list = []
     try:
         # if no hosts list, use psutil method on local host.
