@@ -5,10 +5,10 @@ import h2o_cmd, h2o, h2o_hosts
 import h2o_browse as h2b
 import time
 
-node_count = 1
+node_count = 7
 global base_port
 base_port = 50550
-portsPerNode = 3
+portsPerNode = 2
 
 def check_cloud_and_setup_next():
     h2b.browseTheCloud()

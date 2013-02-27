@@ -10,7 +10,7 @@ class Basic(unittest.TestCase):
 
     def test_Cloud(self):
         base_port = 54300
-        ports_per_node = 3
+        ports_per_node = 2
         for trials in range(0,5):
             for tryNodes in range(3,6):
                 sys.stdout.write('.')

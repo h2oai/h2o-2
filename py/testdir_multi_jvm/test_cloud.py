@@ -17,7 +17,7 @@ class Basic(unittest.TestCase):
         # FIX! weird timeout H2O exceptions with >8? maybe shouldn't
         # don't know if we care
         base_port = 54300
-        ports_per_node = 3
+        ports_per_node = 2
         for tryNodes in range(2,17):
             h2o.verboseprint("Trying cloud of", tryNodes)
             sys.stdout.write('.')

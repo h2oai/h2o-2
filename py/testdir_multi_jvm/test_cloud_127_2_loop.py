@@ -11,7 +11,7 @@ class Basic(unittest.TestCase):
 
     def testCloud(self):
         baseport = 54300
-        ports_per_node = 3
+        ports_per_node = 2
 
         print "\nTest was written because seeing a bigger cloud than we want sometimes"
         print "You'll see the problem in the cloud in the browser"
