@@ -43,7 +43,8 @@ class Basic(unittest.TestCase):
         h2o.check_port_group(base_port)
         h2o.write_flatfile(node_count=node_count, base_port=base_port)
         start = time.time()
-        h2o_hosts.build_cloud_with_hosts(node_count, base_port=base_port, use_flatfile=True)
+        h2o_hosts.build_cloud_with_hosts(node_count, base_port=base_port, 
+            use_flatfile=True, java_heap_GB=1)
         print "jar/flatfile copied and Cloud of", len(h2o.nodes), "built in", time.time()-start, "seconds"
         # have to remember total # of nodes for the next class. it will stay the same
         # when we tear down the cloud, we zero the nodes list

@@ -15,7 +15,8 @@ class Basic(unittest.TestCase):
         # have to make sure base_port is the same on both!
         # just do once and don't clean sandbox
         h2o.write_flatfile(node_count=node_count, base_port=base_port)
-        h2o_hosts.build_cloud_with_hosts(node_count, base_port=base_port, use_flatfile=True)
+        h2o_hosts.build_cloud_with_hosts(node_count, base_port=base_port, 
+            use_flatfile=True, java_heap_GB=1)
         h2o.verify_cloud_size()
         h2o.check_sandbox_for_errors()
 

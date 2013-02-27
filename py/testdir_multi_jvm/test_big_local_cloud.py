@@ -22,7 +22,8 @@ class Basic(unittest.TestCase):
 
                 # done in build_cloud now
                 ### h2o.write_flatfile(node_count=tryNodes, base_port=base_port)
-                h2o.build_cloud(node_count=tryNodes,timeoutSecs=30,base_port=base_port,use_flatfile=True)
+                h2o.build_cloud(node_count=tryNodes, java_heap_GB=1,
+                    timeoutSecs=30, base_port=base_port, use_flatfile=True)
                 print "loop %d: Build cloud of %d in %d s" % (trials, tryNodes, (time.time() - start)) 
 
                 for i in range(2):

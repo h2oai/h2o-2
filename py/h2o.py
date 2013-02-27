@@ -234,7 +234,7 @@ nodes = []
 
 def write_flatfile(node_count=2, base_port=54321, hosts=None):
     # always create the flatfile. 
-    ports_per_node = 3
+    ports_per_node = 2
     pff = open(flatfile_name(), "w+")
     if hosts is None:
         ip = get_ip_address()
