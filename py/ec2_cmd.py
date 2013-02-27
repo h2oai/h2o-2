@@ -6,6 +6,13 @@ import os, time, sys, socket
 import h2o_cmd
 import json
 
+'''
+    Simple EC2 utility:
+     
+       * to setup clooud of 5 nodes: ./ec2_cmd.py create --instances 5
+       * to terminated the cloud   : ./ec2_cmd.py terminate --hosts <host file returned by previous command>
+'''
+
 DEFAULT_NUMBER_OF_INSTANCES = 1
 
 '''
