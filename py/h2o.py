@@ -4,6 +4,7 @@ import glob
 import h2o_browse as h2b
 import re
 import inspect, webbrowser
+import errno
 
 # For checking ports in use, using netstat thru a subprocess.
 from subprocess import Popen, PIPE
