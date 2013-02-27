@@ -29,7 +29,7 @@ class Basic(unittest.TestCase):
                 # this intermittently fails
                 h2o.build_cloud(use_this_ip_addr="127.0.0.1", 
                     node_count=tryNodes, base_port=base_port, java_heap_GB=1,
-                    timeoutSecs=15, retryDelaySecs=1)
+                    timeoutSecs=15, retryDelaySecs=2)
                 print "trial #%d: Build cloud of %d in %d secs" % (trial, tryNodes, (time.time() - start)) 
 
                 h2o.verify_cloud_size()

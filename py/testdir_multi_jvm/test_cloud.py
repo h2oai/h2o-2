@@ -24,7 +24,8 @@ class Basic(unittest.TestCase):
             sys.stdout.flush()
 
             start = time.time()
-            h2o.build_cloud(tryNodes, base_port=base_port, timeoutSecs=max(30,10*tryNodes), java_heap_GB=1)
+            h2o.build_cloud(tryNodes, base_port=base_port, 
+                retryDelaySecs=2, timeoutSecs=max(30,10*tryNodes), java_heap_GB=1)
             print "Built cloud of %d in %d s" % (tryNodes, (time.time() - start)) 
             h2o.verify_cloud_size()
 
