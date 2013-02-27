@@ -311,6 +311,8 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
                     newNode = h.remote_h2o(port=base_port + i*ports_per_node, node_id=totalNodes, **kwargs)
                     node_list.append(newNode)
                     totalNodes += 1
+                    # kbn try delay between each one?
+                    time.sleep(1)
 
         verboseprint("Attempting Cloud stabilize of", totalNodes, "nodes on", hostCount, "hosts")
         start = time.time()

@@ -5,9 +5,9 @@ import h2o_cmd, h2o, h2o_hosts
 import h2o_browse as h2b
 import time
 
-node_count = 2
+node_count = 1
 global base_port
-base_port = 55100
+base_port = 50550
 portsPerNode = 3
 
 def check_cloud_and_setup_next():
@@ -42,7 +42,13 @@ class Basic(unittest.TestCase):
         print "base_port:", base_port
         h2o.check_port_group(base_port)
         h2o.write_flatfile(node_count=node_count, base_port=base_port)
+        start = time.time()
         h2o_hosts.build_cloud_with_hosts(node_count, base_port=base_port, use_flatfile=True)
+        print "jar/flatfile copied and Cloud of", len(h2o.nodes), "built in", time.time()-start, "seconds"
+        # have to remember total # of nodes for the next class. it will stay the same
+        # when we tear down the cloud, we zero the nodes list
+        global totalNodes
+        totalNodes = len(h2o.nodes)
         check_cloud_and_setup_next()
 
     @classmethod
@@ -51,21 +57,24 @@ class Basic(unittest.TestCase):
 
     def test_remote_cloud(self):
         global base_port
-        trySize = 0
         # FIX! we should increment this from 1 to N? 
         for i in range(1,10):
             # timeout wants to be larger for large numbers of hosts * node_count
             # don't want to reload jar/flatfile, so use build_cloud
             base_port += portsPerNode * node_count
             print "base_port:", base_port
-            timeoutSecs = max(60, 2*(len(h2o_hosts.hosts) * node_count))
+            timeoutSecs = max(60, 8 * totalNodes)
+            print "totalNodes:", totalNodes, "timeoutSecs:", timeoutSecs
+
             h2o.check_port_group(base_port)
             # FIX! have to recopy the flatfile if we change base_port? hmm.. won't work
             h2o.write_flatfile(node_count=node_count, base_port=base_port)
             
             # FIX! ..just use_flatfile=False for now on these subsequent ones. rely on multicast
+            start = time.time()
             h2o.build_cloud(node_count, base_port=base_port, hosts=h2o_hosts.hosts, use_flatfile=False, 
                 timeoutSecs=timeoutSecs, retryDelaySecs=0.5)
+            print "Cloud of", len(h2o.nodes), "built in", time.time()-start, "seconds"
             check_cloud_and_setup_next()
 
 
