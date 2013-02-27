@@ -43,6 +43,8 @@ public abstract class Atomic extends DTask {
     }
   }
 
+  @Override public boolean isHighPriority(){return true;}
+
   // The (remote) workhorse:
   @Override public final void compute( ) {
     assert _key.home();         // Key is at Home!

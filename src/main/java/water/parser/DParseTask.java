@@ -121,24 +121,30 @@ public final class DParseTask extends MRTask {
   }
 
   public static class AtomicUnion extends Atomic {
-    Key _key;
+//    Key _key;
+    byte [] _bits;
     int _dst_off;
     public AtomicUnion() {}
     public AtomicUnion(byte[] buf, int dstOff){
       _dst_off = dstOff;
-      _key = Key.make(Key.make()._kb, (byte) 1, Key.DFJ_INTERNAL_USER, H2O.SELF);
-      UKV.put(_key, new Value(_key, buf));
+      _bits = buf;
+//      _key = Key.make(Key.make()._kb, (byte) 1, Key.DFJ_INTERNAL_USER, H2O.SELF);
+//      UKV.put(_key, new Value(_key, buf));
     }
     @Override public byte[] atomic( byte[] bits1 ) {
-      byte[] mem = DKV.get(_key).get();
+      byte[] mem = _bits;//DKV.get(_key).get();
       int len = Math.max(_dst_off + mem.length,bits1==null?0:bits1.length);
       byte[] bits2 = MemoryManager.malloc1(len);
       if( bits1 != null ) System.arraycopy(bits1,0,bits2,0,bits1.length);
       System.arraycopy(mem,0,bits2,_dst_off,mem.length);
       return bits2;
     }
-    @Override public void onSuccess() {
-      DKV.remove(_key);
+//    @Override public void onSuccess() {
+//      DKV.remove(_key);
+//    }
+
+    @Override public boolean isHighPriority(){
+      return true;
     }
   }
 
@@ -533,11 +539,11 @@ public final class DParseTask extends MRTask {
           // store the last stream if not stored during the parse
           if( _ab != null )
             _outputStreams2[_outputIdx].store();
+          getFutures().blockForPending();
           break;
         default:
           assert (false);
       }
-
       Progress.update(_job._progress, DKV.get(key).length());
     } catch( Exception e ) {
       e.printStackTrace();
