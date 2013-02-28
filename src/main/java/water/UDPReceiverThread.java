@@ -67,7 +67,7 @@ public class UDPReceiverThread extends Thread {
     // packets are timeline recorded before dropping - and we still will
     // respond to timelines and suicide packets.
     int drop = H2O.OPT_ARGS.random_udp_drop!= null &&
-      RANDOM_UDP_DROP.nextInt(10) == 0 ? 2 : 0;
+      RANDOM_UDP_DROP.nextInt(5) == 0 ? 2 : 0;
 
     // Record the last time we heard from any given Node
     TimeLine.record_recv(ab,drop);

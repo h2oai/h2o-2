@@ -283,7 +283,7 @@ def decide_if_localhost():
 
 # node_count is per host if hosts is specified.
 def build_cloud(node_count=2, base_port=54321, hosts=None, 
-        timeoutSecs=20, retryDelaySecs=0.5, cleanup=True, **kwargs):
+        timeoutSecs=30, retryDelaySecs=0.5, cleanup=True, **kwargs):
     # moved to here from unit_main. so will run with nosetests too!
     clean_sandbox()
     # H2O still checks for collision against 3 ports range 

@@ -89,27 +89,20 @@ public abstract class Paxos {
     // delayed heartbeat packet, or maybe he's missed the Accepted announcement.
     // In either case, pound the news into his head.
     if( cloud._memset.contains(h2o) ) {
-      // if( H2O.isIDFromPrevCloud(h2o) ) {
-      if ( 1==1 ) {
-        // In situations of rapid cloud formation, we could have:
-        // A Cloud of {A,B} is voted on.
-        // A Cloud of {A,B,C,D} is voted on by A,C,D forming a quorum.  B is slow.
-        // New members E,F,G appear to A, so A's proposed list is now {A-G}
-        // B, still slow, heartbeats cloud {A,B}
-        // At this point: B is in {A,B}, A is in {A,B,C} which includes B,
-        // but A is busy working on {A-G}.
-        print("hart: is member but did not get the news1",cloud._memset);
-        print("hart: is member but did not get the news2",PROPOSED_MEMBERS);
-        if( PROPOSED_MEMBERS.equals(cloud._memset) ) { // But if things are not moving fast...
-          _state._members = PROPOSED_MEMBERS.toArray(new H2ONode[0]);
-          UDPPaxosAccepted.build_and_multicast(_state); // Then try to update the slow guy
-        }
-        return;
-      } else {
-        // Trigger new round of Paxos voting: remove this guy from our cloud
-        // (since he thinks he does not belong), and try again.
-        PROPOSED_MEMBERS.remove(h2o);
+      // In situations of rapid cloud formation, we could have:
+      // A Cloud of {A,B} is voted on.
+      // A Cloud of {A,B,C,D} is voted on by A,C,D forming a quorum.  B is slow.
+      // New members E,F,G appear to A, so A's proposed list is now {A-G}
+      // B, still slow, heartbeats cloud {A,B}
+      // At this point: B is in {A,B}, A is in {A,B,C} which includes B,
+      // but A is busy working on {A-G}.
+      print("hart: is member but did not get the news1",cloud._memset);
+      print("hart: is member but did not get the news2",PROPOSED_MEMBERS);
+      if( PROPOSED_MEMBERS.equals(cloud._memset) ) { // But if things are not moving fast...
+        _state._members = PROPOSED_MEMBERS.toArray(new H2ONode[0]);
+        UDPPaxosAccepted.build_and_multicast(_state); // Then try to update the slow guy
       }
+      return;
     } else {
       // Got a heartbeat from some dude not in the Cloud.  Probably napping
       // Node woke up and hasn't yet smelled the roses (i.e., isn't aware the
@@ -128,21 +121,32 @@ public abstract class Paxos {
   // re-instated.  If they don't notice... then they need to be removed.
   // Recompute leader.
   private static void removeLaggards() {
-    long now = System.currentTimeMillis();
-    changeLeader(null);
-    for( Iterator<H2ONode> i = PROPOSED_MEMBERS.iterator(); i.hasNext(); ) {
-      H2ONode h2o = i.next();
-      // Check if node timed out
-      long msec = now - h2o._last_heard_from;
-      if( msec > HeartBeatThread.TIMEOUT ) {
-        assert h2o != H2O.SELF; // Not timing-out self???
-        print("kill: Removing laggard ",h2o);
-        i.remove();
-      } else {                  // Else find the lowest IP address to be leader
-        if( h2o.compareTo(LEADER) < 0 ) changeLeader(h2o);
-      }
-    }
+    // Currently we do not support / survive dropping a member from a cloud.
+    // The only failure mode we support is a node which never ever says
+    // anything, e.g. a flatfile with a mistyped IP, or an IP of a powered-off
+    // node.  If nodes are slow... then they are.  If they have every made
+    // their presence known, we will wait forever for them to come back.
+
+    // Note that a client-mode member - one that never homes any keys but
+    // participates in the K/V memory protocol, such as a laptop attaching to a
+    // full cluster, could safely be declared a laggard and tossed out, because
+    // the lost member contains no keys.  Not implemented for now.
     return;
+    //long now = System.currentTimeMillis();
+    //changeLeader(null);
+    //for( Iterator<H2ONode> i = PROPOSED_MEMBERS.iterator(); i.hasNext(); ) {
+    //  H2ONode h2o = i.next();
+    //  // Check if node timed out
+    //  long msec = now - h2o._last_heard_from;
+    //  if( msec > HeartBeatThread.TIMEOUT ) {
+    //    assert h2o != H2O.SELF; // Not timing-out self???
+    //    print("kill: Removing laggard ",h2o);
+    //    i.remove();
+    //  } else {                  // Else find the lowest IP address to be leader
+    //    if( h2o.compareTo(LEADER) < 0 ) changeLeader(h2o);
+    //  }
+    //}
+    //return;
   }
 
   // Handle a mis-matched announcement; either a self-heartbeat has noticed a
@@ -366,7 +370,7 @@ public abstract class Paxos {
   static synchronized int doAccepted( State state, H2ONode h2o ) {
     // Record most recent ping time from sender
     long proposal_num = state._promise;
-    HashSet<H2ONode> members = new HashSet(Arrays.asList(_state._members));
+    HashSet<H2ONode> members = new HashSet(Arrays.asList(state._members));
     print("recv: Accepted ", members, state);
     if( !members.contains(H2O.SELF) ) { // Not in this set?
       // This accepted set excludes me, so we need to start another round of
