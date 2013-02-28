@@ -366,7 +366,7 @@ public abstract class Paxos {
   static synchronized int doAccepted( State state, H2ONode h2o ) {
     // Record most recent ping time from sender
     long proposal_num = state._promise;
-    HashSet<H2ONode> members = new HashSet(Arrays.asList(_state._members));
+    HashSet<H2ONode> members = new HashSet(Arrays.asList(state._members));
     print("recv: Accepted ", members, state);
     if( !members.contains(H2O.SELF) ) { // Not in this set?
       // This accepted set excludes me, so we need to start another round of
