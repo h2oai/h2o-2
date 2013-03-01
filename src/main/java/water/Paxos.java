@@ -60,6 +60,16 @@ public abstract class Paxos {
   // This is a packet announcing what Cloud this Node thinks is the current
   // Cloud.
   static synchronized void doHeartbeat( H2ONode h2o ) {
+    // commented out the original location of this addProposedMember below, if desire to change back.
+    // Failing case would be if our cloud had a better(lesser) leader than our current LEADER.
+    // If we never updated LEADER to that better value, we can have steady state with different nodes having
+    // different LEADER values.
+    // Since we ignore proposals not from LEADER, that's a steady state fail.
+    // So always try to add all incoming heartbeats to PROPOSED_MEMBERS to guarantee that we
+    // always have LEADER matching what others see. (or we could compare LEADER to cloud[0] when we
+    // add a cloud..that would be better performance wise. Or just an assertion, but this is simpler.
+    addProposedMember(h2o); 
+
     // If this packet is for *this* Cloud, just carry on (the heartbeat has
     // already been recorded.
     H2O cloud = H2O.CLOUD;
@@ -108,8 +118,10 @@ public abstract class Paxos {
       // Node woke up and hasn't yet smelled the roses (i.e., isn't aware the
       // Cloud shifted and kicked him out).  Could be a late heartbeat from
       // him.  Offer to vote him back in.
-      if( !addProposedMember(h2o) )
-        print("hart: already part of proposal",PROPOSED_MEMBERS);
+
+      // kbn: replaced with unconditional same thing at top. 
+      // if( !addProposedMember(h2o) )
+      //   print("hart: already part of proposal",PROPOSED_MEMBERS);
     }
 
     // Trigger a Paxos proposal because there is somebody new, or somebody old
