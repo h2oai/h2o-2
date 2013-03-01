@@ -391,7 +391,12 @@ public abstract class Paxos {
       return print("do  : Leader missed me; I am still not in the new Cloud, so refuse the Accept and let my Heartbeat publish me again",members,state);
     }
 
-    if( proposal_num == PROPOSAL_MAX && state.uuid().equals(H2O.CLOUD._id) )
+    // kbn: For now, take them all Accepted packets because the sending of
+    // doAccepted cloud id + member list may have wrong info sometimes?.
+    // Can reenable this when you think the Accepted packets are always perfect.
+    // i.e. the cloud id and members list always matches the first time you sent that cloud id
+    if ( 1 == 0 )
+    // if( proposal_num == PROPOSAL_MAX && state.uuid().equals(H2O.CLOUD._id) )
       return print("do  : Nothing: Accepted with same cloud membership list",members,state);
 
     // We just got a proposal to change the cloud
