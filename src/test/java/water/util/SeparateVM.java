@@ -1,12 +1,11 @@
 package water.util;
 
-import H2OInit.Boot;
-
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 
 import water.Log;
+import H2OInit.Boot;
 
 /**
  * Executes code in a separate VM.
@@ -77,28 +76,27 @@ public class SeparateVM implements Separate {
   }
 
   static void inheritIO(Process process, final String description, final boolean addLogHeader) {
-    final BufferedReader input = new BufferedReader(new InputStreamReader(process.getInputStream()));
+    forward(process, description, addLogHeader, process.getInputStream(), System.out);
+    forward(process, description, addLogHeader, process.getErrorStream(), System.err);
+  }
+
+  private static void forward(Process process, final String description, final boolean headers, //
+      InputStream in, final PrintStream out) {
+    final BufferedReader stream = new BufferedReader(new InputStreamReader(in));
     Thread thread = new Thread() {
       @Override
       public void run() {
-        if( description != null ) {
-          if( addLogHeader )
-            Log.write(description);
-          else
-            System.out.println(description);
-        }
+        if( description != null )
+          Log.write(out, description, headers);
 
         try {
           for( ;; ) {
-            String line = input.readLine();
+            String line = stream.readLine();
 
             if( line == null )
               break;
 
-            if( addLogHeader )
-              Log.write(line);
-            else
-              System.out.println(line);
+            Log.write(out, line, headers);
           }
         } catch( IOException e ) {
           // Ignore, process probably done

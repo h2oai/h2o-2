@@ -205,7 +205,7 @@ public abstract class Paxos {
       _state._idLo = uuid.getLeastSignificantBits();
       _state._idHi = uuid.getMostSignificantBits();
       Paxos.print("send: Prepare "+proposal_num+" for leadership fight ",PROPOSED_MEMBERS);
-      UDPPaxosProposal.build_and_multicast(proposal_num);
+      UDPPaxosProposal.build_and_multicast(proposal_num, _state._members);
     } else {
       // Non-Leaders act as passive Accepters.  All Nodes should respond in a
       // timely fashion, including Leaders - if they fail the basic heartbeat
