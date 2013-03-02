@@ -4,6 +4,7 @@ import glob
 import h2o_browse as h2b
 import re
 import inspect, webbrowser
+import random
 
 # For checking ports in use, using netstat thru a subprocess.
 from subprocess import Popen, PIPE
@@ -232,18 +233,30 @@ json_url_history = []
 global nodes
 nodes = []
 
-def write_flatfile(node_count=2, base_port=54321, hosts=None):
+# I suppose we could shuffle the flatfile order!
+# but it uses hosts, so if that got shuffled, we got it covered?
+# the i in xrange part is not shuffled. maybe create the list first, for possible random shuffle
+# FIX! default to random_shuffle for now..then switch to not.
+def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True):
     # always create the flatfile. 
     ports_per_node = 2
     pff = open(flatfile_name(), "w+")
+    # doing this list outside the loops so we can shuffle for better test variation
+    hostPortList = []
     if hosts is None:
         ip = get_ip_address()
-        for i in xrange(node_count):
-            pff.write("/" + ip + ":" + str(base_port +ports_per_node*i) + "\n")
+        for i in range(node_count):
+            hostPortList.append("/" + ip + ":" + str(base_port + ports_per_node*i))
     else:
         for h in hosts:
-            for i in xrange(node_count):
-                pff.write("/" + h.addr + ":" + str(base_port +ports_per_node*i) + "\n")
+            for i in range(node_count):
+                hostPortList.append("/" + h.addr + ":" + str(base_port + ports_per_node*i))
+
+    # note we want to shuffle the full list of host+port
+    if rand_shuffle: 
+        random.shuffle(hostPortList)
+    for hp in hostPortList:
+        pff.write(hp + "\n")
     pff.close()
 
 
@@ -281,7 +294,7 @@ def decide_if_localhost():
 
 # node_count is per host if hosts is specified.
 def build_cloud(node_count=2, base_port=54321, hosts=None, 
-        timeoutSecs=30, retryDelaySecs=0.5, cleanup=True, **kwargs):
+        timeoutSecs=30, retryDelaySecs=0.5, cleanup=True, rand_shuffle=True, **kwargs):
     # moved to here from unit_main. so will run with nosetests too!
     clean_sandbox()
     # H2O still checks for collision against 3 ports range 
@@ -294,28 +307,36 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
     try:
         # if no hosts list, use psutil method on local host.
         totalNodes = 0
+        # doing this list outside the loops so we can shuffle for better test variation
+        # this jvm startup shuffle is independent from the flatfile shuffle
+        portList = [base_port + ports_per_node*i for i in range(node_count)]
         if hosts is None:
             # if use_flatfile, we should create it, because tests will just call build_cloud with use_flatfile=True
             # best to just create it all the time..may or may not be used 
             write_flatfile(node_count=node_count, base_port=base_port)
             hostCount = 1
-            for i in xrange(node_count):
+            if rand_shuffle: random.shuffle(portList)
+            for p in portList:
                 verboseprint("psutil starting node", i)
-                newNode = LocalH2O(port=base_port + i*ports_per_node, node_id=totalNodes, **kwargs)
+                newNode = LocalH2O(port=p, node_id=totalNodes, **kwargs)
                 node_list.append(newNode)
                 totalNodes += 1
         else:
             # if hosts, the flatfile was created and uploaded to hosts already
             # I guess don't recreate it, don't overwrite the one that was copied beforehand.
             hostCount = len(hosts)
+            hostPortList = []
             for h in hosts:
-                for i in xrange(node_count):
-                    verboseprint('ssh starting node', totalNodes, 'via', h)
-                    newNode = h.remote_h2o(port=base_port + i*ports_per_node, node_id=totalNodes, **kwargs)
-                    node_list.append(newNode)
-                    totalNodes += 1
-                    # kbn try delay between each one?
-                    time.sleep(1)
+                for port in portList:
+                    hostPortList.append( (h,port) )
+            if rand_shuffle: random.shuffle(hostPortList)
+            for (h,p) in hostPortList:
+                verboseprint('ssh starting node', totalNodes, 'via', h)
+                newNode = h.remote_h2o(port=p, node_id=totalNodes, **kwargs)
+                node_list.append(newNode)
+                totalNodes += 1
+                # kbn try delay between each one?
+                ### time.sleep(1)
 
         verboseprint("Attempting Cloud stabilize of", totalNodes, "nodes on", hostCount, "hosts")
         start = time.time()
