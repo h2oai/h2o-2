@@ -32,7 +32,8 @@ def pickRandGlmParams(paramDict, params):
 
     return colX
 
-def simpleCheckGLM(self, glm, colX, allowFailWarning=False, prettyPrint=False, **kwargs):
+def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False,
+    prettyPrint=False, **kwargs):
     # h2o GLM will verboseprint the result and print errors. 
     # so don't have to do that
     # different when cross validation  is used? No trainingErrorDetails?
@@ -119,27 +120,15 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, prettyPrint=False, *
         # not mutable?
         return cString + cValueString
 
-    # HACK: should go away when tomas correctly creates col_names with dotted expand_cat enums
-    # see if there is any dotted enum
-    foundDot = False
-    for c in coefficients:
-        if isinstance(c, basestring) and re.search("\.",c): 
-            foundDot = True
-            break
-
     # creating both a string for printing and a list of values
     cString = ""
     cList = []
     # print in order using col_names
-    if foundDot:
-        # output won't be in coefficients?
-        for c in coefficients: # any order will do
-            cString = add_to_coefficient_list_and_string(c,cList,cString)
-    else:
-    
-        # output col is last in the list
-        for c in column_names[:-1]:
-            cString = add_to_coefficient_list_and_string(c,cList,cString)
+    # if foundDot:
+
+    # column_names is input only now..same for header or no header, or expanded enums
+    for c in column_names:
+        cString = add_to_coefficient_list_and_string(c,cList,cString)
 
     if prettyPrint: 
         print "\nH2O intercept:\t\t%.5e" % intercept
@@ -149,7 +138,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, prettyPrint=False, *
 
     # pick out the coefficent for the column we enabled for enhanced checking. Can be None.
     # FIX! temporary hack to deal with disappearing/renaming columns in GLM
-    if colX is not None:
+    if (not allowZeroCoeff) and (colX is not None):
         absXCoeff = abs(float(coefficients[str(colX)]))
         self.assertGreater(absXCoeff, 1e-26, (
             "abs. value of GLM coefficients['" + str(colX) + "'] is " +
@@ -178,7 +167,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, prettyPrint=False, *
     # just sum the abs value  up..look for greater than 0
 
     # skip this test if there is just one coefficient. Maybe pointing to a non-important coeff?
-    if (len(coefficients)>1):
+    if (not allowZeroCoeff) and (len(coefficients)>1):
         s = 0.0
         for c in coefficients:
             v = coefficients[c]
