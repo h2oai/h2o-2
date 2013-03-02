@@ -170,9 +170,18 @@ public class H2ONode extends Iced implements Comparable {
     if( x == null ) return -1;   // Always before null
     H2ONode h2o = (H2ONode)x;
     if( h2o == this ) return 0;
-    int res1 = _key._ipv4 - h2o._key._ipv4;
-    if( res1 != 0 ) return res1;
-    int res2 = _key.udp_port() - h2o ._key.udp_port();
+
+    // Want negative return if x is <, 0 if =, positive if >
+    // If the unsigned 32-bit x and _key have different sign bits,
+    // the 32-bit signed comparison needs to be reversed.
+    // Alternative is convert to long first.
+    long l1 = _key._ipv4 & 0xffffffffL;
+    long l2 = h2o._key._ipv4 & 0xffffffffL;
+    long res1 = l1 - l2;
+    if( res1 != 0 ) return (int) res1;
+
+    // port probably is not big enough to worry about.
+    int res2 = _key.udp_port() - h2o._key.udp_port();
     assert res2 != 0; // Intern'g should prevent equal Inet+ports
     return res2;
   }
