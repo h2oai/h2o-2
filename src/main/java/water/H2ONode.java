@@ -4,7 +4,6 @@ import java.net.*;
 import java.nio.channels.DatagramChannel;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.*;
 
 import water.nbhm.NonBlockingHashMap;
 import water.nbhm.NonBlockingHashMapLong;
@@ -26,7 +25,7 @@ public class H2ONode extends Iced implements Comparable {
     public H2Okey(InetAddress inet, int port) {
       super(inet,port);
       byte[] b = inet.getAddress();
-      _ipv4 = ((b[0]&0xFF)<<0)+((b[1]&0xFF)<<8)+((b[2]&0xFF)<<16)+((b[3]&0xFF)<<24);
+      _ipv4 = ((b[3]&0xFF)<<0)+((b[2]&0xFF)<<8)+((b[1]&0xFF)<<16)+((b[0]&0xFF)<<24);
     }
     public int htm_port() { return getPort()-1; }
     public int udp_port() { return getPort()  ; }
@@ -92,12 +91,12 @@ public class H2ONode extends Iced implements Comparable {
   }
   public static final H2ONode intern( InetAddress ip, int port ) { return intern(new H2Okey(ip,port)); }
 
-  public static final H2ONode intern( int ip, int port ) { 
+  public static final H2ONode intern( int ip, int port ) {
     byte[] b = new byte[4];
-    b[0] = (byte)(ip>> 0);
-    b[1] = (byte)(ip>> 8);
-    b[2] = (byte)(ip>>16);
-    b[3] = (byte)(ip>>24);
+    b[3] = (byte)(ip>> 0);
+    b[2] = (byte)(ip>> 8);
+    b[1] = (byte)(ip>>16);
+    b[0] = (byte)(ip>>24);
     try {
       return intern(InetAddress.getByAddress(b),port);
     } catch( UnknownHostException uhe ) {
