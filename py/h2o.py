@@ -403,6 +403,7 @@ def check_sandbox_for_errors():
                 # JIT reporting looks like this..don't detect that as an error
                 printSingleWarning = False
                 foundBad = False
+                foundNOPTaskCnt = 0
                 if not ' bytes)' in line:
                     # no multiline FSM on this 
                     printSingleWarning = regex3.search(line) and not ('[Loaded ' in line)
@@ -427,7 +428,13 @@ def check_sandbox_for_errors():
                     # Update: Assertion can be followed by Exception. 
                     # Make sure we keep printing for a min of 4 lines
                     foundAt = re.match(r'[\t ]+at ',line)
-                    if foundBad and (lines>4) and not (foundCaused or foundAt):
+                    # on the NOPTask stack trace, we get two Assertion errors and would like to see them both
+                    # looks like min of 10 lines looks like it will cover it
+                    # but also maybe just count NOPTask
+                    if re.match(r'NOPTask',line):
+                        foundNopTaskCnt += 1
+
+                    if foundBad and (lines>10) and not (foundCaused or foundAt or foundNopTaskCnt==1):
                         printing = 2 
 
                 if (printing==1):
