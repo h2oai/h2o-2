@@ -250,6 +250,8 @@ def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, t
         myKeyForParseResult = keyForParseResult
     return node.parse(s3_key, myKeyForParseResult, timeoutSecs=timeoutSecs, **kwargs)
 
+'''
+RF scoring 
 def runRFView(node=None, parseKey=None, modelKey=None, ntree=None,
         timeoutSecs=20, retryDelaySecs=2, **kwargs):
     if not parseKey: raise Exception('No parse key for RFView specified')
@@ -295,4 +297,4 @@ def runRFView(node=None, parseKey=None, modelKey=None, ntree=None,
     h2f.simpleCheckRFView(node, rfView)
 
     return rfView
-
+'''
