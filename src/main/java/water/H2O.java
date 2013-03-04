@@ -541,7 +541,6 @@ public final class H2O {
           Log.die("On " + H2O.findInetAddressForSelf() +
               " some of the required ports " + (OPT_ARGS.port+0) +
               ", " + (OPT_ARGS.port+1) +
-              ", " + (OPT_ARGS.port+2) +
               " are not available, change -port PORT and try again.");
       }
       API_PORT += 2;

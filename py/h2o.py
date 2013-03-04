@@ -424,6 +424,7 @@ def check_sandbox_for_errors():
                 # JIT reporting looks like this..don't detect that as an error
                 printSingleWarning = False
                 foundBad = False
+                foundNOPTaskCnt = 0
                 if not ' bytes)' in line:
                     # no multiline FSM on this 
                     printSingleWarning = regex3.search(line) and not ('[Loaded ' in line)
@@ -448,7 +449,13 @@ def check_sandbox_for_errors():
                     # Update: Assertion can be followed by Exception. 
                     # Make sure we keep printing for a min of 4 lines
                     foundAt = re.match(r'[\t ]+at ',line)
-                    if foundBad and (lines>4) and not (foundCaused or foundAt):
+                    # on the NOPTask stack trace, we get two Assertion errors and would like to see them both
+                    # looks like min of 10 lines looks like it will cover it
+                    # but also maybe just count NOPTask
+                    if re.match(r'NOPTask',line):
+                        foundNopTaskCnt += 1
+
+                    if foundBad and (lines>10) and not (foundCaused or foundAt or foundNopTaskCnt==1):
                         printing = 2 
 
                 if (printing==1):
@@ -753,7 +760,8 @@ class H2O(object):
 
     # params: header=1, 
     # noise is a 2-tuple: ("StoreView",params_dict)
-    def parse(self, key, key2=None, timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, **kwargs):
+    def parse(self, key, key2=None, timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, 
+        noPoll=False, **kwargs):
         browseAlso = kwargs.pop('browseAlso',False)
         # this doesn't work. webforums indicate max_retries might be 0 already? (as of 3 months ago)
         # requests.defaults({max_retries : 4})
@@ -767,7 +775,6 @@ class H2O(object):
             }
         params_dict.update(kwargs)
         noise = kwargs.pop('noise', None)
-        verboseprint('Parse.Json noise:', noise)
 
         a = self.__check_request(
             requests.get(
@@ -779,13 +786,18 @@ class H2O(object):
         if a['response']['redirect_request']!='Progress':
             print dump_json(a)
             raise Exception('H2O parse redirect is not Progress. Parse json response precedes.')
-        # noise is a 2-tuple ("StoreView, none) for url plus args for doing during poll to create noise
-        # no noise if None
-        a = self.poll_url(a['response'],
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, initialDelaySecs=initialDelaySecs, noise=noise)
 
-        verboseprint("\nParse result:", dump_json(a))
-        return a
+        if noPoll:
+            # don't wait for response! might have H2O throughput issues if send them back to back a lot?
+            return None
+        else:
+            # noise is a 2-tuple ("StoreView, none) for url plus args for doing during poll to create noise
+            # no noise if None
+            verboseprint('Parse.Json noise:', noise)
+            a = self.poll_url(a['response'],
+                timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, initialDelaySecs=initialDelaySecs, noise=noise)
+            verboseprint("\nParse result:", dump_json(a))
+            return a
 
     def netstat(self):
         return self.__check_request(requests.get(self.__url('Network.json')))

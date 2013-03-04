@@ -5,7 +5,7 @@ import h2o_cmd, h2o, h2o_hosts
 import h2o_browse as h2b
 import time
 
-node_count = 7
+node_count = 10
 global base_port
 base_port = 50550
 portsPerNode = 2

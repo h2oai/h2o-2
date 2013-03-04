@@ -4,7 +4,6 @@ import java.net.*;
 import java.nio.channels.DatagramChannel;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.*;
 
 import water.nbhm.NonBlockingHashMap;
 import water.nbhm.NonBlockingHashMapLong;
@@ -26,7 +25,7 @@ public class H2ONode extends Iced implements Comparable {
     public H2Okey(InetAddress inet, int port) {
       super(inet,port);
       byte[] b = inet.getAddress();
-      _ipv4 = ((b[0]&0xFF)<<0)+((b[1]&0xFF)<<8)+((b[2]&0xFF)<<16)+((b[3]&0xFF)<<24);
+      _ipv4 = ((b[3]&0xFF)<<0)+((b[2]&0xFF)<<8)+((b[1]&0xFF)<<16)+((b[0]&0xFF)<<24);
     }
     public int htm_port() { return getPort()-1; }
     public int udp_port() { return getPort()  ; }
@@ -92,12 +91,12 @@ public class H2ONode extends Iced implements Comparable {
   }
   public static final H2ONode intern( InetAddress ip, int port ) { return intern(new H2Okey(ip,port)); }
 
-  public static final H2ONode intern( int ip, int port ) { 
+  public static final H2ONode intern( int ip, int port ) {
     byte[] b = new byte[4];
-    b[0] = (byte)(ip>> 0);
-    b[1] = (byte)(ip>> 8);
-    b[2] = (byte)(ip>>16);
-    b[3] = (byte)(ip>>24);
+    b[3] = (byte)(ip>> 0);
+    b[2] = (byte)(ip>> 8);
+    b[1] = (byte)(ip>>16);
+    b[0] = (byte)(ip>>24);
     try {
       return intern(InetAddress.getByAddress(b),port);
     } catch( UnknownHostException uhe ) {
@@ -171,9 +170,18 @@ public class H2ONode extends Iced implements Comparable {
     if( x == null ) return -1;   // Always before null
     H2ONode h2o = (H2ONode)x;
     if( h2o == this ) return 0;
-    int res1 = _key._ipv4 - h2o._key._ipv4;
-    if( res1 != 0 ) return res1;
-    int res2 = _key.udp_port() - h2o ._key.udp_port();
+
+    // Want negative return if x is <, 0 if =, positive if >
+    // If the unsigned 32-bit x and _key have different sign bits,
+    // the 32-bit signed comparison needs to be reversed.
+    // Alternative is convert to long first.
+    long l1 = _key._ipv4 & 0xffffffffL;
+    long l2 = h2o._key._ipv4 & 0xffffffffL;
+    long res1 = l1 - l2;
+    if( res1 != 0 ) return (int) res1;
+
+    // port probably is not big enough to worry about.
+    int res2 = _key.udp_port() - h2o._key.udp_port();
     assert res2 != 0; // Intern'g should prevent equal Inet+ports
     return res2;
   }
