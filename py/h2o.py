@@ -5,6 +5,7 @@ import h2o_browse as h2b
 import re
 import inspect, webbrowser
 import random
+import errno
 
 # For checking ports in use, using netstat thru a subprocess.
 from subprocess import Popen, PIPE
@@ -283,6 +284,7 @@ def check_port_group(base_port):
             output = p3.communicate()[0]
             print output
 
+# node_count is number of H2O instances per host if hosts is specified.
 def decide_if_localhost():
     if config_json:
         print "config_json:", config_json
@@ -887,7 +889,7 @@ class H2O(object):
             }
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
-        print "\nrandom_forest parameters:", params_dict
+        verboseprint("\nrandom_forest parameters:", params_dict)
         a = self.__check_request(requests.get(
             url=self.__url('RF.json'),
             timeout=timeoutSecs,
@@ -1351,8 +1353,15 @@ class RemoteHost(object):
             # log('Uploading to %s: %s -> %s' % (self.http_addr, f, dest))
 
             sftp = self.ssh.open_sftp()
-            sftp.put(f, dest, callback=progress)
-            sftp.close()
+            # check if file exists on remote side
+            try:
+                sftp.stat(dest)
+                verboseprint("Skipping upload of file {0} because file {1} exists on remote side!".format(f, dest))
+            except IOError, e:
+                if e.errno == errno.ENOENT:
+                    sftp.put(f, dest, callback=progress)
+            finally:
+                sftp.close()
             self.uploaded[f] = dest
         return self.uploaded[f]
 
@@ -1382,6 +1391,9 @@ class RemoteHost(object):
 
     def __init__(self, addr, username, password=None, **kwargs):
         import paramiko
+        # To debug paramiko you can use the following code:
+        #paramiko.util.log_to_file('/tmp/paramiko.log')
+        #paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
         self.addr = addr
         self.http_addr = addr
         self.username = username
@@ -1396,6 +1408,8 @@ class RemoteHost(object):
         else:
             self.ssh.connect(self.addr, username=username, password=password, **kwargs)
 
+        # keep connection - send keepalive packet evety 5minutes
+        self.ssh.get_transport().set_keepalive(300)
         self.uploaded = {}
 
     def remote_h2o(self, *args, **kwargs):
@@ -1420,6 +1434,9 @@ class RemoteH2O(H2O):
         self.jar = host.upload_file('target/h2o.jar')
         # need to copy the flatfile. We don't always use it (depends on h2o args)
         self.flatfile = host.upload_file(flatfile_name())
+        # distribute AWS credentials
+        if self.aws_credentials:
+            self.aws_credentials = host.upload_file(self.aws_credentials)
 
         if self.use_home_for_ice:
             # this will be the username used to ssh to the host

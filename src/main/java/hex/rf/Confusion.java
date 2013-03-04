@@ -124,7 +124,7 @@ public class Confusion extends MRTask {
     _data = ValueArray.value(DKV.get(_datakey));
     _model = UKV.get(_modelKey, new RFModel());
     _modelDataMap = _model.columnMapping(_data.colNames());
-    assert !_computeOOB || _model._dataKey==_datakey : _computeOOB + " || " + _model._dataKey + " == " + _datakey ;
+    assert !_computeOOB || _model._dataKey.equals(_datakey) : _computeOOB + " || " + _model._dataKey + " == " + _datakey ;
     Column c = _data._cols[_classcol];
     _N = (int)((c._max - c._min)+1);
     assert _N > 0;
