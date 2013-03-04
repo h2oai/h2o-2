@@ -1,7 +1,7 @@
 import os, json, unittest, time, shutil, sys
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_pp, h2o_rf
+import h2o, h2o_cmd, h2o_hosts, h2o_rf
 
 # RF train parameters
 paramsTrainRF = { 
@@ -77,8 +77,8 @@ class Basic(unittest.TestCase):
         kwargs   = paramsScoreRF.copy()
         scoreResult = h2o_rf.scoreRF(scoreKey, trainResult, **kwargs)
 
-        print "\nTrain\n=========={0}".format(h2o_pp.pp_rf_result(trainResult))
-        print "\nScoring\n========={0}".format(h2o_pp.pp_rf_result(scoreResult))
+        print "\nTrain\n=========={0}".format(h2o_rf.pp_rf_result(trainResult))
+        print "\nScoring\n========={0}".format(h2o_rf.pp_rf_result(scoreResult))
 
 if __name__ == '__main__':
     h2o.unit_main()
