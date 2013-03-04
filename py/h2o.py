@@ -299,11 +299,6 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         timeoutSecs=30, retryDelaySecs=0.5, cleanup=True, rand_shuffle=True, **kwargs):
     # moved to here from unit_main. so will run with nosetests too!
     clean_sandbox()
-    # H2O still checks for collision against 3 ports range 
-    # even if its only using 2
-    # FIX! apparently junit.py assumes 2 ports per node? 
-    # H2O.java says 3 ports to check if there's an error, but I believe 2 is right
-    # will have to update to 2 everywhere
     ports_per_node = 2 
     node_list = []
     try:
@@ -313,7 +308,8 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         # this jvm startup shuffle is independent from the flatfile shuffle
         portList = [base_port + ports_per_node*i for i in range(node_count)]
         if hosts is None:
-            # if use_flatfile, we should create it, because tests will just call build_cloud with use_flatfile=True
+            # if use_flatfile, we should create it, 
+            # because tests will just call build_cloud with use_flatfile=True
             # best to just create it all the time..may or may not be used 
             write_flatfile(node_count=node_count, base_port=base_port)
             hostCount = 1
@@ -326,6 +322,9 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         else:
             # if hosts, the flatfile was created and uploaded to hosts already
             # I guess don't recreate it, don't overwrite the one that was copied beforehand.
+            # we don't always use the flatfile (use_flatfile=False)
+            # Suppose we could dispatch from the flatfile to match it's contents
+            # but sometimes we want to test with a bad/different flatfile then we invoke h2o?
             hostCount = len(hosts)
             hostPortList = []
             for h in hosts:
