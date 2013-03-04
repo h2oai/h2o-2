@@ -1,4 +1,5 @@
 import h2o, h2o_cmd
+import time
 
 def setupImportS3(node=None, path='test-s3-integration'):
     if not node: node = h2o.nodes[0]
@@ -32,7 +33,7 @@ def parseImportS3File(node=None,
 def setupImportFolder(node=None, path='/home/0xdiag/datasets'):
     if not node: node = h2o.nodes[0]
     importFolderResult = node.import_files(path)
-    h2o.dump_json(importFolderResult)
+    ### h2o.dump_json(importFolderResult)
     return importFolderResult
 
 # assumes you call setupImportFolder first

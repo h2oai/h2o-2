@@ -13,8 +13,8 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        localhost = h2o.decide_if_localhost()
         global localhost
+        localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(3,java_heap_GB=4)
         else:

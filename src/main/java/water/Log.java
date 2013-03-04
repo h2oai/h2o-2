@@ -3,15 +3,14 @@ package water;
 import java.io.*;
 import java.lang.management.ManagementFactory;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.TimeZone;
+import java.util.*;
 
 public final class Log {
   // @formatter:off
   private static final ThreadLocal<SimpleDateFormat> _utcFormat = new ThreadLocal<SimpleDateFormat>() {
     @Override
     protected SimpleDateFormat initialValue() {
-      SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd'-'HH:mm:ss.SSS");
+      SimpleDateFormat format = new SimpleDateFormat("yyMMdd'-'HH:mm:ss.SSS");
       format.setTimeZone(TimeZone.getTimeZone("UTC"));
       return format;
     }
@@ -20,17 +19,16 @@ public final class Log {
   // @formatter:on
 
   static {
-    HOST_AND_PID = ""
-        + padRight(H2O.findInetAddressForSelf().getHostAddress() + ", ", 17)
-        + padRight(getPid() + ", ", 8);
+    HOST_AND_PID = "" + padRight(H2O.findInetAddressForSelf().getHostAddress() + ", ", 17) + padRight(getPid() + ", ", 8);
   }
 
   private static long getPid() {
     try {
       String n = ManagementFactory.getRuntimeMXBean().getName();
       int i = n.indexOf('@');
-      if( i == -1 ) return -1;
-      return Long.parseLong(n.substring(0,i));
+      if( i == -1 )
+        return -1;
+      return Long.parseLong(n.substring(0, i));
     } catch( Throwable t ) {
       return -1;
     }
@@ -52,10 +50,7 @@ public final class Log {
       t.printStackTrace(printWriter);
       stack = result.toString();
     }
-    String header = _utcFormat.get().format(new Date()) + ", ";
-    header += HOST_AND_PID;
-    header += padRight(Thread.currentThread().getName() + ", ", 12);
-    System.out.println(header + (s != null ? s + " " + stack : stack));
+    System.out.println(s != null ? s + " " + stack : stack);
   }
 
   // Print to the original STDERR & die
@@ -72,5 +67,49 @@ public final class Log {
         strb.append(' ');
 
     return strb.toString();
+  }
+
+  static void initHeaders() {
+    System.setOut(new Wrapper(System.out));
+    System.setErr(new Wrapper(System.err));
+  }
+
+  public static void write(PrintStream stream, String s, boolean headers) {
+    if( stream instanceof Wrapper )
+      ((Wrapper) System.out).printlnParent(s);
+    else
+      stream.println(s);
+  }
+
+  private static final class Wrapper extends PrintStream {
+    Wrapper(PrintStream parent) {
+      super(parent);
+    }
+
+    static String h() {
+      String h = _utcFormat.get().format(new Date()) + ", ";
+      h += HOST_AND_PID;
+      h += padRight(Thread.currentThread().getName() + ", ", 26);
+      return h;
+    }
+
+    @Override
+    public PrintStream printf(String format, Object... args) {
+      return super.printf(h() + format, args);
+    }
+
+    @Override
+    public PrintStream printf(Locale l, String format, Object... args) {
+      return super.printf(l, h() + format, args);
+    }
+
+    @Override
+    public void println(String x) {
+      super.println(h() + x);
+    }
+
+    void printlnParent(String s) {
+      super.println(s);
+    }
   }
 }

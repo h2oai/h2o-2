@@ -25,7 +25,8 @@ public class Sandbox {
 
     Desktop desktop = Desktop.getDesktop();
     // desktop.browse(new URI("http://localhost:54321/Jobs.html"));
-    desktop.browse(new URI("http://localhost:54321/Inspect.html?key=test.hex"));
+    // desktop.browse(new URI("http://localhost:54321/Inspect.html?key=test.hex"));
+    desktop.browse(new URI("http://localhost:54321/Timeline.html"));
 
     BufferedReader console = new BufferedReader(new InputStreamReader(System.in));
     console.readLine();

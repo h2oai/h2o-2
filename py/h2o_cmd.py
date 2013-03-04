@@ -3,7 +3,7 @@ import h2o
 import h2o_browse as h2b, h2o_rf as h2f
 
 def parseFile(node=None, csvPathname=None, key=None, key2=None, 
-    timeoutSecs=20, retryDelaySecs=0.5, noise=None, header=None):
+    timeoutSecs=20, retryDelaySecs=0.5, noise=None, header=None, noPoll=None):
     if not csvPathname: raise Exception('No file name specified')
     if not node: node = h2o.nodes[0]
     key = node.put_file(csvPathname, key=key, timeoutSecs=timeoutSecs)
@@ -13,7 +13,7 @@ def parseFile(node=None, csvPathname=None, key=None, key2=None,
     else:
         myKey2 = key2
     return node.parse(key, myKey2, header=header,
-        timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, noise=noise)
+        timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, noise=noise, noPoll=noPoll)
 
 def runInspect(node=None, key=None, timeoutSecs=5, **kwargs):
     if not key: raise Exception('No key for Inspect specified')

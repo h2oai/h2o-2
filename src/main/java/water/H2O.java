@@ -389,6 +389,7 @@ public final class H2O {
     public String keepice; // Do not delete ice on startup
     public String soft = null; // soft launch for demos
     public String random_udp_drop = null; // test only, randomly drop udp incoming
+    public String log_headers = null; // add machine name, PID and time to logs
   }
   public static boolean IS_SYSTEM_RUNNING = false;
 
@@ -403,6 +404,9 @@ public final class H2O {
     Arguments arguments = new Arguments(args);
     arguments.extract(OPT_ARGS);
     ARGS = arguments.toStringArray();
+
+    if(OPT_ARGS.log_headers != null)
+      Log.initHeaders();
 
     startLocalNode(); // start the local node
     // Load up from disk and initialize the persistence layer
@@ -537,7 +541,6 @@ public final class H2O {
           Log.die("On " + H2O.findInetAddressForSelf() +
               " some of the required ports " + (OPT_ARGS.port+0) +
               ", " + (OPT_ARGS.port+1) +
-              ", " + (OPT_ARGS.port+2) +
               " are not available, change -port PORT and try again.");
       }
       API_PORT += 2;

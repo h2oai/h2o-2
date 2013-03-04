@@ -60,6 +60,16 @@ public abstract class Paxos {
   // This is a packet announcing what Cloud this Node thinks is the current
   // Cloud.
   static synchronized void doHeartbeat( H2ONode h2o ) {
+    // commented out the original location of this addProposedMember below, if desire to change back.
+    // Failing case would be if our cloud had a better(lesser) leader than our current LEADER.
+    // If we never updated LEADER to that better value, we can have steady state with different nodes having
+    // different LEADER values.
+    // Since we ignore proposals not from LEADER, that's a steady state fail.
+    // So always try to add all incoming heartbeats to PROPOSED_MEMBERS to guarantee that we
+    // always have LEADER matching what others see. (or we could compare LEADER to cloud[0] when we
+    // add a cloud..that would be better performance wise. Or just an assertion, but this is simpler.
+    addProposedMember(h2o); 
+
     // If this packet is for *this* Cloud, just carry on (the heartbeat has
     // already been recorded.
     H2O cloud = H2O.CLOUD;
@@ -108,8 +118,10 @@ public abstract class Paxos {
       // Node woke up and hasn't yet smelled the roses (i.e., isn't aware the
       // Cloud shifted and kicked him out).  Could be a late heartbeat from
       // him.  Offer to vote him back in.
-      if( !addProposedMember(h2o) )
-        print("hart: already part of proposal",PROPOSED_MEMBERS);
+
+      // kbn: replaced with unconditional same thing at top. 
+      // if( !addProposedMember(h2o) )
+      //   print("hart: already part of proposal",PROPOSED_MEMBERS);
     }
 
     // Trigger a Paxos proposal because there is somebody new, or somebody old
@@ -205,7 +217,7 @@ public abstract class Paxos {
       _state._idLo = uuid.getLeastSignificantBits();
       _state._idHi = uuid.getMostSignificantBits();
       Paxos.print("send: Prepare "+proposal_num+" for leadership fight ",PROPOSED_MEMBERS);
-      UDPPaxosProposal.build_and_multicast(proposal_num);
+      UDPPaxosProposal.build_and_multicast(proposal_num, _state._members);
     } else {
       // Non-Leaders act as passive Accepters.  All Nodes should respond in a
       // timely fashion, including Leaders - if they fail the basic heartbeat
@@ -379,7 +391,12 @@ public abstract class Paxos {
       return print("do  : Leader missed me; I am still not in the new Cloud, so refuse the Accept and let my Heartbeat publish me again",members,state);
     }
 
-    if( proposal_num == PROPOSAL_MAX && state.uuid().equals(H2O.CLOUD._id) )
+    // kbn: For now, take them all Accepted packets because the sending of
+    // doAccepted cloud id + member list may have wrong info sometimes?.
+    // Can reenable this when you think the Accepted packets are always perfect.
+    // i.e. the cloud id and members list always matches the first time you sent that cloud id
+    if ( 1 == 0 )
+    // if( proposal_num == PROPOSAL_MAX && state.uuid().equals(H2O.CLOUD._id) )
       return print("do  : Nothing: Accepted with same cloud membership list",members,state);
 
     // We just got a proposal to change the cloud
