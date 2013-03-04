@@ -232,10 +232,16 @@ def invoke_hosts_action(action, hosts_config):
     elif (action == 'start'):
         start_instances(ids)
         # FIXME after start instances receive new IPs: wait_for_ssh(ips)
+    elif (action == 'distribute_h2o'):
+        pass
+    elif (action == 'start_h2o'):
+        pass
+    elif (action == 'stop_h2o'):
+        pass
 
 def main():
     parser = argparse.ArgumentParser(description='H2O EC2 instances launcher')
-    parser.add_argument('action', choices=['create', 'terminate', 'stop', 'reboot', 'start', 'show_defaults'],  help='EC2 instances action')
+    parser.add_argument('action', choices=['create', 'terminate', 'stop', 'reboot', 'start', 'distribute_h2o', 'start_h2o', 'stop_h2o', 'show_defaults'],  help='EC2 instances action')
     parser.add_argument('--config', help='Configuration file to configure NEW EC2 instances (if not specified default is used - see --show_defaults)', type=str, default=None)
     parser.add_argument('--instances', help='Number of instances to launch', type=int, default=DEFAULT_NUMBER_OF_INSTANCES)
     parser.add_argument('--hosts', help='Hosts file describing existing "EXISTING" EC2 instances ', type=str, default=None)
