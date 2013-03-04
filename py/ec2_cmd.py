@@ -13,7 +13,8 @@ import json
        * to terminated the cloud   : ./ec2_cmd.py terminate --hosts <host file returned by previous command>
 '''
 
-DEFAULT_NUMBER_OF_INSTANCES = 1
+DEFAULT_NUMBER_OF_INSTANCES = 5
+DEFAULT_HOSTS_FILENAME = 'ec2-config-{0}.json'
 
 '''
 Default EC2 instance setup
@@ -169,7 +170,7 @@ def wait_for_ssh(ips, port=22, skipAlive=True, requiredsuccess=3):
                 h2o_cmd.dot()
 
 
-def dump_hosts_config(ec2_config, reservation, filename='ec2-config-{0}.json'):
+def dump_hosts_config(ec2_config, reservation, filename=DEFAULT_HOSTS_FILENAME):
     cfg = {}
     cfg['aws_credentials'] = '/home/ubuntu/.ec2/AwsCredentials.properties'
     cfg['username']        = ec2_config['username'] 
@@ -252,7 +253,7 @@ def main():
         log("Config   : {0}".format(ec2_config))
         log("Instances: {0}".format(args.instances))
         reservation = run_instances(args.instances, ec2_config)
-        dump_hosts_config(ec2_config, reservation)
+        dump_hosts_config(ec2_config, reservation, args.hosts)
         dump_ssh_commands(ec2_config, reservation)
     elif (args.action == 'show_defaults'):
         print "Config    : {0}".format(DEFAULT_EC2_INSTANCE_CONF)
