@@ -106,10 +106,10 @@ public class TimeLine extends UDP {
   public static InetAddress inet( long[] tl, int idx ) {
     int adr = (int)x0(tl,idx);
     byte[] ip4 = new byte[4];
-    ip4[3] = (byte)(adr>> 0);
-    ip4[2] = (byte)(adr>> 8);
-    ip4[1] = (byte)(adr>>16);
-    ip4[0] = (byte)(adr>>24);
+    ip4[0] = (byte)(adr>> 0);
+    ip4[1] = (byte)(adr>> 8);
+    ip4[2] = (byte)(adr>>16);
+    ip4[3] = (byte)(adr>>24);
     try { return InetAddress.getByAddress(ip4); }
     catch( UnknownHostException e ) { }
     return null;
