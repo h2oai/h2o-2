@@ -107,11 +107,9 @@ def run_instances(count, ec2_config, waitForSSH=True):
 
         return reservation
     except:
-        print "Unexpected error:", sys.exc_info()[0]
-        try:
+        print "Unexpected error:", sys.exc_info()
+        if reservation:
             terminate_reservation(reservation)
-        except:
-            pass
         raise
 
 ''' Wait for ssh port 
