@@ -15,14 +15,9 @@ public abstract class UDP {
   // Types of UDP packets I grok
   public static enum udp {
     bad(false,null), // Do not use the zero packet, too easy to make mistakes
-      // Some Paxos-related and health-related packet types.  These packets are
-      // all stateless, in that we do not need to send any replies back.
+      // Some health-related packet types.  These packets are all stateless, in
+      // that we do not need to send any replies back.
       heartbeat     ( true, new UDPHeartbeat()),
-      paxos_proposal( true, new UDPPaxosProposal()),
-      paxos_promise ( true, new UDPPaxosPromise()),
-      paxos_nack    ( true, new UDPPaxosNack()),
-      paxos_accept  ( true, new UDPPaxosAccept()),
-      paxos_accepted( true, new UDPPaxosAccepted()),
       rebooted      ( true, new UDPRebooted()),  // This node has rebooted recently
       timeline      (false, new TimeLine()),     // Get timeline dumps from across the Cloud
 

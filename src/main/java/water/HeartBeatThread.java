@@ -52,7 +52,7 @@ public class HeartBeatThread extends Thread {
       catch( InterruptedException e ) { }
 
       // Update the interesting health self-info for publication also
-      HeartBeat hb = new HeartBeat();
+      HeartBeat hb = H2O.SELF._heartbeat;
       hb._hb_version = HB_VERSION++;
       hb._jvm_boot_msec= TimeLine.JVM_BOOT_MSEC;
       final Runtime run = Runtime.getRuntime();
@@ -93,8 +93,7 @@ public class HeartBeatThread extends Thread {
       // Look for napping Nodes & propose removing from Cloud
       for( H2ONode h2o : cloud._memary ) {
         if( now - h2o._last_heard_from > SUSPECT ) {  // We suspect this Node has taken a dirt nap
-          Paxos.print("hart: announce suspect node",cloud._memset,h2o.toString());
-          Paxos.doChangeAnnouncement(cloud);
+          Paxos.print("hart: announce suspect node",cloud._memary,h2o.toString());
           break;
         }
       }

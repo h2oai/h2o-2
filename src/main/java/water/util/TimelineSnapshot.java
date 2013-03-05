@@ -187,17 +187,6 @@ public final class TimelineSnapshot implements
         if( (int)(myl0>>24) != (int)(evl0>>24))
           return false;
         break;
-      case paxos_accept:
-      case paxos_accepted:
-      case paxos_nack:
-      case paxos_promise:
-      case paxos_proposal:
-        // compare ctrl bytes 3 + 12 bytes of payload for paxos
-        if ((myl0>>24) != (evl0>>24))
-          return false;
-        if ((dataHi() & 0xFFFFFFFFFFFFFFl) != (ev.dataHi() & 0xFFFFFFFFFFFFFFl))
-          return false;
-        break;
       default:
         throw new Error("unexpected udp packet type " + e.toString());
       }
