@@ -24,7 +24,7 @@ public class UDPTimeOutThread extends Thread {
       try {
         RPC t = PENDING.take();
         // One-shot timeout effect.  Retries need to re-insert back in the queue
-        if( H2O.CLOUD._memset.contains(t._target) )
+        if( H2O.CLOUD.contains(t._target) )
           // A little unusual effect happens here: the resend typically does
           // I/O and perhaps large I/O - and we're resending because the
           // original task never got finished, possibly because it also got

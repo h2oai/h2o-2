@@ -150,17 +150,11 @@ public class H2ONode extends Iced implements Comparable {
     }
     return intern(new H2Okey(local,H2O.UDP_PORT));
   }
-  // Is cloud member
-  public final boolean is_cloud_member(H2O cloud) {
-    HeartBeat hb = _heartbeat;
-    return
-      hb._cloud_id_lo == cloud._id.getLeastSignificantBits() &&
-      hb._cloud_id_hi == cloud._id. getMostSignificantBits() &&
-      cloud._memset.contains(this);
-  }
 
   // Happy printable string
-  public String toString() { return _key.toString (); }
+  @Override public String toString() { return _key.toString (); }
+  @Override public int hashCode() { return _key.hashCode(); }
+  @Override public boolean equals(Object o) { return _key.equals(o); }
 
   // index of this node in the current cloud... can change at the next cloud.
   public int index() { return H2O.CLOUD.nidx(this); }
