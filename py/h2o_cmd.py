@@ -1,9 +1,9 @@
-import os, json, unittest, time, shutil, sys
+import os, json, unittest, time, shutil, sys, socket
 import h2o
 import h2o_browse as h2b, h2o_rf as h2f
 
 def parseFile(node=None, csvPathname=None, key=None, key2=None, 
-    timeoutSecs=20, retryDelaySecs=0.5, noise=None, header=None):
+    timeoutSecs=20, retryDelaySecs=0.5, noise=None, header=None, noPoll=None):
     if not csvPathname: raise Exception('No file name specified')
     if not node: node = h2o.nodes[0]
     key = node.put_file(csvPathname, key=key, timeoutSecs=timeoutSecs)
@@ -13,7 +13,7 @@ def parseFile(node=None, csvPathname=None, key=None, key2=None,
     else:
         myKey2 = key2
     return node.parse(key, myKey2, header=header,
-        timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, noise=noise)
+        timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, noise=noise, noPoll=noPoll)
 
 def runInspect(node=None, key=None, timeoutSecs=5, **kwargs):
     if not key: raise Exception('No key for Inspect specified')
@@ -198,3 +198,103 @@ def runRFView(node=None, data_key=None, model_key=None, ntree=None, timeoutSecs=
     h2f.simpleCheckRFView(node, rfView)
 
     return rfView
+         
+def port_live(ip, port):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.connect((ip,port))
+        s.shutdown(2)
+        return True
+    except:
+        return False
+
+def wait_for_live_port(ip, port, retries=3):
+    h2o.verboseprint("Waiting for {0}:{1} {2}times...".format(ip,port,retries))
+    if not port_live(ip,port):
+        count = 0
+        while count < retries:
+            if port_live(ip,port):
+                count += 1
+            else:
+                count = 0
+            time.sleep(1)
+            dot()
+    if not port_live(ip,port):
+        raise Exception("[h2o_cmd] Error waiting for {0}:{1} {2}times...".format(ip,port,retries))
+
+def dot():
+    sys.stdout.write('.')
+    sys.stdout.flush()
+
+def sleep_with_dot(sec, message=None):
+    if message:
+        print message
+    count = 0
+    while count < sec:
+        time.sleep(1)
+        dot()
+        count += 1
+
+def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, timeoutSecs=20, **kwargs):
+    ''' Parse a file stored in S3 bucket'''                                                                                                                                                                       
+    if not bucket  : raise Exception('No S3 bucket specified')
+    if not filename: raise Exception('No filename in bucket specified')
+    if not node: node = h2o.nodes[0]
+    
+    import_result = node.import_s3(bucket)
+    s3_key = [f['key'] for f in import_result['succeeded'] if f['file'] == filename ][0]
+    
+    if keyForParseResult is None:
+        myKeyForParseResult = s3_key + '.hex'
+    else:
+        myKeyForParseResult = keyForParseResult
+    return node.parse(s3_key, myKeyForParseResult, timeoutSecs=timeoutSecs, **kwargs)
+
+'''
+RF scoring 
+def runRFView(node=None, parseKey=None, modelKey=None, ntree=None,
+        timeoutSecs=20, retryDelaySecs=2, **kwargs):
+    if not parseKey: raise Exception('No parse key for RFView specified')
+    if not modelKey: raise Exception('No model key for RFView specified')
+    if not ntree: raise Exception('No number of trees for RFView specified')
+    if not node: node = h2o.nodes[0]
+    
+    dataKey = parseKey['destination_key']
+    h2o.verboseprint("runRFView dataKey: {0}, modelKey: {1}".format(modelKey, dataKey))
+
+    def testRFProgress(n):
+        rfView = n.random_forest_view(dataKey, modelKey, timeoutSecs, **kwargs)
+        status = rfView['response']['status']
+        numberBuilt = rfView['trees']['number_built']
+
+        if status == 'done': 
+            if numberBuilt!=ntree: 
+                raise Exception("RFview done but number_built!=ntree: %s %s", 
+                    numberBuilt, ntree)
+            return True
+        if status != 'poll': raise Exception('Unexpected status: ' + status)
+
+        progress = rfView['response']['progress']
+        progressTotal = rfView['response']['progress_total']
+
+        # don't print the useless first poll. ma
+        if (status!='done'):
+            if numberBuilt==0:
+                h2o.verboseprint(".")
+            else:
+                h2o.verboseprint("\nRFView polling. Status: %s. %s trees done of %s desired" % 
+                    (status, numberBuilt, ntree))
+
+        return (status=='done')
+
+    node.stabilize(
+            testRFProgress,
+            'random forest reporting %d trees' % ntree,
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
+
+    # Re-read results 
+    rfView = node.random_forest_view(dataKey, modelKey, timeoutSecs, **kwargs)
+    h2f.simpleCheckRFView(node, rfView)
+
+    return rfView
+'''

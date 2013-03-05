@@ -4,6 +4,8 @@ import glob
 import h2o_browse as h2b
 import re
 import inspect, webbrowser
+import random
+import errno
 
 # For checking ports in use, using netstat thru a subprocess.
 from subprocess import Popen, PIPE
@@ -232,18 +234,30 @@ json_url_history = []
 global nodes
 nodes = []
 
-def write_flatfile(node_count=2, base_port=54321, hosts=None):
+# I suppose we could shuffle the flatfile order!
+# but it uses hosts, so if that got shuffled, we got it covered?
+# the i in xrange part is not shuffled. maybe create the list first, for possible random shuffle
+# FIX! default to random_shuffle for now..then switch to not.
+def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True):
     # always create the flatfile. 
     ports_per_node = 2
     pff = open(flatfile_name(), "w+")
+    # doing this list outside the loops so we can shuffle for better test variation
+    hostPortList = []
     if hosts is None:
         ip = get_ip_address()
-        for i in xrange(node_count):
-            pff.write("/" + ip + ":" + str(base_port +ports_per_node*i) + "\n")
+        for i in range(node_count):
+            hostPortList.append("/" + ip + ":" + str(base_port + ports_per_node*i))
     else:
         for h in hosts:
-            for i in xrange(node_count):
-                pff.write("/" + h.addr + ":" + str(base_port +ports_per_node*i) + "\n")
+            for i in range(node_count):
+                hostPortList.append("/" + h.addr + ":" + str(base_port + ports_per_node*i))
+
+    # note we want to shuffle the full list of host+port
+    if rand_shuffle: 
+        random.shuffle(hostPortList)
+    for hp in hostPortList:
+        pff.write(hp + "\n")
     pff.close()
 
 
@@ -270,6 +284,7 @@ def check_port_group(base_port):
             output = p3.communicate()[0]
             print output
 
+# node_count is number of H2O instances per host if hosts is specified.
 def decide_if_localhost():
     if config_json:
         print "config_json:", config_json
@@ -281,41 +296,48 @@ def decide_if_localhost():
 
 # node_count is per host if hosts is specified.
 def build_cloud(node_count=2, base_port=54321, hosts=None, 
-        timeoutSecs=20, retryDelaySecs=0.5, cleanup=True, **kwargs):
+        timeoutSecs=30, retryDelaySecs=0.5, cleanup=True, rand_shuffle=True, **kwargs):
     # moved to here from unit_main. so will run with nosetests too!
     clean_sandbox()
-    # H2O still checks for collision against 3 ports range 
-    # even if its only using 2
-    # FIX! apparently junit.py assumes 2 ports per node? 
-    # H2O.java says 3 ports to check if there's an error, but I believe 2 is right
-    # will have to update to 2 everywhere
     ports_per_node = 2 
     node_list = []
     try:
         # if no hosts list, use psutil method on local host.
         totalNodes = 0
+        # doing this list outside the loops so we can shuffle for better test variation
+        # this jvm startup shuffle is independent from the flatfile shuffle
+        portList = [base_port + ports_per_node*i for i in range(node_count)]
         if hosts is None:
-            # if use_flatfile, we should create it, because tests will just call build_cloud with use_flatfile=True
+            # if use_flatfile, we should create it, 
+            # because tests will just call build_cloud with use_flatfile=True
             # best to just create it all the time..may or may not be used 
             write_flatfile(node_count=node_count, base_port=base_port)
             hostCount = 1
-            for i in xrange(node_count):
+            if rand_shuffle: random.shuffle(portList)
+            for p in portList:
                 verboseprint("psutil starting node", i)
-                newNode = LocalH2O(port=base_port + i*ports_per_node, node_id=totalNodes, **kwargs)
+                newNode = LocalH2O(port=p, node_id=totalNodes, **kwargs)
                 node_list.append(newNode)
                 totalNodes += 1
         else:
             # if hosts, the flatfile was created and uploaded to hosts already
             # I guess don't recreate it, don't overwrite the one that was copied beforehand.
+            # we don't always use the flatfile (use_flatfile=False)
+            # Suppose we could dispatch from the flatfile to match it's contents
+            # but sometimes we want to test with a bad/different flatfile then we invoke h2o?
             hostCount = len(hosts)
+            hostPortList = []
             for h in hosts:
-                for i in xrange(node_count):
-                    verboseprint('ssh starting node', totalNodes, 'via', h)
-                    newNode = h.remote_h2o(port=base_port + i*ports_per_node, node_id=totalNodes, **kwargs)
-                    node_list.append(newNode)
-                    totalNodes += 1
-                    # kbn try delay between each one?
-                    time.sleep(1)
+                for port in portList:
+                    hostPortList.append( (h,port) )
+            if rand_shuffle: random.shuffle(hostPortList)
+            for (h,p) in hostPortList:
+                verboseprint('ssh starting node', totalNodes, 'via', h)
+                newNode = h.remote_h2o(port=p, node_id=totalNodes, **kwargs)
+                node_list.append(newNode)
+                totalNodes += 1
+                # kbn try delay between each one?
+                ### time.sleep(1)
 
         verboseprint("Attempting Cloud stabilize of", totalNodes, "nodes on", hostCount, "hosts")
         start = time.time()
@@ -403,6 +425,7 @@ def check_sandbox_for_errors():
                 # JIT reporting looks like this..don't detect that as an error
                 printSingleWarning = False
                 foundBad = False
+                foundNOPTaskCnt = 0
                 if not ' bytes)' in line:
                     # no multiline FSM on this 
                     printSingleWarning = regex3.search(line) and not ('[Loaded ' in line)
@@ -427,7 +450,13 @@ def check_sandbox_for_errors():
                     # Update: Assertion can be followed by Exception. 
                     # Make sure we keep printing for a min of 4 lines
                     foundAt = re.match(r'[\t ]+at ',line)
-                    if foundBad and (lines>4) and not (foundCaused or foundAt):
+                    # on the NOPTask stack trace, we get two Assertion errors and would like to see them both
+                    # looks like min of 10 lines looks like it will cover it
+                    # but also maybe just count NOPTask
+                    if re.match(r'NOPTask',line):
+                        foundNopTaskCnt += 1
+
+                    if foundBad and (lines>10) and not (foundCaused or foundAt or foundNopTaskCnt==1):
                         printing = 2 
 
                 if (printing==1):
@@ -732,7 +761,8 @@ class H2O(object):
 
     # params: header=1, 
     # noise is a 2-tuple: ("StoreView",params_dict)
-    def parse(self, key, key2=None, timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, **kwargs):
+    def parse(self, key, key2=None, timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, 
+        noPoll=False, **kwargs):
         browseAlso = kwargs.pop('browseAlso',False)
         # this doesn't work. webforums indicate max_retries might be 0 already? (as of 3 months ago)
         # requests.defaults({max_retries : 4})
@@ -746,7 +776,6 @@ class H2O(object):
             }
         params_dict.update(kwargs)
         noise = kwargs.pop('noise', None)
-        verboseprint('Parse.Json noise:', noise)
 
         a = self.__check_request(
             requests.get(
@@ -758,13 +787,18 @@ class H2O(object):
         if a['response']['redirect_request']!='Progress':
             print dump_json(a)
             raise Exception('H2O parse redirect is not Progress. Parse json response precedes.')
-        # noise is a 2-tuple ("StoreView, none) for url plus args for doing during poll to create noise
-        # no noise if None
-        a = self.poll_url(a['response'],
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, initialDelaySecs=initialDelaySecs, noise=noise)
 
-        verboseprint("\nParse result:", dump_json(a))
-        return a
+        if noPoll:
+            # don't wait for response! might have H2O throughput issues if send them back to back a lot?
+            return None
+        else:
+            # noise is a 2-tuple ("StoreView, none) for url plus args for doing during poll to create noise
+            # no noise if None
+            verboseprint('Parse.Json noise:', noise)
+            a = self.poll_url(a['response'],
+                timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, initialDelaySecs=initialDelaySecs, noise=noise)
+            verboseprint("\nParse result:", dump_json(a))
+            return a
 
     def netstat(self):
         return self.__check_request(requests.get(self.__url('Network.json')))
@@ -854,7 +888,7 @@ class H2O(object):
             }
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
-        print "\nrandom_forest parameters:", params_dict
+        verboseprint("\nrandom_forest parameters:", params_dict)
         a = self.__check_request(requests.get(
             url=self.__url('RF.json'),
             timeout=timeoutSecs,
@@ -1318,8 +1352,15 @@ class RemoteHost(object):
             # log('Uploading to %s: %s -> %s' % (self.http_addr, f, dest))
 
             sftp = self.ssh.open_sftp()
-            sftp.put(f, dest, callback=progress)
-            sftp.close()
+            # check if file exists on remote side
+            try:
+                sftp.stat(dest)
+                verboseprint("Skipping upload of file {0} because file {1} exists on remote side!".format(f, dest))
+            except IOError, e:
+                if e.errno == errno.ENOENT:
+                    sftp.put(f, dest, callback=progress)
+            finally:
+                sftp.close()
             self.uploaded[f] = dest
         return self.uploaded[f]
 
@@ -1349,6 +1390,9 @@ class RemoteHost(object):
 
     def __init__(self, addr, username, password=None, **kwargs):
         import paramiko
+        # To debug paramiko you can use the following code:
+        #paramiko.util.log_to_file('/tmp/paramiko.log')
+        #paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
         self.addr = addr
         self.http_addr = addr
         self.username = username
@@ -1363,6 +1407,8 @@ class RemoteHost(object):
         else:
             self.ssh.connect(self.addr, username=username, password=password, **kwargs)
 
+        # keep connection - send keepalive packet evety 5minutes
+        self.ssh.get_transport().set_keepalive(300)
         self.uploaded = {}
 
     def remote_h2o(self, *args, **kwargs):
@@ -1387,6 +1433,9 @@ class RemoteH2O(H2O):
         self.jar = host.upload_file('target/h2o.jar')
         # need to copy the flatfile. We don't always use it (depends on h2o args)
         self.flatfile = host.upload_file(flatfile_name())
+        # distribute AWS credentials
+        if self.aws_credentials:
+            self.aws_credentials = host.upload_file(self.aws_credentials)
 
         if self.use_home_for_ice:
             # this will be the username used to ssh to the host

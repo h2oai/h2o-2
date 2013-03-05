@@ -4,7 +4,6 @@ import java.net.*;
 import java.nio.channels.DatagramChannel;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.*;
 
 import water.nbhm.NonBlockingHashMap;
 import water.nbhm.NonBlockingHashMapLong;
@@ -21,7 +20,7 @@ import water.nbhm.NonBlockingHashMapLong;
 public class H2ONode extends Iced implements Comparable {
 
   // A JVM is uniquely named by machine IP address and port#
-  public static final class H2Okey extends InetSocketAddress {
+  public static final class H2Okey extends InetSocketAddress implements Comparable {
     final int _ipv4;     // cheapo ipv4 address
     public H2Okey(InetAddress inet, int port) {
       super(inet,port);
@@ -40,6 +39,16 @@ public class H2ONode extends Iced implements Comparable {
       catch( UnknownHostException e ) { throw new Error(e); }
       int port = ab.get2();
       return new H2Okey(inet,port);
+    }
+    // Canonical ordering based on inet & port
+    @Override public int compareTo( Object x ) {
+      if( x == null ) return -1;   // Always before null
+      H2Okey key = ((H2ONode)x)._key;
+      if( key == this ) return 0;
+      // Note: long-math does not matter here, all we need is a reliable ordering.
+      int res = _ipv4 - key._ipv4;
+      if( res != 0 ) return res;
+      return udp_port() - key.udp_port();
     }
   }
   public H2Okey _key;
@@ -92,7 +101,7 @@ public class H2ONode extends Iced implements Comparable {
   }
   public static final H2ONode intern( InetAddress ip, int port ) { return intern(new H2Okey(ip,port)); }
 
-  public static final H2ONode intern( int ip, int port ) { 
+  public static final H2ONode intern( int ip, int port ) {
     byte[] b = new byte[4];
     b[0] = (byte)(ip>> 0);
     b[1] = (byte)(ip>> 8);
@@ -151,32 +160,15 @@ public class H2ONode extends Iced implements Comparable {
     }
     return intern(new H2Okey(local,H2O.UDP_PORT));
   }
-  // Is cloud member
-  public final boolean is_cloud_member(H2O cloud) {
-    HeartBeat hb = _heartbeat;
-    return
-      hb._cloud_id_lo == cloud._id.getLeastSignificantBits() &&
-      hb._cloud_id_hi == cloud._id. getMostSignificantBits() &&
-      cloud._memset.contains(this);
-  }
 
   // Happy printable string
-  public String toString() { return _key.toString (); }
+  @Override public String toString() { return _key.toString (); }
+  @Override public int hashCode() { return _key.hashCode(); }
+  @Override public boolean equals(Object o) { return _key.equals(o); }
+  @Override public int compareTo( Object o) { return _key.compareTo(o); }
 
   // index of this node in the current cloud... can change at the next cloud.
   public int index() { return H2O.CLOUD.nidx(this); }
-
-  // Pick the lowest InetAddress
-  public int compareTo( Object x ) {
-    if( x == null ) return -1;   // Always before null
-    H2ONode h2o = (H2ONode)x;
-    if( h2o == this ) return 0;
-    int res1 = _key._ipv4 - h2o._key._ipv4;
-    if( res1 != 0 ) return res1;
-    int res2 = _key.udp_port() - h2o ._key.udp_port();
-    assert res2 != 0; // Intern'g should prevent equal Inet+ports
-    return res2;
-  }
 
   // ---------------
   // The Work-In-Progress list.  Each item is a UDP packet's worth of work.

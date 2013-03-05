@@ -126,7 +126,7 @@ public final class Key extends Iced implements Comparable {
     int replica = -1;
     for( int i=0; i<desired; i++ ) {
       int idx = cloud.D(this,i);
-      if( idx != -1 && cloud._memary[idx] == H2O.SELF ) {
+      if( idx >= 0 && cloud._memary[idx] == H2O.SELF ) {
         replica = i;
         break;
       }

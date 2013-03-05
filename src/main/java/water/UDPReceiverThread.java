@@ -67,7 +67,7 @@ public class UDPReceiverThread extends Thread {
     // packets are timeline recorded before dropping - and we still will
     // respond to timelines and suicide packets.
     int drop = H2O.OPT_ARGS.random_udp_drop!= null &&
-      RANDOM_UDP_DROP.nextInt(10) == 0 ? 2 : 0;
+      RANDOM_UDP_DROP.nextInt(5) == 0 ? 2 : 0;
 
     // Record the last time we heard from any given Node
     TimeLine.record_recv(ab,drop);
@@ -94,7 +94,7 @@ public class UDPReceiverThread extends Thread {
     H2O cloud = H2O.CLOUD;
     // Check cloud membership; stale ex-members are "fail-stop" - we mostly
     // ignore packets from them (except paxos packets).
-    boolean is_member = cloud._memset.contains(ab._h2o);
+    boolean is_member = cloud.contains(ab._h2o);
 
     // Paxos stateless packets & ACKs just fire immediately in a worker
     // thread.  Dups are handled by these packet handlers directly.  No

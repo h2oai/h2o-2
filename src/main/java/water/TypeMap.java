@@ -10,7 +10,6 @@ public class TypeMap {
 
   private volatile Freezable[] _examplars = new Freezable[] {
       new FillRequest(null, -1),
-      new Paxos.State(),
       new H2ONode(),
       new HeartBeat(),
   };
@@ -18,9 +17,8 @@ public class TypeMap {
   /** Remove my list of exemplars.  I will resync to the new leader over time.
    */
   public void changeLeader() {
-    synchronized( this ) {
-      _examplars = Arrays.copyOf(_examplars, INIT_MAP_SIZE);
-    }
+    // Better not have handed out any types; new leader will be out of sync
+    assert _examplars.length == INIT_MAP_SIZE;
   }
 
   /**
@@ -54,22 +52,19 @@ public class TypeMap {
 
   private int fill(Freezable f) {
     String clazz = f.getClass().getName();
-    if( Paxos.LEADER == H2O.SELF ) return registerType(clazz);
+    if( H2O.CLOUD.leader() == H2O.SELF ) return registerType(clazz);
     FillRequest fr = new FillRequest(clazz, -1);
-    fr = RPC.call(Paxos.LEADER, fr).get();
-    return fr._index;
+    return RPC.call(H2O.CLOUD.leader(), fr).get()._index;
   }
 
   private Freezable fill(int i) {
-    assert Paxos.LEADER != H2O.SELF : "LEADER should contain the superset of all type maps";
-
+    assert H2O.CLOUD.leader() != H2O.SELF : "LEADER should contain the superset of all type maps";
     FillRequest fr = new FillRequest(null, i);
-    fr = RPC.call(Paxos.LEADER, fr).get();
-    return getTypeImpl(fr._index);
+    return getTypeImpl(RPC.call(H2O.CLOUD.leader(), fr).get()._index);
   }
 
   private void recordType(String clazz, int index) {
-    assert Paxos.LEADER != H2O.SELF;
+    assert H2O.CLOUD.leader() != H2O.SELF;
     Freezable f = getTypeImpl(index);
     if( f != null ) {
       assert f.getClass().getName().equals(clazz);
@@ -84,7 +79,7 @@ public class TypeMap {
   }
 
   private int registerType(String clazz) {
-    assert Paxos.LEADER == H2O.SELF;
+    assert H2O.CLOUD.leader() == H2O.SELF;
     synchronized( this ) {
       int i = _examplars.length;
       assert i<65535; // Cap at 2 bytes for shorter UDP packets & Timeline recording

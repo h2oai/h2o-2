@@ -13,10 +13,10 @@ import water.hdfs.HdfsLoader;
 import water.nbhm.NonBlockingHashMap;
 import water.store.s3.PersistS3;
 import water.util.Utils;
+import H2OInit.Boot;
+
 
 import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.google.common.io.Closeables;
 
 /**
@@ -62,16 +62,14 @@ public final class H2O {
   // --------------------------------------------------------------------------
   // The Current Cloud. A list of all the Nodes in the Cloud. Changes if we
   // decide to change Clouds via atomic Cloud update.
-  static public volatile H2O CLOUD;
+  static public volatile H2O CLOUD = new H2O(new H2ONode[0],0,0);
 
   // ---
-  // A Set version of the members.
-  public final HashSet<H2ONode> _memset;
   // A dense array indexing all Cloud members. Fast reversal from "member#" to
-  // Node. No holes. Cloud size is _members.length.
+  // Node.  No holes.  Cloud size is _members.length.
   public final H2ONode[] _memary;
-  // UUID to uniquely identify this cloud during paxos voting
-  public final UUID _id;
+  public final int _hash;
+
   // A dense integer identifier that rolls over rarely. Rollover limits the
   // number of simultaneous nested Clouds we are operating on in-parallel.
   // Really capped to 1 byte, under the assumption we won't have 256 nested
@@ -95,42 +93,38 @@ public final class H2O {
   static private final H2O[] CLOUDS = new H2O[256];
 
   // Construct a new H2O Cloud from the member list
-  public H2O( UUID cloud_id, HashSet<H2ONode> memset, int idx ) {
-    _id = cloud_id; // Set the Cloud identity
-    _memset = memset; // Record membership list
-    _memary = memset.toArray(new H2ONode[memset.size()]); // As an array
-    Arrays.sort(_memary); // ... sorted!
-    _idx = (char)(idx&0x0ff); // Roll-over at 256
+  public H2O( H2ONode[] h2os, int hash, int idx ) {
+    _memary = h2os;             // Need to clone?
+    Arrays.sort(_memary);       // ... sorted!
+    _hash = hash;               // And record hash for cloud rollover
+    _idx = (char)(idx&0x0ff);   // Roll-over at 256
   }
 
   // One-shot atomic setting of the next Cloud, with an empty K/V store.
   // Called single-threaded from Paxos. Constructs the new H2O Cloud from a
   // member list.
-  void set_next_Cloud( UUID id, HashSet<H2ONode> members) {
+  void set_next_Cloud( H2ONode[] h2os, int hash ) {
     synchronized(this) {
       int idx = _idx+1; // Unique 1-byte Cloud index
       if( idx == 256 ) idx=1; // wrap, avoiding zero
-      H2O cloud = CLOUD = new H2O(id,members,idx);
-      CLOUDS[idx] = cloud; // Also remember here
+      CLOUDS[idx] = CLOUD = new H2O(h2os,hash,idx);
     }
-    Paxos.print("Announcing new Cloud Membership: ",members,"");
+    Paxos.print("Announcing new Cloud Membership: ",_memary);
   }
 
   // Check if the cloud id matches with one of the old clouds
   static boolean isIDFromPrevCloud(H2ONode h2o) {
     if ( h2o == null ) return false;
     HeartBeat hb = h2o._heartbeat;
-    long lo = hb._cloud_id_lo;
-    long hi = hb._cloud_id_hi;
+    int hash = hb._cloud_hash;
     for( int i=0; i < 256; i++ )
-      if( (CLOUDS[i] != null) &&
-          (lo == CLOUDS[i]._id.getLeastSignificantBits() &&
-           hi == CLOUDS[i]._id.getMostSignificantBits()))
+      if( CLOUDS[i] != null && hash == CLOUDS[i]._hash )
         return true;
     return false;
   }
 
   public final int size() { return _memary.length; }
+  public final H2ONode leader() { return _memary[0]; }
 
   // *Desired* distribution function on keys & replication factor. Replica #0
   // is the master, replica #1, 2, 3, etc represent additional desired
@@ -150,7 +144,7 @@ public final class H2O {
         h2o = h2otmp.read(ab);  // Read util we get the specified H2O
       // Reverse the home to the index
       int idx = nidx(h2o);
-      if( idx != -1 ) return idx;
+      if( idx >= 0 ) return idx;
       // Else homed to a node which is no longer in the cloud!
       // Fall back to the normal home mode
     }
@@ -159,12 +153,11 @@ public final class H2O {
     return ((key._hash+repl)&0x7FFFFFFF) % size();
   }
 
-  // Find the node index for this H2ONode. Not so cheap.
-  public int nidx( H2ONode h2o ) {
-    for( int i=0; i<_memary.length; i++ )
-      if( _memary[i]==h2o )
-        return i;
-    return -1;
+  // Find the node index for this H2ONode, or a negative number on a miss
+  public int nidx( H2ONode h2o ) { return Arrays.binarySearch(_memary,h2o); }
+  public boolean contains( H2ONode h2o ) { return nidx(h2o) >= 0; }
+  @Override public String toString() {
+    return Arrays.toString(_memary);
   }
 
   static InetAddress findInetAddressForSelf() throws Error {
@@ -206,7 +199,7 @@ public final class H2O {
     } else {
       // No user-specified IP address.  Attempt auto-discovery.  Roll through
       // all the network choices on looking for a single Inet4.
-      List<InetAddress> validIps = Lists.newArrayList();
+      ArrayList<InetAddress> validIps = new ArrayList();
       for( InetAddress ip : ips ) {
         // make sure the given IP address can be found here
         if( ip instanceof Inet4Address &&
@@ -389,6 +382,7 @@ public final class H2O {
     public String keepice; // Do not delete ice on startup
     public String soft = null; // soft launch for demos
     public String random_udp_drop = null; // test only, randomly drop udp incoming
+    public String log_headers = null; // add machine name, PID and time to logs
   }
   public static boolean IS_SYSTEM_RUNNING = false;
 
@@ -403,6 +397,9 @@ public final class H2O {
     Arguments arguments = new Arguments(args);
     arguments.extract(OPT_ARGS);
     ARGS = arguments.toStringArray();
+
+    if(OPT_ARGS.log_headers != null)
+      Log.initHeaders();
 
     startLocalNode(); // start the local node
     // Load up from disk and initialize the persistence layer
@@ -444,7 +441,9 @@ public final class H2O {
                         : ", static configuration based on -flatfile "+OPT_ARGS.flatfile));
 
     // Create the starter Cloud with 1 member
-    CLOUD = new H2O(UUID.randomUUID(), Sets.newHashSet(SELF), 1);
+    SELF._heartbeat._jar_md5 = Boot._init._jarHash;
+    Paxos.doHeartbeat(SELF);
+    assert SELF._heartbeat._cloud_hash != 0;
   }
 
   /** Initializes the network services of the local node.
@@ -537,7 +536,6 @@ public final class H2O {
           Log.die("On " + H2O.findInetAddressForSelf() +
               " some of the required ports " + (OPT_ARGS.port+0) +
               ", " + (OPT_ARGS.port+1) +
-              ", " + (OPT_ARGS.port+2) +
               " are not available, change -port PORT and try again.");
       }
       API_PORT += 2;
@@ -619,8 +617,7 @@ public final class H2O {
       // Hideous O(n) algorithm for broadcast - avoid the memory allocation in
       // this method (since it is heavily used)
       HashSet<H2ONode> nodes = (HashSet<H2ONode>)H2O.STATIC_H2OS.clone();
-      nodes.addAll(H2O.CLOUD._memset);
-      nodes.addAll(Paxos.PROPOSED_MEMBERS);
+      nodes.addAll(Paxos.PROPOSED.values());
       bb.mark();
       for( H2ONode h2o : nodes ) {
         bb.reset();
@@ -688,7 +685,7 @@ public final class H2O {
         InetAddress inet = InetAddress.getByName(ip);
         if( !(inet instanceof Inet4Address) )
           Log.die("Only IP4 addresses allowed: given " + ip);
-        if( !Strings.isNullOrEmpty(portStr) ) {
+        if( portStr!=null && !portStr.equals("") ) {
           try {
             port = Integer.decode(portStr);
           } catch( NumberFormatException nfe ) {
