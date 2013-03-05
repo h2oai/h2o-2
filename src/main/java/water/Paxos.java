@@ -60,14 +60,14 @@ public abstract class Paxos {
       }
       if( _commonKnowledge ) {
         _commonKnowledge = false; // No longer sure about things
-        System.out.println("[h2o] Paxos Cloud voting in progress");
+        System.out.println("[h2o] Cloud voting in progress");
       }
 
       // Add to proposed set, update cloud hash
       H2ONode res = PROPOSED.putIfAbsent(h2o._key,h2o);
       assert res==null;
       int chash = H2O.SELF._heartbeat._cloud_hash;
-      chash ^= h2o.hashCode();
+      chash += h2o.hashCode();
       assert chash == fullHash();
       H2O.SELF._heartbeat._cloud_hash = chash;
 
@@ -86,7 +86,7 @@ public abstract class Paxos {
     _commonKnowledge = true;    // Yup!  Have consensus
     H2O.CLOUD.set_next_Cloud(h2os,chash);
     Paxos.class.notify(); // Also, wake up a worker thread stuck in DKV.put
-    System.out.printf("[h2o] Paxos Cloud of size %d formed: %s\n",
+    System.out.printf("[h2o] Cloud of size %d formed: %s\n",
                       H2O.CLOUD.size(), H2O.CLOUD.toString());
     return 0;
   }
@@ -94,7 +94,7 @@ public abstract class Paxos {
   static private int fullHash() {
     int hash = 0;
     for( H2ONode h2o : PROPOSED.values() )
-      hash ^= h2o.hashCode();
+      hash += h2o.hashCode();
     assert hash != 0;
     return hash;
   }
