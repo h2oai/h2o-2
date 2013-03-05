@@ -26,6 +26,7 @@ DEFAULT_EC2_INSTANCE_CONF = {
   'instance_type'   : 'm1.xlarge',
   'pem'             : '~/.ec2/keys/mrjenkins_test.pem',
   'username'        : '0xdiag',      
+  'aws_credentials' : '~/.ec2/AwsCredentials.properties'
 }
 
 ''' Memory mappings for instance kinds '''
@@ -170,7 +171,7 @@ def wait_for_ssh(ips, port=22, skipAlive=True, requiredsuccess=3):
 
 def dump_hosts_config(ec2_config, reservation, filename=DEFAULT_HOSTS_FILENAME):
     cfg = {}
-    cfg['aws_credentials'] = '/home/ubuntu/.ec2/AwsCredentials.properties'
+    cfg['aws_credentials'] = find_file(ec2_config['aws_credentials'])
     cfg['username']        = ec2_config['username'] 
     cfg['key_filename']    = find_file(ec2_config['pem'])
     cfg['use_flatfile']    = True
