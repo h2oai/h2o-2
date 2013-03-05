@@ -66,16 +66,14 @@ public abstract class Paxos {
       // Add to proposed set, update cloud hash
       H2ONode res = PROPOSED.putIfAbsent(h2o._key,h2o);
       assert res==null;
-      int chash = H2O.SELF._heartbeat._cloud_hash;
-      chash += h2o.hashCode();
-      assert chash == fullHash();
-      H2O.SELF._heartbeat._cloud_hash = chash;
+      H2O.SELF._heartbeat._cloud_hash = doHash();
 
     } else if( _commonKnowledge ) {
       return 0;                 // Already know about you, nothing more to do
     }
     int chash = H2O.SELF._heartbeat._cloud_hash;
-    assert chash == fullHash();
+    int dummy=0;
+    assert chash == (dummy=doHash()) : "mismatched hash, HB="+chash+" full="+dummy;
     assert _commonKnowledge==false;
 
     // Do we have consensus now?
@@ -91,7 +89,7 @@ public abstract class Paxos {
     return 0;
   }
 
-  static private int fullHash() {
+  static private int doHash() {
     int hash = 0;
     for( H2ONode h2o : PROPOSED.values() )
       hash += h2o.hashCode();
