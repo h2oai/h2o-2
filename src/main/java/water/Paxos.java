@@ -37,7 +37,6 @@ public abstract class Paxos {
   // This is a packet announcing what Cloud this Node thinks is the current
   // Cloud, plus other status bits
   static synchronized int doHeartbeat( H2ONode h2o ) {
-
     // Kill somebody if the jar files mismatch.  Do not attempt to deal with
     // mismatched jars.
     if( !h2o._heartbeat.check_jar_md5() ) {
@@ -66,14 +65,13 @@ public abstract class Paxos {
       // Add to proposed set, update cloud hash
       H2ONode res = PROPOSED.putIfAbsent(h2o._key,h2o);
       assert res==null;
-      H2O.SELF._heartbeat._cloud_hash = doHash();
+      H2O.SELF._heartbeat._cloud_hash += h2o.hashCode();
 
     } else if( _commonKnowledge ) {
       return 0;                 // Already know about you, nothing more to do
     }
-    int chash = H2O.SELF._heartbeat._cloud_hash;
-    int dummy=0;
-    assert chash == (dummy=doHash()) : "mismatched hash, HB="+chash+" full="+dummy;
+    int chash = H2O.SELF._heartbeat._cloud_hash, dummy = 0;
+    assert chash == (dummy=doHash()) : "mismatched hash4, HB="+chash+" full="+dummy;
     assert _commonKnowledge==false;
 
     // Do we have consensus now?

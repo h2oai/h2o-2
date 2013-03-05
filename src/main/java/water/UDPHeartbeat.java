@@ -8,8 +8,12 @@ package water;
  */
 public class UDPHeartbeat extends UDP {
   @Override AutoBuffer call(AutoBuffer ab) {
-    ab._h2o._heartbeat = new HeartBeat().read(ab);
-    Paxos.doHeartbeat(ab._h2o);
+    if( ab._h2o != H2O.SELF ) { // Do not update self-heartbeat object
+      // The self-heartbeat is the sole holder of racey cloud-concensus hashes
+      // and if we update it here we risk dropping an update.
+      ab._h2o._heartbeat = new HeartBeat().read(ab);
+      Paxos.doHeartbeat(ab._h2o);
+    }
     return ab;
   }
 
