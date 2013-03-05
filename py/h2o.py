@@ -5,7 +5,8 @@ import h2o_browse as h2b
 import re
 import inspect, webbrowser
 import random
-import errno
+# used in shutil.rmtree permission hack for windows
+import os, stat, errno
 
 # For checking ports in use, using netstat thru a subprocess.
 from subprocess import Popen, PIPE
@@ -129,15 +130,40 @@ def get_file_size(f):
 def iter_chunked_file(file, chunk_size=2048):
     return iter(lambda: file.read(chunk_size), '')
 
+
+# shutil.rmtree doesn't work on windows if the files are read only.
+# On unix the parent dir has to not be readonly too.
+# May still be issues with owner being different, like if 'system' is the guy running?
+# Apparently this escape function on errors is the way shutil.rmtree can 
+# handle the permission issue.
+def handleRemoveReadonly(func, path, exc):
+    # If there was an error, it could be due to windows holding onto files.
+    # maybe wait a bit before we try this fix. 
+    # Ex. if we're in the looping cloud test deleting sandbox.
+    time.sleep(2)
+    excvalue = exc[1]
+    if func in (shutil.rmtree, os.rmdir, os.remove) and excvalue.errno == errno.EACCES:
+        # ensure parent directory is writeable too
+        pardir = os.path.abspath(os.path.join(path, os.path.pardir))
+        if not os.access(pardir, os.W_OK):
+            os.chmod(pardir, stat.S_IRWXU| stat.S_IRWXG| stat.S_IRWXO)
+        os.chmod(path, stat.S_IRWXU| stat.S_IRWXG| stat.S_IRWXO) # 0777
+    # now just try it again. It might cause exception again
+    func(path)
+
 LOG_DIR = 'sandbox'
 def clean_sandbox():
     if os.path.exists(LOG_DIR):
         # shutil.rmtree fails to delete very long filenames on Windoze
         #shutil.rmtree(LOG_DIR)
         # This seems reliable on windows+cygwin
-        os.system("rm -rf "+LOG_DIR)
+        # was this on 3/5/13
+        ### os.system("rm -rf "+LOG_DIR)
+        shutil.rmtree(LOG_DIR, ignore_errors=False, onerror=handleRemoveReadonly)
     os.mkdir(LOG_DIR)
 
+# who knows if this one is ok with windows...doesn't rm dir, just 
+# the stdout/stderr files
 def clean_sandbox_stdout_stderr():
     if os.path.exists(LOG_DIR):
         files = []
