@@ -113,7 +113,7 @@ public abstract class DRemoteTask extends DTask<DRemoteTask> implements Cloneabl
     if( keys.size() == 0 ) return null;
     DRemoteTask rpc = clone();
     rpc._keys = keys.toArray(new Key[keys.size()]);
-    return RPC.call(keys.get(0).home_node(), rpc, _fjPriorityLvl);// keep the same priority
+    return RPC.call(keys.get(0).home_node(), rpc, priority());// keep the same priority
   }
 
   private final Key[] flatten( Key[] args ) {

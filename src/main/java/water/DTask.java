@@ -22,9 +22,9 @@ public abstract class DTask<T> extends H2OCountedCompleter implements Freezable 
   boolean _repliedTcp;         // Any return/reply/result was sent via TCP
 
 
-  int _fjPriorityLvl;
-  public int priority(){return _fjPriorityLvl;}
-  public void setPriority(int p){_fjPriorityLvl = p;}
+  private int _fjPriorityLvl;
+  public final int priority(){return _fjPriorityLvl;}
+  public final void setPriority(int p){_fjPriorityLvl = p;}
 
   /** Top-level remote execution hook.  Called on the <em>remote</em>. */
   abstract public T invoke( H2ONode sender );

@@ -39,7 +39,7 @@ public abstract class Atomic extends DTask {
       compute2();                // Also, run it blocking/now
       return null;
     } else {                    // Else run it remotely
-      return RPC.call(key.home_node(),this);
+      return RPC.call(key.home_node(),this, RPC.ATOMIC_PRIORITY);
     }
   }
 
@@ -73,7 +73,4 @@ public abstract class Atomic extends DTask {
     tryComplete();              // Tell F/J this task is done
   }
 
-  public int priority(){
-    return RPC.ATOMIC_PRIORITY;
-  }
 }

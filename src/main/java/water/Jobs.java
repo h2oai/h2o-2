@@ -40,7 +40,7 @@ public abstract class Jobs {
         public Progress alloc() {
           return new Progress();
         }
-      }.invoke(key);
+      }.fork(key);
     }
   }
 
@@ -74,7 +74,7 @@ public abstract class Jobs {
         }
         return old;
       }
-    }.invoke(KEY);
+    }.fork(KEY);
   }
 
   public static void init() {

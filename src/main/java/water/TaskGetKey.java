@@ -14,10 +14,6 @@ public class TaskGetKey extends DTask<TaskGetKey> {
   transient Key _xkey;       // Set by client, read by client
   transient H2ONode _h2o;    // Set by server JVM, read by server JVM on ACKACK
 
-  @Override
-  public int priority(){return RPC.GET_KEY_PRIORITY;} // get key has static priority
-
-
   // Unify multiple Key/Value fetches for the same Key from the same Node at
   // the "same time".  Large key fetches are slow, and we'll get multiple
   // requests close in time.  Batch them up.

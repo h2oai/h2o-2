@@ -13,12 +13,9 @@ public class TaskPutKey extends DTask<TaskPutKey> {
   Value _val;
   transient Value _xval;
   static void put( H2ONode h2o, Key key, Value val, Futures fs ) {
-    Future f = RPC.call(h2o,new TaskPutKey(key,val),RPC.PUT_KEY_PRIORITY);
+    Future f = RPC.call(h2o,new TaskPutKey(key,val), (val == null)?RPC.INVALIDATE_KEY_PRIORITY:RPC.PUT_KEY_PRIORITY);
     if( fs != null ) fs.add(f);
   }
-
-  @Override
-  public int priority(){return (_val == null)?RPC.INVALIDATE_KEY_PRIORITY:RPC.PUT_KEY_PRIORITY;} // put key/invalidate have static priority
 
   static void invalidate( H2ONode h2o, Key key, Futures fs ) { put(h2o,key,null,fs); }
 

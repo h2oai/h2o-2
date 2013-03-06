@@ -101,7 +101,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   public RPC( H2ONode target, V dtask, int priority) {
     _target = target;
     _dt = dtask;
-    _dt._fjPriorityLvl= priority;
+    _dt.setPriority(priority);
     _tasknum = Locally_Unique_TaskIDs.getAndIncrement();
     _started = System.currentTimeMillis();
     _retry = RETRY_MS;
@@ -156,8 +156,8 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     // check priorities - FJ task can only block on a task with higher priority!
     Thread cThread = Thread.currentThread();
     if(cThread instanceof FJWThr)
-      if((!(_dt instanceof DRemoteTask)) && _dt._fjPriorityLvl <= ((FJWThr)cThread).fjPriority()){
-        Error e = new Error("Attempting to block on task (" + _dt.getClass() + ") with equal or lower priority. Can lead to deadlock! " + _dt._fjPriorityLvl + " <=  " + ((FJWThr)cThread).fjPriority());
+      if((!(_dt instanceof DRemoteTask)) && _dt.priority() <= ((FJWThr)cThread).fjPriority()){
+        Error e = new Error("Attempting to block on task (" + _dt.getClass() + ") with equal or lower priority. Can lead to deadlock! " + _dt.priority() + " <=  " + ((FJWThr)cThread).fjPriority());
         e.printStackTrace();
       }
     if( _done ) return _dt; // Fast-path shortcut
@@ -284,7 +284,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       if(dt.priority() == 0)
         H2O.submitFJTsk(c);
       else
-        H2O._taskQ.add(new TaskQEntry(c,dt._fjPriorityLvl));
+        H2O._taskQ.add(new TaskQEntry(c,dt.priority()));
     }
     ab.close();
   }
@@ -308,7 +308,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     if(dt.priority() == 0)
       H2O.submitFJTsk(c);
     else
-      H2O._taskQ.add(new TaskQEntry(c,dt._fjPriorityLvl));
+      H2O._taskQ.add(new TaskQEntry(c,dt.priority()));
     // Here I want to execute on this, but not block for completion in the
     // TCP reader thread.  Jam the task on some F/J thread.
   }
