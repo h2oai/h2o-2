@@ -37,11 +37,13 @@ public class Plot extends Request {
       final Key dest_ = dest;
       UKV.put(dest, new hex.KMeans.KMeansModel());
 
-      H2O.submitFJTsk(new H2OCountedCompleter() {
+      H2O.submitTsk(new H2OCountedCompleter() {
         @Override
         public void compute2() {
-          throw new RuntimeException("TODO Auto-generated method stub");
+          hex.Plot.run(dest_, va, width, height, cols);
         }
+        @Override
+        public int priority() {return RPC.MIN_PRIORITY;}
       });
 
       JsonObject response = new JsonObject();

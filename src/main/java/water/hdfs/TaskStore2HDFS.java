@@ -1,11 +1,7 @@
 package water.hdfs;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
 import water.*;
-import water.hdfs.PersistHdfs;
+import water.DTask.DTaskImpl;
 
 /**
  * Distributed task to store key on HDFS.
@@ -18,7 +14,7 @@ import water.hdfs.PersistHdfs;
  * @author tomasnykodym, cliffc
  *
  */
-public class TaskStore2HDFS extends DTask<TaskStore2HDFS> {
+public class TaskStore2HDFS extends DTaskImpl<TaskStore2HDFS> {
   Key _arykey;                  // Base array key
   long _indexFrom;              // Chunk number
   String _err;                  // Error reporting string

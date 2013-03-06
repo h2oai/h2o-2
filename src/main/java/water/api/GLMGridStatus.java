@@ -9,6 +9,7 @@ import hex.DLSM.ADMMSolver;
 import java.util.*;
 
 import water.*;
+import water.DTask.DTaskImpl;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -17,7 +18,7 @@ import com.google.gson.JsonObject;
 // A grid-search task.  This task is embedded in a Value and mapped to a Key,
 // and only can be updated via Atomic ops on the mapped Value.  So basically,
 // all these fields are "final" in this POJO and are modified by atomic update.
-class GLMGridStatus extends DTask<GLMGridStatus> {
+class GLMGridStatus extends DTaskImpl<GLMGridStatus> {
   // Self-key - actual data is stored in the K/V store.  This is just a
   // convenient POJO to read the bits.
   Key _taskey;                // Myself key

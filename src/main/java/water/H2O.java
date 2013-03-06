@@ -379,6 +379,7 @@ public final class H2O {
       compute2();
     }
     public abstract void compute2();
+    public abstract int priority();
     public boolean onExceptionalCompletion( Throwable ex, CountedCompleter caller ) {
       ex.printStackTrace();
       return true;
@@ -413,16 +414,19 @@ public final class H2O {
 
   public static int getLoQueuedSubmissionCount(){return FJP_NORM.getQueuedSubmissionCount();}
   public static int getHiQueuedSubmissionCount(){return _taskQ.size();}
-  public static void submitFJTsk(H2OCountedCompleter tsk){FJP_NORM.submit(tsk);}
 
-
-  public static void submitHiPriorityTsk(H2OCountedCompleter tsk, int priority){
-    _taskQ.add(new TaskQEntry(tsk,priority));
+  public static void submitTsk(H2OCountedCompleter tsk){
+    int priority = tsk.priority();
+    assert RPC.MIN_PRIORITY <= priority && priority <= RPC.MAX_PRIORITY;
+    if(priority == 0)
+      FJP_NORM.submit(tsk);
+    else
+      _taskQ.add(new TaskQEntry(tsk,priority));
   }
 
 
   static AtomicLong _taskSeq = new AtomicLong();
-  static class TaskQEntry {
+  private static class TaskQEntry {
     public TaskQEntry (H2OCountedCompleter tsk, int priority){
       _tsk = tsk;
       _priority = priority;
@@ -432,7 +436,7 @@ public final class H2O {
     final long _seq;
     final int _priority;
   }
-  static PriorityBlockingQueue<TaskQEntry> _taskQ = new PriorityBlockingQueue<TaskQEntry>(128,new Comparator<TaskQEntry>() {
+  static private PriorityBlockingQueue<TaskQEntry> _taskQ = new PriorityBlockingQueue<TaskQEntry>(128,new Comparator<TaskQEntry>() {
     @Override
     public final int compare(TaskQEntry o1, TaskQEntry o2) {
       int res = o1._priority - o2._priority;

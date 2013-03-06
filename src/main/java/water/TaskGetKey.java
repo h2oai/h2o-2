@@ -1,4 +1,5 @@
 package water;
+import water.DTask.DTaskImpl;
 import water.nbhm.NonBlockingHashMap;
 
 /**
@@ -8,11 +9,12 @@ import water.nbhm.NonBlockingHashMap;
  * @version 1.0
  */
 
-public class TaskGetKey extends DTask<TaskGetKey> {
+public class TaskGetKey extends DTaskImpl<TaskGetKey> {
   Key _key;                  // Set by client/sender JVM, cleared by server JVM
   Value _val;                // Set by server JVM, read by client JVM
   transient Key _xkey;       // Set by client, read by client
   transient H2ONode _h2o;    // Set by server JVM, read by server JVM on ACKACK
+  int _priority;
 
   // Unify multiple Key/Value fetches for the same Key from the same Node at
   // the "same time".  Large key fetches are slow, and we'll get multiple
@@ -28,6 +30,8 @@ public class TaskGetKey extends DTask<TaskGetKey> {
       if( rpc != null ) break;
       // Make a new TGK.
       rpc = new RPC(target,new TaskGetKey(key),RPC.GET_KEY_PRIORITY);
+      rpc._dt._priority = 111;
+      rpc._dt._repliedTcp = true;
       if( TGKS.putIfMatchUnlocked(key,rpc,null) == null ) {
         rpc.call();             // Start the op
         break;

@@ -1,8 +1,5 @@
 package water;
-import java.net.ServerSocket;
-import java.net.InetSocketAddress;
 import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -56,7 +53,7 @@ public class TCPReceiverThread extends Thread {
         // Hand off the TCP connection to the proper handler
         switch( UDP.udp.UDPS[ctrl] ) {
         //case execlo:
-        case exec:   RPC.tcp_exec(ab); break;
+        case exec:     H2O.submitTsk(new FJPacket(ab)); break; //RPC.remote_exec(ab); break;
         case ack:      RPC.tcp_ack (ab); break;
         case ackack:   UDP.udp.UDPS[ctrl]._udp.call(ab).close(); break;
         case timeline: TimeLine.tcp_call(ab); break;

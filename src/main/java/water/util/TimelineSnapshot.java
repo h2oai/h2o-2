@@ -142,8 +142,8 @@ public final class TimelineSnapshot implements
       String operation = isSend() ? " SEND " : " RECV ";
       String host1 = addrString();
       String host2 = recoH2O().toString();
-      String networkPart = isSend() 
-        ? (host2 + " -> " + host1) 
+      String networkPart = isSend()
+        ? (host2 + " -> " + host1)
         : (host1 + " -> " + host2);
       return "Node(" + _nodeId + ": " + ns() + ") " + udpType.toString()
           + operation + networkPart + (isDropped()?" DROPPED ":"") + ", data = '"
@@ -183,6 +183,7 @@ public final class TimelineSnapshot implements
       case exec:
       case heartbeat:
         // compare 3 ctrl bytes + 4 bytes task #
+      //  if ((myl0 & 0xFFFFFFFFFFFFFFl) != (evl0 & 0xFFFFFFFFFFFFFFl))
         if( (int)(myl0>>24) != (int)(evl0>>24))
           return false;
         break;
@@ -255,7 +256,7 @@ public final class TimelineSnapshot implements
     /**
      * Used to determine ordering of events not bound by any dependency.
      *
-     * Events compared according to following rules: 
+     * Events compared according to following rules:
      *   Receives go before sends.  Since we are only here with unbound events,
      *   unbound receives means their sender has already appeared and they
      *   should go adjacent to their sender.

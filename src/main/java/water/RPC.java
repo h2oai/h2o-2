@@ -3,9 +3,9 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import jsr166y.ForkJoinPool;
+import water.DTask.DTaskImpl;
 import water.H2O.FJWThr;
 import water.H2O.H2OCountedCompleter;
-import water.H2O.TaskQEntry;
 
 /**
  * A remotely executed FutureTask.  Flow is:
@@ -36,7 +36,7 @@ import water.H2O.TaskQEntry;
  * @version 1.0
  */
 
-public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.ManagedBlocker {
+public class RPC<V extends DTaskImpl> implements Future<V>, Delayed, ForkJoinPool.ManagedBlocker {
   // The target remote node to pester for a response.  NULL'd out if the target
   // disappears or we cancel things (hence not final).
   H2ONode _target;
@@ -74,6 +74,8 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   static final byte CLIENT_TCP_SEND = 13;
 
   public static final int MAX_PRIORITY = Byte.MAX_VALUE;
+  public static final int ACK_ACK_PRIORITY = Byte.MAX_VALUE;
+  public static final int ACK_PRIORITY = Byte.MAX_VALUE-1;
   public static final int MIN_PRIORITY = 0;
   public static final int GET_KEY_PRIORITY = MAX_PRIORITY-2;
   public static final int INVALIDATE_KEY_PRIORITY = MAX_PRIORITY-2;
@@ -82,23 +84,24 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
 
 
 
-  public static <DT extends DTask> RPC<DT> call(H2ONode target, DT dtask) {
+  public static <DT extends DTaskImpl> RPC<DT> call(H2ONode target, DT dtask) {
     Thread cThread = Thread.currentThread();
     // bump up the priority of the remote task to prevent deadlock
     // NOTE: GetKey,PutKey,Invalidate,Atomic,Ack, have static priorities
     // AND other msgs (AckAck,heartbeat, paxos, timeline,...) are always processed with the MAX priority
     int priority = 0;
     if(cThread instanceof FJWThr)
-      priority = (((FJWThr)cThread).fjPriority()+1);
+      priority = Math.min(RPC.MAX_PRIORITY,(((FJWThr)cThread).fjPriority()+1));
     return new RPC(target, dtask,priority).call();
   }
 
-  public static <DT extends DTask> RPC<DT> call(H2ONode target, DT dtask, int priority) {
+  public static <DT extends DTaskImpl> RPC<DT> call(H2ONode target, DT dtask, int priority) {
     return new RPC(target, dtask,priority).call();
   }
   // Make a remotely executed FutureTask.  Must name the remote target as well
   // as the remote function.  This function is expected to be subclassed.
   public RPC( H2ONode target, V dtask, int priority) {
+    assert RPC.MIN_PRIORITY <= priority && priority <= RPC.MAX_PRIORITY;
     _target = target;
     _dt = dtask;
     _dt.setPriority(priority);
@@ -233,11 +236,11 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
 
 
   public static class RPCCall extends H2OCountedCompleter {
-    final DTask _dt;
+    final DTaskImpl _dt;
     final H2ONode _client;
     final int _tsknum;
 
-    public RPCCall(DTask dt, H2ONode client, int tsknum){
+    public RPCCall(DTaskImpl dt, H2ONode client, int tsknum){
       _dt = dt;
       _client = client;
       _tsknum = tsknum;
@@ -245,6 +248,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
 
     @Override
     public void compute2() {
+      if(_dt instanceof TaskGetKey)assert _dt.priority() == RPC.GET_KEY_PRIORITY:"incorrect GetKey Priority: " + _dt.priority();
       _dt.invoke(_client);
       // Send results back
       AutoBuffer ab = new AutoBuffer(_client).putTask(UDP.udp.ack,_tsknum).put1(SERVER_UDP_SEND);
@@ -254,14 +258,28 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       _client.record_task_answer(_tsknum,_dt);
       ab.close();
     }
+
+    @Override
+    public int priority() {
+      return _dt.priority();
+    }
   }
 
-  static void udp_exec(final AutoBuffer ab ){
+  // Handle TCP traffic, from a client to this server asking for work to be
+  // done.  This is called on the TCP reader thread, not a Fork/Join worker
+  // thread.  We want to do the bulk TCP read in the TCP reader thread.
+  static void remote_exec( final AutoBuffer ab ) {
     final int task = ab.getTask();
     final int flag = ab.getFlag();
     assert flag==CLIENT_UDP_SEND; // Client sent a request to be executed?
+    // Act "as if" called from the UDP packet code, by recording the task just
+    // like the packet we will be receiving (eventually).  The presence of this
+    // packet is used to stop dup-actions on dup-sends.  Racily inserted, keep
+    // only the last one.
     DTask old = ab._h2o.record_task(task);
-    if( old != null ) {       // We've seen this packet before?
+    if(ab.hasTCP())
+      assert old ==null||old instanceof NOPTask : "#"+task+" "+old.getClass(); // For TCP, no repeats, so 1st send is only send (except for UDP timeout retries)
+    if(old != null) {
       if( old instanceof NOPTask ) {
         // This packet has not been ACK'd yet.  Hence it's still a
         // work-in-progress locally.  We have no answer yet to reply with
@@ -278,39 +296,12 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
         rab.close();
         assert !rab.hasTCP();
       }
-    } else {                  // Else not a repeat-packet
-      final DTask dt = ab.get(DTask.class);
-      RPCCall c = new RPCCall(dt,ab._h2o,task);
-      if(dt.priority() == 0)
-        H2O.submitFJTsk(c);
-      else
-        H2O._taskQ.add(new TaskQEntry(c,dt.priority()));
+    } else {
+      // Make a remote instance of this dude from the stream, but only if the
+      // racing UDP packet did not already make one.  Start the bulk TCP read.
+      final DTaskImpl dt = ab.get(DTaskImpl.class);
+      H2O.submitTsk(new RPCCall(dt,ab._h2o,task));
     }
-    ab.close();
-  }
-  // Handle TCP traffic, from a client to this server asking for work to be
-  // done.  This is called on the TCP reader thread, not a Fork/Join worker
-  // thread.  We want to do the bulk TCP read in the TCP reader thread.
-  static void tcp_exec( final AutoBuffer ab ) {
-    final int task = ab.getTask();
-    final int flag = ab.getFlag();
-    assert flag==CLIENT_UDP_SEND; // Client sent a request to be executed?
-    // Act "as if" called from the UDP packet code, by recording the task just
-    // like the packet we will be receiving (eventually).  The presence of this
-    // packet is used to stop dup-actions on dup-sends.  Racily inserted, keep
-    // only the last one.
-    DTask dt1 = ab._h2o.record_task(task);
-    assert dt1==null||dt1 instanceof NOPTask : "#"+task+" "+dt1.getClass(); // For TCP, no repeats, so 1st send is only send (except for UDP timeout retries)
-    // Make a remote instance of this dude from the stream, but only if the
-    // racing UDP packet did not already make one.  Start the bulk TCP read.
-    final DTask dt = ab.get(DTask.class);
-    RPCCall c = new RPCCall(dt,ab._h2o,task);
-    if(dt.priority() == 0)
-      H2O.submitFJTsk(c);
-    else
-      H2O._taskQ.add(new TaskQEntry(c,dt.priority()));
-    // Here I want to execute on this, but not block for completion in the
-    // TCP reader thread.  Jam the task on some F/J thread.
   }
 
   // TCP large RECEIVE of results.  Note that 'this' is NOT the RPC object

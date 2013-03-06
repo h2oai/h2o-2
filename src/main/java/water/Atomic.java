@@ -1,5 +1,7 @@
 package water;
 
+import water.DTask.DTaskImpl;
+
 /**
  * Atomic update of a Key
  *
@@ -7,7 +9,7 @@ package water;
  * @version 1.0
  */
 
-public abstract class Atomic extends DTask {
+public abstract class Atomic extends DTaskImpl {
   public Key _key;              // Transaction key
 
   // User's function to be run atomically.  The Key's Value is fetched from the

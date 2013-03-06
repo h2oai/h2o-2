@@ -1,6 +1,8 @@
 package water;
 import java.util.concurrent.Future;
 
+import water.DTask.DTaskImpl;
+
 /**
  * Push the given key to the remote node
  *
@@ -8,7 +10,7 @@ import java.util.concurrent.Future;
  * @version 1.0
  */
 
-public class TaskPutKey extends DTask<TaskPutKey> {
+public class TaskPutKey extends DTaskImpl<TaskPutKey> {
   Key _key;
   Value _val;
   transient Value _xval;

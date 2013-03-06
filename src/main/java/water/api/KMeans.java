@@ -34,12 +34,14 @@ public class KMeans extends Request {
 
     final Job job = hex.KMeans.startJob(dest, va, k, epsilon, cols);
     try {
-      H2O.submitFJTsk(new H2OCountedCompleter() {
+      H2O.submitTsk(new H2OCountedCompleter() {
         @Override
         public void compute2() {
           hex.KMeans.run(job, va, k, epsilon, cols);
           tryComplete();
         }
+        @Override
+        public int priority() {return RPC.MIN_PRIORITY;}
       });
 
       JsonObject response = new JsonObject();

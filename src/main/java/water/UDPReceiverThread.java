@@ -101,10 +101,8 @@ public class UDPReceiverThread extends Thread {
     // Paxos stateless packets & ACKs just fire immediately in a worker
     // thread.  Dups are handled by these packet handlers directly.  No
     // current membership check required for Paxos packets
-    final int ACK = UDP.udp.ack.ordinal();
     if( UDP.udp.UDPS[ctrl]._paxos || is_member ) {
-      int priority = (ctrl < ACK)?RPC.MAX_PRIORITY:RPC.MAX_PRIORITY-1;
-      H2O.submitHiPriorityTsk(new FJPacket(ab),priority);
+      H2O.submitTsk(new FJPacket(ab));
       return;
     }
     // Some non-Paxos packet from a non-member.  Probably should record &

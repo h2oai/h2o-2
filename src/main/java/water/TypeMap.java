@@ -2,6 +2,8 @@ package water;
 
 import java.util.Arrays;
 
+import water.DTask.DTaskImpl;
+
 import com.google.common.base.Throwables;
 
 public class TypeMap {
@@ -98,7 +100,7 @@ public class TypeMap {
     }
   }
 
-  private static class FillRequest extends DTask<FillRequest> {
+  private static class FillRequest extends DTaskImpl<FillRequest> {
     String _clazz;
     int _index;
 

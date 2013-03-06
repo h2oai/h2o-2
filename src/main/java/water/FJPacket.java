@@ -19,7 +19,11 @@ public class FJPacket extends H2OCountedCompleter {
     if(ctrl <= UDP.udp.ack.ordinal())
       UDP.udp.UDPS[ctrl]._udp.call(_ab).close();
     else
-      RPC.udp_exec(_ab);
+      RPC.remote_exec(_ab);
     tryComplete();
+  }
+  @Override
+  public int priority() {
+    return RPC.MAX_PRIORITY-1;
   }
 }

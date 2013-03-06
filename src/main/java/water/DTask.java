@@ -19,12 +19,21 @@ import jsr166y.CountedCompleter;
  * </ol>
  */
 public abstract class DTask<T> extends H2OCountedCompleter implements Freezable {
+  // this field is NOT serialized as DTask is serBase
   boolean _repliedTcp;         // Any return/reply/result was sent via TCP
 
-
-  private int _fjPriorityLvl;
-  public final int priority(){return _fjPriorityLvl;}
-  public final void setPriority(int p){_fjPriorityLvl = p;}
+  /**
+   * Simple class to allow for DTask with serialized fields (DTask's fields are not serialized as it is serialization base class).
+   *
+   * @author tomasnykodym
+   *
+   * @param <T>
+   */
+  public static abstract class DTaskImpl<T> extends DTask<T> {
+    private int _fjPriorityLvl;
+    public final int priority(){return _fjPriorityLvl;}
+    public final void setPriority(int p){_fjPriorityLvl = p;}
+  }
 
   /** Top-level remote execution hook.  Called on the <em>remote</em>. */
   abstract public T invoke( H2ONode sender );

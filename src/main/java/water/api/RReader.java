@@ -39,7 +39,7 @@ public class RReader extends Request {
       final Key dest_ = dest;
       UKV.put(dest, new RModel());
 
-      H2O.submitFJTsk(new H2OCountedCompleter() {
+      H2O.submitTsk(new H2OCountedCompleter() {
         @Override
         public void compute2() {
           try {
@@ -47,6 +47,11 @@ public class RReader extends Request {
           } catch( IOException e ) {
             Log.write(e);
           }
+        }
+
+        @Override
+        public int priority() {
+         return RPC.MIN_PRIORITY;
         }
       });
       JsonObject response = new JsonObject();
