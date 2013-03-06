@@ -3,7 +3,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import jsr166y.ForkJoinPool;
-import water.DTask.DTaskImpl;
+import water.DTask.DTask;
 import water.H2O.FJWThr;
 import water.H2O.H2OCountedCompleter;
 
@@ -36,7 +36,7 @@ import water.H2O.H2OCountedCompleter;
  * @version 1.0
  */
 
-public class RPC<V extends DTaskImpl> implements Future<V>, Delayed, ForkJoinPool.ManagedBlocker {
+public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.ManagedBlocker {
   // The target remote node to pester for a response.  NULL'd out if the target
   // disappears or we cancel things (hence not final).
   H2ONode _target;
@@ -73,29 +73,30 @@ public class RPC<V extends DTaskImpl> implements Future<V>, Delayed, ForkJoinPoo
   static final byte CLIENT_UDP_SEND = 12;
   static final byte CLIENT_TCP_SEND = 13;
 
-  public static final int MAX_PRIORITY = Byte.MAX_VALUE;
-  public static final int ACK_ACK_PRIORITY = Byte.MAX_VALUE;
-  public static final int ACK_PRIORITY = Byte.MAX_VALUE-1;
-  public static final int MIN_PRIORITY = 0;
-  public static final int GET_KEY_PRIORITY = MAX_PRIORITY-2;
-  public static final int INVALIDATE_KEY_PRIORITY = MAX_PRIORITY-2;
-  public static final int PUT_KEY_PRIORITY = MAX_PRIORITY-3;
-  public static final int ATOMIC_PRIORITY = MAX_PRIORITY-3;
+  public static final int        MAX_PRIORITY = Byte.MAX_VALUE-1;
+  public static final int    ACK_ACK_PRIORITY = MAX_PRIORITY-0;
+  public static final int        ACK_PRIORITY = MAX_PRIORITY-1;
+  public static final int    GET_KEY_PRIORITY = MAX_PRIORITY-2;
+  public static final int INVALIDATE_PRIORITY = MAX_PRIORITY-2;
+  public static final int    PUT_KEY_PRIORITY = MAX_PRIORITY-3;
+  public static final int     ATOMIC_PRIORITY = MAX_PRIORITY-3;
+  public static final int        MIN_PRIORITY = 0;
 
-
-
-  public static <DT extends DTaskImpl> RPC<DT> call(H2ONode target, DT dtask) {
+  public static <DT extends DTask> RPC<DT> call(H2ONode target, DT dtask) {
     Thread cThread = Thread.currentThread();
-    // bump up the priority of the remote task to prevent deadlock
+    // Bump up the priority of the remote task to prevent deadlock
     // NOTE: GetKey,PutKey,Invalidate,Atomic,Ack, have static priorities
-    // AND other msgs (AckAck,heartbeat, paxos, timeline,...) are always processed with the MAX priority
-    int priority = 0;
-    if(cThread instanceof FJWThr)
-      priority = Math.min(RPC.MAX_PRIORITY,(((FJWThr)cThread).fjPriority()+1));
-    return new RPC(target, dtask,priority).call();
+    // AND other msgs (AckAck,heartbeat, timeline,...) are always processed with MAX priority
+    int priority = MIN_PRIORITY;
+    if( cThread instanceof FJWThr ) {
+      int oldp = ((FJWThr)cThread).fjPriority();
+      priority = oldp+1;
+      assert priority <= MAX_PRIORITY : "Bumping oldpriority "+oldp+" too much for "+dtask.getClass();
+    }
+    return new RPC(target,dtask,priority).call();
   }
 
-  public static <DT extends DTaskImpl> RPC<DT> call(H2ONode target, DT dtask, int priority) {
+  public static <DT extends DTask> RPC<DT> call(H2ONode target, DT dtask, int priority) {
     return new RPC(target, dtask,priority).call();
   }
   // Make a remotely executed FutureTask.  Must name the remote target as well
@@ -236,11 +237,11 @@ public class RPC<V extends DTaskImpl> implements Future<V>, Delayed, ForkJoinPoo
 
 
   public static class RPCCall extends H2OCountedCompleter {
-    final DTaskImpl _dt;
+    final DTask _dt;
     final H2ONode _client;
     final int _tsknum;
 
-    public RPCCall(DTaskImpl dt, H2ONode client, int tsknum){
+    public RPCCall(DTask dt, H2ONode client, int tsknum){
       _dt = dt;
       _client = client;
       _tsknum = tsknum;
@@ -299,7 +300,7 @@ public class RPC<V extends DTaskImpl> implements Future<V>, Delayed, ForkJoinPoo
     } else {
       // Make a remote instance of this dude from the stream, but only if the
       // racing UDP packet did not already make one.  Start the bulk TCP read.
-      final DTaskImpl dt = ab.get(DTaskImpl.class);
+      final DTask dt = ab.get(DTask.class);
       H2O.submitTsk(new RPCCall(dt,ab._h2o,task));
     }
   }

@@ -4,8 +4,6 @@ import java.util.Arrays;
 
 import water.DTask.DTaskImpl;
 
-import com.google.common.base.Throwables;
-
 public class TypeMap {
   public static final TypeMap MAP = new TypeMap();
   private static final int INIT_MAP_SIZE = MAP._examplars.length;

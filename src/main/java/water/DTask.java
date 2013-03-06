@@ -1,6 +1,6 @@
 package water;
+
 import water.H2O.H2OCountedCompleter;
-import jsr166y.CountedCompleter;
 
 /** Objects which are passed & remotely executed.<p>
  * <p>
@@ -19,26 +19,18 @@ import jsr166y.CountedCompleter;
  * </ol>
  */
 public abstract class DTask<T> extends H2OCountedCompleter implements Freezable {
-  // this field is NOT serialized as DTask is serBase
-  boolean _repliedTcp;         // Any return/reply/result was sent via TCP
+  // Track if the reply came via TCP - which means a timeout on ACKing the TCP
+  // result does NOT need to get the entire result again, just that the client
+  // needs more time to process the TCP result.
+  transient boolean _repliedTcp; // Any return/reply/result was sent via TCP
 
-  /**
-   * Simple class to allow for DTask with serialized fields (DTask's fields are not serialized as it is serialization base class).
-   *
-   * @author tomasnykodym
-   *
-   * @param <T>
-   */
-  public static abstract class DTaskImpl<T> extends DTask<T> {
-    private int _fjPriorityLvl;
-    public final int priority(){return _fjPriorityLvl;}
-    public final void setPriority(int p){_fjPriorityLvl = p;}
-  }
-
+  // In order to prevent deadlock, threads that block waiting for a reply from
+  // a remote node, need the remote task to run at a higher priority than
+  // themselves.  This field tracks the required priority.
+  public abstract int priority();
+    
   /** Top-level remote execution hook.  Called on the <em>remote</em>. */
   abstract public T invoke( H2ONode sender );
-
-
 
   /** 2nd top-level execution hook.  After the primary task has received a
    * result (ACK) and before we have sent an ACKACK, this method is executed
@@ -51,18 +43,6 @@ public abstract class DTask<T> extends H2OCountedCompleter implements Freezable 
    * vm are available here.
    */
   public void onAckAck() {}
-
-
-  /** Is this task high priority.  Tasks that need to be serviced quickly to
-   * maintain forward progress and/or prevent deadlocks should override this
-   * method to return true. */
-
-  // Oops, uncaught exception
-  @Override
-  public boolean onExceptionalCompletion( Throwable ex, CountedCompleter caller ) {
-    ex.printStackTrace();
-    return true;
-  }
 
   // The abstract methods to be filled in by subclasses.  These are automatically
   // filled in by any subclass of DTask during class-load-time, unless one
