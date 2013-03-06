@@ -41,15 +41,8 @@ public class RandomForestTest extends TestUtil {
     result.get();
 
     // Create incremental confusion matrix.
-    RFModel model;
-    while( true ) {
-      // RACEY BUG HERE: Model is supposed to be complete after drf.get, but as
-      // of 11/5/2012 it takes a little while for all trees to appear.
-      model = UKV.get(modelKey, new RFModel());
-      if( model.size()==ntrees ) break;
-      Thread.sleep(100);
-      System.out.println("RandomForestTest.kaggle_credit() - active waiting");
-    }
+    RFModel model = UKV.get(modelKey, new RFModel());
+
     assertEquals("Number of classes", 2,  model.classes());
     assertEquals("Number of trees", ntrees, model.size());
 
