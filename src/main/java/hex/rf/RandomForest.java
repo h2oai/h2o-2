@@ -173,7 +173,7 @@ public class RandomForest {
                           strata,
                           ARGS.verbose,
                           ARGS.exclusive);
-    DRF drf = (DRF) drfResult.get(); // block on all nodes!
+    DRF drf = drfResult.get();  // block on all nodes!
     RFModel model = UKV.get(modelKey, new RFModel());
     Utils.pln("[RF] Random forest finished in "+ drf._t_main);
 
