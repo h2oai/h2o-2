@@ -2,21 +2,30 @@ package hex.rf;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertArrayEquals;
+import hex.rf.DRF.DRFFuture;
 import hex.rf.Tree.StatType;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import water.*;
+import water.DRemoteTask.DFuture;
 import water.util.TestUtil;
 
+/**
+ * Note: This test expect cloud of 3 nodes.
+ * However, since data are small, random forest will be run only one one node containing
+ * data.
+ *
+ * Hence, the test can be run on single node as well and all results shoudl match.
+ */
 public class RFPredDomainTest extends TestUtil {
 
   @BeforeClass public static void stall() { stall_till_cloudsize(3); }
 
   static final long[] a(long ...p) { return p; }
 
-  protected void runIrisRF(final String trainDS, final String testDS, double expTestErr, long[][] expCM, String[] expDomain) throws Exception {
+  static void runIrisRF(final String trainDS, final String testDS, double expTestErr, long[][] expCM, String[] expDomain) throws Exception {
     String trainKeyName = "iris_train.hex";
     Key trainKey        = loadAndParseKey(trainKeyName, trainDS);
     ValueArray trainData = ValueArray.value(trainKey);
@@ -30,15 +39,17 @@ public class RFPredDomainTest extends TestUtil {
     // Start the distributed Random Forest
     String modelName   = "model";
     final Key modelKey = Key.make(modelName);
-    DRF drf = hex.rf.DRF.webMain(modelKey,cols,trainData,trees,depth,1.0f,(short)1024,statType,seed,false, null, -1, false, null, 0, 0);
+    DRFFuture drf = hex.rf.DRF.execute(modelKey,cols,trainData,trees,depth,1.0f,(short)1024,statType,seed,false, null, -1, false, null, 0, 0);
     // Block
     drf.get();
-    RFModel model = UKV.get(modelKey, new RFModel());
 
+    RFModel model = UKV.get(modelKey, new RFModel());
+System.out.println("RFPredDomainTest.runIrisRF(): " + model);
     String testKeyName  = "iris_test.hex";
+    // Load validation dataset
     Key testKey         = loadAndParseKey(testKeyName, testDS);
     ValueArray testData = ValueArray.value(testKey);
-
+System.out.println("RFPredDomainTest.runIrisRF(): " + testData._key);
     Confusion confusion = Confusion.make(model, testData._key, model._features-1, null, false);
     confusion.report();
     assertEquals("Error rate", expTestErr, confusion.classError(), 0.001);

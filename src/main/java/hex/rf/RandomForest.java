@@ -1,5 +1,6 @@
 package hex.rf;
 
+import hex.rf.DRF.DRFFuture;
 import hex.rf.Tree.StatType;
 import hex.rng.H2ORandomRNG.RNGKind;
 
@@ -7,6 +8,7 @@ import java.io.File;
 import java.util.*;
 
 import water.*;
+import water.DRemoteTask.DFuture;
 import water.Timer;
 import water.util.TestUtil;
 import water.util.Utils;
@@ -155,7 +157,7 @@ public class RandomForest {
 
     Utils.pln("[RF] Arguments used:\n"+ARGS.toString());
     final Key modelKey = Key.make("model");
-    DRF drf = DRF.webMain(modelKey,
+    DRFFuture drfResult = DRF.execute(modelKey,
                           cols,
                           va,
                           ARGS.ntrees,
@@ -171,7 +173,7 @@ public class RandomForest {
                           strata,
                           ARGS.verbose,
                           ARGS.exclusive);
-    drf.get(); // block
+    DRF drf = (DRF) drfResult.get(); // block on all nodes!
     RFModel model = UKV.get(modelKey, new RFModel());
     Utils.pln("[RF] Random forest finished in "+ drf._t_main);
 
