@@ -135,32 +135,31 @@ def iter_chunked_file(file, chunk_size=2048):
 # On unix the parent dir has to not be readonly too.
 # May still be issues with owner being different, like if 'system' is the guy running?
 # Apparently this escape function on errors is the way shutil.rmtree can 
-# handle the permission issue.
-def handleRemoveReadonly(func, path, exc):
+# handle the permission issue. (do chmod here)
+# But we shouldn't have read-only files. So don't try to handle that case.
+def handleRemoveError(func, path, exc):
     # If there was an error, it could be due to windows holding onto files.
-    # maybe wait a bit before we try this fix. 
+    # Wait a bit before retrying. Ignore errors on the retry. Just leave files.
     # Ex. if we're in the looping cloud test deleting sandbox.
-    time.sleep(2)
     excvalue = exc[1]
-    if func in (shutil.rmtree, os.rmdir, os.remove) and excvalue.errno == errno.EACCES:
-        # ensure parent directory is writeable too
-        pardir = os.path.abspath(os.path.join(path, os.path.pardir))
-        if not os.access(pardir, os.W_OK):
-            os.chmod(pardir, stat.S_IRWXU| stat.S_IRWXG| stat.S_IRWXO)
-        os.chmod(path, stat.S_IRWXU| stat.S_IRWXG| stat.S_IRWXO) # 0777
-    # now just try it again. It might cause exception again
-    func(path)
+    print "Retrying shutil.rmtree of sandbox after 2 secs. Will ignore errors. exception was", excvalue.errno
+    time.sleep(2)
+    try:
+        func(path)
+    except OSError:
+        pass
 
 LOG_DIR = 'sandbox'
 def clean_sandbox():
     if os.path.exists(LOG_DIR):
         # shutil.rmtree fails to delete very long filenames on Windoze
         #shutil.rmtree(LOG_DIR)
-        # This seems reliable on windows+cygwin
-        # was this on 3/5/13
+        # was this on 3/5/13. This seems reliable on windows+cygwin
         ### os.system("rm -rf "+LOG_DIR)
-        shutil.rmtree(LOG_DIR, ignore_errors=False, onerror=handleRemoveReadonly)
-    os.mkdir(LOG_DIR)
+        shutil.rmtree(LOG_DIR, ignore_errors=False, onerror=handleRemoveError)
+    # it should have been removed, but on error it might still be there
+    if not os.path.exists(LOG_DIR):
+        os.mkdir(LOG_DIR)
 
 # who knows if this one is ok with windows...doesn't rm dir, just 
 # the stdout/stderr files
