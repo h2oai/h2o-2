@@ -1,7 +1,7 @@
 package water.api;
 
-import jsr166y.RecursiveAction;
 import water.*;
+import water.H2O.H2OCountedCompleter;
 
 import com.google.gson.JsonObject;
 
@@ -37,10 +37,10 @@ public class Plot extends Request {
       final Key dest_ = dest;
       UKV.put(dest, new hex.KMeans.KMeansModel());
 
-      H2O.FJP_NORM.submit(new RecursiveAction() {
+      H2O.submitFJTsk(new H2OCountedCompleter() {
         @Override
-        protected void compute() {
-          hex.Plot.run(dest_, va, width, height, cols);
+        public void compute2() {
+          throw new RuntimeException("TODO Auto-generated method stub");
         }
       });
 

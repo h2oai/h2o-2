@@ -38,9 +38,14 @@ public abstract class UKV {
   }
 
   static public void remove( Key key ) {
+    remove(key,true);
+  }
+
+  static public void remove( Key key, boolean block) {
     Futures fs = new Futures();
     remove(key,fs);             // Recursively delete, gather pending deletes
-    fs.blockForPending();         // Block until all is deleted
+    if(block)
+      fs.blockForPending();         // Block until all is deleted
   }
   // Recursively remove, gathering all the pending remote key-deletes
   static private void remove( Key key, Futures fs ) {

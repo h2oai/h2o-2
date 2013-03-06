@@ -46,7 +46,7 @@ public class TaskStore2HDFS extends DTask<TaskStore2HDFS> {
 
     // Then start writing chunks in-order with the zero chunk
     H2ONode chk0_home = ValueArray.getChunkKey(0,srcKey).home_node();
-    RPC.call(ts.chunkHome(),ts);
+    RPC.call(ts.chunkHome(),ts,ts.priority());
 
     // Watch the progress key until it gets removed or an error appears
     long idx = 0;
@@ -76,7 +76,7 @@ public class TaskStore2HDFS extends DTask<TaskStore2HDFS> {
   }
 
   @Override
-  public void compute() {
+  public void compute2() {
     String path = null;// getPathFromValue(val);
     ValueArray ary = ValueArray.value(_arykey);
     Key self = selfKey();

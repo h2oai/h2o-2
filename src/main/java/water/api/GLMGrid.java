@@ -134,7 +134,7 @@ public class GLMGrid extends Request {
     UKV.put(taskey,task);
     // Start the grid search
     assert task._working == true;
-    H2O.FJP_NORM.submit(task);
+    H2O.submitFJTsk(task);
 
     // Redirect to the grid-search status page
     JsonObject j = new JsonObject();

@@ -1,7 +1,7 @@
 package water.api;
 
-import jsr166y.RecursiveAction;
 import water.*;
+import water.H2O.H2OCountedCompleter;
 import water.store.s3.MultipartUpload;
 import water.store.s3.PersistS3;
 
@@ -49,11 +49,10 @@ public class ExportS3 extends Request {
 
     try {
       final Key dest = MultipartUpload.init(value);
-
-      H2O.FJP_NORM.submit(new RecursiveAction() {
+      H2O.submitFJTsk(new H2OCountedCompleter() {
         @Override
-        protected void compute() {
-          MultipartUpload.run(dest, value, bucket, object);
+        public void compute2() {
+          throw new RuntimeException("TODO Auto-generated method stub");
         }
       });
 

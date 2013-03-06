@@ -1,7 +1,7 @@
 package water.api;
 
-import jsr166y.CountedCompleter;
 import water.*;
+import water.H2O.H2OCountedCompleter;
 import water.Jobs.Job;
 import water.util.RString;
 
@@ -34,17 +34,11 @@ public class KMeans extends Request {
 
     final Job job = hex.KMeans.startJob(dest, va, k, epsilon, cols);
     try {
-      H2O.FJP_NORM.submit(new CountedCompleter() {
+      H2O.submitFJTsk(new H2OCountedCompleter() {
         @Override
-        public void compute() {
+        public void compute2() {
           hex.KMeans.run(job, va, k, epsilon, cols);
           tryComplete();
-        }
-
-        @Override
-        public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
-          ex.printStackTrace();
-          return true;
         }
       });
 

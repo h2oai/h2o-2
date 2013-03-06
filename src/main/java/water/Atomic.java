@@ -36,17 +36,15 @@ public abstract class Atomic extends DTask {
   public final RPC<Atomic> fork(Key key) {
     _key = key;
     if( key.home() ) {          // Key is home?
-      compute();                // Also, run it blocking/now
+      compute2();                // Also, run it blocking/now
       return null;
     } else {                    // Else run it remotely
       return RPC.call(key.home_node(),this);
     }
   }
 
-  @Override public boolean isHighPriority(){return true;}
-
   // The (remote) workhorse:
-  @Override public final void compute( ) {
+  @Override public final void compute2( ) {
     assert _key.home();         // Key is at Home!
     Futures fs = new Futures(); // Must block on all invalidates eventually
     while( true ) {
@@ -73,5 +71,9 @@ public abstract class Atomic extends DTask {
     _key = null;                // No need for key no more
     fs.blockForPending();         // Block for any pending invalidates on the atomic update
     tryComplete();              // Tell F/J this task is done
+  }
+
+  public int priority(){
+    return RPC.ATOMIC_PRIORITY;
   }
 }

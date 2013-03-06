@@ -139,13 +139,6 @@ public final class DParseTask extends MRTask {
       System.arraycopy(mem,0,bits2,_dst_off,mem.length);
       return bits2;
     }
-//    @Override public void onSuccess() {
-//      DKV.remove(_key);
-//    }
-
-    @Override public boolean isHighPriority(){
-      return true;
-    }
   }
 
   /** Returns the list of streams that should be used to store the given rows.

@@ -180,8 +180,7 @@ public final class TimelineSnapshot implements
         break;
       case ack:
       case ackack:
-      case execlo:
-      case exechi:
+      case exec:
       case heartbeat:
         // compare 3 ctrl bytes + 4 bytes task #
         if( (int)(myl0>>24) != (int)(evl0>>24))

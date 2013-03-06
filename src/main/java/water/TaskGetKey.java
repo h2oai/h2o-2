@@ -14,6 +14,10 @@ public class TaskGetKey extends DTask<TaskGetKey> {
   transient Key _xkey;       // Set by client, read by client
   transient H2ONode _h2o;    // Set by server JVM, read by server JVM on ACKACK
 
+  @Override
+  public int priority(){return RPC.GET_KEY_PRIORITY;} // get key has static priority
+
+
   // Unify multiple Key/Value fetches for the same Key from the same Node at
   // the "same time".  Large key fetches are slow, and we'll get multiple
   // requests close in time.  Batch them up.
@@ -27,7 +31,7 @@ public class TaskGetKey extends DTask<TaskGetKey> {
       rpc = TGKS.get(key);
       if( rpc != null ) break;
       // Make a new TGK.
-      rpc = new RPC(target,new TaskGetKey(key));
+      rpc = new RPC(target,new TaskGetKey(key),RPC.GET_KEY_PRIORITY);
       if( TGKS.putIfMatchUnlocked(key,rpc,null) == null ) {
         rpc.call();             // Start the op
         break;
@@ -53,7 +57,7 @@ public class TaskGetKey extends DTask<TaskGetKey> {
     while( _val != null && !_val.setReplica(sender) );
     return this;
   }
-  @Override public void compute() { throw H2O.unimpl(); }
+  @Override public void compute2() { throw H2O.unimpl(); }
 
   // Received an ACK; executes on the node asking&receiving the Value
   @Override public void onAck() {
@@ -80,6 +84,4 @@ public class TaskGetKey extends DTask<TaskGetKey> {
   @Override public void onAckAck() {
     if( _val != null ) _val.lowerActiveGetCount(_h2o);
   }
-
-  @Override public boolean isHighPriority() { return true; }
 }

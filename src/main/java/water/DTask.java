@@ -1,4 +1,5 @@
 package water;
+import water.H2O.H2OCountedCompleter;
 import jsr166y.CountedCompleter;
 
 /** Objects which are passed & remotely executed.<p>
@@ -17,11 +18,18 @@ import jsr166y.CountedCompleter;
  * <li>On the remote, the {@link #onAckAck()} method will be executed.</li>
  * </ol>
  */
-public abstract class DTask<T> extends CountedCompleter implements Freezable {
+public abstract class DTask<T> extends H2OCountedCompleter implements Freezable {
   boolean _repliedTcp;         // Any return/reply/result was sent via TCP
+
+
+  int _fjPriorityLvl;
+  public int priority(){return _fjPriorityLvl;}
+  public void setPriority(int p){_fjPriorityLvl = p;}
 
   /** Top-level remote execution hook.  Called on the <em>remote</em>. */
   abstract public T invoke( H2ONode sender );
+
+
 
   /** 2nd top-level execution hook.  After the primary task has received a
    * result (ACK) and before we have sent an ACKACK, this method is executed
@@ -35,10 +43,10 @@ public abstract class DTask<T> extends CountedCompleter implements Freezable {
    */
   public void onAckAck() {}
 
+
   /** Is this task high priority.  Tasks that need to be serviced quickly to
    * maintain forward progress and/or prevent deadlocks should override this
    * method to return true. */
-  public boolean isHighPriority() { return false; }
 
   // Oops, uncaught exception
   @Override

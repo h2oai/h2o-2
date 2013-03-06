@@ -55,8 +55,8 @@ public class TCPReceiverThread extends Thread {
 
         // Hand off the TCP connection to the proper handler
         switch( UDP.udp.UDPS[ctrl] ) {
-        case execlo:
-        case exechi:   RPC.tcp_exec(ab); break;
+        //case execlo:
+        case exec:   RPC.tcp_exec(ab); break;
         case ack:      RPC.tcp_ack (ab); break;
         case ackack:   UDP.udp.UDPS[ctrl]._udp.call(ab).close(); break;
         case timeline: TimeLine.tcp_call(ab); break;

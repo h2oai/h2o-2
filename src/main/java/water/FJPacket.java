@@ -1,5 +1,5 @@
 package water;
-import jsr166y.*;
+import water.H2O.H2OCountedCompleter;
 
 /**
  * A class to handle the work of a received UDP packet.  Typically we'll do a
@@ -9,19 +9,17 @@ import jsr166y.*;
  * @author <a href="mailto:cliffc@0xdata.com"></a>
  * @version 1.0
  */
-public class FJPacket extends CountedCompleter {
+public class FJPacket extends H2OCountedCompleter {
   final AutoBuffer _ab;
   FJPacket( AutoBuffer ab ) { _ab = ab; }
 
-  public void compute() {
+  public void compute2() {
     int ctrl = _ab.getCtrl();
     _ab.getPort(); // skip past the port
-    UDP.udp.UDPS[ctrl]._udp.call(_ab).close();
+    if(ctrl <= UDP.udp.ack.ordinal())
+      UDP.udp.UDPS[ctrl]._udp.call(_ab).close();
+    else
+      RPC.udp_exec(_ab);
     tryComplete();
-  }
-
-  public boolean onExceptionalCompletion( Throwable ex, CountedCompleter caller ) {
-    ex.printStackTrace();
-    return true;
   }
 }

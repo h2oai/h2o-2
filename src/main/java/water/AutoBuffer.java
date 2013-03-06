@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author <a href="mailto:cliffc@0xdata.com"></a>
  */
 public final class AutoBuffer {
+  public static final int TCP_WRITE_ATTEMPTS = 2;
   // The direct ByteBuffer for schlorping data about
   public ByteBuffer _bb;
 
@@ -406,22 +407,24 @@ public final class AutoBuffer {
     }
     // Doing I/O with the full ByteBuffer - ship partial results
     int attempts = 0;
-    while(true)
-      try {
-        _bb.flip(); // Prep for writing.
-        if( _chan == null )
-          tcpOpen(); // This is a big operation.  Open a TCP socket as-needed.
-        while( _bb.hasRemaining() ) _chan.write(_bb);
-        if( _bb.capacity() < 16*1024 ) _bb = bbMake();
-        _firstPage = false;
-        _bb.clear();
-        return _bb;
-      } catch( IOException e ) {   // Dunno how to handle so crash-n-burn
-        if( e.getMessage().equals("Connection reset by peer") )
-          UDPRebooted.suicide( UDPRebooted.T.error, _h2o );
-        if(++attempts == 10)throw new RuntimeException(e);
-        try {Thread.sleep(1000);} catch( InterruptedException e1 ) {}
-      }
+    _bb.flip(); // Prep for writing.
+    _bb.mark();
+    try{
+      if( _chan == null)
+        tcpOpen(); // This is a big operation.  Open a TCP socket as-needed.
+      while( _bb.hasRemaining() )
+        _chan.write(_bb);
+    } catch( IOException e ) {   // Can't open the connection, try again later
+      if(++attempts == TCP_WRITE_ATTEMPTS)throw new RuntimeException(e);
+      System.err.println("TCP Open/Write attempt # " + attempts + " failed, reason: " + e.getMessage());
+      if(_chan != null && _chan.isOpen()) // if the op did not finish, restart it from scratch
+        try {_chan.close(); _bb.reset(); _chan = null;} catch( IOException e1) {}
+      try {Thread.sleep(1000);} catch( InterruptedException e1 ) {}
+    }
+    if( _bb.capacity() < 16*1024 ) _bb = bbMake();
+    _firstPage = false;
+    _bb.clear();
+    return _bb;
   }
 
   public int peek1() {

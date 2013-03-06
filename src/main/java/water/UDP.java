@@ -32,15 +32,15 @@ public abstract class UDP {
       // These packets all imply some sort of request/response handshake.
       // We'll hang on to these packets; filter out dup sends and auto-reply
       // identical result ACK packets.
-      execlo(false,new RPC.RemoteHandler()), // Remote lo-q execution request
-      exechi(false,new RPC.RemoteHandler()); // Remote hi-q execution request
+      //execlo(false,new RPC.RemoteHandler()), // Remote lo-q execution request
+      exec(false,new RPC.RemoteHandler()); // Remote hi-q execution request
 
     final UDP _udp;           // The Callable S.A.M. instance
     final boolean _paxos;     // Ignore (or not) packets from outside the Cloud
     udp( boolean paxos, UDP udp ) { _paxos = paxos; _udp = udp; }
     static public udp[] UDPS = values();
     // Default: most tasks go to the hi-priority queue
-    ForkJoinPool pool() { return this==execlo ? H2O.FJP_NORM : H2O.FJP_HI; }
+    //ForkJoinPool pool() { return this==execlo ? H2O.FJP_NORM : H2O.FJP_HI; }
   };
 
   // Handle an incoming I/O transaction, probably from a UDP packet.  The

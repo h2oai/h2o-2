@@ -107,7 +107,7 @@ public class TypeMap {
       _index = index;
     }
 
-    @Override public void compute() { throw H2O.unimpl(); }
+    @Override public void compute2() { throw H2O.unimpl(); }
     @Override public FillRequest invoke(H2ONode sender) {
       if( _clazz == null ) {
         int i = _index;
@@ -125,6 +125,5 @@ public class TypeMap {
     }
 
     @Override public void onAck() { MAP.recordType(_clazz, _index); }
-    @Override public boolean isHighPriority() { return true; }
   }
 }

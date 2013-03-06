@@ -1,15 +1,17 @@
 package water.parser;
 
-import com.google.common.base.Throwables;
-import com.google.common.io.Closeables;
 import java.io.IOException;
 import java.util.zip.*;
-import jsr166y.CountedCompleter;
+
 import water.*;
+import water.H2O.H2OCountedCompleter;
 import water.Jobs.Fail;
 import water.Jobs.Job;
 import water.Jobs.Progress;
 import water.parser.DParseTask.Pass;
+
+import com.google.common.base.Throwables;
+import com.google.common.io.Closeables;
 
 /**
  * Helper class to parse an entire ValueArray data, and produce a structured
@@ -78,13 +80,9 @@ public final class ParseDataset {
 
   public static Job forkParseDataset( final Key dest, final Value dataset, final CsvParser.Setup setup ) {
     final Job job = Jobs.start("Parse", dest);
-    H2O.FJP_NORM.submit(new CountedCompleter() {
-        @Override public void compute() { parse(job, dataset, setup); tryComplete(); }
-        public boolean onExceptionalCompletion( Throwable ex, CountedCompleter caller ) {
-          ex.printStackTrace();
-          return true;
-        }
-      });
+    H2O.submitFJTsk(new H2OCountedCompleter() {
+      @Override public void compute2() { parse(job, dataset, setup); tryComplete(); }
+    });
     return job;
   }
 
