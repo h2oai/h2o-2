@@ -1,23 +1,16 @@
 package water.api;
 
-import water.Jobs.Job;
-import water.Key;
-import water.api.RequestBuilders.Response;
-import water.util.RString;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
-import com.sun.crypto.provider.DESParameters;
-
 import hex.rf.Confusion;
 import hex.rf.RFModel;
+import water.Key;
+import water.util.RString;
+
+import com.google.gson.*;
 
 /**
  * RFView shows a progress of random forest building and data scoring.
  */
-public class RFView extends Progress {
+public class RFView extends /* Progress */ Request {
 
   protected final H2OHexKey          _dataKey  = new H2OHexKey(DATA_KEY);
   protected final RFModelKey         _modelKey = new RFModelKey(MODEL_KEY);
@@ -46,9 +39,6 @@ public class RFView extends Progress {
     // hide in generated query page
     _oobee._hideInQuery = true;
     _numTrees._readOnly = true;
-
-    _job._hideInQuery   = true;
-    _dest._hideInQuery  = true;
   }
 
   public static Response redirect(JsonObject fromPageResponse, Key job, Key model) {
@@ -79,9 +69,8 @@ public class RFView extends Progress {
     return Response.redirect(resp, RFView.class, redir);
   }
 
-  @Override
   protected JsonObject defaultJsonResponse() {
-    JsonObject r = super.defaultJsonResponse();
+    JsonObject r = new JsonObject();
     RFModel model = _modelKey.value();
     r.addProperty( DATA_KEY, _dataKey.originalValue());
     r.addProperty(MODEL_KEY, _modelKey.originalValue());
@@ -92,12 +81,10 @@ public class RFView extends Progress {
     return r;
   }
 
-  @Override
   protected Response jobDone(JsonObject jsonResp) {
     return Response.done(jsonResp);
   }
 
-  // NOTE: now it handle jobs only partially
   @Override protected Response serve() {
     int tasks        = 0;
     int finished     = 0;
@@ -150,10 +137,6 @@ public class RFView extends Progress {
       trees.add(Constants.TREE_LEAVES, model.leaves().toJson());
     }
     response.add(Constants.TREES,trees);
-
-    // Update job
-    Job job  = findJob();
-    if (job!=null && job._progress!=null) water.Jobs.Progress.set(job._progress, finished/tasks);
 
     // Build a response
     Response r = (finished == tasks) ? jobDone(response) : Response.poll(response, finished, tasks);

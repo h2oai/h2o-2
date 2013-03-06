@@ -11,7 +11,8 @@ import com.google.gson.JsonObject;
 
 /**
  * Page for random forest scoring.
- * Redirect progress to RF view.
+ *
+ * Redirect directly to RF view.
  */
 public class RFScore extends Request {
 
