@@ -170,6 +170,8 @@ def wait_for_ssh(ips, port=22, skipAlive=True, requiredsuccess=3):
 
 
 def dump_hosts_config(ec2_config, reservation, filename=DEFAULT_HOSTS_FILENAME):
+    if not filename: filename=DEFAULT_HOSTS_FILENAME
+
     cfg = {}
     cfg['aws_credentials'] = find_file(ec2_config['aws_credentials'])
     cfg['username']        = ec2_config['username'] 
