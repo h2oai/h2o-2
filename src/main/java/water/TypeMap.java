@@ -54,6 +54,8 @@ public class TypeMap {
 
   private int fill(Freezable f) {
     String clazz = f.getClass().getName();
+    assert Paxos._commonKnowledge : "TypeMap before commonKnowledge of "+clazz;
+    assert Paxos._cloudLocked     : "TypeMap before cloudLocked of "+clazz;
     if( H2O.CLOUD.leader() == H2O.SELF ) return registerType(clazz);
     FillRequest fr = new FillRequest(clazz, -1);
     return RPC.call(H2O.CLOUD.leader(), fr).get()._index;

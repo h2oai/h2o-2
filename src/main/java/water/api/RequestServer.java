@@ -66,7 +66,6 @@ public class RequestServer extends NanoHTTPD {
 
     // internal handlers
     registerRequest(new Cancel());
-    registerRequest(new NOP());
     registerRequest(new Exec());
     registerRequest(new ExportS3Progress());
     registerRequest(new GLMGridProgress());
