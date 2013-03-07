@@ -40,7 +40,8 @@ class Basic(unittest.TestCase):
         h2i.setupImportFolder(None, importFolderPath)
         for csvFilename, timeoutSecs in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=2000)
+            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
+                timeoutSecs=2000, pollTimeoutSecs=60)
             inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             csvPathname = importFolderPath + "/" + csvFilename
             print "\n" + csvPathname, \
