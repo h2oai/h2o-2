@@ -1,5 +1,6 @@
 package water;
 
+import java.util.Arrays;
 import java.util.UUID;
 
 import water.api.Constants;
@@ -131,28 +132,18 @@ public abstract class Jobs {
     new TAtomic<List>() {
       transient Key _progress;
       @Override public List alloc() { return new List(); }
-      @Override public void onSuccess() { UKV.remove(_progress); }
-
-      @Override
-      public List atomic(List old) {
+      @Override public void onSuccess() { if( _progress != null ) UKV.remove(_progress); }
+      @Override public List atomic(List old) {
         Job[] jobs = old._jobs;
-        int index = -1;
-        for( int i = 0; i < jobs.length; i++ ) {
-          if( jobs[i]._key.equals(key) ) {
-            index = i;
+        int i;
+        for( i = 0; i < jobs.length; i++ )
+          if( jobs[i]._key.equals(key) )
             break;
-          }
-        }
-        if( index >= 0 ) {
-          old._jobs = new Job[jobs.length - 1];
-          int n = 0;
-          for( int i = 0; i < jobs.length; i++ ) {
-            if( i != index )
-              old._jobs[n++] = jobs[i];
-            else
-              _progress = jobs[i]._progress; // Save for key remove on success
-          }
-        }
+        if( i == jobs.length ) return old;
+        _progress = jobs[i]._progress; // Save progress key for remove on success
+        jobs[i] = jobs[jobs.length-1]; // Compact out the key from the list
+        old._jobs = Arrays.copyOf(jobs,jobs.length-1);
+        old._jobs = new Job[jobs.length - 1];
         return old;
       }
     }.invoke(KEY);
