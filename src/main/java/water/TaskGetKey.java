@@ -1,5 +1,6 @@
 package water;
-import water.DTask.DTaskImpl;
+
+import water.DTask;
 import water.nbhm.NonBlockingHashMap;
 
 /**
@@ -9,7 +10,7 @@ import water.nbhm.NonBlockingHashMap;
  * @version 1.0
  */
 
-public class TaskGetKey extends DTaskImpl<TaskGetKey> {
+public class TaskGetKey extends DTask<TaskGetKey> {
   Key _key;                  // Set by client/sender JVM, cleared by server JVM
   Value _val;                // Set by server JVM, read by client JVM
   transient Key _xkey;       // Set by client, read by client
@@ -29,9 +30,7 @@ public class TaskGetKey extends DTaskImpl<TaskGetKey> {
       rpc = TGKS.get(key);
       if( rpc != null ) break;
       // Make a new TGK.
-      rpc = new RPC(target,new TaskGetKey(key),RPC.GET_KEY_PRIORITY);
-      rpc._dt._priority = 111;
-      rpc._dt._repliedTcp = true;
+      rpc = new RPC(target,new TaskGetKey(key));
       if( TGKS.putIfMatchUnlocked(key,rpc,null) == null ) {
         rpc.call();             // Start the op
         break;
@@ -84,4 +83,5 @@ public class TaskGetKey extends DTaskImpl<TaskGetKey> {
   @Override public void onAckAck() {
     if( _val != null ) _val.lowerActiveGetCount(_h2o);
   }
+  @Override public byte priority() { return H2O.GET_KEY_PRIORITY; }
 }

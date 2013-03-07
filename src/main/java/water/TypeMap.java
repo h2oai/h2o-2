@@ -1,131 +1,63 @@
 package water;
 
-import java.util.Arrays;
-
-import water.DTask.DTaskImpl;
+import java.util.HashMap;
+import water.DTask;
 
 public class TypeMap {
-  public static final TypeMap MAP = new TypeMap();
-  private static final int INIT_MAP_SIZE = MAP._examplars.length;
 
-  private volatile Freezable[] _examplars = new Freezable[] {
-      new FillRequest(null, -1),
-      new H2ONode(),
-      new HeartBeat(),
+  static private final String[] CLAZZES = {
+    "hex.ConfusionMatrix",
+    "hex.DGLM$GLMParams",
+    "hex.DGLM$GLMValidation",
+    "hex.DGLM$GramMatrixFunc",
+    "hex.DLSM$ADMMSolver",
+    "hex.LinearRegression$CalcRegressionTask",
+    "hex.LinearRegression$CalcSquareErrorsTasks",
+    "hex.LinearRegression$CalcSumsTask",
+    "hex.NewRowVecTask",
+    "hex.NewRowVecTask$DataFrame",
+    "hex.RowVecTask$Sampling",
+    "water.H2ONode",
+    "water.HeartBeat",
+    "water.Jobs$1",
+    "water.Jobs$Job",
+    "water.Jobs$Progress$1",
+    "water.KVTest$Atomic2",
+    "water.KVTest$ByteHisto",
+    "water.KVTest$RemoteBitSet",
+    "water.Key",
+    "water.TaskGetKey",
+    "water.TaskPutKey",
+    "water.Value",
+    "water.ValueArray",
+    "water.ValueArray$Column",
+    "water.exec.IifOperatorScalar23",
+    "water.exec.LeftEq",
+    "water.parser.DParseTask",
+    "water.parser.DParseTask$AtomicUnion",
+    "water.parser.Enum",
+    "water.util.JStackCollectorTask",
   };
-
-  /** Remove my list of exemplars.  I will resync to the new leader over time.
-   */
-  public void changeLeader() {
-    // Better not have handed out any types; new leader will be out of sync
-    assert _examplars.length == INIT_MAP_SIZE;
+  static private final HashMap<String,Integer> MAP = new HashMap();
+  static {
+    for( int i=0; i<CLAZZES.length; i++ )
+      MAP.put(CLAZZES[i],i);
   }
 
-  /**
-   * Get a Freezable for deserialization.  Comes pre-cloned.
-   */
-  public Freezable getType(int id) {
-    Freezable f = getTypeImpl(id);
-    if( f == null ) f = fill(id);
+  static private final Freezable[] GOLD = new Freezable[CLAZZES.length];
+
+  static public Freezable getType(int id) {
+    Freezable f = GOLD[id];
+    if( f == null ) {
+      try { GOLD[id] = f = (Freezable) Class.forName(CLAZZES[id]).newInstance(); }
+      catch( Exception e ) { throw new Error(e); }
+    }
     return f.newInstance();
   }
 
-  public int getId(Freezable f) {
-    int i = getIdImpl(f);
-    if( i < 0 ) i = fill(f);
-    return i;
-  }
-
-  private Freezable getTypeImpl(int id) {
-    if( id >= _examplars.length ) return null;
-    return _examplars[id];
-  }
-
-  private int getIdImpl(Freezable f) {
-    String target = f.getClass().getName();
-    for( int i = 0; i < _examplars.length; ++i ) {
-      if( _examplars[i] == null ) continue;
-      if( _examplars[i].getClass().getName().equals(target) ) return i;
-    }
-    return -1;
-  }
-
-  private int fill(Freezable f) {
-    String clazz = f.getClass().getName();
-    assert Paxos._commonKnowledge : "TypeMap before commonKnowledge of "+clazz;
-    assert Paxos._cloudLocked     : "TypeMap before cloudLocked of "+clazz;
-    if( H2O.CLOUD.leader() == H2O.SELF ) return registerType(clazz);
-    FillRequest fr = new FillRequest(clazz, -1);
-    return RPC.call(H2O.CLOUD.leader(), fr).get()._index;
-  }
-
-  private Freezable fill(int i) {
-    assert H2O.CLOUD.leader() != H2O.SELF : "LEADER should contain the superset of all type maps";
-    FillRequest fr = new FillRequest(null, i);
-    return getTypeImpl(RPC.call(H2O.CLOUD.leader(), fr).get()._index);
-  }
-
-  private void recordType(String clazz, int index) {
-    assert H2O.CLOUD.leader() != H2O.SELF;
-    Freezable f = getTypeImpl(index);
-    if( f != null ) {
-      assert f.getClass().getName().equals(clazz);
-      return;
-    }
-
-    synchronized( this ) {
-      if( index >= _examplars.length )
-        _examplars = Arrays.copyOf(_examplars, index+1);
-      _examplars[index] = alloc(clazz);
-    }
-  }
-
-  private int registerType(String clazz) {
-    assert H2O.CLOUD.leader() == H2O.SELF;
-    synchronized( this ) {
-      int i = _examplars.length;
-      assert i<65535; // Cap at 2 bytes for shorter UDP packets & Timeline recording
-      _examplars = Arrays.copyOf(_examplars, i+1);
-      _examplars[i] = alloc(clazz);
-      return i;
-    }
-  }
-
-  private static Freezable alloc(String clazz) {
-    if( clazz == null ) return null;
-    try {
-      return (Freezable) Class.forName(clazz).newInstance();
-    } catch( Exception e ) {
-      throw Throwables.propagate(e);
-    }
-  }
-
-  private static class FillRequest extends DTaskImpl<FillRequest> {
-    String _clazz;
-    int _index;
-
-    public FillRequest(String clazz, int index) {
-      _clazz = clazz;
-      _index = index;
-    }
-
-    @Override public void compute2() { throw H2O.unimpl(); }
-    @Override public FillRequest invoke(H2ONode sender) {
-      if( _clazz == null ) {
-        int i = _index;
-        assert 0 <= i && i < MAP._examplars.length;
-        Freezable f = MAP.getTypeImpl(i);
-        _clazz = f.getClass().getName();
-        return this;
-      }
-
-      Freezable f = alloc(_clazz);
-      int i = MAP.getIdImpl(f);
-      if( i < 0 ) i = MAP.registerType(_clazz);
-      _index = i;
-      return this;
-    }
-
-    @Override public void onAck() { MAP.recordType(_clazz, _index); }
+  static public int getId(Freezable f) {
+    Integer I = MAP.get(f.getClass().getName());
+    assert I != null : "TypeMap missing "+f.getClass().getName();
+    return I;
   }
 }

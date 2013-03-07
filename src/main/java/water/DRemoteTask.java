@@ -4,15 +4,13 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import water.DTask.DTaskImpl;
-
 import com.google.common.base.Throwables;
 
 /**  A Distributed DTask.
  * Execute a set of Keys on the home for each Key.
  * Limited to doing a map/reduce style.
  */
-public abstract class DRemoteTask extends DTaskImpl<DRemoteTask> implements Cloneable {
+public abstract class DRemoteTask extends DTask<DRemoteTask> implements Cloneable {
   // Keys to be worked over
   protected Key[] _keys;
 
@@ -82,7 +80,7 @@ public abstract class DRemoteTask extends DTaskImpl<DRemoteTask> implements Clon
     _keys = locals.toArray(new Key[locals.size()]); // Keys, including local keys (if any)
     if( _keys.length != 0 ) {   // Shortcut for no local work
       init();                   // One-time top-level init
-      H2O.submitTsk(this);// Begin normal execution on a FJ thread
+      H2O.submitTask(this);// Begin normal execution on a FJ thread
     }
     return f;             // Block for results from the log-tree splits
   }
@@ -116,7 +114,7 @@ public abstract class DRemoteTask extends DTaskImpl<DRemoteTask> implements Clon
     DRemoteTask rpc = clone();
     rpc._keys = keys.toArray(new Key[keys.size()]);
 
-    return RPC.call(keys.get(0).home_node(), rpc, priority());// keep the same priority
+    return RPC.call(keys.get(0).home_node(), rpc);// keep the same priority
   }
 
   private final Key[] flatten( Key[] args ) {

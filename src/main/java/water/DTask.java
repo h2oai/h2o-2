@@ -24,11 +24,6 @@ public abstract class DTask<T> extends H2OCountedCompleter implements Freezable 
   // needs more time to process the TCP result.
   transient boolean _repliedTcp; // Any return/reply/result was sent via TCP
 
-  // In order to prevent deadlock, threads that block waiting for a reply from
-  // a remote node, need the remote task to run at a higher priority than
-  // themselves.  This field tracks the required priority.
-  public abstract int priority();
-    
   /** Top-level remote execution hook.  Called on the <em>remote</em>. */
   abstract public T invoke( H2ONode sender );
 

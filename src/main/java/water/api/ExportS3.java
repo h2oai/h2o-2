@@ -49,13 +49,10 @@ public class ExportS3 extends Request {
 
     try {
       final Key dest = MultipartUpload.init(value);
-      H2O.submitTsk(new H2OCountedCompleter() {
-        @Override
-        public void compute2() {
+      H2O.submitTask(new H2OCountedCompleter() {
+        @Override public void compute2() {
           MultipartUpload.run(dest, value, bucket, object);
         }
-        @Override
-        public int priority() {return RPC.MIN_PRIORITY;}
       });
 
       JsonObject response = new JsonObject();

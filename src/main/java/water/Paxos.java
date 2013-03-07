@@ -81,7 +81,6 @@ public abstract class Paxos {
         return print("Heartbeat hashes differ, self=0x"+Integer.toHexString(chash)+" "+h2o2+"=0x"+Integer.toHexString(h2o2._heartbeat._cloud_hash)+" ",PROPOSED);
     _commonKnowledge = true;    // Yup!  Have consensus
     H2O.CLOUD.set_next_Cloud(h2os,chash);
-    TypeMap.changeLeader();
     Paxos.class.notify(); // Also, wake up a worker thread stuck in DKV.put
     System.out.printf("[h2o] Cloud of size %d formed: %s\n",
                       H2O.CLOUD.size(), H2O.CLOUD.toString());

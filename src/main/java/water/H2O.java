@@ -1,10 +1,15 @@
 package water;
+
 import java.io.*;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.*;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.*;
 
 import jsr166y.*;
@@ -15,8 +20,6 @@ import water.store.s3.PersistS3;
 import water.util.Utils;
 import H2OInit.Boot;
 
-
-import com.google.common.base.Strings;
 import com.google.common.io.Closeables;
 
 /**
@@ -55,6 +58,7 @@ public final class H2O {
 
   public static final PrintStream OUT = System.out;
   public static final PrintStream ERR = System.err;
+  static final int NUMCPUS = Runtime.getRuntime().availableProcessors();
 
   // Convenience error
   public static final RuntimeException unimpl() { return new RuntimeException("unimplemented"); }
@@ -337,24 +341,34 @@ public final class H2O {
 
 
   // --------------------------------------------------------------------------
-  // The main Fork/Join worker pool(s).
+  // The worker pools - a F/J pool for low-priority high volume work, and
+  // a classic ThreadPoolExecutor supporting a PriorityBlockingQueue for
+  // tasks which need a priority ordering.
+
+  public static final byte        MAX_PRIORITY = Byte.MAX_VALUE-1;
+  public static final byte    ACK_ACK_PRIORITY = MAX_PRIORITY-0;
+  public static final byte        ACK_PRIORITY = MAX_PRIORITY-1;
+  public static final byte   DESERIAL_PRIORITY = MAX_PRIORITY-2;
+  public static final byte    GET_KEY_PRIORITY = MAX_PRIORITY-2;
+  public static final byte INVALIDATE_PRIORITY = MAX_PRIORITY-2;
+  public static final byte    PUT_KEY_PRIORITY = MAX_PRIORITY-3;
+  public static final byte     ATOMIC_PRIORITY = MAX_PRIORITY-3;
+  public static final byte        MIN_PRIORITY = 0;
+
+
+  // F/J threads that remember the priority of the last task they started
+  // working on.
   static class FJWThr extends ForkJoinWorkerThread {
-    public int _fjPriorityLvl;
-    FJWThr(ForkJoinPool pool, int priority) {
-      super(pool);
-      setPriority(priority);
-    }
+    public int _priority;
+    FJWThr(ForkJoinPool pool) { super(pool); }
   }
   static class FJWThrFact implements ForkJoinPool.ForkJoinWorkerThreadFactory {
-    final int _priority;
-    FJWThrFact( int priority ) { _priority = priority; }
     public ForkJoinWorkerThread newThread(ForkJoinPool pool) {
       // The "Normal" or "Low" priority work queues get capped at 99 threads
-      // blocked on I/O. I/O work *should* be done by HI priority threads on
-      // other nodes - so hopefully this will not lead to deadlock. Capping
+      // blocked on I/O.  I/O work *should* be done by HI priority threads on
+      // other nodes - so hopefully this will not lead to deadlock.  Capping
       // all thread pools definitely does lead to deadlock.
-      return (_priority > Thread.MIN_PRIORITY || pool.getPoolSize() < 100)
-        ? new FJWThr(pool,_priority) : null;
+      return pool.getPoolSize() < 100 ? new FJWThr(pool) : null;
     }
   }
 
@@ -366,23 +380,28 @@ public final class H2O {
   // low-priority F/J work starts with an attempt to work & drain the
   // high-priority queues.
   public static abstract class H2OCountedCompleter extends CountedCompleter {
+    // Once per F/J task, drain the high priority queue before doing any low
+    // priority work.
     @Override public final void compute() {
       FJWThr t = (FJWThr)Thread.currentThread();
-      assert t._fjPriorityLvl == RPC.MIN_PRIORITY; // Working some low-priority F/J task
-      assert priority() == RPC.MIN_PRIORITY;       // Working some low-priority F/J task
+      assert t._priority == MIN_PRIORITY; // Working some low-priority F/J task
+      assert  priority() == MIN_PRIORITY; // Working some low-priority F/J task
       // Drain the high priority queue before the normal F/J queue
       TaskQEntry priorityTask = null;
       while((priorityTask = TASKQ.poll()) != null) { // first do the priority work!
-        t._fjPriorityLvl = priorityTask._priority;
-        assert t._fjPriorityLvl > RPC.MIN_PRIORITY; // Working some high-priority task
-        priorityTask._tsk.compute2();
+        t._priority = priorityTask._task.priority();
+        priorityTask._task.compute2();
       }
-      // FJ pool has the lowest priority
-      t._fjPriorityLvl = RPC.MIN_PRIORITY;
       // finally do my own work
+      t._priority = MIN_PRIORITY;
       compute2();
     }
+    // Do the actually intended work
     public abstract void compute2();
+    // In order to prevent deadlock, threads that block waiting for a reply
+    // from a remote node, need the remote task to run at a higher priority
+    // than themselves.  This field tracks the required priority.
+    public byte priority() { return MIN_PRIORITY; }
     // Do not silently ignore uncaught exceptions!
     public boolean onExceptionalCompletion( Throwable ex, CountedCompleter caller ) {
       ex.printStackTrace();
@@ -390,112 +409,64 @@ public final class H2O {
     }
   }
 
+  // Normal-priority work is generally directly-requested user ops.
+  private static final ForkJoinPool FJP_NORM = 
+    new ForkJoinPool(NUMCPUS,new FJWThrFact(),null,false);
 
-  static int hiQPoolSize(){return FJP_HI.getPoolSize();}
-  static int loQPoolSize(){return FJP_NORM.getPoolSize();}
-
-
-
-
-.... crap just use a standard ThreadPoolExecutor with a priority queue...
-  // FJ pool for high priority tasks, must be here in case all low priority
-  // worker threads are blocked
-  private static class HiPriorityFJTsk extends CountedCompleter {
-    @Override public final void compute(){
-
-      // This method is fairly subtle, so a longish comment is in order:
-
-      // We want to always have an available thread to work high-priority jobs,
-      // even if those threads block (awaiting work on remote nodes).  Because
-      // of the priorities we are guaranteed to only need a finite number of
-      // threads (finite block nested).  The low-priority queue jobs can block
-      // all threads awaiting high priority jobs, so we cannot rely on the
-      // low-priority threads draining the high priority queue.
-
-      // But typically we only need 1 special hi-priority queue thread, because
-      // typically the low-priority threads are draining the queue.  So we want
-      // F/J to seek a level of having 1 hi-prior thread, but be willing to
-      // launch more hi-prior threads when the one is blocked (and to reap idle
-      // hi-prior threads).
-
-      // Do a blocking call now that does NOT spawn a thread - we are blocking
-      // because the hi-prior queue is empty.
-      TaskQEntry priorityTask = null;
-      try {priorityTask = TASKQ.take(); } catch( InterruptedException e ) {throw new Error(e);}
-
-      // In order for F/J to spawn a thread when this hi-prior thread blocks,
-      // we need to have a job on the F/J queue.  
-      H2O.FJP_HI.submit(this); // submit myself so that if I block, another thread will start running!
-
-      // Drain the hi-prior queue as fast as we can.  If we block in a
-      // compute2() call F/J will spawn another thread so service the above
-      // submitted task (maintaining a parallelism level of 1).
-      FJWThr t = (FJWThr)Thread.currentThread();
-      do { // first do the priority work!
-        t._fjPriorityLvl = priorityTask._priority;
-        priorityTask._tsk.compute2();
-      } while((priorityTask = TASKQ.poll()) != null);
-
-      // Exit once the queue is empty.  We might have a bunch of hi-prior
-      // threads spawned while we attempted to drain the queue - now that the
-      // queue is empty, we want to let F/J 
-      tryComplete();
-    }
-    public boolean onExceptionalCompletion( Throwable ex, CountedCompleter caller ) {
-      ex.printStackTrace();
-      return true;
-    }
-  }
-
-  public static int getLoQueuedSubmissionCount(){return FJP_NORM.getQueuedSubmissionCount();}
-  public static int getHiQueuedSubmissionCount(){return _taskQ.size();}
-
-  public static void submitTsk(H2OCountedCompleter tsk){
-    int priority = tsk.priority();
-    assert RPC.MIN_PRIORITY <= priority && priority <= RPC.MAX_PRIORITY;
-    if(priority == RPC.MIN_PRIORITY)
-      FJP_NORM.submit(tsk);
-    else
-      TASKQ.add(new TaskQEntry(tsk,priority));
-  }
 
   // Simple CountedCompleter wrapper that includes a notion of priorities.
   // Used to pull prioritized F/J tasks from the priority queue in-order.
   static AtomicInteger _taskSeq = new AtomicInteger();
-  private static class TaskQEntry {
-    public TaskQEntry( H2OCountedCompleter tsk, byte priority ) {
-      _tsk = tsk;
-      _priority = priority;
+  private static class TaskQEntry implements Runnable {
+    final H2OCountedCompleter _task;
+    final int _seq;
+    public TaskQEntry( H2OCountedCompleter task ) {
+      _task = task;
       _seq = _taskSeq.getAndIncrement();
     }
-    final H2OCountedCompleter _tsk;
-    final int _seq;
-    final byte _priority;
+    @Override public void run() { 
+      try { 
+        HiThr t = (HiThr)Thread.currentThread();
+        t._priority = _task.priority();
+        _task.compute2(); 
+      } catch( Throwable e ) { e.printStackTrace(); }
+    }
   }
-  static public PriorityBlockingQueue<TaskQEntry> TASKQ = new PriorityBlockingQueue<TaskQEntry>(128,new Comparator<TaskQEntry>() {
-      @Override public final int compare(TaskQEntry o1, TaskQEntry o2) {
-        int res = o1._priority - o2._priority;
-        if(res != 0)return res;
-        return o1._seq - o2._seq;
-      }
-    });
+  // Priority Queue, holding TaskQEntry's holding F/J tasks with a priority
+  static public PriorityBlockingQueue<TaskQEntry> TASKQ = 
+    new PriorityBlockingQueue<TaskQEntry>(128,new Comparator<TaskQEntry>() {
+        @Override public final int compare(TaskQEntry o1, TaskQEntry o2) {
+          int res = o1._task.priority() - o2._task.priority();
+          if( res != 0 ) return res;// Lower priority wins
+          return o1._seq - o2._seq; // Lower sequence numbers first, i.e. FIFO
+        }
+      });
 
-
-  public static final int HI_Q_THREADS = 1;
-  public static final int LO_Q_THREADS = Math.max(1,Runtime.getRuntime().availableProcessors()-1);
-  // Normal-priority work is generally directly-requested user ops.
-  private static final ForkJoinPool FJP_NORM =
-    new ForkJoinPool(LO_Q_THREADS,
-                     new FJWThrFact(Thread.MIN_PRIORITY), null, false);
-
-  private static final ForkJoinPool FJP_HI =
-      new ForkJoinPool(HI_Q_THREADS,
-                       new FJWThrFact(Thread.MAX_PRIORITY-2), null, false);
-
-  static {
-    for(int i = 0; i < HI_Q_THREADS; ++i)
-      FJP_HI.submit(new HiPriorityFJTsk());
+  static class HiThr extends Thread {
+    public int _priority;
+    HiThr( Runnable r ) { super(r); }
   }
+  static class HiThrFact implements ThreadFactory {
+    public HiThr newThread(Runnable r) {  return new HiThr(r);  }
+  }
+
+  // Thread Pool servicing the above priority queue
+  static public ThreadPoolExecutor HI_POOL = 
+    new ThreadPoolExecutor(10,99,1L,TimeUnit.SECONDS,
+                           (BlockingQueue)TASKQ, new HiThrFact());
+
+  public static int getLoQueue () { return FJP_NORM.getQueuedSubmissionCount(); }
+  public static int getHiQueue () { return TASKQ.size(); }
+  public static int hiQPoolSize() { return HI_POOL .getActiveCount(); }
+  public static int loQPoolSize() { return FJP_NORM.getPoolSize(); }
+
+  public static void submitTask( H2OCountedCompleter task ) {
+    int priority = task.priority();
+    assert MIN_PRIORITY <= priority && priority <= MAX_PRIORITY;
+    if( priority == MIN_PRIORITY )  FJP_NORM.submit(task);
+    else  HI_POOL.execute(new TaskQEntry(task));
+  }
+
   // --------------------------------------------------------------------------
   public static OptArgs OPT_ARGS = new OptArgs();
   public static class OptArgs extends Arguments.Opt {

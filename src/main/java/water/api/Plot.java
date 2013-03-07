@@ -36,15 +36,11 @@ public class Plot extends Request {
     try {
       final Key dest_ = dest;
       UKV.put(dest, new hex.KMeans.KMeansModel());
-
-      H2O.submitTsk(new H2OCountedCompleter() {
-        @Override
-        public void compute2() {
-          hex.Plot.run(dest_, va, width, height, cols);
-        }
-        @Override
-        public int priority() {return RPC.MIN_PRIORITY;}
-      });
+      H2O.submitTask(new H2OCountedCompleter() {
+          @Override public void compute2() {
+            hex.Plot.run(dest_, va, width, height, cols);
+          }
+        });
 
       JsonObject response = new JsonObject();
       response.addProperty(RequestStatics.DEST_KEY, dest.toString());

@@ -39,21 +39,15 @@ public class RReader extends Request {
       final Key dest_ = dest;
       UKV.put(dest, new RModel());
 
-      H2O.submitTsk(new H2OCountedCompleter() {
-        @Override
-        public void compute2() {
-          try {
-            water.RReader.run(dest_, source_.openStream());
-          } catch( IOException e ) {
-            Log.write(e);
+      H2O.submitTask(new H2OCountedCompleter() {
+          @Override public void compute2() {
+            try {
+              water.RReader.run(dest_, source_.openStream());
+            } catch( IOException e ) {
+              Log.write(e);
+            }
           }
-        }
-
-        @Override
-        public int priority() {
-         return RPC.MIN_PRIORITY;
-        }
-      });
+        });
       JsonObject response = new JsonObject();
       response.addProperty(RequestStatics.DEST_KEY, dest.toString());
 

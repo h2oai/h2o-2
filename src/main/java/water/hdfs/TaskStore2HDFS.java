@@ -1,7 +1,7 @@
 package water.hdfs;
 
 import water.*;
-import water.DTask.DTaskImpl;
+import water.DTask;
 
 /**
  * Distributed task to store key on HDFS.
@@ -14,7 +14,7 @@ import water.DTask.DTaskImpl;
  * @author tomasnykodym, cliffc
  *
  */
-public class TaskStore2HDFS extends DTaskImpl<TaskStore2HDFS> {
+public class TaskStore2HDFS extends DTask<TaskStore2HDFS> {
   Key _arykey;                  // Base array key
   long _indexFrom;              // Chunk number
   String _err;                  // Error reporting string
@@ -42,7 +42,7 @@ public class TaskStore2HDFS extends DTaskImpl<TaskStore2HDFS> {
 
     // Then start writing chunks in-order with the zero chunk
     H2ONode chk0_home = ValueArray.getChunkKey(0,srcKey).home_node();
-    RPC.call(ts.chunkHome(),ts,ts.priority());
+    RPC.call(ts.chunkHome(),ts);
 
     // Watch the progress key until it gets removed or an error appears
     long idx = 0;

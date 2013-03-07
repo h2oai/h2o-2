@@ -1,6 +1,6 @@
 package water;
 
-import water.DTask.DTaskImpl;
+import water.DTask;
 
 /**
  * Atomic update of a Key
@@ -9,7 +9,7 @@ import water.DTask.DTaskImpl;
  * @version 1.0
  */
 
-public abstract class Atomic extends DTaskImpl {
+public abstract class Atomic extends DTask {
   public Key _key;              // Transaction key
 
   // User's function to be run atomically.  The Key's Value is fetched from the
@@ -25,7 +25,7 @@ public abstract class Atomic extends DTaskImpl {
   public void onSuccess(){}
 
   // Only invoked remotely; this is now the key's home and can be directly executed
-  @Override public final Atomic invoke( H2ONode sender ) {  compute(); return this; }
+  @Override public final Atomic invoke( H2ONode sender ) {  compute2(); return this; }
 
   /** Block until it completes, even if run remotely */
   public final Atomic invoke( Key key ) {
@@ -41,7 +41,7 @@ public abstract class Atomic extends DTaskImpl {
       compute2();                // Also, run it blocking/now
       return null;
     } else {                    // Else run it remotely
-      return RPC.call(key.home_node(),this, RPC.ATOMIC_PRIORITY);
+      return RPC.call(key.home_node(),this);
     }
   }
 
@@ -75,4 +75,5 @@ public abstract class Atomic extends DTaskImpl {
     tryComplete();              // Tell F/J this task is done
   }
 
+  @Override public byte priority() { return H2O.ATOMIC_PRIORITY; }
 }

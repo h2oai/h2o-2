@@ -1,7 +1,7 @@
 package water;
 import java.util.concurrent.Future;
 
-import water.DTask.DTaskImpl;
+import water.DTask;
 
 /**
  * Push the given key to the remote node
@@ -10,12 +10,12 @@ import water.DTask.DTaskImpl;
  * @version 1.0
  */
 
-public class TaskPutKey extends DTaskImpl<TaskPutKey> {
+public class TaskPutKey extends DTask<TaskPutKey> {
   Key _key;
   Value _val;
   transient Value _xval;
   static void put( H2ONode h2o, Key key, Value val, Futures fs ) {
-    Future f = RPC.call(h2o,new TaskPutKey(key,val), (val == null)?RPC.INVALIDATE_KEY_PRIORITY:RPC.PUT_KEY_PRIORITY);
+    Future f = RPC.call(h2o,new TaskPutKey(key,val));
     if( fs != null ) fs.add(f);
   }
 
@@ -45,5 +45,8 @@ public class TaskPutKey extends DTaskImpl<TaskPutKey> {
   // Received an ACK
   @Override public void onAck() {
     if( _xval != null ) _xval.completeRemotePut();
+  }
+  @Override public byte priority() {
+    return (_val == null) ? H2O.INVALIDATE_PRIORITY : H2O.PUT_KEY_PRIORITY;
   }
 }

@@ -487,7 +487,7 @@ public final class AutoBuffer {
 
   public AutoBuffer put(Freezable f) {
     if( f == null ) return put2((short)-1);
-    put2((short)TypeMap.MAP.getId(f));
+    put2((short)TypeMap.getId(f));
     return f.write(this);
   }
   public AutoBuffer putA(Freezable[] fs)    {
@@ -506,7 +506,7 @@ public final class AutoBuffer {
   public <T extends Freezable> T get(Class<T> t) {
     short id = (short)get2();
     if( id == -1 ) return null;
-    Freezable f = TypeMap.MAP.getType(id);
+    Freezable f = TypeMap.getType(id);
     assert t.isInstance(f);
     return f.read(this);
   }

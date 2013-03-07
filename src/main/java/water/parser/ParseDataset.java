@@ -80,12 +80,9 @@ public final class ParseDataset {
 
   public static Job forkParseDataset( final Key dest, final Value dataset, final CsvParser.Setup setup ) {
     final Job job = Jobs.start("Parse", dest);
-    H2O.submitTsk(new H2OCountedCompleter() {
-      @Override public void compute2() { parse(job, dataset, setup); tryComplete(); }
-
-      @Override
-      public int priority() {return RPC.MIN_PRIORITY;}
-    });
+    H2O.submitTask(new H2OCountedCompleter() {
+        @Override public void compute2() { parse(job, dataset, setup); tryComplete(); }
+      });
     return job;
   }
 

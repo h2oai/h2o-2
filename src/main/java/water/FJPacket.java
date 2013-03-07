@@ -13,7 +13,7 @@ public class FJPacket extends H2OCountedCompleter {
   final AutoBuffer _ab;
   FJPacket( AutoBuffer ab ) { _ab = ab; }
 
-  public void compute2() {
+  @Override public void compute2() {
     int ctrl = _ab.getCtrl();
     _ab.getPort(); // skip past the port
     if(ctrl <= UDP.udp.ack.ordinal())
@@ -22,8 +22,14 @@ public class FJPacket extends H2OCountedCompleter {
       RPC.remote_exec(_ab);
     tryComplete();
   }
-  @Override
-  public int priority() {
-    return RPC.MAX_PRIORITY-1;
-  }
+  // Run at max priority until we decrypt the packet enough to get priorities out
+  static private byte[] UDP_PRIORITIES =
+    new byte[]{-1,
+               H2O.MAX_PRIORITY,    // Heartbeat
+               H2O.MAX_PRIORITY,    // Rebooted
+               H2O.MAX_PRIORITY,    // Timeline
+               H2O.ACK_ACK_PRIORITY,// Ack Ack
+               H2O.ACK_PRIORITY,    // Ack
+               H2O.DESERIAL_PRIORITY}; // Exec is very high, so we deserialize early
+  @Override public byte priority() { return UDP_PRIORITIES[_ab.getCtrl()]; }
 }
