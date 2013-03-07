@@ -92,40 +92,45 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   public synchronized RPC<V> call() {
     // Keep a global record, for awhile
     TASKS.put(_tasknum,this);
-    // We could be racing timeouts-vs-replies.  Blow off timeout if we have an answer.
-    if( isDone() ) {
-      TASKS.remove(_tasknum);
+    try{
+      // We could be racing timeouts-vs-replies.  Blow off timeout if we have an answer.
+      if( isDone() ) {
+        TASKS.remove(_tasknum);
+        return this;
+      }
+      // Default strategy: (re)fire the packet and (re)start the timeout.  We
+      // "count" exactly 1 failure: just whether or not we shipped via TCP ever
+      // once.  After that we fearlessly (re)send UDP-sized packets until the
+      // server replies.
+
+      // Pack classloader/class & the instance data into the outgoing
+      // AutoBuffer.  If it fits in a single UDP packet, ship it.  If not,
+      // finish off the current AutoBuffer (which is now going TCP style), and
+      // make a new UDP-sized packet.  On a re-send of a TCP-sized hunk, just
+      // send the basic UDP control packet.
+      if( !_sentTcp ) {
+        // Ship the UDP packet with clazz name to execute
+        // totally replace me with Michal's enums!!!
+        UDP.udp fjq = UDP.udp.exec;//_dt.isHighPriority() ? UDP.udp.exechi : UDP.udp.execlo;
+        AutoBuffer ab = new AutoBuffer(_target).putTask(fjq,_tasknum);
+        ab.put1(CLIENT_UDP_SEND).put(_dt).close();
+        if( ab.hasTCP() ) _sentTcp = true;
+      }
+      // Double retry until we exceed existing age.  This is the time to delay
+      // until we try again.  Note that we come here immediately on creation,
+      // so the first doubling happens before anybody does any waiting.  Also
+      // note the generous 5sec cap: ping at least every 5 sec.
+      _retry += (_retry < 5000 ) ? _retry : 5000;
+      // Put self on the "TBD" list of tasks awaiting Timeout.
+      // So: dont really 'forget' but remember me in a little bit.
+      assert !UDPTimeOutThread.PENDING.contains(this);
+      UDPTimeOutThread.PENDING.add(this);
       return this;
+    } catch(Throwable t){
+      t.printStackTrace();
+      TASKS.remove(_tasknum);
+      throw new Error(t);
     }
-    // Default strategy: (re)fire the packet and (re)start the timeout.  We
-    // "count" exactly 1 failure: just whether or not we shipped via TCP ever
-    // once.  After that we fearlessly (re)send UDP-sized packets until the
-    // server replies.
-
-    // Pack classloader/class & the instance data into the outgoing
-    // AutoBuffer.  If it fits in a single UDP packet, ship it.  If not,
-    // finish off the current AutoBuffer (which is now going TCP style), and
-    // make a new UDP-sized packet.  On a re-send of a TCP-sized hunk, just
-    // send the basic UDP control packet.
-    if( !_sentTcp ) {
-      // Ship the UDP packet with clazz name to execute
-      // totally replace me with Michal's enums!!!
-      UDP.udp fjq = UDP.udp.exec;//_dt.isHighPriority() ? UDP.udp.exechi : UDP.udp.execlo;
-      AutoBuffer ab = new AutoBuffer(_target).putTask(fjq,_tasknum);
-      ab.put1(CLIENT_UDP_SEND).put(_dt).close();
-      if( ab.hasTCP() ) _sentTcp = true;
-    }
-
-    // Double retry until we exceed existing age.  This is the time to delay
-    // until we try again.  Note that we come here immediately on creation,
-    // so the first doubling happens before anybody does any waiting.  Also
-    // note the generous 5sec cap: ping at least every 5 sec.
-    _retry += (_retry < 5000 ) ? _retry : 5000;
-    // Put self on the "TBD" list of tasks awaiting Timeout.
-    // So: dont really 'forget' but remember me in a little bit.
-    assert !UDPTimeOutThread.PENDING.contains(this);
-    UDPTimeOutThread.PENDING.add(this);
-    return this;
   }
 
   // Similar to FutureTask.get() but does not throw any exceptions.  Returns
