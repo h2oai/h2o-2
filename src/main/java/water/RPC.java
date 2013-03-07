@@ -92,7 +92,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   public synchronized RPC<V> call() {
     // Keep a global record, for awhile
     TASKS.put(_tasknum,this);
-    try{
+    try {
       // We could be racing timeouts-vs-replies.  Blow off timeout if we have an answer.
       if( isDone() ) {
         TASKS.remove(_tasknum);
@@ -126,10 +126,9 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       assert !UDPTimeOutThread.PENDING.contains(this);
       UDPTimeOutThread.PENDING.add(this);
       return this;
-    } catch(Throwable t){
+    } catch(Error t) {
       t.printStackTrace();
-      TASKS.remove(_tasknum);
-      throw new Error(t);
+      throw t;
     }
   }
 
