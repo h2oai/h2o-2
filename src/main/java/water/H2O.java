@@ -410,7 +410,7 @@ public final class H2O {
   }
 
   // Normal-priority work is generally directly-requested user ops.
-  private static final ForkJoinPool FJP_NORM = 
+  private static final ForkJoinPool FJP_NORM =
     new ForkJoinPool(NUMCPUS,new FJWThrFact(),null,false);
 
 
@@ -424,16 +424,16 @@ public final class H2O {
       _task = task;
       _seq = _taskSeq.getAndIncrement();
     }
-    @Override public void run() { 
-      try { 
+    @Override public void run() {
+      try {
         HiThr t = (HiThr)Thread.currentThread();
         t._priority = _task.priority();
-        _task.compute2(); 
+        _task.compute2();
       } catch( Throwable e ) { e.printStackTrace(); }
     }
   }
   // Priority Queue, holding TaskQEntry's holding F/J tasks with a priority
-  static public PriorityBlockingQueue<TaskQEntry> TASKQ = 
+  static public PriorityBlockingQueue<TaskQEntry> TASKQ =
     new PriorityBlockingQueue<TaskQEntry>(128,new Comparator<TaskQEntry>() {
         @Override public final int compare(TaskQEntry o1, TaskQEntry o2) {
           int res = o1._task.priority() - o2._task.priority();
@@ -442,7 +442,7 @@ public final class H2O {
         }
       });
 
-  static class HiThr extends Thread {
+  public static class HiThr extends Thread {
     public int _priority;
     HiThr( Runnable r ) { super(r); }
   }
@@ -451,7 +451,7 @@ public final class H2O {
   }
 
   // Thread Pool servicing the above priority queue
-  static public ThreadPoolExecutor HI_POOL = 
+  static public ThreadPoolExecutor HI_POOL =
     new ThreadPoolExecutor(10,99,1L,TimeUnit.SECONDS,
                            (BlockingQueue)TASKQ, new HiThrFact());
 

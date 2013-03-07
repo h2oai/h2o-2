@@ -3,9 +3,9 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import jsr166y.ForkJoinPool;
-import water.DTask;
 import water.H2O.FJWThr;
 import water.H2O.H2OCountedCompleter;
+import water.H2O.HiThr;
 
 /**
  * A remotely executed FutureTask.  Flow is:
@@ -133,13 +133,16 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   public V get() {
     // check priorities - FJ task can only block on a task with higher priority!
     Thread cThread = Thread.currentThread();
-    if( cThread instanceof FJWThr ) {
-      if((!(_dt instanceof DRemoteTask)) && _dt.priority() <= ((FJWThr)cThread)._priority) {
-        Error e = new Error("Attempting to block on task (" + _dt.getClass() + ") with equal or lower priority. Can lead to deadlock! " + _dt.priority() + " <=  " + ((FJWThr)cThread)._priority);
-        e.printStackTrace();
-      }
-    } else if( cThread instance HiThr ) {
-      throw H2O.unimpl();       // Assert Me Please!
+    int priority;
+    if( cThread instanceof FJWThr )
+      priority = ((FJWThr)cThread)._priority;
+    else if( cThread instanceof HiThr )
+      priority = ((HiThr)cThread)._priority;
+    else
+      priority = Integer.MIN_VALUE; // non prioritized thread
+    if((!(_dt instanceof DRemoteTask)) && _dt.priority() <= priority) {
+      Error e = new Error("*** Attempting to block on task (" + _dt.getClass() + ") with equal or lower priority. Can lead to deadlock! " + _dt.priority() + " <=  " + priority);
+      e.printStackTrace();
     }
     if( _done ) return _dt; // Fast-path shortcut
     // Use FJP ManagedBlock for this blocking-wait - so the FJP can spawn
