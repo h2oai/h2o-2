@@ -19,9 +19,9 @@ public abstract class Atomic extends DTask {
   abstract public byte[] atomic( byte[] bits );
 
   /** Executed on the transaction key's <em>home</em> node after any successful
-   *  atomic update.
+   *  atomic update.  Override this if you need to perform some action after
+   *  the update succeeds (eg cleanup).
    */
-  // override this if you need to perform some action after the update succeeds (eg cleanup)
   public void onSuccess(){}
 
   // Only invoked remotely; this is now the key's home and can be directly executed
@@ -38,7 +38,7 @@ public abstract class Atomic extends DTask {
   public final RPC<Atomic> fork(Key key) {
     _key = key;
     if( key.home() ) {          // Key is home?
-      compute2();                // Also, run it blocking/now
+      compute2();               // Also, run it blocking/now
       return null;
     } else {                    // Else run it remotely
       return RPC.call(key.home_node(),this);
