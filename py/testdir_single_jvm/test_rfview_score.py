@@ -13,7 +13,8 @@ paramDict = {
     'class_weights': [None,'1=2','2=2','3=2','4=2','5=2','6=2','7=2'],
     'ntree': [1,3,7,19],
     'model_key': ['model_keyA', '012345', '__hello'],
-    'out_of_bag_error_estimate': [None,0,1],
+    # UPDATE: H2O...OOBE has to be 0 for scoring
+    'out_of_bag_error_estimate': [0],
     'gini': [None, 0, 1],
     'depth': [None, 1,10,20,100],
     'bin_limit': [None,5,10,100,1000],
@@ -72,8 +73,7 @@ class Basic(unittest.TestCase):
 
         for trial in range(5):
             # params is mutable. This is default.
-            params = {'ntree': 13, 'parallel': 1} 
-            params['out_of_bag_error_estimate'] = 1
+            params = {'ntree': 13, 'parallel': 1, 'out_of_bag_error_estimate': 0}
             colX = h2o_rf.pickRandRfParams(paramDict, params)
             kwargs = params.copy()
             # adjust timeoutSecs with the number of trees
