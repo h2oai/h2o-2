@@ -693,9 +693,12 @@ class H2O(object):
         return requests.get(self.__url('Get.html'),
             params={"key": key})
 
-    # noise is a 2-tuple ("StoreView, none) for url plus args for doing during poll to create noise
+    # noise is a 2-tuple ("StoreView", none) for url plus args for doing during poll to create noise
+    # so we can create noise with different urls!, and different parms to that url
     # no noise if None
-    def poll_url(self, response, timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=None, noise=None):
+    def poll_url(self, response, 
+        timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=15,
+        noise=None):
         verboseprint('poll_url input: response:', dump_json(response))
 
         url = self.__url(response['redirect_request'])
@@ -732,7 +735,7 @@ class H2O(object):
             r = self.__check_request(
                 requests.get(
                     url=urlUsed,
-                    timeout=15, 
+                    timeout=pollTimeoutSecs, 
                     params=paramsUsed))
 
             if ((count%5)==0):
@@ -786,7 +789,8 @@ class H2O(object):
 
     # params: header=1, 
     # noise is a 2-tuple: ("StoreView",params_dict)
-    def parse(self, key, key2=None, timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, 
+    def parse(self, key, key2=None, 
+        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=15,
         noPoll=False, **kwargs):
         browseAlso = kwargs.pop('browseAlso',False)
         # this doesn't work. webforums indicate max_retries might be 0 already? (as of 3 months ago)
@@ -821,7 +825,9 @@ class H2O(object):
             # no noise if None
             verboseprint('Parse.Json noise:', noise)
             a = self.poll_url(a['response'],
-                timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, initialDelaySecs=initialDelaySecs, noise=noise)
+                timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
+                initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+                noise=noise)
             verboseprint("\nParse result:", dump_json(a))
             return a
 
