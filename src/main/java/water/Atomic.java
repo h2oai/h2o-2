@@ -71,7 +71,7 @@ public abstract class Atomic extends DTask {
     }                           // and retry
     onSuccess();                // Call user's post-XTN function
     _key = null;                // No need for key no more
-    fs.blockForPending();         // Block for any pending invalidates on the atomic update
+    fs.blockForPending(); // Block for any pending invalidates on the atomic update
     tryComplete();              // Tell F/J this task is done
   }
 

@@ -56,24 +56,14 @@ public abstract class Jobs {
   private static final Key KEY = Key.make(Constants.BUILT_IN_KEY_JOBS, (byte) 0, Key.SINGLETONS);
 
   private static final class List extends Iced {
-    Job[] _jobs;
+    Job[] _jobs = new Job[0];
   }
 
   static {
     new TAtomic<List>() {
-      @Override
-      public List alloc() {
-        return new List();
-      }
-
-      @Override
-      public List atomic(List old) {
-        if( old == null ) {
-          List empty = new List();
-          empty._jobs = new Job[0];
-          return empty;
-        }
-        return old;
+      @Override public List alloc() { return new List(); }
+      @Override public List atomic(List old) {
+        return old == null ? new List() : old;
       }
     }.fork(KEY);
   }
@@ -101,17 +91,12 @@ public abstract class Jobs {
     job._dest = dest;
 
     new TAtomic<List>() {
-      @Override
-      public List alloc() {
-        return new List();
-      }
-
-      @Override
-      public List atomic(List old) {
+      @Override public List alloc() { return new List(); }
+      @Override public List atomic(List old) {
+        if( old == null ) old = new List();
         Job[] jobs = old._jobs;
-        old._jobs = new Job[jobs.length + 1];
-        System.arraycopy(jobs, 0, old._jobs, 0, jobs.length);
-        old._jobs[old._jobs.length - 1] = job;
+        old._jobs = Arrays.copyOf(jobs,jobs.length+1);
+        old._jobs[jobs.length] = job;
         return old;
       }
     }.invoke(KEY);

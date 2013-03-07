@@ -23,6 +23,7 @@ public class TypeMap {
     "hex.NewRowVecTask",
     "hex.NewRowVecTask$DataFrame",
     "hex.RowVecTask$Sampling",
+    "hex.rf.Confusion",
     "hex.rf.DRF",
     "hex.rf.MinorityClasses$ClassExtractTask",
     "hex.rf.MinorityClasses$CountMClassRowsTask",

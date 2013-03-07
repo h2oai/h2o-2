@@ -345,6 +345,23 @@ public final class H2O {
   // a classic ThreadPoolExecutor supporting a PriorityBlockingQueue for
   // tasks which need a priority ordering.
 
+  // These priorities are carefully ordered and asserted for... modify with
+  // care.  The real problem here is that we can get into cyclic deadlock
+  // unless we spawn a thread of priority "X+1" in order to allow progress
+  // on a queue which might be flooded with a large number of "<=X" tasks.
+  //
+  // Example of deadlock: suppose TaskPutKey and the Invalidate ran at the same
+  // priority on a 2-node cluster.  Both nodes flood their own queues with
+  // writes to unique keys, which require invalidates to run on the other node.
+  // Suppose the flooding depth exceeds the thread-limit (e.g. 99); then each
+  // node might have all 99 worker threads blocked in TaskPutKey, awaiting
+  // remote invalidates - but the other nodes' threads are also all blocked
+  // awaiting invalidates!
+  //
+  // We fix this by being willing to always spawn a thread working on jobs at
+  // priority X+1, and guaranteeing there are no jobs above MAX_PRIORITY -
+  // i.e., jobs running at MAX_PRIORITY cannot block, and when those jobs are
+  // done, the next lower level jobs get unblocked, etc.
   public static final byte        MAX_PRIORITY = Byte.MAX_VALUE-1;
   public static final byte    ACK_ACK_PRIORITY = MAX_PRIORITY-0;
   public static final byte        ACK_PRIORITY = MAX_PRIORITY-1;
@@ -352,7 +369,7 @@ public final class H2O {
   public static final byte    GET_KEY_PRIORITY = MAX_PRIORITY-2;
   public static final byte INVALIDATE_PRIORITY = MAX_PRIORITY-2;
   public static final byte    PUT_KEY_PRIORITY = MAX_PRIORITY-3;
-  public static final byte     ATOMIC_PRIORITY = MAX_PRIORITY-3;
+  public static final byte     ATOMIC_PRIORITY = MAX_PRIORITY-4;
   public static final byte        MIN_PRIORITY = 0;
 
 
