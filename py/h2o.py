@@ -3,10 +3,10 @@ import requests, psutil, argparse, sys, unittest
 import glob
 import h2o_browse as h2b
 import re
-import inspect, webbrowser
+import webbrowser
 import random
 # used in shutil.rmtree permission hack for windows
-import os, stat, errno
+import errno
 
 # For checking ports in use, using netstat thru a subprocess.
 from subprocess import Popen, PIPE
@@ -479,9 +479,9 @@ def check_sandbox_for_errors():
                     # looks like min of 10 lines looks like it will cover it
                     # but also maybe just count NOPTask
                     if re.match(r'NOPTask',line):
-                        foundNopTaskCnt += 1
+                        foundNOPTaskCnt += 1
 
-                    if foundBad and (lines>10) and not (foundCaused or foundAt or foundNopTaskCnt==1):
+                    if foundBad and (lines>10) and not (foundCaused or foundAt or foundNOPTaskCnt==1):
                         printing = 2 
 
                 if (printing==1):
