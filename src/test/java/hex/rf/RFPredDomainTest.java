@@ -1,7 +1,7 @@
 package hex.rf;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import hex.rf.DRF.DRFFuture;
 import hex.rf.Tree.StatType;
 
@@ -9,7 +9,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import water.*;
-import water.DRemoteTask.DFuture;
 import water.util.TestUtil;
 
 /**

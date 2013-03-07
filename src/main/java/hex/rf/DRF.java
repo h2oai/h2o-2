@@ -91,7 +91,7 @@ public final class DRF extends water.DRemoteTask {
       StatType stat, long seed, boolean parallelTrees, double[] classWt, int numSplitFeatures,
       boolean stratify, Map<Integer,Integer> strata, int verbose, int exclusiveSplitLimit) {
     final DRF drf = create(modelKey, cols, ary, ntrees, depth, sample, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, stratify, strata, verbose, exclusiveSplitLimit);
-    drf._job = drf._job = Jobs.start(jobName(drf), modelKey);
+    drf._job = Jobs.start(jobName(drf), modelKey);
     return drf.new DRFFuture(drf.fork(drf.aryKey()));
   }
 
