@@ -30,6 +30,7 @@ public class TypeMap {
     "water.Key",
     "water.TaskGetKey",
     "water.TaskPutKey",
+    "water.TaskInvalidateKey",
     "water.Value",
     "water.ValueArray",
     "water.ValueArray$Column",

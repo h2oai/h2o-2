@@ -402,7 +402,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     // We have the set of Nodes with replicas now.  Ship out invalidates.
     for( int i=0; i<58; i++ )
       if( ((old>>i)&1) != 0 && H2ONode.IDX[i] != sender )
-        TaskPutKey.invalidate(H2ONode.IDX[i],_key,fs);
+        TaskInvalidateKey.invalidate(H2ONode.IDX[i],_key,fs);
     return fs;
   }
 
