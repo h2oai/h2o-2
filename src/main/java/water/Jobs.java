@@ -129,10 +129,9 @@ public abstract class Jobs {
   public static void remove(final Key key) {
     DKV.remove(key);
     new TAtomic<List>() {
-      @Override
-      public List alloc() {
-        return new List();
-      }
+      transient Key _progress;
+      @Override public List alloc() { return new List(); }
+      @Override public void onSuccess() { UKV.remove(_progress); }
 
       @Override
       public List atomic(List old) {
@@ -151,7 +150,7 @@ public abstract class Jobs {
             if( i != index )
               old._jobs[n++] = jobs[i];
             else
-              UKV.remove(jobs[i]._progress);
+              _progress = jobs[i]._progress; // Save for key remove on success
           }
         }
         return old;
