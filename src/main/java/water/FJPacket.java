@@ -11,13 +11,13 @@ import water.H2O.H2OCountedCompleter;
  */
 public class FJPacket extends H2OCountedCompleter {
   final AutoBuffer _ab;
-  FJPacket( AutoBuffer ab ) { _ab = ab; }
+  final int _ctrl;              // 1st byte of packet
+  FJPacket( AutoBuffer ab, int ctrl ) { _ab = ab; _ctrl = ctrl; }
 
   @Override public void compute2() {
-    int ctrl = _ab.getCtrl();
     _ab.getPort(); // skip past the port
-    if(ctrl <= UDP.udp.ack.ordinal())
-      UDP.udp.UDPS[ctrl]._udp.call(_ab).close();
+    if( _ctrl <= UDP.udp.ack.ordinal() )
+      UDP.udp.UDPS[_ctrl]._udp.call(_ab).close();
     else
       RPC.remote_exec(_ab);
     tryComplete();
@@ -31,5 +31,5 @@ public class FJPacket extends H2OCountedCompleter {
                H2O.ACK_ACK_PRIORITY,// Ack Ack
                H2O.ACK_PRIORITY,    // Ack
                H2O.DESERIAL_PRIORITY}; // Exec is very high, so we deserialize early
-  @Override public byte priority() { return UDP_PRIORITIES[_ab.getCtrl()]; }
+  @Override public byte priority() { return UDP_PRIORITIES[_ctrl]; }
 }
