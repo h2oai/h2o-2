@@ -8,6 +8,8 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import water.api.Timeline;
+
 /**
  * A ByteBuffer backed mixed Input/OutputStream class.
  *
@@ -323,7 +325,7 @@ public final class AutoBuffer {
   // not connect it up-front to a target - but send the entire packet right now.
   private int udpSend() throws IOException {
     assert _chan == null;
-    TimeLine.record_send(this);
+    TimeLine.record_send(this,false);
     _bb.flip();                 // Flip for sending
     if( _h2o==H2O.SELF ) {      // SELF-send is the multi-cast signal
       H2O.multicast(_bb);
@@ -390,7 +392,7 @@ public final class AutoBuffer {
     if( sz <= _bb.remaining() ) return _bb;
     return sendPartial();
   }
-
+  boolean _tcpStarted = false;
   // Do something with partial results, because the ByteBuffer is full.
   // If we are byte[] backed, double the backing array size.
   // If we are doing I/O, ship the bytes we have now and flip the ByteBuffer.
@@ -406,6 +408,10 @@ public final class AutoBuffer {
       return _bb;
     }
     // Doing I/O with the full ByteBuffer - ship partial results
+    if(!_tcpStarted){
+      TimeLine.record_send(this,true);
+      _tcpStarted = true;
+    }
     int attempts = 0;
     _bb.flip(); // Prep for writing.
     _bb.mark();

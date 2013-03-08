@@ -124,8 +124,9 @@ public final class TimelineSnapshot implements
     public final InetAddress addrPack() { return TimeLine.inet(_val, _eventIdx); }
     public final long dataLo() { return TimeLine.l0(_val, _eventIdx); }
     public final long dataHi() { return TimeLine.l8(_val, _eventIdx); }
-    public long ns() { return TimeLine.ns(_val, _eventIdx); }
-    public long ms() { return TimeLine.ms(_val, _eventIdx) + recoH2O()._heartbeat._jvm_boot_msec; }
+    public final long ns() { return TimeLine.ns(_val, _eventIdx); }
+    public final boolean isTCP(){return (ns() & 4) != 0;}
+    public final long ms() { return TimeLine.ms(_val, _eventIdx) + recoH2O()._heartbeat._jvm_boot_msec; }
     public H2ONode packH2O() { return _packh2o; } // H2O in packet
     public H2ONode recoH2O() { return _cloud._memary[_nodeId]; } // H2O recording packet
     public final int portPack() {

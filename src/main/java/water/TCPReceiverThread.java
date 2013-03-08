@@ -2,6 +2,8 @@ package water;
 import java.nio.channels.ServerSocketChannel;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import water.api.Timeline;
+
 /**
  * The Thread that looks for TCP Cloud requests.
  *
@@ -49,7 +51,7 @@ public class TCPReceiverThread extends Thread {
 
         // Record the last time we heard from any given Node
         ab._h2o._last_heard_from = System.currentTimeMillis();
-
+        TimeLine.record_recv(ab, true,0);
         // Hand off the TCP connection to the proper handler
         switch( UDP.udp.UDPS[ctrl] ) {
         case exec:     H2O.submitTask(new FJPacket(ab)); break;

@@ -201,15 +201,16 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       if( flag == CLIENT_UDP_SEND ) {
         int tid = ab.get2();
         clazz = TypeMap.getType(tid).toString();
+        clazz = clazz.substring(clazz.lastIndexOf('.')+1, clazz.indexOf('@'));
       }
-      String fs = "";
-      switch( flag ) {
-      case SERVER_UDP_SEND: fs = "SERVER_UDP_SEND"; break;
-      case SERVER_TCP_SEND: fs = "SERVER_TCP_SEND"; break;
-      case CLIENT_UDP_SEND: fs = "CLIENT_UDP_SEND"; break;
-      case CLIENT_TCP_SEND: fs = "CLIENT_TCP_SEND"; break;
-      }
-      return "task# "+ab.getTask()+" "+fs+" "+ clazz;
+//      String fs = "";
+//      switch( flag ) {
+//      case SERVER_UDP_SEND: fs = "SERVER_UDP_SEND"; break;
+//      case SERVER_TCP_SEND: fs = "SERVER_TCP_SEND"; break;
+//      case CLIENT_UDP_SEND: fs = "CLIENT_UDP_SEND"; break;
+//      case CLIENT_TCP_SEND: fs = "CLIENT_TCP_SEND"; break;
+//      }
+      return "task# "+ab.getTask()+" "+ clazz;
     }
   }
 
