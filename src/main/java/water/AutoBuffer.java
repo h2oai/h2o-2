@@ -392,7 +392,6 @@ public final class AutoBuffer {
     if( sz <= _bb.remaining() ) return _bb;
     return sendPartial();
   }
-  boolean _tcpStarted = false;
   // Do something with partial results, because the ByteBuffer is full.
   // If we are byte[] backed, double the backing array size.
   // If we are doing I/O, ship the bytes we have now and flip the ByteBuffer.
@@ -408,11 +407,8 @@ public final class AutoBuffer {
       return _bb;
     }
     // Doing I/O with the full ByteBuffer - ship partial results
-    if(!_tcpStarted){
+    if( _chan == null )
       TimeLine.record_send(this,true);
-      _tcpStarted = true;
-    }
-    int attempts = 0;
     _bb.flip(); // Prep for writing.
     _bb.mark();
     try{
@@ -421,11 +417,8 @@ public final class AutoBuffer {
       while( _bb.hasRemaining() )
         _chan.write(_bb);
     } catch( IOException e ) {   // Can't open the connection, try again later
-      if(++attempts == TCP_WRITE_ATTEMPTS)throw new RuntimeException(e);
-      System.err.println("TCP Open/Write attempt # " + attempts + " failed, reason: " + e.getMessage());
-      if(_chan != null && _chan.isOpen()) // if the op did not finish, restart it from scratch
-        try {_chan.close(); _bb.reset(); _chan = null;} catch( IOException e1) {}
-      try {Thread.sleep(1000);} catch( InterruptedException e1 ) {}
+      System.err.println("TCP Open/Write failed: " + e.getMessage());
+      throw new Error(e);
     }
     if( _bb.capacity() < 16*1024 ) _bb = bbMake();
     _firstPage = false;
