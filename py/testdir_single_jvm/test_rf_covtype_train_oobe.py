@@ -8,6 +8,7 @@ import h2o, h2o_cmd, h2o_rf as h2f
 # only classes 1-7 in the 55th col
 # rng DETERMINISTIC is default
 paramDict = {
+    # FIX! if there's a header, can you specify column number or column header
     'response_variable': 54,
     'class_weight': None,
     'ntree': 30,
@@ -20,7 +21,8 @@ paramDict = {
     # 'bin_limit': 10000,
     'bin_limit': 10000,
     'parallel': 1,
-    # 'ignore': "1,2,6,7,8",
+    # FIX! column numbers not supported
+    'ignore': "1,2,6,7,8",
     # 'ignore': "A2,A3,A7,A8,A9",
     'sample': 80,
     ## 'seed': 3,
@@ -47,8 +49,8 @@ def info_from_inspect(inspect, csvPathname):
     ptime = response['time']
 
     print "num_cols: %s, num_rows: %s, row_size: %s, ptype: %s, \
-           value_size_bytes: %s, response: %s, time: %s" % \
-           (num_cols, num_rows, row_size, ptype, value_size_bytes, response, ptime)
+           value_size_bytes: %s, time: %s" % \
+           (num_cols, num_rows, row_size, ptype, value_size_bytes, ptime)
 
 
 class Basic(unittest.TestCase):
@@ -64,11 +66,21 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rf_covtype_train_oobe(self):
-        csvFilename = 'train.csv'
-        csvPathname = h2o.find_dataset('bench/covtype/h2o/' + csvFilename)
-        print "\nUsing header=1 even though I shouldn't have to. Otherwise I get NA in first row and RF bad\n"
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", header=1, 
-            timeoutSecs=180)
+        if (1==0):
+            csvFilename = 'train.csv'
+            csvPathname = h2o.find_dataset('bench/covtype/h2o/' + csvFilename)
+            print "\nUsing header=1 even though I shouldn't have to. Otherwise I get NA in first row and RF bad\n"
+            parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", header=1, 
+                timeoutSecs=180)
+            # FIX! maybe try specifying column header with column name
+            ### kwargs['response_variable'] = A55
+        else:
+            csvFilename = 'covtype.data'
+            print "\nUsing header=0 on the normal covtype.data"
+            csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
+            parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", header=0, 
+                timeoutSecs=180)
+
 
         inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
         info_from_inspect(inspect, csvPathname)
