@@ -102,6 +102,7 @@ public class TypeMap {
     "water.parser.DParseTask",
     "water.parser.DParseTask$AtomicUnion",
     "water.parser.Enum",
+    "water.util.FileIntegrityChecker",
     "water.util.JStackCollectorTask",
   };
   static private final HashMap<String,Integer> MAP = new HashMap();
