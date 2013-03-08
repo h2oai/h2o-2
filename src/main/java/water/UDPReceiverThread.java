@@ -102,7 +102,7 @@ public class UDPReceiverThread extends Thread {
     // thread.  Dups are handled by these packet handlers directly.  No
     // current membership check required for Paxos packets
     if( UDP.udp.UDPS[ctrl]._paxos || is_member ) {
-      H2O.submitTask(new FJPacket(ab));
+      H2O.submitTask(new FJPacket(ab,ctrl));
       return;
     }
     // Some non-Paxos packet from a non-member.  Probably should record &

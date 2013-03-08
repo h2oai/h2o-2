@@ -16,30 +16,20 @@ public abstract class Jobs {
 
   public static class Progress extends Iced {
     public long _value, _limit;
-
-    public Progress() {
-    }
-
+    public Progress() { }
     public Progress(long value, long limit) {
       _value = value;
       _limit = limit;
     }
-
     public final float get() {
       return Math.min(1f, _limit == 0 ? 0 : (float) ((double) _value / _limit));
     }
-
     public static void update(Key key, final long delta) {
       new TAtomic<Progress>() {
-        @Override
-        public Progress atomic(Progress old) {
+        @Override public Progress alloc() { return new Progress(); }
+        @Override public Progress atomic(Progress old) {
           old._value += delta;
           return old;
-        }
-
-        @Override
-        public Progress alloc() {
-          return new Progress();
         }
       }.fork(key);
     }
@@ -128,7 +118,6 @@ public abstract class Jobs {
         _progress = jobs[i]._progress; // Save progress key for remove on success
         jobs[i] = jobs[jobs.length-1]; // Compact out the key from the list
         old._jobs = Arrays.copyOf(jobs,jobs.length-1);
-        old._jobs = new Job[jobs.length - 1];
         return old;
       }
     }.invoke(KEY);

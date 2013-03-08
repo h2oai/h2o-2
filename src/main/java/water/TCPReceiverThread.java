@@ -35,7 +35,7 @@ public class TCPReceiverThread extends Thread {
           final ServerSocketChannel tmp2 = errsock; errsock = null;
           tmp2.close();       // Could throw, but errsock cleared for next pass
         }
-        if( saw_error ) Thread.sleep(1000); // prevent deny-of-service endless socket-creates
+        if( saw_error ) Thread.sleep(100); // prevent deny-of-service endless socket-creates
         saw_error = false;
 
         // ---
@@ -54,7 +54,8 @@ public class TCPReceiverThread extends Thread {
         TimeLine.record_recv(ab, true,0);
         // Hand off the TCP connection to the proper handler
         switch( UDP.udp.UDPS[ctrl] ) {
-        case exec:     H2O.submitTask(new FJPacket(ab)); break;
+          case exec:     H2O.submitTask(new FJPacket(ab,ctrl)); break;
+          //case exec:     RPC.remote_exec(ab); break;
         case ack:      RPC.tcp_ack (ab); break;
         case ackack:   UDP.udp.UDPS[ctrl]._udp.call(ab).close(); break;
         case timeline: TimeLine.tcp_call(ab); break;

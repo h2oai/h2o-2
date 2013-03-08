@@ -5,7 +5,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import jsr166y.ForkJoinPool;
 import water.H2O.FJWThr;
 import water.H2O.H2OCountedCompleter;
-import water.H2O.HiThr;
 
 /**
  * A remotely executed FutureTask.  Flow is:
@@ -137,9 +136,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   public V get() {
     // check priorities - FJ task can only block on a task with higher priority!
     Thread cThr = Thread.currentThread();
-    int priority =
-       (cThr instanceof FJWThr) ? ((FJWThr)cThr)._priority :
-      ((cThr instanceof  HiThr) ? (( HiThr)cThr)._priority : 0);
+    int priority = (cThr instanceof FJWThr) ? ((FJWThr)cThr)._priority : 0;
     assert _dt.priority() > priority || (_dt.priority() == priority && _dt instanceof DRemoteTask)
       : "*** Attempting to block on task (" + _dt.getClass() + ") with equal or lower priority. Can lead to deadlock! " + _dt.priority() + " <=  " + priority;
     if( _done ) return _dt; // Fast-path shortcut
@@ -255,7 +252,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     // only the last one.
     DTask old = ab._h2o.record_task(task);
     if(ab.hasTCP())
-      assert old ==null : "#"+task+" "+old.getClass(); // For TCP, no repeats, so 1st send is only send
+      assert old ==null||old instanceof NOPTask : "#"+task+" "+old.getClass(); // For TCP, no repeats, so 1st send is only send
     if(old != null) {
       if( old instanceof NOPTask ) {
         // This packet has not been ACK'd yet.  Hence it's still a
