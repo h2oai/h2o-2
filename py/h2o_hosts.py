@@ -28,7 +28,7 @@ def build_cloud_with_hosts(node_count=None, use_flatfile=None,
         configFilename = find_config(h2o.config_json)
     else:
         # configs may be in the testdir_hosts
-        configFilename = find_config('pytest_config-%s.json' %getpass.getuser())
+        configFilename = find_config(h2o.default_hosts_file())
 
     h2o.verboseprint("Loading host config from", configFilename)
     with open(configFilename, 'rb') as fp:

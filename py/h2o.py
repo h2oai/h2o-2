@@ -309,14 +309,24 @@ def check_port_group(base_port):
             output = p3.communicate()[0]
             print output
 
+def default_hosts_file():
+    return 'pytest_config-{0}.json'.format(getpass.getuser())
+
 # node_count is number of H2O instances per host if hosts is specified.
 def decide_if_localhost():
+    # First, look for local hosts file
+    hostsFile = default_hosts_file()
+    if os.path.exists(hostsFile): 
+        verboseprint("* Using config JSON file {0}.".format(hostsFile))
+        return False
     if config_json:
-        print "config_json:", config_json
+        verboseprint("* Using config JSON:", config_json)
         return False
     if 'hosts' in os.getcwd():
-        print "Will use the username's config json"
+        verboseprint("* Using the username's config json")
         return False
+    verboseprint( "Launching local cloud...")
+
     return True
 
 # node_count is per host if hosts is specified.
