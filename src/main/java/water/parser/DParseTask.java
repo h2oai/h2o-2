@@ -121,18 +121,15 @@ public final class DParseTask extends MRTask {
   }
 
   public static class AtomicUnion extends Atomic {
-//    Key _key;
     byte [] _bits;
     int _dst_off;
     public AtomicUnion() {}
     public AtomicUnion(byte[] buf, int dstOff){
       _dst_off = dstOff;
       _bits = buf;
-//      _key = Key.make(Key.make()._kb, (byte) 1, Key.DFJ_INTERNAL_USER, H2O.SELF);
-//      UKV.put(_key, new Value(_key, buf));
     }
     @Override public byte[] atomic( byte[] bits1 ) {
-      byte[] mem = _bits;//DKV.get(_key).get();
+      byte[] mem = _bits;
       int len = Math.max(_dst_off + mem.length,bits1==null?0:bits1.length);
       byte[] bits2 = MemoryManager.malloc1(len);
       if( bits1 != null ) System.arraycopy(bits1,0,bits2,0,bits1.length);
@@ -141,7 +138,7 @@ public final class DParseTask extends MRTask {
     }
 
     @Override public void onSuccess(){
-      _bits = null;
+      _bits = null;             // Do not return the bits
     }
   }
 
