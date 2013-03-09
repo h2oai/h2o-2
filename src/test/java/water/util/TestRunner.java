@@ -36,7 +36,7 @@ public class TestRunner {
     org.junit.runner.JUnitCore.runClasses(KVTest.class);
 
     Desktop desktop = Desktop.getDesktop();
-    desktop.browse(new URI("http://localhost:54321/Timeline.html"));
+    desktop.browse(new URI("http://localhost:54321/Cloud.html"));
 
     BufferedReader console = new BufferedReader(new InputStreamReader(System.in));
     console.readLine();
