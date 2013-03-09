@@ -43,12 +43,11 @@ public class RFPredDomainTest extends TestUtil {
     drf.get();
 
     RFModel model = UKV.get(modelKey, new RFModel());
-System.out.println("RFPredDomainTest.runIrisRF(): " + model);
     String testKeyName  = "iris_test.hex";
     // Load validation dataset
     Key testKey         = loadAndParseKey(testKeyName, testDS);
     ValueArray testData = ValueArray.value(testKey);
-System.out.println("RFPredDomainTest.runIrisRF(): " + testData._key);
+    // Produce confusion matrix - the call is blocking
     Confusion confusion = Confusion.make(model, testData._key, model._features-1, null, false);
     confusion.report();
     assertEquals("Error rate", expTestErr, confusion.classError(), 0.001);
