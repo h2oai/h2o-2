@@ -709,6 +709,7 @@ class H2O(object):
     def poll_url(self, response, 
         timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=15,
         noise=None):
+        print "poll_url: pollTimeoutSecs", pollTimeoutSecs 
         verboseprint('poll_url input: response:', dump_json(response))
 
         url = self.__url(response['redirect_request'])
@@ -800,7 +801,7 @@ class H2O(object):
     # params: header=1, 
     # noise is a 2-tuple: ("StoreView",params_dict)
     def parse(self, key, key2=None, 
-        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=15,
+        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=30,
         noPoll=False, **kwargs):
         browseAlso = kwargs.pop('browseAlso',False)
         # this doesn't work. webforums indicate max_retries might be 0 already? (as of 3 months ago)
