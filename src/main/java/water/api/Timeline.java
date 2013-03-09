@@ -1,11 +1,10 @@
 package water.api;
 
-import java.net.InetAddress;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
 
 import water.*;
-import water.util.RString;
 import water.util.TimelineSnapshot;
 
 import com.google.gson.*;
@@ -18,6 +17,7 @@ public class Timeline extends Request {
   private static final String JSON_DROP = "drop";
   private static final String JSON_NANOS = "nanos";
   private static final String JSON_TIME = "time";
+  private static final String JSON_UDPTCP = "udp_tcp";
   private static final String JSON_RECVS = "recvs";
   private static final String JSON_SENDS = "sends";
   private static final String JSON_DROPS = "drops";
@@ -119,7 +119,7 @@ public class Timeline extends Request {
 
       JsonObject eventJson = new JsonObject();
       eventsJson.add(eventJson);
-
+      eventJson.addProperty(JSON_UDPTCP, event.isTCP()?"TCP":"UDP");
       eventJson.addProperty(JSON_TIME, date);
       eventJson.addProperty(JSON_NANOS, ns);
       eventJson.addProperty(JSON_TYPE, e.toString());
@@ -149,6 +149,7 @@ public class Timeline extends Request {
             "<th>hh:mm:ss:ms</th>" +
             "<th>nanosec</th>" +
             "<th>who</th>" +
+            "<th>UDP/TCP</th>" +
             "<th>event</th>" +
             "<th>bytes</th>" +
             "</thead>";
@@ -172,6 +173,7 @@ public class Timeline extends Request {
       sb.append("<td>").append(object.get(JSON_LAST_TIME).getAsString()).append("</td>");
       sb.append("<td>lots</td>");
       sb.append("<td>many -> many</td>");
+      sb.append("<td>UDP</td>");
       sb.append("<td>heartbeat</td>");
       sb.append("<td>");
       sb.append(object.get(JSON_SENDS).getAsLong()).append(" sends, ");
@@ -200,6 +202,7 @@ public class Timeline extends Request {
       if( !isSend ) sb.append("<b>").append(r).append("</b>");
       else sb.append(r);
       sb.append("</td>");
+      sb.append("<td>").append(object.get(JSON_UDPTCP ).getAsString()).append("</td>");
       sb.append("<td>").append(object.get(JSON_TYPE ).getAsString()).append("</td>");
       sb.append("<td>").append(object.get(JSON_BYTES).getAsString()).append("</td>");
       sb.append("</tr>");

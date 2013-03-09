@@ -1,7 +1,7 @@
 package water.api;
 
-import jsr166y.RecursiveAction;
 import water.*;
+import water.H2O.H2OCountedCompleter;
 import water.store.s3.MultipartUpload;
 import water.store.s3.PersistS3;
 
@@ -49,10 +49,8 @@ public class ExportS3 extends Request {
 
     try {
       final Key dest = MultipartUpload.init(value);
-
-      H2O.FJP_NORM.submit(new RecursiveAction() {
-        @Override
-        protected void compute() {
+      H2O.submitTask(new H2OCountedCompleter() {
+        @Override public void compute2() {
           MultipartUpload.run(dest, value, bucket, object);
         }
       });

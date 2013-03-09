@@ -18,7 +18,7 @@ public abstract class MRTask extends DRemoteTask {
 
   /** Do all the keys in the list associated with this Node.  Roll up the
    * results into <em>this<em> MRTask. */
-  @Override public final void compute() {
+  @Override public final void compute2() {
     if( _hi-_lo >= 2 ) { // Multi-key case: just divide-and-conquer to 1 key
       final int mid = (_lo+_hi)>>>1; // Mid-point
       assert _left == null && _rite == null;

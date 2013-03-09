@@ -1,11 +1,7 @@
 package water.hdfs;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
 import water.*;
-import water.hdfs.PersistHdfs;
+import water.DTask;
 
 /**
  * Distributed task to store key on HDFS.
@@ -76,7 +72,7 @@ public class TaskStore2HDFS extends DTask<TaskStore2HDFS> {
   }
 
   @Override
-  public void compute() {
+  public void compute2() {
     String path = null;// getPathFromValue(val);
     ValueArray ary = ValueArray.value(_arykey);
     Key self = selfKey();

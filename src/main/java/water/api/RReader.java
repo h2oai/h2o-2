@@ -4,8 +4,8 @@ import hex.rf.RFModel;
 
 import java.io.IOException;
 
-import jsr166y.RecursiveAction;
 import water.*;
+import water.H2O.H2OCountedCompleter;
 import water.RReader.RModel;
 import water.util.RString;
 
@@ -39,17 +39,15 @@ public class RReader extends Request {
       final Key dest_ = dest;
       UKV.put(dest, new RModel());
 
-      H2O.FJP_NORM.submit(new RecursiveAction() {
-        @Override
-        protected void compute() {
-          try {
-            water.RReader.run(dest_, source_.openStream());
-          } catch( IOException e ) {
-            Log.write(e);
+      H2O.submitTask(new H2OCountedCompleter() {
+          @Override public void compute2() {
+            try {
+              water.RReader.run(dest_, source_.openStream());
+            } catch( IOException e ) {
+              Log.write(e);
+            }
           }
-        }
-      });
-
+        });
       JsonObject response = new JsonObject();
       response.addProperty(RequestStatics.DEST_KEY, dest.toString());
 

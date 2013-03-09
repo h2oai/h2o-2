@@ -1,7 +1,7 @@
 package water.api;
 
-import jsr166y.RecursiveAction;
 import water.*;
+import water.H2O.H2OCountedCompleter;
 
 import com.google.gson.JsonObject;
 
@@ -36,13 +36,11 @@ public class Plot extends Request {
     try {
       final Key dest_ = dest;
       UKV.put(dest, new hex.KMeans.KMeansModel());
-
-      H2O.FJP_NORM.submit(new RecursiveAction() {
-        @Override
-        protected void compute() {
-          hex.Plot.run(dest_, va, width, height, cols);
-        }
-      });
+      H2O.submitTask(new H2OCountedCompleter() {
+          @Override public void compute2() {
+            hex.Plot.run(dest_, va, width, height, cols);
+          }
+        });
 
       JsonObject response = new JsonObject();
       response.addProperty(RequestStatics.DEST_KEY, dest.toString());
