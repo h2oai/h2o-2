@@ -13,14 +13,10 @@ import water.api.Timeline;
  */
 
 public class TCPReceiverThread extends Thread {
+  public static ServerSocketChannel SOCK;
   public TCPReceiverThread() { super("TCP Receiver"); }
 
-  // How many threads would like to do TCP right now?
-  public static final AtomicInteger TCPS_IN_PROGRESS = new AtomicInteger(0);
-  public static ServerSocketChannel SOCK;
-
   // The Run Method.
-
   // Started by main() on a single thread, this code manages reading TCP requests
   @SuppressWarnings("resource")
   public void run() {
@@ -54,8 +50,8 @@ public class TCPReceiverThread extends Thread {
         TimeLine.record_recv(ab, true,0);
         // Hand off the TCP connection to the proper handler
         switch( UDP.udp.UDPS[ctrl] ) {
-          case exec:     H2O.submitTask(new FJPacket(ab,ctrl)); break;
-          //case exec:     RPC.remote_exec(ab); break;
+          //case exec:     H2O.submitTask(new FJPacket(ab,ctrl)); break;
+        case exec:     RPC.remote_exec(ab).close(); break;
         case ack:      RPC.tcp_ack (ab); break;
         case ackack:   UDP.udp.UDPS[ctrl]._udp.call(ab).close(); break;
         case timeline: TimeLine.tcp_call(ab); break;

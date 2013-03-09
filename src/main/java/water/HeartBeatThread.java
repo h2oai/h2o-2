@@ -67,7 +67,7 @@ public class HeartBeatThread extends Thread {
       hb._fjthrds_lo = (char)H2O.loQPoolSize();
       hb._fjqueue_hi = (char)H2O.getHiQueue();
       hb._fjqueue_lo = (char)H2O.getLoQueue();
-      hb._tcps_active= (char)TCPReceiverThread.TCPS_IN_PROGRESS.get();
+      hb._tcps_active= (char)AutoBuffer.TCPS.get();
       // get the usable and total disk storage for the partition where the
       // persistent KV pairs are stored
       if (PersistIce.ROOT==null) {

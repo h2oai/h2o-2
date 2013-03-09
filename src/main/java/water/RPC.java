@@ -242,7 +242,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   // Handle TCP traffic, from a client to this server asking for work to be
   // done.  This is called on the TCP reader thread, not a Fork/Join worker
   // thread.  We want to do the bulk TCP read in the TCP reader thread.
-  static void remote_exec( final AutoBuffer ab ) {
+  static AutoBuffer remote_exec( final AutoBuffer ab ) {
     final int task = ab.getTask();
     final int flag = ab.getFlag();
     assert flag==CLIENT_UDP_SEND; // Client sent a request to be executed?
@@ -253,7 +253,8 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     DTask old = ab._h2o.record_task(task);
     if(ab.hasTCP())
       assert old ==null||old instanceof NOPTask : "#"+task+" "+old.getClass(); // For TCP, no repeats, so 1st send is only send
-    if(old != null) {
+    if( old != null ) {
+      assert !ab.hasTCP(); // Since no TCP, no need to drain UDP packet before closing
       if( old instanceof NOPTask ) {
         // This packet has not been ACK'd yet.  Hence it's still a
         // work-in-progress locally.  We have no answer yet to reply with
@@ -276,6 +277,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       final DTask dt = ab.get(DTask.class);
       H2O.submitTask(new RPCCall(dt,ab._h2o,task));
     }
+    return ab;
   }
 
   // TCP large RECEIVE of results.  Note that 'this' is NOT the RPC object
