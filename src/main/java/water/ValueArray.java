@@ -215,6 +215,8 @@ import water.Jobs.Job;
     }
     public final boolean isFloat() { return _size < 0 || _scale != 1; }
     public final boolean isScaled() { return _scale != 1; }
+    /** Compute size of numeric integer domain */
+    public final long    numDomainSize() { return (long) ((_max - _min)+1); }
   }
 
   // Get a usable pile-o-bits

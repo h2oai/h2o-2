@@ -15,6 +15,12 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_glm, h2o_util
 import copy
 
+
+print '#******************************************************************************************'
+print "This test fails because the GLMScore json result doesn't have the info in the GLMScore.html"
+print 'it only has: {"response":{"status":"done","h2o":"pytest-kevin-27729","node":"/192.168.1.86:54321","time":30}}'
+print '#******************************************************************************************'
+
 def glm_doit(self, csvFilename, csvPathname, timeoutSecs=30, **kwargs):
     print "\nStarting GLM of", csvFilename
     parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", timeoutSecs=10)

@@ -40,6 +40,7 @@ class JUnit(unittest.TestCase):
                     'hex.KMeansTest',
                     'hex.MinorityClassTest',
                     'hex.rf.RandomForestTest',
+                    'hex.rf.RFPredDomainTest',
                     'water.AppendKeyTest',
                     'water.AutoSerialTest',
                     'water.KVTest',

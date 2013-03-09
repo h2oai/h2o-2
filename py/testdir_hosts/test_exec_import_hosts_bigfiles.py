@@ -22,7 +22,7 @@ exprList = [
         'Result<n>.hex = sum(<keyX>[<col1>]) + Result.hex',
     ]
 
-def exec_list_like_other_tests(exprList, lenNodes, csvFilename, key2):
+def exec_list(exprList, lenNodes, csvFilename, key2):
         h2e.exec_zero_list(zeroList)
         # start with trial = 1 because trial-1 is used to point to Result0 which must be initted
         trial = 1
@@ -105,7 +105,7 @@ class Basic(unittest.TestCase):
             print "Parse result['destination_key']:", parseKey['destination_key']
             inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             print "\n" + csvFilename
-            exec_list_like_other_tests(exprList, lenNodes, csvFilename, key2)
+            exec_list(exprList, lenNodes, csvFilename, key2)
 
 
 if __name__ == '__main__':

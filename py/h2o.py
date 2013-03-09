@@ -3,8 +3,9 @@ import requests, psutil, argparse, sys, unittest
 import glob
 import h2o_browse as h2b
 import re
-import inspect, webbrowser
+import webbrowser
 import random
+# used in shutil.rmtree permission hack for windows
 import errno
 
 # For checking ports in use, using netstat thru a subprocess.
@@ -129,15 +130,39 @@ def get_file_size(f):
 def iter_chunked_file(file, chunk_size=2048):
     return iter(lambda: file.read(chunk_size), '')
 
+
+# shutil.rmtree doesn't work on windows if the files are read only.
+# On unix the parent dir has to not be readonly too.
+# May still be issues with owner being different, like if 'system' is the guy running?
+# Apparently this escape function on errors is the way shutil.rmtree can 
+# handle the permission issue. (do chmod here)
+# But we shouldn't have read-only files. So don't try to handle that case.
+def handleRemoveError(func, path, exc):
+    # If there was an error, it could be due to windows holding onto files.
+    # Wait a bit before retrying. Ignore errors on the retry. Just leave files.
+    # Ex. if we're in the looping cloud test deleting sandbox.
+    excvalue = exc[1]
+    print "Retrying shutil.rmtree of sandbox after 2 secs. Will ignore errors. exception was", excvalue.errno
+    time.sleep(2)
+    try:
+        func(path)
+    except OSError:
+        pass
+
 LOG_DIR = 'sandbox'
 def clean_sandbox():
     if os.path.exists(LOG_DIR):
         # shutil.rmtree fails to delete very long filenames on Windoze
         #shutil.rmtree(LOG_DIR)
-        # This seems reliable on windows+cygwin
-        os.system("rm -rf "+LOG_DIR)
-    os.mkdir(LOG_DIR)
+        # was this on 3/5/13. This seems reliable on windows+cygwin
+        ### os.system("rm -rf "+LOG_DIR)
+        shutil.rmtree(LOG_DIR, ignore_errors=False, onerror=handleRemoveError)
+    # it should have been removed, but on error it might still be there
+    if not os.path.exists(LOG_DIR):
+        os.mkdir(LOG_DIR)
 
+# who knows if this one is ok with windows...doesn't rm dir, just 
+# the stdout/stderr files
 def clean_sandbox_stdout_stderr():
     if os.path.exists(LOG_DIR):
         files = []
@@ -284,14 +309,24 @@ def check_port_group(base_port):
             output = p3.communicate()[0]
             print output
 
+def default_hosts_file():
+    return 'pytest_config-{0}.json'.format(getpass.getuser())
+
 # node_count is number of H2O instances per host if hosts is specified.
 def decide_if_localhost():
+    # First, look for local hosts file
+    hostsFile = default_hosts_file()
+    if os.path.exists(hostsFile): 
+        verboseprint("* Using config JSON file {0}.".format(hostsFile))
+        return False
     if config_json:
-        print "config_json:", config_json
+        verboseprint("* Using config JSON:", config_json)
         return False
     if 'hosts' in os.getcwd():
-        print "Will use the username's config json"
+        verboseprint("* Using the username's config json")
         return False
+    verboseprint( "Launching local cloud...")
+
     return True
 
 # node_count is per host if hosts is specified.
@@ -454,9 +489,9 @@ def check_sandbox_for_errors():
                     # looks like min of 10 lines looks like it will cover it
                     # but also maybe just count NOPTask
                     if re.match(r'NOPTask',line):
-                        foundNopTaskCnt += 1
+                        foundNOPTaskCnt += 1
 
-                    if foundBad and (lines>10) and not (foundCaused or foundAt or foundNopTaskCnt==1):
+                    if foundBad and (lines>10) and not (foundCaused or foundAt or foundNOPTaskCnt==1):
                         printing = 2 
 
                 if (printing==1):
@@ -668,9 +703,12 @@ class H2O(object):
         return requests.get(self.__url('Get.html'),
             params={"key": key})
 
-    # noise is a 2-tuple ("StoreView, none) for url plus args for doing during poll to create noise
+    # noise is a 2-tuple ("StoreView", none) for url plus args for doing during poll to create noise
+    # so we can create noise with different urls!, and different parms to that url
     # no noise if None
-    def poll_url(self, response, timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=None, noise=None):
+    def poll_url(self, response, 
+        timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=15,
+        noise=None):
         verboseprint('poll_url input: response:', dump_json(response))
 
         url = self.__url(response['redirect_request'])
@@ -707,7 +745,7 @@ class H2O(object):
             r = self.__check_request(
                 requests.get(
                     url=urlUsed,
-                    timeout=15, 
+                    timeout=pollTimeoutSecs, 
                     params=paramsUsed))
 
             if ((count%5)==0):
@@ -761,7 +799,8 @@ class H2O(object):
 
     # params: header=1, 
     # noise is a 2-tuple: ("StoreView",params_dict)
-    def parse(self, key, key2=None, timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, 
+    def parse(self, key, key2=None, 
+        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=15,
         noPoll=False, **kwargs):
         browseAlso = kwargs.pop('browseAlso',False)
         # this doesn't work. webforums indicate max_retries might be 0 already? (as of 3 months ago)
@@ -796,7 +835,9 @@ class H2O(object):
             # no noise if None
             verboseprint('Parse.Json noise:', noise)
             a = self.poll_url(a['response'],
-                timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, initialDelaySecs=initialDelaySecs, noise=noise)
+                timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
+                initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+                noise=noise)
             verboseprint("\nParse result:", dump_json(a))
             return a
 
@@ -888,7 +929,7 @@ class H2O(object):
             }
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
-        verboseprint("\nrandom_forest parameters:", params_dict)
+        print "\nrandom_forest parameters:", params_dict
         a = self.__check_request(requests.get(
             url=self.__url('RF.json'),
             timeout=timeoutSecs,
