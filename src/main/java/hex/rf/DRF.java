@@ -213,16 +213,6 @@ public final class DRF extends water.DRemoteTask {
   @Override
   public final void reduce( DRemoteTask drt ) { }
 
-  @Override
-  public void onCompletion(CountedCompleter caller) {
-    System.out.println("DRF.onCompletion(): removing job if it is not null: " + _job);
-    System.out.println("DRF.onCompletion(): keys  :" + _keys.length);
-    System.out.println("DRF.onCompletion(): ntrees:" + _ntrees);
-    System.out.println("DRF.onCompletion(): caller: " + caller);
-    /*if(_job != null)
-      Jobs.remove(_job._key);*/
-  }
-
   /** Unless otherwise specified each split looks at sqrt(#features). */
   private int howManySplitFeatures(Data t) {
     if (_numSplitFeatures!=-1) return _numSplitFeatures;

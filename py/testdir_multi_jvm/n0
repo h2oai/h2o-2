@@ -1,64 +1,78 @@
-nosetests --nologcapture -s --with-xunit test_int2cat_nested.py
-nosetests --nologcapture -s --with-xunit test_int2cat.py
-nosetests --nologcapture -s --with-xunit test_json_browse_both_exec.py
-nosetests --nologcapture -s --with-xunit test_jstack.py
-nosetests --nologcapture -s --with-xunit test_kaggle.py
-nosetests --nologcapture -s --with-xunit test_many_cols_01.py
-nosetests --nologcapture -s --with-xunit test_many_cols_0.py
-nosetests --nologcapture -s --with-xunit test_many_cols_and_types.py
-nosetests --nologcapture -s --with-xunit test_many_fp_formats.py
-nosetests --nologcapture -s --with-xunit test_parse_file_loop.py
-nosetests --nologcapture -s --with-xunit test_parse_fs_schmoo.py
-nosetests --nologcapture -s --with-xunit test_parse_many_cols.py
-nosetests --nologcapture -s --with-xunit test_parse_rand_schmoo.py
-nosetests --nologcapture -s --with-xunit test_poisson_covtype20x_hosts.py
-nosetests --nologcapture -s --with-xunit test_poker_1m_rf.py
-nosetests --nologcapture -s --with-xunit test_put_1m_keys.py
-nosetests --nologcapture -s --with-xunit test_putfile.py
-nosetests --nologcapture -s --with-xunit test_rand_inspect.py
-nosetests --nologcapture -s --with-xunit test_RF200x4.py
-nosetests --nologcapture -s --with-xunit test_rf2a.py
-nosetests --nologcapture -s --with-xunit test_rf2.py
-nosetests --nologcapture -s --with-xunit test_rf3.py
-nosetests --nologcapture -s --with-xunit test_same_parse.py
-nosetests --nologcapture -s --with-xunit test_sigar.py
-nosetests --nologcapture -s --with-xunit test_startup.py
-nosetests --nologcapture -s --with-xunit test_stedo.py
-nosetests --nologcapture -s --with-xunit test_sum_dkv_fail.py
-nosetests --nologcapture -s --with-xunit test_sum_import_hosts.py
-nosetests --nologcapture -s --with-xunit test_sum.py
-nosetests --nologcapture -s --with-xunit test_vector_filter_factor.py
-nosetests --nologcapture -s --with-xunit test_xls.py
-nosetests --nologcapture -s --with-xunit test_xls_w_hosts.py
-nosetests --nologcapture -s --with-xunit test_10ktrees.py
-nosetests --nologcapture -s --with-xunit test_1ktrees.py
-nosetests --nologcapture -s --with-xunit test_allstate_claim_prediction.py
-nosetests --nologcapture -s --with-xunit test_arity.py
-nosetests --nologcapture -s --with-xunit test_bad_nofinaltrees.py
-nosetests --nologcapture -s --with-xunit test_close_to_1MB.py
-nosetests --nologcapture -s --with-xunit test_dkv.py
-nosetests --nologcapture -s --with-xunit test_exec_2_import_hosts.py
-nosetests --nologcapture -s --with-xunit test_exec_3_import_hosts.py
-nosetests --nologcapture -s --with-xunit test_exec_assign_one_node.py
-nosetests --nologcapture -s --with-xunit test_exec_assign.py
-nosetests --nologcapture -s --with-xunit test_exec_col_scalar.py
-nosetests --nologcapture -s --with-xunit test_exec_covtype_rand2.py
-nosetests --nologcapture -s --with-xunit test_exec_import_hosts.py
-nosetests --nologcapture -s --with-xunit test_exec_rotate_inc.py
-nosetests --nologcapture -s --with-xunit test_factor_only.py
-nosetests --nologcapture -s --with-xunit test_factor.py
-nosetests --nologcapture -s --with-xunit test_flatfile.py
-nosetests --nologcapture -s --with-xunit test_GLM_big2_hosts.py
-nosetests --nologcapture -s --with-xunit test_GLM_catdata_hosts.py
-nosetests --nologcapture -s --with-xunit test_GLM_covtype20x_hosts.py
-nosetests --nologcapture -s --with-xunit test_GLM_covtype_hosts.py
-nosetests --nologcapture -s --with-xunit test_GLM_covtype_single_cols.py
-nosetests --nologcapture -s --with-xunit test_GLM_from_import_hosts.py
-nosetests --nologcapture -s --with-xunit test_GLMGrid_hastie.py
-nosetests --nologcapture -s --with-xunit test_GLM_many_cols_4.py
-nosetests --nologcapture -s --with-xunit test_GLM_many_cols_enum.py
-nosetests --nologcapture -s --with-xunit test_GLM_many_cols_int2cat.py
-nosetests --nologcapture -s --with-xunit test_GLM_many_cols_tridist.py
-nosetests --nologcapture -s --with-xunit test_GLM_prob_cols_4.py
-nosetests --nologcapture -s --with-xunit test_glm.py
-# nosetests --nologcapture -s --with-xunit test_inspect.py
+nosetests test_10ktrees.py --nologcapture --with-xunit
+nosetests test_1ktrees.py --nologcapture --with-xunit
+nosetests test_allstate_claim_prediction.py --nologcapture --with-xunit
+nosetests test_arity.py --nologcapture --with-xunit
+nosetests test_bad_nofinaltrees.py --nologcapture --with-xunit
+nosetests test_big_local_cloud.py --nologcapture --with-xunit
+nosetests test_cloud_127_2_loop.py --nologcapture --with-xunit
+nosetests test_cloud_127.py --nologcapture --with-xunit
+nosetests test_cloud_17to25.py --nologcapture --with-xunit
+nosetests test_cloud_5_loop.py --nologcapture --with-xunit
+nosetests test_cloud.py --nologcapture --with-xunit
+nosetests test_cloud_udp_drop.py --nologcapture --with-xunit
+nosetests test_dkv.py --nologcapture --with-xunit
+nosetests test_exec_2_import_hosts.py --nologcapture --with-xunit
+nosetests test_exec_3_import_hosts.py --nologcapture --with-xunit
+nosetests test_exec_assign_one_node.py --nologcapture --with-xunit
+nosetests test_exec_assign.py --nologcapture --with-xunit
+nosetests test_exec_col_scalar.py --nologcapture --with-xunit
+nosetests test_exec_covtype_rand2.py --nologcapture --with-xunit
+nosetests test_exec_import_hosts.py --nologcapture --with-xunit
+nosetests test_exec_rotate_inc.py --nologcapture --with-xunit
+nosetests test_factor_only.py --nologcapture --with-xunit
+nosetests test_factor.py --nologcapture --with-xunit
+nosetests test_flatfile.py --nologcapture --with-xunit
+nosetests test_GLM_100Mx70_hosts.py --nologcapture --with-xunit
+nosetests test_GLM_big2_hosts.py --nologcapture --with-xunit
+nosetests test_GLM_catdata_hosts.py --nologcapture --with-xunit
+nosetests test_GLM_covtype20x_hosts.py --nologcapture --with-xunit
+nosetests test_GLM_covtype_hosts.py --nologcapture --with-xunit
+nosetests test_GLM_covtype_single_cols.py --nologcapture --with-xunit
+nosetests test_GLM_from_import_hosts.py --nologcapture --with-xunit
+nosetests test_GLMGrid_hastie.py --nologcapture --with-xunit
+nosetests test_GLM_many_cols_4.py --nologcapture --with-xunit
+nosetests test_GLM_many_cols_enum.py --nologcapture --with-xunit
+nosetests test_GLM_many_cols_int2cat.py --nologcapture --with-xunit
+nosetests test_GLM_many_cols_tridist.py --nologcapture --with-xunit
+nosetests test_GLM_moneypuck.py --nologcapture --with-xunit
+nosetests test_GLM_prob_cols_4.py --nologcapture --with-xunit
+nosetests test_glm.py --nologcapture --with-xunit
+nosetests test_inspect.py --nologcapture --with-xunit
+nosetests test_int2cat_nested.py --nologcapture --with-xunit
+nosetests test_int2cat.py --nologcapture --with-xunit
+nosetests test_json_browse_both_exec.py --nologcapture --with-xunit
+nosetests test_jstack.py --nologcapture --with-xunit
+nosetests test_kaggle.py --nologcapture --with-xunit
+nosetests test_many_cols_01.py --nologcapture --with-xunit
+nosetests test_many_cols_0.py --nologcapture --with-xunit
+nosetests test_many_cols_and_types.py --nologcapture --with-xunit
+nosetests test_many_fp_formats.py --nologcapture --with-xunit
+nosetests test_multi_with_a_browser.py --nologcapture --with-xunit
+nosetests test_parse_file_loop.py --nologcapture --with-xunit
+nosetests test_parse_fs_schmoo.py --nologcapture --with-xunit
+nosetests test_parse_many_cols.py --nologcapture --with-xunit
+nosetests test_parse_rand_schmoo2.py --nologcapture --with-xunit
+nosetests test_parse_rand_schmoo3.py --nologcapture --with-xunit
+nosetests test_parse_rand_schmoo.py --nologcapture --with-xunit
+nosetests test_parse_small_nopoll2.py --nologcapture --with-xunit
+nosetests test_parse_small_nopoll.py --nologcapture --with-xunit
+nosetests test_poisson_covtype20x_hosts.py --nologcapture --with-xunit
+nosetests test_poker_1m_rf.py --nologcapture --with-xunit
+nosetests test_put_1m_keys.py --nologcapture --with-xunit
+nosetests test_putfile.py --nologcapture --with-xunit
+nosetests test_rand_inspect.py --nologcapture --with-xunit
+nosetests test_RF200x4.py --nologcapture --with-xunit
+nosetests test_rf2a.py --nologcapture --with-xunit
+nosetests test_rf2.py --nologcapture --with-xunit
+nosetests test_rf3.py --nologcapture --with-xunit
+nosetests test_same_parse.py --nologcapture --with-xunit
+nosetests test_sigar.py --nologcapture --with-xunit
+nosetests test_startup.py --nologcapture --with-xunit
+nosetests test_stedo.py --nologcapture --with-xunit
+nosetests test_sum_dkv_fail.py --nologcapture --with-xunit
+nosetests test_sum_import_hosts.py --nologcapture --with-xunit
+nosetests test_sum.py --nologcapture --with-xunit
+nosetests test_vector_filter_factor.py --nologcapture --with-xunit
+nosetests test_xls_poker_xlsx.py --nologcapture --with-xunit
+nosetests test_xls.py --nologcapture --with-xunit
+nosetests test_xls_w_hosts.py --nologcapture --with-xunit
