@@ -2,11 +2,12 @@ package water.parser;
 
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
-import hex.rf.DRF;
-import hex.rf.RFModel;
+import hex.rf.*;
+import hex.rf.DRF.DRFFuture;
 import hex.rf.Tree.StatType;
 import org.junit.Test;
 import water.*;
+import water.DRemoteTask.DFuture;
 import water.parser.ParseDataset;
 import water.util.TestUtil;
 
@@ -42,10 +43,10 @@ public class DatasetCornerCasesTest extends TestUtil {
     // Start the distributed Random Forest
     try {
       final Key modelKey = Key.make("model");
-      DRF drf = hex.rf.DRF.webMain(modelKey, cols, val,
+      DRFFuture result = hex.rf.DRF.execute(modelKey, cols, val,
                                    ntrees,depth,1.0f,(short)1024,statType,seed,true,null,-1,false,null,0,0);
       // Just wait little bit
-      drf.get();
+      result.get();
       // Create incremental confusion matrix
       RFModel model = UKV.get(modelKey, new RFModel());
       assertEquals("Number of classes == 1", 1,  model.classes());

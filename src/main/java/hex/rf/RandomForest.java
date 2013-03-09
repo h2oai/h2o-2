@@ -1,5 +1,6 @@
 package hex.rf;
 
+import hex.rf.DRF.DRFFuture;
 import hex.rf.Tree.StatType;
 import hex.rng.H2ORandomRNG.RNGKind;
 
@@ -7,6 +8,7 @@ import java.io.File;
 import java.util.*;
 
 import water.*;
+import water.DRemoteTask.DFuture;
 import water.Timer;
 import water.util.TestUtil;
 import water.util.Utils;
@@ -22,16 +24,20 @@ public class RandomForest {
   private static final long ROOT_SEED_ADD  = 0x026244fd935c5111L;
   private static final long TREE_SEED_INIT = 0x1321e74a0192470cL;
 
-  public RandomForest(final DRF drf,
+  /** Build random forest for data stored on this node. */
+  public static void build(
+                      final DRF drf,
                       final Data data,
-                      int ntrees, int maxTreeDepth, double minErrorRate,
-                      StatType stat, boolean parallelTrees,
+                      int ntrees,
+                      int maxTreeDepth,
+                      double minErrorRate,
+                      StatType stat,
+                      boolean parallelTrees,
                       int numSplitFeatures) {
     Timer  t_alltrees = new Timer();
     Tree[] trees      = new Tree[ntrees];
     Utils.pln("[RF] number of split features: "+ drf.numSplitFeatures());
-    String str = data.rows()+" rows ";
-    Utils.pln("[RF] starting RF computation with "+ str);
+    Utils.pln("[RF] starting RF computation with "+ data.rows()+" rows ");
 
     Random rnd = Utils.getRNG(data.seed() + ROOT_SEED_ADD);
     for (int i = 0; i < ntrees; ++i) {
@@ -151,7 +157,7 @@ public class RandomForest {
 
     Utils.pln("[RF] Arguments used:\n"+ARGS.toString());
     final Key modelKey = Key.make("model");
-    DRF drf = DRF.webMain(modelKey,
+    DRFFuture drfResult = DRF.execute(modelKey,
                           cols,
                           va,
                           ARGS.ntrees,
@@ -167,7 +173,7 @@ public class RandomForest {
                           strata,
                           ARGS.verbose,
                           ARGS.exclusive);
-    drf.get(); // block
+    DRF drf = drfResult.get();  // block on all nodes!
     RFModel model = UKV.get(modelKey, new RFModel());
     Utils.pln("[RF] Random forest finished in "+ drf._t_main);
 

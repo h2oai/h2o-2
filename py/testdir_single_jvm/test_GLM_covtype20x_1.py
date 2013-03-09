@@ -25,12 +25,12 @@ class Basic(unittest.TestCase):
     def test_poisson_covtype20x(self):
         if localhost:
             csvFilenameList = [
-                ('covtype20x.data', 120),
+                ('covtype20x.data', 200),
                 ]
         else:
             csvFilenameList = [
-                ('covtype20x.data', 120),
-                ('covtype200x.data', 1000),
+                ('covtype20x.data', 200),
+                ('covtype200x.data', 2000),
                 ]
 
         # a browser window too, just because we can
@@ -40,7 +40,8 @@ class Basic(unittest.TestCase):
         h2i.setupImportFolder(None, importFolderPath)
         for csvFilename, timeoutSecs in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=2000)
+            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
+                timeoutSecs=2000, pollTimeoutSecs=60)
             inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             csvPathname = importFolderPath + "/" + csvFilename
             print "\n" + csvPathname, \
@@ -74,21 +75,24 @@ class Basic(unittest.TestCase):
             kwargs.update({'alpha': 0, 'lambda': 0})
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
-            print "glm (L2) end on ", csvPathname, 'took', time.time() - start, 'seconds'
+            elapsed = time.time() - start
+            print "glm (L2) end on ", csvPathname, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
 
             # Elastic
             kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
-            print "glm (Elastic) end on ", csvPathname, 'took', time.time() - start, 'seconds'
+            elapsed = time.time() - start
+            print "glm (Elastic) end on ", csvPathname, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
 
             # L1
             kwargs.update({'alpha': 1.0, 'lambda': 1e-4})
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
-            print "glm (L1) end on ", csvPathname, 'took', time.time() - start, 'seconds'
+            elapsed = time.time() - start
+            print "glm (L1) end on ", csvPathname, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
 
 

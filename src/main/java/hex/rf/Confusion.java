@@ -31,8 +31,12 @@ public class Confusion extends MRTask {
   int   _classcol;
   /** The dataset */
   transient public ValueArray _data;
-  /** Number of response classes */
+  /** Number of response classes = Max(responses in model, responses in test data)*/
   transient public int  _N;
+  /** Number of response classes in model */
+  transient public int _MODEL_N;
+  /** Number of response classes in data */
+  transient public int _DATA_N;
   /** The Confusion Matrix - a NxN matrix of [actual] -vs- [predicted] classes,
       referenced as _matrix[actual][predicted]. Each row in the dataset is
       voted on by all trees, and the majority vote is the predicted class for
@@ -53,7 +57,16 @@ public class Confusion extends MRTask {
   private transient Random    _rand;
   /** Data to replay the sampling algorithm */
   transient private int[]     _chunk_row_mapping;
+  /** Compute oobee or not */
   public boolean _computeOOB;
+  /** Computed mapping of model prediction classes to confusion matrix classes */
+  transient private int[]     _model_classes_mapping;
+  /** Computed mapping of data prediction classes to confusion matrix classes */
+  transient private int[]     _data_classes_mapping;
+  /** Difference between model cmin and CM cmin */
+  transient private int       _cmin_model_mapping;
+  /** Difference between data cmin and CM cmin */
+  transient private int       _cmin_data_mapping;
 
   /**   Constructor for use by the serializers */
   public Confusion() { }
@@ -124,10 +137,27 @@ public class Confusion extends MRTask {
     _data = ValueArray.value(DKV.get(_datakey));
     _model = UKV.get(_modelKey, new RFModel());
     _modelDataMap = _model.columnMapping(_data.colNames());
-    assert !_computeOOB || _model._dataKey.equals(_datakey) : _computeOOB + " || " + _model._dataKey + " == " + _datakey ;
-    Column c = _data._cols[_classcol];
-    _N = (int)((c._max - c._min)+1);
-    assert _N > 0;
+    assert !_computeOOB || _model._dataKey.equals(_datakey) : !_computeOOB + " || " + _model._dataKey + " equals " + _datakey ;
+    Column respModel = _model.response();
+    Column respData  = _data._cols[_classcol];
+    _DATA_N  = (int) respData.numDomainSize();
+    _MODEL_N = (int) respModel.numDomainSize();
+    if (respModel._domain!=null) {
+      assert respData._domain != null;
+      _model_classes_mapping = new int[respModel._domain.length];
+      _data_classes_mapping  = new int[respData._domain.length];
+      // compute mapping
+      _N = alignEnumDomains(respModel._domain, respData._domain, _model_classes_mapping, _data_classes_mapping);
+    } else {
+      assert respData._domain == null;
+      _model_classes_mapping = null;
+      _data_classes_mapping  = null;
+      // compute mapping
+      _cmin_model_mapping = (int) (respModel._min - Math.min(respModel._min, respData._min) );
+      _cmin_data_mapping  = (int) (respData._min  - Math.min(respModel._min, respData._min) );
+      _N = (int) (Math.max(respModel._max, respData._max) - Math.min(respModel._min, respData._min) + 1);
+    }
+    assert _N > 0; // You know...it is good to be sure
   }
 
   /**
@@ -150,7 +180,6 @@ public class Confusion extends MRTask {
         off += _data.rpc(l);
       }
   }
-
 
   /**A classic Map/Reduce style incremental computation of the confusion matrix on a chunk of data. */
   public void map(Key chunk_key) {
@@ -188,11 +217,14 @@ public class Confusion extends MRTask {
         for( int c = 0; c < _modelDataMap.length; c++ )
           if( _data.isNA(bits, row, cols[_modelDataMap[c]])) continue ROWS;
 
-        // Predict with this tree
+        // Predict with this tree - produce 0-based
         int prediction = _model.classify0(ntree, _data, bits, row, _modelDataMap, numClasses );
-        if( prediction >= _N ) continue ROWS; // Junk row cannot be predicted
-        if (prediction != (int) _data.data(bits, row, _classcol) - cmin) _errorsPerTree[ntree]++;
-        votes[row][prediction]++; // Vote the row
+        if( prediction >= _MODEL_N ) continue ROWS; // Junk row cannot be predicted
+        // Check tree miss
+        int alignedPrediction = alignModelIdx(prediction);
+        int alignedData       = alignDataIdx((int) _data.data(bits, row, _classcol) - cmin);
+        if (alignedPrediction != alignedData) _errorsPerTree[ntree]++;
+        votes[row][alignedPrediction]++; // Vote the row
       }
     }
 
@@ -215,14 +247,14 @@ public class Confusion extends MRTask {
           if( vi[l]==vi[result] && (k++ >= j) )  // From zero to number of tied classes-1
             { result = l; break; }
       }
-      int cclass = (int) _data.data(bits, i, _classcol) - cmin;
+      int cclass = alignDataIdx((int) _data.data(bits, i, _classcol) - cmin);
       assert 0 <= cclass && cclass < _N : ("cclass " + cclass + " < " + _N);
       _matrix[cclass][result]++;
       if( result != cclass ) _errors++;
       validation_rows++;
     }
 
-    assert (_rows  == 0) : "Confusion matrix.map(): _rows!=0 ";
+    assert (_rows == 0) : "Confusion matrix.map(): _rows!=0 ";
     _rows=Math.max(validation_rows,_rows);
   }
 
@@ -248,6 +280,21 @@ public class Confusion extends MRTask {
       if (ept1.length < ept2.length) ept1 = Arrays.copyOf(ept1, ept2.length);
       for (int i = 0; i < ept2.length; i++) ept1[i] += ept2[i];
     }
+  }
+
+  /** Transforms 0-based class produced by model to CF zero-based */
+  private int alignModelIdx(int modelClazz) {
+    if (_model_classes_mapping!=null)
+      return _model_classes_mapping[modelClazz];
+    else
+      return modelClazz + _cmin_model_mapping;
+  }
+  /** Transforms 0-based class from input data to CF zero-based */
+  private int alignDataIdx(int dataClazz) {
+    if (_data_classes_mapping!=null)
+      return _data_classes_mapping[dataClazz];
+    else
+      return dataClazz + _cmin_data_mapping;
   }
 
   /** Text form of the confusion matrix */
@@ -295,7 +342,8 @@ public class Confusion extends MRTask {
         + "                              OOBEE: " + (_computeOOB ? "YES (sampling rate: "+_model._sample*100+"%)" : "NO")+ "\n"
         + "                   Confusion matrix:\n"
         + confusionMatrix() + "\n"
-        + "          Avg tree depth (min, max): "  + _model.depth() + "\n"
+        + "                          CM domain: " + Arrays.toString(domain()) + "\n"
+        + "          Avg tree depth (min, max): " + _model.depth() + "\n"
         + "         Avg tree leaves (min, max): " + _model.leaves() + "\n"
         + "                Validated on (rows): " + _rows + "\n"
         + "     Rows skipped during validation: " + _skippedRows + "\n"
@@ -321,4 +369,77 @@ public class Confusion extends MRTask {
     sb.append(_rows).append(',');
     sb.append(err).append(',');
   }
+
+  /** Merge model and data predictor domain to produce domain for CM.
+   * The domain is expected to be ordered and containing unique values. */
+  public static int alignEnumDomains(final String[] modelDomain, final String[] dataDomain, int[] modelMapping, int[] dataMapping) {
+    assert modelMapping!=null && modelMapping.length == modelDomain.length;
+    assert dataMapping!=null && dataMapping.length == dataDomain.length;
+
+    int idx = 0, idxM = 0, idxD = 0;
+    while(idxM!=modelDomain.length || idxD!=dataDomain.length) {
+      if (idxM==modelDomain.length) { dataMapping[idxD++] = idx++; continue;  }
+      if (idxD==dataDomain.length)  { modelMapping[idxM++] = idx++; continue; }
+      int c = modelDomain[idxM].compareTo(dataDomain[idxD]);
+      if (c < 0) {
+        if (modelMapping!=null) modelMapping[idxM] = idx;
+        idxM++;
+      } else if (c > 0) {
+        dataMapping[idxD] = idx;
+        idxD++;
+      } else { // strings are identical
+        modelMapping[idxM] = idx;
+        dataMapping[idxD] = idx;
+        idxM++; idxD++;
+      }
+      idx++;
+    }
+    return idx;
+  }
+
+  public static String[] domain(final Column modelCol, final Column dataCol) {
+    int[] modelEnumMapping = null;
+    int[] dataEnumMapping  = null;
+    int N = 0;
+
+    if (modelCol._domain!=null) {
+      assert dataCol._domain != null;
+      modelEnumMapping = new int[modelCol._domain.length];
+      dataEnumMapping  = new int[dataCol._domain.length];
+      N = alignEnumDomains(modelCol._domain, dataCol._domain, modelEnumMapping, dataEnumMapping);
+    } else {
+      assert dataCol._domain == null;
+      N = (int) (Math.max(modelCol._max, dataCol._max) - Math.min(modelCol._min, dataCol._min) + 1);
+    }
+    return domain(N, modelCol, dataCol, modelEnumMapping, dataEnumMapping);
+  }
+
+  public static String[] domain(int N, final Column modelCol, final Column dataCol, int[] modelEnumMapping, int[] dataEnumMapping) {
+    String[] result      = new String[N];
+    String[] modelDomain = modelCol._domain;
+    String[] dataDomain  = dataCol._domain;
+
+    if (modelDomain!=null) {
+      assert dataDomain!=null;
+      assert modelEnumMapping!=null && modelEnumMapping.length == modelDomain.length;
+      assert dataEnumMapping!=null && dataEnumMapping.length == dataDomain.length;
+
+      for (int i = 0; i < modelDomain.length; i++) result[modelEnumMapping[i]] = modelDomain[i];
+      for (int i = 0; i < dataDomain.length; i++)  result[dataEnumMapping [i]] = dataDomain[i];
+    } else {
+      assert dataDomain==null;
+      int dmin = (int) Math.min(modelCol._min, dataCol._min);
+      int dmax = (int) Math.max(modelCol._max, dataCol._max);
+      for (int i = dmin; i <= dmax; i++) result[i-dmin] = String.valueOf(i);
+    }
+    return result;
+  }
+
+  /** Compute confusion matrix domain based on model and data key. */
+  public String[] domain() {
+    return domain(_N, _model.response(), _data._cols[_classcol], _model_classes_mapping, _data_classes_mapping);
+  }
+
+  /** Return number of classes - in fact dimension of CM. */
+  public final int dimension() { return _N; }
 }

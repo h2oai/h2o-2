@@ -4,6 +4,7 @@ import h2o, h2o_cmd
 import h2o_hosts
 import h2o_browse as h2b
 import h2o_import as h2i
+import h2o_glm
 import time, random
 
 class Basic(unittest.TestCase):
@@ -28,9 +29,11 @@ class Basic(unittest.TestCase):
         #    "covtype169x.data",
         #    "covtype.13x.shuffle.data",
         #    "3G_poker_shuffle"
-        #    "covtype20x.data", 
         #    "billion_rows.csv.gz",
         csvFilenameAll = [
+            # quick test first
+            "covtype.data", 
+            # then the real thing
             "billion_rows.csv.gz",
             ]
         # csvFilenameList = random.sample(csvFilenameAll,1)
@@ -41,7 +44,8 @@ class Basic(unittest.TestCase):
 
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=500)
+            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
+                timeoutSecs=500, pollTimeoutSecs=60)
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "Parse result['destination_key']:", parseKey['destination_key']
 
@@ -52,14 +56,42 @@ class Basic(unittest.TestCase):
             start = time.time()
             # poker and the water.UDP.set3(UDP.java) fail issue..
             # constrain depth to 25
-            RFview = h2o_cmd.runRFOnly(trees=1,depth=25,parseKey=parseKey,
-                timeoutSecs=timeoutSecs)
 
-            h2b.browseJsonHistoryAsUrlLastMatch("RFView")
-            # wait in case it recomputes it
-            time.sleep(10)
+            # RF seems to get memory allocation errors on single machine (16GB dram)
+            ### RFview = h2o_cmd.runRFOnly(trees=1,depth=5,parseKey=parseKey, timeoutSecs=timeoutSecs)
+            ### h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
-            sys.stdout.write('.')
+            # now some GLm
+            kwargs = {'x': 0, 'y': 1, 'num_cross_validation_folds': 0, 'case_mode': '=', 'case': 1}
+            # one coefficient is checked a little more
+            colX = 0
+
+            # L2 
+            kwargs.update({'alpha': 0, 'lambda': 0})
+            start = time.time()
+            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            elapsed = time.time() - start
+            print "glm (L2) end on ", csvFilename, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
+            h2o_glm.simpleCheckGLM(self, glm, colX, **kwargs)
+
+            # Elastic
+            kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
+            start = time.time()
+            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            elapsed = time.time() - start
+            print "glm (Elastic) end on ", csvFilename, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
+            h2o_glm.simpleCheckGLM(self, glm, colX, **kwargs)
+
+            # L1
+            kwargs.update({'alpha': 1.0, 'lambda': 1e-4})
+            start = time.time()
+            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            elapsed = time.time() - start
+            print "glm (L1) end on ", csvFilename, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
+            h2o_glm.simpleCheckGLM(self, glm, colX, **kwargs)
+
+
+            sys.stdout.write('\n.')
             sys.stdout.flush() 
 
 if __name__ == '__main__':

@@ -28,11 +28,28 @@ public abstract class Jobs {
       return Math.min(1f, _limit == 0 ? 0 : (float) ((double) _value / _limit));
     }
 
+    // FIXME this should be called increment
     public static void update(Key key, final long delta) {
       new TAtomic<Progress>() {
         @Override
         public Progress atomic(Progress old) {
           old._value += delta;
+          return old;
+        }
+
+        @Override
+        public Progress alloc() {
+          return new Progress();
+        }
+      }.invoke(key);
+    }
+
+    // FIXME this should be called update
+    public static void set(Key key, final long value) {
+      new TAtomic<Progress>() {
+        @Override
+        public Progress atomic(Progress old) {
+          old._value = value;
           return old;
         }
 

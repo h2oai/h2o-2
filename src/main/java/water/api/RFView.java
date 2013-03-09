@@ -1,35 +1,67 @@
 package water.api;
 
-import water.Key;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
 import hex.rf.Confusion;
 import hex.rf.RFModel;
+import water.Key;
+import water.util.RString;
 
-public class RFView extends Request {
+import com.google.gson.*;
 
-  protected final H2OHexKey _dataKey = new H2OHexKey(DATA_KEY);
-  protected final RFModelKey _modelKey = new RFModelKey(MODEL_KEY);
-  protected final HexKeyClassCol _classCol = new HexKeyClassCol(CLASS, _dataKey);
-  protected final Int _numTrees = new Int(NUM_TREES,50,0,Integer.MAX_VALUE);
-  protected final H2OCategoryWeights _weights = new H2OCategoryWeights(WEIGHTS, _dataKey, _classCol, 1);
-  protected final Bool _oobee = new Bool(OOBEE,false,"Out of bag errors");
-  protected final Bool _noCM = new Bool(NO_CM, false,"Do not produce confusion matrix");
-  protected final Bool _clearCM = new Bool(JSON_CLEAR_CM, false, "Clear cache of model confusion matrices");
+/**
+ * RFView shows a progress of random forest building and data scoring.
+ */
+public class RFView extends /* Progress */ Request {
 
-  public static final String JSON_CONFUSION_KEY = "confusion_key";
-  public static final String JSON_CLEAR_CM = "clear_confusion_matrix";
+  protected final H2OHexKey          _dataKey  = new H2OHexKey(DATA_KEY);
+  protected final RFModelKey         _modelKey = new RFModelKey(MODEL_KEY);
+  protected final HexKeyClassCol     _classCol = new HexKeyClassCol(CLASS, _dataKey);
+  protected final Int                _numTrees = new NTree(NUM_TREES, _modelKey);
+  protected final H2OCategoryWeights _weights  = new H2OCategoryWeights(WEIGHTS, _modelKey, _dataKey, _classCol, 1);
+  protected final Bool               _oobee    = new Bool(OOBEE,false,"Out of bag errors");
+  protected final Bool               _noCM     = new Bool(NO_CM, false,"Do not produce confusion matrix");
+  protected final Bool               _clearCM  = new Bool(JSON_CLEAR_CM, false, "Clear cache of model confusion matrices");
 
-  public static final String JSON_CM        = "confusion_matrix";
-  public static final String JSON_CM_TYPE   = "type";
-  public static final String JSON_CM_HEADER = "header";
-  public static final String JSON_CM_MATRIX = "scores";
-  public static final String JSON_CM_TREES  = "used_trees";
+  public static final String JSON_CONFUSION_KEY   = "confusion_key";
+  public static final String JSON_CLEAR_CM        = "clear_confusion_matrix";
+
+  // JSON keys
+  public static final String JSON_CM              = "confusion_matrix";
+  public static final String JSON_CM_TYPE         = "type";
+  public static final String JSON_CM_HEADER       = "header";
+  public static final String JSON_CM_MATRIX       = "scores";
+  public static final String JSON_CM_TREES        = "used_trees";
   public static final String JSON_CM_CLASS_ERR    = "classification_error";
   public static final String JSON_CM_ROWS         = "rows";
   public static final String JSON_CM_ROWS_SKIPPED = "rows_skipped";
+
+  private final static String[] PARAMS_LIST  = new String[] {DATA_KEY, MODEL_KEY, CLASS, NUM_TREES, WEIGHTS, OOBEE, NO_CM, JSON_CLEAR_CM};
+  RFView() {
+    // hide in generated query page
+    _oobee._hideInQuery = true;
+    _numTrees._readOnly = true;
+  }
+
+  public static Response redirect(JsonObject fromPageResponse, Key job, Key model) {
+    JsonObject destPageParams = new JsonObject();
+    destPageParams.addProperty(JOB, job.toString());
+    destPageParams.addProperty(DEST_KEY, model.toString());
+    for (String param : PARAMS_LIST) {
+      if (fromPageResponse.has(param)) destPageParams.addProperty(param, fromPageResponse.get(param).getAsString());
+    }
+    return Response.redirect(fromPageResponse, RFView.class, destPageParams);
+  }
+
+  public static String link(Key k, String content) {
+    return link(k, DATA_KEY, content);
+  }
+
+  public static String link(Key k, String keyParam, String content) {
+    RString rs = new RString("<a href='RFView.query?%key_param=%$key'>%content</a>");
+    rs.replace("key_param", keyParam);
+    rs.replace("key", k.toString());
+    rs.replace("content", content);
+    return rs.toString();
+  }
 
   public static Response redirect(JsonObject resp, Key dest) {
     JsonObject redir = new JsonObject();
@@ -37,26 +69,36 @@ public class RFView extends Request {
     return Response.redirect(resp, RFView.class, redir);
   }
 
-  @Override protected Response serve() {
-    int tasks = 0;
-    int finished = 0;
+  protected JsonObject defaultJsonResponse() {
+    JsonObject r = new JsonObject();
     RFModel model = _modelKey.value();
+    r.addProperty( DATA_KEY, _dataKey.originalValue());
+    r.addProperty(MODEL_KEY, _modelKey.originalValue());
+    r.addProperty(    CLASS, _classCol.value());
+    r.addProperty(NUM_TREES, model._totalTrees);
+    r.addProperty(     MTRY, model._splitFeatures);
+    r.addProperty(    OOBEE, _oobee.value());
+    return r;
+  }
+
+  protected Response jobDone(JsonObject jsonResp) {
+    return Response.done(jsonResp);
+  }
+
+  @Override protected Response serve() {
+    int tasks        = 0;
+    int finished     = 0;
+    RFModel model    = _modelKey.value();
     double[] weights = _weights.value();
-    JsonObject response = new JsonObject();
 
-    response.addProperty(DATA_KEY, _dataKey.originalValue());
-    response.addProperty(MODEL_KEY, _modelKey.originalValue());
-    response.addProperty(CLASS, _classCol.value());
-    response.addProperty(NUM_TREES, model._totalTrees);
-    response.addProperty(MTRY, -1);
+    tasks    = model._totalTrees;
+    finished = model.size();
 
-    tasks += model._totalTrees;
-    finished += model.size();
-
+    JsonObject response = defaultJsonResponse();
     // CM return and possible computation is requested
     if (!_noCM.value()) {
       tasks += 1;
-      // get the confusion matrix
+      // Get the confusion matrix
       Confusion confusion = Confusion.make(model, _dataKey.value()._key, _classCol.value(), weights, _oobee.value());
       response.addProperty(JSON_CONFUSION_KEY, confusion.keyFor().toString());
       // if the matrix is valid, report it in the JSON
@@ -70,11 +112,11 @@ public class RFView extends Request {
         cm.addProperty(JSON_CM_ROWS_SKIPPED, confusion.skippedRows());
         cm.addProperty(JSON_CM_ROWS, confusion.rows());
         // create the header
-        for (String s : vaCategoryNames(_dataKey.value()._cols[_classCol.value()],1024))
+        for (String s : cfDomain(confusion, 1024))
           cmHeader.add(new JsonPrimitive(s));
         cm.add(JSON_CM_HEADER,cmHeader);
         // add the matrix
-        final int nclasses = model.classes();
+        final int nclasses = confusion.dimension();
         for (int crow = 0; crow < nclasses; ++crow) {
           JsonArray row = new JsonArray();
           for (int ccol = 0; ccol < nclasses; ++ccol)
@@ -96,10 +138,18 @@ public class RFView extends Request {
     }
     response.add(Constants.TREES,trees);
 
-    Response r = (finished == tasks) ? Response.done(response) : Response.poll(response, finished, tasks);
+    // Build a response
+    Response r = (finished == tasks) ? jobDone(response) : Response.poll(response, finished, tasks);
     r.setBuilder(JSON_CM, new ConfusionMatrixBuilder());
-    r.setBuilder(Constants.TREES, new TreeListBuilder());
+    r.setBuilder(TREES, new TreeListBuilder());
     return r;
+  }
+
+  static String[] cfDomain(final Confusion cm, int maxClasses) {
+    String[] dom = cm.domain();
+    if (dom.length > maxClasses)
+      throw new IllegalArgumentException("The column has more than "+maxClasses+" values. Are you sure you have that many classes?");
+    return dom;
   }
 
   private StringBuilder stats(StringBuilder sb, JsonElement json) {
@@ -198,5 +248,4 @@ public class RFView extends Request {
       return sb.toString();
     }
   }
-
 }
