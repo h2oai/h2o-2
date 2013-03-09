@@ -36,7 +36,7 @@ public final class AutoBuffer {
   // we are blocking another Node with I/O.
   private int _oldPrior = -1;
   // Count of concurrent TCP requests both incoming and outgoing
-  private static final AtomicInteger TCPS = new AtomicInteger(0);
+  public static final AtomicInteger TCPS = new AtomicInteger(0);
 
   // Where to send or receive data via TCP or UDP (choice made as we discover
   // how big the message is); used to lazily create a Channel.  If NULL, then
@@ -82,6 +82,7 @@ public final class AutoBuffer {
   // Incoming TCP request.  Make a read-mode AutoBuffer from the open Channel,
   // figure the originating H2ONode from the first few bytes read.
   public AutoBuffer( SocketChannel sock ) throws IOException {
+    TCPS.incrementAndGet();
     _chan = sock;
     raisePriority();            // Make TCP priority high
     _bb = bbMake();
@@ -248,14 +249,13 @@ public final class AutoBuffer {
       while( _chan.read(_bb) != -1 )
         _bb.clear();
       _chan.close();
-      TCPS.decrementAndGet();
       restorePriority();        // And if we raised priority, lower it back
+      TCPS.decrementAndGet();
       bbFree();
     } catch( IOException e ) {  // Dunno how to handle so crash-n-burn
       throw new RuntimeException(e);
     }
   }
-
 
   // Need a sock for a big read or write operation
   private void tcpOpen() throws IOException {
@@ -417,7 +417,7 @@ public final class AutoBuffer {
       while( _bb.hasRemaining() )
         _chan.write(_bb);
     } catch( IOException e ) {   // Can't open the connection, try again later
-      System.err.println("TCP Open/Write failed: " + e.getMessage());
+      System.err.println("TCP Open/Write failed: " + e.getMessage()+" talking to "+_h2o);
       throw new Error(e);
     }
     if( _bb.capacity() < 16*1024 ) _bb = bbMake();
