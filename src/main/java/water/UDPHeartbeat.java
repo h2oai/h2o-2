@@ -1,7 +1,5 @@
 package water;
 
-import H2OInit.Boot;
-
 /**
  * A UDP Heartbeat packet.
  *
@@ -10,16 +8,18 @@ import H2OInit.Boot;
  */
 public class UDPHeartbeat extends UDP {
   @Override AutoBuffer call(AutoBuffer ab) {
-    ab._h2o._heartbeat = new HeartBeat().read(ab);
-    Paxos.doHeartbeat(ab._h2o);
+    if( ab._h2o != H2O.SELF ) { // Do not update self-heartbeat object
+      // The self-heartbeat is the sole holder of racey cloud-concensus hashes
+      // and if we update it here we risk dropping an update.
+      ab._h2o._heartbeat = new HeartBeat().read(ab);
+      Paxos.doHeartbeat(ab._h2o);
+    }
     return ab;
   }
 
   static void build_and_multicast( H2O cloud, HeartBeat hb ) {
     // Paxos.print_debug("send: heartbeat ",cloud._memset);
-    hb._cloud_id_lo = cloud._id.getLeastSignificantBits();
-    hb._cloud_id_hi = cloud._id. getMostSignificantBits();
-    hb._cloud_md5 = Boot._init._jarHash;
+    assert hb._cloud_hash != 0; // Set before send, please
     H2O.SELF._heartbeat = hb;
     hb.write(new AutoBuffer(H2O.SELF).putUdp(UDP.udp.heartbeat)).close();
   }

@@ -45,8 +45,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_many_cols(self):
-        # enable this to create the file
+    def test_GLM_100Mx70_hosts(self):
+        # enable this if you need to re-create the file
         if 1==0:
             SYNDATASETS_DIR = h2o.make_syn_dir()
             createList = [
@@ -84,7 +84,7 @@ class Basic(unittest.TestCase):
         for csvFilename, timeoutSecs, key2 in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
             parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2,
-                timeoutSecs=2000, retryDelaySecs=5, initialDelaySecs=10)
+                timeoutSecs=2000, retryDelaySecs=5, initialDelaySecs=10, pollTimeoutSecs=60)
             inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             csvPathname = importFolderPath + "/" + csvFilename
             num_rows = inspect['num_rows']
@@ -109,7 +109,10 @@ class Basic(unittest.TestCase):
             for trial in range(3):
                 start = time.time()
                 glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
-                print "glm", trial, "end on ", csvPathname, 'took', time.time() - start, 'seconds'
+                elapsed = time.time() - start
+                print "glm", trial, "end on ", csvPathname, 'took', elapsed, 'seconds.',
+                print "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
+
                 h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
 

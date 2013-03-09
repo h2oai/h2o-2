@@ -10,9 +10,9 @@ import java.util.Arrays;
  */
 public class HeartBeat extends Iced {
   public int _hb_version;
-  public long _cloud_id_lo, _cloud_id_hi; // UUID for this Cloud
+  public int _cloud_hash;       // Cloud-membership hash?
   public long _jvm_boot_msec;   // Boot time of JVM
-  public byte[] _cloud_md5;
+  public byte[] _jar_md5;       // JAR file digest
   public char _num_cpus;        // Number of CPUs for this Node, limit of 65535
 
   // Scaled by K or by M setters & getters.
@@ -36,8 +36,8 @@ public class HeartBeat extends Iced {
   public void set_max_disk (long n) {  _max_disk = (int)(n>>20); }
   public long get_max_disk ()  { return  ((long)_max_disk)<<20 ; }
 
-  public boolean check_cloud_md5() {
-    return Arrays.equals(Boot._init._jarHash, _cloud_md5) || true;
+  public boolean check_jar_md5() {
+    return Arrays.equals(Boot._init._jarHash, _jar_md5);
   }
 
   public char _rpcs;            // Outstanding DFutureTasks

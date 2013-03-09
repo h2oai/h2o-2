@@ -10,7 +10,7 @@ public class Upload extends HTMLOnlyRequest {
     + "<script type='text/javascript' src='jquery.fileupload/js/jquery.fileupload.js'></script>"
     + "<script type='text/javascript' src='jquery.fileupload/js/main.js'></script>"
     + "<div class='container' style='margin: 0px auto'>"
-    + "<h3>Request Upload ( <a href='Upload.help'>help</a> )</h3>"
+    + "<h3>Request Upload <a href='Upload.help'><i class='icon-question-sign'></i></a></h3>"
     + "<p>Please specify the file to be uploaded.</p>"
     + "<form id='Fileupload'>"
     + " <span class='btn but-success fileinput-button'>"

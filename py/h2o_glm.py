@@ -78,9 +78,6 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     if family=="binomial":
         print "%15s %s" % ("threshold:\t", validations['threshold'])
 
-    # FIX! the cross validation models are in a different key now
-    # so we don't look at them here any more
-
     # get a copy, so we don't destroy the original when we pop the intercept
     coefficients = GLMModel['coefficients'].copy()
     column_names = GLMModel['column_names']
@@ -93,16 +90,11 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
 
     # the dict keys are column headers if they exist...how to order those? new: use the 'column_names'
     # from the response
-    # Tomas created 'column_names which is the coefficient list in order, with output last.
+    # Tomas created 'column_names which is the coefficient list in order.
     # Just use it to index coefficients! works for header or no-header cases
     # I guess now we won't print the "None" cases for dropped columns (constant columns!)
     # Because Tomas doesn't get everything in 'column_names' if dropped by GLMQuery before
     # he gets it? 
-
-    # output is always last in column_names
-
-    # FIX! until tomas fixes the expanded enums. if there is any expanded enums in coefficient keys
-    # don't try to print things in order using col_names
     def add_to_coefficient_list_and_string(c,cList,cString):
         if c in coefficients:
             cValue = coefficients[c]
@@ -124,8 +116,6 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     cString = ""
     cList = []
     # print in order using col_names
-    # if foundDot:
-
     # column_names is input only now..same for header or no header, or expanded enums
     for c in column_names:
         cString = add_to_coefficient_list_and_string(c,cList,cString)
@@ -221,16 +211,6 @@ def simpleCheckGLMGrid(self, glmGridResult, colX=None, allowFailWarning=False, *
     ### rows = inspectGG['rows']
     value_size_bytes = inspectGG['value_size_bytes']
 
-# models entries look like this:
-#     {
-#       "alpha": 1.0, 
-#       "area_under_curve": 0.16666666666666669, 
-#       "best_threshold": 0.0, 
-#       "error_0": 1.0, 
-#       "error_1": 0.0, 
-#       "key": "__GLMModel_8b0fc26c-3a9c-4c4b-8cf6-240cc5b60508", 
-#       "lambda": 0.009999999999999998, 
-#     }, 
     model0 = glmGridResult['models'][0]
     alpha = model0['alpha']
     area_under_curve = model0['area_under_curve']

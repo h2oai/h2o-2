@@ -84,71 +84,93 @@ public final class DRF extends water.DRemoteTask {
   /** Key for the training data. */
   public final Key aryKey()           { return _rfmodel._dataKey; }
 
-  public static DRF webMain(
+  /** Create DRF task, execute it and returns DFuture.
+   *  Caller can block on the future to wait till execution finish.
+   */
+  public static final DRFFuture execute(Key modelKey, int[] cols, ValueArray ary, int ntrees, int depth, float sample, short binLimit,
+      StatType stat, long seed, boolean parallelTrees, double[] classWt, int numSplitFeatures,
+      boolean stratify, Map<Integer,Integer> strata, int verbose, int exclusiveSplitLimit) {
+    final DRF drf = create(modelKey, cols, ary, ntrees, depth, sample, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, stratify, strata, verbose, exclusiveSplitLimit);
+    drf._job = Jobs.start(jobName(drf), modelKey);
+    return drf.new DRFFuture(drf.fork(drf.aryKey()));
+  }
+
+  private static String jobName(final DRF drf) {
+    return "RandomForest_" + drf._ntrees + "trees";
+  }
+
+  /** Create and configure a new DRF remote task.
+   *  It does not execute DRF !!! */
+  private static DRF create(
     Key modelKey, int[] cols, ValueArray ary, int ntrees, int depth, float sample, short binLimit,
     StatType stat, long seed, boolean parallelTrees, double[] classWt, int numSplitFeatures,
     boolean stratify, Map<Integer,Integer> strata, int verbose, int exclusiveSplitLimit) {
 
     // Construct the RFModel to be trained
-    DRF drf = new DRF();
+    DRF drf      = new DRF();
     drf._rfmodel = new RFModel(modelKey, cols, ary._key,
                                new Key[0], ary._cols.length, sample, numSplitFeatures, ntrees);
-    boolean ok = false;
-    try {
-      drf._job = Jobs.start("RandomForest", modelKey);
+    // Fill in args into DRF
+    drf._ntrees = ntrees;
+    drf._depth = depth;
+    drf._sample = sample;
+    drf._binLimit = binLimit;
+    drf._stat = stat.ordinal();
+    drf._classcol = cols[cols.length-1];
+    drf._seed = seed;
+    drf._parallel = parallelTrees;
+    drf._classWt = classWt;
+    drf._numSplitFeatures = numSplitFeatures;
+    drf._useStratifySampling = stratify;
+    drf._verbose = verbose;
+    drf._exclusiveSplitLimit = exclusiveSplitLimit;
 
-      // Fill in args into DRF
-      drf._ntrees = ntrees;
-      drf._depth = depth;
-      drf._sample = sample;
-      drf._binLimit = binLimit;
-      drf._stat = stat.ordinal();
-      drf._classcol = cols[cols.length-1];
-      drf._seed = seed;
-      drf._parallel = parallelTrees;
-      drf._classWt = classWt;
-      drf._numSplitFeatures = numSplitFeatures;
-      drf._useStratifySampling = stratify;
-      drf._verbose = verbose;
-      drf._exclusiveSplitLimit = exclusiveSplitLimit;
+    RandomForest.OptArgs _ = new RandomForest.OptArgs();
+    _.features = numSplitFeatures;
+    _.ntrees   = ntrees;
+    _.depth    = depth;
+    _.classcol = drf._classcol;
+    _.seed     = seed;
+    _.binLimit = binLimit;
+    _.verbose  = verbose;
+    _.exclusive= exclusiveSplitLimit;
+    String w = "";
+    if (classWt != null) for(int i=0;i<classWt.length;i++) w += i+":"+classWt[i]+",";
+    _.weights=w;
+    _.parallel = parallelTrees ? 1 : 0;
+    _.statType = stat.ordinal() == 1 ? "gini" : "entropy";
+    _.sample = (int)(sample * 100);
+    _.file = "";
 
-      RandomForest.OptArgs _ = new RandomForest.OptArgs();
-      _.features = numSplitFeatures;
-      _.ntrees   = ntrees;
-      _.depth    = depth;
-      _.classcol = drf._classcol;
-      _.seed     = seed;
-      _.binLimit = binLimit;
-      _.verbose  = verbose;
-      _.exclusive= exclusiveSplitLimit;
-      String w = "";
-      if (classWt != null) for(int i=0;i<classWt.length;i++) w += i+":"+classWt[i]+",";
-      _.weights=w;
-      _.parallel = parallelTrees ? 1 : 0;
-      _.statType = stat.ordinal() == 1 ? "gini" : "entropy";
-      _.sample = (int)(sample * 100);
-      _.file = "";
+    if (verbose>0) Utils.pln("Web arguments: " + _ + " key "+ary._key);
 
-      if (verbose>0) Utils.pln("Web arguments: " + _ + " key "+ary._key);
+    // Validate parameters
+    drf.validateInputData();
+    // Start the timer.
+    drf._t_main = new Timer();
+    // Pre-process data in case of stratified sampling: extract minorities
+    if(drf._useStratifySampling)  drf.extractMinorities(ary, strata);
 
-      // Validate parameters
-      drf.validateInputData();
-      // Start the timer.
-      drf._t_main = new Timer();
-      // Pre-process data in case of stratified sampling: extract minorities
-      if(drf._useStratifySampling)  drf.extractMinorities(ary, strata);
+    // Push the RFModel globally first
+    UKV.put(modelKey, drf._rfmodel);
+    DKV.write_barrier();
 
-      // Push the RFModel globally first
-      UKV.put(modelKey, drf._rfmodel);
-      DKV.write_barrier();
-      // Launch distributed RF
-      drf.fork(ary._key);
-      ok = true;
-    } finally {
-      if(!ok)
-        Jobs.remove(drf._job._key);
-    }
     return drf;
+  }
+
+  /** Hacky class to remove {@link Job} correctly.
+   *
+   * NOTE: need to be refined after new cyprien's jobs will be merged. */
+  public final class DRFFuture {
+    private final DFuture _future;
+    private DRFFuture(final DFuture deleg) { super(); _future = deleg; }
+    public DRF get() {
+      // Block to the end of DRF.
+      final DRF drf = (DRF) _future.get();
+      // Remove DRF job.
+      if (drf._job != null) Jobs.remove(drf._job._key);
+      return drf;
+    }
   }
 
   /**Class columns that are not enums are not supported as we ony do classification and not (yet) regression.
@@ -171,6 +193,7 @@ public final class DRF extends water.DRemoteTask {
 
   /**Inhale the data, build a DataAdapter and kick-off the computation.
    * */
+  @Override
   public final void compute() {
     Timer t_extract = new Timer();
     // Build data adapter for this node.
@@ -182,16 +205,22 @@ public final class DRF extends water.DRemoteTask {
     int ntrees        = howManyTrees();
 
     Utils.pln("[RF] Building "+ntrees+" trees");
-    new RandomForest(this, t, ntrees, _depth, 0.0, StatType.values()[_stat],_parallel,_numSplitFeatures);
+    RandomForest.build(this, t, ntrees, _depth, 0.0, StatType.values()[_stat],_parallel,_numSplitFeatures);
+    // Wait for the running jobs
     tryComplete();
   }
 
+  @Override
   public final void reduce( DRemoteTask drt ) { }
 
   @Override
   public void onCompletion(CountedCompleter caller) {
-    if(_job != null)
-      Jobs.remove(_job._key);
+    System.out.println("DRF.onCompletion(): removing job if it is not null: " + _job);
+    System.out.println("DRF.onCompletion(): keys  :" + _keys.length);
+    System.out.println("DRF.onCompletion(): ntrees:" + _ntrees);
+    System.out.println("DRF.onCompletion(): caller: " + caller);
+    /*if(_job != null)
+      Jobs.remove(_job._key);*/
   }
 
   /** Unless otherwise specified each split looks at sqrt(#features). */
