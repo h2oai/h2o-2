@@ -709,7 +709,7 @@ class H2O(object):
     def poll_url(self, response, 
         timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=15,
         noise=None):
-        print "poll_url: pollTimeoutSecs", pollTimeoutSecs 
+        ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs 
         verboseprint('poll_url input: response:', dump_json(response))
 
         url = self.__url(response['redirect_request'])
@@ -766,7 +766,7 @@ class H2O(object):
             if ((time.time()-start)>timeoutSecs):
                 # show what we're polling with 
                 argsStr =  '&'.join(['%s=%s' % (k,v) for (k,v) in paramsUsed.items()])
-                emsg = "Timeout: %d secs while polling. status: %s, url: %s?%s" % (timeoutSecs, status, urlUsed, argsStr)
+                emsg = "Exceeded timeoutSecs: %d secs while polling. status: %s, url: %s?%s" % (timeoutSecs, status, urlUsed, argsStr)
                 raise Exception(emsg)
             count += 1
         return r

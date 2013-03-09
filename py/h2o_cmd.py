@@ -7,7 +7,7 @@ def parseFile(node=None, csvPathname=None, key=None, key2=None,
     noise=None, header=None, noPoll=None):
     if not csvPathname: raise Exception('No file name specified')
     if not node: node = h2o.nodes[0]
-    print "parseFile pollTimeoutSecs:", pollTimeoutSecs
+    ### print "parseFile pollTimeoutSecs:", pollTimeoutSecs
     key = node.put_file(csvPathname, key=key, timeoutSecs=timeoutSecs)
     if key2 is None:
         # don't rely on h2o default key name
