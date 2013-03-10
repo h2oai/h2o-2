@@ -32,7 +32,7 @@ public class TypeMap {
     "hex.rf.MinorityClasses$UnbalancedClass",
     "hex.rf.RFModel",
     "hex.rf.Tree$1",
-    "water.AppendKey",
+    "water.AtomicTest$Append$1",
     "water.H2ONode",
     "water.H2ONode",
     "water.HeartBeat",
