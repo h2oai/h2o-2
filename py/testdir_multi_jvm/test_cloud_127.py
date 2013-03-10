@@ -27,7 +27,7 @@ class Basic(unittest.TestCase):
 
             # increment the base_port to avoid sticky ports when we do another
             # we only use two ports now?
-            base_port += ports_per_node * tryNodes
+            ### base_port += ports_per_node * tryNodes
 
 if __name__ == '__main__':
     h2o.unit_main()
