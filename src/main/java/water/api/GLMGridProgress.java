@@ -29,6 +29,9 @@ public class GLMGridProgress extends Request {
     Key dest = _dest.value();
     GLMModels models = UKV.get(dest);
 
+    if(models==null)
+      return Response.doneEmpty();
+
     JsonObject response = new JsonObject();
     response.addProperty(Constants.DEST_KEY, dest.toString());
 

@@ -155,7 +155,6 @@ public class TypeMap {
   }
 
   static int onLoad(String className) {
-   System.out.println(className);;
     Integer I = MAP.get(className);
     if(I == null)
       throw new RuntimeException("TypeMap missing " + className);
@@ -172,6 +171,8 @@ public class TypeMap {
     }
     return f.newInstance();
   }
+
+  //
 
   public static void main(String[] args) {
     Log._dontDie = true; // Ignore class load error, e.g. Request

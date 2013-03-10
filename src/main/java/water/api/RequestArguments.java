@@ -1551,6 +1551,7 @@ public class RequestArguments extends RequestStatics {
 
     @Override protected ValueArray defaultValue() {
       try {
+        if(_defaultKey == null) return null;
         return ValueArray.value(DKV.get(_defaultKey));
       } catch (Exception e) {
         return null;

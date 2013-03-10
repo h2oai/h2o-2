@@ -39,6 +39,7 @@ public class GLMGrid extends Job {
 
   @Override
   public void start() {
+    super.start();
     UKV.put(dest(), new GLMModels(_lambdas.length * _alphas.length));
 
     H2O.submitTask(new DTask() {
