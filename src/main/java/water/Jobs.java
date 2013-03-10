@@ -39,16 +39,12 @@ public abstract class Jobs {
     // FIXME this should be called update
     public static void set(Key key, final long value) {
       new TAtomic<Progress>() {
-        @Override
-        public Progress atomic(Progress old) {
+        @Override public Progress alloc() { return new Progress(); }
+        @Override public Progress atomic(Progress old) {
           old._value = value;
           return old;
         }
 
-        @Override
-        public Progress alloc() {
-          return new Progress();
-        }
       }.invoke(key);
     }
   }
@@ -85,17 +81,13 @@ public abstract class Jobs {
   }
 
   public static Job start(String description, Key dest) {
-    return start(description, dest, new Progress());
-  }
-
-  public static Job start(String description, Key dest, Progress progress) {
     final Job job = new Job();
     job._key = Key.make(UUID.randomUUID().toString());
-    DKV.put(job._key, new Value(job._key, ""));
+    UKV.put(job._key, new Value(job._key, ""));
     job._description = description;
     job._startTime = System.currentTimeMillis();
     job._progress = Key.make(UUID.randomUUID().toString());
-    UKV.put(job._progress, progress);
+    UKV.put(job._progress, new Progress());
     job._dest = dest;
 
     new TAtomic<List>() {
