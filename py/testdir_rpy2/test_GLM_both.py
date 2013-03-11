@@ -38,8 +38,10 @@ def glm_R_and_compare(csvPathname, family, formula, y, header=False, h2oResults=
         cDelta = [None for a in cListR]
 
     def printit(a,b,c,d):
+        pctDiff = abs(d/c)*100
         print "%-20s %-20.5e %8s %5.2f%% %10s %-20.5e" % \
-            ("R " + a + " " + b + ":", c, "diff:", abs(d/c)*100, "abs diff:", d)
+            ("R " + a + " " + b + ":", c, "pct. diff:", pctDiff, "abs diff:", d)
+        self.AssertLess(pctDiff,1,"Expect <1% difference between H2O and R coefficient/intercept")
 
     print
     printit("intercept", "", interceptR, interceptDelta)
