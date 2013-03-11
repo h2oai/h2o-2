@@ -57,7 +57,7 @@ public abstract class Jobs {
     }
   }
 
-  private static final Key KEY = Key.make(Constants.BUILT_IN_KEY_JOBS, (byte) 0, Key.SINGLETONS);
+  public static final Key KEY = Key.make(Constants.BUILT_IN_KEY_JOBS, (byte) 0, Key.SINGLETONS);
 
   private static final class List extends Iced {
     Job[] _jobs = new Job[0];
@@ -69,7 +69,7 @@ public abstract class Jobs {
       @Override public List atomic(List old) {
         return old == null ? new List() : old;
       }
-    }.fork(KEY);
+    }.invoke(KEY);
   }
 
   public static void init() {

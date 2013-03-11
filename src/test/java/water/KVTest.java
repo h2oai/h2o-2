@@ -69,11 +69,12 @@ public class KVTest extends TestUtil {
       Value val = new Value(k,bits);
       DKV.put(k,val);
     }
+    DKV.write_barrier();
 
     RemoteBitSet r = new RemoteBitSet();
     r.invoke(keys);
     assertEquals((int)((1L<<keys.length)-1), r._x);
-    for( Key k : keys ) UKV.remove(k);
+    for( Key k : keys ) DKV.remove(k);
   }
 
   // Remote Bit Set: OR together the result of a single bit-mask where the

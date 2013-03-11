@@ -10,7 +10,7 @@ import water.H2O.H2OCountedCompleter;
  * A remotely executed FutureTask.  Flow is:
  *
  * 1- Build a DTask (or subclass).  This object will be replicated remotely.
- * 2- Make a RPC object, naming the target Node.  Call (re)send.  Call get() to
+ * 2- Make a RPC object, naming the target Node.  Call (re)call().  Call get() to
  * block for result, or cancel() or isDone(), etc.
  * 3- DTask will be serialized and sent to the target; small objects via UDP
  * and large via TCP (using AutoBuffer & auto-gen serializers).
@@ -26,7 +26,7 @@ import water.H2O.H2OCountedCompleter;
  * 9- Target sends an ACK back (may be combined with the result if small enough)
  * 10- Target puts the ACK in H2ONode.TASKS for later filtering.
  * 10.5- Target receives dup UDP request, then replies with ACK back.
- * 11- Sender recieves ACK result; deserializes; notifies waiters
+ * 11- Sender receives ACK result; deserializes; notifies waiters
  * 12- Sender sends ACKACK back
  * 12.5- Sender recieves dup ACK's, sends dup ACKACK's back
  * 13- Target recieves ACKACK, removes TASKS tracking
@@ -71,6 +71,8 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   static final byte SERVER_TCP_SEND = 11;
   static final byte CLIENT_UDP_SEND = 12;
   static final byte CLIENT_TCP_SEND = 13;
+  static final private String[] COOKIES = new String[] {
+    "SERVER_UDP","SERVER_TCP","CLIENT_UDP","CLIENT_TCP" };
 
   public static <DT extends DTask> RPC<DT> call(H2ONode target, DT dtask) {
     return new RPC(target,dtask).call();
@@ -108,12 +110,19 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       // make a new UDP-sized packet.  On a re-send of a TCP-sized hunk, just
       // send the basic UDP control packet.
       if( !_sentTcp ) {
-        // Ship the UDP packet with clazz name to execute
-        // totally replace me with Michal's enums!!!
-        UDP.udp fjq = UDP.udp.exec;//_dt.isHighPriority() ? UDP.udp.exechi : UDP.udp.execlo;
-        AutoBuffer ab = new AutoBuffer(_target).putTask(fjq,_tasknum);
+        // Ship the UDP packet!
+        AutoBuffer ab = new AutoBuffer(_target).putTask(UDP.udp.exec,_tasknum);
         ab.put1(CLIENT_UDP_SEND).put(_dt).close();
         if( ab.hasTCP() ) _sentTcp = true;
+      } else {
+        // Else it was sent via TCP in a prior attempt, and we've timed out.
+        // This means the caller's ACK/answer probably got dropped and we need
+        // him to resend it (or else the caller is still processing our
+        // request).  Send a UDP reminder - but with the CLIENT_TCP_SEND flag
+        // instead of the UDP send, and no DTask (since it previously went via
+        // TCP, no need to resend it).
+        AutoBuffer ab = new AutoBuffer(_target).putTask(UDP.udp.exec,_tasknum);
+        ab.put1(CLIENT_TCP_SEND).close();
       }
       // Double retry until we exceed existing age.  This is the time to delay
       // until we try again.  Note that we come here immediately on creation,
@@ -200,14 +209,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
         clazz = TypeMap.getType(tid).toString();
         clazz = clazz.substring(clazz.lastIndexOf('.')+1, clazz.indexOf('@'));
       }
-//      String fs = "";
-//      switch( flag ) {
-//      case SERVER_UDP_SEND: fs = "SERVER_UDP_SEND"; break;
-//      case SERVER_TCP_SEND: fs = "SERVER_TCP_SEND"; break;
-//      case CLIENT_UDP_SEND: fs = "CLIENT_UDP_SEND"; break;
-//      case CLIENT_TCP_SEND: fs = "CLIENT_TCP_SEND"; break;
-//      }
-      return "task# "+ab.getTask()+" "+ clazz;
+      return "task# "+ab.getTask()+" "+ clazz+" "+COOKIES[flag-SERVER_UDP_SEND];
     }
   }
 
@@ -239,43 +241,46 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     @Override public byte priority() { return _dt.priority(); }
   }
 
-  // Handle TCP traffic, from a client to this server asking for work to be
-  // done.  This is called on the TCP reader thread, not a Fork/Join worker
-  // thread.  We want to do the bulk TCP read in the TCP reader thread.
+  // Handle traffic, from a client to this server asking for work to be done.
+  // Called from either a F/J thread (generally with a UDP packet) or from the
+  // TCPReceiver thread.
   static AutoBuffer remote_exec( final AutoBuffer ab ) {
     final int task = ab.getTask();
     final int flag = ab.getFlag();
-    assert flag==CLIENT_UDP_SEND; // Client sent a request to be executed?
-    // Act "as if" called from the UDP packet code, by recording the task just
-    // like the packet we will be receiving (eventually).  The presence of this
-    // packet is used to stop dup-actions on dup-sends.  Racily inserted, keep
-    // only the last one.
+    assert flag==CLIENT_UDP_SEND || flag==CLIENT_TCP_SEND; // Client-side send
+    // Atomically record an instance of this task, one-time-only replacing a
+    // null with a NOPTask, NOPTask being a placeholder while we work on a
+    // proper responce - and it serves to let us discard dup UDP requests.
     DTask old = ab._h2o.record_task(task);
-    if(ab.hasTCP())
-      assert old ==null||old instanceof NOPTask : "#"+task+" "+old.getClass(); // For TCP, no repeats, so 1st send is only send
-    if( old != null ) {
-      assert !ab.hasTCP(); // Since no TCP, no need to drain UDP packet before closing
-      if( old instanceof NOPTask ) {
-        // This packet has not been ACK'd yet.  Hence it's still a
-        // work-in-progress locally.  We have no answer yet to reply with
-        // but we do not want to re-offer the packet for repeated work.
-        // Just ignore the packet.
-      } else {
-        // This is an old re-send of the same thing we've answered to before.
-        // Send back the same old answer ACK.  If we sent via TCP before, then
-        // we know the answer got there so just send a control-ACK back.  If we
-        // sent via UDP, resend the whole answer.
-        AutoBuffer rab = new AutoBuffer(ab._h2o).putTask(UDP.udp.ack,ab.getTask());
-        if( old._repliedTcp ) rab.put1(RPC.SERVER_TCP_SEND);
-        else old.write(rab.put1(RPC.SERVER_UDP_SEND));
-        rab.close();
-        assert !rab.hasTCP();
-      }
-    } else {
-      // Make a remote instance of this dude from the stream, but only if the
-      // racing UDP packet did not already make one.  Start the bulk TCP read.
+
+    // This is a UDP packet request an answer back for a request sent via TCP
+    // but the UDP packet has arrived ahead of the TCP.  Just drop the UDP and
+    // wait for the TCP to appear.
+    if( old == null && flag == CLIENT_TCP_SEND ) {
+      assert !ab.hasTCP();
+      // DROP PACKET
+    } else if( old == null ) {  // New task?
+      // Read the DTask Right Now.  If we are the TCPReceiver thread, then we
+      // are reading in that thread... and thus TCP reads are single-threaded.
       final DTask dt = ab.get(DTask.class);
+      // And execute!
       H2O.submitTask(new RPCCall(dt,ab._h2o,task));
+
+    } else if( old instanceof NOPTask ) {
+      // This packet has not been ACK'd yet.  Hence it's still a work-in-
+      // progress locally.  We have no answer to reply but we do not want to
+      // re-offer the packet for repeated work.  Just ignore the packet.
+      // DROP PACKET
+    } else {
+      // This is an old re-send of the same thing we've answered to before.
+      // Send back the same old answer ACK.  If we sent via TCP before, then
+      // we know the answer got there so just send a control-ACK back.  If we
+      // sent via UDP, resend the whole answer.
+      AutoBuffer rab = new AutoBuffer(ab._h2o).putTask(UDP.udp.ack,ab.getTask());
+      if( old._repliedTcp ) rab.put1(RPC.SERVER_TCP_SEND);
+      else old.write(rab.put1(RPC.SERVER_UDP_SEND));
+      rab.close();
+      assert !rab.hasTCP();
     }
     return ab;
   }
@@ -316,11 +321,11 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     assert flag == SERVER_UDP_SEND;
     synchronized(this) {        // Install the answer under lock
       if( _done ) { ab.close(); return; } // Ignore duplicate response packet
+      UDPTimeOutThread.PENDING.remove(this);
       _dt.read(ab);             // Read the answer (under lock?)
       ab.close();               // Also finish the read (under lock?)
       _dt.onAck();              // One time only execute (before sending ACKACK)
       _done = true;
-      UDPTimeOutThread.PENDING.remove(this);
       TASKS.remove(_tasknum);   // Flag as task-completed, even if the result is null
       notifyAll();              // And notify in any case
     }
