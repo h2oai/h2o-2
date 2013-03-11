@@ -18,8 +18,6 @@ public class TestRunner {
   static final String KEY  = System.getProperty("user.home") + "/.ssh/id_rsa";
 
   public static void main(String[] args) throws Exception {
-    H2O.main(args);
-
     ArrayList<Separate> sites = new ArrayList<Separate>();
     int nodes = 1 + 2;
 
@@ -31,18 +29,20 @@ public class TestRunner {
       // sites.add(new SeparateBox(host, USER, KEY, new String[] { "init.Boot" }));
     }
 
+    H2O.main(args);
     TestUtil.stall_till_cloudsize(nodes);
+
+    Desktop desktop = Desktop.getDesktop();
+    desktop.browse(new URI("http://localhost:54321/StoreView.html"));
+
+    BufferedReader console = new BufferedReader(new InputStreamReader(System.in));
+    console.readLine();
 
     // new KMeansTest().testGaussian((int) 1e6);
     // org.junit.runner.JUnitCore.runClasses(KMeansTest.class);
     org.junit.runner.JUnitCore.runClasses(GLMGridTest.class);
     org.junit.runner.JUnitCore.runClasses(KVTest.class);
 
-    Desktop desktop = Desktop.getDesktop();
-    desktop.browse(new URI("http://localhost:54321/Cloud.html"));
-
-    BufferedReader console = new BufferedReader(new InputStreamReader(System.in));
-    console.readLine();
 
     for( Separate site : sites )
       site.close();

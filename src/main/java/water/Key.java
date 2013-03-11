@@ -169,8 +169,6 @@ public final class Key extends Iced implements Comparable {
     _hash = hash+chk; // Add sequential block numbering
   }
 
-  Key() {}
-
   // Make new Keys.  Optimistically attempt interning, but no guarantee.
   static public Key make(byte[] kb, byte rf) {
     if( rf == -1 ) throw new IllegalArgumentException();

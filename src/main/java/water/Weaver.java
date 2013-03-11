@@ -184,6 +184,7 @@ public class Weaver {
     //       s.putA4(_xs);
     //       s.put8d(_d);
     //     }
+    // TODO use Freezable.write instead of AutoBuffer.put for final classes
     make_body(cc,ctfs,callsuper,
               "public water.AutoBuffer write(water.AutoBuffer ab) {\n",
               "  super.write(ab);\n",
