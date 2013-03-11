@@ -24,7 +24,7 @@ public class TaskStore2HDFS extends DTask<TaskStore2HDFS> {
     assert PersistHdfs.getPathForKey(srcKey) != null; // Validate key name
     Value v = DKV.get(srcKey);
     if( v == null ) return "Key "+srcKey+" not found";
-    if( v._isArray == 0 ) {     // Simple chunk?
+    if( !v.isArray() ) {        // Simple chunk?
       v.setHdfs();              // Set to HDFS and be done
       return null;              // Success
     }

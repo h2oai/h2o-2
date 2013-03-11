@@ -3,8 +3,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 
-import water.Jobs.Job;
-
 /**
 * Large Arrays & Arraylets
 *
@@ -101,7 +99,7 @@ import water.Jobs.Job;
 
   /** Get a Value wrapping a serialized ValueArray */
   public Value value() {
-    return new Value(_key,write(new AutoBuffer()).buf(),_persist,(byte)1);
+    return new Value(_key,write(new AutoBuffer()).buf(),_persist, Value.VALUE_ARRAY);
   }
   /** Deserialize wrapper from a Key */
   public static ValueArray value(Key k) {
@@ -111,9 +109,9 @@ import water.Jobs.Job;
   }
   /** Deserialize wrapper from a Value */
   public static ValueArray value(Value val) {
-    assert val != null && val._isArray!=0;
+    assert val != null && val.isArray();
     ValueArray ary = new ValueArray(val._key,0,Value.ICE);
-    ary.read(new AutoBuffer(val.get()));
+    ary.read(new AutoBuffer(val.memOrLoad()));
     ary.init(val._key);
     return ary;
   }
@@ -222,7 +220,7 @@ import water.Jobs.Job;
   // Get a usable pile-o-bits
   public AutoBuffer getChunk( long chknum ) { return getChunk(getChunkKey(chknum)); }
   public AutoBuffer getChunk( Key key ) {
-    byte[] b = DKV.get(key).get();
+    byte[] b = DKV.get(key).memOrLoad();
     assert b.length == rpc(getChunkIndex(key))*_rowsize : "actual="+b.length+" expected="+rpc(getChunkIndex(key))*_rowsize;
     return new AutoBuffer(b);
   }
@@ -389,14 +387,14 @@ import water.Jobs.Job;
       Key ckey = getChunkKey(cidx++,key);
       DKV.put(ckey,new Value(ckey,buf),fs);
 
-      if(job != null && Jobs.cancelled(job._key))
+      if(job != null && job.cancelled())
         return;
     }
     assert is.read(new byte[1]) == -1;
 
     // Last chunk is short, read it; combine buffers and make the last chunk larger
     Key ckey = getChunkKey(cidx-1,key); // Get last chunk written out
-    assert DKV.get(ckey).get()==oldbuf; // Maybe false-alarms under high-memory-pressure?
+    assert DKV.get(ckey).memOrLoad()==oldbuf; // Maybe false-alarms under high-memory-pressure?
     byte[] newbuf = Arrays.copyOf(oldbuf,(int)(off+CHUNK_SZ));
     System.arraycopy(buf,0,newbuf,(int)CHUNK_SZ,off);
     DKV.put(ckey,new Value(ckey,newbuf),fs); // Overwrite the old too-small Value

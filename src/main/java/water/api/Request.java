@@ -1,6 +1,5 @@
 package water.api;
 
-import H2OInit.Boot;
 
 import java.io.IOException;
 import java.io.InputStream;

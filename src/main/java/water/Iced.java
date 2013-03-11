@@ -13,4 +13,5 @@ public abstract class Iced implements Freezable {
   @Override public AutoBuffer write(AutoBuffer bb) { throw barf(); }
   @Override public <T extends Freezable> T read(AutoBuffer bb) { throw barf(); }
   @Override public <T extends Freezable> T newInstance() { throw barf(); }
+  @Override public int frozenType() { throw barf(); }
 }

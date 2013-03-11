@@ -2,9 +2,7 @@ package water.hdfs;
 
 import java.io.File;
 
-import water.H2O;
-import water.Log;
-import H2OInit.Boot;
+import water.*;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Strings;

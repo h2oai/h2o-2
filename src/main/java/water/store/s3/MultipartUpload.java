@@ -144,7 +144,7 @@ public class MultipartUpload extends MRTask {
   }
 
   private static ValueArray va(Value value) {
-    if( value._isArray != 0 ) return ValueArray.value(value);
+    if( value.isArray() ) return ValueArray.value(value);
     return new ValueArray(value._key, value.length(), Value.S3);
   }
 
@@ -160,11 +160,6 @@ public class MultipartUpload extends MRTask {
           System.out.println("s3 step " + update._done + " of " + update._todo);
 
         return update;
-      }
-
-      @Override
-      public Progress alloc() {
-        return new Progress();
       }
     }.invoke(key);
   }

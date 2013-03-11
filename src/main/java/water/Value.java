@@ -18,7 +18,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   // In any case, they will cause issues with both GC (giant pause times on
   // many collectors) and I/O (long term blocking of TCP I/O channels to
   // service a single request, causing starvation of other requests).
-  public static int MAX = 10*1024*1024;
+  public static final int MAX = 10*1024*1024;
 
   // ---
   // Values are wads of bits; known small enough to 'chunk' politely on disk,
@@ -36,19 +36,40 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   private volatile byte[] _mem;
   public final byte[] mem() { return _mem; }
 
-  public final <T extends Freezable> T get(T t) {
-    return t.read(new AutoBuffer(get()));
+  // ---
+  public static final byte FREEZABLE = 0;
+  // public static final int COLUMN_DOUBLE = 1;
+  // ...
+  public static final byte VALUE_ARRAY = 1;
+  private byte _type;
+  public final byte type() { return _type; }
+  public final boolean isArray() {
+    return _type == VALUE_ARRAY;
   }
 
   /** The FAST path get-byte-array - final method for speed.
    * @return a null if the Value is deleted already. */
-  public final byte[] get() {
+  public final byte[] memOrLoad() {
     byte[] mem = _mem;          // Read once!
     if( mem != null ) return mem;
     if( _max == 0 ) return (_mem = new byte[0]);
     return (_mem = loadPersist());
   }
+
   public final void freeMem() { _mem = null; }
+
+  // ---
+  // As object.
+  public final <T extends Freezable> T get() {
+    return new AutoBuffer(memOrLoad()).get();
+  }
+
+  public final <T extends Freezable> T get(T t) {
+    AutoBuffer bb = new AutoBuffer(memOrLoad());
+    char type = bb.get2();
+    assert t.frozenType() == type : "" + t.frozenType() + " vs " + (int) type;
+    return t.read(bb);
+  }
 
   // ---
   // Time of last access to this value.
@@ -144,7 +165,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   /** Set persistence to HDFS from ICE */
   public void setHdfs() {
     assert onICE();
-    byte[] mem = get();    // Get into stable memory
+    byte[] mem = memOrLoad();    // Get into stable memory
     removeIce();           // Remove from ICE disk
     _persist = Value.HDFS|Value.NOTdsk;
     assert onHDFS();       // Flip to HDFS
@@ -161,7 +182,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     Key arykey = ValueArray.getArrayKey(key);
     Value v1 = DKV.get(arykey);
     if( v1 == null ) return null;       // Nope; not there
-    if( v1._isArray == 0 ) return null; // Or not a ValueArray
+    if( !v1.isArray() ) return null; // Or not a ValueArray
     switch( v1._persist&BACKEND_MASK ) {
     case ICE : if( !key.home() ) return null; // Only do this on the home node for ICE
                return PersistIce .lazyArrayChunk(key);
@@ -174,7 +195,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
 
   public StringBuilder getString( int len, StringBuilder sb ) {
     int newlines=0;
-    byte[] b = get();
+    byte[] b = memOrLoad();
     final int LEN=Math.min(len,b.length);
     for( int i=0; i<LEN; i++ ) {
       byte c = b[i];
@@ -193,30 +214,25 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   // Expand a KEY_OF_KEYS into an array of keys
   public Key[] flatten() {
     assert _key._kb[0] == Key.KEY_OF_KEYS;
-    return new AutoBuffer(get(), 0).getA(Key.class);
+    return new AutoBuffer(memOrLoad(), 0).getA(Key.class);
   }
-
-  // Stupid typed-Value hack for ValueArray: contents are to be interpreted as
-  // a ValueArray.  Really, this needs to be replaced with a Real Value Type
-  // System (Michal's enums!).
-  public byte _isArray;
 
   // Get the 1st bytes from either a plain Value, or chunk 0 of a ValueArray
   public byte[] getFirstBytes() {
-    return ((_isArray == 0) ? this : DKV.get(ValueArray.getChunkKey(0,_key))).get();
+    return (!isArray() ? this : DKV.get(ValueArray.getChunkKey(0,_key))).memOrLoad();
   }
 
   // For plain Values, just the length in bytes.
   // For ValueArrays, the length of all chunks.
   public long length() {
-    if( _isArray==0 ) return _max;
+    if(!isArray()) return _max;
     return ValueArray.value(this).length();
   }
 
 
   // --------------------------------------------------------------------------
   // Set just the initial fields
-  public Value(Key k, int max, byte[] mem, byte be, byte isArray ) {
+  public Value(Key k, int max, byte[] mem, byte be, byte type ) {
     assert mem==null || mem.length==max;
     assert max < MAX : "Value size=0x"+Integer.toHexString(max);
     _key = k;
@@ -227,14 +243,14 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     // passed-in persist bits
     byte p = (byte)(be&BACKEND_MASK);
     _persist = (p==ICE) ? p : be;
-    _isArray = isArray;
+    _type = type;
   }
-  public Value(Key k, int max, byte be    ) { this(k, max, null, be,(byte)0); }
-  public Value(Key k, int max             ) { this(k, max, MemoryManager.malloc1(max), ICE, (byte)0); }
-  public Value(Key k, int max, byte[] mem ) { this(k, max, mem, ICE, (byte)0); }
+  public Value(Key k, int max, byte be    ) { this(k, max, null, be, FREEZABLE); }
+  public Value(Key k, int max             ) { this(k, max, MemoryManager.malloc1(max), ICE, FREEZABLE); }
+  public Value(Key k, int max, byte[] mem ) { this(k, max, mem, ICE, FREEZABLE); }
   public Value(Key k, String s            ) { this(k, s.length(), s.getBytes()); }
   public Value(Key k, byte[] bits         ) { this(k, bits.length,bits); }
-  public Value(Key k, byte[] bits, byte persist, byte isArray ) { this(k, bits.length,bits,persist, isArray); }
+  public Value(Key k, byte[] bits, byte persist, byte type) { this(k, bits.length,bits,persist, type); }
   public Value() { }            // for auto-serialization
 
   // Custom serializers: the _mem field is racily cleared by the MemoryManager
@@ -243,14 +259,14 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   public AutoBuffer write(AutoBuffer bb) {
     byte p = _persist;
     if( onICE() ) p &= ~ON_dsk; // Not on the remote disk
-    return bb.put1(p).put1(_isArray).putA1(get());
+    return bb.put1(p).put1(_type).putA1(memOrLoad());
   }
 
-  // Custome serializer: set _max from _mem length; set replicas & timestamp.
+  // Custom serializer: set _max from _mem length; set replicas & timestamp.
   public Value read(AutoBuffer bb) {
     assert _key == null;        // Not set yet
-    _persist = (byte)bb.get1();
-    _isArray = (byte)bb.get1();
+    _persist = (byte) bb.get1();
+    _type = (byte) bb.get1();
     _mem = bb.getA1();
     _max = _mem.length;
     // On remote nodes _replicas is initialized to 0 (signaling a remote PUT is
@@ -447,7 +463,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   }
 
   public boolean isHex() {
-    if( _isArray != 1 ) return false;
+    if( !isArray() ) return false;
     ValueArray va = ValueArray.value(this);
     if( va._cols == null || va._cols.length == 0 ) return false;
     if( va._cols.length > 1 ) return true;
@@ -478,7 +494,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
 
   /** Creates a Stream for reading bytes */
   public InputStream openStream() throws IOException {
-    if( _isArray == 0 ) return new ByteArrayInputStream(get());
+    if( !isArray() ) return new ByteArrayInputStream(memOrLoad());
     return ValueArray.value(this).openStream();
   }
 }

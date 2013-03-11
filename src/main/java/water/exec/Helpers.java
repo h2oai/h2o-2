@@ -177,7 +177,7 @@ public class Helpers {
           @Override public void map(Key fromk) {
             long chkidx = ValueArray.getChunkIndex(fromk);
             Key tok = ValueArray.getChunkKey(chkidx, to);
-            byte[] bits = DKV.get(fromk).get();
+            byte[] bits = DKV.get(fromk).memOrLoad();
             Value tov = new Value(tok, MemoryManager.arrayCopyOf(bits, bits.length));
             DKV.put(tok, tov, getFutures());
           }

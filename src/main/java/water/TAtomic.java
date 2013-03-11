@@ -10,15 +10,12 @@ public abstract class TAtomic<T extends Freezable> extends Atomic {
    */
   public abstract T atomic(T old);
 
-  /** Allocate an instance of T */
-  public abstract T alloc();
-
   @Override
   public byte[] atomic(byte[] bits) {
     T old = null;
-    if(bits != null) old = alloc().read(new AutoBuffer(bits));
+    if(bits != null) old = new AutoBuffer(bits).get();
     T nnn = atomic(old);
     if( nnn == null ) return null;
-    return nnn.write(new AutoBuffer()).buf();
+    return new AutoBuffer().put(nnn).buf();
   }
 }

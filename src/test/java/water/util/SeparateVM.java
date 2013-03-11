@@ -4,8 +4,8 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import water.Boot;
 import water.Log;
-import H2OInit.Boot;
 
 /**
  * Executes code in a separate VM.

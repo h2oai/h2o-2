@@ -15,9 +15,10 @@ public class Constants {
     public static final String HEX = ".hex";
     public static final String JOB = ".job";
     public static final String KMEANS = ".kmeans";
+    public static final String R = ".r";
   }
 
-  public static final String BUILT_IN_KEY_JOBS                 = "__built_in_key_jobs";
+  public static final String BUILT_IN_KEY_JOBS                 = "jobs";
 
   public static final String ALPHA                 = "alpha";
   public static final String ARGUMENTS             = "arguments";

@@ -11,7 +11,6 @@ import java.util.Arrays;
 import org.junit.Test;
 
 import water.*;
-import water.util.TestUtil;
 
 // Test grid-search over GLM args
 public class GLMGridTest extends TestUtil {

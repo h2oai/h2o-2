@@ -4,7 +4,6 @@ import hex.KMeans;
 import java.util.Arrays;
 import java.util.Random;
 import org.junit.*;
-import water.util.TestUtil;
 
 public class ConcurrentKeyTest extends TestUtil {
 

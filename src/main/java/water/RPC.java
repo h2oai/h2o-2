@@ -206,7 +206,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       String clazz = "";
       if( flag == CLIENT_UDP_SEND ) {
         int tid = ab.get2();
-        clazz = TypeMap.getType(tid).toString();
+        clazz = TypeMap.newInstance(tid).toString();
         clazz = clazz.substring(clazz.lastIndexOf('.')+1, clazz.indexOf('@'));
       }
       return "task# "+ab.getTask()+" "+ clazz+" "+COOKIES[flag-SERVER_UDP_SEND];

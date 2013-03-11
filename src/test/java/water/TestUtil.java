@@ -1,13 +1,16 @@
-package water.util;
+package water;
 
 import static org.junit.Assert.*;
-import com.google.common.io.Closeables;
+
 import java.io.*;
 import java.util.Arrays;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import water.*;
+
 import water.parser.ParseDataset;
+
+import com.google.common.io.Closeables;
 
 public class TestUtil {
   private static int _initial_keycnt = 0;
@@ -15,13 +18,13 @@ public class TestUtil {
   @BeforeClass
   public static void setupCloud() {
     H2O.main(new String[] {});
-    Jobs.init(); // Jobs.KEY must be part of initial keys
+    UKV.put(Job.LIST, new Job.List()); // Jobs.LIST must be part of initial keys
     _initial_keycnt = H2O.store_size();
   }
 
   @AfterClass
   public static void checkLeakedKeys() {
-    DKV.get(Jobs.KEY);          // This gets invalidated; must be reloaded
+    DKV.get(Job.LIST);          // This gets invalidated; must be reloaded
     DKV.write_barrier();
     int leaked_keys = H2O.store_size() - _initial_keycnt;
     if( leaked_keys != 0 )

@@ -7,7 +7,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import water.*;
 import water.parser.ParseDataset;
-import water.util.TestUtil;
 
 public class RBigDataTest extends TestUtil {
   static private final AtomicInteger UNIQUE = new AtomicInteger(1);
