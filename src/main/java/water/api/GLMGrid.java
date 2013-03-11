@@ -154,7 +154,7 @@ public class GLMGrid extends Request {
     rs.replace("ycol",m.responseName());
     rs.replace("case",m._glmParams._caseVal);
     try {
-      rs.replace("xcols",URLEncoder.encode(m.xcolNames(),"utf8"));
+      rs.replace("xcols",URLEncoder.encode(m.selectedCols(),"utf8"));
       rs.replace("caseMode",URLEncoder.encode(m._glmParams._caseMode.toString(),"utf8"));
     } catch( UnsupportedEncodingException e ) {
       throw new RuntimeException(e);

@@ -336,6 +336,24 @@ public abstract class DGLM {
       return Key.make(KEY_PREFIX + Key.make());
     }
 
+
+    /**
+     * Non expanded ordered list of names of selected columns.
+     *
+     * @return
+     */
+    public String selectedCols(){
+      StringBuilder sb = new StringBuilder();
+      for( ValueArray.Column C : _va._cols ) {
+        sb.append(C._name).append(',');
+      }
+      sb.setLength(sb.length()-1); // Remove trailing extra comma
+      return sb.toString();
+    }
+    /**
+     * Expanded (categoricals expanded to vector of levels) ordered list of column names.
+     * @return
+     */
     public String xcolNames(){
       StringBuilder sb = new StringBuilder();
       for( ValueArray.Column C : _va._cols ) {
