@@ -5,8 +5,7 @@ import static org.junit.Assert.assertEquals;
 import hex.rf.DRF.DRFFuture;
 import hex.rf.Tree.StatType;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 import water.*;
 import water.util.TestUtil;
@@ -20,7 +19,7 @@ import water.util.TestUtil;
  */
 public class RFPredDomainTest extends TestUtil {
 
-  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
+//  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
 
   static final long[] a(long ...p) { return p; }
 
@@ -72,6 +71,7 @@ public class RFPredDomainTest extends TestUtil {
    *   CM   : A B C D E
    */
   @Test
+  @Ignore
   public void irisExtra() throws Exception {
     long[][] cm = new long[][] {
         a(0, 0,  0, 0,  1),
@@ -94,6 +94,7 @@ public class RFPredDomainTest extends TestUtil {
    *   CM   : A B C
    */
   @Test
+  @Ignore
   public void irisMissing() throws Exception {
     long[][] cm = new long[][] {
         a(0, 0,  0),
@@ -114,6 +115,7 @@ public class RFPredDomainTest extends TestUtil {
    *   CM   : A B C D E
    */
   @Test
+  @Ignore
   public void irisMissingAndExtra() throws Exception {
     long[][] cm = new long[][] {
         a(0, 0,  0, 0, 1),
@@ -137,6 +139,7 @@ public class RFPredDomainTest extends TestUtil {
    *   CM   : [0,4]
    */
   @Test
+  @Ignore
   public void irisNumericExtra() throws Exception {
     long[][] cm = new long[][] {
         a(20, 0,  0,  0, 0),
@@ -159,6 +162,7 @@ public class RFPredDomainTest extends TestUtil {
    *   CM   : [0,2]
    */
   @Test
+  @Ignore
   public void irisNumericMissing() throws Exception {
     long[][] cm = new long[][] {
         a(0, 0, 0),
@@ -179,6 +183,7 @@ public class RFPredDomainTest extends TestUtil {
    *   CM   : [0,4]
    */
   @Test
+  @Ignore
   public void irisNumericMissingAndExtra() throws Exception {
     long[][] cm = new long[][] {
         a(0, 0,  0, 0, 0),
@@ -200,6 +205,7 @@ public class RFPredDomainTest extends TestUtil {
    *   CM   : [-1,4]
    */
   @Test
+  @Ignore
   public void irisNumericExtra2() throws Exception {
     long[][] cm = new long[][] {
         a(0, 0,  0, 1, 0, 0),
@@ -212,6 +218,28 @@ public class RFPredDomainTest extends TestUtil {
     String[] cmDomain = new String[] {"-1", "0", "1", "2", "3", "4"};
     runIrisRF("smalldata/test/classifier/iris_train_numeric.csv",
               "smalldata/test/classifier/iris_test_numeric_extra2.csv",
+              0.057f, cm, cmDomain);
+  }
+
+  /**
+   * Scenario:
+   *   model: [0,2]
+   *   data : [-1,4]
+   *   CM   : [-1,4]
+   */
+  @Test
+  public void irisExtraWithNAs() throws Exception {
+    long[][] cm = new long[][] {
+        a(0, 0,  0, 1, 0, 0),
+        a(0, 20, 0, 0, 0, 0),
+        a(0, 0, 16, 0, 0, 0),
+        a(0, 0,  1,13, 0, 0),
+        a(0, 0,  0, 0, 0, 0),
+        a(0, 0,  1, 0, 0, 0),
+    };
+    String[] cmDomain = new String[] {"-1", "0", "1", "2", "3", "4"};
+    runIrisRF("smalldata/test/classifier/iris_train.csv",
+              "smalldata/test/classifier/iris_test_extra_with_na.csv",
               0.057f, cm, cmDomain);
   }
 }
