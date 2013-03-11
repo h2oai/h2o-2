@@ -220,7 +220,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     final int _tsknum;
     long _started;
     long _retry;
-    boolean _computed;
+    volatile boolean _computed;
     public RPCCall(DTask dt, H2ONode client, int tsknum) {
       _dt = dt;
       _client = client;
@@ -230,16 +230,17 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     @Override public void compute2() {
       // Run the remote task on this server!
       _dt.invoke(_client);
-      _computed = true;
       // Send results back
       AutoBuffer ab = new AutoBuffer(_client).putTask(UDP.udp.ack,_tsknum).put1(SERVER_UDP_SEND);
       _dt.write(ab);                 // Write the DTask - could be very large write
       _dt._repliedTcp = ab.hasTCP(); // Resends do not need to repeat TCP result
+      _computed = true;              // After the TCP reply flag set, set computed bit
       ab.close();
-      _client.record_task_answer(this); // Record after large write
+      _client.record_task_answer(this); // Setup for retrying Ack & AckAck
     }
     // Re-send strictly the ack, because we're missing an AckAck
     public final void resend_ack() {
+      assert _computed : "Found RPCCall not computed "+_tsknum;
       AutoBuffer rab = new AutoBuffer(_client).putTask(UDP.udp.ack,_tsknum);
       if( _dt._repliedTcp ) rab.put1(RPC.SERVER_TCP_SEND);
       else _dt.write(rab.put1(RPC.SERVER_UDP_SEND));
