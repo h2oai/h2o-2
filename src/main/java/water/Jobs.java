@@ -30,7 +30,7 @@ public abstract class Jobs {
       new TAtomic<Progress>() {
         @Override public Progress alloc() { return new Progress(); }
         @Override public Progress atomic(Progress old) {
-          old._value += delta;
+          if( old!=null ) old._value += delta;
           return old;
         }
       }.fork(key);

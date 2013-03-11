@@ -235,8 +235,8 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       AutoBuffer ab = new AutoBuffer(_client).putTask(UDP.udp.ack,_tsknum).put1(SERVER_UDP_SEND);
       _dt.write(ab);                 // Write the DTask - could be very large write
       _dt._repliedTcp = ab.hasTCP(); // Resends do not need to repeat TCP result
-      _client.record_task_answer(this); // Record after large write, but before close
       ab.close();
+      _client.record_task_answer(this); // Record after large write
     }
     // Re-send strictly the ack, because we're missing an AckAck
     public final void resend_ack() {
