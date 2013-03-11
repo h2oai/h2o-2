@@ -9,6 +9,7 @@ import hex.DLSM.ADMMSolver;
 import java.util.*;
 
 import water.*;
+import water.DTask;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -67,7 +68,7 @@ class GLMGridStatus extends DTask<GLMGridStatus> {
   // Work on this task.  Only *this* main thread updates '_working' &
   // '_progress' & '_ms' fields.  Only other web threads update the '_stop'
   // field; web threads also atomically-read the progress&ms fields.
-  public void compute() {
+  public void compute2() {
     assert _working == true;
     final int N = _alphas.length;
     GLMModel m = null;

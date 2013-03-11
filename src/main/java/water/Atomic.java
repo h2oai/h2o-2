@@ -1,5 +1,7 @@
 package water;
 
+import water.DTask;
+
 /**
  * Atomic update of a Key
  *
@@ -17,13 +19,13 @@ public abstract class Atomic extends DTask {
   abstract public byte[] atomic( byte[] bits );
 
   /** Executed on the transaction key's <em>home</em> node after any successful
-   *  atomic update.
+   *  atomic update.  Override this if you need to perform some action after
+   *  the update succeeds (eg cleanup).
    */
-  // override this if you need to perform some action after the update succeeds (eg cleanup)
   public void onSuccess(){}
 
   // Only invoked remotely; this is now the key's home and can be directly executed
-  @Override public final Atomic invoke( H2ONode sender ) {  compute(); return this; }
+  @Override public final Atomic invoke( H2ONode sender ) {  compute2(); return this; }
 
   /** Block until it completes, even if run remotely */
   public final Atomic invoke( Key key ) {
@@ -36,7 +38,7 @@ public abstract class Atomic extends DTask {
   public final RPC<Atomic> fork(Key key) {
     _key = key;
     if( key.home() ) {          // Key is home?
-      compute();                // Also, run it blocking/now
+      compute2();               // Also, run it blocking/now
       return null;
     } else {                    // Else run it remotely
       return RPC.call(key.home_node(),this);
@@ -44,7 +46,7 @@ public abstract class Atomic extends DTask {
   }
 
   // The (remote) workhorse:
-  @Override public final void compute( ) {
+  @Override public final void compute2( ) {
     assert _key.home();         // Key is at Home!
     Futures fs = new Futures(); // Must block on all invalidates eventually
     while( true ) {
@@ -69,7 +71,9 @@ public abstract class Atomic extends DTask {
     }                           // and retry
     onSuccess();                // Call user's post-XTN function
     _key = null;                // No need for key no more
-    fs.blockForPending();         // Block for any pending invalidates on the atomic update
+    fs.blockForPending(); // Block for any pending invalidates on the atomic update
     tryComplete();              // Tell F/J this task is done
   }
+
+  @Override public byte priority() { return H2O.ATOMIC_PRIORITY; }
 }

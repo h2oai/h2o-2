@@ -1,4 +1,6 @@
 package water;
+
+import water.DTask;
 import water.nbhm.NonBlockingHashMap;
 
 /**
@@ -13,6 +15,7 @@ public class TaskGetKey extends DTask<TaskGetKey> {
   Value _val;                // Set by server JVM, read by client JVM
   transient Key _xkey;       // Set by client, read by client
   transient H2ONode _h2o;    // Set by server JVM, read by server JVM on ACKACK
+  int _priority;
 
   // Unify multiple Key/Value fetches for the same Key from the same Node at
   // the "same time".  Large key fetches are slow, and we'll get multiple
@@ -53,7 +56,7 @@ public class TaskGetKey extends DTask<TaskGetKey> {
     while( _val != null && !_val.setReplica(sender) );
     return this;
   }
-  @Override public void compute() { throw H2O.unimpl(); }
+  @Override public void compute2() { throw H2O.unimpl(); }
 
   // Received an ACK; executes on the node asking&receiving the Value
   @Override public void onAck() {
@@ -80,6 +83,5 @@ public class TaskGetKey extends DTask<TaskGetKey> {
   @Override public void onAckAck() {
     if( _val != null ) _val.lowerActiveGetCount(_h2o);
   }
-
-  @Override public boolean isHighPriority() { return true; }
+  @Override public byte priority() { return H2O.GET_KEY_PRIORITY; }
 }

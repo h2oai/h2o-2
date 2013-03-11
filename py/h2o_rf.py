@@ -18,7 +18,7 @@ def pickRandRfParams(paramDict, params):
             params['out_of_bag_error_estimate'] = 0
     return colX
 
-def simpleCheckRFView(node, rfv,**kwargs):
+def simpleCheckRFView(node, rfv, **kwargs):
     if not node:
         node = h2o.nodes[0]
 
@@ -37,6 +37,25 @@ def simpleCheckRFView(node, rfv,**kwargs):
     # the simple assigns will at least check the key exists
     cm = rfv['confusion_matrix']
     header = cm['header'] # list
+
+    classification_error = cm['classification_error']
+    print "classification_error:", classification_error
+
+    rows_skipped = cm['rows_skipped']
+    print "rows_skipped:", rows_skipped
+
+    cm_type = cm['type']
+    print "type:", cm_type
+
+    used_trees = cm['used_trees']
+    ### print "used_trees:", used_trees
+    if (used_trees <= 0):
+        raise Exception("used_trees should be >0. used_trees:", used_trees)
+
+    # if we got the ntree for comparison. Not always there in kwargs though!
+    ntree = kwargs.get('ntree',None)
+    if (ntree is not None and used_trees != ntree):
+        raise Exception("used_trees should == ntree. used_trees:", used_trees)
 
     scoresList = cm['scores'] # list
     totalScores = 0
@@ -85,6 +104,8 @@ def simpleCheckRFView(node, rfv,**kwargs):
     ### confusionInspect = node.inspect(confusion_key)
     ### modelInspect = node.inspect(model_key)
     dataInspect = node.inspect(data_key)
+
+    return classification_error
 
 def trainRF(trainParseKey, **kwargs):
     # Train RF

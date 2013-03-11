@@ -262,7 +262,7 @@ public class GLM extends Request {
         R.replace("warnings",wsb);
         R.replace("succ","alert-warning");
         if(!m.converged())
-          R.replace("action","Suggested action: Go to " + (m.isSolved() ? (GLMGrid.link(m, "Grid search") + ", "):"") + " to search for better parameters");
+          R.replace("action","Computation did not converge. Suggested action: Go to " + (m.isSolved() ? (GLMGrid.link(m, "Grid search") + ", "):"") + " to search for better parameters");
       } else {
         R.replace("succ","alert-success");
       }

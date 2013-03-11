@@ -157,7 +157,7 @@ public class Weaver {
     // We cannot call Iced.xxx, as these methods always throw a
     // RuntimeException (to make sure we noisely fail instead of silently
     // fail).  But we DO need to call the super-chain of serialization methods
-    // - except for DTask.
+    // - stopping at DTask.
     boolean callsuper = true;
     for( CtClass base : _serBases )
       if( cc.getSuperclass() == base ) callsuper = false;

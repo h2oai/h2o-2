@@ -41,7 +41,7 @@ class JUnit(unittest.TestCase):
                     'hex.MinorityClassTest',
                     'hex.rf.RandomForestTest',
                     'hex.rf.RFPredDomainTest',
-                    'water.AppendKeyTest',
+                    'water.AtomicTest',
                     'water.AutoSerialTest',
                     'water.KVTest',
                     'water.KeyToString',

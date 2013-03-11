@@ -1,9 +1,8 @@
 package water;
-import java.net.ServerSocket;
-import java.net.InetSocketAddress;
 import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import water.api.Timeline;
 
 /**
  * The Thread that looks for TCP Cloud requests.
@@ -14,14 +13,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 
 public class TCPReceiverThread extends Thread {
+  public static ServerSocketChannel SOCK;
   public TCPReceiverThread() { super("TCP Receiver"); }
 
-  // How many threads would like to do TCP right now?
-  public static final AtomicInteger TCPS_IN_PROGRESS = new AtomicInteger(0);
-  public static ServerSocketChannel SOCK;
-
   // The Run Method.
-
   // Started by main() on a single thread, this code manages reading TCP requests
   @SuppressWarnings("resource")
   public void run() {
@@ -36,7 +31,7 @@ public class TCPReceiverThread extends Thread {
           final ServerSocketChannel tmp2 = errsock; errsock = null;
           tmp2.close();       // Could throw, but errsock cleared for next pass
         }
-        if( saw_error ) Thread.sleep(1000); // prevent deny-of-service endless socket-creates
+        if( saw_error ) Thread.sleep(100); // prevent deny-of-service endless socket-creates
         saw_error = false;
 
         // ---
@@ -52,11 +47,11 @@ public class TCPReceiverThread extends Thread {
 
         // Record the last time we heard from any given Node
         ab._h2o._last_heard_from = System.currentTimeMillis();
-
+        TimeLine.record_recv(ab, true,0);
         // Hand off the TCP connection to the proper handler
         switch( UDP.udp.UDPS[ctrl] ) {
-        case execlo:
-        case exechi:   RPC.tcp_exec(ab); break;
+          //case exec:     H2O.submitTask(new FJPacket(ab,ctrl)); break;
+        case exec:     RPC.remote_exec(ab).close(); break;
         case ack:      RPC.tcp_ack (ab); break;
         case ackack:   UDP.udp.UDPS[ctrl]._udp.call(ab).close(); break;
         case timeline: TimeLine.tcp_call(ab); break;

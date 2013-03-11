@@ -1,6 +1,8 @@
 package water;
 import java.util.concurrent.Future;
 
+import water.DTask;
+
 /**
  * Push the given key to the remote node
  *
@@ -17,9 +19,7 @@ public class TaskPutKey extends DTask<TaskPutKey> {
     if( fs != null ) fs.add(f);
   }
 
-  static void invalidate( H2ONode h2o, Key key, Futures fs ) { put(h2o,key,null,fs); }
-
-  private TaskPutKey( Key key, Value val ) { _key = key; _xval = _val = val; }
+  protected TaskPutKey( Key key, Value val ) { _key = key; _xval = _val = val; }
   public TaskPutKey invoke( H2ONode sender ) {
     assert _key.home() || _val==null; // Only PUT to home for keys, or remote invalidation from home
     // Initialize Value for having a single known replica (the sender)
@@ -38,10 +38,13 @@ public class TaskPutKey extends DTask<TaskPutKey> {
     _val = null;
     return this;
   }
-  @Override public void compute() { throw H2O.unimpl(); }
+  @Override public void compute2() { throw H2O.unimpl(); }
 
   // Received an ACK
   @Override public void onAck() {
     if( _xval != null ) _xval.completeRemotePut();
+  }
+  @Override public byte priority() {
+    return H2O.PUT_KEY_PRIORITY;
   }
 }

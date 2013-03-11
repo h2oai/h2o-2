@@ -74,23 +74,6 @@ class Basic(unittest.TestCase):
             print "glm (L2) end on ", csvFilename, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             h2o_glm.simpleCheckGLM(self, glm, colX, **kwargs)
 
-            # Elastic
-            kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
-            start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
-            elapsed = time.time() - start
-            print "glm (Elastic) end on ", csvFilename, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
-            h2o_glm.simpleCheckGLM(self, glm, colX, **kwargs)
-
-            # L1
-            kwargs.update({'alpha': 1.0, 'lambda': 1e-4})
-            start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
-            elapsed = time.time() - start
-            print "glm (L1) end on ", csvFilename, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
-            h2o_glm.simpleCheckGLM(self, glm, colX, **kwargs)
-
-
             sys.stdout.write('\n.')
             sys.stdout.flush() 
 

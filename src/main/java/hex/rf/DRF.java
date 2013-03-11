@@ -194,7 +194,7 @@ public final class DRF extends water.DRemoteTask {
   /**Inhale the data, build a DataAdapter and kick-off the computation.
    * */
   @Override
-  public final void compute() {
+  public final void compute2() {
     Timer t_extract = new Timer();
     // Build data adapter for this node.
     DataAdapter dapt = DABuilder.create(this).build(_keys);

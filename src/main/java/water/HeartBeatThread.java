@@ -63,11 +63,11 @@ public class HeartBeatThread extends Thread {
       hb.set_valsz     (myHisto.histo(false)._cached);
       hb._num_cpus   = (char)run.availableProcessors();
       hb._rpcs       = (char)RPC.TASKS.size();
-      hb._fjthrds_hi = (char)H2O.FJP_HI  .getPoolSize();
-      hb._fjthrds_lo = (char)H2O.FJP_NORM.getPoolSize();
-      hb._fjqueue_hi = (char)H2O.FJP_HI  .getQueuedSubmissionCount();
-      hb._fjqueue_lo = (char)H2O.FJP_NORM.getQueuedSubmissionCount();
-      hb._tcps_active= (char)TCPReceiverThread.TCPS_IN_PROGRESS.get();
+      hb._fjthrds_hi = (char)H2O.hiQPoolSize();
+      hb._fjthrds_lo = (char)H2O.loQPoolSize();
+      hb._fjqueue_hi = (char)H2O.getHiQueue();
+      hb._fjqueue_lo = (char)H2O.getLoQueue();
+      hb._tcps_active= (char)AutoBuffer.TCPS.get();
       // get the usable and total disk storage for the partition where the
       // persistent KV pairs are stored
       if (PersistIce.ROOT==null) {

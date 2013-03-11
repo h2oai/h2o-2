@@ -292,8 +292,18 @@ public abstract class DGLM {
         }
       }
     }
-  }
 
+    public final boolean hasNaNsOrInfs() {
+      for(int i = 0; i < _xy.length; ++i){
+        if(Double.isInfinite(_xy[i]) || Double.isNaN(_xy[i]))
+          return true;
+        for(int j = 0; j < _xx[i].length; ++j)
+          if(Double.isInfinite(_xx[i][j]) || Double.isNaN(_xx[i][j]))
+            return true;
+      }
+      return false;
+    }
+  }
 
   public static class GLMModel extends Model {
     final Sampling _s;
@@ -306,7 +316,6 @@ public abstract class DGLM {
     public final LSMSolver _solver; // Which solver is used
     public final GLMParams _glmParams;
 
-    public transient ValueArray _ary;  // Data used to build the model
     public transient int _responseCol; // Response column
 
     final double [] _beta;            // The output coefficients!  Main model result.
@@ -376,6 +385,7 @@ public abstract class DGLM {
       _iterations = iters;
       _time = time;
       _solver = solver;
+      _warnings = warnings;
     }
 
     public boolean converged() { return _converged; }
@@ -1000,7 +1010,7 @@ public abstract class DGLM {
     // filter out constant columns...
     GramMatrixFunc gramF = new GramMatrixFunc(data, params, beta.clone());
     ArrayList<String> warns = new ArrayList<String>();
-    boolean converged = false;
+    boolean converged = true;
     Gram gram = gramF.apply(data);
     int iter = 1;
     try {
@@ -1014,21 +1024,25 @@ public abstract class DGLM {
     }
     if(params._family != Family.gaussian) { // IRLSM
       do{
+        //System.arraycopy(gramF._beta, 0, beta, 0, beta.length);
         gram = gramF.apply(data);
         double [] b = beta;
         beta = gramF._beta;
         gramF._beta = b;
+        if(gram.hasNaNsOrInfs()) // we can't solve this problem any further, user should increase regularization and try again
+          break;
         try {
           lsm.solve(gram.getXX(), gram.getXY(), gram.getYY(), gramF._beta);
         } catch (NonSPDMatrixException e) {
           if(!(lsm instanceof GeneralizedGradientSolver)){ // if we failed with ADMM, try Generalized gradient
+            System.err.println("swapping solvers!");
             lsm = new GeneralizedGradientSolver(lsm._lambda, lsm._alpha);
             warns.add("Switched to generalized gradient solver due to Non SPD matrix.");
             lsm.solve(gram.getXX(), gram.getXY(), gram.getYY(), gramF._beta);
           }
         }
       } while(++iter < params._maxIter && betaDiff(beta,gramF._beta) > params._betaEps);
-      if(betaDiff(beta,gramF._beta) > params._betaEps)warns.add("Did not converge!");
+      converged = (betaDiff(beta,gramF._beta) < params._betaEps);//warns.add("Did not converge!");
     }
     double [] newBeta = gramF._beta;
     String [] warnings = new String[warns.size()];

@@ -23,7 +23,6 @@ def build_cloud_with_hosts(node_count=None, use_flatfile=None,
     #   import h2o_config
 
     # allow user to specify the config json at the command line. config_json is a global.
-    # shouldn't need this??
     if h2o.config_json:
         configFilename = find_config(h2o.config_json)
     else:

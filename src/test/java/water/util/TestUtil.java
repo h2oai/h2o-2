@@ -21,6 +21,7 @@ public class TestUtil {
 
   @AfterClass
   public static void checkLeakedKeys() {
+    DKV.get(Jobs.KEY);          // This gets invalidated; must be reloaded
     DKV.write_barrier();
     int leaked_keys = H2O.store_size() - _initial_keycnt;
     if( leaked_keys != 0 )

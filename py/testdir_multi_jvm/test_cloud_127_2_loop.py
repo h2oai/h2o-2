@@ -10,7 +10,7 @@ class Basic(unittest.TestCase):
         h2o.check_sandbox_for_errors()
 
     def testCloud(self):
-        baseport = 54300
+        base_port = 54300
         ports_per_node = 2
 
         print "\nTest was written because seeing a bigger cloud than we want sometimes"
@@ -37,7 +37,7 @@ class Basic(unittest.TestCase):
 
                 # increment the base_port to avoid sticky ports when we do another
                 # we only use two ports now?
-                baseport += ports_per_node * tryNodes
+                ### base_port += ports_per_node * tryNodes
 
 if __name__ == '__main__':
     h2o.unit_main()

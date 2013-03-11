@@ -134,7 +134,7 @@ public class GLMGrid extends Request {
     UKV.put(taskey,task);
     // Start the grid search
     assert task._working == true;
-    H2O.FJP_NORM.submit(task);
+    H2O.submitTask(task);
 
     // Redirect to the grid-search status page
     JsonObject j = new JsonObject();
@@ -157,7 +157,7 @@ public class GLMGrid extends Request {
   public static String link(GLMModel m, String content) {
     RString rs = new RString("<a href='GLMGrid.query?%key_param=%$key&y=%ycol&x=%xcols&caseMode=%caseMode&case=%case'>%content</a>");
     rs.replace("key_param", KEY);
-    rs.replace("key", m._ary._key.toString());
+    rs.replace("key", m._dataKey.toString());
     rs.replace("content", content);
     rs.replace("ycol",m.responseName());
     rs.replace("case",m._glmParams._caseVal);

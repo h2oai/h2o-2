@@ -22,7 +22,7 @@ def define_params():
         'weight': [None, 1, 2, 4],
         # new expert stuff
         'expert': [None,0,1],
-        'lsm_solver': [None, 'GenGradient', 'ADMM'],
+        'lsm_solver': ['ADMM'],
         'standardize': [None, 0, 1],
 
         }

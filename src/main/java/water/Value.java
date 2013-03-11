@@ -387,8 +387,10 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     assert old != -1; // Only the thread doing a PUT ever locks
     assert decodeReaderCount(old) >= 0; // Count does not go negative
     // Repeat, in case racing GETs are bumping the counter
+    // assert my current lock-lvl is smaller than lock lvl of this lock
     while( decodeReaderCount(old) > 0 || // Has readers?
            !_replicas.compareAndSet(old,-1) ) { // or failed to lock?
+      // assert I am waiting only on threads with higher priority
       try { ForkJoinPool.managedBlock(this); } catch( InterruptedException e ) { }
       old = _replicas.get();
       assert old != -1; // Only the thread doing a PUT ever locks
@@ -400,7 +402,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     // We have the set of Nodes with replicas now.  Ship out invalidates.
     for( int i=0; i<58; i++ )
       if( ((old>>i)&1) != 0 && H2ONode.IDX[i] != sender )
-        TaskPutKey.invalidate(H2ONode.IDX[i],_key,fs);
+        TaskInvalidateKey.invalidate(H2ONode.IDX[i],_key,fs);
     return fs;
   }
 
@@ -421,6 +423,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   void startRemotePut() {
     assert !_key.home();
     long x = 0;
+    // assert I am waiting on threads with higher priority?
     while( (x=_replicas.get()) != -1L ) // Spin until replicas==-1
       if( x == 1L || _replicas.compareAndSet(0L,1L) )
         try { ForkJoinPool.managedBlock(this); } catch( InterruptedException e ) { }

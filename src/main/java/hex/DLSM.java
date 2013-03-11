@@ -21,7 +21,7 @@ public class DLSM {
   }
 
   public static abstract class LSMSolver extends Iced {
-    public final double _lambda;
+    public double _lambda;
     public final double _alpha;
 
     public LSMSolver(double lambda, double alpha){
@@ -140,7 +140,7 @@ public class DLSM {
       Matrix xm = null;
       Matrix xyPrime = (Matrix)xy.clone();
       OUTER:
-      for(int a = 0; a < 20; ++a){
+      for(int a = 0; a < 5; ++a){
         double kappa = _lambda*_alpha / _rho;
         for( int i = 0; i < 10000; ++i ) {
           // first compute the x update
@@ -194,7 +194,7 @@ public class DLSM {
         }
         return z;
       }
-      throw new LSMSolverException("Unexpected error when solving LSM. Can't solve this problem.");
+      throw new NonSPDMatrixException();
     }
 
     @Override
@@ -249,13 +249,15 @@ public class DLSM {
     private double g_beta(double[][] xx, double[] xy, double yy, double[] beta) {
       final int n = xy.length;
       double res = yy;
+
       for( int i = 0; i < n; ++i ) {
         double x = 0;
-        for( int j = 0; j < n; ++j )
+        for( int j = 0; j < n; ++j ){
           x += xx[i][j] * beta[j];
+        }
         res += (0.5*x + xy[i]) * beta[i];
       }
-      assert res >= 0:"res = " + res;
+      if(res <= 0)throw new LSMSolverException("Generalized Gradient: Can not solved this problem.");
       return res;
     }
 

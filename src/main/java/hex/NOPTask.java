@@ -1,5 +1,12 @@
 package hex;
-import water.*;
+
+import water.ValueArray;
+import water.Key;
+import water.Value;
+import water.MRTask;
+import water.DRemoteTask;
+import water.DKV;
+
 
 public class NOPTask extends MRTask {
 

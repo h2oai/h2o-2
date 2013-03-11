@@ -2,6 +2,8 @@ package water;
 import java.nio.channels.DatagramChannel;
 import java.util.Random;
 
+import water.RPC.RemoteHandler;
+
 /**
  * The Thread that looks for UDP Cloud requests.
  *
@@ -70,7 +72,7 @@ public class UDPReceiverThread extends Thread {
       RANDOM_UDP_DROP.nextInt(5) == 0 ? 2 : 0;
 
     // Record the last time we heard from any given Node
-    TimeLine.record_recv(ab,drop);
+    TimeLine.record_recv(ab,false,drop);
     ab._h2o._last_heard_from = System.currentTimeMillis();
 
     // Snapshots are handled *IN THIS THREAD*, to prevent more UDP packets from
@@ -99,13 +101,10 @@ public class UDPReceiverThread extends Thread {
     // Paxos stateless packets & ACKs just fire immediately in a worker
     // thread.  Dups are handled by these packet handlers directly.  No
     // current membership check required for Paxos packets
-    final int ACK = UDP.udp.ack.ordinal();
-    if( UDP.udp.UDPS[ctrl]._paxos ||
-        (is_member && ctrl <= ACK) ) {
-      H2O.FJP_HI.execute(new FJPacket(ab));
+    if( UDP.udp.UDPS[ctrl]._paxos || is_member ) {
+      H2O.submitTask(new FJPacket(ab,ctrl));
       return;
     }
-
     // Some non-Paxos packet from a non-member.  Probably should record &
     // complain.
     if( !is_member ) {
@@ -127,30 +126,5 @@ public class UDPReceiverThread extends Thread {
     // dups), we do not want to do the work *again* - so we do not want to
     // enqueue it for work.  Also, if we've *replied* to this packet before
     // we just want to send the dup reply back.
-    DTask old = ab._h2o.record_task(ab.getTask());
-    if( old != null ) {       // We've seen this packet before?
-      if( old instanceof NOPTask ) {
-        // This packet has not been ACK'd yet.  Hence it's still a
-        // work-in-progress locally.  We have no answer yet to reply with
-        // but we do not want to re-offer the packet for repeated work.
-        // Just ignore the packet.
-      } else {
-        // This is an old re-send of the same thing we've answered to before.
-        // Send back the same old answer ACK.  If we sent via TCP before, then
-        // we know the answer got there so just send a control-ACK back.  If we
-        // sent via UDP, resend the whole answer.
-        AutoBuffer rab = new AutoBuffer(ab._h2o).putTask(UDP.udp.ack,ab.getTask());
-        if( old._repliedTcp ) rab.put1(RPC.SERVER_TCP_SEND);
-        else old.write(rab.put1(RPC.SERVER_UDP_SEND));
-        rab.close();
-        assert !rab.hasTCP();
-      }
-      ab.close();
-    } else {                  // Else not a repeat-packet
-      // Announce new packet to workers.
-      // "execlo" goes to "normal" priority queue.
-      // "exechi" goes to "high"   priority queue.
-      UDP.udp.UDPS[ctrl].pool().execute(new FJPacket(ab));
-    }
   }
 }

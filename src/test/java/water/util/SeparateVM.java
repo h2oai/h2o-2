@@ -16,6 +16,8 @@ public class SeparateVM implements Separate {
   public SeparateVM(String prefix, String[] args) throws IOException {
     ArrayList<String> list = new ArrayList<String>();
     list.add(System.getProperty("java.home") + File.separator + "bin" + File.separator + "java");
+    list.add("-ea");
+    list.add("-Xmx1G");
     list.add("-cp");
     list.add(System.getProperty("java.class.path"));
     // list.add("-agentlib:jdwp=transport=dt_socket,address=8000,server=y,suspend=y");
