@@ -5,11 +5,6 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.*;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.PriorityBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.*;
 
 import jsr166y.*;
@@ -341,9 +336,7 @@ public final class H2O {
 
 
   // --------------------------------------------------------------------------
-  // The worker pools - a F/J pool for low-priority high volume work, and
-  // a classic ThreadPoolExecutor supporting a PriorityBlockingQueue for
-  // tasks which need a priority ordering.
+  // The worker pools - F/J pools with different priorities.
 
   // These priorities are carefully ordered and asserted for... modify with
   // care.  The real problem here is that we can get into cyclic deadlock
@@ -587,6 +580,7 @@ public final class H2O {
     // which we have not recieved a timely response and probably need to
     // arrange for a re-send to cover a dropped UDP packet.
     new UDPTimeOutThread().start();
+    new H2ONode.AckAckTimeOutThread().start();
 
     // Start the TCPReceiverThread, to listen for TCP requests from other Cloud
     // Nodes. There should be only 1 of these, and it never shuts down.

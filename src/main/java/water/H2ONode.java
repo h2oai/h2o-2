@@ -3,6 +3,7 @@ package water;
 import java.net.*;
 import java.nio.channels.DatagramChannel;
 import java.util.*;
+import java.util.concurrent.DelayQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import water.nbhm.NonBlockingHashMap;
@@ -176,34 +177,67 @@ public class H2ONode extends Iced implements Comparable {
   // Completed work instead work-in-progress.  Completed work can be
   // short-circuit replied-to by resending this DTask back.  Work that we're
   // sure the this Node has seen the reply to can be removed.
-  private NonBlockingHashMapLong<DTask> WORK = new NonBlockingHashMapLong();
+  static public NonBlockingHashMapLong<RPC.RPCCall> WORK = new NonBlockingHashMapLong();
+
+  RPC.RPCCall has_task( int tnum ) { return WORK.get(tnum); }
 
   // Record a task-in-progress, or return the prior DTask if one already
   // exists.  Initial mappings are always to "NOPTask", a placeholder.  Once
   // the task is complete, the mapping is changed to a completed DTask.  The
   // DTask can be repeatedly ACKd back to the caller, and is removed once an
   // ACKACK appears.
-  DTask record_task( int task ) {
-    return WORK.putIfAbsent(task,new NOPTask());
+  RPC.RPCCall record_task( RPC.RPCCall rpc ) {
+    return WORK.putIfAbsent(rpc._tsknum,rpc);
   }
   // Record the final return value for a DTask.  Should happen only once.
   // Recorded here, so if the client misses our ACK response we can resend the
   // same answer back.
-  void record_task_answer( int task, DTask dt ) {
-    DTask old = WORK.put(task,dt);
-    assert old instanceof NOPTask : "Not a NOPTask #"+task+" "+(old == null ? "null" : old.getClass())+" "+dt.getClass()+" "+(old==dt);
+  void record_task_answer( RPC.RPCCall rpcall ) {
+    rpcall._started = System.currentTimeMillis();
+    rpcall._retry = RPC.RETRY_MS; // Start the timer on when to resend
+    AckAckTimeOutThread.PENDING.add(rpcall);
   }
   // Stop tracking a remote task, because we got an ACKACK.
   void remove_task_tracking( int task ) {
-    DTask old = WORK.remove(task);
+    RPC.RPCCall old = WORK.remove(task);
     if( old == null ) return;   // Already stopped tracking
-    assert !(old instanceof NOPTask) : "Still NOPTask #"+task+" "+(old == null ? "null" : old.getClass());
-    // Task was completed
-    old.onAckAck();                 // One-time call stop-tracking
+    AckAckTimeOutThread.PENDING.remove(old);
+    assert old._computed : "Still not done #"+task+" "+old.getClass();
+    old._dt.onAckAck();         // One-time call stop-tracking
+  }
+
+  // Resend ACK's, in case the UDP ACKACK got dropped.  Note that even if the
+  // ACK was sent via TCP, the ACKACK might be dropped.  Further: even if we
+  // *know* the client got our TCP response, we do not know *when* he'll
+  // process it... so we cannot e.g. eagerly do an ACKACK on this side.  We
+  // must wait for the real ACKACK - which can drop.  So we *must* resend ACK's
+  // occasionally to force a resend of ACKACKs.
+
+  static public class AckAckTimeOutThread extends Thread {
+    public AckAckTimeOutThread() { super("ACKACK Timeout"); }
+    // List of DTasks with results ready (and sent!), and awaiting an ACKACK.
+    static DelayQueue<RPC.RPCCall> PENDING = new DelayQueue<RPC.RPCCall>();
+    // Started by main() on a single thread, handle timing-out UDP packets
+    public void run() {
+      Thread.currentThread().setPriority(Thread.NORM_PRIORITY);
+      while( true ) {
+        try {
+          RPC.RPCCall r = PENDING.take();
+          if( H2O.CLOUD.contains(r._client) ) {
+            r.resend_ack();
+            PENDING.add(r);
+          } else H2O.SELF.remove_task_tracking(r._tsknum);
+        } catch( InterruptedException e ) {
+          // Interrupted while waiting for a packet?
+          // Blow it off and go wait again...
+        }
+      }
+    }
   }
 
   // This Node rebooted recently; we can quit tracking prior work history
   void rebooted() {
     WORK.clear();
+    AckAckTimeOutThread.PENDING.clear();
   }
 }

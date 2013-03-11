@@ -214,31 +214,54 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   }
 
 
-  public static class RPCCall extends H2OCountedCompleter {
+  public static class RPCCall extends H2OCountedCompleter implements Delayed {
     final DTask _dt;
     final H2ONode _client;
     final int _tsknum;
-
-    public RPCCall(DTask dt, H2ONode client, int tsknum){
+    long _started;
+    long _retry;
+    boolean _computed;
+    public RPCCall(DTask dt, H2ONode client, int tsknum) {
       _dt = dt;
       _client = client;
       _tsknum = tsknum;
     }
 
-    @Override
-    public void compute2() {
-      assert !(_dt instanceof TaskGetKey) || _dt.priority() == H2O.GET_KEY_PRIORITY : "incorrect GetKey Priority: " + _dt.priority();
+    @Override public void compute2() {
+      // Run the remote task on this server!
       _dt.invoke(_client);
+      _computed = true;
       // Send results back
       AutoBuffer ab = new AutoBuffer(_client).putTask(UDP.udp.ack,_tsknum).put1(SERVER_UDP_SEND);
-      _dt.write(ab);                 // Write the DTask
+      _dt.write(ab);                 // Write the DTask - could be very large write
       _dt._repliedTcp = ab.hasTCP(); // Resends do not need to repeat TCP result
-      // Install answer so retries get this very answer
-      _client.record_task_answer(_tsknum,_dt);
+      _client.record_task_answer(this); // Record after large write, but before close
       ab.close();
     }
-
+    // Re-send strictly the ack, because we're missing an AckAck
+    public final void resend_ack() {
+      AutoBuffer rab = new AutoBuffer(_client).putTask(UDP.udp.ack,_tsknum);
+      if( _dt._repliedTcp ) rab.put1(RPC.SERVER_TCP_SEND);
+      else _dt.write(rab.put1(RPC.SERVER_UDP_SEND));
+      rab.close();
+      // Double retry until we exceed existing age.  This is the time to delay
+      // until we try again.  Note that we come here immediately on creation,
+      // so the first doubling happens before anybody does any waiting.  Also
+      // note the generous 5sec cap: ping at least every 5 sec.
+      _retry += (_retry < 5000 ) ? _retry : 5000;
+    }
     @Override public byte priority() { return _dt.priority(); }
+    // How long until we should do the "timeout" action?
+    @Override public final long getDelay( TimeUnit unit ) {
+      long delay = (_started+_retry)-System.currentTimeMillis();
+      return unit.convert( delay, TimeUnit.MILLISECONDS );
+    }
+    // Needed for the DelayQueue API
+    @Override public final int compareTo( Delayed t ) {
+      RPCCall r = (RPCCall)t;
+      long nextTime = _started+_retry, rNextTime = r._started+r._retry;
+      return nextTime == rNextTime ? 0 : (nextTime > rNextTime ? 1 : -1);
+    }
   }
 
   // Handle traffic, from a client to this server asking for work to be done.
@@ -249,9 +272,9 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     final int flag = ab.getFlag();
     assert flag==CLIENT_UDP_SEND || flag==CLIENT_TCP_SEND; // Client-side send
     // Atomically record an instance of this task, one-time-only replacing a
-    // null with a NOPTask, NOPTask being a placeholder while we work on a
-    // proper responce - and it serves to let us discard dup UDP requests.
-    DTask old = ab._h2o.record_task(task);
+    // null with an RPCCall, a placeholder while we work on a proper responce -
+    // and it serves to let us discard dup UDP requests.
+    RPCCall old = ab._h2o.has_task(task);
 
     // This is a UDP packet request an answer back for a request sent via TCP
     // but the UDP packet has arrived ahead of the TCP.  Just drop the UDP and
@@ -262,12 +285,12 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     } else if( old == null ) {  // New task?
       // Read the DTask Right Now.  If we are the TCPReceiver thread, then we
       // are reading in that thread... and thus TCP reads are single-threaded.
-      final DTask dt = ab.get(DTask.class);
-      // And execute!
-      H2O.submitTask(new RPCCall(dt,ab._h2o,task));
+      RPCCall rpc = new RPCCall(ab.get(DTask.class),ab._h2o,task);
+      if( ab._h2o.record_task(rpc)==null ) // Atomically insert (to avoid double-work)
+        H2O.submitTask(rpc);    // And execute!
 
-    } else if( old instanceof NOPTask ) {
-      // This packet has not been ACK'd yet.  Hence it's still a work-in-
+    } else if( !old._computed ) {
+      // This packet has not been fully computed.  Hence it's still a work-in-
       // progress locally.  We have no answer to reply but we do not want to
       // re-offer the packet for repeated work.  Just ignore the packet.
       // DROP PACKET
@@ -276,11 +299,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       // Send back the same old answer ACK.  If we sent via TCP before, then
       // we know the answer got there so just send a control-ACK back.  If we
       // sent via UDP, resend the whole answer.
-      AutoBuffer rab = new AutoBuffer(ab._h2o).putTask(UDP.udp.ack,ab.getTask());
-      if( old._repliedTcp ) rab.put1(RPC.SERVER_TCP_SEND);
-      else old.write(rab.put1(RPC.SERVER_UDP_SEND));
-      rab.close();
-      assert !rab.hasTCP();
+      old.resend_ack();
     }
     return ab;
   }
@@ -334,12 +353,12 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   // ---
   static final long RETRY_MS = 200; // Initial UDP packet retry in msec
   // How long until we should do the "timeout" action?
-  public long getDelay( TimeUnit unit ) {
+  @Override public final long getDelay( TimeUnit unit ) {
     long delay = (_started+_retry)-System.currentTimeMillis();
     return unit.convert( delay, TimeUnit.MILLISECONDS );
   }
   // Needed for the DelayQueue API
-  public final int compareTo( Delayed t ) {
+  @Override public final int compareTo( Delayed t ) {
     RPC<?> dt = (RPC<?>)t;
     long nextTime = _started+_retry, dtNextTime = dt._started+dt._retry;
     return nextTime == dtNextTime ? 0 : (nextTime > dtNextTime ? 1 : -1);

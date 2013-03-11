@@ -506,7 +506,7 @@ public final class AutoBuffer {
     short id = (short)get2();
     if( id == -1 ) return null;
     Freezable f = TypeMap.getType(id);
-    assert t.isInstance(f);
+    assert t.isInstance(f) : "told to expect "+t+" but found "+f;
     return f.read(this);
   }
 
