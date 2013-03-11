@@ -68,7 +68,6 @@ LOCAL_PROPERTIES_FILE="./build.local.conf"
 function clean() {
     echo "cleaning..."
     rm -fr ${CLASSES}
-    rm -fr ${JAR_ROOT}/H2OInit
     rm -fr ${JAR_ROOT}/h2o_core.jar
     rm -fr ${JAR_ROOT}/water
     rm -fr ${JAR_ROOT}/hex
@@ -96,7 +95,6 @@ function build_classes() {
         $SRC/water/*java \
         $SRC/water/*/*java \
         $SRC/jsr166y/*java \
-        $SRC/H2OInit/*java \
         $TESTSRC/*/*java \
         $TESTSRC/*/*/*java
 }
@@ -104,8 +102,6 @@ function build_classes() {
 function build_initializer() {
     echo "building initializer..."
     local CLASSPATH="${JAR_ROOT}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/*"
-    mkdir lib/H2OInit
-    cp $CLASSES/H2OInit/*.class lib/H2OInit
     pushd lib
     "$JAR" xf javassist.jar
     rm -rf META-INF

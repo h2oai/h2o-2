@@ -1,5 +1,6 @@
 package water;
-import jsr166y.CountedCompleter;
+
+import water.H2O.H2OCountedCompleter;
 
 /** Objects which are passed & remotely executed.<p>
  * <p>
@@ -17,8 +18,11 @@ import jsr166y.CountedCompleter;
  * <li>On the remote, the {@link #onAckAck()} method will be executed.</li>
  * </ol>
  */
-public abstract class DTask<T> extends CountedCompleter implements Freezable {
-  boolean _repliedTcp;         // Any return/reply/result was sent via TCP
+public abstract class DTask<T> extends H2OCountedCompleter implements Freezable {
+  // Track if the reply came via TCP - which means a timeout on ACKing the TCP
+  // result does NOT need to get the entire result again, just that the client
+  // needs more time to process the TCP result.
+  transient boolean _repliedTcp; // Any return/reply/result was sent via TCP
 
   /** Top-level remote execution hook.  Called on the <em>remote</em>. */
   abstract public T invoke( H2ONode sender );
@@ -35,18 +39,6 @@ public abstract class DTask<T> extends CountedCompleter implements Freezable {
    */
   public void onAckAck() {}
 
-  /** Is this task high priority.  Tasks that need to be serviced quickly to
-   * maintain forward progress and/or prevent deadlocks should override this
-   * method to return true. */
-  public boolean isHighPriority() { return false; }
-
-  // Oops, uncaught exception
-  @Override
-  public boolean onExceptionalCompletion( Throwable ex, CountedCompleter caller ) {
-    ex.printStackTrace();
-    return true;
-  }
-
   // The abstract methods to be filled in by subclasses.  These are automatically
   // filled in by any subclass of DTask during class-load-time, unless one
   // is already defined.  These methods are NOT DECLARED ABSTRACT, because javac
@@ -57,4 +49,5 @@ public abstract class DTask<T> extends CountedCompleter implements Freezable {
   @Override public AutoBuffer write(AutoBuffer bb) { throw barf(); }
   @Override public <F extends Freezable> F read(AutoBuffer bb) { throw barf(); }
   @Override public <F extends Freezable> F newInstance() { throw barf(); }
+  @Override public int frozenType() { throw barf(); }
 }

@@ -1,8 +1,7 @@
 package water.api;
 
-import water.*;
-import water.Jobs.Job;
-import water.Jobs;
+import water.Job;
+import water.Key;
 
 import com.google.gson.JsonObject;
 
@@ -32,8 +31,8 @@ public class Progress extends Request {
   protected Job findJob() {
     Key key = Key.make(_job.value());
     Job job = null;
-    for( Job current : Jobs.get() ) {
-      if( current._key.equals(key) ) {
+    for( Job current : Job.all() ) {
+      if( current.self().equals(key) ) {
         job = current;
         break;
       }
@@ -55,17 +54,16 @@ public class Progress extends Request {
 
   /** Return default progress {@link Response}. */
   protected Response jobInProgress(final Job job, JsonObject jsonResp) {
-    Jobs.Progress progress = UKV.get(job._progress, new Jobs.Progress());
-    Response r = Response.poll(jsonResp, progress != null ? progress.get() : 1f);
+    Response r = Response.poll(jsonResp, job.progress());
 
-    final String description = job._description;
+    final String description = job.description();
     r.setBuilder(ROOT_OBJECT, defaultProgressBuilder(description));
     r.setBuilder(RequestStatics.DEST_KEY, new KeyElementBuilder());
     return r;
   }
 
   static final ObjectBuilder defaultProgressBuilder(final String description) {
-    return  new ObjectBuilder() {
+    return new ObjectBuilder() {
       @Override
       public String caption(JsonObject object, String objectName) {
         return "<h3>" + description + "</h3>";

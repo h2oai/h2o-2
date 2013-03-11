@@ -20,6 +20,7 @@ import water.nbhm.UtilUnsafe;
 public class TimeLine extends UDP {
   private static final Unsafe _unsafe = UtilUnsafe.getUnsafe();
 
+
   // The TimeLine buffer.
 
   // The TimeLine buffer is full of Events; each event has a timestamp and some
@@ -31,8 +32,8 @@ public class TimeLine extends UDP {
   // A TimeLine event is:
   // - Milliseconds since JVM boot; 4 bytes
   // - IP4 of send/recv
-  // - Sys.Nano, 8 bytes -1 bit
-  // - Nano low bit is 0 for send, 1 for recv
+  // - Sys.Nano, 8 bytes-3 bits
+  // - Nano low bit is 1 id packet was droped, next bit is 0 for send, 1 for recv, next bit is 0 for udp, 1 for tcp
   // - 16 bytes of payload; 1st byte is a udp_type opcode, next 4 bytes are typically task#
   static final int MAX_EVENTS=1024; // Power-of-2, please
   static final int WORDS_PER_EVENT=4;
@@ -70,7 +71,7 @@ public class TimeLine extends UDP {
   // receive and must be either 0 or 1.  "drop" is whether or not the UDP
   // packet is dropped as-if a network drop, and must be either 0 (kept) or 2
   // (dropped).
-  private static void record( AutoBuffer b, int sr, int drop ) {
+  private static void record( AutoBuffer b, boolean tcp, int sr, int drop ) {
     final long ms = System.currentTimeMillis(); // Read first, in case we're slow storing values
     final long ns = System.nanoTime();
     final long[] tl = TIMELINE; // Read once, in case the whole array shifts out from under us
@@ -79,7 +80,7 @@ public class TimeLine extends UDP {
     assert deltams < 0x0FFFFFFFFL; // No daily overflow
     if( b.position() < 16 ) b.position(16);
     tl[idx*WORDS_PER_EVENT+0+1] = (deltams)<<32 | (b._h2o.ip4()&0x0FFFFFFFFL);
-    tl[idx*WORDS_PER_EVENT+1+1] = (ns&~3)|sr|drop;
+    tl[idx*WORDS_PER_EVENT+1+1] = (ns&~7)| (tcp?4:0)|sr|drop;
     // More complexities: record the *receiver* port in the timeline - but not
     // in the outgoing UDP packet!  The outgoing packet always has the sender's
     // port (that's us!) - which means the recorded timeline packet normally
@@ -92,8 +93,8 @@ public class TimeLine extends UDP {
     tl[idx*WORDS_PER_EVENT+2+1] = tmp;
     tl[idx*WORDS_PER_EVENT+3+1] = b.get8(8);
   }
-  public static void record_send( AutoBuffer b )           { record(b,0,0); }
-  public static void record_recv( AutoBuffer b, int drop ) { record(b,1,drop); }
+  public static void record_send( AutoBuffer b , boolean tcp)           { record(b, tcp, 0,0); }
+  public static void record_recv( AutoBuffer b, boolean tcp, int drop ) { record(b,tcp, 1,drop); }
 
   // Accessors, for TimeLines that come from all over the system
   public static int length( ) { return MAX_EVENTS; }

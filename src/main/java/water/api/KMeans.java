@@ -1,8 +1,7 @@
 package water.api;
 
-import jsr166y.CountedCompleter;
 import water.*;
-import water.Jobs.Job;
+import water.H2O.H2OCountedCompleter;
 import water.util.RString;
 
 import com.google.gson.JsonObject;
@@ -29,30 +28,24 @@ public class KMeans extends Request {
       int dot = n.lastIndexOf('.');
       if( dot > 0 )
         n = n.substring(0, dot);
-      dest = Key.make(hex.KMeans.KMeansModel.KEY_PREFIX + n + Extensions.KMEANS);
+      dest = Key.make(n + Extensions.KMEANS);
     }
 
     final Job job = hex.KMeans.startJob(dest, va, k, epsilon, cols);
     try {
-      H2O.FJP_NORM.submit(new CountedCompleter() {
+      H2O.submitTask(new H2OCountedCompleter() {
         @Override
-        public void compute() {
+        public void compute2() {
           hex.KMeans.run(job, va, k, epsilon, cols);
           tryComplete();
-        }
-
-        @Override
-        public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
-          ex.printStackTrace();
-          return true;
         }
       });
 
       JsonObject response = new JsonObject();
-      response.addProperty(JOB, job._key.toString());
+      response.addProperty(JOB, job.self().toString());
       response.addProperty(DEST_KEY, dest.toString());
 
-      Response r = Progress.redirect(response, job._key, dest);
+      Response r = Progress.redirect(response, job.self(), dest);
       r.setBuilder(DEST_KEY, new KeyElementBuilder());
       return r;
     } catch( IllegalArgumentException e ) {

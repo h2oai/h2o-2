@@ -1,4 +1,4 @@
-package H2OInit;
+package water;
 
 import com.google.gson.JsonObject;
 import java.io.InputStream;

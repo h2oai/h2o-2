@@ -208,6 +208,7 @@ def get_ip_address():
 
     import socket
     ip = '127.0.0.1'
+    # this method doesn't work if vpn is enabled..it gets the vpn ip
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(('8.8.8.8',0))
@@ -219,6 +220,16 @@ def get_ip_address():
     if ip.startswith('127'):
         ip = socket.getaddrinfo(socket.gethostname(), None)[0][4][0]
         verboseprint("get_ip case 3:", ip)
+
+    ipa = None
+    for ips in socket.gethostbyname_ex(socket.gethostname())[2]:
+         # only take the first 
+         if ipa is None and not ips.startswith("127."):
+            ipa = ips[:]
+            verboseprint("get_ip case 4:", ipa)
+            if ip != ipa:
+                print "\nAssuming", ip, "is the ip address h2o will use but", ipa, "is probably the real ip?"
+                print "You might have a vpn active. Best to use '-ip "+ipa+"' to get python and h2o the same."
 
     verboseprint("get_ip_address:", ip) 
     return ip
@@ -709,6 +720,7 @@ class H2O(object):
     def poll_url(self, response, 
         timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=15,
         noise=None):
+        ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs 
         verboseprint('poll_url input: response:', dump_json(response))
 
         url = self.__url(response['redirect_request'])
@@ -765,7 +777,7 @@ class H2O(object):
             if ((time.time()-start)>timeoutSecs):
                 # show what we're polling with 
                 argsStr =  '&'.join(['%s=%s' % (k,v) for (k,v) in paramsUsed.items()])
-                emsg = "Timeout: %d secs while polling. status: %s, url: %s?%s" % (timeoutSecs, status, urlUsed, argsStr)
+                emsg = "Exceeded timeoutSecs: %d secs while polling. status: %s, url: %s?%s" % (timeoutSecs, status, urlUsed, argsStr)
                 raise Exception(emsg)
             count += 1
         return r
@@ -800,7 +812,7 @@ class H2O(object):
     # params: header=1, 
     # noise is a 2-tuple: ("StoreView",params_dict)
     def parse(self, key, key2=None, 
-        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=15,
+        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=30,
         noPoll=False, **kwargs):
         browseAlso = kwargs.pop('browseAlso',False)
         # this doesn't work. webforums indicate max_retries might be 0 already? (as of 3 months ago)
@@ -1157,7 +1169,7 @@ class H2O(object):
             entries = [ find_file('build/classes'), find_file('lib/javassist.jar') ] 
             entries += glob.glob(find_file('lib')+'/*/*.jar')
             entries += glob.glob(find_file('lib')+'/*/*/*.jar')
-            args += ['-classpath', os.pathsep.join(entries), 'H2OInit.Boot']
+            args += ['-classpath', os.pathsep.join(entries), 'water.Boot']
         else: 
             args += ["-jar", self.get_h2o_jar()]
 

@@ -1,4 +1,4 @@
-package H2OInit;
+package water;
 
 import javassist.*;
 
@@ -36,12 +36,12 @@ public class Weaver {
   // subclass of water.DTask, and if so - alter the class before returning it.
   public synchronized CtClass javassistLoadClass(String name) {
     try {
+      if( name.equals("water.Boot")) return null;
       CtClass cc = _pool.get(name); // Full Name Lookup
       if( cc == null ) return null; // Oops?  Try the system loader, but expected to work
       String pack = cc.getPackageName();
       if( !pack.startsWith("water") &&
           !pack.startsWith("hex") &&
-          !pack.startsWith("test") &&
           !pack.startsWith("org.junit") &&
           true ) return null; // Not in my package
 
@@ -91,6 +91,7 @@ public class Weaver {
       ensureSerMethods(cc);
       ensureNullaryCtor(cc);
       ensureNewInstance(cc);
+      ensureType(cc);
     }
     cc.freeze();
     return cc;
@@ -125,6 +126,16 @@ public class Weaver {
     }
   }
 
+  private void ensureType(CtClass cc) throws NotFoundException, CannotCompileException {
+    CtMethod ccms[] = cc.getDeclaredMethods();
+    if( !hasExisting("frozenType", "()I", ccms) && (cc.getModifiers() & Modifier.ABSTRACT) == 0 ) {
+      cc.addMethod(CtNewMethod.make(
+          "public int frozenType() {" +
+          "  return " + TypeMap.onLoad(cc.getName()) + ";" +
+          "}", cc));
+    }
+  }
+
   private void ensureNullaryCtor(CtClass cc) throws NotFoundException, CannotCompileException {
     // Build a null-ary constructor if needed
     String clzname = cc.getSimpleName();
@@ -155,9 +166,9 @@ public class Weaver {
     CtField ctfs[] = cc.getDeclaredFields();
 
     // We cannot call Iced.xxx, as these methods always throw a
-    // RuntimeException (to make sure we noisely fail instead of silently
+    // RuntimeException (to make sure we noisily fail instead of silently
     // fail).  But we DO need to call the super-chain of serialization methods
-    // - except for DTask.
+    // - stopping at DTask.
     boolean callsuper = true;
     for( CtClass base : _serBases )
       if( cc.getSuperclass() == base ) callsuper = false;
@@ -173,6 +184,7 @@ public class Weaver {
     //       s.putA4(_xs);
     //       s.put8d(_d);
     //     }
+    // TODO use Freezable.write instead of AutoBuffer.put for final classes
     make_body(cc,ctfs,callsuper,
               "public water.AutoBuffer write(water.AutoBuffer ab) {\n",
               "  super.write(ab);\n",

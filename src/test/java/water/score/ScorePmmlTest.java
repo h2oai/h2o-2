@@ -5,8 +5,8 @@ import java.util.HashMap;
 import org.junit.Assert;
 import org.junit.Test;
 import water.H2O;
+import water.TestUtil;
 import water.parser.PMMLParser;
-import water.util.TestUtil;
 
 public class ScorePmmlTest extends TestUtil {
   private static final String HEADER = "<?xml version='1.0' encoding='UTF-8'?>\n" +

@@ -10,7 +10,6 @@ import java.util.*;
 import water.*;
 import water.DRemoteTask.DFuture;
 import water.Timer;
-import water.util.TestUtil;
 import water.util.Utils;
 
 /**

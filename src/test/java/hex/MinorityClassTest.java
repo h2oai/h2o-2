@@ -13,7 +13,6 @@ import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import water.*;
 import water.parser.ParseDataset;
-import water.util.TestUtil;
 
 public class MinorityClassTest extends TestUtil {
   static final int _classIdx = 10;

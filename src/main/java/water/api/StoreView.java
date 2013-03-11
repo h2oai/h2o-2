@@ -92,7 +92,7 @@ public class StoreView extends Request {
     String str = "";
 
     // See if this is a structured ValueArray. Report results from a total parse.
-    if( val._isArray != 0 ) {
+    if( val.isArray() ) {
       ValueArray ary = ValueArray.value(val);
       if( ary._cols.length > 1 || ary._cols[0]._size != 1 ) {
         rows = ary._numrows;

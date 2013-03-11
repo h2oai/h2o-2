@@ -23,7 +23,7 @@ public class JStackCollectorTask extends DRemoteTask {
   }
 
   @Override
-  public void compute() {
+  public void compute2() {
     Map<Thread, StackTraceElement[]> allStackTraces = Thread.getAllStackTraces();
     StringBuilder sb = new StringBuilder();
     for (Entry<Thread,StackTraceElement[]> el : allStackTraces.entrySet()) {

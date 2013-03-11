@@ -124,8 +124,9 @@ public final class TimelineSnapshot implements
     public final InetAddress addrPack() { return TimeLine.inet(_val, _eventIdx); }
     public final long dataLo() { return TimeLine.l0(_val, _eventIdx); }
     public final long dataHi() { return TimeLine.l8(_val, _eventIdx); }
-    public long ns() { return TimeLine.ns(_val, _eventIdx); }
-    public long ms() { return TimeLine.ms(_val, _eventIdx) + recoH2O()._heartbeat._jvm_boot_msec; }
+    public final long ns() { return TimeLine.ns(_val, _eventIdx); }
+    public final boolean isTCP(){return (ns() & 4) != 0;}
+    public final long ms() { return TimeLine.ms(_val, _eventIdx) + recoH2O()._heartbeat._jvm_boot_msec; }
     public H2ONode packH2O() { return _packh2o; } // H2O in packet
     public H2ONode recoH2O() { return _cloud._memary[_nodeId]; } // H2O recording packet
     public final int portPack() {
@@ -142,8 +143,8 @@ public final class TimelineSnapshot implements
       String operation = isSend() ? " SEND " : " RECV ";
       String host1 = addrString();
       String host2 = recoH2O().toString();
-      String networkPart = isSend() 
-        ? (host2 + " -> " + host1) 
+      String networkPart = isSend()
+        ? (host2 + " -> " + host1)
         : (host1 + " -> " + host2);
       return "Node(" + _nodeId + ": " + ns() + ") " + udpType.toString()
           + operation + networkPart + (isDropped()?" DROPPED ":"") + ", data = '"
@@ -180,10 +181,10 @@ public final class TimelineSnapshot implements
         break;
       case ack:
       case ackack:
-      case execlo:
-      case exechi:
+      case exec:
       case heartbeat:
         // compare 3 ctrl bytes + 4 bytes task #
+      //  if ((myl0 & 0xFFFFFFFFFFFFFFl) != (evl0 & 0xFFFFFFFFFFFFFFl))
         if( (int)(myl0>>24) != (int)(evl0>>24))
           return false;
         break;
@@ -256,7 +257,7 @@ public final class TimelineSnapshot implements
     /**
      * Used to determine ordering of events not bound by any dependency.
      *
-     * Events compared according to following rules: 
+     * Events compared according to following rules:
      *   Receives go before sends.  Since we are only here with unbound events,
      *   unbound receives means their sender has already appeared and they
      *   should go adjacent to their sender.
@@ -342,7 +343,7 @@ public final class TimelineSnapshot implements
     } else { // look for matching send, otherwise set _blocked
       assert !_edges.containsKey(e);
       int senderIdx = e.packH2O().index();
-      if (senderIdx == -1) { // should not happen?
+      if (senderIdx < 0) { // should not happen?
         // no possible sender - return and do not block
         System.err.println("no sender found! port = " + e.portPack()
             + ", ip = " + e.addrPack().toString());

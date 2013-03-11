@@ -1,10 +1,12 @@
 package water.api;
 
+import water.Job;
 import water.Key;
 
 import com.google.gson.JsonObject;
 
 public class Cancel extends Request {
+  // TODO use ExistingJobKey (check other places)
   protected final Str _key = new Str(KEY);
 
   @Override
@@ -12,7 +14,7 @@ public class Cancel extends Request {
     String key = _key.value();
 
     try {
-      water.Jobs.cancel(Key.make(key));
+      Job.cancel(Key.make(key));
     } catch( Exception e ) {
       return Response.error(e.getMessage());
     }

@@ -80,7 +80,7 @@ public abstract class DRemoteTask extends DTask<DRemoteTask> implements Cloneabl
     _keys = locals.toArray(new Key[locals.size()]); // Keys, including local keys (if any)
     if( _keys.length != 0 ) {   // Shortcut for no local work
       init();                   // One-time top-level init
-      H2O.FJP_NORM.submit(this);// Begin normal execution on a FJ thread
+      H2O.submitTask(this);// Begin normal execution on a FJ thread
     }
     return f;             // Block for results from the log-tree splits
   }
@@ -113,14 +113,15 @@ public abstract class DRemoteTask extends DTask<DRemoteTask> implements Cloneabl
     if( keys.size() == 0 ) return null;
     DRemoteTask rpc = clone();
     rpc._keys = keys.toArray(new Key[keys.size()]);
-    return RPC.call(keys.get(0).home_node(), rpc);
+
+    return RPC.call(keys.get(0).home_node(), rpc);// keep the same priority
   }
 
   private final Key[] flatten( Key[] args ) {
     if( args.length==1 ) {
       Value val = DKV.get(args[0]);
       // Arraylet: expand into the chunk keys
-      if( val != null && val._isArray != 0 ) {
+      if( val != null && val.isArray() ) {
         ValueArray ary = ValueArray.value(val);
         Key[] keys = new Key[(int)ary.chunks()];
         for( int i=0; i<keys.length; i++ )

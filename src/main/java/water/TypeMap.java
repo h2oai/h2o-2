@@ -1,130 +1,203 @@
 package water;
 
-import java.util.Arrays;
-
-import com.google.common.base.Throwables;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 public class TypeMap {
-  public static final TypeMap MAP = new TypeMap();
-  private static final int INIT_MAP_SIZE = MAP._examplars.length;
+  static final short NULL = (short) -1;
 
-  private volatile Freezable[] _examplars = new Freezable[] {
-      new FillRequest(null, -1),
-      new H2ONode(),
-      new HeartBeat(),
+  // Run main below to update TODO add as build step
+  static private final String[] CLAZZES = {
+    "hex.ConfusionMatrix",
+    "hex.Covariance$COV_Task",
+    "hex.DGLM$GLMModel",
+    "hex.DGLM$GLMParams",
+    "hex.DGLM$GLMValidation",
+    "hex.DGLM$GLMValidationFunc",
+    "hex.DGLM$Gram",
+    "hex.DGLM$GramMatrixFunc",
+    "hex.DLSM$ADMMSolver",
+    "hex.DLSM$GeneralizedGradientSolver",
+    "hex.DLSM$LSMSolver",
+    "hex.GLMGrid$1",
+    "hex.GLMGrid$2",
+    "hex.GLMGrid$GLMModels",
+    "hex.GLMGrid",
+    "hex.KMeans$KMeansModel",
+    "hex.KMeans$Lloyds",
+    "hex.KMeans$Sampler",
+    "hex.KMeans$Sqr",
+    "hex.LinearRegression$CalcRegressionTask",
+    "hex.LinearRegression$CalcSquareErrorsTasks",
+    "hex.LinearRegression$CalcSumsTask",
+    "hex.NewRowVecTask$DataFrame",
+    "hex.NewRowVecTask$RowFunc",
+    "hex.NewRowVecTask",
+    "hex.NOPTask",
+    "hex.Plot$Pixels",
+    "hex.Plot$Res",
+    "hex.rf.Confusion",
+    "hex.rf.DRF",
+    "hex.rf.MinorityClasses$ClassExtractTask",
+    "hex.rf.MinorityClasses$CountMClassRowsTask",
+    "hex.rf.MinorityClasses$HistogramTask",
+    "hex.rf.MinorityClasses$ReplicationTask",
+    "hex.rf.MinorityClasses$UnbalancedClass",
+    "hex.rf.RFModel",
+    "hex.rf.Tree$1",
+    "hex.RowVecTask$Sampling",
+    "hex.RowVecTask",
+    "water.Atomic",
+    "water.AtomicTest$Append$1",
+    "water.AutoSerialTest",
+    "water.DRemoteTask",
+    "water.DTask",
+    "water.exec.AddOperator",
+    "water.exec.AndOperator",
+    "water.exec.BooleanVectorFilter",
+    "water.exec.DeepSingleColumnAssignment",
+    "water.exec.DivOperator",
+    "water.exec.EqOperator",
+    "water.exec.GreaterOperator",
+    "water.exec.GreaterOrEqOperator",
+    "water.exec.Helpers$1",
+    "water.exec.Helpers$ScallarCollector",
+    "water.exec.Helpers$SigmaCalc",
+    "water.exec.IifOperator",
+    "water.exec.IifOperatorScalar2",
+    "water.exec.IifOperatorScalar23",
+    "water.exec.IifOperatorScalar3",
+    "water.exec.InPlaceColSwap$ColSwapTask",
+    "water.exec.LeftAdd",
+    "water.exec.LeftAnd",
+    "water.exec.LeftDiv",
+    "water.exec.LeftEq",
+    "water.exec.LeftGreater",
+    "water.exec.LeftGreaterOrEq",
+    "water.exec.LeftLess",
+    "water.exec.LeftLessOrEq",
+    "water.exec.LeftMod",
+    "water.exec.LeftMul",
+    "water.exec.LeftNeq",
+    "water.exec.LeftOr",
+    "water.exec.LeftSub",
+    "water.exec.LessOperator",
+    "water.exec.LessOrEqOperator",
+    "water.exec.Log$MRLog",
+    "water.exec.MakeEnum$GetEnumTask",
+    "water.exec.MakeEnum$PackToEnumTask",
+    "water.exec.Max$MRMax",
+    "water.exec.Mean$MRMean",
+    "water.exec.Min$MRMin",
+    "water.exec.ModOperator",
+    "water.exec.MRColumnProducer",
+    "water.exec.MRVectorBinaryOperator",
+    "water.exec.MRVectorTernaryOperator",
+    "water.exec.MRVectorUnaryOperator",
+    "water.exec.MulOperator",
+    "water.exec.NeqOperator",
+    "water.exec.OrOperator",
+    "water.exec.ParametrizedMRVectorUnaryOperator",
+    "water.exec.RandBitVect$RandVectBuilder",
+    "water.exec.RightAnd",
+    "water.exec.RightDiv",
+    "water.exec.RightMod",
+    "water.exec.RightOr",
+    "water.exec.RightSub",
+    "water.exec.SliceFilter",
+    "water.exec.SubOperator",
+    "water.exec.Sum$MRSum",
+    "water.exec.TernaryWithScalarOperator",
+    "water.exec.TernaryWithTwoScalarsOperator",
+    "water.exec.UnaryMinus",
+    "water.Freezable",
+    "water.H2ONode",
+    "water.hdfs.TaskStore2HDFS",
+    "water.HeartBeat",
+    "water.Iced",
+    "water.Job$1",
+    "water.Job$2",
+    "water.Job$Fail",
+    "water.Job$List",
+    "water.Job",
+    "water.Key",
+    "water.KVTest$Atomic2",
+    "water.KVTest$ByteHisto",
+    "water.KVTest$RemoteBitSet",
+    "water.Model",
+    "water.MRTask",
+    "water.NOPTask",
+    "water.parser.DParseTask$AtomicUnion",
+    "water.parser.DParseTask",
+    "water.parser.Enum",
+    "water.parser.ParseDataset$2",
+    "water.parser.ParseDataset$Progress",
+    "water.parser.ParseDataset",
+    "water.RReader$RModel",
+    "water.store.s3.MultipartUpload$1",
+    "water.store.s3.MultipartUpload$Progress",
+    "water.store.s3.MultipartUpload",
+    "water.TaskGetKey",
+    "water.TaskInvalidateKey",
+    "water.TaskPutKey",
+    "water.TAtomic",
+    "water.util.FileIntegrityChecker",
+    "water.util.JStackCollectorTask",
+    "water.Value",
+    "water.ValueArray$Column",
+    "water.ValueArray",
   };
-
-  /** Remove my list of exemplars.  I will resync to the new leader over time.
-   */
-  public void changeLeader() {
-    // Better not have handed out any types; new leader will be out of sync
-    assert _examplars.length == INIT_MAP_SIZE;
+  static private final HashMap<String,Integer> MAP = new HashMap();
+  static {
+    for( int i=0; i<CLAZZES.length; i++ )
+      MAP.put(CLAZZES[i],i);
   }
 
-  /**
-   * Get a Freezable for deserialization.  Comes pre-cloned.
-   */
-  public Freezable getType(int id) {
-    Freezable f = getTypeImpl(id);
-    if( f == null ) f = fill(id);
+  static int onLoad(String className) {
+    Integer I = MAP.get(className);
+    if(I == null)
+      throw new RuntimeException("TypeMap missing " + className);
+    return I;
+  }
+
+  static private final Freezable[] GOLD = new Freezable[CLAZZES.length];
+
+  static public Freezable newInstance(int id) {
+    Freezable f = GOLD[id];
+    if( f == null ) {
+      try { GOLD[id] = f = (Freezable) Class.forName(CLAZZES[id]).newInstance(); }
+      catch( Exception e ) { throw new Error(e); }
+    }
     return f.newInstance();
   }
 
-  public int getId(Freezable f) {
-    int i = getIdImpl(f);
-    if( i < 0 ) i = fill(f);
-    return i;
+  //
+
+  public static void main(String[] args) {
+    Log._dontDie = true; // Ignore class load error, e.g. Request
+    File classes = new File(CLASSES);
+    ArrayList<String> list = new ArrayList<String>();
+    findClasses(classes, list);
+    for(String s : list)
+      System.out.println("    \"" + s + "\",");
   }
-
-  private Freezable getTypeImpl(int id) {
-    if( id >= _examplars.length ) return null;
-    return _examplars[id];
-  }
-
-  private int getIdImpl(Freezable f) {
-    String target = f.getClass().getName();
-    for( int i = 0; i < _examplars.length; ++i ) {
-      if( _examplars[i] == null ) continue;
-      if( _examplars[i].getClass().getName().equals(target) ) return i;
-    }
-    return -1;
-  }
-
-  private int fill(Freezable f) {
-    String clazz = f.getClass().getName();
-    if( H2O.CLOUD.leader() == H2O.SELF ) return registerType(clazz);
-    FillRequest fr = new FillRequest(clazz, -1);
-    return RPC.call(H2O.CLOUD.leader(), fr).get()._index;
-  }
-
-  private Freezable fill(int i) {
-    assert H2O.CLOUD.leader() != H2O.SELF : "LEADER should contain the superset of all type maps";
-    FillRequest fr = new FillRequest(null, i);
-    return getTypeImpl(RPC.call(H2O.CLOUD.leader(), fr).get()._index);
-  }
-
-  private void recordType(String clazz, int index) {
-    assert H2O.CLOUD.leader() != H2O.SELF;
-    Freezable f = getTypeImpl(index);
-    if( f != null ) {
-      assert f.getClass().getName().equals(clazz);
-      return;
-    }
-
-    synchronized( this ) {
-      if( index >= _examplars.length )
-        _examplars = Arrays.copyOf(_examplars, index+1);
-      _examplars[index] = alloc(clazz);
-    }
-  }
-
-  private int registerType(String clazz) {
-    assert H2O.CLOUD.leader() == H2O.SELF;
-    synchronized( this ) {
-      int i = _examplars.length;
-      assert i<65535; // Cap at 2 bytes for shorter UDP packets & Timeline recording
-      _examplars = Arrays.copyOf(_examplars, i+1);
-      _examplars[i] = alloc(clazz);
-      return i;
-    }
-  }
-
-  private static Freezable alloc(String clazz) {
-    if( clazz == null ) return null;
-    try {
-      return (Freezable) Class.forName(clazz).newInstance();
-    } catch( Exception e ) {
-      throw Throwables.propagate(e);
-    }
-  }
-
-  private static class FillRequest extends DTask<FillRequest> {
-    String _clazz;
-    int _index;
-
-    public FillRequest(String clazz, int index) {
-      _clazz = clazz;
-      _index = index;
-    }
-
-    @Override public void compute() { throw H2O.unimpl(); }
-    @Override public FillRequest invoke(H2ONode sender) {
-      if( _clazz == null ) {
-        int i = _index;
-        assert 0 <= i && i < MAP._examplars.length;
-        Freezable f = MAP.getTypeImpl(i);
-        _clazz = f.getClass().getName();
-        return this;
+  private static final String CLASSES = "target/classes";
+  private static void findClasses(File folder, ArrayList<String> list) {
+    for( File file : folder.listFiles() ) {
+      if( file.isDirectory() )
+        findClasses(file, list);
+      else if( file.getPath().endsWith(".class") ) {
+        String name = file.getPath().substring(CLASSES.length() + 1);
+        name = name.replace('\\', '/').replace('/', '.').replace(".class", "");
+        try {
+          Class c = Class.forName(name);
+          if(Freezable.class.isAssignableFrom(c))
+            list.add(c.getName());
+        } catch(Throwable _) {
+          System.out.println("Skipped: " + name);
+        }
       }
-
-      Freezable f = alloc(_clazz);
-      int i = MAP.getIdImpl(f);
-      if( i < 0 ) i = MAP.registerType(_clazz);
-      _index = i;
-      return this;
     }
-
-    @Override public void onAck() { MAP.recordType(_clazz, _index); }
-    @Override public boolean isHighPriority() { return true; }
   }
 }

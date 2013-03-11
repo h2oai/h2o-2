@@ -1,12 +1,15 @@
 package water.util;
 
+import hex.GLMGridTest;
+
 import java.awt.Desktop;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.util.ArrayList;
 
-import water.H2O;
+import water.*;
+import water.TestUtil;
 
 /**
  * Builds a cloud by duplicating current JVM settings in different processes or machines, and runs tests.
@@ -27,18 +30,20 @@ public class TestRunner {
       // sites.add(new SeparateBox(host, USER, KEY, new String[] { "init.Boot" }));
     }
 
-    // org.junit.runner.JUnitCore.runClasses(KMeansTest.class);
-
     H2O.main(args);
+    TestUtil.stall_till_cloudsize(nodes);
 
     Desktop desktop = Desktop.getDesktop();
-    desktop.browse(new URI("http://localhost:54321/Timeline.html"));
+    desktop.browse(new URI("http://localhost:54321/StoreView.html"));
 
     BufferedReader console = new BufferedReader(new InputStreamReader(System.in));
     console.readLine();
 
-    // TestUtil.stall_till_cloudsize(nodes + 1);
     // new KMeansTest().testGaussian((int) 1e6);
+    // org.junit.runner.JUnitCore.runClasses(KMeansTest.class);
+    org.junit.runner.JUnitCore.runClasses(GLMGridTest.class);
+    org.junit.runner.JUnitCore.runClasses(KVTest.class);
+
 
     for( Separate site : sites )
       site.close();

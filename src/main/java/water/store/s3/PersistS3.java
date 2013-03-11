@@ -95,7 +95,7 @@ public abstract class PersistS3 {
         skip = ValueArray.getChunkOffset(k); // The offset
         k = ValueArray.getArrayKey(k); // From the base file key
         if( k.toString().endsWith(".hex") ) { // Hex file?
-          int value_len = DKV.get(k).get().length; // How long is the ValueArray
+          int value_len = DKV.get(k).memOrLoad().length; // How long is the ValueArray
                                                    // header?
           skip += value_len;
         }
@@ -118,7 +118,7 @@ public abstract class PersistS3 {
     if( !v._key.home() )
       return;
     // Never store arraylets on S3, instead we'll store the entire array.
-    assert v._isArray == 0;
+    assert !v.isArray();
 
     Key dest = MultipartUpload.init(v);
     MultipartUpload.run(dest, v, null, null);
@@ -131,7 +131,7 @@ public abstract class PersistS3 {
 
     long rem = size - off; // Remainder to be read
     if( arykey.toString().endsWith(".hex") ) { // Hex file?
-      int value_len = DKV.get(arykey).get().length; // How long is the
+      int value_len = DKV.get(arykey).memOrLoad().length; // How long is the
                                                     // ValueArray header?
       rem -= value_len;
     }

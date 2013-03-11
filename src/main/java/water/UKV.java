@@ -26,7 +26,7 @@ public abstract class UKV {
     // If the old Value was a large array, we need to delete the leftover
     // chunks - they are unrelated to the new Value which might be either
     // bigger or smaller than the old Value.
-    if( res != null && res._isArray!=0 ) {
+    if( res != null && res.isArray() ) {
       ValueArray ary = ValueArray.value(res);
       for( long i=0; i<ary.chunks(); i++ ) // Delete all the chunks
         DKV.remove(ary.getChunkKey(i),fs);
@@ -38,15 +38,20 @@ public abstract class UKV {
   }
 
   static public void remove( Key key ) {
+    remove(key,true);
+  }
+
+  static public void remove( Key key, boolean block) {
     Futures fs = new Futures();
     remove(key,fs);             // Recursively delete, gather pending deletes
-    fs.blockForPending();         // Block until all is deleted
+    if(block)
+      fs.blockForPending();         // Block until all is deleted
   }
   // Recursively remove, gathering all the pending remote key-deletes
   static private void remove( Key key, Futures fs ) {
     Value val = DKV.get(key,32); // Get the existing Value, if any
     if( val == null ) return;    // Trivial delete
-    if( val._isArray != 0 ) { // See if this is an Array
+    if( val.isArray() ) { // See if this is an Array
       ValueArray ary = ValueArray.value(val);
       for( long i=0; i<ary.chunks(); i++ ) // Delete all the chunks
         remove(ary.getChunkKey(i),fs);
@@ -59,9 +64,9 @@ public abstract class UKV {
 
   // User-Weak-Get a Key from the distributed cloud.
   // Right now, just gets chunk#0 from a ValueArray, or a normal Value otherwise.
-  static public Value get( Key key ) {
+  static public Value getValue( Key key ) {
     Value val = DKV.get(key);
-    if( val != null && val._isArray !=0 ) {
+    if( val != null && val.isArray() ) {
       Key k2 = ValueArray.getChunkKey(0,key);
       Value vchunk0 = DKV.get(k2);
       assert vchunk0 != null : "missed looking for key "+k2+" from "+key;
@@ -77,11 +82,17 @@ public abstract class UKV {
   // Also, allow auto-serialization
   static public void put( Key key, Freezable fr ) {
     if( fr == null ) UKV.put(key, null);
-    else UKV.put(key,new Value(key, fr.write(new AutoBuffer()).buf()));
+    else UKV.put(key,new Value(key, new AutoBuffer().put(fr).buf()));
+  }
+
+  public static <T extends Freezable> T get(Key k) {
+    Value v = UKV.getValue(k);
+    if( v == null ) return null;
+    return v.get();
   }
 
   public static <T extends Freezable> T get(Key k, T t) {
-    Value v = UKV.get(k);
+    Value v = UKV.getValue(k);
     if( v == null ) return null;
     return v.get(t);
   }

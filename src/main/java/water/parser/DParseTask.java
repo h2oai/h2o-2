@@ -3,8 +3,6 @@ package water.parser;
 import java.util.*;
 
 import water.*;
-import water.Jobs.Job;
-import water.Jobs.Progress;
 import water.ValueArray.Column;
 
 /** Class responsible for actual parsing of the datasets.
@@ -54,7 +52,7 @@ public final class DParseTask extends MRTask {
   int _numRows; // number of rows -- works only in second pass FIXME in first pass object
   // 31 bytes
 
-  Job _job;
+  ParseDataset _job;
   String _error;
 
   // arrays
@@ -105,7 +103,7 @@ public final class DParseTask extends MRTask {
      */
     public void store() {
       assert _ab.eof();
-      Key k = ValueArray.getChunkKey(_chunkIndex, _job._dest);
+      Key k = ValueArray.getChunkKey(_chunkIndex, _job.dest());
       AtomicUnion u = new AtomicUnion(_ab.bufClose(),_chunkOffset);
       alsoBlockFor(u.fork(k));
       _ab = null; // free mem
@@ -121,24 +119,24 @@ public final class DParseTask extends MRTask {
   }
 
   public static class AtomicUnion extends Atomic {
-    Key _key;
+    byte [] _bits;
     int _dst_off;
     public AtomicUnion() {}
     public AtomicUnion(byte[] buf, int dstOff){
       _dst_off = dstOff;
-      _key = Key.make(Key.make()._kb, (byte) 1, Key.DFJ_INTERNAL_USER, H2O.SELF);
-      UKV.put(_key, new Value(_key, buf));
+      _bits = buf;
     }
     @Override public byte[] atomic( byte[] bits1 ) {
-      byte[] mem = DKV.get(_key).get();
+      byte[] mem = _bits;
       int len = Math.max(_dst_off + mem.length,bits1==null?0:bits1.length);
       byte[] bits2 = MemoryManager.malloc1(len);
       if( bits1 != null ) System.arraycopy(bits1,0,bits2,0,bits1.length);
       System.arraycopy(mem,0,bits2,_dst_off,mem.length);
       return bits2;
     }
-    @Override public void onSuccess() {
-      DKV.remove(_key);
+
+    @Override public void onSuccess(){
+      _bits = null;             // Do not return the bits
     }
   }
 
@@ -203,7 +201,7 @@ public final class DParseTask extends MRTask {
    *
    * use createPhaseOne() static method instead.
    */
-  private DParseTask(Value dataset, Job job, CustomParser.Type parserType) {
+  private DParseTask(Value dataset, ParseDataset job, CustomParser.Type parserType) {
     _parserType = parserType;
     _sourceDataset = dataset;
     _job = job;
@@ -249,7 +247,7 @@ public final class DParseTask extends MRTask {
    * @param parserType Parser type to use.
    * @return Phase one DRemoteTask object.
    */
-  public static DParseTask createPassOne(Value dataset, Job job, CustomParser.Type parserType) {
+  public static DParseTask createPassOne(Value dataset, ParseDataset job, CustomParser.Type parserType) {
     return new DParseTask(dataset,job,parserType);
   }
 
@@ -283,7 +281,7 @@ public final class DParseTask extends MRTask {
         // set the separator
         this._sep = setup._separator;
         // if parsing value array, initialize the nrows array
-        if( _sourceDataset._isArray != 0 ) {
+        if( _sourceDataset.isArray() ) {
           ValueArray ary = ValueArray.value(_sourceDataset);
           _nrows = new int[(int)ary.chunks()];
         }
@@ -353,8 +351,8 @@ public final class DParseTask extends MRTask {
   public void passTwo() throws Exception {
     // make sure we delete previous array here, because we insert arraylet header after all chunks are stored in
     // so if we do not delete it now, it will be deleted by UKV automatically later and destroy our values!
-    if(DKV.get(_job._dest) != null)
-      UKV.remove(_job._dest);
+    if(DKV.get(_job.dest()) != null)
+      UKV.remove(_job.dest());
     switch (_parserType) {
       case CSV:
         // for CSV parser just launch the distributed parser on the chunks
@@ -413,8 +411,8 @@ public final class DParseTask extends MRTask {
     // let any pending progress reports finish
     DKV.write_barrier();
     // finally make the value array header
-    ValueArray ary = new ValueArray(_job._dest, _numRows, off, cols);
-    UKV.put(_job._dest, ary.value());
+    ValueArray ary = new ValueArray(_job.dest(), _numRows, off, cols);
+    UKV.put(_job.dest(), ary.value());
   }
 
   private void createEnums() {
@@ -482,7 +480,7 @@ public final class DParseTask extends MRTask {
    * splitting it into equal sized chunks.
    */
   @Override public void map(Key key) {
-    if(Jobs.cancelled(_job._key))
+    if(_job.cancelled())
       return;
     try {
       Key aryKey = null;
@@ -533,12 +531,12 @@ public final class DParseTask extends MRTask {
           // store the last stream if not stored during the parse
           if( _ab != null )
             _outputStreams2[_outputIdx].store();
+          getFutures().blockForPending();
           break;
         default:
           assert (false);
       }
-
-      Progress.update(_job._progress, DKV.get(key).length());
+      _job.onProgress(key);
     } catch( Exception e ) {
       e.printStackTrace();
       _error = e.getMessage();
@@ -547,7 +545,7 @@ public final class DParseTask extends MRTask {
 
   @Override
   public void reduce(DRemoteTask drt) {
-    if(Jobs.cancelled(_job._key))
+    if(_job.cancelled())
       return;
     try {
       DParseTask other = (DParseTask)drt;

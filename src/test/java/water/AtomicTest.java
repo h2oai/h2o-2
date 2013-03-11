@@ -3,9 +3,8 @@ package water;
 import java.util.Arrays;
 import java.util.Random;
 import org.junit.*;
-import water.util.TestUtil;
 
-public class AppendKeyTest extends TestUtil {
+public class AtomicTest extends TestUtil {
 
   @BeforeClass public static void stall() { stall_till_cloudsize(3); }
 
@@ -17,19 +16,32 @@ public class AppendKeyTest extends TestUtil {
     return Key.make(n,(byte)1,Key.DFJ_INTERNAL_USER,target);
   }
 
+  private static class Append {
+    static private void append(Key keys, final Key k) {
+      new Atomic() {
+        @Override public byte[] atomic(byte[] bits) {
+          Key[] ks = bits == null ? new Key[0] : new AutoBuffer(bits).getA(Key.class);
+          ks = Arrays.copyOf(ks,ks.length+1);
+          ks[ks.length-1]=k;
+          return new AutoBuffer().putA(ks).buf();
+        }
+      }.invoke(keys);
+    }
+  }
+
   private void doBasic(Key k) {
     Value v = DKV.get(k);
     Assert.assertNull(v);
 
-    Key a1 = Key.make("append 1");
-    new AppendKey(a1).invoke(k);
-    Key[] ks = new AutoBuffer(DKV.get(k).get()).getA(Key.class);
+    Key a1 = Key.make("tatomic 1");
+    Append.append(k,a1);
+    Key[] ks = new AutoBuffer(DKV.get(k).memOrLoad()).getA(Key.class);
     Assert.assertEquals(1, ks.length);
     Assert.assertEquals(a1, ks[0]);
 
-    Key a2 = Key.make("append 2");
-    new AppendKey(a2).invoke(k);
-    ks = new AutoBuffer(DKV.get(k).get()).getA(Key.class);
+    Key a2 = Key.make("tatomic 2");
+    Append.append(k,a2);
+    ks = new AutoBuffer(DKV.get(k).memOrLoad()).getA(Key.class);
     Assert.assertEquals(2, ks.length);
     Assert.assertEquals(a1, ks[0]);
     Assert.assertEquals(a2, ks[1]);
@@ -54,9 +66,9 @@ public class AppendKeyTest extends TestUtil {
       byte[] kb = new byte[Key.KEY_LENGTH];
       r.nextBytes(kb);
       Key nk = Key.make(kb);
-      new AppendKey(nk).invoke(k);
+      Append.append(k,nk);
       v = DKV.get(k);
-      byte[] vb = v.get();
+      byte[] vb = v.memOrLoad();
       Assert.assertArrayEquals(kb, Arrays.copyOfRange(vb, vb.length-kb.length, vb.length));
       total = vb.length;
     }

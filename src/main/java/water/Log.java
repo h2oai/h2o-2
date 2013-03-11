@@ -16,6 +16,7 @@ public final class Log {
     }
   };
   private static final String HOST_AND_PID;
+  static boolean _dontDie;
   // @formatter:on
 
   static {
@@ -56,7 +57,8 @@ public final class Log {
   // Print to the original STDERR & die
   public static void die(String s) {
     System.err.println(s);
-    System.exit(-1);
+    if(!_dontDie)
+      System.exit(-1);
   }
 
   static String padRight(String stringToPad, int size) {

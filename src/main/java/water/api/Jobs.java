@@ -2,8 +2,6 @@ package water.api;
 
 import java.util.Date;
 
-import water.Jobs.Job;
-import water.Jobs.Progress;
 import water.*;
 
 import com.google.gson.*;
@@ -22,16 +20,15 @@ public class Jobs extends Request {
   protected Response serve() {
     JsonObject result = new JsonObject();
     JsonArray array = new JsonArray();
-    Job[] jobs = water.Jobs.get();
+    Job[] jobs = Job.all();
     for( int i = jobs.length - 1; i >= 0; i-- ) {
       JsonObject json = new JsonObject();
-      json.addProperty(KEY, jobs[i]._key.toString());
-      json.addProperty(DESCRIPTION, jobs[i]._description);
-      json.addProperty(DEST_KEY, jobs[i]._dest != null ? jobs[i]._dest.toString() : "");
-      json.addProperty(START_TIME, RequestBuilders.ISO8601.get().format(new Date(jobs[i]._startTime)));
-      Progress progress = jobs[i]._progress != null ? UKV.get(jobs[i]._progress, new Progress()) : null;
-      json.addProperty(PROGRESS, progress != null ? progress.get() : 0f);
-      json.addProperty(CANCELLED, water.Jobs.cancelled(jobs[i]._key));
+      json.addProperty(KEY, jobs[i].self().toString());
+      json.addProperty(DESCRIPTION, jobs[i].description());
+      json.addProperty(DEST_KEY, jobs[i].dest() != null ? jobs[i].dest().toString() : "");
+      json.addProperty(START_TIME, RequestBuilders.ISO8601.get().format(new Date(jobs[i].startTime())));
+      json.addProperty(PROGRESS, jobs[i].progress());
+      json.addProperty(CANCELLED, jobs[i].cancelled());
       array.add(json);
     }
     result.add(JOBS, array);
@@ -47,7 +44,7 @@ public class Jobs extends Request {
       @Override
       public String elementToString(JsonElement elm, String contextName) {
         String html;
-        if( water.Jobs.cancelled(Key.make(elm.getAsString())) )
+        if( Job.cancelled(Key.make(elm.getAsString())) )
           html = "<button disabled class='btn btn-mini'>X</button>";
         else {
           String keyParam = KEY + "=" + elm.getAsString();

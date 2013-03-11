@@ -6,10 +6,8 @@ import java.util.HashMap;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
-import water.H2O;
-import water.NanoHTTPD;
+import water.*;
 import water.api.Upload.PostFile;
-import H2OInit.Boot;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
@@ -82,9 +80,6 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new TypeaheadKeysRequest("Existing H2O Key", ""));
     registerRequest(new TypeaheadFileRequest());
     registerRequest(new TypeaheadHexKeyRequest());
-    registerRequest(new TypeaheadModelKeyRequest()); // Any Key with "__???Model_??????"
-    registerRequest(new TypeaheadGLMModelKeyRequest());
-    registerRequest(new TypeaheadRFModelKeyRequest());
     registerRequest(new TypeaheadS3BucketRequest());
     registerRequest(new TypeaheadHdfsPathRequest());
 
