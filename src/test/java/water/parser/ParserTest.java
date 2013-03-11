@@ -86,13 +86,13 @@ public class ParserTest extends TestUtil {
       StringBuilder sb = new StringBuilder();
       for( int i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\n");
       Key k = Key.make();
-      DKV.put(k, new Value(k, sb.toString()));
+      UKV.put(k, new Value(k, sb.toString()));
       Key r1 = Key.make("r1");
       ParseDataset.parse(r1, DKV.get(k));
       testParsed(r1,exp,k);
       sb = new StringBuilder();
       for( int i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\r\n");
-      DKV.put(k, new Value(k, sb.toString()));
+      UKV.put(k, new Value(k, sb.toString()));
       Key r2 = Key.make("r2");
       ParseDataset.parse(r2, DKV.get(k));
       testParsed(r2,exp,k);
@@ -343,7 +343,7 @@ public class ParserTest extends TestUtil {
       StringBuilder sb = new StringBuilder();
       for( i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\n");
       Key k = Key.make();
-      DKV.put(k, new Value(k, sb.toString()));
+      UKV.put(k, new Value(k, sb.toString()));
       Key r5 = Key.make();
       ParseDataset.parse(r5, DKV.get(k));
       testParsed(r5, exp,k);
