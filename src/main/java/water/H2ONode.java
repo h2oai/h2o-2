@@ -199,10 +199,13 @@ public class H2ONode extends Iced implements Comparable {
   }
   // Stop tracking a remote task, because we got an ACKACK.
   void remove_task_tracking( int task ) {
-    RPC.RPCCall old = WORK.remove(task);
-    if( old == null ) return;   // Already stopped tracking
-    AckAckTimeOutThread.PENDING.remove(old);
-    assert old._computed : "Still not done #"+task+" "+old.getClass();
+    RPC.RPCCall old;
+    synchronized( this ) {
+      old = WORK.remove(task);
+      if( old == null ) return; // Already stopped tracking
+      AckAckTimeOutThread.PENDING.remove(old);
+    }
+    assert old._computed : "Still not done #"+task+" "+old.getClass()+" from "+old._client;
     old._dt.onAckAck();         // One-time call stop-tracking
   }
 
@@ -223,9 +226,14 @@ public class H2ONode extends Iced implements Comparable {
       while( true ) {
         try {
           RPC.RPCCall r = PENDING.take();
+          assert r._computed : "Found RPCCall not computed "+r._tsknum;
           if( H2O.CLOUD.contains(r._client) ) {
-            r.resend_ack();
-            PENDING.add(r);
+            synchronized( H2O.SELF ) {
+              if( H2O.SELF.has_task(r._tsknum) == r ) {
+                r.resend_ack();
+                PENDING.add(r);
+              }
+            }
           } else H2O.SELF.remove_task_tracking(r._tsknum);
         } catch( InterruptedException e ) {
           // Interrupted while waiting for a packet?
