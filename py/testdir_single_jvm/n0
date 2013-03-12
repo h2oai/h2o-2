@@ -9,7 +9,6 @@ nosetests test_from_import.py --nologcapture --with-xunit
 nosetests test_from_putfile.py --nologcapture --with-xunit
 nosetests test_GLM_basic.py --nologcapture --with-xunit
 nosetests test_GLM_big1.py --nologcapture --with-xunit
-nosetests test_GLM_binomial_goalies_binomial.py --nologcapture --with-xunit
 nosetests test_GLM_binomial_goalies.py --nologcapture --with-xunit
 nosetests test_GLM_clslowbwt.py --nologcapture --with-xunit
 nosetests test_GLM_convergence_1_noise.py --nologcapture --with-xunit
