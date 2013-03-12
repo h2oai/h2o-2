@@ -97,7 +97,7 @@ class Basic(unittest.TestCase):
 
                 'alpha': 0, 
                 'lambda': 0, 
-                'beta_eps': 0.001, 
+                'beta_epsilon': 0.001, 
                 'max_iter': 8
                 }
 
