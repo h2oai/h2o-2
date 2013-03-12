@@ -1,78 +1,78 @@
-nosetests test_badchars.py --nologcapture --with-xunit
-nosetests test_billion_rows.py --nologcapture --with-xunit
-nosetests test_exec_covtype_cols.py --nologcapture --with-xunit
-nosetests test_exec_covtype_rand1.py --nologcapture --with-xunit
-nosetests test_exec_operators.py --nologcapture --with-xunit
-nosetests test_exec_result_race.py --nologcapture --with-xunit
-nosetests test_failswith512chunk.py --nologcapture --with-xunit
-nosetests test_from_import.py --nologcapture --with-xunit
-nosetests test_from_putfile.py --nologcapture --with-xunit
-nosetests test_GLM_basic.py --nologcapture --with-xunit
-nosetests test_GLM_big1.py --nologcapture --with-xunit
-nosetests test_GLM_binomial_goalies.py --nologcapture --with-xunit
-nosetests test_GLM_clslowbwt.py --nologcapture --with-xunit
-nosetests test_GLM_convergence_1_noise.py --nologcapture --with-xunit
-nosetests test_GLM_convergence_1.py --nologcapture --with-xunit
-nosetests test_GLM_convergence_2.py --nologcapture --with-xunit
-nosetests test_GLM_covtype_1.py --nologcapture --with-xunit
-nosetests test_GLM_covtype20x_1.py --nologcapture --with-xunit
-nosetests test_GLM_expert.py --nologcapture --with-xunit
-nosetests test_GLM_gaussian_rand2.py --nologcapture --with-xunit
-nosetests test_GLMGrid_basic.py --nologcapture --with-xunit
-nosetests test_GLMGrid_convergence_1.py --nologcapture --with-xunit
-nosetests test_GLM_hastie.py --nologcapture --with-xunit
-nosetests test_GLM_hastie_shuffle.py --nologcapture --with-xunit
-nosetests test_GLM_hhp107_01_browse.py --nologcapture --with-xunit
-nosetests test_GLM_many_cols.py --nologcapture --with-xunit
-nosetests test_GLM_many_cols_real.py --nologcapture --with-xunit
-nosetests test_GLM_params_rand2_4082088627997819015.py --nologcapture --with-xunit
-nosetests test_GLM_params_rand2_8977501266014959103.py --nologcapture --with-xunit
-nosetests test_GLM_params_rand2_expert.py --nologcapture --with-xunit
-nosetests test_GLM_params_rand2_newargs.py --nologcapture --with-xunit
-nosetests test_GLM_params_rand2.py --nologcapture --with-xunit
-nosetests test_GLM_poisson_1.py --nologcapture --with-xunit
-nosetests test_GLM_poisson_goalies_admm.py --nologcapture --with-xunit
-nosetests test_GLM_poisson_goalies_gg.py --nologcapture --with-xunit
-nosetests test_GLM_poisson_rand2.py --nologcapture --with-xunit
-nosetests test_GLM_poisson_timeout_fail.py --nologcapture --with-xunit
-nosetests test_GLM_princeton.py --nologcapture --with-xunit
-nosetests test_GLM_score_same.py --nologcapture --with-xunit
-nosetests test_GLM_tnc3_10.py --nologcapture --with-xunit
-nosetests test_GLM_trisum.py --nologcapture --with-xunit
-nosetests test_GLM_twovalues.py --nologcapture --with-xunit
-nosetests test_GLM_umass.py --nologcapture --with-xunit
-nosetests test_GLM_with_logit_result_1.py --nologcapture --with-xunit
-nosetests test_hdfs.py --nologcapture --with-xunit
-nosetests test_hdfs_store.py --nologcapture --with-xunit
-nosetests test_hex-443.py --nologcapture --with-xunit
-nosetests test_KMeans_basic.py --nologcapture --with-xunit
-nosetests test_many_cols_enum.py --nologcapture --with-xunit
-nosetests test_many_cols.py --nologcapture --with-xunit
-nosetests test_parity_128_4_2_quad.py --nologcapture --with-xunit
-nosetests test_parse_many_cases.py --nologcapture --with-xunit
-nosetests test_parse_many_doublesp.py --nologcapture --with-xunit
-nosetests test_parse_small_many.py --nologcapture --with-xunit
-nosetests test_putfile_a5m.py --nologcapture --with-xunit
-nosetests test_put_parse4.py --nologcapture --with-xunit
-nosetests test_put_value5.py --nologcapture --with-xunit
-nosetests test_randomBitVector.py --nologcapture --with-xunit
-nosetests test_randomdatagen1.py --nologcapture --with-xunit
-nosetests test_randomFilter.py --nologcapture --with-xunit
-nosetests test_redirect.py --nologcapture --with-xunit
-nosetests test_rf1.py --nologcapture --with-xunit
-nosetests test_rf_covtype_train_full.py --nologcapture --with-xunit
-nosetests test_rf_covtype_train_oobe.py --nologcapture --with-xunit
-nosetests test_rf_noise.py --nologcapture --with-xunit
-nosetests test_rf_params_rand1.py --nologcapture --with-xunit
-nosetests test_rf_params_rand2_4201285065147091758.py --nologcapture --with-xunit
-nosetests test_rf_params_rand2_7066883810153380318.py --nologcapture --with-xunit
-nosetests test_rf_params_rand2_nostrata.py --nologcapture --with-xunit
-nosetests test_rf_params_rand2.py --nologcapture --with-xunit
-nosetests test_rf_strata_rand1.py --nologcapture --with-xunit
-nosetests test_rfview_score.py --nologcapture --with-xunit
-nosetests test_simple.py --nologcapture --with-xunit
-nosetests test_slice.py --nologcapture --with-xunit
-nosetests test_tnc3.py --nologcapture --with-xunit
-nosetests test_tree_view.py --nologcapture --with-xunit
-nosetests test_tree_view_wrong_model.py --nologcapture --with-xunit
-nosetests test_with_a_browser.py --nologcapture --with-xunit
+./n0.doit test_badchars.py
+./n0.doit test_billion_rows.py
+./n0.doit test_exec_covtype_cols.py
+./n0.doit test_exec_covtype_rand1.py
+./n0.doit test_exec_operators.py
+./n0.doit test_exec_result_race.py
+./n0.doit test_failswith512chunk.py
+./n0.doit test_from_import.py
+./n0.doit test_from_putfile.py
+./n0.doit test_GLM_basic.py
+./n0.doit test_GLM_big1.py
+./n0.doit test_GLM_binomial_goalies.py
+./n0.doit test_GLM_clslowbwt.py
+./n0.doit test_GLM_convergence_1_noise.py
+./n0.doit test_GLM_convergence_1.py
+./n0.doit test_GLM_convergence_2.py
+./n0.doit test_GLM_covtype_1.py
+./n0.doit test_GLM_covtype20x_1.py
+./n0.doit test_GLM_expert.py
+./n0.doit test_GLM_gaussian_rand2.py
+./n0.doit test_GLMGrid_basic.py
+./n0.doit test_GLMGrid_convergence_1.py
+./n0.doit test_GLM_hastie.py
+./n0.doit test_GLM_hastie_shuffle.py
+./n0.doit test_GLM_hhp107_01_browse.py
+./n0.doit test_GLM_many_cols.py
+./n0.doit test_GLM_many_cols_real.py
+./n0.doit test_GLM_params_rand2_4082088627997819015.py
+./n0.doit test_GLM_params_rand2_8977501266014959103.py
+./n0.doit test_GLM_params_rand2_expert.py
+./n0.doit test_GLM_params_rand2_newargs.py
+./n0.doit test_GLM_params_rand2.py
+./n0.doit test_GLM_poisson_1.py
+./n0.doit test_GLM_poisson_goalies_admm.py
+./n0.doit test_GLM_poisson_goalies_gg.py
+./n0.doit test_GLM_poisson_rand2.py
+./n0.doit test_GLM_poisson_timeout_fail.py
+./n0.doit test_GLM_princeton.py
+./n0.doit test_GLM_score_same.py
+./n0.doit test_GLM_tnc3_10.py
+./n0.doit test_GLM_trisum.py
+./n0.doit test_GLM_twovalues.py
+./n0.doit test_GLM_umass.py
+./n0.doit test_GLM_with_logit_result_1.py
+./n0.doit test_hdfs.py
+./n0.doit test_hdfs_store.py
+./n0.doit test_hex-443.py
+./n0.doit test_KMeans_basic.py
+./n0.doit test_many_cols_enum.py
+./n0.doit test_many_cols.py
+./n0.doit test_parity_128_4_2_quad.py
+./n0.doit test_parse_many_cases.py
+./n0.doit test_parse_many_doublesp.py
+./n0.doit test_parse_small_many.py
+./n0.doit test_putfile_a5m.py
+./n0.doit test_put_parse4.py
+./n0.doit test_put_value5.py
+./n0.doit test_randomBitVector.py
+./n0.doit test_randomdatagen1.py
+./n0.doit test_randomFilter.py
+./n0.doit test_redirect.py
+./n0.doit test_rf1.py
+./n0.doit test_rf_covtype_train_full.py
+./n0.doit test_rf_covtype_train_oobe.py
+./n0.doit test_rf_noise.py
+./n0.doit test_rf_params_rand1.py
+./n0.doit test_rf_params_rand2_4201285065147091758.py
+./n0.doit test_rf_params_rand2_7066883810153380318.py
+./n0.doit test_rf_params_rand2_nostrata.py
+./n0.doit test_rf_params_rand2.py
+./n0.doit test_rf_strata_rand1.py
+./n0.doit test_rfview_score.py
+./n0.doit test_simple.py
+./n0.doit test_slice.py
+./n0.doit test_tnc3.py
+./n0.doit test_tree_view.py
+./n0.doit test_tree_view_wrong_model.py
+./n0.doit test_with_a_browser.py
