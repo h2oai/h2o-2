@@ -117,14 +117,14 @@ public class GLMGrid extends Request {
     glmp._caseVal = _case.valid()?_case.value():Double.NaN;
 
     Key dest = GLMModel.makeKey();
-
+    double [] ts = glmp._family == Family.binomial?_thresholds.value()._arr:null;
     hex.GLMGrid job = new hex.GLMGrid(dest,
                         _key.value(), // Hex data
                         glmp,
                         getCols(_x.value(), _y.value()),
                         _lambda.value()._arr, // Grid ranges
                         _alpha.value()._arr,  // Grid ranges
-                        _thresholds.value()._arr,
+                        ts,
                         _xval.value());
     job.start();
 

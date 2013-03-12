@@ -32,6 +32,7 @@ public class GLMGrid extends Job {
     _ts = thresholds;
     _alphas = as;
     _xfold = xfold;
+    _glmp.checkResponseCol(_ary._cols[xs[xs.length-1]]);
   }
 
   public GLMGrid() {

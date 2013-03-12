@@ -11,6 +11,7 @@ import hex.RowVecTask.Sampling;
 import java.util.*;
 
 import water.*;
+import water.ValueArray.Column;
 import water.api.Constants;
 
 import com.google.gson.*;
@@ -41,6 +42,26 @@ public abstract class DGLM {
     public GLMParams(Family family, Link link){
       _family = family;
       _link = link;
+    }
+
+    public void checkResponseCol(Column ycol){
+      switch(_family){
+      case poisson:
+        if(ycol._min < 0)
+          throw new GLMException("Invalid response variable " + ycol._name + ", Poisson family requires response to be >= 0. ");
+        break;
+      case gamma:
+        if(ycol._min <= 0)
+          throw new GLMException("Invalid response variable " + ycol._name + ", Gamma family requires response to be > 0. ");
+        break;
+      case binomial:
+        if(_caseMode == CaseMode.none && (ycol._min < 0 || ycol._max > 1))
+          if(ycol._min <= 0)
+            throw new GLMException("Invalid response variable " + ycol._name + ", Binomial family requires response to be from [0,1] or have Case predicate. ");
+        break;
+      default:
+        //pass
+      }
     }
 
     public JsonObject toJson(){
@@ -1023,8 +1044,12 @@ public abstract class DGLM {
     return buildModel(data, lsm, params, beta);
   }
 
+
   public static GLMModel buildModel(DataFrame data, LSMSolver lsm, GLMParams params, double [] beta) {
     long t1 = System.currentTimeMillis();
+    // make sure we have valid response variable for the current family
+    Column ycol = data._ary._cols[data._ary._cols.length-1];
+    params.checkResponseCol(ycol);
     // filter out constant columns...
     GramMatrixFunc gramF = new GramMatrixFunc(data, params, beta.clone());
     ArrayList<String> warns = new ArrayList<String>();
