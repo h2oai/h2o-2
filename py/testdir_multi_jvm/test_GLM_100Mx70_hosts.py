@@ -101,7 +101,7 @@ class Basic(unittest.TestCase):
                 'y': y, 
                 'max_iter': 8, 
                 'num_cross_validation_folds': 0, 
-                'beta_eps': 1e-4,
+                'beta_epsilon': 1e-4,
                 'alpha': 0, 
                 'lambda': 0 
                 }
