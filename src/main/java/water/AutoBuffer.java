@@ -163,7 +163,7 @@ public final class AutoBuffer {
     StringBuilder sb = new StringBuilder();
     sb.append("[AB ").append(_read ? "read " : "write ");
     sb.append(_firstPage?"first ":"2nd ").append(_h2o);
-    sb.append("0 <= ").append(_bb.position()).append(" <= ").append(_bb.limit());
+    sb.append(" 0 <= ").append(_bb.position()).append(" <= ").append(_bb.limit());
     sb.append(" <= ").append(_bb.capacity());
     return sb.append("]").toString();
   }
@@ -212,8 +212,7 @@ public final class AutoBuffer {
   // bytes out.  If the write is to an H2ONode and is short, send via UDP.
   // AutoBuffer close calls order; i.e. a reader close() will block until the
   // writer does a close().
-  public final int close() { return close(false); }
-  public final int close(boolean forceTcp ) {
+  public final int close() { 
     assert _h2o != null || _chan != null;      // Byte-array backed should not be closed
     try {
       if( _chan == null ) {     // No channel?
@@ -221,14 +220,14 @@ public final class AutoBuffer {
         // For small-packet write, send via UDP.  Since nothing is sent until
         // now, this close() call trivially orders - since the reader will not
         // even start (much less close()) until this packet is sent.
-        if( !forceTcp && _bb.position() < MTU ) return udpSend();
+        if( _bb.position() < MTU ) return udpSend();
       }
       // Force AutoBuffer 'close' calls to order; i.e. block readers until
       // writers do a 'close' - by writing 1 more byte in the close-call which
       // the reader will have to wait for.
       if( _read ) {             // Reader?
         int x = get1();         // Read 1 more byte
-        assert x == 0xab;
+        assert x == 0xab : "AB.close instead of 0xab sentinel got "+x+", "+this;
       } else {                  // Writer?
         put1(0xab);             // Write one-more byte
         sendPartial();          // Finish partial TCP writes
