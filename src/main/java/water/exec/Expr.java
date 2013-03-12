@@ -30,10 +30,10 @@ public abstract class Expr {
 
     private Result(Key k, int refCount, int pos) throws EvaluationException {
       Value v = DKV.get(k);
-      if( v != null && v._isArray == 0 ) {
-        if( v._max > 100 ) 
+      if( v != null && !v.isArray() ) {
+        if( v._max > 100 )
           throw new EvaluationException(pos, "Key "+k+" is neither a Vector nor a simple number");
-        String s = new String(v.get());
+        String s = new String(v.memOrLoad());
         try { _const = Double.valueOf(s); }
         catch( NumberFormatException nfe ) {
           throw new EvaluationException(pos, "Key "+k+" is neither a Vector nor a simple number");

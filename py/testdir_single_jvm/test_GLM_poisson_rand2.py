@@ -56,7 +56,7 @@ class Basic(unittest.TestCase):
                 'family': "poisson", 
                 'alpha': 0.5, 
                 'lambda': 1e-4, 
-                'beta_eps': 0.001, 
+                'beta_epsilon': 0.001, 
                 'max_iter': 30
                 }
 

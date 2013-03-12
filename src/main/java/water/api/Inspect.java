@@ -55,34 +55,35 @@ public class Inspect extends Request {
   @Override
   protected Response serve() {
     Value val = _key.value();
-    if( val.isHex() ) {
+    if( val.isHex() )
       return serveValueArray(ValueArray.value(val));
+    if( !val.isArray() ) {
+      Freezable f = val.get();
+      if( f instanceof GLMModel ) {
+        GLMModel m = (GLMModel) f;
+        JsonObject res = new JsonObject();
+        // Convert to JSON
+        res.add("GLMModel", m.toJson());
+        // Display HTML setup
+        Response r = Response.done(res);
+        r.setBuilder(""/* top-level do-it-all builder */, new GLMBuilder(m));
+        return r;
+      }
+      if( f instanceof KMeansModel ) {
+        KMeansModel m = (KMeansModel) f;
+        JsonObject res = new JsonObject();
+        // Convert to JSON
+        res.add("KMeansModel", m.toJson());
+        // Display HTML setup
+        Response r = Response.done(res);
+        // r.setBuilder(""/*top-level do-it-all builder*/,new KMeansBuilder(m));
+        return r;
+      }
+      if( f instanceof RFModel ) {
+        JsonObject res = new JsonObject();
+        return RFView.redirect(res,val._key);
+      }
     }
-    if( _key.originalValue().startsWith(GLMModel.KEY_PREFIX) ) {
-      GLMModel m = val.get(new GLMModel());
-      JsonObject res = new JsonObject();
-      // Convert to JSON
-      res.add("GLMModel", m.toJson());
-      // Display HTML setup
-      Response r = Response.done(res);
-      r.setBuilder(""/* top-level do-it-all builder */, new GLMBuilder(m));
-      return r;
-    }
-    if( _key.originalValue().startsWith(KMeansModel.KEY_PREFIX) ) {
-      KMeansModel m = val.get(new KMeansModel());
-      JsonObject res = new JsonObject();
-      // Convert to JSON
-      res.add("KMeansModel", m.toJson());
-      // Display HTML setup
-      Response r = Response.done(res);
-      // r.setBuilder(""/*top-level do-it-all builder*/,new KMeansBuilder(m));
-      return r;
-    }
-    if( _key.originalValue().startsWith(RFModel.KEY_PREFIX) ) {
-      JsonObject res = new JsonObject();
-      return RFView.redirect(res,val._key);
-    }
-
     return serveUnparsedValue(val);
   }
 

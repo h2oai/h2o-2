@@ -42,6 +42,7 @@ public class TaskGetKey extends DTask<TaskGetKey> {
   }
 
   private TaskGetKey( Key key ) { _key = _xkey = key; }
+  TaskGetKey() {}
 
   // Top-level non-recursive invoke
   @Override public TaskGetKey invoke( H2ONode sender ) {

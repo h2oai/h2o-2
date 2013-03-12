@@ -126,6 +126,8 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     else:
         print "\nintercept:", intercept, cString
 
+    print "\nTotal # of coefficients:", len(column_names)
+
     # pick out the coefficent for the column we enabled for enhanced checking. Can be None.
     # FIX! temporary hack to deal with disappearing/renaming columns in GLM
     if (not allowZeroCoeff) and (colX is not None):

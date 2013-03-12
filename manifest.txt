@@ -1,2 +1,2 @@
-Main-Class: H2OInit.Boot
+Main-Class: water.Boot
 

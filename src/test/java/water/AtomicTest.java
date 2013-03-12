@@ -3,7 +3,6 @@ package water;
 import java.util.Arrays;
 import java.util.Random;
 import org.junit.*;
-import water.util.TestUtil;
 
 public class AtomicTest extends TestUtil {
 
@@ -36,13 +35,13 @@ public class AtomicTest extends TestUtil {
 
     Key a1 = Key.make("tatomic 1");
     Append.append(k,a1);
-    Key[] ks = new AutoBuffer(DKV.get(k).get()).getA(Key.class);
+    Key[] ks = new AutoBuffer(DKV.get(k).memOrLoad()).getA(Key.class);
     Assert.assertEquals(1, ks.length);
     Assert.assertEquals(a1, ks[0]);
 
     Key a2 = Key.make("tatomic 2");
     Append.append(k,a2);
-    ks = new AutoBuffer(DKV.get(k).get()).getA(Key.class);
+    ks = new AutoBuffer(DKV.get(k).memOrLoad()).getA(Key.class);
     Assert.assertEquals(2, ks.length);
     Assert.assertEquals(a1, ks[0]);
     Assert.assertEquals(a2, ks[1]);
@@ -69,7 +68,7 @@ public class AtomicTest extends TestUtil {
       Key nk = Key.make(kb);
       Append.append(k,nk);
       v = DKV.get(k);
-      byte[] vb = v.get();
+      byte[] vb = v.memOrLoad();
       Assert.assertArrayEquals(kb, Arrays.copyOfRange(vb, vb.length-kb.length, vb.length));
       total = vb.length;
     }

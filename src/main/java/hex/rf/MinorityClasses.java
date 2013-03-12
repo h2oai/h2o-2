@@ -187,7 +187,7 @@ public class MinorityClasses {
     @Override
     public void map(Key key) {
       _createdKeys = new Key[H2O.CLOUD._memary.length];
-      byte [] bits = DKV.get(key).get();
+      byte [] bits = DKV.get(key).memOrLoad();
       for(int i = 0; i < _createdKeys.length; ++i){
         if(H2O.SELF.index() == i)
           _createdKeys[i] = key;

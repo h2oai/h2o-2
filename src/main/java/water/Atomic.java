@@ -52,10 +52,10 @@ public abstract class Atomic extends DTask {
     while( true ) {
       Value val1 = DKV.get(_key);
       byte[] bits1 = null;
-      if( val1 != null ) {      // Got a mapping?
-        bits1 = val1.get();     // Get the bits
-        if( bits1 == null )     // Assume XTN failure & try again
-          continue;             // No bits?  deleted value already?
+      if( val1 != null ) {        // Got a mapping?
+        bits1 = val1.memOrLoad(); // Get the bits
+        if( bits1 == null )       // Assume XTN failure & try again
+          continue;               // No bits?  deleted value already?
       }
 
       // Run users' function.  This is supposed to read-only from bits1 and

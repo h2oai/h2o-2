@@ -17,7 +17,7 @@
 	<classpathentry kind="lib" path="lib/trove/trove-3.0.3.jar"/>
 	<classpathentry kind="lib" path="lib/s3/aws-java-sdk-1.3.27.jar" sourcepath="lib/s3/aws-java-sdk-1.3.27-sources.jar"/>
 	<classpathentry kind="lib" path="lib/jama/Jama.jar"/>
-	<classpathentry kind="lib" path="lib/javassist.jar"/>
+	<classpathentry kind="lib" path="lib/javassist.jar" sourcepath="lib/javassist-sources.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="lib/hadoop/cdh4/hadoop-hdfs.jar"/>
 	<classpathentry kind="lib" path="lib/hadoop/cdh4/hadoop-auth.jar"/>

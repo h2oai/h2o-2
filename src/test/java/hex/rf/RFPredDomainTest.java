@@ -8,7 +8,6 @@ import hex.rf.Tree.StatType;
 import org.junit.*;
 
 import water.*;
-import water.util.TestUtil;
 
 /**
  * Note: This test expect cloud of 3 nodes.

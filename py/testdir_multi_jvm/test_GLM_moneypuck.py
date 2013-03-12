@@ -83,7 +83,7 @@ class Basic(unittest.TestCase):
                 'link': 'log',
                 'num_cross_validation_folds': 0, 
                 'max_iter': max_iter, 
-                'beta_eps': 1e-3}
+                'beta_epsilon': 1e-3}
 
             # L2 
             if 1==0:

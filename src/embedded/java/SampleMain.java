@@ -2,13 +2,13 @@ package embedded;
 
 import java.io.FileInputStream;
 
-import H2OInit.Boot;
+import water.Boot;
 
 /**
  *  A Sample Main Class which embeddeds H2O.
  *
  *  H2O is *not* run from its main, and thus requires an initialization call.
- *  After that, the H2OInit.External API can be called, including e.g.
+ *  After that, the water.External API can be called, including e.g.
  *  loading a Model and running H2O as an embedded Scoring Engine.
  *
  *  Compile:   javac -cp ".;h2o.jar" SampleMain.java
@@ -36,14 +36,14 @@ class SampleMain {
     System.out.println("Sample App Does Stuff");
 
     // Put a model
-    Object modelKey = H2OInit.External.makeKey("irisModel");
-    Object model = H2OInit.External.ingestRFModelFromR(modelKey,new FileInputStream("../../smalldata/test/rmodels/rf-iris-1tree.model"));
+    Object modelKey = water.External.makeKey("irisModel");
+    Object model = water.External.ingestRFModelFromR(modelKey,new FileInputStream("../../smalldata/test/rmodels/rf-iris-1tree.model"));
 
     double[] row = new double[]{2.3,1.2,4.4,5.5};
-    double res1 = H2OInit.External.scoreKey(modelKey, new String[]{"sepal"}, row);
+    double res1 = water.External.scoreKey(modelKey, new String[]{"sepal"}, row);
     System.out.println(res1);
 
-    double res2 = H2OInit.External.scoreModel(model, new String[]{"sepal"}, row);
+    double res2 = water.External.scoreModel(model, new String[]{"sepal"}, row);
     System.out.println(res2);
 
     try { Thread.sleep(5*1000); }

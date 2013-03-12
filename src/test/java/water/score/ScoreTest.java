@@ -5,7 +5,6 @@ import java.util.HashMap;
 import org.junit.Assert;
 import org.junit.Test;
 import water.parser.PMMLParser;
-import water.util.TestUtil;
 import water.*;
 
 public class ScoreTest extends TestUtil {

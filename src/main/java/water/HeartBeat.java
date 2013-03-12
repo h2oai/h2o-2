@@ -1,6 +1,5 @@
 package water;
 
-import H2OInit.Boot;
 
 import java.util.Arrays;
 

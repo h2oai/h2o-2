@@ -6,7 +6,6 @@ import java.io.FileInputStream;
 import org.junit.*;
 import water.*;
 import water.RReader.RModel;
-import water.util.TestUtil;
 
 public class RReaderTest extends TestUtil {
   @BeforeClass

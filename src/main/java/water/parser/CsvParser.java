@@ -57,7 +57,7 @@ public class CsvParser extends CustomParser {
   @Override public final void parse(Key key) throws Exception {
     ValueArray _ary = _aryKey == null ? null : ValueArray.value(DKV.get(_aryKey));
     ValueString _str = new ValueString();
-    byte[] bits = DKV.get(key).get();
+    byte[] bits = DKV.get(key).memOrLoad();
     int offset = 0;
     int state = _skipFirstLine ? SKIP_LINE : WHITESPACE_BEFORE_TOKEN;
     int quotes = 0;
@@ -401,7 +401,7 @@ NEXT_CHAR:
         secondChunk = 0;
         Value v = DKV.get(key); // we had the last key
         assert (v != null) : "The value used to be there!";
-        bits = v.get();
+        bits = v.memOrLoad();
         offset += bits.length;
         _str.set(bits,offset,0);
       } else if (offset >= bits.length) {
@@ -432,7 +432,7 @@ NEXT_CHAR:
           }
           break MAIN_LOOP;
         }
-        bits = v.get();         // Could limit to eg 512 bytes
+        bits = v.memOrLoad();         // Could limit to eg 512 bytes
         if (bits[0] == CHAR_LF && state == EXPECT_COND_LF)
           break MAIN_LOOP; // when the first character we see is a line end
       }

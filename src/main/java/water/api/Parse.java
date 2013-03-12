@@ -1,9 +1,7 @@
 package water.api;
 
 import water.*;
-import water.Jobs.Job;
-import water.parser.CsvParser;
-import water.parser.ParseDataset;
+import water.parser.*;
 import water.parser.CsvParser.Setup;
 import water.util.RString;
 
@@ -124,7 +122,7 @@ public class Parse extends Request {
       JsonObject response = new JsonObject();
       response.addProperty(RequestStatics.DEST_KEY,dest.toString());
 
-      Response r = Progress.redirect(response, job._key, dest);
+      Response r = Progress.redirect(response, job.self(), dest);
       r.setBuilder(RequestStatics.DEST_KEY, new KeyElementBuilder());
       return r;
     } catch (IllegalArgumentException e) {

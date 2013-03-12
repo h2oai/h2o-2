@@ -13,8 +13,7 @@ import water.*;
 import water.api.Constants;
 import water.exec.Exec;
 import water.exec.PositionedException;
-import water.util.TestUtil;
-
+import water.TestUtil;
 import com.google.gson.*;
 
 // A series of tests designed to validate GLM's *statistical results* and not,
