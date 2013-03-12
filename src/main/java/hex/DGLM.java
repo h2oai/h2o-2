@@ -1048,7 +1048,7 @@ public abstract class DGLM {
   public static GLMModel buildModel(DataFrame data, LSMSolver lsm, GLMParams params, double [] beta) {
     long t1 = System.currentTimeMillis();
     // make sure we have valid response variable for the current family
-    Column ycol = data._ary._cols[data._ary._cols.length-1];
+    Column ycol = data._ary._cols[data._modelDataMap[data._modelDataMap.length-1]];
     params.checkResponseCol(ycol);
     // filter out constant columns...
     GramMatrixFunc gramF = new GramMatrixFunc(data, params, beta.clone());

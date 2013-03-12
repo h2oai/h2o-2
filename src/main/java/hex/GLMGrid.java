@@ -42,32 +42,32 @@ public class GLMGrid extends Job {
   public void start() {
     super.start();
     UKV.put(dest(), new GLMModels(_lambdas.length * _alphas.length));
-
-    H2O.submitTask(new DTask() {
-      @Override
-      public void compute2() {
-        final int N = _alphas.length;
-        GLMModel m = null;
-        try {
-          OUTER: for( int l1 = 1; l1 <= _lambdas.length; l1++ ) {
-            for( int a = 0; a < _alphas.length; a++ ) {
+    for(int a = 0; a < _alphas.length; ++a){
+      final int aidx = a;
+      H2O.submitTask(new DTask() {
+        @Override
+        public void compute2() {
+          final int N = _alphas.length;
+          GLMModel m = null;
+          try {
+            for( int l1 = 1; l1 <= _lambdas.length; l1++ ) {
               if( cancelled() )
-                break OUTER;
-              m = do_task(m,_lambdas.length-l1,a); // Do a step; get a model
-              update(dest(), m, (_lambdas.length-l1) * N + a);
+                break;
+              m = do_task(m,_lambdas.length-l1,aidx); // Do a step; get a model
+              update(dest(), m, (_lambdas.length-l1) * N + aidx);
             }
+          } finally {
+            remove();
           }
-        } finally {
-          remove();
+          tryComplete(); // This task is done
         }
-        tryComplete(); // This task is done
-      }
 
-      // Not intended for remote or distributed execution; task control runs on one node.
-      @Override public GLMGrid invoke(H2ONode sender) {
-        throw H2O.unimpl();
-      }
-    });
+        // Not intended for remote or distributed execution; task control runs on one node.
+        @Override public GLMGrid invoke(H2ONode sender) {
+          throw H2O.unimpl();
+        }
+      });
+    }
   }
 
   // Update dest for a new model. In a static function, to avoid closing
@@ -88,7 +88,9 @@ public class GLMGrid extends Job {
   // Do a single step (blocking).
   // In this case, run 1 GLM model.
   private GLMModel do_task(GLMModel m, int l, int alpha) {
-    m = DGLM.buildModel(DGLM.getData(_ary, _xs, null, true), new ADMMSolver(_lambdas[l], _alphas[alpha]), _glmp);
+    m = (m == null)?
+        DGLM.buildModel(DGLM.getData(_ary, _xs, null, true), new ADMMSolver(_lambdas[l], _alphas[alpha]),_glmp):
+        DGLM.buildModel(DGLM.getData(_ary, _xs, null, true), new ADMMSolver(_lambdas[l], _alphas[alpha]), _glmp,m._beta);
     if( _xfold <= 1 )
       m.validateOn(_ary, null, _ts);
     else

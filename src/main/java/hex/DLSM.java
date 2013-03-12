@@ -16,6 +16,7 @@ import com.google.gson.JsonObject;
 public class DLSM {
 
   public enum LSMSolverType {
+    AUTO, // AUTO: (len(beta) < 1000)?ADMM:GenGradient
     ADMM,
     GenGradient
   }
