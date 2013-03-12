@@ -25,11 +25,10 @@ class Basic(unittest.TestCase):
         trialMax = 20
         for trial in range(trialMax):
             key2 = csvFilename + "_" + str(trial) + ".hex"
-            ### nodeX = random.randint(0,lenNodes-1) 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2, timeoutSecs=20)
+            nodeX = random.randint(0,lenNodes-1) 
+            parseKey = h2i.parseImportFolderFile(h2o.nodes[nodeX], csvFilename, importFolderPath, key2=key2, timeoutSecs=20)
             sys.stdout.write('.')
             sys.stdout.flush()
-
 
 if __name__ == '__main__':
     h2o.unit_main()
