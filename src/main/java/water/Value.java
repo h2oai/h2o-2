@@ -179,13 +179,13 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
    * to all stores providing large-file access by default including S3. */
   public static Value lazyArrayChunk( Key key ) {
     if( key._kb[0] != Key.ARRAYLET_CHUNK ) return null; // Not an arraylet chunk
+    if( !key.home() ) return null; // Only on home node, so the replica tracking is correct
     Key arykey = ValueArray.getArrayKey(key);
-    Value v1 = DKV.get(arykey);
+    Value v1 = DKV.get(arykey,Integer.MAX_VALUE,H2O.ARY_KEY_PRIORITY);
     if( v1 == null ) return null;       // Nope; not there
     if( !v1.isArray() ) return null; // Or not a ValueArray
     switch( v1._persist&BACKEND_MASK ) {
-    case ICE : if( !key.home() ) return null; // Only do this on the home node for ICE
-               return PersistIce .lazyArrayChunk(key);
+    case ICE : return PersistIce .lazyArrayChunk(key);
     case HDFS: return PersistHdfs.lazyArrayChunk(key);
     case NFS : return PersistNFS .lazyArrayChunk(key);
     case S3  : return PersistS3  .lazyArrayChunk(key);
