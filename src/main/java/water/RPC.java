@@ -328,7 +328,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       rpc.response(ab);
     }
     // ACKACK the remote, telling him "we got the answer"
-    new AutoBuffer(ab._h2o).putTask(UDP.udp.ackack.ordinal(),task).close(true);
+    new AutoBuffer(ab._h2o).putTask(UDP.udp.ackack.ordinal(),task).close();
   }
 
   // Got a response UDP packet, or completed a large TCP answer-receive.

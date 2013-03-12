@@ -21,7 +21,7 @@ class Basic(unittest.TestCase):
 
         y = "106"
         x = ""
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, timeoutSecs=2)
+        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, timeoutSecs=15)
 
         # create the X that excludes some columns
         trial = 0

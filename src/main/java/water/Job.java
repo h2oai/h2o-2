@@ -13,11 +13,8 @@ public class Job extends Iced {
   }
 
   public static class Fail extends Iced {
-    String _message;
-
-    public Fail(String message) {
-      _message = message;
-    }
+    public final String _message;
+    public Fail(String message) { _message = message; }
   }
 
   private Key    _self;
@@ -115,7 +112,7 @@ public class Job extends Iced {
     new TAtomic<List>() {
       @Override
       public List atomic(List old) {
-        if( old == null ) old = new List();
+        if( old == null ) return null;
         Job[] jobs = old._jobs;
         int i;
         for( i = 0; i < jobs.length; i++ )

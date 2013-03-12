@@ -44,7 +44,7 @@ public class CsvParser extends CustomParser {
   DParseTask callback;
 
 
-  public CsvParser(Key aryKey, int numColumns, byte separator, byte decimalSeparator, DParseTask callback, boolean skipFirstLine) throws Exception {
+  public CsvParser(Key aryKey, int numColumns, byte separator, byte decimalSeparator, DParseTask callback, boolean skipFirstLine) {
     _aryKey = aryKey;
     _numColumns = numColumns;
     CHAR_SEPARATOR = separator;
@@ -54,7 +54,7 @@ public class CsvParser extends CustomParser {
   }
 
   @SuppressWarnings("fallthrough")
-  @Override public final void parse(Key key) throws Exception {
+  @Override public final void parse(Key key) {
     ValueArray _ary = _aryKey == null ? null : ValueArray.value(DKV.get(_aryKey));
     ValueString _str = new ValueString();
     byte[] bits = DKV.get(key).memOrLoad();

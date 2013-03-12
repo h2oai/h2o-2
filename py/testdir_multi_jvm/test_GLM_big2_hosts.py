@@ -15,7 +15,7 @@ class Basic(unittest.TestCase):
         localhost = h2o.decide_if_localhost()
         if (localhost):
             # maybe fails more reliably with just 2 jvms?
-            h2o.build_cloud(2,java_heap_GB=7)
+            h2o.build_cloud(2,java_heap_GB=5)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
