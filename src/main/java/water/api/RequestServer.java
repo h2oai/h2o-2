@@ -61,6 +61,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new Tutorials()),           "View All",      "Tutorials");
     Request.addToNavbar(registerRequest(new TutorialRFIris()),      "Random Forest", "Tutorials");
     Request.addToNavbar(registerRequest(new TutorialGLMProstate()), "GLM",           "Tutorials");
+    Request.addToNavbar(registerRequest(new TutorialKMeans()),      "KMeans",        "Tutorials");
 
     // internal handlers
     registerRequest(new Cancel());
