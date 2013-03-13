@@ -287,19 +287,24 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       // Read the DTask Right Now.  If we are the TCPReceiver thread, then we
       // are reading in that thread... and thus TCP reads are single-threaded.
       RPCCall rpc = new RPCCall(ab.get(DTask.class),ab._h2o,task);
-      if( ab._h2o.record_task(rpc)==null ) // Atomically insert (to avoid double-work)
+      if( ab._h2o.record_task(rpc)==null ) { // Atomically insert (to avoid double-work)
         H2O.submitTask(rpc);    // And execute!
+      } else {
+        assert !ab.hasTCP();
+      }
 
     } else if( !old._computed ) {
       // This packet has not been fully computed.  Hence it's still a work-in-
       // progress locally.  We have no answer to reply but we do not want to
       // re-offer the packet for repeated work.  Just ignore the packet.
+      assert !ab.hasTCP();      // All the resends should be UDP only
       // DROP PACKET
     } else {
       // This is an old re-send of the same thing we've answered to before.
       // Send back the same old answer ACK.  If we sent via TCP before, then
       // we know the answer got there so just send a control-ACK back.  If we
       // sent via UDP, resend the whole answer.
+      assert !ab.hasTCP();      // All the resends should be UDP only
       old.resend_ack();
     }
     return ab;
@@ -328,7 +333,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       rpc.response(ab);
     }
     // ACKACK the remote, telling him "we got the answer"
-    new AutoBuffer(ab._h2o).putTask(UDP.udp.ackack.ordinal(),task).close(true);
+    new AutoBuffer(ab._h2o).putTask(UDP.udp.ackack.ordinal(),task).close();
   }
 
   // Got a response UDP packet, or completed a large TCP answer-receive.

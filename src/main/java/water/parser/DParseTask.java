@@ -482,65 +482,61 @@ public final class DParseTask extends MRTask {
   @Override public void map(Key key) {
     if(_job.cancelled())
       return;
-    try {
-      Key aryKey = null;
-      boolean arraylet = key._kb[0] == Key.ARRAYLET_CHUNK;
-      boolean skipFirstLine = _skipFirstLine;
-      if(arraylet) {
-        aryKey = ValueArray.getArrayKey(key);
-        _chunkId = ValueArray.getChunkIndex(key);
-        skipFirstLine = skipFirstLine || (ValueArray.getChunkIndex(key) != 0);
-      }
-      switch (_phase) {
-        case ONE:
-          assert (_ncolumns != 0);
-          // initialize the column statistics
-          phaseOneInitialize();
-          // perform the parse
-          CsvParser p = new CsvParser(aryKey, _ncolumns, _sep, _decSep, this,skipFirstLine);
-          p.parse(key);
-          if(arraylet) {
-            long idx = ValueArray.getChunkIndex(key);
-            int idx2 = (int)idx;
-            assert idx2 == idx;
-            assert (_nrows[idx2] == 0) : idx+": "+Arrays.toString(_nrows)+" ("+_nrows[idx2]+" -- "+_myrows+")";
-            _nrows[idx2] = _myrows;
-          }
-          break;
-        case TWO:
-          assert (_ncolumns != 0);
-          // initialize statistics - invalid rows, sigma and row size
-          phaseTwoInitialize();
-          // calculate the first row and the number of rows to parse
-          int firstRow = 0;
-          int lastRow = _myrows;
-          _myrows = 0;
-          if( arraylet ){
-            long origChunkIdx = ValueArray.getChunkIndex(key);
-            firstRow = (origChunkIdx == 0) ? 0 : _nrows[(int)origChunkIdx-1];
-            lastRow = _nrows[(int)origChunkIdx];
-          }
-          int rowsToParse = lastRow - firstRow;
-          // create the output streams
-          _outputStreams2 = createRecords(firstRow, rowsToParse);
-          assert (_outputStreams2.length > 0);
-          _ab = _outputStreams2[0].initialize();
-          // perform the second parse pass
-          CsvParser p2 = new CsvParser(aryKey, _ncolumns, _sep, _decSep, this,skipFirstLine);
-          p2.parse(key);
-          // store the last stream if not stored during the parse
-          if( _ab != null )
-            _outputStreams2[_outputIdx].store();
-          getFutures().blockForPending();
-          break;
-        default:
-          assert (false);
-      }
-      _job.onProgress(key);
-    } catch( Exception e ) {
-      e.printStackTrace();
-      _error = e.getMessage();
+
+    Key aryKey = null;
+    boolean arraylet = key._kb[0] == Key.ARRAYLET_CHUNK;
+    boolean skipFirstLine = _skipFirstLine;
+    if(arraylet) {
+      aryKey = ValueArray.getArrayKey(key);
+      _chunkId = ValueArray.getChunkIndex(key);
+      skipFirstLine = skipFirstLine || (ValueArray.getChunkIndex(key) != 0);
     }
+    switch (_phase) {
+    case ONE:
+      assert (_ncolumns != 0);
+      // initialize the column statistics
+      phaseOneInitialize();
+      // perform the parse
+      CsvParser p = new CsvParser(aryKey, _ncolumns, _sep, _decSep, this,skipFirstLine);
+      p.parse(key);
+      if(arraylet) {
+        long idx = ValueArray.getChunkIndex(key);
+        int idx2 = (int)idx;
+        assert idx2 == idx;
+        assert (_nrows[idx2] == 0) : idx+": "+Arrays.toString(_nrows)+" ("+_nrows[idx2]+" -- "+_myrows+")";
+        _nrows[idx2] = _myrows;
+      }
+      break;
+    case TWO:
+      assert (_ncolumns != 0);
+      // initialize statistics - invalid rows, sigma and row size
+      phaseTwoInitialize();
+      // calculate the first row and the number of rows to parse
+      int firstRow = 0;
+      int lastRow = _myrows;
+      _myrows = 0;
+      if( arraylet ){
+        long origChunkIdx = ValueArray.getChunkIndex(key);
+        firstRow = (origChunkIdx == 0) ? 0 : _nrows[(int)origChunkIdx-1];
+        lastRow = _nrows[(int)origChunkIdx];
+      }
+      int rowsToParse = lastRow - firstRow;
+      // create the output streams
+      _outputStreams2 = createRecords(firstRow, rowsToParse);
+      assert (_outputStreams2.length > 0);
+      _ab = _outputStreams2[0].initialize();
+      // perform the second parse pass
+      CsvParser p2 = new CsvParser(aryKey, _ncolumns, _sep, _decSep, this,skipFirstLine);
+      p2.parse(key);
+      // store the last stream if not stored during the parse
+      if( _ab != null )
+        _outputStreams2[_outputIdx].store();
+      getFutures().blockForPending();
+      break;
+    default:
+      assert (false);
+    }
+    ParseDataset.onProgress(key,_job._progress);
   }
 
   @Override

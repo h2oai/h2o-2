@@ -358,11 +358,12 @@ public final class H2O {
   public static final byte    ACK_ACK_PRIORITY = MAX_PRIORITY-0;
   public static final byte        ACK_PRIORITY = MAX_PRIORITY-1;
   public static final byte   DESERIAL_PRIORITY = MAX_PRIORITY-2;
-  public static final byte    GET_KEY_PRIORITY = MAX_PRIORITY-2;
   public static final byte INVALIDATE_PRIORITY = MAX_PRIORITY-2;
-  public static final byte    PUT_KEY_PRIORITY = MAX_PRIORITY-3;
-  public static final byte     ATOMIC_PRIORITY = MAX_PRIORITY-4;
-  public static final byte     MIN_HI_PRIORITY = MAX_PRIORITY-4;
+  public static final byte    ARY_KEY_PRIORITY = MAX_PRIORITY-2;
+  public static final byte    GET_KEY_PRIORITY = MAX_PRIORITY-3;
+  public static final byte    PUT_KEY_PRIORITY = MAX_PRIORITY-4;
+  public static final byte     ATOMIC_PRIORITY = MAX_PRIORITY-5;
+  public static final byte     MIN_HI_PRIORITY = MAX_PRIORITY-5;
   public static final byte        MIN_PRIORITY = 0;
 
   // F/J threads that remember the priority of the last task they started
@@ -438,17 +439,20 @@ public final class H2O {
       assert  priority() == pp; // Job went to the correct queue?
       assert t._priority <= pp; // Thread attempting the job is only a low-priority?
       // Drain the high priority queues before the normal F/J queue
-      for( int p = MAX_PRIORITY; p > pp; p-- ) {
-        if( FJPS[p] == null ) break;
-        H2OCountedCompleter h2o = FJPS[p].poll();
-        if( h2o != null ) {     // Got a hi-priority job?
-          t._priority = p;      // Set & do it now!
-          h2o.compute2();       // Do it ahead of normal F/J work
-          p++;                  // Check again the same queue
+      try {
+        for( int p = MAX_PRIORITY; p > pp; p-- ) {
+          if( FJPS[p] == null ) break;
+          H2OCountedCompleter h2o = FJPS[p].poll();
+          if( h2o != null ) {     // Got a hi-priority job?
+            t._priority = p;      // Set & do it now!
+            h2o.compute2();       // Do it ahead of normal F/J work
+            p++;                  // Check again the same queue
+          }
         }
+      } finally {
+        t._priority = pp;
       }
       // Now run the task as planned
-      t._priority = pp;
       compute2();
     }
     // Do the actually intended work

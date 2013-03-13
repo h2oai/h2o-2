@@ -1,0 +1,83 @@
+# ./n1.doit test_big_local_cloud.py
+# ./n1.doit test_cloud_127_2_loop.py
+# ./n1.doit test_cloud_127.py
+# ./n1.doit test_cloud_17to25.py
+# ./n1.doit test_cloud_5_loop.py
+# ./n1.doit test_cloud.py
+# ./n1.doit test_cloud_udp_drop.py
+./n1.doit test_import_covtype_parse_1jvm.py
+./n1.doit test_import_covtype_parse_2jvm.py
+./n1.doit test_import_covtype_parse_3jvm.py
+./n1.doit test_import_covtype_parse_4jvm.py
+./n1.doit test_dkv.py
+./n1.doit test_exec_2_import_hosts.py
+./n1.doit test_exec_3_import_hosts.py
+./n1.doit test_exec_assign_one_node.py
+./n1.doit test_exec_assign.py
+./n1.doit test_exec_col_scalar.py
+./n1.doit test_exec_covtype_rand2.py
+./n1.doit test_exec_import_hosts.py
+./n1.doit test_exec_rotate_inc.py
+./n1.doit test_factor_only.py
+./n1.doit test_factor.py
+./n1.doit test_flatfile.py
+./n1.doit test_GLM_100Mx70_hosts.py
+./n1.doit test_GLM_big2_hosts.py
+./n1.doit test_GLM_catdata_hosts.py
+./n1.doit test_GLM_covtype20x_hosts.py
+./n1.doit test_GLM_covtype_hosts.py
+./n1.doit test_GLM_covtype_single_cols.py
+./n1.doit test_GLM_from_import_hosts.py
+./n1.doit test_GLMGrid_hastie.py
+./n1.doit test_GLM_many_cols_4.py
+./n1.doit test_GLM_many_cols_enum.py
+./n1.doit test_GLM_many_cols_int2cat.py
+./n1.doit test_GLM_many_cols_tridist.py
+./n1.doit test_GLM_moneypuck.py
+./n1.doit test_GLM_prob_cols_4.py
+./n1.doit test_glm.py
+./n1.doit test_inspect.py
+./n1.doit test_int2cat_nested.py
+./n1.doit test_int2cat.py
+./n1.doit test_json_browse_both_exec.py
+./n1.doit test_jstack.py
+./n1.doit test_kaggle.py
+./n1.doit test_many_cols_01.py
+./n1.doit test_many_cols_0.py
+./n1.doit test_many_cols_and_types.py
+./n1.doit test_many_fp_formats.py
+./n1.doit test_multi_with_a_browser.py
+./n1.doit test_parse_file_loop.py
+./n1.doit test_parse_fs_schmoo.py
+./n1.doit test_parse_many_cols.py
+./n1.doit test_parse_rand_schmoo2.py
+./n1.doit test_parse_rand_schmoo3.py
+./n1.doit test_parse_rand_schmoo.py
+./n1.doit test_parse_small_nopoll2.py
+./n1.doit test_parse_small_nopoll.py
+./n1.doit test_poisson_covtype20x_hosts.py
+./n1.doit test_poker_1m_rf.py
+./n1.doit test_put_1m_keys.py
+./n1.doit test_putfile.py
+./n1.doit test_rand_inspect.py
+./n1.doit test_RF200x4.py
+./n1.doit test_rf2a.py
+./n1.doit test_rf2.py
+./n1.doit test_rf3.py
+./n1.doit test_same_parse.py
+./n1.doit test_sigar.py
+./n1.doit test_startup.py
+./n1.doit test_stedo.py
+./n1.doit test_sum_dkv_fail.py
+./n1.doit test_sum_import_hosts.py
+./n1.doit test_sum.py
+./n1.doit test_vector_filter_factor.py
+./n1.doit test_xls_poker_xlsx.py
+./n1.doit test_xls.py
+./n1.doit test_xls_w_hosts.py
+
+./n1.doit test_10ktrees.py
+./n1.doit test_1ktrees.py
+./n1.doit test_allstate_claim_prediction.py
+./n1.doit test_arity.py
+./n1.doit test_bad_nofinaltrees.py

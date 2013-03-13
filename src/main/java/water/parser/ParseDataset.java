@@ -20,16 +20,13 @@ import com.google.common.io.Closeables;
 public final class ParseDataset extends Job {
   public static enum Compression { NONE, ZIP, GZIP }
 
-  private long _total;
-  private Key  _progress;
+  private final long _total;
+  public final Key  _progress;
 
   private ParseDataset(Key dest, Value dataset) {
     super("Parse", dest);
     _total = dataset.length() * Pass.values().length;
     _progress = Key.make(UUID.randomUUID().toString(), (byte) 0, Key.JOB);
-  }
-
-  ParseDataset() {
   }
 
   // Guess
@@ -175,27 +172,26 @@ public final class ParseDataset extends Job {
 
   @Override
   public float progress() {
+    if(_total == 0) return 0;
     Progress progress = UKV.get(_progress);
-    if(_total == 0)
-      return 0;
     return (progress != null ? progress._value : 0) / (float) _total;
   }
 
-  @Override
-  public void remove() {
+  @Override public void remove() {
     DKV.remove(_progress);
     super.remove();
   }
 
-  final void onProgress(final Key chunk) {
+  static final void onProgress(final Key chunk, final Key progress) {
+    assert progress != null;
     new TAtomic<Progress>() {
-      @Override
-      public Progress atomic(Progress old) {
-        if( old == null )
-          return new Progress();
-        old._value += DKV.get(chunk).length();
+      @Override public Progress atomic(Progress old) {
+        if( old == null ) return null;
+        Value val = DKV.get(chunk);
+        if( val == null ) return null;
+        old._value += val.length();
         return old;
       }
-    }.fork(_progress);
+    }.fork(progress);
   }
 }

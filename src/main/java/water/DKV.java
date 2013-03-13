@@ -78,7 +78,7 @@ public abstract class DKV {
   }
 
   // User-Weak-Get a Key from the distributed cloud.
-  static public Value get( Key key, int len ) {
+  static public Value get( Key key, int len, int priority ) {
     while( true ) {
       // Read the Cloud once per put-attempt, to keep a consistent snapshot.
       H2O cloud = H2O.CLOUD;
@@ -115,8 +115,8 @@ public abstract class DKV {
             return tpk._xval;
         }
 
-      return TaskGetKey.get(home,key);
+      return TaskGetKey.get(home,key,priority);
     }
   }
-  static public Value get( Key key ) { return get(key,Integer.MAX_VALUE); }
+  static public Value get( Key key ) { return get(key,Integer.MAX_VALUE,H2O.GET_KEY_PRIORITY); }
 }

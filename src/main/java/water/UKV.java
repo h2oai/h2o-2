@@ -49,12 +49,12 @@ public abstract class UKV {
   }
   // Recursively remove, gathering all the pending remote key-deletes
   static private void remove( Key key, Futures fs ) {
-    Value val = DKV.get(key,32); // Get the existing Value, if any
+    Value val = DKV.get(key,32,H2O.GET_KEY_PRIORITY); // Get the existing Value, if any
     if( val == null ) return;    // Trivial delete
     if( val.isArray() ) { // See if this is an Array
       ValueArray ary = ValueArray.value(val);
       for( long i=0; i<ary.chunks(); i++ ) // Delete all the chunks
-        remove(ary.getChunkKey(i),fs);
+        DKV.remove(ary.getChunkKey(i),fs);
     }
     if( key._kb[0] == Key.KEY_OF_KEYS ) // Key-of-keys?
       for( Key k : val.flatten() )      // Then recursively delete

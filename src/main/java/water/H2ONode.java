@@ -177,7 +177,7 @@ public class H2ONode extends Iced implements Comparable {
   // Completed work instead work-in-progress.  Completed work can be
   // short-circuit replied-to by resending this DTask back.  Work that we're
   // sure the this Node has seen the reply to can be removed.
-  static public NonBlockingHashMapLong<RPC.RPCCall> WORK = new NonBlockingHashMapLong();
+  public NonBlockingHashMapLong<RPC.RPCCall> WORK = new NonBlockingHashMapLong();
 
   RPC.RPCCall has_task( int tnum ) { return WORK.get(tnum); }
 

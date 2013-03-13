@@ -18,13 +18,16 @@ public class TestUtil {
   @BeforeClass
   public static void setupCloud() {
     H2O.main(new String[] {});
-    UKV.put(Job.LIST, new Job.List()); // Jobs.LIST must be part of initial keys
     _initial_keycnt = H2O.store_size();
+    assert _initial_keycnt == 0;
+    assert Job.all().length == 0;      // No outstanding jobs
+    UKV.put(Job.LIST, new Job.List()); // Jobs.LIST must be part of initial keys
   }
 
   @AfterClass
   public static void checkLeakedKeys() {
-    DKV.get(Job.LIST);          // This gets invalidated; must be reloaded
+    assert Job.all().length == 0; // No outstanding jobs
+    DKV.remove(Job.LIST);         // Remove all keys
     DKV.write_barrier();
     int leaked_keys = H2O.store_size() - _initial_keycnt;
     if( leaked_keys != 0 )
@@ -39,10 +42,7 @@ public class TestUtil {
     while( System.currentTimeMillis() - start < 10000 ) {
       if( H2O.CLOUD.size() >= x )
         break;
-      try {
-        Thread.sleep(100);
-      } catch( InterruptedException ie ) {
-      }
+      try { Thread.sleep(100); } catch( InterruptedException ie ) { }
     }
     assertTrue("Cloud size of " + x, H2O.CLOUD.size() >= x);
   }

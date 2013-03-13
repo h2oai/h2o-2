@@ -1,0 +1,16 @@
+./n0.doit test_exec_import_hosts_bigfiles.py
+./n0.doit test_flatfile_with_hosts.py
+# ./n0.doit test_flatfile_w_sudo_iptables.py
+./n0.doit test_from_hdfs_hosts.py
+./n0.doit test_hosts_with_a_browser.py
+./n0.doit test_nulls.py
+./n0.doit test_putfile_remote.py
+./n0.doit test_remote_cloud1.py
+./n0.doit test_remote_cloud.py
+./n0.doit test_rf1_hosts.py
+./n0.doit test_rf2a_hosts.py
+./n0.doit test_rf_311M_rows_hosts.py
+./n0.doit test_rf_from_import_hosts.py
+./n0.doit test_simple_w_hosts.py
+./n0.doit test_w_hosts_fail1.py
+./n0.doit test_w_hosts.py
