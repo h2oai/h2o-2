@@ -18,8 +18,8 @@ class Basic(unittest.TestCase):
     def test_import_covtype_parse_loop(self):
         csvFilename = "billion_rows.csv"
         importFolderPath = "/home2/0xdiag/datasets"
-        trialMax = 4
-        for tryHeap in [1,4,28]:
+        trialMax = 3
+        for tryHeap in [4,16]:
             print "\n", tryHeap,"GB heap, 1 jvms, import folder," + \
                 "then loop parsing 'billion_rows.csv' to unique keys"
             h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap)
@@ -36,7 +36,7 @@ class Basic(unittest.TestCase):
 
             # sticky ports?
             h2o.tear_down_cloud()
-            time.sleep(2)
+            time.sleep(5)
 
 if __name__ == '__main__':
     h2o.unit_main()
