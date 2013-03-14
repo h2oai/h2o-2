@@ -177,7 +177,7 @@ public class H2ONode extends Iced implements Comparable {
   // Completed work instead work-in-progress.  Completed work can be
   // short-circuit replied-to by resending this DTask back.  Work that we're
   // sure the this Node has seen the reply to can be removed.
-  public NonBlockingHashMapLong<RPC.RPCCall> WORK = new NonBlockingHashMapLong();
+  private NonBlockingHashMapLong<RPC.RPCCall> WORK = new NonBlockingHashMapLong();
 
   RPC.RPCCall has_task( int tnum ) { return WORK.get(tnum); }
 
@@ -228,13 +228,14 @@ public class H2ONode extends Iced implements Comparable {
           RPC.RPCCall r = PENDING.take();
           assert r._computed : "Found RPCCall not computed "+r._tsknum;
           if( H2O.CLOUD.contains(r._client) ) {
-            synchronized( H2O.SELF ) {
-              if( H2O.SELF.has_task(r._tsknum) == r ) {
+            synchronized( r._client ) {
+              if( r._client.has_task(r._tsknum) == r ) {
                 r.resend_ack();
                 PENDING.add(r);
               }
             }
-          } else H2O.SELF.remove_task_tracking(r._tsknum);
+          } else
+            r._client.remove_task_tracking(r._tsknum);
         } catch( InterruptedException e ) {
           // Interrupted while waiting for a packet?
           // Blow it off and go wait again...
