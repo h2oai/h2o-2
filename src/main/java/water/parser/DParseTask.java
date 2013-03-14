@@ -87,26 +87,26 @@ public final class DParseTask extends MRTask {
     final int _chunkIndex;
     final int _chunkOffset;
     final int _numRows;
-    AutoBuffer _ab;
+    AutoBuffer _abs;
 
     /** Allocates the stream for the chunk. Streams should only be allocated
      * right before the record will be used and should be stored immediately
      * after that.
      */
     public AutoBuffer initialize() {
-      assert  _ab == null;
-      return (_ab = new AutoBuffer(_numRows * _rowsize));
+      assert  _abs == null;
+      return (_abs = new AutoBuffer(_numRows * _rowsize));
     }
 
     /** Stores the stream to its chunk using the atomic union. After the data
      * from the stream is stored, its memory is freed up.
      */
     public void store() {
-      assert _ab.eof();
+      assert _abs.eof();
       Key k = ValueArray.getChunkKey(_chunkIndex, _job.dest());
       AtomicUnion u = new AtomicUnion(_ab.bufClose(),_chunkOffset);
       alsoBlockFor(u.fork(k));
-      _ab = null; // free mem
+      _abs = null; // free mem
     }
 
     // You are not expected to create record streams yourself, use the
