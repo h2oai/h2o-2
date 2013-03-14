@@ -35,7 +35,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        h2o.build_cloud(node_count=1)
+        h2o.build_cloud(node_count=1, java_heap_GB=10)
 
     @classmethod
     def tearDownClass(cls):

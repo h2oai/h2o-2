@@ -1,5 +1,5 @@
 import unittest
-import random, sys
+import random, sys, time
 sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_rf
@@ -43,7 +43,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        h2o.build_cloud(node_count=1)
+        h2o.build_cloud(node_count=1, java_heap_GB=10)
 
     @classmethod
     def tearDownClass(cls):
@@ -65,9 +65,11 @@ class Basic(unittest.TestCase):
             kwargs = params.copy()
             # adjust timeoutSecs with the number of trees
             # seems ec2 can be really slow
-            timeoutSecs = 30 + 15 * (kwargs['parallel'] and 5 or 10)
+            timeoutSecs = 30 + 15 * (kwargs['parallel'] and 6 or 10)
+            start = time.time()
             h2o_cmd.runRF(timeoutSecs=timeoutSecs, retryDelaySecs=1, csvPathname=csvPathname, **kwargs)
-            print "Trial #", trial, "completed"
+            elapsed = time.time()-start
+            print "Trial #", trial, "completed in", elapsed, "seconds.", "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
 if __name__ == '__main__':
     h2o.unit_main()

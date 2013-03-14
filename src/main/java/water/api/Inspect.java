@@ -58,7 +58,13 @@ public class Inspect extends Request {
     if( val.isHex() )
       return serveValueArray(ValueArray.value(val));
     if( !val.isArray() ) {
-      Freezable f = val.get();
+      Freezable f;
+      try {
+        f = val.get();
+      } catch(Exception ex) {
+        // data is not a Freezable, ignore until next version of types
+        f = null;
+      }
       if( f instanceof GLMModel ) {
         GLMModel m = (GLMModel) f;
         JsonObject res = new JsonObject();

@@ -33,16 +33,17 @@ class Basic(unittest.TestCase):
             "and-testing.data",
             "arcene2_train.both",
             "arcene_train.both",
-            "bestbuy_test.csv",
-            "bestbuy_train.csv",
+            # these can't RF ..output classes not integer?
+            # "bestbuy_test.csv",
+            # "bestbuy_train.csv",
             "covtype.data",
             "covtype.4x.shuffle.data",
             "covtype4x.shuffle.data",
             "covtype.13x.data",
             "covtype.13x.shuffle.data",
-            "covtype.169x.data",
-            "prostate_2g.csv",
-            "prostate_long.csv.gz",
+            # "covtype.169x.data",
+            # "prostate_2g.csv",
+            # "prostate_long.csv.gz",
             "prostate_long_1G.csv",
             "hhp.unbalanced.012.1x11.data.gz",
             "hhp.unbalanced.012.data.gz",
@@ -50,14 +51,14 @@ class Basic(unittest.TestCase):
             "hhp2.os.noisy.0_1.data",
             "hhp2.os.noisy.9_4.data",
             "hhp_9_14_12.data",
-            "poker_c1s1_testing_refresh.csv",
-            "3G_poker_shuffle",
-            "billion_rows.csv.gz",
-            "poker-hand.1244M.shuffled311M.full.txt",
+            # "poker_c1s1_testing_refresh.csv",
+            # "3G_poker_shuffle",
+            # "billion_rows.csv.gz",
+            # "poker-hand.1244M.shuffled311M.full.txt",
         ]
 
         # pick 8 randomly!
-        if (1==0):
+        if (1==1):
             csvFilenameList = random.sample(csvFilenameAll,8)
         # Alternatively: do the list in order! Note the order is easy to hard
         else:

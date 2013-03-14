@@ -1,3 +1,7 @@
+./n0.doit test_import_covtype_parse_1jvm.py
+./n0.doit test_import_covtype_parse_2jvm.py
+./n0.doit test_import_covtype_parse_3jvm.py
+./n0.doit test_import_covtype_parse_4jvm.py
 ./n0.doit test_10ktrees.py
 ./n0.doit test_1ktrees.py
 ./n0.doit test_allstate_claim_prediction.py
