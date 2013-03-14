@@ -9,7 +9,7 @@ class TestExcel(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        h2o.build_cloud(node_count=3)
+        h2o.build_cloud(node_count=3, java_heap_MB=1300)
 
     @classmethod
     def tearDownClass(cls):
