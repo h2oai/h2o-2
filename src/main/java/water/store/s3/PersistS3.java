@@ -3,10 +3,12 @@ package water.store.s3;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Properties;
 
 import water.*;
 
 import com.amazonaws.AmazonClientException;
+import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.PropertiesCredentials;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
@@ -32,7 +34,7 @@ public abstract class PersistS3 {
     File credentials = new File(Objects.firstNonNull(H2O.OPT_ARGS.aws_credentials, DEFAULT_CREDENTIALS_LOCATION));
     AmazonS3 s3 = null;
     try {
-      s3 = new AmazonS3Client(new PropertiesCredentials(credentials));
+      s3 = new AmazonS3Client(new PropertiesCredentials(credentials), s3ClientCfg());
     } catch( Throwable e ) {
       e.printStackTrace();
       log("Unable to create S3 backend.");
@@ -218,5 +220,26 @@ public abstract class PersistS3 {
     String[] bk = decodeKey(k);
     assert (bk.length == 2);
     return S3.getObjectMetadata(bk[0], bk[1]);
+  }
+
+  /** S3 socket timeout property name */
+  public final static String S3_SOCKET_TIMEOUT_PROP      = "water.s3.socketTimeout";
+  /** S3 connection timeout property  name */
+  public final static String S3_CONNECTION_TIMEOUT_PROP  = "water.s3.connectionTimeout";
+  /** S3 maximal error retry number */
+  public final static String S3_MAX_ERROR_RETRY_PROP     = "water.s3.maxErrorRetry";
+  /** S3 maximal http connections */
+  public final static String S3_MAX_HTTP_CONNECTIONS_PROP= "water.s3.maxHttpConnections";
+
+
+  static ClientConfiguration s3ClientCfg() {
+    ClientConfiguration cfg = new ClientConfiguration();
+    Properties prop = System.getProperties();
+    if (prop.containsKey(S3_SOCKET_TIMEOUT_PROP))       cfg.setSocketTimeout(    Integer.getInteger(S3_SOCKET_TIMEOUT_PROP));
+    if (prop.containsKey(S3_CONNECTION_TIMEOUT_PROP))   cfg.setConnectionTimeout(Integer.getInteger(S3_CONNECTION_TIMEOUT_PROP));
+    if (prop.containsKey(S3_MAX_ERROR_RETRY_PROP))      cfg.setMaxErrorRetry(    Integer.getInteger(S3_MAX_ERROR_RETRY_PROP));
+    if (prop.containsKey(S3_MAX_HTTP_CONNECTIONS_PROP)) cfg.setMaxConnections(   Integer.getInteger(S3_MAX_HTTP_CONNECTIONS_PROP));
+
+    return cfg;
   }
 }
