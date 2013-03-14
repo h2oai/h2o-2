@@ -33,14 +33,12 @@ public class Tutorials extends HTMLOnlyRequest {
 
     + "<div class='span3 col'>"
     + "<h2 style='margin: 20px 0 0 0'>K-means</h2>"
-    + "<p>Perform cluster analysis with H<sub>2</sub>O and K-means algorithm.</p>"
+    + "<p>Perform cluster analysis with H<sub>2</sub>O and K-means algorithm. H<sub>2</sub>O implements K-means||, a highly scalable version.</p>"
     +   "<a href='/TutorialKMeans.html' class='btn btn-primary btn-large'>Try it!</a>"
     + "</div>"
 
     + "</div>"
-
     + "</div>"
-
     + "</div>";
   }
 }

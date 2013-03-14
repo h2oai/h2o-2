@@ -71,6 +71,15 @@ public class GLMGridTest extends TestUtil {
 
   // Minimize max-errors of prostate or hhp
   @Test public void test_PROSTATE_CSV() {
+    test(false);
+  }
+
+// TODO
+//  @Test public void testCancel() {
+//    test(true);
+//  }
+
+  private void test(boolean cancel) {
     Key k1=null;
     try {
       // Load dataset
