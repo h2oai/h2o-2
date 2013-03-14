@@ -9,6 +9,7 @@ public class TypeMap {
 
   // Run main below to update TODO add as build step
   static private final String[] CLAZZES = {
+    "BAD",
     "hex.ConfusionMatrix",
     "hex.Covariance$COV_Task",
     "hex.DGLM$GLMModel",

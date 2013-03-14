@@ -20,18 +20,20 @@ public class TaskGetKey extends DTask<TaskGetKey> {
   // Unify multiple Key/Value fetches for the same Key from the same Node at
   // the "same time".  Large key fetches are slow, and we'll get multiple
   // requests close in time.  Batch them up.
-  public static final NonBlockingHashMap<Key,RPC> TGKS = new NonBlockingHashMap();
+  public static final NonBlockingHashMap<Key,RPC<TaskGetKey>> TGKS = new NonBlockingHashMap();
 
   // Get a value from a named remote node
   public static Value get( H2ONode target, Key key, int priority ) {
-    RPC<TaskGetKey> rpc;
+    RPC<TaskGetKey> rpc, old;
     while( true ) {       // Repeat until we get a unique TGK installed per key
       // Do we have an old TaskGetKey in-progress?
       rpc = TGKS.get(key);
-      if( rpc != null ) break;
+      if( rpc != null && rpc._dt._priority >= priority )
+        break;
+      old = rpc;
       // Make a new TGK.
       rpc = new RPC(target,new TaskGetKey(key,priority));
-      if( TGKS.putIfMatchUnlocked(key,rpc,null) == null ) {
+      if( TGKS.putIfMatchUnlocked(key,rpc,old) == old ) {
         rpc.call();             // Start the op
         break;
       }

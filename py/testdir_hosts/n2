@@ -1,0 +1,12 @@
+./n1.doit test_import_covtype_parse_1jvm.py
+./n1.doit test_import_covtype_parse_2jvm.py
+./n1.doit test_import_covtype_parse_3jvm.py
+./n1.doit test_import_covtype_parse_4jvm.py
+./n1.doit test_exec_2_import_hosts.py
+./n1.doit test_exec_3_import_hosts.py
+./n1.doit test_parse_many_cols.py
+./n1.doit test_parse_rand_schmoo2.py
+./n1.doit test_parse_rand_schmoo3.py
+./n1.doit test_parse_rand_schmoo.py
+./n1.doit test_parse_small_nopoll2.py
+./n1.doit test_parse_small_nopoll.py

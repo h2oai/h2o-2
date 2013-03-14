@@ -183,27 +183,24 @@ public class GLM extends Request {
       JsonObject res = new JsonObject();
       ValueArray ary = _key.value();
       int[] columns = createColumns();
-
       res.addProperty("key", ary._key.toString());
       res.addProperty("h2o", H2O.SELF.toString());
-
       GLMParams glmParams = getGLMParams();
-
-      LSMSolverType t = _lsmSolver.value();
+      DataFrame data = DGLM.getData(ary, columns, null, _standardize.value());
       LSMSolver lsm = null;
-      switch(t){
+      switch(_lsmSolver.value()){
+      case AUTO:
+        lsm = data.expandedSz() < 1000?
+            new ADMMSolver(_lambda.value(),_alpha.value()):
+            new GeneralizedGradientSolver(_lambda.value(),_alpha.value());
+         break;
       case ADMM:
         lsm = new ADMMSolver(_lambda.value(),_alpha.value());
         break;
       case GenGradient:
         lsm = new GeneralizedGradientSolver(_lambda.value(),_alpha.value());
       }
-
-      DataFrame data = DGLM.getData(ary, columns, null, _standardize.value());
-
       GLMModel m = DGLM.buildModel(data, lsm, glmParams);
-
-
       if( m.isSolved() ) {     // Solved at all?
         NumberSequence nseq = _thresholds.value();
         double[] arr = nseq == null ? null : nseq._arr;

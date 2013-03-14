@@ -19,14 +19,14 @@ public class TestUtil {
   public static void setupCloud() {
     H2O.main(new String[] {});
     _initial_keycnt = H2O.store_size();
-    assert _initial_keycnt == 0;
     assert Job.all().length == 0;      // No outstanding jobs
     UKV.put(Job.LIST, new Job.List()); // Jobs.LIST must be part of initial keys
   }
 
   @AfterClass
   public static void checkLeakedKeys() {
-    assert Job.all().length == 0; // No outstanding jobs
+    Job[] jobs = Job.all();
+    assert jobs.length == 0 : Arrays.toString(jobs);  // No outstanding jobs
     DKV.remove(Job.LIST);         // Remove all keys
     DKV.write_barrier();
     int leaked_keys = H2O.store_size() - _initial_keycnt;

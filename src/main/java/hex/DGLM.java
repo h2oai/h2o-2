@@ -11,6 +11,7 @@ import hex.RowVecTask.Sampling;
 import java.util.*;
 
 import water.*;
+import water.ValueArray.Column;
 import water.api.Constants;
 
 import com.google.gson.*;
@@ -41,6 +42,26 @@ public abstract class DGLM {
     public GLMParams(Family family, Link link){
       _family = family;
       _link = link;
+    }
+
+    public void checkResponseCol(Column ycol){
+      switch(_family){
+      case poisson:
+        if(ycol._min < 0)
+          throw new GLMException("Invalid response variable " + ycol._name + ", Poisson family requires response to be >= 0. ");
+        break;
+      case gamma:
+        if(ycol._min <= 0)
+          throw new GLMException("Invalid response variable " + ycol._name + ", Gamma family requires response to be > 0. ");
+        break;
+      case binomial:
+        if(_caseMode == CaseMode.none && (ycol._min < 0 || ycol._max > 1))
+          if(ycol._min <= 0)
+            throw new GLMException("Invalid response variable " + ycol._name + ", Binomial family requires response to be from [0,1] or have Case predicate. ");
+        break;
+      default:
+        //pass
+      }
     }
 
     public JsonObject toJson(){
@@ -108,7 +129,7 @@ public abstract class DGLM {
     familyDefault(0),
     identity(0),
     logit(0),
-    log(0),
+    log(0.1),
 //    probit(0),
 //    cauchit(0),
 //    cloglog(0),
@@ -191,6 +212,18 @@ public abstract class DGLM {
     public final double [] defaultArgs;
     Family(Link l, double [] d){defaultLink = l; defaultArgs = d;}
 
+    public double mustart(double y){
+      switch(this){
+      case gaussian:
+        return y;
+      case binomial:
+        return 0.5;
+      case poisson:
+        return y + 0.1;
+      default:
+        throw new Error("unimplemented");
+      }
+    }
     public double aic(double dev, long nobs, int betaLen){
       switch(this){
       case gaussian:
@@ -275,7 +308,9 @@ public abstract class DGLM {
       }
       return xx;
     }
-    public double [] getXY(){return _xy;}
+    public double [] getXY(){
+      return _xy;
+    }
     public double getYY(){return _yy;}
 
     public void add(Gram grm){
@@ -336,6 +371,24 @@ public abstract class DGLM {
       return Key.make(KEY_PREFIX + Key.make());
     }
 
+
+    /**
+     * Non expanded ordered list of names of selected columns.
+     *
+     * @return
+     */
+    public String selectedCols(){
+      StringBuilder sb = new StringBuilder();
+      for( ValueArray.Column C : _va._cols ) {
+        sb.append(C._name).append(',');
+      }
+      sb.setLength(sb.length()-1); // Remove trailing extra comma
+      return sb.toString();
+    }
+    /**
+     * Expanded (categoricals expanded to vector of levels) ordered list of column names.
+     * @return
+     */
     public String xcolNames(){
       StringBuilder sb = new StringBuilder();
       for( ValueArray.Column C : _va._cols ) {
@@ -781,6 +834,7 @@ public abstract class DGLM {
 
   public static class GramMatrixFunc extends RowFunc<Gram>{
     final int _dense;
+    final int _N;
     final long _nobs; // number of observations in the dataset
     boolean _computeXX = true;
     final boolean _weighted;
@@ -799,18 +853,19 @@ public abstract class DGLM {
       _link = glmp._link;
       _cMode = glmp._caseMode;
       _cVal = glmp._caseVal;
+      _N = data.expandedSz();
     }
 
     @Override
     public Gram newResult(){
-      if(_computeXX)return new Gram(_beta.length);
+      if(_computeXX)return new Gram(_N);
       // else we do not have to allocate XX
       Gram res = new Gram();
-      res._xy = MemoryManager.malloc8d(_beta.length);
+      res._xy = MemoryManager.malloc8d(_N);
       return res;
     }
 
-    public final double mu(double[] x, int[] indexes){
+    public final double computeEta(double[] x, int[] indexes){
       double mu = 0;
       for(int i = 0; i < _dense; ++i)
         mu += x[i]*_beta[i];
@@ -831,20 +886,25 @@ public abstract class DGLM {
         y = (_cMode.isCase(y,_cVal))?1:0;
       double w = 1;
       if(_weighted) {
-        double mu = mu(x,indexes);
-        double p = _link.linkInv(mu);
-        double var = _family.variance(p);
-        var = Math.max(1e-5, var); // avoid numerical problems with 0 variance
+        double eta,mu,var;
+        if(_beta == null){
+          mu = _family.mustart(y);
+          eta = _link.link(mu);
+        } else {
+          eta = computeEta(x,indexes);
+          mu = _link.linkInv(eta);
+        }
+        var = Math.max(1e-5, _family.variance(mu)); // avoid numerical problems with 0 variance
         if(_family == Family.binomial || _family == Family.poisson){
           w = var;
-          y = mu + (y-p)/var;
+          y = eta + (y-mu)/var;
         } else {
-          double dp = _link.linkInvDeriv(mu);
+          double dp = _link.linkInvDeriv(eta);
           w = dp*dp/var;
-          y = mu + (y - p)/dp;
+          y = eta + (y - mu)/dp;
         }
       }
-      assert w >= 0;
+      assert w >= 0:"invalid weight " + w;
       gram._yy += 0.5*w*y*y;
       ++gram._nobs;
       for(int i = 0; i < _dense; ++i){
@@ -999,40 +1059,45 @@ public abstract class DGLM {
   }
 
   public static GLMModel buildModel(DataFrame data, LSMSolver lsm, GLMParams params) {
-    double [] beta = new double[data.expandedSz()];
-    Arrays.fill(beta, params._link.defaultBeta);
-    if(params._family == Family.gamma)beta[beta.length-1] = 1;
-    return buildModel(data, lsm, params, beta);
+//    double [] beta = new double[data.expandedSz()];
+//    Arrays.fill(beta, params._link.defaultBeta);
+//    if(params._family == Family.gamma)beta[beta.length-1] = 1;
+    return buildModel(data, lsm, params, null);
   }
 
-  public static GLMModel buildModel(DataFrame data, LSMSolver lsm, GLMParams params, double [] beta) {
+
+  public static GLMModel buildModel(DataFrame data, LSMSolver lsm, GLMParams params, double [] oldBeta) {
     long t1 = System.currentTimeMillis();
+    // make sure we have valid response variable for the current family
+    Column ycol = data._ary._cols[data._modelDataMap[data._modelDataMap.length-1]];
+    params.checkResponseCol(ycol);
     // filter out constant columns...
-    GramMatrixFunc gramF = new GramMatrixFunc(data, params, beta.clone());
+    GramMatrixFunc gramF = new GramMatrixFunc(data, params, oldBeta);
+    double [] newBeta = MemoryManager.malloc8d(data.expandedSz());
     ArrayList<String> warns = new ArrayList<String>();
     boolean converged = true;
     Gram gram = gramF.apply(data);
     int iter = 1;
     try {
-      lsm.solve(gram.getXX(), gram.getXY(), gram.getYY(), gramF._beta);
+      lsm.solve(gram.getXX(), gram.getXY(), gram.getYY(), newBeta);
     } catch (NonSPDMatrixException e) {
       if(!(lsm instanceof GeneralizedGradientSolver)){ // if we failed with ADMM, try Generalized gradient
         lsm = new GeneralizedGradientSolver(lsm._lambda, lsm._alpha);
         warns.add("Switched to generalized gradient solver due to Non SPD matrix.");
-        lsm.solve(gram.getXX(), gram.getXY(), gram.getYY(), gramF._beta);
+        lsm.solve(gram.getXX(), gram.getXY(), gram.getYY(), newBeta);
       }
     }
     if(params._family != Family.gaussian) { // IRLSM
+      if(oldBeta == null)oldBeta = MemoryManager.malloc8d(data.expandedSz());
       do{
-        //System.arraycopy(gramF._beta, 0, beta, 0, beta.length);
+        double [] b = oldBeta;
+        oldBeta = (gramF._beta = newBeta);
+        newBeta = b;
         gram = gramF.apply(data);
-        double [] b = beta;
-        beta = gramF._beta;
-        gramF._beta = b;
         if(gram.hasNaNsOrInfs()) // we can't solve this problem any further, user should increase regularization and try again
           break;
         try {
-          lsm.solve(gram.getXX(), gram.getXY(), gram.getYY(), gramF._beta);
+          lsm.solve(gram.getXX(), gram.getXY(), gram.getYY(), newBeta);
         } catch (NonSPDMatrixException e) {
           if(!(lsm instanceof GeneralizedGradientSolver)){ // if we failed with ADMM, try Generalized gradient
             System.err.println("swapping solvers!");
@@ -1041,12 +1106,12 @@ public abstract class DGLM {
             lsm.solve(gram.getXX(), gram.getXY(), gram.getYY(), gramF._beta);
           }
         }
-      } while(++iter < params._maxIter && betaDiff(beta,gramF._beta) > params._betaEps);
-      converged = (betaDiff(beta,gramF._beta) < params._betaEps);//warns.add("Did not converge!");
+      } while(++iter < params._maxIter && betaDiff(newBeta,oldBeta) > params._betaEps);
+      converged = (betaDiff(oldBeta,gramF._beta) < params._betaEps);//warns.add("Did not converge!");
     }
-    double [] newBeta = gramF._beta;
     String [] warnings = new String[warns.size()];
     warns.toArray(warnings);
+    double [] standardizedBeta = newBeta;
     if(data._standardized){ // denormalize coefficients
       newBeta = newBeta.clone();
       double norm = 0.0;        // Reverse any normalization on the intercept
@@ -1057,6 +1122,6 @@ public abstract class DGLM {
       }
       newBeta[newBeta.length-1] -= norm;
     }
-    return new GLMModel(data, newBeta, gramF._beta, params, lsm, converged, iter, System.currentTimeMillis() - t1, warnings);
+    return new GLMModel(data, newBeta, standardizedBeta, params, lsm, converged, iter, System.currentTimeMillis() - t1, warnings);
   }
 }
