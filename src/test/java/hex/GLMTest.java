@@ -1,8 +1,11 @@
 package hex;
 
 import static org.junit.Assert.assertEquals;
-import hex.DGLM.*;
+import hex.DGLM.Family;
+import hex.DGLM.GLMModel;
+import hex.DGLM.GLMParams;
 import hex.DLSM.ADMMSolver;
+import hex.DLSM.GeneralizedGradientSolver;
 import hex.DLSM.LSMSolver;
 
 import java.util.Random;
@@ -13,7 +16,7 @@ import water.*;
 import water.api.Constants;
 import water.exec.Exec;
 import water.exec.PositionedException;
-import water.TestUtil;
+
 import com.google.gson.*;
 
 // A series of tests designed to validate GLM's *statistical results* and not,
@@ -54,24 +57,62 @@ public class GLMTest extends TestUtil {
 
   @Test public void testPoissonRegression() {
     Key datakey = Key.make("datakey");
+    Key datakey2 = Key.make("datakey2");
     try {
-      // Make some data to test with.
-      // Equation is: y = 0.1*x+0
+      ///////////////////////////////////////////
+      // Test 1.
+      // Make some synthetic data to test with.
+      // Equation is: y = exp(x+1);
+      ///////////////////////////////////////////
       ValueArray va =
         va_maker(datakey,
                  new byte []{  0, 1, 2, 3 , 4 , 5 , 6  , 7  },
                  //  e^1, e^2, ..., e^8
                  new double[]{2.718282,7.389056, 20.085537, 54.598150, 148.413159, 403.428793, 1096.633158, 2980.957987});
-      LSMSolver lsms = new ADMMSolver(0,0);
-      JsonObject glm = computeGLM(Family.poisson,lsms,va,false,null); // Solve it!
+      JsonObject glm = computeGLM(Family.poisson,new ADMMSolver(0,0),va,false,null); // Solve it!
       JsonObject coefs = glm.get("coefficients").getAsJsonObject();
       assertEquals( 1.0, coefs.get("Intercept").getAsDouble(), 0.000001);
       assertEquals( 1.0, coefs.get("0")        .getAsDouble(), 0.000001);
       UKV.remove(Key.make(glm.get(Constants.MODEL_KEY).getAsString()));
+      // recompute with GG solver
+      glm = computeGLM(Family.poisson,new GeneralizedGradientSolver(0,0),va,false,null); // Solve it!
+      coefs = glm.get("coefficients").getAsJsonObject();
+      assertEquals( 1.0, coefs.get("Intercept").getAsDouble(), 0.0001);
+      assertEquals( 1.0, coefs.get("0")        .getAsDouble(), 0.0001);
+      UKV.remove(Key.make(glm.get(Constants.MODEL_KEY).getAsString()));
+      ////////////////////////////////////////////////////////////////////////////////////
+      // Test 2.
+      // example from http://www.biostat.umn.edu/~dipankar/bmtry711.11/lecture_13.pdf
+      // Equation is: y = exp(0.2565+0.3396);
+      ////////////////////////////////////////////////////////////////////////////////////
+      //    Month Period Deaths Month Period Deaths
+      //    1 0 | 8  18
+      //    2 1 | 9  23
+      //    3 2 | 10 31
+      //    4 3 | 11 20
+      //    5 1 | 12 25
+      //    6 4 | 13 37
+      //    7 9 | 14 45
+      va = va_maker(datakey2,
+                   new byte []{1,2,3,4,5,6,7,8, 9, 10,11,12,13,14},
+                   new byte []{0,1,2,3,1,4,9,18,23,31,20,25,37,45});
+      glm = computeGLM(Family.poisson,new ADMMSolver(0,0),va,false,null); // Solve it!
+      coefs = glm.get("coefficients").getAsJsonObject();
+      assertEquals( 0.3396, coefs.get("Intercept").getAsDouble(), 0.0001);
+      assertEquals( 0.2565, coefs.get("0")        .getAsDouble(), 0.0001);
+      UKV.remove(Key.make(glm.get(Constants.MODEL_KEY).getAsString()));
+      // recompute with GG solver
+      glm = computeGLM(Family.poisson,new GeneralizedGradientSolver(0,0),va,false,null); // Solve it!
+      coefs = glm.get("coefficients").getAsJsonObject();
+      assertEquals( 0.3396, coefs.get("Intercept").getAsDouble(), 0.0001);
+      assertEquals( 0.2565, coefs.get("0")        .getAsDouble(), 0.0001);
+      UKV.remove(Key.make(glm.get(Constants.MODEL_KEY).getAsString()));
     }finally{
       UKV.remove(datakey);
+      UKV.remove(datakey2);
     }
   }
+
   // ---
   // Test GLM on a simple dataset that has an easy Linear Regression.
   @Test public void testLinearRegression() {
