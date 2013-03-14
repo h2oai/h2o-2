@@ -57,6 +57,9 @@ public final class H2O {
   // Convenience error
   public static final RuntimeException unimpl() { return new RuntimeException("unimplemented"); }
 
+  // Central /dev/null for ignored exceptions
+  public static final void ignore(Throwable e) { e.printStackTrace(); }
+
   // --------------------------------------------------------------------------
   // The Current Cloud. A list of all the Nodes in the Cloud. Changes if we
   // decide to change Clouds via atomic Cloud update.

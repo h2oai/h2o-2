@@ -7,8 +7,7 @@ import java.util.Properties;
 
 import water.*;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.ClientConfiguration;
+import com.amazonaws.*;
 import com.amazonaws.auth.PropertiesCredentials;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
@@ -36,7 +35,7 @@ public abstract class PersistS3 {
     try {
       s3 = new AmazonS3Client(new PropertiesCredentials(credentials), s3ClientCfg());
     } catch( Throwable e ) {
-      e.printStackTrace();
+      H2O.ignore(e);
       log("Unable to create S3 backend.");
       if( H2O.OPT_ARGS.aws_credentials == null )
         log(HELP);
@@ -108,7 +107,7 @@ public abstract class PersistS3 {
       assert v.isPersisted();
       return b;
     } catch( IOException e ) { // Broken disk / short-file???
-      System.err.println(e);
+      H2O.ignore(e);
       return null;
     } finally {
       Closeables.closeQuietly(s);
@@ -211,6 +210,7 @@ public abstract class PersistS3 {
       r.setRange(offset, offset + length);
       return S3.getObject(r);
     } catch( AmazonClientException e ) {
+      H2O.ignore(e);
       return null;
     }
   }
@@ -239,7 +239,7 @@ public abstract class PersistS3 {
     if (prop.containsKey(S3_CONNECTION_TIMEOUT_PROP))   cfg.setConnectionTimeout(Integer.getInteger(S3_CONNECTION_TIMEOUT_PROP));
     if (prop.containsKey(S3_MAX_ERROR_RETRY_PROP))      cfg.setMaxErrorRetry(    Integer.getInteger(S3_MAX_ERROR_RETRY_PROP));
     if (prop.containsKey(S3_MAX_HTTP_CONNECTIONS_PROP)) cfg.setMaxConnections(   Integer.getInteger(S3_MAX_HTTP_CONNECTIONS_PROP));
-
+    //cfg.setProtocol(Protocol.HTTP);
     return cfg;
   }
 }
