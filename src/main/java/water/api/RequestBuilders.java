@@ -978,7 +978,9 @@ public class RequestBuilders extends RequestQueries {
 
   public class KeyMinAvgMaxBuilder extends ArrayRowElementBuilder {
     private String trunc(JsonObject obj, String fld, int n) {
-      String s1 = obj.get(fld).getAsString();
+      JsonElement je = obj.get(fld);
+      if( je == null ) return "<br>";
+      String s1 = je.getAsString();
       String s2 = (s1.length() > n ?  s1.substring(0,n) : s1);
       String s3 = s2.replace(" ","&nbsp;");
       return s3+"<br>";
