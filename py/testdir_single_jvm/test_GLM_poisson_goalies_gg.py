@@ -12,7 +12,7 @@ def define_params():
         'family': ['poisson'],
         'num_cross_validation_folds': [1],
         'thresholds': [0.5],
-        'lambda': [1e-8],
+        'lambda': [0,1e-8],
         'alpha': [0],
         # don't use defaults? they have issues?
         'beta_epsilon': [0.001, 0.0001],
@@ -88,10 +88,12 @@ class Basic(unittest.TestCase):
                 'num_cross_validation_folds': 1,
                 'family': "poisson",
                 'alpha': 0.0,
-                'lambda': 1e-8,
+                'lambda': 0,
                 'beta_epsilon': 0.001,
                 'max_iter': 3,
                 'standardize': 1,
+                'expert': 1,
+                'lsm_solver': 'GenGradient',
                 }
 
             colX = h2o_glm.pickRandGlmParams(paramDict, params)

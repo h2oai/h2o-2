@@ -16,11 +16,6 @@ import h2o, h2o_cmd, h2o_glm, h2o_util
 import copy
 
 
-print '#******************************************************************************************'
-print "This test fails because the GLMScore json result doesn't have the info in the GLMScore.html"
-print 'it only has: {"response":{"status":"done","h2o":"pytest-kevin-27729","node":"/192.168.1.86:54321","time":30}}'
-print '#******************************************************************************************'
-
 def glm_doit(self, csvFilename, csvPathname, timeoutSecs=30, **kwargs):
     print "\nStarting GLM of", csvFilename
     parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", timeoutSecs=10)
@@ -52,15 +47,15 @@ def glm_score(self, csvFilename, csvPathname, modelKey, timeoutSecs=3):
     h2o.verboseprint(h2o.dump_json(glmScore))
     ### h2o_glm.simpleCheckGLM(self, glm, 7, **kwargs)
 
-    # compare this glm to the first one. since the files are replications, the results
+    # compare this glm to the first one. since the files are replications, 
+    # the results
     # should be similar?
-    GLMModel = glmScore['GLMModel']
-    validationsList = glmScore['GLMModel']['validations']
-    validations = validationsList[0]
+    # UPDATE: format for returning results is slightly different than normal GLM
+    validation = glmScore['validation']
     if self.validations1:
-        h2o_glm.compareToFirstGlm(self, 'err', validations, self.validations1)
+        h2o_glm.compareToFirstGlm(self, 'err', validation, self.validations1)
     else:
-        self.validations1 = copy.deepcopy(validations)
+        self.validations1 = copy.deepcopy(validation)
 
 
 
