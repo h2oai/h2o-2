@@ -7,7 +7,10 @@ import hex.DLSM.ADMMSolver;
 
 import java.util.*;
 
+import jsr166y.CountedCompleter;
+
 import water.*;
+import water.H2O.H2OCountedCompleter;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -38,50 +41,63 @@ public class GLMGrid extends Job {
   public GLMGrid() {
   }
 
+
+  private class GridTask extends H2OCountedCompleter {
+    final int _aidx;
+    GridTask(int aidx) { _aidx = aidx; }
+
+    @Override
+    public void compute2() {
+      GLMModel m = null;
+      Futures fs = new Futures();
+      try {
+        for( int l1 = 1; l1 <= _lambdas.length; l1++ ) {
+          if(cancelled())
+            break;
+          m = do_task(m,_lambdas.length-l1,_aidx); // Do a step; get a model
+          update(dest(), m, (_lambdas.length-l1) * _alphas.length + _aidx, System.currentTimeMillis() - startTime(),fs);
+        }
+      fs.blockForPending();
+      }finally {
+        tryComplete();
+      }
+    }
+
+  }
   @Override
   public void start() {
     super.start();
     UKV.put(dest(), new GLMModels(_lambdas.length * _alphas.length));
-    for(int a = 0; a < _alphas.length; ++a){
-      final int aidx = a;
-      H2O.submitTask(new DTask() {
-        @Override
-        public void compute2() {
-          final int N = _alphas.length;
-          GLMModel m = null;
-          try {
-            for( int l1 = 1; l1 <= _lambdas.length; l1++ ) {
-              if( cancelled() )
-                break;
-              m = do_task(m,_lambdas.length-l1,aidx); // Do a step; get a model
-              update(dest(), m, (_lambdas.length-l1) * N + aidx);
-            }
-          } finally {
-            remove();
-          }
-          tryComplete(); // This task is done
+    final int N = _alphas.length;
+    H2O.submitTask(new H2OCountedCompleter() {
+      @Override
+      public void compute2() {
+        setPendingCount(N);
+        for( int a = 0; a < _alphas.length; a++ ){
+          GridTask t = new GridTask(a);
+          t.setCompleter(this);
+          H2O.submitTask(t);
         }
+        tryComplete(); // This task is done
+      }
+      @Override public void onCompletion(CountedCompleter caller){remove();}
+    });
 
-        // Not intended for remote or distributed execution; task control runs on one node.
-        @Override public GLMGrid invoke(H2ONode sender) {
-          throw H2O.unimpl();
-        }
-      });
-    }
   }
 
   // Update dest for a new model. In a static function, to avoid closing
   // over the 'this' pointer of a GLMGrid and thus serializing it as part
   // of the atomic update.
-  private static void update(Key dest, final GLMModel m, final int idx) {
-    new TAtomic<GLMModels>() {
+  private static void update(Key dest, final GLMModel m, final int idx, final long runTime, Futures fs) {
+    fs.add(new TAtomic<GLMModels>() {
       @Override
       public GLMModels atomic(GLMModels old) {
         old._ms[idx] = m._selfKey;
         old._count++;
+        old._runTime = Math.max(runTime,old._runTime);
         return old;
       }
-    }.invoke(dest);
+    }.fork(dest));
   }
 
   // ---
@@ -102,6 +118,10 @@ public class GLMGrid extends Job {
     // The computed GLM models: product of length of lamda1s,lambda2s,rhos,alphas
     Key[] _ms;
     int   _count;
+
+    long _runTime = 0;
+
+    public final long runTime(){return _runTime;}
 
     GLMModels(int length) {
       _ms = new Key[length];

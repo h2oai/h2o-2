@@ -52,6 +52,26 @@ public class GLMTest extends TestUtil {
     return glm;
   }
 
+  @Test public void testPoissonRegression() {
+    Key datakey = Key.make("datakey");
+    try {
+      // Make some data to test with.
+      // Equation is: y = 0.1*x+0
+      ValueArray va =
+        va_maker(datakey,
+                 new byte []{  0, 1, 2, 3 , 4 , 5 , 6  , 7  },
+                 //  e^1, e^2, ..., e^8
+                 new double[]{2.718282,7.389056, 20.085537, 54.598150, 148.413159, 403.428793, 1096.633158, 2980.957987});
+      LSMSolver lsms = new ADMMSolver(0,0);
+      JsonObject glm = computeGLM(Family.poisson,lsms,va,false,null); // Solve it!
+      JsonObject coefs = glm.get("coefficients").getAsJsonObject();
+      assertEquals( 1.0, coefs.get("Intercept").getAsDouble(), 0.000001);
+      assertEquals( 1.0, coefs.get("0")        .getAsDouble(), 0.000001);
+      UKV.remove(Key.make(glm.get(Constants.MODEL_KEY).getAsString()));
+    }finally{
+      UKV.remove(datakey);
+    }
+  }
   // ---
   // Test GLM on a simple dataset that has an easy Linear Regression.
   @Test public void testLinearRegression() {

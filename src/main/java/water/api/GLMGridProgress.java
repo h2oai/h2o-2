@@ -14,10 +14,20 @@ import com.google.common.collect.Maps;
 import com.google.gson.*;
 
 public class GLMGridProgress extends Request {
+  static String getTimeStr(long t){
+    int hrs = (int)(t/(60*60*1000));
+    t -= hrs*60*60*1000;
+    int mins = (int)(t/60000);
+    t -= mins * 60000;
+    int secs = (int)(t/1000);
+    t -= secs*1000;
+    int millis = (int)t;
+    return hrs + "hrs " + mins + "m " + secs + "s " + millis + "ms";
+  }
   protected final H2OKey _job  = new H2OKey(JOB);
   protected final H2OKey _dest = new H2OKey(DEST_KEY);
 
-  public static Response redirect(JsonObject resp, Key job, Key dest) {
+   public static Response redirect(JsonObject resp, Key job, Key dest) {
     JsonObject redir = new JsonObject();
     redir.addProperty(JOB, job.toString());
     redir.addProperty(DEST_KEY, dest.toString());
@@ -28,13 +38,11 @@ public class GLMGridProgress extends Request {
   protected Response serve() {
     Key dest = _dest.value();
     GLMModels models = UKV.get(dest);
-
     if(models==null)
       return Response.doneEmpty();
-
     JsonObject response = new JsonObject();
     response.addProperty(Constants.DEST_KEY, dest.toString());
-
+    response.addProperty("computation_time", getTimeStr(models.runTime()));
     JsonArray array = new JsonArray();
     for( GLMModel m : models.sorted() ) {
       JsonObject o = new JsonObject();
