@@ -72,6 +72,9 @@ public final class ParseDataset extends Job {
       case GZIP: parseGZipped(job, dataset, setup); break;
       default:   throw new Error("Unknown compression of dataset!");
       }
+    } catch( java.io.EOFException eof ) {
+      // Unexpected EOF?  Assume its a broken file, and toss the whole parse out
+      UKV.put(job.dest(), new Fail(eof.getMessage()));
     } catch( Exception e ) {
       UKV.put(job.dest(), new Fail(e.getMessage()));
       throw Throwables.propagate(e);
