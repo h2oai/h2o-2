@@ -16,9 +16,9 @@ import h2o, h2o_cmd, h2o_glm, h2o_util
 import copy
 
 
-def glm_doit(self, csvFilename, csvPathname, timeoutSecs=30, **kwargs):
+def glm_doit(self, csvFilename, csvPathname, timeoutSecs, **kwargs):
     print "\nStarting GLM of", csvFilename
-    parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", timeoutSecs=10)
+    parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", timeoutSecs=60, pollTimeoutSecs=60)
 
     start = time.time()
     glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
@@ -85,7 +85,7 @@ class Basic(unittest.TestCase):
         y = "10"
         x = ""
         kwargs = {'x': x, 'y':  y, 'case': -1, 'thresholds': 0.5}
-        (modelKey, validations1) = glm_doit(self, csvFilename, csvPathname, timeoutSecs=30, **kwargs)
+        (modelKey, validations1) = glm_doit(self, csvFilename, csvPathname, timeoutSecs=60, **kwargs)
 
         print "Use", modelKey, "model on 2x and 4x replications and compare results to 1x"
 
