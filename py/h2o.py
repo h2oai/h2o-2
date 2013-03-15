@@ -300,24 +300,23 @@ def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True)
 def check_port_group(base_port):
     # UPDATE: don't do this any more
     # for now, only check for jenkins or kevin
-    if (1==0):
+    if (1==1):
         username = getpass.getuser()
         if username=='jenkins' or username=='kevin' or username=='michal':
             # assumes you want to know about 3 ports starting at base_port
             command1Split = ['netstat', '-anp']
             command2Split = ['egrep']
             # colon so only match ports. space at end? so no submatches
-            command2Split.append("(%s | %s | %s)" % (base_port, base_port+1, base_port+2) )
+            command2Split.append("(%s | %s)" % (base_port, base_port+1) )
             command3Split = ['wc','-l']
 
-            print "Checking 3 ports starting at ", base_port
+            print "Checking 2 ports starting at ", base_port
             print ' '.join(command2Split)
 
             # use netstat thru subprocess
             p1 = Popen(command1Split, stdout=PIPE)
             p2 = Popen(command2Split, stdin=p1.stdout, stdout=PIPE)
-            p3 = Popen(command3Split, stdin=p2.stdout, stdout=PIPE)
-            output = p3.communicate()[0]
+            output = p2.communicate()[0]
             print output
 
 def default_hosts_file():
