@@ -55,6 +55,36 @@ public class GLMTest extends TestUtil {
     return glm;
   }
 
+  @Test public void testGammaRegression() {
+    Key datakey = Key.make("datakey");
+//    Key datakey2 = Key.make("datakey2");
+    try {
+      ///////////////////////////////////////////
+      // Test 1.
+      // Make some synthetic data to test with.
+      // Equation is: y = 1/(x+1);
+      ///////////////////////////////////////////
+      ValueArray va =
+        va_maker(datakey,
+                 new byte []{  0, 1, 2, 3 , 4 , 5 , 6  , 7  },
+                 //  e^1, e^2, ..., e^8
+                 new double[]{1.0, 0.5, 0.3333333, 0.25, 0.20,  0.1666667, 0.1428571, 0.1250000});
+      JsonObject glm = computeGLM(Family.gamma,new ADMMSolver(0,0),va,false,null); // Solve it!
+      JsonObject coefs = glm.get("coefficients").getAsJsonObject();
+      assertEquals( 1.0, coefs.get("Intercept").getAsDouble(), 0.000001);
+      assertEquals( 1.0, coefs.get("0")        .getAsDouble(), 0.000001);
+      UKV.remove(Key.make(glm.get(Constants.MODEL_KEY).getAsString()));
+      // recompute with GG solver
+      glm = computeGLM(Family.gamma,new GeneralizedGradientSolver(0,0),va,false,null); // Solve it!
+      coefs = glm.get("coefficients").getAsJsonObject();
+      assertEquals( 1.0, coefs.get("Intercept").getAsDouble(), 0.0001);
+      assertEquals( 1.0, coefs.get("0")        .getAsDouble(), 0.0001);
+      UKV.remove(Key.make(glm.get(Constants.MODEL_KEY).getAsString()));
+    }finally{
+      UKV.remove(datakey);
+//      UKV.remove(datakey2);
+    }
+  }
   @Test public void testPoissonRegression() {
     Key datakey = Key.make("datakey");
     Key datakey2 = Key.make("datakey2");
