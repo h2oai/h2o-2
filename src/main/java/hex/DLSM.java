@@ -236,8 +236,8 @@ public class DLSM {
     double                     _objVal;
     double                     _t          = 1.0;
     int                        _iterations = 0;
-    public static final int    MAX_ITER    = 500;
-    public static final double EPS         = 1e-3;
+    public static final int    MAX_ITER    = 1000;
+    public static final double EPS         = 1e-5;
 
     public GeneralizedGradientSolver(double lambda, double alpha) {
       this(lambda,alpha,1e-3);
@@ -268,7 +268,8 @@ public class DLSM {
         }
         res += (0.5*x + xy[i]) * beta[i];
       }
-      if(res <= 0)throw new LSMSolverException("Generalized Gradient: Can not solved this problem.");
+      if(res <= 0)
+        throw new LSMSolverException("Generalized Gradient: Can not solved this problem.");
       return res;
     }
 

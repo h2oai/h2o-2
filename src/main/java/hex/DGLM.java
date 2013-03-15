@@ -220,6 +220,8 @@ public abstract class DGLM {
         return 0.5;
       case poisson:
         return y + 0.1;
+      case gamma:
+        return y;
       default:
         throw new Error("unimplemented");
       }
