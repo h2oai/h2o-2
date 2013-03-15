@@ -27,6 +27,7 @@ public final class ParseDataset extends Job {
     super("Parse", dest);
     _total = dataset.length() * Pass.values().length;
     _progress = Key.make(UUID.randomUUID().toString(), (byte) 0, Key.JOB);
+    UKV.put(_progress, new Progress());
   }
 
   // Guess
