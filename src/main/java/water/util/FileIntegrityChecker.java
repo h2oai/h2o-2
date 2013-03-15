@@ -27,8 +27,12 @@ public class FileIntegrityChecker extends DRemoteTask {
   }
 
   private void addFolder(File folder, ArrayList<File> filesInProgress ) {
+    if( !folder.canRead() ) return;
     if (folder.isDirectory()) {
       for (File f: folder.listFiles()) {
+        if( !f.canRead() ) continue; // Ignore unreadable files
+        if( f.isHidden() && !folder.isHidden() )
+          continue;             // Do not dive into hidden dirs unless asked
         if (f.isDirectory())
           addFolder(f,filesInProgress);
         else
