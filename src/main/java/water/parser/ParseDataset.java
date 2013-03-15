@@ -190,7 +190,7 @@ public final class ParseDataset extends Job {
     assert progress != null;
     new TAtomic<Progress>() {
       @Override public Progress atomic(Progress old) {
-        if( old == null ) return null;
+        if( old == null ) old = new Progress();
         Value val = DKV.get(chunk);
         if( val == null ) return null;
         old._value += val.length();
