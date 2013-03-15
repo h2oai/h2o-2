@@ -16,7 +16,7 @@ def find_config(base):
 def build_cloud_with_hosts(node_count=None, use_flatfile=None, 
     use_hdfs=None, hdfs_name_node=None, hdfs_config=None,  hdfs_version=None,
     base_port=None,
-    java_heap_GB=None, java_extra_args=None,
+    java_heap_GB=None, java_heap_MB=None, java_extra_args=None,
     **kwargs):
 
     # For seeing example of what we want in the json, if we add things

@@ -1214,12 +1214,7 @@ class H2O(object):
             args += [
                 '-hdfs hdfs://' + self.hdfs_name_node,
                 '-hdfs_version=' + self.hdfs_version, 
-                '-hdfs_root=' + self.hdfs_root,
             ]
-            if self.hdfs_nopreload:
-                args += [
-                    '-hdfs_nopreload ' + self.hdfs_nopreload
-                ]
             if self.hdfs_config:
                 args += [
                     '-hdfs_config ' + self.hdfs_config
@@ -1239,12 +1234,10 @@ class H2O(object):
 
     def __init__(self, 
         use_this_ip_addr=None, port=54321, capture_output=True, sigar=False, use_debugger=None, classpath=None,
-        use_hdfs=False, hdfs_root="/datasets", 
+        use_hdfs=False, 
         # hdfs_version="cdh4", hdfs_name_node="192.168.1.151", 
         hdfs_version="cdh3u5", hdfs_name_node="192.168.1.176", 
         hdfs_config=None,
-        # FIX not interesting any more?
-        hdfs_nopreload=None, 
         aws_credentials=None,
         use_flatfile=False, java_heap_GB=None, java_heap_MB=None, java_extra_args=None, 
         use_home_for_ice=False, node_id=None, username=None,
@@ -1276,9 +1269,7 @@ class H2O(object):
         self.use_hdfs = use_hdfs
         self.hdfs_name_node = hdfs_name_node
         self.hdfs_version = hdfs_version
-        self.hdfs_root = hdfs_root
         self.hdfs_config = hdfs_config
-        self.hdfs_nopreload = hdfs_nopreload
 
         self.use_flatfile = use_flatfile
         self.java_heap_GB = java_heap_GB
