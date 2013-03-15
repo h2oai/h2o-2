@@ -68,8 +68,6 @@ class Basic(unittest.TestCase):
         else:
             csvFilenameAll = [
                 ("covtype.data", "cA", 5),
-                ("covtype.data", "cB", 5),
-                ("covtype20x.data", "cC", 50),
                 ("covtype20x.data", "cD", 50),
             ]
 
