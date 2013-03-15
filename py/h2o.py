@@ -71,7 +71,7 @@ def parse_our_args():
     parser.add_argument('-ip', '--ip', type=str, help='IP address to use for single host H2O with psutil control')
     parser.add_argument('-cj', '--config_json', help='Use this json format file to provide multi-host defaults. Overrides the default file pytest_config-<username>.json. These are used only if you do build_cloud_with_hosts()')
     parser.add_argument('-dbg', '--debugger', help='Launch java processes with java debug attach mechanisms', action='store_true')
-    parser.add_argument('-rud', '--random_udp_drop', help='Drop 10% of the UDP packets at the receive side', action='store_true')
+    parser.add_argument('-rud', '--random_udp_drop', help='Drop 20 pct. of the UDP packets at the receive side', action='store_true')
     parser.add_argument('unittest_args', nargs='*')
 
     args = parser.parse_args()
@@ -1159,6 +1159,13 @@ class H2O(object):
             args += [ '-Xms%dG' % self.java_heap_GB ]
             args += [ '-Xmx%dG' % self.java_heap_GB ]
 
+        if self.java_heap_MB is not None:
+            if (1 > self.java_heap_MB > 63000):
+                raise Exception('java_heap_MB <1 or >63000  (MB): %s' % (self.java_heap_MB))
+            args += [ '-Xms%dm' % self.java_heap_MB ]
+            args += [ '-Xmx%dm' % self.java_heap_MB ]
+            print "crikey",self.java_heap_MB
+
         if self.java_extra_args is not None:
             args += [ '%s' % self.java_extra_args ]
 
@@ -1239,7 +1246,7 @@ class H2O(object):
         # FIX not interesting any more?
         hdfs_nopreload=None, 
         aws_credentials=None,
-        use_flatfile=False, java_heap_GB=None, java_extra_args=None, 
+        use_flatfile=False, java_heap_GB=None, java_heap_MB=None, java_extra_args=None, 
         use_home_for_ice=False, node_id=None, username=None,
         random_udp_drop=False
         ):
@@ -1275,6 +1282,7 @@ class H2O(object):
 
         self.use_flatfile = use_flatfile
         self.java_heap_GB = java_heap_GB
+        self.java_heap_MB = java_heap_MB
         self.java_extra_args = java_extra_args
 
         self.use_home_for_ice = use_home_for_ice
