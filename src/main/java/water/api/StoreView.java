@@ -50,7 +50,7 @@ public class StoreView extends Request {
     for( int i=offset; i<offset+_view.value(); i++ ) {
       if( i >= len ) break;
       Value val = H2O.get(keys[i]);
-      ary.add(formatKeyRow(cloud,keys[i],val));
+      if( val != null ) ary.add(formatKeyRow(cloud,keys[i],val));
     }
 
     result.add(KEYS,ary);
@@ -132,12 +132,13 @@ public class StoreView extends Request {
         cols = setup._data[1].length;
         result.addProperty(ROWS, "~" + rows);
         result.addProperty(COLS, cols);
+        final int len = setup._data.length;
         for( int i=0; i<Math.min(cols,jcols.length); i++ ) {
           JsonObject col = new JsonObject();
-          col.addProperty(HEADER,setup._data[0][i]); // First 4 rows, including labels
-          col.addProperty(MIN   ,setup._data[1][i]); // as MIN/MEAN/MAX
-          col.addProperty(MEAN  ,setup._data[2][i]);
-          col.addProperty(MAX   ,setup._data[3][i]);
+          if(len > 0) col.addProperty(HEADER,setup._data[0][i]); // First 4 rows, including labels
+          if(len > 1) col.addProperty(MIN   ,setup._data[1][i]); // as MIN/MEAN/MAX
+          if(len > 2) col.addProperty(MEAN  ,setup._data[2][i]);
+          if(len > 3) col.addProperty(MAX   ,setup._data[3][i]);
           jcols[i] = col;
         }
       } else {

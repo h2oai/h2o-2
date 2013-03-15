@@ -117,7 +117,10 @@ public class Parse extends Request {
     Key dest = Key.make(_dest.value());
     try {
       // Make a new Setup, with the 'header' flag set according to user wishes.
-      CsvParser.Setup new_setup = new CsvParser.Setup(q._separator,_header.value(),q._data,q._numlines,q._bits);
+      CsvParser.Setup new_setup = _header.originalValue() == null // No user wish?
+        ? q                     // Default to heuristic
+        // Else use what user choose
+        : new CsvParser.Setup(q._separator,_header.value(),q._data,q._numlines,q._bits);
       Job job = ParseDataset.forkParseDataset(dest, DKV.get(p._key),new_setup);
       JsonObject response = new JsonObject();
       response.addProperty(RequestStatics.DEST_KEY,dest.toString());

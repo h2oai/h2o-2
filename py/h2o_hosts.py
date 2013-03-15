@@ -58,6 +58,7 @@ def build_cloud_with_hosts(node_count=None, use_flatfile=None,
     # default to none, which means the arg isn't used and java decides for us
     # useful for small dram systems, and for testing that
     javaHeapGB = hostDict.setdefault('java_heap_GB', None)
+    javaHeapMB = hostDict.setdefault('java_heap_MB', None)
     javaExtraArgs = hostDict.setdefault('java_extra_args', None)
 
     use_home_for_ice = hostDict.setdefault('use_home_for_ice', False)
@@ -91,6 +92,9 @@ def build_cloud_with_hosts(node_count=None, use_flatfile=None,
     if java_heap_GB is not None:
         javaHeapGB = java_heap_GB
 
+    if java_heap_MB is not None:
+        javaHeapMB = java_heap_MB
+
     if java_extra_args is not None:
         javaExtraArgs = java_extra_args
 
@@ -99,7 +103,7 @@ def build_cloud_with_hosts(node_count=None, use_flatfile=None,
 
     h2o.verboseprint("host config: ", username, password, 
         h2oPerHost, basePort, sigar, useFlatfile, 
-        useHdfs, hdfsNameNode, hdfsVersion, hdfsConfig, javaHeapGB, use_home_for_ice,
+        useHdfs, hdfsNameNode, hdfsVersion, hdfsConfig, javaHeapGB, javaHeapMB, use_home_for_ice,
         hostList, key_filename, aws_credentials, **kwargs)
 
     #********************
@@ -134,7 +138,7 @@ def build_cloud_with_hosts(node_count=None, use_flatfile=None,
             use_flatfile=useFlatfile,
             use_hdfs=useHdfs, hdfs_name_node=hdfsNameNode,
             hdfs_version=hdfsVersion, hdfs_config=hdfsConfig,
-            java_heap_GB=javaHeapGB, java_extra_args=javaExtraArgs,
+            java_heap_GB=javaHeapGB, java_heap_MB=javaHeapMB, java_extra_args=javaExtraArgs,
             use_home_for_ice=use_home_for_ice,
             aws_credentials=aws_credentials,
             **kwargs)
