@@ -677,8 +677,9 @@ public final class DParseTask extends MRTask {
         } else if ((_max[i] - _min[i]) < 65535) {
           _colTypes[i] = SHORT;
           _bases[i] = (int)_min[i];
-        } else if (_max[i] - _min[i] < (1l << 32)) {
-            _colTypes[i] = INT;
+        } else if (_max[i] - _min[i] < (1L << 32) &&
+                   _min[i] > Integer.MIN_VALUE && _min[i] < Integer.MAX_VALUE) {
+          _colTypes[i] = INT;
           _bases[i] = (int)_min[i];
         } else
           _colTypes[i] = LONG;

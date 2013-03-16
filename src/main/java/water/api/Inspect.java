@@ -89,6 +89,10 @@ public class Inspect extends Request {
         JsonObject res = new JsonObject();
         return RFView.redirect(res,val._key);
       }
+      if( f instanceof Job.Fail ) {
+        UKV.remove(val._key);   // Not sure if this is a good place to do this
+        return Response.error(((Job.Fail)f)._message);
+      }
     }
     return serveUnparsedValue(val);
   }
