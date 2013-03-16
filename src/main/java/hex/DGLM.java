@@ -395,8 +395,8 @@ public abstract class DGLM {
       StringBuilder sb = new StringBuilder();
       for( ValueArray.Column C : _va._cols ) {
         if( C._domain != null )
-          for( String d : C._domain )
-            sb.append(C._name).append('.').append(d).append(',');
+          for(int i = 1; i < C._domain.length; ++i)
+            sb.append(C._name).append('.').append(C._domain[i]).append(',');
         else
           sb.append(C._name).append(',');
       }
@@ -509,11 +509,11 @@ public abstract class DGLM {
       JsonObject normalizedCoefs = new JsonObject();
       int idx=0;
       JsonArray colNames = new JsonArray();
-
       for( int i=0; i<_va._cols.length-1; i++ ) {
         ValueArray.Column C = _va._cols[i];
         if( C._domain != null )
-          for( String d : C._domain ){
+          for(int j = 1; j < C._domain.length;++j){
+            String d = C._domain[j];
             String cname = C._name+"."+d;
             colNames.add(new JsonPrimitive(cname));
             if(_standardized)normalizedCoefs.addProperty(cname,_normBeta[idx]);
@@ -1102,14 +1102,13 @@ public abstract class DGLM {
           lsm.solve(gram.getXX(), gram.getXY(), gram.getYY(), newBeta);
         } catch (NonSPDMatrixException e) {
           if(!(lsm instanceof GeneralizedGradientSolver)){ // if we failed with ADMM, try Generalized gradient
-            System.err.println("swapping solvers!");
             lsm = new GeneralizedGradientSolver(lsm._lambda, lsm._alpha);
             warns.add("Switched to generalized gradient solver due to Non SPD matrix.");
-            lsm.solve(gram.getXX(), gram.getXY(), gram.getYY(), gramF._beta);
+            lsm.solve(gram.getXX(), gram.getXY(), gram.getYY(), newBeta);
           }
         }
       } while(++iter < params._maxIter && betaDiff(newBeta,oldBeta) > params._betaEps);
-      converged = (betaDiff(oldBeta,gramF._beta) < params._betaEps);//warns.add("Did not converge!");
+      converged = converged && (betaDiff(oldBeta,newBeta) < params._betaEps);
     }
     String [] warnings = new String[warns.size()];
     warns.toArray(warnings);

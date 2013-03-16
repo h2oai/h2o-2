@@ -44,7 +44,7 @@ public class GLM extends Request {
   // ------------------------------------- ADVANCED SETTINGS ------------------------------------------------------------------------------------
   protected final Bool _standardize = new Bool("standardize", true, "Set to standardize (0 mean, unit variance) the data before training.");
   protected final RSeq _thresholds = new RSeq(DTHRESHOLDS, false, new NumberSequence("0:1:0.01", false, 0.01),false);
-  protected final EnumArgument<LSMSolverType> _lsmSolver = new EnumArgument<LSMSolverType>("lsm_solver", LSMSolverType.ADMM);
+  protected final EnumArgument<LSMSolverType> _lsmSolver = new EnumArgument<LSMSolverType>("lsm_solver", LSMSolverType.AUTO);
   protected final Real _betaEps = new Real(BETA_EPS,1e-4);
   protected final Int _maxIter = new Int(MAX_ITER, 50, 1, 1000000);
   //protected final Bool _reweightGram = new Bool("reweigthed_gram_xval", false, "Set to force reweighted gram matrix for cross-validation (non-reweighted xval is much faster, less precise).");
@@ -252,7 +252,7 @@ public class GLM extends Request {
 
       // Warnings
 
-      if( m._warnings != null ) {
+      if( m._warnings != null && m._warnings.length > 0) {
         StringBuilder wsb = new StringBuilder();
         for( String s : m._warnings )
           wsb.append(s).append("<br>");

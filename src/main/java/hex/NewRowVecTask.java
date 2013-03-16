@@ -73,7 +73,7 @@ public class NewRowVecTask<T extends Iced> extends MRTask {
       for( int i=0; i<colIds.length-1; i++ ) {
         _colCatMap[i] = len;
         ValueArray.Column C = ary._cols[colIds[i]];
-        len += ( expandCat && C._domain != null )?C._domain.length:1;
+        len += ( expandCat && C._domain != null )?C._domain.length-1:1;
       }
       // the last element (response variable) is NEVER expanded
       _colCatMap[colIds.length-1] = len++;
@@ -153,11 +153,17 @@ ROW:
           x[i] = (_data._normSub != null)?(d - _data._normSub[idx]) * _data._normMul[idx]:d;
           indexes[i] = idx;
         } else {                // Else categorical
-          x[i] = 1.0;           // Always a 1.0
+          long l = _data._ary.data(bits, r,dataColIdx);
+
           // Size of category (number of factors/enum elements) is also the
           // number of expanded columns.  Make sure that the enum/factor 'd' is
           // in range.
-          long l = _data._ary.data(bits, r,dataColIdx);
+          if(l == 0){
+            x[i] = 0; // we skip the first categorical (so that the sum of the categorical columns is not always 1!)
+          } else {
+            x[i] = 1.0;
+            --l;
+          }
           assert 0 <= l && (int)l < _data._colCatMap[i+1]-idx;
           indexes[i] = idx+(int)l; // Which expanded column to use
         }

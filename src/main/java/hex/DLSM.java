@@ -260,7 +260,6 @@ public class DLSM {
     private double g_beta(double[][] xx, double[] xy, double yy, double[] beta) {
       final int n = xy.length;
       double res = yy;
-
       for( int i = 0; i < n; ++i ) {
         double x = 0;
         for( int j = 0; j < n; ++j ){
@@ -268,7 +267,7 @@ public class DLSM {
         }
         res += (0.5*x + xy[i]) * beta[i];
       }
-      if(res <= 0)
+      if(!(res >= 0))
         throw new LSMSolverException("Generalized Gradient: Can not solved this problem.");
       return res;
     }

@@ -413,7 +413,6 @@ public class GLMTest extends TestUtil {
     // by 1, plus the intercept.
     double coef = jcoefs.get("0."+category).getAsDouble();
     double predict = 1.0/(1.0+Math.exp(-(coef*1.0/* + all other terms are 0 */+icept)));
-    System.out.println("expected = " + expected + ", got " + predict);
     assertEquals(expected,predict,0.001);
   }
 }
