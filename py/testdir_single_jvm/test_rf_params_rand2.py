@@ -60,12 +60,11 @@ class Basic(unittest.TestCase):
         csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
         for trial in range(20):
             # params is mutable. This is default.
-            params = {'ntree': 13, 'parallel': 1}
+            params = {'ntree': 13, 'parallel': 1, 'features': 7}
             colX = h2o_rf.pickRandRfParams(paramDict, params)
             kwargs = params.copy()
             # adjust timeoutSecs with the number of trees
-            # seems ec2 can be really slow
-            timeoutSecs = 30 + 15 * (kwargs['parallel'] and 6 or 10)
+            timeoutSecs = 30 + ((kwargs['ntree']*20) * max(1,kwargs['features']/15) * (kwargs['parallel'] and 1 or 3))
             start = time.time()
             h2o_cmd.runRF(timeoutSecs=timeoutSecs, retryDelaySecs=1, csvPathname=csvPathname, **kwargs)
             elapsed = time.time()-start
