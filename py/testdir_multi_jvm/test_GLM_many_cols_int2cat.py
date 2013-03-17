@@ -93,7 +93,7 @@ class Basic(unittest.TestCase):
 
             print "\nNow running the int 2 enum exec command across all input cols"
             colResultList = h2e.exec_expr_list_across_cols(None, exprList, key2, maxCol=colCount, 
-                timeoutSecs=4, incrementingResult=False)
+                timeoutSecs=30, incrementingResult=False)
             print "\nexec colResultList", colResultList
 
             paramDict2 = {}
