@@ -67,7 +67,7 @@ class Basic(unittest.TestCase):
             kwargs = paramDict
             # adjust timeoutSecs with the number of trees
             # seems ec2 can be really slow
-            timeoutSecs = 30 + kwargs['ntree'] * 10
+            timeoutSecs = 30 + kwargs['ntree'] * 20
             start = time.time()
             rfView = h2o_cmd.runRFOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
