@@ -1,7 +1,7 @@
 import os, json, unittest, time, shutil, sys
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd as cmd 
+import h2o, h2o_cmd as cmd, h2o_hosts
 import argparse
 
 class Basic(unittest.TestCase):
@@ -10,7 +10,11 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        h2o.build_cloud(2)
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(2)
+        else:
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):

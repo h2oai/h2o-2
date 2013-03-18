@@ -10,9 +10,11 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # uses two much memory with 4?
-        # FIX! does it die with 3?
-        h2o.build_cloud(2)
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(2)
+        else:
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
