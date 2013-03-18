@@ -17,6 +17,7 @@ public class Value implements ForkJoinPool.ManagedBlocker {
   // Type-id of serialzied object; see TypeMap for the list.
   // Might be a primitive array type, or a Iced POJO
   private short _type;
+  public int type() { return _type; }
   public String className() { return TypeMap.className(_type); }
 
 

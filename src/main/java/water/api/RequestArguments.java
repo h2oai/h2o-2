@@ -1440,20 +1440,15 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
   // H2OKey
   // ---------------------------------------------------------------------------
-
   public class H2OKey extends InputText<Key> {
-
     public final Key _defaultValue;
-
     public H2OKey(String name) {
       super(name, true);
       _defaultValue = null;
     }
-
     public H2OKey(String name, String keyName) {
       this(name, Key.make(keyName));
     }
-
     public H2OKey(String name, Key key) {
       super(name, false);
       _defaultValue = key;
@@ -1471,31 +1466,24 @@ public class RequestArguments extends RequestStatics {
     @Override protected String queryDescription() {
       return "Valid H2O key";
     }
-
   }
 
   // ---------------------------------------------------------------------------
   // H2OExistingKey
   // ---------------------------------------------------------------------------
-
   public class H2OExistingKey extends TypeaheadInputText<Value> {
-
     public final Key _defaultValue;
-
     public H2OExistingKey(String name) {
       super(TypeaheadKeysRequest.class, name, true);
       _defaultValue = null;
     }
-
     public H2OExistingKey(String name, String keyName) {
       this(name, Key.make(keyName));
     }
-
     public H2OExistingKey(String name, Key key) {
       super(TypeaheadKeysRequest.class, name, false);
       _defaultValue = key;
     }
-
     @Override protected Value parse(String input) throws IllegalArgumentException {
       Key k = Key.make(input);
       Value v = DKV.get(k);
@@ -1518,7 +1506,6 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
   // H2OHexKey
   // ---------------------------------------------------------------------------
-
   public class H2OHexKey extends TypeaheadInputText<ValueArray> {
     public final Key _defaultKey;
 
@@ -1557,29 +1544,29 @@ public class RequestArguments extends RequestStatics {
   }
 
   // -------------------------------------------------------------------------
-  public class H2OModelKey<T extends Model> extends TypeaheadInputText<T> {
-    public H2OModelKey(TypeaheadKeysRequest tkr, String name, boolean req) {
-      super(tkr.getClass(), name, req);
-      _filterType = tkr.filterType();
-...needs to have upstream filtering...
-    }
-
-    @Override protected T parse(String input) throws IllegalArgumentException {
+  public class H2OModelKey<TM extends Model, TK extends TypeaheadKeysRequest> extends TypeaheadInputText<TM> {
+    public H2OModelKey(TK tkr, String name, boolean req) { super(tkr.getClass(), name, req); }
+    @Override protected TM parse(String input) throws IllegalArgumentException {
       Key k = Key.make(input);
       Value v = DKV.get(k);
       if (v == null)
         throw new IllegalArgumentException("Key "+input+" not found!");
-      return (T)v.get();
+      return (TM)v.pojo();
     }
-
     @Override protected String queryDescription() { return "An existing H2O Model key"; }
-    @Override protected T defaultValue() { return null; }
+    @Override protected TM defaultValue() { return null; }
   }
 
   // -------------------------------------------------------------------------
-  public class H2OGLMModelKey extends H2OModelKey<GLMModel> {
+  public class H2OGLMModelKey extends H2OModelKey<GLMModel, TypeaheadGLMModelKeyRequest> {
     public H2OGLMModelKey(String name, boolean req) {
-      super(new TypeaheadGLMModelKeyRequest(), name, req);
+      super(new TypeaheadGLMModelKeyRequest(),name, req);
+    }
+  }
+  // -------------------------------------------------------------------------
+  public class RFModelKey extends H2OModelKey<RFModel, TypeaheadRFModelKeyRequest> {
+    public RFModelKey(String name, boolean req) {
+      super(new TypeaheadRFModelKeyRequest(),name, req);
     }
   }
 
@@ -2141,32 +2128,6 @@ public class RequestArguments extends RequestStatics {
       return result;
     }
 
-  }
-
-  public class RFModelKey extends TypeaheadInputText<RFModel> {
-
-    public RFModelKey(String name) {
-      super(TypeaheadRFModelKeyRequest.class, name, true);
-    }
-
-    @Override protected RFModel parse(String input) throws IllegalArgumentException {
-      Value v = UKV.getValue(Key.make(input));
-      if( v == null )
-        throw new IllegalArgumentException("Key "+input+" was not found");
-      try {
-        return v.get(new RFModel());
-      } catch (Exception e) {
-        throw new IllegalArgumentException("Key "+input+" is not a model key");
-      }
-    }
-
-    @Override protected RFModel defaultValue() {
-      return null;
-    }
-
-    @Override protected String queryDescription() {
-      return "Key of the RF model";
-    }
   }
 
   public class NTree extends Int {

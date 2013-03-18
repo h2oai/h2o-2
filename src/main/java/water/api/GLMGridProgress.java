@@ -37,7 +37,7 @@ public class GLMGridProgress extends Request {
   @Override
   protected Response serve() {
     Key dest = _dest.value();
-    GLMModels models = UKV.get(dest);
+    GLMModels models = (GLMModels)UKV.get(dest);
     if(models==null)
       return Response.doneEmpty();
     JsonObject response = new JsonObject();

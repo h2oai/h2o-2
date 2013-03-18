@@ -5,9 +5,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class TypeMap {
-  static final short NULL = (short) -1;
-  static final short PRIM_B = 1;
-  static final short VALUE_ARRAY;
+  static public final short NULL = (short) -1;
+  static public final short PRIM_B = 1;
+  static public final short VALUE_ARRAY;
 
   // Run main below to update TODO add as build step
   static private final String[] CLAZZES = {
@@ -162,7 +162,7 @@ public class TypeMap {
     VALUE_ARRAY = (short)va_id; // Pre-cached the type id for ValueArray
   }
 
-  static int onLoad(String className) {
+  static public int onLoad(String className) {
     Integer I = MAP.get(className);
     if(I == null)
       throw new RuntimeException("TypeMap missing " + className);

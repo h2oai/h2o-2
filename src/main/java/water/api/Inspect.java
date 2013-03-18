@@ -55,46 +55,36 @@ public class Inspect extends Request {
   @Override
   protected Response serve() {
     Value val = _key.value();
-    if( val.isHex() )
-      return serveValueArray(ValueArray.value(val));
-    if( !val.isArray() ) {
-      Freezable f;
-      try {
-        f = val.get();
-      } catch(Exception ex) {
-        // data is not a Freezable, ignore until next version of types
-        f = null;
-      }
-      if( f instanceof GLMModel ) {
-        GLMModel m = (GLMModel) f;
-        JsonObject res = new JsonObject();
-        // Convert to JSON
-        res.add("GLMModel", m.toJson());
-        // Display HTML setup
-        Response r = Response.done(res);
-        r.setBuilder(""/* top-level do-it-all builder */, new GLMBuilder(m));
-        return r;
-      }
-      if( f instanceof KMeansModel ) {
-        KMeansModel m = (KMeansModel) f;
-        JsonObject res = new JsonObject();
-        // Convert to JSON
-        res.add("KMeansModel", m.toJson());
-        // Display HTML setup
-        Response r = Response.done(res);
-        // r.setBuilder(""/*top-level do-it-all builder*/,new KMeansBuilder(m));
-        return r;
-      }
-      if( f instanceof RFModel ) {
-        JsonObject res = new JsonObject();
-        return RFView.redirect(res,val._key);
-      }
-      if( f instanceof Job.Fail ) {
-        UKV.remove(val._key);   // Not sure if this is a good place to do this
-        return Response.error(((Job.Fail)f)._message);
-      }
+    if( val.type() == TypeMap.PRIM_B )
+      return serveUnparsedValue(val);
+    Iced f = val.pojo();
+    if( f instanceof ValueArray )
+      return serveValueArray((ValueArray)f);
+    if( f instanceof GLMModel ) {
+      GLMModel m = (GLMModel)f;
+      JsonObject res = new JsonObject();
+      res.add("GLMModel", m.toJson());
+      Response r = Response.done(res);
+      r.setBuilder(""/* top-level do-it-all builder */, new GLMBuilder(m));
+      return r;
     }
-    return serveUnparsedValue(val);
+    if( f instanceof KMeansModel ) {
+      KMeansModel m = (KMeansModel)f;
+      JsonObject res = new JsonObject();
+      res.add("KMeansModel", m.toJson());
+      Response r = Response.done(res);
+      // r.setBuilder(""/*top-level do-it-all builder*/,new KMeansBuilder(m));
+      return r;
+    }
+    if( f instanceof RFModel ) {
+      JsonObject res = new JsonObject();
+      return RFView.redirect(res,val._key);
+    }
+    if( f instanceof Job.Fail ) {
+      UKV.remove(val._key);   // Not sure if this is a good place to do this
+      return Response.error(((Job.Fail)f)._message);
+    }
+    return Response.error("No idea how to display a "+f.getClass());
   }
 
   // Look at unparsed data; guess its setup

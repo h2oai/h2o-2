@@ -698,7 +698,7 @@ public abstract class DGLM {
             @Override
             public GLMModel next() {
               if(idx == keys.length) throw new NoSuchElementException();
-              return DKV.get(keys[idx++]).get(new GLMModel());
+              return DKV.get(keys[idx++]).get(GLMModel.class);
             }
               @Override
             public boolean hasNext() {

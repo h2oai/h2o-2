@@ -150,8 +150,8 @@ public class GLMGrid extends Job {
             return 1; // drive the nulls to the end
           if( v2 == null )
             return -1;
-          GLMModel m1 = v1.get(new GLMModel());
-          GLMModel m2 = v2.get(new GLMModel());
+          GLMModel m1 = v1.get(GLMModel.class);
+          GLMModel m2 = v2.get(GLMModel.class);
           if( m1._glmParams._family == Family.binomial ) {
             double cval1 = m1._vals[0].AUC(), cval2 = m2._vals[0].AUC();
             if( cval1 == cval2 ) {
@@ -196,7 +196,7 @@ public class GLMGrid extends Job {
 
             @Override
             public GLMModel next() {
-              return DKV.get(keys[_idx++]).get(new GLMModel());
+              return DKV.get(keys[_idx++]).get(GLMModel.class);
             }
 
             @Override
