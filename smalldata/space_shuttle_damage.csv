@@ -1,0 +1,25 @@
+flight, temp, damage
+STS-1,66,no
+STS-2,70,yes
+STS-3,69,no
+STS-4,80,
+STS-5,68,no
+STS-6,67,no
+STS-7,72,no
+STS-8,73,no
+STS-9,70,no
+STS-41-B,57,yes
+STS-41-C,63,yes
+STS-41-D,70,yes
+STS-41-G,78,no
+STS-51-A,67,no
+STS-51-C,53,yes
+STS-51-D,67,no
+STS-51-B,75,no
+STS-51-G,70,no
+STS-51-F,81,no
+STS-51-I,76,no
+STS-51-J,79,no
+STS-61-A,75,yes
+STS-61-B,76,no
+STS-61-C,58,yes
