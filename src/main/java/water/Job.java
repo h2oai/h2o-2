@@ -27,7 +27,7 @@ public class Job extends Iced {
   }
 
   public static Job[] all() {
-    List list = UKV.get(LIST);
+    List list = UKV.get(LIST,List.class);
     return list != null ? list._jobs : new Job[0];
   }
 
@@ -40,7 +40,7 @@ public class Job extends Iced {
   }
 
   public void start() {
-    DKV.put(_self, new Value(_self, ""));
+    DKV.put(_self, new Value(_self, new byte[0]));
     new TAtomic<List>() {
       @Override
       public List atomic(List old) {

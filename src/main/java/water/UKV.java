@@ -27,7 +27,7 @@ public abstract class UKV {
     // chunks - they are unrelated to the new Value which might be either
     // bigger or smaller than the old Value.
     if( res != null && res.isArray() ) {
-      ValueArray ary = ValueArray.value(res);
+      ValueArray ary = (ValueArray)res.pojo();
       for( long i=0; i<ary.chunks(); i++ ) // Delete all the chunks
         DKV.remove(ary.getChunkKey(i),fs);
     }
@@ -36,11 +36,9 @@ public abstract class UKV {
         remove(k,fs);
     if( res != null ) res.freeMem();
   }
+  static public void put( Key key, Iced val, Futures fs ) { put(key,new Value(key,Value.ICE, val),fs); }
 
-  static public void remove( Key key ) {
-    remove(key,true);
-  }
-
+  static public void remove( Key key ) { remove(key,true); }
   static public void remove( Key key, boolean block) {
     Futures fs = new Futures();
     remove(key,fs);             // Recursively delete, gather pending deletes
@@ -50,9 +48,9 @@ public abstract class UKV {
   // Recursively remove, gathering all the pending remote key-deletes
   static private void remove( Key key, Futures fs ) {
     Value val = DKV.get(key,32,H2O.GET_KEY_PRIORITY); // Get the existing Value, if any
-    if( val == null ) return;    // Trivial delete
-    if( val.isArray() ) { // See if this is an Array
-      ValueArray ary = ValueArray.value(val);
+    if( val == null ) return;   // Trivial delete
+    if( val.isArray() ) {       // See if this is an Array
+      ValueArray ary = (ValueArray)val.pojo();
       for( long i=0; i<ary.chunks(); i++ ) // Delete all the chunks
         DKV.remove(ary.getChunkKey(i),fs);
     }
@@ -80,20 +78,18 @@ public abstract class UKV {
   static public void remove(String s) { remove(Key.make(s)); }
 
   // Also, allow auto-serialization
-  static public void put( Key key, Freezable fr ) {
-    if( fr == null ) UKV.put(key, null);
+  static public void put( Key key, Iced fr ) {
+    if( fr == null ) UKV.remove(key);
     else UKV.put(key,new Value(key, new AutoBuffer().put(fr).buf()));
   }
 
-  public static <T extends Freezable> T get(Key k) {
-    Value v = UKV.getValue(k);
-    if( v == null ) return null;
-    return v.get();
+  public static Iced get(Key k) { 
+    Value v = DKV.get(k);
+    return (v == null) ? null : v.pojo();
   }
 
-  public static <T extends Freezable> T get(Key k, T t) {
-    Value v = UKV.getValue(k);
-    if( v == null ) return null;
-    return v.get(t);
+  public static <T extends Iced> T get(Key k, Class<T> t) {
+    Value v = DKV.get(k);
+    return (v == null) ? null : v.get(t);
   }
 }

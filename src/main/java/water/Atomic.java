@@ -16,7 +16,7 @@ public abstract class Atomic extends DTask {
   // home STORE, and the bits are passed in.  The returned bits are atomically
   // installed as the new Value (the function is retried until it runs
   // atomically).  The original bits are supposed to be read-only.
-  abstract public byte[] atomic( byte[] bits );
+  abstract public Value atomic( Value val );
 
   /** Executed on the transaction key's <em>home</em> node after any successful
    *  atomic update.  Override this if you need to perform some action after
@@ -49,29 +49,23 @@ public abstract class Atomic extends DTask {
   @Override public final void compute2( ) {
     assert _key.home();         // Key is at Home!
     Futures fs = new Futures(); // Must block on all invalidates eventually
+    Value val1 = DKV.get(_key);
     while( true ) {
-      Value val1 = DKV.get(_key);
-      byte[] bits1 = null;
-      if( val1 != null ) {        // Got a mapping?
-        bits1 = val1.memOrLoad(); // Get the bits
-        if( bits1 == null )       // Assume XTN failure & try again
-          continue;               // No bits?  deleted value already?
-      }
-
-      // Run users' function.  This is supposed to read-only from bits1 and
-      // return new bits2 to atomically install.
-      byte[] bits2 = atomic(bits1);
-      assert bits1 == null || bits1 != bits2; // No returning the same array
-      if( bits2 == null ) break; // they gave up
-
+      // Run users' function.  This is supposed to read-only from val1 and
+      // return new val2 to atomically install.
+      Value val2 = atomic(val1);
+      if( val2 == null ) break; // ABORT: they gave up
+      assert val1 != val2;      // No returning the same Value
       // Attempt atomic update
-      Value val2 = new Value(_key, bits2.length, bits2);
       Value res = DKV.DputIfMatch(_key,val2,val1,fs);
-      if( res == val1 ) break;  // Success?
+      if( res == val1 ) {       // Success?
+        onSuccess();            // Call user's post-XTN function
+        fs.blockForPending();   // Block for any pending invalidates on the atomic update
+        break;
+      }
+      val1 = res;               // Otherwise try again with the current value
     }                           // and retry
-    onSuccess();                // Call user's post-XTN function
     _key = null;                // No need for key no more
-    fs.blockForPending(); // Block for any pending invalidates on the atomic update
     tryComplete();              // Tell F/J this task is done
   }
 

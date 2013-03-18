@@ -51,7 +51,7 @@ public abstract class PersistIce {
         initializeFilesFromFolder(f); // Recursively keep loading K/V pairs
       } else {
         Key k = decodeKey(f);
-        Value ice = new Value(k,(int)f.length(), Value.ICE);
+        Value ice = new Value(k,(int)f.length());
         ice.setdsk();
         H2O.putIfAbsent_raw(k,ice);
       }

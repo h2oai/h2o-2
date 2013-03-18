@@ -1543,19 +1543,12 @@ public class RequestArguments extends RequestStatics {
         throw new IllegalArgumentException("Key "+input+" not found!");
       if (!v.isArray())
         throw new IllegalArgumentException("Key "+input+" is not a valid HEX key");
-      ValueArray va = ValueArray.value(v);
-      if ((va._cols == null) || (va._cols.length == 0))
-        throw new IllegalArgumentException("Key "+input+" is not a valid HEX key");
-      return va;
+      return v.get(ValueArray.class);
     }
 
     @Override protected ValueArray defaultValue() {
-      try {
-        if(_defaultKey == null) return null;
-        return ValueArray.value(DKV.get(_defaultKey));
-      } catch (Exception e) {
-        return null;
-      }
+      if(_defaultKey == null) return null;
+      return DKV.get(_defaultKey).get(ValueArray.class);
     }
 
     @Override protected String queryDescription() {
@@ -1565,24 +1558,18 @@ public class RequestArguments extends RequestStatics {
 
   // -------------------------------------------------------------------------
   public class H2OModelKey<T extends Model> extends TypeaheadInputText<T> {
-    private final String _filter_string;
     public H2OModelKey(TypeaheadKeysRequest tkr, String name, boolean req) {
       super(tkr.getClass(), name, req);
-      _filter_string = tkr._filter.defaultValue();
+      _filterType = tkr.filterType();
+...needs to have upstream filtering...
     }
 
     @Override protected T parse(String input) throws IllegalArgumentException {
-      if( input.indexOf(_filter_string) == -1 )
-        throw new IllegalArgumentException("Key "+input+" is not a Model key");
       Key k = Key.make(input);
       Value v = DKV.get(k);
       if (v == null)
         throw new IllegalArgumentException("Key "+input+" not found!");
-      try {
-        return v.get();
-      } catch(Throwable t) {
-        throw new IllegalArgumentException("Key "+input+" is not a Model key");
-      }
+      return (T)v.get();
     }
 
     @Override protected String queryDescription() { return "An existing H2O Model key"; }
