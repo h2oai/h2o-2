@@ -390,8 +390,7 @@ public class GLMTest extends TestUtil {
       JsonObject glm = computeGLMlog(lsms,va,true); // Solve it!
       JsonObject jcoefs = glm.get("coefficients").getAsJsonObject();
       double icept = jcoefs.get("Intercept").getAsDouble();
-
-      assertCat(jcoefs,icept,"Low" ,0.0      );
+//      assertCat(jcoefs,icept,"Low" ,0.0      );
       assertCat(jcoefs,icept,"Med" ,0.3333333);
       assertCat(jcoefs,icept,"High",1.0      );
       UKV.remove(Key.make(glm.get(Constants.MODEL_KEY).getAsString()));
