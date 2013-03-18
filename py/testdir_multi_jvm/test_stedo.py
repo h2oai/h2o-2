@@ -1,4 +1,4 @@
-import unittest, os, sys
+import unittest, os, sys, time
 sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_hosts
@@ -20,7 +20,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_stedo_testing_data(self):
-        csvPathname = h2o.find_file('smalldata/stego/stego_testing.data')
+        csvPathname = h2o.find_file('smalldata/stego/stego_training.data')
         # Prediction class is the second column => class=1
         h2o_cmd.runRF(trees=50, timeoutSecs=30, csvPathname=csvPathname, response_variable=1, out_of_bag_error_estimate=1)
 
