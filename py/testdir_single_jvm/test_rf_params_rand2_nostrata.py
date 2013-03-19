@@ -48,7 +48,7 @@ class Basic(unittest.TestCase):
         # SEED = 
         random.seed(SEED)
         print "\nUsing random seed:", SEED
-        for trial in range(20):
+        for trial in range(10):
             # params is mutable. This is default.
             params= {'ntree': 23, 'parallel': 1, 'features': 7}
             colX = h2o_rf.pickRandRfParams(paramDict, params)
