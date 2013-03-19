@@ -1,7 +1,7 @@
 import os, json, unittest, time, shutil, sys
 sys.path.extend(['.','..','py'])
 
-import h2o
+import h2o, h2o_hosts
 
 class SigarApi(unittest.TestCase):
     def tearDown(self):
@@ -9,8 +9,12 @@ class SigarApi(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        h2o.clean_sandbox()
-        h2o.build_cloud(3,sigar=True)
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(3,sigar=True)
+        else:
+            h2o_hosts.build_cloud_with_hosts()
+
 
     @classmethod
     def tearDownClass(cls):

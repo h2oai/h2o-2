@@ -28,7 +28,12 @@ class Basic(unittest.TestCase):
         # SEED = 
         random.seed(SEED)
         print "\nUsing random seed:", SEED
-        h2o.build_cloud(2)
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(2)
+        else:
+            h2o_hosts.build_cloud_with_hosts()
+
         global SYNDATASETS_DIR
         SYNDATASETS_DIR = h2o.make_syn_dir()
 

@@ -15,7 +15,11 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        h2o.build_cloud(3)
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(3)
+        else:
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod 
     def tearDownClass(cls): 

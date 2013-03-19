@@ -79,13 +79,16 @@ class Basic(unittest.TestCase):
             kwargs = params.copy()
 
             # make timeout bigger with xvals
-            timeoutSecs = 60 + (kwargs['num_cross_validation_folds']*20)
+            timeoutSecs = 120 + (kwargs['num_cross_validation_folds']*30)
             # or double the 4 seconds per iteration (max_iter+1 worst case?)
             timeoutSecs = max(timeoutSecs, (8 * (kwargs['max_iter']+1)))
 
             start = time.time()
+            print "May not solve. Expanded categorical columns causing a large # cols, small # of rows"
             glm = h2o_cmd.runGLMOnly(timeoutSecs=timeoutSecs, parseKey=parseKey, **kwargs)
-            print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
+            elapsed = time.time()-start
+            print "glm end on ", csvPathname, "Trial #", trial, "completed in", elapsed, "seconds.",\
+                "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
             start = time.time()
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
