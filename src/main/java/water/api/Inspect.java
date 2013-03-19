@@ -57,7 +57,7 @@ public class Inspect extends Request {
     Value val = _key.value();
     if( val.type() == TypeMap.PRIM_B )
       return serveUnparsedValue(val);
-    Iced f = val.pojo();
+    Iced f = val.get();
     if( f instanceof ValueArray )
       return serveValueArray((ValueArray)f);
     if( f instanceof GLMModel ) {

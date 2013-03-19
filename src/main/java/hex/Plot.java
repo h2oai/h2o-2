@@ -43,7 +43,7 @@ public abstract class Plot {
         System.out.println("pixels map " + key + ": " + this);
 
       assert key.home();
-      ValueArray va = ValueArray.value(DKV.get(_arykey));
+      ValueArray va = DKV.get(_arykey).get();
       AutoBuffer bits = va.getChunk(key);
       int rows = bits.remaining() / va._rowsize;
       _pixels = new byte[_height * _width];

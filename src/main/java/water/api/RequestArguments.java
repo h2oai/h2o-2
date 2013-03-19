@@ -1530,12 +1530,12 @@ public class RequestArguments extends RequestStatics {
         throw new IllegalArgumentException("Key "+input+" not found!");
       if (!v.isArray())
         throw new IllegalArgumentException("Key "+input+" is not a valid HEX key");
-      return v.get(ValueArray.class);
+      return v.get();
     }
 
     @Override protected ValueArray defaultValue() {
       if(_defaultKey == null) return null;
-      return DKV.get(_defaultKey).get(ValueArray.class);
+      return DKV.get(_defaultKey).get();
     }
 
     @Override protected String queryDescription() {
@@ -1551,7 +1551,7 @@ public class RequestArguments extends RequestStatics {
       Value v = DKV.get(k);
       if (v == null)
         throw new IllegalArgumentException("Key "+input+" not found!");
-      return (TM)v.pojo();
+      return v.get();
     }
     @Override protected String queryDescription() { return "An existing H2O Model key"; }
     @Override protected TM defaultValue() { return null; }
@@ -1565,8 +1565,8 @@ public class RequestArguments extends RequestStatics {
   }
   // -------------------------------------------------------------------------
   public class RFModelKey extends H2OModelKey<RFModel, TypeaheadRFModelKeyRequest> {
-    public RFModelKey(String name, boolean req) {
-      super(new TypeaheadRFModelKeyRequest(),name, req);
+    public RFModelKey(String name) {
+      super(new TypeaheadRFModelKeyRequest(),name, true);
     }
   }
 

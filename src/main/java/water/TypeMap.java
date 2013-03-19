@@ -169,12 +169,20 @@ public class TypeMap {
     return I;
   }
 
-  static private final Iced[] GOLD = new Iced[CLAZZES.length];
+  static private final Freezable[] GOLD = new Freezable[CLAZZES.length];
 
   static public Iced newInstance(int id) {
-    Iced f = GOLD[id];
+    Iced f = (Iced)GOLD[id];
     if( f == null ) {
       try { GOLD[id] = f = (Iced) Class.forName(CLAZZES[id]).newInstance(); }
+      catch( Exception e ) { throw new Error(e); }
+    }
+    return f.newInstance();
+  }
+  static public Freezable newFreezable(int id) {
+    Freezable f = GOLD[id];
+    if( f == null ) {
+      try { GOLD[id] = f = (Freezable) Class.forName(CLAZZES[id]).newInstance(); }
       catch( Exception e ) { throw new Error(e); }
     }
     return f.newInstance();

@@ -105,7 +105,7 @@ public class StratifiedDABuilder extends DABuilder {
    */
   @Override
   protected final DataAdapter inhaleData(final Key [] keys) {
-    final ValueArray ary = ValueArray.value(_drf._rfmodel._dataKey);
+    final ValueArray ary = DKV.get(_drf._rfmodel._dataKey).get();
     int   row_size        = ary.rowSize();
     int   rpc             = (int)ValueArray.CHUNK_SZ/row_size;
     final Column classCol = ary._cols[_drf._classcol];

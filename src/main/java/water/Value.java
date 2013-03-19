@@ -11,7 +11,8 @@ import water.store.s3.PersistS3;
  * underlying byte[] which may be spilled to disk and freed by the
  * {@link MemoryManager}.
  */
-public class Value implements ForkJoinPool.ManagedBlocker {
+public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
+  static final int DEBUG_WEAVER=1;
 
   // ---
   // Type-id of serialzied object; see TypeMap for the list.
@@ -44,14 +45,22 @@ public class Value implements ForkJoinPool.ManagedBlocker {
   // manager (but only if persisted to some disk or in a POJO).  Can be filled
   // in by reloading from disk, or by serializing a POJO.
   private volatile byte[] _mem;
-  public final byte[] mem() { return _mem; }
+  public final byte[] rawMem() { return _mem; }
 
   // ---
   // A POJO version of the _mem array, or null if the _mem has not been
   // serialized or if _mem is primitive data and not a POJO.  Cleared to null
   // asynchronously by the memory manager (but only if persisted to some disk,
   // or in the _mem array).  Can be filled in by deserializing the _mem array.
-  private volatile Iced _pojo;
+
+  // NOTE THAT IF YOU MODIFY any fields of a POJO that is part of a Value,
+  // - this is NOT the recommended programming style,
+  // - those changes are visible to all on the node,
+  // - but not to other nodes, and
+  // - the POJO might be dropped by the MemoryManager and reconstitued from
+  //   disk and/or the byte array back to it's original form, losing your changes.
+  private volatile Freezable _pojo;
+  public Freezable rawPOJO() { return _pojo; }
 
   // Free array (but always be able to rebuild the array)
   public final void freeMem() { 
@@ -70,26 +79,33 @@ public class Value implements ForkJoinPool.ManagedBlocker {
   public final byte[] memOrLoad() {
     byte[] mem = _mem;          // Read once!
     if( mem != null ) return mem;
-    Iced pojo = _pojo;          // Read once!
+    Freezable pojo = _pojo;     // Read once!
     if( pojo != null ) return (_mem = pojo.write(new AutoBuffer()).buf());
     if( _max == 0 ) return (_mem = new byte[0]);
     return (_mem = loadPersist());
+  }
+  public final byte[] getBytes() { 
+    assert _type==TypeMap.PRIM_B && _pojo == null;
+    return memOrLoad();
   }
 
   // The FAST path get-POJO - final method for speed.
   // Will (re)build the POJO from the _mem array.
   // Never returns NULL.
-  // How do I do POJO Strings?
-  // How do I do Key[]?
-  public final Iced pojo() {
-    Iced pojo = _pojo;          // Read once!
-    if( pojo != null ) return pojo;
+  public <T extends Iced> T get() {
+    Iced pojo = (Iced)_pojo;    // Read once!
+    if( pojo != null ) return (T)pojo;
     pojo = TypeMap.newInstance(_type);
     pojo.read(new AutoBuffer(memOrLoad()));
-    return (_pojo = pojo);
+    return (T)(_pojo = pojo);
   }
-  // For when the type is known ahead of time
-  public <T extends Iced> T get(Class<T> t) { return (T)pojo(); }
+  //public <T> T get(Class<T> fc) {
+  //  T pojo = _pojo;             // Read once!
+  //  if( pojo != null ) return (T)pojo;
+  //  pojo = TypeMap.newInstance(_type);
+  //  pojo.read(new AutoBuffer(memOrLoad()));
+  //  return (T)(_pojo = pojo);
+  //}
 
   // ---
   // Time of last access to this value.
@@ -223,24 +239,29 @@ public class Value implements ForkJoinPool.ManagedBlocker {
   // For ValueArrays, the length of all chunks.
   public long length() {
     if(!isArray()) return _max;
-    return ((ValueArray)pojo()).length();
+    return ((ValueArray)get()).length();
   }
 
   /** Creates a Stream for reading bytes */
   public InputStream openStream() throws IOException {
-    if( !isArray() ) return new ByteArrayInputStream(memOrLoad());
-    return ((ValueArray)pojo()).openStream();
+    if( isArray() ) return ((ValueArray)get()).openStream();
+    assert _type==TypeMap.PRIM_B;
+    return new ByteArrayInputStream(memOrLoad());
   }
 
-  // Expand a KEY_OF_KEYS into an array of keys
-  public Key[] flatten() {
-    assert _key._kb[0] == Key.KEY_OF_KEYS;
-    return new AutoBuffer(memOrLoad()).getA(Key.class);
+  // Heuristic to guess if this is unparsed CSV text or not
+  public boolean isHex() {
+    if( !isArray() ) return false;
+    ValueArray va = get();
+    if( va._cols == null || va._cols.length == 0 ) return false;
+    if( va._cols.length > 1 ) return true;
+    if( va._cols[0]._size != 1 ) return true;
+    return _key.toString().endsWith(".hex");
   }
 
   // --------------------------------------------------------------------------
   // Set just the initial fields
-  public Value(Key k, byte be, int max, byte[] mem, short type ) {
+  public Value(Key k, int max, byte[] mem, short type, byte be ) {
     assert mem==null || mem.length==max;
     assert max < MAX : "Value size=0x"+Integer.toHexString(max);
     _key = k;
@@ -253,13 +274,17 @@ public class Value implements ForkJoinPool.ManagedBlocker {
     // passed-in persist bits
     byte p = (byte)(be&BACKEND_MASK);
     _persist = (p==ICE) ? p : be;
+    _replicas = new AtomicLong(0);
   }
-  public Value(Key k, byte[] mem ) { this(k, ICE, mem.length, mem, TypeMap.PRIM_B); }
-  public Value(Key k,          int max ) { this(k, ICE, max, null, TypeMap.PRIM_B); }
-  public Value(Key k, byte be, int max ) { this(k,  be, max, null, TypeMap.PRIM_B); }
-  public Value(Key k, byte be, Iced pojo ) {
+  public Value(Key k, byte[] mem ) { this(k, mem.length, mem, TypeMap.PRIM_B, ICE); }
+  public Value(Key k, int max ) { this(k, max, new byte[max], TypeMap.PRIM_B, ICE); }
+  public Value(Key k, int max, byte be ) { this(k, max, null, TypeMap.PRIM_B,  be); }
+  public Value(Key k, String s ) { this(k, s.getBytes()); }
+  public Value(Key k, Iced pojo ) { this(k,pojo,ICE); }
+  public Value(Key k, Iced pojo, byte be ) {
     _key = k;
     _pojo = pojo;
+    _type = (short)pojo.frozenType();
     _mem = pojo.write(new AutoBuffer()).buf();
     _max = _mem.length;
     // For the ICE backend, assume new values are not-yet-written.
@@ -267,13 +292,27 @@ public class Value implements ForkJoinPool.ManagedBlocker {
     // passed-in persist bits
     byte p = (byte)(be&BACKEND_MASK);
     _persist = (p==ICE) ? p : be;
+    _replicas = new AtomicLong(0);
   }
-
+  public Value(Key k, Freezable pojo) {
+    _key = k;
+    _pojo = pojo;
+    _type = (short)pojo.frozenType();
+    _mem = pojo.write(new AutoBuffer()).buf();
+    _max = _mem.length;
+    _persist = ICE;
+    _replicas = new AtomicLong(0);
+  }
+  // Nullary constructor for weaving
+  public Value() {
+    _replicas = new AtomicLong(0);
+  }
 
   // Custom serializers: the _mem field is racily cleared by the MemoryManager
   // and the normal serializer then might ship over a null instead of the
   // intended byte[].  Also, the value is NOT on the deserialize'd machines disk
   public AutoBuffer write(AutoBuffer bb) {
+    touch();
     byte p = _persist;
     if( onICE() ) p &= ~ON_dsk; // Not on the remote disk
     return bb.put1(p).put2(_type).putA1(memOrLoad());
@@ -375,7 +414,7 @@ public class Value implements ForkJoinPool.ManagedBlocker {
   //
   // Note that this sequence involves a lot of blocking on the writes, but not
   // the readers - i.e., writes are slow to complete.
-  private transient final AtomicLong _replicas = new AtomicLong(0);
+  private transient final AtomicLong _replicas;
   public int numReplicas() {
     long r = _replicas.get();
     int c = 0;

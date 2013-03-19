@@ -131,7 +131,7 @@ public final class DParseTask extends MRTask {
       byte[] bits2 = MemoryManager.malloc1(len);
       if( val1 != null ) System.arraycopy(val1.memOrLoad(),0,bits2,0,val1._max);
       System.arraycopy(mem,0,bits2,_dst_off,mem.length);
-      return new Value(val1._key,bits2);
+      return new Value(_key,bits2);
     }
 
     @Override public void onSuccess(){
@@ -281,7 +281,7 @@ public final class DParseTask extends MRTask {
         this._sep = setup._separator;
         // if parsing value array, initialize the nrows array
         if( _sourceDataset.isArray() ) {
-          ValueArray ary = _sourceDataset.get(ValueArray.class);
+          ValueArray ary = _sourceDataset.get();
           _nrows = new int[(int)ary.chunks()];
         }
         // launch the distributed parser on its chunks.

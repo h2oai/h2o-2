@@ -24,7 +24,7 @@ public class KMeansTest extends TestUtil {
 
       KMeans.RAND_SEED = 8683452581122892189L;
       KMeans.run(target, va, 2, 1e-6, 0);
-      KMeans.KMeansModel res = UKV.get(target, new KMeans.KMeansModel());
+      KMeans.KMeansModel res = UKV.get(target);
       double[][] clusters = res.clusters();
 
       Assert.assertEquals(1.125, clusters[0][0], 0.000001);

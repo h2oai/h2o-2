@@ -70,7 +70,7 @@ public abstract class PersistNFS {
       f.mkdirs();
       FileOutputStream s = new FileOutputStream(f);
       try {
-        byte[] m = v.mem();
+        byte[] m = v.memOrLoad();
         assert (m == null || m.length == v._max); // Assert not saving partial files
         if( m!=null )
           s.write(m);
@@ -91,7 +91,7 @@ public abstract class PersistNFS {
     // the last chunk can be fat, so it got packed into the earlier chunk
     if( rem < ValueArray.CHUNK_SZ && off > 0 ) return null;
     int sz = (rem >= ValueArray.CHUNK_SZ*2) ? (int)ValueArray.CHUNK_SZ : (int)rem;
-    Value val = new Value(key,Value.NFS,sz);
+    Value val = new Value(key,sz,Value.NFS);
     val.setdsk(); // But its already on disk.
     return val;
   }

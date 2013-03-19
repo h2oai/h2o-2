@@ -905,7 +905,7 @@ public final class H2O {
           Key key = (Key )ok;
           if( !(ov instanceof Value) ) continue; // Ignore tombstones and Primes and null's
           Value val = (Value)ov;
-          byte[] m = val.mem();
+          byte[] m = val.rawMem();
           if( m == null ) continue; // Nothing to throw out
 
           // ValueArrays covering large files in global filesystems such as NFS
@@ -1008,7 +1008,7 @@ public final class H2O {
           if( !(ok instanceof Key ) ) continue; // Ignore tombstones and Primes and null's
           if( !(ov instanceof Value) ) continue; // Ignore tombstones and Primes and null's
           Value val = (Value)ov;
-          byte[] m = val.mem();
+          byte[] m = val.rawMem();
           if( m == null ) continue;
           if( val.isArray() &&
               (val._persist & Value.BACKEND_MASK)!=Value.ICE )

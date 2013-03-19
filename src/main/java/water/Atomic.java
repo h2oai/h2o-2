@@ -13,9 +13,11 @@ public abstract class Atomic extends DTask {
   public Key _key;              // Transaction key
 
   // User's function to be run atomically.  The Key's Value is fetched from the
-  // home STORE, and the bits are passed in.  The returned bits are atomically
-  // installed as the new Value (the function is retried until it runs
-  // atomically).  The original bits are supposed to be read-only.
+  // home STORE and passed in.  The returned Value is atomically installed as
+  // the new Value (and the function is retried until it runs atomically).  The
+  // original Value is supposed to be read-only.  If the original Key misses
+  // (no Value), one is created with 0 length and wrong Value._type to allow
+  // the Key to passed in (as part of the Value) 
   abstract public Value atomic( Value val );
 
   /** Executed on the transaction key's <em>home</em> node after any successful
@@ -65,7 +67,7 @@ public abstract class Atomic extends DTask {
       }
       val1 = res;               // Otherwise try again with the current value
     }                           // and retry
-    _key = null;                // No need for key no more
+    _key = null;                // No need for key no more, don't send it back
     tryComplete();              // Tell F/J this task is done
   }
 

@@ -226,7 +226,7 @@ public abstract class PersistIce {
         e.printStackTrace();
       }
       try {
-        byte[] m = v.mem(); // we are not single threaded anymore
+        byte[] m = v.memOrLoad(); // we are not single threaded anymore
         assert m != null && m.length == v._max; // Assert not saving partial files
         s.write(m);
         v.setdsk();             // Set as write-complete to disk

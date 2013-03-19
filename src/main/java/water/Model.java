@@ -36,7 +36,7 @@ public abstract class Model extends Iced {
   public Model( Key key, int cols[], Key dataKey ) {
     _selfKey = key;
     _dataKey = dataKey;
-    _va = trimCols(DKV.get(dataKey).get(ValueArray.class),cols);
+    _va = trimCols((ValueArray)DKV.get(dataKey).get(),cols);
   }
   /** Default artificial model, built from given column names.  */
   public Model( Key key, String[] colNames, String[] classNames ) {

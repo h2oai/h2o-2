@@ -115,7 +115,7 @@ public class VABuilder {
   public VABuilder createAndStore(Key k) {
     ValueArray v = create(k);
     Futures fs = new Futures();
-    DKV.put(k, v.value(), fs);
+    DKV.put(k, v, fs);
     fs.blockForPending();
     return this;
   }

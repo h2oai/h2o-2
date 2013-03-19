@@ -118,7 +118,8 @@ public class Weaver {
 
   private void ensureNewInstance(CtClass cc) throws NotFoundException, CannotCompileException {
     CtMethod ccms[] = cc.getDeclaredMethods();
-    if( !hasExisting("newInstance", "()Lwater/Freezable;", ccms) ) {
+    if( !javassist.Modifier.isAbstract(cc.getModifiers()) &&
+        !hasExisting("newInstance", "()Lwater/Freezable;", ccms) ) {
       cc.addMethod(CtNewMethod.make(
           "public water.Freezable newInstance() {\n" +
           "    return new " +cc.getName()+"();\n" +
@@ -128,7 +129,8 @@ public class Weaver {
 
   private void ensureType(CtClass cc) throws NotFoundException, CannotCompileException {
     CtMethod ccms[] = cc.getDeclaredMethods();
-    if( !hasExisting("frozenType", "()I", ccms) && (cc.getModifiers() & Modifier.ABSTRACT) == 0 ) {
+    if( !javassist.Modifier.isAbstract(cc.getModifiers()) &&
+        !hasExisting("frozenType", "()I", ccms) ) {
       cc.addMethod(CtNewMethod.make(
           "public int frozenType() {" +
           "  return " + TypeMap.onLoad(cc.getName()) + ";" +

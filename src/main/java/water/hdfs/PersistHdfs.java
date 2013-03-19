@@ -67,11 +67,10 @@ public abstract class PersistHdfs {
             byte [] mem = MemoryManager.malloc1(sz);
             s.readFully(mem);
             // Convert to a ValueArray (hope it fits in 1Meg!)
-            ValueArray ary = new ValueArray(k,size,Value.HDFS).read(new AutoBuffer(mem));
-            ary._persist = Value.HDFS|Value.ON_dsk;
-            val = ary.value();
+            ValueArray ary = new ValueArray(k,0).read(new AutoBuffer(mem));
+            val = new Value(k,ary,Value.HDFS);
           } else if( size >= 2*ValueArray.CHUNK_SZ ) {
-            val = new ValueArray(k,size,Value.HDFS).value(); // ValueArray byte wrapper over a large file
+            val = new Value(k,new ValueArray(k,size),Value.HDFS); // ValueArray byte wrapper over a large file
           } else {
             val = new Value(k,(int)size,Value.HDFS); // Plain Value
           }

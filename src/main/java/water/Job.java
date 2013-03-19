@@ -6,7 +6,17 @@ import java.util.UUID;
 import water.api.Constants;
 
 public class Job extends Iced {
+  // Global LIST of Jobs key.
   static final Key LIST = Key.make(Constants.BUILT_IN_KEY_JOBS, (byte) 0, Key.BUILT_IN_KEY);
+
+  // Per-job fields
+  public final Key    _self; // Boolean read-only value; exists==>running, not-exists==>canceled/removed
+  public final Key    _dest; // Key holding final value after job is removed
+  public final String _description;
+  public final long   _startTime;
+
+  public Key self() { return _self; }
+  public Key dest() { return _dest; }
 
   public interface Progress {
     float progress();
@@ -17,17 +27,12 @@ public class Job extends Iced {
     public Fail(String message) { _message = message; }
   }
 
-  private Key    _self;
-  private Key    _dest;
-  private String _description;
-  private long   _startTime;
-
   static final class List extends Iced {
     Job[] _jobs = new Job[0];
   }
 
   public static Job[] all() {
-    List list = UKV.get(LIST,List.class);
+    List list = UKV.get(LIST);
     return list != null ? list._jobs : new Job[0];
   }
 
@@ -42,8 +47,7 @@ public class Job extends Iced {
   public void start() {
     DKV.put(_self, new Value(_self, new byte[0]));
     new TAtomic<List>() {
-      @Override
-      public List atomic(List old) {
+      @Override public List atomic(List old) {
         if( old == null ) old = new List();
         Job[] jobs = old._jobs;
         old._jobs = Arrays.copyOf(jobs,jobs.length+1);
@@ -53,36 +57,19 @@ public class Job extends Iced {
     }.fork(LIST);
   }
 
-  public Job() {
-  }
-
-  public Key self() {
-    return _self;
-  }
-
-  public Key dest() {
-    return _dest;
-  }
-
-  public String description() {
-    return _description;
-  }
-
-  public long startTime() {
-    return _startTime;
-  }
-
   // Overriden for Parse
   public float progress() {
-    Job.Progress dest = (Job.Progress) UKV.get(dest());
+    Job.Progress dest = UKV.get(_dest);
     return dest != null ? dest.progress() : 0;
   }
 
+  // Block until the Job finishes.  
+  // NOT F/J FRIENDLY, EATS THE THREAD until job completes.  Only use for web threads.
   public <T> T get() {
     // TODO through notifications?
     while( DKV.get(_self) != null ) {
       try {
-        Thread.sleep(1);
+        Thread.sleep(10);
       } catch( InterruptedException e ) {
         throw new RuntimeException(e);
       }
@@ -90,19 +77,13 @@ public class Job extends Iced {
     return (T) UKV.get(_dest);
   }
 
-  public void cancel() {
-    cancel(_self);
-  }
-
+  public void cancel() { cancel(_self); }
   public static void cancel(Key self) {
     DKV.remove(self);
     DKV.write_barrier();
   }
 
-  public boolean cancelled() {
-    return cancelled(_self);
-  }
-
+  public boolean cancelled() { return cancelled(_self); }
   public static boolean cancelled(Key self) {
     return DKV.get(self) == null;
   }
@@ -110,8 +91,7 @@ public class Job extends Iced {
   public void remove() {
     DKV.remove(_self);
     new TAtomic<List>() {
-      @Override
-      public List atomic(List old) {
+      @Override public List atomic(List old) {
         if( old == null ) return null;
         Job[] jobs = old._jobs;
         int i;

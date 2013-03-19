@@ -18,7 +18,7 @@ public class ExportS3Progress extends Request {
   @Override
   protected Response serve() {
     Value v = _dest.value();
-    MultipartUpload.Progress progress = v.get(MultipartUpload.Progress.class);
+    MultipartUpload.Progress progress = v.get();
     JsonObject response = new JsonObject();
     response.addProperty(RequestStatics.DEST_KEY, v._key.toString());
     Response r;

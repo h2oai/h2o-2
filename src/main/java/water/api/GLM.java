@@ -272,7 +272,7 @@ public class GLM extends Request {
       long xtime = 0;
       for( GLMValidation v : m._vals ) {
         if(v._modelKeys != null)for( Key k : v._modelKeys) {
-          GLMModel m2 = UKV.get(k, GLMModel.class);
+          GLMModel m2 = UKV.get(k);
           xtime += m2._time;
           ++count;
         }

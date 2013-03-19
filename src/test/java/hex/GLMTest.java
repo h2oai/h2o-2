@@ -289,7 +289,7 @@ public class GLMTest extends TestUtil {
       k2 = Exec.exec("colSwap(h.hex,2,h.hex$cylinders==3?1:0)","h2.hex");
       // Columns for displacement, power, weight, 0-60, year, then response is cylinders
       int[] cols= new int[]{3,4,5,6,7,2};
-      ValueArray va = ValueArray.value(DKV.get(k2));
+      ValueArray va = DKV.get(k2).get();
       // Compute the coefficients
       LSMSolver lsmsx = new ADMMSolver(0,0.0);
       JsonObject glm = computeGLM( Family.binomial, lsmsx, va, false, cols );
@@ -332,7 +332,7 @@ public class GLMTest extends TestUtil {
   // with every iteration until we hit Infinities.
   @Test public void testConverge() {
     Key k1= loadAndParseKey("m.hex","smalldata/logreg/make_me_converge_10000x5.csv");
-    ValueArray va = ValueArray.value(DKV.get(k1));
+    ValueArray va = DKV.get(k1).get();
     // Compute the coefficients
     LSMSolver lsmsx = new ADMMSolver(1e-5, 0.5);
     JsonObject glm = computeGLMlog( lsmsx, va, false );

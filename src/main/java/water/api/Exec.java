@@ -14,7 +14,7 @@ public class Exec extends Request {
     String s = _exec.value();
     try {
       Key k = water.exec.Exec.exec(s, _dest.value());
-      ValueArray va = DKV.get(k).get(ValueArray.class);
+      ValueArray va = DKV.get(k).get();
       Response r = new Inspect(k).serveValueArray(va);
       if( _safe.value() ) r.escapeIllegalJsonElements();
       return r;

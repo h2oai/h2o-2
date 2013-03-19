@@ -25,7 +25,7 @@ public class InternalInterface implements water.ExternalInterface {
     if (v == null)
       throw new IllegalArgumentException("Key "+sk+" not found!");
     try {
-      return scoreModel(v.get(Model.class),colNames,row);
+      return scoreModel(v.get(),colNames,row);
     } catch(Throwable t) {
       throw new IllegalArgumentException("Key "+sk+" is not a Model key");
     }

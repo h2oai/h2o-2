@@ -11,8 +11,8 @@ public abstract class TAtomic<T extends Iced> extends Atomic {
   public abstract T atomic(T old);
 
   @Override public Value atomic(Value val) {
-    T old = val == null ? null : (T)val.pojo();
+    T old = val == null ? null : (T)val.get();
     T nnn = atomic(old);
-    return  nnn == null ? null : new Value(val._key,Value.ICE,nnn);
+    return  nnn == null ? null : new Value(_key,nnn);
   }
 }

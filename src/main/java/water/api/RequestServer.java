@@ -78,7 +78,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new RemoveAck());
     registerRequest(new RFView());
     registerRequest(new RFTreeView());
-    registerRequest(new TypeaheadKeysRequest("Existing H2O Key", ""));
+    registerRequest(new TypeaheadKeysRequest("Existing H2O Key", "", null));
     registerRequest(new TypeaheadHexKeyRequest());
     registerRequest(new TypeaheadFileRequest());
     registerRequest(new TypeaheadS3BucketRequest());

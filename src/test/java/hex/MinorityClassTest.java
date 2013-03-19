@@ -23,7 +23,7 @@ public class MinorityClassTest extends TestUtil {
 
   @Test public void testHistogram(){
     Key key = loadAndParseKey("poker.hex","smalldata/poker/poker-hand-testing.data");
-    ValueArray data = ValueArray.value(key);
+    ValueArray data = DKV.get(key).get();
     int [] h = MinorityClasses.globalHistogram(MinorityClasses.histogram(data, _classIdx));
     assertTrue(Arrays.equals(expectedHist, h));
     UKV.remove(key);
@@ -31,7 +31,7 @@ public class MinorityClassTest extends TestUtil {
 
   @Test public void testExtraction(){
     Key key = loadAndParseKey("poker.hex","smalldata/poker/poker-hand-testing.data");
-    ValueArray data = ValueArray.value(key);
+    ValueArray data = DKV.get(key).get();
     UnbalancedClass [] uClasses = MinorityClasses.extractUnbalancedClasses(data, 10, new int [] {0,9});
     assertTrue(uClasses.length == 2);
     assertTrue(uClasses[0]._chunks.length == 6);

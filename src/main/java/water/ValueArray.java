@@ -195,7 +195,7 @@ public class ValueArray extends Iced implements Cloneable {
   // Get a usable pile-o-bits
   public AutoBuffer getChunk( long chknum ) { return getChunk(getChunkKey(chknum)); }
   public AutoBuffer getChunk( Key key ) {
-    byte[] b = DKV.get(key).memOrLoad();
+    byte[] b = DKV.get(key).getBytes();
     assert b.length == rpc(getChunkIndex(key))*_rowsize : "actual="+b.length+" expected="+rpc(getChunkIndex(key))*_rowsize;
     return new AutoBuffer(b);
   }
@@ -307,22 +307,19 @@ public class ValueArray extends Iced implements Cloneable {
   // Read a (possibly VERY large file) and put it in the K/V store and return a
   // Value for it. Files larger than 2Meg are broken into arraylets of 1Meg each.
   static public Key readPut(String keyname, InputStream is) throws IOException {
-    Key key = Key.make(keyname);
-    readPut(key, is);
-    return key;
+    return readPut(Key.make(keyname), is);
   }
 
-  static public void readPut(Key k, InputStream is) throws IOException {
-    readPut(k, is, null);
+  static public Key readPut(Key k, InputStream is) throws IOException {
+    return readPut(k, is, null);
   }
 
-  static public void readPut(Key k, InputStream is, Job job) throws IOException {
-    Futures fs = new Futures();
-    readPut(k,is,job,fs);
-    fs.blockForPending();
+  static public Key readPut(Key k, InputStream is, Job job) throws IOException {
+    readPut(k,is,job,new Futures()).blockForPending();
+    return k;
   }
 
-  static private void readPut(Key key, InputStream is, Job job, Futures fs) throws IOException {
+  static private Futures readPut(Key key, InputStream is, Job job, Futures fs) throws IOException {
     UKV.remove(key);
     byte[] oldbuf, buf = null;
     int off = 0, sz = 0;
@@ -351,10 +348,10 @@ public class ValueArray extends Iced implements Cloneable {
       DKV.put(ckey,new Value(ckey,newbuf),fs); // Overwrite the old too-small Value
     } else {
       Key ckey = getChunkKey(cidx,key);
-      DKV.put(ckey,new Value(ckey,buf),fs);
+      DKV.put(ckey,new Value(ckey,Arrays.copyOf(buf,off)),fs);
     }
     UKV.put(key,new ValueArray(key,szl),fs);
-    return;
+    return fs;
   }
 
   // Wrap a InputStream over this ValueArray

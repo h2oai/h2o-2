@@ -38,10 +38,6 @@ public class GLMGrid extends Job {
     _glmp.checkResponseCol(_ary._cols[xs[xs.length-1]]);
   }
 
-  public GLMGrid() {
-  }
-
-
   private class GridTask extends H2OCountedCompleter {
     final int _aidx;
     GridTask(int aidx) { _aidx = aidx; }
@@ -55,7 +51,7 @@ public class GLMGrid extends Job {
           if(cancelled())
             break;
           m = do_task(m,_lambdas.length-l1,_aidx); // Do a step; get a model
-          update(dest(), m, (_lambdas.length-l1) * _alphas.length + _aidx, System.currentTimeMillis() - startTime(),fs);
+          update(dest(), m, (_lambdas.length-l1) * _alphas.length + _aidx, System.currentTimeMillis() - _startTime,fs);
         }
       fs.blockForPending();
       }finally {
@@ -150,8 +146,8 @@ public class GLMGrid extends Job {
             return 1; // drive the nulls to the end
           if( v2 == null )
             return -1;
-          GLMModel m1 = v1.get(GLMModel.class);
-          GLMModel m2 = v2.get(GLMModel.class);
+          GLMModel m1 = v1.get();
+          GLMModel m2 = v2.get();
           if( m1._glmParams._family == Family.binomial ) {
             double cval1 = m1._vals[0].AUC(), cval2 = m2._vals[0].AUC();
             if( cval1 == cval2 ) {
@@ -196,7 +192,7 @@ public class GLMGrid extends Job {
 
             @Override
             public GLMModel next() {
-              return DKV.get(keys[_idx++]).get(GLMModel.class);
+              return DKV.get(keys[_idx++]).get();
             }
 
             @Override
