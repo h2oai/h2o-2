@@ -81,7 +81,7 @@ class test_GLM_prob_cols_4(unittest.TestCase):
         tryList = [
             (7919,  53, 'cA', 600),
             # translated to enums, 4 per col, so don't go above 2k effective cols or too slow!
-            (2659,  513, 'cB', 600),
+            (2659,  400, 'cB', 600),
             ]
 
         ### h2b.browseTheCloud()
