@@ -7,6 +7,7 @@ import hex.DGLM.GLMParams;
 import hex.DLSM.ADMMSolver;
 import hex.DLSM.GeneralizedGradientSolver;
 import hex.DLSM.LSMSolver;
+import hex.NewRowVecTask.DataFrame;
 
 import java.util.Random;
 
@@ -85,6 +86,53 @@ public class GLMTest extends TestUtil {
 //      UKV.remove(datakey2);
     }
   }
+
+
+  /**
+   * Test H2O gets the same results as R.
+   */
+  @Test public void testOnData(){
+    Key k = loadAndParseKey("h.hex","smalldata/glm_test/poisson_tst1.csv");
+    ValueArray ary = ValueArray.value(k);
+    // Test poisson
+    DataFrame data = DGLM.getData(ary, new int[]{2, 3},1, null, true);
+    GLMModel m1 = DGLM.buildModel(data, new ADMMSolver(0,0), new GLMParams(Family.poisson));
+    GLMModel m2 = DGLM.buildModel(data, new GeneralizedGradientSolver(0,0), new GLMParams(Family.poisson));
+    JsonObject j1 = m1.toJson();
+    JsonObject j2 = m2.toJson();
+    JsonObject coefs1 = j1.get("coefficients").getAsJsonObject();
+    JsonObject coefs2 = j2.get("coefficients").getAsJsonObject();
+    assertEquals( -4.1627, coefs1.get("Intercept").getAsDouble(), 0.001);
+    assertEquals( -4.1627, coefs2.get("Intercept").getAsDouble(), 0.001);
+    assertEquals( -1.08386, coefs1.get("prog.General").getAsDouble(), 0.001);
+    assertEquals( -1.08386, coefs2.get("prog.General").getAsDouble(), 0.001);
+    assertEquals( -0.71405 , coefs1.get("prog.Vocational").getAsDouble(), 0.001);
+    assertEquals( -0.71405 , coefs2.get("prog.Vocational").getAsDouble(), 0.001);
+    assertEquals( 0.07015 , coefs1.get("math").getAsDouble(), 0.001);
+    assertEquals( 0.07015 , coefs2.get("math").getAsDouble(), 0.001);
+    UKV.remove(Key.make(j1.get(Constants.MODEL_KEY).getAsString()));
+    UKV.remove(Key.make(j2.get(Constants.MODEL_KEY).getAsString()));
+    // Test Gamma
+    data = DGLM.getData(ary, new int[]{1,2},3, null, true);
+    m1 = DGLM.buildModel(data, new ADMMSolver(0,0), new GLMParams(Family.gamma));
+    m2 = DGLM.buildModel(data, new GeneralizedGradientSolver(0,0), new GLMParams(Family.gamma));
+    j1 = m1.toJson();
+    j2 = m2.toJson();
+    coefs1 = j1.get("coefficients").getAsJsonObject();
+    coefs2 = j2.get("coefficients").getAsJsonObject();
+    assertEquals( 0.01869, coefs1.get("Intercept").getAsDouble(), 0.001);
+    assertEquals( 0.01869, coefs2.get("Intercept").getAsDouble(), 0.001);
+    assertEquals( 0.0015022, coefs1.get("prog.General").getAsDouble(), 0.001);
+    assertEquals( 0.0015022, coefs2.get("prog.General").getAsDouble(), 0.001);
+    assertEquals( 0.0030964, coefs1.get("prog.Vocational").getAsDouble(), 0.001);
+    assertEquals( 0.0030964, coefs2.get("prog.Vocational").getAsDouble(), 0.001);
+    assertEquals( -0.0009666, coefs1.get("num_awards").getAsDouble(), 0.001);
+    assertEquals( -0.0009666, coefs2.get("num_awards").getAsDouble(), 0.001);
+    UKV.remove(Key.make(j1.get(Constants.MODEL_KEY).getAsString()));
+    UKV.remove(Key.make(j2.get(Constants.MODEL_KEY).getAsString()));
+    UKV.remove(k);
+  }
+
   @Test public void testPoissonRegression() {
     Key datakey = Key.make("datakey");
     Key datakey2 = Key.make("datakey2");
