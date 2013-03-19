@@ -4,6 +4,7 @@ import java.util.*;
 
 import water.*;
 import water.Job.Progress;
+import water.api.Constants;
 
 import com.google.gson.*;
 
@@ -52,7 +53,7 @@ public abstract class KMeans {
           ary2.add(new JsonPrimitive(d));
         ary.add(ary2);
       }
-      res.add("clusters", ary);
+      res.add(Constants.CLUSTERS, ary);
       return res;
     }
 
