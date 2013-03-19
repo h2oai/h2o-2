@@ -62,7 +62,7 @@ class Basic(unittest.TestCase):
                 x = ""
 
             print "WARNING: max_iter set to 8 for benchmark comparisons"
-            max_iter = 8
+            max_iter = 50
 
             y = "54"
 
