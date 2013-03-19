@@ -126,6 +126,7 @@ public class TypeMap {
     "water.Job$List",
     "water.Job",
     "water.Key",
+    "water.Key$Ary",
     "water.KVTest$Atomic2",
     "water.KVTest$ByteHisto",
     "water.KVTest$RemoteBitSet",

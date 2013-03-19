@@ -94,6 +94,6 @@ public abstract class UKV {
   }
   public static <T extends Freezable> T get(Key k, Class<T> C) { 
     Value v = DKV.get(k);
-    return (v == null) ? null : (T)v.get();
+    return (v == null) ? null : v.get(C);
   }
 }

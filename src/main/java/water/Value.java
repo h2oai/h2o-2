@@ -97,15 +97,17 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     if( pojo != null ) return (T)pojo;
     pojo = TypeMap.newInstance(_type);
     pojo.read(new AutoBuffer(memOrLoad()));
+    pojo.init(_key);
     return (T)(_pojo = pojo);
   }
-  //public <T> T get(Class<T> fc) {
-  //  T pojo = _pojo;             // Read once!
-  //  if( pojo != null ) return (T)pojo;
-  //  pojo = TypeMap.newInstance(_type);
-  //  pojo.read(new AutoBuffer(memOrLoad()));
-  //  return (T)(_pojo = pojo);
-  //}
+  public <T> T get(Class<T> fc) {
+    Freezable pojo = _pojo;     // Read once!
+    if( pojo != null ) return (T)pojo;
+    pojo = TypeMap.newFreezable(_type);
+    pojo.read(new AutoBuffer(memOrLoad()));
+    assert fc.isAssignableFrom(pojo.getClass());
+    return (T)(_pojo = pojo);
+  }
 
   // ---
   // Time of last access to this value.

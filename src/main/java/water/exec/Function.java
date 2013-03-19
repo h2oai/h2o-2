@@ -643,7 +643,6 @@ class MakeEnum extends Function {
 class InPlaceColSwap extends Function {
 
   static class ColSwapTask extends MRTask {
-
     final Key _resultKey;
     final Key _oldKey;
     final Key _newKey;
@@ -721,10 +720,10 @@ class InPlaceColSwap extends Function {
     int off = 0;
     for (int i = 0; i < cols.length; ++i) {
       if (oldCol == i) {
-        cols[i] = newAry._cols[newCol];
+        cols[i] = newAry._cols[newCol].clone();
         cols[i]._name = oldAry._cols[i]._name;
       } else {
-        cols[i] = oldAry._cols[i];
+        cols[i] = oldAry._cols[i].clone();
       }
       cols[i]._off = (char) off;
       off += Math.abs(cols[i]._size);

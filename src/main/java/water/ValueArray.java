@@ -78,15 +78,12 @@ public class ValueArray extends Iced implements Cloneable {
   }
 
   @Override public ValueArray clone() {
-    try {
-      return (ValueArray)super.clone();
-    } catch( CloneNotSupportedException cne ) {
-      throw H2O.unimpl();
-    }
+    try { return (ValueArray)super.clone(); }
+    catch( CloneNotSupportedException cne ) { throw H2O.unimpl(); }
   }
 
   // Init of transient fields from deserialization calls
-  private final ValueArray init( Key key ) {
+  public final ValueArray init( Key key ) {
     _key = key;
     return this;
   }
@@ -164,7 +161,7 @@ public class ValueArray extends Iced implements Cloneable {
   }
 
   // internal convience class for building structured ValueArrays
-  static public class Column extends Iced {
+  static public class Column extends Iced implements Cloneable {
     public String _name;
     // Domain of the column - all the strings which represents the column's
     // domain.  The order of the strings corresponds to numbering utilized in
@@ -190,6 +187,10 @@ public class ValueArray extends Iced implements Cloneable {
     public final boolean isScaled() { return _scale != 1; }
     /** Compute size of numeric integer domain */
     public final long    numDomainSize() { return (long) ((_max - _min)+1); }
+    @Override public Column clone() {
+      try { return (Column)super.clone(); }
+      catch( CloneNotSupportedException cne ) { throw H2O.unimpl(); }
+    }
   }
 
   // Get a usable pile-o-bits
