@@ -33,7 +33,7 @@ class Basic(unittest.TestCase):
                 parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2, timeoutSecs=20)
             # sticky ports?
             h2o.tear_down_cloud()
-            time.sleep(2)
+            time.sleep(5)
 
 if __name__ == '__main__':
     h2o.unit_main()

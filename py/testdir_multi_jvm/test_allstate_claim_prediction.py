@@ -22,23 +22,23 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_C_claim_prediction_gaussian(self):
+    def test_A_claim_prediction_gaussian(self):
         csvPathname = h2o.find_file('smalldata/allstate/claim_prediction_train_set_10000_int.csv.gz')
-        kwargs = {'family': 'gaussian', 'y': 'Claim_Amount'}
-        glm = h2o_cmd.runGLM(timeoutSecs=50, csvPathname=csvPathname, **kwargs)
+        kwargs = {'family': 'gaussian', 'y': 'Claim_Amount', 'alpha': 0, 'lambda': 0.5, 'max_iter': 15}
+        glm = h2o_cmd.runGLM(timeoutSecs=150, csvPathname=csvPathname, **kwargs)
         h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
     def test_B_claim_prediction_binomial(self):
         csvPathname = h2o.find_file('smalldata/allstate/claim_prediction_train_set_10000_int.csv.gz')
-        kwargs = {'family': 'binomial', 'y': 'Claim_Amount', 'case_mode': '>', 'case': 100}
-        glm = h2o_cmd.runGLM(timeoutSecs=50, csvPathname=csvPathname, **kwargs)
+        kwargs = {'family': 'binomial', 'y': 'Claim_Amount', 'case_mode': '>', 'case': 100, 'alpha': 0, 'lambda': 0.5, 'max_iter': 15}
+        glm = h2o_cmd.runGLM(timeoutSecs=150, csvPathname=csvPathname, **kwargs)
         h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
-    def test_A_claim_prediction_binomial(self):
+    def test_C_claim_prediction_binomial(self):
         print "nan/fail to solve if alpha=0/lambda=0. Using alpha=0/lambda=0.5"
         csvPathname = h2o.find_file('smalldata/allstate/claim_prediction_train_set_10000_int.csv.gz')
-        kwargs = {'family': 'poisson', 'y': 'Claim_Amount', 'alpha': 0, 'lambda': 0.5}
-        glm = h2o_cmd.runGLM(timeoutSecs=50, csvPathname=csvPathname, **kwargs)
+        kwargs = {'family': 'poisson', 'y': 'Claim_Amount', 'alpha': 0, 'lambda': 0.5, 'max_iter': 15}
+        glm = h2o_cmd.runGLM(timeoutSecs=150, csvPathname=csvPathname, **kwargs)
         h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
 if __name__ == '__main__':

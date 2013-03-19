@@ -29,8 +29,8 @@ class Basic(unittest.TestCase):
                 ]
         else:
             csvFilenameList = [
-                ('covtype200x.data', 1000),
-                # ('covtype20x.data', 240),
+                # ('covtype200x.data', 1000),
+                ('covtype20x.data', 240),
                 ]
 
 

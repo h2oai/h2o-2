@@ -69,7 +69,7 @@ class Basic(unittest.TestCase):
         print "\nUsing random seed:", SEED
         csvPathname = h2o.find_file('smalldata/poker/poker1000')
 
-        for trial in range(20):
+        for trial in range(10):
             # params is mutable. This is default.
             params = {'ntree': 17, 'parallel': 1}
             colX = h2o_rf.pickRandRfParams(paramDict, params)
