@@ -27,15 +27,12 @@ class Basic(unittest.TestCase):
             csvFilenameList = [
                 # 68 secs on my laptop?
                 ('covtype20x.data', 240, 'cA'),
-                ('covtype20x.data', 240, 'cB'),
-                ('covtype20x.data', 240, 'cC'),
-                ('covtype20x.data', 240, 'cD'),
                 ]
         else:
             # None is okay for key2
             csvFilenameList = [
                 ('covtype20x.data', 240,'cA'),
-                ('covtype200x.data', 1000,'cE'),
+                # ('covtype200x.data', 1000,'cE'),
                 ]
 
         # a browser window too, just because we can
