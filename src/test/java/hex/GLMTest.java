@@ -93,7 +93,7 @@ public class GLMTest extends TestUtil {
    */
   @Test public void testOnData(){
     Key k = loadAndParseKey("h.hex","smalldata/glm_test/poisson_tst1.csv");
-    ValueArray ary = ValueArray.value(k);
+    ValueArray ary = DKV.get(k).get();
     // Test poisson
     DataFrame data = DGLM.getData(ary, new int[]{2, 3},1, null, true);
     GLMModel m1 = DGLM.buildModel(data, new ADMMSolver(0,0), new GLMParams(Family.poisson));
