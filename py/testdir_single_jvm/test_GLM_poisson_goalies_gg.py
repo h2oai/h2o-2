@@ -78,7 +78,7 @@ class Basic(unittest.TestCase):
             kwargs = params.copy()
 
             # make timeout bigger with xvals
-            timeoutSecs = 120 + (kwargs['num_cross_validation_folds']*30)
+            timeoutSecs = 180 + (kwargs['num_cross_validation_folds']*30)
             # or double the 4 seconds per iteration (max_iter+1 worst case?)
             timeoutSecs = max(timeoutSecs, (8 * (kwargs['max_iter']+1)))
 
