@@ -42,7 +42,7 @@ def simpleCheckRFView(node, rfv, noprint=False, **kwargs):
     rows_skipped = cm['rows_skipped']
     cm_type = cm['type']
     if not noprint: 
-        print "classification_error:", classification_error
+        print "classification_error * 100 (pct):", classification_error * 100
         print "rows_skipped:", rows_skipped
         print "type:", cm_type
 
@@ -62,12 +62,17 @@ def simpleCheckRFView(node, rfv, noprint=False, **kwargs):
     classErrorPctList = []
     for classIndex,s in enumerate(scoresList):
         classSum = sum(s)
-        # H2O should really give me this since it's in the browser, but it doesn't
-        classRightPct = ((s[classIndex] + 0.0)/classSum) * 100
-        classErrorPct = 100 - classRightPct
-        classErrorPctList.append(classErrorPct)
-        ### print "s:", s, "classIndex:", classIndex
-        if not noprint: print "class:", classIndex, "classSum", classSum, "classErrorPct:", "%4.2f" % classErrorPct
+        if classSum == 0 :
+            # why would the number of scores for a class be 0? does RF CM have entries for non-existent classes
+            # in a range??..in any case, tolerate. (it shows up in test.py on poker100)
+            if not noprint: print "class:", classIndex, "classSum", classSum, "<- why 0?"
+        else:
+            # H2O should really give me this since it's in the browser, but it doesn't
+            classRightPct = ((s[classIndex] + 0.0)/classSum) * 100
+            classErrorPct = 100 - classRightPct
+            classErrorPctList.append(classErrorPct)
+            ### print "s:", s, "classIndex:", classIndex
+            if not noprint: print "class:", classIndex, "classSum", classSum, "classErrorPct:", "%4.2f" % classErrorPct
         totalScores += classSum
 
     # this should equal the num rows in the dataset if full scoring? (minus any NAs)

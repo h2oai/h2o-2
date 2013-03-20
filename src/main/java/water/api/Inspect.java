@@ -1,6 +1,9 @@
 package water.api;
 
+import com.google.gson.*;
+
 import hex.DGLM.GLMModel;
+import hex.GLMGrid.GLMModels;
 import hex.KMeans.KMeansModel;
 import hex.rf.RFModel;
 
@@ -15,8 +18,6 @@ import water.ValueArray.Column;
 import water.api.GLM.GLMBuilder;
 import water.parser.CsvParser;
 import water.util.Utils;
-
-import com.google.gson.*;
 
 public class Inspect extends Request {
   private static final HashMap<String, String> _displayNames = new HashMap<String, String>();
@@ -55,46 +56,42 @@ public class Inspect extends Request {
   @Override
   protected Response serve() {
     Value val = _key.value();
-    if( val.isHex() )
-      return serveValueArray(ValueArray.value(val));
-    if( !val.isArray() ) {
-      Freezable f;
-      try {
-        f = val.get();
-      } catch( Exception ex ) {
-        // data is not a Freezable, ignore until next version of types
-        f = null;
-      }
-      if( f instanceof GLMModel ) {
-        GLMModel m = (GLMModel) f;
-        JsonObject res = new JsonObject();
-        // Convert to JSON
-        res.add(GLMModel.NAME, m.toJson());
-        // Display HTML setup
-        Response r = Response.done(res);
-        r.setBuilder(""/* top-level do-it-all builder */, new GLMBuilder(m));
-        return r;
-      }
-      if( f instanceof KMeansModel ) {
-        KMeansModel m = (KMeansModel) f;
-        JsonObject res = new JsonObject();
-        // Convert to JSON
-        res.add(KMeansModel.NAME, m.toJson());
-        // Display HTML setup
-        Response r = Response.done(res);
-        r.setBuilder(KMeansModel.NAME, new KMeans.Builder(m));
-        return r;
-      }
-      if( f instanceof RFModel ) {
-        JsonObject res = new JsonObject();
-        return RFView.redirect(res, val._key);
-      }
-      if( f instanceof Job.Fail ) {
-        UKV.remove(val._key); // Not sure if this is a good place to do this
-        return Response.error(((Job.Fail) f)._message);
-      }
+    if( val.type() == TypeMap.PRIM_B )
+      return serveUnparsedValue(val);
+    Iced f = val.get();
+    if( f instanceof ValueArray )
+      return serveValueArray((ValueArray)f);
+    if( f instanceof GLMModel ) {
+      GLMModel m = (GLMModel)f;
+      JsonObject res = new JsonObject();
+      res.add(GLMModel.NAME, m.toJson());
+      Response r = Response.done(res);
+      r.setBuilder(ROOT_OBJECT, new GLMBuilder(m));
+      return r;
     }
-    return serveUnparsedValue(val);
+    if( f instanceof hex.GLMGrid.GLMModels ) {
+      JsonObject resp = new JsonObject();
+      resp.addProperty(Constants.DEST_KEY, val._key.toString());
+      return GLMGridProgress.redirect(resp,null,val._key);
+    }
+
+    if( f instanceof KMeansModel ) {
+      KMeansModel m = (KMeansModel)f;
+      JsonObject res = new JsonObject();
+      res.add(KMeansModel.NAME, m.toJson());
+      Response r = Response.done(res);
+      r.setBuilder(KMeansModel.NAME, new KMeans.Builder(m));
+      return r;
+    }
+    if( f instanceof RFModel ) {
+      JsonObject res = new JsonObject();
+      return RFView.redirect(res,val._key);
+    }
+    if( f instanceof Job.Fail ) {
+      UKV.remove(val._key);   // Not sure if this is a good place to do this
+      return Response.error(((Job.Fail)f)._message);
+    }
+    return Response.error("No idea how to display a "+f.getClass());
   }
 
   // Look at unparsed data; guess its setup

@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.Properties;
 
 import water.Key;
+import water.ValueArray;
 import water.util.RString;
 
 import com.google.gson.JsonObject;
@@ -147,6 +148,8 @@ public class GLMGrid extends Request {
   }
 
   public static String link(GLMModel m, String content) {
+    int [] colIds = m.selectedColumns();
+    if(colIds == null)return ""; // the dataset is not in H2O any more
     RString rs = new RString("<a href='GLMGrid.query?%key_param=%$key&y=%ycol&x=%xcols&caseMode=%caseMode&case=%case'>%content</a>");
     rs.replace("key_param", KEY);
     rs.replace("key", m._dataKey.toString());
@@ -154,7 +157,10 @@ public class GLMGrid extends Request {
     rs.replace("ycol",m.responseName());
     rs.replace("case",m._glmParams._caseVal);
     try {
-      rs.replace("xcols",URLEncoder.encode(m.selectedCols(),"utf8"));
+      StringBuilder sb = new StringBuilder(""+colIds[0]);
+      for(int i = 1; i < colIds.length-1; ++i)
+        sb.append(","+colIds[i]);
+      rs.replace("xcols",sb.toString());
       rs.replace("caseMode",URLEncoder.encode(m._glmParams._caseMode.toString(),"utf8"));
     } catch( UnsupportedEncodingException e ) {
       throw new RuntimeException(e);

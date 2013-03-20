@@ -1,7 +1,7 @@
 import os, json, unittest, time, shutil, sys
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd
+import h2o, h2o_cmd, h2o_hosts
 
 class glm_same_parse(unittest.TestCase):
     def tearDown(self):
@@ -10,8 +10,12 @@ class glm_same_parse(unittest.TestCase):
     
     @classmethod
     def setUpClass(cls):
-        # fails with 3
-        h2o.build_cloud(3)
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(3)
+        else:
+            h2o_hosts.build_cloud_with_hosts()
+
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud(h2o.nodes)

@@ -65,12 +65,11 @@ public abstract class PersistS3 {
       int sz = (int) Math.min(ValueArray.CHUNK_SZ, size);
       byte[] mem = MemoryManager.malloc1(sz);
       ByteStreams.readFully(is, mem);
-      ValueArray ary = new ValueArray(k, sz, Value.S3).read(new AutoBuffer(mem));
-      ary._persist = Value.S3 | Value.ON_dsk;
-      val = ary.value();
+      ValueArray ary = new ValueArray(k, sz).read(new AutoBuffer(mem));
+      val = new Value(k,ary,Value.S3);
     } else if( size >= 2 * ValueArray.CHUNK_SZ ) {
       // ValueArray byte wrapper over a large file
-      val = new ValueArray(k, size, Value.S3).value();
+      val = new Value(k,new ValueArray(k, size),Value.S3);
     } else {
       val = new Value(k, (int) size, Value.S3); // Plain Value
     }

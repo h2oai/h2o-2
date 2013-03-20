@@ -1,11 +1,11 @@
 package water.parser;
 
 import static org.junit.Assert.assertEquals;
+import hex.rf.RFModel;
 import java.io.File;
 import java.io.FileInputStream;
 import org.junit.*;
 import water.*;
-import water.RReader.RModel;
 
 public class RReaderTest extends TestUtil {
   @BeforeClass
@@ -16,12 +16,12 @@ public class RReaderTest extends TestUtil {
   @Test
   public void testIrisModel() throws Exception {
     Key irisk = TestUtil.loadAndParseKey("iris.hex","smalldata/iris/iris2.csv");
-    ValueArray iris = ValueArray.value(DKV.get(irisk));
+    ValueArray iris = DKV.get(irisk).get();
 
     File file = TestUtil.find_test_file("smalldata/test/rmodels/iris_x-iris-1-4_y-species_ntree-500.rdata");
     Key key = Key.make("irisModel");
     RReader.run(key, new FileInputStream(file));
-    RModel model = UKV.get(key, new RModel());
+    RFModel model = UKV.get(key);
     int[] map = model.columnMapping(iris.colNames());
     Assert.assertTrue(Model.isCompatible(map));
 
@@ -41,12 +41,12 @@ public class RReaderTest extends TestUtil {
   @Test
   public void testProstateModel() throws Exception {
     Key prok = TestUtil.loadAndParseKey("prostate.hex","smalldata/logreg/prostate.csv");
-    ValueArray pro = ValueArray.value(DKV.get(prok));
+    ValueArray pro = DKV.get(prok).get();
 
     File file = TestUtil.find_test_file("smalldata/test/rmodels/prostate-rf-10tree-asFactorCapsule.rdata");
     Key key = Key.make("prostateModel");
     RReader.run(key, new FileInputStream(file));
-    RModel model = UKV.get(key, new RModel());
+    RFModel model = UKV.get(key);
     int[] map = model.columnMapping(pro.colNames());
     final int classCol = 1;     // Response column is known to be column #1, CAPSULE
     map[map.length-1] = classCol;
@@ -70,12 +70,12 @@ public class RReaderTest extends TestUtil {
   /*@Test*/
   public void testCovtypeModel() throws Exception {
     Key prok = TestUtil.loadAndParseKey("covtype.hex","smalldata/covtype/covtype.20k.data");
-    ValueArray pro = ValueArray.value(DKV.get(prok));
+    ValueArray pro = DKV.get(prok).get();
 
     File file = TestUtil.find_test_file("smalldata/test/rmodels/covtype-rf-50tree-as-factor-X5.rdata");
     Key key = Key.make("covtypeModel");
     RReader.run(key, new FileInputStream(file));
-    RModel model = UKV.get(key, new RModel());
+    RFModel model = UKV.get(key);
     int[] map = new int[pro._cols.length];
     for( int i=0; i<map.length; i++ ) map[i] = i;
     final int classCol = map.length-1;     // Response column is known to be last column

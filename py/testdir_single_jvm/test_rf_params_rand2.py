@@ -58,7 +58,7 @@ class Basic(unittest.TestCase):
         random.seed(SEED)
         print "\nUsing random seed:", SEED
         csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
-        for trial in range(20):
+        for trial in range(10):
             # params is mutable. This is default.
             params = {'ntree': 13, 'parallel': 1, 'features': 7}
             colX = h2o_rf.pickRandRfParams(paramDict, params)

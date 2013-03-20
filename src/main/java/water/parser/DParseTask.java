@@ -121,18 +121,17 @@ public final class DParseTask extends MRTask {
   public static class AtomicUnion extends Atomic {
     byte [] _bits;
     int _dst_off;
-    public AtomicUnion() {}
     public AtomicUnion(byte[] buf, int dstOff){
       _dst_off = dstOff;
       _bits = buf;
     }
-    @Override public byte[] atomic( byte[] bits1 ) {
+    @Override public Value atomic( Value val1 ) {
       byte[] mem = _bits;
-      int len = Math.max(_dst_off + mem.length,bits1==null?0:bits1.length);
+      int len = Math.max(_dst_off + mem.length,val1==null?0:val1._max);
       byte[] bits2 = MemoryManager.malloc1(len);
-      if( bits1 != null ) System.arraycopy(bits1,0,bits2,0,bits1.length);
+      if( val1 != null ) System.arraycopy(val1.memOrLoad(),0,bits2,0,val1._max);
       System.arraycopy(mem,0,bits2,_dst_off,mem.length);
-      return bits2;
+      return new Value(_key,bits2);
     }
 
     @Override public void onSuccess(){
@@ -282,7 +281,7 @@ public final class DParseTask extends MRTask {
         this._sep = setup._separator;
         // if parsing value array, initialize the nrows array
         if( _sourceDataset.isArray() ) {
-          ValueArray ary = ValueArray.value(_sourceDataset);
+          ValueArray ary = _sourceDataset.get();
           _nrows = new int[(int)ary.chunks()];
         }
         // launch the distributed parser on its chunks.
@@ -412,7 +411,7 @@ public final class DParseTask extends MRTask {
     DKV.write_barrier();
     // finally make the value array header
     ValueArray ary = new ValueArray(_job.dest(), _numRows, off, cols);
-    UKV.put(_job.dest(), ary.value());
+    UKV.put(_job.dest(), ary);
   }
 
   private void createEnums() {

@@ -14,7 +14,7 @@ import java.util.Arrays;
 */
 
 
- public class ValueArray extends Iced implements Cloneable {
+public class ValueArray extends Iced implements Cloneable {
 
   public static final int LOG_CHK = 20; // Chunks are 1<<20, or 1Meg
   public static final long CHUNK_SZ = 1L << LOG_CHK;
@@ -43,31 +43,25 @@ import java.util.Arrays;
   public long[] _rpc;            // Row# for start of each chunk
   public long _numrows;      // Number of rows; the Y dimension.  Can be >>2^32
   public final int _rowsize;     // Size in bytes for an entire row
-  public byte _persist;          // Persistance in ICE, NFS, HDFS, S3, etc
 
   public ValueArray(Key key, long numrows, int rowsize, Column[] cols ) {
-    this(key,numrows,rowsize,cols,Value.ICE);
-  }
-  private ValueArray(Key key, long numrows, int rowsize, Column[] cols, byte persist ) {
     // Always some kind of rowsize.  For plain unstructured data use a single
     // byte column format.
     assert rowsize > 0;
     _numrows = numrows;
     _rowsize = rowsize;
     _cols = cols;
-    _persist = persist;
     init(key);
   }
 
   // Plain unstructured data wrapper.  Just a vast byte array
-  public ValueArray(Key key, long len, byte persist ) { this(key,len,1,new Column[]{new Column(len)},persist); }
+  public ValueArray(Key key, long len ) { this(key,len,1,new Column[]{new Column(len)}); }
 
   // Variable-sized chunks.  Pass in the number of whole rows in each chunk.
-  public ValueArray(Key key, int[] rows, int rowsize, Column[] cols, byte persist ) {
+  public ValueArray(Key key, int[] rows, int rowsize, Column[] cols ) {
     assert rowsize > 0;
     _rowsize = rowsize;
     _cols = cols;
-    _persist = persist;
     _key = key;
     // Roll-up summary the number rows in each chunk, to the starting row# per chunk.
     _rpc = new long[rows.length+1];
@@ -84,36 +78,14 @@ import java.util.Arrays;
   }
 
   @Override public ValueArray clone() {
-    try {
-      return (ValueArray)super.clone();
-    } catch( CloneNotSupportedException cne ) {
-      throw H2O.unimpl();
-    }
+    try { return (ValueArray)super.clone(); }
+    catch( CloneNotSupportedException cne ) { throw H2O.unimpl(); }
   }
 
   // Init of transient fields from deserialization calls
-  private final ValueArray init( Key key ) {
+  public final ValueArray init( Key key ) {
     _key = key;
     return this;
-  }
-
-  /** Get a Value wrapping a serialized ValueArray */
-  public Value value() {
-    return new Value(_key,write(new AutoBuffer()).buf(),_persist, Value.VALUE_ARRAY);
-  }
-  /** Deserialize wrapper from a Key */
-  public static ValueArray value(Key k) {
-    Value v = DKV.get(k);
-    assert v != null : "Missed Value for "+k;
-    return value(v);
-  }
-  /** Deserialize wrapper from a Value */
-  public static ValueArray value(Value val) {
-    assert val != null && val.isArray();
-    ValueArray ary = new ValueArray(val._key,0,Value.ICE);
-    ary.read(new AutoBuffer(val.memOrLoad()));
-    ary.init(val._key);
-    return ary;
   }
 
   /** Pretty print! */
@@ -189,7 +161,7 @@ import java.util.Arrays;
   }
 
   // internal convience class for building structured ValueArrays
-  static public class Column extends Iced {
+  static public class Column extends Iced implements Cloneable {
     public String _name;
     // Domain of the column - all the strings which represents the column's
     // domain.  The order of the strings corresponds to numbering utilized in
@@ -215,12 +187,16 @@ import java.util.Arrays;
     public final boolean isScaled() { return _scale != 1; }
     /** Compute size of numeric integer domain */
     public final long    numDomainSize() { return (long) ((_max - _min)+1); }
+    @Override public Column clone() {
+      try { return (Column)super.clone(); }
+      catch( CloneNotSupportedException cne ) { throw H2O.unimpl(); }
+    }
   }
 
   // Get a usable pile-o-bits
   public AutoBuffer getChunk( long chknum ) { return getChunk(getChunkKey(chknum)); }
   public AutoBuffer getChunk( Key key ) {
-    byte[] b = DKV.get(key).memOrLoad();
+    byte[] b = DKV.get(key).getBytes();
     assert b.length == rpc(getChunkIndex(key))*_rowsize : "actual="+b.length+" expected="+rpc(getChunkIndex(key))*_rowsize;
     return new AutoBuffer(b);
   }
@@ -332,50 +308,24 @@ import java.util.Arrays;
   // Read a (possibly VERY large file) and put it in the K/V store and return a
   // Value for it. Files larger than 2Meg are broken into arraylets of 1Meg each.
   static public Key readPut(String keyname, InputStream is) throws IOException {
-    Key key = Key.make(keyname);
-    readPut(key, is);
-    return key;
+    return readPut(Key.make(keyname), is);
   }
 
-  static public void readPut(Key k, InputStream is) throws IOException {
-    readPut(k, is, null);
+  static public Key readPut(Key k, InputStream is) throws IOException {
+    return readPut(k, is, null);
   }
 
-  static public void readPut(Key k, InputStream is, Job job) throws IOException {
-    Futures fs = new Futures();
-    readPut(k,is,job,fs);
-    fs.blockForPending();
+  static public Key readPut(Key k, InputStream is, Job job) throws IOException {
+    readPut(k,is,job,new Futures()).blockForPending();
+    return k;
   }
 
-  static private void readPut(Key key, InputStream is, Job job, Futures fs) throws IOException {
-    // try to read 2-chunks or less into the buffer
-    byte[] buf = MemoryManager.malloc1((int)(CHUNK_SZ<<1));
-    int off=0;
-    int len=buf.length;
-    int sz=0;
-    while( off<len && (sz = is.read(buf,off,len-off)) != -1 )
-      off+=sz;
-    if( off<(CHUNK_SZ<<1) ) {   // buffer is 2-chunks or less
-      assert is.read(new byte[1]) == -1;
-      // it is a single simple value
-      UKV.put(key,new Value(key,Arrays.copyOf(buf,off)),fs);
-      return;
-    }
+  static private Futures readPut(Key key, InputStream is, Job job, Futures fs) throws IOException {
     UKV.remove(key);
-
-    // Oops - read 2 chunks worth of data and still more coming.  Switch over
-    // to a ValueArray, and write out what we got as the first two of possibly
-    // many chunks.
-    Key ckey0 = getChunkKey(0,key);
-    DKV.put(ckey0,new Value(ckey0,Arrays.copyOfRange(buf,            0,(int) CHUNK_SZ    )),fs);
-    Key ckey1 = getChunkKey(1,key);
-    buf = Arrays.copyOfRange(buf,(int)CHUNK_SZ,(int)(CHUNK_SZ<<1));
-    DKV.put(ckey1,new Value(ckey1,buf),fs);
-
-    // Read the rest out
+    byte[] oldbuf, buf = null;
+    int off = 0, sz = 0;
     long szl = off;
-    long cidx = 2;
-    byte[] oldbuf;
+    long cidx = 0;
     while( true ) {
       oldbuf = buf;
       buf = MemoryManager.malloc1((int)CHUNK_SZ);
@@ -384,22 +334,25 @@ import java.util.Arrays;
         off+=sz;
       szl += off;
       if( off<CHUNK_SZ ) break;
+      if( job != null && job.cancelled() ) break;
       Key ckey = getChunkKey(cidx++,key);
       DKV.put(ckey,new Value(ckey,buf),fs);
-
-      if(job != null && job.cancelled())
-        return;
     }
-    assert is.read(new byte[1]) == -1;
+    assert is.read(new byte[1]) == -1 || job.cancelled();
 
     // Last chunk is short, read it; combine buffers and make the last chunk larger
-    Key ckey = getChunkKey(cidx-1,key); // Get last chunk written out
-    assert DKV.get(ckey).memOrLoad()==oldbuf; // Maybe false-alarms under high-memory-pressure?
-    byte[] newbuf = Arrays.copyOf(oldbuf,(int)(off+CHUNK_SZ));
-    System.arraycopy(buf,0,newbuf,(int)CHUNK_SZ,off);
-    DKV.put(ckey,new Value(ckey,newbuf),fs); // Overwrite the old too-small Value
-    UKV.put(key,new ValueArray(key,szl,Value.ICE).value(),fs);
-    return;
+    if( cidx > 0 ) {
+      Key ckey = getChunkKey(cidx-1,key); // Get last chunk written out
+      assert DKV.get(ckey).memOrLoad()==oldbuf; // Maybe false-alarms under high-memory-pressure?
+      byte[] newbuf = Arrays.copyOf(oldbuf,(int)(off+CHUNK_SZ));
+      System.arraycopy(buf,0,newbuf,(int)CHUNK_SZ,off);
+      DKV.put(ckey,new Value(ckey,newbuf),fs); // Overwrite the old too-small Value
+    } else {
+      Key ckey = getChunkKey(cidx,key);
+      DKV.put(ckey,new Value(ckey,Arrays.copyOf(buf,off)),fs);
+    }
+    UKV.put(key,new ValueArray(key,szl),fs);
+    return fs;
   }
 
   // Wrap a InputStream over this ValueArray

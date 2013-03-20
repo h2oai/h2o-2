@@ -1,5 +1,6 @@
 package water.api;
 
+import water.DKV;
 import water.Key;
 import water.ValueArray;
 
@@ -13,7 +14,7 @@ public class Exec extends Request {
     String s = _exec.value();
     try {
       Key k = water.exec.Exec.exec(s, _dest.value());
-      ValueArray va = ValueArray.value(k);
+      ValueArray va = DKV.get(k).get();
       Response r = new Inspect(k).serveValueArray(va);
       if( _safe.value() ) r.escapeIllegalJsonElements();
       return r;

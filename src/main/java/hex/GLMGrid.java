@@ -38,10 +38,6 @@ public class GLMGrid extends Job {
     _glmp.checkResponseCol(_ary._cols[xs[xs.length-1]]);
   }
 
-  public GLMGrid() {
-  }
-
-
   private class GridTask extends H2OCountedCompleter {
     final int _aidx;
     GridTask(int aidx) { _aidx = aidx; }
@@ -55,7 +51,7 @@ public class GLMGrid extends Job {
           if(cancelled())
             break;
           m = do_task(m,_lambdas.length-l1,_aidx); // Do a step; get a model
-          update(dest(), m, (_lambdas.length-l1) * _alphas.length + _aidx, System.currentTimeMillis() - startTime(),fs);
+          update(dest(), m, (_lambdas.length-l1) * _alphas.length + _aidx, System.currentTimeMillis() - _startTime,fs);
         }
       fs.blockForPending();
       }finally {
@@ -118,22 +114,13 @@ public class GLMGrid extends Job {
     // The computed GLM models: product of length of lamda1s,lambda2s,rhos,alphas
     Key[] _ms;
     int   _count;
-
     long _runTime = 0;
 
     public final long runTime(){return _runTime;}
 
-    GLMModels(int length) {
-      _ms = new Key[length];
-    }
-
-    GLMModels() {
-    }
-
-    @Override
-    public float progress() {
-      return _count / (float) _ms.length;
-    }
+    GLMModels(int length) { _ms = new Key[length]; }
+    GLMModels() { }
+    @Override public float progress() { return _count / (float) _ms.length; }
 
     public Iterable<GLMModel> sorted() {
       Arrays.sort(_ms, new Comparator<Key>() {
@@ -150,8 +137,8 @@ public class GLMGrid extends Job {
             return 1; // drive the nulls to the end
           if( v2 == null )
             return -1;
-          GLMModel m1 = v1.get(new GLMModel());
-          GLMModel m2 = v2.get(new GLMModel());
+          GLMModel m1 = v1.get();
+          GLMModel m2 = v2.get();
           if( m1._glmParams._family == Family.binomial ) {
             double cval1 = m1._vals[0].AUC(), cval2 = m2._vals[0].AUC();
             if( cval1 == cval2 ) {
@@ -183,26 +170,13 @@ public class GLMGrid extends Job {
       }
       final int N = lastIdx;
       return new Iterable<GLMModel>() {
-
         @Override
         public Iterator<GLMModel> iterator() {
           return new Iterator<GLMModel>() {
             int _idx = 0;
-
-            @Override
-            public void remove() {
-              throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public GLMModel next() {
-              return DKV.get(keys[_idx++]).get(new GLMModel());
-            }
-
-            @Override
-            public boolean hasNext() {
-              return _idx < N;
-            }
+            @Override public GLMModel next() { return DKV.get(keys[_idx++]).get(); }
+            @Override public boolean hasNext() { return _idx < N; }
+            @Override public void remove() { throw new UnsupportedOperationException(); }
           };
         }
       };
@@ -212,7 +186,6 @@ public class GLMGrid extends Job {
     public JsonObject toJson() {
       JsonObject j = new JsonObject();
       // sort models according to their performance
-
       JsonArray arr = new JsonArray();
       for( GLMModel m : sorted() )
         arr.add(m.toJson());

@@ -488,36 +488,41 @@ public final class AutoBuffer {
     put2((short) f.frozenType());
     return f.write(this);
   }
-  public AutoBuffer putA(Freezable[] fs) {
+  public AutoBuffer put(Iced f) {
+    if( f == null ) return put2(TypeMap.NULL);
+    put2((short) f.frozenType());
+    return f.write(this);
+  }
+  public AutoBuffer putA(Iced[] fs) {
     if( fs == null ) return put4(-1);
     put4(fs.length);
-    for( Freezable f : fs ) put(f);
+    for( Iced f : fs ) put(f);
     return this;
   }
-  public AutoBuffer putAA(Freezable[][] fs) {
+  public AutoBuffer putAA(Iced[][] fs) {
     if( fs == null ) return put4(-1);
     put4(fs.length);
-    for( Freezable[] f : fs ) putA(f);
+    for( Iced[] f : fs ) putA(f);
     return this;
   }
 
-  public <T extends Freezable> T get() {
-    return get(null);
-  }
   public <T extends Freezable> T get(Class<T> t) {
     short id = (short)get2();
     if( id == TypeMap.NULL ) return null;
-    Freezable f = TypeMap.newInstance(id);
-    assert t == null || t.isInstance(f) : "told to expect "+t+" but found "+f;
-    return f.read(this);
+    return TypeMap.newFreezable(id).read(this);
   }
-  public <T extends Freezable> T[] getA(Class<T> tc) {
+  public <T extends Iced> T get() {
+    short id = (short)get2();
+    if( id == TypeMap.NULL ) return null;
+    return TypeMap.newInstance(id).read(this);
+  }
+  public <T extends Iced> T[] getA(Class<T> tc) {
     int len = get4(); if( len == -1 ) return null;
     T[] ts = (T[]) Array.newInstance(tc, len);
-    for( int i = 0; i < len; ++i ) ts[i] = get(tc);
+    for( int i = 0; i < len; ++i ) ts[i] = get();
     return ts;
   }
-  public <T extends Freezable> T[][] getAA(Class<T> tc) {
+  public <T extends Iced> T[][] getAA(Class<T> tc) {
     int len = get4(); if( len == -1 ) return null;
     Class<T[]> tcA = (Class<T[]>) Array.newInstance(tc, 0).getClass();
     T[][] ts = (T[][]) Array.newInstance(tcA, len);

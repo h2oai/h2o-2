@@ -65,7 +65,7 @@ public class RBigDataTest extends TestUtil {
 
   protected void testScalarExpression(String expr, double result) {
     Key key = executeExpression(expr);
-    ValueArray va = ValueArray.value(key);
+    ValueArray va = DKV.get(key).get();
     assertEquals(va.numRows(), 1);
     assertEquals(va.numCols(), 1);
     assertEquals(result,va.datad(0,0), 0.0);
@@ -73,7 +73,7 @@ public class RBigDataTest extends TestUtil {
   }
 
   protected void testKeyValues(Key k, double n1, double n2, double n3, double nx3, double nx2, double nx1) {
-    ValueArray v = ValueArray.value(k);
+    ValueArray v = DKV.get(k).get();
     assertEquals(v.datad(0,0),n1,0.0);
     assertEquals(v.datad(1,0),n2,0.0);
     assertEquals(v.datad(2,0),n3,0.0);
@@ -89,7 +89,7 @@ public class RBigDataTest extends TestUtil {
   }
 
   public void testDataFrameStructure(Key k, int rows, int cols) {
-    ValueArray v = ValueArray.value(k);
+    ValueArray v = DKV.get(k).get();
     assertEquals(v.numRows(), rows);
     assertEquals(v.numCols(), cols);
   }

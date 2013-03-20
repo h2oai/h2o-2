@@ -29,7 +29,7 @@ public class GLMGridProgress extends Request {
 
    public static Response redirect(JsonObject resp, Key job, Key dest) {
     JsonObject redir = new JsonObject();
-    redir.addProperty(JOB, job.toString());
+    if( job != null ) redir.addProperty(JOB, job.toString());
     redir.addProperty(DEST_KEY, dest.toString());
     return Response.redirect(resp, GLMGridProgress.class, redir);
   }
@@ -37,7 +37,7 @@ public class GLMGridProgress extends Request {
   @Override
   protected Response serve() {
     Key dest = _dest.value();
-    GLMModels models = UKV.get(dest);
+    GLMModels models = (GLMModels)UKV.get(dest);
     if(models==null)
       return Response.doneEmpty();
     JsonObject response = new JsonObject();

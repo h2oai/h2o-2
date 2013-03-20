@@ -240,7 +240,7 @@ public class DLSM {
     public static final double EPS         = 1e-5;
 
     public GeneralizedGradientSolver(double lambda, double alpha) {
-      this(lambda,alpha,1e-3);
+      this(lambda,alpha,1e-5);
     }
     public GeneralizedGradientSolver(double lambda, double alpha, double betaEps) {
       super(lambda,alpha);

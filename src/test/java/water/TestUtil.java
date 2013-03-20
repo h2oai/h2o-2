@@ -92,7 +92,7 @@ public class TestUtil {
 
   public static ValueArray parse_test_key(Key fileKey, Key parsedKey) {
     ParseDataset.parse(parsedKey, DKV.get(fileKey));
-    return ValueArray.value(DKV.get(parsedKey));
+    return DKV.get(parsedKey).get();
   }
 
   public static ValueArray parse_test_key(Key fileKey) {
@@ -234,7 +234,7 @@ public class TestUtil {
       col._sigma = Math.sqrt(col._sigma / col._n);
 
     // Write out data & keys
-    DKV.put(key, ary.value());
+    DKV.put(key, ary);
     DKV.write_barrier();
     return ary;
   }

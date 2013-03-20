@@ -85,7 +85,7 @@ public class GLMGridTest extends TestUtil {
       // Load dataset
       //k1 = loadAndParseKey("h.hex","smalldata/logreg/prostate.csv"); final int class_col = 1;
       k1 = loadAndParseKey("h.hex","smalldata/hhp_107_01.data.gz"); final int class_col = 106;
-      ValueArray va = ValueArray.value(DKV.get(k1));
+      ValueArray va = DKV.get(k1).get();
       // Default normalization solver
       LSMSolver lsms = new ADMMSolver(1e-5,0.5);
       // Binomial (logistic) GLM solver

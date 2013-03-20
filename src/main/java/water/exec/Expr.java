@@ -135,7 +135,7 @@ public abstract class Expr {
   }
 
   public static ValueArray getValueArray(int pos, Key k) throws EvaluationException {
-    return ValueArray.value(k);
+    return DKV.get(k).get();
   }
 
 }

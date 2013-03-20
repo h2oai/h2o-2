@@ -28,7 +28,7 @@ public final class VAIterator implements Iterator<VAIterator> {
   private int _chunkIdx;
 
   public VAIterator(Key k, int defaultColumn, long startRow) {
-    _ary = ValueArray.value(k);
+    _ary = DKV.get(k).get();
     assert (_ary != null) : "VA for key "+k.toString()+" not found.";
     _rows = _ary.numRows();
     _rowSize = _ary.rowSize();

@@ -15,7 +15,7 @@ public class BooleanVectorFilter extends MRTask {
 
   public BooleanVectorFilter( Key dst, Key src, Key bvec, int bcol ) {
     // Source & boolean vector must be compatible lengths
-    assert ValueArray.value(DKV.get(bvec))._numrows == ValueArray.value(DKV.get(src))._numrows;
+    assert ((ValueArray)(DKV.get(bvec).get()))._numrows == ((ValueArray)(DKV.get(src).get()))._numrows;
     _dst = dst;
     _src = src;
     _bvec= bvec;
@@ -25,7 +25,7 @@ public class BooleanVectorFilter extends MRTask {
   @Override public void map(Key key) {
     long srcIdx = ValueArray.getChunkIndex(key);
     // Source metadata
-    ValueArray srcAry = ValueArray.value(DKV.get(_src));
+    ValueArray srcAry = DKV.get(_src).get();
     final int rows = srcAry.rpc(srcIdx);
     // Get the raw bits to work on
     AutoBuffer srcBits = srcAry.getChunk(key);

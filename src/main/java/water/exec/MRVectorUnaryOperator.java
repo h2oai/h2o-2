@@ -44,7 +44,7 @@ public abstract class MRVectorUnaryOperator extends MRColumnProducer {
 
   @Override
   public void map(Key key) {
-    ValueArray result = ValueArray.value(_resultKey);
+    ValueArray result = DKV.get(_resultKey).get();
     long cidx = ValueArray.getChunkIndex(key);
     long rowOffset = result.startRow(cidx);
     VAIterator opnd = new VAIterator(_key,_col, rowOffset);

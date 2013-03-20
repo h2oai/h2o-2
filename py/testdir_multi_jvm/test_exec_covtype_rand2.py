@@ -1,7 +1,7 @@
 import unittest, sys
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_browse as h2b, h2o_exec as h2e
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts
 import random, sys, time
 
 zeroList = [
@@ -38,7 +38,11 @@ class Basic(unittest.TestCase):
         random.seed(SEED)
         print "\nUsing random seed:", SEED
 
-        h2o.build_cloud(2, java_heap_GB=5)
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(2, java_heap_GB=5)
+        else:
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):

@@ -61,10 +61,9 @@ class Basic(unittest.TestCase):
             # FIX! just look at X=0:1 for speed, for now
             kwargs = {'y': 54, 'num_cross_validation_folds': 2, 'family': "binomial", 'case': 1}
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=2000, **kwargs)
+            h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
-            # different when num_cross_validation_foldsidation is used? No trainingErrorDetails?
             h2o.verboseprint("\nglm:", glm)
-
             h2b.browseJsonHistoryAsUrlLastMatch("GLM")
 
             GLMModel = glm['GLMModel']

@@ -203,7 +203,7 @@ public abstract class KMeans {
         System.out.println("sqr map " + key + ": " + this);
 
       assert key.home();
-      ValueArray va = ValueArray.value(DKV.get(_arykey));
+      ValueArray va = DKV.get(_arykey).get();
       AutoBuffer bits = va.getChunk(key);
       int rows = bits.remaining() / va._rowsize;
       double[] values = new double[_cols.length];
@@ -242,7 +242,7 @@ public abstract class KMeans {
         System.out.println("sampler map " + key + ": " + this + ", sqr: " + _sqr);
 
       assert key.home();
-      ValueArray va = ValueArray.value(DKV.get(_arykey));
+      ValueArray va = DKV.get(_arykey).get();
       AutoBuffer bits = va.getChunk(key);
       int rows = bits.remaining() / va._rowsize;
       double[] values = new double[_cols.length];
@@ -296,7 +296,7 @@ public abstract class KMeans {
         System.out.println("KMeans map " + key + ": " + this);
 
       assert key.home();
-      ValueArray va = ValueArray.value(DKV.get(_arykey));
+      ValueArray va = DKV.get(_arykey).get();
       AutoBuffer bits = va.getChunk(key);
       int rows = bits.remaining() / va._rowsize;
       double[] values = new double[_cols.length];

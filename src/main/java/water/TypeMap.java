@@ -5,11 +5,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class TypeMap {
-  static final short NULL = (short) -1;
+  static public final short NULL = (short) -1;
+  static public final short PRIM_B = 1;
+  static public final short VALUE_ARRAY;
 
   // Run main below to update TODO add as build step
   static private final String[] CLAZZES = {
-    "BAD",
+    " BAD",                     // 0: BAD
+    "[B",                       // 1: Array of Bytes
     "hex.ConfusionMatrix",
     "hex.Covariance$COV_Task",
     "hex.DGLM$GLMModel",
@@ -25,6 +28,10 @@ public class TypeMap {
     "hex.GLMGrid$2",
     "hex.GLMGrid$GLMModels",
     "hex.GLMGrid",
+    "hex.Histogram",
+    "hex.Histogram$Bins",
+    "hex.Histogram$OutlineTask",
+    "hex.Histogram$BinningTask",
     "hex.KMeans$KMeansModel",
     "hex.KMeans$Lloyds",
     "hex.KMeans$Sampler",
@@ -123,6 +130,7 @@ public class TypeMap {
     "water.Job$List",
     "water.Job",
     "water.Key",
+    "water.Key$Ary",
     "water.KVTest$Atomic2",
     "water.KVTest$ByteHisto",
     "water.KVTest$RemoteBitSet",
@@ -151,11 +159,15 @@ public class TypeMap {
   };
   static private final HashMap<String,Integer> MAP = new HashMap();
   static {
-    for( int i=0; i<CLAZZES.length; i++ )
+    int va_id = -1;
+    for( int i=0; i<CLAZZES.length; i++ ) {
       MAP.put(CLAZZES[i],i);
+      if( CLAZZES[i].equals("water.ValueArray") ) va_id = i;
+    }
+    VALUE_ARRAY = (short)va_id; // Pre-cached the type id for ValueArray
   }
 
-  static int onLoad(String className) {
+  static public int onLoad(String className) {
     Integer I = MAP.get(className);
     if(I == null)
       throw new RuntimeException("TypeMap missing " + className);
@@ -164,7 +176,15 @@ public class TypeMap {
 
   static private final Freezable[] GOLD = new Freezable[CLAZZES.length];
 
-  static public Freezable newInstance(int id) {
+  static public Iced newInstance(int id) {
+    Iced f = (Iced)GOLD[id];
+    if( f == null ) {
+      try { GOLD[id] = f = (Iced) Class.forName(CLAZZES[id]).newInstance(); }
+      catch( Exception e ) { throw new Error(e); }
+    }
+    return f.newInstance();
+  }
+  static public Freezable newFreezable(int id) {
     Freezable f = GOLD[id];
     if( f == null ) {
       try { GOLD[id] = f = (Freezable) Class.forName(CLAZZES[id]).newInstance(); }
@@ -173,7 +193,11 @@ public class TypeMap {
     return f.newInstance();
   }
 
-  //
+  static public String className(int id) { return CLAZZES[id]; }
+  static public Class clazz(int id) {
+    if( GOLD[id] == null ) newInstance(id);
+    return GOLD[id].getClass();
+  }
 
   public static void main(String[] args) {
     Log._dontDie = true; // Ignore class load error, e.g. Request
@@ -193,7 +217,7 @@ public class TypeMap {
         name = name.replace('\\', '/').replace('/', '.').replace(".class", "");
         try {
           Class c = Class.forName(name);
-          if(Freezable.class.isAssignableFrom(c))
+          if(Iced.class.isAssignableFrom(c))
             list.add(c.getName());
         } catch(Throwable _) {
           System.out.println("Skipped: " + name);

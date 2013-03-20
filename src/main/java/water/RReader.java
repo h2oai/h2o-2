@@ -72,18 +72,6 @@ public class RReader {
 
   private static final String PLUG                = "Unsupported";
 
-  public static class RModel extends RFModel {
-    public float  _progress;
-    public String _error;
-
-    public RModel(Key selfKey, String[] colNames, String[] classNames, Key[] tkeys, int features, float sample) {
-      super(selfKey, colNames, classNames, tkeys, features, sample);
-    }
-
-    public RModel() {
-    }
-  }
-
   public static void run(Key dest, InputStream stream) {
     try {
       DataInputStream in = new DataInputStream(new GZIPInputStream(stream));
@@ -112,20 +100,12 @@ public class RReader {
         Key key = Key.make();
         keys[i] = key;
         DKV.put(key, new Value(key, buffer.buf()));
-
-        if( i % 128 == 0 ) {
-          RModel model = new RModel();
-          model._progress = i / (float) num_trees;
-        }
       }
 
-      RModel model = new RModel(dest, headers, classes, keys, 1, 100.0f);
-      model._progress = 1f;
+      RFModel model = new RFModel(dest, headers, classes, keys, 1, 100.0f);
       UKV.put(dest, model);
     } catch( Exception ex ) {
-      RModel model = new RModel();
-      model._error = ex.toString();
-      UKV.put(dest, model);
+      UKV.put(dest, new Job.Fail(ex.toString()));
     }
   }
 

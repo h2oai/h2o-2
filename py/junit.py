@@ -37,6 +37,7 @@ class JUnit(unittest.TestCase):
                     '-mainClass', 'org.junit.runner.JUnitCore',
                     # The tests
                     #'hex.GLMGridTest',
+                    'hex.HistogramTest',
                     'hex.GLMTest',
                     'hex.KMeansTest',
                     'hex.MinorityClassTest',
