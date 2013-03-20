@@ -1,6 +1,9 @@
 package water.api;
 
+import com.google.gson.*;
+
 import hex.DGLM.GLMModel;
+import hex.GLMGrid.GLMModels;
 import hex.KMeans.KMeansModel;
 import hex.rf.RFModel;
 
@@ -15,8 +18,6 @@ import water.ValueArray.Column;
 import water.api.GLM.GLMBuilder;
 import water.parser.CsvParser;
 import water.util.Utils;
-
-import com.google.gson.*;
 
 public class Inspect extends Request {
   private static final HashMap<String, String> _displayNames = new HashMap<String, String>();
@@ -68,6 +69,13 @@ public class Inspect extends Request {
       r.setBuilder(""/* top-level do-it-all builder */, new GLMBuilder(m));
       return r;
     }
+    if( f instanceof hex.GLMGrid.GLMModels ) {
+      hex.GLMGrid.GLMModels m = (hex.GLMGrid.GLMModels)f;
+      JsonObject resp = new JsonObject();
+      resp.addProperty(Constants.DEST_KEY, val._key.toString());
+      return GLMGridProgress.redirect(resp,null,val._key);
+    }
+
     if( f instanceof KMeansModel ) {
       KMeansModel m = (KMeansModel)f;
       JsonObject res = new JsonObject();
