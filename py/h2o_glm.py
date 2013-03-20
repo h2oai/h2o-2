@@ -194,7 +194,7 @@ def compareToFirstGlm(self, key, glm, firstglm):
         delta = .1 * float(firstk)
         msg = "Too large a delta (" + str(delta) + ") comparing current and first for: " + key
         self.assertAlmostEqual(float(k), float(firstk), delta=delta, msg=msg)
-        self.assertGreaterEqual(float(k), 0.0, str(k) + " not >= 0.0 in current")
+        self.assertGreaterEqual(abs(float(k)), 0.0, str(k) + " abs not >= 0.0 in current")
 
 
 def simpleCheckGLMGrid(self, glmGridResult, colX=None, allowFailWarning=False, **kwargs):
