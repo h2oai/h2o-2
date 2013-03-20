@@ -938,6 +938,8 @@ class H2O(object):
             'data_key': data_key,
             'ntree':  trees,
             'model_key': 'pytest_model',
+            # new default. h2o defaults to 0, better for tracking oobe problems
+            'out_of_bag_error_estimate': 1, 
             }
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
@@ -955,7 +957,7 @@ class H2O(object):
         params_dict = {
             'data_key': data_key,
             'model_key': model_key,
-            'out_of_bag_error_estimate': None,
+            'out_of_bag_error_estimate': 1, 
             'class_weights': None,
             'response_variable': None, # FIX! apparently this is needed now?
             }

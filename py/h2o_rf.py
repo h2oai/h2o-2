@@ -42,7 +42,7 @@ def simpleCheckRFView(node, rfv, noprint=False, **kwargs):
     rows_skipped = cm['rows_skipped']
     cm_type = cm['type']
     if not noprint: 
-        print "classification_error:", classification_error
+        print "classification_error * 100 (pct):", classification_error * 100
         print "rows_skipped:", rows_skipped
         print "type:", cm_type
 
