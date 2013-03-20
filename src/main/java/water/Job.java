@@ -59,7 +59,7 @@ public class Job extends Iced {
 
   // Overriden for Parse
   public float progress() {
-    Job.Progress dest = UKV.get(_dest);
+    Job.Progress dest = (Job.Progress) UKV.get(_dest);
     return dest != null ? dest.progress() : 0;
   }
 
