@@ -1,0 +1,3 @@
+./n0.doit test_import_covtype_parse_2jvm.py
+./n0.doit test_import_covtype_parse_3jvm.py
+./n0.doit test_import_covtype_parse_4jvm.py

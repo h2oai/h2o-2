@@ -1,6 +1,6 @@
 import unittest, sys, random, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -21,14 +21,19 @@ class Basic(unittest.TestCase):
         trialMax = 2
         for tryHeap in [4,3,2,1]:
             print "\n", tryHeap,"GB heap, 2 jvms, import folder, then loop parsing 'covtype.data' to unique keys"
-            h2o.build_cloud(node_count=2, java_heap_GB=tryHeap)
+            localhost = h2o.decide_if_localhost()
+            if (localhost):
+                h2o.build_cloud(2, java_heap_GB=tryHeap)
+            else:
+                h2o_hosts.build_cloud_with_hosts(node_count=2, java_heap_GB=tryHeap)
+
             h2i.setupImportFolder(None, importFolderPath)
             for trial in range(trialMax):
                 key2 = csvFilename + "_" + str(trial) + ".hex"
                 parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2, timeoutSecs=20)
             # sticky ports?
             h2o.tear_down_cloud()
-            time.sleep(2)
+            time.sleep(5)
 
 if __name__ == '__main__':
     h2o.unit_main()

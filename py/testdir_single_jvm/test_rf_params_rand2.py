@@ -23,7 +23,7 @@ paramDict = {
     'seed': [None,'0','1','11111','19823134','1231231'],
     # stack trace if we use more features than legal. dropped or redundanct cols reduce 
     # legal max also.
-    'features': [None,1,3,5,7,9,11,13,17,19,23,37,53],
+    'features': [1,3,5,7,9,11,13,17,19,23,37,53],
     'exclusive_split_limit': [None,0,3,5],
     # 'stratify': [None,0,1,1,1,1,1,1,1,1,1],
     'strata': [
@@ -58,7 +58,7 @@ class Basic(unittest.TestCase):
         random.seed(SEED)
         print "\nUsing random seed:", SEED
         csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
-        for trial in range(20):
+        for trial in range(10):
             # params is mutable. This is default.
             params = {'ntree': 13, 'parallel': 1, 'features': 7}
             colX = h2o_rf.pickRandRfParams(paramDict, params)

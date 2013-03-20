@@ -10,15 +10,16 @@ def pickRandRfParams(paramDict, params):
         randomKey = random.choice(paramDict.keys())
         randomV = paramDict[randomKey]
         randomValue = random.choice(randomV)
+        # note it updates params, so any default values will still be there
         params[randomKey] = randomValue
         if (randomKey=='x'):
             colX = randomValue
         # temp hack to avoid CM=0 results if 100% sample and using OOBEE
-        if 'sample' in params and params['sample']==100:
-            params['out_of_bag_error_estimate'] = 0
+        if ('out_of_bag_error_estimate' in params) and ('sample' in params) and (params['sample']==100):
+            params['sample'] = 90
     return colX
 
-def simpleCheckRFView(node, rfv, **kwargs):
+def simpleCheckRFView(node, rfv, noprint=False, **kwargs):
     if not node:
         node = h2o.nodes[0]
 
@@ -26,7 +27,7 @@ def simpleCheckRFView(node, rfv, **kwargs):
         warnings = rfv['warnings']
         # catch the 'Failed to converge" for now
         for w in warnings:
-            print "\nwarning:", w
+            if not noprint: print "\nwarning:", w
             if ('Failed' in w) or ('failed' in w):
                 raise Exception(w)
 
@@ -37,18 +38,15 @@ def simpleCheckRFView(node, rfv, **kwargs):
     # the simple assigns will at least check the key exists
     cm = rfv['confusion_matrix']
     header = cm['header'] # list
-
     classification_error = cm['classification_error']
-    print "classification_error:", classification_error
-
     rows_skipped = cm['rows_skipped']
-    print "rows_skipped:", rows_skipped
-
     cm_type = cm['type']
-    print "type:", cm_type
+    if not noprint: 
+        print "classification_error:", classification_error
+        print "rows_skipped:", rows_skipped
+        print "type:", cm_type
 
     used_trees = cm['used_trees']
-    ### print "used_trees:", used_trees
     if (used_trees <= 0):
         raise Exception("used_trees should be >0. used_trees:", used_trees)
 
@@ -61,8 +59,25 @@ def simpleCheckRFView(node, rfv, **kwargs):
     totalScores = 0
     # individual scores can be all 0 if nothing for that output class
     # due to sampling
-    for s in scoresList:
-        totalScores += sum(s)
+    classErrorPctList = []
+    for classIndex,s in enumerate(scoresList):
+        classSum = sum(s)
+        if classSum == 0 :
+            # why would the number of scores for a class be 0? does RF CM have entries for non-existent classes
+            # in a range??..in any case, tolerate. (it shows up in test.py on poker100)
+            if not noprint: print "class:", classIndex, "classSum", classSum, "<- why 0?"
+        else:
+            # H2O should really give me this since it's in the browser, but it doesn't
+            classRightPct = ((s[classIndex] + 0.0)/classSum) * 100
+            classErrorPct = 100 - classRightPct
+            classErrorPctList.append(classErrorPct)
+            ### print "s:", s, "classIndex:", classIndex
+            if not noprint: print "class:", classIndex, "classSum", classSum, "classErrorPct:", "%4.2f" % classErrorPct
+        totalScores += classSum
+
+    # this should equal the num rows in the dataset if full scoring? (minus any NAs)
+    if not noprint: print "totalScores:", totalScores
+
     if (totalScores<=0 or totalScores>5e9):
         raise Exception("scores in RFView seems wrong. scores:", scoresList)
 
@@ -94,7 +109,6 @@ def simpleCheckRFView(node, rfv, **kwargs):
     if (number_built<=0 or number_built>20000):
         raise Exception("number_built in RFView seems wrong. number_built:", number_built)
 
-
     h2o.verboseprint("RFView response: number_built:", number_built, "leaves:", leaves, "depth:", depth)
 
     # just touching these keys to make sure they're good?
@@ -105,7 +119,7 @@ def simpleCheckRFView(node, rfv, **kwargs):
     ### modelInspect = node.inspect(model_key)
     dataInspect = node.inspect(data_key)
 
-    return classification_error
+    return (classification_error, classErrorPctList, totalScores)
 
 def trainRF(trainParseKey, **kwargs):
     # Train RF

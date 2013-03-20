@@ -7,13 +7,13 @@
 ./n0.doit test_allstate_claim_prediction.py
 ./n0.doit test_arity.py
 ./n0.doit test_bad_nofinaltrees.py
-./n0.doit test_big_local_cloud.py
-./n0.doit test_cloud_127_2_loop.py
-./n0.doit test_cloud_127.py
-./n0.doit test_cloud_17to25.py
-./n0.doit test_cloud_5_loop.py
-./n0.doit test_cloud.py
-./n0.doit test_cloud_udp_drop.py
+# ./n0.doit test_big_local_cloud.py
+# ./n0.doit test_cloud_127_2_loop.py
+# ./n0.doit test_cloud_127.py
+# ./n0.doit test_cloud_17to25.py
+# ./n0.doit test_cloud_5_loop.py
+# ./n0.doit test_cloud.py
+# ./n0.doit test_cloud_udp_drop.py
 ./n0.doit test_dkv.py
 ./n0.doit test_exec_2_import_hosts.py
 ./n0.doit test_exec_3_import_hosts.py
