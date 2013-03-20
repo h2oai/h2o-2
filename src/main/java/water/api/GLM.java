@@ -208,9 +208,9 @@ public class GLM extends Request {
       LSMSolver lsm = null;
       switch(_lsmSolver.value()){
       case AUTO:
-        lsm = data.expandedSz() < 1000?
-            new ADMMSolver(_lambda.value(),_alpha.value()):
-            new GeneralizedGradientSolver(_lambda.value(),_alpha.value());
+        lsm = //data.expandedSz() < 1000?
+            new ADMMSolver(_lambda.value(),_alpha.value());//:
+            //new GeneralizedGradientSolver(_lambda.value(),_alpha.value());
          break;
       case ADMM:
         lsm = new ADMMSolver(_lambda.value(),_alpha.value());
