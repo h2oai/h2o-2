@@ -381,7 +381,7 @@ public abstract class DGLM {
      */
     public int [] selectedColumns(){
       if(DKV.get(_dataKey) == null) return null;
-      ValueArray ary = ValueArray.value(_dataKey);
+      ValueArray ary = DKV.get(_dataKey).get();
       HashSet<String> colNames = new HashSet<String>();
       for(Column c:_va._cols)
         colNames.add(c._name);

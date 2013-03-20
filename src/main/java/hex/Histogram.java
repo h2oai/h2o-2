@@ -117,7 +117,7 @@ public abstract class Histogram {
       public void map(Key key) {
          assert key.home();
          // Get the root ValueArray for the metadata
-         ValueArray ary = ValueArray.value(DKV.get(_arykey));
+         ValueArray ary = DKV.get(_arykey).get();
          // Get the raw bits to work on
          AutoBuffer bits = ary.getChunk(key);
          final int nrow = bits.remaining()/ary._rowsize;
@@ -170,7 +170,7 @@ public abstract class Histogram {
       public void map(Key key) {
          assert key.home();
          // Get the root ValueArray for the metadata
-         ValueArray ary = ValueArray.value(DKV.get(_arykey));
+         ValueArray ary = DKV.get(_arykey).get();
          // Get the raw bits to work on
          AutoBuffer bits = ary.getChunk(key);
          final int nrow = bits.remaining()/ary._rowsize;
