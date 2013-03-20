@@ -350,7 +350,7 @@ public abstract class DGLM {
 
     public final int _iterations;     // Iterations used to solve
     public final long _time;          // Total solve time in millis
-    public final LSMSolver _solver; // Which solver is used
+    public final LSMSolver _solver;   // Which solver is used
     public final GLMParams _glmParams;
 
     public transient int _responseCol; // Response column
@@ -373,20 +373,25 @@ public abstract class DGLM {
       return Key.make(KEY_PREFIX + Key.make());
     }
 
-
     /**
-     * Non expanded ordered list of names of selected columns.
+     * Ids of selected columns (the last idx is the response variable) of the original dataset,
+     * if it still exists in H2O, or null.
      *
-     * @return
+     * @return array of column ids, the last is the response var.
      */
-    public String selectedCols(){
-      StringBuilder sb = new StringBuilder();
-      for( ValueArray.Column C : _va._cols ) {
-        sb.append(C._name).append(',');
-      }
-      sb.setLength(sb.length()-1); // Remove trailing extra comma
-      return sb.toString();
+    public int [] selectedColumns(){
+      if(DKV.get(_dataKey) == null) return null;
+      ValueArray ary = ValueArray.value(_dataKey);
+      HashSet<String> colNames = new HashSet<String>();
+      for(Column c:_va._cols)
+        colNames.add(c._name);
+      int [] res = new int[colNames.size()];
+      int j = 0;
+      for(int i = 0; i < ary._cols.length; ++i)
+        if(colNames.contains(ary._cols[i]._name))res[j++] = i;
+      return res;
     }
+
     /**
      * Expanded (categoricals expanded to vector of levels) ordered list of column names.
      * @return

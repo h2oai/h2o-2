@@ -21,6 +21,7 @@ import java.util.*;
 import java.util.Map.Entry;
 
 import water.*;
+import water.ValueArray.Column;
 import water.util.RString;
 
 import com.google.gson.JsonElement;
@@ -87,12 +88,29 @@ public class GLM extends Request {
     return rs.toString();
   }
 
+
+  static void getColumnIdxs(StringBuilder sb, ValueArray ary, String [] cols ){
+    Arrays.sort(cols);
+    boolean firstCol = false;
+    for(int i = 0; i < ary._cols.length; ++i)
+      if(Arrays.binarySearch(cols, ary._cols[i]._name) >= 0)
+        if(firstCol){
+          sb.append(""+i);
+          firstCol = false;
+        } else
+          sb.append(","+i);
+  }
   public static String link(Key k, GLMModel m, String content) {
+    int [] colIds = m.selectedColumns();
+    if(colIds == null)return ""; /// the dataset is no longer on H2O, no link shoudl be produced!
     try {
       StringBuilder sb = new StringBuilder("<a href='GLM.query?");
       sb.append(KEY + "=" + k.toString());
       sb.append("&y=" + m.responseName());
-      sb.append("&x=" + URLEncoder.encode(m.xcolNames(),"utf8"));
+      // find the column idxs...(the model keeps only names)
+      sb.append("&x=" + colIds[0]);
+      for(int i = 1; i < colIds.length-1; ++i)
+        sb.append(","+colIds[i]);
       sb.append("&family=" + m._glmParams._family.toString());
       sb.append("&link=" + m._glmParams._link.toString());
       sb.append("&lambda=" + m._solver._lambda);
