@@ -2,17 +2,17 @@ package water.api;
 
 import hex.DGLM.GLMModel;
 import hex.rf.RFModel;
-
 import java.util.Arrays;
-
-import water.H2O;
-import water.Key;
-
+import water.*;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonPrimitive;
 
 public class TypeaheadKeysRequest extends TypeaheadRequest {
-  public TypeaheadKeysRequest(String msg, String filter) { super(msg, filter); }
+  final int _typeid;            // Also filter for Keys of this type
+  public TypeaheadKeysRequest(String msg, String filter, Class C) { 
+    super(msg, filter);
+    _typeid = C==null ? 0 : TypeMap.onLoad(C.getName());
+  }
 
   @Override
   protected JsonArray serve(String filter, int limit) {
@@ -26,7 +26,10 @@ public class TypeaheadKeysRequest extends TypeaheadRequest {
         continue;               // Ignore this filtered-out key
       if( !key.user_allowed() ) // Also filter out for user-keys
         continue;
-      if( !shouldIncludeKey(key) ) continue;
+      Value val = DKV.get(key);
+      if( val == null ) continue; // Deleted key?
+      if( _typeid != 0 && val.type() != _typeid ) continue; // Wrong type?
+      if( !shouldIncludeKey(key) ) continue; // Generic override
       keys[len++] = key;        // Capture the key
       if( len == keys.length ) break;
     }
@@ -45,7 +48,7 @@ class TypeaheadModelKeyRequest extends TypeaheadKeysRequest {
   public TypeaheadModelKeyRequest() {
     super("Provides a simple JSON array of filtered keys known to the "+
           "current node that are Models at the time of calling.",
-          "Model_");
+          "Model_",null);
   }
 }
 
@@ -53,7 +56,7 @@ class TypeaheadGLMModelKeyRequest extends TypeaheadKeysRequest {
   public TypeaheadGLMModelKeyRequest() {
     super("Provides a simple JSON array of filtered keys known to the "+
           "current node that are GLMModels at the time of calling.",
-          GLMModel.KEY_PREFIX);
+          null,GLMModel.class);
   }
 }
 
@@ -61,6 +64,14 @@ class TypeaheadRFModelKeyRequest extends TypeaheadKeysRequest {
   public TypeaheadRFModelKeyRequest() {
     super("Provides a simple JSON array of filtered keys known to the "+
           "current node that are RFModels at the time of calling.",
-          RFModel.KEY_PREFIX);
+          null,RFModel.class);
+  }
+}
+
+class TypeaheadHexKeyRequest extends TypeaheadKeysRequest {
+  public TypeaheadHexKeyRequest() {
+    super("Provides a simple JSON array of filtered keys known to the "+
+          "current node that are ValueArrays at the time of calling.",
+          null,ValueArray.class);
   }
 }

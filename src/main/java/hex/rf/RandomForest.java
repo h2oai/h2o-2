@@ -102,7 +102,7 @@ public class RandomForest {
     ValueArray va;
     // get the input data
     if(ARGS.parsedKey != null) // data already parsed
-      va = ValueArray.value(DKV.get(Key.make(ARGS.parsedKey)));
+      va = DKV.get(Key.make(ARGS.parsedKey)).get();
     else if(ARGS.rawKey != null) // data loaded in K/V, not parsed yet
       va = TestUtil.parse_test_key(Key.make(ARGS.rawKey),Key.make(TestUtil.getHexKeyFromRawKey(ARGS.rawKey)));
     else { // data outside of H2O, load and parse
@@ -173,7 +173,7 @@ public class RandomForest {
                           ARGS.verbose,
                           ARGS.exclusive);
     DRF drf = drfResult.get();  // block on all nodes!
-    RFModel model = UKV.get(modelKey, new RFModel());
+    RFModel model = UKV.get(modelKey);
     Utils.pln("[RF] Random forest finished in "+ drf._t_main);
 
     Timer t_valid = new Timer();

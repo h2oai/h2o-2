@@ -20,8 +20,8 @@ public class ParserTest extends TestUtil {
     for( int i = 0; i < data.length; ++i)
       rpc[i] = data[i].length();
     Key k = Key.make(kname);
-    ValueArray va = new ValueArray(k, rpc, 1, new ValueArray.Column[]{new ValueArray.Column(1)}, Value.ICE);
-    DKV.put(k, va.value());
+    ValueArray va = new ValueArray(k, rpc, 1, new ValueArray.Column[]{new ValueArray.Column(1)});
+    DKV.put(k, va);
     for (int i = 0; i < data.length; ++i) {
       keys[i] = va.getChunkKey(i);
       DKV.put(keys[i], new Value(keys[i], data[i]));
@@ -47,7 +47,7 @@ public class ParserTest extends TestUtil {
     testParsed(k,expected,inputkey,expected.length);
   }
   public static void testParsed(Key k, double[][] expected, Key inputkey, int len) {
-    ValueArray va = ValueArray.value(DKV.get(k));
+    ValueArray va = DKV.get(k).get();
     Assert.assertEquals(len,va._numrows);
     Assert.assertEquals(expected[0].length,va._cols.length);
     for (int i = 0; i < expected.length; ++i)
@@ -212,7 +212,7 @@ public class ParserTest extends TestUtil {
       Key key = k("NondecimalColumns",dataset);
       Key r = Key.make();
       ParseDataset.parse(r,DKV.get(key));
-      ValueArray va = ValueArray.value(DKV.get(r));
+      ValueArray va = DKV.get(r).get();
       String[] cd = va._cols[2]._domain;
       Assert.assertEquals(" four",cd[0]);
       Assert.assertEquals("one",cd[1]);
@@ -262,7 +262,7 @@ public class ParserTest extends TestUtil {
       Key key = k("MultipleNondecimalColumns",dataset);
       Key r = Key.make();
       ParseDataset.parse(r,DKV.get(key));
-      ValueArray va = ValueArray.value(DKV.get(r));
+      ValueArray va = DKV.get(r).get();
       String[] cd = va._cols[2]._domain;
       Assert.assertEquals("one",cd[0]);
       Assert.assertEquals("three",cd[1]);
@@ -310,7 +310,7 @@ public class ParserTest extends TestUtil {
     Key key = k("EmptyColumnValues",dataset);
     Key r = Key.make();
     ParseDataset.parse(r,DKV.get(key));
-    ValueArray va = ValueArray.value(DKV.get(r));
+    ValueArray va = DKV.get(r).get();
     String[] cd = va._cols[3]._domain;
     Assert.assertEquals("bar",cd[0]);
     Assert.assertEquals("foo",cd[1]);
@@ -366,7 +366,7 @@ public class ParserTest extends TestUtil {
     Key okey = Key.make("bestbuy.hex");
     ParseDataset.parse(okey,DKV.get(fkey));
     UKV.remove(fkey);
-    ValueArray va = ValueArray.value(DKV.get(okey));
+    ValueArray va = DKV.get(okey).get();
     UKV.remove(okey);
   }
 

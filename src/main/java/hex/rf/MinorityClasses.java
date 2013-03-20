@@ -94,7 +94,7 @@ public class MinorityClasses {
     long _res;
     @Override
     public void map(Key key) {
-      ValueArray ary = ValueArray.value(_aryKey);
+      ValueArray ary = DKV.get(_aryKey).get();
       AutoBuffer bits = ary.getChunk(key);
       Column c = ary._cols[_classIdx];
       int rows = bits.remaining()/ary.rowSize();
@@ -158,7 +158,7 @@ public class MinorityClasses {
 
     @Override
     public void map(Key key) {
-      ValueArray ary = ValueArray.value(_aryKey);
+      ValueArray ary = DKV.get(_aryKey).get();
       _histogram = new int[H2O.CLOUD.size()][_n];
       AutoBuffer bits = ary.getChunk(key);
       Column c = ary._cols[_classIdx];
@@ -230,7 +230,7 @@ public class MinorityClasses {
     @Override
     public void map(Key key) {
       Key aryKey = ValueArray.getArrayKey(key);
-      ValueArray ary = ValueArray.value(aryKey);
+      ValueArray ary = DKV.get(aryKey).get();
       _offsets = new int[_imbalancedClasses.length];
       _histogram = new int[_imbalancedClasses.length];
       _createdKeys = new Key[_imbalancedClasses.length][];

@@ -47,7 +47,7 @@ public class Helpers {
 
     @Override public void map(Key key) {
       _result = 0;
-      ValueArray va = ValueArray.value(_key);
+      ValueArray va = DKV.get(_key).get();
       Column c = va._cols[_col];
       AutoBuffer bits = va.getChunk(key);
       int rowSize = va._rowsize;
@@ -86,9 +86,9 @@ public class Helpers {
   public static void calculateSigma(final Key key, int col) {
     SigmaCalc sc = new SigmaCalc(key, col);
     sc.invoke(key);
-    ValueArray va = ValueArray.value(key);
+    ValueArray va = DKV.get(key).get();
     va._cols[col]._sigma = sc.sigma();
-    DKV.put(va._key, va.value());
+    DKV.put(va._key, va); // This is a VA header in-place update, without disturbing the col data
     DKV.write_barrier();
   }
 
@@ -100,7 +100,7 @@ public class Helpers {
 
     @Override
     public void map(Key key) {
-      ValueArray va = ValueArray.value(_key);
+      ValueArray va = DKV.get(_key).get();
       Column c = va._cols[_col];
       double mean = c._mean;
       AutoBuffer bits = va.getChunk(key);
@@ -124,7 +124,7 @@ public class Helpers {
     }
 
     public double sigma() {
-      ValueArray va = ValueArray.value(_key);
+      ValueArray va = DKV.get(_key).get();
       return Math.sqrt(_sigma / va.numRows());
     }
   }
@@ -157,21 +157,23 @@ public class Helpers {
       if( what.canShallowCopy() ) {
         throw H2O.unimpl();
       } else if (what.rawColIndex()!=-1) { // copy in place of a single column only
-        ValueArray v = ValueArray.value(what._key);
-        if( v == null )
+        Value v1 = DKV.get(what._key);
+        if( v1 == null )
           throw new EvaluationException(pos, "Key " + what._key + " not found");
+        ValueArray v = v1.get();
         int col = what.rawColIndex();
         Column c = v._cols[col];
         VABuilder b = new VABuilder(to.toString(), v.numRows()).addColumn(c._name,c._size, c._scale,c._min, c._max, c._mean, c._sigma).createAndStore(to);
         DeepSingleColumnAssignment da = new DeepSingleColumnAssignment(what._key, to, col);
         da.invoke(to);
       } else {
-        ValueArray v = ValueArray.value(what._key);
-        if( v == null )
+        Value v1 = DKV.get(what._key);
+        if( v1 == null )
           throw new EvaluationException(pos, "Key " + what._key + " not found");
+        ValueArray v = v1.get();
         ValueArray r = v.clone();
         r._key = to;
-        DKV.put(to, r.value());
+        DKV.put(to, r);
         DKV.write_barrier();
         MRTask copyTask = new MRTask() {
           @Override public void map(Key fromk) {
@@ -242,8 +244,8 @@ class DeepSingleColumnAssignment extends MRTask {
 
 
   @Override public void map(Key key) {
-    ValueArray vTo = ValueArray.value(_to);
-    ValueArray vFrom = ValueArray.value(_from);
+    ValueArray vTo = DKV.get(_to).get();
+    ValueArray vFrom = DKV.get(_from).get();
     int colSize = vFrom._cols[_colIndex]._size;
     assert colSize == vTo._cols[0]._size;
     long cidx = ValueArray.getChunkIndex(key);

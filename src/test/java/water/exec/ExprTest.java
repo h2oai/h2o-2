@@ -11,10 +11,10 @@ public class ExprTest extends TestUtil {
     Key k1=null,k2=null,kg=null,k3=null,ki=null;
     try {
       k1 = loadAndParseKey("h.hex","smalldata/cars.csv");
-      ValueArray.value(k1);
+      ValueArray va1 = DKV.get(k1).get();
       k2 = executeExpression("g=colSwap(h.hex,2,factor(h.hex[2]))");
       kg = Key.make("g");
-      ValueArray va2 = ValueArray.value(kg);
+      ValueArray va2 = DKV.get(kg).get();
       ValueArray.Column col = va2._cols[2];
       assertArrayEquals(col._domain,new String[]{"3","4","5","6","8"});
       k3 = executeExpression("i=colSwap(h.hex,2,h.hex[2]==3?1:0)");
@@ -31,10 +31,10 @@ public class ExprTest extends TestUtil {
   // Test a big slice
   @Test public void testMultiChunkFile() {
     Key k1 = loadAndParseKey("hhp.hex","smalldata/hhp.cut3.214.data.gz");
-    ValueArray.value(k1);
+    ValueArray va1 = DKV.get(k1).get();
     Key k2 = executeExpression("g=slice(hhp.hex,1,131248)");
     Key kg = Key.make("g");
-    ValueArray va2 = ValueArray.value(kg);
+    ValueArray va2 = DKV.get(kg).get();
     assertEquals(va2.data(0, 72), 1);
     assertEquals(va2.data(0, 77), 1);
     assertEquals(va2.data(2,105),10);
@@ -52,10 +52,10 @@ public class ExprTest extends TestUtil {
     Key k1=null, k2=null, kg=null;
     try {
       k1 = loadAndParseKey("kaggle.hex","smalldata/kaggle/creditsample-training.csv.gz");
-      ValueArray.value(k1);
+      ValueArray va1 = DKV.get(k1).get();
       k2 = executeExpression("g=randomFilter(kaggle.hex,5432,1232123)");
       kg = Key.make("g");
-      ValueArray va2 = ValueArray.value(kg);
+      ValueArray va2 = DKV.get(kg).get();
       assertEquals(va2.data(0, 0),  5);
       assertEquals(va2.data(1, 0), 29);
       assertEquals(va2.data(2, 0), 46);
@@ -151,7 +151,7 @@ public class ExprTest extends TestUtil {
 
   protected void testScalarExpression(String expr, double result) {
     Key key = executeExpression(expr);
-    ValueArray va = ValueArray.value(key);
+    ValueArray va = DKV.get(key).get();
     assertEquals(va.numRows(), 1);
     assertEquals(va.numCols(), 1);
     assertEquals(result,va.datad(0,0), 0.0);
@@ -159,7 +159,7 @@ public class ExprTest extends TestUtil {
   }
 
   protected void testKeyValues(Key k, double n1, double n2, double n3, double nx3, double nx2, double nx1) {
-    ValueArray v = ValueArray.value(k);
+    ValueArray v = DKV.get(k).get();
     assertEquals(v.datad(0,0),n1,0.0);
     assertEquals(v.datad(1,0),n2,0.0);
     assertEquals(v.datad(2,0),n3,0.0);
@@ -175,7 +175,7 @@ public class ExprTest extends TestUtil {
   }
 
   public void testDataFrameStructure(Key k, int rows, int cols) {
-    ValueArray v = ValueArray.value(k);
+    ValueArray v = DKV.get(k).get();
     assertEquals(v.numRows(), rows);
     assertEquals(v.numCols(), cols);
   }

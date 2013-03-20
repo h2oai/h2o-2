@@ -19,11 +19,11 @@ public class AtomicTest extends TestUtil {
   private static class Append {
     static private void append(Key keys, final Key k) {
       new Atomic() {
-        @Override public byte[] atomic(byte[] bits) {
-          Key[] ks = bits == null ? new Key[0] : new AutoBuffer(bits).getA(Key.class);
-          ks = Arrays.copyOf(ks,ks.length+1);
-          ks[ks.length-1]=k;
-          return new AutoBuffer().putA(ks).buf();
+        @Override public Value atomic(Value val) {
+          Key.Ary ks = val == null ? new Key.Ary(new Key[0]) : (Key.Ary)val.get();
+          Key[] keys = Arrays.copyOf(ks._keys,ks._keys.length+1);
+          keys[keys.length-1]=k;
+          return new Value(_key,new Key.Ary(keys));
         }
       }.invoke(keys);
     }

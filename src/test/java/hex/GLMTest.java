@@ -93,7 +93,7 @@ public class GLMTest extends TestUtil {
    */
   @Test public void testOnData(){
     Key k = loadAndParseKey("h.hex","smalldata/glm_test/poisson_tst1.csv");
-    ValueArray ary = ValueArray.value(k);
+    ValueArray ary = DKV.get(k).get();
     // Test poisson
     DataFrame data = DGLM.getData(ary, new int[]{2, 3},1, null, true);
     GLMModel m1 = DGLM.buildModel(data, new ADMMSolver(0,0), new GLMParams(Family.poisson));
@@ -337,7 +337,7 @@ public class GLMTest extends TestUtil {
       k2 = Exec.exec("colSwap(h.hex,2,h.hex$cylinders==3?1:0)","h2.hex");
       // Columns for displacement, power, weight, 0-60, year, then response is cylinders
       int[] cols= new int[]{3,4,5,6,7,2};
-      ValueArray va = ValueArray.value(DKV.get(k2));
+      ValueArray va = DKV.get(k2).get();
       // Compute the coefficients
       LSMSolver lsmsx = new ADMMSolver(0,0.0);
       JsonObject glm = computeGLM( Family.binomial, lsmsx, va, false, cols );
@@ -380,7 +380,7 @@ public class GLMTest extends TestUtil {
   // with every iteration until we hit Infinities.
   @Test public void testConverge() {
     Key k1= loadAndParseKey("m.hex","smalldata/logreg/make_me_converge_10000x5.csv");
-    ValueArray va = ValueArray.value(DKV.get(k1));
+    ValueArray va = DKV.get(k1).get();
     // Compute the coefficients
     LSMSolver lsmsx = new ADMMSolver(1e-5, 0.5);
     JsonObject glm = computeGLMlog( lsmsx, va, false );
@@ -438,7 +438,7 @@ public class GLMTest extends TestUtil {
       JsonObject glm = computeGLMlog(lsms,va,true); // Solve it!
       JsonObject jcoefs = glm.get("coefficients").getAsJsonObject();
       double icept = jcoefs.get("Intercept").getAsDouble();
-//      assertCat(jcoefs,icept,"Low" ,0.0      );
+      //assertCat(jcoefs,icept,"Low" ,0.0      );// now folded into the intercept
       assertCat(jcoefs,icept,"Med" ,0.3333333);
       assertCat(jcoefs,icept,"High",1.0      );
       UKV.remove(Key.make(glm.get(Constants.MODEL_KEY).getAsString()));

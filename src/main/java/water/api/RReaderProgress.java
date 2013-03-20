@@ -1,9 +1,8 @@
 package water.api;
 
-import water.*;
-import water.RReader.RModel;
-
 import com.google.gson.JsonObject;
+import hex.rf.RFModel;
+import water.*;
 
 public class RReaderProgress extends Request {
   protected final H2OExistingKey _dest = new H2OExistingKey(DEST_KEY);
@@ -23,16 +22,11 @@ public class RReaderProgress extends Request {
       r = Response.poll(response, 0);
     } else {
       response.addProperty(RequestStatics.DEST_KEY, v._key.toString());
-      RModel model = UKV.get(v._key, new RModel());
-      if( model._progress == 1f ) {
-        r = RFView.redirect(response, v._key);
+      Iced ps = v.get();
+      if( ps instanceof Job.Fail ) {
+        r = Response.error(((Job.Fail)ps)._message);
       } else {
-        RModel ps = v.get(new RModel());
-        if( ps._error != null ) {
-          r = Response.error(ps._error);
-        } else {
-          r = Response.poll(response, 1f);
-        }
+        r = RFView.redirect(response, v._key);
       }
     }
     r.setBuilder(RequestStatics.DEST_KEY, new KeyElementBuilder());

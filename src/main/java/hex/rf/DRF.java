@@ -231,7 +231,7 @@ public final class DRF extends water.DRemoteTask {
    *  trees.  Round down for later nodes, and round up for earlier nodes.
    */
   private int howManyTrees() {
-    ValueArray ary = ValueArray.value(_rfmodel._dataKey);
+    ValueArray ary = DKV.get(_rfmodel._dataKey).get();
     final long num_chunks = ary.chunks();
     final int  num_nodes  = H2O.CLOUD.size();
     HashSet<H2ONode> nodes = new HashSet();

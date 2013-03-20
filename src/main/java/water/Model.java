@@ -36,7 +36,7 @@ public abstract class Model extends Iced {
   public Model( Key key, int cols[], Key dataKey ) {
     _selfKey = key;
     _dataKey = dataKey;
-    _va = trimCols(ValueArray.value(dataKey),cols);
+    _va = trimCols((ValueArray)DKV.get(dataKey).get(),cols);
   }
   /** Default artificial model, built from given column names.  */
   public Model( Key key, String[] colNames, String[] classNames ) {
@@ -54,7 +54,7 @@ public abstract class Model extends Iced {
     C._domain = classNames;
     C._min = 0.0;
     C._max = classNames==null ? 0 : classNames.length-1;
-    _va = new ValueArray(null,0,8*Cs.length,Cs);
+    _va = new ValueArray(null,0L,8*Cs.length,Cs);
   }
   /** Artificial model.  The 'va' defines the compatible data, but is not
    *  associated with any real dataset.  Data to be scored on the model has to

@@ -17,7 +17,7 @@ public class RandomForestTest extends TestUtil {
     Key okey = loadAndParseKey("credit.hex", "smalldata/kaggle/creditsample-training.csv.gz");
     UKV.remove(Key.make("smalldata/kaggle/creditsample-training.csv.gz_UNZIPPED"));
     UKV.remove(Key.make("smalldata\\kaggle\\creditsample-training.csv.gz_UNZIPPED"));
-    ValueArray val = ValueArray.value(okey);
+    ValueArray val = DKV.get(okey).get();
 
     // Check parsed dataset
     assertEquals("Number of chunks", 4, val.chunks());
@@ -39,7 +39,7 @@ public class RandomForestTest extends TestUtil {
     result.get();
 
     // Create incremental confusion matrix.
-    RFModel model = UKV.get(modelKey, new RFModel());
+    RFModel model = UKV.get(modelKey);
 
     assertEquals("Number of classes", 2,  model.classes());
     assertEquals("Number of trees", ntrees, model.size());
