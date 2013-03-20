@@ -20,10 +20,10 @@ import com.google.gson.*;
 
 public class Inspect extends Request {
   private static final HashMap<String, String> _displayNames = new HashMap<String, String>();
-  private static final long     INFO_PAGE = -1;
-  private final H2OExistingKey _key       = new H2OExistingKey(KEY);
-  private final LongInt        _offset    = new LongInt(OFFSET, 0L, INFO_PAGE, Long.MAX_VALUE, "");
-  private final Int            _view      = new Int(VIEW, 100, 0, 10000);
+  private static final long                    INFO_PAGE     = -1;
+  private final H2OExistingKey                 _key          = new H2OExistingKey(KEY);
+  private final LongInt                        _offset       = new LongInt(OFFSET, 0L, INFO_PAGE, Long.MAX_VALUE, "");
+  private final Int                            _view         = new Int(VIEW, 100, 0, 10000);
 
   static {
     _displayNames.put(ENUM_DOMAIN_SIZE, "Enum Domain");
@@ -61,7 +61,7 @@ public class Inspect extends Request {
       Freezable f;
       try {
         f = val.get();
-      } catch(Exception ex) {
+      } catch( Exception ex ) {
         // data is not a Freezable, ignore until next version of types
         f = null;
       }
@@ -69,7 +69,7 @@ public class Inspect extends Request {
         GLMModel m = (GLMModel) f;
         JsonObject res = new JsonObject();
         // Convert to JSON
-        res.add("GLMModel", m.toJson());
+        res.add(GLMModel.NAME, m.toJson());
         // Display HTML setup
         Response r = Response.done(res);
         r.setBuilder(""/* top-level do-it-all builder */, new GLMBuilder(m));
@@ -79,19 +79,19 @@ public class Inspect extends Request {
         KMeansModel m = (KMeansModel) f;
         JsonObject res = new JsonObject();
         // Convert to JSON
-        res.add("KMeansModel", m.toJson());
+        res.add(KMeansModel.NAME, m.toJson());
         // Display HTML setup
         Response r = Response.done(res);
-        // r.setBuilder(""/*top-level do-it-all builder*/,new KMeansBuilder(m));
+        r.setBuilder(KMeansModel.NAME, new KMeans.Builder(m));
         return r;
       }
       if( f instanceof RFModel ) {
         JsonObject res = new JsonObject();
-        return RFView.redirect(res,val._key);
+        return RFView.redirect(res, val._key);
       }
       if( f instanceof Job.Fail ) {
-        UKV.remove(val._key);   // Not sure if this is a good place to do this
-        return Response.error(((Job.Fail)f)._message);
+        UKV.remove(val._key); // Not sure if this is a good place to do this
+        return Response.error(((Job.Fail) f)._message);
       }
     }
     return serveUnparsedValue(val);
@@ -130,9 +130,10 @@ public class Inspect extends Request {
         if( len < 0 )
           break;
         off += len;
-        if( off == bs.length ) {  // Dataset is uncompressing alot!  Need more space...
-          if( bs.length >= ValueArray.CHUNK_SZ ) break; // Already got enough
-          bs = Arrays.copyOf(bs,bs.length*2);
+        if( off == bs.length ) { // Dataset is uncompressing alot! Need more space...
+          if( bs.length >= ValueArray.CHUNK_SZ )
+            break; // Already got enough
+          bs = Arrays.copyOf(bs, bs.length * 2);
         }
       }
     } catch( IOException ioe ) { // Stop at any io error
@@ -146,7 +147,7 @@ public class Inspect extends Request {
     return CsvParser.inspect(bs);
   }
 
-    // Build a response JSON
+  // Build a response JSON
   private final Response serveUnparsedValue(Value v) {
     JsonObject result = new JsonObject();
     result.addProperty(VALUE_TYPE, "unparsed");

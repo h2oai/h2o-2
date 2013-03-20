@@ -364,6 +364,7 @@ public abstract class DGLM {
 
 
     public boolean isSolved() { return _beta != null; }
+    public static final String NAME = GLMModel.class.getSimpleName();
     public static final String KEY_PREFIX = "__GLMModel_";
     // Hand out the coffients.  Must be treated as a read-only array.
     public double[] beta() { return _beta; }

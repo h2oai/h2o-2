@@ -617,6 +617,7 @@ public class RequestBuilders extends RequestQueries {
      */
     public String header(JsonArray array) {
       StringBuilder sb = new StringBuilder();
+      sb.append("<span style='display: inline-block;'>");
       sb.append("<table class='table table-striped table-bordered'>");
       if (array.get(0) instanceof JsonObject) {
         sb.append("<tr>");
@@ -634,7 +635,7 @@ public class RequestBuilders extends RequestQueries {
     /** Footer of the table, the end of table tag.
      */
     public String footer(JsonArray array) {
-      return "</table>";
+      return "</table></span>";
     }
 
     /** Default builders for the table. It is either a table row builder if the
@@ -717,14 +718,18 @@ public class RequestBuilders extends RequestQueries {
           Number n = elm.getAsNumber();
           if( n instanceof Double ) {
             Double d = (Double) n;
-            if( Double.isNaN(d) )
-              return "";
-            return _format.get().format(d);
+            return format(d);
           }
           return elm.getAsString();
         } else {
           return elm.toString();
         }
+    }
+
+    public static String format(double value) {
+      if( Double.isNaN(value) )
+        return "";
+      return _format.get().format(value);
     }
 
     public String elementToName(String contextName) {

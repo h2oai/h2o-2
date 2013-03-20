@@ -18,7 +18,8 @@ public abstract class KMeans {
   public static Long           RAND_SEED;
 
   public static class KMeansModel extends Model implements Progress {
-    public double[][]          _clusters;                    // The cluster centers, normalized according to _va
+    public static final String NAME = KMeansModel.class.getSimpleName();
+    public double[][]          _clusters;  // The cluster centers, normalized according to _va
     public int                 _iteration;
 
     // Empty constructor for deserialization

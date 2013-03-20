@@ -231,7 +231,7 @@ public class GLM extends Request {
     GLMBuilder( GLMModel m) { _m=m; }
     public String build(Response response, JsonObject json, String contextName) {
       StringBuilder sb = new StringBuilder();;
-      modelHTML(_m,json.get("GLMModel").getAsJsonObject(),sb);
+      modelHTML(_m,json.get(GLMModel.NAME).getAsJsonObject(),sb);
       return sb.toString();
     }
 
