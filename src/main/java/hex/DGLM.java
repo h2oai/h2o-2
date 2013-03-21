@@ -1007,7 +1007,6 @@ public abstract class DGLM {
       if(_glmp._family == Family.poisson) { // aic for poisson
         res._err += (ym - yr)*(ym - yr);
         long y = (long)yr;
-        assert y == yr;
         double logfactorial = 0;
         for(long i = 2; i <= y; ++i)logfactorial += Math.log(i);
         res._aic += (yr*Math.log(ym) - logfactorial - ym);
