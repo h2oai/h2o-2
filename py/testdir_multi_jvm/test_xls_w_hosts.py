@@ -15,7 +15,6 @@ class TestExcel(unittest.TestCase):
         else:
             h2o_hosts.build_cloud_with_hosts()
 
-
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
@@ -32,8 +31,12 @@ class TestExcel(unittest.TestCase):
         h2o_cmd.runRF(None, h2o.find_dataset('poker/poker-hand-testing.xls'), trees=31, timeoutSecs=60)
 
     def test_poker_xlsx(self):
-        # was 51
-        h2o_cmd.runRF(None, h2o.find_dataset('poker/poker-hand-testing.xlsx'), trees=31, timeoutSecs=120)
+        # maybe can get stuck during polling for parse progress?
+        # break it out for pollTimeoutSecs
+        parseKey = h2o_cmd.parseFile(None, h2o.find_dataset('poker/poker-hand-testing.xlsx'),
+            timeoutSecs=120, pollTimeoutSecs=60)
+        h2o_cmd.runRFOnly(None, parseKey=parseKey, trees=31, timeoutSecs=120)
+
 
 if __name__ == '__main__':
     h2o.unit_main()
