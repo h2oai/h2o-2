@@ -56,7 +56,7 @@ public class Progress extends Request {
   protected Response jobInProgress(final Job job, JsonObject jsonResp) {
     Response r = Response.poll(jsonResp, job.progress());
 
-    final String description = job.description();
+    final String description = job._description;
     r.setBuilder(ROOT_OBJECT, defaultProgressBuilder(description));
     r.setBuilder(RequestStatics.DEST_KEY, new KeyElementBuilder());
     return r;

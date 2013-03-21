@@ -15,7 +15,6 @@ class TestExcel(unittest.TestCase):
         else:
             h2o_hosts.build_cloud_with_hosts()
 
-
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()

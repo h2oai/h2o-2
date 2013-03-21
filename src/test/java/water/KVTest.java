@@ -174,7 +174,8 @@ public class KVTest extends TestUtil {
   }
   
   public static class Atomic2 extends Atomic {
-    @Override public byte[] atomic( byte[] bits1 ) {
+    @Override public Value atomic( Value val ) {
+      byte[] bits1 = val.memOrLoad();
       long l1 = UDP.get8(bits1,0);
       long l2 = UDP.get8(bits1,8);
       l1 += 2;
@@ -182,7 +183,7 @@ public class KVTest extends TestUtil {
       byte[] bits2 = new byte[16];
       UDP.set8(bits2,0,l1);
       UDP.set8(bits2,8,l2);
-      return bits2;
+      return new Value(_key,bits2);
     }
   }
   
@@ -193,7 +194,7 @@ public class KVTest extends TestUtil {
     Key okey = Key.make("cars.hex");
     ParseDataset.parse(okey,DKV.get(fkey));
     UKV.remove(fkey);
-    ValueArray va = ValueArray.value(DKV.get(okey));
+    ValueArray va = DKV.get(okey).get();
     // Compute LinearRegression between columns 2 & 3
     JsonObject res = LinearRegression.run(va,2,3);
     assertEquals( 58.326241377521995, res.get("Beta1"      ).getAsDouble(), 0.000001);

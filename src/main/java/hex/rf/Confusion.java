@@ -105,7 +105,7 @@ public class Confusion extends MRTask {
      for that Key to already exist, returning a prior CM if one is available.*/
   static public Confusion make(RFModel model, Key datakey, int classcol, double[] classWt,boolean computeOOB) {
     Key key = keyFor(model._selfKey, model.size(), datakey, classcol, computeOOB);
-    Confusion C = UKV.get(key, new Confusion());
+    Confusion C = UKV.get(key, Confusion.class);
     if( C != null ) {         // Look for a prior cached result
       C.shared_init();
       return C;
@@ -134,8 +134,8 @@ public class Confusion extends MRTask {
   /** Shared init: for new Confusions, for remote Confusions*/
   private void shared_init() {
     _rand   = Utils.getRNG(0x92b5023f2cd40b7cL); // big random seed
-    _data = ValueArray.value(DKV.get(_datakey));
-    _model = UKV.get(_modelKey, new RFModel());
+    _data = DKV.get(_datakey).get();
+    _model = UKV.get(_modelKey);
     _modelDataMap = _model.columnMapping(_data.colNames());
     assert !_computeOOB || _model._dataKey.equals(_datakey) : !_computeOOB + " || " + _model._dataKey + " equals " + _datakey ;
     Column respModel = _model.response();

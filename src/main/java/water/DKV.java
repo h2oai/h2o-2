@@ -22,10 +22,14 @@ public abstract class DKV {
       if( res == old ) return old; // PUT is globally visible now?
     }
   }
+  static public Value put( Key key, Iced v ) { return put(key,v,null); }
+  static public Value put( Key key, Iced v, Futures fs ) { 
+    return put(key,new Value(key,v),fs); 
+  }
 
   // Remove this Key
   static public Value remove( Key key ) { return remove(key,null); }
-  static public Value remove( Key key, Futures fs ) { return put(key,null,fs); }
+  static public Value remove( Key key, Futures fs ) { return put(key,(Value)null,fs); }
 
   // Do a PUT, and on success trigger replication.  Some callers need the old
   // value, and some callers need the Futures so we can block later to ensure
@@ -85,11 +89,9 @@ public abstract class DKV {
       Value val = H2O.get(key);
       // Hit in local cache?
       if( val != null ) {
-        // See if we have enough data cached locally
-        if( len > val._max ) len = val._max;
-        if( len == 0 || val.mem() != null || val.isPersisted() )
-          return val; // Got it on local disk?  Then we must have it all
-        // Got something, but not enough and not on local disk: need to read more
+        if( len > val._max ) len = val._max; // See if we have enough data cached locally
+        assert len == 0 || val.rawMem() != null || val.rawPOJO() != null || val.isPersisted();
+        return val;
       }
 
       // While in theory we could read from any replica, we always need to

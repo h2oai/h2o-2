@@ -6,7 +6,6 @@ import java.io.IOException;
 
 import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.RReader.RModel;
 import water.util.RString;
 
 import com.google.gson.JsonObject;
@@ -37,7 +36,6 @@ public class RReader extends Request {
     try {
       final Value source_ = source;
       final Key dest_ = dest;
-      UKV.put(dest, new RModel());
 
       H2O.submitTask(new H2OCountedCompleter() {
           @Override public void compute2() {

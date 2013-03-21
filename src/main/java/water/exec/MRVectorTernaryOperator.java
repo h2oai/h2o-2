@@ -43,7 +43,7 @@ public abstract class MRVectorTernaryOperator extends MRColumnProducer {
    * chunk index.
    */
   @Override public void map(Key key) {
-    ValueArray result = ValueArray.value(_resultKey);
+    ValueArray result = DKV.get(_resultKey).get();
     long cidx = ValueArray.getChunkIndex(key);
     long rowOffset = result.startRow(cidx);
     VAIterator op1 = new VAIterator(_opnd1Key, _opnd1Col, rowOffset);

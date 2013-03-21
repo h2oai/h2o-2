@@ -249,7 +249,7 @@ public class GLM extends Request {
     GLMBuilder( GLMModel m) { _m=m; }
     public String build(Response response, JsonObject json, String contextName) {
       StringBuilder sb = new StringBuilder();;
-      modelHTML(_m,json.get("GLMModel").getAsJsonObject(),sb);
+      modelHTML(_m,json.get(GLMModel.NAME).getAsJsonObject(),sb);
       return sb.toString();
     }
 
@@ -290,7 +290,7 @@ public class GLM extends Request {
       long xtime = 0;
       for( GLMValidation v : m._vals ) {
         if(v._modelKeys != null)for( Key k : v._modelKeys) {
-          GLMModel m2 = UKV.get(k, new GLMModel());
+          GLMModel m2 = UKV.get(k);
           xtime += m2._time;
           ++count;
         }

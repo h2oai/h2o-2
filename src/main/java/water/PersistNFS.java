@@ -70,7 +70,7 @@ public abstract class PersistNFS {
       f.mkdirs();
       FileOutputStream s = new FileOutputStream(f);
       try {
-        byte[] m = v.mem();
+        byte[] m = v.memOrLoad();
         assert (m == null || m.length == v._max); // Assert not saving partial files
         if( m!=null )
           s.write(m);

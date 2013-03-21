@@ -11,10 +11,10 @@ import com.google.gson.JsonObject;
  * Simple web page to guide model validation.
  */
 public class Score extends Request {
-  protected final H2OModelKey<Model> _modelKey;
+  protected final H2OModelKey<Model,TypeaheadModelKeyRequest> _modelKey;
 
   public Score() {
-    _modelKey = new H2OModelKey<Model>(new TypeaheadModelKeyRequest(),MODEL_KEY,true);
+    _modelKey = new H2OModelKey(new TypeaheadModelKeyRequest(),MODEL_KEY,true);
     // Force refresh because the true set of argument queries depends on the
     // columns in the model... when it finally appears.
     _modelKey.setRefreshOnChange();

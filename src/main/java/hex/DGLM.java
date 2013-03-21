@@ -351,6 +351,7 @@ public abstract class DGLM {
     }
 
     public boolean isSolved() { return _beta != null; }
+    public static final String NAME = GLMModel.class.getSimpleName();
     public static final String KEY_PREFIX = "__GLMModel_";
     // Hand out the coffients.  Must be treated as a read-only array.
     public double[] beta() { return _beta; }
@@ -368,7 +369,7 @@ public abstract class DGLM {
      */
     public int [] selectedColumns(){
       if(DKV.get(_dataKey) == null) return null;
-      ValueArray ary = ValueArray.value(_dataKey);
+      ValueArray ary = DKV.get(_dataKey).get();
       HashSet<String> colNames = new HashSet<String>();
       for(Column c:_va._cols)
         colNames.add(c._name);
@@ -684,7 +685,7 @@ public abstract class DGLM {
             @Override
             public GLMModel next() {
               if(idx == keys.length) throw new NoSuchElementException();
-              return DKV.get(keys[idx++]).get(new GLMModel());
+              return DKV.get(keys[idx++]).get();
             }
               @Override
             public boolean hasNext() {

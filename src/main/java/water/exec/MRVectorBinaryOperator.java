@@ -49,7 +49,7 @@ public abstract class MRVectorBinaryOperator extends MRColumnProducer {
    * chunk index.
    */
   @Override public void map(Key key) {
-    ValueArray result = ValueArray.value(_resultKey);
+    ValueArray result = DKV.get(_resultKey).get();
     long cidx = ValueArray.getChunkIndex(key);
     long rowOffset = result.startRow(cidx);
     VAIterator left = new VAIterator(_leftKey,_leftCol, rowOffset);

@@ -1,13 +1,13 @@
 package water.api;
 
+import hex.KMeans.KMeansModel;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.util.RString;
 
-import com.google.gson.JsonObject;
+import com.google.gson.*;
 
 public class KMeans extends Request {
-
   protected final H2OHexKey          _source  = new H2OHexKey(SOURCE_KEY);
   protected final Int                _k       = new Int(K);
   protected final Real               _epsilon = new Real(EPSILON, 1e-6);
@@ -62,5 +62,45 @@ public class KMeans extends Request {
     rs.replace("key", k.toString());
     rs.replace("content", content);
     return rs.toString();
+  }
+
+  static class Builder extends ObjectBuilder {
+    final KMeansModel _m;
+
+    Builder(KMeansModel m) {
+      _m = m;
+    }
+
+    public String build(Response response, JsonObject json, String contextName) {
+      StringBuilder sb = new StringBuilder();
+      modelHTML(_m, json, sb);
+      return sb.toString();
+    }
+
+    private void modelHTML(KMeansModel m, JsonObject json, StringBuilder sb) {
+      // sb.append("<div class='alert'>Actions: " + Plot.link(m._selfKey, "Plot");
+
+      JsonArray rows = json.getAsJsonArray(CLUSTERS);
+      JsonArray row0 = rows.get(0).getAsJsonArray();
+
+      sb.append("<span style='display: inline-block;'>");
+      sb.append("<table class='table table-striped table-bordered'>");
+      sb.append("<tr>");
+      sb.append("<th>Clusters</th>");
+      for( int i = 0; i < row0.size(); i++ )
+        sb.append("<th>").append(i).append("</th>");
+      sb.append("</tr>");
+
+      for( int r = 0; r < rows.size(); r++ ) {
+        sb.append("<tr>");
+        sb.append("<td>").append(r).append("</td>");
+        for( int c = 0; c < row0.size(); c++ ) {
+          JsonElement e = rows.get(r).getAsJsonArray().get(c);
+          sb.append("<td>").append(ElementBuilder.format(e.getAsDouble())).append("</td>");
+        }
+        sb.append("</tr>");
+      }
+      sb.append("</table></span>");
+    }
   }
 }
