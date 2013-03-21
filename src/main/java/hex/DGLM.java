@@ -44,15 +44,21 @@ public abstract class DGLM {
       _link = link;
     }
 
-    public void checkResponseCol(Column ycol){
+    public void checkResponseCol(Column ycol, ArrayList<String> warnings){
       switch(_family){
       case poisson:
         if(ycol._min < 0)
           throw new GLMException("Invalid response variable " + ycol._name + ", Poisson family requires response to be >= 0. ");
+        if(ycol._domain != null && ycol._domain.length > 0)
+          throw new GLMException("Invalid response variable " + ycol._name + ", Poisson family requires response to be integer number >= 0. Got categorical.");
+        if(ycol.isFloat())
+          warnings.add("Running family=Poisson on non-integer response column. Poisson is dicrete distribution, consider using gamma or gaussian instead.");
         break;
       case gamma:
         if(ycol._min <= 0)
           throw new GLMException("Invalid response variable " + ycol._name + ", Gamma family requires response to be > 0. ");
+        if(ycol._domain != null && ycol._domain.length > 0)
+          throw new GLMException("Invalid response variable " + ycol._name + ", Poisson family requires response to be integer number >= 0. Got categorical.");
         break;
       case binomial:
         if(_caseMode == CaseMode.none && (ycol._min < 0 || ycol._max > 1))
@@ -333,8 +339,6 @@ public abstract class DGLM {
     public final LSMSolver _solver;   // Which solver is used
     public final GLMParams _glmParams;
 
-    public transient int _responseCol; // Response column
-
     final double [] _beta;            // The output coefficients!  Main model result.
     final double [] _normBeta;        // normalized coefficients
 
@@ -371,12 +375,15 @@ public abstract class DGLM {
       if(DKV.get(_dataKey) == null) return null;
       ValueArray ary = DKV.get(_dataKey).get();
       HashSet<String> colNames = new HashSet<String>();
-      for(Column c:_va._cols)
-        colNames.add(c._name);
-      int [] res = new int[colNames.size()];
+      for(int i = 0; i < _va._cols.length-1; ++i)
+        colNames.add(_va._cols[i]._name);
+      String responseCol = _va._cols[_va._cols.length-1]._name;
+      int [] res = new int[colNames.size()+1];
       int j = 0;
       for(int i = 0; i < ary._cols.length; ++i)
         if(colNames.contains(ary._cols[i]._name))res[j++] = i;
+        else if(ary._cols[i]._name.equals(responseCol))
+          res[res.length-1] = i;
       return res;
     }
 
@@ -662,7 +669,7 @@ public abstract class DGLM {
           aic += (xm._vals[0]._aic - 2*xm_rank);
         }
       }
-      _err = err;
+      _err = err/models.length;
       _deviance = dev;
       _nullDeviance = nDev;
       _n = n;
@@ -970,6 +977,7 @@ public abstract class DGLM {
         res._aic *= -2;
         break; // aic is set during the validation task
       case gamma:
+        res._aic = Double.NaN;
         break; // aic for gamma is not computed
       default:
         assert false:"missing implementation for family " + _glmp._family;
@@ -1006,8 +1014,7 @@ public abstract class DGLM {
       res._nullDeviance += _glmp._family.deviance(yr, _ymu);
       if(_glmp._family == Family.poisson) { // aic for poisson
         res._err += (ym - yr)*(ym - yr);
-        long y = (long)yr;
-        assert y == yr;
+        long y = Math.round(yr);
         double logfactorial = 0;
         for(long i = 2; i <= y; ++i)logfactorial += Math.log(i);
         res._aic += (yr*Math.log(ym) - logfactorial - ym);
@@ -1083,11 +1090,12 @@ public abstract class DGLM {
     long t1 = System.currentTimeMillis();
     // make sure we have valid response variable for the current family
     Column ycol = data._ary._cols[data._modelDataMap[data._modelDataMap.length-1]];
-    params.checkResponseCol(ycol);
+    ArrayList<String> warns = new ArrayList<String>();
+    params.checkResponseCol(ycol,warns);
     // filter out constant columns...
     GramMatrixFunc gramF = new GramMatrixFunc(data, params, oldBeta);
     double [] newBeta = MemoryManager.malloc8d(data.expandedSz());
-    ArrayList<String> warns = new ArrayList<String>();
+
     boolean converged = true;
     Gram gram = gramF.apply(data);
     int iter = 1;

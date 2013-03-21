@@ -35,7 +35,7 @@ public class GLMGrid extends Job {
     _ts = thresholds;
     _alphas = as;
     _xfold = xfold;
-    _glmp.checkResponseCol(_ary._cols[xs[xs.length-1]]);
+    _glmp.checkResponseCol(_ary._cols[xs[xs.length-1]], new ArrayList<String>()); // ignore warnings here, they will be shown for each mdoel anyways
   }
 
   private class GridTask extends H2OCountedCompleter {

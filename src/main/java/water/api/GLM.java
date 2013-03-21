@@ -21,7 +21,6 @@ import java.util.*;
 import java.util.Map.Entry;
 
 import water.*;
-import water.ValueArray.Column;
 import water.util.RString;
 
 import com.google.gson.JsonElement;
@@ -363,6 +362,7 @@ public class GLM extends Request {
       case identity: eq = new RString("y = %equation");   break;
       case logit:    eq = new RString("y = 1/(1 + Math.exp(-(%equation)))");  break;
       case log:      eq = new RString("y = Math.exp((%equation)))");  break;
+      case inverse:  eq = new RString("y = 1/(%equation)");  break;
       default:       eq = new RString("equation display not implemented"); break;
       }
       StringBuilder sb = new StringBuilder();

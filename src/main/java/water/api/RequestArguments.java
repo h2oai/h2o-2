@@ -4,7 +4,6 @@ import hex.DGLM.CaseMode;
 import hex.DGLM.Family;
 import hex.DGLM.GLMModel;
 import hex.DGLM.Link;
-import hex.KMeans.KMeansModel;
 import hex.rf.Confusion;
 import hex.rf.RFModel;
 
@@ -1845,14 +1844,14 @@ public class RequestArguments extends RequestStatics {
       };
     }
     double _maxNAsRatio = 0.1;
-    ThreadLocal<ArrayList<String>> _constantColumns = new ThreadLocal<ArrayList<String>>();
+    ThreadLocal<TreeSet<String>> _constantColumns = new ThreadLocal<TreeSet<String>>();
     ThreadLocal<Integer> _badColumns = new ThreadLocal<Integer>();
 
     @Override
     public boolean shouldIgnore(int i, ValueArray.Column ca ) {
       if(ca._min == ca._max){
         if(_constantColumns.get() == null)
-          _constantColumns.set(new ArrayList<String>());
+          _constantColumns.set(new TreeSet<String>());
         _constantColumns.get().add(Objects.firstNonNull(ca._name, String.valueOf(i)));
         return true;
       }
@@ -1879,8 +1878,7 @@ public class RequestArguments extends RequestStatics {
     @Override
     public String queryComment(){
       if(_constantColumns.get() == null || _constantColumns.get().isEmpty())return "";
-      ArrayList<String> ignoredCols = _constantColumns.get();
-      Collections.sort(ignoredCols);
+      TreeSet<String> ignoredCols = _constantColumns.get();
       if(_badColumns.get() != null && _badColumns.get() > 0)
         return "<div class='alert'><b> There were " + _badColumns.get() + " bad columns not selected by default. Ignoring " + _constantColumns.get().size() + " constant columns</b>: " + ignoredCols.toString() +"</div>";
       else
