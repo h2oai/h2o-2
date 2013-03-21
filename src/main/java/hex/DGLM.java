@@ -220,6 +220,8 @@ public abstract class DGLM {
         return 0.5;
       case poisson:
         return y + 0.1;
+      case gamma:
+        return y;
       default:
         throw new Error("unimplemented");
       }
@@ -348,7 +350,7 @@ public abstract class DGLM {
 
     public final int _iterations;     // Iterations used to solve
     public final long _time;          // Total solve time in millis
-    public final LSMSolver _solver; // Which solver is used
+    public final LSMSolver _solver;   // Which solver is used
     public final GLMParams _glmParams;
 
     public transient int _responseCol; // Response column
@@ -362,6 +364,7 @@ public abstract class DGLM {
 
 
     public boolean isSolved() { return _beta != null; }
+    public static final String NAME = GLMModel.class.getSimpleName();
     public static final String KEY_PREFIX = "__GLMModel_";
     // Hand out the coffients.  Must be treated as a read-only array.
     public double[] beta() { return _beta; }
@@ -371,20 +374,25 @@ public abstract class DGLM {
       return Key.make(KEY_PREFIX + Key.make());
     }
 
-
     /**
-     * Non expanded ordered list of names of selected columns.
+     * Ids of selected columns (the last idx is the response variable) of the original dataset,
+     * if it still exists in H2O, or null.
      *
-     * @return
+     * @return array of column ids, the last is the response var.
      */
-    public String selectedCols(){
-      StringBuilder sb = new StringBuilder();
-      for( ValueArray.Column C : _va._cols ) {
-        sb.append(C._name).append(',');
-      }
-      sb.setLength(sb.length()-1); // Remove trailing extra comma
-      return sb.toString();
+    public int [] selectedColumns(){
+      if(DKV.get(_dataKey) == null) return null;
+      ValueArray ary = DKV.get(_dataKey).get();
+      HashSet<String> colNames = new HashSet<String>();
+      for(Column c:_va._cols)
+        colNames.add(c._name);
+      int [] res = new int[colNames.size()];
+      int j = 0;
+      for(int i = 0; i < ary._cols.length; ++i)
+        if(colNames.contains(ary._cols[i]._name))res[j++] = i;
+      return res;
     }
+
     /**
      * Expanded (categoricals expanded to vector of levels) ordered list of column names.
      * @return
@@ -393,8 +401,8 @@ public abstract class DGLM {
       StringBuilder sb = new StringBuilder();
       for( ValueArray.Column C : _va._cols ) {
         if( C._domain != null )
-          for( String d : C._domain )
-            sb.append(C._name).append('.').append(d).append(',');
+          for(int i = 1; i < C._domain.length; ++i)
+            sb.append(C._name).append('.').append(C._domain[i]).append(',');
         else
           sb.append(C._name).append(',');
       }
@@ -507,11 +515,11 @@ public abstract class DGLM {
       JsonObject normalizedCoefs = new JsonObject();
       int idx=0;
       JsonArray colNames = new JsonArray();
-
       for( int i=0; i<_va._cols.length-1; i++ ) {
         ValueArray.Column C = _va._cols[i];
         if( C._domain != null )
-          for( String d : C._domain ){
+          for(int j = 1; j < C._domain.length;++j){
+            String d = C._domain[j];
             String cname = C._name+"."+d;
             colNames.add(new JsonPrimitive(cname));
             if(_standardized)normalizedCoefs.addProperty(cname,_normBeta[idx]);
@@ -696,7 +704,7 @@ public abstract class DGLM {
             @Override
             public GLMModel next() {
               if(idx == keys.length) throw new NoSuchElementException();
-              return DKV.get(keys[idx++]).get(new GLMModel());
+              return DKV.get(keys[idx++]).get();
             }
               @Override
             public boolean hasNext() {
@@ -1100,14 +1108,13 @@ public abstract class DGLM {
           lsm.solve(gram.getXX(), gram.getXY(), gram.getYY(), newBeta);
         } catch (NonSPDMatrixException e) {
           if(!(lsm instanceof GeneralizedGradientSolver)){ // if we failed with ADMM, try Generalized gradient
-            System.err.println("swapping solvers!");
             lsm = new GeneralizedGradientSolver(lsm._lambda, lsm._alpha);
             warns.add("Switched to generalized gradient solver due to Non SPD matrix.");
-            lsm.solve(gram.getXX(), gram.getXY(), gram.getYY(), gramF._beta);
+            lsm.solve(gram.getXX(), gram.getXY(), gram.getYY(), newBeta);
           }
         }
       } while(++iter < params._maxIter && betaDiff(newBeta,oldBeta) > params._betaEps);
-      converged = (betaDiff(oldBeta,gramF._beta) < params._betaEps);//warns.add("Did not converge!");
+      converged = converged && (betaDiff(oldBeta,newBeta) < params._betaEps);
     }
     String [] warnings = new String[warns.size()];
     warns.toArray(warnings);

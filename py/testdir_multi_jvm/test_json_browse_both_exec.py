@@ -2,7 +2,7 @@ import unittest
 import random, sys, time, webbrowser, re
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_browse as h2b
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_hosts
 
 # Result from exec is an interesting key because it changes shape depending on the operation
 # it's hard to overwrite keys with other operations. so exec gives us that, which allows us
@@ -52,9 +52,12 @@ class Basic(unittest.TestCase):
         print "\nUsing random seed:", SEED
 
         # 3 nodes so we can hit the inspect from different nodes
-        global lenNodes
-        lenNodes = 3
-        h2o.build_cloud(lenNodes)
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(3)
+        else:
+            h2o_hosts.build_cloud_with_hosts()
+
 
     @classmethod
     def tearDownClass(cls):
@@ -63,6 +66,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_loop_random_exec_covtype(self):
+        lenNodes = len(h2o.nodes)
         csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
         key2 = 'c.hex'
         parseKey = h2o_cmd.parseFile(None, csvPathname, 'covtype.data', key2, 10)

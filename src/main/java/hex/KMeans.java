@@ -4,6 +4,7 @@ import java.util.*;
 
 import water.*;
 import water.Job.Progress;
+import water.api.Constants;
 
 import com.google.gson.*;
 
@@ -17,7 +18,8 @@ public abstract class KMeans {
   public static Long           RAND_SEED;
 
   public static class KMeansModel extends Model implements Progress {
-    public double[][]          _clusters;                    // The cluster centers, normalized according to _va
+    public static final String NAME = KMeansModel.class.getSimpleName();
+    public double[][]          _clusters;  // The cluster centers, normalized according to _va
     public int                 _iteration;
 
     // Empty constructor for deserialization
@@ -52,7 +54,7 @@ public abstract class KMeans {
           ary2.add(new JsonPrimitive(d));
         ary.add(ary2);
       }
-      res.add("clusters", ary);
+      res.add(Constants.CLUSTERS, ary);
       return res;
     }
 
@@ -201,7 +203,7 @@ public abstract class KMeans {
         System.out.println("sqr map " + key + ": " + this);
 
       assert key.home();
-      ValueArray va = ValueArray.value(DKV.get(_arykey));
+      ValueArray va = DKV.get(_arykey).get();
       AutoBuffer bits = va.getChunk(key);
       int rows = bits.remaining() / va._rowsize;
       double[] values = new double[_cols.length];
@@ -240,7 +242,7 @@ public abstract class KMeans {
         System.out.println("sampler map " + key + ": " + this + ", sqr: " + _sqr);
 
       assert key.home();
-      ValueArray va = ValueArray.value(DKV.get(_arykey));
+      ValueArray va = DKV.get(_arykey).get();
       AutoBuffer bits = va.getChunk(key);
       int rows = bits.remaining() / va._rowsize;
       double[] values = new double[_cols.length];
@@ -294,7 +296,7 @@ public abstract class KMeans {
         System.out.println("KMeans map " + key + ": " + this);
 
       assert key.home();
-      ValueArray va = ValueArray.value(DKV.get(_arykey));
+      ValueArray va = DKV.get(_arykey).get();
       AutoBuffer bits = va.getChunk(key);
       int rows = bits.remaining() / va._rowsize;
       double[] values = new double[_cols.length];

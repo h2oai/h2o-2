@@ -22,7 +22,7 @@ public class DatasetCornerCasesTest extends TestUtil {
     Key okey = Key.make("HTWO-87-two-lines-dataset.hex");
     ParseDataset.parse(okey,DKV.get(fkey));
     UKV.remove(fkey);
-    ValueArray val = ValueArray.value(DKV.get(okey));
+    ValueArray val = DKV.get(okey).get();
 
     // Check parsed dataset
     assertEquals("Number of chunks == 1", 1, val.chunks());
@@ -47,7 +47,7 @@ public class DatasetCornerCasesTest extends TestUtil {
       // Just wait little bit
       result.get();
       // Create incremental confusion matrix
-      RFModel model = UKV.get(modelKey, new RFModel());
+      RFModel model = UKV.get(modelKey);
       assertEquals("Number of classes == 1", 1,  model.classes());
       assertTrue("Number of trees > 0 ", model.size()> 0);
       model.deleteKeys();
@@ -88,7 +88,7 @@ public class DatasetCornerCasesTest extends TestUtil {
     Key okey = Key.make(keyname);
     ParseDataset.parse(okey,DKV.get(fkey));
 
-    ValueArray val = ValueArray.value(DKV.get(okey));
+    ValueArray val = DKV.get(okey).get();
     assertEquals(filename + ": number of chunks == 1", 1, val.chunks());
     assertEquals(filename + ": number of rows   == 2", 2, val._numrows);
     assertEquals(filename + ": number of cols   == 9", 9, val._cols.length);

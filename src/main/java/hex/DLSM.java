@@ -41,10 +41,14 @@ public class DLSM {
     public abstract boolean solve(double [][] xx, double [] xy, double yy,  double [] newBeta);
     public abstract JsonObject toJson();
 
+    protected boolean _converged;
+    public final boolean converged(){return _converged;}
     public static class LSMSolverException extends RuntimeException {
       public LSMSolverException(String msg){super(msg);}
     }
+    public abstract String name();
   }
+
 
   private static double shrinkage(double x, double kappa) {
     return Math.max(0, x - kappa) - Math.max(0, -x - kappa);
@@ -110,9 +114,6 @@ public class DLSM {
       return res;
     }
 
-
-
-
     public static class NonSPDMatrixException extends LSMSolverException {
       public NonSPDMatrixException(){
         super("Matrix is not SPD, can't solve without regularization");
@@ -127,7 +128,9 @@ public class DLSM {
       CholeskyDecomposition lu = new CholeskyDecomposition(xx);
       if(_alpha == 0 || _lambda == 0) // no l1 penalty
         try {
-          return lu.solve(xy).getColumnPackedCopy();
+          double[] res = lu.solve(xy).getColumnPackedCopy();
+          _converged = true;
+          return res;
         }catch(Exception e){
           if( !e.getMessage().equals("Matrix is not symmetric positive definite.") )
             throw new Error(e);
@@ -143,7 +146,7 @@ public class DLSM {
       OUTER:
       for(int a = 0; a < 5; ++a){
         double kappa = _lambda*_alpha / _rho;
-        for( int i = 0; i < 10000; ++i ) {
+        for( int i = 0; i < 1000; ++i ) {
           // first compute the x update
           // add rho*(z-u) to A'*y
           for( int j = 0; j < N-1; ++j ) {
@@ -191,7 +194,10 @@ public class DLSM {
           s_norm = _rho * Math.sqrt(s_norm);
           eps_pri = ABSTOL + RELTOL * Math.sqrt(Math.max(x_norm, z_norm));
           eps_dual = ABSTOL + _rho * RELTOL * Math.sqrt(u_norm);
-          if( r_norm < eps_pri && s_norm < eps_dual ) break;
+          if( r_norm < eps_pri && s_norm < eps_dual ){
+            _converged = true;
+            break;
+          }
         }
         return z;
       }
@@ -205,6 +211,11 @@ public class DLSM {
       // and I want to keep option of using user-supplied beta (to avoid allocation)
       System.arraycopy(beta, 0, newBeta, 0, beta.length);
       return true;
+    }
+
+    @Override
+    public String name() {
+      return "ADMM";
     }
   }
 
@@ -222,15 +233,14 @@ public class DLSM {
     public final double        _betaEps;
     private double[]           _beta;
     private double[]           _betaGradient;
-    boolean                    _converged;
     double                     _objVal;
     double                     _t          = 1.0;
     int                        _iterations = 0;
-    public static final int    MAX_ITER    = 100000;
-    public static final double EPS         = 1e-6;
+    public static final int    MAX_ITER    = 1000;
+    public static final double EPS         = 1e-5;
 
     public GeneralizedGradientSolver(double lambda, double alpha) {
-      this(lambda,alpha,1e-3);
+      this(lambda,alpha,1e-5);
     }
     public GeneralizedGradientSolver(double lambda, double alpha, double betaEps) {
       super(lambda,alpha);
@@ -250,7 +260,6 @@ public class DLSM {
     private double g_beta(double[][] xx, double[] xy, double yy, double[] beta) {
       final int n = xy.length;
       double res = yy;
-
       for( int i = 0; i < n; ++i ) {
         double x = 0;
         for( int j = 0; j < n; ++j ){
@@ -258,7 +267,8 @@ public class DLSM {
         }
         res += (0.5*x + xy[i]) * beta[i];
       }
-      if(res <= 0)throw new LSMSolverException("Generalized Gradient: Can not solved this problem.");
+      if(!(res >= 0))
+        throw new LSMSolverException("Generalized Gradient: Can not solved this problem.");
       return res;
     }
 
@@ -367,8 +377,11 @@ public class DLSM {
     @Override
     public JsonObject toJson() {
       JsonObject json = new JsonObject();
-
       return json;
+    }
+    @Override
+    public String name() {
+      return "GeneralizedGradient";
     }
   }
 }

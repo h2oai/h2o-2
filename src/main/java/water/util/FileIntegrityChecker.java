@@ -27,8 +27,12 @@ public class FileIntegrityChecker extends DRemoteTask {
   }
 
   private void addFolder(File folder, ArrayList<File> filesInProgress ) {
+    if( !folder.canRead() ) return;
     if (folder.isDirectory()) {
       for (File f: folder.listFiles()) {
+        if( !f.canRead() ) continue; // Ignore unreadable files
+        if( f.isHidden() && !folder.isHidden() )
+          continue;             // Do not dive into hidden dirs unless asked
         if (f.isDirectory())
           addFolder(f,filesInProgress);
         else
@@ -67,7 +71,7 @@ public class FileIntegrityChecker extends DRemoteTask {
     long size = f.length();
     Value val = (size < 2*ValueArray.CHUNK_SZ)
       ? new Value(k,(int)size,Value.NFS)
-      : new ValueArray(k,size,Value.NFS).value();
+      : new Value(k,new ValueArray(k,size),Value.NFS);
     val.setdsk();
     if(fs == null) UKV.put(k, val);
     else UKV.put(k, val, fs);

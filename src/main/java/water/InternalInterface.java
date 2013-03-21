@@ -24,13 +24,11 @@ public class InternalInterface implements water.ExternalInterface {
     Value v = DKV.get(key);
     if (v == null)
       throw new IllegalArgumentException("Key "+sk+" not found!");
-    Model M = null;
     try {
-      M = v.get();
+      return scoreModel(v.get(),colNames,row);
     } catch(Throwable t) {
       throw new IllegalArgumentException("Key "+sk+" is not a Model key");
     }
-    return scoreModel(M,colNames,row);
   }
 
   // Call to map the columns and score

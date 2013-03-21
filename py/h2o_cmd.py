@@ -18,6 +18,33 @@ def parseFile(node=None, csvPathname=None, key=None, key2=None,
         timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
         noise=noise, noPoll=noPoll)
 
+
+def info_from_inspect(inspect, csvPathname):
+    # need more info about this dataset for debug
+    cols = inspect['cols']
+    # look for nonzero num_missing_values count in each col
+    sum_num_missing_values = 0
+    for i, colDict in enumerate(cols):
+        num_missing_values = colDict['num_missing_values']
+        if num_missing_values != 0:
+            print "%s: col: %d, num_missing_values: %d" % (csvPathname, i, num_missing_values)
+            sum_num_missing_values += num_missing_values
+
+    num_cols = inspect['num_cols']
+    num_rows = inspect['num_rows']
+    row_size = inspect['row_size']
+    ptype = inspect['type']
+    value_size_bytes = inspect['value_size_bytes']
+    response = inspect['response']
+    ptime = response['time']
+
+    print "num_cols: %s, num_rows: %s, row_size: %s, ptype: %s, \
+           value_size_bytes: %s, time: %s" % \
+           (num_cols, num_rows, row_size, ptype, value_size_bytes, ptime)
+    # sum of num_missing_values from all the columns
+    return sum_num_missing_values
+
+
 def runInspect(node=None, key=None, timeoutSecs=5, **kwargs):
     if not key: raise Exception('No key for Inspect specified')
     if not node: node = h2o.nodes[0]
@@ -199,8 +226,6 @@ def runRFView(node=None, data_key=None, model_key=None, ntree=None, timeoutSecs=
     # kind of wasteful re-read, but maybe good for testing
     rfView = node.random_forest_view(data_key, model_key, timeoutSecs, **kwargs)
     h2f.simpleCheckRFView(node, rfView)
-
-
     return rfView
          
 def port_live(ip, port):

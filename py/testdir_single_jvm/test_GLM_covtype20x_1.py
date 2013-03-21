@@ -25,11 +25,11 @@ class Basic(unittest.TestCase):
     def test_poisson_covtype20x(self):
         if localhost:
             csvFilenameList = [
-                ('covtype20x.data', 200),
+                ('covtype20x.data', 400),
                 ]
         else:
             csvFilenameList = [
-                ('covtype20x.data', 200),
+                ('covtype20x.data', 400),
                 ('covtype200x.data', 2000),
                 ]
 

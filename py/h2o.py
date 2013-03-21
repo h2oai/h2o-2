@@ -71,7 +71,7 @@ def parse_our_args():
     parser.add_argument('-ip', '--ip', type=str, help='IP address to use for single host H2O with psutil control')
     parser.add_argument('-cj', '--config_json', help='Use this json format file to provide multi-host defaults. Overrides the default file pytest_config-<username>.json. These are used only if you do build_cloud_with_hosts()')
     parser.add_argument('-dbg', '--debugger', help='Launch java processes with java debug attach mechanisms', action='store_true')
-    parser.add_argument('-rud', '--random_udp_drop', help='Drop 10% of the UDP packets at the receive side', action='store_true')
+    parser.add_argument('-rud', '--random_udp_drop', help='Drop 20 pct. of the UDP packets at the receive side', action='store_true')
     parser.add_argument('unittest_args', nargs='*')
 
     args = parser.parse_args()
@@ -88,7 +88,8 @@ def parse_our_args():
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
     # FIX! this isn't working to grab the args we don't care about
     # Pass "--failfast" to stop on first error to unittest. and -v
-    sys.argv[1:] = ['-v', "--failfast"] + args.unittest_args
+#    sys.argv[1:] = ['-v', "--failfast"] + args.unittest_args
+    sys.argv[1:] = args.unittest_args
 
 def verboseprint(*args, **kwargs):
     if verbose:
@@ -300,24 +301,23 @@ def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True)
 def check_port_group(base_port):
     # UPDATE: don't do this any more
     # for now, only check for jenkins or kevin
-    if (1==0):
+    if (1==1):
         username = getpass.getuser()
         if username=='jenkins' or username=='kevin' or username=='michal':
             # assumes you want to know about 3 ports starting at base_port
             command1Split = ['netstat', '-anp']
             command2Split = ['egrep']
             # colon so only match ports. space at end? so no submatches
-            command2Split.append("(%s | %s | %s)" % (base_port, base_port+1, base_port+2) )
+            command2Split.append("(%s | %s)" % (base_port, base_port+1) )
             command3Split = ['wc','-l']
 
-            print "Checking 3 ports starting at ", base_port
+            print "Checking 2 ports starting at ", base_port
             print ' '.join(command2Split)
 
             # use netstat thru subprocess
             p1 = Popen(command1Split, stdout=PIPE)
             p2 = Popen(command2Split, stdin=p1.stdout, stdout=PIPE)
-            p3 = Popen(command3Split, stdin=p2.stdout, stdout=PIPE)
-            output = p3.communicate()[0]
+            output = p2.communicate()[0]
             print output
 
 def default_hosts_file():
@@ -938,6 +938,8 @@ class H2O(object):
             'data_key': data_key,
             'ntree':  trees,
             'model_key': 'pytest_model',
+            # new default. h2o defaults to 0, better for tracking oobe problems
+            'out_of_bag_error_estimate': 1, 
             }
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
@@ -955,7 +957,7 @@ class H2O(object):
         params_dict = {
             'data_key': data_key,
             'model_key': model_key,
-            'out_of_bag_error_estimate': None,
+            'out_of_bag_error_estimate': 1, 
             'class_weights': None,
             'response_variable': None, # FIX! apparently this is needed now?
             }
@@ -1159,6 +1161,13 @@ class H2O(object):
             args += [ '-Xms%dG' % self.java_heap_GB ]
             args += [ '-Xmx%dG' % self.java_heap_GB ]
 
+        if self.java_heap_MB is not None:
+            if (1 > self.java_heap_MB > 63000):
+                raise Exception('java_heap_MB <1 or >63000  (MB): %s' % (self.java_heap_MB))
+            args += [ '-Xms%dm' % self.java_heap_MB ]
+            args += [ '-Xmx%dm' % self.java_heap_MB ]
+            print "crikey",self.java_heap_MB
+
         if self.java_extra_args is not None:
             args += [ '%s' % self.java_extra_args ]
 
@@ -1207,12 +1216,7 @@ class H2O(object):
             args += [
                 '-hdfs hdfs://' + self.hdfs_name_node,
                 '-hdfs_version=' + self.hdfs_version, 
-                '-hdfs_root=' + self.hdfs_root,
             ]
-            if self.hdfs_nopreload:
-                args += [
-                    '-hdfs_nopreload ' + self.hdfs_nopreload
-                ]
             if self.hdfs_config:
                 args += [
                     '-hdfs_config ' + self.hdfs_config
@@ -1232,14 +1236,12 @@ class H2O(object):
 
     def __init__(self, 
         use_this_ip_addr=None, port=54321, capture_output=True, sigar=False, use_debugger=None, classpath=None,
-        use_hdfs=False, hdfs_root="/datasets", 
+        use_hdfs=False, 
         # hdfs_version="cdh4", hdfs_name_node="192.168.1.151", 
         hdfs_version="cdh3u5", hdfs_name_node="192.168.1.176", 
         hdfs_config=None,
-        # FIX not interesting any more?
-        hdfs_nopreload=None, 
         aws_credentials=None,
-        use_flatfile=False, java_heap_GB=None, java_extra_args=None, 
+        use_flatfile=False, java_heap_GB=None, java_heap_MB=None, java_extra_args=None, 
         use_home_for_ice=False, node_id=None, username=None,
         random_udp_drop=False
         ):
@@ -1269,12 +1271,11 @@ class H2O(object):
         self.use_hdfs = use_hdfs
         self.hdfs_name_node = hdfs_name_node
         self.hdfs_version = hdfs_version
-        self.hdfs_root = hdfs_root
         self.hdfs_config = hdfs_config
-        self.hdfs_nopreload = hdfs_nopreload
 
         self.use_flatfile = use_flatfile
         self.java_heap_GB = java_heap_GB
+        self.java_heap_MB = java_heap_MB
         self.java_extra_args = java_extra_args
 
         self.use_home_for_ice = use_home_for_ice

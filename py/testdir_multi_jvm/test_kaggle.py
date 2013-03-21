@@ -1,7 +1,7 @@
 import unittest, sys
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd
+import h2o, h2o_cmd, h2o_hosts
 import h2o_browse as h2b
 import time
 
@@ -11,7 +11,12 @@ class TestKaggle(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        h2o.build_cloud(2)
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(2)
+        else:
+            h2o_hosts.build_cloud_with_hosts()
+
         h2b.browseTheCloud()
 
     @classmethod

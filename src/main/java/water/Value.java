@@ -12,6 +12,15 @@ import water.store.s3.PersistS3;
  * {@link MemoryManager}.
  */
 public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
+  static final int DEBUG_WEAVER=1;
+
+  // ---
+  // Type-id of serialzied object; see TypeMap for the list.
+  // Might be a primitive array type, or a Iced POJO
+  private short _type;
+  public int type() { return _type; }
+  public String className() { return TypeMap.className(_type); }
+
 
   // Max size of Values before we start asserting.
   // Sizes around this big, or larger are probably true errors.
@@ -32,43 +41,72 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   // ---
   // A array of this Value when cached in DRAM, or NULL if not cached.  The
   // contents of _mem are immutable (Key/Value mappings can be changed by an
-  // explicit PUT action).
+  // explicit PUT action).  Cleared to null asynchronously by the memory
+  // manager (but only if persisted to some disk or in a POJO).  Can be filled
+  // in by reloading from disk, or by serializing a POJO.
   private volatile byte[] _mem;
-  public final byte[] mem() { return _mem; }
+  public final byte[] rawMem() { return _mem; }
 
   // ---
-  public static final byte FREEZABLE = 0;
-  // public static final int COLUMN_DOUBLE = 1;
-  // ...
-  public static final byte VALUE_ARRAY = 1;
-  private byte _type;
-  public final byte type() { return _type; }
-  public final boolean isArray() {
-    return _type == VALUE_ARRAY;
+  // A POJO version of the _mem array, or null if the _mem has not been
+  // serialized or if _mem is primitive data and not a POJO.  Cleared to null
+  // asynchronously by the memory manager (but only if persisted to some disk,
+  // or in the _mem array).  Can be filled in by deserializing the _mem array.
+
+  // NOTE THAT IF YOU MODIFY any fields of a POJO that is part of a Value,
+  // - this is NOT the recommended programming style,
+  // - those changes are visible to all on the node,
+  // - but not to other nodes, and
+  // - the POJO might be dropped by the MemoryManager and reconstitued from
+  //   disk and/or the byte array back to it's original form, losing your changes.
+  private volatile Freezable _pojo;
+  public Freezable rawPOJO() { return _pojo; }
+
+  // Free array (but always be able to rebuild the array)
+  public final void freeMem() { 
+    assert isPersisted() || _pojo != null;
+    _mem = null; 
+  }
+  // Free POJO (but always be able to rebuild the PJO)
+  public final void freePOJO() { 
+    assert isPersisted() || _mem != null;
+    _pojo = null;
   }
 
-  /** The FAST path get-byte-array - final method for speed.
-   * @return a null if the Value is deleted already. */
+  // The FAST path get-byte-array - final method for speed.
+  // Will (re)build the mem array from either the POJO or disk.
+  // Never returns NULL.
   public final byte[] memOrLoad() {
     byte[] mem = _mem;          // Read once!
     if( mem != null ) return mem;
+    Freezable pojo = _pojo;     // Read once!
+    if( pojo != null ) return (_mem = pojo.write(new AutoBuffer()).buf());
     if( _max == 0 ) return (_mem = new byte[0]);
     return (_mem = loadPersist());
   }
-
-  public final void freeMem() { _mem = null; }
-
-  // ---
-  // As object.
-  public final <T extends Freezable> T get() {
-    return new AutoBuffer(memOrLoad()).get();
+  public final byte[] getBytes() { 
+    assert _type==TypeMap.PRIM_B && _pojo == null;
+    return memOrLoad();
   }
 
-  public final <T extends Freezable> T get(T t) {
-    AutoBuffer bb = new AutoBuffer(memOrLoad());
-    char type = bb.get2();
-    assert t.frozenType() == type : "" + t.frozenType() + " vs " + (int) type;
-    return t.read(bb);
+  // The FAST path get-POJO - final method for speed.
+  // Will (re)build the POJO from the _mem array.
+  // Never returns NULL.
+  public <T extends Iced> T get() {
+    Iced pojo = (Iced)_pojo;    // Read once!
+    if( pojo != null ) return (T)pojo;
+    pojo = TypeMap.newInstance(_type);
+    pojo.read(new AutoBuffer(memOrLoad()));
+    pojo.init(_key);
+    return (T)(_pojo = pojo);
+  }
+  public <T> T get(Class<T> fc) {
+    Freezable pojo = _pojo;     // Read once!
+    if( pojo != null ) return (T)pojo;
+    pojo = TypeMap.newFreezable(_type);
+    pojo.read(new AutoBuffer(memOrLoad()));
+    assert fc.isAssignableFrom(pojo.getClass());
+    return (T)(_pojo = pojo);
   }
 
   // ---
@@ -174,25 +212,6 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   }
 
 
-  /** Lazily manifest data chunks on demand.  Requires a pre-existing ValueArray.
-   * Probably should be moved into HDFS-land, except that the same logic applies
-   * to all stores providing large-file access by default including S3. */
-  public static Value lazyArrayChunk( Key key ) {
-    if( key._kb[0] != Key.ARRAYLET_CHUNK ) return null; // Not an arraylet chunk
-    if( !key.home() ) return null; // Only on home node, so the replica tracking is correct
-    Key arykey = ValueArray.getArrayKey(key);
-    Value v1 = DKV.get(arykey,Integer.MAX_VALUE,H2O.ARY_KEY_PRIORITY);
-    if( v1 == null ) return null;       // Nope; not there
-    if( !v1.isArray() ) return null; // Or not a ValueArray
-    switch( v1._persist&BACKEND_MASK ) {
-    case ICE : return PersistIce .lazyArrayChunk(key);
-    case HDFS: return PersistHdfs.lazyArrayChunk(key);
-    case NFS : return PersistNFS .lazyArrayChunk(key);
-    case S3  : return PersistS3  .lazyArrayChunk(key);
-    default  : throw H2O.unimpl();
-    }
-  }
-
   public StringBuilder getString( int len, StringBuilder sb ) {
     int newlines=0;
     byte[] b = memOrLoad();
@@ -211,11 +230,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     return sb;
   }
 
-  // Expand a KEY_OF_KEYS into an array of keys
-  public Key[] flatten() {
-    assert _key._kb[0] == Key.KEY_OF_KEYS;
-    return new AutoBuffer(memOrLoad(), 0).getA(Key.class);
-  }
+  public boolean isArray() { return _type == TypeMap.VALUE_ARRAY; }
 
   // Get the 1st bytes from either a plain Value, or chunk 0 of a ValueArray
   public byte[] getFirstBytes() {
@@ -226,55 +241,118 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   // For ValueArrays, the length of all chunks.
   public long length() {
     if(!isArray()) return _max;
-    return ValueArray.value(this).length();
+    return ((ValueArray)get()).length();
   }
 
+  /** Creates a Stream for reading bytes */
+  public InputStream openStream() throws IOException {
+    if( isArray() ) return ((ValueArray)get()).openStream();
+    assert _type==TypeMap.PRIM_B;
+    return new ByteArrayInputStream(memOrLoad());
+  }
+
+  // Heuristic to guess if this is unparsed CSV text or not
+  public boolean isHex() {
+    if( !isArray() ) return false;
+    ValueArray va = get();
+    if( va._cols == null || va._cols.length == 0 ) return false;
+    if( va._cols.length > 1 ) return true;
+    if( va._cols[0]._size != 1 ) return true;
+    return _key.toString().endsWith(".hex");
+  }
 
   // --------------------------------------------------------------------------
   // Set just the initial fields
-  public Value(Key k, int max, byte[] mem, byte be, byte type ) {
+  public Value(Key k, int max, byte[] mem, short type, byte be ) {
     assert mem==null || mem.length==max;
     assert max < MAX : "Value size=0x"+Integer.toHexString(max);
     _key = k;
     _max = max;
     _mem = mem;
+    _type = type;
+    _pojo = null;
     // For the ICE backend, assume new values are not-yet-written.
     // For HDFS & NFS backends, assume we from global data and preserve the
     // passed-in persist bits
     byte p = (byte)(be&BACKEND_MASK);
     _persist = (p==ICE) ? p : be;
-    _type = type;
+    _replicas = new AtomicLong(0);
   }
-  public Value(Key k, int max, byte be    ) { this(k, max, null, be, FREEZABLE); }
-  public Value(Key k, int max             ) { this(k, max, MemoryManager.malloc1(max), ICE, FREEZABLE); }
-  public Value(Key k, int max, byte[] mem ) { this(k, max, mem, ICE, FREEZABLE); }
-  public Value(Key k, String s            ) { this(k, s.length(), s.getBytes()); }
-  public Value(Key k, byte[] bits         ) { this(k, bits.length,bits); }
-  public Value(Key k, byte[] bits, byte persist, byte type) { this(k, bits.length,bits,persist, type); }
-  public Value() { }            // for auto-serialization
+  public Value(Key k, byte[] mem ) { this(k, mem.length, mem, TypeMap.PRIM_B, ICE); }
+  public Value(Key k, int max ) { this(k, max, new byte[max], TypeMap.PRIM_B, ICE); }
+  public Value(Key k, int max, byte be ) { this(k, max, null, TypeMap.PRIM_B,  be); }
+  public Value(Key k, String s ) { this(k, s.getBytes()); }
+  public Value(Key k, Iced pojo ) { this(k,pojo,ICE); }
+  public Value(Key k, Iced pojo, byte be ) {
+    _key = k;
+    _pojo = pojo;
+    _type = (short)pojo.frozenType();
+    _mem = pojo.write(new AutoBuffer()).buf();
+    _max = _mem.length;
+    // For the ICE backend, assume new values are not-yet-written.
+    // For HDFS & NFS backends, assume we from global data and preserve the
+    // passed-in persist bits
+    byte p = (byte)(be&BACKEND_MASK);
+    _persist = (p==ICE) ? p : be;
+    _replicas = new AtomicLong(0);
+  }
+  public Value(Key k, Freezable pojo) {
+    _key = k;
+    _pojo = pojo;
+    _type = (short)pojo.frozenType();
+    _mem = pojo.write(new AutoBuffer()).buf();
+    _max = _mem.length;
+    _persist = ICE;
+    _replicas = new AtomicLong(0);
+  }
+  // Nullary constructor for weaving
+  public Value() {
+    _replicas = new AtomicLong(0);
+  }
 
   // Custom serializers: the _mem field is racily cleared by the MemoryManager
   // and the normal serializer then might ship over a null instead of the
   // intended byte[].  Also, the value is NOT on the deserialize'd machines disk
   public AutoBuffer write(AutoBuffer bb) {
+    touch();
     byte p = _persist;
     if( onICE() ) p &= ~ON_dsk; // Not on the remote disk
-    return bb.put1(p).put1(_type).putA1(memOrLoad());
+    return bb.put1(p).put2(_type).putA1(memOrLoad());
   }
 
   // Custom serializer: set _max from _mem length; set replicas & timestamp.
   public Value read(AutoBuffer bb) {
     assert _key == null;        // Not set yet
     _persist = (byte) bb.get1();
-    _type = (byte) bb.get1();
+    _type = (short) bb.get2();
     _mem = bb.getA1();
     _max = _mem.length;
+    _pojo = null;
     // On remote nodes _replicas is initialized to 0 (signaling a remote PUT is
     // in progress) flips to -1 when the remote PUT is done, or +1 if a notify
     // needs to happen.
     _replicas.set(-1);          // Set as 'remote put is done'
     touch();
     return this;
+  }
+
+  /** Lazily manifest data chunks on demand.  Requires a pre-existing ValueArray.
+   * Probably should be moved into HDFS-land, except that the same logic applies
+   * to all stores providing large-file access by default including S3. */
+  public static Value lazyArrayChunk( Key key ) {
+    if( key._kb[0] != Key.ARRAYLET_CHUNK ) return null; // Not an arraylet chunk
+    if( !key.home() ) return null; // Only on home node, so the replica tracking is correct
+    Key arykey = ValueArray.getArrayKey(key);
+    Value v1 = DKV.get(arykey,Integer.MAX_VALUE,H2O.ARY_KEY_PRIORITY);
+    if( v1 == null ) return null;       // Nope; not there
+    if( !v1.isArray() ) return null; // Or not a ValueArray
+    switch( v1._persist&BACKEND_MASK ) {
+    case ICE : return PersistIce .lazyArrayChunk(key);
+    case HDFS: return PersistHdfs.lazyArrayChunk(key);
+    case NFS : return PersistNFS .lazyArrayChunk(key);
+    case S3  : return PersistS3  .lazyArrayChunk(key);
+    default  : throw H2O.unimpl();
+    }
   }
 
   // ---------------------
@@ -338,7 +416,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   //
   // Note that this sequence involves a lot of blocking on the writes, but not
   // the readers - i.e., writes are slow to complete.
-  private transient final AtomicLong _replicas = new AtomicLong(0);
+  private transient final AtomicLong _replicas;
   public int numReplicas() {
     long r = _replicas.get();
     int c = 0;
@@ -462,15 +540,6 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     return _replicas.get() != -1;
   }
 
-  public boolean isHex() {
-    if( !isArray() ) return false;
-    ValueArray va = ValueArray.value(this);
-    if( va._cols == null || va._cols.length == 0 ) return false;
-    if( va._cols.length > 1 ) return true;
-    if( va._cols[0]._size != 1 ) return true;
-    return _key.toString().endsWith(".hex");
-  }
-
   /** Return true if blocking is unnecessary.
    * Alas, used in TWO places and the blocking API forces them to share here. */
   @Override public boolean isReleasable() {
@@ -492,9 +561,4 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     return true;
   }
 
-  /** Creates a Stream for reading bytes */
-  public InputStream openStream() throws IOException {
-    if( !isArray() ) return new ByteArrayInputStream(memOrLoad());
-    return ValueArray.value(this).openStream();
-  }
 }

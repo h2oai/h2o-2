@@ -104,7 +104,7 @@ public final class DParseTask extends MRTask {
     public void store() {
       assert _abs.eof();
       Key k = ValueArray.getChunkKey(_chunkIndex, _job.dest());
-      AtomicUnion u = new AtomicUnion(_ab.bufClose(),_chunkOffset);
+      AtomicUnion u = new AtomicUnion(_abs.bufClose(),_chunkOffset);
       alsoBlockFor(u.fork(k));
       _abs = null; // free mem
     }
@@ -121,18 +121,17 @@ public final class DParseTask extends MRTask {
   public static class AtomicUnion extends Atomic {
     byte [] _bits;
     int _dst_off;
-    public AtomicUnion() {}
     public AtomicUnion(byte[] buf, int dstOff){
       _dst_off = dstOff;
       _bits = buf;
     }
-    @Override public byte[] atomic( byte[] bits1 ) {
+    @Override public Value atomic( Value val1 ) {
       byte[] mem = _bits;
-      int len = Math.max(_dst_off + mem.length,bits1==null?0:bits1.length);
+      int len = Math.max(_dst_off + mem.length,val1==null?0:val1._max);
       byte[] bits2 = MemoryManager.malloc1(len);
-      if( bits1 != null ) System.arraycopy(bits1,0,bits2,0,bits1.length);
+      if( val1 != null ) System.arraycopy(val1.memOrLoad(),0,bits2,0,val1._max);
       System.arraycopy(mem,0,bits2,_dst_off,mem.length);
-      return bits2;
+      return new Value(_key,bits2);
     }
 
     @Override public void onSuccess(){
@@ -282,7 +281,7 @@ public final class DParseTask extends MRTask {
         this._sep = setup._separator;
         // if parsing value array, initialize the nrows array
         if( _sourceDataset.isArray() ) {
-          ValueArray ary = ValueArray.value(_sourceDataset);
+          ValueArray ary = _sourceDataset.get();
           _nrows = new int[(int)ary.chunks()];
         }
         // launch the distributed parser on its chunks.
@@ -412,7 +411,7 @@ public final class DParseTask extends MRTask {
     DKV.write_barrier();
     // finally make the value array header
     ValueArray ary = new ValueArray(_job.dest(), _numRows, off, cols);
-    UKV.put(_job.dest(), ary.value());
+    UKV.put(_job.dest(), ary);
   }
 
   private void createEnums() {
@@ -560,7 +559,7 @@ public final class DParseTask extends MRTask {
         if (_phase == Pass.ONE) {
           if (_nrows != other._nrows)
             for (int i = 0; i < _nrows.length; ++i)
-              _nrows[i] += other._nrows[i];
+              _nrows[i] |= other._nrows[i];
           for(int i = 0; i < _ncolumns; ++i) {
             if(_enums[i] != other._enums[i])
               _enums[i].merge(other._enums[i]);
@@ -677,8 +676,9 @@ public final class DParseTask extends MRTask {
         } else if ((_max[i] - _min[i]) < 65535) {
           _colTypes[i] = SHORT;
           _bases[i] = (int)_min[i];
-        } else if (_max[i] - _min[i] < (1l << 32)) {
-            _colTypes[i] = INT;
+        } else if (_max[i] - _min[i] < (1L << 32) &&
+                   _min[i] > Integer.MIN_VALUE && _min[i] < Integer.MAX_VALUE) {
+          _colTypes[i] = INT;
           _bases[i] = (int)_min[i];
         } else
           _colTypes[i] = LONG;
@@ -733,8 +733,8 @@ public final class DParseTask extends MRTask {
       _colIdx = 0;
       // if we are at the end of current stream, move to the next one
       if (_ab.eof()) {
-        _outputStreams2[_outputIdx].store();
-        ++_outputIdx;
+        assert _outputStreams2[_outputIdx]._abs == _ab;
+        _outputStreams2[_outputIdx++].store();
         if (_outputIdx < _outputStreams2.length) {
           _ab = _outputStreams2[_outputIdx].initialize();
         } else {
@@ -749,7 +749,7 @@ public final class DParseTask extends MRTask {
    */
   public void rollbackLine() {
     --_myrows;
-    assert (_phase == Pass.ONE || _ab == null) : "p="+_phase+" ab="+_ab;
+    assert (_phase == Pass.ONE || _ab == null) : "p="+_phase+" ab="+_ab+" oidx="+_outputIdx+"/"+_outputStreams2.length+" chk#"+_chunkId+" myrow"+_myrows+" "+_sourceDataset._key;
   }
 
   /** Adds double value to the column.

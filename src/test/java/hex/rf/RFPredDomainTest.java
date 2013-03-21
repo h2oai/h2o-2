@@ -25,7 +25,7 @@ public class RFPredDomainTest extends TestUtil {
   static void runIrisRF(final String trainDS, final String testDS, double expTestErr, long[][] expCM, String[] expDomain) throws Exception {
     String trainKeyName = "iris_train.hex";
     Key trainKey        = loadAndParseKey(trainKeyName, trainDS);
-    ValueArray trainData = ValueArray.value(trainKey);
+    ValueArray trainData = DKV.get(trainKey).get();
 
     int  trees    = 10;
     int  depth    = 50;
@@ -40,12 +40,11 @@ public class RFPredDomainTest extends TestUtil {
     // Block
     drf.get();
 
-    RFModel model = UKV.get(modelKey, new RFModel());
+    RFModel model = UKV.get(modelKey);
     String testKeyName  = "iris_test.hex";
     // Load validation dataset
     Key testKey         = loadAndParseKey(testKeyName, testDS);
-    ValueArray testData = ValueArray.value(testKey);
-    // Produce confusion matrix - the call is blocking
+    ValueArray testData = DKV.get(testKey).get();
     Confusion confusion = Confusion.make(model, testData._key, model._features-1, null, false);
     confusion.report();
     assertEquals("Error rate", expTestErr, confusion.classError(), 0.001);

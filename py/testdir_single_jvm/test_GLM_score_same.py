@@ -16,14 +16,10 @@ import h2o, h2o_cmd, h2o_glm, h2o_util
 import copy
 
 
-print '#******************************************************************************************'
-print "This test fails because the GLMScore json result doesn't have the info in the GLMScore.html"
-print 'it only has: {"response":{"status":"done","h2o":"pytest-kevin-27729","node":"/192.168.1.86:54321","time":30}}'
-print '#******************************************************************************************'
-
-def glm_doit(self, csvFilename, csvPathname, timeoutSecs=30, **kwargs):
+def glm_doit(self, csvFilename, csvPathname, timeoutSecs, pollTimeoutSecs, **kwargs):
     print "\nStarting GLM of", csvFilename
-    parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", timeoutSecs=10)
+    parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", 
+        timeoutSecs=60, pollTimeoutSecs=pollTimeoutSecs)
 
     start = time.time()
     glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
@@ -38,10 +34,11 @@ def glm_doit(self, csvFilename, csvPathname, timeoutSecs=30, **kwargs):
     modelKey = GLMModel['model_key']
     return modelKey, validations
 
-def glm_score(self, csvFilename, csvPathname, modelKey, timeoutSecs=3):
+def glm_score(self, csvFilename, csvPathname, modelKey, timeoutSecs=30, pollTimeoutSecs=30):
     print "\nStarting GLM score of", csvFilename
     key2 = csvFilename + ".hex"
-    parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, timeoutSecs=10)
+    parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, 
+        timeoutSecs=timeoutSecs, pollTimeoutSecs=pollTimeoutSecs)
     y = "10"
     x = ""
     kwargs = {'x': x, 'y':  y, 'case': -1, 'thresholds': 0.5}
@@ -52,15 +49,15 @@ def glm_score(self, csvFilename, csvPathname, modelKey, timeoutSecs=3):
     h2o.verboseprint(h2o.dump_json(glmScore))
     ### h2o_glm.simpleCheckGLM(self, glm, 7, **kwargs)
 
-    # compare this glm to the first one. since the files are replications, the results
+    # compare this glm to the first one. since the files are replications, 
+    # the results
     # should be similar?
-    GLMModel = glmScore['GLMModel']
-    validationsList = glmScore['GLMModel']['validations']
-    validations = validationsList[0]
+    # UPDATE: format for returning results is slightly different than normal GLM
+    validation = glmScore['validation']
     if self.validations1:
-        h2o_glm.compareToFirstGlm(self, 'err', validations, self.validations1)
+        h2o_glm.compareToFirstGlm(self, 'err', validation, self.validations1)
     else:
-        self.validations1 = copy.deepcopy(validations)
+        self.validations1 = copy.deepcopy(validation)
 
 
 
@@ -90,7 +87,8 @@ class Basic(unittest.TestCase):
         y = "10"
         x = ""
         kwargs = {'x': x, 'y':  y, 'case': -1, 'thresholds': 0.5}
-        (modelKey, validations1) = glm_doit(self, csvFilename, csvPathname, timeoutSecs=30, **kwargs)
+        (modelKey, validations1) = glm_doit(self, csvFilename, csvPathname, 
+            timeoutSecs=60, pollTimeoutSecs=60, **kwargs)
 
         print "Use", modelKey, "model on 2x and 4x replications and compare results to 1x"
 
@@ -101,7 +99,8 @@ class Basic(unittest.TestCase):
         filename2x = "hastie_2x.data"
         pathname2x = SYNDATASETS_DIR + '/' + filename2x
         h2o_util.file_cat(pathname1x,pathname1x,pathname2x)
-        glm_score(self,filename2x, pathname2x, modelKey, timeoutSecs=45)
+        glm_score(self,filename2x, pathname2x, modelKey, 
+            timeoutSecs=60, pollTimeoutSecs=60)
 
         filename4x = "hastie_4x.data"
         pathname4x = SYNDATASETS_DIR + '/' + filename4x
@@ -110,7 +109,8 @@ class Basic(unittest.TestCase):
         print "Iterating 3 times on this last one"
         for i in range(3):
             print "\nTrial #", i, "of", filename4x
-            glm_score(self,filename4x, pathname4x, modelKey, timeoutSecs=60)
+            glm_score(self,filename4x, pathname4x, modelKey, 
+                timeoutSecs=60, pollTimeoutSecs=60)
 
 if __name__ == '__main__':
     h2o.unit_main()

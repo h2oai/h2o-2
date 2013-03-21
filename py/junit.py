@@ -36,6 +36,8 @@ class JUnit(unittest.TestCase):
                     '-ea', '-jar', h2o.find_file('target/h2o.jar'),
                     '-mainClass', 'org.junit.runner.JUnitCore',
                     # The tests
+                    #'hex.GLMGridTest',
+                    'hex.HistogramTest',
                     'hex.GLMTest',
                     'hex.KMeansTest',
                     'hex.MinorityClassTest',
@@ -43,13 +45,16 @@ class JUnit(unittest.TestCase):
                     'hex.rf.RFPredDomainTest',
                     'water.AtomicTest',
                     'water.AutoSerialTest',
+                    'water.ConcurrentKeyTest',
                     'water.KVTest',
                     'water.KeyToString',
                     'water.api.RStringTest',
                     'water.exec.ExprTest',
                     'water.exec.RBigDataTest',
                     'water.parser.DatasetCornerCasesTest',
-                    'water.parser.ParserTest'
+                    'water.parser.ParseProgressTest',
+                    'water.parser.ParserTest',
+                    'water.parser.RReaderTest',
                     ])
 
             rc = ps.wait(None)

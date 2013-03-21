@@ -57,6 +57,9 @@ public final class H2O {
   // Convenience error
   public static final RuntimeException unimpl() { return new RuntimeException("unimplemented"); }
 
+  // Central /dev/null for ignored exceptions
+  public static final void ignore(Throwable e) { e.printStackTrace(); }
+
   // --------------------------------------------------------------------------
   // The Current Cloud. A list of all the Nodes in the Cloud. Changes if we
   // decide to change Clouds via atomic Cloud update.
@@ -902,7 +905,7 @@ public final class H2O {
           Key key = (Key )ok;
           if( !(ov instanceof Value) ) continue; // Ignore tombstones and Primes and null's
           Value val = (Value)ov;
-          byte[] m = val.mem();
+          byte[] m = val.rawMem();
           if( m == null ) continue; // Nothing to throw out
 
           // ValueArrays covering large files in global filesystems such as NFS
@@ -1005,7 +1008,7 @@ public final class H2O {
           if( !(ok instanceof Key ) ) continue; // Ignore tombstones and Primes and null's
           if( !(ov instanceof Value) ) continue; // Ignore tombstones and Primes and null's
           Value val = (Value)ov;
-          byte[] m = val.mem();
+          byte[] m = val.rawMem();
           if( m == null ) continue;
           if( val.isArray() &&
               (val._persist & Value.BACKEND_MASK)!=Value.ICE )

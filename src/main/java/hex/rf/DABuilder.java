@@ -34,7 +34,7 @@ class DABuilder {
   /** Return the number of rows on this node. */
   final int getRowCount(final Key[] keys) {
     int num_rows = 0;    // One pass over all chunks to compute max rows
-    ValueArray ary = ValueArray.value(_drf._rfmodel._dataKey);
+    ValueArray ary = DKV.get(_drf._rfmodel._dataKey).get();
     for( Key key : keys ) if( key.home() ) num_rows += ary.rpc(ValueArray.getChunkIndex(key));
     return num_rows;
   }
@@ -49,7 +49,7 @@ class DABuilder {
   protected  DataAdapter inhaleData(Key [] keys) {
     Timer t_inhale = new Timer();
     RFModel rfmodel = _drf._rfmodel;
-    final ValueArray ary = ValueArray.value(rfmodel._dataKey);
+    final ValueArray ary = DKV.get(rfmodel._dataKey).get();
 
     // The model columns are dense packed - but there will be columns in the
     // data being ignored.  This is a map from the model's columns to the

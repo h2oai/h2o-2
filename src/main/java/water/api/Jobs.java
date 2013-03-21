@@ -24,9 +24,9 @@ public class Jobs extends Request {
     for( int i = jobs.length - 1; i >= 0; i-- ) {
       JsonObject json = new JsonObject();
       json.addProperty(KEY, jobs[i].self().toString());
-      json.addProperty(DESCRIPTION, jobs[i].description());
+      json.addProperty(DESCRIPTION, jobs[i]._description);
       json.addProperty(DEST_KEY, jobs[i].dest() != null ? jobs[i].dest().toString() : "");
-      json.addProperty(START_TIME, RequestBuilders.ISO8601.get().format(new Date(jobs[i].startTime())));
+      json.addProperty(START_TIME, RequestBuilders.ISO8601.get().format(new Date(jobs[i]._startTime)));
       json.addProperty(PROGRESS, jobs[i].progress());
       json.addProperty(CANCELLED, jobs[i].cancelled());
       array.add(json);

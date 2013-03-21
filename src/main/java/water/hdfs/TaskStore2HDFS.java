@@ -30,7 +30,7 @@ public class TaskStore2HDFS extends DTask<TaskStore2HDFS> {
     }
 
     // For ValueArrays, make the .hex header
-    ValueArray ary = ValueArray.value(v);
+    ValueArray ary = v.get();
     String err = PersistHdfs.freeze(srcKey,ary);
     if( err != null ) return err;
 
@@ -46,7 +46,7 @@ public class TaskStore2HDFS extends DTask<TaskStore2HDFS> {
 
     // Watch the progress key until it gets removed or an error appears
     long idx = 0;
-    while( UKV.get(selfKey,ts) != null ) {
+    while( (ts=UKV.get(selfKey,TaskStore2HDFS.class)) != null ) {
       if( ts._indexFrom != idx ) {
         System.out.print(" "+idx+"/"+ary.chunks());
         idx = ts._indexFrom;
@@ -74,7 +74,7 @@ public class TaskStore2HDFS extends DTask<TaskStore2HDFS> {
   @Override
   public void compute2() {
     String path = null;// getPathFromValue(val);
-    ValueArray ary = ValueArray.value(_arykey);
+    ValueArray ary = DKV.get(_arykey).get();
     Key self = selfKey();
 
     while( _indexFrom < ary.chunks() ) {

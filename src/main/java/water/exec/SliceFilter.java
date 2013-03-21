@@ -19,14 +19,14 @@ public class SliceFilter extends MRTask {
     _source = source;
     _start = start;
     _length = length;
-    ValueArray ary = ValueArray.value(source);
+    ValueArray ary = DKV.get(source).get();
     assert (start + length <= ary.numRows());
     _rowSize = ary._rowsize;
   }
 
 
   @Override public void map(Key key) {
-    ValueArray ary = ValueArray.value(_source);
+    ValueArray ary = DKV.get(_source).get();
     long cidx = ValueArray.getChunkIndex(key);
     long startRow = ary.startRow(cidx);
     int rowsInChunk = chunkSize(key, _length*_rowSize, _rowSize) / _rowSize;

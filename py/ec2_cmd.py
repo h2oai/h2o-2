@@ -184,6 +184,12 @@ def dump_hosts_config(ec2_config, reservation, filename=DEFAULT_HOSTS_FILENAME):
     cfg['ip'] = [ i.private_ip_address for i in reservation.instances ]
     cfg['instances'] = [ { 'id': i.id, 'private_ip_address': i.private_ip_address, 'public_ip_address': i.ip_address, 'public_dns_name': i.public_dns_name } for i in reservation.instances ]
     cfg['reservation_id']  = reservation.id
+    # put ssh commands into comments
+    cmds = get_ssh_commands(ec2_config, reservation)
+    idx  = 1
+    for cmd in cmds: 
+        cfg['comment_ssh_{0}'.format(idx)] = cmd
+        idx += 1
     # save config
     filename = filename.format(reservation.id)
     with open(filename, 'w+') as f:
@@ -193,10 +199,16 @@ def dump_hosts_config(ec2_config, reservation, filename=DEFAULT_HOSTS_FILENAME):
     log("To terminate instances call:")
     log("python ec2_cmd.py terminate --hosts {0}".format(filename))
 
-def dump_ssh_commands(ec2_config, reservation):
+def get_ssh_commands(ec2_config, reservation):
+    cmds = []
     for i in reservation.instances:
-        print "ssh -i ~/.ec2/keys/mrjenkins_test.pem ubuntu@{0}".format(i.private_ip_address) 
+        cmds.append( "ssh -i ~/.ec2/keys/mrjenkins_test.pem ubuntu@{0}".format(i.private_ip_address) )
+    return cmds
 
+def dump_ssh_commands(ec2_config, reservation):
+    cmds = get_ssh_commands(ec2_config, reservation)
+    for cmd in cmds:
+        print cmd 
 
 def load_ec2_config(config_file):
     if config_file:

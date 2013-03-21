@@ -30,29 +30,6 @@ paramDict = {
     'exclusive_split_limit': 0,
     }
 
-def info_from_inspect(inspect, csvPathname):
-    # need more info about this dataset for debug
-    cols = inspect['cols']
-    # look for nonzero num_missing_values count in each col
-    for i, colDict in enumerate(cols):
-        num_missing_values = colDict['num_missing_values']
-        if num_missing_values != 0:
-            print "%s: col: %d, num_missing_values: %d" % (csvPathname, i, num_missing_values)
-            pass
-
-    num_cols = inspect['num_cols']
-    num_rows = inspect['num_rows']
-    row_size = inspect['row_size']
-    ptype = inspect['type']
-    value_size_bytes = inspect['value_size_bytes']
-    response = inspect['response']
-    ptime = response['time']
-
-    print "num_cols: %s, num_rows: %s, row_size: %s, ptype: %s, \
-           value_size_bytes: %s, time: %s" % \
-           (num_cols, num_rows, row_size, ptype, value_size_bytes, ptime)
-
-
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -83,14 +60,14 @@ class Basic(unittest.TestCase):
 
 
         inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
-        info_from_inspect(inspect, csvPathname)
+        h2o_cmd.info_from_inspect(inspect, csvPathname)
 
         for trial in range(1):
             # params is mutable. This is default.
             kwargs = paramDict
             # adjust timeoutSecs with the number of trees
             # seems ec2 can be really slow
-            timeoutSecs = 30 + kwargs['ntree'] * 10
+            timeoutSecs = 30 + kwargs['ntree'] * 20
             start = time.time()
             rfView = h2o_cmd.runRFOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start

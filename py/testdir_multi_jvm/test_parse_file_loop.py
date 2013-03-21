@@ -1,6 +1,6 @@
 import unittest, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_browse as h2b
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_hosts
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -8,7 +8,11 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        h2o.build_cloud(node_count=3)
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(3,java_heap_GB=4)
+        else:
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):

@@ -134,7 +134,7 @@ public abstract class Function {
         throw new Exception("Expected vector (value)");
       if (r.rawColIndex() >= 0) // that is we are selecting single column
         return;
-      ValueArray va = ValueArray.value(DKV.get(r._key));
+      ValueArray va = DKV.get(r._key).get();
       if (va.numCols()!=1)
         throw new Exception("Expected single column vector, but "+va.numCols()+" columns found.");
     }
@@ -279,7 +279,7 @@ class Mean extends Function {
     @Override protected void reduce(double x) { _result += x; }
 
     @Override public double result() {
-      ValueArray va = ValueArray.value(_key);
+      ValueArray va = DKV.get(_key).get();
       return _result / va.numRows();
     }
 
@@ -320,10 +320,10 @@ class Filter extends Function {
       numrows += tmp;
     }
     // Build target header
-    ValueArray va = ValueArray.value(args[0]._key);
+    ValueArray va = DKV.get(args[0]._key).get();
     va = VABuilder.updateRows(va, r._key, numrows);
     va._rpc = filter._rpc;      // Variable rows-per-chunk
-    DKV.put(va._key, va.value());
+    DKV.put(va._key, va);
     DKV.write_barrier();
     return r;
   }
@@ -342,7 +342,7 @@ class Slice extends Function {
 
   @Override public Result eval(Result... args) throws Exception {
     // additional arg checking
-    ValueArray ary = ValueArray.value(args[0]._key);
+    ValueArray ary = DKV.get(args[0]._key).get();
     long start = (long) args[1]._const;
     long length = (long) args[2]._const;
     if (start >= ary.numRows())
@@ -352,9 +352,9 @@ class Slice extends Function {
     if (start+length > ary.numRows())
       throw new Exception("Start + offset is out of bounds.");
     Result r = Result.temporary();
-    ValueArray va = ValueArray.value(args[0]._key);
+    ValueArray va = DKV.get(args[0]._key).get();
     va = VABuilder.updateRows(va, r._key, length);
-    DKV.put(va._key, va.value());
+    DKV.put(va._key, va);
     DKV.write_barrier();
     SliceFilter filter = new SliceFilter(args[0]._key,start,length);
     filter.invoke(r._key);
@@ -376,13 +376,13 @@ class RandBitVect extends Function {
     public RandVectBuilder(Key k, long selected, long seed) {
       _key = k;
       _selected = selected;
-      ValueArray va = ValueArray.value(k);
+      ValueArray va = DKV.get(k).get();
       _numrows = va._numrows;
       _seed = seed;
     }
 
     @Override public void map(Key key) {
-      ValueArray va = ValueArray.value(_key);
+      ValueArray va = DKV.get(_key).get();
       long cidx = ValueArray.getChunkIndex(key);
       int rows = va.rpc(cidx);
       long start = va.startRow(cidx);
@@ -448,7 +448,7 @@ class RandomFilter extends Function {
   }
 
   @Override public Result eval(Result... args) throws Exception {
-    ValueArray ary = ValueArray.value(args[0]._key);
+    ValueArray ary = DKV.get(args[0]._key).get();
     long rows = (long) args[1]._const;
     if( rows < 0 || rows > ary.numRows())
       throw new Exception("Unable to sample more rows that are already present in the data frame");
@@ -475,7 +475,7 @@ class Log extends Function {
 
   @Override public Result eval(Result... args) throws Exception {
     Result r = Result.temporary();
-    ValueArray va = ValueArray.value(args[0]._key);
+    ValueArray va = DKV.get(args[0]._key).get();
     VABuilder b = new VABuilder("temp",va.numRows()).addDoubleColumn("0").createAndStore(r._key);
     MRLog task = new Log.MRLog(args[0]._key, r._key, args[0].colIndex());
     task.invoke(r._key);
@@ -509,7 +509,7 @@ class MakeEnum extends Function {
     }
 
     @Override public void map(Key key) {
-      ValueArray ary = ValueArray.value(_aryKey);
+      ValueArray ary = DKV.get(_aryKey).get();
       AutoBuffer bits = ary.getChunk(key);
       Column c = ary._cols[_colIndex];
       final int rowsInChunk = ary.rpc(ValueArray.getChunkIndex(key));
@@ -546,7 +546,7 @@ class MakeEnum extends Function {
     }
 
     @Override public void map(Key key) {
-      ValueArray result = ValueArray.value(_resultKey);
+      ValueArray result = DKV.get(_resultKey).get();
       long cidx = ValueArray.getChunkIndex(key);
       long rowOffset = result.startRow(cidx);
       VAIterator source = new VAIterator(_sourceKey,_sourceCol, rowOffset);
@@ -590,7 +590,7 @@ class MakeEnum extends Function {
   @Override
   public Result eval(Result... args) throws Exception {
     try {
-      ValueArray oldAry = ValueArray.value(args[0]._key);
+      ValueArray oldAry = DKV.get(args[0]._key).get();
       // calculate the enums for the new encoded column
       GetEnumTask etask = new GetEnumTask(args[0]._key, args[0].colIndex());
       etask.invoke(args[0]._key);
@@ -615,7 +615,7 @@ class MakeEnum extends Function {
       // create the temporary result and VA
       Result result = Result.temporary();
       ValueArray ary = new ValueArray(result._key, oldAry.numRows(), c._size, new Column[] { c });
-      DKV.put(result._key, ary.value());
+      DKV.put(result._key, ary);
       DKV.write_barrier();
       // invoke the pack task
       PackToEnumTask ptask = new PackToEnumTask(result._key, args[0]._key, args[0].colIndex(),etask._domain);
@@ -623,7 +623,7 @@ class MakeEnum extends Function {
       // update the mean
       c._mean = ptask._tot / c._n;
       ary = new ValueArray(result._key, oldAry.numRows(), c._size, new Column[] { c });
-      DKV.put(result._key, ary.value());
+      DKV.put(result._key, ary);
       DKV.write_barrier();
       return result;
     } catch (Exception e) {
@@ -643,7 +643,6 @@ class MakeEnum extends Function {
 class InPlaceColSwap extends Function {
 
   static class ColSwapTask extends MRTask {
-
     final Key _resultKey;
     final Key _oldKey;
     final Key _newKey;
@@ -661,7 +660,7 @@ class InPlaceColSwap extends Function {
     @Override public void map(Key key) {
       // a simple MR, get the row offset for the given key, then initialize the
       // iterators and patch the result
-      ValueArray result = ValueArray.value(_resultKey);
+      ValueArray result = DKV.get(_resultKey).get();
       long cidx = ValueArray.getChunkIndex(key);
       int rowSize = result._rowsize;
       long rowOffset = result.startRow(cidx);
@@ -708,8 +707,8 @@ class InPlaceColSwap extends Function {
     // get and check the arguments
     Key oldKey = args[0]._key;
     Key newKey = args[2]._key;
-    ValueArray oldAry = ValueArray.value(oldKey);
-    ValueArray newAry = ValueArray.value(newKey);
+    ValueArray oldAry = DKV.get(oldKey).get();
+    ValueArray newAry = DKV.get(newKey).get();
     assert (oldAry != null);
     assert (newAry != null);
     int oldCol = Helpers.checkedColumnIndex(oldAry, args[1]);
@@ -721,10 +720,10 @@ class InPlaceColSwap extends Function {
     int off = 0;
     for (int i = 0; i < cols.length; ++i) {
       if (oldCol == i) {
-        cols[i] = newAry._cols[newCol];
+        cols[i] = newAry._cols[newCol].clone();
         cols[i]._name = oldAry._cols[i]._name;
       } else {
-        cols[i] = oldAry._cols[i];
+        cols[i] = oldAry._cols[i].clone();
       }
       cols[i]._off = (char) off;
       off += Math.abs(cols[i]._size);
@@ -734,7 +733,7 @@ class InPlaceColSwap extends Function {
     // we now have the new column layout and must do the copying, create the
     // value array
     ValueArray ary = new ValueArray(result._key, oldAry.numRows(), off, cols);
-    DKV.put(result._key, ary.value());
+    DKV.put(result._key, ary);
     DKV.write_barrier();
     ColSwapTask task = new ColSwapTask(result._key, oldKey, newKey, oldCol, newCol);
     task.invoke(result._key);

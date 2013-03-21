@@ -3,10 +3,11 @@ package water.store.s3;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Properties;
 
 import water.*;
 
-import com.amazonaws.AmazonClientException;
+import com.amazonaws.*;
 import com.amazonaws.auth.PropertiesCredentials;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
@@ -32,9 +33,9 @@ public abstract class PersistS3 {
     File credentials = new File(Objects.firstNonNull(H2O.OPT_ARGS.aws_credentials, DEFAULT_CREDENTIALS_LOCATION));
     AmazonS3 s3 = null;
     try {
-      s3 = new AmazonS3Client(new PropertiesCredentials(credentials));
+      s3 = new AmazonS3Client(new PropertiesCredentials(credentials), s3ClientCfg());
     } catch( Throwable e ) {
-      e.printStackTrace();
+      H2O.ignore(e);
       log("Unable to create S3 backend.");
       if( H2O.OPT_ARGS.aws_credentials == null )
         log(HELP);
@@ -64,12 +65,11 @@ public abstract class PersistS3 {
       int sz = (int) Math.min(ValueArray.CHUNK_SZ, size);
       byte[] mem = MemoryManager.malloc1(sz);
       ByteStreams.readFully(is, mem);
-      ValueArray ary = new ValueArray(k, sz, Value.S3).read(new AutoBuffer(mem));
-      ary._persist = Value.S3 | Value.ON_dsk;
-      val = ary.value();
+      ValueArray ary = new ValueArray(k, sz).read(new AutoBuffer(mem));
+      val = new Value(k,ary,Value.S3);
     } else if( size >= 2 * ValueArray.CHUNK_SZ ) {
       // ValueArray byte wrapper over a large file
-      val = new ValueArray(k, size, Value.S3).value();
+      val = new Value(k,new ValueArray(k, size),Value.S3);
     } else {
       val = new Value(k, (int) size, Value.S3); // Plain Value
     }
@@ -106,7 +106,7 @@ public abstract class PersistS3 {
       assert v.isPersisted();
       return b;
     } catch( IOException e ) { // Broken disk / short-file???
-      System.err.println(e);
+      H2O.ignore(e);
       return null;
     } finally {
       Closeables.closeQuietly(s);
@@ -209,6 +209,7 @@ public abstract class PersistS3 {
       r.setRange(offset, offset + length);
       return S3.getObject(r);
     } catch( AmazonClientException e ) {
+      H2O.ignore(e);
       return null;
     }
   }
@@ -218,5 +219,26 @@ public abstract class PersistS3 {
     String[] bk = decodeKey(k);
     assert (bk.length == 2);
     return S3.getObjectMetadata(bk[0], bk[1]);
+  }
+
+  /** S3 socket timeout property name */
+  public final static String S3_SOCKET_TIMEOUT_PROP      = "water.s3.socketTimeout";
+  /** S3 connection timeout property  name */
+  public final static String S3_CONNECTION_TIMEOUT_PROP  = "water.s3.connectionTimeout";
+  /** S3 maximal error retry number */
+  public final static String S3_MAX_ERROR_RETRY_PROP     = "water.s3.maxErrorRetry";
+  /** S3 maximal http connections */
+  public final static String S3_MAX_HTTP_CONNECTIONS_PROP= "water.s3.maxHttpConnections";
+
+
+  static ClientConfiguration s3ClientCfg() {
+    ClientConfiguration cfg = new ClientConfiguration();
+    Properties prop = System.getProperties();
+    if (prop.containsKey(S3_SOCKET_TIMEOUT_PROP))       cfg.setSocketTimeout(    Integer.getInteger(S3_SOCKET_TIMEOUT_PROP));
+    if (prop.containsKey(S3_CONNECTION_TIMEOUT_PROP))   cfg.setConnectionTimeout(Integer.getInteger(S3_CONNECTION_TIMEOUT_PROP));
+    if (prop.containsKey(S3_MAX_ERROR_RETRY_PROP))      cfg.setMaxErrorRetry(    Integer.getInteger(S3_MAX_ERROR_RETRY_PROP));
+    if (prop.containsKey(S3_MAX_HTTP_CONNECTIONS_PROP)) cfg.setMaxConnections(   Integer.getInteger(S3_MAX_HTTP_CONNECTIONS_PROP));
+    //cfg.setProtocol(Protocol.HTTP);
+    return cfg;
   }
 }

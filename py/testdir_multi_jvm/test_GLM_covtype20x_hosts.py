@@ -25,16 +25,14 @@ class Basic(unittest.TestCase):
     def test_GLM_covtype20x(self):
         if localhost:
             csvFilenameList = [
-                ('covtype20x.data', 120, 'cA'),
-                ('covtype20x.data', 120, 'cB'),
-                ('covtype20x.data', 120, 'cC'),
-                ('covtype20x.data', 120, 'cD'),
+                # 68 secs on my laptop?
+                ('covtype20x.data', 240, 'cA'),
                 ]
         else:
             # None is okay for key2
             csvFilenameList = [
-                ('covtype20x.data', 120,'cA'),
-                ('covtype200x.data', 1000,'cE'),
+                ('covtype20x.data', 240,'cA'),
+                # ('covtype200x.data', 1000,'cE'),
                 ]
 
         # a browser window too, just because we can
@@ -64,7 +62,7 @@ class Basic(unittest.TestCase):
                 x = ""
 
             print "WARNING: max_iter set to 8 for benchmark comparisons"
-            max_iter = 8
+            max_iter = 50
 
             y = "54"
 

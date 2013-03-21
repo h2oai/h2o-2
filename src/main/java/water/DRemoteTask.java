@@ -122,7 +122,7 @@ public abstract class DRemoteTask extends DTask<DRemoteTask> implements Cloneabl
       Value val = DKV.get(args[0]);
       // Arraylet: expand into the chunk keys
       if( val != null && val.isArray() ) {
-        ValueArray ary = ValueArray.value(val);
+        ValueArray ary = val.get();
         Key[] keys = new Key[(int)ary.chunks()];
         for( int i=0; i<keys.length; i++ )
           keys[i] = ary.getChunkKey(i);
