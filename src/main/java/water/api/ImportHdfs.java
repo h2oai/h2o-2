@@ -17,21 +17,11 @@ public class ImportHdfs extends Request {
     public PathArg(String name) {
       super(TypeaheadHdfsPathRequest.class, name, true);
     }
-
-    @Override
-    protected String parse(String input) throws IllegalArgumentException {
+    @Override protected String parse(String input) throws IllegalArgumentException {
       return input;
     }
-
-    @Override
-    protected String queryDescription() {
-      return "existing HDFS path";
-    }
-
-    @Override
-    protected String defaultValue() {
-      return null;
-    }
+    @Override protected String queryDescription() { return "existing HDFS path"; }
+    @Override protected String defaultValue() { return null; }
   }
 
   protected final PathArg _path = new PathArg("path");
