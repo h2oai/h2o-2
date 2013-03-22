@@ -1,5 +1,7 @@
 package hex;
 
+import java.util.Arrays;
+
 import water.Iced;
 
 import com.google.gson.JsonArray;
@@ -10,6 +12,15 @@ public final class ConfusionMatrix extends Iced {
   long _n;
   double _threshold;
 
+  public ConfusionMatrix clone(){
+    ConfusionMatrix res = new ConfusionMatrix(0);
+    res._arr = _arr.clone();
+    for(int i = 0; i < _arr.length; ++i)
+      res._arr[i] = _arr[i].clone();
+    res._n = _n;
+    res._threshold = _threshold;
+    return res;
+  }
   public enum ErrMetric {
     MAXC,
     SUMC,
@@ -80,6 +91,13 @@ public final class ConfusionMatrix extends Iced {
         _arr[i][j] += other._arr[i][j];
   }
 
+  @Override
+  public String toString(){
+    StringBuilder sb = new StringBuilder();
+    for(long[] r:_arr)
+      sb.append(Arrays.toString(r) + "\n");
+    return sb.toString();
+  }
   public JsonArray toJson(){
     JsonArray res = new JsonArray();
     JsonArray header = new JsonArray();
