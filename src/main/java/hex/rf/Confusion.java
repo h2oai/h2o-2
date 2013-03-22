@@ -217,7 +217,7 @@ public class Confusion extends MRTask {
         for( int c = 0; c < _modelDataMap.length; c++ )
           if( _data.isNA(bits, row, cols[_modelDataMap[c]])) continue ROWS;
 
-        // Predict with this tree - produce 0-based
+        // Predict with this tree - produce 0-based class index
         int prediction = _model.classify0(ntree, _data, bits, row, _modelDataMap, numClasses );
         if( prediction >= _MODEL_N ) continue ROWS; // Junk row cannot be predicted
         // Check tree miss

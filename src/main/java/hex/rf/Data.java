@@ -123,7 +123,8 @@ public class Data implements Iterable<Row> {
 
 
   // Roll a fair die for sampling, resetting the random die every numrows
-  private int[] sampleFair(double bagSizePct, long seed, int numrows ) {
+  private int[] sampleFair(double bagSizePct, long seed, int rowsPerChunk ) {
+    assert rowsPerChunk != 0 : "RowsPerChunk contains 0! Not able to assure deterministic sampling!";
     Random rand = null;
     int rows = rows();
     int size = bagsz(rows,bagSizePct);
@@ -137,8 +138,8 @@ public class Data implements Iterable<Row> {
          * if always deterministic or non-deterministic version - see hex.rf.Utils.get{Deter}RNG */
         long chunkSamplingSeed = seed + ((long)i<<16); // In any case do NOT remove cast to long!!!
         rand = Utils.getDeterRNG(chunkSamplingSeed);
-        cnt=numrows-1;          //
-        if( i+2*numrows > rows() ) cnt = rows(); // Last chunk is big
+        cnt=rowsPerChunk-1;          //
+        if( i+2*rowsPerChunk > rows() ) cnt = rows(); // Last chunk is big
       }
       float randFloat = rand.nextFloat();
       if( randFloat < f ) {
