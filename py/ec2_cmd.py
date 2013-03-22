@@ -20,7 +20,7 @@ DEFAULT_HOSTS_FILENAME = 'ec2-config-{0}.json'
 Default EC2 instance setup
 '''
 DEFAULT_EC2_INSTANCE_CONF = {
-  'image_id'        : 'ami-cd9a11a4',
+  'image_id'        : 'ami-b85cc4d1', # 'ami-cd9a11a4',
   'security_groups' : [ 'MrJenkinsTest' ],
   'key_name'        : 'mrjenkins_test',
   'instance_type'   : 'm1.xlarge',
