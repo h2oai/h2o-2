@@ -70,9 +70,11 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     validations = validationsList[0]
     print "GLMModel/validations"
     print "%15s %s" % ("err:\t", validations['err'])
-    print "%15s %s" % ("auc:\t", validations['auc'])
     print "%15s %s" % ("nullDev:\t", validations['nullDev'])
     print "%15s %s" % ("resDev:\t", validations['resDev'])
+
+    if family!="gaussian":
+        print "%15s %s" % ("auc:\t", validations['auc'])
 
     # threshold only there if binomial?
     if family=="binomial":
