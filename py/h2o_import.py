@@ -1,15 +1,16 @@
 import h2o, h2o_cmd
 import time
 
-def setupImportS3(node=None, path='test-s3-integration'):
+def setupImportS3(node=None, bucket='home_0xdiag_datasets'):
+    if not bucket  : raise Exception('No S3 bucket specified')
     if not node: node = h2o.nodes[0]
-    importS3Result = node.import_s3(path)
+    importS3Result = node.import_s3(bucket)
     h2o.dump_json(importS3Result)
     return importS3Result
 
 # assumes you call setupImportS3 first
 def parseImportS3File(node=None, 
-    csvFilename='covtype.data', path='test-s3-integration', key2=None,
+    csvFilename='covtype.data', path='home-0xdiag-datasets', key2=None, 
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=1, pollTimeoutSecs=15):
 
     if not node: node = h2o.nodes[0]
@@ -36,12 +37,13 @@ def setupImportFolder(node=None, path='/home/0xdiag/datasets'):
     # test config state (which gets set only from the config json use-case)
     # on the nodes. The only globals we have are command line args..so lets keep that
     # Really should have a class for global H2O cloud state? or test state?
-    if h2o.nodes[0].redirect_import_folder_to_s3_path: 
-        path = h2o.nodes[0].redirect_import_folder_to_s3_path + path
-        setupImportFolder(node=node, path=path)
+    if not node: node = h2o.nodes[0]
+    if node.redirect_import_folder_to_s3_path: 
+        # FIX! make bucket vary depending on path
+        bucket = 'home_0xdiag_datasets'
+        setupImportFolderS3(node=node, bucket=bucket)
         return
 
-    if not node: node = h2o.nodes[0]
     importFolderResult = node.import_files(path)
     ### h2o.dump_json(importFolderResult)
     return importFolderResult
@@ -49,14 +51,13 @@ def setupImportFolder(node=None, path='/home/0xdiag/datasets'):
 # assumes you call setupImportFolder first
 def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=1, pollTimeoutSecs=15):
+    if not node: node = h2o.nodes[0]
     # a little hack to redirect import folder tests to an s3 folder
-    if h2o.nodes[0].redirect_import_folder_to_s3_path:
-        path = h2o.nodes[0].redirect_import_folder_to_s3_path + path
+    if node.redirect_import_folder_to_s3_path:
         parseImportS3File(node, csvFilename, path, key2,
             timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs)
         return
 
-    if not node: node = h2o.nodes[0]
     if not csvFilename: raise Exception('parseImportFolderFile: No csvFilename')
     csvPathnameForH2O = "nfs:/" + path + "/" + csvFilename
 
@@ -79,7 +80,7 @@ def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
 
 def setupImportHdfs(node=None, path=None):
     if not node: node = h2o.nodes[0]
-    hdfsPrefix = 'hdfs://' + h2o.nodes[0].hdfs_name_node
+    hdfsPrefix = 'hdfs://' + node.hdfs_name_node
     if path is None:
         URI = hdfsPrefix + '/datasets'
     else:
@@ -106,9 +107,6 @@ def parseImportHdfsFile(node=None, csvFilename=None, path=None, timeoutSecs=3600
     # double hdfs!
     hdfsKey = URI + "/" + csvFilename
     print "parseHdfsFile hdfsKey:", hdfsKey
-
-    # FIX! getting H2O HPE?
-    # inspect = node.inspect(hdfsKey)
     inspect = h2o_cmd.runInspect(key=hdfsKey)
     print "parseHdfsFile:", inspect
 
