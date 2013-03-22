@@ -73,11 +73,10 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     print "%15s %s" % ("nullDev:\t", validations['nullDev'])
     print "%15s %s" % ("resDev:\t", validations['resDev'])
 
-    if family!="gaussian":
-        print "%15s %s" % ("auc:\t", validations['auc'])
-
     # threshold only there if binomial?
+    # auc only for binomial
     if family=="binomial":
+        print "%15s %s" % ("auc:\t", validations['auc'])
         print "%15s %s" % ("threshold:\t", validations['threshold'])
 
     # get a copy, so we don't destroy the original when we pop the intercept
