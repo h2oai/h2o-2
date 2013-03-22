@@ -41,7 +41,7 @@ def setupImportFolder(node=None, path='/home/0xdiag/datasets'):
     if node.redirect_import_folder_to_s3_path: 
         # FIX! make bucket vary depending on path
         bucket = 'home_0xdiag_datasets'
-        setupImportFolderS3(node=node, bucket=bucket)
+        setupImportS3(node=node, bucket=bucket)
         return
 
     importFolderResult = node.import_files(path)
