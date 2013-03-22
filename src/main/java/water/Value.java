@@ -113,6 +113,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     if( pojo != null ) return pojo;
     pojo = TypeMap.newFreezable(_type);
     pojo.read(new AutoBuffer(memOrLoad()));
+    if( pojo instanceof Iced ) ((Iced)pojo).init(_key);
     return (_pojo = pojo);
   }
 

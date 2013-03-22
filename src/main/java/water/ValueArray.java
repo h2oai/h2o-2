@@ -83,7 +83,7 @@ public class ValueArray extends Iced implements Cloneable {
   }
 
   // Init of transient fields from deserialization calls
-  public final ValueArray init( Key key ) {
+  @Override public final ValueArray init( Key key ) {
     _key = key;
     return this;
   }
