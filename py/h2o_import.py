@@ -15,7 +15,7 @@ def parseImportS3File(node=None,
 
     if not node: node = h2o.nodes[0]
     if not csvFilename: raise Exception('parseImportS3File: No csvFilename')
-    csvPathnameForH2O = "s3:/" + path + "/" + csvFilename
+    s3Key= "s3:/" + path + "/" + csvFilename
 
     # We like the short parse key2 name. 
     # We don't drop anything from csvFilename, unlike H2O default
@@ -26,7 +26,7 @@ def parseImportS3File(node=None,
         myKey2 = key2
 
     print "Waiting for the slow parse of the file:", csvFilename
-    parseKey = node.parse(csvPathnameForH2O, myKey2, 
+    parseKey = node.parse(s3Key, myKey2, 
         timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs)
     print "\nParse result:", parseKey
     return parseKey
@@ -101,7 +101,7 @@ def parseImportHdfsFile(node=None, csvFilename=None, path=None, timeoutSecs=3600
 
     # FIX! this is ugly..
     print "\nHacked the test to match the new behavior for key names created from hdfs files"
-    hdfsPrefix = 'hdfs:hdfs://' + h2o.nodes[0].hdfs_name_node
+    hdfsPrefix = 'hdfs:hdfs://' + node.hdfs_name_node
     if path is None:
         URI = hdfsPrefix + '/datasets'
     else:
