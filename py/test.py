@@ -43,7 +43,7 @@ class Basic(unittest.TestCase):
 
     def test_G_Slower_JUNIT(self):
         h2o.tear_down_cloud()
-        h2o.build_cloud(node_count=3)
+        h2o.build_cloud(node_count=2)
         # we don't have the port or ip configuration here
         # that util/h2o.py does? Keep this in synch with spawn_h2o there.
         # also don't have --nosigar here?
