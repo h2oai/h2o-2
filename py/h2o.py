@@ -88,7 +88,7 @@ def parse_our_args():
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
     # FIX! this isn't working to grab the args we don't care about
     # Pass "--failfast" to stop on first error to unittest. and -v
-#    sys.argv[1:] = ['-v', "--failfast"] + args.unittest_args
+    #    sys.argv[1:] = ['-v', "--failfast"] + args.unittest_args
     sys.argv[1:] = args.unittest_args
 
 def verboseprint(*args, **kwargs):
@@ -474,7 +474,7 @@ def check_sandbox_for_errors():
                 foundNOPTaskCnt = 0
                 if not ' bytes)' in line:
                     # no multiline FSM on this 
-                    printSingleWarning = regex3.search(line) and not ('[Loaded ' in line)
+                    printSingleWarning = (regex3.search(line) and not ('[Loaded ' in line)) or ('Non-member packets' in line)
                     #   13190  280      ###        sun.nio.ch.DatagramChannelImpl::ensureOpen (16 bytes)
 
                     # don't detect these class loader info messags as errors
@@ -932,6 +932,35 @@ class H2O(object):
         verboseprint("\nexec_query result:", dump_json(a))
         return a
 
+    def jobs_admin(self, timeoutSecs=20, **kwargs):
+        params_dict = {
+            # 'expression': None,
+            }
+        browseAlso = kwargs.pop('browseAlso',False)
+        params_dict.update(kwargs)
+        verboseprint("\nexec_query:", params_dict)
+        a = self.__check_request(requests.get(
+            url=self.__url('Jobs.json'),
+            timeout=timeoutSecs,
+            params=params_dict))
+        verboseprint("\njobs_admin result:", dump_json(a))
+        return a
+
+    def jobs_cancel(self, timeoutSecs=20, **kwargs):
+        params_dict = {
+            # 'expression': None,
+            }
+        browseAlso = kwargs.pop('browseAlso',False)
+        params_dict.update(kwargs)
+        verboseprint("\nexec_query:", params_dict)
+        a = self.__check_request(requests.get(
+            url=self.__url('Cancel.json'),
+            timeout=timeoutSecs,
+            params=params_dict))
+        verboseprint("\njobs_cancel result:", dump_json(a))
+        return a
+
+
     # note ntree in kwargs can overwrite trees! (trees is legacy param)
     def random_forest(self, data_key, trees, timeoutSecs=300, **kwargs):
         params_dict = {
@@ -1243,8 +1272,11 @@ class H2O(object):
         aws_credentials=None,
         use_flatfile=False, java_heap_GB=None, java_heap_MB=None, java_extra_args=None, 
         use_home_for_ice=False, node_id=None, username=None,
-        random_udp_drop=False
+        random_udp_drop=False,
+        redirect_import_folder_to_s3_path=None,
         ):
+ 
+        self.redirect_import_folder_to_s3_path = redirect_import_folder_to_s3_path
 
         if use_debugger is None: use_debugger = debugger
         self.aws_credentials = aws_credentials

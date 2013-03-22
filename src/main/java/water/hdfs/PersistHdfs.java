@@ -16,7 +16,7 @@ import com.google.gson.*;
 
 /** Persistence backend for HDFS */
 public abstract class PersistHdfs {
-  static         final String KEY_PREFIX="hdfs:";
+  static         final String KEY_PREFIX="";
   static         final int    KEY_PREFIX_LEN = KEY_PREFIX.length();
   static private final Configuration CONF;
 
@@ -79,7 +79,7 @@ public abstract class PersistHdfs {
 
           JsonObject o = new JsonObject();
           o.addProperty(Constants.KEY, k.toString());
-          o.addProperty(Constants.FILE, p.toString());
+          o.addProperty(Constants.FILE, pfs.toString());
           succeeded.add(o);
         }
       }

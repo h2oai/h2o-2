@@ -142,7 +142,6 @@ public abstract class PersistIce {
       }
       i++;                      // Skip the trailing '%'
     }
-
     // a normal key - ASCII with special characters encoded after % sign
     for( ; i < key.length(); ++i ) {
       byte b = (byte)key.charAt(i);
@@ -158,10 +157,9 @@ public abstract class PersistIce {
         default:   System.err.println("Invalid format of filename " + s + " at index " + i);
         }
       }
-      kb[j++] = b;
       if( j>=kb.length ) kb = Arrays.copyOf(kb,j*2);
+      kb[j++] = b;
     }
-
     // now in kb we have the key name
     return Key.make(Arrays.copyOf(kb,j));
   }

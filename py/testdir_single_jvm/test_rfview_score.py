@@ -20,7 +20,7 @@ paramDict = {
     'bin_limit': [None,5,10,100,1000],
     'parallel': [None,0,1],
     'ignore': [None,0,1,2,3,4,5,6,7,8,9],
-    'sample': [None,20,40,60,80,100],
+    'sample': [None,20,40,60,80,90],
     'seed': [None,'0','1','11111','19823134','1231231'],
     # stack trace if we use more features than legal. dropped or redundanct cols reduce 
     # legal max also.

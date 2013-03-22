@@ -7,10 +7,10 @@
 # ./n1.doit test_cloud_udp_drop.py
 ./n1.doit test_exec_2_import_hosts.py
 ./n1.doit test_exec_3_import_hosts.py
-./n1.doit test_import_covtype_parse_1jvm.py
-./n1.doit test_import_covtype_parse_2jvm.py
-./n1.doit test_import_covtype_parse_3jvm.py
-./n1.doit test_import_covtype_parse_4jvm.py
+# ./n1.doit test_import_covtype_parse_1jvm.py
+# ./n1.doit test_import_covtype_parse_2jvm.py
+# ./n1.doit test_import_covtype_parse_3jvm.py
+# ./n1.doit test_import_covtype_parse_4jvm.py
 ./n1.doit test_dkv.py
 ./n1.doit test_exec_assign_one_node.py
 ./n1.doit test_exec_assign.py

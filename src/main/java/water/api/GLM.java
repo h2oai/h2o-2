@@ -21,14 +21,12 @@ import java.util.*;
 import java.util.Map.Entry;
 
 import water.*;
-import water.ValueArray.Column;
 import water.util.RString;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 public class GLM extends Request {
-
   protected final H2OHexKey _key = new H2OHexKey(KEY);
   protected final H2OHexKeyCol _y = new H2OHexKeyCol(Y, _key);
   protected final HexColumnSelect _x = new HexNonConstantColumnSelect(X, _key, _y);
@@ -363,6 +361,8 @@ public class GLM extends Request {
       switch( m._glmParams._link ) {
       case identity: eq = new RString("y = %equation");   break;
       case logit:    eq = new RString("y = 1/(1 + Math.exp(-(%equation)))");  break;
+      case log:      eq = new RString("y = Math.exp((%equation)))");  break;
+      case inverse:  eq = new RString("y = 1/(%equation)");  break;
       default:       eq = new RString("equation display not implemented"); break;
       }
       StringBuilder sb = new StringBuilder();

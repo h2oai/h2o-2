@@ -130,8 +130,11 @@ def runRFTreeView(node=None, n=None, data_key=None, model_key=None, timeoutSecs=
     if not node: node = h2o.nodes[0]
     return node.random_forest_treeview(n, data_key, model_key, timeoutSecs, **kwargs)
 
-def runRFOnly(node=None, parseKey=None, trees=5,
-        timeoutSecs=20, retryDelaySecs=2, **kwargs):
+
+# rfView can be used to skip the rf completion view
+# for creating multiple rf jobs
+def runRFOnly(node=None, parseKey=None, trees=5, 
+        timeoutSecs=20, retryDelaySecs=2, rfview=True, **kwargs):
     if not parseKey: raise Exception('No parsed key for RF specified')
     if not node: node = h2o.nodes[0]
     #! FIX! what else is in parseKey that we should check?
@@ -157,8 +160,11 @@ def runRFOnly(node=None, parseKey=None, trees=5,
     # /ip:port of cloud (can't use h2o name)
     rfClass= rf['response_variable']
 
-    rfView = runRFView(node, data_key, model_key, ntree, timeoutSecs, retryDelaySecs, **kwargs)
-    return rfView
+    rfViewResult = None
+    if rfview:
+        rfViewResult = runRFView(node, data_key, model_key, ntree, timeoutSecs, retryDelaySecs, **kwargs)
+    
+    return rfViewResult
 
 # scoring on browser does these:
 # RFView.html?

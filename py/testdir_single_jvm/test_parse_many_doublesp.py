@@ -161,10 +161,12 @@ class Basic(unittest.TestCase):
         # what about case of missing eoll at end of file?
     
     sepChangeDict = {
-        0:"  ", # double space
-        1:" ",
-        2:",",
-        3:"\t",
+        # NEW: Hive datasets use 0x01 hex char as SEP, so now legal in our parser spec
+        0:"",
+        1:"  ", # double space
+        2:" ",
+        3:",",
+        4:"\t",
         }
     
     def changeSep(self,rows,sepCase):

@@ -2,6 +2,7 @@ package water;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.HashMap;
 
 /**
 * Large Arrays & Arraylets
@@ -77,13 +78,25 @@ public class ValueArray extends Iced implements Cloneable {
     assert rpc(chunks()-1) == rows[(int)(chunks()-1)];
   }
 
+  public int [] getColumnIds(String [] colNames){
+    HashMap<String,Integer> colMap = new HashMap<String,Integer>();
+    for(int i = 0; i < colNames.length; ++i)colMap.put(colNames[i],i);
+    int [] res = new int [colNames.length];
+    Arrays.fill(res, -1);
+    Integer idx = null;
+    for(int i = 0; i < _cols.length; ++i)
+      if((idx = colMap.get(_cols[i]._name)) != null)
+        res[idx] = i;
+    return res;
+  }
+
   @Override public ValueArray clone() {
     try { return (ValueArray)super.clone(); }
     catch( CloneNotSupportedException cne ) { throw H2O.unimpl(); }
   }
 
   // Init of transient fields from deserialization calls
-  public final ValueArray init( Key key ) {
+  @Override public final ValueArray init( Key key ) {
     _key = key;
     return this;
   }

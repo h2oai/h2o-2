@@ -24,7 +24,6 @@ def write_syn_dataset(csvPathname, rowCount, headerData, rowData):
 # append!
 def append_syn_dataset(csvPathname, rowData, num):
     with open(csvPathname, "a") as dsf:
-        print num
         for i in range(num):
             dsf.write(rowData + "\n")
 
@@ -83,7 +82,8 @@ class parse_rand_schmoo(unittest.TestCase):
 
         # hangs on put file 2nd time. about 300MB file, 2M rows.
         # is it because the heap is just 1GB?
-        write_syn_dataset(csvPathname, 1000000, headerData, rowData)
+        totalRows = 1000000
+        write_syn_dataset(csvPathname, totalRows, headerData, rowData)
 
         print "This is the same format/data file used by test_same_parse, but the non-gzed version"
         print "\nSchmoo the # of rows"
@@ -91,6 +91,7 @@ class parse_rand_schmoo(unittest.TestCase):
             rowData = rand_rowData()
             num = random.randint(4096, 5096)
             append_syn_dataset(csvPathname, rowData, num)
+            totalRows += num
             start = time.time()
 
             # make sure all key names are unique, when we re-put and re-parse (h2o caching issues)
@@ -98,7 +99,7 @@ class parse_rand_schmoo(unittest.TestCase):
             key2 = csvFilename + "_" + str(trial) + ".hex"
             key = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2, 
                 timeoutSecs=70, pollTimeoutSecs=60, noPoll=True)
-            print "trial #", trial, "with num rows:", num, "parse end on ", csvFilename, \
+            print "trial #", trial, "totalRows:", totalRows, "num:", num, "parse end on ", csvFilename, \
                 'took', time.time() - start, 'seconds'
             ### h2o_cmd.runInspect(key=key2)
             ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")

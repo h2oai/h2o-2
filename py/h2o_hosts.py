@@ -67,6 +67,8 @@ def build_cloud_with_hosts(node_count=None, use_flatfile=None,
     key_filename = hostDict.setdefault('key_filename', None)
     # host aws configuration
     aws_credentials = hostDict.setdefault('aws_credentials', None)
+    # a little hack to redirect import folder tests to an s3 folder
+    redirect_import_folder_to_s3_path = hostDict.setdefault('redirect_import_folder_to_s3_path', None)
 
     # can override the json with a caller's argument
     # FIX! and we support passing othe kwargs from above? but they don't override
@@ -141,4 +143,5 @@ def build_cloud_with_hosts(node_count=None, use_flatfile=None,
             java_heap_GB=javaHeapGB, java_heap_MB=javaHeapMB, java_extra_args=javaExtraArgs,
             use_home_for_ice=use_home_for_ice,
             aws_credentials=aws_credentials,
+            redirect_import_folder_to_s3_path=redirect_import_folder_to_s3_path,
             **kwargs)

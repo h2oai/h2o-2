@@ -27,34 +27,26 @@ class Basic(unittest.TestCase):
         #    "covtype20x.data", 
         #    "billion_rows.csv.gz",
         csvFilenameList = [
-            ("covtype.data", 1),
-            ("covtype20x.data", 1),
-            # ("covtype200x.data", None),
-            # ("a5m.csv", None),
-            # ("a10m.csv", None),
-            # ("a100m.csv", None),
-            # ("a200m.csv", None),
-            # ("a400m.csv", None),
-            # ("a600m.csv", None),
-            # ("100million_rows.csv,  None"),
-            # ("200million_rows.csv", None),
-            # ("billion_rows.csv.gz", 1),
-            # memory issue on one machine. no RF
-            # ("new-poker-hand.full.311M.txt.gz", None),
+            ("covtype.data", 'UCI/UCI-large/covtype/covtype.data', 1),
             ]
         # pop open a browser on the cloud
         h2b.browseTheCloud()
 
-        for (csvFilename, trees) in csvFilenameList:
-            csvPathname = h2o.find_file('/home/0xdiag/datasets/' + csvFilename)
+        for (csvFilename, datasetPath, trees) in csvFilenameList:
+            csvPathname = h2o.find_dataset(datasetPath)
 
             # creates csvFilename and csvFilename.hex  keys
-            parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key=csvFilename, timeoutSecs=500)
+            node = h2o.nodes[0]
+            key = node.put_file(csvPathname, key=csvFilename, timeoutSecs=timeoutSecs)
+            # not using parseFile...used to be a bug if we inspect the file we just put
+            # so we test that
+            inspect1 = h2o_cmd.runInspect(key=csvFilename)
+
+            parseKey = node.parse(key, timeoutSecs=500)
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "Parse result['destination_key']:", parseKey['destination_key']
-
             # We should be able to see the parse result?
-            inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
+            inspect2 = h2o_cmd.runInspect(key=parseKey['destination_key'])
 
             print "\n" + csvFilename
             start = time.time()
@@ -62,10 +54,6 @@ class Basic(unittest.TestCase):
             if trees is not None:
                 RFview = h2o_cmd.runRFOnly(trees=trees,depth=25,parseKey=parseKey,
                     timeoutSecs=timeoutSecs)
-
-            h2b.browseJsonHistoryAsUrlLastMatch("RFView")
-            # wait in case it recomputes it
-            time.sleep(10)
 
             sys.stdout.write('.')
             sys.stdout.flush() 

@@ -43,7 +43,7 @@ class Basic(unittest.TestCase):
         # fail rate is one in 200?
         # need at least two rows (parser)
         for sizeTrial in range(25):
-            size = random.randint(2,129)
+            size = random.randint(1129,2255)
             print "\nparsing with rows:", size
             csvFilename = "p" + "_" + str(size)
             csvPathname = SYNDATASETS_DIR + "/" + csvFilename
@@ -61,6 +61,10 @@ class Basic(unittest.TestCase):
                 if not trial%10:
                     sys.stdout.write('.')
                     sys.stdout.flush()
+
+
+            # a = h2o.nodes[0].jobs_admin()
+            # print "jobs-admin():", h2o.dump_json(a)
 
             # do a storeview ..was causing npe while parsing?
             # maybe fire to each node?

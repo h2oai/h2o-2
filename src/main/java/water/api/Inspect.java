@@ -58,9 +58,13 @@ public class Inspect extends Request {
     Value val = _key.value();
     if( val.type() == TypeMap.PRIM_B )
       return serveUnparsedValue(val);
-    Iced f = val.get();
-    if( f instanceof ValueArray )
-      return serveValueArray((ValueArray)f);
+    Freezable f = val.getFreezable();
+    if( f instanceof ValueArray ) {
+      ValueArray ary = (ValueArray)f;
+      if( ary._cols.length==1 && ary._cols[0]._name==null )
+        return serveUnparsedValue(val);
+      return serveValueArray(ary);
+    }
     if( f instanceof GLMModel ) {
       GLMModel m = (GLMModel)f;
       JsonObject res = new JsonObject();
