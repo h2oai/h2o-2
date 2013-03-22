@@ -170,9 +170,9 @@ class Basic(unittest.TestCase):
     sepChangeDict = {
         # NEW: 0x01 can be SEP character for Hive datasets
         0:""
-        # 1:",",
-        # 2:" ",
-        # 3:"\t"
+        1:",",
+        2:" ",
+        3:"\t"
         }
     
     def changeSep(self,rows,sepCase):
