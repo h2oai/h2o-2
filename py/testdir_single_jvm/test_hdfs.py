@@ -58,7 +58,7 @@ class Basic(unittest.TestCase):
         ]
 
         # pick 8 randomly!
-        if (1==1):
+        if (1==0):
             csvFilenameList = random.sample(csvFilenameAll,8)
         # Alternatively: do the list in order! Note the order is easy to hard
         else:

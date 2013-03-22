@@ -932,6 +932,35 @@ class H2O(object):
         verboseprint("\nexec_query result:", dump_json(a))
         return a
 
+    def jobs_admin(self, timeoutSecs=20, **kwargs):
+        params_dict = {
+            # 'expression': None,
+            }
+        browseAlso = kwargs.pop('browseAlso',False)
+        params_dict.update(kwargs)
+        verboseprint("\nexec_query:", params_dict)
+        a = self.__check_request(requests.get(
+            url=self.__url('Jobs.json'),
+            timeout=timeoutSecs,
+            params=params_dict))
+        verboseprint("\njobs_admin result:", dump_json(a))
+        return a
+
+    def jobs_cancel(self, timeoutSecs=20, **kwargs):
+        params_dict = {
+            # 'expression': None,
+            }
+        browseAlso = kwargs.pop('browseAlso',False)
+        params_dict.update(kwargs)
+        verboseprint("\nexec_query:", params_dict)
+        a = self.__check_request(requests.get(
+            url=self.__url('Cancel.json'),
+            timeout=timeoutSecs,
+            params=params_dict))
+        verboseprint("\njobs_cancel result:", dump_json(a))
+        return a
+
+
     # note ntree in kwargs can overwrite trees! (trees is legacy param)
     def random_forest(self, data_key, trees, timeoutSecs=300, **kwargs):
         params_dict = {

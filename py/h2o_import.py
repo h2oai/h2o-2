@@ -11,7 +11,7 @@ def setupImportS3(node=None, bucket='home_0xdiag_datasets'):
 # assumes you call setupImportS3 first
 def parseImportS3File(node=None, 
     csvFilename='covtype.data', path='home-0xdiag-datasets', key2=None, 
-    timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=1, pollTimeoutSecs=15):
+    timeoutSecs=360, retryDelaySecs=2, initialDelaySecs=1, pollTimeoutSecs=60):
 
     if not node: node = h2o.nodes[0]
     if not csvFilename: raise Exception('parseImportS3File: No csvFilename')
@@ -50,7 +50,7 @@ def setupImportFolder(node=None, path='/home/0xdiag/datasets'):
 
 # assumes you call setupImportFolder first
 def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
-    timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=1, pollTimeoutSecs=15):
+    timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=1, pollTimeoutSecs=60):
     if not node: node = h2o.nodes[0]
     # a little hack to redirect import folder tests to an s3 folder
     # TEMP hack: translate /home/0xdiag/datasets to /home-0xdiag-datasets
@@ -95,7 +95,8 @@ def setupImportHdfs(node=None, path=None):
 
 # FIX! can update this to parse from local dir also (import keys from folder?)
 # but everyone needs to have a copy then
-def parseImportHdfsFile(node=None, csvFilename=None, path=None, timeoutSecs=3600, retryDelaySecs=1.0):
+def parseImportHdfsFile(node=None, csvFilename=None, path=None, 
+    timeoutSecs=3600, retryDelaySecs=2, initialDelaySecs=1, pollTimeoutSecs=60):
     if not csvFilename: raise Exception('No csvFilename parameter in parseImportHdfsFile')
     if not node: node = h2o.nodes[0]
 
