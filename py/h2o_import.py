@@ -1,8 +1,8 @@
 import h2o, h2o_cmd
-import time
+import time, re
 
 def setupImportS3(node=None, bucket='home_0xdiag_datasets'):
-    if not bucket  : raise Exception('No S3 bucket specified')
+    if not bucket: raise Exception('No S3 bucket specified')
     if not node: node = h2o.nodes[0]
     importS3Result = node.import_s3(bucket)
     h2o.dump_json(importS3Result)
@@ -53,7 +53,10 @@ def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=1, pollTimeoutSecs=15):
     if not node: node = h2o.nodes[0]
     # a little hack to redirect import folder tests to an s3 folder
+    # TEMP hack: translate /home/0xdiag/datasets to /home-0xdiag-datasets
+
     if node.redirect_import_folder_to_s3_path:
+        path = re.sub('/home/0xdiag/datasets', '/home-0xdiag-datasets', path)
         parseImportS3File(node, csvFilename, path, key2,
             timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs)
         return
