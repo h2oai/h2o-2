@@ -480,7 +480,7 @@ NEXT_CHAR:
    *  last one as it is used if all other fails because multiple spaces can be
    *  used as a single separator.
    */
-  private static byte[] separators = new byte[] { ',', ';', '|', '\t', ' '};
+  private static byte[] separators = new byte[] { ',', ';', '|', '\t', ' ' };
 
   /** Dermines the number of separators in given line. Correctly handles quoted
    * tokens.
