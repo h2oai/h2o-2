@@ -1,11 +1,11 @@
 import h2o, h2o_cmd
 import time, re
 
-def setupImportS3(node=None, bucket='home_0xdiag_datasets'):
+def setupImportS3(node=None, bucket='home-0xdiag-datasets'):
     if not bucket: raise Exception('No S3 bucket specified')
     if not node: node = h2o.nodes[0]
     importS3Result = node.import_s3(bucket)
-    h2o.dump_json(importS3Result)
+    print h2o.dump_json(importS3Result)
     return importS3Result
 
 # assumes you call setupImportS3 first
@@ -15,7 +15,7 @@ def parseImportS3File(node=None,
 
     if not node: node = h2o.nodes[0]
     if not csvFilename: raise Exception('parseImportS3File: No csvFilename')
-    s3Key= "s3:/" + path + "/" + csvFilename
+    s3Key= "s3:" + path + "/" + csvFilename
 
     # We like the short parse key2 name. 
     # We don't drop anything from csvFilename, unlike H2O default
@@ -40,11 +40,10 @@ def setupImportFolder(node=None, path='/home/0xdiag/datasets'):
     if not node: node = h2o.nodes[0]
     if node.redirect_import_folder_to_s3_path: 
         # FIX! make bucket vary depending on path
-        bucket = 'home_0xdiag_datasets'
-        setupImportS3(node=node, bucket=bucket)
-        return
-
-    importFolderResult = node.import_files(path)
+        bucket = 'home-0xdiag-datasets'
+        importFolderResult = setupImportS3(node=node, bucket=bucket)
+    else:
+        importFolderResult = node.import_files(path)
     ### h2o.dump_json(importFolderResult)
     return importFolderResult
 
@@ -55,14 +54,7 @@ def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
     # a little hack to redirect import folder tests to an s3 folder
     # TEMP hack: translate /home/0xdiag/datasets to /home-0xdiag-datasets
 
-    if node.redirect_import_folder_to_s3_path:
-        path = re.sub('/home/0xdiag/datasets', '/home-0xdiag-datasets', path)
-        parseImportS3File(node, csvFilename, path, key2,
-            timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs)
-        return
-
     if not csvFilename: raise Exception('parseImportFolderFile: No csvFilename')
-    csvPathnameForH2O = "nfs:/" + path + "/" + csvFilename
 
     # We like the short parse key2 name. 
     # We don't drop anything from csvFilename, unlike H2O default
@@ -73,11 +65,18 @@ def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
         myKey2 = key2
 
     print "Waiting for the slow parse of the file:", csvFilename
-    # we're getting a http timeout on the parse progress poll of big parses. 
-    # try to increase timeout with pollTimeoutSecs.
-    # don't want it big normally..don't want to wait after fail for simple tests.
-    parseKey = node.parse(csvPathnameForH2O, myKey2, 
-        timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs)
+
+    if node.redirect_import_folder_to_s3_path:
+        path = re.sub('/home/0xdiag/datasets', 'home-0xdiag-datasets', path)
+        parseKey = parseImportS3File(node, csvFilename, path, myKey2,
+            timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs)
+    else:
+        csvPathnameForH2O = "nfs:/" + path + "/" + csvFilename
+        # we're getting a http timeout on the parse progress poll of big parses. 
+        # try to increase timeout with pollTimeoutSecs.
+        # don't want it big normally..don't want to wait after fail for simple tests.
+        parseKey = node.parse(csvPathnameForH2O, myKey2, 
+            timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs)
     print "\nParse result:", parseKey
     return parseKey
 

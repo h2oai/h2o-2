@@ -17,7 +17,6 @@ def write_syn_dataset(csvPathname, rowCount, headerData, rowData):
 # append!
 def append_syn_dataset(csvPathname, rowData, num):
     with open(csvPathname, "a") as dsf:
-        print num
         for i in range(num):
             dsf.write(rowData + "\n")
 
@@ -66,7 +65,9 @@ class parse_rand_schmoo(unittest.TestCase):
         headerData = "ID,CAPSULE,AGE,RACE,DPROS,DCAPS,PSA,VOL,GLEASON"
 
         rowData = rand_rowData()
-        write_syn_dataset(csvPathname, 1000000, headerData, rowData)
+        totalRows = 1000000
+        write_syn_dataset(csvPathname, totalRows, headerData, rowData)
+
 
         print "This is the same format/data file used by test_same_parse, but the non-gzed version"
         print "\nSchmoo the # of rows"
@@ -75,6 +76,7 @@ class parse_rand_schmoo(unittest.TestCase):
             rowData = rand_rowData()
             num = random.randint(4096, 10096)
             append_syn_dataset(csvPathname, rowData, num)
+            totalRows += num
             start = time.time()
 
             # make sure all key names are unique, when we re-put and re-parse (h2o caching issues)
@@ -83,7 +85,7 @@ class parse_rand_schmoo(unittest.TestCase):
             # On EC2 once we get to 30 trials or so, do we see polling hang? GC or spill of heap or ??
             key = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2, 
                 timeoutSecs=70, pollTimeoutSecs=60)
-            print "trial #", trial, "with num rows:", num, "parse end on ", csvFilename, \
+            print "trial #", trial, "totalRows:", totalRows, "num:", num, "parse end on ", csvFilename, \
                 'took', time.time() - start, 'seconds'
             ### h2o_cmd.runInspect(key=key2)
             ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
