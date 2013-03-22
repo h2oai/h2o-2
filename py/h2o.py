@@ -474,7 +474,7 @@ def check_sandbox_for_errors():
                 foundNOPTaskCnt = 0
                 if not ' bytes)' in line:
                     # no multiline FSM on this 
-                    printSingleWarning = regex3.search(line) and not ('[Loaded ' in line)
+                    printSingleWarning = (regex3.search(line) and not ('[Loaded ' in line)) or ('Non-member packets' in line)
                     #   13190  280      ###        sun.nio.ch.DatagramChannelImpl::ensureOpen (16 bytes)
 
                     # don't detect these class loader info messags as errors
