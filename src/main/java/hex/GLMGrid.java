@@ -32,6 +32,7 @@ public class GLMGrid extends Job {
     _glmp = glmp;
     _xs = xs;
     _lambdas = ls;
+    Arrays.sort(_lambdas);
     _ts = thresholds;
     _alphas = as;
     _xfold = xfold;
@@ -44,13 +45,14 @@ public class GLMGrid extends Job {
 
     @Override
     public void compute2() {
-      GLMModel m = null;
+      double [] beta = null;
       Futures fs = new Futures();
       try {
         for( int l1 = 1; l1 <= _lambdas.length; l1++ ) {
           if(cancelled())
             break;
-          m = do_task(m,_lambdas.length-l1,_aidx); // Do a step; get a model
+          GLMModel m = do_task(beta,_lambdas.length-l1,_aidx); // Do a step; get a model
+          beta = m._normBeta.clone();
           update(dest(), m, (_lambdas.length-l1) * _alphas.length + _aidx, System.currentTimeMillis() - _startTime,fs);
         }
       fs.blockForPending();
@@ -78,17 +80,17 @@ public class GLMGrid extends Job {
       }
       @Override public void onCompletion(CountedCompleter caller){remove();}
     });
-
   }
 
   // Update dest for a new model. In a static function, to avoid closing
   // over the 'this' pointer of a GLMGrid and thus serializing it as part
   // of the atomic update.
-  private static void update(Key dest, final GLMModel m, final int idx, final long runTime, Futures fs) {
+  private static void update(Key dest, GLMModel m, final int idx, final long runTime, Futures fs) {
+    final Model model = m;
     fs.add(new TAtomic<GLMModels>() {
       @Override
       public GLMModels atomic(GLMModels old) {
-        old._ms[idx] = m._selfKey;
+        old._ms[idx] = model._selfKey;
         old._count++;
         old._runTime = Math.max(runTime,old._runTime);
         return old;
@@ -99,10 +101,8 @@ public class GLMGrid extends Job {
   // ---
   // Do a single step (blocking).
   // In this case, run 1 GLM model.
-  private GLMModel do_task(GLMModel m, int l, int alpha) {
-    m = (m == null)?
-        DGLM.buildModel(DGLM.getData(_ary, _xs, null, true), new ADMMSolver(_lambdas[l], _alphas[alpha]),_glmp):
-        DGLM.buildModel(DGLM.getData(_ary, _xs, null, true), new ADMMSolver(_lambdas[l], _alphas[alpha]), _glmp,m._beta);
+  private GLMModel do_task(double [] beta, int l, int alpha) {
+    GLMModel m = DGLM.buildModel(DGLM.getData(_ary, _xs, null, true), new ADMMSolver(_lambdas[l], _alphas[alpha]), _glmp,beta);
     if( _xfold <= 1 )
       m.validateOn(_ary, null, _ts);
     else
@@ -123,7 +123,10 @@ public class GLMGrid extends Job {
     @Override public float progress() { return _count / (float) _ms.length; }
 
     public Iterable<GLMModel> sorted() {
-      Arrays.sort(_ms, new Comparator<Key>() {
+      // NOTE: deserialized object is now kept in KV, so we can not modify it here.
+      // We have to create our own private copy before sort!
+      Key [] ms = _ms.clone();
+      Arrays.sort(ms, new Comparator<Key>() {
         @Override
         public int compare(Key k1, Key k2) {
           Value v1 = null, v2 = null;
@@ -160,9 +163,9 @@ public class GLMGrid extends Job {
             return Double.compare(m1._vals[0]._err, m2._vals[0]._err);
         }
       });
-      final Key[] keys = _ms;
-      int lastIdx = _ms.length;
-      for( int i = 0; i < _ms.length; ++i ) {
+      final Key[] keys = ms;
+      int lastIdx = ms.length;
+      for( int i = 0; i < ms.length; ++i ) {
         if( keys[i] == null || DKV.get(keys[i]) == null ) {
           lastIdx = i;
           break;
