@@ -6,6 +6,7 @@
     "username": "0xdiag", 
     "password": "0xdiag", 
     "use_home_for_ice": true,
+    "redirect_import_folder_to_s3_path": false,
 
     "h2o_per_host": 1, 
     "sigar": true,

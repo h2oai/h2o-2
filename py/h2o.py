@@ -88,7 +88,7 @@ def parse_our_args():
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
     # FIX! this isn't working to grab the args we don't care about
     # Pass "--failfast" to stop on first error to unittest. and -v
-#    sys.argv[1:] = ['-v', "--failfast"] + args.unittest_args
+    #    sys.argv[1:] = ['-v', "--failfast"] + args.unittest_args
     sys.argv[1:] = args.unittest_args
 
 def verboseprint(*args, **kwargs):
@@ -1243,8 +1243,11 @@ class H2O(object):
         aws_credentials=None,
         use_flatfile=False, java_heap_GB=None, java_heap_MB=None, java_extra_args=None, 
         use_home_for_ice=False, node_id=None, username=None,
-        random_udp_drop=False
+        random_udp_drop=False,
+        redirect_import_folder_to_s3_path=None,
         ):
+ 
+        self.redirect_import_folder_to_s3_path = redirect_import_folder_to_s3_path
 
         if use_debugger is None: use_debugger = debugger
         self.aws_credentials = aws_credentials
