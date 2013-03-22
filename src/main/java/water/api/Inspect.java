@@ -58,7 +58,7 @@ public class Inspect extends Request {
     Value val = _key.value();
     if( val.type() == TypeMap.PRIM_B )
       return serveUnparsedValue(val);
-    Iced f = val.get();
+    Freezable f = val.getFreezable();
     if( f instanceof ValueArray ) {
       ValueArray ary = (ValueArray)f;
       if( ary._cols.length==1 && ary._cols[0]._name==null )
