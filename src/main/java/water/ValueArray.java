@@ -2,6 +2,7 @@ package water;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.HashMap;
 
 /**
 * Large Arrays & Arraylets
@@ -75,6 +76,18 @@ public class ValueArray extends Iced implements Cloneable {
     _rpc[_rpc.length-1] = _numrows = sum;
     assert rpc(0) == rows[0];   // Some quicky sanity checks
     assert rpc(chunks()-1) == rows[(int)(chunks()-1)];
+  }
+
+  public int [] getColumnIds(String [] colNames){
+    HashMap<String,Integer> colMap = new HashMap<String,Integer>();
+    for(int i = 0; i < colNames.length; ++i)colMap.put(colNames[i],i);
+    int [] res = new int [colNames.length];
+    Arrays.fill(res, -1);
+    Integer idx = null;
+    for(int i = 0; i < _cols.length; ++i)
+      if((idx = colMap.get(_cols[i]._name)) != null)
+        res[idx] = i;
+    return res;
   }
 
   @Override public ValueArray clone() {

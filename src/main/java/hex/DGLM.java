@@ -445,13 +445,9 @@ public abstract class DGLM {
 
     public boolean converged() { return _converged; }
 
-
-
-
-
     // Validate on a dataset.  Columns must match, including the response column.
     public GLMValidation validateOn( ValueArray ary, Sampling s, double [] thresholds ) {
-      int[] modelDataMap = columnMapping(ary.colNames());
+      int[] modelDataMap = ary.getColumnIds(_va.colNames());//columnMapping(ary.colNames());
       if( !isCompatible(modelDataMap) ) // This dataset is compatible or not?
         throw new GLMException("incompatible dataset");
       DataFrame data = new DataFrame(ary, modelDataMap, s, false, true);
@@ -601,7 +597,7 @@ public abstract class DGLM {
     public double _nullDeviance;
     public double _err;
     ErrMetric _errMetric = ErrMetric.SUMC;
-    double _auc;
+    double _auc = Double.NaN;
     public ConfusionMatrix [] _cm;
     int _tid;
     double [] _thresholds;
@@ -801,7 +797,8 @@ public abstract class DGLM {
       res.addProperty("dof", _dof);
       res.addProperty("resDev", _deviance);
       res.addProperty("nullDev", _nullDeviance);
-      res.addProperty("auc", _auc);
+      if(!Double.isNaN(_auc))res.addProperty("auc", _auc);
+      if(!Double.isNaN(_aic))res.addProperty("aic", _aic);
 
       if(_cm != null) {
         double [] err = _cm[_tid].classErr();
