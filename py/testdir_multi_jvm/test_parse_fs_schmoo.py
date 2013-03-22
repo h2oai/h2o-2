@@ -45,13 +45,15 @@ class glm_same_parse(unittest.TestCase):
         headerData = "ID,CAPSULE,AGE,RACE,DPROS,DCAPS,PSA,VOL,GLEASON"
         rowData = "1,0,65,1,2,1,1.4,0,6"
 
-        write_syn_dataset(csvPathname,      99860, headerData, rowData)
+        totalRows = 99860
+        write_syn_dataset(csvPathname, totalRows, headerData, rowData)
 
         print "This is the same format/data file used by test_same_parse, but the non-gzed version"
         print "\nSchmoo the # of rows"
         print "Updating the key and key2 names for each trial"
         for trial in range (200):
             append_syn_dataset(csvPathname, rowData)
+            totalRows += 1
             ### start = time.time()
             # this was useful to cause failures early on. Not needed eventually
             ### key = h2o_cmd.parseFile(csvPathname=h2o.find_file("smalldata/logreg/prostate.csv"))
@@ -61,7 +63,8 @@ class glm_same_parse(unittest.TestCase):
             key = csvFilename + "_" + str(trial)
             key2 = csvFilename + "_" + str(trial) + ".hex"
             key = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2)
-            print "trial #", trial, "parse end on ", csvFilename, 'took', time.time() - start, 'seconds'
+            print "trial #", trial, "totalRows:", totalRows, "parse end on ", \
+                csvFilename, 'took', time.time() - start, 'seconds'
 
             h2o_cmd.runInspect(key=key2)
             # only used this for debug to look at parse (red last row) on failure
