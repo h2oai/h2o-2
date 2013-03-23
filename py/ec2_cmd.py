@@ -184,6 +184,7 @@ def dump_hosts_config(ec2_config, reservation, filename=DEFAULT_HOSTS_FILENAME):
     cfg['ip'] = [ i.private_ip_address for i in reservation.instances ]
     cfg['instances'] = [ { 'id': i.id, 'private_ip_address': i.private_ip_address, 'public_ip_address': i.ip_address, 'public_dns_name': i.public_dns_name } for i in reservation.instances ]
     cfg['reservation_id']  = reservation.id
+    cfg['redirect_import_folder_to_s3_path'] = True
     # put ssh commands into comments
     cmds = get_ssh_commands(ec2_config, reservation)
     idx  = 1
@@ -198,6 +199,8 @@ def dump_hosts_config(ec2_config, reservation, filename=DEFAULT_HOSTS_FILENAME):
     log("Host config dumped into {0}".format(filename))
     log("To terminate instances call:")
     log("python ec2_cmd.py terminate --hosts {0}".format(filename))
+    log("To watch cloud in browser follow address:")
+    log("   http://{0}:{1}".format(reservation.instances[0].public_dns_name, cfg['base_port']))
 
 def get_ssh_commands(ec2_config, reservation):
     cmds = []
