@@ -67,14 +67,15 @@ class Basic(unittest.TestCase):
             # FIX! does it never end if we don't have alpha specified?
             params = {
                 'y': 6, 
-                'num_cross_validation_folds': 3, 
+                'num_cross_validation_folds': 2, 
 
                 'family': "binomial", 
                 'case_mode': ['>'],
                 'case': ['20'],
 
                 'alpha': 0, 
-                'lambda': 0, 
+                # seems we always need a little regularization
+                'lambda': 1e-4,
                 'beta_epsilon': 0.001, 
                 'max_iter': 8
                 }
