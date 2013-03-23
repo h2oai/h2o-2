@@ -123,7 +123,7 @@ class Basic(unittest.TestCase):
                 write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel)
 
                 selKey2 = key2 + "_" + str(sel)
-                parseKey = h2o_cmd.parseFile(None, csvPathname, key2=selKey2, timeoutSecs=10)
+                parseKey = h2o_cmd.parseFile(None, csvPathname, key2=selKey2, timeoutSecs=30)
                 print csvFilename, 'parse time:', parseKey['response']['time']
                 print "Parse result['destination_key']:", parseKey['destination_key']
                 inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])

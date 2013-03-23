@@ -63,12 +63,12 @@ class Basic(unittest.TestCase):
         # so probably 10x that for covtype200
         if localhost:
             csvFilenameAll = [
-                ("covtype.data", "cA", 5),
+                ("covtype.data", "cA", 15),
             ]
         else:
             csvFilenameAll = [
-                ("covtype.data", "cA", 5),
-                ("covtype20x.data", "cD", 50),
+                ("covtype.data", "cA", 15),
+                ("covtype20x.data", "cD", 60),
             ]
 
         ### csvFilenameList = random.sample(csvFilenameAll,1)

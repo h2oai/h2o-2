@@ -59,7 +59,7 @@ class Basic(unittest.TestCase):
         h2e.exec_zero_list(zeroList)
         start = time.time()
         h2e.exec_expr_list_rand(len(h2o.nodes), exprList, 'c.hex',
-            maxCol=54, maxRow=400000, maxTrials=200, timeoutSecs=5)
+            maxCol=54, maxRow=400000, maxTrials=200, timeoutSecs=15)
         h2o.check_sandbox_for_errors()
         print "exec end on ", "covtype.data" , 'took', time.time() - start, 'seconds'
 
