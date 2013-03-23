@@ -63,12 +63,12 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   public Freezable rawPOJO() { return _pojo; }
 
   // Free array (but always be able to rebuild the array)
-  public final void freeMem() { 
+  public final void freeMem() {
     assert isPersisted() || _pojo != null;
-    _mem = null; 
+    _mem = null;
   }
   // Free POJO (but always be able to rebuild the PJO)
-  public final void freePOJO() { 
+  public final void freePOJO() {
     assert isPersisted() || _mem != null;
     _pojo = null;
   }
@@ -84,7 +84,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     if( _max == 0 ) return (_mem = new byte[0]);
     return (_mem = loadPersist());
   }
-  public final byte[] getBytes() { 
+  public final byte[] getBytes() {
     assert _type==TypeMap.PRIM_B && _pojo == null;
     return memOrLoad();
   }
@@ -242,7 +242,11 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
 
   // Get the 1st bytes from either a plain Value, or chunk 0 of a ValueArray
   public byte[] getFirstBytes() {
-    return (!isArray() ? this : DKV.get(ValueArray.getChunkKey(0,_key))).memOrLoad();
+    Value v = this;
+    if(isArray())
+      v = DKV.get(ValueArray.getChunkKey(0,_key));
+    // Return empty array if key has been deleted
+    return v != null ? v.memOrLoad() : new byte[0];
   }
 
   // For plain Values, just the length in bytes.

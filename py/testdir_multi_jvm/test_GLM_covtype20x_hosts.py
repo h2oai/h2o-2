@@ -26,12 +26,12 @@ class Basic(unittest.TestCase):
         if localhost:
             csvFilenameList = [
                 # 68 secs on my laptop?
-                ('covtype20x.data', 240, 'cA'),
+                ('covtype20x.data', 480, 'cA'),
                 ]
         else:
             # None is okay for key2
             csvFilenameList = [
-                ('covtype20x.data', 240,'cA'),
+                ('covtype20x.data', 480,'cA'),
                 # ('covtype200x.data', 1000,'cE'),
                 ]
 

@@ -139,7 +139,10 @@ public class Tree extends CountedCompleter {
   // which serializes "for free".
   static void appendKey(Key model, final Key tKey) {
     new TAtomic<RFModel>() {
-      @Override public RFModel atomic(RFModel old) { return RFModel.make(old,tKey); }
+      @Override public RFModel atomic(RFModel old) {
+        if(old == null) return null;
+        return RFModel.make(old,tKey);
+      }
     }.invoke(model);
   }
 

@@ -25,12 +25,12 @@ class Basic(unittest.TestCase):
     def test_GLM_covtype20x(self):
         if localhost:
             csvFilenameList = [
-                ('covtype20x.data', 240),
+                ('covtype20x.data', 480),
                 ]
         else:
             csvFilenameList = [
                 # ('covtype200x.data', 1000),
-                ('covtype20x.data', 240),
+                ('covtype20x.data', 480),
                 ]
 
 

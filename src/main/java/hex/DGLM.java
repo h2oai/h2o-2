@@ -477,7 +477,7 @@ public abstract class DGLM {
         if(models[i].isSolved())
           models[i].validateOn(ary, new Sampling(i, folds, true),thresholds);
       }
-      GLMValidation res = new GLMValidation(models, ErrMetric.SUMC,thresholds);
+      GLMValidation res = new GLMValidation(_selfKey,models, ErrMetric.SUMC,thresholds);
       if(_vals == null)_vals = new GLMValidation[]{res};
       else {
         _vals = Arrays.copyOf(_vals, _vals.length+1);
@@ -603,10 +603,9 @@ public abstract class DGLM {
     double [] _thresholds;
 
     public GLMValidation(){_modelKeys = null;}
-
-    public GLMValidation(GLMModel [] models, ErrMetric m, double [] thresholds) {
+    public GLMValidation(Key modelKey, GLMModel [] models, ErrMetric m, double [] thresholds) {
       _errMetric = m;
-      _modelKey = models[0]._selfKey;
+      _modelKey = modelKey;
       _dataKey = models[0]._dataKey;
       _modelKeys = new Key[models.length];
       int i = 0;
@@ -635,7 +634,7 @@ public abstract class DGLM {
         int nthresholds = models[0]._vals[0]._cm.length;
         _cm = new ConfusionMatrix[nthresholds];
         for(int t = 0; t < nthresholds; ++t)
-          _cm[t] = models[0]._vals[0]._cm[t];
+          _cm[t] = models[0]._vals[0]._cm[t].clone();
         n += models[0]._vals[0]._n;
         dev = models[0]._vals[0]._deviance;
         rank = models[0].rank();
@@ -772,7 +771,6 @@ public abstract class DGLM {
       double auc = 0;           // Area-under-ROC
       double TPR_pre = 1;
       double FPR_pre = 1;
-
       for(int t = 0; t < _cm.length; ++t){
         double TPR = 1 - _cm[t].classErr(1); // =TP/(TP+FN) = true -positive-rate
         double FPR =     _cm[t].classErr(0); // =FP/(FP+TN) = false-positive-rate
