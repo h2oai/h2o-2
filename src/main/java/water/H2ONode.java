@@ -52,7 +52,7 @@ public class H2ONode extends Iced implements Comparable {
       int old = this.old_compare(key);
       int hack = this.hack_compare(key);
       assert Math.abs(old)== Math.abs(hack);  // They don't have to agree ... but should not lie about equality
-      return hack;
+      return old;
     }
 
     private int hack_compare(H2Okey key) {
