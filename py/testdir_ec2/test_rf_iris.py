@@ -2,7 +2,7 @@ import unittest
 import random, sys
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_rf
+import h2o, h2o_cmd, h2o_rf, h2o_hosts
 
 # RF train parameters
 paramsTrainRF = { 
@@ -28,7 +28,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        h2o.build_cloud(node_count=1)
+        h2o_hosts.build_cloud_with_hosts(node_count=1)
 
     @classmethod
     def tearDownClass(cls):
