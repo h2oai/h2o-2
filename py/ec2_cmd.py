@@ -13,7 +13,7 @@ import json
        * to terminated the cloud   : ./ec2_cmd.py terminate --hosts <host file returned by previous command>
 '''
 
-DEFAULT_NUMBER_OF_INSTANCES = 5
+DEFAULT_NUMBER_OF_INSTANCES = 4
 DEFAULT_HOSTS_FILENAME = 'ec2-config-{0}.json'
 
 '''
