@@ -49,11 +49,19 @@ public class H2ONode extends Iced implements Comparable {
       H2Okey key = ((H2ONode)x)._key;
       if( key == this ) return 0;
       // Note: long-math does not matter here, all we need is a reliable ordering.
-//FIXME: Jan hack...
-      //  int res = _ipv4 - key._ipv4;
-//      if( res != 0 ) return res;
-      // return udp_port() - key.udp_port();
+      int old = this.old_compare(key);
+      int hack = this.hack_compare(key);
+      assert Math.abs(old)== Math.abs(hack);  // They don't have to agree ... but should not lie about equality
+      return hack;
+    }
+
+    private int hack_compare(H2Okey key) {
       return name.compareTo(key.name);
+    }
+    private int old_compare(H2Okey key) {
+        int res = _ipv4 - key._ipv4;
+        if( res != 0 ) return res;
+        return udp_port() - key.udp_port();
     }
   }
   public H2Okey _key;
