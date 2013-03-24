@@ -28,7 +28,7 @@ public class H2ONode extends Iced implements Comparable {
       super(inet,port);
       byte[] b = inet.getAddress();
       _ipv4 = ((b[0]&0xFF)<<0)+((b[1]&0xFF)<<8)+((b[2]&0xFF)<<16)+((b[3]&0xFF)<<24);
-      name = inet.toString();
+      name = inet.toString()+":"+port;
     }
     public int htm_port() { return getPort()-1; }
     public int udp_port() { return getPort()  ; }
@@ -51,7 +51,13 @@ public class H2ONode extends Iced implements Comparable {
       // Note: long-math does not matter here, all we need is a reliable ordering.
       int old = this.old_compare(key);
       int hack = this.hack_compare(key);
-      assert Math.abs(old)== Math.abs(hack);  // They don't have to agree ... but should not lie about equality
+      if ( old > 0 ) old = 1; else if (old < 0) old = -1;
+      if ( hack > 0 ) hack = 1; else if (hack < 0)hack  = -1;
+      assert     Math.abs(old)== Math.abs(hack):
+       "compare: " + old + "!="+hack + " || " +
+       name + " other=" + key.name + " ipv4=("+_ipv4+","+key._ipv4+") udp=("+udp_port()+","+key.udp_port()+")"
+
+        ;  // They don't have to agree ... but should not lie about equality
       return old;
     }
 
