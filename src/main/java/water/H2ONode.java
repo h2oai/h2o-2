@@ -53,12 +53,8 @@ public class H2ONode extends Iced implements Comparable {
       int hack = this.hack_compare(key);
       if ( old > 0 ) old = 1; else if (old < 0) old = -1;
       if ( hack > 0 ) hack = 1; else if (hack < 0)hack  = -1;
-      assert     Math.abs(old)== Math.abs(hack):
-       "compare: " + old + "!="+hack + " || " +
-       name + " other=" + key.name + " ipv4=("+_ipv4+","+key._ipv4+") udp=("+udp_port()+","+key.udp_port()+")"
-
-        ;  // They don't have to agree ... but should not lie about equality
-      return old;
+     // assert     Math.abs(old)== Math.abs(hack):       "compare: " + old + "!="+hack + " || " +       name + " other=" + key.name + " ipv4=("+_ipv4+","+key._ipv4+") udp=("+udp_port()+","+key.udp_port()+")"        ;  // They don't have to agree ... but should not lie about equality
+      return hack;
     }
 
     private int hack_compare(H2Okey key) {
