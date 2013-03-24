@@ -84,7 +84,7 @@ public class RFRunner {
     String rawKeys;
     String parsedKeys;
     String h2oArgs = "";                                      // args for the spawned h2o
-    String jvmArgs = " -Xmx3g";                               // args for the spawned jvm
+    String jvmArgs = " -Xmx6g";                               // args for the spawned jvm
     String resultDB = "/tmp/results.csv";                     // output file
   }
 
@@ -328,8 +328,38 @@ public class RFRunner {
   public static void kCS1() {
     special.put(path+"datasets/bench/kaggle.creditsample/h2o/train.csv","-classcol=0");
     testIt( path+"datasets/bench/kaggle.creditsample/h2o", new String[][]{{"train.csv","test.csv"}}, //files
+        new int[]{50} /*trees*/, new int[]{1000} /*bin*/, new int[]{80} /*sample*/,
+        new String[]{"entropy"}, null/*ignore*/, null, null,fromToStride(1,10,1));// seeds ,  staras
+  }
+  public static void kCS0() {
+    special.put(path+"datasets/bench/kaggle.creditsample/h2o/train.csv","-classcol=0");
+    testIt( path+"datasets/bench/kaggle.creditsample/h2o", new String[][]{{"train.csv","test.csv"}}, //files
+        new int[]{50} /*trees*/, new int[]{100,200,500,1000,1500,2000} /*bin*/, new int[]{80} /*sample*/,
+        new String[]{"entropy"}, null/*ignore*/, null, null,null);// seeds ,  staras
+  }
+
+  public static void kCS2() {
+    special.put(path+"datasets/bench/kaggle.creditsample/h2o/train.csv","-classcol=0");
+    testIt( path+"datasets/bench/kaggle.creditsample/h2o", new String[][]{{"train.csv","test.csv"}}, //files
         new int[]{50,100} /*trees*/, new int[]{100,200,500,1000} /*bin*/, new int[]{80} /*sample*/,
         new String[]{"entropy"}, null/*ignore*/, null, null,null);// seeds ,  staras
+  }
+
+
+
+  public static void ste1() {
+    special.put(path+"datasets/bench/stego/h2o/train.csv","-classcol=1");
+    testIt( path+"datasets/bench/stego/h2o", new String[][]{{"train.csv","test.csv"}}, //files
+        new int[]{200} /*trees*/, new int[]{10000} /*bin*/, new int[]{80} /*sample*/,
+        new String[]{"entropy"}, null/*ignore*/, null, null,new int[]{15});// seeds ,  staras
+  }
+
+
+
+  public static void kAS1() {
+    testIt( path+"datasets/bench/kaggle.allstate/h2o", new String[][]{{"train.csv.gz","test.csv.gz"}}, //files
+        new int[]{300} /*trees*/, new int[]{10000} /*bin*/, new int[]{90} /*sample*/,
+        new String[]{"entropy"},  new String[]{"0,1"}/*ignore*/, null, null,new int[]{20});// seeds ,  staras
   }
 
 
@@ -417,7 +447,7 @@ public class RFRunner {
     new Arguments(args).extract(ARGS);
     out_= new PrintStream(new File("/tmp/RFRunner.stdout.txt"));
     javaCmd_ =   ARGS.jvmArgs + " " + JAR + " " + MAIN;
-    kCS1(); //cT7(); //kCS1(); //cT5();// cT2(); cT3(); cT4();
+    ste1(); //cT7(); //kCS1(); //cT5();// cT2(); cT3(); cT4();
   }
 
   @org.junit.Test
