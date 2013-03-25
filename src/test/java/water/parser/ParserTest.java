@@ -88,13 +88,13 @@ public class ParserTest extends TestUtil {
       Key k = Key.make();
       UKV.put(k, new Value(k, sb.toString()));
       Key r1 = Key.make("r1");
-      ParseDataset.parse(r1, DKV.get(k));
+      ParseDataset.parse(r1, new Key[]{k});
       testParsed(r1,exp,k);
       sb = new StringBuilder();
       for( int i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\r\n");
       UKV.put(k, new Value(k, sb.toString()));
       Key r2 = Key.make("r2");
-      ParseDataset.parse(r2, DKV.get(k));
+      ParseDataset.parse(r2, new Key[]{k});
       testParsed(r2,exp,k);
     }
   }
@@ -129,7 +129,7 @@ public class ParserTest extends TestUtil {
       String[] dataset = getDataForSeparator(separator, data);
       Key k = k("ChunkBoundaries",dataset);
       Key r3 = Key.make();
-      ParseDataset.parse(r3,DKV.get(k));
+      ParseDataset.parse(r3,new Key[]{k});
       testParsed(r3,exp,k);
     }
   }
@@ -160,7 +160,7 @@ public class ParserTest extends TestUtil {
       String[] dataset = getDataForSeparator(separator, data);
       Key k = k("ChunkBoundariesMixedLineEndings",dataset);
       Key r4 = Key.make();
-      ParseDataset.parse(r4,DKV.get(k));
+      ParseDataset.parse(r4,new Key[]{k});
       testParsed(r4,exp,k);
     }
   }
@@ -211,7 +211,7 @@ public class ParserTest extends TestUtil {
       String[] dataset = getDataForSeparator(separator, data);
       Key key = k("NondecimalColumns",dataset);
       Key r = Key.make();
-      ParseDataset.parse(r,DKV.get(key));
+      ParseDataset.parse(r,new Key[]{key});
       ValueArray va = DKV.get(r).get();
       String[] cd = va._cols[2]._domain;
       Assert.assertEquals(" four",cd[0]);
@@ -232,7 +232,7 @@ public class ParserTest extends TestUtil {
       String[] dataset = getDataForSeparator(separator, data);
       Key key = k("NumberFormats",dataset);
       Key r = Key.make();
-      ParseDataset.parse(r,DKV.get(key));
+      ParseDataset.parse(r,new Key[]{key});
       testParsed(r, expDouble,key);
     }
   }
@@ -261,7 +261,7 @@ public class ParserTest extends TestUtil {
       String[] dataset = getDataForSeparator(separator, data);
       Key key = k("MultipleNondecimalColumns",dataset);
       Key r = Key.make();
-      ParseDataset.parse(r,DKV.get(key));
+      ParseDataset.parse(r,new Key[]{key});
       ValueArray va = DKV.get(r).get();
       String[] cd = va._cols[2]._domain;
       Assert.assertEquals("one",cd[0]);
@@ -309,7 +309,7 @@ public class ParserTest extends TestUtil {
     String[] dataset = getDataForSeparator(separator, data);
     Key key = k("EmptyColumnValues",dataset);
     Key r = Key.make();
-    ParseDataset.parse(r,DKV.get(key));
+    ParseDataset.parse(r,new Key[]{key});
     ValueArray va = DKV.get(r).get();
     String[] cd = va._cols[3]._domain;
     Assert.assertEquals("bar",cd[0]);
@@ -345,7 +345,7 @@ public class ParserTest extends TestUtil {
       Key k = Key.make();
       UKV.put(k, new Value(k, sb.toString()));
       Key r5 = Key.make();
-      ParseDataset.parse(r5, DKV.get(k));
+      ParseDataset.parse(r5, new Key[]{k});
       testParsed(r5, exp,k);
     }
   }
@@ -364,7 +364,7 @@ public class ParserTest extends TestUtil {
   @Test public void testTimeParse() {
     Key fkey = load_test_file("smalldata/kaggle/bestbuy_train_10k.csv.gz");
     Key okey = Key.make("bestbuy.hex");
-    ParseDataset.parse(okey,DKV.get(fkey));
+    ParseDataset.parse(okey,new Key[]{fkey});
     UKV.remove(fkey);
     ValueArray va = DKV.get(okey).get();
     UKV.remove(okey);
@@ -382,7 +382,7 @@ public class ParserTest extends TestUtil {
     };
     Key fkey = load_test_file("smalldata/test/is_NA.csv");
     Key okey = Key.make("NA.hex");
-    ParseDataset.parse(okey,DKV.get(fkey));
+    ParseDataset.parse(okey,new Key[]{fkey});
     testParsed(okey,exp,fkey,25);
   }
 }

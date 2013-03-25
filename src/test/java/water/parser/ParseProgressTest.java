@@ -28,7 +28,7 @@ public class ParseProgressTest extends TestUtil {
 
     for( int i=0; i<1; i++ ) {
       Key covkey = Key.make("c"+i+".hex");
-      ParseDataset.parse(covkey,DKV.get(k));
+      ParseDataset.parse(covkey,new Key[]{k});
       ValueArray ary = DKV.get(covkey).get();
       UKV.remove(covkey);
     }

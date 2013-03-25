@@ -85,13 +85,13 @@ public class TestUtil {
   public static Key loadAndParseKey(String keyName, String path) {
     Key fkey = load_test_file(path);
     Key okey = Key.make(keyName);
-    ParseDataset.parse(okey, DKV.get(fkey));
+    ParseDataset.parse(okey, new Key[]{fkey});
     UKV.remove(fkey);
     return okey;
   }
 
   public static ValueArray parse_test_key(Key fileKey, Key parsedKey) {
-    ParseDataset.parse(parsedKey, DKV.get(fileKey));
+    ParseDataset.parse(parsedKey, new Key[]{fileKey});
     return DKV.get(parsedKey).get();
   }
 

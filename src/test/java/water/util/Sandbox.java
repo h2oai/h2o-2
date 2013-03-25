@@ -22,7 +22,7 @@ public class Sandbox {
     // File f = new File("py/testdir_single_jvm/syn_datasets/hastie_4x.data");
     Key key = TestUtil.load_test_file(f, "test");
     Key dest = Key.make("test.hex");
-    ParseDataset.parse(dest, DKV.get(key));
+    ParseDataset.parse(dest, new Key[]{key});
     Desktop desktop = Desktop.getDesktop();
     desktop.browse(new URI("http://localhost:54321/Inspect.html?key=test.hex"));
   }
