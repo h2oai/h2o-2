@@ -18,14 +18,11 @@ import com.google.common.io.Closeables;
 
 /** Persistence backend for S3 */
 public abstract class PersistS3 {
-  private static void log(String printf, Object... args) {
-    System.err.printf("[s3] " + printf + "\n", args);
-  }
-  private static final String   HELP = "You can specify a credentials properties file with the -aws_credentials command line switch.";
+  private static final String  HELP = "You can specify a credentials properties file with the -aws_credentials command line switch.";
 
   // Default location of the S3 credentials file
   private static final String  DEFAULT_CREDENTIALS_LOCATION = "AwsCredentials.properties";
-  private static final String  KEY_PREFIX                   = "s3:";
+  private static final String  KEY_PREFIX                   = "s3://";
   private static final int     KEY_PREFIX_LEN               = KEY_PREFIX.length();
 
   private static final AmazonS3 S3;
@@ -95,9 +92,8 @@ public abstract class PersistS3 {
         skip = ValueArray.getChunkOffset(k); // The offset
         k = ValueArray.getArrayKey(k); // From the base file key
         if( k.toString().endsWith(".hex") ) { // Hex file?
-          int value_len = DKV.get(k).memOrLoad().length; // How long is the ValueArray
-                                                   // header?
-          skip += value_len;
+          int value_len = DKV.get(k).memOrLoad().length; // How long is the ValueArray header?
+          skip += value_len;    // Skip header
         }
       }
       S3Object s3obj = getObjectForKey(k, skip, v._max);
@@ -240,5 +236,9 @@ public abstract class PersistS3 {
     if (prop.containsKey(S3_MAX_HTTP_CONNECTIONS_PROP)) cfg.setMaxConnections(   Integer.getInteger(S3_MAX_HTTP_CONNECTIONS_PROP));
     //cfg.setProtocol(Protocol.HTTP);
     return cfg;
+  }
+
+  private static void log(String printf, Object... args) {
+    System.err.printf("[s3] " + printf + "\n", args);
   }
 }
