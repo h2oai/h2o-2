@@ -2,9 +2,7 @@ import unittest
 import random, sys, time
 sys.path.extend(['.','..','py'])
 import json
-
-import h2o, h2o_cmd, h2o_hosts
-import h2o_glm
+import h2o, h2o_cmd, h2o_hosts, h2o_glm
 
 # none is illegal for threshold
 # always run with num_cross_validation_folds, to make sure we get the trainingErrorDetails

@@ -1,8 +1,6 @@
 import os, json, unittest, time, shutil, sys, re
 sys.path.extend(['.','..','py'])
-import h2o_glm
-
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_glm
 import h2o_browse as h2b
 
 def write_syn_dataset(csvPathname, rowCount, rowDataTrue, rowDataFalse, outputTrue, outputFalse):
