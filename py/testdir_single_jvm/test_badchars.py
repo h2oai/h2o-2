@@ -8,7 +8,7 @@ sys.path.extend(['.','..','py'])
 # NUL is not a end of line character, though. 
 # verify: NUL (0x00) can be used as a character in tokens, and not be ignored. 
 
-import h2o, h2o_cmd
+import h2o, h2o_cmd, h2o_hosts
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -16,7 +16,12 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        h2o.build_cloud(node_count=1)
+        global localhost
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(node_count=1)
+        else:
+            h2o_hosts.build_cloud_with_hosts(node_count=1)
 
     @classmethod
     def tearDownClass(cls):
