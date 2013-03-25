@@ -15,7 +15,7 @@ def parseImportS3File(node=None,
 
     if not node: node = h2o.nodes[0]
     if not csvFilename: raise Exception('parseImportS3File: No csvFilename')
-    s3Key= "s3:" + path + "/" + csvFilename
+    s3Key= "s3://" + path + "/" + csvFilename
 
     # We like the short parse key2 name. 
     # We don't drop anything from csvFilename, unlike H2O default
