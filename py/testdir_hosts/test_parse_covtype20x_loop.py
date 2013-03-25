@@ -15,14 +15,13 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_import_billion_rows_parse_loop(self):
-        print "Apparently we can't handle 1B rows .gzed. Using non-.gzed
-        csvFilename = "billion_rows.csv"
-        importFolderPath = "/home2/0xdiag/datasets"
+    def test_import_covtype20x_parse_loop(self):
+        csvFilename = "covtype20x.data"
+        importFolderPath = "/home/0xdiag/datasets"
         trialMax = 3
-        for tryHeap in [4,16]:
+        for tryHeap in [4,12]:
             print "\n", tryHeap,"GB heap, 1 jvm per host, import folder," + \
-                "then loop parsing 'billion_rows.csv' to unique keys"
+                "then loop parsing 'covtype20x.data' to unique keys"
             h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap)
             h2i.setupImportFolder(None, importFolderPath)
             timeoutSecs=300
