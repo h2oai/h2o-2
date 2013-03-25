@@ -1,11 +1,13 @@
 package water.api;
 
+import com.google.gson.JsonObject;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.regex.Pattern;
 import water.*;
 import water.parser.*;
 import water.parser.CsvParser.Setup;
 import water.util.RString;
-
-import com.google.gson.JsonObject;
 
 public class Parse extends Request {
   protected final ExistingCSVKey _source = new ExistingCSVKey(SOURCE_KEY);
@@ -13,28 +15,74 @@ public class Parse extends Request {
   private final Header _header = new Header(HEADER);
 
   private static class PSetup {
-    final Key _key;
+    final ArrayList<Key> _keys;
     final CsvParser.Setup _setup;
     final boolean _xls;
-    PSetup( Key key, CsvParser.Setup setup ) { _key=key; _setup=setup; _xls = false;}
-    PSetup( Key key, CsvParser.Setup setup, boolean xls) { _key=key; _setup=setup; _xls = xls;}
+    PSetup( ArrayList<Key> keys, CsvParser.Setup setup) { _keys=keys; _setup=setup; _xls=false;}
+    PSetup( Key key, CsvParser.Setup setup ) { this(key,setup,false);}
+    PSetup( Key key, CsvParser.Setup setup, boolean xls) {
+      _keys = new ArrayList();
+      _keys.add(key);
+      _setup=setup;
+      _xls = xls;
+    }
   };
 
-  // An H2O Hex Query, which does runs the basic CSV parsing heuristics.
+  // An H2O Key Query, which runs the basic CSV parsing heuristics.  Accepts
+  // Key wildcards, and gathers all matching Keys for simultaneous parsing.
+  // Multi-key parses are only allowed on compatible CSV files, and only 1 is
+  // allowed to have headers.
   public class ExistingCSVKey extends TypeaheadInputText<PSetup> {
     public ExistingCSVKey(String name) { super(TypeaheadKeysRequest.class, name, true); }
     @Override protected PSetup parse(String input) throws IllegalArgumentException {
-      Key k = Key.make(input);
-      if(input.endsWith(".xlsx") || input.endsWith(".xls"))return new PSetup(k, new Setup((byte) 0,false,null,0,null), true);;
-      Value v = DKV.get(k);
-      if (v == null) throw new IllegalArgumentException("Key "+input+" not found!");
-      CsvParser.Setup setup = Inspect.csvGuessValue(v);
-      if( setup._data == null || setup._data[0].length == 0 )
-        throw new IllegalArgumentException("The dataset format is not recognized/supported");
-      return new PSetup(k,setup);
+      Key k1 = Key.make(input);
+      Value v1 = DKV.get(k1);
+      if( v1 != null  && (input.endsWith(".xlsx") || input.endsWith(".xls")) )
+        return new PSetup(k1, new Setup((byte) 0,false,null,0,null), true);
+      // Reg-Ex pattern match all keys, like file-globbing.
+      // File-globbing: '?' allows an optional single character, regex needs '.?'
+      // File-globbing: '*' allows any characters, regex needs '*?'
+      // File-globbing: '\' is normal character in windows, regex needs '\\'
+      Pattern p = Pattern.compile(input.replace("?",".?").replace("*",".*?").replace("\\","\\\\"));
+      ArrayList<Key> keys = new ArrayList();
+      boolean badkeys = false;
+      Key key2 = null;          // The key with the headers
+      CsvParser.Setup setup2 = null;
+      for( Key key : H2O.keySet() ) { // For all keys
+        if( !key.user_allowed() ) continue;
+        String ks = key.toString();
+        if( !p.matcher(ks).matches() ) // Ignore non-matching keys
+          continue;
+        Value v2 = DKV.get(key);  // Look at it
+        if( v2 == null  || input.endsWith(".xlsx") || input.endsWith(".xls") )
+          continue;           // Missed key (racing deletes) or XLS files
+        CsvParser.Setup setup = Inspect.csvGuessValue(v2);
+        if( setup._data == null || setup._data[0].length == 0 ) {
+          badkeys = true;     // Broken data?
+          continue;
+        }
+        if( setup2 == null ) {  // First valid setup?
+          setup2 = setup;       // Capture 1st valid setup; all must be like it
+          key2 = key;           // Possible header
+        } else if( !setup2.equals(setup) ||           // 2nd valid setup; check compat
+                   setup._header && setup2._header ) {// Too many headers?
+          throw new IllegalArgumentException("Matching keys<br> "+key+"; "+setup+" and<br> "+key2+"; "+setup2+" have different formats");
+        } else if( !setup2._header && setup._header ) { // If they are compatible, and 1 has headers
+          setup2 = setup;       // Keep the exactly 1 set of headers up front
+          keys.add(key2);       // Add non-header to the list
+          key2 = key;           // Possible header
+        } else {                // Else normal non-header
+          keys.add(key);        // Add to list
+        }
+      }
+      if( key2 == null && keys.size() == 0 )
+        throw new IllegalArgumentException(badkeys ? "The dataset format is not recognized/supported" : "Key "+input+" not found!");
+      Collections.sort(keys);   // Sort all the keys, except the 1 header guy
+      keys.add(0,key2);         // Insert the header key up front
+      return new PSetup(keys,setup2);
     }
     @Override protected PSetup defaultValue() { return null; }
-    @Override protected String queryDescription() { return "An existing H2O key of CSV text"; }
+    @Override protected String queryDescription() { return "An existing H2O key (or regex of keys) of CSV text"; }
   }
 
 
@@ -47,7 +95,7 @@ public class Parse extends Request {
     @Override protected String defaultValue() {
       PSetup setup = _source.value();
       if( setup == null ) return null;
-      String n = setup._key.toString();
+      String n = setup._keys.get(0).toString();
       int dot = n.lastIndexOf('.');
       if( dot > 0 ) n = n.substring(0, dot);
       int i = 0;
@@ -121,7 +169,8 @@ public class Parse extends Request {
         ? q                     // Default to heuristic
         // Else use what user choose
         : new CsvParser.Setup(q._separator,_header.value(),q._data,q._numlines,q._bits);
-      Job job = ParseDataset.forkParseDataset(dest, DKV.get(p._key),new_setup);
+      Key[] keys = p._keys.toArray(new Key[p._keys.size()]);
+      Job job = ParseDataset.forkParseDataset(dest, keys,new_setup);
       JsonObject response = new JsonObject();
       response.addProperty(RequestStatics.DEST_KEY,dest.toString());
 

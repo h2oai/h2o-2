@@ -23,8 +23,10 @@ public final class ParseDataset extends Job {
   private final long _total;
   public final Key  _progress;
 
-  private ParseDataset(Key dest, Value dataset) {
+  private ParseDataset(Key dest, Key[] keys) {
     super("Parse", dest);
+    if( keys.length > 1 ) throw H2O.unimpl();
+    Value dataset = DKV.get(keys[0]);
     _total = dataset.length() * Pass.values().length;
     _progress = Key.make(UUID.randomUUID().toString(), (byte) 0, Key.JOB);
     UKV.put(_progress, new Progress());
@@ -45,7 +47,9 @@ public final class ParseDataset extends Job {
 
   // Parse the dataset (uncompressed, zippped) as a CSV-style thingy and
   // produce a structured dataset as a result.
-  private static void parse(ParseDataset job, Value dataset, CsvParser.Setup setup) {
+  private static void parse(ParseDataset job, Key[] keys, CsvParser.Setup setup) {
+    if( keys.length > 1 ) throw H2O.unimpl();
+    Value dataset = DKV.get(keys[0]);
     if( dataset.isHex() )
       throw new IllegalArgumentException("This is a binary structured dataset; "
           + "parse() only works on text files.");
@@ -83,17 +87,17 @@ public final class ParseDataset extends Job {
     }
   }
 
-  public static void parse(Key dest, Value dataset) {
-    ParseDataset job = new ParseDataset(dest, dataset);
+  public static void parse(Key dest, Key[] keys) {
+    ParseDataset job = new ParseDataset(dest, keys);
     job.start();
-    parse(job, dataset, null);
+    parse(job, keys, null);
   }
 
-  public static Job forkParseDataset( final Key dest, final Value dataset, final CsvParser.Setup setup ) {
-    final ParseDataset job = new ParseDataset(dest, dataset);
+  public static Job forkParseDataset( final Key dest, final Key[] keys, final CsvParser.Setup setup ) {
+    final ParseDataset job = new ParseDataset(dest, keys);
     job.start();
     H2O.submitTask(new H2OCountedCompleter() {
-        @Override public void compute2() { parse(job, dataset, setup); tryComplete(); }
+        @Override public void compute2() { parse(job, keys, setup); tryComplete(); }
       });
     return job;
   }
@@ -138,8 +142,7 @@ public final class ParseDataset extends Job {
     }
     if( key == null )
       throw new Error("Cannot uncompressed ZIP-compressed dataset!");
-    Value uncompressedDataset = DKV.get(key);
-    parse(job, uncompressedDataset, setup);
+    parse(job, new Key[]{key}, setup);
     UKV.remove(key);
   }
 
@@ -155,8 +158,7 @@ public final class ParseDataset extends Job {
 
     if( key == null )
       throw new Error("Cannot uncompressed GZIP-compressed dataset!");
-    Value uncompressedDataset = DKV.get(key);
-    parse(job, uncompressedDataset, setup);
+    parse(job, new Key[]{key}, setup);
     UKV.remove(key);
   }
 

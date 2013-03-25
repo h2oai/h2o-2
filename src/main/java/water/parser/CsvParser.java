@@ -471,6 +471,15 @@ NEXT_CHAR:
       _numlines = numlines;
       _bits = bits;
     }
+    @Override public boolean equals( Object o ) {
+      if( o == null || !(o instanceof Setup) ) return false;
+      Setup s = (Setup)o;
+      // "Compatible" setups means same columns and same separators
+      return _separator == s._separator && _data[0].length == s._data[0].length;
+    }
+    @Override public String toString() {
+      return "'"+_separator+"' head="+_header+" cols="+_data[0].length;
+    }
   }
 
   /** Separators recognized by the parser.  You can add new separators to this
