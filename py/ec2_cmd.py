@@ -205,7 +205,7 @@ def dump_hosts_config(ec2_config, reservation, filename=DEFAULT_HOSTS_FILENAME):
     cfg['use_flatfile']    = True
     cfg['h2o_per_host']    = 1
     cfg['java_heap_GB']    = MEMORY_MAPPING[ec2_config['instance_type']]['xmx']
-    cfg['java_extra_args'] = '-XX:MaxDirectMemorySize=1g'
+    cfg['java_extra_args'] = '' # No default Java arguments '-XX:MaxDirectMemorySize=1g'
     cfg['base_port']       = 54321
     cfg['ip'] = [ i.private_ip_address for i in reservation.instances ]
     cfg['ec2_instances']   = [ { 'id': i.id, 'private_ip_address': i.private_ip_address, 'public_ip_address': i.ip_address, 'public_dns_name': i.public_dns_name } for i in reservation.instances ]
@@ -214,7 +214,7 @@ def dump_hosts_config(ec2_config, reservation, filename=DEFAULT_HOSTS_FILENAME):
     cfg['redirect_import_folder_to_s3_path'] = True
     if ec2_config['hdfs_config']:
         cfg['hdfs_config']     = find_file(ec2_config['hdfs_config'])
-        cfg['use_hdfs']        = True
+        # Do not put it there, since h2o.py will put noisy command line parameters cfg['use_hdfs']        = True
 
     # put ssh commands into comments
     cmds = get_ssh_commands(ec2_config, reservation)
