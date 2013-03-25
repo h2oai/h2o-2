@@ -2,14 +2,14 @@ import unittest
 import random, sys, time
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_rf, h2o_hosts
+import h2o, h2o_cmd, h2o_rf
 
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
 # only classes 1-7 in the 55th col
 # don't allow None on ntree..causes 50 tree default!
 print "Temporarily not using bin_limit=1 to 4"
 paramDict = {
-    'response_variable': [None,54],
+    'response_variable': [None, 16],
     'class_weights': [None,'1=2','2=2','3=2','4=2','5=2','6=2','7=2'],
     'ntree': [1,3,7,19],
     'model_key': ['model_keyA', '012345', '__hello'],
@@ -23,7 +23,7 @@ paramDict = {
     'seed': [None,'0','1','11111','19823134','1231231'],
     # stack trace if we use more features than legal. dropped or redundanct cols reduce 
     # legal max also.
-    'features': [1,3,5,7,9,11,13,17,19,23,37,53],
+    'features': [1,3,5],
     'exclusive_split_limit': [None,0,3,5],
     # 'stratify': [None,0,1,1,1,1,1,1,1,1,1],
     'strata': [
@@ -43,7 +43,6 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(node_count=1, java_heap_GB=10)
@@ -62,14 +61,16 @@ class Basic(unittest.TestCase):
         # SEED = 
         random.seed(SEED)
         print "\nUsing random seed:", SEED
-        csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
+        csvPathname = h2o.find_file('/home/0xdiag/datasets/ncaa/Players.csv')
         for trial in range(10):
             # params is mutable. This is default.
-            params = {'ntree': 13, 'parallel': 1, 'features': 7}
+            params = {'ntree': 13, 'parallel': 1, 'features': 4}
             colX = h2o_rf.pickRandRfParams(paramDict, params)
             kwargs = params.copy()
             # adjust timeoutSecs with the number of trees
+            # seems ec2 can be really slow
             timeoutSecs = 30 + ((kwargs['ntree']*20) * max(1,kwargs['features']/15) * (kwargs['parallel'] and 1 or 3))
+
             start = time.time()
             h2o_cmd.runRF(timeoutSecs=timeoutSecs, retryDelaySecs=1, csvPathname=csvPathname, **kwargs)
             elapsed = time.time()-start

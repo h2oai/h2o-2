@@ -1,8 +1,7 @@
 import os, json, unittest, time, shutil, sys
 # not needed, but in case you move it down to subdir
 sys.path.extend(['.','..','py'])
-import h2o_cmd
-import h2o
+import h2o, h2o_cmd, h2o_hosts
 import h2o_browse as h2b
 
 class Basic(unittest.TestCase):
@@ -11,7 +10,12 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        h2o.build_cloud(node_count=3)
+        global localhost
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(node_count=3)
+        else:
+            h2o_hosts.build_cloud_with_hosts(node_count=3)
 
     @classmethod
     def tearDownClass(cls):

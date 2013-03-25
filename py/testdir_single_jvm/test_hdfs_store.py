@@ -14,7 +14,12 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # assume we're at 0xdata with it's hdfs namenode
-        h2o.build_cloud(1,use_hdfs=True, hdfs_version='cdh3u5', hdfs_name_node="192.168.1.176")
+        global localhost
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(1,use_hdfs=True, hdfs_version='cdh3u5', hdfs_name_node="192.168.1.176")
+        else:
+            h2o_hosts.build_cloud_with_hosts(1,use_hdfs=True, hdfs_version='cdh3u5', hdfs_name_node="192.168.1.176")
 
     @classmethod
     def tearDownClass(cls):

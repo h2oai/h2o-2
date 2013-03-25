@@ -220,8 +220,8 @@ public class Inspect extends Request {
       long endRow = Math.min(_offset.value() + _view.value(), va._numrows);
       long startRow = Math.min(_offset.value(), va._numrows - _view.value());
       for( long row = Math.max(0, startRow); row < endRow; ++row ) {
-        JsonArray obj = new JsonArray();
-        obj.add(new JsonPrimitive(row));
+        JsonObject obj = new JsonObject();
+        obj.addProperty(ROW, row);
         for( int i = 0; i < va._cols.length; ++i )
           format(obj, va, row, i);
         rows.add(obj);
@@ -252,7 +252,7 @@ public class Inspect extends Request {
     return r;
   }
 
-  private static void format(JsonArray obj, ValueArray va, long rowIdx, int colIdx) {
+  private static void format(JsonObject obj, ValueArray va, long rowIdx, int colIdx) {
     if( rowIdx < 0 || rowIdx >= va._numrows )
       return;
     if( colIdx >= va._cols.length )
@@ -260,13 +260,13 @@ public class Inspect extends Request {
     ValueArray.Column c = va._cols[colIdx];
     String name = c._name != null ? c._name : "" + colIdx;
     if( va.isNA(rowIdx, colIdx) ) {
-      obj.add(new JsonPrimitive("NA"));
+      obj.addProperty(name, "NA");
     } else if( c._domain != null ) {
-      obj.add(new JsonPrimitive(c._domain[(int) va.data(rowIdx, colIdx)]));
-    } else if( c.isFloat() ) {
-      obj.add(new JsonPrimitive(va.datad(rowIdx, colIdx)));
+      obj.addProperty(name, c._domain[(int) va.data(rowIdx, colIdx)]);
+    } else if( (c._size > 0) && (c._scale == 1) ) {
+      obj.addProperty(name, va.data(rowIdx, colIdx));
     } else {
-      obj.add(new JsonPrimitive(va.data (rowIdx, colIdx)));
+      obj.addProperty(name, va.datad(rowIdx, colIdx));
     }
   }
 
@@ -308,8 +308,8 @@ public class Inspect extends Request {
       StringBuilder sb = new StringBuilder();
       if( array.size() == 0 ) { // Fake row, needed by builder
         array = new JsonArray();
-        JsonArray fake = new JsonArray();
-        fake.add(new JsonPrimitive(0));
+        JsonObject fake = new JsonObject();
+        fake.addProperty(ROW, 0);
         for( int i = 0; i < _va._cols.length; ++i )
           format(fake, _va, 0, i);
         array.add(fake);

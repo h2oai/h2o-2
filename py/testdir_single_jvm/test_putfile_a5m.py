@@ -1,7 +1,6 @@
 import os, json, unittest, time, shutil, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd
-import h2o_hosts
+import h2o, h2o_cmd, h2o_hosts
 import h2o_browse as h2b
 import h2o_import as h2i
 import time, random
@@ -12,7 +11,12 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        h2o.build_cloud(1,java_heap_GB=10)
+        global localhost
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(1,java_heap_GB=10)
+        else:
+            h2o_hosts.build_cloud_with_hosts(1,java_heap_GB=10)
 
     @classmethod
     def tearDownClass(cls):
