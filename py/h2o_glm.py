@@ -195,7 +195,8 @@ def compareToFirstGlm(self, key, glm, firstglm):
         firstkList = [firstglm[key]]
 
     for k, firstk in zip(kList, firstkList):
-        delta = .1 * float(firstk)
+        # delta must be a positive number ?
+        delta = .1 * abs(float(firstk))
         msg = "Too large a delta (" + str(delta) + ") comparing current and first for: " + key
         self.assertAlmostEqual(float(k), float(firstk), delta=delta, msg=msg)
         self.assertGreaterEqual(abs(float(k)), 0.0, str(k) + " abs not >= 0.0 in current")
