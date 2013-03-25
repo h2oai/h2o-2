@@ -29,6 +29,7 @@ DEFAULT_EC2_INSTANCE_CONFIGS = {
               'pem'             : '~/.ec2/keys/mrjenkins_test.pem',
               'username'        : '0xdiag',      
               'aws_credentials' : '~/.ec2/AwsCredentials.properties',
+              'hdfs_config'     : '~/.ec2/core-site.xml',
               'region'          : 'us-east-1',
              },
   'us-west-1':{
@@ -39,6 +40,7 @@ DEFAULT_EC2_INSTANCE_CONFIGS = {
               'pem'             : '~/.ec2/keys/mrjenkins_test.pem',
               'username'        : '0xdiag',      
               'aws_credentials' : '~/.ec2/AwsCredentials.properties',
+              'hdfs_config'     : '~/.ec2/core-site.xml',
               'region'          : 'us-west-1',
              },
 }
@@ -97,6 +99,7 @@ def ec2_connect(region):
 
     return conn
 
+#def check_required_env_variables():
 
 ''' Run number of EC2 instance.
 Waits forthem and optionaly waits for ssh service.
@@ -209,6 +212,10 @@ def dump_hosts_config(ec2_config, reservation, filename=DEFAULT_HOSTS_FILENAME):
     cfg['ec2_reservation_id']  = reservation.id
     cfg['ec2_region']      = ec2_config['region']
     cfg['redirect_import_folder_to_s3_path'] = True
+    if ec2_config['hdfs_config']:
+        cfg['hdfs_config']     = find_file(ec2_config['hdfs_config'])
+        cfg['use_hdfs']        = True
+
     # put ssh commands into comments
     cmds = get_ssh_commands(ec2_config, reservation)
     idx  = 1

@@ -1533,6 +1533,9 @@ class RemoteH2O(H2O):
         if self.aws_credentials:
             self.aws_credentials = host.upload_file(self.aws_credentials)
 
+        if self.hdfs_config:
+            self.hdfs_config = host.upload_file(self.hdfs_config)
+
         if self.use_home_for_ice:
             # this will be the username used to ssh to the host
             self.ice = "/home/" + host.username + '/ice.%d.%s' % (self.port, time.time())
