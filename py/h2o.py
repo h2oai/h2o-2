@@ -474,7 +474,8 @@ def check_sandbox_for_errors():
                 foundNOPTaskCnt = 0
                 if not ' bytes)' in line:
                     # no multiline FSM on this 
-                    printSingleWarning = (regex3.search(line) and not ('[Loaded ' in line)) or ('Non-member packets' in line)
+                    printSingleWarning = (regex3.search(line) and not ('[Loaded ' in line)) or \
+                        ('Non-member packets' in line)
                     #   13190  280      ###        sun.nio.ch.DatagramChannelImpl::ensureOpen (16 bytes)
 
                     # don't detect these class loader info messags as errors
@@ -525,12 +526,18 @@ def check_sandbox_for_errors():
     # we probably could have a tearDown with the test rather than the class, but we
     # would have to update all tests. 
     if len(errLines)!=0:
-        emsg1 = " check_sandbox_for_errors: Errors in sandbox stdout or stderr.\n" + \
-                 "Could have occurred at any prior time\n\n"
-        emsg2 = "".join(errLines)
-        if nodes: 
-            nodes[0].sandbox_error_report(True)
-        raise Exception(python_test_name + emsg1 + emsg2)
+        # check if the lines all start with INFO: or have "apache" in them
+        justInfo = True
+        for e in errLines:
+            justInfo &= re.match("INFO:", e) or ("apache" in e)
+
+        if not justInfo:
+            emsg1 = " check_sandbox_for_errors: Errors in sandbox stdout or stderr.\n" + \
+                     "Could have occurred at any prior time\n\n"
+            emsg2 = "".join(errLines)
+            if nodes: 
+                nodes[0].sandbox_error_report(True)
+            raise Exception(python_test_name + emsg1 + emsg2)
 
 
 def tear_down_cloud(node_list=None):
