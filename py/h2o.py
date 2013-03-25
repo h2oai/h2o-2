@@ -1256,10 +1256,10 @@ class H2O(object):
                 '-hdfs hdfs://' + self.hdfs_name_node,
                 '-hdfs_version=' + self.hdfs_version, 
             ]
-            if self.hdfs_config:
-                args += [
-                    '-hdfs_config ' + self.hdfs_config
-                ]
+        if self.hdfs_config:
+            args += [
+                '-hdfs_config ' + self.hdfs_config
+            ]
 
         if not self.sigar:
             args += ['--nosigar']

@@ -23,12 +23,10 @@ public class H2ONode extends Iced implements Comparable {
   // A JVM is uniquely named by machine IP address and port#
   public static final class H2Okey extends InetSocketAddress implements Comparable {
     final int _ipv4;     // cheapo ipv4 address
-    final String name;
     public H2Okey(InetAddress inet, int port) {
       super(inet,port);
       byte[] b = inet.getAddress();
       _ipv4 = ((b[0]&0xFF)<<0)+((b[1]&0xFF)<<8)+((b[2]&0xFF)<<16)+((b[3]&0xFF)<<24);
-      name = inet.toString()+":"+port;
     }
     public int htm_port() { return getPort()-1; }
     public int udp_port() { return getPort()  ; }
@@ -48,22 +46,10 @@ public class H2ONode extends Iced implements Comparable {
       if( x == null ) return -1;   // Always before null
       H2Okey key = ((H2ONode)x)._key;
       if( key == this ) return 0;
-      // Note: long-math does not matter here, all we need is a reliable ordering.
-      int old = this.old_compare(key);
-      int hack = this.hack_compare(key);
-      if ( old > 0 ) old = 1; else if (old < 0) old = -1;
-      if ( hack > 0 ) hack = 1; else if (hack < 0)hack  = -1;
-     // assert     Math.abs(old)== Math.abs(hack):       "compare: " + old + "!="+hack + " || " +       name + " other=" + key.name + " ipv4=("+_ipv4+","+key._ipv4+") udp=("+udp_port()+","+key.udp_port()+")"        ;  // They don't have to agree ... but should not lie about equality
-      return hack;
-    }
-
-    private int hack_compare(H2Okey key) {
-      return name.compareTo(key.name);
-    }
-    private int old_compare(H2Okey key) {
-        int res = _ipv4 - key._ipv4;
-        if( res != 0 ) return res;
-        return udp_port() - key.udp_port();
+      // Must be unsigned long-math, or overflow will make a broken sort
+      long res = (_ipv4&0xFFFFFFFFL) - (key._ipv4&0xFFFFFFFFL);
+      if( res != 0 ) return res < 0 ? -1 : 1;
+      return udp_port() - key.udp_port();
     }
   }
   public H2Okey _key;
