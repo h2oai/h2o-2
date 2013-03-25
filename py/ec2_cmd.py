@@ -295,7 +295,7 @@ def merge_reservations(reservations):
 def main():
     parser = argparse.ArgumentParser(description='H2O EC2 instances launcher')
     parser.add_argument('action', choices=['create', 'terminate', 'stop', 'reboot', 'start', 'distribute_h2o', 'start_h2o', 'stop_h2o', 'show_defaults', 'merge_reservations'],  help='EC2 instances action')
-    parser.add_argument('-c', '--config',    help='Configuration file to configure NEW EC2 instances (if not specified default is used - see --show_defaults)', type=str, default=None)
+    parser.add_argument('-c', '--config',    help='Configuration file to configure NEW EC2 instances (if not specified default is used - see "show_defaults")', type=str, default=None)
     parser.add_argument('-i', '--instances', help='Number of instances to launch', type=int, default=DEFAULT_NUMBER_OF_INSTANCES)
     parser.add_argument('-H', '--hosts',     help='Hosts file describing existing "EXISTING" EC2 instances ', type=str, default=None)
     parser.add_argument('-r', '--region',    help='Specifies target create region', type=str, default=DEFAULT_REGION)

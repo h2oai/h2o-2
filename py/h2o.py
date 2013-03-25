@@ -790,15 +790,16 @@ class H2O(object):
         return r
     
     # additional params include: cols=. don't need to include in params_dict it doesn't need a default
-    def kmeans(self, key, key2=None, timeoutSecs=10, retryDelaySecs=0.2, **kwargs):
+    def kmeans(self, key, key2=None, 
+        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=30,
+        **kwargs):
+        # defaults
         params_dict = {
             'epsilon': 1e-6,
             'k': 1,
             'source_key': key,
             'destination_key': None,
             }
-        # alternate name, to match what parse has
-        # don't really need this, maybe better if tests all use 'destination_key'
         if key2 is not None: params_dict['destination_key'] = key2
         params_dict.update(kwargs)
         print "\nKMeans params list", params_dict
@@ -812,7 +813,9 @@ class H2O(object):
         if a['response']['redirect_request']!='Progress':
             print dump_json(a)
             raise Exception('H2O kmeans redirect is not Progress. KMeans json response precedes.')
-        a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
+        a = self.poll_url(a['response'],
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nKMeans result:", dump_json(a))
         return a
 
