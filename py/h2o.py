@@ -887,9 +887,17 @@ class H2O(object):
     # FIX! what params does this take
     def store_view(self):
         a = self.__check_request(requests.get(self.__url('StoreView.json'),
-            params={
-                })
-            )
+            params={}))
+        # too much!
+        ### verboseprint("\ninspect result:", dump_json(a))
+        return a
+
+    # There is also a RemoveAck in the browser, that asks for confirmation from
+    # the user. This is after that confirmation.
+    def remove_key(self, key):
+        a = self.__check_request(requests.get(self.__url('Remove.json'),
+            params={"key": key}))
+
         # too much!
         ### verboseprint("\ninspect result:", dump_json(a))
         return a

@@ -28,6 +28,9 @@ def parseImportS3File(node=None,
     print "Waiting for the slow parse of the file:", csvFilename
     parseKey = node.parse(s3Key, myKey2, 
         timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs)
+    # a hack so we know what the source_key was, bask at the caller
+    parseKey['source_key'] = importKey
+
     print "\nParse result:", parseKey
     return parseKey
 
@@ -71,13 +74,12 @@ def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
         parseKey = parseImportS3File(node, csvFilename, path, myKey2,
             timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs)
     else:
-        csvPathnameForH2O = "nfs:/" + path + "/" + csvFilename
-        # we're getting a http timeout on the parse progress poll of big parses. 
-        # try to increase timeout with pollTimeoutSecs.
-        # don't want it big normally..don't want to wait after fail for simple tests.
-        parseKey = node.parse(csvPathnameForH2O, myKey2, 
+        importKey = "nfs:/" + path + "/" + csvFilename
+        parseKey = node.parse(importKey, myKey2, 
             timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs)
-    print "\nParse result:", parseKey
+        # a hack so we know what the source_key was, bask at the caller
+        parseKey['source_key'] = importKey
+        print "\nParse result:", parseKey
     return parseKey
 
 def setupImportHdfs(node=None, path=None):
@@ -117,5 +119,7 @@ def parseImportHdfsFile(node=None, csvFilename=None, path=None,
 
     parseKey = node.parse(hdfsKey, csvFilename + ".hex",
         timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs)
+    # a hack so we know what the source_key was, bask at the caller
+    parseKey['source_key'] = hdfsKey
     print "parseHdfsFile:", parseKey
     return parseKey
