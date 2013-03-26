@@ -227,6 +227,7 @@ public final class ParseDataset extends Job {
       }
       UKV.remove(dataset[i]._key);
     }
+    phaseTwo.normalizeSigma();
     phaseTwo.createValueArrayHeader();
     job.remove();
   }

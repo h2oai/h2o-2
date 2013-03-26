@@ -233,10 +233,8 @@ public final class DParseTask extends MRTask {
     _min = other._min;
     _max = other._max;
     _mean = other._mean;
-    _sigma = other._sigma;
     _colNames = other._colNames;
     _error = other._error;
-    _invalidValues = other._invalidValues;
   }
   /** Private constructor for phase two, copy constructor from phase one.
    *
@@ -409,6 +407,9 @@ public final class DParseTask extends MRTask {
       default:
         throw new Error("NOT IMPLEMENTED");
     }
+  }
+
+  public void normalizeSigma() {
     // normalize sigma
     for(int i = 0; i < _ncolumns; ++i)
       _sigma[i] = Math.sqrt(_sigma[i]/(_numRows - _invalidValues[i]));
