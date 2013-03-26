@@ -30,6 +30,10 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
       ValueArray thisAry = get();
       ValueArray otherAry = v.get();
       if(thisAry.length() == otherAry.length() && thisAry._numrows == otherAry._numrows && thisAry._rowsize == otherAry._rowsize && thisAry._cols.length == otherAry._cols.length){
+        for(int i = 0; i < thisAry._cols.length; ++i){
+          if(!thisAry._cols[i].equals(otherAry._cols[i]))
+            return false;
+        }
         // headers are the same (except for the keys), now compare the chunk bits
         BitsCmpTask res = new BitsCmpTask(thisAry); res.invoke(v._key);
         return res._res;
