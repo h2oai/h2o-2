@@ -29,8 +29,7 @@ def parseImportS3File(node=None,
     parseKey = node.parse(s3Key, myKey2, 
         timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs)
     # a hack so we know what the source_key was, bask at the caller
-    parseKey['source_key'] = importKey
-
+    parseKey['source_key'] = s3Key
     print "\nParse result:", parseKey
     return parseKey
 
