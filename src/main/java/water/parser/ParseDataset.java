@@ -171,9 +171,13 @@ public final class ParseDataset extends Job {
     int chunks = (int)nchunks;
     assert chunks == nchunks;
     // parse the first value
-    DParseTask phaseOne = DParseTask.createPassOne(dataset[0], job, CustomParser.Type.CSV);
+    DParseTask phaseOne = DParseTask.createPassOne(dataset[0], job, parserType);
     int [] startchunks = new int[dataset.length+1];
     phaseOne.passOne(headerSetup);
+    if( (phaseOne._error != null) && !phaseOne._error.isEmpty() ) {
+      System.err.println(phaseOne._error);
+      throw new Exception("The dataset format is not recognized/supported");
+    }
     if(dataset.length > 1){     // parse the rest
       startchunks[1] = phaseOne._nrows.length;
       phaseOne._nrows = Arrays.copyOf(phaseOne._nrows, chunks);
@@ -181,6 +185,10 @@ public final class ParseDataset extends Job {
         DParseTask tsk = DParseTask.createPassOne(dataset[i], job, CustomParser.Type.CSV);
         assert(!setup._header);
         tsk.passOne(setup);
+        if( (tsk._error != null) && !tsk._error.isEmpty() ) {
+          System.err.println(phaseOne._error);
+          throw new Exception("The dataset format is not recognized/supported");
+        }
         startchunks[i+1] = startchunks[i] + tsk._nrows.length;
         // modified reduction step, compute the compression scheme and the nrows array
         for (int j = 0; j < tsk._nrows.length; ++j)
