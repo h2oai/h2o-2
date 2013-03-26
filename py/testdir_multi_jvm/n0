@@ -1,8 +1,6 @@
-./n0.doit test_import_covtype_parse_1jvm.py
-./n0.doit test_import_covtype_parse_2jvm.py
-./n0.doit test_import_covtype_parse_3jvm.py
-./n0.doit test_import_covtype_parse_4jvm.py
 ./n0.doit test_10ktrees.py
+./n0.doit test_1ktrees_job_cancel_3.py
+./n0.doit test_1ktrees_job_cancel.py
 ./n0.doit test_1ktrees.py
 ./n0.doit test_allstate_claim_prediction.py
 ./n0.doit test_arity.py
@@ -26,6 +24,7 @@
 ./n0.doit test_factor_only.py
 ./n0.doit test_factor.py
 ./n0.doit test_flatfile.py
+./n0.doit test_from_import_3.py
 ./n0.doit test_GLM_100Mx70_hosts.py
 ./n0.doit test_GLM_big2_hosts.py
 ./n0.doit test_GLM_catdata_hosts.py
@@ -34,6 +33,7 @@
 ./n0.doit test_GLM_covtype_single_cols.py
 ./n0.doit test_GLM_from_import_hosts.py
 ./n0.doit test_GLMGrid_hastie.py
+./n0.doit test_GLM_import_YearPredictionMSD.py
 ./n0.doit test_GLM_many_cols_4.py
 ./n0.doit test_GLM_many_cols_enum.py
 ./n0.doit test_GLM_many_cols_int2cat.py
@@ -41,12 +41,18 @@
 ./n0.doit test_GLM_moneypuck.py
 ./n0.doit test_GLM_prob_cols_4.py
 ./n0.doit test_glm.py
+./n0.doit test_hdfs_3.py
+./n0.doit test_import_covtype_parse_1jvm.py
+./n0.doit test_import_covtype_parse_2jvm.py
+./n0.doit test_import_covtype_parse_3jvm.py
+./n0.doit test_import_covtype_parse_4jvm.py
 ./n0.doit test_inspect.py
 ./n0.doit test_int2cat_nested.py
 ./n0.doit test_int2cat.py
 ./n0.doit test_json_browse_both_exec.py
 ./n0.doit test_jstack.py
 ./n0.doit test_kaggle.py
+./n0.doit test_KMeans_params_rand2.py
 ./n0.doit test_many_cols_01.py
 ./n0.doit test_many_cols_0.py
 ./n0.doit test_many_cols_and_types.py
@@ -77,6 +83,5 @@
 ./n0.doit test_sum_import_hosts.py
 ./n0.doit test_sum.py
 ./n0.doit test_vector_filter_factor.py
-./n0.doit test_xls_poker_xlsx.py
 ./n0.doit test_xls.py
 ./n0.doit test_xls_w_hosts.py
