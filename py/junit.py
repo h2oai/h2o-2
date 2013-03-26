@@ -45,6 +45,7 @@ class JUnit(unittest.TestCase):
                     'water.AtomicTest',
                     'water.AutoSerialTest',
                     'water.KVTest',
+                    'water.BitCmpTest',
                     'water.KeyToString',
                     'water.api.RStringTest',
                     'water.exec.ExprTest',
@@ -52,6 +53,7 @@ class JUnit(unittest.TestCase):
                     'water.parser.ParseProgressTest',
                     'water.parser.ParserTest',
                     'water.parser.RReaderTest',
+                    'water.parser.ParseFolderTest'
                     ])
 
             rc = ps.wait(None)
