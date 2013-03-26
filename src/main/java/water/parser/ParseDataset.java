@@ -122,6 +122,7 @@ public final class ParseDataset extends Job {
     int header = -1;
     CsvParser.Setup headerSetup = null;
     if(setup == null){
+      // Obtain the setup and make sure it is consistent among all values
       for(int i = 0; i < dataset.length; ++i){
         byte [] bits = dataset[i].getFirstBytes(); // Can limit to eg 256*1024
         CsvParser.Setup s = CsvParser.guessCsvSetup(bits);
@@ -141,6 +142,8 @@ public final class ParseDataset extends Job {
         }
       }
       if(header >= 0){
+        // we found a header, put it to the beginning of the array
+        // and make sure the first value gets parsed with header on and the others with header off
         if(setup._header){
           headerSetup = setup;
           setup = new CsvParser.Setup(setup._separator,false,setup._data,setup._numlines,setup._bits);
@@ -157,6 +160,7 @@ public final class ParseDataset extends Job {
       setup = new CsvParser.Setup(setup._separator,false,setup._data,setup._numlines,setup._bits);
     }
     long nchunks = 0;
+    // count the total number of chunks
     for(int i = 0; i < dataset.length; ++i){
       if(dataset[i].isArray()){
         ValueArray ary = dataset[i].get();
@@ -166,10 +170,11 @@ public final class ParseDataset extends Job {
     }
     int chunks = (int)nchunks;
     assert chunks == nchunks;
+    // parse the first value
     DParseTask phaseOne = DParseTask.createPassOne(dataset[0], job, CustomParser.Type.CSV);
     int [] startchunks = new int[dataset.length+1];
     phaseOne.passOne(headerSetup);
-    if(dataset.length > 1){
+    if(dataset.length > 1){     // parse the rest
       startchunks[1] = phaseOne._nrows.length;
       phaseOne._nrows = Arrays.copyOf(phaseOne._nrows, chunks);
       for(int i = 1; i < dataset.length; ++i){
@@ -177,7 +182,7 @@ public final class ParseDataset extends Job {
         assert(!setup._header);
         tsk.passOne(setup);
         startchunks[i+1] = startchunks[i] + tsk._nrows.length;
-        // modified reduction step
+        // modified reduction step, compute the compression scheme and the nrows array
         for (int j = 0; j < tsk._nrows.length; ++j)
           phaseOne._nrows[j+startchunks[i]] = tsk._nrows[j];
         assert tsk._ncolumns == phaseOne._ncolumns;
