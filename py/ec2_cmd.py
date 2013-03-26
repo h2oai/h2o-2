@@ -342,9 +342,8 @@ def format_state(state):
     return state.upper()
 
 def format_name(tags):
-    if 'Name' in tags: name = tags['Name']
-    else: name = 'NONAME'
-    return '\033[94m<{0}>\033[0m'.format(name)
+    if 'Name' in tags: return '\033[91m<{0}>\033[0m'.format(tags['Name'])
+    else: return '\033[94m<NONAME>\033[0m'
 
 def merge_reservations(reservations):
     pass
