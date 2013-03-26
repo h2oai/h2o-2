@@ -141,6 +141,7 @@ public class TypeMap {
     "water.parser.DParseTask",
     "water.parser.Enum",
     "water.parser.ParseDataset$2",
+    "water.parser.ParseDataset$3",
     "water.parser.ParseDataset$Progress",
     "water.parser.ParseDataset",
     "water.RReader$RModel",
@@ -156,6 +157,7 @@ public class TypeMap {
     "water.Value",
     "water.ValueArray$Column",
     "water.ValueArray",
+    "water.BitsCmpTask"
   };
   static private final HashMap<String,Integer> MAP = new HashMap();
   static {

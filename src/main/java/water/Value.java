@@ -1,5 +1,6 @@
 package water;
 import java.io.*;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 
 import jsr166y.ForkJoinPool;
@@ -21,6 +22,21 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   public int type() { return _type; }
   public String className() { return TypeMap.className(_type); }
 
+  public boolean isBitIdentical(Value v){
+    if(this == v)return true;
+    if(!isArray() && !v.isArray())
+      return Arrays.equals(getBytes(), v.getBytes());
+    if(isArray() && v.isArray()){
+      ValueArray thisAry = get();
+      ValueArray otherAry = v.get();
+      if(thisAry.length() == otherAry.length() && thisAry._numrows == otherAry._numrows && thisAry._rowsize == otherAry._rowsize && thisAry._cols.length == otherAry._cols.length){
+        // headers are the same (except for the keys), now compare the chunk bits
+        BitsCmpTask res = new BitsCmpTask(thisAry); res.invoke(v._key);
+        return res._res;
+      }
+    }
+    return false;
+  }
 
   // Max size of Values before we start asserting.
   // Sizes around this big, or larger are probably true errors.

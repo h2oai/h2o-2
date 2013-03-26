@@ -25,12 +25,12 @@ DEFAULT_EC2_INSTANCE_CONFIGS = {
               'image_id'        : 'ami-b85cc4d1', # 'ami-cd9a11a4',
               'security_groups' : [ 'MrJenkinsTest' ],
               'key_name'        : 'mrjenkins_test',
-              'instance_type'   : 'm1.xlarge',
+              'instance_type'   : 'm2.4xlarge',
+              'region'          : 'us-east-1',
               'pem'             : '~/.ec2/keys/mrjenkins_test.pem',
               'username'        : '0xdiag',      
               'aws_credentials' : '~/.ec2/AwsCredentials.properties',
               'hdfs_config'     : '~/.ec2/core-site.xml',
-              'region'          : 'us-east-1',
              },
   'us-west-1':{
               'image_id'        : 'ami-a6cbe6e3', # 'ami-cd9a11a4',
@@ -87,11 +87,12 @@ def find_file(base):
     if not os.path.exists(f): f = os.path.expanduser(base)
     if not os.path.exists(f): f = os.path.expanduser("~")+ '/' + base
     if not os.path.exists(f):
-        raise Exception("\033[91m[ec2] Unable to find config %s \033[0m" % base)
+        return None
     return f
 
 ''' Returns a boto connection to given region ''' 
 def ec2_connect(region):
+    check_required_env_variables()
     import boto.ec2
     conn = boto.ec2.connect_to_region(region)
     if not conn:
@@ -99,22 +100,32 @@ def ec2_connect(region):
 
     return conn
 
-#def check_required_env_variables():
+def check_required_env_variables():
+    ok = True
+    if not os.environ['AWS_ACCESS_KEY_ID']: 
+        warn("AWS_ACCESS_KEY_ID need to be defined!")
+        ok = False
+    if not os.environ['AWS_SECRET_ACCESS_KEY']:
+        warn("AWS_SECRET_ACCESS_KEY need to be defined!")
+        ok = False
+
+    if not ok: raise Exception("\033[91m[ec2] Missing AWS environment variables!\033[0m")
 
 ''' Run number of EC2 instance.
 Waits forthem and optionaly waits for ssh service.
 '''
 def run_instances(count, ec2_config, region, waitForSSH=True):
     '''Create a new reservation for count instances'''
-    ec2_config.setdefault('min_count', count)
-    ec2_config.setdefault('max_count', count)
 
     ec2params = inheritparams(ec2_config, EC2_API_RUN_INSTANCE)
+    ec2params.setdefault('min_count', count)
+    ec2params.setdefault('max_count', count)
 
     reservation = None
     conn = ec2_connect(region)
     try:
         reservation = conn.run_instances(**ec2params)
+        log('Reservation: {0}'.format(reservation.id))
         log('Waiting for {0} EC2 instances {1} to come up, this can take 1-2 minutes.'.format(len(reservation.instances), reservation.instances))
         start = time.time()
         for instance in reservation.instances:
@@ -199,9 +210,16 @@ def dump_hosts_config(ec2_config, reservation, filename=DEFAULT_HOSTS_FILENAME):
     if not filename: filename=DEFAULT_HOSTS_FILENAME
 
     cfg = {}
-    cfg['aws_credentials'] = find_file(ec2_config['aws_credentials'])
+    f = find_file(ec2_config['aws_credentials'])
+    if f: cfg['aws_credentials'] = f
+    else: warn_file_miss(ec2_config['aws_credentials'])
+    f = find_file(ec2_config['pem'])
+    if f: cfg['key_filename'] = f
+    else: warn_file_miss(ec2_config['key_filename'])
+    f = find_file(ec2_config['hdfs_config'])
+    if f: cfg['hdfs_config']  = f
+    else: warn_file_miss(ec2_config['hdfs_config'])
     cfg['username']        = ec2_config['username'] 
-    cfg['key_filename']    = find_file(ec2_config['pem'])
     cfg['use_flatfile']    = True
     cfg['h2o_per_host']    = 1
     cfg['java_heap_GB']    = MEMORY_MAPPING[ec2_config['instance_type']]['xmx']
@@ -212,10 +230,6 @@ def dump_hosts_config(ec2_config, reservation, filename=DEFAULT_HOSTS_FILENAME):
     cfg['ec2_reservation_id']  = reservation.id
     cfg['ec2_region']      = ec2_config['region']
     cfg['redirect_import_folder_to_s3_path'] = True
-    if ec2_config['hdfs_config']:
-        cfg['hdfs_config']     = find_file(ec2_config['hdfs_config'])
-        # Do not put it there, since h2o.py will put noisy command line parameters cfg['use_hdfs']        = True
-
     # put ssh commands into comments
     cmds = get_ssh_commands(ec2_config, reservation)
     idx  = 1
@@ -264,6 +278,13 @@ def load_ec2_config(config_file, region):
 
     return ec2_cfg
 
+def load_ec2_reservation(reservation, region):
+    conn = ec2_connect(region)
+    lr   = [ r for r in conn.get_all_instances() if r.id == reservation ]
+    if not lr: raise Exception('Reservation id {0} not found !'.format(reservation))
+
+    return lr[0]
+
 def load_hosts_config(config_file):
     f = find_file(config_file)
     with open(f, 'rb') as fp:
@@ -272,6 +293,12 @@ def load_hosts_config(config_file):
 
 def log(msg):
     print "\033[92m[ec2] \033[0m", msg
+
+def warn(msg):
+    print "\033[92m[ec2] \033[0m \033[91m{0}\033[0m".format(msg)
+
+def warn_file_miss(f):
+    warn("File {0} is missing! Please update the generated config manually.".format(f))
 
 def invoke_hosts_action(action, hosts_config):
     ids = [ inst['id'] for inst in hosts_config['ec2_instances'] ]
@@ -295,18 +322,40 @@ def invoke_hosts_action(action, hosts_config):
     elif (action == 'stop_h2o'):
         pass
 
+def report_reservations(region, reservation_id=None):
+    conn = ec2_connect(region)
+    reservations = conn.get_all_instances()
+    if reservation_id: reservations = [i for i in reservations if i.id == reservation_id ]
+    log('Reservations:')
+    for r in reservations: report_reservation(r); log('')
+
+def report_reservation(r):
+    log('  Reservation : {0}'.format(r.id))
+    log('  Instances   : {0}'.format(len(r.instances)))
+    for i in r.instances:
+        log('    [{0} : {4}] {5} {1}/{2}/{3} {6}'.format(i.id, i.public_dns_name, i.ip_address, i.private_ip_address,i.instance_type, format_state(i.state), format_name(i.tags)))
+
+def format_state(state):
+    if state == 'stopped': return '\033[093mSTOPPED\033[0m'
+    if state == 'running': return '\033[092mRUNNING\033[0m'
+    if state == 'terminated': return '\033[090mTERMINATED\033[0m'
+    return state.upper()
+
+def format_name(tags):
+    if 'Name' in tags: return '\033[91m<{0}>\033[0m'.format(tags['Name'])
+    else: return '\033[94m<NONAME>\033[0m'
 
 def merge_reservations(reservations):
     pass
 
 def main():
     parser = argparse.ArgumentParser(description='H2O EC2 instances launcher')
-    parser.add_argument('action', choices=['create', 'terminate', 'stop', 'reboot', 'start', 'distribute_h2o', 'start_h2o', 'stop_h2o', 'show_defaults', 'merge_reservations'],  help='EC2 instances action')
+    parser.add_argument('action', choices=['create', 'terminate', 'stop', 'reboot', 'start', 'distribute_h2o', 'start_h2o', 'stop_h2o', 'show_defaults', 'dump_reservation', 'show_reservations'],  help='EC2 instances action')
     parser.add_argument('-c', '--config',    help='Configuration file to configure NEW EC2 instances (if not specified default is used - see "show_defaults")', type=str, default=None)
     parser.add_argument('-i', '--instances', help='Number of instances to launch', type=int, default=DEFAULT_NUMBER_OF_INSTANCES)
     parser.add_argument('-H', '--hosts',     help='Hosts file describing existing "EXISTING" EC2 instances ', type=str, default=None)
     parser.add_argument('-r', '--region',    help='Specifies target create region', type=str, default=DEFAULT_REGION)
-    parser.add_argument('--reservations',    help='Comma separated list of reservation IDs', type=str, default=None)
+    parser.add_argument('--reservation',     help='Reservation ID, for example "r-1824ec65"', type=str, default=None)
     args = parser.parse_args()
 
     if (args.action == 'create'):
@@ -326,6 +375,13 @@ def main():
         print
     elif (args.action == 'merge_reservations'):
         merge_reservations(args.reservations, args.region)
+    elif (args.action == 'dump_reservation'):
+        ec2_region = load_ec2_region(args.region)
+        ec2_config = load_ec2_config(args.config, ec2_region)
+        ec2_reservation = load_ec2_reservation(args.reservation, ec2_region)
+        dump_hosts_config(ec2_config, ec2_reservation, args.hosts)
+    elif (args.action == 'show_reservations'):
+        report_reservations(args.region, args.reservation)
     else: 
         hosts_config = load_hosts_config(args.hosts)
         invoke_hosts_action(args.action, hosts_config)

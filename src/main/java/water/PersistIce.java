@@ -157,7 +157,7 @@ public abstract class PersistIce {
         default:   System.err.println("Invalid format of filename " + s + " at index " + i);
         }
       }
-      if( j>=kb.length ) kb = Arrays.copyOf(kb,j*2);
+      if( j>=kb.length ) kb = Arrays.copyOf(kb,Math.max(2,j*2));
       kb[j++] = b;
     }
     // now in kb we have the key name

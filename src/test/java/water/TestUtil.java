@@ -3,6 +3,7 @@ package water;
 import static org.junit.Assert.*;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 import org.junit.AfterClass;
@@ -60,6 +61,25 @@ public class TestUtil {
     return file;
   }
 
+
+  public static Key [] load_test_folder(String fname) {
+    return load_test_folder(find_test_file(fname));
+  }
+  public static Key [] load_test_folder(File folder) {
+    assert folder.isDirectory();
+    ArrayList<Key> keys = new ArrayList<Key>();
+    for(File f:folder.listFiles()){
+      if(f.isFile())
+        keys.add(load_test_file(f));
+    }
+    Key [] res = new Key[keys.size()];
+    keys.toArray(res);
+    return res;
+  }
+
+  public static Key load_test_file(String fname, String key) {
+    return load_test_file(find_test_file(fname),key);
+  }
   public static Key load_test_file(String fname) {
     return load_test_file(find_test_file(fname));
   }
@@ -87,6 +107,15 @@ public class TestUtil {
     Key okey = Key.make(keyName);
     ParseDataset.parse(okey, new Key[]{fkey});
     UKV.remove(fkey);
+    return okey;
+  }
+
+  public static Key loadAndParseFolder(String keyName, String path) {
+    Key [] keys = load_test_folder(path);
+    Key okey = Key.make(keyName);
+    Job j = ParseDataset.forkParseDataset(okey, keys,null);
+    j.get();
+    for(Key k:keys)UKV.remove(k);
     return okey;
   }
 
