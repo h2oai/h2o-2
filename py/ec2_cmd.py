@@ -331,7 +331,7 @@ def report_reservations(region, reservation_id=None):
 
 def report_reservation(r):
     log('  Reservation : {0}'.format(r.id))
-    log('  Instances   :')
+    log('  Instances   : {0}'.format(len(r.instances)))
     for i in r.instances:
         log('    [{0} : {4}] {5} {1}/{2}/{3} {6}'.format(i.id, i.public_dns_name, i.ip_address, i.private_ip_address,i.instance_type, format_state(i.state), format_name(i.tags)))
 
