@@ -190,7 +190,7 @@ public abstract class PersistS3 {
   private static S3Object getObjectForKey(Key k, long offset, long length) throws IOException {
     String[] bk = decodeKey(k);
     GetObjectRequest r = new GetObjectRequest(bk[0], bk[1]);
-    r.setRange(offset, offset + length); // Range is *inclusive* according to docs???
+    r.setRange(offset, offset + length - 1); // Range is *inclusive* according to docs???
     return S3.getObject(r);
   }
 
