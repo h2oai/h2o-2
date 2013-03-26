@@ -13,13 +13,11 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # Uses your username specific json: pytest_config-<username>.json
-
-        # do what my json says, but with my hdfs. hdfs_name_node from the json
-        # I'll set use_hdfs to False here, because H2O won't start if it can't talk to the hdfs
-        # h2o_hosts.build_cloud_with_hosts(use_hdfs=False)
-        ### h2o.build_cloud(1, java_heap_GB=14, use_hdfs=True, java_extra_args='-verbose:class')
-        h2o.build_cloud(2, java_heap_GB=4, use_hdfs=True)
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(3, java_heap_GB=4, use_hdfs=True)
+        else:
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
