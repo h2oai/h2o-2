@@ -13,8 +13,6 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.*;
 import com.google.common.base.Objects;
-import com.google.common.io.ByteStreams;
-import com.google.common.io.Closeables;
 
 /** Persistence backend for S3 */
 public abstract class PersistS3 {
@@ -56,12 +54,11 @@ public abstract class PersistS3 {
     long size = obj.getSize();
     Value val = null;
     if( obj.getKey().endsWith(".hex") ) { // Hex file?
-      S3Object s3obj = getObjectForKey(k, 0, ValueArray.CHUNK_SZ);
-      S3ObjectInputStream is = s3obj.getObjectContent();
-
       int sz = (int) Math.min(ValueArray.CHUNK_SZ, size);
-      byte[] mem = MemoryManager.malloc1(sz);
-      ByteStreams.readFully(is, mem);
+      byte[] mem = MemoryManager.malloc1(sz); // May stall a long time to get memory
+      S3ObjectInputStream is = getObjectForKey(k, 0, ValueArray.CHUNK_SZ).getObjectContent();
+      int off = 0;
+      while( off < sz ) off += is.read(mem,off,sz-off);
       ValueArray ary = new ValueArray(k, sz).read(new AutoBuffer(mem));
       val = new Value(k,ary,Value.S3);
     } else if( size >= 2 * ValueArray.CHUNK_SZ ) {
@@ -83,29 +80,29 @@ public abstract class PersistS3 {
   // no matter what).
   public static byte[] fileLoad(Value v) {
     byte[] b = MemoryManager.malloc1(v._max);
+    Key k = v._key;
+    long skip = 0;
+    // Convert an arraylet chunk into a long-offset from the base file.
+    if( k._kb[0] == Key.ARRAYLET_CHUNK ) {
+      skip = ValueArray.getChunkOffset(k); // The offset
+      k = ValueArray.getArrayKey(k); // From the base file key
+      if( k.toString().endsWith(".hex") ) { // Hex file?
+        int value_len = DKV.get(k).memOrLoad().length; // How long is the ValueArray header?
+        skip += value_len;    // Skip header
+      }
+    }
     S3ObjectInputStream s = null;
     try {
-      long skip = 0;
-      Key k = v._key;
-      // Convert an arraylet chunk into a long-offset from the base file.
-      if( k._kb[0] == Key.ARRAYLET_CHUNK ) {
-        skip = ValueArray.getChunkOffset(k); // The offset
-        k = ValueArray.getArrayKey(k); // From the base file key
-        if( k.toString().endsWith(".hex") ) { // Hex file?
-          int value_len = DKV.get(k).memOrLoad().length; // How long is the ValueArray header?
-          skip += value_len;    // Skip header
-        }
-      }
-      S3Object s3obj = getObjectForKey(k, skip, v._max);
-      s = s3obj.getObjectContent();
-      ByteStreams.readFully(s, b);
+      s = getObjectForKey(k, skip, v._max).getObjectContent();
+      int off = 0;
+      while( off < v._max ) off += s.read(b,off,v._max-off);
       assert v.isPersisted();
       return b;
     } catch( IOException e ) { // Broken disk / short-file???
       H2O.ignore(e);
       return null;
     } finally {
-      Closeables.closeQuietly(s);
+      try { if( s != null ) s.close(); } catch( IOException e ) { }
     }
   }
 
@@ -142,14 +139,10 @@ public abstract class PersistS3 {
 
   /**
    * Creates the key for given S3 bucket and key.
-   *
    * Returns the H2O key, or null if the key cannot be created.
-   *
-   * @param bucket
-   *          Bucket name
-   * @param key
-   *          Key name (S3)
-   * @return H2O key pointing to the given bucket and key.
+   * @param bucket  Bucket name
+   * @param key     Key name (S3)
+   * @return        H2O key pointing to the given bucket and key.
    */
   public static Key encodeKey(String bucket, String key) {
     Key res = encodeKeyImpl(bucket, key);
@@ -159,13 +152,10 @@ public abstract class PersistS3 {
 
   /**
    * Decodes the given H2O key to the S3 bucket and key name.
-   *
    * Returns the array of two strings, first one is the bucket name and second
    * one is the key name.
-   *
-   * @param k
-   *          Key to be decoded.
-   * @return Pair (array) of bucket name and key name.
+   * @param k  Key to be decoded.
+   * @return   Pair (array) of bucket name and key name.
    */
   public static String[] decodeKey(Key k) {
     String[] res = decodeKeyImpl(k);
@@ -196,18 +186,12 @@ public abstract class PersistS3 {
     return new String[] { bucket, key };
   }
 
-  // Gets the S3 object associated with the key that can read length bytes from
-  // offset
-  private static S3Object getObjectForKey(Key k, long offset, long length) {
-    try {
-      String[] bk = decodeKey(k);
-      GetObjectRequest r = new GetObjectRequest(bk[0], bk[1]);
-      r.setRange(offset, offset + length);
-      return S3.getObject(r);
-    } catch( AmazonClientException e ) {
-      H2O.ignore(e);
-      return null;
-    }
+  // Gets the S3 object associated with the key that can read length bytes from offset
+  private static S3Object getObjectForKey(Key k, long offset, long length) throws IOException {
+    String[] bk = decodeKey(k);
+    GetObjectRequest r = new GetObjectRequest(bk[0], bk[1]);
+    r.setRange(offset, offset + length); // Range is *inclusive* according to docs???
+    return S3.getObject(r);
   }
 
   // Gets the object metadata associated with given key.
