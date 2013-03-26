@@ -1,4 +1,6 @@
 ./n0.doit test_badchars.py
+./n0.doit test_import_and_delete_keys.py
+
 ./n0.doit test_billion_rows.py
 ./n0.doit test_exec_covtype_cols.py
 ./n0.doit test_exec_covtype_rand1.py
