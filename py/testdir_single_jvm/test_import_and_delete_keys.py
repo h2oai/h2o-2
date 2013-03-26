@@ -57,13 +57,16 @@ class Basic(unittest.TestCase):
             for csvFilename in csvFilenameList:
                 h2i.setupImportFolder(None, importFolderPath)
                 # creates csvFilename.hex from file in importFolder dir 
+                start = time.time()
                 parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=500)
-                print csvFilename, 'parse time:', parseKey['response']['time']
+                elapsed = time.time() - start
+                print csvFilename, "parsed in", elapsed, "seconds.", "%d pct. of timeout" % ((elapsed*100)/timeoutSecs), "\n"
+                print csvFilename, 'H2O reports parse time:', parseKey['response']['time']
+
                 # h2o doesn't produce this, but h2o_import.py adds it for us.
                 print "Parse result['source_key']:", parseKey['source_key']
                 print "Parse result['destination_key']:", parseKey['destination_key']
                 print "\n" + csvFilename
-                start = time.time()
 
                 storeView = h2o.nodes[0].store_view()
                 ### print "storeView:", h2o.dump_json(storeView)
