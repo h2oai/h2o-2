@@ -52,6 +52,7 @@ public class HeartBeatThread extends Thread {
       catch( InterruptedException e ) { }
 
       // Update the interesting health self-info for publication also
+      H2O cloud = H2O.CLOUD;
       HeartBeat hb = H2O.SELF._heartbeat;
       hb._hb_version = HB_VERSION++;
       hb._jvm_boot_msec= TimeLine.JVM_BOOT_MSEC;
@@ -62,7 +63,10 @@ public class HeartBeatThread extends Thread {
       hb._keys       = (H2O.STORE.size ());
       hb.set_valsz     (myHisto.histo(false)._cached);
       hb._num_cpus   = (char)run.availableProcessors();
-      hb._rpcs       = (char)RPC.TASKS.size();
+      int rpcs = 0;
+      for( H2ONode h2o : cloud._memary )
+        rpcs += h2o.taskSize();
+      hb._rpcs       = (char)rpcs;
       hb._fjthrds_hi = (char)H2O.hiQPoolSize();
       hb._fjthrds_lo = (char)H2O.loQPoolSize();
       hb._fjqueue_hi = (char)H2O.getHiQueue();
@@ -81,7 +85,6 @@ public class HeartBeatThread extends Thread {
 
       // Announce what Cloud we think we are in.
       // Publish our health as well.
-      H2O cloud = H2O.CLOUD;
       UDPHeartbeat.build_and_multicast(cloud, hb);
 
       // If we have no internet connection, then the multicast goes

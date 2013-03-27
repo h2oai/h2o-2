@@ -11,7 +11,7 @@ def define_params():
         'k': [1, 12],
         'y': [None, 7, 43, 54],
         'epsilon': [1e-8, 1e-6, 1e-2, 1, 10],
-        'cols': [None, "0,1,2,3,4,5,6"],
+        'cols': [None, "0", "3", "0,1,2,3,4,5,6"],
         }
     return paramDict
 
