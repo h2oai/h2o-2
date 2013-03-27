@@ -517,6 +517,7 @@ def check_sandbox_for_errors():
                         sys.stdout.write(line)
 
             sandFile.close()
+    sys.stdout.flush()
 
     # already has \n in each line
     # doing this kludge to put multiple line message in the python traceback, 
@@ -1213,7 +1214,6 @@ class H2O(object):
                 raise Exception('java_heap_MB <1 or >63000  (MB): %s' % (self.java_heap_MB))
             args += [ '-Xms%dm' % self.java_heap_MB ]
             args += [ '-Xmx%dm' % self.java_heap_MB ]
-            print "crikey",self.java_heap_MB
 
         if self.java_extra_args is not None:
             args += [ '%s' % self.java_extra_args ]
@@ -1466,6 +1466,7 @@ class RemoteHost(object):
             finally:
                 sftp.close()
             self.uploaded[f] = dest
+        sys.stdout.flush()
         return self.uploaded[f]
 
     def record_file(self, f, dest):
