@@ -76,9 +76,10 @@ public abstract class DKV {
   // Stall until all existing writes have completed.
   // Used to order successive writes.
   static public void write_barrier() {
-    for( RPC rpc : RPC.TASKS.values() )
-      if( rpc._dt instanceof TaskPutKey || rpc._dt instanceof Atomic )
-        rpc.get();
+    for( H2ONode h2o : H2O.CLOUD._memary )
+      for( RPC rpc : h2o.tasks() )
+        if( rpc._dt instanceof TaskPutKey || rpc._dt instanceof Atomic )
+          rpc.get();
   }
 
   // User-Weak-Get a Key from the distributed cloud.
@@ -109,8 +110,9 @@ public abstract class DKV {
       // e.g., because a prior 'put' of a null (i.e. a remove) is still mid-
       // send to the remote, so the local get has missed above, but a remote
       // get still might 'win' because the remote 'remove' is still in-progress.
-      for( RPC<?> rpc : RPC.TASKS.values() )
-        if( rpc._target == home && rpc._dt instanceof TaskPutKey ) {
+      for( RPC<?> rpc : home.tasks() )
+        if( rpc._dt instanceof TaskPutKey ) {
+          assert rpc._target == home;
           TaskPutKey tpk = (TaskPutKey)rpc._dt;
           Key k = tpk._key;
           if( k != null && key.equals(k) )

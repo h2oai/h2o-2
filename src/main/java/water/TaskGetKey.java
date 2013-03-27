@@ -32,10 +32,10 @@ public class TaskGetKey extends DTask<TaskGetKey> {
         break;
       old = rpc;
       // Make a new TGK.
-      rpc = new RPC(target,new TaskGetKey(key,priority));
+      rpc = new RPC(target,new TaskGetKey(key,priority),1.0f);
       if( TGKS.putIfMatchUnlocked(key,rpc,old) == old ) {
-        rpc.call();             // Start the op
-        break;
+        rpc.setTaskNum().call(); // Start the op
+        break;                  // Successful install of a fresh RPC
       }
     }
     Value val = rpc.get()._val; // Block for, then fetch out the result

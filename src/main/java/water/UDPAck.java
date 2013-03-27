@@ -12,7 +12,7 @@ public class UDPAck extends UDP {
   // Received an ACK for a remote Task.  Ping the task.
   AutoBuffer call(AutoBuffer ab) {
     int tnum = ab.getTask();
-    RPC<?> t = RPC.TASKS.get(tnum);
+    RPC<?> t = ab._h2o.taskGet(tnum);
     assert t== null || t._tasknum == tnum;
     if( t != null ) t.response(ab); // Do the 2nd half of this task, includes ACKACK
     else ab.close();
