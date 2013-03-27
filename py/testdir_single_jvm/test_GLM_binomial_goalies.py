@@ -75,8 +75,8 @@ class Basic(unittest.TestCase):
                 'num_cross_validation_folds': 2, 
 
                 'family': "binomial", 
-                'case_mode': ['>'],
-                'case': ['20'],
+                'case_mode': '>',
+                'case': '20',
 
                 'alpha': 0, 
                 # seems we always need a little regularization
