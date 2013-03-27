@@ -6,6 +6,7 @@ import java.util.zip.*;
 
 import water.*;
 import water.H2O.H2OCountedCompleter;
+import water.api.Inspect;
 import water.parser.DParseTask.Pass;
 
 import com.google.common.base.Throwables;
@@ -119,46 +120,10 @@ public final class ParseDataset extends Job {
     public ParseException(String msg){super(msg);}
   }
   public static void parseUncompressed(ParseDataset job, Value [] dataset, CustomParser.Type parserType, CsvParser.Setup setup) throws Exception{
-    int header = -1;
-    CsvParser.Setup headerSetup = null;
-    if(setup == null){
-      // Obtain the setup and make sure it is consistent among all values
-      for(int i = 0; i < dataset.length; ++i){
-        byte [] bits = dataset[i].getFirstBytes(); // Can limit to eg 256*1024
-        CsvParser.Setup s = CsvParser.guessCsvSetup(bits);
-        if(s._header) { // we expect only one header here
-          if(header < 0){
-            header = i;
-          } else
-            System.err.println("warning, encoutered multiple headers when parsing multiple files.");
-        }
-        if(setup == null)
-          setup = s;
-        else { // check that the setups are compatible
-          if(s._separator != s._separator)
-            throw new ParseException("incompatible separators (" + setup._separator + ", " + s._separator + ") encoutered when parsing multiple files.");
-          if(setup._data[0].length != s._data[0].length)
-            throw new ParseException("incompatible number of columns (" + setup._data[0].length + ", " + s._data[0].length + ") encoutered when parsing multiple files.");
-        }
-      }
-      if(header >= 0){
-        // we found a header, put it to the beginning of the array
-        // and make sure the first value gets parsed with header on and the others with header off
-        if(setup._header){
-          headerSetup = setup;
-          setup = new CsvParser.Setup(setup._separator,false,setup._data,setup._numlines,setup._bits);
-        } else
-          headerSetup = new CsvParser.Setup(setup._separator,true,setup._data,setup._numlines,setup._bits);
-        Value v = dataset[0];
-        dataset[0] = dataset[header];
-        dataset[header] = v;
-        header = 0;
-      } else
-        headerSetup = setup;
-    } else {
-      headerSetup = setup;
-      setup = new CsvParser.Setup(setup._separator,false,setup._data,setup._numlines,setup._bits);
-    }
+    if(setup == null)
+      setup = Inspect.csvGuessValue(dataset[0]);
+    CsvParser.Setup headerSetup = setup;
+    setup = new CsvParser.Setup(setup._separator,false,setup._data,setup._numlines,setup._bits);
     long nchunks = 0;
     // count the total number of chunks
     for(int i = 0; i < dataset.length; ++i){
