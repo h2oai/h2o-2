@@ -24,10 +24,9 @@ public class UDPTimeOutThread extends Thread {
       try {
         RPC t = PENDING.take();
         // One-shot timeout effect.  Retries need to re-insert back in the queue
-        if( H2O.CLOUD.contains(t._target) )
-          t.call();
-        else
-          t.cancel(true);
+        if( H2O.CLOUD.contains(t._target) ) {
+          if( !t.isDone() ) t.call();
+        } else t.cancel(true);
       } catch( InterruptedException e ) {
         // Interrupted while waiting for a packet?
         // Blow it off and go wait again...
