@@ -315,7 +315,8 @@ public final class DParseTask extends MRTask {
         if( _sourceDataset.isArray() ) {
           ValueArray ary = _sourceDataset.get();
           _nrows = new int[(int)ary.chunks()];
-        }
+        } else
+          _nrows = new int[1];
         // launch the distributed parser on its chunks.
         this.invoke(_sourceDataset._key);
         break;
@@ -536,7 +537,8 @@ public final class DParseTask extends MRTask {
         assert idx2 == idx;
         assert (_nrows[idx2] == 0) : idx+": "+Arrays.toString(_nrows)+" ("+_nrows[idx2]+" -- "+_myrows+")";
         _nrows[idx2] = _myrows;
-      }
+      } else
+        _nrows[0] = _myrows;
       break;
     case TWO:
       assert (_ncolumns != 0);
@@ -547,13 +549,13 @@ public final class DParseTask extends MRTask {
       int firstRow = 0;
       int lastRow = _myrows;
       _myrows = 0;
-      if( arraylet ){
-        long origChunkIdx = ValueArray.getChunkIndex(key) + _startChunk;
-        firstRow = (origChunkIdx == 0) ? 0 : _nrows[(int)origChunkIdx-1];
-        lastRow = _nrows[(int)origChunkIdx];
-        if(lastRow <= firstRow){
-          System.err.println("invalid rowsToParse at chunk " + origChunkIdx + ": " + Arrays.toString(_nrows));
-        }
+      long origChunkIdx = _startChunk;
+      if( arraylet )
+        origChunkIdx += ValueArray.getChunkIndex(key);
+      firstRow = (origChunkIdx == 0) ? 0 : _nrows[(int)origChunkIdx-1];
+      lastRow = _nrows[(int)origChunkIdx];
+      if(lastRow <= firstRow){
+        System.err.println("invalid rowsToParse at chunk " + origChunkIdx + ": " + Arrays.toString(_nrows));
       }
       int rowsToParse = lastRow - firstRow;
       // create the output streams
