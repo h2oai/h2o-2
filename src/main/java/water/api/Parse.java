@@ -10,6 +10,7 @@ import water.parser.CsvParser.Setup;
 import water.util.RString;
 
 public class Parse extends Request {
+  protected final Str _excludeExpression = new Str("exclude","");
   protected final ExistingCSVKey _source = new ExistingCSVKey(SOURCE_KEY);
   protected final NewH2OHexKey _dest = new NewH2OHexKey(DEST_KEY);
   private final Header _header = new Header(HEADER);
@@ -17,35 +18,31 @@ public class Parse extends Request {
   private static class PSetup {
     final ArrayList<Key> _keys;
     final CsvParser.Setup _setup;
-    final boolean _xls;
-    PSetup( ArrayList<Key> keys, CsvParser.Setup setup) { _keys=keys; _setup=setup; _xls=false;}
-    PSetup( Key key, CsvParser.Setup setup ) { this(key,setup,false);}
-    PSetup( Key key, CsvParser.Setup setup, boolean xls) {
+    PSetup( ArrayList<Key> keys, CsvParser.Setup setup) { _keys=keys; _setup=setup; }
+    PSetup( Key key, CsvParser.Setup setup) {
       _keys = new ArrayList();
       _keys.add(key);
       _setup=setup;
-      _xls = xls;
     }
   };
+
 
   // An H2O Key Query, which runs the basic CSV parsing heuristics.  Accepts
   // Key wildcards, and gathers all matching Keys for simultaneous parsing.
   // Multi-key parses are only allowed on compatible CSV files, and only 1 is
   // allowed to have headers.
   public class ExistingCSVKey extends TypeaheadInputText<PSetup> {
-    public ExistingCSVKey(String name) { super(TypeaheadKeysRequest.class, name, true); }
+    public ExistingCSVKey(String name) { super(TypeaheadKeysRequest.class, name, true); addPrerequisite(_excludeExpression);}
     @Override protected PSetup parse(String input) throws IllegalArgumentException {
       Key k1 = Key.make(input);
       Value v1 = DKV.get(k1);
       if( v1 != null  && (input.endsWith(".xlsx") || input.endsWith(".xls")) )
-        return new PSetup(k1, new Setup((byte) 0,false,null,0,null), true);
-      // Reg-Ex pattern match all keys, like file-globbing.
-      // File-globbing: '?' allows an optional single character, regex needs '.?'
-      // File-globbing: '*' allows any characters, regex needs '*?'
-      // File-globbing: '\' is normal character in windows, regex needs '\\'
-      String patternStr = input.replace("?",".?").replace("*",".*?").replace("\\","\\\\");
-      System.out.println(patternStr);
-      Pattern p = Pattern.compile(patternStr);
+        return new PSetup(k1, new Setup((byte) 0,false,null,0,null));
+      Pattern p = makePattern(input);
+      Pattern exclude = null;
+      if(_excludeExpression.specified())
+        exclude = makePattern(_excludeExpression.value());
+
       ArrayList<Key> keys = new ArrayList();
      // boolean badkeys = false;
 
@@ -53,6 +50,8 @@ public class Parse extends Request {
         if( !key.user_allowed() ) continue;
         String ks = key.toString();
         if( !p.matcher(ks).matches() ) // Ignore non-matching keys
+          continue;
+        if(exclude != null && exclude.matcher(ks).matches())
           continue;
         Value v2 = DKV.get(key);  // Look at it
         if( v2 == null  || input.endsWith(".xlsx") || input.endsWith(".xls") )
@@ -70,8 +69,19 @@ public class Parse extends Request {
       if( setup._data == null || setup._data[0].length == 0 ) {
         throw new Error("Illegal format of the data! (First file does not parse)");
       }
+
       return new PSetup(keys,setup);
     }
+    private Pattern makePattern(String input) {
+      // Reg-Ex pattern match all keys, like file-globbing.
+      // File-globbing: '?' allows an optional single character, regex needs '.?'
+      // File-globbing: '*' allows any characters, regex needs '*?'
+      // File-globbing: '\' is normal character in windows, regex needs '\\'
+      String patternStr = input.replace("?",".?").replace("*",".*?").replace("\\","\\\\");
+      Pattern p = Pattern.compile(patternStr);
+      return p;
+    }
+
     @Override protected PSetup defaultValue() { return null; }
     @Override protected String queryDescription() { return "An existing H2O key (or regex of keys) of CSV text"; }
   }
