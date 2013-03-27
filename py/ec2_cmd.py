@@ -15,8 +15,9 @@ import json
 
 DEFAULT_NUMBER_OF_INSTANCES = 4
 DEFAULT_HOSTS_FILENAME = 'ec2-config-{0}.json'
-
 DEFAULT_REGION = 'us-east-1'
+DEFAULT_INSTANCE_NAME='node_{0}'.format(os.getenv('USER'))
+
 '''
 Default EC2 instance setup
 '''
@@ -114,7 +115,7 @@ def check_required_env_variables():
 ''' Run number of EC2 instance.
 Waits forthem and optionaly waits for ssh service.
 '''
-def run_instances(count, ec2_config, region, waitForSSH=True):
+def run_instances(count, ec2_config, region, waitForSSH=True, tags=None):
     '''Create a new reservation for count instances'''
 
     ec2params = inheritparams(ec2_config, EC2_API_RUN_INSTANCE)
@@ -142,6 +143,17 @@ def run_instances(count, ec2_config, region, waitForSSH=True):
         
         if waitForSSH:
             wait_for_ssh([ i.ip_address for i in reservation.instances ])
+
+        # Tag instances
+        try:
+            print tags
+            if tags:
+                print tags
+                conn.create_tags([i.id for i in reservation.instances], tags)                        
+        except:
+            warn('Something wrong during tagging instances. Exceptions IGNORED!')
+            print sys.exc_info()
+            pass
 
         return reservation
     except:
@@ -348,6 +360,13 @@ def format_name(tags):
 def merge_reservations(reservations):
     pass
 
+def create_tags(**kwargs):
+    tags = { }
+    for key,value in kwargs.iteritems():
+        tags[key] = value
+
+    return tags
+
 def main():
     parser = argparse.ArgumentParser(description='H2O EC2 instances launcher')
     parser.add_argument('action', choices=['create', 'terminate', 'stop', 'reboot', 'start', 'distribute_h2o', 'start_h2o', 'stop_h2o', 'show_defaults', 'dump_reservation', 'show_reservations'],  help='EC2 instances action')
@@ -356,15 +375,18 @@ def main():
     parser.add_argument('-H', '--hosts',     help='Hosts file describing existing "EXISTING" EC2 instances ', type=str, default=None)
     parser.add_argument('-r', '--region',    help='Specifies target create region', type=str, default=DEFAULT_REGION)
     parser.add_argument('--reservation',     help='Reservation ID, for example "r-1824ec65"', type=str, default=None)
+    parser.add_argument('--name',            help='Name for launched instances', type=str, default=DEFAULT_INSTANCE_NAME)
     args = parser.parse_args()
 
     if (args.action == 'create'):
         ec2_region = load_ec2_region(args.region)
         ec2_config = load_ec2_config(args.config, ec2_region)
+        tags       = create_tags(Name=args.name)
         log("Region   : {0}".format(ec2_region))
         log("Config   : {0}".format(ec2_config))
         log("Instances: {0}".format(args.instances))
-        reservation = run_instances(args.instances, ec2_config, ec2_region)
+        log("Tags     : {0}".format(tags))
+        reservation = run_instances(args.instances, ec2_config, ec2_region, tags=tags)
         dump_hosts_config(ec2_config, reservation, args.hosts)
         dump_ssh_commands(ec2_config, reservation)
     elif (args.action == 'show_defaults'):
@@ -391,5 +413,4 @@ def main():
 
 if __name__ == '__main__':
     main()
-
 
