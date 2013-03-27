@@ -26,7 +26,7 @@ DEFAULT_EC2_INSTANCE_CONFIGS = {
               'image_id'        : 'ami-b85cc4d1', # 'ami-cd9a11a4',
               'security_groups' : [ 'MrJenkinsTest' ],
               'key_name'        : 'mrjenkins_test',
-              'instance_type'   : 'm2.4xlarge',
+              'instance_type'   : 'm1.xlarge',
               'region'          : 'us-east-1',
               'pem'             : '~/.ec2/keys/mrjenkins_test.pem',
               'username'        : '0xdiag',      
