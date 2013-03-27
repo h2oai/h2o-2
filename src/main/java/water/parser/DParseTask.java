@@ -546,17 +546,12 @@ public final class DParseTask extends MRTask {
       // initialize statistics - invalid rows, sigma and row size
       phaseTwoInitialize();
       // calculate the first row and the number of rows to parse
-      int firstRow = 0;
-      int lastRow = _myrows;
       _myrows = 0;
       long origChunkIdx = _startChunk;
       if( arraylet )
         origChunkIdx += ValueArray.getChunkIndex(key);
-      firstRow = (origChunkIdx == 0) ? 0 : _nrows[(int)origChunkIdx-1];
-      lastRow = _nrows[(int)origChunkIdx];
-      if(lastRow <= firstRow){
-        System.err.println("invalid rowsToParse at chunk " + origChunkIdx + ": " + Arrays.toString(_nrows));
-      }
+      int firstRow = (origChunkIdx == 0) ? 0 : _nrows[(int)origChunkIdx-1];
+      int lastRow = _nrows[(int)origChunkIdx];
       int rowsToParse = lastRow - firstRow;
       // create the output streams
       _outputStreams2 = createRecords(firstRow, rowsToParse);
