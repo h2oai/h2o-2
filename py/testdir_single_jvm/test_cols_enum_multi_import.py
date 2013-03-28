@@ -70,7 +70,7 @@ class Basic(unittest.TestCase):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         translateList = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u']
         tryList = [
-            (1000, 100, 'cA', 5),
+            (300, 100, 'cA', 60),
             ]
 
         ### h2b.browseTheCloud()
@@ -88,9 +88,11 @@ class Basic(unittest.TestCase):
                 csvPathname = SYNDATASETS_DIR + '/' + csvFilename
                 write_syn_dataset(csvPathname, rowCount, colCount, SEED, translateList)
 
-            h2i.setupImportFolder(None, SYNDATASETS_DIR)
+            # DON"T get redireted to S3! (EC2 hack in config, remember!)
+            # use it at the node level directly (because we gen'ed the files.
+            h2o.nodes[0].import_files(SYNDATASETS_DIR)
             # use regex. the only files in the dir will be the ones we just created with  *fileN* match
-            parseKey = h2o.nodes[0].parse('*'+rowxcol+'*', key2=key2, exclude=None, header=1, timeoutSecs=30)
+            parseKey = h2o.nodes[0].parse('*'+rowxcol+'*', key2=key2, exclude=None, header=1, timeoutSecs=timeoutSecs)
             ### parseKey = h2o.nodes[0].parse('*49*', key2=key2, exclude=None, header=1, timeoutSecs=30)
             print "parseKey['destination_key']: " + parseKey['destination_key']
             print 'parse time:', parseKey['response']['time']
