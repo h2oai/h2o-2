@@ -831,9 +831,12 @@ class H2O(object):
         # https://github.com/kennethreitz/requests/issues/719
         # it was closed saying Requests doesn't do retries. (documentation implies otherwise)
         verboseprint("\nParsing key:", key, "to key2:", key2, "(if None, means default)")
-        # FIX! noted that H2O will stack trace if dst key = src key. maybe H2O should detect that.
+
+        # other h2o parse parameters, not in the defauls
+        # header
+        # exclude
         params_dict = {
-            'source_key': key,
+            'source_key': key, # can be a regex
             'destination_key': key2,
             }
         params_dict.update(kwargs)
