@@ -25,15 +25,16 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_hdfs_multi_bad_csv(self):
-        print "\nUse the new regex capabilities for selecting hdfs: try *csv* at /datasets"
+    def test_hdfs_multi_copies(self):
+        print "\nUse the new regex capabilities for selecting hdfs: try *copies* at /datasets"
+        print "This should match to a folder with about twenty covtype10x?"
         # pop open a browser on the cloud
         h2b.browseTheCloud()
         # defaults to /datasets
         h2i.setupImportHdfs()
-        parseKey = h2o.nodes[0].parse('*airlines_all*csv', key2='random_csv.hex', 
-            exclude=None, header=None, timeoutSecs=600)
-        print "*csv* regex to hdfs /datasets", 'parse time:', parseKey['response']['time']
+        parseKey = h2o.nodes[0].parse('*copies*', key2='copies.hex', 
+            exclude=None, header=None, timeoutSecs=300)
+        print "*copies* regex to hdfs /datasets", 'parse time:', parseKey['response']['time']
         print "parse result:", parseKey['destination_key']
         sys.stdout.flush() 
 
