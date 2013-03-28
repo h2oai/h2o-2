@@ -1559,7 +1559,18 @@ class RemoteH2O(H2O):
        
         # this fires up h2o over there
         cmd = ' '.join(self.get_args())
-        self.channel.exec_command(cmd)
+        # UPDATE: somehow java -jar on cygwin target (xp) can't handle /tmp/h2o*jar
+        # because it's a windows executable and expects windows style path names.
+        # but if we cd into /tmp, it can do java -jar h2o*jar.
+        # So just split out the /tmp (pretend we don't know) and the h2o jar file name
+        # Newer windows may not have this problem? Do the ls (this goes into the local stdout
+        # files) so we can see the file is really where we expect.
+        # This hack only works when the dest is /tmp/h2o*jar. It's okay to execute
+        # with pwd = /tmp. If /tmp/ isn't in the jar path, I guess things will be the same as
+        # normal.
+        self.channel.exec_command("cd /tmp; ls -ltr "+self.jar+"; "+ \
+            re.sub("/tmp/","",cmd)) # removing the /tmp/ we know is in there
+
         if self.capture_output:
             if self.node_id is not None:
                 logPrefix = 'remote-h2o-' + str(self.node_id)
