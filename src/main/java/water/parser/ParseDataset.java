@@ -28,17 +28,12 @@ public final class ParseDataset extends Job {
     super("Parse", dest);
     //if( keys.length > 1 ) throw H2O.unimpl();
     Value dataset = DKV.get(keys[0]);
-    _total = dataset.length() * Pass.values().length;
-    _progress = Key.make(UUID.randomUUID().toString(), (byte) 0, Key.JOB);
-    UKV.put(_progress, new Progress());
-  }
-
-  private ParseDataset(Key dest, Value [] dataset) {
-    super("Parse", dest);
-    long t = dataset[0].length();
-    for(int i = 1; i < dataset.length; ++i)
-      t += dataset[i].length();
-    _total = t * Pass.values().length;
+    long total = dataset.length() * Pass.values().length;
+    for(int i = 1; i < keys.length; ++i){
+      dataset = DKV.get(keys[i]);
+      total += dataset.length() * Pass.values().length;
+    }
+    _total = total;
     _progress = Key.make(UUID.randomUUID().toString(), (byte) 0, Key.JOB);
     UKV.put(_progress, new Progress());
   }
