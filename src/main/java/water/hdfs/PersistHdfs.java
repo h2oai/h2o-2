@@ -11,7 +11,6 @@ import water.api.Constants;
 
 import com.google.common.base.Strings;
 import com.google.common.io.ByteStreams;
-import com.google.common.io.Closeables;
 import com.google.gson.*;
 
 /** Persistence backend for HDFS */
@@ -144,13 +143,16 @@ public abstract class PersistHdfs {
         s = fs.open(p);
         ByteStreams.skipFully(s, skip);
         ByteStreams.readFully(s, b);
+        // temporary disabled: s.readFully(skip,b,0,b.length);
         assert v.isPersisted();
 
         return b;
       } catch (IOException e) {
         H2O.ignore(e, "Get exception, retrying...");
         try { Thread.sleep(500); } catch (InterruptedException ie) {}
-      } finally { Closeables.closeQuietly(s); }
+      } finally {
+        try { if( s != null ) s.close(); } catch( IOException e ) {}
+      }
     }
   }
 
@@ -189,7 +191,7 @@ public abstract class PersistHdfs {
       FileSystem fs = FileSystem.get(p.toUri(), CONF);
       size = fs.getFileStatus(p).getLen();
     } catch( IOException e ) {
-      System.err.println(e);
+      H2O.ignore(e);
       return null;
     }
     long rem = size-off;        // Remainder to be read
@@ -220,7 +222,7 @@ public abstract class PersistHdfs {
     } catch( IOException e ) {
       res = e.getMessage(); // Just the exception message, throwing the stack trace away
     } finally {
-      Closeables.closeQuietly(s);
+      try { if( s != null ) s.close(); } catch( IOException e ) {}
     }
     return res;
   }
@@ -239,7 +241,7 @@ public abstract class PersistHdfs {
     } catch( IOException e ) {
       res = e.getMessage(); // Just the exception message, throwing the stack trace away
     } finally {
-      Closeables.closeQuietly(s);
+      try { if( s != null ) s.close(); } catch( IOException e ) {}
     }
     return res;
   }
