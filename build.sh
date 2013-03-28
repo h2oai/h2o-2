@@ -21,9 +21,10 @@ set -o errexit   ## set -e : exit the script if any statement returns a non-true
 # ------------------------------------------------------------------------------
 # basic build properties
 # ------------------------------------------------------------------------------
-# This is where the source files (java) are relative to the path of this file
-    SRC=src/main/java
-TESTSRC=src/test/java
+# This is where the source files (java) and resources are relative to the path of this file
+      SRC=src/main/java
+  TESTSRC=src/test/java
+RESOURCES=src/main/resources
 # and this is where the jar contents is stored relative to this file again
 JAR_ROOT=lib
 
@@ -117,7 +118,8 @@ function build_jar() {
     "$JAR" -cfm ../${JAR_FILE} ../manifest.txt `/usr/bin/find . -type f -not -name "*-sources.jar"`
     cd ..
     # include H2O classes
-    "$JAR" uf ${JAR_FILE} -C "${CLASSES}" .
+    "$JAR" uf ${JAR_FILE} -C "${CLASSES}"   .
+    "$JAR" uf ${JAR_FILE} -C "${RESOURCES}" .
     "$ZIP" -qd ${JAR_FILE} javassist.jar 
     echo "copying jar file... ${JAR_FILE} to ${OUTDIR}/h2o-${JAR_TIME}.jar"
     cp ${JAR_FILE} ${OUTDIR}/h2o-${JAR_TIME}.jar
