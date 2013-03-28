@@ -112,6 +112,7 @@ public class TestUtil {
 
   public static Key loadAndParseFolder(String keyName, String path) {
     Key [] keys = load_test_folder(path);
+    Arrays.sort(keys);
     Key okey = Key.make(keyName);
     Job j = ParseDataset.forkParseDataset(okey, keys,null);
     j.get();
