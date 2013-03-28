@@ -125,30 +125,32 @@ public abstract class PersistHdfs {
   public static byte[] fileLoad(Value v) {
     byte[] b = MemoryManager.malloc1(v._max);
     FSDataInputStream s = null;
-    try {
-      long skip = 0;
-      Key k = v._key;
-      // Convert an arraylet chunk into a long-offset from the base file.
-      if( k._kb[0] == Key.ARRAYLET_CHUNK ) {
-        skip = ValueArray.getChunkOffset(k); // The offset
-        k = ValueArray.getArrayKey(k);       // From the base file key
-        if( k.toString().endsWith(".hex") ) { // Hex file?
-          int value_len = DKV.get(k).memOrLoad().length;  // How long is the ValueArray header?
-          skip += value_len;
-        }
+
+    long skip = 0;
+    Key k = v._key;
+    // Convert an arraylet chunk into a long-offset from the base file.
+    if( k._kb[0] == Key.ARRAYLET_CHUNK ) {
+      skip = ValueArray.getChunkOffset(k); // The offset
+      k = ValueArray.getArrayKey(k);       // From the base file key
+      if( k.toString().endsWith(".hex") ) { // Hex file?
+        int value_len = DKV.get(k).memOrLoad().length;  // How long is the ValueArray header?
+        skip += value_len;
       }
-      Path p = getPathForKey(k);
-      FileSystem fs = FileSystem.get(p.toUri(), CONF);
-      s = fs.open(p);
-      ByteStreams.skipFully(s, skip);
-      ByteStreams.readFully(s, b);
-      assert v.isPersisted();
-      return b;
-    } catch( IOException e ) { // Broken disk / short-file???
-      System.err.println(e);
-      return null;
-    } finally {
-      Closeables.closeQuietly(s);
+    }
+    Path p = getPathForKey(k);
+    while(true) {
+      try {
+        FileSystem fs = FileSystem.get(p.toUri(), CONF);
+        s = fs.open(p);
+        ByteStreams.skipFully(s, skip);
+        ByteStreams.readFully(s, b);
+        assert v.isPersisted();
+
+        return b;
+      } catch (IOException e) {
+        H2O.ignore(e, "Get exception, retrying...");
+        try { Thread.sleep(500); } catch (InterruptedException ie) {}
+      } finally { Closeables.closeQuietly(s); }
     }
   }
 
