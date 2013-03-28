@@ -90,7 +90,8 @@ def setupImportHdfs(node=None, path=None):
         URI = hdfsPrefix + path
 
     importHdfsResult = node.import_hdfs(URI)
-    print h2o.dump_json(importHdfsResult)
+    # too many hdfs keys to print now
+    h2o.verboseprint(h2o.dump_json(importHdfsResult))
     return importHdfsResult
 
 # FIX! can update this to parse from local dir also (import keys from folder?)
