@@ -447,7 +447,7 @@ public abstract class DGLM {
 
     // Validate on a dataset.  Columns must match, including the response column.
     public GLMValidation validateOn( ValueArray ary, Sampling s, double [] thresholds ) {
-      int[] modelDataMap = ary.getColumnIds(_va.colNames());//columnMapping(ary.colNames());
+      int [] modelDataMap = ary.getColumnIds(_va.colNames());//columnMapping(ary.colNames());
       if( !isCompatible(modelDataMap) ) // This dataset is compatible or not?
         throw new GLMException("incompatible dataset");
       DataFrame data = new DataFrame(ary, modelDataMap, s, false, true);
@@ -466,10 +466,9 @@ public abstract class DGLM {
     }
 
     public GLMValidation xvalidate(ValueArray ary,int folds, double [] thresholds) {
-      String[] colNames = ary.colNames();
-      int[] modelDataMap = columnMapping(colNames);
-      if( !isCompatible(modelDataMap) ) // This dataset is compatible or not?
-        throw new GLMException("incompatible dataset");;
+      int [] modelDataMap = ary.getColumnIds(_va.colNames());//columnMapping(ary.colNames());
+      if( !isCompatible(modelDataMap) )  // This dataset is compatible or not?
+        throw new GLMException("incompatible dataset");
 
       GLMModel [] models = new GLMModel[folds];
       for(int i = 0; i < folds; ++i){
@@ -639,20 +638,22 @@ public abstract class DGLM {
         dev = models[0]._vals[0]._deviance;
         rank = models[0].rank();
         aic = models[0]._vals[0]._aic - 2*rank;
+        _auc = models[0]._vals[0]._auc;
         nDev = models[0]._vals[0]._nullDeviance;
         for(i = 1; i < models.length; ++i){
           int xm_rank = models[i].rank();
           rank = Math.max(xm_rank,rank);
           n += models[i]._vals[0]._n;
-          dev += models[0]._vals[0]._deviance;
-          aic += models[0]._vals[0]._aic - 2*xm_rank;
-          nDev += models[0]._vals[0]._nullDeviance;
+          dev += models[i]._vals[0]._deviance;
+          aic += models[i]._vals[0]._aic - 2*xm_rank;
+          nDev += models[i]._vals[0]._nullDeviance;
+          _auc += models[i]._vals[0]._auc;
           for(int t = 0; t < nthresholds; ++t)
             _cm[t].add(models[i]._vals[0]._cm[t]);
         }
         _thresholds = thresholds;
         computeBestThreshold(m);
-        computeAUC();
+        _auc /= models.length;
       } else {
         for(GLMModel xm:models) {
           int xm_rank = xm.rank();
