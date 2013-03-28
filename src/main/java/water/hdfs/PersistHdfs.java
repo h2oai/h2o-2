@@ -11,7 +11,6 @@ import water.api.Constants;
 
 import com.google.common.base.Strings;
 import com.google.common.io.ByteStreams;
-import com.google.common.io.Closeables;
 import com.google.gson.*;
 
 /** Persistence backend for HDFS */
@@ -125,30 +124,35 @@ public abstract class PersistHdfs {
   public static byte[] fileLoad(Value v) {
     byte[] b = MemoryManager.malloc1(v._max);
     FSDataInputStream s = null;
-    try {
-      long skip = 0;
-      Key k = v._key;
-      // Convert an arraylet chunk into a long-offset from the base file.
-      if( k._kb[0] == Key.ARRAYLET_CHUNK ) {
-        skip = ValueArray.getChunkOffset(k); // The offset
-        k = ValueArray.getArrayKey(k);       // From the base file key
-        if( k.toString().endsWith(".hex") ) { // Hex file?
-          int value_len = DKV.get(k).memOrLoad().length;  // How long is the ValueArray header?
-          skip += value_len;
-        }
+
+    long skip = 0;
+    Key k = v._key;
+    // Convert an arraylet chunk into a long-offset from the base file.
+    if( k._kb[0] == Key.ARRAYLET_CHUNK ) {
+      skip = ValueArray.getChunkOffset(k); // The offset
+      k = ValueArray.getArrayKey(k);       // From the base file key
+      if( k.toString().endsWith(".hex") ) { // Hex file?
+        int value_len = DKV.get(k).memOrLoad().length;  // How long is the ValueArray header?
+        skip += value_len;
       }
-      Path p = getPathForKey(k);
-      FileSystem fs = FileSystem.get(p.toUri(), CONF);
-      s = fs.open(p);
-      ByteStreams.skipFully(s, skip);
-      ByteStreams.readFully(s, b);
-      assert v.isPersisted();
-      return b;
-    } catch( IOException e ) { // Broken disk / short-file???
-      System.err.println(e);
-      return null;
-    } finally {
-      Closeables.closeQuietly(s);
+    }
+    Path p = getPathForKey(k);
+    while(true) {
+      try {
+        FileSystem fs = FileSystem.get(p.toUri(), CONF);
+        s = fs.open(p);
+        ByteStreams.skipFully(s, skip);
+        ByteStreams.readFully(s, b);
+        // temporary disabled: s.readFully(skip,b,0,b.length);
+        assert v.isPersisted();
+
+        return b;
+      } catch (IOException e) {
+        H2O.ignore(e, "Get exception, retrying...");
+        try { Thread.sleep(500); } catch (InterruptedException ie) {}
+      } finally {
+        try { if( s != null ) s.close(); } catch( IOException e ) {}
+      }
     }
   }
 
@@ -187,7 +191,7 @@ public abstract class PersistHdfs {
       FileSystem fs = FileSystem.get(p.toUri(), CONF);
       size = fs.getFileStatus(p).getLen();
     } catch( IOException e ) {
-      System.err.println(e);
+      H2O.ignore(e);
       return null;
     }
     long rem = size-off;        // Remainder to be read
@@ -218,7 +222,7 @@ public abstract class PersistHdfs {
     } catch( IOException e ) {
       res = e.getMessage(); // Just the exception message, throwing the stack trace away
     } finally {
-      Closeables.closeQuietly(s);
+      try { if( s != null ) s.close(); } catch( IOException e ) {}
     }
     return res;
   }
@@ -237,7 +241,7 @@ public abstract class PersistHdfs {
     } catch( IOException e ) {
       res = e.getMessage(); // Just the exception message, throwing the stack trace away
     } finally {
-      Closeables.closeQuietly(s);
+      try { if( s != null ) s.close(); } catch( IOException e ) {}
     }
     return res;
   }
