@@ -53,6 +53,7 @@ public abstract class PersistNFS {
         if( s != null ) s.close();
       }
     } catch( IOException e ) { // Broken disk / short-file???
+      H2O.ignore(e);
       return null;
     }
   }
@@ -79,6 +80,7 @@ public abstract class PersistNFS {
         s.close();
       }
     } catch( IOException e ) {
+      H2O.ignore(e);
     }
   }
 
