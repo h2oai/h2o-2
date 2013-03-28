@@ -68,9 +68,8 @@ public class Parse extends Request {
       Key hKey = keys.get(0);
       Value v = DKV.get(hKey);
       CsvParser.Setup setup = Inspect.csvGuessValue(v);
-      if( setup._data == null || setup._data[0].length == 0 ) {
-        throw new Error("Illegal format of the data! (First file does not parse)");
-      }
+      if( setup._data == null || setup._data[0].length == 0 )
+        throw new IllegalArgumentException("I cannot figure out this file; I only handle common CSV formats: "+hKey);
       return new PSetup(keys,setup);
     }
 
@@ -106,7 +105,7 @@ public class Parse extends Request {
       // File-globbing: '?' allows an optional single character, regex needs '.?'
       // File-globbing: '*' allows any characters, regex needs '*?'
       // File-globbing: '\' is normal character in windows, regex needs '\\'
-      String patternStr = input.replace("?",".?").replace("*",".*?").replace("\\","\\\\");
+      String patternStr = input.replace("?",".?").replace("*",".*?").replace("\\","\\\\").replace("(","\\(").replace(")","\\)");
       Pattern p = Pattern.compile(patternStr);
       return p;
     }
