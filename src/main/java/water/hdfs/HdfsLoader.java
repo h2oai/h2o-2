@@ -37,7 +37,7 @@ public class HdfsLoader {
       Log.die("[hdfs] Unable to initialize hadoop version " + version +
           " please use different version.");
     }
-    System.err.println("[hdfs] Using HDFS-version " + version);
+    System.out.println("[hdfs] Using HDFS version " + version);
     PersistHdfs.initialize();
   }
 }

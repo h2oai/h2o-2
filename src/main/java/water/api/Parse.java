@@ -153,6 +153,9 @@ public class Parse extends Request {
   }
 
   public static String link(Key k, String content) {
+    return link(k.toString(),content);
+  }
+  public static String link(String k, String content) {
     RString rs = new RString("<a href='Parse.query?%key_param=%$key'>%content</a>");
     rs.replace("key_param", SOURCE_KEY);
     rs.replace("key", k.toString());
