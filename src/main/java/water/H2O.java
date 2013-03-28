@@ -14,6 +14,8 @@ import water.nbhm.NonBlockingHashMap;
 import water.store.s3.PersistS3;
 import water.util.Utils;
 
+import com.amazonaws.auth.PropertiesCredentials;
+import com.google.common.base.Objects;
 import com.google.common.io.Closeables;
 
 /**
@@ -481,9 +483,6 @@ public final class H2O {
     public int port; // set_cloud_name_and_mcast()
     public String ip; // Named IP4/IP6 address instead of the default
     public String ice_root; // ice root directory
-    public String hdfs; // HDFS backend
-    public String hdfs_version; // version of the filesystem
-    public String hdfs_config; // configuration file of the HDFS
     public String aws_credentials; // properties file for aws credentials
     public String keepice; // Do not delete ice on startup
     public String soft = null; // soft launch for demos
@@ -521,6 +520,13 @@ public final class H2O {
 
   private static void initializeExpressionEvaluation() {
     Function.initializeCommonFunctions();
+  }
+
+  // Default location of the AWS credentials file
+  private static final String DEFAULT_CREDENTIALS_LOCATION = "AwsCredentials.properties";
+  public static PropertiesCredentials getAWSCredentials() throws IOException {
+    File credentials = new File(Objects.firstNonNull(OPT_ARGS.aws_credentials, DEFAULT_CREDENTIALS_LOCATION));
+    return new PropertiesCredentials(credentials);
   }
 
   /** Starts the local k-v store.

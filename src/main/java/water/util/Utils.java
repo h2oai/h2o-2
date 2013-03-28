@@ -4,8 +4,7 @@ import hex.rng.*;
 import hex.rng.H2ORandomRNG.RNGKind;
 import hex.rng.H2ORandomRNG.RNGType;
 
-import java.io.Closeable;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.security.SecureRandom;
 import java.text.DecimalFormat;
@@ -213,5 +212,14 @@ public class Utils {
 
   public static void close(Socket s) {
     try { if( s != null ) s.close(); } catch( IOException _ ) { }
+  }
+
+  public static void readConsole() {
+    BufferedReader console = new BufferedReader(new InputStreamReader(System.in));
+    try {
+      console.readLine();
+    } catch( IOException e ) {
+      throw new RuntimeException(e);
+    }
   }
 }

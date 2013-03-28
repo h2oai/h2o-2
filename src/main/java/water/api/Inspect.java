@@ -1,9 +1,6 @@
 package water.api;
 
-import com.google.gson.*;
-
 import hex.DGLM.GLMModel;
-import hex.GLMGrid.GLMModels;
 import hex.KMeans.KMeansModel;
 import hex.rf.RFModel;
 
@@ -18,6 +15,8 @@ import water.ValueArray.Column;
 import water.api.GLM.GLMBuilder;
 import water.parser.CsvParser;
 import water.util.Utils;
+
+import com.google.gson.*;
 
 public class Inspect extends Request {
   private static final HashMap<String, String> _displayNames = new HashMap<String, String>();

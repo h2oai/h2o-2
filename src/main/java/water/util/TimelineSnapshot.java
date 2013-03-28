@@ -343,7 +343,7 @@ public final class TimelineSnapshot implements
     } else { // look for matching send, otherwise set _blocked
       assert !_edges.containsKey(e);
       int senderIdx = e.packH2O().index();
-      if (senderIdx < 0) { // should not happen?
+      if (senderIdx < 0) { // binary search did not find member, should not happen?
         // no possible sender - return and do not block
         System.err.println("no sender found! port = " + e.portPack()
             + ", ip = " + e.addrPack().toString());

@@ -8,12 +8,15 @@ import water.api.Constants;
 public class Job extends Iced {
   // Global LIST of Jobs key.
   static final Key LIST = Key.make(Constants.BUILT_IN_KEY_JOBS, (byte) 0, Key.BUILT_IN_KEY);
+  private static final int KEEP_LAST_COUNT = 100;
+  public static final long CANCELLED_END_TIME = -1;
 
   // Per-job fields
   public final Key    _self; // Boolean read-only value; exists==>running, not-exists==>canceled/removed
   public final Key    _dest; // Key holding final value after job is removed
   public final String _description;
   public final long   _startTime;
+  public long         _endTime;
 
   public Key self() { return _self; }
   public Key dest() { return _dest; }
@@ -63,7 +66,7 @@ public class Job extends Iced {
     return dest != null ? dest.progress() : 0;
   }
 
-  // Block until the Job finishes.  
+  // Block until the Job finishes.
   // NOT F/J FRIENDLY, EATS THE THREAD until job completes.  Only use for web threads.
   public <T> T get() {
     // TODO through notifications?
@@ -78,9 +81,22 @@ public class Job extends Iced {
   }
 
   public void cancel() { cancel(_self); }
-  public static void cancel(Key self) {
+  public static void cancel(final Key self) {
     DKV.remove(self);
     DKV.write_barrier();
+    new TAtomic<List>() {
+      @Override public List atomic(List old) {
+        if( old == null ) old = new List();
+        Job[] jobs = old._jobs;
+        for( int i = 0; i < jobs.length; i++ ) {
+          if( jobs[i]._self.equals(self) ) {
+            jobs[i]._endTime = CANCELLED_END_TIME;
+            break;
+          }
+        }
+        return old;
+      }
+    }.fork(LIST);
   }
 
   public boolean cancelled() { return cancelled(_self); }
@@ -94,13 +110,29 @@ public class Job extends Iced {
       @Override public List atomic(List old) {
         if( old == null ) return null;
         Job[] jobs = old._jobs;
-        int i;
-        for( i = 0; i < jobs.length; i++ )
-          if( jobs[i]._self.equals(_self) )
+        for( int i = 0; i < jobs.length; i++ ) {
+          if( jobs[i]._self.equals(_self) ) {
+            if(jobs[i]._endTime != CANCELLED_END_TIME)
+              jobs[i]._endTime = System.currentTimeMillis();
             break;
-        if( i == jobs.length ) return null;
-        jobs[i] = jobs[jobs.length-1]; // Compact out the key from the list
-        old._jobs = Arrays.copyOf(jobs,jobs.length-1);
+          }
+        }
+        int count = jobs.length;
+        while(count > KEEP_LAST_COUNT) {
+          long min = Long.MAX_VALUE;
+          int n = -1;
+          for( int i = 0; i < jobs.length; i++ ) {
+            if(jobs[i]._endTime != 0 && jobs[i]._startTime < min) {
+              min = jobs[i]._startTime;
+              n = i;
+            }
+          }
+          if(n < 0)
+            break;
+          jobs[n] = jobs[--count];
+        }
+        if(count < jobs.length)
+          old._jobs = Arrays.copyOf(jobs, count);
         return old;
       }
     }.fork(LIST);

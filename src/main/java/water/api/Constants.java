@@ -127,6 +127,7 @@ public class Constants {
   public static final String SOURCE_KEY            = "source_key";
   public static final String STACK_TRACES          = "stack_traces";
   public static final String START_TIME            = "start_time";
+  public static final String END_TIME              = "end_time";
   public static final String STATUS                = "status";
   public static final String STEP                  = "step";
   public static final String STRATA                = "strata";

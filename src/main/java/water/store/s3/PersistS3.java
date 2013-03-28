@@ -1,34 +1,29 @@
 package water.store.s3;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Properties;
 
 import water.*;
 
-import com.amazonaws.*;
-import com.amazonaws.auth.PropertiesCredentials;
+import com.amazonaws.ClientConfiguration;
+import com.amazonaws.Protocol;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.*;
-import com.google.common.base.Objects;
 
 /** Persistence backend for S3 */
 public abstract class PersistS3 {
   private static final String  HELP = "You can specify a credentials properties file with the -aws_credentials command line switch.";
 
-  // Default location of the S3 credentials file
-  private static final String  DEFAULT_CREDENTIALS_LOCATION = "AwsCredentials.properties";
   private static final String  KEY_PREFIX                   = "s3://";
   private static final int     KEY_PREFIX_LEN               = KEY_PREFIX.length();
 
   private static final AmazonS3 S3;
   static {
-    File credentials = new File(Objects.firstNonNull(H2O.OPT_ARGS.aws_credentials, DEFAULT_CREDENTIALS_LOCATION));
     AmazonS3 s3 = null;
     try {
-      s3 = new AmazonS3Client(new PropertiesCredentials(credentials), s3ClientCfg());
+      s3 = new AmazonS3Client(H2O.getAWSCredentials(), s3ClientCfg());
     } catch( Throwable e ) {
       H2O.ignore(e);
       log("Unable to create S3 backend.");

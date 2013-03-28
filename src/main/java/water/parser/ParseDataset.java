@@ -119,7 +119,7 @@ public final class ParseDataset extends Job {
   public static class ParseException extends Exception{
     public ParseException(String msg){super(msg);}
   }
-  public static void parseUncompressed(ParseDataset job, Value [] dataset, CustomParser.Type parserType, CsvParser.Setup setup) throws Exception{
+  private static void parseUncompressed(ParseDataset job, Value [] dataset, CustomParser.Type parserType, CsvParser.Setup setup) throws Exception{
     if(setup == null)
       setup = Inspect.csvGuessValue(dataset[0]);
     CsvParser.Setup headerSetup = setup;
@@ -194,7 +194,6 @@ public final class ParseDataset extends Job {
     }
     phaseTwo.normalizeSigma();
     phaseTwo.createValueArrayHeader();
-    job.remove();
   }
 
   // Unpack zipped CSV-style structure and call method parseUncompressed(...)

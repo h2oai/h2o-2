@@ -21,7 +21,7 @@ public class Progress extends Request {
     Job job = findJob();
     JsonObject jsonResponse = defaultJsonResponse();
 
-    if( job == null )
+    if( job == null || job._endTime != 0 )
       return jobDone(jsonResponse);
 
     return jobInProgress(job, jsonResponse);

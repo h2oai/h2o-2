@@ -15,12 +15,14 @@ public final class Log {
       return format;
     }
   };
+  public static final String HOST;
   private static final String HOST_AND_PID;
   static boolean _dontDie;
   // @formatter:on
 
   static {
-    HOST_AND_PID = "" + padRight(H2O.findInetAddressForSelf().getHostAddress() + ", ", 17) + padRight(getPid() + ", ", 8);
+    HOST = H2O.findInetAddressForSelf().getHostAddress();
+    HOST_AND_PID = "" + padRight(HOST + ", ", 17) + padRight(getPid() + ", ", 8);
   }
 
   private static long getPid() {
@@ -57,11 +59,11 @@ public final class Log {
   // Print to the original STDERR & die
   public static void die(String s) {
     System.err.println(s);
-    if(!_dontDie)
+    if( !_dontDie )
       System.exit(-1);
   }
 
-  static String padRight(String stringToPad, int size) {
+  public static String padRight(String stringToPad, int size) {
     StringBuilder strb = new StringBuilder(stringToPad);
 
     while( strb.length() < size )
@@ -71,12 +73,14 @@ public final class Log {
     return strb.toString();
   }
 
-  static void initHeaders() {
-    System.setOut(new Wrapper(System.out));
-    System.setErr(new Wrapper(System.err));
+  public static void initHeaders() {
+    if( !(System.out instanceof Wrapper) ) {
+      System.setOut(new Wrapper(System.out));
+      System.setErr(new Wrapper(System.err));
+    }
   }
 
-  public static void write(PrintStream stream, String s, boolean headers) {
+  public static void unwrap(PrintStream stream, String s) {
     if( stream instanceof Wrapper )
       ((Wrapper) System.out).printlnParent(s);
     else

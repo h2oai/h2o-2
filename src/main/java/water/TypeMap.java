@@ -1,8 +1,7 @@
 package water;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.*;
 
 public class TypeMap {
   static public final short NULL = (short) -1;
@@ -24,14 +23,12 @@ public class TypeMap {
     "hex.DLSM$ADMMSolver",
     "hex.DLSM$GeneralizedGradientSolver",
     "hex.DLSM$LSMSolver",
-    "hex.GLMGrid$1",
+    "hex.GLMGrid",
     "hex.GLMGrid$2",
     "hex.GLMGrid$GLMModels",
-    "hex.GLMGrid",
-    "hex.Histogram",
+    "hex.Histogram$BinningTask",
     "hex.Histogram$Bins",
     "hex.Histogram$OutlineTask",
-    "hex.Histogram$BinningTask",
     "hex.KMeans$KMeansModel",
     "hex.KMeans$Lloyds",
     "hex.KMeans$Sampler",
@@ -39,12 +36,14 @@ public class TypeMap {
     "hex.LinearRegression$CalcRegressionTask",
     "hex.LinearRegression$CalcSquareErrorsTasks",
     "hex.LinearRegression$CalcSumsTask",
+    "hex.NOPTask",
+    "hex.NewRowVecTask",
     "hex.NewRowVecTask$DataFrame",
     "hex.NewRowVecTask$RowFunc",
-    "hex.NewRowVecTask",
-    "hex.NOPTask",
     "hex.Plot$Pixels",
     "hex.Plot$Res",
+    "hex.RowVecTask",
+    "hex.RowVecTask$Sampling",
     "hex.rf.Confusion",
     "hex.rf.DRF",
     "hex.rf.MinorityClasses$ClassExtractTask",
@@ -54,13 +53,37 @@ public class TypeMap {
     "hex.rf.MinorityClasses$UnbalancedClass",
     "hex.rf.RFModel",
     "hex.rf.Tree$1",
-    "hex.RowVecTask$Sampling",
-    "hex.RowVecTask",
     "water.Atomic",
     "water.AtomicTest$Append$1",
     "water.AutoSerialTest",
+    "water.BitsCmpTask",
     "water.DRemoteTask",
     "water.DTask",
+    "water.Freezable",
+    "water.H2ONode",
+    "water.HeartBeat",
+    "water.Iced",
+    "water.Job",
+    "water.Job$1",
+    "water.Job$2",
+    "water.Job$3",
+    "water.Job$Fail",
+    "water.Job$List",
+    "water.KVTest$Atomic2",
+    "water.KVTest$ByteHisto",
+    "water.KVTest$RemoteBitSet",
+    "water.Key",
+    "water.Key$Ary",
+    "water.MRTask",
+    "water.Model",
+    "water.NOPTask",
+    "water.TAtomic",
+    "water.TaskGetKey",
+    "water.TaskInvalidateKey",
+    "water.TaskPutKey",
+    "water.Value",
+    "water.ValueArray",
+    "water.ValueArray$Column",
     "water.exec.AddOperator",
     "water.exec.AndOperator",
     "water.exec.BooleanVectorFilter",
@@ -93,16 +116,16 @@ public class TypeMap {
     "water.exec.LessOperator",
     "water.exec.LessOrEqOperator",
     "water.exec.Log$MRLog",
+    "water.exec.MRColumnProducer",
+    "water.exec.MRVectorBinaryOperator",
+    "water.exec.MRVectorTernaryOperator",
+    "water.exec.MRVectorUnaryOperator",
     "water.exec.MakeEnum$GetEnumTask",
     "water.exec.MakeEnum$PackToEnumTask",
     "water.exec.Max$MRMax",
     "water.exec.Mean$MRMean",
     "water.exec.Min$MRMin",
     "water.exec.ModOperator",
-    "water.exec.MRColumnProducer",
-    "water.exec.MRVectorBinaryOperator",
-    "water.exec.MRVectorTernaryOperator",
-    "water.exec.MRVectorUnaryOperator",
     "water.exec.MulOperator",
     "water.exec.NeqOperator",
     "water.exec.OrOperator",
@@ -119,45 +142,18 @@ public class TypeMap {
     "water.exec.TernaryWithScalarOperator",
     "water.exec.TernaryWithTwoScalarsOperator",
     "water.exec.UnaryMinus",
-    "water.Freezable",
-    "water.H2ONode",
     "water.hdfs.TaskStore2HDFS",
-    "water.HeartBeat",
-    "water.Iced",
-    "water.Job$1",
-    "water.Job$2",
-    "water.Job$Fail",
-    "water.Job$List",
-    "water.Job",
-    "water.Key",
-    "water.Key$Ary",
-    "water.KVTest$Atomic2",
-    "water.KVTest$ByteHisto",
-    "water.KVTest$RemoteBitSet",
-    "water.Model",
-    "water.MRTask",
-    "water.NOPTask",
-    "water.parser.DParseTask$AtomicUnion",
     "water.parser.DParseTask",
+    "water.parser.DParseTask$AtomicUnion",
     "water.parser.Enum",
-    "water.parser.ParseDataset$2",
-    "water.parser.ParseDataset$3",
-    "water.parser.ParseDataset$Progress",
     "water.parser.ParseDataset",
-    "water.RReader$RModel",
+    "water.parser.ParseDataset$2",
+    "water.parser.ParseDataset$Progress",
+    "water.store.s3.MultipartUpload",
     "water.store.s3.MultipartUpload$1",
     "water.store.s3.MultipartUpload$Progress",
-    "water.store.s3.MultipartUpload",
-    "water.TaskGetKey",
-    "water.TaskInvalidateKey",
-    "water.TaskPutKey",
-    "water.TAtomic",
     "water.util.FileIntegrityChecker",
     "water.util.JStackCollectorTask",
-    "water.Value",
-    "water.ValueArray$Column",
-    "water.ValueArray",
-    "water.BitsCmpTask"
   };
   static private final HashMap<String,Integer> MAP = new HashMap();
   static {
@@ -206,6 +202,7 @@ public class TypeMap {
     File classes = new File(CLASSES);
     ArrayList<String> list = new ArrayList<String>();
     findClasses(classes, list);
+    Collections.sort(list);
     for(String s : list)
       System.out.println("    \"" + s + "\",");
   }
@@ -219,7 +216,7 @@ public class TypeMap {
         name = name.replace('\\', '/').replace('/', '.').replace(".class", "");
         try {
           Class c = Class.forName(name);
-          if(Iced.class.isAssignableFrom(c))
+          if(Freezable.class.isAssignableFrom(c))
             list.add(c.getName());
         } catch(Throwable _) {
           System.out.println("Skipped: " + name);
