@@ -52,6 +52,10 @@ public class ImportHdfs extends Request {
     json.add(FAILED, fail);
     Response r = Response.done(json);
     r.setBuilder(SUCCEEDED + "." + KEY, new KeyCellBuilder());
+    // Add quick link
+    if (succ.size() > 1)
+    r.addHeader("<div class='alert'>" //
+        + Parse.link("", "Parse all into hex format") + " </div>");
     return r;
   }
 }
