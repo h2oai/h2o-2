@@ -1,6 +1,6 @@
 package water.api;
 
-import water.DKV;
+import water.UKV;
 import water.Value;
 
 import com.google.gson.JsonObject;
@@ -13,7 +13,7 @@ public class Remove extends Request {
     Value v = _key.value();
 
     try {
-      DKV.remove(v._key);
+      UKV.remove(v._key);
     } catch( Exception e ) {
       return Response.error(e.getMessage());
     }
