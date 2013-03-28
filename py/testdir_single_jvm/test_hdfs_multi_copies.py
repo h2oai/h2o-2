@@ -32,7 +32,7 @@ class Basic(unittest.TestCase):
         h2b.browseTheCloud()
         # defaults to /datasets
         h2i.setupImportHdfs()
-        parseKey = h2o.nodes[0].parse('*copies*', key2='copies.hex', 
+        parseKey = h2o.nodes[0].parse('*covtype10x_copies*', key2='copies.hex', 
             exclude=None, header=None, timeoutSecs=600)
         print "*copies* regex to hdfs /datasets", 'parse time:', parseKey['response']['time']
         print "parse result:", parseKey['destination_key']
