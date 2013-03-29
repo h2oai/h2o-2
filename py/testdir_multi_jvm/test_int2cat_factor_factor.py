@@ -28,16 +28,6 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
 
     dsf.close()
 
-paramDict = {
-    'family': ['binomial'],
-    'lambda': [1.0E-5],
-    'max_iter': [50],
-    'weight': [1.0],
-    'thresholds': [0.5],
-    'num_cross_validation_folds': [2],
-    'beta_epsilon': [1.0E-4],
-    }
-
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -59,7 +49,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_many_cols_int2cat(self):
+    def test_int2cat_factor_factor(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (10000,  10, 'cA.hex', 100),
@@ -74,7 +64,9 @@ class Basic(unittest.TestCase):
         # we're going to do a special exec across all the columns to turn them into enums
         # including the duplicate of the output!
         exprList = [
-                '<keyX>= colSwap(<keyX>,<col1>,factor(<keyX>[<col1>]))',
+                '<keyX>= colSwap(<keyX>,<col1>,\
+                    factor(<keyX>[<col1>]))', 
+                ### '<keyX>= colSwap(<keyX>,<col1>,<keyX>[<col1>])',
             ]
 
         for (rowCount, colCount, key2, timeoutSecs) in tryList:
@@ -93,28 +85,10 @@ class Basic(unittest.TestCase):
 
             print "\nNow running the int 2 enum exec command across all input cols"
             colResultList = h2e.exec_expr_list_across_cols(None, exprList, key2, maxCol=colCount, 
-                timeoutSecs=30, incrementingResult=False)
+                timeoutSecs=90, incrementingResult=False)
             print "\nexec colResultList", colResultList
 
-            paramDict2 = {}
-            for k in paramDict:
-                paramDict2[k] = paramDict[k][0]
-            # since we add the output twice, it's no longer colCount-1
-            y = colCount
-            kwargs = {'y': y, 'max_iter': 50, 'case': 1}
-            kwargs.update(paramDict2)
-
-            start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
-            print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
-            # only col y-1 (next to last)doesn't get renamed in coefficients 
-            # due to enum/categorical expansion
-            print "y:", y 
-            h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
-
             if not h2o.browse_disable:
-                h2b.browseJsonHistoryAsUrlLastMatch("GLM")
-                time.sleep(3)
                 h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
                 time.sleep(3)
 

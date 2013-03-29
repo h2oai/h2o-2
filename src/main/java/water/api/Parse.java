@@ -31,7 +31,7 @@ public class Parse extends Request {
   // Multi-key parses are only allowed on compatible CSV files, and only 1 is
   // allowed to have headers.
   public class ExistingCSVKey extends TypeaheadInputText<PSetup> {
-    public ExistingCSVKey(String name) { super(TypeaheadKeysRequest.class, name, true); addPrerequisite(_excludeExpression);}
+    public ExistingCSVKey(String name) { super(TypeaheadKeysRequest.class, name, true); _excludeExpression.setRefreshOnChange();/*addPrerequisite(_excludeExpression)*/;}
 
     @Override protected PSetup parse(String input) throws IllegalArgumentException {
       Key k1 = Key.make(input);
