@@ -51,7 +51,7 @@ JAVAC_ARGS="-g
     -Xlint:-unchecked "
 JAR=`which jar`
 ZIP=`which zip`
-GIT=`which git`
+GIT=`which git || which false`
 CLASSES="${OUTDIR}/classes"
 VERSION_PROPERTIES="${CLASSES}/version.properties"
 
