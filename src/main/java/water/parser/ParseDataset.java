@@ -57,10 +57,16 @@ public final class ParseDataset extends Job {
     Value [] dataset = new Value[keys.length];
     for(int i = 0; i < keys.length; ++i)
       dataset[i] = DKV.get(keys[i]);
-
-    if( dataset[0].isHex() )
-      throw new IllegalArgumentException("This is a binary structured dataset; "
-          + "parse() only works on text files.");
+    if(setup == null)
+      setup = Inspect.csvGuessValue(dataset[0]);
+    if(keys.length > 1) {
+      CheckParseSetup tst = new CheckParseSetup(job,setup);
+      tst.invoke(keys);
+      if(!tst._res){
+        job.remove();
+        return;
+      }
+    }
 
     try {
       // try if it is XLS file first
@@ -111,7 +117,7 @@ public final class ParseDataset extends Job {
     return job;
   }
 
-  public static class ParseException extends Exception{
+  public static class ParseException extends RuntimeException{
     public ParseException(String msg){super(msg);}
   }
   public static void parseUncompressed(ParseDataset job, Value [] dataset, CustomParser.Type parserType, CsvParser.Setup setup) throws Exception{

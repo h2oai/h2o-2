@@ -144,6 +144,7 @@ public class TypeMap {
     "water.parser.ParseDataset$3",
     "water.parser.ParseDataset$Progress",
     "water.parser.ParseDataset",
+    "water.parser.CheckParseSetup",
     "water.RReader$RModel",
     "water.store.s3.MultipartUpload$1",
     "water.store.s3.MultipartUpload$Progress",
