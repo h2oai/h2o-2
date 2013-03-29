@@ -283,12 +283,13 @@ public final class ParseDataset extends Job {
 
   static final void onProgress(final Key chunk, final Key progress) {
     assert progress != null;
+    Value val = DKV.get(chunk);
+    if( val == null ) return;
+    final long len = val.length();
     new TAtomic<Progress>() {
       @Override public Progress atomic(Progress old) {
         if( old == null ) return null;
-        Value val = DKV.get(chunk);
-        if( val == null ) return null;
-        old._value += val.length();
+        old._value += len;
         return old;
       }
     }.fork(progress);
