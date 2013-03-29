@@ -55,8 +55,14 @@ public final class ParseDataset extends Job {
   // produce a structured dataset as a result.
   private static void parse(ParseDataset job, Key[] keys, CsvParser.Setup setup) {
     Value [] dataset = new Value[keys.length];
-    for(int i = 0; i < keys.length; ++i)
-      dataset[i] = DKV.get(keys[i]);
+    int j = 0;
+    for(int i = 0; i < keys.length; ++i){
+      Value v = DKV.get(keys[i]);
+      if(v.length() > 0) // skip nonzeros
+        dataset[j++] = v;
+    }
+    if(j < dataset.length) // remove the nulls
+      dataset = Arrays.copyOf(dataset, j);
     if(setup == null)
       setup = Inspect.csvGuessValue(dataset[0]);
     if(keys.length > 1) {

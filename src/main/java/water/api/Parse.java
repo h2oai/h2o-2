@@ -54,7 +54,7 @@ public class Parse extends Request {
         if(exclude != null && exclude.matcher(ks).matches())
           continue;
         Value v2 = DKV.get(key);  // Look at it
-        if( v2 == null  || input.endsWith(".xlsx") || input.endsWith(".xls") )
+        if( v2 == null  || input.endsWith(".xlsx") || input.endsWith(".xls") || v2.length() == 0)
           continue;           // Missed key (racing deletes) or XLS files
         if(v2.isHex())// filter common mistake such as *filename* with filename.hex already present
           continue;
