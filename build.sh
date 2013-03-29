@@ -51,7 +51,9 @@ JAVAC_ARGS="-g
     -Xlint:-unchecked "
 JAR=`which jar`
 ZIP=`which zip`
+GIT=`which git || which false`
 CLASSES="${OUTDIR}/classes"
+VERSION_PROPERTIES="${CLASSES}/version.properties"
 
 # Clean up also /tmp content (/tmp/h2o-temp-*, /tmp/File*tmp)
 # Note: /tmp is specific for Linux.
@@ -98,6 +100,12 @@ function build_classes() {
         $SRC/jsr166y/*java \
         $TESTSRC/*/*java \
         $TESTSRC/*/*/*java
+
+    cp -r ${RESOURCES}/* "${CLASSES}"
+cat >> "$VERSION_PROPERTIES" <<EOF
+h2o.git.version=$($GIT rev-parse HEAD 2>/dev/null )
+h2o.git.branch=$($GIT rev-parse --abbrev-ref HEAD 2>/dev/null )
+EOF
 }
 
 function build_initializer() {
@@ -119,11 +127,11 @@ function build_jar() {
     cd ..
     # include H2O classes
     "$JAR" uf ${JAR_FILE} -C "${CLASSES}"   .
-    "$JAR" uf ${JAR_FILE} -C "${RESOURCES}" .
     "$ZIP" -qd ${JAR_FILE} javassist.jar 
     echo "copying jar file... ${JAR_FILE} to ${OUTDIR}/h2o-${JAR_TIME}.jar"
     cp ${JAR_FILE} ${OUTDIR}/h2o-${JAR_TIME}.jar
 }
+
 function test_py() {
     echo "Running junit tests..."
     python py/junit.py
