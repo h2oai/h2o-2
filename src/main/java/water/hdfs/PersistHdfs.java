@@ -1,7 +1,7 @@
 package water.hdfs;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
+import java.net.SocketTimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
@@ -141,19 +141,27 @@ public abstract class PersistHdfs {
       try {
         FileSystem fs = FileSystem.get(p.toUri(), CONF);
         s = fs.open(p);
-        ByteStreams.skipFully(s, skip);
-        ByteStreams.readFully(s, b);
-        // temporary disabled: s.readFully(skip,b,0,b.length);
+        s.readFully(skip,b,0,b.length);
         assert v.isPersisted();
-
         return b;
+      // Explicitely ignore the following exceptions but
+      // fail on the other
+      } catch (EOFException e) {
+        ignoreAndWait(e);
+      } catch (SocketTimeoutException e) {
+        ignoreAndWait(e);
       } catch (IOException e) {
-        H2O.ignore(e, "Get exception, retrying...");
-        try { Thread.sleep(500); } catch (InterruptedException ie) {}
+        H2O.ignore(e);
+        return null;
       } finally {
         try { if( s != null ) s.close(); } catch( IOException e ) {}
       }
     }
+  }
+
+  private static void ignoreAndWait(final Exception e) {
+    H2O.ignore(e, "[h2o,hdfs] Hit exception, retrying...");
+    try { Thread.sleep(500); } catch (InterruptedException ie) {}
   }
 
   // Store Value v to disk.
