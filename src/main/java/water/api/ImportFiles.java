@@ -63,6 +63,9 @@ public class ImportFiles extends Request {
         };
       }
     });
+    if (succ.size() > 1)
+      r.addHeader("<div class='alert'>" //
+          + Parse.link("*"+_path.value()+"*", "Parse all into hex format") + " </div>");
     return r;
   }
 }
