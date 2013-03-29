@@ -58,8 +58,14 @@ public final class H2O {
   public static final RuntimeException unimpl() { return new RuntimeException("unimplemented"); }
 
   // Central /dev/null for ignored exceptions
-  public static final void ignore(Throwable e) { System.err.println("Exception ignored:"); e.printStackTrace(); }
-  public static final void ignore(Throwable e, String msg) { System.err.println("Exception ignored: " + msg); e.printStackTrace(); }
+  public static final void ignore(Throwable e) { ignore(e,"[h2o] Problem ignored: "); }
+  public static final void ignore(Throwable e, String msg) {
+    StackTraceElement[] stack = e.getStackTrace();
+    StringBuffer sb = new StringBuffer();
+    sb.append(msg).append('\n').append(e).append('\n');
+    for (StackTraceElement el : stack) { sb.append("\tat "); sb.append(el.toString().replaceFirst("Exception", "Problem" )); sb.append('\n'); }
+    System.err.println(sb);
+  }
 
   // --------------------------------------------------------------------------
   // The Current Cloud. A list of all the Nodes in the Cloud. Changes if we

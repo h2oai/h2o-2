@@ -5,13 +5,14 @@ import java.net.SocketTimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.FileSystem;
 
 import water.*;
 import water.api.Constants;
 
 import com.google.common.base.Strings;
-import com.google.common.io.ByteStreams;
-import com.google.gson.*;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 
 /** Persistence backend for HDFS */
 public abstract class PersistHdfs {
@@ -144,15 +145,14 @@ public abstract class PersistHdfs {
         s.readFully(skip,b,0,b.length);
         assert v.isPersisted();
         return b;
-      // Explicitely ignore the following exceptions but
-      // fail on the other
+      // Explicitly ignore the following exceptions but
+      // fail on the rest IOExceptions
       } catch (EOFException e) {
         ignoreAndWait(e);
       } catch (SocketTimeoutException e) {
         ignoreAndWait(e);
       } catch (IOException e) {
-        H2O.ignore(e);
-        return null;
+        ignoreAndWait(e);
       } finally {
         try { if( s != null ) s.close(); } catch( IOException e ) {}
       }
@@ -160,7 +160,7 @@ public abstract class PersistHdfs {
   }
 
   private static void ignoreAndWait(final Exception e) {
-    H2O.ignore(e, "[h2o,hdfs] Hit exception, retrying...");
+    H2O.ignore(e, "[h2o,hdfs] Hit problem, retrying...");
     try { Thread.sleep(500); } catch (InterruptedException ie) {}
   }
 

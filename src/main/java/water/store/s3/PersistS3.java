@@ -5,11 +5,10 @@ import java.net.SocketTimeoutException;
 import java.util.Arrays;
 import java.util.Properties;
 
-import org.apache.hadoop.fs.FileSystem;
-
 import water.*;
 
-import com.amazonaws.*;
+import com.amazonaws.ClientConfiguration;
+import com.amazonaws.Protocol;
 import com.amazonaws.auth.PropertiesCredentials;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
@@ -103,18 +102,18 @@ public abstract class PersistS3 {
     while(true) {             // Loop, in case we get premature EOF's
       try {
         s = getObjectForKey(k, skip, v._max).getObjectContent();
-        ByteStreams.readFully(s, b); // delegate work to Google (it reads the byte buffer in a cycle)
+        ByteStreams.readFully(s, b); // delegate work to Google (it reads the byte buffer in a cycle as we did)
         assert v.isPersisted();
         return b;
-      // Explicitely ignore the following exceptions but
-      // fail on the other
+      // Explicitly ignore the following exceptions but
+      // fail on the rest IOExceptions
       } catch (EOFException e) {
         ignoreAndWait(e);
       } catch (SocketTimeoutException e) {
         ignoreAndWait(e);
       } catch (IOException e) {
-        H2O.ignore(e);
-        return null;
+        // Catch the exception but ignore it as well.
+        ignoreAndWait(e);
       } finally {
         try { if( s != null ) s.close(); } catch( IOException e ) {}
       }
@@ -122,7 +121,7 @@ public abstract class PersistS3 {
   }
 
   private static void ignoreAndWait(final Exception e) {
-    H2O.ignore(e, "[h2o,s3] Hit exception, retrying...");
+    H2O.ignore(e, "[h2o,s3] Hit a S3 problem, retrying...");
     try { Thread.sleep(500); } catch (InterruptedException ie) {}
   }
 
