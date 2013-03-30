@@ -74,7 +74,8 @@ class Basic(unittest.TestCase):
         # we're going to do a special exec across all the columns to turn them into enums
         # including the duplicate of the output!
         exprList = [
-                '<keyX>= colSwap(<keyX>,<col1>,factor(<keyX>[<col1>]))',
+                ### '<keyX>= colSwap(<keyX>,<col1>,factor(<keyX>[<col1>]))',
+                '<keyX>= colSwap(<keyX>,<col1>,<keyX>[<col1>])',
             ]
 
         for (rowCount, colCount, key2, timeoutSecs) in tryList:
@@ -93,7 +94,7 @@ class Basic(unittest.TestCase):
 
             print "\nNow running the int 2 enum exec command across all input cols"
             colResultList = h2e.exec_expr_list_across_cols(None, exprList, key2, maxCol=colCount, 
-                timeoutSecs=30, incrementingResult=False)
+                timeoutSecs=90, incrementingResult=False)
             print "\nexec colResultList", colResultList
 
             paramDict2 = {}
