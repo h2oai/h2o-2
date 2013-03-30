@@ -417,8 +417,8 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
 def upload_jar_to_remote_hosts(hosts, slow_connection=False):
     def prog(sofar, total):
         # output is bad for jenkins. 
-        # ok to turn this off for all cases where we don't want a browser
-        if not browse_disable:
+        username = getpass.getuser()
+        if username!='jenkins':
             p = int(10.0 * sofar / total)
             sys.stdout.write('\rUploading jar [%s%s] %02d%%' % ('#'*p, ' '*(10-p), 100*sofar/total))
             sys.stdout.flush()
