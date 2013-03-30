@@ -11,6 +11,7 @@ import water.*;
 import water.api.Constants;
 
 import com.google.common.base.Strings;
+import com.google.common.io.ByteStreams;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
@@ -142,7 +143,12 @@ public abstract class PersistHdfs {
       try {
         FileSystem fs = FileSystem.get(p.toUri(), CONF);
         s = fs.open(p);
-        s.readFully(skip,b,0,b.length);
+        // NOTE:
+        // The following line degrades performance of HDFS load from S3 API: s.readFully(skip,b,0,b.length);
+        // Google API's simple seek has better performance
+        // Load of 300MB file via Google API ~ 14sec, via s.readFully ~ 5min (under the same condition)
+        ByteStreams.skipFully(s, skip);
+        ByteStreams.readFully(s, b);
         assert v.isPersisted();
         return b;
       // Explicitly ignore the following exceptions but
@@ -160,7 +166,7 @@ public abstract class PersistHdfs {
   }
 
   private static void ignoreAndWait(final Exception e) {
-    H2O.ignore(e, "[h2o,hdfs] Hit problem, retrying...");
+    H2O.ignore(e, "[h2o,hdfs] Hit HDFS reset problem, retrying...");
     try { Thread.sleep(500); } catch (InterruptedException ie) {}
   }
 
