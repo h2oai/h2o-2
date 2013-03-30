@@ -734,9 +734,9 @@ class InPlaceColSwap extends Function {
     // value array
     ValueArray ary = new ValueArray(result._key, oldAry.numRows(), off, cols);
     DKV.put(result._key, ary);
-    DKV.write_barrier();
     ColSwapTask task = new ColSwapTask(result._key, oldKey, newKey, oldCol, newCol);
     task.invoke(result._key);
+    DKV.write_barrier();
     return result;
   }
 }
