@@ -1274,10 +1274,14 @@ class H2O(object):
         if self.random_udp_drop or random_udp_drop:
             args += ['--random_udp_drop']
 
+        if self.enable_h2o_log:
+            args += ['--log']
+
         return args
 
     def __init__(self, 
-        use_this_ip_addr=None, port=54321, capture_output=True, sigar=False, use_debugger=None, classpath=None,
+        use_this_ip_addr=None, port=54321, capture_output=True, sigar=False, 
+        use_debugger=None, classpath=None,
         use_hdfs=False, 
         # hdfs_version="cdh4", hdfs_name_node="192.168.1.151", 
         hdfs_version="cdh3u5", hdfs_name_node="192.168.1.176", 
@@ -1287,6 +1291,7 @@ class H2O(object):
         use_home_for_ice=False, node_id=None, username=None,
         random_udp_drop=False,
         redirect_import_folder_to_s3_path=None,
+        enable_h2o_log=True, # default to True
         ):
  
         self.redirect_import_folder_to_s3_path = redirect_import_folder_to_s3_path
@@ -1331,6 +1336,7 @@ class H2O(object):
         # have nodes[0] remember (0 always exists)
         self.sandbox_error_was_reported = False
         self.random_udp_drop = random_udp_drop
+        self.enable_h2o_log = enable_h2o_log
 
     def __str__(self):
         return '%s - http://%s:%d/' % (type(self), self.http_addr, self.port)
