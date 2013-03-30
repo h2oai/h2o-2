@@ -37,7 +37,7 @@ class Basic(unittest.TestCase):
         timeoutSecs = 200
         ### importS3Result = h2i.setupImportS3()
         # note S3 URI thru HDFS is not typical.
-        URI = "S3://home-0xdiag-datasets"
+        URI = "s3://home-0xdiag-datasets"
         importHDFSResult = h2o.nodes[0].import_hdfs(URI)
 # "succeeded": [
 #     {
