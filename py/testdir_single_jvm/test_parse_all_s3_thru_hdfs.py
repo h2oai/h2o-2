@@ -46,12 +46,12 @@ class Basic(unittest.TestCase):
 # "succeeded": [
 #     {
 #      "file": "billion_rows.csv.gz", 
-#      "key": "S3://home-0xdiag-datasets/billion_rows.csv.gz"
+#      "key": "s3n://home-0xdiag-datasets/billion_rows.csv.gz"
 #    }, 
         S3FullList = importHDFSResult['succeeded']
         print "S3FullList:", h2o.dump_json(S3FullList)
         # error if none? 
-        self.assertGreater(len(S3FullList,8),"Didn't see more than 8 files in S3?")
+        self.assertGreater(len(S3FullList),8,"Didn't see more than 8 files in S3?")
 
         if (1==0):
             S3List = random.sample(S3FullList,8)
@@ -59,8 +59,8 @@ class Basic(unittest.TestCase):
             S3List = S3FullList
 
         for s in S3List:
-            S3Key = S3List['key']
-            S3Filename = S3List['file']
+            S3Key = s['key']
+            S3Filename = s['file']
 
             # creates csvFilename.hex from file in hdfs dir 
             print "Loading S3 key: ", S3Key, 'thru HDFS'
@@ -70,7 +70,6 @@ class Basic(unittest.TestCase):
             print S3Filename, 'parse time:', parseKey['response']['time']
             print "parse result:", parseKey['destination_key']
 
-            print "\n" + S#Filename
             start = time.time()
             sys.stdout.flush() 
 
