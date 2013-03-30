@@ -27,6 +27,7 @@ public class TypeMap {
     "hex.GLMGrid$1",
     "hex.GLMGrid$2",
     "hex.GLMGrid$GLMModels",
+    "hex.GLMGrid$GridTask",
     "hex.GLMGrid",
     "hex.Histogram",
     "hex.Histogram$Bins",
