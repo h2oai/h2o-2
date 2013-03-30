@@ -494,7 +494,7 @@ public final class H2O {
     public String keepice; // Do not delete ice on startup
     public String soft = null; // soft launch for demos
     public String random_udp_drop = null; // test only, randomly drop udp incoming
-    public String log_headers = null; // add machine name, PID and time to logs
+    public String log = null; // add machine name, PID and time to logs
   }
   public static boolean IS_SYSTEM_RUNNING = false;
 
@@ -510,7 +510,7 @@ public final class H2O {
     arguments.extract(OPT_ARGS);
     ARGS = arguments.toStringArray();
 
-    if(OPT_ARGS.log_headers != null)
+    if(OPT_ARGS.log != null)
       Log.initHeaders();
 
     startLocalNode(); // start the local node
