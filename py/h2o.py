@@ -462,6 +462,10 @@ def check_sandbox_for_errors():
             regex2 = re.compile('Caused',re.IGNORECASE)
             regex3 = re.compile('warn|info', re.IGNORECASE)
 
+            # there are many hdfs/apache messages with error in the text. treat as warning if they have '[WARN]'
+            # i.e. they start with:
+            # [WARN]
+
             # if we started due to "warning" ...then if we hit exception, we don't want to stop
             # we want that to act like a new beginning. Maybe just treat "warning" and "info" as
             # single line events? that's better
@@ -478,7 +482,8 @@ def check_sandbox_for_errors():
 
                     # don't detect these class loader info messags as errors
                     #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
-                    foundBad = regex1.search(line) and not (('error rate' in line) or ('[Loaded ' in line))
+                    foundBad = regex1.search(line) and not (
+                        ('error rate' in line) or ('[Loaded ' in line) or ('[WARN]' in line))
 
                 if (printing==0 and foundBad):
                     printing = 1

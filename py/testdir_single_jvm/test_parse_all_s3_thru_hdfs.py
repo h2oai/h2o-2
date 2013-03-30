@@ -61,6 +61,10 @@ class Basic(unittest.TestCase):
         for s in S3List:
             S3Key = s['key']
             S3Filename = s['file']
+            # there is some non-file key names returned? s3n metadata?
+            # only use the keys with csv in their name
+            if 'csv' not in S3Key:
+                continue
 
             # creates csvFilename.hex from file in hdfs dir 
             print "Loading S3 key: ", S3Key, 'thru HDFS'
