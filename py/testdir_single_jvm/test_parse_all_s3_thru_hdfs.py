@@ -20,7 +20,11 @@ class Basic(unittest.TestCase):
             h2o.build_cloud(1)
         else:
             # all hdfs info is done thru the hdfs_config michal's ec2 config sets up?
-            h2o_hosts.build_cloud_with_hosts(1)
+            h2o_hosts.build_cloud_with_hosts(1, 
+            # this is for our amazon ec hdfs
+            # see https://github.com/0xdata/h2o/wiki/H2O-and-S3
+            hdfs_name_node='10.78.14.235:9000',
+            hdfs_version='0.20.2')
 
     @classmethod
     def tearDownClass(cls):
@@ -37,7 +41,7 @@ class Basic(unittest.TestCase):
         timeoutSecs = 200
         ### importS3Result = h2i.setupImportS3()
         # note S3 URI thru HDFS is not typical.
-        URI = "s3://home-0xdiag-datasets"
+        URI = "s3n://home-0xdiag-datasets"
         importHDFSResult = h2o.nodes[0].import_hdfs(URI)
 # "succeeded": [
 #     {

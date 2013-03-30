@@ -1256,6 +1256,7 @@ class H2O(object):
         if self.use_hdfs:
             # NOTE: was leaving space. should work, but try =
             args += [
+                # it's fine if hdfs_name has a ":9000" port or something too
                 '-hdfs hdfs://' + self.hdfs_name_node,
                 '-hdfs_version=' + self.hdfs_version, 
             ]
