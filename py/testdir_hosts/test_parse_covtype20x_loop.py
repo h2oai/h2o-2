@@ -20,7 +20,7 @@ class Basic(unittest.TestCase):
         importFolderPath = "/home/0xdiag/datasets"
         trialMax = 3
         for tryHeap in [4,12]:
-            print "\n", tryHeap,"GB heap, 1 jvm per host, import folder," + \
+            print "\n", tryHeap,"GB heap, 1 jvm per host, import folder,", \
                 "then loop parsing 'covtype20x.data' to unique keys"
             h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap)
             h2i.setupImportFolder(None, importFolderPath)
@@ -33,6 +33,14 @@ class Basic(unittest.TestCase):
                 elapsed = time.time() - start
                 print "Trial #", trial, "completed in", elapsed, "seconds.", \
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+
+                print "Deleting key in H2O so we get it from S3 (if ec2) or nfs again.", \
+                      "Otherwise it would just parse the cached key."
+                storeView = h2o.nodes[0].store_view()
+                ### print "storeView:", h2o.dump_json(storeView)
+                print "Removing", parseKey['source_key']
+                removeKeyResult = h2o.nodes[0].remove_key(key=parseKey['source_key'])
+                ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
 
             # sticky ports?
             h2o.tear_down_cloud()
