@@ -74,8 +74,8 @@ class Basic(unittest.TestCase):
         # we're going to do a special exec across all the columns to turn them into enums
         # including the duplicate of the output!
         exprList = [
-                ### '<keyX>= colSwap(<keyX>,<col1>,factor(<keyX>[<col1>]))',
-                '<keyX>= colSwap(<keyX>,<col1>,<keyX>[<col1>])',
+                '<keyX>= colSwap(<keyX>,<col1>,factor(<keyX>[<col1>]))',
+                ### '<keyX>= colSwap(<keyX>,<col1>,<keyX>[<col1>])',
             ]
 
         for (rowCount, colCount, key2, timeoutSecs) in tryList:
