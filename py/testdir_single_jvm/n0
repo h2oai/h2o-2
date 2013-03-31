@@ -1,4 +1,3 @@
-./n0.doit test1.py
 ./n0.doit test_badchars.py
 ./n0.doit test_billion_rows.py
 ./n0.doit test_cols_enum_multi_import.py
