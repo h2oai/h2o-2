@@ -35,7 +35,7 @@ class Basic(unittest.TestCase):
         # under this s3n "path"
         csvFilename = "syn_datasets/*_10000x200*"
 
-        trialMax = 3
+        trialMax = 1
         timeoutSecs = 500
         URI = "s3n://home-0xdiag-datasets"
         s3nKey = URI + "/" + csvFilename
@@ -60,13 +60,19 @@ class Basic(unittest.TestCase):
             print "Trial #", trial, "completed in", elapsed, "seconds.", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
-            print "Deleting key in H2O so we get it from S3 (if ec2) or nfs again.", \
+            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            print "\n" + key2 + \
+                "    num_rows:", "{:,}".format(inspect['num_rows']), \
+                "    num_cols:", "{:,}".format(inspect['num_cols'])
+
+            print "Deleting key in H2O so we get it from s3n (if ec2) or nfs again.", \
                   "Otherwise it would just parse the cached key."
             storeView = h2o.nodes[0].store_view()
             ### print "storeView:", h2o.dump_json(storeView)
-            print "Removing", s3nKey
-            removeKeyResult = h2o.nodes[0].remove_key(key=s3nKey)
-            ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
+            print "BROKE: we can't delete keys with a pattern match yet..this fails"
+            print "So we only do 1 trial and don't delete"
+            # print "Removing", s3nKey
+            # removeKeyResult = h2o.nodes[0].remove_key(key=s3nKey)
 
 
 if __name__ == '__main__':

@@ -63,7 +63,7 @@ class Basic(unittest.TestCase):
             s3nFilename = s['file']
             # there is some non-file key names returned? s3n metadata?
             # only use the keys with csv in their name
-            if ('csv' not in s3nKey) or ('syn_dataset' in S3nKey):
+            if ('csv' not in s3nKey) or ('syn_dataset' in s3nKey):
                 continue
 
             # creates csvFilename.hex from file in hdfs dir 
