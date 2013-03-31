@@ -27,7 +27,8 @@ public class TestUtil {
   @AfterClass
   public static void checkLeakedKeys() {
     Job[] jobs = Job.all();
-    assert jobs.length == 0 : Arrays.toString(jobs);  // No outstanding jobs
+    for(Job job : jobs)
+      assert job._endTime != 0 : job;  // No pending job
     DKV.remove(Job.LIST);         // Remove all keys
     DKV.write_barrier();
     int leaked_keys = H2O.store_size() - _initial_keycnt;

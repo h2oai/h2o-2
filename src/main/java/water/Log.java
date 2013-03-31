@@ -87,6 +87,20 @@ public final class Log {
       stream.println(s);
   }
 
+  public static void log(File file, PrintStream stream) throws Exception {
+    BufferedReader reader = new BufferedReader(new FileReader(file));
+    try {
+      for( ;; ) {
+        String line = reader.readLine();
+        if( line == null )
+          break;
+        stream.println(line);
+      }
+    } finally {
+      reader.close();
+    }
+  }
+
   private static final class Wrapper extends PrintStream {
     Wrapper(PrintStream parent) {
       super(parent);

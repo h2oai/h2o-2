@@ -34,7 +34,9 @@ DEPENDENCIES="${JAR_ROOT}/jama/*${SEP}${JAR_ROOT}/apache/*${SEP}${JAR_ROOT}/juni
 
 DEFAULT_HADOOP_VERSION="1.0.0"
 OUTDIR="target"
+JAR_FILE="${OUTDIR}/h2o.jar"
 
+JAVA=`which java`||echo 'Missing java, please install jdk'
 JAVAC=`which javac`||echo 'Missing javac, please install jdk'
 
 # need bootclasspath to point to jdk1.6 rt.jar bootstrap classes
@@ -68,15 +70,7 @@ LOCAL_PROPERTIES_FILE="./build.local.conf"
 
 function clean() {
     echo "cleaning..."
-    rm -fr ${CLASSES}
-    rm -fr ${JAR_ROOT}/h2o_core.jar
-    rm -fr ${JAR_ROOT}/water
-    rm -fr ${JAR_ROOT}/hex
     rm -fr ${OUTDIR}
-    # Also remove prior build system files, for a smooth transition for people 
-    # who try to build without doing a clean wipe
-    rm -fr ${JAR_ROOT}/init
-    rm -fr ${JAR_ROOT}/hexbase_impl.jar
     if [ "$WIPE_TMP" = "true" ]; then
         echo " - wiping tmp..."
         rm -fr /tmp/h2o-temp-*
@@ -111,7 +105,6 @@ function build_initializer() {
 
 function build_jar() {
     JAR_TIME=`date "+%H.%M.%S-%m%d%y"`
-    local JAR_FILE="${OUTDIR}/h2o.jar"
     echo "creating jar file... ${JAR_FILE}"
     # include all libraries
     cd ${JAR_ROOT}
@@ -124,9 +117,9 @@ function build_jar() {
     echo "copying jar file... ${JAR_FILE} to ${OUTDIR}/h2o-${JAR_TIME}.jar"
     cp ${JAR_FILE} ${OUTDIR}/h2o-${JAR_TIME}.jar
 }
-function test_py() {
-    echo "Running junit tests..."
-    python py/junit.py
+function junit() {
+    echo "running JUnit tests..."
+    $JAVA -cp ${JAR_FILE} water.Boot -mainClass water.JUnitRunner
 }
 
 clean
@@ -136,4 +129,4 @@ if [ "$1" = "compile" ]; then exit 0; fi
 build_initializer
 build_jar
 if [ "$1" = "build" ]; then exit 0; fi
-test_py
+junit

@@ -483,6 +483,9 @@ public final class H2O {
     public int port; // set_cloud_name_and_mcast()
     public String ip; // Named IP4/IP6 address instead of the default
     public String ice_root; // ice root directory
+    public String hdfs; // HDFS backend
+    public String hdfs_version; // version of the filesystem
+    public String hdfs_config; // configuration file of the HDFS
     public String aws_credentials; // properties file for aws credentials
     public String keepice; // Do not delete ice on startup
     public String soft = null; // soft launch for demos
@@ -768,6 +771,17 @@ public final class H2O {
     File f = new File(fname);
     if( !f.exists() ) return null; // No flat file
     HashSet<H2ONode> h2os = new HashSet<H2ONode>();
+    List<FlatFileEntry> list = parseFlatFile(f);
+    for(FlatFileEntry entry : list)
+      h2os.add(H2ONode.intern(entry.inet, entry.port+1));// use the UDP port here
+    return h2os;
+  }
+  public static class FlatFileEntry {
+    public InetAddress inet;
+    public int port;
+  }
+  public static List<FlatFileEntry> parseFlatFile( File f ) {
+    List<FlatFileEntry> list = new ArrayList<FlatFileEntry>();
     BufferedReader br = null;
     int port = DEFAULT_PORT;
     try {
@@ -805,11 +819,14 @@ public final class H2O {
             Log.die("Invalid port #: "+portStr);
           }
         }
-        h2os.add(H2ONode.intern(inet, port+1));// use the UDP port here
+        FlatFileEntry entry = new FlatFileEntry();
+        entry.inet = inet;
+        entry.port = port;
+        list.add(entry);
       }
     } catch( Exception e ) { Log.die(e.toString()); }
     finally { Closeables.closeQuietly(br); }
-    return h2os;
+    return list;
   }
 
   static void initializePersistence() {

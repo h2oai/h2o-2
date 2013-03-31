@@ -1,6 +1,5 @@
 package water;
 
-import java.io.File;
 import java.util.*;
 
 public class TypeMap {
@@ -197,31 +196,21 @@ public class TypeMap {
     return GOLD[id].getClass();
   }
 
+  //
+
   public static void main(String[] args) {
-    Log._dontDie = true; // Ignore class load error, e.g. Request
-    File classes = new File(CLASSES);
     ArrayList<String> list = new ArrayList<String>();
-    findClasses(classes, list);
+    for(String name : Boot.getClasses()) {
+      try {
+        Class c = Class.forName(name);
+        if(Freezable.class.isAssignableFrom(c))
+          list.add(c.getName());
+      } catch(Throwable _) {
+        System.out.println("Skipped: " + name);
+      }
+    }
     Collections.sort(list);
     for(String s : list)
       System.out.println("    \"" + s + "\",");
-  }
-  private static final String CLASSES = "target/classes";
-  private static void findClasses(File folder, ArrayList<String> list) {
-    for( File file : folder.listFiles() ) {
-      if( file.isDirectory() )
-        findClasses(file, list);
-      else if( file.getPath().endsWith(".class") ) {
-        String name = file.getPath().substring(CLASSES.length() + 1);
-        name = name.replace('\\', '/').replace('/', '.').replace(".class", "");
-        try {
-          Class c = Class.forName(name);
-          if(Freezable.class.isAssignableFrom(c))
-            list.add(c.getName());
-        } catch(Throwable _) {
-          System.out.println("Skipped: " + name);
-        }
-      }
-    }
   }
 }
