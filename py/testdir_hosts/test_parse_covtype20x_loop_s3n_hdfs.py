@@ -13,7 +13,8 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        h2o.tear_down_cloud()
+        # the node state is gone when we tear down the cloud, so pass the ignore here also.
+        h2o.tear_down_cloud(sandbox_ignore_errors=True)
 
     def test_import_covtype20x_parse_loop(self):
         csvFilename = "covtype20x.data"
@@ -32,7 +33,7 @@ class Basic(unittest.TestCase):
             # don't raise exception if we find something bad in h2o stdout/stderr?
             h2o.nodes[0].sandbox_ignore_errors = True
 
-            timeoutSecs=500
+            timeoutSecs = 500
             URI = "s3n://home-0xdiag-datasets"
             s3nKey = URI + "/" + csvFilename
             for trial in range(trialMax):
@@ -64,8 +65,8 @@ class Basic(unittest.TestCase):
                 removeKeyResult = h2o.nodes[0].remove_key(key=s3nKey)
                 ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
 
-            # sticky ports?
             h2o.tear_down_cloud()
+            # sticky ports? wait a bit.
             time.sleep(5)
 
 if __name__ == '__main__':

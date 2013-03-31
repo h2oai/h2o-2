@@ -438,7 +438,7 @@ def upload_jar_to_remote_hosts(hosts, slow_connection=False):
         hosts[0].upload_file(f, progress=prog)
         hosts[0].push_file_to_remotes(f, hosts[1:])
 
-def check_sandbox_for_errors():
+def check_sandbox_for_errors(sandbox_ignore_errors=False):
     # dont' have both tearDown and tearDownClass report the same found error
     # only need the first
     if nodes and nodes[0].sandbox_error_report():
@@ -538,20 +538,22 @@ def check_sandbox_for_errors():
 
             # can build a cloud that ignores all sandbox things that normally fatal the test
             # kludge, test will set this directly if it wants, rather than thru build_cloud
-            # parameter
-            if nodes and nodes[0].sandbox_ignore_errors:
+            # parameter. 
+            # we need the sandbox_ignore_errors, for the test teardown_cloud..the state 
+            # disappears!
+            if sandbox_ignore_errors or (nodes and nodes[0].sandbox_ignore_errors):
                 pass
             else:
                 raise Exception(python_test_name + emsg1 + emsg2)
 
-def tear_down_cloud(node_list=None):
+def tear_down_cloud(node_list=None, sandbox_ignore_errors=False):
     if not node_list: node_list = nodes
     try:
         for n in node_list:
             n.terminate()
             verboseprint("tear_down_cloud n:", n)
     finally:
-        check_sandbox_for_errors()
+        check_sandbox_for_errors(sandbox_ignore_errors=sandbox_ignore_errors)
         node_list[:] = []
 
 # don't need any more? 
