@@ -32,7 +32,7 @@ class Basic(unittest.TestCase):
             # don't raise exception if we find something bad in h2o stdout/stderr?
             h2o.nodes[0].sandbox_ignore_errors = True
 
-            timeoutSecs=300
+            timeoutSecs=500
             URI = "s3n://home-0xdiag-datasets"
             s3nKey = URI + "/" + csvFilename
             for trial in range(trialMax):
