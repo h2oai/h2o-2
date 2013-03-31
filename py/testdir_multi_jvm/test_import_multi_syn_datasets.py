@@ -30,14 +30,22 @@ class Basic(unittest.TestCase):
         print "Doesn't put anything in syn_datasets. When run with import folder redirected"
         print "to import S3, there is a syn_datasets with 100 files"
         print "FIX! When run locally, I should have some multi-files in", importFolderPath, "/syn_datasets?" 
-
         timeoutSecs = 500
+        if h2o.nodes[0].redirect_import_folder_to_s3_path:
+            csvFilenameAll = [
+                # FIX! ..just folder doesn't appear to work. add regex
+                # need a destination_key...h2o seems to use the regex if I don't provide one
+                ### "syn_datasets/*", 
+                "syn_datasets/*_10000x200*", 
+                ]
+        else:
+            csvFilenameAll = [
+                # FIX! ..just folder doesn't appear to work. add regex
+                # need a destination_key...h2o seems to use the regex if I don't provide one
+                ### "syn_datasets/*", 
+                "syn_datasets/*", 
+                ]
 
-        csvFilenameAll = [
-            # FIX! ..just folder doesn't appear to work. add regex
-            # need a destination_key...h2o seems to use the regex if I don't provide one
-            "syn_datasets/*", 
-            ]
         # csvFilenameList = random.sample(csvFilenameAll,1)
         csvFilenameList = csvFilenameAll
 
