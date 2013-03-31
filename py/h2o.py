@@ -535,8 +535,14 @@ def check_sandbox_for_errors():
             emsg2 = "".join(errLines)
             if nodes: 
                 nodes[0].sandbox_error_report(True)
-            raise Exception(python_test_name + emsg1 + emsg2)
 
+            # can build a cloud that ignores all sandbox things that normally fatal the test
+            # kludge, test will set this directly if it wants, rather than thru build_cloud
+            # parameter
+            if nodes and nodes[0].sandbox_ignore_errors:
+                pass
+            else:
+                raise Exception(python_test_name + emsg1 + emsg2)
 
 def tear_down_cloud(node_list=None):
     if not node_list: node_list = nodes
@@ -1341,8 +1347,11 @@ class H2O(object):
         # don't want multiple reports from tearDown and tearDownClass
         # have nodes[0] remember (0 always exists)
         self.sandbox_error_was_reported = False
+        self.sandbox_ignore_errors = False
+
         self.random_udp_drop = random_udp_drop
         self.enable_h2o_log = enable_h2o_log
+
 
     def __str__(self):
         return '%s - http://%s:%d/' % (type(self), self.http_addr, self.port)
