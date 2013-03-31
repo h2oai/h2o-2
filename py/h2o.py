@@ -328,16 +328,16 @@ def decide_if_localhost():
     # First, look for local hosts file
     hostsFile = default_hosts_file()
     if os.path.exists(hostsFile): 
-        verboseprint("* Using config JSON file {0}.".format(hostsFile))
+        print "* Using matching username config JSON file discovered in this directory: {0}.".format(hostsFile)
         return False
     if config_json:
-        verboseprint("* Using config JSON:", config_json)
+        print "* Using config JSON you passed as -cj argument:", config_json
         return False
     if 'hosts' in os.getcwd():
-        verboseprint("* Using the username's config json")
+        print "Since you're in a *hosts* directory, we're using a config json"
+        print "* Expecting default username's config json here. Better exist!"
         return False
-    verboseprint( "Launching local cloud...")
-
+    print "No config json used. Launching local cloud..."
     return True
 
 # node_count is per host if hosts is specified.
