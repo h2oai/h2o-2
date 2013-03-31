@@ -1,7 +1,7 @@
+./n0.doit test1.py
 ./n0.doit test_badchars.py
-./n0.doit test_import_and_delete_keys.py
-
 ./n0.doit test_billion_rows.py
+./n0.doit test_cols_enum_multi_import.py
 ./n0.doit test_exec_covtype_cols.py
 ./n0.doit test_exec_covtype_rand1.py
 ./n0.doit test_exec_operators.py
@@ -46,15 +46,20 @@
 ./n0.doit test_GLM_twovalues.py
 ./n0.doit test_GLM_umass.py
 ./n0.doit test_GLM_with_logit_result_1.py
+./n0.doit test_hdfs_multi_bad_csv.py
+./n0.doit test_hdfs_multi_copies.py
 ./n0.doit test_hdfs.py
 ./n0.doit test_hdfs_store.py
 ./n0.doit test_hex-443.py
+./n0.doit test_import_and_delete_keys.py
 ./n0.doit test_KMeans_basic.py
 ./n0.doit test_KMeans_hastie_shuffle.py
 ./n0.doit test_many_cols_enum.py
 ./n0.doit test_many_cols.py
 ./n0.doit test_mixed_causes_NA.py
 ./n0.doit test_parity_128_4_2_quad.py
+./n0.doit test_parse_covtype20x_s3n_thru_hdfs.py
+./n0.doit test_parse_csvs_s3n_thru_hdfs.py
 ./n0.doit test_parse_many_cases.py
 ./n0.doit test_parse_many_doublesp.py
 ./n0.doit test_parse_small_many.py
