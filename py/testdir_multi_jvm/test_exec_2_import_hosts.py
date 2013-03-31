@@ -62,10 +62,12 @@ class Basic(unittest.TestCase):
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
         if localhost:
+            maxTrials = 200
             csvFilenameAll = [
                 ("covtype.data", "cA", 15),
             ]
         else:
+            maxTrials = 20
             csvFilenameAll = [
                 ("covtype.data", "cA", 15),
                 ("covtype20x.data", "cD", 60),
@@ -89,7 +91,7 @@ class Basic(unittest.TestCase):
             h2e.exec_zero_list(zeroList)
             # we use colX+1 so keep it to 53
             h2e.exec_expr_list_rand(lenNodes, exprList, key2, 
-                maxCol=53, maxRow=400000, maxTrials=200, timeoutSecs=timeoutSecs)
+                maxCol=53, maxRow=400000, maxTrials=maxTrials, timeoutSecs=timeoutSecs)
 
 
 if __name__ == '__main__':

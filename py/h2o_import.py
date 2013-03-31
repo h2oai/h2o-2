@@ -5,7 +5,8 @@ def setupImportS3(node=None, bucket='home-0xdiag-datasets'):
     if not bucket: raise Exception('No S3 bucket specified')
     if not node: node = h2o.nodes[0]
     importS3Result = node.import_s3(bucket)
-    print h2o.dump_json(importS3Result)
+    # too many files now to print
+    ### print h2o.dump_json(importS3Result)
     return importS3Result
 
 # assumes you call setupImportS3 first

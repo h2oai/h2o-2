@@ -46,7 +46,9 @@
 ./n0.doit test_import_covtype_parse_2jvm.py
 ./n0.doit test_import_covtype_parse_3jvm.py
 ./n0.doit test_import_covtype_parse_4jvm.py
+./n0.doit test_import_multi_syn_datasets.py
 ./n0.doit test_inspect.py
+./n0.doit test_int2cat_factor_factor.py
 ./n0.doit test_int2cat_nested.py
 ./n0.doit test_int2cat.py
 ./n0.doit test_json_browse_both_exec.py

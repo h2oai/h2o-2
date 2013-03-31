@@ -58,6 +58,11 @@ public abstract class PersistIce {
     }
   }
 
+  public static FileWriter logFile() {
+    try { return new FileWriter(iceRoot+"/h2o.log"); }
+    catch( IOException ioe ) { return null; }
+  }
+
   // file implementation -------------------------------------------------------
 
   // the filename can be either byte encoded if it starts with % followed by

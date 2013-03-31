@@ -1,8 +1,7 @@
 package water.api;
 
 import com.google.gson.JsonObject;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.*;
 import java.util.regex.Pattern;
 import water.*;
 import water.parser.*;
@@ -32,7 +31,8 @@ public class Parse extends Request {
   // Multi-key parses are only allowed on compatible CSV files, and only 1 is
   // allowed to have headers.
   public class ExistingCSVKey extends TypeaheadInputText<PSetup> {
-    public ExistingCSVKey(String name) { super(TypeaheadKeysRequest.class, name, true); addPrerequisite(_excludeExpression);}
+    public ExistingCSVKey(String name) { super(TypeaheadKeysRequest.class, name, true); _excludeExpression.setRefreshOnChange();/*addPrerequisite(_excludeExpression)*/;}
+
     @Override protected PSetup parse(String input) throws IllegalArgumentException {
       Key k1 = Key.make(input);
       Value v1 = DKV.get(k1);
@@ -54,8 +54,10 @@ public class Parse extends Request {
         if(exclude != null && exclude.matcher(ks).matches())
           continue;
         Value v2 = DKV.get(key);  // Look at it
-        if( v2 == null  || input.endsWith(".xlsx") || input.endsWith(".xls") )
+        if( v2 == null  || input.endsWith(".xlsx") || input.endsWith(".xls") || v2.length() == 0)
           continue;           // Missed key (racing deletes) or XLS files
+        if(v2.isHex())// filter common mistake such as *filename* with filename.hex already present
+          continue;
         keys.add(key);        // Add to list
       }
 
@@ -66,18 +68,44 @@ public class Parse extends Request {
       Key hKey = keys.get(0);
       Value v = DKV.get(hKey);
       CsvParser.Setup setup = Inspect.csvGuessValue(v);
-      if( setup._data == null || setup._data[0].length == 0 ) {
-        throw new Error("Illegal format of the data! (First file does not parse)");
-      }
-
+      if( setup._data == null || setup._data[0].length == 0 )
+        throw new IllegalArgumentException("I cannot figure out this file; I only handle common CSV formats: "+hKey);
       return new PSetup(keys,setup);
     }
+
+    private final String keyRow(Key k){
+      return "<tr><td>" + k + "</td></tr>\n";
+    }
+
+    @Override
+    public String queryComment(){
+      if(!specified())return "";
+      PSetup p = value();
+      StringBuilder sb = new StringBuilder();
+      if(p._keys.size() <= 10){
+        for(Key k:p._keys)
+          sb.append(keyRow(k));
+      } else {
+        int n = p._keys.size();
+        for(int i = 0; i < 5; ++i)
+          sb.append(keyRow(p._keys.get(i)));
+        sb.append("<tr><td>...</td></tr>\n");
+        for(int i = 5; i > 0; --i)
+          sb.append(keyRow(p._keys.get(n-i)));
+      }
+      return
+          "<div class='alert'><b> Found " + p._keys.size() +  " files matching the expression.</b><br/>\n" +
+          "<table>\n" +
+           sb.toString() +
+          "</table></div>";
+    }
+
     private Pattern makePattern(String input) {
       // Reg-Ex pattern match all keys, like file-globbing.
       // File-globbing: '?' allows an optional single character, regex needs '.?'
       // File-globbing: '*' allows any characters, regex needs '*?'
       // File-globbing: '\' is normal character in windows, regex needs '\\'
-      String patternStr = input.replace("?",".?").replace("*",".*?").replace("\\","\\\\");
+      String patternStr = input.replace("?",".?").replace("*",".*?").replace("\\","\\\\").replace("(","\\(").replace(")","\\)");
       Pattern p = Pattern.compile(patternStr);
       return p;
     }

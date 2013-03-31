@@ -3,7 +3,7 @@ import random, sys, time
 sys.path.extend(['.','..','py'])
 import json
 
-import h2o, h2o_cmd
+import h2o, h2o_cmd, h2o_hosts
 import h2o_kmeans, h2o_import as h2i
 
 def define_params():

@@ -328,16 +328,16 @@ def decide_if_localhost():
     # First, look for local hosts file
     hostsFile = default_hosts_file()
     if os.path.exists(hostsFile): 
-        verboseprint("* Using config JSON file {0}.".format(hostsFile))
+        print "* Using matching username config JSON file discovered in this directory: {0}.".format(hostsFile)
         return False
     if config_json:
-        verboseprint("* Using config JSON:", config_json)
+        print "* Using config JSON you passed as -cj argument:", config_json
         return False
     if 'hosts' in os.getcwd():
-        verboseprint("* Using the username's config json")
+        print "Since you're in a *hosts* directory, we're using a config json"
+        print "* Expecting default username's config json here. Better exist!"
         return False
-    verboseprint( "Launching local cloud...")
-
+    print "No config json used. Launching local cloud..."
     return True
 
 # node_count is per host if hosts is specified.
@@ -417,8 +417,8 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
 def upload_jar_to_remote_hosts(hosts, slow_connection=False):
     def prog(sofar, total):
         # output is bad for jenkins. 
-        # ok to turn this off for all cases where we don't want a browser
-        if not browse_disable:
+        username = getpass.getuser()
+        if username!='jenkins':
             p = int(10.0 * sofar / total)
             sys.stdout.write('\rUploading jar [%s%s] %02d%%' % ('#'*p, ' '*(10-p), 100*sofar/total))
             sys.stdout.flush()
@@ -438,7 +438,7 @@ def upload_jar_to_remote_hosts(hosts, slow_connection=False):
         hosts[0].upload_file(f, progress=prog)
         hosts[0].push_file_to_remotes(f, hosts[1:])
 
-def check_sandbox_for_errors():
+def check_sandbox_for_errors(sandbox_ignore_errors=False):
     # dont' have both tearDown and tearDownClass report the same found error
     # only need the first
     if nodes and nodes[0].sandbox_error_report():
@@ -462,6 +462,10 @@ def check_sandbox_for_errors():
             regex2 = re.compile('Caused',re.IGNORECASE)
             regex3 = re.compile('warn|info', re.IGNORECASE)
 
+            # there are many hdfs/apache messages with error in the text. treat as warning if they have '[WARN]'
+            # i.e. they start with:
+            # [WARN]
+
             # if we started due to "warning" ...then if we hit exception, we don't want to stop
             # we want that to act like a new beginning. Maybe just treat "warning" and "info" as
             # single line events? that's better
@@ -471,16 +475,15 @@ def check_sandbox_for_errors():
                 # JIT reporting looks like this..don't detect that as an error
                 printSingleWarning = False
                 foundBad = False
-                foundNOPTaskCnt = 0
                 if not ' bytes)' in line:
                     # no multiline FSM on this 
-                    printSingleWarning = (regex3.search(line) and not ('[Loaded ' in line)) or \
-                        ('Non-member packets' in line)
+                    printSingleWarning = regex3.search(line) and not ('[Loaded ' in line)
                     #   13190  280      ###        sun.nio.ch.DatagramChannelImpl::ensureOpen (16 bytes)
 
                     # don't detect these class loader info messags as errors
                     #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
-                    foundBad = regex1.search(line) and not (('error rate' in line) or ('[Loaded ' in line))
+                    foundBad = regex1.search(line) and not (
+                        ('error rate' in line) or ('[Loaded ' in line) or ('[WARN]' in line))
 
                 if (printing==0 and foundBad):
                     printing = 1
@@ -497,13 +500,7 @@ def check_sandbox_for_errors():
                     # Update: Assertion can be followed by Exception. 
                     # Make sure we keep printing for a min of 4 lines
                     foundAt = re.match(r'[\t ]+at ',line)
-                    # on the NOPTask stack trace, we get two Assertion errors and would like to see them both
-                    # looks like min of 10 lines looks like it will cover it
-                    # but also maybe just count NOPTask
-                    if re.match(r'NOPTask',line):
-                        foundNOPTaskCnt += 1
-
-                    if foundBad and (lines>10) and not (foundCaused or foundAt or foundNOPTaskCnt==1):
+                    if foundBad and (lines>10) and not (foundCaused or foundAt):
                         printing = 2 
 
                 if (printing==1):
@@ -538,17 +535,25 @@ def check_sandbox_for_errors():
             emsg2 = "".join(errLines)
             if nodes: 
                 nodes[0].sandbox_error_report(True)
-            raise Exception(python_test_name + emsg1 + emsg2)
 
+            # can build a cloud that ignores all sandbox things that normally fatal the test
+            # kludge, test will set this directly if it wants, rather than thru build_cloud
+            # parameter. 
+            # we need the sandbox_ignore_errors, for the test teardown_cloud..the state 
+            # disappears!
+            if sandbox_ignore_errors or (nodes and nodes[0].sandbox_ignore_errors):
+                pass
+            else:
+                raise Exception(python_test_name + emsg1 + emsg2)
 
-def tear_down_cloud(node_list=None):
+def tear_down_cloud(node_list=None, sandbox_ignore_errors=False):
     if not node_list: node_list = nodes
     try:
         for n in node_list:
             n.terminate()
             verboseprint("tear_down_cloud n:", n)
     finally:
-        check_sandbox_for_errors()
+        check_sandbox_for_errors(sandbox_ignore_errors=sandbox_ignore_errors)
         node_list[:] = []
 
 # don't need any more? 
@@ -1264,6 +1269,7 @@ class H2O(object):
         if self.use_hdfs:
             # NOTE: was leaving space. should work, but try =
             args += [
+                # it's fine if hdfs_name has a ":9000" port or something too
                 '-hdfs hdfs://' + self.hdfs_name_node,
                 '-hdfs_version=' + self.hdfs_version, 
             ]
@@ -1282,10 +1288,14 @@ class H2O(object):
         if self.random_udp_drop or random_udp_drop:
             args += ['--random_udp_drop']
 
+        if self.enable_h2o_log:
+            args += ['--log']
+
         return args
 
     def __init__(self, 
-        use_this_ip_addr=None, port=54321, capture_output=True, sigar=False, use_debugger=None, classpath=None,
+        use_this_ip_addr=None, port=54321, capture_output=True, sigar=False, 
+        use_debugger=None, classpath=None,
         use_hdfs=False, 
         # hdfs_version="cdh4", hdfs_name_node="192.168.1.151", 
         hdfs_version="cdh3u5", hdfs_name_node="192.168.1.176", 
@@ -1295,6 +1305,7 @@ class H2O(object):
         use_home_for_ice=False, node_id=None, username=None,
         random_udp_drop=False,
         redirect_import_folder_to_s3_path=None,
+        enable_h2o_log=True, # default to True
         ):
  
         self.redirect_import_folder_to_s3_path = redirect_import_folder_to_s3_path
@@ -1338,7 +1349,11 @@ class H2O(object):
         # don't want multiple reports from tearDown and tearDownClass
         # have nodes[0] remember (0 always exists)
         self.sandbox_error_was_reported = False
+        self.sandbox_ignore_errors = False
+
         self.random_udp_drop = random_udp_drop
+        self.enable_h2o_log = enable_h2o_log
+
 
     def __str__(self):
         return '%s - http://%s:%d/' % (type(self), self.http_addr, self.port)

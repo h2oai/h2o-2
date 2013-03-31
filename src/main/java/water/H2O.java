@@ -60,8 +60,14 @@ public final class H2O {
   public static final RuntimeException unimpl() { return new RuntimeException("unimplemented"); }
 
   // Central /dev/null for ignored exceptions
-  public static final void ignore(Throwable e) { System.err.println("Exception ignored:"); e.printStackTrace(); }
-  public static final void ignore(Throwable e, String msg) { System.err.println("Exception ignored: " + msg); e.printStackTrace(); }
+  public static final void ignore(Throwable e) { ignore(e,"[h2o] Problem ignored: "); }
+  public static final void ignore(Throwable e, String msg) {
+    StackTraceElement[] stack = e.getStackTrace();
+    StringBuffer sb = new StringBuffer();
+    sb.append(msg).append('\n').append(e).append('\n');
+    for (StackTraceElement el : stack) { sb.append("\tat "); sb.append(el.toString().replaceFirst("Exception", "Problem" )); sb.append('\n'); }
+    System.err.println(sb);
+  }
 
   // --------------------------------------------------------------------------
   // The Current Cloud. A list of all the Nodes in the Cloud. Changes if we
@@ -490,7 +496,7 @@ public final class H2O {
     public String keepice; // Do not delete ice on startup
     public String soft = null; // soft launch for demos
     public String random_udp_drop = null; // test only, randomly drop udp incoming
-    public String log_headers = null; // add machine name, PID and time to logs
+    public String log = null; // add machine name, PID and time to logs
   }
   public static boolean IS_SYSTEM_RUNNING = false;
 
@@ -506,7 +512,7 @@ public final class H2O {
     arguments.extract(OPT_ARGS);
     ARGS = arguments.toStringArray();
 
-    if(OPT_ARGS.log_headers != null)
+    if(OPT_ARGS.log != null)
       Log.initHeaders();
 
     startLocalNode(); // start the local node

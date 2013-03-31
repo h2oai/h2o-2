@@ -7,10 +7,7 @@ import hex.DLSM.ADMMSolver;
 
 import java.util.*;
 
-import jsr166y.CountedCompleter;
-
 import water.*;
-import water.H2O.H2OCountedCompleter;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -39,76 +36,84 @@ public class GLMGrid extends Job {
     _glmp.checkResponseCol(_ary._cols[xs[xs.length-1]], new ArrayList<String>()); // ignore warnings here, they will be shown for each mdoel anyways
   }
 
-  private class GridTask extends H2OCountedCompleter {
-    final int _aidx;
-    GridTask(int aidx) { _aidx = aidx; }
+  // Update dest for a new model. In a static function, to avoid closing
+  // over the 'this' pointer of a GLMGrid and thus serializing it as part
+  // of the atomic update.
+  private void update(GLMModel m, final int idx, final long runTime, Futures fs) {
+    final Model model = m;
+    final Key jobKey = self();
+    fs.add(new TAtomic<GLMModels>() {
+      final Key _job = jobKey;
+      boolean done = false;
+      @Override
+      public GLMModels atomic(GLMModels old) {
+        old._ms[idx] = model._selfKey;
+        done = ++old._count == old._ms.length;
+        old._runTime = Math.max(runTime,old._runTime);
+        return old;
+      }
+      @Override public void onSuccess() {
+        // we're done, notify
+        if(done) DKV.remove(_job);
+      };
+    }.fork(dest()));
+  }
 
+  private static class GridTask extends DTask<GridTask> {
+    final int _aidx;
+    GLMGrid   _job;
+    Key       _aryKey;
+    GridTask(GLMGrid job, int aidx) {
+      _aidx = aidx;
+      _job = job;
+      _aryKey = _job._ary._key;
+      assert _aryKey != null;
+    }
     @Override
     public void compute2() {
+      final int N = _job._lambdas.length;
       double [] beta = null;
       Futures fs = new Futures();
-      try {
-        for( int l1 = 1; l1 <= _lambdas.length; l1++ ) {
-          if(cancelled())
-            break;
-          GLMModel m = do_task(beta,_lambdas.length-l1,_aidx); // Do a step; get a model
-          beta = m._normBeta.clone();
-          update(dest(), m, (_lambdas.length-l1) * _alphas.length + _aidx, System.currentTimeMillis() - _startTime,fs);
-        }
-      fs.blockForPending();
-      }finally {
-        tryComplete();
+      ValueArray ary = DKV.get(_aryKey).get();
+      for( int l1 = 1; l1 <= _job._lambdas.length; l1++ ) {
+        if(_job.cancelled())
+          break;
+        GLMModel m = DGLM.buildModel(DGLM.getData(ary, _job._xs, null, true), new ADMMSolver(_job._lambdas[N-l1], _job._alphas[_aidx]), _job._glmp,beta);
+        if( _job._xfold <= 1 )
+          m.validateOn(ary, null, _job._ts);
+        else
+          m.xvalidate(ary, _job._xfold, _job._ts);
+        beta = m._normBeta.clone();
+        _job.update(m, (_job._lambdas.length-l1) + _aidx * _job._lambdas.length, System.currentTimeMillis() - _job._startTime,fs);
       }
+      fs.blockForPending();
     }
 
+    @Override
+    public GridTask invoke(H2ONode client){
+      compute2();
+      // don't send input data back!
+      _job = null;
+      _aryKey = null;
+      return this;
+    }
   }
   @Override
   public void start() {
     super.start();
     UKV.put(dest(), new GLMModels(_lambdas.length * _alphas.length));
-    final int N = _alphas.length;
-    H2O.submitTask(new H2OCountedCompleter() {
-      @Override
-      public void compute2() {
-        setPendingCount(N);
-        for( int a = 0; a < _alphas.length; a++ ){
-          GridTask t = new GridTask(a);
-          t.setCompleter(this);
-          H2O.submitTask(t);
-        }
-        tryComplete(); // This task is done
-      }
-      @Override public void onCompletion(CountedCompleter caller){remove();}
-    });
+    final int cloudsize = H2O.CLOUD._memary.length;
+    int myId = H2O.SELF.index();
+    for( int a = 0; a < _alphas.length; a++ ){
+      GridTask t = new GridTask(this,a);
+      int nodeId = (myId+a)%cloudsize;
+      if(nodeId == myId)
+        H2O.submitTask(t);
+      else
+        RPC.call(H2O.CLOUD._memary[nodeId],t);
+    }
   }
 
-  // Update dest for a new model. In a static function, to avoid closing
-  // over the 'this' pointer of a GLMGrid and thus serializing it as part
-  // of the atomic update.
-  private static void update(Key dest, GLMModel m, final int idx, final long runTime, Futures fs) {
-    final Model model = m;
-    fs.add(new TAtomic<GLMModels>() {
-      @Override
-      public GLMModels atomic(GLMModels old) {
-        old._ms[idx] = model._selfKey;
-        old._count++;
-        old._runTime = Math.max(runTime,old._runTime);
-        return old;
-      }
-    }.fork(dest));
-  }
-
-  // ---
-  // Do a single step (blocking).
-  // In this case, run 1 GLM model.
-  private GLMModel do_task(double [] beta, int l, int alpha) {
-    GLMModel m = DGLM.buildModel(DGLM.getData(_ary, _xs, null, true), new ADMMSolver(_lambdas[l], _alphas[alpha]), _glmp,beta);
-    if( _xfold <= 1 )
-      m.validateOn(_ary, null, _ts);
-    else
-      m.xvalidate(_ary, _xfold, _ts);
-    return m;
-  }
 
   public static class GLMModels extends Iced implements Progress {
     // The computed GLM models: product of length of lamda1s,lambda2s,rhos,alphas

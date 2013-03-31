@@ -31,8 +31,8 @@ class Basic(unittest.TestCase):
         h2b.browseTheCloud()
         # defaults to /datasets
         h2i.setupImportHdfs()
-        parseKey = h2o.nodes[0].parse('*csv*', key2='random_csv.hex', 
-            exclude=None, header=None, timeoutSecs=200)
+        parseKey = h2o.nodes[0].parse('*airlines_all*csv', key2='random_csv.hex', 
+            exclude=None, header=None, timeoutSecs=600)
         print "*csv* regex to hdfs /datasets", 'parse time:', parseKey['response']['time']
         print "parse result:", parseKey['destination_key']
         sys.stdout.flush() 

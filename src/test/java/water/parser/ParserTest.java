@@ -1,11 +1,9 @@
 package water.parser;
 
-import static org.junit.Assert.assertEquals;
-import java.io.IOException;
-import java.util.Arrays;
-import org.junit.*;
+import org.junit.Assert;
+import org.junit.Test;
+
 import water.*;
-import water.parser.ParseDataset;
 
 public class ParserTest extends TestUtil {
 

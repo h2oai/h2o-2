@@ -1,6 +1,7 @@
 
 import h2o, h2o_cmd, sys
 import time, random, re
+import h2o_browse as h2b
 # Trying to share some functions useful for creating random exec expressions
 # and executing them
 # these lists are just included for example
@@ -179,9 +180,13 @@ def exec_expr_list_across_cols(lenNodes, exprList, key2,
             else: # assume it's a re-assign to self
                 resultKey = key2
 
-            execResultInspect = exec_expr(h2o.nodes[execNode], execExpr,
-                resultKey, timeoutSecs)
-            ### print "\nexecResult:", execResultInspect
+            # kbn
+
+            execResultInspect = exec_expr(h2o.nodes[execNode], execExpr, resultKey, timeoutSecs)
+            ### print "\nexecResult:", h2o.dump_json(execResultInspect)
+            execResultKey = execResultInspect[0]['key']
+            resultInspect = h2o_cmd.runInspect(None, execResultKey)
+            ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
 
             # min is keyword. shouldn't use.
             if incrementingResult: # a col will have a single min

@@ -28,17 +28,12 @@ public final class ParseDataset extends Job {
     super("Parse", dest);
     //if( keys.length > 1 ) throw H2O.unimpl();
     Value dataset = DKV.get(keys[0]);
-    _total = dataset.length() * Pass.values().length;
-    _progress = Key.make(UUID.randomUUID().toString(), (byte) 0, Key.JOB);
-    UKV.put(_progress, new Progress());
-  }
-
-  private ParseDataset(Key dest, Value [] dataset) {
-    super("Parse", dest);
-    long t = dataset[0].length();
-    for(int i = 1; i < dataset.length; ++i)
-      t += dataset[i].length();
-    _total = t * Pass.values().length;
+    long total = dataset.length() * Pass.values().length;
+    for(int i = 1; i < keys.length; ++i){
+      dataset = DKV.get(keys[i]);
+      total += dataset.length() * Pass.values().length;
+    }
+    _total = total;
     _progress = Key.make(UUID.randomUUID().toString(), (byte) 0, Key.JOB);
     UKV.put(_progress, new Progress());
   }
@@ -60,12 +55,24 @@ public final class ParseDataset extends Job {
   // produce a structured dataset as a result.
   private static void parse(ParseDataset job, Key[] keys, CsvParser.Setup setup) {
     Value [] dataset = new Value[keys.length];
-    for(int i = 0; i < keys.length; ++i)
-      dataset[i] = DKV.get(keys[i]);
-
-    if( dataset[0].isHex() )
-      throw new IllegalArgumentException("This is a binary structured dataset; "
-          + "parse() only works on text files.");
+    int j = 0;
+    for(int i = 0; i < keys.length; ++i){
+      Value v = DKV.get(keys[i]);
+      if(v.length() > 0) // skip nonzeros
+        dataset[j++] = v;
+    }
+    if(j < dataset.length) // remove the nulls
+      dataset = Arrays.copyOf(dataset, j);
+    if(setup == null)
+      setup = Inspect.csvGuessValue(dataset[0]);
+    if(keys.length > 1) {
+      CheckParseSetup tst = new CheckParseSetup(job,setup);
+      tst.invoke(keys);
+      if(!tst._res){
+        job.remove();
+        return;
+      }
+    }
 
     try {
       // try if it is XLS file first
@@ -116,7 +123,7 @@ public final class ParseDataset extends Job {
     return job;
   }
 
-  public static class ParseException extends Exception{
+  public static class ParseException extends RuntimeException{
     public ParseException(String msg){super(msg);}
   }
   private static void parseUncompressed(ParseDataset job, Value [] dataset, CustomParser.Type parserType, CsvParser.Setup setup) throws Exception{
@@ -281,12 +288,13 @@ public final class ParseDataset extends Job {
 
   static final void onProgress(final Key chunk, final Key progress) {
     assert progress != null;
+    Value val = DKV.get(chunk);
+    if( val == null ) return;
+    final long len = val.length();
     new TAtomic<Progress>() {
       @Override public Progress atomic(Progress old) {
         if( old == null ) return null;
-        Value val = DKV.get(chunk);
-        if( val == null ) return null;
-        old._value += val.length();
+        old._value += len;
         return old;
       }
     }.fork(progress);

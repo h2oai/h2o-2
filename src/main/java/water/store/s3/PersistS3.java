@@ -1,6 +1,8 @@
 package water.store.s3;
 
+import java.io.EOFException;
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.util.Arrays;
 import java.util.Properties;
 
@@ -11,6 +13,7 @@ import com.amazonaws.Protocol;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.*;
+import com.google.common.io.ByteStreams;
 
 /** Persistence backend for S3 */
 public abstract class PersistS3 {
@@ -91,32 +94,31 @@ public abstract class PersistS3 {
     // hit with a bogus resource limit (H2O doing a parse looks like a DDOS to
     // Amazon S3).
     S3ObjectInputStream s = null;
-    try {
-      int off = 0;              //
-      while(true) {             // Loop, in case we get premature EOF's
-        if( s == null ) {       // (re)Start S3 reading
-          s = getObjectForKey(k, skip, v._max).getObjectContent();
-          off = 0;              // Restart from scratch
-        }
-        int len = s.read(b,off,v._max-off);
-        if( len == -1 ) {       // Read reports EOF???
-          try { s.close(); } catch( IOException e ) { }
-          s = null;             // Reset S3 reading
-          // Also, try to avoid slamming an already busy S3.
-          try { Thread.sleep(500); } catch( InterruptedException ie ) {}
-        } else {                // Else it was a good read
-          off += len;
-          if( off >= v._max ) break;
-        }
+
+    while(true) {             // Loop, in case we get premature EOF's
+      try {
+        s = getObjectForKey(k, skip, v._max).getObjectContent();
+        ByteStreams.readFully(s, b); // delegate work to Google (it reads the byte buffer in a cycle as we did)
+        assert v.isPersisted();
+        return b;
+      // Explicitly ignore the following exceptions but
+      // fail on the rest IOExceptions
+      } catch (EOFException e) {
+        ignoreAndWait(e);
+      } catch (SocketTimeoutException e) {
+        ignoreAndWait(e);
+      } catch (IOException e) {
+        // Catch the exception but ignore it as well.
+        ignoreAndWait(e);
+      } finally {
+        try { if( s != null ) s.close(); } catch( IOException e ) {}
       }
-      assert v.isPersisted();
-      return b;
-    } catch( IOException e ) { // Broken disk / other errors?
-      H2O.ignore(e);
-      return null;
-    } finally {
-      try { if( s != null ) s.close(); } catch( IOException e ) { }
     }
+  }
+
+  private static void ignoreAndWait(final Exception e) {
+    H2O.ignore(e, "[h2o,s3] Hit the S3 reset problem, waiting and retrying...");
+    try { Thread.sleep(500); } catch (InterruptedException ie) {}
   }
 
   // Store Value v to disk.
