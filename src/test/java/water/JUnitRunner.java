@@ -43,6 +43,7 @@ public class JUnitRunner {
     nodes.add(master);
 
     File out = null, err = null, sandbox = new File("sandbox");
+    sandbox.mkdirs();
     for( int i = 0; i < nodes.size(); i++ ) {
       out = File.createTempFile("junit-" + i + "-out-", null, sandbox);
       err = File.createTempFile("junit-" + i + "-err-", null, sandbox);
