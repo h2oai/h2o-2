@@ -127,7 +127,7 @@ function build_jar() {
 
 function junit() {
     echo "running JUnit tests..."
-    $JAVA -cp ${JAR_FILE} water.Boot -mainClass water.JUnitRunner
+    "$JAVA" -cp ${JAR_FILE} water.Boot -mainClass water.JUnitRunner
 }
 
 clean
