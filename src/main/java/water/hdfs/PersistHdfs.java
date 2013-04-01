@@ -6,6 +6,7 @@ import java.net.SocketTimeoutException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.s3.S3Exception;
 
 import water.*;
 import water.api.Constants;
@@ -153,12 +154,10 @@ public abstract class PersistHdfs {
         return b;
       // Explicitly ignore the following exceptions but
       // fail on the rest IOExceptions
-      } catch (EOFException e) {
-        ignoreAndWait(e);
-      } catch (SocketTimeoutException e) {
-        ignoreAndWait(e);
-      } catch (IOException e) {
-        ignoreAndWait(e);
+      } catch (EOFException e)           { ignoreAndWait(e);
+      } catch (SocketTimeoutException e) { ignoreAndWait(e);
+      } catch (S3Exception e)            { ignoreAndWait(e);
+      } catch (IOException e)            { ignoreAndWait(e);
       } finally {
         try { if( s != null ) s.close(); } catch( IOException e ) {}
       }

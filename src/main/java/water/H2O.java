@@ -64,8 +64,10 @@ public final class H2O {
   public static final void ignore(Throwable e, String msg) {
     StackTraceElement[] stack = e.getStackTrace();
     StringBuffer sb = new StringBuffer();
-    sb.append(msg).append('\n').append(e).append('\n');
-    for (StackTraceElement el : stack) { sb.append("\tat "); sb.append(el.toString().replaceFirst("Exception", "Problem" )); sb.append('\n'); }
+    // The replacement of Exception -> Problem is required by our testing framework which would report
+    // error if it sees "exception" in the node output
+    sb.append(msg).append('\n').append(e.toString().replace("Exception", "Problem")).append('\n');
+    for (StackTraceElement el : stack) { sb.append("\tat "); sb.append(el.toString().replace("Exception", "Problem" )); sb.append('\n'); }
     System.err.println(sb);
   }
 
