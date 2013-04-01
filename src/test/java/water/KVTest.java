@@ -192,7 +192,7 @@ public class KVTest extends TestUtil {
   @Test public void testLinearRegression() {
     Key fkey = load_test_file("smalldata/cars.csv");
     Key okey = Key.make("cars.hex");
-    ParseDataset.parse(okey,DKV.get(fkey));
+    ParseDataset.parse(okey,new Key[]{fkey});
     UKV.remove(fkey);
     ValueArray va = DKV.get(okey).get();
     // Compute LinearRegression between columns 2 & 3

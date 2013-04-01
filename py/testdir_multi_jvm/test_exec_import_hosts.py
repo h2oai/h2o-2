@@ -69,16 +69,16 @@ class Basic(unittest.TestCase):
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
         if localhost:
+            maxTrials = 200
             csvFilenameAll = [
-                ("covtype.data", "cA", 5),
-                ("covtype.data", "cB", 5),
+                ("covtype.data", "cA", 15),
+                ("covtype.data", "cB", 15),
             ]
         else:
+            maxTrials = 20
             csvFilenameAll = [
-                ("covtype.data", "cA", 5),
-                ("covtype.data", "cB", 5),
-                ("covtype20x.data", "cC", 50),
-                ("covtype20x.data", "cD", 50),
+                ("covtype.data", "cA", 15),
+                ("covtype20x.data", "cC", 60),
             ]
 
         ### csvFilenameList = random.sample(csvFilenameAll,1)
@@ -96,7 +96,7 @@ class Basic(unittest.TestCase):
             print "\n" + csvFilename
             h2e.exec_zero_list(zeroList)
             h2e.exec_expr_list_rand(lenNodes, exprList, key2, 
-                maxCol=54, maxRow=400000, maxTrials=100, timeoutSecs=timeoutSecs)
+                maxCol=54, maxRow=400000, maxTrials=maxTrials, timeoutSecs=timeoutSecs)
 
 if __name__ == '__main__':
     h2o.unit_main()

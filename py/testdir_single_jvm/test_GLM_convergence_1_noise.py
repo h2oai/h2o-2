@@ -22,9 +22,9 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
         rowTotal = 0
         # do jumpahead per row, so the combination of rows plus col dice rolls
         # doesn't allow prediction of the RNG so well? (an issue with 500 col datasets)
-        r1.jumpahead(922377089)   
-        r2.jumpahead(488915466)
-        r3.jumpahead(743976213)
+        ### r1.jumpahead(922377089)   
+        ### r2.jumpahead(488915466)
+        ### r3.jumpahead(743976213)
 
         # use r3 to randomly inject 5% noise. noise is complement
         for j in range(colCount):

@@ -5,7 +5,8 @@ def setupImportS3(node=None, bucket='home-0xdiag-datasets'):
     if not bucket: raise Exception('No S3 bucket specified')
     if not node: node = h2o.nodes[0]
     importS3Result = node.import_s3(bucket)
-    print h2o.dump_json(importS3Result)
+    # too many files now to print
+    ### print h2o.dump_json(importS3Result)
     return importS3Result
 
 # assumes you call setupImportS3 first
@@ -15,7 +16,7 @@ def parseImportS3File(node=None,
 
     if not node: node = h2o.nodes[0]
     if not csvFilename: raise Exception('parseImportS3File: No csvFilename')
-    s3Key= "s3:" + path + "/" + csvFilename
+    s3Key= "s3://" + path + "/" + csvFilename
 
     # We like the short parse key2 name. 
     # We don't drop anything from csvFilename, unlike H2O default
@@ -28,6 +29,8 @@ def parseImportS3File(node=None,
     print "Waiting for the slow parse of the file:", csvFilename
     parseKey = node.parse(s3Key, myKey2, 
         timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs)
+    # a hack so we know what the source_key was, bask at the caller
+    parseKey['source_key'] = s3Key
     print "\nParse result:", parseKey
     return parseKey
 
@@ -71,13 +74,12 @@ def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
         parseKey = parseImportS3File(node, csvFilename, path, myKey2,
             timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs)
     else:
-        csvPathnameForH2O = "nfs:/" + path + "/" + csvFilename
-        # we're getting a http timeout on the parse progress poll of big parses. 
-        # try to increase timeout with pollTimeoutSecs.
-        # don't want it big normally..don't want to wait after fail for simple tests.
-        parseKey = node.parse(csvPathnameForH2O, myKey2, 
+        importKey = "nfs:/" + path + "/" + csvFilename
+        parseKey = node.parse(importKey, myKey2, 
             timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs)
-    print "\nParse result:", parseKey
+        # a hack so we know what the source_key was, bask at the caller
+        parseKey['source_key'] = importKey
+        print "\nParse result:", parseKey
     return parseKey
 
 def setupImportHdfs(node=None, path=None):
@@ -89,7 +91,8 @@ def setupImportHdfs(node=None, path=None):
         URI = hdfsPrefix + path
 
     importHdfsResult = node.import_hdfs(URI)
-    print h2o.dump_json(importHdfsResult)
+    # too many hdfs keys to print now
+    h2o.verboseprint(h2o.dump_json(importHdfsResult))
     return importHdfsResult
 
 # FIX! can update this to parse from local dir also (import keys from folder?)
@@ -117,5 +120,7 @@ def parseImportHdfsFile(node=None, csvFilename=None, path=None,
 
     parseKey = node.parse(hdfsKey, csvFilename + ".hex",
         timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs)
+    # a hack so we know what the source_key was, bask at the caller
+    parseKey['source_key'] = hdfsKey
     print "parseHdfsFile:", parseKey
     return parseKey

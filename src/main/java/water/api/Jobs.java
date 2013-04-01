@@ -2,7 +2,8 @@ package water.api;
 
 import java.util.Date;
 
-import water.*;
+import water.Job;
+import water.Key;
 
 import com.google.gson.*;
 
@@ -27,8 +28,10 @@ public class Jobs extends Request {
       json.addProperty(DESCRIPTION, jobs[i]._description);
       json.addProperty(DEST_KEY, jobs[i].dest() != null ? jobs[i].dest().toString() : "");
       json.addProperty(START_TIME, RequestBuilders.ISO8601.get().format(new Date(jobs[i]._startTime)));
-      json.addProperty(PROGRESS, jobs[i].progress());
-      json.addProperty(CANCELLED, jobs[i].cancelled());
+      long end = jobs[i]._endTime;
+      json.addProperty(END_TIME, end == 0 ? "" : RequestBuilders.ISO8601.get().format(new Date(end)));
+      json.addProperty(PROGRESS, end == 0 ? jobs[i].progress() : 0);
+      json.addProperty(CANCELLED, end == 0 ? jobs[i].cancelled() : end == Job.CANCELLED_END_TIME);
       array.add(json);
     }
     result.add(JOBS, array);
@@ -56,7 +59,13 @@ public class Jobs extends Request {
     r.setBuilder(JOBS + "." + START_TIME, new ArrayRowElementBuilder() {
       @Override
       public String elementToString(JsonElement elm, String contextName) {
-        return "<script>document.write(new Date(" + elm.toString() + ").toLocaleTimeString())</script>";
+        return date(elm.toString());
+      }
+    });
+    r.setBuilder(JOBS + "." + END_TIME, new ArrayRowElementBuilder() {
+      @Override
+      public String elementToString(JsonElement elm, String contextName) {
+        return date(elm.toString());
       }
     });
     r.setBuilder(JOBS + "." + PROGRESS, new ArrayRowElementBuilder() {
@@ -66,6 +75,12 @@ public class Jobs extends Request {
       }
     });
     return r;
+  }
+
+  private static String date(String utc) {
+    if( utc == null || utc.length() == 0 )
+      return "";
+    return "<script>document.write(new Date(" + utc + ").toLocaleTimeString())</script>";
   }
 
   private static String progress(float value) {

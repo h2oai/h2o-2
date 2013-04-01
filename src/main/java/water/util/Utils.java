@@ -4,8 +4,7 @@ import hex.rng.*;
 import hex.rng.H2ORandomRNG.RNGKind;
 import hex.rng.H2ORandomRNG.RNGType;
 
-import java.io.Closeable;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.security.SecureRandom;
 import java.text.DecimalFormat;
@@ -213,5 +212,41 @@ public class Utils {
 
   public static void close(Socket s) {
     try { if( s != null ) s.close(); } catch( IOException _ ) { }
+  }
+
+  public static String readConsole() {
+    BufferedReader console = new BufferedReader(new InputStreamReader(System.in));
+    try {
+      return console.readLine();
+    } catch( IOException e ) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static File tempFile(String content) {
+    File file;
+    FileWriter w = null;
+    try {
+      file = File.createTempFile("h2o", null);
+      w = new FileWriter(file);
+      w.write(content);
+    } catch(IOException ex) {
+      throw new RuntimeException(ex);
+    } finally {
+      if(w != null) {
+        try {
+          w.close();
+        } catch(IOException _) {
+        }
+      }
+    }
+    return file;
+  }
+
+  public static String join(char sep, Object[] array) {
+    String s = "";
+    for( Object o : array )
+      s += (s.length() == 0 ? "" : sep) + o.toString();
+    return s;
   }
 }

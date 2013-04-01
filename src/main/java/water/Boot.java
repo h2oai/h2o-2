@@ -6,8 +6,7 @@ import java.lang.reflect.Method;
 import java.net.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
-import java.util.Enumeration;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -112,15 +111,22 @@ public class Boot extends ClassLoader {
       addInternalJars("jets3t");
     }
 
+    run(args);
+  }
+
+  public static void run(String[] args) throws Exception {
     // Figure out the correct main class to call
     String mainClass = "water.H2O"; // Default mainClass
-    if( args.length >= 2 && args[0].equals("-mainClass") ) {
-      mainClass = args[1];    // Swap out for requested main
-      args = Arrays.copyOfRange(args, 2, args.length);
+    if(args != null) {
+      int index = Arrays.asList(args).indexOf("-mainClass");
+      if( index >= 0 && args.length > index + 1 ) {
+        mainClass = args[index + 1];    // Swap out for requested main
+        args = Arrays.copyOfRange(args, 2, args.length);
+      }
     }
 
     // Call "main"!
-    Class h2oclazz = loadClass(mainClass,true);
+    Class h2oclazz = _init.loadClass(mainClass,true);
     h2oclazz.getMethod("main",String[].class).invoke(null,(Object)args);
   }
 
@@ -219,4 +225,37 @@ public class Boot extends ClassLoader {
     return z;
   }
 
+  // --------------------------------------------------------------------------
+  //
+  // Lists H2O classes
+  //
+  // --------------------------------------------------------------------------
+
+  public static List<String> getClasses() {
+    Log._dontDie = true; // Ignore fatal class load error, e.g. Request
+    ArrayList<String> names = new ArrayList<String>();
+    if(_init._h2oJar != null) {
+      for( Enumeration<ZipEntry> e = (Enumeration) _init._h2oJar.entries(); e.hasMoreElements(); ) {
+        String name = e.nextElement().getName();
+        if( name.endsWith(".class") )
+          names.add(name);
+      }
+    } else
+      findClasses(new File(CLASSES), names);
+
+    for( int i = 0; i < names.size(); i++ ) {
+      String n = names.get(i);
+      names.set(i, n.replace('\\', '/').replace('/', '.').substring(0, n.length() - 6));
+    }
+    return names;
+  }
+  private static final String CLASSES = "target/classes";
+  private static void findClasses(File folder, ArrayList<String> names) {
+    for( File file : folder.listFiles() ) {
+      if( file.isDirectory() )
+        findClasses(file, names);
+      else if( file.getPath().endsWith(".class") )
+        names.add(file.getPath().substring(CLASSES.length() + 1));
+    }
+  }
 }

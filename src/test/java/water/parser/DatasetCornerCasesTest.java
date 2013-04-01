@@ -20,7 +20,7 @@ public class DatasetCornerCasesTest extends TestUtil {
   @Test public void testTwoLineDataset() throws Exception {
     Key fkey = load_test_file("smalldata/test/HTWO-87-two-lines-dataset.csv");
     Key okey = Key.make("HTWO-87-two-lines-dataset.hex");
-    ParseDataset.parse(okey,DKV.get(fkey));
+    ParseDataset.parse(okey,new Key[]{fkey});
     UKV.remove(fkey);
     ValueArray val = DKV.get(okey).get();
 
@@ -86,7 +86,7 @@ public class DatasetCornerCasesTest extends TestUtil {
   private void testOneLineDataset(String filename, String keyname) {
     Key fkey = load_test_file(filename);
     Key okey = Key.make(keyname);
-    ParseDataset.parse(okey,DKV.get(fkey));
+    ParseDataset.parse(okey,new Key[]{fkey});
 
     ValueArray val = DKV.get(okey).get();
     assertEquals(filename + ": number of chunks == 1", 1, val.chunks());

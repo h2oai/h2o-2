@@ -1,5 +1,5 @@
 import unittest
-import re, os, shutil, sys, random
+import re, os, shutil, sys, random, time
 sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_hosts
@@ -67,6 +67,11 @@ class Basic(unittest.TestCase):
             if 1==0:
                 for node in h2o.nodes:
                     storeView = node.store_view()
+
+        # and wait a minute to make sure all tcp_wait ports clear out
+        print "Sleeping for 120 secs so the next jenkins job doesn't see all our tcp_wait ports"
+        time.sleep(120)
+
 
 
 

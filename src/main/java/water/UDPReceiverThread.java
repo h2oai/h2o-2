@@ -1,7 +1,8 @@
 package water;
-import java.nio.channels.DatagramChannel;
-import java.util.Random;
 
+import java.nio.channels.DatagramChannel;
+import java.util.Date;
+import java.util.Random;
 import water.RPC.RemoteHandler;
 
 /**
@@ -105,26 +106,17 @@ public class UDPReceiverThread extends Thread {
       H2O.submitTask(new FJPacket(ab,ctrl));
       return;
     }
-    // Some non-Paxos packet from a non-member.  Probably should record &
-    // complain.
-    if( !is_member ) {
-      // Filter unknown-packet-reports.  In bad situations of poisoned Paxos
-      // voting we can get a LOT of these packets/sec, flooding the console.
-      _unknown_packets_per_sec++;
-      long timediff = ab._h2o._last_heard_from - _unknown_packet_time;
-      if( timediff > 1000 ) {
-        System.err.println("Non-member packets: "+_unknown_packets_per_sec+"/sec, last one from "+ab._h2o);
-        _unknown_packets_per_sec = 0;
-        _unknown_packet_time = ab._h2o._last_heard_from;
-      }
-      ab.close();
-      return;
-    }
 
-    // Convert Unreliable DP to Reliable DP.
-    // If we got this packet already (it is common for the sender to send
-    // dups), we do not want to do the work *again* - so we do not want to
-    // enqueue it for work.  Also, if we've *replied* to this packet before
-    // we just want to send the dup reply back.
+    // Some non-Paxos packet from a non-member.  Probably should record & complain.
+    // Filter unknown-packet-reports.  In bad situations of poisoned Paxos
+    // voting we can get a LOT of these packets/sec, flooding the console.
+    _unknown_packets_per_sec++;
+    long timediff = ab._h2o._last_heard_from - _unknown_packet_time;
+    if( timediff > 1000 ) {
+      System.err.println("[h2o] *WARNING* UDP packets from outside the cloud: "+_unknown_packets_per_sec+"/sec, last one from "+ab._h2o+ " @ "+new Date());
+      _unknown_packets_per_sec = 0;
+      _unknown_packet_time = ab._h2o._last_heard_from;
+    }
+    ab.close();
   }
 }

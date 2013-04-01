@@ -35,5 +35,9 @@ class Basic(unittest.TestCase):
             h2o.tear_down_cloud()
             time.sleep(5)
 
+        print "Waiting 60 secs for TIME_WAIT sockets to go away"
+        time.sleep(60)
+
+
 if __name__ == '__main__':
     h2o.unit_main()

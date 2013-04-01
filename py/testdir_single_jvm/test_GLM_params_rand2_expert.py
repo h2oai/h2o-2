@@ -2,9 +2,7 @@ import unittest
 import random, sys, time
 sys.path.extend(['.','..','py'])
 import json
-
-import h2o, h2o_cmd
-import h2o_glm
+import h2o, h2o_cmd, h2o_hosts, h2o_glm
 
 # none is illegal for threshold
 # always run with num_cross_validation_folds, to make sure we get the trainingErrorDetails
@@ -52,7 +50,12 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        h2o.build_cloud(node_count=1)
+        global localhost
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(node_count=1)
+        else:
+            h2o_hosts.build_cloud_with_hosts(node_count=1)
 
     @classmethod
     def tearDownClass(cls):

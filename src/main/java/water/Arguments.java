@@ -117,6 +117,16 @@ public class Arguments {
    */
   public int size() { return commandLineArgs.length;  }
 
+  /**
+   * Index of first flag, or -1 if command line contains only options.
+   */
+  public int firstFlag() {
+    for( int i = 0; i < commandLineArgs.length; i++ )
+      if(commandLineArgs[i].flag)
+        return i;
+    return -1;
+  }
+
   public String get(int i) {  return commandLineArgs[i].val;  }
 
   /**

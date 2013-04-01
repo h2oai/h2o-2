@@ -26,35 +26,35 @@ class Basic(unittest.TestCase):
         if 1==1:
             # None is okay for key2
             csvFilenameList = [
-                ('hdb-2007-02-05/Goalies.csv',120,'Goalies'),
-                ('hdb-2007-02-05/GoaliesSC.csv',120,'GoaliesSC'),
-                # ('hdb-2007-02-05/Master.csv',120,'Master'),
-                ('hdb-2007-02-05/Scoring.csv',120,'Scoring'),
-                ('hdb-2007-02-05/ScoringSC.csv',120,'ScoringSC'),
-                ('hdb-2007-02-05/Teams.csv',120,'Teams'),
-                ('hdb-2007-02-05/TeamsHalf.csv',120,'TeamsHalf'),
-                ('hdb-2007-02-05/TeamsPost.csv',120,'TeamsPost'),
-                ('hdb-2007-02-05/TeamsSC.csv',120,'TeamsSC'),
-                ('tricks-2012-06-23/HatTricks.csv',120,'HatTricks'),
-                ('bkb090621/abbrev.csv',120,'abbrev'),
-                ('bkb090621/AwardsCoaches.csv',120,'AwardsCoaches'),
-                ('bkb090621/AwardsPlayers.csv',120,'AwardsPlayers'),
-                ('bkb090621/Coaches.csv',120,'Coaches'),
+                # ('hdb-2007-02-05/Goalies.csv',240,'Goalies'),
+                # ('hdb-2007-02-05/GoaliesSC.csv',240,'GoaliesSC'),
+                # ('hdb-2007-02-05/Master.csv',240,'Master'),
+                ('hdb-2007-02-05/Scoring.csv',240,'Scoring'),
+                ('hdb-2007-02-05/ScoringSC.csv',240,'ScoringSC'),
+                ('hdb-2007-02-05/Teams.csv',240,'Teams'),
+                ('hdb-2007-02-05/TeamsHalf.csv',240,'TeamsHalf'),
+                ('hdb-2007-02-05/TeamsPost.csv',240,'TeamsPost'),
+                ('hdb-2007-02-05/TeamsSC.csv',240,'TeamsSC'),
+                ('tricks-2012-06-23/HatTricks.csv',240,'HatTricks'),
+                ('bkb090621/abbrev.csv',240,'abbrev'),
+                ('bkb090621/AwardsCoaches.csv',240,'AwardsCoaches'),
+                ('bkb090621/AwardsPlayers.csv',240,'AwardsPlayers'),
+                ('bkb090621/Coaches.csv',240,'Coaches'),
                 # never finishes?
-                # ('bkb090621/Draft.csv',120,'Draft'),
-                # ('bkb090621/Master.csv',120,'Master'),
-                ('bkb090621/PlayersAllstar.csv',120,'PlayersAllstar'),
-                ('bkb090621/Players.csv',120,'Players'),
-                ('bkb090621/PlayersPlayoffs.csv',120,'PlayersPlayoffs'),
-                ('bkb090621/Teams.csv',120,'Teams'),
-                ('hdb-2007-02-05/abbrev.csv',120,'abbrev'),
+                # ('bkb090621/Draft.csv',240,'Draft'),
+                # ('bkb090621/Master.csv',240,'Master'),
+                ('bkb090621/PlayersAllstar.csv',240,'PlayersAllstar'),
+                ('bkb090621/Players.csv',240,'Players'),
+                ('bkb090621/PlayersPlayoffs.csv',240,'PlayersPlayoffs'),
+                ('bkb090621/Teams.csv',240,'Teams'),
+                ('hdb-2007-02-05/abbrev.csv',240,'abbrev'),
                 # SPD without regularization
                 # can't solve, when regularization added
-                # ('hdb-2007-02-05/AwardsCoaches.csv',120,'AwardsCoaches'),
-                # ('hdb-2007-02-05/AwardsMisc.csv',120,'AwardsMisc'),
-                ('hdb-2007-02-05/AwardsPlayers.csv',120,'AwardsPlayers'),
+                # ('hdb-2007-02-05/AwardsCoaches.csv',240,'AwardsCoaches'),
+                # ('hdb-2007-02-05/AwardsMisc.csv',240,'AwardsMisc'),
+                ('hdb-2007-02-05/AwardsPlayers.csv',240,'AwardsPlayers'),
                 # can't solve, when regularization added
-                # ('hdb-2007-02-05/Coaches.csv',120,'Coaches'),
+                # ('hdb-2007-02-05/Coaches.csv',240,'Coaches'),
                 ]
 
         # a browser window too, just because we can
@@ -74,7 +74,7 @@ class Basic(unittest.TestCase):
                 "    num_rows:", "{:,}".format(num_rows), \
                 "    num_cols:", "{:,}".format(num_cols)
 
-            max_iter = 30 
+            max_iter = 9
             # assume the last col is the output!
             y = num_cols-1
             kwargs = {

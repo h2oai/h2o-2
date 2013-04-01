@@ -34,7 +34,6 @@ public abstract class UKV {
     if( key._kb[0] == Key.KEY_OF_KEYS ) // Key-of-keys?
       for( Key k : key.flatten() )      // Then recursively delete
         remove(k,fs);
-    if( res != null ) res.freeMem();
   }
   static public void put( Key key, Iced val, Futures fs ) { put(key,new Value(key, val),fs); }
 

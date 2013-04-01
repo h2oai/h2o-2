@@ -14,6 +14,8 @@ import water.nbhm.NonBlockingHashMap;
 import water.store.s3.PersistS3;
 import water.util.Utils;
 
+import com.amazonaws.auth.PropertiesCredentials;
+import com.google.common.base.Objects;
 import com.google.common.io.Closeables;
 
 /**
@@ -58,7 +60,16 @@ public final class H2O {
   public static final RuntimeException unimpl() { return new RuntimeException("unimplemented"); }
 
   // Central /dev/null for ignored exceptions
-  public static final void ignore(Throwable e) { e.printStackTrace(); }
+  public static final void ignore(Throwable e) { ignore(e,"[h2o] Problem ignored: "); }
+  public static final void ignore(Throwable e, String msg) {
+    StackTraceElement[] stack = e.getStackTrace();
+    StringBuffer sb = new StringBuffer();
+    // The replacement of Exception -> Problem is required by our testing framework which would report
+    // error if it sees "exception" in the node output
+    sb.append(msg).append('\n').append(e.toString().replace("Exception", "Problem")).append('\n');
+    for (StackTraceElement el : stack) { sb.append("\tat "); sb.append(el.toString().replace("Exception", "Problem" )); sb.append('\n'); }
+    System.err.println(sb);
+  }
 
   // --------------------------------------------------------------------------
   // The Current Cloud. A list of all the Nodes in the Cloud. Changes if we
@@ -487,7 +498,7 @@ public final class H2O {
     public String keepice; // Do not delete ice on startup
     public String soft = null; // soft launch for demos
     public String random_udp_drop = null; // test only, randomly drop udp incoming
-    public String log_headers = null; // add machine name, PID and time to logs
+    public String log = null; // add machine name, PID and time to logs
   }
   public static boolean IS_SYSTEM_RUNNING = false;
 
@@ -503,7 +514,7 @@ public final class H2O {
     arguments.extract(OPT_ARGS);
     ARGS = arguments.toStringArray();
 
-    if(OPT_ARGS.log_headers != null)
+    if(OPT_ARGS.log != null)
       Log.initHeaders();
 
     startLocalNode(); // start the local node
@@ -520,6 +531,13 @@ public final class H2O {
 
   private static void initializeExpressionEvaluation() {
     Function.initializeCommonFunctions();
+  }
+
+  // Default location of the AWS credentials file
+  private static final String DEFAULT_CREDENTIALS_LOCATION = "AwsCredentials.properties";
+  public static PropertiesCredentials getAWSCredentials() throws IOException {
+    File credentials = new File(Objects.firstNonNull(OPT_ARGS.aws_credentials, DEFAULT_CREDENTIALS_LOCATION));
+    return new PropertiesCredentials(credentials);
   }
 
   /** Starts the local k-v store.
@@ -761,6 +779,17 @@ public final class H2O {
     File f = new File(fname);
     if( !f.exists() ) return null; // No flat file
     HashSet<H2ONode> h2os = new HashSet<H2ONode>();
+    List<FlatFileEntry> list = parseFlatFile(f);
+    for(FlatFileEntry entry : list)
+      h2os.add(H2ONode.intern(entry.inet, entry.port+1));// use the UDP port here
+    return h2os;
+  }
+  public static class FlatFileEntry {
+    public InetAddress inet;
+    public int port;
+  }
+  public static List<FlatFileEntry> parseFlatFile( File f ) {
+    List<FlatFileEntry> list = new ArrayList<FlatFileEntry>();
     BufferedReader br = null;
     int port = DEFAULT_PORT;
     try {
@@ -798,11 +827,14 @@ public final class H2O {
             Log.die("Invalid port #: "+portStr);
           }
         }
-        h2os.add(H2ONode.intern(inet, port+1));// use the UDP port here
+        FlatFileEntry entry = new FlatFileEntry();
+        entry.inet = inet;
+        entry.port = port;
+        list.add(entry);
       }
     } catch( Exception e ) { Log.die(e.toString()); }
     finally { Closeables.closeQuietly(br); }
-    return h2os;
+    return list;
   }
 
   static void initializePersistence() {

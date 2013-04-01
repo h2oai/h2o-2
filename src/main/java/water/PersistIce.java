@@ -58,6 +58,11 @@ public abstract class PersistIce {
     }
   }
 
+  public static FileWriter logFile() {
+    try { return new FileWriter(iceRoot+"/h2o.log"); }
+    catch( IOException ioe ) { return null; }
+  }
+
   // file implementation -------------------------------------------------------
 
   // the filename can be either byte encoded if it starts with % followed by
@@ -157,7 +162,7 @@ public abstract class PersistIce {
         default:   System.err.println("Invalid format of filename " + s + " at index " + i);
         }
       }
-      if( j>=kb.length ) kb = Arrays.copyOf(kb,j*2);
+      if( j>=kb.length ) kb = Arrays.copyOf(kb,Math.max(2,j*2));
       kb[j++] = b;
     }
     // now in kb we have the key name

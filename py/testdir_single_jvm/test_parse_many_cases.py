@@ -12,7 +12,12 @@ class Basic(unittest.TestCase):
     def setUpClass(cls):
         global SYNDATASETS_DIR
         SYNDATASETS_DIR = h2o.make_syn_dir()
-        h2o.build_cloud(node_count=1) 
+        global localhost
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(node_count=1) 
+        else:
+            h2o_hosts.build_cloud_with_hosts(node_count=1) 
 
     @classmethod 
     def tearDownClass(cls): 

@@ -62,11 +62,11 @@ class Basic(unittest.TestCase):
     def test_GLM_many_cols_int2cat(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (10000,  10, 'cA', 100),
-            (10000,  20, 'cB', 200),
-            (10000,  30, 'cC', 300),
-            (10000,  40, 'cD', 400),
-            (10000,  50, 'cE', 500),
+            (10000,  10, 'cA.hex', 100),
+            (10000,  20, 'cB.hex', 200),
+            (10000,  30, 'cC.hex', 300),
+            (10000,  40, 'cD.hex', 400),
+            (10000,  50, 'cE.hex', 500),
             ]
 
         ### h2b.browseTheCloud()
@@ -75,6 +75,7 @@ class Basic(unittest.TestCase):
         # including the duplicate of the output!
         exprList = [
                 '<keyX>= colSwap(<keyX>,<col1>,factor(<keyX>[<col1>]))',
+                ### '<keyX>= colSwap(<keyX>,<col1>,<keyX>[<col1>])',
             ]
 
         for (rowCount, colCount, key2, timeoutSecs) in tryList:
@@ -84,7 +85,7 @@ class Basic(unittest.TestCase):
 
             print "\nCreating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10)
+            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=90)
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "Parse result['destination_key']:", parseKey['destination_key']
 
@@ -93,7 +94,7 @@ class Basic(unittest.TestCase):
 
             print "\nNow running the int 2 enum exec command across all input cols"
             colResultList = h2e.exec_expr_list_across_cols(None, exprList, key2, maxCol=colCount, 
-                timeoutSecs=30, incrementingResult=False)
+                timeoutSecs=90, incrementingResult=False)
             print "\nexec colResultList", colResultList
 
             paramDict2 = {}

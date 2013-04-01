@@ -204,6 +204,25 @@ public class ValueArray extends Iced implements Cloneable {
       try { return (Column)super.clone(); }
       catch( CloneNotSupportedException cne ) { throw H2O.unimpl(); }
     }
+
+    private static boolean eq(double x, double y, double precision){
+      return (Math.abs(x-y) < precision);
+    }
+    @Override
+    public boolean equals(Object other){
+      if(!(other instanceof Column)) return false;
+      Column c = (Column)other;
+      return
+          _base  == c._base  &&
+          _scale == c._scale &&
+          _max   == c._max   &&
+          _min   == c._min   &&
+          (eq(_mean,c._mean,1e-5)  || Double.isNaN(_mean) && Double.isNaN(c._mean))  &&
+          (eq(_sigma,c._sigma,1e-5)|| Double.isNaN(_sigma)&& Double.isNaN(c._sigma)) &&
+          _n     == c._n     &&
+          _size  == c._size  &&
+          (_name == null && c._name  == null || _name  != null && c._name  != null && _name.equals(c._name));
+    }
   }
 
   // Get a usable pile-o-bits

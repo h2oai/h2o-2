@@ -36,8 +36,9 @@ public class ImportHdfs extends Request {
   protected Response serve() {
     JsonArray succ = new JsonArray();
     JsonArray fail = new JsonArray();
+    String pstr = _path.value();
     try {
-      PersistHdfs.addFolder(new Path(_path.value()), succ, fail);
+      PersistHdfs.addFolder(new Path(pstr), succ, fail);
     } catch( IOException e ) {
       StringBuilder sb = new StringBuilder();
       PrintWriter pw = new PrintWriter(Streams.writerForAppendable(sb));
@@ -46,12 +47,15 @@ public class ImportHdfs extends Request {
       return Response.error(sb.toString());
     }
     DKV.write_barrier();
-
     JsonObject json = new JsonObject();
     json.add(SUCCEEDED, succ);
     json.add(FAILED, fail);
     Response r = Response.done(json);
     r.setBuilder(SUCCEEDED + "." + KEY, new KeyCellBuilder());
+    // Add quick link
+    if (succ.size() > 1)
+      r.addHeader("<div class='alert'>" //
+          + Parse.link("*"+pstr+"*", "Parse all into hex format") + " </div>");
     return r;
   }
 }
