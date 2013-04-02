@@ -51,6 +51,7 @@ public class RFScore extends Request {
     response.addProperty(MODEL_KEY, _modelKey.originalValue());
     response.addProperty(CLASS, _classCol.value());
     response.addProperty(NUM_TREES, model._totalTrees);
+    response.addProperty(OOBEE, 0);
     if (_weights.specified())
       response.addProperty(WEIGHTS, _weights.originalValue());
 
