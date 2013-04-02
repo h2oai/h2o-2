@@ -19,6 +19,8 @@ public class TypeMap {
     "hex.DGLM$GLMValidationFunc",
     "hex.DGLM$Gram",
     "hex.DGLM$GramMatrixFunc",
+    "hex.DGLM$GLMXValTask",
+    "hex.DGLM$GLMXvalSetup",
     "hex.DLSM$ADMMSolver",
     "hex.DLSM$GeneralizedGradientSolver",
     "hex.DLSM$LSMSolver",

@@ -4,6 +4,7 @@ import hex.ConfusionMatrix.ErrMetric;
 import hex.DLSM.ADMMSolver.NonSPDMatrixException;
 import hex.DLSM.GeneralizedGradientSolver;
 import hex.DLSM.LSMSolver;
+import hex.GLMGrid.GLMModels;
 import hex.NewRowVecTask.DataFrame;
 import hex.NewRowVecTask.RowFunc;
 import hex.RowVecTask.Sampling;
@@ -11,6 +12,7 @@ import hex.RowVecTask.Sampling;
 import java.util.*;
 
 import water.*;
+import water.Key.Ary;
 import water.ValueArray.Column;
 import water.api.Constants;
 
@@ -328,6 +330,70 @@ public abstract class DGLM {
     }
   }
 
+  private static class GLMXvalSetup extends Iced {
+    final int _id;
+    public GLMXvalSetup(int i){_id = i;}
+  }
+  private static class GLMXValTask extends MRTask {
+    transient ValueArray _ary;
+    Key _aryKey;
+    boolean _standardize;
+    LSMSolver _lsm;
+    GLMParams _glmp;
+    double [] _betaStart;
+    int [] _cols;
+    double [] _thresholds;
+    final int _folds;
+    GLMModel [] _models;
+
+    public GLMXValTask(int folds, ValueArray ary, int [] cols, boolean standardize, LSMSolver lsm, GLMParams glmp, double [] betaStart, double [] thresholds){
+      _folds = folds;
+      _ary = ary; _aryKey = ary._key;
+      _cols = cols;
+      _standardize = standardize;
+      _lsm = lsm;
+      _glmp = glmp;
+      _betaStart = betaStart;
+      _thresholds = thresholds;
+    }
+
+    @Override
+    public void init() {
+      super.init();
+      _ary = DKV.get(_aryKey).get();
+      _models = new GLMModel[_folds];
+    }
+
+    @Override
+    public void map(Key key) {
+      GLMXvalSetup setup = DKV.get(key).get();
+      Sampling s = new Sampling(setup._id,_folds,false);
+      assert _models[setup._id] == null;
+      _models[setup._id] = DGLM.buildModel(DGLM.getData(_ary, _cols, s, _standardize), _lsm, _glmp, _betaStart.clone());
+      _models[setup._id].validateOn(_ary, s.complement(), _thresholds);
+      // cleanup before sending back
+      DKV.remove(key);
+      _betaStart = null;
+      _lsm = null;
+      _glmp = null;
+      _cols = null;
+      _aryKey = null;
+    }
+
+    @Override
+    public void reduce(DRemoteTask drt) {
+      GLMXValTask other = (GLMXValTask)drt;
+      if(other._models != _models){
+        for(int i = 0; i < _models.length; ++i)
+          if(_models[i] == null)
+            _models[i] = other._models[i];
+          else
+            assert other._models[i] == null;
+      }
+    }
+  }
+
+
   public static class GLMModel extends Model {
     final Sampling _s;
     final int [] _colCatMap;
@@ -465,18 +531,20 @@ public abstract class DGLM {
       return val;
     }
 
+
+
     public GLMValidation xvalidate(ValueArray ary,int folds, double [] thresholds) {
       int [] modelDataMap = ary.getColumnIds(_va.colNames());//columnMapping(ary.colNames());
       if( !isCompatible(modelDataMap) )  // This dataset is compatible or not?
         throw new GLMException("incompatible dataset");
-
-      GLMModel [] models = new GLMModel[folds];
-      for(int i = 0; i < folds; ++i){
-        models[i] = buildModel(DGLM.getData(ary, modelDataMap, new Sampling(i,folds,false),true), _solver, _glmParams);
-        if(models[i].isSolved())
-          models[i].validateOn(ary, new Sampling(i, folds, true),thresholds);
-      }
-      GLMValidation res = new GLMValidation(_selfKey,models, ErrMetric.SUMC,thresholds);
+      final int myNodeId = H2O.SELF.index();
+      final int cloudsize = H2O.CLOUD.size();
+      Key [] keys = new Key[folds];
+      for(int i = 0; i < folds; ++i)
+        DKV.put(keys[i] = Key.make(Key.make()._kb,(byte)0,Key.DFJ_INTERNAL_USER,H2O.CLOUD._memary[(myNodeId + i)%cloudsize]), new GLMXvalSetup(i));
+      GLMXValTask tsk = new GLMXValTask(folds, ary, modelDataMap, _standardized, _solver, _glmParams, _normBeta, thresholds);
+      tsk.invoke(keys);
+      GLMValidation res = new GLMValidation(_selfKey,tsk._models, ErrMetric.SUMC,thresholds);
       if(_vals == null)_vals = new GLMValidation[]{res};
       else {
         _vals = Arrays.copyOf(_vals, _vals.length+1);
