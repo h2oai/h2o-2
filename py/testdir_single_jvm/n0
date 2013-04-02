@@ -1,91 +1,89 @@
-./n0.doit test_badchars.py
-./n0.doit test_billion_rows.py
-./n0.doit test_cols_enum_multi_import.py
-./n0.doit test_exec_covtype_cols.py
-./n0.doit test_exec_covtype_rand1.py
-./n0.doit test_exec_operators.py
-./n0.doit test_exec_result_race.py
-./n0.doit test_failswith512chunk.py
-./n0.doit test_from_import.py
-./n0.doit test_from_putfile.py
-./n0.doit test_GLM_basic.py
-./n0.doit test_GLM_big1.py
-./n0.doit test_GLM_binomial_goalies.py
-./n0.doit test_GLM_clslowbwt.py
-./n0.doit test_GLM_convergence_1_noise.py
-./n0.doit test_GLM_convergence_1.py
-./n0.doit test_GLM_convergence_2.py
-./n0.doit test_GLM_covtype_1.py
-./n0.doit test_GLM_covtype20x_1.py
-./n0.doit test_GLM_expert.py
-./n0.doit test_GLM_gamma_rand2.py
-./n0.doit test_GLM_gaussian_rand2.py
-./n0.doit test_GLMGrid_basic.py
-./n0.doit test_GLMGrid_convergence_1.py
-./n0.doit test_GLM_hastie.py
-./n0.doit test_GLM_hastie_shuffle.py
-./n0.doit test_GLM_hhp107_01_browse.py
-./n0.doit test_GLM_many_cols.py
-./n0.doit test_GLM_many_cols_real.py
-./n0.doit test_GLM_params_rand2_4082088627997819015.py
-./n0.doit test_GLM_params_rand2_8977501266014959103.py
-./n0.doit test_GLM_params_rand2_expert.py
-./n0.doit test_GLM_params_rand2_newargs.py
-./n0.doit test_GLM_params_rand2.py
-./n0.doit test_GLM_poisson_1.py
-./n0.doit test_GLM_poisson_goalies_admm.py
-./n0.doit test_GLM_poisson_goalies_gg.py
-./n0.doit test_GLM_poisson_rand2.py
-./n0.doit test_GLM_poisson_timeout_fail.py
-./n0.doit test_GLM_princeton.py
-./n0.doit test_GLM_score_same.py
-./n0.doit test_GLM_syn_2659x1049.py
-./n0.doit test_GLM_tnc3_10.py
-./n0.doit test_GLM_trisum.py
-./n0.doit test_GLM_twovalues.py
-./n0.doit test_GLM_umass.py
-./n0.doit test_GLM_with_logit_result_1.py
-./n0.doit test_hdfs_multi_bad_csv.py
-./n0.doit test_hdfs_multi_copies.py
-./n0.doit test_hdfs.py
-./n0.doit test_hdfs_store.py
-./n0.doit test_hex-443.py
-./n0.doit test_import_and_delete_keys.py
-./n0.doit test_KMeans_basic.py
-./n0.doit test_KMeans_hastie_shuffle.py
-./n0.doit test_many_cols_enum.py
-./n0.doit test_many_cols.py
-./n0.doit test_mixed_causes_NA.py
-./n0.doit test_parity_128_4_2_quad.py
-./n0.doit test_parse_covtype20x_s3n_thru_hdfs.py
-./n0.doit test_parse_csvs_s3n_thru_hdfs.py
-./n0.doit test_parse_many_cases.py
-./n0.doit test_parse_many_doublesp.py
-./n0.doit test_parse_small_many.py
-./n0.doit test_players_NA.py
-./n0.doit test_putfile_a5m.py
-./n0.doit test_put_parse4.py
-./n0.doit test_put_value5.py
-./n0.doit test_randomBitVector.py
-./n0.doit test_randomdatagen1.py
-./n0.doit test_randomFilter.py
-./n0.doit test_redirect.py
-./n0.doit test_rf1.py
-./n0.doit test_rf_covtype_train_full.py
-./n0.doit test_rf_covtype_train_oobe.py
-./n0.doit test_rf_noise.py
-./n0.doit test_rf_params_rand1.py
-./n0.doit test_rf_params_rand2_4201285065147091758.py
-./n0.doit test_rf_params_rand2_7066883810153380318.py
-./n0.doit test_rf_params_rand2_ncaa.py
-./n0.doit test_rf_params_rand2_nostrata.py
-./n0.doit test_rf_params_rand2.py
-./n0.doit test_rf_params_rand2_space.py
-./n0.doit test_rf_strata_rand1.py
-./n0.doit test_rfview_score.py
-./n0.doit test_simple.py
-./n0.doit test_slice.py
-./n0.doit test_tnc3.py
-./n0.doit test_tree_view.py
-./n0.doit test_tree_view_wrong_model.py
-./n0.doit test_with_a_browser.py
+./n0.doittest_badchars.py
+./n0.doittest_billion_rows.py
+./n0.doittest_cols_enum_multi_import.py
+./n0.doittest_exec_covtype_cols.py
+./n0.doittest_exec_covtype_rand1.py
+./n0.doittest_exec_operators.py
+./n0.doittest_exec_result_race.py
+./n0.doittest_failswith512chunk.py
+./n0.doittest_from_import.py
+./n0.doittest_from_putfile.py
+./n0.doittest_GLM_basic.py
+./n0.doittest_GLM_big1.py
+./n0.doittest_GLM_binomial_goalies.py
+./n0.doittest_GLM_clslowbwt.py
+./n0.doittest_GLM_convergence_1_noise.py
+./n0.doittest_GLM_convergence_1.py
+./n0.doittest_GLM_convergence_2.py
+./n0.doittest_GLM_covtype_1.py
+./n0.doittest_GLM_covtype20x_1.py
+./n0.doittest_GLM_expert.py
+./n0.doittest_GLM_gamma_rand2.py
+./n0.doittest_GLM_gaussian_rand2.py
+./n0.doittest_GLMGrid_basic.py
+./n0.doittest_GLMGrid_convergence_1.py
+./n0.doittest_GLM_hastie.py
+./n0.doittest_GLM_hastie_shuffle.py
+./n0.doittest_GLM_hhp107_01_browse.py
+./n0.doittest_GLM_many_cols.py
+./n0.doittest_GLM_many_cols_real.py
+./n0.doittest_GLM_params_rand2_4082088627997819015.py
+./n0.doittest_GLM_params_rand2_8977501266014959103.py
+./n0.doittest_GLM_params_rand2_expert.py
+./n0.doittest_GLM_params_rand2_newargs.py
+./n0.doittest_GLM_params_rand2.py
+./n0.doittest_GLM_poisson_1.py
+./n0.doittest_GLM_poisson_goalies_admm.py
+./n0.doittest_GLM_poisson_goalies_gg.py
+./n0.doittest_GLM_poisson_rand2.py
+./n0.doittest_GLM_poisson_timeout_fail.py
+./n0.doittest_GLM_princeton.py
+./n0.doittest_GLM_score_same.py
+./n0.doittest_GLM_syn_2659x1049.py
+./n0.doittest_GLM_tnc3_10.py
+./n0.doittest_GLM_trisum.py
+./n0.doittest_GLM_twovalues.py
+./n0.doittest_GLM_umass.py
+./n0.doittest_GLM_with_logit_result_1.py
+./n0.doittest_hdfs_multi_bad_csv.py
+./n0.doittest_hdfs_multi_copies.py
+./n0.doittest_hdfs.py
+./n0.doittest_hdfs_store.py
+./n0.doittest_hex-443.py
+./n0.doittest_import_and_delete_keys.py
+./n0.doittest_KMeans_basic.py
+./n0.doittest_KMeans_hastie_shuffle.py
+./n0.doittest_many_cols_enum.py
+./n0.doittest_many_cols.py
+./n0.doittest_mixed_causes_NA.py
+./n0.doittest_parity_128_4_2_quad.py
+./n0.doittest_parse_many_cases.py
+./n0.doittest_parse_many_doublesp.py
+./n0.doittest_parse_small_many.py
+./n0.doittest_players_NA.py
+./n0.doittest_putfile_a5m.py
+./n0.doittest_put_parse4.py
+./n0.doittest_put_value5.py
+./n0.doittest_randomBitVector.py
+./n0.doittest_randomdatagen1.py
+./n0.doittest_randomFilter.py
+./n0.doittest_redirect.py
+./n0.doittest_rf1.py
+./n0.doittest_rf_covtype_train_full.py
+./n0.doittest_rf_covtype_train_oobe.py
+./n0.doittest_rf_noise.py
+./n0.doittest_rf_params_rand1.py
+./n0.doittest_rf_params_rand2_4201285065147091758.py
+./n0.doittest_rf_params_rand2_7066883810153380318.py
+./n0.doittest_rf_params_rand2_ncaa.py
+./n0.doittest_rf_params_rand2_nostrata.py
+./n0.doittest_rf_params_rand2.py
+./n0.doittest_rf_params_rand2_space.py
+./n0.doittest_rf_strata_rand1.py
+./n0.doittest_rfview_score.py
+./n0.doittest_simple.py
+./n0.doittest_slice.py
+./n0.doittest_tnc3.py
+./n0.doittest_tree_view.py
+./n0.doittest_tree_view_wrong_model.py
+./n0.doittest_with_a_browser.py
