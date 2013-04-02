@@ -69,7 +69,6 @@ public class RFPredDomainTest extends TestUtil {
    *   CM   : A B C D E
    */
   @Test
-  @Ignore
   public void irisExtra() throws Exception {
     long[][] cm = new long[][] {
         a(0, 0,  0, 0,  1),
@@ -113,7 +112,6 @@ public class RFPredDomainTest extends TestUtil {
    *   CM   : A B C D E
    */
   @Test
-  @Ignore
   public void irisMissingAndExtra() throws Exception {
     long[][] cm = new long[][] {
         a(0, 0,  0, 0, 1),
@@ -160,7 +158,6 @@ public class RFPredDomainTest extends TestUtil {
    *   CM   : [0,2]
    */
   @Test
-  @Ignore
   public void irisNumericMissing() throws Exception {
     long[][] cm = new long[][] {
         a(0, 0, 0),
@@ -181,7 +178,6 @@ public class RFPredDomainTest extends TestUtil {
    *   CM   : [0,4]
    */
   @Test
-  @Ignore
   public void irisNumericMissingAndExtra() throws Exception {
     long[][] cm = new long[][] {
         a(0, 0,  0, 0, 0),
@@ -203,7 +199,6 @@ public class RFPredDomainTest extends TestUtil {
    *   CM   : [-1,4]
    */
   @Test
-  @Ignore
   public void irisNumericExtra2() throws Exception {
     long[][] cm = new long[][] {
         a(0, 0,  0, 1, 0, 0),
@@ -226,6 +221,7 @@ public class RFPredDomainTest extends TestUtil {
    *   CM   : [-1,4]
    */
   @Test
+  @Ignore // ignore for now
   public void irisExtraWithNAs() throws Exception {
     long[][] cm = new long[][] {
         a(0, 0,  0, 1, 0, 0),
