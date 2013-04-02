@@ -16,8 +16,8 @@ class Basic(unittest.TestCase):
         if (localhost):
             h2o.build_cloud(2,java_heap_GB=5)
         else:
-            print "2 jvms per node, 14GB heap each"
-            h2o_hosts.build_cloud_with_hosts(node_count=2, java_heap_GB=14)
+            print "1 jvms per node, 28GB heap each"
+            h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=28)
 
     @classmethod
     def tearDownClass(cls):
@@ -62,9 +62,6 @@ class Basic(unittest.TestCase):
             else:
                 x = ""
 
-            print "WARNING: max_iter set to 8 for benchmark comparisons"
-            max_iter = 50
-
             y = "54"
 
             kwargs = {
@@ -75,8 +72,9 @@ class Basic(unittest.TestCase):
                 'num_cross_validation_folds': 0, 
                 'case_mode': '=', 
                 'case': 1, 
-                'max_iter': max_iter, 
+                'max_iter': 8, 
                 'beta_epsilon': 1e-3}
+            print "WARNING: max_iter set to 8 for benchmark comparisons"
 
             # L2 
             kwargs.update({'alpha': 0, 'lambda': 0})
