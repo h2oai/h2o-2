@@ -82,7 +82,7 @@ class Basic(unittest.TestCase):
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(None, rfView, noprint=True)
             print "Trial #", trial, "completed in", elapsed, "seconds.", "%d pct. of timeout" % ((elapsed*100)/timeoutSecs), "\n"
             self.assertEqual(totalScores,23) # class 1 is 'yes'
-            self.assertLess(classErrorPctList[0],82) # class 0 is 'no'
+            self.assertLess(classErrorPctList[0],95) # class 0 is 'no'
             self.assertLess(classErrorPctList[1],29) # class 1 is 'yes'
             self.assertLess(classification_error,61)
 
