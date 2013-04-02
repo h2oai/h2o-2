@@ -109,7 +109,7 @@ public class RFView extends /* Progress */ Request {
       tasks += 1;
       // Compute the highest number of trees which is less then a threshold
       int modelSize = tasks * _refreshTresholdCM.value()/100;
-      modelSize     = finished == 0 ? 0 : modelSize * (finished/modelSize);
+      modelSize     = modelSize == 0 ? finished : modelSize * (finished/modelSize);
       // Get the confusion matrix
       Confusion confusion = Confusion.make(model, modelSize, _dataKey.value()._key, _classCol.value(), weights, _oobee.value());
       response.addProperty(JSON_CONFUSION_KEY, confusion.keyFor().toString());
