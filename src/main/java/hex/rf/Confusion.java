@@ -75,17 +75,17 @@ public class Confusion extends MRTask {
    * @param model the ensemble used to classify
    * @param datakey the key of the data that will be classified
    */
-  private Confusion(RFModel model, Key datakey, int classcol, double[] classWt, boolean computeOOB ) {
+  private Confusion(RFModel model, int treesToUse, Key datakey, int classcol, double[] classWt, boolean computeOOB ) {
     _modelKey = model._selfKey;
     _datakey = datakey;
     _classcol = classcol;
     _classWt = classWt != null && classWt.length > 0 ? classWt : null;
-    _treesUsed = model.size();
+    _treesUsed = treesToUse;
     _computeOOB = computeOOB;
     shared_init();
   }
 
-  public Key keyFor() { return keyFor(_model._selfKey,_model.size(),_datakey, _classcol, _computeOOB); }
+  public Key keyFor() { return keyFor(_model._selfKey,_treesUsed,_datakey, _classcol, _computeOOB); }
   static public Key keyFor(Key modelKey, int msize, Key datakey, int classcol, boolean computeOOB) {
     return Key.make("ConfusionMatrix of (" + datakey+"["+classcol+"],"+modelKey+"["+msize+"],"+(computeOOB?"1":"0")+")");
   }
@@ -103,8 +103,11 @@ public class Confusion extends MRTask {
   /**Apply a model to a dataset to produce a Confusion Matrix.  To support
      incremental & repeated model application, hash the model & data and look
      for that Key to already exist, returning a prior CM if one is available.*/
-  static public Confusion make(RFModel model, Key datakey, int classcol, double[] classWt,boolean computeOOB) {
-    Key key = keyFor(model._selfKey, model.size(), datakey, classcol, computeOOB);
+  static public Confusion make(RFModel model, Key datakey, int classcol, double[] classWt, boolean computeOOB) {
+    return make(model, model.size(), datakey, classcol, classWt, computeOOB);
+  }
+  static public Confusion make(RFModel model, int modelSize, Key datakey, int classcol, double[] classWt,boolean computeOOB) {
+    Key key = keyFor(model._selfKey, modelSize, datakey, classcol, computeOOB);
     Confusion C = UKV.get(key, Confusion.class);
     if( C != null ) {         // Look for a prior cached result
       C.shared_init();
@@ -112,9 +115,9 @@ public class Confusion extends MRTask {
     }
 
     // mark that we are computing the matrix now
-    Key progressKey = keyForProgress(model._selfKey, model.size(), datakey, classcol, computeOOB);
+    Key progressKey = keyForProgress(model._selfKey, modelSize, datakey, classcol, computeOOB);
     Value v = DKV.DputIfMatch(progressKey, new Value(progressKey,"IN_PROGRESS"), null, null);
-    C = new Confusion(model,datakey,classcol,classWt,computeOOB);
+    C = new Confusion(model,modelSize,datakey,classcol,classWt,computeOOB);
     if (v != null) { // someone is already working on the matrix, stop
       C._matrix = null;
       return C;
