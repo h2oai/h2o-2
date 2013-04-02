@@ -69,7 +69,7 @@ def build_cloud_with_hosts(node_count=None, use_flatfile=None,
     aws_credentials = hostDict.setdefault('aws_credentials', None)
     # a little hack to redirect import folder tests to an s3 folder
     redirect_import_folder_to_s3_path = hostDict.setdefault('redirect_import_folder_to_s3_path', None)
-    enable_h2o_log = hostDict.setdefault('enable_h2o_log', False)
+    enable_h2o_log = hostDict.setdefault('enable_h2o_log', True)
 
     # can override the json with a caller's argument
     # FIX! and we support passing othe kwargs from above? but they don't override
