@@ -256,7 +256,7 @@ public class H2ONode extends Iced implements Comparable {
     // around a long time - and the dt might be big.
     DTask dt = rpc._dt;         // The existing DTask, if any
     if( dt != null && RPC.RPCCall.CAS_DT.compareAndSet(rpc,dt,null) ) {
-      assert rpc._computed : "Still not done #"+task+" "+rpc._dt.getClass()+" from "+rpc._client;
+      assert rpc._computed : "Still not done #"+task+" "+dt.getClass()+" from "+rpc._client;
       AckAckTimeOutThread.PENDING.remove(rpc);
       dt.onAckAck();            // One-time call on stop-tracking
     }
