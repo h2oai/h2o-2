@@ -38,7 +38,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_gamma_rand2(self):
+    def test_GLM_gaussian_rand2(self):
         csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname)
 
