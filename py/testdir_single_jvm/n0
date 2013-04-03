@@ -57,8 +57,6 @@
 ./n0.doit test_many_cols.py
 ./n0.doit test_mixed_causes_NA.py
 ./n0.doit test_parity_128_4_2_quad.py
-./n0.doit test_parse_covtype20x_s3n_thru_hdfs.py
-./n0.doit test_parse_csvs_s3n_thru_hdfs.py
 ./n0.doit test_parse_many_cases.py
 ./n0.doit test_parse_many_doublesp.py
 ./n0.doit test_parse_small_many.py

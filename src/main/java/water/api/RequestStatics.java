@@ -1,12 +1,12 @@
 package water.api;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.Map;
 import java.util.regex.Pattern;
-import water.H2O;
+
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 
 /** All statics for the Request api.
  *
@@ -41,6 +41,7 @@ public class RequestStatics extends Constants {
     help(".help"), ///< should display the help on the given request
     query(".query"), ///< Displays the query for the argument in html mode
     debug(".debug"), ///< Displays the webpage without query
+    png(".png"), ///< image, e.g. plot
     ;
     /** Suffix of the request - extension of the URL.
      */
@@ -62,6 +63,8 @@ public class RequestStatics extends Constants {
         return query;
       if (requestUrl.endsWith(debug._suffix))
         return debug;
+      if (requestUrl.endsWith(png._suffix))
+        return png;
       return json;
     }
 

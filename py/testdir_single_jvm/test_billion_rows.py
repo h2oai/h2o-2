@@ -14,9 +14,10 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1,java_heap_GB=10)
+            h2o.build_cloud(1,java_heap_GB=14)
         else:
-            h2o_hosts.build_cloud_with_hosts(1,java_heap_GB=10)
+            # dataset is about 12GB uncompressed.
+            h2o_hosts.build_cloud_with_hosts(1,java_heap_GB=14)
 
     @classmethod
     def tearDownClass(cls):
@@ -27,7 +28,7 @@ class Basic(unittest.TestCase):
         # importFolderPath = "/home/hduser/hdfs_datasets"
         importFolderPath = "/home/0xdiag/datasets"
         h2i.setupImportFolder(None, importFolderPath)
-        timeoutSecs = 500
+        timeoutSecs = 900
 
         #    "covtype169x.data",
         #    "covtype.13x.shuffle.data",

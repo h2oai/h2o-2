@@ -55,6 +55,7 @@ MEMORY_MAPPING = {
     'm2.4xlarge' : { 'xmx' : 60 },  
     'm3.xlarge'  : { 'xmx' : 11 },  
     'm3.2xlarge' : { 'xmx' : 24 },  
+    'c1.xlarge'  : { 'xmx' : 6  },  
 }
 
 ''' EC2 API default configuration. The corresponding values are replaces by EC2 user config. '''

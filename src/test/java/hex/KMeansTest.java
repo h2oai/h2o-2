@@ -83,7 +83,7 @@ public class KMeansTest extends TestUtil {
     }
   }
 
-  static double[][] gauss(int columns, int rows, double[][] goals) {
+  public static double[][] gauss(int columns, int rows, double[][] goals) {
     // rows and cols are reversed on this one for va_maker
     double[][] array = new double[columns][rows];
     Random rand = KMeans.RAND_SEED == null ? new Random() : new Random(KMeans.RAND_SEED);

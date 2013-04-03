@@ -24,7 +24,7 @@ class Basic(unittest.TestCase):
             print "\n", tryHeap,"GB heap, 1 jvm per host, import folder,", \
                 "then loop parsing 'billion_rows.csv' to unique keys"
             h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap)
-            timeoutSecs=300
+            timeoutSecs=800
             for trial in range(trialMax):
                 # since we delete the key, we have to re-import every iteration, to get it again
                 h2i.setupImportFolder(None, importFolderPath)

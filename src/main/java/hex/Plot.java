@@ -9,13 +9,7 @@ import water.ValueArray.Column;
 public abstract class Plot {
   private static final boolean DEBUG = false;
 
-  public static class Res extends Iced {
-    public byte[] _pixels;
-  }
-
-  static public void run(Key dest, ValueArray va, int width, int height, int... cols) {
-    final Res res = new Res();
-
+  static public byte[] run(ValueArray va, int width, int height, int... cols) {
     // TODO PCA if more than two columns
 
     // Count dots falling in each pixel
@@ -25,8 +19,7 @@ public abstract class Plot {
     task._height = height;
     task._cols = cols;
     task.invoke(va._key);
-    res._pixels = task._pixels;
-    UKV.put(dest, res);
+    return task._pixels;
   }
 
   static class Pixels extends MRTask {
