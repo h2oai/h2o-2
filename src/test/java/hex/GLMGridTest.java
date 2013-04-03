@@ -5,11 +5,6 @@ import hex.DGLM.GLMModel;
 import hex.DGLM.GLMParams;
 import hex.DLSM.ADMMSolver;
 import hex.DLSM.LSMSolver;
-
-import java.util.Arrays;
-
-import org.junit.Test;
-
 import water.*;
 
 // Test grid-search over GLM args
@@ -27,17 +22,11 @@ public class GLMGridTest extends TestUtil {
     System.out.print(msg);
 
     // Solve it!
-    GLMModel m = DGLM.buildModel(DGLM.getData(va, cols, null, true), lsms, glmp);
+    GLMModel m = DGLM.startGLMJob(DGLM.getData(va, cols, null, true), lsms, glmp,null,0).get();
     if( m._warnings != null )
       for( String s : m._warnings )
         System.err.println(s);
-
     // Validate / compute results
-    if( m.isSolved() ) {
-      m.validateOn(va,null,thresholds);
-      long[][] arr = m._vals[0].bestCM()._arr;
-      System.out.println(", score="+score(m)+Arrays.deepToString(arr));
-    }
     return m;
   }
 
