@@ -28,7 +28,7 @@ class Basic(unittest.TestCase):
         # importFolderPath = "/home/hduser/hdfs_datasets"
         importFolderPath = "/home/0xdiag/datasets"
         h2i.setupImportFolder(None, importFolderPath)
-        timeoutSecs = 500
+        timeoutSecs = 900
 
         #    "covtype169x.data",
         #    "covtype.13x.shuffle.data",
