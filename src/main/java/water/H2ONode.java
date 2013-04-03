@@ -208,7 +208,7 @@ public class H2ONode extends Iced implements Comparable {
   private final RPC.RPCCall _removed_task = new RPC.RPCCall(null,this,0);
 
   RPC.RPCCall has_task( int tnum ) {
-    if( tnum <= _removed_task_ids.get() ) return null;
+    if( tnum <= _removed_task_ids.get() ) return _removed_task;
     return _work.get(tnum);
   }
 
