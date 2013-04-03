@@ -8,6 +8,7 @@ import java.lang.reflect.Method;
 import java.util.*;
 
 import org.apache.commons.lang.ArrayUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
@@ -50,6 +51,7 @@ public class JUnitRunner {
 
     File out = null, err = null, sandbox = new File("sandbox");
     sandbox.mkdirs();
+    Utils.clearFolder(sandbox);
     for( int i = 0; i < nodes.size(); i++ ) {
       out = File.createTempFile("junit-" + i + "-out-", null, sandbox);
       err = File.createTempFile("junit-" + i + "-err-", null, sandbox);
@@ -111,6 +113,9 @@ public class JUnitRunner {
     }
 
     private static boolean isTest(Class c) {
+      for( Annotation a : c.getAnnotations() )
+        if( a instanceof Ignore )
+          return false;
       for( Method m : c.getMethods() )
         for( Annotation a : m.getAnnotations() )
           if( a instanceof Test )

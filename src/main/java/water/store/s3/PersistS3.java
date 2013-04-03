@@ -22,29 +22,27 @@ public abstract class PersistS3 {
   private static final String  KEY_PREFIX                   = "s3://";
   private static final int     KEY_PREFIX_LEN               = KEY_PREFIX.length();
 
-  private static final AmazonS3 S3;
-  static {
-    AmazonS3 s3 = null;
-    try {
-      s3 = new AmazonS3Client(H2O.getAWSCredentials(), s3ClientCfg());
-    } catch( Throwable e ) {
-      H2O.ignore(e);
-      log("Unable to create S3 backend.");
-      if( H2O.OPT_ARGS.aws_credentials == null )
-        log(HELP);
-    }
-    S3 = s3;
-  }
+  private static final Object _lock = new Object();
+  private static volatile AmazonS3 _s3;
 
   public static AmazonS3 getClient() {
-    if( S3 == null ) {
-      StringBuilder msg = new StringBuilder();
-      msg.append("Unable to load S3 credentials.");
-      if( H2O.OPT_ARGS.aws_credentials == null )
-        msg.append(HELP);
-      throw new IllegalArgumentException(msg.toString());
+    if( _s3 == null ) {
+      synchronized(_lock) {
+        if( _s3 == null ) {
+          try {
+            _s3 = new AmazonS3Client(H2O.getAWSCredentials(), s3ClientCfg());
+          } catch( Throwable e ) {
+            StringBuilder msg = new StringBuilder();
+            msg.append(e.getMessage() + "\n");
+            msg.append("Unable to load S3 credentials.");
+            if( H2O.OPT_ARGS.aws_credentials == null )
+              msg.append(HELP);
+            throw new RuntimeException(msg.toString());
+          }
+        }
+      }
     }
-    return S3;
+    return _s3;
   }
 
   public static Key loadKey(S3ObjectSummary obj) throws IOException {
@@ -206,14 +204,14 @@ public abstract class PersistS3 {
     String[] bk = decodeKey(k);
     GetObjectRequest r = new GetObjectRequest(bk[0], bk[1]);
     r.setRange(offset, offset + length - 1); // Range is *inclusive* according to docs???
-    return S3.getObject(r);
+    return getClient().getObject(r);
   }
 
   // Gets the object metadata associated with given key.
   private static ObjectMetadata getObjectMetadataForKey(Key k) {
     String[] bk = decodeKey(k);
     assert (bk.length == 2);
-    return S3.getObjectMetadata(bk[0], bk[1]);
+    return getClient().getObjectMetadata(bk[0], bk[1]);
   }
 
   /** S3 socket timeout property name */
@@ -235,9 +233,5 @@ public abstract class PersistS3 {
     if (prop.containsKey(S3_MAX_HTTP_CONNECTIONS_PROP)) cfg.setMaxConnections(   Integer.getInteger(S3_MAX_HTTP_CONNECTIONS_PROP));
     cfg.setProtocol(Protocol.HTTP);
     return cfg;
-  }
-
-  private static void log(String printf, Object... args) {
-    System.err.printf("[s3] " + printf + "\n", args);
   }
 }

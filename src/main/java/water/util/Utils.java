@@ -249,4 +249,20 @@ public class Utils {
       s += (s.length() == 0 ? "" : sep) + o.toString();
     return s;
   }
+
+  public static void clearFolder(String folder) {
+    clearFolder(new File(folder));
+  }
+
+  public static void clearFolder(File folder) {
+    if (folder.exists()) {
+      for (File child : folder.listFiles()) {
+        if (child.isDirectory())
+          clearFolder(child);
+
+        if (!child.delete())
+          throw new RuntimeException("Cannot delete " + child);
+      }
+    }
+  }
 }
