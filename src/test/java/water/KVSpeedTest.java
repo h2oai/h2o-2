@@ -2,11 +2,12 @@ package water;
 
 import org.junit.*;
 
+// Weeny speed-test harness.  Not intended for use with any real testing.
 public class KVSpeedTest extends TestUtil {
 
   @BeforeClass public static void stall() { stall_till_cloudsize(3); }
 
-  @Test public void test100Keys() {
+  /*@Test*/ public void test100Keys() {
     final int ITERS = 100000;
     Key   keys[] = new Key  [ITERS];
     Value vals[] = new Value[keys.length];
