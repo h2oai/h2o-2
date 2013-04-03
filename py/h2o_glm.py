@@ -33,7 +33,7 @@ def pickRandGlmParams(paramDict, params):
     return colX
 
 def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False,
-    prettyPrint=False, **kwargs):
+    prettyPrint=False, noPrint=False, **kwargs):
     # h2o GLM will verboseprint the result and print errors. 
     # so don't have to do that
     # different when cross validation  is used? No trainingErrorDetails?
@@ -128,7 +128,8 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         print "\nH2O intercept:\t\t%.5e" % intercept
         print cString
     else:
-        print "\nintercept:", intercept, cString
+        if not noPrint:
+            print "\nintercept:", intercept, cString
 
     print "\nTotal # of coefficients:", len(column_names)
 
