@@ -79,7 +79,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         print "%15s %s" % ("auc:\t", validations['auc'])
         print "%15s %s" % ("threshold:\t", validations['threshold'])
 
-    if family=="poisson" or family=="gaussian" or family=="gamma":
+    if family=="poisson" or family=="gaussian":
         print "%15s %s" % ("aic:\t", validations['aic'])
 
     # get a copy, so we don't destroy the original when we pop the intercept
