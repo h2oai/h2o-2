@@ -12,7 +12,7 @@ import java.util.zip.*;
 
 import water.*;
 import water.ValueArray.Column;
-import water.api.GLM.GLMBuilder;
+import water.api.GLMProgress.GLMBuilder;
 import water.parser.CsvParser;
 import water.util.Utils;
 
@@ -69,7 +69,7 @@ public class Inspect extends Request {
       JsonObject res = new JsonObject();
       res.add(GLMModel.NAME, m.toJson());
       Response r = Response.done(res);
-      r.setBuilder(ROOT_OBJECT, new GLMBuilder(m));
+      r.setBuilder(ROOT_OBJECT, new GLMBuilder(m, null));
       return r;
     }
     if( f instanceof hex.GLMGrid.GLMModels ) {

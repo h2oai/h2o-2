@@ -4,6 +4,7 @@ import hex.DGLM.Family;
 import hex.DGLM.GLMModel;
 import hex.DGLM.GLMParams;
 import hex.DLSM.ADMMSolver;
+import hex.NewRowVecTask.JobCancelledException;
 
 import java.util.*;
 
@@ -75,18 +76,14 @@ public class GLMGrid extends Job {
       double [] beta = null;
       Futures fs = new Futures();
       ValueArray ary = DKV.get(_aryKey).get();
-      for( int l1 = 1; l1 <= _job._lambdas.length; l1++ ) {
-        if(_job.cancelled())
-          break;
-        GLMModel m = DGLM.buildModel(DGLM.getData(ary, _job._xs, null, true), new ADMMSolver(_job._lambdas[N-l1], _job._alphas[_aidx]), _job._glmp,beta);
-        if( _job._xfold <= 1 )
-          m.validateOn(ary, null, _job._ts);
-        else
-          m.xvalidate(ary, _job._xfold, _job._ts);
-        beta = m._normBeta.clone();
-        _job.update(m, (_job._lambdas.length-l1) + _aidx * _job._lambdas.length, System.currentTimeMillis() - _job._startTime,fs);
-      }
-      fs.blockForPending();
+      try{
+        for( int l1 = 1; l1 <= _job._lambdas.length && !_job.cancelled(); l1++ ) {
+          GLMModel m = DGLM.buildModel(_job,GLMModel.makeKey(false),DGLM.getData(ary, _job._xs, null, true), new ADMMSolver(_job._lambdas[N-l1], _job._alphas[_aidx]), _job._glmp,beta,_job._xfold);
+          beta = m._normBeta.clone();
+          _job.update(m, (_job._lambdas.length-l1) + _aidx * _job._lambdas.length, System.currentTimeMillis() - _job._startTime,fs);
+        }
+        fs.blockForPending();
+      }catch(JobCancelledException e){/* do not need to do anything here but stop the execution*/}
     }
 
     @Override

@@ -13,6 +13,7 @@ public class TypeMap {
     "[B",                       // 1: Array of Bytes
     "hex.ConfusionMatrix",
     "hex.Covariance$COV_Task",
+    "hex.DGLM$GLMJob",
     "hex.DGLM$GLMModel",
     "hex.DGLM$GLMParams",
     "hex.DGLM$GLMValidation",
@@ -71,6 +72,9 @@ public class TypeMap {
     "water.Job$3",
     "water.Job$Fail",
     "water.Job$List",
+    "water.Job$ChunkProgressJob",
+    "water.Job$ChunkProgress",
+    "water.Job$ChunkProgressJob$2",
     "water.KVTest$Atomic2",
     "water.KVTest$ByteHisto",
     "water.KVTest$RemoteBitSet",
