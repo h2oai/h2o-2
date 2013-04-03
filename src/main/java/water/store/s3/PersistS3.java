@@ -115,7 +115,7 @@ public abstract class PersistS3 {
   }
 
   private static void ignoreAndWait(final Exception e) {
-    H2O.ignore(e, "[h2o,s3] Hit the S3 reset problem, waiting and retrying...");
+    H2O.ignore(e, "[h2o,s3] Hit the S3 reset problem, waiting and retrying...", false);
     try { Thread.sleep(500); } catch (InterruptedException ie) {}
   }
 

@@ -165,7 +165,7 @@ public abstract class PersistHdfs {
   }
 
   private static void ignoreAndWait(final Exception e) {
-    H2O.ignore(e, "[h2o,hdfs] Hit HDFS reset problem, retrying...");
+    H2O.ignore(e, "[h2o,hdfs] Hit HDFS reset problem, retrying...", false);
     try { Thread.sleep(500); } catch (InterruptedException ie) {}
   }
 
