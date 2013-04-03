@@ -2,7 +2,7 @@
 import os, json, unittest, time, shutil, sys
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_glm
 import h2o_browse as h2b
 import h2o_import as h2i
 import time, random
@@ -40,7 +40,6 @@ class Basic(unittest.TestCase):
         s3nKey = URI + csvPathname
 
         trialMax = 3
-        timeoutSecs = 500
 
         for trial in range(trialMax):
             trialStart = time.time()
@@ -53,12 +52,15 @@ class Basic(unittest.TestCase):
 
             key2 = csvFilename + "_" + str(trial) + ".hex"
             print "Loading s3n key: ", s3nKey, 'thru HDFS'
+            timeoutSecs = 500
             start = time.time()
             parseKey = h2o.nodes[0].parse(s3nKey, key2,
-                timeoutSecs=500, retryDelaySecs=10, pollTimeoutSecs=60)
+                timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
             elapsed = time.time() - start
+            print s3nKey, 'h2o reported parse time:', parseKey['response']['time']
+            print "parse end on ", s3nKey, 'took', elapsed, 'seconds',\
+                "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
-            print s3nKey, 'parse time:', parseKey['response']['time']
             print "parse result:", parseKey['destination_key']
 
             kwargs = {
@@ -68,16 +70,16 @@ class Basic(unittest.TestCase):
                 'num_cross_validation_folds': 2,
                 'case_mode': '=',
                 'case': 1,
-                'max_iter': 50,
+                'max_iter': 8,
                 'beta_epsilon': 1e-3}
 
-            timeoutSecs = 300
+            timeoutSecs = 500
             # L2 
             kwargs.update({'alpha': 0, 'lambda': 0})
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time()
-            print "glm (L2) end on ", csvPathname, 'took', elapsed - start, 'seconds',\
+            print "glm (L2) end on ", csvPathname, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
             h2o.check_sandbox_for_errors()
@@ -87,7 +89,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time()
-            print "glm (Elastic) end on ", csvPathname, 'took', elapsed - start, 'seconds',\
+            print "glm (Elastic) end on ", csvPathname, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
             h2o.check_sandbox_for_errors()
@@ -97,7 +99,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time()
-            print "glm (L1) end on ", csvPathname, 'took', elapsed - start, 'seconds',\
+            print "glm (L1) end on ", csvPathname, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
             h2o.check_sandbox_for_errors()
