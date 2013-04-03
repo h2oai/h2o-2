@@ -88,7 +88,7 @@ public class KMeans extends Request {
       sb.append("<tr>");
       sb.append("<th>Clusters</th>");
       for( int i = 0; i < row0.size(); i++ )
-        sb.append("<th>").append(i).append("</th>");
+        sb.append("<th>").append(m._va._cols[i]._name).append("</th>");
       sb.append("</tr>");
 
       for( int r = 0; r < rows.size(); r++ ) {

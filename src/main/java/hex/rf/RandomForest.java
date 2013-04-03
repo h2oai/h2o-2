@@ -8,7 +8,6 @@ import java.io.File;
 import java.util.*;
 
 import water.*;
-import water.DRemoteTask.DFuture;
 import water.Timer;
 import water.util.Utils;
 
@@ -57,7 +56,7 @@ public class RandomForest {
     String  rawKey;
     String  parsedKey;
     String  validationFile;
-    String  h2oArgs       = " --name=Test"+ System.nanoTime()+ " ";
+    String  h2oArgs;
     int     ntrees        = 10;
     int     depth         = Integer.MAX_VALUE;
     int     sample        = 67;
@@ -94,10 +93,16 @@ public class RandomForest {
   public static void main(String[] args) throws Exception {
     Arguments arguments = new Arguments(args);
     arguments.extract(ARGS);
-    if(ARGS.h2oArgs.startsWith("\"") && ARGS.h2oArgs.endsWith("\""))
-      ARGS.h2oArgs = ARGS.h2oArgs.substring(1, ARGS.h2oArgs.length()-1);
-    ARGS.h2oArgs = ARGS.h2oArgs.trim();
-    String [] h2oArgs = ARGS.h2oArgs.split("[ \t]+");
+    String[] h2oArgs;
+    if(ARGS.h2oArgs == null) { // By default run using local IP, C.f. JUnitRunner
+      File flat = Utils.tempFile("127.0.0.1:54327");
+      h2oArgs = new String[] { "-ip=127.0.0.1", "-flatfile=" + flat.getAbsolutePath() };
+    } else {
+      if(ARGS.h2oArgs.startsWith("\"") && ARGS.h2oArgs.endsWith("\""))
+        ARGS.h2oArgs = ARGS.h2oArgs.substring(1, ARGS.h2oArgs.length()-1);
+      ARGS.h2oArgs = ARGS.h2oArgs.trim();
+      h2oArgs = ARGS.h2oArgs.split("[ \t]+");
+    }
     H2O.main(h2oArgs);
     ValueArray va;
     // get the input data

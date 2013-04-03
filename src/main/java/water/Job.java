@@ -62,8 +62,10 @@ public class Job extends Iced {
 
   // Overriden for Parse
   public float progress() {
-    Job.Progress dest = (Job.Progress) UKV.get(_dest);
-    return dest != null ? dest.progress() : 0;
+    Freezable f = UKV.get(_dest);
+    if(f instanceof Job)
+      return ((Job.Progress) f).progress();
+    return 0;
   }
 
   // Block until the Job finishes.
