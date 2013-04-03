@@ -242,14 +242,14 @@ public final class H2O {
   }
 
   private static InetAddress guessInetAddress(List<InetAddress> ips) {
-    System.err.println("Multiple local IPs detected:");
-    for(InetAddress ip : ips) System.err.println("  " + ip);
-    System.err.println("Attempting to determine correct address...");
+    System.out.println("Multiple local IPs detected:");
+    for(InetAddress ip : ips) System.out.println("  " + ip);
+    System.out.println("Attempting to determine correct address...");
     Socket s = null;
     try {
       // using google's DNS server as an external IP to find
       s = new Socket("8.8.8.8", 53);
-      System.err.println("Using " + s.getLocalAddress());
+      System.out.println("Using " + s.getLocalAddress());
       return s.getLocalAddress();
     } catch( Throwable t ) {
       return null;

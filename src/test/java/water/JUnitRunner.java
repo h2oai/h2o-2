@@ -8,6 +8,7 @@ import java.lang.reflect.Method;
 import java.util.*;
 
 import org.apache.commons.lang.ArrayUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
@@ -16,6 +17,7 @@ import water.parser.ParseCompressedAndXLSTest;
 import water.parser.ParseFolderTestBig;
 import water.sys.Node;
 import water.sys.NodeVM;
+import water.util.Utils;
 
 public class JUnitRunner {
   private static void filter(List<Class> tests) {
@@ -33,17 +35,23 @@ public class JUnitRunner {
   }
 
   public static void main(String[] args) throws Exception {
+    // Force all IPs to local so that users can run with a firewall
+    File flat = Utils.tempFile("127.0.0.1:54321\n127.0.0.1:54323\n127.0.0.1:54325");
+    String[] a = new String[] { "-ip", "127.0.0.1", "--log_headers", "-flatfile", flat.getAbsolutePath() };
+    H2O.OPT_ARGS.ip = "127.0.0.1";
+    args = (String[]) ArrayUtils.addAll(a, args);
+
     ArrayList<Node> nodes = new ArrayList<Node>();
-    args = (String[]) ArrayUtils.addAll(args, new String[] { "--log_headers" });
     nodes.add(new NodeVM(args));
     nodes.add(new NodeVM(args));
 
-    args = (String[]) ArrayUtils.addAll(args, new String[] { "-mainClass", Master.class.getName() });
+    args = (String[]) ArrayUtils.addAll(new String[] { "-mainClass", Master.class.getName() }, args);
     Node master = new NodeVM(args);
     nodes.add(master);
 
     File out = null, err = null, sandbox = new File("sandbox");
     sandbox.mkdirs();
+    Utils.clearFolder(sandbox);
     for( int i = 0; i < nodes.size(); i++ ) {
       out = File.createTempFile("junit-" + i + "-out-", null, sandbox);
       err = File.createTempFile("junit-" + i + "-err-", null, sandbox);
@@ -105,6 +113,9 @@ public class JUnitRunner {
     }
 
     private static boolean isTest(Class c) {
+      for( Annotation a : c.getAnnotations() )
+        if( a instanceof Ignore )
+          return false;
       for( Method m : c.getMethods() )
         for( Annotation a : m.getAnnotations() )
           if( a instanceof Test )
