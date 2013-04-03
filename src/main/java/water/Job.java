@@ -147,7 +147,6 @@ public class Job extends Iced {
     final double _count;
 
     public ChunkProgress(long chunksTotal) {
-      System.out.println("chunkstotal = " + chunksTotal);
       _totalInv = 1.0/chunksTotal;
       _count = 0;
     }
@@ -185,6 +184,12 @@ public class Job extends Iced {
           return old.update(c);
         }
       }.invoke(_progress);
+    }
+
+    @Override
+    public void remove(){
+      super.remove();
+      UKV.remove(_progress);
     }
 
     public final Key progressKey(){return _progress;}

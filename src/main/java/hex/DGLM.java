@@ -1,5 +1,5 @@
 package hex;
-
+import water.Model;
 import hex.ConfusionMatrix.ErrMetric;
 import hex.DGLM.GLMModel.Status;
 import hex.DLSM.ADMMSolver.NonSPDMatrixException;
@@ -9,9 +9,7 @@ import hex.NewRowVecTask.DataFrame;
 import hex.NewRowVecTask.JobCancelledException;
 import hex.NewRowVecTask.RowFunc;
 import hex.RowVecTask.Sampling;
-
 import java.util.*;
-
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
@@ -21,7 +19,6 @@ import water.api.Constants;
 
 import com.google.common.base.Objects;
 import com.google.gson.*;
-
 
 
 
@@ -1245,7 +1242,6 @@ public abstract class DGLM {
 
   public static GLMModel buildModel(Job job, Key resKey, DataFrame data, LSMSolver lsm, GLMParams params, double [] oldBeta, int xval) throws JobCancelledException {
     GLMModel currentModel = null;
-    System.out.println("#cols = " + data.expandedSz());
     ArrayList<String> warns = new ArrayList<String>();
     long t1 = System.currentTimeMillis();
     // make sure we have valid response variable for the current family

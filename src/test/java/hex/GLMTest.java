@@ -50,11 +50,8 @@ public class GLMTest extends TestUtil {
     glmp._betaEps = 0.000001;
     glmp._maxIter = 100;
     // Solver
-    GLMModel m = DGLM.buildModel(DGLM.getData(va, cols,null,true), lsms, glmp);
-    // Solve it!
-    m.validateOn(va, null,THRESHOLDS);// Validate...
-    JsonObject glm = m.toJson();
-    return glm;
+    GLMModel m = DGLM.startGLMJob(DGLM.getData(va, cols,null,true), lsms, glmp,null,0).get();
+    return m.toJson();
   }
 
    static double [] thresholds = new double [] {
@@ -79,12 +76,8 @@ public class GLMTest extends TestUtil {
   }
 
   public static void runGLMTest(DataFrame data, LSMSolver lsm, GLMParams glmp, int xval, String [] coefs, double [] values, double ndev, double resdev, double err, double aic, double auc, double betaPrecision, double validationPrecision){
-    GLMModel m = DGLM.buildModel(data, lsm, glmp);
+    GLMModel m = DGLM.startGLMJob(data, lsm, glmp,null,0).get();
     try{
-      if(xval <= 1)
-        m.validateOn(data._ary, null,thresholds);
-      else
-        m.xvalidate(data._ary, xval, thresholds);
       JsonObject mjson = m.toJson();
       JsonObject jcoefs = mjson.get("coefficients").getAsJsonObject();
       for(int i = 0; i < coefs.length; ++i)
@@ -101,8 +94,8 @@ public class GLMTest extends TestUtil {
       if(!Double.isNaN(err))
         assertEquals(err, validation.get("err").getAsDouble(), validationPrecision);
     } finally {
-      if(m != null && m._selfKey != null)
-        UKV.remove(m._selfKey);
+      if(m != null)
+        m.remove();
     }
   }
 
