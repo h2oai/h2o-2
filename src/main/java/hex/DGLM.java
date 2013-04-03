@@ -1,21 +1,24 @@
 package hex;
-
+import water.Model;
 import hex.ConfusionMatrix.ErrMetric;
+import hex.DGLM.GLMModel.Status;
 import hex.DLSM.ADMMSolver.NonSPDMatrixException;
 import hex.DLSM.GeneralizedGradientSolver;
 import hex.DLSM.LSMSolver;
 import hex.NewRowVecTask.DataFrame;
+import hex.NewRowVecTask.JobCancelledException;
 import hex.NewRowVecTask.RowFunc;
 import hex.RowVecTask.Sampling;
-
 import java.util.*;
-
+import jsr166y.CountedCompleter;
 import water.*;
+import water.H2O.H2OCountedCompleter;
+import water.Job.ChunkProgressJob;
 import water.ValueArray.Column;
 import water.api.Constants;
 
+import com.google.common.base.Objects;
 import com.google.gson.*;
-
 
 
 
@@ -25,6 +28,19 @@ public abstract class DGLM {
 
   public static class GLMException extends RuntimeException {
     public GLMException(String msg){super(msg);}
+  }
+
+  public static class GLMJob extends ChunkProgressJob {
+    public GLMJob(ValueArray data, Key dest, int xval, GLMParams params){
+      // approximate the total number of computed chunks as 25 per normal model computation + 10 iterations per xval model)
+      super("GLM(" + data._key.toString() + ")",dest, (params._family == Family.gaussian)?data.chunks()*(xval+1):data.chunks()*(20+4*xval));
+    }
+
+    @Override
+    public float progress() {
+      ChunkProgress progress = UKV.get(progressKey());
+      return (progress != null ? progress.progress() : 0);
+    }
   }
 
   public static class GLMParams extends Iced {
@@ -328,7 +344,80 @@ public abstract class DGLM {
     }
   }
 
+  private static class GLMXvalSetup extends Iced {
+    final int _id;
+    public GLMXvalSetup(int i){_id = i;}
+  }
+  private static class GLMXValTask extends MRTask {
+    transient ValueArray _ary;
+    Key _aryKey;
+    Job _job;
+    boolean _standardize;
+    LSMSolver _lsm;
+    GLMParams _glmp;
+    double [] _betaStart;
+    int [] _cols;
+    double [] _thresholds;
+    final int _folds;
+    GLMModel [] _models;
+
+    public GLMXValTask(Job job, int folds, ValueArray ary, int [] cols, boolean standardize, LSMSolver lsm, GLMParams glmp, double [] betaStart, double [] thresholds){
+      _job = job;
+      _folds = folds;
+      _ary = ary; _aryKey = ary._key;
+      _cols = cols;
+      _standardize = standardize;
+      _lsm = lsm;
+      _glmp = glmp;
+      _betaStart = betaStart;
+      _thresholds = thresholds;
+    }
+
+    @Override
+    public void init() {
+      super.init();
+      _ary = DKV.get(_aryKey).get();
+      _models = new GLMModel[_folds];
+
+    }
+
+    @Override
+    public void map(Key key) {
+
+      GLMXvalSetup setup = DKV.get(key).get();
+      Sampling s = new Sampling(setup._id,_folds,false);
+      assert _models[setup._id] == null;
+      Key dest = GLMModel.makeKey(false);
+      try{
+        _models[setup._id] = DGLM.buildModel(_job, dest,DGLM.getData(_ary, _cols, s, _standardize), _lsm, _glmp, _betaStart.clone(),0);
+      } catch(JobCancelledException e) {
+        UKV.remove(dest);
+      }
+      // cleanup before sending back
+      DKV.remove(key);
+      _betaStart = null;
+      _lsm = null;
+      _glmp = null;
+      _cols = null;
+      _aryKey = null;
+    }
+
+    @Override
+    public void reduce(DRemoteTask drt) {
+      GLMXValTask other = (GLMXValTask)drt;
+      if(other._models != _models){
+        for(int i = 0; i < _models.length; ++i)
+          if(_models[i] == null)
+            _models[i] = other._models[i];
+          else
+            assert other._models[i] == null;
+      }
+    }
+  }
+
   public static class GLMModel extends Model {
+    public enum Status {NotStarted,ComputingModel,ComputingValidation,Done,Cancelled};
+
     final Sampling _s;
     final int [] _colCatMap;
     public final boolean _converged;
@@ -346,6 +435,11 @@ public abstract class DGLM {
     public GLMValidation [] _vals;
     // Empty constructor for deseriaization
 
+    Status _status;
+
+    public Status status(){
+      return _status;
+    }
     public int rank(){
       if(_beta == null)return -1;
       int res = 0;
@@ -361,8 +455,8 @@ public abstract class DGLM {
     public double[] beta() { return _beta; }
     // Warm-start setup; clone the incoming array since we will be mutating it
 
-    public static final Key makeKey() {
-      return Key.make(KEY_PREFIX + Key.make());
+    public static final Key makeKey(boolean visible) {
+      return visible?Key.make(KEY_PREFIX + Key.make()):Key.make(Key.make()._kb,(byte)0,Key.DFJ_INTERNAL_USER,H2O.SELF);
     }
 
     /**
@@ -412,6 +506,7 @@ public abstract class DGLM {
     }
 
     public GLMModel(){
+      _status = Status.NotStarted;
       _colCatMap = null;
       _beta = null;
       _normBeta = null;
@@ -424,12 +519,13 @@ public abstract class DGLM {
       _solver = null;
     }
 
-    public GLMModel(DataFrame data, double [] beta, double [] normBeta, GLMParams glmp, LSMSolver solver, boolean converged, int iters, long time, String [] warnings){
-      this(data._ary, data._modelDataMap, data._colCatMap, data._standardized, data.getSampling(),beta,normBeta, glmp,solver,converged,iters,time,warnings);
+    public GLMModel(Status status, float progress, Key k, DataFrame data, double [] beta, double [] normBeta, GLMParams glmp, LSMSolver solver, boolean converged, int iters, long time, String [] warnings){
+      this(status, progress, k,data._ary, data._modelDataMap, data._colCatMap, data._standardized, data.getSampling(),beta,normBeta, glmp,solver,converged,iters,time,warnings);
     }
 
-    public GLMModel(ValueArray ary, int [] colIds, int [] colCatMap, boolean standardized, Sampling s, double [] beta, double [] normBeta,  GLMParams glmp, LSMSolver solver, boolean converged, int iters, long time, String [] warnings){
-      super(makeKey(),colIds, ary._key);
+    public GLMModel(Status status, float progress, Key k, ValueArray ary, int [] colIds, int [] colCatMap, boolean standardized, Sampling s, double [] beta, double [] normBeta,  GLMParams glmp, LSMSolver solver, boolean converged, int iters, long time, String [] warnings){
+      super(k,colIds, ary._key);
+      _status = status;
       _colCatMap = colCatMap;
       _beta = beta;
       _normBeta = normBeta;
@@ -445,14 +541,24 @@ public abstract class DGLM {
 
     public boolean converged() { return _converged; }
 
+    public void store() {
+      UKV.put(_selfKey,this);
+    }
+
+    public void remove(){
+      UKV.remove(_selfKey);
+      if(_vals != null) for (GLMValidation val:_vals)
+        if(val._modelKeys != null)for(Key k:val._modelKeys)
+          UKV.remove(k);
+    }
     // Validate on a dataset.  Columns must match, including the response column.
-    public GLMValidation validateOn( ValueArray ary, Sampling s, double [] thresholds ) {
+    public GLMValidation validateOn(Job job, ValueArray ary, Sampling s, double [] thresholds ) throws JobCancelledException {
       int [] modelDataMap = ary.getColumnIds(_va.colNames());//columnMapping(ary.colNames());
       if( !isCompatible(modelDataMap) ) // This dataset is compatible or not?
         throw new GLMException("incompatible dataset");
       DataFrame data = new DataFrame(ary, modelDataMap, s, false, true);
       GLMValidationFunc f = new GLMValidationFunc(_glmParams,_beta, thresholds,ary._cols[modelDataMap[modelDataMap.length-1]]._mean);
-      GLMValidation val = f.apply(data);
+      GLMValidation val = f.apply(job,data);
       val._modelKey = _selfKey;
       if(_vals == null)
         _vals = new GLMValidation[]{val};
@@ -461,31 +567,31 @@ public abstract class DGLM {
         _vals = Arrays.copyOf(_vals, n+1);
         _vals[n] = val;
       }
-      UKV.put(_selfKey,this);
       return val;
     }
 
-    public GLMValidation xvalidate(ValueArray ary,int folds, double [] thresholds) {
+    public GLMValidation xvalidate(Job job, ValueArray ary,int folds, double [] thresholds) throws JobCancelledException {
       int [] modelDataMap = ary.getColumnIds(_va.colNames());//columnMapping(ary.colNames());
       if( !isCompatible(modelDataMap) )  // This dataset is compatible or not?
         throw new GLMException("incompatible dataset");
-
-      GLMModel [] models = new GLMModel[folds];
-      for(int i = 0; i < folds; ++i){
-        models[i] = buildModel(DGLM.getData(ary, modelDataMap, new Sampling(i,folds,false),true), _solver, _glmParams);
-        if(models[i].isSolved())
-          models[i].validateOn(ary, new Sampling(i, folds, true),thresholds);
-      }
-      GLMValidation res = new GLMValidation(_selfKey,models, ErrMetric.SUMC,thresholds);
+      final int myNodeId = H2O.SELF.index();
+      final int cloudsize = H2O.CLOUD.size();
+      Key [] keys = new Key[folds];
+      for(int i = 0; i < folds; ++i)
+        DKV.put(keys[i] = Key.make(Key.make()._kb,(byte)0,Key.DFJ_INTERNAL_USER,H2O.CLOUD._memary[(myNodeId + i)%cloudsize]), new GLMXvalSetup(i));
+      GLMXValTask tsk = new GLMXValTask(job,folds, ary, modelDataMap, _standardized, _solver, _glmParams, _normBeta, thresholds);
+      long t1 = System.currentTimeMillis();
+      tsk.invoke(keys);
+      if(job.cancelled())
+        throw new JobCancelledException();
+      GLMValidation res = new GLMValidation(_selfKey,tsk._models, ErrMetric.SUMC,thresholds, System.currentTimeMillis() - t1);
       if(_vals == null)_vals = new GLMValidation[]{res};
       else {
         _vals = Arrays.copyOf(_vals, _vals.length+1);
         _vals[_vals.length-1] = res;
       }
-      UKV.put(_selfKey,this);
       return res;
     }
-
 
     public JsonObject toJson(){
       JsonObject res = new JsonObject();
@@ -600,9 +706,15 @@ public abstract class DGLM {
     public ConfusionMatrix [] _cm;
     int _tid;
     double [] _thresholds;
+    long _time;
+
+    public final long computationTime(){
+      return _time;
+    }
 
     public GLMValidation(){_modelKeys = null;}
-    public GLMValidation(Key modelKey, GLMModel [] models, ErrMetric m, double [] thresholds) {
+    public GLMValidation(Key modelKey, GLMModel [] models, ErrMetric m, double [] thresholds, long time) {
+      _time = time;
       _errMetric = m;
       _modelKey = modelKey;
       _dataKey = models[0]._dataKey;
@@ -935,9 +1047,6 @@ public abstract class DGLM {
     }
   }
 
-
-
-
   public static class GLMValidationFunc extends RowFunc<GLMValidation> {
     final GLMParams _glmp;
     final double [] _beta;
@@ -947,14 +1056,19 @@ public abstract class DGLM {
     public GLMValidationFunc(GLMParams params, double [] beta, double [] thresholds, double ymu){
       _glmp = params;
       _beta = beta;
-      _thresholds = thresholds;
+      _thresholds = Objects.firstNonNull(thresholds,DEFAULT_THRESHOLDS);
       _ymu = ymu;
     }
 
-    public GLMValidation apply(DataFrame data){
-      NewRowVecTask<GLMValidation> tsk = new NewRowVecTask<GLMValidation>(this, data);
+    @Override
+    public GLMValidation apply(Job job,DataFrame data) throws JobCancelledException {
+      long t1 = System.currentTimeMillis();
+      NewRowVecTask<GLMValidation> tsk = new NewRowVecTask<GLMValidation>(job,this, data);
       tsk.invoke(data._ary._key);
+      if(job.cancelled())
+        throw new JobCancelledException();
       GLMValidation res = tsk._result;
+      res._time = System.currentTimeMillis()-t1;
       if(_glmp._family != Family.binomial)
         res._err = Math.sqrt(res._err/res._n);
       res._dataKey = data._ary._key;
@@ -985,7 +1099,7 @@ public abstract class DGLM {
     @Override
     public GLMValidation newResult() {
       GLMValidation res = new GLMValidation();
-      if(_thresholds != null){
+      if(_glmp._family == Family.binomial){
         res._cm = new ConfusionMatrix[_thresholds.length];
         for(int i = 0; i < _thresholds.length; ++i)
           res._cm[i] = new ConfusionMatrix(2);
@@ -1074,26 +1188,70 @@ public abstract class DGLM {
     return new DataFrame(ary, colIds, s, standardize, true);
   }
 
-  public static GLMModel buildModel(DataFrame data, LSMSolver lsm, GLMParams params) {
-//    double [] beta = new double[data.expandedSz()];
-//    Arrays.fill(beta, params._link.defaultBeta);
-//    if(params._family == Family.gamma)beta[beta.length-1] = 1;
-    return buildModel(data, lsm, params, null);
+
+  public static class GLMProgress implements Job.Progress{
+    GLMModel _currentModel;
+    float   _progress;
+    float   _overAllprogress;
+
+
+
+    @Override
+    public float progress() {
+      return _progress;
+    }
+
+    public void iterationComputed(GLMModel m){
+      _currentModel = m;
+    }
+    public void chunkProcessed(){
+
+    }
+
+  }
+  public static GLMJob startGLMJob(final DataFrame data, final LSMSolver lsm, final GLMParams params, final double [] betaStart, final int xval ) {
+    final GLMJob job = new GLMJob(data._ary,GLMModel.makeKey(true),xval,params);
+    final double [] beta;
+    final double [] denormalizedBeta;
+    if(betaStart != null){
+      beta = betaStart.clone();
+      denormalizedBeta = data.denormalizeBeta(beta);
+    } else {
+      beta = denormalizedBeta = null;
+    }
+    UKV.put(job.dest(), new GLMModel(Status.ComputingModel,0.0f,job.dest(),data, denormalizedBeta, beta, params, lsm, false, 0, 0, null));
+    job.start();
+    H2O.submitTask(new H2OCountedCompleter() {
+        @Override public void compute2() {
+          try{
+            buildModel(job, job.dest(), data, lsm, params, beta,xval);
+            job.remove();
+          } catch(JobCancelledException e){
+            UKV.remove(job.dest());
+          }
+          tryComplete();
+        }
+        @Override
+        public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
+          job.cancel();
+          return super.onExceptionalCompletion(ex, caller);
+        }
+    });
+    return job;
   }
 
-
-  public static GLMModel buildModel(DataFrame data, LSMSolver lsm, GLMParams params, double [] oldBeta) {
+  public static GLMModel buildModel(Job job, Key resKey, DataFrame data, LSMSolver lsm, GLMParams params, double [] oldBeta, int xval) throws JobCancelledException {
+    GLMModel currentModel = null;
+    ArrayList<String> warns = new ArrayList<String>();
     long t1 = System.currentTimeMillis();
     // make sure we have valid response variable for the current family
     Column ycol = data._ary._cols[data._modelDataMap[data._modelDataMap.length-1]];
-    ArrayList<String> warns = new ArrayList<String>();
     params.checkResponseCol(ycol,warns);
     // filter out constant columns...
     GramMatrixFunc gramF = new GramMatrixFunc(data, params, oldBeta);
     double [] newBeta = MemoryManager.malloc8d(data.expandedSz());
-
     boolean converged = true;
-    Gram gram = gramF.apply(data);
+    Gram gram = gramF.apply(job,data);
     int iter = 1;
     try {
       lsm.solve(gram.getXX(), gram.getXY(), gram.getYY(), newBeta);
@@ -1104,40 +1262,60 @@ public abstract class DGLM {
         lsm.solve(gram.getXX(), gram.getXY(), gram.getYY(), newBeta);
       }
     }
-    if(params._family != Family.gaussian) { // IRLSM
-      if(oldBeta == null)oldBeta = MemoryManager.malloc8d(data.expandedSz());
-      do{
-        double [] b = oldBeta;
-        oldBeta = (gramF._beta = newBeta);
-        newBeta = b;
-        gram = gramF.apply(data);
-        if(gram.hasNaNsOrInfs()) // we can't solve this problem any further, user should increase regularization and try again
-          break;
-        try {
+    if(params._family == Family.gaussian) {
+       currentModel = new GLMModel(Status.ComputingValidation, 0.0f,resKey,data, data.denormalizeBeta(newBeta), newBeta, params, lsm, converged, iter, System.currentTimeMillis() - t1, null);
+    } else do{ // IRLSM
+      if(oldBeta == null)
+        oldBeta = MemoryManager.malloc8d(data.expandedSz());
+      if(job.cancelled())
+        throw new JobCancelledException();
+      double [] b = oldBeta;
+      oldBeta = (gramF._beta = newBeta);
+      newBeta = b;
+      gram = gramF.apply(job,data);
+      if(gram.hasNaNsOrInfs()) // we can't solve this problem any further, user should increase regularization and try again
+        break;
+      try {
+        lsm.solve(gram.getXX(), gram.getXY(), gram.getYY(), newBeta);
+      } catch (NonSPDMatrixException e) {
+        if(!(lsm instanceof GeneralizedGradientSolver)){ // if we failed with ADMM, try Generalized gradient
+          lsm = new GeneralizedGradientSolver(lsm._lambda, lsm._alpha);
+          warns.add("Switched to generalized gradient solver due to Non SPD matrix.");
           lsm.solve(gram.getXX(), gram.getXY(), gram.getYY(), newBeta);
-        } catch (NonSPDMatrixException e) {
-          if(!(lsm instanceof GeneralizedGradientSolver)){ // if we failed with ADMM, try Generalized gradient
-            lsm = new GeneralizedGradientSolver(lsm._lambda, lsm._alpha);
-            warns.add("Switched to generalized gradient solver due to Non SPD matrix.");
-            lsm.solve(gram.getXX(), gram.getXY(), gram.getYY(), newBeta);
-          }
         }
-      } while(++iter < params._maxIter && betaDiff(newBeta,oldBeta) > params._betaEps);
-      converged = converged && (betaDiff(oldBeta,newBeta) < params._betaEps);
-    }
+      }
+      String [] warnings = new String[warns.size()];
+      warns.toArray(warnings);
+      double betaDiff = betaDiff(oldBeta,newBeta);
+      converged = (betaDiff < params._betaEps);
+      float progress = Math.max((float)iter/params._maxIter,Math.min((float)(params._betaEps/betaDiff),1.0f));
+      currentModel = new GLMModel(Status.ComputingModel,progress,resKey,data, data.denormalizeBeta(newBeta), newBeta, params, lsm, converged, iter, System.currentTimeMillis() - t1, warnings);
+      currentModel.store();
+    } while( ++iter < params._maxIter && !converged );
+    currentModel._status = Status.ComputingValidation;
+    currentModel.store();
+    if( xval > 1 ) // ... and x-validate
+      currentModel.xvalidate(job,data._ary,xval,DEFAULT_THRESHOLDS);
+    else
+      currentModel.validateOn(job,data._ary, data.getSamplingComplement(),DEFAULT_THRESHOLDS); // Full scoring on original dataset
+    currentModel._status = Status.Done;
+    currentModel.store();
     String [] warnings = new String[warns.size()];
     warns.toArray(warnings);
-    double [] standardizedBeta = newBeta;
-    if(data._standardized){ // denormalize coefficients
-      newBeta = newBeta.clone();
-      double norm = 0.0;        // Reverse any normalization on the intercept
-      for( int i=0; i<newBeta.length-1; i++ ) {
-        double b = newBeta[i]*data._normMul[i];
-        norm += b*data._normSub[i]; // Also accumulate the intercept adjustment
-        newBeta[i] = b;
-      }
-      newBeta[newBeta.length-1] -= norm;
-    }
-    return new GLMModel(data, newBeta, standardizedBeta, params, lsm, converged, iter, System.currentTimeMillis() - t1, warnings);
+    return currentModel;
   }
+
+  static double [] DEFAULT_THRESHOLDS = new double [] {
+    0.00, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09,
+    0.10, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19,
+    0.20, 0.21, 0.22, 0.23, 0.24, 0.25, 0.26, 0.27, 0.28, 0.29,
+    0.30, 0.31, 0.32, 0.33, 0.34, 0.35, 0.36, 0.37, 0.38, 0.39,
+    0.40, 0.41, 0.42, 0.43, 0.44, 0.45, 0.46, 0.47, 0.48, 0.49,
+    0.50, 0.51, 0.52, 0.53, 0.54, 0.55, 0.56, 0.57, 0.58, 0.59,
+    0.60, 0.61, 0.62, 0.63, 0.64, 0.65, 0.66, 0.67, 0.68, 0.69,
+    0.70, 0.71, 0.72, 0.73, 0.74, 0.75, 0.76, 0.77, 0.78, 0.79,
+    0.80, 0.81, 0.82, 0.83, 0.84, 0.85, 0.86, 0.87, 0.88, 0.89,
+    0.90, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99,
+    1.00
+  };
 }

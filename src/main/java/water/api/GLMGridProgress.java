@@ -24,8 +24,10 @@ public class GLMGridProgress extends Request {
     int millis = (int)t;
     return hrs + "hrs " + mins + "m " + secs + "s " + millis + "ms";
   }
-  protected final H2OKey _job  = new H2OKey(JOB);
+  protected final H2OKey _job  = new H2OKey(JOB,false);
   protected final H2OKey _dest = new H2OKey(DEST_KEY);
+
+
 
    public static Response redirect(JsonObject resp, Key job, Key dest) {
     JsonObject redir = new JsonObject();

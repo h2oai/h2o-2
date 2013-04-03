@@ -1,5 +1,7 @@
 package water;
 
+import hex.DGLM.GLMProgress;
+
 import java.util.Arrays;
 import java.util.UUID;
 
@@ -138,5 +140,58 @@ public class Job extends Iced {
         return old;
       }
     }.fork(LIST);
+  }
+
+  public static class ChunkProgress extends Iced implements Progress {
+    final double _totalInv;
+    final double _count;
+
+    public ChunkProgress(long chunksTotal) {
+      _totalInv = 1.0/chunksTotal;
+      _count = 0;
+    }
+    public ChunkProgress(double totalInv,double count){
+      _totalInv = totalInv;
+      _count = count;
+    }
+    public ChunkProgress update(int count) {
+      return new ChunkProgress(_totalInv, _count + count);
+    }
+    public final float progress(){
+      return (float)(_count * _totalInv);
+    }
+  }
+
+  public static class ChunkProgressJob extends Job {
+    Key _progress;
+    public ChunkProgressJob(String desc, Key dest, long chunksTotal){
+      super(desc,dest);
+      _progress = Key.make(Key.make()._kb,(byte)0,Key.DFJ_INTERNAL_USER,dest.home_node());
+      UKV.put(_progress,new ChunkProgress(chunksTotal));
+    }
+    public void setProgressMin(final long c){ // c == number of processed chunks
+      new TAtomic<ChunkProgress>() {
+        @Override
+        public ChunkProgress atomic(ChunkProgress old) {
+          return old.update((int)Math.max(0, c - old._count));
+        }
+      }.invoke(_progress);
+    }
+    public void updateProgress(final int c){ // c == number of processed chunks
+      new TAtomic<ChunkProgress>() {
+        @Override
+        public ChunkProgress atomic(ChunkProgress old) {
+          return old.update(c);
+        }
+      }.invoke(_progress);
+    }
+
+    @Override
+    public void remove(){
+      super.remove();
+      UKV.remove(_progress);
+    }
+
+    public final Key progressKey(){return _progress;}
   }
 }

@@ -6,7 +6,11 @@ import hex.RowVecTask.Sampling;
 
 import java.util.Arrays;
 
+import javax.swing.ProgressMonitor;
+
 import water.*;
+import water.Job.ChunkProgress;
+import water.Job.ChunkProgressJob;
 import water.ValueArray.Column;
 
 import com.google.common.collect.BiMap;
@@ -16,8 +20,11 @@ public class NewRowVecTask<T extends Iced> extends MRTask {
   // These fields are all *shared* *read-only*.
   final RowFunc<T> _func;
   final DataFrame  _data;
+  final Job _job;
   //-----------------------------------------------------
   T _result; // result of the computation is stored here
+
+  public static class JobCancelledException extends Exception {}
 
 
   public static abstract class RowFunc<T extends Iced> extends Iced  {
@@ -34,9 +41,10 @@ public class NewRowVecTask<T extends Iced> extends MRTask {
 
     public abstract T reduce(T x, T y);
 
-    public T apply(DataFrame data){
-      NewRowVecTask<T> tsk = new NewRowVecTask<T>(this, data);
+    public T apply(Job j, DataFrame data) throws JobCancelledException{
+      NewRowVecTask<T> tsk = new NewRowVecTask<T>(j,this, data);
       tsk.invoke(data._ary._key);
+      if(j.cancelled())throw new JobCancelledException();
       return tsk._result;
     }
 
@@ -95,6 +103,7 @@ public class NewRowVecTask<T extends Iced> extends MRTask {
       _nobs = (s != null)?(long)(ary._numrows*s.ratio()):ary._numrows;
     }
     public Sampling getSampling() {return (_s != null)?_s.clone():null;}
+    public Sampling getSamplingComplement() {return (_s != null)?_s.complement():null;}
     public int expandedSz() {return _colCatMap[_colCatMap.length-1];}
     public int compactSz(){return _modelDataMap.length;}
     public int dense(){
@@ -102,8 +111,22 @@ public class NewRowVecTask<T extends Iced> extends MRTask {
         if(_colCatMap[i] != i)return i-1;
       return _modelDataMap.length;
     }
-  }
 
+    public double [] denormalizeBeta(double [] beta) {
+      if(!_standardized)
+        return beta;
+
+      double [] newBeta = beta.clone();
+      double norm = 0.0;        // Reverse any normalization on the intercept
+      for( int i=0; i<newBeta.length-1; i++ ) {
+        double b = newBeta[i]*_normMul[i];
+        norm += b*_normSub[i]; // Also accumulate the intercept adjustment
+        newBeta[i] = b;
+      }
+      newBeta[newBeta.length-1] -= norm;
+      return newBeta;
+    }
+  }
 
   // Set once per Node, shared ValueArray unpack
   @Override
@@ -112,13 +135,15 @@ public class NewRowVecTask<T extends Iced> extends MRTask {
   }
 
 
-  public NewRowVecTask(RowFunc<T> f, DataFrame data){
+  public NewRowVecTask(Job job,RowFunc<T> f, DataFrame data){
+    _job = job;
     _func = f;
     _data = data;
   }
 
   @Override
   public void map(Key key) {
+    if(_job.cancelled())return;
     T result = _func.newResult();
     Sampling s = _data.getSampling();
     AutoBuffer bits = _data._ary.getChunk(key);
@@ -174,12 +199,16 @@ ROW:
       _func.processRow(result, x, indexes);
     }
     _result = _func.result(result);
+    if(_job instanceof ChunkProgressJob)
+      ((ChunkProgressJob)_job).updateProgress(1);
   }
 
   @Override
   public void reduce(DRemoteTask drt) {
-    NewRowVecTask<T> rv = (NewRowVecTask<T>)drt;
-    assert _result != rv._result;
-    _result = (_result != null)?_func.reduce(_result, rv._result):rv._result;
+    if(!_job.cancelled()){
+      NewRowVecTask<T> rv = (NewRowVecTask<T>)drt;
+      assert _result != rv._result;
+      _result = (_result != null)?_func.reduce(_result, rv._result):rv._result;
+    }
   }
 }

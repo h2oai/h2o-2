@@ -6,7 +6,7 @@ import hex.DGLM.GLMModel;
 import hex.DGLM.GLMValidation;
 import water.Key;
 import water.ValueArray;
-import water.api.GLM.GLMBuilder;
+import water.api.GLMProgress.GLMBuilder;
 import water.util.RString;
 
 import com.google.gson.JsonObject;
@@ -75,7 +75,7 @@ public class GLMScore extends Request {
       JsonObject res = new JsonObject();
       ValueArray ary = _dataKey.value();
       GLMModel m = _modelKey.value();
-      GLMValidation v = _thresholds.disabled()?m.validateOn(ary, null, null):m.validateOn(ary, null, _thresholds.value()._arr);
+      GLMValidation v = _thresholds.disabled()?m.validateOn(null,ary, null, null):m.validateOn(null,ary, null, _thresholds.value()._arr);
       res.add("validation", v.toJson());
       // Display HTML setup
       Response r = Response.done(res);
