@@ -101,21 +101,17 @@ public abstract class PersistS3 {
         return b;
       // Explicitly ignore the following exceptions but
       // fail on the rest IOExceptions
-      } catch (EOFException e) {
-        ignoreAndWait(e);
-      } catch (SocketTimeoutException e) {
-        ignoreAndWait(e);
-      } catch (IOException e) {
-        // Catch the exception but ignore it as well.
-        ignoreAndWait(e);
+      } catch (EOFException e)           { ignoreAndWait(e,false);
+      } catch (SocketTimeoutException e) { ignoreAndWait(e,false);
+      } catch (IOException e)            { ignoreAndWait(e,true);
       } finally {
         try { if( s != null ) s.close(); } catch( IOException e ) {}
       }
     }
   }
 
-  private static void ignoreAndWait(final Exception e) {
-    H2O.ignore(e, "[h2o,s3] Hit the S3 reset problem, waiting and retrying...", false);
+  private static void ignoreAndWait(final Exception e, boolean printException) {
+    H2O.ignore(e, "[h2o,s3] Hit the S3 reset problem, waiting and retrying...", printException);
     try { Thread.sleep(500); } catch (InterruptedException ie) {}
   }
 
