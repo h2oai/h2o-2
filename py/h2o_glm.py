@@ -1,5 +1,5 @@
 import h2o_cmd, h2o
-import re, random
+import re, random, math
 
 def pickRandGlmParams(paramDict, params):
     colX = 0
@@ -68,6 +68,11 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     validationsList = GLMModel['validations']
     # don't want to modify validationsList in case someone else looks at it
     validations = validationsList[0]
+
+    if math.isnan(validations['err']):
+        emsg = "Why is this err = 'nan'?? %6s %s" % ("err:\t", validations['err'])
+        raise Exception(emsg)
+
     print "GLMModel/validations"
     print "%15s %s" % ("err:\t", validations['err'])
     print "%15s %s" % ("nullDev:\t", validations['nullDev'])
