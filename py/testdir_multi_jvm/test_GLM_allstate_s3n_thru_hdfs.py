@@ -52,6 +52,8 @@ class Basic(unittest.TestCase):
 
             key2 = csvFilename + "_" + str(trial) + ".hex"
             print "Loading s3n key: ", s3nKey, 'thru HDFS'
+            # ec2 is about 400 secs on four m2.4xlarge nodes
+            # should be less on more nodes?
             timeoutSecs = 500
             start = time.time()
             parseKey = h2o.nodes[0].parse(s3nKey, key2,
