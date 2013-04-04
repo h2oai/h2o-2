@@ -69,6 +69,21 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     # don't want to modify validationsList in case someone else looks at it
     validations = validationsList[0]
 
+    # xval. compare what we asked for and what we got.
+    num_cross_validation_folds = kwargs.setdefault('num_cross_validation_folds', None)
+    if not 'xval_models' in validations:
+        if num_cross_validation_folds > 1:
+                raise Exception("No cross validation models returned. Asked for "+num_cross_validation_folds)
+    else:
+        xval_models = validations['xval_models']
+        if num_cross_validation_folds and num_cross_validation_folds > 1:
+            if len(xval_models) != num_cross_validation_folds:
+                raise Exception(len(xval_models)+" cross validation models returned. Asked for "+num_cross_validation_folds)
+        else:
+            # should be default 10?
+            if len(xval_models) != 10:
+                raise Exception(len(xval_models)+" cross validation models returned. Default should be 10")
+
     if math.isnan(validations['err']):
         emsg = "Why is this err = 'nan'?? %6s %s" % ("err:\t", validations['err'])
         raise Exception(emsg)
