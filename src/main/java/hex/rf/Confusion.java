@@ -213,7 +213,16 @@ public class Confusion extends MRTask {
         // of random numbers as in the method Data.sampleFair()
         // Skip row used during training if OOB is computed
         float sampledItem = rand.nextFloat();
-        if( _computeOOB &&  sampledItem < _model._sample ) continue ROWS;
+        if( _computeOOB ) { // if OOBEE is computed then we need to take into account utilized sampling strategy
+          switch( _model._samplingStrategy ) {
+          case RANDOM          : if (sampledItem < _model._sample ) continue ROWS; break;
+          case STRATIFIED_LOCAL:
+            int clazz = (int) _data.data(bits, row, _classcol) - cmin;
+            if (sampledItem < _model._strataSamples[clazz] ) continue ROWS;
+            break;
+          default: assert false : "The selected sampling strategy does not support OOBEE replay!"; break;
+          }
+        }
         // ------
 
         // Bail out of broken rows

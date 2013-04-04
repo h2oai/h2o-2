@@ -108,7 +108,7 @@ public final class DRF extends water.DRemoteTask {
     // Construct the RFModel to be trained
     DRF drf      = new DRF();
     drf._rfmodel = new RFModel(modelKey, cols, ary._key,
-                               new Key[0], ary._cols.length, sample, numSplitFeatures, ntrees);
+                               new Key[0], ary._cols.length, sample, null, numSplitFeatures, ntrees);
     // Fill in args into DRF
     drf._ntrees = ntrees;
     drf._depth = depth;

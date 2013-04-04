@@ -39,13 +39,15 @@ public class Tree extends CountedCompleter {
   final long _seed;             // Pseudo random seed: used to playback sampling
   final int _numrows;           // Used to playback sampling
   final float _sample;          // Sample rate
-  boolean _stratify;
+  SamplingStrategy _samplingStrategy;
   int [] _strata;
   transient int _verbose ;
   int _exclusiveSplitLimit;
 
-  // Constructor used to define the specs when building the tree from the top
-  public Tree( Data data, int max_depth, double min_error_rate, StatType stat, int numSplitFeatures, long seed, Job job, int treeId, int alltrees, float sample, int rowsize, boolean stratify, int [] strata, int verbose, int exclusiveSplitLimit) {
+  /**
+   * Constructor used to define the specs when building the tree from the top
+   */
+  public Tree(final Data data, int max_depth, double min_error_rate, StatType stat, int numSplitFeatures, long seed, Job job, int treeId, int alltrees, float sample, int rowsize, boolean stratify, int [] strata, int verbose, int exclusiveSplitLimit) {
     _type             = stat;
     _data             = data;
     _data_id          = treeId; //data.dataId();
@@ -54,10 +56,10 @@ public class Tree extends CountedCompleter {
     _job              = job;
     _alltrees         = alltrees;
     _seed             = seed;
-    assert sample <= 1.0f : "Stratify sampling should in interval (0,1] but it is " + sample;
+    assert sample <= 1.0f : "Sample should in interval (0,1] but it is " + sample;
     _sample           = sample;
     _numrows          = rowsize;
-    _stratify         = stratify;
+    _samplingStrategy = stratify ? SamplingStrategy.STRATIFIED_LOCAL : SamplingStrategy.RANDOM;
     _strata           = strata;
     _verbose          = verbose;
     _exclusiveSplitLimit = exclusiveSplitLimit;
@@ -82,7 +84,7 @@ public class Tree extends CountedCompleter {
     return result;
   }
 
-  StringBuffer computeStatistics() {
+  private StringBuffer computeStatistics() {
     StringBuffer sb = new StringBuffer();
     ArrayList<SplitInfo>[] stats = new ArrayList[_data.columns()];
     for (int i = 0; i < _data.columns()-1; i++) stats[i] = new ArrayList<Tree.SplitNode.SplitInfo>();
@@ -105,13 +107,26 @@ public class Tree extends CountedCompleter {
     return sb;
   }
 
+  /** Sample node's local data according to current sampling strategy. */
+  private Data sampleLocalData() {
+    switch (_samplingStrategy) {
+    case STRATIFIED_LOCAL  :
+    case STRATIFIED_DISTRIB:
+      float[] s = new float[_data._dapt.classes()];
+      for (int i=0; i<s.length;i++) s[i] = _strata[i];
+      return _data.sample(s,_seed,_numrows);
+    case    RANDOM:
+    default       : return _data.sample(_sample,_seed,_numrows);
+    }
+  }
+
   // Actually build the tree
   public void compute() {
     if(!_job.cancelled()) {
-      Timer timer = new Timer();
-      _stats[0] = new ThreadLocal<Statistic>();
-      _stats[1] = new ThreadLocal<Statistic>();
-      Data d = (true && _stratify)?_data.sample(_strata,_seed):_data.sample(_sample,_seed,_numrows);
+      Timer timer    = new Timer();
+      _stats[0]      = new ThreadLocal<Statistic>();
+      _stats[1]      = new ThreadLocal<Statistic>();
+      Data         d = sampleLocalData();
       Statistic left = getStatistic(0, d, _seed, _exclusiveSplitLimit);
       // calculate the split
       for( Row r : d ) left.addQ(r);
@@ -121,8 +136,7 @@ public class Tree extends CountedCompleter {
         ? new LeafNode(_data.unmapClass(spl._split), d.rows())
         : new FJBuild (spl, d, 0, _seed).compute();
 
-      if (_verbose > 1)
-        Utils.pln(computeStatistics().toString());
+      if (_verbose > 1) Utils.pln(computeStatistics().toString());
       _stats = null; // GC
 
       // Atomically improve the Model as well
