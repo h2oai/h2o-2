@@ -100,7 +100,7 @@ class Basic(unittest.TestCase):
                 'link': 'logit',
                 'y': y, 
                 'max_iter': 8, 
-                'num_cross_validation_folds': 0, 
+                'n_folds': 0, 
                 'beta_epsilon': 1e-4,
                 'alpha': 0, 
                 'lambda': 0 

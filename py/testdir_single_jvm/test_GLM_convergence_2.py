@@ -93,7 +93,7 @@ class Basic(unittest.TestCase):
                     'alpha': 0.5,
                     'weight': 1.0,
                     'link': 'familyDefault',
-                    'num_cross_validation_folds': 0,
+                    'n_folds': 0,
                     'beta_epsilon': 1e-4,
                     'thresholds': '0:1:0.01',
                     }

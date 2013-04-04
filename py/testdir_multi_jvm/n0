@@ -26,9 +26,12 @@
 ./n0.doit test_flatfile.py
 ./n0.doit test_from_import_3.py
 ./n0.doit test_GLM_100Mx70_hosts.py
+./n0.doit test_GLM_allstate_s3n_thru_hdfs.py
 ./n0.doit test_GLM_big2_hosts.py
 ./n0.doit test_GLM_catdata_hosts.py
+./n0.doit test_GLM_covtype2000x_hosts.py
 ./n0.doit test_GLM_covtype20x_hosts.py
+./n0.doit test_GLM_covtype20x_s3n_thru_hdfs.py
 ./n0.doit test_GLM_covtype_hosts.py
 ./n0.doit test_GLM_covtype_single_cols.py
 ./n0.doit test_GLM_from_import_hosts.py

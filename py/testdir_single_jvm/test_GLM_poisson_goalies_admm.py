@@ -10,7 +10,7 @@ def define_params():
     paramDict = {
         ## 'x': [0,1,15,33,34],
         'family': ['poisson'],
-        'num_cross_validation_folds': [1],
+        'n_folds': [1],
         'thresholds': [0.5],
         'lambda': [0,1e-8],
         'alpha': [0],
@@ -68,7 +68,7 @@ class Basic(unittest.TestCase):
             # FIX! does it never end if we don't have alpha specified?
             params = {
                 'y': 5,
-                'num_cross_validation_folds': 1,
+                'n_folds': 1,
                 'family': "poisson",
                 'alpha': 0.0,
                 # 'lambda': 1e-8,
@@ -84,7 +84,7 @@ class Basic(unittest.TestCase):
             kwargs = params.copy()
 
             # make timeout bigger with xvals
-            timeoutSecs = 180 + (kwargs['num_cross_validation_folds']*30)
+            timeoutSecs = 180 + (kwargs['n_folds']*30)
             # or double the 4 seconds per iteration (max_iter+1 worst case?)
             timeoutSecs = max(timeoutSecs, (8 * (kwargs['max_iter']+1)))
 
