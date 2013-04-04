@@ -55,6 +55,9 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
                     # stop on other 'fail' warnings (are there any? fail to solve?
                     raise Exception(w)
 
+    # for key, value in glm.iteritems(): print key
+    # not in GLMGrid?
+    # print "computation_time:", glm['computation_time']
     print "GLMModel execution time (milliseconds):", GLMModel['time']
 
     # FIX! don't get GLMParams if it can't solve?
@@ -70,19 +73,19 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     validations = validationsList[0]
 
     # xval. compare what we asked for and what we got.
-    num_cross_validation_folds = kwargs.setdefault('num_cross_validation_folds', None)
+    n_folds = kwargs.setdefault('n_folds', None)
     if not 'xval_models' in validations:
-        if num_cross_validation_folds > 1:
-                raise Exception("No cross validation models returned. Asked for "+num_cross_validation_folds)
+        if n_folds > 1:
+                raise Exception("No cross validation models returned. Asked for "+n_folds)
     else:
         xval_models = validations['xval_models']
-        if num_cross_validation_folds and num_cross_validation_folds > 1:
-            if len(xval_models) != num_cross_validation_folds:
-                raise Exception(len(xval_models)+" cross validation models returned. Asked for "+num_cross_validation_folds)
+        if n_folds and n_folds > 1:
+            if len(xval_models) != n_folds:
+                raise Exception(len(xval_models)+" cross validation models returned. Asked for "+n_folds)
         else:
             # should be default 10?
             if len(xval_models) != 10:
-                raise Exception(len(xval_models)+" cross validation models returned. Default should be 10")
+                raise Exception(str(len(xval_models))+" cross validation models returned. Default should be 10")
 
     if math.isnan(validations['err']):
         emsg = "Why is this err = 'nan'?? %6s %s" % ("err:\t", validations['err'])

@@ -3,8 +3,8 @@ import numpy as np
 from rpy2 import robjects as ro
 import rpy2.rlike.container as rlc
 
-def train(num_cross_validation_foldss, y_values, weights):
-        x_float_vector = [ro.FloatVector(x) for x in np.array(num_cross_validation_foldss).transpose()]
+def train(x_data, y_values, weights):
+        x_float_vector = [ro.FloatVector(x) for x in np.array(x_data).transpose()]
         y_float_vector = ro.FloatVector(y_values)   
         weights_float_vector = ro.FloatVector(weights)
         names = ['v' + str(i) for i in xrange(len(x_float_vector))]
@@ -20,11 +20,11 @@ def train(num_cross_validation_foldss, y_values, weights):
         print "formula:", formula
 
 
-num_cross_validation_foldss = np.array([(0,1,2,3,4,5,6)])
+x_data = np.array([(0,1,2,3,4,5,6)])
 y_values = np.array([0])
 weights =  np.array([1])
 
-train(num_cross_validation_foldss, y_values, weights)
+train(x_data, y_values, weights)
 
 
 

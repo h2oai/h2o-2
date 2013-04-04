@@ -46,7 +46,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             # FIX! why can't I include 0 here? it keeps getting 'unable to solve" if 0 is included
             # 0 by itself is okay?
-            kwargs = {'y': 7, 'x': '1,2,3,4,5,6', 'family': "binomial", 'num_cross_validation_folds': 3, 'lambda': 1e-4}
+            kwargs = {'y': 7, 'x': '1,2,3,4,5,6', 'family': "binomial", 'n_folds': 3, 'lambda': 1e-4}
             timeoutSecs = 200
             glm = h2o_cmd.runGLM(csvPathname=csvPathname, timeoutSecs=timeoutSecs, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, 6, **kwargs)

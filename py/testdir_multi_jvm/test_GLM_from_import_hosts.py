@@ -59,7 +59,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             # can't pass lamba as kwarg because it's a python reserved word
             # FIX! just look at X=0:1 for speed, for now
-            kwargs = {'y': 54, 'num_cross_validation_folds': 2, 'family': "binomial", 'case': 1}
+            kwargs = {'y': 54, 'n_folds': 2, 'family': "binomial", 'case': 1}
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=2000, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 

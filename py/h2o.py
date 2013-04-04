@@ -798,10 +798,9 @@ class H2O(object):
                        "status: %s, url: %s?%s" % (status, urlUsed, argsStr)
                 raise Exception(emsg)
             count += 1
-        if (status == 'poll' and 'GLMModel' in r):
-            emsg = "\nHey! I'm seeing 'status' = 'poll' at the same time the response has 'GLMModel'" +\
-                  "...assuming we're done. see https://0xdata.atlassian.net/browse/HEX-618\n"
-            raise Exception(emsg+dump_json(r))
+            # GLM can return partial results during polling..that's legal
+            if 'GLMProgress' in urlUsed and 'GLMModel' in r:
+                print "\nINFO: GLM returning partial results during polling. Continuing.."
 
         return r
     
@@ -1073,13 +1072,12 @@ class H2O(object):
         return a
 
     # kwargs used to pass many params
-    def GLM_shared(self, key, timeoutSecs=300, retryDelaySecs=0.5, parentName=None, **kwargs):
+    def GLM_shared(self, key, 
+        timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=30,
+        parentName=None, **kwargs):
+
         browseAlso = kwargs.pop('browseAlso',False)
-        num_cross_validation_folds = kwargs.pop('num_cross_validation_folds',None)
         params_dict = { 
-            # FIX! hack. this param changed name again
-            # map new to old, for now
-            'n_folds': num_cross_validation_folds,
             'family': 'binomial',
             'key': key,
             'y': 1,
@@ -1096,14 +1094,17 @@ class H2O(object):
         verboseprint(parentName, dump_json(a))
         return a 
 
-    def GLM(self, key, timeoutSecs=300, retryDelaySecs=0.5, **kwargs):
-        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, parentName="GLM", **kwargs)
+    def GLM(self, key, 
+        timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=30, **kwargs):
 
+        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLM", **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
         if a['response']['redirect_request']!='GLMProgress':
             print dump_json(a)
             raise Exception('H2O GLM redirect is not GLMProgress. GLM json response precedes.')
-        a = self.poll_url(a['response'], timeoutSecs, retryDelaySecs)
+        a = self.poll_url(a['response'],
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("GLM done:", dump_json(a))
 
         browseAlso = kwargs.get('browseAlso', False)
@@ -1114,14 +1115,17 @@ class H2O(object):
         return a
 
     # this only exists in new. old will fail
-    def GLMGrid(self, key, timeoutSecs=300, retryDelaySecs=1.0, **kwargs):
-        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, parentName="GLMGrid", **kwargs)
+    def GLMGrid(self, key, 
+        timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=30, **kwargs):
 
+        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLMGrid", **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
         if a['response']['redirect_request']!='GLMGridProgress':
             print dump_json(a)
             raise Exception('H2O GLMGrid redirect is not GLMGridProgress. GLMGrid json response precedes.')
-        a = self.poll_url(a['response'], timeoutSecs, retryDelaySecs)
+        a = self.poll_url(a['response'],
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("GLMGrid done:", dump_json(a))
 
         browseAlso = kwargs.get('browseAlso', False)

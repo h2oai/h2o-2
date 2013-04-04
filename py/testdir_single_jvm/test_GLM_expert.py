@@ -48,8 +48,8 @@ class Basic(unittest.TestCase):
                 # solver can be ADMM
                 kwargs = {'x': x, 'y':  y,\
                      'expert': 1, 'lsm_solver': 'GenGradient', 'standardize':1}
-                # fails with num_cross_validation_folds
-                print "Not doing num_cross_validation_folds with benign. Fails with 'unable to solve?'"
+                # fails with n_folds
+                print "Not doing n_folds with benign. Fails with 'unable to solve?'"
                 glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=5, **kwargs)
                 # no longer look at STR?
                 h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
@@ -80,7 +80,7 @@ class Basic(unittest.TestCase):
                 print "y:", y
 
                 # solver can be ADMM. standardize normalizes the data.
-                kwargs = {'x': x, 'y':  y, 'num_cross_validation_folds': 5,\
+                kwargs = {'x': x, 'y':  y, 'n_folds': 5,\
                     'expert': 1, 'lsm_solver': 'GenGradient', 'standardize':1}
                 glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=2, **kwargs)
                 # ID,CAPSULE,AGE,RACE,DPROS,DCAPS,PSA,VOL,GLEASON
