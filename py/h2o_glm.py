@@ -55,6 +55,8 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
                     # stop on other 'fail' warnings (are there any? fail to solve?
                     raise Exception(w)
 
+    # for key, value in glm.iteritems(): print key
+    print "computation_time:", glm['computation_time']
     print "GLMModel execution time (milliseconds):", GLMModel['time']
 
     # FIX! don't get GLMParams if it can't solve?
