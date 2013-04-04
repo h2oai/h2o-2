@@ -36,7 +36,7 @@ class Basic(unittest.TestCase):
     def setUpClass(cls):
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1,java_heap_MB=1300,use_flatfile=True)
+            h2o.build_cloud(2,java_heap_MB=1300,use_flatfile=True)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -89,14 +89,15 @@ class Basic(unittest.TestCase):
             cm = rfv['confusion_matrix']
             rows_skipped = cm['rows_skipped']
 
+            # the sample is what we trained on. The CM for one tree is what's left
+            # it's not perfectly accurate..allow +-2
             sample = kwargs['sample']
             rowsUsed = sample * totalRows/100
             rowsNotUsed = totalRows - rowsUsed
 
-            print "predicted rowsUsed:", rowsUsed, "actually:", totalRows - rows_skipped, "rows_skipped:", rows_skipped
-            self.assertEqual(rowsUsed, totalRows - rows_skipped)
-            print "predicted rowsNotUsed:", rowsNotUsed, "actually rows_skipped:", rows_skipped
-            self.assertEqual(rowsNotUsed, rows_skipped)
+            print "Allowing delta of 0-2"
+            print "predicted CM rows (rowsNotUsed):", rowsNotUsed, "actually:", totalRows - rows_skipped, "rows_skipped:", rows_skipped
+            self.assertAlmostEqual(rowsNotUsed, totalRows - rows_skipped, delta=2)
 
             h2o.check_sandbox_for_errors()
 
