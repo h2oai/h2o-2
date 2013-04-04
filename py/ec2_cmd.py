@@ -4,6 +4,8 @@ import argparse
 import boto
 import os, time, sys, socket
 import h2o_cmd
+import h2o
+import h2o_hosts
 import json
 
 '''
@@ -313,7 +315,7 @@ def warn(msg):
 def warn_file_miss(f):
     warn("File {0} is missing! Please update the generated config manually.".format(f))
 
-def invoke_hosts_action(action, hosts_config):
+def invoke_hosts_action(action, hosts_config, args):
     ids = [ inst['id'] for inst in hosts_config['ec2_instances'] ]
     ips = [ inst['private_ip_address'] for inst in hosts_config['ec2_instances'] ]
     region = hosts_config['ec2_region']
@@ -331,7 +333,26 @@ def invoke_hosts_action(action, hosts_config):
     elif (action == 'distribute_h2o'):
         pass
     elif (action == 'start_h2o'):
-        pass
+        try:
+            h2o.config_json = args.hosts
+            log("Starting H2O cloud...")
+            h2o_hosts.build_cloud_with_hosts()
+            h2o.touch_cloud()
+            log("Cloud started. Let's roll!")
+            log("You can start for example here \033[93mhttp://{0}:{1}\033[0m".format(hosts_config['ec2_instances'][0]['public_dns_name'],hosts_config['base_port']))
+            if args.timeout: 
+                log("Cloud will shutdown after {0} seconds or use Ctrl+C to shutdown it.".format(args.timeout))
+                time.sleep(args.timeout)
+            else: 
+                log("To kill the cloud please use Ctrl+C as usual.")
+                while (True): time.sleep(3600)
+        except:
+            pass
+        finally:
+            log("Goodbye H2O cloud...")
+            h2o.tear_down_cloud()
+            log("Cloud is gone.")
+ 
     elif (action == 'stop_h2o'):
         pass
 
@@ -370,13 +391,14 @@ def create_tags(**kwargs):
 
 def main():
     parser = argparse.ArgumentParser(description='H2O EC2 instances launcher')
-    parser.add_argument('action', choices=['create', 'terminate', 'stop', 'reboot', 'start', 'distribute_h2o', 'start_h2o', 'stop_h2o', 'show_defaults', 'dump_reservation', 'show_reservations'],  help='EC2 instances action')
+    parser.add_argument('action', choices=['create', 'terminate', 'stop', 'reboot', 'start', 'distribute_h2o', 'start_h2o', 'show_defaults', 'dump_reservation', 'show_reservations'],  help='EC2 instances action\n\t\tAHOJ')
     parser.add_argument('-c', '--config',    help='Configuration file to configure NEW EC2 instances (if not specified default is used - see "show_defaults")', type=str, default=None)
     parser.add_argument('-i', '--instances', help='Number of instances to launch', type=int, default=DEFAULT_NUMBER_OF_INSTANCES)
     parser.add_argument('-H', '--hosts',     help='Hosts file describing existing "EXISTING" EC2 instances ', type=str, default=None)
     parser.add_argument('-r', '--region',    help='Specifies target create region', type=str, default=DEFAULT_REGION)
     parser.add_argument('--reservation',     help='Reservation ID, for example "r-1824ec65"', type=str, default=None)
     parser.add_argument('--name',            help='Name for launched instances', type=str, default=DEFAULT_INSTANCE_NAME)
+    parser.add_argument('--timeout',         help='Timeout in seconds.', type=int, default=None)
     args = parser.parse_args()
 
     if (args.action == 'create'):
@@ -407,7 +429,7 @@ def main():
         report_reservations(args.region, args.reservation)
     else: 
         hosts_config = load_hosts_config(args.hosts)
-        invoke_hosts_action(args.action, hosts_config)
+        invoke_hosts_action(args.action, hosts_config, args)
         if (args.action == 'terminate'):
             log("Deleting {0} host file.".format(args.hosts))
             os.remove(args.hosts)
