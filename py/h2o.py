@@ -608,7 +608,7 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25):
                 "\n" +
                 "\nUPDATE: building cloud size of 2 with 127.0.0.1 may temporarily report 3 incorrectly, with no zombie?" 
                 )
-            # raise Exception(emsg)
+            raise Exception(emsg)
             print emsg
 
         
@@ -657,8 +657,8 @@ class H2O(object):
                     raise Exception(emsg)
 
         for w in ['warning', 'Warning', 'warnings', 'Warnings']:
-            verboseprint(dump_json(rjson))
             if w in rjson:
+                verboseprint(dump_json(rjson))
                 print 'rjson %s in %s: %s' % (w, inspect.stack()[1][3], rjson[w])
 
         return rjson
@@ -745,6 +745,8 @@ class H2O(object):
             noiseUrl = self.__url(noise_json + ".json")
 
         status = 'poll'
+        r = {} # response
+
         start = time.time()
         count = 0
         # FIX! temporarily wait 5x the retryDelaySecs delay, before the first poll
@@ -752,6 +754,8 @@ class H2O(object):
         if initialDelaySecs:
             time.sleep(initialDelaySecs)
         # can end with status = 'redirect' or 'done'
+        # FIX! temporary hack ...if a GLMModel key shows up, treat that as "stop polling'   
+        # because we have results for GLm. (i.e. ignore status.
         while status == 'poll':
             # UPDATE: 1/24/13 change to always wait before the first poll..
             # see if it makes a diff to our low rate fails
@@ -790,9 +794,15 @@ class H2O(object):
             if ((time.time()-start)>timeoutSecs):
                 # show what we're polling with 
                 argsStr =  '&'.join(['%s=%s' % (k,v) for (k,v) in paramsUsed.items()])
-                emsg = "Exceeded timeoutSecs: %d secs while polling. status: %s, url: %s?%s" % (timeoutSecs, status, urlUsed, argsStr)
+                emsg = "Exceeded timeoutSecs: %d secs while polling." +\
+                       "status: %s, url: %s?%s" % (timeoutSecs, status, urlUsed, argsStr)
                 raise Exception(emsg)
             count += 1
+        if (status == 'poll' and 'GLMModel' in r):
+            emsg = "\nHey! I'm seeing 'status' = 'poll' at the same time the response has 'GLMModel'" +\
+                  "...assuming we're done. see https://0xdata.atlassian.net/browse/HEX-618\n"
+            raise Exception(emsg+dump_json(r))
+
         return r
     
     # additional params include: cols=. don't need to include in params_dict it doesn't need a default

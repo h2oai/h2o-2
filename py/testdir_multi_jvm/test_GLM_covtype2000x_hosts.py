@@ -23,7 +23,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_covtype20x(self):
+    def test_GLM_covtype2000x(self):
         if localhost:
             csvFilenameList = [
                 # 68 secs on my laptop?
