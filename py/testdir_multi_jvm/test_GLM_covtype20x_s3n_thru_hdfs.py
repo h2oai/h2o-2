@@ -73,11 +73,12 @@ class Basic(unittest.TestCase):
                 'max_iter': 8,
                 'beta_epsilon': 1e-3}
 
-            timeoutSecs = 500
+            timeoutSecs = 720
             # L2 
             kwargs.update({'alpha': 0, 'lambda': 0})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, 
+                initialDelaySecs=15, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time()
             print "glm (L2) end on ", csvPathname, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
