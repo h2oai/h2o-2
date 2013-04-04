@@ -9,9 +9,7 @@ import water.H2O;
 public class JStackCollectorTask extends DRemoteTask {
   public String[] result; // for each node in the cloud it contains all threads stack traces
 
-  public JStackCollectorTask() {
-    result = new String[H2O.CLOUD._memary.length];
-  }
+  public JStackCollectorTask() {}
 
   @Override
   public void reduce(DRemoteTask drt) {
@@ -24,6 +22,7 @@ public class JStackCollectorTask extends DRemoteTask {
 
   @Override
   public void compute2() {
+    result = new String[H2O.CLOUD._memary.length];
     Map<Thread, StackTraceElement[]> allStackTraces = Thread.getAllStackTraces();
     StringBuilder sb = new StringBuilder();
     for (Entry<Thread,StackTraceElement[]> el : allStackTraces.entrySet()) {
