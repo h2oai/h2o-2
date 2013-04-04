@@ -1075,13 +1075,16 @@ class H2O(object):
     # kwargs used to pass many params
     def GLM_shared(self, key, timeoutSecs=300, retryDelaySecs=0.5, parentName=None, **kwargs):
         browseAlso = kwargs.pop('browseAlso',False)
+        num_cross_validation_folds = kwargs.pop('num_cross_validation_folds',None)
         params_dict = { 
+            # FIX! hack. this param changed name again
+            # map new to old, for now
+            'n_folds': num_cross_validation_folds,
             'family': 'binomial',
             'key': key,
             'y': 1,
             'link': 'familyDefault'
         }
-
         params_dict.update(kwargs)
         print "\nGLM params list", params_dict
 
