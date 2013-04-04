@@ -81,7 +81,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, 
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=60, **kwargs)
-            elapsed = time.time()
+            elapsed = time.time() - start
             print "glm (L2) end on ", csvPathname, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             h2o_glm.simpleCheckGLM(self, glm, None, noPrint=True, **kwargs)
@@ -92,7 +92,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey,
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=60, **kwargs)
-            elapsed = time.time()
+            elapsed = time.time() - start
             print "glm (Elastic) end on ", csvPathname, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             h2o_glm.simpleCheckGLM(self, glm, None, noPrint=True, **kwargs)
@@ -103,7 +103,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey,
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=60, **kwargs)
-            elapsed = time.time()
+            elapsed = time.time() - start
             print "glm (L1) end on ", csvPathname, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             h2o_glm.simpleCheckGLM(self, glm, None, noPrint=True, **kwargs)
