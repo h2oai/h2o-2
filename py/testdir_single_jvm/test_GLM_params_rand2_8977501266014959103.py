@@ -7,7 +7,7 @@ import h2o, h2o_cmd, h2o_hosts, h2o_glm
 def define_params():
     paramDict = {
         'family': [None, 'gaussian', 'binomial', 'poisson'],
-        'num_cross_validation_folds': [2,3,4,9],
+        'n_folds': [2,3,4,9],
         'thresholds': [0.1, 0.5, 0.7, 0.9],
         'lambda': [0, 1e-4],
         'alpha': [0,0.5,0.75],

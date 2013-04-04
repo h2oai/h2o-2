@@ -31,7 +31,7 @@ class Basic(unittest.TestCase):
         for (csvFilename, y, timeoutSecs) in csvFilenameList:
             csvPathname = h2o.find_file("smalldata/logreg/umass_statdata/" + csvFilename)
             print "\n" + csvPathname
-            kwargs = {'num_cross_validation_folds': 0, 'family': 'binomial', 'link': 'familyDefault', 'y': y}
+            kwargs = {'n_folds': 0, 'family': 'binomial', 'link': 'familyDefault', 'y': y}
             start = time.time()
             glm = h2o_cmd.runGLM(csvPathname=csvPathname, key=csvFilename, timeoutSecs=timeoutSecs, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)

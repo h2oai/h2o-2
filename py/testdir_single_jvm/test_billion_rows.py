@@ -66,7 +66,7 @@ class Basic(unittest.TestCase):
             ### h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
             # now some GLm
-            kwargs = {'x': 0, 'y': 1, 'num_cross_validation_folds': 0, 'case_mode': '=', 'case': 1}
+            kwargs = {'x': 0, 'y': 1, 'n_folds': 0, 'case_mode': '=', 'case': 1}
             # one coefficient is checked a little more
             colX = 0
 

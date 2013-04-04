@@ -1,3 +1,5 @@
 
 sleep 10
 nosetests $1 --nologcapture --with-xunit --xunit-file=$1.nosetests.xml
+# sed -i 's!num_cross_validation_folds!n_folds!g' $1
+

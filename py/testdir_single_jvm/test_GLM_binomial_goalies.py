@@ -13,7 +13,7 @@ def define_params():
         'case_mode': ['>'],
         'case': [20],
 
-        'num_cross_validation_folds': [0],
+        'n_folds': [0],
         'thresholds': [0.1, 0.5, 0.7, 0.9],
         # 'lambda': [1e-8, 1e-4],
         # 'alpha': [0,0.5,0.75],
@@ -72,7 +72,7 @@ class Basic(unittest.TestCase):
             # FIX! does it never end if we don't have alpha specified?
             params = {
                 'y': 6, 
-                'num_cross_validation_folds': 2, 
+                'n_folds': 2, 
 
                 'family': "binomial", 
                 'case_mode': '>',
@@ -89,7 +89,7 @@ class Basic(unittest.TestCase):
             kwargs = params.copy()
 
             # make timeout bigger with xvals
-            timeoutSecs = 180 + (kwargs['num_cross_validation_folds']*30)
+            timeoutSecs = 180 + (kwargs['n_folds']*30)
             # or double the 4 seconds per iteration (max_iter+1 worst case?)
             timeoutSecs = max(timeoutSecs, (8 * (kwargs['max_iter']+1)))
 

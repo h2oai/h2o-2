@@ -64,7 +64,7 @@ class Basic(unittest.TestCase):
             print "y:", y
 
             start = time.time()
-            kwargs = {'x': x, 'y': y, 'num_cross_validation_folds': 6}
+            kwargs = {'x': x, 'y': y, 'n_folds': 6}
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=300, **kwargs)
 
             # pass the kwargs with all the params, so we know what we asked for!

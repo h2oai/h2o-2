@@ -60,7 +60,7 @@ class Basic(unittest.TestCase):
 
         if (1==1):
             start = time.time()
-            kwargs = {'y': 13, 'num_cross_validation_folds': 6}
+            kwargs = {'y': 13, 'n_folds': 6}
             # hmm. maybe we should update to use key as input
             # in case exec is used to change the parseKey
             # in any case, the destination_key in parseKey was what was updated
@@ -83,7 +83,7 @@ class Basic(unittest.TestCase):
 
         if (1==1):
             start = time.time()
-            kwargs = {'y': 13, 'num_cross_validation_folds': 6}
+            kwargs = {'y': 13, 'n_folds': 6}
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=300, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'

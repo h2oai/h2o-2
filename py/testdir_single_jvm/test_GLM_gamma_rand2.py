@@ -8,7 +8,7 @@ def define_params():
     paramDict = {
         'x': [0,1,15,33,34],
         'family': ['gamma'],
-        'num_cross_validation_folds': [2,3,4,9,15],
+        'n_folds': [2,3,4,9,15],
         'thresholds': [0.1, 0.5, 0.7, 0.9],
         'lambda': [1e-8, 1e-4],
         'alpha': [0,0.5,0.75],
@@ -52,7 +52,7 @@ class Basic(unittest.TestCase):
         paramDict = define_params()
         for trial in range(20):
             # params is mutable. This is default.
-            params = {'y': 54, 'num_cross_validation_folds': 3, 'family': "gamma", 'alpha': 0.5, 'lambda': 1e-4, 'max_iter': 30}
+            params = {'y': 54, 'n_folds': 3, 'family': "gamma", 'alpha': 0.5, 'lambda': 1e-4, 'max_iter': 30}
             colX = h2o_glm.pickRandGlmParams(paramDict, params)
             kwargs = params.copy()
 

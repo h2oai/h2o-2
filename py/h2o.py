@@ -798,10 +798,9 @@ class H2O(object):
                        "status: %s, url: %s?%s" % (status, urlUsed, argsStr)
                 raise Exception(emsg)
             count += 1
-        if (status == 'poll' and 'GLMModel' in r):
-            emsg = "\nHey! I'm seeing 'status' = 'poll' at the same time the response has 'GLMModel'" +\
-                  "...assuming we're done. see https://0xdata.atlassian.net/browse/HEX-618\n"
-            raise Exception(emsg+dump_json(r))
+            # GLM can return partial results during polling..that's legal
+            if 'GLMProgress' in urlUsed and 'GLMModel' in r:
+                print "\nINFO: GLM returning partial results during polling. Continuing.."
 
         return r
     
@@ -1078,11 +1077,7 @@ class H2O(object):
         parentName=None, **kwargs):
 
         browseAlso = kwargs.pop('browseAlso',False)
-        num_cross_validation_folds = kwargs.pop('num_cross_validation_folds',None)
         params_dict = { 
-            # FIX! hack. this param changed name again
-            # map new to old, for now
-            'n_folds': num_cross_validation_folds,
             'family': 'binomial',
             'key': key,
             'y': 1,

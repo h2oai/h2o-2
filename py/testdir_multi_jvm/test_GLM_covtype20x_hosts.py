@@ -71,7 +71,7 @@ class Basic(unittest.TestCase):
                 'y': y, 
                 'family': 'binomial',
                 'link': 'logit',
-                'num_cross_validation_folds': 1, 
+                'n_folds': 1, 
                 'case_mode': '=', 
                 'case': 1, 
                 'max_iter': max_iter, 
