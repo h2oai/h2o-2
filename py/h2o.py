@@ -794,8 +794,8 @@ class H2O(object):
             if ((time.time()-start)>timeoutSecs):
                 # show what we're polling with 
                 argsStr =  '&'.join(['%s=%s' % (k,v) for (k,v) in paramsUsed.items()])
-                emsg = "Exceeded timeoutSecs: %d secs while polling." +\
-                       "status: %s, url: %s?%s" % (timeoutSecs, status, urlUsed, argsStr)
+                emsg = "Exceeded timeoutSecs: %d secs while polling." % timeoutSecs +\
+                       "status: %s, url: %s?%s" % (status, urlUsed, argsStr)
                 raise Exception(emsg)
             count += 1
         if (status == 'poll' and 'GLMModel' in r):
