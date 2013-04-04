@@ -4,6 +4,8 @@ import argparse
 import boto
 import os, time, sys, socket
 import h2o_cmd
+import h2o
+import h2o_hosts
 import json
 
 '''
@@ -370,13 +372,14 @@ def create_tags(**kwargs):
 
 def main():
     parser = argparse.ArgumentParser(description='H2O EC2 instances launcher')
-    parser.add_argument('action', choices=['create', 'terminate', 'stop', 'reboot', 'start', 'distribute_h2o', 'start_h2o', 'stop_h2o', 'show_defaults', 'dump_reservation', 'show_reservations'],  help='EC2 instances action')
+    parser.add_argument('action', choices=['create', 'terminate', 'stop', 'reboot', 'start', 'distribute_h2o', 'start_h2o', 'show_defaults', 'dump_reservation', 'show_reservations'],  help='EC2 instances action')
     parser.add_argument('-c', '--config',    help='Configuration file to configure NEW EC2 instances (if not specified default is used - see "show_defaults")', type=str, default=None)
     parser.add_argument('-i', '--instances', help='Number of instances to launch', type=int, default=DEFAULT_NUMBER_OF_INSTANCES)
     parser.add_argument('-H', '--hosts',     help='Hosts file describing existing "EXISTING" EC2 instances ', type=str, default=None)
     parser.add_argument('-r', '--region',    help='Specifies target create region', type=str, default=DEFAULT_REGION)
     parser.add_argument('--reservation',     help='Reservation ID, for example "r-1824ec65"', type=str, default=None)
     parser.add_argument('--name',            help='Name for launched instances', type=str, default=DEFAULT_INSTANCE_NAME)
+    parser.add_argument('--timeout',         help='Timeout in seconds.', type=int, default=None)
     args = parser.parse_args()
 
     if (args.action == 'create'):
@@ -405,6 +408,16 @@ def main():
         dump_hosts_config(ec2_config, ec2_reservation, args.hosts)
     elif (args.action == 'show_reservations'):
         report_reservations(args.region, args.reservation)
+    elif (args.action == 'start_h2o'):
+        try:
+            h2o.config_json = args.hosts
+            h2o_hosts.build_cloud_with_hosts()
+            h2o.touch_cloud()
+            if args.timeout: time.sleep(args.timeout)
+            else: 
+                while (True): time.sleep(3600)
+        finally:
+            h2o.tear_down_cloud()
     else: 
         hosts_config = load_hosts_config(args.hosts)
         invoke_hosts_action(args.action, hosts_config)
