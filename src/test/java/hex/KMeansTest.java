@@ -109,4 +109,20 @@ public class KMeansTest extends TestUtil {
 
     return true;
   }
+
+  @Test
+  public void testAirline() {
+    Key k1 = loadAndParseKey("h.hex","smalldata/airlines/allyears2k.zip");
+    Key target = Key.make("air.kmeans");
+    ValueArray va = UKV.get(k1);
+    long start = System.currentTimeMillis();
+    KMeans.run(target, va, 8, 1e-2, 0);
+    long stop = System.currentTimeMillis();
+    Log.write("KMeansTest.airlines: ms:" + (stop - start));
+    KMeans.KMeansModel res = UKV.get(target);
+    double[][] clusters = res.clusters();
+    UKV.remove(k1);
+    UKV.remove(target);
+  }
+
 }
