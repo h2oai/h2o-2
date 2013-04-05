@@ -20,6 +20,21 @@ import water.nbhm.UtilUnsafe;
 public class TimeLine extends UDP {
   private static final Unsafe _unsafe = UtilUnsafe.getUnsafe();
 
+/**
+ * Only for debugging.
+ * Prints local timeline to stdout.
+ *
+ * To be used in case of an error when global timeline can not be relied upon as we might not be able to talk to other nodes.
+ */
+ public static void printMyTimeLine(){
+   long [] s = TimeLine.snapshot();
+   System.out.println("===================================<TIMELINE>==============================================");
+   for(int i = 0; i < TimeLine.length(); ++i) {
+     if(!TimeLine.isEmpty(s, i) && ((TimeLine.l0(s, i) & 0xFF) == UDP.udp.exec.ordinal()))
+       System.out.println(TimeLine.ms(s, i) + ": " + (((TimeLine.ns(s, i) & 4) != 0)?"TCP":"UDP")  +  TimeLine.inet(s, i) + " | " + UDP.printx16(TimeLine.l0(s, i), TimeLine.l8(s, i)));
+   }
+   System.out.println("===========================================================================================");
+ }
 
   // The TimeLine buffer.
 

@@ -1,6 +1,5 @@
 package water;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import jsr166y.ForkJoinPool;
@@ -280,6 +279,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   // Called from either a F/J thread (generally with a UDP packet) or from the
   // TCPReceiver thread.
   static AutoBuffer remote_exec( final AutoBuffer ab ) {
+    long lo = ab.get8(0), hi = ab.get8(8); // for dbg
     final int task = ab.getTask();
     final int flag = ab.getFlag();
     assert flag==CLIENT_UDP_SEND || flag==CLIENT_TCP_SEND; // Client-side send
@@ -287,12 +287,12 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     // null with an RPCCall, a placeholder while we work on a proper responce -
     // and it serves to let us discard dup UDP requests.
     RPCCall old = ab._h2o.has_task(task);
-
     // This is a UDP packet requesting an answer back for a request sent via
     // TCP but the UDP packet has arrived ahead of the TCP.  Just drop the UDP
     // and wait for the TCP to appear.
     if( old == null && flag == CLIENT_TCP_SEND ) {
-      assert !ab.hasTCP();
+      if(ab.hasTCP())TimeLine.printMyTimeLine();
+      assert !ab.hasTCP():"ERROR: got tcp with existing task #, FROM " + ab._h2o.toString() + " AB: " +  UDP.printx16(lo,hi);      // All the resends should be UDP only
       // DROP PACKET
     } else if( old == null ) {  // New task?
       // Read the DTask Right Now.  If we are the TCPReceiver thread, then we
@@ -302,7 +302,8 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       if( rpc2==null ) {        // Atomically insert (to avoid double-work)
         H2O.submitTask(rpc);    // And execute!
       } else {                  // Else lost the task-insertion race
-        assert !ab.hasTCP();    // Hence this is a dup 'exec' request
+        if(ab.hasTCP())TimeLine.printMyTimeLine();
+        assert !ab.hasTCP():"ERROR: got tcp with existing task #, FROM " + ab._h2o.toString() + " AB: " +  UDP.printx16(lo,hi);      // All the resends should be UDP only
         // DROP PACKET
       }
 
@@ -310,14 +311,16 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       // This packet has not been fully computed.  Hence it's still a work-in-
       // progress locally.  We have no answer to reply but we do not want to
       // re-offer the packet for repeated work.  Just ignore the packet.
-      assert !ab.hasTCP();      // All the resends should be UDP only
+      if(ab.hasTCP())TimeLine.printMyTimeLine();
+      assert !ab.hasTCP():"ERROR: got tcp with existing task #, FROM " + ab._h2o.toString() + " AB: " +  UDP.printx16(lo,hi);      // All the resends should be UDP only
       // DROP PACKET
     } else {
       // This is an old re-send of the same thing we've answered to before.
       // Send back the same old answer ACK.  If we sent via TCP before, then
       // we know the answer got there so just send a control-ACK back.  If we
       // sent via UDP, resend the whole answer.
-      assert !ab.hasTCP();      // All the resends should be UDP only
+      if(ab.hasTCP())TimeLine.printMyTimeLine();
+      assert !ab.hasTCP():"ERROR: got tcp with existing task #, FROM " + ab._h2o.toString() + " AB: " +  UDP.printx16(lo,hi);      // All the resends should be UDP only
       old.resend_ack();
     }
     return ab;
