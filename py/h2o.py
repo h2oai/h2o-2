@@ -801,7 +801,7 @@ class H2O(object):
             count += 1
             # GLM can return partial results during polling..that's legal
             if 'GLMProgress' in urlUsed and 'GLMModel' in r:
-                print "\nINFO: GLM returning partial results during polling. Continuing.."
+                print "INFO: GLM returning partial results during polling. Continuing.."
 
         return r
     
