@@ -57,7 +57,7 @@ class Basic(unittest.TestCase):
             timeoutSecs = 500
             start = time.time()
             parseKey = h2o.nodes[0].parse(s3nKey, key2,
-                timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
+                timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60, noise=('JStack', None))
             elapsed = time.time() - start
             print s3nKey, 'h2o reported parse time:', parseKey['response']['time']
             print "parse end on ", s3nKey, 'took', elapsed, 'seconds',\
@@ -82,7 +82,7 @@ class Basic(unittest.TestCase):
             kwargs.update({'alpha': 0, 'lambda': 0})
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, 
-                timeoutSecs=timeoutSecs, pollTimeoutSecs=60, **kwargs)
+                timeoutSecs=timeoutSecs, pollTimeoutSecs=60, noise=('JStack', None), **kwargs)
             elapsed = time.time() - start
             print "glm (L2) end on ", csvPathname, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -93,7 +93,7 @@ class Basic(unittest.TestCase):
             kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey,
-                timeoutSecs=timeoutSecs, pollTimeoutSecs=60, **kwargs)
+                timeoutSecs=timeoutSecs, pollTimeoutSecs=60, noise=('JStack', None), **kwargs)
             elapsed = time.time() - start
             print "glm (Elastic) end on ", csvPathname, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -104,7 +104,7 @@ class Basic(unittest.TestCase):
             kwargs.update({'alpha': 1.0, 'lambda': 1e-4})
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey,
-                timeoutSecs=timeoutSecs, pollTimeoutSecs=60, **kwargs)
+                timeoutSecs=timeoutSecs, pollTimeoutSecs=60, noise=('JStack', None), **kwargs)
             elapsed = time.time() - start
             print "glm (L1) end on ", csvPathname, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
