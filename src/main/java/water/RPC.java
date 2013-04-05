@@ -63,6 +63,10 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   // Not volatile because set under lock.
   boolean _sentTcp;
 
+  // To help with asserts, record the size of the sent DTask - if we resend
+  // if should remain the same size.
+  int _size;
+
   // Magic Cookies
   static final byte SERVER_UDP_SEND = 10;
   static final byte SERVER_TCP_SEND = 11;
@@ -124,6 +128,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
         ab.put1(CLIENT_UDP_SEND).put(_dt);
         if( ab.hasTCP() ) _sentTcp = true;
         ab.close();
+        assert sz_check(ab) : "Resend of "+_dt.getClass()+"changes size from "+_size+" to "+ab.size();
       } else {
         // Else it was sent via TCP in a prior attempt, and we've timed out.
         // This means the caller's ACK/answer probably got dropped and we need
@@ -226,6 +231,9 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     long _started;              // Retry fields for the ackack
     long _retry;
     volatile boolean _computed; // One time transition from false to true
+    // To help with asserts, record the size of the sent DTask - if we resend
+    // if should remain the same size.
+    int _size;
     public RPCCall(DTask dt, H2ONode client, int tsknum) {
       _dt = dt;
       _client = client;
@@ -253,6 +261,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       if( dt._repliedTcp ) rab.put1(RPC.SERVER_TCP_SEND) ; // Reply sent via TCP
       else        dt.write(rab.put1(RPC.SERVER_UDP_SEND)); // Reply sent via UDP
       rab.close();
+      assert sz_check(rab) : "Resend of "+_dt.getClass()+"changes size from "+_size+" to "+rab.size();
       // Double retry until we exceed existing age.  This is the time to delay
       // until we try again.  Note that we come here immediately on creation,
       // so the first doubling happens before anybody does any waiting.  Also
@@ -273,6 +282,13 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     }
     static AtomicReferenceFieldUpdater<RPCCall,DTask> CAS_DT =
       AtomicReferenceFieldUpdater.newUpdater(RPCCall.class, DTask.class,"_dt");
+    // Assertion check that size is not changing between resends,
+    // i.e., resends sent identical data.
+    private boolean sz_check(AutoBuffer ab) {
+      final int absize = ab.size();
+      if( _size == 0 ) { _size = absize; return true; }
+      return _size==absize;
+    }
   }
 
   // Handle traffic, from a client to this server asking for work to be done.
@@ -370,6 +386,14 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       ab._h2o.taskRemove(_tasknum); // Flag as task-completed, even if the result is null
       notifyAll();              // And notify in any case
     }
+  }
+
+  // Assertion check that size is not changing between resends,
+  // i.e., resends sent identical data.
+  private boolean sz_check(AutoBuffer ab) {
+    final int absize = ab.size();
+    if( _size == 0 ) { _size = absize; return true; }
+    return _size==absize;
   }
 
   // ---
