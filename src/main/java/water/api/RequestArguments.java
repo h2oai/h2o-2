@@ -853,12 +853,11 @@ public class RequestArguments extends RequestStatics {
 
   public abstract class MultipleText<T> extends Argument<T> {
     protected abstract String[] textValues();
-
     protected abstract String[] textNames();
 
-    protected String[] textPrefixes() {
-      return null;
-    }
+    protected String[] textPrefixes() { return null; }
+    protected String[] textSuffixes() { return null; }
+    protected String   textSuffix()   { return null; }
 
 
     public MultipleText(String name, boolean required) {
@@ -872,10 +871,15 @@ public class RequestArguments extends RequestStatics {
       StringBuilder sb = new StringBuilder();
       sb.append("<div style='max-height:300px;overflow:auto'>");
       String[] prefixes = textPrefixes();
-      String[] values = textValues();
-      String[] names = textNames();
-      if (prefixes == null)
-        prefixes = names;
+      String[] values   = textValues();
+      String[] names    = textNames();
+      String[] suffixes = textSuffixes();
+      if (prefixes == null) prefixes = names;
+      if (suffixes == null && textSuffix() != null) {
+        suffixes = new String[names.length];
+        String suffix = textSuffix();
+        for(int i = 0; i<names.length; i++) suffixes[i] = suffix;
+      }
       if (values == null) {
         values = new String[prefixes.length];
         for (int i = 0; i < values.length; ++i)
@@ -885,10 +889,11 @@ public class RequestArguments extends RequestStatics {
       if (values.length == 0)
         sb.append("<div class='alert alert-error'>No editable controls under current setup</div>");
       for (int i = 0 ; i < values.length; ++i) {
-        sb.append("<div class='input-append'>"
-                + "<input class='span3' name='"+names[i]+"' id='"+_name+String.valueOf(i)+"' type='text' value='"+values[i]+"' placeholder='"+queryDescription()+"'>"
-                + "<span class='add-on'>" + prefixes[i]+"</span>"
-                + "</div>");
+        sb.append("<div class='input-prepend" + (suffixes!=null?" input-append":"") + "'>");
+        sb.append("<span class='add-on'>" + prefixes[i]+"</span>");
+        sb.append("<input class='span3' name='"+names[i]+"' id='"+_name+String.valueOf(i)+"' type='text' value='"+values[i]+"' placeholder='"+queryDescription()+"'>");
+        if (suffixes!=null) sb.append("<span class='add-on'>" + suffixes[i]+"</span>");
+        sb.append("</div>");
       }
       sb.append("</div>");
       return sb.toString();
@@ -2016,9 +2021,9 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
 
   public class H2OCategoryStrata extends MultipleText<int[]> {
-    public final H2OHexKey _key;
+    public final H2OHexKey    _key;
     public final H2OHexKeyCol _classCol;
-    public final int _defaultValue;
+    public final int          _defaultValue;
 
     public H2OCategoryStrata(String name, H2OHexKey key, H2OHexKeyCol classCol, int defaultValue) {
       super(name,false);
@@ -2114,7 +2119,7 @@ public class RequestArguments extends RequestStatics {
     }
 
     @Override protected String queryDescription() {
-      return "Category strata (integer)";
+      return "Category strata sampling rates (in %)";
     }
 
     public Map<Integer,Integer> convertToMap() {
@@ -2122,13 +2127,11 @@ public class RequestArguments extends RequestStatics {
       if ((v == null) || (v.length == 0))
         return null;
       Map<Integer,Integer> result = new HashMap();
-      for (int i = 0; i < v.length; ++i) {
-        if (v[i] != _defaultValue)
-          result.put(i, v[i]);
-      }
+      for (int i = 0; i < v.length; ++i) result.put(i, v[i]);
       return result;
     }
 
+    @Override protected String textSuffix() { return "%"; };
   }
 
   public class NTree extends Int {

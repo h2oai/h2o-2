@@ -12,7 +12,12 @@ class DABuilder {
   protected final DRF _drf;
 
   static DABuilder create(final DRF drf) {
-    return drf._useStratifySampling ? new StratifiedDABuilder(drf) : new DABuilder(drf);
+    switch( drf._samplingStrategy ) {
+    case STRATIFIED_DISTRIBUTED: return new StratifiedDABuilder(drf);
+    case RANDOM                :
+    case STRATIFIED_LOCAL      :
+    default                    : return new DABuilder(drf);
+    }
   }
 
   @SuppressWarnings("unused") private DABuilder() { this(null); };

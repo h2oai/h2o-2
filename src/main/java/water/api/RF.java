@@ -1,6 +1,7 @@
 package water.api;
 
 import hex.rf.*;
+import hex.rf.Tree.StatType;
 
 import java.util.Properties;
 import java.util.BitSet;
@@ -12,24 +13,26 @@ import com.google.gson.JsonObject;
 
 public class RF extends Request {
 
-  protected final H2OHexKey _dataKey = new H2OHexKey(DATA_KEY);
-  protected final HexKeyClassCol _classCol = new HexKeyClassCol(CLASS, _dataKey);
-  protected final Int _numTrees = new Int(NUM_TREES,50,0,Integer.MAX_VALUE);
-  protected final Bool _gini = new Bool(GINI,false,"use gini statistic (otherwise entropy is used)");
-  protected final H2OCategoryWeights _weights = new H2OCategoryWeights(WEIGHTS, _dataKey, _classCol, 1);
-  protected final Bool _stratify = new Bool(STRATIFY,false,"Use Stratified sampling");
-  protected final H2OCategoryStrata _strata = new H2OCategoryStrata(STRATA, _dataKey, _classCol, 1);
-  protected final H2OKey _modelKey = new H2OKey(MODEL_KEY, RFModel.makeKey());
-  protected final Bool _oobee = new Bool(OOBEE,true,"Out of bag errors");
-  protected final Int _features = new Int(FEATURES, null, 1, Integer.MAX_VALUE);
-  protected final HexColumnSelect _ignore = new HexNonClassColumnSelect(IGNORE, _dataKey, _classCol);
-  protected final Int _sample = new Int(SAMPLE, 67, 1, 100);
-  protected final Int _binLimit = new Int(BIN_LIMIT,1024, 0,65535);
-  protected final Int _depth = new Int(DEPTH,Integer.MAX_VALUE,0,Integer.MAX_VALUE);
-  protected final LongInt _seed = new LongInt(SEED,0xae44a87f9edf1cbL,"High order bits make better seeds");
-  protected final Bool _parallel = new Bool(PARALLEL,true,"Build trees in parallel");
-  protected final Int _exclusiveSplitLimit = new Int(EXCLUSIVE_SPLIT_LIMIT, null, 0, Integer.MAX_VALUE);
+  protected final H2OHexKey         _dataKey    = new H2OHexKey(DATA_KEY);
+  protected final HexKeyClassCol    _classCol   = new HexKeyClassCol(CLASS, _dataKey);
+  protected final Int               _numTrees   = new Int(NUM_TREES,50,0,Integer.MAX_VALUE);
+  protected final Int               _features   = new Int(FEATURES, null, 1, Integer.MAX_VALUE);
+  protected final Int               _depth      = new Int(DEPTH,Integer.MAX_VALUE,0,Integer.MAX_VALUE);
+  protected final EnumArgument<StatType> _statType = new EnumArgument<Tree.StatType>(STAT_TYPE, StatType.ENTROPY);
+  protected final HexColumnSelect   _ignore     = new HexNonClassColumnSelect(IGNORE, _dataKey, _classCol);
+  protected final H2OCategoryWeights _weights   = new H2OCategoryWeights(WEIGHTS, _dataKey, _classCol, 1);
+  protected final EnumArgument<SamplingStrategy> _samplingStrategy = new EnumArgument<SamplingStrategy>(SAMPLING_STRATEGY, SamplingStrategy.RANDOM, true);
+  protected final H2OCategoryStrata              _strataSamples    = new H2OCategoryStrata(STRATA_SAMPLES, _dataKey, _classCol, 67);
+  protected final Int               _sample     = new Int(SAMPLE, 67, 1, 100);
+  protected final Bool              _oobee      = new Bool(OOBEE,true,"Out of bag error");
+  protected final H2OKey            _modelKey   = new H2OKey(MODEL_KEY, RFModel.makeKey());
+  /* Advanced settings */
+  protected final Int               _binLimit   = new Int(BIN_LIMIT,1024, 0,65535);
+  protected final LongInt           _seed       = new LongInt(SEED,0xae44a87f9edf1cbL,"High order bits make better seeds");
+  protected final Bool              _parallel   = new Bool(PARALLEL,true,"Build trees in parallel");
+  protected final Int               _exclusiveSplitLimit = new Int(EXCLUSIVE_SPLIT_LIMIT, null, 0, Integer.MAX_VALUE);
 
+  /** Return the query link to this page */
   public static String link(Key k, String content) {
     RString rs = new RString("<a href='RF.query?%key_param=%$key'>%content</a>");
     rs.replace("key_param", DATA_KEY);
@@ -39,19 +42,27 @@ public class RF extends Request {
   }
 
   public RF() {
-    _stratify.setRefreshOnChange();
+    _sample._hideInQuery = false; //default value for sampling strategy
+    _strataSamples._hideInQuery = true;
+
     _requestHelp = "Build a model using Random Forest.";
-    _classCol._requestHelp = "The output classification (also known as " +
-    		"'response variable') that is being learned.";
+    /* Fields help */
+    help(_dataKey,  "");
+    help(_classCol, "The output classification (also known as " +
+    		        "'response variable') that is being learned.");
+    help(_numTrees, "");
+    help(_features, "");
+    help(_depth,    "");
+    help(_oobee,    "Compute out-of-bag error rate.");
   }
 
   @Override protected void queryArgumentValueSet(Argument arg, Properties inputArgs) {
-    if (arg == _stratify) {
-      if (_stratify.value()) {
-        _oobee.disable("OOBEE is only meaningful if stratify is not specified.", inputArgs);
-        _oobee.record()._value = false;
-      } else {
-        _strata.disable("Strata is only meaningful if stratify is on.", inputArgs);
+    if (arg == _samplingStrategy) {
+      _sample._hideInQuery = true; _strataSamples._hideInQuery = true;
+      switch (_samplingStrategy.value()) {
+      case RANDOM                : _sample._hideInQuery = false; break;
+      case STRATIFIED_DISTRIBUTED:
+      case STRATIFIED_LOCAL      : _strataSamples._hideInQuery = false; break;
       }
     }
     if( arg == _ignore ) {
@@ -90,27 +101,25 @@ public class RF extends Request {
     }
 
     int features = _features.value() == null ? -1 : _features.value();
-    float sample = _sample.value() / 100.0f;
     int exclusiveSplitLimit = _exclusiveSplitLimit.value() == null ? 0 : _exclusiveSplitLimit.value();
-    Tree.StatType statType = _gini.value() ? Tree.StatType.GINI : Tree.StatType.ENTROPY;
 
     try {
       // Async launch DRF
       hex.rf.DRF.execute(
-              modelKey,         // Key to save the model under
-              cols,             // Columns selected from the dataset
-              ary,              // The dataset to train on
+              modelKey,
+              cols,
+              ary,
               ntree,
               _depth.value(),
-              sample,
               _binLimit.value().shortValue(),
-              statType,
+              _statType.value(),
               _seed.value(),
               _parallel.value(),
               _weights.value(),
               features,
-              _stratify.value(),
-              _strata.convertToMap(),
+              _samplingStrategy.value(),
+              _sample.value() / 100.0f,
+              _strataSamples.value(),
               0, /* verbose level is minimal here */
               exclusiveSplitLimit
               );

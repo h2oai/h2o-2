@@ -206,6 +206,7 @@ public class Confusion extends MRTask {
       /* NOTE: Before changing used generator think about which kind of random generator you need:
        * if always deterministic or non-deterministic version - see hex.rf.Utils.get{Deter}RNG */
       seed = seed + (init_row<<16);
+      System.err.println("CM seed: " + seed);
       Random rand = Utils.getDeterRNG(seed);
       // Now for all rows, classify & vote!
       ROWS: for( int row = 0; row < rows; row++ ) {

@@ -42,7 +42,7 @@ public class RandomForest {
       long treeSeed = rnd.nextLong() + TREE_SEED_INIT; // make sure that enough bits is initialized
       trees[i] = new Tree( data, maxTreeDepth, minErrorRate, stat, numSplitFeatures, treeSeed,
                            drf._job,i,drf._ntrees, drf._sample, drf._numrows,
-                           drf._useStratifySampling, drf._strata,
+                           drf._samplingStrategy, drf._strataSamples,
                            drf._verbose, drf._exclusiveSplitLimit );
       if (!parallelTrees)   DRemoteTask.invokeAll(new Tree[]{trees[i]});
     }
@@ -166,15 +166,15 @@ public class RandomForest {
                           va,
                           ARGS.ntrees,
                           ARGS.depth,
-                          (ARGS.sample/100.0f),
                           (short)ARGS.binLimit,
                           st,
                           ARGS.seed,
                           ARGS.parallel==1,
                           classWeights,
                           ARGS.features, // number of split features or -1 (default)
-                          ARGS.stratify,
-                          strata,
+                          ARGS.stratify ? SamplingStrategy.STRATIFIED_LOCAL : SamplingStrategy.RANDOM,
+                          (ARGS.sample/100.0f),
+                          /* FIXME strata*/ null,
                           ARGS.verbose,
                           ARGS.exclusive);
     DRF drf = drfResult.get();  // block on all nodes!

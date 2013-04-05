@@ -163,11 +163,11 @@ public class Data implements Iterable<Row> {
    *
    * Stratified sampling look only at local data.
    */
-  private int[] sampleStratified(float[] samplePerStrata, long seed, int rowsPerChunk) {
+  private int[] sampleLocalStratified(float[] samplePerStrata, long seed, int rowsPerChunk) {
     // preconditions
     assert samplePerStrata.length == _dapt.classes() : "There is not enought number of samples for individual stratas!";
     // precomputing - find the largest sample and compute the bag size for it
-    float largestSample = 0f;
+    float largestSample = 0.0f;
     for (float sample : samplePerStrata) if (sample > largestSample) largestSample = sample;
     // compute
     Random rand   = null;
@@ -180,6 +180,7 @@ public class Data implements Iterable<Row> {
       if( cnt--==0 ) {
         long chunkSamplingSeed = chunkSampleSeed(seed, i);
         rand = Utils.getDeterRNG(chunkSamplingSeed);
+        System.err.println("seed: " + chunkSamplingSeed);
         cnt  = rowsPerChunk-1;
         if( i+2*rowsPerChunk > rows ) cnt = rows; // Last chunk is big
       }
@@ -211,7 +212,7 @@ public class Data implements Iterable<Row> {
 
   public Data sample(float[] samplePerStrata, long seed, int rowsPerChunk) {
 
-    int sample[] = sampleStratified(samplePerStrata, seed, rowsPerChunk);
+    int sample[] = sampleLocalStratified(samplePerStrata, seed, rowsPerChunk);
     Arrays.sort(sample);
     // -debug
     System.out.println("Data.sample(): strata = " + Arrays.toString(samplePerStrata));
