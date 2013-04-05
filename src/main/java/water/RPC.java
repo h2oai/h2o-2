@@ -1,12 +1,10 @@
 package water;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import jsr166y.ForkJoinPool;
 import water.H2O.FJWThr;
 import water.H2O.H2OCountedCompleter;
-import water.util.TimelineSnapshot;
 
 /**
  * A remotely executed FutureTask.  Flow is:
@@ -280,17 +278,6 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   // Handle traffic, from a client to this server asking for work to be done.
   // Called from either a F/J thread (generally with a UDP packet) or from the
   // TCPReceiver thread.
-
-  // for dbg
-  static void printMyTimeLine(){
-    long [] s = TimeLine.snapshot();
-    System.out.println("===================================<TIMELINE>==============================================");
-    for(int i = 0; i < TimeLine.length(); ++i) {
-      if(!TimeLine.isEmpty(s, i) && ((TimeLine.l0(s, i) & 0xFF) == UDP.udp.exec.ordinal()))
-        System.out.println(TimeLine.ms(s, i) + ": " + (((TimeLine.ns(s, i) & 4) != 0)?"TCP":"UDP")  +  TimeLine.inet(s, i) + " | " + UDP.printx16(TimeLine.l0(s, i), TimeLine.l8(s, i)));
-    }
-    System.out.println("===========================================================================================");
-  }
   static AutoBuffer remote_exec( final AutoBuffer ab ) {
     long lo = ab.get8(0), hi = ab.get8(8); // for dbg
     final int task = ab.getTask();
@@ -304,11 +291,8 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     // TCP but the UDP packet has arrived ahead of the TCP.  Just drop the UDP
     // and wait for the TCP to appear.
     if( old == null && flag == CLIENT_TCP_SEND ) {
-      if(ab.hasTCP()){
-        System.out.println("ERROR: got tcp with existing task #, FROM " + ab._h2o.toString() + " AB: " +  UDP.printx16(lo,hi));
-        printMyTimeLine();
-      }
-      assert !ab.hasTCP();
+      if(ab.hasTCP())TimeLine.printMyTimeLine();
+      assert !ab.hasTCP():"ERROR: got tcp with existing task #, FROM " + ab._h2o.toString() + " AB: " +  UDP.printx16(lo,hi);      // All the resends should be UDP only
       // DROP PACKET
     } else if( old == null ) {  // New task?
       // Read the DTask Right Now.  If we are the TCPReceiver thread, then we
@@ -318,35 +302,25 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       if( rpc2==null ) {        // Atomically insert (to avoid double-work)
         H2O.submitTask(rpc);    // And execute!
       } else {                  // Else lost the task-insertion race
-        if(ab.hasTCP()){
-          System.out.println("ERROR: got tcp with existing task #, FROM " + ab._h2o.toString() + " AB: " +  UDP.printx16(lo,hi));
-          printMyTimeLine();
-        }
-        assert !ab.hasTCP();    // Hence this is a dup 'exec' request
+        if(ab.hasTCP())TimeLine.printMyTimeLine();
+        assert !ab.hasTCP():"ERROR: got tcp with existing task #, FROM " + ab._h2o.toString() + " AB: " +  UDP.printx16(lo,hi);      // All the resends should be UDP only
         // DROP PACKET
       }
 
     } else if( !old._computed ) {
-      if(ab.hasTCP()){
-        System.out.println("ERROR: got tcp with existing task #, FROM " + ab._h2o.toString() + " AB: " +  UDP.printx16(lo,hi));
-        printMyTimeLine();
-      }
       // This packet has not been fully computed.  Hence it's still a work-in-
       // progress locally.  We have no answer to reply but we do not want to
       // re-offer the packet for repeated work.  Just ignore the packet.
-      assert !ab.hasTCP();      // All the resends should be UDP only
-
+      if(ab.hasTCP())TimeLine.printMyTimeLine();
+      assert !ab.hasTCP():"ERROR: got tcp with existing task #, FROM " + ab._h2o.toString() + " AB: " +  UDP.printx16(lo,hi);      // All the resends should be UDP only
       // DROP PACKET
     } else {
-      if(ab.hasTCP()){
-        System.out.println("ERROR: got tcp with existing task #, FROM " + ab._h2o.toString() + " AB: " +  UDP.printx16(lo,hi));
-        printMyTimeLine();
-      }
       // This is an old re-send of the same thing we've answered to before.
       // Send back the same old answer ACK.  If we sent via TCP before, then
       // we know the answer got there so just send a control-ACK back.  If we
       // sent via UDP, resend the whole answer.
-      assert !ab.hasTCP();      // All the resends should be UDP only
+      if(ab.hasTCP())TimeLine.printMyTimeLine();
+      assert !ab.hasTCP():"ERROR: got tcp with existing task #, FROM " + ab._h2o.toString() + " AB: " +  UDP.printx16(lo,hi);      // All the resends should be UDP only
       old.resend_ack();
     }
     return ab;
