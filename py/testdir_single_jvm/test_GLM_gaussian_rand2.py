@@ -61,10 +61,7 @@ class Basic(unittest.TestCase):
             glm = h2o_cmd.runGLMOnly(timeoutSecs=120, parseKey=parseKey, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
 
-            start = time.time()
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
-            print "simpleCheckGLM end on ", csvPathname, 'took', time.time() - start, 'seconds'
-
             print "Trial #", trial, "completed\n"
 
 
