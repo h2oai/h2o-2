@@ -43,6 +43,7 @@ public class Constants {
   public static final String DEPTH                 = "depth";
   public static final String DESCRIPTION           = "description";
   public static final String DEST_KEY              = "destination_key";
+  public static final String PROGRESS_KEY              = "progress_key";
   public static final String DTHRESHOLDS           = "thresholds";
   public static final String ENUM_DOMAIN_SIZE      = "enum_domain_size";
   public static final String EPSILON               = "epsilon";

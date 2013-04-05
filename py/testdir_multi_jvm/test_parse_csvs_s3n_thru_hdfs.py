@@ -21,10 +21,10 @@ class Basic(unittest.TestCase):
         else:
             # all hdfs info is done thru the hdfs_config michal's ec2 config sets up?
             h2o_hosts.build_cloud_with_hosts(1, 
-            # this is for our amazon ec hdfs
-            # see https://github.com/0xdata/h2o/wiki/H2O-and-s3n
-            hdfs_name_node='10.78.14.235:9000',
-            hdfs_version='0.20.2')
+                # this is for our amazon ec hdfs
+                # see https://github.com/0xdata/h2o/wiki/H2O-and-s3n
+                hdfs_name_node='10.78.14.235:9000',
+                hdfs_version='0.20.2')
 
     @classmethod
     def tearDownClass(cls):

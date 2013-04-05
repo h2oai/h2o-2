@@ -190,7 +190,7 @@ class Basic(unittest.TestCase):
             print 'col_names:', col_names
             print 'x:', x
 
-            kwargs = { 'num_cross_validation_folds': 0, 'y': y, 'x': x,
+            kwargs = { 'n_folds': 0, 'y': y, 'x': x,
                 'family': family, 'link': 'familyDefault',
                 'alpha': 0, 'lambda': 0, 'case_mode': '=', 'case': 1,
                 'beta_epsilon': 1.0E-4, 'max_iter': 50 }

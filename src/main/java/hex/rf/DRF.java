@@ -123,6 +123,10 @@ public final class DRF extends water.DRemoteTask {
     drf._useStratifySampling = stratify;
     drf._verbose = verbose;
     drf._exclusiveSplitLimit = exclusiveSplitLimit;
+    // Save the number of rows per chunk - it is needed for proper sampling.
+    // But it will need to be changed with new fluid vectors
+    assert ary._rpc == null : "DRF does not support different sizes of chunks for now!";
+    drf._numrows = (int) (ValueArray.CHUNK_SZ/ary._rowsize);
 
     RandomForest.OptArgs _ = new RandomForest.OptArgs();
     _.features = numSplitFeatures;
@@ -211,13 +215,6 @@ public final class DRF extends water.DRemoteTask {
 
   @Override
   public final void reduce( DRemoteTask drt ) { }
-
-  @Override
-  public void onCompletion(CountedCompleter caller) {
-    System.out.println("DRF.onCompletion(): keys  :" + _keys.length);
-    System.out.println("DRF.onCompletion(): ntrees:" + _ntrees);
-    System.out.println("DRF.onCompletion(): caller: " + caller);
-  }
 
   /** Unless otherwise specified each split looks at sqrt(#features). */
   private int howManySplitFeatures(Data t) {

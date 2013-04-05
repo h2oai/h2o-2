@@ -11,7 +11,7 @@ params = {
     'thresholds': 0.5, 
     'alpha': 1.0, 
     'lambda': 1e-05,
-    'num_cross_validation_folds': 1, 
+    'n_folds': 1, 
     'max_iter': 20, 
 }
 class Basic(unittest.TestCase):

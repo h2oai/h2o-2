@@ -16,37 +16,30 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED, translateList):
         rowData = []
         for j in range(colCount):
             ### ri1 = int(r1.triangular(0,2,1.5))
-            ri1 = int(r1.triangular(0,4,2.5))
+            ri1 = int(r1.triangular(1,5,2.5))
             rowData.append(ri1)
 
         rowTotal = sum(rowData)
+        ### print rowData
         if translateList is not None:
             for i, iNum in enumerate(rowData):
-                rowData[i] = translateList[iNum]
+                # numbers should be 1-5, mapping to a-d
+                rowData[i] = translateList[iNum-1]
 
-        result = r2.randint(0,1)
+        rowAvg = (rowTotal + 0.0)/colCount
+        ### print rowAvg
+        if rowAvg > 2.25:
+            result = 1
+        else:
+            result = 0
         ### print colCount, rowTotal, result
         rowDataStr = map(str,rowData)
         rowDataStr.append(str(result))
-        # add the output twice, to try to match to it?
-        # can't include output in input, pefect separation, failure to converge?
-        ### rowDataStr.append(str(result))
-
         rowDataCsv = ",".join(rowDataStr)
         dsf.write(rowDataCsv + "\n")
 
     dsf.close()
 
-paramDict = {
-    'family': ['binomial'],
-    'lambda': [1.0E-5],
-    'alpha': [1.0],
-    'max_iter': [50],
-    'weight': [1.0],
-    'thresholds': [0.5],
-    'num_cross_validation_folds': [2],
-    'beta_epsilon': [1.0E-4],
-    }
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -96,26 +89,32 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             print "\n" + csvFilename
 
-            paramDict2 = {}
-            for k in paramDict:
-                paramDict2[k] = paramDict[k][0]
-
             y = colCount
-            kwargs = {'y': y, 'max_iter': 50, 'case': 1}
-            kwargs.update(paramDict2)
+            kwargs = {
+                'y': y, 
+                'max_iter': 50, 
+                'case': 1,
+                'family': 'binomial',
+                'lambda': 0,
+                'alpha': 0,
+                'max_iter': 50,
+                'weight': 1.0,
+                'thresholds': 0.5,
+                'n_folds': 2,
+                'beta_epsilon':1.0E-4,
+            }
 
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
-            # only col Y-1 (next to last)doesn't get renamed in coefficients due to enum/categorical expansion
             print "y:", y 
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
             if not h2o.browse_disable:
                 h2b.browseJsonHistoryAsUrlLastMatch("GLM")
-                time.sleep(15)
+                time.sleep(10)
                 h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
-                time.sleep(15)
+                time.sleep(10)
 
 if __name__ == '__main__':
     h2o.unit_main()

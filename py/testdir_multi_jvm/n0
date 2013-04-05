@@ -26,9 +26,12 @@
 ./n0.doit test_flatfile.py
 ./n0.doit test_from_import_3.py
 ./n0.doit test_GLM_100Mx70_hosts.py
+./n0.doit test_GLM_allstate_s3n_thru_hdfs.py
 ./n0.doit test_GLM_big2_hosts.py
 ./n0.doit test_GLM_catdata_hosts.py
+./n0.doit test_GLM_covtype2000x_hosts.py
 ./n0.doit test_GLM_covtype20x_hosts.py
+./n0.doit test_GLM_covtype20x_s3n_thru_hdfs.py
 ./n0.doit test_GLM_covtype_hosts.py
 ./n0.doit test_GLM_covtype_single_cols.py
 ./n0.doit test_GLM_from_import_hosts.py
@@ -60,6 +63,8 @@
 ./n0.doit test_many_cols_and_types.py
 ./n0.doit test_many_fp_formats.py
 ./n0.doit test_multi_with_a_browser.py
+./n0.doit test_parse_covtype20x_s3n_thru_hdfs.py
+./n0.doit test_parse_csvs_s3n_thru_hdfs.py
 ./n0.doit test_parse_file_loop.py
 ./n0.doit test_parse_fs_schmoo.py
 ./n0.doit test_parse_many_cols.py
@@ -68,6 +73,7 @@
 ./n0.doit test_parse_rand_schmoo.py
 ./n0.doit test_parse_small_nopoll2.py
 ./n0.doit test_parse_small_nopoll.py
+./n0.doit test_parse_syn_s3n_thru_hdfs.py
 ./n0.doit test_poisson_covtype20x_hosts.py
 ./n0.doit test_poker_1m_rf.py
 ./n0.doit test_put_1m_keys.py
@@ -77,6 +83,7 @@
 ./n0.doit test_rf2a.py
 ./n0.doit test_rf2.py
 ./n0.doit test_rf3.py
+./n0.doit test_rf_sample.py
 ./n0.doit test_same_parse.py
 ./n0.doit test_sigar.py
 ./n0.doit test_startup.py

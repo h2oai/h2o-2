@@ -27,12 +27,12 @@ public class TypeaheadFileRequest extends TypeaheadRequest {
     if( base == null ) base = new File(".");
 
     JsonArray array = new JsonArray();
-    for( File file : base.listFiles() ) {
+    File[] files = base.listFiles();
+    if( files == null ) return array;
+    for( File file : files ) {
       if( file.isHidden() ) continue;
-      if( file.getName().toLowerCase().startsWith(filterPrefix) ) {
-        String s = file.getPath();
-        array.add(new JsonPrimitive(s));
-      }
+      if( file.getName().toLowerCase().startsWith(filterPrefix) )
+        array.add(new JsonPrimitive(file.getPath()));
       if( array.size() == limit) break;
     }
     return array;

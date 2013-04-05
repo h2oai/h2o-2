@@ -154,18 +154,18 @@ public abstract class PersistHdfs {
         return b;
       // Explicitly ignore the following exceptions but
       // fail on the rest IOExceptions
-      } catch (EOFException e)           { ignoreAndWait(e);
-      } catch (SocketTimeoutException e) { ignoreAndWait(e);
-      } catch (S3Exception e)            { ignoreAndWait(e);
-      } catch (IOException e)            { ignoreAndWait(e);
+      } catch (EOFException e)           { ignoreAndWait(e,false);
+      } catch (SocketTimeoutException e) { ignoreAndWait(e,false);
+      } catch (S3Exception e)            { ignoreAndWait(e,false);
+      } catch (IOException e)            { ignoreAndWait(e,true);
       } finally {
         try { if( s != null ) s.close(); } catch( IOException e ) {}
       }
     }
   }
 
-  private static void ignoreAndWait(final Exception e) {
-    H2O.ignore(e, "[h2o,hdfs] Hit HDFS reset problem, retrying...");
+  private static void ignoreAndWait(final Exception e, boolean printException) {
+    H2O.ignore(e, "[h2o,hdfs] Hit HDFS reset problem, retrying...", printException);
     try { Thread.sleep(500); } catch (InterruptedException ie) {}
   }
 

@@ -5,7 +5,7 @@ import json
 import h2o, h2o_cmd, h2o_hosts, h2o_glm
 
 # none is illegal for threshold
-# always run with num_cross_validation_folds, to make sure we get the trainingErrorDetails
+# always run with n_folds, to make sure we get the trainingErrorDetails
 # FIX! we'll have to do something for gaussian. It doesn't return the ted keys below
 
 # some newer args for new port
@@ -15,7 +15,7 @@ def define_params():
         'x': [0,1,15,33],
         # 'family': [None, 'gaussian', 'binomial', 'poisson'],
         'family': ['gaussian', 'binomial'],
-        'num_cross_validation_folds': [2,3,4,9],
+        'n_folds': [2,3,4,9],
         'threshold': [0.1, 0.5, 0.7, 0.9],
         # 'lambda': [None, 1e-8, 1e-4,1,10,1e4],
         # Update: None is a problem with 'fail to converge'

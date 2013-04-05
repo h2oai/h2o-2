@@ -1,5 +1,5 @@
 import h2o_cmd, h2o
-import re, random
+import re, random, math
 
 def pickRandGlmParams(paramDict, params):
     colX = 0
@@ -33,7 +33,7 @@ def pickRandGlmParams(paramDict, params):
     return colX
 
 def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False,
-    prettyPrint=False, **kwargs):
+    prettyPrint=False, noPrint=False, **kwargs):
     # h2o GLM will verboseprint the result and print errors. 
     # so don't have to do that
     # different when cross validation  is used? No trainingErrorDetails?
@@ -55,6 +55,9 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
                     # stop on other 'fail' warnings (are there any? fail to solve?
                     raise Exception(w)
 
+    # for key, value in glm.iteritems(): print key
+    # not in GLMGrid?
+    # print "computation_time:", glm['computation_time']
     print "GLMModel execution time (milliseconds):", GLMModel['time']
 
     # FIX! don't get GLMParams if it can't solve?
@@ -68,6 +71,26 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     validationsList = GLMModel['validations']
     # don't want to modify validationsList in case someone else looks at it
     validations = validationsList[0]
+
+    # xval. compare what we asked for and what we got.
+    n_folds = kwargs.setdefault('n_folds', None)
+    if not 'xval_models' in validations:
+        if n_folds > 1:
+                raise Exception("No cross validation models returned. Asked for "+n_folds)
+    else:
+        xval_models = validations['xval_models']
+        if n_folds and n_folds > 1:
+            if len(xval_models) != n_folds:
+                raise Exception(len(xval_models)+" cross validation models returned. Asked for "+n_folds)
+        else:
+            # should be default 10?
+            if len(xval_models) != 10:
+                raise Exception(str(len(xval_models))+" cross validation models returned. Default should be 10")
+
+    if math.isnan(validations['err']):
+        emsg = "Why is this err = 'nan'?? %6s %s" % ("err:\t", validations['err'])
+        raise Exception(emsg)
+
     print "GLMModel/validations"
     print "%15s %s" % ("err:\t", validations['err'])
     print "%15s %s" % ("nullDev:\t", validations['nullDev'])
@@ -79,7 +102,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         print "%15s %s" % ("auc:\t", validations['auc'])
         print "%15s %s" % ("threshold:\t", validations['threshold'])
 
-    if family=="poisson" or family=="gaussian" or family=="gamma":
+    if family=="poisson" or family=="gaussian":
         print "%15s %s" % ("aic:\t", validations['aic'])
 
     # get a copy, so we don't destroy the original when we pop the intercept
@@ -128,7 +151,8 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         print "\nH2O intercept:\t\t%.5e" % intercept
         print cString
     else:
-        print "\nintercept:", intercept, cString
+        if not noPrint:
+            print "\nintercept:", intercept, cString
 
     print "\nTotal # of coefficients:", len(column_names)
 

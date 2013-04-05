@@ -14,7 +14,19 @@ public class TreeRenderer {
   static {
     File f = new File("/usr/local/bin/dot");
     if( !f.exists() ) f = new File("/usr/bin/dot");
+    // graphviz is currently at 2.30. hack to support minor revs coming up until
+    // someone figures out a better way. 
+    // Also, 2.30 apparently got rid of a space on Win7 at least. So try those too.
     if( !f.exists() ) f = new File("C:\\Program Files (x86)\\Graphviz 2.28\\bin\\dot.exe");
+    if( !f.exists() ) f = new File("C:\\Program Files (x86)\\Graphviz 2.29\\bin\\dot.exe");
+    if( !f.exists() ) f = new File("C:\\Program Files (x86)\\Graphviz 2.30\\bin\\dot.exe");
+    if( !f.exists() ) f = new File("C:\\Program Files (x86)\\Graphviz 2.31\\bin\\dot.exe");
+    if( !f.exists() ) f = new File("C:\\Program Files (x86)\\Graphviz 2.32\\bin\\dot.exe");
+    if( !f.exists() ) f = new File("C:\\Program Files (x86)\\Graphviz2.28\\bin\\dot.exe");
+    if( !f.exists() ) f = new File("C:\\Program Files (x86)\\Graphviz2.29\\bin\\dot.exe");
+    if( !f.exists() ) f = new File("C:\\Program Files (x86)\\Graphviz2.30\\bin\\dot.exe");
+    if( !f.exists() ) f = new File("C:\\Program Files (x86)\\Graphviz2.31\\bin\\dot.exe");
+    if( !f.exists() ) f = new File("C:\\Program Files (x86)\\Graphviz2.32\\bin\\dot.exe");
     DOT_PATH = f.exists() ? f.getAbsolutePath() : null;
   }
 

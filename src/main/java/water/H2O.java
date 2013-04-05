@@ -60,14 +60,18 @@ public final class H2O {
   public static final RuntimeException unimpl() { return new RuntimeException("unimplemented"); }
 
   // Central /dev/null for ignored exceptions
-  public static final void ignore(Throwable e) { ignore(e,"[h2o] Problem ignored: "); }
-  public static final void ignore(Throwable e, String msg) {
-    StackTraceElement[] stack = e.getStackTrace();
+  public static final void ignore(Throwable e)             { ignore(e,"[h2o] Problem ignored: "); }
+  public static final void ignore(Throwable e, String msg) { ignore(e, msg, true); }
+  public static final void ignore(Throwable e, String msg, boolean printException) {
     StringBuffer sb = new StringBuffer();
-    // The replacement of Exception -> Problem is required by our testing framework which would report
-    // error if it sees "exception" in the node output
-    sb.append(msg).append('\n').append(e.toString().replace("Exception", "Problem")).append('\n');
-    for (StackTraceElement el : stack) { sb.append("\tat "); sb.append(el.toString().replace("Exception", "Problem" )); sb.append('\n'); }
+    sb.append(msg).append('\n');
+    if (printException) {
+      StackTraceElement[] stack = e.getStackTrace();
+      // The replacement of Exception -> Problem is required by our testing framework which would report
+      // error if it sees "exception" in the node output
+      sb.append(e.toString().replace("Exception", "Problem")).append('\n');
+      for (StackTraceElement el : stack) { sb.append("\tat "); sb.append(el.toString().replace("Exception", "Problem" )); sb.append('\n'); }
+    }
     System.err.println(sb);
   }
 
@@ -242,14 +246,14 @@ public final class H2O {
   }
 
   private static InetAddress guessInetAddress(List<InetAddress> ips) {
-    System.err.println("Multiple local IPs detected:");
-    for(InetAddress ip : ips) System.err.println("  " + ip);
-    System.err.println("Attempting to determine correct address...");
+    System.out.println("Multiple local IPs detected:");
+    for(InetAddress ip : ips) System.out.println("  " + ip);
+    System.out.println("Attempting to determine correct address...");
     Socket s = null;
     try {
       // using google's DNS server as an external IP to find
       s = new Socket("8.8.8.8", 53);
-      System.err.println("Using " + s.getLocalAddress());
+      System.out.println("Using " + s.getLocalAddress());
       return s.getLocalAddress();
     } catch( Throwable t ) {
       return null;

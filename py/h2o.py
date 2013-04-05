@@ -327,11 +327,11 @@ def default_hosts_file():
 def decide_if_localhost():
     # First, look for local hosts file
     hostsFile = default_hosts_file()
-    if os.path.exists(hostsFile): 
-        print "* Using matching username config JSON file discovered in this directory: {0}.".format(hostsFile)
-        return False
     if config_json:
         print "* Using config JSON you passed as -cj argument:", config_json
+        return False
+    if os.path.exists(hostsFile): 
+        print "* Using matching username config JSON file discovered in this directory: {0}.".format(hostsFile)
         return False
     if 'hosts' in os.getcwd():
         print "Since you're in a *hosts* directory, we're using a config json"
@@ -608,7 +608,7 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25):
                 "\n" +
                 "\nUPDATE: building cloud size of 2 with 127.0.0.1 may temporarily report 3 incorrectly, with no zombie?" 
                 )
-            # raise Exception(emsg)
+            raise Exception(emsg)
             print emsg
 
         
@@ -657,8 +657,8 @@ class H2O(object):
                     raise Exception(emsg)
 
         for w in ['warning', 'Warning', 'warnings', 'Warnings']:
-            verboseprint(dump_json(rjson))
             if w in rjson:
+                verboseprint(dump_json(rjson))
                 print 'rjson %s in %s: %s' % (w, inspect.stack()[1][3], rjson[w])
 
         return rjson
@@ -745,6 +745,8 @@ class H2O(object):
             noiseUrl = self.__url(noise_json + ".json")
 
         status = 'poll'
+        r = {} # response
+
         start = time.time()
         count = 0
         # FIX! temporarily wait 5x the retryDelaySecs delay, before the first poll
@@ -752,6 +754,8 @@ class H2O(object):
         if initialDelaySecs:
             time.sleep(initialDelaySecs)
         # can end with status = 'redirect' or 'done'
+        # FIX! temporary hack ...if a GLMModel key shows up, treat that as "stop polling'   
+        # because we have results for GLm. (i.e. ignore status.
         while status == 'poll':
             # UPDATE: 1/24/13 change to always wait before the first poll..
             # see if it makes a diff to our low rate fails
@@ -790,9 +794,14 @@ class H2O(object):
             if ((time.time()-start)>timeoutSecs):
                 # show what we're polling with 
                 argsStr =  '&'.join(['%s=%s' % (k,v) for (k,v) in paramsUsed.items()])
-                emsg = "Exceeded timeoutSecs: %d secs while polling. status: %s, url: %s?%s" % (timeoutSecs, status, urlUsed, argsStr)
+                emsg = "Exceeded timeoutSecs: %d secs while polling." % timeoutSecs +\
+                       "status: %s, url: %s?%s" % (status, urlUsed, argsStr)
                 raise Exception(emsg)
             count += 1
+            # GLM can return partial results during polling..that's legal
+            if 'GLMProgress' in urlUsed and 'GLMModel' in r:
+                print "\nINFO: GLM returning partial results during polling. Continuing.."
+
         return r
     
     # additional params include: cols=. don't need to include in params_dict it doesn't need a default
@@ -1063,7 +1072,10 @@ class H2O(object):
         return a
 
     # kwargs used to pass many params
-    def GLM_shared(self, key, timeoutSecs=300, retryDelaySecs=0.5, parentName=None, **kwargs):
+    def GLM_shared(self, key, 
+        timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=30,
+        parentName=None, **kwargs):
+
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict = { 
             'family': 'binomial',
@@ -1071,7 +1083,6 @@ class H2O(object):
             'y': 1,
             'link': 'familyDefault'
         }
-
         params_dict.update(kwargs)
         print "\nGLM params list", params_dict
 
@@ -1083,29 +1094,38 @@ class H2O(object):
         verboseprint(parentName, dump_json(a))
         return a 
 
-    def GLM(self, key, timeoutSecs=300, retryDelaySecs=0.5, **kwargs):
-        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, parentName="GLM", **kwargs)
+    def GLM(self, key, 
+        timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=30, **kwargs):
+
+        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLM", **kwargs)
+        # Check that the response has the right Progress url it's going to steer us to.
+        if a['response']['redirect_request']!='GLMProgress':
+            print dump_json(a)
+            raise Exception('H2O GLM redirect is not GLMProgress. GLM json response precedes.')
+        a = self.poll_url(a['response'],
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+        verboseprint("GLM done:", dump_json(a))
 
         browseAlso = kwargs.get('browseAlso', False)
         if (browseAlso | browse_json):
-            print "Redoing the GLM through the browser, no results saved though"
-            h2b.browseJsonHistoryAsUrlLastMatch('GLM')
+            print "Viewing the GLM grid result through the browser"
+            h2b.browseJsonHistoryAsUrlLastMatch('GLMProgress')
             time.sleep(5)
         return a
 
     # this only exists in new. old will fail
-    def GLMGrid(self, key, timeoutSecs=300, retryDelaySecs=1.0, **kwargs):
-        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, parentName="GLMGrid", **kwargs)
+    def GLMGrid(self, key, 
+        timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=30, **kwargs):
 
-        if kwargs.get('norm'):
-            # don't have to pop, GLMGrid ignores
-            print "\nWARNING: norm param is ignored by GLMGrid. Always uses LASSO (L1+L2)."
-
+        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLMGrid", **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
         if a['response']['redirect_request']!='GLMGridProgress':
             print dump_json(a)
             raise Exception('H2O GLMGrid redirect is not GLMGridProgress. GLMGrid json response precedes.')
-        a = self.poll_url(a['response'], timeoutSecs, retryDelaySecs)
+        a = self.poll_url(a['response'],
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("GLMGrid done:", dump_json(a))
 
         browseAlso = kwargs.get('browseAlso', False)

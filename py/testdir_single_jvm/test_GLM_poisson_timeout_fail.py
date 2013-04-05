@@ -16,7 +16,7 @@ def define_params():
         'max_iter': 15, 
         'link': 'familyDefault', 
         'alpha': 0.5, 
-        'num_cross_validation_folds': 9, 
+        'n_folds': 9, 
         'lambda': 1e-4
     }
     return paramDict
@@ -47,7 +47,7 @@ class Basic(unittest.TestCase):
         kwargs = define_params()
         for trial in range(3):
             # make timeout bigger with xvals
-            timeoutSecs = 60 + (kwargs['num_cross_validation_folds']*20)
+            timeoutSecs = 60 + (kwargs['n_folds']*20)
             # or double the 4 seconds per iteration (max_iter+1 worst case?)
             timeoutSecs = max(timeoutSecs, (8 * (kwargs['max_iter']+1)))
             

@@ -5,8 +5,7 @@ import static org.junit.Assert.assertEquals;
 import hex.rf.DRF.DRFFuture;
 import hex.rf.Tree.StatType;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 import water.*;
 
@@ -42,12 +41,10 @@ public class RFPredDomainTest extends TestUtil {
     drf.get();
 
     RFModel model = UKV.get(modelKey);
-System.out.println("RFPredDomainTest.runIrisRF(): " + model);
     String testKeyName  = "iris_test.hex";
     // Load validation dataset
     Key testKey         = loadAndParseKey(testKeyName, testDS);
     ValueArray testData = DKV.get(testKey).get();
-System.out.println("RFPredDomainTest.runIrisRF(): " + testData._key);
     Confusion confusion = Confusion.make(model, testData._key, model._features-1, null, false);
     confusion.report();
     assertEquals("Error rate", expTestErr, confusion.classError(), 0.001);
@@ -94,6 +91,7 @@ System.out.println("RFPredDomainTest.runIrisRF(): " + testData._key);
    *   CM   : A B C
    */
   @Test
+  @Ignore
   public void irisMissing() throws Exception {
     long[][] cm = new long[][] {
         a(0, 0,  0),
@@ -137,6 +135,7 @@ System.out.println("RFPredDomainTest.runIrisRF(): " + testData._key);
    *   CM   : [0,4]
    */
   @Test
+  @Ignore
   public void irisNumericExtra() throws Exception {
     long[][] cm = new long[][] {
         a(20, 0,  0,  0, 0),
@@ -212,6 +211,29 @@ System.out.println("RFPredDomainTest.runIrisRF(): " + testData._key);
     String[] cmDomain = new String[] {"-1", "0", "1", "2", "3", "4"};
     runIrisRF("smalldata/test/classifier/iris_train_numeric.csv",
               "smalldata/test/classifier/iris_test_numeric_extra2.csv",
+              0.057f, cm, cmDomain);
+  }
+
+  /**
+   * Scenario:
+   *   model: [0,2]
+   *   data : [-1,4]
+   *   CM   : [-1,4]
+   */
+  @Test
+  @Ignore // ignore for now
+  public void irisExtraWithNAs() throws Exception {
+    long[][] cm = new long[][] {
+        a(0, 0,  0, 1, 0, 0),
+        a(0, 20, 0, 0, 0, 0),
+        a(0, 0, 16, 0, 0, 0),
+        a(0, 0,  1,13, 0, 0),
+        a(0, 0,  0, 0, 0, 0),
+        a(0, 0,  1, 0, 0, 0),
+    };
+    String[] cmDomain = new String[] {"-1", "0", "1", "2", "3", "4"};
+    runIrisRF("smalldata/test/classifier/iris_train.csv",
+              "smalldata/test/classifier/iris_test_extra_with_na.csv",
               0.057f, cm, cmDomain);
   }
 }

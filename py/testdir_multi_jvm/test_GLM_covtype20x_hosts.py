@@ -62,7 +62,7 @@ class Basic(unittest.TestCase):
                 x = ""
 
             print "WARNING: max_iter set to 8 for benchmark comparisons"
-            max_iter = 50
+            max_iter = 8 
 
             y = "54"
 
@@ -71,7 +71,7 @@ class Basic(unittest.TestCase):
                 'y': y, 
                 'family': 'binomial',
                 'link': 'logit',
-                'num_cross_validation_folds': 0, 
+                'n_folds': 1, 
                 'case_mode': '=', 
                 'case': 1, 
                 'max_iter': max_iter, 

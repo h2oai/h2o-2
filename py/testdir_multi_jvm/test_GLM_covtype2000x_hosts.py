@@ -14,62 +14,67 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(3,java_heap_GB=4)
+            h2o.build_cloud(2,java_heap_GB=5)
         else:
-            h2o_hosts.build_cloud_with_hosts()
+            print "1 jvms per node, 28GB heap each"
+            h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=28)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_covtype20x(self):
+    def test_GLM_covtype2000x(self):
         if localhost:
             csvFilenameList = [
-                ('covtype20x.data', 480),
+                # 68 secs on my laptop?
+                ('covtype20x.data', 480, 'cA'),
                 ]
         else:
+            # None is okay for key2
             csvFilenameList = [
-                # ('covtype200x.data', 1000),
-                ('covtype20x.data', 480),
+                ('covtype2000x.data', 3600,'cA'),
+                # ('covtype200x.data', 1000,'cE'),
                 ]
-
 
         # a browser window too, just because we can
         h2b.browseTheCloud()
 
-        importFolderPath = '/home/0xdiag/datasets'
+        importFolderPath = '/home2/0xdiag/datasets'
         h2i.setupImportFolder(None, importFolderPath)
-        for csvFilename,timeoutSecs in csvFilenameList:
-            # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=2000)
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        for csvFilename, timeoutSecs, key2 in csvFilenameList:
             csvPathname = importFolderPath + "/" + csvFilename
+            # creates csvFilename.hex from file in importFolder dir 
+            start = time.time()
+            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
+                timeoutSecs=2000, key2=key2)
+            print "parse end on ", csvPathname, 'took', time.time() - start, 'seconds'
+            h2o.check_sandbox_for_errors()
+
+            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             print "\n" + csvPathname, \
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \
                 "    num_cols:", "{:,}".format(inspect['num_cols'])
 
             if (1==0):
-                print "WARNING: just doing the first 33 features, for comparison to allstate numbers"
+                print "WARNING: just first 33 features. Comparison to allstate"
                 # pythonic!
                 x = ",".join(map(str,range(33)))
             else:
                 x = ""
 
-            print "WARNING: max_iter set to 8 for benchmark comparisons"
-            max_iter = 8
-
             y = "54"
-            
+
             kwargs = {
                 'x': x,
                 'y': y, 
-                'family': 'poisson',
-                'link': 'log',
+                'family': 'binomial',
+                'link': 'logit',
                 'n_folds': 0, 
-                # 'case_mode': '=', 
-                # 'case': 1, 
-                'max_iter': max_iter, 
+                'case_mode': '=', 
+                'case': 1, 
+                'max_iter': 8, 
                 'beta_epsilon': 1e-3}
+            print "WARNING: max_iter set to 8 for benchmark comparisons"
 
             # L2 
             kwargs.update({'alpha': 0, 'lambda': 0})
@@ -77,6 +82,7 @@ class Basic(unittest.TestCase):
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             print "glm (L2) end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
+            h2o.check_sandbox_for_errors()
 
             # Elastic
             kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
@@ -84,6 +90,7 @@ class Basic(unittest.TestCase):
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             print "glm (Elastic) end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
+            h2o.check_sandbox_for_errors()
 
             # L1
             kwargs.update({'alpha': 1.0, 'lambda': 1e-4})
@@ -91,6 +98,8 @@ class Basic(unittest.TestCase):
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             print "glm (L1) end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
+            h2o.check_sandbox_for_errors()
+
 
 
 if __name__ == '__main__':

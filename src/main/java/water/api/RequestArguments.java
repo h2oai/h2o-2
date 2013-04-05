@@ -1442,7 +1442,10 @@ public class RequestArguments extends RequestStatics {
   public class H2OKey extends InputText<Key> {
     public final Key _defaultValue;
     public H2OKey(String name) {
-      super(name, true);
+      this(name, true);
+    }
+    public H2OKey(String name, boolean required) {
+      super(name, required);
       _defaultValue = null;
     }
     public H2OKey(String name, String keyName) {

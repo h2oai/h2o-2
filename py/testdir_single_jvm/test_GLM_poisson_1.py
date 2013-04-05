@@ -44,7 +44,7 @@ class Basic(unittest.TestCase):
             'y': y,
             'family': 'poisson',
             'link': 'log',
-            'num_cross_validation_folds': 0,
+            'n_folds': 0,
             'max_iter': max_iter,
             'beta_eps': 1e-3}
 
