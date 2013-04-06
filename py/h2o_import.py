@@ -100,17 +100,12 @@ def parseImportHdfsFile(node=None, csvFilename=None, path=None,
     if not csvFilename: raise Exception('No csvFilename parameter in parseImportHdfsFile')
     if not node: node = h2o.nodes[0]
 
-    # FIX! this is ugly..
-    print "\nHacked the test to match the new behavior for key names created from hdfs files"
-    # was
-    # hdfsPrefix = 'hdfs:hdfs://' + node.hdfs_name_node
     hdfsPrefix = 'hdfs://' + node.hdfs_name_node
     if path is None:
         URI = hdfsPrefix + '/datasets'
     else:
         URI = hdfsPrefix + path
 
-    # double hdfs!
     hdfsKey = URI + "/" + csvFilename
     print "parseHdfsFile hdfsKey:", hdfsKey
     inspect = h2o_cmd.runInspect(key=hdfsKey)
