@@ -180,7 +180,6 @@ public class Data implements Iterable<Row> {
       if( cnt--==0 ) {
         long chunkSamplingSeed = chunkSampleSeed(seed, i);
         rand = Utils.getDeterRNG(chunkSamplingSeed);
-        System.err.println("seed: " + chunkSamplingSeed);
         cnt  = rowsPerChunk-1;
         if( i+2*rowsPerChunk > rows ) cnt = rows; // Last chunk is big
       }

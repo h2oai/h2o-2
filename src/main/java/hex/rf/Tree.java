@@ -39,7 +39,7 @@ public class Tree extends CountedCompleter {
   final long     _seed;         // Pseudo random seed: used to playback sampling
   final int      _numrows;      // Used to playback sampling
   final float    _sample;       // Sample rate
-  SamplingStrategy _samplingStrategy;
+  Sampling.Strategy _samplingStrategy;
   int []         _strataSamples;
   transient int  _verbose ;
   int            _exclusiveSplitLimit;
@@ -47,7 +47,7 @@ public class Tree extends CountedCompleter {
   /**
    * Constructor used to define the specs when building the tree from the top
    */
-  public Tree(final Data data, int max_depth, double min_error_rate, StatType stat, int numSplitFeatures, long seed, Job job, int treeId, int alltrees, float sample, int rowsize, SamplingStrategy samplingStrategy, int [] strataSamples, int verbose, int exclusiveSplitLimit) {
+  public Tree(final Data data, int max_depth, double min_error_rate, StatType stat, int numSplitFeatures, long seed, Job job, int treeId, int alltrees, float sample, int rowsize, Sampling.Strategy samplingStrategy, int [] strataSamples, int verbose, int exclusiveSplitLimit) {
     _type             = stat;
     _data             = data;
     _data_id          = treeId; //data.dataId();
@@ -114,7 +114,7 @@ public class Tree extends CountedCompleter {
       float[] s = new float[_strataSamples.length];
       for(int i=0; i<_strataSamples.length; i++) s[i] = _strataSamples[i]/100.0f;
       return _data.sample(s,_seed,_numrows);
-    case STRATIFIED_DISTRIBUTED: return _data.sample(_strataSamples,_seed);
+//    case STRATIFIED_DISTRIBUTED: return _data.sample(_strataSamples,_seed);
     case RANDOM                :
     default                    : return _data.sample(_sample,_seed,_numrows);
     }

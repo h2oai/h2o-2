@@ -13,7 +13,7 @@ class DABuilder {
 
   static DABuilder create(final DRF drf) {
     switch( drf._samplingStrategy ) {
-    case STRATIFIED_DISTRIBUTED: return new StratifiedDABuilder(drf);
+//    case STRATIFIED_DISTRIBUTED: return new StratifiedDABuilder(drf);
     case RANDOM                :
     case STRATIFIED_LOCAL      :
     default                    : return new DABuilder(drf);

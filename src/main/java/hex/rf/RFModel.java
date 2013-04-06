@@ -15,7 +15,7 @@ public class RFModel extends Model implements Cloneable, Progress {
   /** Number of features these trees are built for */
   public int       _features;
   /** Sampling strategy used for model */
-  public SamplingStrategy _samplingStrategy;
+  public Sampling.Strategy _samplingStrategy;
   /** Sampling rate used when building trees. */
   public float     _sample;
   /** Strata sampling rate used for local-node strata-sampling */
@@ -36,7 +36,7 @@ public class RFModel extends Model implements Cloneable, Progress {
    * @param classes     the number of response classes
    * @param data        the dataset
    */
-  public RFModel(Key selfKey, int[] cols, Key dataKey, Key[] tkeys, int features, SamplingStrategy samplingStrategy, float sample, float[] strataSamples, int splitFeatures, int totalTrees) {
+  public RFModel(Key selfKey, int[] cols, Key dataKey, Key[] tkeys, int features, Sampling.Strategy samplingStrategy, float sample, float[] strataSamples, int splitFeatures, int totalTrees) {
     super(selfKey,cols,dataKey);
     _features       = features;
     _sample         = sample;
@@ -55,7 +55,7 @@ public class RFModel extends Model implements Cloneable, Progress {
     _splitFeatures  = features;
     _totalTrees     = tkeys.length;
     _tkeys          = tkeys;
-    _samplingStrategy = SamplingStrategy.RANDOM;
+    _samplingStrategy = Sampling.Strategy.RANDOM;
     for( Key tkey : _tkeys ) assert DKV.get(tkey)!=null;
     assert classes() > 0;
   }

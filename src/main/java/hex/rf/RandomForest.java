@@ -172,7 +172,7 @@ public class RandomForest {
                           ARGS.parallel==1,
                           classWeights,
                           ARGS.features, // number of split features or -1 (default)
-                          ARGS.stratify ? SamplingStrategy.STRATIFIED_LOCAL : SamplingStrategy.RANDOM,
+                          ARGS.stratify ? Sampling.Strategy.STRATIFIED_LOCAL : Sampling.Strategy.RANDOM,
                           (ARGS.sample/100.0f),
                           /* FIXME strata*/ null,
                           ARGS.verbose,

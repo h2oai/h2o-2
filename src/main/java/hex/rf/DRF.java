@@ -14,6 +14,7 @@ public final class DRF extends water.DRemoteTask {
   /** The RF Model.  Contains the dataset being worked on, the classification
    *  column, and the training columns.  */
   public RFModel _rfmodel;
+  /** Job representing this DRF execution. */
   public Job _job;
 
   // ---------------
@@ -30,7 +31,7 @@ public final class DRF extends water.DRemoteTask {
   /** Feature holding the classifier  (default: #features-1) */
   int _classcol;
   /** Utilized sampling method */
-  SamplingStrategy _samplingStrategy;
+  Sampling.Strategy _samplingStrategy;
   /** Proportion of observations to use for building each individual tree (default: .67)*/
   float _sample;
   /** Used to replay sampling */
@@ -86,7 +87,7 @@ public final class DRF extends water.DRemoteTask {
    */
   public static final DRFFuture execute(Key modelKey, int[] cols, ValueArray ary, int ntrees, int depth, short binLimit,
       StatType stat, long seed, boolean parallelTrees, double[] classWt, int numSplitFeatures,
-      SamplingStrategy samplingStrategy, float sample, int[] strataSamples, int verbose, int exclusiveSplitLimit) {
+      Sampling.Strategy samplingStrategy, float sample, int[] strataSamples, int verbose, int exclusiveSplitLimit) {
     final DRF drf = create(modelKey, cols, ary, ntrees, depth, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, samplingStrategy, sample, strataSamples, verbose, exclusiveSplitLimit);
     drf._job = new Job(jobName(drf), modelKey);
     drf._job.start();
@@ -102,7 +103,7 @@ public final class DRF extends water.DRemoteTask {
   private static DRF create(
     Key modelKey, int[] cols, ValueArray ary, int ntrees, int depth, short binLimit,
     StatType stat, long seed, boolean parallelTrees, double[] classWt, int numSplitFeatures,
-    SamplingStrategy samplingStrategy, float sample, int[] strataSamples, int verbose, int exclusiveSplitLimit) {
+    Sampling.Strategy samplingStrategy, float sample, int[] strataSamples, int verbose, int exclusiveSplitLimit) {
 
     // Construct the RFModel to be trained
     DRF drf      = new DRF();
@@ -129,31 +130,14 @@ public final class DRF extends water.DRemoteTask {
     assert ary._rpc == null : "DRF does not support different sizes of chunks for now!";
     drf._numrows = (int) (ValueArray.CHUNK_SZ/ary._rowsize);
 
-    RandomForest.OptArgs _ = new RandomForest.OptArgs();
-    _.features = numSplitFeatures;
-    _.ntrees   = ntrees;
-    _.depth    = depth;
-    _.classcol = drf._classcol;
-    _.seed     = seed;
-    _.binLimit = binLimit;
-    _.verbose  = verbose;
-    _.exclusive= exclusiveSplitLimit;
-    String w = "";
-    if (classWt != null) for(int i=0;i<classWt.length;i++) w += i+":"+classWt[i]+",";
-    _.weights=w;
-    _.parallel = parallelTrees ? 1 : 0;
-    _.statType = stat.ordinal() == 1 ? "gini" : "entropy";
-    _.sample = (int)(sample * 100);
-    _.file = "";
-
-    if (verbose>0) Utils.pln("Web arguments: " + _ + " key "+ary._key);
+    if (verbose>0) dumpRFParams(modelKey, cols, ary, ntrees, depth, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, samplingStrategy, sample, strataSamples, verbose, exclusiveSplitLimit);
 
     // Validate parameters
     drf.validateInputData();
     // Start the timer.
     drf._t_main = new Timer();
     // Pre-process data in case of stratified sampling: extract minorities
-    if(drf._samplingStrategy == SamplingStrategy.STRATIFIED_DISTRIBUTED)  drf.extractMinorities(ary, strataSamples);
+    // if(drf._samplingStrategy == Sampling.Strategy.STRATIFIED_DISTRIBUTED)  drf.extractMinorities(ary, strataSamples);
 
     // Push the RFModel globally first
     UKV.put(modelKey, drf._rfmodel);
@@ -317,5 +301,33 @@ public final class DRF extends water.DRemoteTask {
       for(int c:uClasses)u[i++] = c;
       _uClasses = MinorityClasses.extractUnbalancedClasses(ary, _classcol, u);
     }
+  }
+
+  static void dumpRFParams(
+      Key modelKey, int[] cols, ValueArray ary, int ntrees, int depth, short binLimit,
+      StatType stat, long seed, boolean parallelTrees, double[] classWt, int numSplitFeatures,
+      Sampling.Strategy samplingStrategy, float sample, int[] strataSamples, int verbose, int exclusiveSplitLimit) {
+    RandomForest.OptArgs _ = new RandomForest.OptArgs();
+    _.features = numSplitFeatures;
+    _.ntrees   = ntrees;
+    _.depth    = depth;
+    _.classcol = cols[cols.length-1];
+    _.seed     = seed;
+    _.binLimit = binLimit;
+    _.verbose  = verbose;
+    _.exclusive= exclusiveSplitLimit;
+    String w = "";
+    if (classWt != null) for(int i=0;i<classWt.length;i++) w += i+":"+classWt[i]+",";
+    _.weights=w;
+    _.parallel = parallelTrees ? 1 : 0;
+    _.statType = stat.ordinal() == 1 ? "gini" : "entropy";
+    _.sample = (int)(sample * 100);
+    _.file = "";
+
+    Utils.pln("Web arguments: " + _ + " key "+ary._key);
+  }
+
+  class DRFBuilder {
+
   }
 }

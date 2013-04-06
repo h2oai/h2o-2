@@ -21,7 +21,7 @@ public class RF extends Request {
   protected final EnumArgument<StatType> _statType = new EnumArgument<Tree.StatType>(STAT_TYPE, StatType.ENTROPY);
   protected final HexColumnSelect   _ignore     = new HexNonClassColumnSelect(IGNORE, _dataKey, _classCol);
   protected final H2OCategoryWeights _weights   = new H2OCategoryWeights(WEIGHTS, _dataKey, _classCol, 1);
-  protected final EnumArgument<SamplingStrategy> _samplingStrategy = new EnumArgument<SamplingStrategy>(SAMPLING_STRATEGY, SamplingStrategy.RANDOM, true);
+  protected final EnumArgument<Sampling.Strategy> _samplingStrategy = new EnumArgument<Sampling.Strategy>(SAMPLING_STRATEGY, Sampling.Strategy.RANDOM, true);
   protected final H2OCategoryStrata              _strataSamples    = new H2OCategoryStrata(STRATA_SAMPLES, _dataKey, _classCol, 67);
   protected final Int               _sample     = new Int(SAMPLE, 67, 1, 100);
   protected final Bool              _oobee      = new Bool(OOBEE,true,"Out of bag error");
@@ -61,7 +61,7 @@ public class RF extends Request {
       _sample._hideInQuery = true; _strataSamples._hideInQuery = true;
       switch (_samplingStrategy.value()) {
       case RANDOM                : _sample._hideInQuery = false; break;
-      case STRATIFIED_DISTRIBUTED:
+      //case STRATIFIED_DISTRIBUTED:
       case STRATIFIED_LOCAL      : _strataSamples._hideInQuery = false; break;
       }
     }
