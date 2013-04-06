@@ -11,6 +11,9 @@ import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.Random;
 
+import water.*;
+import water.parser.ParseDataset;
+
 public class Utils {
 
   /** Returns the index of the largest value in the array.
@@ -265,4 +268,20 @@ public class Utils {
       }
     }
   }
+
+  public static ValueArray loadAndParseKey(String path) {
+    return loadAndParseKey(Key.make(), path);
+  }
+
+  public static ValueArray loadAndParseKey(Key okey, String path) {
+    FileIntegrityChecker c = FileIntegrityChecker.check(new File(path));
+    Futures fs = new Futures();
+    Key k = c.importFile(0, fs);
+    fs.blockForPending();
+    ParseDataset.parse(okey, new Key[]{k});
+    UKV.remove(k);
+    ValueArray res = DKV.get(okey).get();
+    return res;
+  }
+
 }
