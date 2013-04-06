@@ -22,7 +22,7 @@ print "Temporarily not using binLimit=1 to 4"
 # data_key=poker1000.hex&
 # response_variable=10&
 # ntree=50&
-# gini=1&
+# stat_type=ENTROPY&
 # class_weights=0%3D1.0&
 # stratify=0&
 # model_key=model&
@@ -43,7 +43,7 @@ paramDict = {
     'ntree': [1,3,7,19],
     'model_key': ['model_keyA', '012345', '__hello'],
     'out_of_bag_error_estimate': [None,0,1],
-    'gini': [None, 0, 1],
+    'stat_type': [None, 'ENTROPY', 'GINI'],
     'depth': [None, 1,10,20,100],
     'bin_limit': [None,5,10,100,1000],
     'parallel': [1],
@@ -51,9 +51,8 @@ paramDict = {
     'sample': [None,20,40,60,80,100],
     'seed': [None,'0','1','11111','19823134','1231231'],
     'features': [1,3,5,7,9,11,13,17,19,23,37,53],
-    # disable for now
-    ### 'stratify': [None,0,1,1,1,1,1,1,1,1,1],
-    'strata': [
+    'sampling_strategy': [None, 'RANDOM', 'STRATIFIED_LOCAL' ],
+    'strata_samples': [
         None,
         "0:10",
         "1:5",

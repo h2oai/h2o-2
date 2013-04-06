@@ -14,7 +14,7 @@ paramDict = {
     # 'ntree': 200,
     'model_key': 'model_keyA',
     'out_of_bag_error_estimate': 0,
-    'gini': 1,
+    'stat_type': 'GINI',
     'depth': 2147483647, 
     'bin_limit': 10000,
     'parallel': 1,
