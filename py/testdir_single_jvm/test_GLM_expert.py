@@ -6,7 +6,6 @@ class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
-
     @classmethod
     def setUpClass(cls):
         global localhost
@@ -27,66 +26,52 @@ class Basic(unittest.TestCase):
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
         # columns start at 0
         y = "3"
-        x = ""
         # cols 0-13. 3 is output
         # no member id in this one
-        for appendx in xrange(14):
-            if (appendx == 3): 
-                print "\n3 is output."
-            else:
-                if x == "": 
-                    x = str(appendx)
-                else:
-                    x = x + "," + str(appendx)
-
-                csvFilename = "benign.csv"
-                csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
-                print "\nx:", x
-                print "y:", y
-                
-        
-                # solver can be ADMM
-                kwargs = {'x': x, 'y':  y,\
-                     'expert': 1, 'lsm_solver': 'GenGradient', 'standardize': 1, 'n_folds': 1}
-                # fails with n_folds
-                print "Not doing n_folds with benign. Fails with 'unable to solve?'"
-                glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=30, **kwargs)
-                # no longer look at STR?
-                h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
-                h2o.check_sandbox_for_errors()
+        for maxx in range(4,14):
+            x = range(maxx)
+            x.remove(3) # 3 is output
+            x = ",".join(map(str,x))
+            print "\nx:", x
+            print "y:", y
+            
+            # solver can be ADMM
+            kwargs = {'x': x, 'y':  y,\
+                 'expert': 1, 'lsm_solver': 'GenGradient', 'standardize': 1, 'n_folds': 1}
+            # fails with n_folds
+            print "Not doing n_folds with benign. Fails with 'unable to solve?'"
+            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=30, **kwargs)
+            # no longer look at STR?
+            h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
+            h2o.check_sandbox_for_errors()
+            sys.stdout.write('.')
+            sys.stdout.flush() 
 
     def test_C_prostate(self):
         print "\nStarting prostate.csv"
         # columns start at 0
         y = "1"
-        x = ""
         csvFilename = "prostate.csv"
         csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
 
-        for appendx in xrange(9):
-            if (appendx == 0):
-                print "\n0 is member ID. not used"
-            elif (appendx == 1):
-                print "\n1 is output."
-            else:
-                if x == "": 
-                    x = str(appendx)
-                else:
-                    x = x + "," + str(appendx)
+        for maxx in range(2,9):
+            x = range(maxx)
+            x.remove(0) # 0 is member ID. not used
+            x.remove(1) # 1 is output
+            x = ",".join(map(str,x))
+            print "\nx:", x
+            print "y:", y
 
-                sys.stdout.write('.')
-                sys.stdout.flush() 
-                print "\nx:", x
-                print "y:", y
-
-                # solver can be ADMM. standardize normalizes the data.
-                kwargs = {'x': x, 'y':  y, 'n_folds': 5,\
-                    'expert': 1, 'lsm_solver': 'GenGradient', 'standardize':1}
-                glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=30, **kwargs)
-                # ID,CAPSULE,AGE,RACE,DPROS,DCAPS,PSA,VOL,GLEASON
-                h2o_glm.simpleCheckGLM(self, glm, 'AGE', **kwargs)
-                h2o.check_sandbox_for_errors()
+            # solver can be ADMM. standardize normalizes the data.
+            kwargs = {'x': x, 'y':  y, 'n_folds': 5,\
+                'expert': 1, 'lsm_solver': 'GenGradient', 'standardize':1}
+            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=30, **kwargs)
+            # ID,CAPSULE,AGE,RACE,DPROS,DCAPS,PSA,VOL,GLEASON
+            h2o_glm.simpleCheckGLM(self, glm, 'AGE', **kwargs)
+            h2o.check_sandbox_for_errors()
+            sys.stdout.write('.')
+            sys.stdout.flush() 
 
 if __name__ == '__main__':
     h2o.unit_main()
