@@ -116,18 +116,23 @@ public class Boot extends ClassLoader {
 
   public static void run(String[] args) throws Exception {
     // Figure out the correct main class to call
-    String mainClass = "water.H2O"; // Default mainClass
+    String mainClass = "water.H2O";
     if(args != null) {
       int index = Arrays.asList(args).indexOf("-mainClass");
       if( index >= 0 && args.length > index + 1 ) {
         mainClass = args[index + 1];    // Swap out for requested main
-        args = Arrays.copyOfRange(args, 2, args.length);
+        args = Arrays.copyOfRange(args, index + 2, args.length);
       }
     }
-
-    // Call "main"!
-    Class h2oclazz = _init.loadClass(mainClass,true);
-    h2oclazz.getMethod("main",String[].class).invoke(null,(Object)args);
+    Class mainClazz = _init.loadClass(mainClass,true);
+    mainClazz.getMethod("main",String[].class).invoke(null,(Object)args);
+    int index = Arrays.asList(args).indexOf("-runClass");
+    if( index >= 0 && args.length > index + 1 ) {
+      String className = args[index + 1];    // Swap out for requested main
+      args = Arrays.copyOfRange(args, index + 2, args.length);
+      Class clazz = _init.loadClass(className,true);
+      clazz.getMethod("main",String[].class).invoke(null,(Object)args);
+    }
   }
 
   /** Returns an external File for the internal file name. */

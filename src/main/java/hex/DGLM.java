@@ -36,6 +36,11 @@ public abstract class DGLM {
       super("GLM(" + data._key.toString() + ")",dest, (params._family == Family.gaussian)?data.chunks()*(xval+1):data.chunks()*(20+4*xval));
     }
 
+    public boolean isDone(){
+      if(DKV.get(dest()) == null)return false;
+      GLMModel m = DKV.get(dest()).get();
+      return m._status == GLMModel.Status.Done;
+    }
     @Override
     public float progress() {
       ChunkProgress progress = UKV.get(progressKey());
@@ -428,8 +433,8 @@ public abstract class DGLM {
     public final LSMSolver _solver;   // Which solver is used
     public final GLMParams _glmParams;
 
-    final double [] _beta;            // The output coefficients!  Main model result.
-    final double [] _normBeta;        // normalized coefficients
+    final public double [] _beta;            // The output coefficients!  Main model result.
+    final public double [] _normBeta;        // normalized coefficients
 
     public String [] _warnings;
     public GLMValidation [] _vals;
