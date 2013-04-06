@@ -47,12 +47,13 @@ class Basic(unittest.TestCase):
         
                 # solver can be ADMM
                 kwargs = {'x': x, 'y':  y,\
-                     'expert': 1, 'lsm_solver': 'GenGradient', 'standardize':1}
+                     'expert': 1, 'lsm_solver': 'GenGradient', 'standardize': 1, 'n_folds': 1}
                 # fails with n_folds
                 print "Not doing n_folds with benign. Fails with 'unable to solve?'"
                 glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=30, **kwargs)
                 # no longer look at STR?
                 h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
+                h2o.check_sandbox_for_errors()
 
     def test_C_prostate(self):
         print "\nStarting prostate.csv"
@@ -85,6 +86,7 @@ class Basic(unittest.TestCase):
                 glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=30, **kwargs)
                 # ID,CAPSULE,AGE,RACE,DPROS,DCAPS,PSA,VOL,GLEASON
                 h2o_glm.simpleCheckGLM(self, glm, 'AGE', **kwargs)
+                h2o.check_sandbox_for_errors()
 
 if __name__ == '__main__':
     h2o.unit_main()
