@@ -183,21 +183,6 @@ def runRFTreeView(node=None, n=None, data_key=None, model_key=None, timeoutSecs=
     if not node: node = h2o.nodes[0]
     return node.random_forest_treeview(n, data_key, model_key, timeoutSecs, **kwargs)
 
-# scoring on browser does these:
-# RFView.html?
-# data_key=a5m.hex&
-# model_key=__RFModel_81c5063c-e724-4ebe-bfc1-3ac6838bc628&
-# FIX! why not in model?
-# response_variable=1&
-# FIX why needed?
-# ntree=50&
-# FIX! why not in model
-# class_weights=-1%3D1.0%2C0%3D1.0%2C1%3D1.0&
-# FIX! no longer?
-# out_of_bag_error_estimate=1&
-# FIX! scoring only
-# no_confusion_matrix=1&
-# clear_confusion_matrix=1
 
 def runRFView(node=None, data_key=None, model_key=None, ntree=None, 
     timeoutSecs=15, retryDelaySecs=2, noise=None, **kwargs):
