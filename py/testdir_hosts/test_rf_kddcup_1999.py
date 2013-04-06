@@ -27,22 +27,27 @@ class Basic(unittest.TestCase):
         h2i.setupImportFolder(None, importFolderPath)
         csvFilename = 'kddcup_1999.data'
 
-        for trials in range(2):
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=300)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
-            inspect = h2o_cmd.runInspect(None,parseKey['destination_key'])
+        print "Want to see that I get similar results when using H2O RF defaults (no params to json)" +\
+            "compared to running with the parameters specified and matching the browser RF query defaults" +\
+            "Also run the param for full scoring vs OOBE scoring"
 
-            print "\n" + csvFilename
+        parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=300)
+        print csvFilename, 'parse time:', parseKey['response']['time']
+        print "Parse result['destination_key']:", parseKey['destination_key']
+        inspect = h2o_cmd.runInspect(None,parseKey['destination_key'])
+
+        for trials in range(4):
+            print "\n" + csvFilename, "Trial #", trials
             start = time.time()
 
             kwargs = {
                 'response_variable': 'classifier',
-                'ntree': 50,
-                'gini': 0,
+                'ntree': 200,
+                'gini': 1,
                 'class_weights': None,
                 'stratify': 0,
-                'features': None,
+                # 'features': None,
+                'features': 7,
                 'ignore': None,
                 'sample': 67,
                 'bin_limit': 1024,
@@ -51,17 +56,23 @@ class Basic(unittest.TestCase):
                 'parallel': 1,
                 'exclusive_split_limit': None,
                 }
-            
-            if trials == 2:
-                kwargs['out_of_bag_error_estimate'] = None
-            else:
-                kwargs['out_of_bag_error_estimate'] = trials
 
+            if trials == 0:
+                kwargs = {}
+            elif trials == 1:
+                kwargs['out_of_bag_error_estimate'] = None
+            elif trials == 2:
+                kwargs['out_of_bag_error_estimate'] = 0
+            elif trials == 3:
+                kwargs['out_of_bag_error_estimate'] = 1
+
+            start = time.time()
             RFview = h2o_cmd.runRFOnly(trees=50,parseKey=parseKey, 
                 timeoutSecs=300, retryDelaySecs=1.0, **kwargs)
             print "RF end on ", csvFilename, 'took', time.time() - start, 'seconds'
 
+            h2b.browseJsonHistoryAsUrlLastMatch("RFView")
+
 if __name__ == '__main__':
     h2o.unit_main()
-
 
