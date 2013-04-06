@@ -95,9 +95,7 @@ class Basic(unittest.TestCase):
             print "glm end on ", csvPathname, "Trial #", trial, "completed in", elapsed, "seconds.",\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
-            start = time.time()
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
-            print "simpleCheckGLM end on ", csvPathname, 'took', time.time() - start, 'seconds'
             print "Trial #", trial, "completed\n"
 
 

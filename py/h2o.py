@@ -382,8 +382,6 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
                 newNode = h.remote_h2o(port=p, node_id=totalNodes, **kwargs)
                 node_list.append(newNode)
                 totalNodes += 1
-                # kbn try delay between each one?
-                ### time.sleep(1)
 
         verboseprint("Attempting Cloud stabilize of", totalNodes, "nodes on", hostCount, "hosts")
         start = time.time()
@@ -639,13 +637,16 @@ class H2O(object):
 
         # fatal if no response
         if not r: 
-            raise Exception('no r in __check_request %s in %s:' % (e, inspect.stack()[1][3]))
+            raise Exception("Maybe bad url? no r in __check_request %s in %s:" % (e, inspect.stack()[1][3]))
 
         # this is used to open a browser on results, or to redo the operation in the browser
         # we don't' have that may urls flying around, so let's keep them all
         json_url_history.append(r.url)
-
+        if not r.json():
+            raise Exception("Maybe bad url? no r.json in __check_request %s in %s:" % (e, inspect.stack()[1][3]))
+            
         rjson = r.json()
+
         for e in ['error', 'Error', 'errors', 'Errors']:
             if e in rjson:
                 verboseprint(dump_json(rjson))
@@ -799,8 +800,8 @@ class H2O(object):
                 raise Exception(emsg)
             count += 1
             # GLM can return partial results during polling..that's legal
-            if 'GLMProgress' in urlUsed and 'GLMModel' in r:
-                print "\nINFO: GLM returning partial results during polling. Continuing.."
+            ### if 'GLMProgress' in urlUsed and 'GLMModel' in r:
+            ###    print "INFO: GLM returning partial results during polling. Continuing.."
 
         return r
     
@@ -838,7 +839,7 @@ class H2O(object):
     # noise is a 2-tuple: ("StoreView",params_dict)
     def parse(self, key, key2=None, 
         timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=30,
-        noPoll=False, **kwargs):
+        noPoll=False, noise=None, **kwargs):
         browseAlso = kwargs.pop('browseAlso',False)
         # this doesn't work. webforums indicate max_retries might be 0 already? (as of 3 months ago)
         # requests.defaults({max_retries : 4})
@@ -854,7 +855,6 @@ class H2O(object):
             'destination_key': key2,
             }
         params_dict.update(kwargs)
-        noise = kwargs.pop('noise', None)
 
         a = self.__check_request(
             requests.get(
@@ -1095,7 +1095,7 @@ class H2O(object):
         return a 
 
     def GLM(self, key, 
-        timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=30, **kwargs):
+        timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=30, noise=None, **kwargs):
 
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLM", **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
@@ -1104,7 +1104,7 @@ class H2O(object):
             raise Exception('H2O GLM redirect is not GLMProgress. GLM json response precedes.')
         a = self.poll_url(a['response'],
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
-            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs, noise=noise)
         verboseprint("GLM done:", dump_json(a))
 
         browseAlso = kwargs.get('browseAlso', False)
@@ -1116,7 +1116,7 @@ class H2O(object):
 
     # this only exists in new. old will fail
     def GLMGrid(self, key, 
-        timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=30, **kwargs):
+        timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=30, noise=None, **kwargs):
 
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLMGrid", **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
@@ -1125,7 +1125,7 @@ class H2O(object):
             raise Exception('H2O GLMGrid redirect is not GLMGridProgress. GLMGrid json response precedes.')
         a = self.poll_url(a['response'],
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
-            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs, noise=noise)
         verboseprint("GLMGrid done:", dump_json(a))
 
         browseAlso = kwargs.get('browseAlso', False)
@@ -1558,8 +1558,6 @@ class RemoteHost(object):
         return RemoteH2O(self, self.addr, *args, **kwargs)
 
     def open_channel(self):
-        # kbn
-        # ch = self.ssh.invoke_shell()
         ch = self.ssh.get_transport().open_session()
         ch.get_pty() # force the process to die without the connection
         return ch

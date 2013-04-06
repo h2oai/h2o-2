@@ -15,7 +15,6 @@ def define_params():
         'x': [0,1,15,33],
         # 'family': [None, 'gaussian', 'binomial', 'poisson'],
         'family': ['gaussian', 'binomial'],
-        'n_folds': [2,3,4,9],
         'threshold': [0.1, 0.5, 0.7, 0.9],
         # 'lambda': [None, 1e-8, 1e-4,1,10,1e4],
         # Update: None is a problem with 'fail to converge'
@@ -78,13 +77,14 @@ class Basic(unittest.TestCase):
 
         for trial in range(50):
             # params is mutable. This is default.
-            params = {'y': 54, 'case': 1, 'lambda': 0, 'alpha': 0}
+            params = {'y': 54, 'case': 1, 'lambda': 0, 'alpha': 0, 'n_folds': 1}
             colX = h2o_glm.pickRandGlmParams(paramDict, params)
             kwargs = params.copy()
             start = time.time()
             glm = h2o_cmd.runGLMOnly(timeoutSecs=70, parseKey=parseKey, **kwargs)
             # pass the kwargs with all the params, so we know what we asked for!
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
+            h2o.check_sandbox_for_errors()
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
             print "Trial #", trial, "completed\n"
 

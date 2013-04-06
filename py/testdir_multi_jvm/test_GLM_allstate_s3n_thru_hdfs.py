@@ -49,6 +49,12 @@ class Basic(unittest.TestCase):
             s3nFullList = importHDFSResult['succeeded']
             ### print "s3nFullList:", h2o.dump_json(s3nFullList)
             self.assertGreater(len(s3nFullList),8,"Didn't see more than 8 files in s3n?")
+            storeView = h2o.nodes[0].store_view()
+            ### print "storeView:", h2o.dump_json(storeView)
+            for s in storeView['keys']:
+                print "\nkey:", s['key']
+                if 'rows' in s:
+                    print "rows:", s['rows'], "value_size_bytes:", s['value_size_bytes']
 
             key2 = csvFilename + "_" + str(trial) + ".hex"
             print "Loading s3n key: ", s3nKey, 'thru HDFS'
@@ -57,7 +63,7 @@ class Basic(unittest.TestCase):
             timeoutSecs = 500
             start = time.time()
             parseKey = h2o.nodes[0].parse(s3nKey, key2,
-                timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
+                timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60, noise=('JStack', None))
             elapsed = time.time() - start
             print s3nKey, 'h2o reported parse time:', parseKey['response']['time']
             print "parse end on ", s3nKey, 'took', elapsed, 'seconds',\
@@ -82,7 +88,7 @@ class Basic(unittest.TestCase):
             kwargs.update({'alpha': 0, 'lambda': 0})
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, 
-                timeoutSecs=timeoutSecs, pollTimeoutSecs=60, **kwargs)
+                timeoutSecs=timeoutSecs, pollTimeoutSecs=60, noise=('JStack', None), **kwargs)
             elapsed = time.time() - start
             print "glm (L2) end on ", csvPathname, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -93,7 +99,7 @@ class Basic(unittest.TestCase):
             kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey,
-                timeoutSecs=timeoutSecs, pollTimeoutSecs=60, **kwargs)
+                timeoutSecs=timeoutSecs, pollTimeoutSecs=60, noise=('JStack', None), **kwargs)
             elapsed = time.time() - start
             print "glm (Elastic) end on ", csvPathname, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -104,7 +110,7 @@ class Basic(unittest.TestCase):
             kwargs.update({'alpha': 1.0, 'lambda': 1e-4})
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey,
-                timeoutSecs=timeoutSecs, pollTimeoutSecs=60, **kwargs)
+                timeoutSecs=timeoutSecs, pollTimeoutSecs=60, noise=('JStack', None), **kwargs)
             elapsed = time.time() - start
             print "glm (L1) end on ", csvPathname, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)

@@ -7,7 +7,6 @@ import h2o, h2o_cmd, h2o_hosts, h2o_glm
 def define_params():
     paramDict = {
         'family': [None, 'gaussian', 'binomial', 'poisson'],
-        'n_folds': [2,3,4,9],
         'thresholds': [0.1, 0.5, 0.7, 0.9],
         'lambda': [0, 1e-4],
         'alpha': [0,0.5,0.75],
@@ -57,13 +56,14 @@ class Basic(unittest.TestCase):
         paramDict = define_params()
         for trial in range(20):
             # params is mutable. This is default.
-            params = {'y': 54, 'alpha': 0, 'lambda': 0, 'case': 1}
+            params = {'y': 54, 'alpha': 0, 'lambda': 0, 'case': 1, 'n_folds': 1}
             colX = h2o_glm.pickRandGlmParams(paramDict, params)
             kwargs = params.copy()
             start = time.time()
             glm = h2o_cmd.runGLMOnly(timeoutSecs=70, parseKey=parseKey, **kwargs)
             # pass the kwargs with all the params, so we know what we asked for!
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
+            h2o.check_sandbox_for_errors()
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
             print "Trial #", trial, "completed\n"
 

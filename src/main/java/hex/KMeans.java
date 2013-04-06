@@ -311,6 +311,7 @@ public abstract class KMeans {
           values[column] = datad(va, bits, row, va._cols[_cols[column]]);
 
         int cluster = closest(_clusters, values);
+        if( cluster == -1 ) continue; // Ignore broken row
 
         // Add values and increment counter for chosen cluster
         for( int column = 0; column < _cols.length; column++ )
@@ -339,19 +340,26 @@ public abstract class KMeans {
 
   public static double minSqr(double[][] clusters, int clusterCount, double[] point) {
     double minSqr = Double.MAX_VALUE;
-
     for( int cluster = 0; cluster < clusterCount; cluster++ ) {
       double sqr = 0;
-
+      int pts=point.length;
       for( int column = 0; column < point.length; column++ ) {
-        double delta = point[column] - clusters[cluster][column];
-        sqr += delta * delta;
+        double d = point[column];
+        if( Double.isNaN(d) ) { // Bad data?
+          pts--;                // Do not count
+        } else {
+          double delta = d - clusters[cluster][column];
+          sqr += delta * delta;
+        }
       }
-
+      // Scale distance by ratio of valid dimensions to all dimensions - since
+      // we did not add any error term for the missing point, the sum of errors
+      // is small - ratio up "as if" the missing error term is equal to the
+      // average of other error terms.
+      if( pts < point.length ) sqr *= point.length/pts;
       if( sqr < minSqr )
         minSqr = sqr;
     }
-
     return minSqr;
   }
 
@@ -359,12 +367,22 @@ public abstract class KMeans {
     int min = -1;
     double minSqr = Double.MAX_VALUE;
     for( int cluster = 0; cluster < clusters.length; cluster++ ) {
-      double sqr = 0;
+      double sqr = 0;           // Sum of dimensional distances
+      int pts=point.length;
       for( int column = 0; column < point.length; column++ ) {
-        assert !Double.isNaN(point[column]);
-        double delta = point[column] - clusters[cluster][column];
-        sqr += delta * delta;
+        double d = point[column];
+        if( Double.isNaN(d) ) { // Bad data?
+          pts--;                // Do not count
+        } else {
+          double delta = d - clusters[cluster][column];
+          sqr += delta * delta;
+        }
       }
+      // Scale distance by ratio of valid dimensions to all dimensions - since
+      // we did not add any error term for the missing point, the sum of errors
+      // is small - ratio up "as if" the missing error term is equal to the
+      // average of other error terms.
+      if( pts < point.length ) sqr *= point.length/pts;
       if( sqr < minSqr ) {
         min = cluster;
         minSqr = sqr;

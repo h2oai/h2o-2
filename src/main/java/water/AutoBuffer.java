@@ -51,6 +51,10 @@ public final class AutoBuffer {
   // them when flipping the ByteBuffer to the next chunk of data.
   private boolean _firstPage;
 
+  // Total size written out from 'new' to 'close'.  Only updated when actually
+  // writing data, or after close().
+  private int _size;
+
   // The assumed max UDP packetsize
   public static final int MTU = 1500-8/*UDP packet header size*/;
 
@@ -273,13 +277,14 @@ public final class AutoBuffer {
 
   // True if we are in read-mode
   boolean readMode() { return _read; }
+  // Size in bytes sent, after a close()
+  int size() { return _size; }
 
   // Available bytes in this buffer to read
   public int remaining() { return _bb.remaining(); }
   public int position () { return _bb.position (); }
   public void position(int pos) { _bb.position(pos); }
   public int limit() { return _bb.limit(); }
-  public boolean firstPage() { return _firstPage; }
 
   public void positionWithResize(int value) {
     putSp(value - position());
@@ -325,6 +330,7 @@ public final class AutoBuffer {
   private int udpSend() throws IOException {
     assert _chan == null;
     TimeLine.record_send(this,false);
+    _size += _bb.position();
     _bb.flip();                 // Flip for sending
     if( _h2o==H2O.SELF ) {      // SELF-send is the multi-cast signal
       H2O.multicast(_bb);
@@ -406,6 +412,7 @@ public final class AutoBuffer {
       return _bb;
     }
     // Doing I/O with the full ByteBuffer - ship partial results
+    _size += _bb.position();
     if( _chan == null )
       TimeLine.record_send(this,true);
     _bb.flip(); // Prep for writing.

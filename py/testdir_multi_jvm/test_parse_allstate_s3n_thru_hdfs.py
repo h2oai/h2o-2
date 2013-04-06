@@ -64,7 +64,7 @@ class Basic(unittest.TestCase):
             timeoutSecs = 500
             start = time.time()
             parseKey = h2o.nodes[0].parse(s3nKey, key2,
-                timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
+                timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60, noise=('JStack', none))
             elapsed = time.time() - start
             print s3nKey, 'h2o reported parse time:', parseKey['response']['time']
             print "parse end on ", s3nKey, 'took', elapsed, 'seconds',\

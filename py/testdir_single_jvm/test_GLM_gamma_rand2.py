@@ -8,7 +8,7 @@ def define_params():
     paramDict = {
         'x': [0,1,15,33,34],
         'family': ['gamma'],
-        'n_folds': [2,3,4,9,15],
+        'n_folds': [2,3,4],
         'thresholds': [0.1, 0.5, 0.7, 0.9],
         'lambda': [1e-8, 1e-4],
         'alpha': [0,0.5,0.75],
@@ -16,7 +16,7 @@ def define_params():
         'case': [1,2,3,4,5,6,7],
         # inverse and log causing problems
         # 'link': [None, 'logit','identity', 'log', 'inverse'],
-        'max_iter': [None, 10],
+        'max_iter': [10],
         'weight': [None, 1, 2, 4],
         }
     return paramDict
@@ -52,7 +52,7 @@ class Basic(unittest.TestCase):
         paramDict = define_params()
         for trial in range(20):
             # params is mutable. This is default.
-            params = {'y': 54, 'n_folds': 3, 'family': "gamma", 'alpha': 0.5, 'lambda': 1e-4, 'max_iter': 30}
+            params = {'y': 54, 'n_folds': 3, 'family': "gamma", 'alpha': 0.5, 'lambda': 1e-4, 'max_iter': 10}
             colX = h2o_glm.pickRandGlmParams(paramDict, params)
             kwargs = params.copy()
 
@@ -60,10 +60,7 @@ class Basic(unittest.TestCase):
             glm = h2o_cmd.runGLMOnly(timeoutSecs=120, parseKey=parseKey, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
 
-            start = time.time()
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
-            print "simpleCheckGLM end on ", csvPathname, 'took', time.time() - start, 'seconds'
-
             print "Trial #", trial, "completed\n"
 
 
