@@ -8,7 +8,6 @@ import h2o, h2o_cmd, h2o_hosts, h2o_glm
 def define_params():
     paramDict = {
         'family': [None, 'gaussian', 'binomial', 'poisson'],
-        'n_folds': [2,3,4,9],
         'thresholds': [0.1, 0.5, 0.7, 0.9],
         # seem to get zero coeffs with lamba=1 case=7
         # just keep the range smaller for this dataset
@@ -59,7 +58,7 @@ class Basic(unittest.TestCase):
         paramDict = define_params()
         for trial in range(20):
             # params is mutable. This is default.
-            params = {'y': 54, 'case': 1, 'alpha': 0, 'lambda': 0}
+            params = {'y': 54, 'case': 1, 'alpha': 0, 'lambda': 0, 'n_folds': 1}
             colX = h2o_glm.pickRandGlmParams(paramDict, params)
             kwargs = params.copy()
             start = time.time()
