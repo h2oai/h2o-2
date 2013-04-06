@@ -49,6 +49,12 @@ class Basic(unittest.TestCase):
             s3nFullList = importHDFSResult['succeeded']
             ### print "s3nFullList:", h2o.dump_json(s3nFullList)
             self.assertGreater(len(s3nFullList),8,"Didn't see more than 8 files in s3n?")
+            storeView = h2o.nodes[0].store_view()
+            ### print "storeView:", h2o.dump_json(storeView)
+            for s in storeView['keys']:
+                print "\nkey:", s['key']
+                if 'rows' in s:
+                    print "rows:", s['rows'], "value_size_bytes:", s['value_size_bytes']
 
             key2 = csvFilename + "_" + str(trial) + ".hex"
             print "Loading s3n key: ", s3nKey, 'thru HDFS'
