@@ -8,8 +8,7 @@ import h2o_kmeans, h2o_import as h2i
 
 def define_params():
     paramDict = {
-        'k': [1, 12],
-        'y': [None, 7, 43, 54],
+        'k': [2, 12],
         'epsilon': [1e-8, 1e-6, 1e-2, 1, 10],
         'cols': [None, "0", "3", "0,1,2,3,4,5,6"],
         }
@@ -66,9 +65,6 @@ class Basic(unittest.TestCase):
             for trial in range(3):
                 randomV = paramDict['k']
                 k = random.choice(randomV)
-
-                randomV = paramDict['y']
-                y = random.choice(randomV)
 
                 randomV = paramDict['epsilon']
                 epsilon = random.choice(randomV)
