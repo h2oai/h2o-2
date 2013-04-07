@@ -59,7 +59,7 @@ class Basic(unittest.TestCase):
             print "Loading s3n key: ", s3nKey, 'thru HDFS'
             # ec2 is about 400 secs on four m2.4xlarge nodes
             # should be less on more nodes?
-            timeoutSecs = 500
+            timeoutSecs = 600
             start = time.time()
             parseKey = h2o.nodes[0].parse(s3nKey, key2,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60, noise=('JStack', None))
@@ -78,7 +78,7 @@ class Basic(unittest.TestCase):
 
             start = time.time()
             kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, \
-                timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=60, **kwargs)
+                timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=120, **kwargs)
             elapsed = time.time() - start
             print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
