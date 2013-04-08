@@ -1,5 +1,4 @@
 package hex;
-import water.Model;
 import hex.ConfusionMatrix.ErrMetric;
 import hex.DGLM.GLMModel.Status;
 import hex.DLSM.ADMMSolver.NonSPDMatrixException;
@@ -9,10 +8,13 @@ import hex.NewRowVecTask.DataFrame;
 import hex.NewRowVecTask.JobCancelledException;
 import hex.NewRowVecTask.RowFunc;
 import hex.RowVecTask.Sampling;
+
 import java.util.*;
+
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
+import water.Job.ChunkProgress;
 import water.Job.ChunkProgressJob;
 import water.ValueArray.Column;
 import water.api.Constants;
@@ -35,17 +37,13 @@ public abstract class DGLM {
       // approximate the total number of computed chunks as 25 per normal model computation + 10 iterations per xval model)
       super("GLM(" + data._key.toString() + ")",dest, (params._family == Family.gaussian)?data.chunks()*(xval+1):data.chunks()*(20+4*xval));
     }
-
-    public boolean isDone(){
-      if(DKV.get(dest()) == null)return false;
-      GLMModel m = DKV.get(dest()).get();
-      return m._status == GLMModel.Status.Done;
-    }
+    public boolean isDone(){return DKV.get(self()) == null;}
     @Override
     public float progress() {
       ChunkProgress progress = UKV.get(progressKey());
       return (progress != null ? progress.progress() : 0);
     }
+
   }
 
   public static class GLMParams extends Iced {
@@ -421,8 +419,8 @@ public abstract class DGLM {
   }
 
   public static class GLMModel extends Model {
-    public enum Status {NotStarted,ComputingModel,ComputingValidation,Done,Cancelled};
-
+    public enum Status {NotStarted,ComputingModel,ComputingValidation,Done,Cancelled,Error};
+    String _error;
     final Sampling _s;
     final int [] _colCatMap;
     public final boolean _converged;
@@ -444,6 +442,9 @@ public abstract class DGLM {
 
     public Status status(){
       return _status;
+    }
+    public String error(){
+      return _error;
     }
     public int rank(){
       if(_beta == null)return -1;
@@ -966,6 +967,11 @@ public abstract class DGLM {
     }
 
     @Override
+    public int resultSz(){
+      return (_N*_N << 2) + (_N << 3);
+    }
+
+    @Override
     public Gram newResult(){
       if(_computeXX)return new Gram(_N);
       // else we do not have to allocate XX
@@ -1193,27 +1199,6 @@ public abstract class DGLM {
     return new DataFrame(ary, colIds, s, standardize, true);
   }
 
-
-  public static class GLMProgress implements Job.Progress{
-    GLMModel _currentModel;
-    float   _progress;
-    float   _overAllprogress;
-
-
-
-    @Override
-    public float progress() {
-      return _progress;
-    }
-
-    public void iterationComputed(GLMModel m){
-      _currentModel = m;
-    }
-    public void chunkProcessed(){
-
-    }
-
-  }
   public static GLMJob startGLMJob(final DataFrame data, final LSMSolver lsm, final GLMParams params, final double [] betaStart, final int xval ) {
     final GLMJob job = new GLMJob(data._ary,GLMModel.makeKey(true),xval,params);
     final double [] beta;
@@ -1238,7 +1223,7 @@ public abstract class DGLM {
         }
         @Override
         public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
-          job.cancel();
+          job.onException(ex);
           return super.onExceptionalCompletion(ex, caller);
         }
     });

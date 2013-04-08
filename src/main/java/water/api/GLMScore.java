@@ -6,7 +6,7 @@ import hex.DGLM.GLMModel;
 import hex.DGLM.GLMValidation;
 import water.Key;
 import water.ValueArray;
-import water.api.GLMProgress.GLMBuilder;
+import water.api.GLMProgressPage.GLMBuilder;
 import water.util.RString;
 
 import com.google.gson.JsonObject;

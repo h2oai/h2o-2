@@ -12,7 +12,7 @@ import java.util.zip.*;
 
 import water.*;
 import water.ValueArray.Column;
-import water.api.GLMProgress.GLMBuilder;
+import water.api.GLMProgressPage.GLMBuilder;
 import water.parser.CsvParser;
 import water.util.Utils;
 
