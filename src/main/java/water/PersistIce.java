@@ -212,33 +212,31 @@ public abstract class PersistIce {
     }
   }
 
+  public static class PersistIceException extends Exception {}
+
   // Store Value v to disk.
-  static void fileStore(Value v) {
+  static void fileStore(Value v) throws IOException {
     // A perhaps useless cutout: the upper layers should test this first.
     if( v.isPersisted() ) return;
+    new File(iceRoot,getDirectoryForKey(v._key)).mkdirs();
+    // Nuke any prior file.
+    OutputStream s = null;
     try {
-      new File(iceRoot,getDirectoryForKey(v._key)).mkdirs();
-      // Nuke any prior file.
-      OutputStream s = null;
-      try {
-        s = new FileOutputStream(encodeKeyToFile(v));
-      } catch (FileNotFoundException e) {
-        System.err.println("Encoding a key to a file failed!");
-        System.err.println("Key: "+v._key.toString());
-        System.err.println("Encoded: "+encodeKeyToFile(v));
-        e.printStackTrace();
-      }
-      try {
-        byte[] m = v.memOrLoad(); // we are not single threaded anymore
-        assert m != null && m.length == v._max; // Assert not saving partial files
-        s.write(m);
-        v.setdsk();             // Set as write-complete to disk
-      } finally {
-        if( s != null ) s.close();
-      }
-    } catch( IOException e ) {
+      s = new FileOutputStream(encodeKeyToFile(v));
+    } catch (FileNotFoundException e) {
+      System.err.println("Encoding a key to a file failed!");
+      System.err.println("Key: "+v._key.toString());
+      System.err.println("Encoded: "+encodeKeyToFile(v));
       e.printStackTrace();
-      throw new RuntimeException("File store failed: "+e);
+      throw new RuntimeException(e);
+    }
+    try {
+      byte[] m = v.memOrLoad(); // we are not single threaded anymore
+      assert m != null && m.length == v._max; // Assert not saving partial files
+      s.write(m);
+      v.setdsk();             // Set as write-complete to disk
+    } finally {
+      if( s != null ) s.close();
     }
   }
 

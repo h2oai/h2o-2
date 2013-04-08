@@ -14,6 +14,7 @@ public class UDPRebooted extends UDP {
     none,
     reboot,
     shutdown,
+    oom,
     error,
     locked,
     mismatch;
@@ -41,6 +42,7 @@ public class UDPRebooted extends UDP {
       System.out.println("[h2o] Orderly shutdown command from "+killer);
       System.exit(0);
       return;
+    case oom:      m = "Out of Memory and no swap space left!"      ; break;
     case error:    m = "Error leading to a cloud kill"              ; break;
     case locked:   m = "Killed joining a locked cloud"              ; break;
     case mismatch: m = "Killed joining a cloud with a different jar"; break;

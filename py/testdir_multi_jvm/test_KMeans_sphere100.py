@@ -35,6 +35,7 @@ def write_spheres_dataset(csvPathname, CLUSTERS, n):
     # keep track of the centers so we compare to a sorted result from H2O
     centersList = []
     currentCenter = None
+    totalRows = 0
     for sphereCnt in range(CLUSTERS):
         R = 10 * (sphereCnt+1)
         newOffset = [3*R,3*R,3*R]
@@ -43,19 +44,20 @@ def write_spheres_dataset(csvPathname, CLUSTERS, n):
             currentCenter = [0,0,0]
         else:
             currentCenter  = [a+b for a,b in zip(currentCenter, newOffset)] 
-        print "currentCenter:", currentCenter, "R:", R
         centersList.append(currentCenter)
 
         # build a sphere at that center
         # pick a random # of points, from .5n to 1.5n
         numPts = random.randint(int(.5*n), int(1.5*n))
+        print "currentCenter:", currentCenter, "R:", R, "numPts", numPts
         for i in range(numPts):
             xyz = get_xyz_sphere(R)
             xyzShifted  = [a+b for a,b in zip(xyz,currentCenter)] 
             dsf.write(",".join(map(str,xyzShifted))+"\n")
+            totalRows += 1
 
     dsf.close()
-    print "Spheres created:", len(centersList)
+    print "Spheres created:", len(centersList), "totalRows:", totalRows
     return centersList
 
 
