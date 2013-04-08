@@ -62,6 +62,7 @@ def simpleCheckRFView(node, rfv, noprint=False, **kwargs):
     # individual scores can be all 0 if nothing for that output class
     # due to sampling
     classErrorPctList = []
+    predictedClassList = []
     for classIndex,s in enumerate(scoresList):
         classSum = sum(s)
         if classSum == 0 :
@@ -76,7 +77,19 @@ def simpleCheckRFView(node, rfv, noprint=False, **kwargs):
             classErrorPctList.append(classErrorPct)
             ### print "s:", s, "classIndex:", classIndex
             if not noprint: print "class:", classIndex, "classSum", classSum, "classErrorPct:", "%4.2f" % classErrorPct
+
+            # gather info for prediction summary
+            for pIndex,p in enumerate(s):
+                if classIndex==0:
+                    predictedClassList.append(p)
+                else:
+                    predictedClassList[pIndex] += p
+
         totalScores += classSum
+
+    print "Predicted summary:"
+    for predictedClass, p in enumerate(predictedClassList):
+        print str(predictedClass)+":", p
 
     # this should equal the num rows in the dataset if full scoring? (minus any NAs)
     if not noprint: 

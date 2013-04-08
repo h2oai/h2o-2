@@ -19,8 +19,12 @@ class Basic(unittest.TestCase):
         csvPathnamegz = h2o.find_file('smalldata/hhp_107_01.data.gz')
         print "\nRF start on ", csvPathnamegz, "this will probably take a minute.."
         start = time.time()
-        h2o_cmd.runRF(csvPathname=csvPathnamegz, trees=23,
-                timeoutSecs=120, retryDelaySecs=10)
+        kwargs = {
+            'class_weights': '0=1,1=10',
+        }
+
+        h2o_cmd.runRF(csvPathname=csvPathnamegz, trees=100,
+                timeoutSecs=120, retryDelaySecs=10, **kwargs)
         print "RF end on ", csvPathnamegz, 'took', time.time() - start, 'seconds'
 
 if __name__ == '__main__':

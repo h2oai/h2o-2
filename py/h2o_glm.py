@@ -91,6 +91,14 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         emsg = "Why is this err = 'nan'?? %6s %s" % ("err:\t", validations['err'])
         raise Exception(emsg)
 
+    if math.isnan(validations['resDev']):
+        emsg = "Why is this resDev = 'nan'?? %6s %s" % ("resDev:\t", validations['resDev'])
+        raise Exception(emsg)
+
+    if math.isnan(validations['nullDev']):
+        emsg = "Why is this nullDev = 'nan'?? %6s %s" % ("nullDev:\t", validations['nullDev'])
+        raise Exception(emsg)
+
     print "GLMModel/validations"
     print "%15s %s" % ("err:\t", validations['err'])
     print "%15s %s" % ("nullDev:\t", validations['nullDev'])

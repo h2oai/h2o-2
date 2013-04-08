@@ -28,8 +28,8 @@ class Basic(unittest.TestCase):
         csvFilename = 'kddcup_1999.data'
 
         print "Want to see that I get similar results when using H2O RF defaults (no params to json)" +\
-            "compared to running with the parameters specified and matching the browser RF query defaults" +\
-            "Also run the param for full scoring vs OOBE scoring"
+            "compared to running with the parameters specified and matching the browser RF query defaults. " +\
+            "Also run the param for full scoring vs OOBE scoring."
 
         parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=300)
         print csvFilename, 'parse time:', parseKey['response']['time']
@@ -76,3 +76,26 @@ class Basic(unittest.TestCase):
 if __name__ == '__main__':
     h2o.unit_main()
 
+# histogram of response classes (42nd field)
+#      30 buffer_overflow.
+#       8 ftp_write.
+#      53 guess_passwd.
+#      12 imap.
+#   12481 ipsweep.
+#      21 land.
+#       9 loadmodule.
+#       7 multihop.
+# 1072017 neptune.
+#    2316 nmap.
+#  972781 normal.
+#       3 perl.
+#       4 phf.
+#     264 pod.
+#   10413 portsweep.
+#      10 rootkit.
+#   15892 satan.
+# 2807886 smurf.
+#       2 spy.
+#     979 teardrop.
+#    1020 warezclient.
+#      20 warezmaster.
