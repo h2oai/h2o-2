@@ -12,7 +12,12 @@ class DABuilder {
   protected final DRF _drf;
 
   static DABuilder create(final DRF drf) {
-    return drf._useStratifySampling ? new StratifiedDABuilder(drf) : new DABuilder(drf);
+    switch( drf._samplingStrategy ) {
+//    case STRATIFIED_DISTRIBUTED: return new StratifiedDABuilder(drf);
+    case RANDOM                :
+    case STRATIFIED_LOCAL      :
+    default                    : return new DABuilder(drf);
+    }
   }
 
   @SuppressWarnings("unused") private DABuilder() { this(null); };
@@ -22,7 +27,7 @@ class DABuilder {
   final DataAdapter build(Key [] keys) { return inhaleData(keys); }
 
   /** Check that we have proper number of valid columns vs. features selected, if not cap*/
-  final void checkAndLimitFeatureUsedPerSplit(final DataAdapter dapt) {
+  private final void checkAndLimitFeatureUsedPerSplit(final DataAdapter dapt) {
     int validCols = _drf._rfmodel._va._cols.length-1; // for classIdx column
     if (validCols < _drf._numSplitFeatures) {
       Utils.pln("Limiting features from " + _drf._numSplitFeatures +
@@ -32,7 +37,7 @@ class DABuilder {
   }
 
   /** Return the number of rows on this node. */
-  final int getRowCount(final Key[] keys) {
+  private final int getRowCount(final Key[] keys) {
     int num_rows = 0;    // One pass over all chunks to compute max rows
     ValueArray ary = DKV.get(_drf._rfmodel._dataKey).get();
     for( Key key : keys ) if( key.home() ) num_rows += ary.rpc(ValueArray.getChunkIndex(key));
@@ -40,7 +45,7 @@ class DABuilder {
   }
 
   /** Return chunk index of the first chunk on this node. Used to identify the trees built here.*/
-  final long getChunkId(final Key[] keys) {
+  private final long getChunkId(final Key[] keys) {
     for( Key key : keys ) if( key.home() ) return ValueArray.getChunkIndex(key);
     throw new Error("No key on this node");
   }
@@ -67,6 +72,7 @@ class DABuilder {
     // Now load the DataAdapter with all the rows on this node.
     final int ncolumns = rfmodel._va._cols.length;
 
+    // Collects jobs
     ArrayList<RecursiveAction> dataInhaleJobs = new ArrayList<RecursiveAction>();
     int start_row = 0;
     for( final Key k : keys ) {    // now read the values
@@ -96,6 +102,7 @@ class DABuilder {
         }});
       start_row += rows;
     }
+    // And invoke collected jobs
     ForkJoinTask.invokeAll(dataInhaleJobs);
     dapt.shrink();
     Utils.pln("[RF] Inhale done in " + t_inhale);

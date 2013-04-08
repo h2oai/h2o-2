@@ -36,7 +36,7 @@ public class RFPredDomainTest extends TestUtil {
     // Start the distributed Random Forest
     String modelName   = "model";
     final Key modelKey = Key.make(modelName);
-    DRFFuture drf = hex.rf.DRF.execute(modelKey,cols,trainData,trees,depth,1.0f,(short)1024,statType,seed,false, null, -1, false, null, 0, 0);
+    DRFFuture drf = hex.rf.DRF.execute(modelKey,cols,trainData,trees,depth,(short)1024,statType,seed,false, null, -1, Sampling.Strategy.RANDOM, 1.0f, null, 0, 0);
     // Block
     drf.get();
 

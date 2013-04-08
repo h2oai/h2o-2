@@ -26,39 +26,31 @@ public class Tree extends CountedCompleter {
    */
   public static final int ROWS_FORK_TRESHOLD = 1<<11;
 
-
   final StatType _type;         // Flavor of split logic
-  final Data _data;             // Data source
-  final int _data_id;           // Data-subset identifier (so trees built on this subset are not validated on it)
-  final int _max_depth;         // Tree-depth cutoff
-  final int _numSplitFeatures;  // Number of features to check at each splitting (~ split features)
-  INode _tree;                  // Root of decision tree
+  final Data     _data;         // Data source
+  final Sampling _sampler;      // Sampling strategy
+  final int      _data_id;      // Data-subset identifier (so trees built on this subset are not validated on it)
+  final int      _max_depth;    // Tree-depth cutoff
+  final int      _numSplitFeatures;  // Number of features to check at each splitting (~ split features)
+  INode          _tree;         // Root of decision tree
   ThreadLocal<Statistic>[] _stats  = new ThreadLocal[2];
-  final Job _job;
-  final int _alltrees;          // Number of trees expected to build a complete model
-  final long _seed;             // Pseudo random seed: used to playback sampling
-  final int _numrows;           // Used to playback sampling
-  final float _sample;          // Sample rate
-  boolean _stratify;
-  int [] _strata;
-  transient int _verbose ;
-  int _exclusiveSplitLimit;
+  final Job      _job;          // DRF job building this tree
+  final long     _seed;         // Pseudo random seed: used to playback sampling
+  transient int  _verbose ;
+  int            _exclusiveSplitLimit;
 
-  // Constructor used to define the specs when building the tree from the top
-  public Tree( Data data, int max_depth, double min_error_rate, StatType stat, int numSplitFeatures, long seed, Job job, int treeId, int alltrees, float sample, int rowsize, boolean stratify, int [] strata, int verbose, int exclusiveSplitLimit) {
+  /**
+   * Constructor used to define the specs when building the tree from the top
+   */
+  public Tree(final Data data, int max_depth, double min_error_rate, StatType stat, int numSplitFeatures, long seed, final Job job, int treeId, int verbose, int exclusiveSplitLimit, final Sampling sampler) {
     _type             = stat;
     _data             = data;
     _data_id          = treeId; //data.dataId();
     _max_depth        = max_depth-1;
     _numSplitFeatures = numSplitFeatures;
     _job              = job;
-    _alltrees         = alltrees;
     _seed             = seed;
-    assert sample <= 1.0f : "Stratify sampling should in interval (0,1] but it is " + sample;
-    _sample           = sample;
-    _numrows          = rowsize;
-    _stratify         = stratify;
-    _strata           = strata;
+    _sampler          = sampler;
     _verbose          = verbose;
     _exclusiveSplitLimit = exclusiveSplitLimit;
   }
@@ -82,7 +74,7 @@ public class Tree extends CountedCompleter {
     return result;
   }
 
-  StringBuffer computeStatistics() {
+  private StringBuffer computeStatistics() {
     StringBuffer sb = new StringBuffer();
     ArrayList<SplitInfo>[] stats = new ArrayList[_data.columns()];
     for (int i = 0; i < _data.columns()-1; i++) stats[i] = new ArrayList<Tree.SplitNode.SplitInfo>();
@@ -108,10 +100,10 @@ public class Tree extends CountedCompleter {
   // Actually build the tree
   public void compute() {
     if(!_job.cancelled()) {
-      Timer timer = new Timer();
-      _stats[0] = new ThreadLocal<Statistic>();
-      _stats[1] = new ThreadLocal<Statistic>();
-      Data d = (true && _stratify)?_data.sample(_strata,_seed):_data.sample(_sample,_seed,_numrows);
+      Timer timer    = new Timer();
+      _stats[0]      = new ThreadLocal<Statistic>();
+      _stats[1]      = new ThreadLocal<Statistic>();
+      Data         d = _sampler.sample(_data, _seed);
       Statistic left = getStatistic(0, d, _seed, _exclusiveSplitLimit);
       // calculate the split
       for( Row r : d ) left.addQ(r);
@@ -121,8 +113,7 @@ public class Tree extends CountedCompleter {
         ? new LeafNode(_data.unmapClass(spl._split), d.rows())
         : new FJBuild (spl, d, 0, _seed).compute();
 
-      if (_verbose > 1)
-        Utils.pln(computeStatistics().toString());
+      if (_verbose > 1) Utils.pln(computeStatistics().toString());
       _stats = null; // GC
 
       // Atomically improve the Model as well

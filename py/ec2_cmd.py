@@ -259,6 +259,8 @@ def dump_hosts_config(ec2_config, reservation, filename=DEFAULT_HOSTS_FILENAME):
     log("Host config dumped into {0}".format(filename))
     log("To terminate instances call:")
     log("\033[93mpython ec2_cmd.py terminate --hosts {0}\033[0m".format(filename))
+    log("To start H2O cloud call:")
+    log("\033[93mpython ec2_cmd.py start_h2o --hosts {0}\033[0m".format(filename))
     log("To watch cloud in browser follow address:")
     log("   http://{0}:{1}".format(reservation.instances[0].public_dns_name, cfg['base_port']))
 
@@ -391,7 +393,7 @@ def create_tags(**kwargs):
 
 def main():
     parser = argparse.ArgumentParser(description='H2O EC2 instances launcher')
-    parser.add_argument('action', choices=['create', 'terminate', 'stop', 'reboot', 'start', 'distribute_h2o', 'start_h2o', 'show_defaults', 'dump_reservation', 'show_reservations'],  help='EC2 instances action\n\t\tAHOJ')
+    parser.add_argument('action', choices=['demo', 'create', 'terminate', 'stop', 'reboot', 'start', 'distribute_h2o', 'start_h2o', 'show_defaults', 'dump_reservation', 'show_reservations'],  help='EC2 instances action\n\t\tAHOJ')
     parser.add_argument('-c', '--config',    help='Configuration file to configure NEW EC2 instances (if not specified default is used - see "show_defaults")', type=str, default=None)
     parser.add_argument('-i', '--instances', help='Number of instances to launch', type=int, default=DEFAULT_NUMBER_OF_INSTANCES)
     parser.add_argument('-H', '--hosts',     help='Hosts file describing existing "EXISTING" EC2 instances ', type=str, default=None)

@@ -10,7 +10,7 @@ paramsTrainRF = {
             'parallel'   : 1, 
             'bin_limit'  : 20000,
             'ignore'     : 'ArrDelay,DepDelay',
-            'gini'       : 0,
+            'stat_type'  : 'ENTROPY',
             'out_of_bag_error_estimate': 1, 
             'exclusive_split_limit'    : 0,
             'timeoutSecs': 14800,

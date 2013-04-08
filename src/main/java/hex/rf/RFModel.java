@@ -14,11 +14,16 @@ import water.util.Counter;
 public class RFModel extends Model implements Cloneable, Progress {
   /** Number of features these trees are built for */
   public int       _features;
+  /** Sampling strategy used for model */
+  public Sampling.Strategy _samplingStrategy;
   /** Sampling rate used when building trees. */
   public float     _sample;
+  /** Strata sampling rate used for local-node strata-sampling */
+  public float[]   _strataSamples;
   /** Number of split features */
   public int       _splitFeatures;
-
+  /** Number of computed split features per node */
+  public int[]     _nodesSplitFeatures;
   /** Number of keys the model expects to be built for it */
   public int       _totalTrees;
   /** All the trees in the model */
@@ -31,13 +36,15 @@ public class RFModel extends Model implements Cloneable, Progress {
    * @param classes     the number of response classes
    * @param data        the dataset
    */
-  public RFModel(Key selfKey, int[] cols, Key dataKey, Key[] tkeys, int features, float sample, int splitFeatures, int totalTrees) {
+  public RFModel(Key selfKey, int[] cols, Key dataKey, Key[] tkeys, int features, Sampling.Strategy samplingStrategy, float sample, float[] strataSamples, int splitFeatures, int totalTrees) {
     super(selfKey,cols,dataKey);
     _features       = features;
     _sample         = sample;
     _splitFeatures  = splitFeatures;
     _totalTrees     = totalTrees;
     _tkeys          = tkeys;
+    _strataSamples  = strataSamples;
+    _samplingStrategy = samplingStrategy;
     for( Key tkey : _tkeys ) assert DKV.get(tkey)!=null;
   }
 
@@ -48,6 +55,7 @@ public class RFModel extends Model implements Cloneable, Progress {
     _splitFeatures  = features;
     _totalTrees     = tkeys.length;
     _tkeys          = tkeys;
+    _samplingStrategy = Sampling.Strategy.RANDOM;
     for( Key tkey : _tkeys ) assert DKV.get(tkey)!=null;
     assert classes() > 0;
   }

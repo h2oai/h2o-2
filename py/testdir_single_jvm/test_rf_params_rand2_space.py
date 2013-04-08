@@ -17,8 +17,8 @@ paramDict = {
     # legal max also.
     'features': [None,1],
     'exclusive_split_limit': [None],
-    # 'stratify': [None,0,1,1,1,1,1,1,1,1,1],
-    'strata': [
+    'sampling_strategy': [None, 'RANDOM', 'STRATIFIED_LOCAL' ],
+    'strata_samples': [
         None,
         "0:10",
         "1:5",
@@ -59,7 +59,7 @@ class Basic(unittest.TestCase):
             # params is mutable. This is default.
             params = {
                 'sample': 80,
-                'gini': 0,
+                'stat_type': 'ENTROPY',
                 'class_weights': 'yes=1000',
                 'ntree': 50, 
                 'parallel': 1, 

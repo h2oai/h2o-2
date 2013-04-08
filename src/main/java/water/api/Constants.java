@@ -63,7 +63,6 @@ public class Constants {
   public static final String FJ_THREADS_LO         = "fj_threads_lo";
   public static final String FREE_DISK             = "free_disk" + Suffixes.BYTES;
   public static final String FREE_MEM              = "free_mem" + Suffixes.BYTES;
-  public static final String GINI                  = "gini";
   public static final String HEADER                = "header";
   public static final String HEIGHT                = "height";
   public static final String HELP                  = "help";
@@ -122,6 +121,7 @@ public class Constants {
   public static final String RPCS                  = "rpcs";
   public static final String SAMPLE                = "sample";
   public static final String SCALE                 = "scale";
+  public static final String SAMPLING_STRATEGY     = "sampling_strategy";
   public static final String SEED                  = "seed";
   public static final String SENT_ROWS             = "sent_rows";
   public static final String SIZE                  = "size";
@@ -131,8 +131,8 @@ public class Constants {
   public static final String END_TIME              = "end_time";
   public static final String STATUS                = "status";
   public static final String STEP                  = "step";
-  public static final String STRATA                = "strata";
-  public static final String STRATIFY              = "stratify";
+  public static final String STAT_TYPE             = "stat_type";
+  public static final String STRATA_SAMPLES        = "strata_samples";
   public static final String SUCCEEDED             = "succeeded";
   public static final String TASK_KEY              = "task_key";
   public static final String TCPS_ACTIVE           = "tcps_active";
