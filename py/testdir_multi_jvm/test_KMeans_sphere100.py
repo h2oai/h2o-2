@@ -97,40 +97,45 @@ class Basic(unittest.TestCase):
         print "\nStarting", csvFilename
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
 
-        kwargs = {'k': CLUSTERS, 'epsilon': 1e-6, 'cols': None, 'destination_key': 'syn_spheres100.hex'}
-        timeoutSecs = 30
-        start = time.time()
-        kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
-        elapsed = time.time() - start
-        print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.',\
-            "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
+        # try 5 times, to see if all inits by h2o are good
+        for trial in range(5):
+            kwargs = {'k': CLUSTERS, 'epsilon': 1e-6, 'cols': None, 'destination_key': 'syn_spheres100.hex'}
+            timeoutSecs = 30
+            start = time.time()
+            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            elapsed = time.time() - start
+            print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.',\
+                "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 
-        kmeansResult = h2o_cmd.runInspect(key='syn_spheres100.hex')
+            kmeansResult = h2o_cmd.runInspect(key='syn_spheres100.hex')
 
-        ### print h2o.dump_json(kmeans)
-        ### print h2o.dump_json(kmeansResult)
-        h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
+            ### print h2o.dump_json(kmeans)
+            ### print h2o.dump_json(kmeansResult)
+            h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
 
-        # cluster centers can return in any order
-        clusters = kmeansResult['KMeansModel']['clusters']
-        clustersSorted = sorted(clusters, key=itemgetter(0))
-        ### print clustersSorted
+            # cluster centers can return in any order
+            clusters = kmeansResult['KMeansModel']['clusters']
+            clustersSorted = sorted(clusters, key=itemgetter(0))
+            ### print clustersSorted
 
-        print "\nh2o result, centers sorted"
-        print clustersSorted
-        print "\ngenerated centers"
-        print centersList
-        for i,center in enumerate(centersList):
-            a = center
-            b = clustersSorted[i]
-            print "\nexpected:", a
-            print "h2o:", b # h2o result
-            aStr = ",".join(map(str,a))
-            bStr = ",".join(map(str,b))
-            iStr = str(i)
-            self.assertAlmostEqual(a[0], b[0], delta=1, msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+" x not correct.")
-            self.assertAlmostEqual(a[1], b[1], delta=1, msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+" y not correct.")
-            self.assertAlmostEqual(a[2], b[2], delta=1, msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+" z not correct.")
+            print "\nh2o result, centers sorted"
+            print clustersSorted
+            print "\ngenerated centers"
+            print centersList
+            for i,center in enumerate(centersList):
+                a = center
+                b = clustersSorted[i]
+                print "\nexpected:", a
+                print "h2o:", b # h2o result
+                aStr = ",".join(map(str,a))
+                bStr = ",".join(map(str,b))
+                iStr = str(i)
+                self.assertAlmostEqual(a[0], b[0], delta=1, msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+" x not correct.")
+                self.assertAlmostEqual(a[1], b[1], delta=1, msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+" y not correct.")
+                self.assertAlmostEqual(a[2], b[2], delta=1, msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+" z not correct.")
+
+            print "Trial #", trial, "completed"
+
 
 
 
