@@ -10,8 +10,8 @@ import h2o, h2o_cmd, h2o_rf, h2o_hosts
 # only classes 0-8 in the last col of poker1000
 
 paramDict = {
-    'stratify': [None,0,1,1,1,1,1,1,1,1,1],
-    'strata': [
+    'sampling_strategy': [None, 'RANDOM', 'STRATIFIED_LOCAL' ],
+    'strata_samples': [
         None,
         "0:10",
         "1:5",

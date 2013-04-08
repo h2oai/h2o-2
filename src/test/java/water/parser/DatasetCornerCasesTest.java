@@ -43,7 +43,7 @@ public class DatasetCornerCasesTest extends TestUtil {
     try {
       final Key modelKey = Key.make("model");
       DRFFuture result = hex.rf.DRF.execute(modelKey, cols, val,
-                                   ntrees,depth,1.0f,(short)1024,statType,seed,true,null,-1,false,null,0,0);
+                                   ntrees,depth,(short)1024,statType,seed,true,null,-1,Sampling.Strategy.RANDOM,1.0f,null,0,0);
       // Just wait little bit
       result.get();
       // Create incremental confusion matrix

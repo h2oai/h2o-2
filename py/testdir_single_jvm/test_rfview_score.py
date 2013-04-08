@@ -15,7 +15,7 @@ paramDict = {
     'model_key': ['model_keyA', '012345', '__hello'],
     # UPDATE: H2O...OOBE has to be 0 for scoring
     'out_of_bag_error_estimate': [0],
-    'gini': [None, 0, 1],
+    'stat_type': [None, 'ENTROPY', 'GINI'],
     'depth': [None, 1,10,20,100],
     'bin_limit': [None,5,10,100,1000],
     'parallel': [None,0,1],
@@ -27,8 +27,8 @@ paramDict = {
     # only 51 non-constant cols in the 20k covtype?
     'features': [None,1,3,5,7,9,11,13,17,19,23,37,51],
     'exclusive_split_limit': [None,0,3,5],
-    # 'stratify': [None,0,1,1,1,1,1,1,1,1,1],
-    'strata': [
+    'sampling_strategy': [None, 'RANDOM', 'STRATIFIED_LOCAL' ],
+    'strata_samples': [
         None,
         "0:10",
         "1:5",

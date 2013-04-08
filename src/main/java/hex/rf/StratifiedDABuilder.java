@@ -147,7 +147,7 @@ public class StratifiedDABuilder extends DABuilder {
       unbalancedClasses = new boolean[nclasses];
       for(UnbalancedClass c:_drf._uClasses){
         unbalancedClasses[c._c] = true;
-        int nrows = _drf._strata[c._c];
+        int nrows = _drf._strataSamples[c._c];
         int echunks = 1 + nrows/rpc;
         if(echunks >= c._chunks.length) { // we need all the chunks from all the nodes
           chunkHistogram[keys.length][c._c] = _drf._gHist[c._c];

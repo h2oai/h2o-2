@@ -121,50 +121,6 @@ public class Data implements Iterable<Row> {
     return new Subset(this, sample, 0, sample.length);
   }
 
-
-  // Roll a fair die for sampling, resetting the random die every numrows
-  private int[] sampleFair(double bagSizePct, long seed, int rowsPerChunk ) {
-    assert rowsPerChunk != 0 : "RowsPerChunk contains 0! Not able to assure deterministic sampling!";
-    Random rand = null;
-    int rows = rows();
-    int size = bagsz(rows,bagSizePct);
-    int[] sample = MemoryManager.malloc4((int)(size*1.10));
-    float f = (float)bagSizePct;
-    int cnt=0;                  // Counter for resetting Random
-    int j=0;                    // Number of selected samples
-    for( int i=0; i<rows(); i++ ) {
-      if( cnt--==0 ) {
-        /* NOTE: Before changing used generator think about which kind of random generator you need:
-         * if always deterministic or non-deterministic version - see hex.rf.Utils.get{Deter}RNG */
-        long chunkSamplingSeed = seed + ((long)i<<16); // In any case do NOT remove cast to long!!!
-        rand = Utils.getDeterRNG(chunkSamplingSeed);
-        cnt=rowsPerChunk-1;          //
-        if( i+2*rowsPerChunk > rows() ) cnt = rows(); // Last chunk is big
-      }
-      float randFloat = rand.nextFloat();
-      if( randFloat < f ) {
-        if( j == sample.length ) sample = Arrays.copyOfRange(sample,0,(int)(sample.length*1.2));
-        sample[j++] = i;
-      }
-    }
-    return Arrays.copyOf(sample,j); // Trim out bad rows
-  }
-  /** added for stratified sampling, uniformly picks sample of n elements from the given interval */
-  private int sampleFromClass(int c, int n, int startIdx, int sample [], Random r) {
-    int iStart = _dapt._intervalsStarts[c];
-    int iEnd = _dapt._intervalsStarts[c+1];
-    int iWidth = iEnd - iStart;
-    for(int i = 0; i < n; ++i){
-      int candidate = iStart + r.nextInt(iWidth);
- //FIXME     while(_dapt.badRow(candidate)){
-//        if(candidate == iStart)candidate = iStart + iWidth;
-        //--candidate;
-//      }
-      sample[startIdx++] = candidate;
-    }
-    return startIdx;
-  }
-
   public Data sample(int [] strata, long seed) {
     int sz = 0;
     for(int s:strata)sz += s;
@@ -179,20 +135,20 @@ public class Data implements Iterable<Row> {
     Arrays.sort(sample); // we want an ordered sample
     return new Subset(this, sample, 0, sample.length);
   }
-
-  // Deterministically sample the 'this' Data at the bagSizePct.  Toss out
-  // invalid rows (as-if not sampled), but maintain the sampling rate.
-  public Data sample(double bagSizePct, long seed, int numrows) {
-    assert getClass()==Data.class; // No subclassing on this method
-    int [] sample;
-    sample = sampleFair(bagSizePct,seed,numrows);
-    // add the remaining rows
-    Arrays.sort(sample); // we want an ordered sample
-    return new Subset(this, sample, 0, sample.length);
-  }
-  private int bagsz( int rows, double bagSizePct ) {
-    int size = (int)(rows * bagSizePct);
-    return (size>0 || rows==0) ? size : 1;
+  /** added for stratified sampling, uniformly picks sample of n elements from the given interval */
+  private int sampleFromClass(int c, int n, int startIdx, int sample [], Random r) {
+    int iStart = _dapt.getIntervalsStarts()[c];
+    int iEnd = _dapt.getIntervalsStarts()[c+1];
+    int iWidth = iEnd - iStart;
+    for(int i = 0; i < n; ++i){
+      int candidate = iStart + r.nextInt(iWidth);
+ //FIXME     while(_dapt.badRow(candidate)){
+//        if(candidate == iStart)candidate = iStart + iWidth;
+        //--candidate;
+//      }
+      sample[startIdx++] = candidate;
+    }
+    return startIdx;
   }
 
   public Data complement(Data parent, short[] complement) { throw new Error("Only for subsets."); }
@@ -259,4 +215,5 @@ class Subset extends Data {
     for(int i=0;i<complement.length; i++) if (complement[i]==0) p[pos++] = i;
     return new Subset(this, p, 0, p.length);
   }
+
 }
