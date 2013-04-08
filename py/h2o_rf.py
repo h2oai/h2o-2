@@ -58,9 +58,11 @@ def simpleCheckRFView(node, rfv, noprint=False, **kwargs):
 
     scoresList = cm['scores'] # list
     totalScores = 0
+    totalRight = 0
     # individual scores can be all 0 if nothing for that output class
     # due to sampling
     classErrorPctList = []
+    
     for classIndex,s in enumerate(scoresList):
         classSum = sum(s)
         if classSum == 0 :
@@ -70,6 +72,7 @@ def simpleCheckRFView(node, rfv, noprint=False, **kwargs):
         else:
             # H2O should really give me this since it's in the browser, but it doesn't
             classRightPct = ((s[classIndex] + 0.0)/classSum) * 100
+            totalRight += s[classIndex]
             classErrorPct = 100 - classRightPct
             classErrorPctList.append(classErrorPct)
             ### print "s:", s, "classIndex:", classIndex
@@ -77,7 +80,12 @@ def simpleCheckRFView(node, rfv, noprint=False, **kwargs):
         totalScores += classSum
 
     # this should equal the num rows in the dataset if full scoring? (minus any NAs)
-    if not noprint: print "totalScores:", totalScores
+    if not noprint: 
+        print "totalScores:", totalScores
+        print "totalRight:", totalRight
+        pctRight = (totalRight * 100.0)/totalScores
+        print "pctRight:", pctRight, "%"
+        print "pctWrong:", 100 - pctRight, "%"
 
     if (totalScores<=0 or totalScores>5e9):
         raise Exception("scores in RFView seems wrong. scores:", scoresList)
