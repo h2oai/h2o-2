@@ -96,8 +96,8 @@ def simpleCheckRFView(node, rfv, noprint=False, **kwargs):
         print "totalScores:", totalScores
         print "totalRight:", totalRight
         pctRight = 100.0 * totalRight/totalScores
-        print "pctRight:", pctRight
-        print "pctWrong:", 100.0 - pctRight
+        print "pctRight:", "%5.2f" % pctRight
+        print "pctWrong:", "%5.2f" % (100 - pctRight)
 
     if (totalScores<=0 or totalScores>5e9):
         raise Exception("scores in RFView seems wrong. scores:", scoresList)

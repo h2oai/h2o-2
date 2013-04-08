@@ -89,7 +89,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_kmeans_3spheres(self):
+    def test_kmeans_sphere3(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = 'syn_spheres3_' + str(SEED) + '.csv'
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename
