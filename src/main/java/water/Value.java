@@ -14,7 +14,6 @@ import water.store.s3.PersistS3;
  */
 public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   static final int DEBUG_WEAVER=1;
-
   // ---
   // Type-id of serialzied object; see TypeMap for the list.
   // Might be a primitive array type, or a Iced POJO
@@ -187,7 +186,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   public boolean onS3  (){ return (_persist & BACKEND_MASK) ==   S3; }
 
   /** Store complete Values to disk */
-  void storePersist() {
+  void storePersist() throws IOException {
     if( isPersisted() ) return;
     switch( _persist&BACKEND_MASK ) {
     case ICE : PersistIce .fileStore(this); break;
@@ -232,11 +231,11 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   public void setHdfs() {
     assert onICE();
     byte[] mem = memOrLoad();    // Get into stable memory
-    removeIce();           // Remove from ICE disk
+    PersistHdfs.fileStore(this);
     _persist = Value.HDFS|Value.NOTdsk;
+    removeIce();           // Remove from ICE disk
     assert onHDFS();       // Flip to HDFS
     _mem = mem; // Close a race with the H2O cleaner zapping _mem while removing from ice
-    storePersist();        // Store back to HDFS
   }
 
 
