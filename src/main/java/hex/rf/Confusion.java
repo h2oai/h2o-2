@@ -202,10 +202,10 @@ public class Confusion extends MRTask {
     // we trained on during voting.
     for( int ntree = 0; ntree < _model.treeCount(); ntree++ ) {
       long seed = _model.seed(ntree);
-      long init_row = _chunk_row_mapping[nchk];
+      int  init_row = _chunk_row_mapping[nchk];
       /* NOTE: Before changing used generator think about which kind of random generator you need:
        * if always deterministic or non-deterministic version - see hex.rf.Utils.get{Deter}RNG */
-      seed = seed + (init_row<<16);
+      seed = Sampling.chunkSampleSeed(seed, init_row);
       Random rand = Utils.getDeterRNG(seed);
       // Now for all rows, classify & vote!
       ROWS: for( int row = 0; row < rows; row++ ) {
@@ -213,7 +213,16 @@ public class Confusion extends MRTask {
         // of random numbers as in the method Data.sampleFair()
         // Skip row used during training if OOB is computed
         float sampledItem = rand.nextFloat();
-        if( _computeOOB &&  sampledItem < _model._sample ) continue ROWS;
+        if( _computeOOB ) { // if OOBEE is computed then we need to take into account utilized sampling strategy
+          switch( _model._samplingStrategy ) {
+          case RANDOM          : if (sampledItem < _model._sample ) continue ROWS; break;
+          case STRATIFIED_LOCAL:
+            int clazz = (int) _data.data(bits, row, _classcol) - cmin;
+            if (sampledItem < _model._strataSamples[clazz] ) continue ROWS;
+            break;
+          default: assert false : "The selected sampling strategy does not support OOBEE replay!"; break;
+          }
+        }
         // ------
 
         // Bail out of broken rows

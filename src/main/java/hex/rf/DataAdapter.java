@@ -15,13 +15,17 @@ import water.util.Utils;
 final class DataAdapter  {
   public final ValueArray _ary;
 
-  /*Place holder for missing data, NaN, Inf in short encoding.*/
+  /** Place holder for missing data, NaN, Inf in short encoding.*/
   static final short BAD = Short.MIN_VALUE;
-  int _numClasses;
-  int [] _intervalsStarts;
+  /** Number of classes. */
+  private int _numClasses;
+  /** ??? */
+  private int [] _intervalsStarts;
+  /** Columns. */
   private final Col[] _c;
   /** Unique cookie identifying this dataset*/
   private final long _dataId;
+  /** Seed for sampling */
   private final long _seed;
   public final int _numRows;
   public final double[] _classWt;
@@ -58,6 +62,8 @@ final class DataAdapter  {
     if(_intervalsStarts.length <= i)_intervalsStarts = Arrays.copyOf(_intervalsStarts, i+1);
     _intervalsStarts[i] = S;
   }
+
+  final int[] getIntervalsStarts() { return _intervalsStarts; }
 
   /** Given a value in enum format, returns:  the value in the original format if no
    * binning was applied,  or if binning was applied a value that is inbetween

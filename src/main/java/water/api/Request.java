@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
 
+import org.apache.poi.ss.formula.functions.T;
+
 import water.*;
 import water.util.*;
 
@@ -190,4 +192,5 @@ public abstract class Request extends RequestBuilders {
     return r;
   }
 
+  protected static final void help(Argument arg, String help) { arg._requestHelp = help; }
 }
