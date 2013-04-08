@@ -2,9 +2,8 @@
 import os, json, unittest, time, shutil, sys
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_glm
-import h2o_browse as h2b
-import h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_kmeans
+import h2o_browse as h2b, h2o_import as h2i
 import time, random
 
 class Basic(unittest.TestCase):
@@ -30,7 +29,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_allstate_s3n_thru_hdfs(self):
+    def test_KMeans_allstate_s3n_thru_hdfs(self):
         # csvFilename = "covtype20x.data"
         # csvPathname = csvFilename
         csvFilename = "train_set.csv"
@@ -60,7 +59,7 @@ class Basic(unittest.TestCase):
             print "Loading s3n key: ", s3nKey, 'thru HDFS'
             # ec2 is about 400 secs on four m2.4xlarge nodes
             # should be less on more nodes?
-            timeoutSecs = 500
+            timeoutSecs = 600
             start = time.time()
             parseKey = h2o.nodes[0].parse(s3nKey, key2,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60, noise=('JStack', None))
@@ -72,50 +71,22 @@ class Basic(unittest.TestCase):
             print "parse result:", parseKey['destination_key']
 
             kwargs = {
-                # allstate claim last col
-                'y': 34,
-                'case_mode': '>',
-                'case': 0,
+                'cols': None,
+                'epsilon': 1e-6,
+                'k': 12
+            }
 
-                'family': 'binomial',
-                'link': 'logit',
-                'n_folds': 2,
-                'max_iter': 8,
-                'beta_epsilon': 1e-3}
-
-            timeoutSecs = 500
-            # L2 
-            kwargs.update({'alpha': 0, 'lambda': 0})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, 
-                timeoutSecs=timeoutSecs, pollTimeoutSecs=60, noise=('JStack', None), **kwargs)
+            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, \
+                timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=120, **kwargs)
             elapsed = time.time() - start
-            print "glm (L2) end on ", csvPathname, 'took', elapsed, 'seconds',\
-                "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-            h2o_glm.simpleCheckGLM(self, glm, None, noPrint=True, **kwargs)
-            h2o.check_sandbox_for_errors()
+            print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', \
+                "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
+            h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
 
-            # Elastic
-            kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
-            start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey,
-                timeoutSecs=timeoutSecs, pollTimeoutSecs=60, noise=('JStack', None), **kwargs)
-            elapsed = time.time() - start
-            print "glm (Elastic) end on ", csvPathname, 'took', elapsed, 'seconds',\
-                "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-            h2o_glm.simpleCheckGLM(self, glm, None, noPrint=True, **kwargs)
-            h2o.check_sandbox_for_errors()
-
-            # L1
-            kwargs.update({'alpha': 1.0, 'lambda': 1e-4})
-            start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey,
-                timeoutSecs=timeoutSecs, pollTimeoutSecs=60, noise=('JStack', None), **kwargs)
-            elapsed = time.time() - start
-            print "glm (L1) end on ", csvPathname, 'took', elapsed, 'seconds',\
-                "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-            h2o_glm.simpleCheckGLM(self, glm, None, noPrint=True, **kwargs)
-            h2o.check_sandbox_for_errors()
+            ### print h2o.dump_json(kmeans)
+            inspect = h2o_cmd.runInspect(None,key=kmeans['destination_key'])
+            print h2o.dump_json(inspect)
 
             print "Deleting key in H2O so we get it from S3 (if ec2) or nfs again.", \
                   "Otherwise it would just parse the cached key."

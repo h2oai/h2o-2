@@ -1,7 +1,5 @@
 package water;
 
-import hex.DGLM.GLMProgress;
-
 import java.util.Arrays;
 import java.util.UUID;
 
@@ -143,22 +141,46 @@ public class Job extends Iced {
   }
 
   public static class ChunkProgress extends Iced implements Progress {
-    final double _totalInv;
-    final double _count;
+    final long _nchunks;
+    final long _count;
+    private final Status _status;
+    final String _error;
+
+    public enum Status {Computing,Done,Cancelled,Error};
+
+
+    public Status status(){return _status;}
+
+    public boolean isDone(){return _status == Status.Done || _status == Status.Error;}
+    public String error(){return _error;}
+
 
     public ChunkProgress(long chunksTotal) {
-      _totalInv = 1.0/chunksTotal;
+      _nchunks = chunksTotal;
       _count = 0;
+      _status = Status.Computing;
+      _error = null;
     }
-    public ChunkProgress(double totalInv,double count){
-      _totalInv = totalInv;
-      _count = count;
+    private ChunkProgress(long nchunks, long computed,Status s, String err){
+      _nchunks = nchunks;
+      _count = computed;
+      _status = s;
+      _error = err;
     }
     public ChunkProgress update(int count) {
-      return new ChunkProgress(_totalInv, _count + count);
+      if(_status == Status.Cancelled || _status == Status.Error)
+        return this;
+      long c = _count + count;
+      return new ChunkProgress(_nchunks,c, (c == _nchunks)?Status.Done:Status.Computing,null);
+    }
+    public ChunkProgress cancel(){
+      return new ChunkProgress(0,0,Status.Cancelled,null);
+    }
+    public ChunkProgress error(String msg){
+      return new ChunkProgress(0,0,Status.Error, msg);
     }
     public final float progress(){
-      return (float)(_count * _totalInv);
+      return (float)((double)_count/(double)_nchunks);
     }
   }
 
@@ -178,12 +200,14 @@ public class Job extends Iced {
       }.invoke(_progress);
     }
     public void updateProgress(final int c){ // c == number of processed chunks
-      new TAtomic<ChunkProgress>() {
-        @Override
-        public ChunkProgress atomic(ChunkProgress old) {
-          return old.update(c);
-        }
-      }.invoke(_progress);
+      if(!cancelled()){
+        new TAtomic<ChunkProgress>() {
+          @Override
+          public ChunkProgress atomic(ChunkProgress old) {
+            return old.update(c);
+          }
+        }.invoke(_progress);
+      }
     }
 
     @Override
@@ -193,5 +217,16 @@ public class Job extends Iced {
     }
 
     public final Key progressKey(){return _progress;}
+
+    public void onException(Throwable ex){
+      UKV.remove(dest());
+      Value v = DKV.get(progressKey());
+      if(v != null){
+        ChunkProgress p = v.get();
+        p = p.error(ex.getMessage());
+        DKV.put(progressKey(), p);
+      }
+      cancel();
+    }
   }
 }

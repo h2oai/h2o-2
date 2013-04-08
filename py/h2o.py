@@ -410,6 +410,7 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
 
     # this is just in case they don't assign the return to the nodes global?
     nodes[:] = node_list
+    print len(node_list), "total jvms in H2O cloud"
     return node_list
 
 def upload_jar_to_remote_hosts(hosts, slow_connection=False):
@@ -800,8 +801,8 @@ class H2O(object):
                 raise Exception(emsg)
             count += 1
             # GLM can return partial results during polling..that's legal
-            if 'GLMProgress' in urlUsed and 'GLMModel' in r:
-                print "INFO: GLM returning partial results during polling. Continuing.."
+            ### if 'GLMProgress' in urlUsed and 'GLMModel' in r:
+            ###    print "INFO: GLM returning partial results during polling. Continuing.."
 
         return r
     

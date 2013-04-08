@@ -19,7 +19,7 @@ import water.util.RString;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
-public class GLMProgress extends Request {
+public class GLMProgressPage extends Request {
   static String getTimeStr(long t){
     int hrs = (int)(t/(60*60*1000));
     t -= hrs*60*60*1000;
@@ -39,32 +39,52 @@ public class GLMProgress extends Request {
     if( job != null ) redir.addProperty(JOB, job.toString());
     redir.addProperty(DEST_KEY, dest.toString());
     redir.addProperty(PROGRESS_KEY, progress.toString());
-    return Response.redirect(resp, GLMProgress.class, redir);
+    return Response.redirect(resp, GLMProgressPage.class, redir);
   }
 
-   protected double getProgress(){
-     Value v = DKV.get(_progress.value());
-     if(v == null)
-       return 0;
-     return v.get(ChunkProgress.class).progress();
-   }
+
   @Override
   protected Response serve() {
-    Key dest = _dest.value();
-    GLMModel m = (GLMModel)UKV.get(dest);
-    if(m==null)
-      return Response.doneEmpty();
     JsonObject response = new JsonObject();
+    Key dest = _dest.value();
     response.addProperty(Constants.DEST_KEY, dest.toString());
-    response.addProperty("computation_time", getTimeStr(m._time));
+    ChunkProgress p = null;
+    Value v = DKV.get(_progress.value());
+    if(v != null){
+      p = v.get();
+      if(p.error() != null){
+        UKV.remove(_progress.value());
+       return Response.error(p.error());
+      }
 
-    JsonObject res = response;
+    } else {
 
-    res.add("GLMModel", m.toJson());
+    }
+    GLMModel m = (GLMModel)UKV.get(dest);
+    if(m!=null){
+      response.addProperty("computation_time", getTimeStr(m._time));
+      response.add("GLMModel",m.toJson());
+    }
+    Response r = null;
     // Display HTML setup
-    Response r = (DKV.get(_job.value()) == null)
-        ?Response.done(res)
-        :Response.poll(res,(float)getProgress());
+    if(p == null)
+      r =  Response.done(response);
+    else switch(p.status()){
+    case Computing:
+      r = Response.poll(response,p.progress());
+      break;
+    case Done:
+      UKV.remove(_progress.value());
+      r = Response.done(response);
+      break;
+    case Error:
+      UKV.remove(_progress.value());
+      r = Response.error(p.error());
+      break;
+    case Cancelled:
+      UKV.remove(_progress.value());
+      r = Response.error("Cancelled!");
+    }
     r.setBuilder(""/*top-level do-it-all builder*/,new GLMBuilder(m,_job.value()));
     return r;
   }

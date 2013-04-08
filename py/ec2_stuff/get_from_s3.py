@@ -1,16 +1,13 @@
 #!/usr/bin/env python
 
-copies = 100
-print "Will send", copies, "copies of a file to s3_path in 'home-0xdiag-datasets' bucket with numerical suffix"
+# Usage
+#send_to_s3.py "<local_file_path>" "<s3_path>"
 
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('local_file_path', help="path to local file to be copied to s3")
 parser.add_argument('s3_path', help="path to use inside s3 bucket 'home-0xdiag-datasets'")
 args = parser.parse_args()
-
-local_file_path = args.local_file_path
-s3_path = args.s3_path
 
 import sys
 import os
@@ -35,18 +32,14 @@ conn = S3Connection(aws_id, aws_key)
 # The bucket name
 bucket = 'home-0xdiag-datasets'
 pb = conn.get_bucket(bucket)
+
 # Make an S3 key using the bucket
 k = Key(pb)
-k.set_metadata('Cache-Control', 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0')
-
+file_name_to_use_in_s3 = "%s/%s"%(args.s3_path, os.path.basename(args.local_file_path))
 # Set the name of the file to use in S3
 # S3 doesn't have the concept of directories
 # Use / in the file name to mimic the directory path
-base_file_name_to_use_in_s3 = "%s/%s"%(s3_path, os.path.basename(local_file_path))
-for n in range(copies):
-    file_suffix = "%05d" % n
-    # add suffix to the name in s3
-    k.name = base_file_name_to_use_in_s3 + "_" + file_suffix
-    # Send the file to S3
-    k.set_contents_from_filename(local_file_path)
-    print "  Sent %s to %s in bucket: %s"%(local_file_path, k.name, bucket)
+k.name = file_name_to_use_in_s3
+# Get the file from S3
+k.get_contents_to_filename(args.local_file_path)
+print "  Got %s to %s"%(file_name_to_use_in_s3, args.local_file_path)

@@ -23,7 +23,7 @@ paramsScoreRF = {
 
 trainDS = {
         's3bucket'    : 'h2o-airlines-unpacked',
-        'filename'    : 'year1987.csv',
+        'filename'    : 'allyears_10.csv',
         'timeoutSecs' : 14800,
         'header'      : 1
         }

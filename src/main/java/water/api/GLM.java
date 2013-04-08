@@ -215,7 +215,7 @@ public class GLM extends Request {
       GLMJob job = DGLM.startGLMJob(data, lsm, glmParams, null, _xval.value());
       JsonObject j = new JsonObject();
       j.addProperty(Constants.DEST_KEY, job.dest().toString());
-      Response r = GLMProgress.redirect(j, job.self(), job.dest(),job.progressKey());
+      Response r = GLMProgressPage.redirect(j, job.self(), job.dest(),job.progressKey());
       r.setBuilder(Constants.DEST_KEY, new KeyElementBuilder());
       return r;
     }catch(GLMException e){

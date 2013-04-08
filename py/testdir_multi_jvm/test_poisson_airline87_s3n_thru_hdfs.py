@@ -33,13 +33,13 @@ class Basic(unittest.TestCase):
     def test_GLM_allstate_s3n_thru_hdfs(self):
         # csvFilename = "covtype20x.data"
         # csvPathname = csvFilename
-        csvFilename = "train_set.csv"
-        csvPathname = "allstate/" + csvFilename
+        csvFilename = "year1987.csv"
+        csvPathname = csvFilename
         # https://s3.amazonaws.com/home-0xdiag-datasets/allstate/train_set.csv
-        URI = "s3n://home-0xdiag-datasets/"
+        URI = "s3n://h2o-airlines-unpacked/"
         s3nKey = URI + csvPathname
 
-        trialMax = 3
+        trialMax = 2
 
         for trial in range(trialMax):
             trialStart = time.time()
@@ -72,16 +72,16 @@ class Basic(unittest.TestCase):
             print "parse result:", parseKey['destination_key']
 
             kwargs = {
-                # allstate claim last col
-                'y': 34,
-                'case_mode': '>',
-                'case': 0,
-
-                'family': 'binomial',
-                'link': 'logit',
-                'n_folds': 2,
+                # will fail if categorical is chosen
+                # 'y': 'IsArrDelayed',
+                'y': 'CRSArrTime',
+                'x': '1,2,3,4,8,9,16,17,18,30',
+                'family': 'poisson',
+                'link': 'familyDefault',
+                'n_folds': 1,
                 'max_iter': 8,
-                'beta_epsilon': 1e-3}
+                'beta_epsilon': 1e-3
+                }
 
             timeoutSecs = 500
             # L2 

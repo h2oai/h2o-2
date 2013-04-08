@@ -11,7 +11,7 @@ from rpy2 import robjects as ro
 
 
 # y is h2o style. start at 0
-def glm_R_and_compare(csvPathname, family, formula, y, header=False, h2oResults=None):
+def glm_R_and_compare(self, csvPathname, family, formula, y, header=False, h2oResults=None):
     # df = ro.DataFrame.from_csvfile(csvPathname, col_names=col_names, header=False)
     df = ro.DataFrame.from_csvfile(csvPathname, header=False)
     cn = ro.r.colnames(df)
@@ -37,21 +37,21 @@ def glm_R_and_compare(csvPathname, family, formula, y, header=False, h2oResults=
         interceptDelta = None
         cDelta = [None for a in cListR]
 
-    def printit(a,b,c,d):
+    def printit(self,a,b,c,d):
         pctDiff = abs(d/c)*100
         print "%-20s %-20.5e %8s %5.2f%% %10s %-20.5e" % \
             ("R " + a + " " + b + ":", c, "pct. diff:", pctDiff, "abs diff:", d)
-        self.AssertLess(pctDiff,1,"Expect <1% difference between H2O and R coefficient/intercept")
+        self.assertLess(pctDiff,1,"Expect <1% difference between H2O and R coefficient/intercept")
 
     print
-    printit("intercept", "", interceptR, interceptDelta)
+    printit(self, "intercept", "", interceptR, interceptDelta)
     print "compare lengths cListH2O, cListR, cDelta:", len(cListH2O), len(cListR), len(cDelta)
     print "clistH2O:", cListH2O
     print "clistR:", cListR
     print "cn:", cn
     print "cDelta:", cDelta
     for i,cValue in enumerate(cListR):
-        printit("coefficient", cn[i], cValue, cDelta[i])
+        printit(self , "coefficient", cn[i], cValue, cDelta[i])
 
     ### print "\nDumping some raw R results (info already printed above)"
     ### print "coef:", ro.r.coef(fit)
@@ -201,7 +201,7 @@ class Basic(unittest.TestCase):
             print "glm end (w/check) on ", csvPathname2, 'took', time.time()-start, 'seconds'
             h2oResults = h2o_glm.simpleCheckGLM(self, glm, None, prettyPrint=True, **kwargs)
             # now do it thru R and compare
-            (warningsR, cListR, interceptR) = glm_R_and_compare(csvPathname2, family, formula, y, 
+            (warningsR, cListR, interceptR) = glm_R_and_compare(self, csvPathname2, family, formula, y, 
                 header=header, h2oResults=h2oResults)
 
             trial += 1

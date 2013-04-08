@@ -21,7 +21,7 @@ class Basic(unittest.TestCase):
         ## time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_B_benign(self):
+    def test_GLMGrid_basic_benign(self):
         csvFilename = "benign.csv"
         print "\nStarting", csvFilename 
         csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
@@ -30,16 +30,10 @@ class Basic(unittest.TestCase):
         # cols 0-13. 3 is output
         # no member id in this one
         y = "3"
-        xList = []  
-        for appendx in xrange(14):
-            if (appendx == 0): 
-                print "\nSkipping 0. Causes coefficient of 0 when used alone"
-            elif (appendx == 3): 
-                print "\n3 is output."
-            else:
-                xList.append(appendx)
-
-        x = ','.join(map(str, xList))
+        x = range(14)
+        x.remove(0) # 0. skipping causes coefficient of 0 when used alone
+        x.remove(3) # 3 is output
+        x = ','.join(map(str, x))
 
         # just run the test with all x, not the intermediate results
         print "\nx:", x
@@ -59,10 +53,9 @@ class Basic(unittest.TestCase):
         colNames = [ 'STR','OBS','AGMT','FNDX','HIGD','DEG','CHK',
                      'AGP1','AGMN','NLV','LIV','WT','AGLP','MST' ]
 
-        # h2o_glm.simpleCheckGLMGrid(self, gg, colNames[xList[-1]], **kwargs)
         h2o_glm.simpleCheckGLMGrid(self, gg, None, **kwargs)
 
-    def test_C_prostate(self):
+    def test_GLMGrid_basic_prostate(self):
         csvFilename = "prostate.csv"
         print "\nStarting", csvFilename
         # columns start at 0
@@ -70,16 +63,11 @@ class Basic(unittest.TestCase):
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
 
         y = "1"
-        xList = []  
-        for appendx in xrange(9):
-            if (appendx == 0):
-                print "\n0 is member ID. not used"
-            elif (appendx == 1):
-                print "\n1 is output."
-            else:
-                xList.append(appendx)
+        x = range(9)
+        x.remove(0) # 0. member ID. not used.
+        x.remove(1) # 1 is output
+        x = ','.join(map(str, x))
 
-        x = ','.join(map(str, xList))
         # just run the test with all x, not the intermediate results
         print "\nx:", x
         print "y:", y
