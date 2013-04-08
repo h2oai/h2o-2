@@ -121,118 +121,6 @@ public class Data implements Iterable<Row> {
     return new Subset(this, sample, 0, sample.length);
   }
 
-
-  /** Roll a fair die for sampling, resetting the random die every numrows. */
-  private int[] sampleFair(double bagSizePct, long seed, int rowsPerChunk ) {
-    // preconditions
-    assert rowsPerChunk != 0 : "RowsPerChunk contains 0! Not able to assure deterministic sampling!";
-    // init
-    Random rand = null;
-    int   rows   = rows();
-    int   size   = bagsz(rows,bagSizePct);
-    int[] sample = MemoryManager.malloc4((int)(size*1.10));
-    float f      = (float)bagSizePct;
-    int   cnt    = 0;  // Counter for resetting Random
-    int   j      = 0;  // Number of selected samples
-    // compute
-    for( int i=0; i<rows; i++ ) {
-      if( cnt--==0 ) {
-        /* NOTE: Before changing used generator think about which kind of random generator you need:
-         * if always deterministic or non-deterministic version - see hex.rf.Utils.get{Deter}RNG */
-        long chunkSamplingSeed = chunkSampleSeed(seed, i);
-        rand = Utils.getDeterRNG(chunkSamplingSeed);
-        cnt  = rowsPerChunk-1;
-        if( i+2*rowsPerChunk > rows ) cnt = rows; // Last chunk is big
-      }
-      float randFloat = rand.nextFloat();
-      if( randFloat < f ) {
-        if( j == sample.length ) sample = Arrays.copyOfRange(sample,0,(int)(sample.length*1.2));
-        sample[j++] = i;
-      }
-    }
-    return Arrays.copyOf(sample,j); // Trim out bad rows
-  }
-
-  /** This method returns the correct seed based on initial seed and row index.
-   *  WARNING : this method is crucial for correct replay of sampling.
-   */
-  static long chunkSampleSeed(long seed, int rowIdx) { return seed + ((long)rowIdx<<16); }
-
-  /** Strata is a dataset group which corresponds to a class.
-   * Sampling is specified per strata group -
-   *
-   * Stratified sampling look only at local data.
-   */
-  private int[] sampleLocalStratified(float[] samplePerStrata, long seed, int rowsPerChunk) {
-    // preconditions
-    assert samplePerStrata.length == _dapt.classes() : "There is not enought number of samples for individual stratas!";
-    // precomputing - find the largest sample and compute the bag size for it
-    float largestSample = 0.0f;
-    for (float sample : samplePerStrata) if (sample > largestSample) largestSample = sample;
-    // compute
-    Random rand   = null;
-    int    rows   = rows();
-    int[]  sample = new int[(int) (largestSample*rows)]; // be little bit more pessimistic
-    int    j      = 0;
-    int    cnt    = 0;
-    // collect samples per strata
-    for (int i=0; i<rows; i++) {
-      if( cnt--==0 ) {
-        long chunkSamplingSeed = chunkSampleSeed(seed, i);
-        rand = Utils.getDeterRNG(chunkSamplingSeed);
-        cnt  = rowsPerChunk-1;
-        if( i+2*rowsPerChunk > rows ) cnt = rows; // Last chunk is big
-      }
-      float randFloat = rand.nextFloat();
-      int strata = _dapt.classOf(i); // strata groups are represented by response classes
-      if (randFloat < samplePerStrata[strata]) {
-        if( j == sample.length ) sample = Arrays.copyOfRange(sample,0,(int)(sample.length*1.2));
-        sample[j++] = i;
-      }
-    }
-    return Arrays.copyOf(sample,j);
-  }
-
-  /** added for stratified sampling, uniformly picks sample of n elements from the given interval */
-  private int sampleFromClass(int c, int n, int startIdx, int sample [], Random r) {
-    int iStart = _dapt.getIntervalsStarts()[c];
-    int iEnd = _dapt.getIntervalsStarts()[c+1];
-    int iWidth = iEnd - iStart;
-    for(int i = 0; i < n; ++i){
-      int candidate = iStart + r.nextInt(iWidth);
- //FIXME     while(_dapt.badRow(candidate)){
-//        if(candidate == iStart)candidate = iStart + iWidth;
-        //--candidate;
-//      }
-      sample[startIdx++] = candidate;
-    }
-    return startIdx;
-  }
-
-  public Data sample(float[] samplePerStrata, long seed, int rowsPerChunk) {
-
-    int sample[] = sampleLocalStratified(samplePerStrata, seed, rowsPerChunk);
-    Arrays.sort(sample);
-    // -debug
-    System.out.println("Data.sample(): strata = " + Arrays.toString(samplePerStrata));
-    int   sumHisto = 0;
-    int[] histo = new int[_dapt.classes()];
-    for (int i = 0; i < rows(); i++) histo[_dapt.classOf(i)]++;
-    for (int h : histo) sumHisto += h;
-
-    int sumSampledHisto = 0;
-    int[] sampledHisto = new int[_dapt.classes()];
-    for (int i : sample) sampledHisto[_dapt.classOf(i)]++;
-    for (int h : sampledHisto) sumSampledHisto += h;
-
-    System.out.println("Total: " + sumSampledHisto + "/" + sumHisto + " (" + 100*sumSampledHisto/sumHisto );
-    for (int i = 0; i < histo.length; i++) {
-      System.out.println("Class " + i + " " + sampledHisto[i] + "/" + histo[i] + " (" + 100*sampledHisto[i]/histo[i]);
-    }
-    // -end of debug
-    return new Subset(this, sample, 0, sample.length);
-  }
-
   public Data sample(int [] strata, long seed) {
     int sz = 0;
     for(int s:strata)sz += s;
@@ -247,20 +135,20 @@ public class Data implements Iterable<Row> {
     Arrays.sort(sample); // we want an ordered sample
     return new Subset(this, sample, 0, sample.length);
   }
-
-  // Deterministically sample the 'this' Data at the bagSizePct.  Toss out
-  // invalid rows (as-if not sampled), but maintain the sampling rate.
-  public Data sample(double bagSizePct, long seed, int numrows) {
-    assert getClass()==Data.class; // No subclassing on this method
-    int [] sample;
-    sample = sampleFair(bagSizePct,seed,numrows);
-    // add the remaining rows
-    Arrays.sort(sample); // we want an ordered sample
-    return new Subset(this, sample, 0, sample.length);
-  }
-  private int bagsz( int rows, double bagSizePct ) {
-    int size = (int)(rows * bagSizePct);
-    return (size>0 || rows==0) ? size : 1;
+  /** added for stratified sampling, uniformly picks sample of n elements from the given interval */
+  private int sampleFromClass(int c, int n, int startIdx, int sample [], Random r) {
+    int iStart = _dapt.getIntervalsStarts()[c];
+    int iEnd = _dapt.getIntervalsStarts()[c+1];
+    int iWidth = iEnd - iStart;
+    for(int i = 0; i < n; ++i){
+      int candidate = iStart + r.nextInt(iWidth);
+ //FIXME     while(_dapt.badRow(candidate)){
+//        if(candidate == iStart)candidate = iStart + iWidth;
+        //--candidate;
+//      }
+      sample[startIdx++] = candidate;
+    }
+    return startIdx;
   }
 
   public Data complement(Data parent, short[] complement) { throw new Error("Only for subsets."); }

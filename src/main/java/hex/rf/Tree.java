@@ -26,41 +26,31 @@ public class Tree extends CountedCompleter {
    */
   public static final int ROWS_FORK_TRESHOLD = 1<<11;
 
-
   final StatType _type;         // Flavor of split logic
   final Data     _data;         // Data source
+  final Sampling _sampler;      // Sampling strategy
   final int      _data_id;      // Data-subset identifier (so trees built on this subset are not validated on it)
   final int      _max_depth;    // Tree-depth cutoff
   final int      _numSplitFeatures;  // Number of features to check at each splitting (~ split features)
   INode          _tree;         // Root of decision tree
   ThreadLocal<Statistic>[] _stats  = new ThreadLocal[2];
   final Job      _job;          // DRF job building this tree
-  final int      _alltrees;     // Number of trees expected to build a complete model
   final long     _seed;         // Pseudo random seed: used to playback sampling
-  final int      _numrows;      // Used to playback sampling
-  final float    _sample;       // Sample rate
-  Sampling.Strategy _samplingStrategy;
-  int []         _strataSamples;
   transient int  _verbose ;
   int            _exclusiveSplitLimit;
 
   /**
    * Constructor used to define the specs when building the tree from the top
    */
-  public Tree(final Data data, int max_depth, double min_error_rate, StatType stat, int numSplitFeatures, long seed, Job job, int treeId, int alltrees, float sample, int rowsize, Sampling.Strategy samplingStrategy, int [] strataSamples, int verbose, int exclusiveSplitLimit) {
+  public Tree(final Data data, int max_depth, double min_error_rate, StatType stat, int numSplitFeatures, long seed, final Job job, int treeId, int verbose, int exclusiveSplitLimit, final Sampling sampler) {
     _type             = stat;
     _data             = data;
     _data_id          = treeId; //data.dataId();
     _max_depth        = max_depth-1;
     _numSplitFeatures = numSplitFeatures;
     _job              = job;
-    _alltrees         = alltrees;
     _seed             = seed;
-    assert sample <= 1.0f : "Sample should in interval (0,1] but it is " + sample;
-    _sample           = sample;
-    _numrows          = rowsize;
-    _samplingStrategy = samplingStrategy;
-    _strataSamples    = strataSamples;
+    _sampler          = sampler;
     _verbose          = verbose;
     _exclusiveSplitLimit = exclusiveSplitLimit;
   }
@@ -107,26 +97,13 @@ public class Tree extends CountedCompleter {
     return sb;
   }
 
-  /** Sample node's local data according to current sampling strategy. */
-  private Data sampleLocalData() {
-    switch (_samplingStrategy) {
-    case STRATIFIED_LOCAL      :
-      float[] s = new float[_strataSamples.length];
-      for(int i=0; i<_strataSamples.length; i++) s[i] = _strataSamples[i]/100.0f;
-      return _data.sample(s,_seed,_numrows);
-//    case STRATIFIED_DISTRIBUTED: return _data.sample(_strataSamples,_seed);
-    case RANDOM                :
-    default                    : return _data.sample(_sample,_seed,_numrows);
-    }
-  }
-
   // Actually build the tree
   public void compute() {
     if(!_job.cancelled()) {
       Timer timer    = new Timer();
       _stats[0]      = new ThreadLocal<Statistic>();
       _stats[1]      = new ThreadLocal<Statistic>();
-      Data         d = sampleLocalData();
+      Data         d = _sampler.sample(_data, _seed);
       Statistic left = getStatistic(0, d, _seed, _exclusiveSplitLimit);
       // calculate the split
       for( Row r : d ) left.addQ(r);

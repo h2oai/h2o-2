@@ -41,13 +41,24 @@ public class RandomForest {
     for (int i = 0; i < ntrees; ++i) {
       long treeSeed = rnd.nextLong() + TREE_SEED_INIT; // make sure that enough bits is initialized
       trees[i] = new Tree( data, maxTreeDepth, minErrorRate, stat, numSplitFeatures, treeSeed,
-                           drf._job,i,drf._ntrees, drf._sample, drf._numrows,
-                           drf._samplingStrategy, drf._strataSamples,
-                           drf._verbose, drf._exclusiveSplitLimit );
+                           drf._job,i, drf._verbose, drf._exclusiveSplitLimit, createSampler(drf) );
       if (!parallelTrees)   DRemoteTask.invokeAll(new Tree[]{trees[i]});
     }
     if(parallelTrees)DRemoteTask.invokeAll(trees);
     Utils.pln("All trees ("+ntrees+") done in "+ t_alltrees);
+  }
+
+  static Sampling createSampler(final DRF drf) {
+    switch(drf._samplingStrategy) {
+    case RANDOM          : return new Sampling.Random(drf._sample, drf._numrows);
+    case STRATIFIED_LOCAL:
+      float[] ss = new float[drf._strataSamples.length];
+      for (int i=0;i<ss.length;i++) ss[i] = drf._strataSamples[i] / 100.f;
+      return new Sampling.StratifiedLocal(ss, drf._numrows);
+    default:
+      assert false : "Unsupported sampling strategy";
+      return null;
+    }
   }
 
 
