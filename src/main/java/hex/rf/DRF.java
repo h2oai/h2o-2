@@ -1,5 +1,6 @@
 package hex.rf;
 import hex.rf.MinorityClasses.UnbalancedClass;
+import hex.rf.Sampling.Strategy;
 import hex.rf.Tree.StatType;
 
 import java.util.*;
@@ -107,7 +108,12 @@ public final class DRF extends water.DRemoteTask {
 
     // Construct the RFModel to be trained
     DRF drf      = new DRF();
-    float[] ssamples = new float[strataSamples.length]; for (int i=0;i<ssamples.length;i++) ssamples[i] = strataSamples[i]/100.0f;
+    // This should removed
+    float[] ssamples = null;
+    if (samplingStrategy==Strategy.STRATIFIED_LOCAL) {
+      ssamples = new float[strataSamples.length];
+      for (int i=0;i<ssamples.length;i++) ssamples[i] = strataSamples[i]/100.0f;
+    }
     drf._rfmodel = new RFModel(modelKey, cols, ary._key,
                                new Key[0], ary._cols.length, samplingStrategy, sample, ssamples, numSplitFeatures, ntrees);
     // Fill in args into DRF
