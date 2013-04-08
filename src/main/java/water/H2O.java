@@ -877,6 +877,8 @@ public final class H2O {
     // Turn on to see copious cache-cleaning stats
     static public final boolean VERBOSE = Boolean.getBoolean("h2o.cleaner.verbose");
 
+    boolean _diskFull = false;
+
     public Cleaner() {
       super("Memory Cleaner");
       setDaemon(true);
@@ -888,7 +890,15 @@ public final class H2O {
       MemoryManager.set_goals("init",false);
     }
 
+    static boolean lazyPersist(){ // free disk > our DRAM?
+      return H2O.SELF._heartbeat.get_free_disk() > MemoryManager.MEM_MAX;
+    }
+    static boolean isDiskFull(){ // free disk space < 5 megs?
+      File f = new File(PersistIce.ROOT);
+      return f.getUsableSpace() < (5 << 10);
+    }
     public void run() {
+      boolean diskFull = false;
       while (true) {
         // Sweep the K/V store, writing out Values (cleaning) and free'ing
         // - Clean all "old" values (lazily, optimistically)
@@ -920,6 +930,8 @@ public final class H2O {
         // If lazy, store-to-disk things down to 1/2 the desired cache level
         // and anything older than 5 secs.
         boolean force = (h._cached >= DESIRED); // Forced to clean
+        if(force && diskFull)
+          diskFull = isDiskFull();
         long clean_to_age = h.clean_to(force ? DESIRED : (DESIRED>>1));
         // If not forced cleaning, expand the cleaning age to allows Values
         // more than 5sec old
@@ -933,6 +945,7 @@ public final class H2O {
         // For faster K/V store walking get the NBHM raw backing array,
         // and walk it directly.
         Object[] kvs = STORE.raw_array();
+
         // Start the walk at slot 2, because slots 0,1 hold meta-data
         for( int i=2; i<kvs.length; i += 2 ) {
           // In the raw backing array, Keys and Values alternate in slots
@@ -962,14 +975,28 @@ public final class H2O {
 
           // Should I write this value out to disk?
           // Should I further force it from memory?
-          if( force || lazy_clean(key) ) {
-            if( VERBOSE && !val.isPersisted() ) { System.out.print('.'); cleaned += m.length; }
-            val.storePersist(); // Write to disk
-            if( force ) val.freeMem(); // And, under pressure, free mem
-            if( VERBOSE ) freed += m.length;
+          if(!val.isPersisted() && !diskFull && (force || (lazyPersist() && lazy_clean(key)))) {
+            if( VERBOSE) { System.out.print('.'); cleaned += m.length; }
+            try{
+              val.storePersist(); // Write to disk
+            } catch(IOException e) {
+              if(diskFull = isDiskFull()) // disk full?
+                System.err.println("Disk full! Disabling swapping to disk." + ((force)?" Memory low! Please free some space in " + PersistIce.ROOT+"!":""));
+              else {
+                System.err.println("Disk swapping failed! " + e.getMessage());
+                // Something is wrong so mark disk as full anyways so we do not attempt to write again.
+                // (will retry next run when memory is low)
+                diskFull = true;
+              }
+            }
+          }
+          if(force && val.isPersisted()){
+            val.freeMem(); // And, under pressure, free mem
+            freed += m.length;
           }
         }
-
+        if(force && (freed < DESIRED) && isDiskFull())
+          UDPRebooted.suicide(UDPRebooted.T.oom, H2O.SELF);
         h = _myHisto.histo(true); // Force a new histogram
         MemoryManager.set_goals("postclean",false);
         if( VERBOSE )
@@ -988,7 +1015,6 @@ public final class H2O {
       Key arykey = ValueArray.getArrayKey(key);
       return arykey.user_allowed(); // Write user keys but not system keys
     }
-
 
     // Histogram class
     public static class Histo {
