@@ -14,7 +14,6 @@ import java.util.*;
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.Job.ChunkProgress;
 import water.Job.ChunkProgressJob;
 import water.ValueArray.Column;
 import water.api.Constants;
@@ -418,7 +417,7 @@ public abstract class DGLM {
     }
   }
 
-  public static class GLMModel extends Model {
+  public static class GLMModel extends water.Model {
     public enum Status {NotStarted,ComputingModel,ComputingValidation,Done,Cancelled,Error};
     String _error;
     final Sampling _s;
