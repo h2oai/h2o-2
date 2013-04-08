@@ -33,8 +33,8 @@ class Basic(unittest.TestCase):
     def test_GLM_allstate_s3n_thru_hdfs(self):
         # csvFilename = "covtype20x.data"
         # csvPathname = csvFilename
-        csvFilename = "year1987"
-        csvPathname = csvFilename + "*"
+        csvFilename = "year1987.csv"
+        csvPathname = csvFilename
         # https://s3.amazonaws.com/home-0xdiag-datasets/allstate/train_set.csv
         URI = "s3n://h2o-airlines-unpacked/"
         s3nKey = URI + csvPathname
