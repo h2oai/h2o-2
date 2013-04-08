@@ -332,8 +332,4 @@ public final class DRF extends water.DRemoteTask {
 
     Utils.pln("Web arguments: " + _ + " key "+ary._key);
   }
-
-  class DRFBuilder {
-
-  }
 }

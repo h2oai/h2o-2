@@ -202,10 +202,10 @@ public class Confusion extends MRTask {
     // we trained on during voting.
     for( int ntree = 0; ntree < _model.treeCount(); ntree++ ) {
       long seed = _model.seed(ntree);
-      long init_row = _chunk_row_mapping[nchk];
+      int  init_row = _chunk_row_mapping[nchk];
       /* NOTE: Before changing used generator think about which kind of random generator you need:
        * if always deterministic or non-deterministic version - see hex.rf.Utils.get{Deter}RNG */
-      seed = seed + (init_row<<16);
+      seed = Sampling.chunkSampleSeed(seed, init_row);
       Random rand = Utils.getDeterRNG(seed);
       // Now for all rows, classify & vote!
       ROWS: for( int row = 0; row < rows; row++ ) {
