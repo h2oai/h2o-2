@@ -966,11 +966,6 @@ public abstract class DGLM {
     }
 
     @Override
-    public int resultSz(){
-      return (_N*_N << 2) + (_N << 3);
-    }
-
-    @Override
     public Gram newResult(){
       if(_computeXX)return new Gram(_N);
       // else we do not have to allocate XX
