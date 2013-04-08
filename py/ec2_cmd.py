@@ -421,7 +421,11 @@ def main():
         dump_ssh_commands(ec2_config, reservation)
         if (args.action == 'demo'):
             args.hosts = filename
-            invoke_hosts_action('start_h2o', hosts_cfg, args)
+            try:
+                invoke_hosts_action('start_h2o', hosts_cfg, args)
+            finally:
+                invoke_hosts_action('terminate', hosts_cfg, args)
+
     elif (args.action == 'show_defaults'):
         print 
         print "\033[92mConfig\033[0m : {0}".format(json.dumps(DEFAULT_EC2_INSTANCE_CONFIGS,indent=2))
