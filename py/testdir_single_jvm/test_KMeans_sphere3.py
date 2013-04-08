@@ -6,8 +6,9 @@ import random
 import math
 
 # a truly uniform sphere
-# While I prefer the discarding method for spheres, for completeness 
-# I offer the exact solution: http://stackoverflow.com/questions/918736/random-number-generator-that-produces-a-power-law-distribution/918782#918782
+# http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution
+# While the author prefers the discarding method for spheres, for completeness 
+# he offers the exact solution: http://stackoverflow.com/questions/918736/random-number-generator-that-produces-a-power-law-distribution/918782#918782
 # In spherical coordinates, taking advantage of the sampling rule:
 # http://stackoverflow.com/questions/2106503/pseudorandom-number-generator-exponential-distribution/2106568#2106568
 def get_xyz_sphere(R):
