@@ -1075,7 +1075,7 @@ public abstract class DGLM {
       long t1 = System.currentTimeMillis();
       NewRowVecTask<GLMValidation> tsk = new NewRowVecTask<GLMValidation>(job,this, data);
       tsk.invoke(data._ary._key);
-      if(job.cancelled())
+      if(job != null && job.cancelled())
         throw new JobCancelledException();
       GLMValidation res = tsk._result;
       res._time = System.currentTimeMillis()-t1;
@@ -1222,7 +1222,7 @@ public abstract class DGLM {
         }
         @Override
         public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
-          job.onException(ex);
+          if(job != null) job.onException(ex);
           return super.onExceptionalCompletion(ex, caller);
         }
     });

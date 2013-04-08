@@ -143,7 +143,7 @@ public class NewRowVecTask<T extends Iced> extends MRTask {
 
   @Override
   public void map(Key key) {
-    if(_job.cancelled())return;
+    if(_job != null && _job.cancelled())return;
     T result = _func.newResult();
     Sampling s = _data.getSampling();
     AutoBuffer bits = _data._ary.getChunk(key);
