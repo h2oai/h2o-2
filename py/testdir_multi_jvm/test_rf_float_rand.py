@@ -5,6 +5,7 @@ import h2o, h2o_cmd
 import h2o_browse as h2b
 import random
 
+print "ASSUMING max FP single precision (hex rep. 7f7f ffff) approx. 3.4028234 * 10**38"
 
 def write_syn_dataset(csvPathname, rowCount, headerData):
     dsf = open(csvPathname, "w+")
@@ -30,7 +31,7 @@ def rand_rowData():
     # data is best? if we put all 0s or 1, then I guess it will be bits?
     rowData = str(random.uniform(0,7))
     for i in range(7):
-        rowData = rowData + "," + str(random.uniform(-1e59,1e59))
+        rowData = rowData + "," + str(random.uniform(-1e30,1e30))
     return rowData
 
 class parse_rand_schmoo(unittest.TestCase):
