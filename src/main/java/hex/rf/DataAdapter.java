@@ -13,32 +13,35 @@ import water.util.Utils;
  *
  * Missing values, NaNs and Infinity are treated as BAD data. */
 final class DataAdapter  {
-  public final ValueArray _ary;
 
   /** Place holder for missing data, NaN, Inf in short encoding.*/
   static final short BAD = Short.MIN_VALUE;
+
+  /** Data to load */
+  public final ValueArray _ary;
   /** Number of classes. */
-  private int _numClasses;
+  private final int _numClasses;
   /** ??? */
   private int [] _intervalsStarts;
   /** Columns. */
-  private final Col[] _c;
+  private final Col[]    _c;
   /** Unique cookie identifying this dataset*/
-  private final long _dataId;
+  private final long     _dataId;
   /** Seed for sampling */
-  private final long _seed;
-  public final int _numRows;
-  public final double[] _classWt;
+  private final long     _seed;
+  /** Number of rows */
+  public  final int      _numRows;
+  /** Class weights */
+  public  final double[] _classWt;
   /** Maximum arity for a column (not a hard limit) */
-  final short _bin_limit;
-  /** Number of bad rows */
+  private final int      _binLimit;
 
   DataAdapter(ValueArray ary, RFModel model, int[] modelDataMap, int rows,
-              long unique, long seed, short bin_limit, double[] classWt) {
+              long unique, long seed, int binLimit, double[] classWt) {
     assert model._dataKey == ary._key;
     _ary = ary;
     _seed = seed+(unique<<16); // This is important to preserve sampling selection!!!
-    _bin_limit = bin_limit;
+    _binLimit = binLimit;
     _dataId = unique;
     _numRows = rows;
     _numClasses = model.classes();
@@ -46,7 +49,7 @@ final class DataAdapter  {
     _c = new Col[model._va._cols.length];
     for( int i = 0; i < _c.length; i++ ) {
       assert ary._cols[modelDataMap[i]]._name.equals(model._va._cols[i]._name);
-      _c[i]= new Col(model._va._cols[i]._name, rows, i == _c.length-1,_bin_limit, model._va._cols[i].isFloat());
+      _c[i]= new Col(model._va._cols[i]._name, rows, i == _c.length-1,_binLimit, model._va._cols[i].isFloat());
     }
     boolean trivial = true;
     if (classWt != null) for(double f: classWt) if (f != 1.0) trivial = false;
@@ -129,7 +132,7 @@ final class DataAdapter  {
     int invalidValues;
     float min, max;
 
-    Col(String s, int rows, boolean isClass_, short binLimit_, boolean isFloat_) {
+    Col(String s, int rows, boolean isClass_, int binLimit_, boolean isFloat_) {
       name = s; isFloat = isFloat_; isClass = isClass_; binLimit = binLimit_;
       raw = MemoryManager.malloc4f(rows);
     }
