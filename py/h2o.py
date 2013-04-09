@@ -1121,7 +1121,7 @@ class H2O(object):
 
         browseAlso = kwargs.get('browseAlso', False)
         if (browseAlso | browse_json):
-            print "Viewing the GLM grid result through the browser"
+            print "Viewing the GLM result through the browser"
             h2b.browseJsonHistoryAsUrlLastMatch('GLMProgressPage')
             time.sleep(5)
         return a

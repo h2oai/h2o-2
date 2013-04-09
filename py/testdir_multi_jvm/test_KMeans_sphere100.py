@@ -11,6 +11,11 @@ import math
 # he offers the exact solution: http://stackoverflow.com/questions/918736/random-number-generator-that-produces-a-power-law-distribution/918782#918782
 # In spherical coordinates, taking advantage of the sampling rule:
 # http://stackoverflow.com/questions/2106503/pseudorandom-number-generator-exponential-distribution/2106568#2106568
+global CLUSTERS, SPHERE_PTS
+CLUSTERS = 2
+SPHERE_PTS = 10000
+ALLOWED_DELTA = 1
+
 def get_xyz_sphere(R):
     phi = random.uniform(0, 2 * math.pi)
     costheta = random.uniform(-1,1)
@@ -33,12 +38,21 @@ def write_spheres_dataset(csvPathname, CLUSTERS, n):
     # R is radius of the spheres
     # separate them by 3 * the previous R
     # keep track of the centers so we compare to a sorted result from H2O
+    print "To keep life interesting:"
+    print "make the multiplier, between 3 and 9 in just one direction"
+    print "pick x, y, or z direction randomly"
+    print "We tack the centers created, and assert against the H2O results, so 'correct' is checked"
+    print "Increasing radius for each basketball. (R)"
     centersList = []
     currentCenter = None
     totalRows = 0
     for sphereCnt in range(CLUSTERS):
         R = 10 * (sphereCnt+1)
-        newOffset = [3*R,3*R,3*R]
+        jump = random.randint(3*R,(3*R)+9)
+        xyzChoice = random.randint(0,2)
+        newOffset = [0,0,0]
+        newOffset[xyzChoice] = jump
+
         # figure out the next center
         if currentCenter is None:
             currentCenter = [0,0,0]
@@ -70,8 +84,8 @@ class Basic(unittest.TestCase):
         global SEED
         SEED = random.randint(0, sys.maxint)
         # for repeatability of case that fails
-        SEED = 5987531387942634479
-
+        # SEED = 5987531387942634479
+        SEED = 6050079225893213627
         random.seed(SEED)
         print "\nUsing random seed:", SEED
 
@@ -88,8 +102,6 @@ class Basic(unittest.TestCase):
 
     def test_kmeans_sphere100(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
-        CLUSTERS = 5
-        SPHERE_PTS = 10000
         csvFilename = 'syn_spheres100.csv'
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename
         centersList = write_spheres_dataset(csvPathname, CLUSTERS, SPHERE_PTS)
@@ -98,9 +110,9 @@ class Basic(unittest.TestCase):
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
 
         # try 5 times, to see if all inits by h2o are good
-        for trial in range(5):
+        for trial in range(3):
             kwargs = {'k': CLUSTERS, 'epsilon': 1e-6, 'cols': None, 'destination_key': 'syn_spheres100.hex'}
-            timeoutSecs = 30
+            timeoutSecs = 100
             start = time.time()
             kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
@@ -115,24 +127,40 @@ class Basic(unittest.TestCase):
 
             # cluster centers can return in any order
             clusters = kmeansResult['KMeansModel']['clusters']
-            clustersSorted = sorted(clusters, key=itemgetter(0))
+            # the way we create the centers above, if we sort on the sum of xyz
+            # we should get the order the same as when they were created.
+            # to be safe, we'll sort the centers that were generated too, the same way
+            clustersSorted = sorted(clusters, key=sum)
+            centersSorted = sorted(centersList, key=sum)
             ### print clustersSorted
 
-            print "\nh2o result, centers sorted"
+            print "\nh2o result, centers (sorted by key=sum)"
             print clustersSorted
-            print "\ngenerated centers"
-            print centersList
-            for i,center in enumerate(centersList):
-                a = center
+            print "\ngenerated centers (sorted by key=sum)"
+            print centersSorted
+            for i,center in enumerate(centersSorted):
+                # Doing the compare of gen'ed/actual centers is kind of a hamming distance problem.
+                # Assuming that the difference between adjacent sums of all center values, 
+                # is greater than 2x the sum of all max allowed variance on each value, 
+                # Then the sums will be unique and non-overlapping with allowed variance.
+                # So a sort of the centers, keyed on sum of all values for a center
+                # will create an ordering that can be compared. 
+                # sort gen'ed and actual separately.
+                # A check on the adjacent center constraint (with allowed variance) is done while gen'ing)
+                a = centersSorted
                 b = clustersSorted[i]
                 print "\nexpected:", a
                 print "h2o:", b # h2o result
                 aStr = ",".join(map(str,a))
                 bStr = ",".join(map(str,b))
                 iStr = str(i)
-                self.assertAlmostEqual(a[0], b[0], delta=1, msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+" x not correct.")
-                self.assertAlmostEqual(a[1], b[1], delta=1, msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+" y not correct.")
-                self.assertAlmostEqual(a[2], b[2], delta=1, msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+" z not correct.")
+
+                self.assertAlmostEqual(a[0], b[0], delta=ALLOWED_DELTA, 
+                    msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+" x not correct.")
+                self.assertAlmostEqual(a[1], b[1], delta=ALLOWED_DELTA, 
+                    msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+" y not correct.")
+                self.assertAlmostEqual(a[2], b[2], delta=ALLOWED_DELTA, 
+                    msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+" z not correct.")
 
             print "Trial #", trial, "completed"
 
