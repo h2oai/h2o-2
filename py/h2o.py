@@ -734,7 +734,7 @@ class H2O(object):
     # no noise if None
     def poll_url(self, response, 
         timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=15,
-        noise=None):
+        noPoll=False, noise=None):
         ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs 
         verboseprint('poll_url input: response:', dump_json(response))
 
@@ -800,6 +800,10 @@ class H2O(object):
                        "status: %s, url: %s?%s" % (status, urlUsed, argsStr)
                 raise Exception(emsg)
             count += 1
+
+
+            if noPoll:
+                return r
             # GLM can return partial results during polling..that's legal
             ### if 'GLMProgressPage' in urlUsed and 'GLMModel' in r:
             ###    print "INFO: GLM returning partial results during polling. Continuing.."
@@ -869,18 +873,17 @@ class H2O(object):
             raise Exception('H2O parse redirect is not Progress. Parse json response precedes.')
 
         if noPoll:
-            # don't wait for response! might have H2O throughput issues if send them back to back a lot?
-            return None
-        else:
-            # noise is a 2-tuple ("StoreView, none) for url plus args for doing during poll to create noise
-            # no noise if None
-            verboseprint('Parse.Json noise:', noise)
-            a = self.poll_url(a['response'],
-                timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
-                initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-                noise=noise)
-            verboseprint("\nParse result:", dump_json(a))
             return a
+
+        # noise is a 2-tuple ("StoreView, none) for url plus args for doing during poll to create noise
+        # no noise if None
+        verboseprint('Parse.Json noise:', noise)
+        a = self.poll_url(a['response'],
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+            noise=noise)
+        verboseprint("\nParse result:", dump_json(a))
+        return a
 
     def netstat(self):
         return self.__check_request(requests.get(self.__url('Network.json')))
@@ -1096,13 +1099,18 @@ class H2O(object):
         return a 
 
     def GLM(self, key, 
-        timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=30, noise=None, **kwargs):
+        timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=30, 
+        noPoll=False, noise=None, **kwargs):
 
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLM", **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
         if a['response']['redirect_request']!='GLMProgressPage':
             print dump_json(a)
             raise Exception('H2O GLM redirect is not GLMProgressPage. GLM json response precedes.')
+
+        if noPoll:
+            return a
+
         a = self.poll_url(a['response'],
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs, noise=noise)
@@ -1117,13 +1125,18 @@ class H2O(object):
 
     # this only exists in new. old will fail
     def GLMGrid(self, key, 
-        timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=30, noise=None, **kwargs):
+        timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=30,
+        noPoll=False, noise=None, **kwargs):
 
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLMGrid", **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
         if a['response']['redirect_request']!='GLMGridProgress':
             print dump_json(a)
             raise Exception('H2O GLMGrid redirect is not GLMGridProgress. GLMGrid json response precedes.')
+
+        if noPoll:
+            return a
+
         a = self.poll_url(a['response'],
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs, noise=noise)

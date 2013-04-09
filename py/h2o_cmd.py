@@ -16,7 +16,7 @@ def parseFile(node=None, csvPathname=None, key=None, key2=None,
         myKey2 = key2
     return node.parse(key, myKey2, header=header,
         timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-        noise=noise, noPoll=noPoll)
+        noPoll=noPoll, noise=noise)
 
 def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, 
     timeoutSecs=20, retryDelaySecs=2, pollTimeoutSecs=30, 
@@ -35,7 +35,7 @@ def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None,
         myKeyForParseResult = keyForParseResult
     return node.parse(s3_key, myKeyForParseResult, header=header,
         timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-        noise=noise, noPoll=noPoll)
+        noPoll=noPoll, noise=noise)
 
 def runInspect(node=None, key=None, timeoutSecs=5, **kwargs):
     if not key: raise Exception('No key for Inspect specified')
@@ -43,7 +43,7 @@ def runInspect(node=None, key=None, timeoutSecs=5, **kwargs):
     # FIX! currently there is no such thing as a timeout on node.inspect
     return node.inspect(key, **kwargs)
 
-def info_from_inspect(inspect, csvPathname):
+def infoFromInspect(inspect, csvPathname):
     # need more info about this dataset for debug
     cols = inspect['cols']
     # look for nonzero num_missing_values count in each col
@@ -185,8 +185,10 @@ def runRFTreeView(node=None, n=None, data_key=None, model_key=None, timeoutSecs=
 
 
 def runRFView(node=None, data_key=None, model_key=None, ntree=None, 
-    timeoutSecs=15, retryDelaySecs=2, noise=None, **kwargs):
+    timeoutSecs=15, retryDelaySecs=2, 
+    noPoll=False, noise=None, **kwargs):
     if not node: node = h2o.nodes[0]
+
     def test(n, tries=None):
         rfView = n.random_forest_view(data_key, model_key, timeoutSecs, noise=noise, **kwargs)
         status = rfView['response']['status']
@@ -226,6 +228,9 @@ def runRFView(node=None, data_key=None, model_key=None, ntree=None,
                     "Status: %s. %s trees done of %s desired" % (status, numberBuilt, ntree))
 
         return (status!='poll')
+
+    if noPoll:
+        return None
 
     node.stabilize(
             test,
