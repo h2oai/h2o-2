@@ -27,7 +27,7 @@ public class RF extends Request {
   protected final Bool              _oobee      = new Bool(OOBEE,true,"Out of bag error");
   protected final H2OKey            _modelKey   = new H2OKey(MODEL_KEY, RFModel.makeKey());
   /* Advanced settings */
-  protected final Int               _binLimit   = new Int(BIN_LIMIT,1024, 0,65535);
+  protected final Int               _binLimit   = new Int(BIN_LIMIT,1024, 0,65534);
   protected final LongInt           _seed       = new LongInt(SEED,0xae44a87f9edf1cbL,"High order bits make better seeds");
   protected final Bool              _parallel   = new Bool(PARALLEL,true,"Build trees in parallel");
   protected final Int               _exclusiveSplitLimit = new Int(EXCLUSIVE_SPLIT_LIMIT, null, 0, Integer.MAX_VALUE);
@@ -111,7 +111,7 @@ public class RF extends Request {
               ary,
               ntree,
               _depth.value(),
-              _binLimit.value().shortValue(),
+              _binLimit.value(),
               _statType.value(),
               _seed.value(),
               _parallel.value(),
