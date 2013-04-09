@@ -213,7 +213,7 @@ class Basic(unittest.TestCase):
                         '.data'
                     self.writeRows(csvPathname,newRows2,eol)
                     h2o_cmd.runRF(trees=1, csvPathname=csvPathname,
-                        timeoutSecs=10, retryDelaySecs=0.1)
+                        timeoutSecs=10, retryDelaySecs=0.1, noPrint=True, print_params=False)
                     h2o.verboseprint("Set", set)
                     h2o.check_sandbox_for_errors()
                     sys.stdout.write('.')
