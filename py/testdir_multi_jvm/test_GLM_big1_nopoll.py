@@ -13,9 +13,9 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1)
+            h2o.build_cloud(3)
         else:
-            h2o_hosts.build_cloud_with_hosts(1)
+            h2o_hosts.build_cloud_with_hosts(3)
 
     @classmethod
     def tearDownClass(cls):
@@ -31,10 +31,10 @@ class Basic(unittest.TestCase):
 
         glmInitial = []
         # dispatch multiple jobs back to back
-        for jobDispatch in xrange(3):
+        for jobDispatch in range(40):
 
             start = time.time()
-            kwargs = {'x': x, 'y': y, 'n_folds': 5}
+            kwargs = {'x': x, 'y': y, 'n_folds': 1}
             # FIX! what model keys do these get?
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=300, noPoll=True, **kwargs)
             glmInitial.append(glm)
