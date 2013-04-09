@@ -1,7 +1,6 @@
 import os, json, unittest, time, shutil, sys
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_kmeans, h2o_hosts
-from operator import itemgetter
 import random
 import math
 
@@ -12,7 +11,7 @@ import math
 # In spherical coordinates, taking advantage of the sampling rule:
 # http://stackoverflow.com/questions/2106503/pseudorandom-number-generator-exponential-distribution/2106568#2106568
 global CLUSTERS, SPHERE_PTS
-CLUSTERS = 2
+CLUSTERS = 3
 SPHERE_PTS = 10000
 ALLOWED_DELTA = 1
 
@@ -48,8 +47,14 @@ def write_spheres_dataset(csvPathname, CLUSTERS, n):
     totalRows = 0
     for sphereCnt in range(CLUSTERS):
         R = 10 * (sphereCnt+1)
-        jump = random.randint(3*R,(3*R)+9)
-        xyzChoice = random.randint(0,2)
+        if (1==0):
+            jump = random.randint(3*R,(3*R)+9)
+            xyzChoice = random.randint(0,2)
+        else:
+            print "FIX! temporarily limiting the center jumps to z dimension for easy understanding"
+            jump = 3*R
+            xyzChoice = 2
+
         newOffset = [0,0,0]
         newOffset[xyzChoice] = jump
 
@@ -57,7 +62,13 @@ def write_spheres_dataset(csvPathname, CLUSTERS, n):
         if currentCenter is None:
             currentCenter = [0,0,0]
         else:
+            lastCenter = currentCenter
             currentCenter  = [a+b for a,b in zip(currentCenter, newOffset)] 
+            if (sum(currentCenter) - sum(lastCenter) < (len(currentCenter)* ALLOWED_DELTA)):
+                print "ERROR: adjacent centers are too close for our sort algorithm"
+                print "currentCenter:", currentCenter, "lastCenter:", lastCenter
+                raise Exception
+                
         centersList.append(currentCenter)
 
         # build a sphere at that center
@@ -131,13 +142,17 @@ class Basic(unittest.TestCase):
             # we should get the order the same as when they were created.
             # to be safe, we'll sort the centers that were generated too, the same way
             clustersSorted = sorted(clusters, key=sum)
-            centersSorted = sorted(centersList, key=sum)
+            centersSorted  = sorted(centersList, key=sum)
             ### print clustersSorted
 
             print "\nh2o result, centers (sorted by key=sum)"
-            print clustersSorted
+            s = '{0:6.2f} {1:6.2f} {2:6.2f}'
+            for c in clustersSorted:
+                print s.format(*c)
             print "\ngenerated centers (sorted by key=sum)"
-            print centersSorted
+            for c in centersSorted:
+                print s.format(*c)
+            
             for i,center in enumerate(centersSorted):
                 # Doing the compare of gen'ed/actual centers is kind of a hamming distance problem.
                 # Assuming that the difference between adjacent sums of all center values, 
@@ -147,7 +162,7 @@ class Basic(unittest.TestCase):
                 # will create an ordering that can be compared. 
                 # sort gen'ed and actual separately.
                 # A check on the adjacent center constraint (with allowed variance) is done while gen'ing)
-                a = centersSorted
+                a = center
                 b = clustersSorted[i]
                 print "\nexpected:", a
                 print "h2o:", b # h2o result
@@ -155,17 +170,14 @@ class Basic(unittest.TestCase):
                 bStr = ",".join(map(str,b))
                 iStr = str(i)
 
-                self.assertAlmostEqual(a[0], b[0], delta=ALLOWED_DELTA, 
-                    msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+" x not correct.")
-                self.assertAlmostEqual(a[1], b[1], delta=ALLOWED_DELTA, 
-                    msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+" y not correct.")
-                self.assertAlmostEqual(a[2], b[2], delta=ALLOWED_DELTA, 
-                    msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+" z not correct.")
+                emsg = aStr+" != "+bStr+". Sorted cluster center "+iStr+" x not correct."
+                self.assertAlmostEqual(a[0], b[0], delta=ALLOWED_DELTA, msg=emsg)
+                emsg = aStr+" != "+bStr+". Sorted cluster center "+iStr+" y not correct."
+                self.assertAlmostEqual(a[1], b[1], delta=ALLOWED_DELTA, msg=emsg)
+                emsg = aStr+" != "+bStr+". Sorted cluster center "+iStr+" z not correct."
+                self.assertAlmostEqual(a[2], b[2], delta=ALLOWED_DELTA, msg=emsg)
 
             print "Trial #", trial, "completed"
-
-
-
 
 if __name__ == '__main__':
     h2o.unit_main()
