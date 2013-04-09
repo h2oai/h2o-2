@@ -20,7 +20,7 @@ def pickRandRfParams(paramDict, params):
         # test ask for 100
     return colX
 
-def simpleCheckRFView(node, rfv, noprint=False, **kwargs):
+def simpleCheckRFView(node, rfv, noPrint=False, **kwargs):
     if not node:
         node = h2o.nodes[0]
 
@@ -28,7 +28,7 @@ def simpleCheckRFView(node, rfv, noprint=False, **kwargs):
         warnings = rfv['warnings']
         # catch the 'Failed to converge" for now
         for w in warnings:
-            if not noprint: print "\nwarning:", w
+            if not noPrint: print "\nwarning:", w
             if ('Failed' in w) or ('failed' in w):
                 raise Exception(w)
 
@@ -42,7 +42,7 @@ def simpleCheckRFView(node, rfv, noprint=False, **kwargs):
     classification_error = cm['classification_error']
     rows_skipped = cm['rows_skipped']
     cm_type = cm['type']
-    if not noprint: 
+    if not noPrint: 
         print "classification_error * 100 (pct):", classification_error * 100
         print "rows_skipped:", rows_skipped
         print "type:", cm_type
@@ -62,13 +62,13 @@ def simpleCheckRFView(node, rfv, noprint=False, **kwargs):
     # individual scores can be all 0 if nothing for that output class
     # due to sampling
     classErrorPctList = []
-    predictedClassList = []
+    predictedClassDict = {} # may be missing some? so need a dict?
     for classIndex,s in enumerate(scoresList):
         classSum = sum(s)
         if classSum == 0 :
             # why would the number of scores for a class be 0? does RF CM have entries for non-existent classes
             # in a range??..in any case, tolerate. (it shows up in test.py on poker100)
-            if not noprint: print "class:", classIndex, "classSum", classSum, "<- why 0?"
+            if not noPrint: print "class:", classIndex, "classSum", classSum, "<- why 0?"
         else:
             # H2O should really give me this since it's in the browser, but it doesn't
             classRightPct = ((s[classIndex] + 0.0)/classSum) * 100
@@ -76,23 +76,24 @@ def simpleCheckRFView(node, rfv, noprint=False, **kwargs):
             classErrorPct = 100 - classRightPct
             classErrorPctList.append(classErrorPct)
             ### print "s:", s, "classIndex:", classIndex
-            if not noprint: print "class:", classIndex, "classSum", classSum, "classErrorPct:", "%4.2f" % classErrorPct
+            if not noPrint: print "class:", classIndex, "classSum", classSum, "classErrorPct:", "%4.2f" % classErrorPct
 
             # gather info for prediction summary
             for pIndex,p in enumerate(s):
-                if classIndex==0:
-                    predictedClassList.append(p)
+                if pIndex not in predictedClassDict:
+                    predictedClassDict[pIndex] = p
                 else:
-                    predictedClassList[pIndex] += p
+                    predictedClassDict[pIndex] += p
 
         totalScores += classSum
 
-    print "Predicted summary:"
-    for predictedClass, p in enumerate(predictedClassList):
-        print str(predictedClass)+":", p
+    if not noPrint: 
+        print "Predicted summary:"
+        # FIX! Not sure why we weren't working with a list..hack with dict for now
+        for predictedClass,p in predictedClassDict.items():
+            print str(predictedClass)+":", p
 
-    # this should equal the num rows in the dataset if full scoring? (minus any NAs)
-    if not noprint: 
+        # this should equal the num rows in the dataset if full scoring? (minus any NAs)
         print "totalScores:", totalScores
         print "totalRight:", totalRight
         pctRight = 100.0 * totalRight/totalScores

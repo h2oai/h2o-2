@@ -57,12 +57,18 @@
 ./n0.doit test_json_browse_both_exec.py
 ./n0.doit test_jstack.py
 ./n0.doit test_kaggle.py
+./n0.doit test_KMeans_allstate_s3n_thru_hdfs.py
+./n0.doit test_KMeans_cats_s3n_thru_hdfs.py
+./n0.doit test_KMeans_covtype20x.py
 ./n0.doit test_KMeans_params_rand2.py
+./n0.doit test_KMeans_sphere100.py
+./n0.doit test_KMeans_sphere3.py
 ./n0.doit test_many_cols_01.py
 ./n0.doit test_many_cols_0.py
 ./n0.doit test_many_cols_and_types.py
 ./n0.doit test_many_fp_formats.py
 ./n0.doit test_multi_with_a_browser.py
+./n0.doit test_parse_allstate_s3n_thru_hdfs.py
 ./n0.doit test_parse_covtype20x_s3n_thru_hdfs.py
 ./n0.doit test_parse_csvs_s3n_thru_hdfs.py
 ./n0.doit test_parse_file_loop.py
@@ -74,6 +80,7 @@
 ./n0.doit test_parse_small_nopoll2.py
 ./n0.doit test_parse_small_nopoll.py
 ./n0.doit test_parse_syn_s3n_thru_hdfs.py
+./n0.doit test_poisson_airline87_s3n_thru_hdfs.py
 ./n0.doit test_poisson_covtype20x_hosts.py
 ./n0.doit test_poker_1m_rf.py
 ./n0.doit test_put_1m_keys.py

@@ -48,12 +48,13 @@ print list(bigger_vec)
 # linear regression
 observed = R.FloatVector([1.1, 1.2, 1.3]) # native python list will not do!!
 theoretical = R.FloatVector([1.15, 1.25, 1.35])
-R.globalEnv['observed'] = observed
-R.globalEnv['theoretical'] = theoretical
+R.globalenv['observed'] = observed
+R.globalenv['theoretical'] = theoretical
 m = R.r.lm('theoretical ~ observed')
-R.abline(lm,col='color') # add regression line to EXISTING plot
-m['coefficients'][0][0] # intercept
-m['coefficients'][0][1] # slope
+# R.abline(lm,col='color') # add regression line to EXISTING plot
+# print m['coefficients'][0][0] # intercept
+print m
+# print m['coefficients'][0][1] # slope
 
 
 #Histogram: mid-points: 

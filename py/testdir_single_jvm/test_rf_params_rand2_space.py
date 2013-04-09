@@ -22,10 +22,10 @@ paramDict = {
         None,
         "0=10",
         "1=5",
-        "0=7,2=3",
-        "0=1,1=1,2=1,3=1,4=1,5=1,6=1,7=1,8=1,9=1",
-        "0=100,1=100,2=100,3=100,4=100,5=100,6=100,7=100,8=100,9=100",
-        "0=0,1=0,2=0,3=0,4=0,5=0,6=0,7=0,8=0,9=0",
+        "0=7,1=3",
+        "0=1,1=1",
+        "0=100,1=100",
+        "0=0,1=0",
         ]
     }
 
@@ -79,7 +79,7 @@ class Basic(unittest.TestCase):
             rfView = h2o_cmd.runRF(timeoutSecs=timeoutSecs, retryDelaySecs=1, csvPathname=csvPathname, **kwargs)
             elapsed = time.time()-start
             # just to get the list of per class errors
-            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(None, rfView, noprint=True)
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(None, rfView, noPrint=True)
             print "Trial #", trial, "completed in", elapsed, "seconds.", "%d pct. of timeout" % ((elapsed*100)/timeoutSecs), "\n"
             # why does this vary between 22 and 23
             self.assertAlmostEqual(totalScores,23,delta=1) # class 1 is 'yes'

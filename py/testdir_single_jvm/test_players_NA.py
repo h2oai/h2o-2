@@ -25,7 +25,7 @@ class Basic(unittest.TestCase):
         csvPathname = h2o.find_file('/home/0xdiag/datasets/ncaa/' + csvFilename)
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, timeoutSecs=15)
         inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
-        sum_num_missing_values = h2o_cmd.info_from_inspect(inspect, csvPathname)
+        sum_num_missing_values = h2o_cmd.infoFromInspect(inspect, csvPathname)
         self.assertEqual(sum_num_missing_values, 0,
                 "Players.csv should not have NAs (although it might have some rows with extras)")
 
