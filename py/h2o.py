@@ -1100,9 +1100,9 @@ class H2O(object):
 
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLM", **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
-        if a['response']['redirect_request']!='GLMProgress':
+        if a['response']['redirect_request']!='GLMProgressPage':
             print dump_json(a)
-            raise Exception('H2O GLM redirect is not GLMProgress. GLM json response precedes.')
+            raise Exception('H2O GLM redirect is not GLMProgressPage. GLM json response precedes.')
         a = self.poll_url(a['response'],
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs, noise=noise)
@@ -1111,7 +1111,7 @@ class H2O(object):
         browseAlso = kwargs.get('browseAlso', False)
         if (browseAlso | browse_json):
             print "Viewing the GLM grid result through the browser"
-            h2b.browseJsonHistoryAsUrlLastMatch('GLMProgress')
+            h2b.browseJsonHistoryAsUrlLastMatch('GLMProgressPage')
             time.sleep(5)
         return a
 
