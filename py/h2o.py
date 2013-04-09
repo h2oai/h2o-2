@@ -734,7 +734,7 @@ class H2O(object):
     # no noise if None
     def poll_url(self, response, 
         timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=15,
-        noise=None):
+        noPoll=False, noise=None):
         ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs 
         verboseprint('poll_url input: response:', dump_json(response))
 
@@ -800,8 +800,12 @@ class H2O(object):
                        "status: %s, url: %s?%s" % (status, urlUsed, argsStr)
                 raise Exception(emsg)
             count += 1
+
+
+            if noPoll:
+                return r
             # GLM can return partial results during polling..that's legal
-            ### if 'GLMProgress' in urlUsed and 'GLMModel' in r:
+            ### if 'GLMProgressPage' in urlUsed and 'GLMModel' in r:
             ###    print "INFO: GLM returning partial results during polling. Continuing.."
 
         return r
@@ -869,18 +873,17 @@ class H2O(object):
             raise Exception('H2O parse redirect is not Progress. Parse json response precedes.')
 
         if noPoll:
-            # don't wait for response! might have H2O throughput issues if send them back to back a lot?
-            return None
-        else:
-            # noise is a 2-tuple ("StoreView, none) for url plus args for doing during poll to create noise
-            # no noise if None
-            verboseprint('Parse.Json noise:', noise)
-            a = self.poll_url(a['response'],
-                timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
-                initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-                noise=noise)
-            verboseprint("\nParse result:", dump_json(a))
             return a
+
+        # noise is a 2-tuple ("StoreView, none) for url plus args for doing during poll to create noise
+        # no noise if None
+        verboseprint('Parse.Json noise:', noise)
+        a = self.poll_url(a['response'],
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+            noise=noise)
+        verboseprint("\nParse result:", dump_json(a))
+        return a
 
     def netstat(self):
         return self.__check_request(requests.get(self.__url('Network.json')))
@@ -999,7 +1002,7 @@ class H2O(object):
 
 
     # note ntree in kwargs can overwrite trees! (trees is legacy param)
-    def random_forest(self, data_key, trees, timeoutSecs=300, **kwargs):
+    def random_forest(self, data_key, trees, timeoutSecs=300, print_params=True, **kwargs):
         params_dict = {
             'data_key': data_key,
             'ntree':  trees,
@@ -1009,7 +1012,10 @@ class H2O(object):
             }
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
-        print "\nrandom_forest parameters:", params_dict
+
+        if print_params:
+            print "\nrandom_forest parameters:", params_dict
+
         a = self.__check_request(requests.get(
             url=self.__url('RF.json'),
             timeout=timeoutSecs,
@@ -1096,13 +1102,18 @@ class H2O(object):
         return a 
 
     def GLM(self, key, 
-        timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=30, noise=None, **kwargs):
+        timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=30, 
+        noPoll=False, noise=None, **kwargs):
 
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLM", **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
-        if a['response']['redirect_request']!='GLMProgress':
+        if a['response']['redirect_request']!='GLMProgressPage':
             print dump_json(a)
-            raise Exception('H2O GLM redirect is not GLMProgress. GLM json response precedes.')
+            raise Exception('H2O GLM redirect is not GLMProgressPage. GLM json response precedes.')
+
+        if noPoll:
+            return a
+
         a = self.poll_url(a['response'],
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs, noise=noise)
@@ -1111,19 +1122,24 @@ class H2O(object):
         browseAlso = kwargs.get('browseAlso', False)
         if (browseAlso | browse_json):
             print "Viewing the GLM grid result through the browser"
-            h2b.browseJsonHistoryAsUrlLastMatch('GLMProgress')
+            h2b.browseJsonHistoryAsUrlLastMatch('GLMProgressPage')
             time.sleep(5)
         return a
 
     # this only exists in new. old will fail
     def GLMGrid(self, key, 
-        timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=30, noise=None, **kwargs):
+        timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=30,
+        noPoll=False, noise=None, **kwargs):
 
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLMGrid", **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
         if a['response']['redirect_request']!='GLMGridProgress':
             print dump_json(a)
             raise Exception('H2O GLMGrid redirect is not GLMGridProgress. GLMGrid json response precedes.')
+
+        if noPoll:
+            return a
+
         a = self.poll_url(a['response'],
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs, noise=noise)

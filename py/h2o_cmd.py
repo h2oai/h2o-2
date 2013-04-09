@@ -16,7 +16,7 @@ def parseFile(node=None, csvPathname=None, key=None, key2=None,
         myKey2 = key2
     return node.parse(key, myKey2, header=header,
         timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-        noise=noise, noPoll=noPoll)
+        noPoll=noPoll, noise=noise)
 
 def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, 
     timeoutSecs=20, retryDelaySecs=2, pollTimeoutSecs=30, 
@@ -35,7 +35,7 @@ def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None,
         myKeyForParseResult = keyForParseResult
     return node.parse(s3_key, myKeyForParseResult, header=header,
         timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-        noise=noise, noPoll=noPoll)
+        noPoll=noPoll, noise=noise)
 
 def runInspect(node=None, key=None, timeoutSecs=5, **kwargs):
     if not key: raise Exception('No key for Inspect specified')
@@ -43,7 +43,7 @@ def runInspect(node=None, key=None, timeoutSecs=5, **kwargs):
     # FIX! currently there is no such thing as a timeout on node.inspect
     return node.inspect(key, **kwargs)
 
-def info_from_inspect(inspect, csvPathname):
+def infoFromInspect(inspect, csvPathname):
     # need more info about this dataset for debug
     cols = inspect['cols']
     # look for nonzero num_missing_values count in each col
@@ -146,7 +146,7 @@ def runRF(node=None, csvPathname=None, trees=5, key=None,
 # rfView can be used to skip the rf completion view
 # for creating multiple rf jobs
 def runRFOnly(node=None, parseKey=None, trees=5, 
-        timeoutSecs=20, retryDelaySecs=2, rfview=True, noise=None, **kwargs):
+        timeoutSecs=20, retryDelaySecs=2, rfview=True, noise=None, noPrint=False, **kwargs):
     if not parseKey: raise Exception('No parsed key for RF specified')
     if not node: node = h2o.nodes[0]
     #! FIX! what else is in parseKey that we should check?
@@ -158,7 +158,6 @@ def runRFOnly(node=None, parseKey=None, trees=5,
     # if we model_key was given to rf via **kwargs, remove it, since we're passing 
     # model_key from rf. can't pass it in two places. (ok if it doesn't exist in kwargs)
     data_key  = rf['data_key']
-    kwargs.pop('model_key',None)
     kwargs.pop('model_key',None)
     model_key = rf['model_key']
     rfCloud = rf['response']['h2o']
@@ -175,7 +174,7 @@ def runRFOnly(node=None, parseKey=None, trees=5,
     rfViewResult = None
     if rfview:
         rfViewResult = runRFView(node, data_key, model_key, ntree, 
-            timeoutSecs, retryDelaySecs, noise=noise, **kwargs)
+            timeoutSecs, retryDelaySecs, noise=noise, noPrint=noPrint, **kwargs)
     
     return rfViewResult
 
@@ -185,8 +184,10 @@ def runRFTreeView(node=None, n=None, data_key=None, model_key=None, timeoutSecs=
 
 
 def runRFView(node=None, data_key=None, model_key=None, ntree=None, 
-    timeoutSecs=15, retryDelaySecs=2, noise=None, **kwargs):
+    timeoutSecs=15, retryDelaySecs=2, 
+    noPoll=False, noise=None, noPrint=False, **kwargs):
     if not node: node = h2o.nodes[0]
+
     def test(n, tries=None):
         rfView = n.random_forest_view(data_key, model_key, timeoutSecs, noise=noise, **kwargs)
         status = rfView['response']['status']
@@ -207,7 +208,7 @@ def runRFView(node=None, data_key=None, model_key=None, ntree=None,
         errorInResponse = \
             numberBuilt<0 or ntree<0 or numberBuilt>ntree or \
             progress<0 or progressTotal<0 or progress>progressTotal or \
-            progressTotal!=(ntree+1) or \
+            progressTotal!=ntree or \
             ntree!=rfView['ntree']
             # rfView better always agree with what RF ntree was
 
@@ -227,6 +228,9 @@ def runRFView(node=None, data_key=None, model_key=None, ntree=None,
 
         return (status!='poll')
 
+    if noPoll:
+        return None
+
     node.stabilize(
             test,
             'random forest reporting %d trees' % ntree,
@@ -234,7 +238,7 @@ def runRFView(node=None, data_key=None, model_key=None, ntree=None,
 
     # kind of wasteful re-read, but maybe good for testing
     rfView = node.random_forest_view(data_key, model_key, timeoutSecs, noise=noise, **kwargs)
-    h2f.simpleCheckRFView(node, rfView)
+    h2f.simpleCheckRFView(node, rfView, noPrint=noPrint)
     return rfView
          
 def port_live(ip, port):

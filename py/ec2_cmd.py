@@ -149,9 +149,7 @@ def run_instances(count, ec2_config, region, waitForSSH=True, tags=None):
 
         # Tag instances
         try:
-            print tags
             if tags:
-                print tags
                 conn.create_tags([i.id for i in reservation.instances], tags)                        
         except:
             warn('Something wrong during tagging instances. Exceptions IGNORED!')
@@ -221,7 +219,7 @@ def wait_for_ssh(ips, port=22, skipAlive=True, requiredsuccess=3):
                 h2o_cmd.dot()
 
 
-def dump_hosts_config(ec2_config, reservation, filename=DEFAULT_HOSTS_FILENAME):
+def dump_hosts_config(ec2_config, reservation, filename=DEFAULT_HOSTS_FILENAME, save=True):
     if not filename: filename=DEFAULT_HOSTS_FILENAME
 
     cfg = {}
@@ -251,18 +249,22 @@ def dump_hosts_config(ec2_config, reservation, filename=DEFAULT_HOSTS_FILENAME):
     for cmd in cmds: 
         cfg['ec2_comment_ssh_{0}'.format(idx)] = cmd
         idx += 1
-    # save config
-    filename = filename.format(reservation.id)
-    with open(filename, 'w+') as f:
-        f.write(json.dumps(cfg, indent=4))
 
-    log("Host config dumped into {0}".format(filename))
-    log("To terminate instances call:")
-    log("\033[93mpython ec2_cmd.py terminate --hosts {0}\033[0m".format(filename))
-    log("To start H2O cloud call:")
-    log("\033[93mpython ec2_cmd.py start_h2o --hosts {0}\033[0m".format(filename))
-    log("To watch cloud in browser follow address:")
-    log("   http://{0}:{1}".format(reservation.instances[0].public_dns_name, cfg['base_port']))
+    if save:
+        # save config
+        filename = filename.format(reservation.id)
+        with open(filename, 'w+') as f:
+            f.write(json.dumps(cfg, indent=4))
+
+        log("Host config dumped into {0}".format(filename))
+        log("To terminate instances call:")
+        log("\033[93mpython ec2_cmd.py terminate --hosts {0}\033[0m".format(filename))
+        log("To start H2O cloud call:")
+        log("\033[93mpython ec2_cmd.py start_h2o --hosts {0}\033[0m".format(filename))
+        log("To watch cloud in browser follow address:")
+        log("   http://{0}:{1}".format(reservation.instances[0].public_dns_name, cfg['base_port']))
+
+    return (cfg, filename)
 
 def get_ssh_commands(ec2_config, reservation):
     cmds = []
@@ -393,7 +395,7 @@ def create_tags(**kwargs):
 
 def main():
     parser = argparse.ArgumentParser(description='H2O EC2 instances launcher')
-    parser.add_argument('action', choices=['demo', 'create', 'terminate', 'stop', 'reboot', 'start', 'distribute_h2o', 'start_h2o', 'show_defaults', 'dump_reservation', 'show_reservations'],  help='EC2 instances action\n\t\tAHOJ')
+    parser.add_argument('action', choices=['help', 'demo', 'create', 'terminate', 'stop', 'reboot', 'start', 'distribute_h2o', 'start_h2o', 'show_defaults', 'dump_reservation', 'show_reservations'],  help='EC2 instances action\n\t\tAHOJ')
     parser.add_argument('-c', '--config',    help='Configuration file to configure NEW EC2 instances (if not specified default is used - see "show_defaults")', type=str, default=None)
     parser.add_argument('-i', '--instances', help='Number of instances to launch', type=int, default=DEFAULT_NUMBER_OF_INSTANCES)
     parser.add_argument('-H', '--hosts',     help='Hosts file describing existing "EXISTING" EC2 instances ', type=str, default=None)
@@ -403,8 +405,10 @@ def main():
     parser.add_argument('--timeout',         help='Timeout in seconds.', type=int, default=None)
     args = parser.parse_args()
 
-    if (args.action == 'create'):
-        ec2_region = load_ec2_region(args.region)
+    ec2_region = load_ec2_region(args.region)
+    if (args.action == 'help'):
+        parser.print_help()
+    elif (args.action == 'create' or args.action == 'demo'):
         ec2_config = load_ec2_config(args.config, ec2_region)
         tags       = create_tags(Name=args.name)
         log("Region   : {0}".format(ec2_region))
@@ -412,8 +416,16 @@ def main():
         log("Instances: {0}".format(args.instances))
         log("Tags     : {0}".format(tags))
         reservation = run_instances(args.instances, ec2_config, ec2_region, tags=tags)
-        dump_hosts_config(ec2_config, reservation, args.hosts)
+        
+        hosts_cfg, filename   = dump_hosts_config(ec2_config, reservation, args.hosts)
         dump_ssh_commands(ec2_config, reservation)
+        if (args.action == 'demo'):
+            args.hosts = filename
+            try:
+                invoke_hosts_action('start_h2o', hosts_cfg, args)
+            finally:
+                invoke_hosts_action('terminate', hosts_cfg, args)
+
     elif (args.action == 'show_defaults'):
         print 
         print "\033[92mConfig\033[0m : {0}".format(json.dumps(DEFAULT_EC2_INSTANCE_CONFIGS,indent=2))
@@ -423,16 +435,20 @@ def main():
     elif (args.action == 'merge_reservations'):
         merge_reservations(args.reservations, args.region)
     elif (args.action == 'dump_reservation'):
-        ec2_region = load_ec2_region(args.region)
         ec2_config = load_ec2_config(args.config, ec2_region)
         ec2_reservation = load_ec2_reservation(args.reservation, ec2_region)
         dump_hosts_config(ec2_config, ec2_reservation, args.hosts)
     elif (args.action == 'show_reservations'):
         report_reservations(args.region, args.reservation)
     else: 
-        hosts_config = load_hosts_config(args.hosts)
+        if args.hosts: 
+            hosts_config = load_hosts_config(args.hosts)
+        elif args.reservation: # TODO allows for specifying multiple reservations and merge them
+            ec2_config      = load_ec2_config(args.config, ec2_region)
+            ec2_reservation = load_ec2_reservation(args.reservation, ec2_region)
+            hosts_config,_  = dump_hosts_config(ec2_config, ec2_reservation, save=False)
         invoke_hosts_action(args.action, hosts_config, args)
-        if (args.action == 'terminate'):
+        if (args.action == 'terminate' and args.hosts):
             log("Deleting {0} host file.".format(args.hosts))
             os.remove(args.hosts)
 

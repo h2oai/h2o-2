@@ -64,7 +64,7 @@ class Basic(unittest.TestCase):
 
 
         inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
-        h2o_cmd.info_from_inspect(inspect, csvPathname)
+        h2o_cmd.infoFromInspect(inspect, csvPathname)
 
         for trial in range(1):
             # params is mutable. This is default.

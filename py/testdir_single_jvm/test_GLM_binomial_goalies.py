@@ -57,7 +57,7 @@ class Basic(unittest.TestCase):
         inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
 
         # need more info about the dataset for debug
-        h2o_cmd.info_from_inspect(inspect, csvPathname)
+        h2o_cmd.infoFromInspect(inspect, csvPathname)
 
         # for determinism, I guess we should spit out the seed?
         # random.seed(SEED)

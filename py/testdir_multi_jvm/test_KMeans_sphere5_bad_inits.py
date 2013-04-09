@@ -86,7 +86,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_kmeans_sphere100(self):
+    def test_kmeans_sphere5(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         CLUSTERS = 5
         SPHERE_PTS = 10000
