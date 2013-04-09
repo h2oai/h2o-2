@@ -801,7 +801,7 @@ class H2O(object):
                 raise Exception(emsg)
             count += 1
             # GLM can return partial results during polling..that's legal
-            ### if 'GLMProgress' in urlUsed and 'GLMModel' in r:
+            ### if 'GLMProgressPage' in urlUsed and 'GLMModel' in r:
             ###    print "INFO: GLM returning partial results during polling. Continuing.."
 
         return r
