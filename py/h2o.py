@@ -1002,7 +1002,7 @@ class H2O(object):
 
 
     # note ntree in kwargs can overwrite trees! (trees is legacy param)
-    def random_forest(self, data_key, trees, timeoutSecs=300, **kwargs):
+    def random_forest(self, data_key, trees, timeoutSecs=300, print_params=True, **kwargs):
         params_dict = {
             'data_key': data_key,
             'ntree':  trees,
@@ -1012,7 +1012,10 @@ class H2O(object):
             }
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
-        print "\nrandom_forest parameters:", params_dict
+
+        if print_params:
+            print "\nrandom_forest parameters:", params_dict
+
         a = self.__check_request(requests.get(
             url=self.__url('RF.json'),
             timeout=timeoutSecs,

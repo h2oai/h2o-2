@@ -79,7 +79,7 @@ class Basic(unittest.TestCase):
             rfView = h2o_cmd.runRF(timeoutSecs=timeoutSecs, retryDelaySecs=1, csvPathname=csvPathname, **kwargs)
             elapsed = time.time()-start
             # just to get the list of per class errors
-            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(None, rfView, noprint=True)
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(None, rfView, noPrint=True)
             print "Trial #", trial, "completed in", elapsed, "seconds.", "%d pct. of timeout" % ((elapsed*100)/timeoutSecs), "\n"
             # why does this vary between 22 and 23
             self.assertAlmostEqual(totalScores,23,delta=1) # class 1 is 'yes'
