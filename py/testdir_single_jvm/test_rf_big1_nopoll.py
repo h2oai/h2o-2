@@ -46,11 +46,11 @@ class Basic(unittest.TestCase):
             a = h2o.nodes[0].jobs_admin()
             print "jobs_admin():", h2o.dump_json(a)
             jobs = a['jobs']
-            # GLMModelKeys = []
+            RFModelKeys = []
             for j in jobs:
                 # save the destination keys for any RF Model in progress
-                # if 'GLMModel' in j['destination_key']:
-                #    GLMModelKeys.append(j['destination_key'])
+                if 'RF' in j['destination_key']:
+                   RFModelKeys.append(j['destination_key'])
 
                 if j['end_time'] == '':
                     anyBusy = True
