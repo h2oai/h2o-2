@@ -34,17 +34,16 @@ paramDict = {
     'features': [None,1,2,3],
     # only works on new
     'exclusive_split_limit': [None,0,3,5],
-# FIX! other test shows the problems with strata_samples (index -1 errors)
-#     'sampling_strategy': [None, 'RANDOM', 'STRATIFIED_LOCAL' ],
-#     'strata_samples': [
-#         None,
-#         "0=10",
-#         "1=5",
-#         # "0=7,2=3", 
-#         # "0=1,1=1,2=1,3=1,4=1,5=1,6=1,7=1,8=1,9=1", 
-#         # "0=100,1=100,2=100,3=100,4=100,5=100,6=100,7=100,8=100,9=100", 
-#         # "0=0,1=0,2=0,3=0,4=0,5=0,6=0,7=0,8=0,9=0",
-#         ]
+    'sampling_strategy': [None, 'RANDOM', 'STRATIFIED_LOCAL' ],
+    'strata_samples': [
+        None,
+        "0=10",
+        "1=5",
+        "2=3", 
+        "1=1,2=1,3=1,4=1,5=1,6=1,7=1,8=1",
+        "1=100,2=100,3=100,4=100,5=100,6=100,7=100,8=100",
+        "1=0,1=0,2=0,3=0,4=0,5=0,6=0,7=0,8=0",
+        ]
     }
 
 class Basic(unittest.TestCase):
