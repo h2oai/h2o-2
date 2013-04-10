@@ -57,8 +57,9 @@ public class Score extends Request {
     Model M = _modelKey.value();
     // Extract the datarow from the argument vector.
     // The args are in the same order as the columns, except for the leading model_key.
-    double d[] = new double[M._va._cols.length-1];
-    for( int i=0; i<d.length; i++ ) {
+    // Skips the last column (response column).
+    double d[] = new double[M._va._cols.length];
+    for( int i=0; i<d.length-1; i++ ) {
       Argument arg = _arguments.get(i+1);
       if( false ) ;
       else if( arg instanceof FactorSelect ) d[i] = (Integer)arg.value();
@@ -75,7 +76,7 @@ public class Score extends Request {
     JsonArray rows = new JsonArray();
     JsonObject obj = new JsonObject();
     obj.addProperty(ROW,0);     // Bogus row number
-    for( int i=0; i<d.length; i++ ) {
+    for( int i=0; i<d.length-1; i++ ) {
       ValueArray.Column C = M._va._cols[i];
       obj.addProperty(C._name,
                       C._domain==null
