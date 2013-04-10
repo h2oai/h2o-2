@@ -204,7 +204,6 @@ class Basic(unittest.TestCase):
         # assuming that lineend
         if newSep == "":
             randomOtherSep = random.choice(self.sepChangeDict.values())
-            print randomOtherSep
             newRows = [r.replace('@',randomOtherSep) for r in newRows]
 
         return newRows
