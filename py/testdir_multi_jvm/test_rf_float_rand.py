@@ -86,7 +86,7 @@ class parse_rand_schmoo(unittest.TestCase):
             # On EC2 once we get to 30 trials or so, do we see polling hang? GC or spill of heap or ??
             kwargs = {'ntree': 5, 'depth': 5}
             key = h2o_cmd.runRF(csvPathname=csvPathname, key=key, key2=key2, 
-                timeoutSecs=70, pollTimeoutSecs=60, **kwargs)
+                timeoutSecs=15, pollTimeoutSecs=5, **kwargs)
             print "trial #", trial, "totalRows:", totalRows, "num:", num, "RF end on ", csvFilename, \
                 'took', time.time() - start, 'seconds'
             ### h2o_cmd.runInspect(key=key2)
