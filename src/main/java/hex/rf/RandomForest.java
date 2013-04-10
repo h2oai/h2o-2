@@ -37,11 +37,12 @@ public class RandomForest {
     Utils.pln("[RF] number of split features: "+ drf.numSplitFeatures());
     Utils.pln("[RF] starting RF computation with "+ data.rows()+" rows ");
 
-    Random rnd = Utils.getRNG(data.seed() + ROOT_SEED_ADD);
+    Random  rnd     = Utils.getRNG(data.seed() + ROOT_SEED_ADD);
+    Sampling sampler = createSampler(drf);
     for (int i = 0; i < ntrees; ++i) {
       long treeSeed = rnd.nextLong() + TREE_SEED_INIT; // make sure that enough bits is initialized
       trees[i] = new Tree( data, maxTreeDepth, minErrorRate, stat, numSplitFeatures, treeSeed,
-                           drf._job,i, drf._verbose, drf._exclusiveSplitLimit, createSampler(drf) );
+                           drf._job,i, drf._verbose, drf._exclusiveSplitLimit, sampler );
       if (!parallelTrees)   DRemoteTask.invokeAll(new Tree[]{trees[i]});
     }
     if(parallelTrees)DRemoteTask.invokeAll(trees);
@@ -177,7 +178,7 @@ public class RandomForest {
                           va,
                           ARGS.ntrees,
                           ARGS.depth,
-                          (short)ARGS.binLimit,
+                          ARGS.binLimit,
                           st,
                           ARGS.seed,
                           ARGS.parallel==1,

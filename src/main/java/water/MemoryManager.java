@@ -46,6 +46,37 @@ public abstract class MemoryManager {
   // max heap memory
   static final long MEM_MAX = Runtime.getRuntime().maxMemory();
 
+  // Memory currently being used by running tasks
+  static final AtomicLong _taskMem = new AtomicLong(0);
+
+  /**
+   * Try to reserve memory needed for task execution and return true if succeeded.
+   * Tasks have a shared pool of memory which they should ask for in advance before they even try to allocate it.
+   * We assume here, that tasks can take all the memory (except 1/8th of the heap which is set as minimum cache size).
+   *
+   * This method is another backpressure mechanism to make sure we do not exhaust system's resources by running too many tasks at the same time.
+   * Tasks are expected to reserve memory before proceeding with their execution and making sure they release it when done.
+   *
+   * @param m - requested number of bytes
+   * @return true if there is enough free memory
+   */
+  public static boolean tryReserveTaskMem(long m){
+    long current = _taskMem.addAndGet(m);
+    if(current > (MEM_MAX - (MEM_MAX >> 3))){ // 1/8th of the heap is reserved for cache
+      current = _taskMem.addAndGet(-m);
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Free the memory successfully reserved by task.
+   * @param m
+   */
+  public static void freeTaskMem(long m){
+    _taskMem.addAndGet(-m);
+  }
+
   // Callbacks from GC
   static final HeapUsageMonitor HEAP_USAGE_MONITOR = new HeapUsageMonitor();
   static volatile long HEAP_USED_AT_LAST_GC;
@@ -83,12 +114,15 @@ public abstract class MemoryManager {
     }
   }
 
+  public static void set_goals( String msg, boolean oom){
+    set_goals(msg, oom, 0);
+  }
   // Set K/V cache goals.
   // Allow (or disallow) allocations.
   // Called from the Cleaner, when "cacheUsed" has changed significantly.
   // Called from any FullGC notification, and HEAP/POJO_USED changed.
   // Called on any OOM allocation
-  public static void set_goals( String msg, boolean oom ) {
+  public static void set_goals( String msg, boolean oom , long bytes) {
     // Our best guess of free memory, as of the last GC cycle
     long freeHeap = MEM_MAX - HEAP_USED_AT_LAST_GC;
     assert freeHeap >= 0 : "I am really confused about the heap usage";
@@ -109,7 +143,7 @@ public abstract class MemoryManager {
     long age = (System.currentTimeMillis() - TIME_AT_LAST_GC); // Age since last FullGC
     age = Math.min(age,10*60*1000 ); // Clip at 10mins
     while( (age-=5000) > 0 ) p = p-(p>>3); // Decay effective POJO by 1/8th every 5sec
-    d -= 2*p; // Allow for the effective POJO, and again to throttle GC rate
+    d -= 2*p - bytes; // Allow for the effective POJO, and again to throttle GC rate
     d = Math.max(d,MEM_MAX>>3); // Keep at least 1/8th heap
     H2O.Cleaner.DESIRED = d;
 
@@ -132,10 +166,13 @@ public abstract class MemoryManager {
                            ", MAX="+(MEM_MAX>>20)+"M"+
                            ", DESIRED="+(H2O.Cleaner.DESIRED>>20)+"M");
       setMemGood();
-      assert !oom; // Confused? OOM should have FullGCd should have set low-mem goals
+      assert !oom:"MEM_MAX = " + MEM_MAX + ", DESIRED = " + d +", CACHE = " + cacheUsage + ", p = " + p + ", bytes = " + bytes; // Confused? OOM should have FullGCd should have set low-mem goals
     }
   }
 
+  public static long reserveTaskMemory(long sz){
+    return 0;
+  }
   /**
    * Monitors the heap usage after full gc run and tells Cleaner to free memory
    * if mem usage is too high. Stops new allocation if mem usage is critical.
@@ -223,7 +260,7 @@ public abstract class MemoryManager {
         }
       }
       catch( OutOfMemoryError e ) { }
-      set_goals("OOM",true); // Low memory; block for swapping
+      set_goals("OOM",true, bytes); // Low memory; block for swapping
     }
   }
 

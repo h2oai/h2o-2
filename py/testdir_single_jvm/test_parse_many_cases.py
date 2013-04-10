@@ -3,6 +3,7 @@ import re, os, shutil, sys
 sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_hosts
+import random
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -23,18 +24,18 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls): 
         h2o.tear_down_cloud()
 
-    def test_many_parse1(self):
+    def test_A_many_parse1(self):
         rows = self.genrows1()
         set = 1
         self.tryThemAll(set,rows)
 
-    def test_many_parse2(self):
+    def test_B_many_parse2(self):
         rows = self.genrows2()
         set = 2
         self.tryThemAll(set,rows)
 
     # this one has problems with blank lines
-    def test_many_parse3(self):
+    def test_C_many_parse3(self):
         rows = self.genrows3()
         set = 3
         self.tryThemAll(set,rows)
@@ -44,11 +45,12 @@ class Basic(unittest.TestCase):
         # FIX! what about blank fields and spaces as sep
         # FIX! temporary need more lines to avoid sample error in H2O
         # throw in some variants for leading 0 on the decimal, and scientific notation
+        # new: change the @ to an alternate legal SEP if the special HIVE SEP is in play
         rows = [
         "# 'comment, is okay",
         '# "this comment, is okay too',
         "# 'this' comment, is okay too",
-        "FirstName|MiddleInitials|LastName|DateofBirth",
+        "@FirstName@|@Middle@Initials@|@LastName@|@Date@of@Birth@ ",
         "0|0.5|1|0",
         "3|NaN|4|1",
         "6||8|0",
@@ -91,11 +93,11 @@ class Basic(unittest.TestCase):
     # FIX! needed an extra line to avoid bug on default 67+ sample?
     def genrows2(self):
         rows = [
-        "FirstName|MiddleInitials|LastName|DateofBirth",
+        "First@Name|@MiddleInitials|LastName@|Date@ofBirth",
         "Kalyn|A.|Dalton|1967-04-01",
         "Gwendolyn|B.|Burton|1947-10-26",
         "Elodia|G.|Ali|1983-10-31",
-        "Elodia|G.|Ali|1983-10-31",
+        "Elo@dia|@G.|Ali@|1983-10-31",
         "Elodia|G.|Ali|1983-10-31",
         "Elodia|G.|Ali|1983-10-31",
         "Elodia|G.|Ali|1983-10-31",
@@ -195,6 +197,18 @@ class Basic(unittest.TestCase):
             newSep = self.sepChangeDict[sepCase]
 
         newRows = [r.replace('|',newSep) for r in rows]
+
+        # special case, if using the HIVE sep, substitute randomly
+        # one of the other SEPs into the "@" in the template
+        # FIX! we need to add HIVE lineends into lineend choices.
+        # assuming that lineend
+        if newSep == "":
+            # don't use the same SEP to swap in.
+            randomOtherSep = random.choice(self.sepChangeDict.values())
+            while (randomOtherSep==newSep):
+                randomOtherSep = random.choice(self.sepChangeDict.values())
+            newRows = [r.replace('@',randomOtherSep) for r in newRows]
+
         return newRows
     
     def tryThemAll(self,set,rows):

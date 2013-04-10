@@ -39,6 +39,7 @@ public class NewRowVecTask<T extends Iced> extends MRTask {
     public abstract T newResult();
     public abstract void processRow(T res, double [] x, int [] indexes);
 
+    public int resultSz(){return 0;}
     public abstract T reduce(T x, T y);
 
     public T apply(Job j, DataFrame data) throws JobCancelledException{
@@ -139,6 +140,11 @@ public class NewRowVecTask<T extends Iced> extends MRTask {
     _job = job;
     _func = f;
     _data = data;
+  }
+
+  @Override
+  public int memReqPerChunk(){
+    return _func.resultSz();
   }
 
   @Override

@@ -38,7 +38,7 @@ public final class DRF extends water.DRemoteTask {
   /** Used to replay sampling */
   int _numrows;
   /** Limit of the cardinality of a feature before we bin. */
-  short _binLimit;
+  int _binLimit;
   /** Pseudo random seed */
   long _seed;
   /** Weights of the different features (default: 1/features) */
@@ -86,7 +86,7 @@ public final class DRF extends water.DRemoteTask {
   /** Create DRF task, execute it and returns DFuture.
    *  Caller can block on the future to wait till execution finish.
    */
-  public static final DRFFuture execute(Key modelKey, int[] cols, ValueArray ary, int ntrees, int depth, short binLimit,
+  public static final DRFFuture execute(Key modelKey, int[] cols, ValueArray ary, int ntrees, int depth, int binLimit,
       StatType stat, long seed, boolean parallelTrees, double[] classWt, int numSplitFeatures,
       Sampling.Strategy samplingStrategy, float sample, int[] strataSamples, int verbose, int exclusiveSplitLimit) {
     final DRF drf = create(modelKey, cols, ary, ntrees, depth, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, samplingStrategy, sample, strataSamples, verbose, exclusiveSplitLimit);
@@ -102,7 +102,7 @@ public final class DRF extends water.DRemoteTask {
   /** Create and configure a new DRF remote task.
    *  It does not execute DRF !!! */
   private static DRF create(
-    Key modelKey, int[] cols, ValueArray ary, int ntrees, int depth, short binLimit,
+    Key modelKey, int[] cols, ValueArray ary, int ntrees, int depth, int binLimit,
     StatType stat, long seed, boolean parallelTrees, double[] classWt, int numSplitFeatures,
     Sampling.Strategy samplingStrategy, float sample, int[] strataSamples, int verbose, int exclusiveSplitLimit) {
 
@@ -310,7 +310,7 @@ public final class DRF extends water.DRemoteTask {
   }
 
   static void dumpRFParams(
-      Key modelKey, int[] cols, ValueArray ary, int ntrees, int depth, short binLimit,
+      Key modelKey, int[] cols, ValueArray ary, int ntrees, int depth, int binLimit,
       StatType stat, long seed, boolean parallelTrees, double[] classWt, int numSplitFeatures,
       Sampling.Strategy samplingStrategy, float sample, int[] strataSamples, int verbose, int exclusiveSplitLimit) {
     RandomForest.OptArgs _ = new RandomForest.OptArgs();

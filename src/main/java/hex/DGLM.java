@@ -974,6 +974,9 @@ public abstract class DGLM {
       return res;
     }
 
+    @Override
+    public int resultSz(){return ((_N *_N)  + _N) << 3;}
+
     public final double computeEta(double[] x, int[] indexes){
       double mu = 0;
       for(int i = 0; i < _dense; ++i)

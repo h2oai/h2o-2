@@ -35,8 +35,8 @@ def browseJsonHistoryAsUrlLastMatch(matchme,swapme=None):
         # but we've not switched everything to new. So do it selectively
 
         if swapme is not None: url = re.sub(matchme, swapme, url)
-        url = re.sub("GLMGridProgress","GLMGridProgress.html",url)
-        url = re.sub("Progress","Progress.html",url)
+        url = re.sub("ProgressPage","ProgressPage.html",url)
+        url = re.sub("Progress?!Page","Progress.html",url)
         url = re.sub(".json",".html",url)
 
         h2o.verboseprint("browseJsonHistoryAsUrlLastMatch:", url)

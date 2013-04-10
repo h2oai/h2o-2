@@ -208,8 +208,8 @@ def runRFView(node=None, data_key=None, model_key=None, ntree=None,
         errorInResponse = \
             numberBuilt<0 or ntree<0 or numberBuilt>ntree or \
             progress<0 or progressTotal<0 or progress>progressTotal or \
-            progressTotal!=(ntree+1) or \
             ntree!=rfView['ntree']
+            ## progressTotal!=ntree or
             # rfView better always agree with what RF ntree was
 
         if errorInResponse:
