@@ -203,7 +203,10 @@ class Basic(unittest.TestCase):
         # FIX! we need to add HIVE lineends into lineend choices.
         # assuming that lineend
         if newSep == "":
+            # don't use the same SEP to swap in.
             randomOtherSep = random.choice(self.sepChangeDict.values())
+            while (randomOtherSep==newSep):
+                randomOtherSep = random.choice(self.sepChangeDict.values())
             newRows = [r.replace('@',randomOtherSep) for r in newRows]
 
         return newRows

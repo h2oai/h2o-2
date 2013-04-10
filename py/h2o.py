@@ -88,8 +88,9 @@ def parse_our_args():
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
     # FIX! this isn't working to grab the args we don't care about
     # Pass "--failfast" to stop on first error to unittest. and -v
-    #    sys.argv[1:] = ['-v', "--failfast"] + args.unittest_args
-    sys.argv[1:] = args.unittest_args
+    # won't get this for jenkins, since it doesn't do parse_our_args
+    sys.argv[1:] = ['-v', "--failfast"] + args.unittest_args
+    # sys.argv[1:] = args.unittest_args
 
 def verboseprint(*args, **kwargs):
     if verbose:
