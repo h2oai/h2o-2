@@ -60,7 +60,6 @@ public abstract class KMeans {
       double dd[][] = new double[_clusters.length][_clusters[0].length];
       for( int j = 0; j < dd.length; j++ ) {
         double ds[] = _clusters[j];
-        dd[j] = new double[ds.length];
         for( int i = 0; i < ds.length; i++ ) {
           ValueArray.Column C = _va._cols[i];
           double d = ds[i];
@@ -126,7 +125,7 @@ public abstract class KMeans {
       ValueArray va = DKV.get(_arykey).get();
       AutoBuffer bits = va.getChunk(key);
       int rows = bits.remaining() / va._rowsize;
-      double[] values = new double[_cols.length];
+      double[] values = new double[_cols.length-1];
       ClusterDist cd = new ClusterDist();
       for( int row = 0; row < rows; row++ ) {
         datad(va, bits, row, _cols, values);
@@ -190,7 +189,7 @@ public abstract class KMeans {
 
     // Initialize first cluster to first row
     double[][] clusters = new double[1][];
-    clusters[0] = new double[cols.length];
+    clusters[0] = new double[cols.length-1];
     AutoBuffer bits = va.getChunk(0);
     datad(va, bits, 0, cols, clusters[0]);    
 
@@ -235,7 +234,7 @@ public abstract class KMeans {
       task.invoke(va._key);
 
       for( int cluster = 0; cluster < clusters.length; cluster++ ) {
-        for( int column = 0; column < cols.length; column++ ) {
+        for( int column = 0; column < cols.length-1; column++ ) {
           double value = task._sums[cluster][column] / task._counts[cluster];
           if( Math.abs(value - clusters[cluster][column]) > epsilon )
             moved = true;
@@ -264,7 +263,7 @@ public abstract class KMeans {
       ValueArray va = DKV.get(_arykey).get();
       AutoBuffer bits = va.getChunk(key);
       int rows = bits.remaining() / va._rowsize;
-      double[] values = new double[_cols.length];
+      double[] values = new double[_cols.length-1];
       ClusterDist cd = new ClusterDist();
       for( int row = 0; row < rows; row++ )
         _sqr += minSqr(_clusters, datad(va, bits, row, _cols, values), cd);
@@ -295,7 +294,7 @@ public abstract class KMeans {
       ValueArray va = DKV.get(_arykey).get();
       AutoBuffer bits = va.getChunk(key);
       int rows = bits.remaining() / va._rowsize;
-      double[] values = new double[_cols.length];
+      double[] values = new double[_cols.length-1];
       ArrayList<double[]> list = new ArrayList<double[]>();
       Random rand = RAND_SEED == null ? new Random() : new Random(RAND_SEED);
       ClusterDist cd = new ClusterDist();
@@ -335,10 +334,10 @@ public abstract class KMeans {
       ValueArray va = DKV.get(_arykey).get();
       AutoBuffer bits = va.getChunk(key);
       int rows = bits.remaining() / va._rowsize;
-      double[] values = new double[_cols.length];
+      double[] values = new double[_cols.length-1];
 
       // Create result arrays
-      _sums = new double[_clusters.length][_cols.length];
+      _sums = new double[_clusters.length][_cols.length-1];
       _counts = new int[_clusters.length];
       ClusterDist cd = new ClusterDist();
 
@@ -349,7 +348,7 @@ public abstract class KMeans {
         if( cluster == -1 ) continue; // Ignore broken row
 
         // Add values and increment counter for chosen cluster
-        for( int column = 0; column < _cols.length; column++ )
+        for( int column = 0; column < values.length; column++ )
           _sums[cluster][column] += values[column];
         _counts[cluster]++;
       }
@@ -365,8 +364,8 @@ public abstract class KMeans {
         _sums = task._sums;
         _counts = task._counts;
       } else {
-        for( int cluster = 0; cluster < _clusters.length; cluster++ ) {
-          for( int column = 0; column < _cols.length; column++ )
+        for( int cluster = 0; cluster < _counts.length; cluster++ ) {
+          for( int column = 0; column < _sums[0].length; column++ )
             _sums[cluster][column] += task._sums[cluster][column];
           _counts[cluster] += task._counts[cluster];
         }
