@@ -1,8 +1,10 @@
 package water.parser;
 
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 import java.util.zip.*;
+
+import jsr166y.CountedCompleter;
 
 import water.*;
 import water.H2O.H2OCountedCompleter;
@@ -58,7 +60,7 @@ public final class ParseDataset extends Job {
     int j = 0;
     for(int i = 0; i < keys.length; ++i){
       Value v = DKV.get(keys[i]);
-      if(v.length() > 0) // skip nonzeros
+      if(v == null || v.length() > 0) // skip nonzeros
         dataset[j++] = v;
     }
     if(j < dataset.length) // remove the nulls
@@ -93,8 +95,10 @@ public final class ParseDataset extends Job {
       }
       switch( compression ) {
       case NONE: parseUncompressed(job, dataset, CustomParser.Type.CSV, setup); break;
-      case ZIP:  parseZipped(job, dataset, setup); break;
-      case GZIP: parseGZipped(job, dataset, setup); break;
+      case ZIP:  //parseZipped(job, dataset, setup); break;
+      case GZIP: //parseGZipped(job, dataset, setup); break;
+        parseCompressed(job, dataset, setup, compression);
+        break;
       default:   throw new Error("Unknown compression of dataset!");
       }
     } catch( java.io.EOFException eof ) {
@@ -203,6 +207,86 @@ public final class ParseDataset extends Job {
     phaseTwo.createValueArrayHeader();
   }
 
+  public static class UnzipTask extends DRemoteTask {
+    Job _job;
+    Compression _comp;
+    boolean _success = false;
+    @Override
+    public void reduce(DRemoteTask drt) {
+      UnzipTask other = (UnzipTask)drt;
+      _success = _success && other._success;
+    }
+
+    @Override
+    public void compute2() {
+      setPendingCount(_keys.length);
+      for(Key k:_keys){
+        final Key key = k;
+        H2OCountedCompleter subtask = new H2OCountedCompleter() {
+          @Override
+          public void compute2() {
+            InputStream is = null;
+            Key okey = Key.make(new String(key._kb) + "_UNZIPPED");
+            try{
+              switch(_comp){
+              case ZIP:
+                is = new ZipInputStream(DKV.get(key).openStream());
+                break;
+              case GZIP:
+                is = new GZIPInputStream(DKV.get(key).openStream());
+                break;
+              default:
+                throw H2O.unimpl();
+              }
+              ValueArray.readPut(okey, is, _job);
+            } catch(Throwable t){
+              System.err.println("failed decompressing data " + key.toString() + " with compression "  + _comp);
+              UKV.remove(okey);
+              throw new RuntimeException(t);
+            } finally {
+              Closeables.closeQuietly(is);
+              tryComplete();
+            }
+          }
+        };
+        subtask.setCompleter(this);
+        H2O.submitTask(subtask);
+      }
+      tryComplete();
+    }
+
+    @Override
+    public void onCompletion(CountedCompleter caller){
+      _success= true;
+    }
+    @Override
+    public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
+      _success = false;
+      return super.onExceptionalCompletion(ex, caller);
+    }
+  }
+
+  public static void parseCompressed(ParseDataset job, Value [] dataset, CsvParser.Setup setup, Compression comp) throws IOException {
+    Key [] keys = new Key[dataset.length];
+    for(int i = 0; i < keys.length; ++i)
+      keys[i] = dataset[i]._key;
+    UnzipTask tsk = new UnzipTask();
+    tsk._comp = comp;
+    tsk.invoke(keys);
+    if(tsk._success){
+      // now turn the keys into output keys pointing to uncompressed data
+      for(int i = 0; i < keys.length; ++i)
+        keys[i] = Key.make(new String(keys[i]._kb) + "_UNZIPPED");
+      try {
+        parse(job, keys, setup);
+      } finally {
+        for(int i = 0; i < keys.length; ++i)
+          if(keys[i] != null)
+            UKV.remove(keys[i]);
+      }
+    } else
+      throw new EOFException();
+  }
   // Unpack zipped CSV-style structure and call method parseUncompressed(...)
   // The method exepct a dataset which contains a ZIP file encapsulating one file.
   public static void parseZipped(ParseDataset job, Value [] dataset, CsvParser.Setup setup) throws IOException {

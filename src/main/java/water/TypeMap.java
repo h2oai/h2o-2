@@ -159,6 +159,7 @@ public class TypeMap {
     "water.parser.ParseDataset",
     "water.parser.ParseDataset$2",
     "water.parser.ParseDataset$Progress",
+    "water.parser.ParseDataset$UnzipTask",
     "water.store.s3.MultipartUpload",
     "water.store.s3.MultipartUpload$1",
     "water.store.s3.MultipartUpload$Progress",
