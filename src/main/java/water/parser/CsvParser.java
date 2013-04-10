@@ -489,7 +489,7 @@ NEXT_CHAR:
    *  last one as it is used if all other fails because multiple spaces can be
    *  used as a single separator.
    */
-  private static byte[] separators = new byte[] { ',', ';', '|', '\t', 1/* '^A',  Hive table column separator */, ' '/*space is last in this list, because we allow multiple spaces*/ };
+  private static byte[] separators = new byte[] { 1/* '^A',  Hive table column separator */, ',', ';', '|', '\t',  ' '/*space is last in this list, because we allow multiple spaces*/ };
 
   /** Dermines the number of separators in given line. Correctly handles quoted
    * tokens.
