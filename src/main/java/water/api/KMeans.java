@@ -12,7 +12,7 @@ public class KMeans extends Request {
   protected final Int                _k       = new Int(K);
   protected final Real               _epsilon = new Real(EPSILON, 1e-6);
   protected final HexAllColumnSelect _columns = new HexAllColumnSelect(COLS, _source);
-  protected final H2OKey             _dest    = new H2OKey(DEST_KEY, (Key) null);
+  protected final H2OKey             _dest    = new H2OKey(DEST_KEY, hex.KMeans.makeKey());
 
   @Override
   protected Response serve() {
@@ -78,23 +78,21 @@ public class KMeans extends Request {
     }
 
     private void modelHTML(KMeansModel m, JsonObject json, StringBuilder sb) {
-      // sb.append("<div class='alert'>Actions: " + Plot.link(m._selfKey, "Plot");
-
       JsonArray rows = json.getAsJsonArray(CLUSTERS);
-      JsonArray row0 = rows.get(0).getAsJsonArray();
 
+      sb.append("<div class='alert'>Actions: " + KMeansScore.link(m._selfKey,"Validate on another dataset") + ", " + KMeans.link(m._dataKey, "Compute new model") + "</div>");
       sb.append("<span style='display: inline-block;'>");
       sb.append("<table class='table table-striped table-bordered'>");
       sb.append("<tr>");
       sb.append("<th>Clusters</th>");
-      for( int i = 0; i < row0.size(); i++ )
+      for( int i = 0; i < m._va._cols.length-1; i++ )
         sb.append("<th>").append(m._va._cols[i]._name).append("</th>");
       sb.append("</tr>");
 
       for( int r = 0; r < rows.size(); r++ ) {
         sb.append("<tr>");
         sb.append("<td>").append(r).append("</td>");
-        for( int c = 0; c < row0.size(); c++ ) {
+        for( int c = 0; c < m._va._cols.length-1; c++ ) {
           JsonElement e = rows.get(r).getAsJsonArray().get(c);
           sb.append("<td>").append(ElementBuilder.format(e.getAsDouble())).append("</td>");
         }

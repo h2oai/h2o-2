@@ -33,6 +33,7 @@ public class TypeMap {
     "hex.Histogram$Bins",
     "hex.Histogram$OutlineTask",
     "hex.KMeans$KMeansModel",
+    "hex.KMeans$KMeansScore",
     "hex.KMeans$Lloyds",
     "hex.KMeans$Sampler",
     "hex.KMeans$Sqr",

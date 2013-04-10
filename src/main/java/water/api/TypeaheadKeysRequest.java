@@ -2,6 +2,7 @@ package water.api;
 
 import hex.DGLM.GLMModel;
 import hex.rf.RFModel;
+import hex.KMeans.KMeansModel;
 import java.util.Arrays;
 import water.*;
 import com.google.gson.JsonArray;
@@ -65,6 +66,14 @@ class TypeaheadRFModelKeyRequest extends TypeaheadKeysRequest {
     super("Provides a simple JSON array of filtered keys known to the "+
           "current node that are RFModels at the time of calling.",
           null,RFModel.class);
+  }
+}
+
+class TypeaheadKMeansModelKeyRequest extends TypeaheadKeysRequest {
+  public TypeaheadKMeansModelKeyRequest() {
+    super("Provides a simple JSON array of filtered keys known to the "+
+          "current node that are KMeansModels at the time of calling.",
+          null,KMeansModel.class);
   }
 }
 

@@ -178,7 +178,7 @@ public class RandomForest {
                           va,
                           ARGS.ntrees,
                           ARGS.depth,
-                          (short)ARGS.binLimit,
+                          ARGS.binLimit,
                           st,
                           ARGS.seed,
                           ARGS.parallel==1,

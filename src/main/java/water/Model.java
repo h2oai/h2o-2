@@ -114,6 +114,7 @@ public abstract class Model extends Iced {
   //  Then the mapping is: int[]{0,2,4,6,3}
 
   private static int find(String n, String[] names) {
+    if( n == null ) return -1;
     for( int j = 0; j<names.length; j++ )
       if( n.equals(names[j]) )
         return j;

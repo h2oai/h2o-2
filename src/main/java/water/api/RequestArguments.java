@@ -4,6 +4,7 @@ import hex.DGLM.CaseMode;
 import hex.DGLM.Family;
 import hex.DGLM.GLMModel;
 import hex.DGLM.Link;
+import hex.KMeans.KMeansModel;
 import hex.rf.Confusion;
 import hex.rf.RFModel;
 
@@ -1574,6 +1575,11 @@ public class RequestArguments extends RequestStatics {
   public class RFModelKey extends H2OModelKey<RFModel, TypeaheadRFModelKeyRequest> {
     public RFModelKey(String name) {
       super(new TypeaheadRFModelKeyRequest(),name, true);
+    }
+  }
+  public class H2OKMeansModelKey extends H2OModelKey<KMeansModel, TypeaheadKMeansModelKeyRequest> {
+    public H2OKMeansModelKey(String name, boolean req) {
+      super(new TypeaheadKMeansModelKeyRequest(),name, req);
     }
   }
 
