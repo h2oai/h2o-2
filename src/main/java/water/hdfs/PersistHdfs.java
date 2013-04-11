@@ -199,13 +199,17 @@ public abstract class PersistHdfs {
     Key arykey = ValueArray.getArrayKey(key);  // From the base file key
     long off = ValueArray.getChunkOffset(key); // The offset
     long size = 0;
-    try {
-      Path p = getPathForKey(arykey);
-      FileSystem fs = FileSystem.get(p.toUri(), CONF);
-      size = fs.getFileStatus(p).getLen();
-    } catch( IOException e ) {
-      H2O.ignore(e);
-      return null;
+    while (true) {
+      try {
+        Path p = getPathForKey(arykey);
+        FileSystem fs = FileSystem.get(p.toUri(), CONF);
+        size = fs.getFileStatus(p).getLen();
+        break;
+      } catch (EOFException e)           { ignoreAndWait(e,false);
+      } catch (SocketTimeoutException e) { ignoreAndWait(e,false);
+      } catch (S3Exception e)            { ignoreAndWait(e,false);
+      } catch (IOException e)            { ignoreAndWait(e,true);
+      }
     }
     long rem = size-off;        // Remainder to be read
     if( arykey.toString().endsWith(".hex") ) { // Hex file?
