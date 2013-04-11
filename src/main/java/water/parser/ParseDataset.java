@@ -66,6 +66,10 @@ public final class ParseDataset extends Job {
     }
     if(j < dataset.length) // remove the nulls
       dataset = Arrays.copyOf(dataset, j);
+    if(dataset.length == 0){
+      job.cancel();
+      return;
+    }
     if(setup == null)
       setup = Inspect.csvGuessValue(dataset[0]);
     if(keys.length > 1) {
@@ -86,14 +90,14 @@ public final class ParseDataset extends Job {
         // pass
       }
       Compression compression = guessCompressionMethod(dataset[0]);
-      if( compression == Compression.ZIP ) {
-        try {
-          parseUncompressed(job, dataset, CustomParser.Type.XLSX, setup);
-          return;
-        } catch( Exception e ) {
-          // pass
-        }
-      }
+//      if( compression == Compression.ZIP ) {
+//        try {
+//          parseUncompressed(job, dataset, CustomParser.Type.XLSX, setup);
+//          return;
+//        } catch( Exception e ) {
+//          // pass
+//        }
+//      }
       switch( compression ) {
       case NONE: parseUncompressed(job, dataset, CustomParser.Type.CSV, setup); break;
       case ZIP:  //parseZipped(job, dataset, setup); break;
@@ -234,7 +238,12 @@ public final class ParseDataset extends Job {
             try{
               switch(_comp){
               case ZIP:
-                is = new ZipInputStream(v.openStream());
+                ZipInputStream zis = new ZipInputStream(v.openStream());
+                ZipEntry ze = zis.getNextEntry();
+                // There is at least one entry in zip file and it is not a directory.
+                if( ze == null || ze.isDirectory() )
+                  throw new Exception("Unsupported zip file: "+ ((ze == null)?"No entry found":"Files containing directory arte not supported."));
+                is = zis;
                 break;
               case GZIP:
                 is = new GZIPInputStream(v.openStream());
