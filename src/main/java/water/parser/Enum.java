@@ -55,8 +55,9 @@ public final class Enum extends Iced {
   }
 
   int getTokenId(ValueString str){
-    assert _map.get(str) != null:"missing value! " + str.toString();
-    return _map.get(str);
+    Integer I = _map.get(str);
+    assert I != null : "missing value! " + str.toString();
+    return I;
   }
 
   public void merge(Enum other){
@@ -100,14 +101,17 @@ public final class Enum extends Iced {
   // being deleted, they may be written anyways.  If the Values are changing, a
   // random Value is written.
   public AutoBuffer write( AutoBuffer ab ) {
-    if( _map != null )
-      for( ValueString key : _map.keySet() )
-        ab.put2((char)key._length).putA1(key._buf,key._length).put4(_map.get(key));
+    if( _map == null ) return ab.put1(1); // Killed map marker
+    ab.put1(0);                           // Not killed
+    for( ValueString key : _map.keySet() )
+      ab.put2((char)key._length).putA1(key._buf,key._length).put4(_map.get(key));
     return ab.put2((char)65535); // End of map marker
   }
 
   public Enum read( AutoBuffer ab ) {
     assert _map == null || _map.size()==0;
+    _map = null;
+    if( ab.get1() == 1 ) return this; // Killed?
     _map = new NonBlockingHashMap<ValueString, Integer>();
     int len = 0;
     while( (len = ab.get2()) != 65535 ) // Read until end-of-map marker
