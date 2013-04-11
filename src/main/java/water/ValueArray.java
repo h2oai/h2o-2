@@ -360,6 +360,7 @@ public class ValueArray extends Iced implements Cloneable {
     int off = 0, sz = 0;
     long szl = off;
     long cidx = 0;
+    Futures dkv_fs = new Futures();
     while( true ) {
       oldbuf = buf;
       buf = MemoryManager.malloc1((int)CHUNK_SZ);
@@ -385,10 +386,14 @@ public class ValueArray extends Iced implements Cloneable {
       H2O.submitTask(subtask);
       // Also add the DKV task to the blocking list (not just the TaskPutKey
       // buried inside the DKV!)
-      fs.add(subtask);
+      dkv_fs.add(subtask);
     }
     assert is.read(new byte[1]) == -1 || job.cancelled();
 
+    // Block for all pending DKV puts, which will in turn add blocking requests
+    // to the passed-in Future list 'fs'.  Also block for the last DKV to
+    // happen, because we're overwriting the last one with final size bits.
+    dkv_fs.blockForPending();
     // Last chunk is short, read it; combine buffers and make the last chunk larger
     if( cidx > 0 ) {
       Key ckey = getChunkKey(cidx-1,key); // Get last chunk written out
