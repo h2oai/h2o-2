@@ -26,7 +26,7 @@ public class KMeansTest extends TestUtil {
       Assert.assertEquals(1.125, clusters[0][0], 0.000001);
       Assert.assertEquals(4.65, clusters[1][0], 0.000001);
     } finally {
-      KMeans.RAND_SEED = null;
+      KMeans.RAND_SEED = 0;
       UKV.remove(source);
       UKV.remove(target);
     }
@@ -73,7 +73,7 @@ public class KMeansTest extends TestUtil {
         Assert.assertTrue(found);
       }
     } finally {
-      KMeans.RAND_SEED = null;
+      KMeans.RAND_SEED = 0;
       UKV.remove(source);
       UKV.remove(target);
     }
@@ -82,7 +82,7 @@ public class KMeansTest extends TestUtil {
   public static double[][] gauss(int columns, int rows, double[][] goals) {
     // rows and cols are reversed on this one for va_maker
     double[][] array = new double[columns][rows];
-    Random rand = KMeans.RAND_SEED == null ? new Random() : new Random(KMeans.RAND_SEED);
+    Random rand = KMeans.RAND_SEED == 0 ? new Random() : new Random(KMeans.RAND_SEED);
 
     for( int goal = 0; goal < goals.length; goal++ )
       for( int c = 0; c < columns; c++ )
