@@ -1,6 +1,7 @@
 import os, json, unittest, time, shutil, sys
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
+import h2o_exec as h2e
 import time, random
 
 class Basic(unittest.TestCase):
@@ -34,8 +35,9 @@ class Basic(unittest.TestCase):
         #    "covtype20x.data", 
         #    "billion_rows.csv.gz",
         csvFilenameAll = [
-            "covtype.data",
-            "covtype20x.data",
+            ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz"),
+            ("covtype.data", "covtype.data"),
+            ("covtype20x.data", "covtype20x.data"),
             # "covtype200x.data",
             # "100million_rows.csv",
             # "200million_rows.csv",
@@ -54,20 +56,37 @@ class Basic(unittest.TestCase):
         # pop open a browser on the cloud
         h2b.browseTheCloud()
 
-        for csvFilename in csvFilenameList:
+        # split out the pattern match and the filename used for the hex
+        for csvFilepattern, csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=500)
-            print csvFilename, 'parse time:', parseKey['response']['time']
+
+            start = time.time()
+            parseKey = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
+                key2=csvFilename, timeoutSecs=500)
+            elapsed = start - time.time()
+            print "parse end on ", csvFilepattern, 'took', elapsed, 'seconds.',\
+                "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
+
+            print csvFilepattern, 'parse time:', parseKey['response']['time']
             print "Parse result['destination_key']:", parseKey['destination_key']
 
             # We should be able to see the parse result?
             inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
 
-            print "\n" + csvFilename
+            # the nflx data doesn't have a small enough # of classes in any col
+            # use exec to randomFilter out 200 rows for a quick RF. that should work for everyone?
+            origKey = parseKey['destination_key']
+            execExpr = 'a = randomFilter('+origKey+',200,12345678)' 
+            h2e.exec_expr(h2o.nodes[0], execExpr, "a", timeoutSecs=30)
+            # runRFOnly takes the parseKey directly
+            newParseKey = {'destination_key': 'a'}
+
+
+            print "\n" + csvFilepattern
             start = time.time()
             # poker and the water.UDP.set3(UDP.java) fail issue..
             # constrain depth to 25
-            RFview = h2o_cmd.runRFOnly(trees=1,depth=25,parseKey=parseKey,
+            RFview = h2o_cmd.runRFOnly(trees=1,depth=25,parseKey=newParseKey,
                 timeoutSecs=timeoutSecs)
 
             h2b.browseJsonHistoryAsUrlLastMatch("RFView")

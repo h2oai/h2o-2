@@ -4,6 +4,10 @@
 #send_to_s3.py "<local_file_path>" "<s3_path>"
 
 import argparse
+from os.path import expanduser
+
+home = expanduser("~")
+
 parser = argparse.ArgumentParser()
 parser.add_argument('local_file_path', help="path to local file to be copied to s3")
 parser.add_argument('s3_path', help="path to use inside s3 bucket 'home-0xdiag-datasets'")
@@ -13,12 +17,12 @@ import sys
 import os
 
 # should just be one line, but you never know
-with open('/home/hduser/.ec2/aws_id') as f:
+with open(home + '/.ec2/aws_id') as f:
     lines = f.read().splitlines()
 aws_id = lines[0]
 print "  Using aws_id:", aws_id
 
-with open('/home/hduser/.ec2/aws_key') as f:
+with open(home + '/.ec2/aws_key') as f:
     lines = f.read().splitlines()
 aws_key = lines[0]
 print "  Using aws_key:", aws_key
