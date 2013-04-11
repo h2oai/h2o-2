@@ -7,18 +7,17 @@ import h2o_util
 
 # a truly uniform sphere
 # http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution
-# While the author prefers the discarding method for spheres, for completeness 
 # he offers the exact solution: http://stackoverflow.com/questions/918736/random-number-generator-that-produces-a-power-law-distribution/918782#918782
 # In spherical coordinates, taking advantage of the sampling rule:
 # http://stackoverflow.com/questions/2106503/pseudorandom-number-generator-exponential-distribution/2106568#2106568
 CLUSTERS = 5 
-SPHERE_PTS = 1000
-RANDOMIZE_SPHERE_PTS = False
-CENTER_DELTA = 1
-DIMENSIONS = 3 # 1,2 or 3
+SPHERE_PTS = 10000
+RANDOMIZE_SPHERE_PTS = True
+DIMENSIONS = 5 # 1,2 or 3
 JUMP_RANDOM_ALL_DIRS = False
 SHUFFLE_SPHERES = True
 R_NOISE = True
+ALLOWED_CENTER_DELTA = 1
 
 def get_xyz_sphere(R):
     u = random.random() # 0 to 1
@@ -36,9 +35,12 @@ def get_xyz_sphere(R):
     x = r * math.sin(theta) * math.cos(phi)
     y = r * math.sin(theta) * math.sin(phi)
     z = r * math.cos(theta) 
-    xyz = [x, y, z]
+    # use these for jump dimensions? (picture "time" and other dimensions)
+    zz = 0
+    yy = 0
+    xyzzy = [x, y, z, zz, yy]
     ### print xyz[:DIMENSIONS]
-    return xyz[:DIMENSIONS]
+    return xyzzy[:DIMENSIONS]
 
 def write_spheres_dataset(csvPathname, CLUSTERS, n):
     dsf = open(csvPathname, "w+")
@@ -61,10 +63,14 @@ def write_spheres_dataset(csvPathname, CLUSTERS, n):
             jump = random.randint(10*R,(10*R)+10)
             xyzChoice = random.randint(0,DIMENSIONS-1)
         else:
-            jump = 10*R
-            if DIMENSIONS==3:
+            jump = 3*R
+            if DIMENSIONS==5:
+                # limit jumps to yy
+                xyzChoice = 4
+            elif DIMENSIONS==3:
                 # limit jumps to z
-                xyzChoice = 2
+                # xyzChoice = 2
+                xyzChoice = 0
             else:
                 # limit jumps to x
                 xyzChoice = 0
@@ -79,7 +85,7 @@ def write_spheres_dataset(csvPathname, CLUSTERS, n):
         else:
             lastCenter = currentCenter
             currentCenter  = [a+b for a,b in zip(currentCenter, newOffset)] 
-            if (sum(currentCenter) - sum(lastCenter) < (len(currentCenter)* CENTER_DELTA)):
+            if (sum(currentCenter) - sum(lastCenter) < (len(currentCenter)* ALLOWED_CENTER_DELTA)):
                 print "ERROR: adjacent centers are too close for our sort algorithm"
                 print "currentCenter:", currentCenter, "lastCenter:", lastCenter
                 raise Exception
@@ -210,7 +216,7 @@ class Basic(unittest.TestCase):
 
                 for i, v in enumerate(a):
                     emsg = aStr+" != "+bStr+". Sorted cluster center "+iStr+" axis "+str(i)+" not correct."
-                    self.assertAlmostEqual(a[i], b[i], delta=CENTER_DELTA, msg=emsg)
+                    self.assertAlmostEqual(a[i], b[i], delta=ALLOWED_CENTER_DELTA, msg=emsg)
 
             print "Trial #", trial, "completed"
 
