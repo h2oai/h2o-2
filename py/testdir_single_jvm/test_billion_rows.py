@@ -47,10 +47,14 @@ class Basic(unittest.TestCase):
 
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
+            start = time.time()
             parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
                 timeoutSecs=500, pollTimeoutSecs=60)
+            elapsed = time.time() - start
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "Parse result['destination_key']:", parseKey['destination_key']
+            print csvFilename, "completed in", elapsed, "seconds.", "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+
 
             # We should be able to see the parse result?
             inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
