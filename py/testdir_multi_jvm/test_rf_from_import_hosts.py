@@ -36,8 +36,10 @@ class Basic(unittest.TestCase):
         #    "billion_rows.csv.gz",
         csvFilenameAll = [
             ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz"),
-            ("covtype.data", "covtype.data"),
-            ("covtype20x.data", "covtype20x.data"),
+            # do it twice
+            ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz"),
+            # ("covtype.data", "covtype.data"),
+            # ("covtype20x.data", "covtype20x.data"),
             # "covtype200x.data",
             # "100million_rows.csv",
             # "200million_rows.csv",
@@ -62,7 +64,7 @@ class Basic(unittest.TestCase):
 
             start = time.time()
             parseKey = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
-                key2=csvFilename, timeoutSecs=500)
+                key2=csvFilename + ".hex", timeoutSecs=500)
             elapsed = start - time.time()
             print "parse end on ", csvFilepattern, 'took', elapsed, 'seconds.',\
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
