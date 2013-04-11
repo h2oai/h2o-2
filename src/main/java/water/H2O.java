@@ -980,14 +980,14 @@ public final class H2O {
             try{
               val.storePersist(); // Write to disk
             } catch(IOException e) {
-              if(diskFull = isDiskFull()) // disk full?
+              if( isDiskFull() ) // disk full?
                 System.err.println("Disk full! Disabling swapping to disk." + ((force)?" Memory low! Please free some space in " + PersistIce.ROOT+"!":""));
-              else {
+              else
                 System.err.println("Disk swapping failed! " + e.getMessage());
-                // Something is wrong so mark disk as full anyways so we do not attempt to write again.
-                // (will retry next run when memory is low)
-                diskFull = true;
-              }
+              // Something is wrong so mark disk as full anyways so we do not
+              // attempt to write again.  (will retry next run when memory is
+              // low)
+              diskFull = true;
             }
           }
           if(force && val.isPersisted()){
@@ -995,8 +995,7 @@ public final class H2O {
             freed += m.length;
           }
         }
-        if(force && (freed < DESIRED) && isDiskFull())
-          UDPRebooted.suicide(UDPRebooted.T.oom, H2O.SELF);
+
         h = _myHisto.histo(true); // Force a new histogram
         MemoryManager.set_goals("postclean",false);
         if( VERBOSE )
