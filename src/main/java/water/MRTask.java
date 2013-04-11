@@ -41,17 +41,12 @@ public abstract class MRTask extends DRemoteTask {
       _rite._hasReservedMem = _hasReservedMem;
       _left._hi = mid;          // Reset mid-point
       _rite._lo = mid;          // Also set self mid-point
+      setPendingCount(2);
       if(_hasReservedMem) { // we have enough memory => run in parallel
-        setPendingCount(2);
         _left.fork();             // Runs in another thread/FJ instance
         _rite.fork();             // Runs in another thread/FJ instance
       } else {
         // not enough memory => go single threaded
-        // single threaded execution means this can not be set as completer of _left
-        //   if pending count was > 0, it would hang after _left finished, as our only thread would be waiting for _rite which would never execute.
-        //   if pending count was = 0, it would go on and execute onCompletion before _rite completes
-        _left.setCompleter(null);
-        _rite.setCompleter(null);
         _left.compute2();
         _rite.compute2();
       }

@@ -584,6 +584,7 @@ public abstract class DGLM {
       Key [] keys = new Key[folds];
       for(int i = 0; i < folds; ++i)
         DKV.put(keys[i] = Key.make(Key.make()._kb,(byte)0,Key.DFJ_INTERNAL_USER,H2O.CLOUD._memary[(myNodeId + i)%cloudsize]), new GLMXvalSetup(i));
+      DKV.write_barrier();
       GLMXValTask tsk = new GLMXValTask(job,folds, ary, modelDataMap, _standardized, _solver, _glmParams, _normBeta, thresholds);
       long t1 = System.currentTimeMillis();
       tsk.invoke(keys);
