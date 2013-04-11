@@ -53,13 +53,17 @@ public class Futures {
   }
 
   /** Block until all pending futures have completed */
-  synchronized public final void blockForPending() {
+  public final void blockForPending() {
     try {
-      while( _pending_cnt > 0 )
-        // Block until the last Future finishes.  This will unlock/wait/relock
-        // - so the _pending fields all change, and will be freshly reloaded
-        // after returning from the blocking get() call.
-        _pending[--_pending_cnt].get();
+      // Block until the last Future finishes.
+      while( true ) {
+        Future f = null;
+        synchronized(this) {
+          if( _pending_cnt == 0 ) return;
+          f = _pending[--_pending_cnt];
+        }
+        f.get();
+      }
     } catch( InterruptedException ie ) {
       throw new RuntimeException(ie);
     } catch( ExecutionException ee ) {

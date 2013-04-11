@@ -125,7 +125,7 @@ public abstract class MemoryManager {
   public static void set_goals( String msg, boolean oom , long bytes) {
     // Our best guess of free memory, as of the last GC cycle
     long freeHeap = MEM_MAX - HEAP_USED_AT_LAST_GC;
-    assert freeHeap >= 0 : "I am really confused about the heap usage";
+    assert freeHeap >= 0 : "I am really confused about the heap usage; MEM_MAX="+MEM_MAX+" HEAP_USED_AT_LAST_GC="+HEAP_USED_AT_LAST_GC;
     // Current memory held in the K/V store.
     long cacheUsage = myHisto.histo(false)._cached;
 

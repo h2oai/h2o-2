@@ -52,8 +52,8 @@ public abstract class MRTask extends DRemoteTask {
         //   if pending count was = 0, it would go on and execute onCompletion before _rite completes
         _left.setCompleter(null);
         _rite.setCompleter(null);
-        _left.invoke();
-        _rite.invoke();
+        _left.compute2();
+        _rite.compute2();
       }
     } else {
       if( _hi > _lo )           // Single key?
