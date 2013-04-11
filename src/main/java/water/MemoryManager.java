@@ -156,7 +156,7 @@ public abstract class MemoryManager {
                            ", MAX="+(MEM_MAX>>20)+"M"+
                            ", DESIRED="+(H2O.Cleaner.DESIRED>>20)+"M");
       }
-      setMemLow(); // Stop allocations; trigger emergency clean
+      if( oom ) setMemLow(); // Stop allocations; trigger emergency clean
       H2O.kick_store_cleaner();
     } else { // Else we are not *emergency* cleaning, but may be lazily cleaning.
       if( H2O.Cleaner.VERBOSE && !CAN_ALLOC )
