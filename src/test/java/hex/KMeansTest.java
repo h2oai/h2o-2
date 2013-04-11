@@ -7,11 +7,7 @@ import org.junit.*;
 import water.*;
 
 public class KMeansTest extends TestUtil {
-
-  @BeforeClass
-  public static void stall() {
-    stall_till_cloudsize(3);
-  }
+  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
 
   @Test
   public void test1Dimension() {
@@ -125,4 +121,16 @@ public class KMeansTest extends TestUtil {
     UKV.remove(target);
   }
 
+  @Test
+  public void testSphere() {
+    Key k1 = loadAndParseKey("syn_sphere3.hex","smalldata/syn_sphere3.csv");
+    Key target = Key.make(KMeans.KEY_PREFIX+"sphere");
+    ValueArray va = UKV.get(k1);
+    KMeans.run(target, va, 3, 1e-2, 0,1,2);
+    KMeans.KMeansModel res = UKV.get(target);
+    res.print();
+    double[][] clusters = res.clusters();
+    UKV.remove(k1);
+    UKV.remove(target);
+  }
 }
