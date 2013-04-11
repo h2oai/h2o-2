@@ -7,6 +7,7 @@ import java.util.zip.*;
 import jsr166y.CountedCompleter;
 
 import water.*;
+import water.DRemoteTask.DFuture;
 import water.H2O.H2OCountedCompleter;
 import water.api.Inspect;
 import water.parser.DParseTask.Pass;
@@ -97,7 +98,7 @@ public final class ParseDataset extends Job {
       case NONE: parseUncompressed(job, dataset, CustomParser.Type.CSV, setup); break;
       case ZIP:  //parseZipped(job, dataset, setup); break;
       case GZIP: //parseGZipped(job, dataset, setup); break;
-        parseCompressed(job, dataset, setup, compression);
+        parseCompressed(job, keys, setup, compression);
         break;
       default:   throw new Error("Unknown compression of dataset!");
       }
@@ -210,13 +211,15 @@ public final class ParseDataset extends Job {
   public static class UnzipTask extends DRemoteTask {
     Job _job;
     Compression _comp;
-    boolean _success = false;
+    boolean _success = true;
     @Override
     public void reduce(DRemoteTask drt) {
       UnzipTask other = (UnzipTask)drt;
       _success = _success && other._success;
     }
 
+    @Override // Must override not to flatten the keys (which we do not really want to do here)
+    public DFuture fork( Key... keys ) { _keys = keys; return dfork(); }
     @Override
     public void compute2() {
       setPendingCount(_keys.length);
@@ -227,13 +230,14 @@ public final class ParseDataset extends Job {
           public void compute2() {
             InputStream is = null;
             Key okey = Key.make(new String(key._kb) + "_UNZIPPED");
+            Value v = DKV.get(key);
             try{
               switch(_comp){
               case ZIP:
-                is = new ZipInputStream(DKV.get(key).openStream());
+                is = new ZipInputStream(v.openStream());
                 break;
               case GZIP:
-                is = new GZIPInputStream(DKV.get(key).openStream());
+                is = new GZIPInputStream(v.openStream());
                 break;
               default:
                 throw H2O.unimpl();
@@ -266,10 +270,7 @@ public final class ParseDataset extends Job {
     }
   }
 
-  public static void parseCompressed(ParseDataset job, Value [] dataset, CsvParser.Setup setup, Compression comp) throws IOException {
-    Key [] keys = new Key[dataset.length];
-    for(int i = 0; i < keys.length; ++i)
-      keys[i] = dataset[i]._key;
+  public static void parseCompressed(ParseDataset job, Key [] keys, CsvParser.Setup setup, Compression comp) throws IOException {
     UnzipTask tsk = new UnzipTask();
     tsk._comp = comp;
     tsk.invoke(keys);
@@ -284,8 +285,10 @@ public final class ParseDataset extends Job {
           if(keys[i] != null)
             UKV.remove(keys[i]);
       }
-    } else
-      throw new EOFException();
+    } else {
+      System.err.println("unzipping of keys " + Arrays.toString(keys) + " + key[0] = " + keys[0] + " failed!");
+      throw new RuntimeException();
+    }
   }
   // Unpack zipped CSV-style structure and call method parseUncompressed(...)
   // The method exepct a dataset which contains a ZIP file encapsulating one file.
