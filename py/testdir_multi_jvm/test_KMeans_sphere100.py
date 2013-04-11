@@ -3,6 +3,7 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_kmeans, h2o_hosts
 import random
 import math
+import h2o_util
 
 # a truly uniform sphere
 # http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution
@@ -10,12 +11,13 @@ import math
 # he offers the exact solution: http://stackoverflow.com/questions/918736/random-number-generator-that-produces-a-power-law-distribution/918782#918782
 # In spherical coordinates, taking advantage of the sampling rule:
 # http://stackoverflow.com/questions/2106503/pseudorandom-number-generator-exponential-distribution/2106568#2106568
-CLUSTERS = 3
+CLUSTERS = 5 
 SPHERE_PTS = 1000
 RANDOMIZE_SPHERE_PTS = False
 CENTER_DELTA = 1
-DIMENSIONS = 2 # or 3
+DIMENSIONS = 3 # 1,2 or 3
 JUMP_RANDOM_ALL_DIRS = False
+SHUFFLE_SPHERES = True
 
 def get_xyz_sphere(R):
     u = random.random() # 0 to 1
@@ -128,10 +130,20 @@ class Basic(unittest.TestCase):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = 'syn_spheres100.csv'
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename
+
         centersList = write_spheres_dataset(csvPathname, CLUSTERS, SPHERE_PTS)
 
+        if SHUFFLE_SPHERES:
+            # since we create spheres in order
+            csvFilename2 = 'syn_spheres100_shuffled.csv'
+            csvPathname2 = SYNDATASETS_DIR + '/' + csvFilename2
+            h2o_util.file_shuffle(csvPathname, csvPathname2)
+        else:
+            csvFilename2 = csvFilename
+            csvPathname2 = csvPathname
+
         print "\nStarting", csvFilename
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname2, key2=csvFilename2 + ".hex")
 
         # try 5 times, to see if all inits by h2o are good
         for trial in range(3):
@@ -191,12 +203,9 @@ class Basic(unittest.TestCase):
                 bStr = ",".join(map(str,b))
                 iStr = str(i)
 
-                emsg = aStr+" != "+bStr+". Sorted cluster center "+iStr+" x not correct."
-                self.assertAlmostEqual(a[0], b[0], delta=CENTER_DELTA, msg=emsg)
-                emsg = aStr+" != "+bStr+". Sorted cluster center "+iStr+" y not correct."
-                self.assertAlmostEqual(a[1], b[1], delta=CENTER_DELTA, msg=emsg)
-                emsg = aStr+" != "+bStr+". Sorted cluster center "+iStr+" z not correct."
-                self.assertAlmostEqual(a[2], b[2], delta=CENTER_DELTA, msg=emsg)
+                for i, v in enumerate(a):
+                    emsg = aStr+" != "+bStr+". Sorted cluster center "+iStr+" axis "+str(i)+" not correct."
+                    self.assertAlmostEqual(a[i], b[i], delta=CENTER_DELTA, msg=emsg)
 
             print "Trial #", trial, "completed"
 
