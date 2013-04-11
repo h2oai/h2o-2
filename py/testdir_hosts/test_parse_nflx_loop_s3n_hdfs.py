@@ -16,14 +16,15 @@ class Basic(unittest.TestCase):
         # the node state is gone when we tear down the cloud, so pass the ignore here also.
         h2o.tear_down_cloud(sandbox_ignore_errors=True)
 
-    def test_import_covtype20x_parse_loop(self):
+    def test_import_nflx_parse_loop(self):
         print "Using the -.gz files from s3"
-        csvFilename = "manyfiles-nflx-gz"
-        importFolderPath = "/home/0xdiag/datasets"
-        trialMax = 3
-        for tryHeap in [4,12]:
-            print "\n", tryHeap,"GB heap, 1 jvm per host, import folder,", \
-                "then parse 'covtype20x.data'"
+        # want just s3n://home-0xdiag-datasets/manyfiles-nflx-gz/file_1.dat.gz
+        csvFilename = "file_1.dat.gz"
+        csvPathname = "manyfiles-nflx-gz/" + csvFilename
+
+        trialMax = 2
+        for tryHeap in [12,4]:
+            print "\n", tryHeap,"GB heap, 1 jvm per host, import hdfs/s3n, then parse"
             h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap,
                 # all hdfs info is done thru the hdfs_config michal's ec2 config sets up?
                 # this is for our amazon ec hdfs
@@ -36,12 +37,19 @@ class Basic(unittest.TestCase):
 
             timeoutSecs = 500
             URI = "s3n://home-0xdiag-datasets"
-            s3nKey = URI + "/" + csvFilename
+            s3nKey = URI + "/" + csvPathname
             for trial in range(trialMax):
                 # since we delete the key, we have to re-import every iteration, to get it again
                 # s3n URI thru HDFS is not typical.
                 importHDFSResult = h2o.nodes[0].import_hdfs(URI)
                 s3nFullList = importHDFSResult['succeeded']
+                for k in s3nFullList:
+                    key = k['key']
+                    # just print the first tile
+                    if 'nflx' in key and 'file_1.dat.gz' in key: 
+                        # should be s3n://home-0xdiag-datasets/manyfiles-nflx-gz/file_1.dat.gz
+                        print "first file we'll use:", key
+
                 ### print "s3nFullList:", h2o.dump_json(s3nFullList)
                 # error if none? 
                 self.assertGreater(len(s3nFullList),8,"Didn't see more than 8 files in s3n?")
@@ -55,16 +63,25 @@ class Basic(unittest.TestCase):
 
                 print s3nKey, 'parse time:', parseKey['response']['time']
                 print "parse result:", parseKey['destination_key']
-                print "Trial #", trial, "completed in", elapsed, "seconds.", \
+                print "Parse #", trial, "completed in", elapsed, "seconds.", \
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
                 print "Deleting key in H2O so we get it from S3 (if ec2) or nfs again.", \
                       "Otherwise it would just parse the cached key."
+
                 storeView = h2o.nodes[0].store_view()
                 ### print "storeView:", h2o.dump_json(storeView)
-                print "Removing", s3nKey
-                removeKeyResult = h2o.nodes[0].remove_key(key=s3nKey)
-                ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
+                # "key": "s3n://home-0xdiag-datasets/manyfiles-nflx-gz/file_84.dat.gz"
+                # have to do the pattern match ourself, to figure out what keys to delete
+                # we're deleting the keys in the initial import. We leave the keys we created
+                # by the parse. We use unique dest keys for those, so no worries.
+                # Leaving them is good because things fill up! (spill)
+                for k in s3nFullList:
+                    deleteKey = k['key']
+                    if 'nflx' in key and 'file_1.dat.gz' in key: 
+                        print "Removing", deleteKey
+                        removeKeyResult = h2o.nodes[0].remove_key(key=deleteKey)
+                        ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
 
             h2o.tear_down_cloud()
             # sticky ports? wait a bit.

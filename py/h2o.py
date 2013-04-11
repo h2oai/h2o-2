@@ -439,6 +439,8 @@ def upload_jar_to_remote_hosts(hosts, slow_connection=False):
         hosts[0].push_file_to_remotes(f, hosts[1:])
 
 def check_sandbox_for_errors(sandbox_ignore_errors=False):
+    if not os.path.exists(LOG_DIR):
+        return
     # dont' have both tearDown and tearDownClass report the same found error
     # only need the first
     if nodes and nodes[0].sandbox_error_report():
