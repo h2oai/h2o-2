@@ -7,11 +7,7 @@ import org.junit.*;
 import water.*;
 
 public class KMeansTest extends TestUtil {
-
-  @BeforeClass
-  public static void stall() {
-    stall_till_cloudsize(3);
-  }
+  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
 
   @Test
   public void test1Dimension() {
@@ -30,7 +26,7 @@ public class KMeansTest extends TestUtil {
       Assert.assertEquals(1.125, clusters[0][0], 0.000001);
       Assert.assertEquals(4.65, clusters[1][0], 0.000001);
     } finally {
-      KMeans.RAND_SEED = null;
+      KMeans.RAND_SEED = 0;
       UKV.remove(source);
       UKV.remove(target);
     }
@@ -77,7 +73,7 @@ public class KMeansTest extends TestUtil {
         Assert.assertTrue(found);
       }
     } finally {
-      KMeans.RAND_SEED = null;
+      KMeans.RAND_SEED = 0;
       UKV.remove(source);
       UKV.remove(target);
     }
@@ -86,7 +82,7 @@ public class KMeansTest extends TestUtil {
   public static double[][] gauss(int columns, int rows, double[][] goals) {
     // rows and cols are reversed on this one for va_maker
     double[][] array = new double[columns][rows];
-    Random rand = KMeans.RAND_SEED == null ? new Random() : new Random(KMeans.RAND_SEED);
+    Random rand = KMeans.RAND_SEED == 0 ? new Random() : new Random(KMeans.RAND_SEED);
 
     for( int goal = 0; goal < goals.length; goal++ )
       for( int c = 0; c < columns; c++ )
@@ -125,4 +121,16 @@ public class KMeansTest extends TestUtil {
     UKV.remove(target);
   }
 
+  @Test
+  public void testSphere() {
+    Key k1 = loadAndParseKey("syn_sphere3.hex","smalldata/syn_sphere3.csv");
+    Key target = Key.make(KMeans.KEY_PREFIX+"sphere");
+    ValueArray va = UKV.get(k1);
+    KMeans.run(target, va, 3, 1e-2, 0,1,2);
+    KMeans.KMeansModel res = UKV.get(target);
+    res.print();
+    double[][] clusters = res.clusters();
+    UKV.remove(k1);
+    UKV.remove(target);
+  }
 }

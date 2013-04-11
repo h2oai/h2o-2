@@ -259,7 +259,10 @@ public abstract class MemoryManager {
         default: throw H2O.unimpl();
         }
       }
-      catch( OutOfMemoryError e ) { }
+      catch( OutOfMemoryError e ) { 
+        if( H2O.Cleaner.isDiskFull() )
+          UDPRebooted.suicide(UDPRebooted.T.oom, H2O.SELF);
+      }
       set_goals("OOM",true, bytes); // Low memory; block for swapping
     }
   }

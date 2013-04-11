@@ -14,7 +14,8 @@ import com.google.gson.*;
  * http://www.youtube.com/watch?v=cigXAxV3XcY
  */
 public abstract class KMeans {
-  public static Long           RAND_SEED;
+  private static final boolean NORMALIZE=false;
+  public static long           RAND_SEED = 0; // 0x1234567 might be better seed
   public static final String   KEY_PREFIX = "__KMeansModel_";
   public static final Key makeKey() {
     return Key.make(KEY_PREFIX + Key.make());
@@ -22,8 +23,8 @@ public abstract class KMeans {
 
   public static class KMeansModel extends Model implements Progress {
     public static final String NAME = KMeansModel.class.getSimpleName();
-    public double[][]          _clusters;  // The cluster centers, normalized according to _va
-    public int                 _iteration;
+    public double[][] _clusters; // The cluster centers, normalized according to _va
+    public int        _iteration;
 
     // Empty constructor for deserialization
     public KMeansModel() { }
@@ -63,9 +64,11 @@ public abstract class KMeans {
         for( int i = 0; i < ds.length; i++ ) {
           ValueArray.Column C = _va._cols[i];
           double d = ds[i];
-          if( C._sigma != 0.0 && !Double.isNaN(C._sigma) )
-            d *= C._sigma;
-          d += C._mean;
+          if( NORMALIZE ) {
+            if( C._sigma != 0.0 && !Double.isNaN(C._sigma) )
+              d *= C._sigma;
+            d += C._mean;
+          }
           dd[j][i] = d;
         }
       }
@@ -81,9 +84,12 @@ public abstract class KMeans {
     protected double score0(double[] data) {
       for( int i = 0; i < data.length-1; i++ ) { // Normalize the data before scoring
         ValueArray.Column C = _va._cols[i];
-        double d = data[i] - C._mean;
-        if( C._sigma != 0.0 && !Double.isNaN(C._sigma) )
-          d /= C._sigma;
+        double d = data[i];
+        if( NORMALIZE ) {
+          d -= C._mean;
+          if( C._sigma != 0.0 && !Double.isNaN(C._sigma) )
+            d /= C._sigma;
+        }
         data[i] = d;
       }
       data[data.length-1] = Double.NaN; // Response variable column not used
@@ -99,6 +105,17 @@ public abstract class KMeans {
     protected double score0(ValueArray data, AutoBuffer ab, int row_in_chunk, int[] mapping) {
       throw H2O.unimpl();
     }
+
+    public final void print() {
+      StringBuilder sb = new StringBuilder();
+      sb.append("I: ").append(_iteration).append("[");
+      double[][] c = clusters();
+      for( int i=0; i<c.length; i++ )
+        sb.append(c[i][2]).append(",");
+      sb.append("]");
+      System.err.println(sb);
+    }
+
   }
 
   // Compute the cluster members, and the mean-dist to each cluster
@@ -159,8 +176,12 @@ public abstract class KMeans {
     for( int c = 0; c < cols.length-1; c++ ) {
       ValueArray.Column C = va._cols[c];
       // Use the mean if missing data, then center & normalize
-      double d = (va.isNA(bits, row, C) ? C._mean : va.datad(bits, row, C)) - C._mean;
-      res[c] =  (C._sigma == 0.0 || Double.isNaN(C._sigma)) ? d : d / C._sigma;
+      double d = (va.isNA(bits, row, C) ? C._mean : va.datad(bits, row, C));
+      if( NORMALIZE ) {
+        d -= C._mean;
+        d = (C._sigma == 0.0 || Double.isNaN(C._sigma)) ? d : d / C._sigma;
+      }
+      res[c] = d;
     }
     return res;
   }
@@ -217,6 +238,7 @@ public abstract class KMeans {
       }
 
       res._iteration++;
+      res._clusters = clusters;
       UKV.put(job.dest(), res);
     }
 
@@ -296,7 +318,7 @@ public abstract class KMeans {
       int rows = bits.remaining() / va._rowsize;
       double[] values = new double[_cols.length-1];
       ArrayList<double[]> list = new ArrayList<double[]>();
-      Random rand = RAND_SEED == null ? new Random() : new Random(RAND_SEED);
+      Random rand = RAND_SEED == 0 ? new Random() : new Random(RAND_SEED);
       ClusterDist cd = new ClusterDist();
 
       for( int row = 0; row < rows; row++ ) {
@@ -325,8 +347,8 @@ public abstract class KMeans {
     double[][] _clusters;       // IN:  Centroids/clusters
 
     // Reduced - sums and counts for each cluster
-    double[][] _sums;
-    int[]      _counts;
+    double[][] _sums;           // OUT: Sum of (normalized) features in each cluster
+    int[]      _counts;         // OUT: Count of rows in cluster
 
     @Override
     public void map(Key key) {
@@ -423,10 +445,11 @@ public abstract class KMeans {
     double[][] res = new double[k][];
     res[0] = points[0];
     int count = 1;
-    Random rand = RAND_SEED == null ? new Random() : new Random(RAND_SEED);
+    Random rand = RAND_SEED == 0 ? new Random() : new Random(RAND_SEED);
     ClusterDist cd = new ClusterDist();
 
     while( count < res.length ) {
+      // Compute total-square-distance from all points to all other points so-far
       double sum = 0;
       for( int i = 0; i < points.length; i++ )
         sum += minSqr(res, points[i], cd, count);
