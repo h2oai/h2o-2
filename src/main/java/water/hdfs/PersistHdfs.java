@@ -55,6 +55,7 @@ public abstract class PersistHdfs {
   @SuppressWarnings("deprecation")
   private static void addFolder(FileSystem fs, Path p, JsonArray succeeded, JsonArray failed) {
     try {
+      if( fs == null ) return;
       for( FileStatus file : fs.listStatus(p) ) {
         Path pfs = file.getPath();
         if( file.isDir() ) {
