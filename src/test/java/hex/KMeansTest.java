@@ -128,7 +128,6 @@ public class KMeansTest extends TestUtil {
     ValueArray va = UKV.get(k1);
     KMeans.run(target, va, 3, 1e-2, 0,1,2);
     KMeans.KMeansModel res = UKV.get(target);
-    res.print();
     double[][] clusters = res.clusters();
     UKV.remove(k1);
     UKV.remove(target);
