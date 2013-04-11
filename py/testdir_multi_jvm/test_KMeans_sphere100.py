@@ -18,10 +18,15 @@ CENTER_DELTA = 1
 DIMENSIONS = 3 # 1,2 or 3
 JUMP_RANDOM_ALL_DIRS = False
 SHUFFLE_SPHERES = True
+R_NOISE = True
 
 def get_xyz_sphere(R):
     u = random.random() # 0 to 1
+    # add a little noise
     r = R * (u ** (1.0/3))
+    if R_NOISE:
+        rNoise = random.random() * .1 * r
+        r += rNoise
 
     costheta = random.uniform(-1,1)
     theta = math.acos(costheta)
@@ -32,7 +37,7 @@ def get_xyz_sphere(R):
     y = r * math.sin(theta) * math.sin(phi)
     z = r * math.cos(theta) 
     xyz = [x, y, z]
-    print xyz[:DIMENSIONS]
+    ### print xyz[:DIMENSIONS]
     return xyz[:DIMENSIONS]
 
 def write_spheres_dataset(csvPathname, CLUSTERS, n):
