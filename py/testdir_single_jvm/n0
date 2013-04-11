@@ -69,6 +69,7 @@
 ./n0.doit test_randomFilter.py
 ./n0.doit test_redirect.py
 ./n0.doit test_rf1.py
+./n0.doit test_rf_big1_nopoll.py
 ./n0.doit test_rf_covtype_train_full.py
 ./n0.doit test_rf_covtype_train_oobe.py
 ./n0.doit test_rf_noise.py
@@ -79,6 +80,7 @@
 ./n0.doit test_rf_params_rand2_nostrata.py
 ./n0.doit test_rf_params_rand2.py
 ./n0.doit test_rf_params_rand2_space.py
+./n0.doit test_rf_strata_fail.py
 ./n0.doit test_rf_strata_rand1.py
 ./n0.doit test_rfview_score.py
 ./n0.doit test_simple.py

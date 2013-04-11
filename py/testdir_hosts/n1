@@ -27,6 +27,7 @@
 ./n1.doit test_from_import_3.py
 ./n1.doit test_GLM_100Mx70_hosts.py
 ./n1.doit test_GLM_allstate_s3n_thru_hdfs.py
+./n1.doit test_GLM_big1_nopoll.py
 ./n1.doit test_GLM_big2_hosts.py
 ./n1.doit test_GLM_catdata_hosts.py
 ./n1.doit test_GLM_covtype2000x_hosts.py
@@ -36,6 +37,7 @@
 ./n1.doit test_GLM_covtype_single_cols.py
 ./n1.doit test_GLM_from_import_hosts.py
 ./n1.doit test_GLMGrid_hastie.py
+./n1.doit test_GLM_hhp_gz_s3n_thru_hdfs.py
 ./n1.doit test_GLM_import_YearPredictionMSD.py
 ./n1.doit test_GLM_many_cols_4.py
 ./n1.doit test_GLM_many_cols_enum.py
@@ -63,6 +65,7 @@
 ./n1.doit test_KMeans_params_rand2.py
 ./n1.doit test_KMeans_sphere100.py
 ./n1.doit test_KMeans_sphere3.py
+./n1.doit test_KMeans_sphere5_bad_inits.py
 ./n1.doit test_many_cols_01.py
 ./n1.doit test_many_cols_0.py
 ./n1.doit test_many_cols_and_types.py
@@ -90,6 +93,9 @@
 ./n1.doit test_rf2a.py
 ./n1.doit test_rf2.py
 ./n1.doit test_rf3.py
+./n1.doit test_rf_float_many_bins.py
+./n1.doit test_rf_float_rand2.py
+./n1.doit test_rf_float_rand.py
 ./n1.doit test_rf_sample.py
 ./n1.doit test_same_parse.py
 ./n1.doit test_sigar.py
