@@ -31,10 +31,18 @@ class Basic(unittest.TestCase):
         #    "3G_poker_shuffle"
         #    "covtype20x.data", 
         #    "billion_rows.csv.gz",
+
+        # typical size of the michal files
+        avgMichalSize = 116561140 
         csvFilenameAll = [
             # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz"),
             # 100 files takes too long on two machines?
-            ("manyfiles-nflx-gz/file_*.dat.gz", "file_10.dat.gz"),
+            # I use different files to avoid OS caching effects
+            ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize),
+            ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize),
+            ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize),
+            ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize),
+            ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize),
 
             # do it twice
             # ("covtype.data", "covtype.data"),
@@ -59,7 +67,7 @@ class Basic(unittest.TestCase):
 
         # split out the pattern match and the filename used for the hex
         trialMax = 2
-        for csvFilepattern, csvFilename in csvFilenameList:
+        for csvFilepattern, csvFilename, totalBytes in csvFilenameList:
             for trial in range(trialMax):
 
                 importFolderResult = h2i.setupImportFolder(None, importFolderPath)
@@ -75,6 +83,9 @@ class Basic(unittest.TestCase):
                 elapsed = time.time() - start
                 print "Parse #", trial, "completed in", "%6.2f" % elapsed, "seconds.", \
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+                if totalBytes is not None:
+                    fileMBS = (totalBytes/1e6)/elapsed
+                    print "\nMB/sec (before uncompress)", "%6.2f" % fileMBS
 
                 print csvFilepattern, 'parse time:', parseKey['response']['time']
                 print "Parse result['destination_key']:", parseKey['destination_key']
