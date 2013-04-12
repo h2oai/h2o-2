@@ -21,7 +21,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_hhp_107_01(self):
+    def test_rf_big1_nopoll(self):
         csvPathname = h2o.find_file("smalldata/hhp_107_01.data.gz")
         print "\n" + csvPathname
 
@@ -41,6 +41,7 @@ class Basic(unittest.TestCase):
             print "\njobDispatch #", jobDispatch
 
         anyBusy = True
+        waitLoop = 0
         while (anyBusy):
             anyBusy = False
             a = h2o.nodes[0].jobs_admin()
@@ -54,14 +55,19 @@ class Basic(unittest.TestCase):
 
                 if j['end_time'] == '':
                     anyBusy = True
-                    print "Not done - ",\
+                    print "Loop", waitLoop, "Not done - ",\
                         "destination_key:", j['destination_key'], \
                         "progress:",  j['progress'], \
                         "cancelled:", j['cancelled'],\
                         "end_time:",  j['end_time']
             print "\n"
             h2b.browseJsonHistoryAsUrlLastMatch("Jobs")
+            if (anyBusy and waitLoop > 2):
+                print h2o.dump_json(jobs)
+                raise Exception("Some queued jobs haven't completed after", waitLoop, "wait loops")
+
             time.sleep(5)
+            waitLoop += 1
 
             
         # b = h2o.nodes[0].jobs_cancel(key='pytest_model')
