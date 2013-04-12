@@ -18,7 +18,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_B_importFolder_files(self):
+    def test_rf_from_import_hosts(self):
 
         # just do the import folder once
         # importFolderPath = "/home/hduser/hdfs_datasets"
@@ -36,7 +36,7 @@ class Basic(unittest.TestCase):
         csvFilenameList = csvFilenameAll
 
         # pop open a browser on the cloud
-        h2b.browseTheCloud()
+        ### h2b.browseTheCloud()
 
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 

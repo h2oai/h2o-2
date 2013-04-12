@@ -23,7 +23,7 @@ class Basic(unittest.TestCase):
         csvPathname = "manyfiles-nflx-gz/" + csvFilename
 
         trialMax = 2
-        for tryHeap in [12,4]:
+        for tryHeap in [10,4]:
             print "\n", tryHeap,"GB heap, 1 jvm per host, import hdfs/s3n, then parse"
             h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap,
                 # all hdfs info is done thru the hdfs_config michal's ec2 config sets up?
@@ -63,7 +63,7 @@ class Basic(unittest.TestCase):
 
                 print s3nKey, 'parse time:', parseKey['response']['time']
                 print "parse result:", parseKey['destination_key']
-                print "Parse #", trial, "completed in", elapsed, "seconds.", \
+                print "Parse #", trial, "completed in", "%6.2f" % elapsed, "seconds.", \
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
                 print "Deleting key in H2O so we get it from S3 (if ec2) or nfs again.", \

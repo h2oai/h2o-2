@@ -1,23 +1,26 @@
-
 {
-     "_comment" : "no password, or None,  means none will be used in ssh. Assumes keys have been exchanged. Watch out for common error: last entry in list can't have comma. Only ip is used. Others ignored, saved here for sometime use. Last ip value used if duplicates? Leading _ means not used. First ip/h2o is used for H2O json communication..vary ip list to direct that. See http://docs.python.org/library/json.html for json->python data types. Note lower case for true/false. null is None, but can just not have an entry. Defaults are in h2o_hosts.py",
-
     "username": "0xdiag", 
-    "password": "0xdiag", 
-    "use_home_for_ice": true,
-
+    "hdfs_config": "/home/kevin/.ec2/core-site.xml", 
+    "java_extra_args": "", 
     "h2o_per_host": 1, 
-    "sigar": true,
-    "java_heap_GB": 28, 
-
-    "hdfs_name_node": "192.168.1.176",
-    "hdfs_version": "cdh3u5",
-    "use_hdfs": false,
-
-    "use_flatfile": true,
-
     "ip": [
-        "192.168.1.172"
-    ]
+        "10.151.35.230"
+    ], 
+    "ec2_instances": [
+        {
+            "private_ip_address": "10.151.35.230", 
+            "public_dns_name": "ec2-54-243-8-80.compute-1.amazonaws.com", 
+            "id": "i-41f94929", 
+            "public_ip_address": "54.243.8.80"
+        }
+    ], 
+    "key_filename": "/home/kevin/.ec2/keys/mrjenkins_test.pem", 
+    "redirect_import_folder_to_s3_path": true, 
+    "aws_credentials": "/home/kevin/.ec2/AwsCredentials.properties", 
+    "ec2_comment_ssh_1": "ssh -i ~/.ec2/keys/mrjenkins_test.pem ubuntu@10.151.35.230", 
+    "java_heap_GB": 11, 
+    "base_port": 54321, 
+    "use_flatfile": true, 
+    "ec2_reservation_id": "r-18029779", 
+    "ec2_region": "us-east-1"
 }
-
