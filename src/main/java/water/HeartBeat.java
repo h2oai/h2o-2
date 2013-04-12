@@ -1,6 +1,5 @@
 package water;
 
-
 import java.util.Arrays;
 
 /**
@@ -40,9 +39,11 @@ public class HeartBeat extends Iced {
   }
 
   public char _rpcs;            // Outstanding DFutureTasks
-  public char _fjthrds_hi;      // Number of threads (not all are runnable)
+
+  // Number of elements & threads in high FJ work queues
+  public short _fjthrds_hi[];
+  public short _fjqueue_hi[];
   public char _fjthrds_lo;      // Number of threads (not all are runnable)
-  public char _fjqueue_hi;      // Number of elements in FJ work queue
   public char _fjqueue_lo;      // Number of elements in FJ work queue
   public char _tcps_active;     // Threads trying do a TCP send
 }

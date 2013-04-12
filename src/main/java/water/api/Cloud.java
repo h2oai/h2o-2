@@ -1,8 +1,6 @@
 package water.api;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import com.google.gson.*;
 import water.*;
 
 public class Cloud extends Request {
@@ -32,8 +30,17 @@ public class Cloud extends Request {
       node.addProperty(FREE_DISK, hb.get_free_disk());
       node.addProperty(MAX_DISK, hb.get_max_disk());
       node.addProperty(NUM_CPUS, (int)hb._num_cpus);
-      node.addProperty(FJ_THREADS_HI, (int)hb._fjthrds_hi);
-      node.addProperty(FJ_QUEUE_HI, (int)hb._fjqueue_hi);
+
+      JsonArray fjt = new JsonArray();
+      JsonArray fjq = new JsonArray();
+      if( hb._fjthrds_hi != null ) {
+        for( int i=0; i<hb._fjthrds_hi.length; i++ ) {
+          fjt.add(new JsonPrimitive(hb._fjthrds_hi[i]));
+          fjq.add(new JsonPrimitive(hb._fjqueue_hi[i]));
+        }
+      }
+      node.add(FJ_THREADS_HI, fjt);
+      node.add(FJ_QUEUE_HI  , fjq);
       node.addProperty(FJ_THREADS_LO, (int)hb._fjthrds_lo);
       node.addProperty(FJ_QUEUE_LO, (int)hb._fjqueue_lo);
       node.addProperty(RPCS, (int)hb._rpcs);

@@ -413,27 +413,16 @@ public final class H2O {
   private static final ForkJoinPool2 FJPS[] = new ForkJoinPool2[MAX_PRIORITY+1];
   static {
     for( int i=MIN_HI_PRIORITY; i<=MAX_PRIORITY; i++ )
-      FJPS[i] = new ForkJoinPool2(i,1); // 1 thread per pool
+      FJPS[i] = new ForkJoinPool2(i,NUMCPUS); // 1 thread per pool
     FJPS[0] = FJP_NORM;
   }
 
   // Easy peeks at the low FJ queue
-  public static int getLoQueue () { return FJP_NORM.getQueuedSubmissionCount(); }
-  public static int loQPoolSize() { return FJP_NORM.getPoolSize(); }
+  public static int getLoQueue (     ) { return FJP_NORM.getQueuedSubmissionCount();}
+  public static int loQPoolSize(     ) { return FJP_NORM.getPoolSize();             }
+  public static int getHiQueue (int i) { return FJPS[i+MIN_HI_PRIORITY].getQueuedSubmissionCount();}
+  public static int hiQPoolSize(int i) { return FJPS[i+MIN_HI_PRIORITY].getPoolSize();             }
 
-  // Summarize the hi FJ queue work
-  public static int getHiQueue () {
-    int sum=0;
-    for( int i=MIN_HI_PRIORITY; i<=MAX_PRIORITY; i++ )
-      sum += FJPS[i].getQueuedSubmissionCount();
-    return sum;
-  }
-  public static int hiQPoolSize() {
-    int sum=0;
-    for( int i=MIN_HI_PRIORITY; i<=MAX_PRIORITY; i++ )
-      sum += FJPS[i].getPoolSize();
-    return sum;
-  }
   // Submit to the correct priority queue
   public static void submitTask( H2OCountedCompleter task ) {
     int priority = task.priority();
