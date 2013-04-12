@@ -1,5 +1,5 @@
 $(function () {
-    var filetypes = /\.(zip|exe|dmg|pdf|doc.*|xls.*|ppt.*|mp3|txt|rar|wma|mov|avi|wmv|flv|wav)$/i
+    var filetypes = /\.(jar|zip|exe|dmg|pdf|doc.*|xls.*|ppt.*|mp3|txt|rar|wma|mov|avi|wmv|flv|wav)$/i
     var baseHref = '';
     if (jQuery('base').attr('href') != undefined) baseHref = jQuery('base').attr('href');
  
