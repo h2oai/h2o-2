@@ -20,7 +20,8 @@ class Basic(unittest.TestCase):
         print "Using the -.gz files from s3"
         # want just s3n://home-0xdiag-datasets/manyfiles-nflx-gz/file_1.dat.gz
         csvFilename = "file_1.dat.gz"
-        csvPathname = "manyfiles-nflx-gz/" + csvFilename
+        csvFilepattern = "file_1[0-9].dat.gz"
+        csvPathname = "manyfiles-nflx-gz/" + csvFilepattern
 
         trialMax = 2
         for tryHeap in [10,4]:
