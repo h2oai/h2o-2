@@ -24,7 +24,6 @@ class Basic(unittest.TestCase):
     def test_from_import(self):
         # just do the import folder once
         # importFolderPath = "/home/hduser/hdfs_datasets"
-        importFolderPath = '/home/0xdiag/datasets'
 
         #    "covtype169x.data",
         #    "covtype.13x.shuffle.data",
@@ -33,32 +32,48 @@ class Basic(unittest.TestCase):
         #    "billion_rows.csv.gz",
 
         # typical size of the michal files
-        avgMichalSize = 116561140 
-        csvFilenameAll = [
-            # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz"),
-            # 100 files takes too long on two machines?
-            # I use different files to avoid OS caching effects
-            ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize),
-            ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize),
-            ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize),
-            ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize),
-            ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize),
-
-            # do it twice
-            # ("covtype.data", "covtype.data"),
-            # ("covtype20x.data", "covtype20x.data"),
-            # "covtype200x.data",
-            # "100million_rows.csv",
-            # "200million_rows.csv",
-            # "a5m.csv",
-            # "a10m.csv",
-            # "a100m.csv",
-            # "a200m.csv",
-            # "a400m.csv",
-            # "a600m.csv",
-            # "billion_rows.csv.gz",
-            # "new-poker-hand.full.311M.txt.gz",
+        if (1==1):
+            importFolderPath = '/home2/0xdiag/datasets'
+            print "Using non-.gz'ed files in", importFolderPath
+            avgMichalSize = 116561140 
+            csvFilenameAll = [
+                # I use different files to avoid OS caching effects
+                ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSize),
+                ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSize),
+                ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSize),
+                ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSize),
+                ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSize),
             ]
+        else:
+            importFolderPath = '/home/0xdiag/datasets'
+            print "Using .gz'ed files in", importFolderPath
+            # all exactly the same prior to gzip!
+            avgMichalSize = 237270000
+            csvFilenameAll = [
+                # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz"),
+                # 100 files takes too long on two machines?
+                # I use different files to avoid OS caching effects
+                ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize),
+                ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize),
+                ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize),
+                ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize),
+                ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize),
+
+                # do it twice
+                # ("covtype.data", "covtype.data"),
+                # ("covtype20x.data", "covtype20x.data"),
+                # "covtype200x.data",
+                # "100million_rows.csv",
+                # "200million_rows.csv",
+                # "a5m.csv",
+                # "a10m.csv",
+                # "a100m.csv",
+                # "a200m.csv",
+                # "a400m.csv",
+                # "a600m.csv",
+                # "billion_rows.csv.gz",
+                # "new-poker-hand.full.311M.txt.gz",
+                ]
         # csvFilenameList = random.sample(csvFilenameAll,1)
         csvFilenameList = csvFilenameAll
 
@@ -114,6 +129,7 @@ class Basic(unittest.TestCase):
                 # remove the original data key
                 for k in importFullList:
                     deleteKey = k['key']
+                    print "possible delete:" deleteKey
                     # don't delete any ".hex" keys. the parse results above have .hex
                     # this is the name of the multi-file (it comes in as a single file?)
                     if csvFilename in deleteKey and not '.hex' in deleteKey:
