@@ -13,7 +13,7 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(3,java_heap_GB=10)
+            h2o.build_cloud(1,java_heap_GB=28)
         else:
             h2o_hosts.build_cloud_with_hosts(1)
 
@@ -32,7 +32,8 @@ class Basic(unittest.TestCase):
         #    "covtype20x.data", 
         #    "billion_rows.csv.gz",
         csvFilenameAll = [
-            ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz"),
+            # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz"),
+            ("manyfiles-nflx-gz/file_*.dat.gz", "file_10.dat.gz"),
             # do it twice
             # ("covtype.data", "covtype.data"),
             # ("covtype20x.data", "covtype20x.data"),

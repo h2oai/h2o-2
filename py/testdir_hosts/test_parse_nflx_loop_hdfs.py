@@ -23,7 +23,7 @@ class Basic(unittest.TestCase):
         csvFilepattern = "file_1[0-9].dat.gz"
 
         trialMax = 2
-        for tryHeap in [10,4]:
+        for tryHeap in [24]:
             print "\n", tryHeap,"GB heap, 1 jvm per host, import 192.168.1.176 hdfs, then parse"
             h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap,
                 use_hdfs=True,
