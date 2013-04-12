@@ -99,6 +99,7 @@ class Basic(unittest.TestCase):
                 for k in importFullList:
                     deleteKey = k['key']
                     # don't delete any ".hex" keys. the parse results above have .hex
+                    # this is the name of the multi-file (it comes in as a single file?)
                     if csvFilename in deleteKey and not '.hex' in deleteKey:
                         print "\nRemoving", deleteKey
                         removeKeyResult = h2o.nodes[0].remove_key(key=deleteKey)

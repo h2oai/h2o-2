@@ -19,9 +19,10 @@ class Basic(unittest.TestCase):
     def test_import_nflx_parse_loop(self):
         print "Using the -.gz files from s3"
         # want just s3n://home-0xdiag-datasets/manyfiles-nflx-gz/file_1.dat.gz
-        csvFilename = "file_1.dat.gz"
+        csvFilename = "file_10.dat.gz"
         csvFilepattern = "file_1[0-9].dat.gz"
-        csvPathname = "manyfiles-nflx-gz/" + csvFilepattern
+        URI = "s3n://home-0xdiag-datasets"
+        s3nKey = URI + "/manyfiles-nflx-gz/" + csvFilepattern
 
         trialMax = 2
         for tryHeap in [10,4]:
@@ -37,8 +38,6 @@ class Basic(unittest.TestCase):
             h2o.nodes[0].sandbox_ignore_errors = True
 
             timeoutSecs = 500
-            URI = "s3n://home-0xdiag-datasets"
-            s3nKey = URI + "/" + csvPathname
             for trial in range(trialMax):
                 # since we delete the key, we have to re-import every iteration, to get it again
                 # s3n URI thru HDFS is not typical.
@@ -49,7 +48,7 @@ class Basic(unittest.TestCase):
                     # just print the first tile
                     if 'nflx' in key and 'file_1.dat.gz' in key: 
                         # should be s3n://home-0xdiag-datasets/manyfiles-nflx-gz/file_1.dat.gz
-                        print "first file we'll use:", key
+                        print "example file we'll use:", key
 
                 ### print "s3nFullList:", h2o.dump_json(s3nFullList)
                 # error if none? 
@@ -79,7 +78,7 @@ class Basic(unittest.TestCase):
                 # Leaving them is good because things fill up! (spill)
                 for k in s3nFullList:
                     deleteKey = k['key']
-                    if 'nflx' in key and 'file_1.dat.gz' in key: 
+                    if csvFilename in deleteKey and not ".hex" in key:      
                         print "Removing", deleteKey
                         removeKeyResult = h2o.nodes[0].remove_key(key=deleteKey)
                         ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
