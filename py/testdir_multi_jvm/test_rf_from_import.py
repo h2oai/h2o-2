@@ -33,7 +33,9 @@ class Basic(unittest.TestCase):
         #    "billion_rows.csv.gz",
         csvFilenameAll = [
             # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz"),
+            # 100 files takes too long on two machines?
             ("manyfiles-nflx-gz/file_*.dat.gz", "file_10.dat.gz"),
+
             # do it twice
             # ("covtype.data", "covtype.data"),
             # ("covtype20x.data", "covtype20x.data"),
@@ -64,12 +66,12 @@ class Basic(unittest.TestCase):
                 importFullList = importFolderResult['succeeded']
                 importFailList = importFolderResult['failed']
                 print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
-                timeoutSecs = 500
+                timeoutSecs = 700
                 # creates csvFilename.hex from file in importFolder dir 
 
                 start = time.time()
                 parseKey = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
-                    key2=csvFilename + ".hex", timeoutSecs=500)
+                    key2=csvFilename + ".hex", timeoutSecs=timeoutSecs)
                 elapsed = time.time() - start
                 print "Parse #", trial, "completed in", elapsed, "seconds.", \
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)

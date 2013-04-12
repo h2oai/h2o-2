@@ -49,7 +49,7 @@ class Basic(unittest.TestCase):
                 print "Loading s3n key: ", s3nKey, 'thru HDFS'
                 start = time.time()
                 parseKey = h2o.nodes[0].parse(s3nKey, key2,
-                    timeoutSecs=500, retryDelaySecs=10, pollTimeoutSecs=60)
+                    timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
                 elapsed = time.time() - start
 
                 print s3nKey, 'parse time:', parseKey['response']['time']

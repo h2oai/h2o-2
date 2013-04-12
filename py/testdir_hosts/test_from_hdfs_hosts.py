@@ -60,7 +60,7 @@ class Basic(unittest.TestCase):
         # pop open a browser on the cloud
         h2b.browseTheCloud()
 
-        timeoutSecs = 200
+        timeoutSecs = 1000
         # save the first, for all comparisions, to avoid slow drift with each iteration
         firstglm = {}
         h2i.setupImportHdfs()
@@ -69,7 +69,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             print 'Parsing', csvFilename
             parseKey = h2i.parseImportHdfsFile(
-                csvFilename=csvFilename, path='/datasets', timeoutSecs=1000, retryDelaySecs=1.0)
+                csvFilename=csvFilename, path='/datasets', timeoutSecs=timeoutSecs, retryDelaySecs=1.0)
             print csvFilename, '\nparse time (python)', time.time() - start, 'seconds'
             print csvFilename, '\nparse time (h2o):', parseKey['response']['time']
             ### print h2o.dump_json(parseKey['response'])

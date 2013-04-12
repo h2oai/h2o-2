@@ -55,7 +55,7 @@ class Basic(unittest.TestCase):
                 print "Loading hdfs key: ", hdfsKey
                 start = time.time()
                 parseKey = h2o.nodes[0].parse(hdfsKey, key2,
-                    timeoutSecs=500, retryDelaySecs=10, pollTimeoutSecs=60)
+                    timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
                 elapsed = time.time() - start
 
                 print hdfsKey, 'parse time:', parseKey['response']['time']
