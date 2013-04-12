@@ -32,12 +32,13 @@ class Basic(unittest.TestCase):
         #    "billion_rows.csv.gz",
 
         # typical size of the michal files
-        if (1==1):
+        if (1==0):
             importFolderPath = '/home2/0xdiag/datasets'
             print "Using non-.gz'ed files in", importFolderPath
             avgMichalSize = 116561140 
             csvFilenameAll = [
                 # I use different files to avoid OS caching effects
+                ("onefile-nflx/file_1_to_100.dat", "file_1.dat", 100 * avgMichalSize),
                 ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSize),
                 ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSize),
                 ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSize),
@@ -53,6 +54,7 @@ class Basic(unittest.TestCase):
                 # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz"),
                 # 100 files takes too long on two machines?
                 # I use different files to avoid OS caching effects
+                ("covtype200x.data", "covtype200x.data", 15033863400),
                 ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize),
                 ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize),
                 ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize),
@@ -129,7 +131,7 @@ class Basic(unittest.TestCase):
                 # remove the original data key
                 for k in importFullList:
                     deleteKey = k['key']
-                    print "possible delete:" deleteKey
+                    ### print "possible delete:", deleteKey
                     # don't delete any ".hex" keys. the parse results above have .hex
                     # this is the name of the multi-file (it comes in as a single file?)
                     if csvFilename in deleteKey and not '.hex' in deleteKey:
