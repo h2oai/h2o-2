@@ -1,6 +1,6 @@
 import os, json, unittest, time, shutil, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_kmeans, h2o_hosts
+import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_browse as h2b
 import random
 import math
 import h2o_util
@@ -10,12 +10,13 @@ import h2o_util
 # he offers the exact solution: http://stackoverflow.com/questions/918736/random-number-generator-that-produces-a-power-law-distribution/918782#918782
 # In spherical coordinates, taking advantage of the sampling rule:
 # http://stackoverflow.com/questions/2106503/pseudorandom-number-generator-exponential-distribution/2106568#2106568
-CLUSTERS = 5 
+CLUSTERS = 3
 SPHERE_PTS = 10000
 RANDOMIZE_SPHERE_PTS = True
-DIMENSIONS = 5 # 1,2 or 3
-JUMP_RANDOM_ALL_DIRS = False
-SHUFFLE_SPHERES = True
+DIMENSIONS = 3 # 1,2 or 3
+JUMP_RANDOM_ALL_DIRS = True
+# should do this, but does it make h2o kmeans fail?
+SHUFFLE_SPHERES = False
 R_NOISE = True
 ALLOWED_CENTER_DELTA = 1
 
@@ -63,7 +64,7 @@ def write_spheres_dataset(csvPathname, CLUSTERS, n):
             jump = random.randint(10*R,(10*R)+10)
             xyzChoice = random.randint(0,DIMENSIONS-1)
         else:
-            jump = 3*R
+            jump = 10*R
             if DIMENSIONS==5:
                 # limit jumps to yy
                 xyzChoice = 4
@@ -77,7 +78,10 @@ def write_spheres_dataset(csvPathname, CLUSTERS, n):
 
         zeroes = [0] * DIMENSIONS
         newOffset = zeroes
-        newOffset[xyzChoice] = jump
+        # FIX! problems if we don't jump the other dimensions?
+        # try jumping in all dimensions
+        # newOffset[xyzChoice] = jump
+        newOffset = [jump] * DIMENSIONS
 
         # figure out the next center
         if currentCenter is None:
@@ -156,12 +160,16 @@ class Basic(unittest.TestCase):
         print "\nStarting", csvFilename
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname2, key2=csvFilename2 + ".hex")
 
+        ### h2b.browseTheCloud()
+
         # try 5 times, to see if all inits by h2o are good
-        for trial in range(3):
+        # does it break if cols is not specified?
+        cols = ",".join(map(str,range(DIMENSIONS)))
+        for trial in range(10):
             kwargs = {
                 'k': CLUSTERS, 
                 'epsilon': 1e-6, 
-                'cols': None, 
+                'cols': cols,
                 'destination_key': 'syn_spheres100.hex'
             }
             timeoutSecs = 100
@@ -172,7 +180,7 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 
             kmeansResult = h2o_cmd.runInspect(key='syn_spheres100.hex')
-            print h2o.dump_json(kmeansResult)
+            # print h2o.dump_json(kmeansResult)
 
             ### print h2o.dump_json(kmeans)
             ### print h2o.dump_json(kmeansResult)
@@ -188,7 +196,7 @@ class Basic(unittest.TestCase):
             centersSorted  = sorted(centersList, key=sum)
             ### print clustersSorted
 
-            print "\nh2o result, centers (sorted by key=sum)"
+            print "\ntrial #", trial, "h2o result, centers (sorted by key=sum)"
             cf = '{0:6.2f}'
             for c in clustersSorted:
                 print ' '.join(map(cf.format,c))
