@@ -1,8 +1,10 @@
 package water;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.HashMap;
+import water.H2O.H2OCountedCompleter;
 
 /**
 * Large Arrays & Arraylets
@@ -352,12 +354,13 @@ public class ValueArray extends Iced implements Cloneable {
     return k;
   }
 
-  static private Futures readPut(Key key, InputStream is, Job job, Futures fs) throws IOException {
+  static private Futures readPut(Key key, InputStream is, Job job, final Futures fs) throws IOException {
     UKV.remove(key);
     byte[] oldbuf, buf = null;
     int off = 0, sz = 0;
     long szl = off;
     long cidx = 0;
+    Futures dkv_fs = new Futures();
     while( true ) {
       oldbuf = buf;
       buf = MemoryManager.malloc1((int)CHUNK_SZ);
@@ -367,11 +370,30 @@ public class ValueArray extends Iced implements Cloneable {
       szl += off;
       if( off<CHUNK_SZ ) break;
       if( job != null && job.cancelled() ) break;
-      Key ckey = getChunkKey(cidx++,key);
-      DKV.put(ckey,new Value(ckey,buf),fs);
+      final Key ckey = getChunkKey(cidx++,key);
+      final Value val = new Value(ckey,buf);
+      // Do the 'DKV.put' in a F/J task.  For multi-JVM setups, this step often
+      // means network I/O pushing the Value to a new Node.  Putting it in a
+      // subtask allows the I/O to overlap with the read from the InputStream.
+      // Especially if the InputStream is a (g)unzip, its useful to overlap the
+      // write with read.
+      H2OCountedCompleter subtask = new H2OCountedCompleter() {
+          @Override public void compute2() {
+            DKV.put(ckey,val,fs); // The only exciting thing in this innerclass!
+            tryComplete();
+          }
+        };
+      H2O.submitTask(subtask);
+      // Also add the DKV task to the blocking list (not just the TaskPutKey
+      // buried inside the DKV!)
+      dkv_fs.add(subtask);
     }
     assert is.read(new byte[1]) == -1 || job.cancelled();
 
+    // Block for all pending DKV puts, which will in turn add blocking requests
+    // to the passed-in Future list 'fs'.  Also block for the last DKV to
+    // happen, because we're overwriting the last one with final size bits.
+    dkv_fs.blockForPending();
     // Last chunk is short, read it; combine buffers and make the last chunk larger
     if( cidx > 0 ) {
       Key ckey = getChunkKey(cidx-1,key); // Get last chunk written out
