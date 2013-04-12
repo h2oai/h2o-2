@@ -71,7 +71,7 @@ class Basic(unittest.TestCase):
                 parseKey = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
                     key2=csvFilename + ".hex", timeoutSecs=500)
                 elapsed = time.time() - start
-                print "Parse #", trial, "completed in", elapsed, "seconds.", \
+                print "Parse #", trial, "completed in", "%6.2f" % elapsed, "seconds.", \
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
                 print csvFilepattern, 'parse time:', parseKey['response']['time']
