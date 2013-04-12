@@ -20,12 +20,12 @@ class Basic(unittest.TestCase):
         print "Using the -.gz files from s3"
         # want just s3n://home-0xdiag-datasets/manyfiles-nflx-gz/file_1.dat.gz
         csvFilename = "file_10.dat.gz"
-        csvFilepattern = "file_1[0-9].dat.gz"
+        csvFilepattern = "file_1[0-9][0-9].dat.gz"
         URI = "s3n://home-0xdiag-datasets"
         s3nKey = URI + "/manyfiles-nflx-gz/" + csvFilepattern
 
         trialMax = 2
-        for tryHeap in [10,4]:
+        for tryHeap in [28]:
             print "\n", tryHeap,"GB heap, 1 jvm per host, import hdfs/s3n, then parse"
             h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap,
                 # all hdfs info is done thru the hdfs_config michal's ec2 config sets up?
