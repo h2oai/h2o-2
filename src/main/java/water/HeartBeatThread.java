@@ -1,6 +1,6 @@
 package water;
+
 import java.io.File;
-//import org.hyperic.sigar.Udp;
 
 /**
  * Starts a thread publishing multicast HeartBeats to the local subnet: the
@@ -67,9 +67,13 @@ public class HeartBeatThread extends Thread {
       for( H2ONode h2o : cloud._memary )
         rpcs += h2o.taskSize();
       hb._rpcs       = (char)rpcs;
-      hb._fjthrds_hi = (char)H2O.hiQPoolSize();
+      hb._fjthrds_hi = new short[H2O.MAX_PRIORITY+1-H2O.MIN_HI_PRIORITY];
+      hb._fjqueue_hi = new short[H2O.MAX_PRIORITY+1-H2O.MIN_HI_PRIORITY];
+      for( int i=0; i<hb._fjthrds_hi.length; i++ ) {
+        hb._fjthrds_hi[i] = (short)H2O.hiQPoolSize(i);
+        hb._fjqueue_hi[i] = (short)H2O.getHiQueue(i);
+      }
       hb._fjthrds_lo = (char)H2O.loQPoolSize();
-      hb._fjqueue_hi = (char)H2O.getHiQueue();
       hb._fjqueue_lo = (char)H2O.getLoQueue();
       hb._tcps_active= (char)AutoBuffer.TCPS.get();
       // get the usable and total disk storage for the partition where the

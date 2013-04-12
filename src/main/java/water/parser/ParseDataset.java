@@ -29,7 +29,6 @@ public final class ParseDataset extends Job {
 
   private ParseDataset(Key dest, Key[] keys) {
     super("Parse", dest);
-    //if( keys.length > 1 ) throw H2O.unimpl();
     Value dataset = DKV.get(keys[0]);
     long total = dataset.length() * Pass.values().length;
     for(int i = 1; i < keys.length; ++i){
