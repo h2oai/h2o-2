@@ -42,7 +42,7 @@ def build_cloud_with_hosts(node_count=None, use_flatfile=None,
     # to avoid waiting, randomize the port to make it less likely?
     # at least for the hosts case
     offset = random.randint(0,31)
-    basePort = hostDict.setdefault('base_port', 55300 + offset)
+    basePort = hostDict.setdefault('base_port', 54300 + offset)
     username = hostDict.setdefault('username','0xdiag')
     # stupid but here for clarity
     password = hostDict.setdefault('password', None)

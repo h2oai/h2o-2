@@ -10,12 +10,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(1,java_heap_GB=28)
-        else:
-            h2o_hosts.build_cloud_with_hosts(1)
+        pass
 
     @classmethod
     def tearDownClass(cls):
@@ -32,18 +27,18 @@ class Basic(unittest.TestCase):
         #    "billion_rows.csv.gz",
 
         # typical size of the michal files
-        if (1==0):
+        if (1==1):
             importFolderPath = '/home2/0xdiag/datasets'
             print "Using non-.gz'ed files in", importFolderPath
             avgMichalSize = 116561140 
             csvFilenameAll = [
                 # I use different files to avoid OS caching effects
-                ("onefile-nflx/file_1_to_100.dat", "file_1.dat", 100 * avgMichalSize),
-                ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSize),
-                ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSize),
+                # ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSize),
+                # ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSize),
                 ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSize),
                 ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSize),
                 ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSize),
+                ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSize),
             ]
         else:
             importFolderPath = '/home/0xdiag/datasets'
@@ -83,10 +78,16 @@ class Basic(unittest.TestCase):
         ### h2b.browseTheCloud()
 
         # split out the pattern match and the filename used for the hex
-        trialMax = 2
+        trialMax = 1
         for csvFilepattern, csvFilename, totalBytes in csvFilenameList:
-            for trial in range(trialMax):
+            # rebuild the cloud for each file
+            localhost = h2o.decide_if_localhost()
+            if (localhost):
+                h2o.build_cloud(1,java_heap_GB=28)
+            else:
+                h2o_hosts.build_cloud_with_hosts(1)
 
+            for trial in range(trialMax):
                 importFolderResult = h2i.setupImportFolder(None, importFolderPath)
                 importFullList = importFolderResult['succeeded']
                 importFailList = importFolderResult['failed']
@@ -139,6 +140,8 @@ class Basic(unittest.TestCase):
                         removeKeyResult = h2o.nodes[0].remove_key(key=deleteKey)
                         ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
 
+                # sticky sockets?
+                time.sleep(10)
                 sys.stdout.write('.')
                 sys.stdout.flush() 
 
