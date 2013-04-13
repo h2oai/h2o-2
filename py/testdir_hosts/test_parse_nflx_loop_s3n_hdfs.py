@@ -41,6 +41,7 @@ class Basic(unittest.TestCase):
         trialMax = 1
         for csvFilepattern, csvFilename, totalBytes in csvFilenameList:
             s3nKey = URI + "/" + csvFilepattern
+            ## for tryHeap in [54, 28]:
             for tryHeap in [28]:
                 print "\n", tryHeap,"GB heap, 1 jvm per host, import hdfs/s3n, then parse"
                 h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap,
@@ -53,7 +54,7 @@ class Basic(unittest.TestCase):
                 # don't raise exception if we find something bad in h2o stdout/stderr?
                 h2o.nodes[0].sandbox_ignore_errors = True
 
-                timeoutSecs = 1800
+                timeoutSecs = 2400
                 for trial in range(trialMax):
                     # since we delete the key, we have to re-import every iteration, to get it again
                     # s3n URI thru HDFS is not typical.
@@ -86,9 +87,8 @@ class Basic(unittest.TestCase):
                         fileMBS = (totalBytes/1e6)/elapsed
                         print "\nMB/sec (before uncompress)", "%6.2f" % fileMBS
                         l = str(len(h2o.nodes))
-                        logging.critical('{:s} {:s} {:s} {:6.2f} MB/sec'.format(
-                            l, csvFilepattern, csvFilename, fileMBS))
-
+                        logging.critical('{!s} {:s} {:s} {:s} {:6.2f} MB/sec for {!s} secs'.format(
+                            tryHeap, l, csvFilepattern, csvFilename, fileMBS, elapsed))
 
                     print "Deleting key in H2O so we get it from S3 (if ec2) or nfs again.", \
                           "Otherwise it would just parse the cached key."
