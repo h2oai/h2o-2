@@ -12,7 +12,7 @@ def find_config(base):
     return f
 
 # None means the json will specify, or the default for json below
-# only these two args override for now. can add more.
+# only these args override for now. can add more.
 def build_cloud_with_hosts(node_count=None, use_flatfile=None, 
     use_hdfs=None, hdfs_name_node=None, hdfs_config=None,  hdfs_version=None,
     base_port=None,
@@ -70,6 +70,7 @@ def build_cloud_with_hosts(node_count=None, use_flatfile=None,
     # a little hack to redirect import folder tests to an s3 folder
     redirect_import_folder_to_s3_path = hostDict.setdefault('redirect_import_folder_to_s3_path', None)
     enable_h2o_log = hostDict.setdefault('enable_h2o_log', True)
+    enable_benchmark_log = hostDict.setdefault('enable_benchmark_log', False)
 
     # can override the json with a caller's argument
     # FIX! and we support passing othe kwargs from above? but they don't override
@@ -146,4 +147,5 @@ def build_cloud_with_hosts(node_count=None, use_flatfile=None,
             aws_credentials=aws_credentials,
             redirect_import_folder_to_s3_path=redirect_import_folder_to_s3_path,
             enable_h2o_log=enable_h2o_log,
+            enable_benchmark_log=enable_benchmark_log,
             **kwargs)

@@ -2,18 +2,15 @@ import os, json, unittest, time, shutil, sys
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
 import h2o_exec as h2e
-import time, random
+import time, random, logging
 
-import logging
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
     @classmethod
     def setUpClass(cls):
-        logging.basicConfig(filename='benchmark.log',
-            level=logging.CRITICAL, 
-            format='%(asctime)s %(message)s')
+        pass
 
     @classmethod
     def tearDownClass(cls):
@@ -48,16 +45,19 @@ class Basic(unittest.TestCase):
             print "Using .gz'ed files in", importFolderPath
             # all exactly the same prior to gzip!
             avgMichalSize = 237270000
+            # could use this, but remember import folder -> import folder s3 for jenkins?
+            # how would it get it right?
+            # os.path.getsize(f)
             csvFilenameAll = [
-                ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize),
-                ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize),
-                ("covtype200x.data", "covtype200x.data", 15033863400),
                 # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz"),
                 # 100 files takes too long on two machines?
                 # I use different files to avoid OS caching effects
                 ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize),
                 ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize),
                 ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize),
+                ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize),
+                ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize),
+                ("covtype200x.data", "covtype200x.data", 15033863400),
 
                 # do it twice
                 # ("covtype.data", "covtype.data"),
@@ -87,9 +87,11 @@ class Basic(unittest.TestCase):
         for csvFilepattern, csvFilename, totalBytes in csvFilenameList:
             localhost = h2o.decide_if_localhost()
             if (localhost):
-                h2o.build_cloud(1,java_heap_GB=28)
+                h2o.build_cloud(1,java_heap_GB=28, base_port=base_port,
+                    enable_benchmark_log=True)
             else:
-                h2o_hosts.build_cloud_with_hosts(1, base_port=base_port)
+                h2o_hosts.build_cloud_with_hosts(1, base_port=base_port, 
+                    enable_benchmark_log=True)
             # to avoid sticky ports?
             base_port += 2
 
@@ -103,7 +105,7 @@ class Basic(unittest.TestCase):
 
                 start = time.time()
                 parseKey = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
-                    key2=csvFilename + ".hex", timeoutSecs=timeoutSecs)
+                    key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, retryDelaySecs = 5, benchmarkLogging=True)
                 elapsed = time.time() - start
                 print "Parse #", trial, "completed in", "%6.2f" % elapsed, "seconds.", \
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -149,9 +151,11 @@ class Basic(unittest.TestCase):
                         removeKeyResult = h2o.nodes[0].remove_key(key=deleteKey)
                         ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
 
-                time.sleep(120)
+                h2o.tear_down_cloud()
+                if not localhost:
+                    print "Waiting 10 secs before building cloud again (sticky ports?)"
+                    time.sleep(10)
 
-                # sticky sockets?
                 sys.stdout.write('.')
                 sys.stdout.flush() 
 

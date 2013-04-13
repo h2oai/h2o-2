@@ -4,7 +4,7 @@ import h2o_browse as h2b, h2o_rf as h2f
 
 def parseFile(node=None, csvPathname=None, key=None, key2=None, 
     timeoutSecs=30, retryDelaySecs=0.5, pollTimeoutSecs=30,
-    noise=None, header=None, noPoll=None):
+    noise=None, noPoll=None, header=None):
     if not csvPathname: raise Exception('No file name specified')
     if not node: node = h2o.nodes[0]
     ### print "parseFile pollTimeoutSecs:", pollTimeoutSecs
@@ -14,13 +14,14 @@ def parseFile(node=None, csvPathname=None, key=None, key2=None,
         myKey2 = key + '.hex'
     else:
         myKey2 = key2
-    return node.parse(key, myKey2, header=header,
-        timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-        noPoll=noPoll, noise=noise)
+    return node.parse(key, myKey2, 
+        timeoutSecs, retryDelaySecs, 
+        pollTimeoutSecs=pollTimeoutSecs, noise=noise, noPoll=noPoll,
+        header=header)
 
 def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, 
     timeoutSecs=20, retryDelaySecs=2, pollTimeoutSecs=30, 
-    noise=None, header=None, noPoll=None):
+    noise=None, noPoll=None, header=None):
     ''' Parse a file stored in S3 bucket'''                                                                                                                                                                       
     if not bucket  : raise Exception('No S3 bucket specified')
     if not filename: raise Exception('No filename in bucket specified')
@@ -33,9 +34,10 @@ def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None,
         myKeyForParseResult = s3_key + '.hex'
     else:
         myKeyForParseResult = keyForParseResult
-    return node.parse(s3_key, myKeyForParseResult, header=header,
-        timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-        noPoll=noPoll, noise=noise)
+    return node.parse(s3_key, myKeyForParseResult, 
+        timeoutSecs, retryDelaySecs, 
+        pollTimeoutSecs=pollTimeoutSecs, noise=noise, noPoll=noPoll,
+        header=header)
 
 def runInspect(node=None, key=None, timeoutSecs=5, **kwargs):
     if not key: raise Exception('No key for Inspect specified')
@@ -185,7 +187,7 @@ def runRFTreeView(node=None, n=None, data_key=None, model_key=None, timeoutSecs=
 
 def runRFView(node=None, data_key=None, model_key=None, ntree=None, 
     timeoutSecs=15, retryDelaySecs=2, 
-    noPoll=False, noise=None, noPrint=False, **kwargs):
+    noise=None, noPoll=False, noPrint=False, **kwargs):
     if not node: node = h2o.nodes[0]
 
     def test(n, tries=None):
