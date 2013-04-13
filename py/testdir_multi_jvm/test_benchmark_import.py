@@ -36,12 +36,12 @@ class Basic(unittest.TestCase):
             avgMichalSize = 116561140 
             csvFilenameAll = [
                 # I use different files to avoid OS caching effects
+                ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSize),
+                ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSize),
                 ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSize),
                 ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSize),
                 ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSize),
                 ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSize),
-                ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSize),
-                ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSize),
             ]
         else:
             importFolderPath = '/home/0xdiag/datasets'
@@ -49,15 +49,15 @@ class Basic(unittest.TestCase):
             # all exactly the same prior to gzip!
             avgMichalSize = 237270000
             csvFilenameAll = [
+                ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize),
+                ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize),
+                ("covtype200x.data", "covtype200x.data", 15033863400),
                 # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz"),
                 # 100 files takes too long on two machines?
                 # I use different files to avoid OS caching effects
-                ("covtype200x.data", "covtype200x.data", 15033863400),
                 ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize),
                 ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize),
                 ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize),
-                ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize),
-                ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize),
 
                 # do it twice
                 # ("covtype.data", "covtype.data"),
@@ -82,13 +82,16 @@ class Basic(unittest.TestCase):
 
         # split out the pattern match and the filename used for the hex
         trialMax = 1
+        # rebuild the cloud for each file
+        base_port = 54321
         for csvFilepattern, csvFilename, totalBytes in csvFilenameList:
-            # rebuild the cloud for each file
             localhost = h2o.decide_if_localhost()
             if (localhost):
                 h2o.build_cloud(1,java_heap_GB=28)
             else:
-                h2o_hosts.build_cloud_with_hosts(1, base_port=54321)
+                h2o_hosts.build_cloud_with_hosts(1, base_port=base_port)
+            # to avoid sticky ports?
+            base_port += 2
 
             for trial in range(trialMax):
                 importFolderResult = h2i.setupImportFolder(None, importFolderPath)
@@ -146,8 +149,9 @@ class Basic(unittest.TestCase):
                         removeKeyResult = h2o.nodes[0].remove_key(key=deleteKey)
                         ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
 
+                time.sleep(120)
+
                 # sticky sockets?
-                time.sleep(60)
                 sys.stdout.write('.')
                 sys.stdout.flush() 
 
