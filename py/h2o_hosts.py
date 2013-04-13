@@ -11,16 +11,57 @@ def find_config(base):
         raise Exception("unable to find config %s" % base)
     return f
 
-# None means the json will specify, or the default for json below
-# only these args override for now. can add more.
-def build_cloud_with_hosts(node_count=None, use_flatfile=None, 
-    use_hdfs=None, hdfs_name_node=None, hdfs_config=None,  hdfs_version=None,
-    base_port=None,
-    java_heap_GB=None, java_heap_MB=None, java_extra_args=None,
-    **kwargs):
+# node_count is sometimes used positionally...break that out. all others are keyword args
+def build_cloud_with_hosts(node_count=None, **kwargs):
+    # legacy: we allow node_count to be positional. 
+    # if it's used positionally, stick in in kwargs (overwrite if there too)
+    if node_count is not None:
+        # we use h2o_per_host in the config file. will translate to node_count for build_cloud
+        kwargs['h2o_per_host'] = node_count
+        # set node_count to None to make sure we don't use it below. 'h2o_per_host' should be used
+        node_count = None
 
-    # For seeing example of what we want in the json, if we add things
-    #   import h2o_config
+    # randomizing default base_port used
+    offset = random.randint(0,31)
+    # for new params:
+    # Just update this list with the param name and default and you're done
+    allParamsDefault = {
+        'use_flatfile': None,
+        'use_hdfs': None,
+        'hdfs_name_node': None, 
+        'hdfs_config': None,
+        'hdfs_version': None,
+        'base_port': None,
+        'java_heap_GB': None,
+        'java_heap_MB': None,
+        'java_extra_args': None,
+
+        'slow_connection': False,
+        'ip':'["127.0.0.1"]', # this is the hosts list
+        'h2o_per_host': 2,
+        'base_port': 54300 + offset,
+        'username':'0xdiag',
+        'password': None,
+        'sigar': False,
+        'use_flatfile': False,
+        'use_hdfs': False,
+        'hdfs_name_node': '192.168.1.176',
+        'hdfs_version': 'cdh3u5',
+        'hdfs_config': None,
+        'java_heap_GB': None,
+        'java_heap_MB': None,
+        'java_extra_args': None,
+        'use_home_for_ice': False,
+        'key_filename': None,
+        'aws_credentials': None,
+        'redirect_import_folder_to_s3_path': None,
+        'enable_h2o_log': True,
+        'enable_benchmark_log': False,
+    }
+    # initialize the default values
+    paramsToUse = {}
+    for k,v in allParamsDefault.iteritems():
+        paramsToUse[k] = allParamsDefault.setdefault(k, v)
 
     # allow user to specify the config json at the command line. config_json is a global.
     if h2o.config_json:
@@ -33,119 +74,59 @@ def build_cloud_with_hosts(node_count=None, use_flatfile=None,
     with open(configFilename, 'rb') as fp:
          hostDict = json.load(fp)
 
-    slow_connection = hostDict.setdefault('slow_connection', False)
-    hostList = hostDict.setdefault('ip','127.0.0.1')
+    for k,v in hostDict.iteritems():
+        # Don't take in params that we don't have in the list above
+        # Because michal has extra params in here for ec2! and comments!
+        if k in paramsToUse:
+            paramsToUse[k] = hostDict.setdefault(k, v)
 
-    h2oPerHost = hostDict.setdefault('h2o_per_host', 2)
-    # default should avoid colliding with sri's demo cloud ports: 54321
-    # we get some problems with sticky ports, during back to back tests in regressions
-    # to avoid waiting, randomize the port to make it less likely?
-    # at least for the hosts case
-    offset = random.randint(0,31)
-    basePort = hostDict.setdefault('base_port', 54300 + offset)
-    username = hostDict.setdefault('username','0xdiag')
-    # stupid but here for clarity
-    password = hostDict.setdefault('password', None)
-    sigar = hostDict.setdefault('sigar', False)
+    # Now overwrite with anything passed by the test
+    # whatever the test passes, always overrules the config json
+    for k,v in kwargs.iteritems():
+        paramsToUse[k] = kwargs.setdefault(k, v)
 
-    useFlatfile = hostDict.setdefault('use_flatfile', False)
-
-    useHdfs = hostDict.setdefault('use_hdfs', False)
-    hdfsNameNode = hostDict.setdefault('hdfs_name_node', '192.168.1.151')
-    hdfsVersion = hostDict.setdefault('hdfs_version', 'cdh3u5')
-    hdfsConfig = hostDict.setdefault('hdfs_config', None)
-
-    # default to none, which means the arg isn't used and java decides for us
-    # useful for small dram systems, and for testing that
-    javaHeapGB = hostDict.setdefault('java_heap_GB', None)
-    javaHeapMB = hostDict.setdefault('java_heap_MB', None)
-    javaExtraArgs = hostDict.setdefault('java_extra_args', None)
-
-    use_home_for_ice = hostDict.setdefault('use_home_for_ice', False)
-
-    # key file
-    key_filename = hostDict.setdefault('key_filename', None)
-    # host aws configuration
-    aws_credentials = hostDict.setdefault('aws_credentials', None)
-    # a little hack to redirect import folder tests to an s3 folder
-    redirect_import_folder_to_s3_path = hostDict.setdefault('redirect_import_folder_to_s3_path', None)
-    enable_h2o_log = hostDict.setdefault('enable_h2o_log', True)
-    enable_benchmark_log = hostDict.setdefault('enable_benchmark_log', False)
-
-    # can override the json with a caller's argument
-    # FIX! and we support passing othe kwargs from above? but they don't override
-    # json, ...so have to fix here if that's desired
-    if node_count is not None:
-        h2oPerHost = node_count
-
-    if use_flatfile is not None:
-        useFlatfile = use_flatfile
-
-    if use_hdfs is not None:
-        useHdfs = use_hdfs
-
-    if hdfs_name_node is not None:
-        hdfsNameNode = hdfs_name_node
-
-    if hdfs_version is not None:
-        hdfsVersion = hdfs_version
-
-    if hdfs_config is not None:
-        hdfsConfig = hdfs_config
-
-    if java_heap_GB is not None:
-        javaHeapGB = java_heap_GB
-
-    if java_heap_MB is not None:
-        javaHeapMB = java_heap_MB
-
-    if java_extra_args is not None:
-        javaExtraArgs = java_extra_args
-
-    if base_port is not None:
-        basePort = base_port
-
-    h2o.verboseprint("host config: ", username, password, 
-        h2oPerHost, basePort, sigar, useFlatfile, 
-        useHdfs, hdfsNameNode, hdfsVersion, hdfsConfig, javaHeapGB, javaHeapMB, use_home_for_ice,
-        hostList, key_filename, aws_credentials, **kwargs)
+    h2o.verboseprint("All build_cloud_with_hosts params:", paramsToUse)
 
     #********************
     global hosts
-    # Update: special case hostList = ["127.0.0.1"] and use the normal build_cloud
+    # Update: special case paramsToUse['ip'] = ["127.0.0.1"] and use the normal build_cloud
     # this allows all the tests in testdir_host to be run with a special config that points to 127.0.0.1
     # hosts should be None for everyone if normal build_cloud is desired
-    if hostList == ["127.0.0.1"]:
+    if paramsToUse['ip']== ["127.0.0.1"]:
         hosts = None
     else:
         h2o.verboseprint("About to RemoteHost, likely bad ip if hangs")
         hosts = []
-        for h in hostList:
+        for h in paramsToUse['ip']:
             h2o.verboseprint("Connecting to:", h)
-            hosts.append(h2o.RemoteHost(addr=h, username=username, password=password, key_filename=key_filename))
+            hosts.append(h2o.RemoteHost(addr=h, 
+                username=paramsToUse['username'], 
+                password=paramsToUse['password'], 
+                key_filename=paramsToUse['key_filename']))
+    # done with these, don't pass to build_cloud
+    paramsToUse.pop('ip')
+    paramsToUse.pop('username')
+    paramsToUse.pop('password')
+    paramsToUse.pop('key_filename')
    
     # handles hosts=None correctly
-    h2o.write_flatfile(node_count=h2oPerHost, base_port=basePort, hosts=hosts)
+    h2o.write_flatfile(
+        node_count=paramsToUse['h2o_per_host'],
+        base_port=paramsToUse['base_port'],
+        hosts=hosts)
 
     if hosts is not None:
         # this uploads the flatfile too
-        h2o.upload_jar_to_remote_hosts(hosts, slow_connection=slow_connection)
+        h2o.upload_jar_to_remote_hosts(hosts, slow_connection=paramsToUse['slow_connection'])
         # timeout wants to be larger for large numbers of hosts * h2oPerHost
         # use 60 sec min, 5 sec per node.
-        timeoutSecs = max(60, 8*(len(hosts) * h2oPerHost))
+        timeoutSecs = max(60, 8*(len(hosts) * paramsToUse['h2o_per_host']))
     else: # for 127.0.0.1 case
         timeoutSecs = 60
+    paramsToUse.pop('slow_connection')
 
     # sandbox gets cleaned in build_cloud
-    h2o.build_cloud(h2oPerHost,
-            base_port=basePort, hosts=hosts, timeoutSecs=timeoutSecs, sigar=sigar, 
-            use_flatfile=useFlatfile,
-            use_hdfs=useHdfs, hdfs_name_node=hdfsNameNode,
-            hdfs_version=hdfsVersion, hdfs_config=hdfsConfig,
-            java_heap_GB=javaHeapGB, java_heap_MB=javaHeapMB, java_extra_args=javaExtraArgs,
-            use_home_for_ice=use_home_for_ice,
-            aws_credentials=aws_credentials,
-            redirect_import_folder_to_s3_path=redirect_import_folder_to_s3_path,
-            enable_h2o_log=enable_h2o_log,
-            enable_benchmark_log=enable_benchmark_log,
-            **kwargs)
+    # legacy param issue
+    node_count = paramsToUse['h2o_per_host']
+    paramsToUse.pop('h2o_per_host')
+    h2o.build_cloud(node_count, **paramsToUse)
