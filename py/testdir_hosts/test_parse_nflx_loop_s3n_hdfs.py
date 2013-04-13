@@ -50,7 +50,7 @@ class Basic(unittest.TestCase):
                 # don't raise exception if we find something bad in h2o stdout/stderr?
                 h2o.nodes[0].sandbox_ignore_errors = True
 
-                timeoutSecs = 800
+                timeoutSecs = 1800
                 for trial in range(trialMax):
                     # since we delete the key, we have to re-import every iteration, to get it again
                     # s3n URI thru HDFS is not typical.
