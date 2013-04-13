@@ -23,11 +23,11 @@ class Basic(unittest.TestCase):
             # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz"),
             # 100 files takes too long on two machines?
             # I use different files to avoid OS caching effects
-            ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize),
             ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize),
             ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize),
             ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize),
             ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize),
+            ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize),
         ]
 
         print "Using the -.gz files from s3"
@@ -102,7 +102,7 @@ class Basic(unittest.TestCase):
 
                 h2o.tear_down_cloud()
                 # sticky ports? wait a bit.
-                time.sleep(5)
+                time.sleep(120)
 
 if __name__ == '__main__':
     h2o.unit_main()
