@@ -9,10 +9,15 @@ import water.parser.CsvParser.Setup;
 import water.util.RString;
 
 public class Parse extends Request {
-  protected final Str _excludeExpression = new Str("exclude","");
-  protected final ExistingCSVKey _source = new ExistingCSVKey(SOURCE_KEY);
-  protected final NewH2OHexKey _dest = new NewH2OHexKey(DEST_KEY);
-  private final Header _header = new Header(HEADER);
+  private   final Separator      _separator = new Separator(SEPARATOR);
+  protected final Str _excludeExpression    = new Str("exclude","");
+  protected final ExistingCSVKey _source    = new ExistingCSVKey(SOURCE_KEY);
+  protected final NewH2OHexKey   _dest      = new NewH2OHexKey(DEST_KEY);
+  private   final Header         _header    = new Header(HEADER);
+
+  public Parse() {
+    _excludeExpression.setRefreshOnChange();
+  }
 
   private static class PSetup {
     final ArrayList<Key> _keys;
@@ -25,13 +30,12 @@ public class Parse extends Request {
     }
   };
 
-
   // An H2O Key Query, which runs the basic CSV parsing heuristics.  Accepts
   // Key wildcards, and gathers all matching Keys for simultaneous parsing.
   // Multi-key parses are only allowed on compatible CSV files, and only 1 is
   // allowed to have headers.
   public class ExistingCSVKey extends TypeaheadInputText<PSetup> {
-    public ExistingCSVKey(String name) { super(TypeaheadKeysRequest.class, name, true); _excludeExpression.setRefreshOnChange();/*addPrerequisite(_excludeExpression)*/;}
+    public ExistingCSVKey(String name) { super(TypeaheadKeysRequest.class, name, true); }
 
     @Override protected PSetup parse(String input) throws IllegalArgumentException {
       Key k1 = Key.make(input);
@@ -67,7 +71,9 @@ public class Parse extends Request {
       // now we assume the first key has the header
       Key hKey = keys.get(0);
       Value v = DKV.get(hKey);
-      CsvParser.Setup setup = Inspect.csvGuessValue(v);
+
+      byte separator = _separator.specified() ? _separator.value() : CsvParser.NO_SEPARATOR;
+      CsvParser.Setup setup = Inspect.csvGuessValue(v, separator);
       if( setup._data == null || setup._data[0].length == 0 )
         throw new IllegalArgumentException("I cannot figure out this file; I only handle common CSV formats: "+hKey);
       return new PSetup(keys,setup);
@@ -162,6 +168,10 @@ public class Parse extends Request {
       sb.append("/>&nbsp;&nbsp;").append(queryDescription()).append("<p>");
       String[][] data = psetup._setup._data;
       if( data != null ) {
+        int sep = psetup._setup._separator;
+        sb.append("<div class='alert'><b>");
+        sb.append(String.format("Detected %d columns using '%s' (\\u%04d) as a separator.", data[0].length,sep<33 ? WHITE_DELIMS[sep] : Character.toString((char)sep),sep));
+        sb.append("</b></div>");
         sb.append("<table class='table table-striped table-bordered'>");
         int j=psetup._setup._header?0:1; // Skip auto-gen header in data[0]
         if( value.equals("1") ) { // Obvious header display, if asked for
@@ -215,4 +225,49 @@ public class Parse extends Request {
       return Response.error(e.getMessage());
     }
   }
+
+  private class Separator extends InputSelect<Byte> {
+    public Separator(String name) {
+      super(name,false);
+      setRefreshOnChange();
+    }
+
+    @Override protected String   queryDescription() { return "Utilized separator"; }
+    @Override protected String[] selectValues()     { return DEFAULT_IDX_DELIMS;   }
+    @Override protected String[] selectNames()      { return DEFAULT_DELIMS; }
+    @Override protected Byte     defaultValue()     { return -1;             }
+    @Override protected String   selectedItemValue(){ return value() != null ? value().toString() : defaultValue().toString(); }
+    @Override protected Byte parse(String input) throws IllegalArgumentException {
+      Byte result = Byte.valueOf(input);
+      return result;
+    }
+  }
+
+  /** List of white space delimiters */
+  static final String[] WHITE_DELIMS = { "NULL", "SOH (start of heading)", "STX (start of text)", "ETX (end of text)", "EOT (end of transmission)",
+    "ENQ (enquiry)", "ACK (acknowledge)", "BEL '\\a' (bell)", "BS '\b' (backspace)", "HT  '\\t' (horizontal tab)", "LF  '\\n' (new line)", " VT '\\v' (vertical tab)",
+    "FF '\\f' (form feed)", "CR '\\r' (carriage ret)", "SO  (shift out)", "SI  (shift in)", "DLE (data link escape)", "DC1 (device control 1) ", "DC2 (device control 2)",
+    "DC3 (device control 3)", "DC4 (device control 4)", "NAK (negative ack.)", "SYN (synchronous idle)", "ETB (end of trans. blk)", "CAN (cancel)", "EM  (end of medium)",
+    "SUB (substitute)", "ESC (escape)", "FS  (file separator)", "GS  (group separator)", "RS  (record separator)", "US  (unit separator)", "' ' SPACE" };
+  /** List of all ASCII delimiters */
+  static final String[] DEFAULT_DELIMS     = new String[127];
+  static final String[] DEFAULT_IDX_DELIMS = new String[127];
+  static {
+    int i = 0;
+    for (i = 0; i < WHITE_DELIMS.length; i++) DEFAULT_DELIMS[i] = String.format("%s: '%02d'", WHITE_DELIMS[i],i);
+    for (;i < 126; i++) {
+      String s = null; // Escape HTML entities manually or use StringEscapeUtils from Apache
+      switch ((char)i) {
+        case '&': s = "&amp;"; break;
+        case '<': s = "&lt;";  break;
+        case '>': s = "&gt;";  break;
+        case '\"': s = "&quot;"; break;
+        default : s = Character.toString((char)i);
+      }
+      DEFAULT_DELIMS[i] = String.format("%s: '%02d'", s, i);
+    }
+    for (i = 0; i < 126; i++) DEFAULT_IDX_DELIMS[i] = String.valueOf(i);
+    DEFAULT_DELIMS[i]     = "Guess separator ...";
+    DEFAULT_IDX_DELIMS[i] = String.valueOf(CsvParser.NO_SEPARATOR);
+  };
 }
