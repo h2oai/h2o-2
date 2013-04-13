@@ -59,6 +59,9 @@ class Basic(unittest.TestCase):
                 'hex.MinorityClassTest',
                 'water.exec.RBigDataTest'
                 ])
+        # getting UDP receiver stack traces if we shut down quickly after Junit
+        # may need to wait a little bit before shutdown?
+        time.sleep(3)
         rc = ps.wait(None)
         out = file(stdout).read()
         err = file(stderr).read()
