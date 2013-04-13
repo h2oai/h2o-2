@@ -101,6 +101,8 @@ public class Constants {
   public static final String NUM_MISSING_VALUES    = "num_missing_values";
   public static final String NUM_ROWS              = "num_rows";
   public static final String NUM_TREES             = "ntree";
+  public static final String NUM_SUCCEEDED         = "num_succeeded";
+  public static final String NUM_FAILED            = "num_failed";
   public static final String OBJECT                = "object";
   public static final String OFFSET                = "offset";
   public static final String OOBEE                 = "out_of_bag_error_estimate";
@@ -123,6 +125,7 @@ public class Constants {
   public static final String SCALE                 = "scale";
   public static final String SAMPLING_STRATEGY     = "sampling_strategy";
   public static final String SEED                  = "seed";
+  public static final String SEPARATOR             = "separator";
   public static final String SENT_ROWS             = "sent_rows";
   public static final String SIZE                  = "size";
   public static final String SOURCE_KEY            = "source_key";

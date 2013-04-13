@@ -8,8 +8,7 @@ import org.apache.hadoop.fs.Path;
 import water.DKV;
 import water.hdfs.PersistHdfs;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import com.google.gson.*;
 import com.google.gson.internal.Streams;
 
 public class ImportHdfs extends Request {
@@ -48,7 +47,9 @@ public class ImportHdfs extends Request {
     }
     DKV.write_barrier();
     JsonObject json = new JsonObject();
+    json.add(NUM_SUCCEEDED, new JsonPrimitive(succ.size()));
     json.add(SUCCEEDED, succ);
+    json.add(NUM_FAILED, new JsonPrimitive(fail.size()));
     json.add(FAILED, fail);
     Response r = Response.done(json);
     r.setBuilder(SUCCEEDED + "." + KEY, new KeyCellBuilder());

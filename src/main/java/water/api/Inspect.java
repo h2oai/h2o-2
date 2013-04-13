@@ -97,8 +97,9 @@ public class Inspect extends Request {
     return Response.error("No idea how to display a "+f.getClass());
   }
 
-  // Look at unparsed data; guess its setup
-  public static CsvParser.Setup csvGuessValue(Value v) {
+  // Look at unparsed data; guess its setup, separator can be enforced.
+  public static CsvParser.Setup csvGuessValue(Value v) { return csvGuessValue(v, CsvParser.NO_SEPARATOR); }
+  public static CsvParser.Setup csvGuessValue(Value v, byte separator) {
     // See if we can make sense of the first few rows.
     byte[] bs = v.getFirstBytes(); // Read some bytes
     int off = 0;
@@ -144,7 +145,7 @@ public class Inspect extends Request {
       bs = Arrays.copyOf(bs, off); // Trim array to length read
 
     // Now try to interpret the unzipped data as a CSV
-    return CsvParser.inspect(bs);
+    return CsvParser.inspect(bs, separator);
   }
 
   // Build a response JSON

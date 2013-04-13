@@ -8,7 +8,9 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        pass
+        logging.basicConfig(filename='benchmark.log',
+            level=logging.CRITICAL,
+            format='%(asctime)s %(message)s')
         print "Will build clouds with incrementing heap sizes and import folder/parse"
 
     @classmethod
@@ -82,6 +84,10 @@ class Basic(unittest.TestCase):
                     if totalBytes is not None:
                         fileMBS = (totalBytes/1e6)/elapsed
                         print "\nMB/sec (before uncompress)", "%6.2f" % fileMBS
+                        l = str(len(h2o.nodes))
+                        logging.critical('{:s} {:s} {:s} {:6.2f} MB/sec'.format(
+                            l, csvFilepattern, csvFilename, fileMBS))
+
 
                     print "Deleting key in H2O so we get it from S3 (if ec2) or nfs again.", \
                           "Otherwise it would just parse the cached key."
