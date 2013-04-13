@@ -57,6 +57,7 @@ public class ImportS3 extends Request {
         JsonObject o = new JsonObject();
         o.addProperty(KEY, k.toString());
         o.addProperty(FILE, obj.getKey());
+        o.addProperty(VALUE_SIZE, obj.getSize());
         succ.add(o);
       } catch( IOException e ) {
         JsonObject o = new JsonObject();
@@ -65,7 +66,9 @@ public class ImportS3 extends Request {
         fail.add(o);
       }
     }
+    json.add(NUM_SUCCEEDED, new JsonPrimitive(succ.size()));
     json.add(SUCCEEDED, succ);
+    json.add(NUM_FAILED, new JsonPrimitive(fail.size()));
     json.add(FAILED, fail);
     DKV.write_barrier();
 

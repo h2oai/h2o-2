@@ -4,13 +4,16 @@ import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
 import h2o_exec as h2e
 import time, random
 
+import logging
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
     @classmethod
     def setUpClass(cls):
-        pass
+        logging.basicConfig(filename='benchmark.log',
+            level=logging.CRITICAL, 
+            format='%(asctime)s %(message)s')
 
     @classmethod
     def tearDownClass(cls):
@@ -27,14 +30,14 @@ class Basic(unittest.TestCase):
         #    "billion_rows.csv.gz",
 
         # typical size of the michal files
-        if (1==1):
+        if (1==0):
             importFolderPath = '/home2/0xdiag/datasets'
             print "Using non-.gz'ed files in", importFolderPath
             avgMichalSize = 116561140 
             csvFilenameAll = [
                 # I use different files to avoid OS caching effects
-                # ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSize),
-                # ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSize),
+                ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSize),
+                ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSize),
                 ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSize),
                 ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSize),
                 ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSize),
@@ -85,7 +88,7 @@ class Basic(unittest.TestCase):
             if (localhost):
                 h2o.build_cloud(1,java_heap_GB=28)
             else:
-                h2o_hosts.build_cloud_with_hosts(1)
+                h2o_hosts.build_cloud_with_hosts(1, base_port=54321)
 
             for trial in range(trialMax):
                 importFolderResult = h2i.setupImportFolder(None, importFolderPath)
@@ -104,6 +107,9 @@ class Basic(unittest.TestCase):
                 if totalBytes is not None:
                     fileMBS = (totalBytes/1e6)/elapsed
                     print "\nMB/sec (before uncompress)", "%6.2f" % fileMBS
+                    l = str(len(h2o.nodes))
+                    logging.critical('{:s} {:s} {:s} {:6.2f} MB/sec'.format(
+                        l, csvFilepattern, csvFilename, fileMBS))
 
                 print csvFilepattern, 'parse time:', parseKey['response']['time']
                 print "Parse result['destination_key']:", parseKey['destination_key']
@@ -141,7 +147,7 @@ class Basic(unittest.TestCase):
                         ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
 
                 # sticky sockets?
-                time.sleep(10)
+                time.sleep(60)
                 sys.stdout.write('.')
                 sys.stdout.flush() 
 

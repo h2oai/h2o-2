@@ -83,6 +83,7 @@ public abstract class PersistHdfs {
           JsonObject o = new JsonObject();
           o.addProperty(Constants.KEY, k.toString());
           o.addProperty(Constants.FILE, pfs.toString());
+          o.addProperty(Constants.VALUE_SIZE, file.getLen());
           succeeded.add(o);
         }
       }
