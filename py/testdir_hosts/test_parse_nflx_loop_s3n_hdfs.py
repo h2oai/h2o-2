@@ -39,7 +39,7 @@ class Basic(unittest.TestCase):
         for csvFilepattern, csvFilename, totalBytes in csvFilenameList:
             s3nKey = URI + "/" + csvFilepattern
             ## for tryHeap in [54, 28]:
-            for tryHeap in [28]:
+            for tryHeap in [54]:
                 print "\n", tryHeap,"GB heap, 1 jvm per host, import hdfs/s3n, then parse"
                 h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap,
                     enable_benchmark_log=True,
@@ -85,7 +85,7 @@ class Basic(unittest.TestCase):
                     if totalBytes is not None:
                         fileMBS = (totalBytes/1e6)/elapsed
                         print "\nMB/sec (before uncompress)", "%6.2f" % fileMBS
-                        logging.critical('{!s} jvms, {:s}GB heap, {:s} {:s} {:6.2f} MB/sec for {!s} secs'.format(
+                        logging.critical('{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} MB/sec for {:6.2f} secs'.format(
                             len(h2o.nodes), tryHeap, csvFilepattern, csvFilename, fileMBS, elapsed))
 
                     print "Deleting key in H2O so we get it from S3 (if ec2) or nfs again.", \
