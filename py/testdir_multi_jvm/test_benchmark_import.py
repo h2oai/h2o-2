@@ -33,12 +33,12 @@ class Basic(unittest.TestCase):
             avgMichalSize = 116561140 
             csvFilenameAll = [
                 # I use different files to avoid OS caching effects
-                ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSize),
-                ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSize),
                 ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSize),
                 ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSize),
                 ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSize),
                 ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSize),
+                ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSize),
+                ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSize),
             ]
         else:
             importFolderPath = '/home/0xdiag/datasets'
@@ -84,13 +84,14 @@ class Basic(unittest.TestCase):
         trialMax = 1
         # rebuild the cloud for each file
         base_port = 54321
+        tryHeap = 28
         for csvFilepattern, csvFilename, totalBytes in csvFilenameList:
             localhost = h2o.decide_if_localhost()
             if (localhost):
-                h2o.build_cloud(1,java_heap_GB=28, base_port=base_port,
+                h2o.build_cloud(1,java_heap_GB=tryHeap, base_port=base_port,
                     enable_benchmark_log=True)
             else:
-                h2o_hosts.build_cloud_with_hosts(1, base_port=base_port, 
+                h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap, base_port=base_port, 
                     enable_benchmark_log=True)
             # to avoid sticky ports?
             base_port += 2
@@ -112,9 +113,8 @@ class Basic(unittest.TestCase):
                 if totalBytes is not None:
                     fileMBS = (totalBytes/1e6)/elapsed
                     print "\nMB/sec (before uncompress)", "%6.2f" % fileMBS
-                    l = str(len(h2o.nodes))
-                    logging.critical('{:s} {:s} {:s} {:6.2f} MB/sec'.format(
-                        l, csvFilepattern, csvFilename, fileMBS))
+                    logging.critical('{!s} jvms, {!s}GB heap, {:s} {:s} {:6.2f} MB/sec'.format(
+                        len(h2o.nodes), tryHeap, csvFilepattern, csvFilename, fileMBS))
 
                 print csvFilepattern, 'parse time:', parseKey['response']['time']
                 print "Parse result['destination_key']:", parseKey['destination_key']

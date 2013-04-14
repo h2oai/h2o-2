@@ -2,6 +2,8 @@ import time, os, json, signal, tempfile, shutil, datetime, inspect, threading, o
 import requests, psutil, argparse, sys, unittest
 import glob
 import h2o_browse as h2b
+import h2o_perf
+
 import re
 import webbrowser
 import random
@@ -41,9 +43,6 @@ def drain(src, dst):
     t.daemon = True
     t.start()
 
-# jenkins gets this assign, but not the unit_main one?
-python_test_name = inspect.stack()[1][1]
-
 def unit_main():
     global python_test_name
     python_test_name = inspect.stack()[1][1]
@@ -64,6 +63,8 @@ ipaddr = None
 config_json = None
 debugger = False
 random_udp_drop = False
+# jenkins gets this assign, but not the unit_main one?
+python_test_name = inspect.stack()[1][1]
 
 def parse_our_args():
     parser = argparse.ArgumentParser()
@@ -305,7 +306,6 @@ def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True)
 
 
 def check_port_group(base_port):
-    # UPDATE: don't do this any more
     # for now, only check for jenkins or kevin
     if (1==1):
         username = getpass.getuser()
@@ -355,16 +355,9 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
     # is created that polling and other normal things can check, to decide to dump 
     # info to benchmark.log
     if kwargs.setdefault('enable_benchmark_log', False):
-        # default should just append thru multiple cloud builds.
-        # I guess sandbox is cleared on each cloud build. so don't build there.
-        # just use local directory? (python_test_name global set below before this)
-        blog = 'benchmark_' + python_test_name + '.log'
-        print "Appending to %s." % blog, "Between tests, you may want to delete it if it gets too big"
-        logging.basicConfig(filename=blog,
-            # we use CRITICAL for the benchmark logging to avoid info/warn stuff
-            # from other python packages
-            level=logging.CRITICAL,
-            format='%(asctime)s %(message)s') # date/time stamp
+        # an object to keep stuff out of h2o.py        
+        global cloudPerfH2O
+        cloudPerfH2O = h2o_perf.PerfH2O(python_test_name)
 
     ports_per_node = 2 
     node_list = []
@@ -779,6 +772,7 @@ class H2O(object):
         # Progress status NPE issue (H2O)
         if initialDelaySecs:
             time.sleep(initialDelaySecs)
+
         # can end with status = 'redirect' or 'done'
         # FIX! temporary hack ...if a GLMModel key shows up, treat that as "stop polling'   
         # because we have results for GLm. (i.e. ignore status.
@@ -832,9 +826,7 @@ class H2O(object):
             ###    print "INFO: GLM returning partial results during polling. Continuing.."
 
             if benchmarkLogging:
-                cpup = psutil.cpu_percent(percpu=True)
-                l = "%s %s %s" % (python_test_name, "psutil.cpu_percent:", cpup)
-                logging.critical(l)
+                cloudPerfH2O.get_and_log(retryDelaySecs)
 
         return r
     
@@ -1539,7 +1531,6 @@ class RemoteHost(object):
             # Just don't log anything until build_cloud()? that should be okay?
             # we were just logging this upload message..not needed.
             # log('Uploading to %s: %s -> %s' % (self.http_addr, f, dest))
-
             sftp = self.ssh.open_sftp()
             # check if file exists on remote side
             try:
