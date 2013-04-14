@@ -37,8 +37,8 @@ class Basic(unittest.TestCase):
                 ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSize),
                 ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSize),
                 ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSize),
-                ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSize),
-                ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSize),
+                # ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSize),
+                # ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSize),
             ]
         else:
             importFolderPath = '/home/0xdiag/datasets'
@@ -56,8 +56,8 @@ class Basic(unittest.TestCase):
                 ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize),
                 ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize),
                 ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize),
-                ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize),
-                ("covtype200x.data", "covtype200x.data", 15033863400),
+                # ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize),
+                # ("covtype200x.data", "covtype200x.data", 15033863400),
 
                 # do it twice
                 # ("covtype.data", "covtype.data"),
@@ -104,9 +104,12 @@ class Basic(unittest.TestCase):
                 timeoutSecs = 700
                 # creates csvFilename.hex from file in importFolder dir 
 
+                logging.critical("")
+                logging.critical("Parse " + csvFilename + " Start--------------------------------")
                 start = time.time()
                 parseKey = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
-                    key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, retryDelaySecs = 5, benchmarkLogging=True)
+                    key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, retryDelaySecs = 5, 
+                    benchmarkLogging=['cpu','disk', 'jstack'])
                 elapsed = time.time() - start
                 print "Parse #", trial, "completed in", "%6.2f" % elapsed, "seconds.", \
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -130,7 +133,6 @@ class Basic(unittest.TestCase):
                 h2e.exec_expr(h2o.nodes[0], execExpr, "a", timeoutSecs=30)
                 # runRFOnly takes the parseKey directly
                 newParseKey = {'destination_key': 'a'}
-
 
                 print "\n" + csvFilepattern
                 start = time.time()

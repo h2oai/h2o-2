@@ -750,7 +750,7 @@ class H2O(object):
     # no noise if None
     def poll_url(self, response, 
         timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=15,
-        noise=None, benchmarkLogging=False, noPoll=False):
+        noise=None, benchmarkLogging=None, noPoll=False):
         ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs 
         verboseprint('poll_url input: response:', dump_json(response))
 
@@ -826,7 +826,7 @@ class H2O(object):
             ###    print "INFO: GLM returning partial results during polling. Continuing.."
 
             if benchmarkLogging:
-                cloudPerfH2O.get_and_log(retryDelaySecs)
+                cloudPerfH2O.get_log_save(benchmarkLogging)
 
         return r
     
@@ -881,6 +881,9 @@ class H2O(object):
             'destination_key': key2,
             }
         params_dict.update(kwargs)
+
+        if benchmarkLogging:
+            cloudPerfH2O.get_save()
 
         a = self.__check_request(
             requests.get(
