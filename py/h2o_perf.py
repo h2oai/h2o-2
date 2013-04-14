@@ -25,8 +25,9 @@ class PerfH2O(object):
         self.pollStats['count'] = 0
         self.pollStats['lastJstackTime'] = time.time()
 
-    # split out the get and save, to initialize values for delta measurements
-    # the first will be a bit off, because elapsed isn't accurate time since the initial setting.
+    # split out the get and save, so we can 'get_save' to initialize values 
+    # for delta measurements. The first delta will be a bit off, 
+    # because elapsed isn't accurate time since the initial setting.
     def get(self):
         cpu_percent = psutil.cpu_percent(percpu=True)
         dioc = psutil.disk_io_counters()
@@ -60,66 +61,72 @@ class PerfH2O(object):
         pollStats = self.pollStats
         elapsedTime = snapshotTime - pollStats['time']
 
-        enable = {
+        logEnable = {
             'cpu': False,
             'disk': False,
             'network': False,
             'jstack': False,
         }
         for e in benchmarkLogging:
-            enable[e] = True
+            logEnable[e] = True
 
-        # only do jstack if >= 10 seconds since last one
-        if enable['jstack'] and ((snapshotTime - pollStats['lastJstackTime']) >= 10):
+        # only do jstack if >= 10 seconds since lastLine one
+        if logEnable['jstack'] and ((snapshotTime - pollStats['lastJstackTime']) >= 10):
+            # okay..get some Jstack stuff, and mark it as gathered now
             self.pollStats['lastJstackTime'] = snapshotTime
             
-            # complicated because it's all bad string 
+            # complicated because it's all one big string 
             # and lots of info we don't want. 
-            # just print stack traces > a number of "lines"
-            stats = h2o.nodes[0].jstack()
-            node0 = stats['nodes'][0]
+            jstackResult = h2o.nodes[0].jstack()
+            node0 = jstackResult['nodes'][0]
             stack_traces = node0["stack_traces"]
             # all one string
-            slines = stack_traces.split('\n')
+            stackLines = stack_traces.split('\n')
 
-            MINCACHETOPRINT = 7
-            cache = []
-            jstackCache = False
-            last = ""
+            # create cache
+            def init_cache(self):
+                self.cache = []
+                self.cacheHasJstack = False
+                self.cacheHasTCP = False
 
-            def check_cache():
-                if not jstackCache and len(cache) >= MINCACHETOPRINT:
-                    for c in cache:
+            def log_and_init_cache(self):
+                MINCACHETOPRINT = 7
+                if self.cacheHasTCP or (not self.cacheHasJstack and len(self.cache) >= MINCACHETOPRINT):
+                    for c in self.cache:
                         logging.critical(c)
+                init_cache(self)
 
-            for s in slines:
+            init_cache(self)
+            # pretend to start at stack trace break
+            lastLine = ""
+            for s in stackLines:
                 # look for gaps, if 7 lines in your cache, print them
-                if (last==""): 
-                    check_cache()
-                    cache = []
-                    jstackCache = False
+                if (lastLine==""): 
+                    log_and_init_cache(self)
                 else:
-                    cache.append(s)
-                    # throw it away later if JStack cache
+                    self.cache.append(s)
+                    # always throw it away later if JStack cache
                     if 'JStack' in s:
-                        jstackCache = True
-                    
-                last = s
+                        self.cacheHasJstack = True
+                    # always print it if it mentions TCP
+                    if 'TCP' in s:
+                        self.cacheHasTCP = True
+                lastLine = s
+
             # check last one
-            check_cache()
+            log_and_init_cache(self)
 
         l = "%s %s" % ("cpu_percent:", cpu_percent)
-        if enable['cpu']:
+        if logEnable['cpu']:
             logging.critical(l)
-
 
         diocSpotRdMBSec = (dioc.read_bytes - pollStats['read_bytes']) / (1e6 * elapsedTime)
         diocSpotWrMBSec = (dioc.write_bytes - pollStats['write_bytes']) / (1e6 * elapsedTime)
         diocSpotRdTime = (dioc.read_time - pollStats['read_time']) / 1e3
         diocSpotWrTime = (dioc.write_time - pollStats['write_time']) / 1e3
-        l = "Disk. Spot RdMB/s:{:6.2f} Spot WrMB/s:{:6.2f} {!s} {!s}".format(
-            diocSpotRdMBSec, diocSpotWrMBSec, diocSpotRdTime, diocSpotWrTime)
-        if enable['disk'] and pollStats['count'] > 0:
+        l = "Disk. Spot RdMB/s: {:<6.2f} Spot WrMB/s: {:<6.2f} {!s} {!s} elapsed: {:<6.2f}".format(
+            diocSpotRdMBSec, diocSpotWrMBSec, diocSpotRdTime, diocSpotWrTime, elapsedTime)
+        if logEnable['disk'] and pollStats['count'] > 0:
             logging.critical(l)
 
         niocSpotSentMBSec = (nioc.bytes_sent - pollStats['bytes_sent'])/(1e6 * elapsedTime)
@@ -134,10 +141,10 @@ class PerfH2O(object):
         niocSpotDropOut = 0
         niocSpotErrIn = 0
         niocSpotErrOut = 0
-        l = "Network. Spot RecvMB/s:{:6.2f} Spot SentMB/s:{:6.2f} {!s} {!s} {!s} {!s}".format(
+        l = "Network. Spot RecvMB/s: {:<6.2f} Spot SentMB/s: {:<6.2f} {!s} {!s} {!s} {!s}".format(
             niocSpotRecvMBSec, niocSpotSentMBSec,\
             niocSpotDropIn, niocSpotDropOut, niocSpotErrIn, niocSpotErrOut)
-        if enable['network'] and pollStats['count'] > 0:
+        if logEnable['network'] and pollStats['count'] > 0:
             logging.critical(l)
 
         self.save(cpu_percent, dioc, nioc, snapshotTime)

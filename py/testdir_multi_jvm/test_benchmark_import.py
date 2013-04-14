@@ -33,14 +33,14 @@ class Basic(unittest.TestCase):
             avgMichalSize = 116561140 
             csvFilenameAll = [
                 # I use different files to avoid OS caching effects
-                # ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSize, 700),
-                # ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSize, 700),
-                # ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSize, 700),
-                # ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSize, 700),
+                ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSize, 700),
+                ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSize, 700),
+                ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSize, 700),
+                ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSize, 700),
                 # ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSize, 700),
-                ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSize, 1200),
+                # ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSize, 1200),
             ]
-        elif (1==1):
+        elif (1==0):
             importFolderPath = '/home2/0xdiag/datasets'
             print "Using non-.gz'ed files in", importFolderPath
             avgMichalSize = 116561140 
@@ -66,15 +66,17 @@ class Basic(unittest.TestCase):
                 # 100 files takes too long on two machines?
                 # ("covtype200x.data", "covtype200x.data", 15033863400, 700),
                 # I use different files to avoid OS caching effects
-                ("covtype200x.data", "covtype200x.data", 15033863400, 700),
                 ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 700),
-                ("manyfiles-nflx-gz/file_10.dat.gz", "file_10_1.dat.gz", 10 * avgMichalSize, 700),
+                ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 700),
+                ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 700),
+                ("manyfiles-nflx-gz/file_10.dat.gz", "file_10_1.dat.gz", 1 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_11.dat.gz", "file_11_1.dat.gz", 1 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize, 700),
+                ("covtype200x.data", "covtype200x.data", 15033863400, 700),
                 # ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 700),
 
                 # do it twice
@@ -110,7 +112,7 @@ class Basic(unittest.TestCase):
                 h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap, base_port=base_port, 
                     enable_benchmark_log=True)
             # pop open a browser on the cloud
-            h2b.browseTheCloud()
+            ### h2b.browseTheCloud()
 
             # to avoid sticky ports?
             base_port += 2
@@ -128,15 +130,15 @@ class Basic(unittest.TestCase):
                 parseKey = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
                     key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, retryDelaySecs = 5, 
                     # benchmarkLogging=['cpu','disk', 'jstack'])
-                    benchmarkLogging=['cpu','disk'])
+                    benchmarkLogging=['cpu','disk','jstack'])
                 elapsed = time.time() - start
                 print "Parse #", trial, "completed in", "%6.2f" % elapsed, "seconds.", \
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
                 if totalBytes is not None:
                     fileMBS = (totalBytes/1e6)/elapsed
                     print "\nMB/sec (before uncompress)", "%6.2f" % fileMBS
-                    logging.critical('{!s} jvms, {!s}GB heap, {:s} {:s} {:6.2f} MB/sec'.format(
-                        len(h2o.nodes), tryHeap, csvFilepattern, csvFilename, fileMBS))
+                    logging.critical('{!s} jvms, {!s}GB heap, {:s} {:s} {:6.2f} MB/sec for {:.2f} secs'.format(
+                        len(h2o.nodes), tryHeap, csvFilepattern, csvFilename, fileMBS, elapsed))
 
                 print csvFilepattern, 'parse time:', parseKey['response']['time']
                 print "Parse result['destination_key']:", parseKey['destination_key']
