@@ -108,7 +108,7 @@ class PerfH2O(object):
             # check last one
             check_cache()
 
-        l = "%s %s %s" % (self.python_test_name, "cpu_percent:", cpu_percent)
+        l = "%s %s" % ("cpu_percent:", cpu_percent)
         if enable['cpu']:
             logging.critical(l)
 

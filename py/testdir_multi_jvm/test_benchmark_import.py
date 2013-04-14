@@ -16,7 +16,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_from_import(self):
+    def test_benchmark_import(self):
         # just do the import folder once
         # importFolderPath = "/home/hduser/hdfs_datasets"
 
@@ -27,31 +27,31 @@ class Basic(unittest.TestCase):
         #    "billion_rows.csv.gz",
 
         # typical size of the michal files
-        if (1==1):
+        if (1==0):
             importFolderPath = '/home2/0xdiag/datasets'
             print "Using non-.gz'ed files in", importFolderPath
             avgMichalSize = 116561140 
             csvFilenameAll = [
                 # I use different files to avoid OS caching effects
-                ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSize, 700),
-                ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSize, 700),
-                ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSize, 700),
-                ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSize, 700),
+                # ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSize, 700),
+                # ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSize, 700),
+                # ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSize, 700),
+                # ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSize, 700),
                 # ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSize, 700),
-                # ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSize, 1200),
+                ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSize, 1200),
             ]
-        elif (1==0):
+        elif (1==1):
             importFolderPath = '/home2/0xdiag/datasets'
             print "Using non-.gz'ed files in", importFolderPath
             avgMichalSize = 116561140 
             csvFilenameAll = [
                 # I use different files to avoid OS caching effects
+                ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSize, 1200),
+                ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSize, 1200),
                 ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSize, 700),
                 ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSize, 700),
                 ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSize, 700),
                 ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSize, 700),
-                # ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSize, 700),
-                # ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSize, 700),
             ]
         else:
             importFolderPath = '/home/0xdiag/datasets'
@@ -64,13 +64,18 @@ class Basic(unittest.TestCase):
             csvFilenameAll = [
                 # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz", 700),
                 # 100 files takes too long on two machines?
+                # ("covtype200x.data", "covtype200x.data", 15033863400, 700),
                 # I use different files to avoid OS caching effects
+                ("covtype200x.data", "covtype200x.data", 15033863400, 700),
+                ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 700),
+                ("manyfiles-nflx-gz/file_10.dat.gz", "file_10_1.dat.gz", 10 * avgMichalSize, 700),
+                ("manyfiles-nflx-gz/file_11.dat.gz", "file_11_1.dat.gz", 1 * avgMichalSize, 700),
+                ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize, 700),
                 # ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 700),
-                # ("covtype200x.data", "covtype200x.data", 15033863400, 700),
 
                 # do it twice
                 # ("covtype.data", "covtype.data"),
@@ -90,8 +95,6 @@ class Basic(unittest.TestCase):
         # csvFilenameList = random.sample(csvFilenameAll,1)
         csvFilenameList = csvFilenameAll
 
-        # pop open a browser on the cloud
-        ### h2b.browseTheCloud()
 
         # split out the pattern match and the filename used for the hex
         trialMax = 1
@@ -106,6 +109,9 @@ class Basic(unittest.TestCase):
             else:
                 h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap, base_port=base_port, 
                     enable_benchmark_log=True)
+            # pop open a browser on the cloud
+            h2b.browseTheCloud()
+
             # to avoid sticky ports?
             base_port += 2
 
@@ -138,6 +144,23 @@ class Basic(unittest.TestCase):
                 # We should be able to see the parse result?
                 inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
 
+                print "num_rows:", inspect['num_rows']
+                print "num_cols:", inspect['num_cols']
+                cols = inspect['cols']
+                # trying to see how many enums we get
+                # don't print int
+                for i,c in enumerate(cols):
+                    # print i, "name:", c['name']
+                    msg = "column %d" % i
+                    msg = msg + " type: %s" % c['type']
+                    if c['type'] == 'enum':
+                        msg = msg + (" enum_domain_size: %d" % c['enum_domain_size'])
+                    if c['num_missing_values'] != 0:
+                        msg = msg + (" num_missing_values: %s" % c['num_missing_values'])
+
+                    if c['type'] != 'int' or (c['num_missing_values'] != 0):
+                        print msg
+                        
                 # the nflx data doesn't have a small enough # of classes in any col
                 # use exec to randomFilter out 200 rows for a quick RF. that should work for everyone?
                 origKey = parseKey['destination_key']
@@ -168,8 +191,8 @@ class Basic(unittest.TestCase):
 
                 h2o.tear_down_cloud()
                 if not localhost:
-                    print "Waiting 10 secs before building cloud again (sticky ports?)"
-                    time.sleep(10)
+                    print "Waiting 30 secs before building cloud again (sticky ports?)"
+                    time.sleep(30)
 
                 sys.stdout.write('.')
                 sys.stdout.flush() 
