@@ -9,9 +9,6 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        logging.basicConfig(filename='benchmark.log',
-            level=logging.CRITICAL,
-            format='%(asctime)s %(message)s')
         print "Will build clouds with incrementing heap sizes and import folder/parse"
 
     @classmethod
@@ -45,6 +42,7 @@ class Basic(unittest.TestCase):
             for tryHeap in [28]:
                 print "\n", tryHeap,"GB heap, 1 jvm per host, import hdfs/s3n, then parse"
                 h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap,
+                    enable_benchmark_log=True,
                     # all hdfs info is done thru the hdfs_config michal's ec2 config sets up?
                     # this is for our amazon ec hdfs
                     # see https://github.com/0xdata/h2o/wiki/H2O-and-s3n
@@ -75,7 +73,8 @@ class Basic(unittest.TestCase):
                     print "Loading s3n key: ", s3nKey, 'thru HDFS'
                     start = time.time()
                     parseKey = h2o.nodes[0].parse(s3nKey, key2,
-                        timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
+                        timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60,
+                        benchmarkLogging=['cpu','disk'])
                     elapsed = time.time() - start
 
                     print s3nKey, 'parse time:', parseKey['response']['time']
@@ -86,9 +85,8 @@ class Basic(unittest.TestCase):
                     if totalBytes is not None:
                         fileMBS = (totalBytes/1e6)/elapsed
                         print "\nMB/sec (before uncompress)", "%6.2f" % fileMBS
-                        l = str(len(h2o.nodes))
-                        logging.critical('{!s} {:s} {:s} {:s} {:6.2f} MB/sec for {!s} secs'.format(
-                            tryHeap, l, csvFilepattern, csvFilename, fileMBS, elapsed))
+                        logging.critical('{!s} jvms, {:s}GB heap, {:s} {:s} {:6.2f} MB/sec for {!s} secs'.format(
+                            len(h2o.nodes), tryHeap, csvFilepattern, csvFilename, fileMBS, elapsed))
 
                     print "Deleting key in H2O so we get it from S3 (if ec2) or nfs again.", \
                           "Otherwise it would just parse the cached key."

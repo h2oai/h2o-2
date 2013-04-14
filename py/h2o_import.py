@@ -13,7 +13,7 @@ def setupImportS3(node=None, bucket='home-0xdiag-datasets'):
 def parseImportS3File(node=None, 
     csvFilename='covtype.data', path='home-0xdiag-datasets', key2=None, 
     timeoutSecs=360, retryDelaySecs=2, initialDelaySecs=1, pollTimeoutSecs=60, noise=None,
-    benchmarkLogging=False):
+    benchmarkLogging=None):
 
     if not node: node = h2o.nodes[0]
     if not csvFilename: raise Exception('parseImportS3File: No csvFilename')
@@ -54,7 +54,7 @@ def setupImportFolder(node=None, path='/home/0xdiag/datasets'):
 # assumes you call setupImportFolder first
 def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=1, pollTimeoutSecs=60, noise=None,
-    benchmarkLogging=False):
+    benchmarkLogging=None):
     if not node: node = h2o.nodes[0]
     # a little hack to redirect import folder tests to an s3 folder
     # TEMP hack: translate /home/0xdiag/datasets to /home-0xdiag-datasets
@@ -99,7 +99,7 @@ def setupImportHdfs(node=None, path=None):
 
 def parseImportHdfsFile(node=None, csvFilename=None, path=None, 
     timeoutSecs=3600, retryDelaySecs=2, initialDelaySecs=1, pollTimeoutSecs=60, noise=None,
-    benchmarkLogging=False):
+    benchmarkLogging=None):
     if not csvFilename: raise Exception('No csvFilename parameter in parseImportHdfsFile')
     if not node: node = h2o.nodes[0]
 
