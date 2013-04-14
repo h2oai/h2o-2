@@ -191,22 +191,16 @@ public class Job extends Iced {
       _progress = Key.make(Key.make()._kb,(byte)0,Key.DFJ_INTERNAL_USER,dest.home_node());
       UKV.put(_progress,new ChunkProgress(chunksTotal));
     }
-    public void setProgressMin(final long c){ // c == number of processed chunks
-      new TAtomic<ChunkProgress>() {
-        @Override
-        public ChunkProgress atomic(ChunkProgress old) {
-          return old.update((int)Math.max(0, c - old._count));
-        }
-      }.invoke(_progress);
-    }
+
     public void updateProgress(final int c){ // c == number of processed chunks
       if(!cancelled()){
         new TAtomic<ChunkProgress>() {
           @Override
           public ChunkProgress atomic(ChunkProgress old) {
+            if(old == null)return null;
             return old.update(c);
           }
-        }.invoke(_progress);
+        }.fork(_progress);
       }
     }
 
