@@ -27,18 +27,31 @@ class Basic(unittest.TestCase):
         #    "billion_rows.csv.gz",
 
         # typical size of the michal files
-        if (1==0):
+        if (1==1):
             importFolderPath = '/home2/0xdiag/datasets'
             print "Using non-.gz'ed files in", importFolderPath
             avgMichalSize = 116561140 
             csvFilenameAll = [
                 # I use different files to avoid OS caching effects
-                ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSize),
-                ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSize),
-                ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSize),
-                ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSize),
-                # ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSize),
-                # ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSize),
+                ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSize, 700),
+                ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSize, 700),
+                ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSize, 700),
+                ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSize, 700),
+                # ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSize, 700),
+                # ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSize, 1200),
+            ]
+        elif (1==0):
+            importFolderPath = '/home2/0xdiag/datasets'
+            print "Using non-.gz'ed files in", importFolderPath
+            avgMichalSize = 116561140 
+            csvFilenameAll = [
+                # I use different files to avoid OS caching effects
+                ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSize, 700),
+                ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSize, 700),
+                ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSize, 700),
+                ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSize, 700),
+                # ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSize, 700),
+                # ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSize, 700),
             ]
         else:
             importFolderPath = '/home/0xdiag/datasets'
@@ -49,15 +62,15 @@ class Basic(unittest.TestCase):
             # how would it get it right?
             # os.path.getsize(f)
             csvFilenameAll = [
-                # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz"),
+                # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz", 700),
                 # 100 files takes too long on two machines?
                 # I use different files to avoid OS caching effects
-                ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize),
-                ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize),
-                ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize),
-                ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize),
-                # ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize),
-                # ("covtype200x.data", "covtype200x.data", 15033863400),
+                ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 700),
+                ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
+                ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 700),
+                ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize, 700),
+                # ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 700),
+                # ("covtype200x.data", "covtype200x.data", 15033863400, 700),
 
                 # do it twice
                 # ("covtype.data", "covtype.data"),
@@ -85,7 +98,7 @@ class Basic(unittest.TestCase):
         # rebuild the cloud for each file
         base_port = 54321
         tryHeap = 28
-        for csvFilepattern, csvFilename, totalBytes in csvFilenameList:
+        for (csvFilepattern, csvFilename, totalBytes, timeoutSecs) in csvFilenameList:
             localhost = h2o.decide_if_localhost()
             if (localhost):
                 h2o.build_cloud(1,java_heap_GB=tryHeap, base_port=base_port,
@@ -101,7 +114,6 @@ class Basic(unittest.TestCase):
                 importFullList = importFolderResult['succeeded']
                 importFailList = importFolderResult['failed']
                 print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
-                timeoutSecs = 700
                 # creates csvFilename.hex from file in importFolder dir 
 
                 logging.critical("")
@@ -109,7 +121,8 @@ class Basic(unittest.TestCase):
                 start = time.time()
                 parseKey = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
                     key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, retryDelaySecs = 5, 
-                    benchmarkLogging=['cpu','disk', 'jstack'])
+                    # benchmarkLogging=['cpu','disk', 'jstack'])
+                    benchmarkLogging=['cpu','disk'])
                 elapsed = time.time() - start
                 print "Parse #", trial, "completed in", "%6.2f" % elapsed, "seconds.", \
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)

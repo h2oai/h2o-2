@@ -43,14 +43,8 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
         'username':'0xdiag',
         'password': None,
         'sigar': False,
-        'use_flatfile': False,
-        'use_hdfs': False,
-        'hdfs_name_node': '192.168.1.176',
-        'hdfs_version': 'cdh3u5',
-        'hdfs_config': None,
-        'java_heap_GB': None,
-        'java_heap_MB': None,
-        'java_extra_args': None,
+        'rand_shuffle': True,
+
         'use_home_for_ice': False,
         'key_filename': None,
         'aws_credentials': None,
@@ -103,8 +97,9 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
                 username=paramsToUse['username'], 
                 password=paramsToUse['password'], 
                 key_filename=paramsToUse['key_filename']))
+
     # done with these, don't pass to build_cloud
-    paramsToUse.pop('ip')
+    paramsToUse.pop('ip') # this was the list of ip's from the config file, replaced by 'hosts' to build_cloud
     paramsToUse.pop('username')
     paramsToUse.pop('password')
     paramsToUse.pop('key_filename')
@@ -113,7 +108,9 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
     h2o.write_flatfile(
         node_count=paramsToUse['h2o_per_host'],
         base_port=paramsToUse['base_port'],
-        hosts=hosts)
+        hosts=hosts,
+        rand_shuffle=True
+        )
 
     if hosts is not None:
         # this uploads the flatfile too
@@ -129,4 +126,4 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
     # legacy param issue
     node_count = paramsToUse['h2o_per_host']
     paramsToUse.pop('h2o_per_host')
-    h2o.build_cloud(node_count, **paramsToUse)
+    h2o.build_cloud(node_count, hosts=hosts, **paramsToUse)
