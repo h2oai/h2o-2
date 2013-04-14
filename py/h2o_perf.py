@@ -3,18 +3,43 @@ import h2o
 import time
 
 class PerfH2O(object):
-    def __init__(self, python_test_name):
+    # so a test can create multiple logs
+    def change_logfile(self, subtest_name):
+        # change to another logfile after we've already been going
+        blog = 'benchmark_' + subtest_name + '.log'
+        print "Switch. Now appending to %s." % blog, "Between tests, you may want to delete it if it gets too big"
+
+        # http://stackoverflow.com/questions/5296130/restart-logging-to-a-new-file-python
+        # manually reassign the handler
+        logger = logging.getLogger()
+        logger.handlers[0].stream.close()
+        logger.removeHandler(logger.handlers[0])
+
+        file_handler = logging.FileHandler(blog)
+        file_handler.setLevel(logging.CRITICAL) # like the init
+        formatter = logging.Formatter("%(asctime)s %(message)s") # date/time stamp
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+
+    def init_logfile(self, subtest_name):
         # default should just append thru multiple cloud builds.
         # I guess sandbox is cleared on each cloud build. so don't build there.
         # just use local directory? (python_test_name global set below before this)
-        blog = 'benchmark_' + python_test_name + '.log'
-        self.python_test_name = python_test_name
+        blog = 'benchmark_' + subtest_name + '.log'
+        self.subtest_name = subtest_name
         print "Appending to %s." % blog, "Between tests, you may want to delete it if it gets too big"
         logging.basicConfig(filename=blog,
             # we use CRITICAL for the benchmark logging to avoid info/warn stuff
             # from other python packages
             level=logging.CRITICAL,
             format='%(asctime)s %(message)s') # date/time stamp
+
+    def __init__(self, python_test_name):
+        self.python_test_name = python_test_name
+        self.init_logfile(python_test_name)
+
+        self.MINCACHETOPRINT = 7
+        self.JSTACKINTERVAL = 20
 
         # initialize state used for spot rate measurements during polling
         statsList = ['read_bytes','write_bytes','read_time','write_time',
@@ -70,8 +95,8 @@ class PerfH2O(object):
         for e in benchmarkLogging:
             logEnable[e] = True
 
-        # only do jstack if >= 10 seconds since lastLine one
-        if logEnable['jstack'] and ((snapshotTime - pollStats['lastJstackTime']) >= 10):
+        # only do jstack if >= JSTACKINTERVAL seconds since lastLine one
+        if logEnable['jstack'] and ((snapshotTime - pollStats['lastJstackTime']) >= self.JSTACKINTERVAL):
             # okay..get some Jstack stuff, and mark it as gathered now
             self.pollStats['lastJstackTime'] = snapshotTime
             
@@ -90,8 +115,7 @@ class PerfH2O(object):
                 self.cacheHasTCP = False
 
             def log_and_init_cache(self):
-                MINCACHETOPRINT = 7
-                if self.cacheHasTCP or (not self.cacheHasJstack and len(self.cache) >= MINCACHETOPRINT):
+                if self.cacheHasTCP or (not self.cacheHasJstack and len(self.cache) >= self.MINCACHETOPRINT):
                     for c in self.cache:
                         logging.critical(c)
                 init_cache(self)
@@ -104,7 +128,8 @@ class PerfH2O(object):
                 if (lastLine==""): 
                     log_and_init_cache(self)
                 else:
-                    self.cache.append(s)
+                    # put a nice "#" char for grepping out jstack stuff
+                    self.cache.append("#" + s)
                     # always throw it away later if JStack cache
                     if 'JStack' in s:
                         self.cacheHasJstack = True
@@ -151,5 +176,5 @@ class PerfH2O(object):
 
     # just logg a message..useful for splitting tests of files 
     def message(self, l):
-        logging.critical(message)
+        logging.critical(l)
 
