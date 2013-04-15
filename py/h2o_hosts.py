@@ -35,14 +35,18 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
         'java_heap_GB': None,
         'java_heap_MB': None,
         'java_extra_args': None,
+        'sigar': False,
 
+        'timeoutSecs': 60, 
+        'retryDelaySecs': 2, 
+        'cleanup': True,
         'slow_connection': False,
-        'ip':'["127.0.0.1"]', # this is the hosts list
+
         'h2o_per_host': 2,
+        'ip':'["127.0.0.1"]', # this is for creating the hosts list
         'base_port': 54300 + offset,
         'username':'0xdiag',
         'password': None,
-        'sigar': False,
         'rand_shuffle': True,
 
         'use_home_for_ice': False,
