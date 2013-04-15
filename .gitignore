@@ -22,3 +22,4 @@ pytest_flatfile-*
 sandbox
 syn_datasets
 target/
+.settings/*

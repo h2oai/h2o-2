@@ -120,7 +120,7 @@ public class DLSM {
       }
     }
 
-    public double [] solve(Matrix xx, Matrix xy) {
+    public double [] solve(Matrix xx, Matrix xy, double [] z) {
       final int N = xx.getRowDimension();
       double lambda =  _lambda*(1-_alpha)*0.5 + _rho;
       if(_lambda != 0) for(int i = 0; i < N-1; ++i)
@@ -129,6 +129,7 @@ public class DLSM {
       if(_alpha == 0 || _lambda == 0) // no l1 penalty
         try {
           double[] res = lu.solve(xy).getColumnPackedCopy();
+          System.arraycopy(res, 0, z, 0, res.length);
           _converged = true;
           return res;
         }catch(Exception e){
@@ -139,8 +140,7 @@ public class DLSM {
 
       final double ABSTOL = Math.sqrt(N) * 1e-4;
       final double RELTOL = 1e-2;
-      double[] z = new double[N];
-      double[] u = new double[N-1];
+      double[] u = MemoryManager.malloc8d(N-1);
       Matrix xm = null;
       Matrix xyPrime = (Matrix)xy.clone();
       OUTER:
@@ -206,11 +206,9 @@ public class DLSM {
 
     @Override
     public boolean solve(double[][] xx, double[] xy, double yy, double[] newBeta) {
-      double [] beta = solve(new Matrix(xx), new Matrix(xy,xy.length));
-      // not really nice solution, but we get new Vector from Jama
-      // and I want to keep option of using user-supplied beta (to avoid allocation)
-      System.arraycopy(beta, 0, newBeta, 0, beta.length);
-      return true;
+      Arrays.fill(newBeta, 0);
+      solve(new Matrix(xx), new Matrix(xy,xy.length),newBeta);
+      return _converged;
     }
 
     @Override

@@ -26,7 +26,7 @@ public abstract class DRemoteTask extends DTask<DRemoteTask> implements Cloneabl
   // those instances.
   public void init() { }
 
-  public int memReqPerChunk(){return 0;}
+  public long memOverheadPerChunk(){return 0;}
 
   // Invokes the task on all nodes
   public void invokeOnAllNodes() {

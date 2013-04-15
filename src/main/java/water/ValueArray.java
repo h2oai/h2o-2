@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.HashMap;
+
 import water.H2O.H2OCountedCompleter;
+import water.Job.ProgressMonitor;
 
 /**
 * Large Arrays & Arraylets
@@ -410,14 +412,19 @@ public class ValueArray extends Iced implements Cloneable {
   }
 
   // Wrap a InputStream over this ValueArray
-  public InputStream openStream() {
+  public InputStream openStream() {return openStream(null);}
+  public InputStream openStream(ProgressMonitor p) {
+	final ProgressMonitor progress = p;
     return new InputStream() {
       private AutoBuffer _ab;
       private long _chkidx;
+      private long _currentChunkSz;
       @Override public int available() throws IOException {
         if( _ab==null || _ab.remaining()==0 ) {
+          if(progress != null)progress.update(_currentChunkSz);
           if( _chkidx >= chunks() ) return 0;
           _ab = getChunk(_chkidx++);
+          _currentChunkSz = _ab.remaining();
         }
         return _ab.remaining();
       }

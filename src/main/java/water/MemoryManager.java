@@ -1,15 +1,14 @@
 package water;
 
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryMXBean;
-import java.lang.management.MemoryNotificationInfo;
-import java.lang.management.MemoryPoolMXBean;
-import java.lang.management.MemoryType;
+import java.lang.management.*;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.management.Notification;
 import javax.management.NotificationEmitter;
+
+import jsr166y.ForkJoinPool;
+import jsr166y.ForkJoinPool.ManagedBlocker;
 
 /**
  * Manages memory assigned to key/value pairs. All byte arrays used in
@@ -46,13 +45,12 @@ public abstract class MemoryManager {
   // max heap memory
   static final long MEM_MAX = Runtime.getRuntime().maxMemory();
 
-  // Memory currently being used by running tasks
-  static final AtomicLong _taskMem = new AtomicLong(0);
+  // Memory available for tasks (we assume 3/4 of the heap is available for tasks)
+  static final AtomicLong _taskMem = new AtomicLong(MEM_MAX-(MEM_MAX>>2));
 
   /**
    * Try to reserve memory needed for task execution and return true if succeeded.
    * Tasks have a shared pool of memory which they should ask for in advance before they even try to allocate it.
-   * We assume here, that tasks can take all the memory (except 1/8th of the heap which is set as minimum cache size).
    *
    * This method is another backpressure mechanism to make sure we do not exhaust system's resources by running too many tasks at the same time.
    * Tasks are expected to reserve memory before proceeding with their execution and making sure they release it when done.
@@ -61,12 +59,33 @@ public abstract class MemoryManager {
    * @return true if there is enough free memory
    */
   public static boolean tryReserveTaskMem(long m){
-    long current = _taskMem.addAndGet(m);
-    if(current > (MEM_MAX - (MEM_MAX >> 3))){ // 1/8th of the heap is reserved for cache
-      current = _taskMem.addAndGet(-m);
+    if(!CAN_ALLOC)return false;
+    assert m >= 0:"m < 0: " + m;
+    long current = _taskMem.addAndGet(-m);
+    if(current < 0){
+      current = _taskMem.addAndGet(m);
       return false;
     }
     return true;
+  }
+  private static Object _taskMemLock = new Object();
+  public static void reserveTaskMem(long m){
+    final long bytes = m;
+    while(!tryReserveTaskMem(bytes)){
+      try {
+        ForkJoinPool.managedBlock(new ManagedBlocker() {
+          @Override
+          public boolean isReleasable() {return _taskMem.get() >= bytes;}
+          @Override
+          public boolean block() throws InterruptedException {
+            synchronized(_taskMemLock){
+              try {_taskMemLock.wait();} catch( InterruptedException e ) {}
+            }
+            return isReleasable();
+          }
+        });
+      } catch (InterruptedException e){throw new Error(e);}
+    }
   }
 
   /**
@@ -74,7 +93,11 @@ public abstract class MemoryManager {
    * @param m
    */
   public static void freeTaskMem(long m){
-    _taskMem.addAndGet(-m);
+    if(m == 0)return;
+    _taskMem.addAndGet(m);
+    synchronized(_taskMemLock){
+      _taskMemLock.notifyAll();
+    }
   }
 
   // Callbacks from GC
@@ -170,9 +193,6 @@ public abstract class MemoryManager {
     }
   }
 
-  public static long reserveTaskMemory(long sz){
-    return 0;
-  }
   /**
    * Monitors the heap usage after full gc run and tells Cleaner to free memory
    * if mem usage is too high. Stops new allocation if mem usage is critical.
@@ -259,7 +279,7 @@ public abstract class MemoryManager {
         default: throw H2O.unimpl();
         }
       }
-      catch( OutOfMemoryError e ) { 
+      catch( OutOfMemoryError e ) {
         if( H2O.Cleaner.isDiskFull() )
           UDPRebooted.suicide(UDPRebooted.T.oom, H2O.SELF);
       }

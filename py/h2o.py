@@ -2,11 +2,16 @@ import time, os, json, signal, tempfile, shutil, datetime, inspect, threading, o
 import requests, psutil, argparse, sys, unittest
 import glob
 import h2o_browse as h2b
+import h2o_perf
+
 import re
 import webbrowser
 import random
 # used in shutil.rmtree permission hack for windows
 import errno
+# use to unencode the urls sent to h2o?
+import urlparse
+import logging
 
 # For checking ports in use, using netstat thru a subprocess.
 from subprocess import Popen, PIPE
@@ -38,9 +43,6 @@ def drain(src, dst):
     t.daemon = True
     t.start()
 
-# jenkins gets this assign, but not the unit_main one?
-python_test_name = inspect.stack()[1][1]
-
 def unit_main():
     global python_test_name
     python_test_name = inspect.stack()[1][1]
@@ -61,6 +63,8 @@ ipaddr = None
 config_json = None
 debugger = False
 random_udp_drop = False
+# jenkins gets this assign, but not the unit_main one?
+python_test_name = inspect.stack()[1][1]
 
 def parse_our_args():
     parser = argparse.ArgumentParser()
@@ -132,7 +136,6 @@ def get_file_size(f):
 def iter_chunked_file(file, chunk_size=2048):
     return iter(lambda: file.read(chunk_size), '')
 
-
 # shutil.rmtree doesn't work on windows if the files are read only.
 # On unix the parent dir has to not be readonly too.
 # May still be issues with owner being different, like if 'system' is the guy running?
@@ -144,7 +147,7 @@ def handleRemoveError(func, path, exc):
     # Wait a bit before retrying. Ignore errors on the retry. Just leave files.
     # Ex. if we're in the looping cloud test deleting sandbox.
     excvalue = exc[1]
-    print "Retrying shutil.rmtree of sandbox after 2 secs. Will ignore errors. exception was", excvalue.errno
+    print "Retrying shutil.rmtree of sandbox (2 sec delay). Will ignore errors. Exception was", excvalue.errno
     time.sleep(2)
     try:
         func(path)
@@ -184,7 +187,10 @@ def tmp_dir(prefix='', suffix=''):
 def log(cmd, comment=None):
     with open(LOG_DIR + '/commands.log', 'a') as f:
         f.write(str(datetime.datetime.now()) + ' -- ')
-        f.write(cmd)
+        # what got sent to h2o
+        # f.write(cmd)
+        # let's try saving the unencoded url instead..human readable
+        f.write(urlparse.unquote(cmd))
         if comment:
             f.write('    #')
             f.write(comment)
@@ -300,7 +306,6 @@ def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True)
 
 
 def check_port_group(base_port):
-    # UPDATE: don't do this any more
     # for now, only check for jenkins or kevin
     if (1==1):
         username = getpass.getuser()
@@ -346,6 +351,14 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         timeoutSecs=30, retryDelaySecs=0.5, cleanup=True, rand_shuffle=True, **kwargs):
     # moved to here from unit_main. so will run with nosetests too!
     clean_sandbox()
+    # keep this param in kwargs, because we pass to the H2O node build, so state
+    # is created that polling and other normal things can check, to decide to dump 
+    # info to benchmark.log
+    if kwargs.setdefault('enable_benchmark_log', False):
+        # an object to keep stuff out of h2o.py        
+        global cloudPerfH2O
+        cloudPerfH2O = h2o_perf.PerfH2O(python_test_name)
+
     ports_per_node = 2 
     node_list = []
     try:
@@ -737,7 +750,7 @@ class H2O(object):
     # no noise if None
     def poll_url(self, response, 
         timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=15,
-        noPoll=False, noise=None):
+        noise=None, benchmarkLogging=None, noPoll=False):
         ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs 
         verboseprint('poll_url input: response:', dump_json(response))
 
@@ -745,6 +758,7 @@ class H2O(object):
         params = response['redirect_request_args']
 
         if noise is not None:
+            print noise
             # noise_json should be like "Storeview"
             (noise_json, noiseParams) = noise
             noiseUrl = self.__url(noise_json + ".json")
@@ -758,6 +772,7 @@ class H2O(object):
         # Progress status NPE issue (H2O)
         if initialDelaySecs:
             time.sleep(initialDelaySecs)
+
         # can end with status = 'redirect' or 'done'
         # FIX! temporary hack ...if a GLMModel key shows up, treat that as "stop polling'   
         # because we have results for GLm. (i.e. ignore status.
@@ -804,16 +819,19 @@ class H2O(object):
                 raise Exception(emsg)
             count += 1
 
-
             if noPoll:
                 return r
             # GLM can return partial results during polling..that's legal
             ### if 'GLMProgressPage' in urlUsed and 'GLMModel' in r:
             ###    print "INFO: GLM returning partial results during polling. Continuing.."
 
+            if benchmarkLogging:
+                cloudPerfH2O.get_log_save(benchmarkLogging)
+
         return r
     
-    # additional params include: cols=. don't need to include in params_dict it doesn't need a default
+    # additional params include: cols=. 
+    # don't need to include in params_dict it doesn't need a default
     def kmeans(self, key, key2=None, 
         timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=30,
         **kwargs):
@@ -847,7 +865,7 @@ class H2O(object):
     # noise is a 2-tuple: ("StoreView",params_dict)
     def parse(self, key, key2=None, 
         timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=30,
-        noPoll=False, noise=None, **kwargs):
+        noise=None, benchmarkLogging=False, noPoll=False, **kwargs):
         browseAlso = kwargs.pop('browseAlso',False)
         # this doesn't work. webforums indicate max_retries might be 0 already? (as of 3 months ago)
         # requests.defaults({max_retries : 4})
@@ -863,6 +881,9 @@ class H2O(object):
             'destination_key': key2,
             }
         params_dict.update(kwargs)
+
+        if benchmarkLogging:
+            cloudPerfH2O.get_save()
 
         a = self.__check_request(
             requests.get(
@@ -884,7 +905,7 @@ class H2O(object):
         a = self.poll_url(a['response'],
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-            noise=noise)
+            noise=noise, benchmarkLogging=benchmarkLogging)
         verboseprint("\nParse result:", dump_json(a))
         return a
 
@@ -937,8 +958,7 @@ class H2O(object):
     # ImportFiles replaces ImportFolder, with a param that can be a folder or a file.
     # the param name is 'file', but it can take a directory or a file.
     # 192.168.0.37:54323/ImportFiles.html?file=%2Fhome%2F0xdiag%2Fdatasets
-
-    # this can be used to import just a file or a whole folder
+    # Can import just a file or a whole folder
     def import_files(self, path):
         a = self.__check_request(requests.get(
             self.__url('ImportFiles.json'),
@@ -946,7 +966,7 @@ class H2O(object):
         verboseprint("\nimport_files result:", dump_json(a))
         return a
 
-    def import_s3(self, bucket, repl=None):
+    def import_s3(self, bucket):
         a = self.__check_request(requests.get(
             self.__url('ImportS3.json'),
             params={"bucket": bucket}))
@@ -1106,7 +1126,7 @@ class H2O(object):
 
     def GLM(self, key, 
         timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=30, 
-        noPoll=False, noise=None, **kwargs):
+        noise=None, noPoll=False, **kwargs):
 
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLM", **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
@@ -1132,7 +1152,7 @@ class H2O(object):
     # this only exists in new. old will fail
     def GLMGrid(self, key, 
         timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=30,
-        noPoll=False, noise=None, **kwargs):
+        noise=None, noPoll=False, **kwargs):
 
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLMGrid", **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
@@ -1226,12 +1246,10 @@ class H2O(object):
                 n.get_cloud()
                 return True
             except requests.ConnectionError, e:
-                # verboseprint("Connection error", e, "during wait_for_node_to_accept_connections")
-
                 # Now using: requests 1.1.0 (easy_install --upgrade requests) 2/5/13
                 # Now: assume all requests.ConnectionErrors are H2O legal connection errors.
                 # Have trouble finding where the errno is, fine to assume all are good ones.
-                # remember: we have a timeout check that will kick in if continued H2O badness.
+                # Timeout check will kick in if continued H2O badness.
                 return False
 
         self.stabilize(test, 'Cloud accepting connections',
@@ -1345,7 +1363,8 @@ class H2O(object):
         use_home_for_ice=False, node_id=None, username=None,
         random_udp_drop=False,
         redirect_import_folder_to_s3_path=None,
-        enable_h2o_log=True, # default to True
+        enable_h2o_log=True, 
+        enable_benchmark_log=False,
         ):
  
         self.redirect_import_folder_to_s3_path = redirect_import_folder_to_s3_path
@@ -1393,6 +1412,9 @@ class H2O(object):
 
         self.random_udp_drop = random_udp_drop
         self.enable_h2o_log = enable_h2o_log
+
+        # this dumps stats from tests, and perf stats while polling to benchmark.log
+        self.enable_benchmark_log = enable_benchmark_log
 
 
     def __str__(self):
@@ -1512,12 +1534,11 @@ class RemoteHost(object):
             # Just don't log anything until build_cloud()? that should be okay?
             # we were just logging this upload message..not needed.
             # log('Uploading to %s: %s -> %s' % (self.http_addr, f, dest))
-
             sftp = self.ssh.open_sftp()
             # check if file exists on remote side
             try:
                 sftp.stat(dest)
-                print "Skipping upload of file {0} because file {1} exists on remote side!".format(f, dest)
+                print "Skipping upload of file {0}. File {1} exists on remote side!".format(f, dest)
             except IOError, e:
                 if e.errno == errno.ENOENT:
                     sftp.put(f, dest, callback=progress)

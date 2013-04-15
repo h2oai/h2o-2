@@ -71,9 +71,9 @@ public final class DParseTask extends MRTask {
 
 
   @Override
-  public int memReqPerChunk(){
-   // double memory should be safe upper limit here (and too far off from the actual either)
-   return (_phase == Pass.TWO)?(int)ValueArray.CHUNK_SZ:0;
+  public long memOverheadPerChunk(){
+   // double memory for phase2 should be safe upper limit here (and too far off from the actual either)
+   return (_phase == Pass.TWO)?2*ValueArray.CHUNK_SZ:ValueArray.CHUNK_SZ;
   }
   // transients - each map creates and uses it's own, no need to get these back
   // create and used only on the task caller's side

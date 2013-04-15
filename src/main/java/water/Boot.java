@@ -99,6 +99,7 @@ public class Boot extends ClassLoader {
       if( !dir.mkdir() )  throw new IOException("Failed to create tmp dir: "  + dir.getAbsolutePath());
       dir.deleteOnExit();
       _parentDir = dir;         // Set a global instead of passing the dir about?
+      System.out.println("[h2o,debug] Extracting jar into " + _parentDir);
 
       // Make all the embedded jars visible to the custom class loader
       extractInternalFiles(); // Resources
@@ -154,7 +155,7 @@ public class Boot extends ClassLoader {
   }
 
   /** Extracts the libraries from the jar file to given local path.   */
-  private void extractInternalFiles() {
+  private void extractInternalFiles() throws IOException {
     Enumeration entries = _h2oJar.entries();
     while( entries.hasMoreElements() ) {
       ZipEntry e = (ZipEntry) entries.nextElement();
@@ -179,7 +180,8 @@ public class Boot extends ClassLoader {
       } catch( FileNotFoundException ex ) {
         // Expected FNF if 2 H2O instances are attempting to unpack in the same directory
       } catch( IOException ex ) {
-        System.err.println("Unable to extract file "+name+" because "+ex);
+        Log.die("Unable to extract file "+name+" because of "+ex+". Make sure that directory " + _parentDir + " contains at least 50MB of free space to unpack H2O libraries.");
+        throw ex; // dead code
       }
     }
   }
