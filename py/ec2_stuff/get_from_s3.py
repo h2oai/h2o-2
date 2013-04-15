@@ -59,7 +59,7 @@ k.get_contents_to_filename(args.local_file_path)
 elapsed = time.time() - start
 local_file_size = os.path.getsize(args.local_file_path)
 print "  Got %s to %s"%(file_name_to_use_in_s3, args.local_file_path)
-print "  Filesize was", local_file_size
+print "  Filesize was", local_file_size, "bytes"
 print "  Speed was", "%6.2f" % (local_file_size / (1e6 * elapsed)), "MB/Sec"
 
 
