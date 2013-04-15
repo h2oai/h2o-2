@@ -74,6 +74,7 @@ public class TypeMap {
     "water.Job$Fail",
     "water.Job$List",
     "water.Job$ChunkProgressJob",
+    "water.Job$ChunkProgressJob$1",
     "water.Job$ChunkProgress",
     "water.Job$ChunkProgressJob$2",
     "water.KVTest$Atomic2",

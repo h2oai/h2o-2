@@ -361,7 +361,7 @@ public abstract class DGLM {
     int [] _cols;
     double [] _thresholds;
     final int _folds;
-    GLMModel [] _models;
+    Key [] _models;
 
     public GLMXValTask(Job job, int folds, ValueArray ary, int [] cols, boolean standardize, LSMSolver lsm, GLMParams glmp, double [] betaStart, double [] thresholds){
       _job = job;
@@ -379,21 +379,20 @@ public abstract class DGLM {
     public void init() {
       super.init();
       _ary = DKV.get(_aryKey).get();
-      _models = new GLMModel[_folds];
+      _models = new Key[_folds];
 
     }
 
     @Override
     public void map(Key key) {
-
       GLMXvalSetup setup = DKV.get(key).get();
       Sampling s = new Sampling(setup._id,_folds,false);
       assert _models[setup._id] == null;
-      Key dest = GLMModel.makeKey(false);
+      _models[setup._id] = GLMModel.makeKey(false);
       try{
-        _models[setup._id] = DGLM.buildModel(_job, dest,DGLM.getData(_ary, _cols, s, _standardize), _lsm, _glmp, _betaStart.clone(),0);
+        DGLM.buildModel(_job, _models[setup._id],DGLM.getData(_ary, _cols, s, _standardize), _lsm, _glmp, _betaStart.clone(),0);
       } catch(JobCancelledException e) {
-        UKV.remove(dest);
+        UKV.remove(_models[setup._id]);
       }
       // cleanup before sending back
       DKV.remove(key);
@@ -719,10 +718,13 @@ public abstract class DGLM {
     }
 
     public GLMValidation(){_modelKeys = null;}
-    public GLMValidation(Key modelKey, GLMModel [] models, ErrMetric m, double [] thresholds, long time) {
+    public GLMValidation(Key modelKey, Key [] modelKeys, ErrMetric m, double [] thresholds, long time) {
       _time = time;
       _errMetric = m;
       _modelKey = modelKey;
+      GLMModel [] models = new GLMModel[modelKeys.length];
+      for (int i = 0; i < models.length; ++i)
+        models[i] = DKV.get(modelKeys[i]).get();
       _dataKey = models[0]._dataKey;
       _modelKeys = new Key[models.length];
       int i = 0;
@@ -976,7 +978,7 @@ public abstract class DGLM {
     }
 
     @Override
-    public int resultSz(){return ((_N *_N)  + _N) << 3;}
+    public long memReq(){return ValueArray.CHUNK_SZ + ((_N*_N  + _N) * 8);}
 
     public final double computeEta(double[] x, int[] indexes){
       double mu = 0;
