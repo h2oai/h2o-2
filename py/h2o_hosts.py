@@ -113,7 +113,7 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
         node_count=paramsToUse['h2o_per_host'],
         base_port=paramsToUse['base_port'],
         hosts=hosts,
-        rand_shuffle=True
+        rand_shuffle=paramsToUse['rand_shuffle']
         )
 
     if hosts is not None:
