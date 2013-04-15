@@ -1,17 +1,11 @@
 package water;
 
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryMXBean;
-import java.lang.management.MemoryNotificationInfo;
-import java.lang.management.MemoryPoolMXBean;
-import java.lang.management.MemoryType;
+import java.lang.management.*;
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import javax.management.*;
-
-import com.sun.tools.internal.xjc.util.ForkContentHandler;
+import javax.management.Notification;
+import javax.management.NotificationEmitter;
 
 import jsr166y.ForkJoinPool;
 import jsr166y.ForkJoinPool.ManagedBlocker;
