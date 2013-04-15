@@ -3,6 +3,7 @@ sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_rf, h2o_hosts
 import h2o_browse as h2b
+import h2o_jobs
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -26,11 +27,9 @@ class Basic(unittest.TestCase):
         print "\n" + csvPathname
 
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, timeoutSecs=15)
-
         rfViewInitial = []
         # dispatch multiple jobs back to back
         for jobDispatch in range(1):
-
             start = time.time()
             kwargs = {}
             # FIX! what model keys do these get?
@@ -40,38 +39,7 @@ class Basic(unittest.TestCase):
             print "rf job dispatch end on ", csvPathname, 'took', time.time() - start, 'seconds'
             print "\njobDispatch #", jobDispatch
 
-        anyBusy = True
-        waitLoop = 0
-        while (anyBusy):
-            anyBusy = False
-            a = h2o.nodes[0].jobs_admin()
-            print "jobs_admin():", h2o.dump_json(a)
-            jobs = a['jobs']
-            RFModelKeys = []
-            for j in jobs:
-                # save the destination keys for any RF Model in progress
-                if 'RF' in j['destination_key']:
-                   RFModelKeys.append(j['destination_key'])
-
-                if j['end_time'] == '':
-                    anyBusy = True
-                    print "Loop", waitLoop, "Not done - ",\
-                        "destination_key:", j['destination_key'], \
-                        "progress:",  j['progress'], \
-                        "cancelled:", j['cancelled'],\
-                        "end_time:",  j['end_time']
-            print "\n"
-            h2b.browseJsonHistoryAsUrlLastMatch("Jobs")
-            if (anyBusy and waitLoop > 2):
-                print h2o.dump_json(jobs)
-                raise Exception("Some queued jobs haven't completed after", waitLoop, "wait loops")
-
-            time.sleep(5)
-            waitLoop += 1
-
-            
-        # b = h2o.nodes[0].jobs_cancel(key='pytest_model')
-        # print "jobs_cancel():", h2o.dump_json(b)
+        h2o_jobs.pollWaitJobs(pattern='GLMModel', timeoutSecs=10, retryDelaySecs=5)
 
         # we saved the initial response?
         # if we do another poll they should be done now, and better to get it that 
