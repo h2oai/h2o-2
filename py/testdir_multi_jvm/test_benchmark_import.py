@@ -58,6 +58,7 @@ class Basic(unittest.TestCase):
             print "Using .gz'ed files in", importFolderPath
             # all exactly the same prior to gzip!
             avgMichalSize = 237270000
+            avgSynSize = 4020000
             # could use this, but remember import folder -> import folder s3 for jenkins?
             # how would it get it right?
             # os.path.getsize(f)
@@ -66,6 +67,10 @@ class Basic(unittest.TestCase):
                 # 100 files takes too long on two machines?
                 # ("covtype200x.data", "covtype200x.data", 15033863400, 700),
                 # I use different files to avoid OS caching effects
+                ("syn_datasets/syn_7350063254201195578_10000x200.csv_00000", "syn_1.csv", avgSynSize, 700),
+                ("syn_datasets/syn_7350063254201195578_10000x200.csv_0001[0-9]", "syn_10.csv", 10 * avgSynSize, 700),
+                ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[23][0-9]", "syn_20.csv", 20 * avgSynSize, 700),
+                ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[45678][0-9]", "syn_50.csv", 50 * avgSynSize, 700),
                 ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 700),
                 # ("manyfiles-nflx-gz/file_10.dat.gz", "file_10_1.dat.gz", 1 * avgMichalSize, 700),
                 # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
