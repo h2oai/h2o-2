@@ -1215,6 +1215,7 @@ public abstract class DGLM {
         @Override public void compute2() {
           try{
             buildModel(job, job.dest(), data, lsm, params, beta,xval);
+            assert !job.cancelled();
             job.remove();
           } catch(JobCancelledException e){
             UKV.remove(job.dest());
@@ -1289,9 +1290,10 @@ public abstract class DGLM {
     else
       currentModel.validateOn(job,data._ary, data.getSamplingComplement(),DEFAULT_THRESHOLDS); // Full scoring on original dataset
     currentModel._status = Status.Done;
-    currentModel.store();
     String [] warnings = new String[warns.size()];
     warns.toArray(warnings);
+    currentModel.store();
+    DKV.write_barrier();
     return currentModel;
   }
 
