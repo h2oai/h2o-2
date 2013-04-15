@@ -285,6 +285,7 @@ public final class ParseDataset extends Job {
   public static void parseCompressed(ParseDataset job, Key [] keys, CsvParser.Setup setup, Compression comp) throws IOException {
     UnzipTask tsk = new UnzipTask();
     tsk._comp = comp;
+    UnzipTask tsk = new UnzipTask(job, comp);
     tsk.invoke(keys);
     if(tsk._success){
     if (tsk._success && DKV.get(job._self) != null) {
