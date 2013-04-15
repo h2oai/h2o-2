@@ -24,7 +24,7 @@ import com.google.common.io.Closeables;
 public final class ParseDataset extends Job {
   public static enum Compression { NONE, ZIP, GZIP }
 
-  private final long _total;
+  long _total;
   public final Key  _progress;
 
   private ParseDataset(Key dest, Key[] keys) {
@@ -238,10 +238,17 @@ public final class ParseDataset extends Job {
             InputStream is = null;
             Key okey = Key.make(new String(key._kb) + "_UNZIPPED");
             Value v = DKV.get(key);
+            final Key progressKey = _job._progress;
+            ProgressMonitor pmon = new ProgressMonitor() {
+                @Override
+                public void update(long n) {
+                  onProgress(n, progressKey);
+                }
+            };
             try{
               switch(_comp){
               case ZIP:
-                ZipInputStream zis = new ZipInputStream(v.openStream());
+                ZipInputStream zis = new ZipInputStream(v.openStream(pmon));
                 ZipEntry ze = zis.getNextEntry();
                 // There is at least one entry in zip file and it is not a directory.
                 if( ze == null || ze.isDirectory() )
@@ -249,7 +256,7 @@ public final class ParseDataset extends Job {
                 is = zis;
                 break;
               case GZIP:
-                is = new GZIPInputStream(v.openStream());
+                is = new GZIPInputStream(v.openStream(pmon));
                 break;
               default:
                 throw H2O.unimpl();
@@ -283,11 +290,8 @@ public final class ParseDataset extends Job {
   }
 
   public static void parseCompressed(ParseDataset job, Key [] keys, CsvParser.Setup setup, Compression comp) throws IOException {
-    UnzipTask tsk = new UnzipTask();
-    tsk._comp = comp;
     UnzipTask tsk = new UnzipTask(job, comp);
     tsk.invoke(keys);
-    if(tsk._success){
     if (tsk._success && DKV.get(job._self) != null) {
       // now turn the keys into output keys pointing to uncompressed data
       // and compute new progress
@@ -389,20 +393,24 @@ public final class ParseDataset extends Job {
     Progress progress = UKV.get(_progress);
     return (progress != null ? progress._value : 0) / (float) _total;
   }
-
   @Override public void remove() {
     DKV.remove(_progress);
     super.remove();
   }
-
   static final void onProgress(final Key chunk, final Key progress) {
     assert progress != null;
     Value val = DKV.get(chunk);
-    if( val == null ) return;
+    if (val == null)
+      return;
     final long len = val.length();
+    onProgress(len, progress);
+  }
+  static final void onProgress(final long len, final Key progress) {
     new TAtomic<Progress>() {
-      @Override public Progress atomic(Progress old) {
-        if( old == null ) return null;
+      @Override
+      public Progress atomic(Progress old) {
+        if (old == null)
+          return null;
         old._value += len;
         return old;
       }
