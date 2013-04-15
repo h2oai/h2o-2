@@ -1,7 +1,7 @@
 import os, json, unittest, time, shutil, sys
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
-import h2o_exec as h2e
+import h2o_exec as h2e, h2o_jobs
 import time, random, logging
 
 class Basic(unittest.TestCase):
@@ -125,6 +125,7 @@ class Basic(unittest.TestCase):
                 h2o.cloudPerfH2O.message("Parse " + csvFilename + " Start--------------------------------")
                 start = time.time()
                 parseKey = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
+                    noPoll=True,
                     key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, retryDelaySecs = 5, 
                     # benchmarkLogging=['cpu','disk', 'jstack'])
                     benchmarkLogging=['cpu','disk','jstack'])
@@ -140,6 +141,9 @@ class Basic(unittest.TestCase):
                 print csvFilepattern, 'parse time:', parseKey['response']['time']
                 print "Parse result['destination_key']:", parseKey['destination_key']
 
+                # does it take a little while to show up in Jobs, from where we issued the parse?
+                time.sleep(2)
+                h2o_jobs.pollWaitJobs(pattern=csvFilename)
                 # We should be able to see the parse result?
                 inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
 
