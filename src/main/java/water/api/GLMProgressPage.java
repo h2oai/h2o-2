@@ -56,9 +56,6 @@ public class GLMProgressPage extends Request {
         UKV.remove(_progress.value());
        return Response.error(p.error());
       }
-
-    } else {
-
     }
     GLMModel m = (GLMModel)UKV.get(dest);
     if(m!=null){
@@ -67,24 +64,12 @@ public class GLMProgressPage extends Request {
     }
     Response r = null;
     // Display HTML setup
-    if(p == null)
+    if(DKV.get(_job.value()) == null)
       r =  Response.done(response);
-    else switch(p.status()){
-    case Computing:
+    else if(p != null)
       r = Response.poll(response,p.progress());
-      break;
-    case Done:
-      UKV.remove(_progress.value());
-      r = Response.done(response);
-      break;
-    case Error:
-      UKV.remove(_progress.value());
-      r = Response.error(p.error());
-      break;
-    case Cancelled:
-      UKV.remove(_progress.value());
-      r = Response.error("Cancelled!");
-    }
+    else
+     r = Response.poll(response,0);
     r.setBuilder(""/*top-level do-it-all builder*/,new GLMBuilder(m,_job.value()));
     return r;
   }

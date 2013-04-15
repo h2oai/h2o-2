@@ -171,7 +171,10 @@ public class Job extends Iced {
       if(_status == Status.Cancelled || _status == Status.Error)
         return this;
       long c = _count + count;
-      return new ChunkProgress(_nchunks,c, (c == _nchunks)?Status.Done:Status.Computing,null);
+      return new ChunkProgress(_nchunks,c, Status.Computing,null);
+    }
+    public ChunkProgress done() {
+      return new ChunkProgress(_nchunks,_nchunks, Status.Done,null);
     }
     public ChunkProgress cancel(){
       return new ChunkProgress(0,0,Status.Cancelled,null);
@@ -180,7 +183,8 @@ public class Job extends Iced {
       return new ChunkProgress(0,0,Status.Error, msg);
     }
     public final float progress(){
-      return (float)((double)_count/(double)_nchunks);
+      if(_status == Status.Done)return 1.0f;
+      return Math.min(0.99f,(float)((double)_count/(double)_nchunks));
     }
   }
 
