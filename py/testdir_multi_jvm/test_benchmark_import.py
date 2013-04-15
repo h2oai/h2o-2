@@ -99,6 +99,10 @@ class Basic(unittest.TestCase):
         # rebuild the cloud for each file
         base_port = 54321
         tryHeap = 28
+        # can fire a parse off and go wait on the jobs queue (inspect afterwards is enough?)
+        noPoll = False
+        benchmarkLogging = ['cpu','disk']
+
         for (csvFilepattern, csvFilename, totalBytes, timeoutSecs) in csvFilenameList:
             localhost = h2o.decide_if_localhost()
             if (localhost):
@@ -125,10 +129,9 @@ class Basic(unittest.TestCase):
                 h2o.cloudPerfH2O.message("Parse " + csvFilename + " Start--------------------------------")
                 start = time.time()
                 parseKey = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
-                    noPoll=True,
-                    key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, retryDelaySecs = 5, 
-                    # benchmarkLogging=['cpu','disk', 'jstack'])
-                    benchmarkLogging=['cpu','disk','jstack'])
+                    key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, retryDelaySecs=5, 
+                    noPoll=noPoll,
+                    benchmarkLogging=benchmarkLogging)
                 elapsed = time.time() - start
                 print "Parse #", trial, "completed in", "%6.2f" % elapsed, "seconds.", \
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -143,7 +146,7 @@ class Basic(unittest.TestCase):
 
                 # does it take a little while to show up in Jobs, from where we issued the parse?
                 time.sleep(2)
-                h2o_jobs.pollWaitJobs(pattern=csvFilename)
+                h2o_jobs.pollWaitJobs(pattern=csvFilename, benchmarkLogging=benchmarkLogging)
                 # We should be able to see the parse result?
                 inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
 

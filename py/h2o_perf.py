@@ -7,7 +7,7 @@ class PerfH2O(object):
     def change_logfile(self, subtest_name):
         # change to another logfile after we've already been going
         blog = 'benchmark_' + subtest_name + '.log'
-        print "Switch. Now appending to %s." % blog, "Between tests, you may want to delete it if it gets too big"
+        print "\nSwitch. Now appending to %s." % blog, "Between tests, you may want to delete it if it gets too big"
 
         # http://stackoverflow.com/questions/5296130/restart-logging-to-a-new-file-python
         # manually reassign the handler
@@ -27,7 +27,7 @@ class PerfH2O(object):
         # just use local directory? (python_test_name global set below before this)
         blog = 'benchmark_' + subtest_name + '.log'
         self.subtest_name = subtest_name
-        print "Appending to %s." % blog, "Between tests, you may want to delete it if it gets too big"
+        print "\nAppending to %s." % blog, "Between tests, you may want to delete it if it gets too big"
         logging.basicConfig(filename=blog,
             # we use CRITICAL for the benchmark logging to avoid info/warn stuff
             # from other python packages
