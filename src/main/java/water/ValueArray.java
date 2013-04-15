@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.concurrent.ExecutionException;
 
 import water.H2O.H2OCountedCompleter;
 import water.Job.ProgressMonitor;
@@ -363,6 +364,7 @@ public class ValueArray extends Iced implements Cloneable {
     long szl = off;
     long cidx = 0;
     Futures dkv_fs = new Futures();
+    H2OCountedCompleter f_last = null;
     while( true ) {
       oldbuf = buf;
       buf = MemoryManager.malloc1((int)CHUNK_SZ);
@@ -384,30 +386,38 @@ public class ValueArray extends Iced implements Cloneable {
             DKV.put(val._key,val,fs); // The only exciting thing in this innerclass!
             tryComplete();
           }
+          @Override public byte priority() { return H2O.ATOMIC_PRIORITY; }
         };
       H2O.submitTask(subtask);
       // Also add the DKV task to the blocking list (not just the TaskPutKey
       // buried inside the DKV!)
       dkv_fs.add(subtask);
+      f_last = subtask;
     }
     assert is.read(new byte[1]) == -1 || job.cancelled();
 
-    // Block for all pending DKV puts, which will in turn add blocking requests
-    // to the passed-in Future list 'fs'.  Also block for the last DKV to
-    // happen, because we're overwriting the last one with final size bits.
-    dkv_fs.blockForPending();
     // Last chunk is short, read it; combine buffers and make the last chunk larger
     if( cidx > 0 ) {
       Key ckey = getChunkKey(cidx-1,key); // Get last chunk written out
-      assert DKV.get(ckey).memOrLoad()==oldbuf; // Maybe false-alarms under high-memory-pressure?
       byte[] newbuf = Arrays.copyOf(oldbuf,(int)(off+CHUNK_SZ));
       System.arraycopy(buf,0,newbuf,(int)CHUNK_SZ,off);
+      // Block for the last DKV to happen, because we're overwriting the last one
+      // with final size bits.
+      try { f_last.get(); }
+      catch( InterruptedException ie ) { throw new RuntimeException(ie); }
+      catch(   ExecutionException ee ) { throw new RuntimeException(ee); }
+      assert DKV.get(ckey).memOrLoad()==oldbuf; // Maybe false-alarms under high-memory-pressure?
       DKV.put(ckey,new Value(ckey,newbuf),fs); // Overwrite the old too-small Value
     } else {
       Key ckey = getChunkKey(cidx,key);
       DKV.put(ckey,new Value(ckey,Arrays.copyOf(buf,off)),fs);
     }
     UKV.put(key,new ValueArray(key,szl),fs);
+
+    // Block for all pending DKV puts, which will in turn add blocking requests
+    // to the passed-in Future list 'fs'.
+    dkv_fs.blockForPending();
+
     return fs;
   }
 
