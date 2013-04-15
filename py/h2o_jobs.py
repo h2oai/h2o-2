@@ -4,7 +4,7 @@ import h2o
 
 # poll the Jobs queue and wait if not all done. Return matching keys to a pattern for 'destination_key"
 # for a job (model usually)
-def pollWaitJobs(pattern=None, timeoutSecs=30, retryDelaySecs=5):
+def pollWaitJobs(pattern=None, timeoutSecs=30, retryDelaySecs=5, benchmarkLogging=None):
     anyBusy = True
     waitTime = 0
     while (anyBusy):
@@ -37,6 +37,11 @@ def pollWaitJobs(pattern=None, timeoutSecs=30, retryDelaySecs=5):
         sys.stdout.flush()
         time.sleep(retryDelaySecs)
         waitTime += retryDelaySecs
+
+        # any time we're sitting around polling we might want to save logging info (cpu/disk/jstack)
+        # test would pass ['cpu','disk','jstack'] kind of list
+        if benchmarkLogging:
+            h2o.cloudPerfH2O.get_log_save(benchmarkLogging)
     return patternKeys
 
 

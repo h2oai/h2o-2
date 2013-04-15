@@ -966,7 +966,7 @@ class H2O(object):
         verboseprint("\nimport_files result:", dump_json(a))
         return a
 
-    def import_s3(self, bucket, repl=None):
+    def import_s3(self, bucket):
         a = self.__check_request(requests.get(
             self.__url('ImportS3.json'),
             params={"bucket": bucket}))
