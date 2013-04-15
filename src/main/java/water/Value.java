@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 
 import jsr166y.ForkJoinPool;
+import water.Job.ProgressMonitor;
 import water.hdfs.PersistHdfs;
 import water.store.s3.PersistS3;
 
@@ -275,9 +276,12 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     return ((ValueArray)get()).length();
   }
 
-  /** Creates a Stream for reading bytes */
   public InputStream openStream() throws IOException {
-    if( isArray() ) return ((ValueArray)get()).openStream();
+    return openStream(null);
+  }
+  /** Creates a Stream for reading bytes */
+  public InputStream openStream(ProgressMonitor p) throws IOException {
+    if( isArray() ) return ((ValueArray)get()).openStream(p);
     assert _type==TypeMap.PRIM_B;
     return new ByteArrayInputStream(memOrLoad());
   }

@@ -25,6 +25,9 @@ public class Job extends Iced {
     float progress();
   }
 
+  public interface ProgressMonitor {
+    public void update(long n);
+  }
   public static class Fail extends Iced {
     public final String _message;
     public Fail(String message) { _message = message; }

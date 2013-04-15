@@ -212,9 +212,13 @@ public final class ParseDataset extends Job {
   }
 
   public static class UnzipTask extends DRemoteTask {
-    Job _job;
-    Compression _comp;
+    final ParseDataset _job;
+    final Compression _comp;
     boolean _success = true;
+    public UnzipTask(ParseDataset job, Compression comp) {
+      _job = job;
+      _comp = comp;
+    }
     @Override
     public void reduce(DRemoteTask drt) {
       UnzipTask other = (UnzipTask)drt;
@@ -283,9 +287,18 @@ public final class ParseDataset extends Job {
     tsk._comp = comp;
     tsk.invoke(keys);
     if(tsk._success){
+    if (tsk._success && DKV.get(job._self) != null) {
       // now turn the keys into output keys pointing to uncompressed data
-      for(int i = 0; i < keys.length; ++i)
+      // and compute new progress
+      job._total = 0;
+      for (int i = 0; i < keys.length; ++i){
         keys[i] = Key.make(new String(keys[i]._kb) + "_UNZIPPED");
+        job._total += DKV.get(keys[i]).length();
+      }
+      job._total *= 2; // 2 phases
+      // reset progress
+      UKV.put(job._self, job);
+      UKV.put(job._progress,new Progress());
       try {
         parse(job, keys, setup);
       } finally {
