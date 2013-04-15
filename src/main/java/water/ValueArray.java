@@ -379,7 +379,7 @@ public class ValueArray extends Iced implements Cloneable {
       // write with read.
       H2OCountedCompleter subtask = new H2OCountedCompleter() {
           @Override public void compute2() {
-            DKV.put(ckey,val,fs); // The only exciting thing in this innerclass!
+            DKV.put(val._key,val,fs); // The only exciting thing in this innerclass!
             tryComplete();
           }
         };
