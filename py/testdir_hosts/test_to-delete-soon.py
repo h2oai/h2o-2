@@ -1,8 +1,8 @@
 import unittest, sys, random, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
-import h2o_jobs
-import logging
+import h2o_jobs 
+import logging 
 
 def check_enums_from_inspect(parseKey):
     inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
@@ -53,27 +53,19 @@ class Basic(unittest.TestCase):
         # typical size of the michal files
         avgMichalSize = 116561140
         avgSynSize = 4020000
+        avgAzSize = 75169317 # bytes
         csvFilenameList = [
-            # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz"),
-            # 100 files takes too long on two machines?
-            # I use different files to avoid OS caching effects
-            # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[0-9][0-9]", "syn_100.csv", 100 * avgSynSize, 700),
-            # ("syn_datasets/syn_7350063254201195578_10000x200.csv_00000", "syn_1.csv", avgSynSize, 700),
-            # ("syn_datasets/syn_7350063254201195578_10000x200.csv_0001[0-9]", "syn_10.csv", 10 * avgSynSize, 700),
-            # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[23][0-9]", "syn_20.csv", 20 * avgSynSize, 700),
-            # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[45678][0-9]", "syn_50.csv", 50 * avgSynSize, 700),
-
+            ("to-delete-soon/a", "a_1.dat", 1 * avgAzSize, 300),
+            ("to-delete-soon/[abcdefghij]", "a_10.dat", 1 * avgAzSize, 300),
+            ("to-delete-soon/[a-v]", "b_20.dat", 20 * avgAzSize, 800),
+            ("to-delete-soon/[a-z]", "a_24.dat", 24 * avgAzSize, 900),
             # ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 300),
             # ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
             # ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 900),
-
-            ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_A.dat.gz", 100 * avgMichalSize, 2400),
-            ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_B.dat.gz", 100 * avgMichalSize, 2400),
-            ("manyfiles-nflx-gz/file_1[0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 2400),
-            ("manyfiles-nflx-gz/file_2[0-9][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 2400),
-            ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
-            ("manyfiles-nflx-gz/file_1[0-4][0-9].dat.gz", "file_50_B.dat.gz", 50 * avgMichalSize, 1800),
-            ("manyfiles-nflx-gz/file_1[5-9][0-9].dat.gz", "file_50_C.dat.gz", 50 * avgMichalSize, 1800),
+            # ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
+            # ("manyfiles-nflx-gz/file_1[0-4][0-9].dat.gz", "file_50_B.dat.gz", 50 * avgMichalSize, 1800),
+            # ("manyfiles-nflx-gz/file_1[5-9][0-9].dat.gz", "file_50_C.dat.gz", 50 * avgMichalSize, 1800),
+            # ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 2400),
         ]
 
         print "Using the -.gz files from s3"
@@ -99,7 +91,7 @@ class Basic(unittest.TestCase):
                 
                 print "\n", tryHeap,"GB heap, 1 jvm per host, import", protocol, "then parse"
                 h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap,
-                    enable_benchmark_log=True, timeoutSecs=120, retryDelaySecs=10,
+                    enable_benchmark_log=True, timeoutSecs=180, retryDelaySecs=10,
                     # all hdfs info is done thru the hdfs_config michal's ec2 config sets up?
                     # this is for our amazon ec hdfs
                     # see https://github.com/0xdata/h2o/wiki/H2O-and-s3n
@@ -139,7 +131,7 @@ class Basic(unittest.TestCase):
                     print "Loading", protocol, "key:", s3nKey, "to", key2
                     start = time.time()
                     parseKey = h2o.nodes[0].parse(s3nKey, key2,
-                        timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=180,
+                        timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60,
                         noPoll=noPoll,
                         benchmarkLogging=benchmarkLogging)
 

@@ -1,12 +1,14 @@
 import logging, psutil
 import h2o
-import time
+import time, os
 
 class PerfH2O(object):
     # so a test can create multiple logs
     def change_logfile(self, subtest_name):
         # change to another logfile after we've already been going
-        blog = 'benchmark_' + subtest_name + '.log'
+        # just want the base name if we pointed to it from somewhere else
+        short_subtest_name = os.path.basename(subtest_name) 
+        blog = 'benchmark_' + short_subtest_name + '.log'
         print "\nSwitch. Now appending to %s." % blog, "Between tests, you may want to delete it if it gets too big"
 
         # http://stackoverflow.com/questions/5296130/restart-logging-to-a-new-file-python
@@ -25,8 +27,9 @@ class PerfH2O(object):
         # default should just append thru multiple cloud builds.
         # I guess sandbox is cleared on each cloud build. so don't build there.
         # just use local directory? (python_test_name global set below before this)
-        blog = 'benchmark_' + subtest_name + '.log'
-        self.subtest_name = subtest_name
+        short_subtest_name = os.path.basename(subtest_name) 
+        blog = 'benchmark_' + short_subtest_name + '.log'
+        self.subtest_name = short_subtest_name
         print "\nAppending to %s." % blog, "Between tests, you may want to delete it if it gets too big"
         logging.basicConfig(filename=blog,
             # we use CRITICAL for the benchmark logging to avoid info/warn stuff
@@ -35,8 +38,9 @@ class PerfH2O(object):
             format='%(asctime)s %(message)s') # date/time stamp
 
     def __init__(self, python_test_name):
-        self.python_test_name = python_test_name
-        self.init_logfile(python_test_name)
+        short_python_test_name = os.path.basename(python_test_name) 
+        self.python_test_name = short_python_test_name
+        self.init_logfile(short_python_test_name)
 
         self.MINCACHETOPRINT = 7
         self.JSTACKINTERVAL = 20
