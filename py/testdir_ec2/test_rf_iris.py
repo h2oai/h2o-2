@@ -19,6 +19,7 @@ paramsTrainRF = {
 
 # RF test parameters
 paramsTestRF = {
+            'out_of_bag_error_estimate': 0, 
             'timeoutSecs': 14800,
         }
 

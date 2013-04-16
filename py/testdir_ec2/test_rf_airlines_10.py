@@ -5,7 +5,7 @@ import h2o, h2o_cmd, h2o_hosts, h2o_rf
 
 # RF train parameters
 paramsTrainRF = { 
-            'ntree'      : 100, 
+            'ntree'      : 10, 
             'depth'      : 300,
             'parallel'   : 1, 
             'bin_limit'  : 20000,
@@ -18,6 +18,7 @@ paramsTrainRF = {
 
 # RF test parameters
 paramsScoreRF = {
+            'out_of_bag_error_estimate': 0, 
             'timeoutSecs': 14800,
         }
 

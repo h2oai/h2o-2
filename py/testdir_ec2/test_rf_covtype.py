@@ -9,7 +9,6 @@ paramsTrainRF = {
             'depth'      : 300,
             'parallel'   : 1, 
             'bin_limit'  : 20000,
-            'ignore'     : 'ArrDelay,DepDelay',
             'stat_type'  : 'ENTROPY',
             'out_of_bag_error_estimate': 1, 
             'exclusive_split_limit'    : 0,
@@ -18,20 +17,20 @@ paramsTrainRF = {
 
 # RF test parameters
 paramsScoreRF = {
-            'out_of_bag_error_estimate': 0, 
             'timeoutSecs': 14800,
+            'out_of_bag_error_estimate': 0, 
         }
 
 trainDS = {
-        's3bucket'    : 'h2o-airlines-unpacked',
-        'filename'    : 'year1987.csv',
+        's3bucket'    : 'h2o-datasets',
+        'filename'    : 'covtype.data',
         'timeoutSecs' : 14800,
         'header'      : 1
         }
 
 scoreDS = {
-        's3bucket'    : 'h2o-airlines-unpacked',
-        'filename'    : 'year1988.csv',
+        's3bucket'    : 'h2o-datasets',
+        'filename'    : 'covtype.data',
         'timeoutSecs' : 14800,
         'header'      : 1
         }

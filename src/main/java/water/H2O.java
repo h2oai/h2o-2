@@ -882,7 +882,7 @@ public final class H2O {
     static boolean lazyPersist(){ // free disk > our DRAM?
       return H2O.SELF._heartbeat.get_free_disk() > MemoryManager.MEM_MAX;
     }
-    static boolean isDiskFull(){ // free disk space < 5 megs?
+    static boolean isDiskFull(){ // free disk space < 5K?
       File f = new File(PersistIce.ROOT);
       return f.getUsableSpace() < (5 << 10);
     }

@@ -173,7 +173,10 @@ def scoreRF(scoreParseKey, trainResult, **kwargs):
 def pp_rf_result(rf):
     jcm = rf['confusion_matrix']
     header = jcm['header']
-    cm = ' '.join(header)
+    #cm = '   '.join(header)
+    cm = '{0:<15}'.format('')
+    for h in header: cm = '{0}|{1:<15}'.format(cm, h)
+    cm = '{0}|{1:<15}'.format(cm, 'error')
     c = 0
     for line in jcm['scores']:
         lineSum  = sum(line)
@@ -182,7 +185,10 @@ def pp_rf_result(rf):
             err = float(errorSum) / lineSum
         else:
             err = 0.0
-        cm = "{0}\n {1} {2} {3}".format(cm, header[c], ' '.join(map(str,line)), err)
+        fl = '{0:<15}'.format(header[c])
+        for num in line: fl = '{0}|{1:<15}'.format(fl, num)
+        fl = '{0}|{1:<15}'.format(fl, err)
+        cm = "{0}\n{1}".format(cm, fl)
         c += 1
 
     return """
@@ -194,7 +200,7 @@ def pp_rf_result(rf):
    Time: {9} seconds
 
    Confusion matrix:
-      {10}
+{10}
 """.format(
         rf['trees']['leaves']['min'],
         rf['trees']['leaves']['mean'],
