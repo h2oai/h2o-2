@@ -17,27 +17,16 @@ class Basic(unittest.TestCase):
         # the node state is gone when we tear down the cloud, so pass the ignore here also.
         h2o.tear_down_cloud(sandbox_ignore_errors=True)
 
-    def test_parse_nflx_loop_s3n_hdfs(self):
+    def test_flashgordon(self):
         # typical size of the michal files
         avgMichalSize = 116561140
         avgSynSize = 4020000
         csvFilenameList = [
-            # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz"),
-            # 100 files takes too long on two machines?
-            # I use different files to avoid OS caching effects
-            ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[0-9][0-9]", "syn_100.csv", 100 * avgSynSize, 700),
-            ("syn_datasets/syn_7350063254201195578_10000x200.csv_00000", "syn_1.csv", avgSynSize, 700),
-            ("syn_datasets/syn_7350063254201195578_10000x200.csv_0001[0-9]", "syn_10.csv", 10 * avgSynSize, 700),
-            ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[23][0-9]", "syn_20.csv", 20 * avgSynSize, 700),
-            ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[45678][0-9]", "syn_50.csv", 50 * avgSynSize, 700),
-
-            ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 300),
-            ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
-            ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 900),
-            ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
-            ("manyfiles-nflx-gz/file_1[0-4][0-9].dat.gz", "file_50_B.dat.gz", 50 * avgMichalSize, 1800),
-            ("manyfiles-nflx-gz/file_1[5-9][0-9].dat.gz", "file_50_C.dat.gz", 50 * avgMichalSize, 1800),
-            ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 2400),
+            ("100.dat.gz", "dat_1", 1 * avgSynSize, 700),
+            ("11[0-9].dat.gz", "dat_10", 10 * avgSynSize, 700),
+            ("1[32][0-9].dat.gz", "dat_20", 20 * avgSynSize, 800),
+            ("1[5-9][0-9].dat.gz", "dat_50", 50 * avgSynSize, 900),
+            # ("1[0-9][0-9].dat.gz", "dat_100", 100 * avgSynSize, 1200),
         ]
 
         print "Using the -.gz files from s3"
@@ -48,10 +37,10 @@ class Basic(unittest.TestCase):
         benchmarkLogging = ['cpu','disk']
         bucket = "home-0xdiag-datasets"
         if USE_S3:
-            URI = "s3://home-0xdiag-datasets"
+            URI = "s3://flashgordon"
             protocol = "s3"
         else:
-            URI = "s3n://home-0xdiag-datasets"
+            URI = "s3n://flashgordon"
             protocol = "s3n/hdfs"
 
         # split out the pattern match and the filename used for the hex

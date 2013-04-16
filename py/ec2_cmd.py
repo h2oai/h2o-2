@@ -25,7 +25,7 @@ Default EC2 instance setup
 '''
 DEFAULT_EC2_INSTANCE_CONFIGS = {
   'us-east-1':{
-              'image_id'        : 'ami-b85cc4d1', # 'ami-cd9a11a4',
+              'image_id'        : 'ami-30c6a059', #'ami-b85cc4d1', # 'ami-cd9a11a4',
               'security_groups' : [ 'MrJenkinsTest' ],
               'key_name'        : 'mrjenkins_test',
               'instance_type'   : 'm1.xlarge',
@@ -132,6 +132,7 @@ def run_instances(count, ec2_config, region, waitForSSH=True, tags=None):
         log('Reservation: {0}'.format(reservation.id))
         log('Waiting for {0} EC2 instances {1} to come up, this can take 1-2 minutes.'.format(len(reservation.instances), reservation.instances))
         start = time.time()
+        time.sleep(1)
         for instance in reservation.instances:
             while instance.update() == 'pending':
                time.sleep(1)

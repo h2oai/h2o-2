@@ -22,7 +22,7 @@ import water.nbhm.NonBlockingHashMap;
  */
 public final class Enum extends Iced {
 
-  public static final int MAX_ENUM_SIZE = 65535;
+  public static final int MAX_ENUM_SIZE = 11000;
 
   volatile NonBlockingHashMap<ValueString, Integer> _map;
 
