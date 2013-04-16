@@ -27,38 +27,38 @@ class Basic(unittest.TestCase):
         #    "billion_rows.csv.gz",
 
         # typical size of the michal files
+        avgMichalSizeUncompressed = 237270000 
+        avgMichalSize = 116561140 
+        avgSynSize = 4020000
+        covtype200xSize = 15033863400
         if (1==0):
             importFolderPath = '/home2/0xdiag/datasets'
             print "Using non-.gz'ed files in", importFolderPath
-            avgMichalSize = 116561140 
             csvFilenameAll = [
                 # I use different files to avoid OS caching effects
-                ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSize, 700),
-                ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSize, 700),
-                ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSize, 700),
-                ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSize, 700),
-                # ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSize, 700),
-                # ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSize, 1200),
+                ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSizeUncompressed, 700),
+                ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSizeUncompressed, 700),
+                ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSizeUncompressed, 700),
+                ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSizeUncompressed, 700),
+                # ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSizeUncompressed, 700),
+                # ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSizeUncompressed, 1200),
             ]
         elif (1==0):
             importFolderPath = '/home2/0xdiag/datasets'
             print "Using non-.gz'ed files in", importFolderPath
-            avgMichalSize = 116561140 
             csvFilenameAll = [
                 # I use different files to avoid OS caching effects
-                ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSize, 1200),
-                ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSize, 1200),
-                ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSize, 700),
-                ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSize, 700),
-                ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSize, 700),
-                ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSize, 700),
+                ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSizeUncompressed, 1200),
+                ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSizeUncompressed, 1200),
+                ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSizeUncompressed, 700),
+                ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSizeUncompressed, 700),
+                ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSizeUncompressed, 700),
+                ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSizeUncompressed, 700),
             ]
         else:
             importFolderPath = '/home/0xdiag/datasets'
             print "Using .gz'ed files in", importFolderPath
             # all exactly the same prior to gzip!
-            avgMichalSize = 237270000
-            avgSynSize = 4020000
             # could use this, but remember import folder -> import folder s3 for jenkins?
             # how would it get it right?
             # os.path.getsize(f)
@@ -67,7 +67,7 @@ class Basic(unittest.TestCase):
                 # 100 files takes too long on two machines?
                 # ("covtype200x.data", "covtype200x.data", 15033863400, 700),
                 # I use different files to avoid OS caching effects
-                # ("covtype200x.data", "covtype200x.data", 15033863400, 700),
+                ("covtype200x.data", "covtype200x.data", covtype200xSize, 700),
                 # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[0-9][0-9]", "syn_100.csv", 100 * avgSynSize, 700),
                 # ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 700),
                 # ("syn_datasets/syn_7350063254201195578_10000x200.csv_00000", "syn_1.csv", avgSynSize, 700),
@@ -79,7 +79,7 @@ class Basic(unittest.TestCase):
                 ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize, 700),
-                # ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 700),
+                ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 700),
 
                 # do it twice
                 # ("covtype.data", "covtype.data"),
