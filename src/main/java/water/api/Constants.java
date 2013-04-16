@@ -43,8 +43,8 @@ public class Constants {
   public static final String DEPTH                 = "depth";
   public static final String DESCRIPTION           = "description";
   public static final String DEST_KEY              = "destination_key";
-  public static final String PROGRESS_KEY              = "progress_key";
   public static final String DTHRESHOLDS           = "thresholds";
+  public static final String END_TIME              = "end_time";
   public static final String ENUM_DOMAIN_SIZE      = "enum_domain_size";
   public static final String EPSILON               = "epsilon";
   public static final String ERROR                 = "error";
@@ -110,6 +110,7 @@ public class Constants {
   public static final String PATH                  = "path";
   public static final String PREVIOUS_MODEL_KEY    = "previous_model_key";
   public static final String PROGRESS              = "progress";
+  public static final String PROGRESS_KEY          = "progress_key";
   public static final String PROGRESS_TOTAL        = "progress_total";
   public static final String REDIRECT              = "redirect_request";
   public static final String REDIRECT_ARGS         = "redirect_request_args";
@@ -131,12 +132,12 @@ public class Constants {
   public static final String SOURCE_KEY            = "source_key";
   public static final String STACK_TRACES          = "stack_traces";
   public static final String START_TIME            = "start_time";
-  public static final String END_TIME              = "end_time";
   public static final String STATUS                = "status";
   public static final String STEP                  = "step";
   public static final String STAT_TYPE             = "stat_type";
   public static final String STRATA_SAMPLES        = "strata_samples";
   public static final String SUCCEEDED             = "succeeded";
+  public static final String SYSTEM_LOAD           = "system_load";
   public static final String TASK_KEY              = "task_key";
   public static final String TCPS_ACTIVE           = "tcps_active";
   public static final String TIME                  = "time";
