@@ -20,22 +20,6 @@ import water.nbhm.UtilUnsafe;
 public class TimeLine extends UDP {
   private static final Unsafe _unsafe = UtilUnsafe.getUnsafe();
 
-/**
- * Only for debugging.
- * Prints local timeline to stdout.
- *
- * To be used in case of an error when global timeline can not be relied upon as we might not be able to talk to other nodes.
- */
- public static void printMyTimeLine(){
-   long [] s = TimeLine.snapshot();
-   System.out.println("===================================<TIMELINE>==============================================");
-   for(int i = 0; i < TimeLine.length(); ++i) {
-     if(!TimeLine.isEmpty(s, i) && ((TimeLine.l0(s, i) & 0xFF) == UDP.udp.exec.ordinal()))
-       System.out.println(TimeLine.ms(s, i) + ": " + (((TimeLine.ns(s, i) & 4) != 0)?"TCP":"UDP")  +  TimeLine.inet(s, i) + " | " + UDP.printx16(TimeLine.l0(s, i), TimeLine.l8(s, i)));
-   }
-   System.out.println("===========================================================================================");
- }
-
   // The TimeLine buffer.
 
   // The TimeLine buffer is full of Events; each event has a timestamp and some
@@ -108,8 +92,8 @@ public class TimeLine extends UDP {
     tl[idx*WORDS_PER_EVENT+2+1] = tmp;
     tl[idx*WORDS_PER_EVENT+3+1] = b.get8(8);
   }
-  public static void record_send( AutoBuffer b , boolean tcp)           { record(b, tcp, 0,0); }
-  public static void record_recv( AutoBuffer b, boolean tcp, int drop ) { record(b,tcp, 1,drop); }
+  public static void record_send( AutoBuffer b, boolean tcp)           { record(b,tcp,0,   0); }
+  public static void record_recv( AutoBuffer b, boolean tcp, int drop) { record(b,tcp,1,drop); }
 
   // Accessors, for TimeLines that come from all over the system
   public static int length( ) { return MAX_EVENTS; }
@@ -209,4 +193,20 @@ public class TimeLine extends UDP {
   }
 
   public String print16( AutoBuffer ab ) { return ""; } // no extra info in a timeline packet
+
+  /**
+   * Only for debugging.
+   * Prints local timeline to stdout.
+   *
+   * To be used in case of an error when global timeline can not be relied upon as we might not be able to talk to other nodes.
+   */
+  public static void printMyTimeLine(){
+    long [] s = TimeLine.snapshot();
+    System.out.println("===================================<TIMELINE>==============================================");
+    for(int i = 0; i < TimeLine.length(); ++i) {
+      if(!TimeLine.isEmpty(s, i) && ((TimeLine.l0(s, i) & 0xFF) == UDP.udp.exec.ordinal()))
+        System.out.println(TimeLine.ms(s, i) + ": " + (((TimeLine.ns(s, i) & 4) != 0)?"TCP":"UDP")  +  TimeLine.inet(s, i) + " | " + UDP.printx16(TimeLine.l0(s, i), TimeLine.l8(s, i)));
+    }
+    System.out.println("===========================================================================================");
+  }
 }
