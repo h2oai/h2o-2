@@ -1,12 +1,15 @@
 package water.util;
 
- class Log {
+abstract class Log {
 
-	public enum Tag {
+	public static interface Tag {
+		public static enum Subsystem implements Tag {
 		RF, GLM, KMEANS, PARSE, STORE;
+		}
 	}
 
-	static private int level = 0;
+	/** Verbosity for debug log level */
+	static private int level = Integer.getInteger("h2o.log.debug.level", 1);
 
 	static public Throwable fatal(Object _this, Tag t, String msg, Throwable exception) {
 		// some printing
