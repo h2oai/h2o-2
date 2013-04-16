@@ -22,7 +22,7 @@ public class Progress extends Request {
     JsonObject jsonResponse = defaultJsonResponse();
 
     if( job == null || job._endTime != 0 )
-      return jobDone(jsonResponse);
+      return jobDone(job, jsonResponse);
 
     return jobInProgress(job, jsonResponse);
   }
@@ -30,14 +30,7 @@ public class Progress extends Request {
   /** Find job key for this request */
   protected Job findJob() {
     Key key = Key.make(_job.value());
-    Job job = null;
-    for( Job current : Job.all() ) {
-      if( current.self().equals(key) ) {
-        job = current;
-        break;
-      }
-    }
-    return job;
+    return Job.findJob(key);
   }
 
   /** Create default Json response with destination key */
@@ -48,8 +41,8 @@ public class Progress extends Request {
   }
 
   /** Return {@link Response} for finished job. */
-  protected Response jobDone(final JsonObject jsonResp) {
-    return Inspect.redirect(jsonResp, Key.make(_dest.value()));
+  protected Response jobDone(final Job job,final JsonObject jsonResp) {
+    return Inspect.redirect(jsonResp, job, Key.make(_dest.value()));
   }
 
   /** Return default progress {@link Response}. */
