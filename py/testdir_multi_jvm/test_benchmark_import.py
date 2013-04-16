@@ -31,7 +31,7 @@ class Basic(unittest.TestCase):
         avgMichalSize = 116561140 
         avgSynSize = 4020000
         covtype200xSize = 15033863400
-        if (1==0):
+        if 1==0:
             importFolderPath = '/home2/0xdiag/datasets'
             print "Using non-.gz'ed files in", importFolderPath
             csvFilenameAll = [
@@ -43,7 +43,7 @@ class Basic(unittest.TestCase):
                 # ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSizeUncompressed, 700),
                 # ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSizeUncompressed, 1200),
             ]
-        elif (1==0):
+        if 1==0:
             importFolderPath = '/home2/0xdiag/datasets'
             print "Using non-.gz'ed files in", importFolderPath
             csvFilenameAll = [
@@ -55,7 +55,7 @@ class Basic(unittest.TestCase):
                 ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSizeUncompressed, 700),
                 ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSizeUncompressed, 700),
             ]
-        else:
+        if 1==1: 
             importFolderPath = '/home/0xdiag/datasets'
             print "Using .gz'ed files in", importFolderPath
             # all exactly the same prior to gzip!

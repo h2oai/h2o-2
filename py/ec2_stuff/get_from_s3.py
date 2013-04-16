@@ -38,7 +38,7 @@ conn = S3Connection(aws_id, aws_key)
 bucket = 'home-0xdiag-datasets'
 pb = conn.get_bucket(bucket)
 
-if 1==0:
+if 1==1:
     # show everything in the buckei
     rs = pb.list()
     for key in rs:
