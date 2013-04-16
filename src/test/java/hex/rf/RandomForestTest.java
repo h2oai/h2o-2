@@ -20,7 +20,8 @@ public class RandomForestTest extends TestUtil {
     ValueArray val = DKV.get(okey).get();
 
     // Check parsed dataset
-    assertEquals("Number of chunks", 4, val.chunks());
+    final int n = new int[]{4,2,1}[ValueArray.LOG_CHK-20];
+    assertEquals("Number of chunks", n, val.chunks());
     assertEquals("Number of rows", 150000, val.numRows());
     assertEquals("Number of cols", 12, val.numCols());
 
