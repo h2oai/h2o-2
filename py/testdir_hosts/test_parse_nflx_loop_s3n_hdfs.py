@@ -20,10 +20,17 @@ class Basic(unittest.TestCase):
     def test_parse_nflx_loop_s3n_hdfs(self):
         # typical size of the michal files
         avgMichalSize = 116561140
+        avgSynSize = 4020000
         csvFilenameList = [
             # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz"),
             # 100 files takes too long on two machines?
             # I use different files to avoid OS caching effects
+            ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[0-9][0-9]", "syn_100.csv", 100 * avgSynSize, 700),
+            ("syn_datasets/syn_7350063254201195578_10000x200.csv_00000", "syn_1.csv", avgSynSize, 700),
+            ("syn_datasets/syn_7350063254201195578_10000x200.csv_0001[0-9]", "syn_10.csv", 10 * avgSynSize, 700),
+            ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[23][0-9]", "syn_20.csv", 20 * avgSynSize, 700),
+            ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[45678][0-9]", "syn_50.csv", 50 * avgSynSize, 700),
+
             ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 300),
             ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
             ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 900),
@@ -36,7 +43,7 @@ class Basic(unittest.TestCase):
         print "Using the -.gz files from s3"
         # want just s3n://home-0xdiag-datasets/manyfiles-nflx-gz/file_1.dat.gz
     
-        USE_S3 = True
+        USE_S3 = False
         noPoll = True
         benchmarkLogging = ['cpu','disk']
         bucket = "home-0xdiag-datasets"
@@ -78,9 +85,14 @@ class Basic(unittest.TestCase):
                     for k in s3nFullList:
                         key = k['key']
                         # just print the first tile
-                        if 'nflx' in key and 'file_1.dat.gz' in key: 
+                        # if 'nflx' in key and 'file_1.dat.gz' in key: 
+                        if csvFilepattern in key:
                             # should be s3n://home-0xdiag-datasets/manyfiles-nflx-gz/file_1.dat.gz
                             print "example file we'll use:", key
+                            break
+                        else:
+                            ### print key
+                            pass
 
                     ### print "s3nFullList:", h2o.dump_json(s3nFullList)
                     # error if none? 
