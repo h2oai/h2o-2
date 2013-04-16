@@ -141,7 +141,7 @@ public abstract class KMeans {
       assert key.home();
       ValueArray va = DKV.get(_arykey).get();
       AutoBuffer bits = va.getChunk(key);
-      int rows = va.rpc(va.getChunkIndex(key));
+      int rows = va.rpc(ValueArray.getChunkIndex(key));
       double[] values = new double[_cols.length-1];
       ClusterDist cd = new ClusterDist();
       for( int row = 0; row < rows; row++ ) {
@@ -284,7 +284,7 @@ public abstract class KMeans {
       assert key.home();
       ValueArray va = DKV.get(_arykey).get();
       AutoBuffer bits = va.getChunk(key);
-      int rows = va.rpc(va.getChunkIndex(key));
+      int rows = va.rpc(ValueArray.getChunkIndex(key));
       double[] values = new double[_cols.length-1];
       ClusterDist cd = new ClusterDist();
       for( int row = 0; row < rows; row++ )
@@ -315,7 +315,7 @@ public abstract class KMeans {
       assert key.home();
       ValueArray va = DKV.get(_arykey).get();
       AutoBuffer bits = va.getChunk(key);
-      int rows = va.rpc(va.getChunkIndex(key));
+      int rows = va.rpc(ValueArray.getChunkIndex(key));
       double[] values = new double[_cols.length-1];
       ArrayList<double[]> list = new ArrayList<double[]>();
       Random rand = RAND_SEED == 0 ? new Random() : new Random(RAND_SEED);
@@ -355,7 +355,7 @@ public abstract class KMeans {
       assert key.home();
       ValueArray va = DKV.get(_arykey).get();
       AutoBuffer bits = va.getChunk(key);
-      int rows = va.rpc(va.getChunkIndex(key));
+      int rows = va.rpc(ValueArray.getChunkIndex(key));
       double[] values = new double[_cols.length-1];
 
       // Create result arrays
