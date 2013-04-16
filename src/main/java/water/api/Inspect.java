@@ -321,27 +321,27 @@ public class Inspect extends Request {
       row.addProperty(ROW, MIN);
       for( int i = 0; i < _va._cols.length; i++ )
         row.addProperty(_va._cols[i]._name, _va._cols[i]._min);
-      sb.append(defaultBuilder(row).build(response, row, contextName));
+      sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       row.addProperty(ROW, MAX);
       for( int i = 0; i < _va._cols.length; i++ )
         row.addProperty(_va._cols[i]._name, _va._cols[i]._max);
-      sb.append(defaultBuilder(row).build(response, row, contextName));
+      sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       row.addProperty(ROW, MEAN);
       for( int i = 0; i < _va._cols.length; i++ )
         row.addProperty(_va._cols[i]._name, _va._cols[i]._mean);
-      sb.append(defaultBuilder(row).build(response, row, contextName));
+      sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       row.addProperty(ROW, VARIANCE);
       for( int i = 0; i < _va._cols.length; i++ )
         row.addProperty(_va._cols[i]._name, _va._cols[i]._sigma);
-      sb.append(defaultBuilder(row).build(response, row, contextName));
+      sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       row.addProperty(ROW, NUM_MISSING_VALUES);
       for( int i = 0; i < _va._cols.length; i++ )
         row.addProperty(_va._cols[i]._name, _va._numrows - _va._cols[i]._n);
-      sb.append(defaultBuilder(row).build(response, row, contextName));
+      sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       if( _offset == INFO_PAGE ) {
         row.addProperty(ROW, OFFSET);
