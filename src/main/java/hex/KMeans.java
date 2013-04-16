@@ -15,7 +15,7 @@ import com.google.gson.*;
  */
 public abstract class KMeans {
   private static final boolean NORMALIZE=false;
-  public static long           RAND_SEED = 0; // 0x1234567 might be better seed
+  public static long           RAND_SEED = 0; // 0x1234567L might be a better seed
   public static final String   KEY_PREFIX = "__KMeansModel_";
   public static final Key makeKey() {
     return Key.make(KEY_PREFIX + Key.make());
@@ -141,7 +141,7 @@ public abstract class KMeans {
       assert key.home();
       ValueArray va = DKV.get(_arykey).get();
       AutoBuffer bits = va.getChunk(key);
-      int rows = bits.remaining() / va._rowsize;
+      int rows = va.rpc(va.getChunkIndex(key));
       double[] values = new double[_cols.length-1];
       ClusterDist cd = new ClusterDist();
       for( int row = 0; row < rows; row++ ) {
@@ -284,7 +284,7 @@ public abstract class KMeans {
       assert key.home();
       ValueArray va = DKV.get(_arykey).get();
       AutoBuffer bits = va.getChunk(key);
-      int rows = bits.remaining() / va._rowsize;
+      int rows = va.rpc(va.getChunkIndex(key));
       double[] values = new double[_cols.length-1];
       ClusterDist cd = new ClusterDist();
       for( int row = 0; row < rows; row++ )
@@ -315,7 +315,7 @@ public abstract class KMeans {
       assert key.home();
       ValueArray va = DKV.get(_arykey).get();
       AutoBuffer bits = va.getChunk(key);
-      int rows = bits.remaining() / va._rowsize;
+      int rows = va.rpc(va.getChunkIndex(key));
       double[] values = new double[_cols.length-1];
       ArrayList<double[]> list = new ArrayList<double[]>();
       Random rand = RAND_SEED == 0 ? new Random() : new Random(RAND_SEED);
@@ -355,7 +355,7 @@ public abstract class KMeans {
       assert key.home();
       ValueArray va = DKV.get(_arykey).get();
       AutoBuffer bits = va.getChunk(key);
-      int rows = bits.remaining() / va._rowsize;
+      int rows = va.rpc(va.getChunkIndex(key));
       double[] values = new double[_cols.length-1];
 
       // Create result arrays

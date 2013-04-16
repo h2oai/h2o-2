@@ -1,6 +1,9 @@
 package water;
 
 import java.io.File;
+import java.lang.management.ManagementFactory;
+
+import javax.management.*;
 
 /**
  * Starts a thread publishing multicast HeartBeats to the local subnet: the
@@ -44,6 +47,13 @@ public class HeartBeatThread extends Thread {
   // with the membership Heartbeat, they will start a round of Paxos group
   // discovery.
   public void run() {
+    MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+    ObjectName os;
+    try {
+      os = new ObjectName("java.lang:type=OperatingSystem");
+    } catch( MalformedObjectNameException ex ) {
+      throw new RuntimeException(ex);
+    }
     Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
     while( true ) {
       // Once per second, for the entire cloud a Node will multi-cast publish
@@ -63,6 +73,13 @@ public class HeartBeatThread extends Thread {
       hb._keys       = (H2O.STORE.size ());
       hb.set_valsz     (myHisto.histo(false)._cached);
       hb._num_cpus   = (char)run.availableProcessors();
+      Object load = null;
+      try {
+        load = mbs.getAttribute(os, "SystemLoadAverage");
+      } catch( Exception e ) {
+        // Ignore, data probably not available on this VM
+      }
+      hb._system_load_average = load instanceof Double ? ((Double) load).floatValue() : 0;
       int rpcs = 0;
       for( H2ONode h2o : cloud._memary )
         rpcs += h2o.taskSize();

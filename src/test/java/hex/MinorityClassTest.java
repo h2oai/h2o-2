@@ -33,20 +33,26 @@ public class MinorityClassTest extends TestUtil {
     Key key = loadAndParseKey("poker.hex","smalldata/poker/poker-hand-testing.data");
     ValueArray data = DKV.get(key).get();
     UnbalancedClass [] uClasses = MinorityClasses.extractUnbalancedClasses(data, 10, new int [] {0,9});
-    assertTrue(uClasses.length == 2);
-    assertTrue(uClasses[0]._chunks.length == 6);
-    assertTrue(uClasses[0]._rows == 501209);
-    assertTrue(uClasses[1]._chunks.length == 1);
-    assertTrue(uClasses[1]._rows == 3);
-    for( UnbalancedClass ubc : uClasses )
-      for( Key k : ubc._chunks )
+    final int n = new int[]{6,3,2}[ValueArray.LOG_CHK-20];
+    UnbalancedClass[] goal = new UnbalancedClass[] {
+      new UnbalancedClass(0,new Key[n],501209), // Class 0, 501209 rows
+      new UnbalancedClass(9,new Key[1],     3)  // Class 9,      3 rows
+    };
+    for( int i=0; i<uClasses.length; i++ ) {
+      UnbalancedClass u = uClasses[i];
+      UnbalancedClass g = goal    [i];
+      assertTrue(u._c == g._c);
+      assertTrue(u._rows == g._rows);
+      assertTrue(u._chunks.length == g._chunks.length);
+      for( Key k : u._chunks )
         UKV.remove(k);
+    }
     UKV.remove(key);
   }
 
   public static void main(String [] args){
     if(args.length > 0){
-      assert args.length == 1:"unexpected number of args, expects exactl one arg (number of nodes), got " + args.length;
+      assert args.length == 1:"unexpected number of args, expects exactly one arg (number of nodes), got " + args.length;
     }
     JUnitCore junit = new JUnitCore();
     Result r = junit.run(MinorityClassTest.class);

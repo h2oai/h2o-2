@@ -143,6 +143,21 @@ public class Job extends Iced {
     }.fork(LIST);
   }
 
+  /** Finds a job with given key or returns null */
+  public static final Job findJob(final Key key) {
+    Job job = null;
+    for (Job current : Job.all()) {
+      if (current.self().equals(key)) {
+        job = current;
+        break;
+      }
+    }
+    return job;
+  }
+
+  /** Returns job execution time in miliseconds */
+  public final long executionTime() { return _endTime - _startTime; }
+
   public static class ChunkProgress extends Iced implements Progress {
     final long _nchunks;
     final long _count;

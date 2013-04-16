@@ -24,6 +24,7 @@ public class Inspect extends Request {
   private final H2OExistingKey                 _key          = new H2OExistingKey(KEY);
   private final LongInt                        _offset       = new LongInt(OFFSET, 0L, INFO_PAGE, Long.MAX_VALUE, "");
   private final Int                            _view         = new Int(VIEW, 100, 0, 10000);
+  private final Str                            _producer     = new Str(JOB, null);
 
   static {
     _displayNames.put(ENUM_DOMAIN_SIZE, "Enum Domain");
@@ -46,10 +47,15 @@ public class Inspect extends Request {
   Inspect() {
   }
 
-  public static Response redirect(JsonObject resp, Key dest) {
+  public static Response redirect(JsonObject resp, Job keyProducer, Key dest) {
     JsonObject redir = new JsonObject();
+    if (keyProducer!=null) redir.addProperty(JOB, keyProducer._self.toString());
     redir.addProperty(KEY, dest.toString());
     return Response.redirect(resp, Inspect.class, redir);
+  }
+
+  public static Response redirect(JsonObject resp, Key dest) {
+    return redirect(resp, null, dest);
   }
 
   @Override
@@ -279,8 +285,14 @@ public class Inspect extends Request {
           + "<a href='RemoveAck.html?" + keyParam + "'>"
           + "<button class='btn btn-danger btn-mini'>X</button></a>"
           + "&nbsp;&nbsp;" + ary._key.toString()
-        + "</h3>"
-        + "<div class='alert'>" + "Build models using "
+        + "</h3>");
+    if (_producer.valid() && _producer.value()!=null) {
+      Job job = Job.findJob(Key.make(_producer.value()));
+      if (job!= null)
+        sb.append("<div class='alert alert-success'>"
+        		+ "<b>Produced in ").append(PrettyPrint.msecs(job.executionTime(),true)).append(".</b></div>");
+    }
+    sb.append("<div class='alert'>" + "Build models using "
           + RF.link(ary._key, "Random Forest") + ", "
           + GLM.link(ary._key, "GLM") + ", " + GLMGrid.link(ary._key, "GLM Grid Search") + ", or "
           + KMeans.link(ary._key, "KMeans") + "<br />"
@@ -321,27 +333,27 @@ public class Inspect extends Request {
       row.addProperty(ROW, MIN);
       for( int i = 0; i < _va._cols.length; i++ )
         row.addProperty(_va._cols[i]._name, _va._cols[i]._min);
-      sb.append(defaultBuilder(row).build(response, row, contextName));
+      sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       row.addProperty(ROW, MAX);
       for( int i = 0; i < _va._cols.length; i++ )
         row.addProperty(_va._cols[i]._name, _va._cols[i]._max);
-      sb.append(defaultBuilder(row).build(response, row, contextName));
+      sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       row.addProperty(ROW, MEAN);
       for( int i = 0; i < _va._cols.length; i++ )
         row.addProperty(_va._cols[i]._name, _va._cols[i]._mean);
-      sb.append(defaultBuilder(row).build(response, row, contextName));
+      sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       row.addProperty(ROW, VARIANCE);
       for( int i = 0; i < _va._cols.length; i++ )
         row.addProperty(_va._cols[i]._name, _va._cols[i]._sigma);
-      sb.append(defaultBuilder(row).build(response, row, contextName));
+      sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       row.addProperty(ROW, NUM_MISSING_VALUES);
       for( int i = 0; i < _va._cols.length; i++ )
         row.addProperty(_va._cols[i]._name, _va._numrows - _va._cols[i]._n);
-      sb.append(defaultBuilder(row).build(response, row, contextName));
+      sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       if( _offset == INFO_PAGE ) {
         row.addProperty(ROW, OFFSET);

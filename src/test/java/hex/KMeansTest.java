@@ -1,13 +1,12 @@
 package hex;
 
+import java.util.Arrays;
 import java.util.Random;
-
 import org.junit.*;
-
 import water.*;
 
 public class KMeansTest extends TestUtil {
-  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
+  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   @Test
   public void test1Dimension() {
@@ -42,7 +41,7 @@ public class KMeansTest extends TestUtil {
     Key target = Key.make("datakey.kmeans");
 
     try {
-      KMeans.RAND_SEED = 8683452581122892189L;
+      KMeans.RAND_SEED = 8683452581122892188L;
       final int columns = 100;
       double[][] goals = new double[8][columns];
       double[][] array = gauss(columns, rows, goals);
@@ -53,7 +52,7 @@ public class KMeansTest extends TestUtil {
 
       ValueArray va = va_maker(source, (Object[]) array);
       long start = System.currentTimeMillis();
-      KMeans.run(target, va, 8, 1e-6, cols);
+      KMeans.run(target, va, goals.length, 1e-6, cols);
 
       long stop = System.currentTimeMillis();
       Log.write("KMeansTest.testGaussian rows:" + rows + ", ms:" + (stop - start));
@@ -62,14 +61,12 @@ public class KMeansTest extends TestUtil {
 
       for( double[] goal : goals ) {
         boolean found = false;
-
         for( double[] cluster : clusters ) {
           if( match(cluster, goal) ) {
             found = true;
             break;
           }
         }
-
         Assert.assertTrue(found);
       }
     } finally {
@@ -89,8 +86,7 @@ public class KMeansTest extends TestUtil {
         goals[goal][c] = rand.nextDouble() * 100;
 
     for( int r = 0; r < rows; r++ ) {
-      int goal = rand.nextInt(goals.length);
-
+      final int goal = rand.nextInt(goals.length);
       for( int c = 0; c < columns; c++ )
         array[c][r] = goals[goal][c] + rand.nextGaussian();
     }
@@ -102,8 +98,16 @@ public class KMeansTest extends TestUtil {
     for( int i = 0; i < cluster.length; i++ )
       if( Math.abs(cluster[i] - goal[i]) > 1 )
         return false;
-
     return true;
+  }
+
+  static double dist(double[] cluster, double[] goal) {
+    double sum = 0;
+    for( int i = 0; i < cluster.length; i++ ) {
+      double d = cluster[i] - goal[i];
+      sum += d*d;
+    }
+    return Math.sqrt(sum/cluster.length);
   }
 
   @Test

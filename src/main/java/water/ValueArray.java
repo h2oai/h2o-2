@@ -12,8 +12,8 @@ import water.Job.ProgressMonitor;
 /**
 * Large Arrays & Arraylets
 *
-* Large arrays are broken into 1Meg chunks (except the last chunk which may be
-* from 1 to 2Megs). Large arrays have a metadata section in this ValueArray.
+* Large arrays are broken into 4Meg chunks (except the last chunk which may be
+* from 4 to 8Megs). Large arrays have a metadata section in this ValueArray.
 *
 * @author <a href="mailto:cliffc@0xdata.com"></a>
 * @version 1.0
@@ -22,7 +22,7 @@ import water.Job.ProgressMonitor;
 
 public class ValueArray extends Iced implements Cloneable {
 
-  public static final int LOG_CHK = 20; // Chunks are 1<<20, or 1Meg
+  public static final int LOG_CHK = 22; // Chunks are 1<<22, or 4Meg
   public static final long CHUNK_SZ = 1L << LOG_CHK;
 
   // --------------------------------------------------------

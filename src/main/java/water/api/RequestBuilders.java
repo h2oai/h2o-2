@@ -173,6 +173,10 @@ public class RequestBuilders extends RequestQueries {
    */
   public static final Builder ARRAY_ROW_BUILDER = new ArrayRowBuilder();
 
+  /** Basic build for shaded array rows. (tr class='..')
+   */
+  public static final Builder ARRAY_HEADER_ROW_BUILDER = new ArrayHeaderRowBuilder();
+
   /** Basic builder for elements inside objects. (dl,dt,dd)
    */
   public static final ElementBuilder ELEMENT_BUILDER = new ElementBuilder();
@@ -834,6 +838,12 @@ public class RequestBuilders extends RequestQueries {
       return ARRAY_ROW_ELEMENT_BUILDER;
     }
 
+  }
+
+  public static class ArrayHeaderRowBuilder extends ArrayRowBuilder {
+	@Override public String header(JsonObject object, String objectName) {
+	  return "<tr class='warning'>";
+	}
   }
 
   // ---------------------------------------------------------------------------

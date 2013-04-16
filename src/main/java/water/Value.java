@@ -14,33 +14,13 @@ import water.store.s3.PersistS3;
  * {@link MemoryManager}.
  */
 public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
-  static final int DEBUG_WEAVER=1;
+
   // ---
   // Type-id of serialzied object; see TypeMap for the list.
   // Might be a primitive array type, or a Iced POJO
   private short _type;
   public int type() { return _type; }
   public String className() { return TypeMap.className(_type); }
-
-  public boolean isBitIdentical(Value v){
-    if(this == v)return true;
-    if(!isArray() && !v.isArray())
-      return Arrays.equals(getBytes(), v.getBytes());
-    if(isArray() && v.isArray()){
-      ValueArray thisAry = get();
-      ValueArray otherAry = v.get();
-      if(thisAry.length() == otherAry.length() && thisAry._numrows == otherAry._numrows && thisAry._rowsize == otherAry._rowsize && thisAry._cols.length == otherAry._cols.length){
-        for(int i = 0; i < thisAry._cols.length; ++i){
-          if(!thisAry._cols[i].equals(otherAry._cols[i]))
-            return false;
-        }
-        // headers are the same (except for the keys), now compare the chunk bits
-        BitsCmpTask res = new BitsCmpTask(thisAry); res.invoke(v._key);
-        return res._res;
-      }
-    }
-    return false;
-  }
 
   // Max size of Values before we start asserting.
   // Sizes around this big, or larger are probably true errors.
@@ -294,6 +274,28 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     if( va._cols.length > 1 ) return true;
     if( va._cols[0]._size != 1 ) return true;
     return _key.toString().endsWith(".hex");
+  }
+
+  public boolean isBitIdentical( Value v ) {
+    if( this == v ) return true;
+    if( !isArray() && !v.isArray() )
+      return Arrays.equals(getBytes(), v.getBytes());
+    if( isArray() && v.isArray() ) {
+      ValueArray thisAry =   get();
+      ValueArray thatAry = v.get();
+      if( thisAry.length() == thatAry.length() && 
+          thisAry._numrows == thatAry._numrows && 
+          thisAry._rowsize == thatAry._rowsize && 
+          thisAry._cols.length == thatAry._cols.length ) {
+        for( int i = 0; i < thisAry._cols.length; ++i )
+          if( !thisAry._cols[i].equals(thatAry._cols[i]) )
+            return false;
+        // headers are the same (except for the keys), now compare the chunk bits
+        BitsCmpTask res = new BitsCmpTask(thisAry); res.invoke(v._key);
+        return res._res;
+      }
+    }
+    return false;
   }
 
   // --------------------------------------------------------------------------
