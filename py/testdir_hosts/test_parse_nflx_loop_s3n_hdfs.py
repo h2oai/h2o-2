@@ -67,11 +67,13 @@ class Basic(unittest.TestCase):
             # ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
             # ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 900),
 
-            ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_A.dat.gz", 100 * avgMichalSize, 2400),
-            ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_B.dat.gz", 100 * avgMichalSize, 2400),
-            ("manyfiles-nflx-gz/file_1[0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 2400),
-            ("manyfiles-nflx-gz/file_2[0-9][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 2400),
             ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
+            ("manyfiles-nflx-gz/file_1[0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 2400),
+            ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 2400),
+            ("manyfiles-nflx-gz/file_[123][0-9][0-9].dat.gz", "file_300_A.dat.gz", 300 * avgMichalSize, 2400),
+            ("manyfiles-nflx-gz/file_[123][0-9][0-9].dat.gz", "file_300_B.dat.gz", 300 * avgMichalSize, 2400),
+            ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_B.dat.gz", 200 * avgMichalSize, 2400),
+            ("manyfiles-nflx-gz/file_2[0-9][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 2400),
             ("manyfiles-nflx-gz/file_1[0-4][0-9].dat.gz", "file_50_B.dat.gz", 50 * avgMichalSize, 1800),
             ("manyfiles-nflx-gz/file_1[5-9][0-9].dat.gz", "file_50_C.dat.gz", 50 * avgMichalSize, 1800),
         ]
@@ -92,10 +94,12 @@ class Basic(unittest.TestCase):
 
         # split out the pattern match and the filename used for the hex
         trialMax = 1
+        pollTimeoutSecs = 180
+        retryDelaySecs = 10
         # use i to forward reference in the list, so we can do multiple outstanding parses below
         for i, (csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
             ## for tryHeap in [54, 28]:
-            for tryHeap in [54]:
+            for tryHeap in [60]:
                 
                 print "\n", tryHeap,"GB heap, 1 jvm per host, import", protocol, "then parse"
                 h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap,
@@ -139,32 +143,40 @@ class Basic(unittest.TestCase):
                     print "Loading", protocol, "key:", s3nKey, "to", key2
                     start = time.time()
                     parseKey = h2o.nodes[0].parse(s3nKey, key2,
-                        timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=180,
+                        timeoutSecs=timeoutSecs, 
+                        retryDelaySecs=retryDelaySecs,
+                        pollTimeoutSecs=pollTimeoutSecs,
                         noPoll=noPoll,
                         benchmarkLogging=benchmarkLogging)
 
                     if noPoll:
-                        time.sleep(1)
-                        h2o.check_sandbox_for_errors()
-                        (csvFilepattern, csvFilename, totalBytes2, timeoutSecs) = csvFilenameList[i+1]
-                        s3nKey = URI + "/" + csvFilepattern
-                        key2 = csvFilename + "_" + str(trial) + ".hex"
-                        print "Loading", protocol, "key:", s3nKey, "to", key2
-                        parse2Key = h2o.nodes[0].parse(s3nKey, key2,
-                            timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60,
-                            noPoll=noPoll,
-                            benchmarkLogging=benchmarkLogging)
+                        if (i+1) < len(csvFilenameList):
+                            time.sleep(1)
+                            h2o.check_sandbox_for_errors()
+                            (csvFilepattern, csvFilename, totalBytes2, timeoutSecs) = csvFilenameList[i+1]
+                            s3nKey = URI + "/" + csvFilepattern
+                            key2 = csvFilename + "_" + str(trial) + ".hex"
+                            print "Loading", protocol, "key:", s3nKey, "to", key2
+                            parse2Key = h2o.nodes[0].parse(s3nKey, key2,
+                                timeoutSecs=timeoutSecs,
+                                retryDelaySecs=retryDelaySecs,
+                                pollTimeoutSecs=pollTimeoutSecs,
+                                noPoll=noPoll,
+                                benchmarkLogging=benchmarkLogging)
 
-                        time.sleep(1)
-                        h2o.check_sandbox_for_errors()
-                        (csvFilepattern, csvFilename, totalBytes3, timeoutSecs) = csvFilenameList[i+2]
-                        s3nKey = URI + "/" + csvFilepattern
-                        key2 = csvFilename + "_" + str(trial) + ".hex"
-                        print "Loading", protocol, "key:", s3nKey, "to", key2
-                        parse3Key = h2o.nodes[0].parse(s3nKey, key2,
-                            timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60,
-                            noPoll=noPoll,
-                            benchmarkLogging=benchmarkLogging)
+                        if (i+2) < len(csvFilenameList):
+                            time.sleep(1)
+                            h2o.check_sandbox_for_errors()
+                            (csvFilepattern, csvFilename, totalBytes3, timeoutSecs) = csvFilenameList[i+2]
+                            s3nKey = URI + "/" + csvFilepattern
+                            key2 = csvFilename + "_" + str(trial) + ".hex"
+                            print "Loading", protocol, "key:", s3nKey, "to", key2
+                            parse3Key = h2o.nodes[0].parse(s3nKey, key2,
+                                timeoutSecs=timeoutSecs, 
+                                retryDelaySecs=retryDelaySecs,
+                                pollTimeoutSecs=pollTimeoutSecs,
+                                noPoll=noPoll,
+                                benchmarkLogging=benchmarkLogging)
 
                     elapsed = time.time() - start
                     print s3nKey, 'parse time:', parseKey['response']['time']

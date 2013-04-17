@@ -55,10 +55,10 @@ class Basic(unittest.TestCase):
         avgSynSize = 4020000
         avgAzSize = 75169317 # bytes
         csvFilenameList = [
-            ("to-delete-soon/a", "a_1.dat", 1 * avgAzSize, 300),
-            ("to-delete-soon/[abcdefghij]", "a_10.dat", 1 * avgAzSize, 300),
-            ("to-delete-soon/[a-v]", "b_20.dat", 20 * avgAzSize, 800),
-            ("to-delete-soon/[a-z]", "a_24.dat", 24 * avgAzSize, 900),
+            ("a", "a_1.dat", 1 * avgAzSize, 300),
+            ("[a-j]", "a_10.dat", 10 * avgAzSize, 300),
+            ("[k-v]", "b_10.dat", 10 * avgAzSize, 800),
+            ("[w-z]", "c_4.dat", 4 * avgAzSize, 900),
             # ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 300),
             # ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
             # ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 900),
@@ -72,14 +72,14 @@ class Basic(unittest.TestCase):
         # want just s3n://home-0xdiag-datasets/manyfiles-nflx-gz/file_1.dat.gz
     
         USE_S3 = False
-        noPoll = False
+        noPoll = True
         benchmarkLogging = ['cpu','disk']
-        bucket = "home-0xdiag-datasets"
+        bucket = "to-delete-soon"
         if USE_S3:
-            URI = "s3://home-0xdiag-datasets"
+            URI = "s3://to-delete-soon"
             protocol = "s3"
         else:
-            URI = "s3n://home-0xdiag-datasets"
+            URI = "s3n://to-delete-soon"
             protocol = "s3n/hdfs"
 
         # split out the pattern match and the filename used for the hex
@@ -136,27 +136,29 @@ class Basic(unittest.TestCase):
                         benchmarkLogging=benchmarkLogging)
 
                     if noPoll:
-                        time.sleep(1)
-                        h2o.check_sandbox_for_errors()
-                        (csvFilepattern, csvFilename, totalBytes2, timeoutSecs) = csvFilenameList[i+1]
-                        s3nKey = URI + "/" + csvFilepattern
-                        key2 = csvFilename + "_" + str(trial) + ".hex"
-                        print "Loading", protocol, "key:", s3nKey, "to", key2
-                        parse2Key = h2o.nodes[0].parse(s3nKey, key2,
-                            timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60,
-                            noPoll=noPoll,
-                            benchmarkLogging=benchmarkLogging)
+                        if (i+1) < len(csvFilenameList): 
+                            time.sleep(1)
+                            h2o.check_sandbox_for_errors()
+                            (csvFilepattern, csvFilename, totalBytes2, timeoutSecs) = csvFilenameList[i+1]
+                            s3nKey = URI + "/" + csvFilepattern
+                            key2 = csvFilename + "_" + str(trial) + ".hex"
+                            print "Loading", protocol, "key:", s3nKey, "to", key2
+                            parse2Key = h2o.nodes[0].parse(s3nKey, key2,
+                                timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60,
+                                noPoll=noPoll,
+                                benchmarkLogging=benchmarkLogging)
 
-                        time.sleep(1)
-                        h2o.check_sandbox_for_errors()
-                        (csvFilepattern, csvFilename, totalBytes3, timeoutSecs) = csvFilenameList[i+2]
-                        s3nKey = URI + "/" + csvFilepattern
-                        key2 = csvFilename + "_" + str(trial) + ".hex"
-                        print "Loading", protocol, "key:", s3nKey, "to", key2
-                        parse3Key = h2o.nodes[0].parse(s3nKey, key2,
-                            timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60,
-                            noPoll=noPoll,
-                            benchmarkLogging=benchmarkLogging)
+                        if (i+2) < len(csvFilenameList): 
+                            time.sleep(1)
+                            h2o.check_sandbox_for_errors()
+                            (csvFilepattern, csvFilename, totalBytes3, timeoutSecs) = csvFilenameList[i+2]
+                            s3nKey = URI + "/" + csvFilepattern
+                            key2 = csvFilename + "_" + str(trial) + ".hex"
+                            print "Loading", protocol, "key:", s3nKey, "to", key2
+                            parse3Key = h2o.nodes[0].parse(s3nKey, key2,
+                                timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60,
+                                noPoll=noPoll,
+                                benchmarkLogging=benchmarkLogging)
 
                     elapsed = time.time() - start
                     print s3nKey, 'parse time:', parseKey['response']['time']
