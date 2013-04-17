@@ -17,15 +17,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_benchmark_import(self):
-        # just do the import folder once
-        # importFolderPath = "/home/hduser/hdfs_datasets"
-
-        #    "covtype169x.data",
-        #    "covtype.13x.shuffle.data",
-        #    "3G_poker_shuffle"
-        #    "covtype20x.data", 
-        #    "billion_rows.csv.gz",
-
         # typical size of the michal files
         avgMichalSizeUncompressed = 237270000 
         avgMichalSize = 116561140 
