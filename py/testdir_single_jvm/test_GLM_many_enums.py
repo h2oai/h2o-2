@@ -1,24 +1,44 @@
 import unittest
 import random, sys, time, os
+import string
 sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
 
-def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
-    r1 = random.Random(SEED)
-    dsf = open(csvPathname, "w+")
+# we want to seed a random dictionary for our enums
+# this creates random stringsj
+# id_generator()
+# id_generator(3, "6793YUIO")
+# id_generator(string.ascii_uppercase, "6793YUIO")
+# def random_enum(size=6, chars=string.printable):
+# def random_enum(size=6, chars=string.letters + string.digits + string.punctuation + string.whitespace):
+def random_enum(size=6, chars=string.letters + string.digits):
+    return ''.join(random.choice(chars) for x in range(size))
 
+def create_enum_list(size=1000):
+    enumList = [random_enum() for i in range(size)]
+    return enumList
+
+def write_syn_dataset(csvPathname, rowCount, colCount=1, SEED='12345678', 
+    colSepChar=",", rowSepChar="\n"):
+    r1 = random.Random(SEED)
+    enumList = create_enum_list()
+
+    dsf = open(csvPathname, "w+")
     for i in range(rowCount):
         rowData = []
         for j in range(colCount):
-            ri = r1.randint(0,1)
+            ri = random.choice(enumList)
             rowData.append(ri)
 
+        # output column
         ri = r1.randint(0,1)
         rowData.append(ri)
 
-        rowDataCsv = ",".join(map(str,rowData))
-        dsf.write(rowDataCsv + "\n")
+        # use the new Hive separator
+        rowDataCsv = colSepChar.join(map(str,rowData)) + rowSepChar
+        print rowDataCsv
+        dsf.write(rowDataCsv)
 
     dsf.close()
 
@@ -48,18 +68,28 @@ class Basic(unittest.TestCase):
     def test_GLM_many_cols(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            # (10000, 10, 'cB', 300), 
-            # (10000, 50, 'cC', 300), 
-            (10000, 100, 'cD', 300), 
-            (10000, 200, 'cE', 300), 
-            (10000, 300, 'cF', 300), 
-            (10000, 400, 'cG', 300), 
-            (10000, 500, 'cH', 300), 
-            (10000, 1000, 'cI', 300), 
+            (10000, 1, 'cD', 300), 
+            (10000, 2, 'cE', 300), 
+            (10000, 3, 'cF', 300), 
+            (10000, 4, 'cG', 300), 
+            (10000, 5, 'cH', 300), 
+            (10000, 1, 'cI', 300), 
             ]
 
         ### h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
+        colSepHexString = '01'
+        colSepHexString = '0a'
+        colSepChar = colSepHexString.decode('hex')
+        colSepInt = int(colSepHexString, base=16)
+
+        print "colSepChar:", colSepChar
+        print "colSepInt", colSepInt
+
+        rowSepHexString = '01'
+        rowSepChar = rowSepHexString.decode('hex')
+
+        print "rowSepChar:", rowSepChar
 
         for (rowCount, colCount, key2, timeoutSecs) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
@@ -67,9 +97,13 @@ class Basic(unittest.TestCase):
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
             print "Creating random", csvPathname
-            write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
+            write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, 
+                colSepChar=colSepChar, rowSepChar=rowSepChar)
 
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10)
+            # FIX! does 'separator=' take ints or ?? hex format
+            # looks like it takes the hex string (two chars)
+            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, 
+                timeoutSecs=30, separator=colSepInt)
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "Parse result['destination_key']:", parseKey['destination_key']
 

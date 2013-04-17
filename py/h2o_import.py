@@ -13,7 +13,7 @@ def setupImportS3(node=None, bucket='home-0xdiag-datasets'):
 def parseImportS3File(node=None, 
     csvFilename='covtype.data', path='home-0xdiag-datasets', key2=None, 
     timeoutSecs=360, retryDelaySecs=2, initialDelaySecs=1, pollTimeoutSecs=60, noise=None,
-    benchmarkLogging=None, noPoll=False):
+    benchmarkLogging=None, noPoll=False, **kwargs):
 
     if not node: node = h2o.nodes[0]
     if not csvFilename: raise Exception('parseImportS3File: No csvFilename')
@@ -30,7 +30,7 @@ def parseImportS3File(node=None,
     print "Waiting for the slow parse of the file:", csvFilename
     parseKey = node.parse(s3Key, myKey2, 
         timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs, noise, 
-        benchmarkLogging, noPoll)
+        benchmarkLogging, noPoll, **kwargs)
     # a hack so we know what the source_key was, bask at the caller
     parseKey['source_key'] = s3Key
     print "\nParse result:", parseKey
@@ -55,7 +55,7 @@ def setupImportFolder(node=None, path='/home/0xdiag/datasets'):
 # assumes you call setupImportFolder first
 def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=1, pollTimeoutSecs=60, noise=None,
-    benchmarkLogging=None, noPoll=False):
+    benchmarkLogging=None, noPoll=False, **kwargs):
     if not node: node = h2o.nodes[0]
     # a little hack to redirect import folder tests to an s3 folder
     # TEMP hack: translate /home/0xdiag/datasets to /home-0xdiag-datasets
@@ -81,7 +81,7 @@ def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
         importKey = "nfs:/" + path + "/" + csvFilename
         parseKey = node.parse(importKey, myKey2, 
             timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs, noise, 
-            benchmarkLogging, noPoll)
+            benchmarkLogging, noPoll, **kwargs)
         # a hack so we know what the source_key was, bask at the caller
         parseKey['source_key'] = importKey
         print "\nParse result:", parseKey
@@ -102,7 +102,7 @@ def setupImportHdfs(node=None, path=None):
 
 def parseImportHdfsFile(node=None, csvFilename=None, path=None, 
     timeoutSecs=3600, retryDelaySecs=2, initialDelaySecs=1, pollTimeoutSecs=60, noise=None,
-    benchmarkLogging=None, noPoll=False):
+    benchmarkLogging=None, noPoll=False, **kwargs):
     if not csvFilename: raise Exception('No csvFilename parameter in parseImportHdfsFile')
     if not node: node = h2o.nodes[0]
 
@@ -119,7 +119,7 @@ def parseImportHdfsFile(node=None, csvFilename=None, path=None,
 
     parseKey = node.parse(hdfsKey, csvFilename + ".hex",
         timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs, noise, 
-        benchmarkLogging, noPoll)
+        benchmarkLogging, noPoll, **kwargs)
     # a hack so we know what the source_key was, bask at the caller
     parseKey['source_key'] = hdfsKey
     print "parseHdfsFile:", parseKey

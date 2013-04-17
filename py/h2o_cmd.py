@@ -2,9 +2,10 @@ import os, json, unittest, time, shutil, sys, socket
 import h2o
 import h2o_browse as h2b, h2o_rf as h2f
 
+# header, separator, exclude params are passed thru kwargs to node.parse
 def parseFile(node=None, csvPathname=None, key=None, key2=None, 
     timeoutSecs=30, retryDelaySecs=0.5, pollTimeoutSecs=30,
-    noise=None, noPoll=None, header=None):
+    noise=None, noPoll=None, **kwargs):
     if not csvPathname: raise Exception('No file name specified')
     if not node: node = h2o.nodes[0]
     ### print "parseFile pollTimeoutSecs:", pollTimeoutSecs
@@ -16,12 +17,11 @@ def parseFile(node=None, csvPathname=None, key=None, key2=None,
         myKey2 = key2
     return node.parse(key, myKey2, 
         timeoutSecs, retryDelaySecs, 
-        pollTimeoutSecs=pollTimeoutSecs, noise=noise, noPoll=noPoll,
-        header=header)
+        pollTimeoutSecs=pollTimeoutSecs, noise=noise, noPoll=noPoll, **kwargs)
 
 def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, 
     timeoutSecs=20, retryDelaySecs=2, pollTimeoutSecs=30, 
-    noise=None, noPoll=None, header=None):
+    noise=None, noPoll=None, **kwargs):
     ''' Parse a file stored in S3 bucket'''                                                                                                                                                                       
     if not bucket  : raise Exception('No S3 bucket specified')
     if not filename: raise Exception('No filename in bucket specified')
@@ -36,8 +36,7 @@ def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None,
         myKeyForParseResult = keyForParseResult
     return node.parse(s3_key, myKeyForParseResult, 
         timeoutSecs, retryDelaySecs, 
-        pollTimeoutSecs=pollTimeoutSecs, noise=noise, noPoll=noPoll,
-        header=header)
+        pollTimeoutSecs=pollTimeoutSecs, noise=noise, noPoll=noPoll, **kwargs)
 
 def runInspect(node=None, key=None, timeoutSecs=5, **kwargs):
     if not key: raise Exception('No key for Inspect specified')

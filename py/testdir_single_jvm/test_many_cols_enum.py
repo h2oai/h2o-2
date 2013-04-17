@@ -8,7 +8,6 @@ import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
 import h2o_exec as h2e
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
-    # 8 random generatators, 1 per column
     r1 = random.Random(SEED)
     dsf = open(csvPathname, "w+")
 

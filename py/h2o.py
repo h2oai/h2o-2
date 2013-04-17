@@ -475,7 +475,7 @@ def check_sandbox_for_errors(sandbox_ignore_errors=False):
                 'found multiple|exception|error|assert|killing|killed|required ports',
                 re.IGNORECASE)
             regex2 = re.compile('Caused',re.IGNORECASE)
-            regex3 = re.compile('warn|info', re.IGNORECASE)
+            regex3 = re.compile('warn|info|TCP', re.IGNORECASE)
 
             # there are many hdfs/apache messages with error in the text. treat as warning if they have '[WARN]'
             # i.e. they start with:
@@ -861,8 +861,12 @@ class H2O(object):
         verboseprint("\nKMeans result:", dump_json(a))
         return a
 
-    # params: header=1, 
+    # params: 
+    # header=1, 
+    # separator=1 (hex encode?
+    # exclude=
     # noise is a 2-tuple: ("StoreView",params_dict)
+    
     def parse(self, key, key2=None, 
         timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=30,
         noise=None, benchmarkLogging=False, noPoll=False, **kwargs):
