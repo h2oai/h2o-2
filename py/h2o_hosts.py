@@ -53,7 +53,7 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
         'key_filename': None,
         'aws_credentials': None,
         'redirect_import_folder_to_s3_path': None,
-        'enable_h2o_log': True,
+        'disable_h2o_log': False,
         'enable_benchmark_log': False,
     }
     # initialize the default values
