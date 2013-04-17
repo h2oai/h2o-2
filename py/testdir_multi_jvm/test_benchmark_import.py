@@ -4,6 +4,22 @@ import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
 import h2o_exec as h2e, h2o_jobs
 import time, random, logging
 
+def check_key_distribution():
+    c = h2o.nodes[0].cloud_status()
+    nodes = c[0]['nodes']
+    print "Key distribution post parse, should be balanced"
+    # get average
+    totalKeys = 0
+    for n in nodes:
+        totalKeys += n['num_keys']
+    avgKeys = totalKeys/len(nodes)
+    # if more than 5% difference from average, print warning
+    for n in nodes:
+        print 'num_keys:', n['num_keys'], 'value_size_bytes:', n['value_size_bytes'],\
+            'name:', n['name']
+        if (abs(avgKeys - n['num_keys'])/avgKeys)  > 0.05:
+            print "WARNING. avgKeys:", avgKeys, "and n['num_keys']:", n['num_keys'], "have > 5% delta"
+
 
 def check_enums_from_inspect(parseKey):
     inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
@@ -241,6 +257,7 @@ class Basic(unittest.TestCase):
                 ### RFview = h2o_cmd.runRFOnly(trees=1,depth=25,parseKey=newParseKey, timeoutSecs=timeoutSecs)
                 ### h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
+                check_key_distribution()
                 delete_csv_key(csvFilename, importFullList)
                 h2o.tear_down_cloud()
                 if not localhost:
