@@ -129,6 +129,8 @@ class Basic(unittest.TestCase):
         # can fire a parse off and go wait on the jobs queue (inspect afterwards is enough?)
         noPoll = False
         benchmarkLogging = ['cpu','disk']
+        pollTimeoutSecs = 120
+        retryDelaySecs = 10
 
         for (csvFilepattern, csvFilename, totalBytes, timeoutSecs) in csvFilenameList:
             localhost = h2o.decide_if_localhost()
@@ -156,32 +158,40 @@ class Basic(unittest.TestCase):
                 h2o.cloudPerfH2O.message("Parse " + csvFilename + " Start--------------------------------")
                 start = time.time()
                 parseKey = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
-                    key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, retryDelaySecs=5, 
+                    key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
+                    retryDelaySecs=retryDelaySecs,
+                    pollTimeoutSecs=pollTimeoutSecs,
                     noPoll=noPoll,
                     benchmarkLogging=benchmarkLogging)
 
                 if noPoll:
-                    time.sleep(1)
-                    h2o.check_sandbox_for_errors()
-                    (csvFilepattern, csvFilename, totalBytes2, timeoutSecs) = csvFilenameList[i+1]
-                    s3nKey = URI + "/" + csvFilepattern
-                    key2 = csvFilename + "_" + str(trial) + ".hex"
-                    print "Loading", protocol, "key:", s3nKey, "to", key2
-                    parse2Key = h2o.nodes[0].parse(s3nKey, key2,
-                        timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60,
-                        noPoll=noPoll,
-                        benchmarkLogging=benchmarkLogging)
+                    if (i+1) < len(csvFilenameList):
+                        time.sleep(1)
+                        h2o.check_sandbox_for_errors()
+                        (csvFilepattern, csvFilename, totalBytes2, timeoutSecs) = csvFilenameList[i+1]
+                        s3nKey = URI + "/" + csvFilepattern
+                        key2 = csvFilename + "_" + str(trial) + ".hex"
+                        print "Loading", protocol, "key:", s3nKey, "to", key2
+                        parse2Key = h2o.nodes[0].parse(s3nKey, key2,
+                            timeoutSecs=timeoutSecs,
+                            retryDelaySecs=retryDelaySecs,
+                            pollTimeoutSecs=pollTimeoutSecs,
+                            noPoll=noPoll,
+                            benchmarkLogging=benchmarkLogging)
 
-                    time.sleep(1)
-                    h2o.check_sandbox_for_errors()
-                    (csvFilepattern, csvFilename, totalBytes3, timeoutSecs) = csvFilenameList[i+2]
-                    s3nKey = URI + "/" + csvFilepattern
-                    key2 = csvFilename + "_" + str(trial) + ".hex"
-                    print "Loading", protocol, "key:", s3nKey, "to", key2
-                    parse3Key = h2o.nodes[0].parse(s3nKey, key2,
-                        timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60,
-                        noPoll=noPoll,
-                        benchmarkLogging=benchmarkLogging)
+                    if (i+2) < len(csvFilenameList):
+                        time.sleep(1)
+                        h2o.check_sandbox_for_errors()
+                        (csvFilepattern, csvFilename, totalBytes3, timeoutSecs) = csvFilenameList[i+2]
+                        s3nKey = URI + "/" + csvFilepattern
+                        key2 = csvFilename + "_" + str(trial) + ".hex"
+                        print "Loading", protocol, "key:", s3nKey, "to", key2
+                        parse3Key = h2o.nodes[0].parse(s3nKey, key2,
+                            timeoutSecs=timeoutSecs,
+                            retryDelaySecs=retryDelaySecs,
+                            pollTimeoutSecs=pollTimeoutSecs,
+                            noPoll=noPoll,
+                            benchmarkLogging=benchmarkLogging)
 
                 elapsed = time.time() - start
                 print "Parse #", trial, "completed in", "%6.2f" % elapsed, "seconds.", \
