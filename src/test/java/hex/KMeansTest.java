@@ -6,7 +6,7 @@ import org.junit.*;
 import water.*;
 
 public class KMeansTest extends TestUtil {
-  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
+  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
 
   @Test
   public void test1Dimension() {
