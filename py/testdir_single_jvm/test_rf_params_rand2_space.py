@@ -20,12 +20,12 @@ paramDict = {
     'sampling_strategy': [None, 'RANDOM', 'STRATIFIED_LOCAL' ],
     'strata_samples': [
         None,
-        "0=10",
-        "1=5",
-        "0=7,1=3",
-        "0=1,1=1",
-        "0=100,1=100",
-        "0=0,1=0",
+        "no=10",
+        "yes=5",
+        "no=7,yes=3",
+        "yes=1,no=1",
+        "no=100,yes=100",
+        "no=0,yes=0",
         ]
     }
 
