@@ -282,7 +282,7 @@ def sleep_with_dot(sec, message=None):
 # and testdir_multi_jvm/test_benchmark_import.py
 # might be able to use more widely
 def check_enums_from_inspect(parseKey):
-    inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
+    inspect = runInspect(key=parseKey['destination_key'])
     print "num_rows:", inspect['num_rows']
     print "num_cols:", inspect['num_cols']
     cols = inspect['cols']
