@@ -96,7 +96,8 @@ def simpleCheckRFView(node, rfv, noPrint=False, **kwargs):
         # this should equal the num rows in the dataset if full scoring? (minus any NAs)
         print "totalScores:", totalScores
         print "totalRight:", totalRight
-        pctRight = 100.0 * totalRight/totalScores
+        if totalScores != 0:  pctRight = 100.0 * totalRight/totalScores
+        else: pctRight = 0.0
         print "pctRight:", "%5.2f" % pctRight
         print "pctWrong:", "%5.2f" % (100 - pctRight)
 
