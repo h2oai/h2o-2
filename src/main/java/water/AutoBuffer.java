@@ -217,7 +217,7 @@ public final class AutoBuffer {
   // bytes out.  If the write is to an H2ONode and is short, send via UDP.
   // AutoBuffer close calls order; i.e. a reader close() will block until the
   // writer does a close().
-  public final int close() { 
+  public final int close() {
     assert _h2o != null || _chan != null;      // Byte-array backed should not be closed
     try {
       if( _chan == null ) {     // No channel?
@@ -280,12 +280,12 @@ public final class AutoBuffer {
         //sock = SocketChannel.open( _h2o._key );
         break;
       } // Explicitly ignore the following exceptions but fail on the rest
-      catch (ConnectException e)       { ex = e; } 
-      catch (SocketTimeoutException e) { ex = e; } 
-      catch (IOException e)            { ex = e; } 
+      catch (ConnectException e)       { ex = e; }
+      catch (SocketTimeoutException e) { ex = e; }
+      catch (IOException e)            { ex = e; }
       finally {
         if( ex != null ) {
-          H2O.ignore(ex, "[h2o,Autobuffer] TCP open problem, waiting and retrying...", true);
+          H2O.ignore(ex, "[h2o,Autobuffer] TCP open problem, waiting and retrying...", false);
           try { Thread.sleep(500); } catch (InterruptedException ie) {}
         }
       }
