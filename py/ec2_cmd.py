@@ -285,7 +285,7 @@ def load_ec2_region(region):
 
     raise Exception('\033[91m[ec2] Unsupported EC2 region: {0}. The available regions are: {1}\033[0m'.format(region, [r for r in DEFAULT_EC2_INSTANCE_CONFIGS ]))
 
-def load_ec2_config(config_file, region):
+def load_ec2_config(config_file, region, instance_type=None):
     if config_file:
         f = find_file(config_file)
         with open(f, 'rb') as fp:
@@ -295,6 +295,8 @@ def load_ec2_config(config_file, region):
 
     for k,v in DEFAULT_EC2_INSTANCE_CONFIGS[region].items():
         ec2_cfg.setdefault(k, v)
+
+    if instance_type: ec2_cfg['instance_type'] = instance_type
 
     return ec2_cfg
 
@@ -396,7 +398,7 @@ def create_tags(**kwargs):
 
 def main():
     parser = argparse.ArgumentParser(description='H2O EC2 instances launcher')
-    parser.add_argument('action', choices=['help', 'demo', 'create', 'terminate', 'stop', 'reboot', 'start', 'distribute_h2o', 'start_h2o', 'show_defaults', 'dump_reservation', 'show_reservations'],  help='EC2 instances action\n\t\tAHOJ')
+    parser.add_argument('action', choices=['help', 'demo', 'create', 'terminate', 'stop', 'reboot', 'start', 'distribute_h2o', 'start_h2o', 'show_defaults', 'dump_reservation', 'show_reservations'], help='EC2 instances action!')
     parser.add_argument('-c', '--config',    help='Configuration file to configure NEW EC2 instances (if not specified default is used - see "show_defaults")', type=str, default=None)
     parser.add_argument('-i', '--instances', help='Number of instances to launch', type=int, default=DEFAULT_NUMBER_OF_INSTANCES)
     parser.add_argument('-H', '--hosts',     help='Hosts file describing existing "EXISTING" EC2 instances ', type=str, default=None)
@@ -404,18 +406,20 @@ def main():
     parser.add_argument('--reservation',     help='Reservation ID, for example "r-1824ec65"', type=str, default=None)
     parser.add_argument('--name',            help='Name for launched instances', type=str, default=DEFAULT_INSTANCE_NAME)
     parser.add_argument('--timeout',         help='Timeout in seconds.', type=int, default=None)
+    parser.add_argument('--instance_type',   help='Enfore a type of EC2 to launch (e.g., m2.2xlarge).', type=str, default=None)
     args = parser.parse_args()
 
     ec2_region = load_ec2_region(args.region)
     if (args.action == 'help'):
         parser.print_help()
     elif (args.action == 'create' or args.action == 'demo'):
-        ec2_config = load_ec2_config(args.config, ec2_region)
+        ec2_config = load_ec2_config(args.config, ec2_region, args.instance_type)
         tags       = create_tags(Name=args.name)
-        log("Region   : {0}".format(ec2_region))
-        log("Config   : {0}".format(ec2_config))
-        log("Instances: {0}".format(args.instances))
-        log("Tags     : {0}".format(tags))
+        log("EC2 region : {0}".format(ec2_region))
+        log("EC2 itype  : {0}".format(ec2_config['instance_type']))
+        log("EC2 config : {0}".format(ec2_config))
+        log("Instances  : {0}".format(args.instances))
+        log("Tags       : {0}".format(tags))
         reservation = run_instances(args.instances, ec2_config, ec2_region, tags=tags)
         
         hosts_cfg, filename   = dump_hosts_config(ec2_config, reservation, args.hosts)
