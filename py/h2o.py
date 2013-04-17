@@ -1350,8 +1350,8 @@ class H2O(object):
         if self.random_udp_drop or random_udp_drop:
             args += ['--random_udp_drop']
 
-        if self.enable_h2o_log:
-            args += ['--log']
+        if self.disable_h2o_log:
+            args += ['--nolog']
 
         return args
 
@@ -1367,7 +1367,7 @@ class H2O(object):
         use_home_for_ice=False, node_id=None, username=None,
         random_udp_drop=False,
         redirect_import_folder_to_s3_path=None,
-        enable_h2o_log=True, 
+        disable_h2o_log=False, 
         enable_benchmark_log=False,
         ):
  
@@ -1415,7 +1415,7 @@ class H2O(object):
         self.sandbox_ignore_errors = False
 
         self.random_udp_drop = random_udp_drop
-        self.enable_h2o_log = enable_h2o_log
+        self.disable_h2o_log = disable_h2o_log
 
         # this dumps stats from tests, and perf stats while polling to benchmark.log
         self.enable_benchmark_log = enable_benchmark_log
