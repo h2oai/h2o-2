@@ -152,6 +152,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   public final static byte HDFS= 2<<0; // HDFS: backed by hadoop cluster
   public final static byte S3  = 3<<0; // Amazon S3
   public final static byte NFS = 4<<0; // NFS: Standard file system
+  public final static byte TCP = 7<<0; // TCP: For profile purposes, not a storage system
   public final static byte BACKEND_MASK = (8-1);
   public final static byte NOTdsk = 0<<3; // latest _mem is persisted or not
   public final static byte ON_dsk = 1<<3;
@@ -198,13 +199,15 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     }
   }
 
-  public String nameOfPersist() {
-    switch( _persist&BACKEND_MASK ) {
+  public String nameOfPersist() { return nameOfPersist(_persist&BACKEND_MASK); }
+  public static String nameOfPersist(int x) {
+    switch( x ) {
     case ICE : return "ICE";
     case HDFS: return "HDFS";
     case S3  : return "S3";
     case NFS : return "NFS";
-    default  : throw H2O.unimpl();
+    case TCP : return "TCP";
+    default  : return null;
     }
   }
 

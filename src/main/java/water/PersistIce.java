@@ -195,14 +195,15 @@ public abstract class PersistIce {
   static byte[] fileLoad(Value v) {
     File f = encodeKeyToFile(v);
     if( f.length() < v._max ) { // Should be fully on disk... or
-      assert !v.isPersisted(); // or it's a racey delete of a spilled value
+      assert !v.isPersisted() : f.length() + " " + v._max + " " + v._key;  // or it's a racey delete of a spilled value
       return null;              // No value
     }
-    byte[] b = MemoryManager.malloc1(v._max);
     try {
-      DataInputStream s = new DataInputStream(new FileInputStream(f));
+      FileInputStream s = new FileInputStream(f);
       try {
-        s.readFully(b, 0, v._max);
+        AutoBuffer ab = new AutoBuffer(s.getChannel(),true,Value.ICE);
+        byte[] b = ab.getA1(v._max);
+        ab.close();
         return b;
       } finally {
         s.close();
@@ -220,7 +221,7 @@ public abstract class PersistIce {
     if( v.isPersisted() ) return;
     new File(iceRoot,getDirectoryForKey(v._key)).mkdirs();
     // Nuke any prior file.
-    OutputStream s = null;
+    FileOutputStream s = null;
     try {
       s = new FileOutputStream(encodeKeyToFile(v));
     } catch (FileNotFoundException e) {
@@ -233,7 +234,7 @@ public abstract class PersistIce {
     try {
       byte[] m = v.memOrLoad(); // we are not single threaded anymore
       assert m != null && m.length == v._max; // Assert not saving partial files
-      s.write(m);
+      new AutoBuffer(s.getChannel(),false,Value.ICE).putA1(m,m.length).close();
       v.setdsk();             // Set as write-complete to disk
     } finally {
       if( s != null ) s.close();

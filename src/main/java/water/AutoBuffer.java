@@ -52,8 +52,15 @@ public final class AutoBuffer {
   private boolean _firstPage;
 
   // Total size written out from 'new' to 'close'.  Only updated when actually
-  // writing data, or after close().
-  private int _size;
+  // reading or writing data, or after close().  For profiling only.
+  public int _size;
+  // More profiling: start->close msec, plus nano's spent in blocking I/O
+  // calls.  The difference between (close-start) and i/o msec is the time the
+  // i/o thread spends doing other stuff (e.g. allocating Java objects or
+  // (de)serializing).
+  public long _time_start_ms, _time_close_ms, _time_io_ns;
+  // I/O persistence flavor: Value.ICE, NFS, HDFS, S3, TCP
+  public final byte _persist;
 
   // The assumed max UDP packetsize
   public static final int MTU = 1500-8/*UDP packet header size*/;
@@ -81,6 +88,7 @@ public final class AutoBuffer {
     _h2o = H2ONode.intern(addr, getPort());
     _firstPage = true;
     assert _h2o != null;
+    _persist = 0;               // No persistance
   }
 
   // Incoming TCP request.  Make a read-mode AutoBuffer from the open Channel,
@@ -97,6 +105,8 @@ public final class AutoBuffer {
     _h2o = H2ONode.intern(sock.socket().getInetAddress(), getPort());
     _firstPage = true;          // Yes, must reset this.
     assert _h2o != null && _h2o != H2O.SELF;
+    _time_start_ms = System.currentTimeMillis();
+    _persist = Value.TCP;
   }
 
   // Make an AutoBuffer to write to an H2ONode.  Requests for full buffer will
@@ -109,14 +119,19 @@ public final class AutoBuffer {
     _read = false;              // Writing by default
     _firstPage = true;          // Filling first page
     assert _h2o != null;
+    _time_start_ms = System.currentTimeMillis();
+    _persist = Value.TCP;
   }
 
   // Spill-to/from-disk request.
-  public AutoBuffer( FileChannel fc, boolean read ) {
+  public AutoBuffer( FileChannel fc, boolean read, byte persist ) {
     _bb = bbMake();
     _chan = fc;                 // Write to read/write
     _h2o = null;                // File Channels never have an _h2o
     _read = read;               // Mostly assert reading vs writing
+    if( read ) _bb.flip();
+    _time_start_ms = System.currentTimeMillis();
+    _persist = persist;         // One of Value.ICE, NFS, S3, HDFS
   }
 
   // Read from UDP multicast.  Same as the byte[]-read variant, except there is an H2O.
@@ -127,6 +142,7 @@ public final class AutoBuffer {
     _firstPage = true;
     _chan = null;
     _h2o = H2ONode.intern(pack.getAddress(), getPort());
+    _persist = 0;               // No persistance
   }
 
   /** Read from a fixed byte[]; should not be closed. */
@@ -139,6 +155,7 @@ public final class AutoBuffer {
     _h2o = null;
     _read = true;
     _firstPage = true;
+    _persist = 0;               // No persistance
   }
 
   /**  Write to an ever-expanding byte[].  Instead of calling {@link #close()},
@@ -150,6 +167,7 @@ public final class AutoBuffer {
     _h2o = null;
     _read = false;
     _firstPage = true;
+    _persist = 0;               // No persistance
   }
 
   /** Write to a known sized byte[].  Instead of calling close(), call
@@ -161,12 +179,14 @@ public final class AutoBuffer {
     _h2o = null;
     _read = false;
     _firstPage = true;
+    _persist = 0;               // No persistance
   }
 
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("[AB ").append(_read ? "read " : "write ");
     sb.append(_firstPage?"first ":"2nd ").append(_h2o);
+    sb.append(" ").append(Value.nameOfPersist(_persist));
     sb.append(" 0 <= ").append(_bb.position()).append(" <= ").append(_bb.limit());
     sb.append(" <= ").append(_bb.capacity());
     return sb.append("]").toString();
@@ -230,14 +250,18 @@ public final class AutoBuffer {
       // Force AutoBuffer 'close' calls to order; i.e. block readers until
       // writers do a 'close' - by writing 1 more byte in the close-call which
       // the reader will have to wait for.
-      if( _read ) {             // Reader?
-        int x = get1();         // Read 1 more byte
-        assert x == 0xab : "AB.close instead of 0xab sentinel got "+x+", "+this;
-      } else {                  // Writer?
-        put1(0xab);             // Write one-more byte
-        sendPartial();          // Finish partial TCP writes
+      if( _h2o != null ) {      // TCP connection?
+        if( _read ) {           // Reader?
+          int x = get1();       // Read 1 more byte
+          assert x == 0xab : "AB.close instead of 0xab sentinel got "+x+", "+this;
+        } else {                // Writer?
+          put1(0xab);           // Write one-more byte
+        }
       }
+      if( !_read ) sendPartial(); // Finish partial writes
       _chan.close();
+      _time_close_ms = System.currentTimeMillis();
+      TimeLine.record_IOclose(this,_persist); // Profile TCP connections
     } catch( IOException e ) {  // Dunno how to handle so crash-n-burn
       throw new RuntimeException(e);
     } finally {
@@ -402,6 +426,7 @@ public final class AutoBuffer {
     _bb.compact();            // Move remaining unread bytes to start of buffer; prep for reading
     // Its got to fit or we asked for too much
     assert _bb.position()+sz <= _bb.capacity() : "("+_bb.position()+"+"+sz+" <= "+_bb.capacity()+")";
+    long ns = System.nanoTime();
     while( _bb.position() < sz ) { // Read until we got enuf
       try {
         int res = _chan.read(_bb); // Read more
@@ -412,8 +437,10 @@ public final class AutoBuffer {
         throw new RuntimeException(e);
       }
     }
-    _bb.flip();                // Prep for handing out bytes
-    _firstPage = false;        // First page of data is gone gone gone
+    _time_io_ns += (System.nanoTime()-ns);
+    _size += _bb.position();    // What we read
+    _bb.flip();                 // Prep for handing out bytes
+    _firstPage = false;         // First page of data is gone gone gone
     return _bb;
   }
 
@@ -446,8 +473,10 @@ public final class AutoBuffer {
     try{
       if( _chan == null)
         tcpOpen(); // This is a big operation.  Open a TCP socket as-needed.
+      long ns = System.nanoTime();
       while( _bb.hasRemaining() )
         _chan.write(_bb);
+      _time_io_ns += (System.nanoTime()-ns);
     } catch( IOException e ) {   // Can't open the connection, try again later
       System.err.println("TCP Open/Write failed: " + e.getMessage()+" talking to "+_h2o);
       throw new Error(e);

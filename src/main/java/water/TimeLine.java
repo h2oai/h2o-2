@@ -1,4 +1,5 @@
 package water;
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -34,7 +35,7 @@ public class TimeLine extends UDP {
   // - Sys.Nano, 8 bytes-3 bits
   // - Nano low bit is 1 id packet was droped, next bit is 0 for send, 1 for recv, next bit is 0 for udp, 1 for tcp
   // - 16 bytes of payload; 1st byte is a udp_type opcode, next 4 bytes are typically task#
-  static final int MAX_EVENTS=1024; // Power-of-2, please
+  public static final int MAX_EVENTS=2048; // Power-of-2, please
   static final int WORDS_PER_EVENT=4;
   static final long[] TIMELINE = new long[MAX_EVENTS*WORDS_PER_EVENT+1];
 
@@ -70,15 +71,13 @@ public class TimeLine extends UDP {
   // receive and must be either 0 or 1.  "drop" is whether or not the UDP
   // packet is dropped as-if a network drop, and must be either 0 (kept) or 2
   // (dropped).
-  private static void record( AutoBuffer b, boolean tcp, int sr, int drop ) {
+  private static void record2( H2ONode h2o, long ns, boolean tcp, int sr, int drop, long b0, long b8 ) {
     final long ms = System.currentTimeMillis(); // Read first, in case we're slow storing values
-    final long ns = System.nanoTime();
-    final long[] tl = TIMELINE; // Read once, in case the whole array shifts out from under us
-    final int idx = next_idx(tl); // Next free index
     long deltams = ms-JVM_BOOT_MSEC;
     assert deltams < 0x0FFFFFFFFL; // No daily overflow
-    if( b.position() < 16 ) b.position(16);
-    tl[idx*WORDS_PER_EVENT+0+1] = (deltams)<<32 | (b._h2o.ip4()&0x0FFFFFFFFL);
+    final long[] tl = TIMELINE; // Read once, in case the whole array shifts out from under us
+    final int idx = next_idx(tl); // Next free index
+    tl[idx*WORDS_PER_EVENT+0+1] = (deltams)<<32 | (h2o.ip4()&0x0FFFFFFFFL);
     tl[idx*WORDS_PER_EVENT+1+1] = (ns&~7)| (tcp?4:0)|sr|drop;
     // More complexities: record the *receiver* port in the timeline - but not
     // in the outgoing UDP packet!  The outgoing packet always has the sender's
@@ -87,13 +86,32 @@ public class TimeLine extends UDP {
     // not record who he sent to!  With this hack the Timeline record always
     // contains the info about "the other guy": inet+port for the receiver in
     // the sender's Timeline, and vice-versa for the receiver's Timeline.
-    long tmp = b.get8(0);
-    if( sr==0 ) tmp = (tmp & ~0xFFFF00) | (b._h2o._key.udp_port()<<8);
-    tl[idx*WORDS_PER_EVENT+2+1] = tmp;
-    tl[idx*WORDS_PER_EVENT+3+1] = b.get8(8);
+    if( sr==0 ) b0 = (b0 & ~0xFFFF00) | (h2o._key.udp_port()<<8);
+    tl[idx*WORDS_PER_EVENT+2+1] = b0;
+    tl[idx*WORDS_PER_EVENT+3+1] = b8;
   }
-  public static void record_send( AutoBuffer b, boolean tcp)           { record(b,tcp,0,   0); }
-  public static void record_recv( AutoBuffer b, boolean tcp, int drop) { record(b,tcp,1,drop); }
+
+  private static void record1( AutoBuffer b, boolean tcp, int sr, int drop) {
+    if( b.position() < 16 ) b.position(16);
+    final long ns = System.nanoTime();
+    record2(b._h2o, ns, tcp,sr,drop,b.get8(0),b.get8(8));
+  }
+  public static void record_send( AutoBuffer b, boolean tcp)           { record1(b,tcp,0,   0); }
+  public static void record_recv( AutoBuffer b, boolean tcp, int drop) { record1(b,tcp,1,drop); }
+
+  // Record a completed I/O event.  The nanosecond time slot is actually nano's-blocked-on-io
+  public static void record_IOclose( AutoBuffer b, int flavor ) {
+    H2ONode h2o = b._h2o==null ? H2O.SELF : b._h2o;
+    // First long word going out has sender-port and a 'bad' control packet
+    long b0 = UDP.udp.i_o.ordinal(); // Special flag to indicate io-record and not a rpc-record
+    b0 |= H2O.SELF._key.udp_port()<<8;
+    b0 |= flavor<<24;           // I/O flavor; one of the Value.persist backends
+    long iotime = b._time_start_ms > 0 ? (b._time_close_ms - b._time_start_ms) : 0;
+    b0 |= iotime<<32;           // msec from start-to-finish, including non-i/o overheads
+    long b8 = b._size;          // byte's transfered in this I/O
+    long ns = b._time_io_ns;    // nano's blocked doing I/O
+    record2(h2o,ns,true,b.readMode()?1:0,0,b0,b8);
+  }
 
   // Accessors, for TimeLines that come from all over the system
   public static int length( ) { return MAX_EVENTS; }
@@ -178,7 +196,7 @@ public class TimeLine extends UDP {
       return ab; // No I/O needed for my own snapshot
     }
     // Send timeline to remote
-    return ab.clearForWriting().putUdp(UDP.udp.timeline).putA8(a);
+    return new AutoBuffer(ab._h2o).putUdp(UDP.udp.timeline).putA8(a);
   }
 
   // Receive a remote timeline
