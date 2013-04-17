@@ -4,55 +4,6 @@ import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
 import h2o_exec as h2e, h2o_jobs
 import time, random, logging
 
-def check_key_distribution():
-    c = h2o.nodes[0].get_cloud()
-    nodes = c['nodes']
-    print "Key distribution post parse, should be balanced"
-    # get average
-    totalKeys = 0
-    for n in nodes:
-        totalKeys += int(n['num_keys'])
-    avgKeys = (totalKeys + 0.0)/len(nodes)
-    # if more than 5% difference from average, print warning
-    for n in nodes:
-        print 'num_keys:', n['num_keys'], 'value_size_bytes:', n['value_size_bytes'],\
-            'name:', n['name']
-        delta = (abs(avgKeys - int(n['num_keys']))/avgKeys)
-        if delta > 0.05:
-            print "WARNING. avgKeys:", avgKeys, "and n['num_keys']:", n['num_keys'], "have >", delta, "% delta"
-
-
-def check_enums_from_inspect(parseKey):
-    inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
-    print "num_rows:", inspect['num_rows']
-    print "num_cols:", inspect['num_cols']
-    cols = inspect['cols']
-    # trying to see how many enums we get
-    # don't print int
-    for i,c in enumerate(cols):
-        # print i, "name:", c['name']
-        msg = "column %d" % i
-        msg = msg + " type: %s" % c['type']
-        if c['type'] == 'enum':
-            msg = msg + (" enum_domain_size: %d" % c['enum_domain_size'])
-        if c['num_missing_values'] != 0:
-            msg = msg + (" num_missing_values: %s" % c['num_missing_values'])
-
-        if c['type'] != 'int' or (c['num_missing_values'] != 0):
-            print msg
-
-def delete_csv_key(csvFilename, importFullList):
-    # remove the original data key
-    for k in importFullList:
-        deleteKey = k['key']
-        ### print "possible delete:", deleteKey
-        # don't delete any ".hex" keys. the parse results above have .hex
-        # this is the name of the multi-file (it comes in as a single file?)
-        if csvFilename in deleteKey and not '.hex' in deleteKey:
-            print "\nRemoving", deleteKey
-            removeKeyResult = h2o.nodes[0].remove_key(key=deleteKey)
-            ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
-
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -136,7 +87,6 @@ class Basic(unittest.TestCase):
                 ]
         # csvFilenameList = random.sample(csvFilenameAll,1)
         csvFilenameList = csvFilenameAll
-
 
         # split out the pattern match and the filename used for the hex
         trialMax = 1
@@ -240,7 +190,7 @@ class Basic(unittest.TestCase):
                 # BUG here?
                 if not noPoll:
                     # We should be able to see the parse result?
-                    check_enums_from_inspect(parseKey)
+                    h2o_cmd.check_enums_from_inspect(parseKey)
                         
                 # the nflx data doesn't have a small enough # of classes in any col
                 # use exec to randomFilter out 200 rows for a quick RF. that should work for everyone?
@@ -258,8 +208,8 @@ class Basic(unittest.TestCase):
                 ### RFview = h2o_cmd.runRFOnly(trees=1,depth=25,parseKey=newParseKey, timeoutSecs=timeoutSecs)
                 ### h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
-                check_key_distribution()
-                delete_csv_key(csvFilename, importFullList)
+                h2o_cmd.check_key_distribution()
+                h2o_cmd.delete_csv_key(csvFilename, importFullList)
                 h2o.tear_down_cloud()
                 if not localhost:
                     print "Waiting 30 secs before building cloud again (sticky ports?)"
