@@ -362,8 +362,9 @@ public abstract class DGLM {
     double [] _thresholds;
     final int _folds;
     Key [] _models;
+    boolean _parallel;
 
-    public GLMXValTask(Job job, int folds, ValueArray ary, int [] cols, boolean standardize, LSMSolver lsm, GLMParams glmp, double [] betaStart, double [] thresholds){
+    public GLMXValTask(Job job, int folds, ValueArray ary, int [] cols, boolean standardize, LSMSolver lsm, GLMParams glmp, double [] betaStart, double [] thresholds, boolean parallel){
       _job = job;
       _folds = folds;
       _ary = ary; _aryKey = ary._key;
@@ -373,6 +374,7 @@ public abstract class DGLM {
       _glmp = glmp;
       _betaStart = betaStart;
       _thresholds = thresholds;
+      _parallel = parallel;
     }
 
     @Override
@@ -390,7 +392,7 @@ public abstract class DGLM {
       assert _models[setup._id] == null;
       _models[setup._id] = GLMModel.makeKey(false);
       try{
-        DGLM.buildModel(_job, _models[setup._id],DGLM.getData(_ary, _cols, s, _standardize), _lsm, _glmp, _betaStart.clone(),0);
+        DGLM.buildModel(_job, _models[setup._id],DGLM.getData(_ary, _cols, s, _standardize), _lsm, _glmp, _betaStart.clone(), 0, _parallel);
       } catch(JobCancelledException e) {
         UKV.remove(_models[setup._id]);
       }
@@ -574,7 +576,7 @@ public abstract class DGLM {
       return val;
     }
 
-    public GLMValidation xvalidate(Job job, ValueArray ary,int folds, double [] thresholds) throws JobCancelledException {
+    public GLMValidation xvalidate(Job job, ValueArray ary,int folds, double [] thresholds, boolean parallel) throws JobCancelledException {
       int [] modelDataMap = ary.getColumnIds(_va.colNames());//columnMapping(ary.colNames());
       if( !isCompatible(modelDataMap) )  // This dataset is compatible or not?
         throw new GLMException("incompatible dataset");
@@ -584,9 +586,21 @@ public abstract class DGLM {
       for(int i = 0; i < folds; ++i)
         DKV.put(keys[i] = Key.make(Key.make()._kb,(byte)0,Key.DFJ_INTERNAL_USER,H2O.CLOUD._memary[(myNodeId + i)%cloudsize]), new GLMXvalSetup(i));
       DKV.write_barrier();
-      GLMXValTask tsk = new GLMXValTask(job,folds, ary, modelDataMap, _standardized, _solver, _glmParams, _normBeta, thresholds);
+      GLMXValTask tsk = new GLMXValTask(job, folds, ary, modelDataMap, _standardized, _solver, _glmParams, _normBeta, thresholds, parallel);
       long t1 = System.currentTimeMillis();
-      tsk.invoke(keys);
+      if(parallel)
+        tsk.invoke(keys);
+      else {
+        tsk.keys(keys);
+        tsk.init();
+        for( int i = 0; i < keys.length; i++ ) {
+          GLMXValTask child = new GLMXValTask(job, folds, ary, modelDataMap, _standardized, _solver, _glmParams, _normBeta, thresholds, parallel);
+          child.keys(keys);
+          child.init();
+          child.map(keys[i]);
+          tsk.reduce(child);
+        }
+      }
       if(job.cancelled())
         throw new JobCancelledException();
       GLMValidation res = new GLMValidation(_selfKey,tsk._models, ErrMetric.SUMC,thresholds, System.currentTimeMillis() - t1);
@@ -1199,7 +1213,7 @@ public abstract class DGLM {
     return new DataFrame(ary, colIds, s, standardize, true);
   }
 
-  public static GLMJob startGLMJob(final DataFrame data, final LSMSolver lsm, final GLMParams params, final double [] betaStart, final int xval ) {
+  public static GLMJob startGLMJob(final DataFrame data, final LSMSolver lsm, final GLMParams params, final double [] betaStart, final int xval, final boolean parallel) {
     final GLMJob job = new GLMJob(data._ary,GLMModel.makeKey(true),xval,params);
     final double [] beta;
     final double [] denormalizedBeta;
@@ -1214,7 +1228,7 @@ public abstract class DGLM {
     H2O.submitTask(new H2OCountedCompleter() {
         @Override public void compute2() {
           try{
-            buildModel(job, job.dest(), data, lsm, params, beta,xval);
+            buildModel(job, job.dest(), data, lsm, params, beta, xval, parallel);
             assert !job.cancelled();
             job.remove();
           } catch(JobCancelledException e){
@@ -1231,7 +1245,7 @@ public abstract class DGLM {
     return job;
   }
 
-  public static GLMModel buildModel(Job job, Key resKey, DataFrame data, LSMSolver lsm, GLMParams params, double [] oldBeta, int xval) throws JobCancelledException {
+  public static GLMModel buildModel(Job job, Key resKey, DataFrame data, LSMSolver lsm, GLMParams params, double [] oldBeta, int xval, boolean parallel) throws JobCancelledException {
     GLMModel currentModel = null;
     ArrayList<String> warns = new ArrayList<String>();
     long t1 = System.currentTimeMillis();
@@ -1286,7 +1300,7 @@ public abstract class DGLM {
     currentModel._status = Status.ComputingValidation;
     currentModel.store();
     if( xval > 1 ) // ... and x-validate
-      currentModel.xvalidate(job,data._ary,xval,DEFAULT_THRESHOLDS);
+      currentModel.xvalidate(job,data._ary,xval,DEFAULT_THRESHOLDS,parallel);
     else
       currentModel.validateOn(job,data._ary, data.getSamplingComplement(),DEFAULT_THRESHOLDS); // Full scoring on original dataset
     currentModel._status = Status.Done;

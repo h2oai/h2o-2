@@ -212,7 +212,7 @@ public class GLM extends Request {
       case GenGradient:
         lsm = new GeneralizedGradientSolver(_lambda.value(),_alpha.value());
       }
-      GLMJob job = DGLM.startGLMJob(data, lsm, glmParams, null, _xval.value());
+      GLMJob job = DGLM.startGLMJob(data, lsm, glmParams, null, _xval.value(), true);
       JsonObject j = new JsonObject();
       j.addProperty(Constants.DEST_KEY, job.dest().toString());
       Response r = GLMProgressPage.redirect(j, job.self(), job.dest(),job.progressKey());

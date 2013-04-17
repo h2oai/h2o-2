@@ -46,7 +46,8 @@ public abstract class DRemoteTask extends DTask<DRemoteTask> implements Cloneabl
 
   // Invoked with a set of keys
   public DRemoteTask invoke( Key... keys ) { return fork(keys).get(); }
-  public DFuture fork( Key... keys ) { _keys = flatten(keys); return dfork(); }
+  public DFuture fork( Key... keys ) { keys(keys); return dfork(); }
+  public void keys( Key... keys ) { _keys = flatten(keys); }
 
   public DFuture dfork( ) {
 
