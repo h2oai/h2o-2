@@ -182,6 +182,7 @@ public final class AutoBuffer {
   private static final AtomicInteger BBFREE = new AtomicInteger(0);
   private static final AtomicInteger BBCACHE= new AtomicInteger(0);
   private static final LinkedBlockingDeque<ByteBuffer> BBS = new LinkedBlockingDeque<ByteBuffer>();
+  public static final int BBSIZE = 64*1024; // Bytebuffer "common big size"
   private static void bbstats( AtomicInteger ai ) {
     if( !DEBUG ) return;
     if( (ai.incrementAndGet()&511)==511 ) {
@@ -198,7 +199,7 @@ public final class AutoBuffer {
       return bb;
     }
     bbstats(BBMAKE);
-    return ByteBuffer.allocateDirect(64*1024).order(ByteOrder.nativeOrder());
+    return ByteBuffer.allocateDirect(BBSIZE).order(ByteOrder.nativeOrder());
   }
   private final int bbFree() {
     if( _bb.isDirect() ) {
@@ -264,7 +265,32 @@ public final class AutoBuffer {
   private void tcpOpen() throws IOException {
     assert _firstPage && _bb.limit() >= 1+2+4; // At least something written
     assert _chan == null;
-    SocketChannel sock = SocketChannel.open( _h2o._key );
+
+    SocketChannel sock;
+    while(true) {             // Loop, in case we get socket open problems
+      IOException ex = null;
+      try {
+        // We expect the socket open to be fast, but if the receiver is very
+        // overwhelmed he might not respond for a long long time.  In this
+        // case we simply keep retrying (after a sleep period to let the
+        // receiver catch up).
+        sock = SocketChannel.open();
+        sock.socket().setSendBufferSize(BBSIZE);
+        sock.connect( _h2o._key );
+        //sock = SocketChannel.open( _h2o._key );
+        break;
+      } // Explicitly ignore the following exceptions but fail on the rest
+      catch (ConnectException e)       { ex = e; } 
+      catch (SocketTimeoutException e) { ex = e; } 
+      catch (IOException e)            { ex = e; } 
+      finally {
+        if( ex != null ) {
+          H2O.ignore(ex, "[h2o,Autobuffer] TCP open problem, waiting and retrying...", true);
+          try { Thread.sleep(500); } catch (InterruptedException ie) {}
+        }
+      }
+    }
+
     assert sock.isConnected();   // Supposed to be a blocking channel
     assert sock.isOpen();        // Supposed to be an open channel
     _chan = sock;
