@@ -99,7 +99,7 @@ class Basic(unittest.TestCase):
         # use i to forward reference in the list, so we can do multiple outstanding parses below
         for i, (csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
             ## for tryHeap in [54, 28]:
-            for tryHeap in [60]:
+            for tryHeap in [30]:
                 
                 print "\n", tryHeap,"GB heap, 1 jvm per host, import", protocol, "then parse"
                 h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap,
