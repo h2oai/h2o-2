@@ -12,6 +12,7 @@ import java.util.Properties;
 
 import water.Key;
 import water.ValueArray;
+import water.api.RequestArguments.Bool;
 import water.util.RString;
 
 import com.google.gson.JsonObject;
@@ -59,8 +60,9 @@ public class GLMGrid extends Request {
   // Args that ARE Grid Searched
   protected final RSeq _lambda = new RSeq(Constants.LAMBDA, false, new NumberSequence("1e-8:1e3:100",true,10),true);
   protected final RSeq _alpha = new RSeq(Constants.ALPHA, false, new NumberSequence("0,0.25,0.5,0.75,1.0",false,1),false);
-  protected final RSeq _thresholds = new RSeq(Constants.DTHRESHOLDS, false,new NumberSequence("0:1:0.01",false,0.1),false);
+  protected final RSeq _thresholds = new RSeq(Constants.DTHRESHOLDS, false, new NumberSequence("0:1:0.01",false,0.1),false);
 
+  protected final Bool _parallel = new Bool(PARALLEL, true, "Build models in parallel");
 
   public GLMGrid(){
     _requestHelp = "Perform grid search over GLM parameters. Calls glm with all parameter combination from user-defined parameter range. Results are ordered according to AUC. For more details see <a href='GLM.help'>GLM help</a>.";
@@ -125,7 +127,8 @@ public class GLMGrid extends Request {
                         _lambda.value()._arr, // Grid ranges
                         _alpha.value()._arr,  // Grid ranges
                         ts,
-                        _xval.value());
+                        _xval.value(),
+                        _parallel.value());
     job.start();
 
     // Redirect to the grid-search status page

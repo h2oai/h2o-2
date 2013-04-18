@@ -9,6 +9,7 @@ import hex.NewRowVecTask.JobCancelledException;
 import java.util.*;
 
 import water.*;
+import water.H2O.H2OCountedCompleter;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -21,9 +22,10 @@ public class GLMGrid extends Job {
   double[]             _ts;     // Thresholds
   double[]             _alphas; // Grid search values
   int                  _xfold;
+  boolean              _parallel;
   GLMParams            _glmp;
 
-  public GLMGrid(Key dest, ValueArray va, GLMParams glmp, int[] xs, double[] ls, double[] as, double[] thresholds, int xfold) {
+  public GLMGrid(Key dest, ValueArray va, GLMParams glmp, int[] xs, double[] ls, double[] as, double[] thresholds, int xfold, boolean parallel) {
     super("GLMGrid", dest);
     _ary = va; // VA is large, and already in a Key so make it transient
     _datakey = va._key; // ... and use the data key instead when reloading
@@ -34,6 +36,7 @@ public class GLMGrid extends Job {
     _ts = thresholds;
     _alphas = as;
     _xfold = xfold;
+    _parallel = parallel;
     _glmp.checkResponseCol(_ary._cols[xs[xs.length-1]], new ArrayList<String>()); // ignore warnings here, they will be shown for each mdoel anyways
   }
 
@@ -63,10 +66,12 @@ public class GLMGrid extends Job {
   private static class GridTask extends DTask<GridTask> {
     final int _aidx;
     GLMGrid   _job;
+    boolean   _parallel;
     Key       _aryKey;
-    GridTask(GLMGrid job, int aidx) {
+    GridTask(GLMGrid job, int aidx, boolean parallel) {
       _aidx = aidx;
       _job = job;
+      _parallel = parallel;
       _aryKey = _job._ary._key;
       assert _aryKey != null;
     }
@@ -78,7 +83,7 @@ public class GLMGrid extends Job {
       ValueArray ary = DKV.get(_aryKey).get();
       try{
         for( int l1 = 1; l1 <= _job._lambdas.length && !_job.cancelled(); l1++ ) {
-          GLMModel m = DGLM.buildModel(_job,GLMModel.makeKey(false),DGLM.getData(ary, _job._xs, null, true), new ADMMSolver(_job._lambdas[N-l1], _job._alphas[_aidx]), _job._glmp,beta,_job._xfold);
+          GLMModel m = DGLM.buildModel(_job,GLMModel.makeKey(false),DGLM.getData(ary, _job._xs, null, true), new ADMMSolver(_job._lambdas[N-l1], _job._alphas[_aidx]), _job._glmp,beta,_job._xfold, _parallel);
           beta = m._normBeta.clone();
           _job.update(m, (_job._lambdas.length-l1) + _aidx * _job._lambdas.length, System.currentTimeMillis() - _job._startTime,fs);
         }
@@ -99,18 +104,29 @@ public class GLMGrid extends Job {
   public void start() {
     super.start();
     UKV.put(dest(), new GLMModels(_lambdas.length * _alphas.length));
-    final int cloudsize = H2O.CLOUD._memary.length;
-    int myId = H2O.SELF.index();
-    for( int a = 0; a < _alphas.length; a++ ){
-      GridTask t = new GridTask(this,a);
-      int nodeId = (myId+a)%cloudsize;
-      if(nodeId == myId)
-        H2O.submitTask(t);
-      else
-        RPC.call(H2O.CLOUD._memary[nodeId],t);
+    if(_parallel) {
+      final int cloudsize = H2O.CLOUD._memary.length;
+      int myId = H2O.SELF.index();
+      for( int a = 0; a < _alphas.length; a++ ) {
+        GridTask t = new GridTask(this, a, _parallel);
+        int nodeId = (myId+a)%cloudsize;
+        if(nodeId == myId)
+          H2O.submitTask(t);
+        else
+          RPC.call(H2O.CLOUD._memary[nodeId],t);
+      }
+    } else {
+      H2O.submitTask(new H2OCountedCompleter() {
+        @Override
+        public void compute2() {
+          for( int a = 0; a < _alphas.length; a++ ) {
+            GridTask t = new GridTask(GLMGrid.this, a, _parallel);
+            t.compute2();
+          }
+        }
+      });
     }
   }
-
 
   public static class GLMModels extends Iced implements Progress {
     // The computed GLM models: product of length of lamda1s,lambda2s,rhos,alphas

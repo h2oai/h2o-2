@@ -7,6 +7,7 @@ import h2o_cmd
 import h2o
 import h2o_hosts
 import json
+import commands
 
 '''
     Simple EC2 utility:
@@ -278,6 +279,15 @@ def dump_ssh_commands(ec2_config, reservation):
     for cmd in cmds:
         print cmd 
 
+# for cleaning /tmp after it becomes full, or any one string command (can separate with semicolon)
+def execute_using_ssh_commands(ec2_config, reservation, command_string='df'):
+    cmds = get_ssh_commands(ec2_config, reservation)
+    for cmd in cmds:
+        c = cmd + " '" + command_string + "'"
+        print "\n"+c
+        ret,out = commands.getstatusoutput(c)
+        print out
+
 def load_ec2_region(region):
     for r in DEFAULT_EC2_INSTANCE_CONFIGS:
         if r == region:
@@ -398,7 +408,7 @@ def create_tags(**kwargs):
 
 def main():
     parser = argparse.ArgumentParser(description='H2O EC2 instances launcher')
-    parser.add_argument('action', choices=['help', 'demo', 'create', 'terminate', 'stop', 'reboot', 'start', 'distribute_h2o', 'start_h2o', 'show_defaults', 'dump_reservation', 'show_reservations'], help='EC2 instances action!')
+    parser.add_argument('action', choices=['help', 'demo', 'create', 'terminate', 'stop', 'reboot', 'start', 'distribute_h2o', 'start_h2o', 'show_defaults', 'dump_reservation', 'show_reservations', 'clean_tmp'], help='EC2 instances action!')
     parser.add_argument('-c', '--config',    help='Configuration file to configure NEW EC2 instances (if not specified default is used - see "show_defaults")', type=str, default=None)
     parser.add_argument('-i', '--instances', help='Number of instances to launch', type=int, default=DEFAULT_NUMBER_OF_INSTANCES)
     parser.add_argument('-H', '--hosts',     help='Hosts file describing existing "EXISTING" EC2 instances ', type=str, default=None)
@@ -445,6 +455,9 @@ def main():
         dump_hosts_config(ec2_config, ec2_reservation, args.hosts)
     elif (args.action == 'show_reservations'):
         report_reservations(args.region, args.reservation)
+    elif (args.action == 'clean_tmp'):
+        ec2_reservation = load_ec2_reservation(args.reservation, ec2_region)
+        execute_using_ssh_commands(None, ec2_reservation, command_string='sudo rm -rf /tmp/*; df')
     else: 
         if args.hosts: 
             hosts_config = load_hosts_config(args.hosts)

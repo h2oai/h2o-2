@@ -22,7 +22,7 @@ public class GLMGridTest extends TestUtil {
     System.out.print(msg);
 
     // Solve it!
-    GLMModel m = DGLM.startGLMJob(DGLM.getData(va, cols, null, true), lsms, glmp,null,0).get();
+    GLMModel m = DGLM.startGLMJob(DGLM.getData(va, cols, null, true), lsms, glmp, null, 0, true).get();
     if( m._warnings != null )
       for( String s : m._warnings )
         System.err.println(s);

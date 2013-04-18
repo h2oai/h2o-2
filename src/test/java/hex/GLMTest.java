@@ -50,7 +50,7 @@ public class GLMTest extends TestUtil {
     glmp._betaEps = 0.000001;
     glmp._maxIter = 100;
     // Solver
-    GLMModel m = DGLM.startGLMJob(DGLM.getData(va, cols,null,true), lsms, glmp,null,0).get();
+    GLMModel m = DGLM.startGLMJob(DGLM.getData(va, cols,null,true), lsms, glmp, null, 0, true).get();
     return m.toJson();
   }
 
@@ -76,7 +76,7 @@ public class GLMTest extends TestUtil {
   }
 
   public static void runGLMTest(DataFrame data, LSMSolver lsm, GLMParams glmp, int xval, String [] coefs, double [] values, double ndev, double resdev, double err, double aic, double auc, double betaPrecision, double validationPrecision){
-    GLMModel m = DGLM.startGLMJob(data, lsm, glmp,null,0).get();
+    GLMModel m = DGLM.startGLMJob(data, lsm, glmp, null, 0, true).get();
     try{
       JsonObject mjson = m.toJson();
       JsonObject jcoefs = mjson.get("coefficients").getAsJsonObject();
