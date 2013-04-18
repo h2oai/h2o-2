@@ -168,7 +168,7 @@ public final class Log {
 
     @Override
     public void println(String x) {
-      super.print(log(null,true,x));
+      super.print(log(null,true,"%s",x));
     }
 
     void printlnParent(String s) {
