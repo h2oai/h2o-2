@@ -20,6 +20,7 @@ DEFAULT_NUMBER_OF_INSTANCES = 4
 DEFAULT_HOSTS_FILENAME = 'ec2-config-{0}.json'
 DEFAULT_REGION = 'us-east-1'
 DEFAULT_INSTANCE_NAME='node_{0}'.format(os.getenv('USER'))
+ADVANCED_SSH_OPTIONS='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o GlobalKnownHostsFile=/dev/null'
 
 '''
 Default EC2 instance setup
@@ -268,10 +269,11 @@ def dump_hosts_config(ec2_config, reservation, filename=DEFAULT_HOSTS_FILENAME, 
 
     return (cfg, filename)
 
-def get_ssh_commands(ec2_config, reservation):
+def get_ssh_commands(ec2_config, reservation, ssh_options=""):
     cmds = []
+    if not ssh_options: ssh_options = ""
     for i in reservation.instances:
-        cmds.append( "ssh -i ~/.ec2/keys/mrjenkins_test.pem ubuntu@{0}".format(i.private_ip_address) )
+        cmds.append( "ssh -i ~/.ec2/keys/mrjenkins_test.pem {1} ubuntu@{0}".format(i.private_ip_address,ssh_options) )
     return cmds
 
 def dump_ssh_commands(ec2_config, reservation):
@@ -282,7 +284,7 @@ def dump_ssh_commands(ec2_config, reservation):
 # for cleaning /tmp after it becomes full, or any one string command (can separate with semicolon)
 def execute_using_ssh_commands(ec2_config, reservation, command_string='df'):
     if not command_string: log("Nothing to execute. Exiting...")
-    cmds = get_ssh_commands(ec2_config, reservation)
+    cmds = get_ssh_commands(ec2_config, reservation, ADVANCED_SSH_OPTIONS)
     for cmd in cmds:
         c = cmd + " '" + command_string + "'"
         print "\n"+c
