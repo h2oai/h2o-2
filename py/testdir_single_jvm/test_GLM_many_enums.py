@@ -65,6 +65,7 @@ class Basic(unittest.TestCase):
         # SEED = 
         random.seed(SEED)
         print "\nUsing random seed:", SEED
+        global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(1,java_heap_GB=10)
@@ -78,16 +79,23 @@ class Basic(unittest.TestCase):
 
     def test_GLM_many_cols(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
-        tryList = [
-            (2000, 1, 'cD', 300), 
-            (2000, 2, 'cE', 300), 
-            (2000, 3, 'cF', 300), 
-            (2000, 4, 'cG', 300), 
-            (2000, 5, 'cH', 300), 
-            (2000, 6, 'cI', 300), 
-            (2000, 7, 'cJ', 300), 
-            (2000, 8, 'cK', 300), 
-            ]
+
+        if localhost:
+            tryList = [
+                (2000, 1, 'cD', 300), 
+                (2000, 2, 'cE', 300), 
+                ]
+        else:
+            tryList = [
+                (2000, 1, 'cD', 300), 
+                (2000, 2, 'cE', 300), 
+                (2000, 3, 'cF', 300), 
+                (2000, 4, 'cG', 300), 
+                (2000, 5, 'cH', 300), 
+                (2000, 6, 'cI', 300), 
+                (2000, 7, 'cJ', 300), 
+                (2000, 8, 'cK', 300), 
+                ]
 
         ### h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
