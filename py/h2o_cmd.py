@@ -2,9 +2,10 @@ import os, json, unittest, time, shutil, sys, socket
 import h2o
 import h2o_browse as h2b, h2o_rf as h2f
 
+# header, separator, exclude params are passed thru kwargs to node.parse
 def parseFile(node=None, csvPathname=None, key=None, key2=None, 
     timeoutSecs=30, retryDelaySecs=0.5, pollTimeoutSecs=30,
-    noise=None, noPoll=None, header=None):
+    noise=None, noPoll=None, **kwargs):
     if not csvPathname: raise Exception('No file name specified')
     if not node: node = h2o.nodes[0]
     ### print "parseFile pollTimeoutSecs:", pollTimeoutSecs
@@ -16,12 +17,11 @@ def parseFile(node=None, csvPathname=None, key=None, key2=None,
         myKey2 = key2
     return node.parse(key, myKey2, 
         timeoutSecs, retryDelaySecs, 
-        pollTimeoutSecs=pollTimeoutSecs, noise=noise, noPoll=noPoll,
-        header=header)
+        pollTimeoutSecs=pollTimeoutSecs, noise=noise, noPoll=noPoll, **kwargs)
 
 def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, 
     timeoutSecs=20, retryDelaySecs=2, pollTimeoutSecs=30, 
-    noise=None, noPoll=None, header=None):
+    noise=None, noPoll=None, **kwargs):
     ''' Parse a file stored in S3 bucket'''                                                                                                                                                                       
     if not bucket  : raise Exception('No S3 bucket specified')
     if not filename: raise Exception('No filename in bucket specified')
@@ -36,8 +36,7 @@ def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None,
         myKeyForParseResult = keyForParseResult
     return node.parse(s3_key, myKeyForParseResult, 
         timeoutSecs, retryDelaySecs, 
-        pollTimeoutSecs=pollTimeoutSecs, noise=noise, noPoll=noPoll,
-        header=header)
+        pollTimeoutSecs=pollTimeoutSecs, noise=noise, noPoll=noPoll, **kwargs)
 
 def runInspect(node=None, key=None, timeoutSecs=5, **kwargs):
     if not key: raise Exception('No key for Inspect specified')
@@ -278,4 +277,62 @@ def sleep_with_dot(sec, message=None):
         time.sleep(1)
         dot()
         count += 1
+
+# I use these in testdir_hosts/test_parse_nflx_loop_s3n_hdfs.py
+# and testdir_multi_jvm/test_benchmark_import.py
+# might be able to use more widely
+def check_enums_from_inspect(parseKey):
+    inspect = runInspect(key=parseKey['destination_key'])
+    print "num_rows:", inspect['num_rows']
+    print "num_cols:", inspect['num_cols']
+    cols = inspect['cols']
+    # trying to see how many enums we get
+    # don't print int
+    for i,c in enumerate(cols):
+        # print i, "name:", c['name']
+        msg = "column %d" % i
+        msg = msg + " type: %s" % c['type']
+        if c['type'] == 'enum':
+            msg = msg + (" enum_domain_size: %d" % c['enum_domain_size'])
+        if c['num_missing_values'] != 0:
+            msg = msg + (" num_missing_values: %s" % c['num_missing_values'])
+
+        if c['type'] != 'int' or (c['num_missing_values'] != 0):
+            print msg
+
+# looks for the key that matches the pattern, in the keys you saved from the 
+# import (that you saved from import of the folder/s3/hdfs)
+# I guess I should change to just be the raw result of the import? not sure
+# see how it's used in tests named above
+def delete_csv_key(csvFilename, importFullList):
+    # remove the original data key
+    for k in importFullList:
+        deleteKey = k['key']
+        ### print "possible delete:", deleteKey
+        # don't delete any ".hex" keys. the parse results above have .hex
+        # this is the name of the multi-file (it comes in as a single file?)
+        if csvFilename in deleteKey and not '.hex' in deleteKey:
+            print "\nRemoving", deleteKey
+            removeKeyResult = h2o.nodes[0].remove_key(key=deleteKey)
+            ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
+
+# checks the key distribution in the cloud, and prints warning if delta against avg
+# is > expected
+def check_key_distribution():
+    c = h2o.nodes[0].get_cloud()
+    nodes = c['nodes']
+    print "Key distribution post parse, should be balanced"
+    # get average
+    totalKeys = 0
+    for n in nodes:
+        totalKeys += int(n['num_keys'])
+    avgKeys = (totalKeys + 0.0)/len(nodes)
+    # if more than 5% difference from average, print warning
+    for n in nodes:
+        print 'num_keys:', n['num_keys'], 'value_size_bytes:', n['value_size_bytes'],\
+            'name:', n['name']
+        delta = (abs(avgKeys - int(n['num_keys']))/avgKeys)
+        if delta > 0.05:
+            print "WARNING. avgKeys:", avgKeys, "and n['num_keys']:", n['num_keys'], "have >", "%.1f" % (100 * delta), "% delta"
+
 

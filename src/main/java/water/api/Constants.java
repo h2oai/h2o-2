@@ -7,7 +7,7 @@ public class Constants {
     // JSON fields with these suffixes will automatically provide some
     // pretty printing.  Users can still override the fields later
     public static final String BYTES               = "_bytes";
-    public static final String BYTES_PER_SECOND    = "_bytes_per_second";
+    public static final String BYTES_PER_SECOND    = "_bytes_/_sec";
     public static final String MILLIS              = "_ms";
   }
 

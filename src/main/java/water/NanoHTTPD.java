@@ -282,8 +282,13 @@ public class NanoHTTPD
         // Apache's default header limit is 8KB.
         int bufsize = 8192;
         byte[] buf = new byte[bufsize];
-        int rlen = is.read(buf, 0, bufsize);
-        if (rlen <= 0) return;
+        int rlen=0;
+        while( true ) {
+          int b = is.read();
+          if( b == -1 ) return;
+          buf[rlen++] = (byte)b;
+          if( b == '\n' ) break;
+        }
 
         // Create a BufferedReader for parsing the header.
         ByteArrayInputStream hbis = new ByteArrayInputStream(buf, 0, rlen);

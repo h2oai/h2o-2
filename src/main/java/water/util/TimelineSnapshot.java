@@ -136,6 +136,17 @@ public final class TimelineSnapshot implements
       return ((0xFFFF) & (i >> 8));
     }
     public final String addrString() { return _packh2o==null ? "multicast" : _packh2o.toString(); }
+    public final String ioflavor() {
+      int flavor = is_io();
+      return flavor == -1 ? (isTCP()?"TCP":"UDP") : Value.nameOfPersist(flavor);
+    }
+    public final int is_io() {
+      int udp_type = (int) (dataLo() & 0xff); // First byte is UDP packet type
+      return UDP.udp.i_o.ordinal() == udp_type ? (int)((dataLo()>>24)&0xFF) : -1;
+    }
+    // ms doing I/O
+    public final int ms_io() { return (int)(dataLo()>>32); }
+    public final int size_io() { return (int)dataHi(); }
 
     public String toString() {
       int udp_type = (int) (dataLo() & 0xff); // First byte is UDP packet type
@@ -188,6 +199,8 @@ public final class TimelineSnapshot implements
         if( (int)(myl0>>24) != (int)(evl0>>24))
           return false;
         break;
+      case i_o:                 // Shows up as I/O-completing recorded packets
+        return false;
       default:
         throw new Error("unexpected udp packet type " + e.toString());
       }
@@ -367,7 +380,7 @@ public final class TimelineSnapshot implements
       }
       e._blocked = true;
     }
-    assert (e == null) || (e._eventIdx < 1024);
+    assert (e == null) || (e._eventIdx < TimeLine.MAX_EVENTS);
   }
 
   @Override
@@ -383,11 +396,11 @@ public final class TimelineSnapshot implements
     for (int i = 0; i < _events.length; ++i)
       if (_events[i] != null && (!_events[i].isEmpty() || _events[i].next())) {
         assert (_events[i] == null)
-            || ((_events[i]._eventIdx < 1024) && !_events[i].isEmpty());
+            || ((_events[i]._eventIdx < TimeLine.MAX_EVENTS) && !_events[i].isEmpty());
         return true;
       } else {
         assert (_events[i] == null)
-            || ((_events[i]._eventIdx < 1024) && !_events[i].isEmpty());
+            || ((_events[i]._eventIdx < TimeLine.MAX_EVENTS) && !_events[i].isEmpty());
         _events[i] = null;
       }
     return false;
@@ -450,7 +463,7 @@ public final class TimelineSnapshot implements
     }
     assert (selectedIdx != -1);
     assert (_events[selectedIdx] != null)
-        && ((_events[selectedIdx]._eventIdx < 1024) && !_events[selectedIdx]
+        && ((_events[selectedIdx]._eventIdx < TimeLine.MAX_EVENTS) && !_events[selectedIdx]
             .isEmpty());
     Event res = _events[selectedIdx];
     _events[selectedIdx] = _events[selectedIdx].nextEvent();

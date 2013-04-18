@@ -475,7 +475,7 @@ def check_sandbox_for_errors(sandbox_ignore_errors=False):
                 'found multiple|exception|error|assert|killing|killed|required ports',
                 re.IGNORECASE)
             regex2 = re.compile('Caused',re.IGNORECASE)
-            regex3 = re.compile('warn|info', re.IGNORECASE)
+            regex3 = re.compile('warn|info|TCP', re.IGNORECASE)
 
             # there are many hdfs/apache messages with error in the text. treat as warning if they have '[WARN]'
             # i.e. they start with:
@@ -861,8 +861,12 @@ class H2O(object):
         verboseprint("\nKMeans result:", dump_json(a))
         return a
 
-    # params: header=1, 
+    # params: 
+    # header=1, 
+    # separator=1 (hex encode?
+    # exclude=
     # noise is a 2-tuple: ("StoreView",params_dict)
+    
     def parse(self, key, key2=None, 
         timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=30,
         noise=None, benchmarkLogging=False, noPoll=False, **kwargs):
@@ -1346,9 +1350,11 @@ class H2O(object):
         if self.random_udp_drop or random_udp_drop:
             args += ['--random_udp_drop']
 
-        if self.enable_h2o_log:
-            args += ['--log']
+        if self.disable_h2o_log:
+            args += ['--nolog']
 
+        # disable logging of requests, as some contain "error", which fails the test
+        args += ['--no_requests_log']
         return args
 
     def __init__(self, 
@@ -1363,7 +1369,7 @@ class H2O(object):
         use_home_for_ice=False, node_id=None, username=None,
         random_udp_drop=False,
         redirect_import_folder_to_s3_path=None,
-        enable_h2o_log=True, 
+        disable_h2o_log=False, 
         enable_benchmark_log=False,
         ):
  
@@ -1411,7 +1417,7 @@ class H2O(object):
         self.sandbox_ignore_errors = False
 
         self.random_udp_drop = random_udp_drop
-        self.enable_h2o_log = enable_h2o_log
+        self.disable_h2o_log = disable_h2o_log
 
         # this dumps stats from tests, and perf stats while polling to benchmark.log
         self.enable_benchmark_log = enable_benchmark_log

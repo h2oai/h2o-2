@@ -9,6 +9,7 @@ import java.util.Arrays;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
+import water.Log;
 import water.parser.ParseDataset;
 
 import com.google.common.io.Closeables;
@@ -30,6 +31,7 @@ public class TestUtil {
     for(Job job : jobs)
       assert job._endTime != 0 : job;  // No pending job
     DKV.remove(Job.LIST);         // Remove all keys
+    DKV.remove(Log.LOG_KEY);
     DKV.write_barrier();
     int leaked_keys = H2O.store_size() - _initial_keycnt;
     if( leaked_keys != 0 )

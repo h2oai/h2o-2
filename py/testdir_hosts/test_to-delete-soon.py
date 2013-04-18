@@ -4,38 +4,6 @@ import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
 import h2o_jobs 
 import logging 
 
-def check_enums_from_inspect(parseKey):
-    inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
-    print "num_rows:", inspect['num_rows']
-    print "num_cols:", inspect['num_cols']
-    cols = inspect['cols']
-    # trying to see how many enums we get
-    # don't print int
-    for i,c in enumerate(cols):
-        # print i, "name:", c['name']
-        msg = "column %d" % i
-        msg = msg + " type: %s" % c['type']
-        if c['type'] == 'enum':
-            msg = msg + (" enum_domain_size: %d" % c['enum_domain_size'])
-        if c['num_missing_values'] != 0:
-            msg = msg + (" num_missing_values: %s" % c['num_missing_values'])
-
-        if c['type'] != 'int' or (c['num_missing_values'] != 0):
-            print msg
-
-def delete_csv_key(csvFilename, importFullList):
-    # remove the original data key
-    for k in importFullList:
-        deleteKey = k['key']
-        ### print "possible delete:", deleteKey
-        # don't delete any ".hex" keys. the parse results above have .hex
-        # this is the name of the multi-file (it comes in as a single file?)
-        if csvFilename in deleteKey and not '.hex' in deleteKey:
-            print "\nRemoving", deleteKey
-            removeKeyResult = h2o.nodes[0].remove_key(key=deleteKey)
-            ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
-
-
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -188,7 +156,7 @@ class Basic(unittest.TestCase):
                     # BUG here?
                     if not noPoll:
                         # We should be able to see the parse result?
-                        check_enums_from_inspect(parseKey)
+                        h2o_cmd.check_enums_from_inspect(parseKey)
 
                     print "Deleting key in H2O so we get it from S3 (if ec2) or nfs again.", \
                           "Otherwise it would just parse the cached key."
@@ -200,7 +168,7 @@ class Basic(unittest.TestCase):
                     # we're deleting the keys in the initial import. We leave the keys we created
                     # by the parse. We use unique dest keys for those, so no worries.
                     # Leaving them is good because things fill up! (spill)
-                    delete_csv_key(csvFilename, s3nFullList)
+                    h2o_cmd.delete_csv_key(csvFilename, s3nFullList)
 
                 h2o.tear_down_cloud()
                 # sticky ports? wait a bit.

@@ -32,8 +32,8 @@ public abstract class UDP {
       // These packets all imply some sort of request/response handshake.
       // We'll hang on to these packets; filter out dup sends and auto-reply
       // identical result ACK packets.
-      //execlo(false,new RPC.RemoteHandler()), // Remote lo-q execution request
-      exec(false,new RPC.RemoteHandler()); // Remote hi-q execution request
+      exec(false,new RPC.RemoteHandler()),   // Remote hi-q execution request
+      i_o (false,new UDP.IO_record());       // Only used to profile I/O
 
     final UDP _udp;           // The Callable S.A.M. instance
     final boolean _paxos;     // Ignore (or not) packets from outside the Cloud
@@ -76,4 +76,15 @@ public abstract class UDP {
 
   public static int set8 ( byte[] buf, int off, long x  ) { _unsafe.putLong  (buf, _Bbase+off, x); return 8; }
   public static int set8d( byte[] buf, int off, double x) { _unsafe.putDouble(buf, _Bbase+off, x); return 8; }
+
+  private static class IO_record extends UDP {
+    public AutoBuffer call(AutoBuffer ab) { throw H2O.unimpl(); }
+    public String print16( AutoBuffer ab ) {
+      int flavor = ab.get1(3);
+      int iotime = ab.get4(4);
+      int size   = ab.get4(8);
+      return "I/O "+Value.nameOfPersist(flavor)+" "+iotime+"ms "+size+"b";
+    }
+
+  }
 }

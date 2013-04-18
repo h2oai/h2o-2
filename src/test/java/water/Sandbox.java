@@ -13,7 +13,7 @@ import water.sys.NodeVM;
 public class Sandbox {
   public static void main(String[] args) throws Exception {
     args = (String[]) ArrayUtils.addAll(args, new String[] { //
-        "-ip", "127.0.0.1", "--log_headers", "-flatfile", "flatfile" });
+        "-ip", "127.0.0.1", "-flatfile", "flatfile" });
     ArrayList<Node> workers = new ArrayList<Node>();
 
     for( int i = 0; i < 0; i++ ) {

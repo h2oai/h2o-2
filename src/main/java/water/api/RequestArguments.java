@@ -120,7 +120,7 @@ public class RequestArguments extends RequestStatics {
   /** List of arguments for the request. Automatically filled in by the argument
    * constructors.
    */
-  protected ArrayList<Argument> _arguments = new ArrayList();
+  protected final ArrayList<Argument> _arguments = new ArrayList();
 
   // ---------------------------------------------------------------------------
 
@@ -467,7 +467,7 @@ public class RequestArguments extends RequestStatics {
         record._value = null;
         return;
       }
-      // check that we have all prerequisities properly initialized
+      // check that we have all prerequisites properly initialized
       if (_prerequisites != null) {
         for (Argument dep : _prerequisites)
           if (!dep.valid()) {

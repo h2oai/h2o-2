@@ -119,7 +119,7 @@ public class Timeline extends Request {
 
       JsonObject eventJson = new JsonObject();
       eventsJson.add(eventJson);
-      eventJson.addProperty(JSON_UDPTCP, event.isTCP()?"TCP":"UDP");
+      eventJson.addProperty(JSON_UDPTCP, event.ioflavor());
       eventJson.addProperty(JSON_TIME, date);
       eventJson.addProperty(JSON_NANOS, ns);
       eventJson.addProperty(JSON_TYPE, e.toString());
@@ -149,7 +149,7 @@ public class Timeline extends Request {
             "<th>hh:mm:ss:ms</th>" +
             "<th>nanosec</th>" +
             "<th>who</th>" +
-            "<th>UDP/TCP</th>" +
+            "<th>I/O Kind</th>" +
             "<th>event</th>" +
             "<th>bytes</th>" +
             "</thead>";

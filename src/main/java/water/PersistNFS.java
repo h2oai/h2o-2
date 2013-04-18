@@ -1,6 +1,7 @@
 package water;
 
 import java.io.*;
+import java.nio.channels.FileChannel;
 
 // Persistence backend for the local file system.
 // Just for loading or storing files.
@@ -33,20 +34,22 @@ public abstract class PersistNFS {
   // but no crash (although one could argue that a racing load&delete is a bug
   // no matter what).
   static byte[] fileLoad(Value v) {
-    byte[] b = MemoryManager.malloc1(v._max);
+    long skip = 0;
+    Key k = v._key;
+    // Convert an arraylet chunk into a long-offset from the base file.
+    if( k._kb[0] == Key.ARRAYLET_CHUNK ) {
+      skip = ValueArray.getChunkOffset(k); // The offset
+      k = ValueArray.getArrayKey(k);       // From the base file key
+    }
     try {
       FileInputStream s = null;
       try {
-        long skip = 0;
-        Key k = v._key;
-        // Convert an arraylet chunk into a long-offset from the base file.
-        if( k._kb[0] == Key.ARRAYLET_CHUNK ) {
-          skip = ValueArray.getChunkOffset(k); // The offset
-          k = ValueArray.getArrayKey(k);       // From the base file key
-        }
         s = new FileInputStream(getFileForKey(k));
-        while( (skip -= s.skip(skip)) > 0 ) ; // Skip to offset
-        for( int off = 0; off < v._max; off += s.read(b,off,v._max) ) ; // Read whole
+        FileChannel fc = s.getChannel();
+        fc.position(skip);
+        AutoBuffer ab = new AutoBuffer(fc,true,Value.NFS);
+        byte[] b = ab.getA1(v._max);
+        ab.close();
         assert v.isPersisted();
         return b;
       } finally {
@@ -74,7 +77,7 @@ public abstract class PersistNFS {
         byte[] m = v.memOrLoad();
         assert (m == null || m.length == v._max); // Assert not saving partial files
         if( m!=null )
-          s.write(m);
+          new AutoBuffer(s.getChannel(),false,Value.NFS).putA1(m,m.length).close();
         v.setdsk(); // Set as write-complete to disk
       } finally {
         s.close();
