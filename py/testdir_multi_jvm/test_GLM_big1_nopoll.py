@@ -32,8 +32,8 @@ class Basic(unittest.TestCase):
 
         glmInitial = []
         # dispatch multiple jobs back to back
+        start = time.time()
         for jobDispatch in range(40):
-            start = time.time()
             kwargs = {'x': x, 'y': y, 'n_folds': 1}
             # FIX! what model keys do these get?
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=300, noPoll=True, **kwargs)
@@ -41,7 +41,10 @@ class Basic(unittest.TestCase):
             print "glm job dispatch end on ", csvPathname, 'took', time.time() - start, 'seconds'
             print "\njobDispatch #", jobDispatch
 
-        h2o_jobs.pollWaitJobs(pattern='GLMModel', timeoutSecs=100, retryDelaySecs=10)
+            timeoutSecs = 200
+        h2o_jobs.pollWaitJobs(pattern='GLMModel', timeoutSecs=timeoutSecs, retryDelaySecs=10)
+        elapsed = time.time() - start
+        print "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 
         # we saved the initial response?
         # if we do another poll they should be done now, and better to get it that 

@@ -97,8 +97,9 @@ class parse_rand_schmoo(unittest.TestCase):
             # make sure all key names are unique, when we re-put and re-parse (h2o caching issues)
             key = csvFilename + "_" + str(trial)
             key2 = csvFilename + "_" + str(trial) + ".hex"
+            # needs a big polling timeout, for the later iterations?
             key = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2, 
-                timeoutSecs=70, pollTimeoutSecs=60, noPoll=True)
+                timeoutSecs=70, pollTimeoutSecs=150, noPoll=True)
             print "trial #", trial, "totalRows:", totalRows, "num:", num, "parse end on ", csvFilename, \
                 'took', time.time() - start, 'seconds'
             ### h2o_cmd.runInspect(key=key2)
