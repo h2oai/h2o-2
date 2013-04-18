@@ -16,14 +16,23 @@ import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
 # Apparently we don't have any new EOL separators for hive?
 # we allow extra chars in the hive separated columns..i.e. single and double quote.
 # pass those separatley
-def random_enum(maxEnumSize, randChars=string.letters + string.digits + "%+-.;|\t ", extraChars=""):
+def random_enum(maxEnumSize, randChars=string.letters + string.digits + "\t ", extraChars=""):
+# def random_enum(maxEnumSize, randChars=string.letters + string.digits + "\$%+-.;|\t ", extraChars=""):
 # def random_enum(maxEnumSize, randChars=string.letters + string.digits + "+-.;|\t ", extraChars=""):
     while (True):
         r = ''.join(random.choice(randChars + extraChars) for x in range(maxEnumSize))
         # print a warning if the result is an integer number (what about "." and E/e scientific notation?
         # we allow $ prefix and % suffix as decorators to numbers?
-        if re.match('^[ \t]*[\$]?[+-]?[0-9]*\.?[0-9]*[eE]?[0-9]*[\%]?[ \t]*$', r): # pessimistic about fixed point and scientific
+        numberRegex = re.compile('^[ \t]*[\$]?[+-]?[0-9]*\.?[0-9]*[eE]?[0-9]*[\%]?[ \t]*$')
+        # can nans have the +-%$ decorators?. allow any case?
+        nanRegex = re.compile('^[ \t]*[\$]?[+-]?[Nn][Aa][Nn]?[\%]?[ \t]*$') 
+        if numberRegex.search(r): # pessimistic about fixed point and scientific
             ### print "regenerate due to WARNING: generated enum is a possible number pattern: '" + r + "'"
+            for i in numberRegex.findall(r): print i
+            pass
+        if nanRegex.search(r): # pessimistic about fixed point and scientific
+            print "regenerate due to WARNING: generated enum is a possible NA/NAN/NaN pattern: '" + r + "'"
+            for i in nanRegex.findall(r): print i
             pass
         else: 
             break
@@ -88,10 +97,15 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM_many_cols(self):
-        SYNDATASETS_DIR = h2o.make_syn_dir()
+        GEN_SYN = True
+
+        if GEN_SYN:
+            SYNDATASETS_DIR = h2o.make_syn_dir()
+        else:
+            SYNDATASETS_DIR = 'syn_datasets'
 
         if localhost:
-            n = 800
+            n = 50
             tryList = [
                 (n, 1, 'cD', 300), 
                 (n, 2, 'cE', 300), 
@@ -152,12 +166,15 @@ class Basic(unittest.TestCase):
             print "rowSepChar:", rowSepChar
 
             SEEDPERFILE = random.randint(0, sys.maxint)
-            csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
+            csvFilename = 'syn_enums_' + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
-            print "Creating random", csvPathname
-            write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, 
-                colSepChar=colSepChar, rowSepChar=rowSepChar, extraChars=extraChars)
+            if GEN_SYN:
+                print "Creating random", csvPathname
+                write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, 
+                    colSepChar=colSepChar, rowSepChar=rowSepChar, extraChars=extraChars)
+            else:
+                print "Using presumed existing", csvPathname
 
             # FIX! does 'separator=' take ints or ?? hex format
             # looks like it takes the hex string (two chars)
