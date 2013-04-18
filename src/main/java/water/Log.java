@@ -26,7 +26,7 @@ public final class Log {
   static {
     HOST = H2O.findInetAddressForSelf().getHostAddress();
     PID=getPid();
-    HOST_AND_PID = "" + padRight(HOST + ", ", 17) + padRight(PID + ", ", 8);
+    HOST_AND_PID = "" + padRight(HOST + ", ", 17);// + padRight(PID + ", ", 8);
   }
   private static final String NL = System.getProperty("line.separator");
 
