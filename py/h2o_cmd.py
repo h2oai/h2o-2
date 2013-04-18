@@ -332,7 +332,7 @@ def check_key_distribution():
         print 'num_keys:', n['num_keys'], 'value_size_bytes:', n['value_size_bytes'],\
             'name:', n['name']
         delta = (abs(avgKeys - int(n['num_keys']))/avgKeys)
-        if delta > 0.05:
+        if delta > 0.10:
             print "WARNING. avgKeys:", avgKeys, "and n['num_keys']:", n['num_keys'], "have >", "%.1f" % (100 * delta), "% delta"
 
 
