@@ -34,6 +34,7 @@ class Basic(unittest.TestCase):
         # SEED = 
         random.seed(SEED)
         print "\nUsing random seed:", SEED
+        global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(1,java_heap_GB=10)
@@ -47,23 +48,35 @@ class Basic(unittest.TestCase):
 
     def test_GLM_many_cols(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
-        tryList = [
-            # (10000, 10, 'cB', 300), 
-            # (10000, 50, 'cC', 300), 
-            (10000, 100, 'cD', 300), 
-            (10000, 200, 'cE', 300), 
-            (10000, 300, 'cF', 300), 
-            (10000, 400, 'cG', 300), 
-            (10000, 500, 'cH', 300), 
-            (10000, 1000, 'cI', 300), 
-            ]
+
+        if localhost:
+            tryList = [
+                (10000, 100, 'cD', 300), 
+                (10000, 200, 'cE', 300), 
+                (10000, 300, 'cF', 300), 
+                (10000, 400, 'cG', 300), 
+                (10000, 500, 'cH', 300), 
+                (10000, 1000, 'cI', 300), 
+                ]
+        else:
+            tryList = [
+                # (10000, 10, 'cB', 300), 
+                # (10000, 50, 'cC', 300), 
+                (10000, 100, 'cD', 300), 
+                (10000, 200, 'cE', 300), 
+                (10000, 300, 'cF', 300), 
+                (10000, 400, 'cG', 300), 
+                (10000, 500, 'cH', 300), 
+                (10000, 1000, 'cI', 300), 
+                ]
 
         ### h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
 
         for (rowCount, colCount, key2, timeoutSecs) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
-            csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
+            # csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
+            csvFilename = 'syn_' + "binary" + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
             print "Creating random", csvPathname
@@ -81,7 +94,7 @@ class Basic(unittest.TestCase):
             # normally we dno't create x and rely on the default
             # create the big concat'ed x like the browser, to see what happens
             x = ','.join(map(str, range(colCount)))
-            kwargs = {'x': x, 'y': y, 'max_iter': 50, 'n_folds': 3, 'alpha': 0.2, 'lambda': 1e-5}
+            kwargs = {'x': x, 'y': y, 'max_iter': 10, 'n_folds': 2, 'alpha': 0.2, 'lambda': 1e-5}
 
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
