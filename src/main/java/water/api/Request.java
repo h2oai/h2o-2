@@ -5,10 +5,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
 
-import org.apache.poi.ss.formula.functions.T;
-
 import water.*;
-import water.util.*;
+import water.util.IndentingAppender;
+import water.util.RString;
 
 import com.google.common.base.Objects;
 import com.google.common.io.ByteStreams;
@@ -32,6 +31,16 @@ public abstract class Request extends RequestBuilders {
       case json:
       case www:
         String query = checkArguments(args, type);
+        if(H2O.OPT_ARGS.no_requests_log == null) {
+          String log = getClass().getSimpleName();
+          for (Argument arg: _arguments) {
+            Object value = arg.record()._value;
+            // Key arguments return values, log the key instead
+            if(value instanceof Value) value = ((Value) value)._key;
+            log += " " + arg._name + "=" + value;
+          }
+          System.out.println(log);
+        }
         if (query != null)
           return wrap(server,query,type);
         long time = System.currentTimeMillis();

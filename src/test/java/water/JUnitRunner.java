@@ -37,7 +37,7 @@ public class JUnitRunner {
   public static void main(String[] args) throws Exception {
     // Force all IPs to local so that users can run with a firewall
     File flat = Utils.tempFile("127.0.0.1:54321\n127.0.0.1:54323\n127.0.0.1:54325");
-    String[] a = new String[] { "-ip", "127.0.0.1", "--log_headers", "-flatfile", flat.getAbsolutePath() };
+    String[] a = new String[] { "-ip", "127.0.0.1", "-flatfile", flat.getAbsolutePath() };
     H2O.OPT_ARGS.ip = "127.0.0.1";
     args = (String[]) ArrayUtils.addAll(a, args);
 

@@ -1353,6 +1353,8 @@ class H2O(object):
         if self.disable_h2o_log:
             args += ['--nolog']
 
+        # disable logging of requests, as some contain "error", which fails the test
+        args += ['--no_requests_log']
         return args
 
     def __init__(self, 

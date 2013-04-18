@@ -492,6 +492,7 @@ public final class H2O {
     public String soft = null; // soft launch for demos
     public String random_udp_drop = null; // test only, randomly drop udp incoming
     public String nolog = null; // disable logging
+    public String no_requests_log = null; // disable logging of Web requests
   }
   public static boolean IS_SYSTEM_RUNNING = false;
 
