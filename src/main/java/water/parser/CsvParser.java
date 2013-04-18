@@ -13,6 +13,7 @@ public class CsvParser extends CustomParser {
 
   public final byte CHAR_DECIMAL_SEPARATOR;
   public final byte CHAR_SEPARATOR;
+  public static final byte HIVE_SEP = 1;
 
   private static final byte SKIP_LINE = 0;
   private static final byte EXPECT_COND_LF = 1;
@@ -193,7 +194,8 @@ NEXT_CHAR:
         // ---------------------------------------------------------------------
         case COND_QUOTED_TOKEN:
           state = TOKEN;
-          if ((c == CHAR_SINGLE_QUOTE) || (c == CHAR_DOUBLE_QUOTE)) {
+          if( CHAR_SEPARATOR!=HIVE_SEP && // Only allow quoting in CSV not Hive files
+              ((c == CHAR_SINGLE_QUOTE) || (c == CHAR_DOUBLE_QUOTE))) {
             assert (quotes == 0);
             quotes = c;
             break NEXT_CHAR;
@@ -492,7 +494,7 @@ NEXT_CHAR:
    *  last one as it is used if all other fails because multiple spaces can be
    *  used as a single separator.
    */
-  private static byte[] separators = new byte[] { 1/* '^A',  Hive table column separator */, ',', ';', '|', '\t',  ' '/*space is last in this list, because we allow multiple spaces*/ };
+  private static byte[] separators = new byte[] { HIVE_SEP/* '^A',  Hive table column separator */, ',', ';', '|', '\t',  ' '/*space is last in this list, because we allow multiple spaces*/ };
 
   /** Dermines the number of separators in given line. Correctly handles quoted
    * tokens.
