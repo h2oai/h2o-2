@@ -78,7 +78,11 @@ class Basic(unittest.TestCase):
             print "\n" + csvFilename
 
             y = colCount
-            kwargs = {'y': y, 'max_iter': 50, 'n_folds': 3, 'alpha': 0.2, 'lambda': 1e-5}
+            # normally we dno't create x and rely on the default
+            # create the big concat'ed x like the browser, to see what happens
+            x = ','.join(map(str, range(colCount)))
+            kwargs = {'x': x, 'y': y, 'max_iter': 50, 'n_folds': 3, 'alpha': 0.2, 'lambda': 1e-5}
+
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'

@@ -57,8 +57,6 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
 
     # for key, value in glm.iteritems(): print key
     # not in GLMGrid?
-    # print "computation_time:", glm['computation_time']
-    print "GLMModel execution time (milliseconds):", GLMModel['time']
 
     # FIX! don't get GLMParams if it can't solve?
     GLMParams = GLMModel["GLMParams"]
@@ -183,10 +181,13 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     # this is good if we just want min or max
     # maxCoeff = max(coefficients, key=coefficients.get)
     # for more, just invert the dictionary and ...
-    maxKey = max([(abs(coefficients[x]),x) for x in coefficients])[1]
-    print "H2O Largest abs. coefficient value:", maxKey, coefficients[maxKey]
-    minKey = min([(abs(coefficients[x]),x) for x in coefficients])[1]
-    print "H2O Smallest abs. coefficient value:", minKey, coefficients[minKey]
+    if (len(coefficients)>0):
+        maxKey = max([(abs(coefficients[x]),x) for x in coefficients])[1]
+        print "H2O Largest abs. coefficient value:", maxKey, coefficients[maxKey]
+        minKey = min([(abs(coefficients[x]),x) for x in coefficients])[1]
+        print "H2O Smallest abs. coefficient value:", minKey, coefficients[minKey]
+    else: 
+        print "Warning, no coefficients returned. Must be intercept only?"
 
     # many of the GLM tests aren't single column though.
     # quick and dirty check: if all the coefficients are zero, 
@@ -204,6 +205,9 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         self.assertGreater(s, 1e-26, (
             "sum of abs. value of GLM coefficients/intercept is " + str(s) + ", not >= 1e-26"
             ))
+
+    # print "computation_time:", glm['computation_time']
+    print "GLMModel execution time (milliseconds):", GLMModel['time']
 
     return (warnings, cList, intercept)
 
