@@ -1,7 +1,5 @@
 package water;
 
-import hex.GLMGridTest;
-
 import java.io.File;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -13,7 +11,6 @@ import org.junit.Test;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 
-import water.parser.ParseCompressedAndXLSTest;
 import water.parser.ParseFolderTestBig;
 import water.sys.Node;
 import water.sys.NodeVM;
@@ -25,9 +22,6 @@ public class JUnitRunner {
     tests.remove(ParseFolderTestBig.class);
     // Too slow
     tests.remove(ConcurrentKeyTest.class);
-    // Does not pass TODO!
-    tests.remove(ParseCompressedAndXLSTest.class);
-    tests.remove(GLMGridTest.class);
 
     // Uncomment to run tests selectively
     // tests.clear();
@@ -35,18 +29,21 @@ public class JUnitRunner {
   }
 
   public static void main(String[] args) throws Exception {
+    int[] ports = new int[] { 54321, 54323, 54325 };
+    String flat = "";
+    for( int i = 0; i < ports.length; i++ )
+      flat += "127.0.0.1:" + ports[i] + "\n";
     // Force all IPs to local so that users can run with a firewall
-    File flat = Utils.tempFile("127.0.0.1:54321\n127.0.0.1:54323\n127.0.0.1:54325");
-    String[] a = new String[] { "-ip", "127.0.0.1", "-flatfile", flat.getAbsolutePath() };
+    String[] a = new String[] { "-ip", "127.0.0.1", "-flatfile", Utils.tempFile(flat).getAbsolutePath() };
     H2O.OPT_ARGS.ip = "127.0.0.1";
     args = (String[]) ArrayUtils.addAll(a, args);
 
     ArrayList<Node> nodes = new ArrayList<Node>();
-    nodes.add(new NodeVM(args));
-    nodes.add(new NodeVM(args));
+    for( int i = 1; i < ports.length; i++ )
+      nodes.add(new NodeVM(Utils.add(args, "-port", "" + ports[i])));
 
-    args = (String[]) ArrayUtils.addAll(new String[] { "-mainClass", Master.class.getName() }, args);
-    Node master = new NodeVM(args);
+    args = Utils.add(new String[] { "-mainClass", Master.class.getName() }, args);
+    Node master = new NodeVM(Utils.add(args, "-port", "" + ports[0]));
     nodes.add(master);
 
     File out = null, err = null, sandbox = new File("sandbox");
