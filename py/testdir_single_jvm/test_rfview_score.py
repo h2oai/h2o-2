@@ -30,7 +30,7 @@ paramDict = {
     'sampling_strategy': [None, 'RANDOM', 'STRATIFIED_LOCAL' ],
     'strata_samples': [
         None,
-        "0=10",
+        "2=10",
         "1=5",
         "2=3",
         "1=1,2=1,3=1,4=1,5=1,6=1,7=1",
@@ -57,7 +57,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_rf_params_rand2(self):
+    def test_rfview_score(self):
         # for determinism, I guess we should spit out the seed?
         # random.seed(SEED)
         SEED = random.randint(0, sys.maxint)
