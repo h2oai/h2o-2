@@ -1,6 +1,7 @@
 import unittest
 import random, sys, time, os
 import string
+import re
 sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
@@ -13,25 +14,36 @@ import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
 # FIX! remove \' and \" temporarily
 
 # Apparently we don't have any new EOL separators for hive?
-# def random_enum(maxEnumSize=6, randChars=string.letters + string.digits + ",;|\t "):
-def random_enum(maxEnumSize=8, randChars=string.letters + "012"):
-# def random_enum(maxEnumSize=6, randChars=string.letters + string.digits):
-    return ''.join(random.choice(randChars) for x in range(maxEnumSize))
+# we allow extra chars in the hive separated columns..i.e. single and double quote.
+# pass those separatley
+def random_enum(maxEnumSize, randChars=string.letters + string.digits + "%+-.;|\t ", extraChars=""):
+# def random_enum(maxEnumSize, randChars=string.letters + string.digits + "+-.;|\t ", extraChars=""):
+    while (True):
+        r = ''.join(random.choice(randChars + extraChars) for x in range(maxEnumSize))
+        # print a warning if the result is an integer number (what about "." and E/e scientific notation?
+        # we allow $ prefix and % suffix as decorators to numbers?
+        if re.match('^[ \t]*[\$]?[+-]?[0-9]*\.?[0-9]*[eE]?[0-9]*[\%]?[ \t]*$', r): # pessimistic about fixed point and scientific
+            ### print "regenerate due to WARNING: generated enum is a possible number pattern: '" + r + "'"
+            pass
+        else: 
+            break
 
+    return r
 
 # MAX_ENUM_SIZE in Enum.java is set to 11000 now
 def create_enum_list(maxEnumSize=8, listSize=11000, **kwargs):
     # allowing length one, we sometimes form single digit numbers that cause the whole column to NA
     # see DparseTask.java for this effect
-    # Use min 4..unlikely to get a random that looks like number with 4 and our string above?j
-    
-    enumList = [random_enum(random.randint(4,maxEnumSize), **kwargs) for i in range(listSize)]
+    # FIX! if we allow 0, then we allow NA?. I guess we check for no missing, so can't allow NA
+    # too many retries allowing 1. try 2 min.
+    # enumList = [random_enum(random.randint(2,maxEnumSize), **kwargs) for i in range(listSize)]
+    enumList = [random_enum(3, **kwargs) for i in range(listSize)]
     return enumList
 
 def write_syn_dataset(csvPathname, rowCount, colCount=1, SEED='12345678', 
-    colSepChar=",", rowSepChar="\n"):
+    colSepChar=",", rowSepChar="\n", extraChars="", listSize=11000):
     r1 = random.Random(SEED)
-    enumList = create_enum_list()
+    enumList = create_enum_list(extraChars=extraChars, maxEnumSize=8, listSize=listSize)
 
     dsf = open(csvPathname, "w+")
     for i in range(rowCount):
@@ -50,9 +62,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount=1, SEED='12345678',
         rowDataCsv = colSepChar.join(map(str,rowData)) + rowSepChar
         ### sys.stdout.write(rowDataCsv)
         dsf.write(rowDataCsv)
-
     dsf.close()
-
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -68,7 +78,7 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1,java_heap_GB=10)
+            h2o.build_cloud(1,java_heap_GB=1)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -81,47 +91,73 @@ class Basic(unittest.TestCase):
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         if localhost:
+            n = 800
             tryList = [
-                (2000, 1, 'cD', 300), 
-                (2000, 2, 'cE', 300), 
+                (n, 1, 'cD', 300), 
+                (n, 2, 'cE', 300), 
+                (n, 3, 'cF', 300), 
+                (n, 4, 'cG', 300), 
+                (n, 5, 'cH', 300), 
+                (n, 6, 'cI', 300), 
                 ]
         else:
+            n = 8000
             tryList = [
-                (2000, 1, 'cD', 300), 
-                (2000, 2, 'cE', 300), 
-                (2000, 3, 'cF', 300), 
-                (2000, 4, 'cG', 300), 
-                (2000, 5, 'cH', 300), 
-                (2000, 6, 'cI', 300), 
-                (2000, 7, 'cJ', 300), 
-                (2000, 8, 'cK', 300), 
+                (n, 1, 'cD', 300), 
+                (n, 2, 'cE', 300), 
+                (n, 3, 'cF', 300), 
+                (n, 4, 'cG', 300), 
+                (n, 5, 'cH', 300), 
+                (n, 6, 'cI', 300), 
+                (n, 7, 'cJ', 300), 
+                (n, 9, 'cK', 300), 
+                (n, 10, 'cLA', 300), 
+                (n, 11, 'cDA', 300), 
+                (n, 12, 'cEA', 300), 
+                (n, 13, 'cFA', 300), 
+                (n, 14, 'cGA', 300), 
+                (n, 15, 'cHA', 300), 
+                (n, 16, 'cIA', 300), 
+                (n, 17, 'cJA', 300), 
+                (n, 19, 'cKA', 300), 
+                (n, 20, 'cLA', 300), 
                 ]
 
         ### h2b.browseTheCloud()
-        lenNodes = len(h2o.nodes)
-        # using the comma is nice to ensure no craziness
-        colSepHexString = '01'
-        colSepHexString = '2c' # comma
-        colSepChar = colSepHexString.decode('hex')
-        colSepInt = int(colSepHexString, base=16)
-        print "colSepChar:", colSepChar
-        print "colSepInt", colSepInt
-
-        # using this instead, makes the file, 'row-readable' in an editor
-        rowSepHexString = '11'
-        rowSepHexString = '0a' # newline
-        rowSepHexString = '0d0a' # cr + newline (windows) \r\n
-        rowSepChar = rowSepHexString.decode('hex')
-        print "rowSepChar:", rowSepChar
-
         for (rowCount, colCount, key2, timeoutSecs) in tryList:
+            # just randomly pick the row and col cases.
+            colSepCase = random.randint(0,1)
+            # using the comma is nice to ensure no craziness
+            # if (colSepCase==0):
+            if (1==0):
+                colSepHexString = '01'
+                extraChars = ",\'\"" # more choices for the unquoted string
+            else:
+                colSepHexString = '2c' # comma
+                extraChars = ""
+
+            colSepChar = colSepHexString.decode('hex')
+            colSepInt = int(colSepHexString, base=16)
+            print "colSepChar:", colSepChar
+            print "colSepInt", colSepInt
+
+            rowSepCase = random.randint(0,1)
+            # using this instead, makes the file, 'row-readable' in an editor
+            if (rowSepCase==0):
+                rowSepHexString = '0a' # newline
+            else:
+                rowSepHexString = '0d0a' # cr + newline (windows) \r\n
+
+            rowSepChar = rowSepHexString.decode('hex')
+            print "rowSepChar:", rowSepChar
+
             SEEDPERFILE = random.randint(0, sys.maxint)
             csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
             print "Creating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, 
-                colSepChar=colSepChar, rowSepChar=rowSepChar)
+                colSepChar=colSepChar, rowSepChar=rowSepChar, extraChars=extraChars)
 
             # FIX! does 'separator=' take ints or ?? hex format
             # looks like it takes the hex string (two chars)
@@ -133,20 +169,21 @@ class Basic(unittest.TestCase):
             # We should be able to see the parse result?
             ### inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             print "\n" + csvFilename
-            h2o_cmd.check_enums_from_inspect(parseKey)
+            missingValues = h2o_cmd.check_enums_from_inspect(parseKey)
+            if missingValues:
+                raise Exception("Looks like a column got flipped to NAs: " + " ".join(map(str, missingValues)))
 
             y = colCount
             kwargs = {'y': y, 'max_iter': 1, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5, 
                 'case_mode': '=', 'case': 0}
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
+            ### glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
-            h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
+            ### h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
             # if not h2o.browse_disable:
             #     h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
             #     time.sleep(5)
-
 
 if __name__ == '__main__':
     h2o.unit_main()
