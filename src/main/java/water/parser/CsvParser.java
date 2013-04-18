@@ -502,26 +502,15 @@ NEXT_CHAR:
   private static int[] determineSeparatorCounts(String from) {
     int[] result = new int[separators.length];
     byte[] bits = from.getBytes();
-    int offset = 0;
-  MAIN_LOOP:
-    while (offset < bits.length) {
-      byte c = bits[offset];
-      for (int i = 0; i < separators.length; ++i)
-        if (c == separators[i])
-          ++result[i];
-      if ((c == '"') || (c == '\'')) {
-        ++offset;
-        while (offset < bits.length) {
-          if (bits[offset] == c) {
-            if (offset+1 == bits.length) // last character on the line was a quote, we are done
-              break MAIN_LOOP;
-            if (bits[offset+1] != c)
-              break;
-          }
-          ++offset;
-        }
-      }
-      ++offset;
+    boolean in_quote = false;
+    for( int j=0; j< bits.length; j++ ) {
+      byte c = bits[j];
+      if( (c == CHAR_SINGLE_QUOTE) || (c == CHAR_DOUBLE_QUOTE) )
+        in_quote ^= true;
+      if( !in_quote || c == HIVE_SEP ) 
+        for( int i = 0; i < separators.length; ++i)
+          if (c == separators[i])
+            ++result[i];
     }
     return result;
   }
