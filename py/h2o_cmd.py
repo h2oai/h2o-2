@@ -115,9 +115,9 @@ def runGLMOnly(node=None, parseKey=None,
     return node.GLM(parseKey['destination_key'], 
         timeoutSecs, retryDelaySecs, noise=noise, **kwargs)
 
-def runGLMScore(node=None, key=None, model_key=None, timeoutSecs=20):
+def runGLMScore(node=None, key=None, model_key=None, timeoutSecs=20, **kwargs):
     if not node: node = h2o.nodes[0]
-    return node.GLMScore(key, model_key, timeoutSecs)
+    return node.GLMScore(key, model_key, timeoutSecs, **kwargs)
 
 def runGLMGrid(node=None, csvPathname=None, key=None, 
         timeoutSecs=60, retryDelaySecs=2, noise=None, **kwargs):

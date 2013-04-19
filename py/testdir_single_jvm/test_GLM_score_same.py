@@ -34,7 +34,8 @@ def glm_doit(self, csvFilename, csvPathname, timeoutSecs, pollTimeoutSecs, **kwa
     modelKey = GLMModel['model_key']
     return modelKey, validations
 
-def glm_score(self, csvFilename, csvPathname, modelKey, timeoutSecs=30, pollTimeoutSecs=30):
+def glm_score(self, csvFilename, csvPathname, modelKey, thresholds="0.5",
+    timeoutSecs=30, pollTimeoutSecs=30):
     print "\nStarting GLM score of", csvFilename
     key2 = csvFilename + ".hex"
     parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, 
@@ -44,7 +45,8 @@ def glm_score(self, csvFilename, csvPathname, modelKey, timeoutSecs=30, pollTime
     kwargs = {'x': x, 'y':  y, 'case': -1, 'thresholds': 0.5}
 
     start = time.time()
-    glmScore = h2o_cmd.runGLMScore(key=key2, model_key=modelKey, timeoutSecs=timeoutSecs)
+    glmScore = h2o_cmd.runGLMScore(key=key2, model_key=modelKey, thresholds="0.5",
+        timeoutSecs=timeoutSecs)
     print "GLMScore in",  (time.time() - start), "secs (python)"
     h2o.verboseprint(h2o.dump_json(glmScore))
     ### h2o_glm.simpleCheckGLM(self, glm, 7, **kwargs)
@@ -104,7 +106,7 @@ class Basic(unittest.TestCase):
         filename2x = "hastie_2x.data"
         pathname2x = SYNDATASETS_DIR + '/' + filename2x
         h2o_util.file_cat(pathname1x,pathname1x,pathname2x)
-        glm_score(self,filename2x, pathname2x, modelKey, 
+        glm_score(self,filename2x, pathname2x, modelKey, thresholds="0.5",
             timeoutSecs=60, pollTimeoutSecs=60)
 
         filename4x = "hastie_4x.data"
@@ -114,7 +116,7 @@ class Basic(unittest.TestCase):
         print "Iterating 3 times on this last one"
         for i in range(3):
             print "\nTrial #", i, "of", filename4x
-            glm_score(self,filename4x, pathname4x, modelKey, 
+            glm_score(self,filename4x, pathname4x, modelKey, thresholds="0.5",
                 timeoutSecs=60, pollTimeoutSecs=60)
 
 if __name__ == '__main__':
