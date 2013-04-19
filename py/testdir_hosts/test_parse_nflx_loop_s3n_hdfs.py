@@ -1,6 +1,6 @@
 import unittest, sys, random, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_glm
 import h2o_jobs
 import logging
 
@@ -182,7 +182,7 @@ class Basic(unittest.TestCase):
                     #**********************************************************************************
                     # Do GLM too
                     # these are all the columns that are enums in the dataset...too many for GLM!
-                    x = range(541) # don't include the output column
+                    x = range(542) # don't include the output column
                     x.remove(3)
                     x.remove(4)
                     x.remove(5)
@@ -203,10 +203,14 @@ class Basic(unittest.TestCase):
                     x.remove(426)
                     x.remove(540)
                     x.remove(541)
+                    # remove the output too!
+                    x.remove(378)
                     x = ",".join(map(str,x))
 
+                    # Argument case error: Value 0.0 is not between 12.0 and 9987.0 (inclusive)
                     if DO_GLM:
-                        GLMkwargs = {'x': x, 'y': 541, 'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
+                        GLMkwargs = {'x': x, 'y': 378, 'case': 15, 'case_mode': '>', 
+                            'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
                         start = time.time()
                         glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=1800, **GLMkwargs)
                         h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
