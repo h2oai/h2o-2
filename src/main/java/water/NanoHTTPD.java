@@ -5,6 +5,8 @@ import java.net.Socket;
 import java.net.URLEncoder;
 import java.util.*;
 
+import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
+
 import water.util.Utils;
 
 /**
@@ -174,6 +176,7 @@ public class NanoHTTPD
   HTTP_UNAUTHORIZED = "401 Unauthorized",
   HTTP_NOTFOUND = "404 Not Found",
   HTTP_BADREQUEST = "400 Bad Request",
+  HTTP_TOOLONGREQUEST = "414 Request-URI Too Long",
   HTTP_INTERNALERROR = "500 Internal Server Error",
   HTTP_NOTIMPLEMENTED = "501 Not Implemented";
 
@@ -272,10 +275,12 @@ public class NanoHTTPD
       t.start();
     }
 
+    /** Maximal supported header. */
+    static final int MAX_HEADER_BUFFER_SIZE = 1 << 16; // 64k
     public void run() {
       try {
         InputStream is = new BufferedInputStream(mySocket.getInputStream());
-        is.mark(8192);
+        is.mark(MAX_HEADER_BUFFER_SIZE);
 
         // Read the first 8192 bytes.
         // The full header should fit in here.
@@ -284,7 +289,7 @@ public class NanoHTTPD
         byte[] buf = new byte[bufsize];
         boolean nl = false;     // Saw a nl
         int rlen=0;
-        while( true ) {
+        while( rlen < MAX_HEADER_BUFFER_SIZE ) {
           int b = is.read();
           if( b == -1 ) return;
           buf[rlen++] = (byte)b;
@@ -292,7 +297,11 @@ public class NanoHTTPD
             if( nl == true ) break; // 2nd nl in a row ==> done with header
             nl = true;
           } else if( b != '\r' ) nl = false;
+          if (rlen == buf.length) buf = Arrays.copyOf(buf, 2*buf.length);
         }
+
+        if (rlen == MAX_HEADER_BUFFER_SIZE)
+          sendError(HTTP_TOOLONGREQUEST, "Requested URL is too long!");
 
         // Create a BufferedReader for parsing the header.
         ByteArrayInputStream hbis = new ByteArrayInputStream(buf, 0, rlen);
