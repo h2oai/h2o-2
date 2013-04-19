@@ -189,7 +189,8 @@ public abstract class MemoryManager {
                            ", MAX="+(MEM_MAX>>20)+"M"+
                            ", DESIRED="+(H2O.Cleaner.DESIRED>>20)+"M");
       setMemGood();
-      assert !oom:"MEM_MAX = " + MEM_MAX + ", DESIRED = " + d +", CACHE = " + cacheUsage + ", p = " + p + ", bytes = " + bytes; // Confused? OOM should have FullGCd should have set low-mem goals
+      if( oom ) // Confused? OOM should have FullGCd should have set low-mem goals
+        System.err.println("[h2o] *WARNING* OOM but no FullGC callback?  MEM_MAX = " + MEM_MAX + ", DESIRED = " + d +", CACHE = " + cacheUsage + ", p = " + p + ", bytes = " + bytes); 
     }
   }
 
