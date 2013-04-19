@@ -75,6 +75,7 @@ public abstract class PersistS3 {
   // but no crash (although one could argue that a racing load&delete is a bug
   // no matter what).
   public static byte[] fileLoad(Value v) {
+    long start_io_ms = System.currentTimeMillis();
     byte[] b = MemoryManager.malloc1(v._max);
     Key k = v._key;
     long skip = 0;
@@ -95,9 +96,11 @@ public abstract class PersistS3 {
 
     while(true) {             // Loop, in case we get premature EOF's
       try {
+        long start_ns = System.nanoTime(); // Blocking i/o call timing - without counting repeats
         s = getObjectForKey(k, skip, v._max).getObjectContent();
         ByteStreams.readFully(s, b); // delegate work to Google (it reads the byte buffer in a cycle as we did)
         assert v.isPersisted();
+        TimeLine.record_IOclose(start_ns,start_io_ms,1/*read*/,v._max,Value.S3);
         return b;
       // Explicitly ignore the following exceptions but
       // fail on the rest IOExceptions

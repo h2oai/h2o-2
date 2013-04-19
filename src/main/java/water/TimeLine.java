@@ -113,6 +113,26 @@ public class TimeLine extends UDP {
     record2(h2o,ns,true,b.readMode()?1:0,0,b0,b8);
   }
 
+  /* Record an I/O call without using an AutoBuffer / NIO.
+   * Used by e.g. HDFS & S3
+   *
+   * @param block_ns - ns of blocking i/o call,
+   * @param io_msg - ms of overall i/o time
+   * @param r_w - 1 for read, 0 for write
+   * @param size - bytes read/written
+   * @param flavor - Value.HDFS or Value.S3
+   */
+  public static void record_IOclose( long start_ns, long start_io_ms, int r_w, long size, int flavor ) {
+    long block_ns = System.nanoTime() - start_ns;
+    long io_ms = System.currentTimeMillis() - start_io_ms;
+    // First long word going out has sender-port and a 'bad' control packet
+    long b0 = UDP.udp.i_o.ordinal(); // Special flag to indicate io-record and not a rpc-record
+    b0 |= H2O.SELF._key.udp_port()<<8;
+    b0 |= flavor<<24;           // I/O flavor; one of the Value.persist backends
+    b0 |= io_ms<<32;            // msec from start-to-finish, including non-i/o overheads
+    record2(H2O.SELF,block_ns,true,r_w,0,b0,size);
+  }
+
   // Accessors, for TimeLines that come from all over the system
   public static int length( ) { return MAX_EVENTS; }
   // Internal array math so we can keep layout private
