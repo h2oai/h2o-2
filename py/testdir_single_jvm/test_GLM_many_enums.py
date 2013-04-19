@@ -22,7 +22,7 @@ number1Regex = re.compile(r"""
     [\$\%]?  # number can have dollar sign or percent to start?
     [+-]?    # plus or minus. maybe h2o matches multiple?
     ([0-9]*\.[0-9]*)?  # decimal point focused. optional whole and fractional digits. h2o thinks whole thing optional
-    ([eE][-+]?[0-9]?)? # optional exponent. A single e matches (incorrectly)
+    ([eE][-+]?[0-9]*)? # optional exponent. A single e matches (incorrectly)
     (\s*\%*)? # can have zero or more percent. Percent can have a space?
     \s*$     # white space or empty space, end
     """, re.VERBOSE)
@@ -34,7 +34,7 @@ number2Regex = re.compile(r"""
     [+-]?    # plus or minus. maybe h2o matches multiple?
     ([0-9]+)? # one or more digits. h2o thinks whole thing optional
     (\.[0-9]*)? # optional decimal point and fractional digits
-    ([eE][-+]?[0-9]?)? # optional exponent. a single e matches (incorrectly)
+    ([eE][-+]?[0-9]*)? # optional exponent. a single e matches (incorrectly)
     (\s*\%*)? # can have zero or more percent. Percent can have a space?
     \s*$     # white space or empty space, end
     """, re.VERBOSE)
@@ -59,7 +59,9 @@ nanRegex = re.compile(r"""
 # seems to have a problem with %? where does H2O allow it?
 # % $ +- ?
 # def random_enum(maxEnumSize, randChars=string.letters + "-.;|\t ", quoteChars="\'\""):
-def random_enum(maxEnumSize, randChars="nanNANeE01" + "%$+-.;|\t ", quoteChars="\'\""):
+
+# I don't understand all the patterns with % that are allowed for numbers..take it out
+def random_enum(maxEnumSize, randChars="aeE01" + "$+-.;|\t ", quoteChars="\'\""):
     choiceStr = randChars + quoteChars
     mightBeNumber = True
     while mightBeNumber:
@@ -149,15 +151,10 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM_many_enums(self):
-        GEN_SYN = True
-
-        if GEN_SYN:
-            SYNDATASETS_DIR = h2o.make_syn_dir()
-        else:
-            SYNDATASETS_DIR = 'syn_datasets'
+        SYNDATASETS_DIR = h2o.make_syn_dir()
 
         if not localhost:
-            n = 5
+            n = 200
             tryList = [
                 (n, 1, 'cD', 300), 
                 (n, 2, 'cE', 300), 
@@ -167,7 +164,7 @@ class Basic(unittest.TestCase):
                 (n, 6, 'cI', 300), 
                 ]
         else:
-            n = 5
+            n = 200
             tryList = [
                 (n, 1, 'cD', 300), 
                 (n, 2, 'cE', 300), 
@@ -192,8 +189,8 @@ class Basic(unittest.TestCase):
         ### h2b.browseTheCloud()
         for (rowCount, colCount, key2, timeoutSecs) in tryList:
             # just randomly pick the row and col cases.
-            colSepCase = random.randint(0,1)
-            # colSepCase = 1
+            # colSepCase = random.randint(0,1)
+            colSepCase = 1
             # using the comma is nice to ensure no craziness
             if (colSepCase==0):
                 colSepHexString = '01'
@@ -221,12 +218,9 @@ class Basic(unittest.TestCase):
             csvFilename = 'syn_enums_' + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
-            if GEN_SYN:
-                print "Creating random", csvPathname
-                write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, 
-                    colSepChar=colSepChar, rowSepChar=rowSepChar, quoteChars=quoteChars)
-            else:
-                print "Using presumed existing", csvPathname
+            print "Creating random", csvPathname
+            write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, 
+                colSepChar=colSepChar, rowSepChar=rowSepChar, quoteChars=quoteChars)
 
             # FIX! does 'separator=' take ints or ?? hex format
             # looks like it takes the hex string (two chars)
