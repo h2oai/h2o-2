@@ -63,8 +63,10 @@ nanRegex = re.compile(r"""
 # pass those separatley
 ### def random_enum(maxEnumSize, randChars=string.letters + string.digits + "\t ", quoteChars=""):
 # def random_enum(maxEnumSize, randChars=string.letters + string.digits + "\$%+-.;|\t ", quoteChars="\'\""):
-def random_enum(maxEnumSize, randChars=string.letters + string.digits + "\$%+-.;|\t ", quoteChars="\'\""):
 # def random_enum(maxEnumSize, randChars=string.letters + string.digits + "+-.;|\t ", quoteChars=""):
+### def random_enum(maxEnumSize, randChars=string.letters + string.digits + "\$%+-.;|\t ", quoteChars="\'\""):
+### def random_enum(maxEnumSize, randChars=string.letters + "\$%+-.;|\t ", quoteChars="\'\""):
+def random_enum(maxEnumSize, randChars=string.letters + "%+-.;|\t ", quoteChars="\'\""):
     choiceStr = randChars + quoteChars
     while (True):
         # H2O doesn't seem to tolerate random single or double quote in the first two rows.
@@ -172,7 +174,7 @@ class Basic(unittest.TestCase):
             SYNDATASETS_DIR = 'syn_datasets'
 
         if localhost:
-            n = 100
+            n = 10
             tryList = [
                 (n, 1, 'cD', 300), 
                 (n, 2, 'cE', 300), 
