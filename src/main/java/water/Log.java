@@ -10,7 +10,7 @@ public final class Log {
   private static final ThreadLocal<SimpleDateFormat> _utcFormat = new ThreadLocal<SimpleDateFormat>() {
     @Override
     protected SimpleDateFormat initialValue() {
-      SimpleDateFormat format = new SimpleDateFormat("yyMMdd'-'HH:mm:ss.SSS");
+      SimpleDateFormat format = new SimpleDateFormat("dd' 'HH:mm:ss.SSS");
       format.setTimeZone(TimeZone.getTimeZone("UTC"));
       return format;
     }
@@ -25,14 +25,14 @@ public final class Log {
   private static final long PID;
   static {
     HOST = H2O.findInetAddressForSelf().getHostAddress();
-    PID=getPid();
-    HOST_AND_PID = "" + padRight(HOST + ", ", 17);// + padRight(PID + ", ", 8);
+    PID = getPid();
+    HOST_AND_PID = "" + fixedLength(HOST + " ", 11) + fixedLength(PID + " ", 6);
   }
   private static final String NL = System.getProperty("line.separator");
 
   // Local (not-distributed) log file
   private static BufferedWriter LOG_FILE;
-  public final static Key LOG_KEY = Key.make("Log",(byte)0,Key.BUILT_IN_KEY);
+  public final static Key LOG_KEY = Key.make("Log", (byte) 0, Key.BUILT_IN_KEY);
 
   private static long getPid() {
     try {
@@ -82,6 +82,16 @@ public final class Log {
     return strb.toString();
   }
 
+  public static String fixedLength(String s, int length) {
+    String r = padRight(s, length);
+    if( r.length() > length ) {
+      int a = Math.max(r.length() - length + 1, 0);
+      int b = Math.max(a, r.length());
+      r = "#" + r.substring(a, b);
+    }
+    return r;
+  }
+
   public static void initHeaders() {
     if( !(System.out instanceof Wrapper) ) {
       System.setOut(new Wrapper(System.out));
@@ -119,16 +129,14 @@ public final class Log {
       // Build the String to be logged, with all sorts of headers
       StringBuilder sb = new StringBuilder();
       String date = _utcFormat.get().format(new Date());
-      sb.append(date).append(", ");
+      sb.append(date).append(" ");
       sb.append(HOST_AND_PID);
-      String thr = Thread.currentThread().getName();
+      String thr = fixedLength(Thread.currentThread().getName() + " ", 15);
       sb.append(thr);
-      int len = thr.length();
-      for( int i=len; i<26; i++ )
-        sb.append(' ');
-      String msg = String.format(l,format,args);
+      String msg = String.format(l, format, args);
       sb.append(msg);
-      if( nl ) sb.append(NL);
+      if( nl )
+        sb.append(NL);
       String s = sb.toString();
       // Write to 3 places: stderr/stdout, the local log file, the K/V store
       // Open/create the logfile when we can
@@ -136,39 +144,40 @@ public final class Log {
         LOG_FILE = new BufferedWriter(PersistIce.logFile());
       // Write to the log file
       if( LOG_FILE != null ) {
-        try { LOG_FILE.write(s,0,s.length()); LOG_FILE.flush(); }
-        catch( IOException ioe ) {/*ignore log-write fails*/}
+        try {
+          LOG_FILE.write(s, 0, s.length());
+          LOG_FILE.flush();
+        } catch( IOException ioe ) {/* ignore log-write fails */
+        }
       }
-      if( Paxos._cloudLocked ) logToKV(date,thr,msg);
+      if( Paxos._cloudLocked )
+        logToKV(date, thr, msg);
       // Returned string goes to stderr/stdout
       return s;
     }
 
-    private static void logToKV( final String date, final String thr, final String msg ) {
-      final long pid = PID;     // Run locally
+    private static void logToKV(final String date, final String thr, final String msg) {
+      final long pid = PID; // Run locally
       final H2ONode h2o = H2O.SELF; // Run locally
       new TAtomic<LogStr>() {
-        @Override public LogStr atomic( LogStr l ) {
-          return new LogStr(l,date,h2o,pid,thr,msg);
+        @Override public LogStr atomic(LogStr l) {
+          return new LogStr(l, date, h2o, pid, thr, msg);
         }
       }.fork(LOG_KEY);
     }
 
-    @Override
-    public PrintStream printf(String format, Object... args) {
-      super.print(log(null,false,format,args));
+    @Override public PrintStream printf(String format, Object... args) {
+      super.print(log(null, false, format, args));
       return this;
     }
 
-    @Override
-    public PrintStream printf(Locale l, String format, Object... args) {
-      super.print(log(l,false,format, args));
+    @Override public PrintStream printf(Locale l, String format, Object... args) {
+      super.print(log(l, false, format, args));
       return this;
     }
 
-    @Override
-    public void println(String x) {
-      super.print(log(null,true,"%s",x));
+    @Override public void println(String x) {
+      super.print(log(null, true, "%s", x));
     }
 
     void printlnParent(String s) {
@@ -179,24 +188,25 @@ public final class Log {
   // Class to hold a ring buffer of log messages in the K/V store
   public static class LogStr extends Iced {
     public static final int MAX = 1024; // Number of log entries
-    public final int _idx;      // Index into the ring buffer
-    public final String  _dates[];
-    public final H2ONode _h2os [];
-    public final long    _pids [];
-    public final String  _thrs [];
-    public final String  _msgs [];
-    LogStr( LogStr l, String date, H2ONode h2o, long pid, String thr, String msg ) { 
-      _dates= l==null ? new String [MAX] : l._dates;
-      _h2os = l==null ? new H2ONode[MAX] : l._h2os ;
-      _pids = l==null ? new long   [MAX] : l._pids ;
-      _thrs = l==null ? new String [MAX] : l._thrs ;
-      _msgs = l==null ? new String [MAX] : l._msgs ;
-      _idx =  l==null ? 0                : (l._idx+1)&(MAX-1);
+    public final int _idx; // Index into the ring buffer
+    public final String _dates[];
+    public final H2ONode _h2os[];
+    public final long _pids[];
+    public final String _thrs[];
+    public final String _msgs[];
+
+    LogStr(LogStr l, String date, H2ONode h2o, long pid, String thr, String msg) {
+      _dates = l == null ? new String[MAX] : l._dates;
+      _h2os = l == null ? new H2ONode[MAX] : l._h2os;
+      _pids = l == null ? new long[MAX] : l._pids;
+      _thrs = l == null ? new String[MAX] : l._thrs;
+      _msgs = l == null ? new String[MAX] : l._msgs;
+      _idx = l == null ? 0 : (l._idx + 1) & (MAX - 1);
       _dates[_idx] = date;
-      _h2os [_idx] = h2o;
-      _pids [_idx] = pid;
-      _thrs [_idx] = thr;
-      _msgs [_idx] = msg;
+      _h2os[_idx] = h2o;
+      _pids[_idx] = pid;
+      _thrs[_idx] = thr;
+      _msgs[_idx] = msg;
     }
   }
 }
