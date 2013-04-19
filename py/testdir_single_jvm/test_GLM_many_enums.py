@@ -6,6 +6,51 @@ sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
 
+# we allow $ prefix and % suffix as decorators to numbers?
+#    ^       # beginning of string
+whitespaceRegex = re.compile(r"""
+    \s*  # white or empty space 
+    \Z   # end of string
+    """, re.VERBOSE)
+
+# doesn't like white space match at end of string?
+#    [ \t]*  # white space
+fractionalRegex = re.compile(r"""
+    \s*     # white space or empty space
+    [+-]?   # plus or minus
+    [0-9]*  # whole digits
+    (\.[0-9]*)? # decimal point and fractional digits
+    ([eE][-+]?[0-9]*)? # scientific notation exponent
+    \s*     # white space or empty space
+    """, re.VERBOSE)
+
+whole1Regex = re.compile(r"""
+    \s*     # white space or empty space
+    [$]?    # number can have dollar sign
+    [+-]?   # plus or minus
+    [0-9]*  # whole digits
+    (\.[0-9]*)? # decimal point and fractional digits
+    %?    # can have a percent
+    \s*     # white space or empty space
+    """, re.VERBOSE)
+
+whole2Regex = re.compile(r"""
+    \s*     # white space or empty space
+    [0-9]+  # whole digits
+    \s*     # white space or empty space
+    """, re.VERBOSE)
+
+# can nans have the +-%$ decorators?. allow any case?
+# $       # end of string
+nanRegex = re.compile(r"""
+    \s*     # white space or empty space
+    [$]?    # number can have dollar sign
+    [+-]?   # plus or minus
+    [Nn][Aa][Nn]* # nan or na
+    %?    # can have a percent
+    \s*     # white space or empty space
+    """, re.VERBOSE)
+
 # we want to seed a random dictionary for our enums
 # string.ascii_uppercase
 # string.printable):
@@ -16,23 +61,35 @@ import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
 # Apparently we don't have any new EOL separators for hive?
 # we allow extra chars in the hive separated columns..i.e. single and double quote.
 # pass those separatley
-def random_enum(maxEnumSize, randChars=string.letters + string.digits + "\t ", extraChars=""):
-# def random_enum(maxEnumSize, randChars=string.letters + string.digits + "\$%+-.;|\t ", extraChars=""):
-# def random_enum(maxEnumSize, randChars=string.letters + string.digits + "+-.;|\t ", extraChars=""):
+### def random_enum(maxEnumSize, randChars=string.letters + string.digits + "\t ", quoteChars=""):
+# def random_enum(maxEnumSize, randChars=string.letters + string.digits + "\$%+-.;|\t ", quoteChars="\'\""):
+def random_enum(maxEnumSize, randChars=string.letters + string.digits + "\$%+-.;|\t ", quoteChars="\'\""):
+# def random_enum(maxEnumSize, randChars=string.letters + string.digits + "+-.;|\t ", quoteChars=""):
+    choiceStr = randChars + quoteChars
     while (True):
-        r = ''.join(random.choice(randChars + extraChars) for x in range(maxEnumSize))
+        # H2O doesn't seem to tolerate random single or double quote in the first two rows.
+        # disallow that by not passing quoteChars for the first two rows
+        r = ''.join(random.choice(choiceStr) for x in range(maxEnumSize))
         # print a warning if the result is an integer number (what about "." and E/e scientific notation?
-        # we allow $ prefix and % suffix as decorators to numbers?
-        numberRegex = re.compile('^[ \t]*[\$]?[+-]?[0-9]*\.?[0-9]*[eE]?[0-9]*[\%]?[ \t]*$')
-        # can nans have the +-%$ decorators?. allow any case?
-        nanRegex = re.compile('^[ \t]*[\$]?[+-]?[Nn][Aa][Nn]?[\%]?[ \t]*$') 
-        if numberRegex.search(r): # pessimistic about fixed point and scientific
+        if whitespaceRegex.match(r): # all whitespace
+            # print "regenerate due to WARNING: generated enum is all white space: '" + r + "'"
+            ### for i in whitespaceRegex.findall(r): print i
+            break  # allow
+        if whole1Regex.match(r): # pessimistic about fixed point and scientific
             ### print "regenerate due to WARNING: generated enum is a possible number pattern: '" + r + "'"
-            for i in numberRegex.findall(r): print i
+            ### for i in wholeRegex.findall(r): print i
             pass
-        if nanRegex.search(r): # pessimistic about fixed point and scientific
-            print "regenerate due to WARNING: generated enum is a possible NA/NAN/NaN pattern: '" + r + "'"
-            for i in nanRegex.findall(r): print i
+        if whole2Regex.match(r): # pessimistic about fixed point and scientific
+            ### print "regenerate due to WARNING: generated enum is a possible number pattern: '" + r + "'"
+            ### for i in wholeRegex.findall(r): print i
+            pass
+        if fractionalRegex.match(r): # pessimistic about fixed point and scientific
+            ### print "regenerate due to WARNING: generated enum is a possible number pattern: '" + r + "'"
+            ### for i in fractionalRegex.findall(r): print i
+            pass
+        if nanRegex.match(r): # pessimistic about fixed point and scientific
+            ### print "regenerate due to WARNING: generated enum is a possible NA/NAN/NaN pattern: '" + r + "'"
+            ### for i in nanRegex.findall(r): print i
             pass
         else: 
             break
@@ -50,17 +107,27 @@ def create_enum_list(maxEnumSize=8, listSize=11000, **kwargs):
     return enumList
 
 def write_syn_dataset(csvPathname, rowCount, colCount=1, SEED='12345678', 
-    colSepChar=",", rowSepChar="\n", extraChars="", listSize=11000):
+        colSepChar=",", rowSepChar="\n", quoteChars=""):
     r1 = random.Random(SEED)
-    enumList = create_enum_list(extraChars=extraChars, maxEnumSize=8, listSize=listSize)
+    enumList = create_enum_list(quoteChars=quoteChars)
 
     dsf = open(csvPathname, "w+")
-    for i in range(rowCount):
+    for row in range(rowCount):
         # doesn't guarantee that 10000 rows have 10000 unique enums in a column
         # essentially sampling with replacement
         rowData = []
-        for j in range(colCount):
+        for col in range(colCount):
             ri = random.choice(enumList)
+            # first two rows can't tolerate single/double quote randomly
+            # keep trying until you get one with no single or double quote in the line
+            if row < 2:
+                while True:
+                    # can't have solely white space cols either in the first two rows
+                    if "'" in ri or '"' in ri or whitespaceRegex.match(ri):
+                        ri = random.choice(enumList)
+                    else:
+                        break
+
             rowData.append(ri)
 
         # output column
@@ -96,7 +163,7 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_GLM_many_cols(self):
+    def test_GLM_many_enums(self):
         GEN_SYN = True
 
         if GEN_SYN:
@@ -105,7 +172,7 @@ class Basic(unittest.TestCase):
             SYNDATASETS_DIR = 'syn_datasets'
 
         if localhost:
-            n = 50
+            n = 100
             tryList = [
                 (n, 1, 'cD', 300), 
                 (n, 2, 'cE', 300), 
@@ -141,14 +208,14 @@ class Basic(unittest.TestCase):
         for (rowCount, colCount, key2, timeoutSecs) in tryList:
             # just randomly pick the row and col cases.
             colSepCase = random.randint(0,1)
+            colSepCase = 0
             # using the comma is nice to ensure no craziness
-            # if (colSepCase==0):
-            if (1==0):
+            if (colSepCase==0):
                 colSepHexString = '01'
-                extraChars = ",\'\"" # more choices for the unquoted string
+                quoteChars = ",\'\"" # more choices for the unquoted string
             else:
                 colSepHexString = '2c' # comma
-                extraChars = ""
+                quoteChars = ""
 
             colSepChar = colSepHexString.decode('hex')
             colSepInt = int(colSepHexString, base=16)
@@ -172,7 +239,7 @@ class Basic(unittest.TestCase):
             if GEN_SYN:
                 print "Creating random", csvPathname
                 write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, 
-                    colSepChar=colSepChar, rowSepChar=rowSepChar, extraChars=extraChars)
+                    colSepChar=colSepChar, rowSepChar=rowSepChar, quoteChars=quoteChars)
             else:
                 print "Using presumed existing", csvPathname
 
@@ -186,9 +253,10 @@ class Basic(unittest.TestCase):
             # We should be able to see the parse result?
             ### inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             print "\n" + csvFilename
-            missingValues = h2o_cmd.check_enums_from_inspect(parseKey)
-            if missingValues:
-                raise Exception("Looks like a column got flipped to NAs: " + " ".join(map(str, missingValues)))
+            missingValuesDict = h2o_cmd.check_enums_from_inspect(parseKey)
+            if missingValuesDict:
+                m = [str(k) + ":" + str(v) for k,v in missingValuesDict.iteritems()]
+                raise Exception("Looks like columns got flipped to NAs: " + ", ".join(m))
 
             y = colCount
             kwargs = {'y': y, 'max_iter': 1, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5, 

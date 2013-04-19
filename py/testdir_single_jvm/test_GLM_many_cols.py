@@ -94,7 +94,7 @@ class Basic(unittest.TestCase):
             # normally we dno't create x and rely on the default
             # create the big concat'ed x like the browser, to see what happens
             x = ','.join(map(str, range(colCount)))
-            kwargs = {'x': x, 'y': y, 'max_iter': 10, 'n_folds': 2, 'alpha': 0.2, 'lambda': 1e-5}
+            kwargs = {'x': x, 'y': y, 'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
 
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)

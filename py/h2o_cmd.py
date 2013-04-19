@@ -288,7 +288,7 @@ def check_enums_from_inspect(parseKey):
     cols = inspect['cols']
     # trying to see how many enums we get
     # don't print int
-    missingValues = []
+    missingValuesDict = {}
     for i,c in enumerate(cols):
         # print i, "name:", c['name']
         msg = "column %d" % i
@@ -297,11 +297,12 @@ def check_enums_from_inspect(parseKey):
             msg = msg + (" enum_domain_size: %d" % c['enum_domain_size'])
         if c['num_missing_values'] != 0:
             msg = msg + (" num_missing_values: %s" % c['num_missing_values'])
-            missingValues.append(c['num_missing_values'])
+            # dictionary by col #
+            missingValuesDict[str(i)] = c['num_missing_values']
         if c['type'] != 'int' or c['num_missing_values'] != 0:
             print msg
 
-    return missingValues # so we can check if there were any missing values due to flipped enums?
+    return missingValuesDict # so we can check if there were any missing values due to flipped enums?
 
 # looks for the key that matches the pattern, in the keys you saved from the 
 # import (that you saved from import of the folder/s3/hdfs)
