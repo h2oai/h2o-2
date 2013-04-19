@@ -920,6 +920,9 @@ class H2O(object):
     def jstack(self):
         return self.__check_request(requests.get(self.__url("JStack.json")))
 
+    def iostatus(self):
+        return self.__check_request(requests.get(self.__url("IOStatus.json")))
+
     # &offset=
     # &view=
     def inspect(self, key, offset=None, view=None, ignoreH2oError=False):
