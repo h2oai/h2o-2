@@ -123,6 +123,7 @@ public class GLMGrid extends Job {
             GridTask t = new GridTask(GLMGrid.this, a, _parallel);
             t.compute2();
           }
+          remove();
         }
       });
     }

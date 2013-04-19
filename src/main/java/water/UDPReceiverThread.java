@@ -53,6 +53,8 @@ public class UDPReceiverThread extends Thread {
 
       } catch( java.nio.channels.AsynchronousCloseException ex ) {
         break;                  // Socket closed for shutdown
+      } catch( java.nio.channels.ClosedChannelException ex ) {
+        break;                  // Socket closed for shutdown
       } catch( Exception e ) {
         // On any error from anybody, close all sockets & re-open
         System.err.println("UDP Receiver error on port "+H2O.UDP_PORT);

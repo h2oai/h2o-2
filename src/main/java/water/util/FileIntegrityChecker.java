@@ -26,6 +26,8 @@ public class FileIntegrityChecker extends DRemoteTask {
     else for ( int i = 0; i < _ok.length; ++i ) _ok[i] += o._ok[i];
   }
 
+  @Override public byte priority() { return H2O.GUI_PRIORITY; }
+
   private void addFolder(File folder, ArrayList<File> filesInProgress ) {
     if( !folder.canRead() ) return;
     if (folder.isDirectory()) {

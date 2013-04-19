@@ -34,6 +34,8 @@ public class JStackCollectorTask extends DRemoteTask {
     tryComplete();
   }
 
+  @Override public byte priority() { return H2O.GUI_PRIORITY; }
+
   private void append(final StringBuilder sb, final Thread t) {
     sb.append('"'); sb.append(t.getName()); sb.append('"');
     if (t.isDaemon()) sb.append(" daemon");
