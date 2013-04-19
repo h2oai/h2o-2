@@ -8,35 +8,58 @@ import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
 
 # we allow $ prefix and % suffix as decorators to numbers?
 #    ^       # beginning of string
-whitespaceRegex = re.compile(r"""
-    \s*  # white or empty space 
-    \Z   # end of string
+specialRegex = re.compile(r"""
+    \s*     # white or empty space 
+    [\%\$]* # can have a percent
+    \Z      # end of string
     """, re.VERBOSE)
 
 # doesn't like white space match at end of string?
 #    [ \t]*  # white space
-fractionalRegex = re.compile(r"""
-    \s*     # white space or empty space
-    [+-]?   # plus or minus
-    [0-9]*  # whole digits
-    (\.[0-9]*)? # decimal point and fractional digits
+fractional1Regex = re.compile(r"""
+    \s*    # white space or empty space
+    \$*    # number can have dollar sign
+    [+-]?  # plus or minus. maybe h2o matches multiple?
+    [0-9]+ # digits, 
     ([eE][-+]?[0-9]*)? # scientific notation exponent
+    \%*    # can have a percent
+    \s*    # white space or empty space
+    """, re.VERBOSE)
+
+fractional2Regex = re.compile(r"""
+    \s*     # white space or empty space
+    \$*     # number can have dollar sign
+    [+-]? # plus or minus. maybe h2o matches multiple?
+    [0-9]*\.[0-9]* # digits, decimal point and fractional digits
+    ([eE][-+]?[0-9]*)? # scientific notation exponent
+    \%*     # can have a percent
+    \s*     # white space or empty space
+    """, re.VERBOSE)
+
+fractional3Regex = re.compile(r"""
+    \s*     # white space or empty space
+    \$*     # number can have dollar sign
+    [+-]?   # plus or minus. maybe h2o matches multiple?
+    [eE][-+]?[0-9]* # exponent only
+    \%*     # can have a percent
     \s*     # white space or empty space
     """, re.VERBOSE)
 
 whole1Regex = re.compile(r"""
     \s*     # white space or empty space
-    [$]?    # number can have dollar sign
-    [+-]?   # plus or minus
-    [0-9]*  # whole digits
+    \$*     # number can have dollar sign
+    [+-]?   # plus or minus. maybe h2o matches multiple?
+    [0-9]+  # whole digits
     (\.[0-9]*)? # decimal point and fractional digits
-    %?    # can have a percent
+    \%*     # can have a percent
     \s*     # white space or empty space
     """, re.VERBOSE)
 
 whole2Regex = re.compile(r"""
     \s*     # white space or empty space
+    \$?     # number can have dollar sign
     [0-9]+  # whole digits
+    \%?     # can have a percent
     \s*     # white space or empty space
     """, re.VERBOSE)
 
@@ -47,7 +70,7 @@ nanRegex = re.compile(r"""
     [$]?    # number can have dollar sign
     [+-]?   # plus or minus
     [Nn][Aa][Nn]* # nan or na
-    %?    # can have a percent
+    \%?     # can have a percent
     \s*     # white space or empty space
     """, re.VERBOSE)
 
@@ -60,41 +83,34 @@ nanRegex = re.compile(r"""
 
 # Apparently we don't have any new EOL separators for hive?
 # we allow extra chars in the hive separated columns..i.e. single and double quote.
-# pass those separatley
-### def random_enum(maxEnumSize, randChars=string.letters + string.digits + "\t ", quoteChars=""):
-# def random_enum(maxEnumSize, randChars=string.letters + string.digits + "\$%+-.;|\t ", quoteChars="\'\""):
-# def random_enum(maxEnumSize, randChars=string.letters + string.digits + "+-.;|\t ", quoteChars=""):
-### def random_enum(maxEnumSize, randChars=string.letters + string.digits + "\$%+-.;|\t ", quoteChars="\'\""):
-### def random_enum(maxEnumSize, randChars=string.letters + "\$%+-.;|\t ", quoteChars="\'\""):
-def random_enum(maxEnumSize, randChars=string.letters + "%+-.;|\t ", quoteChars="\'\""):
+
+# seems to have a problem with %? where does H2O allow it?
+# $ +- ?
+def random_enum(maxEnumSize, randChars=string.letters + ".;|\t ", quoteChars="\'\""):
     choiceStr = randChars + quoteChars
-    while (True):
+    mightBeNumber = True
+    while mightBeNumber:
         # H2O doesn't seem to tolerate random single or double quote in the first two rows.
         # disallow that by not passing quoteChars for the first two rows
         r = ''.join(random.choice(choiceStr) for x in range(maxEnumSize))
-        # print a warning if the result is an integer number (what about "." and E/e scientific notation?
-        if whitespaceRegex.match(r): # all whitespace
+
+        mightBeNumber = False
+        if specialRegex.match(r): # all whitespace
             # print "regenerate due to WARNING: generated enum is all white space: '" + r + "'"
             ### for i in whitespaceRegex.findall(r): print i
-            break  # allow
-        if whole1Regex.match(r): # pessimistic about fixed point and scientific
-            ### print "regenerate due to WARNING: generated enum is a possible number pattern: '" + r + "'"
-            ### for i in wholeRegex.findall(r): print i
-            pass
-        if whole2Regex.match(r): # pessimistic about fixed point and scientific
-            ### print "regenerate due to WARNING: generated enum is a possible number pattern: '" + r + "'"
-            ### for i in wholeRegex.findall(r): print i
-            pass
-        if fractionalRegex.match(r): # pessimistic about fixed point and scientific
-            ### print "regenerate due to WARNING: generated enum is a possible number pattern: '" + r + "'"
-            ### for i in fractionalRegex.findall(r): print i
-            pass
-        if nanRegex.match(r): # pessimistic about fixed point and scientific
-            ### print "regenerate due to WARNING: generated enum is a possible NA/NAN/NaN pattern: '" + r + "'"
-            ### for i in nanRegex.findall(r): print i
-            pass
-        else: 
-            break
+            mightBeNumber = True
+        if whole1Regex.match(r):
+            mightBeNumber = True
+        if whole2Regex.match(r):
+            mightBeNumber = True
+        if fractional1Regex.match(r): 
+            mightBeNumber = True
+        if fractional2Regex.match(r): 
+            mightBeNumber = True
+        if fractional3Regex.match(r): 
+            mightBeNumber = True
+        if nanRegex.match(r):
+            mightBeNumber = True
 
     return r
 
@@ -104,8 +120,8 @@ def create_enum_list(maxEnumSize=8, listSize=11000, **kwargs):
     # see DparseTask.java for this effect
     # FIX! if we allow 0, then we allow NA?. I guess we check for no missing, so can't allow NA
     # too many retries allowing 1. try 2 min.
-    # enumList = [random_enum(random.randint(2,maxEnumSize), **kwargs) for i in range(listSize)]
-    enumList = [random_enum(3, **kwargs) for i in range(listSize)]
+    enumList = [random_enum(random.randint(2,maxEnumSize), **kwargs) for i in range(listSize)]
+    # enumList = [random_enum(3, **kwargs) for i in range(listSize)]
     return enumList
 
 def write_syn_dataset(csvPathname, rowCount, colCount=1, SEED='12345678', 
@@ -125,7 +141,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount=1, SEED='12345678',
             if row < 2:
                 while True:
                     # can't have solely white space cols either in the first two rows
-                    if "'" in ri or '"' in ri or whitespaceRegex.match(ri):
+                    if "'" in ri or '"' in ri or specialRegex.match(ri):
                         ri = random.choice(enumList)
                     else:
                         break
@@ -174,7 +190,7 @@ class Basic(unittest.TestCase):
             SYNDATASETS_DIR = 'syn_datasets'
 
         if localhost:
-            n = 10
+            n = 1000
             tryList = [
                 (n, 1, 'cD', 300), 
                 (n, 2, 'cE', 300), 
