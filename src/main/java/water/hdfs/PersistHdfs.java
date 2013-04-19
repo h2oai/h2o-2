@@ -127,9 +127,9 @@ public abstract class PersistHdfs {
   // but no crash (although one could argue that a racing load&delete is a bug
   // no matter what).
   public static byte[] fileLoad(Value v) {
+    // Count all i/o time from here, including all retry overheads
+    long start_io_ms = System.currentTimeMillis();
     byte[] b = MemoryManager.malloc1(v._max);
-    FSDataInputStream s = null;
-
     long skip = 0;
     Key k = v._key;
     // Convert an arraylet chunk into a long-offset from the base file.
@@ -142,8 +142,10 @@ public abstract class PersistHdfs {
       }
     }
     Path p = getPathForKey(k);
+    FSDataInputStream s = null;
     while(true) {
       try {
+        long start_ns = System.nanoTime(); // Blocking i/o call timing - without counting repeats
         FileSystem fs = FileSystem.get(p.toUri(), CONF);
         s = fs.open(p);
         // NOTE:
@@ -153,6 +155,7 @@ public abstract class PersistHdfs {
         ByteStreams.skipFully(s, skip);
         ByteStreams.readFully(s, b);
         assert v.isPersisted();
+        TimeLine.record_IOclose(start_ns,start_io_ms,1/*read*/,v._max,Value.HDFS);
         return b;
       // Explicitly ignore the following exceptions but
       // fail on the rest IOExceptions

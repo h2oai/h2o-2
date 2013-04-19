@@ -50,7 +50,7 @@ public final class TimelineSnapshot implements
       }
       if (_events[i] != null)
         processEvent(_events[i]);
-      assert (_events[i] == null) || (_events[i]._eventIdx < 1024);
+      assert (_events[i] == null) || (_events[i]._eventIdx < TimeLine.MAX_EVENTS);
     }
 
     // now build the graph (i.e. go through all the events once)
@@ -67,7 +67,7 @@ public final class TimelineSnapshot implements
         if (!_events[i].next())
           _events[i] = null;
       }
-      assert (_events[i] == null) || (_events[i]._eventIdx < 1024);
+      assert (_events[i] == null) || (_events[i]._eventIdx < TimeLine.MAX_EVENTS);
     }
   }
 
