@@ -20,6 +20,7 @@ DEFAULT_NUMBER_OF_INSTANCES = 4
 DEFAULT_HOSTS_FILENAME = 'ec2-config-{0}.json'
 DEFAULT_REGION = 'us-east-1'
 DEFAULT_INSTANCE_NAME='node_{0}'.format(os.getenv('USER'))
+ADVANCED_SSH_OPTIONS='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o GlobalKnownHostsFile=/dev/null'
 
 '''
 Default EC2 instance setup
@@ -268,10 +269,11 @@ def dump_hosts_config(ec2_config, reservation, filename=DEFAULT_HOSTS_FILENAME, 
 
     return (cfg, filename)
 
-def get_ssh_commands(ec2_config, reservation):
+def get_ssh_commands(ec2_config, reservation, ssh_options=""):
     cmds = []
+    if not ssh_options: ssh_options = ""
     for i in reservation.instances:
-        cmds.append( "ssh -i ~/.ec2/keys/mrjenkins_test.pem ubuntu@{0}".format(i.private_ip_address) )
+        cmds.append( "ssh -i ~/.ec2/keys/mrjenkins_test.pem {1} ubuntu@{0}".format(i.private_ip_address,ssh_options) )
     return cmds
 
 def dump_ssh_commands(ec2_config, reservation):
@@ -281,7 +283,8 @@ def dump_ssh_commands(ec2_config, reservation):
 
 # for cleaning /tmp after it becomes full, or any one string command (can separate with semicolon)
 def execute_using_ssh_commands(ec2_config, reservation, command_string='df'):
-    cmds = get_ssh_commands(ec2_config, reservation)
+    if not command_string: log("Nothing to execute. Exiting...")
+    cmds = get_ssh_commands(ec2_config, reservation, ADVANCED_SSH_OPTIONS)
     for cmd in cmds:
         c = cmd + " '" + command_string + "'"
         print "\n"+c
@@ -332,7 +335,7 @@ def warn(msg):
 def warn_file_miss(f):
     warn("File {0} is missing! Please update the generated config manually.".format(f))
 
-def invoke_hosts_action(action, hosts_config, args):
+def invoke_hosts_action(action, hosts_config, args, ec2_reservation=None):
     ids = [ inst['id'] for inst in hosts_config['ec2_instances'] ]
     ips = [ inst['private_ip_address'] for inst in hosts_config['ec2_instances'] ]
     region = hosts_config['ec2_region']
@@ -372,6 +375,10 @@ def invoke_hosts_action(action, hosts_config, args):
  
     elif (action == 'stop_h2o'):
         pass
+    elif (action == 'clean_tmp'):
+        execute_using_ssh_commands(hosts_config, ec2_reservation, command_string='sudo rm -rf /tmp/*; df')
+    elif (action == 'nexec'):
+        execute_using_ssh_commands(hosts_config, ec2_reservation, command_string=args.cmd)
 
 def report_reservations(region, reservation_id=None):
     conn = ec2_connect(region)
@@ -408,7 +415,7 @@ def create_tags(**kwargs):
 
 def main():
     parser = argparse.ArgumentParser(description='H2O EC2 instances launcher')
-    parser.add_argument('action', choices=['help', 'demo', 'create', 'terminate', 'stop', 'reboot', 'start', 'distribute_h2o', 'start_h2o', 'show_defaults', 'dump_reservation', 'show_reservations', 'clean_tmp'], help='EC2 instances action!')
+    parser.add_argument('action', choices=['help', 'demo', 'create', 'terminate', 'stop', 'reboot', 'start', 'distribute_h2o', 'start_h2o', 'show_defaults', 'dump_reservation', 'show_reservations', 'clean_tmp','nexec'], help='EC2 instances action!')
     parser.add_argument('-c', '--config',    help='Configuration file to configure NEW EC2 instances (if not specified default is used - see "show_defaults")', type=str, default=None)
     parser.add_argument('-i', '--instances', help='Number of instances to launch', type=int, default=DEFAULT_NUMBER_OF_INSTANCES)
     parser.add_argument('-H', '--hosts',     help='Hosts file describing existing "EXISTING" EC2 instances ', type=str, default=None)
@@ -417,6 +424,7 @@ def main():
     parser.add_argument('--name',            help='Name for launched instances', type=str, default=DEFAULT_INSTANCE_NAME)
     parser.add_argument('--timeout',         help='Timeout in seconds.', type=int, default=None)
     parser.add_argument('--instance_type',   help='Enfore a type of EC2 to launch (e.g., m2.2xlarge).', type=str, default=None)
+    parser.add_argument('--cmd',             help='Shell command to be executed by nexec.', type=str, default=None)
     args = parser.parse_args()
 
     ec2_region = load_ec2_region(args.region)
@@ -455,17 +463,16 @@ def main():
         dump_hosts_config(ec2_config, ec2_reservation, args.hosts)
     elif (args.action == 'show_reservations'):
         report_reservations(args.region, args.reservation)
-    elif (args.action == 'clean_tmp'):
-        ec2_reservation = load_ec2_reservation(args.reservation, ec2_region)
-        execute_using_ssh_commands(None, ec2_reservation, command_string='sudo rm -rf /tmp/*; df')
     else: 
         if args.hosts: 
             hosts_config = load_hosts_config(args.hosts)
+            if hosts_config['ec2_reservation_id']: ec2_reservation = load_ec2_reservation(hosts_config['ec2_reservation_id'], ec2_region)
+            else: ec2_reservation = None
         elif args.reservation: # TODO allows for specifying multiple reservations and merge them
             ec2_config      = load_ec2_config(args.config, ec2_region)
             ec2_reservation = load_ec2_reservation(args.reservation, ec2_region)
             hosts_config,_  = dump_hosts_config(ec2_config, ec2_reservation, save=False)
-        invoke_hosts_action(args.action, hosts_config, args)
+        invoke_hosts_action(args.action, hosts_config, args, ec2_reservation)
         if (args.action == 'terminate' and args.hosts):
             log("Deleting {0} host file.".format(args.hosts))
             os.remove(args.hosts)

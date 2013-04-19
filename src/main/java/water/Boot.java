@@ -239,7 +239,6 @@ public class Boot extends ClassLoader {
   // --------------------------------------------------------------------------
 
   public static List<String> getClasses() {
-    Log._dontDie = true; // Ignore fatal class load error, e.g. Request
     ArrayList<String> names = new ArrayList<String>();
     if(_init._h2oJar != null) {
       for( Enumeration<ZipEntry> e = (Enumeration) _init._h2oJar.entries(); e.hasMoreElements(); ) {

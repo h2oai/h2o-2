@@ -212,6 +212,7 @@ public class TypeMap {
   //
 
   public static void main(String[] args) {
+    Log._dontDie = true; // Ignore fatal class load error, e.g. Request
     ArrayList<String> list = new ArrayList<String>();
     for(String name : Boot.getClasses()) {
       try {

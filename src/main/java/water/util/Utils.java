@@ -11,6 +11,8 @@ import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.Random;
 
+import org.apache.commons.lang.ArrayUtils;
+
 import water.*;
 import water.parser.ParseDataset;
 
@@ -251,6 +253,10 @@ public class Utils {
     for( Object o : array )
       s += (s.length() == 0 ? "" : sep) + o.toString();
     return s;
+  }
+
+  public static String[] add(String[] a, String... b) {
+    return (String[]) ArrayUtils.addAll(a, b);
   }
 
   public static void clearFolder(String folder) {
