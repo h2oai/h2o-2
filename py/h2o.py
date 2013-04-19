@@ -723,7 +723,7 @@ class H2O(object):
             requests.get(
                 self.__url('PutValue.json'), 
                 params={"value": value, "key": key, "replication_factor": repl}),
-            extraComment = str(value) + "," + str(key) + "," + str(repl))
+                extraComment = str(value) + "," + str(key) + "," + str(repl))
 
     def put_file(self, f, key=None, timeoutSecs=60):
         if key is None:
@@ -736,7 +736,7 @@ class H2O(object):
                 timeout=timeoutSecs,
                 params={"key": key},
                 files={"file": open(f, 'rb')}),
-            extraComment = str(f))
+                extraComment = str(f))
 
         verboseprint("\nput_file response: ", dump_json(resp))
         return key
@@ -1096,7 +1096,7 @@ class H2O(object):
                 self.__url('RFTreeView.json'),
                 timeout=timeoutSecs,
                 params=params_dict),
-            ignoreH2oError=ignoreH2oError)
+                ignoreH2oError=ignoreH2oError)
 
         verboseprint("\nrandom_forest_treeview result:", dump_json(a))
         # Always do it to eyeball?
