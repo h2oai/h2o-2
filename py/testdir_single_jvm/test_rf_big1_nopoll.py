@@ -39,7 +39,7 @@ class Basic(unittest.TestCase):
             print "rf job dispatch end on ", csvPathname, 'took', time.time() - start, 'seconds'
             print "\njobDispatch #", jobDispatch
 
-        h2o_jobs.pollWaitJobs(pattern='GLMModel', timeoutSecs=10, retryDelaySecs=5)
+        h2o_jobs.pollWaitJobs(pattern='GLMModel', timeoutSecs=30, pollTimeoutSecs=120, retryDelaySecs=5)
 
         # we saved the initial response?
         # if we do another poll they should be done now, and better to get it that 
