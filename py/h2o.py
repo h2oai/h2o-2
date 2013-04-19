@@ -492,7 +492,8 @@ def check_sandbox_for_errors(sandbox_ignore_errors=False):
                 foundBad = False
                 if not ' bytes)' in line:
                     # no multiline FSM on this 
-                    printSingleWarning = regex3.search(line) and not ('[Loaded ' in line)
+                    # ignore the [WARN] from 'RestS3Service'
+                    printSingleWarning = regex3.search(line) and not ('[Loaded ' in line) and not ('RestS3Service' in line)
                     #   13190  280      ###        sun.nio.ch.DatagramChannelImpl::ensureOpen (16 bytes)
 
                     # don't detect these class loader info messags as errors

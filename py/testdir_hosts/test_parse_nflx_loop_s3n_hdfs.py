@@ -6,6 +6,8 @@ import logging
 
 class Basic(unittest.TestCase):
     def tearDown(self):
+        ### print "FAILED: waiting for you to terminate after looking at things"
+        ### time.sleep(360000)
         h2o.check_sandbox_for_errors()
 
     @classmethod
@@ -31,24 +33,25 @@ class Basic(unittest.TestCase):
             # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[23][0-9]", "syn_20.csv", 20 * avgSynSize, 700),
             # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[45678][0-9]", "syn_50.csv", 50 * avgSynSize, 700),
 
-            # ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 300),
-            # ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
-            # ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 900),
+            ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 300),
+            ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
+            ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 900),
 
-            ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
-            ("manyfiles-nflx-gz/file_1[0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 2400),
-            ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 2400),
             ("manyfiles-nflx-gz/file_[123][0-9][0-9].dat.gz", "file_300_A.dat.gz", 300 * avgMichalSize, 2400),
             ("manyfiles-nflx-gz/file_[123][0-9][0-9].dat.gz", "file_300_B.dat.gz", 300 * avgMichalSize, 2400),
-            ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_B.dat.gz", 200 * avgMichalSize, 2400),
-            ("manyfiles-nflx-gz/file_2[0-9][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 2400),
+            ("manyfiles-nflx-gz/file_[123][0-9][0-9].dat.gz", "file_300_C.dat.gz", 300 * avgMichalSize, 2400),
+            ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
             ("manyfiles-nflx-gz/file_1[0-4][0-9].dat.gz", "file_50_B.dat.gz", 50 * avgMichalSize, 1800),
-            ("manyfiles-nflx-gz/file_1[5-9][0-9].dat.gz", "file_50_C.dat.gz", 50 * avgMichalSize, 1800),
+            ("manyfiles-nflx-gz/file_1[0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 2400),
+            ("manyfiles-nflx-gz/file_2[0-9][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 2400),
+            ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 2400),
+            ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_B.dat.gz", 200 * avgMichalSize, 2400),
         ]
 
         print "Using the -.gz files from s3"
         # want just s3n://home-0xdiag-datasets/manyfiles-nflx-gz/file_1.dat.gz
     
+        DO_GLM = True
         USE_S3 = False
         noPoll = False
         benchmarkLogging = ['cpu','disk']
@@ -176,9 +179,47 @@ class Basic(unittest.TestCase):
                         # We should be able to see the parse result?
                         h2o_cmd.check_enums_from_inspect(parseKey)
 
+                    #**********************************************************************************
+                    # Do GLM too
+                    # these are all the columns that are enums in the dataset...too many for GLM!
+                    x = range(541) # don't include the output column
+                    x.remove(3)
+                    x.remove(4)
+                    x.remove(5)
+                    x.remove(6)
+                    x.remove(7)
+                    x.remove(8)
+                    x.remove(9)
+                    x.remove(10)
+                    x.remove(11)
+                    x.remove(14)
+                    x.remove(16)
+                    x.remove(17)
+                    x.remove(18)
+                    x.remove(19)
+                    x.remove(20)
+                    x.remove(424)
+                    x.remove(425)
+                    x.remove(426)
+                    x.remove(540)
+                    x.remove(541)
+                    x = ",".join(map(str,x))
+
+                    if DO_GLM:
+                        GLMkwargs = {'x': x, 'y': 541, 'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
+                        start = time.time()
+                        glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=1800, **GLMkwargs)
+                        h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
+                        elapsed = time.time() - start
+                        h2o.check_sandbox_for_errors()
+                        l = '{:d} jvms, {:d}GB heap, {:s} {:s} GLM: {:6.2f} secs'.format(
+                            len(h2o.nodes), tryHeap, csvFilepattern, csvFilename, elapsed)
+                        print l
+                        h2o.cloudPerfH2O.message(l)
+                    #**********************************************************************************
+
                     print "Deleting key in H2O so we get it from S3 (if ec2) or nfs again.", \
                           "Otherwise it would just parse the cached key."
-
                     storeView = h2o.nodes[0].store_view()
                     ### print "storeView:", h2o.dump_json(storeView)
                     # "key": "s3n://home-0xdiag-datasets/manyfiles-nflx-gz/file_84.dat.gz"
