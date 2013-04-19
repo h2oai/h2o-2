@@ -14,7 +14,6 @@ class Basic(unittest.TestCase):
         
     def test_cloud(self):
         h2o.touch_cloud()
-        time.sleep(6000)
         print "OK"
 
 if __name__ == '__main__':
