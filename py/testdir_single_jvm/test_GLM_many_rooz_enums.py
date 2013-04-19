@@ -27,7 +27,7 @@ whitespaceRegex = re.compile(r"""
     ^\s*$     # begin, white space or empty space, end
     """, re.VERBOSE)
 
-DO_TEN_INTEGERS = True
+DO_TEN_INTEGERS = False
 def random_enum(n):
     # pick randomly from a list pointed at by N
     if DO_TEN_INTEGERS:
@@ -91,7 +91,6 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        ### time.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_GLM_many_enums(self):
@@ -100,7 +99,7 @@ class Basic(unittest.TestCase):
         if localhost:
             n = 4000
             tryList = [
-                (n, 3000, 'cI', 300), 
+                (n, 1000, 'cI', 300), 
                 ]
         else:
             n = 5
@@ -180,15 +179,17 @@ class Basic(unittest.TestCase):
                 ### raise Exception("Looks like columns got flipped to NAs: " + ", ".join(m))
 
             y = colCount
-            kwargs = {'y': y, 'max_iter': 1, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5, 
+            x = range(colCount)
+            x = ",".join(map(str,x))
+            kwargs = {'x': x, 'y': y, 'max_iter': 1, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5, 
                 'case_mode': '=', 'case': 0}
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
-            # if not h2o.browse_disable:
-            #     h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
+            if not h2o.browse_disable:
+                h2b.browseJsonHistoryAsUrlLastMatch("GLM.json")
             #     time.sleep(5)
 
 if __name__ == '__main__':
