@@ -126,7 +126,9 @@ def might_h2o_think_whitespace(token):
 def might_h2o_think_number_or_whitespace(token):
     # this matches white space? makes all white space count as number?
     specialRegex = re.compile(r"""
-        [\s\$+-]*$ # single chars that might be considered numbers. alow spaces in between
+        \s*
+        [\$+-]? # single chars that might be considered numbers. alow spaces in between
+        \s*$ 
         """, re.VERBOSE)
 
     # this matches white space? makes all white space count as number?
