@@ -54,7 +54,7 @@ class Basic(unittest.TestCase):
         DO_GLM = True
         USE_S3 = False
         noPoll = False
-        benchmarkLogging = ['cpu','disk']
+        benchmarkLogging = ['cpu','disk','jstack','iostats']
         bucket = "home-0xdiag-datasets"
         if USE_S3:
             URI = "s3://home-0xdiag-datasets"
