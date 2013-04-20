@@ -212,11 +212,10 @@ ROW:
 
   @Override
   public void reduce(DRemoteTask drt) {
-    if(!_job.cancelled()){
-      NewRowVecTask<T> rv = (NewRowVecTask<T>)drt;
-      assert _result != rv._result;
-      _result = (_result != null)?_func.reduce(_result, rv._result):rv._result;
-      rv._result = null;
-    }
+    if(_job != null && _job.cancelled()) return;
+    NewRowVecTask<T> rv = (NewRowVecTask<T>)drt;
+    assert _result != rv._result;
+    _result = (_result != null)?_func.reduce(_result, rv._result):rv._result;
+    rv._result = null;
   }
 }
