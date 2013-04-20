@@ -4,93 +4,35 @@ import string
 import re
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util
 
-# we allow $ prefix and % suffix as decorators to numbers?
-whitespaceRegex = re.compile(r"""
-    ^\s*$     # begin, white space or empty space, end
-    """, re.VERBOSE)
-
-specialRegex = re.compile(r"""
-    ^\s*     # begin, white space or empty space
-    [%\$+-]* # single chars that might be considered numbers
-    \s*$    # white space or empty space, end
-    """, re.VERBOSE)
-
-number1Regex = re.compile(r"""
-    ^\s*     # begin, white space or empty space
-    [\$\%]?  # number can have dollar sign or percent to start?
-    [+-]?    # plus or minus. maybe h2o matches multiple?
-    ([0-9]*\.[0-9]*)?  # decimal point focused. optional whole and fractional digits. h2o thinks whole thing optional
-    ([eE][-+]?[0-9]*)? # optional exponent. A single e matches (incorrectly)
-    (\s*\%*)? # can have zero or more percent. Percent can have a space?
-    \s*$     # white space or empty space, end
-    """, re.VERBOSE)
-
-# this matches white space? makes all white space count as number?
-number2Regex = re.compile(r"""
-    ^\s*     # begin, white space or empty space
-    [\$\%]?  # number can have dollar sign or percent to start?
-    [+-]?    # plus or minus. maybe h2o matches multiple?
-    ([0-9]+)? # one or more digits. h2o thinks whole thing optional
-    (\.[0-9]*)? # optional decimal point and fractional digits
-    ([eE][-+]?[0-9]*)? # optional exponent. a single e matches (incorrectly)
-    (\s*\%*)? # can have zero or more percent. Percent can have a space?
-    \s*$     # white space or empty space, end
-    """, re.VERBOSE)
-
-# can nans have the +-%$ decorators?. allow any case?
-nanRegex = re.compile(r"""
-    ^\s*     # begin, white space or empty space
-    [\$\%]?  # number can have dollar sign or percent to start?
-    [+-]?    # plus or minus
-    [Nn][Aa][Nn]? # nan or na
-    (\s*\%*)? # can have zero or more percent. Percent can have a space?
-    \s*$     # white space or empty space, end
-    """, re.VERBOSE)
+# details:
+# Apparently we don't have any new EOL separators for hive?, just new column separator
+# We allow extra chars in the hive separated columns..i.e. single and double quote.
 
 # we want to seed a random dictionary for our enums
+# python has some things we can use
 # string.ascii_uppercase string.printable string.letters string.digits string.punctuation string.whitespace
-# can use comma when hive 01 is used
-
-# Apparently we don't have any new EOL separators for hive?
-# we allow extra chars in the hive separated columns..i.e. single and double quote.
-
-# seems to have a problem with %? where does H2O allow it?
-# % $ +- ?
-# def random_enum(maxEnumSize, randChars=string.letters + "-.;|\t ", quoteChars="\'\""):
-
-# I don't understand all the patterns with % that are allowed for numbers..take it out
-def random_enum(maxEnumSize, randChars="aeE01" + "$+-.;|\t ", quoteChars="\'\""):
+# restricting the choices makes it easier to find the bad cases
+def random_enum(maxEnumSize, randChars="abeE01" + "$%+-.;|\t ", quoteChars="\'\""):
     choiceStr = randChars + quoteChars
-    mightBeNumber = True
-    while mightBeNumber:
+    mightBeNumberOrWhite = True
+    while mightBeNumberOrWhite:
         # H2O doesn't seem to tolerate random single or double quote in the first two rows.
-        # disallow that by not passing quoteChars for the first two rows
+        # disallow that by not passing quoteChars for the first two rows (in call to here)
         r = ''.join(random.choice(choiceStr) for x in range(maxEnumSize))
-
-        mightBeNumber = False
-        if specialRegex.match(r): # all whitespace
-            # print "regenerate due to WARNING: generated enum is all white space: '" + r + "'"
-            ### for i in whitespaceRegex.findall(r): print i
-            mightBeNumber = True
-        if number1Regex.match(r):
-            mightBeNumber = True
-        if number2Regex.match(r):
-            mightBeNumber = True
-        if nanRegex.match(r):
-            mightBeNumber = True
-
+        mightBeNumberOrWhite = h2o_util.might_h2o_think_number_or_whitespace(r)
     return r
 
 # MAX_ENUM_SIZE in Enum.java is set to 11000 now
 def create_enum_list(maxEnumSize=8, listSize=11000, **kwargs):
-    # allowing length one, we sometimes form single digit numbers that cause the whole column to NA
+    # Allowing length one, we sometimes form single digit numbers that cause the whole column to NA
     # see DparseTask.java for this effect
     # FIX! if we allow 0, then we allow NA?. I guess we check for no missing, so can't allow NA
     # too many retries allowing 1. try 2 min.
-    # enumList = [random_enum(random.randint(2,maxEnumSize), **kwargs) for i in range(listSize)]
-    enumList = [random_enum(4, **kwargs) for i in range(listSize)]
+    enumList = [random_enum(random.randint(2,maxEnumSize), **kwargs) for i in range(listSize)]
+    # a fixed width is sometimes good for finding badness
+    ### enumList = [random_enum(4, **kwargs) for i in range(listSize)]
     return enumList
 
 def write_syn_dataset(csvPathname, rowCount, colCount=1, SEED='12345678', 
@@ -110,7 +52,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount=1, SEED='12345678',
             if row < 2:
                 while True:
                     # can't have solely white space cols either in the first two rows
-                    if "'" in ri or '"' in ri or whitespaceRegex.match(ri):
+                    if "'" in ri or '"' in ri or h2o_util.might_h2o_think_whitespace(ri):
                         ri = random.choice(enumList)
                     else:
                         break
@@ -189,8 +131,7 @@ class Basic(unittest.TestCase):
         ### h2b.browseTheCloud()
         for (rowCount, colCount, key2, timeoutSecs) in tryList:
             # just randomly pick the row and col cases.
-            # colSepCase = random.randint(0,1)
-            colSepCase = 1
+            colSepCase = random.randint(0,1)
             # using the comma is nice to ensure no craziness
             if (colSepCase==0):
                 colSepHexString = '01'
