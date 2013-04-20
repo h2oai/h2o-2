@@ -84,7 +84,7 @@ class parse_rand_schmoo(unittest.TestCase):
             key2 = csvFilename + "_" + str(trial) + ".hex"
             # On EC2 once we get to 30 trials or so, do we see polling hang? GC or spill of heap or ??
             key = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2, 
-                timeoutSecs=70, pollTimeoutSecs=150)
+                timeoutSecs=150, pollTimeoutSecs=150)
             print "trial #", trial, "totalRows:", totalRows, "num:", num, "parse end on ", csvFilename, \
                 'took', time.time() - start, 'seconds'
             ### h2o_cmd.runInspect(key=key2)
