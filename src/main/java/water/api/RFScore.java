@@ -2,8 +2,7 @@ package water.api;
 
 import hex.rf.Confusion;
 import hex.rf.RFModel;
-import water.Job;
-import water.Key;
+import water.*;
 import water.util.RString;
 
 import com.google.gson.JsonObject;
@@ -43,6 +42,10 @@ public class RFScore extends Request {
     return rs.toString();
   }
 
+  private void clearCachedCM(boolean oobee) {
+    UKV.remove(Confusion.keyFor(_modelKey.value()._selfKey,_numTrees.value(),Key.make(_dataKey.originalValue()),_classCol.value(),oobee));
+  }
+
   @Override protected Response serve() {
     RFModel model = _modelKey.value();
     double[] weights = _weights.value();
@@ -54,6 +57,8 @@ public class RFScore extends Request {
     response.addProperty(OOBEE, 0);
     if (_weights.specified())
       response.addProperty(WEIGHTS, _weights.originalValue());
+
+    if (_clearCM.value()) clearCachedCM(false);
 
     // RF scoring do not use RF oobee computation.
     Confusion confusion = Confusion.make(model, _dataKey.value()._key, _classCol.value(), weights, false);
