@@ -35,7 +35,7 @@ public class GLMScore extends Request {
         _thresholds._hideInQuery =true;
       }
     }
-    if( arg == _dataKey ) {     // Check for dataset compatibility
+    if( arg == _dataKey && _modelKey.specified()) {     // Check for dataset compatibility
       ValueArray va = _dataKey.value();
       GLMModel model = _modelKey.value();
       int colIds[] = model.columnMapping(va.colNames());
@@ -47,16 +47,18 @@ public class GLMScore extends Request {
     }
   };
 
-  public static String link(Key k, double threshold, String content) {
+  public static String link(Key modelKey, double threshold, String content) {
+    return link(MODEL_KEY, modelKey, threshold, content);
+  }
+
+  public static String link(String key_param, Key k, double threshold, String content) {
     RString rs = new RString("<a href='GLMScore.query?%key_param=%$key&thresholds=%threshold'>%content</a>");
-    rs.replace("key_param", MODEL_KEY);
+    rs.replace("key_param", key_param);
     rs.replace("key", k.toString());
     rs.replace("threshold", threshold);
     rs.replace("content", content);
     return rs.toString();
   }
-
-
 
   public GLMScore() {}
 

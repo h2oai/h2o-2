@@ -31,13 +31,13 @@ public class RFScore extends Request {
   }
 
   public static String link(Key k, String content) {
-    return link(k, DATA_KEY, content);
+    return link(DATA_KEY, k, content);
   }
 
   /** Generates a link to this page - param is {DATA_KEY, MODEL_KEY} with respect to specified key. */
-  public static String link(Key k, String param, String content) {
+  public static String link(String keyParam, Key k, String content) {
     RString rs = new RString("<a href='RFScore.query?%key_param=%$key'>%content</a>");
-    rs.replace("key_param", param);
+    rs.replace("key_param", keyParam);
     rs.replace("key", k.toString());
     rs.replace("content", content);
     return rs.toString();
