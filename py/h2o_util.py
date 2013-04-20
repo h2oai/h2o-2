@@ -108,3 +108,59 @@ def file_clean_for_R(csvPathname1, csvPathname2):
         infile.close()
         outfile.close()
         print "\n" + csvPathname1 + " cleaned for R to " + csvPathname2
+
+
+# this might be slightly pessimistic, but should be superset
+def might_h2o_think_whitespace(token):
+    # we allow $ prefix and % suffix as decorators to numbers?
+    whitespaceRegex = re.compile(r"""
+        \s*$     # begin, white space or empty space, end
+        """, re.VERBOSE)
+    if whitespaceRegex.match(token):
+        return True
+    else:
+        return False
+
+
+# this might be slightly pessimistic, but should be superset
+def might_h2o_think_number_or_whitespace(token):
+    # this matches white space? makes all white space count as number?
+    specialRegex = re.compile(r"""
+        [\s\$+-]*$ # single chars that might be considered numbers. alow spaces in between
+        """, re.VERBOSE)
+
+    # this matches white space? makes all white space count as number?
+    number1Regex = re.compile(r"""
+        [\s\$\%]*     # begin, white space or empty space. any number of leading % or $ too
+        [+-]?    # plus or minus. maybe h2o matches multiple?
+        ([0-9]*\.[0-9]*)?  # decimal point focused. optional whole and fractional digits. h2o thinks whole thing optional?
+        ([eE][-+]?[0-9]*)? # optional exponent. A single e matches (incorrectly)
+        (\s*\[\% ]*)? # can have zero or more percent. Percent can have a space?
+        [\s\$\%]*$     # white space or empty space, any number of trailing % or $ too. end
+        """, re.VERBOSE)
+
+    # this matches white space? makes all white space count as number?
+    number2Regex = re.compile(r"""
+        [\s\$\%]*     # begin, white space or empty space. any number of leading % or $ too
+        [+-]?    # plus or minus. maybe h2o matches multiple?
+        ([0-9]+)? # one or more digits. h2o thinks whole thing optional
+        (\.[0-9]*)? # optional decimal point and fractional digits
+        ([eE][-+]?[0-9]*)? # optional exponent. a single e matches (incorrectly)
+        (\s*\[\% ]*)? # can have zero or more percent. Percent can have a space?
+        [\s\$\%]*$     # white space or empty space, any number of trailing % or $ too. end
+        """, re.VERBOSE)
+
+    # can nans have the +-%$ decorators?. allow any case?
+    nanRegex = re.compile(r"""
+        [\s\$\%]*     # begin, white space or empty space. any number of leading % or $ too
+        [+-]?    # plus or minus
+        [Nn][Aa][Nn]? # nan or na
+        (\s*\[\% ]*)? # can have zero or more percent. Percent can have a space?
+        [\s\$\%]*$     # white space or empty space, any number of trailing % or $ too. end
+        """, re.VERBOSE)
+
+    if specialRegex.match(token) or number1Regex.match(token) or number2Regex.match(token) or nanRegex.match(token):
+        return True
+    else:
+        return False
+
