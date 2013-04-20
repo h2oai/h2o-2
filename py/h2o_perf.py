@@ -44,6 +44,7 @@ class PerfH2O(object):
 
         self.MINCACHETOPRINT = 7
         self.JSTACKINTERVAL = 20
+        self.IOSTATSINTERVAL = 10
 
         # initialize state used for spot rate measurements during polling
         statsList = ['read_bytes','write_bytes','read_time','write_time',
@@ -52,133 +53,236 @@ class PerfH2O(object):
         for s in statsList:
             self.pollStats[s] = 0
         self.pollStats['count'] = 0
-        self.pollStats['lastJstackTime'] = time.time()
 
-    # split out the get and save, so we can 'get_save' to initialize values 
-    # for delta measurements. The first delta will be a bit off, 
-    # because elapsed isn't accurate time since the initial setting.
-    def get(self):
-        cpu_percent = psutil.cpu_percent(percpu=True)
-        dioc = psutil.disk_io_counters()
-        nioc = psutil.network_io_counters()
-        snapshotTime = time.time()
-        return (cpu_percent, dioc, nioc, snapshotTime)
+        self.snapshotTime = time.time()
+        self.pollStats['lastJstackTime'] = self.snapshotTime
+        self.pollStats['lastIOstatsTime'] = self.snapshotTime
+        self.pollStats['time'] = self.snapshotTime
 
-    def save(self, cpu_percent, dioc, nioc, snapshotTime):
-        self.pollStats['cpu_percent'] = cpu_percent
-        self.pollStats['read_bytes'] =  dioc.read_bytes
-        self.pollStats['write_bytes'] =  dioc.write_bytes
-        self.pollStats['read_time'] =  dioc.read_time
-        self.pollStats['write_time'] =  dioc.write_time
-        self.pollStats['bytes_sent'] =  nioc.bytes_sent
-        self.pollStats['bytes_recv'] =  nioc.bytes_recv
-        # self.pollStats['dropin'] =  nioc.dropin
-        # self.pollStats['dropout'] =  nioc.dropout
-        # self.pollStats['errin'] =  nioc.errin
-        # self.pollStats['errout'] =  nioc.errout
-        self.pollStats['count'] += 1
-        self.pollStats['time'] = snapshotTime
+        self.elapsedTime = 0
 
+    def save(self, cpu_percent=None, dioc=None, nioc=None, jstack=None, iostats=None, snapshotTime=None):
+        # allow incremental update, or all at once
+        if cpu_percent:
+            self.pollStats['cpu_percent'] = cpu_percent
+        if dioc:
+            self.pollStats['read_bytes'] =  dioc.read_bytes
+            self.pollStats['write_bytes'] =  dioc.write_bytes
+            self.pollStats['read_time'] =  dioc.read_time
+            self.pollStats['write_time'] =  dioc.write_time
+        if nioc:
+            self.pollStats['bytes_sent'] =  nioc.bytes_sent
+            self.pollStats['bytes_recv'] =  nioc.bytes_recv
+            # self.pollStats['dropin'] =  nioc.dropin
+            # self.pollStats['dropout'] =  nioc.dropout
+            # self.pollStats['errin'] =  nioc.errin
+            # self.pollStats['errout'] =  nioc.errout
+        if jstack:
+            self.pollStats['lastJstackTime'] = self.snapshotTime
+        if iostats:
+            self.pollStats['lastIOstatsTime'] = self.snapshotTime
+        # this guy is the 'final'
+        if snapshotTime:
+            self.pollStats['time'] = self.snapshotTime
+            self.pollStats['count'] += 1
+
+    # just log a message..useful for splitting tests of files 
+    def message(self, l):
+        logging.critical(l)
       
-    def get_save(self):
-        (cpu_percent, dioc, nioc, snapshotTime) = self.get()
-        self.save(cpu_percent, dioc, nioc, snapshotTime)
-
-    def get_log_save(self, benchmarkLogging=None):
-        (cpu_percent, dioc, nioc, snapshotTime) = self.get()
-
-        pollStats = self.pollStats
-        elapsedTime = snapshotTime - pollStats['time']
-
-        logEnable = {
-            'cpu': False,
-            'disk': False,
-            'network': False,
-            'jstack': False,
-        }
-        for e in benchmarkLogging:
-            logEnable[e] = True
-
+    def log_jstack(self, initOnly=False):
         # only do jstack if >= JSTACKINTERVAL seconds since lastLine one
-        if logEnable['jstack'] and ((snapshotTime - pollStats['lastJstackTime']) >= self.JSTACKINTERVAL):
-            # okay..get some Jstack stuff, and mark it as gathered now
-            self.pollStats['lastJstackTime'] = snapshotTime
-            
-            # complicated because it's all one big string 
-            # and lots of info we don't want. 
-            jstackResult = h2o.nodes[0].jstack()
-            node0 = jstackResult['nodes'][0]
-            stack_traces = node0["stack_traces"]
-            # all one string
-            stackLines = stack_traces.split('\n')
+        if ((self.snapshotTime - self.pollStats['lastJstackTime']) < self.JSTACKINTERVAL):
+            return
 
-            # create cache
-            def init_cache(self):
-                self.cache = []
-                self.cacheHasJstack = False
-                self.cacheHasTCP = False
+        # complicated because it's all one big string 
+        # and lots of info we don't want. 
+        jstackResult = h2o.nodes[0].jstack()
+        node0 = jstackResult['nodes'][0]
+        stack_traces = node0["stack_traces"]
+        # all one string
+        stackLines = stack_traces.split('\n')
 
-            def log_and_init_cache(self):
-                if self.cacheHasTCP or (not self.cacheHasJstack and len(self.cache) >= self.MINCACHETOPRINT):
-                    for c in self.cache:
-                        logging.critical(c)
-                init_cache(self)
+        # create cache
+        def init_cache(self):
+            self.cache = []
+            self.cacheHasJstack = False
+            self.cacheHasTCP = False
 
+        def log_and_init_cache(self):
+            if self.cacheHasTCP or (not self.cacheHasJstack and len(self.cache) >= self.MINCACHETOPRINT):
+                for c in self.cache:
+                    logging.critical(c)
             init_cache(self)
-            # pretend to start at stack trace break
-            lastLine = ""
-            for s in stackLines:
-                # look for gaps, if 7 lines in your cache, print them
-                if (lastLine==""): 
-                    log_and_init_cache(self)
-                else:
-                    # put a nice "#" char for grepping out jstack stuff
-                    self.cache.append("#" + s)
-                    # always throw it away later if JStack cache
-                    if 'JStack' in s:
-                        self.cacheHasJstack = True
-                    # always print it if it mentions TCP
-                    if 'TCP' in s:
-                        self.cacheHasTCP = True
-                lastLine = s
 
-            # check last one
-            log_and_init_cache(self)
+        init_cache(self)
+        # pretend to start at stack trace break
+        lastLine = ""
+        for s in stackLines:
+            # look for gaps, if 7 lines in your cache, print them
+            if (lastLine==""): 
+                log_and_init_cache(self)
+            else:
+                # put a nice "#" char for grepping out jstack stuff
+                self.cache.append("#" + s)
+                # always throw it away later if JStack cache
+                if 'JStack' in s:
+                    self.cacheHasJstack = True
+                # always print it if it mentions TCP
+                if 'TCP' in s:
+                    self.cacheHasTCP = True
+            lastLine = s
 
+        # check last one
+        log_and_init_cache(self)
+        self.pollStats['lastJstackTime'] = self.snapshotTime
+        self.save(jstack=True)
+
+    def log_cpu(self, snapShotTime, initOnly=False):
+        cpu_percent = psutil.cpu_percent(percpu=True)
         l = "%s %s" % ("cpu_percent:", cpu_percent)
-        if logEnable['cpu']:
+        if not initOnly:
             logging.critical(l)
+        self.save(cpu_percent=cpu_percent)
 
-        diocSpotRdMBSec = (dioc.read_bytes - pollStats['read_bytes']) / (1e6 * elapsedTime)
-        diocSpotWrMBSec = (dioc.write_bytes - pollStats['write_bytes']) / (1e6 * elapsedTime)
-        diocSpotRdTime = (dioc.read_time - pollStats['read_time']) / 1e3
-        diocSpotWrTime = (dioc.write_time - pollStats['write_time']) / 1e3
-        l = "Disk. Spot RdMB/s: {:<6.2f} Spot WrMB/s: {:<6.2f} {!s} {!s} elapsed: {:<6.2f}".format(
-            diocSpotRdMBSec, diocSpotWrMBSec, diocSpotRdTime, diocSpotWrTime, elapsedTime)
-        if logEnable['disk'] and pollStats['count'] > 0:
+    def log_disk(self, initOnly=False):
+        dioc = psutil.disk_io_counters()
+        diocSpotRdMBSec = (dioc.read_bytes - self.pollStats['read_bytes']) / (1e6 * self.elapsedTime)
+        diocSpotWrMBSec = (dioc.write_bytes - self.pollStats['write_bytes']) / (1e6 * self.elapsedTime)
+        diocSpotRdTime = (dioc.read_time - self.pollStats['read_time']) / 1e3
+        diocSpotWrTime = (dioc.write_time - self.pollStats['write_time']) / 1e3
+        l = "Disk. Spot RdMB/s: {:>6.2f} Spot WrMB/s: {:>6.2f} {!s} {!s} elapsed: {:<6.2f}".format(
+            diocSpotRdMBSec, diocSpotWrMBSec, diocSpotRdTime, diocSpotWrTime, self.elapsedTime)
+        if not initOnly:
             logging.critical(l)
+        self.save(dioc=dioc)
 
-        niocSpotSentMBSec = (nioc.bytes_sent - pollStats['bytes_sent'])/(1e6 * elapsedTime)
-        niocSpotRecvMBSec = (nioc.bytes_recv - pollStats['bytes_recv'])/(1e6 * elapsedTime)
-        # niocSpotDropIn = nioc.dropin -  pollStats['dropin']
-        # niocSpotDropOut = nioc.dropout -  pollStats['dropout']
-        # niocSpotErrIn = nioc.errin -  pollStats['errin']
-        # niocSpotErrOut = nioc.errout -  pollStats['errout']
+    def log_network(self, initOnly=False):
+        nioc = psutil.network_io_counters()
+        niocSpotSentMBSec = (nioc.bytes_sent - self.pollStats['bytes_sent'])/(1e6 * self.elapsedTime)
+        niocSpotRecvMBSec = (nioc.bytes_recv - self.pollStats['bytes_recv'])/(1e6 * self.elapsedTime)
+        # niocSpotDropIn = nioc.dropin -  self.pollStats['dropin']
+        # niocSpotDropOut = nioc.dropout -  self.pollStats['dropout']
+        # niocSpotErrIn = nioc.errin -  self.pollStats['errin']
+        # niocSpotErrOut = nioc.errout -  self.pollStats['errout']
 
         # stuff doesn't exist on ec2?
         niocSpotDropIn = 0
         niocSpotDropOut = 0
         niocSpotErrIn = 0
         niocSpotErrOut = 0
-        l = "Network. Spot RecvMB/s: {:<6.2f} Spot SentMB/s: {:<6.2f} {!s} {!s} {!s} {!s}".format(
+
+        l = "Network. Spot RecvMB/s: {:>6.2f} Spot SentMB/s: {:>6.2f} {!s} {!s} {!s} {!s}".format(
             niocSpotRecvMBSec, niocSpotSentMBSec,\
             niocSpotDropIn, niocSpotDropOut, niocSpotErrIn, niocSpotErrOut)
-        if logEnable['network'] and pollStats['count'] > 0:
+        if not initOnly:
             logging.critical(l)
+        self.save(nioc=nioc)
 
-        self.save(cpu_percent, dioc, nioc, snapshotTime)
+    def log_iostats(self, initOnly=False):
+        if ((self.snapshotTime - self.pollStats['lastJstackTime']) < self.IOSTATSINTERVAL):
+            return
 
-    # just logg a message..useful for splitting tests of files 
-    def message(self, l):
-        logging.critical(l)
+        DO_IO_RW = True
+        DO_IOP = False
+
+        node = h2o.nodes[0]
+        stats = node.iostatus()
+        ### h2o.verboseprint("log_iostats:", h2o.dump_json(stats))
+        histogram = stats['histogram']
+
+        def log_window(w):
+            if k['window'] == w:
+                i_o = k['i_o']
+                node = k['cloud_node_idx']
+                if k['r_w'] == 'read':
+                    r_w = 'rd'
+                elif k['r_w'] == 'write':
+                    r_w = 'wr'
+                else: 
+                    r_w = k['r_w']
+                
+                for l,v in k.iteritems():
+                    fmt = "iostats: window{:<2d} node {:d} {:s} {:s} {:s} MB/sec: {:6.2f}"
+                    if 'peak' in l:
+                        ## logging.critical(fmt.format(w, node, i_o, r_w, "peak", (v/1e6)))
+                        pass
+                    if 'effective' in l:
+                        logging.critical(fmt.format(w, node, i_o, r_w, "eff.", (v/1e6)))
+
+        if DO_IO_RW:
+            print "\nlog_iotstats probing node:", str(node.addr) + ":" + str(node.port)
+            for k in histogram:
+                ### print k
+                log_window(10)
+                ### log_window(30)
+
+
+        # we want to sort the results before we print them, so grouped by node
+        if DO_IOP:
+            iopList = []
+            raw_iops = stats['raw_iops']
+            ### print
+            for k in raw_iops:
+                ### print k
+                node = k['node']
+                i_o = k['i_o']
+                r_w = k['r_w']
+                size = k['size_bytes']
+                blocked = k['blocked_ns']
+                duration = k['duration_ms'] * 1e6 # convert to ns
+                if duration != 0:
+                    blockedPct = "%.2f" % (100 * blocked/duration) + "%"
+                else:
+                    blockedPct = "no duration"
+                iopMsg = "node: %s %s %s %d bytes. blocked: %s" % (node, i_o, r_w, size, blockedPct)
+                iopList.append([node, iopMsg])
+
+            iopList.sort(key=lambda iop: iop[0])  # sort by node
+            totalSockets = len(iopList)
+            # something wrong if 0?
+            if totalSockets == 0:
+                print "WARNING: is something wrong with this io stats response?"
+                print h2o.dump_json(stats)
+
+            logging.critical("iostats: " + "Total sockets: " + str(totalSockets))
+            for i in iopList:
+                logging.critical("iostats:" + i[1])
+
+        # don't save anything
+        self.save(iostats=True)
+    
+    # call with init?
+    def get_log_save(self, benchmarkLogging=None, initOnly=False):
+        if not benchmarkLogging:
+            return
+
+        self.snapshotTime = time.time()
+        self.elapsedTime = self.snapshotTime - self.pollStats['time']
+
+        logEnable = {
+            'cpu': False,
+            'disk': False,
+            'network': False,
+            'jstack': False,
+            'iostats': False,
+        }
+        for e in benchmarkLogging:
+            logEnable[e] = True
+
+        if logEnable['jstack']:
+            self.log_jstack(initOnly=initOnly)
+        if logEnable['cpu']:
+            self.log_cpu(initOnly)
+        if logEnable['iostats']:
+            self.log_iostats(initOnly=initOnly)
+        # these do delta stats. force init if no delta possible
+        forceInit = self.pollStats['count'] == 0
+        if logEnable['disk']:
+            self.log_disk(initOnly=initOnly or forceInit)
+        if logEnable['network']:
+            self.log_network(initOnly=initOnly or forceInit)
+
+        # done!
+        self.save(snapshotTime=True)
 

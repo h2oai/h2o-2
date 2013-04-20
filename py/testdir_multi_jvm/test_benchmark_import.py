@@ -83,17 +83,17 @@ class Basic(unittest.TestCase):
         trialMax = 1
         # rebuild the cloud for each file
         base_port = 54321
-        tryHeap = 28
+        tryHeap = 10 
         # can fire a parse off and go wait on the jobs queue (inspect afterwards is enough?)
         noPoll = False
-        benchmarkLogging = ['cpu','disk']
+        benchmarkLogging = ['cpu','disk', 'iostats', 'jstack']
         pollTimeoutSecs = 120
         retryDelaySecs = 10
 
         for (csvFilepattern, csvFilename, totalBytes, timeoutSecs) in csvFilenameList:
             localhost = h2o.decide_if_localhost()
             if (localhost):
-                h2o.build_cloud(1,java_heap_GB=tryHeap, base_port=base_port,
+                h2o.build_cloud(2,java_heap_GB=tryHeap, base_port=base_port,
                     enable_benchmark_log=True)
             else:
                 h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap, base_port=base_port, 

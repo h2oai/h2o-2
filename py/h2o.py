@@ -888,7 +888,7 @@ class H2O(object):
         params_dict.update(kwargs)
 
         if benchmarkLogging:
-            cloudPerfH2O.get_save()
+            cloudPerfH2O.get_log_save(initOnly=True)
 
         a = self.__check_request(
             requests.get(
