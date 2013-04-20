@@ -68,12 +68,17 @@ class Basic(unittest.TestCase):
             colX = h2o_glm.pickRandGlmParams(paramDict, params)
             kwargs = params.copy()
             start = time.time()
+            timeoutSecs = max(150, params['n_folds']*10 + params['max_iter']*10)
             glm = h2o_cmd.runGLMOnly(timeoutSecs=150, parseKey=parseKey, **kwargs)
+            elapsed = time.time() - start
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             # FIX! I suppose we have the problem of stdout/stderr not having flushed?
             # should hook in some way of flushing the remote node stdout/stderr
             h2o.check_sandbox_for_errors()
-            print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
+            
+            print "glm end on ", csvPathname, 'took', elapsed, 'seconds.',\
+                "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+
             print "Trial #", trial, "completed\n"
 
 

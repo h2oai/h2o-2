@@ -1,16 +1,16 @@
 import time, sys
 import h2o
-# import h2o_browse as h2b
+import h2o_browse as h2b
 
 # poll the Jobs queue and wait if not all done. Return matching keys to a pattern for 'destination_key"
 # for a job (model usually)
-def pollWaitJobs(pattern=None, timeoutSecs=30, retryDelaySecs=5, benchmarkLogging=None):
+def pollWaitJobs(pattern=None, timeoutSecs=30, pollTimeoutSecs=30, retryDelaySecs=5, benchmarkLogging=None):
     anyBusy = True
     waitTime = 0
     while (anyBusy):
         # timeout checking has to move in here now! just count loops
         anyBusy = False
-        a = h2o.nodes[0].jobs_admin()
+        a = h2o.nodes[0].jobs_admin(timeoutSecs=pollTimeoutSecs)
         ## print "jobs_admin():", h2o.dump_json(a)
         jobs = a['jobs']
         patternKeys = []
@@ -28,7 +28,7 @@ def pollWaitJobs(pattern=None, timeoutSecs=30, retryDelaySecs=5, benchmarkLoggin
                     "cancelled:", j['cancelled'],\
                     "end_time:",  j['end_time'])
 
-        ### h2b.browseJsonHistoryAsUrlLastMatch("Jobs")
+        h2b.browseJsonHistoryAsUrlLastMatch("Jobs")
         if (anyBusy and waitTime > timeoutSecs):
             print h2o.dump_json(jobs)
             raise Exception("Some queued jobs haven't completed after", timeoutSecs, "seconds")

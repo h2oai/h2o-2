@@ -37,7 +37,7 @@ class parse_rand_schmoo(unittest.TestCase):
     def setUpClass(cls):
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(2,java_heap_MB=1300,use_flatfile=True)
+            h2o.build_cloud(2,java_heap_GB=10,use_flatfile=True)
         else:
             import h2o_hosts
             h2o_hosts.build_cloud_with_hosts()
