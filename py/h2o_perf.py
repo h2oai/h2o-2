@@ -257,7 +257,6 @@ class PerfH2O(object):
         if not benchmarkLogging:
             return
 
-        print "hello2"
         self.snapshotTime = time.time()
         self.elapsedTime = self.snapshotTime - self.pollStats['time']
 

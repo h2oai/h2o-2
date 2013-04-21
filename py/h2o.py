@@ -827,7 +827,6 @@ class H2O(object):
             ###    print "INFO: GLM returning partial results during polling. Continuing.."
 
             if benchmarkLogging:
-                print "hello"
                 cloudPerfH2O.get_log_save(benchmarkLogging)
 
         return r
