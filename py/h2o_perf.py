@@ -203,7 +203,7 @@ class PerfH2O(object):
                     r_w = k['r_w']
                 
                 for l,v in k.iteritems():
-                    fmt = "iostats: window{:<2d} node {:d} {:s} {:s} {:s} MB/sec: {:6.2f}"
+                    fmt = "iostats: window{:<2d} node {:d} {:<4s} {:s} {:s} MB/sec: {:6.2f}"
                     if 'peak' in l:
                         ## logging.critical(fmt.format(w, node, i_o, r_w, "peak", (v/1e6)))
                         pass
@@ -257,6 +257,7 @@ class PerfH2O(object):
         if not benchmarkLogging:
             return
 
+        print "hello2"
         self.snapshotTime = time.time()
         self.elapsedTime = self.snapshotTime - self.pollStats['time']
 

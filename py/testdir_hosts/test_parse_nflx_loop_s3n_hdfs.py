@@ -33,9 +33,6 @@ class Basic(unittest.TestCase):
             # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[23][0-9]", "syn_20.csv", 20 * avgSynSize, 700),
             # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[45678][0-9]", "syn_50.csv", 50 * avgSynSize, 700),
 
-            ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 300),
-            ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
-            ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 900),
 
             ("manyfiles-nflx-gz/file_[123][0-9][0-9].dat.gz", "file_300_A.dat.gz", 300 * avgMichalSize, 3600),
             ("manyfiles-nflx-gz/file_[123][0-9][0-9].dat.gz", "file_300_B.dat.gz", 300 * avgMichalSize, 3600),
@@ -46,6 +43,9 @@ class Basic(unittest.TestCase):
             ("manyfiles-nflx-gz/file_2[0-9][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 3600),
             ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 3600),
             ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_B.dat.gz", 200 * avgMichalSize, 3600),
+            ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 300),
+            ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
+            ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 900),
         ]
 
         print "Using the -.gz files from s3"
@@ -54,7 +54,7 @@ class Basic(unittest.TestCase):
         DO_GLM = True
         USE_S3 = False
         noPoll = False
-        benchmarkLogging = ['cpu','disk','jstack','iostats']
+        benchmarkLogging = ['jstack','iostats']
         bucket = "home-0xdiag-datasets"
         if USE_S3:
             URI = "s3://home-0xdiag-datasets"
@@ -212,7 +212,8 @@ class Basic(unittest.TestCase):
                         GLMkwargs = {'x': x, 'y': 378, 'case': 15, 'case_mode': '>', 
                             'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
                         start = time.time()
-                        glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **GLMkwargs)
+                        glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, 
+                            benchmarkLogging=benchmarkLogging, **GLMkwargs)
                         h2o_glm.simpleCheckGLM(self, glm, None, **GLMkwargs)
                         elapsed = time.time() - start
                         h2o.check_sandbox_for_errors()
