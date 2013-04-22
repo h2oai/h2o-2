@@ -195,10 +195,10 @@ public class StratifiedDABuilder extends DABuilder {
     // vector keeping track of indexes of individual classes so that we can read data in parallel
     final int [] startRows = new int[nclasses];
 
-    dapt.initIntervals(nclasses);
+//    dapt.initIntervals(nclasses);
     for(int i = 1; i < nclasses; ++i){
       startRows[i] = startRows[i-1] + chunkHistogram[keys.length][i-1];
-      dapt.setIntervalStart(i, startRows[i]);
+//      dapt.setIntervalStart(i, startRows[i]);
     }
     // cols that do not need binning
     int [] rawCols = new int[_drf._rfmodel._va._cols.length];
