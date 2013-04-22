@@ -45,7 +45,7 @@ Community
 ---------------------------------
 We will breathe & sustain a vibrant community with the focus of taking software engineering approach to data science and empower everyone interested in data to be able to hack data using math and algorithms.
 join us on google groups: h2ostream 
-https://groups.google.com/forum/?!forum/h2ostream
+https://groups.google.com/forum/#!forum/h2ostream
 
 Team
 
