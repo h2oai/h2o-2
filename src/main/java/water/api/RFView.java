@@ -162,7 +162,7 @@ public class RFView extends /* Progress */ Request {
     Response r;
     if (finished == tasks) {
       r = jobDone(response);
-      r.addHeader("<div class='alert'>" + RFScore.link(model._selfKey, MODEL_KEY, "Use this model for scoring.") + " </div>");
+      r.addHeader("<div class='alert'>" + RFScore.link(MODEL_KEY, model._selfKey, "Use this model for scoring.") + " </div>");
     } else { r = Response.poll(response, finished, tasks);  }
     r.setBuilder(JSON_CM, new ConfusionMatrixBuilder());
     r.setBuilder(TREES, new TreeListBuilder());

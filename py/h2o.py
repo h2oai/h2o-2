@@ -870,7 +870,7 @@ class H2O(object):
     
     def parse(self, key, key2=None, 
         timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=30,
-        noise=None, benchmarkLogging=False, noPoll=False, **kwargs):
+        noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
         browseAlso = kwargs.pop('browseAlso',False)
         # this doesn't work. webforums indicate max_retries might be 0 already? (as of 3 months ago)
         # requests.defaults({max_retries : 4})
@@ -888,7 +888,7 @@ class H2O(object):
         params_dict.update(kwargs)
 
         if benchmarkLogging:
-            cloudPerfH2O.get_save()
+            cloudPerfH2O.get_log_save(initOnly=True)
 
         a = self.__check_request(
             requests.get(
@@ -1134,7 +1134,7 @@ class H2O(object):
 
     def GLM(self, key, 
         timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=30, 
-        noise=None, noPoll=False, **kwargs):
+        noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
 
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLM", **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
@@ -1147,7 +1147,8 @@ class H2O(object):
 
         a = self.poll_url(a['response'],
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
-            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs, noise=noise)
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+            noise=noise, benchmarkLogging=benchmarkLogging)
         verboseprint("GLM done:", dump_json(a))
 
         browseAlso = kwargs.get('browseAlso', False)
@@ -1160,7 +1161,7 @@ class H2O(object):
     # this only exists in new. old will fail
     def GLMGrid(self, key, 
         timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=30,
-        noise=None, noPoll=False, **kwargs):
+        noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
 
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLMGrid", **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
@@ -1173,7 +1174,8 @@ class H2O(object):
 
         a = self.poll_url(a['response'],
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
-            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs, noise=noise)
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+            noise=noise, benchmarkLogging=benchmarkLogging)
         verboseprint("GLMGrid done:", dump_json(a))
 
         browseAlso = kwargs.get('browseAlso', False)

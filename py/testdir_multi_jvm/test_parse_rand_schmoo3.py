@@ -99,7 +99,7 @@ class parse_rand_schmoo(unittest.TestCase):
             key2 = csvFilename + "_" + str(trial) + ".hex"
             # needs a big polling timeout, for the later iterations?
             key = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2, 
-                timeoutSecs=70, pollTimeoutSecs=150, noPoll=True)
+                timeoutSecs=150, pollTimeoutSecs=150, noPoll=True)
             print "trial #", trial, "totalRows:", totalRows, "num:", num, "parse end on ", csvFilename, \
                 'took', time.time() - start, 'seconds'
             ### h2o_cmd.runInspect(key=key2)

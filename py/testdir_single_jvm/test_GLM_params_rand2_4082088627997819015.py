@@ -69,7 +69,7 @@ class Basic(unittest.TestCase):
             kwargs = params.copy()
             start = time.time()
             timeoutSecs = max(150, params['n_folds']*10 + params['max_iter']*10)
-            glm = h2o_cmd.runGLMOnly(timeoutSecs=150, parseKey=parseKey, **kwargs)
+            glm = h2o_cmd.runGLMOnly(timeoutSecs=timeoutSecs, parseKey=parseKey, **kwargs)
             elapsed = time.time() - start
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             # FIX! I suppose we have the problem of stdout/stderr not having flushed?

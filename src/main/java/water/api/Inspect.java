@@ -297,7 +297,8 @@ public class Inspect extends Request {
           + GLM.link(ary._key, "GLM") + ", " + GLMGrid.link(ary._key, "GLM Grid Search") + ", or "
           + KMeans.link(ary._key, "KMeans") + "<br />"
           + "Score data using "
-          + RFScore.link(ary._key, "Random Forest") + "."
+          + RFScore.link(ary._key, "Random Forest") + ", "
+          + GLMScore.link(KEY, ary._key, 0.0, "GLM")
         + "</div>"
         + "<p><b><font size=+1>"
           + ary._cols.length + " columns, "
