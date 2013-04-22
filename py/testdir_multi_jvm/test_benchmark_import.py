@@ -1,6 +1,6 @@
 import os, json, unittest, time, shutil, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
+import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_glm
 import h2o_exec as h2e, h2o_jobs
 import time, random, logging
 
@@ -46,7 +46,6 @@ class Basic(unittest.TestCase):
                 # 100 files takes too long on two machines?
                 # ("covtype200x.data", "covtype200x.data", 15033863400, 700),
                 # I use different files to avoid OS caching effects
-                ("covtype200x.data", "covtype200x.data", covtype200xSize, 700),
                 # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[0-9][0-9]", "syn_100.csv", 100 * avgSynSize, 700),
                 # ("syn_datasets/syn_7350063254201195578_10000x200.csv_00000", "syn_1.csv", avgSynSize, 700),
                 # ("syn_datasets/syn_7350063254201195578_10000x200.csv_0001[0-9]", "syn_10.csv", 10 * avgSynSize, 700),
@@ -60,6 +59,7 @@ class Basic(unittest.TestCase):
                 ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 1200),
+                ("covtype200x.data", "covtype200x.data", covtype200xSize, 700),
 
                 # do it twice
                 # ("covtype.data", "covtype.data"),
@@ -85,6 +85,7 @@ class Basic(unittest.TestCase):
         base_port = 54321
         tryHeap = 28
         # can fire a parse off and go wait on the jobs queue (inspect afterwards is enough?)
+        DO_GLM = True
         noPoll = False
         benchmarkLogging = ['cpu','disk']
         pollTimeoutSecs = 120
@@ -198,6 +199,31 @@ class Basic(unittest.TestCase):
                 print "Temporarily hacking to do nothing instead of RF on the parsed file"
                 ### RFview = h2o_cmd.runRFOnly(trees=1,depth=25,parseKey=newParseKey, timeoutSecs=timeoutSecs)
                 ### h2b.browseJsonHistoryAsUrlLastMatch("RFView")
+
+                #**********************************************************************************
+                # Do GLM too
+                # Argument case error: Value 0.0 is not between 12.0 and 9987.0 (inclusive)
+                if DO_GLM:
+                    # these are all the columns that are enums in the dataset...too many for GLM!
+                    x = range(542) # don't include the output column
+                    # remove the output too! (378)
+                    for i in [3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 16, 17, 18, 19, 20, 424, 425, 426, 540, 541, 378]:
+                        x.remove(i)
+                    x = ",".join(map(str,x))
+
+                    GLMkwargs = {'x': x, 'y': 378, 'case': 15, 'case_mode': '>',
+                        'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
+                    start = time.time()
+                    glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **GLMkwargs)
+                    h2o_glm.simpleCheckGLM(self, glm, None, **GLMkwargs)
+                    elapsed = time.time() - start
+                    h2o.check_sandbox_for_errors()
+                    l = '{:d} jvms, {:d}GB heap, {:s} {:s} GLM: {:6.2f} secs'.format(
+                        len(h2o.nodes), tryHeap, csvFilepattern, csvFilename, elapsed)
+                    print l
+                    h2o.cloudPerfH2O.message(l)
+
+                #**********************************************************************************
 
                 h2o_cmd.check_key_distribution()
                 h2o_cmd.delete_csv_key(csvFilename, importFullList)

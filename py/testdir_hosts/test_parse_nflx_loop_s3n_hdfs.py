@@ -181,34 +181,15 @@ class Basic(unittest.TestCase):
 
                     #**********************************************************************************
                     # Do GLM too
-                    # these are all the columns that are enums in the dataset...too many for GLM!
-                    x = range(542) # don't include the output column
-                    x.remove(3)
-                    x.remove(4)
-                    x.remove(5)
-                    x.remove(6)
-                    x.remove(7)
-                    x.remove(8)
-                    x.remove(9)
-                    x.remove(10)
-                    x.remove(11)
-                    x.remove(14)
-                    x.remove(16)
-                    x.remove(17)
-                    x.remove(18)
-                    x.remove(19)
-                    x.remove(20)
-                    x.remove(424)
-                    x.remove(425)
-                    x.remove(426)
-                    x.remove(540)
-                    x.remove(541)
-                    # remove the output too!
-                    x.remove(378)
-                    x = ",".join(map(str,x))
-
                     # Argument case error: Value 0.0 is not between 12.0 and 9987.0 (inclusive)
                     if DO_GLM:
+                        # these are all the columns that are enums in the dataset...too many for GLM!
+                        x = range(542) # don't include the output column
+                        # remove the output too! (378)
+                        for i in [3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 16, 17, 18, 19, 20, 424, 425, 426, 540, 541, 378]:
+                            x.remove(i)
+                        x = ",".join(map(str,x))
+
                         GLMkwargs = {'x': x, 'y': 378, 'case': 15, 'case_mode': '>', 
                             'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
                         start = time.time()
@@ -220,17 +201,18 @@ class Basic(unittest.TestCase):
                             len(h2o.nodes), tryHeap, csvFilepattern, csvFilename, elapsed)
                         print l
                         h2o.cloudPerfH2O.message(l)
-                    #**********************************************************************************
 
+                    #**********************************************************************************
                     print "Deleting key in H2O so we get it from S3 (if ec2) or nfs again.", \
                           "Otherwise it would just parse the cached key."
-                    storeView = h2o.nodes[0].store_view()
+                    ### storeView = h2o.nodes[0].store_view()
                     ### print "storeView:", h2o.dump_json(storeView)
                     # "key": "s3n://home-0xdiag-datasets/manyfiles-nflx-gz/file_84.dat.gz"
                     # have to do the pattern match ourself, to figure out what keys to delete
                     # we're deleting the keys in the initial import. We leave the keys we created
                     # by the parse. We use unique dest keys for those, so no worries.
                     # Leaving them is good because things fill up! (spill)
+                    h2o_cmd.check_key_distribution()
                     h2o_cmd.delete_csv_key(csvFilename, s3nFullList)
 
                 h2o.tear_down_cloud()
