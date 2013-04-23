@@ -27,12 +27,14 @@ class Basic(unittest.TestCase):
             print "Using non-.gz'ed files in", importFolderPath
             csvFilenameAll = [
                 # I use different files to avoid OS caching effects
-                ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSizeUncompressed, 700),
-                ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSizeUncompressed, 700),
-                ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSizeUncompressed, 700),
-                ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSizeUncompressed, 700),
                 ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSizeUncompressed, 700),
-                ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSizeUncompressed, 1200),
+                ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSizeUncompressed, 700),
+                ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSizeUncompressed, 700),
+                # ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSizeUncompressed, 1200),
+                # ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSizeUncompressed, 700),
+                # ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSizeUncompressed, 700),
+                # ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSizeUncompressed, 700),
+                # ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSizeUncompressed, 700),
             ]
         if 1==1: 
             importFolderPath = '/home/0xdiag/datasets'
@@ -54,12 +56,12 @@ class Basic(unittest.TestCase):
                 # ("manyfiles-nflx-gz/file_10.dat.gz", "file_10_1.dat.gz", 1 * avgMichalSize, 700),
                 # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
 
+                ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 1200),
                 ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize, 700),
-                ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 1200),
-                ("covtype200x.data", "covtype200x.data", covtype200xSize, 700),
+                # ("covtype200x.data", "covtype200x.data", covtype200xSize, 700),
 
                 # do it twice
                 # ("covtype.data", "covtype.data"),
@@ -85,13 +87,13 @@ class Basic(unittest.TestCase):
         base_port = 54321
         tryHeap = 10 
         # can fire a parse off and go wait on the jobs queue (inspect afterwards is enough?)
-        DO_GLM = True
-        noPoll = False
+        DO_GLM = False
+        noPoll = True
         benchmarkLogging = ['cpu','disk', 'iostats', 'jstack']
         pollTimeoutSecs = 120
         retryDelaySecs = 10
 
-        for (csvFilepattern, csvFilename, totalBytes, timeoutSecs) in csvFilenameList:
+        for i,(csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
             localhost = h2o.decide_if_localhost()
             if (localhost):
                 h2o.build_cloud(2,java_heap_GB=tryHeap, base_port=base_port,
@@ -128,11 +130,8 @@ class Basic(unittest.TestCase):
                         time.sleep(1)
                         h2o.check_sandbox_for_errors()
                         (csvFilepattern, csvFilename, totalBytes2, timeoutSecs) = csvFilenameList[i+1]
-                        s3nKey = URI + "/" + csvFilepattern
-                        key2 = csvFilename + "_" + str(trial) + ".hex"
-                        print "Loading", protocol, "key:", s3nKey, "to", key2
-                        parse2Key = h2o.nodes[0].parse(s3nKey, key2,
-                            timeoutSecs=timeoutSecs,
+                        parseKey = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
+                            key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                             retryDelaySecs=retryDelaySecs,
                             pollTimeoutSecs=pollTimeoutSecs,
                             noPoll=noPoll,
@@ -142,11 +141,8 @@ class Basic(unittest.TestCase):
                         time.sleep(1)
                         h2o.check_sandbox_for_errors()
                         (csvFilepattern, csvFilename, totalBytes3, timeoutSecs) = csvFilenameList[i+2]
-                        s3nKey = URI + "/" + csvFilepattern
-                        key2 = csvFilename + "_" + str(trial) + ".hex"
-                        print "Loading", protocol, "key:", s3nKey, "to", key2
-                        parse3Key = h2o.nodes[0].parse(s3nKey, key2,
-                            timeoutSecs=timeoutSecs,
+                        parseKey = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
+                            key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                             retryDelaySecs=retryDelaySecs,
                             pollTimeoutSecs=pollTimeoutSecs,
                             noPoll=noPoll,
