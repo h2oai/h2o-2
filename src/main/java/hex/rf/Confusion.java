@@ -191,7 +191,6 @@ public class Confusion extends MRTask {
     final int rows = bits.remaining() / rowsize;
     final int cmin = (int) _data._cols[_classcol]._min;
     int nchk = (int) ValueArray.getChunkIndex(chunk_key);
-    final Column[] cols = _data._cols;
     short numClasses = (short)_model.classes();
 
     // Votes: we vote each tree on each row, holding on to the votes until the end
@@ -223,15 +222,15 @@ public class Confusion extends MRTask {
           default: assert false : "The selected sampling strategy does not support OOBEE replay!"; break;
           }
         }
-        // ------
+        // --- END OF CRUCIAL CODE ---
 
-        // Bail out of broken rows
-        for( int c = 0; c < _modelDataMap.length; c++ )
-          if( _data.isNA(bits, row, cols[_modelDataMap[c]])) continue ROWS;
+        // Bail out of broken rows with NA in class column.
+        // Do not skip yet the rows wi
+        if( _data.isNA(bits, row, _classcol)) continue ROWS;
 
         // Predict with this tree - produce 0-based class index
         int prediction = _model.classify0(ntree, _data, bits, row, _modelDataMap, numClasses );
-        if( prediction >= _MODEL_N ) continue ROWS; // Junk row cannot be predicted
+        if( prediction >= numClasses ) continue ROWS; // Junk row cannot be predicted
         // Check tree miss
         int alignedPrediction = alignModelIdx(prediction);
         int alignedData       = alignDataIdx((int) _data.data(bits, row, _classcol) - cmin);
