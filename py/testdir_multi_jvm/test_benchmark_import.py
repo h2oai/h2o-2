@@ -22,6 +22,14 @@ class Basic(unittest.TestCase):
         avgMichalSize = 116561140 
         avgSynSize = 4020000
         covtype200xSize = 15033863400
+        if 1==1:
+            importFolderPath = '/home/0xdiag/datasets'
+            print "Using non-.gz'ed files in", importFolderPath
+            csvFilenameAll = [
+                # this should hit the "more" files too?
+                ("*_[123][0-9][0-9]*.dat.gz", "file_100.dat.gz", 2 * 300 * avgMichalSizeUncompressed, 700),
+            ]
+
         if 1==0:
             importFolderPath = '/home2/0xdiag/datasets'
             print "Using non-.gz'ed files in", importFolderPath
@@ -36,7 +44,7 @@ class Basic(unittest.TestCase):
                 # ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSizeUncompressed, 700),
                 # ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSizeUncompressed, 700),
             ]
-        if 1==1: 
+        if 1==0: 
             importFolderPath = '/home/0xdiag/datasets'
             print "Using .gz'ed files in", importFolderPath
             # all exactly the same prior to gzip!
@@ -85,11 +93,12 @@ class Basic(unittest.TestCase):
         trialMax = 1
         # rebuild the cloud for each file
         base_port = 54321
-        tryHeap = 10 
+        tryHeap = 28
         # can fire a parse off and go wait on the jobs queue (inspect afterwards is enough?)
         DO_GLM = False
-        noPoll = True
+        noPoll = False
         benchmarkLogging = ['cpu','disk', 'iostats', 'jstack']
+        benchmarkLogging = None
         pollTimeoutSecs = 120
         retryDelaySecs = 10
 
