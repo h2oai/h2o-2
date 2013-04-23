@@ -3,12 +3,12 @@ package water.api;
 import hex.rf.*;
 import hex.rf.Tree.StatType;
 
-import java.util.Properties;
-import java.util.BitSet;
+import java.util.*;
 
 import water.*;
 import water.util.RString;
 
+import com.google.common.primitives.Ints;
 import com.google.gson.JsonObject;
 
 public class RF extends Request {
@@ -19,10 +19,10 @@ public class RF extends Request {
   protected final Int               _features   = new Int(FEATURES, null, 1, Integer.MAX_VALUE);
   protected final Int               _depth      = new Int(DEPTH,Integer.MAX_VALUE,0,Integer.MAX_VALUE);
   protected final EnumArgument<StatType> _statType = new EnumArgument<Tree.StatType>(STAT_TYPE, StatType.ENTROPY);
-  protected final HexColumnSelect   _ignore     = new HexNonClassColumnSelect(IGNORE, _dataKey, _classCol);
+  protected final HexColumnSelect   _ignore     = new RFColumnSelect(IGNORE, _dataKey, _classCol);
   protected final H2OCategoryWeights _weights   = new H2OCategoryWeights(WEIGHTS, _dataKey, _classCol, 1);
   protected final EnumArgument<Sampling.Strategy> _samplingStrategy = new EnumArgument<Sampling.Strategy>(SAMPLING_STRATEGY, Sampling.Strategy.RANDOM, true);
-  protected final H2OCategoryStrata              _strataSamples    = new H2OCategoryStrata(STRATA_SAMPLES, _dataKey, _classCol, 67);
+  protected final H2OCategoryStrata               _strataSamples    = new H2OCategoryStrata(STRATA_SAMPLES, _dataKey, _classCol, 67);
   protected final Int               _sample     = new Int(SAMPLE, 67, 1, 100);
   protected final Bool              _oobee      = new Bool(OOBEE,true,"Out of bag error");
   protected final H2OKey            _modelKey   = new H2OKey(MODEL_KEY, RFModel.makeKey());
@@ -47,13 +47,15 @@ public class RF extends Request {
 
     _requestHelp = "Build a model using Random Forest.";
     /* Fields help */
-    help(_dataKey,  "");
+    help(_dataKey,  "Dataset.");
     help(_classCol, "The output classification (also known as " +
     		        "'response variable') that is being learned.");
-    help(_numTrees, "");
-    help(_features, "");
-    help(_depth,    "");
-    help(_oobee,    "Compute out-of-bag error rate.");
+    help(_numTrees, "Number of trees to generate.");
+    help(_features, "Number of split features,");
+    help(_depth,    "Maximal depth of a tree.");
+    help(_oobee,    "Compute out-of-bag error estimation (OOBEE).");
+    help(_modelKey, "Random forest model's key.");
+    help(_binLimit, "Bin limit.");
   }
 
   @Override protected void queryArgumentValueSet(Argument arg, Properties inputArgs) {
@@ -136,6 +138,37 @@ public class RF extends Request {
       return Response.redirect(response, RFView.class, response);
     } catch (IllegalArgumentException e) {
       return Response.error("Incorrect input data: "+e.getMessage());
+    }
+  }
+
+  // By default ignore all constants columns and "bad" columns, i.e., columns with
+  // many NAs
+  class RFColumnSelect extends HexNonConstantColumnSelect {
+
+    public RFColumnSelect(String name, H2OHexKey key, H2OHexKeyCol classCol) {
+      super(name, key, classCol);
+    }
+
+    @Override protected int[] defaultValue() {
+      ValueArray va = _key.value();
+      int [] res = new int[va._cols.length];
+      int selected = 0;
+      for(int i = 0; i < va._cols.length; ++i)
+        if(shouldIgnore(i,va._cols[i]))
+          res[selected++] = i;
+        else if((1.0 - (double)va._cols[i]._n/va._numrows) >= _maxNAsRatio) {
+            res[selected++] = i;
+            int val = 0;
+            if(_badColumns.get() != null) val = _badColumns.get();
+            _badColumns.set(val+1);
+          }
+
+      return Arrays.copyOfRange(res,0,selected);
+    }
+
+    @Override protected int[] parse(String input) throws IllegalArgumentException {
+      int[] result = super.parse(input);
+      return Ints.concat(result, defaultValue());
     }
   }
 }
