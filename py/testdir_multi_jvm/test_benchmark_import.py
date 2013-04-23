@@ -14,6 +14,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        time.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_benchmark_import(self):
@@ -23,7 +24,8 @@ class Basic(unittest.TestCase):
         avgSynSize = 4020000
         covtype200xSize = 15033863400
         if 1==1:
-            importFolderPath = '/home/0xdiag/datasets'
+            # importFolderPath = '/home/0xdiag/datasets/manyfiles-nflx-gz/more'
+            importFolderPath = '/home/0xdiag/datasets/manyfiles-nflx-gz'
             print "Using non-.gz'ed files in", importFolderPath
             csvFilenameAll = [
                 # this should hit the "more" files too?
@@ -97,8 +99,9 @@ class Basic(unittest.TestCase):
         # can fire a parse off and go wait on the jobs queue (inspect afterwards is enough?)
         DO_GLM = False
         noPoll = False
-        benchmarkLogging = ['cpu','disk', 'iostats', 'jstack']
-        benchmarkLogging = None
+        # benchmarkLogging = ['cpu','disk', 'iostats', 'jstack']
+        # benchmarkLogging = None
+        benchmarkLogging = ['cpu','disk', 'iostats']
         pollTimeoutSecs = 120
         retryDelaySecs = 10
 
@@ -232,6 +235,7 @@ class Basic(unittest.TestCase):
 
                 h2o_cmd.check_key_distribution()
                 h2o_cmd.delete_csv_key(csvFilename, importFullList)
+                time.sleep(3600)
                 h2o.tear_down_cloud()
                 if not localhost:
                     print "Waiting 30 secs before building cloud again (sticky ports?)"
