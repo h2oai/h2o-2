@@ -24,7 +24,7 @@ class Basic(unittest.TestCase):
         avgSynSize = 4020000
         covtype200xSize = 15033863400
         synSize =  183
-        if 1==1:
+        if 1==0:
             # importFolderPath = '/home/0xdiag/datasets'
             importFolderPath = '/home/0xdiag/datasets'
             print "Using .gz'ed files in", importFolderPath
@@ -33,13 +33,14 @@ class Basic(unittest.TestCase):
                 ("10k_small_gz/*", "file_400.dat.gz", 10000 * synSize , 700),
             ]
 
-        if 1==0:
+        if 1==1:
             # importFolderPath = '/home/0xdiag/datasets/manyfiles-nflx-gz/more'
             importFolderPath = '/home/0xdiag/datasets/manyfiles-nflx-gz'
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
                 # this should hit the "more" files too?
-                ("*_[3][0-9][0-9]*.dat.gz", "file_400.dat.gz", 2 * 100 * avgMichalSizeUncompressed, 700),
+                ("*_[1][5-9][0-9]*.dat.gz", "file_100.dat.gz", 2 * 50 * avgMichalSizeUncompressed, 1800),
+                ("*_[123][0-9][0-9]*.dat.gz", "file_600.dat.gz", 2 * 300 * avgMichalSizeUncompressed, 1800),
             ]
 
         if 1==0:
