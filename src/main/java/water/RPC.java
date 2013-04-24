@@ -372,12 +372,12 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   // Install it as The Answer packet and wake up anybody waiting on an answer.
   protected void response( AutoBuffer ab ) {
     assert _tasknum==ab.getTask();
-    if( _done ) { ab.close(); return; } // Ignore duplicate response packet
+    if( _done ) { assert !ab.hasTCP();ab.close(); return; } // Ignore duplicate response packet
     int flag = ab.getFlag();    // Must read flag also, to advance ab
-    if( flag == SERVER_TCP_SEND ) { ab.close(); return; } // Ignore UDP packet for a TCP reply
+    if( flag == SERVER_TCP_SEND ) { assert !ab.hasTCP(); ab.close(); return; } // Ignore UDP packet for a TCP reply
     assert flag == SERVER_UDP_SEND;
     synchronized(this) {        // Install the answer under lock
-      if( _done ) { ab.close(); return; } // Ignore duplicate response packet
+      if( _done ) { assert !ab.hasTCP(); ab.close(); return; } // Ignore duplicate response packet
       UDPTimeOutThread.PENDING.remove(this);
       _dt.read(ab);             // Read the answer (under lock?)
       ab.close();               // Also finish the read (under lock?)

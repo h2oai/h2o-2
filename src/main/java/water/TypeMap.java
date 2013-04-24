@@ -166,6 +166,7 @@ public class TypeMap {
     "water.store.s3.MultipartUpload$Progress",
     "water.util.FileIntegrityChecker",
     "water.util.JStackCollectorTask",
+    "water.util.LogCollectorTask",
   };
   static private final HashMap<String,Integer> MAP = new HashMap();
   static {
