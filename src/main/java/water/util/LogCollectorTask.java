@@ -45,5 +45,6 @@ public class LogCollectorTask extends DRemoteTask {
     }
   }
 
-//  @Override public byte priority() { return H2O.`GUI_PRIORITY; }
+  // erdos-6 has now GUI priorities integrated
+  // @Override public byte priority() { return H2O.GUI_PRIORITY; }
 }
