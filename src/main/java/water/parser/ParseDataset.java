@@ -230,6 +230,8 @@ public final class ParseDataset extends Job {
     @Override
     public void compute2() {
       setPendingCount(_keys.length);
+      final int maxParallel = 0;
+      int runningInParallel = 0;
       for(Key k:_keys){
         final Key key = k;
         H2OCountedCompleter subtask = new H2OCountedCompleter() {
@@ -273,7 +275,12 @@ public final class ParseDataset extends Job {
           }
         };
         subtask.setCompleter(this);
-        H2O.submitTask(subtask);
+        if(runningInParallel == maxParallel)
+          subtask.compute2();
+        else {
+          H2O.submitTask(subtask);
+          ++runningInParallel;
+        }
       }
       tryComplete();
     }
