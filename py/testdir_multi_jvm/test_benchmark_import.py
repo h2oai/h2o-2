@@ -14,7 +14,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        time.sleep(3600)
+        ### time.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_benchmark_import(self):
@@ -23,13 +23,23 @@ class Basic(unittest.TestCase):
         avgMichalSize = 116561140 
         avgSynSize = 4020000
         covtype200xSize = 15033863400
+        synSize =  183
         if 1==1:
-            # importFolderPath = '/home/0xdiag/datasets/manyfiles-nflx-gz/more'
-            importFolderPath = '/home/0xdiag/datasets/manyfiles-nflx-gz'
-            print "Using non-.gz'ed files in", importFolderPath
+            # importFolderPath = '/home/0xdiag/datasets'
+            importFolderPath = '/home/0xdiag/datasets'
+            print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
                 # this should hit the "more" files too?
-                ("*_[123][0-9][0-9]*.dat.gz", "file_100.dat.gz", 2 * 300 * avgMichalSizeUncompressed, 700),
+                ("10k_small_gz/*", "file_400.dat.gz", 10000 * synSize , 700),
+            ]
+
+        if 1==0:
+            # importFolderPath = '/home/0xdiag/datasets/manyfiles-nflx-gz/more'
+            importFolderPath = '/home/0xdiag/datasets/manyfiles-nflx-gz'
+            print "Using .gz'ed files in", importFolderPath
+            csvFilenameAll = [
+                # this should hit the "more" files too?
+                ("*_[3][0-9][0-9]*.dat.gz", "file_400.dat.gz", 2 * 100 * avgMichalSizeUncompressed, 700),
             ]
 
         if 1==0:
@@ -235,11 +245,11 @@ class Basic(unittest.TestCase):
 
                 h2o_cmd.check_key_distribution()
                 h2o_cmd.delete_csv_key(csvFilename, importFullList)
-                time.sleep(3600)
+                ### time.sleep(3600)
                 h2o.tear_down_cloud()
                 if not localhost:
                     print "Waiting 30 secs before building cloud again (sticky ports?)"
-                    time.sleep(30)
+                    ### time.sleep(30)
 
                 sys.stdout.write('.')
                 sys.stdout.flush() 
