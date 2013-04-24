@@ -127,7 +127,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
         AutoBuffer ab = new AutoBuffer(_target).putTask(UDP.udp.exec,_tasknum);
         ab.put1(CLIENT_UDP_SEND).put(_dt);
         if( ab.hasTCP() ) _sentTcp = true;
-        ab.close();
+        ab.close(_sentTcp);
         assert sz_check(ab) : "Resend of "+_dt.getClass()+"changes size from "+_size+" to "+ab.size();
       } else {
         // Else it was sent via TCP in a prior attempt, and we've timed out.
@@ -137,7 +137,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
         // instead of the UDP send, and no DTask (since it previously went via
         // TCP, no need to resend it).
         AutoBuffer ab = new AutoBuffer(_target).putTask(UDP.udp.exec,_tasknum);
-        ab.put1(CLIENT_TCP_SEND).close();
+        ab.put1(CLIENT_TCP_SEND).close(false);
       }
       // Double retry until we exceed existing age.  This is the time to delay
       // until we try again.  Note that we come here immediately on creation,
@@ -249,7 +249,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       _dt.write(ab);                 // Write the DTask - could be very large write
       _dt._repliedTcp = ab.hasTCP(); // Resends do not need to repeat TCP result
       _computed = true;              // After the TCP reply flag set, set computed bit
-      ab.close();
+      ab.close(_dt._repliedTcp);
       _client.record_task_answer(this); // Setup for retrying Ack & AckAck
     }
     // Re-send strictly the ack, because we're missing an AckAck
@@ -260,7 +260,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       AutoBuffer rab = new AutoBuffer(_client).putTask(UDP.udp.ack,_tsknum);
       if( dt._repliedTcp ) rab.put1(RPC.SERVER_TCP_SEND) ; // Reply sent via TCP
       else        dt.write(rab.put1(RPC.SERVER_UDP_SEND)); // Reply sent via UDP
-      rab.close();
+      rab.close(dt._repliedTcp);
       assert sz_check(rab) : "Resend of "+_dt.getClass()+"changes size from "+_size+" to "+rab.size();
       // Double retry until we exceed existing age.  This is the time to delay
       // until we try again.  Note that we come here immediately on creation,
@@ -365,27 +365,28 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       rpc.response(ab);
     }
     // ACKACK the remote, telling him "we got the answer"
-    new AutoBuffer(ab._h2o).putTask(UDP.udp.ackack.ordinal(),task).close();
+    new AutoBuffer(ab._h2o).putTask(UDP.udp.ackack.ordinal(),task).close(false);
   }
 
   // Got a response UDP packet, or completed a large TCP answer-receive.
   // Install it as The Answer packet and wake up anybody waiting on an answer.
-  protected void response( AutoBuffer ab ) {
+  protected int response( AutoBuffer ab ) {
     assert _tasknum==ab.getTask();
-    if( _done ) { assert !ab.hasTCP();ab.close(); return; } // Ignore duplicate response packet
+    if( _done ) return ab.close(false); // Ignore duplicate response packet
     int flag = ab.getFlag();    // Must read flag also, to advance ab
-    if( flag == SERVER_TCP_SEND ) { assert !ab.hasTCP(); ab.close(); return; } // Ignore UDP packet for a TCP reply
+    if( flag == SERVER_TCP_SEND ) return ab.close(false); // Ignore UDP packet for a TCP reply
     assert flag == SERVER_UDP_SEND;
     synchronized(this) {        // Install the answer under lock
-      if( _done ) { assert !ab.hasTCP(); ab.close(); return; } // Ignore duplicate response packet
+      if( _done ) return ab.close(false); // Ignore duplicate response packet
       UDPTimeOutThread.PENDING.remove(this);
       _dt.read(ab);             // Read the answer (under lock?)
-      ab.close();               // Also finish the read (under lock?)
+      ab.close(true);           // Also finish the read (under lock?)
       _dt.onAck();              // One time only execute (before sending ACKACK)
       _done = true;             // Only read one (of many) response packets
       ab._h2o.taskRemove(_tasknum); // Flag as task-completed, even if the result is null
       notifyAll();              // And notify in any case
     }
+    return 0;
   }
 
   // Assertion check that size is not changing between resends,
