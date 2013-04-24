@@ -184,7 +184,8 @@ class PerfH2O(object):
             return
 
         DO_IO_RW = True
-        DO_IOP = False
+        DO_IOP = True
+        DO_BLOCKED = False
 
         node = h2o.nodes[0]
         stats = node.iostatus()
@@ -192,6 +193,8 @@ class PerfH2O(object):
         histogram = stats['histogram']
 
         def log_window(w):
+            ## in case the window disappears from h2o, print what's available with this line
+            ## print k['window']
             if k['window'] == w:
                 i_o = k['i_o']
                 node = k['cloud_node_idx']
@@ -214,8 +217,8 @@ class PerfH2O(object):
             print "\nlog_iotstats probing node:", str(node.addr) + ":" + str(node.port)
             for k in histogram:
                 ### print k
-                log_window(10)
-                ### log_window(30)
+                # 1 5 60 300 available
+                log_window(60)
 
 
         # we want to sort the results before we print them, so grouped by node
@@ -229,13 +232,14 @@ class PerfH2O(object):
                 i_o = k['i_o']
                 r_w = k['r_w']
                 size = k['size_bytes']
-                blocked = k['blocked_ns']
-                duration = k['duration_ms'] * 1e6 # convert to ns
+                blocked = k['blocked_ms']
+                duration = k['duration_ms']
                 if duration != 0:
                     blockedPct = "%.2f" % (100 * blocked/duration) + "%"
                 else:
                     blockedPct = "no duration"
                 iopMsg = "node: %s %s %s %d bytes. blocked: %s" % (node, i_o, r_w, size, blockedPct)
+                # FIX! don't dump for now
                 iopList.append([node, iopMsg])
 
             iopList.sort(key=lambda iop: iop[0])  # sort by node
@@ -246,8 +250,9 @@ class PerfH2O(object):
                 print h2o.dump_json(stats)
 
             logging.critical("iostats: " + "Total sockets: " + str(totalSockets))
-            for i in iopList:
-                logging.critical("iostats:" + i[1])
+            if DO_BLOCKED:
+                for i in iopList:
+                    logging.critical("iostats:" + i[1])
 
         # don't save anything
         self.save(iostats=True)
