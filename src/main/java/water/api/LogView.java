@@ -1,13 +1,18 @@
 package water.api;
 
-import java.io.ByteArrayInputStream;
+import java.io.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Properties;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+import water.*;
+import water.util.LogCollectorTask;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import water.*;
-import water.api.RequestBuilders.Response;
-import water.util.LogCollectorTask;
+import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
 
 public class LogView extends Request {
   @Override protected Response serve() {
@@ -42,8 +47,14 @@ public class LogView extends Request {
       collector.invokeOnAllNodes();
 
       // FIXME put here zip for each file.
-      String outputFile = "h2o.log";
-      byte[] result = pack(collector._result);
+      String outputFile = getOutputLogName();
+      byte[] result = null;
+      try {
+        result = zipLogs(collector._result);
+      } catch (IOException e) {
+        // put the exception into output log
+        result = e.toString().getBytes();
+      }
       NanoHTTPD.Response res = server.new Response(NanoHTTPD.HTTP_OK,NanoHTTPD.MIME_DEFAULT_BINARY, new ByteArrayInputStream(result));
       res.addHeader("Content-Length", Long.toString(result.length));
       res.addHeader("Content-Disposition", "attachment; filename="+outputFile);
@@ -54,19 +65,31 @@ public class LogView extends Request {
       throw new Error("Get should not be called from this context");
     }
 
-    private byte[] pack(byte[][] results) {
+    private String getOutputLogName() {
+      String pattern = "yyMMdd-hhmmss";
+      SimpleDateFormat formatter = new SimpleDateFormat(pattern);
+      String now = formatter.format(new Date());
+
+      return "h2o-" + now + ".zip";
+    }
+
+    private byte[] zipLogs(byte[][] results) throws IOException {
       int l = 0;
-      for (int i = 0; i<results.length;i++) l+=results[i].length;
-      l += 2*results.length; // delimiter
-      byte[] pack = new byte[l];
-      l = 0;
-      for (int i = 0; i<results.length;i++) {
-        System.arraycopy(results[i], 0, pack, l, results[i].length);
-        l += results[i].length;
-        pack[l++] = (byte) '-';
-        pack[l++] = (byte) '\n';
-      }
-      return pack;
+      assert H2O.CLOUD._memary.length == results.length : "Unexpected change in the cloud!";
+      for (int i = 0; i<results.length;l+=results[i++].length);
+      ByteArrayOutputStream baos = new ByteArrayOutputStream(l);
+      ZipOutputStream zos = new ZipOutputStream(baos);
+      try {
+        for (int i =0; i<results.length; i++) {
+          String filename = "node"+i+H2O.CLOUD._memary[i].toString().replace(':', '_').replace('/', '_') + ".log";
+          ZipEntry ze = new ZipEntry(filename);
+          zos.putNextEntry(ze);
+          zos.write(results[i]);
+          zos.closeEntry();
+        }
+      } finally { zos.close(); }
+
+      return baos.toByteArray();
     }
   }
 }

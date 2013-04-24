@@ -45,5 +45,5 @@ public class LogCollectorTask extends DRemoteTask {
     }
   }
 
-//  @Override public byte priority() { return H2O.`GUI_PRIORITY; }
+  @Override public byte priority() { return H2O.GUI_PRIORITY; }
 }
