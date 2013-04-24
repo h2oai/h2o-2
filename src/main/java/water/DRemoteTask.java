@@ -42,7 +42,7 @@ public abstract class DRemoteTask extends DTask<DRemoteTask> implements Cloneabl
 
   // Top-level remote execution hook (called from RPC).  Was passed the keys to
   // execute in _arg.  Fires off jobs to remote machines based on Keys.
-  @Override public DRemoteTask invoke( H2ONode sender ) { return dfork().get(); }
+  @Override public DRemoteTask dinvoke( H2ONode sender ) { return dfork().get(); }
 
   // Invoked with a set of keys
   public DRemoteTask invoke( Key... keys ) { return fork(keys).get(); }

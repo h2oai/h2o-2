@@ -237,8 +237,16 @@ public final class AutoBuffer {
   // bytes out.  If the write is to an H2ONode and is short, send via UDP.
   // AutoBuffer close calls order; i.e. a reader close() will block until the
   // writer does a close().
-  public final int close() {
-    assert _h2o != null || _chan != null;      // Byte-array backed should not be closed
+  public final int close() { return close(true); }
+  public final int close(boolean expect_tcp) {
+    assert _h2o != null || _chan != null; // Byte-array backed should not be closed
+    // Extra asserts on closing TCP channels: we should always know & expect
+    // TCP channels, and read them fully.  If we close a TCP channel that is
+    // not fully read then the writer will assert and we will silently run on.
+    // Note: this assert is essentially redundant with the extra read/write of
+    // 0xab below; closing a TCP read-channel early will read 1 more byte -
+    // which probably will not be 0xab.
+    assert expect_tcp || !hasTCP();
     try {
       if( _chan == null ) {     // No channel?
         if( _read ) return bbFree();
