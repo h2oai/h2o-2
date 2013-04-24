@@ -1,7 +1,8 @@
 package water;
+
+import java.util.ArrayList;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-
 import jsr166y.ForkJoinPool;
 import water.H2O.FJWThr;
 import water.H2O.H2OCountedCompleter;
@@ -10,8 +11,10 @@ import water.H2O.H2OCountedCompleter;
  * A remotely executed FutureTask.  Flow is:
  *
  * 1- Build a DTask (or subclass).  This object will be replicated remotely.
- * 2- Make a RPC object, naming the target Node.  Call (re)call().  Call get() to
- * block for result, or cancel() or isDone(), etc.
+ * 2- Make a RPC object, naming the target Node.  Call (re)call().  Call get()
+ * to block for result, or cancel() or isDone(), etc.  Caller can also arrange
+ * for caller.tryComplete() to be called in a F/J thread, to support completion
+ * style execution (i.e. Continuation Passing Style).
  * 3- DTask will be serialized and sent to the target; small objects via UDP
  * and large via TCP (using AutoBuffer & auto-gen serializers).
  * 4- An RPC UDP control packet will be sent to target; this will also contain
@@ -56,11 +59,15 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   final long _started;
   long _retry;                  // When we should attempt a retry
 
+  // A list of CountedCompleters we will call tryComplete on when the RPC
+  // finally completes.  Frequently null/zero.
+  ArrayList<H2OCountedCompleter> _fjtasks;
+
   // We only send non-failing TCP info once; also if we used TCP it was large
   // so duplications are expensive.  However, we DO need to keep resending some
   // kind of "are you done yet?" UDP packet, incase the reply packet got dropped
   // (but also in case the main call was a single UDP packet and it got dropped).
-  // Not volatile because set under lock.
+  // Not volatile because read & written under lock.
   boolean _sentTcp;
 
   // To help with asserts, record the size of the sent DTask - if we resend
@@ -301,7 +308,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     final int flag = ab.getFlag();
     assert flag==CLIENT_UDP_SEND || flag==CLIENT_TCP_SEND; // Client-side send
     // Atomically record an instance of this task, one-time-only replacing a
-    // null with an RPCCall, a placeholder while we work on a proper responce -
+    // null with an RPCCall, a placeholder while we work on a proper response -
     // and it serves to let us discard dup UDP requests.
     RPCCall old = ab._h2o.has_task(task);
     // This is a UDP packet requesting an answer back for a request sent via
@@ -386,8 +393,21 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       _done = true;             // Only read one (of many) response packets
       ab._h2o.taskRemove(_tasknum); // Flag as task-completed, even if the result is null
       notifyAll();              // And notify in any case
+      // Also notify any and all pending completion-style tasks
+      if( _fjtasks != null ) 
+        for( final H2OCountedCompleter task : _fjtasks )
+          H2O.submitTask(new H2OCountedCompleter() { 
+              @Override public void compute2() { task.tryComplete(); }
+              @Override public byte priority() { return task.priority(); }
+            });
     }
     return 0;
+  }
+
+  // ---
+  synchronized void addCompleter( H2OCountedCompleter task ) {
+    if( _fjtasks == null ) _fjtasks = new ArrayList();
+    _fjtasks.add(task);
   }
 
   // Assertion check that size is not changing between resends,
