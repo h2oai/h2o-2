@@ -74,6 +74,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new GLMGridProgress());
     registerRequest(new GLMProgressPage());
     registerRequest(new GetVector());
+    registerRequest(new LogView.LogDownload());
     registerRequest(new RReaderProgress());
     registerRequest(new PostFile());
     registerRequest(new Progress());

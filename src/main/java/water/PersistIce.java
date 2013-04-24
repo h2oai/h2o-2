@@ -17,9 +17,11 @@ public abstract class PersistIce {
   // initialization routines ---------------------------------------------------
 
   protected static final String ROOT;
-  public static final String DEFAULT_ROOT = "/tmp";
-  private static final String ICE_DIR = "ice";
+  public static final String DEFAULT_ROOT  = "/tmp";
+  private static final String ICE_DIR      = "ice";
+  private static final String LOG_FILENAME = "h2o.log";
   private static final File iceRoot;
+  public  static final File logFile;
 
   // Load into the K/V store all the files found on the local disk
   static void initialize() {}
@@ -27,6 +29,7 @@ public abstract class PersistIce {
     ROOT = (H2O.OPT_ARGS.ice_root==null) ? DEFAULT_ROOT : H2O.OPT_ARGS.ice_root;
     H2O.OPT_ARGS.ice_root = ROOT;
     iceRoot = new File(ROOT+File.separator+ICE_DIR+H2O.API_PORT);
+    logFile = new File(iceRoot+File.separator+LOG_FILENAME);
     // Make the directory as-needed
     iceRoot.mkdirs();
     if( !(iceRoot.isDirectory() && iceRoot.canRead() && iceRoot.canWrite()) )
@@ -59,7 +62,7 @@ public abstract class PersistIce {
   }
 
   public static FileWriter logFile() {
-    try { return new FileWriter(iceRoot+"/h2o.log"); }
+    try { return new FileWriter(iceRoot+File.separator+LOG_FILENAME); }
     catch( IOException ioe ) { return null; }
   }
 
