@@ -3,11 +3,12 @@ package water.api;
 import java.io.ByteArrayInputStream;
 import java.util.Properties;
 
+import water.NanoHTTPD;
+import water.UKV;
+import water.util.LogCollectorTask;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import water.*;
-import water.api.RequestBuilders.Response;
-import water.util.LogCollectorTask;
 
 public class LogView extends Request {
   @Override protected Response serve() {
