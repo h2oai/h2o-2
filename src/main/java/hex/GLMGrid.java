@@ -92,7 +92,7 @@ public class GLMGrid extends Job {
     }
 
     @Override
-    public GridTask invoke(H2ONode client){
+    public GridTask dinvoke(H2ONode client){
       compute2();
       // don't send input data back!
       _job = null;

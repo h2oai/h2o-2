@@ -66,7 +66,7 @@ public class TaskStore2HDFS extends DTask<TaskStore2HDFS> {
   public TaskStore2HDFS(Key srcKey) { _arykey = srcKey; }
 
   @Override
-  public final TaskStore2HDFS invoke(H2ONode sender) {
+  public final TaskStore2HDFS dinvoke(H2ONode sender) {
     compute();
     return this;
   }

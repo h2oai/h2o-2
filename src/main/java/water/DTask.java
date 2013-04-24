@@ -25,7 +25,7 @@ public abstract class DTask<T> extends H2OCountedCompleter implements Freezable 
   transient boolean _repliedTcp; // Any return/reply/result was sent via TCP
 
   /** Top-level remote execution hook.  Called on the <em>remote</em>. */
-  abstract public T invoke( H2ONode sender );
+  abstract public T dinvoke( H2ONode sender );
 
   /** 2nd top-level execution hook.  After the primary task has received a
    * result (ACK) and before we have sent an ACKACK, this method is executed

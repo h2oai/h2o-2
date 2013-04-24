@@ -20,7 +20,7 @@ public class TaskPutKey extends DTask<TaskPutKey> {
   }
 
   protected TaskPutKey( Key key, Value val ) { _key = key; _xval = _val = val; }
-  public TaskPutKey invoke( H2ONode sender ) {
+  @Override public TaskPutKey dinvoke( H2ONode sender ) {
     assert _key.home() || _val==null; // Only PUT to home for keys, or remote invalidation from home
     // Initialize Value for having a single known replica (the sender)
     if( _val != null ) _val.initReplicaHome(sender,_key);

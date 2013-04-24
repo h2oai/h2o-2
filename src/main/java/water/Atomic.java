@@ -27,7 +27,7 @@ public abstract class Atomic extends DTask {
   public void onSuccess(){}
 
   // Only invoked remotely; this is now the key's home and can be directly executed
-  @Override public final Atomic invoke( H2ONode sender ) {  compute2(); return this; }
+  @Override public final Atomic dinvoke( H2ONode sender ) {  compute2(); return this; }
 
   /** Block until it completes, even if run remotely */
   public final Atomic invoke( Key key ) {

@@ -243,7 +243,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
 
     @Override public void compute2() {
       // Run the remote task on this server!
-      _dt.invoke(_client);
+      _dt.dinvoke(_client);
       // Send results back
       AutoBuffer ab = new AutoBuffer(_client).putTask(UDP.udp.ack,_tsknum).put1(SERVER_UDP_SEND);
       _dt.write(ab);                 // Write the DTask - could be very large write
