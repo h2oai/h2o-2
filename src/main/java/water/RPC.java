@@ -251,6 +251,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       _computed = true;              // After the TCP reply flag set, set computed bit
       ab.close(_dt._repliedTcp);
       _client.record_task_answer(this); // Setup for retrying Ack & AckAck
+      tryComplete();
     }
     // Re-send strictly the ack, because we're missing an AckAck
     public final void resend_ack() {
