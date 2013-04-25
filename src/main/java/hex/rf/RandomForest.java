@@ -35,8 +35,8 @@ public class RandomForest {
                       int numSplitFeatures) {
     Timer  t_alltrees = new Timer();
     Tree[] trees      = new Tree[ntrees];
-    Utils.pln("[RF] number of split features: "+ drf.numSplitFeatures());
-    Utils.pln("[RF] starting RF computation with "+ data.rows()+" rows ");
+    L.info(Sys.RANDF,"Number of split features: "+ drf.numSplitFeatures());
+    L.info(Sys.RANDF,"Starting RF computation with "+ data.rows()+" rows ");
 
     Random  rnd     = Utils.getRNG(data.seed() + ROOT_SEED_ADD);
     Sampling sampler = createSampler(drf);
@@ -47,7 +47,7 @@ public class RandomForest {
       if (!parallelTrees)   DRemoteTask.invokeAll(new Tree[]{trees[i]});
     }
     if(parallelTrees)DRemoteTask.invokeAll(trees);
-    Utils.pln("All trees ("+ntrees+") done in "+ t_alltrees);
+    L.info(Sys.RANDF,"All trees ("+ntrees+") done in "+ t_alltrees);
   }
 
   static Sampling createSampler(final DRF drf) {
@@ -131,7 +131,7 @@ public class RandomForest {
       DKV.remove(fk);
     }
     if(ARGS.ntrees == 0) {
-      Utils.pln("Nothing to do as ntrees == 0");
+      L.info(Sys.RANDF,"Nothing to do as ntrees == 0");
       UDPRebooted.T.shutdown.broadcast();
       return;
     }
@@ -172,7 +172,7 @@ public class RandomForest {
     assert ARGS.ntrees >=0;
     assert ARGS.binLimit > 0 && ARGS.binLimit <= Short.MAX_VALUE;
 
-    Utils.pln("[RF] Arguments used:\n"+ARGS.toString());
+    L.info(Sys.RANDF,"Arguments used:\n"+ARGS.toString());
     final Key modelKey = Key.make("model");
     DRFFuture drfResult = DRF.execute(modelKey,
                           cols,
@@ -192,13 +192,13 @@ public class RandomForest {
                           ARGS.exclusive);
     DRF drf = drfResult.get();  // block on all nodes!
     RFModel model = UKV.get(modelKey);
-    Utils.pln("[RF] Random forest finished in "+ drf._t_main);
+    L.info(Sys.RANDF,"Random forest finished in "+ drf._t_main);
 
     Timer t_valid = new Timer();
     // Get training key.
     Key valKey = drf.aryKey();
     if(ARGS.outOfBagError && !ARGS.stratify){
-      Utils.pln("[RF] Computing out of bag error");
+      L.info(Sys.RANDF,"Computing out of bag error");
       Confusion.make( model, valKey, classcol, null, true).report();
     }
     // Run validation.
@@ -212,7 +212,7 @@ public class RandomForest {
       Confusion.make( model, valKey, classcol, null, false).report();
     }
 
-    Utils.pln("[RF] Validation done in: " + t_valid);
+    L.info(Sys.RANDF,"Validation done in: " + t_valid);
     UDPRebooted.T.shutdown.broadcast();
   }
 }

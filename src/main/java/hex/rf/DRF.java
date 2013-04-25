@@ -8,7 +8,8 @@ import java.util.*;
 import water.*;
 import water.ValueArray.Column;
 import water.Timer;
-import water.util.Utils;
+import water.util.*;
+import water.util.L.Tag.Sys;
 
 /** Distributed RandomForest */
 public final class DRF extends water.DRemoteTask {
@@ -192,13 +193,13 @@ public final class DRF extends water.DRemoteTask {
     Timer t_extract = new Timer();
     // Build data adapter for this node.
     DataAdapter dapt = DABuilder.create(this).build(_keys);
-    Utils.pln("[RF] Data adapter built in " + t_extract );
+    L.info(this,Sys.RANDF,"Data adapter built in " + t_extract );
     // Prepare data and compute missing parameters.
     Data t            = Data.make(dapt);
     _numSplitFeatures = howManySplitFeatures(t);
     int ntrees        = howManyTrees();
 
-    Utils.pln("[RF] Building "+ntrees+" trees");
+    L.info(this,Sys.RANDF,"Building "+ntrees+" trees");
     RandomForest.build(this, t, ntrees, _depth, 0.0, StatType.values()[_stat],_parallel,_numSplitFeatures);
     // Wait for the running jobs
     tryComplete();
@@ -290,7 +291,7 @@ public final class DRF extends water.DRemoteTask {
 
     for(int i : nodesIdxs) {
       if( _gHist[i] < (int)(_strataSamples[i]/_sample) )
-        Utils.pln("There is not enough samples of class " + i + ".");
+        L.info(this,Sys.RANDF,"There is not enough samples of class " + i + ".");
     }
     // Decide which classes need to be extracted
     SortedSet<Integer> uClasses = new TreeSet<Integer>();
@@ -330,6 +331,6 @@ public final class DRF extends water.DRemoteTask {
     _.sample = (int)(sample * 100);
     _.file = "";
 
-    Utils.pln("Web arguments: " + _ + " key "+ary._key);
+    L.info(Sys.RANDF,"Web arguments: " + _ + " key "+ary._key);
   }
 }

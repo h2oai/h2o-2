@@ -10,7 +10,9 @@ import jsr166y.CountedCompleter;
 import jsr166y.RecursiveTask;
 import water.*;
 import water.Timer;
+import water.util.L;
 import water.util.Utils;
+import water.util.L.Tag.Sys;
 
 public class Tree extends CountedCompleter {
   static public enum StatType { ENTROPY, GINI };
@@ -113,14 +115,14 @@ public class Tree extends CountedCompleter {
         ? new LeafNode(_data.unmapClass(spl._split), d.rows())
         : new FJBuild (spl, d, 0, _seed).compute();
 
-      if (_verbose > 1) Utils.pln(computeStatistics().toString());
+      if (_verbose > 1)  L.info(this,Sys.RANDF,computeStatistics().toString());
       _stats = null; // GC
 
       // Atomically improve the Model as well
       appendKey(_job.dest(),toKey());
       StringBuilder sb = new StringBuilder("[RF] Tree : ").append(_data_id+1);
       sb.append(" d=").append(_tree.depth()).append(" leaves=").append(_tree.leaves()).append(" done in ").append(timer).append('\n');
-      Utils.pln(_tree.toString(sb,  _verbose > 0 ? Integer.MAX_VALUE : 200).toString());
+      L.info(this,Sys.RANDF,_tree.toString(sb,  _verbose > 0 ? Integer.MAX_VALUE : 200).toString());
     }
     // Wait for completation
     tryComplete();

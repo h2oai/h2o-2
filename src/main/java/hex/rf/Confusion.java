@@ -5,7 +5,8 @@ import java.util.Random;
 
 import water.*;
 import water.ValueArray.Column;
-import water.util.Utils;
+import water.util.*;
+import water.util.L.Tag.Sys;
 
 import com.google.common.primitives.Ints;
 
@@ -128,7 +129,7 @@ public class Confusion extends MRTask {
     if( classWt != null )
       for( int i=0; i<classWt.length; i++ )
         if( classWt[i] != 1.0 )
-          Utils.pln("[CM] Weighted votes "+i+" by "+classWt[i]);
+          L.info(Sys.CONFM,"Weighted votes ",i," by ",classWt[i]);
     return C;
   }
 
@@ -359,9 +360,7 @@ public class Confusion extends MRTask {
         + "                Validated on (rows): " + _rows + "\n"
         + "     Rows skipped during validation: " + _skippedRows + "\n"
         + "  Mispredictions per tree (in rows): " + Arrays.toString(_errorsPerTree)+"\n";
-
-
-    Utils.pln(s);
+    L.info(Sys.RANDF,s);
   }
 
   /** Returns classification error. */
