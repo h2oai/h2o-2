@@ -12,7 +12,6 @@ import water.util.LogCollectorTask;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
 
 public class LogView extends Request {
   @Override protected Response serve() {

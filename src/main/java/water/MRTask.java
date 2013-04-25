@@ -1,7 +1,6 @@
 package water;
 
 import jsr166y.CountedCompleter;
-import jsr166y.ForkJoinPool.ManagedBlocker;
 
 /** Map/Reduce style distributed computation. */
 public abstract class MRTask extends DRemoteTask {

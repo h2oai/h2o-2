@@ -1,4 +1,4 @@
-package water;
+ package water;
 
 import java.lang.management.*;
 import java.util.Arrays;
@@ -190,7 +190,7 @@ public abstract class MemoryManager {
                            ", DESIRED="+(H2O.Cleaner.DESIRED>>20)+"M");
       setMemGood();
       if( oom ) // Confused? OOM should have FullGCd should have set low-mem goals
-        System.err.println("[h2o] *WARNING* OOM but no FullGC callback?  MEM_MAX = " + MEM_MAX + ", DESIRED = " + d +", CACHE = " + cacheUsage + ", p = " + p + ", bytes = " + bytes); 
+        System.err.println("[h2o] *WARNING* OOM but no FullGC callback?  MEM_MAX = " + MEM_MAX + ", DESIRED = " + d +", CACHE = " + cacheUsage + ", p = " + p + ", bytes = " + bytes);
     }
   }
 

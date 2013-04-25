@@ -1,7 +1,5 @@
 package water;
 
-import water.*;
-import water.util.Counter;
 import java.util.Arrays;
 
 /**
