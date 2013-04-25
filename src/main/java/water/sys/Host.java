@@ -5,6 +5,7 @@ import java.util.*;
 
 import water.Boot;
 import water.Log;
+import water.util.L;
 import water.util.Utils;
 
 public class Host {
@@ -103,13 +104,11 @@ public class Host {
       }
 
       args.add(_address + ":" + "/home/" + _user + "/" + FOLDER);
-      // System.out.println(Arrays.toString(args.toArray()));
       ProcessBuilder builder = new ProcessBuilder(args);
       builder.environment().put("CYGWIN", "nodosfilewarning");
       process = builder.start();
       String log = "rsync " + VM.localIP() + " -> " + _address;
-      if( !LOG_RSYNC )
-        System.out.println(log);
+      if( !LOG_RSYNC ) L.info(log);
       NodeVM.inheritIO(process, Log.padRight(log + ": ", 24));
       process.waitFor();
     } catch( Exception ex ) {

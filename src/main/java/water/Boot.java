@@ -10,6 +10,7 @@ import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import water.util.L;
 import water.util.Utils;
 
 
@@ -99,7 +100,7 @@ public class Boot extends ClassLoader {
       if( !dir.mkdir() )  throw new IOException("Failed to create tmp dir: "  + dir.getAbsolutePath());
       dir.deleteOnExit();
       _parentDir = dir;         // Set a global instead of passing the dir about?
-      System.out.println("[h2o,debug] Extracting jar into " + _parentDir);
+      L.info("Extracting jar into " + _parentDir);
 
       // Make all the embedded jars visible to the custom class loader
       extractInternalFiles(); // Resources

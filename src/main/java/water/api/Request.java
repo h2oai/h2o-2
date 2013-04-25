@@ -6,8 +6,8 @@ import java.io.InputStream;
 import java.util.*;
 
 import water.*;
-import water.util.IndentingAppender;
-import water.util.RString;
+import water.util.*;
+import water.util.L.Tag.Sys;
 
 import com.google.common.base.Objects;
 import com.google.common.io.ByteStreams;
@@ -39,7 +39,7 @@ public abstract class Request extends RequestBuilders {
             if(value instanceof Value) value = ((Value) value)._key;
             log += " " + arg._name + "=" + value;
           }
-          System.out.println(log);
+          L.info(this,Sys.HTTPD,log);
         }
         if (query != null)
           return wrap(server,query,type);

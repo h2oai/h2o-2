@@ -9,7 +9,8 @@ import java.util.*;
 
 import water.*;
 import water.Timer;
-import water.util.Utils;
+import water.util.*;
+import water.util.L.Tag.Sys;
 
 /**
  * A RandomForest can be used for growing or validation. The former starts with a known target number of trees,
@@ -124,7 +125,7 @@ public class RandomForest {
       va = TestUtil.parse_test_key(Key.make(ARGS.rawKey),Key.make(TestUtil.getHexKeyFromRawKey(ARGS.rawKey)));
     else { // data outside of H2O, load and parse
       File f = new File(ARGS.file);
-      System.out.println("[RF] Loading file " + f);
+      L.info(Sys.RANDF,"Loading file ", f);
       Key fk = TestUtil.load_test_file(f);
       va = TestUtil.parse_test_key(fk,Key.make(TestUtil.getHexKeyFromFile(f)));
       DKV.remove(fk);
@@ -203,7 +204,7 @@ public class RandomForest {
     // Run validation.
     if(ARGS.validationFile != null && !ARGS.validationFile.isEmpty()){ // validate on the supplied file
       File f = new File(ARGS.validationFile);
-      System.out.println("[RF] Loading validation file " + f);
+      L.info(Sys.RANDF,"Loading validation file ",f);
       Key fk = TestUtil.load_test_file(f);
       ValueArray v = TestUtil.parse_test_key(fk,Key.make(TestUtil.getHexKeyFromFile(f)));
       valKey = v._key;

@@ -7,6 +7,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import javax.management.Notification;
 import javax.management.NotificationEmitter;
 
+import water.util.L;
+import water.util.L.Tag.Sys;
+
 import jsr166y.ForkJoinPool;
 import jsr166y.ForkJoinPool.ManagedBlocker;
 
@@ -171,23 +174,15 @@ public abstract class MemoryManager {
     H2O.Cleaner.DESIRED = d;
 
     if( cacheUsage > H2O.Cleaner.DESIRED ) {
-      if( H2O.Cleaner.VERBOSE ) {
-        System.out.print(CAN_ALLOC?"Blocking! ":"blocked: ");
-        System.out.println(msg+", KV="+(cacheUsage>>20)+"M"+
-                           ", POJO="+(POJO_USED_AT_LAST_GC>>20)+"M"+
-                           ", free="+(freeHeap>>20)+"M"+
-                           ", MAX="+(MEM_MAX>>20)+"M"+
-                           ", DESIRED="+(H2O.Cleaner.DESIRED>>20)+"M");
-      }
+      L.debug2(null, Sys.CLEANR, (CAN_ALLOC?"Blocking! ":"blocked: "),
+          msg,", KV="+(cacheUsage>>20),"M, POJO=",(POJO_USED_AT_LAST_GC>>20),"M, free=",(freeHeap>>20),
+          "M, MAX=",(MEM_MAX>>20),"M, DESIRED=",(H2O.Cleaner.DESIRED>>20),"M");
       if( oom ) setMemLow(); // Stop allocations; trigger emergency clean
       H2O.kick_store_cleaner();
     } else { // Else we are not *emergency* cleaning, but may be lazily cleaning.
-      if( H2O.Cleaner.VERBOSE && !CAN_ALLOC )
-        System.out.println("Unblocking: "+msg+", KV="+(cacheUsage>>20)+"M"+
-                           ", POJO="+(POJO_USED_AT_LAST_GC>>20)+"M"+
-                           ", free="+(freeHeap>>20)+"M"+
-                           ", MAX="+(MEM_MAX>>20)+"M"+
-                           ", DESIRED="+(H2O.Cleaner.DESIRED>>20)+"M");
+      if( !CAN_ALLOC )
+        L.debug2(null,Sys.CLEANR,"Unblocking: ",msg,", KV=",(cacheUsage>>20),"M, POJO=",(POJO_USED_AT_LAST_GC>>20),
+            "M, free=",(freeHeap>>20),"M, MAX=",(MEM_MAX>>20),"M, DESIRED=",(H2O.Cleaner.DESIRED>>20),"M");
       setMemGood();
       if( oom ) // Confused? OOM should have FullGCd should have set low-mem goals
         System.err.println("[h2o] *WARNING* OOM but no FullGC callback?  MEM_MAX = " + MEM_MAX + ", DESIRED = " + d +", CACHE = " + cacheUsage + ", p = " + p + ", bytes = " + bytes);

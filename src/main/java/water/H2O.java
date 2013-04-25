@@ -12,7 +12,9 @@ import water.exec.Function;
 import water.hdfs.HdfsLoader;
 import water.nbhm.NonBlockingHashMap;
 import water.store.s3.PersistS3;
+import water.util.L;
 import water.util.Utils;
+import water.util.L.Tag.Sys;
 
 import com.amazonaws.auth.PropertiesCredentials;
 import com.google.common.base.Objects;
@@ -246,18 +248,20 @@ public final class H2O {
   }
 
   private static InetAddress guessInetAddress(List<InetAddress> ips) {
-    System.out.println("Multiple local IPs detected:");
-    for(InetAddress ip : ips) System.out.println("  " + ip);
-    System.out.println("Attempting to determine correct address...");
+    String m = "Multiple local IPs detected:\n";
+    for(InetAddress ip : ips) m+="  " + ip;
+    m+="Attempting to determine correct address...";
     Socket s = null;
     try {
       // using google's DNS server as an external IP to find
       s = new Socket("8.8.8.8", 53);
-      System.out.println("Using " + s.getLocalAddress());
+      m+="Using " + s.getLocalAddress();
       return s.getLocalAddress();
     } catch( Throwable t ) {
+      L.err(t);
       return null;
     } finally {
+      L.warn(m);
       Utils.close(s);
     }
   }
@@ -556,10 +560,9 @@ public final class H2O {
       STATIC_H2OS.add(SELF);
     }
 
-    System.out.println("[h2o] ("+VERSION+") '"+NAME+"' on " + SELF+
-                       (OPT_ARGS.flatfile==null
-                        ? (", discovery address "+CLOUD_MULTICAST_GROUP+":"+CLOUD_MULTICAST_PORT)
-                        : ", static configuration based on -flatfile "+OPT_ARGS.flatfile));
+    L.info("("+VERSION+") '"+NAME+"' on " + SELF+(OPT_ARGS.flatfile==null
+        ? (", discovery address "+CLOUD_MULTICAST_GROUP+":"+CLOUD_MULTICAST_PORT)
+            : ", static configuration based on -flatfile "+OPT_ARGS.flatfile));
 
     // Create the starter Cloud with 1 member
     SELF._heartbeat._jar_md5 = Boot._init._jarHash;
@@ -663,9 +666,7 @@ public final class H2O {
       API_PORT += 2;
     }
     SELF = H2ONode.self(inet);
-    System.out.println("[h2o] Internal communication uses port: "+UDP_PORT);
-    System.out.println("[h2o] Listening for HTTP and REST traffic on");
-    System.out.println("[h2o]\t\thttp:/"+inet+":"+_apiSocket.getLocalPort()+"/");
+    L.info("Internal communication uses port: ",UDP_PORT,"\nListening for HTTP and REST traffic on  http:/",inet,":"+_apiSocket.getLocalPort()+"/");
 
     NAME = OPT_ARGS.name==null? System.getProperty("user.name") : OPT_ARGS.name;
     // Read a flatfile of allowed nodes
@@ -868,8 +869,6 @@ public final class H2O {
     static public volatile long DESIRED;
     // Histogram used by the Cleaner
     private final Histo _myHisto;
-    // Turn on to see copious cache-cleaning stats
-    static public final boolean VERBOSE = Boolean.getBoolean("h2o.cleaner.verbose");
 
     boolean _diskFull = false;
 
@@ -931,8 +930,7 @@ public final class H2O {
         // more than 5sec old
         if( !force ) clean_to_age = Math.max(clean_to_age,now-5000);
 
-        if( VERBOSE )
-          System.out.println("[clean >>>] "+h+" DESIRED="+(DESIRED>>20)+"M dirtysince="+(now-dirty)+" force="+force+" clean2age="+(now-clean_to_age));
+        L.debug2(this,Sys.CLEANR, h," DESIRED=",(DESIRED>>20),"M dirtysince=",(now-dirty)," force=",force," clean2age=",(now-clean_to_age));
         long cleaned = 0;
         long freed = 0;
 
@@ -970,7 +968,8 @@ public final class H2O {
           // Should I write this value out to disk?
           // Should I further force it from memory?
           if(!val.isPersisted() && !diskFull && (force || (lazyPersist() && lazy_clean(key)))) {
-            if( VERBOSE) { System.out.print('.'); cleaned += m.length; }
+            L.debug2(this, Sys.CLEANR, ".");
+            cleaned += m.length;
             try{
               val.storePersist(); // Write to disk
             } catch(IOException e) {
@@ -992,8 +991,7 @@ public final class H2O {
 
         h = _myHisto.histo(true); // Force a new histogram
         MemoryManager.set_goals("postclean",false);
-        if( VERBOSE )
-          System.out.println("[clean <<<] "+h+" cleaned="+(cleaned>>20)+"M, freed="+(freed>>20)+"M, DESIRED="+(DESIRED>>20)+"M");
+        L.debug2(this,Sys.CLEANR,h," cleaned="+(cleaned>>20),"M, freed=",(freed>>20),"M, DESIRED=",(DESIRED>>20),"M");
       }
     }
 
@@ -1084,7 +1082,7 @@ public final class H2O {
         _oldest = oldest; // Oldest seen in this pass
         _vold = vold;
         _clean = clean && _dirty==Long.MAX_VALUE; // Looks like a clean K/V the whole time?
-        if( VERBOSE ) System.out.println("[compute histo "+(cached>>20)+"M]");
+         L.debug2(this,Sys.CLEANR,"[compute histo "+(cached>>20)+"M]");
       }
 
       // Compute the time (in msec) for which we need to throw out things

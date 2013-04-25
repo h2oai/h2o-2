@@ -10,6 +10,8 @@ import org.apache.hadoop.fs.s3.S3Exception;
 
 import water.*;
 import water.api.Constants;
+import water.util.L;
+import water.util.L.Tag.Sys;
 
 import com.google.common.base.Strings;
 import com.google.common.io.ByteStreams;
@@ -31,7 +33,7 @@ public abstract class PersistHdfs {
       if (!p.exists())
         Log.die("[h2o,hdfs] Unable to open hdfs configuration file "+p.getAbsolutePath());
       conf.addResource(new Path(p.getAbsolutePath()));
-      System.out.println("[h2o,hdfs] resource " + p.getAbsolutePath() + " added to the hadoop configuration");
+      L.info(PersistHdfs.class,Sys.HDFS_,"resource ", p.getAbsolutePath(), " added to the hadoop configuration");
     } else {
       conf = new Configuration();
       if( !Strings.isNullOrEmpty(H2O.OPT_ARGS.hdfs) ) {

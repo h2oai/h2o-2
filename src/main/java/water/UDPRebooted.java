@@ -1,6 +1,7 @@
 package water;
 import java.io.IOException;
-import java.net.DatagramPacket;
+
+import water.util.L;
 
 /**
  * A UDP Rebooted packet: this node recently rebooted
@@ -39,7 +40,7 @@ public class UDPRebooted extends UDP {
     case reboot: return;
     case shutdown:
       closeAll();
-      System.out.println("[h2o] Orderly shutdown command from "+killer);
+      L.info("Orderly shutdown command from "+killer);
       System.exit(0);
       return;
     case oom:      m = "Out of Memory and no swap space left!"      ; break;

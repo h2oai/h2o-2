@@ -1,7 +1,8 @@
 package water.hdfs;
 
 import water.*;
-import water.DTask;
+import water.util.L;
+import water.util.L.Tag.Sys;
 
 /**
  * Distributed task to store key on HDFS.
@@ -48,7 +49,7 @@ public class TaskStore2HDFS extends DTask<TaskStore2HDFS> {
     long idx = 0;
     while( (ts=UKV.get(selfKey,TaskStore2HDFS.class)) != null ) {
       if( ts._indexFrom != idx ) {
-        System.out.print(" "+idx+"/"+ary.chunks());
+        L.debug(Sys.HDFS_,idx,"/",ary.chunks());
         idx = ts._indexFrom;
       }
       if( ts._err != null ) {   // Found an error?
@@ -57,8 +58,7 @@ public class TaskStore2HDFS extends DTask<TaskStore2HDFS> {
       }
       try { Thread.sleep(100); } catch( InterruptedException e ) { }
     }
-    System.out.println(" "+ary.chunks()+"/"+ary.chunks());
-
+    L.debug(Sys.HDFS_,ary.chunks(),"/",ary.chunks());
     //PersistHdfs.refreshHDFSKeys();
     return null;
   }

@@ -6,6 +6,8 @@ import java.util.List;
 
 import water.*;
 import water.util.ByteBufferInputStream;
+import water.util.L;
+import water.util.L.Tag.Sys;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.*;
@@ -84,8 +86,7 @@ public class MultipartUpload extends MRTask {
 
   @Override
   public void map(Key key) {
-    if( DEBUG )
-      System.out.println("s3 map " + key + ": " + this);
+    if( DEBUG ) L.debug(this, Sys.WATER, "map ",key ,": ", this);
 
     assert key.home();
     long chunk = ValueArray.getChunkIndex(key);
@@ -127,8 +128,7 @@ public class MultipartUpload extends MRTask {
 
   @Override
   public void reduce(DRemoteTask rt) {
-    if( DEBUG )
-      System.out.println("s3 reduce: " + this);
+    if( DEBUG ) L.debug(this, Sys.WATER, "reduce: " + this);
 
     MultipartUpload task = (MultipartUpload) rt;
 
@@ -154,8 +154,7 @@ public class MultipartUpload extends MRTask {
         Progress update = new Progress();
         update._todo = old._todo;
         update._done = old._done + 1;
-        if( DEBUG )
-          System.out.println("s3 step " + update._done + " of " + update._todo);
+        if( DEBUG ) L.debug(this, Sys.WATER, "step ",update._done," of ",update._todo);
         return update;
       }
     }.invoke(key);

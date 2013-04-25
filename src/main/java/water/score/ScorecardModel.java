@@ -9,6 +9,8 @@ import water.parser.PMMLParser.DataTypes;
 import water.parser.PMMLParser.Predicate;
 import water.parser.PMMLParser;
 import water.score.ScoreModel;
+import water.util.L;
+import water.util.L.Tag.Sys;
 
 /**
  * Scorecard model - decision table.
@@ -115,7 +117,7 @@ public class ScorecardModel extends ScoreModel {
 
     public void makeFeatureHashMethod( StringBuilder sbParent, HashMap<String,String> vars, CtClass scClass ) {
       if( _type == null ) {
-        System.out.println("[h2o] Warning: ignore untyped feature "+_name);
+        L.warn("Ignore untyped feature "+_name);
         return;
       }
       String jname = xml2jname(_name);

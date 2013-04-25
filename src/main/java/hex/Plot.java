@@ -7,7 +7,6 @@ import water.ValueArray.Column;
  * Basic data visualization using map/reduce.
  */
 public abstract class Plot {
-  private static final boolean DEBUG = false;
 
   static public byte[] run(ValueArray va, int width, int height, int... cols) {
     // TODO PCA if more than two columns
@@ -32,8 +31,6 @@ public abstract class Plot {
 
     @Override
     public void map(Key key) {
-      if( DEBUG )
-        System.out.println("pixels map " + key + ": " + this);
 
       assert key.home();
       ValueArray va = DKV.get(_arykey).get();
@@ -58,10 +55,7 @@ public abstract class Plot {
 
     @Override
     public void reduce(DRemoteTask rt) {
-      if( DEBUG )
-        System.out.println("pixels reduce " + this);
-
-      Pixels task = (Pixels) rt;
+       Pixels task = (Pixels) rt;
 
       if( _pixels == null )
         _pixels = task._pixels;
