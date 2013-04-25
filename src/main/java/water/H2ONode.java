@@ -279,7 +279,7 @@ public class H2ONode extends Iced implements Comparable {
   // occasionally to force a resend of ACKACKs.
 
   static public class AckAckTimeOutThread extends Thread {
-    public AckAckTimeOutThread() { super("ACKACK Timeout"); }
+    public AckAckTimeOutThread() { super("ACKTimeout"); }
     // List of DTasks with results ready (and sent!), and awaiting an ACKACK.
     static DelayQueue<RPC.RPCCall> PENDING = new DelayQueue<RPC.RPCCall>();
     // Started by main() on a single thread, handle timing-out UDP packets

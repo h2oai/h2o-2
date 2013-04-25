@@ -15,6 +15,6 @@ public class Timer {
         new SimpleDateFormat("dd-MMM hh:mm").format(new Date(now)) + ") ";
   }
 
-  public String startAsString() { return new SimpleDateFormat("[dd-MMM hh:mm:ss]").format(new Date(_start)); }
+  public String startAsString() { return new SimpleDateFormat("[dd-MMM hh:mm:ss:SS]").format(new Date(_start)); }
 
 }

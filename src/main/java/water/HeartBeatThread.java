@@ -14,7 +14,7 @@ import javax.management.*;
  */
 public class HeartBeatThread extends Thread {
   public HeartBeatThread() {
-    super("Heartbeat Thread");
+    super("Heartbeat");
     setDaemon(true);
   }
 

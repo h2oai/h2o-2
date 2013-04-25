@@ -2160,9 +2160,9 @@ public class ForkJoinPool extends AbstractExecutorService {
         this.stealCount = new AtomicLong();
         this.nextWorkerNumber = new AtomicInteger();
         int pn = poolNumberGenerator.incrementAndGet();
-        StringBuilder sb = new StringBuilder("FJP-");
+        StringBuilder sb = new StringBuilder("FJ-");
         sb.append(Integer.toString(pn));
-        sb.append("-WRK-");
+        sb.append("-");
         this.workerNamePrefix = sb.toString();
         lock.lock();
         this.runState = 1;              // set init flag

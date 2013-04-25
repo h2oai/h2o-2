@@ -18,6 +18,7 @@ public class NodeCL extends Thread implements Node {
   private ClassLoader    _initialClassLoader, _classLoader;
 
   public NodeCL(String[] args) {
+    super("NodeCL");
     _args = args;
     _classpath = getClassPath();
     _initialClassLoader = Thread.currentThread().getContextClassLoader();

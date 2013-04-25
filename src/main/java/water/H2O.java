@@ -874,7 +874,7 @@ public final class H2O {
     boolean _diskFull = false;
 
     public Cleaner() {
-      super("Memory Cleaner");
+      super("MemCleaner");
       setDaemon(true);
       _dirty = Long.MAX_VALUE; // Set to clean-store
       _myHisto = new Histo(); // Build/allocate a first histogram

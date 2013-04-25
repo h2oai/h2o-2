@@ -20,7 +20,7 @@ public class UDPReceiverThread extends Thread {
   static private long _unknown_packet_time = 0;
   static final Random RANDOM_UDP_DROP = new Random();
   public UDPReceiverThread() {
-    super("Direct UDP Receiver");
+    super("D-UDP-Recv");
   }
 
   // ---

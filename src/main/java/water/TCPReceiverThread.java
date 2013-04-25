@@ -14,7 +14,7 @@ import water.api.Timeline;
 
 public class TCPReceiverThread extends Thread {
   public static ServerSocketChannel SOCK;
-  public TCPReceiverThread() { super("TCP Receiver"); }
+  public TCPReceiverThread() { super("TCPReceive"); }
 
   // The Run Method.
   // Started by main() on a single thread, this code manages reading TCP requests

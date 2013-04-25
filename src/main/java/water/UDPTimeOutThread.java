@@ -8,7 +8,7 @@ import java.util.concurrent.DelayQueue;
  */
 
 public class UDPTimeOutThread extends Thread {
-  public UDPTimeOutThread() { super("UDP Timeout"); }
+  public UDPTimeOutThread() { super("UDPTimeout"); }
 
   // List of "in progress" tasks.  When they time-out we do the time-out action
   // which is possibly a re-send if we suspect a dropped UDP packet, or a

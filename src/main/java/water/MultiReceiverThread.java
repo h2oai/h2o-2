@@ -14,7 +14,7 @@ import java.net.*;
  */
 
 public class MultiReceiverThread extends Thread {
-  public MultiReceiverThread() { super("Multicast UDP Receiver"); }
+  public MultiReceiverThread() { super("Multi-UDP-R"); }
 
   // The Run Method.
   // ---
