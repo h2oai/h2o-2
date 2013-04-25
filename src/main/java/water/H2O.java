@@ -176,7 +176,7 @@ public final class H2O {
     return Arrays.toString(_memary);
   }
 
-  static InetAddress findInetAddressForSelf() throws Error {
+  public static InetAddress findInetAddressForSelf() throws Error {
     // Get a list of all valid IPs on this machine.  Typically 1 on Mac or
     // Windows, but could be many on Linux or if a hypervisor is present.
     ArrayList<InetAddress> ips = new ArrayList<InetAddress>();

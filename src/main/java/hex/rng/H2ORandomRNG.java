@@ -6,14 +6,8 @@ public class H2ORandomRNG extends Random {
 
   public H2ORandomRNG(long seed) {
     super();
-    if ((seed >>> 32) < 0x0000ffffL) {
-      //System.err.println("[H2ORandomRNG] correcting high-bits of seed");
-      seed |= 0x5b93000000000000L;
-    }
-    if (((seed << 32) >>> 32) < 0x0000ffffL) {
-      //System.err.println("[H2ORandomRNG] correcting low-bits of seed");
-      seed |= 0xdb910000L;
-    }
+    if ((seed >>> 32) < 0x0000ffffL)         seed |= 0x5b93000000000000L;
+    if (((seed << 32) >>> 32) < 0x0000ffffL) seed |= 0xdb910000L;
     setSeed(seed);
   }
 
