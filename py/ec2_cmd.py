@@ -27,7 +27,7 @@ Default EC2 instance setup
 '''
 DEFAULT_EC2_INSTANCE_CONFIGS = {
   'us-east-1':{
-              'image_id'        : 'ami-30c6a059', #'ami-b85cc4d1', # 'ami-cd9a11a4',
+              'image_id'        : 'ami-cf5132a6', #'ami-30c6a059', #'ami-b85cc4d1', # 'ami-cd9a11a4',
               'security_groups' : [ 'MrJenkinsTest' ],
               'key_name'        : 'mrjenkins_test',
               'instance_type'   : 'm1.xlarge',
