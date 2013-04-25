@@ -1,9 +1,9 @@
-package water.sys;
+package water.deploy;
 
 import java.io.File;
 import java.util.ArrayList;
 
-import water.sys.VM.Watchdog;
+import water.deploy.VM.Watchdog;
 import water.util.Utils;
 
 public class RemoteRunner {

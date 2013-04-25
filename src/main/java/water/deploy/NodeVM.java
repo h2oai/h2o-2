@@ -1,4 +1,4 @@
-package water.sys;
+package water.deploy;
 
 import water.Boot;
 

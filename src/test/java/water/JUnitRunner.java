@@ -1,8 +1,10 @@
 package water;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.net.ServerSocket;
 import java.util.*;
 
 import org.apache.commons.lang.ArrayUtils;
@@ -11,13 +13,11 @@ import org.junit.Test;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 
-import water.parser.ParseCompressedAndXLSTest;
+import water.deploy.Node;
+import water.deploy.NodeVM;
 import water.parser.ParseFolderTestBig;
-import water.sys.Node;
-import water.sys.NodeVM;
 import water.util.Log;
 import water.util.Utils;
-
 
 public class JUnitRunner {
   private static void filter(List<Class> tests) {
@@ -31,7 +31,19 @@ public class JUnitRunner {
   }
 
   public static void main(String[] args) throws Exception {
-    int[] ports = new int[] { 54321, 54323, 54325 };
+    // Can be necessary to run in parallel to other clouds, so find open ports
+    int[] ports = new int[3];
+    int port = 54321;
+    for( int i = 0; i < ports.length; i++ ) {
+      for( ;; ) {
+        if( isOpen(port) && isOpen(port + 1) ) {
+          ports[i] = port;
+          port += 2;
+          break;
+        }
+        port++;
+      }
+    }
     String flat = "";
     for( int i = 0; i < ports.length; i++ )
       flat += "127.0.0.1:" + ports[i] + "\n";
@@ -67,9 +79,20 @@ public class JUnitRunner {
     }
     for( Node node : nodes )
       node.kill();
-    if( exit == 0 )
-      System.out.println("OK");
+    if( exit == 0 ) System.out.println("OK");
     System.exit(exit);
+  }
+
+  private static boolean isOpen(int port) throws Exception {
+    ServerSocket s = null;
+    try {
+      s = new ServerSocket(port);
+      return true;
+    } catch( IOException ex ) {
+      return false;
+    } finally {
+      if( s != null ) s.close();
+    }
   }
 
   public static class Master {
@@ -83,13 +106,10 @@ public class JUnitRunner {
         for( String name : names ) {
           try {
             Class c = Class.forName(name);
-            if( isTest(c) )
-              tests.add(c);
-          } catch( Throwable _ ) {
-          }
+            if( isTest(c) ) tests.add(c);
+          } catch( Throwable _ ) {}
         }
-        if( tests.size() == 0 )
-          throw new Exception("Failed to find tests");
+        if( tests.size() == 0 ) throw new Exception("Failed to find tests");
 
         filter(tests);
         Result r = org.junit.runner.JUnitCore.runClasses(tests.toArray(new Class[0]));
@@ -100,8 +120,7 @@ public class JUnitRunner {
         } else {
           for( Failure f : r.getFailures() ) {
             System.err.println(f.getDescription());
-            if( f.getException() != null )
-              f.getException().printStackTrace();
+            if( f.getException() != null ) f.getException().printStackTrace();
           }
         }
         System.exit(r.getFailureCount());
@@ -113,12 +132,10 @@ public class JUnitRunner {
 
     private static boolean isTest(Class c) {
       for( Annotation a : c.getAnnotations() )
-        if( a instanceof Ignore )
-          return false;
+        if( a instanceof Ignore ) return false;
       for( Method m : c.getMethods() )
         for( Annotation a : m.getAnnotations() )
-          if( a instanceof Test )
-            return true;
+          if( a instanceof Test ) return true;
       return false;
     }
   }

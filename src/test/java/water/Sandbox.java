@@ -8,9 +8,9 @@ import java.util.ArrayList;
 
 import org.apache.commons.lang.ArrayUtils;
 
+import water.deploy.Node;
+import water.deploy.NodeVM;
 import water.parser.ParseDataset;
-import water.sys.Node;
-import water.sys.NodeVM;
 
 public class Sandbox {
   public static void main(String[] args) throws Exception {
