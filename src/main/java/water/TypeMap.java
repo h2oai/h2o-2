@@ -86,7 +86,7 @@ public class TypeMap {
     "water.Key",
     "water.Key$Ary",
     "water.util.Log$LogStr",
-    "water.util.Log$Wrapper$1",
+    "water.util.Log$1",
     "water.MRTask",
     "water.Model",
     "water.NOPTask",
