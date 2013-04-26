@@ -59,6 +59,8 @@ abstract public class Log {
     public String toString() {
       StringBuffer buf = new StringBuffer(120);
       buf.append(when.startAsString()).append(" ").append(HOST_AND_PID);
+      String thr = fixedLength(Thread.currentThread().getName() + " ", 10);
+      buf.append(thr);
       buf.append(kind.toString()).append(" ").append(sys.toString()).append(": ");
       int headroom = buf.length();
       for( Object m : message )
