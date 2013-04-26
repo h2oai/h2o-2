@@ -25,7 +25,7 @@ abstract public class L {
   }
 
   /** Verbosity for debug log level */
-  static private volatile int level = Integer.getInteger("h2o.log.debug.level", 3);
+  static private volatile int level = Integer.getInteger("h2o.log.debug.level", 1);
   /** IP address of the host */
   public static final String HOST = H2O.findInetAddressForSelf().getHostAddress();
   /** Some guess at the process ID. */
