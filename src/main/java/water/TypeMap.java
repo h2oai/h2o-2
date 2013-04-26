@@ -61,6 +61,7 @@ public class TypeMap {
     "water.AtomicTest$Append$1",
     "water.AutoSerialTest",
     "water.BitsCmpTask",
+    "water.CoreTest$CPULoad",
     "water.DRemoteTask",
     "water.DTask",
     "water.Freezable",
