@@ -299,11 +299,13 @@ abstract public class Log {
     private static String log(Locale l, boolean nl, String format, Object... args) {
       // Build the String to be logged, with all sorts of headers
       StringBuilder sb = new StringBuilder();
+      String thr = fixedLength(Thread.currentThread().getName() + " ", 15);
       String date = _utcFormat.get().format(new Date());
+    /*
       sb.append(date).append(" ");
       sb.append(HOST_AND_PID);
-      String thr = fixedLength(Thread.currentThread().getName() + " ", 15);
       sb.append(thr);
+      */
       String msg = String.format(l, format, args);
       sb.append(msg);
       if( nl )
