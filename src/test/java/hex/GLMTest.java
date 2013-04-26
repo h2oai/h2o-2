@@ -1,19 +1,13 @@
 package hex;
 
 import static org.junit.Assert.assertEquals;
-import hex.DGLM.Family;
-import hex.DGLM.GLMModel;
-import hex.DGLM.GLMParams;
-import hex.DGLM.GLMValidation;
+import hex.DGLM.*;
 import hex.DLSM.ADMMSolver;
 import hex.DLSM.GeneralizedGradientSolver;
 import hex.DLSM.LSMSolver;
 import hex.NewRowVecTask.DataFrame;
-
 import java.util.*;
-
 import org.junit.Test;
-
 import water.*;
 import water.api.Constants;
 import water.exec.Exec;
@@ -33,10 +27,10 @@ public class GLMTest extends TestUtil {
       THRESHOLDS[i] = i/100.0;
   }
 
-  JsonObject computeGLMlog( LSMSolver lsms, ValueArray va, boolean cat ) {
-    return computeGLM( Family.binomial, lsms, va, cat, null); }
+  JsonObject computeGLMlog( LSMSolver lsms, ValueArray va ) {
+    return computeGLM( Family.binomial, lsms, va, null); }
 
-  JsonObject computeGLM( Family family, LSMSolver lsms, ValueArray va, boolean cat, int[] cols ) {
+  JsonObject computeGLM( Family family, LSMSolver lsms, ValueArray va, int[] cols ) {
     // All columns in order, and use last as response variable
     if( cols == null ) {
       cols= new int[va._cols.length];
@@ -264,7 +258,7 @@ public class GLMTest extends TestUtil {
       assertEquals( 0.1, lr.get("Beta1"   ).getAsDouble(), 0.000001);
       assertEquals( 1.0, lr.get("RSquared").getAsDouble(), 0.000001);
       LSMSolver lsms = new ADMMSolver(0,0);
-      JsonObject glm = computeGLM(Family.gaussian,lsms,va,false,null); // Solve it!
+      JsonObject glm = computeGLM(Family.gaussian,lsms,va,null); // Solve it!
       JsonObject coefs = glm.get("coefficients").getAsJsonObject();
       assertEquals( 0.0, coefs.get("Intercept").getAsDouble(), 0.000001);
       assertEquals( 0.1, coefs.get("0")        .getAsDouble(), 0.000001);
@@ -283,7 +277,7 @@ public class GLMTest extends TestUtil {
          public double expr( byte[] x ) { return 1.0/(1.0+Math.exp(-(0.1*x[0]+0.3*x[1]-2.5))); } } );
 
       LSMSolver lsms = new ADMMSolver(0,0); // Default normalization of NONE
-      JsonObject glm = computeGLMlog(lsms,va,false); // Solve it!
+      JsonObject glm = computeGLMlog(lsms,va); // Solve it!
       JsonObject coefs = glm.get("coefficients").getAsJsonObject();
       assertEquals(-2.5, coefs.get("Intercept").getAsDouble(), 0.000001);
       assertEquals( 0.1, coefs.get("0")        .getAsDouble(), 0.000001);
@@ -319,7 +313,7 @@ public class GLMTest extends TestUtil {
         ValueArray va = va_maker(datakey,2,10, new DataExpr_Dirty(R, coefs));
 
         LSMSolver lsms = new ADMMSolver(0,0); // Default normalization of NONE;
-        JsonObject glm = computeGLMlog(lsms,va,false); // Solve it!
+        JsonObject glm = computeGLMlog(lsms,va); // Solve it!
         JsonObject res = glm.get("coefficients").getAsJsonObject();
         assertEquals(coefs[0], res.get("0")        .getAsDouble(), 0.001);
         assertEquals(coefs[1], res.get("1")        .getAsDouble(), 0.001);
@@ -341,7 +335,7 @@ public class GLMTest extends TestUtil {
 
       // No penalty
       LSMSolver lsms0 = new ADMMSolver(0,0); // Default normalization of NONE;
-      JsonObject glm = computeGLMlog(lsms0,va,false); // Solve it!
+      JsonObject glm = computeGLMlog(lsms0,va); // Solve it!
       JsonObject coefs = glm.get("coefficients").getAsJsonObject();
       assertEquals(-2.5, coefs.get("Intercept").getAsDouble(), 0.00001);
       assertEquals( 0.1, coefs.get("0")        .getAsDouble(), 0.000001);
@@ -350,7 +344,7 @@ public class GLMTest extends TestUtil {
 
       // L1 penalty
       LSMSolver lsms1 = new ADMMSolver(0.0,0.0); // Default normalization of NONE;
-      glm = computeGLMlog(lsms1,va,false); // Solve it!
+      glm = computeGLMlog(lsms1,va); // Solve it!
       coefs = glm.get("coefficients").getAsJsonObject();
       assertEquals(-2.5, coefs.get("Intercept").getAsDouble(), 0.00001);
       assertEquals( 0.1, coefs.get("0")        .getAsDouble(), 0.000001);
@@ -359,7 +353,7 @@ public class GLMTest extends TestUtil {
 
       // L2 penalty
       LSMSolver lsms2 = new ADMMSolver(0.0,0.0); // Default normalization of NONE;
-      glm = computeGLMlog(lsms2,va,false); // Solve it!
+      glm = computeGLMlog(lsms2,va); // Solve it!
       coefs = glm.get("coefficients").getAsJsonObject();
       assertEquals(-2.5, coefs.get("Intercept").getAsDouble(), 0.00001);
       assertEquals( 0.1, coefs.get("0")        .getAsDouble(), 0.000001);
@@ -368,7 +362,7 @@ public class GLMTest extends TestUtil {
 
       // ELASTIC penalty
       LSMSolver lsmsx = new ADMMSolver(0.0,0.0); // Default normalization of NONE;
-      glm = computeGLMlog(lsmsx,va,false); // Solve it!
+      glm = computeGLMlog(lsmsx,va); // Solve it!
       coefs = glm.get("coefficients").getAsJsonObject();
       assertEquals(-2.5, coefs.get("Intercept").getAsDouble(), 0.00001);
       assertEquals( 0.1, coefs.get("0")        .getAsDouble(), 0.000001);
@@ -393,7 +387,7 @@ public class GLMTest extends TestUtil {
       ValueArray va = DKV.get(k2).get();
       // Compute the coefficients
       LSMSolver lsmsx = new ADMMSolver(0,0.0);
-      JsonObject glm = computeGLM( Family.binomial, lsmsx, va, false, cols );
+      JsonObject glm = computeGLM( Family.binomial, lsmsx, va, cols );
 
       // Now run the dataset through the equation and see how close we got
       JsonObject coefs = glm.get("coefficients").getAsJsonObject();
@@ -436,7 +430,7 @@ public class GLMTest extends TestUtil {
     ValueArray va = DKV.get(k1).get();
     // Compute the coefficients
     LSMSolver lsmsx = new ADMMSolver(1e-5, 0.5);
-    JsonObject glm = computeGLMlog( lsmsx, va, false );
+    JsonObject glm = computeGLMlog( lsmsx, va );
 
     // From the validations get the chosen threshold
     final JsonArray vals = glm.get("validations").getAsJsonArray();
@@ -488,7 +482,7 @@ public class GLMTest extends TestUtil {
                  new byte  []{     0,     0,      1,     0,     1,      1,     0,     0,     1  });
 
       LSMSolver lsms = new ADMMSolver(0,0.0); // Default normalization of NONE
-      JsonObject glm = computeGLMlog(lsms,va,true); // Solve it!
+      JsonObject glm = computeGLMlog(lsms,va); // Solve it!
       JsonObject jcoefs = glm.get("coefficients").getAsJsonObject();
       double icept = jcoefs.get("Intercept").getAsDouble();
       //assertCat(jcoefs,icept,"Low" ,0.0      );// now folded into the intercept
@@ -514,5 +508,29 @@ public class GLMTest extends TestUtil {
     double coef = jcoefs.get("0."+category).getAsDouble();
     double predict = 1.0/(1.0+Math.exp(-(coef*1.0/* + all other terms are 0 */+icept)));
     assertEquals(expected,predict,0.001);
+  }
+
+  @Test public void testLogRegXVal() {
+    Key k1= loadAndParseKey("m.hex","smalldata/logreg/umass_statdata/cgd.dat");
+    ValueArray va = DKV.get(k1).get();
+
+    LSMSolver lsms = new ADMMSolver(0.0001/*lambda*/,1/*alpha*/);
+    // Now a Gaussian GLM model for the same thing
+    GLMParams glmp = new GLMParams(Family.gaussian);
+    glmp._link = glmp._family.defaultLink;
+    glmp._betaEps = 0.000001;
+    glmp._maxIter = 50;
+
+    int[] cols= new int[va._cols.length];
+    for( int i=0; i<cols.length; i++ ) cols[i]=i;
+    DataFrame df = DGLM.getData(va, cols,null,true);
+
+    GLMModel m=null;
+    try {
+      m = DGLM.startGLMJob(df, lsms, glmp, null, 2, true).get();
+    } finally {
+      if( m != null ) m.remove();
+      UKV.remove(k1);
+    }
   }
 }
