@@ -10,8 +10,8 @@ import org.apache.hadoop.fs.s3.S3Exception;
 
 import water.*;
 import water.api.Constants;
-import water.util.L;
-import water.util.L.Tag.Sys;
+import water.util.Log;
+import water.util.Log.Tag.Sys;
 
 import com.google.common.base.Strings;
 import com.google.common.io.ByteStreams;
@@ -33,7 +33,7 @@ public abstract class PersistHdfs {
       if (!p.exists())
         Log.die("[h2o,hdfs] Unable to open hdfs configuration file "+p.getAbsolutePath());
       conf.addResource(new Path(p.getAbsolutePath()));
-      L.info(PersistHdfs.class,Sys.HDFS_,"resource ", p.getAbsolutePath(), " added to the hadoop configuration");
+      Log.info(PersistHdfs.class,Sys.HDFS_,"resource ", p.getAbsolutePath(), " added to the hadoop configuration");
     } else {
       conf = new Configuration();
       if( !Strings.isNullOrEmpty(H2O.OPT_ARGS.hdfs) ) {
@@ -90,7 +90,7 @@ public abstract class PersistHdfs {
         }
       }
     } catch( IOException e ) {
-      L.err(e);
+      Log.err(e);
       JsonObject o = new JsonObject();
       o.addProperty(Constants.FILE, p.toString());
       o.addProperty(Constants.ERROR, e.getMessage());
@@ -167,7 +167,7 @@ public abstract class PersistHdfs {
       } catch (S3Exception e)            { ignoreAndWait(e,false);
       } catch (IOException e)            { ignoreAndWait(e,true);
       } finally {
-        try { if( s != null ) s.close(); } catch( IOException e ) { L.err(e); }
+        try { if( s != null ) s.close(); } catch( IOException e ) { Log.err(e); }
       }
     }
   }
@@ -245,10 +245,10 @@ public abstract class PersistHdfs {
       byte[] b = f.write(new AutoBuffer()).buf();
       s.write(b);
     } catch( IOException e ) {
-      L.err(e);
+      Log.err(e);
       res = e.getMessage(); // Just the exception message, throwing the stack trace away
     } finally {
-      try { if( s != null ) s.close(); } catch( IOException e ) { L.err(e); }
+      try { if( s != null ) s.close(); } catch( IOException e ) { Log.err(e); }
     }
     return res;
   }
@@ -262,13 +262,13 @@ public abstract class PersistHdfs {
       Path p = getPathForKey(key);
       FileSystem fs = FileSystem.get(p.toUri(), CONF);
       s = fs.append(p);
-      L.info(Sys.HDFS_,"append="+val.memOrLoad().length);
+      Log.info(Sys.HDFS_,"append="+val.memOrLoad().length);
       s.write(val.memOrLoad());
     } catch( IOException e ) {
-      L.err(e);
+      Log.err(e);
       res = e.getMessage(); // Just the exception message, throwing the stack trace away
     } finally {
-      try { if( s != null ) s.close(); } catch( IOException e ) { L.err(e); }
+      try { if( s != null ) s.close(); } catch( IOException e ) { Log.err(e); }
     }
     return res;
   }

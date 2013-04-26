@@ -2,7 +2,7 @@ package water.api;
 
 import water.UKV;
 import water.Value;
-import water.util.L;
+import water.util.Log;
 
 import com.google.gson.JsonObject;
 
@@ -16,7 +16,7 @@ public class Remove extends Request {
     try {
       UKV.remove(v._key);
     } catch( Exception e ) {
-      L.err(e);
+      Log.err(e);
       return Response.error(e.getMessage());
     }
 

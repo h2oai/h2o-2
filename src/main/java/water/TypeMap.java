@@ -2,7 +2,7 @@ package water;
 
 import java.util.*;
 
-import water.util.L;
+import water.util.Log;
 
 public class TypeMap {
   static public final short NULL = (short) -1;
@@ -85,8 +85,8 @@ public class TypeMap {
     "water.KVTest$RemoteBitSet",
     "water.Key",
     "water.Key$Ary",
-    "water.Log$LogStr",
-    "water.Log$Wrapper$1",
+    "water.util.Log$LogStr",
+    "water.util.Log$Wrapper$1",
     "water.MRTask",
     "water.Model",
     "water.NOPTask",
@@ -184,7 +184,7 @@ public class TypeMap {
   static public int onLoad(String className) {
     Integer I = MAP.get(className);
     if(I == null)
-      throw new RuntimeException("TypeMap missing " + className);
+      throw Log.err(new RuntimeException("TypeMap missing " + className));
     return I;
   }
 
@@ -194,7 +194,7 @@ public class TypeMap {
     Iced f = (Iced)GOLD[id];
     if( f == null ) {
       try { GOLD[id] = f = (Iced) Class.forName(CLAZZES[id]).newInstance(); }
-      catch( Exception e ) { throw  L.errRTExcept(e); }
+      catch( Exception e ) { throw  Log.errRTExcept(e); }
     }
     return f.newInstance();
   }
@@ -202,7 +202,7 @@ public class TypeMap {
     Freezable f = GOLD[id];
     if( f == null ) {
       try { GOLD[id] = f = (Freezable) Class.forName(CLAZZES[id]).newInstance(); }
-      catch( Exception e ) { throw  L.errRTExcept(e); }
+      catch( Exception e ) { throw  Log.errRTExcept(e); }
     }
     return f.newInstance();
   }
@@ -213,7 +213,6 @@ public class TypeMap {
     return GOLD[id].getClass();
   }
 
-  //
 
   public static void main(String[] args) {
     Log._dontDie = true; // Ignore fatal class load error, e.g. Request

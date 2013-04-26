@@ -7,7 +7,7 @@ import java.util.Arrays;
 import java.util.Properties;
 
 import water.*;
-import water.util.L;
+import water.util.Log;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
@@ -38,7 +38,7 @@ public abstract class PersistS3 {
             msg.append("Unable to load S3 credentials.");
             if( H2O.OPT_ARGS.aws_credentials == null )
               msg.append(HELP);
-            throw L.err(new RuntimeException(msg.toString()));
+            throw Log.err(new RuntimeException(msg.toString()));
           }
         }
       }
@@ -109,13 +109,13 @@ public abstract class PersistS3 {
       } catch (SocketTimeoutException e) { ignoreAndWait(e,false);
       } catch (IOException e)            { ignoreAndWait(e,true);
       } finally {
-        try { if( s != null ) s.close(); } catch( IOException e ) { L.err(e); }
+        try { if( s != null ) s.close(); } catch( IOException e ) { Log.err(e); }
       }
     }
   }
 
   private static void ignoreAndWait(final Exception e, boolean printException) {
-    L.err(e);
+    Log.err(e);
     H2O.ignore(e, "Hit the S3 reset problem, waiting and retrying...", printException);
     try { Thread.sleep(500); } catch (InterruptedException ie) {}
   }

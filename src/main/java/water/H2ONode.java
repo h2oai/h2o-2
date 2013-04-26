@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import water.nbhm.NonBlockingHashMap;
 import water.nbhm.NonBlockingHashMapLong;
-import water.util.L;
+import water.util.Log;
 
 /**
  * A <code>Node</code> in an <code>H2O</code> Cloud.
@@ -38,7 +38,7 @@ public class H2ONode extends Iced implements Comparable {
     static H2Okey read( AutoBuffer ab ) {
       InetAddress inet;
       try { inet = InetAddress.getByAddress(ab.getA1(4)); }
-      catch( UnknownHostException e ) { throw  L.errRTExcept(e); }
+      catch( UnknownHostException e ) { throw  Log.errRTExcept(e); }
       int port = ab.get2();
       return new H2Okey(inet,port);
     }
@@ -112,7 +112,7 @@ public class H2ONode extends Iced implements Comparable {
     try {
       return intern(InetAddress.getByAddress(b),port);
     } catch( UnknownHostException e ) {
-      L.err(e);
+      Log.err(e);
       return null;
     }
   }
@@ -150,17 +150,17 @@ public class H2ONode extends Iced implements Comparable {
           msg +="\n\t" + ni;
         }
         msg +="\nUsing " + matchingIfs.get(0) + " for UDP broadcast";
-        L.err(msg);
+        Log.err(msg);
         H2O.CLOUD_MULTICAST_IF = matchingIfs.get(0);
       }
     } catch( SocketException e ) {
-      throw  L.errRTExcept(e);
+      throw  Log.errRTExcept(e);
     }
     try {
       assert H2O.CLOUD_DGRAM == null;
       H2O.CLOUD_DGRAM = DatagramChannel.open();
     } catch( Exception e ) {
-      throw  L.errRTExcept(e);
+      throw  Log.errRTExcept(e);
     }
     return intern(new H2Okey(local,H2O.UDP_PORT));
   }

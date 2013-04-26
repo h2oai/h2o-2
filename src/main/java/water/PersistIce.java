@@ -3,7 +3,7 @@ package water;
 import java.io.*;
 import java.util.Arrays;
 
-import water.util.L;
+import water.util.Log;
 
 // Persistence backend for the local storage device
 //
@@ -65,7 +65,7 @@ public abstract class PersistIce {
 
   public static FileWriter logFile() {
     try { return new FileWriter(iceRoot+File.separator+LOG_FILENAME); }
-    catch( IOException e ) { L.err(e); return null; }
+    catch( IOException e ) { Log.err(e); return null; }
   }
 
   // file implementation -------------------------------------------------------
@@ -164,7 +164,7 @@ public abstract class PersistIce {
         case 'q':  b = '"' ; break;
         case 's':  b = '/' ; break;
         case 'z':  b = '\0'; break;
-        default:   L.err("Invalid format of filename " + s + " at index " + i);
+        default:   Log.err("Invalid format of filename " + s + " at index " + i);
         }
       }
       if( j>=kb.length ) kb = Arrays.copyOf(kb,Math.max(2,j*2));
@@ -214,7 +214,7 @@ public abstract class PersistIce {
         s.close();
       }
     } catch( IOException e ) {  // Broken disk / short-file???
-      throw new RuntimeException(L.err("File load failed: ",e));
+      throw new RuntimeException(Log.err("File load failed: ",e));
     }
   }
 
@@ -230,7 +230,7 @@ public abstract class PersistIce {
     try {
       s = new FileOutputStream(encodeKeyToFile(v));
     } catch (FileNotFoundException e) {
-      throw new RuntimeException(L.err("Encoding a key to a file failed!\nKey: "+v._key.toString()+"\nEncoded: "+encodeKeyToFile(v),e));
+      throw new RuntimeException(Log.err("Encoding a key to a file failed!\nKey: "+v._key.toString()+"\nEncoded: "+encodeKeyToFile(v),e));
     }
     try {
       byte[] m = v.memOrLoad(); // we are not single threaded anymore

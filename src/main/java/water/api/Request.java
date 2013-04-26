@@ -7,7 +7,7 @@ import java.util.*;
 
 import water.*;
 import water.util.*;
-import water.util.L.Tag.Sys;
+import water.util.Log.Tag.Sys;
 
 import com.google.common.base.Objects;
 import com.google.common.io.ByteStreams;
@@ -39,7 +39,7 @@ public abstract class Request extends RequestBuilders {
             if(value instanceof Value) value = ((Value) value)._key;
             log += " " + arg._name + "=" + value;
           }
-          L.info(this,Sys.HTTPD,log);
+          Log.info(this,Sys.HTTPD,log);
         }
         if (query != null)
           return wrap(server,query,type);
@@ -129,10 +129,10 @@ public abstract class Request extends RequestBuilders {
     try {
       _htmlTemplate = new String(ByteStreams.toByteArray(resource)).replace("%cloud_name",H2O.NAME);
     } catch (NullPointerException e) {
-      L.err(e);
+      Log.err(e);
       Log.die("page.html not found in resources.");
     } catch (Exception e) {
-      L.err(e);
+      Log.err(e);
       Log.die(e.getMessage());
     } finally {
       Closeables.closeQuietly(resource);

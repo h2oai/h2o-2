@@ -10,7 +10,7 @@ import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import water.util.L;
+import water.util.Log;
 import water.util.Utils;
 
 
@@ -36,7 +36,7 @@ public class Boot extends ClassLoader {
     try {
       _init = new Boot();
     } catch( Exception e ) {
-      throw  L.errRTExcept(e);
+      throw  Log.errRTExcept(e);
     }
   }
 
@@ -49,7 +49,7 @@ public class Boot extends ClassLoader {
       while( (pos = is.read(buf)) > 0 ) md5.update(buf, 0, pos);
       return md5.digest();
     } catch( NoSuchAlgorithmException e ) {
-      throw  L.errRTExcept(e);
+      throw  Log.errRTExcept(e);
     } finally {
       Utils.close(is);
     }
@@ -100,7 +100,7 @@ public class Boot extends ClassLoader {
       if( !dir.mkdir() )  throw new IOException("Failed to create tmp dir: "  + dir.getAbsolutePath());
       dir.deleteOnExit();
       _parentDir = dir;         // Set a global instead of passing the dir about?
-      L.info("Extracting jar into " + _parentDir);
+      Log.info("Extracting jar into " + _parentDir);
 
       // Make all the embedded jars visible to the custom class loader
       extractInternalFiles(); // Resources
@@ -194,7 +194,7 @@ public class Boot extends ClassLoader {
       try {
         return new FileInputStream(new File("lib/resources"+uri));
       } catch (FileNotFoundException e) {
-        L.err(e);
+        Log.err(e);
         return null;
       }
     }

@@ -3,7 +3,7 @@ package water.api;
 import hex.KMeans.KMeansModel;
 import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.util.L;
+import water.util.Log;
 import water.util.RString;
 
 import com.google.gson.*;
@@ -50,10 +50,10 @@ public class KMeans extends Request {
       r.setBuilder(DEST_KEY, new KeyElementBuilder());
       return r;
     } catch( IllegalArgumentException e ) {
-      L.err(e);
+      Log.err(e);
       return Response.error(e.getMessage());
     } catch( Error e ) {
-      L.err(e);
+      Log.err(e);
       return Response.error(e.getMessage());
     }
   }

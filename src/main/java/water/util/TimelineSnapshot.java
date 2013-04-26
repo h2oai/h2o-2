@@ -358,7 +358,7 @@ public final class TimelineSnapshot implements
       int senderIdx = e.packH2O().index();
       if (senderIdx < 0) { // binary search did not find member, should not happen?
         // no possible sender - return and do not block
-        L.warn("no sender found! port = " + e.portPack() + ", ip = " + e.addrPack().toString());
+        Log.warn("no sender found! port = " + e.portPack() + ", ip = " + e.addrPack().toString());
         return;
       }
       Event senderCnd = _events[senderIdx];

@@ -2,11 +2,9 @@
 package water.exec;
 
 import java.util.*;
-
 import water.*;
 import water.ValueArray.Column;
 import water.exec.Expr.Result;
-import water.util.L;
 
 /** A class that represents the function call.
  *
@@ -628,7 +626,7 @@ class MakeEnum extends Function {
       DKV.write_barrier();
       return result;
     } catch (Exception e) {
-      L.err(e);
+      water.util.Log.err(e);
     }
     return null;
   }

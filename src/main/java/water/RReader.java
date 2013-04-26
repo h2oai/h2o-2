@@ -8,7 +8,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.zip.GZIPInputStream;
 
-import water.util.L;
+import water.util.Log;
 
 public class RReader {
   private static final String ASCII_MAGIC_HEADER  = "RDA2\n";
@@ -107,7 +107,7 @@ public class RReader {
       RFModel model = new RFModel(dest, headers, classes, keys, 1, 100.0f);
       UKV.put(dest, model);
     } catch( Exception ex ) {
-      L.err(ex);
+      Log.err(ex);
       UKV.put(dest, new Job.Fail(ex.toString()));
     }
   }

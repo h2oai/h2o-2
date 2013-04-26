@@ -3,8 +3,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 
-import water.util.L;
-import water.util.L.Tag.Sys;
+import water.util.Log;
+import water.util.Log.Tag.Sys;
 
 /**
  * Utility for processing command
@@ -64,7 +64,7 @@ public class Arguments {
             else continue;
           } else if( cl == String.class )
             if (field.get(this)!=null) r+=" -"+name+"="+field.get(this);
-        } catch( Exception e ) { L.err(this,Sys.WATER,"Argument failed with ",e); }
+        } catch( Exception e ) { Log.err(this,Sys.WATER,"Argument failed with ",e); }
       }
       return r;
     }
@@ -212,7 +212,7 @@ public class Arguments {
             count++;
           }
         }
-      } catch( Exception e ) { L.err(this,Sys.WATER,"Argument failed with ",e); }
+      } catch( Exception e ) { Log.err(this,Sys.WATER,"Argument failed with ",e); }
     }
     Arrays.sort(commandLineArgs);
     for( int i = 0; i < commandLineArgs.length; i++ )

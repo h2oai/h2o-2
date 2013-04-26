@@ -12,8 +12,8 @@ import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 
 import water.DKV;
 import water.Key;
-import water.util.L;
-import water.util.L.Tag.Sys;
+import water.util.Log;
+import water.util.Log.Tag.Sys;
 
 public class XlsParser extends CustomParser implements HSSFListener {
 
@@ -41,7 +41,7 @@ public class XlsParser extends CustomParser implements HSSFListener {
 
       factory.processWorkbookEvents(request, _fs);
     } finally {
-      try { is.close(); } catch (IOException e) { L.err(e); }
+      try { is.close(); } catch (IOException e) { Log.err(e); }
     }
   }
 
@@ -106,14 +106,14 @@ public class XlsParser extends CustomParser implements HSSFListener {
       case LabelSSTRecord.sid:
         LabelSSTRecord lsrec = (LabelSSTRecord) record;
         if( _sstRecord == null ) {
-          L.warn(this,Sys.EXCEL,"[ExcelParser] Missing SST record");
+          Log.warn(this,Sys.EXCEL,"[ExcelParser] Missing SST record");
         } else {
           curCol = lsrec.getColumn();
           curStr = _str.setTo(_sstRecord.getString(lsrec.getSSTIndex()).toString());
         }
         break;
       case NoteRecord.sid:
-        L.warn(this,Sys.EXCEL,"Warning cell notes are unsupported");
+        Log.warn(this,Sys.EXCEL,"Warning cell notes are unsupported");
         break;
       case NumberRecord.sid:
         NumberRecord numrec = (NumberRecord) record;
@@ -121,7 +121,7 @@ public class XlsParser extends CustomParser implements HSSFListener {
         curNum = numrec.getValue();
         break;
       case RKRecord.sid:
-        L.warn(this,Sys.EXCEL,"Warning RK records are unsupported");
+        Log.warn(this,Sys.EXCEL,"Warning RK records are unsupported");
         break;
       default:
         break;

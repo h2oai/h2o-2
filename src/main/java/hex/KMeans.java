@@ -5,8 +5,8 @@ import java.util.*;
 import water.*;
 import water.Job.Progress;
 import water.api.Constants;
-import water.util.L;
-import water.util.L.Tag.Sys;
+import water.util.Log;
+import water.util.Log.Tag.Sys;
 
 import com.google.gson.*;
 
@@ -115,7 +115,7 @@ public abstract class KMeans {
       for( int i=0; i<c.length; i++ )
         sb.append(c[i][2]).append(",");
       sb.append("]");
-      L.info(this,Sys.KMEAN,sb);
+      Log.info(this,Sys.KMEAN,sb);
     }
 
   }

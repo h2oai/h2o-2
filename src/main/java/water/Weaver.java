@@ -1,6 +1,6 @@
 package water;
 
-import water.util.L;
+import water.util.Log;
 import javassist.*;
 
 public class Weaver {
@@ -19,7 +19,7 @@ public class Weaver {
 
       for( CtClass c : _serBases ) c.freeze();
     } catch( NotFoundException e ) {
-      throw  L.errRTExcept(e);
+      throw  Log.errRTExcept(e);
     }
   }
 
@@ -29,7 +29,7 @@ public class Weaver {
       if( w == null ) return null;
       return w.toClass(cl, null);
     } catch( CannotCompileException e ) {
-      throw  L.errRTExcept(e);
+      throw  Log.errRTExcept(e);
     }
   }
 
@@ -53,7 +53,7 @@ public class Weaver {
     } catch( NotFoundException nfe ) {
       return null;              // Not found?  Use the normal loader then
     } catch( CannotCompileException e ) { // Expected to compile
-      throw  L.errRTExcept(e);
+      throw  Log.errRTExcept(e);
     }
   }
 
@@ -104,7 +104,7 @@ public class Weaver {
         field = cc.getField("$VALUES");
       } catch( NotFoundException e ) {
         // Eclipse apparently stores this in a different place.
-        L.err(e);
+        Log.err(e);
         field = cc.getField("ENUM$VALUES");
       }
       String body = "static "+cc.getName()+" raw_enum(int i) { return i==255?null:"+field.getName()+"[i]; } ";
@@ -114,7 +114,7 @@ public class Weaver {
         System.out.println("--- Compilation failure while compiler raw_enum for "+cc.getName());
         System.out.println(body);
         System.out.println("------");
-        throw L.err(e);
+        throw Log.err(e);
       }
   }
 
@@ -265,7 +265,7 @@ public class Weaver {
       System.out.println("--- Compilation failure while compiler serializers for "+cc.getName());
       System.out.println(body);
       System.out.println("------");
-      throw L.err(e);
+      throw Log.err(e);
     }
   }
 

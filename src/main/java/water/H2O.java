@@ -13,7 +13,7 @@ import water.hdfs.HdfsLoader;
 import water.nbhm.NonBlockingHashMap;
 import water.store.s3.PersistS3;
 import water.util.*;
-import water.util.L.Tag.Sys;
+import water.util.Log.Tag.Sys;
 
 import com.amazonaws.auth.PropertiesCredentials;
 import com.google.common.base.Objects;
@@ -73,7 +73,7 @@ public final class H2O {
       sb.append(e.toString().replace("Exception", "Problem")).append('\n');
       for (StackTraceElement el : stack) { sb.append("\tat "); sb.append(el.toString().replace("Exception", "Problem" )); sb.append('\n'); }
     }
-    L.info(sb);
+    Log.info(sb);
   }
 
   // --------------------------------------------------------------------------
@@ -190,7 +190,7 @@ public final class H2O {
           ips.add(ias.nextElement());
         }
       }
-    } catch( SocketException e ) { L.err(e); }
+    } catch( SocketException e ) { Log.err(e); }
 
     InetAddress local = null;   // My final choice
 
@@ -201,15 +201,15 @@ public final class H2O {
       try{
         arg = InetAddress.getByName(OPT_ARGS.ip);
       } catch( UnknownHostException e ) {
-        L.err(e);
+        Log.err(e);
         System.exit(-1);
       }
       if( !(arg instanceof Inet4Address) ) {
-        L.err("Only IP4 addresses allowed.");
+        Log.err("Only IP4 addresses allowed.");
         System.exit(-1);
       }
       if( !ips.contains(arg) ) {
-        L.err("IP address not found on this machine");
+        Log.err("IP address not found on this machine");
         System.exit(-1);
       }
       local = arg;
@@ -236,11 +236,11 @@ public final class H2O {
     // local host.
     if( local == null ) {
       try {
-        L.err("Failed to determine IP, falling back to localhost.");
+        Log.err("Failed to determine IP, falling back to localhost.");
         // set default ip address to be 127.0.0.1 /localhost
         local = InetAddress.getByName("127.0.0.1");
       } catch( UnknownHostException e ) {
-        throw  L.errRTExcept(e);
+        throw  Log.errRTExcept(e);
       }
     }
     return local;
@@ -257,10 +257,10 @@ public final class H2O {
       m+="Using " + s.getLocalAddress();
       return s.getLocalAddress();
     } catch( Throwable t ) {
-      L.err(t);
+      Log.err(t);
       return null;
     } finally {
-      L.warn(m);
+      Log.warn(m);
       Utils.close(s);
     }
   }
@@ -554,11 +554,11 @@ public final class H2O {
     // Do not forget to put SELF into the static configuration (to simulate
     // proper multicast behavior)
     if( STATIC_H2OS != null && !STATIC_H2OS.contains(SELF)) {
-      L.warn("Flatfile configuration does not include self: " + SELF+ " but contains " + STATIC_H2OS);
+      Log.warn("Flatfile configuration does not include self: " + SELF+ " but contains " + STATIC_H2OS);
       STATIC_H2OS.add(SELF);
     }
 
-    L.info("("+VERSION+") '"+NAME+"' on " + SELF+(OPT_ARGS.flatfile==null
+    Log.info("("+VERSION+") '"+NAME+"' on " + SELF+(OPT_ARGS.flatfile==null
         ? (", discovery address "+CLOUD_MULTICAST_GROUP+":"+CLOUD_MULTICAST_PORT)
             : ", static configuration based on -flatfile "+OPT_ARGS.flatfile));
 
@@ -651,7 +651,7 @@ public final class H2O {
         _udpSocket.socket().bind(new InetSocketAddress(inet, UDP_PORT));
         break;
       } catch (IOException e) {
-        try { if( _apiSocket != null ) _apiSocket.close(); } catch( IOException ohwell ) { L.err(ohwell); }
+        try { if( _apiSocket != null ) _apiSocket.close(); } catch( IOException ohwell ) { Log.err(ohwell); }
         Closeables.closeQuietly(_udpSocket);
         _apiSocket = null;
         _udpSocket = null;
@@ -664,7 +664,7 @@ public final class H2O {
       API_PORT += 2;
     }
     SELF = H2ONode.self(inet);
-    L.info("Internal communication uses port: ",UDP_PORT,"\nListening for HTTP and REST traffic on  http:/",inet,":"+_apiSocket.getLocalPort()+"/");
+    Log.info("Internal communication uses port: ",UDP_PORT,"\nListening for HTTP and REST traffic on  http:/",inet,":"+_apiSocket.getLocalPort()+"/");
 
     NAME = OPT_ARGS.name==null? System.getProperty("user.name") : OPT_ARGS.name;
     // Read a flatfile of allowed nodes
@@ -678,7 +678,7 @@ public final class H2O {
       ip[i] = (byte)(port>>>((3-i)<<3));
     try {
       CLOUD_MULTICAST_GROUP = InetAddress.getByAddress(ip);
-    } catch( UnknownHostException e ) { throw  L.errRTExcept(e); }
+    } catch( UnknownHostException e ) { throw  Log.errRTExcept(e); }
     CLOUD_MULTICAST_PORT = (port>>>16);
   }
 
@@ -704,10 +704,10 @@ public final class H2O {
         } catch( Exception e ) {  // On any error from anybody, close all sockets & re-open
           // and if not a soft launch (hibernate mode)
           if(H2O.OPT_ARGS.soft == null)
-            L.err("Multicast Error ",e);
+            Log.err("Multicast Error ",e);
             if( CLOUD_MULTICAST_SOCKET != null )
               try { CLOUD_MULTICAST_SOCKET.close(); }
-              catch( Exception e2 ) { L.err("Got",e2); }
+              catch( Exception e2 ) { Log.err("Got",e2); }
               finally { CLOUD_MULTICAST_SOCKET = null; }
           }
       }
@@ -743,7 +743,7 @@ public final class H2O {
         try {
           H2O.CLOUD_DGRAM.send(bb, h2o._key);
         } catch( IOException e ) {
-          L.err("Multicast Error to "+h2o, e);
+          Log.err("Multicast Error to "+h2o, e);
         }
       }
     }
@@ -838,7 +838,7 @@ public final class H2O {
     if( OPT_ARGS.aws_credentials != null ) {
       try {
         PersistS3.getClient();
-      } catch( IllegalArgumentException e ) { L.err(e); }
+      } catch( IllegalArgumentException e ) { Log.err(e); }
     }
   }
 
@@ -925,7 +925,7 @@ public final class H2O {
         // more than 5sec old
         if( !force ) clean_to_age = Math.max(clean_to_age,now-5000);
 
-        L.debug2(this,Sys.CLEANR, h," DESIRED=",(DESIRED>>20),"M dirtysince=",(now-dirty)," force=",force," clean2age=",(now-clean_to_age));
+        Log.debug2(this,Sys.CLEANR, h," DESIRED=",(DESIRED>>20),"M dirtysince=",(now-dirty)," force=",force," clean2age=",(now-clean_to_age));
         long cleaned = 0;
         long freed = 0;
 
@@ -968,9 +968,9 @@ public final class H2O {
               val.storePersist(); // Write to disk
             } catch(IOException e) {
               if( isDiskFull() ) // disk full?
-                L.warn(this,Sys.CLEANR,"Disk full! Disabling swapping to disk." + ((force)?" Memory low! Please free some space in " + PersistIce.ROOT+"!":""));
+                Log.warn(this,Sys.CLEANR,"Disk full! Disabling swapping to disk." + ((force)?" Memory low! Please free some space in " + PersistIce.ROOT+"!":""));
               else
-                L.warn(this,Sys.CLEANR,"Disk swapping failed! " + e.getMessage());
+                Log.warn(this,Sys.CLEANR,"Disk swapping failed! " + e.getMessage());
               // Something is wrong so mark disk as full anyways so we do not
               // attempt to write again.  (will retry next run when memory is low)
               diskFull = true;
@@ -984,7 +984,7 @@ public final class H2O {
 
         h = _myHisto.histo(true); // Force a new histogram
         MemoryManager.set_goals("postclean",false);
-        L.debug2(this,Sys.CLEANR,h," cleaned="+(cleaned>>20),"M, freed=",(freed>>20),"M, DESIRED=",(DESIRED>>20),"M");
+        Log.debug2(this,Sys.CLEANR,h," cleaned="+(cleaned>>20),"M, freed=",(freed>>20),"M, DESIRED=",(DESIRED>>20),"M");
       }
     }
 
@@ -1075,7 +1075,7 @@ public final class H2O {
         _oldest = oldest; // Oldest seen in this pass
         _vold = vold;
         _clean = clean && _dirty==Long.MAX_VALUE; // Looks like a clean K/V the whole time?
-         L.debug2(this,Sys.CLEANR,"[compute histo "+(cached>>20)+"M]");
+         Log.debug2(this,Sys.CLEANR,"[compute histo "+(cached>>20)+"M]");
       }
 
       // Compute the time (in msec) for which we need to throw out things

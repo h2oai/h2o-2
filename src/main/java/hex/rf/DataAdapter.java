@@ -5,7 +5,7 @@ import java.util.Arrays;
 import water.MemoryManager;
 import water.ValueArray;
 import water.util.*;
-import water.util.L.Tag.Sys;
+import water.util.Log.Tag.Sys;
 
 /**A DataAdapter maintains an encoding of the original data. Every raw value (of type float)
  * is represented by a short value. When the number of unique raw value is larger that binLimit,
@@ -152,7 +152,7 @@ final class DataAdapter  {
         // to many NaNs in the column => ignore it
         ignored = true;
         raw     = null;
-        L.info(this,Sys.RANDF,"Ignore column: " + this);
+        Log.info(this,Sys.RANDF,"Ignore column: " + this);
         return;
       }
       int n = vs.length - ndups - nans;
@@ -191,7 +191,7 @@ final class DataAdapter  {
           else binned[i] = (short) (-idx - 1); // this occurs when we are looking for a binned value, we return the smaller value in the array.
           assert binned[i] < binned2raw.length;
         }
-      if( n > binLimit )   L.info(this,Sys.RANDF,this+" this column's arity was cut from "+n+" to "+smax);
+      if( n > binLimit )   Log.info(this,Sys.RANDF,this+" this column's arity was cut from "+n+" to "+smax);
       raw = null; // GCced
     }
 

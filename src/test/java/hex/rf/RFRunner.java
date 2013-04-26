@@ -7,9 +7,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import water.Arguments;
 import water.TestUtil;
-import water.util.L;
+import water.util.Log;
 import water.util.Utils;
-import water.util.L.Tag.Sys;
+import water.util.Log.Tag.Sys;
 
 /** Launch RF in a new vm and records  results.
  */
@@ -106,7 +106,7 @@ public class RFRunner {
 
     /* Creates RFPRocess and spawns new process. */
     RFProcess(String cmd) throws Exception {
-      L.info(this,Sys.RANDF,"'"+JAVA+" "+cmd+"'");
+      Log.info(this,Sys.RANDF,"'"+JAVA+" "+cmd+"'");
       List<String> c = new ArrayList<String>();
       c.add(JAVA);  for(String s : cmd.split(" "))  { s = s.trim(); if (s.length()>0) c.add(s); }
       ProcessBuilder bldr = new ProcessBuilder(c);

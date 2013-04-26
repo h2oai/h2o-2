@@ -8,18 +8,19 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import water.*;
-import water.util.LogCollectorTask;
+import water.util.*;
+import water.util.Log.LogStr;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
 public class LogView extends Request {
   @Override protected Response serve() {
-    water.Log.LogStr logstr = UKV.get(water.Log.LOG_KEY);
+    LogStr logstr = UKV.get(Log.LOG_KEY);
     JsonArray ary = new JsonArray();
     if( logstr != null ) {
-      for( int i=0; i<water.Log.LogStr.MAX; i++ ) {
-        int x = (i+logstr._idx+1)&(water.Log.LogStr.MAX-1);
+      for( int i=0; i<LogStr.MAX; i++ ) {
+        int x = (i+logstr._idx+1)&(LogStr.MAX-1);
         if( logstr._dates[x] == null ) continue;
         JsonObject obj = new JsonObject();
         obj.addProperty("date", logstr._dates[x]);

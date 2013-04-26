@@ -20,7 +20,7 @@ import com.google.common.base.Strings;
 import java.util.ArrayList;
 import water.DKV;
 import water.Key;
-import water.util.L;
+import water.util.Log;
 
 public class XlsxParser extends CustomParser {
 
@@ -60,7 +60,7 @@ public class XlsxParser extends CustomParser {
         }
       }
     } finally {
-      try { is.close(); } catch (IOException e) { L.err(e); }
+      try { is.close(); } catch (IOException e) { Log.err(e); }
     }
   }
 
@@ -128,7 +128,7 @@ public class XlsxParser extends CustomParser {
                 _callback.addStrCol(_curCol, _str.setTo(_lastContents));
             }
           } catch (Exception e) {
-            L.err(e);
+            Log.err(e);
           }
         }
       } else if( name.equals("row") ) {

@@ -4,7 +4,7 @@ import java.nio.channels.DatagramChannel;
 import java.util.Date;
 import java.util.Random;
 
-import water.util.L;
+import water.util.Log;
 
 /**
  * The Thread that looks for UDP Cloud requests.
@@ -58,7 +58,7 @@ public class UDPReceiverThread extends Thread {
         break;                  // Socket closed for shutdown
       } catch( Exception e ) {
         // On any error from anybody, close all sockets & re-open
-        L.err("UDP Receiver error on port "+H2O.UDP_PORT,e);
+        Log.err("UDP Receiver error on port "+H2O.UDP_PORT,e);
         saw_error = true;
         errsock  = sock ;  sock  = null; // Signal error recovery on the next loop
       }
@@ -115,7 +115,7 @@ public class UDPReceiverThread extends Thread {
     _unknown_packets_per_sec++;
     long timediff = ab._h2o._last_heard_from - _unknown_packet_time;
     if( timediff > 1000 ) {
-      L.warn("UDP packets from outside the cloud: "+_unknown_packets_per_sec+"/sec, last one from "+ab._h2o+ " @ "+new Date());
+      Log.warn("UDP packets from outside the cloud: "+_unknown_packets_per_sec+"/sec, last one from "+ab._h2o+ " @ "+new Date());
       _unknown_packets_per_sec = 0;
       _unknown_packet_time = ab._h2o._last_heard_from;
     }

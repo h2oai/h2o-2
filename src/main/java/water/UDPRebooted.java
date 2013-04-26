@@ -1,7 +1,7 @@
 package water;
 import java.io.IOException;
 
-import water.util.L;
+import water.util.Log;
 
 /**
  * A UDP Rebooted packet: this node recently rebooted
@@ -40,7 +40,7 @@ public class UDPRebooted extends UDP {
     case reboot: return;
     case shutdown:
       closeAll();
-      L.info("Orderly shutdown command from "+killer);
+      Log.info("Orderly shutdown command from "+killer);
       System.exit(0);
       return;
     case oom:      m = "Out of Memory and no swap space left!"      ; break;
@@ -50,7 +50,7 @@ public class UDPRebooted extends UDP {
     default:       m = "Received kill "+cause                       ; break;
     }
     closeAll();
-    L.warn(m+" from "+killer);
+    Log.warn(m+" from "+killer);
     System.exit(-1);
   }
 
@@ -61,9 +61,9 @@ public class UDPRebooted extends UDP {
 
   // Try to gracefully close/shutdown all i/o channels.
   public static void closeAll() {
-    try { H2O._udpSocket.close(); } catch( IOException e ) { L.err(e); }
-    try { H2O._apiSocket.close(); } catch( IOException e ) { L.err(e); }
-    try { TCPReceiverThread.SOCK.close(); } catch( IOException e ) { L.err(e); }
+    try { H2O._udpSocket.close(); } catch( IOException e ) { Log.err(e); }
+    try { H2O._apiSocket.close(); } catch( IOException e ) { Log.err(e); }
+    try { TCPReceiverThread.SOCK.close(); } catch( IOException e ) { Log.err(e); }
   }
 
   // Pretty-print bytes 1-15; byte 0 is the udp_type enum

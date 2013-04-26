@@ -8,8 +8,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import water.*;
 import water.api.Upload.PostFile;
-import water.util.L;
-import water.util.L.Tag.Sys;
+import water.util.Log;
+import water.util.Log.Tag.Sys;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
@@ -121,7 +121,7 @@ public class RequestServer extends NanoHTTPD {
               new RequestServer(H2O._apiSocket);
               break;
             } catch ( Exception ioe ) {
-              L.err(this,Sys.HTTPD,"Launching NanoHTTP server got ",ioe);
+              Log.err(this,Sys.HTTPD,"Launching NanoHTTP server got ",ioe);
               try { Thread.sleep(1000); } catch( InterruptedException e ) { } // prevent denial-of-service
             }
           }
@@ -174,7 +174,7 @@ public class RequestServer extends NanoHTTPD {
       if (resource != null) {
         try {
           bytes = ByteStreams.toByteArray(resource);
-        } catch( IOException e ) { L.err(e); }
+        } catch( IOException e ) { Log.err(e); }
         byte[] res = _cache.putIfAbsent(uri,bytes);
         if( res != null ) bytes = res; // Racey update; take what is in the _cache
       }

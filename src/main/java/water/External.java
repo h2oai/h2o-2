@@ -2,7 +2,7 @@ package water;
 
 import java.io.InputStream;
 
-import water.util.L;
+import water.util.Log;
 
 import com.google.gson.JsonObject;
 
@@ -20,9 +20,9 @@ public class External {
   static {
     ExternalInterface api = null;
     try { api = (ExternalInterface)Boot._init.loadClass("water.InternalInterface").newInstance(); }
-    catch( ClassNotFoundException e ) { L.err(e); }
-    catch( InstantiationException e ) { L.err(e); }
-    catch( IllegalAccessException e ) { L.err(e); }
+    catch( ClassNotFoundException e ) { Log.err(e); }
+    catch( InstantiationException e ) { Log.err(e); }
+    catch( IllegalAccessException e ) { Log.err(e); }
     API = api;
   }
 

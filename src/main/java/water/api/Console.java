@@ -5,7 +5,7 @@ import java.io.*;
 
 import water.Boot;
 import water.exec.Function;
-import water.util.L;
+import water.util.Log;
 import water.util.RString;
 
 import com.google.common.io.CharStreams;
@@ -42,7 +42,7 @@ public class Console extends HTMLOnlyRequest {
       reader = new BufferedReader(new InputStreamReader(is));
       CharStreams.copy(reader, sb);
     } catch( IOException e ){
-      L.err(e);
+      Log.err(e);
     } finally {
       Closeables.closeQuietly(reader);
     }

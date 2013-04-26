@@ -7,8 +7,7 @@ import java.util.Arrays;
 
 import org.apache.commons.lang.ArrayUtils;
 
-import water.Log;
-import water.util.L;
+import water.util.Log;
 
 /**
  * Executes code in a separate VM.
@@ -35,7 +34,7 @@ public abstract class VM {
       try {
         cp += new File(new URI(url.toString())) + File.pathSeparator;
       } catch( URISyntaxException e ) {
-        throw L.errRTExcept(e);
+        throw Log.errRTExcept(e);
       }
     }
     _args.add(cp);
@@ -79,7 +78,7 @@ public abstract class VM {
       if( _out != null )
         persistIO(_process, _out, _err);
     } catch( IOException e ) {
-      throw  L.errRTExcept(e);
+      throw  Log.errRTExcept(e);
     }
   }
 
@@ -90,7 +89,7 @@ public abstract class VM {
     } catch( IllegalThreadStateException _ ) {
       return true;
     } catch( Exception e ) {
-      throw  L.errRTExcept(e);
+      throw  Log.errRTExcept(e);
     }
   }
 
@@ -98,7 +97,7 @@ public abstract class VM {
     try {
       return _process.waitFor();
     } catch( InterruptedException e ) {
-      throw  L.errRTExcept(e);
+      throw  Log.errRTExcept(e);
     }
   }
 
@@ -122,7 +121,7 @@ public abstract class VM {
             b = -1;
           }
           if( b < 0 ) {
-            L.info("Assuming parent done, exit(0)");
+            Log.info("Assuming parent done, exit(0)");
             System.exit(0);
           }
         }

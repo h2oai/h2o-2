@@ -79,7 +79,7 @@ public class RequestArguments extends RequestStatics {
         return -1;
       return i;
     } catch (NumberFormatException e) {
-      L.err(e);
+      Log.err(e);
       return -1;
     }
   }
@@ -489,7 +489,7 @@ public class RequestArguments extends RequestStatics {
           record._valid = true;
         } catch (IllegalArgumentException e) {
           record._value = defaultValue();
-          Throwables.propagate(L.err(e));
+          Throwables.propagate(Log.err(e));
         }
       }
     }
@@ -1058,7 +1058,7 @@ public class RequestArguments extends RequestStatics {
       try {
         return NumberSequence.parse(input, _multiplicative, _defaultStep);
       } catch (NumberFormatException e) {
-        throw L.err(new IllegalArgumentException("Value "+input+" is not a valid number sequence."));
+        throw Log.err(new IllegalArgumentException("Value "+input+" is not a valid number sequence."));
       }
     }
 
@@ -1113,10 +1113,10 @@ public class RequestArguments extends RequestStatics {
       try {
         int i = Integer.parseInt(input);
         if ((i< _min) || (i > _max))
-          throw L.err(new IllegalArgumentException("Value "+i+" is not between "+_min+" and "+_max+" (inclusive)"));
+          throw Log.err(new IllegalArgumentException("Value "+i+" is not between "+_min+" and "+_max+" (inclusive)"));
         return i;
       } catch (NumberFormatException e) {
-        throw L.err(new IllegalArgumentException("Value "+input+" is not a valid integer."));
+        throw Log.err(new IllegalArgumentException("Value "+input+" is not a valid integer."));
       }
     }
 
@@ -1230,10 +1230,10 @@ public class RequestArguments extends RequestStatics {
       try {
         double i = Double.parseDouble(input);
         if ((i< _min) || (i > _max))
-         throw L.err(new IllegalArgumentException("Value "+i+" is not between "+_min+" and "+_max+" (inclusive)"));
+         throw Log.err(new IllegalArgumentException("Value "+i+" is not between "+_min+" and "+_max+" (inclusive)"));
         return i;
       } catch (NumberFormatException e) {
-        throw L.err(new IllegalArgumentException("Value "+input+" is not a valid real number."));
+        throw Log.err(new IllegalArgumentException("Value "+input+" is not a valid real number."));
       }
     }
 
@@ -1948,7 +1948,7 @@ public class RequestArguments extends RequestStatics {
       try {
         return determineColumnClassNames(1024);
       } catch (IllegalArgumentException e) {
-        L.err(e);
+        Log.err(e);
         return new String[0];
       }
     }
@@ -1995,11 +1995,11 @@ public class RequestArguments extends RequestStatics {
             start = end + 1;
           }
         } catch (NumberFormatException e) {
-          throw L.err(new IllegalArgumentException("Invalid double format for weight value"));
+          throw Log.err(new IllegalArgumentException("Invalid double format for weight value"));
         }
 
         if (!classNames.containsKey(className))
-          throw L.err(new IllegalArgumentException("Category "+className+" not found!"));
+          throw Log.err(new IllegalArgumentException("Category "+className+" not found!"));
         result[classNames.get(className)] = classWeight;
       }
       return result;
@@ -2013,7 +2013,7 @@ public class RequestArguments extends RequestStatics {
           result[i] = _defaultValue;
         return result;
       } catch( IllegalArgumentException e ) {
-        L.err(e);
+        Log.err(e);
         return new double[0];
       }
     }
@@ -2060,7 +2060,7 @@ public class RequestArguments extends RequestStatics {
       try {
         return determineColumnClassNames(1024);
       } catch (IllegalArgumentException e) {
-        L.err(e);
+        Log.err(e);
         return new String[0];
       }
     }
@@ -2106,7 +2106,7 @@ public class RequestArguments extends RequestStatics {
             start = end + 1;
           }
         } catch (NumberFormatException e) {
-          throw L.err(new IllegalArgumentException("Invalid integer format for strata value"));
+          throw Log.err(new IllegalArgumentException("Invalid integer format for strata value"));
         }
         if (!classNames.containsKey(className))
           throw new IllegalArgumentException("Category "+className+" not found!");
@@ -2123,7 +2123,7 @@ public class RequestArguments extends RequestStatics {
           result[i] = _defaultValue;
         return result;
       } catch (IllegalArgumentException e) {
-        L.err(e);
+        Log.err(e);
         return new int[0];
       }
     }

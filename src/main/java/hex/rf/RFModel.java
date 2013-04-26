@@ -6,7 +6,7 @@ import java.util.Random;
 import water.*;
 import water.Job.Progress;
 import water.util.*;
-import water.util.L.Tag.Sys;
+import water.util.Log.Tag.Sys;
 
 /**
  * A model is an ensemble of trees that can be serialized and that can be used
@@ -68,7 +68,7 @@ public class RFModel extends Model implements Cloneable, Progress {
     try {
       return (RFModel)super.clone();
     } catch( CloneNotSupportedException cne ) {
-      throw L.err(this,Sys.RANDF,"",H2O.unimpl());
+      throw Log.err(this,Sys.RANDF,"",H2O.unimpl());
     }
   }
 

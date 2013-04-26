@@ -3,7 +3,7 @@ package water.api;
 import com.google.gson.JsonObject;
 import java.util.Properties;
 import water.*;
-import water.util.L;
+import water.util.Log;
 
 public class Get extends Request {
   protected H2OExistingKey _key = new H2OExistingKey(KEY);
@@ -30,7 +30,7 @@ public class Get extends Request {
       res.addHeader("Content-Disposition", "attachment; filename="+key.toString());
       return res;
     } catch (Exception e) {
-      L.err(e);
+      Log.err(e);
       return wrap(server,build(Response.error(e.getMessage())));
     }
   }

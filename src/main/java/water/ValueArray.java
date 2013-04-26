@@ -8,7 +8,7 @@ import java.util.concurrent.ExecutionException;
 
 import water.H2O.H2OCountedCompleter;
 import water.Job.ProgressMonitor;
-import water.util.L;
+import water.util.Log;
 
 /**
 * Large Arrays & Arraylets
@@ -98,7 +98,7 @@ public class ValueArray extends Iced implements Cloneable {
 
   @Override public ValueArray clone() {
     try { return (ValueArray)super.clone(); }
-    catch( CloneNotSupportedException cne ) { throw L.err(H2O.unimpl()); }
+    catch( CloneNotSupportedException cne ) { throw Log.err(H2O.unimpl()); }
   }
 
   // Init of transient fields from deserialization calls
@@ -405,8 +405,8 @@ public class ValueArray extends Iced implements Cloneable {
       // Block for the last DKV to happen, because we're overwriting the last one
       // with final size bits.
       try { f_last.get(); }
-      catch( InterruptedException e ) { throw  L.errRTExcept(e); }
-      catch(   ExecutionException e ) { throw  L.errRTExcept(e); }
+      catch( InterruptedException e ) { throw  Log.errRTExcept(e); }
+      catch(   ExecutionException e ) { throw  Log.errRTExcept(e); }
       assert DKV.get(ckey).memOrLoad()==oldbuf; // Maybe false-alarms under high-memory-pressure?
       DKV.put(ckey,new Value(ckey,newbuf),fs); // Overwrite the old too-small Value
     } else {

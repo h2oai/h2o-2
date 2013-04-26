@@ -6,7 +6,7 @@ import jsr166y.ForkJoinTask;
 import jsr166y.RecursiveAction;
 import water.*;
 import water.util.*;
-import water.util.L.Tag.Sys;
+import water.util.Log.Tag.Sys;
 
 class DABuilder {
 
@@ -31,7 +31,7 @@ class DABuilder {
   private final void checkAndLimitFeatureUsedPerSplit(final DataAdapter dapt) {
     int validCols = _drf._rfmodel._va._cols.length-1; // for classIdx column
     if (validCols < _drf._numSplitFeatures) {
-      L.warn(this,Sys.RANDF,"Limiting features from " + _drf._numSplitFeatures +
+      Log.warn(this,Sys.RANDF,"Limiting features from " + _drf._numSplitFeatures +
           " to " + validCols + " because there are no more valid columns in the dataset");
       _drf._numSplitFeatures= validCols;
     }
@@ -106,7 +106,7 @@ class DABuilder {
     // And invoke collected jobs
     ForkJoinTask.invokeAll(dataInhaleJobs);
     dapt.shrink();
-    L.info(this,Sys.RANDF,"Inhale done in " + t_inhale);
+    Log.info(this,Sys.RANDF,"Inhale done in " + t_inhale);
     return dapt;
   }
 }

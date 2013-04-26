@@ -6,8 +6,8 @@ import java.util.List;
 
 import water.*;
 import water.util.ByteBufferInputStream;
-import water.util.L;
-import water.util.L.Tag.Sys;
+import water.util.Log;
+import water.util.Log.Tag.Sys;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.*;
@@ -77,8 +77,8 @@ public class MultipartUpload extends MRTask {
     } catch( Exception e ) {
       try {
         s3.abortMultipartUpload(new AbortMultipartUploadRequest(bucket, object, uploadId));
-      } catch( Exception _ ) {L.err(_); }
-      L.err(e);
+      } catch( Exception _ ) {Log.err(_); }
+      Log.err(e);
       Progress progress = new Progress();
       progress._error = e.toString();
       UKV.put(dest, progress);
@@ -87,7 +87,7 @@ public class MultipartUpload extends MRTask {
 
   @Override
   public void map(Key key) {
-    if( DEBUG ) L.debug(this, Sys.WATER, "map ",key ,": ", this);
+    if( DEBUG ) Log.debug(this, Sys.WATER, "map ",key ,": ", this);
 
     assert key.home();
     long chunk = ValueArray.getChunkIndex(key);
@@ -129,7 +129,7 @@ public class MultipartUpload extends MRTask {
 
   @Override
   public void reduce(DRemoteTask rt) {
-    if( DEBUG ) L.debug(this, Sys.WATER, "reduce: " + this);
+    if( DEBUG ) Log.debug(this, Sys.WATER, "reduce: " + this);
 
     MultipartUpload task = (MultipartUpload) rt;
 
@@ -155,7 +155,7 @@ public class MultipartUpload extends MRTask {
         Progress update = new Progress();
         update._todo = old._todo;
         update._done = old._done + 1;
-        if( DEBUG ) L.debug(this, Sys.WATER, "step ",update._done," of ",update._todo);
+        if( DEBUG ) Log.debug(this, Sys.WATER, "step ",update._done," of ",update._todo);
         return update;
       }
     }.invoke(key);

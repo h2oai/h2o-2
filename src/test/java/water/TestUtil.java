@@ -9,8 +9,8 @@ import java.util.Arrays;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
-import water.Log;
 import water.parser.ParseDataset;
+import water.util.Log;
 
 import com.google.common.io.Closeables;
 

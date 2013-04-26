@@ -4,8 +4,7 @@ import java.io.File;
 import java.util.*;
 
 import water.Boot;
-import water.Log;
-import water.util.L;
+import water.util.Log;
 import water.util.Utils;
 
 public class Host {
@@ -108,7 +107,7 @@ public class Host {
       builder.environment().put("CYGWIN", "nodosfilewarning");
       process = builder.start();
       String log = "rsync " + VM.localIP() + " -> " + _address;
-      if( !LOG_RSYNC ) L.info(log);
+      if( !LOG_RSYNC ) Log.info(log);
       NodeVM.inheritIO(process, Log.padRight(log + ": ", 24));
       process.waitFor();
     } catch( Exception ex ) {
@@ -117,7 +116,7 @@ public class Host {
       if( process != null ) {
         try {
           process.destroy();
-        } catch( Exception _ ) { L.err(_); }
+        } catch( Exception _ ) { Log.err(_); }
       }
     }
   }
@@ -145,7 +144,7 @@ public class Host {
         Process p = Runtime.getRuntime().exec("chmod 600 " + _key);
         p.waitFor();
       } catch( Exception e ) {
-        throw  L.errRTExcept(e);
+        throw  Log.errRTExcept(e);
       }
       k = " -i " + _key;
     }

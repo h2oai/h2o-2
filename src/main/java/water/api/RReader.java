@@ -6,7 +6,7 @@ import java.io.IOException;
 
 import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.util.L;
+import water.util.Log;
 import water.util.RString;
 
 import com.google.gson.JsonObject;
@@ -42,7 +42,7 @@ public class RReader extends Request {
             try {
               water.RReader.run(dest_, source_.openStream());
             } catch( IOException e ) {
-              L.err(e);
+              Log.err(e);
             }
           }
         });
@@ -53,10 +53,10 @@ public class RReader extends Request {
       r.setBuilder(RequestStatics.DEST_KEY, new KeyElementBuilder());
       return r;
     } catch( IllegalArgumentException e ) {
-      L.err(e);
+      Log.err(e);
       return Response.error(e.getMessage());
     } catch( Error e ) {
-      L.err(e);
+      Log.err(e);
       return Response.error(e.getMessage());
     }
   }

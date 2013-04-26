@@ -10,7 +10,7 @@ import java.util.*;
 import water.*;
 import water.Timer;
 import water.util.*;
-import water.util.L.Tag.Sys;
+import water.util.Log.Tag.Sys;
 
 /**
  * A RandomForest can be used for growing or validation. The former starts with a known target number of trees,
@@ -35,8 +35,8 @@ public class RandomForest {
                       int numSplitFeatures) {
     Timer  t_alltrees = new Timer();
     Tree[] trees      = new Tree[ntrees];
-    L.info(Sys.RANDF,"Number of split features: "+ drf.numSplitFeatures());
-    L.info(Sys.RANDF,"Starting RF computation with "+ data.rows()+" rows ");
+    Log.info(Sys.RANDF,"Number of split features: "+ drf.numSplitFeatures());
+    Log.info(Sys.RANDF,"Starting RF computation with "+ data.rows()+" rows ");
 
     Random  rnd     = Utils.getRNG(data.seed() + ROOT_SEED_ADD);
     Sampling sampler = createSampler(drf);
@@ -47,7 +47,7 @@ public class RandomForest {
       if (!parallelTrees)   DRemoteTask.invokeAll(new Tree[]{trees[i]});
     }
     if(parallelTrees)DRemoteTask.invokeAll(trees);
-    L.info(Sys.RANDF,"All trees ("+ntrees+") done in "+ t_alltrees);
+    Log.info(Sys.RANDF,"All trees ("+ntrees+") done in "+ t_alltrees);
   }
 
   static Sampling createSampler(final DRF drf) {
@@ -125,13 +125,13 @@ public class RandomForest {
       va = TestUtil.parse_test_key(Key.make(ARGS.rawKey),Key.make(TestUtil.getHexKeyFromRawKey(ARGS.rawKey)));
     else { // data outside of H2O, load and parse
       File f = new File(ARGS.file);
-      L.info(Sys.RANDF,"Loading file ", f);
+      Log.info(Sys.RANDF,"Loading file ", f);
       Key fk = TestUtil.load_test_file(f);
       va = TestUtil.parse_test_key(fk,Key.make(TestUtil.getHexKeyFromFile(f)));
       DKV.remove(fk);
     }
     if(ARGS.ntrees == 0) {
-      L.info(Sys.RANDF,"Nothing to do as ntrees == 0");
+      Log.info(Sys.RANDF,"Nothing to do as ntrees == 0");
       UDPRebooted.T.shutdown.broadcast();
       return;
     }
@@ -172,7 +172,7 @@ public class RandomForest {
     assert ARGS.ntrees >=0;
     assert ARGS.binLimit > 0 && ARGS.binLimit <= Short.MAX_VALUE;
 
-    L.info(Sys.RANDF,"Arguments used:\n"+ARGS.toString());
+    Log.info(Sys.RANDF,"Arguments used:\n"+ARGS.toString());
     final Key modelKey = Key.make("model");
     DRFFuture drfResult = DRF.execute(modelKey,
                           cols,
@@ -192,19 +192,19 @@ public class RandomForest {
                           ARGS.exclusive);
     DRF drf = drfResult.get();  // block on all nodes!
     RFModel model = UKV.get(modelKey);
-    L.info(Sys.RANDF,"Random forest finished in "+ drf._t_main);
+    Log.info(Sys.RANDF,"Random forest finished in "+ drf._t_main);
 
     Timer t_valid = new Timer();
     // Get training key.
     Key valKey = drf.aryKey();
     if(ARGS.outOfBagError && !ARGS.stratify){
-      L.info(Sys.RANDF,"Computing out of bag error");
+      Log.info(Sys.RANDF,"Computing out of bag error");
       Confusion.make( model, valKey, classcol, null, true).report();
     }
     // Run validation.
     if(ARGS.validationFile != null && !ARGS.validationFile.isEmpty()){ // validate on the supplied file
       File f = new File(ARGS.validationFile);
-      L.info(Sys.RANDF,"Loading validation file ",f);
+      Log.info(Sys.RANDF,"Loading validation file ",f);
       Key fk = TestUtil.load_test_file(f);
       ValueArray v = TestUtil.parse_test_key(fk,Key.make(TestUtil.getHexKeyFromFile(f)));
       valKey = v._key;
@@ -212,7 +212,7 @@ public class RandomForest {
       Confusion.make( model, valKey, classcol, null, false).report();
     }
 
-    L.info(Sys.RANDF,"Validation done in: " + t_valid);
+    Log.info(Sys.RANDF,"Validation done in: " + t_valid);
     UDPRebooted.T.shutdown.broadcast();
   }
 }

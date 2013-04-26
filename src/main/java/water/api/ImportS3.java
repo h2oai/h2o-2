@@ -5,7 +5,7 @@ import java.io.IOException;
 import water.DKV;
 import water.Key;
 import water.store.s3.PersistS3;
-import water.util.L;
+import water.util.Log;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
@@ -61,7 +61,7 @@ public class ImportS3 extends Request {
         o.addProperty(VALUE_SIZE, obj.getSize());
         succ.add(o);
       } catch( IOException e ) {
-        L.err(e);
+        Log.err(e);
         JsonObject o = new JsonObject();
         o.addProperty(FILE, obj.getKey());
         o.addProperty(ERROR, e.getMessage());

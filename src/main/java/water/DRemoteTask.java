@@ -5,7 +5,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import water.util.L;
+import water.util.Log;
 import jsr166y.CountedCompleter;
 
 /**  A Distributed DTask.
@@ -218,7 +218,7 @@ public abstract class DRemoteTask extends DTask<DRemoteTask> implements Cloneabl
       dt.setPendingCount(0); // Volatile write for completer field; reset pending count also
       return dt;
     } catch( CloneNotSupportedException e ) {
-      throw  L.errRTExcept(e);
+      throw  Log.errRTExcept(e);
     }
   }
 }

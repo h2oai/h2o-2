@@ -4,7 +4,7 @@ import java.util.Arrays;
 
 import water.H2ONode.H2Okey;
 import water.nbhm.NonBlockingHashMap;
-import water.util.L;
+import water.util.Log;
 
 /**
  * (Not The) Paxos
@@ -42,10 +42,10 @@ public abstract class Paxos {
     // mismatched jars.
     if( !h2o._heartbeat.check_jar_md5() ) {
       if( H2O.CLOUD.size() > 1 ) {
-        L.err("Killing "+h2o+"  because of jar mismatch.");
+        Log.err("Killing "+h2o+"  because of jar mismatch.");
         UDPRebooted.T.mismatch.send(h2o);
       } else {
-        L.err("Attempting to join "+h2o+" with a jar mismatch. Killing self.");
+        Log.err("Attempting to join "+h2o+" with a jar mismatch. Killing self.");
         System.exit(-1);
       }
       return 0;
@@ -54,13 +54,13 @@ public abstract class Paxos {
     // Never heard of this dude?  See if we want to kill him off for being cloud-locked
     if( !PROPOSED.contains(h2o) ) {
       if( _cloudLocked ) {
-        L.err("Killing "+h2o+" because the cloud is locked.");
+        Log.err("Killing "+h2o+" because the cloud is locked.");
         UDPRebooted.T.locked.send(h2o);
         return 0;
       }
       if( _commonKnowledge ) {
         _commonKnowledge = false; // No longer sure about things
-        L.info("Cloud voting in progress");
+        Log.info("Cloud voting in progress");
       }
 
       // Add to proposed set, update cloud hash
@@ -83,7 +83,7 @@ public abstract class Paxos {
     _commonKnowledge = true;    // Yup!  Have consensus
     H2O.CLOUD.set_next_Cloud(h2os,chash);
     Paxos.class.notify(); // Also, wake up a worker thread stuck in DKV.put
-    L.info("Cloud of size ", H2O.CLOUD.size(), " formed ", H2O.CLOUD.toString());
+    Log.info("Cloud of size ", H2O.CLOUD.size(), " formed ", H2O.CLOUD.toString());
     return 0;
   }
 
@@ -113,7 +113,7 @@ public abstract class Paxos {
   }
   static int print( String msg, H2ONode h2os[] ) { return print(msg,h2os,""); }
   static int print( String msg, H2ONode h2os[], String msg2 ) {
-    L.debug2(msg+Arrays.toString(h2os)+msg2);
+    Log.debug2(msg+Arrays.toString(h2os)+msg2);
     return 0;                   // handy flow-coding return
   }
 }

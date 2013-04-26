@@ -5,7 +5,7 @@ import java.lang.management.ManagementFactory;
 
 import javax.management.*;
 
-import water.util.L;
+import water.util.Log;
 
 /**
  * Starts a thread publishing multicast HeartBeats to the local subnet: the
@@ -54,7 +54,7 @@ public class HeartBeatThread extends Thread {
     try {
       os = new ObjectName("java.lang:type=OperatingSystem");
     } catch( MalformedObjectNameException e ) {
-      throw  L.errRTExcept(e);
+      throw  Log.errRTExcept(e);
     }
     Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
     while( true ) {

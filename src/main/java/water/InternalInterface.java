@@ -3,7 +3,7 @@ package water;
 import java.io.InputStream;
 
 import water.api.Cloud;
-import water.util.L;
+import water.util.Log;
 
 import com.google.gson.JsonObject;
 
@@ -28,7 +28,7 @@ public class InternalInterface implements water.ExternalInterface {
     try {
       return scoreModel(v.get(),colNames,row);
     } catch(Throwable t) {
-      L.err(t);
+      Log.err(t);
       throw new IllegalArgumentException("Key "+sk+" is not a Model key");
     }
   }

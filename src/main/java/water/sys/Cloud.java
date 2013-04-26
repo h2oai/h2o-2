@@ -8,7 +8,7 @@ import org.apache.commons.lang.ArrayUtils;
 import water.*;
 import water.H2O.FlatFileEntry;
 import water.H2O.OptArgs;
-import water.util.L;
+import water.util.Log;
 
 public class Cloud {
   private final String[] _publicIPs, _privateIPs;
@@ -85,7 +85,7 @@ public class Cloud {
       try {
         t.join();
       } catch( InterruptedException e ) {
-        throw  L.errRTExcept(e);
+        throw  Log.errRTExcept(e);
       }
     }
   }

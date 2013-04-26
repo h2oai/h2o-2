@@ -4,7 +4,7 @@ import java.net.*;
 import java.util.*;
 
 import water.util.*;
-import water.util.L.Tag.Sys;
+import water.util.Log.Tag.Sys;
 
 /**
  * A simple, tiny, nicely embeddable HTTP 1.0 (partially 1.1) server in Java
@@ -124,7 +124,7 @@ public class NanoHTTPD
       {
         this.data = new ByteArrayInputStream( txt.getBytes("UTF-8"));
       }
-      catch ( java.io.UnsupportedEncodingException e ) { L.err(e); }
+      catch ( java.io.UnsupportedEncodingException e ) { Log.err(e); }
     }
 
     /**
@@ -201,7 +201,7 @@ public class NanoHTTPD
         try {
           while( true )
             new HTTPSession( myServerSocket.accept());
-        } catch ( IOException e ) { L.err(e); }
+        } catch ( IOException e ) { Log.err(e); }
       }
     }, "NanoHTTPD Thread");
     myThread.setDaemon( true );
@@ -215,7 +215,7 @@ public class NanoHTTPD
     try {
       myServerSocket.close();
       myThread.join();
-    } catch ( IOException e ) { L.err(e);
+    } catch ( IOException e ) { Log.err(e);
     } catch ( InterruptedException e ) { }
   }
 
@@ -246,14 +246,14 @@ public class NanoHTTPD
     try {
       new NanoHTTPD( new ServerSocket(port), wwwroot );
     } catch( IOException ioe ) {
-      L.err(Sys.HTTPD, "Couldn't start server:\n", ioe );
+      Log.err(Sys.HTTPD, "Couldn't start server:\n", ioe );
       System.exit( -1 );
     }
 
     myOut.println( "Now serving files in port " + port + " from \"" + wwwroot + "\"" );
     myOut.println( "Hit Enter to stop.\n" );
 
-    try { System.in.read(); } catch( Throwable t ) { L.err(t); }
+    try { System.in.read(); } catch( Throwable t ) { Log.err(t); }
   }
 
   /**
@@ -399,10 +399,10 @@ public class NanoHTTPD
       } catch ( IOException ioe ) {
         try {
           sendError( HTTP_INTERNALERROR, "SERVER INTERNAL ERROR: IOException: " + ioe.getMessage());
-        } catch ( Throwable t ) { L.err(t); }
+        } catch ( Throwable t ) { Log.err(t); }
       } catch ( InterruptedException e ) {
         // Thrown by sendError, ignore and exit the thread.
-        L.err(e);
+        Log.err(e);
       } finally {
         Utils.close(mySocket);
       }
@@ -673,7 +673,7 @@ public class NanoHTTPD
           data.close();
       }
       catch( IOException e ) {
-        L.err(e);
+        Log.err(e);
         // Couldn't write? No can do.
         Utils.close(mySocket);
       }
@@ -789,7 +789,7 @@ public class NanoHTTPD
         try {
           newUri += URLEncoder.encode( tok, "UTF-8" );
         } catch( UnsupportedEncodingException e ) {
-          throw  L.errRTExcept(e);
+          throw  Log.errRTExcept(e);
         }
       }
     }
@@ -947,7 +947,7 @@ public class NanoHTTPD
                 endAt = Long.parseLong( range.substring( minus+1 ));
               }
             }
-            catch ( NumberFormatException e ) { L.err(e); }
+            catch ( NumberFormatException e ) { Log.err(e); }
           }
         }
 
@@ -996,7 +996,7 @@ public class NanoHTTPD
       }
     }
     catch( IOException e )  {
-      L.err(e);
+      Log.err(e);
       res = new Response( HTTP_FORBIDDEN, MIME_PLAINTEXT, "FORBIDDEN: Reading file failed." );
     }
 

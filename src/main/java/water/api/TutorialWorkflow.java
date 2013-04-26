@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 import water.Boot;
-import water.util.L;
+import water.util.Log;
 
 /**
  * Basic page introducing tutorial for Random Forest on Iris
@@ -157,9 +157,9 @@ abstract public class TutorialWorkflow extends HTMLOnlyRequest {
         while( (line = reader.readLine())!=null) sb.append(line).append('\n');
 
       } catch (IOException e){ /* Silently ignoring */
-        L.err(e);
+        Log.err(e);
       } finally {
-        if (reader!=null) try { reader.close(); } catch( IOException e ) { throw new RuntimeException(L.err("IOException during reader close.",e)); }
+        if (reader!=null) try { reader.close(); } catch( IOException e ) { throw new RuntimeException(Log.err("IOException during reader close.",e)); }
       }
 
       return sb.toString();

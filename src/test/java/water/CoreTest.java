@@ -1,9 +1,11 @@
 package water;
 
-import org.junit.*;
+import org.junit.BeforeClass;
+
+import water.util.Log;
 
 // A simple harness to load all cores on all machines for 30sec.
-// It is an error if all cores do not load... and then also the 
+// It is an error if all cores do not load... and then also the
 // test will run for longer than 30sec.  However, if the cores
 // are not idle, then the test may also run longer than 30sec.
 public class CoreTest extends TestUtil {

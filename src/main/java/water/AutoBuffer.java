@@ -8,7 +8,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import water.util.L;
+import water.util.Log;
 
 /**
  * A ByteBuffer backed mixed Input/OutputStream class.
@@ -206,14 +206,14 @@ public final class AutoBuffer {
   private static void bbstats( AtomicInteger ai ) {
     if( !DEBUG ) return;
     if( (ai.incrementAndGet()&511)==511 ) {
-      L.warn("BB make="+BBMAKE.get()+" free="+BBFREE.get()+" cache="+BBCACHE.get()+" size="+BBS.size());
+      Log.warn("BB make="+BBMAKE.get()+" free="+BBFREE.get()+" cache="+BBCACHE.get()+" size="+BBS.size());
     }
   }
 
   private static final ByteBuffer bbMake() {
     ByteBuffer bb = null;
     try { bb = BBS.pollFirst(0,TimeUnit.SECONDS); }
-    catch( InterruptedException e ) { throw  L.errRTExcept(e); }
+    catch( InterruptedException e ) { throw  Log.errRTExcept(e); }
     if( bb != null ) {
       bbstats(BBCACHE);
       return bb;
@@ -271,7 +271,7 @@ public final class AutoBuffer {
       _time_close_ms = System.currentTimeMillis();
       TimeLine.record_IOclose(this,_persist); // Profile TCP connections
     } catch( IOException e ) {  // Dunno how to handle so crash-n-burn
-      throw  L.errRTExcept(e);
+      throw  Log.errRTExcept(e);
     } finally {
       restorePriority();        // And if we raised priority, lower it back
       if( _chan instanceof SocketChannel )
@@ -289,7 +289,7 @@ public final class AutoBuffer {
       TCPS.decrementAndGet();
       bbFree();
     } catch( IOException e ) {  // Dunno how to handle so crash-n-burn
-      throw  L.errRTExcept(e);
+      throw  Log.errRTExcept(e);
     }
   }
 
@@ -312,9 +312,9 @@ public final class AutoBuffer {
         //sock = SocketChannel.open( _h2o._key );
         break;
       } // Explicitly ignore the following exceptions but fail on the rest
-      catch (ConnectException e)       { L.err(ex = e); }
-      catch (SocketTimeoutException e) { L.err(ex = e); }
-      catch (IOException e)            { L.err(ex = e);  }
+      catch (ConnectException e)       { Log.err(ex = e); }
+      catch (SocketTimeoutException e) { Log.err(ex = e); }
+      catch (IOException e)            { Log.err(ex = e);  }
       finally {
         if( ex != null ) {
           H2O.ignore(ex, "TCP open problem, waiting and retrying...", false);
@@ -442,7 +442,7 @@ public final class AutoBuffer {
         if( res == -1 ) throw new RuntimeException("EOF while reading "+sz+" bytes");
         if( res ==  0 ) throw new RuntimeException("Reading zero bytes - so no progress?");
       } catch( IOException e ) {  // Dunno how to handle so crash-n-burn
-        throw  L.errRTExcept(e);
+        throw  Log.errRTExcept(e);
       }
     }
     _time_io_ns += (System.nanoTime()-ns);
@@ -486,7 +486,7 @@ public final class AutoBuffer {
         _chan.write(_bb);
       _time_io_ns += (System.nanoTime()-ns);
     } catch( IOException e ) {   // Can't open the connection, try again later
-      throw new RuntimeException(L.err("TCP Open/Write talking to "+_h2o+" failed with ",e));
+      throw new RuntimeException(Log.err("TCP Open/Write talking to "+_h2o+" failed with ",e));
     }
     if( _bb.capacity() < 16*1024 ) _bb = bbMake();
     _firstPage = false;

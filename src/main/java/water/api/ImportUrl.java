@@ -5,7 +5,7 @@ import java.net.URL;
 
 import water.Key;
 import water.ValueArray;
-import water.util.L;
+import water.util.Log;
 
 import com.google.common.io.Closeables;
 import com.google.gson.JsonObject;
@@ -46,10 +46,10 @@ public class ImportUrl extends Request {
       r.setBuilder(KEY, new KeyElementBuilder());
       return r;
     } catch( IllegalArgumentException e ) {
-      L.err("Not a valid key: "+ urlStr, e);
+      Log.err("Not a valid key: "+ urlStr, e);
       return Response.error("Not a valid key: "+ urlStr);
     } catch( IOException e ) {
-      L.err(e);
+      Log.err(e);
       return Response.error(e.getMessage());
     } finally {
       Closeables.closeQuietly(s);

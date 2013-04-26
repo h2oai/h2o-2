@@ -10,7 +10,7 @@ import water.*;
 import water.ValueArray.Column;
 import water.Timer;
 import water.util.*;
-import water.util.L.Tag.Sys;
+import water.util.Log.Tag.Sys;
 
 /** Distributed RandomForest */
 public final class DRF extends water.DRemoteTask {
@@ -194,13 +194,13 @@ public final class DRF extends water.DRemoteTask {
     Timer t_extract = new Timer();
     // Build data adapter for this node.
     DataAdapter dapt = DABuilder.create(this).build(_keys);
-    L.info(this,Sys.RANDF,"Data adapter built in " + t_extract );
+    Log.info(this,Sys.RANDF,"Data adapter built in " + t_extract );
     // Prepare data and compute missing parameters.
     Data t            = Data.make(dapt);
     _numSplitFeatures = howManySplitFeatures(t);
     int ntrees        = howManyTrees();
 
-    L.info(this,Sys.RANDF,"Building "+ntrees+" trees");
+    Log.info(this,Sys.RANDF,"Building "+ntrees+" trees");
     RandomForest.build(this, t, ntrees, _depth, 0.0, StatType.values()[_stat],_parallel,_numSplitFeatures);
     // Wait for the running jobs
     tryComplete();
@@ -292,7 +292,7 @@ public final class DRF extends water.DRemoteTask {
 
     for(int i : nodesIdxs) {
       if( _gHist[i] < (int)(_strataSamples[i]/_sample) )
-        L.info(this,Sys.RANDF,"There is not enough samples of class " + i + ".");
+        Log.info(this,Sys.RANDF,"There is not enough samples of class " + i + ".");
     }
     // Decide which classes need to be extracted
     SortedSet<Integer> uClasses = new TreeSet<Integer>();
@@ -332,6 +332,6 @@ public final class DRF extends water.DRemoteTask {
     _.sample = (int)(sample * 100);
     _.file = "";
 
-    L.info(Sys.RANDF,"Web arguments: " + _ + " key "+ary._key);
+    Log.info(Sys.RANDF,"Web arguments: " + _ + " key "+ary._key);
   }
 }

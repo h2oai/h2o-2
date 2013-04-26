@@ -44,7 +44,7 @@ public class Check {
       }
       return true;
     } catch( Exception e ) {
-      throw  L.errRTExcept(e);
+      throw  Log.errRTExcept(e);
     }
   }
 

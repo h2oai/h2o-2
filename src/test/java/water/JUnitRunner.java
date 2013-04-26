@@ -14,7 +14,9 @@ import org.junit.runner.notification.Failure;
 import water.parser.ParseFolderTestBig;
 import water.sys.Node;
 import water.sys.NodeVM;
+import water.util.Log;
 import water.util.Utils;
+
 
 public class JUnitRunner {
   private static void filter(List<Class> tests) {

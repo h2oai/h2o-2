@@ -2,7 +2,7 @@ package water.parser;
 
 import water.*;
 import water.api.Inspect;
-import water.util.L;
+import water.util.Log;
 
 public class CheckParseSetup extends MRTask {
 
@@ -29,7 +29,7 @@ public class CheckParseSetup extends MRTask {
           UKV.put(_job.dest(), new Job.Fail("Attempting to parse incompatible files!"));
         }
       } catch(Throwable t){
-        L.err(t);
+        Log.err(t);
         _res = false;
       }
     }

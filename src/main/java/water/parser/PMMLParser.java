@@ -6,7 +6,7 @@ import java.util.*;
 
 import water.H2O;
 import water.score.*;
-import water.util.L;
+import water.util.Log;
 
 /** Parse PMML models
  *
@@ -193,7 +193,7 @@ public class PMMLParser {
     try {
       int b = _is.read();
       if( b != -1 ) return b;
-    } catch( IOException ioe ) { L.err(ioe);  }
+    } catch( IOException ioe ) { Log.err(ioe);  }
     throw new ParseException("Premature EOF");
   }
   public int peek() {
@@ -201,7 +201,7 @@ public class PMMLParser {
     try {
       int b = _is.read();
       if( b != -1 ) return push(b);
-    } catch( IOException e ) { L.err(e); }
+    } catch( IOException e ) { Log.err(e); }
     throw new ParseException("Premature EOF");
   }
   int push( int b ) { return (_buf[_idx++] = b); }
@@ -578,7 +578,7 @@ public class PMMLParser {
       try {
         if( "true" .equalsIgnoreCase((String) o) ) return 1.0;
         if( "false".equalsIgnoreCase((String) o) ) return 0.0;
-      } catch( Throwable t ) { L.err(t); }
+      } catch( Throwable t ) { Log.err(t); }
     }
     return Double.NaN;
   }

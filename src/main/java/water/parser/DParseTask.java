@@ -4,7 +4,7 @@ import java.util.*;
 
 import water.*;
 import water.ValueArray.Column;
-import water.util.L;
+import water.util.Log;
 
 /** Class responsible for actual parsing of the datasets.
  *
@@ -620,7 +620,7 @@ public final class DParseTask extends MRTask {
       if(_error == null)_error = other._error;
       else if(other._error != null) _error = _error + "\n" + other._error;
     } catch (Exception e) {
-      L.err(e);
+      Log.err(e);
     }
   }
 

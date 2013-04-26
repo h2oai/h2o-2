@@ -2,7 +2,7 @@ package water.exec;
 
 import water.*;
 import water.exec.RLikeParser.Token;
-import water.util.L;
+import water.util.Log;
 
 // =============================================================================
 // Expression
@@ -34,7 +34,7 @@ public abstract class Expr {
         String s = new String(v.memOrLoad());
         try { _const = Double.valueOf(s); }
         catch( NumberFormatException nfe ) {
-          throw L.err(new EvaluationException(pos, "Key "+k+" is neither a Vector nor a simple number"));
+          throw Log.err(new EvaluationException(pos, "Key "+k+" is neither a Vector nor a simple number"));
         }
         _key = null;
         _refCount = 1;
