@@ -88,7 +88,7 @@ public final class Log {
       stream.println(s);
   }
 
-  private static void log(File file, PrintStream stream) throws Exception {
+  public static void log(File file, PrintStream stream) throws Exception {
     BufferedReader reader = new BufferedReader(new FileReader(file));
     try {
       for( ;; ) {
