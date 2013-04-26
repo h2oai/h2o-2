@@ -201,7 +201,7 @@ public class NanoHTTPD
         try {
           while( true )
             new HTTPSession( myServerSocket.accept());
-        } catch ( IOException e ) { Log.err(e); }
+        } catch ( IOException e ) { }
       }
     }, "NanoHTTPD Thread");
     myThread.setDaemon( true );
@@ -215,7 +215,7 @@ public class NanoHTTPD
     try {
       myServerSocket.close();
       myThread.join();
-    } catch ( IOException e ) { Log.err(e);
+    } catch ( IOException e ) {
     } catch ( InterruptedException e ) { }
   }
 
@@ -402,7 +402,6 @@ public class NanoHTTPD
         } catch ( Throwable t ) { Log.err(t); }
       } catch ( InterruptedException e ) {
         // Thrown by sendError, ignore and exit the thread.
-        Log.err(e);
       } finally {
         Utils.close(mySocket);
       }
