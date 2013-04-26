@@ -968,7 +968,6 @@ public final class H2O {
           // Should I write this value out to disk?
           // Should I further force it from memory?
           if(!val.isPersisted() && !diskFull && (force || (lazyPersist() && lazy_clean(key)))) {
-            L.debug2(this, Sys.CLEANR, ".");
             cleaned += m.length;
             try{
               val.storePersist(); // Write to disk
