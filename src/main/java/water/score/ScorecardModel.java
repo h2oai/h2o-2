@@ -67,10 +67,7 @@ public class ScorecardModel extends ScoreModel {
       CtMethod happyMethod = CtMethod.make(sb.toString(),scClass);
       scClass.addMethod(happyMethod);
     } catch( Exception re ) {
-      System.err.println("=== crashing ===");
-      System.err.println(sb.toString());
-      throw new Error(re);
-    } finally {
+      L.err(this,Sys.SCOREM,"Crashing:"+sb.toString(), new Error(re));
     }
   }
 
@@ -89,10 +86,7 @@ public class ScorecardModel extends ScoreModel {
       scClass.addMethod(happyMethod);
 
     } catch( Exception re ) {
-      System.err.println("=== crashing ===");
-      System.err.println(sb.toString());
-      throw new Error(re);
-    } finally {
+      L.err(this,Sys.SCOREM,"Crashing:"+sb.toString(), new Error(re));
     }
   }
 
@@ -150,10 +144,7 @@ public class ScorecardModel extends ScoreModel {
         CtMethod happyMethod = CtMethod.make(sb.toString(),scClass);
         scClass.addMethod(happyMethod);
       } catch( Exception re ) {
-        System.err.println("=== crashing ===");
-        System.err.println(sb.toString());
-        throw new Error(re);
-      } finally {
+        L.err(this,Sys.SCOREM,"Crashing:"+sb.toString(), new Error(re));
       }
     }
 
@@ -191,10 +182,7 @@ public class ScorecardModel extends ScoreModel {
         scClass.addMethod(happyMethod);
 
       } catch( Exception re ) {
-        System.err.println("=== crashing ===");
-        System.err.println(sb.toString());
-        throw new Error(re);
-      } finally {
+        L.err(this,Sys.SCOREM,"Crashing:"+sb.toString(), new Error(re));
       }
     }
 
@@ -297,8 +285,7 @@ public class ScorecardModel extends ScoreModel {
       return jitted_scm;
 
     } catch( Exception e ) {
-      System.err.println("javassist failed: "+e);
-      e.printStackTrace();
+      L.err(Sys.SCOREM,"Javassist failed",e);
     }
     return null;
   }

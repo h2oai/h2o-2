@@ -260,7 +260,7 @@ public abstract class PersistHdfs {
       Path p = getPathForKey(key);
       FileSystem fs = FileSystem.get(p.toUri(), CONF);
       s = fs.append(p);
-      System.err.println("[hdfs] append="+val.memOrLoad().length);
+      L.info(Sys.HDFS_,"append="+val.memOrLoad().length);
       s.write(val.memOrLoad());
     } catch( IOException e ) {
       res = e.getMessage(); // Just the exception message, throwing the stack trace away

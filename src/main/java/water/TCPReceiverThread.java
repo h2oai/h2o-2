@@ -3,6 +3,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import water.api.Timeline;
+import water.util.L;
 
 /**
  * The Thread that looks for TCP Cloud requests.
@@ -62,8 +63,7 @@ public class TCPReceiverThread extends Thread {
         break;                  // Socket closed for shutdown
       } catch( Exception e ) {
         // On any error from anybody, close all sockets & re-open
-        System.err.println("IO error on TCP port "+H2O.UDP_PORT+": "+e);
-        e.printStackTrace();
+        L.err("IO error on TCP port "+H2O.UDP_PORT+": ",e);
         saw_error = true;
         errsock = SOCK ;  SOCK = null; // Signal error recovery on the next loop
       }

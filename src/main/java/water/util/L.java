@@ -15,7 +15,7 @@ abstract public class L {
   public static interface Tag {
     /** Which subsystem of h2o? */
     public static enum Sys implements Tag {
-      RANDF, GENLM, KMEAN, PARSE, STORE, WATER, HDFS_, HTTPD, CLEANR, CONFM;
+      RANDF, GENLM, KMEAN, PARSE, STORE, WATER, HDFS_, HTTPD, CLEANR, CONFM, EXCEL,SCOREM;
     }
 
     /** What kind of message? */
@@ -111,8 +111,26 @@ abstract public class L {
     return exception;
   }
 
+  static public <T extends Throwable> T  err(Sys t, String msg, T exception) {
+    return err(null, t, msg, exception);
+  }
+
+
+  static public <T extends Throwable> T  err(String msg, T exception) {
+    return err(null, Sys.WATER, msg, exception);
+  }
+
+  static public <T extends Throwable> T  err(Sys t, T exception) {
+    return err(null, t, "", exception);
+  }
+
   static public <T extends Throwable> T  err(T exception) {
     return err(null, Sys.WATER, "", exception);
+  }
+
+
+  static public <T extends Throwable> T  err(String m) {
+    return err(null, Sys.WATER,m, null);
   }
 
   static public <T extends Throwable> T warn(Object _this, Sys t, String msg, T exception) {

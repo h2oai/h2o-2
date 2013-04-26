@@ -50,7 +50,7 @@ public class UDPRebooted extends UDP {
     default:       m = "Received kill "+cause                       ; break;
     }
     closeAll();
-    System.err.println("[h2o] "+m+" from "+killer);
+    L.warn(m+" from "+killer);
     System.exit(-1);
   }
 

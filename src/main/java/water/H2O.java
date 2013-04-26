@@ -74,7 +74,7 @@ public final class H2O {
       sb.append(e.toString().replace("Exception", "Problem")).append('\n');
       for (StackTraceElement el : stack) { sb.append("\tat "); sb.append(el.toString().replace("Exception", "Problem" )); sb.append('\n'); }
     }
-    System.err.println(sb);
+    L.info(sb);
   }
 
   // --------------------------------------------------------------------------
@@ -202,15 +202,15 @@ public final class H2O {
       try{
         arg = InetAddress.getByName(OPT_ARGS.ip);
       } catch( UnknownHostException e ) {
-        System.err.println(e.toString());
+        L.err(e);
         System.exit(-1);
       }
       if( !(arg instanceof Inet4Address) ) {
-        System.err.println("Only IP4 addresses allowed.");
+        L.err("Only IP4 addresses allowed.");
         System.exit(-1);
       }
       if( !ips.contains(arg) ) {
-        System.err.println("IP address not found on this machine");
+        L.err("IP address not found on this machine");
         System.exit(-1);
       }
       local = arg;
@@ -237,7 +237,7 @@ public final class H2O {
     // local host.
     if( local == null ) {
       try {
-        System.err.println("Failed to determine IP, falling back to localhost.");
+        L.err("Failed to determine IP, falling back to localhost.");
         // set default ip address to be 127.0.0.1 /localhost
         local = InetAddress.getByName("127.0.0.1");
       } catch( UnknownHostException e ) {
@@ -555,8 +555,7 @@ public final class H2O {
     // Do not forget to put SELF into the static configuration (to simulate
     // proper multicast behavior)
     if( STATIC_H2OS != null && !STATIC_H2OS.contains(SELF)) {
-      System.err.println("[h2o] *WARNING* flatfile configuration does not include self: " + SELF);
-      System.err.println("[h2o] *WARNING* flatfile contains: " + STATIC_H2OS);
+      L.warn("Flatfile configuration does not include self: " + SELF+ " but contains " + STATIC_H2OS);
       STATIC_H2OS.add(SELF);
     }
 
@@ -703,16 +702,15 @@ public final class H2O {
           }
           // Make and send a packet from the buffer
           CLOUD_MULTICAST_SOCKET.send(new DatagramPacket(buf, buf.length, CLOUD_MULTICAST_GROUP,CLOUD_MULTICAST_PORT));
-        } catch( Exception e ) {
-          // On any error from anybody, close all sockets & re-open
-		  // and if not a soft launch (hibernate mode)
-		  if(H2O.OPT_ARGS.soft == null)
-           System.err.println("Multicast Error "+e);
-          if( CLOUD_MULTICAST_SOCKET != null )
-            try { CLOUD_MULTICAST_SOCKET.close(); }
-            catch( Exception e2 ) { }
-            finally { CLOUD_MULTICAST_SOCKET = null; }
-        }
+        } catch( Exception e ) {  // On any error from anybody, close all sockets & re-open
+          // and if not a soft launch (hibernate mode)
+          if(H2O.OPT_ARGS.soft == null)
+            L.err("Multicast Error ",e);
+            if( CLOUD_MULTICAST_SOCKET != null )
+              try { CLOUD_MULTICAST_SOCKET.close(); }
+              catch( Exception e2 ) { L.err("Got",e2); }
+              finally { CLOUD_MULTICAST_SOCKET = null; }
+          }
       }
 
     } else {                    // Multicast Simulation
@@ -747,8 +745,7 @@ public final class H2O {
         try {
           H2O.CLOUD_DGRAM.send(bb, h2o._key);
         } catch( IOException e ) {
-          System.err.println("Multicast Error to "+h2o);
-          e.printStackTrace(System.err);
+          L.err("Multicast Error to "+h2o, e);
         }
       }
     }
@@ -973,12 +970,11 @@ public final class H2O {
               val.storePersist(); // Write to disk
             } catch(IOException e) {
               if( isDiskFull() ) // disk full?
-                System.err.println("Disk full! Disabling swapping to disk." + ((force)?" Memory low! Please free some space in " + PersistIce.ROOT+"!":""));
+                L.warn(this,Sys.CLEANR,"Disk full! Disabling swapping to disk." + ((force)?" Memory low! Please free some space in " + PersistIce.ROOT+"!":""));
               else
-                System.err.println("Disk swapping failed! " + e.getMessage());
+                L.warn(this,Sys.CLEANR,"Disk swapping failed! " + e.getMessage());
               // Something is wrong so mark disk as full anyways so we do not
-              // attempt to write again.  (will retry next run when memory is
-              // low)
+              // attempt to write again.  (will retry next run when memory is low)
               diskFull = true;
             }
           }

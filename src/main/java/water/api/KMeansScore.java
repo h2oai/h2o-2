@@ -1,10 +1,9 @@
 package water.api;
 
-import hex.KMeans.*;
-import water.Key;
-import water.Model;
-import water.ValueArray;
-import water.util.RString;
+import hex.KMeans.KMeansModel;
+import water.*;
+import water.util.*;
+import water.util.L.Tag.Sys;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
@@ -60,7 +59,7 @@ public class KMeansScore extends Request {
       hex.KMeans.KMeansScore kms = hex.KMeans.KMeansScore.score(m,ary);
       res.add("score", new JsonPrimitive("some kmeans score should be here"));
       for( int i=0; i<kms._rows.length; i++ ) {
-        System.err.println("Cluster "+i+" rows: "+kms._rows[i]+" norm mean dist:"+Math.sqrt(kms._dist[i]/kms._rows[i]));
+        L.info(this,Sys.KMEAN,"Cluster "+i+" rows: "+kms._rows[i]+" norm mean dist:"+Math.sqrt(kms._dist[i]/kms._rows[i]));
       }
       // Display HTML setup
       Response r = Response.done(res);

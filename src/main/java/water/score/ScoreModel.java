@@ -1,8 +1,10 @@
 package water.score;
 
-import java.util.*;
-import javassist.*;
-import water.*;
+import java.util.HashMap;
+import java.util.HashSet;
+
+import water.util.L;
+import water.util.L.Tag.Sys;
 
 /**
  * Embedded Scoring model
@@ -66,7 +68,7 @@ public abstract class ScoreModel {
           map[i] = j;
         }
       }
-      if( map[i] == -1 ) System.err.println("[h2o] Warning: feature "+_colNames[i]+" used by the model is not in the provided feature list from the data");
+      if( map[i] == -1 ) L.warn(this,Sys.SCOREM,"Model feature "+_colNames[i]+" not in the provided feature list from the data");
     }
     return map;
   }

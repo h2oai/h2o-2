@@ -1,15 +1,18 @@
 package water.parser;
 
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.UUID;
 import java.util.zip.*;
 
 import jsr166y.CountedCompleter;
-
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.api.Inspect;
 import water.parser.DParseTask.Pass;
+import water.util.L;
+import water.util.L.Tag.Sys;
 
 import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
@@ -153,10 +156,9 @@ public final class ParseDataset extends Job {
     DParseTask phaseOne = DParseTask.createPassOne(dataset[0], job, parserType);
     int [] startchunks = new int[dataset.length+1];
     phaseOne.passOne(headerSetup);
-    if( (phaseOne._error != null) && !phaseOne._error.isEmpty() ) {
-      System.err.println(phaseOne._error);
-      throw new Exception("The dataset format is not recognized/supported");
-    }
+    if( (phaseOne._error != null) && !phaseOne._error.isEmpty() )
+      throw L.err(Sys.PARSE,phaseOne._error, new Exception("The dataset format is not recognized/supported"));
+
     if(dataset.length > 1){     // parse the rest
       startchunks[1] = phaseOne._nrows.length;
       phaseOne._nrows = Arrays.copyOf(phaseOne._nrows, chunks);
@@ -164,10 +166,9 @@ public final class ParseDataset extends Job {
         DParseTask tsk = DParseTask.createPassOne(dataset[i], job, CustomParser.Type.CSV);
         assert(!setup._header);
         tsk.passOne(setup);
-        if( (tsk._error != null) && !tsk._error.isEmpty() ) {
-          System.err.println(phaseOne._error);
-          throw new Exception("The dataset format is not recognized/supported");
-        }
+        if( (tsk._error != null) && !tsk._error.isEmpty() )
+          throw L.err(Sys.PARSE,phaseOne._error, new Exception("The dataset format is not recognized/supported"));
+
         startchunks[i+1] = startchunks[i] + tsk._nrows.length;
         // modified reduction step, compute the compression scheme and the nrows array
         for (int j = 0; j < tsk._nrows.length; ++j)
@@ -188,10 +189,9 @@ public final class ParseDataset extends Job {
     // now do the pass 2
     DParseTask phaseTwo = DParseTask.createPassTwo(phaseOne);
     phaseTwo.passTwo();
-    if((phaseTwo._error != null) && !phaseTwo._error.isEmpty()) {
-      System.err.println(phaseTwo._error);
-      throw new Exception("The dataset format is not recognized/supported");
-    }
+    if((phaseTwo._error != null) && !phaseTwo._error.isEmpty())
+      throw L.err(Sys.PARSE,phaseTwo._error, new Exception("The dataset format is not recognized/supported"));
+
     for(int i = 1; i < dataset.length; ++i){
       DParseTask tsk = new DParseTask(phaseTwo,dataset[i],startchunks[i]);
       tsk._skipFirstLine = false;
@@ -200,10 +200,8 @@ public final class ParseDataset extends Job {
         phaseTwo._sigma[j] += tsk._sigma[j];
         phaseTwo._invalidValues[j] += tsk._invalidValues[j];
       }
-      if( (tsk._error != null) && !tsk._error.isEmpty() ) {
-        System.err.println(phaseTwo._error);
-        throw new Exception("The dataset format is not recognized/supported");
-      }
+      if( (tsk._error != null) && !tsk._error.isEmpty() )
+        throw L.err(Sys.PARSE,phaseTwo._error, new Exception("The dataset format is not recognized/supported"));
       UKV.remove(dataset[i]._key);
     }
     phaseTwo.normalizeSigma();
@@ -250,18 +248,18 @@ public final class ParseDataset extends Job {
                 ZipEntry ze = zis.getNextEntry();
                 // There is at least one entry in zip file and it is not a directory.
                 if( ze == null || ze.isDirectory() )
-                  throw new Exception("Unsupported zip file: "+ ((ze == null)?"No entry found":"Files containing directory arte not supported."));
+                  throw L.err(Sys.PARSE,new Exception("Unsupported zip file: "+ ((ze == null)?"No entry found":"Files containing directory arte not supported.")));
                 is = zis;
                 break;
               case GZIP:
                 is = new GZIPInputStream(v.openStream(pmon));
                 break;
               default:
-                throw H2O.unimpl();
+                throw L.err(Sys.PARSE,H2O.unimpl());
               }
               ValueArray.readPut(okey, is, _job);
             } catch(Throwable t){
-              System.err.println("failed decompressing data " + key.toString() + " with compression "  + _comp);
+              L.err(Sys.PARSE,"failed decompressing data " + key.toString() + " with compression "  + _comp, t);
               UKV.remove(okey);
               throw new RuntimeException(t);
             } finally {
@@ -305,11 +303,9 @@ public final class ParseDataset extends Job {
           if(keys[i] != null)
             UKV.remove(keys[i]);
       }
-    } else {
-      System.err.println("unzipping of keys " + Arrays.toString(keys) + " + key[0] = " + keys[0] + " failed!");
-      throw new RuntimeException();
-    }
+    } else throw L.err(Sys.PARSE, "unzipping of keys " + Arrays.toString(keys) + " + key[0] = " + keys[0] + " failed!", new RuntimeException());
   }
+
   // Unpack zipped CSV-style structure and call method parseUncompressed(...)
   // The method exepct a dataset which contains a ZIP file encapsulating one file.
   public static void parseZipped(ParseDataset job, Value [] dataset, CsvParser.Setup setup) throws IOException {
@@ -359,7 +355,7 @@ public final class ParseDataset extends Job {
       }
       for(int i = 0; i < keys.length; ++i)
         if( keys[i] == null )
-          throw new Error("Cannot uncompressed ZIP-compressed dataset!");
+          throw L.err(Sys.PARSE,new Error("Cannot uncompressed ZIP-compressed dataset!"));
       parse(job, keys, setup);
     }finally {
       for(int i = 0; i < keys.length; ++i)

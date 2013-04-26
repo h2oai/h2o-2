@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import water.nbhm.NonBlockingHashMap;
 import water.nbhm.NonBlockingHashMapLong;
+import water.util.L;
 
 /**
  * A <code>Node</code> in an <code>H2O</code> Cloud.
@@ -143,21 +144,22 @@ public class H2ONode extends Iced implements Comparable {
       case 0: H2O.CLOUD_MULTICAST_IF = null; break;
       case 1: H2O.CLOUD_MULTICAST_IF = matchingIfs.get(0); break;
       default:
-        System.err.print("Found multiple network interfaces for ip address " + local);
+        String msg = "Found multiple network interfaces for ip address " + local;
         for( NetworkInterface ni : matchingIfs ) {
-          System.err.println("\t" + ni);
+          msg +="\n\t" + ni;
         }
-        System.err.println("Using " + matchingIfs.get(0) + " for UDP broadcast");
+        msg +="\nUsing " + matchingIfs.get(0) + " for UDP broadcast";
+        L.err(msg);
         H2O.CLOUD_MULTICAST_IF = matchingIfs.get(0);
       }
     } catch( SocketException e ) {
-      throw new RuntimeException(e);
+      throw new RuntimeException(L.err(e));
     }
     try {
       assert H2O.CLOUD_DGRAM == null;
       H2O.CLOUD_DGRAM = DatagramChannel.open();
     } catch( Exception e ) {
-      throw new RuntimeException(e);
+      throw new RuntimeException(L.err(e));
     }
     return intern(new H2Okey(local,H2O.UDP_PORT));
   }

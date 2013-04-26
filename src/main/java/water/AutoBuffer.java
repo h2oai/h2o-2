@@ -8,7 +8,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import water.api.Timeline;
+import water.util.L;
 
 /**
  * A ByteBuffer backed mixed Input/OutputStream class.
@@ -206,7 +206,7 @@ public final class AutoBuffer {
   private static void bbstats( AtomicInteger ai ) {
     if( !DEBUG ) return;
     if( (ai.incrementAndGet()&511)==511 ) {
-      System.err.println("BB make="+BBMAKE.get()+" free="+BBFREE.get()+" cache="+BBCACHE.get()+" size="+BBS.size());
+      L.warn("BB make="+BBMAKE.get()+" free="+BBFREE.get()+" cache="+BBCACHE.get()+" size="+BBS.size());
     }
   }
 
@@ -486,8 +486,7 @@ public final class AutoBuffer {
         _chan.write(_bb);
       _time_io_ns += (System.nanoTime()-ns);
     } catch( IOException e ) {   // Can't open the connection, try again later
-      System.err.println("TCP Open/Write failed: " + e.getMessage()+" talking to "+_h2o);
-      throw new Error(e);
+      throw new Error(L.err("TCP Open/Write talking to "+_h2o+" failed with ",e));
     }
     if( _bb.capacity() < 16*1024 ) _bb = bbMake();
     _firstPage = false;

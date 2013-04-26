@@ -5,6 +5,8 @@ import java.util.*;
 import water.*;
 import water.Job.Progress;
 import water.api.Constants;
+import water.util.L;
+import water.util.L.Tag.Sys;
 
 import com.google.gson.*;
 
@@ -113,7 +115,7 @@ public abstract class KMeans {
       for( int i=0; i<c.length; i++ )
         sb.append(c[i][2]).append(",");
       sb.append("]");
-      System.err.println(sb);
+      L.info(this,Sys.KMEAN,sb);
     }
 
   }
@@ -212,7 +214,7 @@ public abstract class KMeans {
     double[][] clusters = new double[1][];
     clusters[0] = new double[cols.length-1];
     AutoBuffer bits = va.getChunk(0);
-    datad(va, bits, 0, cols, clusters[0]);    
+    datad(va, bits, 0, cols, clusters[0]);
 
     while( res._iteration < 5 ) {
       // Sum squares distances to clusters

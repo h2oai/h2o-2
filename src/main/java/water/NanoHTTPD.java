@@ -1,13 +1,10 @@
 package water;
 import java.io.*;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.URLEncoder;
+import java.net.*;
 import java.util.*;
 
-import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
-
-import water.util.Utils;
+import water.util.*;
+import water.util.L.Tag.Sys;
 
 /**
  * A simple, tiny, nicely embeddable HTTP 1.0 (partially 1.1) server in Java
@@ -252,7 +249,7 @@ public class NanoHTTPD
     try {
       new NanoHTTPD( new ServerSocket(port), wwwroot );
     } catch( IOException ioe ) {
-      System.err.println( "Couldn't start server:\n" + ioe );
+      L.err(Sys.HTTPD, "Couldn't start server:\n", ioe );
       System.exit( -1 );
     }
 

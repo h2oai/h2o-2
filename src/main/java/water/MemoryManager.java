@@ -128,7 +128,7 @@ public abstract class MemoryManager {
     if( CAN_ALLOC ) return;
     synchronized(_lock) {
       CAN_ALLOC = true;
-      System.err.println("Continuing after swapping");
+      L.info(Sys.CLEANR,"Continuing after swapping");
       _lock.notifyAll();
     }
   }
@@ -136,7 +136,7 @@ public abstract class MemoryManager {
     if( !CAN_ALLOC ) return;
     synchronized(_lock) {
       CAN_ALLOC = false;
-      System.err.println("Pausing to swap to disk; more memory may help");
+      L.info(Sys.CLEANR,"Pausing to swap to disk; more memory may help");
     }
   }
 
@@ -185,7 +185,7 @@ public abstract class MemoryManager {
             "M, free=",(freeHeap>>20),"M, MAX=",(MEM_MAX>>20),"M, DESIRED=",(H2O.Cleaner.DESIRED>>20),"M");
       setMemGood();
       if( oom ) // Confused? OOM should have FullGCd should have set low-mem goals
-        System.err.println("[h2o] *WARNING* OOM but no FullGC callback?  MEM_MAX = " + MEM_MAX + ", DESIRED = " + d +", CACHE = " + cacheUsage + ", p = " + p + ", bytes = " + bytes);
+        L.warn(Sys.CLEANR,"OOM but no FullGC callback?  MEM_MAX = " + MEM_MAX + ", DESIRED = " + d +", CACHE = " + cacheUsage + ", p = " + p + ", bytes = " + bytes);
     }
   }
 

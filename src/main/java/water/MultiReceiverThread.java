@@ -1,6 +1,8 @@
 package water;
 import java.net.*;
 
+import water.util.L;
+
 /**
  * The Thread that looks for Multicast UDP Cloud requests.
  *
@@ -64,8 +66,7 @@ public class MultiReceiverThread extends Thread {
 
       } catch( Exception e ) {
         // On any error from anybody, close all sockets & re-open
-        System.err.println("Multicast "+H2O.CLOUD_MULTICAST_GROUP+":"+H2O.CLOUD_MULTICAST_PORT);
-        e.printStackTrace(System.err);
+        L.err("Multicast "+H2O.CLOUD_MULTICAST_GROUP+":"+H2O.CLOUD_MULTICAST_PORT, e);
         saw_error = true;
         errsock  = sock ;  sock  = null; // Signal error recovery on the next loop
         errgroup = group;  group = null;

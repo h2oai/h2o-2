@@ -3,6 +3,8 @@ package water;
 import java.io.*;
 import java.util.Arrays;
 
+import water.util.L;
+
 // Persistence backend for the local storage device
 //
 // Stores all keys as files, or if leveldb is enabled, stores values smaller
@@ -162,7 +164,7 @@ public abstract class PersistIce {
         case 'q':  b = '"' ; break;
         case 's':  b = '/' ; break;
         case 'z':  b = '\0'; break;
-        default:   System.err.println("Invalid format of filename " + s + " at index " + i);
+        default:   L.err("Invalid format of filename " + s + " at index " + i);
         }
       }
       if( j>=kb.length ) kb = Arrays.copyOf(kb,Math.max(2,j*2));
@@ -228,11 +230,7 @@ public abstract class PersistIce {
     try {
       s = new FileOutputStream(encodeKeyToFile(v));
     } catch (FileNotFoundException e) {
-      System.err.println("Encoding a key to a file failed!");
-      System.err.println("Key: "+v._key.toString());
-      System.err.println("Encoded: "+encodeKeyToFile(v));
-      e.printStackTrace();
-      throw new RuntimeException(e);
+      throw new RuntimeException(L.err("Encoding a key to a file failed!\nKey: "+v._key.toString()+"\nEncoded: "+encodeKeyToFile(v),e));
     }
     try {
       byte[] m = v.memOrLoad(); // we are not single threaded anymore
