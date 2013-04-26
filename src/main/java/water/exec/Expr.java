@@ -1,10 +1,8 @@
 package water.exec;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import water.*;
 import water.exec.RLikeParser.Token;
-import water.parser.ParseDataset;
+import water.util.L;
 
 // =============================================================================
 // Expression
@@ -36,7 +34,7 @@ public abstract class Expr {
         String s = new String(v.memOrLoad());
         try { _const = Double.valueOf(s); }
         catch( NumberFormatException nfe ) {
-          throw new EvaluationException(pos, "Key "+k+" is neither a Vector nor a simple number");
+          throw L.err(new EvaluationException(pos, "Key "+k+" is neither a Vector nor a simple number"));
         }
         _key = null;
         _refCount = 1;

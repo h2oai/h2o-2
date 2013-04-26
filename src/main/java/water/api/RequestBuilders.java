@@ -9,8 +9,7 @@ import java.util.Map.Entry;
 
 import water.H2O;
 import water.PrettyPrint;
-import water.util.JsonUtil;
-import water.util.RString;
+import water.util.*;
 
 import com.google.common.base.Throwables;
 import com.google.gson.*;
@@ -772,7 +771,7 @@ public class RequestBuilders extends RequestQueries {
         String k = URLEncoder.encode(content, "UTF-8");
         return super.build("<a href='Inspect.html?key="+k+"'>"+content+"</a>", name);
       } catch( Throwable e ) {
-        throw Throwables.propagate(e);
+        throw Throwables.propagate(L.err(e));
       }
     }
   }
@@ -792,7 +791,7 @@ public class RequestBuilders extends RequestQueries {
         String k = URLEncoder.encode(key, "UTF-8");
         return "<a href='Inspect.html?key="+k+"'>"+key+"</a>";
       } catch( Throwable e ) {
-        throw Throwables.propagate(e);
+        throw Throwables.propagate(L.err(e));
       }
     }
   }
@@ -986,7 +985,7 @@ public class RequestBuilders extends RequestQueries {
         String delete = "<a href='RemoveAck.html?"+KEY+"="+key+"'><button class='btn btn-danger btn-mini'>X</button></a>";
         return delete + "&nbsp;&nbsp;<a href='Inspect.html?"+KEY+"="+key+"'>"+str+"</a>";
       } catch (UnsupportedEncodingException e) {
-        throw new RuntimeException(e);
+        throw  L.errRTExcept(e);
       }
     }
   }

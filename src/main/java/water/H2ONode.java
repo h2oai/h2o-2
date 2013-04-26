@@ -38,7 +38,7 @@ public class H2ONode extends Iced implements Comparable {
     static H2Okey read( AutoBuffer ab ) {
       InetAddress inet;
       try { inet = InetAddress.getByAddress(ab.getA1(4)); }
-      catch( UnknownHostException e ) { throw new Error(e); }
+      catch( UnknownHostException e ) { throw  L.errRTExcept(e); }
       int port = ab.get2();
       return new H2Okey(inet,port);
     }
@@ -111,7 +111,8 @@ public class H2ONode extends Iced implements Comparable {
     b[3] = (byte)(ip>>24);
     try {
       return intern(InetAddress.getByAddress(b),port);
-    } catch( UnknownHostException uhe ) {
+    } catch( UnknownHostException e ) {
+      L.err(e);
       return null;
     }
   }
@@ -153,13 +154,13 @@ public class H2ONode extends Iced implements Comparable {
         H2O.CLOUD_MULTICAST_IF = matchingIfs.get(0);
       }
     } catch( SocketException e ) {
-      throw new RuntimeException(L.err(e));
+      throw  L.errRTExcept(e);
     }
     try {
       assert H2O.CLOUD_DGRAM == null;
       H2O.CLOUD_DGRAM = DatagramChannel.open();
     } catch( Exception e ) {
-      throw new RuntimeException(L.err(e));
+      throw  L.errRTExcept(e);
     }
     return intern(new H2Okey(local,H2O.UDP_PORT));
   }

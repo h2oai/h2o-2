@@ -36,7 +36,7 @@ public class Boot extends ClassLoader {
     try {
       _init = new Boot();
     } catch( Exception e ) {
-      throw new Error(e);
+      throw  L.errRTExcept(e);
     }
   }
 
@@ -49,7 +49,7 @@ public class Boot extends ClassLoader {
       while( (pos = is.read(buf)) > 0 ) md5.update(buf, 0, pos);
       return md5.digest();
     } catch( NoSuchAlgorithmException e ) {
-      throw new RuntimeException(e);
+      throw  L.errRTExcept(e);
     } finally {
       Utils.close(is);
     }
@@ -194,6 +194,7 @@ public class Boot extends ClassLoader {
       try {
         return new FileInputStream(new File("lib/resources"+uri));
       } catch (FileNotFoundException e) {
+        L.err(e);
         return null;
       }
     }

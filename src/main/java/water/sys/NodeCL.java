@@ -8,6 +8,7 @@ import java.util.*;
 
 import water.Boot;
 import water.TestUtil;
+import water.util.L;
 
 /**
  * Creates a node in-process using a separate class loader.
@@ -57,7 +58,7 @@ public class NodeCL extends Thread implements Node {
       }
       return list.toArray(new URL[list.size()]);
     } catch( Exception e ) {
-      throw new RuntimeException(e);
+      throw  L.errRTExcept(e);
     }
   }
 
@@ -66,8 +67,8 @@ public class NodeCL extends Thread implements Node {
     try {
       join();
       return 0;
-    } catch( InterruptedException ex ) {
-      throw new RuntimeException(ex);
+    } catch( InterruptedException e ) {
+      throw  L.errRTExcept(e);
     }
   }
 
@@ -97,8 +98,8 @@ public class NodeCL extends Thread implements Node {
       Method method = c.getMethod(methodName, types);
       method.setAccessible(true);
       return method.invoke(null, args);
-    } catch( Exception ex ) {
-      throw new RuntimeException(ex);
+    } catch( Exception e ) {
+      throw  L.errRTExcept(e);
     } finally {
       Thread.currentThread().setContextClassLoader(_initialClassLoader);
     }
@@ -121,7 +122,7 @@ public class NodeCL extends Thread implements Node {
       }
       return list;
     } catch( Exception e ) {
-      throw new RuntimeException(e);
+      throw  L.errRTExcept(e);
     }
   }
 }

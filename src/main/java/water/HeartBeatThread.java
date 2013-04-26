@@ -5,6 +5,8 @@ import java.lang.management.ManagementFactory;
 
 import javax.management.*;
 
+import water.util.L;
+
 /**
  * Starts a thread publishing multicast HeartBeats to the local subnet: the
  * Leader of this Cloud.
@@ -51,8 +53,8 @@ public class HeartBeatThread extends Thread {
     ObjectName os;
     try {
       os = new ObjectName("java.lang:type=OperatingSystem");
-    } catch( MalformedObjectNameException ex ) {
-      throw new RuntimeException(ex);
+    } catch( MalformedObjectNameException e ) {
+      throw  L.errRTExcept(e);
     }
     Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
     while( true ) {

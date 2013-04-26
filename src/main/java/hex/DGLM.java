@@ -178,7 +178,7 @@ public abstract class DGLM {
         double xx = (x < 0)?Math.min(-1e-5,x):Math.max(1e-5, x);
         return 1.0/xx;
       default:
-        throw new Error("unsupported link function id  " + this);
+        throw new RuntimeException("unsupported link function id  " + this);
       }
     }
 
@@ -195,7 +195,7 @@ public abstract class DGLM {
         double xx = (x < 0)?Math.min(-1e-5,x):Math.max(1e-5, x);
         return 1.0/xx;
       default:
-        throw new Error("unexpected link function id  " + this);
+        throw new RuntimeException("unexpected link function id  " + this);
       }
     }
 
@@ -214,7 +214,7 @@ public abstract class DGLM {
           double xx = (x < 0)?Math.min(-1e-5,x):Math.max(1e-5, x);
           return -1/(xx*xx);
         default:
-          throw new Error("unexpected link function id  " + this);
+          throw new RuntimeException("unexpected link function id  " + this);
       }
     }
   }
@@ -245,7 +245,7 @@ public abstract class DGLM {
       case gamma:
         return y;
       default:
-        throw new Error("unimplemented");
+        throw new RuntimeException("unimplemented");
       }
     }
     public double variance(double mu){
@@ -260,7 +260,7 @@ public abstract class DGLM {
       case gamma:
         return mu*mu;
       default:
-        throw new Error("unknown family Id " + this);
+        throw new RuntimeException("unknown family Id " + this);
       }
     }
   /**
@@ -284,7 +284,7 @@ public abstract class DGLM {
         if(yr == 0)return -2;
         return -2*(Math.log(yr/ym) - (yr - ym)/ym);
       default:
-        throw new Error("unknown family Id " + this);
+        throw new RuntimeException("unknown family Id " + this);
       }
     }
   }
@@ -1154,7 +1154,7 @@ public abstract class DGLM {
         res._aic += (yr*Math.log(ym) - logfactorial - ym);
       } else if(_glmp._family == Family.binomial) { // cm computation for binomial
         if(yr < 0 || yr > 1 )
-          throw new Error("response variable value out of range: " + yr);
+          throw new RuntimeException("response variable value out of range: " + yr);
         int i = 0;
         for(double t:_thresholds){
           int p = ym >= t?1:0;

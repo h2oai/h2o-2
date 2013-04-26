@@ -4,6 +4,7 @@ import java.util.*;
 
 import water.*;
 import water.ValueArray.Column;
+import water.util.L;
 
 /** Class responsible for actual parsing of the datasets.
  *
@@ -339,7 +340,7 @@ public final class DParseTask extends MRTask {
         px.parse(_sourceDataset._key);
         break;
       default:
-        throw new Error("NOT IMPLEMENTED");
+        throw new RuntimeException("NOT IMPLEMENTED");
     }
   }
 
@@ -411,7 +412,7 @@ public final class DParseTask extends MRTask {
           _outputStreams2[_outputIdx].store();
         break;
       default:
-        throw new Error("NOT IMPLEMENTED");
+        throw new RuntimeException("NOT IMPLEMENTED");
     }
   }
 
@@ -619,7 +620,7 @@ public final class DParseTask extends MRTask {
       if(_error == null)_error = other._error;
       else if(other._error != null) _error = _error + "\n" + other._error;
     } catch (Exception e) {
-      e.printStackTrace();
+      L.err(e);
     }
   }
 

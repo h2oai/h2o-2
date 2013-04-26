@@ -35,7 +35,7 @@ public abstract class VM {
       try {
         cp += new File(new URI(url.toString())) + File.pathSeparator;
       } catch( URISyntaxException e ) {
-        throw new RuntimeException(e);
+        throw L.errRTExcept(e);
       }
     }
     _args.add(cp);
@@ -79,7 +79,7 @@ public abstract class VM {
       if( _out != null )
         persistIO(_process, _out, _err);
     } catch( IOException e ) {
-      throw new RuntimeException(e);
+      throw  L.errRTExcept(e);
     }
   }
 
@@ -89,16 +89,16 @@ public abstract class VM {
       return false;
     } catch( IllegalThreadStateException _ ) {
       return true;
-    } catch( Exception ex ) {
-      throw new RuntimeException(L.err(ex));
+    } catch( Exception e ) {
+      throw  L.errRTExcept(e);
     }
   }
 
   public int waitFor() {
     try {
       return _process.waitFor();
-    } catch( InterruptedException ex ) {
-      throw new RuntimeException(ex);
+    } catch( InterruptedException e ) {
+      throw  L.errRTExcept(e);
     }
   }
 

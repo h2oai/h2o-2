@@ -5,6 +5,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 
 import water.hdfs.PersistHdfs;
+import water.util.L;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonPrimitive;
@@ -32,7 +33,7 @@ public class TypeaheadHdfsPathRequest extends TypeaheadRequest {
         }
         if( array.size() == limit) break;
       }
-    } catch( Throwable _ ) { }
+    } catch( Throwable _ ) { L.err(_); }
     return array;
   }
 

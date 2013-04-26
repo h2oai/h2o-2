@@ -14,6 +14,7 @@ import water.*;
 import water.ValueArray.Column;
 import water.api.GLMProgressPage.GLMBuilder;
 import water.parser.CsvParser;
+import water.util.L;
 import water.util.Utils;
 
 import com.google.gson.*;
@@ -144,6 +145,7 @@ public class Inspect extends Request {
         }
       }
     } catch( IOException ioe ) { // Stop at any io error
+      L.err(ioe);
     } finally {
       Utils.close(is);
     }

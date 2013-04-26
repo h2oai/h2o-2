@@ -210,11 +210,11 @@ public class Utils {
   }
 
   public static void close(Closeable closeable) {
-    try { if( closeable != null ) closeable.close(); } catch( IOException _ ) { }
+    try { if( closeable != null ) closeable.close(); } catch( IOException _ ) { L.err(_); }
   }
 
   public static void close(Socket s) {
-    try { if( s != null ) s.close(); } catch( IOException _ ) { }
+    try { if( s != null ) s.close(); } catch( IOException _ ) { L.err(_); }
   }
 
   public static String readConsole() {
@@ -222,7 +222,7 @@ public class Utils {
     try {
       return console.readLine();
     } catch( IOException e ) {
-      throw new RuntimeException(e);
+      throw  L.errRTExcept(e);
     }
   }
 

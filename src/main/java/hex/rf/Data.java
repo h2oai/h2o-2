@@ -66,7 +66,7 @@ public class Data implements Iterable<Row> {
     public RowIter(int start, int end) { _pos = start; _end = end;       }
     public boolean hasNext()           { return _pos < _end;             }
     public Row     next()              { _r._index = permute(_pos++); return _r; }
-    public void    remove()            { throw new Error("Unsupported"); }
+    public void    remove()            { throw new RuntimeException("Unsupported"); }
   }
 
   public void filter(SplitNode node, Data[] result, Statistic ls, Statistic rs) {
@@ -123,7 +123,7 @@ public class Data implements Iterable<Row> {
     return new Subset(this, sample, 0, sample.length);
   }
 
-  public Data complement(Data parent, short[] complement) { throw new Error("Only for subsets."); }
+  public Data complement(Data parent, short[] complement) { throw new RuntimeException("Only for subsets."); }
   @Override public Data clone() { return this; }
   protected int permute(int idx) { return idx; }
   protected int[] getPermutationArray() {

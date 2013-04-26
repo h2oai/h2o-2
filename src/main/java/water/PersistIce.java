@@ -65,7 +65,7 @@ public abstract class PersistIce {
 
   public static FileWriter logFile() {
     try { return new FileWriter(iceRoot+File.separator+LOG_FILENAME); }
-    catch( IOException ioe ) { return null; }
+    catch( IOException e ) { L.err(e); return null; }
   }
 
   // file implementation -------------------------------------------------------
@@ -214,7 +214,7 @@ public abstract class PersistIce {
         s.close();
       }
     } catch( IOException e ) {  // Broken disk / short-file???
-      throw new RuntimeException("File load failed: "+e);
+      throw new RuntimeException(L.err("File load failed: ",e));
     }
   }
 

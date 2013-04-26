@@ -174,7 +174,7 @@ public class RequestServer extends NanoHTTPD {
       if (resource != null) {
         try {
           bytes = ByteStreams.toByteArray(resource);
-        } catch( IOException e ) { }
+        } catch( IOException e ) { L.err(e); }
         byte[] res = _cache.putIfAbsent(uri,bytes);
         if( res != null ) bytes = res; // Racey update; take what is in the _cache
       }

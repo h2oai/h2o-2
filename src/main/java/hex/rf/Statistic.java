@@ -4,7 +4,9 @@ import hex.rf.Data.Row;
 
 import java.util.*;
 
+import water.util.L;
 import water.util.Utils;
+import water.util.L.Tag.Sys;
 
 /** Keeps track of the column distributions and analyzes the column splits in the
  * end producing the single split that will be used for the node. */
@@ -136,7 +138,7 @@ abstract class Statistic {
           try {
           _columnDists[f][val][cls]++;
           } catch( ArrayIndexOutOfBoundsException ab ) {
-            throw ab;
+            throw L.err(Sys.RANDF,ab);
           }
         }
       }

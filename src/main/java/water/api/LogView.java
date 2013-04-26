@@ -61,7 +61,7 @@ public class LogView extends Request {
     }
 
     @Override protected Response serve() {
-      throw new Error("Get should not be called from this context");
+      throw new RuntimeException("Get should not be called from this context");
     }
 
     private String getOutputLogName() {

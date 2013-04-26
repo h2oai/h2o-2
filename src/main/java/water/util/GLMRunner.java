@@ -88,9 +88,9 @@ public class GLMRunner {
         System.out.println(colnames[i]  + " = " + m._beta[i]);
       }
     }catch(Throwable t){
-      t.printStackTrace();
+      L.err(t);
     } finally {  // we're done. shutdown the cloud
-      System.out.println("==================<GLMRunner DONE>===================");
+      L.info("==================<GLMRunner DONE>===================");
       UDPRebooted.suicide(UDPRebooted.T.shutdown, H2O.SELF);
     }
   }

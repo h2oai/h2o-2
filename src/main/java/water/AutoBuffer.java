@@ -83,7 +83,7 @@ public final class AutoBuffer {
     }
     _bb.flip();                 // Set limit=amount read, and position==0
 
-    if( addr == null ) throw new Error("Unhandled socket type: " + sad);
+    if( addr == null ) throw new RuntimeException("Unhandled socket type: " + sad);
     // Read Inet from socket, port from the stream, figure out H2ONode
     _h2o = H2ONode.intern(addr, getPort());
     _firstPage = true;
@@ -213,7 +213,7 @@ public final class AutoBuffer {
   private static final ByteBuffer bbMake() {
     ByteBuffer bb = null;
     try { bb = BBS.pollFirst(0,TimeUnit.SECONDS); }
-    catch( InterruptedException ie ) { throw new Error(ie); }
+    catch( InterruptedException e ) { throw  L.errRTExcept(e); }
     if( bb != null ) {
       bbstats(BBCACHE);
       return bb;
@@ -271,7 +271,7 @@ public final class AutoBuffer {
       _time_close_ms = System.currentTimeMillis();
       TimeLine.record_IOclose(this,_persist); // Profile TCP connections
     } catch( IOException e ) {  // Dunno how to handle so crash-n-burn
-      throw new RuntimeException(e);
+      throw  L.errRTExcept(e);
     } finally {
       restorePriority();        // And if we raised priority, lower it back
       if( _chan instanceof SocketChannel )
@@ -289,7 +289,7 @@ public final class AutoBuffer {
       TCPS.decrementAndGet();
       bbFree();
     } catch( IOException e ) {  // Dunno how to handle so crash-n-burn
-      throw new RuntimeException(e);
+      throw  L.errRTExcept(e);
     }
   }
 
@@ -312,12 +312,12 @@ public final class AutoBuffer {
         //sock = SocketChannel.open( _h2o._key );
         break;
       } // Explicitly ignore the following exceptions but fail on the rest
-      catch (ConnectException e)       { ex = e; }
-      catch (SocketTimeoutException e) { ex = e; }
-      catch (IOException e)            { ex = e; }
+      catch (ConnectException e)       { L.err(ex = e); }
+      catch (SocketTimeoutException e) { L.err(ex = e); }
+      catch (IOException e)            { L.err(ex = e);  }
       finally {
         if( ex != null ) {
-          H2O.ignore(ex, "[h2o,Autobuffer] TCP open problem, waiting and retrying...", false);
+          H2O.ignore(ex, "TCP open problem, waiting and retrying...", false);
           try { Thread.sleep(500); } catch (InterruptedException ie) {}
         }
       }
@@ -442,7 +442,7 @@ public final class AutoBuffer {
         if( res == -1 ) throw new RuntimeException("EOF while reading "+sz+" bytes");
         if( res ==  0 ) throw new RuntimeException("Reading zero bytes - so no progress?");
       } catch( IOException e ) {  // Dunno how to handle so crash-n-burn
-        throw new RuntimeException(e);
+        throw  L.errRTExcept(e);
       }
     }
     _time_io_ns += (System.nanoTime()-ns);
@@ -486,7 +486,7 @@ public final class AutoBuffer {
         _chan.write(_bb);
       _time_io_ns += (System.nanoTime()-ns);
     } catch( IOException e ) {   // Can't open the connection, try again later
-      throw new Error(L.err("TCP Open/Write talking to "+_h2o+" failed with ",e));
+      throw new RuntimeException(L.err("TCP Open/Write talking to "+_h2o+" failed with ",e));
     }
     if( _bb.capacity() < 16*1024 ) _bb = bbMake();
     _firstPage = false;

@@ -297,13 +297,13 @@ public class RString {
   public void replace(String what, Key key) {
     replace(what, key.user_allowed() ? key.toString() : "<code>"+key.toString()+"</code>");
   }
-  
+
   // Replaces the given placeholder with an object. On a single placeholder,
   // multiple replaces can be called in which case they are appended one after
   // another in order.
   public void replace(String what, Object with) {
     if (what.charAt(0)=='$')
-      throw new Error("$ is now control char that denotes URL encoding!");
+      throw new RuntimeException("$ is now control char that denotes URL encoding!");
     for (Placeholder p : _placeholders.get(what))
       p.end.insertAndAdvance(with.toString());
 

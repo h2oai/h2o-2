@@ -2,6 +2,8 @@ package water;
 
 import java.util.*;
 
+import water.util.L;
+
 public class TypeMap {
   static public final short NULL = (short) -1;
   static public final short PRIM_B = 1;
@@ -192,7 +194,7 @@ public class TypeMap {
     Iced f = (Iced)GOLD[id];
     if( f == null ) {
       try { GOLD[id] = f = (Iced) Class.forName(CLAZZES[id]).newInstance(); }
-      catch( Exception e ) { throw new Error(e); }
+      catch( Exception e ) { throw  L.errRTExcept(e); }
     }
     return f.newInstance();
   }
@@ -200,7 +202,7 @@ public class TypeMap {
     Freezable f = GOLD[id];
     if( f == null ) {
       try { GOLD[id] = f = (Freezable) Class.forName(CLAZZES[id]).newInstance(); }
-      catch( Exception e ) { throw new Error(e); }
+      catch( Exception e ) { throw  L.errRTExcept(e); }
     }
     return f.newInstance();
   }

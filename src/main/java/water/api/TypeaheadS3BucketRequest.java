@@ -2,6 +2,7 @@
 package water.api;
 
 import water.store.s3.PersistS3;
+import water.util.L;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.Bucket;
@@ -26,7 +27,7 @@ public class TypeaheadS3BucketRequest extends TypeaheadRequest {
           array.add(new JsonPrimitive(b.getName()));
         if( array.size() == limit) break;
       }
-    } catch(IllegalArgumentException _ ) { }
+    } catch(IllegalArgumentException _ ) { L.err(_); }
     return array;
   }
 }

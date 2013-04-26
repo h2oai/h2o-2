@@ -105,14 +105,15 @@ public final class ParseDataset extends Job {
       case GZIP: //parseGZipped(job, dataset, setup); break;
         parseCompressed(job, keys, setup, compression);
         break;
-      default:   throw new Error("Unknown compression of dataset!");
+      default:   throw new RuntimeException("Unknown compression of dataset!");
       }
-    } catch( java.io.EOFException eof ) {
+    } catch( java.io.EOFException e ) {
       // Unexpected EOF?  Assume its a broken file, and toss the whole parse out
-      UKV.put(job.dest(), new Fail(eof.getMessage()));
+      L.err(e);
+      UKV.put(job.dest(), new Fail(e.getMessage()));
     } catch( Exception e ) {
       UKV.put(job.dest(), new Fail(e.getMessage()));
-      throw Throwables.propagate(e);
+      throw Throwables.propagate(L.err(e));
     } finally {
       job.remove();
     }
@@ -332,7 +333,7 @@ public final class ParseDataset extends Job {
       }
       for(int i = 0; i < keys.length; ++i)
         if( keys[i] == null )
-          throw new Error("Cannot uncompressed ZIP-compressed dataset!");
+          throw new RuntimeException("Cannot uncompressed ZIP-compressed dataset!");
       parse(job, keys, setup);
     } finally {
       for(int i = 0; i < keys.length; ++i)
@@ -355,7 +356,7 @@ public final class ParseDataset extends Job {
       }
       for(int i = 0; i < keys.length; ++i)
         if( keys[i] == null )
-          throw L.err(Sys.PARSE,new Error("Cannot uncompressed ZIP-compressed dataset!"));
+          throw L.err(Sys.PARSE,new RuntimeException("Cannot uncompressed ZIP-compressed dataset!"));
       parse(job, keys, setup);
     }finally {
       for(int i = 0; i < keys.length; ++i)

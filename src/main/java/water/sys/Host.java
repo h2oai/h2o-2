@@ -117,8 +117,7 @@ public class Host {
       if( process != null ) {
         try {
           process.destroy();
-        } catch( Exception _ ) {
-        }
+        } catch( Exception _ ) { L.err(_); }
       }
     }
   }
@@ -146,7 +145,7 @@ public class Host {
         Process p = Runtime.getRuntime().exec("chmod 600 " + _key);
         p.waitFor();
       } catch( Exception e ) {
-        throw new RuntimeException(e);
+        throw  L.errRTExcept(e);
       }
       k = " -i " + _key;
     }

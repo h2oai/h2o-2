@@ -90,6 +90,7 @@ public abstract class PersistHdfs {
         }
       }
     } catch( IOException e ) {
+      L.err(e);
       JsonObject o = new JsonObject();
       o.addProperty(Constants.FILE, p.toString());
       o.addProperty(Constants.ERROR, e.getMessage());
@@ -166,13 +167,13 @@ public abstract class PersistHdfs {
       } catch (S3Exception e)            { ignoreAndWait(e,false);
       } catch (IOException e)            { ignoreAndWait(e,true);
       } finally {
-        try { if( s != null ) s.close(); } catch( IOException e ) {}
+        try { if( s != null ) s.close(); } catch( IOException e ) { L.err(e); }
       }
     }
   }
 
   private static void ignoreAndWait(final Exception e, boolean printException) {
-    H2O.ignore(e, "[h2o,hdfs] Hit HDFS reset problem, retrying...", printException);
+    H2O.ignore(e, "Hit HDFS reset problem, retrying...", printException);
     try { Thread.sleep(500); } catch (InterruptedException ie) {}
   }
 
@@ -244,9 +245,10 @@ public abstract class PersistHdfs {
       byte[] b = f.write(new AutoBuffer()).buf();
       s.write(b);
     } catch( IOException e ) {
+      L.err(e);
       res = e.getMessage(); // Just the exception message, throwing the stack trace away
     } finally {
-      try { if( s != null ) s.close(); } catch( IOException e ) {}
+      try { if( s != null ) s.close(); } catch( IOException e ) { L.err(e); }
     }
     return res;
   }
@@ -263,9 +265,10 @@ public abstract class PersistHdfs {
       L.info(Sys.HDFS_,"append="+val.memOrLoad().length);
       s.write(val.memOrLoad());
     } catch( IOException e ) {
+      L.err(e);
       res = e.getMessage(); // Just the exception message, throwing the stack trace away
     } finally {
-      try { if( s != null ) s.close(); } catch( IOException e ) {}
+      try { if( s != null ) s.close(); } catch( IOException e ) { L.err(e); }
     }
     return res;
   }

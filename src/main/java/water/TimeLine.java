@@ -5,6 +5,7 @@ import java.net.UnknownHostException;
 
 import sun.misc.Unsafe;
 import water.nbhm.UtilUnsafe;
+import water.util.L;
 
 /**
 
@@ -149,7 +150,7 @@ public class TimeLine extends UDP {
     ip4[2] = (byte)(adr>>16);
     ip4[3] = (byte)(adr>>24);
     try { return InetAddress.getByAddress(ip4); }
-    catch( UnknownHostException e ) { }
+    catch( UnknownHostException e ) { L.err(e); }
     return null;
   }
   // That 2nd long is nanosec, plus the low bit is send/recv & 2nd low is drop

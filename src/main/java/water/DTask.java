@@ -44,7 +44,7 @@ public abstract class DTask<T> extends H2OCountedCompleter implements Freezable 
   // is already defined.  These methods are NOT DECLARED ABSTRACT, because javac
   // thinks they will be called by subclasses relying on the auto-gen.
   private Error barf() {
-    return new Error(getClass().toString()+" should be automatically overridden in the subclass by the auto-serialization code");
+    return new RuntimeException(getClass().toString()+" should be automatically overridden in the subclass by the auto-serialization code");
   }
   @Override public AutoBuffer write(AutoBuffer bb) { throw barf(); }
   @Override public <F extends Freezable> F read(AutoBuffer bb) { throw barf(); }

@@ -77,7 +77,8 @@ public class MultipartUpload extends MRTask {
     } catch( Exception e ) {
       try {
         s3.abortMultipartUpload(new AbortMultipartUploadRequest(bucket, object, uploadId));
-      } catch( Exception _ ) { }
+      } catch( Exception _ ) {L.err(_); }
+      L.err(e);
       Progress progress = new Progress();
       progress._error = e.toString();
       UKV.put(dest, progress);

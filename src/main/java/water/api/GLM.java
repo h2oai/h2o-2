@@ -17,6 +17,7 @@ import java.util.Map.Entry;
 import water.*;
 import water.api.RequestBuilders.KeyElementBuilder;
 import water.api.RequestBuilders.Response;
+import water.util.L;
 import water.util.RString;
 
 import com.google.gson.JsonElement;
@@ -117,7 +118,7 @@ public class GLM extends Request {
       sb.append("'>" + content + "</a>");
       return sb.toString();
     } catch( UnsupportedEncodingException e ) {
-      throw new RuntimeException(e);
+      throw  L.errRTExcept(e);
     }
   }
 
@@ -219,9 +220,10 @@ public class GLM extends Request {
       r.setBuilder(Constants.DEST_KEY, new KeyElementBuilder());
       return r;
     }catch(GLMException e){
+      L.err(e);
       return Response.error(e.getMessage());
     } catch (Throwable t) {
-      t.printStackTrace();
+      L.err(t);
       return Response.error(t.getMessage());
     }
   }

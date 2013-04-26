@@ -3,10 +3,12 @@ package water;
 import java.util.ArrayList;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
 import jsr166y.CountedCompleter;
 import jsr166y.ForkJoinPool;
 import water.H2O.FJWThr;
 import water.H2O.H2OCountedCompleter;
+import water.util.L;
 
 /**
  * A remotely executed FutureTask.  Flow is:
@@ -158,8 +160,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       UDPTimeOutThread.PENDING.add(this);
       return this;
     } catch(Error t) {
-      t.printStackTrace();
-      throw t;
+       throw L.err(t);
     }
   }
 

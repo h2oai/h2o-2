@@ -3,6 +3,7 @@ package water.api;
 import water.DKV;
 import water.Key;
 import water.ValueArray;
+import water.util.L;
 
 public class Exec extends Request {
   private final Str _exec = new Str(EXPRESSION);
@@ -19,6 +20,7 @@ public class Exec extends Request {
       if( _safe.value() ) r.escapeIllegalJsonElements();
       return r;
     } catch( Exception e ) {
+      L.err(e);
       return Response.error(e.getMessage());
     }
   }

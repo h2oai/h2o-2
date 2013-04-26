@@ -14,6 +14,7 @@ import java.util.Map.Entry;
 
 import water.*;
 import water.Job.ChunkProgress;
+import water.util.L;
 import water.util.RString;
 
 import com.google.gson.JsonElement;
@@ -296,8 +297,8 @@ public class GLMProgressPage extends Request {
             sb.append("<tr>");
             try {
               sb.append("<td>" + "<a href='Inspect.html?"+KEY+"="+URLEncoder.encode(xm._selfKey.toString(),"UTF-8")+"'>" + mname + "</a></td>");
-            } catch( UnsupportedEncodingException e1 ) {
-              throw new Error(e1);
+            } catch( UnsupportedEncodingException e ) {
+              throw  L.errRTExcept(e);
             }
             sb.append("<td>" + dformat(xm._vals[0].bestThreshold()) + "</td>");
             sb.append("<td>" + dformat(xm._vals[0].AUC()) + "</td>");
@@ -315,8 +316,8 @@ public class GLMProgressPage extends Request {
             sb.append("<tr>");
             try {
               sb.append("<td>" + "<a href='Inspect.html?"+KEY+"="+URLEncoder.encode(xm._selfKey.toString(),"UTF-8")+"'>" + mname + "</a></td>");
-            } catch( UnsupportedEncodingException e1 ) {
-              throw new Error(e1);
+            } catch( UnsupportedEncodingException e ) {
+              throw  L.errRTExcept(e);
             }
             sb.append("<td>" + ((xm._vals != null)?xm._vals[0]._err:Double.NaN) + "</td>");
             sb.append("</tr>");

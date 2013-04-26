@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.UUID;
 
 import water.api.Constants;
+import water.util.L;
 
 public class Job extends Iced {
   // Global LIST of Jobs key.
@@ -79,7 +80,7 @@ public class Job extends Iced {
       try {
         Thread.sleep(10);
       } catch( InterruptedException e ) {
-        throw new RuntimeException(e);
+        throw  L.errRTExcept(e);
       }
     }
     return (T) UKV.get(_dest);

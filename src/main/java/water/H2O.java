@@ -12,8 +12,7 @@ import water.exec.Function;
 import water.hdfs.HdfsLoader;
 import water.nbhm.NonBlockingHashMap;
 import water.store.s3.PersistS3;
-import water.util.L;
-import water.util.Utils;
+import water.util.*;
 import water.util.L.Tag.Sys;
 
 import com.amazonaws.auth.PropertiesCredentials;
@@ -191,7 +190,7 @@ public final class H2O {
           ips.add(ias.nextElement());
         }
       }
-    } catch( SocketException e ) { }
+    } catch( SocketException e ) { L.err(e); }
 
     InetAddress local = null;   // My final choice
 
@@ -241,7 +240,7 @@ public final class H2O {
         // set default ip address to be 127.0.0.1 /localhost
         local = InetAddress.getByName("127.0.0.1");
       } catch( UnknownHostException e ) {
-        throw new Error(e);
+        throw  L.errRTExcept(e);
       }
     }
     return local;
@@ -652,7 +651,7 @@ public final class H2O {
         _udpSocket.socket().bind(new InetSocketAddress(inet, UDP_PORT));
         break;
       } catch (IOException e) {
-        try { if( _apiSocket != null ) _apiSocket.close(); } catch( IOException ohwell ) { }
+        try { if( _apiSocket != null ) _apiSocket.close(); } catch( IOException ohwell ) { L.err(ohwell); }
         Closeables.closeQuietly(_udpSocket);
         _apiSocket = null;
         _udpSocket = null;
@@ -679,7 +678,7 @@ public final class H2O {
       ip[i] = (byte)(port>>>((3-i)<<3));
     try {
       CLOUD_MULTICAST_GROUP = InetAddress.getByAddress(ip);
-    } catch( UnknownHostException e ) { throw new Error(e); }
+    } catch( UnknownHostException e ) { throw  L.errRTExcept(e); }
     CLOUD_MULTICAST_PORT = (port>>>16);
   }
 
@@ -712,7 +711,6 @@ public final class H2O {
               finally { CLOUD_MULTICAST_SOCKET = null; }
           }
       }
-
     } else {                    // Multicast Simulation
       // The multicast simulation is little bit tricky. To achieve union of all
       // specified nodes' flatfiles (via option -flatfile), the simulated
@@ -840,7 +838,7 @@ public final class H2O {
     if( OPT_ARGS.aws_credentials != null ) {
       try {
         PersistS3.getClient();
-      } catch( IllegalArgumentException iae ) { }
+      } catch( IllegalArgumentException e ) { L.err(e); }
     }
   }
 

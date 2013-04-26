@@ -6,6 +6,7 @@ import hex.rf.Tree.StatType;
 import java.util.*;
 
 import water.*;
+import water.util.L;
 import water.util.RString;
 
 import com.google.common.primitives.Ints;
@@ -137,6 +138,7 @@ public class RF extends Request {
 
       return Response.redirect(response, RFView.class, response);
     } catch (IllegalArgumentException e) {
+      L.err(e);
       return Response.error("Incorrect input data: "+e.getMessage());
     }
   }

@@ -128,6 +128,10 @@ abstract public class L {
     return err(null, Sys.WATER, "", exception);
   }
 
+  static public RuntimeException  errRTExcept(Throwable exception) {
+    return new RuntimeException(err(null, Sys.WATER, "", exception));
+  }
+
 
   static public <T extends Throwable> T  err(String m) {
     return err(null, Sys.WATER,m, null);
@@ -203,6 +207,7 @@ abstract public class L {
         return -1;
       return Long.parseLong(n.substring(0, i));
     } catch( Throwable t ) {
+      L.err(t);
       return -1;
     }
   }

@@ -6,6 +6,7 @@ import java.util.regex.Pattern;
 import water.*;
 import water.parser.*;
 import water.parser.CsvParser.Setup;
+import water.util.L;
 import water.util.RString;
 
 public class Parse extends Request {
@@ -220,8 +221,10 @@ public class Parse extends Request {
       r.setBuilder(RequestStatics.DEST_KEY, new KeyElementBuilder());
       return r;
     } catch (IllegalArgumentException e) {
+      L.err(e);
       return Response.error(e.getMessage());
     } catch (Error e) {
+      L.err(e);
       return Response.error(e.getMessage());
     }
   }

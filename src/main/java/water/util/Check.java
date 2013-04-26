@@ -44,8 +44,7 @@ public class Check {
       }
       return true;
     } catch( Exception e ) {
-      assert false : e.getMessage();
-      return false;
+      throw  L.errRTExcept(e);
     }
   }
 

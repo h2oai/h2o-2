@@ -1,5 +1,6 @@
 package water;
 
+import water.util.L;
 import javassist.*;
 
 public class Weaver {
@@ -18,7 +19,7 @@ public class Weaver {
 
       for( CtClass c : _serBases ) c.freeze();
     } catch( NotFoundException e ) {
-      throw new RuntimeException(e);
+      throw  L.errRTExcept(e);
     }
   }
 
@@ -28,7 +29,7 @@ public class Weaver {
       if( w == null ) return null;
       return w.toClass(cl, null);
     } catch( CannotCompileException e ) {
-      throw new RuntimeException(e);
+      throw  L.errRTExcept(e);
     }
   }
 
@@ -51,8 +52,8 @@ public class Weaver {
       return cc;
     } catch( NotFoundException nfe ) {
       return null;              // Not found?  Use the normal loader then
-    } catch( CannotCompileException cce ) { // Expected to compile
-      throw new RuntimeException(cce);
+    } catch( CannotCompileException e ) { // Expected to compile
+      throw  L.errRTExcept(e);
     }
   }
 
@@ -101,18 +102,19 @@ public class Weaver {
       CtField field;
       try {
         field = cc.getField("$VALUES");
-      } catch( NotFoundException nfe ) {
+      } catch( NotFoundException e ) {
         // Eclipse apparently stores this in a different place.
+        L.err(e);
         field = cc.getField("ENUM$VALUES");
       }
       String body = "static "+cc.getName()+" raw_enum(int i) { return i==255?null:"+field.getName()+"[i]; } ";
       try {
         cc.addMethod(CtNewMethod.make(body,cc));
-      } catch( CannotCompileException ce ) {
+      } catch( CannotCompileException e ) {
         System.out.println("--- Compilation failure while compiler raw_enum for "+cc.getName());
         System.out.println(body);
         System.out.println("------");
-        throw ce;
+        throw L.err(e);
       }
   }
 
@@ -161,7 +163,7 @@ public class Weaver {
     boolean r = hasExisting("read", "(Lwater/AutoBuffer;)Lwater/Freezable;", ccms);
     if( w && r ) return;
     if( w || r )
-      throw new Error(cc.getName() +" must implement both " +
+      throw new RuntimeException(cc.getName() +" must implement both " +
             "read(AutoBuffer) and write(AutoBuffer) or neither");
 
     // Add the serialization methods: read, write.
@@ -259,11 +261,11 @@ public class Weaver {
 
     try {
       cc.addMethod(CtNewMethod.make(body,cc));
-    } catch( CannotCompileException ce ) {
+    } catch( CannotCompileException e ) {
       System.out.println("--- Compilation failure while compiler serializers for "+cc.getName());
       System.out.println(body);
       System.out.println("------");
-      throw ce;
+      throw L.err(e);
     }
   }
 
@@ -308,8 +310,8 @@ public class Weaver {
   }
 
 
-  private static Error barf( CtClass ct, String sig ) {
-    return new Error(ct.getSimpleName()+"."+sig+": Serialization not implemented");
+  private static RuntimeException barf( CtClass ct, String sig ) {
+    return new RuntimeException(ct.getSimpleName()+"."+sig+": Serialization not implemented");
   }
 
 }

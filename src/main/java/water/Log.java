@@ -5,6 +5,8 @@ import java.lang.management.ManagementFactory;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+import water.util.L;
+
 public final class Log {
   // @formatter:off
   private static final ThreadLocal<SimpleDateFormat> _utcFormat = new ThreadLocal<SimpleDateFormat>() {
@@ -42,6 +44,7 @@ public final class Log {
         return -1;
       return Long.parseLong(n.substring(0, i));
     } catch( Throwable t ) {
+      L.err(t);
       return -1;
     }
   }

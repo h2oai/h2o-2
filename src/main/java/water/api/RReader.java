@@ -53,8 +53,10 @@ public class RReader extends Request {
       r.setBuilder(RequestStatics.DEST_KEY, new KeyElementBuilder());
       return r;
     } catch( IllegalArgumentException e ) {
+      L.err(e);
       return Response.error(e.getMessage());
     } catch( Error e ) {
+      L.err(e);
       return Response.error(e.getMessage());
     }
   }

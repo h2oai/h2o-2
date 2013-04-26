@@ -87,7 +87,7 @@ public abstract class MemoryManager {
             return isReleasable();
           }
         });
-      } catch (InterruptedException e){throw new Error(e);}
+      } catch (InterruptedException e){throw  L.errRTExcept(e); }
     }
   }
 
@@ -216,6 +216,7 @@ public abstract class MemoryManager {
               m.setCollectionUsageThreshold(_gc_callback);
               break;
             } catch( IllegalArgumentException iae ) {
+              L.err(iae);
               _gc_callback = _gc_callback - (_gc_callback>>3);
             }
           }
@@ -276,6 +277,7 @@ public abstract class MemoryManager {
         }
       }
       catch( OutOfMemoryError e ) {
+        L.err(e);
         if( H2O.Cleaner.isDiskFull() )
           UDPRebooted.suicide(UDPRebooted.T.oom, H2O.SELF);
       }

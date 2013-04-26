@@ -76,7 +76,7 @@ public class NodeHost implements Node {
       list.add("-cp");
       list.add(cp);
     } catch( IOException e ) {
-      throw new RuntimeException(e);
+      throw  L.errRTExcept(e);
     }
 
     String command = "cd " + Host.FOLDER + ";java";

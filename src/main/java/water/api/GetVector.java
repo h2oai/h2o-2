@@ -3,6 +3,7 @@ package water.api;
 
 import water.ValueArray;
 import water.exec.VAIterator;
+import water.util.L;
 
 import com.google.gson.*;
 
@@ -50,6 +51,7 @@ public class GetVector extends JSONOnlyRequest {
       result.addProperty(Constants.NUM_COLS,iter._ary.numCols());
       result.addProperty(Constants.SENT_ROWS,maxRows);
     } catch (Exception e) {
+      L.err(e);
       return Response.error(e.toString());
     }
     return Response.done(result);
