@@ -80,7 +80,9 @@ public class GLMProgressPage extends Request {
     final Key _job;
     public String build(Response response, JsonObject json, String contextName) {
       StringBuilder sb = new StringBuilder();;
-      modelHTML(_m,json.get(GLMModel.NAME).getAsJsonObject(),sb);
+      JsonElement mje = json.get(GLMModel.NAME);
+      if( mje == null ) return "<div class='error'>Cancelled!</div>";
+      modelHTML(_m,mje.getAsJsonObject(),sb);
       return sb.toString();
     }
 

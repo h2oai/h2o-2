@@ -406,6 +406,7 @@ public abstract class DGLM {
     @Override
     public void reduce(DRemoteTask drt) {
       GLMXValTask other = (GLMXValTask)drt;
+      if( _models == null ) return; // Canceled job?
       if(other._models != _models){
         for(int i = 0; i < _models.length; ++i)
           if(_models[i] == null)
