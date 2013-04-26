@@ -312,9 +312,9 @@ public final class AutoBuffer {
         //sock = SocketChannel.open( _h2o._key );
         break;
       } // Explicitly ignore the following exceptions but fail on the rest
-      catch (ConnectException e)       { Log.err(ex = e); }
-      catch (SocketTimeoutException e) { Log.err(ex = e); }
-      catch (IOException e)            { Log.err(ex = e);  }
+      catch (ConnectException e)       { ex = e; }
+      catch (SocketTimeoutException e) { ex = e; }
+      catch (IOException e)            { ex = e;  }
       finally {
         if( ex != null ) {
           H2O.ignore(ex, "TCP open problem, waiting and retrying...", false);

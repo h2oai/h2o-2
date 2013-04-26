@@ -21,6 +21,6 @@ public class Timer {
   }
 
   /** return the start time of this timer.**/
-  public String startAsString() { return new SimpleDateFormat("[dd-MMM hh:mm:ss:SS]").format(new Date(_start)); }
+  public String startAsString() { return new SimpleDateFormat("[dd-MMM hh:mm:ss:SSS]").format(new Date(_start)); }
 
 }
