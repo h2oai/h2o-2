@@ -502,7 +502,7 @@ class MakeEnum extends Function {
       _aryKey = aryKey;
     }
 
-    @Override public void init(){
+    @Override public void init() {
       super.init();
       if (_domain == null)
         _domain = new water.parser.Enum();

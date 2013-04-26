@@ -12,7 +12,7 @@ public class LogCollectorTask extends DRemoteTask {
 
   public LogCollectorTask() {}
 
-  @Override public void compute2() {
+  @Override public void lcompute() {
     _result = new byte[H2O.CLOUD._memary.length][];
 
     int  idx       = H2O.SELF.index();

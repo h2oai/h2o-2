@@ -20,8 +20,7 @@ public class JStackCollectorTask extends DRemoteTask {
     }
   }
 
-  @Override
-  public void compute2() {
+  @Override public void lcompute() {
     result = new String[H2O.CLOUD._memary.length];
     Map<Thread, StackTraceElement[]> allStackTraces = Thread.getAllStackTraces();
     StringBuilder sb = new StringBuilder();

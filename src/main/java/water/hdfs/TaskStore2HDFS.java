@@ -65,14 +65,7 @@ public class TaskStore2HDFS extends DTask<TaskStore2HDFS> {
 
   public TaskStore2HDFS(Key srcKey) { _arykey = srcKey; }
 
-  @Override
-  public final TaskStore2HDFS dinvoke(H2ONode sender) {
-    compute();
-    return this;
-  }
-
-  @Override
-  public void compute2() {
+  @Override public void compute2() {
     String path = null;// getPathFromValue(val);
     ValueArray ary = DKV.get(_arykey).get();
     Key self = selfKey();

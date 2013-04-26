@@ -1,4 +1,5 @@
 package hex.rf;
+
 import hex.rf.MinorityClasses.UnbalancedClass;
 import hex.rf.Sampling.Strategy;
 import hex.rf.Tree.StatType;
@@ -93,7 +94,7 @@ public final class DRF extends water.DRemoteTask {
     final DRF drf = create(modelKey, cols, ary, ntrees, depth, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, samplingStrategy, sample, strataSamples, verbose, exclusiveSplitLimit);
     drf._job = new Job(jobName(drf), modelKey);
     drf._job.start();
-    return drf.new DRFFuture(drf.fork(drf.aryKey()));
+    return drf.new DRFFuture(drf.dfork(drf.aryKey()));
   }
 
   private static String jobName(final DRF drf) {
@@ -157,11 +158,12 @@ public final class DRF extends water.DRemoteTask {
    *
    * NOTE: need to be refined after new cyprien's jobs will be merged. */
   public final class DRFFuture {
-    private final DFuture _future;
-    private DRFFuture(final DFuture deleg) { super(); _future = deleg; }
+    private final DRemoteTask _future;
+    private DRFFuture(final DRemoteTask deleg) { super(); _future = deleg; }
     public DRF get() {
       // Block to the end of DRF.
-      final DRF drf = (DRF) _future.get();
+      _future.join();
+      final DRF drf = (DRF) _future;
       // Remove DRF job.
       if (drf._job != null) drf._job.remove();
       return drf;
@@ -188,8 +190,7 @@ public final class DRF extends water.DRemoteTask {
 
   /**Inhale the data, build a DataAdapter and kick-off the computation.
    * */
-  @Override
-  public final void compute2() {
+  @Override public final void lcompute() {
     Timer t_extract = new Timer();
     // Build data adapter for this node.
     DataAdapter dapt = DABuilder.create(this).build(_keys);

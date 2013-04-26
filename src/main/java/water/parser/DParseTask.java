@@ -461,7 +461,7 @@ public final class DParseTask extends MRTask {
     }
   }
 
-  @Override public void init(){
+  @Override public void init() {
     super.init();
     createEnums();
   }

@@ -7,7 +7,6 @@ import java.util.zip.*;
 import jsr166y.CountedCompleter;
 
 import water.*;
-import water.DRemoteTask.DFuture;
 import water.H2O.H2OCountedCompleter;
 import water.api.Inspect;
 import water.parser.DParseTask.Pass;
@@ -225,10 +224,9 @@ public final class ParseDataset extends Job {
       _success = _success && other._success;
     }
 
-    @Override // Must override not to flatten the keys (which we do not really want to do here)
-    public DFuture fork( Key... keys ) { _keys = keys; return dfork(); }
-    @Override
-    public void compute2() {
+    // Must override not to flatten the keys (which we do not really want to do here)
+    @Override public DRemoteTask dfork( Key... keys ) { _keys = keys; compute2(); return this; }
+    @Override public void lcompute() {
       setPendingCount(_keys.length);
       for(Key k:_keys){
         final Key key = k;
@@ -278,12 +276,8 @@ public final class ParseDataset extends Job {
       tryComplete();
     }
 
-    @Override
-    public void onCompletion(CountedCompleter caller){
-      _success= true;
-    }
-    @Override
-    public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
+    @Override public void lonCompletion(CountedCompleter caller) { _success= true; }
+    @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
       _success = false;
       return super.onExceptionalCompletion(ex, caller);
     }

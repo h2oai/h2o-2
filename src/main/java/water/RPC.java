@@ -3,6 +3,7 @@ package water;
 import java.util.ArrayList;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import jsr166y.CountedCompleter;
 import jsr166y.ForkJoinPool;
 import water.H2O.FJWThr;
 import water.H2O.H2OCountedCompleter;
@@ -249,8 +250,14 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     }
 
     @Override public void compute2() {
-      // Run the remote task on this server!
+      // First set self to be completed when this subtask completer
+      assert _dt.getCompleter() == null;
+      _dt.setCompleter(this);
+      // Run the remote task on this server...
       _dt.dinvoke(_client);
+    }
+    // When the task completes, ship results back to client
+    @Override public void onCompletion( CountedCompleter caller ) {
       // Send results back
       AutoBuffer ab = new AutoBuffer(_client).putTask(UDP.udp.ack,_tsknum).put1(SERVER_UDP_SEND);
       _dt.write(ab);                 // Write the DTask - could be very large write
@@ -258,7 +265,6 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       _computed = true;              // After the TCP reply flag set, set computed bit
       ab.close(_dt._repliedTcp);
       _client.record_task_answer(this); // Setup for retrying Ack & AckAck
-      tryComplete();
     }
     // Re-send strictly the ack, because we're missing an AckAck
     public final void resend_ack() {
@@ -394,9 +400,9 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       ab._h2o.taskRemove(_tasknum); // Flag as task-completed, even if the result is null
       notifyAll();              // And notify in any case
       // Also notify any and all pending completion-style tasks
-      if( _fjtasks != null ) 
+      if( _fjtasks != null )
         for( final H2OCountedCompleter task : _fjtasks )
-          H2O.submitTask(new H2OCountedCompleter() { 
+          H2O.submitTask(new H2OCountedCompleter() {
               @Override public void compute2() { task.tryComplete(); }
               @Override public byte priority() { return task.priority(); }
             });
@@ -405,9 +411,10 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   }
 
   // ---
-  synchronized void addCompleter( H2OCountedCompleter task ) {
+  synchronized RPC<V> addCompleter( H2OCountedCompleter task ) {
     if( _fjtasks == null ) _fjtasks = new ArrayList();
     _fjtasks.add(task);
+    return this;
   }
 
   // Assertion check that size is not changing between resends,

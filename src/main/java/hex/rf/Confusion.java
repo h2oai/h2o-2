@@ -170,7 +170,7 @@ public class Confusion extends MRTask {
    * wire-line format does not send over things we can compute locally. So
    * compute locally, once, some things we want in all cloned instances.
    */
-  public void init() {
+  @Override public void init() {
     super.init();
     shared_init();
     // Make a mapping from chunk# to row# just for chunks on this node

@@ -91,13 +91,12 @@ public class GLMGrid extends Job {
       }catch(JobCancelledException e){/* do not need to do anything here but stop the execution*/}
     }
 
-    @Override
-    public GridTask dinvoke(H2ONode client){
+    @Override public void dinvoke(H2ONode client){
       compute2();
       // don't send input data back!
       _job = null;
       _aryKey = null;
-      return this;
+      tryComplete();
     }
   }
   @Override

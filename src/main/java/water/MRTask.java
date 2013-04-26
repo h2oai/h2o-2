@@ -8,6 +8,8 @@ public abstract class MRTask extends DRemoteTask {
   transient private int _lo, _hi; // Range of keys to work on
   transient private MRTask _left, _rite; // In-progress execution tree
 
+  public long memOverheadPerChunk(){return 0;}
+
   static final long log2(long x){
     long y = x >> 1;
     while(y > 0){
@@ -17,7 +19,7 @@ public abstract class MRTask extends DRemoteTask {
     return x > 0?y+1:y;
   }
 
-  public void init() {
+  @Override public void init() {
     _lo = 0;
     _hi = _keys.length;
     long reqMem = (log2(_hi - _lo)+2)*memOverheadPerChunk();
@@ -32,7 +34,7 @@ public abstract class MRTask extends DRemoteTask {
   transient long _reservedMem;
   /** Do all the keys in the list associated with this Node.  Roll up the
    * results into <em>this<em> MRTask. */
-  @Override public final void compute2() {
+  @Override public final void lcompute() {
     if( _hi-_lo >= 2 ) { // Multi-key case: just divide-and-conquer to 1 key
       final int mid = (_lo+_hi)>>>1; // Mid-point
       assert _left == null && _rite == null;
@@ -68,7 +70,7 @@ public abstract class MRTask extends DRemoteTask {
     if(_reservedMem > 0)MemoryManager.freeTaskMem(_reservedMem);
   }
 
-  @Override public final void onCompletion( CountedCompleter caller ) {
+  @Override public final void lonCompletion( CountedCompleter caller ) {
     // Reduce results into 'this' so they collapse going up the execution tree.
     // NULL out child-references so we don't accidentally keep large subtrees
     // alive: each one may be holding large partial results.

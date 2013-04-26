@@ -377,12 +377,10 @@ public abstract class DGLM {
       _parallel = parallel;
     }
 
-    @Override
-    public void init() {
+    @Override public void init() {
       super.init();
       _ary = DKV.get(_aryKey).get();
       _models = new Key[_folds];
-
     }
 
     @Override
