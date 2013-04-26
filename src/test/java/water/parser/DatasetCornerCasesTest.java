@@ -7,7 +7,6 @@ import hex.rf.DRF.DRFFuture;
 import hex.rf.Tree.StatType;
 import org.junit.Test;
 import water.*;
-import water.DRemoteTask.DFuture;
 import water.parser.ParseDataset;
 
 public class DatasetCornerCasesTest extends TestUtil {
