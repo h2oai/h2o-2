@@ -46,24 +46,6 @@ public final class Log {
     }
   }
 
-  public static void write(String s) {
-    write(s, null);
-  }
-
-  public static void write(Throwable t) {
-    write(null, t);
-  }
-
-  public static void write(String s, Throwable t) {
-    String stack = "";
-    if( t != null ) {
-      Writer result = new StringWriter();
-      PrintWriter printWriter = new PrintWriter(result);
-      t.printStackTrace(printWriter);
-      stack = result.toString();
-    }
-    System.out.println(s != null ? s + " " + stack : stack);
-  }
 
   // Print to the original STDERR & die
   public static void die(String s) {
@@ -106,7 +88,7 @@ public final class Log {
       stream.println(s);
   }
 
-  public static void log(File file, PrintStream stream) throws Exception {
+  private static void log(File file, PrintStream stream) throws Exception {
     BufferedReader reader = new BufferedReader(new FileReader(file));
     try {
       for( ;; ) {

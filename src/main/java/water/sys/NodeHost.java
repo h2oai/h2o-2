@@ -6,8 +6,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 import water.Boot;
-import water.Log;
 import water.sys.VM.Watchdog;
+import water.util.L;
 
 /**
  * Creates a node on a host.
@@ -103,7 +103,7 @@ public class NodeHost implements Node {
             SSH.this.start();
             SSH.this.waitFor();
           } catch( Exception ex ) {
-            Log.write(ex);
+            L.err(ex);
           }
         }
       };

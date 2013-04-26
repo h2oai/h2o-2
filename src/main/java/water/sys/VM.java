@@ -8,6 +8,7 @@ import java.util.Arrays;
 import org.apache.commons.lang.ArrayUtils;
 
 import water.Log;
+import water.util.L;
 
 /**
  * Executes code in a separate VM.
@@ -89,8 +90,7 @@ public abstract class VM {
     } catch( IllegalThreadStateException _ ) {
       return true;
     } catch( Exception ex ) {
-      Log.write(ex);
-      throw new RuntimeException(ex);
+      throw new RuntimeException(L.err(ex));
     }
   }
 
@@ -122,7 +122,7 @@ public abstract class VM {
             b = -1;
           }
           if( b < 0 ) {
-            Log.write("Assuming parent done, exit(0)");
+            L.info("Assuming parent done, exit(0)");
             System.exit(0);
           }
         }

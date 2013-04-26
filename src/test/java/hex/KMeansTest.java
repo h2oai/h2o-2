@@ -1,9 +1,12 @@
 package hex;
 
-import java.util.Arrays;
 import java.util.Random;
+
 import org.junit.*;
+
 import water.*;
+import water.util.L;
+import water.util.L.Tag.Sys;
 
 public class KMeansTest extends TestUtil {
   @BeforeClass public static void stall() { stall_till_cloudsize(3); }
@@ -51,11 +54,9 @@ public class KMeansTest extends TestUtil {
         cols[i] = i;
 
       ValueArray va = va_maker(source, (Object[]) array);
-      long start = System.currentTimeMillis();
+      Timer t = new Timer();
       KMeans.run(target, va, goals.length, 1e-6, cols);
-
-      long stop = System.currentTimeMillis();
-      Log.write("KMeansTest.testGaussian rows:" + rows + ", ms:" + (stop - start));
+      L.info(this,Sys.KMEAN," testGaussian rows:" + rows + ", ms:" + t);
       KMeans.KMeansModel res = UKV.get(target);
       double[][] clusters = res.clusters();
 
@@ -115,10 +116,9 @@ public class KMeansTest extends TestUtil {
     Key k1 = loadAndParseKey("h.hex","smalldata/airlines/allyears2k.zip");
     Key target = Key.make("air.kmeans");
     ValueArray va = UKV.get(k1);
-    long start = System.currentTimeMillis();
+    Timer t = new Timer();
     KMeans.run(target, va, 8, 1e-2, 0);
-    long stop = System.currentTimeMillis();
-    Log.write("KMeansTest.airlines: ms:" + (stop - start));
+    L.info(this,Sys.KMEAN,"ms= " + t);
     KMeans.KMeansModel res = UKV.get(target);
     double[][] clusters = res.clusters();
     UKV.remove(k1);
