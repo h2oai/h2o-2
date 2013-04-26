@@ -65,7 +65,7 @@ public abstract class PersistIce {
 
   public static FileWriter logFile() {
     try { return new FileWriter(iceRoot+File.separator+LOG_FILENAME); }
-    catch( IOException e ) { Log.err(e); return null; }
+    catch( IOException e ) { /*do not log errors when trying to open the log file*/ return null; }
   }
 
   // file implementation -------------------------------------------------------

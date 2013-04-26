@@ -216,7 +216,8 @@ public abstract class MemoryManager {
               m.setCollectionUsageThreshold(_gc_callback);
               break;
             } catch( IllegalArgumentException iae ) {
-              Log.err(iae);
+              // Do NOT log this exception, it is expected and unavoidable and
+              // entirely handled.
               _gc_callback = _gc_callback - (_gc_callback>>3);
             }
           }
@@ -277,7 +278,8 @@ public abstract class MemoryManager {
         }
       }
       catch( OutOfMemoryError e ) {
-        Log.err(e);
+        // Do NOT log OutOfMemory, it is expected and unavoidable and handled
+        // in most cases by spilling to disk.
         if( H2O.Cleaner.isDiskFull() )
           UDPRebooted.suicide(UDPRebooted.T.oom, H2O.SELF);
       }

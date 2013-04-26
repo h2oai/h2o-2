@@ -27,7 +27,7 @@ public class TypeaheadS3BucketRequest extends TypeaheadRequest {
           array.add(new JsonPrimitive(b.getName()));
         if( array.size() == limit) break;
       }
-    } catch(IllegalArgumentException _ ) { Log.err(_); }
+    } catch(IllegalArgumentException _ ) { }
     return array;
   }
 }

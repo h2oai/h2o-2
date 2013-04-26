@@ -41,7 +41,7 @@ public class XlsParser extends CustomParser implements HSSFListener {
 
       factory.processWorkbookEvents(request, _fs);
     } finally {
-      try { is.close(); } catch (IOException e) { Log.err(e); }
+      try { is.close(); } catch (IOException e) { }
     }
   }
 

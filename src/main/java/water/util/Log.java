@@ -242,6 +242,7 @@ abstract public class Log {
   private static BufferedWriter LOG_FILE;
   public final static Key LOG_KEY = Key.make("Log", (byte) 0, Key.BUILT_IN_KEY);
 
+  // Return process ID, or -1 if not supported
   private static long getPid() {
     try {
       String n = ManagementFactory.getRuntimeMXBean().getName();
@@ -250,7 +251,6 @@ abstract public class Log {
         return -1;
       return Long.parseLong(n.substring(0, i));
     } catch( Throwable t ) {
-      Log.err(t);
       return -1;
     }
   }

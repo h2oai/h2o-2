@@ -19,7 +19,7 @@ public class Weaver {
 
       for( CtClass c : _serBases ) c.freeze();
     } catch( NotFoundException e ) {
-      throw  Log.errRTExcept(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -29,7 +29,7 @@ public class Weaver {
       if( w == null ) return null;
       return w.toClass(cl, null);
     } catch( CannotCompileException e ) {
-      throw  Log.errRTExcept(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -53,7 +53,7 @@ public class Weaver {
     } catch( NotFoundException nfe ) {
       return null;              // Not found?  Use the normal loader then
     } catch( CannotCompileException e ) { // Expected to compile
-      throw  Log.errRTExcept(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -102,19 +102,18 @@ public class Weaver {
       CtField field;
       try {
         field = cc.getField("$VALUES");
-      } catch( NotFoundException e ) {
+      } catch( NotFoundException nfe ) {
         // Eclipse apparently stores this in a different place.
-        Log.err(e);
         field = cc.getField("ENUM$VALUES");
       }
       String body = "static "+cc.getName()+" raw_enum(int i) { return i==255?null:"+field.getName()+"[i]; } ";
       try {
         cc.addMethod(CtNewMethod.make(body,cc));
-      } catch( CannotCompileException e ) {
+      } catch( CannotCompileException ce ) {
         System.out.println("--- Compilation failure while compiler raw_enum for "+cc.getName());
         System.out.println(body);
         System.out.println("------");
-        throw Log.err(e);
+        throw ce;
       }
   }
 

@@ -50,10 +50,8 @@ public class KMeans extends Request {
       r.setBuilder(DEST_KEY, new KeyElementBuilder());
       return r;
     } catch( IllegalArgumentException e ) {
-      Log.err(e);
       return Response.error(e.getMessage());
     } catch( Error e ) {
-      Log.err(e);
       return Response.error(e.getMessage());
     }
   }

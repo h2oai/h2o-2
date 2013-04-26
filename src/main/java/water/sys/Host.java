@@ -116,7 +116,7 @@ public class Host {
       if( process != null ) {
         try {
           process.destroy();
-        } catch( Exception _ ) { Log.err(_); }
+        } catch( Exception _ ) { /*ignore*/ }
       }
     }
   }

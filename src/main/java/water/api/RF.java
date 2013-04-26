@@ -138,7 +138,6 @@ public class RF extends Request {
 
       return Response.redirect(response, RFView.class, response);
     } catch (IllegalArgumentException e) {
-      Log.err(e);
       return Response.error("Incorrect input data: "+e.getMessage());
     }
   }

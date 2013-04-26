@@ -61,9 +61,9 @@ public class UDPRebooted extends UDP {
 
   // Try to gracefully close/shutdown all i/o channels.
   public static void closeAll() {
-    try { H2O._udpSocket.close(); } catch( IOException e ) { Log.err(e); }
-    try { H2O._apiSocket.close(); } catch( IOException e ) { Log.err(e); }
-    try { TCPReceiverThread.SOCK.close(); } catch( IOException e ) { Log.err(e); }
+    try { H2O._udpSocket.close(); } catch( IOException e ) { }
+    try { H2O._apiSocket.close(); } catch( IOException e ) { }
+    try { TCPReceiverThread.SOCK.close(); } catch( IOException e ) { }
   }
 
   // Pretty-print bytes 1-15; byte 0 is the udp_type enum

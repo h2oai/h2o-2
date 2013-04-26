@@ -167,7 +167,7 @@ public abstract class PersistHdfs {
       } catch (S3Exception e)            { ignoreAndWait(e,false);
       } catch (IOException e)            { ignoreAndWait(e,true);
       } finally {
-        try { if( s != null ) s.close(); } catch( IOException e ) { Log.err(e); }
+        try { if( s != null ) s.close(); } catch( IOException e ) { }
       }
     }
   }
@@ -245,10 +245,9 @@ public abstract class PersistHdfs {
       byte[] b = f.write(new AutoBuffer()).buf();
       s.write(b);
     } catch( IOException e ) {
-      Log.err(e);
       res = e.getMessage(); // Just the exception message, throwing the stack trace away
     } finally {
-      try { if( s != null ) s.close(); } catch( IOException e ) { Log.err(e); }
+      try { if( s != null ) s.close(); } catch( IOException e ) { }
     }
     return res;
   }
@@ -265,10 +264,9 @@ public abstract class PersistHdfs {
       Log.info(Sys.HDFS_,"append="+val.memOrLoad().length);
       s.write(val.memOrLoad());
     } catch( IOException e ) {
-      Log.err(e);
       res = e.getMessage(); // Just the exception message, throwing the stack trace away
     } finally {
-      try { if( s != null ) s.close(); } catch( IOException e ) { Log.err(e); }
+      try { if( s != null ) s.close(); } catch( IOException e ) { }
     }
     return res;
   }

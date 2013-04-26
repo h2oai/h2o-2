@@ -32,7 +32,7 @@ public class LogCollectorTask extends DRemoteTask {
     } catch (IOException e) {
       H2O.ignore(e);
     } finally {
-      try { is.close(); } catch (Exception _) { Log.err(_); }
+      try { is.close(); } catch (Exception _) { }
       tryComplete();
     }
   }

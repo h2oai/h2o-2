@@ -66,7 +66,6 @@ public class KMeansScore extends Request {
       r.setBuilder("", new KMeansScoreBuilder(null,null));
       return r;
     } catch( Error e ) {
-      Log.err(e);
       return Response.error(e.getMessage());
     }
   }

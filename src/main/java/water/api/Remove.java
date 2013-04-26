@@ -16,7 +16,6 @@ public class Remove extends Request {
     try {
       UKV.remove(v._key);
     } catch( Exception e ) {
-      Log.err(e);
       return Response.error(e.getMessage());
     }
 

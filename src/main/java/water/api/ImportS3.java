@@ -61,7 +61,6 @@ public class ImportS3 extends Request {
         o.addProperty(VALUE_SIZE, obj.getSize());
         succ.add(o);
       } catch( IOException e ) {
-        Log.err(e);
         JsonObject o = new JsonObject();
         o.addProperty(FILE, obj.getKey());
         o.addProperty(ERROR, e.getMessage());

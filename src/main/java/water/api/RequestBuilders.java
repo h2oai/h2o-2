@@ -770,8 +770,8 @@ public class RequestBuilders extends RequestQueries {
       try {
         String k = URLEncoder.encode(content, "UTF-8");
         return super.build("<a href='Inspect.html?key="+k+"'>"+content+"</a>", name);
-      } catch( Throwable e ) {
-        throw Throwables.propagate(Log.err(e));
+      } catch (UnsupportedEncodingException e) {
+        throw Log.errRTExcept(e);
       }
     }
   }
@@ -790,8 +790,8 @@ public class RequestBuilders extends RequestQueries {
         String key = element.getAsString();
         String k = URLEncoder.encode(key, "UTF-8");
         return "<a href='Inspect.html?key="+k+"'>"+key+"</a>";
-      } catch( Throwable e ) {
-        throw Throwables.propagate(Log.err(e));
+      } catch (UnsupportedEncodingException e) {
+        throw Log.errRTExcept(e);
       }
     }
   }

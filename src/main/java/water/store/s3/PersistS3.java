@@ -109,13 +109,12 @@ public abstract class PersistS3 {
       } catch (SocketTimeoutException e) { ignoreAndWait(e,false);
       } catch (IOException e)            { ignoreAndWait(e,true);
       } finally {
-        try { if( s != null ) s.close(); } catch( IOException e ) { Log.err(e); }
+        try { if( s != null ) s.close(); } catch( IOException e ) { }
       }
     }
   }
 
   private static void ignoreAndWait(final Exception e, boolean printException) {
-    Log.err(e);
     H2O.ignore(e, "Hit the S3 reset problem, waiting and retrying...", printException);
     try { Thread.sleep(500); } catch (InterruptedException ie) {}
   }

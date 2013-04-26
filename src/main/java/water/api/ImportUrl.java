@@ -46,10 +46,8 @@ public class ImportUrl extends Request {
       r.setBuilder(KEY, new KeyElementBuilder());
       return r;
     } catch( IllegalArgumentException e ) {
-      Log.err("Not a valid key: "+ urlStr, e);
       return Response.error("Not a valid key: "+ urlStr);
     } catch( IOException e ) {
-      Log.err(e);
       return Response.error(e.getMessage());
     } finally {
       Closeables.closeQuietly(s);

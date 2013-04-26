@@ -109,11 +109,10 @@ public final class ParseDataset extends Job {
       }
     } catch( java.io.EOFException e ) {
       // Unexpected EOF?  Assume its a broken file, and toss the whole parse out
-      Log.err(e);
       UKV.put(job.dest(), new Fail(e.getMessage()));
     } catch( Exception e ) {
       UKV.put(job.dest(), new Fail(e.getMessage()));
-      throw Throwables.propagate(Log.err(e));
+      throw Throwables.propagate(e);
     } finally {
       job.remove();
     }

@@ -24,7 +24,6 @@ public class Cancel extends Request {
     try {
       Job.cancel(Key.make(key));
     } catch( Exception e ) {
-      Log.err(e);
       return Response.error(e.getMessage());
     }
     JsonObject response = new JsonObject();

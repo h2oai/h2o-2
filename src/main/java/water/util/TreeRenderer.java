@@ -55,7 +55,7 @@ public class TreeRenderer {
       sb.append("</code></pre>");
       return sb.toString();
     } catch( Exception e ) {
-      return errorRender(Log.err(e));
+      return errorRender(e);
     }
   }
 
@@ -75,7 +75,7 @@ public class TreeRenderer {
       img.replace("rawImage", new String(Base64.encodeBase64(data), "UTF-8"));
       return img.toString();
     } catch( Exception e ) {
-      return errorRender(Log.err(e));
+      return errorRender(e);
     }
   }
 
