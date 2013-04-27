@@ -12,9 +12,8 @@ import com.google.gson.JsonObject;
 
 public class RFTreeView extends Request {
   protected final RFModelKey _modelKey = new RFModelKey(MODEL_KEY);
-  protected final Int _tree = new Int(TREE_NUM, 0);
-  protected final H2OHexKey _dataKey = new H2OHexKey(DATA_KEY);
-  protected final H2OHexKeyCol _classCol = new H2OHexKeyCol(CLASS,_dataKey,0);
+  protected final Int        _tree     = new Int(TREE_NUM, 0);
+  protected final H2OHexKey  _dataKey  = new H2OHexKey(DATA_KEY);
 
   public static String link(RFModel model, int tree, ValueArray va, int clz, String body) {
     RString rs = new RString("<a href='/RFTreeView.html?" +
@@ -39,7 +38,6 @@ public class RFTreeView extends Request {
     RFModel model = _modelKey.value();
     int tree = _tree.value();
     ValueArray va = _dataKey.value();
-    int classCol = _classCol.value();
 
     byte[] tbits = model.tree(tree);
     long dl = Tree.depth_leaves(new AutoBuffer(tbits));
@@ -49,7 +47,7 @@ public class RFTreeView extends Request {
     res.addProperty(TREE_LEAVES, leaves);
 
     Response r = Response.done(res);
-    TreeRenderer renderer = new TreeRenderer(model, tree, va, classCol);
+    TreeRenderer renderer = new TreeRenderer(model, tree, va);
     String graph = renderer.graphviz();
     String code = renderer.code();
     r.addHeader("<h2>Tree " + tree + "</h2>" + graph + code);
