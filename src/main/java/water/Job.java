@@ -79,7 +79,6 @@ public class Job extends Iced {
   // Block until the Job finishes.
   public <T> T get() {
     _fjtask.join();             // Block until top-level job is done
-    assert DKV.get(_self) == null; // Control key is missing ==> job is canceled/done
     T ans = (T) UKV.get(_dest);
     remove();                   // Remove self-job
     return ans;
