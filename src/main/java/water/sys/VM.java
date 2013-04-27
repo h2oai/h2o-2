@@ -150,10 +150,7 @@ public abstract class VM {
         try {
           for( ;; ) {
             String line = source_.readLine();
-
-            if( line == null )
-              break;
-
+            if( line == null ) break;
             String s = header == null ? line : header + line;
             Log.unwrap(target, s);
           }

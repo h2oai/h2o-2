@@ -178,13 +178,13 @@ public final class DRF extends water.DRemoteTask {
     Timer t_extract = new Timer();
     // Build data adapter for this node.
     DataAdapter dapt = DABuilder.create(this).build(_keys);
-    Log.debug2(this,Sys.RANDF,"Data adapter built in " + t_extract );
+    Log.debug2(Sys.RANDF,"Data adapter built in " + t_extract );
     // Prepare data and compute missing parameters.
     Data t            = Data.make(dapt);
     _numSplitFeatures = howManySplitFeatures(t);
     int ntrees        = howManyTrees();
 
-    Log.debug2(this,Sys.RANDF,"Building "+ntrees+" trees");
+    Log.debug2(Sys.RANDF,"Building "+ntrees+" trees");
     RandomForest.build(this, t, ntrees, _depth, 0.0, StatType.values()[_stat],_parallel,_numSplitFeatures);
     // Wait for the running jobs
     tryComplete();

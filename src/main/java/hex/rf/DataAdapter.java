@@ -191,7 +191,7 @@ final class DataAdapter  {
           else binned[i] = (short) (-idx - 1); // this occurs when we are looking for a binned value, we return the smaller value in the array.
           assert binned[i] < binned2raw.length;
         }
-      if( n > binLimit )   Log.info(this,Sys.RANDF,this+" this column's arity was cut from "+n+" to "+smax);
+      if( n > binLimit )   Log.info(Sys.RANDF,this+" this column's arity was cut from "+n+" to "+smax);
       raw = null; // GCced
     }
 

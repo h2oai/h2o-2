@@ -2,11 +2,10 @@ package water.util;
 
 import java.io.*;
 import java.lang.management.ManagementFactory;
-import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Locale;
 
 import water.*;
-import water.Timer;
 import water.util.Log.Tag.Kind;
 import water.util.Log.Tag.Sys;
 
@@ -36,8 +35,9 @@ abstract public class Log {
   }
 
   private static final String NL = System.getProperty("line.separator");
-  private static final PrintStream out = System.out;
+  private static final PrintStream out;
   static {
+    out = System.out;
     System.setOut(new Wrapper(System.out));
     System.setErr(new Wrapper(System.err));
   }
@@ -179,12 +179,13 @@ abstract public class Log {
     if( LOG_FILE != null ) {
       try {
         LOG_FILE.write(s, 0, s.length());
+        LOG_FILE.write(NL,0,1);
         LOG_FILE.flush();
       } catch( IOException ioe ) {/* ignore log-write fails */
       }
     }
     if( Paxos._cloudLocked ) logToKV(e.when.startAsString(), e.thread, e.toString());
-    if(printOnOut) out.println(e.toShortString());
+    if(printOnOut) unwrap(System.out,e.toShortString());
   }
 
   private static void logToKV(final String date, final String thr, final String msg) {
@@ -298,13 +299,6 @@ abstract public class Log {
 
   /// ==== FROM OLD LOG ====
 
-  private static final ThreadLocal<SimpleDateFormat> _utcFormat = new ThreadLocal<SimpleDateFormat>() {
-    @Override protected SimpleDateFormat initialValue() {
-      SimpleDateFormat format = new SimpleDateFormat("dd' 'HH:mm:ss.SSS");
-      format.setTimeZone(TimeZone.getTimeZone("UTC"));
-      return format;
-    }
-  };
   // Survive "die" calls - used in some debugging modes
   public static boolean _dontDie;
 
@@ -353,31 +347,10 @@ abstract public class Log {
     }
 
     private static String log(Locale l, boolean nl, String format, Object... args) {
-      // Build the String to be logged, with all sorts of headers
-      StringBuilder sb = new StringBuilder();
-      String thr = fixedLength(Thread.currentThread().getName() + " ", 15);
-      String date = _utcFormat.get().format(new Date());
-      /*
-       * sb.append(date).append(" "); sb.append(HOST_AND_PID); sb.append(thr);
-       */
       String msg = String.format(l, format, args);
-      sb.append(msg);
-      if( nl ) sb.append(NL);
-      String s = sb.toString();
-      // Write to 3 places: stderr/stdout, the local log file, the K/V store
-      // Open/create the logfile when we can
-      if( H2O.SELF != null && LOG_FILE == null ) LOG_FILE = new BufferedWriter(PersistIce.logFile());
-      // Write to the log file
-      if( LOG_FILE != null ) {
-        try {
-          LOG_FILE.write(s, 0, s.length());
-          LOG_FILE.flush();
-        } catch( IOException ioe ) {/* ignore log-write fails */
-        }
-      }
-      if( Paxos._cloudLocked ) logToKV(date, thr, msg);
-      // Returned string goes to stderr/stdout
-      return s;
+      Event e = new Event(Sys.WATER,Kind.INFO,null, new Object[]{msg});
+      Log.write(e,false);
+      return e.toShortString()+NL;
     }
 
     @Override public PrintStream printf(String format, Object... args) {
