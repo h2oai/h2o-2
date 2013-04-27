@@ -135,6 +135,7 @@ public class ValueArray extends Iced implements Cloneable {
   public boolean hasInvalidRows(int colnum) { return _cols[colnum]._n != _numrows; }
 
   /** Rows in this chunk */
+  @SuppressWarnings("cast")
   public int rpc(long chunknum) {
     if( (long)(int)chunknum!=chunknum ) throw H2O.unimpl(); // more than 2^31 chunks?
     if( _rpc != null ) return (int)(_rpc[(int)chunknum+1]-_rpc[(int)chunknum]);
@@ -147,6 +148,7 @@ public class ValueArray extends Iced implements Cloneable {
   }
 
   /** Row number at the start of this chunk */
+  @SuppressWarnings("cast")
   public long startRow( long chunknum) {
     if( (long)(int)chunknum!=chunknum ) throw H2O.unimpl(); // more than 2^31 chunks?
     if( _rpc != null ) return _rpc[(int)chunknum];
@@ -168,7 +170,7 @@ public class ValueArray extends Iced implements Cloneable {
   }
 
   /** Chunk number containing a row */
-  private long chknum( long rownum ) {
+  public long chknum( long rownum ) {
     if( _rpc == null ) {
       int rpc = (int)(CHUNK_SZ/_rowsize);
       return Math.min(rownum/rpc,Math.max(1,_numrows/rpc)-1);

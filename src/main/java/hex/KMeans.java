@@ -4,6 +4,7 @@ import java.util.*;
 
 import water.*;
 import water.Job.Progress;
+import water.ValueArray.Column;
 import water.api.Constants;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
@@ -16,9 +17,10 @@ import com.google.gson.*;
  * http://www.youtube.com/watch?v=cigXAxV3XcY
  */
 public abstract class KMeans {
-  private static final boolean NORMALIZE=false;
-  public static long           RAND_SEED = 0; // 0x1234567L might be a better seed
-  public static final String   KEY_PREFIX = "__KMeansModel_";
+  private static final boolean NORMALIZE = false;
+  public static long RAND_SEED = 0; // 0x1234567L might be a better seed
+  public static final String KEY_PREFIX = "__KMeansModel_";
+
   public static final Key makeKey() {
     return Key.make(KEY_PREFIX + Key.make());
   }
@@ -26,10 +28,10 @@ public abstract class KMeans {
   public static class KMeansModel extends Model implements Progress {
     public static final String NAME = KMeansModel.class.getSimpleName();
     public double[][] _clusters; // The cluster centers, normalized according to _va
-    public int        _iteration;
+    public int _iteration;
 
     // Empty constructor for deserialization
-    public KMeansModel() { }
+    public KMeansModel() {}
 
     private KMeansModel(Key selfKey, int cols[], Key dataKey) {
       super(selfKey, cols, dataKey);
@@ -67,8 +69,7 @@ public abstract class KMeans {
           ValueArray.Column C = _va._cols[i];
           double d = ds[i];
           if( NORMALIZE ) {
-            if( C._sigma != 0.0 && !Double.isNaN(C._sigma) )
-              d *= C._sigma;
+            if( C._sigma != 0.0 && !Double.isNaN(C._sigma) ) d *= C._sigma;
             d += C._mean;
           }
           dd[j][i] = d;
@@ -78,23 +79,21 @@ public abstract class KMeans {
     }
 
     /**
-     * Single row scoring, on properly ordered data.  Will return NaN if any
-     * data element contains a NaN.  Returns the cluster-number, which is
-     * mostly an internal value.  Last data element refers to the response
-     * variable, which is not used for kmeans.
+     * Single row scoring, on properly ordered data. Will return NaN if any data element contains a
+     * NaN. Returns the cluster-number, which is mostly an internal value. Last data element refers
+     * to the response variable, which is not used for kmeans.
      */
     protected double score0(double[] data) {
-      for( int i = 0; i < data.length-1; i++ ) { // Normalize the data before scoring
+      for( int i = 0; i < data.length - 1; i++ ) { // Normalize the data before scoring
         ValueArray.Column C = _va._cols[i];
         double d = data[i];
         if( NORMALIZE ) {
           d -= C._mean;
-          if( C._sigma != 0.0 && !Double.isNaN(C._sigma) )
-            d /= C._sigma;
+          if( C._sigma != 0.0 && !Double.isNaN(C._sigma) ) d /= C._sigma;
         }
         data[i] = d;
       }
-      data[data.length-1] = Double.NaN; // Response variable column not used
+      data[data.length - 1] = Double.NaN; // Response variable column not used
       return closest(_clusters, data, new ClusterDist())._cluster;
     }
 
@@ -112,10 +111,10 @@ public abstract class KMeans {
       StringBuilder sb = new StringBuilder();
       sb.append("I: ").append(_iteration).append("[");
       double[][] c = clusters();
-      for( int i=0; i<c.length; i++ )
+      for( int i = 0; i < c.length; i++ )
         sb.append(c[i][2]).append(",");
       sb.append("]");
-      Log.debug(Sys.KMEAN,sb);
+      Log.debug(Sys.KMEAN, sb);
     }
 
   }
@@ -128,7 +127,7 @@ public abstract class KMeans {
     public long _rows[];        // OUT: Count of rows per-cluster
     public double _dist[];      // OUT: Normalized sqr-error per-cluster
 
-    public static KMeansScore score( KMeansModel model, ValueArray ary ) {
+    public static KMeansScore score(KMeansModel model, ValueArray ary) {
       KMeansScore kms = new KMeansScore();
       kms._arykey = ary._key;
       kms._cols = model.columnMapping(ary.colNames());
@@ -138,13 +137,13 @@ public abstract class KMeans {
     }
 
     @Override public void map(Key key) {
-      _rows = new long  [_clusters.length];
+      _rows = new long[_clusters.length];
       _dist = new double[_clusters.length];
       assert key.home();
       ValueArray va = DKV.get(_arykey).get();
       AutoBuffer bits = va.getChunk(key);
       int rows = va.rpc(ValueArray.getChunkIndex(key));
-      double[] values = new double[_cols.length-1];
+      double[] values = new double[_cols.length - 1];
       ClusterDist cd = new ClusterDist();
       for( int row = 0; row < rows; row++ ) {
         datad(va, bits, row, _cols, values);
@@ -158,12 +157,12 @@ public abstract class KMeans {
     }
 
     @Override public void reduce(DRemoteTask rt) {
-      KMeansScore kms = (KMeansScore)rt;
+      KMeansScore kms = (KMeansScore) rt;
       if( _rows == null ) {
         _rows = kms._rows;
         _dist = kms._dist;
       } else {
-        for( int i=0; i<_rows.length; i++ ) {
+        for( int i = 0; i < _rows.length; i++ ) {
           _rows[i] += kms._rows[i];
           _dist[i] += kms._dist[i];
         }
@@ -171,11 +170,100 @@ public abstract class KMeans {
     }
   }
 
+//Classify a dataset using a model
+  public static class KMeansApply extends MRTask {
+    Key _job;               // IN
+    Key _dest;              // IN:  The result 1-column dataset
+    Key _arykey;            // IN:  The dataset
+    int _cols[];            // IN:  Cols->Features mapping
+    double _clusters[][];   // IN:  The (normalized) Clusters
+
+    public static Job run(Key dest, KMeansModel model, ValueArray ary) {
+      Column c = new Column();
+      c._name = Constants.CLASS;
+      c._size = 4;
+      c._scale = 1;
+      c._min = Double.NaN;
+      c._max = Double.NaN;
+      c._mean = Double.NaN;
+      c._sigma = Double.NaN;
+      c._domain = null;
+      c._n = ary.numRows();
+      ValueArray res = new ValueArray(dest, ary.numRows(), c._size, new Column[] { c });
+      DKV.put(dest, res);
+      DKV.write_barrier();
+
+      Job job = new Job("KMeans apply model: " + model._selfKey + " to " + ary._key, dest);
+      KMeansApply kms = new KMeansApply();
+      kms._job = job._self;
+      kms._arykey = ary._key;
+      kms._cols = model.columnMapping(ary.colNames());
+      kms._clusters = model._clusters;
+      H2O.submitTask(job.start(kms));
+      return job;
+    }
+
+    /**
+     * Creates a new ValueArray with classes. New ValueArray is not aligned with source one
+     * unfortunately so have to send results to each chunk owner using Atomic.
+     */
+    @Override public void map(Key key) {
+      assert key.home();
+      ValueArray va = DKV.get(_arykey).get();
+      AutoBuffer bits = va.getChunk(key);
+      long startRow = va.startRow(ValueArray.getChunkIndex(key));
+      int rows = va.rpc(ValueArray.getChunkIndex(key));
+      ValueArray dest = DKV.get(_dest).get();
+      long chknum = dest.chknum(startRow);
+      long lastChk = chknum;
+      long lastRow = startRow;
+      double[] values = new double[_cols.length - 1];
+      ClusterDist cd = new ClusterDist();
+      int[] clusters = new int[rows];
+      int count = 0;
+      for( int row = 0; row < rows; row++ ) {
+        datad(va, bits, row, _cols, values);
+        closest(_clusters, values, cd);
+        chknum = dest.chknum(startRow + row);
+        if( chknum != lastChk ) {
+          int offset = dest.rowInChunk(chknum, lastRow);
+          updateClusters(clusters, offset, count, dest.getChunkKey(chknum));
+          lastChk = chknum;
+          lastRow = startRow + row;
+          count = 0;
+        }
+        clusters[count++] = cd._cluster;
+      }
+      if( count > 0 ) {
+        int offset = dest.rowInChunk(chknum, lastRow);
+        updateClusters(clusters, offset, count, dest.getChunkKey(chknum));
+      }
+      _dest = null;
+      _arykey = null;
+      _cols = null;
+      _clusters = null;
+    }
+
+    @Override public void reduce(DRemoteTask rt) {}
+  }
+
+  private static void updateClusters(int[] clusters, final int offset, int count, Key chunkKey) {
+    final int[] message = new int[count];
+    System.arraycopy(clusters, 0, message, 0, message.length);
+    new Atomic() {
+      @Override public Value atomic(Value val) {
+        AutoBuffer b = new AutoBuffer(val.memOrLoad());
+        for( int i = 0; i < message.length; i++ )
+          b.put4(offset + i, message[i]);
+        return new Value(val._key, val._max, b.buf(), (short) val.type(), val._persist);
+      }
+    }.invoke(chunkKey);
+  }
 
   // Return a row of normalized values.  If missing, use the mean (which we
   // know exists because we filtered out columns with no mean).
   private static double[] datad(ValueArray va, AutoBuffer bits, int row, int[] cols, double[] res) {
-    for( int c = 0; c < cols.length-1; c++ ) {
+    for( int c = 0; c < cols.length - 1; c++ ) {
       ValueArray.Column C = va._cols[c];
       // Use the mean if missing data, then center & normalize
       double d = (va.isNA(bits, row, C) ? C._mean : va.datad(bits, row, C));
@@ -204,7 +292,7 @@ public abstract class KMeans {
     // not require a response-column to train.  This also means the clusters
     // are not classes (although, if a class/response is associated with each
     // row we could count the number of each class in each cluster).
-    int cols2[] = Arrays.copyOf(cols,cols.length+1);
+    int cols2[] = Arrays.copyOf(cols, cols.length + 1);
     cols2[cols.length] = -1;  // No response column
     KMeansModel res = new KMeansModel(job.dest(), cols2, va._key);
     // Updated column mapping selection after removing various junk columns
@@ -212,7 +300,7 @@ public abstract class KMeans {
 
     // Initialize first cluster to first row
     double[][] clusters = new double[1][];
-    clusters[0] = new double[cols.length-1];
+    clusters[0] = new double[cols.length - 1];
     AutoBuffer bits = va.getChunk(0);
     datad(va, bits, 0, cols, clusters[0]);
 
@@ -258,36 +346,33 @@ public abstract class KMeans {
       task.invoke(va._key);
 
       for( int cluster = 0; cluster < clusters.length; cluster++ ) {
-        for( int column = 0; column < cols.length-1; column++ ) {
+        for( int column = 0; column < cols.length - 1; column++ ) {
           double value = task._sums[cluster][column] / task._counts[cluster];
-          if( Math.abs(value - clusters[cluster][column]) > epsilon )
-            moved = true;
+          if( Math.abs(value - clusters[cluster][column]) > epsilon ) moved = true;
           clusters[cluster][column] = value;
         }
       }
 
       res._iteration++;
       UKV.put(job.dest(), res);
-      if( job.cancelled() )
-        break;
+      if( job.cancelled() ) break;
     }
 
     job.remove();
   }
 
   public static class Sqr extends MRTask {
-    Key        _arykey;         // IN:  Big Table key
-    int[]      _cols;           // IN:  Columns-in-use mapping
+    Key _arykey;         // IN:  Big Table key
+    int[] _cols;           // IN:  Columns-in-use mapping
     double[][] _clusters;       // IN:  Centroids/clusters
-    double     _sqr;            // OUT: sum-squared-error
+    double _sqr;            // OUT: sum-squared-error
 
-    @Override
-    public void map(Key key) {
+    @Override public void map(Key key) {
       assert key.home();
       ValueArray va = DKV.get(_arykey).get();
       AutoBuffer bits = va.getChunk(key);
       int rows = va.rpc(ValueArray.getChunkIndex(key));
-      double[] values = new double[_cols.length-1];
+      double[] values = new double[_cols.length - 1];
       ClusterDist cd = new ClusterDist();
       for( int row = 0; row < rows; row++ )
         _sqr += minSqr(_clusters, datad(va, bits, row, _cols, values), cd);
@@ -296,37 +381,34 @@ public abstract class KMeans {
       _clusters = null;
     }
 
-    @Override
-    public void reduce(DRemoteTask rt) {
-      _sqr += ((Sqr)rt)._sqr;
+    @Override public void reduce(DRemoteTask rt) {
+      _sqr += ((Sqr) rt)._sqr;
     }
   }
 
   public static class Sampler extends MRTask {
-    Key        _arykey;         // IN:  Big Table key
-    int[]      _cols;           // IN:  Columns-in-use mapping
+    Key _arykey;         // IN:  Big Table key
+    int[] _cols;           // IN:  Columns-in-use mapping
     double[][] _clusters;       // IN:  Centroids/clusters
-    double     _sqr;            // IN:  min-square-error
-    double     _probability;    // IN:  odds to select this point
+    double _sqr;            // IN:  min-square-error
+    double _probability;    // IN:  odds to select this point
 
     // Reduced
     double[][] _clust2;         // OUT: new clusters
 
-    @Override
-    public void map(Key key) {
+    @Override public void map(Key key) {
       assert key.home();
       ValueArray va = DKV.get(_arykey).get();
       AutoBuffer bits = va.getChunk(key);
       int rows = va.rpc(ValueArray.getChunkIndex(key));
-      double[] values = new double[_cols.length-1];
+      double[] values = new double[_cols.length - 1];
       ArrayList<double[]> list = new ArrayList<double[]>();
       Random rand = RAND_SEED == 0 ? new Random() : new Random(RAND_SEED);
       ClusterDist cd = new ClusterDist();
 
       for( int row = 0; row < rows; row++ ) {
         double sqr = minSqr(_clusters, datad(va, bits, row, _cols, values), cd);
-        if( _probability * sqr > rand.nextDouble() * _sqr )
-          list.add(values.clone());
+        if( _probability * sqr > rand.nextDouble() * _sqr ) list.add(values.clone());
       }
 
       _clust2 = new double[list.size()][];
@@ -336,32 +418,30 @@ public abstract class KMeans {
       _clusters = null;
     }
 
-    @Override
-    public void reduce(DRemoteTask rt) {
+    @Override public void reduce(DRemoteTask rt) {
       Sampler task = (Sampler) rt;
       _clust2 = _clust2 == null ? task._clust2 : merge(_clust2, task._clust2);
     }
   }
 
   public static class Lloyds extends MRTask {
-    Key        _arykey;         // IN:  Big Table key
-    int[]      _cols;           // IN:  Columns-in-use mapping
+    Key _arykey;         // IN:  Big Table key
+    int[] _cols;           // IN:  Columns-in-use mapping
     double[][] _clusters;       // IN:  Centroids/clusters
 
     // Reduced - sums and counts for each cluster
     double[][] _sums;           // OUT: Sum of (normalized) features in each cluster
-    int[]      _counts;         // OUT: Count of rows in cluster
+    int[] _counts;         // OUT: Count of rows in cluster
 
-    @Override
-    public void map(Key key) {
+    @Override public void map(Key key) {
       assert key.home();
       ValueArray va = DKV.get(_arykey).get();
       AutoBuffer bits = va.getChunk(key);
       int rows = va.rpc(ValueArray.getChunkIndex(key));
-      double[] values = new double[_cols.length-1];
+      double[] values = new double[_cols.length - 1];
 
       // Create result arrays
-      _sums = new double[_clusters.length][_cols.length-1];
+      _sums = new double[_clusters.length][_cols.length - 1];
       _counts = new int[_clusters.length];
       ClusterDist cd = new ClusterDist();
 
@@ -381,8 +461,7 @@ public abstract class KMeans {
       _clusters = null;
     }
 
-    @Override
-    public void reduce(DRemoteTask rt) {
+    @Override public void reduce(DRemoteTask rt) {
       Lloyds task = (Lloyds) rt;
       if( _sums == null ) {
         _sums = task._sums;
@@ -398,24 +477,30 @@ public abstract class KMeans {
   }
 
   // A dumb-ass class for doing multi-value returns
-  private static final class ClusterDist { int _cluster; double _dist; }
-  public static ClusterDist closest(double[][] clusters, double[] point, ClusterDist cd ) {
-    return closest(clusters,point,cd,clusters.length);
+  private static final class ClusterDist {
+    int _cluster;
+    double _dist;
   }
-  public static double minSqr(double[][] clusters, double[] point, ClusterDist cd ) {
-    return closest(clusters,point,cd,clusters.length)._dist;
+
+  public static ClusterDist closest(double[][] clusters, double[] point, ClusterDist cd) {
+    return closest(clusters, point, cd, clusters.length);
   }
-  public static double minSqr(double[][] clusters, double[] point, ClusterDist cd, int N ) {
-    return closest(clusters,point,cd,N)._dist;
+
+  public static double minSqr(double[][] clusters, double[] point, ClusterDist cd) {
+    return closest(clusters, point, cd, clusters.length)._dist;
+  }
+
+  public static double minSqr(double[][] clusters, double[] point, ClusterDist cd, int N) {
+    return closest(clusters, point, cd, N)._dist;
   }
 
   // Return both nearest of N cluster/centroids, and the square-distance.
-  public static ClusterDist closest(double[][] clusters, double[] point, ClusterDist cd, int N ) {
+  public static ClusterDist closest(double[][] clusters, double[] point, ClusterDist cd, int N) {
     int min = -1;
     double minSqr = Double.MAX_VALUE;
     for( int cluster = 0; cluster < N; cluster++ ) {
       double sqr = 0;           // Sum of dimensional distances
-      int pts=point.length;     // Count of valid points
+      int pts = point.length;     // Count of valid points
       for( int column = 0; column < point.length; column++ ) {
         double d = point[column];
         if( Double.isNaN(d) ) { // Bad data?
@@ -431,7 +516,7 @@ public abstract class KMeans {
       // average of other error terms.  Same math another way:
       //   double avg_dist = sqr / pts; // average distance per feature/column/dimension
       //   sqr = sqr * point.length;    // Total dist is average*#dimensions
-      if( pts < point.length ) sqr *= point.length/pts;
+      if( pts < point.length ) sqr *= point.length / pts;
       if( sqr < minSqr ) {
         min = cluster;
         minSqr = sqr;
