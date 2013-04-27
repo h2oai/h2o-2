@@ -925,7 +925,7 @@ public final class H2O {
         // more than 5sec old
         if( !force ) clean_to_age = Math.max(clean_to_age,now-5000);
 
-        Log.debug2(this,Sys.CLEANR, h," DESIRED=",(DESIRED>>20),"M dirtysince=",(now-dirty)," force=",force," clean2age=",(now-clean_to_age));
+        Log.debug2(this,Sys.CLEAN, h," DESIRED=",(DESIRED>>20),"M dirtysince=",(now-dirty)," force=",force," clean2age=",(now-clean_to_age));
         long cleaned = 0;
         long freed = 0;
 
@@ -968,9 +968,9 @@ public final class H2O {
               val.storePersist(); // Write to disk
             } catch(IOException e) {
               if( isDiskFull() ) // disk full?
-                Log.warn(this,Sys.CLEANR,"Disk full! Disabling swapping to disk." + ((force)?" Memory low! Please free some space in " + PersistIce.ROOT+"!":""));
+                Log.warn(this,Sys.CLEAN,"Disk full! Disabling swapping to disk." + ((force)?" Memory low! Please free some space in " + PersistIce.ROOT+"!":""));
               else
-                Log.warn(this,Sys.CLEANR,"Disk swapping failed! " + e.getMessage());
+                Log.warn(this,Sys.CLEAN,"Disk swapping failed! " + e.getMessage());
               // Something is wrong so mark disk as full anyways so we do not
               // attempt to write again.  (will retry next run when memory is low)
               diskFull = true;
@@ -984,7 +984,7 @@ public final class H2O {
 
         h = _myHisto.histo(true); // Force a new histogram
         MemoryManager.set_goals("postclean",false);
-        Log.debug2(this,Sys.CLEANR,h," cleaned="+(cleaned>>20),"M, freed=",(freed>>20),"M, DESIRED=",(DESIRED>>20),"M");
+        Log.debug2(this,Sys.CLEAN,h," cleaned="+(cleaned>>20),"M, freed=",(freed>>20),"M, DESIRED=",(DESIRED>>20),"M");
       }
     }
 
@@ -1075,7 +1075,7 @@ public final class H2O {
         _oldest = oldest; // Oldest seen in this pass
         _vold = vold;
         _clean = clean && _dirty==Long.MAX_VALUE; // Looks like a clean K/V the whole time?
-         Log.debug2(this,Sys.CLEANR,"[compute histo "+(cached>>20)+"M]");
+         Log.debug2(this,Sys.CLEAN,"[compute histo "+(cached>>20)+"M]");
       }
 
       // Compute the time (in msec) for which we need to throw out things

@@ -128,7 +128,7 @@ public abstract class MemoryManager {
     if( CAN_ALLOC ) return;
     synchronized(_lock) {
       CAN_ALLOC = true;
-      Log.info(Sys.CLEANR,"Continuing after swapping");
+      Log.info(Sys.CLEAN,"Continuing after swapping");
       _lock.notifyAll();
     }
   }
@@ -136,7 +136,7 @@ public abstract class MemoryManager {
     if( !CAN_ALLOC ) return;
     synchronized(_lock) {
       CAN_ALLOC = false;
-      Log.info(Sys.CLEANR,"Pausing to swap to disk; more memory may help");
+      Log.info(Sys.CLEAN,"Pausing to swap to disk; more memory may help");
     }
   }
 
@@ -174,18 +174,18 @@ public abstract class MemoryManager {
     H2O.Cleaner.DESIRED = d;
 
     if( cacheUsage > H2O.Cleaner.DESIRED ) {
-      Log.debug2(null, Sys.CLEANR, (CAN_ALLOC?"Blocking! ":"blocked: "),
+      Log.debug2(null, Sys.CLEAN, (CAN_ALLOC?"Blocking! ":"blocked: "),
           msg,", KV="+(cacheUsage>>20),"M, POJO=",(POJO_USED_AT_LAST_GC>>20),"M, free=",(freeHeap>>20),
           "M, MAX=",(MEM_MAX>>20),"M, DESIRED=",(H2O.Cleaner.DESIRED>>20),"M");
       if( oom ) setMemLow(); // Stop allocations; trigger emergency clean
       H2O.kick_store_cleaner();
     } else { // Else we are not *emergency* cleaning, but may be lazily cleaning.
       if( !CAN_ALLOC )
-        Log.debug2(null,Sys.CLEANR,"Unblocking: ",msg,", KV=",(cacheUsage>>20),"M, POJO=",(POJO_USED_AT_LAST_GC>>20),
+        Log.debug2(null,Sys.CLEAN,"Unblocking: ",msg,", KV=",(cacheUsage>>20),"M, POJO=",(POJO_USED_AT_LAST_GC>>20),
             "M, free=",(freeHeap>>20),"M, MAX=",(MEM_MAX>>20),"M, DESIRED=",(H2O.Cleaner.DESIRED>>20),"M");
       setMemGood();
       if( oom ) // Confused? OOM should have FullGCd should have set low-mem goals
-        Log.warn(Sys.CLEANR,"OOM but no FullGC callback?  MEM_MAX = " + MEM_MAX + ", DESIRED = " + d +", CACHE = " + cacheUsage + ", p = " + p + ", bytes = " + bytes);
+        Log.warn(Sys.CLEAN,"OOM but no FullGC callback?  MEM_MAX = " + MEM_MAX + ", DESIRED = " + d +", CACHE = " + cacheUsage + ", p = " + p + ", bytes = " + bytes);
     }
   }
 
