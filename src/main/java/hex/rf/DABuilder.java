@@ -31,7 +31,7 @@ class DABuilder {
   private final void checkAndLimitFeatureUsedPerSplit(final DataAdapter dapt) {
     int validCols = _drf._rfmodel._va._cols.length-1; // for classIdx column
     if (validCols < _drf._numSplitFeatures) {
-      Log.warn(this,Sys.RANDF,"Limiting features from " + _drf._numSplitFeatures +
+      Log.warn(Sys.RANDF,"Limiting features from " + _drf._numSplitFeatures +
           " to " + validCols + " because there are no more valid columns in the dataset");
       _drf._numSplitFeatures= validCols;
     }
@@ -106,7 +106,7 @@ class DABuilder {
     // And invoke collected jobs
     ForkJoinTask.invokeAll(dataInhaleJobs);
     dapt.shrink();
-    Log.info(this,Sys.RANDF,"Inhale done in " + t_inhale);
+    Log.debug2(this,Sys.RANDF,"Inhale done in " + t_inhale);
     return dapt;
   }
 }

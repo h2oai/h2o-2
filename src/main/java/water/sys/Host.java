@@ -6,6 +6,7 @@ import java.util.*;
 import water.Boot;
 import water.util.Log;
 import water.util.Utils;
+import water.util.Log.Tag.Sys;
 
 public class Host {
   public static final String  SSH_OPTS;
@@ -107,7 +108,7 @@ public class Host {
       builder.environment().put("CYGWIN", "nodosfilewarning");
       process = builder.start();
       String log = "rsync " + VM.localIP() + " -> " + _address;
-      if( !LOG_RSYNC ) Log.info(log);
+      if( !LOG_RSYNC ) Log.debug(Sys.WATER,log);
       NodeVM.inheritIO(process, Log.padRight(log + ": ", 24));
       process.waitFor();
     } catch( Exception ex ) {

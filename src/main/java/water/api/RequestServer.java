@@ -121,7 +121,7 @@ public class RequestServer extends NanoHTTPD {
               new RequestServer(H2O._apiSocket);
               break;
             } catch ( Exception ioe ) {
-              Log.err(this,Sys.HTTPD,"Launching NanoHTTP server got ",ioe);
+              Log.err(Sys.HTTPD,"Launching NanoHTTP server got ",ioe);
               try { Thread.sleep(1000); } catch( InterruptedException e ) { } // prevent denial-of-service
             }
           }

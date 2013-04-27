@@ -56,7 +56,7 @@ public class KMeansTest extends TestUtil {
       ValueArray va = va_maker(source, (Object[]) array);
       Timer t = new Timer();
       KMeans.run(target, va, goals.length, 1e-6, cols);
-      Log.info(this,Sys.KMEAN," testGaussian rows:" + rows + ", ms:" + t);
+      Log.debug(Sys.KMEAN," testGaussian rows:" + rows + ", ms:" + t);
       KMeans.KMeansModel res = UKV.get(target);
       double[][] clusters = res.clusters();
 
@@ -118,7 +118,7 @@ public class KMeansTest extends TestUtil {
     ValueArray va = UKV.get(k1);
     Timer t = new Timer();
     KMeans.run(target, va, 8, 1e-2, 0);
-    Log.info(this,Sys.KMEAN,"ms= " + t);
+    Log.debug(Sys.KMEAN,"ms= " + t);
     KMeans.KMeansModel res = UKV.get(target);
     double[][] clusters = res.clusters();
     UKV.remove(k1);

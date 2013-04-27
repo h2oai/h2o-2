@@ -106,14 +106,14 @@ public class XlsParser extends CustomParser implements HSSFListener {
       case LabelSSTRecord.sid:
         LabelSSTRecord lsrec = (LabelSSTRecord) record;
         if( _sstRecord == null ) {
-          Log.warn(this,Sys.EXCEL,"[ExcelParser] Missing SST record");
+          Log.warn(Sys.EXCEL,"[ExcelParser] Missing SST record");
         } else {
           curCol = lsrec.getColumn();
           curStr = _str.setTo(_sstRecord.getString(lsrec.getSSTIndex()).toString());
         }
         break;
       case NoteRecord.sid:
-        Log.warn(this,Sys.EXCEL,"Warning cell notes are unsupported");
+        Log.warn(Sys.EXCEL,"Warning cell notes are unsupported");
         break;
       case NumberRecord.sid:
         NumberRecord numrec = (NumberRecord) record;
@@ -121,7 +121,7 @@ public class XlsParser extends CustomParser implements HSSFListener {
         curNum = numrec.getValue();
         break;
       case RKRecord.sid:
-        Log.warn(this,Sys.EXCEL,"Warning RK records are unsupported");
+        Log.warn(Sys.EXCEL,"Warning RK records are unsupported");
         break;
       default:
         break;

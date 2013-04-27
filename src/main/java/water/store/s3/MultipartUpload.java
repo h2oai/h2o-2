@@ -87,7 +87,7 @@ public class MultipartUpload extends MRTask {
 
   @Override
   public void map(Key key) {
-    if( DEBUG ) Log.debug(this, Sys.WATER, "map ",key ,": ", this);
+    if( DEBUG ) Log.debug( Sys.WATER, "map ",key ,": ", this);
 
     assert key.home();
     long chunk = ValueArray.getChunkIndex(key);
@@ -129,7 +129,7 @@ public class MultipartUpload extends MRTask {
 
   @Override
   public void reduce(DRemoteTask rt) {
-    if( DEBUG ) Log.debug(this, Sys.WATER, "reduce: " + this);
+    if( DEBUG ) Log.debug( Sys.WATER, "reduce: " + this);
 
     MultipartUpload task = (MultipartUpload) rt;
 
@@ -155,7 +155,7 @@ public class MultipartUpload extends MRTask {
         Progress update = new Progress();
         update._todo = old._todo;
         update._done = old._done + 1;
-        if( DEBUG ) Log.debug(this, Sys.WATER, "step ",update._done," of ",update._todo);
+        if( DEBUG ) Log.debug( Sys.WATER, "step ",update._done," of ",update._todo);
         return update;
       }
     }.invoke(key);

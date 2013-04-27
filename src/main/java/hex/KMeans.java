@@ -115,7 +115,7 @@ public abstract class KMeans {
       for( int i=0; i<c.length; i++ )
         sb.append(c[i][2]).append(",");
       sb.append("]");
-      Log.info(this,Sys.KMEAN,sb);
+      Log.debug(Sys.KMEAN,sb);
     }
 
   }

@@ -59,7 +59,7 @@ public class KMeansScore extends Request {
       hex.KMeans.KMeansScore kms = hex.KMeans.KMeansScore.score(m,ary);
       res.add("score", new JsonPrimitive("some kmeans score should be here"));
       for( int i=0; i<kms._rows.length; i++ ) {
-        Log.info(this,Sys.KMEAN,"Cluster "+i+" rows: "+kms._rows[i]+" norm mean dist:"+Math.sqrt(kms._dist[i]/kms._rows[i]));
+        Log.debug(Sys.KMEAN,"Cluster "+i+" rows: "+kms._rows[i]+" norm mean dist:"+Math.sqrt(kms._dist[i]/kms._rows[i]));
       }
       // Display HTML setup
       Response r = Response.done(res);

@@ -64,7 +64,7 @@ public final class H2O {
   public static final void ignore(Throwable e)             { ignore(e,"[h2o] Problem ignored: "); }
   public static final void ignore(Throwable e, String msg) { ignore(e, msg, true); }
   public static final void ignore(Throwable e, String msg, boolean printException) {
-    StringBuffer sb = new StringBuffer();
+/*    StringBuffer sb = new StringBuffer();
     sb.append(msg).append('\n');
     if (printException) {
       StackTraceElement[] stack = e.getStackTrace();
@@ -73,7 +73,8 @@ public final class H2O {
       sb.append(e.toString().replace("Exception", "Problem")).append('\n');
       for (StackTraceElement el : stack) { sb.append("\tat "); sb.append(el.toString().replace("Exception", "Problem" )); sb.append('\n'); }
     }
-    Log.info(sb);
+    */
+    Log.err(msg, printException? e : null);
   }
 
   // --------------------------------------------------------------------------
@@ -968,9 +969,9 @@ public final class H2O {
               val.storePersist(); // Write to disk
             } catch(IOException e) {
               if( isDiskFull() ) // disk full?
-                Log.warn(this,Sys.CLEAN,"Disk full! Disabling swapping to disk." + ((force)?" Memory low! Please free some space in " + PersistIce.ROOT+"!":""));
+                Log.warn(Sys.CLEAN,"Disk full! Disabling swapping to disk." + ((force)?" Memory low! Please free some space in " + PersistIce.ROOT+"!":""));
               else
-                Log.warn(this,Sys.CLEAN,"Disk swapping failed! " + e.getMessage());
+                Log.warn(Sys.CLEAN,"Disk swapping failed! " + e.getMessage());
               // Something is wrong so mark disk as full anyways so we do not
               // attempt to write again.  (will retry next run when memory is low)
               diskFull = true;

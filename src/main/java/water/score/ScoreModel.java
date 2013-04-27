@@ -68,7 +68,7 @@ public abstract class ScoreModel {
           map[i] = j;
         }
       }
-      if( map[i] == -1 ) Log.warn(this,Sys.SCOREM,"Model feature "+_colNames[i]+" not in the provided feature list from the data");
+      if( map[i] == -1 ) Log.warn(Sys.SCOREM,"Model feature "+_colNames[i]+" not in the provided feature list from the data");
     }
     return map;
   }

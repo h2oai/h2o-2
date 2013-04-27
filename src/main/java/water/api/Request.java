@@ -39,7 +39,7 @@ public abstract class Request extends RequestBuilders {
             if(value instanceof Value) value = ((Value) value)._key;
             log += " " + arg._name + "=" + value;
           }
-          Log.info(this,Sys.HTTPD,log);
+          Log.debug(Sys.HTTPD,log);
         }
         if (query != null)
           return wrap(server,query,type);

@@ -152,7 +152,7 @@ final class DataAdapter  {
         // to many NaNs in the column => ignore it
         ignored = true;
         raw     = null;
-        Log.info(this,Sys.RANDF,"Ignore column: " + this);
+        Log.warn(Sys.RANDF,"Ignore column: " + this);
         return;
       }
       int n = vs.length - ndups - nans;

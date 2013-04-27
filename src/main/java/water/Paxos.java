@@ -5,6 +5,7 @@ import java.util.Arrays;
 import water.H2ONode.H2Okey;
 import water.nbhm.NonBlockingHashMap;
 import water.util.Log;
+import water.util.Log.Tag.Sys;
 
 /**
  * (Not The) Paxos
@@ -60,7 +61,7 @@ public abstract class Paxos {
       }
       if( _commonKnowledge ) {
         _commonKnowledge = false; // No longer sure about things
-        Log.info("Cloud voting in progress");
+        Log.debug(Sys.WATER,"Cloud voting in progress");
       }
 
       // Add to proposed set, update cloud hash

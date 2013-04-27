@@ -8,6 +8,7 @@ import java.util.Arrays;
 import org.apache.commons.lang.ArrayUtils;
 
 import water.util.Log;
+import water.util.Log.Tag.Sys;
 
 /**
  * Executes code in a separate VM.
@@ -121,7 +122,7 @@ public abstract class VM {
             b = -1;
           }
           if( b < 0 ) {
-            Log.info("Assuming parent done, exit(0)");
+            Log.debug(Sys.WATER,"Assuming parent done, exit(0)");
             System.exit(0);
           }
         }

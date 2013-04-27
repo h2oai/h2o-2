@@ -10,7 +10,7 @@ public class Debug extends Request {
     for( Key key : H2O.keySet() ) {
       kcnt++;
       Value v = H2O.raw_get(key);
-      Log.debug(this,Sys.WATER, "K: ",key," V:",(v==null?"null":""+v._max));
+      Log.debug(Sys.WATER, "K: ",key," V:",(v==null?"null":""+v._max));
     }
     return Response.error("Dumped "+kcnt+" keys");
   }

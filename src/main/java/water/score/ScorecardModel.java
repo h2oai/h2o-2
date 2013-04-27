@@ -67,7 +67,7 @@ public class ScorecardModel extends ScoreModel {
       CtMethod happyMethod = CtMethod.make(sb.toString(),scClass);
       scClass.addMethod(happyMethod);
     } catch( Exception re ) {
-      Log.err(this,Sys.SCOREM,"Crashing:"+sb.toString(), new RuntimeException(re));
+      Log.err(Sys.SCOREM,"Crashing:"+sb.toString(), new RuntimeException(re));
     }
   }
 
@@ -86,7 +86,7 @@ public class ScorecardModel extends ScoreModel {
       scClass.addMethod(happyMethod);
 
     } catch( Exception re ) {
-      Log.err(this,Sys.SCOREM,"Crashing:"+sb.toString(), new RuntimeException(re));
+      Log.err(Sys.SCOREM,"Crashing:"+sb.toString(), new RuntimeException(re));
     }
   }
 
@@ -144,7 +144,7 @@ public class ScorecardModel extends ScoreModel {
         CtMethod happyMethod = CtMethod.make(sb.toString(),scClass);
         scClass.addMethod(happyMethod);
       } catch( Exception re ) {
-        Log.err(this,Sys.SCOREM,"Crashing:"+sb.toString(), new RuntimeException(re));
+        Log.err(Sys.SCOREM,"Crashing:"+sb.toString(), new RuntimeException(re));
       }
     }
 
@@ -182,7 +182,7 @@ public class ScorecardModel extends ScoreModel {
         scClass.addMethod(happyMethod);
 
       } catch( Exception re ) {
-        Log.err(this,Sys.SCOREM,"Crashing:"+sb.toString(), new RuntimeException(re));
+        Log.err(Sys.SCOREM,"Crashing:"+sb.toString(), new RuntimeException(re));
       }
     }
 

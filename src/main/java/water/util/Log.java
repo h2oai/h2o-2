@@ -37,7 +37,6 @@ abstract public class Log {
 
   private static final String NL = System.getProperty("line.separator");
   private static final PrintStream out = System.out;
-  private static final PrintStream err = System.err;
   static {
     System.setOut(new Wrapper(System.out));
     System.setErr(new Wrapper(System.err));
@@ -88,7 +87,6 @@ abstract public class Log {
    * anything with them but this may change.
    **/
   static class Event {
-    Object where;
     Kind kind;
     Sys sys;
     Timer when;
@@ -98,8 +96,7 @@ abstract public class Log {
     String thread;
     String body;
 
-    Event(Object where, Tag.Sys sys, Tag.Kind kind, Throwable ouch, Object[] message) {
-      this.where = where;
+    Event(Tag.Sys sys, Tag.Kind kind, Throwable ouch, Object[] message) {
       this.kind = kind;
       this.ouch = ouch;
       this.message = message;
@@ -122,7 +119,7 @@ abstract public class Log {
     }
 
     private String body(int headroom) {
-      if( body != null ) return body;
+      //if( body != null ) return body; // the different message have different padding ... can't quite cache.
       StringBuffer buf = new StringBuffer(120);
       for( Object m : message )
         buf.append(m.toString());
@@ -131,7 +128,6 @@ abstract public class Log {
         String[] lines = s.split(NL);
         StringBuffer buf2 = new StringBuffer(2 * buf.length());
         buf2.append(lines[0]);
-        if( where != null ) buf2.append(" (at ").append(classOf(where)).append(")");
         for( int i = 1; i < lines.length; i++ ) {
           buf2.append(NL).append("+");
           for( int j = 1; j < headroom; j++ )
@@ -139,7 +135,7 @@ abstract public class Log {
           buf2.append(lines[i]);
         }
         buf = buf2;
-      } else if( where != null ) buf.append(" (at ").append(classOf(where)).append(")");
+      }
       if( ouch != null ) {
         buf.append(NL);
         Writer wr = new StringWriter();
@@ -175,17 +171,9 @@ abstract public class Log {
     }
   }
 
-   /**Return the name of the class stripped of any decoration.*/
-  private static String classOf(Object o) {
-    String s = (o instanceof Class) ? o.toString() : o.getClass().toString();
-    if( s.indexOf(" ") != -1 ) {
-      s = s.split(" ")[1];
-    }
-    return s;
-  }
 
   /** Write different versions of E to the three outputs. */
-  private static void write(Event e) {
+  private static void write(Event e, boolean printOnOut) {
     String s = e.toString();
     if( H2O.SELF != null && LOG_FILE == null ) LOG_FILE = new BufferedWriter(PersistIce.logFile());
     if( LOG_FILE != null ) {
@@ -196,7 +184,7 @@ abstract public class Log {
       }
     }
     if( Paxos._cloudLocked ) logToKV(e.when.startAsString(), e.thread, e.toString());
-    if( e.kind==Kind.INFO || e.kind==Kind.WARN) out.println(e.toShortString());
+    if(printOnOut) out.println(e.toShortString());
   }
 
   private static void logToKV(final String date, final String thr, final String msg) {
@@ -209,96 +197,81 @@ abstract public class Log {
     }.fork(LOG_KEY);
   }
 
-  static public <T extends Throwable> T err(Object _this, Sys t, String msg, T exception) {
-    Event e = new Event(_this, t, Kind.ERRR, exception, new Object[] { msg });
-    write(e);
-    return exception;
-  }
-
   static public <T extends Throwable> T err(Sys t, String msg, T exception) {
-    return err(null, t, msg, exception);
+    Event e = new Event(t, Kind.ERRR, exception, new Object[] { msg });
+    write(e,false);
+    return exception;
   }
 
   static public <T extends Throwable> T err(String msg, T exception) {
-    return err(null, Sys.WATER, msg, exception);
+    return err(Sys.WATER, msg, exception);
   }
 
   static public <T extends Throwable> T err(Sys t, T exception) {
-    return err(null, t, "", exception);
+    return err(t, "", exception);
   }
 
   static public <T extends Throwable> T err(T exception) {
-    return err(null, Sys.WATER, "", exception);
+    return err(Sys.WATER, "", exception);
   }
 
   static public RuntimeException errRTExcept(Throwable exception) {
-    return new RuntimeException(err(null, Sys.WATER, "", exception));
+    return new RuntimeException(err(Sys.WATER, "", exception));
   }
 
   static public <T extends Throwable> T err(String m) {
-    return err(null, Sys.WATER, m, null);
+    return err(Sys.WATER, m, null);
   }
 
-  static public <T extends Throwable> T warn(Object _this, Sys t, String msg, T exception) {
-    Event e = new Event(_this, t, Kind.WARN, exception, new Object[] { msg });
-    write(e);
+  static public <T extends Throwable> T warn(Sys t, String msg, T exception) {
+    Event e = new Event(t, Kind.WARN, exception, new Object[] { msg });
+    write(e,true);
     return exception;
   }
 
-  static public Throwable warn(Object _this, Sys t, String msg) {
-    return warn(_this, t, msg, null);
-  }
-
   static public Throwable warn(Sys t, String msg) {
-    return warn(null, t, msg, null);
+    return warn(t, msg, null);
   }
 
   static public Throwable warn(String msg) {
-    return warn(null, Sys.WATER, msg, null);
-  }
-
-  static public void info(Object _this, Sys t, Object... objects) {
-    Event e = new Event(_this, t, Kind.INFO, null, objects);
-    write(e);
+    return warn(Sys.WATER, msg, null);
   }
 
   static public void info(Sys t, Object... objects) {
-    info(null, t, objects);
+    Event e = new Event(t, Kind.INFO, null, objects);
+    write(e,true);
   }
 
   static public void info(Object... objects) {
-    info(null, Sys.WATER, objects);
+    info(Sys.WATER, objects);
   }
 
-  static public void debug(Object _this, Sys t, Object... objects) {
-    Event e = new Event(_this, t, Kind.INFO, null, objects);
-    write(e);
+  static public void debug( Sys t, Object... objects) {
+    Event e = new Event(t, Kind.INFO, null, objects);
+    write(e,false);
   }
 
-  static public void debug(Sys t, Object... objects) {
-    debug(null, t, objects);
-  }
 
-  static public void debug1(Object _this, Sys t, Object... objects) {
+  static public void debug1(Sys t, Object... objects) {
     if( level() >= 1 || level(t) >= 1 ) return;
-    Event e = new Event(_this, t, Kind.INFO, null, objects);
-    write(e);
+    Event e = new Event( t, Kind.INFO, null, objects);
+    write(e,false);
   }
 
-  static public void debug2(Object _this, Sys t, Object... objects) {
+  static public void debug2( Sys t, Object... objects) {
     if( level() >= 2 || level(t) >= 2 ) return;
-    Event e = new Event(_this, t, Kind.INFO, null, objects);
-    write(e);
+    Event e = new Event( t, Kind.INFO, null, objects);
+    write(e,false);
   }
 
   static public void debug2(Object... objects) {
-    debug(null, Sys.WATER, objects);
+    debug(Sys.WATER, objects);
   }
 
-  static public void debug3(Object _this, Sys t, Object... objects) {
+  static public void debug3( Sys t, Object... objects) {
     if( level() >= 3 || level(t) >= 3 ) return;
-    Event e = new Event(_this, t, Kind.INFO, null, objects);
-    write(e);
+    Event e = new Event( t, Kind.INFO, null, objects);
+    write(e,false);
   }
 
   private static String fixedLength(String s, int length) {

@@ -68,7 +68,7 @@ public class RFModel extends Model implements Cloneable, Progress {
     try {
       return (RFModel)super.clone();
     } catch( CloneNotSupportedException cne ) {
-      throw Log.err(this,Sys.RANDF,"",H2O.unimpl());
+      throw Log.err(Sys.RANDF,"",H2O.unimpl());
     }
   }
 
