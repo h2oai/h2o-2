@@ -251,6 +251,11 @@ abstract public class Log {
     write(e,false);
   }
 
+  static public void debug(  Object... objects) {
+    Event e = new Event(Sys.WATER, Kind.INFO, null, objects);
+    write(e,false);
+  }
+
 
   static public void debug1(Sys t, Object... objects) {
     if( level() >= 1 || level(t) >= 1 ) return;

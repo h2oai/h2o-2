@@ -61,7 +61,7 @@ public abstract class Paxos {
       }
       if( _commonKnowledge ) {
         _commonKnowledge = false; // No longer sure about things
-        Log.debug(Sys.WATER,"Cloud voting in progress");
+        Log.debug("Cloud voting in progress");
       }
 
       // Add to proposed set, update cloud hash

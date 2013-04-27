@@ -64,7 +64,7 @@ public class Arguments {
             else continue;
           } else if( cl == String.class )
             if (field.get(this)!=null) r+=" -"+name+"="+field.get(this);
-        } catch( Exception e ) { Log.err(Sys.WATER,"Argument failed with ",e); }
+        } catch( Exception e ) { Log.err("Argument failed with ",e); }
       }
       return r;
     }
@@ -212,7 +212,7 @@ public class Arguments {
             count++;
           }
         }
-      } catch( Exception e ) { Log.err(Sys.WATER,"Argument failed with ",e); }
+      } catch( Exception e ) { Log.err("Argument failed with ",e); }
     }
     Arrays.sort(commandLineArgs);
     for( int i = 0; i < commandLineArgs.length; i++ )

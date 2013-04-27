@@ -108,7 +108,7 @@ public class Host {
       builder.environment().put("CYGWIN", "nodosfilewarning");
       process = builder.start();
       String log = "rsync " + VM.localIP() + " -> " + _address;
-      if( !LOG_RSYNC ) Log.debug(Sys.WATER,log);
+      if( !LOG_RSYNC ) Log.debug(log);
       NodeVM.inheritIO(process, Log.padRight(log + ": ", 24));
       process.waitFor();
     } catch( Exception ex ) {

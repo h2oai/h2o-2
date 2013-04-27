@@ -122,7 +122,7 @@ public abstract class VM {
             b = -1;
           }
           if( b < 0 ) {
-            Log.debug(Sys.WATER,"Assuming parent done, exit(0)");
+            Log.debug("Assuming parent done, exit(0)");
             System.exit(0);
           }
         }
