@@ -204,4 +204,5 @@ public abstract class Request extends RequestBuilders {
   }
 
   protected static final void help(Argument arg, String help) { arg._requestHelp = help; }
+  protected static final void help(Request r, String help)    { r._requestHelp   = help; }
 }

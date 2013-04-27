@@ -1,11 +1,13 @@
 package water.api;
 
 import hex.rf.*;
+import hex.rf.DRF.DRFJob;
 import hex.rf.Tree.StatType;
 
 import java.util.*;
 
 import water.*;
+import water.api.RequestArguments.Bool;
 import water.util.Log;
 import water.util.RString;
 
@@ -32,6 +34,7 @@ public class RF extends Request {
   protected final LongInt           _seed       = new LongInt(SEED,0xae44a87f9edf1cbL,"High order bits make better seeds");
   protected final Bool              _parallel   = new Bool(PARALLEL,true,"Build trees in parallel");
   protected final Int               _exclusiveSplitLimit = new Int(EXCLUSIVE_SPLIT_LIMIT, null, 0, Integer.MAX_VALUE);
+  protected final Bool               _iterativeCM        = new Bool(ITERATIVE_CM, true, "Compute confusion matrix on-the-fly");
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {
@@ -45,9 +48,9 @@ public class RF extends Request {
   public RF() {
     _sample._hideInQuery = false; //default value for sampling strategy
     _strataSamples._hideInQuery = true;
-
-    _requestHelp = "Build a model using Random Forest.";
-    /* Fields help */
+    // Request help
+    help(this, "Build a model using Random Forest.");
+    // Fields help
     help(_dataKey,  "Dataset.");
     help(_classCol, "The output classification (also known as " +
     		        "'response variable') that is being learned.");
@@ -103,12 +106,15 @@ public class RF extends Request {
       UKV.remove(Confusion.keyFor(modelKey,i,dataKey,classCol,false));
     }
 
-    int features = _features.value() == null ? -1 : _features.value();
+    int features            = _features.value() == null ? -1 : _features.value();
     int exclusiveSplitLimit = _exclusiveSplitLimit.value() == null ? 0 : _exclusiveSplitLimit.value();
+    int[]   ssamples        = _strataSamples.value();
+    float[] strataSamples   = new float[ssamples.length];
+    for(int i = 0; i<ssamples.length; i++) strataSamples[i] = ssamples[i]/100.0f;
 
     try {
       // Async launch DRF
-      hex.rf.DRF.execute(
+      DRFJob drfJob = hex.rf.DRF.execute(
               modelKey,
               cols,
               ary,
@@ -122,10 +128,11 @@ public class RF extends Request {
               features,
               _samplingStrategy.value(),
               _sample.value() / 100.0f,
-              _strataSamples.value(),
+              strataSamples,
               0, /* verbose level is minimal here */
               exclusiveSplitLimit
               );
+      // Collect parameters required for validation.
       response.addProperty(DATA_KEY, dataKey.toString());
       response.addProperty(MODEL_KEY, modelKey.toString());
       response.addProperty(NUM_TREES, ntree);
@@ -135,6 +142,7 @@ public class RF extends Request {
       if (_ignore.specified())
         response.addProperty(IGNORE, _ignore.originalValue());
       response.addProperty(OOBEE, _oobee.value());
+      response.addProperty(ITERATIVE_CM, _iterativeCM.value());
 
       return Response.redirect(response, RFView.class, response);
     } catch (IllegalArgumentException e) {

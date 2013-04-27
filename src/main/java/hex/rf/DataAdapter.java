@@ -38,10 +38,10 @@ final class DataAdapter  {
   DataAdapter(ValueArray ary, RFModel model, int[] modelDataMap, int rows,
               long unique, long seed, int binLimit, double[] classWt) {
     assert model._dataKey == ary._key;
-    _seed = seed+(unique<<16); // This is important to preserve sampling selection!!!
-    _binLimit = binLimit;
-    _dataId = unique;
-    _numRows = rows;
+    _seed       = seed+(unique<<16); // This is important to preserve sampling selection!!!
+    _binLimit   = binLimit;
+    _dataId     = unique;
+    _numRows    = rows;
     _numClasses = model.classes();
 
     _c = new Col[model._va._cols.length];
@@ -69,7 +69,7 @@ final class DataAdapter  {
    * corresponding to a particular predictor class */
   public int unmapClass(int clazz) { Col c = _c[_c.length-1]; return (int) (c.raw(clazz) - c.min); }
   /**Returns true if the row has missing data. */
-  public long dataId()         { return _dataId; }
+  public long dataId()        { return _dataId; }
   /** The number of possible prediction classes. */
   public int classes()        { return _numClasses; }
 
@@ -97,7 +97,7 @@ final class DataAdapter  {
   public final boolean hasBadValue(int row, int col)  { return _c[col].isBad(row); }
   public final boolean isBadRow(int row)              { return _c[_c.length-1].isBad(row); }
   public final boolean isIgnored(int col)             { return _c[col].isIgnored(); }
-  public void markIgnoredRow(int row)                 { _c[_c.length-1].addBad(row);  }
+  public final void    markIgnoredRow(int row)        { _c[_c.length-1].addBad(row);  }
 
   private static class Col {
     /** Encoded values*/

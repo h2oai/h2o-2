@@ -94,8 +94,9 @@ public class Inspect extends Request {
       return r;
     }
     if( f instanceof RFModel ) {
-      JsonObject res = new JsonObject();
-      return RFView.redirect(res,val._key);
+      RFModel rfModel = (RFModel)f;
+      JsonObject response = new JsonObject();
+      return RFView.redirect(response, rfModel._selfKey, rfModel._dataKey, true);
     }
     if( f instanceof Job.Fail ) {
       UKV.remove(val._key);   // Not sure if this is a good place to do this

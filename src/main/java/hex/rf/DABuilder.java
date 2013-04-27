@@ -1,5 +1,7 @@
 package hex.rf;
 
+import hex.rf.DRF.DRFTask;
+
 import java.util.ArrayList;
 
 import jsr166y.ForkJoinTask;
@@ -10,11 +12,10 @@ import water.util.Log.Tag.Sys;
 
 class DABuilder {
 
-  protected final DRF _drf;
+  protected final DRFTask _drf;
 
-  static DABuilder create(final DRF drf) {
-    switch( drf._samplingStrategy ) {
-//    case STRATIFIED_DISTRIBUTED: return new StratifiedDABuilder(drf);
+  static DABuilder create(final DRFTask drf) {
+    switch( drf._params._samplingStrategy ) {
     case RANDOM                :
     case STRATIFIED_LOCAL      :
     default                    : return new DABuilder(drf);
@@ -23,17 +24,17 @@ class DABuilder {
 
   @SuppressWarnings("unused") private DABuilder() { this(null); };
 
-  DABuilder(final DRF drf) { _drf = drf;  }
+  DABuilder(final DRFTask drf) { _drf = drf;  }
 
   final DataAdapter build(Key [] keys) { return inhaleData(keys); }
 
   /** Check that we have proper number of valid columns vs. features selected, if not cap*/
   private final void checkAndLimitFeatureUsedPerSplit(final DataAdapter dapt) {
     int validCols = _drf._rfmodel._va._cols.length-1; // for classIdx column
-    if (validCols < _drf._numSplitFeatures) {
-      Log.warn(Sys.RANDF,"Limiting features from " + _drf._numSplitFeatures +
+    if (validCols < _drf._params._numSplitFeatures) {
+      Log.warn(Sys.RANDF,"Limiting features from " + _drf._params._numSplitFeatures +
           " to " + validCols + " because there are no more valid columns in the dataset");
-      _drf._numSplitFeatures= validCols;
+      _drf._params._numSplitFeatures= validCols;
     }
   }
 
@@ -65,9 +66,9 @@ class DABuilder {
     final DataAdapter dapt = new DataAdapter( ary, rfmodel, modelDataMap,
                                               getRowCount(keys),
                                               getChunkId(keys),
-                                              _drf._seed,
-                                              _drf._binLimit,
-                                              _drf._classWt);
+                                              _drf._params._seed,
+                                              _drf._params._binLimit,
+                                              _drf._params._classWt);
     // Check that we have proper number of valid columns vs. features selected, if not cap.
     checkAndLimitFeatureUsedPerSplit(dapt);
     // Now load the DataAdapter with all the rows on this node.

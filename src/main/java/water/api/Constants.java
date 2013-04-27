@@ -68,6 +68,7 @@ public class Constants {
   public static final String HELP                  = "help";
   public static final String IGNORE                = "ignore";
   public static final String ITEMS                 = "items";
+  public static final String ITERATIVE_CM          = "iterative_cm";
   public static final String JOB                   = "job";
   public static final String JOBS                  = "jobs";
   public static final String JSON_H2O              = "h2o";
@@ -89,6 +90,7 @@ public class Constants {
   public static final String MODELS                = "models";
   public static final String MORE                  = "more";
   public static final String MTRY                  = "mtry";
+  public static final String MTRY_NODES            = "mtry_nodes";
   public static final String NAME                  = "name";
   public static final String NEG_X                 = "neg_x";
   public static final String NO_CM                 = "no_confusion_matrix";

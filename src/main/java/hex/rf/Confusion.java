@@ -86,7 +86,7 @@ public class Confusion extends MRTask {
     shared_init();
   }
 
-  public Key keyFor() { return keyFor(_model._selfKey,_treesUsed,_datakey, _classcol, _computeOOB); }
+  public Key keyFor() { return keyFor(_model._selfKey,_treesUsed,_datakey,_classcol,_computeOOB); }
   static public Key keyFor(Key modelKey, int msize, Key datakey, int classcol, boolean computeOOB) {
     return Key.make("ConfusionMatrix of (" + datakey+"["+classcol+"],"+modelKey+"["+msize+"],"+(computeOOB?"1":"0")+")");
   }
@@ -366,10 +366,10 @@ public class Confusion extends MRTask {
   /** Returns classification error. */
   public float classError() { return _errors / (float) _rows; }
   /** Return number of rows used for CM computation */
-  public long rows() { return _rows; }
+  public long  rows()       { return _rows; }
   /** Return number of skipped rows during CM computation
    *  The number includes in-bag rows if oobee is used. */
-  public long skippedRows() { return _skippedRows; }
+  public long  skippedRows(){ return _skippedRows; }
 
   /**
    * Reports size of dataset and computed classification error.

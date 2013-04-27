@@ -21,14 +21,17 @@ public class RFModel extends Model implements Cloneable, Progress {
   public float     _sample;
   /** Strata sampling rate used for local-node strata-sampling */
   public float[]   _strataSamples;
-  /** Number of split features */
+  /** Number of split features defined by user. */
   public int       _splitFeatures;
-  /** Number of computed split features per node */
+  /** Number of computed split features per node - number of split features can differ for each node.
+   * However, such difference would point to a problem with data distribution. */
   public int[]     _nodesSplitFeatures;
   /** Number of keys the model expects to be built for it */
   public int       _totalTrees;
   /** All the trees in the model */
   public Key[]     _tkeys;
+  /** Total time to produce model */
+  public long      _time;
 
   public static final String KEY_PREFIX = "__RFModel_";
 
@@ -45,7 +48,8 @@ public class RFModel extends Model implements Cloneable, Progress {
     _totalTrees     = totalTrees;
     _tkeys          = tkeys;
     _strataSamples  = strataSamples;
-    _samplingStrategy = samplingStrategy;
+    _samplingStrategy   = samplingStrategy;
+    _nodesSplitFeatures = new int[H2O.CLOUD.size()];
     for( Key tkey : _tkeys ) assert DKV.get(tkey)!=null;
   }
 
@@ -57,6 +61,7 @@ public class RFModel extends Model implements Cloneable, Progress {
     _totalTrees     = tkeys.length;
     _tkeys          = tkeys;
     _samplingStrategy = Sampling.Strategy.RANDOM;
+    _nodesSplitFeatures = new int[H2O.CLOUD.size()];
     for( Key tkey : _tkeys ) assert DKV.get(tkey)!=null;
     assert classes() > 0;
   }
