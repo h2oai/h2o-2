@@ -1,6 +1,5 @@
 package hex.rf;
 
-import hex.rf.DRF.DRFFuture;
 import hex.rf.Tree.StatType;
 import hex.rng.H2ORandomRNG.RNGKind;
 
@@ -174,7 +173,7 @@ public class RandomForest {
 
     Log.info(Sys.RANDF,"Arguments used:\n"+ARGS.toString());
     final Key modelKey = Key.make("model");
-    DRFFuture drfResult = DRF.execute(modelKey,
+    Job job = DRF.execute(modelKey,
                           cols,
                           va,
                           ARGS.ntrees,
@@ -190,7 +189,7 @@ public class RandomForest {
                           /* FIXME strata*/ null,
                           ARGS.verbose,
                           ARGS.exclusive);
-    DRF drf = drfResult.get();  // block on all nodes!
+    DRF drf = job.get();  // block on all nodes!
     RFModel model = UKV.get(modelKey);
     Log.info(Sys.RANDF,"Random forest finished in "+ drf._t_main);
 

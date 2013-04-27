@@ -195,7 +195,7 @@ public abstract class KMeans {
 
   public static Job startJob(Key dest, ValueArray va, int k, double epsilon, int... cols) {
     Job job = new Job("KMeans K: " + k + ", Cols: " + cols.length, dest);
-    job.start();
+    job.start(null);
     return job;
   }
 

@@ -118,18 +118,19 @@ public final class ParseDataset extends Job {
     }
   }
 
-  public static void parse(Key dest, Key[] keys) {
-    ParseDataset job = new ParseDataset(dest, keys);
-    job.start();
-    parse(job, keys, null);
+  public static void parse(Key dest, final Key[] keys) {
+    final ParseDataset job = new ParseDataset(dest, keys);
+    job.start(new H2OCountedCompleter() {
+        @Override public void compute2() { parse(job, keys, null); tryComplete(); }
+      });
+    job._fjtask.compute2();
   }
 
   public static Job forkParseDataset( final Key dest, final Key[] keys, final CsvParser.Setup setup ) {
     final ParseDataset job = new ParseDataset(dest, keys);
-    job.start();
-    H2O.submitTask(new H2OCountedCompleter() {
+    H2O.submitTask(job.start(new H2OCountedCompleter() {
         @Override public void compute2() { parse(job, keys, setup); tryComplete(); }
-      });
+      }));
     return job;
   }
 

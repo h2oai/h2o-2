@@ -88,13 +88,14 @@ public final class DRF extends water.DRemoteTask {
   /** Create DRF task, execute it and returns DFuture.
    *  Caller can block on the future to wait till execution finish.
    */
-  public static final DRFFuture execute(Key modelKey, int[] cols, ValueArray ary, int ntrees, int depth, int binLimit,
+  public static final Job execute(Key modelKey, int[] cols, ValueArray ary, int ntrees, int depth, int binLimit,
       StatType stat, long seed, boolean parallelTrees, double[] classWt, int numSplitFeatures,
       Sampling.Strategy samplingStrategy, float sample, int[] strataSamples, int verbose, int exclusiveSplitLimit) {
     final DRF drf = create(modelKey, cols, ary, ntrees, depth, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, samplingStrategy, sample, strataSamples, verbose, exclusiveSplitLimit);
     drf._job = new Job(jobName(drf), modelKey);
-    drf._job.start();
-    return drf.new DRFFuture(drf.dfork(drf.aryKey()));
+    drf._job.start(drf);
+    drf.dfork(drf.aryKey());
+    return drf._job;
   }
 
   private static String jobName(final DRF drf) {
@@ -150,24 +151,7 @@ public final class DRF extends water.DRemoteTask {
     // Push the RFModel globally first
     UKV.put(modelKey, drf._rfmodel);
     DKV.write_barrier();
-
     return drf;
-  }
-
-  /** Hacky class to remove {@link Job} correctly.
-   *
-   * NOTE: need to be refined after new cyprien's jobs will be merged. */
-  public final class DRFFuture {
-    private final DRemoteTask _future;
-    private DRFFuture(final DRemoteTask deleg) { super(); _future = deleg; }
-    public DRF get() {
-      // Block to the end of DRF.
-      _future.join();
-      final DRF drf = (DRF) _future;
-      // Remove DRF job.
-      if (drf._job != null) drf._job.remove();
-      return drf;
-    }
   }
 
   /**Class columns that are not enums are not supported as we ony do classification and not (yet) regression.

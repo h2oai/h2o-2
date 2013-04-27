@@ -162,6 +162,7 @@ public class TypeMap {
     "water.parser.Enum",
     "water.parser.ParseDataset",
     "water.parser.ParseDataset$2",
+    "water.parser.ParseDataset$3",
     "water.parser.ParseDataset$Progress",
     "water.parser.ParseDataset$UnzipTask",
     "water.store.s3.MultipartUpload",

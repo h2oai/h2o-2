@@ -2,7 +2,6 @@ package hex.rf;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import hex.rf.DRF.DRFFuture;
 import hex.rf.Tree.StatType;
 
 import org.junit.*;
@@ -36,7 +35,7 @@ public class RFPredDomainTest extends TestUtil {
     // Start the distributed Random Forest
     String modelName   = "model";
     final Key modelKey = Key.make(modelName);
-    DRFFuture drf = hex.rf.DRF.execute(modelKey,cols,trainData,trees,depth,1024,statType,seed,false, null, -1, Sampling.Strategy.RANDOM, 1.0f, null, 0, 0);
+    Job drf = hex.rf.DRF.execute(modelKey,cols,trainData,trees,depth,1024,statType,seed,false, null, -1, Sampling.Strategy.RANDOM, 1.0f, null, 0, 0);
     // Block
     drf.get();
 

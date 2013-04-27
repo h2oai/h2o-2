@@ -406,7 +406,7 @@ public abstract class DGLM {
     @Override
     public void reduce(DRemoteTask drt) {
       GLMXValTask other = (GLMXValTask)drt;
-      if( _models == null ) return; // Canceled job?
+      if( _models == null ) _models = other._models;
       if(other._models != _models){
         for(int i = 0; i < _models.length; ++i)
           if(_models[i] == null)
@@ -588,7 +588,7 @@ public abstract class DGLM {
       GLMXValTask tsk = new GLMXValTask(job, folds, ary, modelDataMap, _standardized, _solver, _glmParams, _normBeta, thresholds, parallel);
       long t1 = System.currentTimeMillis();
       if(parallel)
-        tsk.invoke(keys);
+        tsk.invoke(keys);       // Needs a CPS-style transform here
       else {
         tsk.keys(keys);
         tsk.init();
@@ -1223,8 +1223,7 @@ public abstract class DGLM {
       beta = denormalizedBeta = null;
     }
     UKV.put(job.dest(), new GLMModel(Status.ComputingModel,0.0f,job.dest(),data, denormalizedBeta, beta, params, lsm, false, 0, 0, null));
-    job.start();
-    H2O.submitTask(new H2OCountedCompleter() {
+    final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
         @Override public void compute2() {
           try{
             buildModel(job, job.dest(), data, lsm, params, beta, xval, parallel);
@@ -1240,7 +1239,8 @@ public abstract class DGLM {
           if(job != null) job.onException(ex);
           return super.onExceptionalCompletion(ex, caller);
         }
-    });
+      };
+    H2O.submitTask(job.start(fjtask));
     return job;
   }
 

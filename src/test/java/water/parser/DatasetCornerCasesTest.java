@@ -3,7 +3,6 @@ package water.parser;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 import hex.rf.*;
-import hex.rf.DRF.DRFFuture;
 import hex.rf.Tree.StatType;
 import org.junit.Test;
 import water.*;
@@ -41,10 +40,10 @@ public class DatasetCornerCasesTest extends TestUtil {
     // Start the distributed Random Forest
     try {
       final Key modelKey = Key.make("model");
-      DRFFuture result = hex.rf.DRF.execute(modelKey, cols, val,
+      Job job = hex.rf.DRF.execute(modelKey, cols, val,
                                    ntrees,depth,1024,statType,seed,true,null,-1,Sampling.Strategy.RANDOM,1.0f,null,0,0);
       // Just wait little bit
-      result.get();
+      job.get();
       // Create incremental confusion matrix
       RFModel model = UKV.get(modelKey);
       assertEquals("Number of classes == 1", 1,  model.classes());

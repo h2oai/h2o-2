@@ -63,7 +63,7 @@ public class RFScore extends Request {
     // RF scoring do not use RF oobee computation.
     Confusion confusion = Confusion.make(model, _dataKey.value()._key, _classCol.value(), weights, false);
     Job job = new Job("Random forest scoring", confusion.keyFor());
-    job.start();
+    job.start(null);
     return RFView.redirect(response, job.self(), _modelKey.value()._selfKey);
   }
 }
