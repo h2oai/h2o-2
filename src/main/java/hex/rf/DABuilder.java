@@ -107,7 +107,7 @@ class DABuilder {
     // And invoke collected jobs
     ForkJoinTask.invokeAll(dataInhaleJobs);
     dapt.shrink();
-    Log.debug2(Sys.RANDF,"Inhale done in " + t_inhale);
+    Log.debug(Sys.RANDF,"Inhale done in " + t_inhale);
     return dapt;
   }
 }

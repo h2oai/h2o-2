@@ -36,10 +36,9 @@ public class RandomForest {
                       int numSplitFeatures) {
     Timer  t_alltrees = new Timer();
     Tree[] trees      = new Tree[ntrees];
-
-    Log.debug2(Sys.RANDF,"Building "+ntrees+" trees");
-    Log.debug2(Sys.RANDF,"Number of split features: "+ numSplitFeatures);
-    Log.debug2(Sys.RANDF,"Starting RF computation with "+ data.rows()+" rows ");
+    Log.debug(Sys.RANDF,"Building "+ntrees+" trees");
+    Log.debug(Sys.RANDF,"Number of split features: "+ numSplitFeatures);
+    Log.debug(Sys.RANDF,"Starting RF computation with "+ data.rows()+" rows ");
 
     Random  rnd     = Utils.getRNG(data.seed() + ROOT_SEED_ADD);
     Sampling sampler = createSampler(drfParams);
@@ -128,7 +127,7 @@ public class RandomForest {
       va = TestUtil.parse_test_key(Key.make(ARGS.rawKey),Key.make(TestUtil.getHexKeyFromRawKey(ARGS.rawKey)));
     else { // data outside of H2O, load and parse
       File f = new File(ARGS.file);
-      Log.debug2(Sys.RANDF,"Loading file ", f);
+      Log.debug(Sys.RANDF,"Loading file ", f);
       Key fk = TestUtil.load_test_file(f);
       va = TestUtil.parse_test_key(fk,Key.make(TestUtil.getHexKeyFromFile(f)));
       DKV.remove(fk);

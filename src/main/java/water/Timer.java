@@ -19,7 +19,7 @@ public class Timer {
   };
   private static final ThreadLocal<SimpleDateFormat> utcShortFormat = new ThreadLocal<SimpleDateFormat>() {
     @Override protected SimpleDateFormat initialValue() {
-      SimpleDateFormat format = new SimpleDateFormat("hh:mm:ss");
+      SimpleDateFormat format = new SimpleDateFormat("hh:mm:ss.SSS");
       format.setTimeZone(TimeZone.getTimeZone("UTC"));
       return format;
     }
