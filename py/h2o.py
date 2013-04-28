@@ -472,7 +472,7 @@ def check_sandbox_for_errors(sandbox_ignore_errors=False):
             # FIX! aren't we going to get the cloud building info failure messages
             # oh well...if so ..it's a bug! "killing" is temp to detect jar mismatch error
             regex1 = re.compile(
-                'found multiple|exception|error|assert|killing|killed|required ports',
+                'found multiple|exception|error|ERRR|assert|killing|killed|required ports',
                 re.IGNORECASE)
             regex2 = re.compile('Caused',re.IGNORECASE)
             regex3 = re.compile('warn|info|TCP', re.IGNORECASE)
