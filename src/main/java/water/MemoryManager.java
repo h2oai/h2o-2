@@ -174,14 +174,14 @@ public abstract class MemoryManager {
     H2O.Cleaner.DESIRED = d;
 
     if( cacheUsage > H2O.Cleaner.DESIRED ) {
-      Log.debug2(null, Sys.CLEAN, (CAN_ALLOC?"Blocking! ":"blocked: "),
+      Log.debug2( Sys.CLEAN, (CAN_ALLOC?"Blocking! ":"blocked: "),
           msg,", KV="+(cacheUsage>>20),"M, POJO=",(POJO_USED_AT_LAST_GC>>20),"M, free=",(freeHeap>>20),
           "M, MAX=",(MEM_MAX>>20),"M, DESIRED=",(H2O.Cleaner.DESIRED>>20),"M");
       if( oom ) setMemLow(); // Stop allocations; trigger emergency clean
       H2O.kick_store_cleaner();
     } else { // Else we are not *emergency* cleaning, but may be lazily cleaning.
       if( !CAN_ALLOC )
-        Log.debug2(null,Sys.CLEAN,"Unblocking: ",msg,", KV=",(cacheUsage>>20),"M, POJO=",(POJO_USED_AT_LAST_GC>>20),
+        Log.debug2(Sys.CLEAN,"Unblocking: ",msg,", KV=",(cacheUsage>>20),"M, POJO=",(POJO_USED_AT_LAST_GC>>20),
             "M, free=",(freeHeap>>20),"M, MAX=",(MEM_MAX>>20),"M, DESIRED=",(H2O.Cleaner.DESIRED>>20),"M");
       setMemGood();
       if( oom ) // Confused? OOM should have FullGCd should have set low-mem goals
