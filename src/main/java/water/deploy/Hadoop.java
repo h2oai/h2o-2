@@ -1,7 +1,8 @@
 package water.deploy;
 
 import java.io.*;
-import java.net.*;
+import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
@@ -201,14 +202,13 @@ public class Hadoop {
       conf.set("mapred.child.java.opts", "-Xms256m -Xmx2g -XX:+UseSerialGC");
       conf.set("mapred.job.map.memory.mb", "4096");
       conf.set("mapred.job.reduce.memory.mb", "1024");
+      conf.set("mapred.fairscheduler.locality.delay", "120000");
 
       String hosts = "";
       URI tracker = new URI(config.tracker);
       JobClient client = new JobClient(new InetSocketAddress(tracker.getHost(), tracker.getPort()), conf);
-      for( String name : client.getClusterStatus(true).getActiveTrackerNames() ) {
-        String host = name.substring("tracker_".length(), name.indexOf(':'));
-        hosts += InetAddress.getAllByName(host)[0].getHostAddress() + ',';
-      }
+      for( String name : client.getClusterStatus(true).getActiveTrackerNames() )
+        hosts += name.substring("tracker_".length(), name.indexOf(':')) + ',';
       conf.set(HOSTS_KEY, hosts);
       conf.set(PORT_KEY, "" + config.port);
 
