@@ -2,7 +2,6 @@ package water.util;
 
 import java.io.*;
 import java.lang.management.ManagementFactory;
-import java.util.HashMap;
 import java.util.Locale;
 
 import water.*;
@@ -26,6 +25,7 @@ abstract public class Log {
     /** Which subsystem of h2o? */
     public static enum Sys implements Tag {
       RANDF, GENLM, KMEAN, PARSE, STORE, WATER, HDFS_, HTTPD, CLEAN, CONFM, EXCEL, SCOREM;
+      int _level;
     }
 
     /** What kind of message? */
@@ -54,33 +54,17 @@ abstract public class Log {
   /** Hostname and process ID. */
   private static final String HOST_AND_PID = "" + fixedLength(HOST + " ", 13) + fixedLength(PID + " ", 6);
   /** Debug level, higher means more output. */
-  private static int level = Integer.getInteger("h2o.log.debug.level", 1);
-  /** Per subsystem debug levels, higher means more output. */
-  private static HashMap<Sys, Integer> levels = new HashMap<Sys, Integer>();
-  static {
-    for( Sys t : Sys.values() )
-      levels.put(t, -1);
-  }
+  private static int LEVEL = Integer.getInteger("h2o.log.debug.level", 1);
 
   /** Return the current debugging level. It is OK for applications to change it. */
-  public static int level() {
-    return level;
-  }
+  public static int level() { return LEVEL; }
+  /** Set the debug level. */
+  public static void setLevel(int i) { LEVEL = i; }
 
   /** Get the debug level for the subsystem, -1 if not set. */
-  public static int level(Sys t) {
-    return levels.get(t);
-  }
-
-  /** Set the debug level. */
-  public static void setLevel(int i) {
-    level = i;
-  }
-
+  public static int level(Sys t) { return t._level; }
   /** We can set the debug level on a per-subsystem granularity. Returns -1 if not set. */
-  public static void setLevel(Sys t, int i) {
-    levels.put(t, i);
-  }
+  public static void setLevel(Sys t, int i) { t._level = i; }
 
   /**
    * Events are created for all calls to the logging API. In the current implementation we don't do
