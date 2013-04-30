@@ -92,16 +92,45 @@ abstract public class Log {
     Timer when;
     long msFromStart;
     Throwable ouch;
-    Object[] message;
+    Object[] messages;
+    Object message;
     String thread;
     String body;
 
-    Event(Tag.Sys sys, Tag.Kind kind, Throwable ouch, Object[] message) {
+    volatile boolean printMe;
+
+    private volatile static Timer lastGoodTimer = new Timer();
+    private volatile static Event lastEvent = new Event();
+    private volatile static int missed;
+
+    static Event make(Tag.Sys sys, Tag.Kind kind, Throwable ouch, Object[] messages) {
+      return make0(sys, kind, ouch, messages , null);
+    }
+    static Event make(Tag.Sys sys, Tag.Kind kind, Throwable ouch, Object message) {
+      return make0(sys, kind, ouch, null , message);
+    }
+    static private Event make0(Tag.Sys sys, Tag.Kind kind, Throwable ouch, Object[] messages, Object message) {
+      Event result = null;
+      try {
+        result = new Event();
+        result.init(sys, kind, ouch, messages, message, lastGoodTimer = new Timer());
+      } catch (OutOfMemoryError e){
+        synchronized (Event.class){
+          if (lastEvent.printMe) {  missed++;  return null; }// Giving up; record the number of lost messages
+          result = lastEvent;
+          result.init(sys, kind, ouch, messages, null, lastGoodTimer);
+        }
+      }
+      return result;
+    }
+
+    private void init(Tag.Sys sys, Tag.Kind kind, Throwable ouch, Object[] messages, Object message, Timer t) {
       this.kind = kind;
       this.ouch = ouch;
-      this.message = message;
+      this.messages = messages;
       this.sys = sys;
-      this.when = new Timer();
+      this.when = t;
+      this.printMe = true;
     }
 
     public String toString() {
@@ -121,8 +150,8 @@ abstract public class Log {
     private String body(int headroom) {
       //if( body != null ) return body; // the different message have different padding ... can't quite cache.
       StringBuffer buf = new StringBuffer(120);
-      for( Object m : message )
-        buf.append(m.toString());
+      if (messages!=null) for( Object m : messages )  buf.append(m.toString());
+      else if (message !=null ) buf.append(message.toString());
       if( buf.indexOf(NL) != -1 ) {
         String s = buf.toString();
         String[] lines = s.split(NL);
@@ -174,6 +203,30 @@ abstract public class Log {
 
   /** Write different versions of E to the three outputs. */
   private static void write(Event e, boolean printOnOut) {
+    try {
+      write0(e,printOnOut);
+      if (Event.lastEvent.printMe || Event.missed > 0) {
+        synchronized(Event.class){
+          if ( Event.lastEvent.printMe) {
+            Event ev = Event.lastEvent;
+            write0(ev,true);
+            Event.lastEvent = new Event();
+          }
+          if (Event.missed > 0) {
+            Log.debug("LOGGING MISSED ", Event.missed, " EVENTS");
+            Event.missed=0;
+          }
+        }
+      }
+    } catch (OutOfMemoryError _) {
+      synchronized (Event.class){
+        if (Event.lastEvent.printMe == false)
+         Event.lastEvent = e;
+        else Event.missed++;
+      }
+    }
+  }
+  private static void write0(Event e, boolean printOnOut) {
     String s = e.toString();
     if( H2O.SELF != null && LOG_FILE == null ) LOG_FILE = new BufferedWriter(PersistIce.logFile());
     if( LOG_FILE != null ) {
@@ -186,6 +239,7 @@ abstract public class Log {
     }
     if( Paxos._cloudLocked ) logToKV(e.when.startAsString(), e.thread, e.toString());
     if(printOnOut) unwrap(System.out,e.toShortString());
+    e.printMe = false;
   }
 
   private static void logToKV(final String date, final String thr, final String msg) {
@@ -199,7 +253,7 @@ abstract public class Log {
   }
 
   static public <T extends Throwable> T err(Sys t, String msg, T exception) {
-    Event e = new Event(t, Kind.ERRR, exception, new Object[] { msg });
+    Event e =  Event.make(t, Kind.ERRR, exception, msg );
     write(e,false);
     return exception;
   }
@@ -225,7 +279,7 @@ abstract public class Log {
   }
 
   static public <T extends Throwable> T warn(Sys t, String msg, T exception) {
-    Event e = new Event(t, Kind.WARN, exception, new Object[] { msg });
+    Event e =  Event.make(t, Kind.WARN, exception,  msg);
     write(e,true);
     return exception;
   }
@@ -239,7 +293,7 @@ abstract public class Log {
   }
 
   static public void info(Sys t, Object... objects) {
-    Event e = new Event(t, Kind.INFO, null, objects);
+    Event e =  Event.make(t, Kind.INFO, null, objects);
     write(e,true);
   }
 
@@ -248,25 +302,25 @@ abstract public class Log {
   }
 
   static public void debug( Sys t, Object... objects) {
-    Event e = new Event(t, Kind.INFO, null, objects);
+    Event e =  Event.make(t, Kind.INFO, null, objects);
     write(e,false);
   }
 
   static public void debug(  Object... objects) {
-    Event e = new Event(Sys.WATER, Kind.INFO, null, objects);
+    Event e =  Event.make(Sys.WATER, Kind.INFO, null, objects);
     write(e,false);
   }
 
 
   static public void debug1(Sys t, Object... objects) {
     if( level() >= 1 || level(t) >= 1 ) return;
-    Event e = new Event( t, Kind.INFO, null, objects);
+    Event e =  Event.make( t, Kind.INFO, null, objects);
     write(e,false);
   }
 
   static public void debug2( Sys t, Object... objects) {
     if( level() >= 2 || level(t) >= 2 ) return;
-    Event e = new Event( t, Kind.INFO, null, objects);
+    Event e =  Event.make( t, Kind.INFO, null, objects);
     write(e,false);
   }
 
@@ -276,7 +330,7 @@ abstract public class Log {
 
   static public void debug3( Sys t, Object... objects) {
     if( level() >= 3 || level(t) >= 3 ) return;
-    Event e = new Event( t, Kind.INFO, null, objects);
+    Event e =  Event.make( t, Kind.INFO, null, objects);
     write(e,false);
   }
 
@@ -348,7 +402,7 @@ abstract public class Log {
 
     private static String log(Locale l, boolean nl, String format, Object... args) {
       String msg = String.format(l, format, args);
-      Event e = new Event(Sys.WATER,Kind.INFO,null, new Object[]{msg});
+      Event e =  Event.make(Sys.WATER,Kind.INFO,null, msg);
       Log.write(e,false);
       return e.toShortString()+NL;
     }
@@ -395,5 +449,18 @@ abstract public class Log {
       _thrs[_idx] = thr;
       _msgs[_idx] = msg;
     }
+  }
+
+  public static void main(String[]args) {
+      Log.info("hi");
+      Log.info("h","i");
+      unwrap(System.out,"hi");
+      unwrap(System.err,"hi");
+
+      Log.info("ho",new Object(){
+        int i;
+        public String toString() { if (i++ ==0) throw new OutOfMemoryError(); else return super.toString(); } } );
+      Log.info("hi");
+
   }
 }
