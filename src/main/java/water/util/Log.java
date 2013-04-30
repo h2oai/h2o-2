@@ -35,9 +35,9 @@ abstract public class Log {
   }
 
   private static final String NL = System.getProperty("line.separator");
-  private static final PrintStream out;
+  private static final PrintStream OUT;
   static {
-    out = System.out;
+    OUT = System.out;
     System.setOut(new Wrapper(System.out));
     System.setErr(new Wrapper(System.err));
   }
@@ -362,7 +362,7 @@ abstract public class Log {
   public static void initHeaders() {}
 
   public static void unwrap(PrintStream stream, String s) {
-    if( stream instanceof Wrapper ) ((Wrapper) System.out).printlnParent(s);
+    if( stream instanceof Wrapper ) ((Wrapper) stream).printlnParent(s);
     else stream.println(s);
   }
 
