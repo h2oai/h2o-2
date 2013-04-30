@@ -1052,7 +1052,6 @@ public final class H2O {
         if( h._clean && _dirty==Long.MAX_VALUE )
           return h; // No change to the K/V store, so no point
         compute(h._oldest); // Use last oldest value for computing the next histogram in-place
-        assert h._when <= _when;
         return (H = this);      // Record current best histogram & return it
       }
 
