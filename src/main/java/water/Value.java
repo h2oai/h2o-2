@@ -57,7 +57,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   // - this is NOT the recommended programming style,
   // - those changes are visible to all on the node,
   // - but not to other nodes, and
-  // - the POJO might be dropped by the MemoryManager and reconstitued from
+  // - the POJO might be dropped by the MemoryManager and reconstituted from
   //   disk and/or the byte array back to it's original form, losing your changes.
   private volatile Freezable _pojo;
   public Freezable rawPOJO() { return _pojo; }
@@ -67,7 +67,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     assert isPersisted() || _pojo != null;
     _mem = null;
   }
-  // Free POJO (but always be able to rebuild the PJO)
+  // Free POJO (but always be able to rebuild the POJO)
   public final void freePOJO() {
     assert isPersisted() || _mem != null;
     _pojo = null;
