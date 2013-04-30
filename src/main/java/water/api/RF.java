@@ -7,8 +7,6 @@ import hex.rf.Tree.StatType;
 import java.util.*;
 
 import water.*;
-import water.api.RequestArguments.Bool;
-import water.util.Log;
 import water.util.RString;
 
 import com.google.common.primitives.Ints;
@@ -151,11 +149,12 @@ public class RF extends Request {
   }
 
   // By default ignore all constants columns and "bad" columns, i.e., columns with
-  // many NAs
+  // many NAs (>25% of NAs)
   class RFColumnSelect extends HexNonConstantColumnSelect {
 
     public RFColumnSelect(String name, H2OHexKey key, H2OHexKeyCol classCol) {
       super(name, key, classCol);
+      _maxNAsRatio = 1/4.f;
     }
 
     @Override protected int[] defaultValue() {
