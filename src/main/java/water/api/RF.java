@@ -65,13 +65,12 @@ public class RF extends Request {
       _sample._hideInQuery = true; _strataSamples._hideInQuery = true;
       switch (_samplingStrategy.value()) {
       case RANDOM                : _sample._hideInQuery = false; break;
-      //case STRATIFIED_DISTRIBUTED:
       case STRATIFIED_LOCAL      : _strataSamples._hideInQuery = false; break;
       }
     }
     if( arg == _ignore ) {
       int[] ii = _ignore.value();
-      if( ii != null && ii.length >= _dataKey.value()._cols.length-1 )
+      if( ii != null && ii.length >= _dataKey.value()._cols.length )
         throw new IllegalArgumentException("Cannot ignore all columns");
     }
   }
