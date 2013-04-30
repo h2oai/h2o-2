@@ -400,14 +400,14 @@ public class ValueArray extends Iced implements Cloneable {
     // Last chunk is short, read it; combine buffers and make the last chunk larger
     if( cidx > 0 ) {
       Key ckey = getChunkKey(cidx-1,key); // Get last chunk written out
-      byte[] newbuf = Arrays.copyOf(oldbuf,(int)(off+CHUNK_SZ));
+      byte[] newbuf = MemoryManager.arrayCopyOf(oldbuf,(int)(off+CHUNK_SZ));
       System.arraycopy(buf,0,newbuf,(int)CHUNK_SZ,off);
       // Block for the last DKV to happen, because we're overwriting the last one
       // with final size bits.
       try { f_last.get(); }
       catch( InterruptedException e ) { throw  Log.errRTExcept(e); }
       catch(   ExecutionException e ) { throw  Log.errRTExcept(e); }
-      assert DKV.get(ckey).memOrLoad()==oldbuf; // Maybe false-alarms under high-memory-pressure?
+      assert Arrays.equals(DKV.get(ckey).memOrLoad(),oldbuf);
       DKV.put(ckey,new Value(ckey,newbuf),fs); // Overwrite the old too-small Value
     } else {
       Key ckey = getChunkKey(cidx,key);
