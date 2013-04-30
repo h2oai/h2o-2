@@ -171,17 +171,20 @@ public class ValueArray extends Iced implements Cloneable {
 
   /** Chunk number containing a row */
   public long chknum( long rownum ) {
-    if( _rpc == null ) {
-      int rpc = (int)(CHUNK_SZ/_rowsize);
-      return Math.min(rownum/rpc,Math.max(1,_numrows/rpc)-1);
-    }
+    if( _rpc == null )
+      return chknum(rownum, _numrows, _rowsize);
     int bs = Arrays.binarySearch(_rpc,rownum);
     if( bs < 0 ) bs = -bs-2;
     while( _rpc[bs+1]==rownum ) bs++;
     return bs;
   }
 
-  // internal convience class for building structured ValueArrays
+  public static long chknum( long rownum, long numrows, int rowsize ) {
+    int rpc = (int)(CHUNK_SZ/rowsize);
+    return Math.min(rownum/rpc,Math.max(1,numrows/rpc)-1);
+  }
+
+  // internal convenience class for building structured ValueArrays
   static public class Column extends Iced implements Cloneable {
     public String _name;
     // Domain of the column - all the strings which represents the column's

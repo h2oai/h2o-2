@@ -219,6 +219,7 @@ public class TypeMap {
     return GOLD[id].getClass();
   }
 
+  //
 
   public static void main(String[] args) {
     Log._dontDie = true; // Ignore fatal class load error, e.g. Request

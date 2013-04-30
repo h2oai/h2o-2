@@ -2,7 +2,10 @@ package hex;
 
 import java.util.*;
 
+import jsr166y.CountedCompleter;
 import water.*;
+import water.H2O.H2OCountedCompleter;
+import water.Job.ChunkProgressJob;
 import water.Job.Progress;
 import water.ValueArray.Column;
 import water.api.Constants;
@@ -170,36 +173,50 @@ public abstract class KMeans {
     }
   }
 
-//Classify a dataset using a model
+  // Classify a dataset using a model and generates a list of classes
   public static class KMeansApply extends MRTask {
-    Key _job;               // IN
-    Key _dest;              // IN:  The result 1-column dataset
+    ChunkProgressJob _job;  // IN
     Key _arykey;            // IN:  The dataset
     int _cols[];            // IN:  Cols->Features mapping
     double _clusters[][];   // IN:  The (normalized) Clusters
 
-    public static Job run(Key dest, KMeansModel model, ValueArray ary) {
-      Column c = new Column();
-      c._name = Constants.CLASS;
-      c._size = 4;
-      c._scale = 1;
-      c._min = Double.NaN;
-      c._max = Double.NaN;
-      c._mean = Double.NaN;
-      c._sigma = Double.NaN;
-      c._domain = null;
-      c._n = ary.numRows();
-      ValueArray res = new ValueArray(dest, ary.numRows(), c._size, new Column[] { c });
-      DKV.put(dest, res);
-      DKV.write_barrier();
+    static final int ROW_SIZE = 4;
 
-      Job job = new Job("KMeans apply model: " + model._selfKey + " to " + ary._key, dest);
-      KMeansApply kms = new KMeansApply();
-      kms._job = job._self;
-      kms._arykey = ary._key;
-      kms._cols = model.columnMapping(ary.colNames());
-      kms._clusters = model._clusters;
-      H2O.submitTask(job.start(kms));
+    public static Job run(final Key dest, final KMeansModel model, final ValueArray ary) {
+      String desc = "KMeans apply model: " + model._selfKey + " to " + ary._key;
+      final ChunkProgressJob job = new ChunkProgressJob(desc, dest, ary.chunks());
+      final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
+        @Override public void compute2() {
+          KMeansApply kms = new KMeansApply();
+          kms._job = job;
+          kms._arykey = ary._key;
+          kms._cols = model.columnMapping(ary.colNames());
+          kms._clusters = model._clusters;
+          kms.invoke(ary._key);
+
+          Column c = new Column();
+          c._name = Constants.CLASS;
+          c._size = ROW_SIZE;
+          c._scale = 1;
+          c._min = Double.NaN;
+          c._max = Double.NaN;
+          c._mean = Double.NaN;
+          c._sigma = Double.NaN;
+          c._domain = null;
+          c._n = ary.numRows();
+          ValueArray res = new ValueArray(dest, ary.numRows(), c._size, new Column[] { c });
+          DKV.put(dest, res);
+          DKV.write_barrier();
+          job.remove();
+          tryComplete();
+        }
+
+        @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
+          job.onException(ex);
+          return super.onExceptionalCompletion(ex, caller);
+        }
+      };
+      H2O.submitTask(job.start(fjtask));
       return job;
     }
 
@@ -209,36 +226,39 @@ public abstract class KMeans {
      */
     @Override public void map(Key key) {
       assert key.home();
-      ValueArray va = DKV.get(_arykey).get();
-      AutoBuffer bits = va.getChunk(key);
-      long startRow = va.startRow(ValueArray.getChunkIndex(key));
-      int rows = va.rpc(ValueArray.getChunkIndex(key));
-      ValueArray dest = DKV.get(_dest).get();
-      long chknum = dest.chknum(startRow);
-      long lastChk = chknum;
-      long lastRow = startRow;
-      double[] values = new double[_cols.length - 1];
-      ClusterDist cd = new ClusterDist();
-      int[] clusters = new int[rows];
-      int count = 0;
-      for( int row = 0; row < rows; row++ ) {
-        datad(va, bits, row, _cols, values);
-        closest(_clusters, values, cd);
-        chknum = dest.chknum(startRow + row);
-        if( chknum != lastChk ) {
-          int offset = dest.rowInChunk(chknum, lastRow);
-          updateClusters(clusters, offset, count, dest.getChunkKey(chknum));
-          lastChk = chknum;
-          lastRow = startRow + row;
-          count = 0;
+      if( !_job.cancelled() ) {
+        ValueArray va = DKV.get(_arykey).get();
+        AutoBuffer bits = va.getChunk(key);
+        long startRow = va.startRow(ValueArray.getChunkIndex(key));
+        int rows = va.rpc(ValueArray.getChunkIndex(key));
+        int rpc = (int) (ValueArray.CHUNK_SZ / ROW_SIZE);
+        long chknum = ValueArray.chknum(startRow, va.numRows(), ROW_SIZE);
+        long lastChk = chknum;
+        long lastRow = startRow;
+        double[] values = new double[_cols.length - 1];
+        ClusterDist cd = new ClusterDist();
+        int[] clusters = new int[rows];
+        int count = 0;
+        for( int row = 0; row < rows; row++ ) {
+          datad(va, bits, row, _cols, values);
+          closest(_clusters, values, cd);
+          chknum = ValueArray.chknum(startRow + row, va.numRows(), ROW_SIZE);
+          if( chknum != lastChk ) {
+            int offset = (int) (lastRow - (rpc * chknum));
+            updateClusters(clusters, offset, count, ValueArray.getChunkKey(chknum, _job.dest()));
+            lastChk = chknum;
+            lastRow = startRow + row;
+            count = 0;
+          }
+          clusters[count++] = cd._cluster;
         }
-        clusters[count++] = cd._cluster;
+        if( count > 0 ) {
+          int offset = (int) (lastRow - (rpc * chknum));
+          updateClusters(clusters, offset, count, ValueArray.getChunkKey(chknum, _job.dest()));
+        }
+        _job.updateProgress(1);
       }
-      if( count > 0 ) {
-        int offset = dest.rowInChunk(chknum, lastRow);
-        updateClusters(clusters, offset, count, dest.getChunkKey(chknum));
-      }
-      _dest = null;
+      _job = null;
       _arykey = null;
       _cols = null;
       _clusters = null;
@@ -247,15 +267,18 @@ public abstract class KMeans {
     @Override public void reduce(DRemoteTask rt) {}
   }
 
-  private static void updateClusters(int[] clusters, final int offset, int count, Key chunkKey) {
+  private static void updateClusters(int[] clusters, final int offset, int count, final Key chunkKey) {
     final int[] message = new int[count];
     System.arraycopy(clusters, 0, message, 0, message.length);
     new Atomic() {
       @Override public Value atomic(Value val) {
-        AutoBuffer b = new AutoBuffer(val.memOrLoad());
+        byte[] data;
+        if( val == null ) data = MemoryManager.malloc1((int) ValueArray.CHUNK_SZ);
+        else data = val.memOrLoad();
+        AutoBuffer b = new AutoBuffer(data);
         for( int i = 0; i < message.length; i++ )
           b.put4(offset + i, message[i]);
-        return new Value(val._key, val._max, b.buf(), (short) val.type(), val._persist);
+        return new Value(chunkKey, val._max, b.buf(), (short) val.type(), val._persist);
       }
     }.invoke(chunkKey);
   }

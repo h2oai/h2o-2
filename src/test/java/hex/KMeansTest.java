@@ -9,10 +9,11 @@ import water.util.Log;
 import water.util.Log.Tag.Sys;
 
 public class KMeansTest extends TestUtil {
-  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
+  @BeforeClass public static void stall() {
+    stall_till_cloudsize(3);
+  }
 
-  @Test
-  public void test1Dimension() {
+  @Test public void test1Dimension() {
     Key source = Key.make("datakey");
     Key target = Key.make("datakey.kmeans");
 
@@ -34,8 +35,7 @@ public class KMeansTest extends TestUtil {
     }
   }
 
-  @Test
-  public void testGaussian() {
+  @Test public void testGaussian() {
     testGaussian(10000);
   }
 
@@ -56,7 +56,7 @@ public class KMeansTest extends TestUtil {
       ValueArray va = va_maker(source, (Object[]) array);
       Timer t = new Timer();
       KMeans.run(target, va, goals.length, 1e-6, cols);
-      Log.debug(Sys.KMEAN," testGaussian rows:" + rows + ", ms:" + t);
+      Log.debug(Sys.KMEAN, " testGaussian rows:" + rows + ", ms:" + t);
       KMeans.KMeansModel res = UKV.get(target);
       double[][] clusters = res.clusters();
 
@@ -79,26 +79,30 @@ public class KMeansTest extends TestUtil {
 
   public static double[][] gauss(int columns, int rows, double[][] goals) {
     // rows and cols are reversed on this one for va_maker
-    double[][] array = new double[columns][rows];
     Random rand = KMeans.RAND_SEED == 0 ? new Random() : new Random(KMeans.RAND_SEED);
 
     for( int goal = 0; goal < goals.length; goal++ )
       for( int c = 0; c < columns; c++ )
         goals[goal][c] = rand.nextDouble() * 100;
 
-    for( int r = 0; r < rows; r++ ) {
+    double[][] array = new double[columns][rows];
+    gauss(goals, array);
+    return array;
+  }
+
+  public static void gauss(double[][] goals, double[][] array) {
+    Random rand = KMeans.RAND_SEED == 0 ? new Random() : new Random(KMeans.RAND_SEED);
+
+    for( int r = 0; r < array[0].length; r++ ) {
       final int goal = rand.nextInt(goals.length);
-      for( int c = 0; c < columns; c++ )
+      for( int c = 0; c < array.length; c++ )
         array[c][r] = goals[goal][c] + rand.nextGaussian();
     }
-
-    return array;
   }
 
   static boolean match(double[] cluster, double[] goal) {
     for( int i = 0; i < cluster.length; i++ )
-      if( Math.abs(cluster[i] - goal[i]) > 1 )
-        return false;
+      if( Math.abs(cluster[i] - goal[i]) > 1 ) return false;
     return true;
   }
 
@@ -106,31 +110,29 @@ public class KMeansTest extends TestUtil {
     double sum = 0;
     for( int i = 0; i < cluster.length; i++ ) {
       double d = cluster[i] - goal[i];
-      sum += d*d;
+      sum += d * d;
     }
-    return Math.sqrt(sum/cluster.length);
+    return Math.sqrt(sum / cluster.length);
   }
 
-  @Test
-  public void testAirline() {
-    Key k1 = loadAndParseKey("h.hex","smalldata/airlines/allyears2k.zip");
+  @Test public void testAirline() {
+    Key k1 = loadAndParseKey("h.hex", "smalldata/airlines/allyears2k.zip");
     Key target = Key.make("air.kmeans");
     ValueArray va = UKV.get(k1);
     Timer t = new Timer();
     KMeans.run(target, va, 8, 1e-2, 0);
-    Log.debug(Sys.KMEAN,"ms= " + t);
+    Log.debug(Sys.KMEAN, "ms= " + t);
     KMeans.KMeansModel res = UKV.get(target);
     double[][] clusters = res.clusters();
     UKV.remove(k1);
     UKV.remove(target);
   }
 
-  @Test
-  public void testSphere() {
-    Key k1 = loadAndParseKey("syn_sphere3.hex","smalldata/syn_sphere3.csv");
-    Key target = Key.make(KMeans.KEY_PREFIX+"sphere");
+  @Test public void testSphere() {
+    Key k1 = loadAndParseKey("syn_sphere3.hex", "smalldata/syn_sphere3.csv");
+    Key target = Key.make(KMeans.KEY_PREFIX + "sphere");
     ValueArray va = UKV.get(k1);
-    KMeans.run(target, va, 3, 1e-2, 0,1,2);
+    KMeans.run(target, va, 3, 1e-2, 0, 1, 2);
     KMeans.KMeansModel res = UKV.get(target);
     double[][] clusters = res.clusters();
     UKV.remove(k1);
