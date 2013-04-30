@@ -13,6 +13,8 @@ import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 import water.*;
 import water.hdfs.HdfsLoader;
@@ -190,10 +192,10 @@ public class Hadoop {
     }
 
     public static void main(Config config, String[] args) throws Exception {
-      //   Logger.getRootLogger().setLevel(Level.ALL);
+      Logger.getRootLogger().setLevel(Level.ALL);
       System.setProperty("HADOOP_USER_NAME", config.user);
       Configuration conf = new Configuration();
-      conf.set("fs.default.name", config.name_server);
+      //conf.set("fs.default.name", config.name_server);
       conf.set("mapred.job.tracker", config.tracker);
       conf.set("mapreduce.framework.name", "classic");
       // conf.set("hadoop.job.ugi", "hduser,hduser");
@@ -203,6 +205,7 @@ public class Hadoop {
       conf.set("mapred.job.map.memory.mb", "4096");
       conf.set("mapred.job.reduce.memory.mb", "1024");
       conf.set("mapred.fairscheduler.locality.delay", "120000");
+      conf.set("fs.maprfs.impl", "com.mapr.fs.MapRFileSystem");
 
       String hosts = "";
       URI tracker = new URI(config.tracker);
