@@ -7,8 +7,6 @@ import hex.rf.Tree.StatType;
 import java.util.*;
 
 import water.*;
-import water.api.RequestArguments.Bool;
-import water.util.Log;
 import water.util.RString;
 
 import com.google.common.primitives.Ints;
@@ -67,13 +65,12 @@ public class RF extends Request {
       _sample._hideInQuery = true; _strataSamples._hideInQuery = true;
       switch (_samplingStrategy.value()) {
       case RANDOM                : _sample._hideInQuery = false; break;
-      //case STRATIFIED_DISTRIBUTED:
       case STRATIFIED_LOCAL      : _strataSamples._hideInQuery = false; break;
       }
     }
     if( arg == _ignore ) {
       int[] ii = _ignore.value();
-      if( ii != null && ii.length >= _dataKey.value()._cols.length-1 )
+      if( ii != null && ii.length >= _dataKey.value()._cols.length )
         throw new IllegalArgumentException("Cannot ignore all columns");
     }
   }
@@ -150,8 +147,8 @@ public class RF extends Request {
     }
   }
 
-  // By default ignore all constants columns and "bad" columns, i.e., columns with
-  // many NAs
+  // By default ignore all constants columns and warn about "bad" columns, i.e., columns with
+  // many NAs (>25% of NAs)
   class RFColumnSelect extends HexNonConstantColumnSelect {
 
     public RFColumnSelect(String name, H2OHexKey key, H2OHexKeyCol classCol) {
@@ -166,7 +163,7 @@ public class RF extends Request {
         if(shouldIgnore(i,va._cols[i]))
           res[selected++] = i;
         else if((1.0 - (double)va._cols[i]._n/va._numrows) >= _maxNAsRatio) {
-            res[selected++] = i;
+            //res[selected++] = i;
             int val = 0;
             if(_badColumns.get() != null) val = _badColumns.get();
             _badColumns.set(val+1);
@@ -178,6 +175,13 @@ public class RF extends Request {
     @Override protected int[] parse(String input) throws IllegalArgumentException {
       int[] result = super.parse(input);
       return Ints.concat(result, defaultValue());
+    }
+
+    @Override public String queryComment() {
+      TreeSet<String> ignoredCols = _constantColumns.get();
+      if(_badColumns.get() != null && _badColumns.get() > 0)
+        return "<div class='alert'><b> There are " + _badColumns.get() + " columns with more than " + _maxNAsRatio*100 + "% of NAs.<br/>\nIgnoring " + _constantColumns.get().size() + " constant columns</b>: " + ignoredCols.toString() +"</div>";
+      return super.queryComment();
     }
   }
 }
