@@ -804,7 +804,8 @@ class H2O(object):
                 verboseprint(msgUsed, urlUsed, "Response:", dump_json(r['response']))
             # hey, check the sandbox if we've been waiting a long time...rather than wait for timeout
             # to find the badness?
-            if ((count%15)==0):
+            # if ((count%15)==0):
+            if ((count%6)==0):
                 check_sandbox_for_errors()
 
             if (create_noise):
