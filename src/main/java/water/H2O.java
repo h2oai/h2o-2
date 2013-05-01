@@ -608,7 +608,7 @@ public final class H2O {
 
     // Start the TCPReceiverThread, to listen for TCP requests from other Cloud
     // Nodes. There should be only 1 of these, and it never shuts down.
-    new TCPReceiverThread().start();
+    (TCPReceiverThread.TCPTHR=new TCPReceiverThread()).start();
     water.api.RequestServer.start();
   }
 
