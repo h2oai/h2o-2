@@ -65,13 +65,19 @@ final class DataAdapter  {
   public long seed()          { return _seed; }
   public int columns()        { return _c.length;}
   public int classOf(int idx) { return _c[_c.length-1].get(idx); }
-  /** Transforms given binned index (short) from class column into a value from interval [0..N-1]
-   * corresponding to a particular predictor class */
-  public int unmapClass(int clazz) { Col c = _c[_c.length-1]; return (int) (c.raw(clazz) - c.min); }
   /**Returns true if the row has missing data. */
   public long dataId()        { return _dataId; }
   /** The number of possible prediction classes. */
   public int classes()        { return _numClasses; }
+  /** Transforms given binned index (short) from class column into a value from interval [0..N-1]
+   * corresponding to a particular predictor class */
+  public int unmapClass(int clazz) {
+    Col c = _c[_c.length-1];
+    // OK, this is not fully correct bad handle corner-cases like for example dataset uses classes only
+    // with 0 and 3. Our API reports that there are 4 classes but in fact there are only 2 classes.
+    if (clazz >= c.binned2raw.length) clazz = c.binned2raw.length - 1;
+    return (int) (c.raw(clazz) - c.min);
+  }
 
   /** Returns the number of bins, i.e. the number of distinct values in the column.  */
   public int columnArity(int col) { return _c[col].arity(); }
@@ -123,7 +129,6 @@ final class DataAdapter  {
     }
 
     boolean isFloat()   { return isFloat; }
-    boolean isClass()   { return isClass; }
     boolean isIgnored() { return ignored; }
     int arity()         { return ignored ? -1 : binned2raw.length; }
     String name()       { return name;        }

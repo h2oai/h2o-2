@@ -147,13 +147,12 @@ public class RF extends Request {
     }
   }
 
-  // By default ignore all constants columns and "bad" columns, i.e., columns with
+  // By default ignore all constants columns and warn about "bad" columns, i.e., columns with
   // many NAs (>25% of NAs)
   class RFColumnSelect extends HexNonConstantColumnSelect {
 
     public RFColumnSelect(String name, H2OHexKey key, H2OHexKeyCol classCol) {
       super(name, key, classCol);
-      _maxNAsRatio = 1/4.f;
     }
 
     @Override protected int[] defaultValue() {
@@ -164,7 +163,7 @@ public class RF extends Request {
         if(shouldIgnore(i,va._cols[i]))
           res[selected++] = i;
         else if((1.0 - (double)va._cols[i]._n/va._numrows) >= _maxNAsRatio) {
-            res[selected++] = i;
+            //res[selected++] = i;
             int val = 0;
             if(_badColumns.get() != null) val = _badColumns.get();
             _badColumns.set(val+1);
@@ -176,6 +175,13 @@ public class RF extends Request {
     @Override protected int[] parse(String input) throws IllegalArgumentException {
       int[] result = super.parse(input);
       return Ints.concat(result, defaultValue());
+    }
+
+    @Override public String queryComment() {
+      TreeSet<String> ignoredCols = _constantColumns.get();
+      if(_badColumns.get() != null && _badColumns.get() > 0)
+        return "<div class='alert'><b> There are " + _badColumns.get() + " columns with more than " + _maxNAsRatio*100 + "% of NAs.<br/>\nIgnoring " + _constantColumns.get().size() + " constant columns</b>: " + ignoredCols.toString() +"</div>";
+      return super.queryComment();
     }
   }
 }

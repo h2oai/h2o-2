@@ -57,7 +57,7 @@ public abstract class Sampling {
         }
         float randFloat = rand.nextFloat();
         if( randFloat < f ) {
-          if( j == sample.length ) sample = Arrays.copyOfRange(sample,0,(int)(sample.length*1.2));
+          if( j == sample.length ) sample = Arrays.copyOfRange(sample,0,(int)(1 + sample.length*1.2));
           sample[j++] = i;
         }
       }
