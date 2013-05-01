@@ -25,10 +25,10 @@ public class JStack extends Request {
     json.addProperty(TIME, DateFormat.getInstance().format(new Date()));
 
     JsonArray nodes = new JsonArray();
-    for (int i=0; i<collector.result.length; ++i) {
+    for (int i=0; i<collector._result.length; ++i) {
       JsonObject el = new JsonObject();
       el.addProperty(NODE, H2O.CLOUD._memary[i].toString());
-      el.addProperty(STACK_TRACES, collector.result[i]);
+      el.addProperty(STACK_TRACES, collector._result[i]);
       nodes.add(el);
     }
     json.add(NODES, nodes);
