@@ -142,6 +142,7 @@ public class Constants {
   public static final String SYSTEM_LOAD           = "system_load";
   public static final String TASK_KEY              = "task_key";
   public static final String TCPS_ACTIVE           = "tcps_active";
+  public static final String TCPS_DUTY             = "tcp_duty_cycle";
   public static final String TIME                  = "time";
   public static final String TOT_MEM               = "tot_mem" + Suffixes.BYTES;
   public static final String TREE_COUNT            = "number_built";
