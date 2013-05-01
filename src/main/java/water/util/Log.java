@@ -14,13 +14,13 @@ import water.util.Log.Tag.Sys;
  *
  *  There are three kinds of message:  INFO, WARN and ERRR, for general information,
  *  events that look wrong, and runtime exceptions.
- *  WARN messages and uncaught exceptions are printed on Standard output. Some INFO
- *  messages are also printed on standard output.  Many more messages are printed to the
- *  log file in the ice directory and to the K/V store.
+ *  WARN messages and uncaught exceptions are printed on Standard output. Some
+ *  INFO messages are also printed on standard output.  Many more messages are
+ *  printed to the log file in the ice directory and to the K/V store.
  *
- *  Messages can come from a number of subsystems, Sys.RANDF for instance denotes the
- *  Random forest implementation. Subsystem names are four letter mnemonics to keep formatting
- *  nicely even.
+ *  Messages can come from a number of subsystems, Sys.RANDF for instance
+ *  denotes the Random forest implementation. Subsystem names are five letter
+ *  mnemonics to keep formatting nicely even.
  *
  *  To print messages from a subsystem to the log file, set a property on the command line
  *     -Dlog.RANDF=true
@@ -30,12 +30,13 @@ import water.util.Log.Tag.Sys;
  *     Log.unsetFlag(Sys.RANDF);   // turn off
  *
  *
- *  OOME: when the VM is low on memory, OutOfMemoryError can be thrown in the logging framework
- *  while it is trying to print a message. In this case the first message that fails is recorded
- *  for later printout, and a number of messages can be discarded. The framework will attempt
- *  to print the recorded message later, and report the number of dropped messages, but this
- *  done in a best effort and lossy manner. Basically when an OOME occurs during logging,
- *  no guarantees are made about the messages.
+ *  OOME: when the VM is low on memory, OutOfMemoryError can be thrown in the
+ *  logging framework while it is trying to print a message. In this case the
+ *  first message that fails is recorded for later printout, and a number of
+ *  messages can be discarded. The framework will attempt to print the recorded
+ *  message later, and report the number of dropped messages, but this done in
+ *  a best effort and lossy manner. Basically when an OOME occurs during
+ *  logging, no guarantees are made about the messages.
  **/
 abstract public class Log {
 
@@ -44,7 +45,7 @@ abstract public class Log {
     /** Which subsystem of h2o? */
     public static enum Sys implements Tag {
       RANDF, GENLM, KMEAN, PARSE, STORE, WATER, HDFS_, HTTPD, CLEAN, CONFM, EXCEL, SCOREM;
-      int _level;
+      boolean _enable;
     }
 
     /** What kind of message? */
@@ -72,7 +73,6 @@ abstract public class Log {
   private static final String HOST_AND_PID = "" + fixedLength(HOST + " ", 13) + fixedLength(PID + " ", 6);
 
   /** Per subsystem debugging flags. */
-  private static final HashSet<Sys> flags = new HashSet<Sys>();
   static {
     setFlag(Sys.WATER);
     setFlag(Sys.RANDF);
@@ -84,18 +84,11 @@ abstract public class Log {
   }
 
   /** Check if a subsystem will print debug message to the LOG file */
-  public synchronized static boolean flag(Sys t) {
-    return flags.contains(t);
-  }
-
+  public static boolean flag(Sys t) { return t._enable; }
   /** Set the debug flag. */
-  public synchronized static void setFlag(Sys t) {
-    flags.add(t);
-  }
+  public static void setFlag(Sys t) { t._enable = true; }
   /** Unset the debug flag. */
-  public synchronized static void unsetFlag(Sys t) {
-      if (flags.contains(t) ) flags.remove(t);
-  }
+  public static void unsetFlag(Sys t) { t._enable = false; }
 
   /**
    * Events are created for all calls to the logging API.
@@ -149,14 +142,14 @@ abstract public class Log {
     }
 
     public String toString() {
-      StringBuffer buf = longHeader(new StringBuffer(120));
+      StringBuilder buf = longHeader(new StringBuilder(120));
       int headroom = buf.length();
       buf.append(body(headroom));
       return buf.toString();
     }
 
     public String toShortString() {
-      StringBuffer buf = shortHeader(new StringBuffer(120));
+      StringBuilder buf = shortHeader(new StringBuilder(120));
       int headroom = buf.length();
       buf.append(body(headroom));
       return buf.toString();
@@ -164,13 +157,21 @@ abstract public class Log {
 
     private String body(int headroom) {
       //if( body != null ) return body; // the different message have different padding ... can't quite cache.
-      StringBuffer buf = new StringBuffer(120);
+      StringBuilder buf = new StringBuilder(120);
       if (messages!=null) for( Object m : messages )  buf.append(m.toString());
       else if (message !=null ) buf.append(message.toString());
-      if( buf.indexOf(NL) != -1 ) {
+      // --- "\n" vs NL ---
+      // Embedded strings often use "\n" to denote a new-line.  This is either
+      // 1 or 2 chars ON OUTPUT depending Unix vs Windows, but always 1 char in
+      // the incoming string.  We search & split the incoming string based on
+      // the 1 character "\n", but we build result strings with NL (a String of
+      // length 1 or 2).  i.e.
+      // GOOD: String.indexOf("\n"); SB.append( NL )
+      // BAD : String.indexOf( NL ); SB.append("\n")
+      if( buf.indexOf("\n") != -1 ) {
         String s = buf.toString();
-        String[] lines = s.split(NL);
-        StringBuffer buf2 = new StringBuffer(2 * buf.length());
+        String[] lines = s.split("\n");
+        StringBuilder buf2 = new StringBuilder(2 * buf.length());
         buf2.append(lines[0]);
         for( int i = 1; i < lines.length; i++ ) {
           buf2.append(NL).append("+");
@@ -186,7 +187,7 @@ abstract public class Log {
         PrintWriter pwr = new PrintWriter(wr);
         ouch.printStackTrace(pwr);
         String mess = wr.toString();
-        String[] lines = mess.split(NL);
+        String[] lines = mess.split("\n");
         for( int i = 0; i < lines.length; i++ ) {
           buf.append("+");
           for( int j = 1; j < headroom; j++ )
@@ -198,7 +199,7 @@ abstract public class Log {
       return body = buf.toString();
     }
 
-    private StringBuffer longHeader(StringBuffer buf) {
+    private StringBuilder longHeader(StringBuilder buf) {
       buf.append(when.startAsString()).append(" ").append(HOST_AND_PID);
       if( thread == null ) thread = fixedLength(Thread.currentThread().getName() + " ", 10);
       buf.append(thread);
@@ -206,7 +207,7 @@ abstract public class Log {
       return buf;
     }
 
-    private StringBuffer shortHeader(StringBuffer buf) {
+    private StringBuilder shortHeader(StringBuilder buf) {
       buf.append(when.startAsShortString()).append(" ");
       if( thread == null ) thread = fixedLength(Thread.currentThread().getName() + " ", 8);
       buf.append(thread);
@@ -243,14 +244,14 @@ abstract public class Log {
       }
     }
   }
-  /** the atcual write code. */
+  /** the actual write code. */
   private static void write0(Event e, boolean printOnOut) {
     String s = e.toString();
     if( H2O.SELF != null && LOG_FILE == null ) LOG_FILE = new BufferedWriter(PersistIce.logFile());
     if( LOG_FILE != null ) {
       try {
         LOG_FILE.write(s, 0, s.length());
-        LOG_FILE.write(NL,0,1);
+        LOG_FILE.write(NL,0,NL.length());
         LOG_FILE.flush();
       } catch( IOException ioe ) {/* ignore log-write fails */
       }
@@ -272,7 +273,7 @@ abstract public class Log {
   /** Record an exception to the log file and store. */
   static public <T extends Throwable> T err(Sys t, String msg, T exception) {
     Event e =  Event.make(t, Kind.ERRR, exception, msg );
-    write(e,false);
+    write(e,true);
     return exception;
   }
   /** Record an exception to the log file and store. */
