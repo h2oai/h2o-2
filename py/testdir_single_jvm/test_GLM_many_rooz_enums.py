@@ -6,6 +6,8 @@ sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
 
+targetList = ['red', 'mail', 'black flag', 5, 1981, 'central park', 'good', 'liquor store rooftoop', 'facebook']
+
 lol = [
     ['red','orange','yellow','green','blue','indigo','violet'],
     ['male','female',''],
@@ -35,7 +37,12 @@ def random_enum(n):
         return str(random.randint(0,9))
     else:
         choiceList = lol[n]
-        return str(random.choice(choiceList))
+        r = str(random.choice(choiceList))
+        if r in targetList:
+            t = 1
+        else:
+            t = 0
+        return (t,r)
 
 def write_syn_dataset(csvPathname, rowCount, colCount=1, SEED='12345678', 
         colSepChar=",", rowSepChar="\n"):
@@ -46,8 +53,10 @@ def write_syn_dataset(csvPathname, rowCount, colCount=1, SEED='12345678',
         # essentially sampling with replacement
         rowData = []
         lenLol = len(lol)
+        targetSum = 0
         for col in range(colCount):
-            ri = random_enum(col % lenLol)
+            (t,ri) = random_enum(col % lenLol)
+            targetSum += t # sum up contributions to output choice
             # print ri
             # first two rows can't tolerate single/double quote randomly
             # keep trying until you get one with no single or double quote in the line
@@ -55,15 +64,16 @@ def write_syn_dataset(csvPathname, rowCount, colCount=1, SEED='12345678',
                 while True:
                     # can't have solely white space cols either in the first two rows
                     if "'" in ri or '"' in ri or whitespaceRegex.match(ri):
-                        ri = random_enum(col % lenLol)
+                        (t,ri) = random_enum(col % lenLol)
                     else:
                         break
 
             rowData.append(ri)
 
         # output column
-        ri = r1.randint(0,1)
-        rowData.append(ri)
+        avg = (targetSum+0.0)/colCount
+        # ri = r1.randint(0,1)
+        rowData.append(targetSum)
 
         # use the new Hive separator
         rowDataCsv = colSepChar.join(map(str,rowData)) + rowSepChar
@@ -181,15 +191,15 @@ class Basic(unittest.TestCase):
             y = colCount
             x = range(colCount)
             x = ",".join(map(str,x))
-            kwargs = {'x': x, 'y': y, 'max_iter': 1, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5, 
-                'case_mode': '=', 'case': 0}
+            # kwargs = {'x': x, 'y': y, 'max_iter': 6, 'n_folds': 1, 'alpha': 0.1, 'lambda': 1e-5, 'family': 'poisson', 'case_mode': '=', 'case': 0}
+            kwargs = {'y': y, 'max_iter': 6, 'n_folds': 1, 'alpha': 0.1, 'lambda': 1e-5, 'family': 'poisson', 'case_mode': '=', 'case': 0}
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
-            if not h2o.browse_disable:
-                h2b.browseJsonHistoryAsUrlLastMatch("GLM.json")
+            # if not h2o.browse_disable:
+            #     h2b.browseJsonHistoryAsUrlLastMatch("GLM.json")
             #     time.sleep(5)
 
 if __name__ == '__main__':
