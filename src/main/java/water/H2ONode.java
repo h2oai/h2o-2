@@ -150,7 +150,7 @@ public class H2ONode extends Iced implements Comparable {
           msg +="\n\t" + ni;
         }
         msg +="\nUsing " + matchingIfs.get(0) + " for UDP broadcast";
-        Log.err(msg);
+        Log.warn(msg);
         H2O.CLOUD_MULTICAST_IF = matchingIfs.get(0);
       }
     } catch( SocketException e ) {

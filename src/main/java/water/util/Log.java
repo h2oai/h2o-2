@@ -2,21 +2,40 @@ package water.util;
 
 import java.io.*;
 import java.lang.management.ManagementFactory;
+import java.util.HashSet;
 import java.util.Locale;
 
 import water.*;
 import water.util.Log.Tag.Kind;
 import water.util.Log.Tag.Sys;
 
-/** Log for H2O. This class should be loaded early.
+/** Log for H2O. This class should be loaded before we start to print as it wraps around
+ * System.{out,err}.
  *
  *  There are three kinds of message:  INFO, WARN and ERRR, for general information,
  *  events that look wrong, and runtime exceptions.
+ *  WARN messages and uncaught exceptions are printed on Standard output. Some INFO
+ *  messages are also printed on standard output.  Many more messages are printed to the
+ *  log file in the ice directory and to the K/V store.
  *
- *  Messages can come from a number of subsystems.
+ *  Messages can come from a number of subsystems, Sys.RANDF for instance denotes the
+ *  Random forest implementation. Subsystem names are four letter mnemonics to keep formatting
+ *  nicely even.
  *
- *  There is a global debug level and a per subsystem debug level. They can be queried
- *  and set by the level()/setLevel() methods.
+ *  To print messages from a subsystem to the log file, set a property on the command line
+ *     -Dlog.RANDF=true
+ *     -Dlog.RANDF=false    // turn off
+ *  or call the API function
+ *     Log.setFlag(Sys.RANDF);
+ *     Log.unsetFlag(Sys.RANDF);   // turn off
+ *
+ *
+ *  OOME: when the VM is low on memory, OutOfMemoryError can be thrown in the logging framework
+ *  while it is trying to print a message. In this case the first message that fails is recorded
+ *  for later printout, and a number of messages can be discarded. The framework will attempt
+ *  to print the recorded message later, and report the number of dropped messages, but this
+ *  done in a best effort and lossy manner. Basically when an OOME occurs during logging,
+ *  no guarantees are made about the messages.
  **/
 abstract public class Log {
 
@@ -35,9 +54,7 @@ abstract public class Log {
   }
 
   private static final String NL = System.getProperty("line.separator");
-  private static final PrintStream OUT;
   static {
-    OUT = System.out;
     System.setOut(new Wrapper(System.out));
     System.setErr(new Wrapper(System.err));
   }
@@ -53,22 +70,35 @@ abstract public class Log {
   public static final long PID = getPid();
   /** Hostname and process ID. */
   private static final String HOST_AND_PID = "" + fixedLength(HOST + " ", 13) + fixedLength(PID + " ", 6);
-  /** Debug level, higher means more output. */
-  private static int LEVEL = Integer.getInteger("h2o.log.debug.level", 1);
 
-  /** Return the current debugging level. It is OK for applications to change it. */
-  public static int level() { return LEVEL; }
-  /** Set the debug level. */
-  public static void setLevel(int i) { LEVEL = i; }
+  /** Per subsystem debugging flags. */
+  private static final HashSet<Sys> flags = new HashSet<Sys>();
+  static {
+    setFlag(Sys.WATER);
+    setFlag(Sys.RANDF);
+    for(Sys s : Sys.values()) {
+      String str = System.getProperty("log."+s);
+      if (str == null) continue;
+      if (str.equals("false")) unsetFlag(s); else setFlag(s);
+    }
+  }
 
-  /** Get the debug level for the subsystem, -1 if not set. */
-  public static int level(Sys t) { return t._level; }
-  /** We can set the debug level on a per-subsystem granularity. Returns -1 if not set. */
-  public static void setLevel(Sys t, int i) { t._level = i; }
+  /** Check if a subsystem will print debug message to the LOG file */
+  public synchronized static boolean flag(Sys t) {
+    return flags.contains(t);
+  }
+
+  /** Set the debug flag. */
+  public synchronized static void setFlag(Sys t) {
+    flags.add(t);
+  }
+  /** Unset the debug flag. */
+  public synchronized static void unsetFlag(Sys t) {
+      if (flags.contains(t) ) flags.remove(t);
+  }
 
   /**
-   * Events are created for all calls to the logging API. In the current implementation we don't do
-   * anything with them but this may change.
+   * Events are created for all calls to the logging API.
    **/
   static class Event {
     Kind kind;
@@ -80,7 +110,7 @@ abstract public class Log {
     Object message;
     String thread;
     String body;
-
+    /**True if we have yet finished printing this event.*/
     volatile boolean printMe;
 
     private volatile static Timer lastGoodTimer = new Timer();
@@ -112,6 +142,7 @@ abstract public class Log {
       this.kind = kind;
       this.ouch = ouch;
       this.messages = messages;
+      this.message = message;
       this.sys = sys;
       this.when = t;
       this.printMe = true;
@@ -197,8 +228,10 @@ abstract public class Log {
             Event.lastEvent = new Event();
           }
           if (Event.missed > 0) {
-            Log.debug("LOGGING MISSED ", Event.missed, " EVENTS");
-            Event.missed=0;
+            if (Event.lastEvent.printMe==false) {
+              Event.lastEvent.init(Sys.WATER, Kind.WARN, null, null, "Logging framework dropped a message", Event.lastGoodTimer);
+              Event.missed--;
+            }
           }
         }
       }
@@ -210,6 +243,7 @@ abstract public class Log {
       }
     }
   }
+  /** the atcual write code. */
   private static void write0(Event e, boolean printOnOut) {
     String s = e.toString();
     if( H2O.SELF != null && LOG_FILE == null ) LOG_FILE = new BufferedWriter(PersistIce.logFile());
@@ -225,7 +259,7 @@ abstract public class Log {
     if(printOnOut) unwrap(System.out,e.toShortString());
     e.printMe = false;
   }
-
+  /** We also log events to the store. */
   private static void logToKV(final String date, final String thr, final String msg) {
     final long pid = PID; // Run locally
     final H2ONode h2o = H2O.SELF; // Run locally
@@ -235,89 +269,65 @@ abstract public class Log {
       }
     }.fork(LOG_KEY);
   }
-
+  /** Record an exception to the log file and store. */
   static public <T extends Throwable> T err(Sys t, String msg, T exception) {
     Event e =  Event.make(t, Kind.ERRR, exception, msg );
     write(e,false);
     return exception;
   }
-
+  /** Record an exception to the log file and store. */
   static public <T extends Throwable> T err(String msg, T exception) {
     return err(Sys.WATER, msg, exception);
   }
-
+  /** Record an exception to the log file and store. */
   static public <T extends Throwable> T err(Sys t, T exception) {
     return err(t, "", exception);
   }
-
+  /** Record an exception to the log file and store. */
   static public <T extends Throwable> T err(T exception) {
     return err(Sys.WATER, "", exception);
   }
-
+  /** Record an exception to the log file and store and return a new
+   * RuntimeException that wraps around the exception. */
   static public RuntimeException errRTExcept(Throwable exception) {
     return new RuntimeException(err(Sys.WATER, "", exception));
   }
-
-  static public <T extends Throwable> T err(String m) {
-    return err(Sys.WATER, m, null);
-  }
-
+  /** Log a warning to standard out, the log file and the store. */
   static public <T extends Throwable> T warn(Sys t, String msg, T exception) {
     Event e =  Event.make(t, Kind.WARN, exception,  msg);
     write(e,true);
     return exception;
   }
-
+  /** Log a warning to standard out, the log file and the store. */
   static public Throwable warn(Sys t, String msg) {
     return warn(t, msg, null);
   }
-
+  /** Log a warning to standard out, the log file and the store. */
   static public Throwable warn(String msg) {
     return warn(Sys.WATER, msg, null);
   }
-
+  /** Log an information message to standard out, the log file and the store. */
   static public void info(Sys t, Object... objects) {
     Event e =  Event.make(t, Kind.INFO, null, objects);
     write(e,true);
   }
-
+  /** Log an information message to standard out, the log file and the store. */
   static public void info(Object... objects) {
     info(Sys.WATER, objects);
   }
-
-  static public void debug( Sys t, Object... objects) {
-    Event e =  Event.make(t, Kind.INFO, null, objects);
-    write(e,false);
-  }
-
+  /** Log a debug message to the log file and the store if the subsystem's flag is set. */
   static public void debug(  Object... objects) {
+    if (flag(Sys.WATER)==false) return;
     Event e =  Event.make(Sys.WATER, Kind.INFO, null, objects);
     write(e,false);
   }
-
-
-  static public void debug1(Sys t, Object... objects) {
-    if( level() >= 1 || level(t) >= 1 ) return;
+  /** Log a debug message to the log file and the store if the subsystem's flag is set. */
+  static public void debug(Sys t, Object... objects) {
+    if(  flag(t) == false ) return;
     Event e =  Event.make( t, Kind.INFO, null, objects);
     write(e,false);
   }
-
-  static public void debug2( Sys t, Object... objects) {
-    if( level() >= 2 || level(t) >= 2 ) return;
-    Event e =  Event.make( t, Kind.INFO, null, objects);
-    write(e,false);
-  }
-
-  static public void debug2(Object... objects) {
-    debug(Sys.WATER, objects);
-  }
-
-  static public void debug3( Sys t, Object... objects) {
-    if( level() >= 3 || level(t) >= 3 ) return;
-    Event e =  Event.make( t, Kind.INFO, null, objects);
-    write(e,false);
-  }
-
+  /** Log a debug message to the log file and the store if the subsystem's flag is set. */
   private static String fixedLength(String s, int length) {
     String r = padRight(s, length);
     if( r.length() > length ) {
@@ -361,6 +371,7 @@ abstract public class Log {
   /** No op. */
   public static void initHeaders() {}
 
+  /** Print a message to the stream without the logging information. */
   public static void unwrap(PrintStream stream, String s) {
     if( stream instanceof Wrapper ) ((Wrapper) stream).printlnParent(s);
     else stream.println(s);
@@ -441,9 +452,14 @@ abstract public class Log {
       unwrap(System.out,"hi");
       unwrap(System.err,"hi");
 
-      Log.info("ho",new Object(){
+      Log.info("ho ",new Object(){
         int i;
         public String toString() { if (i++ ==0) throw new OutOfMemoryError(); else return super.toString(); } } );
+      Log.info("ha ",new Object(){
+        int i;
+        public String toString() { if (i++ ==0) throw new OutOfMemoryError(); else return super.toString(); } } );
+      Log.info("hi");
+      Log.info("hi");
       Log.info("hi");
 
   }
