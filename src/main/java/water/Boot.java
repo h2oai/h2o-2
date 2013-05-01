@@ -33,11 +33,8 @@ public class Boot extends ClassLoader {
   private Weaver _weaver;
 
   static {
-    try {
-      _init = new Boot();
-    } catch( Exception e ) {
-      throw  Log.errRTExcept(e);
-    }
+    try { _init = new Boot(); }
+    catch( Exception e ) { throw new RuntimeException(e); } // Do not attempt logging: no boot-loader
   }
 
   public boolean fromJar() { return _h2oJar != null; }
@@ -264,6 +261,21 @@ public class Boot extends ClassLoader {
         findClasses(file, names);
       else if( file.getPath().endsWith(".class") )
         names.add(file.getPath().substring(CLASSES.length() + 1));
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Some global static variables used to pass state between System threads and
+  // H2O threads, such as the GC call-back thread and the MemoryManager threads.
+  static public volatile long HEAP_USED_AT_LAST_GC;
+  static public volatile long TIME_AT_LAST_GC=System.currentTimeMillis();
+  static private final Object _store_cleaner_lock = new Object();
+  static public void kick_store_cleaner() {
+    synchronized(_store_cleaner_lock) { _store_cleaner_lock.notifyAll(); }
+  }
+  static public void block_store_cleaner() {
+    synchronized( _store_cleaner_lock ) {
+      try { _store_cleaner_lock.wait(5000); } catch (InterruptedException ie) { }
     }
   }
 }

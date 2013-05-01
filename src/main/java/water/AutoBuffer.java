@@ -673,7 +673,7 @@ public final class AutoBuffer {
 
   public short[] getA2( ) {
     int len = get4(); if( len == -1 ) return null;
-    short[] buf = new short[len];
+    short[] buf = MemoryManager.malloc2(len);
     int sofar = 0;
     while( sofar < buf.length ) {
       ShortBuffer as = _bb.asShortBuffer();
@@ -688,7 +688,7 @@ public final class AutoBuffer {
 
   public int[] getA4( ) {
     int len = get4(); if( len == -1 ) return null;
-    int[] buf = new int[len];
+    int[] buf = MemoryManager.malloc4(len);
     int sofar = 0;
     while( sofar < buf.length ) {
       IntBuffer as = _bb.asIntBuffer();
@@ -702,7 +702,7 @@ public final class AutoBuffer {
   }
   public float[] getA4f( ) {
     int len = get4(); if( len == -1 ) return null;
-    float[] buf = new float[len];
+    float[] buf = MemoryManager.malloc4f(len);
     int sofar = 0;
     while( sofar < buf.length ) {
       FloatBuffer as = _bb.asFloatBuffer();
@@ -716,7 +716,7 @@ public final class AutoBuffer {
   }
   public long[] getA8( ) {
     int len = get4(); if( len == -1 ) return null;
-    long[] buf = new long[len];
+    long[] buf = MemoryManager.malloc8(len);
     int sofar = 0;
     while( sofar < buf.length ) {
       LongBuffer as = _bb.asLongBuffer();
@@ -730,7 +730,7 @@ public final class AutoBuffer {
   }
   public double[] getA8d( ) {
     int len = get4(); if( len == -1 ) return null;
-    double[] buf = new double[len];
+    double[] buf = MemoryManager.malloc8d(len);
     int sofar = 0;
     while( sofar < len ) {
       DoubleBuffer as = _bb.asDoubleBuffer();
