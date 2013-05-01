@@ -42,8 +42,12 @@ public class TestUtil {
 
   // Stall test until we see at least X members of the Cloud
   public static void stall_till_cloudsize(int x) {
+    stall_till_cloudsize(x, 10000);
+  }
+
+  public static void stall_till_cloudsize(int x, long ms) {
     long start = System.currentTimeMillis();
-    while( System.currentTimeMillis() - start < 10000 ) {
+    while( System.currentTimeMillis() - start < ms ) {
       if( H2O.CLOUD.size() >= x )
         break;
       try { Thread.sleep(100); } catch( InterruptedException ie ) { }

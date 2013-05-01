@@ -12,15 +12,9 @@ import com.google.gson.JsonObject;
 public class KMeansApply extends Request {
   protected final H2OKMeansModelKey _modelKey = new H2OKMeansModelKey(MODEL_KEY, true);
   protected final H2OHexKey _dataKey = new H2OHexKey(DATA_KEY);
-  protected final H2OKey _dest;
+  protected final H2OKey _dest = new H2OKey(DEST_KEY, true);;
 
   public KMeansApply() {
-    _modelKey.refreshOnChange();
-
-    if( _modelKey.value() != null && _dataKey.value() != null )
-      _dest = new H2OKey(DEST_KEY, _modelKey.value()._selfKey.toString() + " on " + _dataKey.value()._key);
-    else
-      _dest = new H2OKey(DEST_KEY, true);
   }
 
   @Override protected void queryArgumentValueSet(water.api.RequestArguments.Argument arg, java.util.Properties inputArgs) {

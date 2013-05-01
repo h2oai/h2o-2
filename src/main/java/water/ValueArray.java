@@ -140,11 +140,15 @@ public class ValueArray extends Iced implements Cloneable {
     if( (long)(int)chunknum!=chunknum ) throw H2O.unimpl(); // more than 2^31 chunks?
     if( _rpc != null ) return (int)(_rpc[(int)chunknum+1]-_rpc[(int)chunknum]);
     int rpc = (int)(CHUNK_SZ/_rowsize);
-    long chunks = Math.max(1,_numrows/rpc);
+    return rpc(chunknum, rpc, _numrows);
+  }
+
+  public static int rpc(long chunknum, int rpc, long numrows) {
+    long chunks = Math.max(1,numrows/rpc);
     assert chunknum < chunks;
     if( chunknum < chunks-1 )   // Not last chunk?
       return rpc;               // Rows per chunk
-    return (int)(_numrows - (chunks-1)*rpc);
+    return (int)(numrows - (chunks-1)*rpc);
   }
 
   /** Row number at the start of this chunk */
@@ -253,7 +257,7 @@ public class ValueArray extends Iced implements Cloneable {
     return datad(getChunk(chknum),rowInChunk(chknum,rownum),colnum);
   }
 
-  // This is a version where the colnum data is not yet pulled out.
+  // This is a version where the column data is not yet pulled out.
   public double datad(AutoBuffer ab, int row_in_chunk, int colnum) {
     return datad(ab,row_in_chunk,_cols[colnum]);
   }

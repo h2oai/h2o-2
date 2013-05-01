@@ -195,7 +195,7 @@ public abstract class KMeans {
           kms.invoke(ary._key);
 
           Column c = new Column();
-          c._name = Constants.CLASS;
+          c._name = Constants.RESPONSE;
           c._size = ROW_SIZE;
           c._scale = 1;
           c._min = Double.NaN;
@@ -232,9 +232,9 @@ public abstract class KMeans {
         long startRow = va.startRow(ValueArray.getChunkIndex(key));
         int rows = va.rpc(ValueArray.getChunkIndex(key));
         int rpc = (int) (ValueArray.CHUNK_SZ / ROW_SIZE);
-        long chknum = ValueArray.chknum(startRow, va.numRows(), ROW_SIZE);
-        long lastChk = chknum;
-        long lastRow = startRow;
+        long chunk = ValueArray.chknum(startRow, va.numRows(), ROW_SIZE);
+        long updatedChk = chunk;
+        long updatedRow = startRow;
         double[] values = new double[_cols.length - 1];
         ClusterDist cd = new ClusterDist();
         int[] clusters = new int[rows];
@@ -242,20 +242,16 @@ public abstract class KMeans {
         for( int row = 0; row < rows; row++ ) {
           datad(va, bits, row, _cols, values);
           closest(_clusters, values, cd);
-          chknum = ValueArray.chknum(startRow + row, va.numRows(), ROW_SIZE);
-          if( chknum != lastChk ) {
-            int offset = (int) (lastRow - (rpc * chknum));
-            updateClusters(clusters, offset, count, ValueArray.getChunkKey(chknum, _job.dest()));
-            lastChk = chknum;
-            lastRow = startRow + row;
+          chunk = ValueArray.chknum(startRow + row, va.numRows(), ROW_SIZE);
+          if( chunk != updatedChk ) {
+            updateClusters(clusters, count, chunk, va.numRows(), rpc, updatedRow);
+            updatedChk = chunk;
+            updatedRow = startRow + row;
             count = 0;
           }
           clusters[count++] = cd._cluster;
         }
-        if( count > 0 ) {
-          int offset = (int) (lastRow - (rpc * chknum));
-          updateClusters(clusters, offset, count, ValueArray.getChunkKey(chknum, _job.dest()));
-        }
+        if( count > 0 ) updateClusters(clusters, count, chunk, va.numRows(), rpc, updatedRow);
         _job.updateProgress(1);
       }
       _job = null;
@@ -265,22 +261,29 @@ public abstract class KMeans {
     }
 
     @Override public void reduce(DRemoteTask rt) {}
-  }
 
-  private static void updateClusters(int[] clusters, final int offset, int count, final Key chunkKey) {
-    final int[] message = new int[count];
-    System.arraycopy(clusters, 0, message, 0, message.length);
-    new Atomic() {
-      @Override public Value atomic(Value val) {
-        byte[] data;
-        if( val == null ) data = MemoryManager.malloc1((int) ValueArray.CHUNK_SZ);
-        else data = val.memOrLoad();
-        AutoBuffer b = new AutoBuffer(data);
-        for( int i = 0; i < message.length; i++ )
-          b.put4(offset + i, message[i]);
-        return new Value(chunkKey, val._max, b.buf(), (short) val.type(), val._persist);
+    private void updateClusters(int[] clusters, int count, long chunk, long numrows, int rpc, long updatedRow) {
+      final int offset = (int) (updatedRow - (rpc * chunk));
+      final Key chunkKey = ValueArray.getChunkKey(chunk, _job.dest());
+      final int[] message;
+      if( count == clusters.length ) message = clusters;
+      else {
+        message = new int[count];
+        System.arraycopy(clusters, 0, message, 0, message.length);
       }
-    }.invoke(chunkKey);
+      final int rows = ValueArray.rpc(chunk, rpc, numrows);
+      new Atomic() {
+        @Override public Value atomic(Value val) {
+          assert val == null || val._key.equals(chunkKey);
+          AutoBuffer b = new AutoBuffer(rows * ROW_SIZE);
+          if( val != null ) b._bb.put(val.memOrLoad());
+          for( int i = 0; i < message.length; i++ )
+            b.put4((offset + i) * 4, message[i]);
+          b.position(b.limit());
+          return new Value(chunkKey, b.buf());
+        }
+      }.invoke(chunkKey);
+    }
   }
 
   // Return a row of normalized values.  If missing, use the mean (which we
@@ -371,7 +374,9 @@ public abstract class KMeans {
       for( int cluster = 0; cluster < clusters.length; cluster++ ) {
         for( int column = 0; column < cols.length - 1; column++ ) {
           double value = task._sums[cluster][column] / task._counts[cluster];
-          if( Math.abs(value - clusters[cluster][column]) > epsilon ) moved = true;
+          if( Math.abs(value - clusters[cluster][column]) > epsilon ) {
+            moved = true;
+          }
           clusters[cluster][column] = value;
         }
       }
