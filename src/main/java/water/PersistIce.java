@@ -234,7 +234,7 @@ public abstract class PersistIce {
     }
     try {
       byte[] m = v.memOrLoad(); // we are not single threaded anymore
-      assert m != null && m.length == v._max; // Assert not saving partial files
+      assert m != null && m.length == v._max : " "+v._key+" "+m; // Assert not saving partial files
       new AutoBuffer(s.getChannel(),false,Value.ICE).putA1(m,m.length).close();
       v.setdsk();             // Set as write-complete to disk
     } finally {
