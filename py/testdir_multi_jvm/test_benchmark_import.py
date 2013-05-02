@@ -56,7 +56,7 @@ class Basic(unittest.TestCase):
                 # ("*10[0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 1800), 
                 # ("*1[0-1][0-9].dat.gz", "file_20_2jvm.dat.gz", 20 * avgMichalSize, 1800), 
                 # ("*1[0-4][0-9].dat.gz", "file_50_2jvm.dat.gz", 50 * avgMichalSize, 1800), 
-                ("*1[0-9][0-9].dat.gz", "file_100_2jvm.dat.gz", 100 * avgMichalSize, 1800), 
+                ("*10[0-9].dat.gz", "file_10_2jvm.dat.gz", 10 * avgMichalSize, 1800), 
                 # ("*1[0-4][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize, 1800), 
                 # ("*1[0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 1800), 
             ]
@@ -141,7 +141,7 @@ class Basic(unittest.TestCase):
         trialMax = 1
         # rebuild the cloud for each file
         base_port = 54321
-        tryHeap = 10
+        tryHeap = 4
         # can fire a parse off and go wait on the jobs queue (inspect afterwards is enough?)
         DO_GLM = False
         noPoll = False
@@ -152,16 +152,17 @@ class Basic(unittest.TestCase):
         retryDelaySecs = 10
 
         jea = '-XX:MaxDirectMemorySize=512m -XX:+PrintGCDetails' + ' -Dh2o.find-ByteBuffer-leaks'
+        jea = '-XX:MaxDirectMemorySize=512m -XX:+PrintGCDetails'
 
         for i,(csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
             localhost = h2o.decide_if_localhost()
             if (localhost):
-                h2o.build_cloud(1,java_heap_GB=tryHeap, base_port=base_port,
-                    enable_benchmark_log=True, java_extra_args=jea)
+                h2o.build_cloud(2,java_heap_GB=tryHeap, base_port=base_port,
+                    enable_benchmark_log=True)
 
             else:
                 h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap, base_port=base_port, 
-                    enable_benchmark_log=True, java_extra_args=jea)
+                    enable_benchmark_log=True)
 
             # pop open a browser on the cloud
             ### h2b.browseTheCloud()

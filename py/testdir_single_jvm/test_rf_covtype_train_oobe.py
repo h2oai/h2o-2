@@ -12,17 +12,13 @@ paramDict = {
     'response_variable': 54,
     'class_weight': None,
     'ntree': 10,
-    # 'ntree': 200,
     'model_key': 'model_keyA',
     'out_of_bag_error_estimate': 1,
     'stat_type': 'ENTROPY',
     'depth': 2147483647, 
-    # 'bin_limit': 10000,
     'bin_limit': 10000,
     'parallel': 1,
-    # FIX! column numbers not supported
     'ignore': "1,2,6,7,8",
-    # 'ignore': "A2,A3,A7,A8,A9",
     'sample': 66,
     ## 'seed': 3,
     ## 'features': 30,
@@ -74,6 +70,15 @@ class Basic(unittest.TestCase):
         # use 10 if 0 just to see (we copied 10 to 0 above)
         rowsForPct[0] = rowsForPct[10]
 
+        # this was with 10 trees
+        # expectTrainPctRightList = [0, 85.27, 88.45, 89.99, 91.11, 91.96, 92.51, 93.03, 93.45, 93.78]
+        # expectScorePctRightList = [0, 89.10, 91,90, 93.26, 94.25, 94.74, 95.10, 95.42, 95.72, 95.92]
+
+        # 0 isn't used
+        expectTrainPctRightList = [0, 85.16, 88.45, 90.24, 91.27, 92.03, 92.64, 93.11, 93.48, 93.79]
+        expectScorePctRightList = [0, 88.81, 91.72, 93.06, 94.02, 94.52, 95.09, 95.41, 95.77, 95.78]
+
+
         print "Creating the key of the last 10% data, for scoring"
         dataKeyTest = "rTest"
         # start at 90% rows + 1
@@ -81,7 +86,11 @@ class Basic(unittest.TestCase):
         execExpr = dataKeyTest + " = slice(" + key2 + "," + str(rowsForPct[9]+1) + ")"
         h2o_exec.exec_expr(None, execExpr, resultKey=dataKeyTest, timeoutSecs=10)
 
-        for trial in range(10):
+        # keep the 0 entry empty
+        actualTrainPctRightList = [0]
+        actualScorePctRightList = [0]
+        
+        for trial in range(1,10):
             # always slice from the beginning
             rowsToUse = rowsForPct[trial%10] 
             resultKey = "r" + str(trial)
@@ -103,10 +112,12 @@ class Basic(unittest.TestCase):
             print "RF end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 
-
-            classification_error = rfv['confusion_matrix']['classification_error']
-            self.assertGreater(classification_error, 0.01, 
-                "train.csv should have out of bag error estimate greater than 0.01")
+            oobeTrainPctRight = 100 * (1.0 - rfv['confusion_matrix']['classification_error'])
+            self.assertAlmostEqual(oobeTrainPctRight, expectTrainPctRightList[trial],
+                msg="OOBE: pct. right for %s pct. training not close enough %6.2f %6.2f"% \
+                    ((trial*10), oobeTrainPctRight, expectTrainPctRightList[trial]), 
+                delta=0.2)
+            actualTrainPctRightList.append(oobeTrainPctRight)
 
             print "Now score on the last 10%"
             # pop the stuff from kwargs that were passing as params
@@ -133,10 +144,31 @@ class Basic(unittest.TestCase):
             kwargs['no_confusion_matrix'] = 0
             # do full scoring
             kwargs['out_of_bag_error_estimate'] = 0
-            h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
+            rfv = h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
 
+            fullScorePctRight = 100 * (1.0 - rfv['confusion_matrix']['classification_error'])
+            self.assertAlmostEqual(fullScorePctRight,expectScorePctRightList[trial],
+                msg="Full: pct. right for scoring after %s pct. training not close enough %6.2f %6.2f"% \
+                    ((trial*10), fullScorePctRight, expectScorePctRightList[trial]), 
+                delta=0.2)
+            actualScorePctRightList.append(fullScorePctRight)
+
             print "Trial #", trial, "completed", "using %6.2f" % (rowsToUse*100.0/num_rows), "pct. of all rows"
+
+        actualDelta = [abs(a-b) for a,b in zip(expectTrainPctRightList, actualTrainPctRightList)]
+        niceFp = ["{0:0.2f}".format(i) for i in actualTrainPctRightList]
+        print "maybe should update with actual. Remove single quotes"  
+        print"expectTrainPctRightList =", niceFp
+        niceFp = ["{0:0.2f}".format(i) for i in actualDelta]
+        print "actualDelta =", niceFp
+
+        actualDelta = [abs(a-b) for a,b in zip(expectScorePctRightList, actualScorePctRightList)]
+        niceFp = ["{0:0.2f}".format(i) for i in actualScorePctRightList]
+        print "maybe should update with actual. Remove single quotes"  
+        print "expectScorePctRightList =", niceFp
+        niceFp = ["{0:0.2f}".format(i) for i in actualDelta]
+        print "actualDelta =", niceFp
 
 if __name__ == '__main__':
     h2o.unit_main()
