@@ -111,7 +111,7 @@ public abstract class DRF {
       // Build data adapter for this node.
       Timer t_extract = new Timer();
       DataAdapter dapt = DABuilder.create(this).build(_keys);
-      Log.debug2(Sys.RANDF,"Data adapter built in " + t_extract );
+      Log.debug(Sys.RANDF,"Data adapter built in " + t_extract );
       // Prepare data and compute missing parameters.
       Data localData        = Data.make(dapt);
       int numSplitFeatures  = howManySplitFeatures(localData);

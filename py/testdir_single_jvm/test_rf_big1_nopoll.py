@@ -1,5 +1,6 @@
-import os, json, unittest, time, shutil, sys
+import os, json, unittest, time, shutil, sys, random
 sys.path.extend(['.','..','py'])
+
 
 import h2o, h2o_cmd, h2o_rf, h2o_hosts
 import h2o_browse as h2b
@@ -33,12 +34,13 @@ class Basic(unittest.TestCase):
         rfViewInitial = []
         rfView = {}
         # dispatch multiple jobs back to back
-        for jobDispatch in range(3):
+        for jobDispatch in range(25):
             start = time.time()
             kwargs = {}
             model_key = 'RF_model' + str(jobDispatch)
             # FIX! what model keys do these get?
-            h2o_cmd.runRFOnly(parseKey=parseKey, model_key=model_key, timeoutSecs=300, noPoll=True, **kwargs)
+            randomNode = h2o.nodes[random.randint(0,len(h2o.nodes)-1)]
+            h2o_cmd.runRFOnly(node=randomNode, parseKey=parseKey, model_key=model_key, timeoutSecs=300, noPoll=True, **kwargs)
 
             print "rfView:", h2o.dump_json(rfView)
             # FIX! are these already in there?
@@ -48,7 +50,7 @@ class Basic(unittest.TestCase):
             print "rf job dispatch end on ", csvPathname, 'took', time.time() - start, 'seconds'
             print "\njobDispatch #", jobDispatch
 
-        h2o_jobs.pollWaitJobs(pattern='RF_model', timeoutSecs=30, pollTimeoutSecs=120, retryDelaySecs=5)
+        h2o_jobs.pollWaitJobs(pattern='RF_model', timeoutSecs=180, pollTimeoutSecs=120, retryDelaySecs=5)
 
         # we saved the initial response?
         # if we do another poll they should be done now, and better to get it that 

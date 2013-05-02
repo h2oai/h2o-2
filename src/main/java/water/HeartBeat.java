@@ -47,4 +47,5 @@ public class HeartBeat extends Iced {
   public char _fjthrds_lo;      // Number of threads (not all are runnable)
   public char _fjqueue_lo;      // Number of elements in FJ work queue
   public char _tcps_active;     // Threads trying do a TCP send
+  public byte _tcps_duty;       // Duty check of TCP receiver thread (from 0 to 100%)
 }

@@ -164,7 +164,7 @@ public abstract class PersistIce {
         case 'q':  b = '"' ; break;
         case 's':  b = '/' ; break;
         case 'z':  b = '\0'; break;
-        default:   Log.err("Invalid format of filename " + s + " at index " + i);
+        default:   Log.warn("Invalid format of filename " + s + " at index " + i);
         }
       }
       if( j>=kb.length ) kb = Arrays.copyOf(kb,Math.max(2,j*2));

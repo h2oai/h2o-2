@@ -39,10 +39,10 @@ public class LogCollectorTask extends DRemoteTask {
 
   @Override public void reduce(DRemoteTask drt) {
     LogCollectorTask another = (LogCollectorTask) drt;
-    for (int i=0; i<_result.length; ++i) {
+    if( _result == null ) _result = another._result;
+    else for (int i=0; i<_result.length; ++i)
       if (_result[i] == null)
         _result[i] = another._result[i];
-    }
   }
 
   @Override public byte priority() { return H2O.GUI_PRIORITY; }

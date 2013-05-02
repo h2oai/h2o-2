@@ -206,11 +206,11 @@ public final class H2O {
         System.exit(-1);
       }
       if( !(arg instanceof Inet4Address) ) {
-        Log.err("Only IP4 addresses allowed.");
+        Log.warn("Only IP4 addresses allowed.");
         System.exit(-1);
       }
       if( !ips.contains(arg) ) {
-        Log.err("IP address not found on this machine");
+        Log.warn("IP address not found on this machine");
         System.exit(-1);
       }
       local = arg;
@@ -237,7 +237,7 @@ public final class H2O {
     // local host.
     if( local == null ) {
       try {
-        Log.err("Failed to determine IP, falling back to localhost.");
+        Log.warn("Failed to determine IP, falling back to localhost.");
         // set default ip address to be 127.0.0.1 /localhost
         local = InetAddress.getByName("127.0.0.1");
       } catch( UnknownHostException e ) {
@@ -608,7 +608,7 @@ public final class H2O {
 
     // Start the TCPReceiverThread, to listen for TCP requests from other Cloud
     // Nodes. There should be only 1 of these, and it never shuts down.
-    new TCPReceiverThread().start();
+    (TCPReceiverThread.TCPTHR=new TCPReceiverThread()).start();
     water.api.RequestServer.start();
   }
 
@@ -924,9 +924,9 @@ public final class H2O {
 
         // No logging in the MemManager under memory pressure.  :-(
         // No logging if under memory pressure: can deadlock the cleaner thread
-        if( Log.level(Sys.CLEAN) > 1 ) {
+        if( Log.flag(Sys.CLEAN) ) {
           String s = h+" DESIRED="+(DESIRED>>20)+"M dirtysince="+(now-dirty)+" force="+force+" clean2age="+(now-clean_to_age);
-          if( MemoryManager.canAlloc() ) Log.debug2(Sys.CLEAN ,s);
+          if( MemoryManager.canAlloc() ) Log.debug(Sys.CLEAN ,s);
           else                           Log.unwrap(System.err,s);
         }
         long cleaned = 0;
@@ -1005,9 +1005,9 @@ public final class H2O {
         h = _myHisto.histo(true); // Force a new histogram
         MemoryManager.set_goals("postclean",false);
         // No logging if under memory pressure: can deadlock the cleaner thread
-        if( Log.level(Sys.CLEAN) > 1 ) {
+        if( Log.flag(Sys.CLEAN) ) {
           String s = h+" cleaned="+(cleaned>>20)+"M, freed="+(freed>>20)+"M, DESIRED="+(DESIRED>>20)+"M";
-          if( MemoryManager.canAlloc() ) Log.debug2(Sys.CLEAN ,s);
+          if( MemoryManager.canAlloc() ) Log.debug(Sys.CLEAN ,s);
           else                           Log.unwrap(System.err,s);
         }
       }

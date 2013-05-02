@@ -50,7 +50,7 @@ public class RandomForest {
     }
 
     if(drfParams._parallel) DRemoteTask.invokeAll(trees);
-    Log.debug2(Sys.RANDF,"All trees ("+ntrees+") done in "+ t_alltrees);
+    Log.debug(Sys.RANDF,"All trees ("+ntrees+") done in "+ t_alltrees);
   }
 
   static Sampling createSampler(final DRFParams params) {
@@ -174,7 +174,7 @@ public class RandomForest {
     assert ARGS.ntrees >=0;
     assert ARGS.binLimit > 0 && ARGS.binLimit <= Short.MAX_VALUE;
 
-    Log.debug2(Sys.RANDF,"Arguments used:\n"+ARGS.toString());
+    Log.debug(Sys.RANDF,"Arguments used:\n"+ARGS.toString());
     final Key modelKey = Key.make("model");
     DRFJob drfJob = DRF.execute(modelKey,
                           cols,
@@ -193,19 +193,19 @@ public class RandomForest {
                           ARGS.verbose,
                           ARGS.exclusive);
     RFModel model = drfJob.get();  // block on all nodes!
-    Log.debug2(Sys.RANDF,"Random forest finished in TODO"/*+ drf._t_main*/);
+    Log.debug(Sys.RANDF,"Random forest finished in TODO"/*+ drf._t_main*/);
 
     Timer t_valid = new Timer();
     // Get training key.
     Key valKey = model._dataKey;
     if(ARGS.outOfBagError && !ARGS.stratify){
-      Log.debug2(Sys.RANDF,"Computing out of bag error");
+      Log.debug(Sys.RANDF,"Computing out of bag error");
       Confusion.make( model, valKey, classcol, null, true).report();
     }
     // Run validation.
     if(ARGS.validationFile != null && !ARGS.validationFile.isEmpty()){ // validate on the supplied file
       File f = new File(ARGS.validationFile);
-      Log.debug2(Sys.RANDF,"Loading validation file ",f);
+      Log.debug(Sys.RANDF,"Loading validation file ",f);
       Key fk = TestUtil.load_test_file(f);
       ValueArray v = TestUtil.parse_test_key(fk,Key.make(TestUtil.getHexKeyFromFile(f)));
       valKey = v._key;
@@ -213,7 +213,7 @@ public class RandomForest {
       Confusion.make( model, valKey, classcol, null, false).report();
     }
 
-    Log.debug2(Sys.RANDF,"Validation done in: " + t_valid);
+    Log.debug(Sys.RANDF,"Validation done in: " + t_valid);
     UDPRebooted.T.shutdown.broadcast();
   }
 }

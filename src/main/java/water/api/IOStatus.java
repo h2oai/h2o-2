@@ -33,7 +33,7 @@ public class IOStatus extends Request {
       int flavor = event.is_io();
       if( flavor == -1 ) continue;
       int nidx = event._nodeId;
-      int rw = event.send_recv();
+      int rw = event.send_recv();// 1 for receive or read
       long ctms = event.ms();   // Close-time msec
       long dura = event.ms_io();// Duration in msec open-to-close
       long blkd = event.ns();   // Nano's in blocking i/o calls;
