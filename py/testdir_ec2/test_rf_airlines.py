@@ -5,15 +5,16 @@ import h2o, h2o_cmd, h2o_hosts, h2o_rf
 
 # RF train parameters
 paramsTrainRF = { 
-            'ntree'      : 100, 
-            'depth'      : 300,
+            'ntree'      : 50, 
+            'depth'      : 30,
             'parallel'   : 1, 
-            'bin_limit'  : 20000,
-            'ignore'     : 'AirTime,ArrDelay,DepDelay,CarrierDelay',
+            'bin_limit'  : 10000,
+            'ignore'     : 'AirTime,ArrDelay,DepDelay,CarrierDelay,IsArrDelayed',
             'stat_type'  : 'ENTROPY',
             'out_of_bag_error_estimate': 1, 
             'exclusive_split_limit'    : 0,
             'timeoutSecs': 14800,
+            'iterative_cm': 0,
             }
 
 # RF test parameters
@@ -24,7 +25,7 @@ paramsScoreRF = {
 
 trainDS = {
         's3bucket'    : 'h2o-airlines-unpacked',
-        'filename'    : 'allyear1987to2007.csv',
+        'filename'    : 'allyears1987to2007.csv',
         'timeoutSecs' : 14800,
         'header'      : 1
         }
