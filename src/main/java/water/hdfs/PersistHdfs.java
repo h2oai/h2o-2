@@ -59,6 +59,7 @@ public abstract class PersistHdfs {
       super(offset,pmon);
       _path = p;
       _fs = FileSystem.get(p.toUri(), CONF);
+      open();
     }
 
     @Override protected InputStream open(long offset) {
