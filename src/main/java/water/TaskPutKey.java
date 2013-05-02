@@ -13,13 +13,18 @@ import water.DTask;
 public class TaskPutKey extends DTask<TaskPutKey> {
   Key _key;
   Value _val;
+  boolean _dontCache; // delete cached value on the sender's side?
   transient Value _xval;
-  static void put( H2ONode h2o, Key key, Value val, Futures fs ) {
-    Future f = RPC.call(h2o,new TaskPutKey(key,val));
+  transient Key _xkey;
+
+  static void put( H2ONode h2o, Key key, Value val, Futures fs, boolean dontCache) {
+    Future f = RPC.call(h2o,new TaskPutKey(key,val,dontCache));
     if( fs != null ) fs.add(f);
   }
 
-  protected TaskPutKey( Key key, Value val ) { _key = key; _xval = _val = val; }
+  protected TaskPutKey( Key key, Value val ) { this(key,val,false);}
+  protected TaskPutKey( Key key, Value val, boolean removeCache ) { _xkey = _key = key; _xval = _val = val; _dontCache = removeCache;}
+
   @Override public void dinvoke( H2ONode sender ) {
     assert _key.home() || _val==null; // Only PUT to home for keys, or remote invalidation from home
     // Initialize Value for having a single known replica (the sender)
@@ -42,6 +47,7 @@ public class TaskPutKey extends DTask<TaskPutKey> {
 
   // Received an ACK
   @Override public void onAck() {
+    if(_dontCache)H2O.putIfMatch(_xkey, null, _xval); // clear the cached value
     if( _xval != null ) _xval.completeRemotePut();
   }
   @Override public byte priority() {

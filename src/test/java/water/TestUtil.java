@@ -108,6 +108,8 @@ public class TestUtil {
   public static Key loadAndParseKey(String keyName, String path) {
     Key fkey = load_test_file(path);
     Key okey = Key.make(keyName);
+    if(DKV.get(okey) != null)
+      DKV.remove(okey);
     ParseDataset.parse(okey, new Key[]{fkey});
     UKV.remove(fkey);
     return okey;
@@ -117,8 +119,7 @@ public class TestUtil {
     Key [] keys = load_test_folder(path);
     Arrays.sort(keys);
     Key okey = Key.make(keyName);
-    Job j = ParseDataset.forkParseDataset(okey, keys,null);
-    j.get();
+    ParseDataset.parse(okey, keys);
     for(Key k:keys)UKV.remove(k);
     return okey;
   }

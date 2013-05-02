@@ -282,7 +282,7 @@ public class Utils {
     Futures fs = new Futures();
     Key k = c.importFile(0, fs);
     fs.blockForPending();
-    ParseDataset.parse(okey, new Key[]{k});
+    ParseDataset.forkParseDataset(okey, new Key[]{k}, null).get();
     UKV.remove(k);
     ValueArray res = DKV.get(okey).get();
     return res;

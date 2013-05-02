@@ -1,13 +1,14 @@
 package water.store.s3;
 
-import java.io.EOFException;
-import java.io.IOException;
+import java.io.*;
 import java.net.SocketTimeoutException;
 import java.util.Arrays;
 import java.util.Properties;
 
 import water.*;
+import water.Job.ProgressMonitor;
 import water.util.Log;
+import water.util.RIStream;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
@@ -46,6 +47,29 @@ public abstract class PersistS3 {
     return _s3;
   }
 
+  public static final class H2SO3InputStream extends RIStream {
+    Key _k;
+    long _to;
+    String [] _bk;
+
+    protected InputStream open(long offset){
+      return getClient().getObject(new GetObjectRequest(_bk[0], _bk[1]).withRange(offset, _to)).getObjectContent();
+    }
+
+    public H2SO3InputStream(Key k, ProgressMonitor pmon){
+      this(k,pmon,0,Long.MAX_VALUE);
+    }
+    public H2SO3InputStream(Key k, ProgressMonitor pmon, long from, long to){
+      super(from,pmon);
+      _k = k;
+      _to = Math.min(DKV.get(k).length()-1,to);
+      _bk = decodeKey(k);
+      open();
+    }
+  }
+  public static InputStream openStream(Key k, ProgressMonitor pmon) throws IOException {
+    return new H2SO3InputStream(k,pmon);
+  }
   public static Key loadKey(S3ObjectSummary obj) throws IOException {
     Key k = encodeKey(obj.getBucketName(), obj.getKey());
     long size = obj.getSize();
