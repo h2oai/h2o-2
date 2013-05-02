@@ -1056,14 +1056,14 @@ class H2O(object):
         return a
 
     def random_forest_view(self, data_key, model_key, timeoutSecs=300, print_params=False, **kwargs):
-        # UPDATE: only pass the minimal set of params to RFView. It should get the 
-        # rest from the model. what about classWt? It can be different between RF and RFView?
         params_dict = {
             'data_key': data_key,
             'model_key': model_key,
             'out_of_bag_error_estimate': 1, 
             'class_weights': None,
             'response_variable': None, # FIX! apparently this is needed now?
+            'no_confusion_matrix': None,
+            'clear_confusion_matrix': None,
             }
         browseAlso = kwargs.pop('browseAlso',False)
 
