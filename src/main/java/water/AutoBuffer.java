@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import water.util.Log;
+import water.util.Log.Tag.Sys;
 
 /**
  * A ByteBuffer backed mixed Input/OutputStream class.
@@ -221,12 +222,14 @@ public final class AutoBuffer {
     bbstats(BBMAKE);
     return ByteBuffer.allocateDirect(BBSIZE).order(ByteOrder.nativeOrder());
   }
+  private static final void bbFree(ByteBuffer bb) {
+    bbstats(BBFREE);
+    bb.clear();
+    BBS.offerFirst(bb);
+  }
+
   private final int bbFree() {
-    if( _bb.isDirect() ) {
-      bbstats(BBFREE);
-      _bb.clear();
-      BBS.offerFirst(_bb);
-    }
+    if( _bb.isDirect() ) bbFree(_bb);
     _bb = null;
     return 0;                   // Flow-coding
   }
@@ -294,11 +297,12 @@ public final class AutoBuffer {
   }
 
   // Need a sock for a big read or write operation
-  private void tcpOpen() throws IOException {
+  private void tcpOpen() {
     assert _firstPage && _bb.limit() >= 1+2+4; // At least something written
     assert _chan == null;
+    assert _bb.position()==0;
 
-    SocketChannel sock;
+    SocketChannel sock=null;
     while(true) {             // Loop, in case we get socket open problems
       IOException ex = null;
       try {
@@ -307,17 +311,30 @@ public final class AutoBuffer {
         // case we simply keep retrying (after a sleep period to let the
         // receiver catch up).
         sock = SocketChannel.open();
+        assert sock.isBlocking();
         sock.socket().setSendBufferSize(BBSIZE);
-        sock.connect( _h2o._key );
-        //sock = SocketChannel.open( _h2o._key );
+        boolean res = sock.connect( _h2o._key );
+        assert res && !sock.isConnectionPending();
+        // Do an initial write: under heavy load we might get a bogus open
+        // followed by a reset/close AFTER writing... leading to a TCP
+        // connection-reset-by-peer error.  The fix is to delay a tad (for the
+        // receiver load to drop) and try again.
+        _bb.position(0);
+        long ns = System.nanoTime();
+        while( _bb.hasRemaining() )
+          sock.write(_bb);
+        _time_io_ns += (System.nanoTime()-ns);
         break;
       } // Explicitly ignore the following exceptions but fail on the rest
       catch (ConnectException e)       { ex = e; }
       catch (SocketTimeoutException e) { ex = e; }
-      catch (IOException e)            { ex = e;  }
+      catch (IOException e)            { ex = e; }
       finally {
         if( ex != null ) {
-          H2O.ignore(ex, "TCP open problem, waiting and retrying...", false);
+          try { if( sock != null ) sock.close(); } catch( IOException e ) { }
+          // Note: logging is dangerous here, as logging requires another TCP
+          // connection and this TCP connection just failed.
+          Log.info("Network congestion: TCP open/write "+ex.getMessage()+" talking to "+_h2o+", waiting and retrying...");
           try { Thread.sleep(500); } catch (InterruptedException ie) {}
         }
       }
@@ -478,15 +495,15 @@ public final class AutoBuffer {
       TimeLine.record_send(this,true);
     _bb.flip(); // Prep for writing.
     _bb.mark();
+    if( _chan == null)
+      tcpOpen(); // This is a big operation.  Open a TCP socket as-needed.
     try{
-      if( _chan == null)
-        tcpOpen(); // This is a big operation.  Open a TCP socket as-needed.
       long ns = System.nanoTime();
       while( _bb.hasRemaining() )
         _chan.write(_bb);
       _time_io_ns += (System.nanoTime()-ns);
     } catch( IOException e ) {   // Can't open the connection, try again later
-      throw new RuntimeException(Log.err("TCP Open/Write talking to "+_h2o+" failed with ",e));
+      throw new RuntimeException(Log.err("TCP Write to "+_h2o+" AB="+this+" failed with ",e));
     }
     if( _bb.capacity() < 16*1024 ) _bb = bbMake();
     _firstPage = false;
