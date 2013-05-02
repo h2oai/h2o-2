@@ -69,7 +69,7 @@ public class RequestQueries extends RequestArguments {
           + "    %QUERY"
           + "  <dl class='dl-horizontal'><dt></dt><dd>"
           + "    <button class='btn btn-primary' onclick='query_submit()'>Submit</button>"
-          + "    <button class='btn btn-info' onclick='query_refresh()'>Refresh</button>"
+          + "    <button class='btn btn-info' onclick='query_refresh(event || window.event)'>Refresh</button>"
           + "    <button class='btn' onclick='query_reset()'>Reset</button>"
           + "  </dd></dl>"
           + "  <script type='text/javascript'>"
