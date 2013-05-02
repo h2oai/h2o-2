@@ -2,32 +2,7 @@ import unittest
 import random, sys, time
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import as h2i, h2o_exec
-
-# we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
-# only classes 1-7 in the 55th col
-# rng DETERMINISTIC is default
-paramDict = {
-    # FIX! if there's a header, can you specify column number or column header
-    'response_variable': 54,
-    'class_weight': None,
-    'ntree': 10,
-    # 'ntree': 200,
-    'model_key': 'model_keyA',
-    'out_of_bag_error_estimate': 1,
-    'stat_type': 'ENTROPY',
-    'depth': 2147483647, 
-    # 'bin_limit': 10000,
-    'bin_limit': 10000,
-    'parallel': 1,
-    # FIX! column numbers not supported
-    'ignore': "1,2,6,7,8",
-    # 'ignore': "A2,A3,A7,A8,A9",
-    'sample': 66,
-    ## 'seed': 3,
-    ## 'features': 30,
-    'exclusive_split_limit': 0,
-    }
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec, h2o_glm
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -46,7 +21,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_rf_covtype_train_oobe(self):
+    def test_GLM_covtype_train(self):
         print "\nMichal will hate me for another file needed: covtype.shuffled.data"
         importFolderPath = "/home/0xdiag/datasets"
         csvFilename = 'covtype.shuffled.data'
@@ -81,6 +56,19 @@ class Basic(unittest.TestCase):
         execExpr = dataKeyTest + " = slice(" + key2 + "," + str(rowsForPct[9]+1) + ")"
         h2o_exec.exec_expr(None, execExpr, resultKey=dataKeyTest, timeoutSecs=10)
 
+        kwargs = {
+            'y': 54, 
+            'max_iter': 20, 
+            'n_folds': 0, 
+            'thresholds': 0.5,
+            'alpha': 0.1, 
+            'lambda': 1e-5, 
+            'family': 'binomial',
+            'case_mode': '=', 
+            'case': 2
+        }
+        timeoutSecs = 60
+
         for trial in range(10):
             # always slice from the beginning
             rowsToUse = rowsForPct[trial%10] 
@@ -88,53 +76,28 @@ class Basic(unittest.TestCase):
             execExpr = resultKey + " = slice(" + key2 + ",1," + str(rowsToUse) + ")"
             h2o_exec.exec_expr(None, execExpr, resultKey=resultKey, timeoutSecs=10)
             parseKey['destination_key'] = resultKey
-
             # adjust timeoutSecs with the number of trees
             # seems ec2 can be really slow
-            kwargs = paramDict.copy()
-            timeoutSecs = 30 + kwargs['ntree'] * 20
+
             start = time.time()
-            # do oobe
-            kwargs['out_of_bag_error_estimate'] = 1
-            kwargs['model_key'] = "model_" + str(trial)
-            
-            rfv = h2o_cmd.runRFOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
-            elapsed = time.time() - start
-            print "RF end on ", csvPathname, 'took', elapsed, 'seconds.', \
-                "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
+            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
+            print "glm end on ", parseKey['destination_key'], 'took', time.time() - start, 'seconds'
+            h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
+            GLMModel = glm['GLMModel']
+            modelKey = GLMModel['model_key']
 
-            classification_error = rfv['confusion_matrix']['classification_error']
-            self.assertGreater(classification_error, 0.01, 
-                "train.csv should have out of bag error estimate greater than 0.01")
+            start = time.time()
+            glmScore = h2o_cmd.runGLMScore(key=dataKeyTest, model_key=modelKey, thresholds="0.5", timeoutSecs=timeoutSecs)
+            print "glmScore end on ", dataKeyTest, 'took', time.time() - start, 'seconds'
+            ### print h2o.dump_json(glmScore)
+            classErr = glmScore['validation']['classErr']
+            auc = glmScore['validation']['auc']
+            err = glmScore['validation']['err']
+            print "classErr:", classErr
+            print "err:", err
+            print "auc:", auc
 
-            print "Now score on the last 10%"
-            # pop the stuff from kwargs that were passing as params
-            model_key = rfv['model_key']
-            kwargs.pop('model_key',None)
-
-            data_key = rfv['data_key']
-            kwargs.pop('data_key',None)
-
-            ntree = rfv['ntree']
-            kwargs.pop('ntree',None)
-            # scoring
-            # RFView.html?
-            # dataKeyTest=a5m.hex&
-            # model_key=__RFModel_81c5063c-e724-4ebe-bfc1-3ac6838bc628&
-            # response_variable=1&
-            # ntree=50&
-            # class_weights=-1%3D1.0%2C0%3D1.0%2C1%3D1.0&
-            # out_of_bag_error_estimate=1&
-            # no_confusion_matrix=1&
-            # clear_confusion_matrix=1
-            ### dataKeyTest = data_key
-            kwargs['clear_confusion_matrix'] = 1
-            kwargs['no_confusion_matrix'] = 0
-            # do full scoring
-            kwargs['out_of_bag_error_estimate'] = 0
-            h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
-                timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
 
             print "Trial #", trial, "completed", "using %6.2f" % (rowsToUse*100.0/num_rows), "pct. of all rows"
 

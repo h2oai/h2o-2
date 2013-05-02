@@ -279,6 +279,7 @@ public final class Key extends Iced implements Comparable {
 
   private static byte[] decodeKeyName(String what) {
     if( what==null ) return null;
+    if( what.length()==0 ) return null;
     if (what.charAt(0) == MAGIC_CHAR) {
       int len = what.indexOf(MAGIC_CHAR,1);
       String tail = what.substring(len+1);
