@@ -1,36 +1,39 @@
 package water.util;
 
-import java.io.*;
-import java.util.Arrays;
-
+import java.io.IOException;
+import java.io.InputStream;
 import water.Job.ProgressMonitor;
 import water.Key;
-
+import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.google.common.base.Throwables;
 
-public abstract class ReliableInputStream extends InputStream {
-  Key _k;
-  long _off;
-  long _mark;
+public abstract class RIStream extends InputStream {
   InputStream _is;
   ProgressMonitor _pmon;
   public final int _retries = 3;
   String [] _bk;
+  private long _off;
 
-  protected ReliableInputStream(InputStream is) throws IOException{_is = is;}
-  protected abstract InputStream open(long off) throws IOException;
+  protected RIStream( long off, ProgressMonitor pmon){
+    _off = off;
+  }
+
+  public final void open(){
+    assert _is == null;
+    _is = open(_off);
+  }
+
+  protected abstract InputStream open(long offset);
+
   private void try2Recover(int attempt, IOException e) {
-    System.out.println("[H2OS3InputStream] Attempt("+attempt + ") to recover from " + e.getMessage() + ")");
+    System.out.println("[H2OS3InputStream] Attempt("+attempt + ") to recover from " + e.getMessage() + "), off = " + _off);
     e.printStackTrace();
-    while(attempt < _retries) {
-      try{close();}catch(IOException ex){}
-      if(attempt > 0) try {Thread.sleep(256 << attempt);}catch(InterruptedException ex){}
-      try {
-        _is = open(_off);
-        return;
-      } catch(IOException ex){++attempt;}
-    }
-    Throwables.propagate(e);
+    if(attempt == _retries) Throwables.propagate(e);
+    try{_is.close();}catch(IOException ex){}
+    _is = null;
+    if(attempt > 0) try {Thread.sleep(256 << attempt);}catch(InterruptedException ex){}
+    open(_off);
+    return;
   }
   @Override
   public boolean markSupported(){
@@ -59,7 +62,10 @@ public abstract class ReliableInputStream extends InputStream {
     while(true){
       try{
         int res = _is.read();
-        if(res != -1)_off += 1;
+        if(res != -1){
+          _off += 1;
+          if(_pmon != null)_pmon.update(1);
+        }
         return res;
       }catch (IOException e){
         try2Recover(attempts++,e);
@@ -73,7 +79,10 @@ public abstract class ReliableInputStream extends InputStream {
     while(true){
       try {
         int res =  _is.read(b);
-        if(res > 0)_off += res;
+        if(res > 0){
+          _off += res;
+          if(_pmon != null)_pmon.update(res);
+        }
         return res;
       } catch(IOException e) {
         try2Recover(attempts++,e);
@@ -87,7 +96,10 @@ public abstract class ReliableInputStream extends InputStream {
     while(true){
       try {
         int res = _is.read(b,off,len);;
-        if(res > 0)_off += res;
+        if(res > 0){
+          _off += res;
+          if(_pmon != null)_pmon.update(res);
+        }
         return res;
       } catch(IOException e) {
         try2Recover(attempts++,e);
@@ -100,7 +112,6 @@ public abstract class ReliableInputStream extends InputStream {
     if(_is != null){
       _is.close();
       _is = null;
-      _off = 0;
     }
   }
 
@@ -110,36 +121,14 @@ public abstract class ReliableInputStream extends InputStream {
     while(true){
       try{
         long res = _is.skip(n);
-        if(res > 0)_off += res;
+        if(res > 0){
+          _off += res;
+          if(_pmon != null)_pmon.update(res);
+        }
         return res;
       } catch (IOException e) {
         try2Recover(attempts++,e);
       }
     }
   }
-  public final long bytesRead(){return _off;}
-  static class MyInputStream extends ReliableInputStream {
-    final byte [] _bs;
-    public MyInputStream(byte [] bs) throws IOException {super(new ByteArrayInputStream(bs));_bs = bs;}
-    @Override
-    protected InputStream open(long off) throws IOException {
-      InputStream is = new ByteArrayInputStream(_bs);
-      is.skip(off);
-      return is;
-    }
-  }
-
-  public static void main(String [] args) throws Exception {
-    MyInputStream is = new MyInputStream(new byte[]{'a','b','c','d','e','f','g','h'});
-    System.out.println(is.bytesRead());
-    System.out.println((char)is.read() + ", " + is.bytesRead());
-    byte [] bf = new byte[4];
-    System.out.println(is.read(bf) + ", " + is.bytesRead() + ", " + Arrays.toString(bf));
-    System.out.println(is.read(bf,2,2) + ", " + is.bytesRead() + ", " + Arrays.toString(bf));
-    System.out.println(is.available());
-    is.skip(is.available());
-    System.out.println(is.available());
-    System.out.println(is.bytesRead());
-  }
 }
-
