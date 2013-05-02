@@ -118,7 +118,7 @@ public class RFView extends /* Progress */ Request {
 
     JsonObject response = defaultJsonResponse();
     // CM return and possible computation is requested
-    if (!_noCM.value() && (finished==tasks || _iterativeCM.value())) {
+    if (!_noCM.value() && (finished==tasks || _iterativeCM.value()) && finished > 0) {
       // Compute the highest number of trees which is less then a threshold
       int modelSize = tasks * _refreshTresholdCM.value()/100;
       modelSize     = modelSize == 0 || finished==tasks ? finished : modelSize * (finished/modelSize);
