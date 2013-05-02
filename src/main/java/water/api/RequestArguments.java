@@ -1554,11 +1554,13 @@ public class RequestArguments extends RequestStatics {
   public class H2OModelKey<TM extends Model, TK extends TypeaheadKeysRequest> extends TypeaheadInputText<TM> {
     public H2OModelKey(TK tkr, String name, boolean req) { super(tkr.getClass(), name, req); }
     @Override protected TM parse(String input) throws IllegalArgumentException {
-      Key k = Key.make(input);
-      Value v = DKV.get(k);
-      if (v == null)
-        throw new IllegalArgumentException("Key "+input+" not found!");
-      return v.get();
+      if( input!=null && input.length()>0 ) {
+        Key k = Key.make(input);
+        Value v = DKV.get(k);
+        if (v != null) 
+          return v.get();
+      }
+      throw new IllegalArgumentException("Key "+input+" not found!");
     }
     @Override protected String queryDescription() { return "An existing H2O Model key"; }
     @Override protected TM defaultValue() { return null; }
