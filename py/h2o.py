@@ -609,12 +609,12 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25):
         if 'nodes' not in c:
             emsg = "\nH2O didn't include a list of nodes in get_cloud response after initial cloud build"
             raise Exception(emsg)
-        cnodes     = c['nodes'] # list of dicts 
-        if (cloud_size > node_count):
+        if (cloud_size != node_count):
             print "\nNodes in current cloud:"
-            for c in cnodes:
+            for c in c['nodes']:
                 print c['name']
         
+        if (cloud_size > node_count):
             emsg = (
                 "\n\nERROR: cloud_size: %d reported via json is bigger than we expect: %d" % (cloud_size, node_count) +
                 "\nYou likely have zombie(s) with the same cloud name on the network, that's forming up with you." +
@@ -627,14 +627,12 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25):
                 "\nUPDATE: building cloud size of 2 with 127.0.0.1 may temporarily report 3 incorrectly, with no zombie?" 
                 )
             raise Exception(emsg)
-            print emsg
-
         
         a = (cloud_size==node_count) and consensus
         if a:
             verboseprint("\tLocked won't happen until after keys are written")
             verboseprint("\nNodes in current cloud:")
-            for c in cnodes:
+            for c in c['nodes']:
                 verboseprint(c['name'])
 
         return a
