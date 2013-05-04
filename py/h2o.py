@@ -348,7 +348,7 @@ def decide_if_localhost():
 
 # node_count is per host if hosts is specified.
 def build_cloud(node_count=2, base_port=54321, hosts=None, 
-        timeoutSecs=30, retryDelaySecs=0.5, cleanup=True, rand_shuffle=True, **kwargs):
+        timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True, **kwargs):
     # moved to here from unit_main. so will run with nosetests too!
     clean_sandbox()
     # keep this param in kwargs, because we pass to the H2O node build, so state
@@ -609,12 +609,12 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25):
         if 'nodes' not in c:
             emsg = "\nH2O didn't include a list of nodes in get_cloud response after initial cloud build"
             raise Exception(emsg)
-        cnodes     = c['nodes'] # list of dicts 
-        if (cloud_size > node_count):
+        if (cloud_size != node_count):
             print "\nNodes in current cloud:"
-            for c in cnodes:
+            for c in c['nodes']:
                 print c['name']
         
+        if (cloud_size > node_count):
             emsg = (
                 "\n\nERROR: cloud_size: %d reported via json is bigger than we expect: %d" % (cloud_size, node_count) +
                 "\nYou likely have zombie(s) with the same cloud name on the network, that's forming up with you." +
@@ -627,14 +627,12 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25):
                 "\nUPDATE: building cloud size of 2 with 127.0.0.1 may temporarily report 3 incorrectly, with no zombie?" 
                 )
             raise Exception(emsg)
-            print emsg
-
         
         a = (cloud_size==node_count) and consensus
         if a:
             verboseprint("\tLocked won't happen until after keys are written")
             verboseprint("\nNodes in current cloud:")
-            for c in cnodes:
+            for c in c['nodes']:
                 verboseprint(c['name'])
 
         return a
@@ -804,7 +802,8 @@ class H2O(object):
                 verboseprint(msgUsed, urlUsed, "Response:", dump_json(r['response']))
             # hey, check the sandbox if we've been waiting a long time...rather than wait for timeout
             # to find the badness?
-            if ((count%15)==0):
+            # if ((count%15)==0):
+            if ((count%6)==0):
                 check_sandbox_for_errors()
 
             if (create_noise):
@@ -1057,14 +1056,14 @@ class H2O(object):
         return a
 
     def random_forest_view(self, data_key, model_key, timeoutSecs=300, print_params=False, **kwargs):
-        # UPDATE: only pass the minimal set of params to RFView. It should get the 
-        # rest from the model. what about classWt? It can be different between RF and RFView?
         params_dict = {
             'data_key': data_key,
             'model_key': model_key,
             'out_of_bag_error_estimate': 1, 
             'class_weights': None,
             'response_variable': None, # FIX! apparently this is needed now?
+            'no_confusion_matrix': None,
+            'clear_confusion_matrix': None,
             }
         browseAlso = kwargs.pop('browseAlso',False)
 

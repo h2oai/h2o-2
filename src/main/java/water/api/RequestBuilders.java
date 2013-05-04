@@ -54,6 +54,7 @@ public class RequestBuilders extends RequestQueries {
     sb.append("<div class='container'>");
     sb.append("<div class='row-fluid'>");
     sb.append("<div class='span12'>");
+    sb.append(buildJSONResponseBox(response));
     sb.append(buildResponseHeader(response));
     Builder builder = response.getBuilderFor(ROOT_OBJECT);
     if (builder == null) {
@@ -109,8 +110,24 @@ public class RequestBuilders extends RequestQueries {
           + "}\n"
           ;
 
+  private static final String _jsonResponseBox =
+            "<div class='pull-right'><a href='#' onclick='$(\"#json_box\").toggleClass(\"hide\");' class='btn btn-inverse btn-mini'>JSON</a></div>"
+          + "<div class='hide' id='json_box'><pre>"
+          + "%JSON_RESPONSE_BOX"
+          + "</pre></div>";
 
-
+  protected String buildJSONResponseBox(Response response) {
+    switch (response._status) {
+      case done    :
+        RString result = new RString(_jsonResponseBox);
+        result.replace("JSON_RESPONSE_BOX", response.toJson().toString());
+        return result.toString();
+      case error   :
+      case redirect:
+      case poll    :
+      default      : return "";
+    }
+  }
 
   protected String buildResponseHeader(Response response) {
     RString result = new RString(_responseHeader);

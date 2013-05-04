@@ -241,7 +241,7 @@ def runRFView(node=None, data_key=None, model_key=None, ntree=None,
     rfView = node.random_forest_view(data_key, model_key, timeoutSecs, noise=noise, **kwargs)
     h2f.simpleCheckRFView(node, rfView, noPrint=noPrint)
     return rfView
-         
+
 def port_live(ip, port):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
