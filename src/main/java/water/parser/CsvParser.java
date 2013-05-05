@@ -469,15 +469,15 @@ NEXT_CHAR:
     public final String[][] _data;
     public final int _numlines;        // Number of lines parsed
     public final byte[] _bits;  // The original bits
-    public final CustomParser.Type _pType;
+
     public Setup(byte separator, boolean header, String[][] data, int numlines, byte[] bits) {
       _separator = separator;
       _header = header;
       _data = data;
       _numlines = numlines;
       _bits = bits;
-      _pType = CustomParser.Type.CSV;
     }
+
     @Override public boolean equals( Object o ) {
       if( o == null || !(o instanceof Setup) ) return false;
       Setup s = (Setup)o;

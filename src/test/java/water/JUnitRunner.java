@@ -25,7 +25,6 @@ public class JUnitRunner {
     tests.remove(ParseFolderTestBig.class);
     // Too slow
     tests.remove(ConcurrentKeyTest.class);
-    tests.remove(ParseCompressedAndXLSTest.class);
     // Uncomment to run tests selectively
     // tests.clear();
     // tests.add(KMeansTest.class);

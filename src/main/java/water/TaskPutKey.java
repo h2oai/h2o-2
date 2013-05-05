@@ -47,7 +47,7 @@ public class TaskPutKey extends DTask<TaskPutKey> {
 
   // Received an ACK
   @Override public void onAck() {
-    if(_dontCache)H2O.putIfMatch(_xkey, null, _xval); // clear the cached value
+//    if(_dontCache)H2O.putIfMatch(_xkey, null, _xval); // clear the cached value
     if( _xval != null ) _xval.completeRemotePut();
   }
   @Override public byte priority() {

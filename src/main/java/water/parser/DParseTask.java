@@ -1,5 +1,6 @@
 package water.parser;
 
+import java.io.IOException;
 import java.util.*;
 
 import water.*;
@@ -320,13 +321,15 @@ public class DParseTask extends MRTask {
         dfork(_sourceDataset._key);
         break;
       case XLS:
-//        throw H2O.unimpl();
-        // XLS parsing is not distributed, just obtain the value stream and
-        // run the parser
-//        CustomParser p = new XlsParser(this);
-//        p.parse(_sourceDataset._key);
-//        --_numRows; // do not count the header
-//        break;
+        // XLS parsing is not distributed, just obtain the value stream and run the parser
+        try{
+          XlsParser p = new XlsParser(this);
+          System.out.println("parsing " + _sourceDataset._key);
+          p.parse(_sourceDataset._key);
+          --_myrows; // do not count the header
+          _numRows = _myrows;
+        } catch(Exception e){throw new RuntimeException(e);}
+        break;
       case XLSX:
         // XLS parsing is not distributed, just obtain the value stream and
         // run the parser
@@ -371,7 +374,7 @@ public class DParseTask extends MRTask {
    * For XLS and XLSX parsers computes all the chunks itself as there is no
    * option for their distributed processing.
    */
-  public void passTwo() throws Exception {
+  public void passTwo()  {
     // make sure we delete previous array here, because we insert arraylet header after all chunks are stored in
     // so if we do not delete it now, it will be deleted by UKV automatically later and destroy our values!
     if(DKV.get(_job.dest()) != null)
@@ -391,8 +394,10 @@ public class DParseTask extends MRTask {
         assert (_outputStreams2.length > 0);
         _ab = _outputStreams2[0].initialize();
         // perform the second parse pass
-        CustomParser p = (_parserType == CustomParser.Type.XLS) ? new XlsParser(this) : new XlsxParser(this);
-        p.parse(_sourceDataset._key);
+        try{
+          CustomParser p = (_parserType == CustomParser.Type.XLS) ? new XlsParser(this) : new XlsxParser(this);
+          p.parse(_sourceDataset._key);
+        } catch(Exception e){throw new RuntimeException(e);}
         // store the last stream if not stored during the parse
         if (_ab != null)
           _outputStreams2[_outputIdx].store();

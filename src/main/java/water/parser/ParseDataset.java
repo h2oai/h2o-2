@@ -9,6 +9,7 @@ import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.api.Inspect;
+import water.parser.CsvParser.Setup;
 import water.parser.DParseTask.Pass;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
@@ -56,6 +57,12 @@ public final class ParseDataset extends Job {
     forkParseDataset(okey, keys, null).get();
   }
 
+  static DParseTask tryParseXls(Value v,ParseDataset job){
+    DParseTask t = DParseTask.createPassOne(v, job, CustomParser.Type.XLS);
+    try{t.passOne(null);}catch(Exception e){return null;}
+    return t;
+  }
+
   public static void parse(ParseDataset job, Key [] keys, CsvParser.Setup setup){
     int j = 0;
     Key [] nonEmptyKeys = new Key[keys.length];
@@ -70,17 +77,27 @@ public final class ParseDataset extends Job {
       job.cancel();
       return;
     }
+    CustomParser.Type ptype = CustomParser.Type.CSV;
     Value v = DKV.get(keys[0]);
-    if (setup == null)
-      setup = Inspect.csvGuessValue(v);
-    else if (setup._data[0] == null) {
-      setup = Inspect.csvGuessValue(v, setup._separator);
+    DParseTask p1 = tryParseXls(v,job);
+    if(p1 != null) {
+      if(keys.length == 1){ // shortcut for 1 xls file, we already have pass one done, just do the 2nd pass and we're done
+        DParseTask p2 = DParseTask.createPassTwo(p1);
+        p2.passTwo();
+        p2.normalizeSigma();
+        p2.createValueArrayHeader();
+        job.remove();
+        return;
+      }
+      ptype = CustomParser.Type.XLS;
+    } else if (setup == null || setup._data == null || setup._data[0] == null) {
+      setup = Inspect.csvGuessValue(v, (setup != null)?setup._separator:CsvParser.NO_SEPARATOR);
       assert setup._data[0] != null;
     }
     final int ncolumns = setup._data[0].length;
     Compression compression = guessCompressionMethod(v);
     try {
-      UnzipAndParseTask tsk = new UnzipAndParseTask(job, compression, setup);
+      UnzipAndParseTask tsk = new UnzipAndParseTask(job, compression, setup,ptype);
       tsk.invoke(keys);
       DParseTask [] p2s = new DParseTask[keys.length];
       DParseTask phaseTwo = DParseTask.createPassTwo(tsk._tsk);
@@ -175,12 +192,12 @@ public final class ParseDataset extends Job {
     final CustomParser.Type _pType;
     final String [] _headers;
 
-    public UnzipAndParseTask(ParseDataset job, Compression comp, CsvParser.Setup setup) {
+    public UnzipAndParseTask(ParseDataset job, Compression comp, CsvParser.Setup setup, CustomParser.Type pType) {
       _job = job;
       _comp = comp;
       _sep = setup._separator;
       _ncolumns = setup._data[0].length;
-      _pType = setup._pType;
+      _pType = pType;
       _headers = (setup._header)?setup._data[0]:null;
     }
     @Override
@@ -255,18 +272,26 @@ public final class ParseDataset extends Job {
            Closeables.closeQuietly(is);
           }
         }
-        CsvParser.Setup setup = Inspect.csvGuessValue(v,_sep);
-        if(setup._data[0].length != _ncolumns)
-          throw new ParseException("Found conflicting number of columns (using separator " + (int)_sep + ") when parsing multiple files. Found " + setup._data[0].length + " columns  in " + key + " , but expected " + _ncolumns);
-        _fileInfo[_idx]._header = setup._header;
-        if(_fileInfo[_idx]._header && _headers != null) // check if we have the header, it should be the same one as we got from the head
-          for(int i = 0; i < setup._data[0].length; ++i)
-            _fileInfo[_idx]._header = _fileInfo[_idx]._header && setup._data[0][i].equalsIgnoreCase(_headers[i]);
-        setup = new CsvParser.Setup(_sep, _fileInfo[_idx]._header, setup._data, setup._numlines, setup._bits);
-        _p1 = DParseTask.createPassOne(v, _job, _pType);
-        _p1.setCompleter(this);
-        _p1.passOne(setup);
-        // DO NOT call tryComplete here, _p1 calls it!
+        CsvParser.Setup setup = null;
+        if(_pType == CustomParser.Type.CSV){
+          setup = Inspect.csvGuessValue(v,_sep);
+          if(setup._data[0].length != _ncolumns)
+            throw new ParseException("Found conflicting number of columns (using separator " + (int)_sep + ") when parsing multiple files. Found " + setup._data[0].length + " columns  in " + key + " , but expected " + _ncolumns);
+          _fileInfo[_idx]._header = setup._header;
+          if(_fileInfo[_idx]._header && _headers != null) // check if we have the header, it should be the same one as we got from the head
+            for(int i = 0; i < setup._data[0].length; ++i)
+              _fileInfo[_idx]._header = _fileInfo[_idx]._header && setup._data[0][i].equalsIgnoreCase(_headers[i]);
+          setup = new CsvParser.Setup(_sep, _fileInfo[_idx]._header, setup._data, setup._numlines, setup._bits);
+          _p1 = DParseTask.createPassOne(v, _job, _pType);
+          _p1.setCompleter(this);
+          _p1.passOne(setup);
+          // DO NOT call tryComplete here, _p1 calls it!
+        } else {
+         _p1 = tryParseXls(v,_job);
+         if(_p1 == null)
+           throw new ParseException("Found conflicting types of files. Can not parse xls and not-xls files together");
+         tryComplete();
+        }
       }
 
       @Override
