@@ -1,10 +1,11 @@
 package water.parser;
 
+import java.io.IOException;
 import java.util.*;
 
 import water.*;
 import water.ValueArray.Column;
-import water.util.Log;
+import water.parser.ParseDataset.FileInfo;
 
 /** Class responsible for actual parsing of the datasets.
  *
@@ -17,7 +18,7 @@ import water.util.Log;
  * The parser works distributed for CSV parsing, but is one node only for the
  * XLS and XLSX formats (they are not fully our code).
  */
-public final class DParseTask extends MRTask {
+public class DParseTask extends MRTask {
   static enum Pass { ONE, TWO }
 
   // pass 1 types
@@ -40,20 +41,17 @@ public final class DParseTask extends MRTask {
 
   private static final int [] COL_SIZES = new int[]{0,1,2,4,8,1,2,-4,-8,1};
 
-  final int _startChunk;
   // scalar variables
   boolean _skipFirstLine;
-  transient long _chunkId = -1;
   Pass _phase;
-  int _myrows;
+  long _numRows;
+  transient int _myrows;
   int _ncolumns;
   byte _sep = (byte)',';
   byte _decSep = (byte)'.';
   int _rpc;
   int _rowsize;
-  int _numRows; // number of rows -- works only in second pass FIXME in first pass object
   // 31 bytes
-
   ParseDataset _job;
   String _error;
 
@@ -66,10 +64,11 @@ public final class DParseTask extends MRTask {
   double [] _max;
   double [] _mean;
   double [] _sigma;
-  int [] _nrows;
+  long [] _nrows;
   Enum [] _enums;
 
-
+  // transient
+  transient int _chunkId;
 
   @Override
   public long memOverheadPerChunk(){
@@ -157,7 +156,7 @@ public final class DParseTask extends MRTask {
     ArrayList<OutputStreamRecord> result = new ArrayList();
     int rpc = (int) ValueArray.CHUNK_SZ / _rowsize;
     int rowInChunk = (int)firstRow % rpc;
-    int lastChunk = Math.max(1,this._numRows / rpc) - 1; // index of the last chunk in the VA
+    long lastChunk = Math.max(1,this._numRows / rpc) - 1; // index of the last chunk in the VA
     int chunkIndex = (int)firstRow/rpc; // index of the chunk I am writing to
     if (chunkIndex > lastChunk) { // we can be writing to the second chunk after its real boundary
       assert (chunkIndex == lastChunk + 1);
@@ -201,7 +200,6 @@ public final class DParseTask extends MRTask {
   // As this is only used for distributed CSV parser we initialize the values
   // for the CSV parser itself.
   public DParseTask() {
-    _startChunk = 0;
     _parserType = CustomParser.Type.CSV;
     _sourceDataset = null;
     _phase = Pass.ONE;
@@ -216,19 +214,17 @@ public final class DParseTask extends MRTask {
     _sourceDataset = dataset;
     _job = job;
     _phase = Pass.ONE;
-    _startChunk = 0;
   }
 
-  protected DParseTask(DParseTask other, Value dataset, int startChunk){
+  protected DParseTask(DParseTask other, FileInfo finfo){
     _phase = other._phase;
     _parserType = other._parserType;
-    _sourceDataset = dataset;
-    _startChunk = startChunk;
+    _sourceDataset = DKV.get(finfo._ikey);
+    _nrows = finfo._nrows;
     _enums = other._enums;
     _colTypes = other._colTypes;
-    _nrows = other._nrows;
-    _skipFirstLine = other._skipFirstLine;
-    _myrows = other._myrows; // for simple values, number of rows is kept in the member variable instead of _nrows
+    _nrows = finfo._nrows;
+    _skipFirstLine = finfo._header;
     _job = other._job;
     _numRows = other._numRows;
     _sep = other._sep;
@@ -258,7 +254,6 @@ public final class DParseTask extends MRTask {
     _colTypes = other._colTypes;
     _nrows = other._nrows;
     _skipFirstLine = other._skipFirstLine;
-    _myrows = other._myrows; // for simple values, number of rows is kept in the member variable instead of _nrows
     _job = other._job;
     _numRows = other._numRows;
     _sep = other._sep;
@@ -272,7 +267,6 @@ public final class DParseTask extends MRTask {
     _colNames = other._colNames;
     _error = other._error;
     _invalidValues = other._invalidValues;
-    _startChunk = 0;
     _phase = Pass.TWO;
   }
 
@@ -300,7 +294,7 @@ public final class DParseTask extends MRTask {
    *
    * @throws Exception
    */
-  public void passOne(CsvParser.Setup setup) throws Exception {
+  public void passOne(CsvParser.Setup setup) {
     switch (_parserType) {
     case CSV:
         // precompute the parser setup, column setup and other settings
@@ -310,7 +304,7 @@ public final class DParseTask extends MRTask {
         }
         if (setup._data == null) {
           _error= "Unable to determine the separator or number of columns on the dataset";
-          return;
+          throw new Error(_error);
         }
         _colNames = setup._data[0];
         setColumnNames(_colNames);
@@ -320,27 +314,30 @@ public final class DParseTask extends MRTask {
         // if parsing value array, initialize the nrows array
         if( _sourceDataset.isArray() ) {
           ValueArray ary = _sourceDataset.get();
-          _nrows = new int[(int)ary.chunks()];
+          _nrows = new long[(int)ary.chunks()+1];
         } else
-          _nrows = new int[1];
+          _nrows = new long[2];
         // launch the distributed parser on its chunks.
-        this.invoke(_sourceDataset._key);
+        dfork(_sourceDataset._key);
         break;
       case XLS:
-        // XLS parsing is not distributed, just obtain the value stream and
-        // run the parser
-        CustomParser p = new XlsParser(this);
-        p.parse(_sourceDataset._key);
-        --_myrows; // do not count the header
+        // XLS parsing is not distributed, just obtain the value stream and run the parser
+        try{
+          XlsParser p = new XlsParser(this);
+          System.out.println("parsing " + _sourceDataset._key);
+          p.parse(_sourceDataset._key);
+          --_myrows; // do not count the header
+          _numRows = _myrows;
+        } catch(Exception e){throw new RuntimeException(e);}
         break;
       case XLSX:
         // XLS parsing is not distributed, just obtain the value stream and
         // run the parser
-        CustomParser px = new XlsxParser(this);
-        px.parse(_sourceDataset._key);
-        break;
+//        CustomParser px = new XlsxParser(this);
+//        px.parse(_sourceDataset._key);
+//        break;
       default:
-        throw new RuntimeException("NOT IMPLEMENTED");
+        throw H2O.unimpl();
     }
   }
 
@@ -349,15 +346,7 @@ public final class DParseTask extends MRTask {
   public static DParseTask createPassTwo(DParseTask phaseOneTask) {
     DParseTask t = new DParseTask(phaseOneTask);
     // calculate proper numbers of rows for the chunks
-    if (t._nrows != null) {
-      t._numRows = 0;
-      for (int i = 0; i < t._nrows.length; ++i) {
-        t._numRows += t._nrows[i];
-        t._nrows[i] = t._numRows;
-      }
-    } else {
-      t._numRows = t._myrows;
-    }
+
     // normalize mean
     for(int i = 0; i < t._ncolumns; ++i)
       t._mean[i] = t._mean[i]/(t._numRows - t._invalidValues[i]);
@@ -385,7 +374,7 @@ public final class DParseTask extends MRTask {
    * For XLS and XLSX parsers computes all the chunks itself as there is no
    * option for their distributed processing.
    */
-  public void passTwo() throws Exception {
+  public void passTwo()  {
     // make sure we delete previous array here, because we insert arraylet header after all chunks are stored in
     // so if we do not delete it now, it will be deleted by UKV automatically later and destroy our values!
     if(DKV.get(_job.dest()) != null)
@@ -401,18 +390,20 @@ public final class DParseTask extends MRTask {
         // initialize statistics - invalid rows, sigma and row size
         phaseTwoInitialize();
         // create the output streams
-        _outputStreams2 = createRecords(0, _myrows);
+        _outputStreams2 = createRecords(0, (int)_numRows);
         assert (_outputStreams2.length > 0);
         _ab = _outputStreams2[0].initialize();
         // perform the second parse pass
-        CustomParser p = (_parserType == CustomParser.Type.XLS) ? new XlsParser(this) : new XlsxParser(this);
-        p.parse(_sourceDataset._key);
+        try{
+          CustomParser p = (_parserType == CustomParser.Type.XLS) ? new XlsParser(this) : new XlsxParser(this);
+          p.parse(_sourceDataset._key);
+        } catch(Exception e){throw new RuntimeException(e);}
         // store the last stream if not stored during the parse
         if (_ab != null)
           _outputStreams2[_outputIdx].store();
         break;
       default:
-        throw new RuntimeException("NOT IMPLEMENTED");
+        throw new Error("NOT IMPLEMENTED");
     }
   }
 
@@ -462,7 +453,7 @@ public final class DParseTask extends MRTask {
     }
   }
 
-  @Override public void init() {
+  @Override public void init(){
     super.init();
     createEnums();
   }
@@ -526,7 +517,7 @@ public final class DParseTask extends MRTask {
     boolean skipFirstLine = _skipFirstLine;
     if(arraylet) {
       aryKey = ValueArray.getArrayKey(key);
-      _chunkId = ValueArray.getChunkIndex(key);
+      _chunkId = (int)ValueArray.getChunkIndex(key);
       skipFirstLine = skipFirstLine || (ValueArray.getChunkIndex(key) != 0);
     }
     switch (_phase) {
@@ -538,13 +529,18 @@ public final class DParseTask extends MRTask {
       CsvParser p = new CsvParser(aryKey, _ncolumns, _sep, _decSep, this,skipFirstLine);
       p.parse(key);
       if(arraylet) {
-        long idx = ValueArray.getChunkIndex(key);
+        long idx = ValueArray.getChunkIndex(key)+1;
         int idx2 = (int)idx;
         assert idx2 == idx;
-        assert (_nrows[idx2] == 0) : idx+": "+Arrays.toString(_nrows)+" ("+_nrows[idx2]+" -- "+_myrows+")";
+        if(idx2 >= _nrows.length){
+          System.err.println("incorrect index/array size for key = " + key + ": " + _nrows.length + " <= " + idx2 + ", aryKey = " + aryKey + ", chunks# = " + DKV.get(aryKey).get(ValueArray.class).chunks());
+          assert false;
+        }
+        assert (_nrows[idx2] == 0) : idx+": "+Arrays.toString(_nrows)+" ("+_nrows[idx2]+" -- "+_numRows+")";
         _nrows[idx2] = _myrows;
       } else
-        _nrows[0] = _myrows;
+        _nrows[1] = _myrows;
+      _numRows = _myrows;
       break;
     case TWO:
       assert (_ncolumns != 0);
@@ -552,13 +548,9 @@ public final class DParseTask extends MRTask {
       // initialize statistics - invalid rows, sigma and row size
       phaseTwoInitialize();
       // calculate the first row and the number of rows to parse
-      _myrows = 0;
-      long origChunkIdx = _startChunk;
-      if( arraylet )
-        origChunkIdx += ValueArray.getChunkIndex(key);
-      int firstRow = (origChunkIdx == 0) ? 0 : _nrows[(int)origChunkIdx-1];
-      int lastRow = _nrows[(int)origChunkIdx];
-      int rowsToParse = lastRow - firstRow;
+      long firstRow = _nrows[_chunkId];
+      long lastRow = _nrows[_chunkId+1];
+      int rowsToParse = (int)(lastRow - firstRow);
       // create the output streams
       _outputStreams2 = createRecords(firstRow, rowsToParse);
       assert (_outputStreams2.length > 0);
@@ -616,11 +608,11 @@ public final class DParseTask extends MRTask {
         for(int i = 0; i < _ncolumns; ++i)
           _invalidValues[i] += other._invalidValues[i];
       }
-      _myrows += other._myrows;
+      _numRows += other._numRows;
       if(_error == null)_error = other._error;
       else if(other._error != null) _error = _error + "\n" + other._error;
     } catch (Exception e) {
-      Log.err(e);
+      e.printStackTrace();
     }
   }
 
@@ -925,6 +917,7 @@ public final class DParseTask extends MRTask {
         }
         break;
       case TWO:
+        assert _ab != null;
         switch (_colTypes[colIdx]) {
           case BYTE:
             _ab.put1((byte)(number*pow10i(exp - _scale[colIdx]) - _bases[colIdx]));

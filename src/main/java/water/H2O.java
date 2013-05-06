@@ -11,6 +11,7 @@ import jsr166y.*;
 import water.exec.Function;
 import water.hdfs.HdfsLoader;
 import water.nbhm.NonBlockingHashMap;
+import water.parser.ParseDataset;
 import water.store.s3.PersistS3;
 import water.util.*;
 import water.util.Log.Tag.Sys;
@@ -63,19 +64,7 @@ public final class H2O {
   // Central /dev/null for ignored exceptions
   public static final void ignore(Throwable e)             { ignore(e,"[h2o] Problem ignored: "); }
   public static final void ignore(Throwable e, String msg) { ignore(e, msg, true); }
-  public static final void ignore(Throwable e, String msg, boolean printException) {
-/*    StringBuffer sb = new StringBuffer();
-    sb.append(msg).append('\n');
-    if (printException) {
-      StackTraceElement[] stack = e.getStackTrace();
-      // The replacement of Exception -> Problem is required by our testing framework which would report
-      // error if it sees "exception" in the node output
-      sb.append(e.toString().replace("Exception", "Problem")).append('\n');
-      for (StackTraceElement el : stack) { sb.append("\tat "); sb.append(el.toString().replace("Exception", "Problem" )); sb.append('\n'); }
-    }
-    */
-    Log.err(msg, printException? e : null);
-  }
+  public static final void ignore(Throwable e, String msg, boolean printException) { Log.err(msg, printException? e : null);  }
 
   // --------------------------------------------------------------------------
   // The Current Cloud. A list of all the Nodes in the Cloud. Changes if we
@@ -501,6 +490,7 @@ public final class H2O {
     public String random_udp_drop = null; // test only, randomly drop udp incoming
     public String nolog = null; // disable logging
     public String no_requests_log = null; // disable logging of Web requests
+    public int pparse_limit = Integer.MAX_VALUE;
   }
   public static boolean IS_SYSTEM_RUNNING = false;
 
@@ -515,7 +505,7 @@ public final class H2O {
     Arguments arguments = new Arguments(args);
     arguments.extract(OPT_ARGS);
     ARGS = arguments.toStringArray();
-
+    ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
     if(OPT_ARGS.nolog == null)
       Log.initHeaders();
 

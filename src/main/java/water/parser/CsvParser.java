@@ -469,6 +469,7 @@ NEXT_CHAR:
     public final String[][] _data;
     public final int _numlines;        // Number of lines parsed
     public final byte[] _bits;  // The original bits
+
     public Setup(byte separator, boolean header, String[][] data, int numlines, byte[] bits) {
       _separator = separator;
       _header = header;
@@ -476,6 +477,7 @@ NEXT_CHAR:
       _numlines = numlines;
       _bits = bits;
     }
+
     @Override public boolean equals( Object o ) {
       if( o == null || !(o instanceof Setup) ) return false;
       Setup s = (Setup)o;
@@ -507,7 +509,7 @@ NEXT_CHAR:
       byte c = bits[j];
       if( (c == CHAR_SINGLE_QUOTE) || (c == CHAR_DOUBLE_QUOTE) )
         in_quote ^= true;
-      if( !in_quote || c == HIVE_SEP ) 
+      if( !in_quote || c == HIVE_SEP )
         for( int i = 0; i < separators.length; ++i)
           if (c == separators[i])
             ++result[i];

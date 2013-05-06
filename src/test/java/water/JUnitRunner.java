@@ -11,6 +11,7 @@ import org.junit.Test;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 
+import water.parser.ParseCompressedAndXLSTest;
 import water.parser.ParseFolderTestBig;
 import water.sys.Node;
 import water.sys.NodeVM;
@@ -24,7 +25,6 @@ public class JUnitRunner {
     tests.remove(ParseFolderTestBig.class);
     // Too slow
     tests.remove(ConcurrentKeyTest.class);
-
     // Uncomment to run tests selectively
     // tests.clear();
     // tests.add(KMeansTest.class);

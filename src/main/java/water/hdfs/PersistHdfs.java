@@ -9,8 +9,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.s3.S3Exception;
 
 import water.*;
+import water.Job.ProgressMonitor;
 import water.api.Constants;
-import water.util.Log;
+import water.util.*;
 import water.util.Log.Tag.Sys;
 
 import com.google.common.base.Strings;
@@ -48,6 +49,33 @@ public abstract class PersistHdfs {
   }
 
   public static Configuration getConf() { return CONF; }
+
+
+  public static class H2OHdfsInputStream extends RIStream {
+    final FileSystem _fs;
+    final Path _path;
+
+    public H2OHdfsInputStream(Path p, long offset,ProgressMonitor pmon) throws IOException{
+      super(offset,pmon);
+      _path = p;
+      _fs = FileSystem.get(p.toUri(), CONF);
+      open();
+    }
+
+    @Override protected InputStream open(long offset) {
+      try{
+        FSDataInputStream is = _fs.open(_path);
+        is.seek(offset);
+        return is;
+      } catch(IOException e){
+        throw new RuntimeException("Opening Hdfs path " + _path.toString() + " failed!");
+      }
+    }
+
+  }
+  public static InputStream openStream(Key k,ProgressMonitor pmon) throws IOException{
+    return new H2OHdfsInputStream(getPathForKey(k),0,pmon);
+  }
 
   public static void addFolder(Path p, JsonArray succeeded, JsonArray failed) throws IOException {
     FileSystem fs = FileSystem.get(p.toUri(), CONF);
