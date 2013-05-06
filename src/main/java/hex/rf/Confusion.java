@@ -213,6 +213,10 @@ public class Confusion extends MRTask {
         // of random numbers as in the method Data.sampleFair()
         // Skip row used during training if OOB is computed
         float sampledItem = rand.nextFloat();
+        // Bail out of broken rows with NA in class column.
+        // Do not skip yet the rows with NAs in the rest of columns
+        if( _data.isNA(bits, row, _classcol)) continue ROWS;
+
         if( _computeOOB ) { // if OOBEE is computed then we need to take into account utilized sampling strategy
           switch( _model._samplingStrategy ) {
           case RANDOM          : if (sampledItem < _model._sample ) continue ROWS; break;
@@ -224,10 +228,6 @@ public class Confusion extends MRTask {
           }
         }
         // --- END OF CRUCIAL CODE ---
-
-        // Bail out of broken rows with NA in class column.
-        // Do not skip yet the rows wi
-        if( _data.isNA(bits, row, _classcol)) continue ROWS;
 
         // Predict with this tree - produce 0-based class index
         int prediction = _model.classify0(ntree, _data, bits, row, _modelDataMap, numClasses );

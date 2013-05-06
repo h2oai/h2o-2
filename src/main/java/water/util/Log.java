@@ -71,9 +71,12 @@ abstract public class Log {
   public static final long PID = getPid();
   /** Hostname and process ID. */
   private static final String HOST_AND_PID = "" + fixedLength(HOST + " ", 13) + fixedLength(PID + " ", 6);
-
+  private static boolean printAll;
   /** Per subsystem debugging flags. */
   static {
+    String pa = System.getProperty("log.printAll");
+    printAll = (pa!=null && pa.equals("true"));
+
     setFlag(Sys.WATER);
     setFlag(Sys.RANDF);
     for(Sys s : Sys.values()) {
@@ -84,7 +87,7 @@ abstract public class Log {
   }
 
   /** Check if a subsystem will print debug message to the LOG file */
-  public static boolean flag(Sys t) { return t._enable; }
+  public static boolean flag(Sys t) { return t._enable || printAll; }
   /** Set the debug flag. */
   public static void setFlag(Sys t) { t._enable = true; }
   /** Unset the debug flag. */
@@ -257,7 +260,7 @@ abstract public class Log {
       }
     }
     if( Paxos._cloudLocked ) logToKV(e.when.startAsString(), e.thread, e.toString());
-    if(printOnOut) unwrap(System.out,e.toShortString());
+    if(printOnOut || printAll) unwrap(System.out,e.toShortString());
     e.printMe = false;
   }
   /** We also log events to the store. */

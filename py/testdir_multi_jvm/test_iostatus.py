@@ -69,7 +69,7 @@ class Basic(unittest.TestCase):
                 i_o = k['i_o']
                 r_w = k['r_w']
                 size = k['size_bytes']
-                blocked = k['blocked_ns']
+                blocked = k['blocked_ms']
                 duration = k['duration_ms'] * 1e6 # convert to ns
                 if duration != 0:
                     blockedPct = "%.2f" % (100 * blocked/duration) + "%"
