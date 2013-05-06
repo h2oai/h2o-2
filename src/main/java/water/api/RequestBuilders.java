@@ -255,17 +255,17 @@ public class RequestBuilders extends RequestQueries {
 
     /** Status of the request.
      */
-    private final Status _status;
+    protected final Status _status;
 
     /** Name of the redirected request. This is only valid if the response is
      * redirect status.
      */
-    private final String _redirectName;
+    protected final String _redirectName;
 
     /** Arguments of the redirect object. These will be given to the redirect
      * object when called.
      */
-    private final JsonObject _redirectArgs;
+    protected final JsonObject _redirectArgs;
 
     /** Poll progress in terms of finished elements.
      */

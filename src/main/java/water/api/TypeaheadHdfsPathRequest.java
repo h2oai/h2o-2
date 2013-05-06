@@ -5,7 +5,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 
 import water.hdfs.PersistHdfs;
-import water.util.Log;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonPrimitive;

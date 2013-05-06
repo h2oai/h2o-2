@@ -36,8 +36,7 @@ public class RemoteRunner {
       if( onWindows.exists() ) {
         list.add(onWindows.getPath());
         list.add("--login");
-      } else
-        list.add("bash");
+      } else list.add("bash");
       list.add(sh.getAbsolutePath());
       exec(list);
     }

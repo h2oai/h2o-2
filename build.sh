@@ -32,7 +32,7 @@ JAR_ROOT=lib
 # inside the JAR_ROOT tree so that they are packed to the jar file properly
 DEPENDENCIES="${JAR_ROOT}/jama/*${SEP}${JAR_ROOT}/apache/*${SEP}${JAR_ROOT}/junit/*${SEP}${JAR_ROOT}/gson/*${SEP}${JAR_ROOT}/javassist.jar${SEP}${JAR_ROOT}/poi/*${SEP}${JAR_ROOT}/trove/*${SEP}${JAR_ROOT}/s3/*${SEP}${JAR_ROOT}/jets3t/*"
 
-DEFAULT_HADOOP_VERSION="1.0.0"
+DEFAULT_HADOOP_VERSION="cdh3"
 OUTDIR="target"
 JAR_FILE="${OUTDIR}/h2o.jar"
 

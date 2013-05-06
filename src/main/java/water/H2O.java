@@ -5,7 +5,6 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
 
 import jsr166y.*;
 import water.exec.Function;
@@ -239,12 +238,12 @@ public final class H2O {
   private static InetAddress guessInetAddress(List<InetAddress> ips) {
     String m = "Multiple local IPs detected:\n";
     for(InetAddress ip : ips) m+="  " + ip;
-    m+="Attempting to determine correct address...";
+    m+="Attempting to determine correct address...\n";
     Socket s = null;
     try {
       // using google's DNS server as an external IP to find
       s = new Socket("8.8.8.8", 53);
-      m+="Using " + s.getLocalAddress();
+      m+="Using " + s.getLocalAddress() + "\n";
       return s.getLocalAddress();
     } catch( Throwable t ) {
       Log.err(t);
@@ -489,7 +488,6 @@ public final class H2O {
     public String soft = null; // soft launch for demos
     public String random_udp_drop = null; // test only, randomly drop udp incoming
     public String nolog = null; // disable logging
-    public String no_requests_log = null; // disable logging of Web requests
     public int pparse_limit = Integer.MAX_VALUE;
   }
   public static boolean IS_SYSTEM_RUNNING = false;

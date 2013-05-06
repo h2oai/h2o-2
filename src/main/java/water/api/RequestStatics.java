@@ -44,6 +44,7 @@ public class RequestStatics extends Constants {
     query(".query"), ///< Displays the query for the argument in html mode
     debug(".debug"), ///< Displays the webpage without query
     png(".png"), ///< image, e.g. plot
+    txt(".txt"), ///< text, e.g. a script
     ;
     /** Suffix of the request - extension of the URL.
      */
@@ -67,6 +68,8 @@ public class RequestStatics extends Constants {
         return debug;
       if (requestUrl.endsWith(png._suffix))
         return png;
+      if (requestUrl.endsWith(txt._suffix))
+        return txt;
       return json;
     }
 

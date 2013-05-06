@@ -1,8 +1,7 @@
 package water.deploy;
 
 import java.io.*;
-import java.net.InetSocketAddress;
-import java.net.URI;
+import java.net.*;
 import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
@@ -17,8 +16,16 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import water.*;
+import water.api.*;
+import water.api.RequestBuilders.Response.Status;
+import water.api.RequestStatics.RequestType;
+import water.api.Script.RunScript;
+import water.api.Cloud;
 import water.hdfs.HdfsLoader;
+import water.util.Log;
 import water.util.Utils;
+
+import com.amazonaws.util.json.JSONObject;
 
 public class Hadoop {
   public static class Config extends Arguments.Opt {
@@ -27,6 +34,7 @@ public class Hadoop {
     String name_server = "hdfs://127.0.0.1:8020";
     String tracker = "hdfs://127.0.0.1:8021";
     int port = 54321;
+    String script;
   }
 
   public static void main(String[] args) throws Exception {
@@ -34,8 +42,7 @@ public class Hadoop {
     Config config = new Config();
     arguments.extract(config);
     String[] remaining = new String[0];
-    if( arguments.firstFlag() >= 0 )
-      remaining = Arrays.copyOfRange(args, arguments.firstFlag(), args.length);
+    if( arguments.firstFlag() >= 0 ) remaining = Arrays.copyOfRange(args, arguments.firstFlag(), args.length);
 
     H2O.OPT_ARGS.hdfs_version = config.version;
     HdfsLoader.initialize();
@@ -62,13 +69,12 @@ public class Hadoop {
             Thread.sleep(10000);
           }
         } catch( Exception ex ) {
-          throw new RuntimeException(ex);
+          throw Log.errRTExcept(ex);
         }
       }
 
       @Override protected void map(LongWritable key, Text value, Context context) throws IOException,
-          InterruptedException {
-      };
+          InterruptedException {};
     }
 
     @Override public int run(String[] args) throws Exception {
@@ -78,7 +84,7 @@ public class Hadoop {
       job.setInputFormatClass(NopInputFormat.class);
       job.setOutputFormatClass(NopOutputFormat.class);
       job.setNumReduceTasks(0);
-      job.waitForCompletion(true);
+      job.submit();
       return 0;
     }
 
@@ -102,8 +108,7 @@ public class Hadoop {
         return new NopRecordWriter();
       }
 
-      @Override public void checkOutputSpecs(JobContext context) throws IOException, InterruptedException {
-      }
+      @Override public void checkOutputSpecs(JobContext context) throws IOException, InterruptedException {}
 
       @Override public OutputCommitter getOutputCommitter(TaskAttemptContext context) throws IOException,
           InterruptedException {
@@ -130,17 +135,14 @@ public class Hadoop {
         return new String[] { _loc };
       }
 
-      @Override public void write(DataOutput out) throws IOException {
-      }
+      @Override public void write(DataOutput out) throws IOException {}
 
-      @Override public void readFields(DataInput in) throws IOException {
-      }
+      @Override public void readFields(DataInput in) throws IOException {}
     }
 
     private static class NopRecordReader extends RecordReader {
       @Override public void initialize(InputSplit split, TaskAttemptContext context) throws IOException,
-          InterruptedException {
-      }
+          InterruptedException {}
 
       @Override public boolean nextKeyValue() throws IOException, InterruptedException {
         throw new RuntimeException("TODO Auto-generated method stub");
@@ -174,28 +176,24 @@ public class Hadoop {
     }
 
     static class NopOutputCommitter extends OutputCommitter {
-      @Override public void setupJob(JobContext jobContext) throws IOException {
-      }
+      @Override public void setupJob(JobContext jobContext) throws IOException {}
 
-      @Override public void setupTask(TaskAttemptContext taskContext) throws IOException {
-      }
+      @Override public void setupTask(TaskAttemptContext taskContext) throws IOException {}
 
       @Override public boolean needsTaskCommit(TaskAttemptContext taskContext) throws IOException {
         return false;
       }
 
-      @Override public void commitTask(TaskAttemptContext taskContext) throws IOException {
-      }
+      @Override public void commitTask(TaskAttemptContext taskContext) throws IOException {}
 
-      @Override public void abortTask(TaskAttemptContext taskContext) throws IOException {
-      }
+      @Override public void abortTask(TaskAttemptContext taskContext) throws IOException {}
     }
 
     public static void main(Config config, String[] args) throws Exception {
       Logger.getRootLogger().setLevel(Level.ALL);
       System.setProperty("HADOOP_USER_NAME", config.user);
       Configuration conf = new Configuration();
-      //conf.set("fs.default.name", config.name_server);
+      conf.set("fs.default.name", config.name_server);
       conf.set("mapred.job.tracker", config.tracker);
       conf.set("mapreduce.framework.name", "classic");
       // conf.set("hadoop.job.ugi", "hduser,hduser");
@@ -205,17 +203,95 @@ public class Hadoop {
       conf.set("mapred.job.map.memory.mb", "4096");
       conf.set("mapred.job.reduce.memory.mb", "1024");
       conf.set("mapred.fairscheduler.locality.delay", "120000");
-      conf.set("fs.maprfs.impl", "com.mapr.fs.MapRFileSystem");
+//      conf.set("fs.maprfs.impl", "com.mapr.fs.MapRFileSystem");
 
       String hosts = "";
       URI tracker = new URI(config.tracker);
       JobClient client = new JobClient(new InetSocketAddress(tracker.getHost(), tracker.getPort()), conf);
-      for( String name : client.getClusterStatus(true).getActiveTrackerNames() )
+      Collection<String> names = client.getClusterStatus(true).getActiveTrackerNames();
+      for( String name : names )
         hosts += name.substring("tracker_".length(), name.indexOf(':')) + ',';
       conf.set(HOSTS_KEY, hosts);
       conf.set(PORT_KEY, "" + config.port);
 
       ToolRunner.run(conf, new HadoopTool(), args);
+
+      if( config.script != null ) {
+        String url = "http://" + hosts.substring(0, hosts.indexOf(',')) + ":" + config.port + "/";
+        // Wait for cloud to be up
+        for( ;; ) {
+          if( size(url) == names.size() ) break;
+          Thread.sleep(300);
+        }
+        String res = post(url, config.script, 0);
+        JSONObject json = new JSONObject(res);
+        JSONObject resp = json.getJSONObject(Constants.RESPONSE);
+        String status = resp.getString(Constants.STATUS);
+        System.out.println("Status: " + status);
+        if( status == Status.error.name() ) {
+          System.out.println("Response: " + res);
+        }
+      }
+    }
+
+    public static int size(String url) {
+      try {
+        String cloud = Cloud.class.getSimpleName() + RequestType.json._suffix;
+        HttpURLConnection c = (HttpURLConnection) new URL(url + cloud).openConnection();
+        c.setConnectTimeout(2 * 1000);
+        c.setReadTimeout(2 * 1000);
+        c.connect();
+        BufferedReader rd = new BufferedReader(new InputStreamReader(c.getInputStream()));
+        String result = "", line;
+        while( (line = rd.readLine()) != null )
+          result += line;
+        rd.close();
+        JSONObject o = new JSONObject(result);
+        int size = o.getInt(Constants.CLOUD_SIZE);
+        return size;
+      } catch( Exception ex ) {
+        return 0;
+      }
+    }
+
+    public static String post(String url, String file, float timeoutSecs) {
+      try {
+        File f = new File(file);
+        String run = RunScript.class.getSimpleName() + RequestType.json._suffix + "?key=" + f.getName();
+        HttpURLConnection c = (HttpURLConnection) new URL(url + run).openConnection();
+        c.setDoOutput(true);
+        c.setRequestMethod("POST");
+        c.setConnectTimeout((int) (timeoutSecs * 1000));
+        c.setReadTimeout((int) (timeoutSecs * 1000));
+        String boundary = "683c3db71d444a2fbab155ba3e128d04";
+        c.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
+        c.connect();
+        OutputStream out = c.getOutputStream();
+        out.write(("--" + boundary + "\r\n").getBytes());
+        out.write(("Content-Disposition: form-data; filename=\"" + f.getName() + "\"\r\n").getBytes());
+        out.write("Content-Type: application/octet-stream\r\n".getBytes());
+        out.write("\r\n".getBytes());
+
+        byte[] buffer = new byte[0xffff];
+        FileInputStream in = new FileInputStream(f);
+        int n = 0;
+        while( (n = in.read(buffer)) != -1 )
+          out.write(buffer, 0, n);
+        in.close();
+
+        out.write(("\r\n--" + boundary + "--\r\n").getBytes());
+        out.close();
+        BufferedReader rd = new BufferedReader(new InputStreamReader(c.getInputStream()));
+        String result = "", line;
+        while( (line = rd.readLine()) != null )
+          result += line;
+        rd.close();
+        return result;
+      } catch( IOException ex ) {
+        throw new RuntimeException(ex);
+      } catch( Exception ex ) {
+        throw Log.errRTExcept(ex);
+      }
     }
   }
 }

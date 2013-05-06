@@ -20,9 +20,21 @@ import com.google.gson.JsonObject;
 public abstract class Request extends RequestBuilders {
   public String _requestHelp;
 
+  protected String href() {
+    return getClass().getSimpleName();
+  }
+
+  protected RequestType hrefType() {
+    return RequestType.www;
+  }
+
   protected abstract Response serve();
 
   protected Response serve_debug() { throw H2O.unimpl(); }
+
+  protected boolean log() {
+    return true;
+  }
 
   public NanoHTTPD.Response serve(NanoHTTPD server, Properties args, RequestType type) {
     switch (type) {
@@ -30,17 +42,16 @@ public abstract class Request extends RequestBuilders {
         return wrap(server, build(Response.done(serveHelp())));
       case json:
       case www:
-        String query = checkArguments(args, type);
-        if(H2O.OPT_ARGS.no_requests_log == null) {
+        if(log()) {
           String log = getClass().getSimpleName();
-          for (Argument arg: _arguments) {
-            Object value = arg.record()._value;
-            // Key arguments return values, log the key instead
-            if(value instanceof Value) value = ((Value) value)._key;
-            log += " " + arg._name + "=" + value;
+          for (Object arg: args.keySet()) {
+            String value = args.getProperty((String) arg);
+            if(value != null && value.length() != 0)
+              log += " " + arg + "=" + value;
           }
-          Log.debug(Sys.HTTPD,log);
+          Log.debug(Sys.HTTPD, log);
         }
+        String query = checkArguments(args, type);
         if (query != null)
           return wrap(server,query,type);
         long time = System.currentTimeMillis();
@@ -148,12 +159,11 @@ public abstract class Request extends RequestBuilders {
     }
     public void toHTML(StringBuilder sb) {
       sb.append("<li><a href='");
-      sb.append(_request.getClass().getSimpleName()+".html");
+      sb.append(_request.href() + _request.hrefType()._suffix);
       sb.append("'>");
       sb.append(_name);
       sb.append("</a></li>");
     }
-
   }
 
   private static HashMap<String, ArrayList<MenuItem> > _navbar = new HashMap();

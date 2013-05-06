@@ -59,6 +59,10 @@ public class Inspect extends Request {
     return redirect(resp, null, dest);
   }
 
+  @Override protected boolean log() {
+    return false;
+  }
+
   @Override
   protected Response serve() {
     Value val = _key.value();
@@ -122,8 +126,10 @@ public class Inspect extends Request {
         ZipInputStream zis = new ZipInputStream(v.openStream());
         ZipEntry ze = zis.getNextEntry(); // Get the *FIRST* entry
         // There is at least one entry in zip file and it is not a directory.
-        if( ze != null || !ze.isDirectory() )
+        if( ze != null && !ze.isDirectory() )
           is = zis;
+        else
+          zis.close();
         break;
       }
       case GZIP:

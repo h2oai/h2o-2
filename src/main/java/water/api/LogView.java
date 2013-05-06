@@ -27,6 +27,8 @@ public class LogView extends Request {
         obj.addProperty("h2o" , logstr._h2os [x].toString());
         obj.addProperty("pid" , logstr._pids [x]);
         obj.addProperty("thr" , logstr._thrs [x]);
+        obj.addProperty("kind", Log.KINDS[logstr._kinds[x]].name());
+        obj.addProperty("sys", Log.SYSS[logstr._syss[x]].name());
         obj.addProperty("msg" , logstr._msgs [x]);
         ary.add(obj);
       }
@@ -37,6 +39,10 @@ public class LogView extends Request {
     Response response = Response.done(result);
     response.addHeader("<a class='btn btn-primary' href='LogDownload.html'>Download all logs</a>");
     return response;
+  }
+
+  @Override protected boolean log() {
+    return false;
   }
 
   static class LogDownload extends Request {

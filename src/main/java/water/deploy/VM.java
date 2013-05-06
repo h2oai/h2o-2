@@ -7,16 +7,16 @@ import java.util.Arrays;
 
 import org.apache.commons.lang.ArrayUtils;
 
-import water.Log;
+import water.util.Log;
 
 /**
  * Executes code in a separate VM.
  */
 public abstract class VM {
   private final ArrayList<String> _args;
-  private Process                 _process;
-  private boolean                 _inherit;
-  private File                    _out, _err;
+  private Process _process;
+  private boolean _inherit;
+  private File _out, _err;
 
   public VM(String[] args) {
     this(null, args);
@@ -34,25 +34,22 @@ public abstract class VM {
       try {
         cp += new File(new URI(url.toString())) + File.pathSeparator;
       } catch( URISyntaxException e ) {
-        throw new RuntimeException(e);
+        throw Log.errRTExcept(e);
       }
     }
     _args.add(cp);
 
-    if( javaArgs != null )
-      _args.addAll(Arrays.asList(javaArgs));
+    if( javaArgs != null ) _args.addAll(Arrays.asList(javaArgs));
     _args.add(getClass().getName());
-    if( appArgs != null )
-      _args.addAll(Arrays.asList(appArgs));
+    if( appArgs != null ) _args.addAll(Arrays.asList(appArgs));
   }
 
   static void defaultParams(ArrayList<String> list) {
     boolean ea = false;
     assert ea = true;
-    if( ea )
-      list.add("-ea");
-    if( Host.LOG_RSYNC )
-      list.add("-D" + Host.LOG_RSYNC_NAME + "=true");
+    if( ea ) list.add("-ea");
+    if( Host.LOG_RSYNC ) list.add("-D" + Host.LOG_RSYNC_NAME + "=true");
+    // list.add("-agentlib:jdwp=transport=dt_socket,address=127.0.0.1:8001,server=y,suspend=n");
   }
 
   public Process process() {
@@ -73,12 +70,10 @@ public abstract class VM {
     try {
       assert !_inherit || (_out == null);
       _process = builder.start();
-      if( _inherit )
-        inheritIO(_process, null);
-      if( _out != null )
-        persistIO(_process, _out, _err);
+      if( _inherit ) inheritIO(_process, null);
+      if( _out != null ) persistIO(_process, _out, _err);
     } catch( IOException e ) {
-      throw new RuntimeException(e);
+      throw Log.errRTExcept(e);
     }
   }
 
@@ -88,17 +83,16 @@ public abstract class VM {
       return false;
     } catch( IllegalThreadStateException _ ) {
       return true;
-    } catch( Exception ex ) {
-      Log.write(ex);
-      throw new RuntimeException(ex);
+    } catch( Exception e ) {
+      throw Log.errRTExcept(e);
     }
   }
 
   public int waitFor() {
     try {
       return _process.waitFor();
-    } catch( InterruptedException ex ) {
-      throw new RuntimeException(ex);
+    } catch( InterruptedException e ) {
+      throw Log.errRTExcept(e);
     }
   }
 
@@ -106,14 +100,12 @@ public abstract class VM {
     _process.destroy();
     try {
       _process.waitFor();
-    } catch( InterruptedException _ ) {
-    }
+    } catch( InterruptedException _ ) {}
   }
 
   public static void exitWithParent() {
     Thread thread = new Thread() {
-      @Override
-      public void run() {
+      @Override public void run() {
         for( ;; ) {
           int b;
           try {
@@ -122,7 +114,7 @@ public abstract class VM {
             b = -1;
           }
           if( b < 0 ) {
-            Log.write("Assuming parent done, exit(0)");
+            Log.debug("Assuming parent done, exit(0)");
             System.exit(0);
           }
         }
@@ -145,15 +137,11 @@ public abstract class VM {
   private static void forward(Process process, final String header, InputStream source, final PrintStream target) {
     final BufferedReader source_ = new BufferedReader(new InputStreamReader(source));
     Thread thread = new Thread() {
-      @Override
-      public void run() {
+      @Override public void run() {
         try {
           for( ;; ) {
             String line = source_.readLine();
-
-            if( line == null )
-              break;
-
+            if( line == null ) break;
             String s = header == null ? line : header + line;
             Log.unwrap(target, s);
           }
@@ -188,8 +176,7 @@ public abstract class VM {
     public static String[] addHost(Host host, String[] args) {
       String k = host.key() != null ? host.key() : "null";
       String[] res = new String[] { host.address(), host.user(), k };
-      if( args != null )
-        res = (String[]) ArrayUtils.addAll(res, args);
+      if( args != null ) res = (String[]) ArrayUtils.addAll(res, args);
       return res;
     }
 
@@ -208,8 +195,7 @@ public abstract class VM {
       final Process process = builder.start();
       NodeVM.inheritIO(process, null);
       Runtime.getRuntime().addShutdownHook(new Thread() {
-        @Override
-        public void run() {
+        @Override public void run() {
           process.destroy();
         }
       });

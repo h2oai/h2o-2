@@ -4,13 +4,13 @@ import java.io.File;
 import java.util.*;
 
 import water.Boot;
-import water.Log;
+import water.util.Log;
 import water.util.Utils;
 
 public class Host {
-  public static final String  SSH_OPTS;
-  public static final String  LOG_RSYNC_NAME = "logrsync";
-  public static final boolean LOG_RSYNC      = System.getProperty(LOG_RSYNC_NAME) != null;
+  public static final String SSH_OPTS;
+  public static final String LOG_RSYNC_NAME = "logrsync";
+  public static final boolean LOG_RSYNC = System.getProperty(LOG_RSYNC_NAME) != null;
 
   static {
     SSH_OPTS = "" //
@@ -21,8 +21,8 @@ public class Host {
         + " -o ServerAliveCountMax=3";
   }
 
-  public static final String  FOLDER         = "h2o_rsync";
-  private final String        _address, _user, _key;
+  public static final String FOLDER = "h2o_rsync";
+  private final String _address, _user, _key;
 
   public Host(String addr) {
     this(addr, null);
@@ -53,10 +53,8 @@ public class Host {
   public static String[] defaultIncludes() {
     ArrayList<String> l = new ArrayList<String>();
     if( Boot._init.fromJar() ) {
-      if( new File("target/h2o.jar").exists() )
-        l.add("target/h2o.jar");
-      else
-        l.add("h2o.jar");
+      if( new File("target/h2o.jar").exists() ) l.add("target/h2o.jar");
+      else l.add("h2o.jar");
     } else {
       l.add("target");
       l.add("lib");
@@ -103,13 +101,11 @@ public class Host {
       }
 
       args.add(_address + ":" + "/home/" + _user + "/" + FOLDER);
-      // System.out.println(Arrays.toString(args.toArray()));
       ProcessBuilder builder = new ProcessBuilder(args);
       builder.environment().put("CYGWIN", "nodosfilewarning");
       process = builder.start();
       String log = "rsync " + VM.localIP() + " -> " + _address;
-      if( !LOG_RSYNC )
-        System.out.println(log);
+      if( !LOG_RSYNC ) Log.debug(log);
       NodeVM.inheritIO(process, Log.padRight(log + ": ", 24));
       process.waitFor();
     } catch( Exception ex ) {
@@ -118,8 +114,7 @@ public class Host {
       if( process != null ) {
         try {
           process.destroy();
-        } catch( Exception _ ) {
-        }
+        } catch( Exception _ ) { /* ignore */}
       }
     }
   }
@@ -147,7 +142,7 @@ public class Host {
         Process p = Runtime.getRuntime().exec("chmod 600 " + _key);
         p.waitFor();
       } catch( Exception e ) {
-        throw new RuntimeException(e);
+        throw Log.errRTExcept(e);
       }
       k = " -i " + _key;
     }

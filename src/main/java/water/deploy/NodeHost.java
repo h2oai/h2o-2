@@ -6,8 +6,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 import water.Boot;
-import water.Log;
 import water.deploy.VM.Watchdog;
+import water.util.Log;
 
 /**
  * Creates a node on a host.
@@ -23,60 +23,48 @@ public class NodeHost implements Node {
     return _ssh.host();
   }
 
-  @Override
-  public void inheritIO() {
+  @Override public void inheritIO() {
     _ssh.inheritIO();
   }
 
-  @Override
-  public void persistIO(String outFile, String errFile) throws IOException {
+  @Override public void persistIO(String outFile, String errFile) throws IOException {
     _ssh.persistIO(outFile, errFile);
   }
 
-  @Override
-  public void start() {
+  @Override public void start() {
     _ssh.startThread();
   }
 
-  @Override
-  public int waitFor() {
+  @Override public int waitFor() {
     try {
       _ssh._thread.join();
-    } catch( InterruptedException e ) {
-    }
+    } catch( InterruptedException e ) {}
     return 0;
   }
 
-  @Override
-  public void kill() {
+  @Override public void kill() {
     try {
       _ssh.kill();
-    } catch( Exception _ ) {
-    }
+    } catch( Exception _ ) {}
   }
 
   public static String command(String[] javaArgs, String[] nodeArgs) {
     ArrayList<String> list = new ArrayList<String>();
-    // TODO When port forwarding done
-    // list.add("-agentlib:jdwp=transport=dt_socket,address=127.0.0.1:8000,server=y,suspend=n");
     VM.defaultParams(list);
-    if( javaArgs != null )
-      list.addAll(Arrays.asList(javaArgs));
+    if( javaArgs != null ) list.addAll(Arrays.asList(javaArgs));
 
     String cp = "";
     try {
       int shared = new File(".").getCanonicalPath().length() + 1;
       for( String s : System.getProperty("java.class.path").split(File.pathSeparator) ) {
         cp += cp.length() != 0 ? ":" : "";
-        if( Boot._init.fromJar() )
-          cp += new File(s).getName();
-        else
-          cp += new File(s).getCanonicalPath().substring(shared).replace('\\', '/');
+        if( Boot._init.fromJar() ) cp += new File(s).getName();
+        else cp += new File(s).getCanonicalPath().substring(shared).replace('\\', '/');
       }
       list.add("-cp");
       list.add(cp);
     } catch( IOException e ) {
-      throw new RuntimeException(e);
+      throw Log.errRTExcept(e);
     }
 
     String command = "cd " + Host.FOLDER + ";java";
@@ -97,13 +85,12 @@ public class NodeHost implements Node {
 
     final void startThread() {
       _thread = new Thread() {
-        @Override
-        public void run() {
+        @Override public void run() {
           try {
             SSH.this.start();
             SSH.this.waitFor();
           } catch( Exception ex ) {
-            Log.write(ex);
+            Log.err(ex);
           }
         }
       };

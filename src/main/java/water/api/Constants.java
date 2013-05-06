@@ -39,6 +39,7 @@ public class Constants {
   public static final String COLS                  = "cols";
   public static final String CONSENSUS             = "consensus";
   public static final String CONTENTS              = "contents";
+  public static final String COUNT                 = "count";
   public static final String DATA_KEY              = "data_key";
   public static final String DEPTH                 = "depth";
   public static final String DESCRIPTION           = "description";

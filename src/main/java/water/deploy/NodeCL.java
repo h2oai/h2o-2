@@ -8,16 +8,18 @@ import java.util.*;
 
 import water.Boot;
 import water.TestUtil;
+import water.util.Log;
 
 /**
  * Creates a node in-process using a separate class loader.
  */
 public class NodeCL extends Thread implements Node {
-  private final URL[]    _classpath;
+  private final URL[] _classpath;
   private final String[] _args;
-  private ClassLoader    _initialClassLoader, _classLoader;
+  private ClassLoader _initialClassLoader, _classLoader;
 
   public NodeCL(String[] args) {
+    super("NodeCL");
     _args = args;
     _classpath = getClassPath();
     _initialClassLoader = Thread.currentThread().getContextClassLoader();
@@ -26,20 +28,17 @@ public class NodeCL extends Thread implements Node {
     setDaemon(true);
   }
 
-  @Override
-  public void inheritIO() {
+  @Override public void inheritIO() {
     // TODO add -id to PID?
     // invoke(className, methodName, args)
   }
 
-  @Override
-  public void persistIO(String outFile, String errFile) throws IOException {
+  @Override public void persistIO(String outFile, String errFile) throws IOException {
     // TODO
     // invoke(className, methodName, args)
   }
 
-  @Override
-  public void kill() {
+  @Override public void kill() {
     // TODO
     // invoke(className, methodName, args)
   }
@@ -56,22 +55,20 @@ public class NodeCL extends Thread implements Node {
       }
       return list.toArray(new URL[list.size()]);
     } catch( Exception e ) {
-      throw new RuntimeException(e);
+      throw Log.errRTExcept(e);
     }
   }
 
-  @Override
-  public int waitFor() {
+  @Override public int waitFor() {
     try {
       join();
       return 0;
-    } catch( InterruptedException ex ) {
-      throw new RuntimeException(ex);
+    } catch( InterruptedException e ) {
+      throw Log.errRTExcept(e);
     }
   }
 
-  @Override
-  public void run() {
+  @Override public void run() {
     invoke(Boot.class.getName(), "main", (Object) _args);
   }
 
@@ -96,8 +93,8 @@ public class NodeCL extends Thread implements Node {
       Method method = c.getMethod(methodName, types);
       method.setAccessible(true);
       return method.invoke(null, args);
-    } catch( Exception ex ) {
-      throw new RuntimeException(ex);
+    } catch( Exception e ) {
+      throw Log.errRTExcept(e);
     } finally {
       Thread.currentThread().setContextClassLoader(_initialClassLoader);
     }
@@ -120,7 +117,7 @@ public class NodeCL extends Thread implements Node {
       }
       return list;
     } catch( Exception e ) {
-      throw new RuntimeException(e);
+      throw Log.errRTExcept(e);
     }
   }
 }
