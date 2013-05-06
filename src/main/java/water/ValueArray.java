@@ -383,15 +383,12 @@ public class ValueArray extends Iced implements Cloneable {
       // Especially if the InputStream is a (g)unzip, its useful to overlap the
       // write with read.
       H2OCountedCompleter subtask = new H2OCountedCompleter() {
-          @Override public void compute2() {
-            if(val._key.home() || H2O.get(val._key) != null){
-              DKV.put(val._key,val,fs,true); // The only exciting thing in this innerclass!
-              tryComplete();
-            } else // do not cache keys during readPut!
-              new RPC(val._key.home_node(),new TaskPutKey(val._key, val,true)).addCompleter(this).call();
-          }
-          @Override public byte priority() { return H2O.ATOMIC_PRIORITY; }
-        };
+        @Override public void compute2() {
+          DKV.put(val._key,val,fs,!val._key.home() && H2O.get(val._key) == null); // The only exciting thing in this innerclass!
+          tryComplete();
+        }
+        @Override public byte priority() { return H2O.ATOMIC_PRIORITY; }
+      };
       H2O.submitTask(subtask);
       // Also add the DKV task to the blocking list (not just the TaskPutKey
       // buried inside the DKV!)

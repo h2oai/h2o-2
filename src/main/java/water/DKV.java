@@ -23,6 +23,7 @@ public abstract class DKV {
         key = val._key = old._key; // Use prior key in val
       Value res = DputIfMatch(key,val,old,fs,dontCache);
       if( res == old ) return old; // PUT is globally visible now?
+      if(res != null) key = val._key = res._key;
     }
   }
   static public Value put( Key key, Iced v ) { return put(key,v,null); }
