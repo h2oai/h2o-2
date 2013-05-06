@@ -24,6 +24,8 @@ import com.google.common.io.Closeables;
  */
 @SuppressWarnings("fallthrough")
 public final class ParseDataset extends Job {
+
+  public static int PLIMIT = Integer.MAX_VALUE;
   public static enum Compression { NONE, ZIP, GZIP }
 
   public final Key  _progress;
@@ -193,6 +195,9 @@ public final class ParseDataset extends Job {
     final String [] _headers;
 
     public UnzipAndParseTask(ParseDataset job, Compression comp, CsvParser.Setup setup, CustomParser.Type pType) {
+      this(job,comp,setup,pType,Integer.MAX_VALUE);
+    }
+    public UnzipAndParseTask(ParseDataset job, Compression comp, CsvParser.Setup setup, CustomParser.Type pType, int maxParallelism) {
       _job = job;
       _comp = comp;
       _sep = setup._separator;
@@ -220,7 +225,6 @@ public final class ParseDataset extends Job {
         } else
           _counter = (int)n;
       }
-
     }
     // actual implementation of unzip and parse, intedned for the FJ computation
     private class UnzipAndParseLocalTask extends H2OCountedCompleter {
@@ -229,7 +233,6 @@ public final class ParseDataset extends Job {
         _idx = idx;
         setCompleter(UnzipAndParseTask.this);
       }
-
       protected  DParseTask _p1;
       @Override
       public void compute2() {
@@ -310,8 +313,14 @@ public final class ParseDataset extends Job {
       _fileInfo = new FileInfo[_keys.length];
       subTasks = new UnzipAndParseLocalTask[_keys.length];
       setPendingCount(subTasks.length);
-      for(int i = 0; i < _keys.length; ++i)
-        H2O.submitTask((subTasks[i] = new UnzipAndParseLocalTask(i)));
+      int p = 0;
+      for(int i = 0; i < _keys.length; ++i){
+        if(p < ParseDataset.PLIMIT){
+          H2O.submitTask((subTasks[i] = new UnzipAndParseLocalTask(i)));
+          ++p;
+        } else
+          (subTasks[i] = new UnzipAndParseLocalTask(i)).invoke();
+      }
       tryComplete();
     }
 

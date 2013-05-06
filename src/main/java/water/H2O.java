@@ -11,6 +11,7 @@ import jsr166y.*;
 import water.exec.Function;
 import water.hdfs.HdfsLoader;
 import water.nbhm.NonBlockingHashMap;
+import water.parser.ParseDataset;
 import water.store.s3.PersistS3;
 import water.util.*;
 import water.util.Log.Tag.Sys;
@@ -501,6 +502,7 @@ public final class H2O {
     public String random_udp_drop = null; // test only, randomly drop udp incoming
     public String nolog = null; // disable logging
     public String no_requests_log = null; // disable logging of Web requests
+    public int pparse_limit = Integer.MAX_VALUE;
   }
   public static boolean IS_SYSTEM_RUNNING = false;
 
@@ -515,7 +517,7 @@ public final class H2O {
     Arguments arguments = new Arguments(args);
     arguments.extract(OPT_ARGS);
     ARGS = arguments.toStringArray();
-
+    ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
     if(OPT_ARGS.nolog == null)
       Log.initHeaders();
 
