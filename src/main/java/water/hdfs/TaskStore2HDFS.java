@@ -1,7 +1,8 @@
 package water.hdfs;
 
 import water.*;
-import water.DTask;
+import water.util.Log;
+import water.util.Log.Tag.Sys;
 
 /**
  * Distributed task to store key on HDFS.
@@ -48,7 +49,7 @@ public class TaskStore2HDFS extends DTask<TaskStore2HDFS> {
     long idx = 0;
     while( (ts=UKV.get(selfKey,TaskStore2HDFS.class)) != null ) {
       if( ts._indexFrom != idx ) {
-        System.out.print(" "+idx+"/"+ary.chunks());
+        Log.debug(Sys.HDFS_,idx,"/",ary.chunks());
         idx = ts._indexFrom;
       }
       if( ts._err != null ) {   // Found an error?
@@ -57,22 +58,14 @@ public class TaskStore2HDFS extends DTask<TaskStore2HDFS> {
       }
       try { Thread.sleep(100); } catch( InterruptedException e ) { }
     }
-    System.out.println(" "+ary.chunks()+"/"+ary.chunks());
-
+    Log.debug(Sys.HDFS_,ary.chunks(),"/",ary.chunks());
     //PersistHdfs.refreshHDFSKeys();
     return null;
   }
 
   public TaskStore2HDFS(Key srcKey) { _arykey = srcKey; }
 
-  @Override
-  public final TaskStore2HDFS invoke(H2ONode sender) {
-    compute();
-    return this;
-  }
-
-  @Override
-  public void compute2() {
+  @Override public void compute2() {
     String path = null;// getPathFromValue(val);
     ValueArray ary = DKV.get(_arykey).get();
     Key self = selfKey();

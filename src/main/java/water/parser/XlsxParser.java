@@ -20,6 +20,7 @@ import com.google.common.base.Strings;
 import java.util.ArrayList;
 import water.DKV;
 import water.Key;
+import water.util.Log;
 
 public class XlsxParser extends CustomParser {
 
@@ -30,18 +31,18 @@ public class XlsxParser extends CustomParser {
   private ArrayList<String> _colNames = new ArrayList();
   private ValueString _str = new ValueString();
 
-  
-  
+
+
   public XlsxParser(DParseTask callback) {
     _callback = callback;
   }
-  
+
   private XMLReader makeSheetParser() throws SAXException {
     XMLReader parser = XMLReaderFactory.createXMLReader();
     parser.setContentHandler(new SheetHandler());
     return parser;
   }
-  
+
   @Override public void parse(Key key) throws Exception {
     _firstRow = true;
     InputStream is = DKV.get(key).openStream();
@@ -49,7 +50,7 @@ public class XlsxParser extends CustomParser {
       XSSFReader reader = new XSSFReader(OPCPackage.open(is));
       _sst = reader.getSharedStringsTable();
       XMLReader parser = makeSheetParser();
-      Iterator<InputStream> it = reader.getSheetsData(); 
+      Iterator<InputStream> it = reader.getSheetsData();
       while (it.hasNext()) {
         InputStream sheet = it.next();
         try {
@@ -59,10 +60,10 @@ public class XlsxParser extends CustomParser {
         }
       }
     } finally {
-      try { is.close(); } catch (IOException e) { }
+      try { is.close(); } catch (IOException e) { Log.err(e); }
     }
   }
-  
+
   private class SheetHandler extends DefaultHandler {
     private String  _lastContents;
     private boolean _nextIsString;
@@ -127,7 +128,7 @@ public class XlsxParser extends CustomParser {
                 _callback.addStrCol(_curCol, _str.setTo(_lastContents));
             }
           } catch (Exception e) {
-            e.printStackTrace();
+            Log.err(e);
           }
         }
       } else if( name.equals("row") ) {

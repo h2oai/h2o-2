@@ -3,6 +3,7 @@ package water.api;
 import com.google.gson.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 import water.*;
 import water.util.TimelineSnapshot;
 
@@ -10,7 +11,7 @@ public class IOStatus extends Request {
   private static final String HISTOGRAM = "histogram";
   public IOStatus() { _requestHelp = "Displays recent I/O activity."; }
   // Delta-time for histogram summaries, in seconds
-  private static final int[] dts = new int[]{1,2,5,10,30,60,120,300,600};
+  private static final int[] dts = new int[]{1,5,60,300};
 
   @Override public Response serve() {
     JsonObject response = new JsonObject();
@@ -32,7 +33,7 @@ public class IOStatus extends Request {
       int flavor = event.is_io();
       if( flavor == -1 ) continue;
       int nidx = event._nodeId;
-      int rw = event.send_recv();
+      int rw = event.send_recv();// 1 for receive or read
       long ctms = event.ms();   // Close-time msec
       long dura = event.ms_io();// Duration in msec open-to-close
       long blkd = event.ns();   // Nano's in blocking i/o calls;
@@ -55,7 +56,7 @@ public class IOStatus extends Request {
       iop.addProperty("i_o",Value.nameOfPersist(flavor));
       iop.addProperty("r_w",rw==0?"write":"read");
       iop.addProperty("duration"+Constants.Suffixes.MILLIS,dura); // ms from open-to-close
-      iop.addProperty("blocked_ns",blkd); // ns in blocking i/o calls
+      iop.addProperty("blocked"+Constants.Suffixes.MILLIS,TimeUnit.MILLISECONDS.convert(blkd,TimeUnit.NANOSECONDS)); // ns in blocking i/o calls
       iop.addProperty("size"+Constants.Suffixes.BYTES,size); // bytes read/written
       iops.add(iop);
     }
@@ -104,17 +105,11 @@ public class IOStatus extends Request {
         JsonObject jo = e.getAsJsonObject();
         int nidx = jo.get("cloud_node_idx").getAsInt();
         // Convert flavor string to a flavor index
-        int flavor;
-        try {
         String fs = jo.get("i_o").getAsString();
+        int flavor;
         for( flavor=0; flavor<8; flavor++ )
           if( fs.equals(Value.nameOfPersist(flavor)) )
             break;
-        } catch( UnsupportedOperationException uoe ) {
-          System.err.println("jio?"+jo);
-          System.err.println("jio?"+jo.get("i_o"));
-          throw uoe;
-        }
         assert flavor < 8;
         // Convert r/w string to 1/0
         int r_w = jo.get("r_w").getAsString().equals("write") ? 0 : 1;
@@ -143,18 +138,12 @@ public class IOStatus extends Request {
         for( int flavor=0; flavor<8; flavor++ ) {
           if( !f[n][flavor][0] && !f[n][flavor][1] ) continue;
           int rows = 0; // Compute rows for either read or write or both
-          if( f[n][flavor][0] ) rows += 2;
-          if( f[n][flavor][1] ) rows += 2;
+          if( f[n][flavor][0] ) rows++;
+          if( f[n][flavor][1] ) rows++;
           sb.append("<tr>");
           sb.append("<td rowspan=\""+rows+"\"><h4>").append(Value.nameOfPersist(flavor)).append("</h4></td>");
-          if( f[n][flavor][1] ) { // Do 2 rows of read
-            doRow(sb, "eff read" ,ebws,n,flavor,1);
-            doRow(sb,"peak read" ,pbws,n,flavor,1);
-          }
-          if( f[n][flavor][0] ) { // Do 2 rows of write
-            doRow(sb, "eff write",ebws,n,flavor,0);
-            doRow(sb,"peak write",pbws,n,flavor,0);
-          }
+          if( f[n][flavor][1] ) doRow(sb,ebws,pbws,n,flavor,1);
+          if( f[n][flavor][0] ) doRow(sb,ebws,pbws,n,flavor,0);
           sb.append("</tr>");
         }
         sb.append("</table></span>");
@@ -166,12 +155,18 @@ public class IOStatus extends Request {
   }
 
   // Do a single row, all time-windows
-  private static void doRow( StringBuilder sb, String msg, long[][][][] bws, int nidx, int flavor, int r_w ) {
-    sb.append("<td>").append(msg).append("</td>");
+  private static void doRow( StringBuilder sb, long[][][][] ebws, long[][][][] pbws, int nidx, int flavor, int r_w ) {
+    sb.append("<td> eff/peak ").append(r_w==0?"write":"read").append("</td>");
     for( int i=0; i<dts.length; i++ ) {
       sb.append("<td>");
-      if( bws[nidx][flavor][r_w][i] > 0 ) 
-        sb.append(PrettyPrint.bytesPerSecond(bws[nidx][flavor][r_w][i]));
+      long eff = ebws[nidx][flavor][r_w][i];
+      long peak= pbws[nidx][flavor][r_w][i];
+      if( eff > 0 || peak > 0 ) {
+        int scale = Math.max(PrettyPrint.byteScale(eff),PrettyPrint.byteScale(peak));
+        String s1 = PrettyPrint.bytes(eff,scale);
+        String s2 = s1.substring(0,s1.length()-3); // Strip units off
+        sb.append(s2).append(" / ").append(PrettyPrint.bytes(peak,scale)).append("/S");
+      }
       sb.append("</td>");
     }
     sb.append("</tr>");

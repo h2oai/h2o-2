@@ -4,7 +4,9 @@ import hex.rf.Data.Row;
 
 import java.util.*;
 
+import water.util.Log;
 import water.util.Utils;
+import water.util.Log.Tag.Sys;
 
 /** Keeps track of the column distributions and analyzes the column splits in the
  * end producing the single split that will be used for the node. */
@@ -80,7 +82,8 @@ abstract class Statistic {
     // first create the column distributions
     _columnDists = new int[data.columns()-1][][];
     for (int i = 0; i < _columnDists.length; ++i)
-      _columnDists[i] = new int[data.columnArity(i)+1][data.classes()];
+      if (!data.isIgnored(i))
+        _columnDists[i] = new int[data.columnArity(i)+1][data.classes()];
     // create the columns themselves
     _features = new int[featuresPerSplit];
     _remembered = null;
@@ -102,6 +105,7 @@ abstract class Statistic {
   /**Features can be used in a split if they are not already used. */
   private boolean isColumnUsable(Data d, int i) {
     assert i < d.columns()-1;   // Last column is class
+    if (d.isIgnored(i)) return false;
     return (_remembered == null || !_remembered.contains(i)) && d.colMaxIdx(i) != d.colMinIdx(i);
   }
 
@@ -134,7 +138,7 @@ abstract class Statistic {
           try {
           _columnDists[f][val][cls]++;
           } catch( ArrayIndexOutOfBoundsException ab ) {
-            throw ab;
+            throw Log.err(Sys.RANDF,ab);
           }
         }
       }

@@ -1,5 +1,6 @@
 package hex.rf;
 
+import hex.rf.DRF.DRFTask;
 import hex.rf.MinorityClasses.UnbalancedClass;
 
 import java.util.*;
@@ -12,7 +13,7 @@ import water.util.Utils;
 
 public class StratifiedDABuilder extends DABuilder {
 
-  StratifiedDABuilder(DRF drf) {
+  StratifiedDABuilder(DRFTask drf) {
     super(drf);
   }
 
@@ -108,7 +109,7 @@ public class StratifiedDABuilder extends DABuilder {
     final ValueArray ary = DKV.get(_drf._rfmodel._dataKey).get();
     int   row_size        = ary.rowSize();
     int   rpc             = (int)ValueArray.CHUNK_SZ/row_size;
-    final Column classCol = ary._cols[_drf._classcol];
+    final Column classCol = ary._cols[_drf._params._classcol];
     final int    nclasses = _drf._rfmodel.classes();
     boolean []   unbalancedClasses = null;
     final int[] modelDataMap = _drf._rfmodel.columnMapping(ary.colNames());
@@ -142,15 +143,15 @@ public class StratifiedDABuilder extends DABuilder {
 
     ArrayList<Key> myKeys = new ArrayList<Key>();
     for(Key k : keys)myKeys.add(k);
-    if(_drf._uClasses != null) {
+    if(/*FIXME _drf._params._uClasses != null*/ true) {
       // boolean array to keep track which classes to ignore when reading local keys
       unbalancedClasses = new boolean[nclasses];
-      for(UnbalancedClass c:_drf._uClasses){
+      for(UnbalancedClass c: new UnbalancedClass[0] /*FIXME _drf._params._uClasses*/){
         unbalancedClasses[c._c] = true;
-        int nrows = _drf._strataSamples[c._c];
+        int nrows = -1 ; // FIXME = _drf._params._strataSamples[c._c];
         int echunks = 1 + nrows/rpc;
         if(echunks >= c._chunks.length) { // we need all the chunks from all the nodes
-          chunkHistogram[keys.length][c._c] = _drf._gHist[c._c];
+//          chunkHistogram[keys.length][c._c] = _drf._gHist[c._c];
           for(Key k:c._chunks)
             myKeys.add(k);
         } else { // sample only from some of chunks on other nodes
@@ -166,7 +167,7 @@ public class StratifiedDABuilder extends DABuilder {
           }
           // sample from non-local chunks until we have enough rows
           // sampling only works on chunk boundary -> we can end up with upt to rpc more rows than requested
-          Random rand = Utils.getRNG(_drf._seed);
+          Random rand = Utils.getRNG(_drf._params._seed);
           while(r < nrows){
             assert !indexes.isEmpty();
             int i = rand.nextInt() % indexes.size();
@@ -188,17 +189,17 @@ public class StratifiedDABuilder extends DABuilder {
     final DataAdapter dapt = new DataAdapter(ary, _drf._rfmodel, modelDataMap,
                                             totalRows,
                                             ValueArray.getChunkIndex(keys[0]),
-                                            _drf._seed,
-                                            _drf._binLimit,
-                                            _drf._classWt);
+                                            _drf._params._seed,
+                                            _drf._params._binLimit,
+                                            _drf._params._classWt);
 
     // vector keeping track of indexes of individual classes so that we can read data in parallel
     final int [] startRows = new int[nclasses];
 
-    dapt.initIntervals(nclasses);
+//    dapt.initIntervals(nclasses);
     for(int i = 1; i < nclasses; ++i){
       startRows[i] = startRows[i-1] + chunkHistogram[keys.length][i-1];
-      dapt.setIntervalStart(i, startRows[i]);
+//      dapt.setIntervalStart(i, startRows[i]);
     }
     // cols that do not need binning
     int [] rawCols = new int[_drf._rfmodel._va._cols.length];
@@ -238,7 +239,7 @@ public class StratifiedDABuilder extends DABuilder {
       } else { // chunk containing only single unbalanced class
         // find the unbalanced class
         int c = 0;
-        for(;c < (_drf._uClasses.length-1) && i - _drf._uClasses[c]._chunks.length >= 0; ++c);
+        //for(;c < (_drf._params._uClasses.length-1) && i - _drf._params._uClasses[c]._chunks.length >= 0; ++c);
         startRows[c] += DKV.get(myKeys.get(i))._max/rpc;
       }
     }

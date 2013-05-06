@@ -7,7 +7,8 @@ import java.util.Arrays;
 
 import org.apache.commons.lang.ArrayUtils;
 
-import water.Log;
+import water.util.Log;
+import water.util.Log.Tag.Sys;
 
 /**
  * Executes code in a separate VM.
@@ -34,7 +35,7 @@ public abstract class VM {
       try {
         cp += new File(new URI(url.toString())) + File.pathSeparator;
       } catch( URISyntaxException e ) {
-        throw new RuntimeException(e);
+        throw Log.errRTExcept(e);
       }
     }
     _args.add(cp);
@@ -78,7 +79,7 @@ public abstract class VM {
       if( _out != null )
         persistIO(_process, _out, _err);
     } catch( IOException e ) {
-      throw new RuntimeException(e);
+      throw  Log.errRTExcept(e);
     }
   }
 
@@ -88,17 +89,16 @@ public abstract class VM {
       return false;
     } catch( IllegalThreadStateException _ ) {
       return true;
-    } catch( Exception ex ) {
-      Log.write(ex);
-      throw new RuntimeException(ex);
+    } catch( Exception e ) {
+      throw  Log.errRTExcept(e);
     }
   }
 
   public int waitFor() {
     try {
       return _process.waitFor();
-    } catch( InterruptedException ex ) {
-      throw new RuntimeException(ex);
+    } catch( InterruptedException e ) {
+      throw  Log.errRTExcept(e);
     }
   }
 
@@ -122,7 +122,7 @@ public abstract class VM {
             b = -1;
           }
           if( b < 0 ) {
-            Log.write("Assuming parent done, exit(0)");
+            Log.debug("Assuming parent done, exit(0)");
             System.exit(0);
           }
         }
@@ -150,10 +150,7 @@ public abstract class VM {
         try {
           for( ;; ) {
             String line = source_.readLine();
-
-            if( line == null )
-              break;
-
+            if( line == null ) break;
             String s = header == null ? line : header + line;
             Log.unwrap(target, s);
           }

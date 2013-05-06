@@ -57,7 +57,7 @@ public abstract class Sampling {
         }
         float randFloat = rand.nextFloat();
         if( randFloat < f ) {
-          if( j == sample.length ) sample = Arrays.copyOfRange(sample,0,(int)(sample.length*1.2));
+          if( j == sample.length ) sample = Arrays.copyOfRange(sample,0,(int)(1 + sample.length*1.2));
           sample[j++] = i;
         }
       }
@@ -97,18 +97,20 @@ public abstract class Sampling {
       int    j      = 0;
       int    cnt    = 0;
       // collect samples per strata
-      for (int i=0; i<rows; i++) {
+      for (int row=0; row<rows; row++) {
         if( cnt--==0 ) {
-          long chunkSamplingSeed = chunkSampleSeed(seed, i);
+          long chunkSamplingSeed = chunkSampleSeed(seed, row);
           rand = Utils.getDeterRNG(chunkSamplingSeed);
           cnt  = rowsPerChunk-1;
-          if( i+2*rowsPerChunk > rows ) cnt = rows; // Last chunk is big
+          if( row+2*rowsPerChunk > rows ) cnt = rows; // Last chunk is big
         }
         float randFloat = rand.nextFloat();
-        int strata = data._dapt.classOf(i); // strata groups are represented by response classes
-        if (randFloat < _strataSamples[strata]) {
-          if( j == sample.length ) sample = Arrays.copyOfRange(sample,0,(int)(sample.length*1.2));
-          sample[j++] = i;
+        if (!data._dapt.hasBadValue(row, data._dapt.classColIdx())) {
+          int strata = data._dapt.classOf(row); // strata groups are represented by response classes
+          if (randFloat < _strataSamples[strata]) {
+            if( j == sample.length ) sample = Arrays.copyOfRange(sample,0,(int)(1+sample.length*1.2));
+            sample[j++] = row;
+          }
         }
       }
       return Arrays.copyOf(sample,j);

@@ -15,7 +15,7 @@ public class TreeRenderer {
     File f = new File("/usr/local/bin/dot");
     if( !f.exists() ) f = new File("/usr/bin/dot");
     // graphviz is currently at 2.30. hack to support minor revs coming up until
-    // someone figures out a better way. 
+    // someone figures out a better way.
     // Also, 2.30 apparently got rid of a space on Win7 at least. So try those too.
     if( !f.exists() ) f = new File("C:\\Program Files (x86)\\Graphviz 2.28\\bin\\dot.exe");
     if( !f.exists() ) f = new File("C:\\Program Files (x86)\\Graphviz 2.29\\bin\\dot.exe");
@@ -30,15 +30,20 @@ public class TreeRenderer {
     DOT_PATH = f.exists() ? f.getAbsolutePath() : null;
   }
 
+  /** Response column domain. */
   private final String[] _domain;
+  /** RF Model columns set - only columns which were used for model building. */
   private final Column[] _columns;
-  private final byte[] _treeBits;
-  private final int _nodeCount;
+  /** Mapping from RF model' columns into dataset columns. */
+  private final int[]    _mapping;
+  private final byte[]   _treeBits;
+  private final int      _nodeCount;
 
-  public TreeRenderer(RFModel model, int treeNum, ValueArray ary, int classCol) {
+  public TreeRenderer(RFModel model, int treeNum, ValueArray ary) {
     _treeBits = model.tree(treeNum);
-    _columns = ary._cols;
-    _domain = _columns[classCol]._domain;
+    _mapping  = model.columnMapping(ary.colNames());
+    _columns  = model._va._cols;
+    _domain   = model.response()._domain;
 
     long dl = Tree.depth_leaves(new AutoBuffer(_treeBits));
     int leaves= (int)(dl&0xFFFFFFFFL);
@@ -51,7 +56,9 @@ public class TreeRenderer {
     try {
       StringBuilder sb = new StringBuilder();
       sb.append("<pre><code>");
-      new CodeTreePrinter(sb, _columns, _domain).walk_serialized_tree(new AutoBuffer(_treeBits));
+      new CodeTreePrinter(sb, _columns, _mapping, _domain).dumpColumnConstants()
+                                                .dumpClassConstants()
+                                                .walkSerializedTree(new AutoBuffer(_treeBits));
       sb.append("</code></pre>");
       return sb.toString();
     } catch( Exception e ) {
@@ -69,7 +76,7 @@ public class TreeRenderer {
     try {
       RString img = new RString("<img src=\"data:image/svg+xml;base64,%rawImage\" width='80%%' ></img><p>");
       Process exec = Runtime.getRuntime().exec(new String[] { DOT_PATH, "-Tsvg" });
-      new GraphvizTreePrinter(exec.getOutputStream(), _columns, _domain).walk_serialized_tree(new AutoBuffer(_treeBits));
+      new GraphvizTreePrinter(exec.getOutputStream(), _columns, _mapping, _domain).walk_serialized_tree(new AutoBuffer(_treeBits));
       exec.getOutputStream().close();
       byte[] data = ByteStreams.toByteArray(exec.getInputStream());
       img.replace("rawImage", new String(Base64.encodeBase64(data), "UTF-8"));

@@ -14,12 +14,12 @@ import water.util.IndentingAppender;
 public class CodeTreePrinter extends TreePrinter {
   private final IndentingAppender _dest;
 
-  public CodeTreePrinter(OutputStream dest, Column[] columns, String[]classNames) {
-    this(new OutputStreamWriter(dest), columns, classNames);
+  public CodeTreePrinter(OutputStream dest, Column[] columns, int[] mapping, String[] classNames) {
+    this(new OutputStreamWriter(dest), columns, mapping, classNames);
   }
 
-  public CodeTreePrinter(Appendable dest, Column[] columns, String[]classNames) {
-    super(columns, classNames);
+  public CodeTreePrinter(Appendable dest, Column[] columns, int[] mapping, String[] classNames) {
+    super(columns, mapping, classNames);
     _dest = new IndentingAppender(dest);
   }
 
@@ -55,8 +55,24 @@ public class CodeTreePrinter extends TreePrinter {
     _dest.decrementIndent();
   }
 
+  public CodeTreePrinter dumpColumnConstants() {
+    try {
+      _dest.append("// Column constants\n");
+      for (int i=0; i<_cols.length-1; i++)
+        _dest.append(String.format("int %s = %d;\n", colNameConstant(i), _colMapping[i]));
+    } catch (IOException e) { throw new Error(e); }
+    return this;
+  }
 
-  public void walk_serialized_tree( AutoBuffer tbits ) {
+  private String colNameConstant(int colNum) {
+    return "COL_" + _cols[colNum]._name.toUpperCase().replace(' ', '_').replace('.', '_');
+  }
+
+  public CodeTreePrinter dumpClassConstants() {
+    return this;
+  }
+
+  public CodeTreePrinter walkSerializedTree( AutoBuffer tbits ) {
     try {
       _dest.append("int classify(float fs[]) {\n");
       _dest.incrementIndent();
@@ -70,7 +86,7 @@ public class CodeTreePrinter extends TreePrinter {
         }
         protected Tree.TreeVisitor pre (int col, float fcmp, int off0, int offl, int offr ) throws IOException {
           byte b = (byte) _ts.get1(off0);
-          _dest.append(String.format("if( fs[%s] %s %f ) \n",_cols[col]._name,((b=='E')?"==":"<="), fcmp)).incrementIndent();
+          _dest.append(String.format("if( fs[%s] %s %f ) \n",colNameConstant(col),((b=='E')?"==":"<="), fcmp)).incrementIndent();
           return this;
         }
         protected Tree.TreeVisitor mid (int col, float fcmp ) throws IOException {
@@ -84,5 +100,7 @@ public class CodeTreePrinter extends TreePrinter {
       }.visit();
       _dest.decrementIndent().append("}").flush();
     } catch( IOException e ) { throw new Error(e); }
+
+    return this;
   }
 }

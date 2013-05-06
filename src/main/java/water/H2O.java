@@ -12,7 +12,8 @@ import water.exec.Function;
 import water.hdfs.HdfsLoader;
 import water.nbhm.NonBlockingHashMap;
 import water.store.s3.PersistS3;
-import water.util.Utils;
+import water.util.*;
+import water.util.Log.Tag.Sys;
 
 import com.amazonaws.auth.PropertiesCredentials;
 import com.google.common.base.Objects;
@@ -54,7 +55,7 @@ public final class H2O {
 
   public static final PrintStream OUT = System.out;
   public static final PrintStream ERR = System.err;
-  static final int NUMCPUS = Runtime.getRuntime().availableProcessors();
+  public static final int NUMCPUS = Runtime.getRuntime().availableProcessors();
 
   // Convenience error
   public static final RuntimeException unimpl() { return new RuntimeException("unimplemented"); }
@@ -63,7 +64,7 @@ public final class H2O {
   public static final void ignore(Throwable e)             { ignore(e,"[h2o] Problem ignored: "); }
   public static final void ignore(Throwable e, String msg) { ignore(e, msg, true); }
   public static final void ignore(Throwable e, String msg, boolean printException) {
-    StringBuffer sb = new StringBuffer();
+/*    StringBuffer sb = new StringBuffer();
     sb.append(msg).append('\n');
     if (printException) {
       StackTraceElement[] stack = e.getStackTrace();
@@ -72,7 +73,8 @@ public final class H2O {
       sb.append(e.toString().replace("Exception", "Problem")).append('\n');
       for (StackTraceElement el : stack) { sb.append("\tat "); sb.append(el.toString().replace("Exception", "Problem" )); sb.append('\n'); }
     }
-    System.err.println(sb);
+    */
+    Log.err(msg, printException? e : null);
   }
 
   // --------------------------------------------------------------------------
@@ -176,7 +178,7 @@ public final class H2O {
     return Arrays.toString(_memary);
   }
 
-  static InetAddress findInetAddressForSelf() throws Error {
+  public static InetAddress findInetAddressForSelf() throws Error {
     // Get a list of all valid IPs on this machine.  Typically 1 on Mac or
     // Windows, but could be many on Linux or if a hypervisor is present.
     ArrayList<InetAddress> ips = new ArrayList<InetAddress>();
@@ -189,7 +191,7 @@ public final class H2O {
           ips.add(ias.nextElement());
         }
       }
-    } catch( SocketException e ) { }
+    } catch( SocketException e ) { Log.err(e); }
 
     InetAddress local = null;   // My final choice
 
@@ -200,15 +202,15 @@ public final class H2O {
       try{
         arg = InetAddress.getByName(OPT_ARGS.ip);
       } catch( UnknownHostException e ) {
-        System.err.println(e.toString());
+        Log.err(e);
         System.exit(-1);
       }
       if( !(arg instanceof Inet4Address) ) {
-        System.err.println("Only IP4 addresses allowed.");
+        Log.warn("Only IP4 addresses allowed.");
         System.exit(-1);
       }
       if( !ips.contains(arg) ) {
-        System.err.println("IP address not found on this machine");
+        Log.warn("IP address not found on this machine");
         System.exit(-1);
       }
       local = arg;
@@ -235,29 +237,31 @@ public final class H2O {
     // local host.
     if( local == null ) {
       try {
-        System.err.println("Failed to determine IP, falling back to localhost.");
+        Log.warn("Failed to determine IP, falling back to localhost.");
         // set default ip address to be 127.0.0.1 /localhost
         local = InetAddress.getByName("127.0.0.1");
       } catch( UnknownHostException e ) {
-        throw new Error(e);
+        throw  Log.errRTExcept(e);
       }
     }
     return local;
   }
 
   private static InetAddress guessInetAddress(List<InetAddress> ips) {
-    System.out.println("Multiple local IPs detected:");
-    for(InetAddress ip : ips) System.out.println("  " + ip);
-    System.out.println("Attempting to determine correct address...");
+    String m = "Multiple local IPs detected:\n";
+    for(InetAddress ip : ips) m+="  " + ip;
+    m+="Attempting to determine correct address...";
     Socket s = null;
     try {
       // using google's DNS server as an external IP to find
       s = new Socket("8.8.8.8", 53);
-      System.out.println("Using " + s.getLocalAddress());
+      m+="Using " + s.getLocalAddress();
       return s.getLocalAddress();
     } catch( Throwable t ) {
+      Log.err(t);
       return null;
     } finally {
+      Log.warn(m);
       Utils.close(s);
     }
   }
@@ -403,12 +407,12 @@ public final class H2O {
   // A standard FJ Pool, with an expected priority level.
   private static class ForkJoinPool2 extends ForkJoinPool {
     public final int _priority;
-    ForkJoinPool2(int p, int cap) { super(NUMCPUS,new FJWThrFact(cap),null,false); _priority = p; }
+    ForkJoinPool2(int p, int cap) { super(NUMCPUS,new FJWThrFact(cap),null,p!=MIN_PRIORITY); _priority = p; }
     public H2OCountedCompleter poll() { return (H2OCountedCompleter)pollSubmission(); }
   }
 
   // Normal-priority work is generally directly-requested user ops.
-  private static final ForkJoinPool2 FJP_NORM = new ForkJoinPool2(MIN_PRIORITY,99);
+  private static final ForkJoinPool2 FJP_NORM = new ForkJoinPool2(MIN_PRIORITY,299);
   // Hi-priority work, sorted into individual queues per-priority.
   // Capped at a small number of threads per pool.
   private static final ForkJoinPool2 FJPS[] = new ForkJoinPool2[MAX_PRIORITY+1];
@@ -551,15 +555,13 @@ public final class H2O {
     // Do not forget to put SELF into the static configuration (to simulate
     // proper multicast behavior)
     if( STATIC_H2OS != null && !STATIC_H2OS.contains(SELF)) {
-      System.err.println("[h2o] *WARNING* flatfile configuration does not include self: " + SELF);
-      System.err.println("[h2o] *WARNING* flatfile contains: " + STATIC_H2OS);
+      Log.warn("Flatfile configuration does not include self: " + SELF+ " but contains " + STATIC_H2OS);
       STATIC_H2OS.add(SELF);
     }
 
-    System.out.println("[h2o] ("+VERSION+") '"+NAME+"' on " + SELF+
-                       (OPT_ARGS.flatfile==null
-                        ? (", discovery address "+CLOUD_MULTICAST_GROUP+":"+CLOUD_MULTICAST_PORT)
-                        : ", static configuration based on -flatfile "+OPT_ARGS.flatfile));
+    Log.info("("+VERSION+") '"+NAME+"' on " + SELF+(OPT_ARGS.flatfile==null
+        ? (", discovery address "+CLOUD_MULTICAST_GROUP+":"+CLOUD_MULTICAST_PORT)
+            : ", static configuration based on -flatfile "+OPT_ARGS.flatfile));
 
     // Create the starter Cloud with 1 member
     SELF._heartbeat._jar_md5 = Boot._init._jarHash;
@@ -606,7 +608,7 @@ public final class H2O {
 
     // Start the TCPReceiverThread, to listen for TCP requests from other Cloud
     // Nodes. There should be only 1 of these, and it never shuts down.
-    new TCPReceiverThread().start();
+    (TCPReceiverThread.TCPTHR=new TCPReceiverThread()).start();
     water.api.RequestServer.start();
   }
 
@@ -650,7 +652,7 @@ public final class H2O {
         _udpSocket.socket().bind(new InetSocketAddress(inet, UDP_PORT));
         break;
       } catch (IOException e) {
-        try { if( _apiSocket != null ) _apiSocket.close(); } catch( IOException ohwell ) { }
+        try { if( _apiSocket != null ) _apiSocket.close(); } catch( IOException ohwell ) { Log.err(ohwell); }
         Closeables.closeQuietly(_udpSocket);
         _apiSocket = null;
         _udpSocket = null;
@@ -663,9 +665,7 @@ public final class H2O {
       API_PORT += 2;
     }
     SELF = H2ONode.self(inet);
-    System.out.println("[h2o] Internal communication uses port: "+UDP_PORT);
-    System.out.println("[h2o] Listening for HTTP and REST traffic on");
-    System.out.println("[h2o]\t\thttp:/"+inet+":"+_apiSocket.getLocalPort()+"/");
+    Log.info("Internal communication uses port: ",UDP_PORT,"\nListening for HTTP and REST traffic on  http:/",inet,":"+_apiSocket.getLocalPort()+"/");
 
     NAME = OPT_ARGS.name==null? System.getProperty("user.name") : OPT_ARGS.name;
     // Read a flatfile of allowed nodes
@@ -679,7 +679,7 @@ public final class H2O {
       ip[i] = (byte)(port>>>((3-i)<<3));
     try {
       CLOUD_MULTICAST_GROUP = InetAddress.getByAddress(ip);
-    } catch( UnknownHostException e ) { throw new Error(e); }
+    } catch( UnknownHostException e ) { throw  Log.errRTExcept(e); }
     CLOUD_MULTICAST_PORT = (port>>>16);
   }
 
@@ -702,18 +702,16 @@ public final class H2O {
           }
           // Make and send a packet from the buffer
           CLOUD_MULTICAST_SOCKET.send(new DatagramPacket(buf, buf.length, CLOUD_MULTICAST_GROUP,CLOUD_MULTICAST_PORT));
-        } catch( Exception e ) {
-          // On any error from anybody, close all sockets & re-open
-		  // and if not a soft launch (hibernate mode)
-		  if(H2O.OPT_ARGS.soft == null)
-           System.err.println("Multicast Error "+e);
-          if( CLOUD_MULTICAST_SOCKET != null )
-            try { CLOUD_MULTICAST_SOCKET.close(); }
-            catch( Exception e2 ) { }
-            finally { CLOUD_MULTICAST_SOCKET = null; }
-        }
+        } catch( Exception e ) {  // On any error from anybody, close all sockets & re-open
+          // and if not a soft launch (hibernate mode)
+          if(H2O.OPT_ARGS.soft == null)
+            Log.err("Multicast Error ",e);
+            if( CLOUD_MULTICAST_SOCKET != null )
+              try { CLOUD_MULTICAST_SOCKET.close(); }
+              catch( Exception e2 ) { Log.err("Got",e2); }
+              finally { CLOUD_MULTICAST_SOCKET = null; }
+          }
       }
-
     } else {                    // Multicast Simulation
       // The multicast simulation is little bit tricky. To achieve union of all
       // specified nodes' flatfiles (via option -flatfile), the simulated
@@ -746,8 +744,7 @@ public final class H2O {
         try {
           H2O.CLOUD_DGRAM.send(bb, h2o._key);
         } catch( IOException e ) {
-          System.err.println("Multicast Error to "+h2o);
-          e.printStackTrace(System.err);
+          Log.err("Multicast Error to "+h2o, e);
         }
       }
     }
@@ -842,7 +839,7 @@ public final class H2O {
     if( OPT_ARGS.aws_credentials != null ) {
       try {
         PersistS3.getClient();
-      } catch( IllegalArgumentException iae ) { }
+      } catch( IllegalArgumentException e ) { Log.err(e); }
     }
   }
 
@@ -858,9 +855,6 @@ public final class H2O {
     // Keep earliest dirty time seen
     if( x < _dirty ) _dirty = x;
   }
-  static void kick_store_cleaner() {
-    synchronized(STORE) { STORE.notifyAll(); }
-  }
 
   // Periodically write user keys to disk
   public static class Cleaner extends Thread {
@@ -868,19 +862,17 @@ public final class H2O {
     static public volatile long DESIRED;
     // Histogram used by the Cleaner
     private final Histo _myHisto;
-    // Turn on to see copious cache-cleaning stats
-    static public final boolean VERBOSE = Boolean.getBoolean("h2o.cleaner.verbose");
 
     boolean _diskFull = false;
 
     public Cleaner() {
-      super("Memory Cleaner");
+      super("MemCleaner");
       setDaemon(true);
-      _dirty = Long.MAX_VALUE; // Set to clean-store
-      _myHisto = new Histo(); // Build/allocate a first histogram
-      _myHisto.compute(0); // Compute lousy histogram; find eldest
-      Histo.H.set(_myHisto); // Force to be the most recent
-      _myHisto.histo(true); // Force a recompute with a good eldest
+      _dirty = Long.MAX_VALUE;  // Set to clean-store
+      _myHisto = new Histo();   // Build/allocate a first histogram
+      _myHisto.compute(0);      // Compute lousy histogram; find eldest
+      H = _myHisto;             // Force to be the most recent
+      _myHisto.histo(true);     // Force a recompute with a good eldest
       MemoryManager.set_goals("init",false);
     }
 
@@ -910,14 +902,13 @@ public final class H2O {
         if( h._cached < DESIRED && // Cache is low and
             (now-dirty < 5000) ) { // not dirty a long time
           // Block asleep, waking every 5 secs to check for stuff, or when poked
-          synchronized( STORE ) {
-            try { STORE.wait(5000); } catch (InterruptedException ie) { }
-          }
+          Boot.block_store_cleaner();
           continue; // Awoke; loop back and re-check histogram.
         }
 
         now = System.currentTimeMillis();
         _dirty = Long.MAX_VALUE; // Reset, since we are going write stuff out
+        MemoryManager.set_goals("preclean",false);
 
         // The age beyond which we need to toss out things to hit the desired
         // caching levels. If forced, be exact (toss out the minimal amount).
@@ -931,8 +922,13 @@ public final class H2O {
         // more than 5sec old
         if( !force ) clean_to_age = Math.max(clean_to_age,now-5000);
 
-        if( VERBOSE )
-          System.out.println("[clean >>>] "+h+" DESIRED="+(DESIRED>>20)+"M dirtysince="+(now-dirty)+" force="+force+" clean2age="+(now-clean_to_age));
+        // No logging in the MemManager under memory pressure.  :-(
+        // No logging if under memory pressure: can deadlock the cleaner thread
+        if( Log.flag(Sys.CLEAN) ) {
+          String s = h+" DESIRED="+(DESIRED>>20)+"M dirtysince="+(now-dirty)+" force="+force+" clean2age="+(now-clean_to_age);
+          if( MemoryManager.canAlloc() ) Log.debug(Sys.CLEAN ,s);
+          else                           Log.unwrap(System.err,s);
+        }
         long cleaned = 0;
         long freed = 0;
 
@@ -944,25 +940,34 @@ public final class H2O {
         for( int i=2; i<kvs.length; i += 2 ) {
           // In the raw backing array, Keys and Values alternate in slots
           Object ok = kvs[i+0], ov = kvs[i+1];
-          if( !(ok instanceof Key ) ) continue; // Ignore tombstones and Primes and null's
+          if( !(ok instanceof Key  ) ) continue; // Ignore tombstones and Primes and null's
           Key key = (Key )ok;
           if( !(ov instanceof Value) ) continue; // Ignore tombstones and Primes and null's
           Value val = (Value)ov;
           byte[] m = val.rawMem();
-          if( m == null ) continue; // Nothing to throw out
+          Object p = val.rawPOJO();
+          if( m == null && p == null ) continue; // Nothing to throw out
 
           // ValueArrays covering large files in global filesystems such as NFS
           // or HDFS are only made on import (right now), and not reconstructed
           // by inspection of the Key or filesystem.... so we cannot toss them
           // out because they will not be reconstructed merely by loading the Value.
           if( val.isArray() &&
-              (val._persist & Value.BACKEND_MASK)!=Value.ICE )
+              (val._persist & Value.BACKEND_MASK)!=Value.ICE ) {
+            // But can toss out a byte-array if already deserialized
+            // (no need for both forms).
+            if( m != null && p != null ) { val.freeMem(); freed += val._max; }
             continue; // Cannot throw out
+          }
 
-          // Ignore things younger than the required age. In particular, do
+          // Ignore things younger than the required age.  In particular, do
           // not spill-to-disk all dirty things we find.
           long touched = val._lastAccessedTime;
           if( touched > clean_to_age ) {
+            // But can toss out a byte-array if already deserialized & on disk
+            // (no need for both forms).
+            if( val.isPersisted() &&
+                m != null && p != null ) { val.freeMem(); freed += val._max; }
             dirty_store(touched); // But may write it out later
             continue;
           }
@@ -970,30 +975,41 @@ public final class H2O {
           // Should I write this value out to disk?
           // Should I further force it from memory?
           if(!val.isPersisted() && !diskFull && (force || (lazyPersist() && lazy_clean(key)))) {
-            if( VERBOSE) { System.out.print('.'); cleaned += m.length; }
-            try{
+            try {
               val.storePersist(); // Write to disk
+              if( m == null ) m = val.rawMem();
+              if( m != null ) cleaned += m.length;
             } catch(IOException e) {
               if( isDiskFull() ) // disk full?
-                System.err.println("Disk full! Disabling swapping to disk." + ((force)?" Memory low! Please free some space in " + PersistIce.ROOT+"!":""));
+                Log.warn(Sys.CLEAN,"Disk full! Disabling swapping to disk." + ((force)?" Memory low! Please free some space in " + PersistIce.ROOT+"!":""));
               else
-                System.err.println("Disk swapping failed! " + e.getMessage());
+                Log.warn(Sys.CLEAN,"Disk swapping failed! " + e.getMessage());
               // Something is wrong so mark disk as full anyways so we do not
-              // attempt to write again.  (will retry next run when memory is
-              // low)
+              // attempt to write again.  (will retry next run when memory is low)
               diskFull = true;
             }
           }
-          if(force && val.isPersisted()){
-            val.freeMem(); // And, under pressure, free mem
-            freed += m.length;
+          // And, under pressure, free all
+          if( force && val.isPersisted() ) {
+            val.freeMem ();  if( m != null ) freed += val._max;  m = null;
+            val.freePOJO();  if( p != null ) freed += val._max;  p = null;
+          }
+          // If we have both forms, toss the byte[] form - can be had by
+          // serializing again.
+          if( m != null && p != null ) {
+            val.freeMem();
+            freed += val._max;
           }
         }
 
         h = _myHisto.histo(true); // Force a new histogram
         MemoryManager.set_goals("postclean",false);
-        if( VERBOSE )
-          System.out.println("[clean <<<] "+h+" cleaned="+(cleaned>>20)+"M, freed="+(freed>>20)+"M, DESIRED="+(DESIRED>>20)+"M");
+        // No logging if under memory pressure: can deadlock the cleaner thread
+        if( Log.flag(Sys.CLEAN) ) {
+          String s = h+" cleaned="+(cleaned>>20)+"M, freed="+(freed>>20)+"M, DESIRED="+(DESIRED>>20)+"M";
+          if( MemoryManager.canAlloc() ) Log.debug(Sys.CLEAN ,s);
+          else                           Log.unwrap(System.err,s);
+        }
       }
     }
 
@@ -1009,11 +1025,11 @@ public final class H2O {
       return arykey.user_allowed(); // Write user keys but not system keys
     }
 
+    // Current best histogram
+    static private volatile Histo H;
+
     // Histogram class
     public static class Histo {
-      // Current best histogram
-      static public final AtomicReference<Histo> H = new AtomicReference(null);
-
       final long[] _hs = new long[128];
       long _oldest; // Time of the oldest K/V discovered this pass
       long _eldest; // Time of the eldest K/V found in some prior pass
@@ -1024,24 +1040,19 @@ public final class H2O {
       boolean _clean; // Was "clean" K/V when built?
 
       // Return the current best histogram
-      static Histo best_histo() { return H.get(); }
+      static Histo best_histo() { return H; }
 
       // Return the current best histogram, recomputing in-place if it is
       // getting stale. Synchronized so the same histogram can be called into
       // here and will be only computed into one-at-a-time.
       synchronized Histo histo( boolean force ) {
-        Histo h = H.get(); // Grab current best histogram
+        final Histo h = H; // Grab current best histogram
         if( !force && System.currentTimeMillis() < h._when+100 )
           return h; // It is recent; use it
         if( h._clean && _dirty==Long.MAX_VALUE )
           return h; // No change to the K/V store, so no point
         compute(h._oldest); // Use last oldest value for computing the next histogram in-place
-        // Atomically set a more recent histogram, racing against other threads
-        // setting a newer histogram. Probably just the Cleaner thread racing
-        // against F/J workers calling into the MemoryManager.
-        while( h._when <= _when && !H.compareAndSet(h,this) )
-          h = H.get();
-        return H.get();
+        return (H = this);      // Record current best histogram & return it
       }
 
       // Compute a histogram
@@ -1060,16 +1071,19 @@ public final class H2O {
         for( int i=2; i<kvs.length; i += 2 ) {
           // In the raw backing array, Keys and Values alternate in slots
           Object ok = kvs[i+0], ov = kvs[i+1];
-          if( !(ok instanceof Key ) ) continue; // Ignore tombstones and Primes and null's
+          if( !(ok instanceof Key  ) ) continue; // Ignore tombstones and Primes and null's
           if( !(ov instanceof Value) ) continue; // Ignore tombstones and Primes and null's
           Value val = (Value)ov;
-          byte[] m = val.rawMem();
-          if( m == null ) continue;
+          int len = 0;
+          if( val.rawMem () != null ) len += val._max;
+          if( val.rawPOJO() != null ) len += val._max;
+          if( len == 0 ) continue;
+          cached += len; // Accumulate total amount of cached keys
+
           if( val.isArray() &&
               (val._persist & Value.BACKEND_MASK)!=Value.ICE )
-            continue; // Cannot throw out
+            continue; // Cannot throw out (so not in histogram buckets)
 
-          cached += m.length; // Accumulate total amount of cached keys
           if( val._lastAccessedTime < oldest ) { // Found an older Value?
             vold = val; // Record oldest Value seen
             oldest = val._lastAccessedTime;
@@ -1078,13 +1092,12 @@ public final class H2O {
           int idx = (int)((val._lastAccessedTime - eldest)/_hStep);
           if( idx < 0 ) idx = 0;
           else if( idx >= _hs.length ) idx = _hs.length-1;
-          _hs[idx] += m.length; // Bump histogram bucket
+          _hs[idx] += len;      // Bump histogram bucket
         }
-        _cached = cached; // Total cached
+        _cached = cached; // Total cached; NOTE: larger than sum of histogram buckets
         _oldest = oldest; // Oldest seen in this pass
         _vold = vold;
         _clean = clean && _dirty==Long.MAX_VALUE; // Looks like a clean K/V the whole time?
-        if( VERBOSE ) System.out.println("[compute histo "+(cached>>20)+"M]");
       }
 
       // Compute the time (in msec) for which we need to throw out things
@@ -1105,7 +1118,7 @@ public final class H2O {
       public String toString() {
         long x = _eldest;
         long now = System.currentTimeMillis();
-        return "H("+(_cached>>20)+"M, "+x+" < +"+(_oldest-x)+" <...{"+_hStep+"}...< +"+(_hStep*128)+" < +"+(now-x)+")";
+        return "H("+(_cached>>20)+"M, "+x+"ms < +"+(_oldest-x)+"ms <...{"+_hStep+"ms}...< +"+(_hStep*128)+"ms < +"+(now-x)+")";
       }
     }
   }

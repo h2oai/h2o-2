@@ -8,7 +8,7 @@ package water;
  */
 public class UDPBrokenPacket extends UDP {
   @Override AutoBuffer call(AutoBuffer ab) {
-    throw new Error("I really should complain more about this broken packet "+ab);
+    throw new RuntimeException("I really should complain more about this broken packet "+ab);
   }
 }
 

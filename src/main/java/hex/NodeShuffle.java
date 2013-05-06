@@ -1,5 +1,4 @@
 package hex;
-import java.io.*;
 import water.*;
 
 /**

@@ -5,6 +5,8 @@ import java.lang.management.ManagementFactory;
 
 import javax.management.*;
 
+import water.util.Log;
+
 /**
  * Starts a thread publishing multicast HeartBeats to the local subnet: the
  * Leader of this Cloud.
@@ -14,7 +16,7 @@ import javax.management.*;
  */
 public class HeartBeatThread extends Thread {
   public HeartBeatThread() {
-    super("Heartbeat Thread");
+    super("Heartbeat");
     setDaemon(true);
   }
 
@@ -51,8 +53,8 @@ public class HeartBeatThread extends Thread {
     ObjectName os;
     try {
       os = new ObjectName("java.lang:type=OperatingSystem");
-    } catch( MalformedObjectNameException ex ) {
-      throw new RuntimeException(ex);
+    } catch( MalformedObjectNameException e ) {
+      throw  Log.errRTExcept(e);
     }
     Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
     while( true ) {
@@ -93,6 +95,8 @@ public class HeartBeatThread extends Thread {
       hb._fjthrds_lo = (char)H2O.loQPoolSize();
       hb._fjqueue_lo = (char)H2O.getLoQueue();
       hb._tcps_active= (char)AutoBuffer.TCPS.get();
+      hb._tcps_duty  = (byte)TCPReceiverThread.TCPTHR.dutyCyclePercent();
+
       // get the usable and total disk storage for the partition where the
       // persistent KV pairs are stored
       if (PersistIce.ROOT==null) {

@@ -3,6 +3,8 @@ package water.api;
 import water.DKV;
 import water.Key;
 import water.ValueArray;
+import water.exec.EvaluationException;
+import water.util.Log;
 
 public class Exec extends Request {
   private final Str _exec = new Str(EXPRESSION);
@@ -18,7 +20,11 @@ public class Exec extends Request {
       Response r = new Inspect(k).serveValueArray(va);
       if( _safe.value() ) r.escapeIllegalJsonElements();
       return r;
+    } catch( EvaluationException e ) {
+      // No logging user typo's
+      return Response.error(e.getMessage());
     } catch( Exception e ) {
+      Log.err(e);
       return Response.error(e.getMessage());
     }
   }

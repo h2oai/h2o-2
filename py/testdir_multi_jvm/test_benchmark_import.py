@@ -1,6 +1,6 @@
 import os, json, unittest, time, shutil, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
+import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_glm
 import h2o_exec as h2e, h2o_jobs
 import time, random, logging
 
@@ -14,6 +14,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        ### time.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_benchmark_import(self):
@@ -22,19 +23,76 @@ class Basic(unittest.TestCase):
         avgMichalSize = 116561140 
         avgSynSize = 4020000
         covtype200xSize = 15033863400
+        synSize =  183
+        if 1==0:
+            # importFolderPath = '/home/0xdiag/datasets'
+            importFolderPath = '/home/0xdiag/datasets'
+            print "Using .gz'ed files in", importFolderPath
+            csvFilenameAll = [
+                # this should hit the "more" files too?
+                ("10k_small_gz/*", "file_400.dat.gz", 10000 * synSize , 700),
+            ]
+
+        if 1==0:
+            importFolderPath = '/home/0xdiag/datasets/more1_1200_link'
+            print "Using .gz'ed files in", importFolderPath
+            csvFilenameAll = [
+                # this should hit the "more" files too?
+                ("*.dat.gz", "file_1200.dat.gz", 1200 * avgMichalSize, 1800),
+            ]
+
+        if 1==1:
+            importFolderPath = '/home/0xdiag/datasets/more1_1200_link'
+            print "Using .gz'ed files in", importFolderPath
+            csvFilenameAll = [
+                # this should hit the "more" files too?
+                # ("*[1-8][0-9][0-9].dat.gz", "file_800.dat.gz", 800 * avgMichalSize, 1800),
+
+                # ("*[1-4][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 1800), # fails tcp reset
+                # ("*[1-2][0-9][0-9].dat.gz", "file_200.dat.gz", 200 * avgMichalSize, 1800),  # fails tcp
+                # ("*[1][0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 1800),  # fails tcp
+                # ("*[1][0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 1800),
+
+                # ("*10[0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 1800), 
+                # ("*1[0-1][0-9].dat.gz", "file_20_2jvm.dat.gz", 20 * avgMichalSize, 1800), 
+                # ("*1[0-4][0-9].dat.gz", "file_50_2jvm.dat.gz", 50 * avgMichalSize, 1800), 
+                ("*10[0-9].dat.gz", "file_10_2jvm.dat.gz", 10 * avgMichalSize, 1800), 
+                # ("*1[0-4][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize, 1800), 
+                # ("*1[0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 1800), 
+            ]
+
+        if 1==0:
+            importFolderPath = '/home/0xdiag/datasets/more1_300_link'
+            print "Using .gz'ed files in", importFolderPath
+            csvFilenameAll = [
+                # this should hit the "more" files too?
+                ("*.dat.gz", "file_300.dat.gz", 300 * avgMichalSize, 1800),
+            ]
+
+        if 1==0:
+            importFolderPath = '/home/0xdiag/datasets/manyfiles-nflx-gz'
+            print "Using .gz'ed files in", importFolderPath
+            csvFilenameAll = [
+                # this should hit the "more" files too?
+                ("*_[123][0-9][0-9]*.dat.gz", "file_600.dat.gz", 2 * 300 * avgMichalSize, 1800),
+                ("*_[1][5-9][0-9]*.dat.gz", "file_100.dat.gz", 2 * 50 * avgMichalSize, 1800),
+            ]
+
         if 1==0:
             importFolderPath = '/home2/0xdiag/datasets'
             print "Using non-.gz'ed files in", importFolderPath
             csvFilenameAll = [
                 # I use different files to avoid OS caching effects
-                ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSizeUncompressed, 700),
-                ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSizeUncompressed, 700),
-                ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSizeUncompressed, 700),
-                ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSizeUncompressed, 700),
                 ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSizeUncompressed, 700),
-                ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSizeUncompressed, 1200),
+                ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSizeUncompressed, 700),
+                ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSizeUncompressed, 700),
+                # ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSizeUncompressed, 1200),
+                # ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSizeUncompressed, 700),
+                # ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSizeUncompressed, 700),
+                # ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSizeUncompressed, 700),
+                # ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSizeUncompressed, 700),
             ]
-        if 1==1: 
+        if 1==0: 
             importFolderPath = '/home/0xdiag/datasets'
             print "Using .gz'ed files in", importFolderPath
             # all exactly the same prior to gzip!
@@ -46,7 +104,6 @@ class Basic(unittest.TestCase):
                 # 100 files takes too long on two machines?
                 # ("covtype200x.data", "covtype200x.data", 15033863400, 700),
                 # I use different files to avoid OS caching effects
-                ("covtype200x.data", "covtype200x.data", covtype200xSize, 700),
                 # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[0-9][0-9]", "syn_100.csv", 100 * avgSynSize, 700),
                 # ("syn_datasets/syn_7350063254201195578_10000x200.csv_00000", "syn_1.csv", avgSynSize, 700),
                 # ("syn_datasets/syn_7350063254201195578_10000x200.csv_0001[0-9]", "syn_10.csv", 10 * avgSynSize, 700),
@@ -55,11 +112,12 @@ class Basic(unittest.TestCase):
                 # ("manyfiles-nflx-gz/file_10.dat.gz", "file_10_1.dat.gz", 1 * avgMichalSize, 700),
                 # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
 
+                ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 1200),
                 ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize, 700),
-                ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 1200),
+                # ("covtype200x.data", "covtype200x.data", covtype200xSize, 700),
 
                 # do it twice
                 # ("covtype.data", "covtype.data"),
@@ -83,21 +141,29 @@ class Basic(unittest.TestCase):
         trialMax = 1
         # rebuild the cloud for each file
         base_port = 54321
-        tryHeap = 10 
+        tryHeap = 4
         # can fire a parse off and go wait on the jobs queue (inspect afterwards is enough?)
+        DO_GLM = False
         noPoll = False
-        benchmarkLogging = ['cpu','disk', 'iostats', 'jstack']
+        # benchmarkLogging = ['cpu','disk', 'iostats', 'jstack']
+        # benchmarkLogging = None
+        benchmarkLogging = ['cpu','disk', 'network', 'iostats']
         pollTimeoutSecs = 120
         retryDelaySecs = 10
 
-        for (csvFilepattern, csvFilename, totalBytes, timeoutSecs) in csvFilenameList:
+        jea = '-XX:MaxDirectMemorySize=512m -XX:+PrintGCDetails' + ' -Dh2o.find-ByteBuffer-leaks'
+        jea = '-XX:MaxDirectMemorySize=512m -XX:+PrintGCDetails'
+
+        for i,(csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
             localhost = h2o.decide_if_localhost()
             if (localhost):
                 h2o.build_cloud(2,java_heap_GB=tryHeap, base_port=base_port,
                     enable_benchmark_log=True)
+
             else:
                 h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap, base_port=base_port, 
                     enable_benchmark_log=True)
+
             # pop open a browser on the cloud
             ### h2b.browseTheCloud()
 
@@ -127,11 +193,8 @@ class Basic(unittest.TestCase):
                         time.sleep(1)
                         h2o.check_sandbox_for_errors()
                         (csvFilepattern, csvFilename, totalBytes2, timeoutSecs) = csvFilenameList[i+1]
-                        s3nKey = URI + "/" + csvFilepattern
-                        key2 = csvFilename + "_" + str(trial) + ".hex"
-                        print "Loading", protocol, "key:", s3nKey, "to", key2
-                        parse2Key = h2o.nodes[0].parse(s3nKey, key2,
-                            timeoutSecs=timeoutSecs,
+                        parseKey = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
+                            key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                             retryDelaySecs=retryDelaySecs,
                             pollTimeoutSecs=pollTimeoutSecs,
                             noPoll=noPoll,
@@ -141,11 +204,8 @@ class Basic(unittest.TestCase):
                         time.sleep(1)
                         h2o.check_sandbox_for_errors()
                         (csvFilepattern, csvFilename, totalBytes3, timeoutSecs) = csvFilenameList[i+2]
-                        s3nKey = URI + "/" + csvFilepattern
-                        key2 = csvFilename + "_" + str(trial) + ".hex"
-                        print "Loading", protocol, "key:", s3nKey, "to", key2
-                        parse3Key = h2o.nodes[0].parse(s3nKey, key2,
-                            timeoutSecs=timeoutSecs,
+                        parseKey = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
+                            key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                             retryDelaySecs=retryDelaySecs,
                             pollTimeoutSecs=pollTimeoutSecs,
                             noPoll=noPoll,
@@ -199,12 +259,38 @@ class Basic(unittest.TestCase):
                 ### RFview = h2o_cmd.runRFOnly(trees=1,depth=25,parseKey=newParseKey, timeoutSecs=timeoutSecs)
                 ### h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
+                #**********************************************************************************
+                # Do GLM too
+                # Argument case error: Value 0.0 is not between 12.0 and 9987.0 (inclusive)
+                if DO_GLM:
+                    # these are all the columns that are enums in the dataset...too many for GLM!
+                    x = range(542) # don't include the output column
+                    # remove the output too! (378)
+                    for i in [3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 16, 17, 18, 19, 20, 424, 425, 426, 540, 541, 378]:
+                        x.remove(i)
+                    x = ",".join(map(str,x))
+
+                    GLMkwargs = {'x': x, 'y': 378, 'case': 15, 'case_mode': '>',
+                        'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
+                    start = time.time()
+                    glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **GLMkwargs)
+                    h2o_glm.simpleCheckGLM(self, glm, None, **GLMkwargs)
+                    elapsed = time.time() - start
+                    h2o.check_sandbox_for_errors()
+                    l = '{:d} jvms, {:d}GB heap, {:s} {:s} GLM: {:6.2f} secs'.format(
+                        len(h2o.nodes), tryHeap, csvFilepattern, csvFilename, elapsed)
+                    print l
+                    h2o.cloudPerfH2O.message(l)
+
+                #**********************************************************************************
+
                 h2o_cmd.check_key_distribution()
                 h2o_cmd.delete_csv_key(csvFilename, importFullList)
+                ### time.sleep(3600)
                 h2o.tear_down_cloud()
                 if not localhost:
                     print "Waiting 30 secs before building cloud again (sticky ports?)"
-                    time.sleep(30)
+                    ### time.sleep(30)
 
                 sys.stdout.write('.')
                 sys.stdout.flush() 

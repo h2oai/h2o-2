@@ -1,6 +1,7 @@
 package water;
 import java.io.IOException;
-import java.net.DatagramPacket;
+
+import water.util.Log;
 
 /**
  * A UDP Rebooted packet: this node recently rebooted
@@ -21,7 +22,7 @@ public class UDPRebooted extends UDP {
 
     public void send(H2ONode target) {
       assert this != none;
-      new AutoBuffer(target).putUdp(udp.rebooted).put1(ordinal()).close();
+      new AutoBuffer(target).putUdp(udp.rebooted).put1(ordinal()).close(false);
     }
     public void broadcast() { send(H2O.SELF); }
   }
@@ -39,7 +40,7 @@ public class UDPRebooted extends UDP {
     case reboot: return;
     case shutdown:
       closeAll();
-      System.out.println("[h2o] Orderly shutdown command from "+killer);
+      Log.info("Orderly shutdown command from "+killer);
       System.exit(0);
       return;
     case oom:      m = "Out of Memory and no swap space left!"      ; break;
@@ -49,7 +50,7 @@ public class UDPRebooted extends UDP {
     default:       m = "Received kill "+cause                       ; break;
     }
     closeAll();
-    System.err.println("[h2o] "+m+" from "+killer);
+    Log.warn(m+" from "+killer);
     System.exit(-1);
   }
 
@@ -60,9 +61,9 @@ public class UDPRebooted extends UDP {
 
   // Try to gracefully close/shutdown all i/o channels.
   public static void closeAll() {
-    try { H2O._udpSocket.close(); } catch( IOException x ) { }
-    try { H2O._apiSocket.close(); } catch( IOException x ) { }
-    try { TCPReceiverThread.SOCK.close(); } catch( IOException x ) { }
+    try { H2O._udpSocket.close(); } catch( IOException e ) { }
+    try { H2O._apiSocket.close(); } catch( IOException e ) { }
+    try { TCPReceiverThread.SOCK.close(); } catch( IOException e ) { }
   }
 
   // Pretty-print bytes 1-15; byte 0 is the udp_type enum

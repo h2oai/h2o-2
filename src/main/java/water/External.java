@@ -1,7 +1,10 @@
 package water;
 
-import com.google.gson.JsonObject;
 import java.io.InputStream;
+
+import water.util.Log;
+
+import com.google.gson.JsonObject;
 
 /**
  *  Expose internal H2O API calls to the External World
@@ -17,9 +20,9 @@ public class External {
   static {
     ExternalInterface api = null;
     try { api = (ExternalInterface)Boot._init.loadClass("water.InternalInterface").newInstance(); }
-    catch( ClassNotFoundException e ) { }
-    catch( InstantiationException e ) { }
-    catch( IllegalAccessException e ) { }
+    catch( ClassNotFoundException e ) { Log.err(e); }
+    catch( InstantiationException e ) { Log.err(e); }
+    catch( IllegalAccessException e ) { Log.err(e); }
     API = api;
   }
 

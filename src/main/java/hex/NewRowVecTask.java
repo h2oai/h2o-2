@@ -130,13 +130,6 @@ public class NewRowVecTask<T extends Iced> extends MRTask {
     }
   }
 
-  // Set once per Node, shared ValueArray unpack
-  @Override
-  public void init(){
-    super.init();
-  }
-
-
   public NewRowVecTask(Job job,RowFunc<T> f, DataFrame data){
     _job = job;
     _func = f;

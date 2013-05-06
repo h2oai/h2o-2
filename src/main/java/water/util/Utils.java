@@ -77,8 +77,6 @@ public class Utils {
     return result;
   }
 
-  public static void pln(String s) { System.out.println(s); }
-
   public static String sampleToString(int[] val, int max) {
     if (val == null || val.length < max) return Arrays.toString(val);
 
@@ -224,7 +222,7 @@ public class Utils {
     try {
       return console.readLine();
     } catch( IOException e ) {
-      throw new RuntimeException(e);
+      throw  Log.errRTExcept(e);
     }
   }
 

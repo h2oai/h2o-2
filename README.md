@@ -45,14 +45,13 @@ Community
 ---------------------------------
 We will breathe & sustain a vibrant community with the focus of taking software engineering approach to data science and empower everyone interested in data to be able to hack data using math and algorithms.
 join us on google groups: h2ostream 
-https://groups.google.com/forum/?!forum/h2ostream
+https://groups.google.com/forum/#!forum/h2ostream
 
 Team
 
 ```
 SriSatish Ambati
 Cliff Click
-Jan Vitek
 Petr Maj
 Tomas Nykodym
 Kevin Normoyle
@@ -61,6 +60,7 @@ Cyprien Noel
 Lauren Brems
 
 Opensource:
+Jan Vitek
 Michal Malohlava
 Mr.Jenkins
 ```
@@ -76,7 +76,6 @@ Trevor Hastie
 ```
 
 Systems, Data, FileSystems and Hadoop
-
 ```
 Doug Lea
 Chris Pouliot
@@ -84,7 +83,6 @@ Dhruba Borthakur
 Charles Zedlewski
 Niall Dalton
 ```
-
 
 Investors
 ---------------------------

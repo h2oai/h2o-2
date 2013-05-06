@@ -41,7 +41,7 @@ public final class ConfusionMatrix extends Iced {
         res = cm.err();
         break;
       default:
-        throw new Error("unexpected err metric " + this);
+        throw new RuntimeException("unexpected err metric " + this);
       }
       return res;
     }

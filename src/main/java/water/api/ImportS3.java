@@ -5,6 +5,7 @@ import java.io.IOException;
 import water.DKV;
 import water.Key;
 import water.store.s3.PersistS3;
+import water.util.Log;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.S3ObjectSummary;

@@ -3,6 +3,8 @@ import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import water.util.Log;
+
 /**
  * A collection of Futures. We can add more, or block on the whole collection.
  * Undefined if you try to add Futures while blocking.
@@ -64,10 +66,10 @@ public class Futures {
         }
         f.get();
       }
-    } catch( InterruptedException ie ) {
-      throw new RuntimeException(ie);
-    } catch( ExecutionException ee ) {
-      throw new RuntimeException(ee);
+    } catch( InterruptedException e ) {
+      throw  Log.errRTExcept(e);
+    } catch( ExecutionException e ) {
+      throw  Log.errRTExcept(e);
     }
   }
 }

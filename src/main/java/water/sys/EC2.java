@@ -9,6 +9,7 @@ import org.apache.commons.lang.ArrayUtils;
 import water.Arguments;
 import water.H2O;
 import water.sys.Cloud.Master;
+import water.util.Log;
 import water.util.Utils;
 
 import com.amazonaws.AmazonServiceException;
@@ -198,13 +199,13 @@ public abstract class EC2 {
       r = new BufferedReader(new FileReader(new File(pub)));
       return r.readLine();
     } catch( IOException e ) {
-      throw new RuntimeException(e);
+      throw  Log.errRTExcept(e);
     } finally {
       if( r != null )
         try {
           r.close();
         } catch( IOException e ) {
-          throw new RuntimeException(e);
+          throw  Log.errRTExcept(e);
         }
     }
   }
@@ -234,12 +235,12 @@ public abstract class EC2 {
           if( canConnect(instances) )
             return instances;
         }
-      } catch( AmazonServiceException _ ) {
+      } catch( AmazonServiceException _ ) { Log.err(_);
       }
       try {
         Thread.sleep(500);
       } catch( InterruptedException e ) {
-        throw new RuntimeException(e);
+        throw  Log.errRTExcept(e);
       }
     }
   }

@@ -9,6 +9,8 @@ import water.parser.PMMLParser.DataTypes;
 import water.parser.PMMLParser.Predicate;
 import water.parser.PMMLParser;
 import water.score.ScoreModel;
+import water.util.Log;
+import water.util.Log.Tag.Sys;
 
 /**
  * Scorecard model - decision table.
@@ -65,10 +67,7 @@ public class ScorecardModel extends ScoreModel {
       CtMethod happyMethod = CtMethod.make(sb.toString(),scClass);
       scClass.addMethod(happyMethod);
     } catch( Exception re ) {
-      System.err.println("=== crashing ===");
-      System.err.println(sb.toString());
-      throw new Error(re);
-    } finally {
+      Log.err(Sys.SCOREM,"Crashing:"+sb.toString(), new RuntimeException(re));
     }
   }
 
@@ -87,10 +86,7 @@ public class ScorecardModel extends ScoreModel {
       scClass.addMethod(happyMethod);
 
     } catch( Exception re ) {
-      System.err.println("=== crashing ===");
-      System.err.println(sb.toString());
-      throw new Error(re);
-    } finally {
+      Log.err(Sys.SCOREM,"Crashing:"+sb.toString(), new RuntimeException(re));
     }
   }
 
@@ -115,7 +111,7 @@ public class ScorecardModel extends ScoreModel {
 
     public void makeFeatureHashMethod( StringBuilder sbParent, HashMap<String,String> vars, CtClass scClass ) {
       if( _type == null ) {
-        System.out.println("[h2o] Warning: ignore untyped feature "+_name);
+        Log.warn("Ignore untyped feature "+_name);
         return;
       }
       String jname = xml2jname(_name);
@@ -148,10 +144,7 @@ public class ScorecardModel extends ScoreModel {
         CtMethod happyMethod = CtMethod.make(sb.toString(),scClass);
         scClass.addMethod(happyMethod);
       } catch( Exception re ) {
-        System.err.println("=== crashing ===");
-        System.err.println(sb.toString());
-        throw new Error(re);
-      } finally {
+        Log.err(Sys.SCOREM,"Crashing:"+sb.toString(), new RuntimeException(re));
       }
     }
 
@@ -189,10 +182,7 @@ public class ScorecardModel extends ScoreModel {
         scClass.addMethod(happyMethod);
 
       } catch( Exception re ) {
-        System.err.println("=== crashing ===");
-        System.err.println(sb.toString());
-        throw new Error(re);
-      } finally {
+        Log.err(Sys.SCOREM,"Crashing:"+sb.toString(), new RuntimeException(re));
       }
     }
 
@@ -295,8 +285,7 @@ public class ScorecardModel extends ScoreModel {
       return jitted_scm;
 
     } catch( Exception e ) {
-      System.err.println("javassist failed: "+e);
-      e.printStackTrace();
+      Log.err(Sys.SCOREM,"Javassist failed",e);
     }
     return null;
   }

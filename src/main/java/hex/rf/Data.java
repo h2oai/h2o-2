@@ -44,18 +44,20 @@ public class Data implements Iterable<Row> {
 
   protected int start()          { return 0;                   }
   protected int end()            { return _dapt._numRows;      }
-  public int rows()              { return end() - start();     }
-  public int columns()           { return _dapt.columns();     }
-  public int classes()           { return _dapt.classes();     }
-  public long seed()             { return _dapt.seed();        }
-  public long dataId()           { return _dapt.dataId();      }
-  public String colName(int i)   { return _dapt.columnName(i); }
-  public float unmap(int col, int split) { return _dapt.unmap(col, split); }
-  public int columnArity(int colIndex) { return _dapt.columnArity(colIndex); }
+
+  public final int    rows()           { return end() - start();     }
+  public final int    columns()        { return _dapt.columns();     }
+  public final int    classes()        { return _dapt.classes();     }
+  public final long   seed()           { return _dapt.seed();        }
+  public final long   dataId()         { return _dapt.dataId();      }
+  public final String colName(int i)   { return _dapt.columnName(i); }
+  public final float  unmap(int col, int split) { return _dapt.unmap(col, split); }
+  public final int    columnArity(int colIndex) { return _dapt.columnArity(colIndex); }
   /** Transforms given binned index (short) into 0..N-1 corresponding to predictor class */
-  public int unmapClass(int clazz) {return _dapt.unmapClass(clazz); }
-  public boolean isFloat(int col){ return _dapt.isFloat(col); }
-  public double[] classWt()      { return _dapt._classWt; }
+  public final int      unmapClass(int clazz) {return _dapt.unmapClass(clazz); }
+  public final boolean  isFloat(int col)      { return _dapt.isFloat(col);     }
+  public final double[] classWt()             { return _dapt._classWt;         }
+  public final boolean  isIgnored(int col)    { return _dapt.isIgnored(col);   }
 
   public final Iterator<Row> iterator() { return new RowIter(start(), end()); }
   private class RowIter implements Iterator<Row> {
@@ -63,8 +65,8 @@ public class Data implements Iterable<Row> {
     int _pos = 0; final int _end;
     public RowIter(int start, int end) { _pos = start; _end = end;       }
     public boolean hasNext()           { return _pos < _end;             }
-    public Row next()                  { _r._index = permute(_pos++); return _r; }
-    public void remove()               { throw new Error("Unsupported"); }
+    public Row     next()              { _r._index = permute(_pos++); return _r; }
+    public void    remove()            { throw new RuntimeException("Unsupported"); }
   }
 
   public void filter(SplitNode node, Data[] result, Statistic ls, Statistic rs) {
@@ -121,37 +123,7 @@ public class Data implements Iterable<Row> {
     return new Subset(this, sample, 0, sample.length);
   }
 
-  public Data sample(int [] strata, long seed) {
-    int sz = 0;
-    for(int s:strata)sz += s;
-    int [] sample = new int[sz];
-    int idx = 0;
-    /* NOTE: Before changing used generator think about which kind of random generator you need:
-     * if always deterministic or non-deterministic version - see hex.rf.Utils.get{Deter}RNG */
-    Random r = Utils.getRNG(seed);
-    for(int i = 0; i < strata.length; ++i){
-      idx = sampleFromClass(i, strata[i], idx, sample,r);
-    }
-    Arrays.sort(sample); // we want an ordered sample
-    return new Subset(this, sample, 0, sample.length);
-  }
-  /** added for stratified sampling, uniformly picks sample of n elements from the given interval */
-  private int sampleFromClass(int c, int n, int startIdx, int sample [], Random r) {
-    int iStart = _dapt.getIntervalsStarts()[c];
-    int iEnd = _dapt.getIntervalsStarts()[c+1];
-    int iWidth = iEnd - iStart;
-    for(int i = 0; i < n; ++i){
-      int candidate = iStart + r.nextInt(iWidth);
- //FIXME     while(_dapt.badRow(candidate)){
-//        if(candidate == iStart)candidate = iStart + iWidth;
-        //--candidate;
-//      }
-      sample[startIdx++] = candidate;
-    }
-    return startIdx;
-  }
-
-  public Data complement(Data parent, short[] complement) { throw new Error("Only for subsets."); }
+  public Data complement(Data parent, short[] complement) { throw new RuntimeException("Only for subsets."); }
   @Override public Data clone() { return this; }
   protected int permute(int idx) { return idx; }
   protected int[] getPermutationArray() {

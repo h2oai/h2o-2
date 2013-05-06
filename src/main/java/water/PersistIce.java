@@ -3,6 +3,8 @@ package water;
 import java.io.*;
 import java.util.Arrays;
 
+import water.util.Log;
+
 // Persistence backend for the local storage device
 //
 // Stores all keys as files, or if leveldb is enabled, stores values smaller
@@ -17,9 +19,11 @@ public abstract class PersistIce {
   // initialization routines ---------------------------------------------------
 
   protected static final String ROOT;
-  public static final String DEFAULT_ROOT = "/tmp";
-  private static final String ICE_DIR = "ice";
+  public static final String DEFAULT_ROOT  = "/tmp";
+  private static final String ICE_DIR      = "ice";
+  private static final String LOG_FILENAME = "h2o.log";
   private static final File iceRoot;
+  public  static final File logFile;
 
   // Load into the K/V store all the files found on the local disk
   static void initialize() {}
@@ -27,6 +31,7 @@ public abstract class PersistIce {
     ROOT = (H2O.OPT_ARGS.ice_root==null) ? DEFAULT_ROOT : H2O.OPT_ARGS.ice_root;
     H2O.OPT_ARGS.ice_root = ROOT;
     iceRoot = new File(ROOT+File.separator+ICE_DIR+H2O.API_PORT);
+    logFile = new File(iceRoot+File.separator+LOG_FILENAME);
     // Make the directory as-needed
     iceRoot.mkdirs();
     if( !(iceRoot.isDirectory() && iceRoot.canRead() && iceRoot.canWrite()) )
@@ -59,8 +64,8 @@ public abstract class PersistIce {
   }
 
   public static FileWriter logFile() {
-    try { return new FileWriter(iceRoot+"/h2o.log"); }
-    catch( IOException ioe ) { return null; }
+    try { return new FileWriter(iceRoot+File.separator+LOG_FILENAME); }
+    catch( IOException e ) { /*do not log errors when trying to open the log file*/ return null; }
   }
 
   // file implementation -------------------------------------------------------
@@ -159,7 +164,7 @@ public abstract class PersistIce {
         case 'q':  b = '"' ; break;
         case 's':  b = '/' ; break;
         case 'z':  b = '\0'; break;
-        default:   System.err.println("Invalid format of filename " + s + " at index " + i);
+        default:   Log.warn("Invalid format of filename " + s + " at index " + i);
         }
       }
       if( j>=kb.length ) kb = Arrays.copyOf(kb,Math.max(2,j*2));
@@ -209,7 +214,7 @@ public abstract class PersistIce {
         s.close();
       }
     } catch( IOException e ) {  // Broken disk / short-file???
-      throw new RuntimeException("File load failed: "+e);
+      throw new RuntimeException(Log.err("File load failed: ",e));
     }
   }
 
@@ -225,15 +230,11 @@ public abstract class PersistIce {
     try {
       s = new FileOutputStream(encodeKeyToFile(v));
     } catch (FileNotFoundException e) {
-      System.err.println("Encoding a key to a file failed!");
-      System.err.println("Key: "+v._key.toString());
-      System.err.println("Encoded: "+encodeKeyToFile(v));
-      e.printStackTrace();
-      throw new RuntimeException(e);
+      throw new RuntimeException(Log.err("Encoding a key to a file failed!\nKey: "+v._key.toString()+"\nEncoded: "+encodeKeyToFile(v),e));
     }
     try {
       byte[] m = v.memOrLoad(); // we are not single threaded anymore
-      assert m != null && m.length == v._max; // Assert not saving partial files
+      assert m != null && m.length == v._max : " "+v._key+" "+m; // Assert not saving partial files
       new AutoBuffer(s.getChannel(),false,Value.ICE).putA1(m,m.length).close();
       v.setdsk();             // Set as write-complete to disk
     } finally {

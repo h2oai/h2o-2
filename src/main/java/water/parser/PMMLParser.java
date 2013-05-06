@@ -1,18 +1,20 @@
 package water.parser;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
+
 import water.H2O;
-import water.Key;
 import water.score.*;
+import water.util.Log;
 
 /** Parse PMML models
- *  
+ *
  *  Full recursive-descent style parsing.  MUCH easier to track the control
  *  flows than a SAX-style parser, and does not require the entire doc like a
  *  DOM-style.  More tightly tied to the XML structure, but in theory PMML is
  *  a multi-vendor standard and fairly stable.
- *  
+ *
  *  Like a good R-D parser, uses a separate function for parsing each XML
  *  element.  Each function expects to be at a particular parse-point
  *  (generally after the openning '<' and before the tag is parsed), and
@@ -191,8 +193,7 @@ public class PMMLParser {
     try {
       int b = _is.read();
       if( b != -1 ) return b;
-    } catch( IOException ioe ) {
-    }
+    } catch( IOException ioe ) { Log.err(ioe);  }
     throw new ParseException("Premature EOF");
   }
   public int peek() {
@@ -200,8 +201,7 @@ public class PMMLParser {
     try {
       int b = _is.read();
       if( b != -1 ) return push(b);
-    } catch( IOException ioe ) {
-    }
+    } catch( IOException e ) { Log.err(e); }
     throw new ParseException("Premature EOF");
   }
   int push( int b ) { return (_buf[_idx++] = b); }
@@ -323,7 +323,7 @@ public class PMMLParser {
       case greaterOrEqual: return new GreaterOrEqual(field,cons);
       case greaterThan   : return new GreaterThan   (field,cons);
       case equal         : return new Equals        (field,cons);
-      default            : throw new Error("missing "+field+" "+op+" "+cons);
+      default            : throw new RuntimeException("missing "+field+" "+op+" "+cons);
       }
     }
     public String unique_name() { throw H2O.unimpl(); }
@@ -578,7 +578,7 @@ public class PMMLParser {
       try {
         if( "true" .equalsIgnoreCase((String) o) ) return 1.0;
         if( "false".equalsIgnoreCase((String) o) ) return 0.0;
-      } catch( Throwable t ) { }
+      } catch( Throwable t ) { Log.err(t); }
     }
     return Double.NaN;
   }

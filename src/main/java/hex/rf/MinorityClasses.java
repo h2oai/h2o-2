@@ -249,8 +249,6 @@ public class MinorityClasses {
           // if we run out of space ,go to the full chunk size
           if((_offsets[idx] + rowsize) >= _bufs[idx].length)
             _bufs[idx] = Arrays.copyOf(_bufs[idx], chunksize);
-          if((_offsets[idx] + rowsize) >= chunksize)
-            System.out.println("haha");
           System.arraycopy(bits._bb.array(),i*rowsize + bits._bb.arrayOffset(),
               _bufs[idx], _offsets[idx], rowsize);
           _offsets[idx] += rowsize;
@@ -278,9 +276,7 @@ public class MinorityClasses {
         _offsets = other._offsets;
         _histogram = other._histogram;
       } else {
-        if(_histogram == null || other._histogram == null)
-          System.out.println("haha");
-        for(int i = 0; i < _histogram.length; ++i)
+         for(int i = 0; i < _histogram.length; ++i)
           _histogram[i] += other._histogram[i];
         for(int i = 0; i < _bufs.length; ++i){
           if(_offsets[i] == 0) {

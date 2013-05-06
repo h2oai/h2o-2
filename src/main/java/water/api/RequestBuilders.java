@@ -9,8 +9,7 @@ import java.util.Map.Entry;
 
 import water.H2O;
 import water.PrettyPrint;
-import water.util.JsonUtil;
-import water.util.RString;
+import water.util.*;
 
 import com.google.common.base.Throwables;
 import com.google.gson.*;
@@ -55,6 +54,7 @@ public class RequestBuilders extends RequestQueries {
     sb.append("<div class='container'>");
     sb.append("<div class='row-fluid'>");
     sb.append("<div class='span12'>");
+    sb.append(buildJSONResponseBox(response));
     sb.append(buildResponseHeader(response));
     Builder builder = response.getBuilderFor(ROOT_OBJECT);
     if (builder == null) {
@@ -110,8 +110,24 @@ public class RequestBuilders extends RequestQueries {
           + "}\n"
           ;
 
+  private static final String _jsonResponseBox =
+            "<div class='pull-right'><a href='#' onclick='$(\"#json_box\").toggleClass(\"hide\");' class='btn btn-inverse btn-mini'>JSON</a></div>"
+          + "<div class='hide' id='json_box'><pre>"
+          + "%JSON_RESPONSE_BOX"
+          + "</pre></div>";
 
-
+  protected String buildJSONResponseBox(Response response) {
+    switch (response._status) {
+      case done    :
+        RString result = new RString(_jsonResponseBox);
+        result.replace("JSON_RESPONSE_BOX", response.toJson().toString());
+        return result.toString();
+      case error   :
+      case redirect:
+      case poll    :
+      default      : return "";
+    }
+  }
 
   protected String buildResponseHeader(Response response) {
     RString result = new RString(_responseHeader);
@@ -771,8 +787,8 @@ public class RequestBuilders extends RequestQueries {
       try {
         String k = URLEncoder.encode(content, "UTF-8");
         return super.build("<a href='Inspect.html?key="+k+"'>"+content+"</a>", name);
-      } catch( Throwable e ) {
-        throw Throwables.propagate(e);
+      } catch (UnsupportedEncodingException e) {
+        throw Log.errRTExcept(e);
       }
     }
   }
@@ -791,8 +807,8 @@ public class RequestBuilders extends RequestQueries {
         String key = element.getAsString();
         String k = URLEncoder.encode(key, "UTF-8");
         return "<a href='Inspect.html?key="+k+"'>"+key+"</a>";
-      } catch( Throwable e ) {
-        throw Throwables.propagate(e);
+      } catch (UnsupportedEncodingException e) {
+        throw Log.errRTExcept(e);
       }
     }
   }
@@ -986,7 +1002,7 @@ public class RequestBuilders extends RequestQueries {
         String delete = "<a href='RemoveAck.html?"+KEY+"="+key+"'><button class='btn btn-danger btn-mini'>X</button></a>";
         return delete + "&nbsp;&nbsp;<a href='Inspect.html?"+KEY+"="+key+"'>"+str+"</a>";
       } catch (UnsupportedEncodingException e) {
-        throw new RuntimeException(e);
+        throw  Log.errRTExcept(e);
       }
     }
   }

@@ -4,7 +4,8 @@ import java.util.Arrays;
 
 import water.MemoryManager;
 import water.ValueArray;
-import water.util.Utils;
+import water.util.*;
+import water.util.Log.Tag.Sys;
 
 /**A DataAdapter maintains an encoding of the original data. Every raw value (of type float)
  * is represented by a short value. When the number of unique raw value is larger that binLimit,
@@ -17,12 +18,8 @@ final class DataAdapter  {
   /** Place holder for missing data, NaN, Inf in short encoding.*/
   static final short BAD = Short.MIN_VALUE;
 
-  /** Data to load */
-  public final ValueArray _ary;
   /** Number of classes. */
   private final int _numClasses;
-  /** ??? */
-  private int [] _intervalsStarts;
   /** Columns. */
   private final Col[]    _c;
   /** Unique cookie identifying this dataset*/
@@ -35,15 +32,16 @@ final class DataAdapter  {
   public  final double[] _classWt;
   /** Maximum arity for a column (not a hard limit) */
   private final int      _binLimit;
+  /** Number of ignored columns */
+  private int            _ignoredColumns;
 
   DataAdapter(ValueArray ary, RFModel model, int[] modelDataMap, int rows,
               long unique, long seed, int binLimit, double[] classWt) {
     assert model._dataKey == ary._key;
-    _ary = ary;
-    _seed = seed+(unique<<16); // This is important to preserve sampling selection!!!
-    _binLimit = binLimit;
-    _dataId = unique;
-    _numRows = rows;
+    _seed       = seed+(unique<<16); // This is important to preserve sampling selection!!!
+    _binLimit   = binLimit;
+    _dataId     = unique;
+    _numRows    = rows;
     _numClasses = model.classes();
 
     _c = new Col[model._va._cols.length];
@@ -56,19 +54,7 @@ final class DataAdapter  {
     _classWt = trivial ?  null : classWt;
   }
 
-  public void initIntervals(int n){
-    _intervalsStarts = new int[n+1];
-    _intervalsStarts[n] = _numRows;
-  }
-  public void setIntervalStart(int i, int S){
-    if(_intervalsStarts == null)_intervalsStarts = new int[i+1];
-    if(_intervalsStarts.length <= i)_intervalsStarts = Arrays.copyOf(_intervalsStarts, i+1);
-    _intervalsStarts[i] = S;
-  }
-
-  final int[] getIntervalsStarts() { return _intervalsStarts; }
-
-  /** Given a value in enum format, returns:  the value in the original format if no
+   /** Given a value in enum format, returns:  the value in the original format if no
    * binning was applied,  or if binning was applied a value that is inbetween
    * the idx and the next value.  If the idx is the last value return (2*idx+1)/2. */
   public float unmap(int col, int idx){ return _c[col].rawSplit(idx); }
@@ -79,13 +65,19 @@ final class DataAdapter  {
   public long seed()          { return _seed; }
   public int columns()        { return _c.length;}
   public int classOf(int idx) { return _c[_c.length-1].get(idx); }
-  /** Transforms given binned index (short) from class column into a value from interval [0..N-1]
-   * corresponding to a particular predictor class */
-  public int unmapClass(int clazz) { Col c = _c[_c.length-1]; return (int) (c.raw(clazz) - c.min); }
   /**Returns true if the row has missing data. */
-  public long dataId()         { return _dataId; }
+  public long dataId()        { return _dataId; }
   /** The number of possible prediction classes. */
   public int classes()        { return _numClasses; }
+  /** Transforms given binned index (short) from class column into a value from interval [0..N-1]
+   * corresponding to a particular predictor class */
+  public int unmapClass(int clazz) {
+    Col c = _c[_c.length-1];
+    // OK, this is not fully correct bad handle corner-cases like for example dataset uses classes only
+    // with 0 and 3. Our API reports that there are 4 classes but in fact there are only 2 classes.
+    if (clazz >= c.binned2raw.length) clazz = c.binned2raw.length - 1;
+    return (int) (c.raw(clazz) - c.min);
+  }
 
   /** Returns the number of bins, i.e. the number of distinct values in the column.  */
   public int columnArity(int col) { return _c[col].arity(); }
@@ -95,6 +87,7 @@ final class DataAdapter  {
 
   public void shrink() {
     for ( Col c: _c) c.shrink();
+    for ( Col c: _c) if (c.isIgnored()) _ignoredColumns++;
   }
 
   public String columnName(int i) { return _c[i].name(); }
@@ -105,17 +98,13 @@ final class DataAdapter  {
     return true;
   }
 
-  public void add(float v, int row, int col){ _c[col].add(row,v); }
-
-  public final void addBad(int row, int col) { _c[col].addBad(row); }
-
-  public boolean hasBadValue(int row, int col) { return _c[col].isBad(row); }
-
-  public boolean isBadRow(int row) { return _c[_c.length-1].isBad(row); }
-
-  public void markIgnoredRow(int row) {
-    _c[_c.length-1].addBad(row);
-  }
+  public final void    add(float v, int row, int col) { _c[col].add(row,v); }
+  public final void    addBad(int row, int col)       { _c[col].addBad(row); }
+  public final boolean hasBadValue(int row, int col)  { return _c[col].isBad(row); }
+  public final boolean isBadRow(int row)              { return _c[_c.length-1].isBad(row); }
+  public final boolean isIgnored(int col)             { return _c[col].isIgnored(); }
+  public final void    markIgnoredRow(int row)        { _c[_c.length-1].addBad(row);  }
+  public final int     classColIdx()                  { return _c.length - 1; }
 
   private static class Col {
     /** Encoded values*/
@@ -132,22 +121,25 @@ final class DataAdapter  {
     int invalidValues;
     float min, max;
 
+    boolean ignored;
+
     Col(String s, int rows, boolean isClass_, int binLimit_, boolean isFloat_) {
       name = s; isFloat = isFloat_; isClass = isClass_; binLimit = binLimit_;
       raw = MemoryManager.malloc4f(rows);
+      ignored = false;
     }
 
-    boolean isFloat() { return isFloat; }
-    boolean isClass() { return isClass; }
-    int arity() { return binned2raw.length; }
-    String name() { return name; }
-    short get(int row) { return binned[row]; }
-    void add(int row, float val) { raw[row] = val; }
+    boolean isFloat()   { return isFloat; }
+    boolean isIgnored() { return ignored; }
+    int arity()         { return ignored ? -1 : binned2raw.length; }
+    String name()       { return name;        }
+    short get(int row)  { return binned[row]; }
 
-    void addBad(int row) { raw[row] = Float.NaN; }
+    void add(int row, float val) { raw[row] = val; }
+    void addBad(int row)         { raw[row] = Float.NaN; }
 
     private boolean isBadRaw(float f) { return Float.isNaN(f); }
-    boolean isBad(int row) { return binned[row] == BAD; }
+    boolean isBad(int row)            { return binned[row] == BAD; }
 
     /** For all columns - encode all floats as unique shorts. */
     void shrink() {
@@ -162,7 +154,13 @@ final class DataAdapter  {
         i = j;
       }
       invalidValues = nans;
-      assert vs.length > nans : "Nothing but missing values, should ignore column " + name;
+      if ( vs.length <= nans) {
+        // to many NaNs in the column => ignore it
+        ignored = true;
+        raw     = null;
+        Log.warn(Sys.RANDF,"Ignore column: " + this);
+        return;
+      }
       int n = vs.length - ndups - nans;
       int rem = n % binLimit;
       int maxBinSize = (n > binLimit) ? (n / binLimit + Math.min(rem,1)) : 1;
@@ -199,7 +197,7 @@ final class DataAdapter  {
           else binned[i] = (short) (-idx - 1); // this occurs when we are looking for a binned value, we return the smaller value in the array.
           assert binned[i] < binned2raw.length;
         }
-      if( n > binLimit )  Utils.pln(this+" this column's arity was cut from "+n+" to "+smax);
+      if( n > binLimit )   Log.info(Sys.RANDF,this+" this column's arity was cut from "+n+" to "+smax);
       raw = null; // GCced
     }
 
@@ -220,9 +218,12 @@ final class DataAdapter  {
 
     public String toString() {
       String res = "Column("+name+"){";
-      res+= " ["+df.format(min) +","+df.format(max)+"]";
-      res+=",bad values=" + invalidValues + "/" + rows();
-      if (isClass) res+= " CLASS ";
+      if (ignored) res+="IGNORED";
+      else {
+        res+= " ["+df.format(min) +","+df.format(max)+"]";
+        res+=",bad values=" + invalidValues + "/" + rows();
+        if (isClass) res+= " CLASS ";
+      }
       res += "}";
       return res;
     }

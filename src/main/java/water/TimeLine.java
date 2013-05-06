@@ -5,6 +5,7 @@ import java.net.UnknownHostException;
 
 import sun.misc.Unsafe;
 import water.nbhm.UtilUnsafe;
+import water.util.Log;
 
 /**
 
@@ -187,7 +188,7 @@ public class TimeLine extends UDP {
         SNAPSHOT = new long[CLOUD.size()][];
         // Broadcast a UDP packet, with the hopes of getting all SnapShots as close
         // as possible to the same point in time.
-        new AutoBuffer(H2O.SELF).putUdp(udp.timeline).close();
+        new AutoBuffer(H2O.SELF).putUdp(udp.timeline).close(false);
       }
       // Spin until all snapshots appear
       while( true ) {

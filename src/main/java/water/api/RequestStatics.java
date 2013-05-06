@@ -5,6 +5,8 @@ import java.net.URLEncoder;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import water.util.Log;
+
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
@@ -132,7 +134,7 @@ public class RequestStatics extends Constants {
       try {
         sb.append(URLEncoder.encode(e.getAsString(),"UTF-8"));
       } catch (UnsupportedEncodingException ex) {
-        assert (false): ex.toString();
+        throw  Log.errRTExcept(ex);
       }
     }
     return sb.toString();

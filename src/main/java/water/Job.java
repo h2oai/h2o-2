@@ -4,6 +4,8 @@ import java.util.Arrays;
 import java.util.UUID;
 
 import water.api.Constants;
+import water.util.Log;
+import water.H2O.H2OCountedCompleter;
 
 public class Job extends Iced {
   // Global LIST of Jobs key.
@@ -17,6 +19,7 @@ public class Job extends Iced {
   public final String _description;
   public final long   _startTime;
   public long         _endTime;
+  transient public H2OCountedCompleter _fjtask; // Top-level task you can block on
 
   public Key self() { return _self; }
   public Key dest() { return _dest; }
@@ -50,7 +53,8 @@ public class Job extends Iced {
     _dest = dest;
   }
 
-  public void start() {
+  public H2OCountedCompleter start(H2OCountedCompleter fjtask) {
+    _fjtask = fjtask;
     DKV.put(_self, new Value(_self, new byte[0]));
     new TAtomic<List>() {
       @Override public List atomic(List old) {
@@ -61,6 +65,7 @@ public class Job extends Iced {
         return old;
       }
     }.fork(LIST);
+    return fjtask;
   }
 
   // Overriden for Parse
@@ -72,17 +77,11 @@ public class Job extends Iced {
   }
 
   // Block until the Job finishes.
-  // NOT F/J FRIENDLY, EATS THE THREAD until job completes.  Only use for web threads.
   public <T> T get() {
-    // TODO through notifications?
-    while( DKV.get(_self) != null ) {
-      try {
-        Thread.sleep(10);
-      } catch( InterruptedException e ) {
-        throw new RuntimeException(e);
-      }
-    }
-    return (T) UKV.get(_dest);
+    _fjtask.join();             // Block until top-level job is done
+    T ans = (T) UKV.get(_dest);
+    remove();                   // Remove self-job
+    return ans;
   }
 
   public void cancel() { cancel(_self); }

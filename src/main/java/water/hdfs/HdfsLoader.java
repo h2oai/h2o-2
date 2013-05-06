@@ -3,6 +3,8 @@ package water.hdfs;
 import java.io.File;
 
 import water.*;
+import water.util.Log;
+import water.util.Log.Tag.Sys;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Strings;
@@ -33,11 +35,10 @@ public class HdfsLoader {
         }
       }
     } catch(Exception e) {
-      e.printStackTrace();
-      Log.die("[hdfs] Unable to initialize hadoop version " + version +
-          " please use different version.");
+      Log.err(e);
+      Log.die("[hdfs] Unable to initialize hadoop version " + version + " please use different version.");
     }
-    System.out.println("[hdfs] Using HDFS version " + version);
+    Log.info(Sys.HDFS_,"Using HDFS version ", version);
     PersistHdfs.initialize();
   }
 }

@@ -9,10 +9,13 @@ import java.util.*;
 import jsr166y.CountedCompleter;
 import jsr166y.RecursiveTask;
 import water.*;
+import water.H2O.H2OCountedCompleter;
 import water.Timer;
+import water.util.Log;
 import water.util.Utils;
+import water.util.Log.Tag.Sys;
 
-public class Tree extends CountedCompleter {
+public class Tree extends H2OCountedCompleter {
   static public enum StatType { ENTROPY, GINI };
 
   /** Left and right seed initializer number for statistics */
@@ -40,15 +43,15 @@ public class Tree extends CountedCompleter {
   int            _exclusiveSplitLimit;
 
   /**
-   * Constructor used to define the specs when building the tree from the top
+   * Constructor used to define the specs when building the tree from the top.
    */
-  public Tree(final Data data, int max_depth, double min_error_rate, StatType stat, int numSplitFeatures, long seed, final Job job, int treeId, int verbose, int exclusiveSplitLimit, final Sampling sampler) {
-    _type             = stat;
+  public Tree(final Job job, final Data data, int max_depth, StatType stat, int numSplitFeatures, long seed, int treeId, int verbose, int exclusiveSplitLimit, final Sampling sampler) {
+    _job              = job;
     _data             = data;
-    _data_id          = treeId; //data.dataId();
+    _type             = stat;
+    _data_id          = treeId;
     _max_depth        = max_depth-1;
     _numSplitFeatures = numSplitFeatures;
-    _job              = job;
     _seed             = seed;
     _sampler          = sampler;
     _verbose          = verbose;
@@ -98,7 +101,7 @@ public class Tree extends CountedCompleter {
   }
 
   // Actually build the tree
-  public void compute() {
+  @Override public void compute2() {
     if(!_job.cancelled()) {
       Timer timer    = new Timer();
       _stats[0]      = new ThreadLocal<Statistic>();
@@ -113,14 +116,14 @@ public class Tree extends CountedCompleter {
         ? new LeafNode(_data.unmapClass(spl._split), d.rows())
         : new FJBuild (spl, d, 0, _seed).compute();
 
-      if (_verbose > 1) Utils.pln(computeStatistics().toString());
+      if (_verbose > 1)  Log.info(Sys.RANDF,computeStatistics().toString());
       _stats = null; // GC
 
       // Atomically improve the Model as well
       appendKey(_job.dest(),toKey());
       StringBuilder sb = new StringBuilder("[RF] Tree : ").append(_data_id+1);
       sb.append(" d=").append(_tree.depth()).append(" leaves=").append(_tree.leaves()).append(" done in ").append(timer).append('\n');
-      Utils.pln(_tree.toString(sb,  _verbose > 0 ? Integer.MAX_VALUE : 200).toString());
+      Log.debug(Sys.RANDF,_tree.toString(sb,  _verbose > 0 ? Integer.MAX_VALUE : 200).toString());
     }
     // Wait for completation
     tryComplete();

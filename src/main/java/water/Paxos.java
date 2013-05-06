@@ -1,9 +1,11 @@
 package water;
 
-import java.util.*;
-import water.nbhm.NonBlockingHashMap;
+import java.util.Arrays;
+
 import water.H2ONode.H2Okey;
-import water.H2O;
+import water.nbhm.NonBlockingHashMap;
+import water.util.Log;
+import water.util.Log.Tag.Sys;
 
 /**
  * (Not The) Paxos
@@ -41,10 +43,10 @@ public abstract class Paxos {
     // mismatched jars.
     if( !h2o._heartbeat.check_jar_md5() ) {
       if( H2O.CLOUD.size() > 1 ) {
-        System.err.println("[h2o] Killing "+h2o+"  because of jar mismatch.");
+        Log.warn("Killing "+h2o+"  because of jar mismatch.");
         UDPRebooted.T.mismatch.send(h2o);
       } else {
-        System.err.println("[h2o] Attempting to join "+h2o+" with a jar mismatch. Killing self.");
+        Log.warn("Attempting to join "+h2o+" with a jar mismatch. Killing self.");
         System.exit(-1);
       }
       return 0;
@@ -53,13 +55,13 @@ public abstract class Paxos {
     // Never heard of this dude?  See if we want to kill him off for being cloud-locked
     if( !PROPOSED.contains(h2o) ) {
       if( _cloudLocked ) {
-        System.err.println("[h2o] Killing "+h2o+" because the cloud is locked.");
+        Log.warn("Killing "+h2o+" because the cloud is locked.");
         UDPRebooted.T.locked.send(h2o);
         return 0;
       }
       if( _commonKnowledge ) {
         _commonKnowledge = false; // No longer sure about things
-        System.out.println("[h2o] Cloud voting in progress");
+        Log.debug("Cloud voting in progress");
       }
 
       // Add to proposed set, update cloud hash
@@ -82,8 +84,7 @@ public abstract class Paxos {
     _commonKnowledge = true;    // Yup!  Have consensus
     H2O.CLOUD.set_next_Cloud(h2os,chash);
     Paxos.class.notify(); // Also, wake up a worker thread stuck in DKV.put
-    System.out.printf("[h2o] Cloud of size %d formed: %s\n",
-                      H2O.CLOUD.size(), H2O.CLOUD.toString());
+    Log.info("Cloud of size ", H2O.CLOUD.size(), " formed ", H2O.CLOUD.toString());
     return 0;
   }
 
@@ -113,7 +114,7 @@ public abstract class Paxos {
   }
   static int print( String msg, H2ONode h2os[] ) { return print(msg,h2os,""); }
   static int print( String msg, H2ONode h2os[], String msg2 ) {
-    if( DEBUG ) System.out.println(msg+Arrays.toString(h2os)+msg2);
+    Log.debug(msg,Arrays.toString(h2os),msg2);
     return 0;                   // handy flow-coding return
   }
 }

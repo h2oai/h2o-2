@@ -6,6 +6,7 @@ import java.util.regex.Pattern;
 import water.*;
 import water.parser.*;
 import water.parser.CsvParser.Setup;
+import water.util.Log;
 import water.util.RString;
 
 public class Parse extends Request {

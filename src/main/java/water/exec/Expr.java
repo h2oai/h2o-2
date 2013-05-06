@@ -1,10 +1,7 @@
 package water.exec;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import water.*;
 import water.exec.RLikeParser.Token;
-import water.parser.ParseDataset;
 
 // =============================================================================
 // Expression

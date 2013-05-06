@@ -4,6 +4,7 @@ import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.store.s3.MultipartUpload;
 import water.store.s3.PersistS3;
+import water.util.Log;
 
 import com.google.gson.JsonObject;
 
@@ -62,8 +63,10 @@ public class ExportS3 extends Request {
       r.setBuilder(RequestStatics.DEST_KEY, new KeyElementBuilder());
       return r;
     } catch( IllegalArgumentException e ) {
+      Log.err(e);
       return Response.error(e.getMessage());
     } catch( Error e ) {
+      Log.err(e);
       return Response.error(e.getMessage());
     }
   }

@@ -3,6 +3,7 @@ package hex;
 import java.util.Arrays;
 import water.Iced;
 import water.MemoryManager;
+import water.util.Log;
 import Jama.CholeskyDecomposition;
 import Jama.Matrix;
 
@@ -132,9 +133,9 @@ public class DLSM {
           System.arraycopy(res, 0, z, 0, res.length);
           _converged = true;
           return res;
-        }catch(Exception e){
+        } catch(Exception e) {
           if( !e.getMessage().equals("Matrix is not symmetric positive definite.") )
-            throw new Error(e);
+            throw Log.errRTExcept(e);
           throw new NonSPDMatrixException();
         }
 
@@ -155,9 +156,9 @@ public class DLSM {
           // updated x
           try{
             xm = lu.solve(xyPrime);
-          }catch(Exception e){
+          } catch(Exception e) {
             if( !e.getMessage().equals("Matrix is not symmetric positive definite.") )
-              throw new Error(e);
+              throw Log.errRTExcept(e);
             // bump the rho and try again
             _rho *= 10;
             lambda = (_lambda*(1-_alpha) + _rho) - lambda;

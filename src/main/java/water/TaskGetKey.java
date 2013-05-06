@@ -46,7 +46,7 @@ public class TaskGetKey extends DTask<TaskGetKey> {
   private TaskGetKey( Key key, int priority ) { _key = _xkey = key; _priority = (byte)priority; }
 
   // Top-level non-recursive invoke
-  @Override public TaskGetKey invoke( H2ONode sender ) {
+  @Override public void dinvoke( H2ONode sender ) {
     _h2o = sender;
     Key k = _key;
     _key = null;          // Not part of the return result
@@ -56,7 +56,7 @@ public class TaskGetKey extends DTask<TaskGetKey> {
     // deleted - in which case, simply retry for another Value.
     do  _val = H2O.get(k);      // The return result
     while( _val != null && !_val.setReplica(sender) );
-    return this;
+    tryComplete();
   }
   @Override public void compute2() { throw H2O.unimpl(); }
 

@@ -7,6 +7,7 @@ import org.apache.hadoop.fs.Path;
 
 import water.DKV;
 import water.hdfs.PersistHdfs;
+import water.util.Log;
 
 import com.google.gson.*;
 import com.google.gson.internal.Streams;
@@ -43,6 +44,7 @@ public class ImportHdfs extends Request {
       PrintWriter pw = new PrintWriter(Streams.writerForAppendable(sb));
       e.printStackTrace(pw);
       pw.flush();
+      Log.err(e);
       return Response.error(sb.toString());
     }
     DKV.write_barrier();

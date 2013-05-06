@@ -13,6 +13,7 @@ import java.util.Properties;
 import water.Key;
 import water.ValueArray;
 import water.api.RequestArguments.Bool;
+import water.util.Log;
 import water.util.RString;
 
 import com.google.gson.JsonObject;
@@ -165,7 +166,7 @@ public class GLMGrid extends Request {
       rs.replace("xcols",sb.toString());
       rs.replace("caseMode",URLEncoder.encode(m._glmParams._caseMode.toString(),"utf8"));
     } catch( UnsupportedEncodingException e ) {
-      throw new RuntimeException(e);
+      throw  Log.errRTExcept(e);
     }
     return rs.toString();
   }

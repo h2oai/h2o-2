@@ -1,13 +1,10 @@
 package water;
 import java.io.*;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.URLEncoder;
+import java.net.*;
 import java.util.*;
 
-import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
-
-import water.util.Utils;
+import water.util.*;
+import water.util.Log.Tag.Sys;
 
 /**
  * A simple, tiny, nicely embeddable HTTP 1.0 (partially 1.1) server in Java
@@ -127,10 +124,7 @@ public class NanoHTTPD
       {
         this.data = new ByteArrayInputStream( txt.getBytes("UTF-8"));
       }
-      catch ( java.io.UnsupportedEncodingException uee )
-      {
-        uee.printStackTrace();
-      }
+      catch ( java.io.UnsupportedEncodingException e ) { Log.err(e); }
     }
 
     /**
@@ -207,7 +201,7 @@ public class NanoHTTPD
         try {
           while( true )
             new HTTPSession( myServerSocket.accept());
-        } catch ( IOException ioe ) { }
+        } catch ( IOException e ) { }
       }
     }, "NanoHTTPD Thread");
     myThread.setDaemon( true );
@@ -221,7 +215,7 @@ public class NanoHTTPD
     try {
       myServerSocket.close();
       myThread.join();
-    } catch ( IOException ioe ) {
+    } catch ( IOException e ) {
     } catch ( InterruptedException e ) { }
   }
 
@@ -252,14 +246,14 @@ public class NanoHTTPD
     try {
       new NanoHTTPD( new ServerSocket(port), wwwroot );
     } catch( IOException ioe ) {
-      System.err.println( "Couldn't start server:\n" + ioe );
+      Log.err(Sys.HTTPD, "Couldn't start server:\n", ioe );
       System.exit( -1 );
     }
 
     myOut.println( "Now serving files in port " + port + " from \"" + wwwroot + "\"" );
     myOut.println( "Hit Enter to stop.\n" );
 
-    try { System.in.read(); } catch( Throwable t ) {}
+    try { System.in.read(); } catch( Throwable t ) { Log.err(t); }
   }
 
   /**
@@ -405,8 +399,8 @@ public class NanoHTTPD
       } catch ( IOException ioe ) {
         try {
           sendError( HTTP_INTERNALERROR, "SERVER INTERNAL ERROR: IOException: " + ioe.getMessage());
-        } catch ( Throwable t ) {}
-      } catch ( InterruptedException ie ) {
+        } catch ( Throwable t ) { Log.err(t); }
+      } catch ( InterruptedException e ) {
         // Thrown by sendError, ignore and exit the thread.
       } finally {
         Utils.close(mySocket);
@@ -462,12 +456,10 @@ public class NanoHTTPD
         }
 
         pre.put("uri", uri);
-      }
-      catch ( IOException ioe )
-      {
+      } catch ( IOException ioe ) {
         sendError( HTTP_INTERNALERROR, "SERVER INTERNAL ERROR: IOException: " + ioe.getMessage());
       }
-        }
+    }
 
     public String readLine(InputStream in) throws IOException {
       StringBuilder sb = new StringBuilder();
@@ -584,8 +576,7 @@ public class NanoHTTPD
         }
         return sb.toString();
       }
-      catch( Exception e )
-      {
+      catch( Exception e ) {
         sendError( HTTP_BADREQUEST, "BAD REQUEST: Bad percent-encoding." );
         return null;
       }
@@ -636,7 +627,7 @@ public class NanoHTTPD
       try
       {
         if ( status == null )
-          throw new Error( "sendResponse(): Status can't be null." );
+          throw new RuntimeException( "sendResponse(): Status can't be null." );
 
         OutputStream out = mySocket.getOutputStream();
         PrintWriter pw = new PrintWriter( out );
@@ -680,8 +671,8 @@ public class NanoHTTPD
         if ( data != null )
           data.close();
       }
-      catch( IOException ioe )
-      {
+      catch( IOException e ) {
+        Log.err(e);
         // Couldn't write? No can do.
         Utils.close(mySocket);
       }
@@ -797,7 +788,7 @@ public class NanoHTTPD
         try {
           newUri += URLEncoder.encode( tok, "UTF-8" );
         } catch( UnsupportedEncodingException e ) {
-          throw new RuntimeException(e);
+          throw  Log.errRTExcept(e);
         }
       }
     }
@@ -955,7 +946,7 @@ public class NanoHTTPD
                 endAt = Long.parseLong( range.substring( minus+1 ));
               }
             }
-            catch ( NumberFormatException nfe ) {}
+            catch ( NumberFormatException e ) { Log.err(e); }
           }
         }
 
@@ -1003,8 +994,8 @@ public class NanoHTTPD
         }
       }
     }
-    catch( IOException ioe )
-    {
+    catch( IOException e )  {
+      Log.err(e);
       res = new Response( HTTP_FORBIDDEN, MIME_PLAINTEXT, "FORBIDDEN: Reading file failed." );
     }
 

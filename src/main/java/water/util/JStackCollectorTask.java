@@ -7,22 +7,21 @@ import water.DRemoteTask;
 import water.H2O;
 
 public class JStackCollectorTask extends DRemoteTask {
-  public String[] result; // for each node in the cloud it contains all threads stack traces
+  public String[] _result; // for each node in the cloud it contains all threads stack traces
 
   public JStackCollectorTask() {}
 
   @Override
   public void reduce(DRemoteTask drt) {
     JStackCollectorTask another = (JStackCollectorTask) drt;
-    for (int i=0; i<result.length; ++i) {
-      if (result[i] == null)
-        result[i] = another.result[i];
-    }
+    if( _result == null ) _result = another._result;
+    else for (int i=0; i<_result.length; ++i)
+      if (_result[i] == null)
+        _result[i] = another._result[i];
   }
 
-  @Override
-  public void compute2() {
-    result = new String[H2O.CLOUD._memary.length];
+  @Override public void lcompute() {
+    _result = new String[H2O.CLOUD._memary.length];
     Map<Thread, StackTraceElement[]> allStackTraces = Thread.getAllStackTraces();
     StringBuilder sb = new StringBuilder();
     for (Entry<Thread,StackTraceElement[]> el : allStackTraces.entrySet()) {
@@ -30,7 +29,7 @@ public class JStackCollectorTask extends DRemoteTask {
       append(sb, el.getValue());
       sb.append('\n');
     }
-    result[H2O.SELF.index()] = sb.toString();
+    _result[H2O.SELF.index()] = sb.toString();
     tryComplete();
   }
 

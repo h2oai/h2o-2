@@ -7,6 +7,7 @@ import hex.DGLM.GLMValidation;
 import water.Key;
 import water.ValueArray;
 import water.api.GLMProgressPage.GLMBuilder;
+import water.util.Log;
 import water.util.RString;
 
 import com.google.gson.JsonObject;
@@ -84,9 +85,10 @@ public class GLMScore extends Request {
       r.setBuilder("", new GLMValidationBuilder(v));
       return r;
     }catch(GLMException e){
+      Log.err(e);
       return Response.error(e.getMessage());
     } catch (Throwable t) {
-      t.printStackTrace();
+      Log.err(t);
       return Response.error(t.getMessage());
     }
   }

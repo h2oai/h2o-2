@@ -14,16 +14,20 @@ public class PrettyPrint {
     return String.format("%2d.%03d sec", sec, ms);
   }
 
-  public static String bytes(long bytes) {
-    if( bytes < 0 ) return "N/A";
-    if( bytes < 1L<<10 ) return String.format("%d B" , bytes);
-    if( bytes < 1L<<20 ) return String.format("%.1f KB", bytes/(double)(1L<<10));
-    if( bytes < 1L<<30 ) return String.format("%.1f MB", bytes/(double)(1L<<20));
-    if( bytes < 1L<<40 ) return String.format("%.2f GB", bytes/(double)(1L<<30));
-    if( bytes < 1L<<50 ) return String.format("%.3f TB", bytes/(double)(1L<<40));
-    return String.format("%.3f PB", bytes/(double)(1L<<50));
+  // Return X such that (bytes < 1L<<(X*10))
+  public static int byteScale(long bytes) {
+    for( int i=0; i<6; i++ )
+      if( bytes < 1L<<(i*10) )
+        return i;
+    return 6;
   }
-
+  public static double bytesScaled(long bytes, int scale) {
+    if( scale == 0 ) return bytes;
+    return bytes / (double)(1L<<((scale-1)*10));
+  }
+  public static final String[] SCALE = new String[] {"N/A","%3.0f B ","%.1f KB","%.1f MB","%.2f GB","%.3f TB","%.3f PB"};
+  public static String bytes(long bytes) { return bytes(bytes,byteScale(bytes)); }
+  public static String bytes(long bytes, int scale) { return String.format(SCALE[scale],bytesScaled(bytes,scale)); }
   public static String bytesPerSecond(long bytes) {
     if( bytes < 0 ) return "N/A";
     return bytes(bytes)+"/S";

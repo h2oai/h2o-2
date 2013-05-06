@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import water.nbhm.NonBlockingHashMap;
 import water.nbhm.NonBlockingHashMapLong;
+import water.util.Log;
 
 /**
  * A <code>Node</code> in an <code>H2O</code> Cloud.
@@ -37,7 +38,7 @@ public class H2ONode extends Iced implements Comparable {
     static H2Okey read( AutoBuffer ab ) {
       InetAddress inet;
       try { inet = InetAddress.getByAddress(ab.getA1(4)); }
-      catch( UnknownHostException e ) { throw new Error(e); }
+      catch( UnknownHostException e ) { throw  Log.errRTExcept(e); }
       int port = ab.get2();
       return new H2Okey(inet,port);
     }
@@ -110,7 +111,8 @@ public class H2ONode extends Iced implements Comparable {
     b[3] = (byte)(ip>>24);
     try {
       return intern(InetAddress.getByAddress(b),port);
-    } catch( UnknownHostException uhe ) {
+    } catch( UnknownHostException e ) {
+      Log.err(e);
       return null;
     }
   }
@@ -143,21 +145,22 @@ public class H2ONode extends Iced implements Comparable {
       case 0: H2O.CLOUD_MULTICAST_IF = null; break;
       case 1: H2O.CLOUD_MULTICAST_IF = matchingIfs.get(0); break;
       default:
-        System.err.print("Found multiple network interfaces for ip address " + local);
+        String msg = "Found multiple network interfaces for ip address " + local;
         for( NetworkInterface ni : matchingIfs ) {
-          System.err.println("\t" + ni);
+          msg +="\n\t" + ni;
         }
-        System.err.println("Using " + matchingIfs.get(0) + " for UDP broadcast");
+        msg +="\nUsing " + matchingIfs.get(0) + " for UDP broadcast";
+        Log.warn(msg);
         H2O.CLOUD_MULTICAST_IF = matchingIfs.get(0);
       }
     } catch( SocketException e ) {
-      throw new RuntimeException(e);
+      throw  Log.errRTExcept(e);
     }
     try {
       assert H2O.CLOUD_DGRAM == null;
       H2O.CLOUD_DGRAM = DatagramChannel.open();
     } catch( Exception e ) {
-      throw new RuntimeException(e);
+      throw  Log.errRTExcept(e);
     }
     return intern(new H2Okey(local,H2O.UDP_PORT));
   }
@@ -279,7 +282,7 @@ public class H2ONode extends Iced implements Comparable {
   // occasionally to force a resend of ACKACKs.
 
   static public class AckAckTimeOutThread extends Thread {
-    public AckAckTimeOutThread() { super("ACKACK Timeout"); }
+    public AckAckTimeOutThread() { super("ACKTimeout"); }
     // List of DTasks with results ready (and sent!), and awaiting an ACKACK.
     static DelayQueue<RPC.RPCCall> PENDING = new DelayQueue<RPC.RPCCall>();
     // Started by main() on a single thread, handle timing-out UDP packets

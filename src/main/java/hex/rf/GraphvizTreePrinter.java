@@ -14,12 +14,12 @@ import water.ValueArray.Column;
 public class GraphvizTreePrinter extends TreePrinter {
   private final Appendable _dest;
 
-  public GraphvizTreePrinter(OutputStream dest, Column[] columns, String[]classNames) {
-    this(new OutputStreamWriter(dest), columns, classNames);
+  public GraphvizTreePrinter(OutputStream dest, Column[] columns, int[] colMapping, String[]classNames) {
+    this(new OutputStreamWriter(dest), columns, colMapping, classNames);
   }
 
-  public GraphvizTreePrinter(Appendable dest, Column[] columns, String[]classNames) {
-    super(columns,classNames);
+  public GraphvizTreePrinter(Appendable dest, Column[] columns, int[] colMapping, String[]classNames) {
+    super(columns, colMapping, classNames);
     _dest = dest;
   }
 

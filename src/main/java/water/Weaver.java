@@ -1,5 +1,6 @@
 package water;
 
+import water.util.Log;
 import javassist.*;
 
 public class Weaver {
@@ -51,8 +52,8 @@ public class Weaver {
       return cc;
     } catch( NotFoundException nfe ) {
       return null;              // Not found?  Use the normal loader then
-    } catch( CannotCompileException cce ) { // Expected to compile
-      throw new RuntimeException(cce);
+    } catch( CannotCompileException e ) { // Expected to compile
+      throw new RuntimeException(e);
     }
   }
 
@@ -161,7 +162,7 @@ public class Weaver {
     boolean r = hasExisting("read", "(Lwater/AutoBuffer;)Lwater/Freezable;", ccms);
     if( w && r ) return;
     if( w || r )
-      throw new Error(cc.getName() +" must implement both " +
+      throw new RuntimeException(cc.getName() +" must implement both " +
             "read(AutoBuffer) and write(AutoBuffer) or neither");
 
     // Add the serialization methods: read, write.
@@ -259,11 +260,11 @@ public class Weaver {
 
     try {
       cc.addMethod(CtNewMethod.make(body,cc));
-    } catch( CannotCompileException ce ) {
+    } catch( CannotCompileException e ) {
       System.out.println("--- Compilation failure while compiler serializers for "+cc.getName());
       System.out.println(body);
       System.out.println("------");
-      throw ce;
+      throw Log.err(e);
     }
   }
 
@@ -308,8 +309,8 @@ public class Weaver {
   }
 
 
-  private static Error barf( CtClass ct, String sig ) {
-    return new Error(ct.getSimpleName()+"."+sig+": Serialization not implemented");
+  private static RuntimeException barf( CtClass ct, String sig ) {
+    return new RuntimeException(ct.getSimpleName()+"."+sig+": Serialization not implemented");
   }
 
 }

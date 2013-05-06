@@ -1,26 +1,26 @@
 package water.parser;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import org.apache.poi.hssf.eventusermodel.*;
 import org.apache.poi.hssf.eventusermodel.dummyrecord.LastCellOfRowDummyRecord;
 import org.apache.poi.hssf.eventusermodel.dummyrecord.MissingCellDummyRecord;
 import org.apache.poi.hssf.record.*;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
+
 import water.DKV;
 import water.Key;
-import water.parser.ValueString;
+import water.util.Log;
+import water.util.Log.Tag.Sys;
 
 public class XlsParser extends CustomParser implements HSSFListener {
 
   private POIFSFileSystem _fs;
   private final DParseTask _callback;
   private FormatTrackingHSSFListener _formatListener;
-  
+
   private final ValueString _str = new ValueString();
 
   public XlsParser(DParseTask callback) throws IOException {
@@ -44,7 +44,7 @@ public class XlsParser extends CustomParser implements HSSFListener {
       try { is.close(); } catch (IOException e) { }
     }
   }
-  
+
   ArrayList<String> _columnNames = new ArrayList();
   boolean _firstRow;
 
@@ -106,14 +106,14 @@ public class XlsParser extends CustomParser implements HSSFListener {
       case LabelSSTRecord.sid:
         LabelSSTRecord lsrec = (LabelSSTRecord) record;
         if( _sstRecord == null ) {
-          System.err.println("[ExcelParser] Missing SST record");
+          Log.warn(Sys.EXCEL,"[ExcelParser] Missing SST record");
         } else {
           curCol = lsrec.getColumn();
           curStr = _str.setTo(_sstRecord.getString(lsrec.getSSTIndex()).toString());
         }
         break;
       case NoteRecord.sid:
-        System.err.println("[ExcelParser] Warning cell notes are unsupported");
+        Log.warn(Sys.EXCEL,"Warning cell notes are unsupported");
         break;
       case NumberRecord.sid:
         NumberRecord numrec = (NumberRecord) record;
@@ -121,7 +121,7 @@ public class XlsParser extends CustomParser implements HSSFListener {
         curNum = numrec.getValue();
         break;
       case RKRecord.sid:
-        System.err.println("[ExcelParser] Warning RK records are unsupported");
+        Log.warn(Sys.EXCEL,"Warning RK records are unsupported");
         break;
       default:
         break;
@@ -147,7 +147,7 @@ public class XlsParser extends CustomParser implements HSSFListener {
 
     if (curCol == -1)
       return;
-    
+
     if (_firstRow) {
       _columnNames.add(curStr == null ? "" : curStr.toString());
     } else {
@@ -156,7 +156,7 @@ public class XlsParser extends CustomParser implements HSSFListener {
           _callback.addInvalidCol(curCol);
         else
           _callback.addCol(curCol, curNum);
-      else 
+      else
         _callback.addStrCol(curCol, curStr);
     }
   }

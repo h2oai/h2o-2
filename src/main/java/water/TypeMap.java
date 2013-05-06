@@ -2,6 +2,8 @@ package water;
 
 import java.util.*;
 
+import water.util.Log;
+
 public class TypeMap {
   static public final short NULL = (short) -1;
   static public final short PRIM_B = 1;
@@ -49,7 +51,10 @@ public class TypeMap {
     "hex.RowVecTask",
     "hex.RowVecTask$Sampling",
     "hex.rf.Confusion",
-    "hex.rf.DRF",
+    "hex.rf.DRF$DRFTask",
+    "hex.rf.DRF$DRFTask$1",
+    "hex.rf.DRF$DRFParams",
+    "hex.rf.DRF$DRFJob",
     "hex.rf.MinorityClasses$ClassExtractTask",
     "hex.rf.MinorityClasses$CountMClassRowsTask",
     "hex.rf.MinorityClasses$HistogramTask",
@@ -61,6 +66,7 @@ public class TypeMap {
     "water.AtomicTest$Append$1",
     "water.AutoSerialTest",
     "water.BitsCmpTask",
+    "water.CoreTest$CPULoad",
     "water.DRemoteTask",
     "water.DTask",
     "water.Freezable",
@@ -82,8 +88,9 @@ public class TypeMap {
     "water.KVTest$RemoteBitSet",
     "water.Key",
     "water.Key$Ary",
-    "water.Log$LogStr",
-    "water.Log$Wrapper$1",
+    "water.util.Log$LogStr",
+    "water.util.Log$1",
+    "water.util.Log$2",
     "water.MRTask",
     "water.Model",
     "water.NOPTask",
@@ -159,6 +166,7 @@ public class TypeMap {
     "water.parser.Enum",
     "water.parser.ParseDataset",
     "water.parser.ParseDataset$2",
+    "water.parser.ParseDataset$3",
     "water.parser.ParseDataset$Progress",
     "water.parser.ParseDataset$UnzipTask",
     "water.store.s3.MultipartUpload",
@@ -166,6 +174,7 @@ public class TypeMap {
     "water.store.s3.MultipartUpload$Progress",
     "water.util.FileIntegrityChecker",
     "water.util.JStackCollectorTask",
+    "water.util.LogCollectorTask",
   };
   static private final HashMap<String,Integer> MAP = new HashMap();
   static {
@@ -180,7 +189,7 @@ public class TypeMap {
   static public int onLoad(String className) {
     Integer I = MAP.get(className);
     if(I == null)
-      throw new RuntimeException("TypeMap missing " + className);
+      throw Log.err(new RuntimeException("TypeMap missing " + className));
     return I;
   }
 
@@ -190,7 +199,7 @@ public class TypeMap {
     Iced f = (Iced)GOLD[id];
     if( f == null ) {
       try { GOLD[id] = f = (Iced) Class.forName(CLAZZES[id]).newInstance(); }
-      catch( Exception e ) { throw new Error(e); }
+      catch( Exception e ) { throw  Log.errRTExcept(e); }
     }
     return f.newInstance();
   }
@@ -198,7 +207,7 @@ public class TypeMap {
     Freezable f = GOLD[id];
     if( f == null ) {
       try { GOLD[id] = f = (Freezable) Class.forName(CLAZZES[id]).newInstance(); }
-      catch( Exception e ) { throw new Error(e); }
+      catch( Exception e ) { throw  Log.errRTExcept(e); }
     }
     return f.newInstance();
   }
@@ -209,7 +218,6 @@ public class TypeMap {
     return GOLD[id].getClass();
   }
 
-  //
 
   public static void main(String[] args) {
     Log._dontDie = true; // Ignore fatal class load error, e.g. Request

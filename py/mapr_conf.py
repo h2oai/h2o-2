@@ -1,9 +1,11 @@
+#! /usr/bin/python
+
 import boto
 import time, sys
 import pprint 
 import paramiko
-import h2o
 import argparse
+import ec2_cmd as ec2
 
 ############## Before you run the script ##########################
 # The script needs to have prepared the following shell properties:
@@ -20,38 +22,42 @@ import argparse
 #
 # EC2 connect configuration
 #
-SECURITY_GROUPS = [ 'h2ocloud' ] 
-KEY_NAME        = '0xdata_Big' 
-INSTANCE_TYPE   = 'm2.4xlarge' 
-DEFAULT_MAPR_HOME = '/opt/mapr'
-MAPR_CLUSTER_NAME = 'mapr_0xdata'
-
-EC2_PKEY_FILE     = h2o.find_file('0xdata_Big.pem')
+EC2_PKEY_FILE     = '/home/michal/.ec2/keys/0xdata_Big.pem'
 
 #
 # Our small MapR cloud configuration based on BigInstances2{1-4}:
 #  - one CLDB node
 #  - three ZooKeeper nodes
 #  - each node provides MapR filesystem
-#  - each node has an ubuntu user which can perform sudo
+#  - each node has an mapr user which can perform sudo
 #
-INSTANCES_IDs = [
-        { 'name': 'BigInstance21', 'id': 'i-3b3da947', 'cldb': True,  'zookeeper': True,  'public_ip': None, 'private_ip': None, 'username': 'ubuntu', 'need_sudo': True, 'mapr_home': DEFAULT_MAPR_HOME,},
-        { 'name': 'BigInstance22', 'id': 'i-353da949', 'cldb': False, 'zookeeper': True,  'public_ip': None, 'private_ip': None, 'username': 'ubuntu', 'need_sudo': True, 'mapr_home': DEFAULT_MAPR_HOME,}, 
-        { 'name': 'BigInstance23', 'id': 'i-373da94b', 'cldb': False, 'zookeeper': True,  'public_ip': None, 'private_ip': None, 'username': 'ubuntu', 'need_sudo': True, 'mapr_home': DEFAULT_MAPR_HOME,},
-        { 'name': 'BigInstance24', 'id': 'i-313da94d', 'cldb': False, 'zookeeper': False, 'public_ip': None, 'private_ip': None, 'username': 'ubuntu', 'need_sudo': True, 'mapr_home': DEFAULT_MAPR_HOME,},
-        ]
+
+DEFAULT_MAPR_CLUSTER_CONF = {
+        'need_sudo'    : True,
+        'username'     : 'mapr',
+        'name'         : 'mapr_h2o',
+        'mapr_home'    : '/opt/mapr',
+        'mapr_disks'   : '/home/mapr/disks.txt', 
+        'layout' : {
+            # service minimal layout
+            'zookeepers' : 3, # 3 or 5, odd number, minimal 2
+            'cldbs'      : 2,
+            'jobtrackers': 2,
+            'hbases'     : 2,
+            'nfss'       : 2, # more is better
+            },
+        }
 # = END of cluster configuration = 
 
 def main():
     parser = argparse.ArgumentParser(description='MapR EC2 cluster management utility')
-    parser.add_argument('-v', '--verbose', help="verbose", action='store_true')
+    parser.add_argument('-v', '--verbose',     help="verbose", action='store_true')
+    parser.add_argument('-r', '--reservation', help="reservation id of created EC2 instances", type=str, required=True)
     parser.add_argument('action', choices=['start', 'stop', 'restart', 'configure', 'list'],  help='MapR cluster action')
     args = parser.parse_args()
 
     # MapR cluster
-    mcluster = MaprCluster(INSTANCES_IDs)
-    mcluster.resolve_conf()
+    mcluster = MaprCluster.create(DEFAULT_MAPR_CLUSTER_CONF, args.reservation)
     mcluster.connect_all()
 
     if (args.action == 'start'):
@@ -62,9 +68,7 @@ def main():
         mcluster.stop_all()
         mcluster.start_all()
     elif (args.action == 'configure'):
-        mcluster.stop_all()
         mcluster.configure_all()
-        mcluster.start_all()
     elif (args.action == 'list'):
         log('Not yet implemented!')
 
@@ -141,10 +145,15 @@ class MaprNode(object):
 
 class MaprCluster(object):
 
-    def mapr_conf_cmd(self, cldbs, zookeepers, sudo_required=False,mapr_home=DEFAULT_MAPR_HOME):
+    def mapr_conf_cmd(self, cldbs, zookeepers, mapr_home, sudo_required=False):
         sudo_cmd = ''
         if sudo_required: sudo_cmd = 'sudo '
-        return '%s%s/server/configure.sh -C %s -Z %s -N %s' % (sudo_cmd, mapr_home, ','.join(cldbs), ','.join(zookeepers), MAPR_CLUSTER_NAME)
+        return '%s%s/server/configure.sh -C %s -Z %s -N %s' % (sudo_cmd, mapr_home, ','.join(cldbs), ','.join(zookeepers), self.name)
+
+    def mapr_disk_cmd(self, mapr_home, mapr_disks, sudo_required=False):
+        sudo_cmd = ''
+        if sudo_required: sudo_cmd = 'sudo '
+        return '%s%s/server/disksetup -F %s' % (sudo_cmd, mapr_home, mapr_disks)
 
     def connect_all(self):
         for node in self.nodes:
@@ -155,8 +164,13 @@ class MaprCluster(object):
             node.disconnect()
 
     def start_all(self):
+        # Recommended initialization sequence
+        # Start zookeeper on selected nodes
         for node in self.nodes:
-            node.start_services()
+            node.start_zookeeper()
+        # Start warden on 
+        for node in self.nodes:
+            node.start_warden()
 
     def stop_all(self):
         for node in self.nodes:
@@ -166,26 +180,14 @@ class MaprCluster(object):
         for node in self.nodes:
             cmd = self.mapr_conf_cmd(self.cldbs, self.zookeepers, sudo_required=node.need_sudo, mapr_home=node.mapr_home )
             node.configure_mapr(cmd)
+        
+        for node in self.nodes:
+            cmd = self.mapr_disk_cmd(mapr_home=node.mapr_home,mapr_disks=node.mapr_disks,sudo_required=node.need_sudo)
+            node.configure_mapr(cmd)
 
-    def resolve_conf(self):
-        conn = boto.connect_ec2()
-        reservations = conn.get_all_instances([iid['id'] for iid in INSTANCES_IDs])
-        instances = [i for r in reservations for i in r.instances]
-
-        allRunning = True;
-        for (node_conf, inst) in zip(self.nodes_conf, instances):
-            #pprint(inst.__dict__)
-            if not inst.state == 'running':
-                allRunning = False
-                log('Instance %s is not running. Please launch it!' % inst.id)
-            node_conf['public_ip']  =  inst.ip_address
-            node_conf['private_ip'] =  inst.private_ip_address
-
-
-        # TODO launch the instances
-        if not allRunning:
-            log('Some of instances do not run! Exiting ...')
-            sys.exit(-1)
+    def __init__(self, name, nodes_conf):
+        self.name       = name
+        self.nodes_conf = nodes_conf
         
         # Collects IP addresses of cldb nodes and zookeepers
         self.cldbs      = [inst['private_ip'] for inst in filter(lambda x: x['cldb'] == True, self.nodes_conf)]
@@ -193,12 +195,41 @@ class MaprCluster(object):
 
         self.nodes      = [MaprNode(conf) for conf in self.nodes_conf]
 
-    def __init__(self, nodes_conf):
-        self.nodes_conf = nodes_conf
+
+    @classmethod
+    def create(clazz, mapr_conf, reservation_id): 
+        reservation = ec2.load_ec2_reservation(reservation_id, ec2.DEFAULT_REGION)
+        nodes_conf  = []
+        remaining   = len(reservation.instances)
+        if remaining < 3: zookeepers = 1
+        else: zookeepers = mapr_conf['layout']['zookeepers']
+        cldbs       = mapr_conf['layout']['cldbs']
+        jobtrackers = mapr_conf['layout']['jobtrackers']
+        for instance in reservation.instances:
+            node_conf = { }
+            node_conf['private_ip'] = instance.private_ip_address
+            node_conf['public_ip' ] = instance.ip_address
+            node_conf['need_sudo' ] = mapr_conf['need_sudo' ]
+            node_conf['mapr_home' ] = mapr_conf['mapr_home' ]
+            node_conf['mapr_disks'] = mapr_conf['mapr_disks']
+            node_conf['username'  ] = mapr_conf['username']
+            node_conf['zookeeper' ] = False
+            node_conf['cldb'      ] = False
+            node_conf['jobtracker'] = False
+            if zookeepers > 0:
+                node_conf['zookeeper'] = True
+                zookeepers -= 1
+            if cldbs > 0 and cldbs >= remaining:
+                node_conf['cldb'] = True
+                cldbs -= 1
+
+            remaining -= 1
+            nodes_conf.append(node_conf)
+
+        return MaprCluster(mapr_conf['name'], nodes_conf)
         
 def log(s):
     print(s)
-
 
 def dump_output(prefix, out):
     data = out.read().splitlines()
@@ -207,5 +238,4 @@ def dump_output(prefix, out):
 
 if __name__ == "__main__":
     main()
-
 

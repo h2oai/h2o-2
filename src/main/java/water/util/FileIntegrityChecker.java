@@ -10,7 +10,7 @@ public class FileIntegrityChecker extends DRemoteTask {
   long[] _sizes;
   int[] _ok;
 
-  @Override public void compute2() {
+  @Override public void lcompute() {
     _ok = new int[_files.length];
     for (int i = 0; i < _files.length; ++i) {
       File f = new File(_files[i]);

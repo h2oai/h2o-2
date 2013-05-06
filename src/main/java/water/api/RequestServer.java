@@ -8,6 +8,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import water.*;
 import water.api.Upload.PostFile;
+import water.util.Log;
+import water.util.Log.Tag.Sys;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
@@ -74,6 +76,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new GLMGridProgress());
     registerRequest(new GLMProgressPage());
     registerRequest(new GetVector());
+    registerRequest(new LogView.LogDownload());
     registerRequest(new RReaderProgress());
     registerRequest(new PostFile());
     registerRequest(new Progress());
@@ -88,6 +91,8 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new TypeaheadFileRequest());
     registerRequest(new TypeaheadS3BucketRequest());
     registerRequest(new TypeaheadHdfsPathRequest());
+    registerRequest(new TypeaheadRFModelKeyRequest());
+    registerRequest(new TypeaheadGLMModelKeyRequest());
 
     // testing hooks
     registerRequest(new TestPoll());
@@ -118,7 +123,7 @@ public class RequestServer extends NanoHTTPD {
               new RequestServer(H2O._apiSocket);
               break;
             } catch ( Exception ioe ) {
-              System.err.println("Launching NanoHTTP server got "+ioe);
+              Log.err(Sys.HTTPD,"Launching NanoHTTP server got ",ioe);
               try { Thread.sleep(1000); } catch( InterruptedException e ) { } // prevent denial-of-service
             }
           }
@@ -171,7 +176,7 @@ public class RequestServer extends NanoHTTPD {
       if (resource != null) {
         try {
           bytes = ByteStreams.toByteArray(resource);
-        } catch( IOException e ) { }
+        } catch( IOException e ) { Log.err(e); }
         byte[] res = _cache.putIfAbsent(uri,bytes);
         if( res != null ) bytes = res; // Racey update; take what is in the _cache
       }

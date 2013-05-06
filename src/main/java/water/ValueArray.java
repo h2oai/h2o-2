@@ -8,6 +8,7 @@ import java.util.concurrent.ExecutionException;
 
 import water.H2O.H2OCountedCompleter;
 import water.Job.ProgressMonitor;
+import water.util.Log;
 
 /**
 * Large Arrays & Arraylets
@@ -97,7 +98,7 @@ public class ValueArray extends Iced implements Cloneable {
 
   @Override public ValueArray clone() {
     try { return (ValueArray)super.clone(); }
-    catch( CloneNotSupportedException cne ) { throw H2O.unimpl(); }
+    catch( CloneNotSupportedException cne ) { throw Log.err(H2O.unimpl()); }
   }
 
   // Init of transient fields from deserialization calls
@@ -399,14 +400,14 @@ public class ValueArray extends Iced implements Cloneable {
     // Last chunk is short, read it; combine buffers and make the last chunk larger
     if( cidx > 0 ) {
       Key ckey = getChunkKey(cidx-1,key); // Get last chunk written out
-      byte[] newbuf = Arrays.copyOf(oldbuf,(int)(off+CHUNK_SZ));
+      byte[] newbuf = MemoryManager.arrayCopyOf(oldbuf,(int)(off+CHUNK_SZ));
       System.arraycopy(buf,0,newbuf,(int)CHUNK_SZ,off);
       // Block for the last DKV to happen, because we're overwriting the last one
       // with final size bits.
       try { f_last.get(); }
-      catch( InterruptedException ie ) { throw new RuntimeException(ie); }
-      catch(   ExecutionException ee ) { throw new RuntimeException(ee); }
-      assert DKV.get(ckey).memOrLoad()==oldbuf; // Maybe false-alarms under high-memory-pressure?
+      catch( InterruptedException e ) { throw  Log.errRTExcept(e); }
+      catch(   ExecutionException e ) { throw  Log.errRTExcept(e); }
+      assert Arrays.equals(DKV.get(ckey).memOrLoad(),oldbuf);
       DKV.put(ckey,new Value(ckey,newbuf),fs); // Overwrite the old too-small Value
     } else {
       Key ckey = getChunkKey(cidx,key);

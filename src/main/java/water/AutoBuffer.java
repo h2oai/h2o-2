@@ -8,7 +8,8 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import water.api.Timeline;
+import water.util.Log;
+import water.util.Log.Tag.Sys;
 
 /**
  * A ByteBuffer backed mixed Input/OutputStream class.
@@ -83,7 +84,7 @@ public final class AutoBuffer {
     }
     _bb.flip();                 // Set limit=amount read, and position==0
 
-    if( addr == null ) throw new Error("Unhandled socket type: " + sad);
+    if( addr == null ) throw new RuntimeException("Unhandled socket type: " + sad);
     // Read Inet from socket, port from the stream, figure out H2ONode
     _h2o = H2ONode.intern(addr, getPort());
     _firstPage = true;
@@ -206,14 +207,14 @@ public final class AutoBuffer {
   private static void bbstats( AtomicInteger ai ) {
     if( !DEBUG ) return;
     if( (ai.incrementAndGet()&511)==511 ) {
-      System.err.println("BB make="+BBMAKE.get()+" free="+BBFREE.get()+" cache="+BBCACHE.get()+" size="+BBS.size());
+      Log.warn("BB make="+BBMAKE.get()+" free="+BBFREE.get()+" cache="+BBCACHE.get()+" size="+BBS.size());
     }
   }
 
   private static final ByteBuffer bbMake() {
     ByteBuffer bb = null;
     try { bb = BBS.pollFirst(0,TimeUnit.SECONDS); }
-    catch( InterruptedException ie ) { throw new Error(ie); }
+    catch( InterruptedException e ) { throw  Log.errRTExcept(e); }
     if( bb != null ) {
       bbstats(BBCACHE);
       return bb;
@@ -221,12 +222,14 @@ public final class AutoBuffer {
     bbstats(BBMAKE);
     return ByteBuffer.allocateDirect(BBSIZE).order(ByteOrder.nativeOrder());
   }
+  private static final void bbFree(ByteBuffer bb) {
+    bbstats(BBFREE);
+    bb.clear();
+    BBS.offerFirst(bb);
+  }
+
   private final int bbFree() {
-    if( _bb.isDirect() ) {
-      bbstats(BBFREE);
-      _bb.clear();
-      BBS.offerFirst(_bb);
-    }
+    if( _bb.isDirect() ) bbFree(_bb);
     _bb = null;
     return 0;                   // Flow-coding
   }
@@ -237,8 +240,16 @@ public final class AutoBuffer {
   // bytes out.  If the write is to an H2ONode and is short, send via UDP.
   // AutoBuffer close calls order; i.e. a reader close() will block until the
   // writer does a close().
-  public final int close() {
-    assert _h2o != null || _chan != null;      // Byte-array backed should not be closed
+  public final int close() { return close(true); }
+  public final int close(boolean expect_tcp) {
+    assert _h2o != null || _chan != null; // Byte-array backed should not be closed
+    // Extra asserts on closing TCP channels: we should always know & expect
+    // TCP channels, and read them fully.  If we close a TCP channel that is
+    // not fully read then the writer will assert and we will silently run on.
+    // Note: this assert is essentially redundant with the extra read/write of
+    // 0xab below; closing a TCP read-channel early will read 1 more byte -
+    // which probably will not be 0xab.
+    assert expect_tcp || !hasTCP();
     try {
       if( _chan == null ) {     // No channel?
         if( _read ) return bbFree();
@@ -263,7 +274,7 @@ public final class AutoBuffer {
       _time_close_ms = System.currentTimeMillis();
       TimeLine.record_IOclose(this,_persist); // Profile TCP connections
     } catch( IOException e ) {  // Dunno how to handle so crash-n-burn
-      throw new RuntimeException(e);
+      throw  Log.errRTExcept(e);
     } finally {
       restorePriority();        // And if we raised priority, lower it back
       if( _chan instanceof SocketChannel )
@@ -281,16 +292,17 @@ public final class AutoBuffer {
       TCPS.decrementAndGet();
       bbFree();
     } catch( IOException e ) {  // Dunno how to handle so crash-n-burn
-      throw new RuntimeException(e);
+      throw  Log.errRTExcept(e);
     }
   }
 
   // Need a sock for a big read or write operation
-  private void tcpOpen() throws IOException {
+  private void tcpOpen() {
     assert _firstPage && _bb.limit() >= 1+2+4; // At least something written
     assert _chan == null;
+    assert _bb.position()==0;
 
-    SocketChannel sock;
+    SocketChannel sock=null;
     while(true) {             // Loop, in case we get socket open problems
       IOException ex = null;
       try {
@@ -299,9 +311,19 @@ public final class AutoBuffer {
         // case we simply keep retrying (after a sleep period to let the
         // receiver catch up).
         sock = SocketChannel.open();
+        assert sock.isBlocking();
         sock.socket().setSendBufferSize(BBSIZE);
-        sock.connect( _h2o._key );
-        //sock = SocketChannel.open( _h2o._key );
+        boolean res = sock.connect( _h2o._key );
+        assert res && !sock.isConnectionPending();
+        // Do an initial write: under heavy load we might get a bogus open
+        // followed by a reset/close AFTER writing... leading to a TCP
+        // connection-reset-by-peer error.  The fix is to delay a tad (for the
+        // receiver load to drop) and try again.
+        _bb.position(0);
+        long ns = System.nanoTime();
+        while( _bb.hasRemaining() )
+          sock.write(_bb);
+        _time_io_ns += (System.nanoTime()-ns);
         break;
       } // Explicitly ignore the following exceptions but fail on the rest
       catch (ConnectException e)       { ex = e; }
@@ -309,7 +331,10 @@ public final class AutoBuffer {
       catch (IOException e)            { ex = e; }
       finally {
         if( ex != null ) {
-          H2O.ignore(ex, "[h2o,Autobuffer] TCP open problem, waiting and retrying...", false);
+          try { if( sock != null ) sock.close(); } catch( IOException e ) { }
+          // Note: logging is dangerous here, as logging requires another TCP
+          // connection and this TCP connection just failed.
+          Log.info("Network congestion: TCP open/write "+ex.getMessage()+" talking to "+_h2o+", waiting and retrying...");
           try { Thread.sleep(500); } catch (InterruptedException ie) {}
         }
       }
@@ -434,7 +459,7 @@ public final class AutoBuffer {
         if( res == -1 ) throw new RuntimeException("EOF while reading "+sz+" bytes");
         if( res ==  0 ) throw new RuntimeException("Reading zero bytes - so no progress?");
       } catch( IOException e ) {  // Dunno how to handle so crash-n-burn
-        throw new RuntimeException(e);
+        throw  Log.errRTExcept(e);
       }
     }
     _time_io_ns += (System.nanoTime()-ns);
@@ -470,16 +495,15 @@ public final class AutoBuffer {
       TimeLine.record_send(this,true);
     _bb.flip(); // Prep for writing.
     _bb.mark();
+    if( _chan == null)
+      tcpOpen(); // This is a big operation.  Open a TCP socket as-needed.
     try{
-      if( _chan == null)
-        tcpOpen(); // This is a big operation.  Open a TCP socket as-needed.
       long ns = System.nanoTime();
       while( _bb.hasRemaining() )
         _chan.write(_bb);
       _time_io_ns += (System.nanoTime()-ns);
     } catch( IOException e ) {   // Can't open the connection, try again later
-      System.err.println("TCP Open/Write failed: " + e.getMessage()+" talking to "+_h2o);
-      throw new Error(e);
+      throw new RuntimeException(Log.err("TCP Write to "+_h2o+" AB="+this+" failed with ",e));
     }
     if( _bb.capacity() < 16*1024 ) _bb = bbMake();
     _firstPage = false;
@@ -666,7 +690,7 @@ public final class AutoBuffer {
 
   public short[] getA2( ) {
     int len = get4(); if( len == -1 ) return null;
-    short[] buf = new short[len];
+    short[] buf = MemoryManager.malloc2(len);
     int sofar = 0;
     while( sofar < buf.length ) {
       ShortBuffer as = _bb.asShortBuffer();
@@ -681,7 +705,7 @@ public final class AutoBuffer {
 
   public int[] getA4( ) {
     int len = get4(); if( len == -1 ) return null;
-    int[] buf = new int[len];
+    int[] buf = MemoryManager.malloc4(len);
     int sofar = 0;
     while( sofar < buf.length ) {
       IntBuffer as = _bb.asIntBuffer();
@@ -695,7 +719,7 @@ public final class AutoBuffer {
   }
   public float[] getA4f( ) {
     int len = get4(); if( len == -1 ) return null;
-    float[] buf = new float[len];
+    float[] buf = MemoryManager.malloc4f(len);
     int sofar = 0;
     while( sofar < buf.length ) {
       FloatBuffer as = _bb.asFloatBuffer();
@@ -709,7 +733,7 @@ public final class AutoBuffer {
   }
   public long[] getA8( ) {
     int len = get4(); if( len == -1 ) return null;
-    long[] buf = new long[len];
+    long[] buf = MemoryManager.malloc8(len);
     int sofar = 0;
     while( sofar < buf.length ) {
       LongBuffer as = _bb.asLongBuffer();
@@ -723,7 +747,7 @@ public final class AutoBuffer {
   }
   public double[] getA8d( ) {
     int len = get4(); if( len == -1 ) return null;
-    double[] buf = new double[len];
+    double[] buf = MemoryManager.malloc8d(len);
     int sofar = 0;
     while( sofar < len ) {
       DoubleBuffer as = _bb.asDoubleBuffer();

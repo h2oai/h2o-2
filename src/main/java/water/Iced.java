@@ -7,8 +7,8 @@ public abstract class Iced implements Freezable {
   // filled in by any subclass of Iced during class-load-time, unless one
   // is already defined.  These methods are NOT DECLARED ABSTRACT, because javac
   // thinks they will be called by subclasses relying on the auto-gen.
-  private Error barf() {
-    return new Error(getClass().toString()+" should be automatically overridden in the subclass by the auto-serialization code");
+  private RuntimeException barf() {
+    return new RuntimeException(getClass().toString()+" should be automatically overridden in the subclass by the auto-serialization code");
   }
   @Override public AutoBuffer write(AutoBuffer bb) { throw barf(); }
   @Override public <T extends Freezable> T read(AutoBuffer bb) { throw barf(); }

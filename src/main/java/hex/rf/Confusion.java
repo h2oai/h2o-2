@@ -5,7 +5,8 @@ import java.util.Random;
 
 import water.*;
 import water.ValueArray.Column;
-import water.util.Utils;
+import water.util.*;
+import water.util.Log.Tag.Sys;
 
 import com.google.common.primitives.Ints;
 
@@ -85,7 +86,7 @@ public class Confusion extends MRTask {
     shared_init();
   }
 
-  public Key keyFor() { return keyFor(_model._selfKey,_treesUsed,_datakey, _classcol, _computeOOB); }
+  public Key keyFor() { return keyFor(_model._selfKey,_treesUsed,_datakey,_classcol,_computeOOB); }
   static public Key keyFor(Key modelKey, int msize, Key datakey, int classcol, boolean computeOOB) {
     return Key.make("ConfusionMatrix of (" + datakey+"["+classcol+"],"+modelKey+"["+msize+"],"+(computeOOB?"1":"0")+")");
   }
@@ -128,7 +129,7 @@ public class Confusion extends MRTask {
     if( classWt != null )
       for( int i=0; i<classWt.length; i++ )
         if( classWt[i] != 1.0 )
-          Utils.pln("[CM] Weighted votes "+i+" by "+classWt[i]);
+          Log.info(Sys.CONFM,"Weighted votes ",i," by ",classWt[i]);
     return C;
   }
 
@@ -169,7 +170,7 @@ public class Confusion extends MRTask {
    * wire-line format does not send over things we can compute locally. So
    * compute locally, once, some things we want in all cloned instances.
    */
-  public void init() {
+  @Override public void init() {
     super.init();
     shared_init();
     // Make a mapping from chunk# to row# just for chunks on this node
@@ -191,7 +192,6 @@ public class Confusion extends MRTask {
     final int rows = bits.remaining() / rowsize;
     final int cmin = (int) _data._cols[_classcol]._min;
     int nchk = (int) ValueArray.getChunkIndex(chunk_key);
-    final Column[] cols = _data._cols;
     short numClasses = (short)_model.classes();
 
     // Votes: we vote each tree on each row, holding on to the votes until the end
@@ -213,6 +213,10 @@ public class Confusion extends MRTask {
         // of random numbers as in the method Data.sampleFair()
         // Skip row used during training if OOB is computed
         float sampledItem = rand.nextFloat();
+        // Bail out of broken rows with NA in class column.
+        // Do not skip yet the rows with NAs in the rest of columns
+        if( _data.isNA(bits, row, _classcol)) continue ROWS;
+
         if( _computeOOB ) { // if OOBEE is computed then we need to take into account utilized sampling strategy
           switch( _model._samplingStrategy ) {
           case RANDOM          : if (sampledItem < _model._sample ) continue ROWS; break;
@@ -223,15 +227,11 @@ public class Confusion extends MRTask {
           default: assert false : "The selected sampling strategy does not support OOBEE replay!"; break;
           }
         }
-        // ------
-
-        // Bail out of broken rows
-        for( int c = 0; c < _modelDataMap.length; c++ )
-          if( _data.isNA(bits, row, cols[_modelDataMap[c]])) continue ROWS;
+        // --- END OF CRUCIAL CODE ---
 
         // Predict with this tree - produce 0-based class index
         int prediction = _model.classify0(ntree, _data, bits, row, _modelDataMap, numClasses );
-        if( prediction >= _MODEL_N ) continue ROWS; // Junk row cannot be predicted
+        if( prediction >= numClasses ) continue ROWS; // Junk row cannot be predicted
         // Check tree miss
         int alignedPrediction = alignModelIdx(prediction);
         int alignedData       = alignDataIdx((int) _data.data(bits, row, _classcol) - cmin);
@@ -360,18 +360,16 @@ public class Confusion extends MRTask {
         + "                Validated on (rows): " + _rows + "\n"
         + "     Rows skipped during validation: " + _skippedRows + "\n"
         + "  Mispredictions per tree (in rows): " + Arrays.toString(_errorsPerTree)+"\n";
-
-
-    Utils.pln(s);
+    Log.info(Sys.RANDF,s);
   }
 
   /** Returns classification error. */
   public float classError() { return _errors / (float) _rows; }
   /** Return number of rows used for CM computation */
-  public long rows() { return _rows; }
+  public long  rows()       { return _rows; }
   /** Return number of skipped rows during CM computation
    *  The number includes in-bag rows if oobee is used. */
-  public long skippedRows() { return _skippedRows; }
+  public long  skippedRows(){ return _skippedRows; }
 
   /**
    * Reports size of dataset and computed classification error.

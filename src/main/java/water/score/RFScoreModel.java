@@ -51,7 +51,7 @@ public class RFScoreModel extends ScoreModel {
       // Size is: 1 byte indicator, 2 bytes col, 4 bytes val, the skip, then left, right
       return 1+2+4+(( _l.size() <= 254 ) ? 1 : 4)+_l.size()+_r.size();
     }
-    
+
     public void toPackedTree(AutoBuffer ab) {
       if( _l == null ) {
         assert _r == null;
@@ -151,8 +151,8 @@ public class RFScoreModel extends ScoreModel {
     if( !col.isEmpty() ) {
       rfn._colnum = (short)_cols.indexOf(col);
       if( rfn._colnum == -1 ) {   // Not found?  insert into list
-        rfn._colnum = (short)_cols.size(); 
-        _cols.add(col); 
+        rfn._colnum = (short)_cols.size();
+        _cols.add(col);
       }
     }
     // Parse left & right children
@@ -170,7 +170,7 @@ public class RFScoreModel extends ScoreModel {
     double[] ds = new double[_cols.size()];
     for( int i=0; i<ds.length; i++ ) {
       Double D = (Double)row.get(_cols.get(i));
-      if( D == null ) throw new Error("row is missing column "+_cols.get(i)+", contains "+row.keySet());
+      if( D == null ) throw new RuntimeException("row is missing column "+_cols.get(i)+", contains "+row.keySet());
       ds[i] = D;
     }
     int votes[] = new int[_classes.length+1];

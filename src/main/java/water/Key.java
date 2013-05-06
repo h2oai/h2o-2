@@ -90,7 +90,7 @@ public final class Key extends Iced implements Comparable {
   public int home ( H2O cloud ) { return home (cloud_info(cloud)); }
   public int replica( H2O cloud ) { return replica(cloud_info(cloud)); }
   public int desired( ) { return desired(_cache); }
-  public boolean home() { return H2O.CLOUD._memary[home(H2O.CLOUD)]==H2O.SELF; }
+  public boolean home() { return home_node()==H2O.SELF; }
   public H2ONode home_node( ) {
     H2O cloud = H2O.CLOUD;
     return cloud._memary[home(cloud)];
@@ -279,6 +279,7 @@ public final class Key extends Iced implements Comparable {
 
   private static byte[] decodeKeyName(String what) {
     if( what==null ) return null;
+    if( what.length()==0 ) return null;
     if (what.charAt(0) == MAGIC_CHAR) {
       int len = what.indexOf(MAGIC_CHAR,1);
       String tail = what.substring(len+1);

@@ -178,7 +178,7 @@ public abstract class DGLM {
         double xx = (x < 0)?Math.min(-1e-5,x):Math.max(1e-5, x);
         return 1.0/xx;
       default:
-        throw new Error("unsupported link function id  " + this);
+        throw new RuntimeException("unsupported link function id  " + this);
       }
     }
 
@@ -195,7 +195,7 @@ public abstract class DGLM {
         double xx = (x < 0)?Math.min(-1e-5,x):Math.max(1e-5, x);
         return 1.0/xx;
       default:
-        throw new Error("unexpected link function id  " + this);
+        throw new RuntimeException("unexpected link function id  " + this);
       }
     }
 
@@ -214,7 +214,7 @@ public abstract class DGLM {
           double xx = (x < 0)?Math.min(-1e-5,x):Math.max(1e-5, x);
           return -1/(xx*xx);
         default:
-          throw new Error("unexpected link function id  " + this);
+          throw new RuntimeException("unexpected link function id  " + this);
       }
     }
   }
@@ -245,7 +245,7 @@ public abstract class DGLM {
       case gamma:
         return y;
       default:
-        throw new Error("unimplemented");
+        throw new RuntimeException("unimplemented");
       }
     }
     public double variance(double mu){
@@ -260,7 +260,7 @@ public abstract class DGLM {
       case gamma:
         return mu*mu;
       default:
-        throw new Error("unknown family Id " + this);
+        throw new RuntimeException("unknown family Id " + this);
       }
     }
   /**
@@ -284,7 +284,7 @@ public abstract class DGLM {
         if(yr == 0)return -2;
         return -2*(Math.log(yr/ym) - (yr - ym)/ym);
       default:
-        throw new Error("unknown family Id " + this);
+        throw new RuntimeException("unknown family Id " + this);
       }
     }
   }
@@ -377,12 +377,10 @@ public abstract class DGLM {
       _parallel = parallel;
     }
 
-    @Override
-    public void init() {
+    @Override public void init() {
       super.init();
       _ary = DKV.get(_aryKey).get();
       _models = new Key[_folds];
-
     }
 
     @Override
@@ -408,6 +406,7 @@ public abstract class DGLM {
     @Override
     public void reduce(DRemoteTask drt) {
       GLMXValTask other = (GLMXValTask)drt;
+      if( _models == null ) _models = other._models;
       if(other._models != _models){
         for(int i = 0; i < _models.length; ++i)
           if(_models[i] == null)
@@ -589,7 +588,7 @@ public abstract class DGLM {
       GLMXValTask tsk = new GLMXValTask(job, folds, ary, modelDataMap, _standardized, _solver, _glmParams, _normBeta, thresholds, parallel);
       long t1 = System.currentTimeMillis();
       if(parallel)
-        tsk.invoke(keys);
+        tsk.invoke(keys);       // Needs a CPS-style transform here
       else {
         tsk.keys(keys);
         tsk.init();
@@ -1155,7 +1154,7 @@ public abstract class DGLM {
         res._aic += (yr*Math.log(ym) - logfactorial - ym);
       } else if(_glmp._family == Family.binomial) { // cm computation for binomial
         if(yr < 0 || yr > 1 )
-          throw new Error("response variable value out of range: " + yr);
+          throw new RuntimeException("response variable value out of range: " + yr);
         int i = 0;
         for(double t:_thresholds){
           int p = ym >= t?1:0;
@@ -1224,8 +1223,7 @@ public abstract class DGLM {
       beta = denormalizedBeta = null;
     }
     UKV.put(job.dest(), new GLMModel(Status.ComputingModel,0.0f,job.dest(),data, denormalizedBeta, beta, params, lsm, false, 0, 0, null));
-    job.start();
-    H2O.submitTask(new H2OCountedCompleter() {
+    final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
         @Override public void compute2() {
           try{
             buildModel(job, job.dest(), data, lsm, params, beta, xval, parallel);
@@ -1241,7 +1239,8 @@ public abstract class DGLM {
           if(job != null) job.onException(ex);
           return super.onExceptionalCompletion(ex, caller);
         }
-    });
+      };
+    H2O.submitTask(job.start(fjtask));
     return job;
   }
 

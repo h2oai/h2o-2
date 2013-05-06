@@ -1,5 +1,7 @@
 package water.api;
 
+import java.util.Arrays;
+
 import hex.rf.Confusion;
 import hex.rf.RFModel;
 import water.Key;
@@ -23,6 +25,7 @@ public class RFView extends /* Progress */ Request {
   protected final Bool               _oobee    = new Bool(OOBEE,false,"Out of bag errors");
   protected final Bool               _noCM     = new Bool(NO_CM, false,"Do not produce confusion matrix");
   protected final Bool               _clearCM  = new Bool(JSON_CLEAR_CM, false, "Clear cache of model confusion matrices");
+  protected final Bool               _iterativeCM       = new Bool(ITERATIVE_CM, true, "Compute confusion matrix on-the-fly");
   protected final Int                _refreshTresholdCM = new Int(JSON_REFRESH_TRESHOLD_CM, DEFAULT_CM_REFRESH_TRESHOLD);
   /** RFView specific parameters names */
   public static final String JSON_CONFUSION_KEY   = "confusion_key";
@@ -69,21 +72,30 @@ public class RFView extends /* Progress */ Request {
     return rs.toString();
   }
 
-  public static Response redirect(JsonObject resp, Key dest) {
+  public static Response redirect(JsonObject fromPageResponse, Key rfModel) {
     JsonObject redir = new JsonObject();
-    redir.addProperty(MODEL_KEY, dest.toString());
-    return Response.redirect(resp, RFView.class, redir);
+    redir.addProperty(MODEL_KEY, rfModel.toString());
+    return Response.redirect(null, RFView.class, redir);
+  }
+
+  public static Response redirect(JsonObject fromPageResponse, Key rfModel, Key dataKey, boolean oobee) {
+    JsonObject redir = new JsonObject();
+    redir.addProperty(MODEL_KEY, rfModel.toString());
+    redir.addProperty(DATA_KEY, dataKey.toString());
+    redir.addProperty(OOBEE, oobee);
+    return Response.redirect(fromPageResponse, RFView.class, redir);
   }
 
   protected JsonObject defaultJsonResponse() {
     JsonObject r = new JsonObject();
     RFModel model = _modelKey.value();
-    r.addProperty( DATA_KEY, _dataKey.originalValue());
-    r.addProperty(MODEL_KEY, _modelKey.originalValue());
-    r.addProperty(    CLASS, _classCol.value());
-    r.addProperty(NUM_TREES, model._totalTrees);
-    r.addProperty(     MTRY, model._splitFeatures);
-    r.addProperty(    OOBEE, _oobee.value());
+    r.addProperty(  DATA_KEY, _dataKey.originalValue());
+    r.addProperty( MODEL_KEY, _modelKey.originalValue());
+    r.addProperty(     CLASS, _classCol.value());
+    r.addProperty( NUM_TREES, model._totalTrees);
+    r.addProperty(      MTRY, model._splitFeatures);
+    r.addProperty(MTRY_NODES, Arrays.toString(model._nodesSplitFeatures));
+    r.addProperty(     OOBEE, _oobee.value());
     // CM specific options
     r.addProperty(NO_CM, _noCM.value());
     r.addProperty(JSON_REFRESH_TRESHOLD_CM, _refreshTresholdCM.value());
@@ -106,11 +118,11 @@ public class RFView extends /* Progress */ Request {
 
     JsonObject response = defaultJsonResponse();
     // CM return and possible computation is requested
-    if (!_noCM.value()) {
-      //tasks += 1;
+    if (!_noCM.value() && (finished==tasks || _iterativeCM.value()) && finished > 0) {
       // Compute the highest number of trees which is less then a threshold
       int modelSize = tasks * _refreshTresholdCM.value()/100;
       modelSize     = modelSize == 0 || finished==tasks ? finished : modelSize * (finished/modelSize);
+
       // Get the confusion matrix
       Confusion confusion = Confusion.make(model, modelSize, _dataKey.value()._key, _classCol.value(), weights, _oobee.value());
       response.addProperty(JSON_CONFUSION_KEY, confusion.keyFor().toString());

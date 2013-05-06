@@ -25,7 +25,7 @@ public abstract class DTask<T> extends H2OCountedCompleter implements Freezable 
   transient boolean _repliedTcp; // Any return/reply/result was sent via TCP
 
   /** Top-level remote execution hook.  Called on the <em>remote</em>. */
-  abstract public T invoke( H2ONode sender );
+  public void dinvoke( H2ONode sender ) { compute2(); }
 
   /** 2nd top-level execution hook.  After the primary task has received a
    * result (ACK) and before we have sent an ACKACK, this method is executed
@@ -43,8 +43,8 @@ public abstract class DTask<T> extends H2OCountedCompleter implements Freezable 
   // filled in by any subclass of DTask during class-load-time, unless one
   // is already defined.  These methods are NOT DECLARED ABSTRACT, because javac
   // thinks they will be called by subclasses relying on the auto-gen.
-  private Error barf() {
-    return new Error(getClass().toString()+" should be automatically overridden in the subclass by the auto-serialization code");
+  private RuntimeException barf() {
+    return new RuntimeException(getClass().toString()+" should be automatically overridden in the subclass by the auto-serialization code");
   }
   @Override public AutoBuffer write(AutoBuffer bb) { throw barf(); }
   @Override public <F extends Freezable> F read(AutoBuffer bb) { throw barf(); }

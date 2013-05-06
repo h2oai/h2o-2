@@ -239,9 +239,10 @@ def runRFView(node=None, data_key=None, model_key=None, ntree=None,
 
     # kind of wasteful re-read, but maybe good for testing
     rfView = node.random_forest_view(data_key, model_key, timeoutSecs, noise=noise, **kwargs)
-    h2f.simpleCheckRFView(node, rfView, noPrint=noPrint)
+    if not kwargs.setdefault('no_confusion_matrix', False):
+        h2f.simpleCheckRFView(node, rfView, noPrint=noPrint)
     return rfView
-         
+
 def port_live(ip, port):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:

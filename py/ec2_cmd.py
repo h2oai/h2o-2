@@ -27,7 +27,7 @@ Default EC2 instance setup
 '''
 DEFAULT_EC2_INSTANCE_CONFIGS = {
   'us-east-1':{
-              'image_id'        : 'ami-30c6a059', #'ami-b85cc4d1', # 'ami-cd9a11a4',
+              'image_id'        : 'ami-cf5132a6', #'ami-30c6a059', #'ami-b85cc4d1', # 'ami-cd9a11a4',
               'security_groups' : [ 'MrJenkinsTest' ],
               'key_name'        : 'mrjenkins_test',
               'instance_type'   : 'm1.xlarge',
@@ -298,7 +298,7 @@ def load_ec2_region(region):
 
     raise Exception('\033[91m[ec2] Unsupported EC2 region: {0}. The available regions are: {1}\033[0m'.format(region, [r for r in DEFAULT_EC2_INSTANCE_CONFIGS ]))
 
-def load_ec2_config(config_file, region, instance_type=None):
+def load_ec2_config(config_file, region, instance_type=None, image_id=None):
     if config_file:
         f = find_file(config_file)
         with open(f, 'rb') as fp:
@@ -310,6 +310,7 @@ def load_ec2_config(config_file, region, instance_type=None):
         ec2_cfg.setdefault(k, v)
 
     if instance_type: ec2_cfg['instance_type'] = instance_type
+    if image_id     : ec2_cfg['image_id'     ] = image_id
 
     return ec2_cfg
 
@@ -425,16 +426,18 @@ def main():
     parser.add_argument('--timeout',         help='Timeout in seconds.', type=int, default=None)
     parser.add_argument('--instance_type',   help='Enfore a type of EC2 to launch (e.g., m2.2xlarge).', type=str, default=None)
     parser.add_argument('--cmd',             help='Shell command to be executed by nexec.', type=str, default=None)
+    parser.add_argument('--image_id',        help='Override defautl image_id', type=str, default=None)
     args = parser.parse_args()
 
     ec2_region = load_ec2_region(args.region)
     if (args.action == 'help'):
         parser.print_help()
     elif (args.action == 'create' or args.action == 'demo'):
-        ec2_config = load_ec2_config(args.config, ec2_region, args.instance_type)
+        ec2_config = load_ec2_config(args.config, ec2_region, args.instance_type, args.image_id)
         tags       = create_tags(Name=args.name)
         log("EC2 region : {0}".format(ec2_region))
         log("EC2 itype  : {0}".format(ec2_config['instance_type']))
+        log("EC2 ami    : {0}".format(ec2_config['image_id']))
         log("EC2 config : {0}".format(ec2_config))
         log("Instances  : {0}".format(args.instances))
         log("Tags       : {0}".format(tags))

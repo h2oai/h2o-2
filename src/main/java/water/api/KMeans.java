@@ -3,6 +3,7 @@ package water.api;
 import hex.KMeans.KMeansModel;
 import water.*;
 import water.H2O.H2OCountedCompleter;
+import water.util.Log;
 import water.util.RString;
 
 import com.google.gson.*;

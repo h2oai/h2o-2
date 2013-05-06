@@ -8,6 +8,7 @@ import java.util.Properties;
 import javax.imageio.ImageIO;
 
 import water.*;
+import water.util.Log;
 
 public class Plot extends Request {
   protected final H2OHexKey       _source   = new H2OHexKey(SOURCE_KEY);
@@ -60,7 +61,7 @@ public class Plot extends Request {
         if( !res )
           throw new RuntimeException();
       } catch( IOException e ) {
-        throw new RuntimeException(e);
+        throw  Log.errRTExcept(e);
       }
       InputStream in = new ByteArrayInputStream(buffer.toByteArray());
       return server.new Response(NanoHTTPD.HTTP_OK, "image/png", in);

@@ -13,8 +13,7 @@ import java.util.*;
 
 import water.*;
 import water.ValueArray.Column;
-import water.util.Check;
-import water.util.RString;
+import water.util.*;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Throwables;
@@ -984,7 +983,7 @@ public class RequestArguments extends RequestStatics {
     private static double [] parseArray(String input, boolean mul, double defaultStep){
       String str = input.trim().toLowerCase();
       if( str.startsWith("seq") ) {
-        throw new Error("unimplemented");
+        throw new RuntimeException("unimplemented");
       } if( str.contains(":") ) {
         String [] parts = str.split(":");
         if(parts.length != 2 &&  parts.length != 3 )throw new IllegalArgumentException("Value "+input+" is not a valid number sequence.");
@@ -1230,7 +1229,7 @@ public class RequestArguments extends RequestStatics {
       try {
         double i = Double.parseDouble(input);
         if ((i< _min) || (i > _max))
-          throw new IllegalArgumentException("Value "+i+" is not between "+_min+" and "+_max+" (inclusive)");
+         throw new IllegalArgumentException("Value "+i+" is not between "+_min+" and "+_max+" (inclusive)");
         return i;
       } catch (NumberFormatException e) {
         throw new IllegalArgumentException("Value "+input+" is not a valid real number.");
@@ -1555,11 +1554,13 @@ public class RequestArguments extends RequestStatics {
   public class H2OModelKey<TM extends Model, TK extends TypeaheadKeysRequest> extends TypeaheadInputText<TM> {
     public H2OModelKey(TK tkr, String name, boolean req) { super(tkr.getClass(), name, req); }
     @Override protected TM parse(String input) throws IllegalArgumentException {
-      Key k = Key.make(input);
-      Value v = DKV.get(k);
-      if (v == null)
-        throw new IllegalArgumentException("Key "+input+" not found!");
-      return v.get();
+      if( input!=null && input.length()>0 ) {
+        Key k = Key.make(input);
+        Value v = DKV.get(k);
+        if (v != null) 
+          return v.get();
+      }
+      throw new IllegalArgumentException("Key "+input+" not found!");
     }
     @Override protected String queryDescription() { return "An existing H2O Model key"; }
     @Override protected TM defaultValue() { return null; }

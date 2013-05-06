@@ -1,7 +1,7 @@
 package hex.rf;
 
 import static org.junit.Assert.assertEquals;
-import hex.rf.DRF.DRFFuture;
+import hex.rf.DRF.DRFJob;
 import hex.rf.Tree.StatType;
 
 import org.junit.BeforeClass;
@@ -35,12 +35,9 @@ public class RandomForestTest extends TestUtil {
 
     // Start the distributed Random Forest
     final Key modelKey = Key.make("model");
-    DRFFuture result = hex.rf.DRF.execute(modelKey,cols,val,ntrees,depth,1024,statType,seed, true, null, -1, Sampling.Strategy.RANDOM, 1.0f, null, 0, 0);
-    // Just wait little bit
-    result.get();
-
-    // Create incremental confusion matrix.
-    RFModel model = UKV.get(modelKey);
+    DRFJob result = hex.rf.DRF.execute(modelKey,cols,val,ntrees,depth,1024,statType,seed, true, null, -1, Sampling.Strategy.RANDOM, 1.0f, null, 0, 0);
+    // Wait for completion on all nodes
+    RFModel model = result.get();
 
     assertEquals("Number of classes", 2,  model.classes());
     assertEquals("Number of trees", ntrees, model.size());

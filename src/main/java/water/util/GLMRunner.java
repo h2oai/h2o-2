@@ -8,6 +8,7 @@ import hex.DGLM.GLMModel;
 import hex.DGLM.GLMParams;
 import hex.DLSM.ADMMSolver;
 import water.*;
+import water.util.Log.Tag.Sys;
 
 
 public class GLMRunner {
@@ -80,7 +81,7 @@ public class GLMRunner {
         for(int i = 0; i < dots;++i)System.out.print('.');
         Thread.sleep(250);
       }
-      System.out.println("DONE.");
+      Log.debug(Sys.GENLM,"DONE.");
       GLMModel m = j.get();
       String [] colnames = ary.colNames();
       System.out.println("Intercept"  + " = " + m._beta[ncols-1]);
@@ -88,9 +89,9 @@ public class GLMRunner {
         System.out.println(colnames[i]  + " = " + m._beta[i]);
       }
     }catch(Throwable t){
-      t.printStackTrace();
+      Log.err(t);
     } finally {  // we're done. shutdown the cloud
-      System.out.println("==================<GLMRunner DONE>===================");
+      Log.debug(Sys.GENLM,"==================<GLMRunner DONE>===================");
       UDPRebooted.suicide(UDPRebooted.T.shutdown, H2O.SELF);
     }
   }

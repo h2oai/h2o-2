@@ -2,6 +2,7 @@ package water.api;
 
 import water.UKV;
 import water.Value;
+import water.util.Log;
 
 import com.google.gson.JsonObject;
 

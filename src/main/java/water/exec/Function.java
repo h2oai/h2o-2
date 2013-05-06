@@ -2,7 +2,6 @@
 package water.exec;
 
 import java.util.*;
-
 import water.*;
 import water.ValueArray.Column;
 import water.exec.Expr.Result;
@@ -502,7 +501,7 @@ class MakeEnum extends Function {
       _aryKey = aryKey;
     }
 
-    @Override public void init(){
+    @Override public void init() {
       super.init();
       if (_domain == null)
         _domain = new water.parser.Enum();
@@ -627,7 +626,7 @@ class MakeEnum extends Function {
       DKV.write_barrier();
       return result;
     } catch (Exception e) {
-      e.printStackTrace();
+      water.util.Log.err(e);
     }
     return null;
   }

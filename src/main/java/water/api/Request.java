@@ -6,8 +6,8 @@ import java.io.InputStream;
 import java.util.*;
 
 import water.*;
-import water.util.IndentingAppender;
-import water.util.RString;
+import water.util.*;
+import water.util.Log.Tag.Sys;
 
 import com.google.common.base.Objects;
 import com.google.common.io.ByteStreams;
@@ -39,7 +39,7 @@ public abstract class Request extends RequestBuilders {
             if(value instanceof Value) value = ((Value) value)._key;
             log += " " + arg._name + "=" + value;
           }
-          System.out.println(log);
+          Log.debug(Sys.HTTPD,log);
         }
         if (query != null)
           return wrap(server,query,type);
@@ -129,8 +129,10 @@ public abstract class Request extends RequestBuilders {
     try {
       _htmlTemplate = new String(ByteStreams.toByteArray(resource)).replace("%cloud_name",H2O.NAME);
     } catch (NullPointerException e) {
+      Log.err(e);
       Log.die("page.html not found in resources.");
     } catch (Exception e) {
+      Log.err(e);
       Log.die(e.getMessage());
     } finally {
       Closeables.closeQuietly(resource);
@@ -202,4 +204,5 @@ public abstract class Request extends RequestBuilders {
   }
 
   protected static final void help(Argument arg, String help) { arg._requestHelp = help; }
+  protected static final void help(Request r, String help)    { r._requestHelp   = help; }
 }
