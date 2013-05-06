@@ -63,19 +63,7 @@ public final class H2O {
   // Central /dev/null for ignored exceptions
   public static final void ignore(Throwable e)             { ignore(e,"[h2o] Problem ignored: "); }
   public static final void ignore(Throwable e, String msg) { ignore(e, msg, true); }
-  public static final void ignore(Throwable e, String msg, boolean printException) {
-/*    StringBuffer sb = new StringBuffer();
-    sb.append(msg).append('\n');
-    if (printException) {
-      StackTraceElement[] stack = e.getStackTrace();
-      // The replacement of Exception -> Problem is required by our testing framework which would report
-      // error if it sees "exception" in the node output
-      sb.append(e.toString().replace("Exception", "Problem")).append('\n');
-      for (StackTraceElement el : stack) { sb.append("\tat "); sb.append(el.toString().replace("Exception", "Problem" )); sb.append('\n'); }
-    }
-    */
-    Log.err(msg, printException? e : null);
-  }
+  public static final void ignore(Throwable e, String msg, boolean printException) { Log.err(msg, printException? e : null);  }
 
   // --------------------------------------------------------------------------
   // The Current Cloud. A list of all the Nodes in the Cloud. Changes if we
