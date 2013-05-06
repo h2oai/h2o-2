@@ -456,7 +456,7 @@ public final class AutoBuffer {
       try {
         int res = _chan.read(_bb); // Read more
         // Readers are supposed to be strongly typed and read the exact expected bytes
-        if( res == -1 ) throw new RuntimeException("EOF while reading "+sz+" bytes");
+        if( res == -1 ) throw new RuntimeException("EOF while reading "+sz+" bytes, AB="+this);
         if( res ==  0 ) throw new RuntimeException("Reading zero bytes - so no progress?");
       } catch( IOException e ) {  // Dunno how to handle so crash-n-burn
         throw  Log.errRTExcept(e);
@@ -503,7 +503,7 @@ public final class AutoBuffer {
         _chan.write(_bb);
       _time_io_ns += (System.nanoTime()-ns);
     } catch( IOException e ) {   // Can't open the connection, try again later
-      throw new RuntimeException(Log.err("TCP Write to "+_h2o+" AB="+this+" failed with ",e));
+      throw new RuntimeException(Log.err("TCP Write, AB="+this+" failed with ",e));
     }
     if( _bb.capacity() < 16*1024 ) _bb = bbMake();
     _firstPage = false;
