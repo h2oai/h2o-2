@@ -1664,6 +1664,8 @@ class RemoteH2O(H2O):
             else:
                 logPrefix = 'remote-h2o'
 
+            logPrefix += '-' + host.addr
+
             outfd,outpath = tmp_file(logPrefix + '.stdout.', '.log')
             errfd,errpath = tmp_file(logPrefix + '.stderr.', '.log')
 
