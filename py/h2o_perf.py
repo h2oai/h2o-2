@@ -209,14 +209,19 @@ class PerfH2O(object):
                         pass
                     if 'effective' in l:
                         logging.critical(fmt.format(w, node, i_o, r_w, "eff.", (v/1e6)))
+                return True
+            else:   
+                return False # not found
 
         if DO_IO_RW:
             print "\nlog_iotstats probing node:", str(node.addr) + ":" + str(node.port)
+            found = False
             for k in histogram:
                 ### print k
-                log_window(10)
+                found |= log_window(30)
                 ### log_window(30)
-
+            if not found:
+                print "iostats: desired window not found in histogram"
 
         # we want to sort the results before we print them, so grouped by node
         if DO_IOP:
