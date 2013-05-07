@@ -29,7 +29,8 @@ import com.google.gson.*;
  * @author peta
  */
 public class RequestBuilders extends RequestQueries {
-  public static final String ROOT_OBJECT = "";
+  public static final String ROOT_OBJECT  = "";
+  public static final Gson   GSON_BUILDER = new GsonBuilder().setPrettyPrinting().create();
 
   private static final ThreadLocal<DecimalFormat> _format = new ThreadLocal<DecimalFormat>() {
     protected DecimalFormat initialValue() {
@@ -120,7 +121,7 @@ public class RequestBuilders extends RequestQueries {
     switch (response._status) {
       case done    :
         RString result = new RString(_jsonResponseBox);
-        result.replace("JSON_RESPONSE_BOX", response.toJson().toString());
+        result.replace("JSON_RESPONSE_BOX", GSON_BUILDER.toJson(response.toJson()));
         return result.toString();
       case error   :
       case redirect:
