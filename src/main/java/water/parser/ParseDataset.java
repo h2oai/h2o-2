@@ -67,6 +67,7 @@ public final class ParseDataset extends Job {
 
   public static void parse(ParseDataset job, Key [] keys, CsvParser.Setup setup){
     int j = 0;
+    UKV.remove(job.dest());// remove any previous instance and insert a sentinel (to ensure no one has been writing to the same keys during our parse!
     Key [] nonEmptyKeys = new Key[keys.length];
     for (int i = 0; i < keys.length; ++i) {
       Value v = DKV.get(keys[i]);
@@ -242,12 +243,14 @@ public final class ParseDataset extends Job {
         _fileInfo[_idx]._okey = key;
         Value v = DKV.get(key);
         assert v != null;
-        long sizeDiff = v.length();
+        long csz = v.length();
         if(_comp != Compression.NONE){
+          onProgressSizeChange(csz,_job); // additional pass through the data to decompress
           InputStream is = null;
           try {
             switch(_comp){
             case ZIP:
+
               ZipInputStream zis = new ZipInputStream(v.openStream(new UnzipProgressMonitor(_job._progress)));
               ZipEntry ze = zis.getNextEntry();
               // There is at least one entry in zip file and it is not a directory.
@@ -264,9 +267,7 @@ public final class ParseDataset extends Job {
             _fileInfo[_idx]._okey = Key.make(new String(key._kb) + "_UNZIPPED");
             ValueArray.readPut(_fileInfo[_idx]._okey, is,_job);
             v = DKV.get(_fileInfo[_idx]._okey);
-            sizeDiff = v.length() - sizeDiff;
-            if(sizeDiff != 0)
-              onProgressSizeChange(sizeDiff, _job);
+            onProgressSizeChange(2*(v.length() - csz), _job); // the 2 passes will go over larger file!
             assert v != null;
           } catch (Throwable t) {
             System.err.println("failed decompressing data " + key.toString() + " with compression " + _comp);
