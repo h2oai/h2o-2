@@ -113,7 +113,7 @@ public class Script extends Request {
               break;
             case poll:
               // Not a FJ thread, just wait
-              Thread.sleep(10);
+              Thread.sleep(100);
               break;
             case done:
               cmd = null;

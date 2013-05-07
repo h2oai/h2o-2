@@ -31,18 +31,38 @@ public class Hadoop {
   public static class Config extends Arguments.Opt {
     String version = "cdh3";
     String user = "hduser";
+    String password = "hduser";
     String name_server = "hdfs://127.0.0.1:8020";
     String tracker = "hdfs://127.0.0.1:8021";
     int port = 54321;
+    String memory = "4096";
     String script;
+    String help;
   }
 
   public static void main(String[] args) throws Exception {
-    Arguments arguments = new Arguments(args);
     Config config = new Config();
-    arguments.extract(config);
     String[] remaining = new String[0];
-    if( arguments.firstFlag() >= 0 ) remaining = Arrays.copyOfRange(args, arguments.firstFlag(), args.length);
+    try {
+      Arguments arguments = new Arguments(args);
+      arguments.extract(config);
+      if( config.help != null ) throw new Exception();
+      if( arguments.firstFlag() >= 0 ) remaining = Arrays.copyOfRange(args, arguments.firstFlag(), args.length);
+    } catch( Exception ex ) {
+      Config defaults = new Config();
+      System.out.println("Usage: h2o_on_hadoop [options] args");
+      System.out.println();
+      System.out.println("Options and default values:");
+      System.out.println("  -version=" + defaults.version + ": Hadoop version");
+      System.out.println("  -user=" + defaults.user);
+      System.out.println("  -password=" + defaults.password);
+      System.out.println("  -name_server=" + defaults.name_server + ": Hadoop cluster name server");
+      System.out.println("  -tracker=" + defaults.tracker + ": Hadoop cluster job tracker");
+      System.out.println("  -port=" + defaults.port + ": H2O port on each machine");
+      System.out.println("  -memory=" + defaults.memory + ": Java heap and hadoop task memory limit");
+      System.out.println("  -script=" + defaults.script + ": Optional script (C.f. Web UI->Admin->Get Script)");
+      return;
+    }
 
     H2O.OPT_ARGS.hdfs_version = config.version;
     HdfsLoader.initialize();
@@ -196,12 +216,12 @@ public class Hadoop {
       conf.set("fs.default.name", config.name_server);
       conf.set("mapred.job.tracker", config.tracker);
       conf.set("mapreduce.framework.name", "classic");
-      // conf.set("hadoop.job.ugi", "hduser,hduser");
+      conf.set("hadoop.job.ugi", config.user + "," + config.password);
       conf.setInt("mapred.tasktracker.map.tasks.maximum", 1);
       conf.set("mapred.jar", "/home/cypof/h2o/target/h2o.jar");
-      conf.set("mapred.child.java.opts", "-Xms256m -Xmx2g -XX:+UseSerialGC");
-      conf.set("mapred.job.map.memory.mb", "4096");
-      conf.set("mapred.job.reduce.memory.mb", "1024");
+      conf.set("mapred.child.java.opts", "-Xms" + config.memory + "m -Xmx" + config.memory + "m");
+      conf.set("mapred.job.map.memory.mb", "" + config.memory);
+      conf.set("mapred.job.reduce.memory.mb", "" + config.memory);
       conf.set("mapred.fairscheduler.locality.delay", "120000");
 //      conf.set("fs.maprfs.impl", "com.mapr.fs.MapRFileSystem");
 
@@ -211,18 +231,22 @@ public class Hadoop {
       Collection<String> names = client.getClusterStatus(true).getActiveTrackerNames();
       for( String name : names )
         hosts += name.substring("tracker_".length(), name.indexOf(':')) + ',';
+      System.out.println("Deploying to " + hosts);
       conf.set(HOSTS_KEY, hosts);
       conf.set(PORT_KEY, "" + config.port);
 
       ToolRunner.run(conf, new HadoopTool(), args);
 
+      // Wait for cloud to be up
+      String url = "http://" + hosts.substring(0, hosts.indexOf(',')) + ":" + config.port + "/";
+      for( ;; ) {
+        if( size(url) == names.size() ) break;
+        Thread.sleep(300);
+      }
+      System.out.println("H2O running, can be reached at " + url);
+
       if( config.script != null ) {
-        String url = "http://" + hosts.substring(0, hosts.indexOf(',')) + ":" + config.port + "/";
-        // Wait for cloud to be up
-        for( ;; ) {
-          if( size(url) == names.size() ) break;
-          Thread.sleep(300);
-        }
+        System.out.println("Sending " + config.script);
         String res = post(url, config.script, 0);
         JSONObject json = new JSONObject(res);
         JSONObject resp = json.getJSONObject(Constants.RESPONSE);

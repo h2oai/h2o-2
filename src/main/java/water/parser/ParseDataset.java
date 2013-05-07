@@ -1,6 +1,5 @@
 package water.parser;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
 import java.util.zip.*;
@@ -9,10 +8,7 @@ import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.api.Inspect;
-import water.parser.CsvParser.Setup;
 import water.parser.DParseTask.Pass;
-import water.util.Log;
-import water.util.Log.Tag.Sys;
 
 import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
@@ -371,8 +367,8 @@ public final class ParseDataset extends Job {
   @Override
   public float progress() {
     Progress progress = UKV.get(_progress);
-    if(progress._total == 0)return 0;
-    return (progress != null ? progress._value : 0) / (float) progress._total;
+    if(progress == null || progress._total == 0) return 0;
+    return progress._value / (float) progress._total;
   }
   @Override public void remove() {
     DKV.remove(_progress);

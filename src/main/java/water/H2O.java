@@ -238,7 +238,7 @@ public final class H2O {
   private static InetAddress guessInetAddress(List<InetAddress> ips) {
     String m = "Multiple local IPs detected:\n";
     for(InetAddress ip : ips) m+="  " + ip;
-    m+="Attempting to determine correct address...\n";
+    m+="\nAttempting to determine correct address...\n";
     Socket s = null;
     try {
       // using google's DNS server as an external IP to find

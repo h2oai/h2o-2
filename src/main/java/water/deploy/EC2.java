@@ -41,14 +41,14 @@ public abstract class EC2 {
       count = Integer.parseInt(remaining[0]);
       remaining = Arrays.copyOfRange(remaining, 1, remaining.length);
     } catch( Exception ex ) {
-      Config values = new Config();
-      System.out.println("Usage: ec2 [options] <machine_count> args");
+      Config defaults = new Config();
+      System.out.println("Usage: h2o_on_ec2 [options] <machine_count> args");
       System.out.println();
       System.out.println("Options and default values:");
-      System.out.println("  -region=" + values.region);
-      System.out.println("  -type=" + values.type);
-      System.out.println("  -secg=" + values.secg + " (Security Group, must allow ssh (TCP 22))");
-      System.out.println("  -conf=" + values.conf + " (Confirm before starting new instances)");
+      System.out.println("  -region=" + defaults.region);
+      System.out.println("  -type=" + defaults.type);
+      System.out.println("  -secg=" + defaults.secg + " (Security Group, must allow ssh (TCP 22))");
+      System.out.println("  -conf=" + defaults.conf + " (Confirm before starting new instances)");
       System.out.println("  -incl='' (additional rsync includes, e.g. py:smalldata)");
       System.out.println("  -excl='' (additional rsync excludes, e.g. sandbox:*.pyc)");
       System.out.println();

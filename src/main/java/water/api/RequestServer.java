@@ -22,8 +22,8 @@ public class RequestServer extends NanoHTTPD {
   private static final ConcurrentHashMap<String,byte[]> _cache = new ConcurrentHashMap();
   protected static final HashMap<String,Request> _requests = new HashMap();
 
-  private static final Request _http404;
-  private static final Request _http500;
+  static final Request _http404;
+  static final Request _http500;
 
   // initialization ------------------------------------------------------------
   static {

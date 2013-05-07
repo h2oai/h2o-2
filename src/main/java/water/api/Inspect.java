@@ -66,6 +66,10 @@ public class Inspect extends Request {
   @Override
   protected Response serve() {
     Value val = _key.value();
+    if(val == null) {
+      // Some requests redirect before creating dest
+      return RequestServer._http404.serve();
+    }
     if( val.type() == TypeMap.PRIM_B )
       return serveUnparsedValue(val);
     Freezable f = val.getFreezable();
@@ -88,7 +92,6 @@ public class Inspect extends Request {
       resp.addProperty(Constants.DEST_KEY, val._key.toString());
       return GLMGridProgress.redirect(resp,null,val._key);
     }
-
     if( f instanceof KMeansModel ) {
       KMeansModel m = (KMeansModel)f;
       JsonObject res = new JsonObject();
