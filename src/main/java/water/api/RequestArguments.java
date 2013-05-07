@@ -1268,14 +1268,16 @@ public class RequestArguments extends RequestStatics {
         return super.selectValues();
       return new String[]{CaseMode.eq.toString(), CaseMode.neq.toString()};
     }
+    // HTML note: defaultValue has to match one of value provided by selectValues.
+    // In other case, UI will show that a first value is selected, but this code will not
+    // receive any notification about selected value and user will need to
+    // select value explicitely again!!!
     @Override
     public CaseMode defaultValue() {
       if(_family.value() == Family.binomial){
         Column c = _key.value()._cols[_classCol.value()];
-        if(c._min < 0 || c._max > 1)
-          return c._domain == null
-            ?CaseMode.gt
-            :CaseMode.eq;
+        if (c._domain!=null         ) return CaseMode.eq;
+        if (c._min < 0 || c._max > 1) return CaseMode.gt;
       }
       return CaseMode.none;
     }
@@ -1557,7 +1559,7 @@ public class RequestArguments extends RequestStatics {
       if( input!=null && input.length()>0 ) {
         Key k = Key.make(input);
         Value v = DKV.get(k);
-        if (v != null) 
+        if (v != null)
           return v.get();
       }
       throw new IllegalArgumentException("Key "+input+" not found!");
