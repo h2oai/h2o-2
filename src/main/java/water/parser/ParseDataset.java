@@ -250,7 +250,6 @@ public final class ParseDataset extends Job {
           try {
             switch(_comp){
             case ZIP:
-
               ZipInputStream zis = new ZipInputStream(v.openStream(new UnzipProgressMonitor(_job._progress)));
               ZipEntry ze = zis.getNextEntry();
               // There is at least one entry in zip file and it is not a directory.
@@ -306,6 +305,7 @@ public final class ParseDataset extends Job {
           numRows += _p1._nrows[i];
           _fileInfo[_idx]._nrows[i] = numRows;
         }
+        quietlyComplete(); // wake up anyone  who is joining on this task!
       }
     }
 
