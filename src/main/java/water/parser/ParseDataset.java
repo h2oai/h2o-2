@@ -310,12 +310,10 @@ public final class ParseDataset extends Job {
       subTasks = new UnzipAndParseLocalTask[_keys.length];
       setPendingCount(subTasks.length);
       int p = 0;
+      int j = 0;
       for(int i = 0; i < _keys.length; ++i){
-        if(p < ParseDataset.PLIMIT){
-          H2O.submitTask((subTasks[i] = new UnzipAndParseLocalTask(i)));
-          ++p;
-        } else
-          (subTasks[i] = new UnzipAndParseLocalTask(i)).invoke();
+        if(p == ParseDataset.PLIMIT) subTasks[j++].join(); else ++p;
+        H2O.submitTask((subTasks[i] = new UnzipAndParseLocalTask(i)));
       }
       tryComplete();
     }

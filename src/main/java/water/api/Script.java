@@ -18,6 +18,9 @@ import com.google.gson.JsonObject;
 public class Script extends Request {
   // How many requests
   protected final Int _count = new Int(COUNT, 100);
+  // Flag to notify a Hadoop job we are done (c.f. deploy.Hadoop)
+  public static final String DONE = "_done";
+  public static volatile boolean _done;
 
   @Override protected String href() {
     return "script";
@@ -87,8 +90,8 @@ public class Script extends Request {
         Properties args = new Properties();
         for( ;; ) {
           if( cmd == null ) {
-            if( !tok.hasMoreElements() ) break;
-            line = tok.nextToken();
+            line = next(tok);
+            if( line == null ) break;
             Log.debug(Sys.HTTPD, "RunScript: " + line);
             String[] a = line.split(" ");
             cmd = a[0];
@@ -121,10 +124,26 @@ public class Script extends Request {
               break;
           }
         }
+        for( H2ONode node : H2O.CLOUD._memary )
+          RPC.call(node, new Done());
         return Response.done(new JsonObject());
       } catch( Exception ex ) {
         return Response.error(ex.getMessage() + ", " + line);
       }
+    }
+
+    private static String next(StringTokenizer t) {
+      for( ;; ) {
+        if( !t.hasMoreElements() ) return null;
+        String line = t.nextToken();
+        if( !line.startsWith("#") ) return line;
+      }
+    }
+  }
+
+  private static class Done extends DTask {
+    @Override public void compute2() {
+      _done = true;
     }
   }
 }

@@ -19,7 +19,7 @@ public class FJPacket extends H2OCountedCompleter {
     if( _ctrl <= UDP.udp.ack.ordinal() )
       UDP.udp.UDPS[_ctrl]._udp.call(_ab).close();
     else
-      RPC.remote_exec(_ab).close();
+      RPC.remote_exec(_ab);
     tryComplete();
   }
   // Run at max priority until we decrypt the packet enough to get priorities out

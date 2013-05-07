@@ -266,21 +266,19 @@ abstract public class Log {
       } catch( IOException ioe ) {/* ignore log-write fails */
       }
     }
-    logToKV(e.when.startAsString(), e.thread, e.kind, e.sys, e.body(0));
+    if( Paxos._cloudLocked ) logToKV(e.when.startAsString(), e.thread, e.kind, e.sys, e.body(0));
     if(printOnOut || printAll) unwrap(System.out,e.toShortString());
     e.printMe = false;
   }
   /** We also log events to the store. */
   private static void logToKV(final String date, final String thr, final Kind kind, final Sys sys, final String msg) {
-    if( Paxos._cloudLocked ) {
-      final long pid = PID; // Run locally
-      final H2ONode h2o = H2O.SELF; // Run locally
-      new TAtomic<LogStr>() {
-        @Override public LogStr atomic(LogStr l) {
-          return new LogStr(l, date, h2o, pid, thr, kind, sys, msg);
-        }
-      }.fork(LOG_KEY);
-    }
+    final long pid = PID; // Run locally
+    final H2ONode h2o = H2O.SELF; // Run locally
+    new TAtomic<LogStr>() {
+      @Override public LogStr atomic(LogStr l) {
+        return new LogStr(l, date, h2o, pid, thr, kind, sys, msg);
+      }
+    }.fork(LOG_KEY);
   }
   /** Record an exception to the log file and store. */
   static public <T extends Throwable> T err(Sys t, String msg, T exception) {

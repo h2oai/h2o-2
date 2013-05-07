@@ -1369,7 +1369,7 @@ class H2O(object):
         use_debugger=None, classpath=None,
         use_hdfs=False, 
         # hdfs_version="cdh4", hdfs_name_node="192.168.1.151", 
-        hdfs_version="cdh3u5", hdfs_name_node="192.168.1.176", 
+        hdfs_version="cdh3", hdfs_name_node="192.168.1.176", 
         hdfs_config=None,
         aws_credentials=None,
         use_flatfile=False, java_heap_GB=None, java_heap_MB=None, java_extra_args=None, 

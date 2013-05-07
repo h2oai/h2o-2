@@ -79,7 +79,7 @@ public class TCPReceiverThread extends Thread {
         // Hand off the TCP connection to the proper handler
         switch( UDP.udp.UDPS[ctrl] ) {
           //case exec:     H2O.submitTask(new FJPacket(ab,ctrl)); break;
-        case exec:     RPC.remote_exec(ab).close(); break;
+        case exec:     RPC.remote_exec(ab); break;
         case ack:      RPC.tcp_ack (ab); break;
         case timeline: TimeLine.tcp_call(ab); break;
         default: throw new RuntimeException("Unknown TCP Type: " + ab.getCtrl());

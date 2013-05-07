@@ -1,6 +1,7 @@
 package water.deploy;
 
 import java.io.*;
+import java.lang.reflect.Field;
 import java.net.*;
 import java.util.*;
 
@@ -83,14 +84,29 @@ public class Hadoop {
             hosts += host + ":" + port + '\n';
           File flat = Utils.tempFile(hosts);
           Boot.main(new String[] { "-name", "hadoop", "-port", port, "-flatfile", flat.getAbsolutePath() });
+          Class script = Boot._init.loadClass(Script.class.getName());
           for( ;; ) {
+            // Check in H2O class loader if script is done
+            Field field = script.getField("_done");
+            boolean done = (Boolean) field.get(null);
             // Report progress or task gets killed
             context.progress();
-            Thread.sleep(10000);
+            Thread.sleep(1000);
+            if( done ) break;
           }
         } catch( Exception ex ) {
           throw Log.errRTExcept(ex);
         }
+        // No way to shutdown other H2O threads cleanly for now
+        Thread t = new Thread() {
+          public void run() {
+            try {
+              Thread.sleep(1000);
+            } catch( Exception e ) {}
+            System.exit(0);
+          }
+        };
+        t.start();
       }
 
       @Override protected void map(LongWritable key, Text value, Context context) throws IOException,
@@ -165,34 +181,28 @@ public class Hadoop {
           InterruptedException {}
 
       @Override public boolean nextKeyValue() throws IOException, InterruptedException {
-        throw new RuntimeException("TODO Auto-generated method stub");
+        return false;
       }
 
       @Override public Object getCurrentKey() throws IOException, InterruptedException {
-        throw new RuntimeException("TODO Auto-generated method stub");
+        return null;
       }
 
       @Override public Object getCurrentValue() throws IOException, InterruptedException {
-        throw new RuntimeException("TODO Auto-generated method stub");
+        return null;
       }
 
       @Override public float getProgress() throws IOException, InterruptedException {
-        throw new RuntimeException("TODO Auto-generated method stub");
+        return 0;
       }
 
-      @Override public void close() throws IOException {
-        throw new RuntimeException("TODO Auto-generated method stub");
-      }
+      @Override public void close() throws IOException {}
     }
 
     private static class NopRecordWriter extends RecordWriter {
-      @Override public void write(Object key, Object value) throws IOException, InterruptedException {
-        throw new RuntimeException("TODO Auto-generated method stub");
-      }
+      @Override public void write(Object key, Object value) throws IOException, InterruptedException {}
 
-      @Override public void close(TaskAttemptContext context) throws IOException, InterruptedException {
-        throw new RuntimeException("TODO Auto-generated method stub");
-      }
+      @Override public void close(TaskAttemptContext context) throws IOException, InterruptedException {}
     }
 
     static class NopOutputCommitter extends OutputCommitter {
@@ -217,12 +227,15 @@ public class Hadoop {
       conf.set("mapred.job.tracker", config.tracker);
       conf.set("mapreduce.framework.name", "classic");
       conf.set("hadoop.job.ugi", config.user + "," + config.password);
-      conf.setInt("mapred.tasktracker.map.tasks.maximum", 1);
+      conf.set("mapred.tasktracker.map.tasks.maximum", "1");
+      conf.set("mapred.job.reuse.jvm.num.tasks", "1");
+      conf.set("mapred.map.max.attempts", "0");
+      conf.set("mapred.fairscheduler.locality.delay", "120000");
       conf.set("mapred.jar", "/home/cypof/h2o/target/h2o.jar");
       conf.set("mapred.child.java.opts", "-Xms" + config.memory + "m -Xmx" + config.memory + "m");
       conf.set("mapred.job.map.memory.mb", "" + config.memory);
       conf.set("mapred.job.reduce.memory.mb", "" + config.memory);
-      conf.set("mapred.fairscheduler.locality.delay", "120000");
+
 //      conf.set("fs.maprfs.impl", "com.mapr.fs.MapRFileSystem");
 
       String hosts = "";
@@ -235,7 +248,8 @@ public class Hadoop {
       conf.set(HOSTS_KEY, hosts);
       conf.set(PORT_KEY, "" + config.port);
 
-      ToolRunner.run(conf, new HadoopTool(), args);
+      HadoopTool tool = new HadoopTool();
+      ToolRunner.run(conf, tool, args);
 
       // Wait for cloud to be up
       String url = "http://" + hosts.substring(0, hosts.indexOf(',')) + ":" + config.port + "/";

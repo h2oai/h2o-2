@@ -28,7 +28,7 @@ class Basic(unittest.TestCase):
             h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap,
                 use_hdfs=True,
                 hdfs_name_node='192.168.1.176',
-                hdfs_version='cdh3u5')
+                hdfs_version='cdh3')
 
             # don't raise exception if we find something bad in h2o stdout/stderr?
             h2o.nodes[0].sandbox_ignore_errors = True
