@@ -277,10 +277,10 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
         try {
           ab = new AutoBuffer(_client).putTask(UDP.udp.ack,_tsknum).put1(SERVER_UDP_SEND);
           _dt.write(ab);        // Write the DTask - could be very large write
-          boolean t = ab.hasTCP(); // Resends do not need to repeat TCP result
           _computed = true;   // After the TCP reply flag set, set computed bit
+          boolean t = ab.hasTCP(); // Resends do not need to repeat TCP result
+          _dt._repliedTcp = t;
           ab.close(t,false);  // Then close; send final byte
-          _dt._repliedTcp = t;// Only set after successful close
           break;              // Break out of retry loop
         } catch( AutoBuffer.TCPIsUnreliableException e ) {
           Log.info("Network congestion: TCP "+e._ioe.getMessage()+",  AB="+ab+", waiting and retrying...");
