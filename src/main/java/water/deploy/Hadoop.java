@@ -34,7 +34,7 @@ public class Hadoop {
     String user = "hduser";
     String password = "hduser";
     String name_server = "hdfs://127.0.0.1:8020";
-    String tracker = "hdfs://127.0.0.1:8021";
+    String job_tracker = "hdfs://127.0.0.1:8021";
     int port = 54321;
     String memory = "4096";
     String script;
@@ -58,7 +58,7 @@ public class Hadoop {
       System.out.println("  -user=" + defaults.user);
       System.out.println("  -password=" + defaults.password);
       System.out.println("  -name_server=" + defaults.name_server + ": Hadoop cluster name server");
-      System.out.println("  -tracker=" + defaults.tracker + ": Hadoop cluster job tracker");
+      System.out.println("  -job_tracker=" + defaults.job_tracker + ": Hadoop cluster job tracker");
       System.out.println("  -port=" + defaults.port + ": H2O port on each machine");
       System.out.println("  -memory=" + defaults.memory + ": Java heap and hadoop task memory limit");
       System.out.println("  -script=" + defaults.script + ": Optional script (C.f. Web UI->Admin->Get Script)");
@@ -224,7 +224,7 @@ public class Hadoop {
       System.setProperty("HADOOP_USER_NAME", config.user);
       Configuration conf = new Configuration();
       conf.set("fs.default.name", config.name_server);
-      conf.set("mapred.job.tracker", config.tracker);
+      conf.set("mapred.job.tracker", config.job_tracker);
       conf.set("mapreduce.framework.name", "classic");
       conf.set("hadoop.job.ugi", config.user + "," + config.password);
       conf.set("mapred.tasktracker.map.tasks.maximum", "1");
@@ -239,7 +239,7 @@ public class Hadoop {
 //      conf.set("fs.maprfs.impl", "com.mapr.fs.MapRFileSystem");
 
       String hosts = "";
-      URI tracker = new URI(config.tracker);
+      URI tracker = new URI(config.job_tracker);
       JobClient client = new JobClient(new InetSocketAddress(tracker.getHost(), tracker.getPort()), conf);
       Collection<String> names = client.getClusterStatus(true).getActiveTrackerNames();
       for( String name : names )
