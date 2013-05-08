@@ -2,6 +2,9 @@ package water.util;
 
 import java.io.IOException;
 import java.io.InputStream;
+
+import javax.management.RuntimeErrorException;
+
 import water.Job.ProgressMonitor;
 import water.Key;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
@@ -10,31 +13,47 @@ import com.google.common.base.Throwables;
 public abstract class RIStream extends InputStream {
   InputStream _is;
   ProgressMonitor _pmon;
-  public final int _retries = 3;
+  public final int _retries = 5;
   String [] _bk;
   private long _off;
-
+  boolean _knownSize;
+  long _expectedSz;
   protected RIStream( long off, ProgressMonitor pmon){
     _off = off;
   }
 
+  public void setExpectedSz(long sz){
+    _knownSize = true;
+    _expectedSz = sz;
+  }
   public final void open(){
     assert _is == null;
-    _is = open(_off);
+    try{
+      _is = open(_off);
+    } catch(IOException e){
+      throw new RuntimeException(e);
+    }
   }
 
-  protected abstract InputStream open(long offset);
+  protected abstract InputStream open(long offset) throws IOException;
 
+  public void closeQuietly(){
+    try{close();} catch(Exception e){} // ignore any errors
+  }
   private void try2Recover(int attempt, IOException e) {
-    System.out.println("[H2OS3InputStream] Attempt("+attempt + ") to recover from " + e.getMessage() + "), off = " + _off);
-    e.printStackTrace();
     if(attempt == _retries) Throwables.propagate(e);
+    Log.warn("[H2OS3InputStream] Attempt("+attempt + ") to recover from " + e.getMessage() + "), off = " + _off);
     try{_is.close();}catch(IOException ex){}
     _is = null;
     if(attempt > 0) try {Thread.sleep(256 << attempt);}catch(InterruptedException ex){}
-    open(_off);
+    open();
     return;
   }
+  private void updateOffset(int off) {
+    if(_knownSize)assert off + _off <= _expectedSz;
+    _off += off;
+  }
+
   @Override
   public boolean markSupported(){
     return false;
@@ -49,6 +68,9 @@ public abstract class RIStream extends InputStream {
     int attempts = 0;
     while(true){
       try {
+        int res = _is.available();
+        if(res == 0 && _knownSize && _off < _expectedSz)
+          Log.warn("premature end of file reported, expected " + _expectedSz + " bytes, but got eof after " + _off + " bytes");
         return _is.available();
       } catch (IOException e) {
         try2Recover(attempts++,e);
@@ -62,8 +84,10 @@ public abstract class RIStream extends InputStream {
     while(true){
       try{
         int res = _is.read();
+        if(res == -1 && _knownSize && _off < _expectedSz)
+          Log.warn("premature end of file reported, expected " + _expectedSz + " bytes, but got eof after " + _off + " bytes");
         if(res != -1){
-          _off += 1;
+          updateOffset(1);
           if(_pmon != null)_pmon.update(1);
         }
         return res;
@@ -79,8 +103,10 @@ public abstract class RIStream extends InputStream {
     while(true){
       try {
         int res =  _is.read(b);
+        if(res == 0 && _knownSize && _off < _expectedSz)
+          Log.warn("premature end of file reported, expected " + _expectedSz + " bytes, but got eof after " + _off + " bytes");
         if(res > 0){
-          _off += res;
+          updateOffset(res);
           if(_pmon != null)_pmon.update(res);
         }
         return res;
@@ -95,9 +121,11 @@ public abstract class RIStream extends InputStream {
     int attempts = 0;
     while(true){
       try {
-        int res = _is.read(b,off,len);;
+        int res = _is.read(b,off,len);
+        if(res == 0 && _knownSize && _off < _expectedSz)
+          Log.warn("premature end of file reported, expected " + _expectedSz + " bytes, but got eof after " + _off + " bytes");
         if(res > 0){
-          _off += res;
+          updateOffset(res);
           if(_pmon != null)_pmon.update(res);
         }
         return res;
@@ -122,7 +150,7 @@ public abstract class RIStream extends InputStream {
       try{
         long res = _is.skip(n);
         if(res > 0){
-          _off += res;
+          updateOffset((int)res);
           if(_pmon != null)_pmon.update(res);
         }
         return res;
