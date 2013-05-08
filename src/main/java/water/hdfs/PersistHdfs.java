@@ -59,22 +59,27 @@ public abstract class PersistHdfs {
       super(offset,pmon);
       _path = p;
       _fs = FileSystem.get(p.toUri(), CONF);
+      setExpectedSz(_fs.getFileStatus(p).getLen());
       open();
     }
 
-    @Override protected InputStream open(long offset) {
-      try{
-        FSDataInputStream is = _fs.open(_path);
-        is.seek(offset);
-        return is;
-      } catch(IOException e){
-        throw new RuntimeException("Opening Hdfs path " + _path.toString() + " failed!");
-      }
+    @Override protected InputStream open(long offset) throws IOException {
+      FSDataInputStream is = _fs.open(_path);
+      is.seek(offset);
+      return is;
     }
 
   }
   public static InputStream openStream(Key k,ProgressMonitor pmon) throws IOException{
-    return new H2OHdfsInputStream(getPathForKey(k),0,pmon);
+    H2OHdfsInputStream res = null;
+    try{
+      res =  new H2OHdfsInputStream(getPathForKey(k),0,pmon);
+    } catch(IOException e){
+      try{Thread.sleep(1000);} catch(Exception ex){}
+      Log.warn("Error while opening HDFS key " + k.toString() + ", will wait and retry.");
+      res = new H2OHdfsInputStream(getPathForKey(k),0,pmon);
+    }
+    return res;
   }
 
   public static void addFolder(Path p, JsonArray succeeded, JsonArray failed) throws IOException {
