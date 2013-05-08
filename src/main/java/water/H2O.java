@@ -283,7 +283,7 @@ public final class H2O {
   // replication.
 
   public static final Value putIfMatch( Key key, Value val, Value old ) {
-    assert val==null || val._key == key; // Keys matched
+    assert val==null || val._key.equals(key); // Keys matched
     if( old != null && val != null ) // Have an old value?
       key = val._key = old._key; // Use prior key in val
 

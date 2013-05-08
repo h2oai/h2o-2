@@ -37,6 +37,8 @@ public abstract class Request extends RequestBuilders {
   }
 
   public NanoHTTPD.Response serve(NanoHTTPD server, Properties args, RequestType type) {
+    // Needs to be done also for help to initialize or argument records
+    String query = checkArguments(args, type);
     switch (type) {
       case help:
         return wrap(server, build(Response.done(serveHelp())));
@@ -51,7 +53,6 @@ public abstract class Request extends RequestBuilders {
           }
           Log.debug(Sys.HTTPD, log);
         }
-        String query = checkArguments(args, type);
         if (query != null)
           return wrap(server,query,type);
         long time = System.currentTimeMillis();
@@ -64,7 +65,6 @@ public abstract class Request extends RequestBuilders {
         response = serve_debug();
         return wrap(server,build(response));
       case query:
-        query = checkArguments(args, type);
         return wrap(server,query);
       default:
         throw new RuntimeException("Invalid request type "+type.toString());

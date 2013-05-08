@@ -16,7 +16,7 @@ import water.store.s3.PersistS3;
 public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
 
   // ---
-  // Type-id of serialzied object; see TypeMap for the list.
+  // Type-id of serialized object; see TypeMap for the list.
   // Might be a primitive array type, or a Iced POJO
   private short _type;
   public int type() { return _type; }

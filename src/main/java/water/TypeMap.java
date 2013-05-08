@@ -14,6 +14,7 @@ public class TypeMap {
     " BAD",                     // 0: BAD
     "[B",                       // 1: Array of Bytes
     "hex.ConfusionMatrix",
+    "hex.Covariance$COV_Task",
     "hex.DGLM$GLMJob",
     "hex.DGLM$GLMModel",
     "hex.DGLM$GLMParams",
@@ -33,6 +34,8 @@ public class TypeMap {
     "hex.Histogram$BinningTask",
     "hex.Histogram$Bins",
     "hex.Histogram$OutlineTask",
+    "hex.KMeans$KMeansApply",
+    "hex.KMeans$KMeansApply$2",
     "hex.KMeans$KMeansModel",
     "hex.KMeans$KMeansScore",
     "hex.KMeans$Lloyds",
@@ -41,6 +44,7 @@ public class TypeMap {
     "hex.LinearRegression$CalcRegressionTask",
     "hex.LinearRegression$CalcSquareErrorsTasks",
     "hex.LinearRegression$CalcSumsTask",
+    "hex.NOPTask",
     "hex.NewRowVecTask",
     "hex.NewRowVecTask$DataFrame",
     "hex.NewRowVecTask$RowFunc",
@@ -215,6 +219,7 @@ public class TypeMap {
     return GOLD[id].getClass();
   }
 
+  //
 
   public static void main(String[] args) {
     Log._dontDie = true; // Ignore fatal class load error, e.g. Request

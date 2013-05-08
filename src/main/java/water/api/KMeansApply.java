@@ -7,15 +7,15 @@ import water.util.RString;
 import com.google.gson.JsonObject;
 
 /**
- * Simple web page to trigger k-means validation on another dataset. The dataset must contain the
- * same columns (NOTE:identified by names) or error is returned.
- *
- * @author cliffc
- *
+ * Creates a set of classes by applies k-means on a dataset.
  */
-public class KMeansScore extends Request {
+public class KMeansApply extends Request {
   protected final H2OKMeansModelKey _modelKey = new H2OKMeansModelKey(MODEL_KEY, true);
-  protected final H2OHexKey _dataKey = new H2OHexKey(KEY);
+  protected final H2OHexKey _dataKey = new H2OHexKey(DATA_KEY);
+  protected final H2OKey _dest = new H2OKey(DEST_KEY, true);;
+
+  public KMeansApply() {
+  }
 
   @Override protected void queryArgumentValueSet(water.api.RequestArguments.Argument arg, java.util.Properties inputArgs) {
     if( arg == _dataKey ) {     // Check for dataset compatibility
@@ -24,14 +24,15 @@ public class KMeansScore extends Request {
       int colIds[] = model.columnMapping(va.colNames());
       if( !Model.isCompatible(colIds) ) {
         for( int i = 0; i < colIds.length; i++ )
-          if( colIds[i] == -1 ) throw new IllegalArgumentException("Incompatible dataset: " + va._key
-              + " does not have column '" + model._va._cols[i]._name + "'");
+          if( colIds[i] == -1 )
+            throw new IllegalArgumentException("Incompatible dataset: " + va._key + " does not have column '"
+                + model._va._cols[i]._name + "'");
       }
     }
   };
 
   public static String link(Key k, String content) {
-    RString rs = new RString("<a href='KMeansScore.query?%key_param=%$key'>%content</a>");
+    RString rs = new RString("<a href='KMeansApply.query?%key_param=%$key'>%content</a>");
     rs.replace("key_param", MODEL_KEY);
     rs.replace("key", k.toString());
     rs.replace("content", content);
@@ -40,12 +41,13 @@ public class KMeansScore extends Request {
 
   @Override protected Response serve() {
     try {
-      JsonObject res = new JsonObject();
-      ValueArray ary = _dataKey.value();
-      KMeansModel m = _modelKey.value();
-      hex.KMeans.KMeansScore kms = hex.KMeans.KMeansScore.score(m, ary);
-      res.add("score", kms.toJson());
-      return Response.done(res);
+      KMeansModel model = _modelKey.value();
+      ValueArray data = _dataKey.value();
+      Key dest = _dest.value();
+      Job job = hex.KMeans.KMeansApply.run(dest, model, data);
+      JsonObject response = new JsonObject();
+      response.addProperty(RequestStatics.DEST_KEY, _dest.value().toString());
+      return Progress.redirect(response, job._self, _dest.value());
     } catch( Error e ) {
       return Response.error(e.getMessage());
     }
