@@ -171,6 +171,19 @@ public abstract class KMeans {
         }
       }
     }
+
+    public JsonObject toJson() {
+      JsonObject res = new JsonObject();
+      JsonArray rows = new JsonArray();
+      for( int i = 0; i < _rows.length; ++i )
+        rows.add(new JsonPrimitive(_rows[i]));
+      JsonArray dist = new JsonArray();
+      for( int i = 0; i < _dist.length; ++i )
+        dist.add(new JsonPrimitive(_dist[i]));
+      res.add("rows_per_cluster", rows);
+      res.add("sqr_error_per_cluster", dist);
+      return res;
+    }
   }
 
   // Classify a dataset using a model and generates a list of classes
