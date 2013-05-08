@@ -18,12 +18,10 @@ public abstract class DKV {
   static public Value put( Key key, Value val, Futures fs, boolean dontCache ) {
     assert val==null || val._key == key:"non-matching keys " + ((Object)key).toString() + " != " + ((Object)val._key).toString();
     while( true ) {
-      Value old = H2O.get(key);
-      if( old != null && val != null ) // Have an old value?
-        key = val._key = old._key; // Use prior key in val
+      Value old = H2O.raw_get(key); // Raw-get: do not lazy-manifest if overwriting
       Value res = DputIfMatch(key,val,old,fs,dontCache);
       if( res == old ) return old; // PUT is globally visible now?
-      if(res != null) key = val._key = res._key;
+      if( val != null && val._key != key ) key = val._key;
     }
   }
   static public Value put( Key key, Iced v ) { return put(key,v,null); }
