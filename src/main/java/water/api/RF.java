@@ -32,7 +32,8 @@ public class RF extends Request {
   protected final LongInt           _seed       = new LongInt(SEED,0xae44a87f9edf1cbL,"High order bits make better seeds");
   protected final Bool              _parallel   = new Bool(PARALLEL,true,"Build trees in parallel");
   protected final Int               _exclusiveSplitLimit = new Int(EXCLUSIVE_SPLIT_LIMIT, null, 0, Integer.MAX_VALUE);
-  protected final Bool               _iterativeCM        = new Bool(ITERATIVE_CM, true, "Compute confusion matrix on-the-fly");
+  protected final Bool              _iterativeCM         = new Bool(ITERATIVE_CM, true, "Compute confusion matrix on-the-fly");
+  protected final Bool              _useNonLocalData     = new Bool(USE_NON_LOCAL_DATA, false, "Try to use also non-local data.");
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {
@@ -99,8 +100,8 @@ public class RF extends Request {
     Key modelKey = _modelKey.value();
     UKV.remove(modelKey);       // Remove any prior model first
     for (int i = 0; i < ntree; ++i) {
-      UKV.remove(Confusion.keyFor(modelKey,i,dataKey,classCol,true));
-      UKV.remove(Confusion.keyFor(modelKey,i,dataKey,classCol,false));
+      UKV.remove(ConfusionTask.keyFor(modelKey,i,dataKey,classCol,true));
+      UKV.remove(ConfusionTask.keyFor(modelKey,i,dataKey,classCol,false));
     }
 
     int features            = _features.value() == null ? -1 : _features.value();
@@ -127,7 +128,8 @@ public class RF extends Request {
               _sample.value() / 100.0f,
               strataSamples,
               0, /* verbose level is minimal here */
-              exclusiveSplitLimit
+              exclusiveSplitLimit,
+              _useNonLocalData.value()
               );
       // Collect parameters required for validation.
       response.addProperty(DATA_KEY, dataKey.toString());

@@ -35,7 +35,7 @@ public class RandomForestTest extends TestUtil {
 
     // Start the distributed Random Forest
     final Key modelKey = Key.make("model");
-    DRFJob result = hex.rf.DRF.execute(modelKey,cols,val,ntrees,depth,1024,statType,seed, true, null, -1, Sampling.Strategy.RANDOM, 1.0f, null, 0, 0);
+    DRFJob result = hex.rf.DRF.execute(modelKey,cols,val,ntrees,depth,1024,statType,seed, true, null, -1, Sampling.Strategy.RANDOM, 1.0f, null, 0, 0, false);
     // Wait for completion on all nodes
     RFModel model = result.get();
 

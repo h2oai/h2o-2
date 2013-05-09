@@ -37,7 +37,7 @@ public class RFPredDomainTest extends TestUtil {
     String modelName   = "model";
     final Key modelKey = Key.make(modelName);
 
-    DRFJob drf = hex.rf.DRF.execute(modelKey,cols,trainData,trees,depth,1024,statType,seed,false, null, -1, Sampling.Strategy.RANDOM, 1.0f, null, 0, 0);
+    DRFJob drf = hex.rf.DRF.execute(modelKey,cols,trainData,trees,depth,1024,statType,seed,false, null, -1, Sampling.Strategy.RANDOM, 1.0f, null, 0, 0, false);
     // Block for completion
     RFModel model = drf.get();
 
@@ -45,7 +45,7 @@ public class RFPredDomainTest extends TestUtil {
     // Load validation dataset
     Key testKey         = loadAndParseKey(testKeyName, testDS);
     ValueArray testData = DKV.get(testKey).get();
-    Confusion confusion = Confusion.make(model, testData._key, model._features-1, null, false);
+    ConfusionTask confusion = ConfusionTask.make(model, testData._key, model._features-1, null, false);
     confusion.report();
     assertEquals("Error rate", expTestErr, confusion.classError(), 0.001);
     assertEquals("CF dimension", expCM.length, confusion._matrix.length);

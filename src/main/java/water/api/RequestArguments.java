@@ -5,7 +5,7 @@ import hex.DGLM.Family;
 import hex.DGLM.GLMModel;
 import hex.DGLM.Link;
 import hex.KMeans.KMeansModel;
-import hex.rf.Confusion;
+import hex.rf.ConfusionTask;
 import hex.rf.RFModel;
 
 import java.io.File;
@@ -86,7 +86,7 @@ public class RequestArguments extends RequestStatics {
   /** Compute union of categories in model column and data column.
    * The result is ordered and the values are unique. */
   protected static String[] vaCategoryNames(ValueArray.Column modelCol, ValueArray.Column dataCol, int maxClasses) throws IllegalArgumentException {
-    String[] result = Confusion.domain(modelCol, dataCol);
+    String[] result = ConfusionTask.domain(modelCol, dataCol);
     if (result.length > maxClasses)
       throw new IllegalArgumentException("The column has more than "+maxClasses+" values. Are you sure you have that many classes?");
     return result;

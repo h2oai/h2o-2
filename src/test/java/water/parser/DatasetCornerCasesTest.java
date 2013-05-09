@@ -44,7 +44,7 @@ public class DatasetCornerCasesTest extends TestUtil {
     try {
       final Key modelKey = Key.make("model");
       DRFJob result = hex.rf.DRF.execute(modelKey, cols, val,
-                                   ntrees,depth,1024,statType,seed,true,null,-1,Sampling.Strategy.RANDOM,1.0f,null,0,0);
+                                   ntrees,depth,1024,statType,seed,true,null,-1,Sampling.Strategy.RANDOM,1.0f,null,0,0,false);
       // Just wait little bit
       RFModel model = result.get();
       assertEquals("Number of classes == 1", 1,  model.classes());

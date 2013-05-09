@@ -1,6 +1,6 @@
 package water.api;
 
-import hex.rf.Confusion;
+import hex.rf.ConfusionTask;
 import hex.rf.RFModel;
 import water.*;
 import water.util.RString;
@@ -43,7 +43,7 @@ public class RFScore extends Request {
   }
 
   private void clearCachedCM(boolean oobee) {
-    UKV.remove(Confusion.keyFor(_modelKey.value()._selfKey,_numTrees.value(),Key.make(_dataKey.originalValue()),_classCol.value(),oobee));
+    UKV.remove(ConfusionTask.keyFor(_modelKey.value()._selfKey,_numTrees.value(),Key.make(_dataKey.originalValue()),_classCol.value(),oobee));
   }
 
   @Override protected Response serve() {
@@ -61,7 +61,7 @@ public class RFScore extends Request {
     if (_clearCM.value()) clearCachedCM(false);
 
     // RF scoring do not use RF oobee computation.
-    Confusion confusion = Confusion.make(model, _dataKey.value()._key, _classCol.value(), weights, false);
+    ConfusionTask confusion = ConfusionTask.make(model, _dataKey.value()._key, _classCol.value(), weights, false);
 
     // FIXME i do not need this job anymore
     Job job = new Job("Random forest scoring", confusion.keyFor());

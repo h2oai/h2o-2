@@ -30,7 +30,9 @@ public class RFModel extends Model implements Cloneable, Progress {
   public int       _totalTrees;
   /** All the trees in the model */
   public Key[]     _tkeys;
-  /** Total time to produce model */
+  /** Local forests produced by nodes */
+  public Key[][]   _localForests;
+  /** Total time in seconds to produce model */
   public long      _time;
 
   public static final String KEY_PREFIX = "__RFModel_";
@@ -50,6 +52,8 @@ public class RFModel extends Model implements Cloneable, Progress {
     _strataSamples  = strataSamples;
     _samplingStrategy   = samplingStrategy;
     _nodesSplitFeatures = new int[H2O.CLOUD.size()];
+    _localForests       = new Key[H2O.CLOUD.size()][];
+    for(int i=0;i<H2O.CLOUD.size();i++) _localForests[i] = new Key[0];
     for( Key tkey : _tkeys ) assert DKV.get(tkey)!=null;
   }
 
@@ -60,8 +64,10 @@ public class RFModel extends Model implements Cloneable, Progress {
     _splitFeatures  = features;
     _totalTrees     = tkeys.length;
     _tkeys          = tkeys;
-    _samplingStrategy = Sampling.Strategy.RANDOM;
+    _samplingStrategy   = Sampling.Strategy.RANDOM;
     _nodesSplitFeatures = new int[H2O.CLOUD.size()];
+    _localForests       = new Key[H2O.CLOUD.size()][];
+    for(int i=0;i<H2O.CLOUD.size();i++) _localForests[i] = new Key[0];
     for( Key tkey : _tkeys ) assert DKV.get(tkey)!=null;
     assert classes() > 0;
   }
@@ -81,6 +87,9 @@ public class RFModel extends Model implements Cloneable, Progress {
     RFModel m = old.clone();
     m._tkeys = Arrays.copyOf(old._tkeys,old._tkeys.length+1);
     m._tkeys[m._tkeys.length-1] = tkey;
+    int idx = H2O.SELF.index();
+    m._localForests[idx] = Arrays.copyOf(old._localForests[idx],old._localForests[idx].length+1);
+    m._localForests[idx][m._localForests[idx].length-1] = tkey;
     return m;
   }
 

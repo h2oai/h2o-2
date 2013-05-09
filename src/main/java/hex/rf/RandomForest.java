@@ -45,7 +45,7 @@ public class RandomForest {
     for (int i = 0; i < ntrees; ++i) {
       long treeSeed = rnd.nextLong() + TREE_SEED_INIT; // make sure that enough bits is initialized
       trees[i] = new Tree(job, data, drfParams._depth, drfParams._stat, numSplitFeatures, treeSeed,
-                          i, drfParams._verbose, drfParams._exclusiveSplitLimit, sampler );
+                          i, drfParams._exclusiveSplitLimit, sampler, drfParams._verbose);
       if (!drfParams._parallel)   ForkJoinTask.invokeAll(new Tree[]{trees[i]});
     }
 
@@ -191,7 +191,8 @@ public class RandomForest {
                           (ARGS.sample/100.0f),
                           /* FIXME strata*/ null,
                           ARGS.verbose,
-                          ARGS.exclusive);
+                          ARGS.exclusive,
+                          false);
     RFModel model = drfJob.get();  // block on all nodes!
     Log.debug(Sys.RANDF,"Random forest finished in TODO"/*+ drf._t_main*/);
 
@@ -200,7 +201,7 @@ public class RandomForest {
     Key valKey = model._dataKey;
     if(ARGS.outOfBagError && !ARGS.stratify){
       Log.debug(Sys.RANDF,"Computing out of bag error");
-      Confusion.make( model, valKey, classcol, null, true).report();
+      ConfusionTask.make( model, valKey, classcol, null, true).report();
     }
     // Run validation.
     if(ARGS.validationFile != null && !ARGS.validationFile.isEmpty()){ // validate on the supplied file
@@ -210,7 +211,7 @@ public class RandomForest {
       ValueArray v = TestUtil.parse_test_key(fk,Key.make(TestUtil.getHexKeyFromFile(f)));
       valKey = v._key;
       DKV.remove(fk);
-      Confusion.make( model, valKey, classcol, null, false).report();
+      ConfusionTask.make( model, valKey, classcol, null, false).report();
     }
 
     Log.debug(Sys.RANDF,"Validation done in: " + t_valid);

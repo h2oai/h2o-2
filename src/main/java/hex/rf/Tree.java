@@ -33,29 +33,29 @@ public class Tree extends H2OCountedCompleter {
   final Data     _data;         // Data source
   final Sampling _sampler;      // Sampling strategy
   final int      _data_id;      // Data-subset identifier (so trees built on this subset are not validated on it)
-  final int      _max_depth;    // Tree-depth cutoff
+  final int      _maxDepth;     // Tree-depth cutoff
   final int      _numSplitFeatures;  // Number of features to check at each splitting (~ split features)
   INode          _tree;         // Root of decision tree
   ThreadLocal<Statistic>[] _stats  = new ThreadLocal[2];
   final Job      _job;          // DRF job building this tree
   final long     _seed;         // Pseudo random seed: used to playback sampling
-  transient int  _verbose ;
   int            _exclusiveSplitLimit;
+  int            _verbose;
 
   /**
    * Constructor used to define the specs when building the tree from the top.
    */
-  public Tree(final Job job, final Data data, int max_depth, StatType stat, int numSplitFeatures, long seed, int treeId, int verbose, int exclusiveSplitLimit, final Sampling sampler) {
+  public Tree(final Job job, final Data data, int maxDepth, StatType stat, int numSplitFeatures, long seed, int treeId, int exclusiveSplitLimit, final Sampling sampler, int verbose) {
     _job              = job;
     _data             = data;
     _type             = stat;
     _data_id          = treeId;
-    _max_depth        = max_depth-1;
+    _maxDepth         = maxDepth-1;
     _numSplitFeatures = numSplitFeatures;
     _seed             = seed;
     _sampler          = sampler;
-    _verbose          = verbose;
     _exclusiveSplitLimit = exclusiveSplitLimit;
+    _verbose          = verbose;
   }
 
   // Oops, uncaught exception
@@ -161,8 +161,8 @@ public class Tree extends H2OCountedCompleter {
         new SplitNode    (c, s, _data.colName(c), _data.unmap(c,s));
       _data.filter(nd,res,left,rite);
       FJBuild fj0 = null, fj1 = null;
-      Statistic.Split ls = left.split(res[0], _depth >= _max_depth); // get the splits
-      Statistic.Split rs = rite.split(res[1], _depth >= _max_depth);
+      Statistic.Split ls = left.split(res[0], _depth >= _maxDepth); // get the splits
+      Statistic.Split rs = rite.split(res[1], _depth >= _maxDepth);
       if (ls.isLeafNode() || ls.isImpossible())
             nd._l = new LeafNode(_data.unmapClass(ls._split), res[0].rows()); // create leaf nodes if any
       else  fj0 = new FJBuild(ls,res[0],_depth+1, _seed + LTS_INIT);

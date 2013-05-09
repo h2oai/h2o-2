@@ -23,10 +23,10 @@ public abstract class DRF {
    */
   public static final DRFJob execute(Key modelKey, int[] cols, ValueArray ary, int ntrees, int depth, int binLimit,
       StatType stat, long seed, boolean parallelTrees, double[] classWt, int numSplitFeatures,
-      Sampling.Strategy samplingStrategy, float sample, float[] strataSamples, int verbose, int exclusiveSplitLimit) {
+      Sampling.Strategy samplingStrategy, float sample, float[] strataSamples, int verbose, int exclusiveSplitLimit, boolean useNonLocalData) {
 
     // Create DRF remote task
-    final DRFTask drfTask = create(modelKey, cols, ary, ntrees, depth, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, samplingStrategy, sample, strataSamples, verbose, exclusiveSplitLimit);
+    final DRFTask drfTask = create(modelKey, cols, ary, ntrees, depth, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, samplingStrategy, sample, strataSamples, verbose, exclusiveSplitLimit, useNonLocalData);
     // Create DRF user job & start it
     final DRFJob  drfJob  = new DRFJob(jobName(drfTask), modelKey);
     drfJob.start(drfTask);
@@ -42,7 +42,8 @@ public abstract class DRF {
   private static DRFTask create(
     Key modelKey, int[] cols, ValueArray ary, int ntrees, int depth, int binLimit,
     StatType stat, long seed, boolean parallelTrees, double[] classWt, int numSplitFeatures,
-    Sampling.Strategy samplingStrategy, float sample, float[] strataSamples, int verbose, int exclusiveSplitLimit) {
+    Sampling.Strategy samplingStrategy, float sample, float[] strataSamples,
+    int verbose, int exclusiveSplitLimit, boolean useNonLocalData) {
 
     // Construct the RFModel to be trained
     DRFTask drf  = new DRFTask();
@@ -52,9 +53,9 @@ public abstract class DRF {
     // But it will need to be changed with new fluid vectors
     assert ary._rpc == null : "DRF does not support different sizes of chunks for now!";
     int numrows = (int) (ValueArray.CHUNK_SZ/ary._rowsize);
-    drf._params = DRFParams.create(cols[cols.length-1], ntrees, depth, numrows, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, samplingStrategy, sample, strataSamples, verbose, exclusiveSplitLimit);
+    drf._params = DRFParams.create(cols[cols.length-1], ntrees, depth, numrows, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, samplingStrategy, sample, strataSamples, verbose, exclusiveSplitLimit, useNonLocalData);
     // Verbose debug print
-    if (verbose>0) dumpRFParams(modelKey, cols, ary, ntrees, depth, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, samplingStrategy, sample, strataSamples, verbose, exclusiveSplitLimit);
+    if (verbose>0) dumpRFParams(modelKey, cols, ary, ntrees, depth, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, samplingStrategy, sample, strataSamples, verbose, exclusiveSplitLimit, useNonLocalData);
     // Validate parameters
     drf.validateInputData();
     // Start the timer.
@@ -183,7 +184,7 @@ public abstract class DRF {
     boolean _parallel;
     /** Maximum depth for trees (default MaxInt) */
     int _depth;
-    /** Split statistic (1=Gini, 0=Entropy; default 0) */
+    /** Split statistic */
     StatType _stat;
     /** Feature holding the classifier  (default: #features-1) */
     int _classcol;
@@ -191,12 +192,8 @@ public abstract class DRF {
     Sampling.Strategy _samplingStrategy;
     /** Proportion of observations to use for building each individual tree (default: .67)*/
     float _sample;
-    /** Used to replay sampling */
-    int _numrows;
     /** Limit of the cardinality of a feature before we bin. */
     int _binLimit;
-    /** Pseudo random seed */
-    long _seed;
     /** Weights of the different features (default: 1/features) */
     double[] _classWt;
     /** Arity under which we may use exclusive splits */
@@ -208,10 +205,18 @@ public abstract class DRF {
     int _numSplitFeatures;
     /** Defined stratas samples for each class */
     float[] _strataSamples;
+    /** Utilize not only local data but try to use data from other nodes. */
+    boolean _useNonLocalData;
+    /** Number of rows per chunk - used to replay sampling */
+    int _numrows;
+    /** Pseudo random seed initializing RF algorithm */
+    long _seed;
 
     public static final DRFParams create(int col, int ntrees, int depth, int numrows, int binLimit,
-        StatType statType, long seed, boolean parallelTrees, double[] classWt, int numSplitFeatures,
-        Sampling.Strategy samplingStrategy, float sample, float[] strataSamples, int verbose, int exclusiveSplitLimit) {
+        StatType statType, long seed, boolean parallelTrees, double[] classWt,
+        int numSplitFeatures, Sampling.Strategy samplingStrategy, float sample,
+        float[] strataSamples, int verbose, int exclusiveSplitLimit,
+        boolean useNonLocalData) {
 
       DRFParams drfp = new DRFParams();
       drfp._ntrees           = ntrees;
@@ -229,6 +234,7 @@ public abstract class DRF {
       drfp._exclusiveSplitLimit = exclusiveSplitLimit;
       drfp._strataSamples    = strataSamples;
       drfp._numrows          = numrows;
+      drfp._useNonLocalData  = useNonLocalData;
       return drfp;
     }
   }
@@ -242,7 +248,15 @@ public abstract class DRF {
 
     @Override public H2OCountedCompleter start(H2OCountedCompleter fjtask) {
       H2OCountedCompleter jobRemoval = new H2O.H2OCountedCompleter() {
-        @Override public void compute2() { }
+        @Override public void compute2() {
+          new TAtomic<RFModel>() {
+            @Override public RFModel atomic(RFModel old) {
+              if(old == null) return null;
+              old._time = DRFJob.this.executionTime();
+              return old;
+            }
+          }.invoke(dest());
+        }
         @Override public void onCompletion(CountedCompleter caller) {
           DRFJob.this.remove();
         }
@@ -260,7 +274,8 @@ public abstract class DRF {
   static void dumpRFParams(
       Key modelKey, int[] cols, ValueArray ary, int ntrees, int depth, int binLimit,
       StatType stat, long seed, boolean parallelTrees, double[] classWt, int numSplitFeatures,
-      Sampling.Strategy samplingStrategy, float sample, float[] strataSamples, int verbose, int exclusiveSplitLimit) {
+      Sampling.Strategy samplingStrategy, float sample, float[] strataSamples,
+      int verbose, int exclusiveSplitLimit, boolean useNonLocalData) {
     RandomForest.OptArgs _ = new RandomForest.OptArgs();
     _.features = numSplitFeatures;
     _.ntrees   = ntrees;

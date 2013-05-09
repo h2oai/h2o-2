@@ -2,7 +2,7 @@ package water.api;
 
 import java.util.Arrays;
 
-import hex.rf.Confusion;
+import hex.rf.ConfusionTask;
 import hex.rf.RFModel;
 import water.Key;
 import water.util.RString;
@@ -124,7 +124,7 @@ public class RFView extends /* Progress */ Request {
       modelSize     = modelSize == 0 || finished==tasks ? finished : modelSize * (finished/modelSize);
 
       // Get the confusion matrix
-      Confusion confusion = Confusion.make(model, modelSize, _dataKey.value()._key, _classCol.value(), weights, _oobee.value());
+      ConfusionTask confusion = ConfusionTask.make(model, modelSize, _dataKey.value()._key, _classCol.value(), weights, _oobee.value());
       response.addProperty(JSON_CONFUSION_KEY, confusion.keyFor().toString());
       // if the matrix is valid, report it in the JSON
       if (confusion.isValid() && modelSize > 0) {
@@ -181,7 +181,7 @@ public class RFView extends /* Progress */ Request {
     return r;
   }
 
-  static String[] cfDomain(final Confusion cm, int maxClasses) {
+  static String[] cfDomain(final ConfusionTask cm, int maxClasses) {
     String[] dom = cm.domain();
     if (dom.length > maxClasses)
       throw new IllegalArgumentException("The column has more than "+maxClasses+" values. Are you sure you have that many classes?");

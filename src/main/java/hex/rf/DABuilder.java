@@ -78,36 +78,73 @@ class DABuilder {
     ArrayList<RecursiveAction> dataInhaleJobs = new ArrayList<RecursiveAction>();
     int start_row = 0;
     for( final Key k : keys ) {    // now read the values
+      System.err.println("loading: " + k);
       final int S = start_row;
-      if (!k.home()) continue;     // skip no local keys (we only inhale local data)
+      if (!k.home()) continue;     // This is not necessary, but for sure skip no local keys (we only inhale local data)
       final int rows = ary.rpc(ValueArray.getChunkIndex(k));
-      dataInhaleJobs.add(new RecursiveAction() {
-        @Override protected void compute() {
-          AutoBuffer bits = ary.getChunk(k);
-          for(int j = 0; j < rows; ++j) {
-            int rowNum = S + j; // row number in the subset of the data on the node
-            boolean rowIsValid = false;
-            for( int c = 0; c < ncolumns; ++c) { // For all columns being processed
-              final int col = modelDataMap[c];   // Column in the dataset
-              if( ary.isNA(bits,j,col) ) { dapt.addBad(rowNum, c); continue; }
-              float f =(float)ary.datad(bits,j,col);
-              if( !dapt.isValid(c,f) ) { dapt.addBad(rowNum, c); continue; }
-              dapt.add(f, rowNum, c);
-              // if the row contains at least one correct value except class
-              // column consider it as correct
-              if( c != ncolumns-1 )
-                rowIsValid |= true;
-            }
-            // The whole row is invalid in the following cases: all values are NaN or there is no class specified (NaN in class column)
-            if (!rowIsValid) dapt.markIgnoredRow(j);
-          }
-        }});
+      dataInhaleJobs.add( loadChunkAction(dapt, ary, k, modelDataMap, ncolumns, rows, S) );
       start_row += rows;
     }
-    // And invoke collected jobs
+    // And invoke collected jobs (load all local data)
     ForkJoinTask.invokeAll(dataInhaleJobs);
+
+    // Now local data are loaded, try to inhale more data from other nodes.
+    if (_drf._params._useNonLocalData) {
+      final float OVERHEAD_MAGIC = 3/8.f;
+      long totalmem = Runtime.getRuntime().totalMemory();
+      long localChunks = keys.length * ValueArray.CHUNK_SZ;
+      long availMem = (long) (OVERHEAD_MAGIC * totalmem) - localChunks; // theoretically available memory
+
+      if (availMem > 0) {
+        // Try to fill the memory up to ratio 3/8
+        int numkeys = (int) (availMem / ValueArray.CHUNK_SZ);
+        System.err.println("TAvailM: MB " + availMem / 1024 / 1024);
+        System.err.println("Can load keys: " + numkeys);
+        ArrayList<Key> allkeys = new ArrayList<Key>(numkeys);
+        for(int i=0; i<ary.chunks(); i++) {
+          Key k = ary.getChunkKey(i);
+          if (!k.home()) allkeys.add(k);
+          if (allkeys.size() == numkeys) break;
+        }
+        for (final Key k : allkeys) {
+          System.err.println("-> reloading more keys: " + k + " from " + k.home_node());
+          final int S = start_row;
+          final int rows = ary.rpc(ValueArray.getChunkIndex(k));
+          dataInhaleJobs.add( loadChunkAction(dapt, ary, k, modelDataMap, ncolumns, rows, S) );
+          start_row += rows;
+        }
+      }
+    }
+    // ----
+
+    // Shrink data
     dapt.shrink();
     Log.debug(Sys.RANDF,"Inhale done in " + t_inhale);
     return dapt;
+  }
+
+  static RecursiveAction loadChunkAction(final DataAdapter dapt, final ValueArray ary, final Key k, final int[] modelDataMap, final int ncolumns, final int rows, final int S) {
+    return new RecursiveAction() {
+      @Override protected void compute() {
+        AutoBuffer bits = ary.getChunk(k);
+        for(int j = 0; j < rows; ++j) {
+          int rowNum = S + j; // row number in the subset of the data on the node
+          boolean rowIsValid = false;
+          for( int c = 0; c < ncolumns; ++c) { // For all columns being processed
+            final int col = modelDataMap[c];   // Column in the dataset
+            if( ary.isNA(bits,j,col) ) { dapt.addBad(rowNum, c); continue; }
+            float f =(float)ary.datad(bits,j,col);
+            if( !dapt.isValid(c,f) ) { dapt.addBad(rowNum, c); continue; }
+            dapt.add(f, rowNum, c);
+            // if the row contains at least one correct value except class
+            // column consider it as correct
+            if( c != ncolumns-1 )
+              rowIsValid |= true;
+          }
+          // The whole row is invalid in the following cases: all values are NaN or there is no class specified (NaN in class column)
+          if (!rowIsValid) dapt.markIgnoredRow(j);
+        }
+      }
+    };
   }
 }
