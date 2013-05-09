@@ -221,7 +221,7 @@ class PerfH2O(object):
             found = False
             for k in histogram:
                 ### print k
-                found |= log_window(30)
+                found |= log_window(60)
                 ### log_window(30)
             if not found:
                 print "iostats: desired window not found in histogram"
