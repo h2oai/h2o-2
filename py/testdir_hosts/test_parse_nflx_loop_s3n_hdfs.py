@@ -79,7 +79,8 @@ class Basic(unittest.TestCase):
             for tryHeap in [24]:
                 
                 print "\n", tryHeap,"GB heap, 1 jvm per host, import", protocol, "then parse"
-                jea = "-XX:+UseParNewGC -XX:+UseConcMarkSweepGC"
+                # jea = "-XX:+UseParNewGC -XX:+UseConcMarkSweepGC"
+                jea = "-Dh2o.find-ByteBuffer-leaks=true"
                 h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap,
                     java_extra_args=jea,
                     enable_benchmark_log=True, timeoutSecs=120, retryDelaySecs=10,
