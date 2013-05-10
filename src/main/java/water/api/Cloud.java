@@ -46,7 +46,6 @@ public class Cloud extends Request {
       node.addProperty(FJ_QUEUE_LO, (int)hb._fjqueue_lo);
       node.addProperty(RPCS, (int)hb._rpcs);
       node.addProperty(TCPS_ACTIVE, (int) hb._tcps_active);
-      node.addProperty(TCPS_DUTY, (int) hb._tcps_duty);
       nodes.add(node);
     }
     response.add(NODES,nodes);

@@ -136,18 +136,17 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       if( !_sentTcp ) {
         // Ship the UDP packet!
         while( true ) {         // Retry loop for broken TCP sends
-          AutoBuffer ab = null;
+          AutoBuffer ab = new AutoBuffer(_target);
           try {
-            ab = new AutoBuffer(_target).putTask(UDP.udp.exec,_tasknum);
-            ab.put1(CLIENT_UDP_SEND).put(_dt);
+            ab.putTask(UDP.udp.exec,_tasknum).put1(CLIENT_UDP_SEND).put(_dt);
             boolean t = ab.hasTCP();
             ab.close(t,false);
             assert sz_check(ab) : "Resend of "+_dt.getClass()+" changes size from "+_size+" to "+ab.size()+" for task#"+_tasknum;
             _sentTcp = t;       // Set after close (and any other possible fail)
             break;              // Break out of retry loop
           } catch( AutoBuffer.TCPIsUnreliableException e ) {
-            Log.info("Network congestion: TCP "+e._ioe.getMessage()+",  AB="+ab+", for task#"+_tasknum+", waiting and retrying...");
-            if( ab != null ) ab.close(true,true);
+            Log.info("Network congestion: TCPcall "+e._ioe.getMessage()+",  AB="+ab+", for task#"+_tasknum+", waiting and retrying...");
+            ab.close(true,true);
             try { Thread.sleep(500); } catch (InterruptedException ie) {}
           }
         } // end of while(true)
@@ -283,7 +282,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
           ab.close(t,false);  // Then close; send final byte
           break;              // Break out of retry loop
         } catch( AutoBuffer.TCPIsUnreliableException e ) {
-          Log.info("Network congestion: TCP "+e._ioe.getMessage()+",  AB="+ab+", waiting and retrying...");
+          Log.info("Network congestion: TCPACK "+e._ioe.getMessage()+", t#"+_tsknum+" AB="+ab+", waiting and retrying...");
           if( ab != null ) ab.close(true,true);
           try { Thread.sleep(500); } catch (InterruptedException ie) {}
         }
