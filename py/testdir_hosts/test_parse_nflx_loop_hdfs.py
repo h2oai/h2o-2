@@ -76,8 +76,10 @@ class Basic(unittest.TestCase):
                 for k in hdfsFullList:
                     deleteKey = k['key']
                     if csvFilename in deleteKey and not ".hex" in key: 
-                        print "Removing", deleteKey
-                        removeKeyResult = h2o.nodes[0].remove_key(key=deleteKey)
+                        pass
+                        # nflx removes key after parse now
+                        ## print "Removing", deleteKey
+                        ## removeKeyResult = h2o.nodes[0].remove_key(key=deleteKey)
                         ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
 
             h2o.tear_down_cloud()

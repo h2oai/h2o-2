@@ -92,6 +92,7 @@ class Basic(unittest.TestCase):
                   "Otherwise it would just parse the cached key."
             storeView = h2o.nodes[0].store_view()
             # pattern matching problem
+            # h2o removes key afte parse now
             ### print "Removing", s3nKey
             ### removeKeyResult = h2o.nodes[0].remove_key(key=s3nKey)
 
