@@ -20,53 +20,71 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud(sandbox_ignore_errors=True)
 
     def test_parse_nflx_loop_s3n_hdfs(self):
-        # typical size of the michal files
-        avgMichalSize = 116561140
-        avgSynSize = 4020000
-        csvFilenameList = [
-            # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz"),
-            # 100 files takes too long on two machines?
-            # I use different files to avoid OS caching effects
-            # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[0-9][0-9]", "syn_100.csv", 100 * avgSynSize, 700),
-            # ("syn_datasets/syn_7350063254201195578_10000x200.csv_00000", "syn_1.csv", avgSynSize, 700),
-            # ("syn_datasets/syn_7350063254201195578_10000x200.csv_0001[0-9]", "syn_10.csv", 10 * avgSynSize, 700),
-            # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[23][0-9]", "syn_20.csv", 20 * avgSynSize, 700),
-            # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[45678][0-9]", "syn_50.csv", 50 * avgSynSize, 700),
-
-#             ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_A_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
-#             ("manyfiles-nflx-gz/file_[123][0-9][0-9].dat.gz", "file_300_A.dat.gz", 300 * avgMichalSize, 3600),
-#             ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_B_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
-#             ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_C_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
-#             ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_D_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
-#             ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_E_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
-#             ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_F_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
-#             ("manyfiles-nflx-gz/file_[123][0-9][0-9].dat.gz", "file_300_B.dat.gz", 300 * avgMichalSize, 3600),
-#            ("manyfiles-nflx-gz/file_[123][0-9][0-9].dat.gz", "file_300_C.dat.gz", 300 * avgMichalSize, 3600),
-            ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 300),
-            ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
-            ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 900),
-            ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 3600),
-            ("manyfiles-nflx-gz/file_1[0-4][0-9].dat.gz", "file_50_B.dat.gz", 50 * avgMichalSize, 3600),
-            ("manyfiles-nflx-gz/file_1[0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
-            ("manyfiles-nflx-gz/file_2[0-9][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 3600),
-            ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 3600),
-            ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_B.dat.gz", 200 * avgMichalSize, 3600),
-        ]
-
-        print "Using the -.gz files from s3"
-        # want just s3n://home-0xdiag-datasets/manyfiles-nflx-gz/file_1.dat.gz
-    
         DO_GLM = False
+        USE_HOME2 = False
         USE_S3 = False
         noPoll = False
         benchmarkLogging = ['jstack','iostats']
         benchmarkLogging = ['iostats']
-        bucket = "home-0xdiag-datasets"
+        # typical size of the michal files
+        avgMichalSize = 116561140
+        avgSynSize = 4020000
+        synSize = 183
+
+        if USE_HOME2:
+            csvFilenameList = [
+                # this should hit the "more" files too?
+                ("00[0-4][0-9]_syn.csv.gz", "file_50.dat.gz", 50 * synSize , 700),
+                ("[0][1][0-9][0-9]_.*", "file_100.dat.gz", 100 * synSize , 700),
+                ("[0][0-4][0-9][0-9]_.*", "file_500.dat.gz", 500 * synSize , 700),
+                ("[0][0-9][0-9][0-9]_.*", "file_1000.dat.gz", 1000 * synSize , 700),
+                # ("10k_small_gz/[0-4][0-9][0-9][0-9]_.*", "file_5000.dat.gz", 5000 * synSize , 700),
+                # ("10k_small_gz/[0-9][0-9][0-9][0-9]_.*", "file_10000.dat.gz", 10000 * synSize , 700),
+            ]
+        else:
+            csvFilenameList = [
+                # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz"),
+                # 100 files takes too long on two machines?
+                # I use different files to avoid OS caching effects
+                # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[0-9][0-9]", "syn_100.csv", 100 * avgSynSize, 700),
+                # ("syn_datasets/syn_7350063254201195578_10000x200.csv_00000", "syn_1.csv", avgSynSize, 700),
+                # ("syn_datasets/syn_7350063254201195578_10000x200.csv_0001[0-9]", "syn_10.csv", 10 * avgSynSize, 700),
+                # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[23][0-9]", "syn_20.csv", 20 * avgSynSize, 700),
+                # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[45678][0-9]", "syn_50.csv", 50 * avgSynSize, 700),
+
+                ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_A_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
+                ("manyfiles-nflx-gz/file_[123][0-9][0-9].dat.gz", "file_300_A.dat.gz", 300 * avgMichalSize, 3600),
+                ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_B_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
+                ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_C_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
+                ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_D_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
+                ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_E_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
+                ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_F_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
+                ("manyfiles-nflx-gz/file_[123][0-9][0-9].dat.gz", "file_300_B.dat.gz", 300 * avgMichalSize, 3600),
+                ("manyfiles-nflx-gz/file_[123][0-9][0-9].dat.gz", "file_300_C.dat.gz", 300 * avgMichalSize, 3600),
+                ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 300),
+                ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
+                ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 900),
+                ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 3600),
+                ("manyfiles-nflx-gz/file_1[0-4][0-9].dat.gz", "file_50_B.dat.gz", 50 * avgMichalSize, 3600),
+                ("manyfiles-nflx-gz/file_1[0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
+                ("manyfiles-nflx-gz/file_2[0-9][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 3600),
+                ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 3600),
+                ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_B.dat.gz", 200 * avgMichalSize, 3600),
+            ]
+
+        print "Using the -.gz files from s3"
+        # want just s3n://home-0xdiag-datasets/manyfiles-nflx-gz/file_1.dat.gz
+    
+        if USE_HOME2:
+            bucket = "home2-0xdiag-datasets/1k_small_gz"
+        else:
+            bucket = "home-0xdiag-datasets"
+
         if USE_S3:
-            URI = "s3://home-0xdiag-datasets"
+            URI = "s3://" + bucket
             protocol = "s3"
         else:
-            URI = "s3n://home-0xdiag-datasets"
+            URI = "s3n://" + bucket
             protocol = "s3n/hdfs"
 
         # split out the pattern match and the filename used for the hex
