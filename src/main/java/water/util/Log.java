@@ -62,7 +62,7 @@ abstract public class Log {
   public static final Sys[] SYSS = Sys.values();
 
   private static final String NL = System.getProperty("line.separator");
-  static {
+  static public void wrap() {
     System.setOut(new Wrapper(System.out));
     System.setErr(new Wrapper(System.err));
   }
@@ -379,14 +379,13 @@ abstract public class Log {
     if( !_dontDie ) System.exit(-1);
   }
 
-  /** No op. */
-  public static void initHeaders() {}
-
   /** Print a message to the stream without the logging information. */
   public static void unwrap(PrintStream stream, String s) {
     if( stream instanceof Wrapper ) ((Wrapper) stream).printlnParent(s);
     else stream.println(s);
   }
+
+  public static PrintStream unwrap(PrintStream stream){ return  stream instanceof Wrapper ? ((Wrapper)stream).parent: stream; }
 
   public static void log(File file, PrintStream stream) throws Exception {
     BufferedReader reader = new BufferedReader(new FileReader(file));
@@ -401,9 +400,13 @@ abstract public class Log {
     }
   }
 
-  private static final class Wrapper extends PrintStream {
+  public static final class Wrapper extends PrintStream {
+
+   PrintStream parent;
+
     Wrapper(PrintStream parent) {
       super(parent);
+      this.parent=parent;
     }
 
     private static String log(Locale l, boolean nl, String format, Object... args) {
