@@ -41,8 +41,9 @@ class Basic(unittest.TestCase):
                       "Otherwise it would just parse the cached key."
                 storeView = h2o.nodes[0].store_view()
                 ### print "storeView:", h2o.dump_json(storeView)
-                print "Removing", parseKey['source_key']
-                removeKeyResult = h2o.nodes[0].remove_key(key=parseKey['source_key'])
+                # h2o removes key after parse now
+                ## print "Removing", parseKey['source_key']
+                ## removeKeyResult = h2o.nodes[0].remove_key(key=parseKey['source_key'])
                 ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
 
             # sticky ports?

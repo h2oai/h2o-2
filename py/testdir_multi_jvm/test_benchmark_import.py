@@ -33,44 +33,44 @@ class Basic(unittest.TestCase):
                 ("10k_small_gz/*", "file_400.dat.gz", 10000 * synSize , 700),
             ]
 
-        if 1==0:
-            importFolderPath = '/home/0xdiag/datasets/more1_1200_link'
-            print "Using .gz'ed files in", importFolderPath
-            csvFilenameAll = [
-                # this should hit the "more" files too?
-                ("*.dat.gz", "file_1200.dat.gz", 1200 * avgMichalSize, 3600),
-            ]
-
         if 1==1:
             importFolderPath = '/home/0xdiag/datasets/more1_1200_link'
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
                 # this should hit the "more" files too?
-                ("*[1-8][0-9][0-9].dat.gz", "file_800.dat.gz", 800 * avgMichalSize, 3600),
+                ("*.dat.gz", "file_1200.dat.gz", 1200 * avgMichalSize, 3600),
+                # ("*.dat.gz", "file_200.dat.gz", 1200 * avgMichalSize, 1800),
+                # ("*.dat.gz", "file_200.dat.gz", 1200 * avgMichalSize, 1800),
+                # ("*[1][0-2][0-9].dat.gz", "file_30.dat.gz", 50 * avgMichalSize, 1800), 
+                ("*[1][0-3][0-9].dat.gz", "file_40.dat.gz", 50 * avgMichalSize, 1800), 
+                ("*[1][0-4][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize, 1800), 
+                # ("*[1][0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 1800), 
+                # ("*[12][0-9][0-9].dat.gz", "file_200.dat.gz", 200 * avgMichalSize, 1800), 
+            ]
 
+        if 1==0:
+            importFolderPath = '/home/0xdiag/datasets/more1_1200_link'
+            print "Using .gz'ed files in", importFolderPath
+            csvFilenameAll = [
+                # this should hit the "more" files too?
+                ("*[1-8][0-9][0-9].dat.gz", "file_800.dat.gz", 800 * avgMichalSize, 3600),
                 # ("*10[0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 3600), 
                 # ("*1[0-4][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize, 3600), 
-                # ("*[1][0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 3600),  # fails tcp
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600), # fails tcp reset
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600), # fails tcp reset
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600), # fails tcp reset
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600), # fails tcp reset
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600), # fails tcp reset
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600), # fails tcp reset
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600), # fails tcp reset
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600), # fails tcp reset
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600), # fails tcp reset
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600), # fails tcp reset
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600), # fails tcp reset
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600), # fails tcp reset
-                ("*[1-2][0-9][0-9].dat.gz", "file_200.dat.gz", 200 * avgMichalSize, 3600),  # fails tcp
-                # ("*[1][0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 3600),
-
-                # ("*1[0-1][0-9].dat.gz", "file_20_2jvm.dat.gz", 20 * avgMichalSize, 3600), 
-                # ("*1[0-4][0-9].dat.gz", "file_50_2jvm.dat.gz", 50 * avgMichalSize, 3600), 
-                # ("*10[0-9].dat.gz", "file_10_2jvm.dat.gz", 10 * avgMichalSize, 3600), 
-                # ("*1[0-9][0-9].dat.gz", "file_100_2jvm.dat.gz", 100 * avgMichalSize, 3600), 
-                # ("*1[0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 3600), 
+                # ("*[1][0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 3600), 
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("*[1-2][0-9][0-9].dat.gz", "file_200.dat.gz", 200 * avgMichalSize, 3600), 
+                ("*1[0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 1800), 
             ]
 
         if 1==0:
@@ -170,8 +170,11 @@ class Basic(unittest.TestCase):
         jea = '-XX:MaxDirectMemorySize=512m -XX:+PrintGCDetails' + ' -Dh2o.find-ByteBuffer-leaks'
         jea = '-XX:MaxDirectMemorySize=512m -XX:+PrintGCDetails'
         jea = "-XX:+UseParNewGC -XX:+UseConcMarkSweepGC"
-
-
+        jea = ' -Dcom.sun.management.jmxremote.port=54330' + \
+              ' -Dcom.sun.management.jmxremote.authenticate=false' + \
+              ' -Dcom.sun.management.jmxremote.ssl=false'  + \
+              ' -Dcom.sun.management.jmxremote' + \
+              ' -Dcom.sun.management.jmxremote.local.only=false'
 
         for i,(csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
             localhost = h2o.decide_if_localhost()

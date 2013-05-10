@@ -121,8 +121,9 @@ class Basic(unittest.TestCase):
                   "Otherwise it would just parse the cached key."
             storeView = h2o.nodes[0].store_view()
             ### print "storeView:", h2o.dump_json(storeView)
-            print "Removing", s3nKey
-            removeKeyResult = h2o.nodes[0].remove_key(key=s3nKey)
+            # h2o removes key after parse now
+            ### print "Removing", s3nKey
+            ## removeKeyResult = h2o.nodes[0].remove_key(key=s3nKey)
             ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
 
             print "Trial #", trial, "completed in", time.time() - trialStart, "seconds.", \

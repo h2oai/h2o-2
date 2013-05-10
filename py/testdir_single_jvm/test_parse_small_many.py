@@ -26,7 +26,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls): 
         h2o.tear_down_cloud()
 
-    def test_A_parse_small_many(self):
+    def test_parse_small_many(self):
         SEED = 6204672511291494176
         random.seed(SEED)
         print "\nUsing random seed:", SEED
@@ -43,16 +43,17 @@ class Basic(unittest.TestCase):
 
         # fail rate is one in 200?
         # need at least two rows (parser)
-        for sizeTrial in range(7):
+        for sizeTrial in range(10):
             size = random.randint(2,129)
             print "\nparsing with rows:", size
             csvFilename = "p" + "_" + str(size)
             csvPathname = SYNDATASETS_DIR + "/" + csvFilename
             writeRows(csvPathname,row,eol,size)
-            key  = csvFilename
-            pkey = node.put_file(csvPathname, key=key, timeoutSecs=timeoutSecs)
-            print h2o.dump_json(pkey)
+            key = csvFilename
+            print h2o.dump_json(key)
             for trial in range(5):
+                # data key is deleted after parse now, so have to put it again
+                pkey = node.put_file(csvPathname, key=key, timeoutSecs=timeoutSecs)
                 key2 = csvFilename + "_" + str(trial) + ".hex"
                 # just parse
                 node.parse(pkey, key2, timeoutSecs=timeoutSecs, retryDelaySecs=0.00)
