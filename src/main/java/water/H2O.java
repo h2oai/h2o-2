@@ -7,6 +7,9 @@ import java.nio.channels.DatagramChannel;
 import java.util.*;
 
 import jsr166y.*;
+
+import water.r.Shell;
+
 import water.exec.Function;
 import water.hdfs.HdfsLoader;
 import water.nbhm.NonBlockingHashMap;
@@ -494,8 +497,9 @@ public final class H2O {
     public String keepice; // Do not delete ice on startup
     public String soft = null; // soft launch for demos
     public String random_udp_drop = null; // test only, randomly drop udp incoming
-    public String nolog = null; // disable logging
     public int pparse_limit = Integer.MAX_VALUE;
+    public String no_requests_log = null; // disable logging of Web requests
+    public String rshell="false"; //FastR shell
   }
   public static boolean IS_SYSTEM_RUNNING = false;
 
@@ -511,8 +515,8 @@ public final class H2O {
     arguments.extract(OPT_ARGS);
     ARGS = arguments.toStringArray();
     ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
-    if(OPT_ARGS.nolog == null)
-      Log.initHeaders();
+
+    if (OPT_ARGS.rshell.equals("false"))  Log.wrap(); // Logging does not wrap when the rshell is on.
 
     startLocalNode(); // start the local node
     // Load up from disk and initialize the persistence layer
@@ -523,6 +527,9 @@ public final class H2O {
     initializeExpressionEvaluation(); // starts the expression evaluation system
 
     startupFinalize(); // finalizes the startup & tests (if any)
+
+    if (OPT_ARGS.rshell.equals("true"))  Shell.go();
+
     // Hang out here until the End of Time
   }
 
