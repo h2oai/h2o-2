@@ -94,8 +94,7 @@ public class HeartBeatThread extends Thread {
       }
       hb._fjthrds_lo = (char)H2O.loQPoolSize();
       hb._fjqueue_lo = (char)H2O.getLoQueue();
-      hb._tcps_active= (char)AutoBuffer.TCPS.get();
-      hb._tcps_duty  = (byte)TCPReceiverThread.TCPTHR.dutyCyclePercent();
+      hb._tcps_active= (char)H2ONode.TCPS.get();
 
       // get the usable and total disk storage for the partition where the
       // persistent KV pairs are stored

@@ -381,7 +381,12 @@ public final class H2O {
   // working on.
   static class FJWThr extends ForkJoinWorkerThread {
     public int _priority;
-    FJWThr(ForkJoinPool pool) { super(pool); }
+    FJWThr(ForkJoinPool pool) {
+      super(pool);
+      setPriority( ((ForkJoinPool2)pool)._priority == Thread.MIN_PRIORITY
+                   ? Thread.NORM_PRIORITY-1
+                   : Thread. MAX_PRIORITY-1 );
+    }
   }
   // Factory for F/J threads, with cap's that vary with priority.
   static class FJWThrFact implements ForkJoinPool.ForkJoinWorkerThreadFactory {
@@ -448,12 +453,14 @@ public final class H2O {
           H2OCountedCompleter h2o = FJPS[p].poll();
           if( h2o != null ) {     // Got a hi-priority job?
             t._priority = p;      // Set & do it now!
+            Thread.currentThread().setPriority(Thread.MAX_PRIORITY-1);
             h2o.compute2();       // Do it ahead of normal F/J work
             p++;                  // Check again the same queue
           }
         }
       } finally {
         t._priority = pp;
+        if( pp == MIN_PRIORITY ) Thread.currentThread().setPriority(Thread.NORM_PRIORITY-1);
       }
       // Now run the task as planned
       compute2();
@@ -596,7 +603,8 @@ public final class H2O {
 
     // Start the TCPReceiverThread, to listen for TCP requests from other Cloud
     // Nodes. There should be only 1 of these, and it never shuts down.
-    (TCPReceiverThread.TCPTHR=new TCPReceiverThread()).start();
+    new TCPReceiverThread().start();
+    // Start the Nano HTTP server thread
     water.api.RequestServer.start();
   }
 
@@ -856,6 +864,7 @@ public final class H2O {
     public Cleaner() {
       super("MemCleaner");
       setDaemon(true);
+      setPriority(MAX_PRIORITY-2);
       _dirty = Long.MAX_VALUE;  // Set to clean-store
       _myHisto = new Histo();   // Build/allocate a first histogram
       _myHisto.compute(0);      // Compute lousy histogram; find eldest
