@@ -33,7 +33,7 @@ class Basic(unittest.TestCase):
                 ("10k_small_gz/*", "file_400.dat.gz", 10000 * synSize , 700),
             ]
 
-        if 1==1:
+        if 1==0:
             importFolderPath = '/home/0xdiag/datasets/more1_1200_link'
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
@@ -48,12 +48,12 @@ class Basic(unittest.TestCase):
                 # ("*[12][0-9][0-9].dat.gz", "file_200.dat.gz", 200 * avgMichalSize, 1800), 
             ]
 
-        if 1==0:
+        if 1==1:
             importFolderPath = '/home/0xdiag/datasets/more1_1200_link'
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
                 # this should hit the "more" files too?
-                ("*[1-8][0-9][0-9].dat.gz", "file_800.dat.gz", 800 * avgMichalSize, 3600),
+                # ("*[1-8][0-9][0-9].dat.gz", "file_800.dat.gz", 800 * avgMichalSize, 3600),
                 # ("*10[0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 3600), 
                 # ("*1[0-4][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize, 3600), 
                 # ("*[1][0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 3600), 
@@ -86,8 +86,8 @@ class Basic(unittest.TestCase):
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
                 # this should hit the "more" files too?
-                ("*_[123][0-9][0-9]*.dat.gz", "file_600.dat.gz", 2 * 300 * avgMichalSize, 3600),
-                ("*_[1][5-9][0-9]*.dat.gz", "file_100.dat.gz", 2 * 50 * avgMichalSize, 3600),
+                ("*_[123][0-9][0-9]*.dat.gz", "file_300.dat.gz", 300 * avgMichalSize, 3600),
+                ("*_[1][5-9][0-9]*.dat.gz", "file_100.dat.gz", 50 * avgMichalSize, 3600),
             ]
 
         if 1==0:
@@ -175,17 +175,19 @@ class Basic(unittest.TestCase):
               ' -Dcom.sun.management.jmxremote.ssl=false'  + \
               ' -Dcom.sun.management.jmxremote' + \
               ' -Dcom.sun.management.jmxremote.local.only=false'
+        jea = ' -Dlog.printAll=true'
+
 
         for i,(csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
             localhost = h2o.decide_if_localhost()
             if (localhost):
                 h2o.build_cloud(2,java_heap_GB=tryHeap, base_port=base_port,
-                    # java_extra_args=jea,
+                    java_extra_args=jea,
                     enable_benchmark_log=True)
 
             else:
                 h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap, base_port=base_port, 
-                    # java_extra_args=jea,
+                    java_extra_args=jea,
                     enable_benchmark_log=True)
 
             # pop open a browser on the cloud
