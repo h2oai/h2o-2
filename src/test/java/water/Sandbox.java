@@ -2,16 +2,20 @@ package water;
 
 import org.apache.commons.lang.ArrayUtils;
 
-import r.RTest;
-import water.api.R;
 import water.deploy.*;
+import water.r.Shell;
 import water.util.Utils;
 
 public class Sandbox {
   public static void main(String[] args) throws Exception {
     localCloud(1, true, args);
-    R.init();
-    RTest.run();
+
+    final String r = "" //
+        + "a=load('smalldata/covtype/covtype.20k.data')\n" // ;
+        + "b=parse(destination_key='covtype.hex', source_key='covtype.20k.data')\n" //
+        + "c=kmeans(k='3', destination_key='covtype.kmeans', source_key='covtype.hex', cols='0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54', epsilon='1.0E-2')\n";
+
+    Shell.run(new String[] { "-f", Utils.tempFile(r).getAbsolutePath(), "--interactive" });
 
     // File f = new File("smalldata/gaussian/sdss174052.csv.gz");
     // File f = new File("smalldata/covtype/covtype.20k.data");

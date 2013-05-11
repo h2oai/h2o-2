@@ -120,6 +120,9 @@ public class RequestArguments extends RequestStatics {
    * constructors.
    */
   protected final ArrayList<Argument> _arguments = new ArrayList();
+  public ArrayList<Argument> arguments() {
+    return _arguments;
+  }
 
   // ---------------------------------------------------------------------------
 
