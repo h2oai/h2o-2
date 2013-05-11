@@ -22,6 +22,10 @@ public abstract class RIStream extends InputStream {
     _off = off;
   }
 
+  public final long off(){return _off;}
+  public final long expectedSz(){
+    return _knownSize?_expectedSz:-1;
+  }
   public void setExpectedSz(long sz){
     _knownSize = true;
     _expectedSz = sz;
@@ -64,14 +68,9 @@ public abstract class RIStream extends InputStream {
   @Override
   public void reset(){throw new UnsupportedOperationException();}
 
-  private void checkEof() {
-    if(_knownSize)
-      if(_off < _expectedSz)
-        Log.warn("premature end of file reported, expected " + _expectedSz + " bytes, but got eof after " + _off + " bytes");
-      else
-        Log.warn("[Expected] eof after " + _expectedSz + " bytes");
-    else
-      Log.warn("eof after " + _off + " bytes, expected size unknown");
+  private void checkEof() throws IOException {
+    if(_knownSize && _off < _expectedSz)
+        throw new IOException("premature end of file reported, expected " + _expectedSz + " bytes, but got eof after " + _off + " bytes");
   }
   @Override
   public final int available() throws IOException {
@@ -111,7 +110,7 @@ public abstract class RIStream extends InputStream {
     while(true){
       try {
         int res =  _is.read(b);
-        if(res == 0) checkEof();
+        if(res == -1) checkEof();
         if(res > 0){
           updateOffset(res);
           if(_pmon != null)_pmon.update(res);
@@ -129,7 +128,7 @@ public abstract class RIStream extends InputStream {
     while(true){
       try {
         int res = _is.read(b,off,len);
-        if(res == 0) checkEof();
+        if(res == -1) checkEof();
         if(res > 0){
           updateOffset(res);
           if(_pmon != null)_pmon.update(res);
