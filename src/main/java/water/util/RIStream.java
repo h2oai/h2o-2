@@ -22,6 +22,10 @@ public abstract class RIStream extends InputStream {
     _off = off;
   }
 
+  public final long off(){return _off;}
+  public final long expectedSz(){
+    return _knownSize?_expectedSz:-1;
+  }
   public void setExpectedSz(long sz){
     _knownSize = true;
     _expectedSz = sz;
@@ -111,7 +115,7 @@ public abstract class RIStream extends InputStream {
     while(true){
       try {
         int res =  _is.read(b);
-        if(res == 0) checkEof();
+        if(res == -1) checkEof();
         if(res > 0){
           updateOffset(res);
           if(_pmon != null)_pmon.update(res);
@@ -129,7 +133,7 @@ public abstract class RIStream extends InputStream {
     while(true){
       try {
         int res = _is.read(b,off,len);
-        if(res == 0) checkEof();
+        if(res == -1) checkEof();
         if(res > 0){
           updateOffset(res);
           if(_pmon != null)_pmon.update(res);
