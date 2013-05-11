@@ -24,20 +24,25 @@ class Basic(unittest.TestCase):
         avgSynSize = 4020000
         covtype200xSize = 15033863400
         synSize =  183
-        if 1==0:
-            # importFolderPath = '/home/0xdiag/datasets'
-            importFolderPath = '/home/0xdiag/datasets'
+        if 1==1:
+            importFolderPath = '/home/0xdiag/datasets/10k_small_gz'
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
                 # this should hit the "more" files too?
-                ("10k_small_gz/*", "file_400.dat.gz", 10000 * synSize , 700),
+                ("00[0-4][0-9]_syn.csv.gz", "file_50.dat.gz", 50 * synSize , 700),
+                ("[1][1][0-9][0-9]_.*", "file_100.dat.gz", 100 * synSize , 700),
+                ("[1][0-4][0-9][0-9]_.*", "file_500.dat.gz", 500 * synSize , 700),
+                ("[1][0-9][0-9][0-9]_.*", "file_1000.dat.gz", 1000 * synSize , 700),
+                ("[0-4][0-9][0-9][0-9]_.*", "file_5000.dat.gz", 5000 * synSize , 700),
+                ("[0-9][0-9][0-9][0-9]_.*", "file_10000.dat.gz", 10000 * synSize , 700),
             ]
 
-        if 1==1:
+        if 1==0:
             importFolderPath = '/home/0xdiag/datasets/more1_1200_link'
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
                 # this should hit the "more" files too?
+                ("*.dat.gz", "file_1200.dat.gz", 1200 * avgMichalSize, 3600),
                 # ("*.dat.gz", "file_200.dat.gz", 1200 * avgMichalSize, 1800),
                 # ("*.dat.gz", "file_200.dat.gz", 1200 * avgMichalSize, 1800),
                 # ("*[1][0-2][0-9].dat.gz", "file_30.dat.gz", 50 * avgMichalSize, 1800), 
@@ -47,23 +52,28 @@ class Basic(unittest.TestCase):
                 # ("*[12][0-9][0-9].dat.gz", "file_200.dat.gz", 200 * avgMichalSize, 1800), 
             ]
 
-        if 1==0:
+        if 1==1:
             importFolderPath = '/home/0xdiag/datasets/more1_1200_link'
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
                 # this should hit the "more" files too?
-                # ("*[1-8][0-9][0-9].dat.gz", "file_800.dat.gz", 800 * avgMichalSize, 1800),
-
-                # ("*[1-4][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 1800), # fails tcp reset
-                # ("*[1-2][0-9][0-9].dat.gz", "file_200.dat.gz", 200 * avgMichalSize, 1800),  # fails tcp
-                # ("*[1][0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 1800),  # fails tcp
-                # ("*[1][0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 1800),
-
-                # ("*10[0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 1800), 
-                # ("*1[0-1][0-9].dat.gz", "file_20_2jvm.dat.gz", 20 * avgMichalSize, 1800), 
-                # ("*1[0-4][0-9].dat.gz", "file_50_2jvm.dat.gz", 50 * avgMichalSize, 1800), 
-                # ("*10[0-9].dat.gz", "file_10_2jvm.dat.gz", 10 * avgMichalSize, 1800), 
-                # ("*1[0-4][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize, 1800), 
+                # ("*[1-8][0-9][0-9].dat.gz", "file_800.dat.gz", 800 * avgMichalSize, 3600),
+                # ("*10[0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 3600), 
+                # ("*1[0-4][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize, 3600), 
+                # ("*[1][0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 3600), 
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("*[1-2][0-9][0-9].dat.gz", "file_200.dat.gz", 200 * avgMichalSize, 3600), 
                 ("*1[0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 1800), 
             ]
 
@@ -72,7 +82,7 @@ class Basic(unittest.TestCase):
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
                 # this should hit the "more" files too?
-                ("*.dat.gz", "file_300.dat.gz", 300 * avgMichalSize, 1800),
+                ("*.dat.gz", "file_300.dat.gz", 300 * avgMichalSize, 3600),
             ]
 
         if 1==0:
@@ -80,8 +90,8 @@ class Basic(unittest.TestCase):
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
                 # this should hit the "more" files too?
-                ("*_[123][0-9][0-9]*.dat.gz", "file_600.dat.gz", 2 * 300 * avgMichalSize, 1800),
-                ("*_[1][5-9][0-9]*.dat.gz", "file_100.dat.gz", 2 * 50 * avgMichalSize, 1800),
+                ("*_[123][0-9][0-9]*.dat.gz", "file_300.dat.gz", 300 * avgMichalSize, 3600),
+                ("*_[1][5-9][0-9]*.dat.gz", "file_100.dat.gz", 50 * avgMichalSize, 3600),
             ]
 
         if 1==0:
@@ -118,12 +128,15 @@ class Basic(unittest.TestCase):
                 # ("manyfiles-nflx-gz/file_10.dat.gz", "file_10_1.dat.gz", 1 * avgMichalSize, 700),
                 # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
 
-                ("manyfiles-nflx-gz/file_*.dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 1200),
                 ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize, 700),
-                # ("covtype200x.data", "covtype200x.data", covtype200xSize, 700),
+                ("manyfiles-nflx-gz/file_1[0-9][0-9].dat.gz", "file_100.dat.gz", 50 * avgMichalSize, 700),
+                ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200.dat.gz", 50 * avgMichalSize, 700),
+                ("manyfiles-nflx-gz/file_[12]?[0-9][0-9].dat.gz", "file_300.dat.gz", 50 * avgMichalSize, 700),
+                ("manyfiles-nflx-gz/file_*.dat.gz", "file_384.dat.gz", 100 * avgMichalSize, 1200),
+                ("covtype200x.data", "covtype200x.data", covtype200xSize, 700),
 
                 # do it twice
                 # ("covtype.data", "covtype.data"),
@@ -147,32 +160,38 @@ class Basic(unittest.TestCase):
         trialMax = 1
         # rebuild the cloud for each file
         base_port = 54321
-        tryHeap = 15
+        tryHeap = 24
         # can fire a parse off and go wait on the jobs queue (inspect afterwards is enough?)
         DO_GLM = False
         noPoll = False
         # benchmarkLogging = ['cpu','disk', 'iostats', 'jstack']
         # benchmarkLogging = None
-        benchmarkLogging = ['cpu','disk', 'network', 'iostats']
+        benchmarkLogging = ['cpu','disk', 'network', 'iostats', 'jstack']
+        # benchmarkLogging = ['cpu', 'disk' 'network']
         pollTimeoutSecs = 120
         retryDelaySecs = 10
 
         jea = '-XX:MaxDirectMemorySize=512m -XX:+PrintGCDetails' + ' -Dh2o.find-ByteBuffer-leaks'
         jea = '-XX:MaxDirectMemorySize=512m -XX:+PrintGCDetails'
+        jea = "-XX:+UseParNewGC -XX:+UseConcMarkSweepGC"
         jea = ' -Dcom.sun.management.jmxremote.port=54330' + \
               ' -Dcom.sun.management.jmxremote.authenticate=false' + \
               ' -Dcom.sun.management.jmxremote.ssl=false'  + \
               ' -Dcom.sun.management.jmxremote' + \
               ' -Dcom.sun.management.jmxremote.local.only=false'
+        jea = ' -Dlog.printAll=true'
+
 
         for i,(csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
             localhost = h2o.decide_if_localhost()
             if (localhost):
                 h2o.build_cloud(2,java_heap_GB=tryHeap, base_port=base_port,
+                    java_extra_args=jea,
                     enable_benchmark_log=True)
 
             else:
                 h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap, base_port=base_port, 
+                    java_extra_args=jea,
                     enable_benchmark_log=True)
 
             # pop open a browser on the cloud
