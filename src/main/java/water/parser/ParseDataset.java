@@ -1,5 +1,6 @@
 package water.parser;
 
+import java.io.EOFException;
 import java.io.InputStream;
 import java.util.*;
 import java.util.zip.*;
@@ -13,7 +14,6 @@ import water.util.RIStream;
 
 import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
-import com.sun.xml.internal.rngom.parse.compact.EOFException;
 
 /**
  * Helper class to parse an entire ValueArray data, and produce a structured ValueArray result.
