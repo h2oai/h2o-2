@@ -757,12 +757,15 @@ class H2O(object):
 
         url = self.__url(response['redirect_request'])
         params = response['redirect_request_args']
+        # no need to recreate the string for messaging, in the loop..
+        paramsStr =  '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
 
         if noise is not None:
             print noise
             # noise_json should be like "Storeview"
             (noise_json, noiseParams) = noise
             noiseUrl = self.__url(noise_json + ".json")
+            noiseParamsStr =  '&'.join(['%s=%s' % (k,v) for (k,v) in noiseParams.items()])
 
         status = 'poll'
         r = {} # response
@@ -775,17 +778,18 @@ class H2O(object):
         # can end with status = 'redirect' or 'done'
         while status == 'poll':
             # UPDATE: 1/24/13 change to always wait before the first poll..
-            # see if it makes a diff to our low rate fails
             time.sleep(retryDelaySecs)
             # every other one?
             create_noise = noise is not None and ((count%2)==0)
             if create_noise:
                 urlUsed = noiseUrl
                 paramsUsed = noiseParams
+                paramsUsedStr = noiseParamsStr
                 msgUsed = "\nNoise during polling with"
             else:
                 urlUsed = url
                 paramsUsed = params
+                paramsUsedStr = paramsStr
                 msgUsed = "\nPolling with"
 
             r = self.__check_request(
@@ -795,7 +799,7 @@ class H2O(object):
                     params=paramsUsed))
 
             if ((count%5)==0):
-                verboseprint(msgUsed, urlUsed, "Response:", dump_json(r['response']))
+                verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(r['response']))
             # hey, check the sandbox if we've been waiting a long time...rather than wait for timeout
             # to find the badness?
             # if ((count%15)==0):
@@ -811,15 +815,13 @@ class H2O(object):
 
             if ((time.time()-start)>timeoutSecs):
                 # show what we're polling with 
-                argsStr =  '&'.join(['%s=%s' % (k,v) for (k,v) in paramsUsed.items()])
                 emsg = "Exceeded timeoutSecs: %d secs while polling." % timeoutSecs +\
-                       "status: %s, url: %s?%s" % (status, urlUsed, argsStr)
+                       "status: %s, url: %s?%s" % (status, urlUsed, paramsUsedStr)
                 raise Exception(emsg)
             count += 1
 
             if noPoll:
                 return r
-            # GLM can return partial results during polling..that's legal
 
             if benchmarkLogging:
                 cloudPerfH2O.get_log_save(benchmarkLogging)
