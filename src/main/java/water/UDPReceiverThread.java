@@ -67,7 +67,7 @@ public class UDPReceiverThread extends Thread {
 
   // Basic packet handling:
   //   - Timeline record it
-  static public void basic_packet_handling( AutoBuffer ab ) {
+  static public void basic_packet_handling( AutoBuffer ab ) throws java.io.IOException {
     // Randomly drop 1/10th of the packets, as-if broken network.  Dropped
     // packets are timeline recorded before dropping - and we still will
     // respond to timelines and suicide packets.
@@ -84,7 +84,7 @@ public class UDPReceiverThread extends Thread {
     int ctrl = ab.getCtrl();
     ab.getPort(); // skip the port bytes
     if( ctrl == UDP.udp.timeline.ordinal() ) {
-      UDP.udp.timeline._udp.call(ab).close();
+      UDP.udp.timeline._udp.call(ab);
       return;
     }
 
@@ -119,6 +119,6 @@ public class UDPReceiverThread extends Thread {
       _unknown_packets_per_sec = 0;
       _unknown_packet_time = ab._h2o._last_heard_from;
     }
-    ab.close(false);
+    ab.close(false,false);
   }
 }

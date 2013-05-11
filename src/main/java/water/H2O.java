@@ -7,6 +7,9 @@ import java.nio.channels.DatagramChannel;
 import java.util.*;
 
 import jsr166y.*;
+
+import water.r.Shell;
+
 import water.exec.Function;
 import water.hdfs.HdfsLoader;
 import water.nbhm.NonBlockingHashMap;
@@ -381,7 +384,12 @@ public final class H2O {
   // working on.
   static class FJWThr extends ForkJoinWorkerThread {
     public int _priority;
-    FJWThr(ForkJoinPool pool) { super(pool); }
+    FJWThr(ForkJoinPool pool) {
+      super(pool);
+      setPriority( ((ForkJoinPool2)pool)._priority == Thread.MIN_PRIORITY
+                   ? Thread.NORM_PRIORITY-1
+                   : Thread. MAX_PRIORITY-1 );
+    }
   }
   // Factory for F/J threads, with cap's that vary with priority.
   static class FJWThrFact implements ForkJoinPool.ForkJoinWorkerThreadFactory {
@@ -448,12 +456,14 @@ public final class H2O {
           H2OCountedCompleter h2o = FJPS[p].poll();
           if( h2o != null ) {     // Got a hi-priority job?
             t._priority = p;      // Set & do it now!
+            Thread.currentThread().setPriority(Thread.MAX_PRIORITY-1);
             h2o.compute2();       // Do it ahead of normal F/J work
             p++;                  // Check again the same queue
           }
         }
       } finally {
         t._priority = pp;
+        if( pp == MIN_PRIORITY ) Thread.currentThread().setPriority(Thread.NORM_PRIORITY-1);
       }
       // Now run the task as planned
       compute2();
@@ -487,8 +497,9 @@ public final class H2O {
     public String keepice; // Do not delete ice on startup
     public String soft = null; // soft launch for demos
     public String random_udp_drop = null; // test only, randomly drop udp incoming
-    public String nolog = null; // disable logging
     public int pparse_limit = Integer.MAX_VALUE;
+    public String no_requests_log = null; // disable logging of Web requests
+    public String rshell="false"; //FastR shell
   }
   public static boolean IS_SYSTEM_RUNNING = false;
 
@@ -504,8 +515,8 @@ public final class H2O {
     arguments.extract(OPT_ARGS);
     ARGS = arguments.toStringArray();
     ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
-    if(OPT_ARGS.nolog == null)
-      Log.initHeaders();
+
+    if (OPT_ARGS.rshell.equals("false"))  Log.wrap(); // Logging does not wrap when the rshell is on.
 
     startLocalNode(); // start the local node
     // Load up from disk and initialize the persistence layer
@@ -516,6 +527,9 @@ public final class H2O {
     initializeExpressionEvaluation(); // starts the expression evaluation system
 
     startupFinalize(); // finalizes the startup & tests (if any)
+
+    if (OPT_ARGS.rshell.equals("true"))  Shell.go();
+
     // Hang out here until the End of Time
   }
 
@@ -596,7 +610,8 @@ public final class H2O {
 
     // Start the TCPReceiverThread, to listen for TCP requests from other Cloud
     // Nodes. There should be only 1 of these, and it never shuts down.
-    (TCPReceiverThread.TCPTHR=new TCPReceiverThread()).start();
+    new TCPReceiverThread().start();
+    // Start the Nano HTTP server thread
     water.api.RequestServer.start();
   }
 
@@ -856,6 +871,7 @@ public final class H2O {
     public Cleaner() {
       super("MemCleaner");
       setDaemon(true);
+      setPriority(MAX_PRIORITY-2);
       _dirty = Long.MAX_VALUE;  // Set to clean-store
       _myHisto = new Histo();   // Build/allocate a first histogram
       _myHisto.compute(0);      // Compute lousy histogram; find eldest

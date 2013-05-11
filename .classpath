@@ -29,5 +29,10 @@
 	<classpathentry kind="lib" path="lib/hadoop/cdh3/jackson-mapper-asl-1.5.2.jar"/>
 	<classpathentry kind="lib" path="lib/hadoop/cdh3/log4j-1.2.15.jar" sourcepath="/home/cypof/.m2/repository/log4j/log4j/1.2.15/log4j-1.2.15-sources.jar"/>
 	<classpathentry kind="lib" path="lib/hadoop/cdh3/hadoop-core-0.20.2-cdh3u6.jar" sourcepath="lib/hadoop/cdh3/hadoop-core-0.20.2-cdh3u6-sources.jar"/>
+	<classpathentry kind="lib" path="lib/javassist-sources.jar"/>
+	<classpathentry kind="lib" path="lib/fastr/antlr-runtime-3.5.jar"/>
+	<classpathentry kind="lib" path="lib/fastr/arpack_combined_all.jar"/>
+	<classpathentry kind="lib" path="lib/fastr/netlib-java-0.9.3.jar"/>
+	<classpathentry kind="lib" path="lib/fastr/r.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>
