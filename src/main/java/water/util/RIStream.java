@@ -68,14 +68,9 @@ public abstract class RIStream extends InputStream {
   @Override
   public void reset(){throw new UnsupportedOperationException();}
 
-  private void checkEof() {
-    if(_knownSize)
-      if(_off < _expectedSz)
-        Log.warn("premature end of file reported, expected " + _expectedSz + " bytes, but got eof after " + _off + " bytes");
-      else
-        Log.warn("[Expected] eof after " + _expectedSz + " bytes");
-    else
-      Log.warn("eof after " + _off + " bytes, expected size unknown");
+  private void checkEof() throws IOException {
+    if(_knownSize && _off < _expectedSz)
+        throw new IOException("premature end of file reported, expected " + _expectedSz + " bytes, but got eof after " + _off + " bytes");
   }
   @Override
   public final int available() throws IOException {
