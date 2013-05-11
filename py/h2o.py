@@ -769,14 +769,10 @@ class H2O(object):
 
         start = time.time()
         count = 0
-        # FIX! temporarily wait 5x the retryDelaySecs delay, before the first poll
-        # Progress status NPE issue (H2O)
         if initialDelaySecs:
             time.sleep(initialDelaySecs)
 
         # can end with status = 'redirect' or 'done'
-        # FIX! temporary hack ...if a GLMModel key shows up, treat that as "stop polling'   
-        # because we have results for GLm. (i.e. ignore status.
         while status == 'poll':
             # UPDATE: 1/24/13 change to always wait before the first poll..
             # see if it makes a diff to our low rate fails
@@ -824,8 +820,6 @@ class H2O(object):
             if noPoll:
                 return r
             # GLM can return partial results during polling..that's legal
-            ### if 'GLMProgressPage' in urlUsed and 'GLMModel' in r:
-            ###    print "INFO: GLM returning partial results during polling. Continuing.."
 
             if benchmarkLogging:
                 cloudPerfH2O.get_log_save(benchmarkLogging)
