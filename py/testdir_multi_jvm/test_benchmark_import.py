@@ -24,7 +24,7 @@ class Basic(unittest.TestCase):
         avgSynSize = 4020000
         covtype200xSize = 15033863400
         synSize =  183
-        if 1==1:
+        if 1==0:
             importFolderPath = '/home/0xdiag/datasets/10k_small_gz'
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
@@ -57,10 +57,15 @@ class Basic(unittest.TestCase):
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
                 # this should hit the "more" files too?
-                # ("*[1-8][0-9][0-9].dat.gz", "file_800.dat.gz", 800 * avgMichalSize, 3600),
                 # ("*10[0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 3600), 
                 # ("*1[0-4][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize, 3600), 
                 # ("*[1][0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 3600), 
+                # ("*3[0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 3600),
+                # ("*1[0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 1800), 
+                #("*[1-2][0-9][0-9].dat.gz", "file_200.dat.gz", 200 * avgMichalSize, 3600), 
+                # ("*[3-4][0-9][0-9].dat.gz", "file_200.dat.gz", 200 * avgMichalSize, 3600),
+                ("*[3-5][0-9][0-9].dat.gz", "file_300.dat.gz", 300 * avgMichalSize, 3600),
+                ("*[3-5][0-9][0-9].dat.gz", "file_300.dat.gz", 300 * avgMichalSize, 3600),
                 ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
                 ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
                 ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
@@ -69,12 +74,7 @@ class Basic(unittest.TestCase):
                 ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
                 ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
                 ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
-                ("*[1-2][0-9][0-9].dat.gz", "file_200.dat.gz", 200 * avgMichalSize, 3600), 
-                ("*1[0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 1800), 
+                ("*[1-8][0-9][0-9].dat.gz", "file_800.dat.gz", 800 * avgMichalSize, 3600),
             ]
 
         if 1==0:
@@ -160,13 +160,14 @@ class Basic(unittest.TestCase):
         trialMax = 1
         # rebuild the cloud for each file
         base_port = 54321
-        tryHeap = 24
+        tryHeap = 28
         # can fire a parse off and go wait on the jobs queue (inspect afterwards is enough?)
         DO_GLM = False
         noPoll = False
         # benchmarkLogging = ['cpu','disk', 'iostats', 'jstack']
         # benchmarkLogging = None
         benchmarkLogging = ['cpu','disk', 'network', 'iostats', 'jstack']
+        benchmarkLogging = ['cpu','disk', 'network', 'iostats']
         # benchmarkLogging = ['cpu', 'disk' 'network']
         pollTimeoutSecs = 120
         retryDelaySecs = 10
@@ -186,12 +187,12 @@ class Basic(unittest.TestCase):
             localhost = h2o.decide_if_localhost()
             if (localhost):
                 h2o.build_cloud(2,java_heap_GB=tryHeap, base_port=base_port,
-                    java_extra_args=jea,
+                    # java_extra_args=jea,
                     enable_benchmark_log=True)
 
             else:
-                h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap, base_port=base_port, 
-                    java_extra_args=jea,
+                h2o_hosts.build_cloud_with_hosts(2, java_heap_GB=tryHeap/2, base_port=base_port, 
+                    # java_extra_args=jea,
                     enable_benchmark_log=True)
 
             # pop open a browser on the cloud

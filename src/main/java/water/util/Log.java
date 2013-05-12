@@ -63,7 +63,8 @@ abstract public class Log {
 
   private static final String NL = System.getProperty("line.separator");
   static public void wrap() {
-    System.setOut(new Wrapper(System.out));
+    ///Turning off wrapping for now...  If this breaks stuff will put it back on.
+    /// System.setOut(new Wrapper(System.out));
     System.setErr(new Wrapper(System.err));
   }
   /** Local log file */
@@ -78,6 +79,8 @@ abstract public class Log {
   public static final long PID = getPid();
   /** Hostname and process ID. */
   private static final String HOST_AND_PID = "" + fixedLength(HOST + " ", 13) + fixedLength(PID + " ", 6);
+  private static final String LONG_HEADERS_PARAM = "long_log_headers";
+  private static final boolean LONG_HEADERS = System.getProperty(LONG_HEADERS_PARAM) != null;
   private static boolean printAll;
   /** Per subsystem debugging flags. */
   static {
@@ -267,7 +270,7 @@ abstract public class Log {
       }
     }
     if( Paxos._cloudLocked ) logToKV(e.when.startAsString(), e.thread, e.kind, e.sys, e.body(0));
-    if(printOnOut || printAll) unwrap(System.out,e.toShortString());
+    if(printOnOut || printAll) unwrap(System.out, (LONG_HEADERS ? e.toString() : e.toShortString()));
     e.printMe = false;
   }
   /** We also log events to the store. */

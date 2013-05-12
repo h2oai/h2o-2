@@ -9,8 +9,7 @@ import water.util.Utils;
 
 public class Host {
   public static final String SSH_OPTS;
-  public static final String LOG_RSYNC_NAME = "logrsync";
-  public static final boolean LOG_RSYNC = System.getProperty(LOG_RSYNC_NAME) != null;
+  public static final boolean LOG_RSYNC = System.getProperty("logrsync") != null;
 
   static {
     SSH_OPTS = "" //
@@ -94,11 +93,9 @@ public class Host {
       args.addAll(Arrays.asList(includes));
 
       // --exclude seems ignored on Linux (?) so use --exclude-from
-      if( excludes != null ) {
-        File file = Utils.tempFile(Utils.join('\n', excludes));
-        args.add("--exclude-from");
-        args.add(file.getAbsolutePath());
-      }
+      File file = Utils.tempFile(Utils.join('\n', excludes));
+      args.add("--exclude-from");
+      args.add(file.getAbsolutePath());
 
       args.add(_address + ":" + "/home/" + _user + "/" + FOLDER);
       ProcessBuilder builder = new ProcessBuilder(args);
@@ -115,6 +112,30 @@ public class Host {
         try {
           process.destroy();
         } catch( Exception _ ) { /* ignore */}
+      }
+    }
+  }
+
+  public static void rsync(final Host[] hosts, final String[] includes, final String[] excludes) {
+    ArrayList<Thread> threads = new ArrayList<Thread>();
+
+    for( int i = 0; i < hosts.length; i++ ) {
+      final int i_ = i;
+      Thread t = new Thread() {
+        @Override public void run() {
+          hosts[i_].rsync(includes, excludes);
+        }
+      };
+      t.setDaemon(true);
+      t.start();
+      threads.add(t);
+    }
+
+    for( Thread t : threads ) {
+      try {
+        t.join();
+      } catch( InterruptedException e ) {
+        throw Log.errRTExcept(e);
       }
     }
   }
