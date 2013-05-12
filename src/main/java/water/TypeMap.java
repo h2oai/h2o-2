@@ -230,7 +230,7 @@ public class TypeMap {
         if(Freezable.class.isAssignableFrom(c))
           list.add(c.getName());
       } catch(Throwable _) {
-        System.out.println("Skipped: " + name);
+        Log.warn("Skipped: " + name);
       }
     }
     Collections.sort(list);
