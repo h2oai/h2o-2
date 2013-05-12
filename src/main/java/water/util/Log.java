@@ -63,7 +63,8 @@ abstract public class Log {
 
   private static final String NL = System.getProperty("line.separator");
   static public void wrap() {
-    System.setOut(new Wrapper(System.out));
+    ///Turning off wrapping for now...  If this breaks stuff will put it back on.
+    /// System.setOut(new Wrapper(System.out));
     System.setErr(new Wrapper(System.err));
   }
   /** Local log file */
