@@ -10,6 +10,7 @@ import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.api.Inspect;
 import water.parser.DParseTask.Pass;
+import water.util.Log;
 import water.util.RIStream;
 
 import com.google.common.base.Throwables;
@@ -261,6 +262,7 @@ public final class ParseDataset extends Job {
               is = new GZIPInputStream(ris);
               break;
             default:
+              Log.info("Can't understand compression: _comp: "+_comp+" csz: "+csz+" key: "+key+" ris: "+ris);
               throw H2O.unimpl();
             }
             _fileInfo[_idx]._okey = Key.make(new String(key._kb) + "_UNZIPPED");

@@ -15,8 +15,8 @@ import water.util.Log;
 public class NodeHost implements Node {
   private volatile SSH _ssh;
 
-  public NodeHost(Host host, String[] javaArgs, String[] nodeArgs) {
-    _ssh = new SSH(host, new String[] { command(javaArgs, nodeArgs) });
+  public NodeHost(Host host, String[] args) {
+    _ssh = new SSH(host, args);
   }
 
   public Host host() {
@@ -50,7 +50,6 @@ public class NodeHost implements Node {
 
   public static String command(String[] javaArgs, String[] nodeArgs) {
     ArrayList<String> list = new ArrayList<String>();
-    VM.defaultParams(list);
     if( javaArgs != null ) list.addAll(Arrays.asList(javaArgs));
 
     String cp = "";
@@ -77,10 +76,16 @@ public class NodeHost implements Node {
   }
 
   static class SSH extends Watchdog {
+    Host _host;
     Thread _thread;
 
     public SSH(Host host, String[] args) {
-      super(host, args);
+      super(null, new String[] { new Params(host, VM.cloneParams(), args).write() });
+      _host = host;
+    }
+
+    public Host host() {
+      return _host;
     }
 
     final void startThread() {
@@ -100,15 +105,12 @@ public class NodeHost implements Node {
 
     public static void main(String[] args) throws Exception {
       exitWithParent();
-
-      Host host = getHost(args);
+      Params p = Params.read(args[0]);
+      Host host = new Host(p._host[0], p._host[1], p._host[2]);
       ArrayList<String> list = new ArrayList<String>();
       list.addAll(Arrays.asList(host.sshWithArgs().split(" ")));
       list.add(host.address());
-      // TODO Port forwarding for security
-      // list.add("-L");
-      // list.add("8000:127.0.0.1:" + local);
-      list.addAll(Arrays.asList(getArgs(args)));
+      list.add(command(p._java, p._node));
       exec(list);
     }
   }
