@@ -270,25 +270,25 @@ public class RequestBuilders extends RequestQueries {
 
     /** Poll progress in terms of finished elements.
      */
-    private final int _pollProgress;
+    protected final int _pollProgress;
 
     /** Total elements to be finished before the poll will be done.
      */
-    private final int _pollProgressElements;
+    protected final int _pollProgressElements;
 
     /** Response object for JSON requests.
      */
-    private final JsonObject _response;
+    protected final JsonObject _response;
 
-    private boolean _strictJsonCompliance = false;
+    protected boolean _strictJsonCompliance = false;
 
     /** Custom builders for JSON elements when converting to HTML automatically.
      */
-    private final HashMap<String,Builder> _builders = new HashMap();
+    protected final HashMap<String,Builder> _builders = new HashMap();
 
     /** Custom headers to show in the html.
      */
-    private final List<String> _headers = new ArrayList();
+    protected final List<String> _headers = new ArrayList();
 
     /** Private constructor creating the request with given type and response
      * JSON object.

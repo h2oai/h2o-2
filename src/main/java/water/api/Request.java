@@ -4,6 +4,7 @@ package water.api;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
+import java.util.Map.Entry;
 
 import water.*;
 import water.util.*;
@@ -12,8 +13,7 @@ import water.util.Log.Tag.Sys;
 import com.google.common.base.Objects;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import com.google.gson.*;
 
 /** A basic class for a JSON request.
  */
@@ -215,4 +215,31 @@ public abstract class Request extends RequestBuilders {
 
   protected static final void help(Argument arg, String help) { arg._requestHelp = help; }
   protected static final void help(Request r, String help)    { r._requestHelp   = help; }
+
+  public static JsonObject execSync(Request request) {
+    for( ;; ) {
+      Response r = request.serve();
+      switch( r._status ) {
+        case error:
+          throw new RuntimeException(r.error());
+        case redirect:
+          request = RequestServer.requests().get(r._redirectName);
+          Properties args = new Properties();
+          for( Entry<String, JsonElement> entry : r._redirectArgs.entrySet() )
+            args.put(entry.getKey(), entry.getValue().getAsString());
+          request.checkArguments(args, RequestType.json);
+          break;
+        case poll:
+          // Not a FJ thread, just wait
+          try {
+            Thread.sleep(100);
+          } catch( InterruptedException e ) {
+            throw new RuntimeException(e);
+          }
+          break;
+        case done:
+          return r._response;
+      }
+    }
+  }
 }

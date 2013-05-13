@@ -1,5 +1,6 @@
 package water.parser;
 
+import java.io.EOFException;
 import java.io.InputStream;
 import java.util.*;
 import java.util.zip.*;
@@ -9,6 +10,8 @@ import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.api.Inspect;
 import water.parser.DParseTask.Pass;
+import water.util.Log;
+import water.util.RIStream;
 
 import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
@@ -243,10 +246,12 @@ public final class ParseDataset extends Job {
         if(_comp != Compression.NONE){
           onProgressSizeChange(csz,_job); // additional pass through the data to decompress
           InputStream is = null;
+          InputStream ris = null;
           try {
+            ris = v.openStream(new UnzipProgressMonitor(_job._progress));
             switch(_comp){
             case ZIP:
-              ZipInputStream zis = new ZipInputStream(v.openStream(new UnzipProgressMonitor(_job._progress)));
+              ZipInputStream zis = new ZipInputStream(ris);
               ZipEntry ze = zis.getNextEntry();
               // There is at least one entry in zip file and it is not a directory.
               if (ze == null || ze.isDirectory())
@@ -254,9 +259,10 @@ public final class ParseDataset extends Job {
               is = zis;
               break;
             case GZIP:
-              is = new GZIPInputStream(v.openStream(new UnzipProgressMonitor(_job._progress)));
+              is = new GZIPInputStream(ris);
               break;
             default:
+              Log.info("Can't understand compression: _comp: "+_comp+" csz: "+csz+" key: "+key+" ris: "+ris);
               throw H2O.unimpl();
             }
             _fileInfo[_idx]._okey = Key.make(new String(key._kb) + "_UNZIPPED");
@@ -264,6 +270,13 @@ public final class ParseDataset extends Job {
             v = DKV.get(_fileInfo[_idx]._okey);
             onProgressSizeChange(2*(v.length() - csz), _job); // the 2 passes will go over larger file!
             assert v != null;
+          }catch (EOFException e){
+            if(ris != null && ris instanceof RIStream){
+              RIStream r = (RIStream)ris;
+              System.err.println("Unexpected eof after reading " + r.off() + "bytes, expeted size = " + r.expectedSz());
+            }
+            System.err.println("failed decompressing data " + key.toString() + " with compression " + _comp);
+            throw new RuntimeException(e);
           } catch (Throwable t) {
             System.err.println("failed decompressing data " + key.toString() + " with compression " + _comp);
             throw new RuntimeException(t);

@@ -4,11 +4,9 @@ import java.io.*;
 import java.util.*;
 
 import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.lang.ArrayUtils;
 
 import water.Arguments;
 import water.H2O;
-import water.deploy.Cloud.Master;
 import water.util.Log;
 import water.util.Utils;
 
@@ -22,14 +20,24 @@ public abstract class EC2 {
 
   public static class Config extends Arguments.Opt {
     String region = "us-east-1";
-    String type = "m1.small";
+    String type = "m1.xlarge";
     String secg = "default";
-    boolean conf = true;
+    boolean confirm = true;
     String incl; // additional rsync includes
     String excl; // additional rsync excludes
+    String java_args;
   }
 
   public static void main(String[] args) throws Exception {
+    try {
+      H2O.getAWSCredentials();
+    } catch( Exception ex ) {
+      System.out.println("Please add AWS credentials to './AwsCredentials.properties'");
+      System.out.println("File format is:");
+      System.out.println("accessKey=XXXXXXXXXXXXXXXXXXXX");
+      System.out.println("secretKey=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+      return;
+    }
     Config config;
     int count;
     String[] remaining;
@@ -48,39 +56,21 @@ public abstract class EC2 {
       System.out.println("  -region=" + defaults.region);
       System.out.println("  -type=" + defaults.type);
       System.out.println("  -secg=" + defaults.secg + " (Security Group, must allow ssh (TCP 22))");
-      System.out.println("  -conf=" + defaults.conf + " (Confirm before starting new instances)");
+      System.out.println("  -confirm=" + defaults.confirm + " (Confirm before starting new instances)");
       System.out.println("  -incl='' (additional rsync includes, e.g. py:smalldata)");
       System.out.println("  -excl='' (additional rsync excludes, e.g. sandbox:*.pyc)");
-      System.out.println();
-      System.out.println("AWS credentials are looked for at './AwsCredentials.properties'");
+      System.out.println("  -java_args='' (java args for cluster JVMs)");
       return;
     }
     run(config, count, remaining);
   }
 
   public static void run(Config config, int count, String[] args) throws Exception {
-    Cloud c = resize(config.region, config.type, config.secg, config.conf, count);
-
-    // Take first box as cloud master
-    Host master = new Host(c.publicIPs()[0]);
+    Cloud c = resize(config.region, config.type, config.secg, config.confirm, count);
     String[] includes = config.incl != null ? config.incl.split(File.pathSeparator) : null;
     String[] excludes = config.excl != null ? config.excl.split(File.pathSeparator) : null;
-    includes = (String[]) ArrayUtils.addAll(Host.defaultIncludes(), includes);
-    excludes = (String[]) ArrayUtils.addAll(Host.defaultExcludes(), excludes);
-
-    File flatfile = Utils.tempFile(Utils.join('\n', c.privateIPs()));
-    includes = (String[]) ArrayUtils.add(includes, flatfile.getAbsolutePath());
-
-    master.rsync(includes, excludes);
-
-    ArrayList<String> list = new ArrayList<String>();
-    list.add("-mainClass");
-    list.add(Master.class.getName());
-    list.add("-flatfile");
-    list.add(flatfile.getName());
-    list.add("-log_headers");
-    list.addAll(Arrays.asList(args));
-    RemoteRunner.launch(master, list.toArray(new String[0]));
+    String[] java = config.java_args != null ? config.java_args.split(" ") : null;
+    c.start(includes, excludes, java, args);
   }
 
   /**
@@ -139,6 +129,7 @@ public abstract class EC2 {
       request.withMinCount(launchCount).withMaxCount(launchCount);
       request.withSecurityGroupIds(secg);
       // TODO what's the right way to have boxes in same availability zone?
+      // maybe start a first one and add others to same
       // request.withPlacement(new Placement(region + "c"));
       request.withUserData(new String(Base64.encodeBase64(cloudConfig().getBytes())));
 

@@ -1,7 +1,9 @@
 package water;
 
+import java.io.IOException;
 import java.net.*;
 import java.nio.channels.DatagramChannel;
+import java.nio.channels.SocketChannel;
 import java.util.*;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -20,8 +22,13 @@ import water.util.Log;
  */
 
 public class H2ONode extends Iced implements Comparable {
+  public int _unique_idx; // Dense integer index, skipping 0.  NOT cloud-wide unique.
+  public long _last_heard_from; // Time in msec since we last heard from this Node
+  public volatile HeartBeat _heartbeat;  // My health info.  Changes 1/sec.
+  public int _tcp_readers;               // Count of started TCP reader threads
 
   // A JVM is uniquely named by machine IP address and port#
+  public H2Okey _key;
   public static final class H2Okey extends InetSocketAddress implements Comparable {
     final int _ipv4;     // cheapo ipv4 address
     public H2Okey(InetAddress inet, int port) {
@@ -53,14 +60,8 @@ public class H2ONode extends Iced implements Comparable {
       return udp_port() - key.udp_port();
     }
   }
-  public H2Okey _key;
-
-  public int _unique_idx; // Dense integer index, skipping 0.
-  public long _last_heard_from; // Time in msec since we last heard from this Node
 
   public final int ip4() { return _key._ipv4; }
-
-  public volatile HeartBeat _heartbeat;  // My health info.  Changes 1/sec.
 
   // These are INTERN'd upon construction, and are uniquely numbered within the
   // same run of a JVM.  If a remote Node goes down, then back up... it will
@@ -175,6 +176,46 @@ public class H2ONode extends Iced implements Comparable {
   public int index() { return H2O.CLOUD.nidx(this); }
 
   // ---------------
+  // A queue of available TCP sockets
+  // Public re-usable TCP socket opened to this node, or null.
+  // This is essentially a BlockingQueue/Stack that allows null.
+  private SocketChannel _socks[] = new SocketChannel[2];
+  private int _socksAvail=_socks.length;
+  // Count of concurrent TCP requests both incoming and outgoing
+  public static final AtomicInteger TCPS = new AtomicInteger(0);
+  public SocketChannel getTCPSocket() throws IOException {
+    // Under lock, claim an existing open socket if possible
+    synchronized(this) {
+      // Limit myself to the number of open sockets from node-to-node
+      while( _socksAvail == 0 )
+        try { wait(); } catch( InterruptedException ie ) { }
+      // Claim an open socket
+      SocketChannel sock = _socks[--_socksAvail];
+      if( sock != null ) {
+        if( sock.isOpen() ) return sock; // Return existing socket!
+        // Else its an already-closed socket, lower open TCP count
+        assert TCPS.get() > 0;
+        TCPS.decrementAndGet();
+      }
+    }
+    // Must make a fresh socket
+    SocketChannel sock2 = SocketChannel.open();
+    sock2.socket().setSendBufferSize(AutoBuffer.BBSIZE);
+    boolean res = sock2.connect( _key );
+    assert res && !sock2.isConnectionPending() && sock2.isBlocking() && sock2.isConnected() && sock2.isOpen();
+    TCPS.incrementAndGet();     // Cluster-wide counting
+    return sock2;
+  }
+  public synchronized void freeTCPSocket( SocketChannel sock ) {
+    assert 0 <= _socksAvail && _socksAvail < _socks.length;
+    if( sock != null && !sock.isOpen() ) sock = null;
+    _socks[_socksAvail++] = sock;
+    assert TCPS.get() > 0;
+    if( sock == null ) TCPS.decrementAndGet();
+    notify();
+  }
+
+  // ---------------
   // The *outgoing* client-side calls; pending tasks this Node wants answered.
   private final NonBlockingHashMapLong<RPC> _tasks = new NonBlockingHashMapLong();
   public void taskPut(int tnum, RPC rpc ) { _tasks.put(tnum,rpc); }
@@ -287,7 +328,7 @@ public class H2ONode extends Iced implements Comparable {
     static DelayQueue<RPC.RPCCall> PENDING = new DelayQueue<RPC.RPCCall>();
     // Started by main() on a single thread, handle timing-out UDP packets
     public void run() {
-      Thread.currentThread().setPriority(Thread.NORM_PRIORITY);
+      Thread.currentThread().setPriority(Thread.MAX_PRIORITY-1);
       while( true ) {
         RPC.RPCCall r;
         try { r = PENDING.take(); }
