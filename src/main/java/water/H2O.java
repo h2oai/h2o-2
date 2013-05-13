@@ -516,7 +516,8 @@ public final class H2O {
     ARGS = arguments.toStringArray();
     ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
 
-    if (OPT_ARGS.rshell.equals("false"))  Log.wrap(); // Logging does not wrap when the rshell is on.
+    //if (OPT_ARGS.rshell.equals("false"))
+    Log.wrap(); // Logging does not wrap when the rshell is on.
 
     startLocalNode(); // start the local node
     // Load up from disk and initialize the persistence layer
@@ -529,7 +530,6 @@ public final class H2O {
     startupFinalize(); // finalizes the startup & tests (if any)
 
     if (OPT_ARGS.rshell.equals("true"))  Shell.go();
-
     // Hang out here until the End of Time
   }
 
