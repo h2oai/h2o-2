@@ -416,7 +416,6 @@ public class ValueArray extends Iced implements Cloneable {
       try { f_last.get(); }
       catch( InterruptedException e ) { throw  Log.errRTExcept(e); }
       catch(   ExecutionException e ) { throw  Log.errRTExcept(e); }
-      assert Arrays.equals(DKV.get(ckey).memOrLoad(),oldbuf);
       DKV.put(ckey,new Value(ckey,newbuf),fs); // Overwrite the old too-small Value
     } else {
       Key ckey = getChunkKey(cidx,key);
