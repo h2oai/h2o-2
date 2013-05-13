@@ -1001,15 +1001,16 @@ public class RequestArguments extends RequestStatics {
         if(to == from) return new double[]{from};
         if(to < from)throw new IllegalArgumentException("Value "+input+" is not a valid number sequence.");
         if(step == 0)throw new IllegalArgumentException("Value "+input+" is not a valid number sequence.");
-        int n = mul
-          ? (int)((Math.log(to) - Math.log(from))/Math.log(step))
-          : (int)((         to  -          from )/         step );
-        double [] res = new double[n];
-        for( int i = 0; i < n; ++i ) {
-          res[i] = from;
+        // make sure we have format from < to
+
+        double [] res = new double[1024];
+        int i = 0;
+        while(from <= to){
+          res[i++] = from;
+          if(i == res.length)res = Arrays.copyOf(res, res.length + Math.max(1, res.length >> 1));
           if( mul) from *= step; else from += step;
         }
-        return res;
+        return Arrays.copyOf(res,i);
       } else if( str.contains(",") ) {
         String [] parts = str.split(",");
         double [] res = new double[parts.length];
