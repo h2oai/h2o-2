@@ -58,56 +58,56 @@ def file_shuffle(infile, outfile):
 
 # FIX! This is a hack to deal with parser bug
 def file_strip_trailing_spaces(csvPathname1, csvPathname2):
-        infile = open(csvPathname1, 'r')
-        outfile = open(csvPathname2,'w') # existing file gets erased
-        for line in infile.readlines():
-            # remove various lineends and whitespace (leading and trailing)
-            # make it unix linend
-            outfile.write(line.strip(" \n\r") + "\n")
-        infile.close()
-        outfile.close()
-        print "\n" + csvPathname1 + " stripped to " + csvPathname2
+    infile = open(csvPathname1, 'r')
+    outfile = open(csvPathname2,'w') # existing file gets erased
+    for line in infile.readlines():
+        # remove various lineends and whitespace (leading and trailing)
+        # make it unix linend
+        outfile.write(line.strip(" \n\r") + "\n")
+    infile.close()
+    outfile.close()
+    print "\n" + csvPathname1 + " stripped to " + csvPathname2
 
 # can R deal with comments in a csv?
 def file_strip_comments(csvPathname1, csvPathname2):
-        infile = open(csvPathname1, 'r')
-        outfile = open(csvPathname2,'w') # existing file gets erased
-        for line in infile.readlines():
-            if not line.startswith('#'): outfile.write(line)
-        infile.close()
-        outfile.close()
-        print "\n" + csvPathname1 + " w/o comments to " + csvPathname2
+    infile = open(csvPathname1, 'r')
+    outfile = open(csvPathname2,'w') # existing file gets erased
+    for line in infile.readlines():
+        if not line.startswith('#'): outfile.write(line)
+    infile.close()
+    outfile.close()
+    print "\n" + csvPathname1 + " w/o comments to " + csvPathname2
 
 def file_spaces_to_comma(csvPathname1, csvPathname2):
-        infile = open(csvPathname1, 'r')
-        outfile = open(csvPathname2,'w') # existing file gets erased
-        for line in infile.readlines():
-            outfile.write(re.sub(r' +',r',',line))
-        infile.close()
-        outfile.close()
-        print "\n" + csvPathname1 + " with space(s)->comma to " + csvPathname2
+    infile = open(csvPathname1, 'r')
+    outfile = open(csvPathname2,'w') # existing file gets erased
+    for line in infile.readlines():
+        outfile.write(re.sub(r' +',r',',line))
+    infile.close()
+    outfile.close()
+    print "\n" + csvPathname1 + " with space(s)->comma to " + csvPathname2
 
 # UPDATE: R seems to be doing some kind of expand_cat on cols with '.' in them for NA
 # (the umass/princeton) data sets. Change to 0 for now so both H2O and R use them the 
 # same way
 def file_clean_for_R(csvPathname1, csvPathname2):
-        infile = open(csvPathname1, 'r')
-        outfile = open(csvPathname2,'w') # existing file gets erased
-        for line in infile.readlines():
-            # 1) remove comments and header???
-            if not line.startswith('#') and not re.match('[A-Za-z]+',line):
-                # 2) remove various lineends and whitespace (leading and trailing)..make it unix linend
-                line = line.strip(" \n\r") + "\n"
-                # 3) change spaces to comma (don't worry about spaces in enums..don't have them for now)
-                line = re.sub(r' +',r',',line)
-                # 4) change "." fields to 0
-                line = re.sub(',\.,',',0,',line) # middle of line
-                line = re.sub('^\.,','0,',line)  # beginning of line
-                line = re.sub(',\.$',',0',line)  # end of line
-                outfile.write(line)
-        infile.close()
-        outfile.close()
-        print "\n" + csvPathname1 + " cleaned for R to " + csvPathname2
+    infile = open(csvPathname1, 'r')
+    outfile = open(csvPathname2,'w') # existing file gets erased
+    for line in infile.readlines():
+        # 1) remove comments and header???
+        if not line.startswith('#') and not re.match('[A-Za-z]+',line):
+            # 2) remove various lineends and whitespace (leading and trailing)..make it unix linend
+            line = line.strip(" \n\r") + "\n"
+            # 3) change spaces to comma (don't worry about spaces in enums..don't have them for now)
+            line = re.sub(r' +',r',',line)
+            # 4) change "." fields to 0
+            line = re.sub(',\.,',',0,',line) # middle of line
+            line = re.sub('^\.,','0,',line)  # beginning of line
+            line = re.sub(',\.$',',0',line)  # end of line
+            outfile.write(line)
+    infile.close()
+    outfile.close()
+    print "\n" + csvPathname1 + " cleaned for R to " + csvPathname2
 
 
 # this might be slightly pessimistic, but should be superset
@@ -136,7 +136,7 @@ def might_h2o_think_number_or_whitespace(token):
         [\s\$\%]*     # begin, white space or empty space. any number of leading % or $ too
         [+-]?    # plus or minus. maybe h2o matches multiple?
         ([0-9]*\.[0-9]*)?  # decimal point focused. optional whole and fractional digits. h2o thinks whole thing optional?
-        ([eE][-+]?[0-9]*)? # optional exponent. A single e matches (incorrectly)
+        ([eE][-+]?[0-9]+)? # optional exponent. A single e matches (incorrectly)
         (\s*\[\% ]*)? # can have zero or more percent. Percent can have a space?
         [\s\$\%]*$     # white space or empty space, any number of trailing % or $ too. end
         """, re.VERBOSE)
@@ -147,7 +147,7 @@ def might_h2o_think_number_or_whitespace(token):
         [+-]?    # plus or minus. maybe h2o matches multiple?
         ([0-9]+)? # one or more digits. h2o thinks whole thing optional
         (\.[0-9]*)? # optional decimal point and fractional digits
-        ([eE][-+]?[0-9]*)? # optional exponent. a single e matches (incorrectly)
+        ([eE][-+]?[0-9]+)? # optional exponent. a single e matches (incorrectly)
         (\s*\[\% ]*)? # can have zero or more percent. Percent can have a space?
         [\s\$\%]*$     # white space or empty space, any number of trailing % or $ too. end
         """, re.VERBOSE)
