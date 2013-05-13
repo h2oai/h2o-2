@@ -82,7 +82,7 @@ public class Hadoop {
           String port = context.getConfiguration().get(PORT_KEY);
           for( String host : context.getConfiguration().get(HOSTS_KEY).split(",") )
             hosts += host + ":" + port + '\n';
-          File flat = Utils.tempFile(hosts);
+          File flat = Utils.writeFile(hosts);
           Boot.main(new String[] { "-name", "hadoop", "-port", port, "-flatfile", flat.getAbsolutePath() });
           Class script = Boot._init.loadClass(Script.class.getName());
           for( ;; ) {

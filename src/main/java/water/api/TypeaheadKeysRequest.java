@@ -1,16 +1,19 @@
 package water.api;
 
 import hex.DGLM.GLMModel;
+import hex.KMeansModel;
 import hex.rf.RFModel;
-import hex.KMeans.KMeansModel;
+
 import java.util.Arrays;
+
 import water.*;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonPrimitive;
 
 public class TypeaheadKeysRequest extends TypeaheadRequest {
   final int _typeid;            // Also filter for Keys of this type
-  public TypeaheadKeysRequest(String msg, String filter, Class C) { 
+  public TypeaheadKeysRequest(String msg, String filter, Class C) {
     super(msg, filter);
     _typeid = C==null ? 0 : TypeMap.onLoad(C.getName());
   }

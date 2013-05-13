@@ -33,7 +33,7 @@ public class Cloud {
     Host master = new Host(_publicIPs[0]);
     includes = (String[]) ArrayUtils.addAll(Host.defaultIncludes(), includes);
     excludes = (String[]) ArrayUtils.addAll(Host.defaultExcludes(), excludes);
-    File flatfile = Utils.tempFile(Utils.join('\n', _privateIPs));
+    File flatfile = Utils.writeFile(Utils.join('\n', _privateIPs));
     includes = (String[]) ArrayUtils.add(includes, flatfile.getAbsolutePath());
     master.rsync(includes, excludes);
 
@@ -66,7 +66,7 @@ public class Cloud {
       s = s.replace("\\", "\\\\").replace("$", "\\$");
       ArrayList<String> list = new ArrayList<String>();
       // Have to copy to file for cygwin, but works also on -nix
-      File sh = Utils.tempFile(s);
+      File sh = Utils.writeFile(s);
       File onWindows = new File("C:/cygwin/bin/bash.exe");
       if( onWindows.exists() ) {
         list.add(onWindows.getPath());

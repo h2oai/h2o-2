@@ -15,7 +15,7 @@ public class Sandbox {
         + "b=parse(destination_key='covtype.hex', source_key='covtype.20k.data')\n" //
         + "c=kmeans(k='3', destination_key='covtype.kmeans', source_key='covtype.hex', cols='0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54', epsilon='1.0E-2')\n";
 
-    Shell.run(new String[] { "-f", Utils.tempFile(r).getAbsolutePath(), "--interactive" });
+    Shell.run(new String[] { "-f", Utils.writeFile(r).getAbsolutePath(), "--interactive" });
 
     // File f = new File("smalldata/gaussian/sdss174052.csv.gz");
     // File f = new File("smalldata/covtype/covtype.20k.data");
@@ -49,7 +49,7 @@ public class Sandbox {
     String flat = "";
     for( int i = 0; i < nodes; i++ )
       flat += ip + ":" + (port + i * 2) + '\n';
-    String flatfile = Utils.tempFile(flat).getAbsolutePath();
+    String flatfile = Utils.writeFile(flat).getAbsolutePath();
     for( int i = 1; i < nodes; i++ ) {
       String[] a = args(args, ip, (port + i * 2), flatfile);
       Node worker = inProcess ? new NodeCL(a) : new NodeVM(a);
@@ -66,7 +66,7 @@ public class Sandbox {
     String flat = local + ":" + port + '\n';
     for( int i = 0; i < workers.length; i++ )
       flat += workers[i] + ":" + port + '\n';
-    String flatfile = Utils.tempFile(flat).getAbsolutePath();
+    String flatfile = Utils.writeFile(flat).getAbsolutePath();
     for( int i = 0; i < 0; i++ ) {
       Host host = new Host("192.168.1.15" + (i + 1));
       Node worker = new NodeHost(host, args(args, host.address(), port, flatfile));

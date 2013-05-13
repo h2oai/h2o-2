@@ -1,6 +1,6 @@
 package water.api;
 
-import hex.KMeans.KMeansModel;
+import hex.KMeansModel;
 import water.*;
 import water.util.RString;
 
@@ -44,7 +44,7 @@ public class KMeansApply extends Request {
       KMeansModel model = _modelKey.value();
       ValueArray data = _dataKey.value();
       Key dest = _dest.value();
-      Job job = hex.KMeans.KMeansApply.run(dest, model, data);
+      Job job = KMeansModel.KMeansApply.run(dest, model, data);
       JsonObject response = new JsonObject();
       response.addProperty(RequestStatics.DEST_KEY, _dest.value().toString());
       return Progress.redirect(response, job._self, _dest.value());
