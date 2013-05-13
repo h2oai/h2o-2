@@ -24,7 +24,6 @@ class Basic(unittest.TestCase):
         # just do the import folder once
         # importFolderPath = "/home/hduser/hdfs_datasets"
         importFolderPath = '/home/0xdiag/datasets'
-        h2i.setupImportFolder(None, importFolderPath)
 
         print "This imports a folder of csv files..i.e points to syn_datasets with no regex"
         print "Doesn't put anything in syn_datasets. When run with import folder redirected"
@@ -53,6 +52,8 @@ class Basic(unittest.TestCase):
         ### h2b.browseTheCloud()
 
         for csvFilename in csvFilenameList:
+            # have to import each time, because h2o deletes source after parse
+            h2i.setupImportFolder(None, importFolderPath)
             # creates csvFilename.hex from file in importFolder dir 
             parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2="syn_datasets.hex",
                 timeoutSecs=500)

@@ -1,11 +1,11 @@
 package water.parser;
 
-import java.io.IOException;
 import java.util.*;
 
 import water.*;
 import water.ValueArray.Column;
 import water.parser.ParseDataset.FileInfo;
+import water.util.Log;
 
 /** Class responsible for actual parsing of the datasets.
  *
@@ -324,11 +324,11 @@ public class DParseTask extends MRTask {
         // XLS parsing is not distributed, just obtain the value stream and run the parser
         try{
           XlsParser p = new XlsParser(this);
-          System.out.println("parsing " + _sourceDataset._key);
+          Log.info("parsing ", _sourceDataset._key);
           p.parse(_sourceDataset._key);
           --_myrows; // do not count the header
           _numRows = _myrows;
-        } catch(Exception e){throw new RuntimeException(e);}
+        } catch(Exception e){ throw new RuntimeException(e); }
         break;
       case XLSX:
         // XLS parsing is not distributed, just obtain the value stream and

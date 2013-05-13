@@ -1268,7 +1268,9 @@ public class RequestArguments extends RequestStatics {
 
     @Override
     public String[] selectValues(){
-      if(_key.value() == null || _classCol.value() == null || _key.value()._cols[_classCol.value()]._domain == null)
+      ValueArray va = _key.value();
+      Integer cc = _classCol.value();
+      if( va == null ||  cc == null || va._cols[cc]._domain == null )
         return super.selectValues();
       return new String[]{CaseMode.eq.toString(), CaseMode.neq.toString()};
     }

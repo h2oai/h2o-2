@@ -1,7 +1,8 @@
 package water;
 
-import water.util.Log;
 import javassist.*;
+import water.util.Log;
+import water.util.Log.Tag.Sys;
 
 public class Weaver {
   private final ClassPool _pool;
@@ -110,9 +111,7 @@ public class Weaver {
       try {
         cc.addMethod(CtNewMethod.make(body,cc));
       } catch( CannotCompileException ce ) {
-        System.out.println("--- Compilation failure while compiler raw_enum for "+cc.getName());
-        System.out.println(body);
-        System.out.println("------");
+        Log.warn(Sys.WATER,"--- Compilation failure while compiler raw_enum for "+cc.getName()+"\n"+body+"\n------",ce);
         throw ce;
       }
   }
@@ -255,16 +254,13 @@ public class Weaver {
     sb.append(trailer);
     String body = sb.toString();
     if( debug_print ) {
-      System.out.println(cc.getName()+" "+body);
+      Log.debug(cc.getName()+" "+body);
     }
 
     try {
       cc.addMethod(CtNewMethod.make(body,cc));
     } catch( CannotCompileException e ) {
-      System.out.println("--- Compilation failure while compiler serializers for "+cc.getName());
-      System.out.println(body);
-      System.out.println("------");
-      throw Log.err(e);
+      throw Log.err("--- Compilation failure while compiler serializers for "+cc.getName()+"\n"+body+"\n-----",e);
     }
   }
 

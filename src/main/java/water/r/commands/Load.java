@@ -13,25 +13,17 @@ import water.TestUtil;
 import water.util.Log;
 
 public class Load implements Invokable {
-  @Override public String name() {
-    return "load";
-  }
+  public String name() { return "load"; }
 
-  @Override public String[] parameters() {
-    return new String[] { "uri" };
-  }
+  public String[] parameters() { return new String[] { "uri" }; }
 
-  @Override public String[] requiredParameters() {
-    return new String[] { "uri" };
-  }
+  public String[] requiredParameters() { return new String[] { "uri" }; }
 
-  @Override public RAny invoke(ArgumentInfo ai, RAny[] args) {
+  public RAny invoke(ArgumentInfo ai, RAny[] args) {
     URI uri;
     try {
       uri = new URI(Interop.asString(args[0]));
-    } catch( URISyntaxException e ) {
-      throw Log.errRTExcept(e);
-    }
+    } catch( URISyntaxException e ) {  throw Log.errRTExcept(e);  }
     if( uri.getScheme() == null || uri.getScheme().equals("file") ) {
       File f = new File(uri.getPath());
       return Interop.asRString(TestUtil.load_test_file(f, f.getName()).toString());

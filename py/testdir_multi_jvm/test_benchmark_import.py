@@ -42,14 +42,15 @@ class Basic(unittest.TestCase):
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
                 # this should hit the "more" files too?
-                ("*.dat.gz", "file_1200.dat.gz", 1200 * avgMichalSize, 3600),
                 # ("*.dat.gz", "file_200.dat.gz", 1200 * avgMichalSize, 1800),
                 # ("*.dat.gz", "file_200.dat.gz", 1200 * avgMichalSize, 1800),
                 # ("*[1][0-2][0-9].dat.gz", "file_30.dat.gz", 50 * avgMichalSize, 1800), 
-                ("*[1][0-3][0-9].dat.gz", "file_40.dat.gz", 50 * avgMichalSize, 1800), 
-                ("*[1][0-4][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize, 1800), 
-                # ("*[1][0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 1800), 
-                # ("*[12][0-9][0-9].dat.gz", "file_200.dat.gz", 200 * avgMichalSize, 1800), 
+                ("*file_[0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 1800), 
+                ("*file_[12][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 1800), 
+                ("*file_[34][0-9][0-9].dat.gz", "file_200_B.dat.gz", 200 * avgMichalSize, 1800), 
+                ("*file_[56][0-9][0-9].dat.gz", "file_200_C.dat.gz", 200 * avgMichalSize, 1800), 
+                ("*file_[78][0-9][0-9].dat.gz", "file_200_D.dat.gz", 200 * avgMichalSize, 1800), 
+                # ("*.dat.gz", "file_1200.dat.gz", 1200 * avgMichalSize, 3600),
             ]
 
         if 1==1:
@@ -74,7 +75,6 @@ class Basic(unittest.TestCase):
                 ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
                 ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
                 ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
-                ("*[1-8][0-9][0-9].dat.gz", "file_800.dat.gz", 800 * avgMichalSize, 3600),
             ]
 
         if 1==0:
@@ -168,7 +168,8 @@ class Basic(unittest.TestCase):
         # benchmarkLogging = None
         benchmarkLogging = ['cpu','disk', 'network', 'iostats', 'jstack']
         benchmarkLogging = ['cpu','disk', 'network', 'iostats']
-        # benchmarkLogging = ['cpu', 'disk' 'network']
+        # IOStatus can hang?
+        benchmarkLogging = ['cpu', 'disk' 'network']
         pollTimeoutSecs = 120
         retryDelaySecs = 10
 
@@ -191,7 +192,7 @@ class Basic(unittest.TestCase):
                     enable_benchmark_log=True)
 
             else:
-                h2o_hosts.build_cloud_with_hosts(2, java_heap_GB=tryHeap/2, base_port=base_port, 
+                h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap/2, base_port=base_port, 
                     # java_extra_args=jea,
                     enable_benchmark_log=True)
 
