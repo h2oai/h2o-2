@@ -3,7 +3,7 @@ package water.api;
 import water.DKV;
 import water.Key;
 import water.ValueArray;
-import water.exec.EvaluationException;
+import water.exec.PositionedException;
 import water.util.Log;
 
 public class Exec extends Request {
@@ -20,7 +20,7 @@ public class Exec extends Request {
       Response r = new Inspect(k).serveValueArray(va);
       if( _safe.value() ) r.escapeIllegalJsonElements();
       return r;
-    } catch( EvaluationException e ) {
+    } catch( PositionedException e ) {
       // No logging user typo's
       return Response.error(e.getMessage());
     } catch( Exception e ) {
