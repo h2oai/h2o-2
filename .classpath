@@ -31,6 +31,6 @@
 	<classpathentry kind="lib" path="lib/fastr/antlr-runtime-3.5.jar"/>
 	<classpathentry kind="lib" path="lib/fastr/arpack_combined_all.jar"/>
 	<classpathentry kind="lib" path="lib/fastr/netlib-java-0.9.3.jar"/>
-	<classpathentry kind="lib" path="lib/fastr/r.jar"/>
+	<classpathentry kind="lib" path="lib/fastr/r.jar" sourcepath="lib/fastr/r-sources.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

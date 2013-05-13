@@ -98,6 +98,7 @@ public class Constants {
   public static final String NODE                  = "node";
   public static final String NODE_NAME             = "node_name";
   public static final String NODES                 = "nodes";
+  public static final String NORMALIZE             = "normalize";
   public static final String NUM_COLS              = "num_cols";
   public static final String NUM_CPUS              = "num_cpus";
   public static final String NUM_KEYS              = "num_keys";

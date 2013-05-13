@@ -1,7 +1,7 @@
 package water.api;
 
 import hex.DGLM.GLMModel;
-import hex.KMeans.KMeansModel;
+import hex.KMeansModel;
 import hex.rf.RFModel;
 
 import java.io.IOException;

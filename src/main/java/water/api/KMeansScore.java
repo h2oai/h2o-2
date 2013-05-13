@@ -1,6 +1,6 @@
 package water.api;
 
-import hex.KMeans.KMeansModel;
+import hex.KMeansModel;
 import water.*;
 import water.util.RString;
 
@@ -43,7 +43,7 @@ public class KMeansScore extends Request {
       JsonObject res = new JsonObject();
       ValueArray ary = _dataKey.value();
       KMeansModel m = _modelKey.value();
-      hex.KMeans.KMeansScore kms = hex.KMeans.KMeansScore.score(m, ary);
+      KMeansModel.KMeansScore kms = KMeansModel.KMeansScore.score(m, ary);
       res.add("score", kms.toJson());
       return Response.done(res);
     } catch( Error e ) {

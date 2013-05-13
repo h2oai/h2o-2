@@ -4,7 +4,7 @@ import hex.DGLM.CaseMode;
 import hex.DGLM.Family;
 import hex.DGLM.GLMModel;
 import hex.DGLM.Link;
-import hex.KMeans.KMeansModel;
+import hex.*;
 import hex.rf.Confusion;
 import hex.rf.RFModel;
 
@@ -13,7 +13,8 @@ import java.util.*;
 
 import water.*;
 import water.ValueArray.Column;
-import water.util.*;
+import water.util.Check;
+import water.util.RString;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Throwables;
@@ -1000,15 +1001,16 @@ public class RequestArguments extends RequestStatics {
         if(to == from) return new double[]{from};
         if(to < from)throw new IllegalArgumentException("Value "+input+" is not a valid number sequence.");
         if(step == 0)throw new IllegalArgumentException("Value "+input+" is not a valid number sequence.");
-        int n = mul
-          ? (int)((Math.log(to) - Math.log(from))/Math.log(step))
-          : (int)((         to  -          from )/         step );
-        double [] res = new double[n];
-        for( int i = 0; i < n; ++i ) {
-          res[i] = from;
+        // make sure we have format from < to
+
+        double [] res = new double[1024];
+        int i = 0;
+        while(from <= to){
+          res[i++] = from;
+          if(i == res.length)res = Arrays.copyOf(res, res.length + Math.max(1, res.length >> 1));
           if( mul) from *= step; else from += step;
         }
-        return res;
+        return Arrays.copyOf(res,i);
       } else if( str.contains(",") ) {
         String [] parts = str.split(",");
         double [] res = new double[parts.length];
@@ -1267,7 +1269,9 @@ public class RequestArguments extends RequestStatics {
 
     @Override
     public String[] selectValues(){
-      if(_key.value() == null || _classCol.value() == null || _key.value()._cols[_classCol.value()]._domain == null)
+      ValueArray va = _key.value();
+      Integer cc = _classCol.value();
+      if( va == null ||  cc == null || va._cols[cc]._domain == null )
         return super.selectValues();
       return new String[]{CaseMode.eq.toString(), CaseMode.neq.toString()};
     }
