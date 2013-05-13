@@ -140,8 +140,10 @@ public abstract class Request extends RequestBuilders {
     try {
       _htmlTemplate = new String(ByteStreams.toByteArray(resource)).replace("%cloud_name",H2O.NAME);
     } catch (NullPointerException e) {
-      Log.err(e);
-      Log.die("page.html not found in resources.");
+      if(!Log._dontDie) {
+        Log.err(e);
+        Log.die("page.html not found in resources.");
+      }
     } catch (Exception e) {
       Log.err(e);
       Log.die(e.getMessage());

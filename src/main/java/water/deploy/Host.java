@@ -93,7 +93,7 @@ public class Host {
       args.addAll(Arrays.asList(includes));
 
       // --exclude seems ignored on Linux (?) so use --exclude-from
-      File file = Utils.tempFile(Utils.join('\n', excludes));
+      File file = Utils.writeFile(Utils.join('\n', excludes));
       args.add("--exclude-from");
       args.add(file.getAbsolutePath());
 

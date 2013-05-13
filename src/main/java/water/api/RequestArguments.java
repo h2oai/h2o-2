@@ -4,7 +4,7 @@ import hex.DGLM.CaseMode;
 import hex.DGLM.Family;
 import hex.DGLM.GLMModel;
 import hex.DGLM.Link;
-import hex.KMeans.KMeansModel;
+import hex.*;
 import hex.rf.Confusion;
 import hex.rf.RFModel;
 
@@ -13,7 +13,8 @@ import java.util.*;
 
 import water.*;
 import water.ValueArray.Column;
-import water.util.*;
+import water.util.Check;
+import water.util.RString;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Throwables;
