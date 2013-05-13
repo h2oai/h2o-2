@@ -6,12 +6,10 @@ sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util
 RANDOM_LENGTH = False
-ENUM_SIZE = random.randint(2,8)
-ENUM_SIZE = 2
+ENUM_SIZE = random.randint(2,7)
 ### ENUM_SIZE = 4
 # just randomly pick the row and col cases.
 COL_SEP_HIVE = random.randint(0,1) == 1
-COL_SEP_HIVE = 0
 ## COL_SEP_HIVE = False # comma
 
 # details:
