@@ -12,7 +12,7 @@ def define_params():
         'thresholds': [0.1, 0.5, 0.7, 0.9],
         'lambda': [1e-8, 1e-4],
         'alpha': [0,0.5,0.75],
-        'beta_epsilon': [None, 0.0001],
+        'beta_eps': [None, 0.0001],
         'case': [1,2,3,4,5,6,7],
         # inverse and log causing problems
         # 'link': [None, 'logit','identity', 'log', 'inverse'],

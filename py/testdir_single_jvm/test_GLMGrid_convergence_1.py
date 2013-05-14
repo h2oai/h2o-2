@@ -96,7 +96,7 @@ class Basic(unittest.TestCase):
                     'weight': 1.0,
                     'link': 'familyDefault',
                     'n_folds': 2,
-                    'beta_epsilon': 1e-4,
+                    'beta_eps': 1e-4,
                     #***********
                     'lambda': '1e-8:1e-3:1e2',
                     'alpha': '0,0.5,.75',

@@ -18,7 +18,7 @@ def define_params():
         # 'lambda': [1e-8, 1e-4],
         # 'alpha': [0,0.5,0.75],
         # don't use defaults? they have issues?
-        'beta_epsilon': [0.001, 0.0001],
+        'beta_eps': [0.001, 0.0001],
         # case_mode not used for poisson?
         # inverse and log causing problems
         # 'link': [None, 'logit','identity', 'log', 'inverse'],
@@ -81,7 +81,7 @@ class Basic(unittest.TestCase):
                 'alpha': 0, 
                 # seems we always need a little regularization
                 'lambda': 1e-4,
-                'beta_epsilon': 0.001, 
+                'beta_eps': 0.001, 
                 'max_iter': 8
                 }
 

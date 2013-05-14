@@ -20,7 +20,7 @@ def define_params():
         # Update: None is a problem with 'fail to converge'
         'lambda': [0, 1e-8, 1e-4],
         'alpha': [0,0.2,0.8],
-        'beta_epsilon': [None, 0.0001],
+        'beta_eps': [None, 0.0001],
         # can't use < or <= case_mode if 1!
         # same with > or > if 7
         # maybe don't use 7 because of low frequency in dataset (think xval sampling)
