@@ -1112,13 +1112,14 @@ class H2O(object):
 
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict = { 
+            'parallel': 1,
             'family': 'binomial',
             'key': key,
             'y': 1,
             'link': 'familyDefault'
         }
         params_dict.update(kwargs)
-        print "\nGLM params list", params_dict
+        print "\n"+parentName, "params list", params_dict
 
         a = self.__check_request(requests.get(
             self.__url(parentName + '.json'),

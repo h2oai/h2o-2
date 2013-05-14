@@ -80,7 +80,7 @@ class Basic(unittest.TestCase):
                 'link': 'familyDefault',
                 'n_folds': 1,
                 'max_iter': 8,
-                'beta_epsilon': 1e-3
+                'beta_eps': 1e-3
                 }
 
             timeoutSecs = 500

@@ -11,7 +11,7 @@ def define_params():
         'lambda': [0, 1e-4],
         'alpha': [0,0.5,0.75],
         # new?
-        'beta_epsilon': [None, 0.0001],
+        'beta_eps': [None, 0.0001],
         # too many problems with case=7
         'case': [1,2,3,4,5,6],
         # inverse and log causing problems

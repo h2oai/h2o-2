@@ -96,7 +96,7 @@ class Basic(unittest.TestCase):
                     # what about these?
                     # 'link': [None, 'logit','identity', 'log', 'inverse'],
                     'n_folds': 0,
-                    'beta_epsilon': 1e-4,
+                    'beta_eps': 1e-4,
                     'thresholds': '0:1:0.01',
                     }
 

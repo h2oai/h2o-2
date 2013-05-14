@@ -81,7 +81,7 @@ class Basic(unittest.TestCase):
                 'link': 'logit',
                 'n_folds': 2,
                 'max_iter': 8,
-                'beta_epsilon': 1e-3}
+                'beta_eps': 1e-3}
 
             timeoutSecs = 500
             # L2 
