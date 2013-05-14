@@ -765,7 +765,10 @@ class H2O(object):
             # noise_json should be like "Storeview"
             (noise_json, noiseParams) = noise
             noiseUrl = self.__url(noise_json + ".json")
-            noiseParamsStr =  '&'.join(['%s=%s' % (k,v) for (k,v) in noiseParams.items()])
+            if noiseParams is None:
+                noiseParamsStr = ""
+            else:
+                noiseParamsStr =  '&'.join(['%s=%s' % (k,v) for (k,v) in noiseParams.items()])
 
         status = 'poll'
         r = {} # response
