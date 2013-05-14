@@ -253,10 +253,10 @@ class Basic(unittest.TestCase):
                         else:
                             algo = 'GLMGrid'
                             GLMkwargs = {'x': x, 'y': 378, 'case': 15, 'case_mode': '>', 'family': 'binomial',
-                                'max_iter': 10, 'n_folds': 2, 'beta_epsilon': 1e-4,
-                                'lambda': '1e-8:1e3:100',
-                                'alpha': '0,0.5,1',
-                                'thresholds': '0:1:0.01'
+                                'max_iter': 10, 'n_folds': 1, 'beta_epsilon': 1e-4,
+                                'lambda': '1e-4',
+                                'alpha': '0,0.5',
+                                'thresholds': '0.5'
                                 }
                             start = time.time()
                             glm = h2o_cmd.runGLMGridOnly(parseKey=parseKey,
