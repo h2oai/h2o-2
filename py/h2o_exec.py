@@ -94,7 +94,8 @@ def fill_in_expr_template(exprTemplate, colX, n, row, key2):
 def exec_expr(node, execExpr, resultKey="Result.hex", timeoutSecs=10):
     start = time.time()
     # FIX! Exec has 'escape_nan' arg now. should we test?
-    resultExec = h2o_cmd.runExecOnly(node, expression=execExpr, timeoutSecs=timeoutSecs, escape_nan=0)
+    # 5/14/13 removed escape_nan=0
+    resultExec = h2o_cmd.runExecOnly(node, expression=execExpr, timeoutSecs=timeoutSecs)
     h2o.verboseprint(resultExec)
     h2o.verboseprint('exec took', time.time() - start, 'seconds')
     ### print 'exec took', time.time() - start, 'seconds'
