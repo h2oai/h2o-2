@@ -92,7 +92,7 @@ class GLM_twovalues(unittest.TestCase):
 
             start = time.time()
             key = csvFilename + "_" + str(trial)
-            kwargs = {'case': case, 'y': 10, 'family': 'binomial', 'alpha': 0, 'beta_epsilon': 0.0002}
+            kwargs = {'case': case, 'y': 10, 'family': 'binomial', 'alpha': 0, 'beta_eps': 0.0002}
 
             # default takes 39 iterations? play with alpha/beta
             glm = h2o_cmd.runGLM(csvPathname=csvPathname, key=key)

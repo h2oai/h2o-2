@@ -51,7 +51,7 @@ paramDict = {
     'weight': [1.0],
     'thresholds': [0.5],
     'n_folds': [0],
-    'beta_epsilon': [1.0E-4],
+    'beta_eps': [1.0E-4],
     }
 
 class test_GLM_prob_cols_4(unittest.TestCase):
