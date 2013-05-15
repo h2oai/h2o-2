@@ -136,10 +136,15 @@ def might_h2o_think_number_or_whitespace(token):
         [\s\$\%]*     # begin, white space or empty space. any number of leading % or $ too
         [+-]?    # plus or minus. maybe h2o matches multiple?
         ([0-9]*\.[0-9]*)?  # decimal point focused. optional whole and fractional digits. h2o thinks whole thing optional?
-        ([eE][-+]?[0-9]+)? # optional exponent. A single e matches (incorrectly)
+        ([eE][-+]*[0-9]+)? # optional exponent. A single e matches (incorrectly) apparently repeated +- after the e doesn't matter
         (\s*\[\% ]*)? # can have zero or more percent. Percent can have a space?
         [\s\$\%]*$     # white space or empty space, any number of trailing % or $ too. end
         """, re.VERBOSE)
+
+
+    # apparently these get detected as number
+    # +e+++10
+    # +e---10
 
     # this matches white space? makes all white space count as number?
     number2Regex = re.compile(r"""
@@ -147,7 +152,7 @@ def might_h2o_think_number_or_whitespace(token):
         [+-]?    # plus or minus. maybe h2o matches multiple?
         ([0-9]+)? # one or more digits. h2o thinks whole thing optional
         (\.[0-9]*)? # optional decimal point and fractional digits
-        ([eE][-+]?[0-9]+)? # optional exponent. a single e matches (incorrectly)
+        ([eE][-+]*[0-9]+)? # optional exponent. a single e matches (incorrectly) apparently repeated +- after the e doesn't matter
         (\s*\[\% ]*)? # can have zero or more percent. Percent can have a space?
         [\s\$\%]*$     # white space or empty space, any number of trailing % or $ too. end
         """, re.VERBOSE)
