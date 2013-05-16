@@ -6,12 +6,8 @@ import java.net.URL;
 import java.util.List;
 
 import water.*;
-import water.api.Inspect;
-import water.parser.CsvParser;
-import water.parser.ParseDataset;
 import water.store.s3.PersistS3;
 import water.util.FileIntegrityChecker;
-import water.util.Log;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
@@ -60,27 +56,9 @@ public abstract class URI {
 
   public abstract ValueArray get() throws IOException;
 
-  protected ValueArray parse(Key hKey) {
-    Value v = DKV.get(hKey);
-    byte separator = CsvParser.NO_SEPARATOR;
-    CsvParser.Setup setup = Inspect.csvGuessValue(v, separator);
-    if( setup._data == null || setup._data[0].length == 0 ) throw new IllegalArgumentException(
-        "I cannot figure out this file; I only handle common CSV formats: " + hKey);
-    Key dest = Key.make(hKey + ".hex");
-    try {
-      Job job = ParseDataset.forkParseDataset(dest, new Key[] { hKey }, setup);
-      return job.get();
-    } catch( IllegalArgumentException e ) {
-      throw Log.errRTExcept(e);
-    } catch( Error e ) {
-      throw Log.errRTExcept(e);
-    }
-  }
-
 }
 
 class File extends URI {
-  String bucket;
 
   File(String p) throws FormatError {
     path = p;
@@ -91,12 +69,9 @@ class File extends URI {
     Futures fs = new Futures();
     Key k = c.importFile(0, fs);
     fs.blockForPending();
-    Key okey = Key.make(path + ".hex");
-    ParseDataset.forkParseDataset(okey, new Key[] { k }, null).get();
-    UKV.remove(k);
-    return DKV.get(okey).<ValueArray> get();
+    return DKV.get(k).<ValueArray> get();
   }
-
+  public String toString() { return path; }
 }
 
 class S3 extends URI {
@@ -115,9 +90,10 @@ class S3 extends URI {
     List<S3ObjectSummary> l = s3.listObjects(bucket, path).getObjectSummaries();
     assert l.size() == 1;
     S3ObjectSummary obj = l.get(0);
-    Key hKey = PersistS3.loadKey(obj);
-    return parse(hKey);
+    Key k = PersistS3.loadKey(obj);
+    return  DKV.get(k).<ValueArray> get();
   }
+  public String toString() { return "s3://"+bucket+"/"+path; }
 
 }
 
@@ -125,6 +101,8 @@ class S3n extends S3 {
   S3n(String p) throws FormatError {
     super(p);
   }
+  public String toString() { return "s3n://"+bucket+"/"+path; }
+
 }
 
 class Http extends URI {
@@ -140,6 +118,8 @@ class Http extends URI {
     InputStream s = url.openStream();
     if( s == null ) throw new FormatError("argh");
     ValueArray.readPut(k, s);
-    return parse(k);
+    return  DKV.get(k).<ValueArray> get();
   }
+
+  public String toString() { return "http://"+path; }
 }
