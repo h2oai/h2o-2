@@ -11,61 +11,75 @@ import water.parser.CsvParser;
 import water.parser.ParseDataset;
 
 /**
- * The R version of parsing.
+ * The R version of parse.
  *
- * The parse command is currently designed to be blocking and to do both import and parse at the
- * same time.
+ * The parse command is currently blocking; in the future we will support a non-blocking version
+ * by return a result object that may contain a future.
+ *
+ * The command does both import and parse.
  */
 public class Parse implements Invokable {
+
+  /** The name of the R command. */
   public String name() {
     return "h2o.parse";
   }
 
+  /** Function called from R to perform the parse. */
   @Override public RAny invoke(ArgumentInfo ai, RAny[] args) {
     throw new RuntimeException("TODO Auto-generated method stub");
   }
 
+  private static final String[] params = new String[] { "files" };
+
+  /** List of required parameters */
   @Override public String[] requiredParameters() {
-    throw new RuntimeException("TODO Auto-generated method stub");
+    return params;
   }
 
+  /** List of all parameters. */
   @Override public String[] parameters() {
-    throw new RuntimeException("TODO Auto-generated method stub");
+    return params;
   }
 
+  /** Arguments passed to the command. */
   static public class Arg extends Arguments.Opt {
-    URI[] names = new URI[] {};
+    /* List of file names to parse. */
+    URI[] files = new URI[] {};
   }
 
+  /** Return a fresh argument objects with default values. */
   static public Arg defaultArg() {
     return new Arg();
   }
 
+  /** Return value of the command. */
   static public class Res extends Arguments.Opt {
-    /* The result of the parse; null if an error occured */
+    /* The result of the parse; null if an error occurred */
     ValueArray result;
     /* An error recording why the parse failed. */
     Throwable error;
   }
 
+  /** Return a fresh return value object. */
   static public Res defaultRes() {
     return new Res();
   }
 
   /**
-   * The execute method does the work. Eventually it will have to take all the parse arguments. But
-   * right now it is at its simplest.
+   * This method does the work of the command. Exceptions related to the execution of the command
+   * are returned in the result object.
    */
   Res execute(Arg arg) {
     Res res = defaultRes();
-    if( arg.names.length == 0 ) {
+    if( arg.files.length == 0 ) {
       res.error = new URI.FormatError("no files");
       return res;
     }
-    Key[] ks = new Key[arg.names.length];
+    Key[] ks = new Key[arg.files.length];
     for( int i = 0; i < ks.length; i++ ) {
       try {
-        ks[i] = arg.names[i].get().getKey();
+        ks[i] = arg.files[i].get().getKey();
       } catch( IOException e ) {
         res.error = e;
         return res;
@@ -75,7 +89,7 @@ public class Parse implements Invokable {
     byte separator = CsvParser.NO_SEPARATOR;
     CsvParser.Setup setup = Inspect.csvGuessValue(v, separator);
     if( setup._data == null || setup._data[0].length == 0 ) res.error = new IllegalArgumentException(
-        "I cannot figure out this file; I only handle common CSV formats: " + arg.names[0]);
+        "I cannot figure out this file; I only handle common CSV formats: " + arg.files[0]);
     Key dest = Key.make(ks[0] + ".hex");
     try {
       Job job = ParseDataset.forkParseDataset(dest, ks, setup);
