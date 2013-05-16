@@ -13,15 +13,15 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 
 /**
- * WORK IN PROGRESS.
- *
- * The URI class represents a file name that we can import. We support a bunch and do a modicum of
- * sanity checking. We could do more.
- *
- * THIS CODE IS PROBABLY WRONG AND WILL CHANGE
+ * The URI class represents a file name that we can import in h2o. We support a number of different
+ * sources (files, s3, hdfs, URL) and do a little sanity checking. Error thrown by this file are not
+ * logged here. They will be caught by clients of this class and reported to users in whatever way
+ * the client see fit. (For instance, in the R Shell, errors will not terminate the shell, they will
+ * be printed on the console.)
  */
 public abstract class URI {
 
+  /** The string identifying the file (without source) */
   String path;
 
   public static URI make(String s) throws FormatError {
@@ -48,15 +48,19 @@ public abstract class URI {
     else return res;
   }
 
+  /** Malformed URIs throw this error. **/
   public static class FormatError extends Error {
     FormatError(String s) {
       super(s);
     }
   }
 
+  /** Load the file into memory and return a ValueArray object. */
   public abstract ValueArray get() throws IOException;
 
 }
+
+// ====  The following types are not exposed to clients.
 
 class File extends URI {
 
@@ -71,7 +75,10 @@ class File extends URI {
     fs.blockForPending();
     return DKV.get(k).<ValueArray> get();
   }
-  public String toString() { return path; }
+
+  public String toString() {
+    return path;
+  }
 }
 
 class S3 extends URI {
@@ -91,9 +98,12 @@ class S3 extends URI {
     assert l.size() == 1;
     S3ObjectSummary obj = l.get(0);
     Key k = PersistS3.loadKey(obj);
-    return  DKV.get(k).<ValueArray> get();
+    return DKV.get(k).<ValueArray> get();
   }
-  public String toString() { return "s3://"+bucket+"/"+path; }
+
+  public String toString() {
+    return "s3://" + bucket + "/" + path;
+  }
 
 }
 
@@ -101,7 +111,10 @@ class S3n extends S3 {
   S3n(String p) throws FormatError {
     super(p);
   }
-  public String toString() { return "s3n://"+bucket+"/"+path; }
+
+  public String toString() {
+    return "s3n://" + bucket + "/" + path;
+  }
 
 }
 
@@ -118,8 +131,10 @@ class Http extends URI {
     InputStream s = url.openStream();
     if( s == null ) throw new FormatError("argh");
     ValueArray.readPut(k, s);
-    return  DKV.get(k).<ValueArray> get();
+    return DKV.get(k).<ValueArray> get();
   }
 
-  public String toString() { return "http://"+path; }
+  public String toString() {
+    return "http://" + path;
+  }
 }

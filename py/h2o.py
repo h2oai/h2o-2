@@ -856,7 +856,7 @@ class H2O(object):
         a = self.poll_url(a['response'],
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
-        verboseprint("\nKMeans result:", dump_json(a))
+        verboseprint("\nKMeansApply result:", dump_json(a))
 
         if (browseAlso | browse_json):
             print "Redoing the KMeansApply through the browser, no results saved though"
@@ -883,14 +883,18 @@ class H2O(object):
                 timeout=timeoutSecs,
                 params=params_dict))
 
-        # Check that the response has the right Progress url it's going to steer us to.
-        if a['response']['redirect_request']!='Progress':
-            print dump_json(a)
-            raise Exception('H2O kmeans redirect is not Progress. KMeansScore json response precedes.')
-        a = self.poll_url(a['response'],
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
-            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
-        verboseprint("\nKMeans result:", dump_json(a))
+        if (1==0): # kmeans_score doesn't need polling?
+            # Check that the response has the right Progress url it's going to steer us to.
+            verboseprint("\nKMeansScore first result:", dump_json(a))
+            if a['response']['redirect_request']!='Progress':
+                print dump_json(a)
+                raise Exception('H2O kmeans redirect is not Progress. KMeansScore json response precedes.')
+
+            a = self.poll_url(a['response'],
+                timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
+                initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+
+        verboseprint("\nKMeansScore result:", dump_json(a))
 
         if (browseAlso | browse_json):
             print "Redoing the KMeansScore through the browser, no results saved though"
