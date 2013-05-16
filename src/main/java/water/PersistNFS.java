@@ -29,6 +29,11 @@ public abstract class PersistNFS {
     return new File(s);
   }
 
+  static InputStream openStream(Key k) throws IOException {
+    assert ( k._kb[0] != Key.ARRAYLET_CHUNK ):"open stream should only be used on a value/value array head";
+    return new FileInputStream(getFileForKey(k));
+  }
+
   // Read up to 'len' bytes of Value. Value should already be persisted to
   // disk.  A racing delete can trigger a failure where we get a null return,
   // but no crash (although one could argue that a racing load&delete is a bug

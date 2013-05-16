@@ -44,6 +44,7 @@ def setupImportFolder(node=None, path='/home/0xdiag/datasets'):
     # Really should have a class for global H2O cloud state? or test state?
     if not node: node = h2o.nodes[0]
     if node.redirect_import_folder_to_s3_path: 
+        print "hello"
         # FIX! make bucket vary depending on path
         bucket = 'home-0xdiag-datasets'
         importFolderResult = setupImportS3(node=node, bucket=bucket)

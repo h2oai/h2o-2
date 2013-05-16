@@ -20,53 +20,90 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud(sandbox_ignore_errors=True)
 
     def test_parse_nflx_loop_s3n_hdfs(self):
-        # typical size of the michal files
-        avgMichalSize = 116561140
-        avgSynSize = 4020000
-        csvFilenameList = [
-            # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz"),
-            # 100 files takes too long on two machines?
-            # I use different files to avoid OS caching effects
-            # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[0-9][0-9]", "syn_100.csv", 100 * avgSynSize, 700),
-            # ("syn_datasets/syn_7350063254201195578_10000x200.csv_00000", "syn_1.csv", avgSynSize, 700),
-            # ("syn_datasets/syn_7350063254201195578_10000x200.csv_0001[0-9]", "syn_10.csv", 10 * avgSynSize, 700),
-            # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[23][0-9]", "syn_20.csv", 20 * avgSynSize, 700),
-            # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[45678][0-9]", "syn_50.csv", 50 * avgSynSize, 700),
-
-            ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_A_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
-            ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_B_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
-            ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_C_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
-            ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_D_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
-            ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_E_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
-            ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_F_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
-            ("manyfiles-nflx-gz/file_[123][0-9][0-9].dat.gz", "file_300_A.dat.gz", 300 * avgMichalSize, 3600),
-            ("manyfiles-nflx-gz/file_[123][0-9][0-9].dat.gz", "file_300_B.dat.gz", 300 * avgMichalSize, 3600),
-            ("manyfiles-nflx-gz/file_[123][0-9][0-9].dat.gz", "file_300_C.dat.gz", 300 * avgMichalSize, 3600),
-            ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 300),
-            ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
-            ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 900),
-            ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 3600),
-            ("manyfiles-nflx-gz/file_1[0-4][0-9].dat.gz", "file_50_B.dat.gz", 50 * avgMichalSize, 3600),
-            ("manyfiles-nflx-gz/file_1[0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
-            ("manyfiles-nflx-gz/file_2[0-9][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 3600),
-            ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 3600),
-            ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_B.dat.gz", 200 * avgMichalSize, 3600),
-        ]
-
-        print "Using the -.gz files from s3"
-        # want just s3n://home-0xdiag-datasets/manyfiles-nflx-gz/file_1.dat.gz
-    
         DO_GLM = False
+        DO_GLMGRID = True
+        USE_HOME2 = False
         USE_S3 = False
         noPoll = False
         benchmarkLogging = ['jstack','iostats']
         benchmarkLogging = ['iostats']
-        bucket = "home-0xdiag-datasets"
+        benchmarkLogging = []
+        # typical size of the michal files
+        avgMichalSize = 116561140
+        avgSynSize = 4020000
+        synSize = 183
+
+        if USE_HOME2:
+            csvFilenameList = [
+                # this should hit the "more" files too?
+                ("00[0-4][0-9]_syn.csv.gz", "file_50.dat.gz", 50 * synSize , 700),
+                ("[0][1][0-9][0-9]_.*", "file_100.dat.gz", 100 * synSize , 700),
+                ("[0][0-4][0-9][0-9]_.*", "file_500.dat.gz", 500 * synSize , 700),
+                ("[0][0-9][0-9][0-9]_.*", "file_1000.dat.gz", 1000 * synSize , 700),
+                # ("10k_small_gz/[0-4][0-9][0-9][0-9]_.*", "file_5000.dat.gz", 5000 * synSize , 700),
+                # ("10k_small_gz/[0-9][0-9][0-9][0-9]_.*", "file_10000.dat.gz", 10000 * synSize , 700),
+            ]
+        else:
+            csvFilenameList = [
+                # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz"),
+                # 100 files takes too long on two machines?
+                # I use different files to avoid OS caching effects
+                # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[0-9][0-9]", "syn_100.csv", 100 * avgSynSize, 700),
+                # ("syn_datasets/syn_7350063254201195578_10000x200.csv_00000", "syn_1.csv", avgSynSize, 700),
+                # ("syn_datasets/syn_7350063254201195578_10000x200.csv_0001[0-9]", "syn_10.csv", 10 * avgSynSize, 700),
+                # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[23][0-9]", "syn_20.csv", 20 * avgSynSize, 700),
+                # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[45678][0-9]", "syn_50.csv", 50 * avgSynSize, 700),
+                ("manyfiles-nflx-gz/file_1[0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
+                ("manyfiles-nflx-gz/file_2[0-9][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 3600),
+
+                ("manyfiles-nflx-gz/file_[1-2][0-5][0-9].dat.gz", "file_120_A.dat.gz", 120 * avgMichalSize, 3600),
+                ("manyfiles-nflx-gz/file_[1-2][0-5][0-9].dat.gz", "file_120_B.dat.gz", 120 * avgMichalSize, 3600),
+
+                ("manyfiles-nflx-gz/file_[1-2][0-6][0-9].dat.gz", "file_140_A.dat.gz", 140 * avgMichalSize, 3600),
+                ("manyfiles-nflx-gz/file_[1-2][0-6][0-9].dat.gz", "file_140_B.dat.gz", 140 * avgMichalSize, 3600),
+
+                ("manyfiles-nflx-gz/file_[1-2][0-7][0-9].dat.gz", "file_160_A.dat.gz", 160 * avgMichalSize, 3600),
+                ("manyfiles-nflx-gz/file_[1-2][0-7][0-9].dat.gz", "file_160_B.dat.gz", 160 * avgMichalSize, 3600),
+
+                ("manyfiles-nflx-gz/file_[1-2][0-8][0-9].dat.gz", "file_180_A.dat.gz", 180 * avgMichalSize, 3600),
+                ("manyfiles-nflx-gz/file_[1-2][0-8][0-9].dat.gz", "file_180_B.dat.gz", 180 * avgMichalSize, 3600),
+
+                ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 3600),
+                ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_B.dat.gz", 200 * avgMichalSize, 3600),
+
+                ("manyfiles-nflx-gz/file_[123][0-9][0-9].dat.gz", "file_300_A.dat.gz", 300 * avgMichalSize, 3600),
+                ("manyfiles-nflx-gz/file_[123][0-9][0-9].dat.gz", "file_300_B.dat.gz", 300 * avgMichalSize, 3600),
+                ("manyfiles-nflx-gz/file_[123][0-9][0-9].dat.gz", "file_300_C.dat.gz", 300 * avgMichalSize, 3600),
+
+
+                ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 300),
+                ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
+                ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 900),
+                ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 3600),
+                ("manyfiles-nflx-gz/file_1[0-4][0-9].dat.gz", "file_50_B.dat.gz", 50 * avgMichalSize, 3600),
+                ("manyfiles-nflx-gz/file_1[0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
+                ("manyfiles-nflx-gz/file_2[0-9][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 3600),
+                ("[A]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_A_200_x55.dat.gz", 200 * (avgMichalSize/2), 7200),
+                ("[A-B]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_B_400_x55.dat.gz", 400 * (avgMichalSize/2), 7200),
+                ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_C_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
+                ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_D_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
+                ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_E_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
+                ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_F_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
+            ]
+
+        print "Using the -.gz files from s3"
+        # want just s3n://home-0xdiag-datasets/manyfiles-nflx-gz/file_1.dat.gz
+    
+        if USE_HOME2:
+            bucket = "home2-0xdiag-datasets/1k_small_gz"
+        else:
+            bucket = "home-0xdiag-datasets"
+
         if USE_S3:
-            URI = "s3://home-0xdiag-datasets"
+            URI = "s3://" + bucket
             protocol = "s3"
         else:
-            URI = "s3n://home-0xdiag-datasets"
+            URI = "s3n://" + bucket
             protocol = "s3n/hdfs"
 
         # split out the pattern match and the filename used for the hex
@@ -76,12 +113,15 @@ class Basic(unittest.TestCase):
         # use i to forward reference in the list, so we can do multiple outstanding parses below
         for i, (csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
             ## for tryHeap in [54, 28]:
-            for tryHeap in [24]:
+            h2oPerNode = 1
+            # h1.4xlarge 60.5GB dram
+            for tryHeap in [28]:
                 
-                print "\n", tryHeap,"GB heap, 1 jvm per host, import", protocol, "then parse"
-                jea = "-XX:+UseParNewGC -XX:+UseConcMarkSweepGC"
-                h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap,
-                    java_extra_args=jea,
+                print "\n", tryHeap,"GB heap,", h2oPerNode, "jvm per host, import", protocol, "then parse"
+                # jea = "-XX:+UseParNewGC -XX:+UseConcMarkSweepGC"
+                jea = "-Dh2o.find-ByteBuffer-leaks=true"
+                h2o_hosts.build_cloud_with_hosts(h2oPerNode, java_heap_GB=tryHeap,
+                    # java_extra_args=jea,
                     enable_benchmark_log=True, timeoutSecs=120, retryDelaySecs=10,
                     # all hdfs info is done thru the hdfs_config michal's ec2 config sets up?
                     # this is for our amazon ec hdfs
@@ -190,7 +230,7 @@ class Basic(unittest.TestCase):
                     #**********************************************************************************
                     # Do GLM too
                     # Argument case error: Value 0.0 is not between 12.0 and 9987.0 (inclusive)
-                    if DO_GLM:
+                    if DO_GLM or DO_GLMGRID:
                         # these are all the columns that are enums in the dataset...too many for GLM!
                         x = range(542) # don't include the output column
                         # remove the output too! (378)
@@ -198,16 +238,37 @@ class Basic(unittest.TestCase):
                             x.remove(i)
                         x = ",".join(map(str,x))
 
-                        GLMkwargs = {'x': x, 'y': 378, 'case': 15, 'case_mode': '>', 
-                            'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
-                        start = time.time()
-                        glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, 
-                            benchmarkLogging=benchmarkLogging, **GLMkwargs)
-                        h2o_glm.simpleCheckGLM(self, glm, None, **GLMkwargs)
-                        elapsed = time.time() - start
+                        if DO_GLM:
+                            algo = 'GLM'
+                            GLMkwargs = {'x': x, 'y': 378, 'case': 15, 'case_mode': '>', 'family': 'binomial',
+                                'max_iter': 10, 'n_folds': 2, 'alpha': 0.2, 'lambda': 1e-5}
+                            start = time.time()
+                            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, 
+                                timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+                                pollTimeoutSecs=pollTimeoutSecs,
+                                benchmarkLogging=benchmarkLogging, **GLMkwargs)
+                            elapsed = time.time() - start
+                            h2o_glm.simpleCheckGLM(self, glm, None, **GLMkwargs)
+
+                        else:
+                            algo = 'GLMGrid'
+                            GLMkwargs = {'x': x, 'y': 378, 'case': 15, 'case_mode': '>', 'family': 'binomial',
+                                'max_iter': 10, 'n_folds': 1, 'beta_epsilon': 1e-4,
+                                'lambda': '1e-4',
+                                'alpha': '0,0.5',
+                                'thresholds': '0.5'
+                                }
+                            start = time.time()
+                            glm = h2o_cmd.runGLMGridOnly(parseKey=parseKey,
+                                timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+                                pollTimeoutSecs=pollTimeoutSecs,
+                                benchmarkLogging=benchmarkLogging, **GLMkwargs)
+                            elapsed = time.time() - start
+                            h2o_glm.simpleCheckGLMGrid(self, glm, None, **GLMkwargs)
+
                         h2o.check_sandbox_for_errors()
-                        l = '{:d} jvms, {:d}GB heap, {:s} {:s} GLM: {:6.2f} secs'.format(
-                            len(h2o.nodes), tryHeap, csvFilepattern, csvFilename, elapsed)
+                        l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:s} {:6.2f} secs'.format(
+                            len(h2o.nodes), tryHeap, algo, csvFilepattern, csvFilename, elapsed)
                         print l
                         h2o.cloudPerfH2O.message(l)
 

@@ -70,14 +70,10 @@ class Basic(unittest.TestCase):
 
                 storeView = h2o.nodes[0].store_view()
                 ### print "storeView:", h2o.dump_json(storeView)
-                print "Removing", parseKey['source_key'], "so we can re-import it"
-                removeKeyResult = h2o.nodes[0].remove_key(key=parseKey['source_key'])
-                print "removeKeyResult:", h2o.dump_json(removeKeyResult)
-
-                # we could put an override on the error 
-                ### print "Trying to remove a key that's not there anymore?", parseKey['source_key']
-                ### removeKeyResult = h2o.nodes[0].remove_key(key=parseKey['source_key'])
-                ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
+                # h2o deletes key after parse now
+                ## print "Removing", parseKey['source_key'], "so we can re-import it"
+                ## removeKeyResult = h2o.nodes[0].remove_key(key=parseKey['source_key'])
+                ## print "removeKeyResult:", h2o.dump_json(removeKeyResult)
 
             print "\nTrial", trial, "completed\n"
 

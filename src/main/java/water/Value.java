@@ -16,7 +16,7 @@ import water.store.s3.PersistS3;
 public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
 
   // ---
-  // Type-id of serialzied object; see TypeMap for the list.
+  // Type-id of serialized object; see TypeMap for the list.
   // Might be a primitive array type, or a Iced POJO
   private short _type;
   public int type() { return _type; }
@@ -264,7 +264,14 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   }
   /** Creates a Stream for reading bytes */
   public InputStream openStream(ProgressMonitor p) throws IOException {
-    if( isArray() ) return ((ValueArray)get()).openStream(p);
+    if(onNFS())
+      return PersistNFS.openStream(_key);
+    else if(onHDFS())
+      return PersistHdfs.openStream(_key,p);
+    else if(onS3())
+      return PersistS3.openStream(_key,p);
+    if(isArray())
+      return ((ValueArray)get()).openStream(p);
     assert _type==TypeMap.PRIM_B;
     return new ByteArrayInputStream(memOrLoad());
   }
@@ -286,9 +293,9 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     if( isArray() && v.isArray() ) {
       ValueArray thisAry =   get();
       ValueArray thatAry = v.get();
-      if( thisAry.length() == thatAry.length() && 
-          thisAry._numrows == thatAry._numrows && 
-          thisAry._rowsize == thatAry._rowsize && 
+      if( thisAry.length() == thatAry.length() &&
+          thisAry._numrows == thatAry._numrows &&
+          thisAry._rowsize == thatAry._rowsize &&
           thisAry._cols.length == thatAry._cols.length ) {
         for( int i = 0; i < thisAry._cols.length; ++i )
           if( !thisAry._cols[i].equals(thatAry._cols[i]) )

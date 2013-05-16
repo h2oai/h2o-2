@@ -13,7 +13,7 @@ def define_params():
         'lambda': [1e-8, 1e-4],
         'alpha': [0,0.5,0.75],
         # don't use defaults? problems?
-        'beta_epsilon': [0.001, 0.0001],
+        'beta_eps': [0.001, 0.0001],
         # too many problems with case=7
         'case': [1,2,3,4,5,6],
         # inverse and log causing problems

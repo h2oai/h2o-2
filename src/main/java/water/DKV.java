@@ -14,17 +14,19 @@ public abstract class DKV {
   // update.  i.e., The User has initiated a change against the K/V store.
   // This is a WEAK update: it is not strongly ordered with other updates
   static public Value put( Key key, Value val ) { return put(key,val,null); }
-  static public Value put( Key key, Value val, Futures fs ) {
-    assert val==null || val.isSameKey(key);
+  static public Value put( Key key, Value val, Futures fs ) { return put(key,val,fs,false);}
+  static public Value put( Key key, Value val, Futures fs, boolean dontCache ) {
+    assert val==null || val._key == key:"non-matching keys " + ((Object)key).toString() + " != " + ((Object)val._key).toString();
     while( true ) {
-      Value old = H2O.get(key);
-      Value res = DputIfMatch(key,val,old,fs);
+      Value old = H2O.raw_get(key); // Raw-get: do not lazy-manifest if overwriting
+      Value res = DputIfMatch(key,val,old,fs,dontCache);
       if( res == old ) return old; // PUT is globally visible now?
+      if( val != null && val._key != key ) key = val._key;
     }
   }
   static public Value put( Key key, Iced v ) { return put(key,v,null); }
-  static public Value put( Key key, Iced v, Futures fs ) { 
-    return put(key,new Value(key,v),fs); 
+  static public Value put( Key key, Iced v, Futures fs ) {
+    return put(key,new Value(key,v),fs);
   }
 
   // Remove this Key
@@ -39,7 +41,10 @@ public abstract class DKV {
   // value is a Futures if one is needed, or the old Value if not.  If a
   // Futures is returned the old Value is stashed inside of it for the caller
   // to consume.
-  static public Value DputIfMatch( Key key, Value val, Value old, Futures fs ) {
+  static public Value DputIfMatch( Key key, Value val, Value old, Futures fs) {
+    return DputIfMatch(key, val, old, fs, false);
+  }
+  static public Value DputIfMatch( Key key, Value val, Value old, Futures fs, boolean dontCache ) {
     // First: I must block repeated remote PUTs to the same Key until all prior
     // ones complete - the home node needs to see these PUTs in order.
     // Repeated PUTs on the home node are already ordered.
@@ -68,7 +73,7 @@ public abstract class DKV {
       if( old != null ) old.lockAndInvalidate(H2O.SELF,fs);
     } else {                    // On non-HOME?
       // Start a write, but do not block for it
-      TaskPutKey.put(key.home_node(),key,val,fs);
+      TaskPutKey.put(key.home_node(),key,val,fs, dontCache);
     }
     return old;
   }

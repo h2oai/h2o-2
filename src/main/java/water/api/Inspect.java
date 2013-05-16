@@ -1,7 +1,7 @@
 package water.api;
 
 import hex.DGLM.GLMModel;
-import hex.KMeans.KMeansModel;
+import hex.KMeansModel;
 import hex.rf.RFModel;
 
 import java.io.IOException;
@@ -59,9 +59,17 @@ public class Inspect extends Request {
     return redirect(resp, null, dest);
   }
 
+  @Override protected boolean log() {
+    return false;
+  }
+
   @Override
   protected Response serve() {
     Value val = _key.value();
+    if(val == null) {
+      // Some requests redirect before creating dest
+      return RequestServer._http404.serve();
+    }
     if( val.type() == TypeMap.PRIM_B )
       return serveUnparsedValue(val);
     Freezable f = val.getFreezable();
@@ -84,7 +92,6 @@ public class Inspect extends Request {
       resp.addProperty(Constants.DEST_KEY, val._key.toString());
       return GLMGridProgress.redirect(resp,null,val._key);
     }
-
     if( f instanceof KMeansModel ) {
       KMeansModel m = (KMeansModel)f;
       JsonObject res = new JsonObject();
@@ -122,8 +129,10 @@ public class Inspect extends Request {
         ZipInputStream zis = new ZipInputStream(v.openStream());
         ZipEntry ze = zis.getNextEntry(); // Get the *FIRST* entry
         // There is at least one entry in zip file and it is not a directory.
-        if( ze != null || !ze.isDirectory() )
+        if( ze != null && !ze.isDirectory() )
           is = zis;
+        else
+          zis.close();
         break;
       }
       case GZIP:

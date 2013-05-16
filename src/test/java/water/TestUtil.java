@@ -42,8 +42,12 @@ public class TestUtil {
 
   // Stall test until we see at least X members of the Cloud
   public static void stall_till_cloudsize(int x) {
+    stall_till_cloudsize(x, 10000);
+  }
+
+  public static void stall_till_cloudsize(int x, long ms) {
     long start = System.currentTimeMillis();
-    while( System.currentTimeMillis() - start < 10000 ) {
+    while( System.currentTimeMillis() - start < ms ) {
       if( H2O.CLOUD.size() >= x )
         break;
       try { Thread.sleep(100); } catch( InterruptedException ie ) { }
@@ -108,6 +112,8 @@ public class TestUtil {
   public static Key loadAndParseKey(String keyName, String path) {
     Key fkey = load_test_file(path);
     Key okey = Key.make(keyName);
+    if(DKV.get(okey) != null)
+      DKV.remove(okey);
     ParseDataset.parse(okey, new Key[]{fkey});
     UKV.remove(fkey);
     return okey;
@@ -117,8 +123,7 @@ public class TestUtil {
     Key [] keys = load_test_folder(path);
     Arrays.sort(keys);
     Key okey = Key.make(keyName);
-    Job j = ParseDataset.forkParseDataset(okey, keys,null);
-    j.get();
+    ParseDataset.parse(okey, keys);
     for(Key k:keys)UKV.remove(k);
     return okey;
   }

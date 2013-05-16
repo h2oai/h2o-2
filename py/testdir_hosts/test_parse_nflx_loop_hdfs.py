@@ -28,7 +28,7 @@ class Basic(unittest.TestCase):
             h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap,
                 use_hdfs=True,
                 hdfs_name_node='192.168.1.176',
-                hdfs_version='cdh3u5')
+                hdfs_version='cdh3')
 
             # don't raise exception if we find something bad in h2o stdout/stderr?
             h2o.nodes[0].sandbox_ignore_errors = True
@@ -76,8 +76,10 @@ class Basic(unittest.TestCase):
                 for k in hdfsFullList:
                     deleteKey = k['key']
                     if csvFilename in deleteKey and not ".hex" in key: 
-                        print "Removing", deleteKey
-                        removeKeyResult = h2o.nodes[0].remove_key(key=deleteKey)
+                        pass
+                        # nflx removes key after parse now
+                        ## print "Removing", deleteKey
+                        ## removeKeyResult = h2o.nodes[0].remove_key(key=deleteKey)
                         ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
 
             h2o.tear_down_cloud()

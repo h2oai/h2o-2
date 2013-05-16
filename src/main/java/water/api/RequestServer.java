@@ -7,6 +7,7 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
 import water.*;
+import water.api.Script.RunScript;
 import water.api.Upload.PostFile;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
@@ -20,9 +21,12 @@ public class RequestServer extends NanoHTTPD {
   // cache of all loaded resources
   private static final ConcurrentHashMap<String,byte[]> _cache = new ConcurrentHashMap();
   protected static final HashMap<String,Request> _requests = new HashMap();
+  public static HashMap<String,Request> requests() {
+    return _requests;
+  }
 
-  private static final Request _http404;
-  private static final Request _http500;
+  static final Request _http404;
+  static final Request _http500;
 
   // initialization ------------------------------------------------------------
   static {
@@ -41,6 +45,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new ImportHdfs()),  "Import HDFS",  "Data");
     Request.addToNavbar(registerRequest(new Upload()),      "Upload",       "Data");
     Request.addToNavbar(registerRequest(new Get()),         "Download",     "Data");
+    Request.addToNavbar(registerRequest(new SummaryPage()), "Summary",      "Data");
 
     Request.addToNavbar(registerRequest(new RF()),          "Random Forest", "Model");
     Request.addToNavbar(registerRequest(new GLM()),         "GLM",           "Model");
@@ -51,9 +56,11 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new RFScore()),     "Random Forest", "Score");
     Request.addToNavbar(registerRequest(new GLMScore()),    "GLM",           "Score");
     Request.addToNavbar(registerRequest(new KMeansScore()), "KMeans",        "Score");
+    Request.addToNavbar(registerRequest(new KMeansApply()), "KMeans Apply",  "Score");
     Request.addToNavbar(registerRequest(new Score()),       "Apply Model",   "Score");
 
     //Request.addToNavbar(registerRequest(new Plot()),        "Basic",         "Plot");
+    registerRequest(new Plot());
 
     Request.addToNavbar(registerRequest(new Jobs()),        "Jobs",          "Admin");
     Request.addToNavbar(registerRequest(new Cloud()),       "Cluster Status","Admin");
@@ -62,6 +69,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new JStack()),      "Stack Dump",    "Admin");
     Request.addToNavbar(registerRequest(new Debug()),       "Debug Dump",    "Admin");
     Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",   "Admin");
+    Request.addToNavbar(registerRequest(new Script()),      "Get Script",    "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",      "Admin");
 
     Request.addToNavbar(registerRequest(new Tutorials()),           "View All",      "Tutorials");
@@ -86,6 +94,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new RemoveAck());
     registerRequest(new RFView());
     registerRequest(new RFTreeView());
+    registerRequest(new RunScript());
     registerRequest(new TypeaheadKeysRequest("Existing H2O Key", "", null));
     registerRequest(new TypeaheadHexKeyRequest());
     registerRequest(new TypeaheadFileRequest());
@@ -106,11 +115,10 @@ public class RequestServer extends NanoHTTPD {
    */
 
   protected static Request registerRequest(Request req) {
-    String href = req.getClass().getSimpleName();
+    String href = req.href();
     assert (! _requests.containsKey(href)) : "Request with href "+href+" already registered";
     _requests.put(href,req);
     return req;
-
   }
 
   // Keep spinning until we get to launch the NanoHTTPD

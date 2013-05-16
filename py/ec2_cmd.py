@@ -52,14 +52,16 @@ DEFAULT_EC2_INSTANCE_CONFIGS = {
 
 ''' Memory mappings for instance kinds '''
 MEMORY_MAPPING = {
-    'm1.large'   : { 'xmx' : 5  },  
-    'm1.xlarge'  : { 'xmx' : 11 }, 
-    'm2.xlarge'  : { 'xmx' : 13 },  
-    'm2.2xlarge' : { 'xmx' : 30 },  
-    'm2.4xlarge' : { 'xmx' : 60 },  
-    'm3.xlarge'  : { 'xmx' : 11 },  
-    'm3.2xlarge' : { 'xmx' : 24 },  
-    'c1.xlarge'  : { 'xmx' : 6  },  
+    'm1.large'   : { 'xmx' : 5  },  # $0.24/hr
+    'm1.xlarge'  : { 'xmx' : 11 },  # $0.48/hr
+    'm2.xlarge'  : { 'xmx' : 13 },  # $0.41/hr
+    'm2.2xlarge' : { 'xmx' : 30 },  # $0.82/hr
+    'm2.4xlarge' : { 'xmx' : 60 },  # $1.64/hr
+    'm3.xlarge'  : { 'xmx' : 11 },  # $0.50/hr
+    'm3.2xlarge' : { 'xmx' : 24 },  # $1.00/hr
+    'c1.xlarge'  : { 'xmx' : 6  },  # $0.58/hr
+    'hi1.4xlarge'  : { 'xmx' : 56},  # $3.10/hr 60.5GB dram. 8 cores/8 threads. 2TB SSD. 10GE
+    'cr1.8xlarge'  : { 'xmx' : 230},  # $4.60/hr 244GB dram. 2 E5-2670. 240GB SSD. 10GE
 }
 
 ''' EC2 API default configuration. The corresponding values are replaces by EC2 user config. '''

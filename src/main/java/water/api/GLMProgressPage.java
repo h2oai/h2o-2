@@ -1,24 +1,21 @@
 package water.api;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import hex.*;
-import hex.DGLM.CaseMode;
-import hex.DGLM.GLMModel;
-import hex.DGLM.GLMParams;
-import hex.DGLM.GLMValidation;
+import hex.DGLM.*;
 import hex.DLSM.LSMSolver;
-
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.text.DecimalFormat;
 import java.util.Map.Entry;
-
+import java.util.*;
 import water.*;
 import water.Job.ChunkProgress;
 import water.util.Log;
 import water.util.RString;
-
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 
 public class GLMProgressPage extends Request {
   static String getTimeStr(long t){
@@ -150,9 +147,9 @@ public class GLMProgressPage extends Request {
       if( m.isSolved() ) {
         JsonObject coefs = json.get("coefficients").getAsJsonObject();
         R.replace("modelSrc",equationHTML(m,coefs));
-        R.replace("coefficients",coefsHTML(coefs));
+        R.replace("coefficients",coefsHTML(m,coefs));
         if(json.has("normalized_coefficients"))
-          R.replace("normalized_coefficients",coefsHTML(json.get("normalized_coefficients").getAsJsonObject()));
+          R.replace("normalized_coefficients",coefsHTML(m,json.get("normalized_coefficients").getAsJsonObject()));
       }
       sb.append(R);
       // Validation / scoring
@@ -219,22 +216,37 @@ public class GLMProgressPage extends Request {
       return eq.toString();
     }
 
-    private static String coefsHTML( JsonObject coefs ) {
+    private static class Coef {
+      final String _name; final double _d;
+      Coef( Entry<String,JsonElement> e ) { _name = e.getKey(); _d = e.getValue().getAsDouble(); }
+      @Override public String toString() { return _name+"="+_d; }
+    }
+    private static String coefsHTML( GLMModel m, JsonObject coefs ) {
+      Set<Entry<String,JsonElement>> ee = coefs.entrySet();
+      Coef cs[] = new Coef[ee.size()];
+      int i=0;
+      for( Entry<String,JsonElement> e : ee )
+        cs[i++] = new Coef(e);
+      if( m._glmParams._family == Family.binomial )
+        Arrays.sort(cs,new Comparator<Coef>() {
+            @Override public int compare(Coef c0, Coef c1) { return (c0._d<c1._d) ? 1 : (c0._d==c1._d?0:-1);}
+          });
+
       StringBuilder sb = new StringBuilder();
       sb.append("<table class='table table-bordered table-condensed'>");
       sb.append("<tr>");
-      sb.append("<th>").append("Intercept").append("</th>");
-      for( Entry<String,JsonElement> e : coefs.entrySet() ){
-        if(e.getKey().equals("Intercept"))continue;
-        sb.append("<th>").append(e.getKey()).append("</th>");
+      for( Coef c : cs ) {
+        if(c._name.equals("Intercept"))continue;
+        sb.append("<th>").append(c._name).append("</th>");
       }
+      sb.append("<th>").append("Intercept").append("</th>");
       sb.append("</tr>");
       sb.append("<tr>");
-      sb.append("<td>").append(coefs.get("Intercept").getAsDouble()).append("</td>");
-      for( Entry<String,JsonElement> e : coefs.entrySet()){
-        if(e.getKey().equals("Intercept"))continue;
-        sb.append("<td>").append(e.getValue().getAsDouble()).append("</td>");
+      for( Coef c : cs ) {
+        if(c._name.equals("Intercept"))continue;
+        sb.append("<td>").append(c._d).append("</td>");
       }
+      sb.append("<td>").append(coefs.get("Intercept").getAsDouble()).append("</td>");
       sb.append("</tr>");
       sb.append("</table>");
       return sb.toString();

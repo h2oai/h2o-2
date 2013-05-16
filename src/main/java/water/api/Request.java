@@ -4,6 +4,7 @@ package water.api;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
+import java.util.Map.Entry;
 
 import water.*;
 import water.util.*;
@@ -12,34 +13,45 @@ import water.util.Log.Tag.Sys;
 import com.google.common.base.Objects;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import com.google.gson.*;
 
 /** A basic class for a JSON request.
  */
 public abstract class Request extends RequestBuilders {
   public String _requestHelp;
 
+  protected String href() {
+    return getClass().getSimpleName();
+  }
+
+  protected RequestType hrefType() {
+    return RequestType.www;
+  }
+
   protected abstract Response serve();
 
   protected Response serve_debug() { throw H2O.unimpl(); }
 
+  protected boolean log() {
+    return true;
+  }
+
   public NanoHTTPD.Response serve(NanoHTTPD server, Properties args, RequestType type) {
+    // Needs to be done also for help to initialize or argument records
+    String query = checkArguments(args, type);
     switch (type) {
       case help:
         return wrap(server, build(Response.done(serveHelp())));
       case json:
       case www:
-        String query = checkArguments(args, type);
-        if(H2O.OPT_ARGS.no_requests_log == null) {
+        if(log()) {
           String log = getClass().getSimpleName();
-          for (Argument arg: _arguments) {
-            Object value = arg.record()._value;
-            // Key arguments return values, log the key instead
-            if(value instanceof Value) value = ((Value) value)._key;
-            log += " " + arg._name + "=" + value;
+          for (Object arg: args.keySet()) {
+            String value = args.getProperty((String) arg);
+            if(value != null && value.length() != 0)
+              log += " " + arg + "=" + value;
           }
-          Log.debug(Sys.HTTPD,log);
+          Log.debug(Sys.HTTPD, log);
         }
         if (query != null)
           return wrap(server,query,type);
@@ -53,7 +65,6 @@ public abstract class Request extends RequestBuilders {
         response = serve_debug();
         return wrap(server,build(response));
       case query:
-        query = checkArguments(args, type);
         return wrap(server,query);
       default:
         throw new RuntimeException("Invalid request type "+type.toString());
@@ -129,8 +140,10 @@ public abstract class Request extends RequestBuilders {
     try {
       _htmlTemplate = new String(ByteStreams.toByteArray(resource)).replace("%cloud_name",H2O.NAME);
     } catch (NullPointerException e) {
-      Log.err(e);
-      Log.die("page.html not found in resources.");
+      if(!Log._dontDie) {
+        Log.err(e);
+        Log.die("page.html not found in resources.");
+      }
     } catch (Exception e) {
       Log.err(e);
       Log.die(e.getMessage());
@@ -148,12 +161,11 @@ public abstract class Request extends RequestBuilders {
     }
     public void toHTML(StringBuilder sb) {
       sb.append("<li><a href='");
-      sb.append(_request.getClass().getSimpleName()+".html");
+      sb.append(_request.href() + _request.hrefType()._suffix);
       sb.append("'>");
       sb.append(_name);
       sb.append("</a></li>");
     }
-
   }
 
   private static HashMap<String, ArrayList<MenuItem> > _navbar = new HashMap();
@@ -205,4 +217,31 @@ public abstract class Request extends RequestBuilders {
 
   protected static final void help(Argument arg, String help) { arg._requestHelp = help; }
   protected static final void help(Request r, String help)    { r._requestHelp   = help; }
+
+  public static JsonObject execSync(Request request) {
+    for( ;; ) {
+      Response r = request.serve();
+      switch( r._status ) {
+        case error:
+          throw new RuntimeException(r.error());
+        case redirect:
+          request = RequestServer.requests().get(r._redirectName);
+          Properties args = new Properties();
+          for( Entry<String, JsonElement> entry : r._redirectArgs.entrySet() )
+            args.put(entry.getKey(), entry.getValue().getAsString());
+          request.checkArguments(args, RequestType.json);
+          break;
+        case poll:
+          // Not a FJ thread, just wait
+          try {
+            Thread.sleep(100);
+          } catch( InterruptedException e ) {
+            throw new RuntimeException(e);
+          }
+          break;
+        case done:
+          return r._response;
+      }
+    }
+  }
 }

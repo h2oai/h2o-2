@@ -96,6 +96,9 @@ public class ValueArray extends Iced implements Cloneable {
     return res;
   }
 
+  /** Return the key that denotes this entire ValueArray in the K/V store. */
+  public final Key getKey() { return _key; }
+
   @Override public ValueArray clone() {
     try { return (ValueArray)super.clone(); }
     catch( CloneNotSupportedException cne ) { throw Log.err(H2O.unimpl()); }
@@ -135,18 +138,24 @@ public class ValueArray extends Iced implements Cloneable {
   public boolean hasInvalidRows(int colnum) { return _cols[colnum]._n != _numrows; }
 
   /** Rows in this chunk */
+  @SuppressWarnings("cast")
   public int rpc(long chunknum) {
     if( (long)(int)chunknum!=chunknum ) throw H2O.unimpl(); // more than 2^31 chunks?
     if( _rpc != null ) return (int)(_rpc[(int)chunknum+1]-_rpc[(int)chunknum]);
     int rpc = (int)(CHUNK_SZ/_rowsize);
-    long chunks = Math.max(1,_numrows/rpc);
+    return rpc(chunknum, rpc, _numrows);
+  }
+
+  public static int rpc(long chunknum, int rpc, long numrows) {
+    long chunks = Math.max(1,numrows/rpc);
     assert chunknum < chunks;
     if( chunknum < chunks-1 )   // Not last chunk?
       return rpc;               // Rows per chunk
-    return (int)(_numrows - (chunks-1)*rpc);
+    return (int)(numrows - (chunks-1)*rpc);
   }
 
   /** Row number at the start of this chunk */
+  @SuppressWarnings("cast")
   public long startRow( long chunknum) {
     if( (long)(int)chunknum!=chunknum ) throw H2O.unimpl(); // more than 2^31 chunks?
     if( _rpc != null ) return _rpc[(int)chunknum];
@@ -168,18 +177,21 @@ public class ValueArray extends Iced implements Cloneable {
   }
 
   /** Chunk number containing a row */
-  private long chknum( long rownum ) {
-    if( _rpc == null ) {
-      int rpc = (int)(CHUNK_SZ/_rowsize);
-      return Math.min(rownum/rpc,Math.max(1,_numrows/rpc)-1);
-    }
+  public long chknum( long rownum ) {
+    if( _rpc == null )
+      return chknum(rownum, _numrows, _rowsize);
     int bs = Arrays.binarySearch(_rpc,rownum);
     if( bs < 0 ) bs = -bs-2;
     while( _rpc[bs+1]==rownum ) bs++;
     return bs;
   }
 
-  // internal convience class for building structured ValueArrays
+  public static long chknum( long rownum, long numrows, int rowsize ) {
+    int rpc = (int)(CHUNK_SZ/rowsize);
+    return Math.min(rownum/rpc,Math.max(1,numrows/rpc)-1);
+  }
+
+  // internal convenience class for building structured ValueArrays
   static public class Column extends Iced implements Cloneable {
     public String _name;
     // Domain of the column - all the strings which represents the column's
@@ -203,6 +215,7 @@ public class ValueArray extends Iced implements Cloneable {
       _min=0; _max=255; _mean=128; _n = len; _scale=1; _size=1;
     }
     public final boolean isFloat() { return _size < 0 || _scale != 1; }
+    public final boolean isEnum() { return _domain != null; }
     public final boolean isScaled() { return _scale != 1; }
     /** Compute size of numeric integer domain */
     public final long    numDomainSize() { return (long) ((_max - _min)+1); }
@@ -248,7 +261,7 @@ public class ValueArray extends Iced implements Cloneable {
     return datad(getChunk(chknum),rowInChunk(chknum,rownum),colnum);
   }
 
-  // This is a version where the colnum data is not yet pulled out.
+  // This is a version where the column data is not yet pulled out.
   public double datad(AutoBuffer ab, int row_in_chunk, int colnum) {
     return datad(ab,row_in_chunk,_cols[colnum]);
   }
@@ -328,14 +341,14 @@ public class ValueArray extends Iced implements Cloneable {
     return Key.make(buf,(byte)arrayKey.desired());
   }
 
-  // Get the root array Key from a random arraylet sub-key
+  /** Get the root array Key from a random arraylet sub-key */
   public static Key getArrayKey( Key k ) { return Key.make(getArrayKeyBytes(k)); }
   public static byte[] getArrayKeyBytes( Key k ) {
     assert k._kb[0] == Key.ARRAYLET_CHUNK;
     return Arrays.copyOfRange(k._kb,2+8,k._kb.length);
   }
 
-  // Get the chunk-index from a random arraylet sub-key
+  /** Get the chunk-index from a random arraylet sub-key */
   public static long getChunkIndex(Key k) {
     assert k._kb[0] == Key.ARRAYLET_CHUNK;
     return UDP.get8(k._kb, 2) >> LOG_CHK;
@@ -383,12 +396,12 @@ public class ValueArray extends Iced implements Cloneable {
       // Especially if the InputStream is a (g)unzip, its useful to overlap the
       // write with read.
       H2OCountedCompleter subtask = new H2OCountedCompleter() {
-          @Override public void compute2() {
-            DKV.put(val._key,val,fs); // The only exciting thing in this innerclass!
-            tryComplete();
-          }
-          @Override public byte priority() { return H2O.ATOMIC_PRIORITY; }
-        };
+        @Override public void compute2() {
+          DKV.put(val._key,val,fs,!val._key.home() && H2O.get(val._key) == null); // The only exciting thing in this innerclass!
+          tryComplete();
+        }
+        @Override public byte priority() { return H2O.ATOMIC_PRIORITY; }
+      };
       H2O.submitTask(subtask);
       // Also add the DKV task to the blocking list (not just the TaskPutKey
       // buried inside the DKV!)
@@ -407,7 +420,6 @@ public class ValueArray extends Iced implements Cloneable {
       try { f_last.get(); }
       catch( InterruptedException e ) { throw  Log.errRTExcept(e); }
       catch(   ExecutionException e ) { throw  Log.errRTExcept(e); }
-      assert Arrays.equals(DKV.get(ckey).memOrLoad(),oldbuf);
       DKV.put(ckey,new Value(ckey,newbuf),fs); // Overwrite the old too-small Value
     } else {
       Key ckey = getChunkKey(cidx,key);

@@ -1,9 +1,8 @@
 
 package water.api;
 
-import java.io.File;
-
-import com.google.gson.*;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 
 public abstract class TypeaheadRequest extends Request {
   protected final Str _filter;
@@ -22,6 +21,10 @@ public abstract class TypeaheadRequest extends Request {
     JsonObject response = new JsonObject();
     response.add(ITEMS, array);
     return Response.done(response);
+  }
+
+  @Override protected boolean log() {
+    return false;
   }
 
   abstract protected JsonArray serve(String filter, int limit);

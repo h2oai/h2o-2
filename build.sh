@@ -30,9 +30,9 @@ JAR_ROOT=lib
 
 # additional dependencies, relative to this file, but all dependencies should be
 # inside the JAR_ROOT tree so that they are packed to the jar file properly
-DEPENDENCIES="${JAR_ROOT}/jama/*${SEP}${JAR_ROOT}/apache/*${SEP}${JAR_ROOT}/junit/*${SEP}${JAR_ROOT}/gson/*${SEP}${JAR_ROOT}/javassist.jar${SEP}${JAR_ROOT}/poi/*${SEP}${JAR_ROOT}/trove/*${SEP}${JAR_ROOT}/s3/*${SEP}${JAR_ROOT}/jets3t/*"
+DEPENDENCIES="${JAR_ROOT}/fastr/*${SEP}${JAR_ROOT}/jama/*${SEP}${JAR_ROOT}/apache/*${SEP}${JAR_ROOT}/junit/*${SEP}${JAR_ROOT}/gson/*${SEP}${JAR_ROOT}/javassist.jar${SEP}${JAR_ROOT}/poi/*${SEP}${JAR_ROOT}/trove/*${SEP}${JAR_ROOT}/s3/*${SEP}${JAR_ROOT}/jets3t/*"
 
-DEFAULT_HADOOP_VERSION="1.0.0"
+DEFAULT_HADOOP_VERSION="cdh3"
 OUTDIR="target"
 JAR_FILE="${OUTDIR}/h2o.jar"
 
@@ -94,6 +94,9 @@ function build_classes() {
         $SRC/jsr166y/*java \
         $TESTSRC/*/*java \
         $TESTSRC/*/*/*java
+
+    "$JAVA" -ea -cp "${CLASSPATH}"${SEP}"$CLASSES" water.TypeMap
+    "$JAVAC" ${JAVAC_ARGS} -cp "${CLASSPATH}" -d "$CLASSES" $SRC/water/TypeMapGen.java
 
     cp -r ${RESOURCES}/* "${CLASSES}"
 cat >> "$VERSION_PROPERTIES" <<EOF

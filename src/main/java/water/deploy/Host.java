@@ -1,4 +1,4 @@
-package water.sys;
+package water.deploy;
 
 import java.io.File;
 import java.util.*;
@@ -6,12 +6,10 @@ import java.util.*;
 import water.Boot;
 import water.util.Log;
 import water.util.Utils;
-import water.util.Log.Tag.Sys;
 
 public class Host {
-  public static final String  SSH_OPTS;
-  public static final String  LOG_RSYNC_NAME = "logrsync";
-  public static final boolean LOG_RSYNC      = System.getProperty(LOG_RSYNC_NAME) != null;
+  public static final String SSH_OPTS;
+  public static final boolean LOG_RSYNC = System.getProperty("logrsync") != null;
 
   static {
     SSH_OPTS = "" //
@@ -22,8 +20,8 @@ public class Host {
         + " -o ServerAliveCountMax=3";
   }
 
-  public static final String  FOLDER         = "h2o_rsync";
-  private final String        _address, _user, _key;
+  public static final String FOLDER = "h2o_rsync";
+  private final String _address, _user, _key;
 
   public Host(String addr) {
     this(addr, null);
@@ -54,10 +52,8 @@ public class Host {
   public static String[] defaultIncludes() {
     ArrayList<String> l = new ArrayList<String>();
     if( Boot._init.fromJar() ) {
-      if( new File("target/h2o.jar").exists() )
-        l.add("target/h2o.jar");
-      else
-        l.add("h2o.jar");
+      if( new File("target/h2o.jar").exists() ) l.add("target/h2o.jar");
+      else l.add("h2o.jar");
     } else {
       l.add("target");
       l.add("lib");
@@ -97,11 +93,9 @@ public class Host {
       args.addAll(Arrays.asList(includes));
 
       // --exclude seems ignored on Linux (?) so use --exclude-from
-      if( excludes != null ) {
-        File file = Utils.tempFile(Utils.join('\n', excludes));
-        args.add("--exclude-from");
-        args.add(file.getAbsolutePath());
-      }
+      File file = Utils.writeFile(Utils.join('\n', excludes));
+      args.add("--exclude-from");
+      args.add(file.getAbsolutePath());
 
       args.add(_address + ":" + "/home/" + _user + "/" + FOLDER);
       ProcessBuilder builder = new ProcessBuilder(args);
@@ -117,7 +111,31 @@ public class Host {
       if( process != null ) {
         try {
           process.destroy();
-        } catch( Exception _ ) { /*ignore*/ }
+        } catch( Exception _ ) { /* ignore */}
+      }
+    }
+  }
+
+  public static void rsync(final Host[] hosts, final String[] includes, final String[] excludes) {
+    ArrayList<Thread> threads = new ArrayList<Thread>();
+
+    for( int i = 0; i < hosts.length; i++ ) {
+      final int i_ = i;
+      Thread t = new Thread() {
+        @Override public void run() {
+          hosts[i_].rsync(includes, excludes);
+        }
+      };
+      t.setDaemon(true);
+      t.start();
+      threads.add(t);
+    }
+
+    for( Thread t : threads ) {
+      try {
+        t.join();
+      } catch( InterruptedException e ) {
+        throw Log.errRTExcept(e);
       }
     }
   }
@@ -145,7 +163,7 @@ public class Host {
         Process p = Runtime.getRuntime().exec("chmod 600 " + _key);
         p.waitFor();
       } catch( Exception e ) {
-        throw  Log.errRTExcept(e);
+        throw Log.errRTExcept(e);
       }
       k = " -i " + _key;
     }

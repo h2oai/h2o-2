@@ -2,7 +2,6 @@ package water.util;
 
 import java.io.*;
 import java.lang.management.ManagementFactory;
-import java.util.HashSet;
 import java.util.Locale;
 
 import water.*;
@@ -44,7 +43,7 @@ abstract public class Log {
   public static interface Tag {
     /** Which subsystem of h2o? */
     public static enum Sys implements Tag {
-      RANDF, GENLM, KMEAN, PARSE, STORE, WATER, HDFS_, HTTPD, CLEAN, CONFM, EXCEL, SCOREM;
+      RANDF, GENLM, KMEAN, PARSE, STORE, WATER, HDFS_, HTTPD, CLEAN, CONFM, EXCEL, SCORM;
       boolean _enable;
     }
 
@@ -53,10 +52,19 @@ abstract public class Log {
       INFO, WARN, ERRR;
     }
   }
+  static {
+    for(Kind k : Kind.values())
+      assert k.name().length() == Kind.INFO.name().length();
+    for(Sys s : Sys.values())
+      assert s.name().length() == Sys.RANDF.name().length();
+  }
+  public static final Kind[] KINDS = Kind.values();
+  public static final Sys[] SYSS = Sys.values();
 
   private static final String NL = System.getProperty("line.separator");
-  static {
-    System.setOut(new Wrapper(System.out));
+  static public void wrap() {
+    ///Turning off wrapping for now...  If this breaks stuff will put it back on.
+    /// System.setOut(new Wrapper(System.out));
     System.setErr(new Wrapper(System.err));
   }
   /** Local log file */
@@ -71,6 +79,8 @@ abstract public class Log {
   public static final long PID = getPid();
   /** Hostname and process ID. */
   private static final String HOST_AND_PID = "" + fixedLength(HOST + " ", 13) + fixedLength(PID + " ", 6);
+  private static final String LONG_HEADERS_PARAM = "long_log_headers";
+  private static final boolean LONG_HEADERS = System.getProperty(LONG_HEADERS_PARAM) != null;
   private static boolean printAll;
   /** Per subsystem debugging flags. */
   static {
@@ -79,6 +89,7 @@ abstract public class Log {
 
     setFlag(Sys.WATER);
     setFlag(Sys.RANDF);
+    setFlag(Sys.HTTPD);
     for(Sys s : Sys.values()) {
       String str = System.getProperty("log."+s);
       if (str == null) continue;
@@ -105,7 +116,6 @@ abstract public class Log {
     Object[] messages;
     Object message;
     String thread;
-    String body;
     /**True if we have yet finished printing this event.*/
     volatile boolean printMe;
 
@@ -199,7 +209,7 @@ abstract public class Log {
           if( i != lines.length - 1 ) buf.append(NL);
         }
       }
-      return body = buf.toString();
+      return buf.toString();
     }
 
     private StringBuilder longHeader(StringBuilder buf) {
@@ -259,17 +269,17 @@ abstract public class Log {
       } catch( IOException ioe ) {/* ignore log-write fails */
       }
     }
-    if( Paxos._cloudLocked ) logToKV(e.when.startAsString(), e.thread, e.toString());
-    if(printOnOut || printAll) unwrap(System.out,e.toShortString());
+    if( Paxos._cloudLocked ) logToKV(e.when.startAsString(), e.thread, e.kind, e.sys, e.body(0));
+    if(printOnOut || printAll) unwrap(System.out, (LONG_HEADERS ? e.toString() : e.toShortString()));
     e.printMe = false;
   }
   /** We also log events to the store. */
-  private static void logToKV(final String date, final String thr, final String msg) {
+  private static void logToKV(final String date, final String thr, final Kind kind, final Sys sys, final String msg) {
     final long pid = PID; // Run locally
     final H2ONode h2o = H2O.SELF; // Run locally
     new TAtomic<LogStr>() {
       @Override public LogStr atomic(LogStr l) {
-        return new LogStr(l, date, h2o, pid, thr, msg);
+        return new LogStr(l, date, h2o, pid, thr, kind, sys, msg);
       }
     }.fork(LOG_KEY);
   }
@@ -320,14 +330,14 @@ abstract public class Log {
     info(Sys.WATER, objects);
   }
   /** Log a debug message to the log file and the store if the subsystem's flag is set. */
-  static public void debug(  Object... objects) {
-    if (flag(Sys.WATER)==false) return;
+  static public void debug(Object... objects) {
+    if (flag(Sys.WATER) == false) return;
     Event e =  Event.make(Sys.WATER, Kind.INFO, null, objects);
     write(e,false);
   }
   /** Log a debug message to the log file and the store if the subsystem's flag is set. */
   static public void debug(Sys t, Object... objects) {
-    if(  flag(t) == false ) return;
+    if (flag(t) == false) return;
     Event e =  Event.make( t, Kind.INFO, null, objects);
     write(e,false);
   }
@@ -372,14 +382,13 @@ abstract public class Log {
     if( !_dontDie ) System.exit(-1);
   }
 
-  /** No op. */
-  public static void initHeaders() {}
-
   /** Print a message to the stream without the logging information. */
   public static void unwrap(PrintStream stream, String s) {
     if( stream instanceof Wrapper ) ((Wrapper) stream).printlnParent(s);
     else stream.println(s);
   }
+
+  public static PrintStream unwrap(PrintStream stream){ return  stream instanceof Wrapper ? ((Wrapper)stream).parent: stream; }
 
   public static void log(File file, PrintStream stream) throws Exception {
     BufferedReader reader = new BufferedReader(new FileReader(file));
@@ -394,9 +403,13 @@ abstract public class Log {
     }
   }
 
-  private static final class Wrapper extends PrintStream {
+  public static final class Wrapper extends PrintStream {
+
+   PrintStream parent;
+
     Wrapper(PrintStream parent) {
       super(parent);
+      this.parent=parent;
     }
 
     private static String log(Locale l, boolean nl, String format, Object... args) {
@@ -429,23 +442,29 @@ abstract public class Log {
   public static class LogStr extends Iced {
     public static final int MAX = 1024; // Number of log entries
     public final int _idx; // Index into the ring buffer
+    public final byte _kinds[];
+    public final byte _syss[];
     public final String _dates[];
     public final H2ONode _h2os[];
     public final long _pids[];
     public final String _thrs[];
     public final String _msgs[];
 
-    LogStr(LogStr l, String date, H2ONode h2o, long pid, String thr, String msg) {
+    LogStr(LogStr l, String date, H2ONode h2o, long pid, String thr, Kind kind, Sys sys, String msg) {
       _dates = l == null ? new String[MAX] : l._dates;
       _h2os = l == null ? new H2ONode[MAX] : l._h2os;
       _pids = l == null ? new long[MAX] : l._pids;
       _thrs = l == null ? new String[MAX] : l._thrs;
+      _kinds = l == null ? new byte[MAX] : l._kinds;
+      _syss = l == null ? new byte[MAX] : l._syss;
       _msgs = l == null ? new String[MAX] : l._msgs;
       _idx = l == null ? 0 : (l._idx + 1) & (MAX - 1);
       _dates[_idx] = date;
       _h2os[_idx] = h2o;
       _pids[_idx] = pid;
       _thrs[_idx] = thr;
+      _kinds[_idx] = (byte) kind.ordinal();
+      _syss[_idx] = (byte) sys.ordinal();
       _msgs[_idx] = msg;
     }
   }

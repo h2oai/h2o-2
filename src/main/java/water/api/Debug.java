@@ -2,7 +2,6 @@ package water.api;
 
 import water.*;
 import water.util.Log;
-import water.util.Log.Tag.Sys;
 
 public class Debug extends Request {
   @Override protected Response serve() {

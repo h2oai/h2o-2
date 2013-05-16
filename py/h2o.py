@@ -757,39 +757,42 @@ class H2O(object):
 
         url = self.__url(response['redirect_request'])
         params = response['redirect_request_args']
+        # no need to recreate the string for messaging, in the loop..
+        paramsStr =  '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
 
         if noise is not None:
             print noise
             # noise_json should be like "Storeview"
             (noise_json, noiseParams) = noise
             noiseUrl = self.__url(noise_json + ".json")
+            if noiseParams is None:
+                noiseParamsStr = ""
+            else:
+                noiseParamsStr =  '&'.join(['%s=%s' % (k,v) for (k,v) in noiseParams.items()])
 
         status = 'poll'
         r = {} # response
 
         start = time.time()
         count = 0
-        # FIX! temporarily wait 5x the retryDelaySecs delay, before the first poll
-        # Progress status NPE issue (H2O)
         if initialDelaySecs:
             time.sleep(initialDelaySecs)
 
         # can end with status = 'redirect' or 'done'
-        # FIX! temporary hack ...if a GLMModel key shows up, treat that as "stop polling'   
-        # because we have results for GLm. (i.e. ignore status.
         while status == 'poll':
             # UPDATE: 1/24/13 change to always wait before the first poll..
-            # see if it makes a diff to our low rate fails
             time.sleep(retryDelaySecs)
             # every other one?
             create_noise = noise is not None and ((count%2)==0)
             if create_noise:
                 urlUsed = noiseUrl
                 paramsUsed = noiseParams
+                paramsUsedStr = noiseParamsStr
                 msgUsed = "\nNoise during polling with"
             else:
                 urlUsed = url
                 paramsUsed = params
+                paramsUsedStr = paramsStr
                 msgUsed = "\nPolling with"
 
             r = self.__check_request(
@@ -799,7 +802,7 @@ class H2O(object):
                     params=paramsUsed))
 
             if ((count%5)==0):
-                verboseprint(msgUsed, urlUsed, "Response:", dump_json(r['response']))
+                verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(r['response']))
             # hey, check the sandbox if we've been waiting a long time...rather than wait for timeout
             # to find the badness?
             # if ((count%15)==0):
@@ -815,23 +818,86 @@ class H2O(object):
 
             if ((time.time()-start)>timeoutSecs):
                 # show what we're polling with 
-                argsStr =  '&'.join(['%s=%s' % (k,v) for (k,v) in paramsUsed.items()])
                 emsg = "Exceeded timeoutSecs: %d secs while polling." % timeoutSecs +\
-                       "status: %s, url: %s?%s" % (status, urlUsed, argsStr)
+                       "status: %s, url: %s?%s" % (status, urlUsed, paramsUsedStr)
                 raise Exception(emsg)
             count += 1
 
             if noPoll:
                 return r
-            # GLM can return partial results during polling..that's legal
-            ### if 'GLMProgressPage' in urlUsed and 'GLMModel' in r:
-            ###    print "INFO: GLM returning partial results during polling. Continuing.."
 
             if benchmarkLogging:
                 cloudPerfH2O.get_log_save(benchmarkLogging)
 
         return r
     
+    def kmeans_apply(self, data_key, model_key, destination_key,
+        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=30,
+        **kwargs):
+        # defaults
+        params_dict = {
+            'destination_key': destination_key,
+            'model_key': model_key,
+            'data_key': data_key,
+            }
+        browseAlso = kwargs.get('browseAlso', False)
+        params_dict.update(kwargs)
+        print "\nKMeansApply params list", params_dict
+        a = self.__check_request(
+            requests.get(
+                url=self.__url('KMeansApply.json'),
+                timeout=timeoutSecs,
+                params=params_dict))
+
+        # Check that the response has the right Progress url it's going to steer us to.
+        if a['response']['redirect_request']!='Progress':
+            print dump_json(a)
+            raise Exception('H2O kmeans redirect is not Progress. KMeansApply json response precedes.')
+        a = self.poll_url(a['response'],
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+        verboseprint("\nKMeans result:", dump_json(a))
+
+        if (browseAlso | browse_json):
+            print "Redoing the KMeansApply through the browser, no results saved though"
+            h2b.browseJsonHistoryAsUrlLastMatch('KMeansApply')
+            time.sleep(5)
+        return a
+
+    # model_key
+    # key
+    def kmeans_score(self, key, model_key,
+        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=30,
+        **kwargs):
+        # defaults
+        params_dict = {
+            'key': key,
+            'model_key': model_key,
+            }
+        browseAlso = kwargs.get('browseAlso', False)
+        params_dict.update(kwargs)
+        print "\nKMeansScore params list", params_dict
+        a = self.__check_request(
+            requests.get(
+                url=self.__url('KMeansScore.json'),
+                timeout=timeoutSecs,
+                params=params_dict))
+
+        # Check that the response has the right Progress url it's going to steer us to.
+        if a['response']['redirect_request']!='Progress':
+            print dump_json(a)
+            raise Exception('H2O kmeans redirect is not Progress. KMeansScore json response precedes.')
+        a = self.poll_url(a['response'],
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+        verboseprint("\nKMeans result:", dump_json(a))
+
+        if (browseAlso | browse_json):
+            print "Redoing the KMeansScore through the browser, no results saved though"
+            h2b.browseJsonHistoryAsUrlLastMatch('KMeansScore')
+            time.sleep(5)
+        return a
+
     # additional params include: cols=. 
     # don't need to include in params_dict it doesn't need a default
     def kmeans(self, key, key2=None, 
@@ -845,6 +911,7 @@ class H2O(object):
             'destination_key': None,
             }
         if key2 is not None: params_dict['destination_key'] = key2
+        browseAlso = kwargs.get('browseAlso', False)
         params_dict.update(kwargs)
         print "\nKMeans params list", params_dict
         a = self.__check_request(
@@ -861,6 +928,11 @@ class H2O(object):
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nKMeans result:", dump_json(a))
+
+        if (browseAlso | browse_json):
+            print "Redoing the KMeans through the browser, no results saved though"
+            h2b.browseJsonHistoryAsUrlLastMatch('KMeans')
+            time.sleep(5)
         return a
 
     # params: 
@@ -935,7 +1007,6 @@ class H2O(object):
                 }),
             ignoreH2oError=ignoreH2oError
             )
-        # too much!
         ### verboseprint("\ninspect result:", dump_json(a))
         return a
 
@@ -943,17 +1014,17 @@ class H2O(object):
     def store_view(self):
         a = self.__check_request(requests.get(self.__url('StoreView.json'),
             params={}))
-        # too much!
         ### verboseprint("\ninspect result:", dump_json(a))
         return a
 
     # There is also a RemoveAck in the browser, that asks for confirmation from
     # the user. This is after that confirmation.
+    # UPDATE: ignore errors on remove..key might already be gone due to h2o removing it now
+    # after parse
     def remove_key(self, key):
-        a = self.__check_request(requests.get(self.__url('Remove.json'),
-            params={"key": key}))
-
-        # too much!
+        a = self.__check_request(
+            requests.get(self.__url('Remove.json'), params={"key": key}),
+            ignoreH2oError=True)
         ### verboseprint("\ninspect result:", dump_json(a))
         return a
 
@@ -1117,13 +1188,14 @@ class H2O(object):
 
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict = { 
+            'parallel': 1,
             'family': 'binomial',
             'key': key,
             'y': 1,
             'link': 'familyDefault'
         }
         params_dict.update(kwargs)
-        print "\nGLM params list", params_dict
+        print "\n"+parentName, "params list", params_dict
 
         a = self.__check_request(requests.get(
             self.__url(parentName + '.json'),
@@ -1369,7 +1441,7 @@ class H2O(object):
         use_debugger=None, classpath=None,
         use_hdfs=False, 
         # hdfs_version="cdh4", hdfs_name_node="192.168.1.151", 
-        hdfs_version="cdh3u5", hdfs_name_node="192.168.1.176", 
+        hdfs_version="cdh3", hdfs_name_node="192.168.1.176", 
         hdfs_config=None,
         aws_credentials=None,
         use_flatfile=False, java_heap_GB=None, java_heap_MB=None, java_extra_args=None, 
@@ -1663,6 +1735,8 @@ class RemoteH2O(H2O):
                 logPrefix = 'remote-h2o-' + str(self.node_id)
             else:
                 logPrefix = 'remote-h2o'
+
+            logPrefix += '-' + host.addr
 
             outfd,outpath = tmp_file(logPrefix + '.stdout.', '.log')
             errfd,errpath = tmp_file(logPrefix + '.stderr.', '.log')

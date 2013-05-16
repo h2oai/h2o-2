@@ -1,9 +1,8 @@
 package water.parser;
 
-import java.io.IOException;
+import java.io.EOFException;
 import java.io.InputStream;
-import java.util.Arrays;
-import java.util.UUID;
+import java.util.*;
 import java.util.zip.*;
 
 import jsr166y.CountedCompleter;
@@ -12,7 +11,7 @@ import water.H2O.H2OCountedCompleter;
 import water.api.Inspect;
 import water.parser.DParseTask.Pass;
 import water.util.Log;
-import water.util.Log.Tag.Sys;
+import water.util.RIStream;
 
 import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
@@ -24,9 +23,10 @@ import com.google.common.io.Closeables;
  */
 @SuppressWarnings("fallthrough")
 public final class ParseDataset extends Job {
+
+  public static int PLIMIT = Integer.MAX_VALUE;
   public static enum Compression { NONE, ZIP, GZIP }
 
-  long _total;
   public final Key  _progress;
 
   private ParseDataset(Key dest, Key[] keys) {
@@ -37,9 +37,8 @@ public final class ParseDataset extends Job {
       dataset = DKV.get(keys[i]);
       total += dataset.length() * Pass.values().length;
     }
-    _total = total;
     _progress = Key.make(UUID.randomUUID().toString(), (byte) 0, Key.JOB);
-    UKV.put(_progress, new Progress());
+    UKV.put(_progress, new Progress(0,total));
   }
 
   // Guess
@@ -55,62 +54,91 @@ public final class ParseDataset extends Job {
     return Compression.NONE;
   }
 
-  // Parse the dataset (uncompressed, zippped) as a CSV-style thingy and
-  // produce a structured dataset as a result.
-  private static void parse(ParseDataset job, Key[] keys, CsvParser.Setup setup) {
-    Value [] dataset = new Value[keys.length];
+  public static void parse(Key okey, Key [] keys){
+    forkParseDataset(okey, keys, null).get();
+  }
+
+  static DParseTask tryParseXls(Value v,ParseDataset job){
+    DParseTask t = DParseTask.createPassOne(v, job, CustomParser.Type.XLS);
+    try{t.passOne(null);}catch(Exception e){return null;}
+    return t;
+  }
+
+  public static void parse(ParseDataset job, Key [] keys, CsvParser.Setup setup){
     int j = 0;
-    for(int i = 0; i < keys.length; ++i){
+    UKV.remove(job.dest());// remove any previous instance and insert a sentinel (to ensure no one has been writing to the same keys during our parse!
+    Key [] nonEmptyKeys = new Key[keys.length];
+    for (int i = 0; i < keys.length; ++i) {
       Value v = DKV.get(keys[i]);
-      if(v == null || v.length() > 0) // skip nonzeros
-        dataset[j++] = v;
+      if (v == null || v.length() > 0) // skip nonzeros
+        nonEmptyKeys[j++] = keys[i];
     }
-    if(j < dataset.length) // remove the nulls
-      dataset = Arrays.copyOf(dataset, j);
-    if(dataset.length == 0){
+    if (j < nonEmptyKeys.length) // remove the nulls
+      keys = Arrays.copyOf(nonEmptyKeys, j);
+    if (keys.length == 0) {
       job.cancel();
       return;
     }
-    if(setup == null)
-      setup = Inspect.csvGuessValue(dataset[0]);
-    if(keys.length > 1) {
-      CheckParseSetup tst = new CheckParseSetup(job,setup);
-      tst.invoke(keys);
-      if(!tst._res){
+    CustomParser.Type ptype = CustomParser.Type.CSV;
+    Value v = DKV.get(keys[0]);
+    DParseTask p1 = tryParseXls(v,job);
+    if(p1 != null) {
+      if(keys.length == 1){ // shortcut for 1 xls file, we already have pass one done, just do the 2nd pass and we're done
+        DParseTask p2 = DParseTask.createPassTwo(p1);
+        p2.passTwo();
+        p2.normalizeSigma();
+        p2.createValueArrayHeader();
         job.remove();
         return;
       }
+      ptype = CustomParser.Type.XLS;
+    } else if (setup == null || setup._data == null || setup._data[0] == null) {
+      setup = Inspect.csvGuessValue(v, (setup != null)?setup._separator:CsvParser.NO_SEPARATOR);
+      assert setup._data[0] != null;
     }
-
+    final int ncolumns = setup._data[0].length;
+    Compression compression = guessCompressionMethod(v);
     try {
-      // try if it is XLS file first
-      try {
-        parseUncompressed(job, dataset, CustomParser.Type.XLS, setup);
-        return;
-      } catch( Exception e ) {
-        // pass
+      UnzipAndParseTask tsk = new UnzipAndParseTask(job, compression, setup,ptype);
+      tsk.invoke(keys);
+      DParseTask [] p2s = new DParseTask[keys.length];
+      DParseTask phaseTwo = DParseTask.createPassTwo(tsk._tsk);
+      // too keep original order of the keys...
+      HashMap<Key, FileInfo> fileInfo = new HashMap<Key, FileInfo>();
+      long rowCount = 0;
+      for(int i = 0; i < tsk._fileInfo.length; ++i)
+        fileInfo.put(tsk._fileInfo[i]._ikey,tsk._fileInfo[i]);
+      // run pass 2
+      for(int i = 0; i < keys.length; ++i){
+        FileInfo finfo = fileInfo.get(keys[i]);
+        Key k = finfo._okey;
+        long nrows = finfo._nrows[finfo._nrows.length-1];
+        for(j = 0; j < finfo._nrows.length; ++j)
+          finfo._nrows[j] += rowCount;
+        rowCount += nrows;
+        p2s[i] = (DParseTask) new DParseTask(phaseTwo, finfo).dfork(k);
       }
-      Compression compression = guessCompressionMethod(dataset[0]);
-//      if( compression == Compression.ZIP ) {
-//        try {
-//          parseUncompressed(job, dataset, CustomParser.Type.XLSX, setup);
-//          return;
-//        } catch( Exception e ) {
-//          // pass
-//        }
-//      }
-      switch( compression ) {
-      case NONE: parseUncompressed(job, dataset, CustomParser.Type.CSV, setup); break;
-      case ZIP:  //parseZipped(job, dataset, setup); break;
-      case GZIP: //parseGZipped(job, dataset, setup); break;
-        parseCompressed(job, keys, setup, compression);
-        break;
-      default:   throw new RuntimeException("Unknown compression of dataset!");
+      phaseTwo._sigma = new double[ncolumns];
+      phaseTwo._invalidValues = new long[ncolumns];
+      // now put the results together and create ValueArray header
+      for(int i = 0; i < p2s.length; ++i){
+        DParseTask t = p2s[i];
+        p2s[i].get();
+        for (j = 0; j < phaseTwo._ncolumns; ++j) {
+          phaseTwo._sigma[j] += t._sigma[j];
+          phaseTwo._invalidValues[j] += t._invalidValues[j];
+        }
+        if ((t._error != null) && !t._error.isEmpty()) {
+          System.err.println(phaseTwo._error);
+          throw new Exception("The dataset format is not recognized/supported");
+        }
+        FileInfo finfo = fileInfo.get(keys[i]);
+        UKV.remove(finfo._okey);
       }
-    } catch( java.io.EOFException e ) {
-      // Unexpected EOF?  Assume its a broken file, and toss the whole parse out
-      UKV.put(job.dest(), new Fail(e.getMessage()));
-    } catch( Exception e ) {
+      phaseTwo.normalizeSigma();
+      phaseTwo._colNames = setup._data[0];
+      phaseTwo.createValueArrayHeader();
+    } catch (Exception e) {
       UKV.put(job.dest(), new Fail(e.getMessage()));
       throw Throwables.propagate(e);
     } finally {
@@ -118,249 +146,217 @@ public final class ParseDataset extends Job {
     }
   }
 
-  public static void parse(Key dest, final Key[] keys) {
-    final ParseDataset job = new ParseDataset(dest, keys);
-    job.start(new H2OCountedCompleter() {
-        @Override public void compute2() { parse(job, keys, null); tryComplete(); }
-      });
-    job._fjtask.compute2();
+  public static class ParserFJTask extends H2OCountedCompleter {
+    final ParseDataset job;
+    Key [] keys;
+    CsvParser.Setup setup;
+
+    public ParserFJTask(ParseDataset job, Key [] keys, CsvParser.Setup setup){
+      this.job = job;
+      this.keys = keys;
+      this.setup = setup;
+    }
+    @Override
+    public void compute2() {
+      parse(job, keys,setup);
+      tryComplete();
+    }
   }
 
-  public static Job forkParseDataset( final Key dest, final Key[] keys, final CsvParser.Setup setup ) {
-    final ParseDataset job = new ParseDataset(dest, keys);
-    H2O.submitTask(job.start(new H2OCountedCompleter() {
-        @Override public void compute2() { parse(job, keys, setup); tryComplete(); }
-      }));
+  public static Job forkParseDataset(final Key dest, final Key[] keys, final CsvParser.Setup setup) {
+    ParseDataset job = new ParseDataset(dest, keys);
+    H2OCountedCompleter fjt = new ParserFJTask(job, keys, setup);
+    job.start(fjt);
+    H2O.submitTask(fjt);
     return job;
   }
 
-  public static class ParseException extends RuntimeException{
-    public ParseException(String msg){super(msg);}
-  }
-  private static void parseUncompressed(ParseDataset job, Value [] dataset, CustomParser.Type parserType, CsvParser.Setup setup) throws Exception{
-    if(setup == null)
-      setup = Inspect.csvGuessValue(dataset[0]);
-    CsvParser.Setup headerSetup = setup;
-    setup = new CsvParser.Setup(setup._separator,false,setup._data,setup._numlines,setup._bits);
-    long nchunks = 0;
-    // count the total number of chunks
-    for(int i = 0; i < dataset.length; ++i){
-      if(dataset[i].isArray()){
-        ValueArray ary = dataset[i].get();
-        nchunks += ary.chunks();
-      } else
-        nchunks += 1;
+  public static class ParseException extends RuntimeException {
+    public ParseException(String msg) {
+      super(msg);
     }
-    int chunks = (int)nchunks;
-    assert chunks == nchunks;
-    // parse the first value
-    DParseTask phaseOne = DParseTask.createPassOne(dataset[0], job, parserType);
-    int [] startchunks = new int[dataset.length+1];
-    phaseOne.passOne(headerSetup);
-    if( (phaseOne._error != null) && !phaseOne._error.isEmpty() )
-      throw Log.err(Sys.PARSE,phaseOne._error, new Exception("The dataset format is not recognized/supported"));
-
-    if(dataset.length > 1){     // parse the rest
-      startchunks[1] = phaseOne._nrows.length;
-      phaseOne._nrows = Arrays.copyOf(phaseOne._nrows, chunks);
-      for(int i = 1; i < dataset.length; ++i){
-        DParseTask tsk = DParseTask.createPassOne(dataset[i], job, CustomParser.Type.CSV);
-        assert(!setup._header);
-        tsk.passOne(setup);
-        if( (tsk._error != null) && !tsk._error.isEmpty() )
-          throw Log.err(Sys.PARSE,phaseOne._error, new Exception("The dataset format is not recognized/supported"));
-
-        startchunks[i+1] = startchunks[i] + tsk._nrows.length;
-        // modified reduction step, compute the compression scheme and the nrows array
-        for (int j = 0; j < tsk._nrows.length; ++j)
-          phaseOne._nrows[j+startchunks[i]] = tsk._nrows[j];
-        assert tsk._ncolumns == phaseOne._ncolumns;
-        for(int j = 0; j < tsk._ncolumns; ++j) {
-          if(phaseOne._enums[j] != tsk._enums[j])
-            phaseOne._enums[j].merge(tsk._enums[j]);
-          if(tsk._min[j] < phaseOne._min[j])phaseOne._min[j] = tsk._min[j];
-          if(tsk._max[j] > phaseOne._max[j])phaseOne._max[j] = tsk._max[j];
-          if(tsk._scale[j] < phaseOne._scale[j])phaseOne._scale[j] = tsk._scale[j];
-          if(tsk._colTypes[j] > phaseOne._colTypes[j])phaseOne._colTypes[j] = tsk._colTypes[j];
-          phaseOne._mean[j] += tsk._mean[j];
-          phaseOne._invalidValues[j] += tsk._invalidValues[j];
-        }
-      }
-    }
-    // now do the pass 2
-    DParseTask phaseTwo = DParseTask.createPassTwo(phaseOne);
-    phaseTwo.passTwo();
-    if((phaseTwo._error != null) && !phaseTwo._error.isEmpty())
-      throw Log.err(Sys.PARSE,phaseTwo._error, new Exception("The dataset format is not recognized/supported"));
-
-    for(int i = 1; i < dataset.length; ++i){
-      DParseTask tsk = new DParseTask(phaseTwo,dataset[i],startchunks[i]);
-      tsk._skipFirstLine = false;
-      tsk.passTwo();
-      for(int j = 0; j < phaseTwo._ncolumns; ++j){
-        phaseTwo._sigma[j] += tsk._sigma[j];
-        phaseTwo._invalidValues[j] += tsk._invalidValues[j];
-      }
-      if( (tsk._error != null) && !tsk._error.isEmpty() )
-        throw Log.err(Sys.PARSE,phaseTwo._error, new Exception("The dataset format is not recognized/supported"));
-      UKV.remove(dataset[i]._key);
-    }
-    phaseTwo.normalizeSigma();
-    phaseTwo.createValueArrayHeader();
   }
 
-  public static class UnzipTask extends DRemoteTask {
+  public static class FileInfo extends Iced{
+    Key _ikey;
+    Key _okey;
+    long [] _nrows;
+    boolean _header;
+  }
+
+  public static class UnzipAndParseTask extends DRemoteTask {
     final ParseDataset _job;
     final Compression _comp;
-    boolean _success = true;
-    public UnzipTask(ParseDataset job, Compression comp) {
+    DParseTask _tsk;
+    FileInfo [] _fileInfo;
+    final byte _sep;
+    final int _ncolumns;
+    final CustomParser.Type _pType;
+    final String [] _headers;
+
+    public UnzipAndParseTask(ParseDataset job, Compression comp, CsvParser.Setup setup, CustomParser.Type pType) {
+      this(job,comp,setup,pType,Integer.MAX_VALUE);
+    }
+    public UnzipAndParseTask(ParseDataset job, Compression comp, CsvParser.Setup setup, CustomParser.Type pType, int maxParallelism) {
       _job = job;
       _comp = comp;
+      _sep = setup._separator;
+      _ncolumns = setup._data[0].length;
+      _pType = pType;
+      _headers = (setup._header)?setup._data[0]:null;
     }
     @Override
-    public void reduce(DRemoteTask drt) {
-      UnzipTask other = (UnzipTask)drt;
-      _success = _success && other._success;
+    public DRemoteTask dfork( Key... keys ) {
+      _keys = keys;
+      H2O.submitTask(this);
+      return this;
+    }
+    static private class UnzipProgressMonitor implements ProgressMonitor {
+      int _counter = 0;
+      Key _progress;
+
+      public UnzipProgressMonitor(Key progress){_progress = progress;}
+      @Override
+      public void update(long n) {
+        n += _counter;
+        if(n > (1 << 20)){
+          onProgress(n, _progress);
+          _counter = 0;
+        } else
+          _counter = (int)n;
+      }
+    }
+    // actual implementation of unzip and parse, intedned for the FJ computation
+    private class UnzipAndParseLocalTask extends H2OCountedCompleter {
+      final int _idx;
+      public UnzipAndParseLocalTask(int idx){
+        _idx = idx;
+        setCompleter(UnzipAndParseTask.this);
+      }
+      protected  DParseTask _p1;
+      @Override
+      public void compute2() {
+        final Key key = _keys[_idx];
+        _fileInfo[_idx] = new FileInfo();
+        _fileInfo[_idx]._ikey = key;
+        _fileInfo[_idx]._okey = key;
+        Value v = DKV.get(key);
+        assert v != null;
+        long csz = v.length();
+        if(_comp != Compression.NONE){
+          onProgressSizeChange(csz,_job); // additional pass through the data to decompress
+          InputStream is = null;
+          InputStream ris = null;
+          try {
+            ris = v.openStream(new UnzipProgressMonitor(_job._progress));
+            switch(_comp){
+            case ZIP:
+              ZipInputStream zis = new ZipInputStream(ris);
+              ZipEntry ze = zis.getNextEntry();
+              // There is at least one entry in zip file and it is not a directory.
+              if (ze == null || ze.isDirectory())
+                throw new Exception("Unsupported zip file: " + ((ze == null) ? "No entry found": "Files containing directory are not supported."));
+              is = zis;
+              break;
+            case GZIP:
+              is = new GZIPInputStream(ris);
+              break;
+            default:
+              Log.info("Can't understand compression: _comp: "+_comp+" csz: "+csz+" key: "+key+" ris: "+ris);
+              throw H2O.unimpl();
+            }
+            _fileInfo[_idx]._okey = Key.make(new String(key._kb) + "_UNZIPPED");
+            ValueArray.readPut(_fileInfo[_idx]._okey, is,_job);
+            v = DKV.get(_fileInfo[_idx]._okey);
+            onProgressSizeChange(2*(v.length() - csz), _job); // the 2 passes will go over larger file!
+            assert v != null;
+          }catch (EOFException e){
+            if(ris != null && ris instanceof RIStream){
+              RIStream r = (RIStream)ris;
+              System.err.println("Unexpected eof after reading " + r.off() + "bytes, expeted size = " + r.expectedSz());
+            }
+            System.err.println("failed decompressing data " + key.toString() + " with compression " + _comp);
+            throw new RuntimeException(e);
+          } catch (Throwable t) {
+            System.err.println("failed decompressing data " + key.toString() + " with compression " + _comp);
+            throw new RuntimeException(t);
+          } finally {
+           Closeables.closeQuietly(is);
+          }
+        }
+        CsvParser.Setup setup = null;
+        if(_pType == CustomParser.Type.CSV){
+          setup = Inspect.csvGuessValue(v,_sep);
+          if(setup._data[0].length != _ncolumns)
+            throw new ParseException("Found conflicting number of columns (using separator " + (int)_sep + ") when parsing multiple files. Found " + setup._data[0].length + " columns  in " + key + " , but expected " + _ncolumns);
+          _fileInfo[_idx]._header = setup._header;
+          if(_fileInfo[_idx]._header && _headers != null) // check if we have the header, it should be the same one as we got from the head
+            for(int i = 0; i < setup._data[0].length; ++i)
+              _fileInfo[_idx]._header = _fileInfo[_idx]._header && setup._data[0][i].equalsIgnoreCase(_headers[i]);
+          setup = new CsvParser.Setup(_sep, _fileInfo[_idx]._header, setup._data, setup._numlines, setup._bits);
+          _p1 = DParseTask.createPassOne(v, _job, _pType);
+          _p1.setCompleter(this);
+          _p1.passOne(setup);
+          // DO NOT call tryComplete here, _p1 calls it!
+        } else {
+         _p1 = tryParseXls(v,_job);
+         if(_p1 == null)
+           throw new ParseException("Found conflicting types of files. Can not parse xls and not-xls files together");
+         tryComplete();
+        }
+      }
+
+      @Override
+      public void onCompletion(CountedCompleter caller){
+        _fileInfo[_idx]._nrows = _p1._nrows;
+        long numRows = 0;
+        for(int i = 0; i < _p1._nrows.length; ++i){
+          numRows += _p1._nrows[i];
+          _fileInfo[_idx]._nrows[i] = numRows;
+        }
+        quietlyComplete(); // wake up anyone  who is joining on this task!
+      }
     }
 
-    // Must override not to flatten the keys (which we do not really want to do here)
-    @Override public DRemoteTask dfork( Key... keys ) { _keys = keys; compute2(); return this; }
-    @Override public void lcompute() {
-      setPendingCount(_keys.length);
-      for(Key k:_keys){
-        final Key key = k;
-        H2OCountedCompleter subtask = new H2OCountedCompleter() {
-          @Override
-          public void compute2() {
-            InputStream is = null;
-            Key okey = Key.make(new String(key._kb) + "_UNZIPPED");
-            Value v = DKV.get(key);
-            final Key progressKey = _job._progress;
-            ProgressMonitor pmon = new ProgressMonitor() {
-                @Override
-                public void update(long n) {
-                  onProgress(n, progressKey);
-                }
-            };
-            try{
-              switch(_comp){
-              case ZIP:
-                ZipInputStream zis = new ZipInputStream(v.openStream(pmon));
-                ZipEntry ze = zis.getNextEntry();
-                // There is at least one entry in zip file and it is not a directory.
-                if( ze == null || ze.isDirectory() )
-                  throw Log.err(Sys.PARSE,new Exception("Unsupported zip file: "+ ((ze == null)?"No entry found":"Files containing directory arte not supported.")));
-                is = zis;
-                break;
-              case GZIP:
-                is = new GZIPInputStream(v.openStream(pmon));
-                break;
-              default:
-                throw Log.err(Sys.PARSE,H2O.unimpl());
-              }
-              ValueArray.readPut(okey, is, _job);
-            } catch(Throwable t){
-              Log.err(Sys.PARSE,"failed decompressing data " + key.toString() + " with compression "  + _comp, t);
-              UKV.remove(okey);
-              throw new RuntimeException(t);
-            } finally {
-              Closeables.closeQuietly(is);
-              tryComplete();
-            }
-          }
-        };
-        subtask.setCompleter(this);
-        H2O.submitTask(subtask);
+    @Override
+    public void lcompute() {
+      _fileInfo = new FileInfo[_keys.length];
+      subTasks = new UnzipAndParseLocalTask[_keys.length];
+      setPendingCount(subTasks.length);
+      int p = 0;
+      int j = 0;
+      for(int i = 0; i < _keys.length; ++i){
+        if(p == ParseDataset.PLIMIT) subTasks[j++].join(); else ++p;
+        H2O.submitTask((subTasks[i] = new UnzipAndParseLocalTask(i)));
       }
       tryComplete();
     }
 
-    @Override public void lonCompletion(CountedCompleter caller) { _success= true; }
-    @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
-      _success = false;
-      return super.onExceptionalCompletion(ex, caller);
+    transient UnzipAndParseLocalTask [] subTasks;
+    @Override
+    public final void lonCompletion(CountedCompleter caller){
+      _tsk = subTasks[0]._p1;
+      for(int i = 1; i < _keys.length; ++i){
+        DParseTask tsk = subTasks[i]._p1;
+        tsk._nrows = _tsk._nrows;
+        _tsk.reduce(tsk);
+      }
     }
-  }
 
-  public static void parseCompressed(ParseDataset job, Key [] keys, CsvParser.Setup setup, Compression comp) throws IOException {
-    UnzipTask tsk = new UnzipTask(job, comp);
-    tsk.invoke(keys);
-    if (tsk._success && DKV.get(job._self) != null) {
-      // now turn the keys into output keys pointing to uncompressed data
-      // and compute new progress
-      job._total = 0;
-      for (int i = 0; i < keys.length; ++i){
-        keys[i] = Key.make(new String(keys[i]._kb) + "_UNZIPPED");
-        job._total += DKV.get(keys[i]).length();
+    @Override
+    public void reduce(DRemoteTask drt) {
+      UnzipAndParseTask tsk = (UnzipAndParseTask)drt;
+      if(_tsk == null && _fileInfo == null){
+        _fileInfo = tsk._fileInfo;
+        _tsk = tsk._tsk;
+      } else {
+        final int n = _fileInfo.length;
+        _fileInfo = Arrays.copyOf(_fileInfo, n + tsk._fileInfo.length);
+        System.arraycopy(tsk._fileInfo, 0, _fileInfo, n, tsk._fileInfo.length);
+        // we do not want to merge nrows from different files, apart from that, we want to use standard reduce!
+        tsk._tsk._nrows = _tsk._nrows;
+        _tsk.reduce(tsk._tsk);
       }
-      job._total *= 2; // 2 phases
-      // reset progress
-      UKV.put(job._self, job);
-      UKV.put(job._progress,new Progress());
-      try {
-        parse(job, keys, setup);
-      } finally {
-        for(int i = 0; i < keys.length; ++i)
-          if(keys[i] != null)
-            UKV.remove(keys[i]);
-      }
-    } else throw Log.err(Sys.PARSE, "unzipping of keys " + Arrays.toString(keys) + " + key[0] = " + keys[0] + " failed!", new RuntimeException());
-  }
-
-  // Unpack zipped CSV-style structure and call method parseUncompressed(...)
-  // The method exepct a dataset which contains a ZIP file encapsulating one file.
-  public static void parseZipped(ParseDataset job, Value [] dataset, CsvParser.Setup setup) throws IOException {
-    // Dataset contains zipped CSV
-    ZipInputStream zis = null;
-    Key keys [] = new Key[dataset.length];
-    try{
-      for(int i = 0; i < dataset.length; ++i){
-        try {
-          // Create Zip input stream and uncompress the data into a new key <ORIGINAL-KEY-NAME>_UNZIPPED
-          zis = new ZipInputStream(dataset[i].openStream());
-          // Get the *FIRST* entry
-          ZipEntry ze = zis.getNextEntry();
-          // There is at least one entry in zip file and it is not a directory.
-          if( ze != null && !ze.isDirectory() ) {
-            keys[i] = Key.make(new String(dataset[i]._key._kb) + "_UNZIPPED");
-            ValueArray.readPut(keys[i], zis, job);
-          }
-        } finally {
-          Closeables.closeQuietly(zis);
-        }
-        // else it is possible to dive into a directory but in this case I would
-        // prefer to return error since the ZIP file has not expected format
-      }
-      for(int i = 0; i < keys.length; ++i)
-        if( keys[i] == null )
-          throw new RuntimeException("Cannot uncompressed ZIP-compressed dataset!");
-      parse(job, keys, setup);
-    } finally {
-      for(int i = 0; i < keys.length; ++i)
-        if(keys[i] != null)
-          UKV.remove(keys[i]);
-    }
-  }
-
-  public static void parseGZipped(ParseDataset job, Value [] dataset, CsvParser.Setup setup) throws IOException {
-    GZIPInputStream gzis = null;
-    Key [] keys = new Key [dataset.length];
-    try{
-      try {
-        for(int i = 0; i < dataset.length; ++i){
-          gzis = new GZIPInputStream(dataset[i].openStream());
-          keys[i] = ValueArray.readPut(new String(dataset[i]._key._kb) + "_UNZIPPED", gzis);
-        }
-      } finally {
-        Closeables.closeQuietly(gzis);
-      }
-      for(int i = 0; i < keys.length; ++i)
-        if( keys[i] == null )
-          throw Log.err(Sys.PARSE,new RuntimeException("Cannot uncompressed ZIP-compressed dataset!"));
-      parse(job, keys, setup);
-    }finally {
-      for(int i = 0; i < keys.length; ++i)
-        if(keys[i] != null)UKV.remove(keys[i]);
     }
   }
 
@@ -375,14 +371,16 @@ public final class ParseDataset extends Job {
   // Progress (TODO count chunks in VA, unify with models?)
 
   static class Progress extends Iced {
+    long _total;
     long _value;
+    Progress(long val, long total){_value = val; _total = total;}
   }
 
   @Override
   public float progress() {
-    if(_total == 0) return 0;
     Progress progress = UKV.get(_progress);
-    return (progress != null ? progress._value : 0) / (float) _total;
+    if(progress == null || progress._total == 0) return 0;
+    return progress._value / (float) progress._total;
   }
   @Override public void remove() {
     DKV.remove(_progress);
@@ -406,5 +404,16 @@ public final class ParseDataset extends Job {
         return old;
       }
     }.fork(progress);
+  }
+  static final void onProgressSizeChange(final long len, final ParseDataset job) {
+    new TAtomic<Progress>() {
+      @Override
+      public Progress atomic(Progress old) {
+        if (old == null)
+          return null;
+        old._total += len;
+        return old;
+      }
+    }.fork(job._progress);
   }
 }

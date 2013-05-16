@@ -5,12 +5,15 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
 
 import jsr166y.*;
+
+import water.r.Shell;
+
 import water.exec.Function;
 import water.hdfs.HdfsLoader;
 import water.nbhm.NonBlockingHashMap;
+import water.parser.ParseDataset;
 import water.store.s3.PersistS3;
 import water.util.*;
 import water.util.Log.Tag.Sys;
@@ -63,19 +66,7 @@ public final class H2O {
   // Central /dev/null for ignored exceptions
   public static final void ignore(Throwable e)             { ignore(e,"[h2o] Problem ignored: "); }
   public static final void ignore(Throwable e, String msg) { ignore(e, msg, true); }
-  public static final void ignore(Throwable e, String msg, boolean printException) {
-/*    StringBuffer sb = new StringBuffer();
-    sb.append(msg).append('\n');
-    if (printException) {
-      StackTraceElement[] stack = e.getStackTrace();
-      // The replacement of Exception -> Problem is required by our testing framework which would report
-      // error if it sees "exception" in the node output
-      sb.append(e.toString().replace("Exception", "Problem")).append('\n');
-      for (StackTraceElement el : stack) { sb.append("\tat "); sb.append(el.toString().replace("Exception", "Problem" )); sb.append('\n'); }
-    }
-    */
-    Log.err(msg, printException? e : null);
-  }
+  public static final void ignore(Throwable e, String msg, boolean printException) { Log.debug(Sys.WATER, msg + (printException? e.toString() : "")); }
 
   // --------------------------------------------------------------------------
   // The Current Cloud. A list of all the Nodes in the Cloud. Changes if we
@@ -250,12 +241,12 @@ public final class H2O {
   private static InetAddress guessInetAddress(List<InetAddress> ips) {
     String m = "Multiple local IPs detected:\n";
     for(InetAddress ip : ips) m+="  " + ip;
-    m+="Attempting to determine correct address...";
+    m+="\nAttempting to determine correct address...\n";
     Socket s = null;
     try {
       // using google's DNS server as an external IP to find
       s = new Socket("8.8.8.8", 53);
-      m+="Using " + s.getLocalAddress();
+      m+="Using " + s.getLocalAddress() + "\n";
       return s.getLocalAddress();
     } catch( Throwable t ) {
       Log.err(t);
@@ -295,7 +286,7 @@ public final class H2O {
   // replication.
 
   public static final Value putIfMatch( Key key, Value val, Value old ) {
-    assert val==null || val._key == key; // Keys matched
+    assert val==null || val._key.equals(key); // Keys matched
     if( old != null && val != null ) // Have an old value?
       key = val._key = old._key; // Use prior key in val
 
@@ -393,7 +384,12 @@ public final class H2O {
   // working on.
   static class FJWThr extends ForkJoinWorkerThread {
     public int _priority;
-    FJWThr(ForkJoinPool pool) { super(pool); }
+    FJWThr(ForkJoinPool pool) {
+      super(pool);
+      setPriority( ((ForkJoinPool2)pool)._priority == Thread.MIN_PRIORITY
+                   ? Thread.NORM_PRIORITY-1
+                   : Thread. MAX_PRIORITY-1 );
+    }
   }
   // Factory for F/J threads, with cap's that vary with priority.
   static class FJWThrFact implements ForkJoinPool.ForkJoinWorkerThreadFactory {
@@ -412,7 +408,7 @@ public final class H2O {
   }
 
   // Normal-priority work is generally directly-requested user ops.
-  private static final ForkJoinPool2 FJP_NORM = new ForkJoinPool2(MIN_PRIORITY,299);
+  private static final ForkJoinPool2 FJP_NORM = new ForkJoinPool2(MIN_PRIORITY,99);
   // Hi-priority work, sorted into individual queues per-priority.
   // Capped at a small number of threads per pool.
   private static final ForkJoinPool2 FJPS[] = new ForkJoinPool2[MAX_PRIORITY+1];
@@ -460,12 +456,14 @@ public final class H2O {
           H2OCountedCompleter h2o = FJPS[p].poll();
           if( h2o != null ) {     // Got a hi-priority job?
             t._priority = p;      // Set & do it now!
+            Thread.currentThread().setPriority(Thread.MAX_PRIORITY-1);
             h2o.compute2();       // Do it ahead of normal F/J work
             p++;                  // Check again the same queue
           }
         }
       } finally {
         t._priority = pp;
+        if( pp == MIN_PRIORITY ) Thread.currentThread().setPriority(Thread.NORM_PRIORITY-1);
       }
       // Now run the task as planned
       compute2();
@@ -499,8 +497,9 @@ public final class H2O {
     public String keepice; // Do not delete ice on startup
     public String soft = null; // soft launch for demos
     public String random_udp_drop = null; // test only, randomly drop udp incoming
-    public String nolog = null; // disable logging
+    public int pparse_limit = Integer.MAX_VALUE;
     public String no_requests_log = null; // disable logging of Web requests
+    public String rshell="false"; //FastR shell
   }
   public static boolean IS_SYSTEM_RUNNING = false;
 
@@ -515,9 +514,10 @@ public final class H2O {
     Arguments arguments = new Arguments(args);
     arguments.extract(OPT_ARGS);
     ARGS = arguments.toStringArray();
+    ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
 
-    if(OPT_ARGS.nolog == null)
-      Log.initHeaders();
+    //if (OPT_ARGS.rshell.equals("false"))
+    Log.wrap(); // Logging does not wrap when the rshell is on.
 
     startLocalNode(); // start the local node
     // Load up from disk and initialize the persistence layer
@@ -528,6 +528,8 @@ public final class H2O {
     initializeExpressionEvaluation(); // starts the expression evaluation system
 
     startupFinalize(); // finalizes the startup & tests (if any)
+
+    if (OPT_ARGS.rshell.equals("true"))  Shell.go();
     // Hang out here until the End of Time
   }
 
@@ -608,7 +610,8 @@ public final class H2O {
 
     // Start the TCPReceiverThread, to listen for TCP requests from other Cloud
     // Nodes. There should be only 1 of these, and it never shuts down.
-    (TCPReceiverThread.TCPTHR=new TCPReceiverThread()).start();
+    new TCPReceiverThread().start();
+    // Start the Nano HTTP server thread
     water.api.RequestServer.start();
   }
 
@@ -868,6 +871,7 @@ public final class H2O {
     public Cleaner() {
       super("MemCleaner");
       setDaemon(true);
+      setPriority(MAX_PRIORITY-2);
       _dirty = Long.MAX_VALUE;  // Set to clean-store
       _myHisto = new Histo();   // Build/allocate a first histogram
       _myHisto.compute(0);      // Compute lousy histogram; find eldest

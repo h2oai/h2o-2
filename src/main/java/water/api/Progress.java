@@ -55,6 +55,10 @@ public class Progress extends Request {
     return r;
   }
 
+  @Override protected boolean log() {
+    return false;
+  }
+
   static final ObjectBuilder defaultProgressBuilder(final String description) {
     return new ObjectBuilder() {
       @Override

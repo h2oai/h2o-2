@@ -29,7 +29,8 @@ import com.google.gson.*;
  * @author peta
  */
 public class RequestBuilders extends RequestQueries {
-  public static final String ROOT_OBJECT = "";
+  public static final String ROOT_OBJECT  = "";
+  public static final Gson   GSON_BUILDER = new GsonBuilder().setPrettyPrinting().create();
 
   private static final ThreadLocal<DecimalFormat> _format = new ThreadLocal<DecimalFormat>() {
     protected DecimalFormat initialValue() {
@@ -120,7 +121,7 @@ public class RequestBuilders extends RequestQueries {
     switch (response._status) {
       case done    :
         RString result = new RString(_jsonResponseBox);
-        result.replace("JSON_RESPONSE_BOX", response.toJson().toString());
+        result.replace("JSON_RESPONSE_BOX", GSON_BUILDER.toJson(response.toJson()));
         return result.toString();
       case error   :
       case redirect:
@@ -255,39 +256,39 @@ public class RequestBuilders extends RequestQueries {
 
     /** Status of the request.
      */
-    private final Status _status;
+    protected final Status _status;
 
     /** Name of the redirected request. This is only valid if the response is
      * redirect status.
      */
-    private final String _redirectName;
+    protected final String _redirectName;
 
     /** Arguments of the redirect object. These will be given to the redirect
      * object when called.
      */
-    private final JsonObject _redirectArgs;
+    protected final JsonObject _redirectArgs;
 
     /** Poll progress in terms of finished elements.
      */
-    private final int _pollProgress;
+    protected final int _pollProgress;
 
     /** Total elements to be finished before the poll will be done.
      */
-    private final int _pollProgressElements;
+    protected final int _pollProgressElements;
 
     /** Response object for JSON requests.
      */
-    private final JsonObject _response;
+    protected final JsonObject _response;
 
-    private boolean _strictJsonCompliance = false;
+    protected boolean _strictJsonCompliance = false;
 
     /** Custom builders for JSON elements when converting to HTML automatically.
      */
-    private final HashMap<String,Builder> _builders = new HashMap();
+    protected final HashMap<String,Builder> _builders = new HashMap();
 
     /** Custom headers to show in the html.
      */
-    private final List<String> _headers = new ArrayList();
+    protected final List<String> _headers = new ArrayList();
 
     /** Private constructor creating the request with given type and response
      * JSON object.

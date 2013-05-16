@@ -1,14 +1,12 @@
-package water.sys;
+package water.deploy;
 
 import java.io.*;
 import java.util.*;
 
 import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.lang.ArrayUtils;
 
 import water.Arguments;
 import water.H2O;
-import water.sys.Cloud.Master;
 import water.util.Log;
 import water.util.Utils;
 
@@ -21,15 +19,25 @@ public abstract class EC2 {
   private static final String NAME = USER + "-H2O-Cloud";
 
   public static class Config extends Arguments.Opt {
-    String  region = "us-east-1";
-    String  type   = "m1.small";
-    String  secg   = "default";
-    boolean conf   = true;
-    String  incl;                // additional rsync includes
-    String  excl;                // additional rsync excludes
+    String region = "us-east-1";
+    String type = "m1.xlarge";
+    String secg = "default";
+    boolean confirm = true;
+    String incl; // additional rsync includes
+    String excl; // additional rsync excludes
+    String java_args;
   }
 
   public static void main(String[] args) throws Exception {
+    try {
+      H2O.getAWSCredentials();
+    } catch( Exception ex ) {
+      System.out.println("Please add AWS credentials to './AwsCredentials.properties'");
+      System.out.println("File format is:");
+      System.out.println("accessKey=XXXXXXXXXXXXXXXXXXXX");
+      System.out.println("secretKey=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+      return;
+    }
     Config config;
     int count;
     String[] remaining;
@@ -41,46 +49,28 @@ public abstract class EC2 {
       count = Integer.parseInt(remaining[0]);
       remaining = Arrays.copyOfRange(remaining, 1, remaining.length);
     } catch( Exception ex ) {
-      Config values = new Config();
-      System.out.println("Usage: ec2 [options] <machine_count> args");
+      Config defaults = new Config();
+      System.out.println("Usage: h2o_on_ec2 [options] <machine_count> args");
       System.out.println();
       System.out.println("Options and default values:");
-      System.out.println("  -region=" + values.region);
-      System.out.println("  -type=" + values.type);
-      System.out.println("  -secg=" + values.secg + " (Security Group, must allow ssh (TCP 22))");
-      System.out.println("  -conf=" + values.conf + " (Confirm before starting new instances)");
+      System.out.println("  -region=" + defaults.region);
+      System.out.println("  -type=" + defaults.type);
+      System.out.println("  -secg=" + defaults.secg + " (Security Group, must allow ssh (TCP 22))");
+      System.out.println("  -confirm=" + defaults.confirm + " (Confirm before starting new instances)");
       System.out.println("  -incl='' (additional rsync includes, e.g. py:smalldata)");
       System.out.println("  -excl='' (additional rsync excludes, e.g. sandbox:*.pyc)");
-      System.out.println();
-      System.out.println("AWS credentials are looked for at './AwsCredentials.properties'");
+      System.out.println("  -java_args='' (java args for cluster JVMs)");
       return;
     }
     run(config, count, remaining);
   }
 
   public static void run(Config config, int count, String[] args) throws Exception {
-    Cloud c = resize(config.region, config.type, config.secg, config.conf, count);
-
-    // Take first box as cloud master
-    Host master = new Host(c.publicIPs()[0]);
+    Cloud c = resize(config.region, config.type, config.secg, config.confirm, count);
     String[] includes = config.incl != null ? config.incl.split(File.pathSeparator) : null;
     String[] excludes = config.excl != null ? config.excl.split(File.pathSeparator) : null;
-    includes = (String[]) ArrayUtils.addAll(Host.defaultIncludes(), includes);
-    excludes = (String[]) ArrayUtils.addAll(Host.defaultExcludes(), excludes);
-
-    File flatfile = Utils.tempFile(Utils.join('\n', c.privateIPs()));
-    includes = (String[]) ArrayUtils.add(includes, flatfile.getAbsolutePath());
-
-    master.rsync(includes, excludes);
-
-    ArrayList<String> list = new ArrayList<String>();
-    list.add("-mainClass");
-    list.add(Master.class.getName());
-    list.add("-flatfile");
-    list.add(flatfile.getName());
-    list.add("-log_headers");
-    list.addAll(Arrays.asList(args));
-    RemoteRunner.launch(master, list.toArray(new String[0]));
+    String[] java = config.java_args != null ? config.java_args.split(" ") : null;
+    c.start(includes, excludes, java, args);
   }
 
   /**
@@ -100,10 +90,8 @@ public abstract class EC2 {
         String ip = ip(instance);
         if( ip != null ) {
           String name = null;
-          if( instance.getTags().size() > 0 )
-            name = instance.getTags().get(0).getValue();
-          if( NAME.equals(name) )
-            instances.add(instance);
+          if( instance.getTags().size() > 0 ) name = instance.getTags().get(0).getValue();
+          if( NAME.equals(name) ) instances.add(instance);
         }
       }
     }
@@ -119,32 +107,29 @@ public abstract class EC2 {
       if( confirm ) {
         System.out.println("Please confirm [y/n]");
         String s = Utils.readConsole();
-        if( s == null || !s.equalsIgnoreCase("y") )
-          throw new RuntimeException("Aborted");
+        if( s == null || !s.equalsIgnoreCase("y") ) throw new RuntimeException("Aborted");
       }
 
       RunInstancesRequest request = new RunInstancesRequest();
       request.withInstanceType(type);
-      if( region.startsWith("us-east-1") )
-        request.withImageId("ami-fc75ee95");
-      else if( region.startsWith("us-west-1") )
-        request.withImageId("ami-64d1fc21");
+      if( region.startsWith("us-east-1") ) request.withImageId("ami-fc75ee95");
+      else if( region.startsWith("us-west-1") ) request.withImageId("ami-64d1fc21");
       else if( region.startsWith("us-west-2") ) // Oregon
-        request.withImageId("ami-52bf2b62");
-      else if( region.startsWith("eu-west-1") )
-        request.withImageId("ami-5e93992a");
+      request.withImageId("ami-52bf2b62");
+      else if( region.startsWith("eu-west-1") ) request.withImageId("ami-5e93992a");
       else if( region.startsWith("ap-southeast-1") ) // Singapore
-        request.withImageId("ami-ac9ed2fe");
+      request.withImageId("ami-ac9ed2fe");
       else if( region.startsWith("ap-southeast-2") ) // Sydney
-        request.withImageId("ami-283eaf12");
+      request.withImageId("ami-283eaf12");
       else if( region.startsWith("ap-northeast-1") ) // Tokyo
-        request.withImageId("ami-153fbf14");
+      request.withImageId("ami-153fbf14");
       else if( region.startsWith("sa-east-1") ) // Sao Paulo
-        request.withImageId("ami-db6bb0c6");
+      request.withImageId("ami-db6bb0c6");
 
       request.withMinCount(launchCount).withMaxCount(launchCount);
       request.withSecurityGroupIds(secg);
       // TODO what's the right way to have boxes in same availability zone?
+      // maybe start a first one and add others to same
       // request.withPlacement(new Placement(region + "c"));
       request.withUserData(new String(Base64.encodeBase64(cloudConfig().getBytes())));
 
@@ -199,14 +184,13 @@ public abstract class EC2 {
       r = new BufferedReader(new FileReader(new File(pub)));
       return r.readLine();
     } catch( IOException e ) {
-      throw  Log.errRTExcept(e);
+      throw Log.errRTExcept(e);
     } finally {
-      if( r != null )
-        try {
-          r.close();
-        } catch( IOException e ) {
-          throw  Log.errRTExcept(e);
-        }
+      if( r != null ) try {
+        r.close();
+      } catch( IOException e ) {
+        throw Log.errRTExcept(e);
+      }
     }
   }
 
@@ -228,28 +212,25 @@ public abstract class EC2 {
         List<Instance> instances = new ArrayList<Instance>();
         for( Reservation reservation : reservations )
           for( Instance instance : reservation.getInstances() )
-            if( ip(instance) != null )
-              instances.add(instance);
+            if( ip(instance) != null ) instances.add(instance);
         if( instances.size() == ids.size() ) {
           // Try to connect to SSH port on each box
-          if( canConnect(instances) )
-            return instances;
+          if( canConnect(instances) ) return instances;
         }
-      } catch( AmazonServiceException _ ) { Log.err(_);
+      } catch( AmazonServiceException _ ) {
+        // Ignore and retry
       }
       try {
         Thread.sleep(500);
       } catch( InterruptedException e ) {
-        throw  Log.errRTExcept(e);
+        throw Log.errRTExcept(e);
       }
     }
   }
 
   private static String ip(Instance instance) {
     String ip = instance.getPublicIpAddress();
-    if( ip != null && ip.length() != 0 )
-      if( instance.getState().getName().equals("running") )
-        return ip;
+    if( ip != null && ip.length() != 0 ) if( instance.getState().getName().equals("running") ) return ip;
     return null;
   }
 
@@ -258,12 +239,10 @@ public abstract class EC2 {
       try {
         String ssh = Host.ssh() + " -q" + Host.SSH_OPTS + " " + instance.getPublicIpAddress();
         Process p = Runtime.getRuntime().exec(ssh + " exit");
-        if( p.waitFor() != 0 )
-          return false;
+        if( p.waitFor() != 0 ) return false;
       } catch( Exception e ) {
         return false;
-      } finally {
-      }
+      } finally {}
     }
     return true;
   }

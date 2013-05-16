@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-
-java -ea -cp target/h2o.jar water.Boot -mainClass water.sys.EC2 $@

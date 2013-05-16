@@ -6,8 +6,8 @@ sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util
 RANDOM_LENGTH = False
-MAX_ENUM_SIZE = random.randint(2,8)
-### MAX_ENUM_SIZE = 4
+ENUM_SIZE = random.randint(2,7)
+### ENUM_SIZE = 4
 # just randomly pick the row and col cases.
 COL_SEP_HIVE = random.randint(0,1) == 1
 ## COL_SEP_HIVE = False # comma
@@ -20,13 +20,13 @@ COL_SEP_HIVE = random.randint(0,1) == 1
 # python has some things we can use
 # string.ascii_uppercase string.printable string.letters string.digits string.punctuation string.whitespace
 # restricting the choices makes it easier to find the bad cases
-def random_enum(maxEnumSize, randChars="abeE01" + "$%+-.;|\t ", quoteChars="\'\""):
+def random_enum(enumSize, randChars="abeE01" + "$%+-.;|\t ", quoteChars="\'\""):
     choiceStr = randChars + quoteChars
     mightBeNumberOrWhite = True
     while mightBeNumberOrWhite:
         # H2O doesn't seem to tolerate random single or double quote in the first two rows.
         # disallow that by not passing quoteChars for the first two rows (in call to here)
-        r = ''.join(random.choice(choiceStr) for x in range(maxEnumSize))
+        r = ''.join(random.choice(choiceStr) for x in range(enumSize))
         mightBeNumberOrWhite = h2o_util.might_h2o_think_number_or_whitespace(r)
     return r
 
@@ -41,9 +41,9 @@ def write_syn_dataset(csvPathname, rowCount, colCount=1, SEED='12345678',
         rowData = []
         def doRandomOrFixed():
             if RANDOM_LENGTH:
-                return random_enum(random.randint(2, MAX_ENUM_SIZE), quoteChars=quoteChars)
+                return random_enum(random.randint(2, ENUM_SIZE), quoteChars=quoteChars)
             else:
-                return random_enum(MAX_ENUM_SIZE, quoteChars=quoteChars)
+                return random_enum(ENUM_SIZE, quoteChars=quoteChars)
 
         for col in range(colCount):
             ri = doRandomOrFixed()

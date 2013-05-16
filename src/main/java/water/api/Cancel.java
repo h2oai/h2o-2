@@ -2,7 +2,6 @@ package water.api;
 
 import water.Job;
 import water.Key;
-import water.util.Log;
 import water.util.RString;
 
 import com.google.gson.JsonObject;

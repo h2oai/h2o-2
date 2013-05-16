@@ -39,6 +39,7 @@ public class Constants {
   public static final String COLS                  = "cols";
   public static final String CONSENSUS             = "consensus";
   public static final String CONTENTS              = "contents";
+  public static final String COUNT                 = "count";
   public static final String DATA_KEY              = "data_key";
   public static final String DEPTH                 = "depth";
   public static final String DESCRIPTION           = "description";
@@ -97,6 +98,7 @@ public class Constants {
   public static final String NODE                  = "node";
   public static final String NODE_NAME             = "node_name";
   public static final String NODES                 = "nodes";
+  public static final String NORMALIZE             = "normalize";
   public static final String NUM_COLS              = "num_cols";
   public static final String NUM_CPUS              = "num_cpus";
   public static final String NUM_KEYS              = "num_keys";

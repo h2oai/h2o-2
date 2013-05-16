@@ -11,13 +11,12 @@
     "java_heap_GB": 28, 
 
     "hdfs_name_node": "192.168.1.176",
-    "hdfs_version": "cdh3u5",
+    "hdfs_version": "cdh3",
     "use_hdfs": false,
 
     "use_flatfile": true,
 
     "ip": [
-        "192.168.1.171",
         "192.168.1.172",
         "192.168.1.173",
         "192.168.1.174",

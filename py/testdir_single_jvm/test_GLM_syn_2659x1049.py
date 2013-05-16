@@ -7,7 +7,7 @@ params = {
     'family': 'binomial', 
     'link': 'familyDefault', 
     'weight': 1.0, 
-    'beta_epsilon': 0.0001, 
+    'beta_eps': 0.0001, 
     'thresholds': 0.5, 
     'alpha': 1.0, 
     'lambda': 1e-05,

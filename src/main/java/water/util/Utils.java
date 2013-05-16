@@ -226,22 +226,23 @@ public class Utils {
     }
   }
 
-  public static File tempFile(String content) {
-    File file;
+  public static File writeFile(String content) {
+    try {
+      return writeFile(File.createTempFile("h2o", null), content);
+    } catch( IOException e ) {
+      throw Log.errRTExcept(e);
+    }
+  }
+
+  public static File writeFile(File file, String content) {
     FileWriter w = null;
     try {
-      file = File.createTempFile("h2o", null);
       w = new FileWriter(file);
       w.write(content);
-    } catch(IOException ex) {
-      throw new RuntimeException(ex);
+    } catch(IOException e) {
+      Log.errRTExcept(e);
     } finally {
-      if(w != null) {
-        try {
-          w.close();
-        } catch(IOException _) {
-        }
-      }
+      close(w);
     }
     return file;
   }
@@ -282,7 +283,7 @@ public class Utils {
     Futures fs = new Futures();
     Key k = c.importFile(0, fs);
     fs.blockForPending();
-    ParseDataset.parse(okey, new Key[]{k});
+    ParseDataset.forkParseDataset(okey, new Key[]{k}, null).get();
     UKV.remove(k);
     ValueArray res = DKV.get(okey).get();
     return res;

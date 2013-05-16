@@ -64,7 +64,7 @@ public class Job extends Iced {
         old._jobs[jobs.length] = Job.this;
         return old;
       }
-    }.fork(LIST);
+    }.invoke(LIST);
     return fjtask;
   }
 

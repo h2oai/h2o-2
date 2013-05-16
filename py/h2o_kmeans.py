@@ -1,8 +1,8 @@
 import h2o_cmd, h2o
-import re
+import re, math
 
 def simpleCheckKMeans(self, kmeans, **kwargs):
-    print h2o.dump_json(kmeans)
+    ### print h2o.dump_json(kmeans)
     warnings = None
     if 'warnings' in kmeans:
         warnings = kmeans['warnings']
@@ -12,9 +12,14 @@ def simpleCheckKMeans(self, kmeans, **kwargs):
             print "\nwarning:", w
             if re.search(x,w): raise Exception(w)
 
-    print "KMeans time", kmeans['response']['time']
-
     # Check other things in the json response dictionary 'kmeans' here
+    destination_key = kmeans["destination_key"]
+    kmeansResult = h2o_cmd.runInspect(key=destination_key)
+    clusters = kmeansResult["KMeansModel"]["clusters"]
+    for i,c in enumerate(clusters):
+        for n in c:
+            if math.isnan(n):
+                raise Exception("center", i, "has NaN:", n, "center:", c)
 
     return warnings
 

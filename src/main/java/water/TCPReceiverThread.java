@@ -1,11 +1,13 @@
 package water;
 
+import java.net.Socket;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 import water.api.Timeline;
 import water.util.Log;
+import water.H2O;
 
 /**
  * The Thread that looks for TCP Cloud requests.
@@ -16,25 +18,16 @@ import water.util.Log;
  */
 
 public class TCPReceiverThread extends Thread {
-  public static TCPReceiverThread TCPTHR;
-  // Last N block/run durations in even (block time) and odd (run time) pairs.
-  // The _idx points past the last valid point, and if even means the thread is
-  // currently blocking and odd means it is blocking.
-  final int _dms[] = new int[256];
-  int _idx=1;
-  long _timeRun, _timeBlock;
-
   public static ServerSocketChannel SOCK;
-  public TCPReceiverThread() { super("TCPReceive"); }
+  public TCPReceiverThread() { super("TCP-Accept"); }
 
   // The Run Method.
   // Started by main() on a single thread, this code manages reading TCP requests
   @SuppressWarnings("resource")
   public void run() {
-    Thread.currentThread().setPriority(Thread.MAX_PRIORITY-1);
+    Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
     ServerSocketChannel errsock = null;
     boolean saw_error = false;
-    _timeRun = System.currentTimeMillis();
 
     while( true ) {
       try {
@@ -54,36 +47,11 @@ public class TCPReceiverThread extends Thread {
           SOCK.socket().bind(H2O.SELF._key);
         }
 
-        // Record run-time between connections
-        _timeBlock = System.currentTimeMillis();
-        int runMS   = (int)Math.min(_timeBlock - _timeRun,Integer.MAX_VALUE);
-        _dms[_idx] = runMS;     // Record recent run time
-        _idx = (_idx+1)&(_dms.length-1);
-
         // Block for TCP connection and setup to read from it.
         SocketChannel sock = SOCK.accept();
-        _timeRun = System.currentTimeMillis();
 
-        // Record block-time between connections
-        int blockMS = (int)Math.min(_timeRun - _timeBlock,Integer.MAX_VALUE);
-        _dms[_idx] = blockMS;   // Record recent block time
-        _idx = (_idx+1)&(_dms.length-1);
-
-        // Read the TCP connection and handle it
-        AutoBuffer ab = new AutoBuffer(sock);
-        int ctrl = ab.getCtrl();
-
-        // Record the last time we heard from any given Node
-        ab._h2o._last_heard_from = _timeRun;
-        TimeLine.record_recv(ab, true,0);
-        // Hand off the TCP connection to the proper handler
-        switch( UDP.udp.UDPS[ctrl] ) {
-          //case exec:     H2O.submitTask(new FJPacket(ab,ctrl)); break;
-        case exec:     RPC.remote_exec(ab).close(); break;
-        case ack:      RPC.tcp_ack (ab); break;
-        case timeline: TimeLine.tcp_call(ab); break;
-        default: throw new RuntimeException("Unknown TCP Type: " + ab.getCtrl());
-        }
+        // Pass off the TCP connection to a separate reader thread
+        new TCPReaderThread(sock,new AutoBuffer(sock)).start();
 
       } catch( java.nio.channels.AsynchronousCloseException ex ) {
         break;                  // Socket closed for shutdown
@@ -96,20 +64,49 @@ public class TCPReceiverThread extends Thread {
     }
   }
 
-  // Approximate duty-cycle as a ratio of blocked to (blocked+runtime) over the
-  // last 128 TCP reads.
-  public int dutyCyclePercent() {
-    // Update the most recent block-time or run-time for in-progress work
-    long now = System.currentTimeMillis();
-    int idx = _idx;             // Read once
-    _dms[idx] = (int)Math.min(now - ((idx&1)==0 ? _timeBlock : _timeRun),Integer.MAX_VALUE);
-    // Compute total run/block time
-    int rms=0, bms=0;
-    for( int i=0; i<_dms.length; i+=2 ) {
-      bms += _dms[i+0];
-      rms += _dms[i+1];
+  // A private thread for reading from this open socket.
+  public static class TCPReaderThread extends Thread {
+    public SocketChannel _sock;
+    public AutoBuffer _ab;
+    public TCPReaderThread(SocketChannel sock, AutoBuffer ab) {
+      super("TCP-"+ab._h2o+"-"+(ab._h2o._tcp_readers++));
+      _sock = sock;
+      _ab = ab;
+      setPriority(MAX_PRIORITY-1);
     }
-    double duty = (double)rms/(bms+rms)*100.0;
-    return Math.max(Math.min((int)(duty+0.5),100),0);
+
+    public void run() {
+      while( true ) { // Loop, reading fresh TCP requests until the sender closes
+        try {
+          // Record the last time we heard from any given Node
+          _ab._h2o._last_heard_from = System.currentTimeMillis();
+          TimeLine.record_recv(_ab, true,0);
+          // Hand off the TCP connection to the proper handler
+          int ctrl = _ab.getCtrl();
+          switch( UDP.udp.UDPS[ctrl] ) {
+          case exec:     RPC.remote_exec  (_ab); break;
+          case ack:      RPC.tcp_ack      (_ab); break;
+          case timeline: TimeLine.tcp_call(_ab); break;
+          default: throw new RuntimeException("Unknown TCP Type: " + ctrl+" "+_ab._h2o);
+          }
+        } catch( java.nio.channels.AsynchronousCloseException ex ) {
+          break;                // Socket closed for shutdown
+        } catch( Exception e ) {
+          // On any error from anybody, close everything
+          Log.err("IO error on TCP port "+H2O.UDP_PORT+": ",e);
+          break;
+        }
+        // Reuse open sockets for the next task
+        try {
+          if( !_sock.isOpen() ) break;
+          _ab = new AutoBuffer(_sock);
+        } catch( Exception e ) {
+          // Exceptions here are *normal*, this is an idle TCP connection and
+          // either the OS can time it out, or the cloud might shutdown.  We
+          // don't care what happens to this socket.
+          break;         // Ignore all errors; silently die if socket is closed
+        }
+      }
+    }
   }
 }

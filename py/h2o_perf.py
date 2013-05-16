@@ -192,7 +192,7 @@ class PerfH2O(object):
         ### h2o.verboseprint("log_iostats:", h2o.dump_json(stats))
         histogram = stats['histogram']
 
-        def log_window(w):
+        def log_window(k,w):
             ## in case the window disappears from h2o, print what's available with this line
             ## print k['window']
             if k['window'] == w:
@@ -221,12 +221,11 @@ class PerfH2O(object):
             found = False
             for k in histogram:
                 ### print k
-                found |= log_window(30)
+                found |= log_window(k,60)
                 ### log_window(30)
             if not found:
                 print "iostats: desired window not found in histogram"
                 # 1 5 60 300 available
-                log_window(60)
 
         # we want to sort the results before we print them, so grouped by node
         if DO_IOP:
