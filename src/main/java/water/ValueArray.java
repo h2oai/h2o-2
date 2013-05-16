@@ -96,6 +96,9 @@ public class ValueArray extends Iced implements Cloneable {
     return res;
   }
 
+  /** Return the key that denotes this entire ValueArray in the K/V store. */
+  public final Key getKey() { return _key; }
+
   @Override public ValueArray clone() {
     try { return (ValueArray)super.clone(); }
     catch( CloneNotSupportedException cne ) { throw Log.err(H2O.unimpl()); }
@@ -338,14 +341,14 @@ public class ValueArray extends Iced implements Cloneable {
     return Key.make(buf,(byte)arrayKey.desired());
   }
 
-  // Get the root array Key from a random arraylet sub-key
+  /** Get the root array Key from a random arraylet sub-key */
   public static Key getArrayKey( Key k ) { return Key.make(getArrayKeyBytes(k)); }
   public static byte[] getArrayKeyBytes( Key k ) {
     assert k._kb[0] == Key.ARRAYLET_CHUNK;
     return Arrays.copyOfRange(k._kb,2+8,k._kb.length);
   }
 
-  // Get the chunk-index from a random arraylet sub-key
+  /** Get the chunk-index from a random arraylet sub-key */
   public static long getChunkIndex(Key k) {
     assert k._kb[0] == Key.ARRAYLET_CHUNK;
     return UDP.get8(k._kb, 2) >> LOG_CHK;

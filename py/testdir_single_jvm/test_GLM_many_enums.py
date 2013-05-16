@@ -106,7 +106,7 @@ class Basic(unittest.TestCase):
                 (n, 6, 'cI', 300), 
                 ]
         else:
-            n = 200
+            n = 150
             tryList = [
                 (n, 1, 'cD', 300), 
                 (n, 2, 'cE', 300), 
@@ -132,6 +132,7 @@ class Basic(unittest.TestCase):
         for (rowCount, colCount, key2, timeoutSecs) in tryList:
             # just randomly pick the row and col cases.
             colSepCase = random.randint(0,1)
+            colSepCase = 1
             # using the comma is nice to ensure no craziness
             if (colSepCase==0):
                 colSepHexString = '01'
