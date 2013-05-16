@@ -45,6 +45,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new ImportHdfs()),  "Import HDFS",  "Data");
     Request.addToNavbar(registerRequest(new Upload()),      "Upload",       "Data");
     Request.addToNavbar(registerRequest(new Get()),         "Download",     "Data");
+    Request.addToNavbar(registerRequest(new SummaryPage()), "Summary",      "Data");
 
     Request.addToNavbar(registerRequest(new RF()),          "Random Forest", "Model");
     Request.addToNavbar(registerRequest(new GLM()),         "GLM",           "Model");
