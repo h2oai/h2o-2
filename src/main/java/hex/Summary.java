@@ -210,7 +210,8 @@ public class Summary extends Iced {
           }
         }
       } else {
-        double x = _min[0] + _binsz*0.5;
+        double x = _min[0];
+        if(_binsz != 1)x += _binsz*0.5;
         for(int i = 0; i < _bins.length; ++i){
           if(_bins[i] != 0){
             ary.add(new JsonPrimitive(_bins[i]));
