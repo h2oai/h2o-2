@@ -212,6 +212,7 @@ public class ValueArray extends Iced implements Cloneable {
       _min=0; _max=255; _mean=128; _n = len; _scale=1; _size=1;
     }
     public final boolean isFloat() { return _size < 0 || _scale != 1; }
+    public final boolean isEnum() { return _domain != null; }
     public final boolean isScaled() { return _scale != 1; }
     /** Compute size of numeric integer domain */
     public final long    numDomainSize() { return (long) ((_max - _min)+1); }
