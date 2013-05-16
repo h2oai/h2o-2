@@ -175,9 +175,6 @@ public class Summary extends Iced {
       JsonObject histo = new JsonObject();
       histo.addProperty("bin_size", _binsz);
       JsonArray ary = new JsonArray();
-      for(long c:_bins)
-        ary.add(new JsonPrimitive(c));
-
       JsonArray binNames = new JsonArray();
       if(_summary._ary._cols[_colId].isEnum()){
         for(int i = 0; i < _summary._ary._cols[_colId]._domain.length; ++i){

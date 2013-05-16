@@ -24,7 +24,6 @@ public class SummaryPage extends Request {
         JsonArray cols = element.getAsJsonArray();
         Iterator<JsonElement> it = cols.iterator();
         while(it.hasNext()){
-
           JsonObject o = it.next().getAsJsonObject();
           String cname = o.get("name").getAsString();
           sb.append("<div class='table' id='col_" + cname + "' style='border-top-style:solid;'><h4>Column: " + cname + "</h4>\n");
