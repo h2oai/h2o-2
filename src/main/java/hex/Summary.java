@@ -102,6 +102,32 @@ public class Summary extends Iced {
       assert Math.abs(_binszInv - other._binszInv) < 0.000000001;
       for (int i = 0; i < _bins.length; i++)
         _bins[i] += other._bins[i];
+      if(_min != null){
+        int j = 0, k = 0;
+        double [] min = _min.clone();
+        double [] max = _max.clone();
+        for(int i = 0; i < _min.length; ++i){
+          if(other._min[k] < _min[j]){
+            min[i] = other._min[k++];
+          } else if(_min[j] < other._min[k]){
+            ++j;
+          } else {
+            ++j; ++k;
+          }
+        }
+        j = k = 0;
+        for(int i = 0; i < _max.length; ++i){
+          if(other._max[k] > _max[j]){
+            max[i] = other._max[k++];
+          } else if (_max[j] > other._max[k]){
+            ++j;
+          } else {
+            ++j;++k;
+          }
+        }
+        _min = min;
+        _max = max;
+      }
     }
 
     void add(double val) {
@@ -184,7 +210,8 @@ public class Summary extends Iced {
           }
         }
       } else {
-        double x = _min[0] + _binsz*0.5;
+        double x = _min[0];
+        if(_binsz != 1)x += _binsz*0.5;
         for(int i = 0; i < _bins.length; ++i){
           if(_bins[i] != 0){
             ary.add(new JsonPrimitive(_bins[i]));
