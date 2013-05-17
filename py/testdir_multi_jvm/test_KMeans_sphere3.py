@@ -66,6 +66,26 @@ def write_syn_dataset(csvPathname, n, SEED):
     return
 
 
+def show_results(csvPathname, parseKey, model_key, centers, destination_key):
+    kmeansApplyResult = h2o.nodes[0].kmeans_apply(
+        data_key=parseKey['destination_key'], model_key=model_key,
+        destination_key=destination_key)
+    # print h2o.dump_json(kmeansApplyResult)
+    inspect = h2o_cmd.runInspect(None, destination_key)
+    h2o_cmd.infoFromInspect(inspect, csvPathname)
+
+    kmeansScoreResult = h2o.nodes[0].kmeans_score(
+        key=parseKey['destination_key'], model_key=model_key)
+    score = kmeansScoreResult['score']
+    rows_per_cluster = score['rows_per_cluster']
+    sqr_error_per_cluster = score['sqr_error_per_cluster']
+
+    for i,c in enumerate(centers):
+        print "\ncenters["+str(i)+"]: ", centers[i]
+        print "rows_per_cluster["+str(i)+"]: ", rows_per_cluster[i]
+        print "sqr_error_per_cluster["+str(i)+"]: ", sqr_error_per_cluster[i]
+
+
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -104,30 +124,27 @@ class Basic(unittest.TestCase):
         kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
         elapsed = time.time() - start
         print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
-
-        kmeansResult = h2o_cmd.runInspect(key='spheres3.hex')
-
-        ### print h2o.dump_json(kmeans)
-        print h2o.dump_json(kmeansResult)
         h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
-
-        clusters = kmeansResult['KMeansModel']['clusters']
+        model_key = kmeans['destination_key']
+        kmeansResult = h2o_cmd.runInspect(key=model_key)
+        centers = kmeansResult['KMeansModel']['clusters']
 
         # cluster centers can return in any order
-        clustersSorted = sorted(clusters, key=itemgetter(0))
+        centersSorted = sorted(centers, key=itemgetter(0))
 
-        self.assertAlmostEqual(clustersSorted[0][0],100,delta=.2)
-        self.assertAlmostEqual(clustersSorted[1][0],200,delta=.2)
-        self.assertAlmostEqual(clustersSorted[2][0],300,delta=.2)
+        self.assertAlmostEqual(centersSorted[0][0],100,delta=.2)
+        self.assertAlmostEqual(centersSorted[1][0],200,delta=.2)
+        self.assertAlmostEqual(centersSorted[2][0],300,delta=.2)
 
-        self.assertAlmostEqual(clustersSorted[0][1],100,delta=.2)
-        self.assertAlmostEqual(clustersSorted[1][1],200,delta=.2)
-        self.assertAlmostEqual(clustersSorted[2][1],300,delta=.2)
+        self.assertAlmostEqual(centersSorted[0][1],100,delta=.2)
+        self.assertAlmostEqual(centersSorted[1][1],200,delta=.2)
+        self.assertAlmostEqual(centersSorted[2][1],300,delta=.2)
 
-        self.assertAlmostEqual(clustersSorted[0][2],100,delta=.2)
-        self.assertAlmostEqual(clustersSorted[1][2],200,delta=.2)
-        self.assertAlmostEqual(clustersSorted[2][2],300,delta=.2)
+        self.assertAlmostEqual(centersSorted[0][2],100,delta=.2)
+        self.assertAlmostEqual(centersSorted[1][2],200,delta=.2)
+        self.assertAlmostEqual(centersSorted[2][2],300,delta=.2)
 
+        show_results(csvPathname, parseKey, model_key, centers, 'd')
 
 if __name__ == '__main__':
     h2o.unit_main()
