@@ -1,10 +1,10 @@
 package water.api;
+
+import com.google.gson.*;
 import hex.ColSummaryTask;
 import java.util.Iterator;
 import water.ValueArray;
 import water.util.Utils;
-
-import com.google.gson.*;
 
 public class SummaryPage extends Request {
   protected final H2OHexKey _key = new H2OHexKey(KEY);
@@ -26,6 +26,7 @@ public class SummaryPage extends Request {
         while(it.hasNext()){
           JsonObject o = it.next().getAsJsonObject();
           String cname = o.get("name").getAsString();
+          long N = o.get("N").getAsLong();
           sb.append("<div class='table' id='col_" + cname + "' style='border-top-style:solid;'><h4>Column: " + cname + "</h4>\n");
           if(o.has("min") && o.has("max")){
             StringBuilder minRow = new StringBuilder("<tr><th>&mu;</th><td>" + Utils.p2d(o.get("mean").getAsDouble())+"</td><th style='border-left-style:solid; borde-left:1px;border-left-color:#ddd;'>min[5]</th>");
@@ -70,13 +71,17 @@ public class SummaryPage extends Request {
           Iterator<JsonElement> nIter = names.iterator();
           StringBuilder n = new StringBuilder("<tr>");
           StringBuilder b = new StringBuilder("<tr>");
+          StringBuilder p = new StringBuilder("<tr>");
           while(bIter.hasNext() && nIter.hasNext()){
             n.append("<td>" + nIter.next().getAsString() + "</td>");
-            b.append("<td>" + bIter.next().getAsLong() + "</td>");
+            long cnt = bIter.next().getAsLong();
+            b.append("<td>" + cnt + "</td>");
+            p.append(String.format("<td>%.1f%%</td>",(100.0*cnt/N)));
           }
-          n.append("</tr>");
-          b.append("</tr>");
-          sb.append("<table>" + n.toString() + b.toString() + "</table>");
+          n.append("</tr>\n");
+          b.append("</tr>\n");
+          p.append("</tr>\n");
+          sb.append("<table>" + n.toString() + b.toString() + p.toString() + "</table>");
           sb.append("\n</div>\n");
         }
         return sb.toString();

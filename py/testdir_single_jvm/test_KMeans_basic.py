@@ -51,9 +51,6 @@ class Basic(unittest.TestCase):
             model_key = kmeans['destination_key']
             kmeansResult = h2o_cmd.runInspect(key=model_key)
             centers = kmeansResult['KMeansModel']['clusters']
-
-            ## print h2o.dump_json(kmeans)
-            ## print h2o.dump_json(kmeansResult)
             h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
             show_results(csvPathname, parseKey, model_key, centers, 'd')
 
@@ -71,9 +68,6 @@ class Basic(unittest.TestCase):
             model_key = kmeans['destination_key']
             kmeansResult = h2o_cmd.runInspect(key=model_key)
             centers = kmeansResult['KMeansModel']['clusters']
-
-            ## print h2o.dump_json(kmeans)
-            ## print h2o.dump_json(kmeansResult)
             h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
             show_results(csvPathname, parseKey, model_key, centers, 'd')
 
