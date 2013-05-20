@@ -1,21 +1,26 @@
 package water.api;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import hex.*;
-import hex.DGLM.*;
+import hex.DGLM.CaseMode;
+import hex.DGLM.Family;
+import hex.DGLM.GLMModel;
+import hex.DGLM.GLMParams;
+import hex.DGLM.GLMValidation;
 import hex.DLSM.LSMSolver;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.text.DecimalFormat;
-import java.util.Map.Entry;
 import java.util.*;
+import java.util.Map.Entry;
+
 import water.*;
 import water.Job.ChunkProgress;
 import water.util.Log;
 import water.util.RString;
+
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 
 public class GLMProgressPage extends Request {
   static String getTimeStr(long t){

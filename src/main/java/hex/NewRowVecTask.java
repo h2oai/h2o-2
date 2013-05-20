@@ -6,10 +6,7 @@ import hex.RowVecTask.Sampling;
 
 import java.util.Arrays;
 
-import javax.swing.ProgressMonitor;
-
 import water.*;
-import water.Job.ChunkProgress;
 import water.Job.ChunkProgressJob;
 import water.ValueArray.Column;
 

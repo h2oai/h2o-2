@@ -3,11 +3,8 @@ package water.util;
 import java.io.IOException;
 import java.io.InputStream;
 
-import javax.management.RuntimeErrorException;
-
 import water.Job.ProgressMonitor;
-import water.Key;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
+
 import com.google.common.base.Throwables;
 
 public abstract class RIStream extends InputStream {

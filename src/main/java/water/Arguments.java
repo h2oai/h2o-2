@@ -4,7 +4,6 @@ import java.lang.reflect.Modifier;
 import java.util.Arrays;
 
 import water.util.Log;
-import water.util.Log.Tag.Sys;
 
 /**
  * Utility for processing command

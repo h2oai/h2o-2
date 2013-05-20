@@ -1,8 +1,8 @@
 package water.api;
 
-import com.google.gson.JsonObject;
-import hex.rf.RFModel;
 import water.*;
+
+import com.google.gson.JsonObject;
 
 public class RReaderProgress extends Request {
   protected final H2OExistingKey _dest = new H2OExistingKey(DEST_KEY);

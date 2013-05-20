@@ -11,8 +11,6 @@ import java.util.Arrays;
 import java.util.Properties;
 
 import water.Key;
-import water.ValueArray;
-import water.api.RequestArguments.Bool;
 import water.util.Log;
 import water.util.RString;
 

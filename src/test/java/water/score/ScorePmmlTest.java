@@ -2,9 +2,10 @@ package water.score;
 
 import java.io.ByteArrayInputStream;
 import java.util.HashMap;
+
 import org.junit.Assert;
 import org.junit.Test;
-import water.H2O;
+
 import water.TestUtil;
 import water.parser.PMMLParser;
 

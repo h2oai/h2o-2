@@ -1,10 +1,8 @@
 package water.parser;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import water.*;
-import water.parser.ValueString;
 
 public class CsvParser extends CustomParser {
 

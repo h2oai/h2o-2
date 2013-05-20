@@ -5,7 +5,6 @@ import java.net.UnknownHostException;
 
 import sun.misc.Unsafe;
 import water.nbhm.UtilUnsafe;
-import water.util.Log;
 
 /**
 

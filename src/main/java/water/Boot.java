@@ -10,8 +10,8 @@ import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import water.util.*;
-import water.util.Log.Tag.Sys;
+import water.util.Log;
+import water.util.Utils;
 
 
 /** Initializer class for H2O.

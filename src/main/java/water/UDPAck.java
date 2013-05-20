@@ -1,5 +1,4 @@
 package water;
-import java.net.DatagramPacket;
 
 /**
  * A remote task request has just returned an ACK with answer

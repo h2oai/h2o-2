@@ -1,13 +1,9 @@
 package water;
 
-import java.net.Socket;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicInteger;
-import water.api.Timeline;
+
 import water.util.Log;
-import water.H2O;
 
 /**
  * The Thread that looks for TCP Cloud requests.

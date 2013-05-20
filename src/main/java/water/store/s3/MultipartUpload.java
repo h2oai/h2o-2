@@ -7,7 +7,6 @@ import java.util.List;
 import water.*;
 import water.util.ByteBufferInputStream;
 import water.util.Log;
-import water.util.Log.Tag.Sys;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.*;
