@@ -12,11 +12,12 @@ import r.ifc.Interop;
 import r.ifc.Interop.Invokable;
 import water.api.*;
 import water.api.RequestArguments.Argument;
-import water.r.commands.Load;
-import water.r.commands.Matrix;
+import water.r.commands.*;
+import water.r.commands.Parse;
 import water.util.Log;
 
 import com.google.gson.*;
+
 
 public class Shell extends Thread {
   public Shell() {
@@ -72,6 +73,7 @@ public class Shell extends Thread {
     }
     Interop.register(new Load());
     Interop.register(new Matrix());
+    Interop.register(new Parse());
     Console.main(args);
   }
 

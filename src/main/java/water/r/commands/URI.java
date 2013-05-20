@@ -55,8 +55,8 @@ public abstract class URI {
     }
   }
 
-  /** Load the file into memory and return a ValueArray object. */
-  public abstract ValueArray get() throws IOException;
+  /** Load the file into memory and return key. */
+  public abstract Key get() throws IOException;
 
 }
 
@@ -68,12 +68,12 @@ class File extends URI {
     path = p;
   }
 
-  public ValueArray get() {
+  public Key get() {
     FileIntegrityChecker c = FileIntegrityChecker.check(new java.io.File(path));
     Futures fs = new Futures();
     Key k = c.importFile(0, fs);
     fs.blockForPending();
-    return DKV.get(k).<ValueArray> get();
+    return k;
   }
 
   public String toString() {
@@ -92,13 +92,12 @@ class S3 extends URI {
     path = split[1];
   }
 
-  public ValueArray get() throws IOException {
+  public Key get() throws IOException {
     AmazonS3 s3 = PersistS3.getClient();
     List<S3ObjectSummary> l = s3.listObjects(bucket, path).getObjectSummaries();
     assert l.size() == 1;
     S3ObjectSummary obj = l.get(0);
-    Key k = PersistS3.loadKey(obj);
-    return DKV.get(k).<ValueArray> get();
+    return  PersistS3.loadKey(obj);
   }
 
   public String toString() {
@@ -124,14 +123,14 @@ class Http extends URI {
     path = p;
   }
 
-  public ValueArray get() throws IOException {
+  public Key get() throws IOException {
     String p = "http://" + path;
     URL url = new URL(p);
     Key k = Key.make(p);
     InputStream s = url.openStream();
     if( s == null ) throw new FormatError("argh");
     ValueArray.readPut(k, s);
-    return DKV.get(k).<ValueArray> get();
+    return k;
   }
 
   public String toString() {

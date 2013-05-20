@@ -87,7 +87,7 @@ public class Parse implements Invokable {
     Key[] ks = new Key[arg.files.length];
     for( int i = 0; i < ks.length; i++ ) {
       try {
-        ks[i] = arg.files[i].get().getKey();
+        ks[i] = arg.files[i].get();
       } catch( IOException e ) {
         res.error = e;
         return res;
