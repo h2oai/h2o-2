@@ -100,6 +100,7 @@ public class Summary extends Iced {
       assert _bins.length == other._bins.length;
       assert Math.abs(_start - other._start) < 0.000001;
       assert Math.abs(_binszInv - other._binszInv) < 0.000000001;
+      _n += other._n;
       for (int i = 0; i < _bins.length; i++)
         _bins[i] += other._bins[i];
       if(_min != null){
