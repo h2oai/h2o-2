@@ -36,11 +36,12 @@ public class SummaryPage extends Request {
         StringBuilder sb = new StringBuilder();
         JsonArray cols = element.getAsJsonArray();
         Iterator<JsonElement> it = cols.iterator();
+        sb.append("<div class='table' style='height:90%;overflow-y:scroll'>");
         while(it.hasNext()){
           JsonObject o = it.next().getAsJsonObject();
           String cname = o.get("name").getAsString();
           long N = o.get("N").getAsLong();
-          sb.append("<div class='table'  id='col_" + cname + "' style='width:100%;border-top-style:solid;'><h4>Column: " + cname + "</h4>\n");
+          sb.append("<div class='table'  id='col_" + cname + "' style='width:100%;heigth:90%;overflow-y:scroll;border-top-style:solid;'><h4>Column: " + cname + "</h4>\n");
           if(o.has("min") && o.has("max")){
             StringBuilder minRow = new StringBuilder("<tr><th>&mu;</th><td>" + Utils.p2d(o.get("mean").getAsDouble())+"</td><th style='border-left-style:solid; borde-left:1px;border-left-color:#ddd;'>min[5]</th>");
             StringBuilder maxRow = new StringBuilder("<tr><th>&sigma;</th><td>" + Utils.p2d(o.get("sigma").getAsDouble()) + "</td><th style='border-left-style:solid; borde-left:1px;border-left-color:#ddd;'>max[5]</th>");
@@ -70,11 +71,11 @@ public class SummaryPage extends Request {
             firstRow.append("</tr>");
             minRow.append("</tr>");
             maxRow.append("</tr>");
-            sb.append("<table>");
+            sb.append("<div style='width:100%;overflow:scroll;'><table>");
             sb.append(firstRow.toString());
             sb.append(minRow.toString());
             sb.append(maxRow.toString());
-            sb.append("</table>");
+            sb.append("</table></div>");
           }
           sb.append("<h5>Histogram</h5>");
           JsonObject histo = o.get("histogram").getAsJsonObject();
@@ -97,9 +98,10 @@ public class SummaryPage extends Request {
           n.append("</tr>\n");
           b.append("</tr>\n");
           p.append("</tr>\n");
-          sb.append("<table style='max-width:90%;'>" + n.toString() + b.toString() + p.toString() + "</table>");
+          sb.append("<div style='width:100%;overflow:scroll;'><table>" + n.toString() + b.toString() + p.toString() + "</table></div>");
           sb.append("\n</div>\n");
         }
+        sb.append("</div>");
         return sb.toString();
       }
     });
