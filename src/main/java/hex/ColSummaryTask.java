@@ -4,7 +4,6 @@ import water.ValueArray;
 
 public final class ColSummaryTask extends RowTask<Summary>{
   final int [] _cols;
-  Summary _res;
   public ColSummaryTask(ValueArray ary, int [] cols){super(ary);_cols = cols;}
   @Override public Summary newRes() {return new Summary(_ary,_cols);}
   @Override public void map(hex.RowTask.Row r, Summary t) {

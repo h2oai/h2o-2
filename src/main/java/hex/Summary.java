@@ -200,6 +200,7 @@ public class Summary extends Iced {
       res.addProperty("N", _n);
       JsonObject histo = new JsonObject();
       histo.addProperty("bin_size", _binsz);
+      histo.addProperty("nbins", _bins.length);
       JsonArray ary = new JsonArray();
       JsonArray binNames = new JsonArray();
       if(_summary._ary._cols[_colId].isEnum()){

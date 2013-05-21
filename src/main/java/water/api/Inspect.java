@@ -304,7 +304,7 @@ public class Inspect extends Request {
         sb.append("<div class='alert alert-success'>"
         		+ "<b>Produced in ").append(PrettyPrint.msecs(job.executionTime(),true)).append(".</b></div>");
     }
-    sb.append("<div class='alert'>" + "Build models using "
+    sb.append("<div class='alert'>" +"View " + SummaryPage.link(ary._key, "Summary") +  "<br/>Build models using "
           + RF.link(ary._key, "Random Forest") + ", "
           + GLM.link(ary._key, "GLM") + ", " + GLMGrid.link(ary._key, "GLM Grid Search") + ", or "
           + KMeans.link(ary._key, "KMeans") + "<br />"
