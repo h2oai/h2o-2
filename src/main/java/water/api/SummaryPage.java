@@ -31,15 +31,19 @@ public class SummaryPage extends Request {
     JsonObject res = new JsonObject();
     res.add("summary", sum.result().toJson());
     Response r = Response.done(res);
-    r.setBuilder("summary.columns", new Builder() {
+    r.setBuilder(ROOT_OBJECT, new Builder() {
       @Override public String build(Response response, JsonElement element, String contextName) {
+
+        StringBuilder pageBldr = new StringBuilder("<div id='column_list' style='position:fixed;left:0;z-index:1030;margin-bottom:5px;width:150px;text-align:right;height:90%;overflow-y:auto;overflow-y:auto;'><h5>Columns</h5>");
         StringBuilder sb = new StringBuilder();
-        JsonArray cols = element.getAsJsonArray();
+        JsonArray cols = element.getAsJsonObject().get("summary").getAsJsonObject().get("columns").getAsJsonArray();
         Iterator<JsonElement> it = cols.iterator();
-        sb.append("<div class='table' style='height:90%;overflow-y:scroll'>");
+        sb.append("<div class='table' style='margin-left:35px; height:90%;overflow-y:scroll'>");
+
         while(it.hasNext()){
           JsonObject o = it.next().getAsJsonObject();
           String cname = o.get("name").getAsString();
+          pageBldr.append("<div style='margin-left:5px;'><a href='#col_" + cname + "'>" + cname + "</a></div>");
           long N = o.get("N").getAsLong();
           sb.append("<div class='table'  id='col_" + cname + "' style='width:100%;heigth:90%;overflow-y:scroll;border-top-style:solid;'><h4>Column: " + cname + "</h4>\n");
           if(o.has("min") && o.has("max")){
@@ -102,7 +106,9 @@ public class SummaryPage extends Request {
           sb.append("\n</div>\n");
         }
         sb.append("</div>");
-        return sb.toString();
+        pageBldr.append("</div>");
+        pageBldr.append(sb);
+        return pageBldr.toString();
       }
     });
     return r;
