@@ -24,6 +24,30 @@ def simpleCheckKMeans(self, kmeans, **kwargs):
     return warnings
 
 
+def bigCheckResults(self, kmeans, csvPathname, parseKey, applyDestinationKey, **kwargs):
+    simpleCheckKMeans(self, kmeans, **kwargs)
+    model_key = kmeans['destination_key']
+    kmeansResult = h2o_cmd.runInspect(key=model_key)
+    centers = kmeansResult['KMeansModel']['clusters']
+
+    kmeansApplyResult = h2o.nodes[0].kmeans_apply(
+        data_key=parseKey['destination_key'], model_key=model_key,
+        destination_key=applyDestinationKey)
+    inspect = h2o_cmd.runInspect(None, applyDestinationKey)
+    h2o_cmd.infoFromInspect(inspect, csvPathname)
+
+    kmeansScoreResult = h2o.nodes[0].kmeans_score(
+        key=parseKey['destination_key'], model_key=model_key)
+    score = kmeansScoreResult['score']
+    rows_per_cluster = score['rows_per_cluster']
+    sqr_error_per_cluster = score['sqr_error_per_cluster']
+
+    for i,c in enumerate(centers):
+        print "\ncenters["+str(i)+"]: ", centers[i]
+        print "rows_per_cluster["+str(i)+"]: ", rows_per_cluster[i]
+        print "sqr_error_per_cluster["+str(i)+"]: ", sqr_error_per_cluster[i]
+
+
 # compare this clusters to last one. since the files are concatenations, 
 # the results should be similar? 10% of first is allowed delta
 def compareToFirstKMeans(self, clusters, firstclusters):

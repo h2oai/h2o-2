@@ -39,13 +39,12 @@ def kmeans_doit(self, csvFilename, csvPathname, timeoutSecs=30):
     elapsed = time.time() - start
     print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', \
         "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
-    h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
-    inspect = h2o_cmd.runInspect(None, key=kmeans['destination_key'])
-    ### print h2o.dump_json(inspect)
+    h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
 
 
     # compare this kmeans to the first one. since the files are replications, the results
     # should be similar?
+    inspect = h2o_cmd.runInspect(None, key=kmeans['destination_key'])
     KMeansModel = inspect['KMeansModel']
     clusters = KMeansModel['clusters'][0]
     print "clusters:", h2o.dump_json(clusters)
