@@ -34,11 +34,11 @@ public class SummaryPage extends Request {
     r.setBuilder(ROOT_OBJECT, new Builder() {
       @Override public String build(Response response, JsonElement element, String contextName) {
 
-        StringBuilder pageBldr = new StringBuilder("<div id='column_list' style='position:fixed;left:0;z-index:1030;margin-bottom:5px;width:150px;text-align:right;height:90%;overflow-y:auto;overflow-y:auto;'><h5>Columns</h5>");
+        StringBuilder pageBldr = new StringBuilder("<div id='column_list' style='position:fixed;left:0;z-index:1030;margin-bottom:5px;width:165px;text-align:right;height:90%;overflow-y:auto;overflow-y:auto;'><h5>Columns</h5>");
         StringBuilder sb = new StringBuilder();
         JsonArray cols = element.getAsJsonObject().get("summary").getAsJsonObject().get("columns").getAsJsonArray();
         Iterator<JsonElement> it = cols.iterator();
-        sb.append("<div class='table' style='margin-left:35px; height:90%;overflow-y:scroll'>");
+        sb.append("<div class='table' style='position:fixed;left:175px;height:90%;overflow-y:scroll'>");
 
         while(it.hasNext()){
           JsonObject o = it.next().getAsJsonObject();
