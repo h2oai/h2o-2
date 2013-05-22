@@ -7,6 +7,7 @@ public class TypeMapGen {
     "[B",                       // 1: Array of Bytes
     "hex.ColSummaryTask",
     "hex.ConfusionMatrix",
+    "hex.Covariance$COV_Task",
     "hex.DGLM$GLMJob",
     "hex.DGLM$GLMModel",
     "hex.DGLM$GLMParams",
@@ -37,6 +38,7 @@ public class TypeMapGen {
     "hex.LinearRegression$CalcRegressionTask",
     "hex.LinearRegression$CalcSquareErrorsTasks",
     "hex.LinearRegression$CalcSumsTask",
+    "hex.NOPTask",
     "hex.NewRowVecTask",
     "hex.NewRowVecTask$DataFrame",
     "hex.NewRowVecTask$RowFunc",
