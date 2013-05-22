@@ -22,11 +22,11 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_covtype20x(self):
+    def test_KMeans_covtype20x(self):
         if localhost:
             csvFilenameList = [
                 # 68 secs on my laptop?
-                ('covtype20x.data', 480, 'cA'),
+                ('covtype.data', 480, 'cA'),
                 ]
         else:
             # None is okay for key2
@@ -34,9 +34,6 @@ class Basic(unittest.TestCase):
                 ('covtype20x.data', 480,'cA'),
                 # ('covtype200x.data', 1000,'cE'),
                 ]
-
-        # a browser window too, just because we can
-        h2b.browseTheCloud()
 
         importFolderPath = '/home/0xdiag/datasets'
         h2i.setupImportFolder(None, importFolderPath)
@@ -57,7 +54,7 @@ class Basic(unittest.TestCase):
             kwargs = {
                 'cols': None,
                 'epsilon': 1e-4,
-                'k': 2
+                'k': 8
             }
 
             start = time.time()
@@ -67,10 +64,7 @@ class Basic(unittest.TestCase):
             print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
-
-            ### print h2o.dump_json(kmeans)
-            inspect = h2o_cmd.runInspect(None,key=kmeans['destination_key'])
-            print h2o.dump_json(inspect)
+            centers = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
 
 if __name__ == '__main__':
     h2o.unit_main()

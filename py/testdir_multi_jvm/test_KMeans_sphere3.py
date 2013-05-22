@@ -124,11 +124,8 @@ class Basic(unittest.TestCase):
         kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
         elapsed = time.time() - start
         print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
-        h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
-        model_key = kmeans['destination_key']
-        kmeansResult = h2o_cmd.runInspect(key=model_key)
-        centers = kmeansResult['KMeansModel']['clusters']
 
+        centers = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
         # cluster centers can return in any order
         centersSorted = sorted(centers, key=itemgetter(0))
 
