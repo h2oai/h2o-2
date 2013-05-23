@@ -1,6 +1,8 @@
 
 package water.exec;
 
+import hex.Histogram.OutlineTask;
+
 import java.util.*;
 import water.*;
 import water.ValueArray.Column;
@@ -319,9 +321,11 @@ class Filter extends Function {
       numrows += tmp;
     }
     // Build target header
-    ValueArray va = DKV.get(args[0]._key).get();
-    va = VABuilder.updateRows(va, r._key, numrows);
+    ValueArray va = VABuilder.updateRows(DKV.get(args[0]._key).get(ValueArray.class),r._key,numrows);
+    DKV.put(va._key, va);
+    va = VABuilder.getUpdatedVA(va, r._key, numrows);
     va._rpc = filter._rpc;      // Variable rows-per-chunk
+
     DKV.put(va._key, va);
     DKV.write_barrier();
     return r;
@@ -357,6 +361,10 @@ class Slice extends Function {
     DKV.write_barrier();
     SliceFilter filter = new SliceFilter(args[0]._key,start,length);
     filter.invoke(r._key);
+    // update stats
+    va = VABuilder.getUpdatedVA(va, r._key, length);
+    // and store them
+    DKV.put(va._key,va);
     assert (filter._filteredRows == length) : filter._filteredRows + " -- " + length;
     return r;
   }
