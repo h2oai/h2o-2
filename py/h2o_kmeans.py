@@ -47,6 +47,8 @@ def bigCheckResults(self, kmeans, csvPathname, parseKey, applyDestinationKey, **
         print "rows_per_cluster["+str(i)+"]: ", rows_per_cluster[i]
         print "sqr_error_per_cluster["+str(i)+"]: ", sqr_error_per_cluster[i]
 
+    return centers
+
 
 # compare this clusters to last one. since the files are concatenations, 
 # the results should be similar? 10% of first is allowed delta

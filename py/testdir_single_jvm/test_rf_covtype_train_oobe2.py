@@ -43,7 +43,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_rf_covtype_train_oobe(self):
+    def test_rf_covtype_train_oobe2(self):
         print "\nUse randomBitVector and filter to separate the dataset randomly"
         importFolderPath = "/home/0xdiag/datasets"
         csvFilename = 'covtype.data'
@@ -87,8 +87,6 @@ class Basic(unittest.TestCase):
         # randomFilter(srcFrame,rows,seed)
         # filter(srcFrame,bitVect)
 
-        ### h2b.browseTheCloud()
-
         # odd. output is byte, all other exec outputs are 8 byte? (at least the ones below?)
         execExpr = "rbv=randomBitVector(" + str(num_rows) + "," + str(last10) + ",12345)"
         h2o_exec.exec_expr(None, execExpr, resultKey="rbv", timeoutSecs=10)
@@ -113,6 +111,7 @@ class Basic(unittest.TestCase):
             rowsToUse = rowsForPct[trial%10] 
             resultKey = "r" + str(trial)
             execExpr = resultKey + "=slice(" + dataKeyTrain + ",1," + str(rowsToUse) + ")"
+            execExpr = resultKey + "=slice(" + dataKeyTrain + ",1)"
             h2o_exec.exec_expr(None, execExpr, resultKey=resultKey, timeoutSecs=10)
             parseKey['destination_key'] = resultKey
 
