@@ -5,9 +5,9 @@ public class TypeMapGen {
   static final String[] CLAZZES = {
     " BAD",                     // 0: BAD
     "[B",                       // 1: Array of Bytes
+    "hex.BaseStatsTask",
     "hex.ColSummaryTask",
     "hex.ConfusionMatrix",
-    "hex.Covariance$COV_Task",
     "hex.DGLM$GLMJob",
     "hex.DGLM$GLMModel",
     "hex.DGLM$GLMParams",
@@ -38,7 +38,6 @@ public class TypeMapGen {
     "hex.LinearRegression$CalcRegressionTask",
     "hex.LinearRegression$CalcSquareErrorsTasks",
     "hex.LinearRegression$CalcSumsTask",
-    "hex.NOPTask",
     "hex.NewRowVecTask",
     "hex.NewRowVecTask$DataFrame",
     "hex.NewRowVecTask$RowFunc",

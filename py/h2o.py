@@ -761,7 +761,7 @@ class H2O(object):
         paramsStr =  '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
 
         if noise is not None:
-            print noise
+            print "Using noise during poll_url:", noise
             # noise_json should be like "Storeview"
             (noise_json, noiseParams) = noise
             noiseUrl = self.__url(noise_json + ".json")

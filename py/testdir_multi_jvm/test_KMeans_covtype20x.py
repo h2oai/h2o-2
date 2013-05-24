@@ -26,7 +26,7 @@ class Basic(unittest.TestCase):
         if localhost:
             csvFilenameList = [
                 # 68 secs on my laptop?
-                ('covtype.data', 480, 'cA'),
+                ('covtype20x.data', 480, 'cA'),
                 ]
         else:
             # None is okay for key2
@@ -54,7 +54,7 @@ class Basic(unittest.TestCase):
             kwargs = {
                 'cols': None,
                 'epsilon': 1e-4,
-                'k': 8
+                'k': 7
             }
 
             start = time.time()

@@ -65,27 +65,6 @@ def write_syn_dataset(csvPathname, n, SEED):
     dsf.close()
     return
 
-
-def show_results(csvPathname, parseKey, model_key, centers, destination_key):
-    kmeansApplyResult = h2o.nodes[0].kmeans_apply(
-        data_key=parseKey['destination_key'], model_key=model_key,
-        destination_key=destination_key)
-    # print h2o.dump_json(kmeansApplyResult)
-    inspect = h2o_cmd.runInspect(None, destination_key)
-    h2o_cmd.infoFromInspect(inspect, csvPathname)
-
-    kmeansScoreResult = h2o.nodes[0].kmeans_score(
-        key=parseKey['destination_key'], model_key=model_key)
-    score = kmeansScoreResult['score']
-    rows_per_cluster = score['rows_per_cluster']
-    sqr_error_per_cluster = score['sqr_error_per_cluster']
-
-    for i,c in enumerate(centers):
-        print "\ncenters["+str(i)+"]: ", centers[i]
-        print "rows_per_cluster["+str(i)+"]: ", rows_per_cluster[i]
-        print "sqr_error_per_cluster["+str(i)+"]: ", sqr_error_per_cluster[i]
-
-
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -140,8 +119,6 @@ class Basic(unittest.TestCase):
         self.assertAlmostEqual(centersSorted[0][2],100,delta=.2)
         self.assertAlmostEqual(centersSorted[1][2],200,delta=.2)
         self.assertAlmostEqual(centersSorted[2][2],300,delta=.2)
-
-        show_results(csvPathname, parseKey, model_key, centers, 'd')
 
 if __name__ == '__main__':
     h2o.unit_main()

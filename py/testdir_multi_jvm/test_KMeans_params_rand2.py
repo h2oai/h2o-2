@@ -73,7 +73,8 @@ class Basic(unittest.TestCase):
                 randomV = paramDict['cols']
                 cols = random.choice(randomV)
 
-                kwargs = {'k': k, 'epsilon': epsilon, 'cols': cols, 'destination_key': csvFilename + "_" + str(trial) + '.hex'}
+                kwargs = {'k': k, 'epsilon': epsilon, 'cols': cols, 
+                    'destination_key': csvFilename + "_" + str(trial) + '.hex'}
                 start = time.time()
                 kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, \
                     timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=60, **kwargs)
