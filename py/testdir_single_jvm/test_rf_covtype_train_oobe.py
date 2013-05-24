@@ -44,7 +44,7 @@ class Basic(unittest.TestCase):
 
     def test_rf_covtype_train_oobe(self):
         print "\nMichal will hate me for another file needed: covtype.shuffled.data"
-        importFolderPath = "/home/0xdiag/datasets"
+        importFolderPath = "/home/0xdiag/datasets/standard"
         csvFilename = 'covtype.shuffled.data'
         csvPathname = importFolderPath + "/" + csvFilename
         key2 = csvFilename + ".hex"
@@ -70,14 +70,9 @@ class Basic(unittest.TestCase):
         # use 10 if 0 just to see (we copied 10 to 0 above)
         rowsForPct[0] = rowsForPct[10]
 
-        # this was with 10 trees
-        # expectTrainPctRightList = [0, 85.27, 88.45, 89.99, 91.11, 91.96, 92.51, 93.03, 93.45, 93.78]
-        # expectScorePctRightList = [0, 89.10, 91,90, 93.26, 94.25, 94.74, 95.10, 95.42, 95.72, 95.92]
-
         # 0 isn't used
         expectTrainPctRightList = [0, 85.16, 88.45, 90.24, 91.27, 92.03, 92.64, 93.11, 93.48, 93.79]
         expectScorePctRightList = [0, 88.81, 91.72, 93.06, 94.02, 94.52, 95.09, 95.41, 95.77, 95.78]
-
 
         print "Creating the key of the last 10% data, for scoring"
         dataKeyTest = "rTest"

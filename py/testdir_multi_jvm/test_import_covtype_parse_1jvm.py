@@ -17,7 +17,7 @@ class Basic(unittest.TestCase):
 
     def test_import_covtype_parse_loop(self):
         csvFilename = "covtype.data"
-        importFolderPath = "/home/0xdiag/datasets"
+        importFolderPath = "/home/0xdiag/datasets/standard"
         trialMax = 2
         localhost = h2o.decide_if_localhost()
         for tryHeap in [4,3,2,1]:

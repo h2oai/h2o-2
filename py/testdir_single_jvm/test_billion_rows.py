@@ -24,15 +24,10 @@ class Basic(unittest.TestCase):
 
     def test_B_importFolder_files(self):
         # just do the import folder once
-        # importFolderPath = "/home/hduser/hdfs_datasets"
-        importFolderPath = "/home/0xdiag/datasets"
+        importFolderPath = "/home/0xdiag/datasets/standard"
         h2i.setupImportFolder(None, importFolderPath)
         timeoutSecs = 900
 
-        #    "covtype169x.data",
-        #    "covtype.13x.shuffle.data",
-        #    "3G_poker_shuffle"
-        #    "billion_rows.csv.gz",
         csvFilenameAll = [
             # quick test first
             "covtype.data", 
@@ -55,20 +50,10 @@ class Basic(unittest.TestCase):
             print "Parse result['destination_key']:", parseKey['destination_key']
             print csvFilename, "completed in", elapsed, "seconds.", "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
-
             # We should be able to see the parse result?
             inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
 
             print "\n" + csvFilename
-            start = time.time()
-            # poker and the water.UDP.set3(UDP.java) fail issue..
-            # constrain depth to 25
-
-            # RF seems to get memory allocation errors on single machine (16GB dram)
-            ### RFview = h2o_cmd.runRFOnly(trees=1,depth=5,parseKey=parseKey, timeoutSecs=timeoutSecs)
-            ### h2b.browseJsonHistoryAsUrlLastMatch("RFView")
-
-            # now some GLm
             kwargs = {'x': 0, 'y': 1, 'n_folds': 0, 'case_mode': '=', 'case': 1}
             # one coefficient is checked a little more
             colX = 0

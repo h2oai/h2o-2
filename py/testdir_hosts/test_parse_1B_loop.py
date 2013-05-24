@@ -18,7 +18,7 @@ class Basic(unittest.TestCase):
     def test_import_billion_rows_parse_loop(self):
         print "Apparently we can't handle 1B rows .gzed"
         csvFilename = "billion_rows.csv.gz"
-        importFolderPath = "/home/0xdiag/datasets"
+        importFolderPath = "/home/0xdiag/datasets/standard"
         trialMax = 3
         for tryHeap in [4,16]:
             print "\n", tryHeap,"GB heap, 1 jvm per host, import folder,", \

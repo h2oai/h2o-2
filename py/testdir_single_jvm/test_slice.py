@@ -46,13 +46,10 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        # wait while I inspect things
-        # time.sleep(1500)
         h2o.tear_down_cloud()
 
     def test_exec_import_hosts(self):
-        # importFolderPath = "/home/hduser/hdfs_datasets"
-        importFolderPath = "/home/0xdiag/datasets"
+        importFolderPath = "/home/0xdiag/datasets/standard"
         h2o_import.setupImportFolder(None, importFolderPath)
 
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
@@ -63,7 +60,6 @@ class Basic(unittest.TestCase):
 
         ### csvFilenameList = random.sample(csvFilenameAll,1)
         csvFilenameList = csvFilenameAll
-        # h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
         for (csvFilename, key2, timeoutSecs) in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
