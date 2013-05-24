@@ -23,7 +23,7 @@ class Basic(unittest.TestCase):
 
     def test_GLM_covtype_train(self):
         print "\nMichal will hate me for another file needed: covtype.shuffled.data"
-        importFolderPath = "/home/0xdiag/datasets"
+        importFolderPath = "/home/0xdiag/datasets/standard"
         csvFilename = 'covtype.shuffled.data'
         csvPathname = importFolderPath + "/" + csvFilename
         key2 = csvFilename + ".hex"
@@ -97,7 +97,6 @@ class Basic(unittest.TestCase):
             print "classErr:", classErr
             print "err:", err
             print "auc:", auc
-
 
             print "Trial #", trial, "completed", "using %6.2f" % (rowsToUse*100.0/num_rows), "pct. of all rows"
 

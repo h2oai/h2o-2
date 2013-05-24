@@ -62,8 +62,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_exec_import_hosts(self):
-        # importFolderPath = "/home/hduser/hdfs_datasets"
-        importFolderPath = "/home/0xdiag/datasets"
+        importFolderPath = "/home/0xdiag/datasets/standard"
 
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200

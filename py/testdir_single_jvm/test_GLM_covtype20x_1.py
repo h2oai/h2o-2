@@ -36,7 +36,7 @@ class Basic(unittest.TestCase):
         # a browser window too, just because we can
         h2b.browseTheCloud()
 
-        importFolderPath = '/home/0xdiag/datasets'
+        importFolderPath = '/home/0xdiag/datasets/standard'
         h2i.setupImportFolder(None, importFolderPath)
         for csvFilename, timeoutSecs in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 

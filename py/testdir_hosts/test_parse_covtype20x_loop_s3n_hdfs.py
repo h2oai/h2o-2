@@ -18,7 +18,7 @@ class Basic(unittest.TestCase):
 
     def test_import_covtype20x_parse_loop(self):
         csvFilename = "covtype20x.data"
-        importFolderPath = "/home/0xdiag/datasets"
+        importFolderPath = "/home/0xdiag/datasets/standard"
         trialMax = 3
         for tryHeap in [4,12]:
             print "\n", tryHeap,"GB heap, 1 jvm per host, import folder,", \

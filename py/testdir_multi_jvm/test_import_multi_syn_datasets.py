@@ -22,7 +22,6 @@ class Basic(unittest.TestCase):
 
     def test_import_multi_syn_datasets(self):
         # just do the import folder once
-        # importFolderPath = "/home/hduser/hdfs_datasets"
         importFolderPath = '/home/0xdiag/datasets'
 
         print "This imports a folder of csv files..i.e points to syn_datasets with no regex"
