@@ -77,7 +77,6 @@ class Basic(unittest.TestCase):
 
         ### csvFilenameList = random.sample(csvFilenameAll,1)
         csvFilenameList = csvFilenameAll
-        h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
 
         for (csvFilename, key2, timeoutSecs) in csvFilenameList:
