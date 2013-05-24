@@ -1,18 +1,18 @@
 package hex;
 
 import static org.junit.Assert.assertTrue;
-import hex.rf.MinorityClasses.UnbalancedClass;
 import hex.rf.MinorityClasses;
-import java.io.FileInputStream;
+import hex.rf.MinorityClasses.UnbalancedClass;
+
 import java.util.Arrays;
-import org.junit.AfterClass;
+
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
+
 import water.*;
-import water.parser.ParseDataset;
 
 public class MinorityClassTest extends TestUtil {
   static final int _classIdx = 10;

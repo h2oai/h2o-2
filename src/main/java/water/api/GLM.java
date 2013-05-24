@@ -1,7 +1,13 @@
 package water.api;
 
 import hex.*;
-import hex.DGLM.*;
+import hex.DGLM.CaseMode;
+import hex.DGLM.Family;
+import hex.DGLM.GLMException;
+import hex.DGLM.GLMJob;
+import hex.DGLM.GLMModel;
+import hex.DGLM.GLMParams;
+import hex.DGLM.Link;
 import hex.DLSM.ADMMSolver;
 import hex.DLSM.GeneralizedGradientSolver;
 import hex.DLSM.LSMSolver;
@@ -10,17 +16,12 @@ import hex.NewRowVecTask.DataFrame;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.text.DecimalFormat;
 import java.util.*;
-import java.util.Map.Entry;
 
 import water.*;
-import water.api.RequestBuilders.KeyElementBuilder;
-import water.api.RequestBuilders.Response;
 import water.util.Log;
 import water.util.RString;
 
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 public class GLM extends Request {

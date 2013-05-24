@@ -5,10 +5,10 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 import water.Arguments;
 import water.TestUtil;
 import water.util.Log;
-import water.util.Utils;
 import water.util.Log.Tag.Sys;
 
 /** Launch RF in a new vm and records  results.

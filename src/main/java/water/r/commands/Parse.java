@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import r.builtins.CallFactory.ArgumentInfo;
 import r.data.RAny;
+import r.ifc.Interop;
 import r.ifc.Interop.Invokable;
 import water.*;
 import water.api.Inspect;
@@ -13,8 +14,8 @@ import water.parser.ParseDataset;
 /**
  * The R version of parse.
  *
- * The parse command is currently blocking; in the future we will support a non-blocking version
- * by return a result object that may contain a future.
+ * The parse command is currently blocking; in the future we will support a non-blocking version by
+ * return a result object that may contain a future.
  *
  * The command does both import and parse.
  */
@@ -27,7 +28,14 @@ public class Parse implements Invokable {
 
   /** Function called from R to perform the parse. */
   @Override public RAny invoke(ArgumentInfo ai, RAny[] args) {
-    throw new RuntimeException("TODO Auto-generated method stub");
+    String[] files = Interop.asStringArray(ai.getAny(args, "files"));
+    Arg arg = defaultArg();
+    URI[] uris = new URI[files.length];
+    for( int i = 0; i < files.length; i++ )
+      uris[i] = URI.make(files[i]);
+    arg.files = uris;
+    Res res = execute(arg);
+    return Interop.asRString((res.error == null) ? res.result._key.toString() : res.error.toString());
   }
 
   private static final String[] params = new String[] { "files" };
@@ -79,7 +87,7 @@ public class Parse implements Invokable {
     Key[] ks = new Key[arg.files.length];
     for( int i = 0; i < ks.length; i++ ) {
       try {
-        ks[i] = arg.files[i].get().getKey();
+        ks[i] = arg.files[i].get();
       } catch( IOException e ) {
         res.error = e;
         return res;

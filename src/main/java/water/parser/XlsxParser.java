@@ -3,11 +3,9 @@ package water.parser;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Iterator;
 
-import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
-import org.apache.poi.openxml4j.exceptions.OpenXML4JException;
 import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.xssf.eventusermodel.XSSFReader;
 import org.apache.poi.xssf.model.SharedStringsTable;
@@ -16,11 +14,11 @@ import org.xml.sax.*;
 import org.xml.sax.helpers.DefaultHandler;
 import org.xml.sax.helpers.XMLReaderFactory;
 
-import com.google.common.base.Strings;
-import java.util.ArrayList;
 import water.DKV;
 import water.Key;
 import water.util.Log;
+
+import com.google.common.base.Strings;
 
 public class XlsxParser extends CustomParser {
 

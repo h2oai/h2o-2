@@ -1,10 +1,7 @@
 package water.r.commands;
 
 import r.builtins.CallFactory.ArgumentInfo;
-import r.data.*;
-import r.data.RArray.Names;
-import r.data.internal.DoubleImpl;
-import r.data.internal.ScalarDoubleImpl;
+import r.data.RAny;
 import r.ifc.Interop;
 import r.ifc.Interop.Invokable;
 import water.*;
@@ -26,13 +23,13 @@ public class Matrix implements Invokable {
   @Override public RAny invoke(ArgumentInfo ai, RAny[] args) {
     Key key = Key.make(Interop.asString(args[0]));
     ValueArray va = DKV.get(key).get();
-    long r1 = get(ai, args, 1, 1) - 1;
-    long c1 = get(ai, args, 2, 1) - 1;
-    long r2 = get(ai, args, 3, va._numrows);
-    long c2 = get(ai, args, 4, va._cols.length);
-    int m = (int) get(ai, args, 5, r2 - r1);
-    int n = (int) get(ai, args, 6, c2 - c1);
-    String normalizeStr = ai.provided(parameters()[7]) ? Interop.asString(args[7]) : null;
+    long r1 = ai.get(args, "r1", 1) - 1;
+    long c1 = ai.get(args, "c1", 1) - 1;
+    long r2 = ai.get(args, "r2", va._numrows);
+    long c2 = ai.get(args, "c2", va._cols.length);
+    int m = (int) ai.get(args, "m", r2 - r1);
+    int n = (int) ai.get(args, "n", c2 - c1);
+    String normalizeStr = ai.get(args, "normalize", null);
     boolean normalize = normalizeStr != null ? Boolean.parseBoolean(normalizeStr) : false;
     double[] res = new double[(int) ((c2 - c1) * (r2 - r1))];
     for( long r = r1; r < r2; r++ ) {
@@ -49,15 +46,9 @@ public class Matrix implements Invokable {
         res[c] = d;
       }
     }
-    RSymbol[] names = new RSymbol[(int) (c2 - c1 + 1)];
+    String[] names = new String[(int) (c2 - c1 + 1)];
     for( int c = (int) c1; c < c2; c++ )
-      names[c] = RSymbol.getSymbol(va._cols[c]._name);
-    return new DoubleImpl(res, new int[] { m, n }, Names.create(names));
-  }
-
-  private long get(ArgumentInfo ai, RAny[] args, int i, long def) {
-    String[] names = parameters();
-    int pos = ai.position(names[i]);
-    return pos >= 0 ? (long) ((ScalarDoubleImpl) (args[pos])).getDouble() : def;
+      names[c] =va._cols[c]._name;
+    return Interop.makeDoubleVector(res, new int[] { m, n }, names);
   }
 }

@@ -2,11 +2,10 @@ package water;
 
 import java.util.ArrayList;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import water.util.Log;
 import jsr166y.CountedCompleter;
+import water.util.Log;
 
 /**  A Distributed DTask.
  * Execute a set of Keys on the home for each Key.

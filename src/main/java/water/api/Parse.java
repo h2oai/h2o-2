@@ -1,13 +1,15 @@
 package water.api;
 
-import com.google.gson.JsonObject;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.regex.Pattern;
+
 import water.*;
 import water.parser.*;
 import water.parser.CsvParser.Setup;
-import water.util.Log;
 import water.util.RString;
+
+import com.google.gson.JsonObject;
 
 public class Parse extends Request {
   private   final Separator      _separator = new Separator(SEPARATOR);

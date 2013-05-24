@@ -5,7 +5,6 @@ import java.util.Arrays;
 import water.H2ONode.H2Okey;
 import water.nbhm.NonBlockingHashMap;
 import water.util.Log;
-import water.util.Log.Tag.Sys;
 
 /**
  * (Not The) Paxos
@@ -26,7 +25,6 @@ import water.util.Log.Tag.Sys;
  * @version 1.0
  */
 public abstract class Paxos {
-  private static final boolean DEBUG = Boolean.getBoolean("water.paxos.debug");
   // Whether or not we have common knowledge
   public static volatile boolean _commonKnowledge = false;
   // Whether or not we're allowing distributed-writes.  The cloud is not

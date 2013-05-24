@@ -1,12 +1,13 @@
 package water.parser;
 
 import static org.junit.Assert.assertEquals;
-import java.io.IOException;
+
 import java.io.File;
-import java.util.Arrays;
-import org.junit.*;
+
+import org.junit.BeforeClass;
+import org.junit.Test;
+
 import water.*;
-import water.parser.ParseDataset;
 import water.util.FileIntegrityChecker;
 
 public class ParseProgressTest extends TestUtil {

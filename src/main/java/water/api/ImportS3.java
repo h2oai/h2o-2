@@ -7,6 +7,7 @@ import water.Key;
 import water.store.s3.PersistS3;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.gson.*;
 
@@ -43,15 +44,8 @@ public class ImportS3 extends Request {
     _bucket._requestHelp = "Amazon S3 Bucket to import.";
   }
 
-  @Override
-  protected Response serve() {
-    JsonObject json = new JsonObject();
-
-    JsonArray succ = new JsonArray();
-    JsonArray fail = new JsonArray();
-    String bucket = _bucket.value();
-    AmazonS3 s3 = PersistS3.getClient();
-    for( S3ObjectSummary obj : s3.listObjects(bucket).getObjectSummaries() ) {
+  public void processListing(ObjectListing listing, JsonArray succ, JsonArray fail){
+    for( S3ObjectSummary obj : listing.getObjectSummaries() ) {
       try {
         Key k = PersistS3.loadKey(obj);
         JsonObject o = new JsonObject();
@@ -66,12 +60,26 @@ public class ImportS3 extends Request {
         fail.add(o);
       }
     }
+  }
+
+  @Override
+  protected Response serve() {
+    JsonObject json = new JsonObject();
+    JsonArray succ = new JsonArray();
+    JsonArray fail = new JsonArray();
+    String bucket = _bucket.value();
+    AmazonS3 s3 = PersistS3.getClient();
+    ObjectListing currentList = s3.listObjects(bucket);
+    processListing(currentList, succ, fail);
+    while(currentList.isTruncated()){
+      currentList = s3.listNextBatchOfObjects(currentList);
+      processListing(currentList, succ, fail);
+    }
     json.add(NUM_SUCCEEDED, new JsonPrimitive(succ.size()));
     json.add(SUCCEEDED, succ);
     json.add(NUM_FAILED, new JsonPrimitive(fail.size()));
     json.add(FAILED, fail);
     DKV.write_barrier();
-
     Response r = Response.done(json);
     r.setBuilder(SUCCEEDED + "." + KEY, new KeyCellBuilder());
     return r;

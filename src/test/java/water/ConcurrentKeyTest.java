@@ -1,9 +1,7 @@
 package water;
 
-import hex.KMeans;
-import java.util.Arrays;
-import java.util.Random;
-import org.junit.*;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 public class ConcurrentKeyTest extends TestUtil {
 

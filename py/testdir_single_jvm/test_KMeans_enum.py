@@ -79,20 +79,8 @@ class Basic(unittest.TestCase):
 
             kwargs = {'k': 2, 'epsilon': 1e-6, 'cols': None, 'destination_key': 'benign_k.hex'}
             kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=5, **kwargs)
-            model_key = kmeans['destination_key']
-            kmeansResult = h2o_cmd.runInspect(key=model_key)
+            h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
 
-            ## h2o.nodes[0].kmeans_apply(data_key=parseKey['destination_key'], model_key=model_key, destination_key='a')
-            # this is failing for some reason
-            ## h2o.nodes[0].kmeans_score(key=parseKey['destination_key'], model_key=model_key)
-
-            clusters = kmeansResult['KMeansModel']['clusters']
-            for i,c in enumerate(clusters):
-                print "clusters["+str(i)+"]: ", clusters[i]
-
-            ## print h2o.dump_json(kmeans)
-            ## print h2o.dump_json(kmeansResult)
-            h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
 
 if __name__ == '__main__':
     h2o.unit_main()

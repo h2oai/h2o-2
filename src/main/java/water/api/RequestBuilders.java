@@ -11,7 +11,6 @@ import water.H2O;
 import water.PrettyPrint;
 import water.util.*;
 
-import com.google.common.base.Throwables;
 import com.google.gson.*;
 
 /** Builders & response object.

@@ -2,8 +2,8 @@ package water.util;
 
 import java.net.InetAddress;
 import java.util.*;
+
 import water.*;
-import water.H2ONode.H2Okey;
 
 /**
  * Wrapper around timeline snapshot. Implements iterator interface (events are
