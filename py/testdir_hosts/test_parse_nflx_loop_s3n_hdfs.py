@@ -20,8 +20,8 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud(sandbox_ignore_errors=True)
 
     def test_parse_nflx_loop_s3n_hdfs(self):
-        DO_GLM = False
-        DO_GLMGRID = True
+        DO_GLM = True
+        DO_GLMGRID = False
         USE_HOME2 = False
         USE_S3 = False
         noPoll = False
@@ -54,22 +54,22 @@ class Basic(unittest.TestCase):
                 # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[23][0-9]", "syn_20.csv", 20 * avgSynSize, 700),
                 # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[45678][0-9]", "syn_50.csv", 50 * avgSynSize, 700),
                 ("manyfiles-nflx-gz/file_1[0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
-                ("manyfiles-nflx-gz/file_2[0-9][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 3600),
+                # ("manyfiles-nflx-gz/file_2[0-9][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 3600),
 
                 ("manyfiles-nflx-gz/file_[1-2][0-5][0-9].dat.gz", "file_120_A.dat.gz", 120 * avgMichalSize, 3600),
-                ("manyfiles-nflx-gz/file_[1-2][0-5][0-9].dat.gz", "file_120_B.dat.gz", 120 * avgMichalSize, 3600),
+                # ("manyfiles-nflx-gz/file_[1-2][0-5][0-9].dat.gz", "file_120_B.dat.gz", 120 * avgMichalSize, 3600),
 
                 ("manyfiles-nflx-gz/file_[1-2][0-6][0-9].dat.gz", "file_140_A.dat.gz", 140 * avgMichalSize, 3600),
-                ("manyfiles-nflx-gz/file_[1-2][0-6][0-9].dat.gz", "file_140_B.dat.gz", 140 * avgMichalSize, 3600),
+                # ("manyfiles-nflx-gz/file_[1-2][0-6][0-9].dat.gz", "file_140_B.dat.gz", 140 * avgMichalSize, 3600),
 
                 ("manyfiles-nflx-gz/file_[1-2][0-7][0-9].dat.gz", "file_160_A.dat.gz", 160 * avgMichalSize, 3600),
-                ("manyfiles-nflx-gz/file_[1-2][0-7][0-9].dat.gz", "file_160_B.dat.gz", 160 * avgMichalSize, 3600),
+                # ("manyfiles-nflx-gz/file_[1-2][0-7][0-9].dat.gz", "file_160_B.dat.gz", 160 * avgMichalSize, 3600),
 
                 ("manyfiles-nflx-gz/file_[1-2][0-8][0-9].dat.gz", "file_180_A.dat.gz", 180 * avgMichalSize, 3600),
-                ("manyfiles-nflx-gz/file_[1-2][0-8][0-9].dat.gz", "file_180_B.dat.gz", 180 * avgMichalSize, 3600),
+                # ("manyfiles-nflx-gz/file_[1-2][0-8][0-9].dat.gz", "file_180_B.dat.gz", 180 * avgMichalSize, 3600),
 
                 ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 3600),
-                ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_B.dat.gz", 200 * avgMichalSize, 3600),
+                # ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_B.dat.gz", 200 * avgMichalSize, 3600),
 
                 ("manyfiles-nflx-gz/file_[123][0-9][0-9].dat.gz", "file_300_A.dat.gz", 300 * avgMichalSize, 3600),
                 ("manyfiles-nflx-gz/file_[123][0-9][0-9].dat.gz", "file_300_B.dat.gz", 300 * avgMichalSize, 3600),
@@ -115,7 +115,7 @@ class Basic(unittest.TestCase):
             ## for tryHeap in [54, 28]:
             h2oPerNode = 1
             # h1.4xlarge 60.5GB dram
-            for tryHeap in [28]:
+            for tryHeap in [14]:
                 
                 print "\n", tryHeap,"GB heap,", h2oPerNode, "jvm per host, import", protocol, "then parse"
                 # jea = "-XX:+UseParNewGC -XX:+UseConcMarkSweepGC"
@@ -241,7 +241,7 @@ class Basic(unittest.TestCase):
                         if DO_GLM:
                             algo = 'GLM'
                             GLMkwargs = {'x': x, 'y': 378, 'case': 15, 'case_mode': '>', 'family': 'binomial',
-                                'max_iter': 10, 'n_folds': 2, 'alpha': 0.2, 'lambda': 1e-5}
+                                'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
                             start = time.time()
                             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, 
                                 timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
