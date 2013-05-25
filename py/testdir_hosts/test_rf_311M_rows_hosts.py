@@ -22,7 +22,7 @@ class Basic(unittest.TestCase):
         # since we'll be waiting, pop a browser
         h2b.browseTheCloud()
 
-        importFolderPath = '/home/0xdiag/datasets'
+        importFolderPath = '/home/0xdiag/datasets/standard'
         h2i.setupImportFolder(None, importFolderPath)
 
         csvFilename = 'new-poker-hand.full.311M.txt.gz'

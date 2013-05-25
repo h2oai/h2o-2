@@ -35,7 +35,7 @@ class Basic(unittest.TestCase):
                 # ('covtype200x.data', 1000,'cE'),
                 ]
 
-        importFolderPath = '/home/0xdiag/datasets'
+        importFolderPath = '/home/0xdiag/datasets/standard'
         h2i.setupImportFolder(None, importFolderPath)
         for csvFilename, timeoutSecs, key2 in csvFilenameList:
             csvPathname = importFolderPath + "/" + csvFilename

@@ -127,7 +127,7 @@ class Basic(unittest.TestCase):
                 # ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSizeUncompressed, 700),
             ]
         if 1==0: 
-            importFolderPath = '/home/0xdiag/datasets'
+            importFolderPath = '/home/0xdiag/datasets/standard'
             print "Using .gz'ed files in", importFolderPath
             # all exactly the same prior to gzip!
             # could use this, but remember import folder -> import folder s3 for jenkins?

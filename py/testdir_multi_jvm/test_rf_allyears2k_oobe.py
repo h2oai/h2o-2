@@ -41,7 +41,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rf_allyears2k_oobe(self):
-        importFolderPath = '/home/0xdiag/datasets'
+        importFolderPath = '/home/0xdiag/datasets/standard'
         csvFilename = 'allyears2k.csv'
         csvPathname = importFolderPath + "/" + csvFilename
         h2i.setupImportFolder(None, importFolderPath)

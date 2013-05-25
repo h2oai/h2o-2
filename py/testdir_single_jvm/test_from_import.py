@@ -21,7 +21,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_from_import(self):
-        importFolderPath = '/home/0xdiag/datasets'
+        importFolderPath = '/home/0xdiag/datasets/standard'
         h2i.setupImportFolder(None, importFolderPath)
         timeoutSecs = 500
         csvFilenameAll = [
