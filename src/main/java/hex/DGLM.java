@@ -611,8 +611,11 @@ public abstract class DGLM {
       return res;
     }
 
+    @Override
     public JsonObject toJson(){
       JsonObject res = new JsonObject();
+      res.addProperty(Constants.VERSION, H2O.VERSION);
+      res.addProperty(Constants.TYPE, GLMModel.class.getName());
       res.addProperty("time", _time);
       res.addProperty(Constants.MODEL_KEY, _selfKey.toString());
       if( _warnings != null ) {
@@ -1213,7 +1216,12 @@ public abstract class DGLM {
   }
 
   public static GLMJob startGLMJob(final DataFrame data, final LSMSolver lsm, final GLMParams params, final double [] betaStart, final int xval, final boolean parallel) {
-    final GLMJob job = new GLMJob(data._ary,GLMModel.makeKey(true),xval,params);
+    return startGLMJob(null, data, lsm, params, betaStart, xval, parallel);
+  }
+
+  public static GLMJob startGLMJob(Key dest, final DataFrame data, final LSMSolver lsm, final GLMParams params, final double [] betaStart, final int xval, final boolean parallel) {
+    if(dest == null) dest = GLMModel.makeKey(true);
+    final GLMJob job = new GLMJob(data._ary,dest,xval,params);
     final double [] beta;
     final double [] denormalizedBeta;
     if(betaStart != null){

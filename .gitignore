@@ -23,4 +23,6 @@ sandbox
 syn_datasets
 target/
 .settings/*
-Cypof.java
+Cypof*
+cypof*
+typemap

@@ -247,6 +247,20 @@ public class Utils {
     return file;
   }
 
+  public static String readFile(File file) {
+    FileReader r = null;
+    try {
+      r = new FileReader(file);
+      char[] data = new char[(int) file.length()];
+      r.read(data);
+      return new String(data);
+    } catch(IOException e) {
+      throw Log.errRTExcept(e);
+    } finally {
+      close(r);
+    }
+  }
+
   public static String join(char sep, Object[] array) {
     String s = "";
     for( Object o : array )

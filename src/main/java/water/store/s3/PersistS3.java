@@ -7,6 +7,7 @@ import java.util.Properties;
 
 import water.*;
 import water.Job.ProgressMonitor;
+import water.api.Constants.Extensions;
 import water.util.Log;
 import water.util.RIStream;
 
@@ -74,7 +75,7 @@ public abstract class PersistS3 {
     Key k = encodeKey(obj.getBucketName(), obj.getKey());
     long size = obj.getSize();
     Value val = null;
-    if( obj.getKey().endsWith(".hex") ) { // Hex file?
+    if( obj.getKey().endsWith(Extensions.HEX) ) { // Hex file?
       int sz = (int) Math.min(ValueArray.CHUNK_SZ, size);
       byte[] mem = MemoryManager.malloc1(sz); // May stall a long time to get memory
       S3ObjectInputStream is = getObjectForKey(k, 0, ValueArray.CHUNK_SZ).getObjectContent();
@@ -108,7 +109,7 @@ public abstract class PersistS3 {
     if( k._kb[0] == Key.ARRAYLET_CHUNK ) {
       skip = ValueArray.getChunkOffset(k); // The offset
       k = ValueArray.getArrayKey(k); // From the base file key
-      if( k.toString().endsWith(".hex") ) { // Hex file?
+      if( k.toString().endsWith(Extensions.HEX) ) { // Hex file?
         int value_len = DKV.get(k).memOrLoad().length; // How long is the ValueArray header?
         skip += value_len;    // Skip header
       }
@@ -160,7 +161,7 @@ public abstract class PersistS3 {
     long size = getObjectMetadataForKey(arykey).getContentLength();
 
     long rem = size - off; // Remainder to be read
-    if( arykey.toString().endsWith(".hex") ) { // Hex file?
+    if( arykey.toString().endsWith(Extensions.HEX) ) { // Hex file?
       int value_len = DKV.get(arykey).memOrLoad().length; // How long is the
                                                     // ValueArray header?
       rem -= value_len;

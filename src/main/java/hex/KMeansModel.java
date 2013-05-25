@@ -34,8 +34,11 @@ public class KMeansModel extends Model implements Progress {
     return !Double.isNaN(C._mean);
   }
 
+  @Override
   public JsonObject toJson() {
     JsonObject res = new JsonObject();
+    res.addProperty(Constants.VERSION, H2O.VERSION);
+    res.addProperty(Constants.TYPE, KMeansModel.class.getName());
     JsonArray ary = new JsonArray();
     for( double[] dd : clusters() ) {
       JsonArray ary2 = new JsonArray();

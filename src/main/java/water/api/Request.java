@@ -44,6 +44,7 @@ public abstract class Request extends RequestBuilders {
         return wrap(server, build(Response.done(serveHelp())));
       case json:
       case www:
+      case png:
         if(log()) {
           String log = getClass().getSimpleName();
           for (Object arg: args.keySet()) {

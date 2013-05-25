@@ -13,7 +13,7 @@ import com.google.gson.*;
 public class KMeans extends Request {
   protected final H2OHexKey _source = new H2OHexKey(SOURCE_KEY);
   protected final Int _k = new Int(K);
-  protected final Real _epsilon = new Real(EPSILON, 1e-6);
+  protected final Real _epsilon = new Real(EPSILON, 1e-4);
   protected final LongInt _seed = new LongInt(SEED, new Random().nextLong(), "");
   protected final Bool _normalize = new Bool(NORMALIZE, false, "");
   protected final HexAllColumnSelect _columns = new HexAllColumnSelect(COLS, _source);

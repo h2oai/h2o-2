@@ -6,9 +6,9 @@ import r.ifc.Interop;
 import r.ifc.Interop.Invokable;
 import water.*;
 
-public class Matrix implements Invokable {
+public class VARead implements Invokable {
   @Override public String name() {
-    return "matrix";
+    return "va.read";
   }
 
   @Override public String[] parameters() {
@@ -48,7 +48,7 @@ public class Matrix implements Invokable {
     }
     String[] names = new String[(int) (c2 - c1 + 1)];
     for( int c = (int) c1; c < c2; c++ )
-      names[c] =va._cols[c]._name;
+      names[c] = va._cols[c]._name;
     return Interop.makeDoubleVector(res, new int[] { m, n }, names);
   }
 }

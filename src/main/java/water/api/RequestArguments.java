@@ -840,15 +840,16 @@ public class RequestArguments extends RequestStatics {
   // MultipleText
   // ===========================================================================
 
+  private static final char JS_SEP = ':';
   private static final String _multipleTextValueJS =
             "  var str = ''\n"
           + "  for (var i = 0; i < %NUMITEMS; ++i) {\n"
           + "    var element = $('#%NAME'+i);\n"
           + "    if (element.val() != '') {\n"
           + "      if (str == '')\n"
-          + "        str = element.attr('name') + '=' +element.val();\n"
+          + "        str = element.attr('name') + '" + JS_SEP + "' +element.val();\n"
           + "      else\n"
-          + "        str = str + ',' + element.attr('name') + '=' + element.val();\n"
+          + "        str = str + ',' + element.attr('name') + '" + JS_SEP + "' + element.val();\n"
           + "    }\n"
           + "  }\n"
           + "  return str;\n"
@@ -1986,12 +1987,12 @@ public class RequestArguments extends RequestStatics {
           ++end;
 
         } else {
-          end = input.indexOf('=',start);
+          end = input.indexOf(JS_SEP,start);
           className = input.substring(start,end);
         }
         start = end;
         while (start < bsource.length && bsource[start]==' ') ++start; // whitespace;
-        if (bsource[start]!='=')
+        if (bsource[start]!=JS_SEP)
           throw new IllegalArgumentException("Expected = after the class name.");
         ++start;
         end = input.indexOf(',',start);
@@ -2073,7 +2074,7 @@ public class RequestArguments extends RequestStatics {
     }
 
     @Override protected int[] parse(String input) throws IllegalArgumentException {
-      // determine the arity of the column
+      // determine the parity of the column
       HashMap<String,Integer> classNames = new HashMap();
       String[] names = determineColumnClassNames(1024);
       for (int i = 0; i < names.length; ++i)
@@ -2093,14 +2094,13 @@ public class RequestArguments extends RequestStatics {
           end = input.indexOf(',',start);
           className = input.substring(start,end);
           ++end;
-
         } else {
-          end = input.indexOf('=',start);
+          end = input.indexOf(JS_SEP,start);
           className = input.substring(start,end);
         }
         start = end;
         while (start < bsource.length && bsource[start]==' ') ++start; // whitespace;
-        if (bsource[start]!='=')
+        if (bsource[start]!=JS_SEP)
           throw new IllegalArgumentException("Expected = after the class name.");
         ++start;
         end = input.indexOf(',',start);

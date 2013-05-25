@@ -1,7 +1,8 @@
 package water;
 
-import java.io.File;
+import java.io.*;
 import java.util.*;
+import java.util.Map.Entry;
 
 import water.util.Log;
 import water.util.Utils;
@@ -12,13 +13,30 @@ public class TypeMap {
   static public final short VALUE_ARRAY;
 
   static private final HashMap<String, Integer> MAP = new HashMap();
+  static private final String[] CLAZZES;
+  static private final Freezable[] GOLD;
   static {
-    int va_id = -1;
-    for( int i = 0; i < TypeMapGen.CLAZZES.length; i++ ) {
-      MAP.put(TypeMapGen.CLAZZES[i], i);
-      if( TypeMapGen.CLAZZES[i].equals("water.ValueArray") ) va_id = i;
+    ClassLoader cl = ClassLoader.getSystemClassLoader();
+    InputStream in = cl.getResourceAsStream("typemap");
+    int va_id = -1, i = 0;
+    if( in != null ) {
+      BufferedReader r = new BufferedReader(new InputStreamReader(in));
+      try {
+        for( ;; ) {
+          String line = r.readLine();
+          if( line == null || line.length() == 0 ) break;
+          if( line.equals("water.ValueArray") ) va_id = i;
+          MAP.put(line, i++);
+        }
+      } catch( IOException e ) {
+        throw new RuntimeException(e);
+      }
     }
     VALUE_ARRAY = (short) va_id; // Pre-cached the type id for ValueArray
+    GOLD = new Freezable[i];
+    CLAZZES = new String[i];
+    for( Entry<String, Integer> entry : MAP.entrySet() )
+      CLAZZES[entry.getValue()] = entry.getKey();
   }
 
   static public int onLoad(String className) {
@@ -27,13 +45,11 @@ public class TypeMap {
     return I;
   }
 
-  static private final Freezable[] GOLD = new Freezable[TypeMapGen.CLAZZES.length];
-
   static public Iced newInstance(int id) {
     Iced f = (Iced) GOLD[id];
     if( f == null ) {
       try {
-        GOLD[id] = f = (Iced) Class.forName(TypeMapGen.CLAZZES[id]).newInstance();
+        GOLD[id] = f = (Iced) Class.forName(CLAZZES[id]).newInstance();
       } catch( Exception e ) {
         throw Log.errRTExcept(e);
       }
@@ -45,7 +61,7 @@ public class TypeMap {
     Freezable f = GOLD[id];
     if( f == null ) {
       try {
-        GOLD[id] = f = (Freezable) Class.forName(TypeMapGen.CLAZZES[id]).newInstance();
+        GOLD[id] = f = (Freezable) Class.forName(CLAZZES[id]).newInstance();
       } catch( Exception e ) {
         throw Log.errRTExcept(e);
       }
@@ -54,7 +70,7 @@ public class TypeMap {
   }
 
   static public String className(int id) {
-    return TypeMapGen.CLAZZES[id];
+    return CLAZZES[id];
   }
 
   static public Class clazz(int id) {
@@ -75,18 +91,11 @@ public class TypeMap {
     }
     Collections.sort(list);
     String s = "" + //
-        "package water;\n" + //
-        "\n" + //
-        "// Do not edit - generated\n" + //
-        "public class TypeMapGen {\n" + //
-        "  static final String[] CLAZZES = {\n" + //
-        "    \" BAD\",                     // 0: BAD\n" +        //
-        "    \"[B\",                       // 1: Array of Bytes\n";
+        " BAD\n" +        //
+        "[B\n";
     for( String c : list )
-      s += "    \"" + c + "\",\n";
-    s += "  };\n";
-    s += "}";
-    Utils.writeFile(new File("src/main/java/water/TypeMapGen.java"), s);
+      s += c + "\n";
+    Utils.writeFile(new File("src/main/resources/typemap"), s);
     Log.info("Generated TypeMap");
   }
 }

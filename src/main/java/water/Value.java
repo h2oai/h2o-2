@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import jsr166y.ForkJoinPool;
 import water.Job.ProgressMonitor;
+import water.api.Constants.Extensions;
 import water.hdfs.PersistHdfs;
 import water.store.s3.PersistS3;
 
@@ -283,7 +284,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     if( va._cols == null || va._cols.length == 0 ) return false;
     if( va._cols.length > 1 ) return true;
     if( va._cols[0]._size != 1 ) return true;
-    return _key.toString().endsWith(".hex");
+    return _key.toString().endsWith(Extensions.HEX);
   }
 
   public boolean isBitIdentical( Value v ) {

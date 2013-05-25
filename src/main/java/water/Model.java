@@ -2,6 +2,8 @@ package water;
 
 import java.util.Arrays;
 
+import com.google.gson.JsonObject;
+
 import water.api.Constants;
 
 /**
@@ -192,4 +194,10 @@ public abstract class Model extends Iced {
 
   /** Bulk scoring API, on a compatible ValueArray (when pushed throw the mapping) */
   protected abstract double score0( ValueArray data, AutoBuffer ab, int row_in_chunk, int[] mapping );
+
+  public abstract JsonObject toJson();
+
+  public void fromJson(JsonObject json) {
+    // TODO
+  }
 }

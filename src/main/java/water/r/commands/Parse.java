@@ -8,6 +8,7 @@ import r.ifc.Interop;
 import r.ifc.Interop.Invokable;
 import water.*;
 import water.api.Inspect;
+import water.api.Constants.Extensions;
 import water.parser.CsvParser;
 import water.parser.ParseDataset;
 
@@ -98,7 +99,7 @@ public class Parse implements Invokable {
     CsvParser.Setup setup = Inspect.csvGuessValue(v, separator);
     if( setup._data == null || setup._data[0].length == 0 ) res.error = new IllegalArgumentException(
         "I cannot figure out this file; I only handle common CSV formats: " + arg.files[0]);
-    Key dest = Key.make(ks[0] + ".hex");
+    Key dest = Key.make(ks[0] + Extensions.HEX);
     try {
       Job job = ParseDataset.forkParseDataset(dest, ks, setup);
       res.result = job.get();

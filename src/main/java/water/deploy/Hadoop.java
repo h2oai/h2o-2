@@ -223,10 +223,9 @@ public class Hadoop {
       Logger.getRootLogger().setLevel(Level.ALL);
       System.setProperty("HADOOP_USER_NAME", config.user);
       Configuration conf = new Configuration();
-      conf.set("fs.default.name", config.name_server);
-      conf.set("mapred.job.tracker", config.job_tracker);
       conf.set("mapreduce.framework.name", "classic");
       conf.set("hadoop.job.ugi", config.user + "," + config.password);
+      conf.set("mapred.job.tracker", config.job_tracker);
       conf.set("mapred.tasktracker.map.tasks.maximum", "1");
       conf.set("mapred.job.reuse.jvm.num.tasks", "1");
       conf.set("mapred.map.max.attempts", "0");
@@ -235,8 +234,8 @@ public class Hadoop {
       conf.set("mapred.child.java.opts", "-Xms" + config.memory + "m -Xmx" + config.memory + "m");
       conf.set("mapred.job.map.memory.mb", "" + config.memory);
       conf.set("mapred.job.reduce.memory.mb", "" + config.memory);
-
-//      conf.set("fs.maprfs.impl", "com.mapr.fs.MapRFileSystem");
+      conf.set("fs.default.name", config.name_server);
+      conf.set("fs.maprfs.impl", "com.mapr.fs.MapRFileSystem");
 
       String hosts = "";
       URI tracker = new URI(config.job_tracker);

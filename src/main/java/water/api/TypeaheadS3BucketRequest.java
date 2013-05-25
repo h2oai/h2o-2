@@ -12,7 +12,7 @@ import com.google.gson.JsonPrimitive;
 public class TypeaheadS3BucketRequest extends TypeaheadRequest {
 
   public TypeaheadS3BucketRequest() {
-    super("Provides a simple JSON array of HDFS paths.","");
+    super("Provides a simple JSON array of S3 paths.","");
   }
 
   @Override

@@ -18,7 +18,6 @@ import water.util.Log;
 
 import com.google.gson.*;
 
-
 public class Shell extends Thread {
   public Shell() {
     super("Shell");
@@ -72,7 +71,9 @@ public class Shell extends Thread {
       });
     }
     Interop.register(new Load());
-    Interop.register(new Matrix());
+    Interop.register(new Save());
+    Interop.register(new VARead());
+    Interop.register(new VAWrite());
     Interop.register(new Parse());
     Console.main(args);
   }
@@ -87,7 +88,7 @@ public class Shell extends Thread {
         a[count] = toR(entry.getValue());
         names[count++] = RSymbol.getSymbol(entry.getKey());
       }
-      return RListFactory.getFor(a, new int[] { 1 }, Names.create(names));
+      return RListFactory.getFor(a, new int[] { a.length }, Names.create(names));
     }
     if( e instanceof JsonArray ) {
       RAny[] a = new RAny[((JsonArray) e).size()];

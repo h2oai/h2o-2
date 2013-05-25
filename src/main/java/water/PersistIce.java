@@ -1,8 +1,12 @@
 package water;
 
 import java.io.*;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Arrays;
 
+import water.api.Constants.Schemes;
+import water.hdfs.PersistHdfs;
 import water.util.Log;
 
 // Persistence backend for the local storage device
@@ -22,7 +26,7 @@ public abstract class PersistIce {
   public static final String DEFAULT_ROOT  = "/tmp";
   private static final String ICE_DIR      = "ice";
   private static final String LOG_FILENAME = "h2o.log";
-  private static final File iceRoot;
+  private static final URI iceRoot;
   public  static final File logFile;
 
   // Load into the K/V store all the files found on the local disk
@@ -30,15 +34,31 @@ public abstract class PersistIce {
   static {
     ROOT = (H2O.OPT_ARGS.ice_root==null) ? DEFAULT_ROOT : H2O.OPT_ARGS.ice_root;
     H2O.OPT_ARGS.ice_root = ROOT;
-    iceRoot = new File(ROOT+File.separator+ICE_DIR+H2O.API_PORT);
-    logFile = new File(iceRoot+File.separator+LOG_FILENAME);
+    try {
+      iceRoot = new URI(ROOT+File.separator+ICE_DIR+H2O.API_PORT);
+      if(Schemes.HDFS.equals(iceRoot.getScheme()))
+        logFile = new File(DEFAULT_ROOT+File.separator+LOG_FILENAME);
+      else
+        logFile = new File(iceRoot+File.separator+LOG_FILENAME);
+    } catch( URISyntaxException e ) {
+      throw new RuntimeException(e);
+    }
     // Make the directory as-needed
-    iceRoot.mkdirs();
-    if( !(iceRoot.isDirectory() && iceRoot.canRead() && iceRoot.canWrite()) )
-      Log.die("ice_root not a read/writable directory");
+    if(Schemes.HDFS.equals(iceRoot.getScheme()))
+      PersistHdfs.mkdir(iceRoot);
+    else {
+      File f = new File(iceRoot.getPath());
+      f.mkdirs();
+      if( !(f.isDirectory() && f.canRead() && f.canWrite()) )
+        Log.die("ice_root not a read/writable directory");
+    }
     // By popular demand, clear out ICE on startup instead of trying to preserve it
-    if( H2O.OPT_ARGS.keepice == null )  cleanIce(iceRoot);
-    else initializeFilesFromFolder(iceRoot);
+    if( H2O.OPT_ARGS.keepice == null ) {
+      if(Schemes.HDFS.equals(iceRoot.getScheme()))
+        PersistHdfs.cleanIce(iceRoot);
+      else
+        cleanIce(new File(iceRoot.getPath()));
+    } else initializeFilesFromFolder(new File(iceRoot));
   }
 
   // Clear the ICE directory
@@ -64,7 +84,7 @@ public abstract class PersistIce {
   }
 
   public static FileWriter logFile() {
-    try { return new FileWriter(iceRoot+File.separator+LOG_FILENAME); }
+    try { return new FileWriter(logFile); }
     catch( IOException e ) { /*do not log errors when trying to open the log file*/ return null; }
   }
 
@@ -179,10 +199,14 @@ public abstract class PersistIce {
   }
 
   private static File encodeKeyToFile(Value v) {
-    return encodeKeyToFile(v._key,(byte)(v.isArray()?'A':'V'));
+    return new File(encodeKey(v));
   }
-  private static File encodeKeyToFile(Key k, byte type) {
-    return new File(iceRoot,getDirectoryForKey(k)+File.separator+key2Str(k,type));
+
+  private static String encodeKey(Value v) {
+    return encodeKey(v._key,(byte)(v.isArray()?'A':'V'));
+  }
+  private static String encodeKey(Key k, byte type) {
+    return iceRoot.toString()+File.separator+getDirectoryForKey(k)+File.separator+key2Str(k,type);
   }
 
   private static String getDirectoryForKey(Key key) {
@@ -198,23 +222,27 @@ public abstract class PersistIce {
   // but no crash (although one could argue that a racing load&delete is a bug
   // no matter what).
   static byte[] fileLoad(Value v) {
-    File f = encodeKeyToFile(v);
-    if( f.length() < v._max ) { // Should be fully on disk... or
-      assert !v.isPersisted() : f.length() + " " + v._max + " " + v._key;  // or it's a racey delete of a spilled value
-      return null;              // No value
-    }
-    try {
-      FileInputStream s = new FileInputStream(f);
-      try {
-        AutoBuffer ab = new AutoBuffer(s.getChannel(),true,Value.ICE);
-        byte[] b = ab.getA1(v._max);
-        ab.close();
-        return b;
-      } finally {
-        s.close();
+    if(Schemes.HDFS.equals(iceRoot.getScheme())) {
+      return PersistHdfs.fileLoad(v, iceRoot.getPath() + File.separatorChar + encodeKeyToFile(v));
+    } else {
+      File f = encodeKeyToFile(v);
+      if( f.length() < v._max ) { // Should be fully on disk... or
+        assert !v.isPersisted() : f.length() + " " + v._max + " " + v._key;  // or it's a racey delete of a spilled value
+        return null;              // No value
       }
-    } catch( IOException e ) {  // Broken disk / short-file???
-      throw new RuntimeException(Log.err("File load failed: ",e));
+      try {
+        FileInputStream s = new FileInputStream(f);
+        try {
+          AutoBuffer ab = new AutoBuffer(s.getChannel(),true,Value.ICE);
+          byte[] b = ab.getA1(v._max);
+          ab.close();
+          return b;
+        } finally {
+          s.close();
+        }
+      } catch( IOException e ) {  // Broken disk / short-file???
+        throw new RuntimeException(Log.err("File load failed: ",e));
+      }
     }
   }
 
@@ -224,21 +252,25 @@ public abstract class PersistIce {
   static void fileStore(Value v) throws IOException {
     // A perhaps useless cutout: the upper layers should test this first.
     if( v.isPersisted() ) return;
-    new File(iceRoot,getDirectoryForKey(v._key)).mkdirs();
-    // Nuke any prior file.
-    FileOutputStream s = null;
-    try {
-      s = new FileOutputStream(encodeKeyToFile(v));
-    } catch (FileNotFoundException e) {
-      throw new RuntimeException(Log.err("Encoding a key to a file failed!\nKey: "+v._key.toString()+"\nEncoded: "+encodeKeyToFile(v),e));
-    }
-    try {
-      byte[] m = v.memOrLoad(); // we are not single threaded anymore
-      assert m != null && m.length == v._max : " "+v._key+" "+m; // Assert not saving partial files
-      new AutoBuffer(s.getChannel(),false,Value.ICE).putA1(m,m.length).close();
-      v.setdsk();             // Set as write-complete to disk
-    } finally {
-      if( s != null ) s.close();
+    if(iceRoot.getScheme().equals(Schemes.HDFS)) {
+      PersistHdfs.store(encodeKey(v), v);
+    } else {
+      new File(iceRoot.toString(),getDirectoryForKey(v._key)).mkdirs();
+      // Nuke any prior file.
+      FileOutputStream s = null;
+      try {
+        s = new FileOutputStream(encodeKeyToFile(v));
+      } catch (FileNotFoundException e) {
+        throw new RuntimeException(Log.err("Encoding a key to a file failed!\nKey: "+v._key.toString()+"\nEncoded: "+encodeKeyToFile(v),e));
+      }
+      try {
+        byte[] m = v.memOrLoad(); // we are not single threaded anymore
+        assert m != null && m.length == v._max : " "+v._key+" "+m; // Assert not saving partial files
+        new AutoBuffer(s.getChannel(),false,Value.ICE).putA1(m,m.length).close();
+        v.setdsk();             // Set as write-complete to disk
+      } finally {
+        if( s != null ) s.close();
+      }
     }
   }
 
@@ -247,7 +279,7 @@ public abstract class PersistIce {
     File f = encodeKeyToFile(v);
     f.delete();
     if( v.isArray() ) { // Also nuke directory if the top-level ValueArray dies
-      f = new File(iceRoot,getDirectoryForKey(v._key));
+      f = new File(iceRoot.toString(),getDirectoryForKey(v._key));
       f.delete();
     }
   }
@@ -255,7 +287,7 @@ public abstract class PersistIce {
   static Value lazyArrayChunk( Key key ) {
     assert key._kb[0] == Key.ARRAYLET_CHUNK;
     assert key.home();          // Only do this on the home node
-    File f = encodeKeyToFile(key,(byte)'V'/*typed as a Value chunk, not the array header*/);
+    File f = new File(encodeKey(key,(byte)'V'/*typed as a Value chunk, not the array header*/));
     if( !f.isFile() ) return null;
     Value val = new Value(key,(int)f.length());
     val.setdsk();               // But its already on disk.

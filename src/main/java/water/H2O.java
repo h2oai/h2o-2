@@ -32,7 +32,7 @@ public final class H2O {
 
   static boolean _hdfsActive = false;
 
-  static final String VERSION = "v0.3";
+  public static final String VERSION = "0.3";
 
   // User name for this Cloud
   public static String NAME;
@@ -561,7 +561,7 @@ public final class H2O {
       STATIC_H2OS.add(SELF);
     }
 
-    Log.info("("+VERSION+") '"+NAME+"' on " + SELF+(OPT_ARGS.flatfile==null
+    Log.info("(v"+VERSION+") '"+NAME+"' on " + SELF+(OPT_ARGS.flatfile==null
         ? (", discovery address "+CLOUD_MULTICAST_GROUP+":"+CLOUD_MULTICAST_PORT)
             : ", static configuration based on -flatfile "+OPT_ARGS.flatfile));
 

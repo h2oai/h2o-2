@@ -137,10 +137,10 @@ public class Parse extends Request {
       int dot = n.lastIndexOf('.');
       if( dot > 0 ) n = n.substring(0, dot);
       int i = 0;
-      String res = n + ".hex";
+      String res = n + Extensions.HEX;
       Key k = Key.make(res);
       while(DKV.get(k) != null)
-        k = Key.make(res = n + ++i + ".hex");
+        k = Key.make(res = n + ++i + Extensions.HEX);
       return res;
     }
     @Override protected String queryDescription() { return "Destination hex key"; }

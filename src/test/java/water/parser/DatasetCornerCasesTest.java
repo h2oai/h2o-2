@@ -9,6 +9,7 @@ import hex.rf.Tree.StatType;
 import org.junit.Test;
 
 import water.*;
+import water.api.Constants.Extensions;
 import water.parser.ParseDataset;
 
 public class DatasetCornerCasesTest extends TestUtil {
@@ -77,7 +78,7 @@ public class DatasetCornerCasesTest extends TestUtil {
 
     for (int i = 0; i < tests.length; i++) {
       String datasetFilename = test_dir + test_prefix + tests[i] + ".csv";
-      String keyname     = test_prefix + tests[i] + ".hex";
+      String keyname     = test_prefix + tests[i] + Extensions.HEX;
       testOneLineDataset(datasetFilename, keyname);
     }
   }

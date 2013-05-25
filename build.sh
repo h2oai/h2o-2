@@ -96,7 +96,6 @@ function build_classes() {
         $TESTSRC/*/*/*java
 
     "$JAVA" -ea -cp "${CLASSPATH}"${SEP}"$CLASSES" water.TypeMap
-    "$JAVAC" ${JAVAC_ARGS} -cp "${CLASSPATH}" -d "$CLASSES" $SRC/water/TypeMapGen.java
 
     cp -r ${RESOURCES}/* "${CLASSES}"
 cat >> "$VERSION_PROPERTIES" <<EOF
