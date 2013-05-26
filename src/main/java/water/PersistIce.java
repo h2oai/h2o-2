@@ -252,7 +252,7 @@ public abstract class PersistIce {
   static void fileStore(Value v) throws IOException {
     // A perhaps useless cutout: the upper layers should test this first.
     if( v.isPersisted() ) return;
-    if(iceRoot.getScheme().equals(Schemes.HDFS)) {
+    if(Schemes.HDFS.equals(iceRoot.getScheme())) {
       PersistHdfs.store(encodeKey(v), v);
     } else {
       new File(iceRoot.toString(),getDirectoryForKey(v._key)).mkdirs();
