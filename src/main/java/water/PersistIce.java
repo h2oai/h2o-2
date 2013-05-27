@@ -23,7 +23,7 @@ public abstract class PersistIce {
   // initialization routines ---------------------------------------------------
 
   protected static final String ROOT;
-  public static final String DEFAULT_ROOT  = "/tmp";
+  public  static final String DEFAULT_ROOT = "/tmp";
   private static final String ICE_DIR      = "ice";
   private static final String LOG_FILENAME = "h2o.log";
   private static final URI iceRoot;
@@ -35,7 +35,8 @@ public abstract class PersistIce {
     ROOT = (H2O.OPT_ARGS.ice_root==null) ? DEFAULT_ROOT : H2O.OPT_ARGS.ice_root;
     H2O.OPT_ARGS.ice_root = ROOT;
     try {
-      iceRoot = new URI(ROOT+File.separator+ICE_DIR+H2O.API_PORT);
+      String uri = (ROOT+"/"+ICE_DIR+H2O.API_PORT).replace("\\","/");
+      iceRoot = new URI(uri);
       if(Schemes.HDFS.equals(iceRoot.getScheme()))
         logFile = new File(DEFAULT_ROOT+File.separator+LOG_FILENAME);
       else
