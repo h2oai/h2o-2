@@ -86,8 +86,9 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     return (_mem = loadPersist());
   }
   public final byte[] getBytes() {
-    assert _type==TypeMap.PRIM_B && _pojo == null;
-    return memOrLoad();
+    assert _type==TypeMap.PRIM_B && _pojo == null && _max > 0;
+    byte[] mem = _mem;          // Read once!
+    return mem != null ? mem : (_mem = loadPersist());
   }
 
   // The FAST path get-POJO - final method for speed.
@@ -265,14 +266,10 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   }
   /** Creates a Stream for reading bytes */
   public InputStream openStream(ProgressMonitor p) throws IOException {
-    if(onNFS())
-      return PersistNFS.openStream(_key);
-    else if(onHDFS())
-      return PersistHdfs.openStream(_key,p);
-    else if(onS3())
-      return PersistS3.openStream(_key,p);
-    if(isArray())
-      return ((ValueArray)get()).openStream(p);
+    if(onNFS() ) return PersistNFS .openStream(_key  );
+    if(onHDFS()) return PersistHdfs.openStream(_key,p);
+    if(onS3()  ) return PersistS3  .openStream(_key,p);
+    if(isArray())return ((ValueArray)get()).openStream(p);
     assert _type==TypeMap.PRIM_B;
     return new ByteArrayInputStream(memOrLoad());
   }
