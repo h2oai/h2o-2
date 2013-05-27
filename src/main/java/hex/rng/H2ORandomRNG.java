@@ -30,8 +30,10 @@ public class H2ORandomRNG extends Random {
   }
 
   public enum RNGType {
-    JavaRNG(RNGKind.DETERMINISTIC), MersenneTwisterRNG(RNGKind.DETERMINISTIC), XorShiftRNG(
-        RNGKind.DETERMINISTIC), SecureRNG(RNGKind.NON_DETERMINISTIC);
+    JavaRNG(RNGKind.DETERMINISTIC),
+    MersenneTwisterRNG(RNGKind.DETERMINISTIC),
+    XorShiftRNG(RNGKind.DETERMINISTIC),
+    SecureRNG(RNGKind.NON_DETERMINISTIC);
 
     RNGKind kind;
     private RNGType(RNGKind kind) {  this.kind = kind; }

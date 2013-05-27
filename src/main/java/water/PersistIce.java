@@ -22,21 +22,20 @@ public abstract class PersistIce {
 
   // initialization routines ---------------------------------------------------
 
-  protected static final String ROOT;
-  public  static final String DEFAULT_ROOT = "/tmp";
+  // TODO extract HDFS checks in specific class
+  public  static final URI ROOT;
+  public  static final String DEFAULT_ROOT  = "/tmp";
   private static final String ICE_DIR      = "ice";
   private static final String LOG_FILENAME = "h2o.log";
   private static final URI iceRoot;
   public  static final File logFile;
 
-  // Load into the K/V store all the files found on the local disk
   static void initialize() {}
   static {
-    ROOT = (H2O.OPT_ARGS.ice_root==null) ? DEFAULT_ROOT : H2O.OPT_ARGS.ice_root;
-    H2O.OPT_ARGS.ice_root = ROOT;
     try {
-      String uri = (ROOT+"/"+ICE_DIR+H2O.API_PORT).replace("\\","/");
-      iceRoot = new URI(uri);
+      if(H2O.OPT_ARGS.ice_root == null) H2O.OPT_ARGS.ice_root = DEFAULT_ROOT;
+      ROOT = new URI(H2O.OPT_ARGS.ice_root.replace("\\","/"));
+      iceRoot = new URI(ROOT+"/"+ICE_DIR+H2O.API_PORT);
       if(Schemes.HDFS.equals(iceRoot.getScheme()))
         logFile = new File(DEFAULT_ROOT+File.separator+LOG_FILENAME);
       else

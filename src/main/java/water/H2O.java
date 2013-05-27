@@ -7,9 +7,8 @@ import java.nio.channels.DatagramChannel;
 import java.util.*;
 
 import jsr166y.*;
-
 import water.r.Shell;
-
+import water.api.Constants.Schemes;
 import water.exec.Function;
 import water.hdfs.HdfsLoader;
 import water.nbhm.NonBlockingHashMap;
@@ -38,7 +37,7 @@ public final class H2O {
   public static String NAME;
 
   // The default port for finding a Cloud
-  static final int DEFAULT_PORT = 54321;
+  public static final int DEFAULT_PORT = 54321;
   public static int UDP_PORT; // Fast/small UDP transfers
   public static int API_PORT; // RequestServer and the new API HTTP port
 
@@ -884,7 +883,11 @@ public final class H2O {
       return H2O.SELF._heartbeat.get_free_disk() > MemoryManager.MEM_MAX;
     }
     static boolean isDiskFull(){ // free disk space < 5K?
-      File f = new File(PersistIce.ROOT);
+      if(Schemes.HDFS.equals(PersistIce.ROOT.getScheme())) {
+        // TODO actual check? for now assume HDFS always happy
+        return false;
+      }
+      File f = new File(PersistIce.ROOT.getPath());
       return f.getUsableSpace() < (5 << 10);
     }
     public void run() {
