@@ -52,17 +52,21 @@ Team
 ```
 SriSatish Ambati
 Cliff Click
-Petr Maj
+Tom Kraljevic
 Tomas Nykodym
-Kevin Normoyle
-Matt Fowles
 Cyprien Noel
+Kevin Normoyle
+Chris Allen
+
+Petr Maj
+Matt Fowles
 Lauren Brems
 
 Opensource:
 Jan Vitek
 Michal Malohlava
 Mr.Jenkins
+
 ```
 
 
