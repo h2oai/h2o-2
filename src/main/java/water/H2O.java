@@ -952,6 +952,11 @@ public final class H2O {
           Object p = val.rawPOJO();
           if( m == null && p == null ) continue; // Nothing to throw out
 
+          // DVec's have a POJO, but the POJO is always tiny with no space savings...
+          // and cannot rebuild the mem_array from the POJO, only from disk.
+          if( key._kb[0] == Key.DVEC ) 
+            throw H2O.unimpl();
+
           // ValueArrays covering large files in global filesystems such as NFS
           // or HDFS are only made on import (right now), and not reconstructed
           // by inspection of the Key or filesystem.... so we cannot toss them

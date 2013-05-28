@@ -55,6 +55,12 @@ public abstract class UKV {
     if( key._kb[0] == Key.KEY_OF_KEYS ) // Key-of-keys?
       for( Key k : key.flatten() )      // Then recursively delete
         remove(k,fs);
+    if( key._kb[0] == Key.VEC ) {
+      water.fvec.Vec vec = val.get();
+      for( int i=0; i<vec.nChunks(); i++ ) {
+        remove(vec.chunkKey(i),fs);
+      }
+    }
     DKV.remove(key,fs);
   }
 

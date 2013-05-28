@@ -1,0 +1,44 @@
+package water.fvec;
+
+import static org.junit.Assert.*;
+import java.io.File;
+//import java.io.FileInputStream;
+//import java.io.IOException;
+import org.junit.*;
+import water.*;
+//import water.fvec.NFSFileVec;
+//import water.util.Log;
+
+public class FVecTest extends TestUtil {
+
+  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
+
+  @Test public void testBasicCRUD() {
+    // Make and insert a FileVec to the global store
+    //File file = TestUtil.find_test_file("./smalldata/cars.csv");
+    File file = TestUtil.find_test_file("./target/h2o.jar");
+    Key key = NFSFileVec.make(file);
+    NFSFileVec nfs=DKV.get(key).get();
+    System.err.println(nfs.at(0));
+
+    UKV.remove(key);
+  }
+
+  private static class ByteHisto extends MRTask2 {
+    int[] _x;
+    // Count occurrences of bytes
+    public void map( long start, CVec cvec ) {
+      _x = new int[256];        // One-time set histogram array
+      int len = cvec.length();
+      for( int i=0; i<len; i++ )
+        _x[(int)cvec.at(i)]++;
+    }
+    // ADD together all results
+    public void reduce( DRemoteTask rbs ) {
+      ByteHisto bh = (ByteHisto)rbs;
+      if( _x == null ) { _x = bh._x; return; }
+      for( int i=0; i<_x.length; i++ )
+        _x[i] += bh._x[i];
+    }
+  }
+}

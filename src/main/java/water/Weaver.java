@@ -132,7 +132,7 @@ public class Weaver {
     if( !javassist.Modifier.isAbstract(cc.getModifiers()) &&
         !hasExisting("frozenType", "()I", ccms) ) {
       cc.addMethod(CtNewMethod.make(
-          "public int frozenType() {" +
+          "public short frozenType() {" +
           "  return " + TypeMap.onLoad(cc.getName()) + ";" +
           "}", cc));
     }

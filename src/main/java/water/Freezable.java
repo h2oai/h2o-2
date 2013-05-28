@@ -7,5 +7,5 @@ public interface Freezable {
   public AutoBuffer write(AutoBuffer bb);
   public <T extends Freezable> T read(AutoBuffer bb);
   public <T extends Freezable> T newInstance();
-  public int frozenType();
+  public short frozenType();
 }

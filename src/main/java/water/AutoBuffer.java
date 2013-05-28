@@ -356,7 +356,6 @@ public final class AutoBuffer {
     return MemoryManager.arrayCopyOfRange(_bb.array(), _bb.arrayOffset(), _bb.position());
   }
   public final byte[] bufClose() {
-    assert eof();
     byte[] res = _bb.array();
     bbFree();
     return res;
@@ -572,12 +571,12 @@ public final class AutoBuffer {
 
   public AutoBuffer put(Freezable f) {
     if( f == null ) return put2(TypeMap.NULL);
-    put2((short) f.frozenType());
+    put2(f.frozenType());
     return f.write(this);
   }
   public AutoBuffer put(Iced f) {
     if( f == null ) return put2(TypeMap.NULL);
-    put2((short) f.frozenType());
+    put2(f.frozenType());
     return f.write(this);
   }
   public AutoBuffer putA(Iced[] fs) {

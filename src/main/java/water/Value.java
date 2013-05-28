@@ -331,7 +331,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   public Value(Key k, Iced pojo, byte be ) {
     _key = k;
     _pojo = pojo;
-    _type = (short)pojo.frozenType();
+    _type = pojo.frozenType();
     _mem = pojo.write(new AutoBuffer()).buf();
     _max = _mem.length;
     // For the ICE backend, assume new values are not-yet-written.
@@ -344,7 +344,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   public Value(Key k, Freezable pojo) {
     _key = k;
     _pojo = pojo;
-    _type = (short)pojo.frozenType();
+    _type = pojo.frozenType();
     _mem = pojo.write(new AutoBuffer()).buf();
     _max = _mem.length;
     _persist = ICE;
@@ -606,4 +606,20 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     return true;
   }
 
+  // The "get an element" API.  The POJO is a "CVec" - a thin decompression
+  // wrapper around the entire "_mem" vector of data.  The CVec is encoded in
+  // front of the data, but might even be zero bytes long.  The remaining _mem
+  // array is the wrapped data, and expected to be 4M or so.
+  public final long at( int i ) { 
+    assert _key._kb[0] == Key.DVEC;
+    return ((water.fvec.CVec)get()).at(i); 
+  }
+  // The "get an element" API.  The POJO is a "CVec" - a thin decompression
+  // wrapper around the entire "_mem" vector of data.  The CVec is encoded in
+  // front of the data, but might even be zero bytes long.  The remaining _mem
+  // array is the wrapped data, and expected to be 4M or so.
+  public final int numElems( ) { 
+    assert _key._kb[0] == Key.DVEC;
+    return ((water.fvec.CVec)get()).length();
+  }
 }
