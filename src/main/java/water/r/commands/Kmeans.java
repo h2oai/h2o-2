@@ -1,16 +1,11 @@
 package water.r.commands;
 
-import java.io.IOException;
-
+import hex.KMeansModel;
 import r.builtins.CallFactory.ArgumentInfo;
 import r.data.RAny;
 import r.ifc.Interop;
 import r.ifc.Interop.Invokable;
 import water.*;
-import water.api.Constants.Extensions;
-import water.api.Inspect;
-import water.parser.CsvParser;
-import water.parser.ParseDataset;
 
 /**
  * The R version of KMEANS.
@@ -25,35 +20,31 @@ public class Kmeans implements Invokable {
 
   /** Function called from R to perform the parse. */
   @Override public RAny invoke(ArgumentInfo ai, RAny[] args) {
-    String data = Interop.asString(ai.getAny(args, "data"));
-    // check that it is a parsed-file-key.
     Arg arg = defaultArg();
-    int k = (int) ai.get(args, "k", -1);
-    double epsilon = ai.get(args, "epsilon", 0);
-    int maxIteration =  (int)ai.get(args, "max.iteration",1);
-    int[] cols = null;
-    ///ai.getAny(args, "cols");
-    Key dest = Key.make(data.toString() + ".mod");
-    ValueArray va = DKV.get(Key.make(data)).get();
-    long seed = ai.get(args,"seed",1234567890);
-    boolean normalize = ai.get(args,"normalize", true);
-    try {
-      hex.KMeans job = hex.KMeans.start(dest, va, k, epsilon, seed, normalize, cols);
-      job.get();
-      String ds = dest.toString();
+    if( Interop.getAttributeAsString(ai.getAny(args, "data"), "h2okind") != "HEX" ) return Interop
+        .asRString("Error wrong data argument");
+    arg.data = ai.get(args, "data", arg.data);
+    arg.k = (int) ai.get(args, "k", arg.k);
+    arg.epsilon = ai.get(args, "epsilon", (long) arg.epsilon);
+    arg.maxIterations = (int) ai.get(args, "max.iterations", arg.maxIterations);
+    arg.cols = Interop.asIntArray(ai.getAny(args, "cols"));
+    arg.seed = ai.get(args, "seed", arg.seed);
+    arg.normalize = ai.get(args, "normalize", arg.normalize);
+    Res res = execute(arg);
+    if( res.error == null ) {
+      String ds = res.result._selfKey.toString();
       RAny rds = Interop.asRString(ds);
-      rds = Interop.setAttribute(rds, "h2okind", "kmeans-model");
-    } catch( IllegalArgumentException e ) {
-    } catch( Error e ) {
-    }
-    return null;
+      rds = Interop.setAttribute(rds, "h2okind", "KMEANS.MODEL");
+      return rds;
+    } else return Interop.asRString(res.error.toString());
   }
 
-  private static final String[] params = new String[] { "data", "cols", "k", "epsilon", "seed", "normalize", "max.iterations" };
+  private static final String[] params = new String[] { "data", "cols", "k", "epsilon", "seed", "normalize",
+      "max.iterations" };
 
   /** List of required parameters */
   @Override public String[] requiredParameters() {
-    return params;
+    return new String[] { "data" };
   }
 
   /** List of all parameters. */
@@ -63,8 +54,15 @@ public class Kmeans implements Invokable {
 
   /** Arguments passed to the command. */
   static public class Arg extends Arguments.Opt {
-    /* List of file names to parse. */
-    URI[] files = new URI[] {};
+    /* Parsed data file key name */
+    String data;
+    /* Columns of the data to include in the Kmeans computation */
+    int[] cols;
+    int k = 2;
+    double epsilon = 1e-4;
+    long seed = 123456789012L;
+    boolean normalize = false;
+    int maxIterations = 10;
   }
 
   /** Return a fresh argument objects with default values. */
@@ -75,7 +73,7 @@ public class Kmeans implements Invokable {
   /** Return value of the command. */
   static public class Res extends Arguments.Opt {
     /* The result of the parse; null if an error occurred */
-    ValueArray result;
+    KMeansModel result;
     /* An error recording why the parse failed. */
     Throwable error;
   }
@@ -91,30 +89,17 @@ public class Kmeans implements Invokable {
    */
   Res execute(Arg arg) {
     Res res = defaultRes();
-    if( arg.files.length == 0 ) {
-      res.error = new URI.FormatError("no files");
-      return res;
+    ValueArray va = DKV.get(Key.make(arg.data)).get();
+    if( arg.cols == null ) {
+      arg.cols = new int[va._cols.length];
+      for( int i = 0; i < arg.cols.length; i++ )
+        arg.cols[i] = i;
     }
-    Key[] ks = new Key[arg.files.length];
-    for( int i = 0; i < ks.length; i++ ) {
-      try {
-        ks[i] = arg.files[i].get();
-      } catch( IOException e ) {
-        res.error = e;
-        return res;
-      }
-    }
-    Value v = DKV.get(ks[0]);
-    byte separator = CsvParser.NO_SEPARATOR;
-    CsvParser.Setup setup = Inspect.csvGuessValue(v, separator);
-    if( setup._data == null || setup._data[0].length == 0 ) res.error = new IllegalArgumentException(
-        "H2O cannot only handles common CSV formats: " + arg.files[0]);
-    Key dest = Key.make(ks[0] + Extensions.HEX);
     try {
-      Job job = ParseDataset.forkParseDataset(dest, ks, setup);
-      res.result = job.get();
-      for( Key k : ks )
-        UKV.remove(k);
+      Key dest = Key.make(arg.data + ".mod");
+      hex.KMeans job = hex.KMeans.start(dest, va, arg.k, arg.epsilon, arg.seed, arg.normalize, arg.cols);
+      job.get();
+      res.result = DKV.get(dest).get();
     } catch( Error e ) {
       res.error = e;
     }

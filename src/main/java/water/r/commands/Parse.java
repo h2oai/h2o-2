@@ -39,7 +39,7 @@ public class Parse implements Invokable {
     if (res.error == null)  {
       String name =  res.result._key.toString();
       RAny rname = Interop.asRString(name);
-      rname = Interop.setAttribute(rname,"h2okind","parsed-file-key");
+      rname = Interop.setAttribute(rname,"h2okind","HEX");
       return rname;
     } else return Interop.asRString(res.error.toString());
   }

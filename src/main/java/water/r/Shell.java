@@ -70,11 +70,12 @@ public class Shell extends Thread {
         }
       });
     }
+    Interop.register(new Kmeans());
     Interop.register(new Load());
+    Interop.register(new Parse());
     Interop.register(new Save());
     Interop.register(new VARead());
     Interop.register(new VAWrite());
-    Interop.register(new Parse());
     Console.main(args);
   }
 
