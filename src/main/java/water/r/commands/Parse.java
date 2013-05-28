@@ -13,12 +13,9 @@ import water.parser.CsvParser;
 import water.parser.ParseDataset;
 
 /**
- * The R version of parse.
- *
- * The parse command is currently blocking; in the future we will support a non-blocking version by
- * return a result object that may contain a future.
- *
- * The command does both import and parse.
+ * The R version of parse. The parse command is currently blocking; in the future we will support a
+ * non-blocking version by return a result object that may contain a future. The command does both
+ * import and parse.
  */
 public class Parse implements Invokable {
 
@@ -36,10 +33,10 @@ public class Parse implements Invokable {
       uris[i] = URI.make(files[i]);
     arg.files = uris;
     Res res = execute(arg);
-    if (res.error == null)  {
-      String name =  res.result._key.toString();
+    if( res.error == null ) {
+      String name = res.result._key.toString();
       RAny rname = Interop.asRString(name);
-      rname = Interop.setAttribute(rname,"h2okind","HEX");
+      rname = Interop.setAttribute(rname, "h2okind", "HEX");
       return rname;
     } else return Interop.asRString(res.error.toString());
   }
