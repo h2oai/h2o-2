@@ -7,44 +7,49 @@ import r.data.RAny;
 import r.ifc.Interop;
 import r.ifc.Interop.Invokable;
 import water.*;
-import water.api.Inspect;
 import water.api.Constants.Extensions;
+import water.api.Inspect;
 import water.parser.CsvParser;
 import water.parser.ParseDataset;
 
 /**
- * The R version of parse.
+ * The R version of KMEANS.
  *
- * The parse command is currently blocking; in the future we will support a non-blocking version by
- * return a result object that may contain a future.
- *
- * The command does both import and parse.
  */
-public class Parse implements Invokable {
+public class Kmeans implements Invokable {
 
   /** The name of the R command. */
   public String name() {
-    return "h2o.parse";
+    return "h2o.kmeans";
   }
 
   /** Function called from R to perform the parse. */
   @Override public RAny invoke(ArgumentInfo ai, RAny[] args) {
-    String[] files = Interop.asStringArray(ai.getAny(args, "files"));
+    String data = Interop.asString(ai.getAny(args, "data"));
+    // check that it is a parsed-file-key.
     Arg arg = defaultArg();
-    URI[] uris = new URI[files.length];
-    for( int i = 0; i < files.length; i++ )
-      uris[i] = URI.make(files[i]);
-    arg.files = uris;
-    Res res = execute(arg);
-    if (res.error == null)  {
-      String name =  res.result._key.toString();
-      RAny rname = Interop.asRString(name);
-      rname = Interop.setAttribute(rname,"h2okind","parsed-file-key");
-      return rname;
-    } else return Interop.asRString(res.error.toString());
+    int k = (int) ai.get(args, "k", -1);
+    double epsilon = ai.get(args, "epsilon", 0);
+    int maxIteration =  (int)ai.get(args, "max.iteration",1);
+    int[] cols = null;
+    ///ai.getAny(args, "cols");
+    Key dest = Key.make(data.toString() + ".mod");
+    ValueArray va = DKV.get(Key.make(data)).get();
+    long seed = ai.get(args,"seed",1234567890);
+    boolean normalize = ai.get(args,"normalize", true);
+    try {
+      hex.KMeans job = hex.KMeans.start(dest, va, k, epsilon, seed, normalize, cols);
+      job.get();
+      String ds = dest.toString();
+      RAny rds = Interop.asRString(ds);
+      rds = Interop.setAttribute(rds, "h2okind", "kmeans-model");
+    } catch( IllegalArgumentException e ) {
+    } catch( Error e ) {
+    }
+    return null;
   }
 
-  private static final String[] params = new String[] { "files" };
+  private static final String[] params = new String[] { "data", "cols", "k", "epsilon", "seed", "normalize", "max.iterations" };
 
   /** List of required parameters */
   @Override public String[] requiredParameters() {
