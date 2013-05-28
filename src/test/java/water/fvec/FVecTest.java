@@ -21,22 +21,26 @@ public class FVecTest extends TestUtil {
     NFSFileVec nfs=DKV.get(key).get();
     System.err.println(nfs.at(0));
 
+    int[] x = new ByteHisto().invoke(nfs)._x;
+    int sum=0;
+    for( int i : x )
+      sum += i;
+    assertEquals(file.length(),sum);
+
     UKV.remove(key);
   }
 
-  private static class ByteHisto extends MRTask2 {
+  private static class ByteHisto extends MRTask2<ByteHisto> {
     int[] _x;
     // Count occurrences of bytes
-    public void map( long start, CVec cvec ) {
+    @Override public void map( long start, CVec cvec ) {
       _x = new int[256];        // One-time set histogram array
       int len = cvec.length();
       for( int i=0; i<len; i++ )
         _x[(int)cvec.at(i)]++;
     }
     // ADD together all results
-    public void reduce( DRemoteTask rbs ) {
-      ByteHisto bh = (ByteHisto)rbs;
-      if( _x == null ) { _x = bh._x; return; }
+    @Override public void reduce( ByteHisto bh ) {
       for( int i=0; i<_x.length; i++ )
         _x[i] += bh._x[i];
     }

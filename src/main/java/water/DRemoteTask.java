@@ -97,7 +97,7 @@ public abstract class DRemoteTask extends DTask<DRemoteTask> implements Cloneabl
 
     // Setup for local recursion: just use the local keys.
     if( locals.size() != 0 ) {  // Shortcut for no local work
-      _local = clone();
+      _local = clone();         // 'this' is completer for '_local', so awaits _local completion
       _local._is_local = true;
       _local._keys = locals.toArray(new Key[locals.size()]); // Keys, including local keys (if any)
       _local.init();            // One-time top-level init

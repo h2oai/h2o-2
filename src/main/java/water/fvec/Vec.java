@@ -48,7 +48,7 @@ public class Vec extends Iced {
   // Convert a chunk-index into a starting row #.  For constant-sized chunks
   // this is a little shift-and-add math.  For variable-sized chunks this is
   // probably a table lookup.
-  long chunk2StartElem( int cidx ) { return _espc[cidx]; }
+  public long chunk2StartElem( int cidx ) { return _espc[cidx]; }
 
   // Convert a chunk index into a data chunk key.  It's just the main Key with
   // the given chunk#.
