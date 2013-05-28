@@ -22,17 +22,15 @@ public class RReaderTest extends TestUtil {
     Key key = Key.make("irisModel");
     RReader.run(key, new FileInputStream(file));
     RFModel model = UKV.get(key);
-    int[] map = model.columnMapping(iris.colNames());
-    Assert.assertTrue(Model.isCompatible(map));
+    Model m = model.adapt(iris.colNames());
 
     // Can I score on the model now?
-    double[] row = new double[map.length];
+    double[] row = new double[iris._cols.length];
     for( int i=0; i<iris._numrows; i++ ) {
-      for( int j=0; j<map.length-1; j++ )
+      for( int j=0; j<iris._cols.length-1; j++ )
         row[j] = iris.datad(i,j);
-      assertEquals(iris.datad(i,map.length-1),model.score(row,map),0.0001);
+      assertEquals(iris.datad(i,iris._cols.length-1),m.score(row),0.0001);
     }
-
     model.deleteKeys();
     UKV.remove(key);
     UKV.remove(irisk);
@@ -54,10 +52,11 @@ public class RReaderTest extends TestUtil {
     // Can I score on the model now?
     double[] row = new double[map.length];
     int errs = 0;
+    Model M = model.adapt(pro);
     for( int i=0; i<pro._numrows; i++ ) {
       for( int j=0; j<map.length; j++ )
         row[j] = pro.datad(i,j);
-      double score = model.score(row,map);
+      double score = M.score(row);
       if( Math.abs(pro.datad(i,classCol) - score) > 0.0001 ) errs++;
     }
     assertEquals(100,errs);
@@ -84,11 +83,12 @@ public class RReaderTest extends TestUtil {
     // Can I score on the model now?
     long start = System.currentTimeMillis();
     double[] row = new double[map.length];
+    Model M = model.adapt(pro);
     int errs = 0;
     for( int i=0; i<pro._numrows; i++ ) {
       for( int j=0; j<map.length; j++ )
         row[j] = pro.datad(i,j);
-      double score = model.score(row,map);
+      double score = M.score(row);
       System.out.println(" "+i+" "+score+" "+(pro.datad(i,classCol)));
       if( Math.abs(pro.datad(i,classCol) - score) > 0.0001 ) errs++;
     }

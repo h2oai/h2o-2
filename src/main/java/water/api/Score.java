@@ -87,7 +87,7 @@ public class Score extends Request {
     res.add(ROWS, rows);
 
     // Score the row on the model.  May destroy 'd'.
-    double response = M.score(d,null);
+    double response = M.score(d);
     res.addProperty(CLASS, response);
 
     // Display HTML setup
