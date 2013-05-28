@@ -51,6 +51,7 @@ public final class H2O {
 
   // Myself, as a Node in the Cloud
   public static H2ONode SELF = null;
+  public static InetAddress SELF_ADDRESS;
 
   // Initial arguments
   public static String[] ARGS;
@@ -168,7 +169,7 @@ public final class H2O {
     return Arrays.toString(_memary);
   }
 
-  public static InetAddress findInetAddressForSelf() throws Error {
+  private static InetAddress findInetAddressForSelf() throws Error {
     // Get a list of all valid IPs on this machine.  Typically 1 on Mac or
     // Windows, but could be many on Linux or if a hypervisor is present.
     ArrayList<InetAddress> ips = new ArrayList<InetAddress>();
@@ -515,6 +516,8 @@ public final class H2O {
     ARGS = arguments.toStringArray();
     ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
 
+    SELF_ADDRESS = findInetAddressForSelf();
+
     //if (OPT_ARGS.rshell.equals("false"))
     Log.wrap(); // Logging does not wrap when the rshell is on.
 
@@ -632,7 +635,6 @@ public final class H2O {
   // function of the name. Parse node ip addresses from the filename.
   static void initializeNetworkSockets( ) {
     // Assign initial ports
-    InetAddress inet = findInetAddressForSelf();
     API_PORT = OPT_ARGS.port != 0 ? OPT_ARGS.port : DEFAULT_PORT;
 
     while (true) {
@@ -651,7 +653,7 @@ public final class H2O {
         _apiSocket = new ServerSocket(API_PORT);
         _udpSocket = DatagramChannel.open();
         _udpSocket.socket().setReuseAddress(true);
-        _udpSocket.socket().bind(new InetSocketAddress(inet, UDP_PORT));
+        _udpSocket.socket().bind(new InetSocketAddress(SELF_ADDRESS, UDP_PORT));
         break;
       } catch (IOException e) {
         try { if( _apiSocket != null ) _apiSocket.close(); } catch( IOException ohwell ) { Log.err(ohwell); }
@@ -659,15 +661,15 @@ public final class H2O {
         _apiSocket = null;
         _udpSocket = null;
         if( OPT_ARGS.port != 0 )
-          Log.die("On " + H2O.findInetAddressForSelf() +
+          Log.die("On " + SELF_ADDRESS +
               " some of the required ports " + (OPT_ARGS.port+0) +
               ", " + (OPT_ARGS.port+1) +
               " are not available, change -port PORT and try again.");
       }
       API_PORT += 2;
     }
-    SELF = H2ONode.self(inet);
-    Log.info("Internal communication uses port: ",UDP_PORT,"\nListening for HTTP and REST traffic on  http:/",inet,":"+_apiSocket.getLocalPort()+"/");
+    SELF = H2ONode.self(SELF_ADDRESS);
+    Log.info("Internal communication uses port: ",UDP_PORT,"\nListening for HTTP and REST traffic on  http:/",SELF_ADDRESS,":"+_apiSocket.getLocalPort()+"/");
 
     NAME = OPT_ARGS.name==null? System.getProperty("user.name") : OPT_ARGS.name;
     // Read a flatfile of allowed nodes

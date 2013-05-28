@@ -73,14 +73,13 @@ abstract public class Log {
   public final static Key LOG_KEY = Key.make("Log", (byte) 0, Key.BUILT_IN_KEY);
   /** Time from when this class loaded. */
   static final Timer time = new Timer();
-  /** IP address of the host */
-  public static final String HOST = H2O.findInetAddressForSelf().getHostAddress();
   /** Some guess at the process ID. */
   public static final long PID = getPid();
-  /** Hostname and process ID. */
-  private static final String HOST_AND_PID = "" + fixedLength(HOST + " ", 13) + fixedLength(PID + " ", 6);
+
   private static final String LONG_HEADERS_PARAM = "long_log_headers";
   private static final boolean LONG_HEADERS = System.getProperty(LONG_HEADERS_PARAM) != null;
+  private static String _longHeaders;
+
   private static boolean printAll;
   /** Per subsystem debugging flags. */
   static {
@@ -213,7 +212,13 @@ abstract public class Log {
     }
 
     private StringBuilder longHeader(StringBuilder buf) {
-      buf.append(when.startAsString()).append(" ").append(HOST_AND_PID);
+      String headers = _longHeaders;
+      if(headers == null) {
+        String host = H2O.SELF_ADDRESS != null ? H2O.SELF_ADDRESS.getHostAddress() : "";
+        headers = fixedLength(host + " ", 16) + fixedLength(PID + " ", 6);
+        if(H2O.SELF_ADDRESS != null) _longHeaders = headers;
+      }
+      buf.append(when.startAsString()).append(" ").append(headers);
       if( thread == null ) thread = fixedLength(Thread.currentThread().getName() + " ", 10);
       buf.append(thread);
       buf.append(kind.toString()).append(" ").append(sys.toString()).append(": ");

@@ -9,6 +9,7 @@ import java.util.Arrays;
 
 import org.apache.commons.codec.binary.Base64;
 
+import water.H2O;
 import water.util.Log;
 
 /**
@@ -152,7 +153,7 @@ public abstract class VM {
   }
 
   public static String localIP() {
-    return Log.HOST;
+    return H2O.SELF_ADDRESS.getHostAddress();
   }
 
   /**
