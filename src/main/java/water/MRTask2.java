@@ -1,8 +1,13 @@
 package water;
 
+import java.util.concurrent.ExecutionException;
+import java.util.Arrays;
 import jsr166y.CountedCompleter;
-import water.fvec.Vec;
+import sun.misc.Unsafe;
 import water.fvec.CVec;
+import water.fvec.Vec;
+import water.nbhm.UtilUnsafe;
+import water.util.Log;
 
 /** Map/Reduce style distributed computation. */
 public abstract class MRTask2<T extends MRTask2> extends DTask implements Cloneable {
@@ -23,68 +28,137 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
   // Top-level blocking call.
   public final T invoke( Vec... vecs ) { 
     checkCompatible(vecs);      // Check for compatible vectors
-    _vecs = vecs; 
-    _nlo = 0;  _nhi = H2O.CLOUD.size(); 
-    compute2();
-    return self(); 
+    _vecs = vecs;               // Record vectors to work on
+    _nlo = 0;  _nhi = H2O.CLOUD.size(); // Do Whole Cloud
+    _lo = 0;  _hi = _vecs[0].nChunks(); // Do All Chunks
+    init();                     // Setup any shared local structures
+    H2O.submitTask(this);       // Begin normal execution on a FJ thread
+    try { get(); }              // Block until done
+    catch( InterruptedException e ) { Log.errRTExcept(e); }
+    catch(   ExecutionException e ) { Log.errRTExcept(e); }
+    if( _fs != null )           // Block on all other pending tasks, also
+      _fs.blockForPending(); 
+    // Finally, must return all results in 'this' because that is the API -
+    // what the user expects
+    if( _res != null && _res != this ) {
+      Log.unwrap(System.err,"Icalling copyOver "+_res+((water.fvec.FVecTest.ByteHisto)this)._x);
+      copyOver(_res);
+      Log.unwrap(System.err,"Icalled  copyOver "+_res+((water.fvec.FVecTest.ByteHisto)this)._x);
+    }
+    return self();
   }
   
   // The Vectors to work on
   private Vec[] _vecs;            // Vectors to work on
 
   // Remote/Global work: other nodes we are awaiting results from
-  private int _nlo, _nhi;         // Range of NODEs to work on - remotely
-  transient private RPC<T> _nleft, _nrite;
+  protected int _nlo, _nhi;           // Range of NODEs to work on - remotely
+  transient protected RPC<T> _nleft, _nrite;
   // Local work: range of local chunks we are working on
-  transient private int _lo, _hi;   // Range of CVecs to work on - locally
-  transient private T _left, _rite; // In-progress execution tree
+  transient protected int _lo, _hi;   // Range of CVecs to work on - locally
+  transient protected T _left, _rite; // In-progress execution tree
+  transient protected T _res;         // Result
+
+  // We can add more things to block on - in case we want a bunch of lazy tasks
+  // produced by children to all end before this top-level task ends.
+  // Semantically, these will all complete before we return from the top-level
+  // task.  Pragmatically, we block on a finer grained basis.
+  transient protected Futures _fs; // More things to block on
 
   // Support for fluid-programming with strong types
   private final T self() { return (T)this; }
 
-  // Called by invoke() on local in a top-level call.  Called by dinvoke() on a
-  // remote, same as invoke() except nlo/nhi filled in.  Guaranteed that the
-  // H2O.SELF.index() is in the {nlo to (nhi-1)} range.
-  @Override public final void compute2() {
-    
-    // Check for global vs local work
-    if( _nlo < _nhi-1 ) {       // Still have global work?
-      throw H2O.unimpl();
+  // Called once on remote at top level, probably with a subset of the cloud.
+  @Override public final void dinvoke(H2ONode sender) {
+    _lo = 0;  _hi = _vecs[0].nChunks();
+    init();                     // Setup any shared local structures
+    compute2();
+...all this post-compute2 work needs to happen in top-level onCompletion
+    // Note: in theory (valid semantics) we could push these "over the wire"
+    // and block for them as we're blocking for the top-level initial split.
+    // However, that would require sending "isDone" flags over the wire also.
+    // MUCH simpler to just block for them all now, and send over the empty set
+    // of not-yet-blocked things.
+    if( _fs != null )
+      _fs.blockForPending(); // Block on all other pending tasks, also
+    // Finally, must return all results in 'this' because that is what is
+    // shipped over the wires.
+    if( _res != null && _res != this ) {
+      Log.unwrap(System.err,"Dcalling copyOver "+_res+((water.fvec.FVecTest.ByteHisto)this)._x);
+      copyOver(_res);
+      Log.unwrap(System.err,"Dcalled  copyOver "+_res+((water.fvec.FVecTest.ByteHisto)this)._x);
     }
-    assert _nlo == _nhi-1 && _nlo == H2O.SELF.index();
-
-    // Local work
-    throw H2O.unimpl();
+    Log.unwrap(System.err,"res="+_res+" this="+this);
+    int x[] = ((water.fvec.FVecTest.ByteHisto)this)._x;
+    Log.unwrap(System.err,"Shipping over "+Arrays.toString(x));
   }
 
+  // Called locally & remotely, with either multiple Cloud nodes to work on, or
+  // with H2O.SELF... and multiple local chunks.  Guaranteed that the
+  // H2O.SELF.index() is in the {nlo to (nhi-1)} range.
+  @Override public final void compute2() {
+    int selfidx = H2O.SELF.index();
+    // Check for global vs local work
+    if( _nlo < _nhi-1 ) {       // Still have global work?
+      if( _nlo   < selfidx ) _nleft = remote_compute(_nlo, selfidx );
+      if( selfidx+1 < _nhi ) _nrite = remote_compute(selfidx+1,_nhi);
+      _nlo = selfidx; _nhi = selfidx+1;
+    }
 
-  ///** Do all the keys in the list associated with this Node.  Roll up the
-  // * results into <em>this<em> MRTask2. */
-  //@Override public final void lcompute() {
-  //  if( _hi-_lo >= 2 ) { // Multi-key case: just divide-and-conquer to 1 key
-  //    final int mid = (_lo+_hi)>>>1; // Mid-point
-  //    assert _left == null && _rite == null;
-  //    _left = (MRTask2)clone();
-  //    _rite = (MRTask2)clone();
-  //    _left._hi = mid;          // Reset mid-point
-  //    _rite._lo = mid;          // Also set self mid-point
-  //    setPendingCount(1);       // One fork awaiting completion
-  //    _left.fork();             // Runs in another thread/FJ instance
-  //    _rite.compute2();         // Runs in THIS F/J thread
-  //  } else {
-  //    if( _hi > _lo )           // Single key?
-  //      map(_keys[_lo]);        // Get it, run it locally
-  //    tryComplete();            // And this task is complete
-  //  }
-  //}
-  //
-  //@Override public final void lonCompletion( CountedCompleter caller ) {
-  //  // Reduce results into 'this' so they collapse going up the execution tree.
-  //  // NULL out child-references so we don't accidentally keep large subtrees
-  //  // alive: each one may be holding large partial results.
-  //  if( _left != null ) reduceAlsoBlock(_left); _left = null;
-  //  if( _rite != null ) reduceAlsoBlock(_rite); _rite = null;
-  //}
+    if( _hi-_lo >= 2 ) { // Multi-chunk case: just divide-and-conquer to 1 chunk
+      final int mid = (_lo+_hi)>>>1; // Mid-point
+      assert _left == null && _rite == null && _res == null;
+      _left = clone(); 
+      _rite = clone(); 
+      _left._hi = mid;          // Reset mid-point
+      _rite._lo = mid;          // Also set self mid-point
+      setPendingCount(1);       // One fork awaiting completion
+      _left.fork();             // Runs in another thread/FJ instance
+      _rite.compute2();         // Runs in THIS F/J thread
+      return;                   // Not complete until the fork completes
+    } 
+    // Zero or 1 chunks, and further chunk might not be homed here
+    if( _hi > _lo ) {           // Single chunk?
+      Vec v0 = _vecs[0];        // Use 0th vector to gate home/not-home
+      long start = v0.chunk2StartElem(_lo);
+      Key dkey = v0.chunkKey(_lo);
+      if( dkey.home() ) {       // And chunk is homed here?
+        Value dvec = v0.chunkIdx(_lo);
+        CVec cvec = dvec.get();
+        if( _vecs.length > 1 ) throw H2O.unimpl();
+        Log.unwrap(System.err,"map("+_lo+")");
+        map(start, cvec);       // Get it, run it locally
+        _res = self();          // Called map() at least once!
+      }
+    }
+    tryComplete();              // And this task is complete
+  }
+
+  // OnCompletion - reduce the left & right into self
+  @Override public final void onCompletion( CountedCompleter caller ) {
+    // Reduce results into 'this' so they collapse going up the execution tree.
+    // NULL out child-references so we don't accidentally keep large subtrees
+    // alive: each one may be holding large partial results.
+    if( _left != null ) reduce2(_left); _left = null;
+    if( _rite != null ) reduce2(_rite); _rite = null;
+    // Reduce global data as well, although this only happens once at the top split
+    if( _nleft != null ) reduce2(_nleft.get());
+    if( _nrite != null ) reduce2(_nrite.get());
+  }
+
+  // Call 'reduce' on pairs of mapped MRTask2's.
+  // Collect all pending Futures from both parties as well.
+  private void reduce2( MRTask2<T> mrt ) {
+    Log.unwrap(System.err,"Reduce this="+_res+" other="+mrt._res);
+    if( _res == null ) _res = mrt._res;
+    else if( mrt._res != null ) _res.reduce(mrt._res);
+    int x[] = ((water.fvec.FVecTest.ByteHisto)this)._x;
+    Log.unwrap(System.err,"Reduce after="+Arrays.toString(x));
+
+    if( _fs == null ) _fs = mrt._fs;
+    else _fs.add(mrt._fs);
+  }
+
   // Cancel/kill all work as we can, then rethrow... do not invisibly swallow
   // exceptions (which is the F/J default)
   @Override public final boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller ) {
@@ -93,6 +167,34 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
     _left = null;
     _rite = null;
     return super.onExceptionalCompletion(ex, caller);
+  }
+
+  // Make an RPC call to some node in the middle of the given range.  Add a
+  // pending completion to self, so that we complete when the RPC completes.
+  private final RPC<T> remote_compute( int lo, int hi ) {
+    int mid = (hi+lo)>>>1;
+    T rpc = clone();
+    rpc._nlo = lo;
+    rpc._nhi = hi;
+    addToPendingCount(1);       // Not complete until the RPC returns
+    // Set self up as needing completion by this RPC: when the ACK comes back
+    // we'll get a wakeup.
+    return new RPC(H2O.CLOUD._memary[mid], rpc).addCompleter(this).call();
+  }
+
+  // Local Clone - setting final-field completer
+  @Override protected T clone() {
+    try {
+      T x = (T)super.clone();
+      x.setCompleter(this); // Set completer, what used to be a final field
+      x._nleft = x._nrite = null;
+      x. _left = x. _rite = null;
+      x._fs = null;         // Clone does not depend on extent futures
+      x.setPendingCount(0); // Volatile write for completer field; reset pending count also
+      return x;
+    } catch( CloneNotSupportedException e ) {
+      throw Log.errRTExcept(e);
+    }
   }
 
   // Check that the vectors are all compatible: same number of rows per chunk

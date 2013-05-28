@@ -62,6 +62,7 @@ public final class H2O {
 
   // Convenience error
   public static final RuntimeException unimpl() { return new RuntimeException("unimplemented"); }
+  public static final RuntimeException fail() { return new RuntimeException("do not call"); }
 
   // Central /dev/null for ignored exceptions
   public static final void ignore(Throwable e)             { ignore(e,"[h2o] Problem ignored: "); }
@@ -887,6 +888,7 @@ public final class H2O {
       File f = new File(PersistIce.ROOT);
       return f.getUsableSpace() < (5 << 10);
     }
+    private static boolean junk = false;
     public void run() {
       boolean diskFull = false;
       while (true) {
@@ -954,8 +956,14 @@ public final class H2O {
 
           // DVec's have a POJO, but the POJO is always tiny with no space savings...
           // and cannot rebuild the mem_array from the POJO, only from disk.
-          if( key._kb[0] == Key.DVEC ) 
-            throw H2O.unimpl();
+          if( key._kb[0] == Key.DVEC ) {
+            if( !junk ) {
+              Log.unwrap(System.err,"still not cleaning DVecs");
+              junk = true;
+            }
+            continue;
+            //throw H2O.unimpl();
+          }
 
           // ValueArrays covering large files in global filesystems such as NFS
           // or HDFS are only made on import (right now), and not reconstructed

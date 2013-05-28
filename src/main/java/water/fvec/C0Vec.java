@@ -1,8 +1,6 @@
 package water.fvec;
 
-import water.AutoBuffer;
-import water.Freezable;
-import water.H2O;
+import water.*;
 
 // The empty-compression function, where data is in bytes
 public class C0Vec extends CVec {

@@ -2,16 +2,13 @@ package water.fvec;
 
 import static org.junit.Assert.*;
 import java.io.File;
-//import java.io.FileInputStream;
-//import java.io.IOException;
 import org.junit.*;
 import water.*;
-//import water.fvec.NFSFileVec;
-//import water.util.Log;
+import water.util.Log;
 
 public class FVecTest extends TestUtil {
 
-  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
+  @BeforeClass public static void stall() { stall_till_cloudsize(2); }
 
   @Test public void testBasicCRUD() {
     // Make and insert a FileVec to the global store
@@ -30,8 +27,8 @@ public class FVecTest extends TestUtil {
     UKV.remove(key);
   }
 
-  private static class ByteHisto extends MRTask2<ByteHisto> {
-    int[] _x;
+  public static class ByteHisto extends MRTask2<ByteHisto> {
+    public int[] _x;
     // Count occurrences of bytes
     @Override public void map( long start, CVec cvec ) {
       _x = new int[256];        // One-time set histogram array

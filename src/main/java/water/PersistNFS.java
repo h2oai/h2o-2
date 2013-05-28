@@ -49,7 +49,6 @@ public abstract class PersistNFS {
     }
     if( k._kb[0] == Key.DVEC ) {
       skip = water.fvec.NFSFileVec.chunkOffset(k); // The offset
-      water.util.Log.unwrap(System.err,"Loading "+k);
     }
     try {
       FileInputStream s = null;

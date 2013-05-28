@@ -53,6 +53,7 @@ public class Vec extends Iced {
   // Convert a chunk index into a data chunk key.  It's just the main Key with
   // the given chunk#.
   public Key chunkKey( int cidx ) {
+    assert 0 <= cidx && cidx < nChunks();
     byte[] bits = _key._kb.clone(); // Copy the Vec key
     bits[0] = Key.DVEC;             // Data chunk key
     UDP.set4(bits,2,cidx);          // Chunk#
@@ -62,7 +63,6 @@ public class Vec extends Iced {
   // Get a Chunk.  Basically the index-to-key map, plus a DKV.get.  Can be
   // overridden for e.g., all-constant vectors where the Value is special.
   public Value chunkIdx( int cidx ) {
-    assert 0 <= cidx && cidx < nChunks();
     Value val = DKV.get(chunkKey(cidx));
     assert val != null;
     return val;

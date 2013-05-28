@@ -217,8 +217,8 @@ public final class Key extends Iced implements Comparable {
   }
 
   // Custom Serialization Reader: Keys must be interned on construction.
-  public Key read(AutoBuffer bb) { return make(bb.getA1()); }
-  public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_kb); }
+  @Override public Key read(AutoBuffer bb) { return make(bb.getA1()); }
+  @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_kb); }
 
 
   // Expand a KEY_OF_KEYS into an array of keys
