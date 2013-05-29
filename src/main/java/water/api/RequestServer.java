@@ -72,6 +72,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",   "Admin");
     Request.addToNavbar(registerRequest(new Script()),      "Get Script",    "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",      "Admin");
+    Request.addToNavbar(registerRequest(new StaticHTMLPage(new File("chris-test.html"))),    "StaticPageTest",    "Test");
 
     Request.addToNavbar(registerRequest(new Tutorials()),           "View All",      "Tutorials");
     Request.addToNavbar(registerRequest(new TutorialRFIris()),      "Random Forest", "Tutorials");
