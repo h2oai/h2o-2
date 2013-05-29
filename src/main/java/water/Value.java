@@ -605,21 +605,4 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     while( !isReleasable() ) { try { wait(); } catch( InterruptedException e ) { } }
     return true;
   }
-
-  // The "get an element" API.  The POJO is a "CVec" - a thin decompression
-  // wrapper around the entire "_mem" vector of data.  The CVec is encoded in
-  // front of the data, but might even be zero bytes long.  The remaining _mem
-  // array is the wrapped data, and expected to be 4M or so.
-  public final long at( int i ) { 
-    assert _key._kb[0] == Key.DVEC;
-    return ((water.fvec.CVec)get()).at(i); 
-  }
-  // The "get an element" API.  The POJO is a "CVec" - a thin decompression
-  // wrapper around the entire "_mem" vector of data.  The CVec is encoded in
-  // front of the data, but might even be zero bytes long.  The remaining _mem
-  // array is the wrapped data, and expected to be 4M or so.
-  public final int numElems( ) { 
-    assert _key._kb[0] == Key.DVEC;
-    return ((water.fvec.CVec)get()).length();
-  }
 }

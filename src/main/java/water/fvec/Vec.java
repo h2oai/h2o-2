@@ -72,13 +72,19 @@ public class Vec extends Iced {
   private final int elem2ChunkElem( long i, int cidx ) {
     return (int)(i - chunk2StartElem(cidx));
   }
-
-  // Fetch element
-  long at( long i ) {
-    int cidx = elem2ChunkIdx(i);
-    Value dvec = chunkIdx(cidx);
-    return dvec.at(elem2ChunkElem(i, cidx));
+  // Matching CVec for a given element
+  public final BigVector elem2BV( long i ) {
+    int cidx = elem2ChunkIdx(i);        // Element/row# to chunk#
+    long start = chunk2StartElem(cidx); // Chunk# to chunk starting element#
+    Value dvec = chunkIdx(cidx);        // Chunk# to chunk data
+    BigVector bv = dvec.get();          // Chunk data to compression wrapper
+    assert bv._start == -1 || bv._start == start;
+    bv._start = start;          // Fields not filled in by unpacking from Value
+    bv._vec = this;             // Fields not filled in by unpacking from Value
+    return bv;
   }
 
-  double atd( long row ) { throw H2O.unimpl(); }
+  // Fetch element
+  long at( long i ) { return elem2BV(i).at(i); }
+  double atd( long i ) { throw H2O.unimpl(); }
 }

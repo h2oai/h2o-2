@@ -8,7 +8,7 @@ import water.util.Log;
 
 public class FVecTest extends TestUtil {
 
-  @BeforeClass public static void stall() { stall_till_cloudsize(2); }
+  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   @Test public void testBasicCRUD() {
     // Make and insert a FileVec to the global store
@@ -29,11 +29,10 @@ public class FVecTest extends TestUtil {
   public static class ByteHisto extends MRTask2<ByteHisto> {
     public int[] _x;
     // Count occurrences of bytes
-    @Override public void map( long start, CVec cvec ) {
+    @Override public void map( long start, int len, BigVector bv ) {
       _x = new int[256];        // One-time set histogram array
-      int len = cvec.length();
-      for( int i=0; i<len; i++ )
-        _x[(int)cvec.at(i)]++;
+      for( long i=start; i<start+len; i++ )
+        _x[(int)bv.at(i)]++;
     }
     // ADD together all results
     @Override public void reduce( ByteHisto bh ) {

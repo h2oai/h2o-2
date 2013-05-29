@@ -3,8 +3,8 @@ package water;
 import java.util.concurrent.ExecutionException;
 import java.util.Arrays;
 import jsr166y.CountedCompleter;
-import sun.misc.Unsafe;
-import water.fvec.CVec;
+import sun.misc.Unsafe;         // 
+import water.fvec.BigVector;
 import water.fvec.Vec;
 import water.nbhm.UtilUnsafe;
 import water.util.Log;
@@ -15,9 +15,9 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
   // The Vectors to work on
   private Vec[] _vecs;            // Vectors to work on
 
-  // Run some useful function over this <strong>local</strong> CVec, and record
-  // the results in the <em>this<em> MRTask2.
-  abstract public void map( long start, CVec cvec );
+  // Run some useful function over this <strong>local</strong> BigVector, and
+  // record the results in the <em>this<em> MRTask2.
+  abstract public void map( long start, int len, BigVector bv );
 
   // Combine results from 'mrt' into 'this' MRTask2.  Both 'this' and 'mrt' are
   // guaranteed to either have map() run on them, or be the results of a prior
@@ -33,7 +33,7 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
   transient protected RPC<T> _nleft, _nrite;
   transient boolean _topLocal;        // Top-level local call, returning results over the wire
   // Local work: range of local chunks we are working on
-  transient protected int _lo, _hi;   // Range of CVecs to work on - locally
+  transient protected int _lo, _hi;   // Range of BigVectors to work on - locally
   transient protected T _left, _rite; // In-progress execution tree
   transient protected T _res;         // Result
 
@@ -116,11 +116,10 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
       long start = v0.chunk2StartElem(_lo);
       Key dkey = v0.chunkKey(_lo);
       if( dkey.home() ) {       // And chunk is homed here?
-        Value dvec = v0.chunkIdx(_lo);
-        CVec cvec = dvec.get();
+        BigVector bv = v0.elem2BV(start);
         if( _vecs.length > 1 ) throw H2O.unimpl();
-        map(start, cvec);       // Get it, run it locally
-        _res = self();          // Called map() at least once!
+        map(start, bv._len, bv); // Get it, run it locally
+        _res = self();          // Save results since called map() at least once!
       }
     }
     tryComplete();              // And this task is complete
