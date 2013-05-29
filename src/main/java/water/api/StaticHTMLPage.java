@@ -8,7 +8,9 @@ import water.NanoHTTPD;
 
 public class StaticHTMLPage extends Request {
   private final String _html;
-  public StaticHTMLPage(File f) {
+  private final String _href;
+  public StaticHTMLPage(File f, String href) {
+    _href = href;
     try {
       FileReader r = new FileReader(f);
       try{
@@ -26,5 +28,8 @@ public class StaticHTMLPage extends Request {
   }
   @Override protected Response serve() {
     throw new RuntimeException("should never be called!");
+  }
+  protected String href() {
+    return _href;
   }
 }
