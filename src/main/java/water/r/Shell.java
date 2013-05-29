@@ -71,6 +71,7 @@ public class Shell extends Thread {
       });
     }
     Interop.register(new Kmeans());
+    Interop.register(new RGLM());
     Interop.register(new Load());
     Interop.register(new Parse());
     Interop.register(new Save());

@@ -169,6 +169,16 @@ public abstract class Model extends Iced {
     //return isCompatible(data.colNames());
   }
 
+  /**
+   * Simple model wrapper adapting original model to different dataset.
+   *
+   * Basically does column and categorical mapping. Each row (irrespectfull of its source) is first
+   * loaded into internal array which is permuted to match the original column order.
+   * Categorical values are mapped to the values corresponding strings had in original dataset or NaN if we did not see this value before.
+   *
+   * @author tomasnykodym
+   *
+   */
   private static class ModelDataAdaptor extends Model {
     final Model M;
     final int       _yCol;
@@ -228,6 +238,9 @@ public abstract class Model extends Iced {
   /**
    * Adapt model for the given dataset.
    * Default behavior is to map columns and categoricals to their original indexes.
+   * Categorical values we have not seen when building the model are translated as NaN.
+   *
+   * Override this to get custom adapt behavior (eg. handle unseen cats differently).
    *
    * @param ary - tst dataset
    * @return Model - model adapted to be applied on the given data
