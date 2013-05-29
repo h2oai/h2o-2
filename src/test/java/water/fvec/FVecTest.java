@@ -16,7 +16,6 @@ public class FVecTest extends TestUtil {
     File file = TestUtil.find_test_file("./target/h2o.jar");
     Key key = NFSFileVec.make(file);
     NFSFileVec nfs=DKV.get(key).get();
-    System.err.println(nfs.at(0));
 
     int[] x = new ByteHisto().invoke(nfs)._x;
     int sum=0;

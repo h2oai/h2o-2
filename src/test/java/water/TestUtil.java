@@ -22,7 +22,6 @@ public class TestUtil {
     H2O.main(new String[] {});
     _initial_keycnt = H2O.store_size();
     assert Job.all().length == 0;      // No outstanding jobs
-    UKV.put(Job.LIST, new Job.List()); // Jobs.LIST must be part of initial keys
   }
 
   @AfterClass
@@ -53,6 +52,7 @@ public class TestUtil {
       try { Thread.sleep(100); } catch( InterruptedException ie ) { }
     }
     assertTrue("Cloud size of " + x, H2O.CLOUD.size() >= x);
+    UKV.put(Job.LIST, new Job.List()); // Jobs.LIST must be part of initial keys
   }
 
   public static File find_test_file(String fname) {
