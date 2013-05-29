@@ -682,8 +682,8 @@ public abstract class DGLM {
           p += _beta[idx]*d;
         } else {
           int d = (int)data[i]; // Enum value
-          idx += d;             // Which expanded column to use
-          if( idx < _colCatMap[i+1] )
+          // d can be -1 if we got enum values not seen in training
+          if(d > 0 && (idx += d) < _colCatMap[i+1])
             p += _beta[idx]/* *1.0 */;
           else             // Enum out of range?
             p = Double.NaN;// Can use a zero, or a NaN
@@ -697,12 +697,12 @@ public abstract class DGLM {
     }
 
     /** Single row scoring, on a compatible ValueArray (when pushed throw the mapping) */
-    protected double score0( ValueArray data, int row, int[] mapping ) {
+    protected double score0( ValueArray data, int row) {
       throw H2O.unimpl();
     }
 
     /** Bulk scoring API, on a compatible ValueArray (when pushed throw the mapping) */
-    protected double score0( ValueArray data, AutoBuffer ab, int row_in_chunk, int[] mapping ) {
+    protected double score0( ValueArray data, AutoBuffer ab, int row_in_chunk) {
       throw H2O.unimpl();
     }
   }

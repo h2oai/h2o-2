@@ -1,5 +1,5 @@
 import h2o, h2o_cmd
-import time, re
+import time, re, getpass
 
 def setupImportS3(node=None, bucket='home-0xdiag-datasets'):
     if not bucket: raise Exception('No S3 bucket specified')
@@ -48,6 +48,9 @@ def setupImportFolder(node=None, path='/home/0xdiag/datasets'):
         bucket = 'home-0xdiag-datasets'
         importFolderResult = setupImportS3(node=node, bucket=bucket)
     else:
+        if getpass.getuser()=='jenkins':
+            print "michal: Temp hack of /home/0xdiag/datasets/standard to /home/0xdiag/datasets till EC2 image is fixed"
+            path = re.sub('/home/0xdiag/datasets/standard', '/home/0xdiag/datasets', path)
         importFolderResult = node.import_files(path)
     ### h2o.dump_json(importFolderResult)
     return importFolderResult
@@ -78,6 +81,9 @@ def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
             timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs, noise, 
             benchmarkLogging, noPoll)
     else:
+        if getpass.getuser()=='jenkins':
+            print "michal: Temp hack of /home/0xdiag/datasets/standard to /home/0xdiag/datasets till EC2 image is fixed"
+            path = re.sub('/home/0xdiag/datasets/standard', '/home/0xdiag/datasets', path)
         importKey = "nfs:/" + path + "/" + csvFilename
         parseKey = node.parse(importKey, myKey2, 
             timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs, noise, 

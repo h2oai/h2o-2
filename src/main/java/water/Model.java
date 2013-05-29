@@ -2,9 +2,10 @@ package water;
 
 import java.util.Arrays;
 
-import com.google.gson.JsonObject;
-
+import water.ValueArray.Column;
 import water.api.Constants;
+
+import com.google.gson.JsonObject;
 
 /**
  * A Model models reality (hopefully).
@@ -168,36 +169,129 @@ public abstract class Model extends Iced {
     //return isCompatible(data.colNames());
   }
 
-  /** Single row scoring.  Data can be in any order.  No checking on a sane
-   *  mapping. */
-  public final double score( double[] data, int[] mapping ) {
-    assert isCompatible(mapping);
-    if( identityMap(mapping) ) { // Shortcut for well-behaved data
-      assert data.length == _va._cols.length;
-      return score0(data);
+  /**
+   * Simple model wrapper adapting original model to different dataset.
+   *
+   * Basically does column and categorical mapping. Each row (irrespectfull of its source) is first
+   * loaded into internal array which is permuted to match the original column order.
+   * Categorical values are mapped to the values corresponding strings had in original dataset or NaN if we did not see this value before.
+   *
+   * @author tomasnykodym
+   *
+   */
+  private static class ModelDataAdaptor extends Model {
+    final Model M;
+    final int       _yCol;
+    final int  []   _xCols;
+    final int  [][] _catMap;
+    final double [] _row;
+
+    public ModelDataAdaptor(Model M, int yCol, int [] cols, int [][] catMap){
+      this.M = M;
+      _row = MemoryManager.malloc8d(cols.length);
+      _xCols = cols;
+      _catMap = catMap;
+      _yCol = yCol;
     }
-    // Build a mapped row and score it.  Explodes if mapping is busted.
-    double[] d = new double[_va._cols.length];
-    for( int i=0; i<_va._cols.length-1; i++ )
-      d[i] = data[mapping[i]];
-    return score0(d);
+    private final double translateCat(int col, int val){
+      int res = _catMap[col][val];
+      return res == -1?Double.NaN:res;
+    }
+    private final double translateCat(int col, double val){
+      if(Double.isNaN(val))return val;
+      assert val == (int)val;
+      return translateCat(col, (int)val);
+    }
+
+    @Override public final double score(double[] data) {
+      int j = 0;
+      for(int i = 0; i < _xCols.length; ++i)
+        _row[j++] = (_catMap == null || _catMap[i] == null)?data[_xCols[i]]:translateCat(i, data[_xCols[i]]);
+      return M.score0(_row);
+    }
+    @Override protected double score0(ValueArray data, int row) {
+      int j = 0;
+      for(int c:_xCols)
+        _row[j++] = (_catMap == null || _catMap[c] == null)
+          ?data.datad(row, c)
+          :translateCat(c,(int)data.data(row, c));
+      return M.score0(_row);
+    }
+    @Override protected double score0(ValueArray data, AutoBuffer ab, int row) {
+      int j = 0;
+      for(int c:_xCols)
+        _row[j++] = (_catMap == null || _catMap[c] == null)
+          ?data.datad(ab,row, c)
+              :translateCat(c,(int)data.data(ab,row, c));
+      return M.score0(_row);
+    }
+    // always should call directly M.score0...
+    @Override protected final double score0(double[] data) {
+      throw new RuntimeException("should NEVER be called!");
+    }
+    @Override public JsonObject toJson() {return M.toJson();}
+    // keep only one adaptor layer! (just in case there would be multiple adapt calls...)
+    @Override public final Model adapt(ValueArray ary){return M.adapt(ary);}
+    @Override public final Model adapt(String [] cols){return M.adapt(cols);}
+  }
+
+  /**
+   * Adapt model for the given dataset.
+   * Default behavior is to map columns and categoricals to their original indexes.
+   * Categorical values we have not seen when building the model are translated as NaN.
+   *
+   * Override this to get custom adapt behavior (eg. handle unseen cats differently).
+   *
+   * @param ary - tst dataset
+   * @return Model - model adapted to be applied on the given data
+   */
+  public Model adapt(ValueArray ary){
+    boolean id = true;
+    final int  [] colMap = columnMapping(ary.colNames());
+    if(!isCompatible(colMap))throw new IllegalArgumentException("This model uses different columns than those provided");
+    final int[][] catMap =  new int[colMap.length][];
+    for(int i = 0; i < colMap.length-1; ++i){
+      Column c = ary._cols[colMap[i]];
+      if(c.isEnum() && !Arrays.deepEquals(_va._cols[i]._domain, c._domain)){
+        id = false;
+        catMap[i] = new int[c._domain.length];
+        for(int j = 0; j < c._domain.length; ++j)
+          catMap[i][j] = find(c._domain[j],_va._cols[i]._domain);
+      }
+    }
+    return (id&&identityMap(colMap))?this:new ModelDataAdaptor(this,colMap[colMap.length-1],Arrays.copyOf(colMap,colMap.length-1),catMap);
+  }
+  /**
+   * Adapt model for given columns.
+   * Only permutes the columns by the column names (factor levels MUST match the training dataset).
+   * @param colNames
+   * @return
+   */
+  public Model adapt(String [] colNames){
+    final int [] colMap = columnMapping(colNames);
+    if(!isCompatible(colMap))throw new IllegalArgumentException("This model uses different columns than those provided");
+    if(identityMap(colMap))return this;
+    return new ModelDataAdaptor(this, colMap[colMap.length-1],Arrays.copyOf(colMap,colMap.length-1), null);
+  }
+  public double score(double [] data){
+    return score0(data);
   }
 
   // Subclasses implement the scoring logic.  They can assume all datasets are
   // compatible already
+  protected abstract double score0(double [] data);
 
-  /** Single row scoring, on properly ordered data */
-  protected abstract double score0( double[] data );
 
   /** Single row scoring, on a compatible ValueArray (when pushed throw the mapping) */
-  protected abstract double score0( ValueArray data, int row, int[] mapping );
+  protected abstract double score0( ValueArray data, int row);
 
   /** Bulk scoring API, on a compatible ValueArray (when pushed throw the mapping) */
-  protected abstract double score0( ValueArray data, AutoBuffer ab, int row_in_chunk, int[] mapping );
+  protected abstract double score0( ValueArray data, AutoBuffer ab, int row_in_chunk);
 
   public abstract JsonObject toJson();
 
   public void fromJson(JsonObject json) {
     // TODO
   }
+
 }
