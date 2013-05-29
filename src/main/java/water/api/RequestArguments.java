@@ -840,7 +840,7 @@ public class RequestArguments extends RequestStatics {
   // MultipleText
   // ===========================================================================
 
-  private static final char JS_SEP = ':';
+  private static final char JS_SEP = '=';
   private static final String _multipleTextValueJS =
             "  var str = ''\n"
           + "  for (var i = 0; i < %NUMITEMS; ++i) {\n"
