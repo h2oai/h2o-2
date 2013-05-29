@@ -14,7 +14,6 @@ public class StaticHTMLPage extends Request {
     try {
       FileReader r = new FileReader(f);
       try{
-        System.out.println(f.length());
         CharBuffer cb = CharBuffer.allocate((int)f.length()+1);
         while(r.read(cb) != -1);
         _html = cb.flip().toString();

@@ -1,11 +1,10 @@
 package water;
 
-import java.io.File;
 import java.lang.management.ManagementFactory;
 
 import javax.management.*;
 
-import water.api.Constants.Schemes;
+import water.persist.Persist;
 import water.util.Log;
 
 /**
@@ -99,14 +98,8 @@ public class HeartBeatThread extends Thread {
 
       // get the usable and total disk storage for the partition where the
       // persistent KV pairs are stored
-      if (PersistIce.ROOT==null || Schemes.HDFS.equals(PersistIce.ROOT.getScheme())) {
-        hb.set_free_disk(0); // not applicable
-        hb.set_max_disk(0); // not applicable
-      } else {
-        File f = new File(PersistIce.ROOT.getPath());
-        hb.set_free_disk(f.getUsableSpace());
-        hb.set_max_disk(f.getTotalSpace());
-      }
+      hb.set_free_disk(Persist.getIce().getUsableSpace());
+      hb.set_max_disk(Persist.getIce().getTotalSpace());
 
       // Announce what Cloud we think we are in.
       // Publish our health as well.

@@ -22,7 +22,8 @@ import water.api.RequestBuilders.Response.Status;
 import water.api.RequestStatics.RequestType;
 import water.api.Script.RunScript;
 import water.api.Cloud;
-import water.hdfs.HdfsLoader;
+import water.persist.HdfsLoader;
+import water.persist.Persist;
 import water.util.Log;
 import water.util.Utils;
 
@@ -36,7 +37,7 @@ public class Hadoop {
     String name_server = "hdfs://127.0.0.1:8020";
     String job_tracker = "hdfs://127.0.0.1:8021";
     int port = H2O.DEFAULT_PORT;
-    String ice_root = PersistIce.DEFAULT_ROOT;
+    String ice_root = H2O.DEFAULT_ICE_ROOT;
     String memory = "4096";
     String script;
     String help;
@@ -68,7 +69,7 @@ public class Hadoop {
     }
 
     H2O.OPT_ARGS.hdfs_version = config.version;
-    HdfsLoader.initialize();
+    HdfsLoader.loadJars();
     HadoopTool.main(config, remaining);
   }
 
@@ -96,7 +97,10 @@ public class Hadoop {
             // Report progress or task gets killed
             context.progress();
             Thread.sleep(1000);
-            if( done ) break;
+            if( done ) {
+              Persist.getIce().clear();
+              break;
+            }
           }
         } catch( Exception ex ) {
           throw Log.errRTExcept(ex);
@@ -270,7 +274,7 @@ public class Hadoop {
         JSONObject resp = json.getJSONObject(Constants.RESPONSE);
         String status = resp.getString(Constants.STATUS);
         System.out.println("Status: " + status);
-        if( status == Status.error.name() ) {
+        if( Status.error.name().equals(status) ) {
           System.out.println("Response: " + res);
         }
       }

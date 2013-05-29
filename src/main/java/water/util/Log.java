@@ -5,6 +5,7 @@ import java.lang.management.ManagementFactory;
 import java.util.Locale;
 
 import water.*;
+import water.api.Constants.Schemes;
 import water.util.Log.Tag.Kind;
 import water.util.Log.Tag.Sys;
 
@@ -37,7 +38,7 @@ import water.util.Log.Tag.Sys;
  *  a best effort and lossy manner. Basically when an OOME occurs during
  *  logging, no guarantees are made about the messages.
  **/
-abstract public class Log {
+public abstract class Log {
 
   /** Tags for log messages */
   public static interface Tag {
@@ -68,7 +69,9 @@ abstract public class Log {
     System.setErr(new Wrapper(System.err));
   }
   /** Local log file */
-  private static BufferedWriter LOG_FILE;
+  static final String FILE_NAME = "h2o.log";
+  static File FILE;
+  static BufferedWriter FILE_WRITER;
   /** Key for the log in the KV store */
   public final static Key LOG_KEY = Key.make("Log", (byte) 0, Key.BUILT_IN_KEY);
   /** Time from when this class loaded. */
@@ -265,12 +268,25 @@ abstract public class Log {
   /** the actual write code. */
   private static void write0(Event e, boolean printOnOut) {
     String s = e.toString();
-    if( H2O.SELF != null && LOG_FILE == null ) LOG_FILE = new BufferedWriter(PersistIce.logFile());
-    if( LOG_FILE != null ) {
+    if( H2O.SELF != null && FILE_WRITER == null ) {
+      File dir;
+      // Use ice folder if local, or default
+      if( H2O.ICE_ROOT.getScheme() == null || Schemes.FILE.equals(H2O.ICE_ROOT.getScheme()) )
+        dir = new File(H2O.ICE_ROOT.getPath());
+      else
+        dir = new File(H2O.DEFAULT_ICE_ROOT);
       try {
-        LOG_FILE.write(s, 0, s.length());
-        LOG_FILE.write(NL,0,NL.length());
-        LOG_FILE.flush();
+        FILE = new File(dir, FILE_NAME);
+        FILE_WRITER = new BufferedWriter(new FileWriter(FILE));
+      } catch( IOException _ ) {
+        // do not log errors when trying to open the log file
+      }
+    }
+    if( FILE_WRITER != null ) {
+      try {
+        FILE_WRITER.write(s, 0, s.length());
+        FILE_WRITER.write(NL,0,NL.length());
+        FILE_WRITER.flush();
       } catch( IOException ioe ) {/* ignore log-write fails */
       }
     }

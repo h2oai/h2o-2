@@ -2,12 +2,11 @@ package water.util;
 
 import java.io.*;
 
-import water.*;
+import water.DRemoteTask;
+import water.H2O;
 
 public class LogCollectorTask extends DRemoteTask {
-
   public static final int MAX_SIZE = 1 << 16;
-
   public byte[][] _result;
 
   public LogCollectorTask() {}
@@ -16,7 +15,7 @@ public class LogCollectorTask extends DRemoteTask {
     _result = new byte[H2O.CLOUD._memary.length][];
 
     int  idx       = H2O.SELF.index();
-    File logFile   = PersistIce.logFile;
+    File logFile   = Log.FILE;
     InputStream is = null;
     int length     = (int) Math.min(MAX_SIZE, logFile.length());
     try {
