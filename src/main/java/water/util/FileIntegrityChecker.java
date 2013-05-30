@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.ArrayList;
 
 import water.*;
+import water.persist.PersistNFS;
 
 public class FileIntegrityChecker extends DRemoteTask {
   String[] _files;

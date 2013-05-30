@@ -20,7 +20,10 @@ public class Constants {
   }
 
   public static class Schemes {
+    public static final String FILE = "file";
     public static final String HDFS = "hdfs";
+    public static final String S3 = "s3";
+    public static final String NFS = "nfs";
   }
 
   public static final String BUILT_IN_KEY_JOBS     = "jobs";

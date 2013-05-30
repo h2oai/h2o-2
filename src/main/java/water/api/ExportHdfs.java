@@ -1,7 +1,10 @@
 package water.api;
 
-import water.Value;
-import water.hdfs.PersistHdfs;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.thirdparty.guava.common.base.Charsets;
+
+import water.*;
+import water.persist.PersistHdfs;
 import water.util.Log;
 
 import com.google.gson.JsonObject;
@@ -21,7 +24,15 @@ public class ExportHdfs extends Request {
     String path = _path.value();
     try {
       if( value == null ) throw new IllegalArgumentException("Unknown key: " + _source.record()._originalValue);
-      PersistHdfs.store(path, value);
+      byte[] data = null;
+      Model model = getAsModel(value);
+      if( model != null ) {
+        // Add extension, used during import
+        if( !path.endsWith(Extensions.JSON) ) path += Extensions.JSON;
+        data = model.toJson().toString().getBytes(Charsets.UTF_8);
+      }
+      if( data != null ) PersistHdfs.store(new Path(path), data);
+      else throw new UnsupportedOperationException("Only models can be exported");
     } catch( Exception e ) {
       Log.err(e);
       return Response.error(e.getMessage());
@@ -29,5 +40,12 @@ public class ExportHdfs extends Request {
     JsonObject json = new JsonObject();
     Response r = Response.done(json);
     return r;
+  }
+
+  private static Model getAsModel(Value v) {
+    if( v.type() == TypeMap.PRIM_B ) return null;
+    Iced iced = v.get();
+    if( iced instanceof Model ) return (Model) iced;
+    return null;
   }
 }

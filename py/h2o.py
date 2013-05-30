@@ -1321,7 +1321,12 @@ class H2O(object):
 
         if self.use_debugger:
             args += ['-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=8000']
+
         args += ["-ea"]
+
+        if self.use_maprfs:
+            args += ["-Djava.library.path=/opt/mapr/lib"]
+
         if self.classpath:
             entries = [ find_file('build/classes'), find_file('lib/javassist.jar') ] 
             entries += glob.glob(find_file('lib')+'/*/*.jar')
@@ -1360,10 +1365,15 @@ class H2O(object):
         # FIX! need to be able to specify name node/path for non-0xdata hdfs
         # specifying hdfs stuff when not used shouldn't hurt anything
         if self.use_hdfs:
-            # NOTE: was leaving space. should work, but try =
             args += [
                 # it's fine if hdfs_name has a ":9000" port or something too
                 '-hdfs hdfs://' + self.hdfs_name_node,
+                '-hdfs_version=' + self.hdfs_version, 
+            ]
+        if self.use_maprfs:
+            args += [
+                # it's fine if hdfs_name has a ":9000" port or something too
+                '-hdfs maprfs://' + self.hdfs_name_node,
                 '-hdfs_version=' + self.hdfs_version, 
             ]
         if self.hdfs_config:
@@ -1391,7 +1401,7 @@ class H2O(object):
     def __init__(self, 
         use_this_ip_addr=None, port=54321, capture_output=True, sigar=False, 
         use_debugger=None, classpath=None,
-        use_hdfs=False, 
+        use_hdfs=False, use_maprfs=False,
         # hdfs_version="cdh4", hdfs_name_node="192.168.1.151", 
         hdfs_version="cdh3", hdfs_name_node="192.168.1.176", 
         hdfs_config=None,
@@ -1429,6 +1439,7 @@ class H2O(object):
         self.capture_output = capture_output
 
         self.use_hdfs = use_hdfs
+        self.use_maprfs = use_maprfs
         self.hdfs_name_node = hdfs_name_node
         self.hdfs_version = hdfs_version
         self.hdfs_config = hdfs_config

@@ -2,7 +2,7 @@ package water.api;
 
 import water.Key;
 import water.Value;
-import water.store.s3.MultipartUpload;
+import water.persist.PersistS3Task;
 
 import com.google.gson.JsonObject;
 
@@ -18,7 +18,7 @@ public class ExportS3Progress extends Request {
   @Override
   protected Response serve() {
     Value v = _dest.value();
-    MultipartUpload.Progress progress = v.get();
+    PersistS3Task.Progress progress = v.get();
     JsonObject response = new JsonObject();
     response.addProperty(RequestStatics.DEST_KEY, v._key.toString());
     Response r;

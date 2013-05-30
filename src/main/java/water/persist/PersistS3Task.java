@@ -1,4 +1,4 @@
-package water.store.s3;
+package water.persist;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -14,7 +14,7 @@ import com.amazonaws.services.s3.model.*;
 /**
  * Map/reduce upload to S3.
  */
-public class MultipartUpload extends MRTask {
+public class PersistS3Task extends MRTask {
   private static final boolean DEBUG = false;
   private static final int     BATCH = 10;
 
@@ -54,7 +54,7 @@ public class MultipartUpload extends MRTask {
       InitiateMultipartUploadResult initResponse = s3.initiateMultipartUpload(initRequest);
       uploadId = initResponse.getUploadId();
 
-      MultipartUpload task = new MultipartUpload();
+      PersistS3Task task = new PersistS3Task();
       task._dest = dest;
       task._key = value._key;
       task._bucket = bucket;
@@ -130,7 +130,7 @@ public class MultipartUpload extends MRTask {
   public void reduce(DRemoteTask rt) {
     if( DEBUG ) Log.debug( "reduce: " + this);
 
-    MultipartUpload task = (MultipartUpload) rt;
+    PersistS3Task task = (PersistS3Task) rt;
 
     if( task._parts != null ) {
       if( _parts == null ) {

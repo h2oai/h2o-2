@@ -1,8 +1,9 @@
-package water.hdfs;
+package water.persist;
 
 import java.io.File;
 
-import water.*;
+import water.Boot;
+import water.H2O;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
 
@@ -13,7 +14,7 @@ public class HdfsLoader {
   private static final String DEFAULT_HDFS_VERSION = "cdh4";
   private static final String MAPRFS_HDFS_VERSION = "0.20.2mapr";
 
-  public static void initialize() {
+  public static void loadJars() {
     // Load the HDFS backend for existing hadoop installations.
     // understands -hdfs=hdfs://server:port OR -hdfs=maprfs:///mapr/node_name/volume
     //             -hdfs-root=root
@@ -21,8 +22,7 @@ public class HdfsLoader {
     String version = Objects.firstNonNull(H2O.OPT_ARGS.hdfs_version, DEFAULT_HDFS_VERSION);
 
     // If HDFS URI is MapR-fs - Switch two MapR version of hadoop
-    if( "mapr".equals(version) ||
-        Strings.nullToEmpty(H2O.OPT_ARGS.hdfs).startsWith("maprsfs://") ) {
+    if( "mapr".equals(version) || Strings.nullToEmpty(H2O.OPT_ARGS.hdfs).startsWith("maprsfs://") ) {
       version = MAPRFS_HDFS_VERSION;
     }
     try {
@@ -31,14 +31,13 @@ public class HdfsLoader {
         if( f.exists() ) {
           Boot._init.addExternalJars(f);
         } else {
-          Boot._init.addInternalJars("hadoop/"+version+"/");
+          Boot._init.addInternalJars("hadoop/" + version + "/");
         }
       }
-    } catch(Exception e) {
+    } catch( Exception e ) {
       Log.err(e);
       Log.die("[hdfs] Unable to initialize hadoop version " + version + " please use different version.");
     }
-    Log.info(Sys.HDFS_,"Using HDFS version ", version);
-    PersistHdfs.initialize();
+    Log.info(Sys.HDFS_, "Using HDFS version ", version);
   }
 }

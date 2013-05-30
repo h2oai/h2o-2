@@ -1,4 +1,4 @@
-package water.store.s3;
+package water.persist;
 
 import java.io.*;
 import java.net.SocketTimeoutException;
@@ -19,18 +19,18 @@ import com.amazonaws.services.s3.model.*;
 import com.google.common.io.ByteStreams;
 
 /** Persistence backend for S3 */
-public abstract class PersistS3 {
-  private static final String  HELP = "You can specify a credentials properties file with the -aws_credentials command line switch.";
+public final class PersistS3 extends Persist {
+  private static final String HELP = "You can specify a credentials properties file with the -aws_credentials command line switch.";
 
-  private static final String  KEY_PREFIX                   = "s3://";
-  private static final int     KEY_PREFIX_LEN               = KEY_PREFIX.length();
+  private static final String KEY_PREFIX = "s3://";
+  private static final int KEY_PREFIX_LEN = KEY_PREFIX.length();
 
   private static final Object _lock = new Object();
   private static volatile AmazonS3 _s3;
 
   public static AmazonS3 getClient() {
     if( _s3 == null ) {
-      synchronized(_lock) {
+      synchronized( _lock ) {
         if( _s3 == null ) {
           try {
             _s3 = new AmazonS3Client(H2O.getAWSCredentials(), s3ClientCfg());
@@ -38,8 +38,7 @@ public abstract class PersistS3 {
             StringBuilder msg = new StringBuilder();
             msg.append(e.getMessage() + "\n");
             msg.append("Unable to load S3 credentials.");
-            if( H2O.OPT_ARGS.aws_credentials == null )
-              msg.append(HELP);
+            if( H2O.OPT_ARGS.aws_credentials == null ) msg.append(HELP);
             throw Log.err(new RuntimeException(msg.toString()));
           }
         }
@@ -51,26 +50,29 @@ public abstract class PersistS3 {
   public static final class H2SO3InputStream extends RIStream {
     Key _k;
     long _to;
-    String [] _bk;
+    String[] _bk;
 
-    protected InputStream open(long offset){
+    protected InputStream open(long offset) {
       return getClient().getObject(new GetObjectRequest(_bk[0], _bk[1]).withRange(offset, _to)).getObjectContent();
     }
 
-    public H2SO3InputStream(Key k, ProgressMonitor pmon){
-      this(k,pmon,0,Long.MAX_VALUE);
+    public H2SO3InputStream(Key k, ProgressMonitor pmon) {
+      this(k, pmon, 0, Long.MAX_VALUE);
     }
-    public H2SO3InputStream(Key k, ProgressMonitor pmon, long from, long to){
-      super(from,pmon);
+
+    public H2SO3InputStream(Key k, ProgressMonitor pmon, long from, long to) {
+      super(from, pmon);
       _k = k;
-      _to = Math.min(DKV.get(k).length()-1,to);
+      _to = Math.min(DKV.get(k).length() - 1, to);
       _bk = decodeKey(k);
       open();
     }
   }
+
   public static InputStream openStream(Key k, ProgressMonitor pmon) throws IOException {
-    return new H2SO3InputStream(k,pmon);
+    return new H2SO3InputStream(k, pmon);
   }
+
   public static Key loadKey(S3ObjectSummary obj) throws IOException {
     Key k = encodeKey(obj.getBucketName(), obj.getKey());
     long size = obj.getSize();
@@ -80,12 +82,13 @@ public abstract class PersistS3 {
       byte[] mem = MemoryManager.malloc1(sz); // May stall a long time to get memory
       S3ObjectInputStream is = getObjectForKey(k, 0, ValueArray.CHUNK_SZ).getObjectContent();
       int off = 0;
-      while( off < sz ) off += is.read(mem,off,sz-off);
+      while( off < sz )
+        off += is.read(mem, off, sz - off);
       ValueArray ary = new ValueArray(k, sz).read(new AutoBuffer(mem));
-      val = new Value(k,ary,Value.S3);
+      val = new Value(k, ary, Value.S3);
     } else if( size >= 2 * ValueArray.CHUNK_SZ ) {
       // ValueArray byte wrapper over a large file
-      val = new Value(k,new ValueArray(k, size),Value.S3);
+      val = new Value(k, new ValueArray(k, size), Value.S3);
     } else {
       val = new Value(k, (int) size, Value.S3); // Plain Value
     }
@@ -100,7 +103,7 @@ public abstract class PersistS3 {
   // disk. A racing delete can trigger a failure where we get a null return,
   // but no crash (although one could argue that a racing load&delete is a bug
   // no matter what).
-  public static byte[] fileLoad(Value v) {
+  @Override public byte[] load(Value v) {
     long start_io_ms = System.currentTimeMillis();
     byte[] b = MemoryManager.malloc1(v._max);
     Key k = v._key;
@@ -120,42 +123,48 @@ public abstract class PersistS3 {
     // Amazon S3).
     S3ObjectInputStream s = null;
 
-    while(true) {             // Loop, in case we get premature EOF's
+    while( true ) {             // Loop, in case we get premature EOF's
       try {
         long start_ns = System.nanoTime(); // Blocking i/o call timing - without counting repeats
         s = getObjectForKey(k, skip, v._max).getObjectContent();
         ByteStreams.readFully(s, b); // delegate work to Google (it reads the byte buffer in a cycle as we did)
         assert v.isPersisted();
-        TimeLine.record_IOclose(start_ns,start_io_ms,1/*read*/,v._max,Value.S3);
+        TimeLine.record_IOclose(start_ns, start_io_ms, 1/* read */, v._max, Value.S3);
         return b;
-      // Explicitly ignore the following exceptions but
-      // fail on the rest IOExceptions
-      } catch (EOFException e)           { ignoreAndWait(e,false);
-      } catch (SocketTimeoutException e) { ignoreAndWait(e,false);
-      } catch (IOException e)            { ignoreAndWait(e,true);
+        // Explicitly ignore the following exceptions but
+        // fail on the rest IOExceptions
+      } catch( EOFException e ) {
+        ignoreAndWait(e, false);
+      } catch( SocketTimeoutException e ) {
+        ignoreAndWait(e, false);
+      } catch( IOException e ) {
+        ignoreAndWait(e, true);
       } finally {
-        try { if( s != null ) s.close(); } catch( IOException e ) { }
+        try {
+          if( s != null ) s.close();
+        } catch( IOException e ) {}
       }
     }
   }
 
   private static void ignoreAndWait(final Exception e, boolean printException) {
     H2O.ignore(e, "Hit the S3 reset problem, waiting and retrying...", printException);
-    try { Thread.sleep(500); } catch (InterruptedException ie) {}
+    try {
+      Thread.sleep(500);
+    } catch( InterruptedException ie ) {}
   }
 
   // Store Value v to disk.
-  public static void fileStore(Value v) {
-    if( !v._key.home() )
-      return;
+  @Override public void store(Value v) {
+    if( !v._key.home() ) return;
     // Never store arraylets on S3, instead we'll store the entire array.
     assert !v.isArray();
 
-    Key dest = MultipartUpload.init(v);
-    MultipartUpload.run(dest, v, null, null);
+    Key dest = PersistS3Task.init(v);
+    PersistS3Task.run(dest, v, null, null);
   }
 
-  static public Value lazyArrayChunk(Key key) {
+  @Override public Value lazyArrayChunk(Key key) {
     Key arykey = ValueArray.getArrayKey(key); // From the base file key
     long off = ValueArray.getChunkOffset(key); // The offset
     long size = getObjectMetadataForKey(arykey).getContentLength();
@@ -163,12 +172,11 @@ public abstract class PersistS3 {
     long rem = size - off; // Remainder to be read
     if( arykey.toString().endsWith(Extensions.HEX) ) { // Hex file?
       int value_len = DKV.get(arykey).memOrLoad().length; // How long is the
-                                                    // ValueArray header?
+      // ValueArray header?
       rem -= value_len;
     }
     // the last chunk can be fat, so it got packed into the earlier chunk
-    if( rem < ValueArray.CHUNK_SZ && off > 0 )
-      return null;
+    if( rem < ValueArray.CHUNK_SZ && off > 0 ) return null;
     int sz = (rem >= ValueArray.CHUNK_SZ * 2) ? (int) ValueArray.CHUNK_SZ : (int) rem;
     Value val = new Value(key, sz, Value.S3);
     val.setdsk(); // But its already on disk.
@@ -176,11 +184,14 @@ public abstract class PersistS3 {
   }
 
   /**
-   * Creates the key for given S3 bucket and key.
-   * Returns the H2O key, or null if the key cannot be created.
-   * @param bucket  Bucket name
-   * @param key     Key name (S3)
-   * @return        H2O key pointing to the given bucket and key.
+   * Creates the key for given S3 bucket and key. Returns the H2O key, or null if the key cannot be
+   * created.
+   *
+   * @param bucket
+   *          Bucket name
+   * @param key
+   *          Key name (S3)
+   * @return H2O key pointing to the given bucket and key.
    */
   public static Key encodeKey(String bucket, String key) {
     Key res = encodeKeyImpl(bucket, key);
@@ -189,11 +200,12 @@ public abstract class PersistS3 {
   }
 
   /**
-   * Decodes the given H2O key to the S3 bucket and key name.
-   * Returns the array of two strings, first one is the bucket name and second
-   * one is the key name.
-   * @param k  Key to be decoded.
-   * @return   Pair (array) of bucket name and key name.
+   * Decodes the given H2O key to the S3 bucket and key name. Returns the array of two strings,
+   * first one is the bucket name and second one is the key name.
+   *
+   * @param k
+   *          Key to be decoded.
+   * @return Pair (array) of bucket name and key name.
    */
   public static String[] decodeKey(Key k) {
     String[] res = decodeKeyImpl(k);
@@ -240,23 +252,42 @@ public abstract class PersistS3 {
   }
 
   /** S3 socket timeout property name */
-  public final static String S3_SOCKET_TIMEOUT_PROP      = "water.s3.socketTimeout";
-  /** S3 connection timeout property  name */
-  public final static String S3_CONNECTION_TIMEOUT_PROP  = "water.s3.connectionTimeout";
+  public final static String S3_SOCKET_TIMEOUT_PROP = "water.s3.socketTimeout";
+  /** S3 connection timeout property name */
+  public final static String S3_CONNECTION_TIMEOUT_PROP = "water.s3.connectionTimeout";
   /** S3 maximal error retry number */
-  public final static String S3_MAX_ERROR_RETRY_PROP     = "water.s3.maxErrorRetry";
+  public final static String S3_MAX_ERROR_RETRY_PROP = "water.s3.maxErrorRetry";
   /** S3 maximal http connections */
-  public final static String S3_MAX_HTTP_CONNECTIONS_PROP= "water.s3.maxHttpConnections";
-
+  public final static String S3_MAX_HTTP_CONNECTIONS_PROP = "water.s3.maxHttpConnections";
 
   static ClientConfiguration s3ClientCfg() {
     ClientConfiguration cfg = new ClientConfiguration();
     Properties prop = System.getProperties();
-    if (prop.containsKey(S3_SOCKET_TIMEOUT_PROP))       cfg.setSocketTimeout(    Integer.getInteger(S3_SOCKET_TIMEOUT_PROP));
-    if (prop.containsKey(S3_CONNECTION_TIMEOUT_PROP))   cfg.setConnectionTimeout(Integer.getInteger(S3_CONNECTION_TIMEOUT_PROP));
-    if (prop.containsKey(S3_MAX_ERROR_RETRY_PROP))      cfg.setMaxErrorRetry(    Integer.getInteger(S3_MAX_ERROR_RETRY_PROP));
-    if (prop.containsKey(S3_MAX_HTTP_CONNECTIONS_PROP)) cfg.setMaxConnections(   Integer.getInteger(S3_MAX_HTTP_CONNECTIONS_PROP));
+    if( prop.containsKey(S3_SOCKET_TIMEOUT_PROP) ) cfg.setSocketTimeout(Integer.getInteger(S3_SOCKET_TIMEOUT_PROP));
+    if( prop.containsKey(S3_CONNECTION_TIMEOUT_PROP) ) cfg.setConnectionTimeout(Integer
+        .getInteger(S3_CONNECTION_TIMEOUT_PROP));
+    if( prop.containsKey(S3_MAX_ERROR_RETRY_PROP) ) cfg.setMaxErrorRetry(Integer.getInteger(S3_MAX_ERROR_RETRY_PROP));
+    if( prop.containsKey(S3_MAX_HTTP_CONNECTIONS_PROP) ) cfg.setMaxConnections(Integer
+        .getInteger(S3_MAX_HTTP_CONNECTIONS_PROP));
     cfg.setProtocol(Protocol.HTTP);
     return cfg;
+  }
+
+  // TODO needed if storing ice to S3
+
+  @Override public String getPath() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override public void clear() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override public void loadExisting() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override public void delete(Value v) {
+    throw new UnsupportedOperationException();
   }
 }
