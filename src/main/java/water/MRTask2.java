@@ -3,7 +3,7 @@ package water;
 import java.util.concurrent.ExecutionException;
 import java.util.Arrays;
 import jsr166y.CountedCompleter;
-import sun.misc.Unsafe;         // 
+import sun.misc.Unsafe;
 import water.fvec.BigVector;
 import water.fvec.Vec;
 import water.nbhm.UtilUnsafe;
@@ -71,7 +71,7 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
   private final void setupLocal() {
     _topLocal = true;
     // Check for global vs local work
-    if( _nlo < _nhi-1 ) {       // Have global work?
+    if( _nlo >= 0 && _nlo < _nhi-1 ) { // Have global work?
       // Note: some top-level calls have no other global work, so
       // "topLocal==true" does not imply "nlo < nhi-1".
       int selfidx = H2O.SELF.index();
@@ -157,8 +157,9 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
       _fs.blockForPending(); 
     // Finally, must return all results in 'this' because that is the API -
     // what the user expects
-    if( _res != null && _res != this )
-      copyOver(_res);
+    if( _res == null ) _nlo = -1; // Flag for no local results *at all*
+    else if( _res != this )       // There is a local result, and its not self
+      copyOver(_res);             // So copy into self
   }
   private static String p(MRTask2 x) {
     if( x==null ) return "(null)";
@@ -169,10 +170,10 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
   private void reduce3( RPC<T> rpc ) {
     if( rpc == null ) return;
     T mrt = rpc.get();          // This is a blocking remote call
+    assert mrt._fs == null;     // No blockable results from remote
     // Unlike reduce2, results are in mrt directly not mrt._res.
     if( _res == null ) _res = mrt;
-    else _res.reduce(mrt);
-    assert mrt._fs == null;     // No blockable results from remote
+    else if( mrt._nlo != -1 ) _res.reduce(mrt);
   }
 
   // Cancel/kill all work as we can, then rethrow... do not invisibly swallow

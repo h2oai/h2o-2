@@ -792,8 +792,8 @@ public final class AutoBuffer {
   public AutoBuffer putA1( byte[] ary ) {
     return ary == null ? put4(-1) : put4(ary.length).putA1(ary,ary.length);
   }
-  public AutoBuffer putA1( byte[] ary, int length ) {
-    int sofar = 0;
+  public AutoBuffer putA1( byte[] ary, int length ) { return putA1(ary,0,length); }
+  public AutoBuffer putA1( byte[] ary, int sofar, int length ) {
     while( sofar < length ) {
       int len = Math.min(length - sofar, _bb.remaining());
       _bb.put(ary, sofar, len);

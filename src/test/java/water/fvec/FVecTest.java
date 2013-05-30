@@ -29,7 +29,7 @@ public class FVecTest extends TestUtil {
     UKV.remove(key);
   }
 
-  private static class ByteHisto extends MRTask2<ByteHisto> {
+  public static class ByteHisto extends MRTask2<ByteHisto> {
     public int[] _x;
     // Count occurrences of bytes
     @Override public void map( long start, int len, BigVector bv ) {
@@ -47,21 +47,29 @@ public class FVecTest extends TestUtil {
 
   @Test public void testWordCount() {
     //File file = TestUtil.find_test_file("./smalldata/cars.csv");
-    File file = TestUtil.find_test_file("../wiki/enwiki-latest-pages-articles.xml");
+    //File file = TestUtil.find_test_file("../wiki/enwiki-latest-pages-articles.xml");
+    //File file = TestUtil.find_test_file("/home/0xdiag/datasets/wiki.xml");
+    File file = TestUtil.find_test_file("../Dropbox/Sris and Cliff/H20_Rush_New_Dataset_100k.csv");
     Key key = NFSFileVec.make(file);
     NFSFileVec nfs=DKV.get(key).get();
     NonBlockingHashMap<VStr,VStr> words = new WordCount().invoke(nfs)._words;
     VStr[] vss = words.keySet().toArray(new VStr[words.size()]);
     Arrays.sort(vss);
-    Log.unwrap(System.err,Arrays.toString(vss));
+    System.out.println("Found "+vss.length+" unique words.");
+    System.out.println(Arrays.toString(vss));
     UKV.remove(key);
   }
 
   private static class WordCount extends MRTask2<WordCount> {
     public static NonBlockingHashMap<VStr,VStr> WORDS;
-    public static AtomicInteger CHUNKS = new AtomicInteger();
     public NonBlockingHashMap<VStr,VStr> _words;
     @Override public void init() { WORDS = new NonBlockingHashMap(); }
+    private static int isChar( int b ) {
+      if( 'A'<=b && b<='Z' ) return b-'A'+'a';
+      if( 'a'<=b && b<='z' ) return b;
+      return -1;
+    }
+
     @Override public void map( long start, int len, BigVector bv ) {
       _words = WORDS;
 
@@ -69,36 +77,25 @@ public class FVecTest extends TestUtil {
       // Skip partial words at the start of chunks, assuming they belong to the
       // trailing end of the prior chunk.
       if( start > 0 )           // Not on the 1st chunk...
-        while( Character.isLetter((char)bv.at(i)) ) i++; // skip any partial word from prior
-      int waste=0, used=256;
-      VStr vs = new VStr(new byte[used],(short)0);
+        while( isChar((int)bv.at(i)) >= 0 ) i++; // skip any partial word from prior
+      VStr vs = new VStr(new byte[512],(short)0);
       // Loop over the chunk, picking out words
       while( i<start+len || vs._len > 0 ) { // Till we run dry & not in middle of word
-        int c = (int)bv.at(i);  // Load a char
-        if( Character.isLetter(c) ) { // In a word?
-          assert vs._len<256 : "Too long: "+this+" at char "+i;
-          int w=vs.append(c);         // Append char
-          if( w > 0 ) { used += vs._cs.length+8; waste+=w+8; }
+        int c = isChar((int)bv.at(i));      // Load a char, lowercase it
+        if( c >= 0 && vs._len < 32700/*break silly long words*/ ) { // In a word?
+          vs.append(c);               // Append char
         } else if( vs._len > 0 ) {    // Have a word?
           VStr vs2 = WORDS.putIfAbsent(vs,vs);
           if( vs2 == null ) {   // If actually inserted, need new VStr
-            if( (WORDS.size()&65535)==0 )
-              Log.unwrap(System.err,PrettyPrint.bytes(WORDS.size())+" "+vs);
+            if( vs._len>256 ) System.out.println("Too long: "+vs+" at char "+i);
             vs = new VStr(vs._cs,(short)(vs._off+vs._len)); 
           } else {
-            vs2.inc();        // Inc count on added word, 
-            vs._len = 0;      // and re-use VStr
+            vs2.inc(1);         // Inc count on added word, 
+            vs._len = 0;        // and re-use VStr
           }
         }
         i++;
       }
-      if( vs._off > 0 ) waste += vs._cs.length-vs._off; // keep partial last charspace
-      else              used -= (vs._cs.length+8);      // drop unused  last charspace
-      CHUNKS.addAndGet(1);
-      Log.unwrap(System.err,
-                 "total="+PrettyPrint.bytes(((long)CHUNKS.get())<<ValueArray.LOG_CHK)+
-                 //", map row="+PrettyPrint.bytes(start)+
-                 ", chars pad/tot="+waste+"/"+used);
     }
 
     @Override public void reduce( WordCount wc ) {
@@ -106,11 +103,25 @@ public class FVecTest extends TestUtil {
         throw H2O.unimpl();
     }
 
-    @Override public AutoBuffer write(AutoBuffer bb) { 
-      throw H2O.unimpl();
+    @Override public AutoBuffer write(AutoBuffer ab) {
+      super.write(ab);
+      if( _res != null && WORDS != null )
+        for( VStr key : WORDS.keySet() )
+          ab.put2((char)key._len).putA1(key._cs,key._off,key._off+key._len).put4(key._cnt);
+      return ab.put2((char)65535); // End of map marker
     }
-    @Override public WordCount read(AutoBuffer bb) { 
-      throw H2O.unimpl();
+    @Override public WordCount read(AutoBuffer ab) { 
+      super.read(ab);
+      _words = WORDS;
+      int len = 0;
+      while( (len = ab.get2()) != 65535 ) { // Read until end-of-map marker
+        VStr vs = new VStr(ab.getA1(len),(short)0);
+        vs._len = (short)len;
+        vs._cnt = ab.get4();
+        VStr vs2 = WORDS.putIfAbsent(vs,vs);
+        if( vs2 != null ) vs2.inc(vs._cnt); // Inc count on added word
+      }
+      return this;
     }
     @Override public void copyOver(DTask wc) { _words = ((WordCount)wc)._words; }    
   }
@@ -122,24 +133,23 @@ public class FVecTest extends TestUtil {
     short _off,_len;            // offset & len of this word
     VStr(byte[]cs, short off) { assert off>=0:off; _cs=cs; _off=off; _len=0; _cnt=1; }
     // append a char; return wasted pad space
-    public int append( int c ) {
-      int waste=0;
-      if( _off+_len == _cs.length ) { // no room for word?
-        waste=_len;             // will recopy to new buffer, so all is wasted
-        byte[] cs = new byte[(_cs.length<<1)<1024?(_cs.length<<1):1024];
+    public void append( int c ) {
+      if( _off+_len >= _cs.length ) { // no room for word?
+        int newlen = Math.min(32767,_cs.length<<1);
+        if( _off > 0 && _len < 512 ) newlen = Math.max(1024,newlen);
+        byte[] cs = new byte[newlen];
         System.arraycopy(_cs,_off,cs,0,_len);
         _off=0;
         _cs = cs;
       }
       _cs[_off+_len++] = (byte)c;
-      return waste;
     }
     volatile int _cnt;          // Atomically update
     private static final AtomicIntegerFieldUpdater<VStr> _cntUpdater =
       AtomicIntegerFieldUpdater.newUpdater(VStr.class, "_cnt");
-    void inc() {
+    void inc(int d) {
       int r = _cnt;
-      while( !_cntUpdater.compareAndSet(this,r,r+1) )
+      while( !_cntUpdater.compareAndSet(this,r,r+d) )
         r = _cnt;
     }
 
