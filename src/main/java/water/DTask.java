@@ -18,7 +18,7 @@ import water.H2O.H2OCountedCompleter;
  * <li>On the remote, the {@link #onAckAck()} method will be executed.</li>
  * </ol>
  */
-public abstract class DTask<T> extends H2OCountedCompleter implements Freezable {
+public abstract class DTask<T extends DTask> extends H2OCountedCompleter implements Freezable {
   // Track if the reply came via TCP - which means a timeout on ACKing the TCP
   // result does NOT need to get the entire result again, just that the client
   // needs more time to process the TCP result.
@@ -50,5 +50,5 @@ public abstract class DTask<T> extends H2OCountedCompleter implements Freezable 
   @Override public <F extends Freezable> F read(AutoBuffer bb) { throw barf(); }
   @Override public <F extends Freezable> F newInstance() { throw barf(); }
   @Override public short frozenType() { throw barf(); }
-  public void copyOver(DTask that) { throw barf(); }
+  public void copyOver(T that) { throw barf(); }
 }

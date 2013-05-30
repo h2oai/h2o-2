@@ -98,9 +98,9 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
   // Called from FJ threads to do local work.  The first called Task (which is
   // also the last one to Complete) also reduces any global work.
   @Override public final void compute2() {
+    assert _left == null && _rite == null && _res == null;
     if( _hi-_lo >= 2 ) { // Multi-chunk case: just divide-and-conquer to 1 chunk
       final int mid = (_lo+_hi)>>>1; // Mid-point
-      assert _left == null && _rite == null && _res == null;
       _left = clone(); 
       _rite = clone(); 
       _left._hi = mid;          // Reset mid-point
@@ -159,6 +159,10 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
     // what the user expects
     if( _res != null && _res != this )
       copyOver(_res);
+  }
+  private static String p(MRTask2 x) {
+    if( x==null ) return "(null)";
+    return "("+x._lo+"-"+(x._hi-1)+")";
   }
 
   // Block for RPCs to complete, then reduce global results into self results
