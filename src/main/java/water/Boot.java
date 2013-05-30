@@ -10,6 +10,9 @@ import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import com.google.common.io.CharStreams;
+import com.google.common.io.Closeables;
+
 import water.util.Log;
 import water.util.Utils;
 
@@ -28,6 +31,20 @@ public class Boot extends ClassLoader {
   public static final Boot _init;
   public final byte[] _jarHash;
 
+  public String loadContent(String fromFile) {
+    BufferedReader reader = null;
+    StringBuilder sb = new StringBuilder();
+    try {
+      InputStream is = getResource2(fromFile);
+      reader = new BufferedReader(new InputStreamReader(is));
+      CharStreams.copy(reader, sb);
+    } catch( IOException e ){
+      Log.err(e);
+    } finally {
+      Closeables.closeQuietly(reader);
+    }
+    return sb.toString();
+  }
   private final ZipFile _h2oJar;
   private File _parentDir;
   private Weaver _weaver;

@@ -79,6 +79,7 @@ public class RequestServer extends NanoHTTPD {
 
     // internal handlers
     registerRequest(new StaticHTMLPage(new File("chris-test.html"),"chris-test"));
+    registerRequest(new StaticHTMLPage("/h2o/CoefficientChart.html","chart"));
     registerRequest(new Cancel());
     registerRequest(new Exec());
     registerRequest(new ExportS3Progress());
