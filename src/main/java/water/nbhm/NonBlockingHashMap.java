@@ -1001,8 +1001,7 @@ public class NonBlockingHashMap<TypeK, TypeV>
       // ---
       int panic_start = -1;
       int copyidx=-9999;            // Fool javac to think it's initialized
-      long cd;
-      while( (cd=_copyDone) < oldlen ) { // Still needing to copy?
+      while( _copyDone < oldlen ) { // Still needing to copy?
         // Carve out a chunk of work.  The counter wraps around so every
         // thread eventually tries to copy every slot repeatedly.
 
@@ -1015,8 +1014,7 @@ public class NonBlockingHashMap<TypeK, TypeV>
         // thread counts trying to copy the table often 'panic'.
         if( panic_start == -1 ) { // No panic?
           copyidx = (int)_copyIdx;
-          while( /*copyidx < (oldlen<<1) &&*/ // 'panic' check
-                 !_copyIdxUpdater.compareAndSet(this,copyidx,copyidx+MIN_COPY_WORK) )
+          while( !_copyIdxUpdater.compareAndSet(this,copyidx,copyidx+MIN_COPY_WORK) )
             copyidx = (int)_copyIdx;      // Re-read
           if( !(copyidx < (oldlen<<1)) )  // Panic!
             panic_start = copyidx;        // Record where we started to panic-copy
@@ -1027,7 +1025,6 @@ public class NonBlockingHashMap<TypeK, TypeV>
         for( int i=0; i<MIN_COPY_WORK; i++ )
           if( copy_slot(topmap,(copyidx+i)&(oldlen-1),oldkvs,newkvs) ) // Made an oldtable slot go dead?
             workdone++;         // Yes!
-        System.out.println(", oldlen="+oldlen+" olen="+oldkvs.length+", newlen="+newkvs.length+" panic="+panic_start+" _copyDone="+cd+", workdone="+workdone+"copyidx="+copyidx);
         if( workdone > 0 )      // Report work-done occasionally
           copy_check_and_promote( topmap, oldkvs, workdone );// See if we can promote
         //for( int i=0; i<MIN_COPY_WORK; i++ )
@@ -1094,8 +1091,6 @@ public class NonBlockingHashMap<TypeK, TypeV>
           // Attempt to promote
           topmap.CAS_kvs(oldkvs,_newkvs) ) {
         topmap._last_resize_milli = System.currentTimeMillis(); // Record resize time for next check
-        long nano = System.nanoTime();
-        System.out.println(" "+nano+" Promote table to "+len(_newkvs));
       }
     }
 
@@ -1153,22 +1148,20 @@ public class NonBlockingHashMap<TypeK, TypeV>
       // Copy the value into the new table, but only if we overwrite a null.
       // If another value is already in the new table, then somebody else
       // wrote something there and that write is happens-after any value that
-      // appears in the old table.  If putIfMatch does not find a null in the
-      // new table - somebody else should have recorded the null-not_null
-      // transition in this copy.
+      // appears in the old table.
       Object old_unboxed = ((Prime)oldval)._V;
       assert old_unboxed != TOMBSTONE;
-      boolean copied_into_new = (putIfMatch(topmap, newkvs, key, old_unboxed, null) == null);
+      putIfMatch(topmap, newkvs, key, old_unboxed, null);
 
       // ---
       // Finally, now that any old value is exposed in the new table, we can
       // forever hide the old-table value by slapping a TOMBPRIME down.  This
       // will stop other threads from uselessly attempting to copy this slot
       // (i.e., it's a speed optimization not a correctness issue).
-      while( !CAS_val(oldkvs,idx,oldval,TOMBPRIME) )
+      while( oldval != TOMBPRIME && !CAS_val(oldkvs,idx,oldval,TOMBPRIME) )
         oldval = val(oldkvs,idx);
 
-      return copied_into_new;
+      return oldval != TOMBPRIME; // True if we slammed the TOMBPRIME down
     } // end copy_slot
   } // End of CHM
 
