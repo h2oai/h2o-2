@@ -17,9 +17,9 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1, use_maprfs=True, hdfs_version='maprfs', hdfs_name_node='192.168.1.171:7222')
+            h2o.build_cloud(1, use_maprfs=True, hdfs_version='0.20.2mapr', hdfs_name_node='mr-0x1.0xdata.loc:7222')
         else:
-            h2o_hosts.build_cloud_with_hosts(1, use_maprfs=True, hdfs_version='maprfs', hdfs_name_node='192.168.1.171:7222')
+            h2o_hosts.build_cloud_with_hosts(1, use_maprfs=True, hdfs_version='0.20.2mapr', hdfs_name_node='mr-0x1.0xdata.loc:7222')
 
     @classmethod
     def tearDownClass(cls):
@@ -74,11 +74,11 @@ class Basic(unittest.TestCase):
         timeoutSecs = 200
         # save the first, for all comparisions, to avoid slow drift with each iteration
         firstglm = {}
-        h2i.setupImportHdfs()
+        h2i.setupImportHdfs(path='/', schema='maprfs')
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in hdfs dir 
             print "Loading", csvFilename, 'from HDFS'
-            parseKey = h2i.parseImportHdfsFile(csvFilename=csvFilename, path='/datasets', timeoutSecs=1000)
+            parseKey = h2i.parseImportHdfsFile(csvFilename=csvFilename, path='/datasets', schema='maprfs', timeoutSecs=1000)
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "parse result:", parseKey['destination_key']
 

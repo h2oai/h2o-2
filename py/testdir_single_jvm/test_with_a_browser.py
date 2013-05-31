@@ -19,7 +19,7 @@ class Basic(unittest.TestCase):
         # I'll set use_hdfs to False here, because H2O won't start if it can't talk to the hdfs
         # h2o_hosts.build_cloud_with_hosts(use_hdfs=False)
         ### h2o.build_cloud(1, java_heap_GB=14, use_hdfs=True, java_extra_args='-verbose:class')
-        h2o.build_cloud(1, java_heap_GB=14, use_hdfs=True)
+        h2o.build_cloud(1, java_heap_GB=14, use_maprfs=True, hdfs_version="0.20.2mapr", hdfs_name_node="192.168.1.171")
 
     @classmethod
     def tearDownClass(cls):
