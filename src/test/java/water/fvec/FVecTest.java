@@ -52,10 +52,32 @@ public class FVecTest extends TestUtil {
     //File file = TestUtil.find_test_file("../Dropbox/Sris and Cliff/H20_Rush_New_Dataset_100k.csv");
     Key key = NFSFileVec.make(file);
     NFSFileVec nfs=DKV.get(key).get();
+
+    final long start = System.currentTimeMillis();
     NonBlockingHashMap<VStr,VStr> words = new WordCount().invoke(nfs)._words;
-    VStr[] vss = words.keySet().toArray(new VStr[words.size()]);
-    Arrays.sort(vss);
-    System.out.println("Found "+vss.length+" unique words.");
+    final long time_wc = System.currentTimeMillis();
+    VStr[] vss = new VStr[words.size()];
+    System.out.println("WC takes "+(time_wc-start)+"msec for "+vss.length+" words");
+
+    // Faster version of toArray - because calling toArray on a 16M entry array
+    // is slow.
+    // Start the walk at slot 2, because slots 0,1 hold meta-data
+    // In the raw backing array, Keys and Values alternate in slots
+    int cnt=0;
+    Object[] kvs = WordCount.WORDS.raw_array();
+    for( int i=2; i<kvs.length; i += 2 ) {
+      Object ok = kvs[i+0], ov = kvs[i+1];
+      if( ok != null && ok instanceof VStr && ok == ov )
+        vss[cnt++] = (VStr)ov;
+    }
+    final long time_ary = System.currentTimeMillis();
+    System.out.println("WC toArray "+(time_ary-time_wc)+"msec for "+cnt+" words");
+
+    Arrays.sort(vss,0,cnt,null);
+    final long time_sort = System.currentTimeMillis();
+    System.out.println("WC sort "+(time_sort-time_ary)+"msec for "+cnt+" words");
+
+    System.out.println("Found "+cnt+" unique words.");
     System.out.println(Arrays.toString(vss));
     UKV.remove(key);
   }
@@ -112,6 +134,8 @@ public class FVecTest extends TestUtil {
     }
     @Override public WordCount read(AutoBuffer ab) { 
       super.read(ab);
+      final long start = System.currentTimeMillis();
+      int cnt=0;
       _words = WORDS;
       int len = 0;
       while( (len = ab.get2()) != 65535 ) { // Read until end-of-map marker
@@ -120,7 +144,10 @@ public class FVecTest extends TestUtil {
         vs._cnt = ab.get4();
         VStr vs2 = WORDS.putIfAbsent(vs,vs);
         if( vs2 != null ) vs2.inc(vs._cnt); // Inc count on added word
+        cnt++;
       }
+      final long t = System.currentTimeMillis() - start;
+      System.out.println("WC Read takes "+t+"msec for "+cnt+" words");
       return this;
     }
     @Override public void copyOver(DTask wc) { _words = ((WordCount)wc)._words; }    
