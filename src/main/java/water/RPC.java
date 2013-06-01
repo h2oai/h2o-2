@@ -216,9 +216,9 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     synchronized(this) {        // Install the answer under lock
       if( !isCancelled() ) {
         did = true;             // Did cancel (was not cancelled already)
+        _target.taskRemove(_tasknum);
         _target = null;         // Flag as canceled
         UDPTimeOutThread.PENDING.remove(this);
-        _target.taskRemove(_tasknum);
       }
       notifyAll();              // notify in any case
     }
