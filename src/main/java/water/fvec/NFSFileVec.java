@@ -35,10 +35,11 @@ public class NFSFileVec extends Vec {
   // shift-and-add math.  For variable-sized chunks this is a binary search,
   // with a sane API (JDK has an insane API).
   @Override int elem2ChunkIdx( long i ) {
-    assert 0 <= i && i < _len;
+    assert 0 <= i && i <= _len : " "+i+" < "+_len;
     int cidx = (int)(i>>ValueArray.LOG_CHK);
-    if( cidx == nChunks() ) cidx--; // Last chunk is larger
-    assert 0 <= cidx && cidx < nChunks();
+    int nc = nChunks();
+    if( cidx >= nc ) cidx=nc-1; // Last chunk is larger
+    assert 0 <= cidx && cidx < nc;
     return cidx;    
   }
   // Convert a chunk-index into a starting row #. Constant sized chunks
