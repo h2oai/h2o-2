@@ -144,9 +144,9 @@ public class H2OLauncher extends JPanel implements ActionListener {
 		
 		try {
 			ProcessBuilder pb =
-				new ProcessBuilder("/Users/tomk/0xdata/H2OLauncher/Contents/Resources/jre1.7.0_21-osx/java-osx/bin/java",
+                            new ProcessBuilder("/Users/tomk/0xdata/H2OInstallerJRE/macosx/Contents/Resources/jre1.7.0_21-osx/java-osx/bin/java",
 						"-Xmx" + xmxField.getText().trim(),
-						"-jar", "/Users/tomk/0xdata/H2OLauncher/Contents/Resources/h2o.jar",
+						"-jar", "/Users/tomk/0xdata/ws/h2o/target/h2o.jar",
 						"-name", cloudField.getText().trim(),
 						"-port", portField.getText().trim()
 						);
