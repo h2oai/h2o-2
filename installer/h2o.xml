@@ -84,6 +84,48 @@
             </startMenuShortcutList>
         </component>
     </componentList>
+    <postBuildActionList>
+        <createTimeStamp>
+            <format>%Y%m%d%H%M%S</format>
+            <variable>timestamp</variable>
+        </createTimeStamp>
+        <setInstallerVariable>
+            <name>tempDir</name>
+            <value>/tmp/.tmpDir${timestamp}</value>
+        </setInstallerVariable>
+        <setInstallerVariable>
+            <name>dmgName</name>
+            <value>${project.outputDirectory}/${project.installerFilename}.dmg</value>
+        </setInstallerVariable>
+        <setInstallerVariable>
+            <name>tempDmgFile</name>
+            <value>${tempDir}/tmp.dmg</value>
+        </setInstallerVariable>
+        <deleteFile>
+            <path>${project.outputDirectory}/${project.installerFilename}.dmg</path>
+        </deleteFile>
+        <deleteFile>
+            <path>${tempDir}</path>
+        </deleteFile>
+        <createDirectory>
+            <path>${tempDir}/output</path>
+        </createDirectory>
+        <copyFile>
+            <destination>${tempDir}/output</destination>
+            <origin>${project.outputDirectory}/${project.installerFilename}</origin>
+        </copyFile>
+        <runProgram>
+            <program>hdiutil</program>
+            <programArguments>create -srcfolder "${tempDir}/output" -volname "${project.fullName}" -fs HFS+ -fsargs "-c c=64,a=16,e=16" -format UDRW "${tempDmgFile}"</programArguments>
+        </runProgram>
+        <runProgram>
+            <program>hdiutil</program>
+            <programArguments>convert "${tempDmgFile}" -format UDZO -imagekey zlib-level=9 -o "${dmgName}"</programArguments>
+        </runProgram>
+        <deleteFile>
+            <path>${tempDir}</path>
+        </deleteFile>
+    </postBuildActionList>
     <preInstallationActionList>
         <setInstallerVariable>
             <name>installdir</name>
