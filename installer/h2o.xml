@@ -65,7 +65,7 @@
                             <origin>${build_project_directory}/../target/h2o.jar</origin>
                         </distributionFile>
                         <distributionDirectory>
-                            <origin>${build_project_directory}/../../H2OInstallerJRE/macosx/Contents</origin>
+                            <origin>${build_project_directory}/../../../H2OInstallerJRE/macosx/Contents</origin>
                         </distributionDirectory>
                     </distributionFileList>
                 </folder>
@@ -108,6 +108,24 @@
         </if>
     </preInstallationActionList>
     <postInstallationActionList>
+        <renameFile>
+            <destination>${installdir}/Contents/Resources/H2OLauncher.jar</destination>
+            <origin>${installdir}/H2OLauncher.jar</origin>
+            <ruleList>
+                <platformTest>
+                    <type>osx</type>
+                </platformTest>
+            </ruleList>
+        </renameFile>
+        <renameFile>
+            <destination>${installdir}/Contents/Resources/h2o.jar</destination>
+            <origin>${installdir}/h2o.jar</origin>
+            <ruleList>
+                <platformTest>
+                    <type>osx</type>
+                </platformTest>
+            </ruleList>
+        </renameFile>
         <showQuestion>
             <default>yes</default>
             <text>Would you like to start H2O now?</text>
