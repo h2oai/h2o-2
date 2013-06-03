@@ -58,6 +58,15 @@
                         <distributionDirectory>
                             <origin>${build_project_directory}/macosx/Contents</origin>
                         </distributionDirectory>
+                        <distributionFile>
+                            <origin>${build_project_directory}/../launcher/target/H2OLauncher.jar</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>${build_project_directory}/../target/h2o.jar</origin>
+                        </distributionFile>
+                        <distributionDirectory>
+                            <origin>${build_project_directory}/../../H2OInstallerJRE/macosx/Contents</origin>
+                        </distributionDirectory>
                     </distributionFileList>
                 </folder>
             </folderList>
