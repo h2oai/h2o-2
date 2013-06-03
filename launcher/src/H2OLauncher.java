@@ -3,6 +3,7 @@ import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.io.IOException;
@@ -143,13 +144,16 @@ public class H2OLauncher extends JPanel implements ActionListener {
 		}
 		
 		try {
-			ProcessBuilder pb =
-                            new ProcessBuilder("/Users/tomk/0xdata/H2OInstallerJRE/macosx/Contents/Resources/jre1.7.0_21-osx/java-osx/bin/java",
-						"-Xmx" + xmxField.getText().trim(),
-						"-jar", "/Users/tomk/0xdata/ws/h2o/target/h2o.jar",
-						"-name", cloudField.getText().trim(),
-						"-port", portField.getText().trim()
-						);
+			File currentDirectory = new File(new File(".").getAbsolutePath());
+			String javaBinary = currentDirectory.getAbsolutePath().toString() + "/jre1.7.0_21-osx/java-osx/bin/java";
+			String h2oJar = currentDirectory.getAbsolutePath().toString() + "/h2o.jar";
+			ProcessBuilder pb = new ProcessBuilder(
+					javaBinary,
+					"-Xmx" + xmxField.getText().trim(),
+					"-jar", h2oJar,
+					"-name", cloudField.getText().trim(),
+					"-port", portField.getText().trim()
+					);
 			pb.redirectErrorStream(true);
 			
 			Process p = pb.start();
@@ -253,9 +257,9 @@ public class H2OLauncher extends JPanel implements ActionListener {
 		addPadding();
 
 		JLabel cloudLabel;
-		cloudLabel = new JLabel ("Cloud name");
+		cloudLabel = new JLabel ("H2O cluster name");
 		cloudField = new JTextField (20);
-		cloudField.setToolTipText("H2O nodes must have the same cloud name in order to form a cloud.  By default, a random name is chosen to prevent you from accidentally joining an existing cloud.");
+		cloudField.setToolTipText("H2O nodes must have the same cluster name in order to form a cluster.  By default, a random name is chosen to prevent you from accidentally joining an existing cluster.");
 		cloudField.addActionListener(this);
 		cloudField.setActionCommand(CLOUD_COMMAND);
 		{
@@ -264,7 +268,7 @@ public class H2OLauncher extends JPanel implements ActionListener {
 			if (randValue < 0) {
 				randValue = -randValue;
 			}
-			String s = "cloud_" + (randValue.toString());
+			String s = "h2o_cluster_" + (randValue.toString());
 			cloudField.setText (s);
 
 			myAdd(cloudLabel, makeLabelConstraints());
