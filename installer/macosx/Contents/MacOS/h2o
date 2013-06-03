@@ -9,5 +9,5 @@ jar_file="${H2O_DIR}/H2OLauncher.jar"
 
 # Run H2OLauncher in the background.
 cd $H2O_DIR
-$JAVA_HOME/bin/java -ea -cp ${jar_file} water.Boot 1> /tmp/h2olauncher.out 2> /tmp/h2olauncher.err &
+$JAVA_HOME/bin/java -ea -jar ${jar_file} 1> /tmp/h2olauncher.out 2> /tmp/h2olauncher.err &
 
