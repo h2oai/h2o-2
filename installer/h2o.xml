@@ -216,7 +216,7 @@
                 </setInstallerVariable>
                 <setInstallerVariable>
                     <name>startscript</name>
-                    <value>${installdir}/h2o.bat</value>
+                    <value>${installdir}\h2o.bat</value>
                     <ruleList>
                         <platformTest>
                             <type>windows</type>
