@@ -154,6 +154,7 @@ public final class H2O {
 
     // See if this is a specifically homed Key
     if( !key.user_allowed() && repl < kb[1] ) { // Asking for a replica# from the homed list?
+      assert kb[0] != Key.DVEC;
       H2ONode h2o=null, h2otmp = new H2ONode(); // Fill in the fields from the Key
       AutoBuffer ab = new AutoBuffer(kb,2);
       for( int i=0; i<=repl; i++ )

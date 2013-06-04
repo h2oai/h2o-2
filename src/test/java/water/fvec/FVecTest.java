@@ -44,8 +44,32 @@ public class FVecTest extends TestUtil {
     }
   }
 
+  @Test public void testNewVec() {
+    // Make and insert a FileVec to the global store
+    File file = TestUtil.find_test_file("./smalldata/cars.csv");
+    Key key = NFSFileVec.make(file);
+    NFSFileVec nfs=DKV.get(key).get();
+    Key key2 = Key.make("newKey",(byte)0,Key.VEC);
+    NewVec nv = new NewVec(key2);
+    Vec res = new TestNewVec().invoke(nv,nfs).vecs(0).close();
 
-  @Test public void testWordCount() {
+    int cidx = res.elem2ChunkIdx(0); // Element/row# to chunk#
+    Value dvec = res.chunkIdx(cidx); // Chunk# to chunk data
+    System.err.println(new String(dvec.memOrLoad()));
+
+    UKV.remove(key );
+    UKV.remove(key2);
+  }
+
+  public static class TestNewVec extends MRTask2<TestNewVec> {
+    @Override public void map( long start, int len, BigVector out, BigVector in ) {
+      for( long i=start; i<start+len; i++ )
+        out.append2(in.at(i)+1); // shift all bytes up one
+    }
+  }
+
+  // ==========================================================================
+  /*@Test*/ public void testWordCount() {
     File file = TestUtil.find_test_file("./smalldata/cars.csv");
     //File file = TestUtil.find_test_file("../wiki/enwiki-latest-pages-articles.xml");
     //File file = TestUtil.find_test_file("/home/0xdiag/datasets/wiki.xml");

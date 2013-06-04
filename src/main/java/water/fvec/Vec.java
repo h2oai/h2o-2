@@ -35,6 +35,10 @@ public class Vec extends Iced {
   // alternative way, such as file-backed Vecs.
   public int nChunks() { return _espc.length-1; }
 
+  // Default read/write behavior for Vecs
+  public boolean readable() { return true ; }
+  public boolean writable() { return false; }
+
   // Convert a row# to a chunk#.  For constant-sized chunks this is a little
   // shift-and-add math.  For variable-sized chunks this is a binary search,
   // with a sane API (JDK has an insane API).  Overridden by subclasses that
@@ -58,7 +62,6 @@ public class Vec extends Iced {
   // Convert a chunk index into a data chunk key.  It's just the main Key with
   // the given chunk#.
   public Key chunkKey( int cidx ) {
-    assert 0 <= cidx && cidx < nChunks();
     byte[] bits = _key._kb.clone(); // Copy the Vec key
     bits[0] = Key.DVEC;             // Data chunk key
     bits[1] = -1;                   // Not homed
@@ -79,8 +82,7 @@ public class Vec extends Iced {
     return (int)(i - chunk2StartElem(cidx));
   }
   // Matching CVec for a given element
-  public final BigVector elem2BV( long i ) {
-    int cidx = elem2ChunkIdx(i);        // Element/row# to chunk#
+  public BigVector elem2BV( long i, int cidx ) {
     long start = chunk2StartElem(cidx); // Chunk# to chunk starting element#
     Value dvec = chunkIdx(cidx);        // Chunk# to chunk data
     BigVector bv = dvec.get();          // Chunk data to compression wrapper
@@ -92,6 +94,9 @@ public class Vec extends Iced {
   }
 
   // Fetch element the slow way
-  long at( long i ) { return elem2BV(i).at(i); }
+  long at( long i ) { return elem2BV(i,elem2ChunkIdx(i)).at(i); }
   double atd( long i ) { throw H2O.unimpl(); }
+
+  // Take any final action on a new vector to close it out
+  Vec close() { throw H2O.fail(); }
 }

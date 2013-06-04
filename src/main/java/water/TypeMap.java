@@ -11,7 +11,7 @@ public class TypeMap {
   static public final short NULL = (short) -1;
   static public final short PRIM_B = 1;
   static public final short VALUE_ARRAY;
-  static public final short C0VEC;
+  static public final short C0VECTOR;
 
   static private final HashMap<String, Integer> MAP = new HashMap();
   static private final String[] CLAZZES;
@@ -27,7 +27,7 @@ public class TypeMap {
           String line = r.readLine();
           if( line == null || line.length() == 0 ) break;
           if( line.equals("water.ValueArray") ) va_id = i;
-          if( line.equals("water.fvec.C0Vec") ) c0_id = i;
+          if( line.equals("water.fvec.C0Vector") ) c0_id = i;
           MAP.put(line, i++);
         }
       } catch( IOException e ) {
@@ -35,7 +35,7 @@ public class TypeMap {
       }
     }
     VALUE_ARRAY = (short) va_id; // Pre-cached the type id for ValueArray
-    C0VEC       = (short) c0_id; // Pre-cached the type id for C0Vec
+    C0VECTOR    = (short) c0_id; // Pre-cached the type id for C0Vector
     GOLD = new Freezable[i];
     CLAZZES = new String[i];
     for( Entry<String, Integer> entry : MAP.entrySet() )

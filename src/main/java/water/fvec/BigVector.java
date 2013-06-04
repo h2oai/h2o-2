@@ -19,7 +19,7 @@ public abstract class BigVector extends Iced {
   // chunk-relative indices - requiring a load from an aliasing local var,
   // leading to lower quality JIT'd code (similar issue to using iterator
   // objects).
-  public long at( long i ) { 
+  public final long at( long i ) { 
     long x = i-_start;
     if( 0 <= x && x < _len ) return at_impl((int)x);
     return _vec.at(i);          // Go Slow
@@ -28,9 +28,9 @@ public abstract class BigVector extends Iced {
   // over the data than the generic at() API.  Probably no gain on larger
   // loops.  The row reference is zero-based on the chunk, and should
   // range-check by the JIT as expected.
-  public long at0( int i ) { return at_impl(i); }
+  public final long at0( int i ) { return at_impl(i); }
   // Double variant of the above 'long' variant.
-  public double atd( long i ) { 
+  public final double atd( long i ) { 
     long x = i-_start;
     if( 0 <= x && x < _len ) return atd_impl((int)x);
     return _vec.atd(i);
@@ -38,6 +38,9 @@ public abstract class BigVector extends Iced {
   // Chunk-specific decompression of chunk-relative indexed data
   abstract long   at_impl ( int i );
   abstract double atd_impl( int i );
+  // Chunk-specific append of data
+  abstract void append2( long   l );
+  abstract void append2( double d );
   // Chunk-specific implementations of read & write
   public abstract AutoBuffer write(AutoBuffer bb);
   public abstract BigVector  read (AutoBuffer bb);
