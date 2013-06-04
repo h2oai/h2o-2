@@ -59,6 +59,22 @@
                             <origin>${build_project_directory}/../../../H2OInstallerJRE/windows</origin>
                         </distributionDirectory>
                     </distributionFileList>
+                    <shortcutList>
+                        <shortcut>
+                            <comment></comment>
+                            <exec></exec>
+                            <icon></icon>
+                            <name>H2O</name>
+                            <path></path>
+                            <platforms>windows</platforms>
+                            <runAsAdmin>0</runAsAdmin>
+                            <runInTerminal>0</runInTerminal>
+                            <windowsExec>${installdir}\h2o.bat</windowsExec>
+                            <windowsExecArgs></windowsExecArgs>
+                            <windowsIcon>${installdir}\h2o.ico</windowsIcon>
+                            <windowsPath></windowsPath>
+                        </shortcut>
+                    </shortcutList>
                 </folder>
                 <folder>
                     <description>Program Files</description>
@@ -200,7 +216,7 @@
                 </setInstallerVariable>
                 <setInstallerVariable>
                     <name>startscript</name>
-                    <value>${installdir}/fix-windows-path.bat</value>
+                    <value>${installdir}/h2o.bat</value>
                     <ruleList>
                         <platformTest>
                             <type>windows</type>
