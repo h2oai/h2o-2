@@ -145,8 +145,9 @@ public class H2OLauncher extends JPanel implements ActionListener {
 		
 		try {
 			File currentDirectory = new File(new File(".").getAbsolutePath());
-			String javaBinary = currentDirectory.getAbsolutePath().toString() + "/jre1.7.0_21-osx/java-osx/bin/java";
-			String h2oJar = currentDirectory.getAbsolutePath().toString() + "/h2o.jar";
+                        String javaHome = System.getProperty("java.home");
+			String javaBinary = javaHome + File.separator + "bin" + File.separator + "java";
+			String h2oJar = currentDirectory.getAbsolutePath().toString() + File.separator + "h2o.jar";
 			ProcessBuilder pb = new ProcessBuilder(
 					javaBinary,
 					"-Xmx" + xmxField.getText().trim(),
