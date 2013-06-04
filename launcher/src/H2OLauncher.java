@@ -332,6 +332,7 @@ public class H2OLauncher extends JPanel implements ActionListener {
 
 		addPadding();
 
+                final int textAreaHeightInLines = 12;
 		final int textAreaWidthInCharacters = 60;
 		final int wideFieldDiffInCharacters = 0;
 
@@ -370,7 +371,7 @@ public class H2OLauncher extends JPanel implements ActionListener {
 			myAdd(outputLabel, makeLabelConstraints());
 		}
 
-		textArea = new JTextArea(30, textAreaWidthInCharacters);
+		textArea = new JTextArea(textAreaHeightInLines, textAreaWidthInCharacters);
 		textArea.setEditable(false);
 		JScrollPane scrollPane = new JScrollPane(textArea);
 		scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
