@@ -84,6 +84,13 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
       if( selfidx+1 < _nhi ) _nrite = remote_compute(selfidx+1,_nhi);
     }
     _lo = 0;  _hi = _vec0.nChunks(); // Do All Chunks
+    // If we have any output vectors, make a blockable Futures for them to
+    // block on.
+    for( Vec v : _vecs )
+      if( v != null && v instanceof NewVec ) {
+        _fs = new Futures();
+        break;
+      }
     init();                     // Setup any user's shared local structures
   }
 
@@ -120,12 +127,24 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
       long start = _vec0.chunk2StartElem(_lo);
       Key dkey = _vec0.chunkKey(_lo);
       if( dkey.home() ) {       // And chunk is homed here?
+
+        // Make decompression chunk headers for these chunks
+        BigVector bvs[] = new BigVector[_vecs.length];
+        for( int i=0; i<_vecs.length; i++ )
+          if( _vecs[i] != null )
+            bvs[i] = _vecs[i].elem2BV(start,_lo);
+        final int len = _vec0.elem2BV(start,_lo)._len;
+
         // Call the various map() calls
-        BigVector bv = _vec0.elem2BV(start,_lo);
-        if( _vecs.length == 1 ) map(start, bv._len, bv);
-        if( _vecs.length == 2 ) map(start, bv._len, _vecs[0].elem2BV(start,_lo), _vecs[1].elem2BV(start,_lo));
+        if( _vecs.length == 1 ) map(start, len, bvs[0]);
+        if( _vecs.length == 2 ) map(start, len, bvs[0], bvs[1]);
         if( _vecs.length > 2 ) throw H2O.unimpl();
         _res = self();          // Save results since called map() at least once!
+
+        // Further D/K/V put any new vec results.
+        for( BigVector bv : bvs )
+          if( bv != null && bv instanceof NewVector )
+            ((NewVector)bv).close(_fs);
       }
     }
     tryComplete();              // And this task is complete
