@@ -208,43 +208,21 @@ public final class PersistHdfs extends Persist {
   }
 
   @Override public Value lazyArrayChunk(final Key key) {
-    Value val;
-    if( _iceRoot != null ) {
-      assert key._kb[0] == Key.ARRAYLET_CHUNK;
-      assert key.home();          // Only do this on the home node
-      final Size size = new Size();
-      run(new Callable() {
-        @Override public Object call() throws Exception {
-          // typed as a Value chunk, not the array header
-          Path p = new Path(_iceRoot, getIceName(key, (byte) 'V'));
-          FileSystem fs = FileSystem.get(p.toUri(), CONF);
-          size._value = (int) fs.getFileStatus(p).getLen();
-          return null;
-        }
-      }, true, 0);
-      val = new Value(key, size._value);
-    } else {
-      final Key arykey = ValueArray.getArrayKey(key);  // From the base file key
-      final Size size = new Size();
-      run(new Callable() {
-        @Override public Object call() throws Exception {
-          Path p = new Path(arykey.toString());
-          FileSystem fs = FileSystem.get(p.toUri(), CONF);
-          size._value = (int) fs.getFileStatus(p).getLen();
-          return null;
-        }
-      }, true, 0);
-      long off = ValueArray.getChunkOffset(key); // The offset
-      long rem = size._value - off; // Remainder to be read
-      if( arykey.toString().endsWith(Extensions.HEX) ) { // Hex file?
-        int value_len = DKV.get(arykey).memOrLoad().length;  // How long is the ValueArray header?
-        rem -= value_len;
+    final Key arykey = ValueArray.getArrayKey(key);  // From the base file key
+    final long off = (_iceRoot != null)?0:ValueArray.getChunkOffset(key); // The offset
+    final Path p = (_iceRoot != null)
+        ?new Path(_iceRoot, getIceName(key, (byte) 'V'))
+        :new Path(arykey.toString());
+    final Size sz = new Size();
+    run(new Callable() {
+      @Override public Object call() throws Exception {
+        FileSystem fs = FileSystem.get(p.toUri(), CONF);
+        long rem = fs.getFileStatus(p).getLen() - off;
+        sz._value = (rem > ValueArray.CHUNK_SZ*2)?(int)ValueArray.CHUNK_SZ:(int)rem;
+        return null;
       }
-      // the last chunk can be fat, so it got packed into the earlier chunk
-      if( rem < ValueArray.CHUNK_SZ && off > 0 ) return null;
-      int sz = (rem >= ValueArray.CHUNK_SZ * 2) ? (int) ValueArray.CHUNK_SZ : (int) rem;
-      val = new Value(key, sz, Value.HDFS);
-    }
+    }, true, 0);
+    Value val = new Value(key, sz._value, Value.HDFS);
     val.setdsk(); // But its already on disk.
     return val;
   }
