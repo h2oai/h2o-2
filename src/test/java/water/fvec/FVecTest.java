@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 public class FVecTest extends TestUtil {
 
-  @BeforeClass public static void stall() { stall_till_cloudsize(2); }
+  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   @Test public void testBasicCRUD() {
     // Make and insert a FileVec to the global store
@@ -46,9 +46,9 @@ public class FVecTest extends TestUtil {
 
 
   @Test public void testWordCount() {
-    //File file = TestUtil.find_test_file("./smalldata/cars.csv");
+    File file = TestUtil.find_test_file("./smalldata/cars.csv");
     //File file = TestUtil.find_test_file("../wiki/enwiki-latest-pages-articles.xml");
-    File file = TestUtil.find_test_file("/home/0xdiag/datasets/wiki.xml");
+    //File file = TestUtil.find_test_file("/home/0xdiag/datasets/wiki.xml");
     //File file = TestUtil.find_test_file("../Dropbox/Sris and Cliff/H20_Rush_New_Dataset_100k.csv");
     Key key = NFSFileVec.make(file);
     NFSFileVec nfs=DKV.get(key).get();

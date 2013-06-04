@@ -16,7 +16,9 @@ import water.*;
 public class Vec extends Iced {
   final Key _key;               // Top-level key
   // Element-start per chunk.  Always zero for chunk 0.  One more entry than
-  // chunks, so the last entry is the total number of rows.
+  // chunks, so the last entry is the total number of rows.  This field is
+  // dead/ignored in subclasses that are guaranteed to have fixed-sized chunks
+  // such as file-backed Vecs.
   final long _espc[];
 
   Vec( Key key, long espc[] ) {
@@ -25,15 +27,18 @@ public class Vec extends Iced {
     _espc = espc; 
   }
 
-  // Number of elements in the vector
+  // Number of elements in the vector.  Overridden by subclasses that compute
+  // length in an alternative way, such as file-backed Vecs.
   long length() { return _espc[_espc.length-1]; }
 
-  // Number of chunks
+  // Number of chunks.  Overridden by subclasses that compute chunks in an
+  // alternative way, such as file-backed Vecs.
   public int nChunks() { return _espc.length-1; }
 
   // Convert a row# to a chunk#.  For constant-sized chunks this is a little
   // shift-and-add math.  For variable-sized chunks this is a binary search,
-  // with a sane API (JDK has an insane API).
+  // with a sane API (JDK has an insane API).  Overridden by subclasses that
+  // compute chunks in an alternative way, such as file-backed Vecs.
   int elem2ChunkIdx( long i ) {
     assert 0 <= i && i < length();
     int lo=0, hi = nChunks();
@@ -46,8 +51,8 @@ public class Vec extends Iced {
   }
 
   // Convert a chunk-index into a starting row #.  For constant-sized chunks
-  // this is a little shift-and-add math.  For variable-sized chunks this is
-  // probably a table lookup.
+  // this is a little shift-and-add math.  For variable-sized chunks this is a
+  // table lookup.
   public long chunk2StartElem( int cidx ) { return _espc[cidx]; }
 
   // Convert a chunk index into a data chunk key.  It's just the main Key with
@@ -56,6 +61,7 @@ public class Vec extends Iced {
     assert 0 <= cidx && cidx < nChunks();
     byte[] bits = _key._kb.clone(); // Copy the Vec key
     bits[0] = Key.DVEC;             // Data chunk key
+    bits[1] = -1;                   // Not homed
     UDP.set4(bits,2,cidx);          // Chunk#
     return Key.make(bits);
   }
@@ -78,13 +84,14 @@ public class Vec extends Iced {
     long start = chunk2StartElem(cidx); // Chunk# to chunk starting element#
     Value dvec = chunkIdx(cidx);        // Chunk# to chunk data
     BigVector bv = dvec.get();          // Chunk data to compression wrapper
-    assert bv._start == -1 || bv._start == start;
+    if( bv._start == start ) return bv; // Already filled-in
+    assert bv._start == -1;
     bv._start = start;          // Fields not filled in by unpacking from Value
     bv._vec = this;             // Fields not filled in by unpacking from Value
     return bv;
   }
 
-  // Fetch element
+  // Fetch element the slow way
   long at( long i ) { return elem2BV(i).at(i); }
   double atd( long i ) { throw H2O.unimpl(); }
 }
