@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# Set up variables and environment variables.
+dir=`/usr/bin/dirname $0`
+jre_version=jre1.7.0_21-osx
+export JAVA_HOME=$dir/../Resources/$jre_version/java-osx
+export H2O_DIR=$dir/../Resources
+jar_file="${H2O_DIR}/H2OLauncher.jar"
+
+# Run H2OLauncher in the background.
+cd $H2O_DIR
+$JAVA_HOME/bin/java -ea -Xmx128m -jar ${jar_file} 1> /tmp/h2olauncher.out 2> /tmp/h2olauncher.err &
+
