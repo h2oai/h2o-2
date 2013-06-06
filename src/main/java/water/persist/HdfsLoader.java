@@ -22,7 +22,7 @@ public class HdfsLoader {
     String version = Objects.firstNonNull(H2O.OPT_ARGS.hdfs_version, DEFAULT_HDFS_VERSION);
 
     // If HDFS URI is MapR-fs - Switch two MapR version of hadoop
-    if( "mapr".equals(version) || Strings.nullToEmpty(H2O.OPT_ARGS.hdfs).startsWith("maprsfs://") ) {
+    if( "mapr".equals(version) || Strings.nullToEmpty(H2O.OPT_ARGS.hdfs).startsWith("maprfs://") ) {
       version = MAPRFS_HDFS_VERSION;
     }
     try {
