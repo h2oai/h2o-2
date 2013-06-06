@@ -46,12 +46,13 @@ public class FVecTest extends TestUtil {
 
   @Test public void testNewVec() {
     // Make and insert a FileVec to the global store
-    File file = TestUtil.find_test_file("./smalldata/cars.csv");
+    //File file = TestUtil.find_test_file("./smalldata/cars.csv");
+    File file = TestUtil.find_test_file("../Dropbox/Sris and Cliff/H20_Rush_New_Dataset_100k.csv");
     Key key = NFSFileVec.make(file);
     NFSFileVec nfs=DKV.get(key).get();
     Key key2 = Key.make("newKey",(byte)0,Key.VEC);
-    NewVec nv = new NewVec(key2);
-    Vec res = new TestNewVec().invoke(nv,nfs).vecs(0).close();
+    AppendableVec nv = new AppendableVec(key2);
+    Vec res = new TestNewVec().invoke(nv,nfs).vecs(0);
 
     int cidx = res.elem2ChunkIdx(0); // Element/row# to chunk#
     Value dvec = res.chunkIdx(cidx); // Chunk# to chunk data
@@ -64,7 +65,7 @@ public class FVecTest extends TestUtil {
   public static class TestNewVec extends MRTask2<TestNewVec> {
     @Override public void map( long start, int len, BigVector out, BigVector in ) {
       for( long i=start; i<start+len; i++ )
-        out.append2(in.at(i)+1); // shift all bytes up one
+        out.append2( in.at(i)+(in.at(i) >= ' ' ? 1 : 0));
     }
   }
 

@@ -9,7 +9,10 @@ public class NewVector extends BigVector {
   transient long _ls[];
   transient double _ds[];
 
-  NewVector( int cidx, Vec vec ) { _vec = vec; _cidx = cidx; }
+  NewVector( AppendableVec vec, int cidx ) { 
+    _vec = vec;                 // Owning AppendableVec
+    _cidx = cidx;               // This chunk#
+  }
 
   // Fast-path append long data
   @Override void append2( long l ) {
@@ -21,7 +24,7 @@ public class NewVector extends BigVector {
     if( _ds != null ) throw H2O.unimpl();
     if( _ls == null ) _ls = new long[1024];
     if( _len >= _ls.length ) {
-      if( _len >= ValueArray.CHUNK_SZ )
+      if( _len > ValueArray.CHUNK_SZ )
         throw new ArrayIndexOutOfBoundsException(_len);
       _ls = Arrays.copyOf(_ls,_len<<1);
     }
@@ -34,6 +37,7 @@ public class NewVector extends BigVector {
   // (does not live on inside the K/V store).
   public void close(Futures fs) {
     DKV.put(_vec.chunkKey(_cidx),compress(),fs);
+    ((AppendableVec)_vec).closeChunk(_cidx,_len);
   }
 
   // Study this NewVector and determine an appropriate compression scheme.

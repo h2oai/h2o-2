@@ -207,12 +207,14 @@ public final class Key extends Iced implements Comparable {
     // 0 - systemType, from 0-31
     // 1 - replica-count, plus up to 3 bits for ip4 vs ip6
     // 2-n - zero, one, two or 3 IP4 (4+2 bytes) or IP6 (16+2 bytes) addresses
-    // n+ - kb.length, repeat of the original kb
+    // 2-5- 4 bytes of chunk#, or -1 for masters
+    // n+ - repeat of the original kb
     AutoBuffer ab = new AutoBuffer();
     ab.put1(systemType).put1(replicas.length);
     for( H2ONode h2o : replicas )
       h2o.write(ab);
-    ab.putA1(kb);
+    ab.put4(-1);
+    ab.putA1(kb,kb.length);
     return make(Arrays.copyOf(ab.buf(),ab.position()),rf);
   }
 

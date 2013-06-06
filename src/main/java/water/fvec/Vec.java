@@ -48,8 +48,8 @@ public class Vec extends Iced {
     int lo=0, hi = nChunks();
     while( lo < hi ) {
       int mid = (hi-lo)>>1;
-      if( i < _espc[mid] ) hi = mid;
-      else                 lo = mid;
+      if( i <= _espc[mid] ) hi = mid;
+      else                  lo = mid;
     }
     return lo;
   }
