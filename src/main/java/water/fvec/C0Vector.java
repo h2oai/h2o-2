@@ -15,4 +15,6 @@ public class C0Vector extends BigVector {
     _len = _mem.length;
     return this; 
   }
+  public int get2(int off) { return UDP.get2(_mem,off); }
+  public int get4(int off) { return UDP.get4(_mem,off); }
 }

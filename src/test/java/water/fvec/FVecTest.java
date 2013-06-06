@@ -72,9 +72,14 @@ public class FVecTest extends TestUtil {
   }
 
   // ==========================================================================
-  //Key fkey = load_test_file("smalldata/cars.csv");
-  //Key okey = Key.make("cars.hex");
-  //ParseDataset.parse(okey,new Key[]{fkey});
+  @Test public void testParse() {
+    File file = TestUtil.find_test_file("./smalldata/cars.csv");
+    Key fkey = NFSFileVec.make(file);
+
+    Key okey = Key.make("cars.hex");
+    ParseDataset2.parse(okey,new Key[]{fkey});
+  }
+
   // ==========================================================================
   /*@Test*/ public void testWordCount() {
     File file = TestUtil.find_test_file("./smalldata/cars.csv");

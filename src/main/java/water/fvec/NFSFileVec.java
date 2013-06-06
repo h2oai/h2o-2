@@ -1,11 +1,12 @@
 package water.fvec;
 
 import java.io.File;
+import java.io.InputStream;
 import water.*;
 
 // A distributed file-backed Vector
 //
-public class NFSFileVec extends Vec {
+public class NFSFileVec extends ByteVec {
   final long _len;              // File length
 
   // Make a new NFSFileVec key which holds the filename implicitly.
@@ -69,5 +70,4 @@ public class NFSFileVec extends Vec {
     Value val3 = DKV.DputIfMatch(dkey,val2,null,null);
     return val3 == null ? val2 : val3;
   }  
-
 }

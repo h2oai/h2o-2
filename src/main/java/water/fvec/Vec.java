@@ -96,7 +96,4 @@ public class Vec extends Iced {
   // Fetch element the slow way
   long at( long i ) { return elem2BV(i,elem2ChunkIdx(i)).at(i); }
   double atd( long i ) { throw H2O.unimpl(); }
-
-  // Take any final action on a new vector to close it out
-  Vec close() { throw H2O.fail(); }
 }

@@ -484,7 +484,7 @@ NEXT_CHAR:
       return _separator == s._separator && _data[0].length == s._data[0].length;
     }
     @Override public String toString() {
-      return "'"+_separator+"' head="+_header+" cols="+_data[0].length;
+      return "'"+(char)_separator+"' head="+_header+" cols="+_data[0].length;
     }
   }
 
