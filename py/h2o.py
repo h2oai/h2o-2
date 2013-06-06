@@ -246,7 +246,12 @@ def spawn_cmd(name, args, capture_output=True):
     if capture_output:
         outfd,outpath = tmp_file(name + '.stdout.', '.log')
         errfd,errpath = tmp_file(name + '.stderr.', '.log')
-        ps = psutil.Popen(args, stdin=None, stdout=outfd, stderr=errfd)
+        # make args a string, so we can do ulimit, and execute with shell
+        if (1==0):
+            argsStr = 'ulimit -u 1024;' + ' '.join(args)
+            ps = psutil.Popen(argsStr, stdin=None, stdout=outfd, stderr=errfd, shell=True)
+        else:
+            ps = psutil.Popen(args, stdin=None, stdout=outfd, stderr=errfd)
     else:
         outpath = '<stdout>'
         errpath = '<stderr>'
@@ -1372,8 +1377,8 @@ class H2O(object):
             ]
         if self.use_maprfs:
             args += [
-                # it's fine if hdfs_name has a ":9000" port or something too
-                '-hdfs maprfs://' + self.hdfs_name_node,
+                # 3 slashes?
+                '-hdfs maprfs:///' + self.hdfs_name_node,
                 '-hdfs_version=' + self.hdfs_version, 
             ]
         if self.hdfs_config:

@@ -93,26 +93,27 @@ def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
         print "\nParse result:", parseKey
     return parseKey
 
-def setupImportHdfs(node=None, path=None, schema='hdfs'):
+def setupImportHdfs(node=None, path=None, schema='hdfs://'):
     if not node: node = h2o.nodes[0]
-    hdfsPrefix = schema + '://' + node.hdfs_name_node
+    print "schema:", schema
+    hdfsPrefix = schema + node.hdfs_name_node
     if path is None:
         URI = hdfsPrefix + '/datasets'
     else:
         URI = hdfsPrefix + path
 
+    print "URI:", URI
     importHdfsResult = node.import_hdfs(URI)
-    # too many hdfs keys to print now
     h2o.verboseprint(h2o.dump_json(importHdfsResult))
     return importHdfsResult
 
-def parseImportHdfsFile(node=None, csvFilename=None, path=None, schema='hdfs',
+def parseImportHdfsFile(node=None, csvFilename=None, path=None, schema='hdfs://',
     timeoutSecs=3600, retryDelaySecs=2, initialDelaySecs=1, pollTimeoutSecs=60, noise=None,
     benchmarkLogging=None, noPoll=False, **kwargs):
     if not csvFilename: raise Exception('No csvFilename parameter in parseImportHdfsFile')
     if not node: node = h2o.nodes[0]
 
-    hdfsPrefix = schema + '://' + node.hdfs_name_node
+    hdfsPrefix = schema + node.hdfs_name_node
     if path is None:
         URI = hdfsPrefix + '/datasets'
     else:

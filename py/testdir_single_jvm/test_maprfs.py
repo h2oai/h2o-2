@@ -16,10 +16,19 @@ class Basic(unittest.TestCase):
         # assume we're at 0xdata with it's hdfs namenode
         global localhost
         localhost = h2o.decide_if_localhost()
+        # hdfs_config='/opt/mapr/conf/mapr-clusters.conf', 
         if (localhost):
-            h2o.build_cloud(1, use_maprfs=True, hdfs_version='0.20.2mapr', hdfs_name_node='mr-0x1.0xdata.loc:7222')
+            h2o.build_cloud(1, 
+                java_extra_args = "-cp /opt/mapr/hadoop/hadoop-0.20.2/conf:/opt/mapr/hadoop/hadoop-0.20.2/lib/hadoop-0.20.2-dev-core.jar:/opt/mapr/hadoop/hadoop-0.20.2/lib/maprfs-0.1.jar:.:/opt/mapr/hadoop/hadoop-0.20.2/lib/commons-logging-1.0.4.jar:/opt/mapr/hadoop/hadoop-0.20.2/lib/zookeeper-3.3.6.jar:/opt/mapr/hadoop/hadoop-0.20.2/lib/log4j-1.2.15.jar",
+                use_maprfs=True, 
+                hdfs_version='0.20.2mapr', 
+                hdfs_name_node='mr-0x1.0xdata.loc')
         else:
-            h2o_hosts.build_cloud_with_hosts(1, use_maprfs=True, hdfs_version='0.20.2mapr', hdfs_name_node='mr-0x1.0xdata.loc:7222')
+            h2o_hosts.build_cloud_with_hosts(1, 
+                java_extra_args = "-cp /opt/mapr/hadoop/hadoop-0.20.2/conf:/opt/mapr/hadoop/hadoop-0.20.2/lib/hadoop-0.20.2-dev-core.jar:/opt/mapr/hadoop/hadoop-0.20.2/lib/maprfs-0.1.jar:.:/opt/mapr/hadoop/hadoop-0.20.2/lib/commons-logging-1.0.4.jar:/opt/mapr/hadoop/hadoop-0.20.2/lib/zookeeper-3.3.6.jar:/opt/mapr/hadoop/hadoop-0.20.2/lib/log4j-1.2.15.jar",
+                use_maprfs=True, 
+                hdfs_version='0.20.2mapr', 
+                hdfs_name_node='mr-0x1.0xdata.loc')
 
     @classmethod
     def tearDownClass(cls):
@@ -69,16 +78,23 @@ class Basic(unittest.TestCase):
             csvFilenameList = csvFilenameAll
 
         # pop open a browser on the cloud
-        h2b.browseTheCloud()
+        # h2b.browseTheCloud()
 
         timeoutSecs = 200
         # save the first, for all comparisions, to avoid slow drift with each iteration
         firstglm = {}
-        h2i.setupImportHdfs(path='/', schema='maprfs')
+        h2i.setupImportHdfs(
+            path='/', 
+            schema='maprfs:///')
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in hdfs dir 
             print "Loading", csvFilename, 'from HDFS'
-            parseKey = h2i.parseImportHdfsFile(csvFilename=csvFilename, path='/datasets', schema='maprfs', timeoutSecs=1000)
+            parseKey = h2i.parseImportHdfsFile(
+                csvFilename=csvFilename, 
+                path='/datasets', 
+                schema='maprfs:///', 
+                timeoutSecs=1000)
+
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "parse result:", parseKey['destination_key']
 
@@ -91,7 +107,6 @@ class Basic(unittest.TestCase):
 
             sys.stdout.write('.')
             sys.stdout.flush() 
-
 
 
 if __name__ == '__main__':
