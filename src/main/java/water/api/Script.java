@@ -80,11 +80,20 @@ public class Script extends Request {
     }
 
     @Override protected Response serve() {
+      ValueArray va = _key.value().get();
+      ByteBuffer bb = va.getChunk(0)._bb;
+      String script;
+      try {
+        script = new String(bb.array(), 0, bb.remaining(), "UTF-8");
+      } catch( UnsupportedEncodingException e ) {
+        throw new RuntimeException(e);
+      }
+      return run(script);
+    }
+
+    public static Response run(String script) {
       String line = null;
       try {
-        ValueArray va = _key.value().get();
-        ByteBuffer bb = va.getChunk(0)._bb;
-        String script = new String(bb.array(), 0, bb.remaining(), "UTF-8");
         StringTokenizer tok = new StringTokenizer(script, "\n\r");
         String cmd = null;
         Properties args = new Properties();
@@ -103,11 +112,14 @@ public class Script extends Request {
           }
           Request request = RequestServer._requests.get(cmd);
           if( request == null ) throw new Exception("Unknown command: " + line);
-          request.checkArguments(args, RequestType.json);
+          String error = request.checkArguments(args, RequestType.json);
+          if(error != null) return Response.error(error + ", " + line);
           Response r = request.serve();
           switch( r._status ) {
             case error:
-              return Response.error(r.error() + ", " + line);
+              String s = r.error() + ", " + line;
+              Log.err(s, null);
+              return Response.error(s);
             case redirect:
               cmd = r._redirectName;
               args.clear();
@@ -128,6 +140,7 @@ public class Script extends Request {
           RPC.call(node, new Done());
         return Response.done(new JsonObject());
       } catch( Exception ex ) {
+        Log.err(ex);
         return Response.error(ex.getMessage() + ", " + line);
       }
     }

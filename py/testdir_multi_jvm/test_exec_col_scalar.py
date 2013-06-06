@@ -70,8 +70,7 @@ class Basic(unittest.TestCase):
 
     def test_exec_import_hosts(self):
         # just do the import folder once
-        # importFolderPath = "/home/hduser/hdfs_datasets"
-        importFolderPath = "/home/0xdiag/datasets"
+        importFolderPath = "/home/0xdiag/datasets/standard"
         h2i.setupImportFolder(None, importFolderPath)
 
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)

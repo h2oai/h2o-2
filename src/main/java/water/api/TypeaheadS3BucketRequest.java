@@ -1,8 +1,7 @@
 
 package water.api;
 
-import water.store.s3.PersistS3;
-import water.util.Log;
+import water.persist.PersistS3;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.Bucket;
@@ -13,7 +12,7 @@ import com.google.gson.JsonPrimitive;
 public class TypeaheadS3BucketRequest extends TypeaheadRequest {
 
   public TypeaheadS3BucketRequest() {
-    super("Provides a simple JSON array of HDFS paths.","");
+    super("Provides a simple JSON array of S3 paths.","");
   }
 
   @Override

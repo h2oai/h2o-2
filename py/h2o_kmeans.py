@@ -1,8 +1,8 @@
 import h2o_cmd, h2o
-import re
+import re, math
 
 def simpleCheckKMeans(self, kmeans, **kwargs):
-    print h2o.dump_json(kmeans)
+    ### print h2o.dump_json(kmeans)
     warnings = None
     if 'warnings' in kmeans:
         warnings = kmeans['warnings']
@@ -12,11 +12,42 @@ def simpleCheckKMeans(self, kmeans, **kwargs):
             print "\nwarning:", w
             if re.search(x,w): raise Exception(w)
 
-    print "KMeans time", kmeans['response']['time']
-
     # Check other things in the json response dictionary 'kmeans' here
+    destination_key = kmeans["destination_key"]
+    kmeansResult = h2o_cmd.runInspect(key=destination_key)
+    clusters = kmeansResult["KMeansModel"]["clusters"]
+    for i,c in enumerate(clusters):
+        for n in c:
+            if math.isnan(n):
+                raise Exception("center", i, "has NaN:", n, "center:", c)
 
     return warnings
+
+
+def bigCheckResults(self, kmeans, csvPathname, parseKey, applyDestinationKey, **kwargs):
+    simpleCheckKMeans(self, kmeans, **kwargs)
+    model_key = kmeans['destination_key']
+    kmeansResult = h2o_cmd.runInspect(key=model_key)
+    centers = kmeansResult['KMeansModel']['clusters']
+
+    kmeansApplyResult = h2o.nodes[0].kmeans_apply(
+        data_key=parseKey['destination_key'], model_key=model_key,
+        destination_key=applyDestinationKey)
+    inspect = h2o_cmd.runInspect(None, applyDestinationKey)
+    h2o_cmd.infoFromInspect(inspect, csvPathname)
+
+    kmeansScoreResult = h2o.nodes[0].kmeans_score(
+        key=parseKey['destination_key'], model_key=model_key)
+    score = kmeansScoreResult['score']
+    rows_per_cluster = score['rows_per_cluster']
+    sqr_error_per_cluster = score['sqr_error_per_cluster']
+
+    for i,c in enumerate(centers):
+        print "\ncenters["+str(i)+"]: ", centers[i]
+        print "rows_per_cluster["+str(i)+"]: ", rows_per_cluster[i]
+        print "sqr_error_per_cluster["+str(i)+"]: ", sqr_error_per_cluster[i]
+
+    return centers
 
 
 # compare this clusters to last one. since the files are concatenations, 

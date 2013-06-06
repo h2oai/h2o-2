@@ -1,12 +1,13 @@
 package water.exec;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.util.concurrent.atomic.AtomicInteger;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+
 import org.junit.Test;
+
 import water.*;
-import water.parser.ParseDataset;
 
 public class RBigDataTest extends TestUtil {
   static private final AtomicInteger UNIQUE = new AtomicInteger(1);

@@ -10,13 +10,10 @@ public abstract class MRTask extends DRemoteTask {
 
   public long memOverheadPerChunk(){return 0;}
 
-  static final long log2(long x){
-    long y = x >> 1;
-    while(y > 0){
-      x = y;
-      y = x >> 1;
-    }
-    return x > 0?y+1:y;
+  static final long log2(long a){
+    long x = a, y = 0;
+    while((x = x >> 1) > 0)++y;
+    return (a > 1 << y)?y+1:y;
   }
 
   @Override public void init() {
@@ -84,4 +81,14 @@ public abstract class MRTask extends DRemoteTask {
     returnReservedMemory();
     return super.onExceptionalCompletion(ex, caller);
   }
+
+  // Caveat Emptor:
+  // Hopefully used for debugging only... not only are these likely to change
+  // in the near future, there's very few guarantees placed on these values.
+  // At various points they are chunk-number ranges (before & during maps), and
+  // stale values that *look* like ranges but are not (during reduces) or maybe
+  // they will morph into row#'s (new not-yet-ready api) and/or forms of
+  // "visited" flags (also new api).
+  public final int lo() { return _lo; }
+  public final int hi() { return _hi; }
 }

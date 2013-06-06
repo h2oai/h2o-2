@@ -17,7 +17,7 @@ class Basic(unittest.TestCase):
 
     def test_import_covtype_parse_loop(self):
         csvFilename = "covtype.data"
-        importFolderPath = "/home/0xdiag/datasets"
+        importFolderPath = "/home/0xdiag/datasets/standard"
         trialMax = 2
         for tryHeap in [4,3,2,1]:
             print "\n", tryHeap,"GB heap, 4 jvms, import folder, then loop parsing 'covtype.data' to unique keys"
@@ -27,8 +27,9 @@ class Basic(unittest.TestCase):
             else:
                 h2o_hosts.build_cloud_with_hosts(node_count=4,java_heap_GB=tryHeap)
 
-            h2i.setupImportFolder(None, importFolderPath)
             for trial in range(trialMax):
+                # import each time, because h2o deletes source after parse
+                h2i.setupImportFolder(None, importFolderPath)
                 key2 = csvFilename + "_" + str(trial) + ".hex"
                 parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2, timeoutSecs=20)
             # sticky ports?

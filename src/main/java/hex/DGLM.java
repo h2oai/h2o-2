@@ -611,8 +611,11 @@ public abstract class DGLM {
       return res;
     }
 
+    @Override
     public JsonObject toJson(){
       JsonObject res = new JsonObject();
+      res.addProperty(Constants.VERSION, H2O.VERSION);
+      res.addProperty(Constants.TYPE, GLMModel.class.getName());
       res.addProperty("time", _time);
       res.addProperty(Constants.MODEL_KEY, _selfKey.toString());
       if( _warnings != null ) {
@@ -679,8 +682,8 @@ public abstract class DGLM {
           p += _beta[idx]*d;
         } else {
           int d = (int)data[i]; // Enum value
-          idx += d;             // Which expanded column to use
-          if( idx < _colCatMap[i+1] )
+          // d can be -1 if we got enum values not seen in training
+          if(d > 0 && (idx += d) < _colCatMap[i+1])
             p += _beta[idx]/* *1.0 */;
           else             // Enum out of range?
             p = Double.NaN;// Can use a zero, or a NaN
@@ -694,12 +697,12 @@ public abstract class DGLM {
     }
 
     /** Single row scoring, on a compatible ValueArray (when pushed throw the mapping) */
-    protected double score0( ValueArray data, int row, int[] mapping ) {
+    protected double score0( ValueArray data, int row) {
       throw H2O.unimpl();
     }
 
     /** Bulk scoring API, on a compatible ValueArray (when pushed throw the mapping) */
-    protected double score0( ValueArray data, AutoBuffer ab, int row_in_chunk, int[] mapping ) {
+    protected double score0( ValueArray data, AutoBuffer ab, int row_in_chunk) {
       throw H2O.unimpl();
     }
   }
@@ -1213,7 +1216,12 @@ public abstract class DGLM {
   }
 
   public static GLMJob startGLMJob(final DataFrame data, final LSMSolver lsm, final GLMParams params, final double [] betaStart, final int xval, final boolean parallel) {
-    final GLMJob job = new GLMJob(data._ary,GLMModel.makeKey(true),xval,params);
+    return startGLMJob(null, data, lsm, params, betaStart, xval, parallel);
+  }
+
+  public static GLMJob startGLMJob(Key dest, final DataFrame data, final LSMSolver lsm, final GLMParams params, final double [] betaStart, final int xval, final boolean parallel) {
+    if(dest == null) dest = GLMModel.makeKey(true);
+    final GLMJob job = new GLMJob(data._ary,dest,xval,params);
     final double [] beta;
     final double [] denormalizedBeta;
     if(betaStart != null){

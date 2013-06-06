@@ -16,9 +16,17 @@ public class Constants {
     public static final String JOB = ".job";
     public static final String KMEANS = ".kmeans";
     public static final String R = ".r";
+    public static final String JSON = ".json";
   }
 
-  public static final String BUILT_IN_KEY_JOBS                 = "jobs";
+  public static class Schemes {
+    public static final String FILE = "file";
+    public static final String HDFS = "hdfs";
+    public static final String S3 = "s3";
+    public static final String NFS = "nfs";
+  }
+
+  public static final String BUILT_IN_KEY_JOBS     = "jobs";
 
   public static final String ALPHA                 = "alpha";
   public static final String ARGUMENTS             = "arguments";
@@ -27,6 +35,7 @@ public class Constants {
   public static final String BEST_THRESHOLD        = "best_threshold";
   public static final String BETA_EPS              = "beta_epsilon";
   public static final String BIN_LIMIT             = "bin_limit";
+  public static final String BROWSE                = "browse";
   public static final String BUCKET                = "bucket";
   public static final String CANCELLED             = "cancelled";
   public static final String CASE                  = "case";
@@ -98,6 +107,7 @@ public class Constants {
   public static final String NODE                  = "node";
   public static final String NODE_NAME             = "node_name";
   public static final String NODES                 = "nodes";
+  public static final String NORMALIZE             = "normalize";
   public static final String NUM_COLS              = "num_cols";
   public static final String NUM_CPUS              = "num_cpus";
   public static final String NUM_KEYS              = "num_keys";
@@ -158,6 +168,7 @@ public class Constants {
   public static final String VALUE_SIZE            = "value_size" + Suffixes.BYTES;
   public static final String VALUE_TYPE            = "type";
   public static final String VARIANCE              = "variance";
+  public static final String VERSION               = "version";
   public static final String VIEW                  = "view";
   public static final String WARNINGS              = "warnings";
   public static final String WEIGHT                = "weight";

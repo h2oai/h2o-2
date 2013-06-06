@@ -5,7 +5,6 @@ import java.net.UnknownHostException;
 
 import sun.misc.Unsafe;
 import water.nbhm.UtilUnsafe;
-import water.util.Log;
 
 /**
 
@@ -188,7 +187,7 @@ public class TimeLine extends UDP {
         SNAPSHOT = new long[CLOUD.size()][];
         // Broadcast a UDP packet, with the hopes of getting all SnapShots as close
         // as possible to the same point in time.
-        new AutoBuffer(H2O.SELF).putUdp(udp.timeline).close(false);
+        new AutoBuffer(H2O.SELF).putUdp(udp.timeline).close(false,false);
       }
       // Spin until all snapshots appear
       while( true ) {
@@ -205,7 +204,7 @@ public class TimeLine extends UDP {
   }
 
   // Send our most recent timeline to the remote via TCP
-  public AutoBuffer call( AutoBuffer ab ) {
+  @Override public AutoBuffer call( AutoBuffer ab ) {
     long[] a = snapshot();
     if( ab._h2o == H2O.SELF ) {
       synchronized(TimeLine.class) {
@@ -214,10 +213,18 @@ public class TimeLine extends UDP {
             SNAPSHOT[i] = a;
         TimeLine.class.notify();
       }
-      return ab; // No I/O needed for my own snapshot
+      return null; // No I/O needed for my own snapshot
     }
     // Send timeline to remote
-    return new AutoBuffer(ab._h2o).putUdp(UDP.udp.timeline).putA8(a);
+    while( true ) {
+      AutoBuffer tab = new AutoBuffer(ab._h2o);
+      try {
+        tab.putUdp(UDP.udp.timeline).putA8(a).close(true,false);
+        return null;
+      } catch( AutoBuffer.TCPIsUnreliableException tue ) {
+        tab.close(true,true);
+      }
+    }
   }
 
   // Receive a remote timeline

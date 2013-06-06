@@ -1,6 +1,5 @@
 package water;
 
-
 /**
  * User-View Key/Value Store
  *
@@ -73,7 +72,6 @@ public abstract class UKV {
   }
 
   static public void put(String s, Value v) { put(Key.make(s), v); }
-  //static public Value get(String s) { return get(Key.make(s)); }
   static public void remove(String s) { remove(Key.make(s)); }
 
   // Also, allow auto-serialization

@@ -79,7 +79,7 @@ class Basic(unittest.TestCase):
         ### h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
 
-        importFolderPath = '/home/0xdiag/datasets'
+        importFolderPath = '/home/0xdiag/datasets/standard'
         h2i.setupImportFolder(None, importFolderPath)
         for csvFilename, timeoutSecs, key2 in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
@@ -101,7 +101,7 @@ class Basic(unittest.TestCase):
                 'y': y, 
                 'max_iter': 8, 
                 'n_folds': 0, 
-                'beta_epsilon': 1e-4,
+                'beta_eps': 1e-4,
                 'alpha': 0, 
                 'lambda': 0 
                 }

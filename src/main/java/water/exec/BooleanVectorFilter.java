@@ -1,7 +1,6 @@
 package water.exec;
 
 import water.*;
-import java.util.Arrays;
 
 /**
  * @author peta
@@ -36,7 +35,7 @@ public class BooleanVectorFilter extends MRTask {
     // Accumulate rows-per-chunk
     _rpc = new long[(int)srcAry.chunks()+1];
     long rpc = 0;
-    
+
     for( int i=0; i<rows; i++ ) {
       vai.next();
       if( vai.data() != 0 ) {
@@ -54,7 +53,7 @@ public class BooleanVectorFilter extends MRTask {
   @Override public void reduce(DRemoteTask drt) {
     BooleanVectorFilter other = (BooleanVectorFilter) drt;
     if( _rpc == null ) _rpc = other._rpc;
-    else 
+    else
       for( int i=0; i<_rpc.length; i++ )
         _rpc[i] += other._rpc[i];
   }

@@ -31,6 +31,10 @@ EC2_PKEY_FILE     = '/home/michal/.ec2/keys/0xdata_Big.pem'
 #  - each node provides MapR filesystem
 #  - each node has an mapr user which can perform sudo
 #
+# Reminder (from mapr tutorials): Once cluster is started:
+# - /opt/mapr/bin/maprcli acl edit -type cluster -user mapr:fc
+# - sudo passwd mapr (password required only for Web admin)
+#
 
 DEFAULT_MAPR_CLUSTER_CONF = {
         'need_sudo'    : True,

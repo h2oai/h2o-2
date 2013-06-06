@@ -3,7 +3,6 @@ package water.api;
 import java.util.ArrayList;
 import java.util.Properties;
 
-import water.util.Log;
 import water.util.RString;
 
 /**

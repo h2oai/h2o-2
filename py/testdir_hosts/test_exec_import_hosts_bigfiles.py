@@ -77,8 +77,7 @@ class Basic(unittest.TestCase):
 
     def test_exec_import_hosts_bigfiles(self):
         # just do the import folder once
-        # importFolderPath = "/home/hduser/hdfs_datasets"
-        importFolderPath = "/home/0xdiag/datasets"
+        importFolderPath = "/home/0xdiag/datasets/standard"
         h2i.setupImportFolder(None, importFolderPath)
         timeoutSecs = 4000
 

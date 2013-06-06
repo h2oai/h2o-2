@@ -110,7 +110,7 @@ public class RandomForest {
     arguments.extract(ARGS);
     String[] h2oArgs;
     if(ARGS.h2oArgs == null) { // By default run using local IP, C.f. JUnitRunner
-      File flat = Utils.tempFile("127.0.0.1:54327");
+      File flat = Utils.writeFile("127.0.0.1:54327");
       h2oArgs = new String[] { "-ip=127.0.0.1", "-flatfile=" + flat.getAbsolutePath() };
     } else {
       if(ARGS.h2oArgs.startsWith("\"") && ARGS.h2oArgs.endsWith("\""))

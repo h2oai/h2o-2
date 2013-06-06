@@ -96,6 +96,9 @@ public class ValueArray extends Iced implements Cloneable {
     return res;
   }
 
+  /** Return the key that denotes this entire ValueArray in the K/V store. */
+  public final Key getKey() { return _key; }
+
   @Override public ValueArray clone() {
     try { return (ValueArray)super.clone(); }
     catch( CloneNotSupportedException cne ) { throw Log.err(H2O.unimpl()); }
@@ -212,6 +215,7 @@ public class ValueArray extends Iced implements Cloneable {
       _min=0; _max=255; _mean=128; _n = len; _scale=1; _size=1;
     }
     public final boolean isFloat() { return _size < 0 || _scale != 1; }
+    public final boolean isEnum() { return _domain != null; }
     public final boolean isScaled() { return _scale != 1; }
     /** Compute size of numeric integer domain */
     public final long    numDomainSize() { return (long) ((_max - _min)+1); }
@@ -337,14 +341,14 @@ public class ValueArray extends Iced implements Cloneable {
     return Key.make(buf,(byte)arrayKey.desired());
   }
 
-  // Get the root array Key from a random arraylet sub-key
+  /** Get the root array Key from a random arraylet sub-key */
   public static Key getArrayKey( Key k ) { return Key.make(getArrayKeyBytes(k)); }
   public static byte[] getArrayKeyBytes( Key k ) {
     assert k._kb[0] == Key.ARRAYLET_CHUNK;
     return Arrays.copyOfRange(k._kb,2+8,k._kb.length);
   }
 
-  // Get the chunk-index from a random arraylet sub-key
+  /** Get the chunk-index from a random arraylet sub-key */
   public static long getChunkIndex(Key k) {
     assert k._kb[0] == Key.ARRAYLET_CHUNK;
     return UDP.get8(k._kb, 2) >> LOG_CHK;
@@ -416,7 +420,6 @@ public class ValueArray extends Iced implements Cloneable {
       try { f_last.get(); }
       catch( InterruptedException e ) { throw  Log.errRTExcept(e); }
       catch(   ExecutionException e ) { throw  Log.errRTExcept(e); }
-      assert Arrays.equals(DKV.get(ckey).memOrLoad(),oldbuf);
       DKV.put(ckey,new Value(ckey,newbuf),fs); // Overwrite the old too-small Value
     } else {
       Key ckey = getChunkKey(cidx,key);

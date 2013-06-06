@@ -1,10 +1,8 @@
 package water.parser;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import water.*;
-import water.parser.ValueString;
 
 public class CsvParser extends CustomParser {
 
@@ -67,6 +65,7 @@ public class CsvParser extends CustomParser {
     int quotes = 0;
     long number = 0;
     int exp = 0;
+    int sgn_exp = 1;
     boolean decimal = false;
     int fractionDigits = 0;
     int numStart = 0;
@@ -251,6 +250,7 @@ NEXT_CHAR:
           } else if ((c == 'e') || (c == 'E')) {
             ++numStart;
             state = NUMBER_EXP_START;
+            sgn_exp = 1;
             break NEXT_CHAR;
           }
           if (exp == -1) {
@@ -307,6 +307,7 @@ NEXT_CHAR:
             break NEXT_CHAR;
           } else if ((c == 'e') || (c == 'E')) {
             state = NUMBER_EXP_START;
+            sgn_exp = 1;
             break NEXT_CHAR;
           }
           state = COND_QUOTED_NUMBER_END;
@@ -318,6 +319,7 @@ NEXT_CHAR:
             break NEXT_CHAR;
           } else if ((c == 'e') || (c == 'E')) {
             state = NUMBER_EXP_START;
+            sgn_exp = 1;
             break NEXT_CHAR;
           }
           state = COND_QUOTED_NUMBER_END;
@@ -338,6 +340,7 @@ NEXT_CHAR:
             if (decimal)
               fractionDigits = offset - 1 - fractionDigits;
             state = NUMBER_EXP_START;
+            sgn_exp = 1;
             break NEXT_CHAR;
           }
           state = COND_QUOTED_NUMBER_END;
@@ -356,16 +359,19 @@ NEXT_CHAR:
           exp = 0;
           if (c == '-') {
             ++numStart;
-            state = NUMBER_EXP_NEGATIVE;
+            sgn_exp *= -1;
             break NEXT_CHAR;
-          } else {
-            state = NUMBER_EXP;
-            if (c == '+') {
-              ++numStart;
-              break NEXT_CHAR;
-            }
+          } else if (c == '+'){
+            ++numStart;
+            break NEXT_CHAR;
           }
-          // fallthrough to NUMBER_EXP
+          if ((c < '0') || (c > '9')){
+            state = STRING;
+            offset = tokenStart-1;
+            _str.set(bits,tokenStart,0);
+            break NEXT_CHAR; // parse as String token now
+          }
+          state = NUMBER_EXP;  // fall through to NUMBER_EXP
         // ---------------------------------------------------------------------
         case NUMBER_EXP:
           if ((c >= '0') && (c <= '9')) {
@@ -373,17 +379,10 @@ NEXT_CHAR:
             exp = (exp*10)+(c-'0');
             break NEXT_CHAR;
           }
+          exp *= sgn_exp;
           state = COND_QUOTED_NUMBER_END;
           continue MAIN_LOOP;
-        // ---------------------------------------------------------------------
-        case NUMBER_EXP_NEGATIVE:
-          if ((c >= '0') && (c <= '9')) {
-            exp = (exp*10)+(c-'0');
-            break NEXT_CHAR;
-          }
-          exp = - exp;
-          state = COND_QUOTED_NUMBER_END;
-          continue MAIN_LOOP;
+
         // ---------------------------------------------------------------------
         case COND_QUOTE:
           if (c == quotes) {

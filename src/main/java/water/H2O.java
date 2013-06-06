@@ -8,10 +8,10 @@ import java.util.*;
 
 import jsr166y.*;
 import water.exec.Function;
-import water.hdfs.HdfsLoader;
 import water.nbhm.NonBlockingHashMap;
 import water.parser.ParseDataset;
-import water.store.s3.PersistS3;
+import water.persist.*;
+import water.r.Shell;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
@@ -26,16 +26,15 @@ import com.google.common.io.Closeables;
 * @version 1.0
 */
 public final class H2O {
-
   static boolean _hdfsActive = false;
 
-  static final String VERSION = "v0.3";
+  public static final String VERSION = "0.3";
 
   // User name for this Cloud
   public static String NAME;
 
   // The default port for finding a Cloud
-  static final int DEFAULT_PORT = 54321;
+  public static final int DEFAULT_PORT = 54321;
   public static int UDP_PORT; // Fast/small UDP transfers
   public static int API_PORT; // RequestServer and the new API HTTP port
 
@@ -49,6 +48,10 @@ public final class H2O {
 
   // Myself, as a Node in the Cloud
   public static H2ONode SELF = null;
+  public static InetAddress SELF_ADDRESS;
+
+  public static final String DEFAULT_ICE_ROOT = "/tmp";
+  public static URI ICE_ROOT;
 
   // Initial arguments
   public static String[] ARGS;
@@ -166,7 +169,7 @@ public final class H2O {
     return Arrays.toString(_memary);
   }
 
-  public static InetAddress findInetAddressForSelf() throws Error {
+  private static InetAddress findInetAddressForSelf() throws Error {
     // Get a list of all valid IPs on this machine.  Typically 1 on Mac or
     // Windows, but could be many on Linux or if a hypervisor is present.
     ArrayList<InetAddress> ips = new ArrayList<InetAddress>();
@@ -381,7 +384,12 @@ public final class H2O {
   // working on.
   static class FJWThr extends ForkJoinWorkerThread {
     public int _priority;
-    FJWThr(ForkJoinPool pool) { super(pool); }
+    FJWThr(ForkJoinPool pool) {
+      super(pool);
+      setPriority( ((ForkJoinPool2)pool)._priority == Thread.MIN_PRIORITY
+                   ? Thread.NORM_PRIORITY-1
+                   : Thread. MAX_PRIORITY-1 );
+    }
   }
   // Factory for F/J threads, with cap's that vary with priority.
   static class FJWThrFact implements ForkJoinPool.ForkJoinWorkerThreadFactory {
@@ -448,12 +456,14 @@ public final class H2O {
           H2OCountedCompleter h2o = FJPS[p].poll();
           if( h2o != null ) {     // Got a hi-priority job?
             t._priority = p;      // Set & do it now!
+            Thread.currentThread().setPriority(Thread.MAX_PRIORITY-1);
             h2o.compute2();       // Do it ahead of normal F/J work
             p++;                  // Check again the same queue
           }
         }
       } finally {
         t._priority = pp;
+        if( pp == MIN_PRIORITY ) Thread.currentThread().setPriority(Thread.NORM_PRIORITY-1);
       }
       // Now run the task as planned
       compute2();
@@ -487,8 +497,9 @@ public final class H2O {
     public String keepice; // Do not delete ice on startup
     public String soft = null; // soft launch for demos
     public String random_udp_drop = null; // test only, randomly drop udp incoming
-    public String nolog = null; // disable logging
     public int pparse_limit = Integer.MAX_VALUE;
+    public String no_requests_log = null; // disable logging of Web requests
+    public String rshell="false"; //FastR shell
   }
   public static boolean IS_SYSTEM_RUNNING = false;
 
@@ -504,10 +515,23 @@ public final class H2O {
     arguments.extract(OPT_ARGS);
     ARGS = arguments.toStringArray();
     ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
-    if(OPT_ARGS.nolog == null)
-      Log.initHeaders();
 
-    startLocalNode(); // start the local node
+    // Get ice path before loading Log or Persist class
+    String ice = DEFAULT_ICE_ROOT;
+    if( OPT_ARGS.ice_root != null ) ice = OPT_ARGS.ice_root.replace("\\", "/");
+    try {
+      ICE_ROOT = new URI(ice);
+    } catch(URISyntaxException ex) {
+      throw new RuntimeException("Invalid ice_root: " + ice + ", " + ex.getMessage());
+    }
+
+    SELF_ADDRESS = findInetAddressForSelf();
+
+    //if (OPT_ARGS.rshell.equals("false"))
+    Log.wrap(); // Logging does not wrap when the rshell is on.
+
+    // Start the local node
+    startLocalNode();
     // Load up from disk and initialize the persistence layer
     initializePersistence();
     // Start network services, including heartbeats & Paxos
@@ -516,6 +540,8 @@ public final class H2O {
     initializeExpressionEvaluation(); // starts the expression evaluation system
 
     startupFinalize(); // finalizes the startup & tests (if any)
+
+    if (OPT_ARGS.rshell.equals("true"))  Shell.go();
     // Hang out here until the End of Time
   }
 
@@ -547,7 +573,7 @@ public final class H2O {
       STATIC_H2OS.add(SELF);
     }
 
-    Log.info("("+VERSION+") '"+NAME+"' on " + SELF+(OPT_ARGS.flatfile==null
+    Log.info("(v"+VERSION+") '"+NAME+"' on " + SELF+(OPT_ARGS.flatfile==null
         ? (", discovery address "+CLOUD_MULTICAST_GROUP+":"+CLOUD_MULTICAST_PORT)
             : ", static configuration based on -flatfile "+OPT_ARGS.flatfile));
 
@@ -596,7 +622,8 @@ public final class H2O {
 
     // Start the TCPReceiverThread, to listen for TCP requests from other Cloud
     // Nodes. There should be only 1 of these, and it never shuts down.
-    (TCPReceiverThread.TCPTHR=new TCPReceiverThread()).start();
+    new TCPReceiverThread().start();
+    // Start the Nano HTTP server thread
     water.api.RequestServer.start();
   }
 
@@ -618,7 +645,6 @@ public final class H2O {
   // function of the name. Parse node ip addresses from the filename.
   static void initializeNetworkSockets( ) {
     // Assign initial ports
-    InetAddress inet = findInetAddressForSelf();
     API_PORT = OPT_ARGS.port != 0 ? OPT_ARGS.port : DEFAULT_PORT;
 
     while (true) {
@@ -637,7 +663,7 @@ public final class H2O {
         _apiSocket = new ServerSocket(API_PORT);
         _udpSocket = DatagramChannel.open();
         _udpSocket.socket().setReuseAddress(true);
-        _udpSocket.socket().bind(new InetSocketAddress(inet, UDP_PORT));
+        _udpSocket.socket().bind(new InetSocketAddress(SELF_ADDRESS, UDP_PORT));
         break;
       } catch (IOException e) {
         try { if( _apiSocket != null ) _apiSocket.close(); } catch( IOException ohwell ) { Log.err(ohwell); }
@@ -645,15 +671,15 @@ public final class H2O {
         _apiSocket = null;
         _udpSocket = null;
         if( OPT_ARGS.port != 0 )
-          Log.die("On " + H2O.findInetAddressForSelf() +
+          Log.die("On " + SELF_ADDRESS +
               " some of the required ports " + (OPT_ARGS.port+0) +
               ", " + (OPT_ARGS.port+1) +
               " are not available, change -port PORT and try again.");
       }
       API_PORT += 2;
     }
-    SELF = H2ONode.self(inet);
-    Log.info("Internal communication uses port: ",UDP_PORT,"\nListening for HTTP and REST traffic on  http:/",inet,":"+_apiSocket.getLocalPort()+"/");
+    SELF = H2ONode.self(SELF_ADDRESS);
+    Log.info("Internal communication uses port: ",UDP_PORT,"\nListening for HTTP and REST traffic on  http:/",SELF_ADDRESS,":"+_apiSocket.getLocalPort()+"/");
 
     NAME = OPT_ARGS.name==null? System.getProperty("user.name") : OPT_ARGS.name;
     // Read a flatfile of allowed nodes
@@ -821,14 +847,13 @@ public final class H2O {
   }
 
   static void initializePersistence() {
-    PersistIce.initialize();
-    PersistNFS.initialize();
-    HdfsLoader.initialize();
+    HdfsLoader.loadJars();
     if( OPT_ARGS.aws_credentials != null ) {
       try {
         PersistS3.getClient();
       } catch( IllegalArgumentException e ) { Log.err(e); }
     }
+    Persist.initialize();
   }
 
 
@@ -856,6 +881,7 @@ public final class H2O {
     public Cleaner() {
       super("MemCleaner");
       setDaemon(true);
+      setPriority(MAX_PRIORITY-2);
       _dirty = Long.MAX_VALUE;  // Set to clean-store
       _myHisto = new Histo();   // Build/allocate a first histogram
       _myHisto.compute(0);      // Compute lousy histogram; find eldest
@@ -868,8 +894,8 @@ public final class H2O {
       return H2O.SELF._heartbeat.get_free_disk() > MemoryManager.MEM_MAX;
     }
     static boolean isDiskFull(){ // free disk space < 5K?
-      File f = new File(PersistIce.ROOT);
-      return f.getUsableSpace() < (5 << 10);
+      long space = Persist.getIce().getUsableSpace();
+      return space != Persist.UNKNOWN && space < (5 << 10);
     }
     public void run() {
       boolean diskFull = false;
@@ -968,8 +994,8 @@ public final class H2O {
               if( m == null ) m = val.rawMem();
               if( m != null ) cleaned += m.length;
             } catch(IOException e) {
-              if( isDiskFull() ) // disk full?
-                Log.warn(Sys.CLEAN,"Disk full! Disabling swapping to disk." + ((force)?" Memory low! Please free some space in " + PersistIce.ROOT+"!":""));
+              if( isDiskFull() )
+                Log.warn(Sys.CLEAN,"Disk full! Disabling swapping to disk." + (force?" Memory low! Please free some space in " + Persist.getIce().getPath() + "!":""));
               else
                 Log.warn(Sys.CLEAN,"Disk swapping failed! " + e.getMessage());
               // Something is wrong so mark disk as full anyways so we do not

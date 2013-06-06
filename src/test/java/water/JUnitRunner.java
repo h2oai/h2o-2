@@ -48,7 +48,7 @@ public class JUnitRunner {
     for( int i = 0; i < ports.length; i++ )
       flat += "127.0.0.1:" + ports[i] + "\n";
     // Force all IPs to local so that users can run with a firewall
-    String[] a = new String[] { "-ip", "127.0.0.1", "-flatfile", Utils.tempFile(flat).getAbsolutePath() };
+    String[] a = new String[] { "-ip", "127.0.0.1", "-flatfile", Utils.writeFile(flat).getAbsolutePath() };
     H2O.OPT_ARGS.ip = "127.0.0.1";
     args = (String[]) ArrayUtils.addAll(a, args);
 

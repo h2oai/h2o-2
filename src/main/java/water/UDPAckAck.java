@@ -1,5 +1,4 @@
 package water;
-import java.net.DatagramPacket;
 
 /**
  * A task initiator has his response, we can quit sending him ACKs.

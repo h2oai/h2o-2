@@ -1,5 +1,4 @@
 package water;
-import java.net.DatagramPacket;
 
 /**
  * A remote task request has just returned an ACK with answer
@@ -15,7 +14,7 @@ public class UDPAck extends UDP {
     RPC<?> t = ab._h2o.taskGet(tnum);
     assert t== null || t._tasknum == tnum;
     if( t != null ) t.response(ab); // Do the 2nd half of this task, includes ACKACK
-    else ab.close(false);
+    else ab.close(false,false);
     // Else forgotten task, but still must ACKACK
     return new AutoBuffer(ab._h2o).putTask(UDP.udp.ackack.ordinal(),tnum);
   }

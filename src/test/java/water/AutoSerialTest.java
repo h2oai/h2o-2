@@ -1,7 +1,7 @@
 package water;
 
-import java.io.*;
 import java.util.Arrays;
+
 import org.junit.Assert;
 import org.junit.Test;
 

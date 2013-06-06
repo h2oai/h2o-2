@@ -14,7 +14,7 @@ def define_params():
         'lambda': [0,1e-8,1e-4,1e-3],
         'alpha': [0,0.8,0.75],
         # new?
-        'beta_epsilon': [None, 0.0001],
+        'beta_eps': [None, 0.0001],
         # eliminate case=7 because it's so rare, especially with cross validation
         'case': [1,2,3,4,5,6],
         # inverse and log causing problems

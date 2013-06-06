@@ -4,7 +4,7 @@ package water.api;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 
-import water.hdfs.PersistHdfs;
+import water.persist.PersistHdfs;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonPrimitive;
@@ -12,13 +12,13 @@ import com.google.gson.JsonPrimitive;
 public class TypeaheadHdfsPathRequest extends TypeaheadRequest {
 
   public TypeaheadHdfsPathRequest() {
-    super("Provides a simple JSON array of S3 Buckets.","");
+    super("Provides a simple JSON array of HDFS Buckets.","");
   }
 
   @Override
   protected JsonArray serve(String filter, int limit) {
     JsonArray array = new JsonArray();
-    Configuration conf = PersistHdfs.getConf();
+    Configuration conf = PersistHdfs.CONF;
     if( conf == null ) return array;
     try {
       Path p = new Path(filter);

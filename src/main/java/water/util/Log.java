@@ -5,6 +5,7 @@ import java.lang.management.ManagementFactory;
 import java.util.Locale;
 
 import water.*;
+import water.api.Constants.Schemes;
 import water.util.Log.Tag.Kind;
 import water.util.Log.Tag.Sys;
 
@@ -37,7 +38,7 @@ import water.util.Log.Tag.Sys;
  *  a best effort and lossy manner. Basically when an OOME occurs during
  *  logging, no guarantees are made about the messages.
  **/
-abstract public class Log {
+public abstract class Log {
 
   /** Tags for log messages */
   public static interface Tag {
@@ -62,22 +63,26 @@ abstract public class Log {
   public static final Sys[] SYSS = Sys.values();
 
   private static final String NL = System.getProperty("line.separator");
-  static {
-    System.setOut(new Wrapper(System.out));
+  static public void wrap() {
+    ///Turning off wrapping for now...  If this breaks stuff will put it back on.
+    /// System.setOut(new Wrapper(System.out));
     System.setErr(new Wrapper(System.err));
   }
   /** Local log file */
-  private static BufferedWriter LOG_FILE;
+  static final String FILE_NAME = "h2o.log";
+  static File FILE;
+  static BufferedWriter FILE_WRITER;
   /** Key for the log in the KV store */
   public final static Key LOG_KEY = Key.make("Log", (byte) 0, Key.BUILT_IN_KEY);
   /** Time from when this class loaded. */
   static final Timer time = new Timer();
-  /** IP address of the host */
-  public static final String HOST = H2O.findInetAddressForSelf().getHostAddress();
   /** Some guess at the process ID. */
   public static final long PID = getPid();
-  /** Hostname and process ID. */
-  private static final String HOST_AND_PID = "" + fixedLength(HOST + " ", 13) + fixedLength(PID + " ", 6);
+
+  private static final String LONG_HEADERS_PARAM = "long_log_headers";
+  private static final boolean LONG_HEADERS = System.getProperty(LONG_HEADERS_PARAM) != null;
+  private static String _longHeaders;
+
   private static boolean printAll;
   /** Per subsystem debugging flags. */
   static {
@@ -210,7 +215,13 @@ abstract public class Log {
     }
 
     private StringBuilder longHeader(StringBuilder buf) {
-      buf.append(when.startAsString()).append(" ").append(HOST_AND_PID);
+      String headers = _longHeaders;
+      if(headers == null) {
+        String host = H2O.SELF_ADDRESS != null ? H2O.SELF_ADDRESS.getHostAddress() : "";
+        headers = fixedLength(host + " ", 16) + fixedLength(PID + " ", 6);
+        if(H2O.SELF_ADDRESS != null) _longHeaders = headers;
+      }
+      buf.append(when.startAsString()).append(" ").append(headers);
       if( thread == null ) thread = fixedLength(Thread.currentThread().getName() + " ", 10);
       buf.append(thread);
       buf.append(kind.toString()).append(" ").append(sys.toString()).append(": ");
@@ -257,17 +268,30 @@ abstract public class Log {
   /** the actual write code. */
   private static void write0(Event e, boolean printOnOut) {
     String s = e.toString();
-    if( H2O.SELF != null && LOG_FILE == null ) LOG_FILE = new BufferedWriter(PersistIce.logFile());
-    if( LOG_FILE != null ) {
+    if( H2O.SELF != null && FILE_WRITER == null ) {
+      File dir;
+      // Use ice folder if local, or default
+      if( H2O.ICE_ROOT.getScheme() == null || Schemes.FILE.equals(H2O.ICE_ROOT.getScheme()) )
+        dir = new File(H2O.ICE_ROOT.getPath());
+      else
+        dir = new File(H2O.DEFAULT_ICE_ROOT);
       try {
-        LOG_FILE.write(s, 0, s.length());
-        LOG_FILE.write(NL,0,NL.length());
-        LOG_FILE.flush();
+        FILE = new File(dir, FILE_NAME);
+        FILE_WRITER = new BufferedWriter(new FileWriter(FILE));
+      } catch( IOException _ ) {
+        // do not log errors when trying to open the log file
+      }
+    }
+    if( FILE_WRITER != null ) {
+      try {
+        FILE_WRITER.write(s, 0, s.length());
+        FILE_WRITER.write(NL,0,NL.length());
+        FILE_WRITER.flush();
       } catch( IOException ioe ) {/* ignore log-write fails */
       }
     }
     if( Paxos._cloudLocked ) logToKV(e.when.startAsString(), e.thread, e.kind, e.sys, e.body(0));
-    if(printOnOut || printAll) unwrap(System.out,e.toShortString());
+    if(printOnOut || printAll) unwrap(System.out, (LONG_HEADERS ? e.toString() : e.toShortString()));
     e.printMe = false;
   }
   /** We also log events to the store. */
@@ -379,14 +403,13 @@ abstract public class Log {
     if( !_dontDie ) System.exit(-1);
   }
 
-  /** No op. */
-  public static void initHeaders() {}
-
   /** Print a message to the stream without the logging information. */
   public static void unwrap(PrintStream stream, String s) {
     if( stream instanceof Wrapper ) ((Wrapper) stream).printlnParent(s);
     else stream.println(s);
   }
+
+  public static PrintStream unwrap(PrintStream stream){ return  stream instanceof Wrapper ? ((Wrapper)stream).parent: stream; }
 
   public static void log(File file, PrintStream stream) throws Exception {
     BufferedReader reader = new BufferedReader(new FileReader(file));
@@ -401,9 +424,13 @@ abstract public class Log {
     }
   }
 
-  private static final class Wrapper extends PrintStream {
+  public static final class Wrapper extends PrintStream {
+
+   PrintStream parent;
+
     Wrapper(PrintStream parent) {
       super(parent);
+      this.parent=parent;
     }
 
     private static String log(Locale l, boolean nl, String format, Object... args) {

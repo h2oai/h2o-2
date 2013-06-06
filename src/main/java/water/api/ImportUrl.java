@@ -5,7 +5,6 @@ import java.net.URL;
 
 import water.Key;
 import water.ValueArray;
-import water.util.Log;
 
 import com.google.common.io.Closeables;
 import com.google.gson.JsonObject;

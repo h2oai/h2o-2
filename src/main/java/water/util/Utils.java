@@ -226,24 +226,39 @@ public class Utils {
     }
   }
 
-  public static File tempFile(String content) {
-    File file;
+  public static File writeFile(String content) {
+    try {
+      return writeFile(File.createTempFile("h2o", null), content);
+    } catch( IOException e ) {
+      throw Log.errRTExcept(e);
+    }
+  }
+
+  public static File writeFile(File file, String content) {
     FileWriter w = null;
     try {
-      file = File.createTempFile("h2o", null);
       w = new FileWriter(file);
       w.write(content);
-    } catch(IOException ex) {
-      throw new RuntimeException(ex);
+    } catch(IOException e) {
+      Log.errRTExcept(e);
     } finally {
-      if(w != null) {
-        try {
-          w.close();
-        } catch(IOException _) {
-        }
-      }
+      close(w);
     }
     return file;
+  }
+
+  public static String readFile(File file) {
+    FileReader r = null;
+    try {
+      r = new FileReader(file);
+      char[] data = new char[(int) file.length()];
+      r.read(data);
+      return new String(data);
+    } catch(IOException e) {
+      throw Log.errRTExcept(e);
+    } finally {
+      close(r);
+    }
   }
 
   public static String join(char sep, Object[] array) {

@@ -10,8 +10,11 @@ import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import water.util.*;
-import water.util.Log.Tag.Sys;
+import com.google.common.io.CharStreams;
+import com.google.common.io.Closeables;
+
+import water.util.Log;
+import water.util.Utils;
 
 
 /** Initializer class for H2O.
@@ -28,6 +31,20 @@ public class Boot extends ClassLoader {
   public static final Boot _init;
   public final byte[] _jarHash;
 
+  public String loadContent(String fromFile) {
+    BufferedReader reader = null;
+    StringBuilder sb = new StringBuilder();
+    try {
+      InputStream is = getResource2(fromFile);
+      reader = new BufferedReader(new InputStreamReader(is));
+      CharStreams.copy(reader, sb);
+    } catch( IOException e ){
+      Log.err(e);
+    } finally {
+      Closeables.closeQuietly(reader);
+    }
+    return sb.toString();
+  }
   private final ZipFile _h2oJar;
   private File _parentDir;
   private Weaver _weaver;
@@ -108,6 +125,7 @@ public class Boot extends ClassLoader {
       addInternalJars("poi");
       addInternalJars("s3");
       addInternalJars("jets3t");
+      addInternalJars("fastr");
     }
 
     run(args);

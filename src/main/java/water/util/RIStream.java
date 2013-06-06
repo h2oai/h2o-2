@@ -3,11 +3,8 @@ package water.util;
 import java.io.IOException;
 import java.io.InputStream;
 
-import javax.management.RuntimeErrorException;
-
 import water.Job.ProgressMonitor;
-import water.Key;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
+
 import com.google.common.base.Throwables;
 
 public abstract class RIStream extends InputStream {
@@ -22,6 +19,10 @@ public abstract class RIStream extends InputStream {
     _off = off;
   }
 
+  public final long off(){return _off;}
+  public final long expectedSz(){
+    return _knownSize?_expectedSz:-1;
+  }
   public void setExpectedSz(long sz){
     _knownSize = true;
     _expectedSz = sz;
@@ -49,8 +50,9 @@ public abstract class RIStream extends InputStream {
     open();
     return;
   }
+
   private void updateOffset(int off) {
-    if(_knownSize)assert off + _off <= _expectedSz;
+    if(_knownSize)assert (off + _off) <= _expectedSz;
     _off += off;
   }
 
@@ -63,14 +65,17 @@ public abstract class RIStream extends InputStream {
   @Override
   public void reset(){throw new UnsupportedOperationException();}
 
+  private void checkEof() throws IOException {
+    if(_knownSize && _off < _expectedSz)
+        throw new IOException("premature end of file reported, expected " + _expectedSz + " bytes, but got eof after " + _off + " bytes");
+  }
   @Override
   public final int available() throws IOException {
     int attempts = 0;
     while(true){
       try {
         int res = _is.available();
-        if(res == 0 && _knownSize && _off < _expectedSz)
-          Log.warn("premature end of file reported, expected " + _expectedSz + " bytes, but got eof after " + _off + " bytes");
+        if(res == 0) checkEof();
         return _is.available();
       } catch (IOException e) {
         try2Recover(attempts++,e);
@@ -84,8 +89,7 @@ public abstract class RIStream extends InputStream {
     while(true){
       try{
         int res = _is.read();
-        if(res == -1 && _knownSize && _off < _expectedSz)
-          Log.warn("premature end of file reported, expected " + _expectedSz + " bytes, but got eof after " + _off + " bytes");
+        if(res == -1) checkEof();
         if(res != -1){
           updateOffset(1);
           if(_pmon != null)_pmon.update(1);
@@ -103,8 +107,7 @@ public abstract class RIStream extends InputStream {
     while(true){
       try {
         int res =  _is.read(b);
-        if(res == 0 && _knownSize && _off < _expectedSz)
-          Log.warn("premature end of file reported, expected " + _expectedSz + " bytes, but got eof after " + _off + " bytes");
+        if(res == -1) checkEof();
         if(res > 0){
           updateOffset(res);
           if(_pmon != null)_pmon.update(res);
@@ -122,8 +125,7 @@ public abstract class RIStream extends InputStream {
     while(true){
       try {
         int res = _is.read(b,off,len);
-        if(res == 0 && _knownSize && _off < _expectedSz)
-          Log.warn("premature end of file reported, expected " + _expectedSz + " bytes, but got eof after " + _off + " bytes");
+        if(res == -1) checkEof();
         if(res > 0){
           updateOffset(res);
           if(_pmon != null)_pmon.update(res);

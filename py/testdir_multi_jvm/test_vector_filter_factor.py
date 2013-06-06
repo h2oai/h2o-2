@@ -57,9 +57,7 @@ class Basic(unittest.TestCase):
 
     def test_vector_filter_factor(self):
         # just do the import folder once
-        # importFolderPath = "/home/hduser/hdfs_datasets"
-        importFolderPath = "/home/0xdiag/datasets"
-        h2i.setupImportFolder(None, importFolderPath)
+        importFolderPath = "/home/0xdiag/datasets/standard"
 
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
@@ -78,10 +76,11 @@ class Basic(unittest.TestCase):
 
         ### csvFilenameList = random.sample(csvFilenameAll,1)
         csvFilenameList = csvFilenameAll
-        h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
 
         for (csvFilename, key2, timeoutSecs) in csvFilenameList:
+            # have to import each time, because h2o deletes the source file after parse
+            h2i.setupImportFolder(None, importFolderPath)
             # creates csvFilename.hex from file in importFolder dir 
             parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
                 key2=key2, timeoutSecs=2000)

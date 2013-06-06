@@ -21,17 +21,9 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_from_import(self):
-        # just do the import folder once
-        # importFolderPath = "/home/hduser/hdfs_datasets"
-        importFolderPath = '/home/0xdiag/datasets'
-
+        importFolderPath = '/home/0xdiag/datasets/standard'
         timeoutSecs = 500
 
-        #    "covtype169x.data",
-        #    "covtype.13x.shuffle.data",
-        #    "3G_poker_shuffle"
-        #    "covtype20x.data", 
-        #    "billion_rows.csv.gz",
         csvFilenameAll = [
             "covtype.data",
             "covtype20x.data",
@@ -49,10 +41,6 @@ class Basic(unittest.TestCase):
             ]
         # csvFilenameList = random.sample(csvFilenameAll,1)
         csvFilenameList = csvFilenameAll
-
-        # pop open a browser on the cloud
-        ### h2b.browseTheCloud()
-
         for trial in range(3):
             for csvFilename in csvFilenameList:
                 h2i.setupImportFolder(None, importFolderPath)

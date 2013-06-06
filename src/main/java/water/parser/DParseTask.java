@@ -1,11 +1,11 @@
 package water.parser;
 
-import java.io.IOException;
 import java.util.*;
 
 import water.*;
 import water.ValueArray.Column;
 import water.parser.ParseDataset.FileInfo;
+import water.util.Log;
 
 /** Class responsible for actual parsing of the datasets.
  *
@@ -324,11 +324,11 @@ public class DParseTask extends MRTask {
         // XLS parsing is not distributed, just obtain the value stream and run the parser
         try{
           XlsParser p = new XlsParser(this);
-          System.out.println("parsing " + _sourceDataset._key);
+          Log.info("parsing ", _sourceDataset._key);
           p.parse(_sourceDataset._key);
           --_myrows; // do not count the header
           _numRows = _myrows;
-        } catch(Exception e){throw new RuntimeException(e);}
+        } catch(Exception e){ throw new RuntimeException(e); }
         break;
       case XLSX:
         // XLS parsing is not distributed, just obtain the value stream and
@@ -967,12 +967,19 @@ public class DParseTask extends MRTask {
   // ArrayIndexOutOfBoundsException... and the Piece de resistance: a
   // ClassCastException deep in the SimpleDateFormat code:
   // "sun.util.calendar.Gregorian$Date cannot be cast to sun.util.calendar.JulianCalendar$Date"
-  // So I just brutally parse "yyyy-MM-dd HH:mm:ss.SSS"
   private static int digit( int x, int c ) {
     if( x < 0 || c < '0' || c > '9' ) return -1;
     return x*10+(c-'0');
   }
   private long attemptTimeParse( ValueString str ) {
+    long t0 = attemptTimeParse_0(str); // "yyyy-MM-dd HH:mm:ss.SSS"
+    if( t0 != Long.MIN_VALUE ) return t0;
+    long t1 = attemptTimeParse_1(str); // "dd-MMM-yy"
+    if( t1 != Long.MIN_VALUE ) return t1;
+    return Long.MIN_VALUE;
+  }
+  // So I just brutally parse "yyyy-MM-dd HH:mm:ss.SSS"
+  private long attemptTimeParse_0( ValueString str ) {
     final byte[] buf = str._buf;
     int i=str._off;
     final int end = i+str._length;
@@ -1015,5 +1022,56 @@ public class DParseTask extends MRTask {
     if( i<end && buf[i] == '"' ) i++;
     if( i<end ) return Long.MIN_VALUE;
     return new GregorianCalendar(yy,MM,dd,HH,mm,ss).getTimeInMillis()+SS;
+  }
+
+  // So I just brutally parse "dd-MMM-yy".
+  public static final byte MMS[][][] = new byte[][][] {
+    {"jan".getBytes(),null},
+    {"feb".getBytes(),null},
+    {"mar".getBytes(),null},
+    {"apr".getBytes(),null},
+    {"may".getBytes(),null},
+    {"jun".getBytes(),"june".getBytes()},
+    {"jul".getBytes(),"july".getBytes()},
+    {"aug".getBytes(),null},
+    {"sep".getBytes(),"sept".getBytes()},
+    {"oct".getBytes(),null},
+    {"nov".getBytes(),null},
+    {"dec".getBytes(),null}
+  };
+  private long attemptTimeParse_1( ValueString str ) {
+    final byte[] buf = str._buf;
+    int i=str._off;
+    final int end = i+str._length;
+    while( i < end && buf[i] == ' ' ) i++;
+    if   ( i < end && buf[i] == '"' ) i++;
+    if( (end-i) < 8 ) return Long.MIN_VALUE;
+    int yy=0, MM=0, dd=0;
+    dd = digit(dd,buf[i++]);
+    if( buf[i] != '-' ) dd = digit(dd,buf[i++]);
+    if( dd < 1 || dd > 31 ) return Long.MIN_VALUE;
+    if( buf[i++] != '-' ) return Long.MIN_VALUE;
+    byte[]mm=null;
+    OUTER: for( ; MM<MMS.length; MM++ ) {
+      byte[][] mms = MMS[MM];
+      INNER: for( int k=0; k<mms.length; k++ ) {
+        mm = mms[k];
+        if( mm == null ) continue;
+        for( int j=0; j<mm.length; j++ )
+          if( mm[j] != Character.toLowerCase(buf[i+j]) )
+            continue INNER;
+        break OUTER;
+      }
+    }
+    if( MM == MMS.length ) return Long.MIN_VALUE; // No matching month
+    i += mm.length;             // Skip month bytes
+    MM++;                       // 1-based month
+    if( buf[i++] != '-' ) return Long.MIN_VALUE;
+    yy = digit(yy,buf[i++]);
+    yy = digit(yy,buf[i++]);
+    yy += 2000;                 // Y2K bug
+    if( i<end && buf[i] == '"' ) i++;
+    if( i<end ) return Long.MIN_VALUE;
+    return new GregorianCalendar(yy,MM,dd).getTimeInMillis();
   }
 }

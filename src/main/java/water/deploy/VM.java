@@ -1,12 +1,15 @@
 package water.deploy;
 
 import java.io.*;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.codec.binary.Base64;
 
+import water.H2O;
 import water.util.Log;
 
 /**
@@ -18,14 +21,10 @@ public abstract class VM {
   private boolean _inherit;
   private File _out, _err;
 
-  public VM(String[] args) {
-    this(null, args);
-  }
-
-  public VM(String[] javaArgs, String[] appArgs) {
+  public VM(String[] java, String[] args) {
     _args = new ArrayList<String>();
     _args.add(System.getProperty("java.home") + "/bin/java");
-    defaultParams(_args);
+    if( java != null ) _args.addAll(Arrays.asList(java));
 
     // Iterate on URIs in case jar has been unpacked by Boot
     _args.add("-cp");
@@ -38,18 +37,16 @@ public abstract class VM {
       }
     }
     _args.add(cp);
-
-    if( javaArgs != null ) _args.addAll(Arrays.asList(javaArgs));
     _args.add(getClass().getName());
-    if( appArgs != null ) _args.addAll(Arrays.asList(appArgs));
+    if( args != null ) _args.addAll(Arrays.asList(args));
   }
 
-  static void defaultParams(ArrayList<String> list) {
-    boolean ea = false;
-    assert ea = true;
-    if( ea ) list.add("-ea");
-    if( Host.LOG_RSYNC ) list.add("-D" + Host.LOG_RSYNC_NAME + "=true");
-    // list.add("-agentlib:jdwp=transport=dt_socket,address=127.0.0.1:8001,server=y,suspend=n");
+  static String[] cloneParams() {
+    RuntimeMXBean r = ManagementFactory.getRuntimeMXBean();
+    ArrayList<String> list = new ArrayList<String>();
+    for( String s : r.getInputArguments() )
+      if( !s.startsWith("-agentlib") ) list.add(s);
+    return list.toArray(new String[list.size()]);
   }
 
   public Process process() {
@@ -100,7 +97,9 @@ public abstract class VM {
     _process.destroy();
     try {
       _process.waitFor();
-    } catch( InterruptedException _ ) {}
+    } catch( InterruptedException _ ) {
+      // Ignore
+    }
   }
 
   public static void exitWithParent() {
@@ -154,39 +153,16 @@ public abstract class VM {
   }
 
   public static String localIP() {
-    return Log.HOST;
+    return H2O.SELF_ADDRESS.getHostAddress();
   }
 
   /**
    * A VM whose only job is to wait for its parent to be gone, then kill its child process.
    * Otherwise every killed test leaves a bunch of orphan ssh and java processes.
    */
-  public static class Watchdog extends VM {
-    private final Host _host;
-
-    public Watchdog(Host host, String[] args) {
-      super(addHost(host, args));
-      _host = host;
-    }
-
-    public Host host() {
-      return _host;
-    }
-
-    public static String[] addHost(Host host, String[] args) {
-      String k = host.key() != null ? host.key() : "null";
-      String[] res = new String[] { host.address(), host.user(), k };
-      if( args != null ) res = (String[]) ArrayUtils.addAll(res, args);
-      return res;
-    }
-
-    protected static Host getHost(String[] args) {
-      String key = !args[2].equals("null") ? args[2] : null;
-      return new Host(args[0], args[1], key);
-    }
-
-    protected static String[] getArgs(String[] args) {
-      return Arrays.copyOfRange(args, 3, args.length);
+  static class Watchdog extends VM {
+    public Watchdog(String[] java, String[] node) {
+      super(java, node);
     }
 
     protected static void exec(ArrayList<String> list) throws Exception {
@@ -200,6 +176,46 @@ public abstract class VM {
         }
       });
       process.waitFor();
+    }
+  }
+
+  static class Params implements Serializable {
+    String[] _host, _java, _node;
+
+    public Params(Host host, String[] java, String[] node) {
+      _host = new String[] { host.address(), host.user(), host.key() };
+      _java = java;
+      _node = node;
+    }
+
+    String write() {
+      try {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        ObjectOutput out = null;
+        try {
+          out = new ObjectOutputStream(bos);
+          out.writeObject(this);
+          return Base64.encodeBase64String(bos.toByteArray());
+        } finally {
+          out.close();
+          bos.close();
+        }
+      } catch( Exception ex ) {
+        throw Log.errRTExcept(ex);
+      }
+    }
+
+    static Params read(String s) {
+      try {
+        ObjectInput in = new ObjectInputStream(new ByteArrayInputStream(Base64.decodeBase64(s)));
+        try {
+          return (Params) in.readObject();
+        } finally {
+          in.close();
+        }
+      } catch( Exception ex ) {
+        throw Log.errRTExcept(ex);
+      }
     }
   }
 }

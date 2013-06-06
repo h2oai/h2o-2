@@ -101,7 +101,7 @@ class Basic(unittest.TestCase):
                 'weight': 1.0,
                 'thresholds': 0.5,
                 'n_folds': 2,
-                'beta_epsilon':1.0E-4,
+                'beta_eps':1.0E-4,
             }
 
             start = time.time()

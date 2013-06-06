@@ -1,7 +1,6 @@
 package water;
 
-import java.io.EOFException;
-import java.io.IOException;
+import java.io.*;
 import java.lang.reflect.Array;
 import java.net.*;
 import java.nio.*;
@@ -38,8 +37,6 @@ public final class AutoBuffer {
   // to lower it again.  Note this is for TCP channels ONLY, and only because
   // we are blocking another Node with I/O.
   private int _oldPrior = -1;
-  // Count of concurrent TCP requests both incoming and outgoing
-  public static final AtomicInteger TCPS = new AtomicInteger(0);
 
   // Where to send or receive data via TCP or UDP (choice made as we discover
   // how big the message is); used to lazily create a Channel.  If NULL, then
@@ -100,7 +97,6 @@ public final class AutoBuffer {
   // Incoming TCP request.  Make a read-mode AutoBuffer from the open Channel,
   // figure the originating H2ONode from the first few bytes read.
   public AutoBuffer( SocketChannel sock ) throws IOException {
-    TCPS.incrementAndGet();
     _chan = sock;
     raisePriority();            // Make TCP priority high
     _bb = bbMake();
@@ -256,7 +252,6 @@ public final class AutoBuffer {
   // AutoBuffer close calls order; i.e. a reader close() will block until the
   // writer does a close().
   public final int close() { return close(true,false); }
-  public final int close(boolean expect_tcp) { return close(expect_tcp,false); }
   public final int close(boolean expect_tcp, boolean failed) {
     assert _h2o != null || _chan != null; // Byte-array backed should not be closed
     // Extra asserts on closing TCP channels: we should always know & expect
@@ -265,44 +260,63 @@ public final class AutoBuffer {
     // Note: this assert is essentially redundant with the extra read/write of
     // 0xab below; closing a TCP read-channel early will read 1 more byte -
     // which probably will not be 0xab.
-    assert expect_tcp || failed || !hasTCP();
+    final boolean tcp = hasTCP();
+    assert !tcp    || expect_tcp; // If we have   TCP, we fully expect it
+    assert !failed || expect_tcp; // If we failed TCP, we expect TCP
     try {
-      if( !failed ) {      // Failed flag is to recover from a broken TCP write
-        if( _chan == null ) {   // No channel?
-          if( _read ) return bbFree();
-          // For small-packet write, send via UDP.  Since nothing is sent until
-          // now, this close() call trivially orders - since the reader will not
-          // even start (much less close()) until this packet is sent.
-          if( _bb.position() < MTU ) return udpSend();
-        }
-        // Force AutoBuffer 'close' calls to order; i.e. block readers until
-        // writers do a 'close' - by writing 1 more byte in the close-call which
-        // the reader will have to wait for.
-        if( _h2o != null ) {    // TCP connection?
+      if( _chan == null ) {     // No channel?
+        if( _read ) return bbFree();
+        // For small-packet write, send via UDP.  Since nothing is sent until
+        // now, this close() call trivially orders - since the reader will not
+        // even start (much less close()) until this packet is sent.
+        if( _bb.position() < MTU ) return udpSend();
+      }
+      // Force AutoBuffer 'close' calls to order; i.e. block readers until
+      // writers do a 'close' - by writing 1 more byte in the close-call which
+      // the reader will have to wait for.
+      if( tcp ) {               // TCP connection?
+        if( failed ) {          // Failed TCP?
+          try { _chan.close(); } catch( IOException ioe ) {} // Silently close
+          if( !_read ) _h2o.freeTCPSocket(null); // Tell H2ONode socket is no longer available
+        } else {                // Closing good TCP?
           if( _read ) {         // Reader?
             int x = get1();     // Read 1 more byte
             assert x == 0xab : "AB.close instead of 0xab sentinel got "+x+", "+this;
+            // Write the reader-handshake-byte.
+            ((SocketChannel)_chan).socket().getOutputStream().write(0xcd);
+            // do not close actually reader socket; recycle it in TCPReader thread
           } else {              // Writer?
             put1(0xab);         // Write one-more byte
+            sendPartial();      // Finish partial writes
+            // Read the writer-handshake-byte.
+            SocketChannel sock = (SocketChannel)_chan;
+            int x = sock.socket().getInputStream().read();
+            assert x == 0xcd : "Handshake; writer expected a 0xcd from reader but got "+x;
+            _h2o.freeTCPSocket(sock); // Recycle writeable TCP channel
           }
         }
-        if( !_read ) sendPartial(); // Finish partial writes
+        restorePriority();      // And if we raised priority, lower it back
+
+      } else {                  // FileChannel
+        if( !_read ) sendPartial(); // Finish partial file-system writes
         _chan.close();
-        _time_close_ms = System.currentTimeMillis();
-        TimeLine.record_IOclose(this,_persist); // Profile TCP connections
-      } else {                                  // Failed?
-        if( _chan != null ) _chan.close();      // Just close, restore, exit
       }
+      _time_close_ms = System.currentTimeMillis();
+      TimeLine.record_IOclose(this,_persist); // Profile AutoBuffer connections
     } catch( IOException e ) {  // Dunno how to handle so crash-n-burn
-      // If already in failure-recovery mode, do not log an error on close...
-      // we already logged at the higher layer in the application.
-      if( !failed ) throw Log.errRTExcept(e);
-    } finally {
-      restorePriority();        // And if we raised priority, lower it back
-      if( _chan instanceof SocketChannel )
-        TCPS.decrementAndGet();
+      throw new TCPIsUnreliableException(e);
     }
     return bbFree();
+  }
+
+  // Need a sock for a big read or write operation.
+  // See if we got one already, else open a new socket.
+  private void tcpOpen() throws IOException {
+    assert _firstPage && _bb.limit() >= 1+2+4; // At least something written
+    assert _chan == null;
+    assert _bb.position()==0;
+    _chan = _h2o.getTCPSocket();
+    raisePriority();
   }
 
   public void drainClose() {
@@ -311,31 +325,14 @@ public final class AutoBuffer {
         _bb.clear();
       _chan.close();
       restorePriority();        // And if we raised priority, lower it back
-      TCPS.decrementAndGet();
       bbFree();
     } catch( IOException e ) {  // Dunno how to handle so crash-n-burn
       throw Log.errRTExcept(e);
     }
   }
 
-  // Need a sock for a big read or write operation
-  private void tcpOpen() throws IOException {
-    assert _firstPage && _bb.limit() >= 1+2+4; // At least something written
-    assert _chan == null;
-    assert _bb.position()==0;
-    SocketChannel sock = SocketChannel.open();
-    if( RANDOM_TCP_DROP != null && RANDOM_TCP_DROP.nextInt(10) == 0 )
-      throw new IOException("Random TCP Open Fail");
-    sock.socket().setSendBufferSize(BBSIZE);
-    boolean res = sock.connect( _h2o._key );
-    assert res && !sock.isConnectionPending() && sock.isBlocking() && sock.isConnected() && sock.isOpen();
-    _chan = sock;
-    TCPS.incrementAndGet();
-    raisePriority();
-  }
-
   // True if we opened a TCP channel, or will open one to close-and-send
-  boolean hasTCP() { return _chan instanceof SocketChannel || (_bb != null && _bb.position() >= MTU); }
+  boolean hasTCP() { return _chan instanceof SocketChannel || (_chan==null && _h2o!=null && _bb != null && _bb.position() >= MTU); }
 
   // True if we are in read-mode
   boolean readMode() { return _read; }
@@ -449,6 +446,12 @@ public final class AutoBuffer {
           throw new TCPIsUnreliableException(new EOFException("Reading "+sz+" bytes, AB="+this));
         if( res ==  0 ) throw new RuntimeException("Reading zero bytes - so no progress?");
       } catch( IOException e ) {  // Dunno how to handle so crash-n-burn
+        // Linux/Ubuntu message for a reset-channel
+        if( e.getMessage().equals("An existing connection was forcibly closed by the remote host") )
+          throw new TCPIsUnreliableException(e);
+        // Windows message for a reset-channel
+        if( e.getMessage().equals("An established connection was aborted by the software in your host machine") )
+          throw new TCPIsUnreliableException(e);
         throw  Log.errRTExcept(e);
       }
     }

@@ -21,6 +21,9 @@ public class RequestServer extends NanoHTTPD {
   // cache of all loaded resources
   private static final ConcurrentHashMap<String,byte[]> _cache = new ConcurrentHashMap();
   protected static final HashMap<String,Request> _requests = new HashMap();
+  public static HashMap<String,Request> requests() {
+    return _requests;
+  }
 
   static final Request _http404;
   static final Request _http500;
@@ -40,8 +43,10 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new ImportS3()),    "Import S3",    "Data");
     Request.addToNavbar(registerRequest(new ExportS3()),    "Export S3",    "Data");
     Request.addToNavbar(registerRequest(new ImportHdfs()),  "Import HDFS",  "Data");
+    Request.addToNavbar(registerRequest(new ExportHdfs()),  "Export HDFS",  "Data");
     Request.addToNavbar(registerRequest(new Upload()),      "Upload",       "Data");
     Request.addToNavbar(registerRequest(new Get()),         "Download",     "Data");
+    Request.addToNavbar(registerRequest(new SummaryPage()), "Summary",      "Data");
 
     Request.addToNavbar(registerRequest(new RF()),          "Random Forest", "Model");
     Request.addToNavbar(registerRequest(new GLM()),         "GLM",           "Model");
@@ -56,6 +61,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new Score()),       "Apply Model",   "Score");
 
     //Request.addToNavbar(registerRequest(new Plot()),        "Basic",         "Plot");
+    registerRequest(new Plot());
 
     Request.addToNavbar(registerRequest(new Jobs()),        "Jobs",          "Admin");
     Request.addToNavbar(registerRequest(new Cloud()),       "Cluster Status","Admin");
@@ -66,13 +72,13 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",   "Admin");
     Request.addToNavbar(registerRequest(new Script()),      "Get Script",    "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",      "Admin");
-
     Request.addToNavbar(registerRequest(new Tutorials()),           "View All",      "Tutorials");
     Request.addToNavbar(registerRequest(new TutorialRFIris()),      "Random Forest", "Tutorials");
     Request.addToNavbar(registerRequest(new TutorialGLMProstate()), "GLM",           "Tutorials");
     Request.addToNavbar(registerRequest(new TutorialKMeans()),      "KMeans",        "Tutorials");
 
     // internal handlers
+    registerRequest(new StaticHTMLPage("/h2o/CoefficientChart.html","chart"));
     registerRequest(new Cancel());
     registerRequest(new Exec());
     registerRequest(new ExportS3Progress());

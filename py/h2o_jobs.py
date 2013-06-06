@@ -28,7 +28,7 @@ def pollWaitJobs(pattern=None, timeoutSecs=30, pollTimeoutSecs=30, retryDelaySec
                     "cancelled:", j['cancelled'],\
                     "end_time:",  j['end_time'])
 
-        h2b.browseJsonHistoryAsUrlLastMatch("Jobs")
+        ### h2b.browseJsonHistoryAsUrlLastMatch("Jobs")
         if (anyBusy and waitTime > timeoutSecs):
             print h2o.dump_json(jobs)
             raise Exception("Some queued jobs haven't completed after", timeoutSecs, "seconds")

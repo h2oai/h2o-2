@@ -1,4 +1,6 @@
 package water.exec;
+import hex.BaseStatsTask;
+
 import java.util.ArrayList;
 
 import water.*;
@@ -120,11 +122,15 @@ public class VABuilder {
     return this;
   }
 
-
   public static ValueArray updateRows(ValueArray old, Key newKey, long newRows) {
     ValueArray newAry = old.clone();
     newAry._key = newKey;
     newAry._numrows = newRows;
     return newAry;
+  }
+  public static ValueArray getUpdatedVA(ValueArray old, Key newKey, long newRows){
+    BaseStatsTask t = new BaseStatsTask(old); // new dataset uses the old encoding so we can use old ValueArray header
+    t.invoke(newKey);
+    return new ValueArray(newKey, newRows, old._rowsize, t.getCols());
   }
 }

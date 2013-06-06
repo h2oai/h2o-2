@@ -6,7 +6,7 @@ import java.io.PrintWriter;
 import org.apache.hadoop.fs.Path;
 
 import water.DKV;
-import water.hdfs.PersistHdfs;
+import water.persist.PersistHdfs;
 import water.util.Log;
 
 import com.google.gson.*;
@@ -24,7 +24,7 @@ public class ImportHdfs extends Request {
     @Override protected String defaultValue() { return null; }
   }
 
-  protected final PathArg _path = new PathArg("path");
+  protected final PathArg _path = new PathArg(PATH);
 
   public ImportHdfs() {
     _requestHelp = "Imports the given HDFS path.  All nodes in the "

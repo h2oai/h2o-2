@@ -3,9 +3,8 @@ package water;
 import java.util.Arrays;
 import java.util.UUID;
 
-import water.api.Constants;
-import water.util.Log;
 import water.H2O.H2OCountedCompleter;
+import water.api.Constants;
 
 public class Job extends Iced {
   // Global LIST of Jobs key.

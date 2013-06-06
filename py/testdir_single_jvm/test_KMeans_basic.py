@@ -6,7 +6,6 @@ class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
-
     @classmethod
     def setUpClass(cls):
         global localhost
@@ -26,12 +25,12 @@ class Basic(unittest.TestCase):
         csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
 
-        kwargs = {'k': 1, 'epsilon': 1e-6, 'cols': None, 'destination_key': 'benign_k.hex'}
-        kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=5, **kwargs)
-        kmeansResult = h2o_cmd.runInspect(key='benign_k.hex')
-        print h2o.dump_json(kmeans)
-        print h2o.dump_json(kmeansResult)
-        h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
+        # loop, to see if we get same centers
+        for i in range(2):
+            kwargs = {'k': 3, 'epsilon': 1e-6, 'cols': None, 'destination_key': 'benign_k.hex'}
+            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=5, **kwargs)
+            h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
+
 
     def test_C_kmeans_prostate(self):
         csvFilename = "prostate.csv"
@@ -39,12 +38,11 @@ class Basic(unittest.TestCase):
         csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
 
-        kwargs = {'k': 1, 'epsilon': 1e-6, 'cols': None, 'destination_key': 'prostate_k.hex'}
-        kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=5, **kwargs)
-        kmeansResult = h2o_cmd.runInspect(key='prostate_k.hex')
-        print h2o.dump_json(kmeans)
-        print h2o.dump_json(kmeansResult)
-        h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
+        # loop, to see if we get same centers
+        for i in range(2):
+            kwargs = {'k': 3, 'epsilon': 1e-6, 'cols': None, 'destination_key': 'prostate_k.hex'}
+            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=5, **kwargs)
+            h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
 
 if __name__ == '__main__':
     h2o.unit_main()

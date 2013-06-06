@@ -25,7 +25,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls): 
         h2o.tear_down_cloud()
 
-    def test_A_parse_small_many(self):
+    def test_parse_small_nopoll2(self):
         SEED = 6204672511291494176
         random.seed(SEED)
         print "\nUsing random seed:", SEED
@@ -48,16 +48,17 @@ class Basic(unittest.TestCase):
             csvFilename = "p" + "_" + str(size)
             csvPathname = SYNDATASETS_DIR + "/" + csvFilename
             writeRows(csvPathname,row,eol,size)
-            key  = csvFilename
-            pkey = node.put_file(csvPathname, key=key, timeoutSecs=timeoutSecs)
-            print h2o.dump_json(pkey)
             
             trialMax = 100
             for trial in range(trialMax):
+                # have to repeat the put because h2o deletes the source key now after parse
+                key = csvFilename + "_" + str(trial)
+                pkey = node.put_file(csvPathname, key=key, timeoutSecs=timeoutSecs)
+                ## print h2o.dump_json(pkey)
                 key2 = csvFilename + "_" + str(trial) + ".hex"
                 # just parse, without polling, except for last one..will that make prior ones complete too?
-                noPoll = trial==(trialMax-1)
-                node.parse(pkey, key2, timeoutSecs=timeoutSecs, retryDelaySecs=0.00, noPoll=noPoll)
+                noPoll = trial!=(trialMax-1)
+                node.parse(pkey, key2, timeoutSecs=timeoutSecs, retryDelaySecs=0.5, noPoll=noPoll)
                 if not trial%10:
                     sys.stdout.write('.')
                     sys.stdout.flush()

@@ -62,9 +62,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_exec_import_hosts(self):
-        # importFolderPath = "/home/hduser/hdfs_datasets"
-        importFolderPath = "/home/0xdiag/datasets"
-        h2i.setupImportFolder(None, importFolderPath)
+        importFolderPath = "/home/0xdiag/datasets/standard"
 
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
@@ -86,6 +84,8 @@ class Basic(unittest.TestCase):
         h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
         for (csvFilename, key2, timeoutSecs) in csvFilenameList:
+            # import each time, because h2o deletes source file after parse
+            h2i.setupImportFolder(None, importFolderPath)
             # creates csvFilename.hex from file in importFolder dir 
             parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
                 key2=key2, timeoutSecs=2000)

@@ -71,7 +71,7 @@ class Basic(unittest.TestCase):
                 'case_mode': '=',
                 'case': 1,
                 'max_iter': 8,
-                'beta_epsilon': 1e-3}
+                'beta_eps': 1e-3}
 
             timeoutSecs = 720
             # L2 

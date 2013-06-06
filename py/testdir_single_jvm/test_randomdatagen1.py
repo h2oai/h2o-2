@@ -27,10 +27,12 @@ class Basic(unittest.TestCase):
     def test_A_randomdata2(self):
         print "Using smalldata/datagen1.csv as is"
         csvPathname = h2o.find_file('smalldata/datagen1.csv')
-        h2o_cmd.runRF(trees=1, response_variable=2, timeoutSecs=10, csvPathname=csvPathname)
+        # have to give the separator == comma...otherwise H2O can't deduce it on this dataset
+        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, timeoutSecs=10, header=1, separator=44)
+        h2o_cmd.runRFOnly(parseKey=parseKey, trees=1, response_variable=2, timeoutSecs=10, csvPathname=csvPathname)
 
     def test_B_randomdata2_1_lineend(self):
-        print "Using smalldata/datagen1.csv to create", SYNDATASETS_DIR, "/datagen1.csv with \r instead" 
+        print "Using smalldata/datagen1.csv to create", SYNDATASETS_DIR, "/datagen1.csv with different line ending" 
         # change lineend, case 1
         csvPathname1 = h2o.find_file('smalldata/datagen1.csv')
         csvPathname2 = SYNDATASETS_DIR + '/datagen1_crlf.csv'
@@ -45,7 +47,8 @@ class Basic(unittest.TestCase):
         infile.close()
         outfile.close()
 
-        h2o_cmd.runRF(trees=1, response_variable=2, timeoutSecs=10, csvPathname=csvPathname2)
+        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname2, timeoutSecs=10, header=1, separator=44)
+        h2o_cmd.runRFOnly(parseKey=parseKey, trees=1, response_variable=2, timeoutSecs=10, csvPathname=csvPathname2)
 
 
 if __name__ == '__main__':

@@ -1,7 +1,13 @@
 package water.api;
 
 import hex.*;
-import hex.DGLM.*;
+import hex.DGLM.CaseMode;
+import hex.DGLM.Family;
+import hex.DGLM.GLMException;
+import hex.DGLM.GLMJob;
+import hex.DGLM.GLMModel;
+import hex.DGLM.GLMParams;
+import hex.DGLM.Link;
 import hex.DLSM.ADMMSolver;
 import hex.DLSM.GeneralizedGradientSolver;
 import hex.DLSM.LSMSolver;
@@ -10,20 +16,16 @@ import hex.NewRowVecTask.DataFrame;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.text.DecimalFormat;
 import java.util.*;
-import java.util.Map.Entry;
 
 import water.*;
-import water.api.RequestBuilders.KeyElementBuilder;
-import water.api.RequestBuilders.Response;
 import water.util.Log;
 import water.util.RString;
 
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 public class GLM extends Request {
+  protected final H2OKey _dest = new H2OKey(DEST_KEY, false);
   protected final H2OHexKey _key = new H2OHexKey(KEY);
   protected final H2OHexKeyCol _y = new H2OHexKeyCol(Y, _key);
   protected final HexColumnSelect _x = new HexNonConstantColumnSelect(X, _key, _y);
@@ -194,6 +196,7 @@ public class GLM extends Request {
   @Override protected Response serve() {
     try {
       JsonObject res = new JsonObject();
+      Key dest = _dest.value();
       ValueArray ary = _key.value();
       int[] columns = createColumns();
       res.addProperty("key", ary._key.toString());
@@ -213,7 +216,7 @@ public class GLM extends Request {
       case GenGradient:
         lsm = new GeneralizedGradientSolver(_lambda.value(),_alpha.value());
       }
-      GLMJob job = DGLM.startGLMJob(data, lsm, glmParams, null, _xval.value(), true);
+      GLMJob job = DGLM.startGLMJob(dest, data, lsm, glmParams, null, _xval.value(), true);
       JsonObject j = new JsonObject();
       j.addProperty(Constants.DEST_KEY, job.dest().toString());
       Response r = GLMProgressPage.redirect(j, job.self(), job.dest(),job.progressKey());
