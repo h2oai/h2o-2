@@ -14,6 +14,7 @@ public class FVecTest extends TestUtil {
 
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
+  // ==========================================================================
   @Test public void testBasicCRUD() {
     // Make and insert a FileVec to the global store
     File file = TestUtil.find_test_file("./smalldata/cars.csv");
@@ -44,19 +45,20 @@ public class FVecTest extends TestUtil {
     }
   }
 
+  // ==========================================================================
+  // Test making a appendable vector from a plain vector
   @Test public void testNewVec() {
     // Make and insert a FileVec to the global store
-    //File file = TestUtil.find_test_file("./smalldata/cars.csv");
-    File file = TestUtil.find_test_file("../Dropbox/Sris and Cliff/H20_Rush_New_Dataset_100k.csv");
+    File file = TestUtil.find_test_file("./smalldata/cars.csv");
+    //File file = TestUtil.find_test_file("../Dropbox/Sris and Cliff/H20_Rush_New_Dataset_100k.csv");
     Key key = NFSFileVec.make(file);
     NFSFileVec nfs=DKV.get(key).get();
     Key key2 = Key.make("newKey",(byte)0,Key.VEC);
     AppendableVec nv = new AppendableVec(key2);
     Vec res = new TestNewVec().invoke(nv,nfs).vecs(0);
-
-    int cidx = res.elem2ChunkIdx(0); // Element/row# to chunk#
-    Value dvec = res.chunkIdx(cidx); // Chunk# to chunk data
-    System.err.println(new String(dvec.memOrLoad()));
+    assertEquals(nfs.at(0)+1,res.at(0));
+    assertEquals(nfs.at(1)+1,res.at(1));
+    assertEquals(nfs.at(2)+1,res.at(2));
 
     UKV.remove(key );
     UKV.remove(key2);
@@ -69,6 +71,10 @@ public class FVecTest extends TestUtil {
     }
   }
 
+  // ==========================================================================
+  //Key fkey = load_test_file("smalldata/cars.csv");
+  //Key okey = Key.make("cars.hex");
+  //ParseDataset.parse(okey,new Key[]{fkey});
   // ==========================================================================
   /*@Test*/ public void testWordCount() {
     File file = TestUtil.find_test_file("./smalldata/cars.csv");

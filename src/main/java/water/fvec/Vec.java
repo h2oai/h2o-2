@@ -46,10 +46,10 @@ public class Vec extends Iced {
   int elem2ChunkIdx( long i ) {
     assert 0 <= i && i < length();
     int lo=0, hi = nChunks();
-    while( lo < hi ) {
-      int mid = (hi-lo)>>1;
-      if( i <= _espc[mid] ) hi = mid;
-      else                  lo = mid;
+    while( lo < hi-1 ) {
+      int mid = (hi+lo)>>>1;
+      if( i < _espc[mid] ) hi = mid;
+      else                 lo = mid;
     }
     return lo;
   }
