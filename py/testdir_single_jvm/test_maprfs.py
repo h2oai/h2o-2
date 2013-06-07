@@ -19,16 +19,14 @@ class Basic(unittest.TestCase):
         # hdfs_config='/opt/mapr/conf/mapr-clusters.conf', 
         if (localhost):
             h2o.build_cloud(1, 
-                # java_extra_args = "-cp /opt/mapr/hadoop/hadoop-0.20.2/conf:/opt/mapr/hadoop/hadoop-0.20.2/lib/hadoop-0.20.2-dev-core.jar:/opt/mapr/hadoop/hadoop-0.20.2/lib/maprfs-0.1.jar:.:/opt/mapr/hadoop/hadoop-0.20.2/lib/commons-logging-1.0.4.jar:/opt/mapr/hadoop/hadoop-0.20.2/lib/zookeeper-3.3.6.jar:/opt/mapr/hadoop/hadoop-0.20.2/lib/log4j-1.2.15.jar",
                 use_maprfs=True, 
-                hdfs_version='0.20.2mapr', 
-                hdfs_name_node='mr-0x1.0xdata.loc')
+                hdfs_version='mapr2.1.3', 
+                hdfs_name_node='mr-0x1.0xdata.loc:7222')
         else:
             h2o_hosts.build_cloud_with_hosts(1, 
-                # java_extra_args = "-cp /opt/mapr/hadoop/hadoop-0.20.2/conf:/opt/mapr/hadoop/hadoop-0.20.2/lib/hadoop-0.20.2-dev-core.jar:/opt/mapr/hadoop/hadoop-0.20.2/lib/maprfs-0.1.jar:.:/opt/mapr/hadoop/hadoop-0.20.2/lib/commons-logging-1.0.4.jar:/opt/mapr/hadoop/hadoop-0.20.2/lib/zookeeper-3.3.6.jar:/opt/mapr/hadoop/hadoop-0.20.2/lib/log4j-1.2.15.jar",
                 use_maprfs=True, 
-                hdfs_version='0.20.2mapr', 
-                hdfs_name_node='mr-0x1.0xdata.loc')
+                hdfs_version='mapr2.1.3', 
+                hdfs_name_node='mr-0x1.0xdata.loc:7222')
 
     @classmethod
     def tearDownClass(cls):
@@ -84,8 +82,9 @@ class Basic(unittest.TestCase):
         # save the first, for all comparisions, to avoid slow drift with each iteration
         firstglm = {}
         h2i.setupImportHdfs(
-            path='/', 
+            path='/datasets', 
             schema='maprfs:///')
+
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in hdfs dir 
             print "Loading", csvFilename, 'from HDFS'
