@@ -29,7 +29,9 @@ public class LogView extends Request {
         obj.addProperty("thr" , logstr._thrs [x]);
         obj.addProperty("kind", Log.KINDS[logstr._kinds[x]].name());
         obj.addProperty("sys", Log.SYSS[logstr._syss[x]].name());
-        obj.addProperty("msg" , logstr._msgs [x]);
+        String s = logstr._msgs[x];
+        if( s.length()>2000 ) s = s.substring(0,2000)+"...";
+        obj.addProperty("msg" , s);
         ary.add(obj);
       }
     }
