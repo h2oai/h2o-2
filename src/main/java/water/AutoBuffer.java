@@ -629,6 +629,19 @@ public final class AutoBuffer {
     return ts;
   }
 
+  public AutoBuffer putAAStr(String[][] fs)    {
+    if( fs == null ) return put4(-1);
+    put4(fs.length);
+    for( String[] s : fs ) putAStr(s);
+    return this;
+  }
+  public String[][] getAAStr() {
+    int len = get4(); if( len == -1 ) return null;
+    String[][] ts = new String[len][];
+    for( int i = 0; i < len; ++i ) ts[i] = getAStr();
+    return ts;
+  }
+
   // Read the smaller of _bb.remaining() and len into buf.
   // Return bytes read, which could be zero.
   public int read( byte[] buf, int off, int len ) {

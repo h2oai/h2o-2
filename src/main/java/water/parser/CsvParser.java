@@ -459,7 +459,7 @@ NEXT_CHAR:
    * Simply holds the column names, their length also determines the number of
    * columns, the separator used and whether the CSV file had a header or not.
    */
-  public static class Setup {
+  public static class Setup extends Iced {
     public final byte _separator;
     public final boolean _header;
     // Row zero is column names.
