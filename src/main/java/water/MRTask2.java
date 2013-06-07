@@ -1,11 +1,7 @@
 package water;
 
-import java.util.concurrent.ExecutionException;
-import java.util.Arrays;
 import jsr166y.CountedCompleter;
-import sun.misc.Unsafe;
 import water.fvec.*;
-import water.nbhm.UtilUnsafe;
 import water.util.Log;
 
 /** Map/Reduce style distributed computation. */
@@ -52,24 +48,8 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
 
   // Top-level blocking call.
   public final T invoke( Vec... vecs ) { 
-    // Use first readable vector to gate home/not-home
-    checkCompatible(firstReadable(vecs),vecs); // Check for compatible vectors
-    _vecs = vecs;               // Record vectors to work on
-    _nlo = 0;  _nhi = H2O.CLOUD.size(); // Do Whole Cloud
-    setupLocal();               // Local setup
-    H2O.submitTask(this);       // Begin normal execution on a FJ thread
-    try { get(); }              // Block until done
-    catch( InterruptedException e ) { Log.errRTExcept(e); }
-    catch(   ExecutionException e ) { Log.errRTExcept(e); }
-
-    // Final close ops on any new appendable vec
-    for( int i=0; i<_vecs.length; i++ ) {
-      Vec v = _vecs[i];
-      if( v != null && v instanceof AppendableVec )
-        _vecs[i] = ((AppendableVec)v).close();
-    }
-
-    return self();
+    dfork(vecs);
+    return getResult();
   }
   public final T dfork( Vec... vecs ) { 
     // Use first readable vector to gate home/not-home
@@ -78,6 +58,21 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
     _nlo = 0;  _nhi = H2O.CLOUD.size(); // Do Whole Cloud
     setupLocal();               // Local setup
     H2O.submitTask(this);       // Begin normal execution on a FJ thread
+    return self();
+  }
+
+  // Block for & get any final results from a dfork'd MRTask2.
+  // Note: the desired name 'get' is final in ForkJoinTask.
+  public final T getResult() {
+    join();
+
+    // Final close ops on any new appendable vec
+    for( int i=0; i<_vecs.length; i++ ) {
+      Vec v = _vecs[i];
+      if( v != null && v instanceof AppendableVec )
+        _vecs[i] = ((AppendableVec)v).close();
+    }
+
     return self();
   }
   
