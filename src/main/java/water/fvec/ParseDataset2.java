@@ -4,12 +4,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 import java.util.zip.*;
 import water.*;
-import water.util.Log;
 import water.H2O.H2OCountedCompleter;
 import water.api.Inspect;
 import water.parser.CsvParser;
+import water.util.Log;
 
 public final class ParseDataset2 extends Job {
   public final Key  _progress;  // Job progress Key
@@ -22,9 +23,7 @@ public final class ParseDataset2 extends Job {
   // Same parse, as a backgroundable Job
   public static Job forkParseDataset(final Key dest, final Key[] keys, final CsvParser.Setup setup) {
     ParseDataset2 job = new ParseDataset2(dest, keys);
-    H2OCountedCompleter fjt = new ParserFJTask(job, keys, setup);
-    job.start(fjt);
-    H2O.submitTask(fjt);
+    H2O.submitTask(job.start(new ParserFJTask(job, keys, setup)));
     return job;
   }
   // Setup a private background parse job
@@ -47,7 +46,7 @@ public final class ParseDataset2 extends Job {
       _setup = setup;
     }
     @Override public void compute2() {
-      parse(_job, _keys, _setup);
+      parse_impl(_job, _keys, _setup);
       tryComplete();
     }
   }
@@ -79,7 +78,7 @@ public final class ParseDataset2 extends Job {
 
   // --------------------------------------------------------------------------
   // Top-level parser driver
-  public static void parse(ParseDataset2 job, Key [] fkeys, CsvParser.Setup setup) {
+  private static void parse_impl(ParseDataset2 job, Key [] fkeys, CsvParser.Setup setup) {
     // remove any previous instance and insert a sentinel (to ensure no one has
     // been writing to the same keys during our parse)!
     UKV.remove(job.dest());
@@ -88,18 +87,49 @@ public final class ParseDataset2 extends Job {
       return;
     }
 
-    // Guess column layout
+    // Guess column layout.  For multiple files, the caller is supposed to
+    // guarantee they have equal & compatible columns and/or headers.
     ByteVec vec = UKV.get(fkeys[0]);
     Compression compression = guessCompressionMethod(vec);
+    byte sep = setup == null ? CsvParser.NO_SEPARATOR : setup._separator;
     if( setup == null || setup._data == null || setup._data[0] == null )
-      setup = csvGuessValue(vec, (setup != null)?setup._separator:CsvParser.NO_SEPARATOR, 
-                            compression);
-    final int ncolumns = setup._data[0].length;
-    
+      setup = csvGuessValue(vec, sep, compression);
     System.out.println("Setup="+setup);
+
+    final int ncols = setup._data[0].length;
+
+    // How many files to launch in parallel?  Cap at 2xcloud size (min 8).
+    int parallel = Math.min(fkeys.length,Math.max(8,H2O.CLOUD.size()<<1));
+    if( parallel > 1 ) throw H2O.unimpl(); // untested
+
+    // Launch parallel file parses.
+    UnzipAndParseTask[] parses = new UnzipAndParseTask[fkeys.length];
+    for( int i=0; i<fkeys.length; i++ ) {
+      parses[i] = new UnzipAndParseTask().dfork((ByteVec)UKV.get(fkeys[i]));
+      if( i>=parallel ) // Up to the limit of parallelism: block for eldest parallel parse
+        parses[i-parallel].get();
+    }
+    for( int i=fkeys.length-parallel; i<fkeys.length; i++ )
+      parses[i].get();          // Block for the rest of parses
     throw H2O.unimpl();
+
+    //setup = Inspect.csvGuessValue(v,_sep);
+    //if(setup._data[0].length != _ncolumns)
+    //  throw new ParseException("Found conflicting number of columns (using separator " + (int)_sep + ") when parsing multiple files. Found " + setup._data[0].length + " columns  in " + key + " , but expected " + _ncolumns);
+    //_fileInfo[_idx]._header = setup._header;
+    //if(_fileInfo[_idx]._header && _headers != null) // check if we have the header, it should be the same one as we got from the head
+    //  for(int i = 0; i < setup._data[0].length; ++i)
+    //    _fileInfo[_idx]._header = _fileInfo[_idx]._header && setup._data[0][i].equalsIgnoreCase(_headers[i]);
+    //setup = new CsvParser.Setup(_sep, _fileInfo[_idx]._header, setup._data, setup._numlines, setup._bits);
+    //_p1 = DParseTask.createPassOne(v, _job, _pType);
+    //_p1.setCompleter(this);
+    //_p1.passOne(setup);
+    //// DO NOT call tryComplete here, _p1 calls it!
   }
 
+  // --------------------------------------------------------------------------
+  private static class UnzipAndParseTask extends MRTask2<UnzipAndParseTask> {
+  }
 
   // --------------------------------------------------------------------------
   // Heuristics
@@ -117,7 +147,6 @@ public final class ParseDataset2 extends Job {
 
   public static CsvParser.Setup csvGuessValue( ByteVec vec, byte separator, Compression compression ) {
     // Since this data is all bytes, we know each chunk is just raw text.
-    // Cast to the no-compression raw text C0Vector fearlessly.
     C0Vector bv = vec.elem2BV(0,0);
     // See if we can make sense of the first few rows.
     byte[] bs = bv._mem;

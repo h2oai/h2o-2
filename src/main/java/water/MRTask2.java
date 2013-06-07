@@ -71,6 +71,15 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
 
     return self();
   }
+  public final T dfork( Vec... vecs ) { 
+    // Use first readable vector to gate home/not-home
+    checkCompatible(firstReadable(vecs),vecs); // Check for compatible vectors
+    _vecs = vecs;               // Record vectors to work on
+    _nlo = 0;  _nhi = H2O.CLOUD.size(); // Do Whole Cloud
+    setupLocal();               // Local setup
+    H2O.submitTask(this);       // Begin normal execution on a FJ thread
+    return self();
+  }
   
   // Called once on remote at top level, probably with a subset of the cloud.
   @Override public final void dinvoke(H2ONode sender) {
