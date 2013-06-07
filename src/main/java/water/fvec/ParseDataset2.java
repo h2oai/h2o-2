@@ -96,26 +96,50 @@ public final class ParseDataset2 extends Job {
       setup = csvGuessValue(vec, sep, compression);
     System.out.println("Setup="+setup);
 
-    final int ncols = setup._data[0].length;
+    // Parallel file parse launches across the cluster
+    MultiFileParseTask uzpt = new MultiFileParseTask(setup).invoke(fkeys);
+    
+    if( uzpt._parserr != null )
+      throw new ParseException(uzpt._parserr);
 
-    // How many files to launch in parallel?  Cap at 2xcloud size (min 8).
-    int parallel = Math.min(fkeys.length,Math.max(8,H2O.CLOUD.size()<<1));
-    if( parallel > 1 ) throw H2O.unimpl(); // untested
-
-    // Launch parallel file parses.
-    UnzipAndParseTask[] parses = new UnzipAndParseTask[fkeys.length];
-    for( int i=0; i<fkeys.length; i++ ) {
-      parses[i] = new UnzipAndParseTask().dfork((ByteVec)UKV.get(fkeys[i]));
-      if( i>=parallel ) // Up to the limit of parallelism: block for eldest parallel parse
-        parses[i-parallel].get();
-    }
-    for( int i=fkeys.length-parallel; i<fkeys.length; i++ )
-      parses[i].get();          // Block for the rest of parses
     throw H2O.unimpl();
+  }
 
-    //setup = Inspect.csvGuessValue(v,_sep);
-    //if(setup._data[0].length != _ncolumns)
-    //  throw new ParseException("Found conflicting number of columns (using separator " + (int)_sep + ") when parsing multiple files. Found " + setup._data[0].length + " columns  in " + key + " , but expected " + _ncolumns);
+  // --------------------------------------------------------------------------
+  // We want to do a standard MRTask with a collection of file-keys (so the
+  // files are parsed in parallel across the cluster), but we want to throttle
+  // the parallelism on each node.
+  private static class MultiFileParseTask extends MRTask<MultiFileParseTask> {
+    public final CsvParser.Setup _setup; // The expected column layout
+    public String _parserr;              // NULL if parse is OK, else an error string
+
+    MultiFileParseTask( CsvParser.Setup setup ) {
+      _setup = setup;
+    }
+
+    //// Total memory on this Node
+    //static long MEM = MemoryManager.MEM_MAX;
+    //// Node-local desired file parallelism level
+    //static int PLEVEL=2;
+    //// Bogus estimate of memory used; cranked really high to force MRTask
+    //// to throttle parallelism level.
+    //@Override public long memOverheadPerChunk() { 
+    //  System.out.println("MEM_MAX="+MEM+", will reserve "+(MEM/PLEVEL));
+    //  return (MEM/PLEVEL); 
+    //}
+
+    // Called once per file
+    @Override public void map( Key key ) {
+      ByteVec vec = UKV.get(key);
+      Compression cpr = guessCompressionMethod(vec);
+      CsvParser.Setup setup = csvGuessValue(vec,_setup._separator,cpr);
+      final int ncol1 = _setup._data[0].length;
+      final int ncol2 =  setup._data[0].length;
+      if( ncol1 != ncol2 ) {
+        _parserr = "Found conflicting number of columns (using separator '" +_setup._separator + "' when parsing multiple files.  Found " + ncol2 + " columns  in " + key + " , but expected " + ncol1;
+        return;
+      }
+      throw H2O.unimpl();
     //_fileInfo[_idx]._header = setup._header;
     //if(_fileInfo[_idx]._header && _headers != null) // check if we have the header, it should be the same one as we got from the head
     //  for(int i = 0; i < setup._data[0].length; ++i)
@@ -125,10 +149,13 @@ public final class ParseDataset2 extends Job {
     //_p1.setCompleter(this);
     //_p1.passOne(setup);
     //// DO NOT call tryComplete here, _p1 calls it!
-  }
+    }
 
-  // --------------------------------------------------------------------------
-  private static class UnzipAndParseTask extends MRTask2<UnzipAndParseTask> {
+    @Override public void reduce( MultiFileParseTask uzpt ) {
+      // Combine parse errors from across files
+      if( _parserr == null ) _parserr = uzpt._parserr;
+      else if( uzpt._parserr != null ) _parserr += uzpt._parserr;
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -192,5 +219,9 @@ public final class ParseDataset2 extends Job {
 
     // Now try to interpret the unzipped data as a CSV
     return CsvParser.inspect(bs, separator);
+  }
+
+  public static class ParseException extends RuntimeException {
+    public ParseException(String msg) { super(msg); }
   }
 }
