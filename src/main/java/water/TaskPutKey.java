@@ -27,6 +27,7 @@ public class TaskPutKey extends DTask<TaskPutKey> {
 
   @Override public void dinvoke( H2ONode sender ) {
     assert _key.home() || _val==null; // Only PUT to home for keys, or remote invalidation from home
+    Paxos.lockCloud();
     // Initialize Value for having a single known replica (the sender)
     //if( _val != null && !_dontCache ) _val.initReplicaHome(sender,_key);
     if( _val != null ) _val.initReplicaHome(sender,_key);

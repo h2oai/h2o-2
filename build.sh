@@ -95,8 +95,6 @@ function build_classes() {
         $TESTSRC/*/*java \
         $TESTSRC/*/*/*java
 
-    "$JAVA" -ea -cp "${CLASSPATH}"${SEP}"$CLASSES" water.TypeMap
-
     cp -r ${RESOURCES}/* "${CLASSES}"
 cat >> "$VERSION_PROPERTIES" <<EOF
 h2o.git.version=$($GIT rev-parse HEAD 2>/dev/null )
