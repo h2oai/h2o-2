@@ -91,7 +91,7 @@ public class Boot extends ClassLoader {
   private URLClassLoader _systemLoader;
   private Method _addUrl;
 
-  private void boot( String[] args ) throws Exception {
+  public void boot( String[] args ) throws Exception {
     if( fromJar() ) {
       _systemLoader = (URLClassLoader)getSystemClassLoader();
       _addUrl = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
