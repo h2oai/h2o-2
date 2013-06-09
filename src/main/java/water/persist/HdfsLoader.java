@@ -30,14 +30,11 @@ public class HdfsLoader {
     }
     try {
       if( Boot._init.fromJar() ) {
-        System.out.println("kevin: Boot._init.fromJar()");
         File f = new File(version);
         if( f.exists() ) {
           Boot._init.addExternalJars(f);
-          System.out.println("kevin: Boot._init.addExternalJars(f)");
         } else {
           Boot._init.addInternalJars("hadoop/" + version + "/");
-          System.out.println("kevin: Boot._init.addInternalJars(hadoop/" + version + "/");
         }
       }
     } catch( Exception e ) {
