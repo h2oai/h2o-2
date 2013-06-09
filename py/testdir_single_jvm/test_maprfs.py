@@ -16,10 +16,17 @@ class Basic(unittest.TestCase):
         # assume we're at 0xdata with it's hdfs namenode
         global localhost
         localhost = h2o.decide_if_localhost()
+        # hdfs_config='/opt/mapr/conf/mapr-clusters.conf', 
         if (localhost):
-            h2o.build_cloud(1, use_maprfs=True, hdfs_version='0.20.2mapr', hdfs_name_node='mr-0x1.0xdata.loc:7222')
+            h2o.build_cloud(1, 
+                use_maprfs=True, 
+                hdfs_version='mapr2.1.3', 
+                hdfs_name_node='mr-0x1.0xdata.loc:7222')
         else:
-            h2o_hosts.build_cloud_with_hosts(1, use_maprfs=True, hdfs_version='0.20.2mapr', hdfs_name_node='mr-0x1.0xdata.loc:7222')
+            h2o_hosts.build_cloud_with_hosts(1, 
+                use_maprfs=True, 
+                hdfs_version='mapr2.1.3', 
+                hdfs_name_node='mr-0x1.0xdata.loc:7222')
 
     @classmethod
     def tearDownClass(cls):
@@ -33,32 +40,6 @@ class Basic(unittest.TestCase):
         #    "allstate_claim_prediction_train_set.zip",
         csvFilenameAll = [
             "TEST-poker1000.csv",
-            "leads.csv",
-            "and-testing.data",
-            "arcene2_train.both",
-            "arcene_train.both",
-            # these can't RF ..output classes not integer?
-            # "bestbuy_test.csv",
-            # "bestbuy_train.csv",
-            "covtype.data",
-            "covtype.4x.shuffle.data",
-            "covtype4x.shuffle.data",
-            "covtype.13x.data",
-            "covtype.13x.shuffle.data",
-            # "covtype.169x.data",
-            # "prostate_2g.csv",
-            # "prostate_long.csv.gz",
-            "prostate_long_1G.csv",
-            "hhp.unbalanced.012.1x11.data.gz",
-            "hhp.unbalanced.012.data.gz",
-            "hhp.unbalanced.data.gz",
-            "hhp2.os.noisy.0_1.data",
-            "hhp2.os.noisy.9_4.data",
-            "hhp_9_14_12.data",
-            # "poker_c1s1_testing_refresh.csv",
-            # "3G_poker_shuffle",
-            # "billion_rows.csv.gz",
-            # "poker-hand.1244M.shuffled311M.full.txt",
         ]
 
         # pick 8 randomly!
@@ -69,16 +50,24 @@ class Basic(unittest.TestCase):
             csvFilenameList = csvFilenameAll
 
         # pop open a browser on the cloud
-        h2b.browseTheCloud()
+        # h2b.browseTheCloud()
 
         timeoutSecs = 200
         # save the first, for all comparisions, to avoid slow drift with each iteration
         firstglm = {}
-        h2i.setupImportHdfs(path='/', schema='maprfs')
+        h2i.setupImportHdfs(
+            path='/datasets', 
+            schema='maprfs')
+
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in hdfs dir 
             print "Loading", csvFilename, 'from HDFS'
-            parseKey = h2i.parseImportHdfsFile(csvFilename=csvFilename, path='/datasets', schema='maprfs', timeoutSecs=1000)
+            parseKey = h2i.parseImportHdfsFile(
+                csvFilename=csvFilename, 
+                path='/datasets', 
+                schema='maprfs', 
+                timeoutSecs=1000)
+
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "parse result:", parseKey['destination_key']
 
@@ -91,7 +80,6 @@ class Basic(unittest.TestCase):
 
             sys.stdout.write('.')
             sys.stdout.flush() 
-
 
 
 if __name__ == '__main__':

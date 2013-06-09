@@ -95,14 +95,20 @@ def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
 
 def setupImportHdfs(node=None, path=None, schema='hdfs'):
     if not node: node = h2o.nodes[0]
-    hdfsPrefix = schema + '://' + node.hdfs_name_node
+
+    print "setupImportHdfs schema:", schema
+    if schema == "maprfs":
+        hdfsPrefix = schema + "://"
+    else:
+        hdfsPrefix = schema + "://" + node.hdfs_name_node
+
     if path is None:
         URI = hdfsPrefix + '/datasets'
     else:
         URI = hdfsPrefix + path
 
+    print "URI:", URI
     importHdfsResult = node.import_hdfs(URI)
-    # too many hdfs keys to print now
     h2o.verboseprint(h2o.dump_json(importHdfsResult))
     return importHdfsResult
 
@@ -112,7 +118,12 @@ def parseImportHdfsFile(node=None, csvFilename=None, path=None, schema='hdfs',
     if not csvFilename: raise Exception('No csvFilename parameter in parseImportHdfsFile')
     if not node: node = h2o.nodes[0]
 
-    hdfsPrefix = schema + '://' + node.hdfs_name_node
+    print "parseImportHdfsFiles schema:", schema
+    if schema == "maprfs":
+        hdfsPrefix = schema + ":" 
+    else:
+        hdfsPrefix = schema + "://" + node.hdfs_name_node
+
     if path is None:
         URI = hdfsPrefix + '/datasets'
     else:
