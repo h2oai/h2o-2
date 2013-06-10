@@ -82,7 +82,7 @@ public class Vec extends Iced {
     return (int)(i - chunk2StartElem(cidx));
   }
   // Matching CVec for a given element
-  public BigVector elem2BV( long i, int cidx ) {
+  public BigVector elem2BV( int cidx ) {
     long start = chunk2StartElem(cidx); // Chunk# to chunk starting element#
     Value dvec = chunkIdx(cidx);        // Chunk# to chunk data
     BigVector bv = dvec.get();          // Chunk data to compression wrapper
@@ -94,6 +94,6 @@ public class Vec extends Iced {
   }
 
   // Fetch element the slow way
-  long at( long i ) { return elem2BV(i,elem2ChunkIdx(i)).at(i); }
+  long at( long i ) { return elem2BV(elem2ChunkIdx(i)).at(i); }
   double atd( long i ) { throw H2O.unimpl(); }
 }

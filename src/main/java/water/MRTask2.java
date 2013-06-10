@@ -140,13 +140,13 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
 
         // Make decompression chunk headers for these chunks
         BigVector bvs[] = new BigVector[_vecs.length];
-        long start = _vec0.chunk2StartElem(_lo);
         for( int i=0; i<_vecs.length; i++ )
           if( _vecs[i] != null )
-            bvs[i] = _vecs[i].elem2BV(start,_lo);
-        final int len = _vec0.elem2BV(start,_lo)._len;
+            bvs[i] = _vecs[i].elem2BV(_lo);
 
         // Call the various map() calls
+        final long start = _vec0.chunk2StartElem(_lo);
+        final int  len   = _vec0.elem2BV(_lo)._len;
         if( _vecs.length == 1 ) map(start, len, bvs[0]);
         if( _vecs.length == 2 ) map(start, len, bvs[0], bvs[1]);
         if( _vecs.length > 2 ) throw H2O.unimpl();

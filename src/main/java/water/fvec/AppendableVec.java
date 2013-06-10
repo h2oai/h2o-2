@@ -73,7 +73,7 @@ public class AppendableVec extends Vec {
   public boolean readable() { return false; }
   public boolean writable() { return true ; }
 
-  @Override public BigVector elem2BV( long i, int cidx ) { return new NewVector(this,cidx); }
+  @Override public BigVector elem2BV( int cidx ) { return new NewVector(this,cidx); }
 
   // None of these are supposed to be called while building the new vector
   public Value chunkIdx( int cidx ) { throw H2O.fail(); }

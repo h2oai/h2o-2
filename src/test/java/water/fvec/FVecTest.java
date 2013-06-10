@@ -73,7 +73,7 @@ public class FVecTest extends TestUtil {
 
   // ==========================================================================
   @Test public void testParse() {
-    File file = TestUtil.find_test_file("./smalldata/cars.csv");
+    File file = TestUtil.find_test_file("./smalldata/airlines/allyears2k_headers.zip");
     Key fkey = NFSFileVec.make(file);
 
     Key okey = Key.make("cars.hex");

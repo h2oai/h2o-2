@@ -8,8 +8,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.zip.*;
 import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.api.Inspect;
 import water.parser.CsvParser;
+import water.parser.ValueString;
 import water.util.Log;
 
 public final class ParseDataset2 extends Job {
@@ -130,31 +130,83 @@ public final class ParseDataset2 extends Job {
 
     // Called once per file
     @Override public void map( Key key ) {
+      // Get parser setup info for this chunk
       ByteVec vec = UKV.get(key);
       Compression cpr = guessCompressionMethod(vec);
       CsvParser.Setup setup = csvGuessValue(vec,_setup._separator,cpr);
-      final int ncol1 = _setup._data[0].length;
-      final int ncol2 =  setup._data[0].length;
-      if( ncol1 != ncol2 ) {
-        _parserr = "Found conflicting number of columns (using separator '" +_setup._separator + "' when parsing multiple files.  Found " + ncol2 + " columns  in " + key + " , but expected " + ncol1;
+      if( !_setup.equals(setup) ) {
+        _parserr = "Conflicting file layouts, expecting: "+_setup+" but found "+setup;
         return;
       }
-      throw H2O.unimpl();
-    //_fileInfo[_idx]._header = setup._header;
-    //if(_fileInfo[_idx]._header && _headers != null) // check if we have the header, it should be the same one as we got from the head
-    //  for(int i = 0; i < setup._data[0].length; ++i)
-    //    _fileInfo[_idx]._header = _fileInfo[_idx]._header && setup._data[0][i].equalsIgnoreCase(_headers[i]);
-    //setup = new CsvParser.Setup(_sep, _fileInfo[_idx]._header, setup._data, setup._numlines, setup._bits);
-    //_p1 = DParseTask.createPassOne(v, _job, _pType);
-    //_p1.setCompleter(this);
-    //_p1.passOne(setup);
-    //// DO NOT call tryComplete here, _p1 calls it!
+      // Allow dup headers, if they are equals-ignoring-case
+      boolean has_hdr = _setup._header && setup._header;
+      if( has_hdr ) {           // Both have headers?
+        for( int i = 0; i < setup._data[0].length; ++i )
+          has_hdr &= setup._data[0][i].equalsIgnoreCase(_setup._data[0][i]);
+        if( !has_hdr )          // Headers not compatible?
+          // Then treat as no-headers, i.e., parse it as a normal row
+          setup = new CsvParser.Setup(setup,false);
+      }
+
+      // Parse the file
+      try {
+        switch( cpr ) {
+        case NONE:
+          // Parallel decompress
+          throw H2O.unimpl();
+        case ZIP: {
+          // Zipped file; no parallel decompression;
+          ZipInputStream zis = new ZipInputStream(vec.openStream());
+          ZipEntry ze = zis.getNextEntry(); // Get the *FIRST* entry
+          // There is at least one entry in zip file and it is not a directory.
+          if( ze != null && !ze.isDirectory() ) streamParse(key,zis);
+          else zis.close();       // Confused: which zipped file to decompress
+          break;
+        }
+        case GZIP: 
+          // Zipped file; no parallel decompression;
+          streamParse(key,new GZIPInputStream(vec.openStream())); 
+          break;
+        }
+      } catch( IOException ioe ) {
+        _parserr = ioe.toString();
+        return;
+      }
     }
 
     @Override public void reduce( MultiFileParseTask uzpt ) {
       // Combine parse errors from across files
       if( _parserr == null ) _parserr = uzpt._parserr;
       else if( uzpt._parserr != null ) _parserr += uzpt._parserr;
+    }
+
+    // Zipped file; no parallel decompression; decompress into local chunks,
+    // parse local chunks; distribute chunks later.
+    private void streamParse( Key fkey, InputStream is ) {
+
+      // All output into a fresh pile of AppendableVecs, one per column
+      int ncols = _setup._data[0].length;
+      AppendableVec cols[] = new AppendableVec[ncols];
+      NewVector nvs[] = new NewVector[ncols];
+      for( int i=0; i<ncols; i++ ) {
+        cols[i] = new AppendableVec(Key.make(fkey.toString()+"C"+i));
+        nvs[i] = new NewVector(cols[i],0);
+      }
+
+      // The parser for fluid vecs
+      CsvParser parser = new CsvParser(_setup) {
+          void newLine() { throw H2O.unimpl(); }
+          void addStrCol(int colIdx, ValueString str) { throw H2O.unimpl(); }
+          void addNumCol(int colIdx, long number, int exp) { throw H2O.unimpl(); }
+          void addInvalidCol(int colIdx) { throw H2O.unimpl(); }
+          void rollbackLine() { throw H2O.unimpl(); }
+          boolean isString(int colIdx) { throw H2O.unimpl(); }
+        };
+
+      // Read from the input stream until we die
+      while( true ) {
+        // Read until the NewVec chunks are full or we're out of data
+      }
     }
   }
 
@@ -163,7 +215,7 @@ public final class ParseDataset2 extends Job {
 
   public static enum Compression { NONE, ZIP, GZIP }
   public static Compression guessCompressionMethod( ByteVec vec) {
-    C0Vector bv = vec.elem2BV(0,0); // First chunk of bytes
+    C0Vector bv = vec.elem2BV(0); // First chunk of bytes
     // Look for ZIP magic
     if( vec.length() > ZipFile.LOCHDR && bv.get4(0) == ZipFile.LOCSIG )
       return Compression.ZIP;
@@ -174,7 +226,7 @@ public final class ParseDataset2 extends Job {
 
   public static CsvParser.Setup csvGuessValue( ByteVec vec, byte separator, Compression compression ) {
     // Since this data is all bytes, we know each chunk is just raw text.
-    C0Vector bv = vec.elem2BV(0,0);
+    C0Vector bv = vec.elem2BV(0);
     // See if we can make sense of the first few rows.
     byte[] bs = bv._mem;
     int off = 0;                   // Offset of read/decompressed bytes

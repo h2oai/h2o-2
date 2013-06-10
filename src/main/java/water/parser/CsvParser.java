@@ -9,7 +9,7 @@ public class CsvParser extends CustomParser {
   /* Constant to specify that separator is not specified. */
   public static final byte NO_SEPARATOR = -1;
 
-  public final byte CHAR_DECIMAL_SEPARATOR;
+  public final byte CHAR_DECIMAL_SEPARATOR = '.';
   public final byte CHAR_SEPARATOR;
   public static final byte HIVE_SEP = 1;
 
@@ -37,31 +37,32 @@ public class CsvParser extends CustomParser {
 
   private static final long LARGEST_DIGIT_NUMBER = 1000000000000000000L;
 
-  public final Key _aryKey;
+  public final ValueArray _ary;
 
   public final int _numColumns;
-
-  public final boolean _skipFirstLine;
-
+  public final Setup _setup;
   DParseTask callback;
 
 
-  public CsvParser(Key aryKey, int numColumns, byte separator, byte decimalSeparator, DParseTask callback, boolean skipFirstLine) {
-    _aryKey = aryKey;
-    _numColumns = numColumns;
-    CHAR_SEPARATOR = separator;
-    CHAR_DECIMAL_SEPARATOR = decimalSeparator;
+  public CsvParser(Setup setup) {
+    throw H2O.unimpl();
+  }
+  public CsvParser(ValueArray ary, Setup setup, DParseTask callback) {
+    _ary = ary;
+    _setup = setup;
+    _numColumns = setup._data[0].length;
+    CHAR_SEPARATOR = setup._separator;
     this.callback = callback;
-    _skipFirstLine = skipFirstLine;
   }
 
   @SuppressWarnings("fallthrough")
   @Override public final void parse(Key key) {
-    ValueArray _ary = _aryKey == null ? null : (ValueArray)DKV.get(_aryKey).get();
     ValueString _str = new ValueString();
     byte[] bits = DKV.get(key).memOrLoad();
     int offset = 0;
-    int state = _skipFirstLine ? SKIP_LINE : WHITESPACE_BEFORE_TOKEN;
+    int state = (_setup._header || 
+                 (key._kb[0] == Key.ARRAYLET_CHUNK && ValueArray.getChunkIndex(key)!=0))
+      ? SKIP_LINE : WHITESPACE_BEFORE_TOKEN;
     int quotes = 0;
     long number = 0;
     int exp = 0;
@@ -85,6 +86,7 @@ public class CsvParser extends CustomParser {
       }
     }
     callback.newLine();
+
 MAIN_LOOP:
     while (true) {
 NEXT_CHAR:
@@ -475,6 +477,13 @@ NEXT_CHAR:
       _data = data;
       _numlines = numlines;
       _bits = bits;
+    }
+    public Setup(Setup S, boolean header) {
+      _separator = S._separator;
+      _header = header;
+      _data = S._data;
+      _numlines = S._numlines;
+      _bits = S._bits;
     }
 
     @Override public boolean equals( Object o ) {

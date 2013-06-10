@@ -42,18 +42,16 @@ public class DParseTask extends MRTask {
   private static final int [] COL_SIZES = new int[]{0,1,2,4,8,1,2,-4,-8,1};
 
   // scalar variables
-  boolean _skipFirstLine;
   Pass _phase;
   long _numRows;
   transient int _myrows;
   int _ncolumns;
   byte _sep = (byte)',';
-  byte _decSep = (byte)'.';
   int _rpc;
   int _rowsize;
-  // 31 bytes
   ParseDataset _job;
   String _error;
+  CsvParser.Setup _setup;
 
   // arrays
   byte [] _colTypes;
@@ -224,11 +222,10 @@ public class DParseTask extends MRTask {
     _enums = other._enums;
     _colTypes = other._colTypes;
     _nrows = finfo._nrows;
-    _skipFirstLine = finfo._header;
     _job = other._job;
     _numRows = other._numRows;
     _sep = other._sep;
-    _decSep = other._decSep;
+    _setup = other._setup;
     _scale = other._scale;
     _bases = other._bases;
     _ncolumns = other._ncolumns;
@@ -253,11 +250,10 @@ public class DParseTask extends MRTask {
     _enums = other._enums;
     _colTypes = other._colTypes;
     _nrows = other._nrows;
-    _skipFirstLine = other._skipFirstLine;
     _job = other._job;
     _numRows = other._numRows;
     _sep = other._sep;
-    _decSep = other._decSep;
+    _setup = other._setup;
     _scale = other._scale;
     _ncolumns = other._ncolumns;
     _min = other._min;
@@ -295,6 +291,7 @@ public class DParseTask extends MRTask {
    * @throws Exception
    */
   public void passOne(CsvParser.Setup setup) {
+    _setup = setup;
     switch (_parserType) {
     case CSV:
         // precompute the parser setup, column setup and other settings
@@ -308,7 +305,6 @@ public class DParseTask extends MRTask {
         }
         _colNames = setup._data[0];
         setColumnNames(_colNames);
-        _skipFirstLine = setup._header;
         // set the separator
         this._sep = setup._separator;
         // if parsing value array, initialize the nrows array
@@ -513,12 +509,12 @@ public class DParseTask extends MRTask {
     if(_job.cancelled())
       return;
     Key aryKey = null;
+    ValueArray ary = null;
     boolean arraylet = key._kb[0] == Key.ARRAYLET_CHUNK;
-    boolean skipFirstLine = _skipFirstLine;
     if(arraylet) {
       aryKey = ValueArray.getArrayKey(key);
       _chunkId = (int)ValueArray.getChunkIndex(key);
-      skipFirstLine = skipFirstLine || (ValueArray.getChunkIndex(key) != 0);
+      ary = DKV.get(aryKey).get();
     }
     switch (_phase) {
     case ONE:
@@ -526,7 +522,8 @@ public class DParseTask extends MRTask {
       // initialize the column statistics
       phaseOneInitialize();
       // perform the parse
-      CsvParser p = new CsvParser(aryKey, _ncolumns, _sep, _decSep, this,skipFirstLine);
+      assert _setup != null;
+      CsvParser p = new CsvParser(ary, _setup, this);
       p.parse(key);
       if(arraylet) {
         long idx = ValueArray.getChunkIndex(key)+1;
@@ -556,7 +553,8 @@ public class DParseTask extends MRTask {
       assert (_outputStreams2.length > 0);
       _ab = _outputStreams2[0].initialize();
       // perform the second parse pass
-      CsvParser p2 = new CsvParser(aryKey, _ncolumns, _sep, _decSep, this,skipFirstLine);
+      assert _setup != null;
+      CsvParser p2 = new CsvParser(ary, _setup, this);
       p2.parse(key);
       // store the last stream if not stored during the parse
       if( _ab != null )
