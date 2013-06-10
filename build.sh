@@ -35,6 +35,7 @@ DEPENDENCIES="${JAR_ROOT}/fastr/*${SEP}${JAR_ROOT}/jama/*${SEP}${JAR_ROOT}/apach
 DEFAULT_HADOOP_VERSION="cdh3"
 OUTDIR="target"
 JAR_FILE="${OUTDIR}/h2o.jar"
+SRC_JAR_FILE="${OUTDIR}/h2o-sources.jar"
 
 JAVA=`which java`||echo 'Missing java, please install jdk'
 JAVAC=`which javac`||echo 'Missing javac, please install jdk'
@@ -125,6 +126,15 @@ function build_jar() {
     cp ${JAR_FILE} ${OUTDIR}/h2o-${JAR_TIME}.jar
 }
 
+function build_src_jar() {
+    echo "creating src jar file... ${SRC_JAR_FILE}"
+    # include H2O source files
+    "$JAR" cf ${SRC_JAR_FILE} -C "${SRC}" .
+    "$JAR" uf ${SRC_JAR_FILE} -C "${TESTSRC}" .
+    echo "copying jar file... ${SRC_JAR_FILE} to ${OUTDIR}/h2o-sources-${JAR_TIME}.jar"
+    cp ${SRC_JAR_FILE} ${OUTDIR}/h2o-sources-${JAR_TIME}.jar
+}
+
 function junit() {
     echo "running JUnit tests..."
     "$JAVA" -ea -cp ${JAR_FILE} water.Boot -mainClass water.JUnitRunner
@@ -136,5 +146,6 @@ build_classes
 if [ "$1" = "compile" ]; then exit 0; fi
 build_initializer
 build_jar
+build_src_jar
 if [ "$1" = "build" ]; then exit 0; fi
 junit
