@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.Random;
 
 import water.*;
+import water.Job.ChunkProgressJob;
 import water.ValueArray.Column;
 import water.util.*;
 import water.util.Log.Tag.Sys;
@@ -21,7 +22,20 @@ import com.google.common.primitives.Ints;
   /*public static class CMJob extends Job {
 
   }*/
+
 }
+
+  /**
+   * Need to have the
+   */
+  public class CMJob extends ChunkProgressJob {
+
+    public CMJob(String desc, Key dest, long chunksTotal) {
+      super(desc, dest, chunksTotal);
+      // TODO Auto-generated constructor stub
+    }
+
+  }
 
 // FIXME: rename to CM task
 public class ConfusionTask extends MRTask {
@@ -38,6 +52,8 @@ public class ConfusionTask extends MRTask {
   public Key      _datakey;
   /** @IN: Column holding the class, defaults to last column */
   int   _classcol;
+  /** @IN: Job */
+  CMJob _job;
 
   /** @OUT: Confusion matrix */
   CM   _matrix;
@@ -80,7 +96,8 @@ public class ConfusionTask extends MRTask {
    * @param model the ensemble used to classify
    * @param datakey the key of the data that will be classified
    */
-  private ConfusionTask(RFModel model, int treesToUse, Key datakey, int classcol, double[] classWt, boolean computeOOB ) {
+  private ConfusionTask(CMJob job, RFModel model, int treesToUse, Key datakey, int classcol, double[] classWt, boolean computeOOB ) {
+    _job        = job;
     _modelKey   = model._selfKey;
     _datakey    = datakey;
     _classcol   = classcol;
