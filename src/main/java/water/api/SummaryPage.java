@@ -43,7 +43,7 @@ public class SummaryPage extends Request {
           String cname = o.get("name").getAsString();
           pageBldr.append("<div><a href='#col_" + cname + "'>" + cname + "</a></div>");
           long N = o.get("N").getAsLong();
-          sb.append("<div class='table' style='width:90%;heigth:90%;overflow-y:scroll;border-top-style:solid;'><div class='alert-success'><h4>Column: " + cname + "</h4></div>\n");
+          sb.append("<div class='table' id='col_" + cname + "' style='width:90%;heigth:90%;overflow-y:scroll;border-top-style:solid;'><div class='alert-success'><h4>Column: " + cname + "</h4></div>\n");
           if(o.has("min") && o.has("max")){
             StringBuilder minRow = new StringBuilder("<tr><th>&mu;</th><td>" + Utils.p2d(o.get("mean").getAsDouble())+"</td><th style='border-left-style:solid; borde-left:1px;border-left-color:#ddd;'>min[5]</th>");
             StringBuilder maxRow = new StringBuilder("<tr><th>&sigma;</th><td>" + Utils.p2d(o.get("sigma").getAsDouble()) + "</td><th style='border-left-style:solid; borde-left:1px;border-left-color:#ddd;'>max[5]</th>");
