@@ -654,7 +654,8 @@ class H2O(object):
         u = 'http://%s:%d/%s' % (self.http_addr, port, loc)
         return u 
 
-    def __do_json_request(self, jsonRequest=None, fullUrl=None, params=None, cmd='get', extraComment=None, ignoreH2oError=False, **kwargs):
+    def __do_json_request(self, jsonRequest=None, fullUrl=None, timeout=10, params=None, 
+        cmd='get', extraComment=None, ignoreH2oError=False, **kwargs):
         # if url param is used, use it as full url. otherwise crate from the jsonRequest
         if fullUrl:
             url = fullUrl
@@ -671,10 +672,11 @@ class H2O(object):
         else:
             log('Start ' + url + paramsStr)
 
+        # file get passed thru kwargs here
         if cmd=='post':
-            r = requests.post(url, params=params, **kwargs)
+            r = requests.post(url, timeout=timeout, params=params, **kwargs)
         else:
-            r = requests.get(url, params=params, **kwargs)
+            r = requests.get(url, timeout=timeout, params=params, **kwargs)
 
         # fatal if no response
         if not r: 
@@ -740,6 +742,7 @@ class H2O(object):
             self.__do_json_request('Shutdown.json')
         except:
             pass
+        time.sleep(1) # a little delay needed?
         return(True)
 
     def put_value(self, value, key=None, repl=None):
@@ -1156,14 +1159,14 @@ class H2O(object):
         return a
 
     # shouldn't need params
-    def log_download(self, logDir=None, **kwargs):
+    def log_download(self, logDir=None, timeoutSecs=5, **kwargs):
         if logDir == None:
             logDir = LOG_DIR # normally sandbox
 
         url = self.__url('LogDownload.json')
         log('Start ' + url);
         print "\nDownloading h2o log(s) using:", url
-        r = requests.get(url, **kwargs)
+        r = requests.get(url, timeout=timeoutSecs, **kwargs)
         if not r or not r.ok: 
             raise Exception("Maybe bad url? no r in log_download %s in %s:" % (e, inspect.stack()[1][3]))
 
@@ -1567,24 +1570,23 @@ class LocalH2O(H2O):
     def is_alive(self):
         verboseprint("Doing is_alive check for LocalH2O", self.wait(0))
         return self.wait(0) is None
-    
-    def terminate(self):
-        # send a shutdown request first. This matches ExternalH2O
-        # since local is used for a lot of buggy new code, also do the ps kill.
-        # try/except inside shutdown_all now
-        self.shutdown_all()
 
-        # we need a delay after shutdown_all above, before this check?
-        time.sleep(1)
-        if self.is_alive():
-            print "\nShutdown didn't work for local node? : %s. Will kill though" % self
-
+    def terminate_self_only(self):
         try:
             if self.is_alive(): self.ps.kill()
             if self.is_alive(): self.ps.terminate()
             return self.wait(0.5)
         except psutil.NoSuchProcess:
             return -1
+
+    def terminate(self):
+        # send a shutdown request first. This matches ExternalH2O
+        # since local is used for a lot of buggy new code, also do the ps kill.
+        # try/except inside shutdown_all now
+        self.shutdown_all()
+        if self.is_alive():
+            print "\nShutdown didn't work for local node? : %s. Will kill though" % self
+        self.terminate_self_only()
 
     def wait(self, timeout=0):
         if self.rc is not None: return self.rc
@@ -1767,9 +1769,9 @@ class RemoteH2O(H2O):
         except:
             return False
 
-    def terminate(self):
-        self.shutdown_all()
+    def terminate_self_only(self):
         self.channel.close()
+        time.sleep(1) # a little delay needed?
         # kbn: it should be dead now? want to make sure we don't have zombies
         # we should get a connection error. doing a is_alive subset.
         try:
@@ -1777,4 +1779,8 @@ class RemoteH2O(H2O):
             raise Exception("get_cloud() should fail after we terminate a node. It isn't. %s %s" % (self, gc_output))
         except:
             return True
+
+    def terminate(self):
+        self.shutdown_all()
+        self.terminate_self_only()
     

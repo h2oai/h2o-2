@@ -22,6 +22,9 @@ def ping_host_if_verbose(host):
     ping = subprocess.Popen( ["ping", "-c", "4", host]) 
     ping.communicate()
 
+def file_line_count(fname):
+    return sum(1 for line in open(fname))
+
 # gunzip gzfile to outfile
 def file_gunzip(gzfile, outfile):
     print "\nGunzip-ing", gzfile, "to", outfile
