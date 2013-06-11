@@ -195,6 +195,7 @@ public final class ParseDataset2 extends Job {
 
       // The parser for fluid vecs
       CsvParser parser = new CsvParser(_setup) {
+          @Override public byte[] getChunkData( int cidx ) { throw H2O.unimpl(); }
           void newLine() { throw H2O.unimpl(); }
           void addStrCol(int colIdx, ValueString str) { throw H2O.unimpl(); }
           void addNumCol(int colIdx, long number, int exp) { throw H2O.unimpl(); }

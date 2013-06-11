@@ -1,4 +1,3 @@
-
 package water.parser;
 
 import java.io.IOException;
@@ -22,17 +21,16 @@ import com.google.common.base.Strings;
 
 public class XlsxParser extends CustomParser {
 
-
   private SharedStringsTable _sst;
   private boolean _firstRow;
   private final DParseTask _callback;
   private ArrayList<String> _colNames = new ArrayList();
   private ValueString _str = new ValueString();
+  private final Key _key;
 
-
-
-  public XlsxParser(DParseTask callback) {
+  public XlsxParser(DParseTask callback, Key key) {
     _callback = callback;
+    _key = key;
   }
 
   private XMLReader makeSheetParser() throws SAXException {
@@ -41,9 +39,9 @@ public class XlsxParser extends CustomParser {
     return parser;
   }
 
-  @Override public void parse(Key key) throws Exception {
+  @Override public void parse(int cidx) throws Exception {
     _firstRow = true;
-    InputStream is = DKV.get(key).openStream();
+    InputStream is = DKV.get(_key).openStream();
     try {
       XSSFReader reader = new XSSFReader(OPCPackage.open(is));
       _sst = reader.getSharedStringsTable();

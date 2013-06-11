@@ -319,9 +319,9 @@ public class DParseTask extends MRTask {
       case XLS:
         // XLS parsing is not distributed, just obtain the value stream and run the parser
         try{
-          XlsParser p = new XlsParser(this);
+          XlsParser p = new XlsParser(this,_sourceDataset._key);
           Log.info("parsing ", _sourceDataset._key);
-          p.parse(_sourceDataset._key);
+          p.parse(0);
           --_myrows; // do not count the header
           _numRows = _myrows;
         } catch(Exception e){ throw new RuntimeException(e); }
@@ -391,8 +391,9 @@ public class DParseTask extends MRTask {
         _ab = _outputStreams2[0].initialize();
         // perform the second parse pass
         try{
-          CustomParser p = (_parserType == CustomParser.Type.XLS) ? new XlsParser(this) : new XlsxParser(this);
-          p.parse(_sourceDataset._key);
+          Key key = _sourceDataset._key;
+          CustomParser p = (_parserType == CustomParser.Type.XLS) ? new XlsParser(this,key) : new XlsxParser(this,key);
+          p.parse(0);
         } catch(Exception e){throw new RuntimeException(e);}
         // store the last stream if not stored during the parse
         if (_ab != null)
@@ -497,6 +498,30 @@ public class DParseTask extends MRTask {
     for(byte b:_colTypes) _rowsize += Math.abs(COL_SIZES[b]);
   }
 
+  // Fill in the methods of CsvParser for DParseTask
+  private static class CsvParser2 extends CsvParser {
+    final Key _key;
+    CsvParser2(Setup setup, DParseTask callback, Key key ) {
+      super(setup, callback);
+      _key = key;
+    }
+    // Fetch chunk data on demand
+    public byte[] getChunkData( int cidx ) {
+      Key key = _key;
+      if( key._kb[0] == Key.ARRAYLET_CHUNK ) { // Chunked data?
+        Key aryKey = ValueArray.getArrayKey(key);
+        ValueArray ary = DKV.get(aryKey).get();
+        if( cidx >= ary.chunks() ) return null;
+        key = ary.getChunkKey(cidx); // Return requested chunk
+      } else {
+        if( cidx > 0 ) return null; // Single chunk?  No next chunk
+      }
+      Value v = DKV.get(key);
+      return v == null ? null : v.memOrLoad();
+    }
+  }
+
+
   /** Map function for distributed parsing of the CSV files.
    *
    * In first phase it calculates the min, max, means, encodings and other
@@ -523,10 +548,10 @@ public class DParseTask extends MRTask {
       phaseOneInitialize();
       // perform the parse
       assert _setup != null;
-      CsvParser p = new CsvParser(ary, _setup, this);
-      p.parse(key);
+      CsvParser p = new CsvParser2(_setup, this, key);
+      p.parse(_chunkId);
       if(arraylet) {
-        long idx = ValueArray.getChunkIndex(key)+1;
+        long idx = _chunkId+1;
         int idx2 = (int)idx;
         assert idx2 == idx;
         if(idx2 >= _nrows.length){
@@ -554,8 +579,8 @@ public class DParseTask extends MRTask {
       _ab = _outputStreams2[0].initialize();
       // perform the second parse pass
       assert _setup != null;
-      CsvParser p2 = new CsvParser(ary, _setup, this);
-      p2.parse(key);
+      CsvParser2 p2 = new CsvParser2(_setup, this, key);
+      p2.parse(_chunkId);
       // store the last stream if not stored during the parse
       if( _ab != null )
         _outputStreams2[_outputIdx].store();
