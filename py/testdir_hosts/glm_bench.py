@@ -29,11 +29,12 @@ class GLMBench(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         print 'building cloud...'
-        h2o_hosts.build_cloud_with_hosts(use_hdfs=True,base_port=54321)
         if is_ec2():
             cls.files = ec2_files
+            h2o_hosts.build_cloud_with_hosts()
         else:
             cls.files = local_files
+            h2o_hosts.build_cloud_with_hosts(use_hdfs=True,base_port=54321)
 
     def run_glms(self,file,configs):
         output = None
