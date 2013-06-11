@@ -19,9 +19,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_log_download_terminate(self):
-        csvPathnamegz = h2o.find_file('smalldata/hhp_9_17_12.predict.data.gz')
-        h2o_cmd.runRF(trees=6, timeoutSecs=30, csvPathname=csvPathnamegz)
+    def test_log_download_terminate2(self):
 
         # download and view using each node
         for h in h2o.nodes:
@@ -33,19 +31,6 @@ class Basic(unittest.TestCase):
 
         # wait to make sure heartbeat updates cloud status
         time.sleep(5)
-
-        print "Checking cloud size at nodes 0 and 2 after terminating 1"
-        nodesNow = [h2o.nodes[0], h2o.nodes[2]]
-        expectedSize = len(nodesNow)
-        cloudSizes = [n.get_cloud()['cloud_size'] for n in nodesNow]
-        cloudConsensus = [n.get_cloud()['consensus'] for n in nodesNow]
-        for s in cloudSizes:
-            consensusStr = (",".join(map(str,cloudConsensus)))
-            sizeStr =   (",".join(map(str,cloudSizes)))
-            if (s != expectedSize):
-                raise Exception("Inconsistent cloud size." +
-                    "nodes report size: %s consensus: %s instead of %d." % \
-                    (sizeStr, consensusStr, expectedSize))
 
         # download logs from node 0
         h2o.nodes[0].log_download(timeoutSecs=3)
