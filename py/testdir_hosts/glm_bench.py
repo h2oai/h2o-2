@@ -20,7 +20,7 @@ ec2_files = {'allstate':'s3n://h2o-datasets/allstate/train_set.zip','airlines':'
 local_files = {'allstate':'hdfs://192.168.1.176/datasets/allstate.csv','airlines':'hdfs://192.168.1.176/datasets/airlines_all.csv'}
 
 def is_ec2():
-    return 'compute.internal' in socket.gethostname()
+    return  'AWS_ACCESS_KEY_ID' in os.environ
 
 class GLMBench(unittest.TestCase):
     def tearDown(self):
