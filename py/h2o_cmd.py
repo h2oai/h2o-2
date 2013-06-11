@@ -15,9 +15,13 @@ def parseFile(node=None, csvPathname=None, key=None, key2=None,
         myKey2 = key + '.hex'
     else:
         myKey2 = key2
-    return node.parse(key, myKey2, 
+    p = node.parse(key, myKey2, 
         timeoutSecs, retryDelaySecs, 
         pollTimeoutSecs=pollTimeoutSecs, noise=noise, noPoll=noPoll, **kwargs)
+
+    # do SummaryPage here too, just to get some coverage
+    node.summary_page(myKey2)
+    return p
 
 def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, 
     timeoutSecs=20, retryDelaySecs=2, pollTimeoutSecs=30, 
@@ -34,9 +38,14 @@ def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None,
         myKeyForParseResult = s3_key + '.hex'
     else:
         myKeyForParseResult = keyForParseResult
-    return node.parse(s3_key, myKeyForParseResult, 
+    # do SummaryPage here too, just to get some coverage
+    p = node.parse(s3_key, myKeyForParseResult, 
         timeoutSecs, retryDelaySecs, 
         pollTimeoutSecs=pollTimeoutSecs, noise=noise, noPoll=noPoll, **kwargs)
+
+    # do SummaryPage here too, just to get some coverage
+    node.summary_page(myKeyForParseResult)
+    return p
 
 def runInspect(node=None, key=None, timeoutSecs=5, **kwargs):
     if not key: raise Exception('No key for Inspect specified')

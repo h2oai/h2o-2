@@ -1147,6 +1147,64 @@ class H2O(object):
             time.sleep(3) # to be able to see it
         return a
 
+    def summary_page(self, key, timeoutSecs=10, **kwargs):
+        params_dict = {
+            'key': key,
+            }
+        browseAlso = kwargs.pop('browseAlso',False)
+
+        a = self.__do_json_request('SummaryPage.json', timeout=timeoutSecs, params=params_dict)
+
+        # just touch all the stuff returned
+        summary = a['summary']
+        columnsList = summary['columns']
+        for columns in columnsList:
+            N = columns['N']
+            name = columns['name']
+            stype = columns['type']
+
+            histogram = columns['histogram']
+            bin_size = histogram['bin_size']
+            bin_names = histogram['bin_names']
+            bins = histogram['bins']
+            nbins = histogram['bins']
+
+            if 1==0:
+                print "\n\n************************"
+                print "name:", name
+                print "type:", stype
+                print "N:", N
+                print "bin_size:", bin_size
+                print "len(bin_names):", len(bin_names)
+                print "len(bins):", len(bins)
+                print "len(nbins):", len(nbins)
+
+            # not done if enum
+            if stype != "enum":
+                smax = columns['max']
+                smin = columns['min']
+                percentiles = columns['percentiles']
+                thresholds = percentiles['thresholds']
+                values = percentiles['values']
+                mean = columns['mean']
+                sigma = columns['sigma']
+
+                if 1==0:
+                    print "len(max):", len(smax)
+                    print "len(min):", len(smin)
+                    print "len(thresholds):", len(thresholds)
+                    print "len(values):", len(values)
+                    print "mean:", mean
+                    print "sigma:", sigma
+
+
+        verboseprint("\nsummary result:", dump_json(a))
+        if (browseAlso | browse_json):
+            h2b.browseJsonHistoryAsUrlLastMatch("SummaryPage")
+            time.sleep(3) # to be able to see it
+
+        return a
+
     def log_view(self, timeoutSecs=10, **kwargs):
         browseAlso = kwargs.pop('browseAlso',False)
 
@@ -1154,7 +1212,7 @@ class H2O(object):
 
         verboseprint("\nlog_view result:", dump_json(a))
         if (browseAlso | browse_json):
-            h2b.browseJsonHistoryAsUrlLastMatch("RFTreeView")
+            h2b.browseJsonHistoryAsUrlLastMatch("LogView")
             time.sleep(3) # to be able to see it
         return a
 
@@ -1516,31 +1574,6 @@ class H2O(object):
     def terminate(self):
         raise Exception('%s must implement %s' % (type(self), inspect.stack()[0][3]))
 
-class ExternalH2O(H2O):
-    '''An H2O instance launched outside the control of python'''
-    def __init__(self, *args, **kwargs):
-        super(ExternalH2O, self).__init__(*args, **kwargs)
-
-    def get_h2o_jar(self):
-        return find_file('target/h2o.jar') # just a likely guess
-
-    def get_ice_dir(self):
-        return '/tmp/ice%d' % self.port # just a likely guess
-
-    def is_alive(self):
-        try:
-            self.get_cloud()
-            return True
-        except:
-            return False
-
-    def terminate(self):
-        # try/except for this is inside shutdown_all now
-        self.shutdown_all()
-        if self.is_alive():
-            raise Exception('Unable to terminate externally launched node: %s' % self)
-
-
 class LocalH2O(H2O):
     '''An H2O instance launched by the python framework on the local host using psutil'''
     def __init__(self, *args, **kwargs):
@@ -1580,7 +1613,7 @@ class LocalH2O(H2O):
             return -1
 
     def terminate(self):
-        # send a shutdown request first. This matches ExternalH2O
+        # send a shutdown request first. 
         # since local is used for a lot of buggy new code, also do the ps kill.
         # try/except inside shutdown_all now
         self.shutdown_all()
