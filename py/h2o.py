@@ -12,6 +12,8 @@ import errno
 # use to unencode the urls sent to h2o?
 import urlparse
 import logging
+# for log_download
+import requests, zipfile, StringIO
 
 # For checking ports in use, using netstat thru a subprocess.
 from subprocess import Popen, PIPE
@@ -652,7 +654,13 @@ class H2O(object):
         u = 'http://%s:%d/%s' % (self.http_addr, port, loc)
         return u 
 
-    def __do_json_request(self, url, params=None, cmd='get', extraComment=None, ignoreH2oError=False, **kwargs):
+    def __do_json_request(self, jsonRequest=None, fullUrl=None, params=None, cmd='get', extraComment=None, ignoreH2oError=False, **kwargs):
+        # if url param is used, use it as full url. otherwise crate from the jsonRequest
+        if fullUrl:
+            url = fullUrl
+        else:
+            url = self.__url(jsonRequest)
+
         if params is not None:
             paramsStr =  '?' + '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
         else:
@@ -699,13 +707,13 @@ class H2O(object):
 
 
     def test_redirect(self):
-        return self.__do_json_request(self.__url('TestRedirect.json'))
+        return self.__do_json_request('TestRedirect.json')
 
     def test_poll(self, args):
-        return self.__do_json_request(self.__url('TestPoll.json'), params=args)
+        return self.__do_json_request('TestPoll.json', params=args)
 
     def get_cloud(self):
-        a = self.__do_json_request(self.__url('Cloud.json'))
+        a = self.__do_json_request('Cloud.json')
 
         consensus  = a['consensus']
         locked     = a['locked']
@@ -722,21 +730,21 @@ class H2O(object):
         return a
 
     def get_timeline(self):
-        return self.__do_json_request(self.__url('Timeline.json'))
+        return self.__do_json_request('Timeline.json')
 
     # Shutdown url is like a reset button. Doesn't send a response before it kills stuff
     # safer if random things are wedged, rather than requiring response
     # so request library might retry and get exception. allow that.
     def shutdown_all(self):
         try:
-            self.__do_json_request(self.__url('Shutdown.json'))
+            self.__do_json_request('Shutdown.json')
         except:
             pass
         return(True)
 
     def put_value(self, value, key=None, repl=None):
         return self.__do_json_request(
-            self.__url('PutValue.json'), 
+            'PutValue.json', 
             params={"value": value, "key": key, "replication_factor": repl},
             extraComment = str(value) + "," + str(key) + "," + str(repl))
 
@@ -746,7 +754,7 @@ class H2O(object):
             ### print "putfile specifying this key:", key
 
         resp = self.__do_json_request(
-                self.__url('PostFile.json'),
+                'PostFile.json',
                 cmd='post',
                 timeout=timeoutSecs,
                 params={"key": key},
@@ -757,7 +765,7 @@ class H2O(object):
         return key
     
     def get_key(self, key):
-        return self.__do_json_request(self.__url('Get.html'), params={"key": key})
+        return self.__do_json_request('Get.html', params={"key": key})
 
     # noise is a 2-tuple ("StoreView", none) for url plus args for doing during poll to create noise
     # so we can create noise with different urls!, and different parms to that url
@@ -798,7 +806,7 @@ class H2O(object):
             # every other one?
             create_noise = noise is not None and ((count%2)==0)
             if create_noise:
-                urlUsed = noiseUrl
+                urlUsed = self.__url(noiseUrl)
                 paramsUsed = noiseParams
                 paramsUsedStr = noiseParamsStr
                 msgUsed = "\nNoise during polling with"
@@ -808,7 +816,7 @@ class H2O(object):
                 paramsUsedStr = paramsStr
                 msgUsed = "\nPolling with"
 
-            r = self.__do_json_request(url=urlUsed, timeout=pollTimeoutSecs, params=paramsUsed)
+            r = self.__do_json_request(fullUrl=urlUsed, timeout=pollTimeoutSecs, params=paramsUsed)
 
             if ((count%5)==0):
                 verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(r['response']))
@@ -852,7 +860,7 @@ class H2O(object):
         browseAlso = kwargs.get('browseAlso', False)
         params_dict.update(kwargs)
         print "\nKMeansApply params list", params_dict
-        a = self.__do_json_request(url=self.__url('KMeansApply.json'), timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('KMeansApply.json', timeout=timeoutSecs, params=params_dict)
 
         # Check that the response has the right Progress url it's going to steer us to.
         if a['response']['redirect_request']!='Progress':
@@ -882,19 +890,9 @@ class H2O(object):
         browseAlso = kwargs.get('browseAlso', False)
         params_dict.update(kwargs)
         print "\nKMeansScore params list", params_dict
-        a = self.__do_json_request(url=self.__url('KMeansScore.json'), timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('KMeansScore.json', timeout=timeoutSecs, params=params_dict)
 
-        if (1==0): # kmeans_score doesn't need polling?
-            # Check that the response has the right Progress url it's going to steer us to.
-            verboseprint("\nKMeansScore first result:", dump_json(a))
-            if a['response']['redirect_request']!='Progress':
-                print dump_json(a)
-                raise Exception('H2O kmeans redirect is not Progress. KMeansScore json response precedes.')
-
-            a = self.poll_url(a['response'],
-                timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
-                initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
-
+        # kmeans_score doesn't need polling?
         verboseprint("\nKMeansScore result:", dump_json(a))
 
         if (browseAlso | browse_json):
@@ -919,7 +917,7 @@ class H2O(object):
         browseAlso = kwargs.get('browseAlso', False)
         params_dict.update(kwargs)
         print "\nKMeans params list", params_dict
-        a = self.__do_json_request(url=self.__url('KMeans.json'), timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('KMeans.json', timeout=timeoutSecs, params=params_dict)
 
         # Check that the response has the right Progress url it's going to steer us to.
         if a['response']['redirect_request']!='Progress':
@@ -964,7 +962,7 @@ class H2O(object):
         if benchmarkLogging:
             cloudPerfH2O.get_log_save(initOnly=True)
 
-        a = self.__do_json_request(url=self.__url('Parse.json'), timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('Parse.json', timeout=timeoutSecs, params=params_dict)
 
         # Check that the response has the right Progress url it's going to steer us to.
         if a['response']['redirect_request']!='Progress':
@@ -985,18 +983,18 @@ class H2O(object):
         return a
 
     def netstat(self):
-        return self.__do_json_request(self.__url('Network.json'))
+        return self.__do_json_request('Network.json')
 
     def jstack(self):
-        return self.__do_json_request(self.__url("JStack.json"))
+        return self.__do_json_request("JStack.json")
 
     def iostatus(self):
-        return self.__do_json_request(self.__url("IOStatus.json"))
+        return self.__do_json_request("IOStatus.json")
 
     # &offset=
     # &view=
     def inspect(self, key, offset=None, view=None, ignoreH2oError=False):
-        a = self.__do_json_request(self.__url('Inspect.json'),
+        a = self.__do_json_request('Inspect.json',
             params={
                 "key": key,
                 "offset": offset,
@@ -1007,7 +1005,7 @@ class H2O(object):
         return a
 
     def store_view(self):
-        a = self.__do_json_request(self.__url('StoreView.json'), params={})
+        a = self.__do_json_request('StoreView.json', params={})
         return a
 
     # There is also a RemoveAck in the browser, that asks for confirmation from
@@ -1015,12 +1013,12 @@ class H2O(object):
     # UPDATE: ignore errors on remove..key might already be gone due to h2o removing it now
     # after parse
     def remove_key(self, key):
-        a = self.__do_json_request(self.__url('Remove.json'), params={"key": key}, ignoreH2oError=True)
+        a = self.__do_json_request('Remove.json', params={"key": key}, ignoreH2oError=True)
         return a
 
     # H2O doesn't support yet?
     def Store2HDFS(self, key):
-        a = self.__do_json_request(self.__url('Store2HDFS.json'), params={"key": key})
+        a = self.__do_json_request('Store2HDFS.json', params={"key": key})
         verboseprint("\ninspect result:", dump_json(a))
         return a
 
@@ -1029,17 +1027,17 @@ class H2O(object):
     # 192.168.0.37:54323/ImportFiles.html?file=%2Fhome%2F0xdiag%2Fdatasets
     # Can import just a file or a whole folder
     def import_files(self, path):
-        a = self.__do_json_request(self.__url('ImportFiles.json'), params={"path": path})
+        a = self.__do_json_request('ImportFiles.json', params={"path": path})
         verboseprint("\nimport_files result:", dump_json(a))
         return a
 
     def import_s3(self, bucket):
-        a = self.__do_json_request(self.__url('ImportS3.json'), params={"bucket": bucket})
+        a = self.__do_json_request('ImportS3.json', params={"bucket": bucket})
         verboseprint("\nimport_s3 result:", dump_json(a))
         return a
 
     def import_hdfs(self, path):
-        a = self.__do_json_request(self.__url('ImportHdfs.json'), params={"path": path})
+        a = self.__do_json_request('ImportHdfs.json', params={"path": path})
         verboseprint("\nimport_hdfs result:", dump_json(a))
         return a
 
@@ -1051,7 +1049,7 @@ class H2O(object):
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
         verboseprint("\nexec_query:", params_dict)
-        a = self.__do_json_request(url=self.__url('Exec.json'), timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('Exec.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nexec_query result:", dump_json(a))
         return a
 
@@ -1062,7 +1060,7 @@ class H2O(object):
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
         verboseprint("\nexec_query:", params_dict)
-        a = self.__do_json_request(url=self.__url('Jobs.json'), timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('Jobs.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\njobs_admin result:", dump_json(a))
         return a
 
@@ -1073,7 +1071,7 @@ class H2O(object):
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
         verboseprint("\nexec_query:", params_dict)
-        a = self.__do_json_request(url=self.__url('Cancel.json'), timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('Cancel.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\njobs_cancel result:", dump_json(a))
         return a
 
@@ -1093,7 +1091,7 @@ class H2O(object):
         if print_params:
             print "\nrandom_forest parameters:", params_dict
 
-        a = self.__do_json_request(url=self.__url('RF.json'), timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('RF.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nrandom_forest result:", dump_json(a))
         return a
 
@@ -1118,7 +1116,7 @@ class H2O(object):
         if print_params:
             print "\nrandom_forest_view parameters:", params_dict
 
-        a = self.__do_json_request(self.__url('RFView.json'), timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('RFView.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nrandom_forest_view result:", dump_json(a))
 
         if (browseAlso | browse_json):
@@ -1136,7 +1134,7 @@ class H2O(object):
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
 
-        a = self.__do_json_request(self.__url('RFTreeView.json'), timeout=timeoutSecs, params=params_dict, 
+        a = self.__do_json_request('RFTreeView.json', timeout=timeoutSecs, params=params_dict, 
             ignoreH2oError=ignoreH2oError)
 
         verboseprint("\nrandom_forest_treeview result:", dump_json(a))
@@ -1145,6 +1143,36 @@ class H2O(object):
             h2b.browseJsonHistoryAsUrlLastMatch("RFTreeView")
             time.sleep(3) # to be able to see it
         return a
+
+    def log_view(self, timeoutSecs=10, **kwargs):
+        browseAlso = kwargs.pop('browseAlso',False)
+
+        a = self.__do_json_request('LogView.json', timeout=timeoutSecs)
+
+        verboseprint("\nlog_view result:", dump_json(a))
+        if (browseAlso | browse_json):
+            h2b.browseJsonHistoryAsUrlLastMatch("RFTreeView")
+            time.sleep(3) # to be able to see it
+        return a
+
+    # shouldn't need params
+    def log_download(self, logDir=None, **kwargs):
+        if logDir == None:
+            logDir = LOG_DIR # normally sandbox
+
+        url = self.__url('LogDownload.json')
+        log('Start ' + url);
+        print "\nDownloading h2o log(s) using:", url
+        r = requests.get(url, **kwargs)
+        if not r or not r.ok: 
+            raise Exception("Maybe bad url? no r in log_download %s in %s:" % (e, inspect.stack()[1][3]))
+
+        z = zipfile.ZipFile(StringIO.StringIO(r.content))
+        print "z.namelist:", z.namelist()
+        print "z.printdir:", z.printdir()
+        z.extractall(logDir)
+        # unzipped file should be in LOG_DIR now
+        return z.namelist
 
     # kwargs used to pass many params
     def GLM_shared(self, key, 
@@ -1161,7 +1189,7 @@ class H2O(object):
         }
         params_dict.update(kwargs)
         print "\n"+parentName, "params list", params_dict
-        a = self.__do_json_request(self.__url(parentName + '.json'), timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request(parentName + '.json', timeout=timeoutSecs, params=params_dict)
         verboseprint(parentName, dump_json(a))
         return a 
 
@@ -1235,7 +1263,7 @@ class H2O(object):
         params_dict.update(kwargs)
         print "\nGLMScore params list", params_dict
 
-        a = self.__do_json_request(self.__url('GLMScore.json'), timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('GLMScore.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("GLMScore:", dump_json(a))
 
         browseAlso = kwargs.get('browseAlso', False)
