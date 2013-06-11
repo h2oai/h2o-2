@@ -41,9 +41,6 @@ public abstract class CsvParser extends CustomParser {
   DParseTask callback;
 
 
-  public CsvParser(Setup setup) {
-    throw H2O.unimpl();
-  }
   public CsvParser(Setup setup, DParseTask callback) {
     _setup = setup;
     CHAR_SEPARATOR = setup._separator;

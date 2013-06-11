@@ -194,8 +194,12 @@ public final class ParseDataset2 extends Job {
       }
 
       // The parser for fluid vecs
-      CsvParser parser = new CsvParser(_setup) {
-          @Override public byte[] getChunkData( int cidx ) { throw H2O.unimpl(); }
+      CsvParser parser = new CsvParser(_setup,null) {
+          private byte[] _bits = new byte[32*1024];
+          @Override public byte[] getChunkData( int cidx ) {
+            // no real chunks; just double-pump decompression buffers
+            throw H2O.unimpl(); 
+          }
           void newLine() { throw H2O.unimpl(); }
           void addStrCol(int colIdx, ValueString str) { throw H2O.unimpl(); }
           void addNumCol(int colIdx, long number, int exp) { throw H2O.unimpl(); }
@@ -204,10 +208,7 @@ public final class ParseDataset2 extends Job {
           boolean isString(int colIdx) { throw H2O.unimpl(); }
         };
 
-      // Read from the input stream until we die
-      while( true ) {
-        // Read until the NewVec chunks are full or we're out of data
-      }
+      parser.parse(0);
     }
   }
 
