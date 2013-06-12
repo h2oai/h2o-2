@@ -67,13 +67,14 @@ public class FVecTest extends TestUtil {
   public static class TestNewVec extends MRTask2<TestNewVec> {
     @Override public void map( long start, int len, BigVector out, BigVector in ) {
       for( long i=start; i<start+len; i++ )
-        out.append2( in.at(i)+(in.at(i) >= ' ' ? 1 : 0));
+        out.append2( in.at(i)+(in.at(i) >= ' ' ? 1 : 0),0);
     }
   }
 
   // ==========================================================================
   @Test public void testParse() {
-    File file = TestUtil.find_test_file("./smalldata/airlines/allyears2k_headers.zip");
+    //File file = TestUtil.find_test_file("./smalldata/airlines/allyears2k_headers.zip");
+    File file = TestUtil.find_test_file("./smalldata/logreg/prostate_long.csv.gz");
     Key fkey = NFSFileVec.make(file);
 
     Key okey = Key.make("cars.hex");

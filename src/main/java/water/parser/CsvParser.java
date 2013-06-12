@@ -80,7 +80,7 @@ public abstract class CsvParser extends CustomParser {
         c = bits[offset];
       }
     }
-    callback.newLine();
+    newLine();
 
 MAIN_LOOP:
     while (true) {
@@ -121,7 +121,7 @@ NEXT_CHAR:
             assert _str._buf != bits;
             _str.addBuff(bits);
           }
-          callback.addStrCol(colIdx, _str);
+          addStrCol(colIdx, _str);
           _str.set(null, 0, 0);
           ++colIdx;
           state = SEPARATOR_OR_EOL;
@@ -139,7 +139,7 @@ NEXT_CHAR:
         case EOL:
           if (colIdx != 0) {
             colIdx = 0;
-            callback.newLine();
+            newLine();
           }
           state = (c == CHAR_CR) ? EXPECT_COND_LF : POSSIBLE_EMPTY_LINE;
           if( !firstChunk )
@@ -199,7 +199,7 @@ NEXT_CHAR:
           // fallthrough to TOKEN
         // ---------------------------------------------------------------------
         case TOKEN:
-          if( callback.isString(colIdx) ) { // Forced already to a string col?
+          if( isString(colIdx) ) { // Forced already to a string col?
             state = STRING; // Do not attempt a number parse, just do a string parse
             _str.set(bits, offset, 0);
             continue MAIN_LOOP;
@@ -266,17 +266,17 @@ NEXT_CHAR:
         case NUMBER_END:
           if (c == CHAR_SEPARATOR) {
             exp = exp - fractionDigits;
-            callback.addNumCol(colIdx,number,exp);
+            addNumCol(colIdx,number,exp);
             ++colIdx;
             // do separator state here too
             state = WHITESPACE_BEFORE_TOKEN;
             break NEXT_CHAR;
           } else if (isEOL(c)) {
             exp = exp - fractionDigits;
-            callback.addNumCol(colIdx,number,exp);
+            addNumCol(colIdx,number,exp);
             // do EOL here for speedup reasons
             colIdx = 0;
-            callback.newLine();
+            newLine();
             state = (c == CHAR_CR) ? EXPECT_COND_LF : POSSIBLE_EMPTY_LINE;
             if( !firstChunk )
               break MAIN_LOOP; // second chunk only does the first row
@@ -432,7 +432,7 @@ NEXT_CHAR:
       c = bits[offset];
     } // end MAIN_LOOP
     if (colIdx == 0)
-      callback.rollbackLine();
+      rollbackLine();
   }
 
   private static boolean isWhitespace(byte c) {
@@ -445,6 +445,16 @@ NEXT_CHAR:
 
   // Get another chunk of byte data
   public abstract byte[] getChunkData( int cidx );
+  // Register a newLine from the parser
+  public abstract void newLine();
+  // True if already forced into a string column (skip number parsing)
+  public abstract boolean isString(int colIdx);
+  // Add a number column with given digits & exp
+  public abstract void addNumCol(int colIdx, long number, int exp);
+  // Add a String column
+  public abstract void addStrCol( int colIdx, ValueString str );
+  // Final rolling back of partial line
+  public abstract void rollbackLine();
 
   // ==========================================================================
   /** Setup of the parser.
@@ -479,12 +489,15 @@ NEXT_CHAR:
 
     @Override public boolean equals( Object o ) {
       if( o == null || !(o instanceof Setup) ) return false;
+      if( o == this ) return true;
       Setup s = (Setup)o;
       // "Compatible" setups means same columns and same separators
-      return _separator == s._separator && _data[0].length == s._data[0].length;
-    }
+      return _separator == s._separator && 
+        ((_data==null && s._data==null) ||
+         (_data[0].length == s._data[0].length));
+      }
     @Override public String toString() {
-      return "'"+(char)_separator+"' head="+_header+" cols="+_data[0].length;
+      return "'"+(char)_separator+"' head="+_header+" cols="+(_data==null?-2:(_data[0]==null?-1:_data[0].length));
     }
   }
 

@@ -39,8 +39,7 @@ public abstract class BigVector extends Iced {
   abstract long   at_impl ( int i );
   abstract double atd_impl( int i );
   // Chunk-specific append of data
-  abstract void append2( long   l );
-  abstract void append2( double d );
+  abstract void append2( long l, int exp );
   // Chunk-specific implementations of read & write
   public abstract AutoBuffer write(AutoBuffer bb);
   public abstract BigVector  read (AutoBuffer bb);

@@ -172,6 +172,12 @@ public final class ParseDataset2 extends Job {
         _parserr = ioe.toString();
         return;
       }
+
+      // Close any AppendableVec
+      //for( int i=0; i<ncols; i++ ) {
+      //}
+      throw H2O.unimpl();
+          
     }
 
     @Override public void reduce( MultiFileParseTask uzpt ) {
@@ -182,33 +188,90 @@ public final class ParseDataset2 extends Job {
 
     // Zipped file; no parallel decompression; decompress into local chunks,
     // parse local chunks; distribute chunks later.
-    private void streamParse( Key fkey, InputStream is ) {
+    private void streamParse( Key fkey, final InputStream is ) throws IOException {
 
       // All output into a fresh pile of AppendableVecs, one per column
-      int ncols = _setup._data[0].length;
-      AppendableVec cols[] = new AppendableVec[ncols];
-      NewVector nvs[] = new NewVector[ncols];
+      final int ncols = _setup._data[0].length;
+      final AppendableVec cols[] = new AppendableVec[ncols];
+      final NewVector nvs[] = new NewVector[ncols];
       for( int i=0; i<ncols; i++ ) {
         cols[i] = new AppendableVec(Key.make(fkey.toString()+"C"+i));
-        nvs[i] = new NewVector(cols[i],0);
+        nvs[i] = new NewVector(cols[i],0/*chunk#*/);
       }
 
       // The parser for fluid vecs
       CsvParser parser = new CsvParser(_setup,null) {
-          private byte[] _bits = new byte[32*1024];
+          // A 2-entry cache of 32K chunks.
+          // no real chunks; just double-pump decompression buffers
+          private byte[] _bits0 = new byte[32*1024];
+          private byte[] _bits1 = new byte[32*1024];
+          private int cidx0=-1, cidx1=-1; // Chunk #s
+          private int _col=0;             // Column #
+
+          // Read a next chunk of data: arbirtrarily split into 32K chunks.
+          // Not distributed since we're reading from a stream; not in the K/V
+          // store; just chunked.
           @Override public byte[] getChunkData( int cidx ) {
-            // no real chunks; just double-pump decompression buffers
+            // Check the 2-entry cache
+            if( cidx==cidx0 ) return _bits0;
+            if( cidx==cidx1 ) return _bits1;
+            // Replace the oldest chunk (smallest chunk#)
+            if( _parserr != null ) return null;
+            assert cidx==cidx0+1 || cidx==cidx1+1;
+            byte[] bits = cidx0<cidx1 ? _bits0 : _bits1;
+            if( cidx0<cidx1 ) cidx0 = cidx;
+            else              cidx1 = cidx;
+            // Read as much as the buffer will hold
+            int off=0;
+            try {
+              while( off < bits.length ) {
+                int len = is.read(bits,off,bits.length-off);
+                if( len == -1 ) break;
+                off += len;
+              }
+            } catch( IOException ioe ) { _parserr = ioe.toString(); }
+            if( off == bits.length ) return bits;
+            if( off == 0 ) return null;
+            return Arrays.copyOf(bits,off);
+          }
+
+          // Handle a newLine action from the parser
+          @Override public void newLine() {
+            if( _col > 0 )
+              while( _col < cols.length )
+                addInvalidCol(_col++);
+            _col=0;
+          }
+
+          // Handle a new number column in the parser
+          @Override public void addNumCol(int colIdx, long number, int exp) {
+            assert colIdx==_col;
+            nvs[colIdx].append2(number,exp);
+            _col++;             // Next column filled in
+          }
+          
+          @Override public void addStrCol(int colIdx, ValueString str) { 
+            Log.unwrap(System.err,"colIdx="+colIdx+" str="+str);
+            assert colIdx==_col;
+            _col++;             // Next column filled in
             throw H2O.unimpl(); 
           }
-          void newLine() { throw H2O.unimpl(); }
-          void addStrCol(int colIdx, ValueString str) { throw H2O.unimpl(); }
-          void addNumCol(int colIdx, long number, int exp) { throw H2O.unimpl(); }
           void addInvalidCol(int colIdx) { throw H2O.unimpl(); }
-          void rollbackLine() { throw H2O.unimpl(); }
-          boolean isString(int colIdx) { throw H2O.unimpl(); }
+          @Override public void rollbackLine() { }
+          @Override public boolean isString(int colIdx) { return false; }
         };
 
-      parser.parse(0);
+      // Parse all internal "chunks", until we drain the zip-stream dry.
+      // Not real chunks, just flipping between 32K buffers.
+      int cidx=0;
+      while( is.available() > 0 )
+        parser.parse(cidx++);
+
+      // Close all the NewVectors
+      for( int i=0; i<ncols; i++ ) {
+        nvs[i].close(null/*futures?*/);
+      }
+
     }
   }
 
@@ -221,7 +284,7 @@ public final class ParseDataset2 extends Job {
     // Look for ZIP magic
     if( vec.length() > ZipFile.LOCHDR && bv.get4(0) == ZipFile.LOCSIG )
       return Compression.ZIP;
-    if( vec.length() > 2 && bv.get2(0) == GZIPInputStream.GZIP_MAGIC )
+    if( vec.length() > 2 && (0xFFFF&bv.get2(0)) == GZIPInputStream.GZIP_MAGIC )
       return Compression.GZIP;
     return Compression.NONE;
   }

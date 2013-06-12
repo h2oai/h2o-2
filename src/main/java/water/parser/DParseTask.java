@@ -501,9 +501,11 @@ public class DParseTask extends MRTask {
   // Fill in the methods of CsvParser for DParseTask
   private static class CsvParser2 extends CsvParser {
     final Key _key;
-    CsvParser2(Setup setup, DParseTask callback, Key key ) {
-      super(setup, callback);
+    DParseTask _dpt;
+    CsvParser2(Setup setup, DParseTask dpt, Key key ) {
+      super(setup, dpt);
       _key = key;
+      _dpt = dpt;
     }
     // Fetch chunk data on demand
     public byte[] getChunkData( int cidx ) {
@@ -519,6 +521,13 @@ public class DParseTask extends MRTask {
       Value v = DKV.get(key);
       return v == null ? null : v.memOrLoad();
     }
+
+    // Register a newLine action from the parser
+    @Override public void newLine() { _dpt.newLine(); }
+    @Override public boolean isString(int cidx) { return _dpt.isString(cidx); }
+    @Override public void addNumCol(int colIdx, long number, int exp) { _dpt.addNumCol(colIdx,number,exp); }
+    @Override public void addStrCol( int colIdx, ValueString str ) { _dpt.addStrCol(colIdx,str); }
+    @Override public void rollbackLine() { _dpt.rollbackLine(); }
   }
 
 
