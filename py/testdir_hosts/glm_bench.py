@@ -22,62 +22,58 @@ local_files = {'allstate':'hdfs://192.168.1.176/datasets/allstate.csv','airlines
 def is_ec2():
     return  'AWS_ACCESS_KEY_ID' in os.environ
 
-class GLMBench(unittest.TestCase):
-    def tearDown(self):
-        h2o.check_sandbox_for_errors()
-        h2o.tear_down_cloud()
-    @classmethod
-    def setUpClass(cls):
-        print 'building cloud...'
-        if is_ec2():
-            cls.files = ec2_files
-            h2o_hosts.build_cloud_with_hosts()
-        else:
-            cls.files = local_files
-            h2o_hosts.build_cloud_with_hosts(use_hdfs=True,base_port=54321)
-
-    def run_glms(self,file,configs):
-        output = None
-        if not os.path.exists('glmbench.csv'):
-            output = open('glmbench.csv','w')
-            output.write(','.join(csv_header)+'\n')
-        else:
-            output = open('glmbench.csv','a')
-        csvWrt = csv.DictWriter(output, fieldnames=csv_header, restval=None, dialect='excel', extrasaction='ignore',delimiter=',')
+def run_glms(file,configs):
+    output = None
+    if not os.path.exists('glmbench.csv'):
+        output = open('glmbench.csv','w')
+        output.write(','.join(csv_header)+'\n')
+    else:
+        output = open('glmbench.csv','a')
+    csvWrt = csv.DictWriter(output, fieldnames=csv_header, restval=None, dialect='excel', extrasaction='ignore',delimiter=',')
+    try:
+        k = parse_file(file)
         try:
-            k = self.parse_file(file)
-            try:
-                for kwargs in configs:
-                    res = h2o.nodes[0].GLM(k, timeoutSecs=6000000, **kwargs)
-                    glm = res['GLMModel']
-                    coefs = glm['coefficients']
-                    coefs = glm['coefficients']
-                    print 'model computed in',res['computation_time']
-                    max_len = 0
-                    val = glm['validations'][0]
-                    row = {'time':time.asctime(),'nodes#':len(h2o.nodes)}
-                    row.update(kwargs)
-                    row.update(glm)
-                    row.update(val)
-                    csvWrt.writerow(row)
-            finally:
-                h2o.nodes[0].remove_key(k)
+            for kwargs in configs:
+                res = h2o.nodes[0].GLM(k, timeoutSecs=6000000, **kwargs)
+                glm = res['GLMModel']
+                coefs = glm['coefficients']
+                coefs = glm['coefficients']
+                print 'model computed in',res['computation_time']
+                max_len = 0
+                val = glm['validations'][0]
+                row = {'time':time.asctime(),'nodes#':len(h2o.nodes)}
+                row.update(kwargs)
+                row.update(glm)
+                row.update(val)
+                csvWrt.writerow(row)
         finally:
-            output.close()
-                   
-    def parse_file(self,f):
-        v = h2o.nodes[0].import_hdfs(self.files[f])['succeeded'][0]
-        return h2o.nodes[0].parse(v['key'],timeoutSecs=3600)['destination_key']
-                   
-    def test_allstate(self):
-        self.run_glms('allstate',[{'y':'Claim_Amount','lambda':l,'alpha':a,'family':'poisson','n_folds':10} for l in (1e-1,1e-2,1e-3,1e-4,1e-5) for a in (1.0,0.5,0.0)])
-
-    def test_airlines(self):
-        self.run_glms('airlines',[{'y':'IsArrDelayed','x':'0,1,2,3,4,5,6,7,8,9,12,16,17,18','lambda':l,'alpha':a,'family':'binomial','n_folds':10,'case':1}
-                                          for l in (0.035,0.025,0.01,0.0075,0.0050,0.0025,0.0010,0.00075,0.00050,0.00025,0.0001,0.000075,0.00005,0.000025,0.00001,0.000001)
-                                          for a in (1.0,0.9,0.75,0.5,0.25,0.1,0.0)])
+            h2o.nodes[0].remove_key(k)
+    finally:
+        output.close()
+    
+def parse_file(f):
+    v = h2o.nodes[0].import_hdfs(f)['succeeded'][0]
+    return h2o.nodes[0].parse(v['key'],timeoutSecs=3600)['destination_key']
 
 if __name__ == '__main__':
-    h2o.unit_main()
+    h2o.parse_our_args()
+    files = None
+    if is_ec2():
+        files = ec2_files
+        h2o_hosts.build_cloud_with_hosts()
+    else:
+        files = local_files
+        h2o_hosts.build_cloud_with_hosts(use_hdfs=True,base_port=54321)
+    try:
+        # run alstate
+        run_glms(files['allstate'],[{'y':'Claim_Amount','lambda':l,'alpha':a,'family':'poisson','n_folds':10} for l in (1e-1,1e-2,1e-3,1e-4,1e-5) for a in (1.0,0.5,0.0)])
+        # run airlines
+        run_glms(files['airlines'],[{'y':'IsArrDelayed','x':'0,1,2,3,4,5,6,7,8,9,12,16,17,18','lambda':l,'alpha':a,'family':'binomial','n_folds':10,'case':1}
+                                          for l in (0.035,0.025,1e-2,5e-3,1e-3,5e-4,1e-4,5e-5,1e-5,1e-8)
+                                          for a in (1.0,0.5,0.0)])
+    finally:
+        h2o.check_sandbox_for_errors()
+        h2o.tear_down_cloud()
+
 
 
