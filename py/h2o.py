@@ -1520,8 +1520,8 @@ class H2O(object):
         else:
             self.addr = use_this_ip_addr
 
-        if use_this_ip_addr is not None:
-            self.http_addr = use_this_ip_addr
+        if self.addr is not None:
+            self.http_addr = self.addr
         else:
             self.http_addr = get_ip_address()
 
