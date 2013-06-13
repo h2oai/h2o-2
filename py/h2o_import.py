@@ -1,10 +1,10 @@
 import h2o, h2o_cmd
 import time, re, getpass
 
-def setupImportS3(node=None, bucket='home-0xdiag-datasets'):
+def setupImportS3(node=None, bucket='home-0xdiag-datasets', timeoutSecs=30):
     if not bucket: raise Exception('No S3 bucket specified')
     if not node: node = h2o.nodes[0]
-    importS3Result = node.import_s3(bucket)
+    importS3Result = node.import_s3(bucket, timeoutSecs=timeoutSecs)
     # too many files now to print
     ### print h2o.dump_json(importS3Result)
     return importS3Result
@@ -36,7 +36,7 @@ def parseImportS3File(node=None,
     print "\nParse result:", parseKey
     return parseKey
 
-def setupImportFolder(node=None, path='/home/0xdiag/datasets'):
+def setupImportFolder(node=None, path='/home/0xdiag/datasets', timeoutSecs=30):
     # a little hack to redirect import folder tests to an s3 folder
     # we don't have any "state" other than per node, so stuck this sort-of-global
     # test config state (which gets set only from the config json use-case)
@@ -46,12 +46,12 @@ def setupImportFolder(node=None, path='/home/0xdiag/datasets'):
     if node.redirect_import_folder_to_s3_path: 
         # FIX! make bucket vary depending on path
         bucket = 'home-0xdiag-datasets'
-        importFolderResult = setupImportS3(node=node, bucket=bucket)
+        importFolderResult = setupImportS3(node=node, bucket=bucket, timeoutSecs=timeoutSecs)
     else:
         if getpass.getuser()=='jenkins':
             print "michal: Temp hack of /home/0xdiag/datasets/standard to /home/0xdiag/datasets till EC2 image is fixed"
             path = re.sub('/home/0xdiag/datasets/standard', '/home/0xdiag/datasets', path)
-        importFolderResult = node.import_files(path)
+        importFolderResult = node.import_files(path, timeoutSecs=timeoutSecs)
     ### h2o.dump_json(importFolderResult)
     return importFolderResult
 
@@ -93,7 +93,7 @@ def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
         print "\nParse result:", parseKey
     return parseKey
 
-def setupImportHdfs(node=None, path=None, schema='hdfs'):
+def setupImportHdfs(node=None, path=None, schema='hdfs', timeoutSecs=30):
     if not node: node = h2o.nodes[0]
 
     print "setupImportHdfs schema:", schema
@@ -108,7 +108,7 @@ def setupImportHdfs(node=None, path=None, schema='hdfs'):
         URI = hdfsPrefix + path
 
     print "URI:", URI
-    importHdfsResult = node.import_hdfs(URI)
+    importHdfsResult = node.import_hdfs(URI, timeoutSecs=timeoutSecs)
     h2o.verboseprint(h2o.dump_json(importHdfsResult))
     return importHdfsResult
 
@@ -132,7 +132,7 @@ def parseImportHdfsFile(node=None, csvFilename=None, path=None, schema='hdfs',
     hdfsKey = URI + "/" + csvFilename
     print "parseHdfsFile hdfsKey:", hdfsKey
     inspect = h2o_cmd.runInspect(key=hdfsKey)
-    print "parseHdfsFile:", inspect
+    print "parseHdfsFile inspect of source:", inspect
 
     parseKey = node.parse(hdfsKey, csvFilename + ".hex",
         timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs, noise, 

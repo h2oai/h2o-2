@@ -21,7 +21,6 @@ def define_params():
         }
     return paramDict
 
-
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -46,6 +45,7 @@ class Basic(unittest.TestCase):
         # for determinism, I guess we should spit out the seed?
         # random.seed(SEED)
         SEED = random.randint(0, sys.maxint)
+        SEED = 7286914545857572838
         # if you have to force to redo a test
         # SEED = 
         random.seed(SEED)
