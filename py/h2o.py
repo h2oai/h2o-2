@@ -1025,22 +1025,20 @@ class H2O(object):
         verboseprint("\ninspect result:", dump_json(a))
         return a
 
-    # ImportFiles replaces ImportFolder, with a param that can be a folder or a file.
-    # the param name is 'file', but it can take a directory or a file.
+    # the param name for ImportFiles is 'file', but it can take a directory or a file.
     # 192.168.0.37:54323/ImportFiles.html?file=%2Fhome%2F0xdiag%2Fdatasets
-    # Can import just a file or a whole folder
-    def import_files(self, path):
-        a = self.__do_json_request('ImportFiles.json', params={"path": path})
+    def import_files(self, path, timeoutSecs=30):
+        a = self.__do_json_request('ImportFiles.json', timeout=timeoutSecs, params={"path": path})
         verboseprint("\nimport_files result:", dump_json(a))
         return a
 
-    def import_s3(self, bucket):
-        a = self.__do_json_request('ImportS3.json', params={"bucket": bucket})
+    def import_s3(self, bucket, timeoutSecs=30):
+        a = self.__do_json_request('ImportS3.json', timeout=timeoutSecs, params={"bucket": bucket})
         verboseprint("\nimport_s3 result:", dump_json(a))
         return a
 
-    def import_hdfs(self, path):
-        a = self.__do_json_request('ImportHdfs.json', params={"path": path})
+    def import_hdfs(self, path, timeoutSecs=30):
+        a = self.__do_json_request('ImportHdfs.json', timeout=timeoutSecs, params={"path": path})
         verboseprint("\nimport_hdfs result:", dump_json(a))
         return a
 
