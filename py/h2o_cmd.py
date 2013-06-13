@@ -57,12 +57,12 @@ def infoFromInspect(inspect, csvPathname):
     # need more info about this dataset for debug
     cols = inspect['cols']
     # look for nonzero num_missing_values count in each col
-    sum_num_missing_values = 0
+    missingValuesList = []
     for i, colDict in enumerate(cols):
         num_missing_values = colDict['num_missing_values']
         if num_missing_values != 0:
             print "%s: col: %d, num_missing_values: %d" % (csvPathname, i, num_missing_values)
-            sum_num_missing_values += num_missing_values
+            missingValuesList.append(num_missing_values)
 
     num_cols = inspect['num_cols']
     num_rows = inspect['num_rows']
@@ -75,8 +75,7 @@ def infoFromInspect(inspect, csvPathname):
     print "num_cols: %s, num_rows: %s, row_size: %s, ptype: %s, \
            value_size_bytes: %s, time: %s" % \
            (num_cols, num_rows, row_size, ptype, value_size_bytes, ptime)
-    # sum of num_missing_values from all the columns
-    return sum_num_missing_values
+    return missingValuesList
 
 # Not working in H2O yet, but support the test
 def runStore2HDFS(node=None, key=None, timeoutSecs=5, **kwargs):

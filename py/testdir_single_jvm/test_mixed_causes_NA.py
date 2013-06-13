@@ -26,8 +26,9 @@ class Basic(unittest.TestCase):
         csvPathname = h2o.find_file('smalldata/' + csvFilename)
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, timeoutSecs=15)
         inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
-        sum_num_missing_values = h2o_cmd.infoFromInspect(inspect, csvPathname)
-        self.assertEqual(sum_num_missing_values, 0,
+        missingValuesList = h2o_cmd.infoFromInspect(inspect, csvPathname)
+        print missingValuesList
+        self.assertEqual(sum(missingValuesList), 0,
                 "Single column of data with mixed number/string should not have NAs")
 
 if __name__ == '__main__':
