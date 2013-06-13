@@ -686,16 +686,16 @@ public class DParseTask extends MRTask {
     10000000000l
   };
 
-  static double pow10(int exp){
+  public static double pow10(int exp){
     return ((exp >= -10 && exp <= 10)?powers10[exp+10]:Math.pow(10, exp));
   }
 
-  static long pow10i(int exp){
+  public static long pow10i(int exp){
     assert 10 >= exp && exp >= 0:"unexpected exponent " + exp;
     return powers10i[exp];
   }
 
-  static final boolean fitsIntoInt(double d){
+  public static final boolean fitsIntoInt(double d){
     return Math.abs((int)d - d) < 1e-8;
   }
 

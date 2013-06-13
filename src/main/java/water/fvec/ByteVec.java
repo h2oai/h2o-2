@@ -11,13 +11,13 @@ public class ByteVec extends Vec {
 
   ByteVec( Key key, long espc[] ) { super(key,espc); }
 
-  public C0Vector elem2BV( int cidx ) { return (C0Vector)super.elem2BV(cidx); }
+  public C1Vector elem2BV( int cidx ) { return (C1Vector)super.elem2BV(cidx); }
 
   // Open a stream view over the underlying data
   InputStream openStream() {
     return new InputStream() {
       private int _cidx, _sz;
-      private C0Vector _c0;
+      private C1Vector _c0;
       @Override public int available() throws IOException {
         if( _c0 == null || _sz >= _c0._mem.length ) {
           if( _cidx >= nChunks() ) return 0;

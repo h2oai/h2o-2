@@ -78,6 +78,7 @@ public abstract class UDP {
 
   public static int set2 (byte[] buf, int off, short x ) {_unsafe.putShort (buf, _Bbase+off, x); return 2;}
   public static int set4 (byte[] buf, int off, int x   ) {_unsafe.putInt   (buf, _Bbase+off, x); return 4;}
+  public static int set4f(byte[] buf, int off, float f ) {_unsafe.putFloat (buf, _Bbase+off, f); return 4;}
   public static int set8 (byte[] buf, int off, long x  ) {_unsafe.putLong  (buf, _Bbase+off, x); return 8;}
   public static int set8d(byte[] buf, int off, double x) {_unsafe.putDouble(buf, _Bbase+off, x); return 8;}
 

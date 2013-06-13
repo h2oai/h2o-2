@@ -280,7 +280,7 @@ public final class ParseDataset2 extends Job {
 
   public static enum Compression { NONE, ZIP, GZIP }
   public static Compression guessCompressionMethod( ByteVec vec) {
-    C0Vector bv = vec.elem2BV(0); // First chunk of bytes
+    C1Vector bv = vec.elem2BV(0); // First chunk of bytes
     // Look for ZIP magic
     if( vec.length() > ZipFile.LOCHDR && bv.get4(0) == ZipFile.LOCSIG )
       return Compression.ZIP;
@@ -291,7 +291,7 @@ public final class ParseDataset2 extends Job {
 
   public static CsvParser.Setup csvGuessValue( ByteVec vec, byte separator, Compression compression ) {
     // Since this data is all bytes, we know each chunk is just raw text.
-    C0Vector bv = vec.elem2BV(0);
+    C1Vector bv = vec.elem2BV(0);
     // See if we can make sense of the first few rows.
     byte[] bs = bv._mem;
     int off = 0;                   // Offset of read/decompressed bytes
