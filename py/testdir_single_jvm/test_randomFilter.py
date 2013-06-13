@@ -59,7 +59,7 @@ class Basic(unittest.TestCase):
         # time.sleep(1500)
         h2o.tear_down_cloud()
 
-    def test_factor_with_syn(self):
+    def test_randomFilter(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         # use SEED so the file isn't cached?
         csvFilenameAll = [
