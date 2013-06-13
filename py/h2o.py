@@ -809,7 +809,7 @@ class H2O(object):
             # every other one?
             create_noise = noise is not None and ((count%2)==0)
             if create_noise:
-                urlUsed = self.__url(noiseUrl)
+                urlUsed = noiseUrl
                 paramsUsed = noiseParams
                 paramsUsedStr = noiseParamsStr
                 msgUsed = "\nNoise during polling with"
@@ -1009,6 +1009,7 @@ class H2O(object):
 
     def store_view(self):
         a = self.__do_json_request('StoreView.json', params={})
+        print h2o.dump_json(a)
         return a
 
     # There is also a RemoveAck in the browser, that asks for confirmation from

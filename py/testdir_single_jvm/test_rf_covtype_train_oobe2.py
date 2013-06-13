@@ -55,6 +55,11 @@ class Basic(unittest.TestCase):
         # in the browser
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, header=0, timeoutSecs=100)
 
+        h2i.setupImportFolder(None, importFolderPath)
+        print "\nUsing header=0 on the normal covtype.data"
+        parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2,
+            header=0, timeoutSecs=180)
+
         inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
         print "\n" + csvPathname, \
             "    num_rows:", "{:,}".format(inspect['num_rows']), \
