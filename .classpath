@@ -31,5 +31,6 @@
 	<classpathentry kind="lib" path="lib/fastr/arpack_combined_all.jar"/>
 	<classpathentry kind="lib" path="lib/fastr/netlib-java-0.9.3.jar"/>
 	<classpathentry kind="lib" path="lib/fastr/r.jar" sourcepath="lib/fastr/r-sources.jar"/>
+	<classpathentry kind="lib" path="lib/log4j/log4j-1.2.15.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>
