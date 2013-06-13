@@ -43,7 +43,7 @@ class Basic(unittest.TestCase):
         SEED = random.randint(0, sys.maxint)
 
         # if you have to force to redo a test
-        # SEED = 
+        SEED = 6019110937119320453
         random.seed(SEED)
         print "\nUsing random seed:", SEED
         localhost = h2o.decide_if_localhost()
