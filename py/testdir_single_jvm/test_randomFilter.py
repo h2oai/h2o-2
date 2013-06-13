@@ -77,9 +77,11 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, 1000000, SEEDPERFILE)
             # creates csvFilename.hex from file in importFolder dir 
             parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=2000)
+
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "Parse result['destination_key']:", parseKey['destination_key']
             inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            h2o_cmd.infoFromInspect(inspect, csvPathname)
 
             print "\n" + csvFilename
             h2e.exec_zero_list(zeroList)
