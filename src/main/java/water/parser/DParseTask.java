@@ -503,7 +503,7 @@ public class DParseTask extends MRTask {
     final Key _key;
     DParseTask _dpt;
     CsvParser2(Setup setup, DParseTask dpt, Key key ) {
-      super(setup, dpt);
+      super(setup);
       _key = key;
       _dpt = dpt;
     }
@@ -526,6 +526,7 @@ public class DParseTask extends MRTask {
     @Override public void newLine() { _dpt.newLine(); }
     @Override public boolean isString(int cidx) { return _dpt.isString(cidx); }
     @Override public void addNumCol(int colIdx, long number, int exp) { _dpt.addNumCol(colIdx,number,exp); }
+    @Override public void addInvalidCol(int colIdx) { _dpt.addInvalidCol(colIdx); }
     @Override public void addStrCol( int colIdx, ValueString str ) { _dpt.addStrCol(colIdx,str); }
     @Override public void rollbackLine() { _dpt.rollbackLine(); }
   }

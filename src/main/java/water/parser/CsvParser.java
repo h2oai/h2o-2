@@ -38,13 +38,10 @@ public abstract class CsvParser extends CustomParser {
   private static final long LARGEST_DIGIT_NUMBER = 1000000000000000000L;
 
   public final Setup _setup;
-  DParseTask callback;
 
-
-  public CsvParser(Setup setup, DParseTask callback) {
+  public CsvParser(Setup setup) {
     _setup = setup;
     CHAR_SEPARATOR = setup._separator;
-    this.callback = callback;
   }
 
   @SuppressWarnings("fallthrough")
@@ -178,11 +175,11 @@ NEXT_CHAR:
               break NEXT_CHAR;
           } else if (c == CHAR_SEPARATOR) {
             // we have empty token, store as NaN
-            callback.addInvalidCol(colIdx);
+            addInvalidCol(colIdx);
             ++colIdx;
             break NEXT_CHAR;
           } else if (isEOL(c)) {
-            callback.addInvalidCol(colIdx);
+            addInvalidCol(colIdx);
             state = EOL;
             continue MAIN_LOOP;
           }
@@ -451,6 +448,8 @@ NEXT_CHAR:
   public abstract boolean isString(int colIdx);
   // Add a number column with given digits & exp
   public abstract void addNumCol(int colIdx, long number, int exp);
+  // An an invalid / missing entry
+  public abstract void addInvalidCol(int colIdx);
   // Add a String column
   public abstract void addStrCol( int colIdx, ValueString str );
   // Final rolling back of partial line

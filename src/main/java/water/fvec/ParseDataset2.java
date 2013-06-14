@@ -214,7 +214,7 @@ public final class ParseDataset2 extends Job {
         nvs[i] = new NewVector(_cols[i],0/*starting chunk#*/);
 
       // The parser for fluid vecs
-      CsvParser parser = new CsvParser(localSetup,null) {
+      CsvParser parser = new CsvParser(localSetup) {
           // A 2-entry cache of 32K chunks.
           // no real chunks; just double-pump decompression buffers
           private byte[] _bits0 = new byte[32*1024];
@@ -272,7 +272,7 @@ public final class ParseDataset2 extends Job {
             _col++;             // Next column filled in
             throw H2O.unimpl(); 
           }
-          void addInvalidCol(int colIdx) { throw H2O.unimpl(); }
+          @Override public void addInvalidCol(int colIdx) { throw H2O.unimpl(); }
           @Override public void rollbackLine() { }
           @Override public boolean isString(int colIdx) { return false; }
         };
