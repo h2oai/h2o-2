@@ -17,15 +17,22 @@ import java.util.Arrays;
 public class AppendableVec extends Vec {
   long _espc[];
 
-  AppendableVec( Key key ) { super(key,null); _espc = new long[4]; }
+  AppendableVec( Key key ) { 
+    super(key,null,Double.MAX_VALUE,Double.MIN_VALUE,0);
+    _espc = new long[4]; 
+  }
 
-  // A AppendableVector chunk was "closed" - completed.  Add it's info to the roll-up.
+  // A NewVector chunk was "closed" - completed.  Add it's info to the roll-up.
   // This call is made in parallel across all node-local created chunks, but is
   // not called distributed.
-  synchronized void closeChunk( int cidx, int len ) {
+  synchronized void closeChunk( int cidx, int len, double min, double max, double sum ) {
     while( cidx >= _espc.length )
       _espc = Arrays.copyOf(_espc,_espc.length<<1);
     _espc[cidx] = len;
+    // Roll-up totals for each chunk as it closes
+    if( min < _min ) _min = min;
+    if( max > _max ) _max = max;
+    _sum += sum;
   }
 
   // Class 'reduce' call on new vectors; to combine the roll-up info.
@@ -64,7 +71,7 @@ public class AppendableVec extends Vec {
     }
     espc[nchunk]=x;             // Total element count in last 
     // Replacement plain Vec for AppendableVec.
-    Vec vec = new Vec(_key,espc);
+    Vec vec = new Vec(_key,espc,_min,_max,_sum);
     DKV.put(_key,vec);          // Inject the header
     return vec;
   }

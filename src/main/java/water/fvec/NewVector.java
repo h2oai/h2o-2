@@ -9,12 +9,16 @@ public class NewVector extends BigVector {
   final int _cidx;
   transient long _ls[];         // Mantissa
   transient int _xs[];          // Exponent
+  transient double _min, _max, _sum;
 
   NewVector( AppendableVec vec, int cidx ) { 
     _vec = vec;                 // Owning AppendableVec
     _cidx = cidx;               // This chunk#
     _ls = new long[4];          // A little room for data
     _xs = new int [4];
+    _min = Double.MAX_VALUE;
+    _max = Double.MIN_VALUE;
+    _sum = 0;
   }
 
   // Fast-path append long data
@@ -37,7 +41,7 @@ public class NewVector extends BigVector {
   // (does not live on inside the K/V store).
   public void close(Futures fs) {
     DKV.put(_vec.chunkKey(_cidx),compress(),fs);
-    ((AppendableVec)_vec).closeChunk(_cidx,_len);
+    ((AppendableVec)_vec).closeChunk(_cidx,_len,_min,_max,_sum);
   }
 
   // Study this NewVector and determine an appropriate compression scheme.
@@ -53,6 +57,11 @@ public class NewVector extends BigVector {
     for( int i=0; i<_len; i++ ) {
       long l = _ls[i];
       int  x = _xs[i];
+      // Compute per-chunk min/sum/max
+      double d = l*DParseTask.pow10(x);
+      if( d < _min ) _min = d;
+      if( d > _max ) _max = d;
+      _sum += d;
       if( l==0 ) x=0;           // Canonicalize zero exponent
       // Remove any trailing zeros / powers-of-10
       long t;
@@ -69,14 +78,12 @@ public class NewVector extends BigVector {
         }
         xmin = x;               // Smaller xmin
       }
-      // *this* value, at the smallest scale
+      // *this* value, as a long scaled at the smallest scale
       long le = l*DParseTask.pow10i(x-xmin);
       if( first || le < lemin ) lemin=le;
       if( first || le > lemax ) lemax=le;
       first = false;
     }
-
-    water.util.Log.unwrap(System.err,"COMPRESS: "+lemin+"e"+xmin+" - "+lemax+"e"+xmin);
 
     // Exponent scaling: replacing numbers like 1.3 with 13e-1.  '13' fits in a
     // byte and we scale the column by 0.1.  A set of numbers like

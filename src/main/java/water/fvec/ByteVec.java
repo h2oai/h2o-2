@@ -9,7 +9,7 @@ import water.util.Log;
 // A vector of plain Bytes.
 public class ByteVec extends Vec {
 
-  ByteVec( Key key, long espc[] ) { super(key,espc); }
+  ByteVec( Key key, long espc[] ) { super(key,espc,Double.NaN,Double.NaN,Double.NaN); }
 
   public C1Vector elem2BV( int cidx ) { return (C1Vector)super.elem2BV(cidx); }
 

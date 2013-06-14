@@ -21,10 +21,15 @@ public class Vec extends Iced {
   // such as file-backed Vecs.
   final long _espc[];
 
-  Vec( Key key, long espc[] ) {
+  double _min, _max, _sum;
+
+  Vec( Key key, long espc[], double min, double max, double sum ) {
     assert key._kb[0]==Key.VEC;
     _key = key;
     _espc = espc; 
+    _min = min == Double.MIN_VALUE ? Double.NaN : min;
+    _max = max;
+    _sum = sum;
   }
 
   // Number of elements in the vector.  Overridden by subclasses that compute
@@ -96,4 +101,10 @@ public class Vec extends Iced {
   // Fetch element the slow way
   long at( long i ) { return elem2BV(elem2ChunkIdx(i)).at(i); }
   double atd( long i ) { throw H2O.unimpl(); }
+
+  // [#elems, min/mean/max]
+  @Override public String toString() {
+    return "["+length()+(Double.isNaN(_min) ? "" : ","+_min+"/"+(_sum/length())+"/"+_max)+"]";
+  }
+
 }

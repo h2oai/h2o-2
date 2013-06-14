@@ -21,7 +21,7 @@ public final class ParseDataset2 extends Job {
     forkParseDataset(okey, keys, null).get();
   }
   // Same parse, as a backgroundable Job
-  public static Job forkParseDataset(final Key dest, final Key[] keys, final CsvParser.Setup setup) {
+  public static ParseDataset2 forkParseDataset(final Key dest, final Key[] keys, final CsvParser.Setup setup) {
     ParseDataset2 job = new ParseDataset2(dest, keys);
     H2O.submitTask(job.start(new ParserFJTask(job, keys, setup)));
     return job;
@@ -78,13 +78,13 @@ public final class ParseDataset2 extends Job {
 
   // --------------------------------------------------------------------------
   // Top-level parser driver
-  private static void parse_impl(ParseDataset2 job, Key [] fkeys, CsvParser.Setup setup) {
+  private static Vec[] parse_impl(ParseDataset2 job, Key [] fkeys, CsvParser.Setup setup) {
     // remove any previous instance and insert a sentinel (to ensure no one has
     // been writing to the same keys during our parse)!
     UKV.remove(job.dest());
     if( fkeys.length == 0) {
       job.cancel();
-      return;
+      return null;
     }
 
     // Guess column layout.  For multiple files, the caller is supposed to
@@ -102,7 +102,15 @@ public final class ParseDataset2 extends Job {
     if( uzpt._parserr != null )
       throw new ParseException(uzpt._parserr);
 
-    throw H2O.unimpl();
+    Vec vecs[] = new Vec[uzpt._cols.length];
+    for( int i=0; i<vecs.length; i++ )
+      vecs[i] = uzpt._cols[i].close();
+
+    for( int i=0; i<vecs.length; i++ )
+      Log.unwrap(System.err,vecs[i].toString()+(setup._header ? setup._data[0][i] : "")+
+                 " bytes/row="+(vecs[i].elem2BV(0)._mem.length/vecs[i].length()));
+    
+    return vecs;
   }
 
   // --------------------------------------------------------------------------
@@ -111,11 +119,12 @@ public final class ParseDataset2 extends Job {
   // the parallelism on each node.
   private static class MultiFileParseTask extends MRTask<MultiFileParseTask> {
     public final CsvParser.Setup _setup; // The expected column layout
+    // OUTPUT fields: 
     public String _parserr;              // NULL if parse is OK, else an error string
+    // All column data for this one file
+    AppendableVec _cols[];
 
-    MultiFileParseTask( CsvParser.Setup setup ) {
-      _setup = setup;
-    }
+    MultiFileParseTask( CsvParser.Setup setup ) { _setup = setup; }
 
     //// Total memory on this Node
     //static long MEM = MemoryManager.MEM_MAX;
@@ -133,6 +142,8 @@ public final class ParseDataset2 extends Job {
       // Get parser setup info for this chunk
       ByteVec vec = UKV.get(key);
       Compression cpr = guessCompressionMethod(vec);
+      // Local setup: nearly the same as the global all-files setup, but maybe
+      // has the header-flag changed.
       CsvParser.Setup setup = csvGuessValue(vec,_setup._separator,cpr);
       if( !_setup.equals(setup) ) {
         _parserr = "Conflicting file layouts, expecting: "+_setup+" but found "+setup;
@@ -148,6 +159,12 @@ public final class ParseDataset2 extends Job {
           setup = new CsvParser.Setup(setup,false);
       }
 
+      // Setup result columns named: filekeyC0, filekeyC1, etc...
+      final int ncols = _setup._data[0].length;
+      _cols = new AppendableVec[ncols];
+      for( int i=0; i<ncols; i++ )
+        _cols[i] = new AppendableVec(Key.make(key.toString()+"C"+i));
+
       // Parse the file
       try {
         switch( cpr ) {
@@ -159,48 +176,45 @@ public final class ParseDataset2 extends Job {
           ZipInputStream zis = new ZipInputStream(vec.openStream());
           ZipEntry ze = zis.getNextEntry(); // Get the *FIRST* entry
           // There is at least one entry in zip file and it is not a directory.
-          if( ze != null && !ze.isDirectory() ) streamParse(key,zis);
+          if( ze != null && !ze.isDirectory() ) streamParse(key,zis,setup);
           else zis.close();       // Confused: which zipped file to decompress
           break;
         }
         case GZIP: 
           // Zipped file; no parallel decompression;
-          streamParse(key,new GZIPInputStream(vec.openStream())); 
+          streamParse(key,new GZIPInputStream(vec.openStream()),setup); 
           break;
         }
       } catch( IOException ioe ) {
         _parserr = ioe.toString();
         return;
       }
-
-      // Close any AppendableVec
-      //for( int i=0; i<ncols; i++ ) {
-      //}
-      throw H2O.unimpl();
-          
     }
 
+    // Reduce: combine errors from across files.
+    // Roll-up other meta data
     @Override public void reduce( MultiFileParseTask uzpt ) {
       // Combine parse errors from across files
       if( _parserr == null ) _parserr = uzpt._parserr;
       else if( uzpt._parserr != null ) _parserr += uzpt._parserr;
+      // Collect & combine columns across files
+      if( _cols == null ) { _cols = uzpt._cols; return; }
+
+      // Reduce multiple AppendableVecs together
+      throw H2O.unimpl();
     }
 
     // Zipped file; no parallel decompression; decompress into local chunks,
     // parse local chunks; distribute chunks later.
-    private void streamParse( Key fkey, final InputStream is ) throws IOException {
+    private void streamParse( Key fkey, final InputStream is, final CsvParser.Setup localSetup ) throws IOException {
 
-      // All output into a fresh pile of AppendableVecs, one per column
-      final int ncols = _setup._data[0].length;
-      final AppendableVec cols[] = new AppendableVec[ncols];
-      final NewVector nvs[] = new NewVector[ncols];
-      for( int i=0; i<ncols; i++ ) {
-        cols[i] = new AppendableVec(Key.make(fkey.toString()+"C"+i));
-        nvs[i] = new NewVector(cols[i],0/*chunk#*/);
-      }
+      // All output into a fresh pile of NewVectors, one per column
+      final NewVector nvs[] = new NewVector[_cols.length];
+      for( int i=0; i<nvs.length; i++ )
+        nvs[i] = new NewVector(_cols[i],0/*starting chunk#*/);
 
       // The parser for fluid vecs
-      CsvParser parser = new CsvParser(_setup,null) {
+      CsvParser parser = new CsvParser(localSetup,null) {
           // A 2-entry cache of 32K chunks.
           // no real chunks; just double-pump decompression buffers
           private byte[] _bits0 = new byte[32*1024];
@@ -209,6 +223,8 @@ public final class ParseDataset2 extends Job {
           private int _col=0;             // Column #
 
           // Read a next chunk of data: arbirtrarily split into 32K chunks.
+          // Chunk size is small enough to allow double-buffered chunks to live
+          // in L2 cache, but large enough to handle all reasonable row sizes.
           // Not distributed since we're reading from a stream; not in the K/V
           // store; just chunked.
           @Override public byte[] getChunkData( int cidx ) {
@@ -238,7 +254,7 @@ public final class ParseDataset2 extends Job {
           // Handle a newLine action from the parser
           @Override public void newLine() {
             if( _col > 0 )
-              while( _col < cols.length )
+              while( _col < _cols.length )
                 addInvalidCol(_col++);
             _col=0;
           }
@@ -261,17 +277,16 @@ public final class ParseDataset2 extends Job {
           @Override public boolean isString(int colIdx) { return false; }
         };
 
-      // Parse all internal "chunks", until we drain the zip-stream dry.
-      // Not real chunks, just flipping between 32K buffers.
+      // Parse all internal "chunks", until we drain the zip-stream dry.  Not
+      // real chunks, just flipping between 32K buffers.  Fills up the single
+      // very large NewVector.
       int cidx=0;
       while( is.available() > 0 )
         parser.parse(cidx++);
 
-      // Close all the NewVectors
-      for( int i=0; i<ncols; i++ ) {
-        nvs[i].close(null/*futures?*/);
-      }
-
+      // Close & compress all the NewVectors for this one file.
+      for( int i=0; i<nvs.length; i++ )
+        nvs[i].close(_fs);
     }
   }
 

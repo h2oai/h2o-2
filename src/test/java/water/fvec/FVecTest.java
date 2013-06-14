@@ -79,6 +79,10 @@ public class FVecTest extends TestUtil {
 
     Key okey = Key.make("cars.hex");
     ParseDataset2.parse(okey,new Key[]{fkey});
+
+    for( int i=0; i<9; i++ )
+      UKV.remove(fkey.toString()+"C"+i);
+    UKV.remove(fkey);
   }
 
   // ==========================================================================
