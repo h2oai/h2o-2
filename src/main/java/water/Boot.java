@@ -126,6 +126,7 @@ public class Boot extends ClassLoader {
       addInternalJars("s3");
       addInternalJars("jets3t");
       addInternalJars("fastr");
+      addInternalJars("log4j");
     }
 
     run(args);
