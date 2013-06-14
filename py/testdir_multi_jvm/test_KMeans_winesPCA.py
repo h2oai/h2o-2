@@ -39,13 +39,13 @@ class Basic(unittest.TestCase):
                 # ('covtype200x.data', 1000,'cE'),
                 ]
 
-        importFolderPath = '/home/ec2-user/h2o/smalldata'
+        importFolderPath = os.path.abspath(h2o.find_file('smalldata'))
         h2i.setupImportFolder(None, importFolderPath)
         for csvFilename, timeoutSecs, key2 in csvFilenameList:
             csvPathname = importFolderPath + "/" + csvFilename
             # creates csvFilename.hex from file in importFolder dir 
             start = time.time()
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
+            parseKey = h2i.parseImportFolderFile(None, 'winesPCA.csv', importFolderPath, 
                 timeoutSecs=2000, key2=key2, noise=('JStack', None))
             print "parse end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o.check_sandbox_for_errors()
@@ -72,7 +72,7 @@ class Basic(unittest.TestCase):
             centers = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
 	    print "Expected centers: [-2.276318, -0.965151], with 59 rows."
 	    print "                  [0.0388763, 1.63886039], with 71 rows."
-	    print "		  [2.740469, -1.237816], with 48 rows."
+	    print "		     [2.740469, -1.237816], with 48 rows."
 	    model_key = kmeans['destination_key']
 	    kmeansScoreResult = h2o.nodes[0].kmeans_score(
 	    	key = parseKey['destination_key'], model_key = model_key)

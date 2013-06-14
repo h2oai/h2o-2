@@ -1,12 +1,7 @@
 import time, os, json, signal, tempfile, shutil, datetime, inspect, threading, os.path, getpass
-import requests, psutil, argparse, sys, unittest
-import glob
-import h2o_browse as h2b
-import h2o_perf
-
-import re
-import webbrowser
-import random
+import requests, psutil, argparse, sys, unittest, glob
+import h2o_browse as h2b, h2o_perf, h2o_util
+import re, webbrowser, random
 # used in shutil.rmtree permission hack for windows
 import errno
 # use to unencode the urls sent to h2o?
@@ -1009,7 +1004,7 @@ class H2O(object):
 
     def store_view(self):
         a = self.__do_json_request('StoreView.json', params={})
-        print h2o.dump_json(a)
+        # print dump_json(a)
         return a
 
     # There is also a RemoveAck in the browser, that asks for confirmation from
@@ -1230,9 +1225,16 @@ class H2O(object):
         z = zipfile.ZipFile(StringIO.StringIO(r.content))
         print "z.namelist:", z.namelist()
         print "z.printdir:", z.printdir()
+
+        # it's a zip of zipped filed
+        z = zipfile.ZipFile(StringIO.StringIO(r.content))
         z.extractall(logDir)
         # unzipped file should be in LOG_DIR now
-        return z.namelist
+        for zname in z.namelist():
+            z2 = zipfile.ZipFile(logDir + "/" + zname)
+            resultList = h2o_util.flat_unzip(logDir + "/" + zname, logDir)
+
+        return resultList
 
     # kwargs used to pass many params
     def GLM_shared(self, key, 
