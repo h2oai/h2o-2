@@ -16,25 +16,14 @@ import com.google.gson.JsonObject;
 
 public class LogView extends Request {
   @Override protected Response serve() {
-    LogStr logstr = UKV.get(Log.LOG_KEY);
-    JsonArray ary = new JsonArray();
-    if( logstr != null ) {
-      for( int i=0; i<LogStr.MAX; i++ ) {
-        int x = (i+logstr._idx+1)&(LogStr.MAX-1);
-        if( logstr._dates[x] == null ) continue;
-        JsonObject obj = new JsonObject();
-        obj.addProperty("date", logstr._dates[x]);
-        obj.addProperty("h2o" , logstr._h2os [x].toString());
-        obj.addProperty("pid" , logstr._pids [x]);
-        obj.addProperty("thr" , logstr._thrs [x]);
-        obj.addProperty("kind", Log.KINDS[logstr._kinds[x]].name());
-        obj.addProperty("sys", Log.SYSS[logstr._syss[x]].name());
-        obj.addProperty("msg" , logstr._msgs [x]);
-        ary.add(obj);
-      }
-    }
+    String s = water.util.Log.getLogPathFileName();
     JsonObject result = new JsonObject();
-    result.add("log",ary);
+    File f = new File (s);
+    String contents = Utils.readFile(f);
+    if (contents == null) {
+      contents = "Not yet initialized, please refresh...";
+    }
+    result.addProperty("log", "<pre>" + contents + "</pre>");
 
     Response response = Response.done(result);
     response.addHeader("<a class='btn btn-primary' href='LogDownload.html'>Download all logs</a>");
