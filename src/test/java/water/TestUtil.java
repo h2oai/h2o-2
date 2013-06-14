@@ -33,10 +33,11 @@ public class TestUtil {
     DKV.remove(Log.LOG_KEY);
     DKV.write_barrier();
     int leaked_keys = H2O.store_size() - _initial_keycnt;
-    if( leaked_keys != 0 )
+    if( leaked_keys > 0 )
       for( Key k : H2O.keySet() )
         System.err.println("Leaked key: " + k);
-    assertEquals("No keys leaked", 0, leaked_keys);
+    assertTrue("No keys leaked", leaked_keys<=0);
+    _initial_keycnt = H2O.store_size();
   }
 
   // Stall test until we see at least X members of the Cloud
