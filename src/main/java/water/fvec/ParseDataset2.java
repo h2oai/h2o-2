@@ -106,10 +106,6 @@ public final class ParseDataset2 extends Job {
     for( int i=0; i<vecs.length; i++ )
       vecs[i] = uzpt._cols[i].close();
 
-    for( int i=0; i<vecs.length; i++ )
-      Log.unwrap(System.err,vecs[i].toString()+(setup._header ? setup._data[0][i] : "")+
-                 " bytes/row="+(vecs[i].elem2BV(0)._mem.length/vecs[i].length()));
-    
     return vecs;
   }
 
