@@ -87,7 +87,7 @@ public class LogView extends Request {
       ZipOutputStream zos = new ZipOutputStream(baos);
       try {
         for (int i =0; i<results.length; i++) {
-          String filename = "node"+i+H2O.CLOUD._memary[i].toString().replace(':', '_').replace('/', '_') + ".log";
+          String filename = "node"+i+H2O.CLOUD._memary[i].toString().replace(':', '_').replace('/', '_') + ".zip";
           ZipEntry ze = new ZipEntry(filename);
           zos.putNextEntry(ze);
           zos.write(results[i]);

@@ -73,9 +73,9 @@ public abstract class Log {
     System.setErr(new Wrapper(System.err));
   }
   /** Local log file */
-  static final String FILE_NAME = "h2o.log";
-  static File FILE;
-  static BufferedWriter FILE_WRITER;
+
+  static String LOG_DIR = null;
+
   /** Key for the log in the KV store */
   public final static Key LOG_KEY = Key.make("Log", (byte) 0, Key.BUILT_IN_KEY);
   /** Time from when this class loaded. */
@@ -272,11 +272,30 @@ public abstract class Log {
 
   private static org.apache.log4j.Logger _logger = null;
 
-  private static org.apache.log4j.Logger getLog4jLogger () {
+  public static String getLogDir() {
+    if (LOG_DIR == null) {
+      return "unknown-log-dir";
+    }
+
+    return LOG_DIR;
+  }
+
+  public static String getLogPathFileName() {
+    int port = H2O.UDP_PORT-1;
+    String portString = Integer.toString(port);
+
+    String logFileName =
+            getLogDir() + File.separator +
+            "h2oNode" + portString + ".log";
+
+    return logFileName;
+  }
+
+  private static org.apache.log4j.Logger getLog4jLogger() {
     return _logger;
   }
 
-  private static org.apache.log4j.Logger createLog4jLogger (String logDir) {
+  private static org.apache.log4j.Logger createLog4jLogger(String logDirParent) {
     synchronized (water.util.Log.class) {
       if (_logger != null) {
         return _logger;
@@ -287,17 +306,18 @@ public abstract class Log {
       String log4jProperties = System.getProperty ("log4j.properties");
       if (log4jProperties != null) {
         PropertyConfigurator.configure(log4jProperties);
+        // TODO:  Need some way to set LOG_DIR here for LogCollectorTask to work.
       }
       else {
+        LOG_DIR = logDirParent + File.separator + "h2ologs";
+        String logPathFileName = getLogPathFileName();
+
         java.util.Properties p = new java.util.Properties();
 
         p.setProperty("log4j.rootLogger", "debug, R");
         p.setProperty("log4j.appender.R", "org.apache.log4j.RollingFileAppender");
-        p.setProperty("log4j.appender.R.File",
-                logDir + File.separator +
-                "h2ologs" + File.separator +
-                "h2o.log");
-        p.setProperty("log4j.appender.R.MaxFileSize", "1MB");
+        p.setProperty("log4j.appender.R.File", logPathFileName);
+        p.setProperty("log4j.appender.R.MaxFileSize", "256KB");
         p.setProperty("log4j.appender.R.MaxBackupIndex", "5");
         p.setProperty("log4j.appender.R.layout", "org.apache.log4j.PatternLayout");
 
