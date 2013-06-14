@@ -94,7 +94,6 @@ public final class ParseDataset2 extends Job {
     byte sep = setup == null ? CsvParser.NO_SEPARATOR : setup._separator;
     if( setup == null || setup._data == null || setup._data[0] == null )
       setup = csvGuessValue(vec, sep, compression);
-    System.out.println("Setup="+setup);
 
     // Parallel file parse launches across the cluster
     MultiFileParseTask uzpt = new MultiFileParseTask(setup).invoke(fkeys);
