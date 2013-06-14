@@ -42,17 +42,17 @@ public class LogView extends Request {
       collector.invokeOnAllNodes();
 
       // FIXME put here zip for each file.
-      String outputFile = getOutputLogName();
+      String outputFileStem = getOutputLogStem();
       byte[] result = null;
       try {
-        result = zipLogs(collector._result);
+        result = zipLogs(collector._result, outputFileStem);
       } catch (IOException e) {
         // put the exception into output log
         result = e.toString().getBytes();
       }
       NanoHTTPD.Response res = server.new Response(NanoHTTPD.HTTP_OK,NanoHTTPD.MIME_DEFAULT_BINARY, new ByteArrayInputStream(result));
       res.addHeader("Content-Length", Long.toString(result.length));
-      res.addHeader("Content-Disposition", "attachment; filename="+outputFile);
+      res.addHeader("Content-Disposition", "attachment; filename="+outputFileStem + ".zip");
       return res;
     }
 
@@ -60,29 +60,47 @@ public class LogView extends Request {
       throw new RuntimeException("Get should not be called from this context");
     }
 
-    private String getOutputLogName() {
+    private String getOutputLogStem() {
       String pattern = "yyMMdd-hhmmss";
       SimpleDateFormat formatter = new SimpleDateFormat(pattern);
       String now = formatter.format(new Date());
 
-      return "h2o-" + now + ".zip";
+      return "h2o-" + now;
     }
 
-    private byte[] zipLogs(byte[][] results) throws IOException {
+    private byte[] zipLogs(byte[][] results, String topDir) throws IOException {
       int l = 0;
       assert H2O.CLOUD._memary.length == results.length : "Unexpected change in the cloud!";
       for (int i = 0; i<results.length;l+=results[i++].length);
       ByteArrayOutputStream baos = new ByteArrayOutputStream(l);
+
+      // Add top-level directory.
       ZipOutputStream zos = new ZipOutputStream(baos);
+      {
+        ZipEntry zde = new ZipEntry (topDir + File.separator);
+        zos.putNextEntry(zde);
+      }
+
       try {
+        // Add zip directory from each cloud member.
         for (int i =0; i<results.length; i++) {
-          String filename = "node"+i+H2O.CLOUD._memary[i].toString().replace(':', '_').replace('/', '_') + ".zip";
+          String filename =
+                  topDir + File.separator +
+                  "node" + i +
+                  H2O.CLOUD._memary[i].toString().replace(':', '_').replace('/', '_') +
+                  ".zip";
           ZipEntry ze = new ZipEntry(filename);
           zos.putNextEntry(ze);
           zos.write(results[i]);
           zos.closeEntry();
         }
-      } finally { zos.close(); }
+
+        // Close the top-level directory.
+        zos.closeEntry();
+      } finally {
+        // Close the full zip file.
+        zos.close();
+      }
 
       return baos.toByteArray();
     }
