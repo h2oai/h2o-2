@@ -1,7 +1,7 @@
 import os, json, unittest, time, shutil, sys
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_util
+import h2o, h2o_cmd, h2o_hosts, h2o_util, h2o_log
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -47,18 +47,15 @@ class Basic(unittest.TestCase):
                     "nodes report size: %s consensus: %s instead of %d." % \
                     (sizeStr, consensusStr, expectedSize))
 
-        # download logs from node 0
-        h2o.nodes[0].log_download(timeoutSecs=3)
-        # figure out the expected log file names (node/ip/port)
-        # node0_192.168.1.171_54326.log
-        logNames = []
-        for i,node in enumerate(h2o.nodes):
-            lineCount = h2o_util.file_line_count("sandbox/" + logName)
-            logName = "node" + str(i) + node.addr + "_" + node.port
-            logNames.append(logName)
-            print logName, "lineCount:", lineCount
+        (logNameList, lineCountList) = h2o_log.checkH2OLogs()
+        nodesNum = len(h2o.nodes)
+        self.assertEqual(len(logNameList), nodesNum, "Should be " + nodesNum + " logs")
+        self.assertEqual(len(lineCountList), nodesNum, "Should be " + nodesNum + " logs")
 
-        print logNames
+        for i in range(nodesNum):
+            # line counts seem to vary..check for "too small"
+            # variance in polling (cloud building and status)?
+            self.assertGreater(lineCountList[i], 12, "node " + str(i) + " log is too small")
 
 if __name__ == '__main__':
     h2o.unit_main()

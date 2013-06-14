@@ -809,7 +809,7 @@ class H2O(object):
             # every other one?
             create_noise = noise is not None and ((count%2)==0)
             if create_noise:
-                urlUsed = self.__url(noiseUrl)
+                urlUsed = noiseUrl
                 paramsUsed = noiseParams
                 paramsUsedStr = noiseParamsStr
                 msgUsed = "\nNoise during polling with"
@@ -1009,6 +1009,7 @@ class H2O(object):
 
     def store_view(self):
         a = self.__do_json_request('StoreView.json', params={})
+        print h2o.dump_json(a)
         return a
 
     # There is also a RemoveAck in the browser, that asks for confirmation from
@@ -1025,22 +1026,20 @@ class H2O(object):
         verboseprint("\ninspect result:", dump_json(a))
         return a
 
-    # ImportFiles replaces ImportFolder, with a param that can be a folder or a file.
-    # the param name is 'file', but it can take a directory or a file.
+    # the param name for ImportFiles is 'file', but it can take a directory or a file.
     # 192.168.0.37:54323/ImportFiles.html?file=%2Fhome%2F0xdiag%2Fdatasets
-    # Can import just a file or a whole folder
-    def import_files(self, path):
-        a = self.__do_json_request('ImportFiles.json', params={"path": path})
+    def import_files(self, path, timeoutSecs=30):
+        a = self.__do_json_request('ImportFiles.json', timeout=timeoutSecs, params={"path": path})
         verboseprint("\nimport_files result:", dump_json(a))
         return a
 
-    def import_s3(self, bucket):
-        a = self.__do_json_request('ImportS3.json', params={"bucket": bucket})
+    def import_s3(self, bucket, timeoutSecs=30):
+        a = self.__do_json_request('ImportS3.json', timeout=timeoutSecs, params={"bucket": bucket})
         verboseprint("\nimport_s3 result:", dump_json(a))
         return a
 
-    def import_hdfs(self, path):
-        a = self.__do_json_request('ImportHdfs.json', params={"path": path})
+    def import_hdfs(self, path, timeoutSecs=30):
+        a = self.__do_json_request('ImportHdfs.json', timeout=timeoutSecs, params={"path": path})
         verboseprint("\nimport_hdfs result:", dump_json(a))
         return a
 
@@ -1522,8 +1521,8 @@ class H2O(object):
         else:
             self.addr = use_this_ip_addr
 
-        if use_this_ip_addr is not None:
-            self.http_addr = use_this_ip_addr
+        if self.addr is not None:
+            self.http_addr = self.addr
         else:
             self.http_addr = get_ip_address()
 
