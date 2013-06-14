@@ -42,6 +42,7 @@ public class DParseTask extends MRTask {
   private static final int [] COL_SIZES = new int[]{0,1,2,4,8,1,2,-4,-8,1};
 
   // scalar variables
+  boolean _skip;
   Pass _phase;
   long _numRows;
   transient int _myrows;
@@ -225,6 +226,7 @@ public class DParseTask extends MRTask {
     _job = other._job;
     _numRows = other._numRows;
     _sep = other._sep;
+    _skip = finfo._header;
     _setup = other._setup;
     _scale = other._scale;
     _bases = other._bases;
@@ -253,6 +255,7 @@ public class DParseTask extends MRTask {
     _job = other._job;
     _numRows = other._numRows;
     _sep = other._sep;
+    _skip = other._skip;
     _setup = other._setup;
     _scale = other._scale;
     _ncolumns = other._ncolumns;
@@ -305,6 +308,7 @@ public class DParseTask extends MRTask {
         }
         _colNames = setup._data[0];
         setColumnNames(_colNames);
+        _skip = setup._header;
         // set the separator
         this._sep = setup._separator;
         // if parsing value array, initialize the nrows array
@@ -502,8 +506,8 @@ public class DParseTask extends MRTask {
   private static class CsvParser2 extends CsvParser {
     final Key _key;
     DParseTask _dpt;
-    CsvParser2(Setup setup, DParseTask dpt, Key key ) {
-      super(setup);
+    CsvParser2(Setup setup, DParseTask dpt, Key key, boolean skip ) {
+      super(setup,skip);
       _key = key;
       _dpt = dpt;
     }
@@ -546,9 +550,11 @@ public class DParseTask extends MRTask {
     Key aryKey = null;
     ValueArray ary = null;
     boolean arraylet = key._kb[0] == Key.ARRAYLET_CHUNK;
+    boolean skip = _skip;
     if(arraylet) {
       aryKey = ValueArray.getArrayKey(key);
       _chunkId = (int)ValueArray.getChunkIndex(key);
+      skip = skip || (_chunkId != 0);
       ary = DKV.get(aryKey).get();
     }
     switch (_phase) {
@@ -558,7 +564,7 @@ public class DParseTask extends MRTask {
       phaseOneInitialize();
       // perform the parse
       assert _setup != null;
-      CsvParser p = new CsvParser2(_setup, this, key);
+      CsvParser p = new CsvParser2(_setup, this, key, skip);
       p.parse(_chunkId);
       if(arraylet) {
         long idx = _chunkId+1;
@@ -589,7 +595,7 @@ public class DParseTask extends MRTask {
       _ab = _outputStreams2[0].initialize();
       // perform the second parse pass
       assert _setup != null;
-      CsvParser2 p2 = new CsvParser2(_setup, this, key);
+      CsvParser2 p2 = new CsvParser2(_setup, this, key, skip);
       p2.parse(_chunkId);
       // store the last stream if not stored during the parse
       if( _ab != null )

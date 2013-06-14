@@ -38,9 +38,11 @@ public abstract class CsvParser extends CustomParser {
   private static final long LARGEST_DIGIT_NUMBER = 1000000000000000000L;
 
   public final Setup _setup;
+  public final boolean _skip;
 
-  public CsvParser(Setup setup) {
+  public CsvParser(Setup setup, boolean skip) {
     _setup = setup;
+    _skip = skip;
     CHAR_SEPARATOR = setup._separator;
   }
 
@@ -55,7 +57,7 @@ public abstract class CsvParser extends CustomParser {
     int offset = 0;             // General cursor into the giant array of bytes
     // Starting state.  Are we skipping the first (partial) line, or not?  Skip
     // a header line, or a partial line if we're in the 2nd and later chunks.
-    int state = (_setup._header || cidx > 0) ? SKIP_LINE : WHITESPACE_BEFORE_TOKEN;
+    int state = (_setup._header || cidx > 0 || _skip) ? SKIP_LINE : WHITESPACE_BEFORE_TOKEN;
     int quotes = 0;
     long number = 0;
     int exp = 0;

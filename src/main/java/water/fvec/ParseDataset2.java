@@ -210,7 +210,7 @@ public final class ParseDataset2 extends Job {
         nvs[i] = new NewVector(_cols[i],0/*starting chunk#*/);
 
       // The parser for fluid vecs
-      CsvParser parser = new CsvParser(localSetup) {
+      CsvParser parser = new CsvParser(localSetup,false) {
           // A 2-entry cache of 32K chunks.
           // no real chunks; just double-pump decompression buffers
           private byte[] _bits0 = new byte[32*1024];
