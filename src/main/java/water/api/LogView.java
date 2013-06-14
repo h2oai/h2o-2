@@ -61,11 +61,11 @@ public class LogView extends Request {
     }
 
     private String getOutputLogStem() {
-      String pattern = "yyMMdd-hhmmss";
+      String pattern = "yyyyMMdd_hhmmss";
       SimpleDateFormat formatter = new SimpleDateFormat(pattern);
       String now = formatter.format(new Date());
 
-      return "h2o-" + now;
+      return "h2ologs_" + now;
     }
 
     private byte[] zipLogs(byte[][] results, String topDir) throws IOException {
