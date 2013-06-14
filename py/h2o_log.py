@@ -1,5 +1,6 @@
 
 import h2o, h2o_util
+import re
 
 def checkH2OLogs(timeoutSecs=3):
     # download and view using each node, just to see we can
@@ -22,10 +23,21 @@ def checkH2OLogs(timeoutSecs=3):
         # what order are the nodes in? (which is node0?)
         print "nodeName:", nodeName
         # node_name: /192.168.1.28:54323
+        # FIX! temporary hack till tom fixes log names
+        p = re.search(':([0-9][0-9]*)', nodeName)
+        nodePort = p.group(1)
+
         nodeName = nodeName.replace(":","_")
         nodeName = nodeName.replace("/","_")
-        logName = "node" + str(i) + nodeName + ".log"
 
+        # FIX! should be this?
+        # logName = "node" + str(i) + nodeName + ".log"
+
+        # FIX! temporary hack till tom fixes log names
+        # Currently: h2oNode54321.log
+        logName = "h2oNode" + nodePort + ".log"
+
+        # old:
         # logName = "node" + str(i) + "_" + str(node.http_addr) + "_" + str(node.port) + ".log"
         lineCount = h2o_util.file_line_count("sandbox/" + logName)
         print logName, "lineCount:", lineCount
