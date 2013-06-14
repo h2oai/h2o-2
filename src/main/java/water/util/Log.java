@@ -281,12 +281,22 @@ public abstract class Log {
   }
 
   public static String getLogPathFileName() {
+    String ip;
+    if (H2O.SELF_ADDRESS == null) {
+      ip = "UnknownIP";
+    }
+    else {
+      ip = H2O.SELF_ADDRESS.getHostAddress();
+    }
+    // Somehow, the above process for producing an IP address has a slash
+    // in it, which is mystifying.  Remove it.
+
     int port = H2O.UDP_PORT-1;
     String portString = Integer.toString(port);
 
     String logFileName =
             getLogDir() + File.separator +
-            "h2oNode" + portString + ".log";
+            "h2o_" + ip + "_" + portString + ".log";
 
     return logFileName;
   }
