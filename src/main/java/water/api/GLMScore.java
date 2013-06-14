@@ -65,10 +65,11 @@ public class GLMScore extends Request {
 
   static class GLMValidationBuilder extends ObjectBuilder {
     final GLMValidation _val;
-    GLMValidationBuilder( GLMValidation v) { _val=v; }
+    final GLMModel _m;
+    GLMValidationBuilder( GLMModel m, GLMValidation v) { _m = m;_val=v; }
     public String build(Response response, JsonObject json, String contextName) {
       StringBuilder sb = new StringBuilder();
-      GLMBuilder.validationHTML(_val,sb);
+      GLMBuilder.validationHTML(_m,_val,sb);
       return sb.toString();
     }
   }
@@ -82,7 +83,7 @@ public class GLMScore extends Request {
       res.add("validation", v.toJson());
       // Display HTML setup
       Response r = Response.done(res);
-      r.setBuilder("", new GLMValidationBuilder(v));
+      r.setBuilder("", new GLMValidationBuilder(m,v));
       return r;
     }catch(GLMException e){
       Log.err(e);

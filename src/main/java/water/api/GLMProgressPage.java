@@ -159,7 +159,7 @@ public class GLMProgressPage extends Request {
       sb.append(R);
       // Validation / scoring
       if(m._vals != null)
-        validationHTML(m._vals,sb);
+        validationHTML(m,m._vals,sb);
     }
 
     private static final String ALPHA   = "&alpha;";
@@ -258,7 +258,7 @@ public class GLMProgressPage extends Request {
     }
 
 
-    static void validationHTML(GLMValidation val, StringBuilder sb){
+    static void validationHTML(GLMModel m, GLMValidation val, StringBuilder sb){
 
       RString valHeader = new RString("<div class='alert'>Validation of model <a href='/Inspect.html?"+KEY+"=%modelKey'>%modelKey</a> on dataset <a href='/Inspect.html?"+KEY+"=%dataKey'>%dataKey</a></div>");
       RString xvalHeader = new RString("<div class='alert'>%valName of model <a href='/Inspect.html?"+KEY+"=%modelKey'>%modelKey</a></div>");
@@ -284,8 +284,8 @@ public class GLMProgressPage extends Request {
         sb.append(valHeader.toString());
       }
 
-      R.replace("DegreesOfFreedom",val._n-1);
-      R.replace("ResidualDegreesOfFreedom",val._dof);
+      R.replace("DegreesOfFreedom",m._nLines-1);
+      R.replace("ResidualDegreesOfFreedom",m._dof);
       R.replace("nullDev",val._nullDeviance);
       R.replace("resDev",val._deviance);
       R.replace("AIC", dformat(val.AIC()));
@@ -344,11 +344,11 @@ public class GLMProgressPage extends Request {
       }
     }
 
-    private static void validationHTML( GLMValidation[] vals, StringBuilder sb) {
+    private static void validationHTML( GLMModel m, GLMValidation[] vals, StringBuilder sb) {
       if( vals == null || vals.length == 0 ) return;
       sb.append("<h4>Validations</h4>");
       for( GLMValidation val : vals )
-        if(val != null)validationHTML(val, sb);
+        if(val != null)validationHTML(m,val, sb);
     }
 
     private static void cmRow( StringBuilder sb, String hd, double c0, double c1, double cerr ) {
