@@ -72,7 +72,7 @@ class Basic(unittest.TestCase):
         # in other tests. (catdata?)
         csvFilename = "1mx10_hastie_10_2.data.gz"
         csvPathname = h2o.find_dataset('logreg' + '/' + csvFilename)
-        glm_doit(self,csvFilename, csvPathname, timeoutSecs=30)
+        glm_doit(self,csvFilename, csvPathname, timeoutSecs=75)
 
         filename1x = "hastie_1x.data"
         pathname1x = SYNDATASETS_DIR + '/' + filename1x
@@ -81,7 +81,7 @@ class Basic(unittest.TestCase):
         filename2x = "hastie_2x.data"
         pathname2x = SYNDATASETS_DIR + '/' + filename2x
         h2o_util.file_cat(pathname1x,pathname1x,pathname2x)
-        glm_doit(self,filename2x, pathname2x, timeoutSecs=45)
+        glm_doit(self,filename2x, pathname2x, timeoutSecs=75)
 
         filename4x = "hastie_4x.data"
         pathname4x = SYNDATASETS_DIR + '/' + filename4x
@@ -90,7 +90,7 @@ class Basic(unittest.TestCase):
         print "Iterating 3 times on this last one for perf compare"
         for i in range(3):
             print "\nTrial #", i, "of", filename4x
-            glm_doit(self,filename4x, pathname4x, timeoutSecs=60)
+            glm_doit(self,filename4x, pathname4x, timeoutSecs=150)
 
 if __name__ == '__main__':
     h2o.unit_main()
