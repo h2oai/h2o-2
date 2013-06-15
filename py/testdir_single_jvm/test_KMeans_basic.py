@@ -17,6 +17,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        time.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_B_kmeans_benign(self):
@@ -40,7 +41,7 @@ class Basic(unittest.TestCase):
 
         # loop, to see if we get same centers
         for i in range(2):
-            kwargs = {'k': 3, 'epsilon': 1e-6, 'cols': None, 'destination_key': 'prostate_k.hex'}
+            kwargs = {'k': 3, 'epsilon': 1e-6, 'cols': 2, 'destination_key': 'prostate_k.hex'}
             kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=5, **kwargs)
             h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
 
