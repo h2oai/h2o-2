@@ -128,9 +128,8 @@ public class RFView extends /* Progress */ Request {
       modelSize     = modelSize == 0 || finished==tasks ? finished : modelSize * (finished/modelSize);
 
       // Get the confusion matrix
-      CMJob cmJob = ConfusionTask.make(model, modelSize, _dataKey.value()._key, _classCol.value(), weights, _oobee.value());
-      response.addProperty(JSON_CONFUSION_KEY, cmJob.dest().toString());
-      CMFinal confusion = UKV.get(cmJob.dest());
+      Key     cmKey = ConfusionTask.keyForCM(model._selfKey, modelSize, _dataKey.value()._key, _classCol.value(), _oobee.value());
+      CMFinal confusion = UKV.get(cmKey);
       // if the matrix is valid, report it in the JSON
       if (confusion!=null && modelSize > 0) {
         //finished += 1;
@@ -165,6 +164,9 @@ public class RFView extends /* Progress */ Request {
         response.add(JSON_CM,cm);
 
         done = finished == tasks;
+      } else {
+        // Start CM computation
+        ConfusionTask.make(model, modelSize, _dataKey.value()._key, _classCol.value(), weights, _oobee.value());
       }
     }
 
@@ -238,6 +240,7 @@ public class RFView extends /* Progress */ Request {
         long rows = cm.get(JSON_CM_ROWS).getAsLong();
         long skippedRows = cm.get(JSON_CM_ROWS_SKIPPED).getAsLong();
         sb.append("<dt>used / skipped rows </dt><dd>").append(String.format("%d / %d (%3.1f %%)", rows, skippedRows, (double)skippedRows*100/(skippedRows+rows))).append("</dd>");
+        sb.append("<dt>trees used</dt><dd>"+cm.get(JSON_CM_TREES).getAsInt()).append("</dd>");
         sb.append("</dl>");
         sb.append("<table class='table table-striped table-bordered table-condensed'>");
         sb.append("<tr><th>Actual \\ Predicted</th>");
@@ -281,7 +284,6 @@ public class RFView extends /* Progress */ Request {
         sb.append(String.format("%5.3f = %d / %d", (double)sumError/sumTotal, sumError, sumTotal));
         sb.append("</b></td></tr>");
         sb.append("</table>");
-        sb.append("Trees used: "+cm.get(JSON_CM_TREES).getAsInt());
       } else {
         sb.append("<div class='alert alert-info'>");
         sb.append("Confusion matrix is being computed into the key:</br>");

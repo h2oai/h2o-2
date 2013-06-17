@@ -9,7 +9,6 @@ import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
 import water.ValueArray.Column;
-import water.api.Jobs;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
@@ -24,19 +23,19 @@ import com.google.common.primitives.Ints;
 public class ConfusionTask extends MRTask {
 
   /** @IN: Class weights */
-  private double[] _classWt;
+  double[] _classWt;
   /** @IN: Compute oobee or not */
-  public boolean  _computeOOB;
+  boolean  _computeOOB;
   /** @IN: Number of used trees in CM computation */
-  public int      _treesUsed;
+  int      _treesUsed;
   /** @IN: Key for the model used for construction of the confusion matrix. */
-  public Key      _modelKey;
+  Key      _modelKey;
   /** @IN: Dataset we are building the matrix on.  The column count must match the Trees.*/
-  public Key      _datakey;
+  Key      _datakey;
   /** @IN: Column holding the class, defaults to last column */
-  int   _classcol;
+  int     _classcol;
   /** @IN: Job */
-  CMJob _job;
+  CMJob   _job;
 
   /** @OUT: Confusion matrix */
   CM   _matrix;
@@ -108,7 +107,7 @@ public class ConfusionTask extends MRTask {
   }
   static public CMJob make(final RFModel model, final int modelSize, final Key datakey, final int classcol, final double[] classWt, final boolean computeOOB) {
     // Create a unique key for given RFModel, validation data and parameters
-    final Key cmKey = keyForCM(model._selfKey, /* CMParams */modelSize, datakey, classcol, computeOOB);
+    final Key cmKey = keyForCM(model._selfKey, modelSize, datakey, classcol, computeOOB);
     // Start a new job
     final CMJob cmJob = new CMJob("CM computation", cmKey, modelSize);
     // and start a new confusion matrix computation
@@ -139,8 +138,6 @@ public class ConfusionTask extends MRTask {
 
     return cmJob;
   }
-
-  public boolean isValid() { return _matrix != null; }
 
   /** Shared init: pre-compute local data for new Confusions, for remote Confusions*/
   private void shared_init() {
