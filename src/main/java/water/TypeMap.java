@@ -31,6 +31,7 @@ public class TypeMap {
     "water.ValueArray",
     "water.ValueArray$Column",
     "water.api.Script$Done",
+    "water.fvec.C1Vector",
     "water.parser.ParseDataset",
     "water.parser.ParseDataset$Progress",
     "water.util.JStackCollectorTask",

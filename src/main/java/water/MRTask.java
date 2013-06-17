@@ -15,6 +15,7 @@ public abstract class MRTask<T extends MRTask> extends DRemoteTask<T> {
   public long memOverheadPerChunk() { return 0; }
 
   static final long log2(long a) {
+    long x = a, y = 0;
     while( (x >>= 1) > 0 ) ++y;
     return (a > (1L << y)) ? y+1 : y;
   }

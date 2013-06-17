@@ -3,6 +3,7 @@ package water.fvec;
 import java.io.File;
 import java.io.InputStream;
 import water.*;
+import water.persist.PersistNFS;
 
 // A distributed file-backed Vector
 //
