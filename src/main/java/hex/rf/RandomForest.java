@@ -1,5 +1,7 @@
 package hex.rf;
 
+import hex.rf.ConfusionTask.CM;
+import hex.rf.ConfusionTask.CMFinal;
 import hex.rf.DRF.DRFJob;
 import hex.rf.DRF.DRFParams;
 import hex.rf.Tree.StatType;
@@ -201,7 +203,8 @@ public class RandomForest {
     Key valKey = model._dataKey;
     if(ARGS.outOfBagError && !ARGS.stratify){
       Log.debug(Sys.RANDF,"Computing out of bag error");
-      ConfusionTask.make( model, valKey, classcol, null, true).report();
+      CMFinal cm = ConfusionTask.make( model, valKey, classcol, null, true).get(); // block until CM is computed
+      cm.report();
     }
     // Run validation.
     if(ARGS.validationFile != null && !ARGS.validationFile.isEmpty()){ // validate on the supplied file
@@ -211,7 +214,8 @@ public class RandomForest {
       ValueArray v = TestUtil.parse_test_key(fk,Key.make(TestUtil.getHexKeyFromFile(f)));
       valKey = v._key;
       DKV.remove(fk);
-      ConfusionTask.make( model, valKey, classcol, null, false).report();
+      CMFinal cm = ConfusionTask.make( model, valKey, classcol, null, false).get();
+      cm.report();
     }
 
     Log.debug(Sys.RANDF,"Validation done in: " + t_valid);

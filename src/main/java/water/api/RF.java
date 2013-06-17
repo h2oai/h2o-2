@@ -100,8 +100,8 @@ public class RF extends Request {
     Key modelKey = _modelKey.value();
     UKV.remove(modelKey);       // Remove any prior model first
     for (int i = 0; i < ntree; ++i) {
-      UKV.remove(ConfusionTask.keyFor(modelKey,i,dataKey,classCol,true));
-      UKV.remove(ConfusionTask.keyFor(modelKey,i,dataKey,classCol,false));
+      UKV.remove(ConfusionTask.keyForCM(modelKey,i,dataKey,classCol,true));
+      UKV.remove(ConfusionTask.keyForCM(modelKey,i,dataKey,classCol,false));
     }
 
     int features            = _features.value() == null ? -1 : _features.value();

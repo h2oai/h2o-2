@@ -3,9 +3,13 @@ package hex.rf;
 import java.util.Arrays;
 import java.util.Random;
 
+import jsr166y.CountedCompleter;
+
 import water.*;
+import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
 import water.ValueArray.Column;
+import water.api.Jobs;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
@@ -17,27 +21,6 @@ import com.google.common.primitives.Ints;
  * request from the Confusion compute on any new trees (if any), and report a
  * matrix. Cheap if all trees already computed.
  */
-  abstract class Confusion {
-
-  /*public static class CMJob extends Job {
-
-  }*/
-
-}
-
-  /**
-   * Need to have the
-   */
-  public class CMJob extends ChunkProgressJob {
-
-    public CMJob(String desc, Key dest, long chunksTotal) {
-      super(desc, dest, chunksTotal);
-      // TODO Auto-generated constructor stub
-    }
-
-  }
-
-// FIXME: rename to CM task
 public class ConfusionTask extends MRTask {
 
   /** @IN: Class weights */
@@ -107,51 +90,54 @@ public class ConfusionTask extends MRTask {
     shared_init();
   }
 
-  public Key keyFor() { return keyFor(_model._selfKey,_treesUsed,_datakey,_classcol,_computeOOB); }
-  static public Key keyFor(Key modelKey, int msize, Key datakey, int classcol, boolean computeOOB) {
+  public Key keyForCM() { return keyForCM(_model._selfKey,_treesUsed,_datakey,_classcol,_computeOOB); }
+  static public Key keyForCM(Key modelKey, int msize, Key datakey, int classcol, boolean computeOOB) {
     return Key.make("ConfusionMatrix of (" + datakey+"["+classcol+"],"+modelKey+"["+msize+"],"+(computeOOB?"1":"0")+")");
   }
 
-  static public Key keyForProgress(Key modelKey, int msize, Key datakey, int classcol, boolean computeOOB) {
-    // make sure it is a system key
-    return Key.make("\0" + "ConfusionMatrixProgress of (" + datakey+"["+classcol+"],"+modelKey+")");
-  }
-
   public static void remove(RFModel model, Key datakey, int classcol, boolean computeOOB) {
-    Key key = keyFor(model._selfKey, model.size(), datakey, classcol, computeOOB);
+    Key key = keyForCM(model._selfKey, model.size(), datakey, classcol, computeOOB);
     UKV.remove(key);
   }
 
   /**Apply a model to a dataset to produce a Confusion Matrix.  To support
      incremental & repeated model application, hash the model & data and look
      for that Key to already exist, returning a prior CM if one is available.*/
-  static public ConfusionTask make(RFModel model, Key datakey, int classcol, double[] classWt, boolean computeOOB) {
+  static public CMJob make(RFModel model, Key datakey, int classcol, double[] classWt, boolean computeOOB) {
     return make(model, model.size(), datakey, classcol, classWt, computeOOB);
   }
-  static public ConfusionTask make(RFModel model, int modelSize, Key datakey, int classcol, double[] classWt,boolean computeOOB) {
-    Key key = keyFor(model._selfKey, modelSize, datakey, classcol, computeOOB);
-    ConfusionTask C = UKV.get(key, ConfusionTask.class);
-    if( C != null ) {         // Look for a prior cached result
-      C.shared_init();
-      return C;
-    }
+  static public CMJob make(final RFModel model, final int modelSize, final Key datakey, final int classcol, final double[] classWt, final boolean computeOOB) {
+    // Create a unique key for given RFModel, validation data and parameters
+    final Key cmKey = keyForCM(model._selfKey, /* CMParams */modelSize, datakey, classcol, computeOOB);
+    // Start a new job
+    final CMJob cmJob = new CMJob("CM computation", cmKey, modelSize);
+    // and start a new confusion matrix computation
+    H2OCountedCompleter fjtask = new H2OCountedCompleter() {
 
-    // mark that we are computing the matrix now
-    Key progressKey = keyForProgress(model._selfKey, modelSize, datakey, classcol, computeOOB);
-    Value v = DKV.DputIfMatch(progressKey, new Value(progressKey,"IN_PROGRESS"), null, null);
-    C = new ConfusionTask(model,modelSize,datakey,classcol,classWt,computeOOB);
-    if (v != null) { // someone is already working on the matrix, stop
-      C._matrix = null;
-      return C;
-    }
-    if( model.size() > 0 ) C.invoke(datakey); // Compute on it: count votes
-    UKV.put(key,C);          // Output to cloud
-    UKV.remove(progressKey); // signal that we have done computing the matrix
-    if( classWt != null )
-      for( int i=0; i<classWt.length; i++ )
-        if( classWt[i] != 1.0 )
-          Log.info(Sys.CONFM,"Weighted votes ",i," by ",classWt[i]);
-    return C;
+      @Override public void compute2() {
+        CMFinal cmResult = UKV.get(cmJob.dest());
+        // Reuse cached results
+        if (cmResult == null) {
+          ConfusionTask cmTask = new ConfusionTask(cmJob, model,modelSize,datakey,classcol,classWt,computeOOB);
+          cmTask.invoke(datakey);
+          cmResult = CMFinal.make(cmTask._matrix, model, cmTask.domain(), cmTask._errorsPerTree, computeOOB);
+          // Propagate the result
+          DKV.put(cmJob.dest(), cmResult);
+          DKV.write_barrier();
+        }
+        cmJob.remove();
+        tryComplete();
+      }
+
+      @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
+        cmJob.onException(ex);
+        return super.onExceptionalCompletion(ex, caller);
+      }
+    };
+
+    H2O.submitTask(cmJob.start(fjtask));
+
+    return cmJob;
   }
 
   public boolean isValid() { return _matrix != null; }
@@ -209,14 +195,12 @@ public class ConfusionTask extends MRTask {
   /**A classic Map/Reduce style incremental computation of the confusion
    * matrix on a chunk of data.
    * */
-  public void map(Key chunk_key) {
-    System.err.println("CM: " + chunk_key);
-    AutoBuffer cdata      = _data.getChunk(chunk_key);
-    final int  rowsize    = _data._rowsize;
-    final int  rows       = cdata.remaining() / rowsize;
-    final int  cmin       = (int) _data._cols[_classcol]._min;
-    int        nchk       = (int) ValueArray.getChunkIndex(chunk_key);
-    short      numClasses = (short)_model.classes();
+  public void map(Key chunkKey) {
+    AutoBuffer cdata      = _data.getChunk(chunkKey);
+    final int nchk       = (int) ValueArray.getChunkIndex(chunkKey);
+    final int rows       = _data.rpc(nchk);
+    final int cmin       = (int) _data._cols[_classcol]._min;
+    short     numClasses = (short)_model.classes();
 
     // Votes: we vote each tree on each row, holding on to the votes until the end
     int[][] votes = new int[rows][_N];
@@ -318,69 +302,6 @@ public class ConfusionTask extends MRTask {
       return dataClazz + _cmin_data_mapping;
   }
 
-  /** Text form of the confusion matrix */
-  private String confusionMatrix() {
-    if( _matrix == null ) return "no trees";
-    final int K = _N + 1;
-    double[] e2c = new double[_N];
-    for( int i = 0; i < _N; i++ ) {
-      long err = -_matrix._matrix[i][i];
-      for( int j = 0; j < _N; j++ )   err += _matrix._matrix[i][j];
-      e2c[i] = Math.round((err / (double) (err + _matrix._matrix[i][i])) * 100) / (double) 100;
-    }
-    String[][] cms = new String[K][K + 1];
-    cms[0][0] = "";
-    for( int i = 1; i < K; i++ ) cms[0][i] = "" + (i - 1);
-    cms[0][K] = "err/class";
-    for( int j = 1; j < K; j++ ) cms[j][0] = "" + (j - 1);
-    for( int j = 1; j < K; j++ ) cms[j][K] = "" + e2c[j - 1];
-    for( int i = 1; i < K; i++ )
-      for( int j = 1; j < K; j++ ) cms[j][i] = "" + _matrix._matrix[j - 1][i - 1];
-    int maxlen = 0;
-    for( int i = 0; i < K; i++ )
-      for( int j = 0; j < K + 1; j++ ) maxlen = Math.max(maxlen, cms[i][j].length());
-    for( int i = 0; i < K; i++ )
-      for( int j = 0; j < K + 1; j++ ) cms[i][j] = pad(cms[i][j], maxlen);
-    String s = "";
-    for( int i = 0; i < K; i++ ) {
-      for( int j = 0; j < K + 1; j++ ) s += cms[i][j];
-      s += "\n";
-    }
-    return s;
-  }
-
-  /** Pad a string with spaces. */
-  private String pad(String s, int l){ String p=""; for(int i=0; i<l-s.length();i++)p+=" "; return " "+p+s; }
-
-  /** Output information about this RF. */
-  public final void report() {
-    double err = _matrix.classError();
-    String s =
-          "              Type of random forest: classification\n"
-        + "                    Number of trees: " + _model.size() + "\n"
-        + "No of variables tried at each split: " + _model._splitFeatures + "\n"
-        + "              Estimate of err. rate: " + Math.round(err * 10000) / 100 + "%  (" + err + ")\n"
-        + "                              OOBEE: " + (_computeOOB ? "YES (sampling rate: "+_model._sample*100+"%)" : "NO")+ "\n"
-        + "                   Confusion matrix:\n"
-        + confusionMatrix() + "\n"
-        + "                          CM domain: " + Arrays.toString(domain()) + "\n"
-        + "          Avg tree depth (min, max): " + _model.depth() + "\n"
-        + "         Avg tree leaves (min, max): " + _model.leaves() + "\n"
-        + "                Validated on (rows): " + _matrix.rows() + "\n"
-        + "     Rows skipped during validation: " + _matrix.skippedRows() + "\n"
-        + "  Mispredictions per tree (in rows): " + Arrays.toString(_errorsPerTree)+"\n";
-    Log.info(Sys.RANDF,s);
-  }
-
-  /**
-   * Reports size of dataset and computed classification error.
-   */
-  public final void report(StringBuilder sb) {
-    double err = _matrix._errors / (double) _matrix._rows;
-    sb.append(_matrix._rows).append(',');
-    sb.append(err).append(',');
-  }
-
   /** Merge model and data predictor domain to produce domain for CM.
    * The domain is expected to be ordered and containing unique values. */
   public static int alignEnumDomains(final String[] modelDomain, final String[] dataDomain, int[] modelMapping, int[] dataMapping) {
@@ -460,14 +381,14 @@ public class ConfusionTask extends MRTask {
     referenced as _matrix[actual][predicted]. Each row in the dataset is
     voted on by all trees, and the majority vote is the predicted class for
     the row. Each row thus gets 1 entry in the matrix.*/
-    private long   _matrix[][];
+    protected long _matrix[][];
     /** Number of mistaken assignments. */
-    private long   _errors;
+    protected long _errors;
     /** Number of rows used for building the matrix.*/
-    private long   _rows;
+    protected long _rows;
     /** Number of skipped rows. Rows can contain bad data, or can be skipped by selecting only out-of-back rows */
-    private long   _skippedRows;
-    /** Returns classification error. */
+    protected long _skippedRows;
+    /** Domain - names of columns and rows */
     public float classError() { return _errors / (float) _rows; }
     /** Return number of rows used for CM computation */
     public long  rows()       { return _rows; }
@@ -489,6 +410,89 @@ public class ConfusionTask extends MRTask {
         _skippedRows += cm._skippedRows;
       }
       return this;
+    }
+    /** Text form of the confusion matrix */
+    @Override public String toString() {
+      if( _matrix == null ) return "no trees";
+      int N = _matrix.length;
+      final int K = N + 1;
+      double[] e2c = new double[N];
+      for( int i = 0; i < N; i++ ) {
+        long err = -_matrix[i][i];
+        for( int j = 0; j < N; j++ )   err += _matrix[i][j];
+        e2c[i] = Math.round((err / (double) (err + _matrix[i][i])) * 100) / (double) 100;
+      }
+      String[][] cms = new String[K][K + 1];
+      cms[0][0] = "";
+      for( int i = 1; i < K; i++ ) cms[0][i] = "" + (i - 1);
+      cms[0][K] = "err/class";
+      for( int j = 1; j < K; j++ ) cms[j][0] = "" + (j - 1);
+      for( int j = 1; j < K; j++ ) cms[j][K] = "" + e2c[j - 1];
+      for( int i = 1; i < K; i++ )
+        for( int j = 1; j < K; j++ ) cms[j][i] = "" + _matrix[j - 1][i - 1];
+      int maxlen = 0;
+      for( int i = 0; i < K; i++ )
+        for( int j = 0; j < K + 1; j++ ) maxlen = Math.max(maxlen, cms[i][j].length());
+      for( int i = 0; i < K; i++ )
+        for( int j = 0; j < K + 1; j++ ) cms[i][j] = pad(cms[i][j], maxlen);
+      String s = "";
+      for( int i = 0; i < K; i++ ) {
+        for( int j = 0; j < K + 1; j++ ) s += cms[i][j];
+        s += "\n";
+      }
+      return s;
+    }
+    /** Pad a string with spaces. */
+    private String pad(String s, int l){ String p=""; for(int i=0; i<l-s.length();i++)p+=" "; return " "+p+s; }
+  }
+
+  public static class CMFinal extends CM {
+    final protected Key      _rfModelKey;
+    final protected String[] _domain;
+    final protected long  [] _errorsPerTree;
+    final protected boolean  _computedOOB;
+    private CMFinal(CM cm, Key rfModelKey, String[] domain, long[] errorsPerTree, boolean computedOOB) {
+      _matrix = cm._matrix; _errors = cm._errors; _rows = cm._rows; _skippedRows = cm._skippedRows;
+      _rfModelKey = rfModelKey;
+      _domain = domain;
+      _errorsPerTree = errorsPerTree;
+      _computedOOB = computedOOB;
+    }
+    public static final CMFinal make(CM cm, RFModel model, String[] domain, long[] errorsPerTree, boolean computedOOB) {
+      return new CMFinal(cm, model._selfKey, domain, errorsPerTree, computedOOB);
+    }
+    public String[] domain() { return _domain; }
+    public int      dimension() { return _matrix.length; }
+    public long     matrix(int i, int j) { return _matrix[i][j]; }
+
+    /** Output information about this RF. */
+    public final void report() {
+      double err = classError();
+      RFModel model = DKV.get(_rfModelKey).get();
+      String s =
+            "              Type of random forest: classification\n"
+          + "                    Number of trees: " + model.size() + "\n"
+          + "No of variables tried at each split: " + model._splitFeatures + "\n"
+          + "              Estimate of err. rate: " + Math.round(err * 10000) / 100 + "%  (" + err + ")\n"
+          + "                              OOBEE: " + (_computedOOB ? "YES (sampling rate: "+model._sample*100+"%)" : "NO")+ "\n"
+          + "                   Confusion matrix:\n"
+          + toString() + "\n"
+          + "                          CM domain: " + Arrays.toString(_domain) + "\n"
+          + "          Avg tree depth (min, max): " + model.depth() + "\n"
+          + "         Avg tree leaves (min, max): " + model.leaves() + "\n"
+          + "                Validated on (rows): " + rows() + "\n"
+          + "     Rows skipped during validation: " + skippedRows() + "\n"
+          + "  Mispredictions per tree (in rows): " + Arrays.toString(_errorsPerTree)+"\n";
+      Log.info(Sys.RANDF,s);
+    }
+
+    /**
+     * Reports size of dataset and computed classification error.
+     */
+    public final void report(StringBuilder sb) {
+      double err = _errors / (double) _rows;
+      sb.append(_rows).append(',');
+      sb.append(err).append(',');
     }
   }
 
@@ -526,5 +530,11 @@ public class ConfusionTask extends MRTask {
 
     cm._rows=validation_rows;
     return cm;
+  }
+
+  public static class CMJob extends ChunkProgressJob {
+    public CMJob(String desc, Key dest, long chunksTotal) {
+      super(desc, dest, chunksTotal);
+    }
   }
 }

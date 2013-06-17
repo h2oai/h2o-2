@@ -2,6 +2,8 @@ package hex.rf;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import hex.rf.ConfusionTask.CMFinal;
+import hex.rf.ConfusionTask.CMJob;
 import hex.rf.DRF.DRFJob;
 import hex.rf.Tree.StatType;
 
@@ -45,21 +47,22 @@ public class RFPredDomainTest extends TestUtil {
     // Load validation dataset
     Key testKey         = loadAndParseKey(testKeyName, testDS);
     ValueArray testData = DKV.get(testKey).get();
-    ConfusionTask confusion = ConfusionTask.make(model, testData._key, model._features-1, null, false);
-    confusion.report();
-    assertEquals("Error rate", expTestErr, confusion.classError(), 0.001);
-    assertEquals("CF dimension", expCM.length, confusion._matrix.length);
+    CMJob cmJob = ConfusionTask.make(model, testData._key, model._features-1, null, false);
+    CMFinal cm = cmJob.get();
+    cm.report();
+    assertEquals("Error rate", expTestErr, cm.classError(), 0.001);
+    assertEquals("CF dimension", expCM.length, cm._matrix.length);
     for (int i = 0; i<expCM.length; i++) {
-      assertArrayEquals(expCM[i], confusion._matrix[i]);
+      assertArrayEquals(expCM[i], cm._matrix[i]);
     }
-    assertArrayEquals("Confusion matrix", expCM, confusion._matrix);
-    assertArrayEquals("CM domain", expDomain, confusion.domain());
+    assertArrayEquals("Confusion matrix", expCM, cm._matrix);
+    assertArrayEquals("CM domain", expDomain, cm.domain());
 
     model.deleteKeys();
     UKV.remove(modelKey);
     UKV.remove(testKey);
     UKV.remove(trainKey);
-    UKV.remove(confusion.keyFor());
+    UKV.remove(cmJob.dest());
   }
 
   /**
