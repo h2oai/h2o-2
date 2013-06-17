@@ -43,7 +43,7 @@ class Basic(unittest.TestCase):
         h2b.browseTheCloud()
 
         importFolderPath = '/home/0xdiag/datasets/standard'
-        h2i.setupImportFolder(None, importFolderPath)
+        h2i.setupImportFolder(None, importFolderPath, timeoutSecs=60)
         validations1= {}
         coefficients1= {}
         for csvFilename in csvFilenameList:

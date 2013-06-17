@@ -2,6 +2,8 @@ package water;
 
 import java.util.Arrays;
 
+import javax.management.RuntimeErrorException;
+
 import water.ValueArray.Column;
 import water.api.Constants;
 
@@ -209,20 +211,13 @@ public abstract class Model extends Iced {
         _row[j++] = (_catMap == null || _catMap[i] == null)?data[_xCols[i]]:translateCat(i, data[_xCols[i]]);
       return M.score0(_row);
     }
-    @Override protected double score0(ValueArray data, int row) {
+
+    @Override public double score(ValueArray data, AutoBuffer ab, int row) {
       int j = 0;
-      for(int c:_xCols)
-        _row[j++] = (_catMap == null || _catMap[c] == null)
-          ?data.datad(row, c)
-          :translateCat(c,(int)data.data(row, c));
-      return M.score0(_row);
-    }
-    @Override protected double score0(ValueArray data, AutoBuffer ab, int row) {
-      int j = 0;
-      for(int c:_xCols)
-        _row[j++] = (_catMap == null || _catMap[c] == null)
-          ?data.datad(ab,row, c)
-              :translateCat(c,(int)data.data(ab,row, c));
+      for(int i = 0; i < _xCols.length; ++i)
+        _row[j++] = (_catMap == null || _catMap[i] == null)
+          ?data.datad(ab,row, _xCols[i])
+              :translateCat(i,(int)data.data(ab,row, _xCols[i]));
       return M.score0(_row);
     }
     // always should call directly M.score0...
@@ -276,6 +271,11 @@ public abstract class Model extends Iced {
   public double score(double [] data){
     return score0(data);
   }
+  public double score(ValueArray ary,AutoBuffer bits, int rid){
+    throw new RuntimeException("model should be first adapted to new dataset!");
+  }
+
+
 
   // Subclasses implement the scoring logic.  They can assume all datasets are
   // compatible already
@@ -283,10 +283,14 @@ public abstract class Model extends Iced {
 
 
   /** Single row scoring, on a compatible ValueArray (when pushed throw the mapping) */
-  protected abstract double score0( ValueArray data, int row);
+  protected double score0( ValueArray data, int row){
+    throw new RuntimeException("Should never be called on non-adapted model. Call Model.adapt(ValueArray) first!");
+  }
 
   /** Bulk scoring API, on a compatible ValueArray (when pushed throw the mapping) */
-  protected abstract double score0( ValueArray data, AutoBuffer ab, int row_in_chunk);
+  protected double score0( ValueArray data, AutoBuffer ab, int row_in_chunk){
+    throw new RuntimeException("Should never be called on non-adapted model. Call Model.adapt(ValueArray) first!");
+  }
 
   public abstract JsonObject toJson();
 

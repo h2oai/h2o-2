@@ -16,7 +16,10 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(3,java_heap_GB=4)
+            h2o.build_cloud(1,java_heap_GB=4,
+                # use_hdfs=True, hdfs_version='cdh3', hdfs_name_node='192.168.1.176')
+                # use_hdfs=True)
+                use_hdfs=True)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -24,26 +27,27 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_from_import_hosts(self):
+    def test_GLM_hdfs_YearPredictionMSD(self):
         if localhost:
             csvFilenameList = [
+                'YearPredictionMSD.txt',
                 'YearPredictionMSD.txt'
                 ]
         else:
             csvFilenameList = [
+                'YearPredictionMSD.txt',
                 'YearPredictionMSD.txt'
                 ]
 
         # a browser window too, just because we can
         h2b.browseTheCloud()
 
-        importFolderPath = '/home/0xdiag/datasets/standard'
-        h2i.setupImportFolder(None, importFolderPath)
         validations1= {}
         coefficients1= {}
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=120)
+            h2i.setupImportHdfs()
+            parseKey = h2i.parseImportHdfsFile(csvFilename=csvFilename, path='/datasets', timeoutSecs=60)
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "Parse result['destination_key']:", parseKey['destination_key']
 
@@ -55,11 +59,10 @@ class Basic(unittest.TestCase):
             # can't pass lamba as kwarg because it's a python reserved word
             # FIX! just look at X=0:1 for speed, for now
             kwargs = {'y': 54, 'n_folds': 2, 'family': "binomial", 'case': 1}
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=2000, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=500, **kwargs)
 
             # different when n_foldsidation is used? No trainingErrorDetails?
             h2o.verboseprint("\nglm:", glm)
-
             h2b.browseJsonHistoryAsUrlLastMatch("GLM")
 
             GLMModel = glm['GLMModel']

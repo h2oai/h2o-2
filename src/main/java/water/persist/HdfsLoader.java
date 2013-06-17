@@ -12,17 +12,20 @@ import com.google.common.base.Strings;
 
 public class HdfsLoader {
   private static final String DEFAULT_HDFS_VERSION = "cdh4";
-  private static final String MAPRFS_HDFS_VERSION = "0.20.2mapr";
+  private static final String MAPRFS_HDFS_VERSION = "mapr2.1.3";
 
   public static void loadJars() {
     // Load the HDFS backend for existing hadoop installations.
+    // FIX! hadoop/mapr supports other variants? also why isn't port an option on mapr, and why volume?
+    // port should be optional
     // understands -hdfs=hdfs://server:port OR -hdfs=maprfs:///mapr/node_name/volume
     //             -hdfs-root=root
     //             -hdfs-config=config file
     String version = Objects.firstNonNull(H2O.OPT_ARGS.hdfs_version, DEFAULT_HDFS_VERSION);
 
-    // If HDFS URI is MapR-fs - Switch two MapR version of hadoop
-    if( "mapr".equals(version) || Strings.nullToEmpty(H2O.OPT_ARGS.hdfs).startsWith("maprsfs://") ) {
+    // If HDFS URI is MapR-fs - Switch to MapR version of hadoop
+    // FIX! shouldn't we just use whatever the hdfs_version specifies previously?
+    if( "mapr".equals(version) || Strings.nullToEmpty(H2O.OPT_ARGS.hdfs).startsWith("maprfs:///") ) {
       version = MAPRFS_HDFS_VERSION;
     }
     try {

@@ -22,7 +22,7 @@ class Basic(unittest.TestCase):
 
     def test_import_multi_syn_datasets(self):
         # just do the import folder once
-        importFolderPath = '/home/0xdiag/datasets/standard'
+        importFolderPath = '/home/0xdiag/datasets'
 
         print "This imports a folder of csv files..i.e points to syn_datasets with no regex"
         print "Doesn't put anything in syn_datasets. When run with import folder redirected"
@@ -52,7 +52,7 @@ class Basic(unittest.TestCase):
 
         for csvFilename in csvFilenameList:
             # have to import each time, because h2o deletes source after parse
-            h2i.setupImportFolder(None, importFolderPath)
+            h2i.setupImportFolder(None, importFolderPath, timeoutSecs=90)
             # creates csvFilename.hex from file in importFolder dir 
             parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2="syn_datasets.hex",
                 timeoutSecs=500)

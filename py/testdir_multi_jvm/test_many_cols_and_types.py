@@ -4,8 +4,10 @@ sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
-def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel):
+# do a random shuffle of 0 thru COLCASES-1, to say what case a column uses
+COLCASES = 12
 
+def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE):
     letters = 'abcdefghijklmnopqrstuvwxyz'
     # all zeroes
     def case0(r):
@@ -17,12 +19,10 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel):
     def case2(r):
         return str(r.randint(0,1))
     # rand 0-2, 2 is NA
+    # UPDATE: remove NA case..so the info check doesn't see cols flipped to NA
     def case3(r):
         d = r.randint(0,2)
-        if (d==2):
-            return ''
-        else:
-            return str(d)
+        return str(d)
     # all 'a'
     def case4(r):
         return 'a'
@@ -64,20 +64,20 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel):
     def case11(r):
         return str(r.uniform(-1e30,1e30))
 
-    # try a neat way to use a dictitionary to case select functions
+    # try a neat way to use a dictionary to case select functions
     caseList=[case0,case1,case2,case3,case4,case5,case6,case7,case8,case9,case10,case11]
-
-    if sel<0 or sel>=len(caseList):
-        raise Exception("sel out of range in write_syn_dataset:", sel)
-    f = caseList[sel]
-
-    # we can do all sorts of methods off the r object
     r = random.Random(SEEDPERFILE)
+    # this makes sure we hit all cases for small col counts
+    # I guess we can just use this mod COLCASES if col count is bigger
+    colCase = range(COLCASES)
+    random.shuffle(colCase)
 
     dsf = open(csvPathname, "w+")
     for i in range(rowCount):
         rowData = []
         for j in range(colCount):
+            colCaseToUse = j % COLCASES
+            f = caseList[colCase[colCaseToUse]]
             rowData.append(f(r)) # f should always return string
         rowDataCsv = ",".join(rowData)
         dsf.write(rowDataCsv + "\n")
@@ -99,39 +99,35 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_many_cols_and_values_with_syn(self):
+    def test_many_cols_and_types(self):
         SEED = random.randint(0, sys.maxint)
         print "\nUsing random seed:", SEED
         # SEED =
         random.seed(SEED)
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (100, 10000, 'cA', 5),
-            (100, 1000, 'cB', 5),
-            (100, 900, 'cC', 5),
-            (100, 500, 'cD', 5),
-            (100, 100, 'cE', 5),
+            (100, 5, 'cA', 5),
+            (1000, 59, 'cB', 5),
+            (5000, 128, 'cC', 5),
+            (6000, 507, 'cD', 5),
+            (9000, 663, 'cE', 5),
             ]
         
         for (rowCount, colCount, key2, timeoutSecs) in tryList:
-            for sel in range(12):
-                SEEDPERFILE = random.randint(0, sys.maxint)
-                csvFilename = "syn_%s_%s_%s_%s.csv" % (SEEDPERFILE, sel, rowCount, colCount)
-                csvPathname = SYNDATASETS_DIR + '/' + csvFilename
+            SEEDPERFILE = random.randint(0, sys.maxint)
+            csvFilename = "syn_%s_%s_%s.csv" % (SEEDPERFILE, rowCount, colCount)
+            csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
-                print "Creating random", csvPathname
-                write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel)
+            print "Creating random", csvPathname
+            write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
-                selKey2 = key2 + "_" + str(sel)
-                parseKey = h2o_cmd.parseFile(None, csvPathname, key2=selKey2, timeoutSecs=30)
-                print csvFilename, 'parse time:', parseKey['response']['time']
-                print "Parse result['destination_key']:", parseKey['destination_key']
-                inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
-                print "\n" + csvFilename
+            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=30)
+            print csvFilename, 'parse time:', parseKey['response']['time']
+            print "Parse result['destination_key']:", parseKey['destination_key']
+            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            h2o_cmd.infoFromInspect(inspect, csvPathname)
 
-                # if not h2o.browse_disable:
-                    # h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
-                    # time.sleep(5)
+            print "\n" + csvFilename
 
 if __name__ == '__main__':
     h2o.unit_main()

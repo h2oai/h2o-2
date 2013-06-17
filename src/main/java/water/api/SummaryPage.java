@@ -33,19 +33,17 @@ public class SummaryPage extends Request {
     Response r = Response.done(res);
     r.setBuilder(ROOT_OBJECT, new Builder() {
       @Override public String build(Response response, JsonElement element, String contextName) {
-
-        StringBuilder pageBldr = new StringBuilder("<div id='column_list' style='position:fixed;left:0;z-index:1030;margin-bottom:5px;width:165px;text-align:right;height:90%;overflow-y:auto;overflow-y:auto;'><h5>Columns</h5>");
-        StringBuilder sb = new StringBuilder();
+        StringBuilder pageBldr = new StringBuilder("<style>#json_box {margin-left:200px}</style><div class=container-fluid' style='margin-left:50px'><div class='row-fluid'><div class='span2 sidebar-nav-fixed' style='text-align:left;overflow-x:scroll'><h5>Columns</h5>");
+        StringBuilder sb = new StringBuilder("<div class='span10' style='height:90%;margin-left:200px'>");
         JsonArray cols = element.getAsJsonObject().get("summary").getAsJsonObject().get("columns").getAsJsonArray();
         Iterator<JsonElement> it = cols.iterator();
-        sb.append("<div class='table' style='position:fixed;left:175px;height:90%;overflow-y:scroll'>");
 
         while(it.hasNext()){
           JsonObject o = it.next().getAsJsonObject();
           String cname = o.get("name").getAsString();
-          pageBldr.append("<div style='margin-left:5px;'><a href='#col_" + cname + "'>" + cname + "</a></div>");
+          pageBldr.append("<div><a href='#col_" + cname + "'>" + cname + "</a></div>");
           long N = o.get("N").getAsLong();
-          sb.append("<div class='table'  id='col_" + cname + "' style='width:100%;heigth:90%;overflow-y:scroll;border-top-style:solid;'><div class='alert-success'><h4>Column: " + cname + "</h4></div>\n");
+          sb.append("<div class='table' id='col_" + cname + "' style='width:90%;heigth:90%;overflow-y:scroll;border-top-style:solid;'><div class='alert-success'><h4>Column: " + cname + "</h4></div>\n");
           if(o.has("min") && o.has("max")){
             StringBuilder minRow = new StringBuilder("<tr><th>&mu;</th><td>" + Utils.p2d(o.get("mean").getAsDouble())+"</td><th style='border-left-style:solid; borde-left:1px;border-left-color:#ddd;'>min[5]</th>");
             StringBuilder maxRow = new StringBuilder("<tr><th>&sigma;</th><td>" + Utils.p2d(o.get("sigma").getAsDouble()) + "</td><th style='border-left-style:solid; borde-left:1px;border-left-color:#ddd;'>max[5]</th>");
@@ -108,6 +106,8 @@ public class SummaryPage extends Request {
         sb.append("</div>");
         pageBldr.append("</div>");
         pageBldr.append(sb);
+        pageBldr.append("</div>");
+
         return pageBldr.toString();
       }
     });

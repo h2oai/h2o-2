@@ -15,9 +15,13 @@ def parseFile(node=None, csvPathname=None, key=None, key2=None,
         myKey2 = key + '.hex'
     else:
         myKey2 = key2
-    return node.parse(key, myKey2, 
+    p = node.parse(key, myKey2, 
         timeoutSecs, retryDelaySecs, 
         pollTimeoutSecs=pollTimeoutSecs, noise=noise, noPoll=noPoll, **kwargs)
+
+    # do SummaryPage here too, just to get some coverage
+    node.summary_page(myKey2)
+    return p
 
 def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, 
     timeoutSecs=20, retryDelaySecs=2, pollTimeoutSecs=30, 
@@ -34,9 +38,14 @@ def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None,
         myKeyForParseResult = s3_key + '.hex'
     else:
         myKeyForParseResult = keyForParseResult
-    return node.parse(s3_key, myKeyForParseResult, 
+    # do SummaryPage here too, just to get some coverage
+    p = node.parse(s3_key, myKeyForParseResult, 
         timeoutSecs, retryDelaySecs, 
         pollTimeoutSecs=pollTimeoutSecs, noise=noise, noPoll=noPoll, **kwargs)
+
+    # do SummaryPage here too, just to get some coverage
+    node.summary_page(myKeyForParseResult)
+    return p
 
 def runInspect(node=None, key=None, timeoutSecs=5, **kwargs):
     if not key: raise Exception('No key for Inspect specified')
@@ -48,12 +57,12 @@ def infoFromInspect(inspect, csvPathname):
     # need more info about this dataset for debug
     cols = inspect['cols']
     # look for nonzero num_missing_values count in each col
-    sum_num_missing_values = 0
+    missingValuesList = []
     for i, colDict in enumerate(cols):
         num_missing_values = colDict['num_missing_values']
         if num_missing_values != 0:
             print "%s: col: %d, num_missing_values: %d" % (csvPathname, i, num_missing_values)
-            sum_num_missing_values += num_missing_values
+            missingValuesList.append(num_missing_values)
 
     num_cols = inspect['num_cols']
     num_rows = inspect['num_rows']
@@ -66,8 +75,7 @@ def infoFromInspect(inspect, csvPathname):
     print "num_cols: %s, num_rows: %s, row_size: %s, ptype: %s, \
            value_size_bytes: %s, time: %s" % \
            (num_cols, num_rows, row_size, ptype, value_size_bytes, ptime)
-    # sum of num_missing_values from all the columns
-    return sum_num_missing_values
+    return missingValuesList
 
 # Not working in H2O yet, but support the test
 def runStore2HDFS(node=None, key=None, timeoutSecs=5, **kwargs):

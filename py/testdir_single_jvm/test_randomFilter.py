@@ -43,7 +43,7 @@ class Basic(unittest.TestCase):
         SEED = random.randint(0, sys.maxint)
 
         # if you have to force to redo a test
-        # SEED = 
+        SEED = 6019110937119320453
         random.seed(SEED)
         print "\nUsing random seed:", SEED
         localhost = h2o.decide_if_localhost()
@@ -59,7 +59,7 @@ class Basic(unittest.TestCase):
         # time.sleep(1500)
         h2o.tear_down_cloud()
 
-    def test_factor_with_syn(self):
+    def test_randomFilter(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         # use SEED so the file isn't cached?
         csvFilenameAll = [
@@ -77,9 +77,11 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, 1000000, SEEDPERFILE)
             # creates csvFilename.hex from file in importFolder dir 
             parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=2000)
+
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "Parse result['destination_key']:", parseKey['destination_key']
             inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            h2o_cmd.infoFromInspect(inspect, csvPathname)
 
             print "\n" + csvFilename
             h2e.exec_zero_list(zeroList)

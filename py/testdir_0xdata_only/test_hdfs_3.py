@@ -73,7 +73,7 @@ class Basic(unittest.TestCase):
         timeoutSecs = 200
         # save the first, for all comparisions, to avoid slow drift with each iteration
         firstglm = {}
-        h2i.setupImportHdfs()
+        h2i.setupImportHdfs(timeoutSecs=60)
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in hdfs dir 
             print "Loading", csvFilename, 'from HDFS'

@@ -9,6 +9,10 @@ import water.api.Constants.Schemes;
 import water.util.Log.Tag.Kind;
 import water.util.Log.Tag.Sys;
 
+import org.apache.log4j.Logger;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.PropertyConfigurator;
+
 /** Log for H2O. This class should be loaded before we start to print as it wraps around
  * System.{out,err}.
  *
@@ -69,9 +73,9 @@ public abstract class Log {
     System.setErr(new Wrapper(System.err));
   }
   /** Local log file */
-  static final String FILE_NAME = "h2o.log";
-  static File FILE;
-  static BufferedWriter FILE_WRITER;
+
+  static String LOG_DIR = null;
+
   /** Key for the log in the KV store */
   public final static Key LOG_KEY = Key.make("Log", (byte) 0, Key.BUILT_IN_KEY);
   /** Time from when this class loaded. */
@@ -265,31 +269,118 @@ public abstract class Log {
       }
     }
   }
+
+  private static org.apache.log4j.Logger _logger = null;
+
+  public static String getLogDir() {
+    if (LOG_DIR == null) {
+      return "unknown-log-dir";
+    }
+
+    return LOG_DIR;
+  }
+
+  public static String getLogPathFileName() {
+    String ip;
+    if (H2O.SELF_ADDRESS == null) {
+      ip = "UnknownIP";
+    }
+    else {
+      ip = H2O.SELF_ADDRESS.getHostAddress();
+    }
+    // Somehow, the above process for producing an IP address has a slash
+    // in it, which is mystifying.  Remove it.
+
+    int port = H2O.UDP_PORT-1;
+    String portString = Integer.toString(port);
+
+    String logFileName =
+            getLogDir() + File.separator +
+            "h2o_" + ip + "_" + portString + ".log";
+
+    return logFileName;
+  }
+
+  private static org.apache.log4j.Logger getLog4jLogger() {
+    return _logger;
+  }
+
+  private static org.apache.log4j.Logger createLog4jLogger(String logDirParent) {
+    synchronized (water.util.Log.class) {
+      if (_logger != null) {
+        return _logger;
+      }
+
+      // If a log4j properties file was specified on the command-line, use it.
+      // Otherwise, create some default properties on the fly.
+      String log4jProperties = System.getProperty ("log4j.properties");
+      if (log4jProperties != null) {
+        PropertyConfigurator.configure(log4jProperties);
+        // TODO:  Need some way to set LOG_DIR here for LogCollectorTask to work.
+      }
+      else {
+        LOG_DIR = logDirParent + File.separator + "h2ologs";
+        String logPathFileName = getLogPathFileName();
+
+        java.util.Properties p = new java.util.Properties();
+
+        p.setProperty("log4j.rootLogger", "debug, R");
+        p.setProperty("log4j.appender.R", "org.apache.log4j.RollingFileAppender");
+        p.setProperty("log4j.appender.R.File", logPathFileName);
+        p.setProperty("log4j.appender.R.MaxFileSize", "256KB");
+        p.setProperty("log4j.appender.R.MaxBackupIndex", "5");
+        p.setProperty("log4j.appender.R.layout", "org.apache.log4j.PatternLayout");
+
+        // See the following document for information about the pattern layout.
+        // http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/PatternLayout.html
+        p.setProperty("log4j.appender.R.layout.ConversionPattern", "%m%n");
+
+        PropertyConfigurator.configure(p);
+      }
+
+      _logger = LogManager.getLogger(Log.class.getName());
+    }
+
+    return _logger;
+  }
+
   /** the actual write code. */
   private static void write0(Event e, boolean printOnOut) {
+    org.apache.log4j.Logger l4j = getLog4jLogger();
+
+    // If no logger object exists, try to build one.
+    if (l4j == null) {
+      if (H2O.SELF != null) {
+        File dir;
+        // Use ice folder if local, or default
+        if( H2O.ICE_ROOT.getScheme() == null || Schemes.FILE.equals(H2O.ICE_ROOT.getScheme()) )
+          dir = new File(H2O.ICE_ROOT.getPath());
+        else
+          dir = new File(H2O.DEFAULT_ICE_ROOT);
+
+        l4j = createLog4jLogger(dir.toString());
+      }
+    }
+
     String s = e.toString();
-    if( H2O.SELF != null && FILE_WRITER == null ) {
-      File dir;
-      // Use ice folder if local, or default
-      if( H2O.ICE_ROOT.getScheme() == null || Schemes.FILE.equals(H2O.ICE_ROOT.getScheme()) )
-        dir = new File(H2O.ICE_ROOT.getPath());
-      else
-        dir = new File(H2O.DEFAULT_ICE_ROOT);
-      try {
-        FILE = new File(dir, FILE_NAME);
-        FILE_WRITER = new BufferedWriter(new FileWriter(FILE));
-      } catch( IOException _ ) {
-        // do not log errors when trying to open the log file
+
+    // Log if we can.
+    if (l4j != null) {
+      if (e.kind == Kind.ERRR) {
+        l4j.error(s);
+      }
+      else if (e.kind == Kind.WARN) {
+        l4j.warn(s);
+      }
+      else if (e.kind == Kind.INFO) {
+        l4j.info(s);
+      }
+      else {
+        // Choose error by default if we can't figure out the right logging level.
+        l4j.error(s);
       }
     }
-    if( FILE_WRITER != null ) {
-      try {
-        FILE_WRITER.write(s, 0, s.length());
-        FILE_WRITER.write(NL,0,NL.length());
-        FILE_WRITER.flush();
-      } catch( IOException ioe ) {/* ignore log-write fails */
-      }
-    }
+
     if( Paxos._cloudLocked ) logToKV(e.when.startAsString(), e.thread, e.kind, e.sys, e.body(0));
     if(printOnOut || printAll) unwrap(System.out, (LONG_HEADERS ? e.toString() : e.toShortString()));
     e.printMe = false;

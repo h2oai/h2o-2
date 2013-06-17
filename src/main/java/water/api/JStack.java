@@ -5,6 +5,7 @@ import java.util.Date;
 
 import water.H2O;
 import water.util.JStackCollectorTask;
+import water.util.Log;
 
 import com.google.gson.*;
 
@@ -32,7 +33,7 @@ public class JStack extends Request {
       nodes.add(el);
     }
     json.add(NODES, nodes);
-
+    Log.info(json);
 
     Response r = Response.done(json);
     r.setBuilder(NODES, new NodeTableBuilder());

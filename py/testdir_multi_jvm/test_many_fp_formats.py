@@ -105,8 +105,8 @@ class Basic(unittest.TestCase):
 
     def test_many_cols_and_values_with_syn(self):
         SEED = random.randint(0, sys.maxint)
+        SEED = 1967029306372214551
         print "\nUsing random seed:", SEED
-        # SEED =
         random.seed(SEED)
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
@@ -127,15 +127,15 @@ class Basic(unittest.TestCase):
                 write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel)
 
                 selKey2 = key2 + "_" + str(sel)
-                parseKey = h2o_cmd.parseFile(None, csvPathname, key2=selKey2, timeoutSecs=5)
+                parseKey = h2o_cmd.parseFile(None, csvPathname, key2=selKey2, timeoutSecs=15)
                 print csvFilename, 'parse time:', parseKey['response']['time']
                 print "Parse result['destination_key']:", parseKey['destination_key']
                 inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
                 print "\n" + csvFilename
 
-                if not h2o.browse_disable:
-                    h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
-                    time.sleep(3)
+                # if not h2o.browse_disable:
+                #     h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
+                #     time.sleep(3)
 
 if __name__ == '__main__':
     h2o.unit_main()
