@@ -13,12 +13,9 @@ import water.parser.CsvParser;
 import water.parser.ParseDataset;
 
 /**
- * The R version of parse.
- *
- * The parse command is currently blocking; in the future we will support a non-blocking version by
- * return a result object that may contain a future.
- *
- * The command does both import and parse.
+ * The R version of parse. The parse command is currently blocking; in the future we will support a
+ * non-blocking version by return a result object that may contain a future. The command does both
+ * import and parse.
  */
 public class Parse implements Invokable {
 
@@ -36,7 +33,12 @@ public class Parse implements Invokable {
       uris[i] = URI.make(files[i]);
     arg.files = uris;
     Res res = execute(arg);
-    return Interop.asRString((res.error == null) ? res.result._key.toString() : res.error.toString());
+    if( res.error == null ) {
+      String name = res.result._key.toString();
+      RAny rname = Interop.asRString(name);
+      rname = Interop.setAttribute(rname, "h2okind", "HEX");
+      return rname;
+    } else return Interop.asRString(res.error.toString());
   }
 
   private static final String[] params = new String[] { "files" };
@@ -98,7 +100,7 @@ public class Parse implements Invokable {
     byte separator = CsvParser.NO_SEPARATOR;
     CsvParser.Setup setup = Inspect.csvGuessValue(v, separator);
     if( setup._data == null || setup._data[0].length == 0 ) res.error = new IllegalArgumentException(
-        "I cannot figure out this file; I only handle common CSV formats: " + arg.files[0]);
+        "H2O cannot only handles common CSV formats: " + arg.files[0]);
     Key dest = Key.make(ks[0] + Extensions.HEX);
     try {
       Job job = ParseDataset.forkParseDataset(dest, ks, setup);

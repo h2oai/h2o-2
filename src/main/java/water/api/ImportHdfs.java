@@ -6,7 +6,7 @@ import java.io.PrintWriter;
 import org.apache.hadoop.fs.Path;
 
 import water.DKV;
-import water.hdfs.PersistHdfs;
+import water.persist.PersistHdfs;
 import water.util.Log;
 
 import com.google.gson.*;

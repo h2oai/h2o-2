@@ -1,6 +1,6 @@
 import subprocess
 import gzip, shutil, random, time, re
-import random, re
+import os, zipfile
 
 # x = choice_with_probability( [('one',0.25), ('two',0.25), ('three',0.5)] )
 # need to sum to 1 or less. check error case if you go negative
@@ -21,6 +21,27 @@ def ping_host_if_verbose(host):
     # if (h2o.verbose) 
     ping = subprocess.Popen( ["ping", "-c", "4", host]) 
     ping.communicate()
+
+def file_line_count(fname):
+    return sum(1 for line in open(fname))
+
+# the logfiles are zipped with directory structure
+# unzip it to the zipdir, throwing away the directory structure.
+# (so we don't have to know the names of the intermediate directories)
+def flat_unzip(my_zip, my_dir):
+    resultList = []
+    with zipfile.ZipFile(my_zip) as zip_file:
+        for member in zip_file.namelist():
+            filename = os.path.basename(member)
+            # skip directories
+            if not filename:
+                continue
+            # copy file (taken from zipfile's extract)
+            source = zip_file.open(member)
+            target = file(os.path.join(my_dir, filename), "wb")
+            with source, target:
+                shutil.copyfileobj(source, target)
+                resultList.append(target)
 
 # gunzip gzfile to outfile
 def file_gunzip(gzfile, outfile):

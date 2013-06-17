@@ -1,5 +1,6 @@
 package water;
 
+import java.lang.reflect.InvocationTargetException;
 import javassist.*;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
@@ -8,6 +9,8 @@ public class Weaver {
   private final ClassPool _pool;
   private final CtClass _enum;
   private final CtClass[] _serBases;
+  public static Class _typeMap;
+  public static java.lang.reflect.Method _onLoad;
   Weaver() {
     try {
       _pool = ClassPool.getDefault();
@@ -127,14 +130,39 @@ public class Weaver {
     }
   }
 
+  // The Weaver is called from the SystemLoader, and if it directly calls
+  // TypeMap we end up calling a version of TypeMap loaded through the
+  // SystemLoader - this is a separate version of TypeMap loaded *through* the
+  // weaver... and may have different type mappings.  So we avoid the issue by
+  // forcing a call to the pre-woven TypeMap.
+  public Weaver initTypeMap( ClassLoader boot ) {
+    _typeMap = weaveAndLoad("water.TypeMap",boot);
+    try { _onLoad = _typeMap.getMethod("onLoad",String.class); }
+    catch( NoSuchMethodException nsme ) { throw new RuntimeException(nsme); }
+    return this;
+  }
+
   private void ensureType(CtClass cc) throws NotFoundException, CannotCompileException {
     CtMethod ccms[] = cc.getDeclaredMethods();
     if( !javassist.Modifier.isAbstract(cc.getModifiers()) &&
         !hasExisting("frozenType", "()I", ccms) ) {
-      cc.addMethod(CtNewMethod.make(
-          "public short frozenType() {" +
-          "  return " + TypeMap.onLoad(cc.getName()) + ";" +
-          "}", cc));
+      // Horrible Reflective Call 
+      // Make a horrible reflective call to TypeMap.onLoad because....
+      // The Weaver is called from the SystemLoader, and if it directly calls
+      // TypeMap we end up calling a version of TypeMap loaded through the
+      // SystemLoader - this is a separate version of TypeMap loaded *through*
+      // the weaver... and may have different type mappings.  So we avoid the
+      // issue by forcing a call to the pre-woven TypeMap.
+      if( _onLoad == null ) 
+        throw new RuntimeException("Weaver not booted, loading class "+cc.getName()+", add to the BOOTSTRAP_CLASSES list");
+      Integer I;
+      try { I = (Integer)_onLoad.invoke(null,cc.getName()); }
+      catch( IllegalAccessException iae ) { throw new RuntimeException( iae); }
+      catch( InvocationTargetException ite) { throw new RuntimeException(ite.getTargetException()); }
+      // Build a simple method returning the type token
+      cc.addMethod(CtNewMethod.make("public int frozenType() {" +
+                                    "  return " + I + ";" +
+                                    "}", cc));
     }
   }
 

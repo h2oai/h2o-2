@@ -61,7 +61,7 @@ public class Sandbox {
   }
 
   public static void localMasterRemoteWorkers(String[] workers, String[] args) {
-    String local = H2O.findInetAddressForSelf().getHostAddress();
+    String local = H2O.SELF_ADDRESS.getHostAddress();
     int port = 54321;
     String flat = local + ":" + port + '\n';
     for( int i = 0; i < workers.length; i++ )

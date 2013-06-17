@@ -117,7 +117,9 @@ public class Script extends Request {
           Response r = request.serve();
           switch( r._status ) {
             case error:
-              return Response.error(r.error() + ", " + line);
+              String s = r.error() + ", " + line;
+              Log.err(s, null);
+              return Response.error(s);
             case redirect:
               cmd = r._redirectName;
               args.clear();

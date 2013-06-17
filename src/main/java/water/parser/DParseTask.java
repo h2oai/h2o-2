@@ -1064,19 +1064,19 @@ public class DParseTask extends MRTask {
   }
 
   // So I just brutally parse "dd-MMM-yy".
-  public static final byte MMS[][] = new byte[][] {
-    "Jan" .getBytes(),
-    "Feb" .getBytes(),
-    "Mar" .getBytes(),
-    "Apr" .getBytes(),
-    "May" .getBytes(),
-    "June".getBytes(),
-    "July".getBytes(),
-    "Aug" .getBytes(),
-    "Sept".getBytes(),
-    "Oct" .getBytes(),
-    "Nov" .getBytes(),
-    "Dec" .getBytes(),
+  public static final byte MMS[][][] = new byte[][][] {
+    {"jan".getBytes(),null},
+    {"feb".getBytes(),null},
+    {"mar".getBytes(),null},
+    {"apr".getBytes(),null},
+    {"may".getBytes(),null},
+    {"jun".getBytes(),"june".getBytes()},
+    {"jul".getBytes(),"july".getBytes()},
+    {"aug".getBytes(),null},
+    {"sep".getBytes(),"sept".getBytes()},
+    {"oct".getBytes(),null},
+    {"nov".getBytes(),null},
+    {"dec".getBytes(),null}
   };
   private long attemptTimeParse_1( ValueString str ) {
     final byte[] buf = str._buf;
@@ -1090,14 +1090,20 @@ public class DParseTask extends MRTask {
     if( buf[i] != '-' ) dd = digit(dd,buf[i++]);
     if( dd < 1 || dd > 31 ) return Long.MIN_VALUE;
     if( buf[i++] != '-' ) return Long.MIN_VALUE;
+    byte[]mm=null;
     OUTER: for( ; MM<MMS.length; MM++ ) {
-      for( int j=0; j<MMS[MM].length; j++ )
-        if( MMS[MM][j] != buf[i+j] )
-          continue OUTER;
-      break;
+      byte[][] mms = MMS[MM];
+      INNER: for( int k=0; k<mms.length; k++ ) {
+        mm = mms[k];
+        if( mm == null ) continue;
+        for( int j=0; j<mm.length; j++ )
+          if( mm[j] != Character.toLowerCase(buf[i+j]) )
+            continue INNER;
+        break OUTER;
+      }
     }
     if( MM == MMS.length ) return Long.MIN_VALUE; // No matching month
-    i += MMS[MM].length;        // Skip month bytes
+    i += mm.length;             // Skip month bytes
     MM++;                       // 1-based month
     if( buf[i++] != '-' ) return Long.MIN_VALUE;
     yy = digit(yy,buf[i++]);

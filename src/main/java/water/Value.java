@@ -6,8 +6,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import jsr166y.ForkJoinPool;
 import water.Job.ProgressMonitor;
 import water.api.Constants.Extensions;
-import water.hdfs.PersistHdfs;
-import water.store.s3.PersistS3;
+import water.persist.*;
 
 /**
  * The core Value stored in the distributed K/V store.  It contains an
@@ -177,13 +176,8 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   /** Store complete Values to disk */
   void storePersist() throws IOException {
     if( isPersisted() ) return;
-    switch( _persist&BACKEND_MASK ) {
-    case ICE : PersistIce .fileStore(this); break;
-    case HDFS: PersistHdfs.fileStore(this); break;
-    case NFS : PersistNFS .fileStore(this); break;
-    case S3  : PersistS3  .fileStore(this); break;
-    default  : throw H2O.unimpl();
-    }
+    int i = _persist & BACKEND_MASK;
+    Persist.I[i].store(this);
   }
 
   /** Remove dead Values from disk */
@@ -192,18 +186,14 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     //  free_mem();
     if( !isPersisted() || !onICE() ) return; // Never hit disk?
     clrdsk();  // Not persisted now
-    PersistIce.fileDelete(this);
+    int i = _persist & BACKEND_MASK;
+    Persist.I[i].delete(this);
   }
   /** Load some or all of completely persisted Values */
   byte[] loadPersist() {
     assert isPersisted();
-    switch( _persist&BACKEND_MASK ) {
-    case ICE : return PersistIce .fileLoad(this);
-    case HDFS: return PersistHdfs.fileLoad(this);
-    case NFS : return PersistNFS .fileLoad(this);
-    case S3  : return PersistS3  .fileLoad(this);
-    default  : throw H2O.unimpl();
-    }
+    int i = _persist & BACKEND_MASK;
+    return Persist.I[i].load(this);
   }
 
   public String nameOfPersist() { return nameOfPersist(_persist&BACKEND_MASK); }
@@ -222,8 +212,8 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   public void setHdfs() {
     assert onICE();
     byte[] mem = memOrLoad();    // Get into stable memory
-    PersistHdfs.fileStore(this);
     _persist = Value.HDFS|Value.NOTdsk;
+    Persist.I[Value.HDFS].store(this);
     removeIce();           // Remove from ICE disk
     assert onHDFS();       // Flip to HDFS
     _mem = mem; // Close a race with the H2O cleaner zapping _mem while removing from ice
@@ -396,13 +386,8 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     Value v1 = DKV.get(arykey,Integer.MAX_VALUE,H2O.ARY_KEY_PRIORITY);
     if( v1 == null ) return null;       // Nope; not there
     if( !v1.isArray() ) return null; // Or not a ValueArray
-    switch( v1._persist&BACKEND_MASK ) {
-    case ICE : return PersistIce .lazyArrayChunk(key);
-    case HDFS: return PersistHdfs.lazyArrayChunk(key);
-    case NFS : return PersistNFS .lazyArrayChunk(key);
-    case S3  : return PersistS3  .lazyArrayChunk(key);
-    default  : throw H2O.unimpl();
-    }
+    int i = v1._persist & BACKEND_MASK;
+    return Persist.I[i].lazyArrayChunk(key);
   }
 
   // ---------------------

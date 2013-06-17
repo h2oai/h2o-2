@@ -88,12 +88,12 @@ public class KMeansModel extends Model implements Progress {
   }
 
   /** Single row scoring, on a compatible ValueArray (when pushed throw the mapping) */
-  protected double score0(ValueArray data, int row, int[] mapping) {
+  protected double score0(ValueArray data, int row) {
     throw H2O.unimpl();
   }
 
   /** Bulk scoring API, on a compatible ValueArray (when pushed throw the mapping) */
-  protected double score0(ValueArray data, AutoBuffer ab, int row_in_chunk, int[] mapping) {
+  protected double score0(ValueArray data, AutoBuffer ab, int row_in_chunk) {
     throw H2O.unimpl();
   }
 

@@ -10,6 +10,9 @@ import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import com.google.common.io.CharStreams;
+import com.google.common.io.Closeables;
+
 import water.util.Log;
 import water.util.Utils;
 
@@ -28,6 +31,20 @@ public class Boot extends ClassLoader {
   public static final Boot _init;
   public final byte[] _jarHash;
 
+  public String loadContent(String fromFile) {
+    BufferedReader reader = null;
+    StringBuilder sb = new StringBuilder();
+    try {
+      InputStream is = getResource2(fromFile);
+      reader = new BufferedReader(new InputStreamReader(is));
+      CharStreams.copy(reader, sb);
+    } catch( IOException e ){
+      Log.err(e);
+    } finally {
+      Closeables.closeQuietly(reader);
+    }
+    return sb.toString();
+  }
   private final ZipFile _h2oJar;
   private File _parentDir;
   private Weaver _weaver;
@@ -74,7 +91,7 @@ public class Boot extends ClassLoader {
   private URLClassLoader _systemLoader;
   private Method _addUrl;
 
-  private void boot( String[] args ) throws Exception {
+  public void boot( String[] args ) throws Exception {
     if( fromJar() ) {
       _systemLoader = (URLClassLoader)getSystemClassLoader();
       _addUrl = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
@@ -109,6 +126,7 @@ public class Boot extends ClassLoader {
       addInternalJars("s3");
       addInternalJars("jets3t");
       addInternalJars("fastr");
+      addInternalJars("log4j");
     }
 
     run(args);
@@ -224,7 +242,7 @@ public class Boot extends ClassLoader {
   private final Class loadClass2( String name ) throws ClassNotFoundException {
     Class z = findLoadedClass(name); // Look for pre-existing class
     if( z != null ) return z;
-    if( _weaver == null ) _weaver = new Weaver();
+    if( _weaver == null ) (_weaver = new Weaver()).initTypeMap(this);
     z = _weaver.weaveAndLoad(name, this);    // Try the Happy Class Loader
     if( z != null ) return z;
     z = getParent().loadClass(name); // Try the parent loader.  Probably the System loader.

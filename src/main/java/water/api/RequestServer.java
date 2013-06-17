@@ -58,7 +58,9 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new GLMScore()),    "GLM",           "Score");
     Request.addToNavbar(registerRequest(new KMeansScore()), "KMeans",        "Score");
     Request.addToNavbar(registerRequest(new KMeansApply()), "KMeans Apply",  "Score");
+    Request.addToNavbar(registerRequest(new GeneratePredictionsPage()),       "Predict",   "Score");
     Request.addToNavbar(registerRequest(new Score()),       "Apply Model",   "Score");
+
 
     //Request.addToNavbar(registerRequest(new Plot()),        "Basic",         "Plot");
     registerRequest(new Plot());
@@ -72,13 +74,13 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",   "Admin");
     Request.addToNavbar(registerRequest(new Script()),      "Get Script",    "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",      "Admin");
-
     Request.addToNavbar(registerRequest(new Tutorials()),           "View All",      "Tutorials");
     Request.addToNavbar(registerRequest(new TutorialRFIris()),      "Random Forest", "Tutorials");
     Request.addToNavbar(registerRequest(new TutorialGLMProstate()), "GLM",           "Tutorials");
     Request.addToNavbar(registerRequest(new TutorialKMeans()),      "KMeans",        "Tutorials");
 
     // internal handlers
+    registerRequest(new StaticHTMLPage("/h2o/CoefficientChart.html","chart"));
     registerRequest(new Cancel());
     registerRequest(new Exec());
     registerRequest(new ExportS3Progress());

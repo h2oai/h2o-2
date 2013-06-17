@@ -22,7 +22,8 @@ import water.api.RequestBuilders.Response.Status;
 import water.api.RequestStatics.RequestType;
 import water.api.Script.RunScript;
 import water.api.Cloud;
-import water.hdfs.HdfsLoader;
+import water.persist.HdfsLoader;
+import water.persist.Persist;
 import water.util.Log;
 import water.util.Utils;
 
@@ -35,7 +36,8 @@ public class Hadoop {
     String password = "hduser";
     String name_server = "hdfs://127.0.0.1:8020";
     String job_tracker = "hdfs://127.0.0.1:8021";
-    int port = 54321;
+    int port = H2O.DEFAULT_PORT;
+    String ice_root = H2O.DEFAULT_ICE_ROOT;
     String memory = "4096";
     String script;
     String help;
@@ -60,20 +62,21 @@ public class Hadoop {
       System.out.println("  -name_server=" + defaults.name_server + ": Hadoop cluster name server");
       System.out.println("  -job_tracker=" + defaults.job_tracker + ": Hadoop cluster job tracker");
       System.out.println("  -port=" + defaults.port + ": H2O port on each machine");
+      System.out.println("  -ice_root=" + defaults.ice_root + ": H2O ice location");
       System.out.println("  -memory=" + defaults.memory + ": Java heap and hadoop task memory limit");
       System.out.println("  -script=" + defaults.script + ": Optional script (C.f. Web UI->Admin->Get Script)");
       return;
     }
 
     H2O.OPT_ARGS.hdfs_version = config.version;
-    HdfsLoader.initialize();
-
+    HdfsLoader.loadJars();
     HadoopTool.main(config, remaining);
   }
 
   public static class HadoopTool extends Configured implements Tool {
     private static final String HOSTS_KEY = "h2o.hosts";
     private static final String PORT_KEY = "h2o.port";
+    private static final String ICE_KEY = "h2o.ice";
 
     static class H2OMapper extends Mapper<LongWritable, Text, LongWritable, Text> {
       @Override protected void setup(Mapper.Context context) throws IOException, InterruptedException {
@@ -83,7 +86,9 @@ public class Hadoop {
           for( String host : context.getConfiguration().get(HOSTS_KEY).split(",") )
             hosts += host + ":" + port + '\n';
           File flat = Utils.writeFile(hosts);
-          Boot.main(new String[] { "-name", "hadoop", "-port", port, "-flatfile", flat.getAbsolutePath() });
+          String ice = context.getConfiguration().get(ICE_KEY);
+          Boot.main(new String[] { "-name", "hadoop", "-port", port, //
+              "-flatfile", flat.getAbsolutePath(), "-ice_root", ice });
           Class script = Boot._init.loadClass(Script.class.getName());
           for( ;; ) {
             // Check in H2O class loader if script is done
@@ -92,7 +97,10 @@ public class Hadoop {
             // Report progress or task gets killed
             context.progress();
             Thread.sleep(1000);
-            if( done ) break;
+            if( done ) {
+              Persist.getIce().clear();
+              break;
+            }
           }
         } catch( Exception ex ) {
           throw Log.errRTExcept(ex);
@@ -246,6 +254,7 @@ public class Hadoop {
       System.out.println("Deploying to " + hosts);
       conf.set(HOSTS_KEY, hosts);
       conf.set(PORT_KEY, "" + config.port);
+      conf.set(ICE_KEY, "" + config.ice_root);
 
       HadoopTool tool = new HadoopTool();
       ToolRunner.run(conf, tool, args);
@@ -265,7 +274,7 @@ public class Hadoop {
         JSONObject resp = json.getJSONObject(Constants.RESPONSE);
         String status = resp.getString(Constants.STATUS);
         System.out.println("Status: " + status);
-        if( status == Status.error.name() ) {
+        if( Status.error.name().equals(status) ) {
           System.out.println("Response: " + res);
         }
       }

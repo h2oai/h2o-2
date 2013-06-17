@@ -23,6 +23,5 @@ sandbox
 syn_datasets
 target/
 .settings/*
-Cypof*
 cypof*
 typemap

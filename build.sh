@@ -30,11 +30,12 @@ JAR_ROOT=lib
 
 # additional dependencies, relative to this file, but all dependencies should be
 # inside the JAR_ROOT tree so that they are packed to the jar file properly
-DEPENDENCIES="${JAR_ROOT}/fastr/*${SEP}${JAR_ROOT}/jama/*${SEP}${JAR_ROOT}/apache/*${SEP}${JAR_ROOT}/junit/*${SEP}${JAR_ROOT}/gson/*${SEP}${JAR_ROOT}/javassist.jar${SEP}${JAR_ROOT}/poi/*${SEP}${JAR_ROOT}/trove/*${SEP}${JAR_ROOT}/s3/*${SEP}${JAR_ROOT}/jets3t/*"
+DEPENDENCIES="${JAR_ROOT}/fastr/*${SEP}${JAR_ROOT}/jama/*${SEP}${JAR_ROOT}/apache/*${SEP}${JAR_ROOT}/junit/*${SEP}${JAR_ROOT}/gson/*${SEP}${JAR_ROOT}/javassist.jar${SEP}${JAR_ROOT}/poi/*${SEP}${JAR_ROOT}/s3/*${SEP}${JAR_ROOT}/jets3t/*${SEP}${JAR_ROOT}/log4j/*"
 
 DEFAULT_HADOOP_VERSION="cdh3"
 OUTDIR="target"
 JAR_FILE="${OUTDIR}/h2o.jar"
+SRC_JAR_FILE="${OUTDIR}/h2o-sources.jar"
 
 JAVA=`which java`||echo 'Missing java, please install jdk'
 JAVAC=`which javac`||echo 'Missing javac, please install jdk'
@@ -95,8 +96,6 @@ function build_classes() {
         $TESTSRC/*/*java \
         $TESTSRC/*/*/*java
 
-    "$JAVA" -ea -cp "${CLASSPATH}"${SEP}"$CLASSES" water.TypeMap
-
     cp -r ${RESOURCES}/* "${CLASSES}"
 cat >> "$VERSION_PROPERTIES" <<EOF
 h2o.git.version=$($GIT rev-parse HEAD 2>/dev/null )
@@ -127,6 +126,15 @@ function build_jar() {
     cp ${JAR_FILE} ${OUTDIR}/h2o-${JAR_TIME}.jar
 }
 
+function build_src_jar() {
+    echo "creating src jar file... ${SRC_JAR_FILE}"
+    # include H2O source files
+    "$JAR" cf ${SRC_JAR_FILE} -C "${SRC}" .
+    "$JAR" uf ${SRC_JAR_FILE} -C "${TESTSRC}" .
+    echo "copying jar file... ${SRC_JAR_FILE} to ${OUTDIR}/h2o-sources-${JAR_TIME}.jar"
+    cp ${SRC_JAR_FILE} ${OUTDIR}/h2o-sources-${JAR_TIME}.jar
+}
+
 function junit() {
     echo "running JUnit tests..."
     "$JAVA" -ea -cp ${JAR_FILE} water.Boot -mainClass water.JUnitRunner
@@ -138,5 +146,6 @@ build_classes
 if [ "$1" = "compile" ]; then exit 0; fi
 build_initializer
 build_jar
+build_src_jar
 if [ "$1" = "build" ]; then exit 0; fi
 junit

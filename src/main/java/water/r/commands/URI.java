@@ -6,7 +6,7 @@ import java.net.URL;
 import java.util.List;
 
 import water.*;
-import water.store.s3.PersistS3;
+import water.persist.PersistS3;
 import water.util.FileIntegrityChecker;
 
 import com.amazonaws.services.s3.AmazonS3;

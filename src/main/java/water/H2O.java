@@ -7,14 +7,11 @@ import java.nio.channels.DatagramChannel;
 import java.util.*;
 
 import jsr166y.*;
-
-import water.r.Shell;
-
 import water.exec.Function;
-import water.hdfs.HdfsLoader;
 import water.nbhm.NonBlockingHashMap;
 import water.parser.ParseDataset;
-import water.store.s3.PersistS3;
+import water.persist.*;
+import water.r.Shell;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
@@ -29,7 +26,6 @@ import com.google.common.io.Closeables;
 * @version 1.0
 */
 public final class H2O {
-
   static boolean _hdfsActive = false;
 
   public static final String VERSION = "0.3";
@@ -38,7 +34,7 @@ public final class H2O {
   public static String NAME;
 
   // The default port for finding a Cloud
-  static final int DEFAULT_PORT = 54321;
+  public static final int DEFAULT_PORT = 54321;
   public static int UDP_PORT; // Fast/small UDP transfers
   public static int API_PORT; // RequestServer and the new API HTTP port
 
@@ -52,6 +48,10 @@ public final class H2O {
 
   // Myself, as a Node in the Cloud
   public static H2ONode SELF = null;
+  public static InetAddress SELF_ADDRESS;
+
+  public static final String DEFAULT_ICE_ROOT = "/tmp";
+  public static URI ICE_ROOT;
 
   // Initial arguments
   public static String[] ARGS;
@@ -177,7 +177,7 @@ public final class H2O {
     return Arrays.toString(_memary);
   }
 
-  public static InetAddress findInetAddressForSelf() throws Error {
+  private static InetAddress findInetAddressForSelf() throws Error {
     // Get a list of all valid IPs on this machine.  Typically 1 on Mac or
     // Windows, but could be many on Linux or if a hypervisor is present.
     ArrayList<InetAddress> ips = new ArrayList<InetAddress>();
@@ -524,10 +524,22 @@ public final class H2O {
     ARGS = arguments.toStringArray();
     ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
 
+    // Get ice path before loading Log or Persist class
+    String ice = DEFAULT_ICE_ROOT;
+    if( OPT_ARGS.ice_root != null ) ice = OPT_ARGS.ice_root.replace("\\", "/");
+    try {
+      ICE_ROOT = new URI(ice);
+    } catch(URISyntaxException ex) {
+      throw new RuntimeException("Invalid ice_root: " + ice + ", " + ex.getMessage());
+    }
+
+    SELF_ADDRESS = findInetAddressForSelf();
+
     //if (OPT_ARGS.rshell.equals("false"))
     Log.wrap(); // Logging does not wrap when the rshell is on.
 
-    startLocalNode(); // start the local node
+    // Start the local node
+    startLocalNode();
     // Load up from disk and initialize the persistence layer
     initializePersistence();
     // Start network services, including heartbeats & Paxos
@@ -641,7 +653,6 @@ public final class H2O {
   // function of the name. Parse node ip addresses from the filename.
   static void initializeNetworkSockets( ) {
     // Assign initial ports
-    InetAddress inet = findInetAddressForSelf();
     API_PORT = OPT_ARGS.port != 0 ? OPT_ARGS.port : DEFAULT_PORT;
 
     while (true) {
@@ -660,7 +671,7 @@ public final class H2O {
         _apiSocket = new ServerSocket(API_PORT);
         _udpSocket = DatagramChannel.open();
         _udpSocket.socket().setReuseAddress(true);
-        _udpSocket.socket().bind(new InetSocketAddress(inet, UDP_PORT));
+        _udpSocket.socket().bind(new InetSocketAddress(SELF_ADDRESS, UDP_PORT));
         break;
       } catch (IOException e) {
         try { if( _apiSocket != null ) _apiSocket.close(); } catch( IOException ohwell ) { Log.err(ohwell); }
@@ -668,15 +679,15 @@ public final class H2O {
         _apiSocket = null;
         _udpSocket = null;
         if( OPT_ARGS.port != 0 )
-          Log.die("On " + H2O.findInetAddressForSelf() +
+          Log.die("On " + SELF_ADDRESS +
               " some of the required ports " + (OPT_ARGS.port+0) +
               ", " + (OPT_ARGS.port+1) +
               " are not available, change -port PORT and try again.");
       }
       API_PORT += 2;
     }
-    SELF = H2ONode.self(inet);
-    Log.info("Internal communication uses port: ",UDP_PORT,"\nListening for HTTP and REST traffic on  http:/",inet,":"+_apiSocket.getLocalPort()+"/");
+    SELF = H2ONode.self(SELF_ADDRESS);
+    Log.info("Internal communication uses port: ",UDP_PORT,"\nListening for HTTP and REST traffic on  http:/",SELF_ADDRESS,":"+_apiSocket.getLocalPort()+"/");
 
     NAME = OPT_ARGS.name==null? System.getProperty("user.name") : OPT_ARGS.name;
     // Read a flatfile of allowed nodes
@@ -844,14 +855,13 @@ public final class H2O {
   }
 
   static void initializePersistence() {
-    PersistIce.initialize();
-    PersistNFS.initialize();
-    HdfsLoader.initialize();
+    HdfsLoader.loadJars();
     if( OPT_ARGS.aws_credentials != null ) {
       try {
         PersistS3.getClient();
       } catch( IllegalArgumentException e ) { Log.err(e); }
     }
+    Persist.initialize();
   }
 
 
@@ -892,8 +902,8 @@ public final class H2O {
       return H2O.SELF._heartbeat.get_free_disk() > MemoryManager.MEM_MAX;
     }
     static boolean isDiskFull(){ // free disk space < 5K?
-      File f = new File(PersistIce.ROOT);
-      return f.getUsableSpace() < (5 << 10);
+      long space = Persist.getIce().getUsableSpace();
+      return space != Persist.UNKNOWN && space < (5 << 10);
     }
     private static boolean junk = false;
     public void run() {
@@ -993,8 +1003,8 @@ public final class H2O {
               if( m == null ) m = val.rawMem();
               if( m != null ) cleaned += m.length;
             } catch(IOException e) {
-              if( isDiskFull() ) // disk full?
-                Log.warn(Sys.CLEAN,"Disk full! Disabling swapping to disk." + ((force)?" Memory low! Please free some space in " + PersistIce.ROOT+"!":""));
+              if( isDiskFull() )
+                Log.warn(Sys.CLEAN,"Disk full! Disabling swapping to disk." + (force?" Memory low! Please free some space in " + Persist.getIce().getPath() + "!":""));
               else
                 Log.warn(Sys.CLEAN,"Disk swapping failed! " + e.getMessage());
               // Something is wrong so mark disk as full anyways so we do not
