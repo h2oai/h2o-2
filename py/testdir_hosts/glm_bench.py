@@ -32,21 +32,20 @@ def run_glms(file,configs):
     csvWrt = csv.DictWriter(output, fieldnames=csv_header, restval=None, dialect='excel', extrasaction='ignore',delimiter=',')
     try:
         k = parse_file(file)
-        try:
-            for kwargs in configs:
-                res = h2o.nodes[0].GLM(k, timeoutSecs=6000000, **kwargs)
-                glm = res['GLMModel']
-                coefs = glm['coefficients']
-                coefs = glm['coefficients']
-                print 'model computed in',res['computation_time']
-                max_len = 0
-                val = glm['validations'][0]
-                row = {'time':time.asctime(),'nodes#':len(h2o.nodes)}
-                row.update(kwargs)
-                row.update(glm)
-                row.update(val)
-                csvWrt.writerow(row)
-            h2o.nodes[0].remove_key(k)
+        for kwargs in configs:
+            res = h2o.nodes[0].GLM(k, timeoutSecs=6000000, **kwargs)
+            glm = res['GLMModel']
+            coefs = glm['coefficients']
+            coefs = glm['coefficients']
+            print 'model computed in',res['computation_time']
+            max_len = 0
+            val = glm['validations'][0]
+            row = {'time':time.asctime(),'nodes#':len(h2o.nodes)}
+            row.update(kwargs)
+            row.update(glm)
+            row.update(val)
+            csvWrt.writerow(row)
+        h2o.nodes[0].remove_key(k)
     finally:
         output.close()
     
@@ -63,14 +62,12 @@ if __name__ == '__main__':
     else:
         files = local_files
         h2o_hosts.build_cloud_with_hosts(use_hdfs=True,base_port=54321)
-    try:
-        # run alstate
-        run_glms(files['allstate'],[{'y':'Claim_Amount','lambda':l,'alpha':a,'family':'poisson','n_folds':10} for l in (1e-4,1e-5) for a in (1.0,0.5,0.0)])
-        # run airlines
-        run_glms(files['airlines'],[{'y':'IsArrDelayed','x':'0,1,2,3,4,5,6,7,8,9,12,16,17,18','lambda':l,'alpha':a,'family':'binomial','n_folds':10,'case':1}
-                                          for l in (0.035,0.025,1e-2,5e-3,1e-3,5e-4,1e-4,5e-5,1e-5,1e-8)
-                                          for a in (1.0,0.5,0.0)])
-        h2o.tear_down_cloud()
-
+    # run alstate
+    run_glms(files['allstate'],[{'y':'Claim_Amount','lambda':l,'alpha':a,'family':'poisson','n_folds':10} for l in (1e-4,1e-5) for a in (1.0,0.5,0.0)])
+    # run airlines
+    run_glms(files['airlines'],[{'y':'IsArrDelayed','x':'0,1,2,3,4,5,6,7,8,9,12,16,17,18','lambda':l,'alpha':a,'family':'binomial','n_folds':10,'case':1}
+                                      for l in (0.035,0.025,1e-2,5e-3,1e-3,5e-4,1e-4,5e-5,1e-5,1e-8)
+                                      for a in (1.0,0.5,0.0)])
+    h2o.tear_down_cloud()
 
 

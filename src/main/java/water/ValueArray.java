@@ -453,10 +453,10 @@ public class ValueArray extends Iced implements Cloneable {
     }
     @Override public void close() { _chkidx = _ary.chunks(); _ab = null; }
     @Override public int read() throws IOException {
-      return available() == 0 ? -1 : _ab.get1();
+      return available() > 0 ? _ab.get1():-1;
     }
     @Override public int read(byte[] b, int off, int len) throws IOException {
-      return available() > 0 ? -1 : _ab.read(b,off,len);
+      return available() > 0 ? _ab.read(b,off,len):-1;
     }
   }
 
