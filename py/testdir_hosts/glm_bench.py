@@ -65,7 +65,7 @@ if __name__ == '__main__':
         h2o_hosts.build_cloud_with_hosts(use_hdfs=True,base_port=54321)
     try:
         # run alstate
-        run_glms(files['allstate'],[{'y':'Claim_Amount','lambda':l,'alpha':a,'family':'poisson','n_folds':10} for l in (1e-2,1e-3,1e-4,1e-5) for a in (1.0,0.5,0.0)])
+        run_glms(files['allstate'],[{'y':'Claim_Amount','lambda':l,'alpha':a,'family':'poisson','n_folds':10} for l in (1e-4,1e-5) for a in (1.0,0.5,0.0)])
         # run airlines
         run_glms(files['airlines'],[{'y':'IsArrDelayed','x':'0,1,2,3,4,5,6,7,8,9,12,16,17,18','lambda':l,'alpha':a,'family':'binomial','n_folds':10,'case':1}
                                           for l in (0.035,0.025,1e-2,5e-3,1e-3,5e-4,1e-4,5e-5,1e-5,1e-8)
