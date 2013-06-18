@@ -16,7 +16,9 @@ import com.google.gson.*;
 public class KMeansModel extends Model implements Progress {
   public static final String NAME = KMeansModel.class.getSimpleName();
   public double[][] _clusters; // The cluster centers, normalized according to _va
+  public double _error; // Sum of min square distances
   public int _iteration;
+  public int _maxIter;
   public long _randSeed;
   public boolean _normalized;
 
@@ -247,7 +249,7 @@ public class KMeansModel extends Model implements Progress {
           KMeans.closest(_clusters, values, cd);
           chunk = ValueArray.chknum(startRow + row, va.numRows(), ROW_SIZE);
           if( chunk != updatedChk ) {
-            updateClusters(clusters, count, chunk, va.numRows(), rpc, updatedRow);
+            updateClusters(clusters, count, updatedChk, va.numRows(), rpc, updatedRow);
             updatedChk = chunk;
             updatedRow = startRow + row;
             count = 0;

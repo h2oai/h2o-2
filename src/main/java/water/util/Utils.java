@@ -209,8 +209,9 @@ public class Utils {
     a[change] = helper;
   }
 
-  public static void close(Closeable closeable) {
-    try { if( closeable != null ) closeable.close(); } catch( IOException _ ) { }
+  public static void close(Closeable...closeable) {
+    for(Closeable c : closeable)
+      try { if( c != null ) c.close(); } catch( IOException _ ) { }
   }
 
   public static void close(Socket s) {

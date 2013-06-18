@@ -11,7 +11,6 @@ import water.exec.Function;
 import water.nbhm.NonBlockingHashMap;
 import water.parser.ParseDataset;
 import water.persist.*;
-import water.r.Shell;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
@@ -499,7 +498,6 @@ public final class H2O {
     public String random_udp_drop = null; // test only, randomly drop udp incoming
     public int pparse_limit = Integer.MAX_VALUE;
     public String no_requests_log = null; // disable logging of Web requests
-    public String rshell="false"; //FastR shell
   }
   public static boolean IS_SYSTEM_RUNNING = false;
 
@@ -540,9 +538,6 @@ public final class H2O {
     initializeExpressionEvaluation(); // starts the expression evaluation system
 
     startupFinalize(); // finalizes the startup & tests (if any)
-
-    if (OPT_ARGS.rshell.equals("true"))  Shell.go();
-    // Hang out here until the End of Time
   }
 
   private static void initializeExpressionEvaluation() {
