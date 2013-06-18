@@ -46,7 +46,6 @@ def run_glms(file,configs):
                 row.update(glm)
                 row.update(val)
                 csvWrt.writerow(row)
-        finally:
             h2o.nodes[0].remove_key(k)
     finally:
         output.close()
@@ -71,8 +70,6 @@ if __name__ == '__main__':
         run_glms(files['airlines'],[{'y':'IsArrDelayed','x':'0,1,2,3,4,5,6,7,8,9,12,16,17,18','lambda':l,'alpha':a,'family':'binomial','n_folds':10,'case':1}
                                           for l in (0.035,0.025,1e-2,5e-3,1e-3,5e-4,1e-4,5e-5,1e-5,1e-8)
                                           for a in (1.0,0.5,0.0)])
-    finally:
-        h2o.check_sandbox_for_errors()
         h2o.tear_down_cloud()
 
 
