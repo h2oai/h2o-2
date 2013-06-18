@@ -571,12 +571,12 @@ public final class AutoBuffer {
 
   public AutoBuffer put(Freezable f) {
     if( f == null ) return put2(TypeMap.NULL);
-    put2(f.frozenType());
+    put2((short)f.frozenType());
     return f.write(this);
   }
   public AutoBuffer put(Iced f) {
     if( f == null ) return put2(TypeMap.NULL);
-    put2(f.frozenType());
+    put2((short)f.frozenType());
     return f.write(this);
   }
   public AutoBuffer putA(Iced[] fs) {

@@ -326,7 +326,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   public Value(Key k, Iced pojo, byte be ) {
     _key = k;
     _pojo = pojo;
-    _type = pojo.frozenType();
+    _type = (short)pojo.frozenType();
     _mem = pojo.write(new AutoBuffer()).buf();
     _max = _mem.length;
     // For the ICE backend, assume new values are not-yet-written.
@@ -339,7 +339,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   public Value(Key k, Freezable pojo) {
     _key = k;
     _pojo = pojo;
-    _type = pojo.frozenType();
+    _type = (short)pojo.frozenType();
     _mem = pojo.write(new AutoBuffer()).buf();
     _max = _mem.length;
     _persist = ICE;

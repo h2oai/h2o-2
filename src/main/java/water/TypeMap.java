@@ -68,7 +68,7 @@ public class TypeMap {
     return install(className,id);
   }
 
-  // Install the type mapping until lock, and grow all the arrays as needed.
+  // Install the type mapping under lock, and grow all the arrays as needed.
   // The grow-step is not obviously race-safe: readers of all the arrays will
   // get either the old or new arrays.  However readers are all reader with
   // smaller type ids, and these will work fine in either old or new arrays.

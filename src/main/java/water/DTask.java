@@ -49,6 +49,6 @@ public abstract class DTask<T extends DTask> extends H2OCountedCompleter impleme
   @Override public AutoBuffer write(AutoBuffer bb) { throw barf(); }
   @Override public <F extends Freezable> F read(AutoBuffer bb) { throw barf(); }
   @Override public <F extends Freezable> F newInstance() { throw barf(); }
-  @Override public short frozenType() { throw barf(); }
+  @Override public int frozenType() { throw barf(); }
   public void copyOver(T that) { throw barf(); }
 }
