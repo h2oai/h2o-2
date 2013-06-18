@@ -434,30 +434,88 @@ public class ValueArray extends Iced implements Cloneable {
     return fs;
   }
 
+  public static class VAStream extends InputStream {
+    protected AutoBuffer _ab;
+    protected long _chkidx;
+    protected final ValueArray _ary;
+    protected final ProgressMonitor _pm;
+    protected long _currentChunkSz;
+
+    public VAStream(ValueArray ary, ProgressMonitor pm){_ary = ary; _pm = pm;}
+    @Override public int available() throws IOException {
+      if( _ab==null || _ab.remaining()==0 ) {
+        if( _chkidx >= _ary.chunks() ) return 0;
+        _ab = _ary.getChunk(_chkidx++);
+        if(_pm != null)_pm.update(_currentChunkSz);
+         _currentChunkSz = _ab.remaining();
+      }
+      return _ab.remaining();
+    }
+    @Override public void close() { _chkidx = _ary.chunks(); _ab = null; }
+    @Override public int read() throws IOException {
+      return available() > 0 ? _ab.get1():-1;
+    }
+    @Override public int read(byte[] b, int off, int len) throws IOException {
+      return available() > 0 ? _ab.read(b,off,len):-1;
+    }
+  }
+
+  public static class CsvVAStream extends VAStream {
+    private byte[] _currentLine;
+    private int _i,_rid, _numrows;
+
+    public CsvVAStream(ValueArray ary, ProgressMonitor pm){
+      this(ary,pm,true);
+    }
+    public CsvVAStream(ValueArray ary, ProgressMonitor pm, boolean header){
+      super(ary,pm);
+      StringBuilder sb = new StringBuilder('"' + ary._cols[0]._name + '"');
+      for(int i = 1; i < ary._cols.length; ++i)
+        sb.append(',').append('"' + ary._cols[i]._name + '"');
+      sb.append('\n');
+      _currentLine = sb.toString().getBytes();
+      _numrows = 1;
+    }
+    @Override
+    public int available() throws IOException{
+      if(_i == _currentLine.length){
+        if(++_rid == _numrows){
+          _ab = null;
+          int abytes = super.available();
+          if(abytes <= 0) return abytes;
+          _numrows = _ary.rpc(_chkidx-1);
+          _rid = 0;
+        }
+        StringBuilder sb = new StringBuilder();
+        boolean f = true;
+        for(Column c:_ary._cols){
+          if(f) f = false; else sb.append(',');
+          if(!_ary.isNA(_ab, _rid, c)){
+            if(c.isEnum()) sb.append('"' + c._domain[(int)_ary.data(_ab, _rid, c)] + '"');
+            else if(!c.isFloat()) sb.append(_ary.data(_ab, _rid, c));
+            else sb.append(_ary.datad(_ab,_rid,c));
+          }
+        }
+        sb.append('\n');
+        _currentLine = sb.toString().getBytes();
+      }
+      _i = 0;
+      return _currentLine.length - _i;
+    }
+    @Override public void close() { super.close(); _currentLine = null;}
+    @Override public int read() throws IOException {
+      return available() <= 0 ? -1 : _currentLine[_i++];
+    }
+    @Override public int read(byte[] b, int off, int len) throws IOException {
+      int n = available();
+      if(n <= 0)return n;
+      n = Math.min(n, len);
+      System.arraycopy(_currentLine, _i, b, off, n);
+      _i += n;
+      return n;
+    }
+  }
   // Wrap a InputStream over this ValueArray
   public InputStream openStream() {return openStream(null);}
-  public InputStream openStream(ProgressMonitor p) {
-	final ProgressMonitor progress = p;
-    return new InputStream() {
-      private AutoBuffer _ab;
-      private long _chkidx;
-      private long _currentChunkSz;
-      @Override public int available() throws IOException {
-        if( _ab==null || _ab.remaining()==0 ) {
-          if(progress != null)progress.update(_currentChunkSz);
-          if( _chkidx >= chunks() ) return 0;
-          _ab = getChunk(_chkidx++);
-          _currentChunkSz = _ab.remaining();
-        }
-        return _ab.remaining();
-      }
-      @Override public void close() { _chkidx = chunks(); _ab = null; }
-      @Override public int read() throws IOException {
-        return available() == 0 ? -1 : _ab.get1();
-      }
-      @Override public int read(byte[] b, int off, int len) throws IOException {
-        return available() == 0 ? -1 : _ab.read(b,off,len);
-      }
-    };
-  }
+  public InputStream openStream(ProgressMonitor p) {return new VAStream(this, p);}
 }

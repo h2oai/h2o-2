@@ -310,7 +310,7 @@ public class Inspect extends Request {
           + KMeans.link(ary._key, "KMeans") + "<br />"
           + "Score data using "
           + RFScore.link(ary._key, "Random Forest") + ", "
-          + GLMScore.link(KEY, ary._key, 0.0, "GLM")
+          + GLMScore.link(KEY, ary._key, 0.0, "GLM") + "</br><b>Download as</b> " + DownloadDataset.link(ary._key, "CSV")
         + "</div>"
         + "<p><b><font size=+1>"
           + ary._cols.length + " columns, "

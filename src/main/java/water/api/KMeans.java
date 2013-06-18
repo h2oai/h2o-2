@@ -13,6 +13,7 @@ import com.google.gson.*;
 public class KMeans extends Request {
   protected final H2OHexKey _source = new H2OHexKey(SOURCE_KEY);
   protected final Int _k = new Int(K);
+  protected final Int _maxIter = new Int(MAX_ITER, 0);
   protected final Real _epsilon = new Real(EPSILON, 1e-4);
   protected final LongInt _seed = new LongInt(SEED, new Random().nextLong(), "");
   protected final Bool _normalize = new Bool(NORMALIZE, false, "");
@@ -24,6 +25,7 @@ public class KMeans extends Request {
     Key source = va._key;
     int k = _k.value();
     double epsilon = _epsilon.value();
+    int maxIter = _maxIter.value();
     long seed = _seed.record()._valid ? _seed.value() : _seed._defaultValue;
     boolean normalize = _normalize.record()._valid ? _normalize.value() : _normalize._defaultValue;
     int[] cols = _columns.value();
@@ -37,7 +39,7 @@ public class KMeans extends Request {
     }
 
     try {
-      hex.KMeans job = hex.KMeans.start(dest, va, k, epsilon, seed, normalize, cols);
+      hex.KMeans job = hex.KMeans.start(dest, va, k, epsilon, maxIter, seed, normalize, cols);
       JsonObject response = new JsonObject();
       response.addProperty(JOB, job.self().toString());
       response.addProperty(DEST_KEY, dest.toString());

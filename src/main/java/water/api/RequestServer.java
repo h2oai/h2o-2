@@ -80,7 +80,8 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new TutorialKMeans()),      "KMeans",        "Tutorials");
 
     // internal handlers
-    registerRequest(new StaticHTMLPage("/h2o/CoefficientChart.html","chart"));
+    //registerRequest(new StaticHTMLPage("/h2o/CoefficientChart.html","chart"));
+    registerRequest(new DownloadDataset());
     registerRequest(new Cancel());
     registerRequest(new Exec());
     registerRequest(new ExportS3Progress());

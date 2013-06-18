@@ -22,19 +22,20 @@ public class KMeans extends Job {
     super("KMeans K: " + k + ", Cols: " + cols.length, dest);
   }
 
-  public static KMeans start(Key dest, final ValueArray va, final int k, final double epsilon, long randSeed,
-      boolean normalize, int... cols) {
+  public static KMeans start(Key dest, final ValueArray va, final int k, final double epsilon, final int maxIter,
+      long randSeed, boolean normalize, int... cols) {
     final KMeans job = new KMeans(dest, k, cols);
 
-    // Unlike other models, k-means is a discovery-only procedure and does
-    // not require a response-column to train.  This also means the clusters
-    // are not classes (although, if a class/response is associated with each
+    // k-means is an unsupervised learning algorithm and does not require a
+    // response-column to train. This also means the clusters are not classes
+    // (although, if a class/response is associated with each
     // row we could count the number of each class in each cluster).
     int cols2[] = Arrays.copyOf(cols, cols.length + 1);
     cols2[cols.length] = -1;  // No response column
     final KMeansModel res = new KMeansModel(job.dest(), cols2, va._key);
     res._normalized = normalize;
     res._randSeed = randSeed;
+    res._maxIter = maxIter;
     UKV.put(job.dest(), res);
     // Updated column mapping selection after removing various junk columns
     final int[] filteredCols = res.columnMapping(va.colNames());
@@ -93,10 +94,8 @@ public class KMeans extends Job {
     clusters = recluster(clusters, k, rand);
     res._clusters = clusters;
 
-    // Iterate until no cluster mean moves more than epsilon
-    boolean moved = true;
-    while( moved ) {
-      moved = false;
+    for( ;; ) {
+      boolean moved = false;
       Lloyds task = new Lloyds();
       task._arykey = va._key;
       task._cols = cols;
@@ -105,17 +104,24 @@ public class KMeans extends Job {
       task.invoke(va._key);
 
       for( int cluster = 0; cluster < clusters.length; cluster++ ) {
-        for( int column = 0; column < cols.length - 1; column++ ) {
-          double value = task._sums[cluster][column] / task._counts[cluster];
-          if( Math.abs(value - clusters[cluster][column]) > epsilon ) {
-            moved = true;
+        if( task._counts[cluster] > 0 ) {
+          for( int column = 0; column < cols.length - 1; column++ ) {
+            double value = task._sums[cluster][column] / task._counts[cluster];
+            if( Math.abs(value - clusters[cluster][column]) > epsilon ) {
+              moved = true;
+            }
+            clusters[cluster][column] = value;
           }
-          clusters[cluster][column] = value;
         }
       }
-
+      res._error = task._error;
       res._iteration++;
       UKV.put(dest(), res);
+      // Iterate until no cluster mean moves more than epsilon,
+      if( !moved ) break;
+      // reached max iterations,
+      if( res._maxIter != 0 && res._iteration >= res._maxIter ) break;
+      // or job cancelled
       if( cancelled() ) break;
     }
 
@@ -197,6 +203,7 @@ public class KMeans extends Job {
 
     double[][] _sums;     // OUT: Sum of (normalized) features in each cluster
     int[] _counts;        // OUT: Count of rows in cluster
+    double _error;        // OUT: Total sqr distance
 
     @Override public void map(Key key) {
       assert key.home();
@@ -213,7 +220,9 @@ public class KMeans extends Job {
       // Find closest cluster for each row
       for( int row = 0; row < rows; row++ ) {
         datad(va, bits, row, _cols, _normalize, values);
-        int cluster = closest(_clusters, values, cd)._cluster;
+        closest(_clusters, values, cd);
+        int cluster = cd._cluster;
+        _error += cd._dist;
         if( cluster == -1 ) continue; // Ignore broken row
 
         // Add values and increment counter for chosen cluster
@@ -231,12 +240,14 @@ public class KMeans extends Job {
       if( _sums == null ) {
         _sums = task._sums;
         _counts = task._counts;
+        _error = task._error;
       } else {
         for( int cluster = 0; cluster < _counts.length; cluster++ ) {
           for( int column = 0; column < _sums[0].length; column++ )
             _sums[cluster][column] += task._sums[cluster][column];
           _counts[cluster] += task._counts[cluster];
         }
+        _error += task._error;
       }
     }
   }
@@ -300,17 +311,28 @@ public class KMeans extends Job {
     ClusterDist cd = new ClusterDist();
 
     while( count < res.length ) {
-      // Compute total-square-distance from all points to all other points so-far
-      double sum = 0;
-      for( int i = 0; i < points.length; i++ )
-        sum += minSqr(res, points[i], cd, count);
-
+//      // Original k-means++, doesn't seem to help in many cases
+//      double sum = 0;
+//      for( int i = 0; i < points.length; i++ )
+//        sum += minSqr(res, points[i], cd, count);
+//
+//      for( int i = 0; i < points.length; i++ ) {
+//        if( minSqr(res, points[i], cd, count) >= rand.nextDouble() * sum ) {
+//          res[count++] = points[i];
+//          break;
+//        }
+//      }
+      // Takes cluster further from any already chosen ones
+      double max = 0;
+      int index = 0;
       for( int i = 0; i < points.length; i++ ) {
-        if( minSqr(res, points[i], cd, count) >= rand.nextDouble() * sum ) {
-          res[count++] = points[i];
-          break;
+        double sqr = minSqr(res, points[i], cd, count);
+        if( sqr > max ) {
+          max = sqr;
+          index = i;
         }
       }
+      res[count++] = points[index];
     }
 
     return res;
@@ -320,7 +342,7 @@ public class KMeans extends Job {
   // know exists because we filtered out columns with no mean).
   public static double[] datad(ValueArray va, AutoBuffer bits, int row, int[] cols, boolean normalize, double[] res) {
     for( int c = 0; c < cols.length - 1; c++ ) {
-      ValueArray.Column C = va._cols[c];
+      ValueArray.Column C = va._cols[cols[c]];
       // Use the mean if missing data, then center & normalize
       double d = (va.isNA(bits, row, C) ? C._mean : va.datad(bits, row, C));
       if( normalize ) {
