@@ -207,9 +207,9 @@ public final class ParseDataset2 extends Job {
     private void streamParse( Key fkey, final InputStream is, final CsvParser.Setup localSetup ) throws IOException {
 
       // All output into a fresh pile of NewVectors, one per column
-      final NewVector nvs[] = new NewVector[_cols.length];
+      final NewChunk nvs[] = new NewChunk[_cols.length];
       for( int i=0; i<nvs.length; i++ )
-        nvs[i] = new NewVector(_cols[i],0/*starting chunk#*/);
+        nvs[i] = new NewChunk(_cols[i],0/*starting chunk#*/);
 
       // The parser for fluid vecs
       CsvParser parser = new CsvParser(localSetup,false) {
@@ -293,7 +293,7 @@ public final class ParseDataset2 extends Job {
 
   public static enum Compression { NONE, ZIP, GZIP }
   public static Compression guessCompressionMethod( ByteVec vec) {
-    C1Vector bv = vec.elem2BV(0); // First chunk of bytes
+    C1Chunk bv = vec.elem2BV(0); // First chunk of bytes
     // Look for ZIP magic
     if( vec.length() > ZipFile.LOCHDR && bv.get4(0) == ZipFile.LOCSIG )
       return Compression.ZIP;
@@ -304,7 +304,7 @@ public final class ParseDataset2 extends Job {
 
   public static CsvParser.Setup csvGuessValue( ByteVec vec, byte separator, Compression compression ) {
     // Since this data is all bytes, we know each chunk is just raw text.
-    C1Vector bv = vec.elem2BV(0);
+    C1Chunk bv = vec.elem2BV(0);
     // See if we can make sense of the first few rows.
     byte[] bs = bv._mem;
     int off = 0;                   // Offset of read/decompressed bytes

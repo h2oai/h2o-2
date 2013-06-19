@@ -33,7 +33,7 @@ public class FVecTest extends TestUtil {
   public static class ByteHisto extends MRTask2<ByteHisto> {
     public int[] _x;
     // Count occurrences of bytes
-    @Override public void map( long start, int len, BigVector bv ) {
+    @Override public void map( long start, int len, Chunk bv ) {
       _x = new int[256];        // One-time set histogram array
       for( long i=start; i<start+len; i++ )
         _x[(int)bv.at(i)]++;
@@ -56,16 +56,16 @@ public class FVecTest extends TestUtil {
     Key key2 = Key.make("newKey",(byte)0,Key.VEC);
     AppendableVec nv = new AppendableVec(key2);
     Vec res = new TestNewVec().invoke(nv,nfs).vecs(0);
-    assertEquals(nfs.at(0)+1,res.at(0));
-    assertEquals(nfs.at(1)+1,res.at(1));
-    assertEquals(nfs.at(2)+1,res.at(2));
+    assertEquals(nfs.get(0)+1,res.get(0));
+    assertEquals(nfs.get(1)+1,res.get(1));
+    assertEquals(nfs.get(2)+1,res.get(2));
 
     UKV.remove(key );
     UKV.remove(key2);
   }
 
   public static class TestNewVec extends MRTask2<TestNewVec> {
-    @Override public void map( long start, int len, BigVector out, BigVector in ) {
+    @Override public void map( long start, int len, Chunk out, Chunk in ) {
       for( long i=start; i<start+len; i++ )
         out.append2( in.at(i)+(in.at(i) >= ' ' ? 1 : 0),0);
     }
@@ -102,7 +102,7 @@ public class FVecTest extends TestUtil {
   // Sum each column independently
   private static class Sum extends MRTask2<Sum> {
     double _sums[];
-    @Override public void map( long start, int len, BigVector[] bvs ) {
+    @Override public void map( long start, int len, Chunk[] bvs ) {
       _sums = new double[bvs.length];
       for( long i=start; i<start+len; i++ )
         for( int j=0; j<bvs.length; j++ )
@@ -162,7 +162,7 @@ public class FVecTest extends TestUtil {
       return -1;
     }
 
-    @Override public void map( long start, int len, BigVector bv ) {
+    @Override public void map( long start, int len, Chunk bv ) {
       _words = WORDS;
 
       long i = start;           // Parse point

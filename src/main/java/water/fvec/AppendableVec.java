@@ -17,9 +17,9 @@ import java.util.Arrays;
 public class AppendableVec extends Vec {
   long _espc[];
 
-  AppendableVec( Key key ) { 
+  AppendableVec( Key key ) {
     super(key,null,Double.MAX_VALUE,Double.MIN_VALUE,0);
-    _espc = new long[4]; 
+    _espc = new long[4];
   }
 
   // A NewVector chunk was "closed" - completed.  Add it's info to the roll-up.
@@ -39,7 +39,7 @@ public class AppendableVec extends Vec {
   // Called single-threaded from the M/R framework.
   public void reduce( AppendableVec nv ) {
     if( this == nv ) return;    // Trivially done
-    
+
     // Combine arrays of elements-per-chunk
     long e1[] = nv._espc;       // Shorter array of longs?
     if( e1.length > _espc.length ) {
@@ -47,7 +47,7 @@ public class AppendableVec extends Vec {
       _espc = nv._espc;         // Keep longer in the object
     }
     for( int i=0; i<e1.length; i++ ) // Copy non-zero elements over
-      if( e1[i] != 0 && _espc[i]==0 ) 
+      if( e1[i] != 0 && _espc[i]==0 )
         _espc[i] = e1[i];
   }
 
@@ -59,7 +59,7 @@ public class AppendableVec extends Vec {
     int nchunk = _espc.length;
     while( _espc[nchunk-1] == 0 ) nchunk--;
 
-    // Compute elems-per-chunk.  
+    // Compute elems-per-chunk.
     // Roll-up elem counts, so espc[i] is the starting element# of chunk i.
     // TODO: Complete fail: loads all data locally - will force OOM.  Needs to be
     // an RPC to test Key existence, and return length & other metadata
@@ -69,7 +69,7 @@ public class AppendableVec extends Vec {
       espc[i] = x;              // Start elem# for chunk i
       x += _espc[i];            // Raise total elem count
     }
-    espc[nchunk]=x;             // Total element count in last 
+    espc[nchunk]=x;             // Total element count in last
     // Replacement plain Vec for AppendableVec.
     Vec vec = new Vec(_key,espc,_min,_max,_sum);
     DKV.put(_key,vec);          // Inject the header
@@ -80,14 +80,14 @@ public class AppendableVec extends Vec {
   public boolean readable() { return false; }
   public boolean writable() { return true ; }
 
-  @Override public BigVector elem2BV( int cidx ) { return new NewVector(this,cidx); }
+  @Override public Chunk elem2BV( int cidx ) { return new NewChunk(this,cidx); }
 
   // None of these are supposed to be called while building the new vector
   public Value chunkIdx( int cidx ) { throw H2O.fail(); }
-  long length() { throw H2O.fail(); }
+  public long length() { throw H2O.fail(); }
   public int nChunks() { throw H2O.fail(); }
   int elem2ChunkIdx( long i ) { throw H2O.fail(); }
   public long chunk2StartElem( int cidx ) { throw H2O.fail(); }
-  long   at ( long i ) { throw H2O.fail(); }
-  double atd( long i ) { throw H2O.fail(); }
+  public long   get ( long i ) { throw H2O.fail(); }
+  public double getd( long i ) { throw H2O.fail(); }
 }

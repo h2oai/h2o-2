@@ -13,9 +13,10 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
 
   // Run some useful function over this <strong>local</strong> BigVector, and
   // record the results in the <em>this<em> MRTask2.
-  public void map( long start, int len, BigVector bv ) { }
-  public void map( long start, int len, BigVector bv0, BigVector bv1 ) { }
-  public void map( long start, int len, BigVector bvs[] ) { }
+  public void map( long start, int len, Chunk chk ) { }
+  public void map( long start, int len, Chunk bv0, Chunk bv1 ) { }
+  public void map( long start, int len, Chunk bvs[] ) { }
+  public void map( Chunk[] chk ) { }
 
   // Combine results from 'mrt' into 'this' MRTask2.  Both 'this' and 'mrt' are
   // guaranteed to either have map() run on them, or be the results of a prior
@@ -49,11 +50,11 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
 
   // Top-level blocking call.
   public final T invoke( Vec... vecs ) { return invoke(new Frame(null,null,vecs)); }
-  public final T invoke( Frame fr ) { 
+  public final T invoke( Frame fr ) {
     dfork(fr);
     return getResult();
   }
-  public final T dfork( Frame fr ) { 
+  public final T dfork( Frame fr ) {
     // Use first readable vector to gate home/not-home
     fr.checkCompatible();       // Check for compatible vectors
     _fr = fr;                   // Record vectors to work on
@@ -70,7 +71,7 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
     _fr.closeAppendables();      // Final close ops on any new appendable vec
     return self();
   }
-  
+
   // Called once on remote at top level, probably with a subset of the cloud.
   @Override public final void dinvoke(H2ONode sender) {
     setupLocal();               // Local setup
@@ -116,22 +117,22 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
     assert _left == null && _rite == null && _res == null;
     if( _hi-_lo >= 2 ) { // Multi-chunk case: just divide-and-conquer to 1 chunk
       final int mid = (_lo+_hi)>>>1; // Mid-point
-      _left = clone(); 
-      _rite = clone(); 
+      _left = clone();
+      _rite = clone();
       _left._hi = mid;          // Reset mid-point
       _rite._lo = mid;          // Also set self mid-point
       addToPendingCount(1);     // One fork awaiting completion
       _left.fork();             // Runs in another thread/FJ instance
       _rite.compute2();         // Runs in THIS F/J thread
       return;                   // Not complete until the fork completes
-    } 
+    }
     // Zero or 1 chunks, and further chunk might not be homed here
     if( _hi > _lo ) {           // Single chunk?
       Vec v0 = _fr.firstReadable();
       if( v0.chunkKey(_lo).home() ) { // And chunk is homed here?
 
         // Make decompression chunk headers for these chunks
-        BigVector bvs[] = new BigVector[_fr._vecs.length];
+        Chunk bvs[] = new Chunk[_fr._vecs.length];
         for( int i=0; i<_fr._vecs.length; i++ )
           if( _fr._vecs[i] != null )
             bvs[i] = _fr._vecs[i].elem2BV(_lo);
@@ -145,9 +146,9 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
         _res = self();          // Save results since called map() at least once!
 
         // Further D/K/V put any new vec results.
-        for( BigVector bv : bvs )
-          if( bv != null && bv instanceof NewVector )
-            ((NewVector)bv).close(_fs);
+        for( Chunk bv : bvs )
+          if( bv != null && bv instanceof NewChunk )
+            ((NewChunk)bv).close(_fs);
       }
     }
     tryComplete();              // And this task is complete
@@ -163,7 +164,7 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
     // Only on the top local call, have more completion work
     if( _topLocal ) postLocal();
   }
-      
+
   // Call 'reduce' on pairs of mapped MRTask2's.
   // Collect all pending Futures from both parties as well.
   private void reduce2( MRTask2<T> mrt ) {
@@ -179,10 +180,10 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
   // Block for other queued pending tasks.
   // Copy any final results into 'this', such that a return of 'this' has the results.
   private void postLocal() {
-    reduce3(_nleft);            // Reduce global results from neighbors. 
+    reduce3(_nleft);            // Reduce global results from neighbors.
     reduce3(_nrite);
     if( _fs != null )           // Block on all other pending tasks, also
-      _fs.blockForPending(); 
+      _fs.blockForPending();
     // Finally, must return all results in 'this' because that is the API -
     // what the user expects
     if( _res == null ) _nlo = -1; // Flag for no local results *at all*
@@ -205,7 +206,7 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
   }
 
   // Call user's reduction.  Also reduce any new AppendableVecs.
-  public void reduce4( T mrt ) { 
+  public void reduce4( T mrt ) {
     // Reduce any AppendableVecs
     for( int i=0; i<_fr._vecs.length; i++ )
       if( _fr._vecs[i] instanceof AppendableVec )
