@@ -78,6 +78,18 @@ public class FVecTest extends TestUtil {
     Key fkey = NFSFileVec.make(file);
 
     Key okey = Key.make("cars.hex");
+    Frame fr = ParseDataset2.parse(okey,new Key[]{fkey});
+    //System.out.println(fr);
+    UKV.remove(fkey);
+    UKV.remove(okey);
+  }
+
+  // ==========================================================================
+  /*@Test*/ public void testParse2() {
+    File file = TestUtil.find_test_file("../covtype.csv");
+    Key fkey = NFSFileVec.make(file);
+
+    Key okey = Key.make("covtype.hex");
     ParseDataset2.parse(okey,new Key[]{fkey});
 
     for( int i=0; i<9; i++ )

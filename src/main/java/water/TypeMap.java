@@ -7,8 +7,9 @@ import water.util.Log;
 public class TypeMap {
   static public final short NULL = (short) -1;
   static public final short PRIM_B = 1;
-  static public final short VALUE_ARRAY;
   static public final short C1VECTOR;
+  static public final short FRAME;
+  static public final short VALUE_ARRAY;
   static final public String BOOTSTRAP_CLASSES[] = {
     " BAD",
     "[B",
@@ -32,6 +33,7 @@ public class TypeMap {
     "water.ValueArray$Column",
     "water.api.Script$Done",
     "water.fvec.C1Vector",
+    "water.fvec.Frame",
     "water.parser.ParseDataset",
     "water.parser.ParseDataset$Progress",
     "water.util.JStackCollectorTask",
@@ -52,8 +54,9 @@ public class TypeMap {
     for( String s : CLAZZES )
       MAP.put(s,id++);
     IDS = id;
-    VALUE_ARRAY = (short)onLoad("water.ValueArray");
     C1VECTOR    = (short)onLoad("water.fvec.C1Vector");
+    FRAME       = (short)onLoad("water.fvec.Frame");
+    VALUE_ARRAY = (short)onLoad("water.ValueArray");
     GOLD = new Freezable[BOOTSTRAP_CLASSES.length];
   }
 

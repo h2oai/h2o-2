@@ -239,6 +239,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   }
 
   public boolean isArray() { return _type == TypeMap.VALUE_ARRAY; }
+  public boolean isFrame() { return _type == TypeMap.FRAME; }
 
   // Get the 1st bytes from either a plain Value, or chunk 0 of a ValueArray
   public byte[] getFirstBytes() {

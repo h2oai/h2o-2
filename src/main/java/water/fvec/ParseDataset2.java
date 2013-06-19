@@ -17,8 +17,8 @@ public final class ParseDataset2 extends Job {
 
   // --------------------------------------------------------------------------
   // Parse an array of csv input/file keys into an array of distributed output Vecs.
-  public static void parse(Key okey, Key [] keys) {
-    forkParseDataset(okey, keys, null).get();
+  public static Frame parse(Key okey, Key [] keys) {
+    return forkParseDataset(okey, keys, null).get();
   }
   // Same parse, as a backgroundable Job
   public static ParseDataset2 forkParseDataset(final Key dest, final Key[] keys, final CsvParser.Setup setup) {
@@ -78,13 +78,13 @@ public final class ParseDataset2 extends Job {
 
   // --------------------------------------------------------------------------
   // Top-level parser driver
-  private static Vec[] parse_impl(ParseDataset2 job, Key [] fkeys, CsvParser.Setup setup) {
+  private static void parse_impl(ParseDataset2 job, Key [] fkeys, CsvParser.Setup setup) {
     // remove any previous instance and insert a sentinel (to ensure no one has
     // been writing to the same keys during our parse)!
     UKV.remove(job.dest());
     if( fkeys.length == 0) {
       job.cancel();
-      return null;
+      return;
     }
 
     // Guess column layout.  For multiple files, the caller is supposed to
@@ -101,11 +101,14 @@ public final class ParseDataset2 extends Job {
     if( uzpt._parserr != null )
       throw new ParseException(uzpt._parserr);
 
-    Vec vecs[] = new Vec[uzpt._cols.length];
-    for( int i=0; i<vecs.length; i++ )
+    Vec[] vecs = new Vec[uzpt._cols.length];
+    String[] names = new String[uzpt._cols.length];
+    for( int i=0; i<vecs.length; i++ ) {
       vecs[i] = uzpt._cols[i].close();
-
-    return vecs;
+      names[i] = setup._header ? (""+i) : setup._data[0][i];
+    }
+    // Jam the frame of columns into the K/V store
+    UKV.put(job.dest(),new Frame(job.dest(),names,vecs));
   }
 
   // --------------------------------------------------------------------------

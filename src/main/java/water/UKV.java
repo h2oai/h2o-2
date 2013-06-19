@@ -1,5 +1,6 @@
 package water;
 
+import water.fvec.Frame;
 /**
  * User-View Key/Value Store
  *
@@ -61,6 +62,8 @@ public abstract class UKV {
         remove(vec.chunkKey(i),fs);
       }
     }
+    if( val.isFrame() )
+      ((Frame)val.get()).remove();
     DKV.remove(key,fs);
   }
 
