@@ -97,7 +97,7 @@ public final class ParseDataset2 extends Job {
 
     // Parallel file parse launches across the cluster
     MultiFileParseTask uzpt = new MultiFileParseTask(setup).invoke(fkeys);
-    
+
     if( uzpt._parserr != null )
       throw new ParseException(uzpt._parserr);
 
@@ -117,7 +117,7 @@ public final class ParseDataset2 extends Job {
   // the parallelism on each node.
   private static class MultiFileParseTask extends MRTask<MultiFileParseTask> {
     public final CsvParser.Setup _setup; // The expected column layout
-    // OUTPUT fields: 
+    // OUTPUT fields:
     public String _parserr;              // NULL if parse is OK, else an error string
     // All column data for this one file
     AppendableVec _cols[];
@@ -130,9 +130,9 @@ public final class ParseDataset2 extends Job {
     //static int PLEVEL=2;
     //// Bogus estimate of memory used; cranked really high to force MRTask
     //// to throttle parallelism level.
-    //@Override public long memOverheadPerChunk() { 
+    //@Override public long memOverheadPerChunk() {
     //  System.out.println("MEM_MAX="+MEM+", will reserve "+(MEM/PLEVEL));
-    //  return (MEM/PLEVEL); 
+    //  return (MEM/PLEVEL);
     //}
 
     // Called once per file
@@ -179,9 +179,9 @@ public final class ParseDataset2 extends Job {
           else zis.close();       // Confused: which zipped file to decompress
           break;
         }
-        case GZIP: 
+        case GZIP:
           // Zipped file; no parallel decompression;
-          streamParse(new GZIPInputStream(vec.openStream()),setup); 
+          streamParse(new GZIPInputStream(vec.openStream()),setup);
           break;
         }
       } catch( IOException ioe ) {
@@ -209,9 +209,9 @@ public final class ParseDataset2 extends Job {
     private void streamParse( final InputStream is, final CsvParser.Setup localSetup ) throws IOException {
 
       // All output into a fresh pile of NewVectors, one per column
-      final NewVector nvs[] = new NewVector[_cols.length];
+      final NewChunk nvs[] = new NewChunk[_cols.length];
       for( int i=0; i<nvs.length; i++ )
-        nvs[i] = new NewVector(_cols[i],0/*starting chunk#*/);
+        nvs[i] = new NewChunk(_cols[i],0/*starting chunk#*/);
 
       // The parser for fluid vecs
       CsvParser parser = new CsvParser(localSetup,false) {
@@ -265,12 +265,12 @@ public final class ParseDataset2 extends Job {
             nvs[colIdx].append2(number,exp);
             _col++;             // Next column filled in
           }
-          
-          @Override public void addStrCol(int colIdx, ValueString str) { 
+
+          @Override public void addStrCol(int colIdx, ValueString str) {
             Log.unwrap(System.err,"colIdx="+colIdx+" str="+str);
             assert colIdx==_col;
             _col++;             // Next column filled in
-            throw H2O.unimpl(); 
+            throw H2O.unimpl();
           }
           @Override public void addInvalidCol(int colIdx) { throw H2O.unimpl(); }
           @Override public void rollbackLine() { }
@@ -294,17 +294,17 @@ public final class ParseDataset2 extends Job {
     private void distroParse( ByteVec vec, final CsvParser.Setup localSetup ) throws IOException {
       //new DParse(localSetup).invoke(vec,_cols);
 
-      
+
     }
     private class DParse extends MRTask2<DParse> {
       final CsvParser.Setup _setup;
       DParse(CsvParser.Setup setup) { _setup = setup; }
-      @Override public void map( final long start, final int len, final BigVector bvs[] ) {
-        final BigVector in = bvs[bvs.length-1]; // Input file in last BigVector
+      @Override public void map( final long start, final int len, final Chunk bvs[] ) {
+        final Chunk in = bvs[bvs.length-1]; // Input file in last BigVector
         // Pre-copy / pre-cast the initial BV's to NewVectors
-        final NewVector nvs[] = new NewVector[bvs.length-1];
+        final NewChunk nvs[] = new NewChunk[bvs.length-1];
         for( int i=0; i<nvs.length; i++ )
-          nvs[i] = (NewVector)bvs[i];
+          nvs[i] = (NewChunk)bvs[i];
         // The Parser
         CsvParser parser = new CsvParser(_setup,false) {
             private byte[] _mem2; // Chunk following this one
@@ -312,7 +312,7 @@ public final class ParseDataset2 extends Job {
             @Override public byte[] getChunkData( int cidx ) {
               if( cidx==0 ) return in._mem;
               if( _mem2 != null ) return _mem2;
-              BigVector in2 = in._vec.nextBV(in);
+              Chunk in2 = in._vec.nextBV(in);
               return in2 == null ? null : (_mem2=in2._mem);
             }
             // Handle a newLine action from the parser
@@ -329,12 +329,12 @@ public final class ParseDataset2 extends Job {
               nvs[colIdx].append2(number,exp);
               _col++;             // Next column filled in
             }
-            
-            @Override public void addStrCol(int colIdx, ValueString str) { 
+
+            @Override public void addStrCol(int colIdx, ValueString str) {
               Log.unwrap(System.err,"colIdx="+colIdx+" str="+str);
               assert colIdx==_col;
               _col++;             // Next column filled in
-              throw H2O.unimpl(); 
+              throw H2O.unimpl();
             }
             @Override public void addInvalidCol(int colIdx) { throw H2O.unimpl(); }
             @Override public void rollbackLine() { }
@@ -351,7 +351,7 @@ public final class ParseDataset2 extends Job {
 
   public static enum Compression { NONE, ZIP, GZIP }
   public static Compression guessCompressionMethod( ByteVec vec) {
-    C1Vector bv = vec.elem2BV(0); // First chunk of bytes
+    C1Chunk bv = vec.elem2BV(0); // First chunk of bytes
     // Look for ZIP magic
     if( vec.length() > ZipFile.LOCHDR && bv.get4(0) == ZipFile.LOCSIG )
       return Compression.ZIP;
@@ -362,7 +362,7 @@ public final class ParseDataset2 extends Job {
 
   public static CsvParser.Setup csvGuessValue( ByteVec vec, byte separator, Compression compression ) {
     // Since this data is all bytes, we know each chunk is just raw text.
-    C1Vector bv = vec.elem2BV(0);
+    C1Chunk bv = vec.elem2BV(0);
     // See if we can make sense of the first few rows.
     byte[] bs = bv._mem;
     int off = 0;                   // Offset of read/decompressed bytes

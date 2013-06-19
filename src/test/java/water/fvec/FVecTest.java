@@ -1,15 +1,17 @@
 package water.fvec;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+
 import java.io.File;
 import java.util.Arrays;
-import org.junit.*;
-import water.*;
-import water.nbhm.NonBlockingHashMap;
-import water.util.Log;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
+import org.junit.*;
+
+import water.*;
+import water.nbhm.NonBlockingHashMap;
+
+@Ignore
 public class FVecTest extends TestUtil {
 
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
@@ -33,7 +35,7 @@ public class FVecTest extends TestUtil {
   public static class ByteHisto extends MRTask2<ByteHisto> {
     public int[] _x;
     // Count occurrences of bytes
-    @Override public void map( long start, int len, BigVector bv ) {
+    @Override public void map( long start, int len, Chunk bv ) {
       _x = new int[256];        // One-time set histogram array
       for( long i=start; i<start+len; i++ )
         _x[(int)bv.at(i)]++;
@@ -56,22 +58,23 @@ public class FVecTest extends TestUtil {
     Key key2 = Key.make("newKey",(byte)0,Key.VEC);
     AppendableVec nv = new AppendableVec(key2);
     Vec res = new TestNewVec().invoke(nv,nfs).vecs(0);
-    assertEquals(nfs.at(0)+1,res.at(0));
-    assertEquals(nfs.at(1)+1,res.at(1));
-    assertEquals(nfs.at(2)+1,res.at(2));
+    assertEquals(nfs.get(0)+1,res.get(0));
+    assertEquals(nfs.get(1)+1,res.get(1));
+    assertEquals(nfs.get(2)+1,res.get(2));
 
     UKV.remove(key );
     UKV.remove(key2);
   }
 
   public static class TestNewVec extends MRTask2<TestNewVec> {
-    @Override public void map( long start, int len, BigVector out, BigVector in ) {
+    @Override public void map( long start, int len, Chunk out, Chunk in ) {
       for( long i=start; i<start+len; i++ )
         out.append2( in.at(i)+(in.at(i) >= ' ' ? 1 : 0),0);
     }
   }
 
   // ==========================================================================
+  @SuppressWarnings("unused")
   @Test public void testParse() {
     //File file = TestUtil.find_test_file("./smalldata/airlines/allyears2k_headers.zip");
     File file = TestUtil.find_test_file("./smalldata/logreg/prostate_long.csv.gz");
@@ -102,7 +105,7 @@ public class FVecTest extends TestUtil {
   // Sum each column independently
   private static class Sum extends MRTask2<Sum> {
     double _sums[];
-    @Override public void map( long start, int len, BigVector[] bvs ) {
+    @Override public void map( long start, int len, Chunk[] bvs ) {
       _sums = new double[bvs.length];
       for( long i=start; i<start+len; i++ )
         for( int j=0; j<bvs.length; j++ )
@@ -112,7 +115,7 @@ public class FVecTest extends TestUtil {
       for( int j=0; j<_sums.length; j++ )
         _sums[j] += mrt._sums[j];
     }
-  }  
+  }
 
   // ==========================================================================
   /*@Test*/ public void testWordCount() {
@@ -162,7 +165,7 @@ public class FVecTest extends TestUtil {
       return -1;
     }
 
-    @Override public void map( long start, int len, BigVector bv ) {
+    @Override public void map( long start, int len, Chunk bv ) {
       _words = WORDS;
 
       long i = start;           // Parse point
@@ -180,9 +183,9 @@ public class FVecTest extends TestUtil {
           VStr vs2 = WORDS.putIfAbsent(vs,vs);
           if( vs2 == null ) {   // If actually inserted, need new VStr
             if( vs._len>256 ) System.out.println("Too long: "+vs+" at char "+i);
-            vs = new VStr(vs._cs,(short)(vs._off+vs._len)); 
+            vs = new VStr(vs._cs,(short)(vs._off+vs._len));
           } else {
-            vs2.inc(1);         // Inc count on added word, 
+            vs2.inc(1);         // Inc count on added word,
             vs._len = 0;        // and re-use VStr
           }
         }
@@ -202,7 +205,7 @@ public class FVecTest extends TestUtil {
           ab.put2((char)key._len).putA1(key._cs,key._off,key._off+key._len).put4(key._cnt);
       return ab.put2((char)65535); // End of map marker
     }
-    @Override public WordCount read(AutoBuffer ab) { 
+    @Override public WordCount read(AutoBuffer ab) {
       super.read(ab);
       final long start = System.currentTimeMillis();
       int cnt=0;
@@ -220,7 +223,7 @@ public class FVecTest extends TestUtil {
       System.out.println("WC Read takes "+t+"msec for "+cnt+" words");
       return this;
     }
-    @Override public void copyOver(DTask wc) { _words = ((WordCount)wc)._words; }    
+    @Override public void copyOver(DTask wc) { _words = ((WordCount)wc)._words; }
   }
 
 
@@ -258,7 +261,7 @@ public class FVecTest extends TestUtil {
       // alpha-sort, after tied on freq
       int len = Math.min(_len,vs._len);
       for(int i = 0; i < len; ++i)
-        if(_cs[_off+i] != vs._cs[vs._off+i]) 
+        if(_cs[_off+i] != vs._cs[vs._off+i])
           return _cs[_off+i]-vs._cs[vs._off+i];
       return _len - vs._len;
     }

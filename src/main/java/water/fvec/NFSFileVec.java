@@ -31,7 +31,7 @@ public class NFSFileVec extends ByteVec {
     _len = len;
   }
 
-  @Override long length() { return _len; }
+  @Override public long length() { return _len; }
   @Override public int nChunks() { return (int)Math.max(1,_len>>ValueArray.LOG_CHK); }
   // Convert a row# to a chunk#.  For constant-sized chunks this is a little
   // shift-and-add math.  For variable-sized chunks this is a binary search,
@@ -42,7 +42,7 @@ public class NFSFileVec extends ByteVec {
     int nc = nChunks();
     if( cidx >= nc ) cidx=nc-1; // Last chunk is larger
     assert 0 <= cidx && cidx < nc;
-    return cidx;    
+    return cidx;
   }
   // Convert a chunk-index into a starting row #. Constant sized chunks
   // (except for the last, which might be a little larger), and size-1 rows so
@@ -70,5 +70,5 @@ public class NFSFileVec extends ByteVec {
     // Atomically insert: fails on a race, but then return the old version
     Value val3 = DKV.DputIfMatch(dkey,val2,null,null);
     return val3 == null ? val2 : val3;
-  }  
+  }
 }

@@ -26,7 +26,7 @@ public class Vec extends Iced {
   Vec( Key key, long espc[], double min, double max, double sum ) {
     assert key._kb[0]==Key.VEC;
     _key = key;
-    _espc = espc; 
+    _espc = espc;
     _min = min == Double.MIN_VALUE ? Double.NaN : min;
     _max = max;
     _sum = sum;
@@ -34,7 +34,7 @@ public class Vec extends Iced {
 
   // Number of elements in the vector.  Overridden by subclasses that compute
   // length in an alternative way, such as file-backed Vecs.
-  long length() { return _espc[_espc.length-1]; }
+  public long length() { return _espc[_espc.length-1]; }
 
   // Number of chunks.  Overridden by subclasses that compute chunks in an
   // alternative way, such as file-backed Vecs.
@@ -87,10 +87,10 @@ public class Vec extends Iced {
     return (int)(i - chunk2StartElem(cidx));
   }
   // Matching CVec for a given element
-  public BigVector elem2BV( int cidx ) {
+  public Chunk elem2BV( int cidx ) {
     long start = chunk2StartElem(cidx); // Chunk# to chunk starting element#
     Value dvec = chunkIdx(cidx);        // Chunk# to chunk data
-    BigVector bv = dvec.get();          // Chunk data to compression wrapper
+    Chunk bv = dvec.get();          // Chunk data to compression wrapper
     if( bv._start == start ) return bv; // Already filled-in
     assert bv._start == -1;
     bv._start = start;          // Fields not filled in by unpacking from Value
@@ -99,14 +99,14 @@ public class Vec extends Iced {
   }
 
   // Next BigVector from the current one
-  BigVector nextBV( BigVector bv ) {
+  Chunk nextBV( Chunk bv ) {
     int cidx = elem2ChunkIdx(bv._start+bv._len);
     return cidx == nChunks() ? null : elem2BV(cidx);
   }
 
   // Fetch element the slow way
-  long at( long i ) { return elem2BV(elem2ChunkIdx(i)).at(i); }
-  double atd( long i ) { throw H2O.unimpl(); }
+  public long get( long i ) { return elem2BV(elem2ChunkIdx(i)).at(i); }
+  public double getd( long i ) { throw H2O.unimpl(); }
 
   // [#elems, min/mean/max]
   @Override public String toString() {
