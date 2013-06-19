@@ -35,9 +35,11 @@ public class RFModel extends Model implements Cloneable, Progress {
   /** Number of keys the model expects to be built for it */
   public int _totalTrees;
   /** All the trees in the model */
-  public Key[] _tkeys;
-  /** Total time to produce model */
-  public long _time;
+  public Key[]     _tkeys;
+  /** Local forests produced by nodes */
+  public Key[][]   _localForests;
+  /** Total time in seconds to produce model */
+  public long      _time;
 
   public static final String KEY_PREFIX = "__RFModel_";
 
@@ -56,18 +58,22 @@ public class RFModel extends Model implements Cloneable, Progress {
     _strataSamples = strataSamples;
     _samplingStrategy = samplingStrategy;
     _nodesSplitFeatures = new int[H2O.CLOUD.size()];
+    _localForests       = new Key[H2O.CLOUD.size()][];
+    for(int i=0;i<H2O.CLOUD.size();i++) _localForests[i] = new Key[0];
     for( Key tkey : _tkeys ) assert DKV.get(tkey)!=null;
   }
 
-  public RFModel(Key selfKey, String[] colNames, String[] classNames, Key[] tkeys, int features, float sample) {
-    super(selfKey, colNames, classNames);
-    _features = features;
-    _sample = sample;
-    _splitFeatures = features;
-    _totalTrees = tkeys.length;
-    _tkeys = tkeys;
-    _samplingStrategy = Sampling.Strategy.RANDOM;
+  public RFModel(Key selfKey, String [] colNames, String[] classNames, Key[] tkeys, int features, float sample) {
+    super(selfKey,colNames,classNames);
+    _features       = features;
+    _sample         = sample;
+    _splitFeatures  = features;
+    _totalTrees     = tkeys.length;
+    _tkeys          = tkeys;
+    _samplingStrategy   = Sampling.Strategy.RANDOM;
     _nodesSplitFeatures = new int[H2O.CLOUD.size()];
+    _localForests       = new Key[H2O.CLOUD.size()][];
+    for(int i=0;i<H2O.CLOUD.size();i++) _localForests[i] = new Key[0];
     for( Key tkey : _tkeys ) assert DKV.get(tkey)!=null;
     assert classes() > 0;
   }
@@ -85,8 +91,11 @@ public class RFModel extends Model implements Cloneable, Progress {
 
   static public RFModel make(RFModel old, Key tkey) {
     RFModel m = old.clone();
-    m._tkeys = Arrays.copyOf(old._tkeys, old._tkeys.length + 1);
-    m._tkeys[m._tkeys.length - 1] = tkey;
+    m._tkeys = Arrays.copyOf(old._tkeys,old._tkeys.length+1);
+    m._tkeys[m._tkeys.length-1] = tkey;
+    int idx = H2O.SELF.index();
+    m._localForests[idx] = Arrays.copyOf(old._localForests[idx],old._localForests[idx].length+1);
+    m._localForests[idx][m._localForests[idx].length-1] = tkey;
     return m;
   }
 
