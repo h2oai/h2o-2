@@ -1,7 +1,7 @@
 import h2o, h2o_cmd
 import time, re, getpass
 
-def setupImportS3(node=None, bucket='home-0xdiag-datasets', timeoutSecs=30):
+def setupImportS3(node=None, bucket='home-0xdiag-datasets', timeoutSecs=180):
     if not bucket: raise Exception('No S3 bucket specified')
     if not node: node = h2o.nodes[0]
     importS3Result = node.import_s3(bucket, timeoutSecs=timeoutSecs)
@@ -12,7 +12,7 @@ def setupImportS3(node=None, bucket='home-0xdiag-datasets', timeoutSecs=30):
 # assumes you call setupImportS3 first
 def parseImportS3File(node=None, 
     csvFilename='covtype.data', path='home-0xdiag-datasets', key2=None, 
-    timeoutSecs=360, retryDelaySecs=2, initialDelaySecs=1, pollTimeoutSecs=60, noise=None,
+    timeoutSecs=360, retryDelaySecs=2, initialDelaySecs=1, pollTimeoutSecs=180, noise=None,
     benchmarkLogging=None, noPoll=False, **kwargs):
 
     if not node: node = h2o.nodes[0]
@@ -36,7 +36,7 @@ def parseImportS3File(node=None,
     print "\nParse result:", parseKey
     return parseKey
 
-def setupImportFolder(node=None, path='/home/0xdiag/datasets', timeoutSecs=30):
+def setupImportFolder(node=None, path='/home/0xdiag/datasets', timeoutSecs=180):
     # a little hack to redirect import folder tests to an s3 folder
     # we don't have any "state" other than per node, so stuck this sort-of-global
     # test config state (which gets set only from the config json use-case)
@@ -57,7 +57,7 @@ def setupImportFolder(node=None, path='/home/0xdiag/datasets', timeoutSecs=30):
 
 # assumes you call setupImportFolder first
 def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
-    timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=1, pollTimeoutSecs=60, noise=None,
+    timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=1, pollTimeoutSecs=180, noise=None,
     benchmarkLogging=None, noPoll=False, **kwargs):
     if not node: node = h2o.nodes[0]
     # a little hack to redirect import folder tests to an s3 folder
@@ -93,7 +93,7 @@ def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
         print "\nParse result:", parseKey
     return parseKey
 
-def setupImportHdfs(node=None, path=None, schema='hdfs', timeoutSecs=30):
+def setupImportHdfs(node=None, path=None, schema='hdfs', timeoutSecs=180):
     if not node: node = h2o.nodes[0]
 
     print "setupImportHdfs schema:", schema
@@ -113,7 +113,7 @@ def setupImportHdfs(node=None, path=None, schema='hdfs', timeoutSecs=30):
     return importHdfsResult
 
 def parseImportHdfsFile(node=None, csvFilename=None, path=None, schema='hdfs',
-    timeoutSecs=3600, retryDelaySecs=2, initialDelaySecs=1, pollTimeoutSecs=60, noise=None,
+    timeoutSecs=3600, retryDelaySecs=2, initialDelaySecs=1, pollTimeoutSecs=180, noise=None,
     benchmarkLogging=None, noPoll=False, **kwargs):
     if not csvFilename: raise Exception('No csvFilename parameter in parseImportHdfsFile')
     if not node: node = h2o.nodes[0]
