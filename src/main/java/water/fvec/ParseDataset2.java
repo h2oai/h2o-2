@@ -168,19 +168,20 @@ public final class ParseDataset2 extends Job {
         switch( cpr ) {
         case NONE:
           // Parallel decompress
-          throw H2O.unimpl();
+          distroParse(vec,setup);
+          break;
         case ZIP: {
           // Zipped file; no parallel decompression;
           ZipInputStream zis = new ZipInputStream(vec.openStream());
           ZipEntry ze = zis.getNextEntry(); // Get the *FIRST* entry
           // There is at least one entry in zip file and it is not a directory.
-          if( ze != null && !ze.isDirectory() ) streamParse(key,zis,setup);
+          if( ze != null && !ze.isDirectory() ) streamParse(zis,setup);
           else zis.close();       // Confused: which zipped file to decompress
           break;
         }
         case GZIP: 
           // Zipped file; no parallel decompression;
-          streamParse(key,new GZIPInputStream(vec.openStream()),setup); 
+          streamParse(new GZIPInputStream(vec.openStream()),setup); 
           break;
         }
       } catch( IOException ioe ) {
@@ -202,9 +203,10 @@ public final class ParseDataset2 extends Job {
       throw H2O.unimpl();
     }
 
+    // ------------------------------------------------------------------------
     // Zipped file; no parallel decompression; decompress into local chunks,
     // parse local chunks; distribute chunks later.
-    private void streamParse( Key fkey, final InputStream is, final CsvParser.Setup localSetup ) throws IOException {
+    private void streamParse( final InputStream is, final CsvParser.Setup localSetup ) throws IOException {
 
       // All output into a fresh pile of NewVectors, one per column
       final NewChunk nvs[] = new NewChunk[_cols.length];
@@ -220,7 +222,7 @@ public final class ParseDataset2 extends Job {
           private int cidx0=-1, cidx1=-1; // Chunk #s
           private int _col=0;             // Column #
 
-          // Read a next chunk of data: arbirtrarily split into 32K chunks.
+          // Read a next chunk of data: arbitrarily split into 32K chunks.
           // Chunk size is small enough to allow double-buffered chunks to live
           // in L2 cache, but large enough to handle all reasonable row sizes.
           // Not distributed since we're reading from a stream; not in the K/V
@@ -286,6 +288,62 @@ public final class ParseDataset2 extends Job {
       for( int i=0; i<nvs.length; i++ )
         nvs[i].close(_fs);
     }
+
+    // ------------------------------------------------------------------------
+    // Distributed parse of an unzipped raw text file.
+    private void distroParse( ByteVec vec, final CsvParser.Setup localSetup ) throws IOException {
+      //new DParse(localSetup).invoke(vec,_cols);
+
+      
+    }
+    private class DParse extends MRTask2<DParse> {
+      final CsvParser.Setup _setup;
+      DParse(CsvParser.Setup setup) { _setup = setup; }
+      @Override public void map( final long start, final int len, final BigVector bvs[] ) {
+        final BigVector in = bvs[bvs.length-1]; // Input file in last BigVector
+        // Pre-copy / pre-cast the initial BV's to NewVectors
+        final NewVector nvs[] = new NewVector[bvs.length-1];
+        for( int i=0; i<nvs.length; i++ )
+          nvs[i] = (NewVector)bvs[i];
+        // The Parser
+        CsvParser parser = new CsvParser(_setup,false) {
+            private byte[] _mem2; // Chunk following this one
+            private int _col=0; // Column #
+            @Override public byte[] getChunkData( int cidx ) {
+              if( cidx==0 ) return in._mem;
+              if( _mem2 != null ) return _mem2;
+              BigVector in2 = in._vec.nextBV(in);
+              return in2 == null ? null : (_mem2=in2._mem);
+            }
+            // Handle a newLine action from the parser
+            @Override public void newLine() {
+              if( _col > 0 )
+                while( _col < _cols.length )
+                  addInvalidCol(_col++);
+              _col=0;
+            }
+
+            // Handle a new number column in the parser
+            @Override public void addNumCol(int colIdx, long number, int exp) {
+              assert colIdx==_col;
+              nvs[colIdx].append2(number,exp);
+              _col++;             // Next column filled in
+            }
+            
+            @Override public void addStrCol(int colIdx, ValueString str) { 
+              Log.unwrap(System.err,"colIdx="+colIdx+" str="+str);
+              assert colIdx==_col;
+              _col++;             // Next column filled in
+              throw H2O.unimpl(); 
+            }
+            @Override public void addInvalidCol(int colIdx) { throw H2O.unimpl(); }
+            @Override public void rollbackLine() { }
+            @Override public boolean isString(int colIdx) { return false; }
+          };
+        parser.parse(0);
+      }
+    }
+
   }
 
   // --------------------------------------------------------------------------
