@@ -7,21 +7,24 @@ public class Frame extends Iced {
   transient public Key _key;
   public String[] _names;
   public Vec[] _vecs;
-  public Vec _vec0;             // First readable vec
+  public Vec _col0;             // First readable vec
 
   public Frame( Key k, String[] names, Vec[] vecs ) { _key=k; _names=names; _vecs=vecs; }
   public void add( String name, Vec vec ) {
     throw H2O.unimpl();
   }
 
+  public final Vec[] vecs() {
+    return _vecs;
+  }
   int length() { return _vecs.length; }
 
   // Return first readable vector
   public Vec firstReadable() {
-    if( _vec0 != null ) return _vec0;
+    if( _col0 != null ) return _col0;
     for( Vec v : _vecs )
       if( v != null && v.readable() )
-        return (_vec0 = v);
+        return (_col0 = v);
     return null;
   }
 
@@ -45,7 +48,7 @@ public class Frame extends Iced {
 
   // Close all AppendableVec
   public void closeAppendables() {
-    _vec0 = null;               // Reset cache
+    _col0 = null;               // Reset cache
     for( int i=0; i<_vecs.length; i++ ) {
       Vec v = _vecs[i];
       if( v != null && v instanceof AppendableVec )

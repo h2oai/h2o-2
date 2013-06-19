@@ -205,9 +205,12 @@ public class Boot extends ClassLoader {
   public InputStream getResource2(String uri) {
     if( fromJar() ) {
       return _systemLoader.getResourceAsStream("resources"+uri);
-    } else { // to allow us to read things not only from the loader
+    } else {
       try {
-        return new FileInputStream(new File("lib/resources"+uri));
+        // IDE mode assumes classes are in target/classes. Not using current path
+        // to allow running from other locations.
+        String classes = getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
+        return new FileInputStream(new File(classes + "/../../lib/resources"+uri));
       } catch (FileNotFoundException e) {
         Log.err(e);
         return null;

@@ -208,7 +208,7 @@ public final class ParseDataset2 extends Job {
     // parse local chunks; distribute chunks later.
     private void streamParse( final InputStream is, final CsvParser.Setup localSetup ) throws IOException {
 
-      // All output into a fresh pile of NewChunks, one per column
+      // All output into a fresh pile of NewVectors, one per column
       final NewChunk nvs[] = new NewChunk[_cols.length];
       for( int i=0; i<nvs.length; i++ )
         nvs[i] = new NewChunk(_cols[i],0/*starting chunk#*/);
@@ -279,12 +279,12 @@ public final class ParseDataset2 extends Job {
 
       // Parse all internal "chunks", until we drain the zip-stream dry.  Not
       // real chunks, just flipping between 32K buffers.  Fills up the single
-      // very large NewChunk.
+      // very large NewVector.
       int cidx=0;
       while( is.available() > 0 )
         parser.parse(cidx++);
 
-      // Close & compress all the NewChunks for this one file.
+      // Close & compress all the NewVectors for this one file.
       for( int i=0; i<nvs.length; i++ )
         nvs[i].close(_fs);
     }
@@ -292,19 +292,34 @@ public final class ParseDataset2 extends Job {
     // ------------------------------------------------------------------------
     // Distributed parse of an unzipped raw text file.
     private void distroParse( ByteVec vec, final CsvParser.Setup localSetup ) throws IOException {
+<<<<<<< HEAD
       Vec bvs[] = Arrays.copyOf(_cols,_cols.length+1,Vec[].class);
       bvs[bvs.length-1] = vec;
       new DParse(localSetup).invoke(bvs);
+=======
+      //new DParse(localSetup).invoke(vec,_cols);
+
+
+>>>>>>> bcdc76ed09a34244e0f1065bd386d3da1daddf46
     }
     private class DParse extends MRTask2<DParse> {
       final CsvParser.Setup _setup;
       DParse(CsvParser.Setup setup) { _setup = setup; }
-      @Override public void map( Chunk[] bvs ) {
+<<<<<<< HEAD
+      @Override public void map( BigVector[] bvs ) {
         // Break out the input & output vectors before the parse loop
-        final Chunk in = bvs[bvs.length-1];
-        final NewChunk[] nvs = new NewChunk[bvs.length-1];
-        for( int i=0; i<nvs.length; i++ ) nvs[i] = (NewChunk)bvs[i];
+        final BigVector in = bvs[bvs.length-1];
+        final NewVector[] nvs = new NewVector[bvs.length-1];
+        for( int i=0; i<nvs.length; i++ ) nvs[i] = (NewVector)bvs[i];
 
+=======
+      @Override public void map( final long start, final int len, final Chunk bvs[] ) {
+        final Chunk in = bvs[bvs.length-1]; // Input file in last BigVector
+        // Pre-copy / pre-cast the initial BV's to NewVectors
+        final NewChunk nvs[] = new NewChunk[bvs.length-1];
+        for( int i=0; i<nvs.length; i++ )
+          nvs[i] = (NewChunk)bvs[i];
+>>>>>>> bcdc76ed09a34244e0f1065bd386d3da1daddf46
         // The Parser
         CsvParser parser = new CsvParser(_setup,false) {
             private byte[] _mem2; // Chunk following this one
@@ -329,9 +344,15 @@ public final class ParseDataset2 extends Job {
               nvs[colIdx].append2(number,exp);
               _col++;             // Next column filled in
             }
+<<<<<<< HEAD
+            
+            @Override public void addStrCol(int colIdx, ValueString str) { 
+              Log.unwrap(System.err,"colIdx="+colIdx+" str='"+str+"'");
+=======
 
             @Override public void addStrCol(int colIdx, ValueString str) {
-              Log.unwrap(System.err,"colIdx="+colIdx+" str='"+str+"'");
+              Log.unwrap(System.err,"colIdx="+colIdx+" str="+str);
+>>>>>>> bcdc76ed09a34244e0f1065bd386d3da1daddf46
               assert colIdx==_col;
               _col++;             // Next column filled in
               throw H2O.unimpl();
@@ -413,4 +434,3 @@ public final class ParseDataset2 extends Job {
     public ParseException(String msg) { super(msg); }
   }
 }
-

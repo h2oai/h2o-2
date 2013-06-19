@@ -10,11 +10,18 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
   // The Vectors to work on
   protected Frame _fr;          // Vectors to work on
 
-  // Run some useful function over this <strong>local</strong> Chunk, and
+  // Run some useful function over this <strong>local</strong> BigVector, and
   // record the results in the <em>this<em> MRTask2.
-  public void map( Chunk bv ) { }
-  public void map( Chunk bv0, Chunk bv1 ) { }
-  public void map( Chunk bvs[] ) { }
+<<<<<<< HEAD
+  public void map( BigVector bv ) { }
+  public void map( BigVector bv0, BigVector bv1 ) { }
+  public void map( BigVector bvs[] ) { }
+=======
+  public void map( long start, int len, Chunk chk ) { }
+  public void map( long start, int len, Chunk bv0, Chunk bv1 ) { }
+  public void map( long start, int len, Chunk bvs[] ) { }
+  public void map( Chunk[] chk ) { }
+>>>>>>> bcdc76ed09a34244e0f1065bd386d3da1daddf46
 
   // Combine results from 'mrt' into 'this' MRTask2.  Both 'this' and 'mrt' are
   // guaranteed to either have map() run on them, or be the results of a prior
@@ -30,7 +37,7 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
   transient protected RPC<T> _nleft, _nrite;
   transient boolean _topLocal;        // Top-level local call, returning results over the wire
   // Local work: range of local chunks we are working on
-  transient protected int _lo, _hi;   // Range of Chunks to work on - locally
+  transient protected int _lo, _hi;   // Range of BigVectors to work on - locally
   transient protected T _left, _rite; // In-progress execution tree
   transient protected T _res;         // Result
 

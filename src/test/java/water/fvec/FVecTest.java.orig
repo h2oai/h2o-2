@@ -35,7 +35,11 @@ public class FVecTest extends TestUtil {
   public static class ByteHisto extends MRTask2<ByteHisto> {
     public int[] _x;
     // Count occurrences of bytes
-    @Override public void map( Chunk bv ) {
+<<<<<<< HEAD
+    @Override public void map( BigVector bv ) {
+=======
+    @Override public void map( long start, int len, Chunk bv ) {
+>>>>>>> bcdc76ed09a34244e0f1065bd386d3da1daddf46
       _x = new int[256];        // One-time set histogram array
       for( int i=0; i<bv._len; i++ )
         _x[(int)bv.at0(i)]++;
@@ -67,8 +71,13 @@ public class FVecTest extends TestUtil {
   }
 
   public static class TestNewVec extends MRTask2<TestNewVec> {
-    @Override public void map( Chunk out, Chunk in ) {
+<<<<<<< HEAD
+    @Override public void map( BigVector out, BigVector in ) {
       for( int i=0; i<in._len; i++ )
+=======
+    @Override public void map( long start, int len, Chunk out, Chunk in ) {
+      for( long i=start; i<start+len; i++ )
+>>>>>>> bcdc76ed09a34244e0f1065bd386d3da1daddf46
         out.append2( in.at(i)+(in.at(i) >= ' ' ? 1 : 0),0);
     }
   }
@@ -107,7 +116,11 @@ public class FVecTest extends TestUtil {
   // Sum each column independently
   private static class Sum extends MRTask2<Sum> {
     double _sums[];
-    @Override public void map( Chunk[] bvs ) {
+<<<<<<< HEAD
+    @Override public void map( BigVector[] bvs ) {
+=======
+    @Override public void map( long start, int len, Chunk[] bvs ) {
+>>>>>>> bcdc76ed09a34244e0f1065bd386d3da1daddf46
       _sums = new double[bvs.length];
       int len = bvs[0]._len;
       for( int i=0; i<len; i++ )
@@ -168,7 +181,11 @@ public class FVecTest extends TestUtil {
       return -1;
     }
 
-    @Override public void map( Chunk bv ) {
+<<<<<<< HEAD
+    @Override public void map( BigVector bv ) {
+=======
+    @Override public void map( long start, int len, Chunk bv ) {
+>>>>>>> bcdc76ed09a34244e0f1065bd386d3da1daddf46
       _words = WORDS;
       final long start = bv._start;
       final int len = bv._len;
@@ -286,4 +303,3 @@ public class FVecTest extends TestUtil {
   }
 
 }
-

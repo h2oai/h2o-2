@@ -5,13 +5,13 @@ import water.*;
 import water.parser.DParseTask;
 
 // An uncompressed chunk of data, support an append operation
-public class NewVector extends BigVector {
+public class NewChunk extends Chunk {
   final int _cidx;
   transient long _ls[];         // Mantissa
   transient int _xs[];          // Exponent
   transient double _min, _max, _sum;
 
-  NewVector( AppendableVec vec, int cidx ) { 
+  NewChunk( AppendableVec vec, int cidx ) {
     _vec = vec;                 // Owning AppendableVec
     _cidx = cidx;               // This chunk#
     _ls = new long[4];          // A little room for data
@@ -24,7 +24,7 @@ public class NewVector extends BigVector {
   // Fast-path append long data
   @Override void append2( long l, int x ) {
     if( _len >= _ls.length ) append2slow();
-    _ls[_len] = l;  
+    _ls[_len] = l;
     _xs[_len] = x;
     _len++;
   }
@@ -47,7 +47,7 @@ public class NewVector extends BigVector {
   // Study this NewVector and determine an appropriate compression scheme.
   // Return the data so compressed.
   static final int MAX_FLOAT_MANTISSA = 0x7FFFFF;
-  BigVector compress() {
+  Chunk compress() {
 
     // See if we can sanely normalize all the data to the same fixed-point.
     int  xmin = Integer.MAX_VALUE;   // min exponent found
@@ -98,33 +98,33 @@ public class NewVector extends BigVector {
     // wise we just flip to a float or double representation.
     if( xmin != 0 ) {
       if( !overflow && lemax-lemin < 255 ) // Fits in scaled biased byte?
-        return new C1SVector(bufX(lemin,xmin,C1SVector.OFF,0),(int)lemin,DParseTask.pow10(xmin));
+        return new C1SChunk(bufX(lemin,xmin,C1SChunk.OFF,0),(int)lemin,DParseTask.pow10(xmin));
       if( !overflow && lemax-lemin < 65535 )
-        return new C2SVector(bufX(lemin,xmin,C2SVector.OFF,1),(int)lemin,DParseTask.pow10(xmin));
+        return new C2SChunk(bufX(lemin,xmin,C2SChunk.OFF,1),(int)lemin,DParseTask.pow10(xmin));
       if( Math.abs(lemax-lemin) <= MAX_FLOAT_MANTISSA && -35 <= xmin && xmin <= 35 )
-        return new C4FVector(bufF(2));
-      return new C8DVector(bufF(3));
+        return new C4FChunk(bufF(2));
+      return new C8DChunk(bufF(3));
     }
 
     // Compress column into a byte
     if( lemax-lemin < 255 ) {         // Span fits in a byte?
       if( 0 <= lemin && lemax < 255 ) // Span fits in an unbiased byte?
-        return new C1Vector(bufX(0,0,C1Vector.OFF,0));
-      return new C1SVector(bufX(lemin,0,C1SVector.OFF,0),(int)lemin,1);
-    } 
+        return new C1Chunk(bufX(0,0,C1Chunk.OFF,0));
+      return new C1SChunk(bufX(lemin,0,C1SChunk.OFF,0),(int)lemin,1);
+    }
 
     // Compress column into a short
     if( lemax-lemin < 65535 ) {               // Span fits in a biased short?
       if( -32767 <= lemin && lemax <= 32767 ) // Span fits in an unbiased short?
-        return new C2Vector(bufX(0,0,C2Vector.OFF,1));
-      return new C2SVector(bufX(lemin,0,C2SVector.OFF,1),(int)lemin,1);
-    } 
+        return new C2Chunk(bufX(0,0,C2Chunk.OFF,1));
+      return new C2SChunk(bufX(lemin,0,C2SChunk.OFF,1),(int)lemin,1);
+    }
 
     // Compress column into ints
     if( Integer.MIN_VALUE < lemin && lemax <= Integer.MAX_VALUE )
-      return new C4Vector(bufX(0,0,0,2));
+      return new C4Chunk(bufX(0,0,0,2));
 
-    return new C8Vector(bufX(0,0,0,3));
+    return new C8Chunk(bufX(0,0,0,3));
   }
 
   // Compute a compressed integer buffer
@@ -132,7 +132,7 @@ public class NewVector extends BigVector {
     byte[] bs = new byte[(_len<<log)+off];
     for( int i=0; i<_len; i++ ) {
       int x = _xs[i]-scale;
-      long le = x >= 0 
+      long le = x >= 0
         ? _ls[i]*DParseTask.pow10i( x)
         : _ls[i]/DParseTask.pow10i(-x);
       le -= bias;
@@ -160,9 +160,9 @@ public class NewVector extends BigVector {
     }
     return bs;
   }
-  
-  @Override long   at_impl ( int i ) { throw H2O.fail(); }
-  @Override double atd_impl( int i ) { throw H2O.fail(); }
+
+  @Override public long   get ( int i ) { throw H2O.fail(); }
+  @Override public double getd( int i ) { throw H2O.fail(); }
   @Override public AutoBuffer write(AutoBuffer bb) { throw H2O.fail(); }
-  @Override public NewVector read(AutoBuffer bb) { throw H2O.fail(); }
+  @Override public NewChunk read(AutoBuffer bb) { throw H2O.fail(); }
 }

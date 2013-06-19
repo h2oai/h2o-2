@@ -134,11 +134,6 @@ def simpleCheckRFView(node, rfv, noPrint=False, **kwargs):
 
     h2o.verboseprint("RFView response: number_built:", number_built, "leaves:", leaves, "depth:", depth)
 
-    # just touching these keys to make sure they're good?
-    confusion_key = rfv['confusion_key']
-
-    # 2/14/13 kbn. can we not model any more? causes assertion error
-    ### confusionInspect = node.inspect(confusion_key)
     ### modelInspect = node.inspect(model_key)
     dataInspect = node.inspect(data_key)
 
