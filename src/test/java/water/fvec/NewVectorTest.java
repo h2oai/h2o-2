@@ -1,11 +1,14 @@
 package water.fvec;
 
-import static org.junit.Assert.*;
-import org.junit.*;
-import water.*;
-import water.parser.DParseTask;
-import water.util.Log;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
+import org.junit.*;
+
+import water.TestUtil;
+import water.parser.DParseTask;
+
+@Ignore
 public class NewVectorTest extends TestUtil {
   static final double EPSILON = 1e-6;
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
@@ -26,7 +29,7 @@ public class NewVectorTest extends TestUtil {
 
   // Test that various collections of parsed numbers compress as expected.
   @Test public void testCompression() {
-    // A simple no-compress 
+    // A simple no-compress
     testImpl(new long[] {122, 3,44},
              new int [] {  0, 0, 0},
              C1Chunk.class);
@@ -66,7 +69,7 @@ public class NewVectorTest extends TestUtil {
     testImpl(new long[] {1234,2345678,31415},
              new int [] {  40,     10,  -40},
              C8DChunk.class);
-    
+
   }
 
 }

@@ -99,7 +99,7 @@ public class Vec extends Iced {
   }
 
   // Next BigVector from the current one
-  BigVector nextBV( BigVector bv ) {
+  Chunk nextBV( Chunk bv ) {
     int cidx = elem2ChunkIdx(bv._start+bv._len);
     return cidx == nChunks() ? null : elem2BV(cidx);
   }

@@ -1,15 +1,17 @@
 package water.fvec;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+
 import java.io.File;
 import java.util.Arrays;
-import org.junit.*;
-import water.*;
-import water.nbhm.NonBlockingHashMap;
-import water.util.Log;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
+import org.junit.*;
+
+import water.*;
+import water.nbhm.NonBlockingHashMap;
+
+@Ignore
 public class FVecTest extends TestUtil {
 
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
@@ -72,6 +74,7 @@ public class FVecTest extends TestUtil {
   }
 
   // ==========================================================================
+  @SuppressWarnings("unused")
   @Test public void testParse() {
     //File file = TestUtil.find_test_file("./smalldata/airlines/allyears2k_headers.zip");
     File file = TestUtil.find_test_file("./smalldata/logreg/prostate_long.csv.gz");
@@ -112,7 +115,7 @@ public class FVecTest extends TestUtil {
       for( int j=0; j<_sums.length; j++ )
         _sums[j] += mrt._sums[j];
     }
-  }  
+  }
 
   // ==========================================================================
   /*@Test*/ public void testWordCount() {
@@ -180,9 +183,9 @@ public class FVecTest extends TestUtil {
           VStr vs2 = WORDS.putIfAbsent(vs,vs);
           if( vs2 == null ) {   // If actually inserted, need new VStr
             if( vs._len>256 ) System.out.println("Too long: "+vs+" at char "+i);
-            vs = new VStr(vs._cs,(short)(vs._off+vs._len)); 
+            vs = new VStr(vs._cs,(short)(vs._off+vs._len));
           } else {
-            vs2.inc(1);         // Inc count on added word, 
+            vs2.inc(1);         // Inc count on added word,
             vs._len = 0;        // and re-use VStr
           }
         }
@@ -202,7 +205,7 @@ public class FVecTest extends TestUtil {
           ab.put2((char)key._len).putA1(key._cs,key._off,key._off+key._len).put4(key._cnt);
       return ab.put2((char)65535); // End of map marker
     }
-    @Override public WordCount read(AutoBuffer ab) { 
+    @Override public WordCount read(AutoBuffer ab) {
       super.read(ab);
       final long start = System.currentTimeMillis();
       int cnt=0;
@@ -220,7 +223,7 @@ public class FVecTest extends TestUtil {
       System.out.println("WC Read takes "+t+"msec for "+cnt+" words");
       return this;
     }
-    @Override public void copyOver(DTask wc) { _words = ((WordCount)wc)._words; }    
+    @Override public void copyOver(DTask wc) { _words = ((WordCount)wc)._words; }
   }
 
 
@@ -258,7 +261,7 @@ public class FVecTest extends TestUtil {
       // alpha-sort, after tied on freq
       int len = Math.min(_len,vs._len);
       for(int i = 0; i < len; ++i)
-        if(_cs[_off+i] != vs._cs[vs._off+i]) 
+        if(_cs[_off+i] != vs._cs[vs._off+i])
           return _cs[_off+i]-vs._cs[vs._off+i];
       return _len - vs._len;
     }
