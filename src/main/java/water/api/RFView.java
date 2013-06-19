@@ -166,6 +166,7 @@ public class RFView extends /* Progress */ Request {
         done = finished == tasks;
       } else {
         // Start CM computation
+        // FIXME do not launch more than one job for the same modelSize
         ConfusionTask.make(model, modelSize, _dataKey.value()._key, _classCol.value(), weights, _oobee.value());
       }
     }
