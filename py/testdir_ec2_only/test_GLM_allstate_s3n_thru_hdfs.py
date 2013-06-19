@@ -34,9 +34,9 @@ class Basic(unittest.TestCase):
         # csvFilename = "covtype20x.data"
         # csvPathname = csvFilename
         csvFilename = "train_set.csv"
-        csvPathname = "allstate/" + csvFilename
+        csvPathname = csvFilename
         # https://s3.amazonaws.com/home-0xdiag-datasets/allstate/train_set.csv
-        URI = "s3n://home-0xdiag-datasets/"
+        URI = "s3n://home-0xdiag-datasets/allstate/"
         s3nKey = URI + csvPathname
 
         trialMax = 3

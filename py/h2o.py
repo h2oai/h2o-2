@@ -1023,17 +1023,17 @@ class H2O(object):
 
     # the param name for ImportFiles is 'file', but it can take a directory or a file.
     # 192.168.0.37:54323/ImportFiles.html?file=%2Fhome%2F0xdiag%2Fdatasets
-    def import_files(self, path, timeoutSecs=30):
+    def import_files(self, path, timeoutSecs=180):
         a = self.__do_json_request('ImportFiles.json', timeout=timeoutSecs, params={"path": path})
         verboseprint("\nimport_files result:", dump_json(a))
         return a
 
-    def import_s3(self, bucket, timeoutSecs=30):
+    def import_s3(self, bucket, timeoutSecs=180):
         a = self.__do_json_request('ImportS3.json', timeout=timeoutSecs, params={"bucket": bucket})
         verboseprint("\nimport_s3 result:", dump_json(a))
         return a
 
-    def import_hdfs(self, path, timeoutSecs=30):
+    def import_hdfs(self, path, timeoutSecs=180):
         a = self.__do_json_request('ImportHdfs.json', timeout=timeoutSecs, params={"path": path})
         verboseprint("\nimport_hdfs result:", dump_json(a))
         return a
