@@ -8,13 +8,14 @@ import water.util.Log;
 public abstract class MRTask2<T extends MRTask2> extends DTask implements Cloneable {
 
   // The Vectors to work on
-  protected Vec[] _vecs;        // Vectors to work on
-  private Vec _vec0;            // First readable
+  protected Frame _fr;          // Vectors to work on
+  private Vec _vec0;            // First readable Vec
 
   // Run some useful function over this <strong>local</strong> BigVector, and
   // record the results in the <em>this<em> MRTask2.
   public void map( long start, int len, BigVector bv ) { }
   public void map( long start, int len, BigVector bv0, BigVector bv1 ) { }
+  public void map( long start, int len, BigVector bvs[] ) { }
 
   // Combine results from 'mrt' into 'this' MRTask2.  Both 'this' and 'mrt' are
   // guaranteed to either have map() run on them, or be the results of a prior
@@ -44,17 +45,18 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
   private final T self() { return (T)this; }
 
   // Read-only accessor
-  public final Vec vecs(int i) { return _vecs[i]; }
+  public final Vec vecs(int i) { return _fr._vecs[i]; }
 
   // Top-level blocking call.
-  public final T invoke( Vec... vecs ) { 
-    dfork(vecs);
+  public final T invoke( Vec... vecs ) { return invoke(new Frame(null,null,vecs)); }
+  public final T invoke( Frame fr ) { 
+    dfork(fr);
     return getResult();
   }
-  public final T dfork( Vec... vecs ) { 
+  public final T dfork( Frame fr ) { 
     // Use first readable vector to gate home/not-home
-    checkCompatible(firstReadable(vecs),vecs); // Check for compatible vectors
-    _vecs = vecs;               // Record vectors to work on
+    fr.checkCompatible();       // Check for compatible vectors
+    _fr = fr;                   // Record vectors to work on
     _nlo = 0;  _nhi = H2O.CLOUD.size(); // Do Whole Cloud
     setupLocal();               // Local setup
     H2O.submitTask(this);       // Begin normal execution on a FJ thread
@@ -65,14 +67,7 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
   // Note: the desired name 'get' is final in ForkJoinTask.
   public final T getResult() {
     join();
-
-    // Final close ops on any new appendable vec
-    for( int i=0; i<_vecs.length; i++ ) {
-      Vec v = _vecs[i];
-      if( v != null && v instanceof AppendableVec )
-        _vecs[i] = ((AppendableVec)v).close();
-    }
-
+    _fr.closeAppendables();      // Final close ops on any new appendable vec
     return self();
   }
   
@@ -95,14 +90,10 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
       if( _nlo   < selfidx ) _nleft = remote_compute(_nlo, selfidx );
       if( selfidx+1 < _nhi ) _nrite = remote_compute(selfidx+1,_nhi);
     }
-    _lo = 0;  _hi = _vec0.nChunks(); // Do All Chunks
+    _lo = 0;  _hi = _fr.firstReadable().nChunks(); // Do All Chunks
     // If we have any output vectors, make a blockable Futures for them to
     // block on.
-    for( Vec v : _vecs )
-      if( v != null && v instanceof AppendableVec ) {
-        _fs = new Futures();
-        break;
-      }
+    if( _fr.hasAppendables() ) _fs = new Futures();
     init();                     // Setup any user's shared local structures
   }
 
@@ -136,20 +127,21 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
     } 
     // Zero or 1 chunks, and further chunk might not be homed here
     if( _hi > _lo ) {           // Single chunk?
-      if( _vec0.chunkKey(_lo).home() ) { // And chunk is homed here?
+      Vec v0 = _fr.firstReadable();
+      if( v0.chunkKey(_lo).home() ) { // And chunk is homed here?
 
         // Make decompression chunk headers for these chunks
-        BigVector bvs[] = new BigVector[_vecs.length];
-        for( int i=0; i<_vecs.length; i++ )
-          if( _vecs[i] != null )
-            bvs[i] = _vecs[i].elem2BV(_lo);
+        BigVector bvs[] = new BigVector[_fr._vecs.length];
+        for( int i=0; i<_fr._vecs.length; i++ )
+          if( _fr._vecs[i] != null )
+            bvs[i] = _fr._vecs[i].elem2BV(_lo);
 
-        // Call the various map() calls
-        final long start = _vec0.chunk2StartElem(_lo);
-        final int  len   = _vec0.elem2BV(_lo)._len;
-        if( _vecs.length == 1 ) map(start, len, bvs[0]);
-        if( _vecs.length == 2 ) map(start, len, bvs[0], bvs[1]);
-        if( _vecs.length > 2 ) throw H2O.unimpl();
+        // Call all the various map() calls that apply
+        final long start = v0.chunk2StartElem(_lo);
+        final int  len   = v0.elem2BV(_lo)._len;
+        if( _fr._vecs.length == 1 ) map(start, len, bvs[0]);
+        if( _fr._vecs.length == 2 ) map(start, len, bvs[0], bvs[1]);
+        map(start, len, bvs );
         _res = self();          // Save results since called map() at least once!
 
         // Further D/K/V put any new vec results.
@@ -215,9 +207,9 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
   // Call user's reduction.  Also reduce any new AppendableVecs.
   public void reduce4( T mrt ) { 
     // Reduce any AppendableVecs
-    for( int i=0; i<_vecs.length; i++ )
-      if( _vecs[i] instanceof AppendableVec )
-        ((AppendableVec)_vecs[i]).reduce((AppendableVec)mrt._vecs[i]);
+    for( int i=0; i<_fr._vecs.length; i++ )
+      if( _fr._vecs[i] instanceof AppendableVec )
+        ((AppendableVec)_fr._vecs[i]).reduce((AppendableVec)mrt._fr._vecs[i]);
     // User's reduction
     reduce(mrt);
   }
@@ -245,32 +237,6 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
       return x;
     } catch( CloneNotSupportedException e ) {
       throw Log.errRTExcept(e);
-    }
-  }
-
-  // Return first readable vector
-  private Vec firstReadable( Vec[] vecs ) {
-    if( _vec0 != null ) return _vec0;
-    for( Vec v : vecs )
-      if( v != null && v.readable() )
-        return (_vec0 = v);
-    return null;
-  }
-
-  // Check that the vectors are all compatible: same number of rows per chunk
-  private static void checkCompatible( Vec v0, Vec[] vecs ) {
-    int nchunks = v0.nChunks();
-    for( Vec vec : vecs ) {
-      if( vec instanceof AppendableVec ) continue; // New Vectors are endlessly compatible
-      if( vec.nChunks() != nchunks )
-        throw new IllegalArgumentException("Vectors different numbers of chunks, "+nchunks+" and "+vec.nChunks());
-    }
-    // Also check each chunk has same rows
-    for( int i=0; i<nchunks; i++ ) {
-      long es = v0.chunk2StartElem(i);
-      for( Vec vec : vecs )
-        if( !(vec instanceof AppendableVec) && vec.chunk2StartElem(i) != es )
-          throw new IllegalArgumentException("Vector chunks different numbers of rows, "+es+" and "+vec.chunk2StartElem(i));
     }
   }
 }

@@ -85,17 +85,34 @@ public class FVecTest extends TestUtil {
   }
 
   // ==========================================================================
-  /*@Test*/ public void testParse2() {
-    File file = TestUtil.find_test_file("../covtype.csv");
+  @Test public void testParse2() {
+    File file = TestUtil.find_test_file("./smalldata/logreg/prostate_long.csv.gz");
+    //File file = TestUtil.find_test_file("../datasets/covtype.csv");
     Key fkey = NFSFileVec.make(file);
 
-    Key okey = Key.make("covtype.hex");
-    ParseDataset2.parse(okey,new Key[]{fkey});
-
-    for( int i=0; i<9; i++ )
-      UKV.remove(fkey.toString()+"C"+i);
+    Key okey = Key.make("prostate_long.hex");
+    Frame fr = ParseDataset2.parse(okey,new Key[]{fkey});
     UKV.remove(fkey);
+
+    double[] sums = new Sum().invoke(fr)._sums;
+    System.out.println(Arrays.toString(sums));
+    UKV.remove(okey);
   }
+
+  // Sum each column independently
+  private static class Sum extends MRTask2<Sum> {
+    double _sums[];
+    @Override public void map( long start, int len, BigVector[] bvs ) {
+      _sums = new double[bvs.length];
+      for( long i=start; i<start+len; i++ )
+        for( int j=0; j<bvs.length; j++ )
+          _sums[j] += bvs[j].at(i);
+    }
+    @Override public void reduce( Sum mrt ) {
+      for( int j=0; j<_sums.length; j++ )
+        _sums[j] += mrt._sums[j];
+    }
+  }  
 
   // ==========================================================================
   /*@Test*/ public void testWordCount() {
