@@ -40,6 +40,7 @@ public class NFSFileVec extends ByteVec {
     assert 0 <= i && i <= _len : " "+i+" < "+_len;
     int cidx = (int)(i>>ValueArray.LOG_CHK);
     int nc = nChunks();
+    if( i >= _len ) return nc;
     if( cidx >= nc ) cidx=nc-1; // Last chunk is larger
     assert 0 <= cidx && cidx < nc;
     return cidx;    

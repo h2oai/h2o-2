@@ -105,7 +105,7 @@ public final class ParseDataset2 extends Job {
     String[] names = new String[uzpt._cols.length];
     for( int i=0; i<vecs.length; i++ ) {
       vecs[i] = uzpt._cols[i].close();
-      names[i] = setup._header ? (""+i) : setup._data[0][i];
+      names[i] = setup._header ? setup._data[0][i] : (""+i);
     }
     // Jam the frame of columns into the K/V store
     UKV.put(job.dest(),new Frame(job.dest(),names,vecs));
@@ -292,19 +292,19 @@ public final class ParseDataset2 extends Job {
     // ------------------------------------------------------------------------
     // Distributed parse of an unzipped raw text file.
     private void distroParse( ByteVec vec, final CsvParser.Setup localSetup ) throws IOException {
-      //new DParse(localSetup).invoke(vec,_cols);
-
-      
+      Vec bvs[] = Arrays.copyOf(_cols,_cols.length+1,Vec[].class);
+      bvs[bvs.length-1] = vec;
+      new DParse(localSetup).invoke(bvs);
     }
     private class DParse extends MRTask2<DParse> {
       final CsvParser.Setup _setup;
       DParse(CsvParser.Setup setup) { _setup = setup; }
-      @Override public void map( final long start, final int len, final BigVector bvs[] ) {
-        final BigVector in = bvs[bvs.length-1]; // Input file in last BigVector
-        // Pre-copy / pre-cast the initial BV's to NewVectors
-        final NewVector nvs[] = new NewVector[bvs.length-1];
-        for( int i=0; i<nvs.length; i++ )
-          nvs[i] = (NewVector)bvs[i];
+      @Override public void map( BigVector[] bvs ) {
+        // Break out the input & output vectors before the parse loop
+        final BigVector in = bvs[bvs.length-1];
+        final NewVector[] nvs = new NewVector[bvs.length-1];
+        for( int i=0; i<nvs.length; i++ ) nvs[i] = (NewVector)bvs[i];
+
         // The Parser
         CsvParser parser = new CsvParser(_setup,false) {
             private byte[] _mem2; // Chunk following this one
@@ -331,7 +331,7 @@ public final class ParseDataset2 extends Job {
             }
             
             @Override public void addStrCol(int colIdx, ValueString str) { 
-              Log.unwrap(System.err,"colIdx="+colIdx+" str="+str);
+              Log.unwrap(System.err,"colIdx="+colIdx+" str='"+str+"'");
               assert colIdx==_col;
               _col++;             // Next column filled in
               throw H2O.unimpl(); 

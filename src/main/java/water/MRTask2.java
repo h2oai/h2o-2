@@ -9,13 +9,12 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
 
   // The Vectors to work on
   protected Frame _fr;          // Vectors to work on
-  private Vec _vec0;            // First readable Vec
 
   // Run some useful function over this <strong>local</strong> BigVector, and
   // record the results in the <em>this<em> MRTask2.
-  public void map( long start, int len, BigVector bv ) { }
-  public void map( long start, int len, BigVector bv0, BigVector bv1 ) { }
-  public void map( long start, int len, BigVector bvs[] ) { }
+  public void map( BigVector bv ) { }
+  public void map( BigVector bv0, BigVector bv1 ) { }
+  public void map( BigVector bvs[] ) { }
 
   // Combine results from 'mrt' into 'this' MRTask2.  Both 'this' and 'mrt' are
   // guaranteed to either have map() run on them, or be the results of a prior
@@ -93,7 +92,8 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
     _lo = 0;  _hi = _fr.firstReadable().nChunks(); // Do All Chunks
     // If we have any output vectors, make a blockable Futures for them to
     // block on.
-    if( _fr.hasAppendables() ) _fs = new Futures();
+    if( _fr.hasAppendables() )
+      _fs = new Futures();
     init();                     // Setup any user's shared local structures
   }
 
@@ -137,11 +137,9 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
             bvs[i] = _fr._vecs[i].elem2BV(_lo);
 
         // Call all the various map() calls that apply
-        final long start = v0.chunk2StartElem(_lo);
-        final int  len   = v0.elem2BV(_lo)._len;
-        if( _fr._vecs.length == 1 ) map(start, len, bvs[0]);
-        if( _fr._vecs.length == 2 ) map(start, len, bvs[0], bvs[1]);
-        map(start, len, bvs );
+        if( _fr._vecs.length == 1 ) map(bvs[0]);
+        if( _fr._vecs.length == 2 ) map(bvs[0], bvs[1]);
+        if( true                  ) map(bvs );
         _res = self();          // Save results since called map() at least once!
 
         // Further D/K/V put any new vec results.

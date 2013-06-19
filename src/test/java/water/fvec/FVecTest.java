@@ -33,10 +33,10 @@ public class FVecTest extends TestUtil {
   public static class ByteHisto extends MRTask2<ByteHisto> {
     public int[] _x;
     // Count occurrences of bytes
-    @Override public void map( long start, int len, BigVector bv ) {
+    @Override public void map( BigVector bv ) {
       _x = new int[256];        // One-time set histogram array
-      for( long i=start; i<start+len; i++ )
-        _x[(int)bv.at(i)]++;
+      for( int i=0; i<bv._len; i++ )
+        _x[(int)bv.at0(i)]++;
     }
     // ADD together all results
     @Override public void reduce( ByteHisto bh ) {
@@ -65,8 +65,8 @@ public class FVecTest extends TestUtil {
   }
 
   public static class TestNewVec extends MRTask2<TestNewVec> {
-    @Override public void map( long start, int len, BigVector out, BigVector in ) {
-      for( long i=start; i<start+len; i++ )
+    @Override public void map( BigVector out, BigVector in ) {
+      for( int i=0; i<in._len; i++ )
         out.append2( in.at(i)+(in.at(i) >= ' ' ? 1 : 0),0);
     }
   }
@@ -87,12 +87,14 @@ public class FVecTest extends TestUtil {
   // ==========================================================================
   @Test public void testParse2() {
     //File file = TestUtil.find_test_file("./smalldata/logreg/prostate_long.csv.gz");
-    File file = TestUtil.find_test_file("../datasets/UCI/UCI-large/covtype/covtype.data");
+    //File file = TestUtil.find_test_file("../datasets/UCI/UCI-large/covtype/covtype.data");
+    File file = TestUtil.find_test_file("../smalldata/logreg/umass_chdage.csv");
     Key fkey = NFSFileVec.make(file);
 
     Key okey = Key.make("prostate_long.hex");
     Frame fr = ParseDataset2.parse(okey,new Key[]{fkey});
     UKV.remove(fkey);
+    System.out.println("Frame="+fr);
 
     double[] sums = new Sum().invoke(fr)._sums;
     System.out.println(Arrays.toString(sums));
@@ -102,11 +104,12 @@ public class FVecTest extends TestUtil {
   // Sum each column independently
   private static class Sum extends MRTask2<Sum> {
     double _sums[];
-    @Override public void map( long start, int len, BigVector[] bvs ) {
+    @Override public void map( BigVector[] bvs ) {
       _sums = new double[bvs.length];
-      for( long i=start; i<start+len; i++ )
+      int len = bvs[0]._len;
+      for( int i=0; i<len; i++ )
         for( int j=0; j<bvs.length; j++ )
-          _sums[j] += bvs[j].at(i);
+          _sums[j] += bvs[j].at0(i);
     }
     @Override public void reduce( Sum mrt ) {
       for( int j=0; j<_sums.length; j++ )
@@ -162,9 +165,10 @@ public class FVecTest extends TestUtil {
       return -1;
     }
 
-    @Override public void map( long start, int len, BigVector bv ) {
+    @Override public void map( BigVector bv ) {
       _words = WORDS;
-
+      final long start = bv._start;
+      final int len = bv._len;
       long i = start;           // Parse point
       // Skip partial words at the start of chunks, assuming they belong to the
       // trailing end of the prior chunk.

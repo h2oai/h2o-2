@@ -56,7 +56,7 @@ public class Frame extends Iced {
   // True if any Appendables exist
   public boolean hasAppendables() {
     for( Vec v : _vecs )
-      if( v != null && v instanceof AppendableVec )
+      if( v instanceof AppendableVec )
         return true;
     return false;
   }
@@ -69,7 +69,7 @@ public class Frame extends Iced {
   @Override public Frame init( Key k ) { _key=k; return this; }
   @Override public String toString() {
     String s="{"+_names[0];
-    for( int i=1; i<_names.length-1; i++ )
+    for( int i=1; i<_names.length; i++ )
       s += ","+_names[i];
     return s+"}";
   }
