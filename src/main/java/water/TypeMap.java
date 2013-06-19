@@ -65,6 +65,7 @@ public class TypeMap {
     Integer I = MAP.get(className);
     if( I != null ) return I;
     // Need to install a new cloud-wide type ID for className
+    assert H2O.CLOUD.size() > 0 : "No cloud when getting type id for "+className;
     int id = -1;
     if( H2O.CLOUD.leader() != H2O.SELF ) // Leader?
       id = FetchId.fetchId(className);
