@@ -16,6 +16,7 @@ public class TutorialGLMProstate extends TutorialWorkflow {
   private final static String[][] TUTORIAL_STEPS = new String[][]{
     /*               Title     Short Summary     File containing step description */
     new String[] { "Step 1", "Introduction", "/tutorials/glm.prostate/step1.html" },
+    new String[] { "Step 2", "Dataset inhale", "/tutorials/glm.prostate/step2.html" },
   };
 
   public TutorialGLMProstate() {
