@@ -7,7 +7,7 @@ import hex.DLSM.GeneralizedGradientSolver;
 import hex.DLSM.LSMSolver;
 import hex.NewRowVecTask.DataFrame;
 import java.util.*;
-import org.junit.Test;
+import org.junit.*;
 import water.*;
 import water.api.Constants;
 import water.exec.Exec;
@@ -20,6 +20,8 @@ import com.google.gson.*;
 // tests are also good).
 
 public class GLMTest extends TestUtil {
+  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
+
   static double[] THRESHOLDS;
   static {
     THRESHOLDS = new double[100];

@@ -1,4 +1,3 @@
-
 ;; Set the debug option to enable a backtrace when a problem occurs.
 ;;(setq debug-on-error t)
 

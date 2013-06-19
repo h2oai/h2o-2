@@ -57,7 +57,7 @@ public class Job extends Iced {
     _dest = dest;
   }
 
-  public H2OCountedCompleter start(H2OCountedCompleter fjtask) {
+  public <T extends H2OCountedCompleter> T start(T fjtask) {
     _fjtask = fjtask;
     DKV.put(_self, new Value(_self, new byte[0]));
     new TAtomic<List>() {

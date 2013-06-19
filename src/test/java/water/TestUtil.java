@@ -22,7 +22,6 @@ public class TestUtil {
     H2O.main(new String[] {});
     _initial_keycnt = H2O.store_size();
     assert Job.all().length == 0;      // No outstanding jobs
-    UKV.put(Job.LIST, new Job.List()); // Jobs.LIST must be part of initial keys
   }
 
   @AfterClass
@@ -34,10 +33,11 @@ public class TestUtil {
     DKV.remove(Log.LOG_KEY);
     DKV.write_barrier();
     int leaked_keys = H2O.store_size() - _initial_keycnt;
-    if( leaked_keys != 0 )
+    if( leaked_keys > 0 )
       for( Key k : H2O.keySet() )
         System.err.println("Leaked key: " + k);
-    assertEquals("No keys leaked", 0, leaked_keys);
+    assertTrue("No keys leaked", leaked_keys<=0);
+    _initial_keycnt = H2O.store_size();
   }
 
   // Stall test until we see at least X members of the Cloud
@@ -53,6 +53,7 @@ public class TestUtil {
       try { Thread.sleep(100); } catch( InterruptedException ie ) { }
     }
     assertTrue("Cloud size of " + x, H2O.CLOUD.size() >= x);
+    UKV.put(Job.LIST, new Job.List()); // Jobs.LIST must be part of initial keys
   }
 
   public static File find_test_file(String fname) {

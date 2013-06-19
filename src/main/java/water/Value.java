@@ -64,8 +64,13 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
 
   // Free array (but always be able to rebuild the array)
   public final void freeMem() {
-    assert isPersisted() || _pojo != null;
+    assert isPersisted() || _pojo != null || _key._kb[0]==Key.DVEC;
     _mem = null;
+    // For DVECs, the POJO contains a pointer back to the _mem byte[], so we
+    // must ALSO free the POJO or else the underlying byte[] never frees...
+    // and we get no space savings.  Also for DVECs, the POJO is tiny and
+    // cheap to rebuild from the byte[].
+    if( _key._kb[0]==Key.DVEC ) _pojo = null;
   }
   // Free POJO (but always be able to rebuild the POJO)
   public final void freePOJO() {
@@ -234,6 +239,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   }
 
   public boolean isArray() { return _type == TypeMap.VALUE_ARRAY; }
+  public boolean isFrame() { return _type == TypeMap.FRAME; }
 
   // Get the 1st bytes from either a plain Value, or chunk 0 of a ValueArray
   public byte[] getFirstBytes() {
@@ -590,5 +596,4 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     while( !isReleasable() ) { try { wait(); } catch( InterruptedException e ) { } }
     return true;
   }
-
 }

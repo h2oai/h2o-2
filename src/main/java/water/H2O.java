@@ -11,7 +11,6 @@ import water.exec.Function;
 import water.nbhm.NonBlockingHashMap;
 import water.parser.ParseDataset;
 import water.persist.*;
-import water.r.Shell;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
@@ -62,6 +61,7 @@ public final class H2O {
 
   // Convenience error
   public static final RuntimeException unimpl() { return new RuntimeException("unimplemented"); }
+  public static final RuntimeException fail() { return new RuntimeException("do not call"); }
 
   // Central /dev/null for ignored exceptions
   public static final void ignore(Throwable e)             { ignore(e,"[h2o] Problem ignored: "); }
@@ -143,10 +143,17 @@ public final class H2O {
   // is nonsense, e.g. asking for replica #3 in a 2-Node system.
   public int D( Key key, int repl ) {
     if( repl >= size() ) return -1;
+    
+    // See if this is a specifically homed DVEC Key (has shorter encoding).
+    byte[] kb = key._kb;
+    if( kb[0] == Key.DVEC && kb[1] != -1 ) {
+      throw H2O.unimpl();
+      // return kb[1]; // home is just node index byte
+    } 
 
     // See if this is a specifically homed Key
-    byte[] kb = key._kb;
     if( !key.user_allowed() && repl < kb[1] ) { // Asking for a replica# from the homed list?
+      assert kb[0] != Key.DVEC;
       H2ONode h2o=null, h2otmp = new H2ONode(); // Fill in the fields from the Key
       AutoBuffer ab = new AutoBuffer(kb,2);
       for( int i=0; i<=repl; i++ )
@@ -499,7 +506,6 @@ public final class H2O {
     public String random_udp_drop = null; // test only, randomly drop udp incoming
     public int pparse_limit = Integer.MAX_VALUE;
     public String no_requests_log = null; // disable logging of Web requests
-    public String rshell="false"; //FastR shell
   }
   public static boolean IS_SYSTEM_RUNNING = false;
 
@@ -540,9 +546,6 @@ public final class H2O {
     initializeExpressionEvaluation(); // starts the expression evaluation system
 
     startupFinalize(); // finalizes the startup & tests (if any)
-
-    if (OPT_ARGS.rshell.equals("true"))  Shell.go();
-    // Hang out here until the End of Time
   }
 
   private static void initializeExpressionEvaluation() {
@@ -897,6 +900,7 @@ public final class H2O {
       long space = Persist.getIce().getUsableSpace();
       return space != Persist.UNKNOWN && space < (5 << 10);
     }
+    private static boolean junk = false;
     public void run() {
       boolean diskFull = false;
       while (true) {

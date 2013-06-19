@@ -1,5 +1,6 @@
 package water;
 
+import water.fvec.Frame;
 /**
  * User-View Key/Value Store
  *
@@ -55,6 +56,14 @@ public abstract class UKV {
     if( key._kb[0] == Key.KEY_OF_KEYS ) // Key-of-keys?
       for( Key k : key.flatten() )      // Then recursively delete
         remove(k,fs);
+    if( key._kb[0] == Key.VEC ) {
+      water.fvec.Vec vec = val.get();
+      for( int i=0; i<vec.nChunks(); i++ ) {
+        remove(vec.chunkKey(i),fs);
+      }
+    }
+    if( val.isFrame() )
+      ((Frame)val.get()).remove();
     DKV.remove(key,fs);
   }
 

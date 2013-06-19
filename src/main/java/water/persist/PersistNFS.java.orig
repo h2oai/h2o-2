@@ -24,9 +24,14 @@ public final class PersistNFS extends Persist {
 
   // Returns the file for given key.
   private static File getFileForKey(Key k) {
+<<<<<<< HEAD:src/main/java/water/PersistNFS.java
     final int len = KEY_PREFIX_LENGTH+1; // Strip key prefix & leading slash
     final int off = k._kb[0]==Key.DVEC ? (1+1+4) : 0;
     String s = new String(k._kb,len+off,k._kb.length-(len+off));
+=======
+    final int len = KEY_PREFIX_LENGTH + 1; // Strip key prefix & leading slash
+    String s = new String(k._kb, len, k._kb.length - len);
+>>>>>>> master:src/main/java/water/persist/PersistNFS.java
     return new File(s);
   }
 

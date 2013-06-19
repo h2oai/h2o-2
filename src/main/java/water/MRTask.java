@@ -3,17 +3,21 @@ package water;
 import jsr166y.CountedCompleter;
 
 /** Map/Reduce style distributed computation. */
-public abstract class MRTask extends DRemoteTask {
+public abstract class MRTask<T extends MRTask> extends DRemoteTask<T> {
 
-  transient private int _lo, _hi; // Range of keys to work on
-  transient private MRTask _left, _rite; // In-progress execution tree
+  transient protected int _lo, _hi; // Range of keys to work on
+  transient private T _left, _rite; // In-progress execution tree
 
-  public long memOverheadPerChunk(){return 0;}
+  // This method is another backpressure mechanism to make sure we do not
+  // exhaust system's resources by running too many tasks at the same time.
+  // Tasks are expected to reserve memory before proceeding with their
+  // execution and making sure they release it when done.
+  public long memOverheadPerChunk() { return 0; }
 
-  static final long log2(long a){
+  static final long log2(long a) {
     long x = a, y = 0;
-    while((x = x >> 1) > 0)++y;
-    return (a > 1 << y)?y+1:y;
+    while( (x >>= 1) > 0 ) ++y;
+    return (a > (1L << y)) ? y+1 : y;
   }
 
   @Override public void init() {
@@ -35,8 +39,8 @@ public abstract class MRTask extends DRemoteTask {
     if( _hi-_lo >= 2 ) { // Multi-key case: just divide-and-conquer to 1 key
       final int mid = (_lo+_hi)>>>1; // Mid-point
       assert _left == null && _rite == null;
-      MRTask l = (MRTask)clone();
-      MRTask r = (MRTask)clone();
+      T l = clone();
+      T r = clone();
       _left = l; l._reservedMem = 0;
       _rite = r; r._reservedMem = 0;
       _left._hi = mid;          // Reset mid-point

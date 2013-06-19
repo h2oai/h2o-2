@@ -186,11 +186,13 @@ public class Weaver {
     // loading of those superclasses.
     CtMethod ccms[] = cc.getDeclaredMethods();
     boolean w = hasExisting("write", "(Lwater/AutoBuffer;)Lwater/AutoBuffer;", ccms);
-    boolean r = hasExisting("read", "(Lwater/AutoBuffer;)Lwater/Freezable;", ccms);
-    if( w && r ) return;
-    if( w || r )
-      throw new RuntimeException(cc.getName() +" must implement both " +
-            "read(AutoBuffer) and write(AutoBuffer) or neither");
+    boolean r = hasExisting("read" , "(Lwater/AutoBuffer;)Lwater/Freezable;" , ccms);
+    boolean d = cc.subclassOf(_serBases[1]); // Subclass of DTask?
+    boolean c = hasExisting("copyOver" , "(Lwater/DTask;)V" , ccms);
+    if( w && r && (!d || c) ) return;
+    if( w || r || c )
+      throw new RuntimeException(cc.getName() +" must implement all of " +
+      "read(AutoBuffer) and write(AutoBuffer) and copyOver(DTask) or none");
 
     // Add the serialization methods: read, write.
     CtField ctfs[] = cc.getDeclaredFields();
@@ -238,6 +240,21 @@ public class Weaver {
               "  %s = (%C)s.get%z(%c.class);\n",
               "  return this;\n" +
               "}");
+
+    // Build a copyOver method that looks something like this:
+    //     public void copyOver( T s ) {
+    //       _x = s._x;
+    //       _xs = s._xs;
+    //       _d = s._d;
+    //     }
+    if( d ) make_body(cc,ctfs,callsuper,
+              "public void copyOver(water.DTask i) {\n"+
+              "  "+cc.getName()+" s = ("+cc.getName()+")i;\n",
+              "  super.copyOver(s);\n",
+              "  %s = s.%s;\n",
+              "  %s = s.%s;\n",
+              "  %s = s.%s;\n",
+              "}");
   }
 
   // Produce a code body with all these fill-ins.
@@ -282,7 +299,7 @@ public class Weaver {
     sb.append(trailer);
     String body = sb.toString();
     if( debug_print ) {
-      Log.debug(cc.getName()+" "+body);
+      System.err.println(cc.getName()+" "+body);
     }
 
     try {

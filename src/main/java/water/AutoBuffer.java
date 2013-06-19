@@ -356,7 +356,6 @@ public final class AutoBuffer {
     return MemoryManager.arrayCopyOfRange(_bb.array(), _bb.arrayOffset(), _bb.position());
   }
   public final byte[] bufClose() {
-    assert eof();
     byte[] res = _bb.array();
     bbFree();
     return res;
@@ -572,12 +571,12 @@ public final class AutoBuffer {
 
   public AutoBuffer put(Freezable f) {
     if( f == null ) return put2(TypeMap.NULL);
-    put2((short) f.frozenType());
+    put2((short)f.frozenType());
     return f.write(this);
   }
   public AutoBuffer put(Iced f) {
     if( f == null ) return put2(TypeMap.NULL);
-    put2((short) f.frozenType());
+    put2((short)f.frozenType());
     return f.write(this);
   }
   public AutoBuffer putA(Iced[] fs) {
@@ -627,6 +626,19 @@ public final class AutoBuffer {
     int len = get4(); if( len == -1 ) return null;
     String[] ts = new String[len];
     for( int i = 0; i < len; ++i ) ts[i] = getStr();
+    return ts;
+  }
+
+  public AutoBuffer putAAStr(String[][] fs)    {
+    if( fs == null ) return put4(-1);
+    put4(fs.length);
+    for( String[] s : fs ) putAStr(s);
+    return this;
+  }
+  public String[][] getAAStr() {
+    int len = get4(); if( len == -1 ) return null;
+    String[][] ts = new String[len][];
+    for( int i = 0; i < len; ++i ) ts[i] = getAStr();
     return ts;
   }
 
@@ -793,8 +805,8 @@ public final class AutoBuffer {
   public AutoBuffer putA1( byte[] ary ) {
     return ary == null ? put4(-1) : put4(ary.length).putA1(ary,ary.length);
   }
-  public AutoBuffer putA1( byte[] ary, int length ) {
-    int sofar = 0;
+  public AutoBuffer putA1( byte[] ary, int length ) { return putA1(ary,0,length); }
+  public AutoBuffer putA1( byte[] ary, int sofar, int length ) {
     while( sofar < length ) {
       int len = Math.min(length - sofar, _bb.remaining());
       _bb.put(ary, sofar, len);

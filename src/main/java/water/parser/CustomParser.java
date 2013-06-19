@@ -17,6 +17,6 @@ public abstract class CustomParser {
   public static final byte CHAR_NULL = 0;
   public static final byte CHAR_COMMA = ',';
 
-  public abstract void parse(Key key) throws Exception;
+  public abstract void parse(int cidx) throws Exception;
 
 }
