@@ -98,6 +98,12 @@ public class Vec extends Iced {
     return bv;
   }
 
+  // Next BigVector from the current one
+  BigVector nextBV( BigVector bv ) {
+    int cidx = elem2ChunkIdx(bv._start+bv._len);
+    return cidx == nChunks() ? null : elem2BV(cidx);
+  }
+
   // Fetch element the slow way
   long at( long i ) { return elem2BV(elem2ChunkIdx(i)).at(i); }
   double atd( long i ) { throw H2O.unimpl(); }

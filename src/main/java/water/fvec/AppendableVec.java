@@ -57,7 +57,7 @@ public class AppendableVec extends Vec {
   public Vec close() {
     // Compute #chunks
     int nchunk = _espc.length;
-    while( _espc[nchunk-1] == 0 ) nchunk--;
+    while( nchunk > 0 && _espc[nchunk-1] == 0 ) nchunk--;
 
     // Compute elems-per-chunk.  
     // Roll-up elem counts, so espc[i] is the starting element# of chunk i.

@@ -86,8 +86,8 @@ public class FVecTest extends TestUtil {
 
   // ==========================================================================
   @Test public void testParse2() {
-    File file = TestUtil.find_test_file("./smalldata/logreg/prostate_long.csv.gz");
-    //File file = TestUtil.find_test_file("../datasets/covtype.csv");
+    //File file = TestUtil.find_test_file("./smalldata/logreg/prostate_long.csv.gz");
+    File file = TestUtil.find_test_file("../datasets/UCI/UCI-large/covtype/covtype.data");
     Key fkey = NFSFileVec.make(file);
 
     Key okey = Key.make("prostate_long.hex");
