@@ -111,7 +111,7 @@ public class KMeansTest extends TestUtil {
   }
 
   @Test public void testAirline() {
-    Key k1 = loadAndParseKey("h.hex", "smalldata/airlines/allyears2k.zip");
+    Key k1 = loadAndParseFile("h.hex", "smalldata/airlines/allyears2k.zip");
     Key target = Key.make("air.kmeans");
     ValueArray va = UKV.get(k1);
     Timer t = new Timer();
@@ -124,7 +124,7 @@ public class KMeansTest extends TestUtil {
   }
 
   @Test public void testSphere() {
-    Key k1 = loadAndParseKey("syn_sphere3.hex", "smalldata/syn_sphere3.csv");
+    Key k1 = loadAndParseFile("syn_sphere3.hex", "smalldata/syn_sphere3.csv");
     Key target = Key.make(KMeans.KEY_PREFIX + "sphere");
     ValueArray va = UKV.get(k1);
     KMeans.start(target, va, 3, 1e-2, 0, SEED, false, 0, 1, 2).get();

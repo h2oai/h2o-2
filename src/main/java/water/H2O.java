@@ -135,6 +135,20 @@ public final class H2O {
   public final int size() { return _memary.length; }
   public final H2ONode leader() { return _memary[0]; }
 
+  public static void waitForCloudSize(int x) {
+    waitForCloudSize(x, 10000);
+  }
+
+  public static void waitForCloudSize(int x, long ms) {
+    long start = System.currentTimeMillis();
+    while( System.currentTimeMillis() - start < ms ) {
+      if( CLOUD.size() >= x )
+        break;
+      try { Thread.sleep(100); } catch( InterruptedException ie ) { }
+    }
+    assert H2O.CLOUD.size() >= x : "Cloud size of " + x;
+  }
+
   // *Desired* distribution function on keys & replication factor. Replica #0
   // is the master, replica #1, 2, 3, etc represent additional desired
   // replication nodes. Note that this function is just the distribution
@@ -143,13 +157,13 @@ public final class H2O {
   // is nonsense, e.g. asking for replica #3 in a 2-Node system.
   public int D( Key key, int repl ) {
     if( repl >= size() ) return -1;
-    
+
     // See if this is a specifically homed DVEC Key (has shorter encoding).
     byte[] kb = key._kb;
     if( kb[0] == Key.DVEC && kb[1] != -1 ) {
       throw H2O.unimpl();
       // return kb[1]; // home is just node index byte
-    } 
+    }
 
     // See if this is a specifically homed Key
     if( !key.user_allowed() && repl < kb[1] ) { // Asking for a replica# from the homed list?
@@ -900,7 +914,7 @@ public final class H2O {
       long space = Persist.getIce().getUsableSpace();
       return space != Persist.UNKNOWN && space < (5 << 10);
     }
-    private static boolean junk = false;
+
     public void run() {
       boolean diskFull = false;
       while (true) {

@@ -1,6 +1,8 @@
 package water;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
+
 import javassist.*;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
@@ -11,6 +13,8 @@ public class Weaver {
   private final CtClass[] _serBases;
   public static Class _typeMap;
   public static java.lang.reflect.Method _onLoad;
+  public static volatile String[] _packages = new String[] { "water", "hex", "org.junit" };
+
   Weaver() {
     try {
       _pool = ClassPool.getDefault();
@@ -24,6 +28,15 @@ public class Weaver {
       for( CtClass c : _serBases ) c.freeze();
     } catch( NotFoundException e ) {
       throw new RuntimeException(e);
+    }
+  }
+
+  public static void registerPackage(String name) {
+    synchronized( Weaver.class ) {
+      String[] a = _packages;
+      String[] t = Arrays.copyOf(a, a.length + 1);
+      t[t.length-1] = name;
+      _packages = t;
     }
   }
 
@@ -41,14 +54,10 @@ public class Weaver {
   // subclass of water.DTask, and if so - alter the class before returning it.
   public synchronized CtClass javassistLoadClass(String name) {
     try {
-      if( name.equals("water.Boot")) return null;
+      if( name.equals("water.Boot") ) return null;
       CtClass cc = _pool.get(name); // Full Name Lookup
       if( cc == null ) return null; // Oops?  Try the system loader, but expected to work
-      String pack = cc.getPackageName();
-      if( !pack.startsWith("water") &&
-          !pack.startsWith("hex") &&
-          !pack.startsWith("org.junit") &&
-          true ) return null; // Not in my package
+      if( !inPackages(cc.getPackageName()) ) return null;
 
       for( CtClass base : _serBases )
         if( cc.subclassOf(base) )
@@ -59,6 +68,14 @@ public class Weaver {
     } catch( CannotCompileException e ) { // Expected to compile
       throw new RuntimeException(e);
     }
+  }
+
+  private static boolean inPackages(String pack) {
+    String[] p = _packages;
+    for( int i = 0; i < p.length; i++ )
+      if( pack.startsWith(p[i]) )
+        return true;
+    return false;
   }
 
   public synchronized CtClass javassistLoadClass( CtClass cc ) throws NotFoundException, CannotCompileException {
@@ -146,14 +163,14 @@ public class Weaver {
     CtMethod ccms[] = cc.getDeclaredMethods();
     if( !javassist.Modifier.isAbstract(cc.getModifiers()) &&
         !hasExisting("frozenType", "()I", ccms) ) {
-      // Horrible Reflective Call 
+      // Horrible Reflective Call
       // Make a horrible reflective call to TypeMap.onLoad because....
       // The Weaver is called from the SystemLoader, and if it directly calls
       // TypeMap we end up calling a version of TypeMap loaded through the
       // SystemLoader - this is a separate version of TypeMap loaded *through*
       // the weaver... and may have different type mappings.  So we avoid the
       // issue by forcing a call to the pre-woven TypeMap.
-      if( _onLoad == null ) 
+      if( _onLoad == null )
         throw new RuntimeException("Weaver not booted, loading class "+cc.getName()+", add to the BOOTSTRAP_CLASSES list");
       Integer I;
       try { I = (Integer)_onLoad.invoke(null,cc.getName()); }

@@ -46,13 +46,7 @@ public class TestUtil {
   }
 
   public static void stall_till_cloudsize(int x, long ms) {
-    long start = System.currentTimeMillis();
-    while( System.currentTimeMillis() - start < ms ) {
-      if( H2O.CLOUD.size() >= x )
-        break;
-      try { Thread.sleep(100); } catch( InterruptedException ie ) { }
-    }
-    assertTrue("Cloud size of " + x, H2O.CLOUD.size() >= x);
+    H2O.waitForCloudSize(x, ms);
     UKV.put(Job.LIST, new Job.List()); // Jobs.LIST must be part of initial keys
   }
 
@@ -110,7 +104,7 @@ public class TestUtil {
     return load_test_file(file, file.getPath());
   }
 
-  public static Key loadAndParseKey(String keyName, String path) {
+  public static Key loadAndParseFile(String keyName, String path) {
     Key fkey = load_test_file(path);
     Key okey = Key.make(keyName);
     if(DKV.get(okey) != null)
@@ -219,9 +213,9 @@ public class TestUtil {
           // @formatter:off
           case  1: ab.put1 (b = ((byte  [])arys[j])[row]);  d = b;  break;
           case -4: ab.put4f(f = ((float [])arys[j])[row]);  d = f;  break;
-          case -8: ab.put8d(d = ((double[])arys[j])[row]);  d = d;  break;
+          case -8: ab.put8d(d = ((double[])arys[j])[row]);          break;
           // @formatter:on
-          case 2: // Catagoricals or enums
+          case 2: // Categoricals or enums
             String s = ((String[]) arys[j])[row];
             String[] dom = col._domain;
             int k = index(dom, s);
@@ -294,6 +288,7 @@ public class TestUtil {
     public abstract double expr(byte[] cols);
   }
 
+  @SuppressWarnings("cast")
   public ValueArray va_maker(Key key, int M, int N, DataExpr expr) {
     if( N <= 0 || N > 127 || M <= 0 )
       throw H2O.unimpl();

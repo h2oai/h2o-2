@@ -3,6 +3,7 @@
 	<classpathentry kind="src" path="src/main/java"/>
 	<classpathentry kind="src" path="src/test/java"/>
 	<classpathentry kind="src" path="src/main/resources"/>
+	<classpathentry kind="src" path="src/samples"/>
 	<classpathentry kind="lib" path="lib/apache/commons-configuration-1.6.jar"/>
 	<classpathentry kind="lib" path="lib/apache/commons-lang-2.4.jar" sourcepath="lib/apache/commons-lang-2.4-sources.jar"/>
 	<classpathentry kind="lib" path="lib/apache/commons-logging-1.1.1.jar" sourcepath="lib/apache/commons-logging-1.1.1-src.zip"/>

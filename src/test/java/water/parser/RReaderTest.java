@@ -15,7 +15,7 @@ public class RReaderTest extends TestUtil {
 
   @Test
   public void testIrisModel() throws Exception {
-    Key irisk = TestUtil.loadAndParseKey("iris.hex","smalldata/iris/iris2.csv");
+    Key irisk = TestUtil.loadAndParseFile("iris.hex","smalldata/iris/iris2.csv");
     ValueArray iris = DKV.get(irisk).get();
 
     File file = TestUtil.find_test_file("smalldata/test/rmodels/iris_x-iris-1-4_y-species_ntree-500.rdata");
@@ -38,7 +38,7 @@ public class RReaderTest extends TestUtil {
 
   @Test
   public void testProstateModel() throws Exception {
-    Key prok = TestUtil.loadAndParseKey("prostate.hex","smalldata/logreg/prostate.csv");
+    Key prok = TestUtil.loadAndParseFile("prostate.hex","smalldata/logreg/prostate.csv");
     ValueArray pro = DKV.get(prok).get();
 
     File file = TestUtil.find_test_file("smalldata/test/rmodels/prostate-rf-10tree-asFactorCapsule.rdata");
@@ -68,7 +68,7 @@ public class RReaderTest extends TestUtil {
 
   /*@Test*/
   public void testCovtypeModel() throws Exception {
-    Key prok = TestUtil.loadAndParseKey("covtype.hex","smalldata/covtype/covtype.20k.data");
+    Key prok = TestUtil.loadAndParseFile("covtype.hex","smalldata/covtype/covtype.20k.data");
     ValueArray pro = DKV.get(prok).get();
 
     File file = TestUtil.find_test_file("smalldata/test/rmodels/covtype-rf-50tree-as-factor-X5.rdata");

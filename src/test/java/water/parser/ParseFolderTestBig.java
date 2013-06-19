@@ -12,7 +12,7 @@ public class ParseFolderTestBig extends TestUtil {
     Key k1 = null,k2 = null;
     try {
       k2 = loadAndParseFolder("multipart.hex","datasets/parse_folder_test" );
-      k1 = loadAndParseKey("full.hex","datasets/UCI/UCI-large/covtype/covtype.data");
+      k1 = loadAndParseFile("full.hex","datasets/UCI/UCI-large/covtype/covtype.data");
       Value v1 = DKV.get(k1);
       Value v2 = DKV.get(k2);
       assertTrue(v1.isBitIdentical(v2));
