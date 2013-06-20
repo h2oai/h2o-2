@@ -132,15 +132,19 @@ class Basic(unittest.TestCase):
             # ntree=50&
             # class_weights=-1%3D1.0%2C0%3D1.0%2C1%3D1.0&
             # out_of_bag_error_estimate=1&
-            # no_confusion_matrix=1&
-            # clear_confusion_matrix=1
-            ### dataKeyTest = data_key
-            kwargs['clear_confusion_matrix'] = 1
-            kwargs['no_confusion_matrix'] = 0
+
+            # does this still exist?
+            # no_confusion_matrix=1
+
+            kwargs['iterative_cm'] = 1
+            kwargs['no_confusion_matrix'] = 1
+
             # do full scoring
             kwargs['out_of_bag_error_estimate'] = 0
             rfv = h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
+
+            h2o.nodes[0].random_forest_predict(model_key=model_key, key=dataKeyTest)
 
             fullScorePctRight = 100 * (1.0 - rfv['confusion_matrix']['classification_error'])
             self.assertAlmostEqual(fullScorePctRight,expectScorePctRightList[trial],

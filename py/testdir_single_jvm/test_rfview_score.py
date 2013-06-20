@@ -105,36 +105,26 @@ class Basic(unittest.TestCase):
             # ntree=50&
             # class_weights=-1%3D1.0%2C0%3D1.0%2C1%3D1.0&
             # out_of_bag_error_estimate=1&
-            # no_confusion_matrix=1&
-            # clear_confusion_matrix=1
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, 
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
+            # new web page for predict? throw it in here for now
+            h2o.nodes[0].random_forest_predict(model_key=model_key, key=dataKeyTest)
 
-            kwargs['no_confusion_matrix'] = 0
-            kwargs['clear_confusion_matrix'] = 0
+            kwargs['iterative_cm'] = 0
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
+            h2o.nodes[0].random_forest_predict(model_key=model_key, key=dataKeyTest)
 
-            kwargs['no_confusion_matrix'] = 0
-            kwargs['clear_confusion_matrix'] = 1
+            kwargs['iterative_cm'] = 1
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, 
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
+            h2o.nodes[0].random_forest_predict(model_key=model_key, key=dataKeyTest)
 
-            kwargs['no_confusion_matrix'] = 1
-            kwargs['clear_confusion_matrix'] = 0
-            h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
-                timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
-
-            kwargs['no_confusion_matrix'] = 1
-            kwargs['clear_confusion_matrix'] = 1
-            h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, 
-                timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
-
-            kwargs['no_confusion_matrix'] = 0
-            kwargs['clear_confusion_matrix'] = 0
+            kwargs['iterative_cm'] = 1
             kwargs['class_weights'] = '1=1,2=2,3=3,4=4,5=5,6=6,7=7'
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
+            h2o.nodes[0].random_forest_predict(model_key=model_key, key=dataKeyTest)
 
             print "Trial #", trial, "completed"
 

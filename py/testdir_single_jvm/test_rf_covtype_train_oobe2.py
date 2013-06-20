@@ -149,15 +149,19 @@ class Basic(unittest.TestCase):
             # ntree=50&
             # class_weights=-1%3D1.0%2C0%3D1.0%2C1%3D1.0&
             # out_of_bag_error_estimate=1&
+# http://192.168.1.28:54321/GeneratePredictionsPage.html?model_key=__RFModel_0e2531bc-2552-4f65-8a4a-843031b0cb99&key=iris
+# http://192.168.1.28:54321/RFView.html?data_key=iris.hex&model_key=__RFModel_0e2531bc-2552-4f65-8a4a-843031b0cb99&ntree=50&response_variable=4&class_weights=Iris-setosa%3D1.0%2CIris-versicolor%3D1.0%2CIris-virginica%3D1.0&out_of_bag_error_estimate=true&iterative_cm=true
+
+            # These two no longer exist? replaced by iterative_cm?
             # no_confusion_matrix=1&
             # clear_confusion_matrix=1
-            ### dataKeyTest = data_key
-            kwargs['clear_confusion_matrix'] = 1
-            kwargs['no_confusion_matrix'] = 0
+            kwargs['iterative_cm'] = 1
             # do full scoring
             kwargs['out_of_bag_error_estimate'] = 0
             rfv = h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
+
+            h2o.nodes[0].random_forest_predict(model_key=model_key, key=dataKeyTest)
 
             fullScorePctRight = 100 * (1.0 - rfv['confusion_matrix']['classification_error'])
             self.assertAlmostEqual(fullScorePctRight,expectScorePctRightList[trial],
