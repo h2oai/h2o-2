@@ -33,7 +33,7 @@ def run_glms(file,configs):
     try:
         k = parse_file(file)
         for kwargs in configs:
-            res = h2o.nodes[0].GLM(k, timeoutSecs=6000000, **kwargs)
+            res = h2o.nodes[0].GLM(k, timeoutSecs=6000000, pollTimeoutSecs=180, **kwargs)
             glm = res['GLMModel']
             coefs = glm['coefficients']
             coefs = glm['coefficients']
