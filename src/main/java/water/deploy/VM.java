@@ -105,16 +105,20 @@ public abstract class VM {
   public static void exitWithParent() {
     Thread thread = new Thread() {
       @Override public void run() {
-        for( ;; ) {
-          int b;
-          try {
-            b = System.in.read();
-          } catch( Exception e ) {
-            b = -1;
-          }
-          if( b < 0 ) {
-            Log.debug("Assuming parent done, exit(0)");
-            System.exit(0);
+        // Avoid on Windows as it exits immediately. Seems to work using Java7
+        // ProcessBuilder.redirectInput, but we need to run on Java 6 for now
+        if( !System.getProperty("os.name").toLowerCase().contains("win") ) {
+          for( ;; ) {
+            int b;
+            try {
+              b = System.in.read();
+            } catch( Exception e ) {
+              b = -1;
+            }
+            if( b < 0 ) {
+              Log.info("Assuming parent done, exit(0)");
+              System.exit(0);
+            }
           }
         }
       }
