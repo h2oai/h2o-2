@@ -9,7 +9,6 @@ public class C2Chunk extends Chunk {
   @Override public long   get ( int    i ) { return UDP.get2(_mem,(i<<1)+OFF);}
   @Override public double getd( int    i ) {
     int res = UDP.get2(_mem,(i<<1)+OFF);
-    System.out.println("res = " + res + " NA = " + NA());
     return res == NA()?Double.NaN:res;
   }
   @Override void   append2 ( long l, int exp ) { throw H2O.fail(); }
