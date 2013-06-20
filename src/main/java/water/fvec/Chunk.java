@@ -9,10 +9,12 @@ import water.Iced;
 // chunk cache of the total vector.  Subclasses of this abstract class
 // implement (possibly empty) compression schemes.
 public abstract class Chunk extends Iced {
+  protected long _NA;
   public long _start;           // Start element; filled after AutoBuffer.read
   public int _len;              // Number of elements in this chunk
   byte[] _mem; // Short-cut to the embedded memory; WARNING: holds onto a large array
   Vec _vec;    // Owning Vec; filled after AutoBuffer.read
+  public Chunk(long na){_NA = na;}
   public final Vec vec() { return _vec; }
   // Load a long value from the 1-entry chunk cache, or miss-out to "go slow".
   // This version uses absolute element numbers, but must convert them to
@@ -43,4 +45,5 @@ public abstract class Chunk extends Iced {
   // Chunk-specific implementations of read & write
   public abstract AutoBuffer write(AutoBuffer bb);
   public abstract Chunk  read (AutoBuffer bb);
+  public final long NA(){return this._NA;}
 }

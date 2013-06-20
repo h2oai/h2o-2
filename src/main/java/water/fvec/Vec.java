@@ -106,7 +106,7 @@ public class Vec extends Iced {
 
   // Fetch element the slow way
   public long get( long i ) { return elem2BV(elem2ChunkIdx(i)).at(i); }
-  public double getd( long i ) { throw H2O.unimpl(); }
+  public double getd( long i ) { return elem2BV(elem2ChunkIdx(i)).atd(i); }
 
   // [#elems, min/mean/max]
   @Override public String toString() {
