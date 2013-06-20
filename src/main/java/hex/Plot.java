@@ -46,12 +46,19 @@ public abstract class Plot {
         Column cY = va._cols[_cols[1]];
         double x = va.datad(bits, row, cX);
         double y = va.datad(bits, row, cY);
-        int iX = scale(x, cX, _width);;
+        int iX = scale(x, cX, _width);
         int iY = scale(y, cY, _height);
         int value = _pixels[iY * _width + iX] & 0xff;
         value = value == 0xff ? value : value + 1;
-        _pixels[iY * _width + iX] = (byte) value;
+        dot(iX, iY, value);
       }
+    }
+
+    private void dot(int iX, int iY, int value) {
+      int r = 2;
+      for( int y = Math.max(0, iY - r); y < Math.min(_height, iY + r); y++ )
+        for( int x = Math.max(0, iX - r); x < Math.min(_width, iX + r); x++ )
+          _pixels[y * _width + x] = (byte) value;
     }
 
     @Override public void reduce(DRemoteTask rt) {

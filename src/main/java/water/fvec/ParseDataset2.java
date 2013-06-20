@@ -272,7 +272,10 @@ public final class ParseDataset2 extends Job {
             _col++;             // Next column filled in
             throw H2O.unimpl();
           }
-          @Override public void addInvalidCol(int colIdx) { throw H2O.unimpl(); }
+          @Override public void addInvalidCol(int colIdx) {
+            nvs[colIdx].append2(0,Integer.MIN_VALUE);
+            _col++;             // Next column filled in
+          }
           @Override public void rollbackLine() { }
           @Override public boolean isString(int colIdx) { return false; }
         };

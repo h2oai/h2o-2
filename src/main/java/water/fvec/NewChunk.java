@@ -12,6 +12,7 @@ public class NewChunk extends Chunk {
   transient double _min, _max, _sum;
 
   NewChunk( AppendableVec vec, int cidx ) {
+    super(Long.MIN_VALUE);
     _vec = vec;                 // Owning AppendableVec
     _cidx = cidx;               // This chunk#
     _ls = new long[4];          // A little room for data
@@ -21,6 +22,9 @@ public class NewChunk extends Chunk {
     _sum = 0;
   }
 
+  protected final boolean isNA(int idx){
+    return _ls[idx] == 0 && _xs[idx] == Integer.MIN_VALUE;
+  }
   // Fast-path append long data
   @Override void append2( long l, int x ) {
     if( _len >= _ls.length ) append2slow();
@@ -53,8 +57,9 @@ public class NewChunk extends Chunk {
     int  xmin = Integer.MAX_VALUE;   // min exponent found
     long lemin= 0, lemax=lemin; // min/max at xmin fixed-point
     boolean overflow=false;
-    boolean first=true;
+    boolean floatOverflow = false;
     for( int i=0; i<_len; i++ ) {
+      if(isNA(i))continue;
       long l = _ls[i];
       int  x = _xs[i];
       // Compute per-chunk min/sum/max
@@ -63,26 +68,26 @@ public class NewChunk extends Chunk {
       if( d > _max ) _max = d;
       _sum += d;
       if( l==0 ) x=0;           // Canonicalize zero exponent
-      // Remove any trailing zeros / powers-of-10
       long t;
       while( l!=0 && (t=l/10)*10==l ) { l=t; x++; }
+      floatOverflow = Math.abs(l) > MAX_FLOAT_MANTISSA;
+      if(i == 0){
+        xmin = x;
+        lemin = lemax = l;
+        continue;
+      }
+      // Remove any trailing zeros / powers-of-10
+      if(overflow || (overflow = (Math.abs(xmin-x)) >=10))continue;
       // Track largest/smallest values at xmin scale.  Note overflow.
       if( x < xmin ) {
-        if( !first ) {
-          overflow |= (lemin < Integer.MIN_VALUE) | (lemax > Integer.MAX_VALUE);
-          if( xmin-x >= 10 ) overflow = true;
-          else {
-            lemin *= DParseTask.pow10i(xmin-x);
-            lemax *= DParseTask.pow10i(xmin-x);
-          }
-        }
+        lemin *= DParseTask.pow10i(xmin-x);
+        lemax *= DParseTask.pow10i(xmin-x);
         xmin = x;               // Smaller xmin
       }
       // *this* value, as a long scaled at the smallest scale
       long le = l*DParseTask.pow10i(x-xmin);
-      if( first || le < lemin ) lemin=le;
-      if( first || le > lemax ) lemax=le;
-      first = false;
+      if( le < lemin ) lemin=le;
+      if( le > lemax ) lemax=le;
     }
 
     // Exponent scaling: replacing numbers like 1.3 with 13e-1.  '13' fits in a
@@ -96,14 +101,15 @@ public class NewChunk extends Chunk {
     // uniform, so we scale up the largest lmax by the largest scale we need
     // and if that fits in a byte/short - then it's worth compressing.  Other
     // wise we just flip to a float or double representation.
-    if( xmin != 0 ) {
-      if( !overflow && lemax-lemin < 255 ) // Fits in scaled biased byte?
-        return new C1SChunk(bufX(lemin,xmin,C1SChunk.OFF,0),(int)lemin,DParseTask.pow10(xmin));
-      if( !overflow && lemax-lemin < 65535 )
-        return new C2SChunk(bufX(lemin,xmin,C2SChunk.OFF,1),(int)lemin,DParseTask.pow10(xmin));
-      if( Math.abs(lemax-lemin) <= MAX_FLOAT_MANTISSA && -35 <= xmin && xmin <= 35 )
-        return new C4FChunk(bufF(2));
+    if(overflow || ((xmin != 0) && floatOverflow || -35 > xmin || xmin > 35))
       return new C8DChunk(bufF(3));
+    if( xmin != 0 ) {
+      if(lemax-lemin < 255 ) // Fits in scaled biased byte?
+        return new C1SChunk(bufX(lemin,xmin,C1SChunk.OFF,0),(int)lemin,DParseTask.pow10(xmin));
+      if(lemax-lemin < 65535 )
+        return new C2SChunk(bufX(lemin,xmin,C2SChunk.OFF,1),(int)lemin,DParseTask.pow10(xmin));
+
+      return new C4FChunk(bufF(2));
     }
 
     // Compress column into a byte
@@ -131,17 +137,27 @@ public class NewChunk extends Chunk {
   private byte[] bufX( long bias, int scale, int off, int log ) {
     byte[] bs = new byte[(_len<<log)+off];
     for( int i=0; i<_len; i++ ) {
-      int x = _xs[i]-scale;
-      long le = x >= 0
-        ? _ls[i]*DParseTask.pow10i( x)
-        : _ls[i]/DParseTask.pow10i(-x);
-      le -= bias;
-      switch( log ) {
-      case 0:          bs [i    +off] = (byte)le ; break;
-      case 1: UDP.set2(bs,(i<<1)+off,  (short)le); break;
-      case 2: UDP.set4(bs,(i<<2)+off,    (int)le); break;
-      case 3: UDP.set8(bs,(i<<3)+off,         le); break;
-      default: H2O.fail();
+      if(isNA(i)){
+        switch( log ) {
+          case 0:          bs [i    +off] = (byte)0xFF;         break;
+          case 1: UDP.set2(bs,(i<<1)+off,   Short.MIN_VALUE);     break;
+          case 2: UDP.set4(bs,(i<<2)+off,   Integer.MIN_VALUE); break;
+          case 3: UDP.set8(bs,(i<<3)+off,   Long.MIN_VALUE);    break;
+          default: H2O.fail();
+        }
+      } else {
+        int x = _xs[i]-scale;
+        long le = x >= 0
+            ? _ls[i]*DParseTask.pow10i( x)
+            : _ls[i]/DParseTask.pow10i(-x);
+        le -= bias;
+        switch( log ) {
+        case 0:          bs [i    +off] = (byte)le ; break;
+        case 1: UDP.set2(bs,(i<<1)+off,  (short)le); break;
+        case 2: UDP.set4(bs,(i<<2)+off,    (int)le); break;
+        case 3: UDP.set8(bs,(i<<3)+off,         le); break;
+        default: H2O.fail();
+        }
       }
     }
     return bs;
@@ -151,11 +167,18 @@ public class NewChunk extends Chunk {
   private byte[] bufF( int log ) {
     byte[] bs = new byte[_len<<log];
     for( int i=0; i<_len; i++ ) {
-      double le = _ls[i]*DParseTask.pow10(_xs[i]);
-      switch( log ) {
-      case 2: UDP.set4f(bs,(i<<2), (float)le); break;
-      case 3: UDP.set8d(bs,(i<<3),        le); break;
-      default: H2O.fail();
+      if(isNA(i)){
+        switch( log ) {
+          case 2: UDP.set4f(bs,(i<<2), Float.NaN);  break;
+          case 3: UDP.set8d(bs,(i<<3), Double.NaN); break;
+        }
+      } else {
+        double le = _ls[i]*DParseTask.pow10(_xs[i]);
+        switch( log ) {
+        case 2: UDP.set4f(bs,(i<<2), (float)le); break;
+        case 3: UDP.set8d(bs,(i<<3),        le); break;
+        default: H2O.fail();
+        }
       }
     }
     return bs;
