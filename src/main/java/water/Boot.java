@@ -213,10 +213,16 @@ public class Boot extends ClassLoader {
       return _systemLoader.getResourceAsStream("resources"+uri);
     } else {
       try {
-        // IDE mode assumes classes are in target/classes. Not using current path
-        // to allow running from other locations.
-        String classes = getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
-        return new FileInputStream(new File(classes + "/../../lib/resources"+uri));
+        return new FileInputStream(new File("lib/resources"+uri)); 
+        // The following code is busted on windows with spaces in user-names,
+        // and I've no idea where it comes from - GIT claims it came from
+        // cliffc-fvec2 merge into master, but there's no indication of this
+        // code in cliffc-fvec2 and cliffc didn't write this code (and it's
+        // instantly busted for the windows user name "Cliff Click").
+        //// IDE mode assumes classes are in target/classes. Not using current path
+        //// to allow running from other locations.
+        //String classes = getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
+        //return new FileInputStream(new File(classes + "/../../lib/resources"+uri));
       } catch (FileNotFoundException e) {
         Log.err(e);
         return null;

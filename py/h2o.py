@@ -1094,13 +1094,12 @@ class H2O(object):
 
     def random_forest_view(self, data_key, model_key, timeoutSecs=300, print_params=False, **kwargs):
         params_dict = {
+            'no_confusion_matrix': None,
             'data_key': data_key,
             'model_key': model_key,
             'out_of_bag_error_estimate': 1, 
             'class_weights': None,
             'response_variable': None, # FIX! apparently this is needed now?
-            'no_confusion_matrix': None,
-            'clear_confusion_matrix': None,
             }
         browseAlso = kwargs.pop('browseAlso',False)
 
@@ -1118,6 +1117,29 @@ class H2O(object):
 
         if (browseAlso | browse_json):
             h2b.browseJsonHistoryAsUrlLastMatch("RFView")
+        return a
+
+    def random_forest_predict(self, key, model_key, timeoutSecs=300, print_params=False, **kwargs):
+        params_dict = {
+            'key': key,
+            'model_key': model_key,
+            }
+        browseAlso = kwargs.pop('browseAlso',False)
+
+        # only update params_dict..don't add
+        # throw away anything else as it should come from the model (propagating what RF used)
+        for k in kwargs:
+            if k in params_dict:
+                params_dict[k] = kwargs[k]
+
+        if print_params:
+            print "\nrandom_forest_view parameters:", params_dict
+
+        a = self.__do_json_request('GeneratePredictionsPage.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nrandom_forest_predict result:", dump_json(a))
+
+        if (browseAlso | browse_json):
+            h2b.browseJsonHistoryAsUrlLastMatch("GeneratePredictions")
         return a
 
     def random_forest_treeview(self, tree_number, data_key, model_key, 
