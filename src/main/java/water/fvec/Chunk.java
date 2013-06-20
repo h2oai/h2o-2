@@ -35,9 +35,15 @@ public abstract class Chunk extends Iced {
     if( 0 <= x && x < _len ) return getd((int)x);
     return _vec.getd(i);
   }
+  public final boolean isNA( long i ) {
+    long x = i-_start;
+    if( 0 <= x && x < _len ) return isNA0((int)x);
+    return _vec.isNA(i);
+  }
   // Chunk-specific decompression of chunk-relative indexed data
   public abstract long   get ( int i );
   public abstract double getd( int i );
+  public /*abstract*/ boolean isNA0(int i ) { return false; } // not implemented yet!
   // Chunk-specific append of data
   abstract void append2( long l, int exp );
   // Chunk-specific implementations of read & write
