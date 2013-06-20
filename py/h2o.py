@@ -1163,7 +1163,7 @@ class H2O(object):
             time.sleep(3) # to be able to see it
         return a
 
-    def summary_page(self, key, timeoutSecs=10, **kwargs):
+    def summary_page(self, key, timeoutSecs=30, **kwargs):
         params_dict = {
             'key': key,
             }
