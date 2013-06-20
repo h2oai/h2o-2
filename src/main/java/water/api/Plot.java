@@ -66,7 +66,7 @@ public class Plot extends Request {
             pixel[0] = 255;
             pixel[1] = 0;
             pixel[2] = 0;
-            int r = 2;
+            int r = 3;
             for( int y = Math.max(0, y0 - r); y < Math.min(height, y0 + r); y++ )
               for( int x = Math.max(0, x0 - r); x < Math.min(width, x0 + r); x++ )
                 raster.setPixel(x, y, pixel);

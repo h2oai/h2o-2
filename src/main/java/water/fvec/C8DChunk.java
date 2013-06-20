@@ -8,7 +8,7 @@ public class C8DChunk extends Chunk {
   @Override public long   get ( int    i ) { return (long)UDP.get8d(_mem,i<<3); }
   @Override public double getd( int    i ) { return       UDP.get8d(_mem,i<<3); }
   @Override void   append2 ( long l, int exp ) { throw H2O.fail(); }
-  @Override public AutoBuffer write(AutoBuffer bb) { throw H2O.fail(); }
+  @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
   @Override public C8DChunk read(AutoBuffer bb) {
     _mem = bb.bufClose();
     _start = -1;
