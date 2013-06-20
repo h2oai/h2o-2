@@ -269,8 +269,12 @@ public class Utils {
     return s;
   }
 
-  public static String[] add(String[] a, String... b) {
-    return (String[]) ArrayUtils.addAll(a, b);
+  public static <T> T[] add(T[] a, String... b) {
+    return (T[]) ArrayUtils.addAll(a, b);
+  }
+
+  public static <T> T[] remove(T[] a, int i) {
+    return (T[]) ArrayUtils.remove(a, i);
   }
 
   public static void clearFolder(String folder) {

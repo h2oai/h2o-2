@@ -7,7 +7,7 @@ import water.util.Log;
 public class TypeMap {
   static public final short NULL = (short) -1;
   static public final short PRIM_B = 1;
-  static public final short C1VECTOR;
+  static public final short C1CHUNK;
   static public final short FRAME;
   static public final short VALUE_ARRAY;
   static final public String BOOTSTRAP_CLASSES[] = {
@@ -32,7 +32,7 @@ public class TypeMap {
     "water.ValueArray",
     "water.ValueArray$Column",
     "water.api.Script$Done",
-    "water.fvec.C1Vector",
+    "water.fvec.C1Chunk",
     "water.fvec.Frame",
     "water.parser.ParseDataset",
     "water.parser.ParseDataset$Progress",
@@ -54,7 +54,7 @@ public class TypeMap {
     for( String s : CLAZZES )
       MAP.put(s,id++);
     IDS = id;
-    C1VECTOR    = (short)onLoad("water.fvec.C1Vector");
+    C1CHUNK    = (short)onLoad("water.fvec.C1Chunk");
     FRAME       = (short)onLoad("water.fvec.Frame");
     VALUE_ARRAY = (short)onLoad("water.ValueArray");
     GOLD = new Freezable[BOOTSTRAP_CLASSES.length];
@@ -98,7 +98,7 @@ public class TypeMap {
     if( id >= CLAZZES.length || CLAZZES[id] == null ) loadId(id);
     Iced f = (Iced) GOLD[id];
     if( f == null ) {
-      try { GOLD[id] = f = (Iced) Class.forName(CLAZZES[id]).newInstance(); } 
+      try { GOLD[id] = f = (Iced) Class.forName(CLAZZES[id]).newInstance(); }
       catch( Exception e ) { throw Log.errRTExcept(e); }
     }
     return f.newInstance();
@@ -108,15 +108,15 @@ public class TypeMap {
     if( id >= CLAZZES.length || CLAZZES[id] == null ) loadId(id);
     Freezable f = GOLD[id];
     if( f == null ) {
-      try { GOLD[id] = f = (Freezable) Class.forName(CLAZZES[id]).newInstance(); } 
+      try { GOLD[id] = f = (Freezable) Class.forName(CLAZZES[id]).newInstance(); }
       catch( Exception e ) { throw Log.errRTExcept(e); }
     }
     return f.newInstance();
   }
 
-  static public String className(int id) { 
+  static public String className(int id) {
     if( id >= CLAZZES.length || CLAZZES[id] == null ) loadId(id);
-    return CLAZZES[id]; 
+    return CLAZZES[id];
   }
   static public Class clazz(int id) {
     if( id >= CLAZZES.length || CLAZZES[id] == null ) loadId(id);

@@ -6,9 +6,10 @@ import water.*;
  * Loads and parse a local file.
  */
 public class Part03_Parse {
+  // Ignore this boilerplate main, c.f. previous samples
   public static void main(String[] args) throws Exception {
     Weaver.registerPackage("h2o.samples");
-    water.Boot._init.boot(new String[] { "-mainClass", UserMain.class.getName() });
+    water.Boot.main(UserMain.class, args);
   }
 
   public static class UserMain {

@@ -4,8 +4,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 import java.util.zip.*;
+
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.parser.CsvParser;

@@ -6,23 +6,28 @@ import java.util.Random;
 
 import water.*;
 import water.fvec.*;
+import water.util.Utils;
 
 /**
  * Simplified version of H2O k-means algorithm for better readability.
  */
-public class Part05_KMeansAPI2 {
+public class Part05_KMeansNewAPI {
+  // Ignore this boilerplate main, c.f. previous samples
   public static void main(String[] args) throws Exception {
     Weaver.registerPackage("h2o.samples");
-    water.Boot._init.boot(new String[] { "-mainClass", UserMain.class.getName() });
+    water.Boot.main(UserMain.class, args);
   }
 
   public static class UserMain {
     public static void main(String[] args) throws Exception {
       H2O.main(args);
+
+      // Parse file
       Key file = NFSFileVec.make(new File("smalldata/gaussian/sdss174052.csv.gz"));
-      Key key = Key.make("test");
-      Frame frame = ParseDataset2.parse(key, new Key[] { file });
-      //frame = new Frame(
+      Frame frame = ParseDataset2.parse(Key.make("test"), new Key[] { file });
+
+      // Create a frame with only the columns to use, e.g. skip first for this dataset
+      frame = new Frame(null, Utils.remove(frame._names, 0), Utils.remove(frame._vecs, 0));
 
       // Create k clusters as arrays of doubles
       int k = 3;
@@ -35,7 +40,7 @@ public class Part05_KMeansAPI2 {
         clusters[0][i] = frame.vecs()[i].getd(row);
 
       // Iterate over the dataset and show error for each step
-      for( int i = 0; i < 100; i++ ) {
+      for( int i = 0; i < 10; i++ ) {
         KMeans task = new KMeans();
         task._clusters = clusters;
         task.invoke(frame);

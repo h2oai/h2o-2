@@ -5,10 +5,11 @@ import water.*;
 /**
  * Runs a map reduce task over a dataset and sums elements of a column.
  */
-public class Part04_Sum {
+public class Part04_MapReduce {
+  // Ignore this boilerplate main, c.f. previous samples
   public static void main(String[] args) throws Exception {
     Weaver.registerPackage("h2o.samples");
-    water.Boot._init.boot(new String[] { "-mainClass", UserMain.class.getName() });
+    water.Boot.main(UserMain.class, args);
   }
 
   public static class UserMain {

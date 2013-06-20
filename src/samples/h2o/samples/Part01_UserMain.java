@@ -11,7 +11,7 @@ public class Part01_UserMain {
   public static void main(String[] args) throws Exception {
     // Ignore, temporary boilerplate
     Weaver.registerPackage("h2o.samples");
-    water.Boot._init.boot(new String[] { "-mainClass", UserMain.class.getName() });
+    water.Boot.main(UserMain.class, args);
   }
 
   public static class UserMain {

@@ -8,7 +8,6 @@ import org.junit.*;
 import water.TestUtil;
 import water.parser.DParseTask;
 
-@Ignore
 public class NewVectorTest extends TestUtil {
   static final double EPSILON = 1e-6;
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }

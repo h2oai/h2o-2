@@ -9,18 +9,24 @@ import water.*;
  * Simplified version of H2O k-means algorithm for better readability.
  */
 public class Part05_KMeans {
+  // Ignore this boilerplate main, c.f. previous samples
   public static void main(String[] args) throws Exception {
     Weaver.registerPackage("h2o.samples");
-    water.Boot._init.boot(new String[] { "-mainClass", UserMain.class.getName() });
+    water.Boot.main(UserMain.class, args);
   }
 
   public static class UserMain {
     public static void main(String[] args) throws Exception {
+      // Starts a one node cluster
       H2O.main(args);
+
+      // Loads, unzip and parse a file. Data is distributed to other nodes in a round-robin way.
       Key key = TestUtil.loadAndParseFile("test", "smalldata/gaussian/sdss174052.csv.gz");
+
+      // ValueArray is a distributed 2D array
       ValueArray va = DKV.get(key).get();
 
-      // Which columns are used from the dataset, skip first in this case
+      // Which columns to use, e.g. skip first for this dataset
       int[] cols = new int[va._cols.length - 1];
       for( int i = 0; i < cols.length; i++ )
         cols[i] = i + 1;
@@ -32,11 +38,11 @@ public class Part05_KMeans {
       // Initialize first cluster to random row
       Random rand = new Random();
       long row = Math.max(0, (long) (rand.nextDouble() * va._numrows) - 1);
-      AutoBuffer bits = va.getChunk(va.chknum(row));
-      fill(clusters[0], va, bits, va.rowInChunk(va.chknum(row), row), cols);
+      for( int i = 0; i < cols.length; i++ )
+        clusters[0][i] = va.datad(row, cols[i]);
 
       // Iterate over the dataset and show error for each step
-      for( int i = 0; i < 100; i++ ) {
+      for( int i = 0; i < 20; i++ ) {
         KMeans task = new KMeans();
         task._mainKey = key;
         task._cols = cols;
@@ -44,6 +50,7 @@ public class Part05_KMeans {
         task.invoke(key);
         System.out.println("Error is " + task._error);
 
+        // Recompute location for each cluster
         for( int cluster = 0; cluster < clusters.length; cluster++ ) {
           if( task._counts[cluster] > 0 ) {
             for( int column = 0; column < cols.length; column++ ) {
@@ -54,9 +61,8 @@ public class Part05_KMeans {
         }
       }
 
-      DecimalFormat df = new DecimalFormat("#.00");
-
       System.out.println("Clusters:");
+      DecimalFormat df = new DecimalFormat("#.00");
       for( int cluster = 0; cluster < clusters.length; cluster++ ) {
         for( int column = 0; column < cols.length; column++ )
           System.out.print(df.format(clusters[cluster][column]) + ", ");
@@ -84,24 +90,39 @@ public class Part05_KMeans {
       ValueArray va = DKV.get(_mainKey).get();
       AutoBuffer bits = va.getChunk(key);
       int rows = va.rpc(ValueArray.getChunkIndex(key));
-      double[] values = new double[_cols.length];
 
       // Create result arrays
       _sums = new double[_clusters.length][_cols.length];
       _counts = new int[_clusters.length];
-      ClusterDist cd = new ClusterDist();
+      double[] values = new double[_cols.length];
 
       // Find closest cluster for each row
       for( int row = 0; row < rows; row++ ) {
-        fill(values, va, bits, row, _cols);
-        closest(_clusters, values, cd);
-        int cluster = cd._cluster;
-        _error += cd._dist;
+        // Extract a row, as it will be iterated many times
+        for( int column = 0; column < _cols.length; column++ ) {
+          ValueArray.Column c = va._cols[_cols[column]];
+          values[column] = va.datad(bits, row, c);
+        }
+        // Find nearest cluster
+        int nearest = -1;
+        double minSqr = Double.MAX_VALUE;
+        for( int cluster = 0; cluster < _clusters.length; cluster++ ) {
+          double sqr = 0;           // Sum of dimensional distances
+          for( int column = 0; column < _cols.length; column++ ) {
+            double delta = values[column] - _clusters[cluster][column];
+            sqr += delta * delta;
+          }
+          if( sqr < minSqr ) {
+            nearest = cluster;
+            minSqr = sqr;
+          }
+        }
+        _error += minSqr;
 
-        // Add values and increment counter for chosen cluster
-        for( int column = 0; column < values.length; column++ )
-          _sums[cluster][column] += values[column];
-        _counts[cluster]++;
+        // Add values and increment counter for that cluster
+        for( int column = 0; column < _cols.length; column++ )
+          _sums[nearest][column] += values[column];
+        _counts[nearest]++;
       }
       _mainKey = null;
       _cols = null;
@@ -116,43 +137,12 @@ public class Part05_KMeans {
         _error = task._error;
       } else {
         for( int cluster = 0; cluster < _counts.length; cluster++ ) {
-          for( int column = 0; column < _sums[0].length; column++ )
+          for( int column = 0; column < _sums[cluster].length; column++ )
             _sums[cluster][column] += task._sums[cluster][column];
           _counts[cluster] += task._counts[cluster];
         }
         _error += task._error;
       }
     }
-  }
-
-  static void closest(double[][] clusters, double[] point, ClusterDist cd) {
-    int min = -1;
-    double minSqr = Double.MAX_VALUE;
-    for( int cluster = 0; cluster < clusters.length; cluster++ ) {
-      double sqr = 0;           // Sum of dimensional distances
-      for( int column = 0; column < point.length; column++ ) {
-        double delta = point[column] - clusters[cluster][column];
-        sqr += delta * delta;
-      }
-      if( sqr < minSqr ) {
-        min = cluster;
-        minSqr = sqr;
-      }
-    }
-    cd._cluster = min; // nearest cluster
-    cd._dist = minSqr; // square-distance
-  }
-
-  static void fill(double[] values, ValueArray va, AutoBuffer bits, int row, int[] cols) {
-    for( int i = 0; i < cols.length - 1; i++ ) {
-      ValueArray.Column c = va._cols[cols[i]];
-      double d = va.datad(bits, row, c);
-      values[i] = d;
-    }
-  }
-
-  static final class ClusterDist {
-    int _cluster;
-    double _dist;
   }
 }

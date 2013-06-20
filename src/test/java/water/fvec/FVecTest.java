@@ -11,7 +11,6 @@ import org.junit.*;
 import water.*;
 import water.nbhm.NonBlockingHashMap;
 
-@Ignore
 public class FVecTest extends TestUtil {
 
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
