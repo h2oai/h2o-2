@@ -821,7 +821,6 @@ public abstract class DGLM {
       _deviance = dev;
       _nullDeviance = nDev;
       _n = n;
-      System.out.println("N = " + _n + ", rank = " + rank);
       _aic = aic + 2*rank;
     }
 

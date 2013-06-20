@@ -140,7 +140,7 @@ abstract public class TutorialWorkflow extends HTMLOnlyRequest {
     public FileTutorStep(String[] info) { super(info); assert info.length == 3; }
 
     @Override synchronized public final String content() {
-      if (true || _content == null) _content = loadContent(_info[2]);
+      if (_content == null) _content = loadContent(_info[2]);
       return _content;
     }
 

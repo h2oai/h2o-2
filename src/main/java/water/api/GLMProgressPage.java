@@ -33,9 +33,9 @@ public class GLMProgressPage extends Request {
     int millis = (int)t;
     return hrs + "hrs " + mins + "m " + secs + "s " + millis + "ms";
   }
-  protected final H2OKey _job  = new H2OKey(JOB);
+  protected final H2OKey _job  = new H2OKey(JOB,false);
   protected final H2OKey _dest = new H2OKey(DEST_KEY);
-  protected final H2OKey _progress = new H2OKey(PROGRESS_KEY);
+  protected final H2OKey _progress = new H2OKey(PROGRESS_KEY,false);
 
    public static Response redirect(JsonObject resp, Key job, Key dest, Key progress) {
     JsonObject redir = new JsonObject();
@@ -52,7 +52,7 @@ public class GLMProgressPage extends Request {
     Key dest = _dest.value();
     response.addProperty(Constants.DEST_KEY, dest.toString());
     ChunkProgress p = null;
-    Value v = DKV.get(_progress.value());
+    Value v = _progress.value()==null ? null : DKV.get(_progress.value());
     if(v != null){
       p = v.get();
       if(p.error() != null){
@@ -67,7 +67,7 @@ public class GLMProgressPage extends Request {
     }
     Response r = null;
     // Display HTML setup
-    if(DKV.get(_job.value()) == null)
+    if(_job.value()== null || DKV.get(_job.value()) == null)
       r =  Response.done(response);
     else if(p != null)
       r = Response.poll(response,p.progress());
