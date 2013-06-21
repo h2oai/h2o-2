@@ -649,13 +649,20 @@ class H2O(object):
         u = 'http://%s:%d/%s' % (self.http_addr, port, loc)
         return u 
 
-    def __do_json_request(self, jsonRequest=None, fullUrl=None, timeout=10, params=None, 
+    def __do_json_request(self, jsonRequest=None, fullUrl=None, timeout=10, params={}, 
         cmd='get', extraComment=None, ignoreH2oError=False, **kwargs):
         # if url param is used, use it as full url. otherwise crate from the jsonRequest
         if fullUrl:
             url = fullUrl
         else:
             url = self.__url(jsonRequest)
+
+        # remove any params that are 'None'
+        # need to copy dictionary, since can't delete while iterating
+        params2 = params.copy()
+        for k in params2:
+            if params2[k] is None:
+                del params[k]
 
         if params is not None:
             paramsStr =  '?' + '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
@@ -1093,6 +1100,7 @@ class H2O(object):
         return a
 
     def random_forest_view(self, data_key, model_key, timeoutSecs=300, print_params=False, **kwargs):
+        # do_json_request will ignore any that remain = None
         params_dict = {
             'no_confusion_matrix': None,
             'data_key': data_key,
@@ -1107,12 +1115,6 @@ class H2O(object):
         for k in kwargs:
             if k in params_dict:
                 params_dict[k] = kwargs[k]
-
-        # FIX! do this for all that use None placeholders for selective params_dict update
-        # remove anything in params_dict that is still "None"
-        for k in params_dict:
-            if params_dict[k] is None:
-                del params_dict[k]
 
         if print_params:
             print "\nrandom_forest_view parameters:", params_dict
