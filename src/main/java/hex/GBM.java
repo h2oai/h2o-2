@@ -44,17 +44,17 @@ public class GBM extends Job {
   private void run(Frame fr) {
     // Initially setup as-if an empty-split had just happened
     _numSplits = 1;
-    _numRowsPerSplit = new long[]{fr._vec[0].length()};
+    _numRowsPerSplit = new long[]{fr._vecs[0].length()};
 
-    while( true ) {
-
-      // Build an array of histograms, one histogram per split.
-      // The histogram array is "ragged" - we use smaller arrays
-      // 
-      _histogram = new long[_numSplits][];
-
-      
-    }
+    //while( true ) {
+    //
+    //  // Build an array of histograms, one histogram per split.
+    //  // The histogram array is "ragged" - we use smaller arrays
+    //  // 
+    //  _histogram = new long[_numSplits][];
+    //
+    //  
+    //}
   }
 }
 
