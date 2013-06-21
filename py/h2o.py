@@ -649,7 +649,7 @@ class H2O(object):
         u = 'http://%s:%d/%s' % (self.http_addr, port, loc)
         return u 
 
-    def __do_json_request(self, jsonRequest=None, fullUrl=None, timeout=10, params={}, 
+    def __do_json_request(self, jsonRequest=None, fullUrl=None, timeout=10, params=None, 
         cmd='get', extraComment=None, ignoreH2oError=False, **kwargs):
         # if url param is used, use it as full url. otherwise crate from the jsonRequest
         if fullUrl:
@@ -659,12 +659,11 @@ class H2O(object):
 
         # remove any params that are 'None'
         # need to copy dictionary, since can't delete while iterating
-        params2 = params.copy()
-        for k in params2:
-            if params2[k] is None:
-                del params[k]
-
         if params is not None:
+            params2 = params.copy()
+            for k in params2:
+                if params2[k] is None:
+                    del params[k]
             paramsStr =  '?' + '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
         else:
             paramsStr = ''
