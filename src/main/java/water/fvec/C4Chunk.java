@@ -4,7 +4,7 @@ import water.*;
 
 // The empty-compression function, where data is in 'int's.
 public class C4Chunk extends Chunk {
-  static private final long _NA = Integer.MIN_VALUE;
+  static protected final long _NA = Integer.MIN_VALUE;
   C4Chunk( byte[] bs ) { _mem=bs; _start = -1; _len = _mem.length>>2; }
   @Override public long   get ( int    i ) {
     long res = UDP.get4(_mem,i<<2);

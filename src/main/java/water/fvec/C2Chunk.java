@@ -4,7 +4,7 @@ import water.*;
 
 // The empty-compression function, where data is in shorts
 public class C2Chunk extends Chunk {
-  static private final long _NA = Short.MIN_VALUE;
+  static protected final long _NA = Short.MIN_VALUE;
   static final int OFF=0;
   C2Chunk( byte[] bs ) { _mem=bs; _start = -1; _len = _mem.length>>1; }
   @Override public long   get ( int    i ) {

@@ -119,17 +119,22 @@ public class Vec extends Iced {
   public double getd( long i ) { return elem2BV(elem2ChunkIdx(i)).atd(i); }
 
   // handling of NAs
-  long   _iNA = Long.MIN_VALUE;
+  long   _iNA = Long.MIN_VALUE+111; // "random" small number, not to clash with the MIN value
   double _fNA = Double.NaN;
   boolean _replaceNAs;
 
+  public final void setNAs(double fNA, long iNa){
+    _replaceNAs = false;
+    _iNA = iNa;
+    _fNA = fNA;
+  }
   /**
    * NAs can be replaced on the fly by user supplied value.
    * @param fval
    * @param ival
    */
   public final void replaceNAs(double fval, long ival){
-    _replaceNAs = !Double.isNaN(fval);
+    _replaceNAs = true;
     _iNA = ival;
     _fNA = fval;
   }

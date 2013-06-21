@@ -137,10 +137,10 @@ public class NewChunk extends Chunk {
     for( int i=0; i<_len; i++ ) {
       if(isNA(i)){
         switch( log ) {
-          case 0:          bs [i    +off] = (byte)0xFF;         break;
-          case 1: UDP.set2(bs,(i<<1)+off,   Short.MIN_VALUE);     break;
-          case 2: UDP.set4(bs,(i<<2)+off,   Integer.MIN_VALUE); break;
-          case 3: UDP.set8(bs,(i<<3)+off,   Long.MIN_VALUE);    break;
+          case 0:          bs [i    +off] = (byte)(0xFF&C1Chunk._NA);  break;
+          case 1: UDP.set2(bs,(i<<1)+off,   (short)C2Chunk._NA); break;
+          case 2: UDP.set4(bs,(i<<2)+off,   (int)C4Chunk._NA); break;
+          case 3: UDP.set8(bs,(i<<3)+off,   C8Chunk._NA); break;
           default: H2O.fail();
         }
       } else {

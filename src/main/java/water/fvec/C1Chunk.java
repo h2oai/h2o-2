@@ -5,7 +5,7 @@ import water.*;
 // The empty-compression function, where data is in UNSIGNED bytes
 public class C1Chunk extends Chunk {
   static final int OFF=0;
-  static private final long _NA = 0xFF;
+  static protected final long _NA = 0xFF;
   C1Chunk(byte[] bs) { _mem=bs; _start = -1; _len = _mem.length; }
   @Override public long   get ( int    i ) {
     long res = 0xFF&_mem[i+OFF];
