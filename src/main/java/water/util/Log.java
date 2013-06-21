@@ -454,7 +454,7 @@ public abstract class Log {
     write(e,false);
   }
   /** Log a debug message to the log file and the store if the subsystem's flag is set. */
-  private static String fixedLength(String s, int length) {
+  public static String fixedLength(String s, int length) {
     String r = padRight(s, length);
     if( r.length() > length ) {
       int a = Math.max(r.length() - length + 1, 0);

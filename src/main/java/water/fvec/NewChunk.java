@@ -182,8 +182,8 @@ public class NewChunk extends Chunk {
     return bs;
   }
 
-  @Override public long   get ( int i ) { throw H2O.fail(); }
-  @Override public double getd( int i ) { throw H2O.fail(); }
+  @Override public long   at8_impl( int i ) { throw H2O.fail(); }
+  @Override public double atd_impl( int i ) { throw H2O.fail(); }
   @Override public AutoBuffer write(AutoBuffer bb) { throw H2O.fail(); }
   @Override public NewChunk read(AutoBuffer bb) { throw H2O.fail(); }
 }

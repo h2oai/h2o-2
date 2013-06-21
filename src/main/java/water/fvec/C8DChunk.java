@@ -5,11 +5,11 @@ import water.*;
 // The empty-compression function, where data is in 'int's.
 public class C8DChunk extends Chunk {
   C8DChunk( byte[] bs ) { _mem=bs; _start = -1; _len = _mem.length>>3; }
-  @Override public long   get ( int    i ) {
+  @Override protected final long   at8_impl( int i ) {
     double res = UDP.get8d(_mem,i<<3);
     return Double.isNaN(res)?_vec._iNA:(long)res;
   }
-  @Override public double getd( int    i ) {
+  @Override protected final double atd_impl( int i ) {
     double res = UDP.get8d(_mem,i<<3);
     return Double.isNaN(res)?_vec._fNA:res;
   }

@@ -7,14 +7,12 @@ public class C1Chunk extends Chunk {
   static final int OFF=0;
   static protected final long _NA = 0xFF;
   C1Chunk(byte[] bs) { _mem=bs; _start = -1; _len = _mem.length; }
-  @Override public long   get ( int    i ) {
+  @Override protected final long at8_impl( int i ) {
     long res = 0xFF&_mem[i+OFF];
-    assert (res == _NA) || !_vec.isNA(res);
     return (res == _NA)?_vec._iNA:res;
   }
-  @Override public double getd( int    i ) {
+  @Override protected final double atd_impl( int i ) {
     long res = 0xFF&_mem[i+OFF];
-    assert (res == _NA) || !_vec.isNA((double)res);
     return (res == _NA)?_vec._fNA:res;
   }
   @Override void   append2 ( long l, int exp ) { throw H2O.fail(); }

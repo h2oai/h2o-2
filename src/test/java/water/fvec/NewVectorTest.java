@@ -24,7 +24,7 @@ public class NewVectorTest extends TestUtil {
     assertTrue( C.isInstance(bv) );
     // Also, we can decompress correctly
     for( int i=0; i<ls.length; i++ )
-      assertEquals(ls[i]*DParseTask.pow10(xs[i]), bv.getd(i), bv.getd(i)*EPSILON);
+      assertEquals(ls[i]*DParseTask.pow10(xs[i]), bv.at0(i), bv.at0(i)*EPSILON);
     UKV.remove(av._key);
   }
   // Test that various collections of parsed numbers compress as expected.
@@ -71,5 +71,3 @@ public class NewVectorTest extends TestUtil {
              C8DChunk.class);
   }
 }
-
-

@@ -19,7 +19,17 @@ public class GBMTest extends TestUtil {
 
     Frame fr = ParseDataset2.parse(Key.make("prostate.hex"),new Key[]{fkey});
     UKV.remove(fkey);
+
+    // Prostate: predice on CAPSULE which is in column #1; move it to last column
+    int ncols = fr._names.length;
+    String s = fr._names[1];    // capsule
+    Vec v    = fr._vecs [1];
+    System.arraycopy(fr._names,2,fr._names,1,ncols-2);
+    System.arraycopy(fr._vecs ,2,fr._vecs ,1,ncols-2);
+    fr._names[ncols-1] = s;
+    fr._vecs [ncols-1] = v;
     System.out.println("Frame="+fr);
+
     GBM gbm = GBM.start(GBM.makeKey(),fr);
     gbm.get();                  // Block for result
     UKV.remove(gbm._dest);

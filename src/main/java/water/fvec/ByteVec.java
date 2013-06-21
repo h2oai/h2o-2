@@ -27,7 +27,7 @@ public class ByteVec extends Vec {
       }
       @Override public void close() { _cidx = nChunks(); _c0 = null; _sz = 0;}
       @Override public int read() throws IOException {
-        return available() == 0 ? -1 : (int)_c0.get(_sz++);
+        return available() == 0 ? -1 : (int)_c0.at80(_sz++);
       }
       @Override public int read(byte[] b, int off, int len) throws IOException {
         int sz = available();

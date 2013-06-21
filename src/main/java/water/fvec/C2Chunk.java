@@ -7,11 +7,11 @@ public class C2Chunk extends Chunk {
   static protected final long _NA = Short.MIN_VALUE;
   static final int OFF=0;
   C2Chunk( byte[] bs ) { _mem=bs; _start = -1; _len = _mem.length>>1; }
-  @Override public long   get ( int    i ) {
+  @Override protected final long at8_impl( int i ) {
     int res = UDP.get2(_mem,(i<<1)+OFF);
     return res == _NA?_vec._iNA:res;
   }
-  @Override public double getd( int    i ) {
+  @Override protected final double atd_impl( int    i ) {
     int res = UDP.get2(_mem,(i<<1)+OFF);
     return res == _NA?_vec._fNA:res;
   }

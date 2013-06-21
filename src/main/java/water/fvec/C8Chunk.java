@@ -6,11 +6,11 @@ import water.*;
 public class C8Chunk extends Chunk {
   protected static final long _NA = Long.MIN_VALUE;
   C8Chunk( byte[] bs ) { _mem=bs; _start = -1; _len = _mem.length>>3; }
-  @Override public long   get ( int i ) {
+  @Override protected final long at8_impl( int i ) {
     long res = UDP.get8(_mem,i<<3);
     return  res == _NA?_vec._iNA:res;
   }
-  @Override public double getd( int    i ) {
+  @Override protected final double atd_impl( int i ) {
     long res = UDP.get8(_mem,i<<3);
     return res == _NA?_vec._fNA:res;
   }

@@ -13,11 +13,11 @@ public class C2SChunk extends Chunk {
     UDP.set8d(_mem,0,scale);
     UDP.set4 (_mem,8,bias );
   }
-  @Override public long   get ( int    i ) {
+  @Override protected final long at8_impl( int i ) {
     long res = UDP.get2(_mem,(i<<1)+OFF);
     return (res == _NA)?_vec._iNA:(long)((res + _bias)*_scale);
   }
-  @Override public double getd( int    i ) {
+  @Override protected final double atd_impl( int i ) {
     long res = UDP.get2(_mem,(i<<1)+OFF);
     return (res == _NA)?_vec._fNA:(res + _bias)*_scale;
   }

@@ -57,9 +57,9 @@ public class FVecTest extends TestUtil {
     Key key2 = Key.make("newKey",(byte)0,Key.VEC);
     AppendableVec nv = new AppendableVec(key2);
     Vec res = new TestNewVec().invoke(nv,nfs).vecs(0);
-    assertEquals(nfs.get(0)+1,res.get(0));
-    assertEquals(nfs.get(1)+1,res.get(1));
-    assertEquals(nfs.get(2)+1,res.get(2));
+    assertEquals(nfs.at8(0)+1,res.at8(0));
+    assertEquals(nfs.at8(1)+1,res.at8(1));
+    assertEquals(nfs.at8(2)+1,res.at8(2));
 
     UKV.remove(key );
     UKV.remove(key2);
@@ -68,7 +68,7 @@ public class FVecTest extends TestUtil {
   public static class TestNewVec extends MRTask2<TestNewVec> {
     @Override public void map( Chunk out, Chunk in ) {
       for( int i=0; i<in._len; i++ )
-        out.append2( in.at(i)+(in.at(i) >= ' ' ? 1 : 0),0);
+        out.append2( in.at8(i)+(in.at8(i) >= ' ' ? 1 : 0),0);
     }
   }
 

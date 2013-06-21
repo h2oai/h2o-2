@@ -13,14 +13,12 @@ public class C1SChunk extends Chunk {
     UDP.set8d(_mem,0,scale);
     UDP.set4 (_mem,8,bias );
   }
-  @Override public long   get ( int    i ) {
+  @Override protected final long at8_impl( int i ) {
     long res = 0xFF&_mem[i+OFF];
-    assert (res == _NA) || !_vec.isNA((long)((res+_bias)*_scale));
     return res == _NA?_vec._iNA:(long)((res+_bias)*_scale);
   }
-  @Override public double getd( int    i ) {
+  @Override protected final double atd_impl( int i ) {
     long res = 0xFF&_mem[i+OFF];
-    assert res == _NA || !_vec.isNA((res+_bias)*_scale);
     return (res == _NA)?_vec._fNA:(res+_bias)*_scale;
   }
   @Override void   append2 ( long l, int exp ) { throw H2O.fail(); }
