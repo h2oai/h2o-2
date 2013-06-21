@@ -1,10 +1,11 @@
 package hex;
 
+import java.util.Arrays;
+import java.util.Formatter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.fvec.*;
 import water.util.Log;
-import java.util.Formatter;
 
 public class GBM extends Job {
   public static final String KEY_PREFIX = "__GBMModel_";
@@ -49,13 +50,16 @@ public class GBM extends Job {
       maxs[i] = fr._vecs[i].max();
     }
     Histogram hist = new Histogram(fr._names,fr._vecs[0].length(), mins, maxs);
-    Log.unwrap(System.out,hist.toString()+"\n\n");
+    Log.unwrap(System.out,hist.toString()+"\n");
 
     double[] ds = new double[ncols+1];
-    for( int i=0; i<ncols; i++ )
-      ds[i] = fr._vecs[i].at(0);
-    hist.incr(ds);
-    Log.unwrap(System.out,hist.toString()+"\n\n");
+    for( int j=0; j<fr._vecs[0].length(); j++ ) {
+      for( int i=0; i<ncols; i++ )
+        ds[i] = fr._vecs[i].at(j);
+      Log.unwrap(System.out,Arrays.toString(ds));
+      hist.incr(ds);
+      Log.unwrap(System.out,hist.toString()+"\n");
+    }
     
     //while( true ) {
     //
@@ -118,7 +122,7 @@ public class GBM extends Job {
       for( int i=0; i<ds.length-1; i++ ) {
         double d = ds[i];
         int idx = _steps[i] <= 0.0 ? 0 : (int)((d-_mins[i][0])/_steps[i]);
-        int idx2 = Math.max(Math.min(idx,nbins),0); // saturate at bounds
+        int idx2 = Math.max(Math.min(idx,nbins-1),0); // saturate at bounds
         _bins[i][idx2]++;
         // Track actual lower/upper bound per-bin
         if( d < _mins[i][idx2] ) _mins[i][idx2] = d;
@@ -174,10 +178,11 @@ public class GBM extends Job {
       String s = Double.isNaN(d) ? "NaN" :
         ((d==Double.MAX_VALUE || d==Double.MIN_VALUE) ? " -" : 
          Double.toString(d));
-      if( s.length() > w ) return sb.append(String.format("%4.0f",d));
-      return p(sb,s,w);
+      if( s.length() <= w ) return p(sb,s,w);
+      s = String.format("%4.1f",d);
+      if( s.length() > w )
+        s = String.format("%4.0f",d);
+      return sb.append(s);
     }
   }
 }
-
-
