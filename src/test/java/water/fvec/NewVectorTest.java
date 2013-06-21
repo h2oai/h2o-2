@@ -5,7 +5,7 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.*;
 
-import water.TestUtil;
+import water.*;
 import water.parser.DParseTask;
 
 public class NewVectorTest extends TestUtil {
@@ -13,19 +13,20 @@ public class NewVectorTest extends TestUtil {
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   private void testImpl( long[] ls, int[] xs, Class C ) {
-    NewChunk nv = new NewChunk(null,0);
+    AppendableVec av = new AppendableVec(Vec.newKey());
+    NewChunk nv = new NewChunk(av,0);
     nv._ls = ls;
     nv._xs = xs;
     nv._len= ls.length;
-
     Chunk bv = nv.compress();
+    bv._vec = av.close();
     // Compression returns the expected compressed-type:
     assertTrue( C.isInstance(bv) );
     // Also, we can decompress correctly
     for( int i=0; i<ls.length; i++ )
       assertEquals(ls[i]*DParseTask.pow10(xs[i]), bv.at0(i), bv.at0(i)*EPSILON);
+    UKV.remove(av._key);
   }
-
   // Test that various collections of parsed numbers compress as expected.
   @Test public void testCompression() {
     // A simple no-compress
@@ -70,5 +71,3 @@ public class NewVectorTest extends TestUtil {
              C8DChunk.class);
   }
 }
-
-

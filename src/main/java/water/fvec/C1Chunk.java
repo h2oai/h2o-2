@@ -5,11 +5,15 @@ import water.*;
 // The empty-compression function, where data is in UNSIGNED bytes
 public class C1Chunk extends Chunk {
   static final int OFF=0;
-  C1Chunk( byte[] bs ) { super(0xFF); _mem=bs; _start = -1; _len = _mem.length; }
-  @Override public long   at8_impl( int    i ) { return 0xFF&_mem[i+OFF]; }
-  @Override public double atd_impl( int    i ) {
-    int res = 0xFF&_mem[i+OFF];
-    return (res == NA())?Double.NaN:res;
+  static protected final long _NA = 0xFF;
+  C1Chunk(byte[] bs) { _mem=bs; _start = -1; _len = _mem.length; }
+  @Override protected final long at8_impl( int i ) {
+    long res = 0xFF&_mem[i+OFF];
+    return (res == _NA)?_vec._iNA:res;
+  }
+  @Override protected final double atd_impl( int i ) {
+    long res = 0xFF&_mem[i+OFF];
+    return (res == _NA)?_vec._fNA:res;
   }
   @Override void   append2 ( long l, int exp ) { throw H2O.fail(); }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }

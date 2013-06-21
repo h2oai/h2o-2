@@ -1,7 +1,6 @@
 package water.fvec;
 
-import water.AutoBuffer;
-import water.Iced;
+import water.*;
 
 // A compression scheme, over a chunk - a single array of bytes.  The *actual*
 // BigVector header info is in the Vec struct - which contains info to find all
@@ -9,13 +8,10 @@ import water.Iced;
 // chunk cache of the total vector.  Subclasses of this abstract class
 // implement (possibly empty) compression schemes.
 public abstract class Chunk extends Iced {
-  protected long _NA;
   public long _start;           // Start element; filled after AutoBuffer.read
   public int _len;              // Number of elements in this chunk
   byte[] _mem; // Short-cut to the embedded memory; WARNING: holds onto a large array
   Vec _vec;    // Owning Vec; filled after AutoBuffer.read
-  public Chunk(long na){_NA = na;}
-  public final Vec vec() { return _vec; }
 
   // The zero-based API.  Somewhere between 10% to 30% faster in a tight-loop
   // over the data than the generic at() API.  Probably no gain on larger
@@ -23,6 +19,7 @@ public abstract class Chunk extends Iced {
   // range-check by the JIT as expected.
   public final double at0( int i ) { return atd_impl(i); }
   public final long  at80( int i ) { return at8_impl(i); }
+  public final boolean isNA0( int i ) { return valueIsNA(at80(i)); }
 
   // Load a double or long value from the 1-entry chunk cache, or miss-out.
   // This version uses absolute element numbers, but must convert them to
@@ -41,6 +38,7 @@ public abstract class Chunk extends Iced {
     if( 0 <= x && x < _len ) return at8_impl((int)x);
     throw new ArrayIndexOutOfBoundsException(""+_start+" <= "+i+" < "+(_start+_len));
   }
+  public final boolean isNA( long i ) { return valueIsNA(at8(i)); }
 
   // Slightly slower than 'at0'; goes (very) slow outside the chunk.  First
   // outside-chunk fetches & caches whole chunk; maybe takes multiple msecs.
@@ -56,19 +54,15 @@ public abstract class Chunk extends Iced {
     if( 0 <= x && x < _len ) return at8_impl((int)x);
     return _vec.at8(i);          // Go Slow
   }
+  public final boolean isNA_slow( long i ) { return valueIsNA(at8_slow(i)); }
 
-  public final boolean isNA( long i ) {
-    long x = i-_start;
-    if( 0 <= x && x < _len ) return isNA0((int)x);
-    return _vec.isNA(i);
-  }
-  public /*abstract*/ boolean isNA0(int i ) { return false; } // not implemented yet!
-  abstract double atd_impl(int idx);
-  abstract long   at8_impl(int idx);
+  abstract protected double atd_impl(int idx);
+  abstract protected long   at8_impl(int idx);
   // Chunk-specific append of data
   abstract void append2( long l, int exp );
   // Chunk-specific implementations of read & write
   public abstract AutoBuffer write(AutoBuffer bb);
   public abstract Chunk  read (AutoBuffer bb);
-  public final long NA(){return this._NA;}
+  public final boolean valueIsNA(long val){return val == _vec._iNA;}
+
 }
