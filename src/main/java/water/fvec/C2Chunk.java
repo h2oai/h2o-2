@@ -6,8 +6,8 @@ import water.*;
 public class C2Chunk extends Chunk {
   static final int OFF=0;
   C2Chunk( byte[] bs ) { super(Short.MIN_VALUE); _mem=bs; _start = -1; _len = _mem.length>>1; }
-  @Override public long   get ( int    i ) { return UDP.get2(_mem,(i<<1)+OFF);}
-  @Override public double getd( int    i ) {
+  @Override public long   at8_impl( int i ) { return UDP.get2(_mem,(i<<1)+OFF);}
+  @Override public double atd_impl( int i ) {
     int res = UDP.get2(_mem,(i<<1)+OFF);
     return res == NA()?Double.NaN:res;
   }

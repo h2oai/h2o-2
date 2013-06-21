@@ -16,36 +16,55 @@ public abstract class Chunk extends Iced {
   Vec _vec;    // Owning Vec; filled after AutoBuffer.read
   public Chunk(long na){_NA = na;}
   public final Vec vec() { return _vec; }
-  // Load a long value from the 1-entry chunk cache, or miss-out to "go slow".
-  // This version uses absolute element numbers, but must convert them to
-  // chunk-relative indices - requiring a load from an aliasing local var,
-  // leading to lower quality JIT'd code (similar issue to using iterator
-  // objects).
-  public final long at( long i ) {
-    long x = i-_start;
-    if( 0 <= x && x < _len ) return get((int)x);
-    return _vec.get(i);          // Go Slow
-  }
+
   // The zero-based API.  Somewhere between 10% to 30% faster in a tight-loop
   // over the data than the generic at() API.  Probably no gain on larger
   // loops.  The row reference is zero-based on the chunk, and should
   // range-check by the JIT as expected.
-  public final long at0( int i ) { return get(i); }
-  // Double variant of the above 'long' variant.
-  public final double atd( long i ) {
+  public final double at0( int i ) { return atd_impl(i); }
+  public final long  at80( int i ) { return at8_impl(i); }
+
+  // Load a double or long value from the 1-entry chunk cache, or miss-out.
+  // This version uses absolute element numbers, but must convert them to
+  // chunk-relative indices - requiring a load from an aliasing local var,
+  // leading to lower quality JIT'd code (similar issue to using iterator
+  // objects).  
+  // Slightly slower than 'at0'; range checks within a chunk
+  public final double at( long i ) {
     long x = i-_start;
-    if( 0 <= x && x < _len ) return getd((int)x);
-    return _vec.getd(i);
+    if( 0 <= x && x < _len ) return atd_impl((int)x);
+    throw new ArrayIndexOutOfBoundsException(""+_start+" <= "+i+" < "+(_start+_len));
   }
+  // Slightly slower than 'at80'; range checks within a chunk
+  public final long at8( long i ) {
+    long x = i-_start;
+    if( 0 <= x && x < _len ) return at8_impl((int)x);
+    throw new ArrayIndexOutOfBoundsException(""+_start+" <= "+i+" < "+(_start+_len));
+  }
+
+  // Slightly slower than 'at0'; goes (very) slow outside the chunk.  First
+  // outside-chunk fetches & caches whole chunk; maybe takes multiple msecs.
+  // 2nd & later touches in the same outside-chunk probably run 100x slower
+  // than inside-chunk accesses.
+  public final double at_slow( long i ) {
+    long x = i-_start;
+    if( 0 <= x && x < _len ) return atd_impl((int)x);
+    return _vec.at8(i);          // Go Slow
+  }
+  public final long at8_slow( long i ) {
+    long x = i-_start;
+    if( 0 <= x && x < _len ) return at8_impl((int)x);
+    return _vec.at8(i);          // Go Slow
+  }
+
   public final boolean isNA( long i ) {
     long x = i-_start;
     if( 0 <= x && x < _len ) return isNA0((int)x);
     return _vec.isNA(i);
   }
-  // Chunk-specific decompression of chunk-relative indexed data
-  public abstract long   get ( int i );
-  public abstract double getd( int i );
   public /*abstract*/ boolean isNA0(int i ) { return false; } // not implemented yet!
+  abstract double atd_impl(int idx);
+  abstract long   at8_impl(int idx);
   // Chunk-specific append of data
   abstract void append2( long l, int exp );
   // Chunk-specific implementations of read & write

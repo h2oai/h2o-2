@@ -6,8 +6,8 @@ import water.*;
 public class C1Chunk extends Chunk {
   static final int OFF=0;
   C1Chunk( byte[] bs ) { super(0xFF); _mem=bs; _start = -1; _len = _mem.length; }
-  @Override public long   get ( int    i ) { return 0xFF&_mem[i+OFF]; }
-  @Override public double getd( int    i ) {
+  @Override public long   at8_impl( int    i ) { return 0xFF&_mem[i+OFF]; }
+  @Override public double atd_impl( int    i ) {
     int res = 0xFF&_mem[i+OFF];
     return (res == NA())?Double.NaN:res;
   }

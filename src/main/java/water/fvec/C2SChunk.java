@@ -12,8 +12,8 @@ public class C2SChunk extends Chunk {
     UDP.set8d(_mem,0,scale);
     UDP.set4 (_mem,8,bias );
   }
-  @Override public long   get ( int    i ) { return (UDP.get2(_mem,(i<<1)+OFF) == NA())?NA():(long)((UDP.get2(_mem,(i<<1)+OFF)+_bias)*_scale); }
-  @Override public double getd( int    i ) { return (UDP.get2(_mem,(i<<1)+OFF) == NA())?Double.NaN:((UDP.get2(_mem,(i<<1)+OFF)+_bias)*_scale); }
+  @Override public long   at8_impl( int i ) { return (UDP.get2(_mem,(i<<1)+OFF) == NA())?NA():(long)((UDP.get2(_mem,(i<<1)+OFF)+_bias)*_scale); }
+  @Override public double atd_impl( int i ) { return (UDP.get2(_mem,(i<<1)+OFF) == NA())?Double.NaN:((UDP.get2(_mem,(i<<1)+OFF)+_bias)*_scale); }
   @Override void   append2 ( long l, int exp ) { throw H2O.fail(); }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
   @Override public C2SChunk read(AutoBuffer bb) {

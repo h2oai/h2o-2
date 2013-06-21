@@ -44,6 +44,16 @@ public class Vec extends Iced {
   public boolean readable() { return true ; }
   public boolean writable() { return false; }
 
+  // Return column min & max - lazily computing as needed.
+  public double min() {
+    if( _min == Double.NaN ) throw H2O.unimpl();
+    return _min;
+  }
+  public double max() {
+    if( _min == Double.NaN ) throw H2O.unimpl();
+    return _max;
+  }
+
   // Convert a row# to a chunk#.  For constant-sized chunks this is a little
   // shift-and-add math.  For variable-sized chunks this is a binary search,
   // with a sane API (JDK has an insane API).  Overridden by subclasses that
@@ -105,8 +115,8 @@ public class Vec extends Iced {
   }
 
   // Fetch element the slow way
-  public long get( long i ) { return elem2BV(elem2ChunkIdx(i)).at(i); }
-  public double getd( long i ) { return elem2BV(elem2ChunkIdx(i)).atd(i); }
+  public long  at8( long i ) { return elem2BV(elem2ChunkIdx(i)).at8(i); }
+  public double at( long i ) { return elem2BV(elem2ChunkIdx(i)).at (i); }
   public boolean isNA( long i ) { return elem2BV(elem2ChunkIdx(i)).isNA(i); }
 
   // [#elems, min/mean/max]
