@@ -1,7 +1,4 @@
-package h2o.samples;
-
-import water.H2O;
-import water.Weaver;
+package water;
 
 /**
  * Shows how to run your own main method. H2O needs to run in a separate class loader, so running
@@ -9,8 +6,6 @@ import water.Weaver;
  */
 public class Part01_UserMain {
   public static void main(String[] args) throws Exception {
-    // Ignore, temporary boilerplate
-    Weaver.registerPackage("h2o.samples");
     water.Boot.main(UserMain.class, args);
   }
 

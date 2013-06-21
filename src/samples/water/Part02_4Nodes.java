@@ -1,7 +1,5 @@
-package h2o.samples;
+package water;
 
-import water.H2O;
-import water.Weaver;
 import water.deploy.Node;
 import water.deploy.NodeVM;
 
@@ -11,7 +9,6 @@ import water.deploy.NodeVM;
 public class Part02_4Nodes {
   // Ignore this boilerplate main, c.f. previous samples
   public static void main(String[] args) throws Exception {
-    Weaver.registerPackage("h2o.samples");
     water.Boot.main(UserMain.class, args);
   }
 

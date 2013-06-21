@@ -1,6 +1,4 @@
-package h2o.samples;
-
-import water.*;
+package water;
 
 /**
  * Runs a map reduce task over a dataset and sums elements of a column.
@@ -8,7 +6,6 @@ import water.*;
 public class Part04_MapReduce {
   // Ignore this boilerplate main, c.f. previous samples
   public static void main(String[] args) throws Exception {
-    Weaver.registerPackage("h2o.samples");
     water.Boot.main(UserMain.class, args);
   }
 

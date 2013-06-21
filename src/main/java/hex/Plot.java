@@ -48,6 +48,10 @@ public abstract class Plot {
         double y = va.datad(bits, row, cY);
         int iX = scale(x, cX, _width);
         int iY = scale(y, cY, _height);
+        if( iX < 0 ) iX = 0; // Bound for numeric instability
+        if( iX >= _width ) iX = _width - 1;
+        if( iY < 0 ) iX = 0; // Bound for numeric instability
+        if( iY >= _height ) iY = _height - 1;
         int value = _pixels[iY * _width + iX] & 0xff;
         value = value == 0xff ? value : value + 1;
         dot(iX, iY, value);

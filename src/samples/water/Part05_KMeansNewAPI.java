@@ -1,10 +1,9 @@
-package h2o.samples;
+package water;
 
 import java.io.File;
 import java.text.DecimalFormat;
 import java.util.Random;
 
-import water.*;
 import water.fvec.*;
 import water.util.Utils;
 
@@ -14,7 +13,6 @@ import water.util.Utils;
 public class Part05_KMeansNewAPI {
   // Ignore this boilerplate main, c.f. previous samples
   public static void main(String[] args) throws Exception {
-    Weaver.registerPackage("h2o.samples");
     water.Boot.main(UserMain.class, args);
   }
 

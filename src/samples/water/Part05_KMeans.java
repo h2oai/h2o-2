@@ -1,11 +1,9 @@
-package h2o.samples;
+package water;
 
 import hex.KMeansModel;
 
 import java.text.DecimalFormat;
 import java.util.Random;
-
-import water.*;
 
 /**
  * Simplified version of H2O k-means algorithm for better readability.
@@ -13,7 +11,6 @@ import water.*;
 public class Part05_KMeans {
   // Ignore this boilerplate main, c.f. previous samples
   public static void main(String[] args) throws Exception {
-    Weaver.registerPackage("h2o.samples");
     water.Boot.main(UserMain.class, args);
   }
 
