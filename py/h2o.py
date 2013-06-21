@@ -1099,7 +1099,6 @@ class H2O(object):
             'model_key': model_key,
             'out_of_bag_error_estimate': 1, 
             'class_weights': None,
-            'response_variable': None, # FIX! apparently this is needed now?
             }
         browseAlso = kwargs.pop('browseAlso',False)
 
@@ -1108,6 +1107,12 @@ class H2O(object):
         for k in kwargs:
             if k in params_dict:
                 params_dict[k] = kwargs[k]
+
+        # FIX! do this for all that use None placeholders for selective params_dict update
+        # remove anything in params_dict that is still "None"
+        for k in params_dict:
+            if params_dict[k] is None:
+                del params_dict[k]
 
         if print_params:
             print "\nrandom_forest_view parameters:", params_dict
