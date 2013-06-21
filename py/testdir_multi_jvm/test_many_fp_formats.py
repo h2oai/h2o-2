@@ -110,11 +110,11 @@ class Basic(unittest.TestCase):
         random.seed(SEED)
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (100000, 10, 'cA', 5),
-            (100, 1000, 'cB', 5),
-            # (100, 900, 'cC', 5),
-            # (100, 500, 'cD', 5),
-            # (100, 100, 'cE', 5),
+            (100000, 10, 'cA', 30),
+            (100, 1000, 'cB', 30),
+            # (100, 900, 'cC', 30),
+            # (100, 500, 'cD', 30),
+            # (100, 100, 'cE', 30),
             ]
         
         for (rowCount, colCount, key2, timeoutSecs) in tryList:
@@ -127,7 +127,7 @@ class Basic(unittest.TestCase):
                 write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel)
 
                 selKey2 = key2 + "_" + str(sel)
-                parseKey = h2o_cmd.parseFile(None, csvPathname, key2=selKey2, timeoutSecs=15)
+                parseKey = h2o_cmd.parseFile(None, csvPathname, key2=selKey2, timeoutSecs=timeoutSecs)
                 print csvFilename, 'parse time:', parseKey['response']['time']
                 print "Parse result['destination_key']:", parseKey['destination_key']
                 inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])

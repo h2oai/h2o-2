@@ -1,13 +1,12 @@
 package water.fvec;
 
+import hex.GBM;
 import java.io.File;
-import java.util.Arrays;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import water.Key;
 import water.TestUtil;
 import water.UKV;
-import hex.GBM;
 
 public class GBMTest extends TestUtil {
 

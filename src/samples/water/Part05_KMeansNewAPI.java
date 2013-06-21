@@ -1,10 +1,9 @@
-package h2o.samples;
+package water;
 
 import java.io.File;
 import java.text.DecimalFormat;
 import java.util.Random;
 
-import water.*;
 import water.fvec.*;
 import water.util.Utils;
 
@@ -14,7 +13,6 @@ import water.util.Utils;
 public class Part05_KMeansNewAPI {
   // Ignore this boilerplate main, c.f. previous samples
   public static void main(String[] args) throws Exception {
-    Weaver.registerPackage("h2o.samples");
     water.Boot.main(UserMain.class, args);
   }
 
@@ -22,22 +20,24 @@ public class Part05_KMeansNewAPI {
     public static void main(String[] args) throws Exception {
       H2O.main(args);
 
-      // Parse file
-      Key file = NFSFileVec.make(new File("smalldata/gaussian/sdss174052.csv.gz"));
+      // Load and parse a file. Data is distributed to other nodes in a round-robin way
+      Key file = NFSFileVec.make(new File("lib/resources/datasets/gaussian.csv"));
       Frame frame = ParseDataset2.parse(Key.make("test"), new Key[] { file });
 
-      // Create a frame with only the columns to use, e.g. skip first for this dataset
+      // Optionally create a frame with less columns, e.g. skip first
       frame = new Frame(null, Utils.remove(frame._names, 0), Utils.remove(frame._vecs, 0));
 
       // Create k clusters as arrays of doubles
-      int k = 3;
+      int k = 7;
       double[][] clusters = new double[k][frame.vecs().length];
 
       // Initialize first cluster to random row
       Random rand = new Random();
-      long row = Math.max(0, (long) (rand.nextDouble() * frame.vecs().length) - 1);
-      for( int i = 0; i < frame.vecs().length; i++ )
-        clusters[0][i] = frame.vecs()[i].getd(row);
+      for( int cluster = 0; cluster < clusters.length; cluster++ ) {
+        long row = Math.max(0, (long) (rand.nextDouble() * frame.vecs().length) - 1);
+        for( int i = 0; i < frame.vecs().length; i++ )
+          clusters[cluster][i] = frame.vecs()[i].getd(row);
+      }
 
       // Iterate over the dataset and show error for each step
       for( int i = 0; i < 10; i++ ) {
@@ -56,9 +56,8 @@ public class Part05_KMeansNewAPI {
         System.out.println("Error is " + task._error);
       }
 
-      DecimalFormat df = new DecimalFormat("#.00");
-
       System.out.println("Clusters:");
+      DecimalFormat df = new DecimalFormat("#.00");
       for( int c = 0; c < clusters.length; c++ ) {
         for( int v = 0; v < frame.vecs().length; v++ )
           System.out.print(df.format(clusters[c][v]) + ", ");

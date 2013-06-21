@@ -1,9 +1,9 @@
-package h2o.samples;
+package water;
+
+import hex.KMeansModel;
 
 import java.text.DecimalFormat;
 import java.util.Random;
-
-import water.*;
 
 /**
  * Simplified version of H2O k-means algorithm for better readability.
@@ -11,7 +11,6 @@ import water.*;
 public class Part05_KMeans {
   // Ignore this boilerplate main, c.f. previous samples
   public static void main(String[] args) throws Exception {
-    Weaver.registerPackage("h2o.samples");
     water.Boot.main(UserMain.class, args);
   }
 
@@ -20,26 +19,28 @@ public class Part05_KMeans {
       // Starts a one node cluster
       H2O.main(args);
 
-      // Loads, unzip and parse a file. Data is distributed to other nodes in a round-robin way.
-      Key key = TestUtil.loadAndParseFile("test", "smalldata/gaussian/sdss174052.csv.gz");
+      // Load and parse a file. Data is distributed to other nodes in a round-robin way
+      Key key = TestUtil.loadAndParseFile("test.hex", "lib/resources/datasets/gaussian.csv");
 
       // ValueArray is a distributed 2D array
       ValueArray va = DKV.get(key).get();
 
-      // Which columns to use, e.g. skip first for this dataset
-      int[] cols = new int[va._cols.length - 1];
+      // Which columns to use, use all in this case
+      int[] cols = new int[va._cols.length];
       for( int i = 0; i < cols.length; i++ )
-        cols[i] = i + 1;
+        cols[i] = i;
 
       // Create k clusters as arrays of doubles
-      int k = 3;
+      int k = 7;
       double[][] clusters = new double[k][va._cols.length];
 
-      // Initialize first cluster to random row
+      // Initialize clusters to random rows
       Random rand = new Random();
-      long row = Math.max(0, (long) (rand.nextDouble() * va._numrows) - 1);
-      for( int i = 0; i < cols.length; i++ )
-        clusters[0][i] = va.datad(row, cols[i]);
+      for( int cluster = 0; cluster < clusters.length; cluster++ ) {
+        long row = Math.max(0, (long) (rand.nextDouble() * va._numrows) - 1);
+        for( int i = 0; i < cols.length; i++ )
+          clusters[cluster][i] = va.datad(row, cols[i]);
+      }
 
       // Iterate over the dataset and show error for each step
       for( int i = 0; i < 20; i++ ) {
@@ -68,6 +69,13 @@ public class Part05_KMeans {
           System.out.print(df.format(clusters[cluster][column]) + ", ");
         System.out.println("");
       }
+
+      // Experimental: debug plot
+      KMeansModel model = new KMeansModel(Key.make("test.kmeans"), cols, key);
+      model._clusters = clusters;
+      UKV.put(model._selfKey, model);
+      System.out.println("Plot:");
+      System.out.println("http://127.0.0.1:54321/Plot.png?source_key=test.hex&cols=0%2C1&clusters=test.kmeans");
     }
   }
 
