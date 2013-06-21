@@ -32,6 +32,16 @@ public class Vec extends Iced {
     _sum = sum;
   }
 
+  public static Key newKey(){
+    byte [] kb = Key.make()._kb;
+    byte[] bits = new byte[1+1+4+kb.length];
+    bits[0] = Key.VEC;
+    bits[1] = 0; // Not homed
+    UDP.set4(bits,2,-1); // 0xFFFFFFFF in the chunk# area
+    System.arraycopy(kb,0,bits,1+1+4,kb.length);
+    return Key.make(bits);
+  }
+
   // Number of elements in the vector.  Overridden by subclasses that compute
   // length in an alternative way, such as file-backed Vecs.
   public long length() { return _espc[_espc.length-1]; }
@@ -107,11 +117,42 @@ public class Vec extends Iced {
   // Fetch element the slow way
   public long get( long i ) { return elem2BV(elem2ChunkIdx(i)).at(i); }
   public double getd( long i ) { return elem2BV(elem2ChunkIdx(i)).atd(i); }
-  public boolean isNA( long i ) { return elem2BV(elem2ChunkIdx(i)).isNA(i); }
+
+  // handling of NAs
+  long   _iNA = Long.MIN_VALUE;
+  double _fNA = Double.NaN;
+  boolean _replaceNAs;
+
+  /**
+   * NAs can be replaced on the fly by user supplied value.
+   * @param fval
+   * @param ival
+   */
+  public final void replaceNAs(double fval, long ival){
+    _replaceNAs = !Double.isNaN(fval);
+    _iNA = ival;
+    _fNA = fval;
+  }
+  public final void replaceNAs(double fval){
+    if(!Double.isNaN(fval))replaceNAs(fval,(long)fval);
+    else {
+      _fNA = fval;
+      _replaceNAs = false;
+    }
+  }
+  public final void replaceNAs(long ival){replaceNAs(ival, ival);}
+  public final boolean isNA(long l){
+    return !_replaceNAs && l == _iNA;
+  }
+  public final boolean isNA(double d){
+    return !_replaceNAs && (Double.isNaN(d) || d == _fNA);
+  }
+
 
   // [#elems, min/mean/max]
   @Override public String toString() {
     return "["+length()+(Double.isNaN(_min) ? "" : ","+_min+"/"+(_sum/length())+"/"+_max)+"]";
   }
+
 
 }

@@ -12,8 +12,7 @@ public class NewChunk extends Chunk {
   transient double _min, _max, _sum;
 
   NewChunk( AppendableVec vec, int cidx ) {
-    super(Long.MIN_VALUE);
-    _vec = vec;                 // Owning AppendableVec
+    _vec = vec;
     _cidx = cidx;               // This chunk#
     _ls = new long[4];          // A little room for data
     _xs = new int [4];
@@ -52,7 +51,6 @@ public class NewChunk extends Chunk {
   // Return the data so compressed.
   static final int MAX_FLOAT_MANTISSA = 0x7FFFFF;
   Chunk compress() {
-
     // See if we can sanely normalize all the data to the same fixed-point.
     int  xmin = Integer.MAX_VALUE;   // min exponent found
     long lemin= 0, lemax=lemin; // min/max at xmin fixed-point
@@ -105,32 +103,32 @@ public class NewChunk extends Chunk {
       return new C8DChunk(bufF(3));
     if( xmin != 0 ) {
       if(lemax-lemin < 255 ) // Fits in scaled biased byte?
-        return new C1SChunk(bufX(lemin,xmin,C1SChunk.OFF,0),(int)lemin,DParseTask.pow10(xmin));
+        return new C1SChunk( bufX(lemin,xmin,C1SChunk.OFF,0),(int)lemin,DParseTask.pow10(xmin));
       if(lemax-lemin < 65535 )
-        return new C2SChunk(bufX(lemin,xmin,C2SChunk.OFF,1),(int)lemin,DParseTask.pow10(xmin));
+        return new C2SChunk( bufX(lemin,xmin,C2SChunk.OFF,1),(int)lemin,DParseTask.pow10(xmin));
 
-      return new C4FChunk(bufF(2));
+      return new C4FChunk( bufF(2));
     }
 
     // Compress column into a byte
     if( lemax-lemin < 255 ) {         // Span fits in a byte?
       if( 0 <= lemin && lemax < 255 ) // Span fits in an unbiased byte?
-        return new C1Chunk(bufX(0,0,C1Chunk.OFF,0));
-      return new C1SChunk(bufX(lemin,0,C1SChunk.OFF,0),(int)lemin,1);
+        return new C1Chunk( bufX(0,0,C1Chunk.OFF,0));
+      return new C1SChunk( bufX(lemin,0,C1SChunk.OFF,0),(int)lemin,1);
     }
 
     // Compress column into a short
     if( lemax-lemin < 65535 ) {               // Span fits in a biased short?
       if( -32767 <= lemin && lemax <= 32767 ) // Span fits in an unbiased short?
-        return new C2Chunk(bufX(0,0,C2Chunk.OFF,1));
-      return new C2SChunk(bufX(lemin,0,C2SChunk.OFF,1),(int)lemin,1);
+        return new C2Chunk( bufX(0,0,C2Chunk.OFF,1));
+      return new C2SChunk( bufX(lemin,0,C2SChunk.OFF,1),(int)lemin,1);
     }
 
     // Compress column into ints
     if( Integer.MIN_VALUE < lemin && lemax <= Integer.MAX_VALUE )
-      return new C4Chunk(bufX(0,0,0,2));
+      return new C4Chunk( bufX(0,0,0,2));
 
-    return new C8Chunk(bufX(0,0,0,3));
+    return new C8Chunk( bufX(0,0,0,3));
   }
 
   // Compute a compressed integer buffer

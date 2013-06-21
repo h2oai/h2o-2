@@ -1,7 +1,6 @@
 package water.fvec;
 
-import water.AutoBuffer;
-import water.Iced;
+import water.*;
 
 // A compression scheme, over a chunk - a single array of bytes.  The *actual*
 // BigVector header info is in the Vec struct - which contains info to find all
@@ -9,13 +8,18 @@ import water.Iced;
 // chunk cache of the total vector.  Subclasses of this abstract class
 // implement (possibly empty) compression schemes.
 public abstract class Chunk extends Iced {
-  protected long _NA;
   public long _start;           // Start element; filled after AutoBuffer.read
   public int _len;              // Number of elements in this chunk
   byte[] _mem; // Short-cut to the embedded memory; WARNING: holds onto a large array
+
   Vec _vec;    // Owning Vec; filled after AutoBuffer.read
-  public Chunk(long na){_NA = na;}
-  public final Vec vec() { return _vec; }
+
+  Key _vecKey;
+  public final Vec vec() {
+    if(_vec == null)
+      _vec = DKV.get(_vecKey).get();
+    return _vec;
+  }
   // Load a long value from the 1-entry chunk cache, or miss-out to "go slow".
   // This version uses absolute element numbers, but must convert them to
   // chunk-relative indices - requiring a load from an aliasing local var,
@@ -37,19 +41,14 @@ public abstract class Chunk extends Iced {
     if( 0 <= x && x < _len ) return getd((int)x);
     return _vec.getd(i);
   }
-  public final boolean isNA( long i ) {
-    long x = i-_start;
-    if( 0 <= x && x < _len ) return isNA0((int)x);
-    return _vec.isNA(i);
-  }
   // Chunk-specific decompression of chunk-relative indexed data
   public abstract long   get ( int i );
   public abstract double getd( int i );
-  public /*abstract*/ boolean isNA0(int i ) { return false; } // not implemented yet!
   // Chunk-specific append of data
   abstract void append2( long l, int exp );
   // Chunk-specific implementations of read & write
   public abstract AutoBuffer write(AutoBuffer bb);
   public abstract Chunk  read (AutoBuffer bb);
-  public final long NA(){return this._NA;}
+  public final boolean valueIsNA(long val){return val == _vec._iNA;}
+
 }
