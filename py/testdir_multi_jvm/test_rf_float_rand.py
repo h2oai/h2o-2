@@ -31,7 +31,9 @@ def rand_rowData():
     # data is best? if we put all 0s or 1, then I guess it will be bits?
     rowData = str(random.uniform(0,7))
     for i in range(7):
-        rowData = rowData + "," + str(random.uniform(-1e30,1e30))
+        # h2o used to only support single (HEX-638)
+        # rowData = rowData + "," + str(random.uniform(-1e30,1e30))
+        rowData = rowData + "," + str(random.uniform(-1e59,1e59))
     return rowData
 
 class parse_rand_schmoo(unittest.TestCase):
@@ -56,7 +58,7 @@ class parse_rand_schmoo(unittest.TestCase):
 
         h2o.tear_down_cloud(h2o.nodes)
     
-    def test_sort_of_prostate_with_row_schmoo(self):
+    def test_rf_float_rand(self):
         SEED = random.randint(0, sys.maxint)
         # if you have to force to redo a test
         # SEED = 
