@@ -7,6 +7,7 @@ import org.junit.Test;
 import water.Key;
 import water.TestUtil;
 import water.UKV;
+import hex.GBM;
 
 public class GBMTest extends TestUtil {
 
@@ -14,14 +15,15 @@ public class GBMTest extends TestUtil {
 
   // ==========================================================================
   @Test public void testBasicGBM() {
-    File file = TestUtil.find_test_file("../smalldata/logreg/umass_chdage.csv");
+    File file = TestUtil.find_test_file("../smalldata/logreg/prostate.csv");
     Key fkey = NFSFileVec.make(file);
 
-    Key okey = Key.make("chdage.hex");
-    Frame fr = ParseDataset2.parse(okey,new Key[]{fkey});
+    Frame fr = ParseDataset2.parse(Key.make("prostate.hex"),new Key[]{fkey});
     UKV.remove(fkey);
     System.out.println("Frame="+fr);
-
-    UKV.remove(okey);
+    GBM gbm = GBM.start(GBM.makeKey(),fr);
+    gbm.get();                  // Block for result
+    UKV.remove(gbm._dest);
+    UKV.remove(fr._key);
   }
 }
