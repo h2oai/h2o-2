@@ -590,6 +590,8 @@ public final class H2O {
       STATIC_H2OS.add(SELF);
     }
 
+    Log.info ("H2O cloud name: '" + NAME + "'");
+
     Log.info("(v"+VERSION+") '"+NAME+"' on " + SELF+(OPT_ARGS.flatfile==null
         ? (", discovery address "+CLOUD_MULTICAST_GROUP+":"+CLOUD_MULTICAST_PORT)
             : ", static configuration based on -flatfile "+OPT_ARGS.flatfile));
