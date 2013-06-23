@@ -619,7 +619,8 @@ public final class H2O {
     // Load up from disk and initialize the persistence layer
     initializePersistence();
     // Start network services, including heartbeats & Paxos
-    startNetworkServices(); // start server services
+    startNetworkServices();   // start server services
+    startApiIpPortWatchdog(); // Check if the API port becomes unreachable
 
     initializeExpressionEvaluation(); // starts the expression evaluation system
 
@@ -708,6 +709,17 @@ public final class H2O {
     new TCPReceiverThread().start();
     // Start the Nano HTTP server thread
     water.api.RequestServer.start();
+  }
+
+  /** Initializes a watchdog thread to make sure the API IP:Port is reachable.
+   *
+   * The IP and port are meant to be accessible from outside this
+   * host, much less inside.  The real reason behind this check is the
+   * one-node cloud case where people move their laptop around and
+   * DHCP assigns them a new IP address.
+   */
+  private static void startApiIpPortWatchdog() {
+    new ApiIpPortWatchdogThread().start();
   }
 
   /** Finalizes the node startup.
@@ -1218,6 +1230,151 @@ public final class H2O {
         long now = System.currentTimeMillis();
         return "H("+(_cached>>20)+"M, "+x+"ms < +"+(_oldest-x)+"ms <...{"+_hStep+"ms}...< +"+(_hStep*128)+"ms < +"+(now-x)+")";
       }
+    }
+  }
+
+  // API IP Port Watchdog ---------------------------------------------------------------
+
+  // Monitor API IP:Port for availability.
+  //
+  // This thread is only a watchdog.  You can comment this thread out
+  // so it does not run without affecting any service functionality.
+  public static class ApiIpPortWatchdogThread extends Thread {
+    final private String threadName = "ApiPortWatchdog";
+
+    private volatile boolean gracefulShutdownInitiated;         // Thread-safe.
+
+    // Failure-tracking.
+    private int consecutiveFailures;
+    private long failureStartTimestampMillis;
+
+    // Timing things that can be tuned if needed.
+    final private int maxFailureSeconds = 180;
+    final private int maxConsecutiveFailures = 6;
+    final private int checkIntervalSeconds = 10;
+    final private int timeoutSeconds = 30;
+    final private int millisPerSecond = 1000;
+    final private int timeoutMillis = timeoutSeconds * millisPerSecond;
+    final private int sleepMillis = checkIntervalSeconds * millisPerSecond;
+
+    // Constructor.
+    public ApiIpPortWatchdogThread() {
+      super("ApiWatch");        // Only 9 characters get printed in the log.
+      setDaemon(true);
+      setPriority(MAX_PRIORITY-2);
+      reset();
+      gracefulShutdownInitiated = false;
+    }
+
+    // Exit this watchdog thread.
+    public void shutdown() {
+      Log.debug (threadName + ": Graceful shutdown requested");
+      gracefulShutdownInitiated = true;
+    }
+
+    // Sleep method.
+    private void mySleep(int millis) {
+      try {
+        Thread.sleep (sleepMillis);
+      } 
+      catch (Exception _)
+        {}
+    }
+
+    // Print some help for the user if a failure occurs.
+    private void printPossibleCauses() {
+      Log.info(threadName + ": A possible cause is DHCP (e.g. changing WiFi networks)");
+      Log.info(threadName + ": A possible cause is your laptop going to sleep (if running on a laptop)");
+      Log.info(threadName + ": A possible cause is the network interface going down");
+      Log.info(threadName + ": A possible cause is this host being overloaded");
+    }
+
+    // Reset the failure counting when a successful check() occurs.
+    private void reset() {
+      consecutiveFailures = 0;
+      failureStartTimestampMillis = 0;
+    }
+
+    // Count the impact of one failure.
+    private void failed() {
+      printPossibleCauses();
+      if (consecutiveFailures == 0) {
+        failureStartTimestampMillis = System.currentTimeMillis();
+      }
+      consecutiveFailures++;
+    }
+
+    // Check if enough failures have occurred or time has passed to
+    // shut down this node.
+    private void testForFailureShutdown() {
+      if (consecutiveFailures >= maxConsecutiveFailures) {
+        Log.err(threadName + ": Too many failures (>= " + maxConsecutiveFailures + "), H2O node shutting down");
+        System.exit(1);
+      }
+
+      if (consecutiveFailures > 0) {
+        final long now = System.currentTimeMillis();
+        final long deltaMillis = now - failureStartTimestampMillis;
+        final long thresholdMillis = (maxFailureSeconds * millisPerSecond);
+        if (deltaMillis > thresholdMillis) {
+          Log.err(threadName + ": Failure time threshold exceeded (>= " + 
+                  thresholdMillis + 
+                  " ms), H2O node shutting down");
+          System.exit(1);
+        }
+      }
+    }
+
+    // Do the watchdog check.
+    private void check() {
+      final Socket s = new Socket();
+      final InetSocketAddress apiIpPort = new InetSocketAddress(H2O.SELF_ADDRESS, H2O.API_PORT);
+
+      try {
+        s.connect (apiIpPort, timeoutMillis);
+        reset();
+      }
+      catch (SocketTimeoutException e) {
+        if (gracefulShutdownInitiated) { return; }
+        Log.err(threadName + ": Timed out trying to connect to REST API IP and Port (" + 
+                H2O.SELF_ADDRESS + ":" + H2O.API_PORT + ", " + timeoutMillis + " ms)");
+        failed();
+      }
+      catch (IOException e) {
+        if (gracefulShutdownInitiated) { return; }
+        Log.err(threadName + ": Failed to connect to REST API IP and Port (" + 
+                H2O.SELF_ADDRESS + ":" + H2O.API_PORT + ")");
+        Log.err(threadName + ": " + e.getMessage());
+        failed();
+      }
+      catch (Exception e) {
+        if (gracefulShutdownInitiated) { return; }
+        Log.err(threadName + ": Failed unexpectedly trying to connect to REST API IP and Port (" + 
+                H2O.SELF_ADDRESS + ":" + H2O.API_PORT + ")",
+                e);
+        failed();
+      }
+      finally {
+        if (gracefulShutdownInitiated) { return; }
+        testForFailureShutdown();
+        try { s.close(); } catch (Exception _) {}
+      }
+    }
+
+    // Class main thread.
+    public void run() {
+      Log.debug (threadName + ": Thread run() started");
+      reset();
+
+      while (true) {
+        mySleep (sleepMillis);
+        check();
+        if (gracefulShutdownInitiated) {
+          break;
+        }
+      }
+
+      Log.debug (threadName + ": Thread run() exited");
     }
   }
 }
