@@ -22,6 +22,7 @@ public class C1SChunk extends Chunk {
     return (res == _NA)?_vec._fNA:(res+_bias)*_scale;
   }
   @Override void   append2 ( long l, int exp ) { throw H2O.fail(); }
+  @Override boolean hasFloat() { return _scale < 1.0; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
   @Override public C1SChunk read(AutoBuffer bb) {
     _mem = bb.bufClose();

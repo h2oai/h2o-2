@@ -20,16 +20,17 @@ public class Vec extends Iced {
   // dead/ignored in subclasses that are guaranteed to have fixed-sized chunks
   // such as file-backed Vecs.
   final long _espc[];
+  final boolean _isInt;         // true if column is all integer data
+  // min/max/mean lazily computed.
+  double _min, _max;
 
-  double _min, _max, _sum;
-
-  Vec( Key key, long espc[], double min, double max, double sum ) {
+  Vec( Key key, long espc[], boolean isInt, double min, double max ) {
     assert key._kb[0]==Key.VEC;
     _key = key;
     _espc = espc;
+    _isInt = isInt;
     _min = min == Double.MIN_VALUE ? Double.NaN : min;
     _max = max;
-    _sum = sum;
   }
 
   public static Key newKey(){
@@ -165,7 +166,7 @@ public class Vec extends Iced {
 
   // [#elems, min/mean/max]
   @Override public String toString() {
-    return "["+length()+(Double.isNaN(_min) ? "" : ","+_min+"/"+(_sum/length())+"/"+_max)+"]";
+    return "["+length()+(Double.isNaN(_min) ? "" : ","+_min+"/"+_max)+"]";
   }
 }
 

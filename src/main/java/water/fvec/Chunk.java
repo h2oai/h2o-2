@@ -60,6 +60,7 @@ public abstract class Chunk extends Iced {
   abstract protected long   at8_impl(int idx);
   // Chunk-specific append of data
   abstract void append2( long l, int exp );
+  abstract boolean hasFloat();
   // Chunk-specific implementations of read & write
   public abstract AutoBuffer write(AutoBuffer bb);
   public abstract Chunk  read (AutoBuffer bb);

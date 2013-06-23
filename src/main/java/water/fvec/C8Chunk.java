@@ -15,6 +15,7 @@ public class C8Chunk extends Chunk {
     return res == _NA?_vec._fNA:res;
   }
   @Override void   append2 ( long l, int exp ) { throw H2O.fail(); }
+  @Override boolean hasFloat() { return false; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
   @Override public C8Chunk read(AutoBuffer bb) {
     _mem = bb.bufClose();

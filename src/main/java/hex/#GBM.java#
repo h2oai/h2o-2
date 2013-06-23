@@ -90,7 +90,7 @@ public class GBM extends Job {
   private static class Histogram extends Iced {
     public static final int BINS=4;
     transient final String[] _names; // Column names
-    public final double[]   _steps;  // Linear interpolation step per bin
+2    public final double[]   _steps;  // Linear interpolation step per bin
     public final long  [][] _bins;   // Bins by column, then bin
     public final double[][] _Ms;     // Rolling mean, per-column-per-bin
     public final double[][] _Ss;     // Rolling var , per-column-per-bin

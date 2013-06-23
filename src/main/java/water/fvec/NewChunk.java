@@ -43,8 +43,9 @@ public class NewChunk extends Chunk {
   // do a DKV put on an appropriate Key.  The original NewVector goes dead
   // (does not live on inside the K/V store).
   public void close(Futures fs) {
-    DKV.put(_vec.chunkKey(_cidx),compress(),fs);
-    ((AppendableVec)_vec).closeChunk(_cidx,_len,_min,_max,_sum);
+    Chunk chunk = compress();
+    DKV.put(_vec.chunkKey(_cidx),chunk,fs);
+    ((AppendableVec)_vec).closeChunk(_cidx,_len,chunk.hasFloat(),_min,_max);
   }
 
   // Study this NewVector and determine an appropriate compression scheme.
@@ -184,6 +185,7 @@ public class NewChunk extends Chunk {
 
   @Override public long   at8_impl( int i ) { throw H2O.fail(); }
   @Override public double atd_impl( int i ) { throw H2O.fail(); }
+  @Override boolean hasFloat() { throw H2O.fail(); }
   @Override public AutoBuffer write(AutoBuffer bb) { throw H2O.fail(); }
   @Override public NewChunk read(AutoBuffer bb) { throw H2O.fail(); }
 }
