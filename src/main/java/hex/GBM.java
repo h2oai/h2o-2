@@ -98,7 +98,7 @@ public class GBM extends Job {
     public final double[][] _mins, _maxs; // Per-column-per-bin min/max
     
     public Histogram( String[] names, long nelems, double[] mins, double[] maxs, boolean isInts[] ) {
-      assert nelems >= 0;
+      assert nelems > 0;
       _names = names;
       int xbins = Math.max((int)Math.min(BINS,nelems),1); // Default bin count
       int ncols = mins.length-1; // Last column is the response column
