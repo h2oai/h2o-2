@@ -269,6 +269,8 @@ public final class H2O {
       s = new Socket("8.8.8.8", 53);
       m+="Using " + s.getLocalAddress() + "\n";
       return s.getLocalAddress();
+    } catch( java.net.SocketException se ) {
+      return null;           // No network at all?  (Laptop w/wifi turned off?)
     } catch( Throwable t ) {
       Log.err(t);
       return null;

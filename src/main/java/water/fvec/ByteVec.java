@@ -8,7 +8,7 @@ import water.Key;
 // A vector of plain Bytes.
 public class ByteVec extends Vec {
 
-  ByteVec( Key key, long espc[] ) { super(key,espc,Double.NaN,Double.NaN,Double.NaN); }
+  ByteVec( Key key, long espc[] ) { super(key,espc,true,Double.NaN,Double.NaN); }
 
   public C1Chunk elem2BV( int cidx ) { return (C1Chunk)super.elem2BV(cidx); }
 

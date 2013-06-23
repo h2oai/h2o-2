@@ -1,4 +1,4 @@
-package water.fvec;
+package hex;
 
 import hex.GBM;
 import java.io.File;
@@ -7,6 +7,7 @@ import org.junit.Test;
 import water.Key;
 import water.TestUtil;
 import water.UKV;
+import water.fvec.*;
 
 public class GBMTest extends TestUtil {
 
