@@ -54,12 +54,19 @@ public class GBM extends Job {
 
     double[] ds = new double[ncols+1];
     for( int j=0; j<fr._vecs[0].length(); j++ ) {
-      for( int i=0; i<ncols; i++ )
+      for( int i=0; i<ncols+1; i++ )
         ds[i] = fr._vecs[i].at(j);
-      Log.unwrap(System.out,Arrays.toString(ds));
+      //Log.unwrap(System.out,Arrays.toString(ds));
       hist.incr(ds);
-      Log.unwrap(System.out,hist.toString()+"\n");
+      //Log.unwrap(System.out,hist.toString()+"\n");
     }
+
+    Log.unwrap(System.out,hist.toString()+"\n");
+    StringBuilder sb = new StringBuilder();
+    for( int i=0; i<ncols; i++ )
+      sb.append(i).append("=").append(hist.score(i)).append("  ");
+    Log.unwrap(System.out,sb.toString());
+    Log.unwrap(System.out,"Best split is column "+hist.bestSplit());
     
     //while( true ) {
     //
@@ -103,8 +110,8 @@ public class GBM extends Job {
         assert maxs[i] >= mins[i];
         _steps[i] = (maxs[i]-mins[i])/nbins; // Step size for linear interpolation
         for( int j=0; j<nbins; j++ ) { // Set bad bounds for min/max
-          _mins[i][j] = Double.MAX_VALUE;
-          _maxs[i][j] = Double.MIN_VALUE;
+          _mins[i][j] =  Double.MAX_VALUE;
+          _maxs[i][j] = -Double.MAX_VALUE;
         }
         _mins[i][      0] = mins[i]; // Know better bounds for whole column min/max
         _maxs[i][nbins-1] = maxs[i];
@@ -130,8 +137,8 @@ public class GBM extends Job {
         // Recursive mean & variance
         //    http://www.johndcook.com/standard_deviation.html
         long k = _bins[i][idx2];
-        double oldM = _Ms[i][idx2], newM = oldM + (d-oldM)/k;
-        double oldS = _Ss[i][idx2], newS = oldS + (d-oldM)*(d-newM);
+        double oldM = _Ms[i][idx2], newM = oldM + (y-oldM)/k;
+        double oldS = _Ss[i][idx2], newS = oldS + (y-oldM)*(y-newM);
         _Ms[i][idx2] = newM;
         _Ss[i][idx2] = newS;
       }
@@ -139,6 +146,33 @@ public class GBM extends Job {
     double mean( int col, int bin ) { return _Ms[col][bin]; }
     double var ( int col, int bin ) { 
       return _bins[col][bin] > 1 ? _Ss[col][bin]/(_bins[col][bin]-1) : 0; 
+    }
+
+    // Compute a "score" for a column; lower score "wins" (is a better split).
+    // Score is related to variance; a lower variance is better.  For now
+    // return the sum of variance across the column, divided by the mean.
+    // Dividing normalizes the column to other columns.
+    double score( int col ) {
+      double sum = 0;
+      int ncols = _bins[0].length;
+      for( int i=0; i<ncols; i++ ) {
+        double m = mean(col,i);
+        double x = m==0.0 ? 0 : var(col,i)/m;
+        sum += x;
+      }
+      return sum;
+    }
+
+    // Find the column with the best split (lowest score)
+    int bestSplit() {
+      double bs = Double.MAX_VALUE;
+      int idx = -1;
+      int ncols = _bins.length;
+      for( int i=0; i<ncols; i++ ) {
+        double s = score(i);
+        if( s < bs ) { bs = s; idx = i; }
+      }
+      return idx;
     }
 
     // Pretty-print a histogram
@@ -153,8 +187,8 @@ public class GBM extends Job {
       for( int j=0; j<_bins.length; j++ ) {
         p(sb,"cnt" ,cntW).append('/');
         p(sb,"min" ,mmmW).append('/');
-        p(sb,"mean",mmmW).append('/');
         p(sb,"max" ,mmmW).append('/');
+        p(sb,"mean",mmmW).append('/');
         p(sb,"var" ,varW).append(colPad);
       }
       sb.append('\n');
@@ -163,8 +197,8 @@ public class GBM extends Job {
         for( int j=0; j<_bins.length; j++ ) {
           p(sb,Long.toString(_bins[j][i]),cntW).append('/');
           p(sb,              _mins[j][i] ,mmmW).append('/');
-          p(sb,               mean(j, i) ,mmmW).append('/');
           p(sb,              _maxs[j][i] ,mmmW).append('/');
+          p(sb,               mean(j, i) ,mmmW).append('/');
           p(sb,               var (j, i) ,varW).append(colPad);
         }
         sb.append('\n');
@@ -176,7 +210,7 @@ public class GBM extends Job {
     }
     static private StringBuilder p(StringBuilder sb, double d, int w) {
       String s = Double.isNaN(d) ? "NaN" :
-        ((d==Double.MAX_VALUE || d==Double.MIN_VALUE) ? " -" : 
+        ((d==Double.MAX_VALUE || d==-Double.MAX_VALUE) ? " -" : 
          Double.toString(d));
       if( s.length() <= w ) return p(sb,s,w);
       s = String.format("%4.1f",d);
