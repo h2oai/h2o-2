@@ -20,7 +20,7 @@ public class Vec extends Iced {
   // dead/ignored in subclasses that are guaranteed to have fixed-sized chunks
   // such as file-backed Vecs.
   final long _espc[];
-  final boolean _isInt;         // true if column is all integer data
+  final public boolean _isInt;  // true if column is all integer data
   // min/max/mean lazily computed.
   double _min, _max;
 

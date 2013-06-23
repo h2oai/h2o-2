@@ -1,7 +1,6 @@
 package hex;
 
 import java.util.Arrays;
-import java.util.Formatter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.fvec.*;
@@ -45,11 +44,13 @@ public class GBM extends Job {
     _numSplits = 1;
     final int ncols = fr._vecs.length; // Last column is the response column
     double mins[] = new double[ncols], maxs[] = new double[ncols];
+    boolean isInts[] = new boolean[ncols];
     for( int i=0; i<ncols; i++ ) {
       mins[i] = fr._vecs[i].min();
       maxs[i] = fr._vecs[i].max();
+      isInts[i] = fr._vecs[i]._isInt;
     }
-    Histogram hist = new Histogram(fr._names,fr._vecs[0].length(), mins, maxs);
+    Histogram hist = new Histogram(fr._names,fr._vecs[0].length(), mins, maxs, isInts);
     Log.unwrap(System.out,hist.toString()+"\n");
 
     double[] ds = new double[ncols];
@@ -96,26 +97,33 @@ public class GBM extends Job {
     public final double[][] _Ss;     // Rolling var , per-column-per-bin
     public final double[][] _mins, _maxs; // Per-column-per-bin min/max
     
-    public Histogram( String[] names, long nelems, double[] mins, double[] maxs ) {
+    public Histogram( String[] names, long nelems, double[] mins, double[] maxs, boolean isInts[] ) {
       assert nelems >= 0;
       _names = names;
-      int nbins = Math.max((int)Math.min(BINS,nelems),1);
+      int xbins = Math.max((int)Math.min(BINS,nelems),1); // Default bin count
       int ncols = mins.length-1; // Last column is the response column
       assert maxs[ncols] > mins[ncols] : "Caller ensures max>min, since if max==min the column is all constants";
       _steps= new double[ncols];
-      _bins = new long  [ncols][nbins]; // Counts per bin
-      _Ms   = new double[ncols][nbins]; // Rolling bin mean
-      _Ss   = new double[ncols][nbins]; // Rolling bin Variance*(cnt-1)
-      _mins = new double[ncols][nbins]; // Rolling min per-bin
-      _maxs = new double[ncols][nbins]; // Rolling max per-bin
-      for( int i=0; i<ncols; i++ ) {    
+      _bins = new long  [ncols][]; // Counts per bin
+      _Ms   = new double[ncols][]; // Rolling bin mean
+      _Ss   = new double[ncols][]; // Rolling bin Variance*(cnt-1)
+      _mins = new double[ncols][]; // Rolling min per-bin
+      _maxs = new double[ncols][]; // Rolling max per-bin
+
+      for( int i=0; i<ncols; i++ ) {
         assert maxs[i] > mins[i] : "Caller ensures max>min, since if max==min the column is all constants";
         // See if we can show there are fewer unique elements than nbins.
         // Common for e.g. boolean columns, or near leaves.
-        
-
-
-
+        int nbins = xbins;      // Default size for most columns        
+        if( isInts[i] && maxs[i]-mins[i] < xbins )
+          nbins = (int)((long)maxs[i]-(long)mins[i]+1L); // Shink bins
+        // Build (ragged) array of bins
+        _bins[i] = new long  [nbins];
+        _Ms  [i] = new double[nbins];
+        _Ss  [i] = new double[nbins];
+        _mins[i] = new double[nbins];
+        _maxs[i] = new double[nbins];
+        // Set step & min/max for each bin
         _steps[i] = (maxs[i]-mins[i])/nbins; // Step size for linear interpolation
         for( int j=0; j<nbins; j++ ) { // Set bad bounds for min/max
           _mins[i][j] =  Double.MAX_VALUE;
@@ -133,9 +141,9 @@ public class GBM extends Job {
     void incr( double[] ds ) {
       assert _bins.length == ds.length-1;
       double y = ds[ds.length-1];
-      int nbins = _bins[0].length;
       for( int i=0; i<ds.length-1; i++ ) {
         double d = ds[i];
+        int nbins = _bins[i].length;
         int idx = _steps[i] <= 0.0 ? 0 : (int)((d-_mins[i][0])/_steps[i]);
         int idx2 = Math.max(Math.min(idx,nbins-1),0); // saturate at bounds
         _bins[i][idx2]++;
@@ -162,8 +170,8 @@ public class GBM extends Job {
     // Dividing normalizes the column to other columns.
     double score( int col ) {
       double sum = 0;
-      int ncols = _bins[0].length;
-      for( int i=0; i<ncols; i++ ) {
+      int nbins = _bins[col].length;
+      for( int i=0; i<nbins; i++ ) {
         double m = mean(col,i);
         double x = m==0.0 ? 0 : var(col,i)/m;
         sum += x;
@@ -189,10 +197,11 @@ public class GBM extends Job {
       final int cntW=4, mmmW=4, varW=4;
       final int colW=cntW+1+mmmW+1+mmmW+1+mmmW+1+varW;
       StringBuilder sb = new StringBuilder();
-      for( int j=0; j<_bins.length; j++ )
+      int ncols = _bins.length;
+      for( int j=0; j<ncols; j++ )
         p(sb,_names[j],colW).append(colPad);
       sb.append('\n');
-      for( int j=0; j<_bins.length; j++ ) {
+      for( int j=0; j<ncols; j++ ) {
         p(sb,"cnt" ,cntW).append('/');
         p(sb,"min" ,mmmW).append('/');
         p(sb,"max" ,mmmW).append('/');
@@ -200,14 +209,17 @@ public class GBM extends Job {
         p(sb,"var" ,varW).append(colPad);
       }
       sb.append('\n');
-      Formatter f = new Formatter(sb);
-      for( int i=0; i<_bins[0].length; i++ ) {
-        for( int j=0; j<_bins.length; j++ ) {
-          p(sb,Long.toString(_bins[j][i]),cntW).append('/');
-          p(sb,              _mins[j][i] ,mmmW).append('/');
-          p(sb,              _maxs[j][i] ,mmmW).append('/');
-          p(sb,               mean(j, i) ,mmmW).append('/');
-          p(sb,               var (j, i) ,varW).append(colPad);
+      for( int i=0; i<BINS; i++ ) {
+        for( int j=0; j<ncols; j++ ) {
+          if( i < _bins[j].length ) {
+            p(sb,Long.toString(_bins[j][i]),cntW).append('/');
+            p(sb,              _mins[j][i] ,mmmW).append('/');
+            p(sb,              _maxs[j][i] ,mmmW).append('/');
+            p(sb,               mean(j, i) ,mmmW).append('/');
+            p(sb,               var (j, i) ,varW).append(colPad);
+          } else {
+            p(sb,"",colW).append(colPad);
+          }
         }
         sb.append('\n');
       }
