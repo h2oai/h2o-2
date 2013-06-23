@@ -522,7 +522,64 @@ public final class H2O {
     public String random_udp_drop = null; // test only, randomly drop udp incoming
     public int pparse_limit = Integer.MAX_VALUE;
     public String no_requests_log = null; // disable logging of Web requests
+    public String h = null;
+    public String help = null;
   }
+
+  public static void printHelp() {
+    String s =
+    "Start an H2O node.\n" +
+    "\n" +
+    "Usage:  java [-Xmx<size>] -jar h2o.jar [options]\n" +
+    "        (Note that every option has a default and is optional.)\n" +
+    "\n" +
+    "    -name <h2oCloudName>\n" +
+    "          Cloud name used for Multicast discovery.\n" +
+    "          Nodes with the same cloud name will form an H2O cloud\n" +
+    "          (also known as an H2O cluster).\n" +
+    "          (Not to be used with -flatfile.)\n" +
+    "\n" +
+    "    -flatfile <flatFileName>\n" +
+    "          Configuration file explicitly listing H2O cloud node members.\n" +
+    "          (Not to be used with -name.)\n" +
+    "\n" +
+    "    -ip <ipAddressOfNode>\n" +
+    "          IP address of this node.\n" +
+    "\n" +
+    "    -port <port>\n" +
+    "          Port number for this node (note: port+1 is also used).\n" +
+    "          (The default port is " + DEFAULT_PORT + ".)\n" +
+    "\n" +
+    "    -ice_root <fileSystemPath>" +
+    "          The directory where H2O spills temporary data to disk." +
+    "          (The default is '" + DEFAULT_ICE_ROOT + "'.)\n" +
+    "\n" +
+    "    -h | -help\n" +
+    "          Print this help.\n" +
+    "\n" +
+    "Cloud formation behavior:\n" +
+    "\n" +
+    "    New H2O nodes join together to form a cloud at startup time.\n" +
+    "    Once a cloud is given work to perform, it locks out new members.\n" +
+    "    from joining.\n" +
+    "\n" +
+    "Examples:\n" +
+    "\n" +
+    "    Start an H2O node with 4GB of memory and a default cloud name:\n" +
+    "        java -Xmx4g -jar h2o.jar\n" +
+    "\n" +
+    "    Start an H2O node with 6GB of memory and a specify the cloud name:\n" +
+    "        java -Xmx6g -jar h2o.jar -name MyCloud\n" +
+    "\n" +
+    "    Start an H2O cloud with three 2GB nodes and a default cloud name:\n" +
+    "        java -Xmx2g -jar h2o.jar\n" +
+    "        java -Xmx2g -jar h2o.jar\n" +
+    "        java -Xmx2g -jar h2o.jar\n" +
+    "\n";
+
+    System.out.print(s);
+  }
+
   public static boolean IS_SYSTEM_RUNNING = false;
 
   // Start up an H2O Node and join any local Cloud
@@ -536,6 +593,12 @@ public final class H2O {
     Arguments arguments = new Arguments(args);
     arguments.extract(OPT_ARGS);
     ARGS = arguments.toStringArray();
+
+    if ((OPT_ARGS.h != null) || (OPT_ARGS.help != null)) {
+      printHelp();
+      System.exit (0);
+    }
+
     ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
 
     // Get ice path before loading Log or Persist class
@@ -546,6 +609,7 @@ public final class H2O {
     } catch(URISyntaxException ex) {
       throw new RuntimeException("Invalid ice_root: " + ice + ", " + ex.getMessage());
     }
+    Log.info ("ICE root: '" + ICE_ROOT + "'");
 
     SELF_ADDRESS = findInetAddressForSelf();
 
@@ -591,6 +655,8 @@ public final class H2O {
       Log.warn("Flatfile configuration does not include self: " + SELF+ " but contains " + STATIC_H2OS);
       STATIC_H2OS.add(SELF);
     }
+
+    Log.info ("H2O cloud name: '" + NAME + "'");
 
     Log.info("(v"+VERSION+") '"+NAME+"' on " + SELF+(OPT_ARGS.flatfile==null
         ? (", discovery address "+CLOUD_MULTICAST_GROUP+":"+CLOUD_MULTICAST_PORT)

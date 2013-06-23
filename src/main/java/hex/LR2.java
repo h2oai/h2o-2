@@ -52,8 +52,8 @@ public abstract class LR2 {
     double _sumX,_sumY,_sumX2; // Sum of X's, Y's, X^2's
     @Override public void map( Chunk xs, Chunk ys ) {
       for( int i=0; i<xs._len; i++ ) {
-        double X = xs.getd(i);
-        double Y = ys.getd(i);
+        double X = xs.at0(i);
+        double Y = ys.at0(i);
         if( !Double.isNaN(X) && !Double.isNaN(Y)) {
           _sumX += X;
           _sumY += Y;
@@ -77,8 +77,8 @@ public abstract class LR2 {
     CalcSquareErrorsTasks( double meanX, double meanY ) { _meanX = meanX; _meanY = meanY; }
     @Override public void map( Chunk xs, Chunk ys ) {
       for( int i=0; i<xs._len; i++ ) {
-        double Xa = xs.getd(i);
-        double Ya = ys.getd(i);
+        double Xa = xs.at0(i);
+        double Ya = ys.at0(i);
         if(!Double.isNaN(Xa) && !Double.isNaN(Ya)) {
           Xa -= _meanX;
           Ya -= _meanY;
@@ -103,7 +103,7 @@ public abstract class LR2 {
     CalcRegressionTask(double beta0, double beta1, double meanY) {_beta0=beta0; _beta1=beta1; _meanY=meanY;}
     @Override public void map( Chunk xs, Chunk ys ) {
       for( int i=0; i<xs._len; i++ ) {
-        double X = xs.getd(i); double Y = ys.getd(i);
+        double X = xs.at0(i); double Y = ys.at0(i);
         if( !Double.isNaN(X) && !Double.isNaN(Y) ) {
           double fit = _beta1*X + _beta0;
           double rs = fit-Y;

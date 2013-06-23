@@ -35,8 +35,10 @@ public class Part05_KMeansNewAPI {
       Random rand = new Random();
       for( int cluster = 0; cluster < clusters.length; cluster++ ) {
         long row = Math.max(0, (long) (rand.nextDouble() * frame.vecs().length) - 1);
-        for( int i = 0; i < frame.vecs().length; i++ )
-          clusters[cluster][i] = frame.vecs()[i].getd(row);
+        for( int i = 0; i < frame.vecs().length; i++ ) {
+          Vec v = frame.vecs()[i];
+          clusters[cluster][i] = v.at(row);
+        }
       }
 
       // Iterate over the dataset and show error for each step
@@ -89,7 +91,7 @@ public class Part05_KMeansNewAPI {
         for( int cluster = 0; cluster < _clusters.length; cluster++ ) {
           double sqr = 0;           // Sum of dimensional distances
           for( int column = 0; column < chunks.length; column++ ) {
-            double delta = chunks[column].atd(row) - _clusters[cluster][column];
+            double delta = chunks[column].at0(row) - _clusters[cluster][column];
             sqr += delta * delta;
           }
           if( sqr < minSqr ) {
@@ -101,7 +103,7 @@ public class Part05_KMeansNewAPI {
 
         // Add values and increment counter for chosen cluster
         for( int column = 0; column < chunks.length; column++ )
-          _sums[nearest][column] += chunks[column].atd(row);
+          _sums[nearest][column] += chunks[column].at0(row);
         _counts[nearest]++;
       }
       _clusters = null;
