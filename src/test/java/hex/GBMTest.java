@@ -1,4 +1,4 @@
-package water.fvec;
+package hex;
 
 import hex.GBM;
 import java.io.File;
@@ -7,13 +7,14 @@ import org.junit.Test;
 import water.Key;
 import water.TestUtil;
 import water.UKV;
+import water.fvec.*;
 
 public class GBMTest extends TestUtil {
 
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   // ==========================================================================
-  /*@Test*/ public void testBasicGBM() {
+  @Test public void testBasicGBM() {
     File file = TestUtil.find_test_file("../smalldata/logreg/prostate.csv");
     Key fkey = NFSFileVec.make(file);
 
