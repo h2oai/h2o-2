@@ -22,7 +22,7 @@ public abstract class Chunk extends Iced implements Cloneable {
   // range-check by the JIT as expected.
   public final double at0( int i ) { return _chk.atd_impl(i); }
   public final long  at80( int i ) { return _chk.at8_impl(i); }
-  public final boolean isNA0( int i ) { return valueIsNA(_chk.at80(i)); }
+  public final boolean isNA0( int i ) { return valueIsNA(at80(i)); }
 
   // Load a double or long value from the 1-entry chunk cache, or miss-out.
   // This version uses absolute element numbers, but must convert them to
@@ -88,11 +88,11 @@ public abstract class Chunk extends Iced implements Cloneable {
     else DKV.put(_vec.chunkKey(cidx),_chk,fs); // Write updated chunk back into K/V
   }
 
+  public int cidx() { return _vec.elem2ChunkIdx(_start); }
+
   // Chunk-specific readers.
   abstract protected double atd_impl(int idx);
   abstract protected long   at8_impl(int idx);
-  // Chunk-specific append of data
-  abstract void append2( long l, int exp );
   // Chunk-specific writer.  Returns false if the value does not fit in the
   // current compression scheme.
   abstract boolean set8_impl(int idx, long l);

@@ -15,7 +15,6 @@ public class C2Chunk extends Chunk {
     int res = UDP.get2(_mem,(i<<1)+OFF);
     return res == _NA?_vec._fNA:res;
   }
-  @Override void   append2 ( long l, int exp ) { throw H2O.fail(); }
   @Override boolean set8_impl(int idx, long l) { return false; }
   @Override boolean hasFloat() { return false; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }

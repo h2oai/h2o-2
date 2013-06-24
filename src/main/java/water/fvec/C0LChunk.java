@@ -14,7 +14,6 @@ public class C0LChunk extends Chunk {
   }
   @Override protected final long at8_impl( int i ) { return _con; }
   @Override protected final double atd_impl( int i ) {return _con; }
-  @Override void   append2 ( long l, int exp ) { throw H2O.fail(); }
   @Override boolean set8_impl(int idx, long l) { return l==_con; }
   @Override boolean hasFloat() { return false; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }

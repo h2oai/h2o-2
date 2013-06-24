@@ -14,7 +14,6 @@ public class C4Chunk extends Chunk {
     long res = UDP.get4(_mem,i<<2);
     return res == _NA?_vec._fNA:res;
   }
-  @Override void   append2 ( long l, int exp ) { throw H2O.fail(); }
   @Override boolean set8_impl(int idx, long l) { return false; }
   @Override boolean hasFloat() { return false; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }

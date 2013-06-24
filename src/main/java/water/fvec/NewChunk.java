@@ -24,7 +24,7 @@ public class NewChunk extends Chunk {
     return _ls[idx] == 0 && _xs[idx] == Integer.MIN_VALUE;
   }
   // Fast-path append long data
-  @Override void append2( long l, int x ) {
+  void append2( long l, int x ) {
     if( _len >= _ls.length ) append2slow();
     _ls[_len] = l;
     _xs[_len] = x;
@@ -32,11 +32,12 @@ public class NewChunk extends Chunk {
   }
   // Slow-path append data
   void append2slow( ) {
-    if( _len > ValueArray.CHUNK_SZ )
+    if( _len > Vec.CHUNK_SZ )
       throw new ArrayIndexOutOfBoundsException(_len);
     _ls = Arrays.copyOf(_ls,_len<<1);
     _xs = Arrays.copyOf(_xs,_len<<1);
   }
+  void invalid() { append2(0,Integer.MIN_VALUE); }
 
   // Do any final actions on a completed NewVector.  Mostly: compress it, and
   // do a DKV put on an appropriate Key.  The original NewVector goes dead
@@ -58,7 +59,7 @@ public class NewChunk extends Chunk {
     boolean overflow=false;
     boolean floatOverflow = false;
     for( int i=0; i<_len; i++ ) {
-      if(isNA(i))continue;
+      if( isNA(i) ) continue;
       long l = _ls[i];
       int  x = _xs[i];
       // Compute per-chunk min/sum/max
@@ -141,12 +142,12 @@ public class NewChunk extends Chunk {
   private byte[] bufX( long bias, int scale, int off, int log ) {
     byte[] bs = new byte[(_len<<log)+off];
     for( int i=0; i<_len; i++ ) {
-      if(isNA(i)){
+      if( isNA(i) ) {
         switch( log ) {
-          case 0:          bs [i    +off] = (byte)(0xFF&C1Chunk._NA);  break;
+          case 0:          bs [i    +off] = (byte)(C1Chunk._NA); break;
           case 1: UDP.set2(bs,(i<<1)+off,   (short)C2Chunk._NA); break;
-          case 2: UDP.set4(bs,(i<<2)+off,   (int)C4Chunk._NA); break;
-          case 3: UDP.set8(bs,(i<<3)+off,   C8Chunk._NA); break;
+          case 2: UDP.set4(bs,(i<<2)+off,     (int)C4Chunk._NA); break;
+          case 3: UDP.set8(bs,(i<<3)+off,          C8Chunk._NA); break;
           default: H2O.fail();
         }
       } else {

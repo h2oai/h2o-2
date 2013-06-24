@@ -14,6 +14,9 @@ import water.*;
 //  Vec Key format is: Key. VEC - byte, 0 - byte,   0    - int, normal Key bytes.
 // DVec Key format is: Key.DVEC - byte, 0 - byte, chunk# - int, normal Key bytes.
 public class Vec extends Iced {
+  public static final int LOG_CHK = 20; // Chunks are 1<<20, or 1Meg
+  public static final long CHUNK_SZ = 1L << LOG_CHK;
+
   final public Key _key;        // Top-level key
   // Element-start per chunk.  Always zero for chunk 0.  One more entry than
   // chunks, so the last entry is the total number of rows.  This field is
