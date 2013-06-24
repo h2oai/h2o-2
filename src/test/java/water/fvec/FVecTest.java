@@ -83,15 +83,15 @@ public class FVecTest extends TestUtil {
 
   // ==========================================================================
   @Test public void testParse2() {
-    //File file = TestUtil.find_test_file("./smalldata/logreg/prostate_long.csv.gz");
-    //File file = TestUtil.find_test_file("../datasets/UCI/UCI-large/covtype/covtype.data");
-    //File file = TestUtil.find_test_file("../smalldata/logreg/umass_chdage.csv");
     File file = TestUtil.find_test_file("../smalldata/logreg/syn_2659x1049.csv");
     Key fkey = NFSFileVec.make(file);
 
     Key okey = Key.make("syn.hex");
     Frame fr = ParseDataset2.parse(okey,new Key[]{fkey});
     UKV.remove(fkey);
+    assertEquals(fr.length(),1049); // Count of columns
+    assertEquals(fr._vecs[0].length(),2659); // Count of rows
+
     double[] sums = new Sum().invoke(fr)._sums;
     UKV.remove(okey);
     assertEquals(3949,sums[0],EPSILON);
