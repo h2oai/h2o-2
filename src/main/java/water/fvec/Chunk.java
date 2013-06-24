@@ -96,7 +96,7 @@ public abstract class Chunk extends Iced implements Cloneable {
   // Chunk-specific writer.  Returns false if the value does not fit in the
   // current compression scheme.
   abstract boolean set8_impl(int idx, long l);
-  // Check-specific bulk inflator back to NewChunk.  Used when writing into a
+  // Chunk-specific bulk inflator back to NewChunk.  Used when writing into a
   // chunk and written value is out-of-range for an update-in-place operation.
   // Bulk copy from the compressed form into the nc._ls array.
   abstract NewChunk inflate_impl(NewChunk nc);
