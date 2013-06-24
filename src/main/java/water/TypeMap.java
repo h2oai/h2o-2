@@ -34,6 +34,8 @@ public class TypeMap {
     "water.api.Script$Done",
     "water.fvec.C1Chunk",
     "water.fvec.Frame",
+    "water.fvec.Vec",
+    "water.fvec.AppendableVec",
     "water.parser.ParseDataset",
     "water.parser.ParseDataset$Progress",
     "water.util.JStackCollectorTask",
@@ -54,7 +56,7 @@ public class TypeMap {
     for( String s : CLAZZES )
       MAP.put(s,id++);
     IDS = id;
-    C1CHUNK    = (short)onLoad("water.fvec.C1Chunk");
+    C1CHUNK     = (short)onLoad("water.fvec.C1Chunk");
     FRAME       = (short)onLoad("water.fvec.Frame");
     VALUE_ARRAY = (short)onLoad("water.ValueArray");
     GOLD = new Freezable[BOOTSTRAP_CLASSES.length];

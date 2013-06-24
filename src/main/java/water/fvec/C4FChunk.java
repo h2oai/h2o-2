@@ -13,7 +13,7 @@ public class C4FChunk extends Chunk {
     float res = UDP.get4f(_mem,i<<2);
     return Float.isNaN(res)?_vec._fNA:res;
   }
-  @Override void   append2 ( long l, int exp ) { throw H2O.fail(); }
+  @Override boolean set8_impl(int idx, long l) { return false; }
   @Override boolean hasFloat() { return true; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
   @Override public C4FChunk read(AutoBuffer bb) {
@@ -22,5 +22,8 @@ public class C4FChunk extends Chunk {
     _len = _mem.length>>2;
     assert _mem.length == _len<<2;
     return this;
+  }
+  @Override NewChunk inflate_impl(NewChunk nc) {
+    throw H2O.unimpl();
   }
 }

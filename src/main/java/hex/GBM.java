@@ -43,6 +43,11 @@ public class GBM extends Job {
     // Initially setup as-if an empty-split had just happened
     _numSplits = 1;
     final int ncols = fr._vecs.length; // Last column is the response column
+
+    // Make a new Vec to hold the split-number for each row (initially all zero).
+    Vec vsplit = Vec.makeZero(fr._vecs[0]);
+
+    // Top-level histogram needs min/max info from the Frame
     double mins[] = new double[ncols], maxs[] = new double[ncols];
     boolean isInts[] = new boolean[ncols];
     for( int i=0; i<ncols; i++ ) {
@@ -53,33 +58,50 @@ public class GBM extends Job {
     Histogram hist = new Histogram(fr._names,fr._vecs[0].length(), mins, maxs, isInts);
     Log.unwrap(System.out,hist.toString()+"\n");
 
-    double[] ds = new double[ncols];
+    // Build a histogram with a pass over the data
+    double[] ds = new double[ncols]; // temp to hold a row
     for( int j=0; j<fr._vecs[0].length(); j++ ) {
-      for( int i=0; i<ncols; i++ )
+      for( int i=0; i<ncols; i++ ) // Fetch a row out
         ds[i] = fr._vecs[i].at(j);
       //Log.unwrap(System.out,Arrays.toString(ds));
       hist.incr(ds);
       //Log.unwrap(System.out,hist.toString()+"\n");
     }
 
+    // Compute the best-split
     Log.unwrap(System.out,hist.toString()+"\n");
     StringBuilder sb = new StringBuilder();
     for( int i=0; i<ncols-1; i++ )
       sb.append(i).append("=").append(hist.score(i)).append("  ");
     Log.unwrap(System.out,sb.toString());
-    Log.unwrap(System.out,"Best split is column "+hist.bestSplit());
-    
-    //while( true ) {
-    //
-    //  // Build an array of histograms, one histogram per split.
-    //  // The histogram array is "ragged" - we use smaller arrays
-    //  // to avoid having too few elements per bin.
-    //  _hists = new Histogram[_numRowsPerSplit];
-    //  for( int i=0; i<_numRowsPerSplit; i++ ) 
-    //    _hists[i] = new Histogram(_numRowsPerSplit[i],x);
-    //
-    //  
-    //}
+    int scol = hist.bestSplit();
+    Log.unwrap(System.out,"Best split is column "+scol);
+
+    // Set split-number for each row
+    for( int j=0; j<fr._vecs[0].length(); j++ ) {
+      double d = fr._vecs[scol].at(j);
+      int bin = hist.bin(scol,d);
+      // bin is split#???
+      vsplit.set8(j,bin);
+    }
+
+
+    // Induce a subsplit over the data.
+    Tree t = new Tree(hist,scol);
+
+    // Remove temp split vector
+    UKV.remove(vsplit._key);
+  }
+
+  // --------------------------------------------------------------------------
+  // A tree of splits.  Each node describes how to split the datarows into
+  // smaller subsets... or describes a leaf with a specific regression.
+  private static class Tree extends Iced {
+    Tree _ts[];                 // Child trees (maybe more than 2)
+    double _min,_max,_step;     // Simple interpolation rules to pick child
+    double _reg;                // Regression (leaf answer)
+    Tree( Histogram h, int split ) {
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -143,21 +165,26 @@ public class GBM extends Job {
       double y = ds[ds.length-1];
       for( int i=0; i<ds.length-1; i++ ) {
         double d = ds[i];
-        int nbins = _bins[i].length;
-        int idx = _steps[i] <= 0.0 ? 0 : (int)((d-_mins[i][0])/_steps[i]);
-        int idx2 = Math.max(Math.min(idx,nbins-1),0); // saturate at bounds
-        _bins[i][idx2]++;
+        int idx = bin(i,d);     // Compute bin# via linear interpolation
+        _bins[i][idx]++;        // Bump count in bin
         // Track actual lower/upper bound per-bin
-        if( d < _mins[i][idx2] ) _mins[i][idx2] = d;
-        if( d > _maxs[i][idx2] ) _maxs[i][idx2] = d;
+        if( d < _mins[i][idx] ) _mins[i][idx] = d;
+        if( d > _maxs[i][idx] ) _maxs[i][idx] = d;
         // Recursive mean & variance
         //    http://www.johndcook.com/standard_deviation.html
-        long k = _bins[i][idx2];
-        double oldM = _Ms[i][idx2], newM = oldM + (y-oldM)/k;
-        double oldS = _Ss[i][idx2], newS = oldS + (y-oldM)*(y-newM);
-        _Ms[i][idx2] = newM;
-        _Ss[i][idx2] = newS;
+        long k = _bins[i][idx];
+        double oldM = _Ms[i][idx], newM = oldM + (y-oldM)/k;
+        double oldS = _Ss[i][idx], newS = oldS + (y-oldM)*(y-newM);
+        _Ms[i][idx] = newM;
+        _Ss[i][idx] = newS;
       }
+    }
+    // Interpolate d to find bin#
+    int bin( int col, double d ) {
+      int nbins = _bins [col].length;
+      int idx1  = _steps[col] <= 0.0 ? 0 : (int)((d-_mins[col][0])/_steps[col]);
+      int idx2  = Math.max(Math.min(idx1,nbins-1),0); // saturate at bounds
+      return idx2;
     }
     double mean( int col, int bin ) { return _Ms[col][bin]; }
     double var ( int col, int bin ) { 

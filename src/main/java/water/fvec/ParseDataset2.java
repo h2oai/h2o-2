@@ -289,7 +289,7 @@ public final class ParseDataset2 extends Job {
 
       // Close & compress all the NewChunks for this one file.
       for( int i=0; i<nvs.length; i++ )
-        nvs[i].close(_fs);
+        nvs[i].close(i,_fs);
     }
 
     // ------------------------------------------------------------------------
@@ -307,13 +307,14 @@ public final class ParseDataset2 extends Job {
         final Chunk in = bvs[bvs.length-1];
         final NewChunk[] nvs = new NewChunk[bvs.length-1];
         for( int i=0; i<nvs.length; i++ ) nvs[i] = (NewChunk)bvs[i];
+        final int cidx = in.cidx();
 
         // The Parser
         CsvParser parser = new CsvParser(_setup,false) {
             private byte[] _mem2; // Chunk following this one
             private int _col=0; // Column #
-            @Override public byte[] getChunkData( int cidx ) {
-              if( cidx==0 ) return in._mem;
+            @Override public byte[] getChunkData( int cidx0 ) {
+              if( cidx0==cidx ) return in._mem;
               if( _mem2 != null ) return _mem2;
               Chunk in2 = in._vec.nextBV(in);
               return in2 == null ? null : (_mem2=in2._mem);
@@ -322,15 +323,14 @@ public final class ParseDataset2 extends Job {
             @Override public void newLine() {
               if( _col > 0 )
                 while( _col < _cols.length )
-                  addInvalidCol(_col++);
+                  addInvalidCol(_col);
               _col=0;
             }
 
             // Handle a new number column in the parser
             @Override public void addNumCol(int colIdx, long number, int exp) {
               assert colIdx==_col;
-              nvs[colIdx].append2(number,exp);
-              _col++;             // Next column filled in
+              nvs[_col++].append2(number,exp);
             }
 
             @Override public void addStrCol(int colIdx, ValueString str) {
@@ -339,11 +339,11 @@ public final class ParseDataset2 extends Job {
               _col++;             // Next column filled in
               throw H2O.unimpl();
             }
-            @Override public void addInvalidCol(int colIdx) { throw H2O.unimpl(); }
+            @Override public void addInvalidCol(int colIdx) { assert colIdx==_col : "colIdx="+colIdx+" _col="+_col; nvs[_col++].invalid(); }
             @Override public void rollbackLine() { }
             @Override public boolean isString(int colIdx) { return false; }
           };
-        parser.parse(0);
+        parser.parse(cidx);
       }
     }
 
@@ -395,7 +395,7 @@ public final class ParseDataset2 extends Job {
           break;
         off += len;
         if( off == bs.length ) { // Dataset is uncompressing alot! Need more space...
-          if( bs.length >= ValueArray.CHUNK_SZ )
+          if( bs.length >= Vec.CHUNK_SZ )
             break; // Already got enough
           bs = Arrays.copyOf(bs, bs.length * 2);
         }

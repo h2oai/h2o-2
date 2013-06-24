@@ -21,7 +21,7 @@ public class C2SChunk extends Chunk {
     long res = UDP.get2(_mem,(i<<1)+OFF);
     return (res == _NA)?_vec._fNA:(res + _bias)*_scale;
   }
-  @Override void   append2 ( long l, int exp ) { throw H2O.fail(); }
+  @Override boolean set8_impl(int idx, long l) { return false; }
   @Override boolean hasFloat() { return _scale < 1.0; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
   @Override public C2SChunk read(AutoBuffer bb) {
@@ -31,5 +31,8 @@ public class C2SChunk extends Chunk {
     _scale= UDP.get8d(_mem,0);
     _bias = UDP.get4 (_mem,8);
     return this;
+  }
+  @Override NewChunk inflate_impl(NewChunk nc) {
+    throw H2O.unimpl();
   }
 }

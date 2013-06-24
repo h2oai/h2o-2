@@ -13,7 +13,7 @@ public class C8DChunk extends Chunk {
     double res = UDP.get8d(_mem,i<<3);
     return Double.isNaN(res)?_vec._fNA:res;
   }
-  @Override void   append2 ( long l, int exp ) { throw H2O.fail(); }
+  @Override boolean set8_impl(int idx, long l) { return false; }
   @Override boolean hasFloat() { return true; }
   @Override public AutoBuffer write(AutoBuffer bb) {return bb.putA1(_mem,_mem.length);}
   @Override public C8DChunk read(AutoBuffer bb) {
@@ -23,4 +23,5 @@ public class C8DChunk extends Chunk {
     assert _mem.length == _len<<3;
     return this;
   }
+  @Override NewChunk inflate_impl(NewChunk nc) { throw H2O.fail(); }
 }

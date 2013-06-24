@@ -21,7 +21,7 @@ public class NewVectorTest extends TestUtil {
     Chunk bv = nv.compress();
     bv._vec = av.close();
     // Compression returns the expected compressed-type:
-    assertTrue( C.isInstance(bv) );
+    assertTrue( "Found chunk class "+bv.getClass()+" but expected "+C, C.isInstance(bv) );
     assertEquals( hasFloat, bv.hasFloat() );
     // Also, we can decompress correctly
     for( int i=0; i<ls.length; i++ )
@@ -29,7 +29,11 @@ public class NewVectorTest extends TestUtil {
     UKV.remove(av._key);
   }
   // Test that various collections of parsed numbers compress as expected.
-  @Test public void testCompression() {
+  /*@Test*/ public void testCompression() {
+    // A simple no-compress
+    testImpl(new long[] {120, 12,120},
+             new int [] {  0,  1,  0},
+             C0LChunk.class,false);
     // A simple no-compress
     testImpl(new long[] {122, 3,44},
              new int [] {  0, 0, 0},
@@ -70,5 +74,48 @@ public class NewVectorTest extends TestUtil {
     testImpl(new long[] {1234,2345678,31415},
              new int [] {  40,     10,  -40},
              C8DChunk.class, true);
+  }
+    
+  // Testing writes to an existing Chunk causing inflation
+  @Test public void testWrites() {
+    Key key = Vec.newKey();
+    AppendableVec av = new AppendableVec(key);
+    NewChunk nv = new NewChunk(av,0);
+    nv._ls = new long[]{0,0,0}; // A 3-row chunk
+    nv._xs = new int []{0,0,0};
+    nv._len= nv._ls.length;
+    nv.close(0,null);
+    Vec vec = av.close();
+    assertEquals( nv._ls.length, vec.length() );
+    // Compression returns the expected constant-compression-type:
+    Chunk c0 = vec.elem2BV(0);
+    assertTrue( "Found chunk class "+c0.getClass()+" but expected C0LChunk", c0 instanceof C0LChunk );
+    assertEquals( false, c0.hasFloat() );
+    // Also, we can decompress correctly
+    for( int i=0; i<nv._ls.length; i++ )
+      assertEquals(0, c0.at0(i), c0.at0(i)*EPSILON);
+    
+    // Now write a zero into slot 0
+    vec.set8(0,0);
+    assertEquals(0,vec.at8(0));
+    Chunk c1 = vec.elem2BV(0);
+    assertTrue( "Found chunk class "+c1.getClass()+" but expected C0LChunk", c1 instanceof C0LChunk );
+    
+    // Now write a one into slot 1; chunk should inflate.
+    c1.set8(1,1);
+    assertEquals(1,vec.at8(1)); // Immediate visibility in current thread
+    c1.close(0,null);           // Done writing into chunk
+    Chunk c2 = vec.elem2BV(0);  // Look again at the installed chunk
+    assertTrue( "Found chunk class "+c2.getClass()+" but expected C1Chunk", c2 instanceof C1Chunk );
+    
+    // Now write a two into slot 2; chunk should not inflate.
+    c2.set8(2,2);
+    assertEquals(2,vec.at8(2)); // Immediate visibility in current thread
+    c2.close(0,null);           // Done writing into chunk
+    Chunk c3 = vec.elem2BV(0);  // Look again at the installed chunk
+    assertTrue( "Found chunk class "+c3.getClass()+" but expected C1Chunk", c3 instanceof C1Chunk );
+    
+    
+    UKV.remove(av._key);
   }
 }
