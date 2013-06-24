@@ -26,4 +26,12 @@ public class C1Chunk extends Chunk {
   }
   public int get2(int off) { return UDP.get2(_mem,off+OFF); }
   public int get4(int off) { return UDP.get4(_mem,off+OFF); }
+  @Override boolean set8_impl(int i, long l) {
+    if( !(0 <= l && l < 255) ) return false;
+    _mem[i+OFF] = (byte)l;
+    return true; 
+  }
+  @Override NewChunk inflate_impl(NewChunk nc) {
+    throw H2O.unimpl();
+  }
 }

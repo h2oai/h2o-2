@@ -16,6 +16,7 @@ public class C2Chunk extends Chunk {
     return res == _NA?_vec._fNA:res;
   }
   @Override void   append2 ( long l, int exp ) { throw H2O.fail(); }
+  @Override boolean set8_impl(int idx, long l) { return false; }
   @Override boolean hasFloat() { return false; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
   @Override public C2Chunk read(AutoBuffer bb) {
@@ -24,5 +25,8 @@ public class C2Chunk extends Chunk {
     _len = _mem.length>>1;
     assert _mem.length == _len<<1;
     return this;
+  }
+  @Override NewChunk inflate_impl(NewChunk nc) {
+    throw H2O.unimpl();
   }
 }

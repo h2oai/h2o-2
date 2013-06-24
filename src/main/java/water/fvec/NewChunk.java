@@ -9,16 +9,15 @@ public class NewChunk extends Chunk {
   final int _cidx;
   transient long _ls[];         // Mantissa
   transient int _xs[];          // Exponent
-  transient double _min, _max, _sum;
+  transient double _min, _max;
 
-  NewChunk( AppendableVec vec, int cidx ) {
+  NewChunk( Vec vec, int cidx ) {
     _vec = vec;
     _cidx = cidx;               // This chunk#
     _ls = new long[4];          // A little room for data
     _xs = new int [4];
-    _min = Double.MAX_VALUE;
-    _max = Double.MIN_VALUE;
-    _sum = 0;
+    _min =  Double.MAX_VALUE;
+    _max = -Double.MAX_VALUE;
   }
 
   protected final boolean isNA(int idx){
@@ -42,10 +41,11 @@ public class NewChunk extends Chunk {
   // Do any final actions on a completed NewVector.  Mostly: compress it, and
   // do a DKV put on an appropriate Key.  The original NewVector goes dead
   // (does not live on inside the K/V store).
-  public void close(Futures fs) {
-    Chunk chunk = compress();
-    DKV.put(_vec.chunkKey(_cidx),chunk,fs);
-    ((AppendableVec)_vec).closeChunk(_cidx,_len,chunk.hasFloat(),_min,_max);
+  @Override public void close(int cidx, Futures fs) {
+    Chunk chk = compress();
+    if( _vec instanceof AppendableVec )
+      ((AppendableVec)_vec).closeChunk(_cidx,_len,chk.hasFloat(),_min,_max);
+    DKV.put(_vec.chunkKey(_cidx),chk,fs);
   }
 
   // Study this NewVector and determine an appropriate compression scheme.
@@ -65,7 +65,6 @@ public class NewChunk extends Chunk {
       double d = l*DParseTask.pow10(x);
       if( d < _min ) _min = d;
       if( d > _max ) _max = d;
-      _sum += d;
       if( l==0 ) x=0;           // Canonicalize zero exponent
       long t;
       while( l!=0 && (t=l/10)*10==l ) { l=t; x++; }
@@ -87,6 +86,12 @@ public class NewChunk extends Chunk {
       long le = l*DParseTask.pow10i(x-xmin);
       if( le < lemin ) lemin=le;
       if( le > lemax ) lemax=le;
+    }
+
+    // Constant column?
+    if( _min==_max ) {
+      if( xmin < 0 ) throw H2O.unimpl();
+      return new C0LChunk((long)_min,_len);
     }
 
     // Exponent scaling: replacing numbers like 1.3 with 13e-1.  '13' fits in a
@@ -183,9 +188,15 @@ public class NewChunk extends Chunk {
     return bs;
   }
 
-  @Override public long   at8_impl( int i ) { throw H2O.fail(); }
+  // Set & At on NewChunks are weird: only used after inflating some other
+  // chunk.  At this point the NewChunk is full size, no more appends allowed,
+  // and the xs exponent array should be only full of zeros.  Accesses must be
+  // in-range and refer to the inflated values of the original Chunk.
+  @Override boolean set8_impl(int i, long l) { _ls[i]=l; _xs[i]=0; return true; }
+  @Override public long   at8_impl( int i ) { assert _xs[i]==0; return _ls[i]; }
   @Override public double atd_impl( int i ) { throw H2O.fail(); }
   @Override boolean hasFloat() { throw H2O.fail(); }
   @Override public AutoBuffer write(AutoBuffer bb) { throw H2O.fail(); }
   @Override public NewChunk read(AutoBuffer bb) { throw H2O.fail(); }
+  @Override NewChunk inflate_impl(NewChunk nc) { throw H2O.fail(); }
 }

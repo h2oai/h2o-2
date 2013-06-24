@@ -289,7 +289,7 @@ public final class ParseDataset2 extends Job {
 
       // Close & compress all the NewChunks for this one file.
       for( int i=0; i<nvs.length; i++ )
-        nvs[i].close(_fs);
+        nvs[i].close(i,_fs);
     }
 
     // ------------------------------------------------------------------------

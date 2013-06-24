@@ -145,7 +145,7 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
         // Further D/K/V put any new vec results.
         for( Chunk bv : bvs )
           if( bv != null && bv instanceof NewChunk )
-            ((NewChunk)bv).close(_fs);
+            ((NewChunk)bv).close(_lo,_fs);
       }
     }
     tryComplete();              // And this task is complete

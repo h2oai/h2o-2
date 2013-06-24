@@ -33,6 +33,7 @@ public class NFSFileVec extends ByteVec {
 
   @Override public long length() { return _len; }
   @Override public int nChunks() { return (int)Math.max(1,_len>>ValueArray.LOG_CHK); }
+  @Override public boolean writable() { return false; }
   // Convert a row# to a chunk#.  For constant-sized chunks this is a little
   // shift-and-add math.  For variable-sized chunks this is a binary search,
   // with a sane API (JDK has an insane API).
