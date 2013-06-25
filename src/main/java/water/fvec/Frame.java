@@ -1,6 +1,7 @@
 package water.fvec;
 
 import water.*;
+import java.util.Arrays;
 
 // A collection of named Vecs.  Essentially an R-like data-frame.
 public class Frame extends Iced {
@@ -11,7 +12,11 @@ public class Frame extends Iced {
 
   public Frame( Key k, String[] names, Vec[] vecs ) { _key=k; _names=names; _vecs=vecs; }
   public void add( String name, Vec vec ) {
-    throw H2O.unimpl();
+    // needs a compatibility-check????
+    _names = Arrays.copyOf(_names,_names.length+1);
+    _vecs  = Arrays.copyOf(_vecs ,_vecs .length+1);
+    _names[_names.length-1] = name;
+    _vecs [_vecs .length-1] = vec ;
   }
 
   public final Vec[] vecs() {
@@ -68,6 +73,8 @@ public class Frame extends Iced {
   public void remove() {
     for( Vec v : _vecs )
       UKV.remove(v._key);
+    _names = new String[0];
+    _vecs = new Vec[0];
   }
   @Override public Frame init( Key k ) { _key=k; return this; }
   @Override public String toString() {

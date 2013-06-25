@@ -64,12 +64,15 @@ public abstract class Chunk extends Iced implements Cloneable {
   public final long set8(long i, long l) {
     long x = i-_start;
     if( !(0 <= x && x < _len) ) return _vec.set8(i,l); // Go Slow
+    return set80((int)x,l);
+  }
+  public final long set80(int idx, long l) {
     if( _chk==this ) {
       assert !(this instanceof NewChunk) : "Cannot direct-write into a NewChunk, only append";
-      _vec.start_writing();     // One-shot writing-init
+      _vec.startWriting();      // One-shot writing-init
       _chk = clone();           // Flag this chunk as having been written into
     }
-    if( _chk.set8_impl((int)x,l) ) return l;
+    if( _chk.set8_impl(idx,l) ) return l;
     // Must inflate the chunk
     NewChunk nc = new NewChunk(null/*_vec*/,_vec.elem2ChunkIdx(_start));
     nc._vec = _vec;
@@ -77,7 +80,7 @@ public abstract class Chunk extends Iced implements Cloneable {
     nc._xs = new int [_len];
     nc._len= _len;
     _chk = inflate_impl(nc);
-    nc.set8_impl((int)x,l);
+    nc.set8_impl(idx,l);
     return l;
   }
 

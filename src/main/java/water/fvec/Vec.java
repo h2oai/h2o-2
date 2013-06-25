@@ -97,8 +97,9 @@ public class Vec extends Iced {
   // (_min, _max, _mean, etc).  Can be called repeatedly from one or all
   // chunks.  Per-chunk row-counts will not be changing, just row contents and
   // caches of row contents.
-  void start_writing() {
+  void startWriting() {
     if( _activeWrites ) return;      // Already set
+    if( !writable() ) throw new IllegalArgumentException("Vector not writable");
     setActiveWrites();               // Set locally eagerly
     // Set remotely lazily.  This will trigger a cloud-wide invalidate of the
     // existing Vec, and eventually we'll have to load a fresh copy of the Vec

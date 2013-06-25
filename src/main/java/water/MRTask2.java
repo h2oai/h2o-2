@@ -13,7 +13,9 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
   // Run some useful function over this <strong>local</strong> Chunk, and
   // record the results in the <em>this<em> MRTask2.
   public void map(    Chunk bv ) { }
+  public void map(    Chunk bv0, Chunk bv1 ) { }
   public void map( NewChunk bv0, Chunk bv1 ) { }
+  public void map(    Chunk bv0, Chunk bv1, Chunk bv2 ) { }
   public void map(    Chunk bvs[] ) { }
 
   // Combine results from 'mrt' into 'this' MRTask2.  Both 'this' and 'mrt' are
@@ -139,6 +141,8 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
         // Call all the various map() calls that apply
         if( _fr._vecs.length == 1 ) map(bvs[0]);
         if( _fr._vecs.length == 2 && bvs[0] instanceof NewChunk) map((NewChunk)bvs[0], bvs[1]);
+        if( _fr._vecs.length == 2 ) map(bvs[0], bvs[1]);
+        if( _fr._vecs.length == 3 ) map(bvs[0], bvs[1], bvs[2]);
         if( true                  ) map(bvs );
         _res = self();          // Save results since called map() at least once!
 
