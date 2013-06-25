@@ -137,6 +137,9 @@ def simpleCheckRFView(node, rfv, noPrint=False, **kwargs):
     ### modelInspect = node.inspect(model_key)
     dataInspect = node.inspect(data_key)
 
+    # shouldn't have any errors
+    h2o.check_sandbox_for_errors()
+
     return (classification_error, classErrorPctList, totalScores)
 
 def trainRF(trainParseKey, **kwargs):

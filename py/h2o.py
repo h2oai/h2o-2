@@ -1093,6 +1093,7 @@ class H2O(object):
 
         if print_params:
             print "\nrandom_forest parameters:", params_dict
+            sys.stdout.flush()
 
         a = self.__do_json_request('RF.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nrandom_forest result:", dump_json(a))
@@ -1101,7 +1102,6 @@ class H2O(object):
     def random_forest_view(self, data_key, model_key, timeoutSecs=300, print_params=False, **kwargs):
         # do_json_request will ignore any that remain = None
         params_dict = {
-            'no_confusion_matrix': None,
             'data_key': data_key,
             'model_key': model_key,
             'out_of_bag_error_estimate': 1, 
@@ -1117,6 +1117,7 @@ class H2O(object):
 
         if print_params:
             print "\nrandom_forest_view parameters:", params_dict
+            sys.stdout.flush()
 
         a = self.__do_json_request('RFView.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nrandom_forest_view result:", dump_json(a))
@@ -1140,6 +1141,7 @@ class H2O(object):
 
         if print_params:
             print "\nrandom_forest_view parameters:", params_dict
+            sys.stdout.flush()
 
         a = self.__do_json_request('GeneratePredictionsPage.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nrandom_forest_predict result:", dump_json(a))

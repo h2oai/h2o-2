@@ -210,6 +210,9 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     print "GLMModel validation time (milliseconds):", validations['val_time']
     print "GLMModel lsm time (milliseconds):", GLMModel['lsm_time']
 
+    # shouldn't have any errors
+    h2o.check_sandbox_for_errors()
+
     return (warnings, cList, intercept)
 
 

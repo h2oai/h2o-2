@@ -152,9 +152,6 @@ class Basic(unittest.TestCase):
 # http://192.168.1.28:54321/GeneratePredictionsPage.html?model_key=__RFModel_0e2531bc-2552-4f65-8a4a-843031b0cb99&key=iris
 # http://192.168.1.28:54321/RFView.html?data_key=iris.hex&model_key=__RFModel_0e2531bc-2552-4f65-8a4a-843031b0cb99&ntree=50&response_variable=4&class_weights=Iris-setosa%3D1.0%2CIris-versicolor%3D1.0%2CIris-virginica%3D1.0&out_of_bag_error_estimate=true&iterative_cm=true
 
-            # These two no longer exist? replaced by iterative_cm?
-            # no_confusion_matrix=1&
-            # clear_confusion_matrix=1
             kwargs['iterative_cm'] = 1
             # do full scoring
             kwargs['out_of_bag_error_estimate'] = 0
