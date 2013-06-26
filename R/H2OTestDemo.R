@@ -1,7 +1,6 @@
 # Test R functionality for Demo
 # to invoke this you need R 2.15 as of now
 # R -f H2OTestDemo.R 
-# source("C:/Users/Anqi/workspace/h2o/R/H2O.R")
 source("../R/H2O.R")
 h2o.SERVER="localhost:54321"
 
@@ -16,8 +15,12 @@ h2o.inspect(covtype.hex)
 # h2o.glm(covtype.hex, y = 12, x = "1,2,3,4,5,6,7,8",case=1, family=binomial)
 temp <- h2o.glm(covtype.hex, y = 12, case = "1", family = binomial)
 cov.glm1 <- h2o.inspect_glm(temp$destination_key)
+cov.glm1$coef
+cov.glm1$dof
 temp <- h2o.glm(covtype.hex, y = 12, x = "1,2,3,4,5,6,7,8", case = 1, family = binomial)
 cov.glm2 <- h2o.inspect_glm(temp$destination_key)
+cov.glm2$coef
+cov.glm2$dof
 
 #h2o.filter(covtype.hex, covtype.hex[6] < mean(covtype.hex[6]))
 #h2o(covtype[1] + covtype[2] * 4 + max(covtype[6]) * covtype[1] + 7 - covtype[3])
@@ -26,6 +29,7 @@ cov.glm2 <- h2o.inspect_glm(temp$destination_key)
 # h2o.rf(covtype.hex, class = "54", ntree = "10")
 temp <- h2o.rf(covtype.hex, class = "54", ntree = "10")
 cov.rf <- h2o.inspect_rf(temp$model_key, temp$data_key)
+cov.rf
 
 # Run GLM
 # h2o.importFile("prostate", paste(getwd(),"../smalldata/logreg/prostate.csv",sep="/"))
@@ -34,7 +38,10 @@ h2o.inspect(prostate.hex)
 # h2o.glm(prostate.hex, y = CAPSULE, x = "ID,AGE,RACE,PSA,DCAPS", family=binomial)
 temp <- h2o.glm(prostate.hex, y = CAPSULE, x = "ID,AGE,RACE,PSA,DCAPS", family = binomial)
 prostate.glm <- h2o.inspect_glm(temp$destination_key)
+prostate.glm$coef
+prostate.glm$dof
 
 # Run K-Means
 temp <- h2o.kmeans(covtype.hex, k = 10)
 cov.km <- h2o.inspect_kmeans(temp$destination_key)
+cov.km
