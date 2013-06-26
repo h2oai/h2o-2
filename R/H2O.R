@@ -218,16 +218,16 @@ h2o.inspect_glm = function(keyName) {
   res = h2o.__remoteSend(h2o.__PAGE_INSPECT, key = keyName)
   res = res$GLMModel
   result = list()
-  result$key = res_glm$model_key
+  result$key = res$model_key
   # result$col_names = res_glm$column_names
-  result$dof = res_glm$dof
+  result$dof = res$dof
   # result$coef = res_glm$coefficients
-  result$coef = data.frame(res_glm$coefficients)
-  colnames(result$coef) = c(res_glm$column_names, "Intercept")
+  result$coef = data.frame(res$coefficients)
+  colnames(result$coef) = c(res$column_names, "Intercept")
   # result$norm_coef = res_glm$normalized_coefficients
-  result$norm_coef = data.frame(res_glm$normalized_coefficients)
-  colnames(result$norm_coef) = c(res_glm$column_names, "Intercept")
-  result$params = res_glm$GLMParams
+  result$norm_coef = data.frame(res$normalized_coefficients)
+  colnames(result$norm_coef) = c(res$column_names, "Intercept")
+  result$params = res$GLMParams
   result
 }
 
