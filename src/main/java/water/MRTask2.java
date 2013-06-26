@@ -150,6 +150,7 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
         for( Chunk bv : bvs )
           if( bv != null && bv instanceof NewChunk )
             ((NewChunk)bv).close(_lo,_fs);
+        System.out.println("MRTask2 after map, called NewChunk.close on wrong node");
       }
     }
     tryComplete();              // And this task is complete

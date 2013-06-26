@@ -55,6 +55,9 @@ public class GBM extends Job {
       maxs[i] = fr._vecs[i].max();
       isInts[i] = fr._vecs[i]._isInt;
     }
+    Log.unwrap(System.out,"=== "+fr.toString()+" "+fr._vecs[0].length());
+    for( int j=0; j<fr.length(); j++ )
+      Log.unwrap(System.out,fr._names[j]+" = "+fr._vecs[j].toString());
     Histogram hist = new Histogram(fr._names,fr._vecs[0].length(), mins, maxs, isInts);
     Log.unwrap(System.out,hist.toString()+"\n");
 

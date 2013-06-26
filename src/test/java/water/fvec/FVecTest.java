@@ -43,7 +43,7 @@ public class FVecTest extends TestUtil {
 
   // ==========================================================================
   // Test making a appendable vector from a plain vector
-  /*@Test*/ public void testNewVec() {
+  @Test public void testNewVec() {
     // Make and insert a File8Vec to the global store
     File file = TestUtil.find_test_file("./smalldata/cars.csv");
     //File file = TestUtil.find_test_file("../Dropbox/Sris and Cliff/H20_Rush_New_Dataset_100k.csv");

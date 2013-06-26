@@ -22,7 +22,7 @@ public class Frame extends Iced {
   public final Vec[] vecs() {
     return _vecs;
   }
-  int length() { return _vecs.length; }
+  public int length() { return _vecs.length; }
 
   // Return first readable vector
   public Vec firstReadable() {
@@ -54,11 +54,13 @@ public class Frame extends Iced {
   // Close all AppendableVec
   public void closeAppendables() {
     _col0 = null;               // Reset cache
+    Futures fs = new Futures();
     for( int i=0; i<_vecs.length; i++ ) {
       Vec v = _vecs[i];
       if( v != null && v instanceof AppendableVec )
-        _vecs[i] = ((AppendableVec)v).close();
+        _vecs[i] = ((AppendableVec)v).close(fs);
     }
+    fs.blockForPending();
   }
 
   // True if any Appendables exist

@@ -101,14 +101,16 @@ public final class ParseDataset2 extends Job {
     if( uzpt._parserr != null )
       throw new ParseException(uzpt._parserr);
 
+    Futures fs = new Futures();
     Vec[] vecs = new Vec[uzpt._cols.length];
     String[] names = new String[uzpt._cols.length];
     for( int i=0; i<vecs.length; i++ ) {
-      vecs[i] = uzpt._cols[i].close();
+      vecs[i] = uzpt._cols[i].close(fs);
       names[i] = setup._header ? setup._data[0][i] : (""+i);
     }
     // Jam the frame of columns into the K/V store
-    UKV.put(job.dest(),new Frame(job.dest(),names,vecs));
+    UKV.put(job.dest(),new Frame(job.dest(),names,vecs),fs);
+    fs.blockForPending();
   }
 
   // --------------------------------------------------------------------------
@@ -345,8 +347,12 @@ public final class ParseDataset2 extends Job {
           };
         parser.parse(cidx);
       }
-    }
 
+      @Override public void reduce( DParse dpt ) {
+        System.out.println("parser reduce?");
+        throw H2O.unimpl();
+      }
+    }
   }
 
   // --------------------------------------------------------------------------

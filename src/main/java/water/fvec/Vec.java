@@ -103,8 +103,13 @@ public class Vec extends Iced {
     setActiveWrites();               // Set locally eagerly
     // Set remotely lazily.  This will trigger a cloud-wide invalidate of the
     // existing Vec, and eventually we'll have to load a fresh copy of the Vec
-    // with activeWrites turned on, and caching disabled
-    new TAtomic<Vec>() { @Override public Vec atomic(Vec v) { v.setActiveWrites(); return v; } }.fork(_key);
+    // with activeWrites turned on, and caching disabled.  This TAtomic is not
+    // lazy to avoid a race with deleting the vec - a "open/set8/close/remove"
+    // sequence can race the "SetActive" with the "remove".
+    new SetActiveWrites().invoke(_key);
+  }
+  private static final class SetActiveWrites extends TAtomic<Vec> {
+    @Override public Vec atomic(Vec v) { v.setActiveWrites(); return v; }
   }
 
   // Convert a row# to a chunk#.  For constant-sized chunks this is a little
