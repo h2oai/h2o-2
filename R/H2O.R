@@ -75,6 +75,19 @@ h2o.put <- function(keyName, value) {
   res$Key
 }
 
+h2o.poll <- function(keyName) {
+  type = tryCatch({ typeof(keyName) }, error = function(e) { "expr" })
+  if (type != "character")
+    keyName = deparse(substitute(keyName))
+  res = h2o.__remoteSend(h2o.__PAGE_JOBS)
+  res = res$jobs
+  for(i in 1:length(res)) {
+    if(res[[i]]$key == keyName)
+      prog = res[[i]]
+  }
+  prog$end_time
+}
+
 # Inspects the given key on H2O cloud. Key can be either a string or a literal which will be translated to a string.
 # Returns a list with key name (key), value type (type), number of rows in the value (num_rows), number of columns (num_cols),
 # size of a single row in bytes (rowSize) and total size in bytes of the value (size). Also list of all columns
@@ -141,6 +154,7 @@ h2o.importUrl <- function(keyName, url, parse = TRUE) {
     res = h2o.__remoteSend(h2o.__PAGE_PARSE, source_key = uploadKey, destination_key = paste(keyName,".hex",sep=""))    
   } 
   #res$destination_key
+  res
 }
 
 # Imports a file local to the server the interop is connecting to. Other arguments are the same as for the importUrl
@@ -219,12 +233,12 @@ h2o.inspect_glm = function(keyName) {
   res = res$GLMModel
   result = list()
   result$key = res$model_key
-  # result$col_names = res_glm$column_names
+  # result$col_names = res$column_names
   result$dof = res$dof
-  # result$coef = res_glm$coefficients
+  # result$coef = res$coefficients
   result$coef = data.frame(res$coefficients)
   colnames(result$coef) = c(res$column_names, "Intercept")
-  # result$norm_coef = res_glm$normalized_coefficients
+  # result$norm_coef = res$normalized_coefficients
   result$norm_coef = data.frame(res$normalized_coefficients)
   colnames(result$norm_coef) = c(res$column_names, "Intercept")
   result$params = res$GLMParams
@@ -263,7 +277,7 @@ h2o.rf = function(keyName, ntree="", class = "", negX = "", family = "gaussian",
     Y = deparse(substitute(ntree))
   type = tryCatch({ typeof(class) }, error = function(e) { "expr" })
  
-  h2o.__printIfVerbose("  running RF on vector ",keyName," class column ",class, " number of trees", ntree)
+  h2o.__printIfVerbose("  running RF on vector ",keyName," class column ",class, " number of trees ", ntree)
   res = h2o.__remoteSend(h2o.__PAGE_RF, data_key = keyName, ntree = ntree, class = class)
   res
 }
@@ -302,6 +316,7 @@ h2o.__PAGE_GLM = "GLM.json"
 h2o.__PAGE_KMEANS = "KMeans.json"
 h2o.__PAGE_RF  = "RF.json"
 h2o.__PAGE_RFVIEW = "RFView.json"
+h2o.__PAGE_JOBS = "Jobs.json"
 
 h2o.__printIfVerbose <- function(...) {
   if (h2o.VERBOSE == TRUE)
