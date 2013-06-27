@@ -86,9 +86,9 @@ public abstract class Chunk extends Iced implements Cloneable {
 
   // After writing we must call close() to register the bulk changes
   public void close( int cidx, Futures fs ) {
-    if( _chk == this ) return;  // Nothing written?
-    if( _chk instanceof NewChunk ) _chk.close(cidx,fs);
-    else DKV.put(_vec.chunkKey(cidx),_chk,fs); // Write updated chunk back into K/V
+    if( _chk instanceof NewChunk ) _chk = ((NewChunk)_chk).close(fs);
+    else if( _chk == this ) return;  // Nothing written?
+    DKV.put(_vec.chunkKey(cidx),_chk,fs); // Write updated chunk back into K/V
   }
 
   public int cidx() { return _vec.elem2ChunkIdx(_start); }

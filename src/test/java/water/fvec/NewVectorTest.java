@@ -19,7 +19,7 @@ public class NewVectorTest extends TestUtil {
     nv._xs = xs;
     nv._len= ls.length;
     Chunk bv = nv.compress();
-    bv._vec = av.close();
+    bv._vec = av.close(null);
     // Compression returns the expected compressed-type:
     assertTrue( "Found chunk class "+bv.getClass()+" but expected "+C, C.isInstance(bv) );
     assertEquals( hasFloat, bv.hasFloat() );
@@ -78,14 +78,17 @@ public class NewVectorTest extends TestUtil {
     
   // Testing writes to an existing Chunk causing inflation
   @Test public void testWrites() {
-    Key key = Vec.newKey();
+    final Key key = Vec.newKey();
     AppendableVec av = new AppendableVec(key);
     NewChunk nv = new NewChunk(av,0);
     nv._ls = new long[]{0,0,0}; // A 3-row chunk
     nv._xs = new int []{0,0,0};
     nv._len= nv._ls.length;
     nv.close(0,null);
-    Vec vec = av.close();
+    Futures fs = new Futures();
+    Vec vec = av.close(fs);
+    fs.blockForPending();
+    
     assertEquals( nv._ls.length, vec.length() );
     // Compression returns the expected constant-compression-type:
     Chunk c0 = vec.elem2BV(0);
@@ -115,7 +118,13 @@ public class NewVectorTest extends TestUtil {
     Chunk c3 = vec.elem2BV(0);  // Look again at the installed chunk
     assertTrue( "Found chunk class "+c3.getClass()+" but expected C1Chunk", c3 instanceof C1Chunk );
     
-    
     UKV.remove(av._key);
+  }
+
+  private static final class CheckVec extends TAtomic<Vec> {
+    @Override public Vec atomic(Vec v) { 
+      assert v != null : "check remote null Vec";
+      return v;
+    }
   }
 }

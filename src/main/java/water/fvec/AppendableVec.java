@@ -55,7 +55,7 @@ public class AppendableVec extends Vec {
 
   // "Close" out a NEW vector - rewrite it to a plain Vec that supports random
   // reads, plus computes rows-per-chunk, min/max/mean, etc.
-  public Vec close() {
+  public Vec close(Futures fs) {
     // Compute #chunks
     int nchunk = _espc.length;
     while( nchunk > 0 && _espc[nchunk-1] == 0 ) nchunk--;
@@ -73,7 +73,7 @@ public class AppendableVec extends Vec {
     espc[nchunk]=x;             // Total element count in last
     // Replacement plain Vec for AppendableVec.
     Vec vec = new Vec(_key,espc,!_hasFloat,_min,_max);
-    DKV.put(_key,vec);          // Inject the header
+    DKV.put(_key,vec,fs);       // Inject the header
     return vec;
   }
 
