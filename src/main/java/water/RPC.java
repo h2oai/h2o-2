@@ -271,11 +271,12 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     // When the task completes, ship results back to client
     @Override public void onCompletion( CountedCompleter caller ) {
       // Send results back
-      while( true ) {         // Retry loop for broken TCP sends
+      DTask dt = _dt;           // _dt can go null the instant its send over wire
+      while( true ) {           // Retry loop for broken TCP sends
         AutoBuffer ab = null;
         try {
           ab = new AutoBuffer(_client).putTask(UDP.udp.ack,_tsknum).put1(SERVER_UDP_SEND);
-          _dt.write(ab);        // Write the DTask - could be very large write
+          _dt.write(ab);      // Write the DTask - could be very large write
           _computed = true;   // After the TCP reply flag set, set computed bit
           boolean t = ab.hasTCP(); // Resends do not need to repeat TCP result
           _dt._repliedTcp = t;
@@ -287,6 +288,8 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
           try { Thread.sleep(500); } catch (InterruptedException ie) {}
         }
       } // end of while(true)
+      if( dt instanceof DRemoteTask || dt instanceof MRTask2 )
+        Log.info("Done  remote task#"+_tsknum+" "+dt.getClass()+" to "+_client);
       _client.record_task_answer(this); // Setup for retrying Ack & AckAck
     }
     // Re-send strictly the ack, because we're missing an AckAck
@@ -364,6 +367,8 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       }
       RPCCall rpc2 = ab._h2o.record_task(rpc);
       if( rpc2==null ) {        // Atomically insert (to avoid double-work)
+        if( rpc._dt instanceof DRemoteTask || rpc._dt instanceof MRTask2 )
+          Log.info("Start remote task#"+task+" "+rpc._dt.getClass()+" from "+ab._h2o);
         H2O.submitTask(rpc);    // And execute!
       } else {                  // Else lost the task-insertion race
         if(ab.hasTCP())TimeLine.printMyTimeLine();
