@@ -47,6 +47,10 @@ def setupImportFolder(node=None, path='/home/0xdiag/datasets', timeoutSecs=180):
         # FIX! make bucket vary depending on path
         bucket = 'home-0xdiag-datasets'
         importFolderResult = setupImportS3(node=node, bucket=bucket, timeoutSecs=timeoutSecs)
+    elif node.redirect_import_folder_to_s3n_path: 
+        # FIX! make bucket vary depending on path
+        path = re.sub('/home/0xdiag/datasets', 'home-0xdiag-datasets', path)
+        importFolderResult = setupImportHdfs(node=node, path=path, schema="s3n", timeoutSecs=timeoutSecs)
     else:
         if getpass.getuser()=='jenkins':
             print "michal: Temp hack of /home/0xdiag/datasets/standard to /home/0xdiag/datasets till EC2 image is fixed"
@@ -75,7 +79,7 @@ def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
 
     print "Waiting for the slow parse of the file:", csvFilename
 
-    if node.redirect_import_folder_to_s3_path:
+    if node.redirect_import_folder_to_s3_path or node.redirect_import_folder_to_s3n_path:
         path = re.sub('/home/0xdiag/datasets', 'home-0xdiag-datasets', path)
         parseKey = parseImportS3File(node, csvFilename, path, myKey2,
             timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs, noise, 

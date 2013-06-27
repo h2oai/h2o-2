@@ -1537,11 +1537,13 @@ class H2O(object):
         use_home_for_ice=False, node_id=None, username=None,
         random_udp_drop=False,
         redirect_import_folder_to_s3_path=None,
+        redirect_import_folder_to_s3n_path=None,
         disable_h2o_log=False, 
         enable_benchmark_log=False,
         ):
  
         self.redirect_import_folder_to_s3_path = redirect_import_folder_to_s3_path
+        self.redirect_import_folder_to_s3n_path = redirect_import_folder_to_s3n_path
 
         if use_debugger is None: use_debugger = debugger
         self.aws_credentials = aws_credentials
