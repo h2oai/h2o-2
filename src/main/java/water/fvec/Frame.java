@@ -72,11 +72,13 @@ public class Frame extends Iced {
   }
 
   // Remove all embedded Vecs
-  public void remove() {
+  public void remove() { remove(new Futures()).blockForPending(); }
+  public Futures remove(Futures fs) {
     for( Vec v : _vecs )
-      UKV.remove(v._key);
+      UKV.remove(v._key,fs);
     _names = new String[0];
     _vecs = new Vec[0];
+    return fs;
   }
   @Override public Frame init( Key k ) { _key=k; return this; }
   @Override public String toString() {

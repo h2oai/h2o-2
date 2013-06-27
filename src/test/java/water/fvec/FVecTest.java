@@ -76,13 +76,13 @@ public class FVecTest extends TestUtil {
 
     Key okey = Key.make("cars.hex");
     Frame fr = ParseDataset2.parse(okey,new Key[]{fkey});
-    //System.out.println(fr);
     UKV.remove(fkey);
+    //System.out.println(fr);
     UKV.remove(okey);
   }
 
   // ==========================================================================
-  /*@Test*/ public void testParse2() {
+  @Test public void testParse2() {
     File file = TestUtil.find_test_file("../smalldata/logreg/syn_2659x1049.csv");
     Key fkey = NFSFileVec.make(file);
 
@@ -92,7 +92,7 @@ public class FVecTest extends TestUtil {
     try {
       assertEquals(fr.length(),1050); // Count of columns
       assertEquals(fr._vecs[0].length(),2659); // Count of rows
-      
+
       double[] sums = new Sum().invoke(fr)._sums;
       assertEquals(3949,sums[0],EPSILON);
       assertEquals(3986,sums[1],EPSILON);
@@ -112,6 +112,7 @@ public class FVecTest extends TestUtil {
       assertEquals(3949+3986,sums[0],EPSILON);
 
     } finally {
+      fr.remove();
       UKV.remove(okey);
     }
   }

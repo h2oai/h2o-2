@@ -42,11 +42,11 @@ public class NewChunk extends Chunk {
   // Do any final actions on a completed NewVector.  Mostly: compress it, and
   // do a DKV put on an appropriate Key.  The original NewVector goes dead
   // (does not live on inside the K/V store).
-  @Override public void close(int cidx, Futures fs) {
+  public Chunk close(Futures fs) {
     Chunk chk = compress();
     if( _vec instanceof AppendableVec )
       ((AppendableVec)_vec).closeChunk(_cidx,_len,chk.hasFloat(),_min,_max);
-    DKV.put(_vec.chunkKey(_cidx),chk,fs);
+    return chk;
   }
 
   // Study this NewVector and determine an appropriate compression scheme.

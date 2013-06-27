@@ -101,16 +101,11 @@ public final class ParseDataset2 extends Job {
     if( uzpt._parserr != null )
       throw new ParseException(uzpt._parserr);
 
-    Futures fs = new Futures();
-    Vec[] vecs = new Vec[uzpt._cols.length];
     String[] names = new String[uzpt._cols.length];
-    for( int i=0; i<vecs.length; i++ ) {
-      vecs[i] = uzpt._cols[i].close(fs);
+    for( int i=0; i<names.length; i++ )
       names[i] = setup._header ? setup._data[0][i] : (""+i);
-    }
     // Jam the frame of columns into the K/V store
-    UKV.put(job.dest(),new Frame(job.dest(),names,vecs),fs);
-    fs.blockForPending();
+    UKV.put(job.dest(),new Frame(job.dest(),names,uzpt._cols));
   }
 
   // --------------------------------------------------------------------------
@@ -122,7 +117,7 @@ public final class ParseDataset2 extends Job {
     // OUTPUT fields:
     public String _parserr;              // NULL if parse is OK, else an error string
     // All column data for this one file
-    AppendableVec _cols[];
+    Vec _cols[];
 
     MultiFileParseTask( CsvParser.Setup setup ) { _setup = setup; }
 
@@ -161,7 +156,7 @@ public final class ParseDataset2 extends Job {
 
       // Setup result columns named: filekeyC0, filekeyC1, etc...
       final int ncols = _setup._data[0].length;
-      _cols = new AppendableVec[ncols];
+      _cols = new Vec[ncols];
       for( int i=0; i<ncols; i++ )
         _cols[i] = new AppendableVec(Key.make(key.toString()+"C"+i));
 
@@ -290,8 +285,10 @@ public final class ParseDataset2 extends Job {
         parser.parse(cidx++);
 
       // Close & compress all the NewChunks for this one file.
-      for( int i=0; i<nvs.length; i++ )
-        nvs[i].close(i,_fs);
+      for( int i=0; i<_cols.length; i++ ) {
+        nvs[i].close(0/*actual chunk number*/,_fs);
+        _cols[i] = ((AppendableVec)_cols[i]).close(_fs);
+      }
     }
 
     // ------------------------------------------------------------------------
@@ -299,7 +296,11 @@ public final class ParseDataset2 extends Job {
     private void distroParse( ByteVec vec, final CsvParser.Setup localSetup ) throws IOException {
       Vec bvs[] = Arrays.copyOf(_cols,_cols.length+1,Vec[].class);
       bvs[bvs.length-1] = vec;
-      new DParse(localSetup).invoke(bvs);
+      DParse dp = new DParse(localSetup).invoke(bvs);
+      // After the MRTask2, the input Vec array has all the AppendableVecs
+      // closed() and rewritten as plain Vecs.  Copy those back into the _cols
+      // array.
+      for( int i=0; i<_cols.length; i++ ) _cols[i] = dp.vecs(i);
     }
     private class DParse extends MRTask2<DParse> {
       final CsvParser.Setup _setup;

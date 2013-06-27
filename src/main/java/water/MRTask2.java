@@ -3,6 +3,7 @@ package water;
 import jsr166y.CountedCompleter;
 import water.fvec.*;
 import water.util.Log;
+import java.util.Arrays;
 
 /** Map/Reduce style distributed computation. */
 public abstract class MRTask2<T extends MRTask2> extends DTask implements Cloneable {
@@ -68,7 +69,6 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
   // Note: the desired name 'get' is final in ForkJoinTask.
   public final T getResult() {
     join();
-    _fr.closeAppendables();      // Final close ops on any new appendable vec
     return self();
   }
 
@@ -146,11 +146,10 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
         if( true                  ) map(bvs );
         _res = self();          // Save results since called map() at least once!
 
-        // Further D/K/V put any new vec results.
+        // no-op for read-only chunks; compress NewChunks; write out altered
+        // chunks to the DKV store.
         for( Chunk bv : bvs )
-          if( bv != null && bv instanceof NewChunk )
-            ((NewChunk)bv).close(_lo,_fs);
-        System.out.println("MRTask2 after map, called NewChunk.close on wrong node");
+          bv.close(_lo,_fs);
       }
     }
     tryComplete();              // And this task is complete
@@ -188,9 +187,12 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
       _fs.blockForPending();
     // Finally, must return all results in 'this' because that is the API -
     // what the user expects
+    int nlo = _nlo, nhi = _nhi;   // Save these before copyOver crushes them
     if( _res == null ) _nlo = -1; // Flag for no local results *at all*
     else if( _res != this )       // There is a local result, and its not self
       copyOver(_res);             // So copy into self
+    if( nlo==0 && nhi == H2O.CLOUD.size() ) // All-done on head of whole MRTask tree?
+      _fr.closeAppendables();   // Final close ops on any new appendable vec
   }
   private static String p(MRTask2 x) {
     if( x==null ) return "(null)";

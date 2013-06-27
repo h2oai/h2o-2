@@ -27,7 +27,6 @@ public class AppendableVec extends Vec {
   // This call is made in parallel across all node-local created chunks, but is
   // not called distributed.
   synchronized void closeChunk( int cidx, int len, boolean hasFloat, double min, double max ) {
-    System.out.println("closeChunk AV cidx="+cidx+" len="+len+" hasF="+hasFloat+" min="+min);
     while( cidx >= _espc.length )
       _espc = Arrays.copyOf(_espc,_espc.length<<1);
     _espc[cidx] = len;
@@ -72,7 +71,6 @@ public class AppendableVec extends Vec {
       x += _espc[i];            // Raise total elem count
     }
     espc[nchunk]=x;             // Total element count in last
-    System.out.println("Closing AV w/"+x+" rows="+espc);
     // Replacement plain Vec for AppendableVec.
     Vec vec = new Vec(_key,espc,!_hasFloat,_min,_max);
     DKV.put(_key,vec,fs);       // Inject the header
