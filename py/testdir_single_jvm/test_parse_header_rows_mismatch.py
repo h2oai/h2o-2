@@ -70,9 +70,9 @@ class Basic(unittest.TestCase):
 
             start = time.time()
             timeoutSecs = 30
-            print "Force it to think there's a header. Not specifying column separator though"
-            parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2, 
-                timeoutSecs=timeoutSecs, pollTimeoutSecs=30, header=1)
+            print "Force it to think there's a header. using comma forced as separator"
+            parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2,
+                timeoutSecs=timeoutSecs, pollTimeoutSecs=30, header=1, separator=44)
             print "parseKey['destination_key']: " + parseKey['destination_key']
             print 'parse time:', parseKey['response']['time']
 

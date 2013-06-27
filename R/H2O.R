@@ -75,6 +75,32 @@ h2o.put <- function(keyName, value) {
   res$Key
 }
 
+h2o.poll <- function(keyName) {
+  type = tryCatch({ typeof(keyName) }, error = function(e) { "expr" })
+  if (type != "character")
+    keyName = deparse(substitute(keyName))
+  res = h2o.__remoteSend(h2o.__PAGE_JOBS)
+  res = res$jobs
+  for(i in 1:length(res)) {
+    if(res[[i]]$key == keyName)
+      prog = res[[i]]
+  }
+  prog$end_time
+}
+
+h2o.poll_rf <- function(keyName) {
+  type = tryCatch({ typeof(keyName) }, error = function(e) { "expr" })
+  if (type != "character")
+    keyName = deparse(substitute(keyName))
+  res = h2o.__remoteSend(h2o.__PAGE_JOBS)
+  res = res$jobs
+  for(i in 1:length(res)) {
+    if(res[[i]]$destination_key == keyName)
+      prog = res[[i]]
+  }
+  prog$end_time
+}
+
 # Inspects the given key on H2O cloud. Key can be either a string or a literal which will be translated to a string.
 # Returns a list with key name (key), value type (type), number of rows in the value (num_rows), number of columns (num_cols),
 # size of a single row in bytes (rowSize) and total size in bytes of the value (size). Also list of all columns
@@ -140,7 +166,8 @@ h2o.importUrl <- function(keyName, url, parse = TRUE) {
     h2o.__printIfVerbose("  parsing key ",uploadKey," to key ",keyName)
     res = h2o.__remoteSend(h2o.__PAGE_PARSE, source_key = uploadKey, destination_key = paste(keyName,".hex",sep=""))    
   } 
-  #res$destination_key
+  # res
+  while(h2o.poll(res$response$redirect_request_args$job) == "") { Sys.sleep(1) }
 }
 
 # Imports a file local to the server the interop is connecting to. Other arguments are the same as for the importUrl
@@ -150,7 +177,6 @@ h2o.importFile <- function(keyName, fileName, parse = TRUE) {
   if (type != "character")
     keyName = deparse(substitute(keyName))
   h2o.importUrl(keyName,paste("file://",fileName,sep=""),parse = parse)
-
 }
 
 # shorthands ----------------------------------------------------------------------------------------------------------
@@ -207,28 +233,8 @@ h2o.glm = function(keyName, y, case="1.0", x = "", negX = "", family = "gaussian
   negX = paste(negX,sep="",collapse=",")
   h2o.__printIfVerbose("  running GLM on vector ",keyName," response column ",y)
   res = h2o.__remoteSend(h2o.__PAGE_GLM, key = keyName, y = y, case=case, x = x, "-x" = negX, family = family, xval = xval, threshold = threshold, norm = norm, lambda = lambda, rho = rho, alpha = alpha)
-  res
-}
-
-h2o.inspect_glm = function(keyName) {
-  type = tryCatch({ typeof(keyName) }, error = function(e) { "expr" })
-  if (type != "character")
-    keyName = deparse(substitute(keyName))
-  h2o.__printIfVerbose("  Inspecting key ",keyName)
-  res = h2o.__remoteSend(h2o.__PAGE_INSPECT, key = keyName)
-  res = res$GLMModel
-  result = list()
-  result$key = res$model_key
-  # result$col_names = res_glm$column_names
-  result$dof = res$dof
-  # result$coef = res_glm$coefficients
-  result$coef = data.frame(res$coefficients)
-  colnames(result$coef) = c(res$column_names, "Intercept")
-  # result$norm_coef = res_glm$normalized_coefficients
-  result$norm_coef = data.frame(res$normalized_coefficients)
-  colnames(result$norm_coef) = c(res$column_names, "Intercept")
-  result$params = res$GLMParams
-  result
+  while(h2o.poll(res$response$redirect_request_args$job) == "") { Sys.sleep(1) }
+  h2o.__printModel(res$destination_key, type = "GLM")
 }
 
 # K-means function.
@@ -241,16 +247,8 @@ h2o.kmeans = function(keyName, k = 5, epsilon = 1.0E-6, normalize = 0) {
 
   h2o.__printIfVerbose("  running ", k, "-means on vector ",keyName)
   res = h2o.__remoteSend(h2o.__PAGE_KMEANS, source_key = keyName, k = k, epsilon = epsilon, normalize = normalize)
-  res
-}
-
-h2o.inspect_kmeans = function(keyName) {
-  type = tryCatch({ typeof(keyName) }, error = function(e) { "expr" })
-  if (type != "character")
-    keyName = deparse(substitute(keyName))
-  h2o.__printIfVerbose("  Inspecting key ",keyName)
-  res = h2o.__remoteSend(h2o.__PAGE_INSPECT, key = keyName)
-  res$KMeansModel$clusters
+  while(h2o.poll(res$response$redirect_request_args$job) == "") { Sys.sleep(1) }
+  h2o.__printModel(res$destination_key, type = "KM")
 }
 
 # RF function. 
@@ -263,9 +261,11 @@ h2o.rf = function(keyName, ntree="", class = "", negX = "", family = "gaussian",
     Y = deparse(substitute(ntree))
   type = tryCatch({ typeof(class) }, error = function(e) { "expr" })
  
-  h2o.__printIfVerbose("  running RF on vector ",keyName," class column ",class, " number of trees", ntree)
+  h2o.__printIfVerbose("  running RF on vector ",keyName," class column ",class, " number of trees ", ntree)
   res = h2o.__remoteSend(h2o.__PAGE_RF, data_key = keyName, ntree = ntree, class = class)
-  res
+  # res
+  while(h2o.poll_rf(res$response$redirect_request_args$model_key) == "") { Sys.sleep(1) }
+  h2o.inspect_rf(res$model_key, res$data_key)
 }
 
 h2o.inspect_rf = function(modelkey, datakey, oob_err = 1) {
@@ -302,6 +302,7 @@ h2o.__PAGE_GLM = "GLM.json"
 h2o.__PAGE_KMEANS = "KMeans.json"
 h2o.__PAGE_RF  = "RF.json"
 h2o.__PAGE_RFVIEW = "RFView.json"
+h2o.__PAGE_JOBS = "Jobs.json"
 
 h2o.__printIfVerbose <- function(...) {
   if (h2o.VERBOSE == TRUE)
@@ -310,7 +311,7 @@ h2o.__printIfVerbose <- function(...) {
 
 h2o.__remoteSend <- function(page,...) {
   # Sends the given arguments as URL arguments to the given page on the specified server
-  #h2o.__printIfVerbose(page)
+  # h2o.__printIfVerbose(page)
   url = paste(h2o.SERVER,page,sep="/")
   # res = fromJSON(postForm(url, style = "POST", ...))
   temp = postForm(url, style = "POST", ...)
@@ -349,6 +350,24 @@ h2o.__convertToRData <- function(res,forceDataFrame=FALSE) {
     }
     r
   }
+}
+
+h2o.__printModel <- function(keyName, type) {
+  h2o.__printIfVerbose("  Inspecting key ",keyName)
+  res = h2o.__remoteSend(h2o.__PAGE_INSPECT, key = keyName)
+  if(type == "GLM") {
+    res = res$GLMModel
+    result = list()
+    result$key = res$model_key
+    result$dof = res$dof
+    result$coef = data.frame(res$coefficients)
+    colnames(result$coef) = c(res$column_names, "Intercept")
+    result$norm_coef = data.frame(res$normalized_coefficients)
+    colnames(result$norm_coef) = c(res$column_names, "Intercept")
+    result$params = res$GLMParams
+    result
+  }
+  else if(type == "KM") { res$KMeansModel$clusters }
 }
 
 # h2o.rf <- function(key,ntree, depth=30,model=FALSE,gini=1,seed=42,wait=TRUE) {
