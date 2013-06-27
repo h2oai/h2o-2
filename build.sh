@@ -24,6 +24,7 @@ set -o errexit   ## set -e : exit the script if any statement returns a non-true
 # This is where the source files (java) and resources are relative to the path of this file
       SRC=src/main/java
   TESTSRC=src/test/java
+SAMPLESRC=src/samples/java
 RESOURCES=src/main/resources
 # and this is where the jar contents is stored relative to this file again
 JAR_ROOT=lib
@@ -93,6 +94,7 @@ function build_classes() {
         $SRC/water/*java \
         $SRC/water/*/*java \
         $SRC/jsr166y/*java \
+        $SAMPLESRC/water/*java \
         $TESTSRC/*/*java \
         $TESTSRC/*/*/*java
 
