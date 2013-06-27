@@ -657,7 +657,13 @@ class H2O(object):
         else:
             url = self.__url(jsonRequest)
 
+        # remove any params that are 'None'
+        # need to copy dictionary, since can't delete while iterating
         if params is not None:
+            params2 = params.copy()
+            for k in params2:
+                if params2[k] is None:
+                    del params[k]
             paramsStr =  '?' + '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
         else:
             paramsStr = ''
@@ -769,7 +775,7 @@ class H2O(object):
     # so we can create noise with different urls!, and different parms to that url
     # no noise if None
     def poll_url(self, response, 
-        timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=15,
+        timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, noPoll=False):
         ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs 
         verboseprint('poll_url input: response:', dump_json(response))
@@ -847,7 +853,7 @@ class H2O(object):
         return r
     
     def kmeans_apply(self, data_key, model_key, destination_key,
-        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=30,
+        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
         **kwargs):
         # defaults
         params_dict = {
@@ -878,7 +884,7 @@ class H2O(object):
     # model_key
     # key
     def kmeans_score(self, key, model_key,
-        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=30,
+        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
         **kwargs):
         # defaults
         params_dict = {
@@ -902,7 +908,7 @@ class H2O(object):
     # additional params include: cols=. 
     # don't need to include in params_dict it doesn't need a default
     def kmeans(self, key, key2=None, 
-        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=30,
+        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
         **kwargs):
         # defaults
         params_dict = {
@@ -939,7 +945,7 @@ class H2O(object):
     # noise is a 2-tuple: ("StoreView",params_dict)
     
     def parse(self, key, key2=None, 
-        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=30,
+        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
         browseAlso = kwargs.pop('browseAlso',False)
         # this doesn't work. webforums indicate max_retries might be 0 already? (as of 3 months ago)
@@ -1023,17 +1029,17 @@ class H2O(object):
 
     # the param name for ImportFiles is 'file', but it can take a directory or a file.
     # 192.168.0.37:54323/ImportFiles.html?file=%2Fhome%2F0xdiag%2Fdatasets
-    def import_files(self, path, timeoutSecs=30):
+    def import_files(self, path, timeoutSecs=180):
         a = self.__do_json_request('ImportFiles.json', timeout=timeoutSecs, params={"path": path})
         verboseprint("\nimport_files result:", dump_json(a))
         return a
 
-    def import_s3(self, bucket, timeoutSecs=30):
+    def import_s3(self, bucket, timeoutSecs=180):
         a = self.__do_json_request('ImportS3.json', timeout=timeoutSecs, params={"bucket": bucket})
         verboseprint("\nimport_s3 result:", dump_json(a))
         return a
 
-    def import_hdfs(self, path, timeoutSecs=30):
+    def import_hdfs(self, path, timeoutSecs=180):
         a = self.__do_json_request('ImportHdfs.json', timeout=timeoutSecs, params={"path": path})
         verboseprint("\nimport_hdfs result:", dump_json(a))
         return a
@@ -1087,20 +1093,19 @@ class H2O(object):
 
         if print_params:
             print "\nrandom_forest parameters:", params_dict
+            sys.stdout.flush()
 
         a = self.__do_json_request('RF.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nrandom_forest result:", dump_json(a))
         return a
 
     def random_forest_view(self, data_key, model_key, timeoutSecs=300, print_params=False, **kwargs):
+        # do_json_request will ignore any that remain = None
         params_dict = {
             'data_key': data_key,
             'model_key': model_key,
             'out_of_bag_error_estimate': 1, 
             'class_weights': None,
-            'response_variable': None, # FIX! apparently this is needed now?
-            'no_confusion_matrix': None,
-            'clear_confusion_matrix': None,
             }
         browseAlso = kwargs.pop('browseAlso',False)
 
@@ -1112,12 +1117,37 @@ class H2O(object):
 
         if print_params:
             print "\nrandom_forest_view parameters:", params_dict
+            sys.stdout.flush()
 
         a = self.__do_json_request('RFView.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nrandom_forest_view result:", dump_json(a))
 
         if (browseAlso | browse_json):
             h2b.browseJsonHistoryAsUrlLastMatch("RFView")
+        return a
+
+    def random_forest_predict(self, key, model_key, timeoutSecs=300, print_params=False, **kwargs):
+        params_dict = {
+            'key': key,
+            'model_key': model_key,
+            }
+        browseAlso = kwargs.pop('browseAlso',False)
+
+        # only update params_dict..don't add
+        # throw away anything else as it should come from the model (propagating what RF used)
+        for k in kwargs:
+            if k in params_dict:
+                params_dict[k] = kwargs[k]
+
+        if print_params:
+            print "\nrandom_forest_view parameters:", params_dict
+            sys.stdout.flush()
+
+        a = self.__do_json_request('GeneratePredictionsPage.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nrandom_forest_predict result:", dump_json(a))
+
+        if (browseAlso | browse_json):
+            h2b.browseJsonHistoryAsUrlLastMatch("GeneratePredictions")
         return a
 
     def random_forest_treeview(self, tree_number, data_key, model_key, 
@@ -1141,7 +1171,7 @@ class H2O(object):
             time.sleep(3) # to be able to see it
         return a
 
-    def summary_page(self, key, timeoutSecs=10, **kwargs):
+    def summary_page(self, key, timeoutSecs=30, **kwargs):
         params_dict = {
             'key': key,
             }
@@ -1240,7 +1270,7 @@ class H2O(object):
 
     # kwargs used to pass many params
     def GLM_shared(self, key, 
-        timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=30,
+        timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180,
         parentName=None, **kwargs):
 
         browseAlso = kwargs.pop('browseAlso',False)
@@ -1258,7 +1288,7 @@ class H2O(object):
         return a 
 
     def GLM(self, key, 
-        timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=30, 
+        timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180, 
         noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
 
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLM", **kwargs)
@@ -1285,7 +1315,7 @@ class H2O(object):
 
     # this only exists in new. old will fail
     def GLMGrid(self, key, 
-        timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=30,
+        timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
 
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLMGrid", **kwargs)

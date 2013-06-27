@@ -15,8 +15,9 @@ public class Sandbox {
   public static void main(String[] args) throws Exception {
     localCloud(1, true, args);
 
-    File f = new File("py/testdir_multi_jvm/syn_datasets/syn_spheres100.csv");
+    //File f = new File("py/testdir_multi_jvm/syn_datasets/syn_spheres100.csv");
     //File f = new File("smalldata/covtype/covtype.20k.data");
+    File f = new File("lib/resources/datasets/gaussian.csv");
     //File f = new File("smalldata/airlines/allyears2k.zip");
     // // File f = new File("../../aaaa/datasets/millionx7_logreg.data.gz");
     // // File f = new File("smalldata/test/rmodels/iris_x-iris-1-4_y-species_ntree-500.rdata");
@@ -31,18 +32,23 @@ public class Sandbox {
     // double[][] goals = new double[8][columns];
     // double[][] array = KMeansTest.gauss(columns, 10000, goals);
     // ValueArray va = TestUtil.va_maker(key, (Object[]) array);
-    //
+
     Key km = Key.make("test.kmeans");
     int[] cols = new int[va._cols.length];
     for( int i = 0; i < cols.length; i++ )
       cols[i] = i;
-    for( int i = 0; i < 100; i++ ) {
-      KMeans job = KMeans.start(km, va, 5, 1e-3, 0, i, false, cols);
+    for( int i = 0; i < 1; i++ ) {
+      KMeans job = KMeans.start(km, va, 7, 1e-3, 0, i, false, cols);
       KMeansModel m = job.get();
       System.out.println(m._error);
     }
 
-//    String u = "/Plot.png?source_key=test.hex&cols=0%2C1&clusters=test.kmeans";
+//    String s = "";
+//    for( int i = 0; i < cols.length; i++ ) {
+//      s += s.length() != 0 ? "%2C" : "";
+//      s += cols[i];
+//    }
+//    String u = "/Plot.png?source_key=test.hex&cols=" + s + "&clusters=test.kmeans";
 //    Desktop.getDesktop().browse(new URI("http://localhost:54321" + u));
   }
 

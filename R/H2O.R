@@ -13,7 +13,7 @@ is.defined <- function(x) {
 # Public functions & declarations -------------------------------------------------------------------------------------
 
 # Determines the server and port to which the interop layer always connects
-h2o.SERVER = "localhost:54323"
+h2o.SERVER = "localhost:54321"
 
 # If verbose, messages will be printed when data is requested, and / or received from the server
 h2o.VERBOSE = TRUE
@@ -75,10 +75,36 @@ h2o.put <- function(keyName, value) {
   res$Key
 }
 
+h2o.poll <- function(keyName) {
+  type = tryCatch({ typeof(keyName) }, error = function(e) { "expr" })
+  if (type != "character")
+    keyName = deparse(substitute(keyName))
+  res = h2o.__remoteSend(h2o.__PAGE_JOBS)
+  res = res$jobs
+  for(i in 1:length(res)) {
+    if(res[[i]]$key == keyName)
+      prog = res[[i]]
+  }
+  prog$end_time
+}
+
+h2o.poll_rf <- function(keyName) {
+  type = tryCatch({ typeof(keyName) }, error = function(e) { "expr" })
+  if (type != "character")
+    keyName = deparse(substitute(keyName))
+  res = h2o.__remoteSend(h2o.__PAGE_JOBS)
+  res = res$jobs
+  for(i in 1:length(res)) {
+    if(res[[i]]$destination_key == keyName)
+      prog = res[[i]]
+  }
+  prog$end_time
+}
+
 # Inspects the given key on H2O cloud. Key can be either a string or a literal which will be translated to a string.
-# Returns a list with key name (key), value type (type), number of rows in the value (rows), number of columns (cols),
+# Returns a list with key name (key), value type (type), number of rows in the value (num_rows), number of columns (num_cols),
 # size of a single row in bytes (rowSize) and total size in bytes of the value (size). Also list of all columns
-# with their names, offsets, types, scales, min, max, badat, means and variancesis returned in a data frame (columns).
+# with their names, offsets, types, scales, min, max, means and variances is returned in a data frame (cols).
 h2o.inspect <- function(keyName) {
   type = tryCatch({ typeof(keyName) }, error = function(e) { "expr" })
   if (type != "character")
@@ -88,11 +114,11 @@ h2o.inspect <- function(keyName) {
   result = list()
   result$key = res$key
   result$type = res$type
-  result$rows = res$rows
-  result$cols = res$cols
-  result$rowSize = res$rowsize
-  result$size = res$size
-  h2o.__printIfVerbose("  key has ",res$cols," columns and ",res$rows," rows")  
+  result$num_rows = res$num_rows
+  result$num_cols = res$num_cols
+  result$rowSize = res$row_size
+  result$size = res$value_size_bytes
+  h2o.__printIfVerbose("  key has ",res$num_cols," columns and ",res$num_rows," rows")  
   # given correct inspect JSON response, converts its columns to a dataframe
   extract <- function(from,what) {
     result = NULL
@@ -100,18 +126,18 @@ h2o.inspect <- function(keyName) {
       result = c(result,from[[i]][what]);
     result;    
   }
-  res = res$columns;
-  result$columns = data.frame(name = as.character(extract(res,"name")),
-                              offset = as.numeric(extract(res,"off")),
+  res = res$cols;
+  result$cols = data.frame(name = as.character(extract(res,"name")),
+                              offset = as.numeric(extract(res,"offset")),
                               type = as.character(extract(res,"type")),
                               size = as.numeric(extract(res,"size")),
                               base = as.numeric(extract(res,"base")),
                               scale = as.numeric(extract(res,"scale")),
                               min = as.numeric(extract(res,"min")),
                               max = as.numeric(extract(res,"max")),
-                              badat = as.numeric(extract(res,"badat")),
+                              nmiss = as.numeric(extract(res,"num_missing_values")),
                               mean = as.numeric(extract(res,"mean")),
-                              var = as.numeric(extract(res,"var")))
+                              var = as.numeric(extract(res,"variance")))
   result
 }
 
@@ -121,8 +147,8 @@ h2o.remove <- function(keyName) {
   if (type != "character")
     keyName = deparse(substitute(keyName))
   h2o.__printIfVerbose("  Removing key ",keyName)
-  res = h2o.__remoteSend(h2o.__PAGE_REMOVE, Key = keyName)
-  res$Key
+  res = h2o.__remoteSend(h2o.__PAGE_REMOVE, key = keyName)
+  res$key
 }
 
 # Imports the given URL to the cloud. The URL must be visible from the node to which the interop is connecting to.
@@ -140,7 +166,8 @@ h2o.importUrl <- function(keyName, url, parse = TRUE) {
     h2o.__printIfVerbose("  parsing key ",uploadKey," to key ",keyName)
     res = h2o.__remoteSend(h2o.__PAGE_PARSE, source_key = uploadKey, destination_key = paste(keyName,".hex",sep=""))    
   } 
-  #res$destination_key
+  # res
+  while(h2o.poll(res$response$redirect_request_args$job) == "") { Sys.sleep(1) }
 }
 
 # Imports a file local to the server the interop is connecting to. Other arguments are the same as for the importUrl
@@ -187,7 +214,6 @@ h2o.filter <- function(keyName, expr, maxRows = h2o.MAX_GET_ROWS, forceDataFrame
   h2o.get(resultKey,maxRows,forceDataFrame)
 }
 
-
 # GLM function. This should be rewiewed by someone who actually understands the GLM:-D
 # Please note that the x and negX arguments cannot be specified without quotes as lists are expected. 
 h2o.glm = function(keyName, y, case="1.0", x = "", negX = "", family = "gaussian", xval = 0, threshold = 0.5, norm = "NONE", lambda = 0.1, rho = 1.0, alpha = 1.0) {
@@ -207,7 +233,22 @@ h2o.glm = function(keyName, y, case="1.0", x = "", negX = "", family = "gaussian
   negX = paste(negX,sep="",collapse=",")
   h2o.__printIfVerbose("  running GLM on vector ",keyName," response column ",y)
   res = h2o.__remoteSend(h2o.__PAGE_GLM, key = keyName, y = y, case=case, x = x, "-x" = negX, family = family, xval = xval, threshold = threshold, norm = norm, lambda = lambda, rho = rho, alpha = alpha)
-  res
+  while(h2o.poll(res$response$redirect_request_args$job) == "") { Sys.sleep(1) }
+  h2o.__printModel(res$destination_key, type = "GLM")
+}
+
+# K-means function.
+h2o.kmeans = function(keyName, k = 5, epsilon = 1.0E-6, normalize = 0) {
+  type = tryCatch({ typeof(keyName) }, error = function(e) { "expr" })
+  if(type != "character")
+    keyName = deparse(substitute(keyName))
+  if(type != "character")
+    k = deparse(substitute(k))
+
+  h2o.__printIfVerbose("  running ", k, "-means on vector ",keyName)
+  res = h2o.__remoteSend(h2o.__PAGE_KMEANS, source_key = keyName, k = k, epsilon = epsilon, normalize = normalize)
+  while(h2o.poll(res$response$redirect_request_args$job) == "") { Sys.sleep(1) }
+  h2o.__printModel(res$destination_key, type = "KM")
 }
 
 # RF function. 
@@ -220,10 +261,30 @@ h2o.rf = function(keyName, ntree="", class = "", negX = "", family = "gaussian",
     Y = deparse(substitute(ntree))
   type = tryCatch({ typeof(class) }, error = function(e) { "expr" })
  
-  
-  h2o.__printIfVerbose("  running RF on vector ",keyName," class column ",class, " number of trees", ntree)
+  h2o.__printIfVerbose("  running RF on vector ",keyName," class column ",class, " number of trees ", ntree)
   res = h2o.__remoteSend(h2o.__PAGE_RF, data_key = keyName, ntree = ntree, class = class)
-  res
+  # res
+  while(h2o.poll_rf(res$response$redirect_request_args$model_key) == "") { Sys.sleep(1) }
+  h2o.inspect_rf(res$model_key, res$data_key)
+}
+
+h2o.inspect_rf = function(modelkey, datakey, oob_err = 1) {
+  type = tryCatch({ typeof(modelkey) }, error = function(e) { "expr" })
+  if (type != "character")
+    modelkey = deparse(substitute(modelkey))
+  type = tryCatch({ typeof(datakey) }, error = function(e) { "expr" })
+  if (type != "character")
+    datakey  = deparse(substitute(datakey))
+  
+  h2o.__printIfVerbose("  Inspecting model key ",modelkey, " for data key ", datakey)
+  res = h2o.__remoteSend(h2o.__PAGE_RFVIEW, model_key = modelkey, data_key = datakey, out_of_bag_error_estimate = oob_err)
+  result = list()
+  result$data_key = res$data_key
+  result$model_key = res$model_key
+  result$num_trees = res$ntree
+  result$confusion_matrix = res$confusion_matrix
+  result$trees = res$trees
+  result
 }
 
 
@@ -238,7 +299,10 @@ h2o.__PAGE_REMOVE = "Remove.json"
 h2o.__PAGE_IMPORT = "ImportUrl.json"
 h2o.__PAGE_PARSE = "Parse.json"
 h2o.__PAGE_GLM = "GLM.json"
+h2o.__PAGE_KMEANS = "KMeans.json"
 h2o.__PAGE_RF  = "RF.json"
+h2o.__PAGE_RFVIEW = "RFView.json"
+h2o.__PAGE_JOBS = "Jobs.json"
 
 h2o.__printIfVerbose <- function(...) {
   if (h2o.VERBOSE == TRUE)
@@ -247,9 +311,13 @@ h2o.__printIfVerbose <- function(...) {
 
 h2o.__remoteSend <- function(page,...) {
   # Sends the given arguments as URL arguments to the given page on the specified server
-  #h2o.__printIfVerbose(page)
+  # h2o.__printIfVerbose(page)
   url = paste(h2o.SERVER,page,sep="/")
-  res = fromJSON(postForm(url,...))
+  # res = fromJSON(postForm(url, style = "POST", ...))
+  temp = postForm(url, style = "POST", ...)
+  after = gsub("NaN", "\"NaN\"", temp[1])
+  after = gsub("Inf", "\"Inf\"", after)
+  res = fromJSON(after)
   if (is.defined(res$Error))
     stop(paste(url," returned the following error:\n",h2o.__formatError(res$Error)))
   res    
@@ -282,6 +350,24 @@ h2o.__convertToRData <- function(res,forceDataFrame=FALSE) {
     }
     r
   }
+}
+
+h2o.__printModel <- function(keyName, type) {
+  h2o.__printIfVerbose("  Inspecting key ",keyName)
+  res = h2o.__remoteSend(h2o.__PAGE_INSPECT, key = keyName)
+  if(type == "GLM") {
+    res = res$GLMModel
+    result = list()
+    result$key = res$model_key
+    result$dof = res$dof
+    result$coef = data.frame(res$coefficients)
+    colnames(result$coef) = c(res$column_names, "Intercept")
+    result$norm_coef = data.frame(res$normalized_coefficients)
+    colnames(result$norm_coef) = c(res$column_names, "Intercept")
+    result$params = res$GLMParams
+    result
+  }
+  else if(type == "KM") { res$KMeansModel$clusters }
 }
 
 # h2o.rf <- function(key,ntree, depth=30,model=FALSE,gini=1,seed=42,wait=TRUE) {

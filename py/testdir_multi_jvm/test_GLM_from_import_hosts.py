@@ -67,8 +67,6 @@ class Basic(unittest.TestCase):
             h2b.browseJsonHistoryAsUrlLastMatch("GLM")
 
             GLMModel = glm['GLMModel']
-            print "GLM time", GLMModel['time']
-
             coefficients = GLMModel['coefficients']
             validationsList = GLMModel['validations']
             validations = validationsList.pop()

@@ -45,7 +45,7 @@ import water.util.Log.Tag.Sys;
 public abstract class MemoryManager {
 
   // max heap memory
-  static final long MEM_MAX = Runtime.getRuntime().maxMemory();
+  static public final long MEM_MAX = Runtime.getRuntime().maxMemory();
 
   // Callbacks from GC
   static final HeapUsageMonitor HEAP_USAGE_MONITOR = new HeapUsageMonitor();
@@ -260,17 +260,21 @@ public abstract class MemoryManager {
   static final AtomicLong _taskMem = new AtomicLong(MEM_MAX-(MEM_MAX>>2));
 
   /**
-   * Try to reserve memory needed for task execution and return true if succeeded.
-   * Tasks have a shared pool of memory which they should ask for in advance before they even try to allocate it.
+   * Try to reserve memory needed for task execution and return true if
+   * succeeded.  Tasks have a shared pool of memory which they should ask for
+   * in advance before they even try to allocate it.
    *
-   * This method is another backpressure mechanism to make sure we do not exhaust system's resources by running too many tasks at the same time.
-   * Tasks are expected to reserve memory before proceeding with their execution and making sure they release it when done.
+   * This method is another backpressure mechanism to make sure we do not
+   * exhaust system's resources by running too many tasks at the same time.
+   * Tasks are expected to reserve memory before proceeding with their
+   * execution and making sure they release it when done.
    *
    * @param m - requested number of bytes
    * @return true if there is enough free memory
    */
   public static boolean tryReserveTaskMem(long m){
     if(!CAN_ALLOC)return false;
+    if( m == 0 ) return true;
     assert m >= 0:"m < 0: " + m;
     long current = _taskMem.addAndGet(-m);
     if(current < 0){

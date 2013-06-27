@@ -11,24 +11,27 @@ import water.util.Log;
  * Execute a set of Keys on the home for each Key.
  * Limited to doing a map/reduce style.
  */
-public abstract class DRemoteTask extends DTask<DRemoteTask> implements Cloneable {
+public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implements Cloneable {
   // Keys to be worked over
   protected Key[] _keys;
   // One-time flips from false to true
-  transient private boolean _is_local;
+  transient protected boolean _is_local;
   // Other RPCs we are waiting on
-  transient private RPC<DRemoteTask> _lo, _hi;
+  transient private RPC<T> _lo, _hi;
   // Local work we are waiting on
-  transient private DRemoteTask _local;
+  transient private T _local;
 
   // We can add more things to block on - in case we want a bunch of lazy tasks
   // produced by children to all end before this top-level task ends.
   // Semantically, these will all complete before we return from the top-level
   // task.  Pragmatically, we block on a finer grained basis.
-  transient private volatile Futures _fs; // More things to block on
+  transient protected volatile Futures _fs; // More things to block on
 
   // Combine results from 'drt' into 'this' DRemoteTask
-  abstract public void reduce( DRemoteTask drt );
+  abstract public void reduce( T drt );
+
+  // Support for fluid-programming with strong types
+  private final T self() { return (T)this; }
 
   // Super-class init on the 1st remote instance of this object.  Caller may
   // choose to clone/fork new instances, but then is reponsible for setting up
@@ -47,8 +50,8 @@ public abstract class DRemoteTask extends DTask<DRemoteTask> implements Cloneabl
   }
 
   // Invoked with a set of keys
-  public DRemoteTask invoke( Key... keys ) { dfork(keys).join(); return this; }
-  public DRemoteTask dfork( Key... keys ) { keys(keys); compute2(); return this; }
+  public T invoke( Key... keys ) { dfork(keys).join();     return self(); }
+  public T dfork ( Key... keys ) { keys(keys); compute2(); return self(); }
   public void keys( Key... keys ) { _keys = flatten(keys); }
 
   // Decide to do local-work or remote-work
@@ -97,7 +100,7 @@ public abstract class DRemoteTask extends DTask<DRemoteTask> implements Cloneabl
 
     // Setup for local recursion: just use the local keys.
     if( locals.size() != 0 ) {  // Shortcut for no local work
-      _local = clone();
+      _local = clone();         // 'this' is completer for '_local', so awaits _local completion
       _local._is_local = true;
       _local._keys = locals.toArray(new Key[locals.size()]); // Keys, including local keys (if any)
       _local.init();            // One-time top-level init
@@ -126,7 +129,7 @@ public abstract class DRemoteTask extends DTask<DRemoteTask> implements Cloneabl
     _keys = null;                   // Do not return _keys over wire
   };
 
-  private final RPC<DRemoteTask> remote_compute( ArrayList<Key> keys ) {
+  private final RPC<T> remote_compute( ArrayList<Key> keys ) {
     if( keys.size() == 0 ) return null;
     DRemoteTask rpc = clone();
     rpc._keys = keys.toArray(new Key[keys.size()]);
@@ -181,7 +184,7 @@ public abstract class DRemoteTask extends DTask<DRemoteTask> implements Cloneabl
     getFutures().add(fs);
   }
 
-  protected void reduceAlsoBlock( DRemoteTask drt ) {
+  protected void reduceAlsoBlock( T drt ) {
     reduce(drt);
     alsoBlockFor(drt._fs);
   }
@@ -209,9 +212,9 @@ public abstract class DRemoteTask extends DTask<DRemoteTask> implements Cloneabl
     return res;
   }
 
-  @Override protected DRemoteTask clone() {
+  @Override protected T clone() {
     try {
-      DRemoteTask dt = (DRemoteTask)super.clone();
+      T dt = (T)super.clone();
       dt.setCompleter(this); // Set completer, what used to be a final field
       dt._fs = null;         // Clone does not depend on extent futures
       dt.setPendingCount(0); // Volatile write for completer field; reset pending count also

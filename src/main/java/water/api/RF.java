@@ -33,6 +33,7 @@ public class RF extends Request {
   protected final Bool              _parallel   = new Bool(PARALLEL,true,"Build trees in parallel");
   protected final Int               _exclusiveSplitLimit = new Int(EXCLUSIVE_SPLIT_LIMIT, null, 0, Integer.MAX_VALUE);
   protected final Bool              _iterativeCM         = new Bool(ITERATIVE_CM, true, "Compute confusion matrix on-the-fly");
+  protected final Bool              _useNonLocalData     = new Bool(USE_NON_LOCAL_DATA, false, "Try to use also non-local data.");
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {
@@ -53,11 +54,19 @@ public class RF extends Request {
     help(_classCol, "The output classification (also known as " +
     		        "'response variable') that is being learned.");
     help(_numTrees, "Number of trees to generate.");
-    help(_features, "Number of split features,");
+    help(_features, "Number of split features used for tree building. The default value is sqrt(#columns).");
+    help(_statType, "Split statisticts - Gini or Entropy-based.");
     help(_depth,    "Maximal depth of a tree.");
+    help(_ignore,   "A list of ignored columns (specified by name or 0-based index).");
+    help(_weights,  "Weights for individual output values.");
     help(_oobee,    "Compute out-of-bag error estimation (OOBEE).");
-    help(_modelKey, "Random forest model's key.");
-    help(_binLimit, "Bin limit.");
+    help(_modelKey, "Random forest model's key where to store output RF model.");
+    help(_binLimit, "Bin limit - too big columns are binned within the given limit.");
+    help(_seed,     "Random generator seed number.");
+    help(_parallel, "Build trees in parallel.");
+    help(_exclusiveSplitLimit, "A limit for including exclusive splits (operator equal) into decision trees.");
+    help(_iterativeCM, "Build confusion matrix iterativelly.");
+    help(_useNonLocalData, "");
   }
 
   @Override protected void queryArgumentValueSet(Argument arg, Properties inputArgs) {
@@ -99,8 +108,8 @@ public class RF extends Request {
     Key modelKey = _modelKey.value();
     UKV.remove(modelKey);       // Remove any prior model first
     for (int i = 0; i < ntree; ++i) {
-      UKV.remove(Confusion.keyFor(modelKey,i,dataKey,classCol,true));
-      UKV.remove(Confusion.keyFor(modelKey,i,dataKey,classCol,false));
+      UKV.remove(ConfusionTask.keyForCM(modelKey,i,dataKey,classCol,true));
+      UKV.remove(ConfusionTask.keyForCM(modelKey,i,dataKey,classCol,false));
     }
 
     int features            = _features.value() == null ? -1 : _features.value();
@@ -127,7 +136,8 @@ public class RF extends Request {
               _sample.value() / 100.0f,
               strataSamples,
               0, /* verbose level is minimal here */
-              exclusiveSplitLimit
+              exclusiveSplitLimit,
+              _useNonLocalData.value()
               );
       // Collect parameters required for validation.
       response.addProperty(DATA_KEY, dataKey.toString());

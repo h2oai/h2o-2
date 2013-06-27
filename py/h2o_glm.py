@@ -206,11 +206,12 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
             "sum of abs. value of GLM coefficients/intercept is " + str(s) + ", not >= 1e-26"
             ))
 
-    # print "computation_time:", glm['computation_time']
-    print "glm computation time (milliseconds):", glm['computation_time']
     print "GLMModel model time (milliseconds):", GLMModel['model_time']
     print "GLMModel validation time (milliseconds):", validations['val_time']
     print "GLMModel lsm time (milliseconds):", GLMModel['lsm_time']
+
+    # shouldn't have any errors
+    h2o.check_sandbox_for_errors()
 
     return (warnings, cList, intercept)
 

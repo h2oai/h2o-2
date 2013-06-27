@@ -2,9 +2,11 @@ package water.api;
 
 import java.util.Arrays;
 
-import hex.rf.Confusion;
-import hex.rf.RFModel;
+import hex.rf.*;
+import hex.rf.ConfusionTask.CMFinal;
+import hex.rf.ConfusionTask.CMJob;
 import water.Key;
+import water.UKV;
 import water.util.RString;
 
 import com.google.gson.*;
@@ -112,6 +114,8 @@ public class RFView extends /* Progress */ Request {
     int finished     = 0;
     RFModel model    = _modelKey.value();
     double[] weights = _weights.value();
+    // Finish refresh after rf model is done and confusion matrix for all trees is computed
+    boolean done = false;
 
     tasks    = model._totalTrees;
     finished = model.size();
@@ -124,10 +128,10 @@ public class RFView extends /* Progress */ Request {
       modelSize     = modelSize == 0 || finished==tasks ? finished : modelSize * (finished/modelSize);
 
       // Get the confusion matrix
-      Confusion confusion = Confusion.make(model, modelSize, _dataKey.value()._key, _classCol.value(), weights, _oobee.value());
-      response.addProperty(JSON_CONFUSION_KEY, confusion.keyFor().toString());
+      Key     cmKey = ConfusionTask.keyForCM(model._selfKey, modelSize, _dataKey.value()._key, _classCol.value(), _oobee.value());
+      CMFinal confusion = UKV.get(cmKey);
       // if the matrix is valid, report it in the JSON
-      if (confusion.isValid() && modelSize > 0) {
+      if (confusion!=null && modelSize > 0) {
         //finished += 1;
         JsonObject cm = new JsonObject();
         JsonArray cmHeader = new JsonArray();
@@ -147,17 +151,23 @@ public class RFView extends /* Progress */ Request {
           JsonArray row  = new JsonArray();
           int classHitScore = 0;
           for (int ccol = 0; ccol < nclasses; ++ccol) {
-            row.add(new JsonPrimitive(confusion._matrix[crow][ccol]));
-            if (crow!=ccol) classHitScore += confusion._matrix[crow][ccol];
+            row.add(new JsonPrimitive(confusion.matrix(crow,ccol)));
+            if (crow!=ccol) classHitScore += confusion.matrix(crow,ccol);
           }
           // produce infinity members in case of 0.f/0
-          classErrors.add(new JsonPrimitive((float)classHitScore / (classHitScore + confusion._matrix[crow][crow])));
+          classErrors.add(new JsonPrimitive((float)classHitScore / (classHitScore + confusion.matrix(crow,crow))));
           matrix.add(row);
         }
         cm.add(JSON_CM_CLASSES_ERRORS, classErrors);
         cm.add(JSON_CM_MATRIX,matrix);
-        cm.addProperty(JSON_CM_TREES,confusion._treesUsed);
+        cm.addProperty(JSON_CM_TREES,modelSize);
         response.add(JSON_CM,cm);
+
+        done = finished == tasks;
+      } else {
+        // Start CM computation
+        // FIXME do not launch more than one job for the same modelSize
+        ConfusionTask.make(model, modelSize, _dataKey.value()._key, _classCol.value(), weights, _oobee.value());
       }
     }
 
@@ -172,7 +182,7 @@ public class RFView extends /* Progress */ Request {
 
     // Build a response
     Response r;
-    if (finished == tasks) {
+    if (done) {
       r = jobDone(response);
       r.addHeader("<div class='alert'>" + /*RFScore.link(MODEL_KEY, model._selfKey, "Use this model for scoring.") */ GeneratePredictionsPage.link(model._selfKey, "Predict!")+ " </div>");
     } else { r = Response.poll(response, finished, tasks);  }
@@ -181,7 +191,7 @@ public class RFView extends /* Progress */ Request {
     return r;
   }
 
-  static String[] cfDomain(final Confusion cm, int maxClasses) {
+  static String[] cfDomain(final CMFinal cm, int maxClasses) {
     String[] dom = cm.domain();
     if (dom.length > maxClasses)
       throw new IllegalArgumentException("The column has more than "+maxClasses+" values. Are you sure you have that many classes?");
@@ -231,6 +241,7 @@ public class RFView extends /* Progress */ Request {
         long rows = cm.get(JSON_CM_ROWS).getAsLong();
         long skippedRows = cm.get(JSON_CM_ROWS_SKIPPED).getAsLong();
         sb.append("<dt>used / skipped rows </dt><dd>").append(String.format("%d / %d (%3.1f %%)", rows, skippedRows, (double)skippedRows*100/(skippedRows+rows))).append("</dd>");
+        sb.append("<dt>trees used</dt><dd>"+cm.get(JSON_CM_TREES).getAsInt()).append("</dd>");
         sb.append("</dl>");
         sb.append("<table class='table table-striped table-bordered table-condensed'>");
         sb.append("<tr><th>Actual \\ Predicted</th>");
@@ -274,7 +285,6 @@ public class RFView extends /* Progress */ Request {
         sb.append(String.format("%5.3f = %d / %d", (double)sumError/sumTotal, sumError, sumTotal));
         sb.append("</b></td></tr>");
         sb.append("</table>");
-        sb.append("Trees used: "+cm.get(JSON_CM_TREES).getAsInt());
       } else {
         sb.append("<div class='alert alert-info'>");
         sb.append("Confusion matrix is being computed into the key:</br>");

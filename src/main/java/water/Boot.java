@@ -87,6 +87,12 @@ public class Boot extends ClassLoader {
   }
 
   public static void main(String[] args) throws Exception {  _init.boot(args); }
+  public static void main(Class main, String[] args) throws Exception {
+    ArrayList<String> l = new ArrayList<String>(Arrays.asList(args));
+    l.add(0, "-mainClass");
+    l.add(1, main.getName());
+    _init.boot(l.toArray(new String[0]));
+  }
 
   private URLClassLoader _systemLoader;
   private Method _addUrl;
@@ -205,9 +211,18 @@ public class Boot extends ClassLoader {
   public InputStream getResource2(String uri) {
     if( fromJar() ) {
       return _systemLoader.getResourceAsStream("resources"+uri);
-    } else { // to allow us to read things not only from the loader
+    } else {
       try {
-        return new FileInputStream(new File("lib/resources"+uri));
+        return new FileInputStream(new File("lib/resources"+uri)); 
+        // The following code is busted on windows with spaces in user-names,
+        // and I've no idea where it comes from - GIT claims it came from
+        // cliffc-fvec2 merge into master, but there's no indication of this
+        // code in cliffc-fvec2 and cliffc didn't write this code (and it's
+        // instantly busted for the windows user name "Cliff Click").
+        //// IDE mode assumes classes are in target/classes. Not using current path
+        //// to allow running from other locations.
+        //String classes = getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
+        //return new FileInputStream(new File(classes + "/../../lib/resources"+uri));
       } catch (FileNotFoundException e) {
         Log.err(e);
         return null;

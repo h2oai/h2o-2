@@ -35,7 +35,7 @@ public class ScoreTest extends TestUtil {
     //File file = find_test_file("smalldata/pmml/cars-cater-rf-1tree.pmml");
     RFScoreModel rfm = (RFScoreModel)PMMLParser.parse(new BufferedInputStream(new FileInputStream(file)));
   
-    Key irisk = loadAndParseKey("iris.hex","smalldata/iris/iris2.csv");
+    Key irisk = loadAndParseFile("iris.hex","smalldata/iris/iris2.csv");
     ValueArray ary = DKV.get(irisk).get();
     AutoBuffer bits = ary.getChunk(0);
     int rows = ary.rpc(0);

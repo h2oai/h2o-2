@@ -163,6 +163,7 @@ public class Constants {
   public static final String TREES                 = "trees";
   public static final String TYPE                  = "type";
   public static final String URL                   = "url";
+  public static final String USE_NON_LOCAL_DATA    = "use_non_local_data";
   public static final String VALUE                 = "value";
   public static final String VALUE_SIZE            = "value_size" + Suffixes.BYTES;
   public static final String VALUE_TYPE            = "type";

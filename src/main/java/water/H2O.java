@@ -61,6 +61,7 @@ public final class H2O {
 
   // Convenience error
   public static final RuntimeException unimpl() { return new RuntimeException("unimplemented"); }
+  public static final RuntimeException fail() { return new RuntimeException("do not call"); }
 
   // Central /dev/null for ignored exceptions
   public static final void ignore(Throwable e)             { ignore(e,"[h2o] Problem ignored: "); }
@@ -134,6 +135,20 @@ public final class H2O {
   public final int size() { return _memary.length; }
   public final H2ONode leader() { return _memary[0]; }
 
+  public static void waitForCloudSize(int x) {
+    waitForCloudSize(x, 10000);
+  }
+
+  public static void waitForCloudSize(int x, long ms) {
+    long start = System.currentTimeMillis();
+    while( System.currentTimeMillis() - start < ms ) {
+      if( CLOUD.size() >= x )
+        break;
+      try { Thread.sleep(100); } catch( InterruptedException ie ) { }
+    }
+    assert H2O.CLOUD.size() >= x : "Cloud size of " + x;
+  }
+
   // *Desired* distribution function on keys & replication factor. Replica #0
   // is the master, replica #1, 2, 3, etc represent additional desired
   // replication nodes. Note that this function is just the distribution
@@ -143,9 +158,16 @@ public final class H2O {
   public int D( Key key, int repl ) {
     if( repl >= size() ) return -1;
 
-    // See if this is a specifically homed Key
+    // See if this is a specifically homed DVEC Key (has shorter encoding).
     byte[] kb = key._kb;
+    if( kb[0] == Key.DVEC && kb[1] != -1 ) {
+      throw H2O.unimpl();
+      // return kb[1]; // home is just node index byte
+    }
+
+    // See if this is a specifically homed Key
     if( !key.user_allowed() && repl < kb[1] ) { // Asking for a replica# from the homed list?
+      assert kb[0] != Key.DVEC;
       H2ONode h2o=null, h2otmp = new H2ONode(); // Fill in the fields from the Key
       AutoBuffer ab = new AutoBuffer(kb,2);
       for( int i=0; i<=repl; i++ )
@@ -247,6 +269,8 @@ public final class H2O {
       s = new Socket("8.8.8.8", 53);
       m+="Using " + s.getLocalAddress() + "\n";
       return s.getLocalAddress();
+    } catch( java.net.SocketException se ) {
+      return null;           // No network at all?  (Laptop w/wifi turned off?)
     } catch( Throwable t ) {
       Log.err(t);
       return null;
@@ -498,7 +522,64 @@ public final class H2O {
     public String random_udp_drop = null; // test only, randomly drop udp incoming
     public int pparse_limit = Integer.MAX_VALUE;
     public String no_requests_log = null; // disable logging of Web requests
+    public String h = null;
+    public String help = null;
   }
+
+  public static void printHelp() {
+    String s =
+    "Start an H2O node.\n" +
+    "\n" +
+    "Usage:  java [-Xmx<size>] -jar h2o.jar [options]\n" +
+    "        (Note that every option has a default and is optional.)\n" +
+    "\n" +
+    "    -name <h2oCloudName>\n" +
+    "          Cloud name used for Multicast discovery.\n" +
+    "          Nodes with the same cloud name will form an H2O cloud\n" +
+    "          (also known as an H2O cluster).\n" +
+    "          (Not to be used with -flatfile.)\n" +
+    "\n" +
+    "    -flatfile <flatFileName>\n" +
+    "          Configuration file explicitly listing H2O cloud node members.\n" +
+    "          (Not to be used with -name.)\n" +
+    "\n" +
+    "    -ip <ipAddressOfNode>\n" +
+    "          IP address of this node.\n" +
+    "\n" +
+    "    -port <port>\n" +
+    "          Port number for this node (note: port+1 is also used).\n" +
+    "          (The default port is " + DEFAULT_PORT + ".)\n" +
+    "\n" +
+    "    -ice_root <fileSystemPath>" +
+    "          The directory where H2O spills temporary data to disk." +
+    "          (The default is '" + DEFAULT_ICE_ROOT + "'.)\n" +
+    "\n" +
+    "    -h | -help\n" +
+    "          Print this help.\n" +
+    "\n" +
+    "Cloud formation behavior:\n" +
+    "\n" +
+    "    New H2O nodes join together to form a cloud at startup time.\n" +
+    "    Once a cloud is given work to perform, it locks out new members.\n" +
+    "    from joining.\n" +
+    "\n" +
+    "Examples:\n" +
+    "\n" +
+    "    Start an H2O node with 4GB of memory and a default cloud name:\n" +
+    "        java -Xmx4g -jar h2o.jar\n" +
+    "\n" +
+    "    Start an H2O node with 6GB of memory and a specify the cloud name:\n" +
+    "        java -Xmx6g -jar h2o.jar -name MyCloud\n" +
+    "\n" +
+    "    Start an H2O cloud with three 2GB nodes and a default cloud name:\n" +
+    "        java -Xmx2g -jar h2o.jar\n" +
+    "        java -Xmx2g -jar h2o.jar\n" +
+    "        java -Xmx2g -jar h2o.jar\n" +
+    "\n";
+
+    System.out.print(s);
+  }
+
   public static boolean IS_SYSTEM_RUNNING = false;
 
   // Start up an H2O Node and join any local Cloud
@@ -512,6 +593,12 @@ public final class H2O {
     Arguments arguments = new Arguments(args);
     arguments.extract(OPT_ARGS);
     ARGS = arguments.toStringArray();
+
+    if ((OPT_ARGS.h != null) || (OPT_ARGS.help != null)) {
+      printHelp();
+      System.exit (0);
+    }
+
     ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
 
     // Get ice path before loading Log or Persist class
@@ -522,6 +609,7 @@ public final class H2O {
     } catch(URISyntaxException ex) {
       throw new RuntimeException("Invalid ice_root: " + ice + ", " + ex.getMessage());
     }
+    Log.info ("ICE root: '" + ICE_ROOT + "'");
 
     SELF_ADDRESS = findInetAddressForSelf();
 
@@ -533,7 +621,8 @@ public final class H2O {
     // Load up from disk and initialize the persistence layer
     initializePersistence();
     // Start network services, including heartbeats & Paxos
-    startNetworkServices(); // start server services
+    startNetworkServices();   // start server services
+    startApiIpPortWatchdog(); // Check if the API port becomes unreachable
 
     initializeExpressionEvaluation(); // starts the expression evaluation system
 
@@ -567,6 +656,8 @@ public final class H2O {
       Log.warn("Flatfile configuration does not include self: " + SELF+ " but contains " + STATIC_H2OS);
       STATIC_H2OS.add(SELF);
     }
+
+    Log.info ("H2O cloud name: '" + NAME + "'");
 
     Log.info("(v"+VERSION+") '"+NAME+"' on " + SELF+(OPT_ARGS.flatfile==null
         ? (", discovery address "+CLOUD_MULTICAST_GROUP+":"+CLOUD_MULTICAST_PORT)
@@ -620,6 +711,17 @@ public final class H2O {
     new TCPReceiverThread().start();
     // Start the Nano HTTP server thread
     water.api.RequestServer.start();
+  }
+
+  /** Initializes a watchdog thread to make sure the API IP:Port is reachable.
+   *
+   * The IP and port are meant to be accessible from outside this
+   * host, much less inside.  The real reason behind this check is the
+   * one-node cloud case where people move their laptop around and
+   * DHCP assigns them a new IP address.
+   */
+  private static void startApiIpPortWatchdog() {
+    new ApiIpPortWatchdogThread().start();
   }
 
   /** Finalizes the node startup.
@@ -892,6 +994,7 @@ public final class H2O {
       long space = Persist.getIce().getUsableSpace();
       return space != Persist.UNKNOWN && space < (5 << 10);
     }
+
     public void run() {
       boolean diskFull = false;
       while (true) {
@@ -1129,6 +1232,151 @@ public final class H2O {
         long now = System.currentTimeMillis();
         return "H("+(_cached>>20)+"M, "+x+"ms < +"+(_oldest-x)+"ms <...{"+_hStep+"ms}...< +"+(_hStep*128)+"ms < +"+(now-x)+")";
       }
+    }
+  }
+
+  // API IP Port Watchdog ---------------------------------------------------------------
+
+  // Monitor API IP:Port for availability.
+  //
+  // This thread is only a watchdog.  You can comment this thread out
+  // so it does not run without affecting any service functionality.
+  public static class ApiIpPortWatchdogThread extends Thread {
+    final private String threadName = "ApiPortWatchdog";
+
+    private volatile boolean gracefulShutdownInitiated;         // Thread-safe.
+
+    // Failure-tracking.
+    private int consecutiveFailures;
+    private long failureStartTimestampMillis;
+
+    // Timing things that can be tuned if needed.
+    final private int maxFailureSeconds = 180;
+    final private int maxConsecutiveFailures = 6;
+    final private int checkIntervalSeconds = 10;
+    final private int timeoutSeconds = 30;
+    final private int millisPerSecond = 1000;
+    final private int timeoutMillis = timeoutSeconds * millisPerSecond;
+    final private int sleepMillis = checkIntervalSeconds * millisPerSecond;
+
+    // Constructor.
+    public ApiIpPortWatchdogThread() {
+      super("ApiWatch");        // Only 9 characters get printed in the log.
+      setDaemon(true);
+      setPriority(MAX_PRIORITY-2);
+      reset();
+      gracefulShutdownInitiated = false;
+    }
+
+    // Exit this watchdog thread.
+    public void shutdown() {
+      Log.debug (threadName + ": Graceful shutdown requested");
+      gracefulShutdownInitiated = true;
+    }
+
+    // Sleep method.
+    private void mySleep(int millis) {
+      try {
+        Thread.sleep (sleepMillis);
+      } 
+      catch (Exception _)
+        {}
+    }
+
+    // Print some help for the user if a failure occurs.
+    private void printPossibleCauses() {
+      Log.info(threadName + ": A possible cause is DHCP (e.g. changing WiFi networks)");
+      Log.info(threadName + ": A possible cause is your laptop going to sleep (if running on a laptop)");
+      Log.info(threadName + ": A possible cause is the network interface going down");
+      Log.info(threadName + ": A possible cause is this host being overloaded");
+    }
+
+    // Reset the failure counting when a successful check() occurs.
+    private void reset() {
+      consecutiveFailures = 0;
+      failureStartTimestampMillis = 0;
+    }
+
+    // Count the impact of one failure.
+    private void failed() {
+      printPossibleCauses();
+      if (consecutiveFailures == 0) {
+        failureStartTimestampMillis = System.currentTimeMillis();
+      }
+      consecutiveFailures++;
+    }
+
+    // Check if enough failures have occurred or time has passed to
+    // shut down this node.
+    private void testForFailureShutdown() {
+      if (consecutiveFailures >= maxConsecutiveFailures) {
+        Log.err(threadName + ": Too many failures (>= " + maxConsecutiveFailures + "), H2O node shutting down");
+        System.exit(1);
+      }
+
+      if (consecutiveFailures > 0) {
+        final long now = System.currentTimeMillis();
+        final long deltaMillis = now - failureStartTimestampMillis;
+        final long thresholdMillis = (maxFailureSeconds * millisPerSecond);
+        if (deltaMillis > thresholdMillis) {
+          Log.err(threadName + ": Failure time threshold exceeded (>= " + 
+                  thresholdMillis + 
+                  " ms), H2O node shutting down");
+          System.exit(1);
+        }
+      }
+    }
+
+    // Do the watchdog check.
+    private void check() {
+      final Socket s = new Socket();
+      final InetSocketAddress apiIpPort = new InetSocketAddress(H2O.SELF_ADDRESS, H2O.API_PORT);
+
+      try {
+        s.connect (apiIpPort, timeoutMillis);
+        reset();
+      }
+      catch (SocketTimeoutException e) {
+        if (gracefulShutdownInitiated) { return; }
+        Log.err(threadName + ": Timed out trying to connect to REST API IP and Port (" + 
+                H2O.SELF_ADDRESS + ":" + H2O.API_PORT + ", " + timeoutMillis + " ms)");
+        failed();
+      }
+      catch (IOException e) {
+        if (gracefulShutdownInitiated) { return; }
+        Log.err(threadName + ": Failed to connect to REST API IP and Port (" + 
+                H2O.SELF_ADDRESS + ":" + H2O.API_PORT + ")");
+        Log.err(threadName + ": " + e.getMessage());
+        failed();
+      }
+      catch (Exception e) {
+        if (gracefulShutdownInitiated) { return; }
+        Log.err(threadName + ": Failed unexpectedly trying to connect to REST API IP and Port (" + 
+                H2O.SELF_ADDRESS + ":" + H2O.API_PORT + ")",
+                e);
+        failed();
+      }
+      finally {
+        if (gracefulShutdownInitiated) { return; }
+        testForFailureShutdown();
+        try { s.close(); } catch (Exception _) {}
+      }
+    }
+
+    // Class main thread.
+    public void run() {
+      Log.debug (threadName + ": Thread run() started");
+      reset();
+
+      while (true) {
+        mySleep (sleepMillis);
+        check();
+        if (gracefulShutdownInitiated) {
+          break;
+        }
+      }
+
+      Log.debug (threadName + ": Thread run() exited");
     }
   }
 }

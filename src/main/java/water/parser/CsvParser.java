@@ -4,12 +4,12 @@ import java.util.ArrayList;
 
 import water.*;
 
-public class CsvParser extends CustomParser {
+public abstract class CsvParser extends CustomParser {
 
   /* Constant to specify that separator is not specified. */
   public static final byte NO_SEPARATOR = -1;
 
-  public final byte CHAR_DECIMAL_SEPARATOR;
+  public final byte CHAR_DECIMAL_SEPARATOR = '.';
   public final byte CHAR_SEPARATOR;
   public static final byte HIVE_SEP = 1;
 
@@ -37,31 +37,27 @@ public class CsvParser extends CustomParser {
 
   private static final long LARGEST_DIGIT_NUMBER = 1000000000000000000L;
 
-  public final Key _aryKey;
+  public final Setup _setup;
+  public final boolean _skip;
 
-  public final int _numColumns;
-
-  public final boolean _skipFirstLine;
-
-  DParseTask callback;
-
-
-  public CsvParser(Key aryKey, int numColumns, byte separator, byte decimalSeparator, DParseTask callback, boolean skipFirstLine) {
-    _aryKey = aryKey;
-    _numColumns = numColumns;
-    CHAR_SEPARATOR = separator;
-    CHAR_DECIMAL_SEPARATOR = decimalSeparator;
-    this.callback = callback;
-    _skipFirstLine = skipFirstLine;
+  public CsvParser(Setup setup, boolean skip) {
+    _setup = setup;
+    _skip = skip;
+    CHAR_SEPARATOR = setup._separator;
   }
 
   @SuppressWarnings("fallthrough")
-  @Override public final void parse(Key key) {
-    ValueArray _ary = _aryKey == null ? null : (ValueArray)DKV.get(_aryKey).get();
+  @Override public final void parse(final int cidx) {
     ValueString _str = new ValueString();
-    byte[] bits = DKV.get(key).memOrLoad();
-    int offset = 0;
-    int state = _skipFirstLine ? SKIP_LINE : WHITESPACE_BEFORE_TOKEN;
+    byte[] bits = getChunkData(cidx);
+    assert bits != null : "no bits for chunk "+cidx;
+    final byte[] bits0 = bits;  // Bits for chunk0
+    boolean firstChunk = true;  // Have not rolled into the 2nd chunk
+    byte[] bits1 = null;        // Bits for chunk1, loaded lazily.
+    int offset = 0;             // General cursor into the giant array of bytes
+    // Starting state.  Are we skipping the first (partial) line, or not?  Skip
+    // a header line, or a partial line if we're in the 2nd and later chunks.
+    int state = (_setup._header || cidx > 0 || _skip) ? SKIP_LINE : WHITESPACE_BEFORE_TOKEN;
     int quotes = 0;
     long number = 0;
     int exp = 0;
@@ -70,11 +66,10 @@ public class CsvParser extends CustomParser {
     int fractionDigits = 0;
     int numStart = 0;
     int tokenStart = 0; // used for numeric token to backtrace if not successful
-    int secondChunk = 0; // 0 = not, 1 = in, or back in first one, 2 == no luck
     int colIdx = 0;
     byte c = bits[offset];
-    // skip comments for the first chunk
-    if ((_ary == null) || (ValueArray.getChunkIndex(key) == 0)) {
+    // skip comments for the first chunk (or if not a chunk)
+    if( cidx == 0 ) {
       while (c == '#' || c == '@'/*also treat as comments leading '@' from ARFF format*/) {
         while ((offset   < bits.length) && (bits[offset] != CHAR_CR) && (bits[offset  ] != CHAR_LF)) ++offset;
         if    ((offset+1 < bits.length) && (bits[offset] == CHAR_CR) && (bits[offset+1] == CHAR_LF)) ++offset;
@@ -84,7 +79,8 @@ public class CsvParser extends CustomParser {
         c = bits[offset];
       }
     }
-    callback.newLine();
+    newLine();
+
 MAIN_LOOP:
     while (true) {
 NEXT_CHAR:
@@ -124,7 +120,7 @@ NEXT_CHAR:
             assert _str._buf != bits;
             _str.addBuff(bits);
           }
-          callback.addStrCol(colIdx, _str);
+          addStrCol(colIdx, _str);
           _str.set(null, 0, 0);
           ++colIdx;
           state = SEPARATOR_OR_EOL;
@@ -142,10 +138,10 @@ NEXT_CHAR:
         case EOL:
           if (colIdx != 0) {
             colIdx = 0;
-            callback.newLine();
+            newLine();
           }
           state = (c == CHAR_CR) ? EXPECT_COND_LF : POSSIBLE_EMPTY_LINE;
-          if (secondChunk != 0)
+          if( !firstChunk )
             break MAIN_LOOP; // second chunk only does the first row
           break NEXT_CHAR;
         // ---------------------------------------------------------------------
@@ -177,15 +173,15 @@ NEXT_CHAR:
           // fallthrough to WHITESPACE_BEFORE_TOKEN
         // ---------------------------------------------------------------------
         case WHITESPACE_BEFORE_TOKEN:
-          if (c == CHAR_SPACE) {
+          if (c == CHAR_SPACE || (c == CHAR_TAB && CHAR_TAB!=CHAR_SEPARATOR)) {
               break NEXT_CHAR;
           } else if (c == CHAR_SEPARATOR) {
             // we have empty token, store as NaN
-            callback.addInvalidCol(colIdx);
+            addInvalidCol(colIdx);
             ++colIdx;
             break NEXT_CHAR;
           } else if (isEOL(c)) {
-            callback.addInvalidCol(colIdx);
+            addInvalidCol(colIdx);
             state = EOL;
             continue MAIN_LOOP;
           }
@@ -202,7 +198,7 @@ NEXT_CHAR:
           // fallthrough to TOKEN
         // ---------------------------------------------------------------------
         case TOKEN:
-          if( callback.isString(colIdx) ) { // Forced already to a string col?
+          if( isString(colIdx) ) { // Forced already to a string col?
             state = STRING; // Do not attempt a number parse, just do a string parse
             _str.set(bits, offset, 0);
             continue MAIN_LOOP;
@@ -269,19 +265,19 @@ NEXT_CHAR:
         case NUMBER_END:
           if (c == CHAR_SEPARATOR) {
             exp = exp - fractionDigits;
-            callback.addNumCol(colIdx,number,exp);
+            addNumCol(colIdx,number,exp);
             ++colIdx;
             // do separator state here too
             state = WHITESPACE_BEFORE_TOKEN;
             break NEXT_CHAR;
           } else if (isEOL(c)) {
             exp = exp - fractionDigits;
-            callback.addNumCol(colIdx,number,exp);
+            addNumCol(colIdx,number,exp);
             // do EOL here for speedup reasons
             colIdx = 0;
-            callback.newLine();
+            newLine();
             state = (c == CHAR_CR) ? EXPECT_COND_LF : POSSIBLE_EMPTY_LINE;
-            if (secondChunk != 0)
+            if( !firstChunk )
               break MAIN_LOOP; // second chunk only does the first row
             break NEXT_CHAR;
           } else if ((c == '%')) {
@@ -400,50 +396,42 @@ NEXT_CHAR:
           assert (false) : " We have wrong state "+state;
       } // end NEXT_CHAR
       ++offset; // do not need to adjust for offset increase here - the offset is set to tokenStart-1!
-      if (offset < 0) {
-        assert secondChunk != 0 : "This can only happen when we are in second chunk and are reverting to first one.";
-        secondChunk = 0;
-        Value v = DKV.get(key); // we had the last key
-        assert (v != null) : "The value used to be there!";
-        bits = v.memOrLoad();
+      if (offset < 0) {         // Offset is negative?  
+        assert !firstChunk;     // Caused by backing up from 2nd chunk into 1st chunk
+        firstChunk = true;
+        bits = bits0;
         offset += bits.length;
         _str.set(bits,offset,0);
-      } else if (offset >= bits.length) {
-        ++secondChunk;
+      } else if (offset >= bits.length) { // Off end of 1st chunk?  Parse into 2nd chunk
+        // Attempt to get more data.
+        if( firstChunk && bits1 == null )
+          bits1 = getChunkData(cidx+1);
         // if we can't get further we might have been the last one and we must
         // commit the latest guy if we had one.
-        if (_ary == null) {
+        if( !firstChunk || bits1 == null ) { // No more data available or allowed
+          // If we are mid-parse of something, act like we saw a LF to end the
+          // current token.
           if ((state != EXPECT_COND_LF) && (state != POSSIBLE_EMPTY_LINE)) {
-            c = CHAR_LF;
-            continue MAIN_LOOP;
+            c = CHAR_LF;  continue MAIN_LOOP;
           }
-          break MAIN_LOOP;
+          break MAIN_LOOP;      // Else we are just done
         }
+
+        // Now parsing in the 2nd chunk.  All offsets relative to the 2nd chunk start.
+        firstChunk = false;
         numStart -= bits.length;
         if (state == NUMBER_FRACTION)
           fractionDigits -= bits.length;
         offset -= bits.length;
         tokenStart -= bits.length;
-        long chkidx = ValueArray.getChunkIndex(key);
-        Value v = (secondChunk < 2 && chkidx+1 < _ary.chunks())
-          ? DKV.get(_ary.getChunkKey(chkidx+1)) : null;
-        // if we can't get further we might have been the last one and we must
-        // commit the latest guy if we had one.
-        if (v == null) {
-          if ((state != EXPECT_COND_LF) && (state != POSSIBLE_EMPTY_LINE)) {
-            c = CHAR_LF;
-            continue MAIN_LOOP;
-          }
-          break MAIN_LOOP;
-        }
-        bits = v.memOrLoad();         // Could limit to eg 512 bytes
-        if (bits[0] == CHAR_LF && state == EXPECT_COND_LF)
+        bits = bits1;           // Set main parsing loop bits
+        if( bits[0] == CHAR_LF && state == EXPECT_COND_LF )
           break MAIN_LOOP; // when the first character we see is a line end
       }
       c = bits[offset];
     } // end MAIN_LOOP
     if (colIdx == 0)
-      callback.rollbackLine();
+      rollbackLine();
   }
 
   private static boolean isWhitespace(byte c) {
@@ -454,12 +442,28 @@ NEXT_CHAR:
     return (c >= CHAR_LF) && ( c<= CHAR_CR);
   }
 
+  // Get another chunk of byte data
+  public abstract byte[] getChunkData( int cidx );
+  // Register a newLine from the parser
+  public abstract void newLine();
+  // True if already forced into a string column (skip number parsing)
+  public abstract boolean isString(int colIdx);
+  // Add a number column with given digits & exp
+  public abstract void addNumCol(int colIdx, long number, int exp);
+  // An an invalid / missing entry
+  public abstract void addInvalidCol(int colIdx);
+  // Add a String column
+  public abstract void addStrCol( int colIdx, ValueString str );
+  // Final rolling back of partial line
+  public abstract void rollbackLine();
+
+  // ==========================================================================
   /** Setup of the parser.
    *
    * Simply holds the column names, their length also determines the number of
    * columns, the separator used and whether the CSV file had a header or not.
    */
-  public static class Setup {
+  public static class Setup extends Iced {
     public final byte _separator;
     public final boolean _header;
     // Row zero is column names.
@@ -476,15 +480,25 @@ NEXT_CHAR:
       _numlines = numlines;
       _bits = bits;
     }
+    public Setup(Setup S, boolean header) {
+      _separator = S._separator;
+      _header = header;
+      _data = S._data;
+      _numlines = S._numlines;
+      _bits = S._bits;
+    }
 
     @Override public boolean equals( Object o ) {
       if( o == null || !(o instanceof Setup) ) return false;
+      if( o == this ) return true;
       Setup s = (Setup)o;
       // "Compatible" setups means same columns and same separators
-      return _separator == s._separator && _data[0].length == s._data[0].length;
-    }
+      return _separator == s._separator && 
+        ((_data==null && s._data==null) ||
+         (_data[0].length == s._data[0].length));
+      }
     @Override public String toString() {
-      return "'"+_separator+"' head="+_header+" cols="+_data[0].length;
+      return "'"+(char)_separator+"' head="+_header+" cols="+(_data==null?-2:(_data[0]==null?-1:_data[0].length));
     }
   }
 

@@ -401,9 +401,18 @@ public abstract class Log {
     write(e,true);
     return exception;
   }
+  /** Record a message to the log file and store. */
+  static public void err(Sys t, String msg) {
+    Event e =  Event.make(t, Kind.ERRR, null, msg );
+    write(e,true);
+  }
   /** Record an exception to the log file and store. */
   static public <T extends Throwable> T err(String msg, T exception) {
     return err(Sys.WATER, msg, exception);
+  }
+  /** Record a message to the log file and store. */
+  static public void err(String msg) {
+    err(Sys.WATER, msg);
   }
   /** Record an exception to the log file and store. */
   static public <T extends Throwable> T err(Sys t, T exception) {
@@ -454,7 +463,7 @@ public abstract class Log {
     write(e,false);
   }
   /** Log a debug message to the log file and the store if the subsystem's flag is set. */
-  private static String fixedLength(String s, int length) {
+  public static String fixedLength(String s, int length) {
     String r = padRight(s, length);
     if( r.length() > length ) {
       int a = Math.max(r.length() - length + 1, 0);

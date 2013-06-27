@@ -24,8 +24,9 @@ public final class PersistNFS extends Persist {
 
   // Returns the file for given key.
   private static File getFileForKey(Key k) {
-    final int len = KEY_PREFIX_LENGTH + 1; // Strip key prefix & leading slash
-    String s = new String(k._kb, len, k._kb.length - len);
+    final int len = KEY_PREFIX_LENGTH+1; // Strip key prefix & leading slash
+    final int off = k._kb[0]==Key.DVEC ? (1+1+4) : 0;
+    String s = new String(k._kb,len+off,k._kb.length-(len+off));
     return new File(s);
   }
 
@@ -45,6 +46,9 @@ public final class PersistNFS extends Persist {
     if( k._kb[0] == Key.ARRAYLET_CHUNK ) {
       skip = ValueArray.getChunkOffset(k); // The offset
       k = ValueArray.getArrayKey(k);       // From the base file key
+    }
+    if( k._kb[0] == Key.DVEC ) {
+      skip = water.fvec.NFSFileVec.chunkOffset(k); // The offset
     }
     try {
       FileInputStream s = null;

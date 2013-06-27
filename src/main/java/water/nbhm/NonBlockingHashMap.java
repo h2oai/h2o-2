@@ -1014,8 +1014,7 @@ public class NonBlockingHashMap<TypeK, TypeV>
         // thread counts trying to copy the table often 'panic'.
         if( panic_start == -1 ) { // No panic?
           copyidx = (int)_copyIdx;
-          while( copyidx < (oldlen<<1) && // 'panic' check
-                 !_copyIdxUpdater.compareAndSet(this,copyidx,copyidx+MIN_COPY_WORK) )
+          while( !_copyIdxUpdater.compareAndSet(this,copyidx,copyidx+MIN_COPY_WORK) )
             copyidx = (int)_copyIdx;      // Re-read
           if( !(copyidx < (oldlen<<1)) )  // Panic!
             panic_start = copyidx;        // Record where we started to panic-copy
@@ -1092,9 +1091,6 @@ public class NonBlockingHashMap<TypeK, TypeV>
           // Attempt to promote
           topmap.CAS_kvs(oldkvs,_newkvs) ) {
         topmap._last_resize_milli = System.currentTimeMillis(); // Record resize time for next check
-        //long nano = System.nanoTime();
-        //System.out.println(" "+nano+" Promote table to "+len(_newkvs));
-        //if( System.out != null ) System.out.print("]");
       }
     }
 
@@ -1152,22 +1148,20 @@ public class NonBlockingHashMap<TypeK, TypeV>
       // Copy the value into the new table, but only if we overwrite a null.
       // If another value is already in the new table, then somebody else
       // wrote something there and that write is happens-after any value that
-      // appears in the old table.  If putIfMatch does not find a null in the
-      // new table - somebody else should have recorded the null-not_null
-      // transition in this copy.
+      // appears in the old table.
       Object old_unboxed = ((Prime)oldval)._V;
       assert old_unboxed != TOMBSTONE;
-      boolean copied_into_new = (putIfMatch(topmap, newkvs, key, old_unboxed, null) == null);
+      putIfMatch(topmap, newkvs, key, old_unboxed, null);
 
       // ---
       // Finally, now that any old value is exposed in the new table, we can
       // forever hide the old-table value by slapping a TOMBPRIME down.  This
       // will stop other threads from uselessly attempting to copy this slot
       // (i.e., it's a speed optimization not a correctness issue).
-      while( !CAS_val(oldkvs,idx,oldval,TOMBPRIME) )
+      while( oldval != TOMBPRIME && !CAS_val(oldkvs,idx,oldval,TOMBPRIME) )
         oldval = val(oldkvs,idx);
 
-      return copied_into_new;
+      return oldval != TOMBPRIME; // True if we slammed the TOMBPRIME down
     } // end copy_slot
   } // End of CHM
 

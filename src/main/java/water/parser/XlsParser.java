@@ -22,14 +22,16 @@ public class XlsParser extends CustomParser implements HSSFListener {
   private FormatTrackingHSSFListener _formatListener;
 
   private final ValueString _str = new ValueString();
+  private final Key _key;
 
-  public XlsParser(DParseTask callback) throws IOException {
+  public XlsParser(DParseTask callback, Key key) throws IOException {
     _callback = callback;
+    _key = key;
   }
 
-  @Override public void parse(Key key) throws IOException {
+  @Override public void parse(int cidx) throws IOException {
     _firstRow = true;
-    InputStream is = DKV.get(key).openStream();
+    InputStream is = DKV.get(_key).openStream();
     try {
       _fs = new POIFSFileSystem(is);
       MissingRecordAwareHSSFListener listener = new MissingRecordAwareHSSFListener(this);

@@ -96,7 +96,7 @@ public class RBigDataTest extends TestUtil {
   }
 
   @Test public void testFullVectAssignment() {
-    Key k = loadAndParseKey("cars.hex", "smalldata/cars.csv");
+    Key k = loadAndParseFile("cars.hex", "smalldata/cars.csv");
     Key k2 = executeExpression("cars.hex");
     testDataFrameStructure(k2, 406, 8);
     UKV.remove(k2);
@@ -108,12 +108,12 @@ public class RBigDataTest extends TestUtil {
   }
 
   @Test public void testSingleVectorAssignment() {
-    Key k = loadAndParseKey("cars.hex", "smalldata/cars.csv");
+    Key k = loadAndParseFile("cars.hex", "smalldata/cars.csv");
     UKV.remove(k);
   }
 
   @Test public void testVectorOperators() {
-    Key k = loadAndParseKey("cars.hex", "smalldata/cars.csv");
+    Key k = loadAndParseFile("cars.hex", "smalldata/cars.csv");
     testVectorExpression("cars.hex[2] + cars.hex$year", 81, 78, 80, 80, 84, 87);
     testVectorExpression("cars.hex[2] - cars.hex$year", -65, -62, -64, -72, -72, -75);
     testVectorExpression("cars.hex[2] * cars.hex$year", 584, 560, 576, 304, 468, 486);
@@ -122,7 +122,7 @@ public class RBigDataTest extends TestUtil {
   }
 
   @Test public void testColumnSelectors() {
-    Key k = loadAndParseKey("cars.hex", "smalldata/cars.csv");
+    Key k = loadAndParseFile("cars.hex", "smalldata/cars.csv");
     Key k2 = executeExpression("cars.hex[2]");
     testDataFrameStructure(k2, 406, 1);
     testKeyValues(k2, 8, 8, 8, 4, 6, 6);
@@ -135,7 +135,7 @@ public class RBigDataTest extends TestUtil {
   }
 
   @Test public void testLargeDataOps() {
-    Key poker = loadAndParseKey("p.hex", "smalldata/poker/poker-hand-testing.data");
+    Key poker = loadAndParseFile("p.hex", "smalldata/poker/poker-hand-testing.data");
     testVectorExpression("p.hex[1] + p.hex[2]", 2, 15, 13, 15, 12, 7);
     testVectorExpression("p.hex[1] - p.hex[2]", 0, 9, 5, 7, 10, 3);
     testVectorExpression("p.hex[1] * p.hex[2]", 1, 36, 36, 44, 11, 10);
@@ -144,14 +144,14 @@ public class RBigDataTest extends TestUtil {
   }
 
   @Test public void testBigLargeExpression() {
-    Key poker = loadAndParseKey("p.hex", "smalldata/poker/poker-hand-testing.data");
+    Key poker = loadAndParseFile("p.hex", "smalldata/poker/poker-hand-testing.data");
     testVectorExpression("p.hex[1] / p.hex[2] + p.hex[3] * p.hex[1] - p.hex[5] + (2* p.hex[1] - (p.hex[2]+3))", 8, 35, 63.25, 85.75, 116.0, 43.5);
     UKV.remove(poker);
   }
 
   @Test public void testDifferentSizeOps() {
-    Key cars = loadAndParseKey("cars.hex", "smalldata/cars.csv");
-    Key poker = loadAndParseKey("p.hex", "smalldata/poker/poker-hand-testing.data");
+    Key cars = loadAndParseFile("cars.hex", "smalldata/cars.csv");
+    Key poker = loadAndParseFile("p.hex", "smalldata/poker/poker-hand-testing.data");
     testVectorExpression("cars.hex$year + p.hex[1]", 74, 82, 81, 84, 86, 81);
     testVectorExpression("cars.hex$year - p.hex[1]", 72, 58, 63, 62, 64, 71);
     testVectorExpression("cars.hex$year * p.hex[1]", 73, 840, 648, 803, 825, 380);
@@ -167,7 +167,7 @@ public class RBigDataTest extends TestUtil {
   // ---
   // Test some basic expressions on "cars.csv"
   @Test public void testBasicCrud() {
-    Key k = loadAndParseKey("cars.hex", "smalldata/cars.csv");
+    Key k = loadAndParseFile("cars.hex", "smalldata/cars.csv");
     testVectorExpression("cars.hex[1] + cars.hex$cylinders", 21,23,25,24,23,36.7);
     UKV.remove(k);
   }

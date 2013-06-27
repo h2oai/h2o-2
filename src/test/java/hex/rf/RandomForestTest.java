@@ -14,7 +14,7 @@ public class RandomForestTest extends TestUtil {
 
   // Test kaggle/creditsample-test data
   @org.junit.Test public void kaggle_credit() throws Exception {
-    Key okey = loadAndParseKey("credit.hex", "smalldata/kaggle/creditsample-training.csv.gz");
+    Key okey = loadAndParseFile("credit.hex", "smalldata/kaggle/creditsample-training.csv.gz");
     UKV.remove(Key.make("smalldata/kaggle/creditsample-training.csv.gz_UNZIPPED"));
     UKV.remove(Key.make("smalldata\\kaggle\\creditsample-training.csv.gz_UNZIPPED"));
     ValueArray val = DKV.get(okey).get();
@@ -35,7 +35,7 @@ public class RandomForestTest extends TestUtil {
 
     // Start the distributed Random Forest
     final Key modelKey = Key.make("model");
-    DRFJob result = hex.rf.DRF.execute(modelKey,cols,val,ntrees,depth,1024,statType,seed, true, null, -1, Sampling.Strategy.RANDOM, 1.0f, null, 0, 0);
+    DRFJob result = hex.rf.DRF.execute(modelKey,cols,val,ntrees,depth,1024,statType,seed, true, null, -1, Sampling.Strategy.RANDOM, 1.0f, null, 0, 0, false);
     // Wait for completion on all nodes
     RFModel model = result.get();
 

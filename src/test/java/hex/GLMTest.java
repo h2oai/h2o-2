@@ -7,7 +7,7 @@ import hex.DLSM.GeneralizedGradientSolver;
 import hex.DLSM.LSMSolver;
 import hex.NewRowVecTask.DataFrame;
 import java.util.*;
-import org.junit.Test;
+import org.junit.*;
 import water.*;
 import water.api.Constants;
 import water.exec.Exec;
@@ -20,6 +20,8 @@ import com.google.gson.*;
 // tests are also good).
 
 public class GLMTest extends TestUtil {
+  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
+
   static double[] THRESHOLDS;
   static {
     THRESHOLDS = new double[100];
@@ -154,7 +156,7 @@ public class GLMTest extends TestUtil {
    * Compare against the results from standard R glm implementation.
    */
   @Test public void testCars(){
-    Key k = loadAndParseKey("h.hex","smalldata/cars.csv");
+    Key k = loadAndParseFile("h.hex","smalldata/cars.csv");
     try{
       ValueArray ary = DKV.get(k).get();
       // PREDICT POWER
@@ -190,7 +192,7 @@ public class GLMTest extends TestUtil {
    * Compare against the results from standard R glm implementation.
    */
   @Test public void testProstate(){
-    Key k = loadAndParseKey("h.hex","smalldata/glm_test/prostate_cat_replaced.csv");
+    Key k = loadAndParseFile("h.hex","smalldata/glm_test/prostate_cat_replaced.csv");
     try{
       ValueArray ary = DKV.get(k).get();
       // R results
@@ -214,7 +216,7 @@ public class GLMTest extends TestUtil {
    * This time, compare athe results gainst glmnet (R's glm does not have regularization).
    */
   @Test public void testCredit(){
-    Key k = loadAndParseKey("h.hex","smalldata/kaggle/creditsample-test.csv.gz");
+    Key k = loadAndParseFile("h.hex","smalldata/kaggle/creditsample-test.csv.gz");
     try{
       ValueArray ary = DKV.get(k).get();
     } finally {
@@ -226,7 +228,7 @@ public class GLMTest extends TestUtil {
    * Test H2O gets the same results as R.
    */
   @Test public void testPoissonTst1(){
-    Key k = loadAndParseKey("h.hex","smalldata/glm_test/poisson_tst1.csv");
+    Key k = loadAndParseFile("h.hex","smalldata/glm_test/poisson_tst1.csv");
     try{
       ValueArray ary = DKV.get(k).get();
       String [] colnames = new String [] {"prog","math","num_awards"};
@@ -379,7 +381,7 @@ public class GLMTest extends TestUtil {
   @Test public void testLogReg_CARS_CSV() {
     Key k1=null,k2=null;
     try {
-      k1 = loadAndParseKey("h.hex","smalldata/cars.csv");
+      k1 = loadAndParseFile("h.hex","smalldata/cars.csv");
       // Fold the cylinders down to 1/0 for 3/not-3
       k2 = Exec.exec("colSwap(h.hex,2,h.hex$cylinders==3?1:0)","h2.hex");
       // Columns for displacement, power, weight, 0-60, year, then response is cylinders
@@ -426,7 +428,7 @@ public class GLMTest extends TestUtil {
   // Test of convergence on this dataset.  It appears that the 'betas' increase
   // with every iteration until we hit Infinities.
   @Test public void testConverge() {
-    Key k1= loadAndParseKey("m.hex","smalldata/logreg/make_me_converge_10000x5.csv");
+    Key k1= loadAndParseFile("m.hex","smalldata/logreg/make_me_converge_10000x5.csv");
     ValueArray va = DKV.get(k1).get();
     // Compute the coefficients
     LSMSolver lsmsx = new ADMMSolver(1e-5, 0.5);
@@ -511,7 +513,7 @@ public class GLMTest extends TestUtil {
   }
 
   @Test public void testLogRegXVal() {
-    Key k1= loadAndParseKey("m.hex","smalldata/logreg/umass_statdata/cgd.dat");
+    Key k1= loadAndParseFile("m.hex","smalldata/logreg/umass_statdata/cgd.dat");
     ValueArray va = DKV.get(k1).get();
 
     LSMSolver lsms = new ADMMSolver(0.0001/*lambda*/,1/*alpha*/);

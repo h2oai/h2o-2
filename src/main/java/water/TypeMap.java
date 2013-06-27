@@ -7,6 +7,8 @@ import water.util.Log;
 public class TypeMap {
   static public final short NULL = (short) -1;
   static public final short PRIM_B = 1;
+  static public final short C1CHUNK;
+  static public final short FRAME;
   static public final short VALUE_ARRAY;
   static final public String BOOTSTRAP_CLASSES[] = {
     " BAD",
@@ -16,6 +18,7 @@ public class TypeMap {
     "hex.DLSM$GeneralizedGradientSolver",
     "hex.KMeans",
     "hex.KMeansModel",
+    "hex.rf.DRF$DRFParams",
     "hex.rf.RFModel",
     "water.FetchClazz",
     "water.FetchId",
@@ -30,6 +33,10 @@ public class TypeMap {
     "water.ValueArray",
     "water.ValueArray$Column",
     "water.api.Script$Done",
+    "water.fvec.C1Chunk",
+    "water.fvec.Frame",
+    "water.fvec.Vec",
+    "water.fvec.AppendableVec",
     "water.parser.ParseDataset",
     "water.parser.ParseDataset$Progress",
     "water.util.JStackCollectorTask",
@@ -50,6 +57,8 @@ public class TypeMap {
     for( String s : CLAZZES )
       MAP.put(s,id++);
     IDS = id;
+    C1CHUNK     = (short)onLoad("water.fvec.C1Chunk");
+    FRAME       = (short)onLoad("water.fvec.Frame");
     VALUE_ARRAY = (short)onLoad("water.ValueArray");
     GOLD = new Freezable[BOOTSTRAP_CLASSES.length];
   }
@@ -59,13 +68,14 @@ public class TypeMap {
     Integer I = MAP.get(className);
     if( I != null ) return I;
     // Need to install a new cloud-wide type ID for className
+    assert H2O.CLOUD.size() > 0 : "No cloud when getting type id for "+className;
     int id = -1;
     if( H2O.CLOUD.leader() != H2O.SELF ) // Leader?
       id = FetchId.fetchId(className);
     return install(className,id);
   }
 
-  // Install the type mapping until lock, and grow all the arrays as needed.
+  // Install the type mapping under lock, and grow all the arrays as needed.
   // The grow-step is not obviously race-safe: readers of all the arrays will
   // get either the old or new arrays.  However readers are all reader with
   // smaller type ids, and these will work fine in either old or new arrays.
@@ -91,7 +101,7 @@ public class TypeMap {
     if( id >= CLAZZES.length || CLAZZES[id] == null ) loadId(id);
     Iced f = (Iced) GOLD[id];
     if( f == null ) {
-      try { GOLD[id] = f = (Iced) Class.forName(CLAZZES[id]).newInstance(); } 
+      try { GOLD[id] = f = (Iced) Class.forName(CLAZZES[id]).newInstance(); }
       catch( Exception e ) { throw Log.errRTExcept(e); }
     }
     return f.newInstance();
@@ -101,15 +111,15 @@ public class TypeMap {
     if( id >= CLAZZES.length || CLAZZES[id] == null ) loadId(id);
     Freezable f = GOLD[id];
     if( f == null ) {
-      try { GOLD[id] = f = (Freezable) Class.forName(CLAZZES[id]).newInstance(); } 
+      try { GOLD[id] = f = (Freezable) Class.forName(CLAZZES[id]).newInstance(); }
       catch( Exception e ) { throw Log.errRTExcept(e); }
     }
     return f.newInstance();
   }
 
-  static public String className(int id) { 
+  static public String className(int id) {
     if( id >= CLAZZES.length || CLAZZES[id] == null ) loadId(id);
-    return CLAZZES[id]; 
+    return CLAZZES[id];
   }
   static public Class clazz(int id) {
     if( id >= CLAZZES.length || CLAZZES[id] == null ) loadId(id);

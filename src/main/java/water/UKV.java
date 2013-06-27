@@ -1,5 +1,6 @@
 package water;
 
+import water.fvec.Frame;
 /**
  * User-View Key/Value Store
  *
@@ -44,7 +45,7 @@ public abstract class UKV {
       fs.blockForPending();         // Block until all is deleted
   }
   // Recursively remove, gathering all the pending remote key-deletes
-  static private void remove( Key key, Futures fs ) {
+  static public void remove( Key key, Futures fs ) {
     Value val = DKV.get(key,32,H2O.GET_KEY_PRIORITY); // Get the existing Value, if any
     if( val == null ) return;   // Trivial delete
     if( val.isArray() ) {       // See if this is an Array
@@ -55,6 +56,13 @@ public abstract class UKV {
     if( key._kb[0] == Key.KEY_OF_KEYS ) // Key-of-keys?
       for( Key k : key.flatten() )      // Then recursively delete
         remove(k,fs);
+    if( key._kb[0] == Key.VEC ) {
+      water.fvec.Vec vec = val.get();
+      for( int i=0; i<vec.nChunks(); i++ )
+        remove(vec.chunkKey(i),fs);
+    }
+    if( val.isFrame() )
+      ((Frame)val.get()).remove(fs);
     DKV.remove(key,fs);
   }
 

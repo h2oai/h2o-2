@@ -42,18 +42,17 @@ public class DParseTask extends MRTask {
   private static final int [] COL_SIZES = new int[]{0,1,2,4,8,1,2,-4,-8,1};
 
   // scalar variables
-  boolean _skipFirstLine;
+  boolean _skip;
   Pass _phase;
   long _numRows;
   transient int _myrows;
   int _ncolumns;
   byte _sep = (byte)',';
-  byte _decSep = (byte)'.';
   int _rpc;
   int _rowsize;
-  // 31 bytes
   ParseDataset _job;
   String _error;
+  CsvParser.Setup _setup;
 
   // arrays
   byte [] _colTypes;
@@ -224,11 +223,11 @@ public class DParseTask extends MRTask {
     _enums = other._enums;
     _colTypes = other._colTypes;
     _nrows = finfo._nrows;
-    _skipFirstLine = finfo._header;
     _job = other._job;
     _numRows = other._numRows;
     _sep = other._sep;
-    _decSep = other._decSep;
+    _skip = finfo._header;
+    _setup = other._setup;
     _scale = other._scale;
     _bases = other._bases;
     _ncolumns = other._ncolumns;
@@ -253,11 +252,11 @@ public class DParseTask extends MRTask {
     _enums = other._enums;
     _colTypes = other._colTypes;
     _nrows = other._nrows;
-    _skipFirstLine = other._skipFirstLine;
     _job = other._job;
     _numRows = other._numRows;
     _sep = other._sep;
-    _decSep = other._decSep;
+    _skip = other._skip;
+    _setup = other._setup;
     _scale = other._scale;
     _ncolumns = other._ncolumns;
     _min = other._min;
@@ -295,6 +294,7 @@ public class DParseTask extends MRTask {
    * @throws Exception
    */
   public void passOne(CsvParser.Setup setup) {
+    _setup = setup;
     switch (_parserType) {
     case CSV:
         // precompute the parser setup, column setup and other settings
@@ -308,7 +308,7 @@ public class DParseTask extends MRTask {
         }
         _colNames = setup._data[0];
         setColumnNames(_colNames);
-        _skipFirstLine = setup._header;
+        _skip = setup._header;
         // set the separator
         this._sep = setup._separator;
         // if parsing value array, initialize the nrows array
@@ -323,9 +323,9 @@ public class DParseTask extends MRTask {
       case XLS:
         // XLS parsing is not distributed, just obtain the value stream and run the parser
         try{
-          XlsParser p = new XlsParser(this);
+          XlsParser p = new XlsParser(this,_sourceDataset._key);
           Log.info("parsing ", _sourceDataset._key);
-          p.parse(_sourceDataset._key);
+          p.parse(0);
           --_myrows; // do not count the header
           _numRows = _myrows;
         } catch(Exception e){ throw new RuntimeException(e); }
@@ -395,8 +395,9 @@ public class DParseTask extends MRTask {
         _ab = _outputStreams2[0].initialize();
         // perform the second parse pass
         try{
-          CustomParser p = (_parserType == CustomParser.Type.XLS) ? new XlsParser(this) : new XlsxParser(this);
-          p.parse(_sourceDataset._key);
+          Key key = _sourceDataset._key;
+          CustomParser p = (_parserType == CustomParser.Type.XLS) ? new XlsParser(this,key) : new XlsxParser(this,key);
+          p.parse(0);
         } catch(Exception e){throw new RuntimeException(e);}
         // store the last stream if not stored during the parse
         if (_ab != null)
@@ -501,6 +502,40 @@ public class DParseTask extends MRTask {
     for(byte b:_colTypes) _rowsize += Math.abs(COL_SIZES[b]);
   }
 
+  // Fill in the methods of CsvParser for DParseTask
+  private static class CsvParser2 extends CsvParser {
+    final Key _key;
+    DParseTask _dpt;
+    CsvParser2(Setup setup, DParseTask dpt, Key key, boolean skip ) {
+      super(setup,skip);
+      _key = key;
+      _dpt = dpt;
+    }
+    // Fetch chunk data on demand
+    public byte[] getChunkData( int cidx ) {
+      Key key = _key;
+      if( key._kb[0] == Key.ARRAYLET_CHUNK ) { // Chunked data?
+        Key aryKey = ValueArray.getArrayKey(key);
+        ValueArray ary = DKV.get(aryKey).get();
+        if( cidx >= ary.chunks() ) return null;
+        key = ary.getChunkKey(cidx); // Return requested chunk
+      } else {
+        if( cidx > 0 ) return null; // Single chunk?  No next chunk
+      }
+      Value v = DKV.get(key);
+      return v == null ? null : v.memOrLoad();
+    }
+
+    // Register a newLine action from the parser
+    @Override public void newLine() { _dpt.newLine(); }
+    @Override public boolean isString(int cidx) { return _dpt.isString(cidx); }
+    @Override public void addNumCol(int colIdx, long number, int exp) { _dpt.addNumCol(colIdx,number,exp); }
+    @Override public void addInvalidCol(int colIdx) { _dpt.addInvalidCol(colIdx); }
+    @Override public void addStrCol( int colIdx, ValueString str ) { _dpt.addStrCol(colIdx,str); }
+    @Override public void rollbackLine() { _dpt.rollbackLine(); }
+  }
+
+
   /** Map function for distributed parsing of the CSV files.
    *
    * In first phase it calculates the min, max, means, encodings and other
@@ -513,12 +548,14 @@ public class DParseTask extends MRTask {
     if(_job.cancelled())
       return;
     Key aryKey = null;
+    ValueArray ary = null;
     boolean arraylet = key._kb[0] == Key.ARRAYLET_CHUNK;
-    boolean skipFirstLine = _skipFirstLine;
+    boolean skip = _skip;
     if(arraylet) {
       aryKey = ValueArray.getArrayKey(key);
       _chunkId = (int)ValueArray.getChunkIndex(key);
-      skipFirstLine = skipFirstLine || (ValueArray.getChunkIndex(key) != 0);
+      skip = skip || (_chunkId != 0);
+      ary = DKV.get(aryKey).get();
     }
     switch (_phase) {
     case ONE:
@@ -526,10 +563,11 @@ public class DParseTask extends MRTask {
       // initialize the column statistics
       phaseOneInitialize();
       // perform the parse
-      CsvParser p = new CsvParser(aryKey, _ncolumns, _sep, _decSep, this,skipFirstLine);
-      p.parse(key);
+      assert _setup != null;
+      CsvParser p = new CsvParser2(_setup, this, key, skip);
+      p.parse(_chunkId);
       if(arraylet) {
-        long idx = ValueArray.getChunkIndex(key)+1;
+        long idx = _chunkId+1;
         int idx2 = (int)idx;
         assert idx2 == idx;
         if(idx2 >= _nrows.length){
@@ -556,8 +594,9 @@ public class DParseTask extends MRTask {
       assert (_outputStreams2.length > 0);
       _ab = _outputStreams2[0].initialize();
       // perform the second parse pass
-      CsvParser p2 = new CsvParser(aryKey, _ncolumns, _sep, _decSep, this,skipFirstLine);
-      p2.parse(key);
+      assert _setup != null;
+      CsvParser2 p2 = new CsvParser2(_setup, this, key, skip);
+      p2.parse(_chunkId);
       // store the last stream if not stored during the parse
       if( _ab != null )
         _outputStreams2[_outputIdx].store();
@@ -654,16 +693,16 @@ public class DParseTask extends MRTask {
     10000000000l
   };
 
-  static double pow10(int exp){
+  public static double pow10(int exp){
     return ((exp >= -10 && exp <= 10)?powers10[exp+10]:Math.pow(10, exp));
   }
 
-  static long pow10i(int exp){
+  public static long pow10i(int exp){
     assert 10 >= exp && exp >= 0:"unexpected exponent " + exp;
     return powers10i[exp];
   }
 
-  static final boolean fitsIntoInt(double d){
+  public static final boolean fitsIntoInt(double d){
     return Math.abs((int)d - d) < 1e-8;
   }
 

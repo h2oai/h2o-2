@@ -21,6 +21,9 @@ def simpleCheckKMeans(self, kmeans, **kwargs):
             if math.isnan(n):
                 raise Exception("center", i, "has NaN:", n, "center:", c)
 
+    # shouldn't have any errors
+    h2o.check_sandbox_for_errors()
+
     return warnings
 
 

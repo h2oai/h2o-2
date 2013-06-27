@@ -2,10 +2,12 @@ package water;
 
 import java.util.Arrays;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.*;
 
 public class AutoSerialTest extends Iced {
+
+  @BeforeClass public static void stall() { TestUtil.stall_till_cloudsize(1); }
+
   byte _byte, _bytes[];
   short _short, _shorts[];
   int _int, _ints[];

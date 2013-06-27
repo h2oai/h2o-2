@@ -10,7 +10,7 @@ public class ExprTest extends TestUtil {
   @Test public void testMakeEnum() {
     Key k1=null,k2=null,kg=null,k3=null,ki=null;
     try {
-      k1 = loadAndParseKey("h.hex","smalldata/cars.csv");
+      k1 = loadAndParseFile("h.hex","smalldata/cars.csv");
       ValueArray va1 = DKV.get(k1).get();
       k2 = executeExpression("g=colSwap(h.hex,2,factor(h.hex[2]))");
       kg = Key.make("g");
@@ -30,7 +30,7 @@ public class ExprTest extends TestUtil {
 
   // Test a big slice
   @Test public void testMultiChunkFile() {
-    Key k1 = loadAndParseKey("hhp.hex","smalldata/hhp.cut3.214.data.gz");
+    Key k1 = loadAndParseFile("hhp.hex","smalldata/hhp.cut3.214.data.gz");
     ValueArray va1 = DKV.get(k1).get();
     Key k2 = executeExpression("g=slice(hhp.hex,1,131248)");
     Key kg = Key.make("g");
@@ -51,7 +51,7 @@ public class ExprTest extends TestUtil {
   @Test public void testRandomFilter() {
     Key k1=null, k2=null, kg=null;
     try {
-      k1 = loadAndParseKey("kaggle.hex","smalldata/kaggle/creditsample-training.csv.gz");
+      k1 = loadAndParseFile("kaggle.hex","smalldata/kaggle/creditsample-training.csv.gz");
       ValueArray va1 = DKV.get(k1).get();
       k2 = executeExpression("g=randomFilter(kaggle.hex,5432,1232123)");
       kg = Key.make("g");

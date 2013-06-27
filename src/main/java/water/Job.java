@@ -46,13 +46,18 @@ public class Job extends Iced {
 
   public Job(String description, Key dest) {
     // Pinned to self, because it should be almost always updated locally
-    _self = Key.make(UUID.randomUUID().toString(), (byte) 0, Key.JOB, H2O.SELF);
+    this(UUID.randomUUID().toString(), description, dest);
+  }
+
+  protected Job(String keyName, String description, Key dest) {
+    // Pinned to self, because it should be almost always updated locally
+    _self = Key.make(keyName, (byte) 0, Key.JOB, H2O.SELF);
     _description = description;
     _startTime = System.currentTimeMillis();
     _dest = dest;
   }
 
-  public H2OCountedCompleter start(H2OCountedCompleter fjtask) {
+  public <T extends H2OCountedCompleter> T start(T fjtask) {
     _fjtask = fjtask;
     DKV.put(_self, new Value(_self, new byte[0]));
     new TAtomic<List>() {

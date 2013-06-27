@@ -11,10 +11,10 @@ public class ParseCompressedAndXLSTest extends TestUtil {
   @Test public void  testIris(){
     Key k1 = null,k2 = null,k3 = null, k4 = null;
     try {
-      k1 = loadAndParseKey("csv.hex","smalldata/iris/iris_wheader.csv");
-      k2 = loadAndParseKey("xls.hex","smalldata/iris/iris.xls");
-      k3 = loadAndParseKey("gzip.hex","smalldata/iris/iris_wheader.csv.gz");
-      k4 = loadAndParseKey("zip.hex","smalldata/iris/iris_wheader.csv.zip");
+      k1 = loadAndParseFile("csv.hex","smalldata/iris/iris_wheader.csv");
+      k2 = loadAndParseFile("xls.hex","smalldata/iris/iris.xls");
+      k3 = loadAndParseFile("gzip.hex","smalldata/iris/iris_wheader.csv.gz");
+      k4 = loadAndParseFile("zip.hex","smalldata/iris/iris_wheader.csv.zip");
       Value v1 = DKV.get(k1);
       Value v2 = DKV.get(k2);
       Value v3 = DKV.get(k3);
