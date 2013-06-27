@@ -36,7 +36,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud(h2o.nodes)
     
-    def test_parse_fs_schmoo(self):
+    def test_parse_fs_schmoo2(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn_prostate.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename
@@ -63,6 +63,9 @@ class Basic(unittest.TestCase):
                 csvFilename, 'took', time.time() - start, 'seconds'
 
             h2o_cmd.runInspect(key=key2)
+            # do a little testing of saving the key as a csv
+            h2o.nodes[0].csv_download(key=key2)
+
             # only used this for debug to look at parse (red last row) on failure
             ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
             h2o.check_sandbox_for_errors()

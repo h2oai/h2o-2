@@ -863,7 +863,7 @@ class H2O(object):
             }
         browseAlso = kwargs.get('browseAlso', False)
         params_dict.update(kwargs)
-        print "\nKMeansApply params list", params_dict
+        print "\nKMeansApply params list:", params_dict
         a = self.__do_json_request('KMeansApply.json', timeout=timeoutSecs, params=params_dict)
 
         # Check that the response has the right Progress url it's going to steer us to.
@@ -893,7 +893,7 @@ class H2O(object):
             }
         browseAlso = kwargs.get('browseAlso', False)
         params_dict.update(kwargs)
-        print "\nKMeansScore params list", params_dict
+        print "\nKMeansScore params list:", params_dict
         a = self.__do_json_request('KMeansScore.json', timeout=timeoutSecs, params=params_dict)
 
         # kmeans_score doesn't need polling?
@@ -920,7 +920,7 @@ class H2O(object):
         if key2 is not None: params_dict['destination_key'] = key2
         browseAlso = kwargs.get('browseAlso', False)
         params_dict.update(kwargs)
-        print "\nKMeans params list", params_dict
+        print "\nKMeans params list:", params_dict
         a = self.__do_json_request('KMeans.json', timeout=timeoutSecs, params=params_dict)
 
         # Check that the response has the right Progress url it's going to steer us to.
@@ -1231,14 +1231,23 @@ class H2O(object):
 
     def log_view(self, timeoutSecs=10, **kwargs):
         browseAlso = kwargs.pop('browseAlso',False)
-
         a = self.__do_json_request('LogView.json', timeout=timeoutSecs)
-
         verboseprint("\nlog_view result:", dump_json(a))
         if (browseAlso | browse_json):
             h2b.browseJsonHistoryAsUrlLastMatch("LogView")
             time.sleep(3) # to be able to see it
         return a
+
+    # FIX! where does it download to?
+    def csv_download(self, key, timeoutSecs=60, **kwargs):
+        params_dict = { 
+            'key': key,
+        }
+        params_dict.update(kwargs)
+        print "\n", "params list:", params_dict
+        a = self.__do_json_request('downloadCsv.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint(dump_json(a))
+        return a 
 
     # shouldn't need params
     def log_download(self, logDir=None, timeoutSecs=5, **kwargs):
@@ -1282,7 +1291,7 @@ class H2O(object):
             'link': 'familyDefault'
         }
         params_dict.update(kwargs)
-        print "\n"+parentName, "params list", params_dict
+        print "\n"+parentName, "params list:", params_dict
         a = self.__do_json_request(parentName + '.json', timeout=timeoutSecs, params=params_dict)
         verboseprint(parentName, dump_json(a))
         return a 
@@ -1355,7 +1364,7 @@ class H2O(object):
             'model_key': model_key,
         }
         params_dict.update(kwargs)
-        print "\nGLMScore params list", params_dict
+        print "\nGLMScore params list:", params_dict
 
         a = self.__do_json_request('GLMScore.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("GLMScore:", dump_json(a))
