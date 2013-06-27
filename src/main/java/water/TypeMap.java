@@ -18,6 +18,7 @@ public class TypeMap {
     "hex.DLSM$GeneralizedGradientSolver",
     "hex.KMeans",
     "hex.KMeansModel",
+    "hex.rf.DRF$DRFParams",
     "hex.rf.RFModel",
     "water.FetchClazz",
     "water.FetchId",
