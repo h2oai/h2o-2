@@ -46,6 +46,7 @@ public class Cloud extends Request {
       node.addProperty(FJ_QUEUE_LO, (int)hb._fjqueue_lo);
       node.addProperty(RPCS, (int)hb._rpcs);
       node.addProperty(TCPS_ACTIVE, (int) hb._tcps_active);
+      node.addProperty(LAST_CONTACT,h2o._last_heard_from);
       nodes.add(node);
     }
     response.add(NODES,nodes);
@@ -54,7 +55,9 @@ public class Cloud extends Request {
     Response r = Response.done(response);
     r.setBuilder(CONSENSUS, new BooleanStringBuilder("","Voting new members"));
     r.setBuilder(LOCKED, new BooleanStringBuilder("Locked","Accepting new members"));
+    r.setBuilder(NODES, new MyAryBuilder());
     r.setBuilder(NODES+"."+NAME, new NodeCellBuilder());
+    r.setBuilder(NODES+"."+LAST_CONTACT, new LastContactBuilder());
     return r;
   }
 
@@ -63,12 +66,32 @@ public class Cloud extends Request {
   }
 
   // Just the Node as a link
-  public class NodeCellBuilder extends ArrayRowElementBuilder {
+  private static class NodeCellBuilder extends ArrayRowElementBuilder {
     @Override public String elementToString(JsonElement element, String contextName) {
       String str = element.getAsString();
       if( str.equals(H2O.SELF.toString()) )
         return "<a href='StoreView.html'>"+str+"</a>";
       return "<a href='Remote.html?Node="+str+"'>"+str+"</a>";
+    }
+  }
+  // Highlight sick nodes
+  private static class MyAryBuilder extends ArrayBuilder {
+    static ArrayRowBuilder MY_ARRAY_ROW = new MyRowBuilder();
+    @Override public Builder defaultBuilder(JsonElement element) { return MY_ARRAY_ROW; }
+  }
+  private static class MyRowBuilder extends ArrayRowBuilder {
+    @Override public String header(JsonObject object, String objectName) {
+      long then = object.getAsJsonPrimitive(LAST_CONTACT).getAsLong();
+      long now = System.currentTimeMillis();
+      return ((now-then) >= HeartBeatThread.TIMEOUT) ? "\n<tr class=\"error\">" : "\n<tr>";
+    }
+  }
+  // Last-heard-from time pretty-printing
+  private static class LastContactBuilder extends ArrayRowElementBuilder {
+    @Override public String elementToString(JsonElement element, String contextName) {
+      long then = element.getAsLong();
+      long now = System.currentTimeMillis();
+      return (now-then >= 2*1000) ? ""+((now-then)/1000)+" secs ago" : "now";
     }
   }
 }

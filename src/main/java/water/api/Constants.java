@@ -85,6 +85,7 @@ public class Constants {
   public static final String K                     = "k";
   public static final String KEY                   = "key";
   public static final String KEYS                  = "keys";
+  public static final String LAST_CONTACT          = "last_contact";
   public static final String LAMBDA                = "lambda";
   public static final String LIMIT                 = "limit";
   public static final String LINK                  = "link";
