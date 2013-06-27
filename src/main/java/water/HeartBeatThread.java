@@ -26,7 +26,7 @@ public class HeartBeatThread extends Thread {
 
   // Timeout in msec before we decide to not include a Node in the next round
   // of Paxos Cloud Membership voting.
-  static final int TIMEOUT = 60000;
+  static public final int TIMEOUT = 60000;
 
   // Timeout in msec before we decide a Node is suspect, and call for a vote
   // to remove him.  This must be strictly greater than the TIMEOUT.
@@ -113,9 +113,15 @@ public class HeartBeatThread extends Thread {
 
       // Look for napping Nodes & propose removing from Cloud
       for( H2ONode h2o : cloud._memary ) {
-        if( now - h2o._last_heard_from > SUSPECT ) {  // We suspect this Node has taken a dirt nap
-          Paxos.print("hart: announce suspect node",cloud._memary,h2o.toString());
-          break;
+        long delta = now - h2o._last_heard_from;
+        if( delta > SUSPECT ) {// We suspect this Node has taken a dirt nap
+          if( !h2o._announcedLostContact ) {
+            Paxos.print("hart: announce suspect node",cloud._memary,h2o.toString());
+            h2o._announcedLostContact = true;
+          }
+        } else if( h2o._announcedLostContact ) {
+          Paxos.print("hart: regained contact with node",cloud._memary,h2o.toString());
+          h2o._announcedLostContact = false;
         }
       }
     }
