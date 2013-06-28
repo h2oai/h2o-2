@@ -15,7 +15,7 @@ public class GBMTest extends TestUtil {
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   // ==========================================================================
-  /*@Test*/ public void testBasicGBM() {
+  @Test public void testBasicGBM() {
     File file = TestUtil.find_test_file("./smalldata/logreg/prostate.csv");
     Key fkey = NFSFileVec.make(file);
     Frame fr = ParseDataset2.parse(Key.make("prostate.hex"),new Key[]{fkey});
