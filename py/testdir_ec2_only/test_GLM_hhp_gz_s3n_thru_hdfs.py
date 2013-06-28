@@ -35,8 +35,8 @@ class Basic(unittest.TestCase):
         print "Should look like hhp_107_01/hhp_107_01.data.gz_00030 in bucket: home-0xdiag-datasets"
 
         csvFilename = "*gz"
-        csvPathname = "hhp_107_01/" + csvFilename
-        URI = "s3n://home-0xdiag-datasets/"
+        csvPathname = csvFilename
+        URI = "s3n://home-0xdiag-datasets/hhp_107_01"
         s3nKey = URI + csvPathname
 
         trialMax = 1
