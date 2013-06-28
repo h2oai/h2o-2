@@ -87,7 +87,7 @@ class Basic(unittest.TestCase):
             h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
             # we should be able to export the model to hdfs
-            e = h2o.nodes.export_hdfs(source_key="rfmodel.hex", path="/datasets/rfmodel.hex")
+            e = h2o.nodes[0].export_hdfs(source_key="rfmodel.hex", path="/datasets/rfmodel.hex")
             # wait in case it recomputes it
             time.sleep(10)
 

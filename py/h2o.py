@@ -671,7 +671,7 @@ class H2O(object):
             paramsStr = ''
 
         if extraComment:
-            log('Start ' + url + paramsStr + " # " + extraComment)
+            log('Start ' + url + paramsStr, comment=extraComment)
         else:
             log('Start ' + url + paramsStr)
 
@@ -1010,8 +1010,8 @@ class H2O(object):
             )
         return a
 
-    def store_view(self):
-        a = self.__do_json_request('StoreView.json', params={})
+    def store_view(self, timeoutSecs=60):
+        a = self.__do_json_request('StoreView.json', timeout=timeoutSecs)
         # print dump_json(a)
         return a
 
@@ -1247,16 +1247,20 @@ class H2O(object):
             time.sleep(3) # to be able to see it
         return a
 
-    # FIX! where does it download to?
-    def csv_download(self, key, timeoutSecs=60, **kwargs):
-        params_dict = { 
-            'key': key,
-        }
-        params_dict.update(kwargs)
-        print "\n", "params list:", params_dict
-        a = self.__do_json_request('downloadCsv.json', timeout=timeoutSecs, params=params_dict)
-        verboseprint(dump_json(a))
-        return a 
+    def csv_download(self, key, csvPathname, timeoutSecs=60, **kwargs):
+        # log it
+        params = {'key': key}
+        paramsStr =  '?' + '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
+        url = self.__url('downloadCsv')
+        log('Start ' + url + paramsStr, comment=csvPathname)
+
+        # do it (absorb in 1024 byte chunks)
+        r = requests.get(url, params=params, timeout=timeoutSecs)
+        print "csv_download r.headers:", r.headers
+        if r.status_code == 200:
+            f = open(csvPathname, 'wb')
+            for chunk in r.iter_content(1024):
+                f.write(chunk)
 
     # shouldn't need params
     def log_download(self, logDir=None, timeoutSecs=5, **kwargs):

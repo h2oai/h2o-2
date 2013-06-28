@@ -1,8 +1,9 @@
 package water.api;
 
-import hex.rf.*;
-import hex.rf.ConfusionTask.CMJob;
-import water.*;
+import hex.rf.ConfusionTask;
+import hex.rf.RFModel;
+import water.Key;
+import water.UKV;
 import water.util.RString;
 
 import com.google.gson.JsonObject;
@@ -19,10 +20,8 @@ public class RFScore extends Request {
   protected final HexKeyClassCol     _classCol = new HexKeyClassCol(CLASS, _dataKey);
   protected final Int                _numTrees = new NTree(NUM_TREES, _modelKey);
   protected final H2OCategoryWeights _weights  = new H2OCategoryWeights(WEIGHTS, _modelKey, _dataKey, _classCol, 1);
-  protected final Bool               _noCM     = new Bool(NO_CM, false,"Do not produce confusion matrix");
   protected final Bool               _clearCM  = new Bool(JSON_CLEAR_CM, false, "Clear cache of model confusion matrices");
 
-  public static final String JSON_CONFUSION_KEY = "confusion_key";
   public static final String JSON_CLEAR_CM      = "clear_confusion_matrix";
 
   RFScore() {
@@ -48,7 +47,6 @@ public class RFScore extends Request {
 
   @Override protected Response serve() {
     RFModel model = _modelKey.value();
-    double[] weights = _weights.value();
     JsonObject response = new JsonObject();
     response.addProperty(DATA_KEY, _dataKey.originalValue());
     response.addProperty(MODEL_KEY, _modelKey.originalValue());
@@ -60,9 +58,6 @@ public class RFScore extends Request {
 
     if (_clearCM.value()) clearCachedCM(false);
 
-    // RF scoring do not use RF oobee computation.
-    CMJob cmJob = ConfusionTask.make(model, _dataKey.value()._key, _classCol.value(), weights, false);
-
-    return RFView.redirect(response, cmJob.self(), _modelKey.value()._selfKey);
+    return RFView.redirect(response, null, _modelKey.value()._selfKey, _dataKey.value()._key, model._totalTrees, _classCol.value(), _weights.originalValue(), false, false);
   }
 }

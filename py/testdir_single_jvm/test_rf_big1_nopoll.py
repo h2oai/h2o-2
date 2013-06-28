@@ -38,15 +38,16 @@ class Basic(unittest.TestCase):
             start = time.time()
             kwargs = {}
             model_key = 'RF_model' + str(jobDispatch)
+            trees = 7
             # FIX! what model keys do these get?
             randomNode = h2o.nodes[random.randint(0,len(h2o.nodes)-1)]
-            h2o_cmd.runRFOnly(node=randomNode, parseKey=parseKey, model_key=model_key, timeoutSecs=300, noPoll=True, **kwargs)
-
-            print "rfView:", h2o.dump_json(rfView)
+            h2o_cmd.runRFOnly(node=randomNode, parseKey=parseKey, trees=trees, model_key=model_key, timeoutSecs=300, noPoll=True, **kwargs)
             # FIX! are these already in there?
             rfView['data_key'] = key2
             rfView['model_key'] = model_key
+            rfView['ntree'] = trees
             rfViewInitial.append(rfView)
+
             print "rf job dispatch end on ", csvPathname, 'took', time.time() - start, 'seconds'
             print "\njobDispatch #", jobDispatch
 
@@ -56,12 +57,15 @@ class Basic(unittest.TestCase):
         # if we do another poll they should be done now, and better to get it that 
         # way rather than the inspect (to match what simpleCheckGLM is expected
         for rfView in rfViewInitial:
-            print "Checking completed job, with no polling:", rfView
+            print "Checking completed job:", rfView
             print "rfView", h2o.dump_json(rfView)
             data_key = rfView['data_key']
             model_key = rfView['model_key']
-            a = h2o.nodes[0].random_forest_view(data_key, model_key, noPoll=True)
-            h2o_rf.simpleCheckRFView(None, a)
+            ntree = rfView['ntree']
+            # a = h2o.nodes[0].random_forest_view(data_key, model_key, noPoll=True)
+            print "Temporary hack: need to do two rf views minimum, to complete a RF (confusion matrix creation)"
+            # allow it to poll to complete
+            h2o_cmd.runRFView(None, data_key, model_key, ntree=ntree, timeoutSecs=60, noPoll=False)
 
 if __name__ == '__main__':
     h2o.unit_main()

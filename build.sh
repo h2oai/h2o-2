@@ -40,6 +40,7 @@ SRC_JAR_FILE="${OUTDIR}/h2o-sources.jar"
 
 JAVA=`which java`||echo 'Missing java, please install jdk'
 JAVAC=`which javac`||echo 'Missing javac, please install jdk'
+JAVADOC=`which javadoc`||echo 'Missing javadoc, please install jdk'
 
 # need bootclasspath to point to jdk1.6 rt.jar bootstrap classes
 # extdirs can also be passed as -extdirs 
@@ -137,6 +138,12 @@ function build_src_jar() {
     cp ${SRC_JAR_FILE} ${OUTDIR}/h2o-sources-${JAR_TIME}.jar
 }
 
+function build_javadoc() {
+    echo "creating javadoc file... ${SRC_JAR_FILE}"
+    local CLASSPATH="${JAR_ROOT}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/*"
+    "${JAVADOC}" -classpath "${CLASSPATH}" -d "${OUTDIR}"/javadoc -sourcepath "${SRC}" -subpackages hex:water
+}
+
 function junit() {
     echo "running JUnit tests..."
     "$JAVA" -ea -cp ${JAR_FILE} water.Boot -mainClass water.JUnitRunner
@@ -148,6 +155,8 @@ build_classes
 if [ "$1" = "compile" ]; then exit 0; fi
 build_initializer
 build_jar
-build_src_jar
 if [ "$1" = "build" ]; then exit 0; fi
+build_src_jar
+build_javadoc
+if [ "$1" = "doc" ]; then exit 0; fi
 junit
