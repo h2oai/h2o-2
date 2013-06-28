@@ -19,7 +19,7 @@ import water.util.Log.Tag.Sys;
 import com.google.common.base.Strings;
 import com.google.common.io.ByteStreams;
 import com.google.gson.*;
-import com.sun.media.sound.InvalidDataException;
+
 
 public final class PersistHdfs extends Persist {
   public static final Configuration CONF;
@@ -281,9 +281,9 @@ public final class PersistHdfs extends Persist {
             JsonParser parser = new JsonParser();
             JsonObject json = parser.parse(new InputStreamReader(fs.open(pfs))).getAsJsonObject();
             JsonElement v = json.get(Constants.VERSION);
-            if( v == null ) throw new InvalidDataException("Missing version");
+            if( v == null ) throw new RuntimeException("Missing version");
             JsonElement type = json.get(Constants.TYPE);
-            if( type == null ) throw new InvalidDataException("Missing type");
+            if( type == null ) throw new RuntimeException("Missing type");
             Class c = Class.forName(type.getAsString());
             Model model = (Model) c.newInstance();
             model.fromJson(json);
