@@ -1021,10 +1021,17 @@ class H2O(object):
         a = self.__do_json_request('Remove.json', params={"key": key}, ignoreH2oError=True)
         return a
 
-    # H2O doesn't support yet?
-    def Store2HDFS(self, key):
-        a = self.__do_json_request('Store2HDFS.json', params={"key": key})
-        verboseprint("\ninspect result:", dump_json(a))
+    # only model keys can be exported?
+    def export_hdfs(self, source_key, path):
+        a = self.__do_json_request('ExportHdfs.json', 
+            params={"source_key": key, "path": path})
+        verboseprint("\nexport_hdfs result:", dump_json(a))
+        return a
+
+    def export_s3(self, source_key, bucket, obj):
+        a = self.__do_json_request('ExportS3.json', 
+            params={"source_key": key, "bucket": bucket, "object": obj})
+        verboseprint("\nexport_s3 result:", dump_json(a))
         return a
 
     # the param name for ImportFiles is 'file', but it can take a directory or a file.
