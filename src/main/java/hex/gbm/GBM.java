@@ -1,4 +1,4 @@
-package hex;
+package hex.gbm;
 
 import java.util.Arrays;
 import water.*;
