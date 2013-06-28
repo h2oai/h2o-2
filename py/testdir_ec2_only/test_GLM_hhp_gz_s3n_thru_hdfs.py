@@ -34,10 +34,10 @@ class Basic(unittest.TestCase):
         print "Trying to load the 100 gz files in the hhp_107_01 dir"
         print "Should look like hhp_107_01/hhp_107_01.data.gz_00030 in bucket: home-0xdiag-datasets"
 
-        csvFilename = "*gz"
+        csvFilename = "*gz*"
         csvPathname = csvFilename
         URI = "s3n://home-0xdiag-datasets/hhp_107_01"
-        s3nKey = URI + csvPathname
+        s3nKey = URI + "/" + csvPathname
 
         trialMax = 1
         for trial in range(trialMax):
@@ -62,7 +62,8 @@ class Basic(unittest.TestCase):
             timeoutSecs = 500
             start = time.time()
             parseKey = h2o.nodes[0].parse(s3nKey, key2,
-                timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60, noise=('JStack', None))
+                timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
+                # noise=('JStack', None)
             elapsed = time.time() - start
             print s3nKey, 'h2o reported parse time:', parseKey['response']['time']
             print "parse end on ", s3nKey, 'took', elapsed, 'seconds',\
@@ -97,7 +98,7 @@ class Basic(unittest.TestCase):
 
             # assume we can only save the model to s3n/hdfs?
             GLMModel = glm['GLMModel']
-            modelKey = GLMModel['model_key']
+            model_key = GLMModel['model_key']
             # should be able to do it with s3 or s3n/hdfs path
             # FIX! should do some checking of the model (write, remove key, re-read?
             # This is all work in progress. we don't version check the .hex file

@@ -31,13 +31,10 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM_allstate_s3n_thru_hdfs(self):
-        # csvFilename = "covtype20x.data"
-        # csvPathname = csvFilename
         csvFilename = "train_set.csv"
-        csvPathname = csvFilename
         # https://s3.amazonaws.com/home-0xdiag-datasets/allstate/train_set.csv
         URI = "s3n://home-0xdiag-datasets/allstate/"
-        s3nKey = URI + csvPathname
+        s3nKey = URI + csvFilename
 
         trialMax = 3
 
@@ -90,7 +87,7 @@ class Basic(unittest.TestCase):
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, 
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=60, noise=('JStack', None), **kwargs)
             elapsed = time.time() - start
-            print "glm (L2) end on ", csvPathname, 'took', elapsed, 'seconds',\
+            print "glm (L2) end on ", csvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             h2o_glm.simpleCheckGLM(self, glm, None, noPrint=True, **kwargs)
             h2o.check_sandbox_for_errors()
@@ -101,7 +98,7 @@ class Basic(unittest.TestCase):
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey,
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=60, noise=('JStack', None), **kwargs)
             elapsed = time.time() - start
-            print "glm (Elastic) end on ", csvPathname, 'took', elapsed, 'seconds',\
+            print "glm (Elastic) end on ", csvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             h2o_glm.simpleCheckGLM(self, glm, None, noPrint=True, **kwargs)
             h2o.check_sandbox_for_errors()
@@ -112,7 +109,7 @@ class Basic(unittest.TestCase):
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey,
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=60, noise=('JStack', None), **kwargs)
             elapsed = time.time() - start
-            print "glm (L1) end on ", csvPathname, 'took', elapsed, 'seconds',\
+            print "glm (L1) end on ", csvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             h2o_glm.simpleCheckGLM(self, glm, None, noPrint=True, **kwargs)
             h2o.check_sandbox_for_errors()

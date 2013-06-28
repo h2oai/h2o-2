@@ -1511,23 +1511,24 @@ class H2O(object):
             '--name=' + cloud_name()
             ]
 
-        # FIX! need to be able to specify name node/path for non-0xdata hdfs
-        # specifying hdfs stuff when not used shouldn't hurt anything
+        # ignore the other -hdfs args if the config is used?
+        if self.hdfs_config:
+            args += [
+                '-hdfs_config ' + self.hdfs_config
+            ]
+
         if self.use_hdfs:
             args += [
                 # it's fine if hdfs_name has a ":9000" port or something too
                 '-hdfs hdfs://' + self.hdfs_name_node,
                 '-hdfs_version=' + self.hdfs_version, 
             ]
+
         if self.use_maprfs:
             args += [
                 # 3 slashes?
                 '-hdfs maprfs:///' + self.hdfs_name_node,
                 '-hdfs_version=' + self.hdfs_version, 
-            ]
-        if self.hdfs_config:
-            args += [
-                '-hdfs_config ' + self.hdfs_config
             ]
 
         if not self.sigar:
@@ -1565,11 +1566,12 @@ class H2O(object):
         ):
 
         if use_hdfs:
-            # see if we can touch a 0xdata machie
+            # see if we can touch a 0xdata machine
             try:
-                a = requests.get('http://169.168.1.176:80')
+                # long timeout in ec2...bad
+                a = requests.get('http://169.168.1.176:80', timeout=1)
                 hdfs_0xdata_visible = True
-            except requests.exceptions.ConnectionError as e:
+            except:
                 hdfs_0xdata_visible = False
      
             # different defaults, depending on where we're running
