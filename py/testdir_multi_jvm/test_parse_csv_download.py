@@ -82,11 +82,15 @@ class parse_rand_schmoo(unittest.TestCase):
 
             start = time.time()
             parseKeyA = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2)
-            print "\ntrial #", trial, "totalRows:", totalRows, "parse end on ", \
+            print "\nA trial #", trial, "totalRows:", totalRows, "parse end on ", \
                 csvFilename, 'took', time.time() - start, 'seconds'
 
             inspect = h2o_cmd.runInspect(key=key2)
-            h2o_cmd.infoFromInspect(inspect, csvPathname)
+            missingValuesListA = h2o_cmd.infoFromInspect(inspect, csvPathname)
+            num_colsA = inspect['num_cols']
+            num_rowsA = inspect['num_rows']
+            row_sizeA = inspect['row_size']
+            value_size_bytesA = inspect['value_size_bytes']
 
             # do a little testing of saving the key as a csv
             csvDownloadPathname = SYNDATASETS_DIR + "/csvDownload.csv"
@@ -96,10 +100,25 @@ class parse_rand_schmoo(unittest.TestCase):
             h2o.nodes[0].remove_key(key2)
             start = time.time()
             parseKeyB = h2o_cmd.parseFile(csvPathname=csvDownloadPathname, key=key, key2=key2)
-            print "trial #", trial, "totalRows:", totalRows, "parse end on ", \
+            print "B trial #", trial, "totalRows:", totalRows, "parse end on ", \
                 csvFilename, 'took', time.time() - start, 'seconds'
             inspect = h2o_cmd.runInspect(key=key2)
-            h2o_cmd.infoFromInspect(inspect, csvPathname)
+            missingValuesListB = h2o_cmd.infoFromInspect(inspect, csvPathname)
+            num_colsB = inspect['num_cols']
+            num_rowsB = inspect['num_rows']
+            row_sizeB = inspect['row_size']
+            value_size_bytesB = inspect['value_size_bytes']
+
+            self.assertEqual(missingValuesListA, missingValuesListB, 
+                "missingValuesList mismatches after re-parse of downloadCsv result")
+            self.assertEqual(num_colsA, num_colsB, 
+                "num_cols mismatches after re-parse of downloadCsv result")
+            self.assertEqual(num_rowsA, num_rowsB, 
+                "num_rows mismatches after re-parse of downloadCsv result")
+            self.assertEqual(row_sizeA, row_sizeB, 
+                "row_size mismatches after re-parse of downloadCsv result")
+            self.assertEqual(value_size_bytesA, value_size_bytesB, 
+                "value_size_bytes mismatches after re-parse of downloadCsv result")
 
             # FIX! should compare the results of the two parses. The infoFromInspect result?
 

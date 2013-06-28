@@ -1256,6 +1256,7 @@ class H2O(object):
 
         # do it (absorb in 1024 byte chunks)
         r = requests.get(url, params=params, timeout=timeoutSecs)
+        print "csv_download r.headers:", r.headers
         if r.status_code == 200:
             f = open(csvPathname, 'wb')
             for chunk in r.iter_content(1024):
