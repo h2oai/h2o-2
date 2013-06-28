@@ -1,12 +1,11 @@
 package water.api;
 
-import java.util.Arrays;
-
 import hex.rf.*;
 import hex.rf.ConfusionTask.CMFinal;
-import hex.rf.ConfusionTask.CMJob;
-import water.Key;
-import water.UKV;
+
+import java.util.Arrays;
+
+import water.*;
 import water.util.RString;
 
 import com.google.gson.*;
@@ -45,21 +44,40 @@ public class RFView extends /* Progress */ Request {
   public static final String JSON_CM_ROWS_SKIPPED = "rows_skipped";
   public static final String JSON_CM_CLASSES_ERRORS = "classes_errors";
 
-  private final static String[] PARAMS_LIST  = new String[] {DATA_KEY, MODEL_KEY, CLASS, NUM_TREES, WEIGHTS, OOBEE, NO_CM, JSON_CLEAR_CM};
   RFView() {
     // hide in generated query page
     _oobee._hideInQuery = true;
     _numTrees._readOnly = true;
   }
 
-  public static Response redirect(JsonObject fromPageResponse, Key job, Key model) {
-    JsonObject destPageParams = new JsonObject();
-    destPageParams.addProperty(JOB, job.toString());
-    destPageParams.addProperty(DEST_KEY, model.toString());
-    for (String param : PARAMS_LIST) {
-      if (fromPageResponse.has(param)) destPageParams.addProperty(param, fromPageResponse.get(param).getAsString());
-    }
-    return Response.redirect(fromPageResponse, RFView.class, destPageParams);
+  public static Response redirect(JsonObject fromPageResponse, Key jobKey, Key modelKey, Key dataKey, int ntree, int classCol, String weights, boolean oobee, boolean iterativeCM) {
+    JsonObject redirect = new JsonObject();
+    if (jobKey!=null) redirect.addProperty(JOB, jobKey.toString());
+    redirect.addProperty(MODEL_KEY, modelKey.toString());
+    redirect.addProperty(DEST_KEY, modelKey.toString());
+    redirect.addProperty(DATA_KEY, dataKey.toString());
+    redirect.addProperty(NUM_TREES, ntree);
+    redirect.addProperty(CLASS, classCol);
+    if (weights != null)
+      redirect.addProperty(WEIGHTS, weights);
+    redirect.addProperty(OOBEE, oobee);
+    redirect.addProperty(ITERATIVE_CM, oobee);
+
+    return Response.redirect(fromPageResponse, RFView.class, redirect);
+  }
+
+  public static Response redirect(JsonObject fromPageResponse, Key rfModelKey) {
+    RFModel rfModel = DKV.get(rfModelKey).get();
+    ValueArray data = DKV.get(rfModel._dataKey).get();
+    return redirect(fromPageResponse, null, rfModelKey, rfModel._dataKey, rfModel._totalTrees, data.numCols()-1, null, true, false );
+  }
+
+  public static Response redirect(JsonObject fromPageResponse, Key rfModel, Key dataKey, boolean oobee) {
+    JsonObject redir = new JsonObject();
+    redir.addProperty(MODEL_KEY, rfModel.toString());
+    redir.addProperty(DATA_KEY, dataKey.toString());
+    redir.addProperty(OOBEE, oobee);
+    return Response.redirect(fromPageResponse, RFView.class, redir);
   }
 
   public static String link(Key k, String content) {
@@ -74,21 +92,8 @@ public class RFView extends /* Progress */ Request {
     return rs.toString();
   }
 
-  public static Response redirect(JsonObject fromPageResponse, Key rfModel) {
-    JsonObject redir = new JsonObject();
-    redir.addProperty(MODEL_KEY, rfModel.toString());
-    return Response.redirect(null, RFView.class, redir);
-  }
-
-  public static Response redirect(JsonObject fromPageResponse, Key rfModel, Key dataKey, boolean oobee) {
-    JsonObject redir = new JsonObject();
-    redir.addProperty(MODEL_KEY, rfModel.toString());
-    redir.addProperty(DATA_KEY, dataKey.toString());
-    redir.addProperty(OOBEE, oobee);
-    return Response.redirect(fromPageResponse, RFView.class, redir);
-  }
-
   protected JsonObject defaultJsonResponse() {
+    // This will be shown every request
     JsonObject r = new JsonObject();
     RFModel model = _modelKey.value();
     r.addProperty(  DATA_KEY, _dataKey.originalValue());
@@ -169,7 +174,7 @@ public class RFView extends /* Progress */ Request {
         // FIXME do not launch more than one job for the same modelSize
         ConfusionTask.make(model, modelSize, _dataKey.value()._key, _classCol.value(), weights, _oobee.value());
       }
-    }
+    } else if (_noCM.value() && finished == tasks) done = true;
 
     // Trees
     JsonObject trees = new JsonObject();

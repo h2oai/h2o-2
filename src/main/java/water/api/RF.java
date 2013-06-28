@@ -87,7 +87,6 @@ public class RF extends Request {
   /** Fires the random forest computation.
    */
   @Override public Response serve() {
-    JsonObject response = new JsonObject();
     ValueArray ary = _dataKey.value();
     int classCol = _classCol.value();
     int ntree = _numTrees.value();
@@ -140,18 +139,15 @@ public class RF extends Request {
               _useNonLocalData.value()
               );
       // Collect parameters required for validation.
+      JsonObject response = new JsonObject();
       response.addProperty(DATA_KEY, dataKey.toString());
-      response.addProperty(MODEL_KEY, modelKey.toString());
+      response.addProperty(MODEL_KEY, drfJob.dest().toString());
+      response.addProperty(DEST_KEY, drfJob.dest().toString());
       response.addProperty(NUM_TREES, ntree);
       response.addProperty(CLASS, classCol);
-      if (_weights.specified())
-        response.addProperty(WEIGHTS, _weights.originalValue());
-      if (_ignore.specified())
-        response.addProperty(IGNORE, _ignore.originalValue());
-      response.addProperty(OOBEE, _oobee.value());
-      response.addProperty(ITERATIVE_CM, _iterativeCM.value());
-
-      return Response.redirect(response, RFView.class, response);
+      Response r = RFView.redirect(response, drfJob.self(), drfJob.dest(), dataKey, ntree, classCol, _weights.originalValue(), _oobee.value(), _iterativeCM.value());
+      r.setBuilder(DEST_KEY, new KeyElementBuilder());
+      return r;
     } catch (IllegalArgumentException e) {
       return Response.error("Incorrect input data: "+e.getMessage());
     }
