@@ -136,7 +136,7 @@ public class RFView extends /* Progress */ Request {
       Key     cmKey = ConfusionTask.keyForCM(model._selfKey, modelSize, _dataKey.value()._key, _classCol.value(), _oobee.value());
       CMFinal confusion = UKV.get(cmKey);
       // if the matrix is valid, report it in the JSON
-      if (confusion!=null && modelSize > 0) {
+      if (confusion!=null && confusion.valid() && modelSize > 0) {
         //finished += 1;
         JsonObject cm = new JsonObject();
         JsonArray cmHeader = new JsonArray();
@@ -169,9 +169,8 @@ public class RFView extends /* Progress */ Request {
         response.add(JSON_CM,cm);
 
         done = finished == tasks;
-      } else {
-        // Start CM computation
-        // FIXME do not launch more than one job for the same modelSize
+      } else if (confusion == null) {
+        // Nobody start computation yet, thus we can start CM computation
         ConfusionTask.make(model, modelSize, _dataKey.value()._key, _classCol.value(), weights, _oobee.value());
       }
     } else if (_noCM.value() && finished == tasks) done = true;

@@ -1,5 +1,7 @@
 package hex.rf;
 
+import hex.rf.DRF.DRFJob;
+
 import java.util.Arrays;
 import java.util.Random;
 
@@ -117,12 +119,13 @@ public class ConfusionTask extends MRTask {
         CMFinal cmResult = UKV.get(cmJob.dest());
         // Reuse cached results
         if (cmResult == null) {
+          // Put non-valid CM. This is not properly synchronized
+          DKV.put(cmJob.dest(), CMFinal.make());
           ConfusionTask cmTask = new ConfusionTask(cmJob, model,modelSize,datakey,classcol,classWt,computeOOB);
           cmTask.invoke(datakey);
           cmResult = CMFinal.make(cmTask._matrix, model, cmTask.domain(), cmTask._errorsPerTree, computeOOB);
-          // Propagate the result
-          DKV.put(cmJob.dest(), cmResult);
-          DKV.write_barrier();
+          // Overwrite the result
+          CMFinal.updateDKV(cmJob.dest(), cmResult);
         }
         cmJob.remove();
         tryComplete();
@@ -448,19 +451,34 @@ public class ConfusionTask extends MRTask {
     final protected String[] _domain;
     final protected long  [] _errorsPerTree;
     final protected boolean  _computedOOB;
-    private CMFinal(CM cm, Key rfModelKey, String[] domain, long[] errorsPerTree, boolean computedOOB) {
+    protected boolean        _valid;
+    private CMFinal() {
+      _valid = false;
+      _rfModelKey = null;
+      _domain = null;
+      _errorsPerTree = null;
+      _computedOOB = false;
+    }
+    private CMFinal(CM cm, Key rfModelKey, String[] domain, long[] errorsPerTree, boolean computedOOB, boolean valid) {
       _matrix = cm._matrix; _errors = cm._errors; _rows = cm._rows; _skippedRows = cm._skippedRows;
       _rfModelKey = rfModelKey;
       _domain = domain;
       _errorsPerTree = errorsPerTree;
       _computedOOB = computedOOB;
+      _valid = valid;
     }
+    /** Make non-valid confusion matrix */
+    public static final CMFinal make() {
+      return new CMFinal();
+    }
+    /** Create a new confusion matrix. */
     public static final CMFinal make(CM cm, RFModel model, String[] domain, long[] errorsPerTree, boolean computedOOB) {
-      return new CMFinal(cm, model._selfKey, domain, errorsPerTree, computedOOB);
+      return new CMFinal(cm, model._selfKey, domain, errorsPerTree, computedOOB, true);
     }
     public String[] domain() { return _domain; }
     public int      dimension() { return _matrix.length; }
     public long     matrix(int i, int j) { return _matrix[i][j]; }
+    public boolean  valid() { return _valid; }
 
     /** Output information about this RF. */
     public final void report() {
@@ -490,6 +508,15 @@ public class ConfusionTask extends MRTask {
       double err = _errors / (double) _rows;
       sb.append(_rows).append(',');
       sb.append(err).append(',');
+    }
+
+    public static void updateDKV(final Key key, final CMFinal cm) {
+      new TAtomic<CMFinal>() {
+        @Override public CMFinal atomic(CMFinal old) {
+          if(old == null) return null;
+          return cm;
+        }
+      }.invoke(key);
     }
   }
 
