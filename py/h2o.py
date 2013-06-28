@@ -43,6 +43,8 @@ def drain(src, dst):
 def unit_main():
     global python_test_name
     python_test_name = inspect.stack()[1][1]
+
+
     print "\nRunning: python", python_test_name
     # moved clean_sandbox out of here, because nosetests doesn't execute h2o.unit_main in our tests.
     # UPDATE: ..is that really true? I'm seeing the above print in the console output runnning
@@ -1539,8 +1541,8 @@ class H2O(object):
         use_debugger=None, classpath=None,
         use_hdfs=False, use_maprfs=False,
         # hdfs_version="cdh4", hdfs_name_node="192.168.1.151", 
-        hdfs_version="cdh3", hdfs_name_node="192.168.1.176", 
-        hdfs_config=None,
+        # hdfs_version="cdh3", hdfs_name_node="192.168.1.176", 
+        hdfs_version=None, hdfs_name_node=None, hdfs_config=None,
         aws_credentials=None,
         use_flatfile=False, java_heap_GB=None, java_heap_MB=None, java_extra_args=None, 
         use_home_for_ice=False, node_id=None, username=None,
@@ -1550,7 +1552,28 @@ class H2O(object):
         disable_h2o_log=False, 
         enable_benchmark_log=False,
         ):
- 
+
+        if use_hdfs:
+            # see if we can touch a 0xdata machie
+            try:
+                a = requests.get('http://169.168.1.176:80')
+                hdfs_0xdata_visible = True
+            except requests.exceptions.ConnectionError as e:
+                hdfs_0xdata_visible = False
+     
+            # different defaults, depending on where we're running
+            if hdfs_name_node is None:
+                if hdfs_0xdata_visible:
+                    hdfs_name_node = "192.168.1.176"
+                else: # ec2
+                    hdfs_name_node = "10.78.14.235:9000"
+
+            if hdfs_version is None:
+                if hdfs_0xdata_visible:
+                    hdfs_version = "cdh3"
+                else: # ec2
+                    hdfs_version =  "0.20.2"
+
         self.redirect_import_folder_to_s3_path = redirect_import_folder_to_s3_path
         self.redirect_import_folder_to_s3n_path = redirect_import_folder_to_s3n_path
 
