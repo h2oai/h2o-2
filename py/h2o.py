@@ -1010,8 +1010,8 @@ class H2O(object):
             )
         return a
 
-    def store_view(self):
-        a = self.__do_json_request('StoreView.json', params={})
+    def store_view(self, timeoutSecs=60):
+        a = self.__do_json_request('StoreView.json', timeout=timeoutSecs)
         # print dump_json(a)
         return a
 
