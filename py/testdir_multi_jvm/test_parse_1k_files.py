@@ -154,8 +154,6 @@ class Basic(unittest.TestCase):
                 h2o_cmd.check_key_distribution()
                 h2o_cmd.delete_csv_key(csvFilename, importFullList)
 
-                time.sleep(500000)
-
                 h2o.tear_down_cloud()
                 if not localhost:
                     print "Waiting 30 secs before building cloud again (sticky ports?)"
