@@ -43,6 +43,8 @@ def drain(src, dst):
 def unit_main():
     global python_test_name
     python_test_name = inspect.stack()[1][1]
+
+
     print "\nRunning: python", python_test_name
     # moved clean_sandbox out of here, because nosetests doesn't execute h2o.unit_main in our tests.
     # UPDATE: ..is that really true? I'm seeing the above print in the console output runnning
@@ -1008,8 +1010,8 @@ class H2O(object):
             )
         return a
 
-    def store_view(self):
-        a = self.__do_json_request('StoreView.json', params={})
+    def store_view(self, timeoutSecs=60):
+        a = self.__do_json_request('StoreView.json', timeout=timeoutSecs)
         # print dump_json(a)
         return a
 
@@ -1021,10 +1023,17 @@ class H2O(object):
         a = self.__do_json_request('Remove.json', params={"key": key}, ignoreH2oError=True)
         return a
 
-    # H2O doesn't support yet?
-    def Store2HDFS(self, key):
-        a = self.__do_json_request('Store2HDFS.json', params={"key": key})
-        verboseprint("\ninspect result:", dump_json(a))
+    # only model keys can be exported?
+    def export_hdfs(self, source_key, path):
+        a = self.__do_json_request('ExportHdfs.json', 
+            params={"source_key": key, "path": path})
+        verboseprint("\nexport_hdfs result:", dump_json(a))
+        return a
+
+    def export_s3(self, source_key, bucket, obj):
+        a = self.__do_json_request('ExportS3.json', 
+            params={"source_key": key, "bucket": bucket, "object": obj})
+        verboseprint("\nexport_s3 result:", dump_json(a))
         return a
 
     # the param name for ImportFiles is 'file', but it can take a directory or a file.
@@ -1539,8 +1548,8 @@ class H2O(object):
         use_debugger=None, classpath=None,
         use_hdfs=False, use_maprfs=False,
         # hdfs_version="cdh4", hdfs_name_node="192.168.1.151", 
-        hdfs_version="cdh3", hdfs_name_node="192.168.1.176", 
-        hdfs_config=None,
+        # hdfs_version="cdh3", hdfs_name_node="192.168.1.176", 
+        hdfs_version=None, hdfs_name_node=None, hdfs_config=None,
         aws_credentials=None,
         use_flatfile=False, java_heap_GB=None, java_heap_MB=None, java_extra_args=None, 
         use_home_for_ice=False, node_id=None, username=None,
@@ -1550,7 +1559,28 @@ class H2O(object):
         disable_h2o_log=False, 
         enable_benchmark_log=False,
         ):
- 
+
+        if use_hdfs:
+            # see if we can touch a 0xdata machie
+            try:
+                a = requests.get('http://169.168.1.176:80')
+                hdfs_0xdata_visible = True
+            except requests.exceptions.ConnectionError as e:
+                hdfs_0xdata_visible = False
+     
+            # different defaults, depending on where we're running
+            if hdfs_name_node is None:
+                if hdfs_0xdata_visible:
+                    hdfs_name_node = "192.168.1.176"
+                else: # ec2
+                    hdfs_name_node = "10.78.14.235:9000"
+
+            if hdfs_version is None:
+                if hdfs_0xdata_visible:
+                    hdfs_version = "cdh3"
+                else: # ec2
+                    hdfs_version =  "0.20.2"
+
         self.redirect_import_folder_to_s3_path = redirect_import_folder_to_s3_path
         self.redirect_import_folder_to_s3n_path = redirect_import_folder_to_s3n_path
 

@@ -35,8 +35,8 @@ class Basic(unittest.TestCase):
         print "Should look like hhp_107_01/hhp_107_01.data.gz_00030 in bucket: home-0xdiag-datasets"
 
         csvFilename = "*gz"
-        csvPathname = "hhp_107_01/" + csvFilename
-        URI = "s3n://home-0xdiag-datasets/"
+        csvPathname = csvFilename
+        URI = "s3n://home-0xdiag-datasets/hhp_107_01"
         s3nKey = URI + csvPathname
 
         trialMax = 1
@@ -94,6 +94,21 @@ class Basic(unittest.TestCase):
             print "glm (L2) end on ", csvPathname, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             h2o_glm.simpleCheckGLM(self, glm, None, noPrint=True, **kwargs)
+
+            # assume we can only save the model to s3n/hdfs?
+            GLMModel = glm['GLMModel']
+            modelKey = GLMModel['model_key']
+            # should be able to do it with s3 or s3n/hdfs path
+            # FIX! should do some checking of the model (write, remove key, re-read?
+            # This is all work in progress. we don't version check the .hex file
+            e = h2o.nodes[0].export_s3(source_key=model_key, bucket='home-0xdiag-datasets', obj='/junk/glm_model_key_1.hex')
+            e = h2o.nodes[0].export_hdfs(source_key=model_key, path='s3n://home-0xdiag-datasets/junk/glm_model_key_2.hex')
+
+            # FIX! how do I get the key back in.
+            h2o_cmd.runInspect(key="s3n://home-0xdiag-datasets/junk/glm_model_key_2.hex")
+            h2o.nodes[0].remove_key(key=model_key)
+
+            # now try reading the model key back in
             h2o.check_sandbox_for_errors()
 
             print "Trial #", trial, "completed in", time.time() - trialStart, "seconds.", \
