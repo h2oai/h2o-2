@@ -7,7 +7,6 @@ import h2o_browse as h2b
 
 def write_syn_dataset(csvPathname, rowCount, headerData, rowData):
     dsf = open(csvPathname, "w+")
-    
     dsf.write(headerData + "\n")
     for i in range(rowCount):
         dsf.write(rowData + "\n")
@@ -18,7 +17,7 @@ def append_syn_dataset(csvPathname, rowData):
     with open(csvPathname, "a") as dsf:
         dsf.write(rowData + "\n")
 
-class glm_same_parse(unittest.TestCase):
+class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
@@ -37,13 +36,14 @@ class glm_same_parse(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud(h2o.nodes)
     
-    def test_sort_of_prostate_with_row_schmoo(self):
+    def test_parse_fs_schmoo(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn_prostate.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
         headerData = "ID,CAPSULE,AGE,RACE,DPROS,DCAPS,PSA,VOL,GLEASON"
         rowData = "1,0,65,1,2,1,1.4,0,6"
+        rowData = "1,0,65,1,2,1,1,0,6"
 
         totalRows = 99860
         write_syn_dataset(csvPathname, totalRows, headerData, rowData)
@@ -54,10 +54,6 @@ class glm_same_parse(unittest.TestCase):
         for trial in range (200):
             append_syn_dataset(csvPathname, rowData)
             totalRows += 1
-            ### start = time.time()
-            # this was useful to cause failures early on. Not needed eventually
-            ### key = h2o_cmd.parseFile(csvPathname=h2o.find_file("smalldata/logreg/prostate.csv"))
-            ### print "Trial #", trial, "parse end on ", "prostate.csv" , 'took', time.time() - start, 'seconds'
 
             start = time.time()
             key = csvFilename + "_" + str(trial)

@@ -30,13 +30,10 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_KMeans_allstate_s3n_thru_hdfs(self):
-        # csvFilename = "covtype20x.data"
-        # csvPathname = csvFilename
         csvFilename = "train_set.csv"
-        csvPathname = "allstate/" + csvFilename
         # https://s3.amazonaws.com/home-0xdiag-datasets/allstate/train_set.csv
-        URI = "s3n://home-0xdiag-datasets/"
-        s3nKey = URI + csvPathname
+        URI = "s3n://home-0xdiag-datasets/allstate"
+        s3nKey = URI + "/" + csvFilename
 
         trialMax = 3
 
@@ -80,7 +77,7 @@ class Basic(unittest.TestCase):
             kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, \
                 timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=120, **kwargs)
             elapsed = time.time() - start
-            print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', \
+            print "kmeans end on ", csvFilename, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
 

@@ -18,11 +18,11 @@ public class DownloadDataset extends Request {
 
 
   @Override public String href(){
-    return "donwloadCsv";
+    return "downloadCsv";
   }
 
   public static String link(Key k, String content){
-    return  "<a href='/donwloadCsv?key=" + k.toString() + "'>" + content + "</a>";
+    return  "<a href='/downloadCsv?key=" + k.toString() + "'>" + content + "</a>";
   }
 
 

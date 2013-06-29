@@ -35,12 +35,12 @@ class Basic(unittest.TestCase):
         USE_S3 = False
         noPoll = True
         benchmarkLogging = ['cpu','disk']
-        bucket = "home-0xdiag-datasets"
+        bucket = "flashgordon"
         if USE_S3:
-            URI = "s3://flashgordon"
+            URI = "s3://" + bucket + "/"
             protocol = "s3"
         else:
-            URI = "s3n://flashgordon"
+            URI = "s3n://" + bucket + "/" # FIX! s3n needs the trailing / now during an import?
             protocol = "s3n/hdfs"
 
         # split out the pattern match and the filename used for the hex
@@ -87,7 +87,7 @@ class Basic(unittest.TestCase):
                     # error if none? 
                     self.assertGreater(len(s3nFullList),8,"Didn't see more than 8 files in s3n?")
 
-                    s3nKey = URI + "/" + csvFilepattern
+                    s3nKey = URI + csvFilepattern
                     key2 = csvFilename + "_" + str(trial) + ".hex"
                     print "Loading", protocol, "key:", s3nKey, "to", key2
                     start = time.time()
@@ -100,7 +100,7 @@ class Basic(unittest.TestCase):
                         time.sleep(1)
                         h2o.check_sandbox_for_errors()
                         (csvFilepattern, csvFilename, totalBytes2, timeoutSecs) = csvFilenameList[i+1]
-                        s3nKey = URI + "/" + csvFilepattern
+                        s3nKey = URI + csvFilepattern
                         key2 = csvFilename + "_" + str(trial) + ".hex"
                         print "Loading", protocol, "key:", s3nKey, "to", key2
                         parse2Key = h2o.nodes[0].parse(s3nKey, key2,
@@ -111,7 +111,7 @@ class Basic(unittest.TestCase):
                         time.sleep(1)
                         h2o.check_sandbox_for_errors()
                         (csvFilepattern, csvFilename, totalBytes3, timeoutSecs) = csvFilenameList[i+2]
-                        s3nKey = URI + "/" + csvFilepattern
+                        s3nKey = URI + csvFilepattern
                         key2 = csvFilename + "_" + str(trial) + ".hex"
                         print "Loading", protocol, "key:", s3nKey, "to", key2
                         parse3Key = h2o.nodes[0].parse(s3nKey, key2,

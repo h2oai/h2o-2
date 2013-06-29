@@ -43,6 +43,8 @@ def drain(src, dst):
 def unit_main():
     global python_test_name
     python_test_name = inspect.stack()[1][1]
+
+
     print "\nRunning: python", python_test_name
     # moved clean_sandbox out of here, because nosetests doesn't execute h2o.unit_main in our tests.
     # UPDATE: ..is that really true? I'm seeing the above print in the console output runnning
@@ -669,7 +671,7 @@ class H2O(object):
             paramsStr = ''
 
         if extraComment:
-            log('Start ' + url + paramsStr + " # " + extraComment)
+            log('Start ' + url + paramsStr, comment=extraComment)
         else:
             log('Start ' + url + paramsStr)
 
@@ -863,7 +865,7 @@ class H2O(object):
             }
         browseAlso = kwargs.get('browseAlso', False)
         params_dict.update(kwargs)
-        print "\nKMeansApply params list", params_dict
+        print "\nKMeansApply params list:", params_dict
         a = self.__do_json_request('KMeansApply.json', timeout=timeoutSecs, params=params_dict)
 
         # Check that the response has the right Progress url it's going to steer us to.
@@ -893,7 +895,7 @@ class H2O(object):
             }
         browseAlso = kwargs.get('browseAlso', False)
         params_dict.update(kwargs)
-        print "\nKMeansScore params list", params_dict
+        print "\nKMeansScore params list:", params_dict
         a = self.__do_json_request('KMeansScore.json', timeout=timeoutSecs, params=params_dict)
 
         # kmeans_score doesn't need polling?
@@ -920,7 +922,7 @@ class H2O(object):
         if key2 is not None: params_dict['destination_key'] = key2
         browseAlso = kwargs.get('browseAlso', False)
         params_dict.update(kwargs)
-        print "\nKMeans params list", params_dict
+        print "\nKMeans params list:", params_dict
         a = self.__do_json_request('KMeans.json', timeout=timeoutSecs, params=params_dict)
 
         # Check that the response has the right Progress url it's going to steer us to.
@@ -1008,8 +1010,8 @@ class H2O(object):
             )
         return a
 
-    def store_view(self):
-        a = self.__do_json_request('StoreView.json', params={})
+    def store_view(self, timeoutSecs=60):
+        a = self.__do_json_request('StoreView.json', timeout=timeoutSecs)
         # print dump_json(a)
         return a
 
@@ -1021,10 +1023,17 @@ class H2O(object):
         a = self.__do_json_request('Remove.json', params={"key": key}, ignoreH2oError=True)
         return a
 
-    # H2O doesn't support yet?
-    def Store2HDFS(self, key):
-        a = self.__do_json_request('Store2HDFS.json', params={"key": key})
-        verboseprint("\ninspect result:", dump_json(a))
+    # only model keys can be exported?
+    def export_hdfs(self, source_key, path):
+        a = self.__do_json_request('ExportHdfs.json', 
+            params={"source_key": key, "path": path})
+        verboseprint("\nexport_hdfs result:", dump_json(a))
+        return a
+
+    def export_s3(self, source_key, bucket, obj):
+        a = self.__do_json_request('ExportS3.json', 
+            params={"source_key": key, "bucket": bucket, "object": obj})
+        verboseprint("\nexport_s3 result:", dump_json(a))
         return a
 
     # the param name for ImportFiles is 'file', but it can take a directory or a file.
@@ -1231,14 +1240,27 @@ class H2O(object):
 
     def log_view(self, timeoutSecs=10, **kwargs):
         browseAlso = kwargs.pop('browseAlso',False)
-
         a = self.__do_json_request('LogView.json', timeout=timeoutSecs)
-
         verboseprint("\nlog_view result:", dump_json(a))
         if (browseAlso | browse_json):
             h2b.browseJsonHistoryAsUrlLastMatch("LogView")
             time.sleep(3) # to be able to see it
         return a
+
+    def csv_download(self, key, csvPathname, timeoutSecs=60, **kwargs):
+        # log it
+        params = {'key': key}
+        paramsStr =  '?' + '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
+        url = self.__url('downloadCsv')
+        log('Start ' + url + paramsStr, comment=csvPathname)
+
+        # do it (absorb in 1024 byte chunks)
+        r = requests.get(url, params=params, timeout=timeoutSecs)
+        print "csv_download r.headers:", r.headers
+        if r.status_code == 200:
+            f = open(csvPathname, 'wb')
+            for chunk in r.iter_content(1024):
+                f.write(chunk)
 
     # shouldn't need params
     def log_download(self, logDir=None, timeoutSecs=5, **kwargs):
@@ -1282,7 +1304,7 @@ class H2O(object):
             'link': 'familyDefault'
         }
         params_dict.update(kwargs)
-        print "\n"+parentName, "params list", params_dict
+        print "\n"+parentName, "params list:", params_dict
         a = self.__do_json_request(parentName + '.json', timeout=timeoutSecs, params=params_dict)
         verboseprint(parentName, dump_json(a))
         return a 
@@ -1355,7 +1377,7 @@ class H2O(object):
             'model_key': model_key,
         }
         params_dict.update(kwargs)
-        print "\nGLMScore params list", params_dict
+        print "\nGLMScore params list:", params_dict
 
         a = self.__do_json_request('GLMScore.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("GLMScore:", dump_json(a))
@@ -1489,23 +1511,24 @@ class H2O(object):
             '--name=' + cloud_name()
             ]
 
-        # FIX! need to be able to specify name node/path for non-0xdata hdfs
-        # specifying hdfs stuff when not used shouldn't hurt anything
+        # ignore the other -hdfs args if the config is used?
+        if self.hdfs_config:
+            args += [
+                '-hdfs_config ' + self.hdfs_config
+            ]
+
         if self.use_hdfs:
             args += [
                 # it's fine if hdfs_name has a ":9000" port or something too
                 '-hdfs hdfs://' + self.hdfs_name_node,
                 '-hdfs_version=' + self.hdfs_version, 
             ]
+
         if self.use_maprfs:
             args += [
                 # 3 slashes?
                 '-hdfs maprfs:///' + self.hdfs_name_node,
                 '-hdfs_version=' + self.hdfs_version, 
-            ]
-        if self.hdfs_config:
-            args += [
-                '-hdfs_config ' + self.hdfs_config
             ]
 
         if not self.sigar:
@@ -1530,18 +1553,42 @@ class H2O(object):
         use_debugger=None, classpath=None,
         use_hdfs=False, use_maprfs=False,
         # hdfs_version="cdh4", hdfs_name_node="192.168.1.151", 
-        hdfs_version="cdh3", hdfs_name_node="192.168.1.176", 
-        hdfs_config=None,
+        # hdfs_version="cdh3", hdfs_name_node="192.168.1.176", 
+        hdfs_version=None, hdfs_name_node=None, hdfs_config=None,
         aws_credentials=None,
         use_flatfile=False, java_heap_GB=None, java_heap_MB=None, java_extra_args=None, 
         use_home_for_ice=False, node_id=None, username=None,
         random_udp_drop=False,
         redirect_import_folder_to_s3_path=None,
+        redirect_import_folder_to_s3n_path=None,
         disable_h2o_log=False, 
         enable_benchmark_log=False,
         ):
- 
+
+        if use_hdfs:
+            # see if we can touch a 0xdata machine
+            try:
+                # long timeout in ec2...bad
+                a = requests.get('http://169.168.1.176:80', timeout=1)
+                hdfs_0xdata_visible = True
+            except:
+                hdfs_0xdata_visible = False
+     
+            # different defaults, depending on where we're running
+            if hdfs_name_node is None:
+                if hdfs_0xdata_visible:
+                    hdfs_name_node = "192.168.1.176"
+                else: # ec2
+                    hdfs_name_node = "10.78.14.235:9000"
+
+            if hdfs_version is None:
+                if hdfs_0xdata_visible:
+                    hdfs_version = "cdh3"
+                else: # ec2
+                    hdfs_version =  "0.20.2"
+
         self.redirect_import_folder_to_s3_path = redirect_import_folder_to_s3_path
+        self.redirect_import_folder_to_s3n_path = redirect_import_folder_to_s3n_path
 
         if use_debugger is None: use_debugger = debugger
         self.aws_credentials = aws_credentials

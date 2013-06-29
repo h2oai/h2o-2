@@ -37,7 +37,7 @@ def rand_rowData():
         rowData = rowData + "," + str(f)
     return rowData
 
-class parse_rand_schmoo(unittest.TestCase):
+class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
@@ -55,7 +55,7 @@ class parse_rand_schmoo(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud(h2o.nodes)
     
-    def test_sort_of_prostate_with_row_schmoo(self):
+    def test_rf_float_many_bins(self):
         SEED = random.randint(0, sys.maxint)
         # if you have to force to redo a test
         # SEED = 

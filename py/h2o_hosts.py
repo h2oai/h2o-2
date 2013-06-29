@@ -27,7 +27,7 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
     # Just update this list with the param name and default and you're done
     allParamsDefault = {
         'use_flatfile': None,
-        'use_hdfs': None,
+        'use_hdfs': True, # default to true, so when we flip import folder to hdfs+s3n import on ec2, the cloud is built correctly
         'hdfs_name_node': None, 
         'hdfs_config': None,
         'hdfs_version': None,
@@ -53,6 +53,7 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
         'key_filename': None,
         'aws_credentials': None,
         'redirect_import_folder_to_s3_path': None,
+        'redirect_import_folder_to_s3n_path': None,
         'disable_h2o_log': False,
         'enable_benchmark_log': False,
     }

@@ -34,7 +34,7 @@ class Basic(unittest.TestCase):
             h2o.nodes[0].sandbox_ignore_errors = True
 
             timeoutSecs = 500
-            URI = "s3n://home-0xdiag-datasets"
+            URI = "s3n://home-0xdiag-datasets/standard"
             s3nKey = URI + "/" + csvFilename
             for trial in range(trialMax):
                 # since we delete the key, we have to re-import every iteration, to get it again

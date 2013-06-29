@@ -1,4 +1,4 @@
-package hex;
+package hex.gbm;
 
 import java.util.Arrays;
 import water.*;
@@ -63,9 +63,7 @@ public class GBM extends Job {
     for( int j=0; j<fr._vecs[0].length(); j++ ) {
       for( int i=0; i<ncols; i++ ) // Fetch a row out
         ds[i] = fr._vecs[i].at(j);
-      //Log.unwrap(System.out,Arrays.toString(ds));
       hist.incr(ds);
-      //Log.unwrap(System.out,hist.toString()+"\n");
     }
 
     // Compute the best-split
@@ -75,19 +73,57 @@ public class GBM extends Job {
       sb.append(i).append("=").append(hist.score(i)).append("  ");
     Log.unwrap(System.out,sb.toString());
     int scol = hist.bestSplit();
+    int nsplits = hist._mins[scol].length;
     Log.unwrap(System.out,"Best split is column "+scol);
 
-    // Set split-number for each row
+
+    // Set split-number for each row - basically scoring the row.
+    // Compute min/max per column per split also
+    double mins2[][] = new double[nsplits][ncols];
+    double maxs2[][] = new double[nsplits][ncols];
+    for( int i=0; i<nsplits; i++ ) { 
+      Arrays.fill(mins2[i], Double.MAX_VALUE); 
+      Arrays.fill(maxs2[i],-Double.MAX_VALUE); 
+    }
     for( int j=0; j<fr._vecs[0].length(); j++ ) {
       double d = fr._vecs[scol].at(j);
       int bin = hist.bin(scol,d);
       // bin is split#???
-      vsplit.set8(j,bin);
+      vsplit.set8(j,bin);       // Set for future reference
+      // Compute min/max 
+      for( int i=0; i<ncols; i++ ) {
+        double d2 = fr._vecs[i].at(j);
+        if( d2 < mins2[bin][i] ) mins2[bin][i] = d2;
+        if( d2 > maxs2[bin][i] ) maxs2[bin][i] = d2;
+      }
     }
-
+    for( int i=0; i<vsplit.nChunks(); i++ )
+      vsplit.elem2BV(i).close(i,null); // "close" the written vsplit vec
 
     // Induce a subsplit over the data.
     Tree t = new Tree(hist,scol);
+
+    // Histograms for each next split 
+    Histogram hs[] = new Histogram[nsplits];
+    for( int i=0; i<nsplits; i++ ) {
+      hs[i] = new Histogram(fr._names,hist._bins[scol][i], mins2[i], maxs2[i], isInts);
+      Log.unwrap(System.out,hs[i].toString());
+    }
+    // Compute all histograms in parallel
+    for( int j=0; j<fr._vecs[0].length(); j++ ) {
+      for( int i=0; i<ncols; i++ ) // Fetch a row out
+        ds[i] = fr._vecs[i].at(j);
+      hs[(int)vsplit.at8(j)].incr(ds);
+    }
+    for( int j=0; j<nsplits; j++ ) {
+      Log.unwrap(System.out,hs[j].toString());
+      sb = new StringBuilder();
+      for( int i=0; i<ncols-1; i++ )
+        sb.append(i).append("=").append(hs[j].score(i)).append("  ");
+      Log.unwrap(System.out,sb.toString());
+      int scol2 = hs[j].bestSplit();
+      Log.unwrap(System.out,"Best split is column "+scol2);
+    }
 
     // Remove temp split vector
     UKV.remove(vsplit._key);
@@ -98,9 +134,17 @@ public class GBM extends Job {
   // smaller subsets... or describes a leaf with a specific regression.
   private static class Tree extends Iced {
     Tree _ts[];                 // Child trees (maybe more than 2)
+    int _col;                   // Column we split over
     double _min,_max,_step;     // Simple interpolation rules to pick child
     double _reg;                // Regression (leaf answer)
     Tree( Histogram h, int split ) {
+      _col = split;
+      int nbins = h._mins[split].length;
+      _min = h._mins [split][0];
+      _max = h._maxs [split][nbins-1];
+      _step= h._steps[split];
+      _reg = Double.NaN;        // Not a leaf
+      _ts  = new Tree[nbins];   // n-way split
     }
   }
 
@@ -133,7 +177,6 @@ public class GBM extends Job {
       _maxs = new double[ncols][]; // Rolling max per-bin
 
       for( int i=0; i<ncols; i++ ) {
-        assert maxs[i] > mins[i] : "Caller ensures max>min, since if max==min the column is all constants";
         // See if we can show there are fewer unique elements than nbins.
         // Common for e.g. boolean columns, or near leaves.
         int nbins = xbins;      // Default size for most columns        
@@ -192,9 +235,12 @@ public class GBM extends Job {
     }
 
     // Compute a "score" for a column; lower score "wins" (is a better split).
+    // CURRENTLY COMPUTING THE WRONG THING...
     // Score is related to variance; a lower variance is better.  For now
     // return the sum of variance across the column, divided by the mean.
     // Dividing normalizes the column to other columns.
+    // THE RIGHT THING: minimize the sum of squared errors.  Equivalent to mean
+    // of squared errors, which can be done with the online mean algorithm.
     double score( int col ) {
       double sum = 0;
       int nbins = _bins[col].length;
@@ -212,6 +258,7 @@ public class GBM extends Job {
       int idx = -1;
       int ncols = _bins.length;
       for( int i=0; i<ncols; i++ ) {
+        if( _bins[i].length == 1 ) continue;
         double s = score(i);
         if( s < bs ) { bs = s; idx = i; }
       }
@@ -266,4 +313,16 @@ public class GBM extends Job {
       return sb.append(s);
     }
   }
+
+  private static double[] removeCol( double[] A, int i ) {
+    double B[] = Arrays.copyOf(A,A.length-1);
+    System.arraycopy(A,i+1,B,i,B.length-i);
+    return B;
+  }
+  private static <T> T[] removeCol( T[] A, int i ) {
+    T B[] = Arrays.copyOf(A,A.length-1);
+    System.arraycopy(A,i+1,B,i,B.length-i);
+    return B;
+  }
+
 }

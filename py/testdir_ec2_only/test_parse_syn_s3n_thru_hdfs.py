@@ -33,11 +33,11 @@ class Basic(unittest.TestCase):
     def test_parse_syn_s3n_thru_hdfs(self):
         # I put these file copies on s3 with unique suffixes
         # under this s3n "path"
-        csvFilename = "syn_datasets/*_10000x200*"
+        csvFilename = "*_10000x200*"
 
         trialMax = 1
         timeoutSecs = 500
-        URI = "s3n://home-0xdiag-datasets"
+        URI = "s3n://home-0xdiag-datasets/syn_datasets"
         s3nKey = URI + "/" + csvFilename
 
         for trial in range(trialMax):

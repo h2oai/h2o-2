@@ -247,7 +247,9 @@ def dump_hosts_config(ec2_config, reservation, filename=DEFAULT_HOSTS_FILENAME, 
     cfg['ec2_instances']   = [ { 'id': i.id, 'private_ip_address': i.private_ip_address, 'public_ip_address': i.ip_address, 'public_dns_name': i.public_dns_name } for i in reservation.instances ]
     cfg['ec2_reservation_id']  = reservation.id
     cfg['ec2_region']      = ec2_config['region']
-    cfg['redirect_import_folder_to_s3_path'] = True
+    # cfg['redirect_import_folder_to_s3_path'] = True
+    # New! we can redirect import folder to s3n thru hdfs, now (ec2)
+    cfg['redirect_import_folder_to_s3n_path'] = True
     # put ssh commands into comments
     cmds = get_ssh_commands(ec2_config, reservation)
     idx  = 1

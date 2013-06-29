@@ -47,6 +47,11 @@ def setupImportFolder(node=None, path='/home/0xdiag/datasets', timeoutSecs=180):
         # FIX! make bucket vary depending on path
         bucket = 'home-0xdiag-datasets'
         importFolderResult = setupImportS3(node=node, bucket=bucket, timeoutSecs=timeoutSecs)
+    elif node.redirect_import_folder_to_s3n_path: 
+        # FIX! make bucket vary depending on path
+        path = re.sub('/home/0xdiag/datasets', '/home-0xdiag-datasets', path)
+        importFolderResult = setupImportHdfs(node=node, path=path, schema="s3n", 
+            timeoutSecs=timeoutSecs)
     else:
         if getpass.getuser()=='jenkins':
             print "michal: Temp hack of /home/0xdiag/datasets/standard to /home/0xdiag/datasets till EC2 image is fixed"
@@ -76,8 +81,14 @@ def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
     print "Waiting for the slow parse of the file:", csvFilename
 
     if node.redirect_import_folder_to_s3_path:
+        # why no leading / for s3 key here. only one / after s3:/ ?
         path = re.sub('/home/0xdiag/datasets', 'home-0xdiag-datasets', path)
         parseKey = parseImportS3File(node, csvFilename, path, myKey2,
+            timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs, noise, 
+            benchmarkLogging, noPoll)
+    elif node.redirect_import_folder_to_s3n_path: 
+        path = re.sub('/home/0xdiag/datasets', '/home-0xdiag-datasets', path)
+        parseKey = parseImportHdfsFile(node, csvFilename, path, myKey2, "s3n",
             timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs, noise, 
             benchmarkLogging, noPoll)
     else:
@@ -97,10 +108,15 @@ def setupImportHdfs(node=None, path=None, schema='hdfs', timeoutSecs=180):
     if not node: node = h2o.nodes[0]
 
     print "setupImportHdfs schema:", schema
+    # FIX! H2O has horrible inconsistencies between the URIs used for different filesystems
     if schema == "maprfs":
         hdfsPrefix = schema + "://"
-    else:
+    elif schema == "s3n":
+        hdfsPrefix = schema + ":/"
+    elif schema == "hdfs":
         hdfsPrefix = schema + "://" + node.hdfs_name_node
+    else: 
+        raise Exception('Uknown schema: ' + schema + ' in setupImportHdfs')
 
     if path is None:
         URI = hdfsPrefix + '/datasets'
@@ -112,17 +128,21 @@ def setupImportHdfs(node=None, path=None, schema='hdfs', timeoutSecs=180):
     h2o.verboseprint(h2o.dump_json(importHdfsResult))
     return importHdfsResult
 
-def parseImportHdfsFile(node=None, csvFilename=None, path=None, schema='hdfs',
+def parseImportHdfsFile(node=None, csvFilename=None, path=None, key2=None, schema='hdfs',
     timeoutSecs=3600, retryDelaySecs=2, initialDelaySecs=1, pollTimeoutSecs=180, noise=None,
     benchmarkLogging=None, noPoll=False, **kwargs):
     if not csvFilename: raise Exception('No csvFilename parameter in parseImportHdfsFile')
     if not node: node = h2o.nodes[0]
 
-    print "parseImportHdfsFiles schema:", schema
+    print "parseImportHdfsFile schema:", schema
     if schema == "maprfs":
-        hdfsPrefix = schema + ":" 
-    else:
+        hdfsPrefix = schema + ":" # no ?? ? inconsistent with import
+    elif schema == "s3n":
+        hdfsPrefix = schema + ":/"
+    elif schema == "hdfs":
         hdfsPrefix = schema + "://" + node.hdfs_name_node
+    else: 
+        raise Exception('Uknown schema: ' + schema + ' in parseImportHdfsFile')
 
     if path is None:
         URI = hdfsPrefix + '/datasets'
@@ -130,14 +150,19 @@ def parseImportHdfsFile(node=None, csvFilename=None, path=None, schema='hdfs',
         URI = hdfsPrefix + path
 
     hdfsKey = URI + "/" + csvFilename
-    print "parseHdfsFile hdfsKey:", hdfsKey
+    print "parseImportHdfsFile hdfsKey:", hdfsKey
     inspect = h2o_cmd.runInspect(key=hdfsKey)
-    print "parseHdfsFile inspect of source:", inspect
+    print "parseImportHdfsFile inspect of source:", inspect
 
-    parseKey = node.parse(hdfsKey, csvFilename + ".hex",
+    if key2 is None:
+        myKey2 = csvFilename + ".hex"
+    else: 
+        myKey2 = key2
+
+    parseKey = node.parse(hdfsKey, myKey2,
         timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs, noise, 
         benchmarkLogging, noPoll, **kwargs)
     # a hack so we know what the source_key was, bask at the caller
     parseKey['source_key'] = hdfsKey
-    print "parseHdfsFile:", parseKey
+    print "parseImportHdfsFile:", parseKey
     return parseKey

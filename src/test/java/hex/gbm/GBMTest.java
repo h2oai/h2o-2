@@ -1,7 +1,7 @@
 package hex;
 
 import static org.junit.Assert.assertEquals;
-import hex.GBM;
+import hex.gbm.GBM;
 import java.io.File;
 import org.junit.BeforeClass;
 import org.junit.Test;
