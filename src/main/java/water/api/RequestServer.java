@@ -118,7 +118,7 @@ public class RequestServer extends NanoHTTPD {
    * returns the request so that it can be further updated.
    */
 
-  protected static Request registerRequest(Request req) {
+  public static Request registerRequest(Request req) {
     String href = req.href();
     assert (! _requests.containsKey(href)) : "Request with href "+href+" already registered";
     _requests.put(href,req);
