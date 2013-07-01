@@ -69,7 +69,7 @@ class Basic(unittest.TestCase):
         tryHeap = 4
         DO_GLM = True
         noPoll = False
-        benchmarkLogging = ['cpu','disk', 'iostats', 'jstack']
+        benchmarkLogging = ['cpu','disk', 'iostats'] # , 'jstack'
         benchmarkLogging = ['cpu','disk']
         pollTimeoutSecs = 120
         retryDelaySecs = 10
@@ -82,12 +82,21 @@ class Basic(unittest.TestCase):
             else:
                 h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap, base_port=base_port, 
                     enable_benchmark_log=True)
-            h2b.browseTheCloud()
+            ### h2b.browseTheCloud()
+
+            # don't let the config json redirect import folder to s3 or s3n, because
+            # we're writing to the syn_datasets locally. (just have to worry about node 0's copy of this state)
+            print "This test creates files in syn_datasets for import folder\n" + \
+                "so h2o and python need to be same machine"
+            h2o.nodes[0].redirect_import_folder_to_s3_path = False
+            h2o.nodes[0].redirect_import_folder_to_s3n_path = False
 
             for trial in range(trialMax):
                 importFolderResult = h2i.setupImportFolder(None, importFolderPath)
                 importFullList = importFolderResult['succeeded']
+                print "importFullList:", importFullList
                 importFailList = importFolderResult['failed']
+                print "importFailList:", importFailList
                 print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
 
                 h2o.cloudPerfH2O.change_logfile(csvFilename)
