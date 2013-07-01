@@ -38,6 +38,7 @@ public class NewChunk extends Chunk {
     _xs = Arrays.copyOf(_xs,_len<<1);
   }
   void invalid() { append2(0,Integer.MIN_VALUE); }
+  void setInvalid(int idx) { _ls[idx]=0; _xs[idx] = Integer.MIN_VALUE; }
 
   // Do any final actions on a completed NewVector.  Mostly: compress it, and
   // do a DKV put on an appropriate Key.  The original NewVector goes dead

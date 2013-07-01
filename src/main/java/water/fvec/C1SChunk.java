@@ -21,7 +21,13 @@ public class C1SChunk extends Chunk {
     long res = 0xFF&_mem[i+OFF];
     return (res == _NA)?_vec._fNA:(res+_bias)*_scale;
   }
-  @Override boolean set8_impl(int idx, long l) { return false; }
+  @Override boolean set8_impl(int i, long l) {
+    if( (double)((int)_scale) != _scale ) return false; // Scaling involved?
+    long res = (long)(l/_scale)-_bias;                  // Compressed value
+    if( !(0 <= l && l < 255) ) return false;
+    _mem[i+OFF] = (byte)l;
+    return true; 
+  }
   @Override boolean hasFloat() { return _scale < 1.0; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
   @Override public C1SChunk read(AutoBuffer bb) {
