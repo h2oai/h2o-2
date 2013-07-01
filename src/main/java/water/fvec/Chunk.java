@@ -28,7 +28,7 @@ public abstract class Chunk extends Iced implements Cloneable {
   // This version uses absolute element numbers, but must convert them to
   // chunk-relative indices - requiring a load from an aliasing local var,
   // leading to lower quality JIT'd code (similar issue to using iterator
-  // objects).  
+  // objects).
   // Slightly slower than 'at0'; range checks within a chunk
   public final double at( long i ) {
     long x = i-_start;

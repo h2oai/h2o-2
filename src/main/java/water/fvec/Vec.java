@@ -1,5 +1,7 @@
 package water.fvec;
 
+import java.util.Arrays;
+
 import water.*;
 
 // A single distributed vector column.
@@ -14,16 +16,18 @@ import water.*;
 //  Vec Key format is: Key. VEC - byte, 0 - byte,   0    - int, normal Key bytes.
 // DVec Key format is: Key.DVEC - byte, 0 - byte, chunk# - int, normal Key bytes.
 public class Vec extends Iced {
+  public enum DType {U,I,F,E,S,NA};
   public static final int LOG_CHK = 20; // Chunks are 1<<20, or 1Meg
   public static final long CHUNK_SZ = 1L << LOG_CHK;
-
+  protected DType _dtype = DType.U;
+  public DType dtype(){return _dtype;}
   final public Key _key;        // Top-level key
   // Element-start per chunk.  Always zero for chunk 0.  One more entry than
   // chunks, so the last entry is the total number of rows.  This field is
   // dead/ignored in subclasses that are guaranteed to have fixed-sized chunks
   // such as file-backed Vecs.
   final long _espc[];
-
+  String [] _domain;
   // If we have active writers, then all cached roll-ups/reductions (e.g. _min,
   // _max) unavailable.  We won't even try to compute them (under the
   // assumption that we'll about to see a zillions writes/sec).
@@ -118,12 +122,16 @@ public class Vec extends Iced {
   // compute chunks in an alternative way, such as file-backed Vecs.
   int elem2ChunkIdx( long i ) {
     assert 0 <= i && i < length();
+    int x = Arrays.binarySearch(_espc, i);
+    int res = x<0?-x - 2:x;
     int lo=0, hi = nChunks();
     while( lo < hi-1 ) {
       int mid = (hi+lo)>>>1;
       if( i < _espc[mid] ) hi = mid;
       else                 lo = mid;
     }
+    if(res != lo)
+      assert(res == lo):res + " != " + lo;
     return lo;
   }
 
@@ -168,8 +176,10 @@ public class Vec extends Iced {
 
   // Next BigVector from the current one
   Chunk nextBV( Chunk bv ) {
-    int cidx = elem2ChunkIdx(bv._start+bv._len);
-    return cidx == nChunks() ? null : elem2BV(cidx);
+    int cidx = bv.cidx()+1;
+    Chunk next =  cidx == nChunks() ? null : elem2BV(cidx);
+    assert next == null || next.cidx() == cidx;
+    return next;
   }
 
   // Fetch element the slow way

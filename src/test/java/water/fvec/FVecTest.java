@@ -90,7 +90,7 @@ public class FVecTest extends TestUtil {
     Frame fr = ParseDataset2.parse(okey,new Key[]{fkey});
     UKV.remove(fkey);
     try {
-      assertEquals(fr.length(),1050); // Count of columns
+      assertEquals(fr.numCols(),1050); // Count of columns
       assertEquals(fr._vecs[0].length(),2659); // Count of rows
 
       double[] sums = new Sum().invoke(fr)._sums;

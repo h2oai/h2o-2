@@ -1,6 +1,8 @@
 package water.fvec;
 
 import water.*;
+
+import java.io.InputStream;
 import java.util.Arrays;
 
 // A collection of named Vecs.  Essentially an R-like data-frame.
@@ -10,7 +12,10 @@ public class Frame extends Iced {
   public Vec[] _vecs;
   public Vec _col0;             // First readable vec
 
-  public Frame( Key k, String[] names, Vec[] vecs ) { _key=k; _names=names; _vecs=vecs; }
+
+  public Frame( Key k, String[] names, Vec[] vecs ) {
+    _key=k; _names=names; _vecs=vecs;
+  }
   public void add( String name, Vec vec ) {
     // needs a compatibility-check????
     _names = Arrays.copyOf(_names,_names.length+1);
@@ -22,7 +27,7 @@ public class Frame extends Iced {
   public final Vec[] vecs() {
     return _vecs;
   }
-  public int length() { return _vecs.length; }
+  int numCols() { return _vecs.length; }
 
   // Return first readable vector
   public Vec firstReadable() {
@@ -54,14 +59,13 @@ public class Frame extends Iced {
   // Close all AppendableVec
   public void closeAppendables() {
     _col0 = null;               // Reset cache
-    Futures fs = new Futures();
     for( int i=0; i<_vecs.length; i++ ) {
       Vec v = _vecs[i];
       if( v != null && v instanceof AppendableVec )
-        _vecs[i] = ((AppendableVec)v).close(fs);
+        _vecs[i] = ((AppendableVec)v).close();
     }
-    fs.blockForPending();
   }
+
 
   // True if any Appendables exist
   public boolean hasAppendables() {
@@ -72,13 +76,11 @@ public class Frame extends Iced {
   }
 
   // Remove all embedded Vecs
-  public void remove() { remove(new Futures()).blockForPending(); }
-  public Futures remove(Futures fs) {
+  public void remove() {
     for( Vec v : _vecs )
-      UKV.remove(v._key,fs);
+      UKV.remove(v._key);
     _names = new String[0];
     _vecs = new Vec[0];
-    return fs;
   }
   @Override public Frame init( Key k ) { _key=k; return this; }
   @Override public String toString() {

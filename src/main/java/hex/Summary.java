@@ -36,7 +36,7 @@ public class Summary extends Iced {
       if(c.isFloat() || c.numDomainSize() > MAX_HIST_SZ){
         _percentiles = Objects.firstNonNull(percentiles, DEFAULT_PERCENTILES);
         double binsz = 3.5 *  c._sigma/ Math.cbrt(c._n);
-        int nbin = (int)((c._max - c._min) / binsz);
+        int nbin = Math.max(1,(int)((c._max - c._min) / binsz));
         long n = Math.max(c._n,1);
         double a = (c._max - c._min) / n;
         double b = Math.pow(10, Math.floor(Math.log10(a)));

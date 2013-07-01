@@ -29,7 +29,6 @@ public class ImportUrl extends Request {
         File f = new File(urlStr);
         urlStr = "file://"+f.getCanonicalPath();
       }
-
       URL url = new URL(urlStr);
       Key k = _key.value();
       if( k == null ) k = Key.make(urlStr);
@@ -37,7 +36,6 @@ public class ImportUrl extends Request {
       if( s == null )
         return Response.error("Unable to open stream to URL "+url.toString());
       ValueArray.readPut(k, s);
-
       JsonObject json = new JsonObject();
       json.addProperty(KEY, k.toString());
       json.addProperty(URL, urlStr);

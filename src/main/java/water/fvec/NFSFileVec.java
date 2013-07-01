@@ -65,7 +65,7 @@ public class NFSFileVec extends ByteVec {
     Value val1 = DKV.get(dkey);// Check for an existing one... will fetch data as needed
     if( val1 != null ) return val1; // Found an existing one?
     // Lazily create a DVec for this chunk
-    int len = (int)(cidx < nchk-1 ? Vec.CHUNK_SZ : (_len-chunk2StartElem(cidx)));
+    int len = (int)(cidx < nchk-1 ? ValueArray.CHUNK_SZ : (_len-chunk2StartElem(cidx)));
     // DVec is just the raw file data with a null-compression scheme
     Value val2 = new Value(dkey,len,null,TypeMap.C1CHUNK,Value.NFS);
     val2.setdsk(); // It is already on disk.
