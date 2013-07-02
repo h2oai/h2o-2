@@ -15,6 +15,7 @@ public class C4Chunk extends Chunk {
     return res == _NA?_vec._fNA:res;
   }
   @Override boolean set8_impl(int idx, long l) { return false; }
+  @Override boolean set8_impl(int i, double d) { return false; }
   @Override boolean hasFloat() { return false; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
   @Override public C4Chunk read(AutoBuffer bb) {

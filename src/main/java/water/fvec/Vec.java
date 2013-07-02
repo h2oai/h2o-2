@@ -177,7 +177,8 @@ public class Vec extends Iced {
   public double at( long i ) { return elem2BV(elem2ChunkIdx(i)).at (i); }
 
   // Write element the slow way
-  public long set8( long i, long l ) { return elem2BV(elem2ChunkIdx(i)).set8(i,l); }
+  public long   set8( long i, long   l) { return elem2BV(elem2ChunkIdx(i)).set8(i,l); }
+  public double set8( long i, double d) { return elem2BV(elem2ChunkIdx(i)).set8(i,d); }
 
   // handling of NAs
   long   _iNA = Long.MIN_VALUE+111; // "random" small number, not to clash with the MIN value
