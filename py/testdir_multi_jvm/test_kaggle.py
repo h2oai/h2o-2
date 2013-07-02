@@ -17,7 +17,7 @@ class TestKaggle(unittest.TestCase):
         else:
             h2o_hosts.build_cloud_with_hosts()
 
-        h2b.browseTheCloud()
+        ### h2b.browseTheCloud()
 
     @classmethod
     def tearDownClass(cls):
@@ -25,12 +25,12 @@ class TestKaggle(unittest.TestCase):
 
     def test_cs_training(self):
         h2o_cmd.runRF(trees=100, depth=100, csvPathname=h2o.find_file('smalldata/kaggle/creditsample-training.csv.gz'),timeoutSecs=300, response_variable=1)
-        h2b.browseJsonHistoryAsUrlLastMatch("RFView")
+        # h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
     def test_cs_test(self):
         h2o_cmd.runRF(trees=100, depth=100, csvPathname=h2o.find_file('smalldata/kaggle/creditsample-training.csv.gz'),timeoutSecs=300, response_variable=1)
 
-        h2b.browseJsonHistoryAsUrlLastMatch("RFView")
+        # h2b.browseJsonHistoryAsUrlLastMatch("RFView")
         time.sleep(5)
 
 if __name__ == '__main__':
