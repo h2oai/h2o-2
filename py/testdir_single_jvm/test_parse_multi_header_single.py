@@ -68,14 +68,14 @@ class Basic(unittest.TestCase):
             ]
 
         trial = 0
-        for (FILENUM, rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (fileNum, rowCount, colCount, key2, timeoutSecs) in tryList:
             trial += 1
             # FIX! should we add a header to them randomly???
-            print "Wait while", FILENUM, "synthetic files are created in", SYNDATASETS_DIR
+            print "Wait while", fileNum, "synthetic files are created in", SYNDATASETS_DIR
             rowxcol = str(rowCount) + 'x' + str(colCount)
             totalCols = colCount + 1 # 1 extra for output
             totalRows = 0
-            for fileN in range(FILENUM):
+            for fileN in range(fileNum):
                 csvFilename = 'syn_' + str(fileN) + "_" + str(SEED) + "_" + rowxcol + '.csv'
                 csvPathname = SYNDATASETS_DIR + '/' + csvFilename
                 rList = rand_rowData(colCount)
