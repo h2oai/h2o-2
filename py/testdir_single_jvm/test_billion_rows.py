@@ -26,7 +26,7 @@ class Basic(unittest.TestCase):
         # just do the import folder once
         importFolderPath = "/home/0xdiag/datasets/standard"
         h2i.setupImportFolder(None, importFolderPath)
-        timeoutSecs = 900
+        timeoutSecs = 1500
 
         csvFilenameAll = [
             # quick test first
@@ -38,7 +38,7 @@ class Basic(unittest.TestCase):
         csvFilenameList = csvFilenameAll
 
         # pop open a browser on the cloud
-        h2b.browseTheCloud()
+        ### h2b.browseTheCloud()
 
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
