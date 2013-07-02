@@ -1,274 +1,31 @@
+
 {
-    "ec2_comment_ssh_22": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.4.233.247", 
-    "ec2_comment_ssh_23": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.68.30.144", 
-    "ec2_comment_ssh_20": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.68.106.137", 
-    "ec2_comment_ssh_21": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.191.126.251", 
-    "ec2_comment_ssh_26": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.8.111.16", 
-    "ec2_comment_ssh_27": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.68.179.222", 
-    "h2o_per_host": 1, 
-    "ec2_comment_ssh_25": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.137.5.241", 
-    "ip": [
-        "10.139.21.161", 
-        "10.68.99.173", 
-        "10.68.215.118", 
-        "10.68.115.77", 
-        "10.8.45.253", 
-        "10.140.14.99", 
-        "10.68.111.121", 
-        "10.6.63.31", 
-        "10.68.199.220", 
-        "10.68.57.74", 
-        "10.68.82.111", 
-        "10.68.197.238", 
-        "10.4.222.217", 
-        "10.139.12.148", 
-        "10.68.34.208", 
-        "10.6.130.86", 
-        "10.191.159.39", 
-        "10.68.185.57", 
-        "10.4.71.193", 
-        "10.68.106.137", 
-        "10.191.126.251", 
-        "10.4.233.247", 
-        "10.68.30.144", 
-        "10.6.157.247", 
-        "10.137.5.241", 
-        "10.8.111.16", 
-        "10.68.179.222", 
-        "10.2.161.214", 
-        "10.191.37.111", 
-        "10.137.19.77", 
-        "10.68.94.53", 
-        "10.191.123.101"
-    ], 
-    "ec2_comment_ssh_28": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.2.161.214", 
-    "key_filename": "/home/kevin/.ec2/keys/mrjenkins_test.pem", 
-    "aws_credentials": "/home/kevin/.ec2/AwsCredentials.properties", 
-    "ec2_comment_ssh_32": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.191.123.101", 
-    "ec2_comment_ssh_29": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.191.37.111", 
-    "ec2_comment_ssh_24": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.6.157.247", 
-    "java_heap_GB": 11, 
-    "ec2_reservation_id": "r-3630f95d", 
+     "_comment" : "no password, or None,  means none will be used in ssh. Assumes keys have been exchanged. Watch out for common error: last entry in list can't have comma. Only ip is used. Others ignored, saved here for sometime use. Last ip value used if duplicates? Leading _ means not used. First ip/h2o is used for H2O json communication..vary ip list to direct that. See http://docs.python.org/library/json.html for json->python data types. Note lower case for true/false. null is None, but can just not have an entry. Defaults are in h2o_hosts.py",
+
     "username": "0xdiag", 
-    "ec2_comment_ssh_30": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.137.19.77", 
-    "ec2_comment_ssh_19": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.4.71.193", 
-    "ec2_comment_ssh_18": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.68.185.57", 
-    "java_extra_args": "", 
-    "ec2_comment_ssh_13": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.4.222.217", 
-    "ec2_comment_ssh_12": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.68.197.238", 
-    "ec2_comment_ssh_11": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.68.82.111", 
-    "ec2_comment_ssh_10": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.68.57.74", 
-    "ec2_comment_ssh_17": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.191.159.39", 
-    "ec2_comment_ssh_16": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.6.130.86", 
-    "ec2_comment_ssh_15": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.68.34.208", 
-    "ec2_comment_ssh_14": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.139.12.148", 
-    "base_port": 54321, 
-    "ec2_comment_ssh_31": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.68.94.53", 
-    "ec2_region": "us-east-1", 
-    "hdfs_config": "/home/kevin/.ec2/core-site.xml", 
-    "use_flatfile": true, 
-    "ec2_instances": [
-        {
-            "private_ip_address": "10.139.21.161", 
-            "public_dns_name": "ec2-54-224-152-210.compute-1.amazonaws.com", 
-            "id": "i-ddfe27b0", 
-            "public_ip_address": "54.224.152.210"
-        }, 
-        {
-            "private_ip_address": "10.68.99.173", 
-            "public_dns_name": "ec2-184-73-148-148.compute-1.amazonaws.com", 
-            "id": "i-dffe27b2", 
-            "public_ip_address": "184.73.148.148"
-        }, 
-        {
-            "private_ip_address": "10.68.215.118", 
-            "public_dns_name": "ec2-107-20-127-231.compute-1.amazonaws.com", 
-            "id": "i-d9fe27b4", 
-            "public_ip_address": "107.20.127.231"
-        }, 
-        {
-            "private_ip_address": "10.68.115.77", 
-            "public_dns_name": "ec2-23-21-23-169.compute-1.amazonaws.com", 
-            "id": "i-dbfe27b6", 
-            "public_ip_address": "23.21.23.169"
-        }, 
-        {
-            "private_ip_address": "10.8.45.253", 
-            "public_dns_name": "ec2-23-22-80-28.compute-1.amazonaws.com", 
-            "id": "i-d5fe27b8", 
-            "public_ip_address": "23.22.80.28"
-        }, 
-        {
-            "private_ip_address": "10.140.14.99", 
-            "public_dns_name": "ec2-75-101-194-109.compute-1.amazonaws.com", 
-            "id": "i-adfe27c0", 
-            "public_ip_address": "75.101.194.109"
-        }, 
-        {
-            "private_ip_address": "10.68.111.121", 
-            "public_dns_name": "ec2-23-22-126-21.compute-1.amazonaws.com", 
-            "id": "i-affe27c2", 
-            "public_ip_address": "23.22.126.21"
-        }, 
-        {
-            "private_ip_address": "10.6.63.31", 
-            "public_dns_name": "ec2-50-19-59-28.compute-1.amazonaws.com", 
-            "id": "i-a9fe27c4", 
-            "public_ip_address": "50.19.59.28"
-        }, 
-        {
-            "private_ip_address": "10.68.199.220", 
-            "public_dns_name": "ec2-54-224-241-166.compute-1.amazonaws.com", 
-            "id": "i-abfe27c6", 
-            "public_ip_address": "54.224.241.166"
-        }, 
-        {
-            "private_ip_address": "10.68.57.74", 
-            "public_dns_name": "ec2-184-73-5-142.compute-1.amazonaws.com", 
-            "id": "i-a5fe27c8", 
-            "public_ip_address": "184.73.5.142"
-        }, 
-        {
-            "private_ip_address": "10.68.82.111", 
-            "public_dns_name": "ec2-54-242-175-239.compute-1.amazonaws.com", 
-            "id": "i-a7fe27ca", 
-            "public_ip_address": "54.242.175.239"
-        }, 
-        {
-            "private_ip_address": "10.68.197.238", 
-            "public_dns_name": "ec2-50-16-59-126.compute-1.amazonaws.com", 
-            "id": "i-a1fe27cc", 
-            "public_ip_address": "50.16.59.126"
-        }, 
-        {
-            "private_ip_address": "10.4.222.217", 
-            "public_dns_name": "ec2-184-72-193-49.compute-1.amazonaws.com", 
-            "id": "i-a3fe27ce", 
-            "public_ip_address": "184.72.193.49"
-        }, 
-        {
-            "private_ip_address": "10.139.12.148", 
-            "public_dns_name": "ec2-54-235-7-192.compute-1.amazonaws.com", 
-            "id": "i-bdfe27d0", 
-            "public_ip_address": "54.235.7.192"
-        }, 
-        {
-            "private_ip_address": "10.68.34.208", 
-            "public_dns_name": "ec2-54-242-13-153.compute-1.amazonaws.com", 
-            "id": "i-bffe27d2", 
-            "public_ip_address": "54.242.13.153"
-        }, 
-        {
-            "private_ip_address": "10.6.130.86", 
-            "public_dns_name": "ec2-174-129-96-101.compute-1.amazonaws.com", 
-            "id": "i-b9fe27d4", 
-            "public_ip_address": "174.129.96.101"
-        }, 
-        {
-            "private_ip_address": "10.191.159.39", 
-            "public_dns_name": "ec2-23-20-10-244.compute-1.amazonaws.com", 
-            "id": "i-bbfe27d6", 
-            "public_ip_address": "23.20.10.244"
-        }, 
-        {
-            "private_ip_address": "10.68.185.57", 
-            "public_dns_name": "ec2-107-20-114-183.compute-1.amazonaws.com", 
-            "id": "i-b5fe27d8", 
-            "public_ip_address": "107.20.114.183"
-        }, 
-        {
-            "private_ip_address": "10.4.71.193", 
-            "public_dns_name": "ec2-23-20-101-196.compute-1.amazonaws.com", 
-            "id": "i-b7fe27da", 
-            "public_ip_address": "23.20.101.196"
-        }, 
-        {
-            "private_ip_address": "10.68.106.137", 
-            "public_dns_name": "ec2-23-22-175-60.compute-1.amazonaws.com", 
-            "id": "i-b1fe27dc", 
-            "public_ip_address": "23.22.175.60"
-        }, 
-        {
-            "private_ip_address": "10.191.126.251", 
-            "public_dns_name": "ec2-184-73-107-75.compute-1.amazonaws.com", 
-            "id": "i-b3fe27de", 
-            "public_ip_address": "184.73.107.75"
-        }, 
-        {
-            "private_ip_address": "10.4.233.247", 
-            "public_dns_name": "ec2-23-22-250-49.compute-1.amazonaws.com", 
-            "id": "i-8dfe27e0", 
-            "public_ip_address": "23.22.250.49"
-        }, 
-        {
-            "private_ip_address": "10.68.30.144", 
-            "public_dns_name": "ec2-54-224-48-208.compute-1.amazonaws.com", 
-            "id": "i-8ffe27e2", 
-            "public_ip_address": "54.224.48.208"
-        }, 
-        {
-            "private_ip_address": "10.6.157.247", 
-            "public_dns_name": "ec2-184-73-48-212.compute-1.amazonaws.com", 
-            "id": "i-89fe27e4", 
-            "public_ip_address": "184.73.48.212"
-        }, 
-        {
-            "private_ip_address": "10.137.5.241", 
-            "public_dns_name": "ec2-67-202-31-181.compute-1.amazonaws.com", 
-            "id": "i-8bfe27e6", 
-            "public_ip_address": "67.202.31.181"
-        }, 
-        {
-            "private_ip_address": "10.8.111.16", 
-            "public_dns_name": "ec2-54-242-216-203.compute-1.amazonaws.com", 
-            "id": "i-85fe27e8", 
-            "public_ip_address": "54.242.216.203"
-        }, 
-        {
-            "private_ip_address": "10.68.179.222", 
-            "public_dns_name": "ec2-54-234-223-138.compute-1.amazonaws.com", 
-            "id": "i-87fe27ea", 
-            "public_ip_address": "54.234.223.138"
-        }, 
-        {
-            "private_ip_address": "10.2.161.214", 
-            "public_dns_name": "ec2-54-243-5-203.compute-1.amazonaws.com", 
-            "id": "i-81fe27ec", 
-            "public_ip_address": "54.243.5.203"
-        }, 
-        {
-            "private_ip_address": "10.191.37.111", 
-            "public_dns_name": "ec2-174-129-155-192.compute-1.amazonaws.com", 
-            "id": "i-83fe27ee", 
-            "public_ip_address": "174.129.155.192"
-        }, 
-        {
-            "private_ip_address": "10.137.19.77", 
-            "public_dns_name": "ec2-54-235-32-201.compute-1.amazonaws.com", 
-            "id": "i-95fe27f8", 
-            "public_ip_address": "54.235.32.201"
-        }, 
-        {
-            "private_ip_address": "10.68.94.53", 
-            "public_dns_name": "ec2-184-73-82-57.compute-1.amazonaws.com", 
-            "id": "i-97fe27fa", 
-            "public_ip_address": "184.73.82.57"
-        }, 
-        {
-            "private_ip_address": "10.191.123.101", 
-            "public_dns_name": "ec2-50-16-142-253.compute-1.amazonaws.com", 
-            "id": "i-93fe27fe", 
-            "public_ip_address": "50.16.142.253"
-        }
-    ], 
-    "redirect_import_folder_to_s3_path": true, 
-    "ec2_comment_ssh_3": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.68.215.118", 
-    "ec2_comment_ssh_2": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.68.99.173", 
-    "ec2_comment_ssh_1": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.139.21.161", 
-    "ec2_comment_ssh_7": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.68.111.121", 
-    "ec2_comment_ssh_6": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.140.14.99", 
-    "ec2_comment_ssh_5": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.8.45.253", 
-    "ec2_comment_ssh_4": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.68.115.77", 
-    "ec2_comment_ssh_9": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.68.199.220", 
-    "ec2_comment_ssh_8": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.6.63.31"
+    "password": "0xdiag", 
+    "use_home_for_ice": true,
+
+    "h2o_per_host": 1, 
+    "sigar": true,
+    "java_heap_GB": 28, 
+
+    "hdfs_name_node": "192.168.1.176",
+    "hdfs_version": "cdh3",
+    "use_hdfs": false,
+
+    "use_flatfile": true,
+
+    "ip": [
+        "192.168.1.172",
+        "192.168.1.173",
+        "192.168.1.174",
+        "192.168.1.175",
+        "192.168.1.176",
+        "192.168.1.177",
+        "192.168.1.178",
+        "192.168.1.179",
+        "192.168.1.180"
+    ]
 }
+

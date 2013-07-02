@@ -31,6 +31,11 @@ public class C1Chunk extends Chunk {
     return true; 
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
-    throw H2O.unimpl();
+    for( int i=0; i<_mem.length; i++ ) {
+      long res = at8_impl(i);
+      if( _vec.isNA(res) ) nc.setInvalid(i);
+      else nc._ls[i] = res;
+    }
+    return nc;
   }
 }

@@ -32,7 +32,7 @@ public class GBMTest extends TestUtil {
       fr._names[ncols-1] = s;
       fr._vecs [ncols-1] = v;
       
-      GBM gbm = GBM.start(GBM.makeKey(),fr);
+      GBM gbm = GBM.start(GBM.makeKey(),fr,3);
       gbm.get();                  // Block for result
       UKV.remove(gbm._dest);
     } finally {
