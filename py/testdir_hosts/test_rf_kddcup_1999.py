@@ -25,7 +25,7 @@ class Basic(unittest.TestCase):
 
         importFolderPath = '/home/0xdiag/datasets/standard'
         h2i.setupImportFolder(None, importFolderPath)
-        csvFilename = 'kddcup_1999.data'
+        csvFilename = 'kddcup_1999.data.gz'
 
         print "Want to see that I get similar results when using H2O RF defaults (no params to json)" +\
             "compared to running with the parameters specified and matching the browser RF query defaults. " +\
