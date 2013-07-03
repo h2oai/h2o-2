@@ -61,8 +61,15 @@ public abstract class MRTask<T extends MRTask> extends DRemoteTask<T> {
       }
       _rite.compute2();         // Runs in THIS F/J thread
     } else {
-      if( _hi > _lo )           // Single key?
-        map(_keys[_lo]);        // Get it, run it locally
+      if( _hi > _lo ) {         // Single key?
+        try {
+          map(_keys[_lo]);      // Get it, run it locally
+        } catch( RuntimeException re ) {
+          RuntimeException t=new RuntimeException(re.getMessage()+" while mapping key "+_keys[_lo]);
+          t.setStackTrace(re.getStackTrace());
+          throw t;
+        }
+      }
       tryComplete();            // And this task is complete
     }
   }
