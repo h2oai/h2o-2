@@ -47,12 +47,12 @@ class parse_rand_schmoo(unittest.TestCase):
         else:
             import h2o_hosts
             h2o_hosts.build_cloud_with_hosts()
-        h2b.browseTheCloud()
+        ### h2b.browseTheCloud()
 
     @classmethod
     def tearDownClass(cls):
         if not h2o.browse_disable:
-            # time.sleep(500000)
+            ### time.sleep(500000)
             pass
 
         h2o.tear_down_cloud(h2o.nodes)
@@ -99,7 +99,7 @@ class parse_rand_schmoo(unittest.TestCase):
             key2 = csvFilename + "_" + str(trial) + ".hex"
             # needs a big polling timeout, for the later iterations?
             key = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2, 
-                timeoutSecs=150, pollTimeoutSecs=150, noPoll=True)
+                timeoutSecs=150, pollTimeoutSecs=150)
             print "trial #", trial, "totalRows:", totalRows, "num:", num, "parse end on ", csvFilename, \
                 'took', time.time() - start, 'seconds'
             ### h2o_cmd.runInspect(key=key2)

@@ -99,7 +99,7 @@ class Basic(unittest.TestCase):
         filename4x = "hastie_4x.data"
         pathname4x = SYNDATASETS_DIR + '/' + filename4x
         h2o_util.file_cat(pathname2xShuf,pathname2xShuf,pathname4x)
-        glm_doit(self,filename4x, pathname4x, timeoutSecs=60)
+        glm_doit(self,filename4x, pathname4x, timeoutSecs=120)
 
 if __name__ == '__main__':
     h2o.unit_main()
