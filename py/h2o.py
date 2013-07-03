@@ -770,8 +770,14 @@ class H2O(object):
         verboseprint("\nput_file response: ", dump_json(resp))
         return key
     
-    def get_key(self, key):
-        return self.__do_json_request('Get.html', params={"key": key})
+    def get_key(self, key, timeoutSecs=30):
+        params = {'key': key}
+        paramsStr =  '?' + '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
+        url = self.__url('Get.html')
+        log('Start ' + url + paramsStr)
+
+        # how big does the data return get? I guess only use on relatively small file/key
+        return requests.get(url, params=params, timeout=timeoutSecs)
 
     # noise is a 2-tuple ("StoreView", none) for url plus args for doing during poll to create noise
     # so we can create noise with different urls!, and different parms to that url
@@ -787,7 +793,9 @@ class H2O(object):
         # no need to recreate the string for messaging, in the loop..
         paramsStr =  '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
 
-        if noise is not None:
+        # FIX! don't do JStack noise for tests that ask for it. JStack seems to have problems
+        noise_enable = noise is not None and noise != ("JStack", None)
+        if noise_enable:
             print "Using noise during poll_url:", noise
             # noise_json should be like "Storeview"
             (noise_json, noiseParams) = noise
@@ -810,7 +818,7 @@ class H2O(object):
             # UPDATE: 1/24/13 change to always wait before the first poll..
             time.sleep(retryDelaySecs)
             # every other one?
-            create_noise = noise is not None and ((count%2)==0)
+            create_noise = noise_enable and ((count%2)==0)
             if create_noise:
                 urlUsed = noiseUrl
                 paramsUsed = noiseParams

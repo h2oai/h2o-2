@@ -30,6 +30,7 @@ public class C1Chunk extends Chunk {
     _mem[i+OFF] = (byte)l;
     return true; 
   }
+  @Override boolean set8_impl(int i, double d) { return false; }
   @Override NewChunk inflate_impl(NewChunk nc) {
     for( int i=0; i<_mem.length; i++ ) {
       long res = at8_impl(i);

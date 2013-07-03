@@ -24,7 +24,7 @@ class Basic(unittest.TestCase):
 
     def test_RF_poker_1m_rf(self):
         csvPathname = h2o.find_file('smalldata/poker/poker1000')
-        h2o_cmd.runRF(trees=50, timeoutSecs=10, csvPathname=csvPathname)
+        h2o_cmd.runRF(trees=50, timeoutSecs=60, csvPathname=csvPathname)
 
 if __name__ == '__main__':
     h2o.unit_main()

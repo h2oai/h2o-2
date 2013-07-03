@@ -42,7 +42,7 @@ class Basic(unittest.TestCase):
             # creates csvFilename.hex from file in importFolder dir 
             start = time.time()
             parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
-                timeoutSecs=2000, key2=key2, noise=('JStack', None))
+                timeoutSecs=2000, key2=key2) # noise=('JStack', None)
             print "parse end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o.check_sandbox_for_errors()
 

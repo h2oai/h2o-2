@@ -151,7 +151,7 @@ def parseImportHdfsFile(node=None, csvFilename=None, path=None, key2=None, schem
 
     hdfsKey = URI + "/" + csvFilename
     print "parseImportHdfsFile hdfsKey:", hdfsKey
-    inspect = h2o_cmd.runInspect(key=hdfsKey)
+    inspect = h2o_cmd.runInspect(key=hdfsKey, timeoutSecs=180)
     print "parseImportHdfsFile inspect of source:", inspect
 
     if key2 is None:

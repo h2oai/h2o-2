@@ -10,6 +10,7 @@ public class NewChunk extends Chunk {
   final int _cidx;
   transient long _ls[];         // Mantissa
   transient int _xs[];          // Exponent
+  transient double _ds[];       // Doubles, for inflating via doubles
   transient double _min, _max;
   int _naCnt;
   int _strCnt;
@@ -23,8 +24,8 @@ public class NewChunk extends Chunk {
     _max = -Double.MAX_VALUE;
   }
 
-  protected final boolean isNA(int idx){
-    return _ls[idx] == 0 && _xs[idx] != 0;
+  protected final boolean isNA(int idx) {
+    return (_ds == null) ? (_ls[idx] == 0 && _xs[idx] != 0) : Double.isNaN(_ds[idx]);
   }
 
   public void addNA(){
@@ -235,10 +236,19 @@ public class NewChunk extends Chunk {
   // chunk.  At this point the NewChunk is full size, no more appends allowed,
   // and the xs exponent array should be only full of zeros.  Accesses must be
   // in-range and refer to the inflated values of the original Chunk.
-  @Override boolean set8_impl(int i, long l) { _ls[i]=l; _xs[i]=0; return true; }
-  @Override public long   at8_impl( int i ) { assert _xs[i]==0; return _ls[i]; }
-  @Override public double atd_impl( int i ) { throw H2O.fail(); }
-  @Override boolean hasFloat() { return _hasFloat; }
+  @Override boolean set8_impl(int i, long l) {
+    if( _ds != null ) throw H2O.unimpl();
+    _ls[i]=l; _xs[i]=0;
+    return true;
+  }
+  @Override boolean set8_impl(int i, double d) {
+    if( _ls != null ) throw H2O.unimpl();
+    _ds[i]=d;
+    return true;
+  }
+  @Override public long   at8_impl( int i ) { assert _xs[i]==0 && _ds==null; return _ls[i]; }
+  @Override public double atd_impl( int i ) { assert _xs==null; return _ds[i]; }
+  @Override boolean hasFloat() { throw H2O.fail(); }
   @Override public AutoBuffer write(AutoBuffer bb) { throw H2O.fail(); }
   @Override public NewChunk read(AutoBuffer bb) { throw H2O.fail(); }
   @Override NewChunk inflate_impl(NewChunk nc) { throw H2O.fail(); }

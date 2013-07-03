@@ -21,7 +21,7 @@ class Basic(unittest.TestCase):
 
     def test_arit_rf(self):
         csvPathname = h2o.find_file('smalldata/test/arit.csv')
-        h2o_cmd.runRF(trees=20, timeoutSecs=30, csvPathname=csvPathname)
+        h2o_cmd.runRF(trees=20, timeoutSecs=300, csvPathname=csvPathname)
 
 if __name__ == '__main__':
     h2o.unit_main()

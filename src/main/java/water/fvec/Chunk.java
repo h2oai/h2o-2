@@ -84,6 +84,30 @@ public abstract class Chunk extends Iced implements Cloneable {
     return l;
   }
 
+  public final double set8(long i, double d) {
+    long x = i-_start;
+    if( !(0 <= x && x < _len) ) return _vec.set8(i,d); // Go Slow
+    return set80((int)x,d);
+  }
+  public final double set80(int idx, double d) {
+    if( _chk==this ) {
+      assert !(this instanceof NewChunk) : "Cannot direct-write into a NewChunk, only append";
+      _vec.startWriting();      // One-shot writing-init
+      _chk = clone();           // Flag this chunk as having been written into
+    }
+    if( _chk.set8_impl(idx,d) ) return d;
+    // Must inflate the chunk
+    NewChunk nc = new NewChunk(null/*_vec*/,_vec.elem2ChunkIdx(_start));
+    nc._vec = _vec;
+    nc._ls = null;
+    nc._xs = null;
+    nc._ds = new double[_len];
+    nc._len= _len;
+    _chk = inflate_impl(nc);
+    nc.set8_impl(idx,d);
+    return d;
+  }
+
   // After writing we must call close() to register the bulk changes
   public void close( int cidx, Futures fs ) {
     if( _chk instanceof NewChunk )_chk = ((NewChunk)_chk).close(fs);
@@ -99,7 +123,8 @@ public abstract class Chunk extends Iced implements Cloneable {
   abstract protected long   at8_impl(int idx);
   // Chunk-specific writer.  Returns false if the value does not fit in the
   // current compression scheme.
-  abstract boolean set8_impl(int idx, long l);
+  abstract boolean set8_impl (int idx, long l );
+  abstract boolean set8_impl (int idx, double d );
   // Chunk-specific bulk inflator back to NewChunk.  Used when writing into a
   // chunk and written value is out-of-range for an update-in-place operation.
   // Bulk copy from the compressed form into the nc._ls array.
