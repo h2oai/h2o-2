@@ -53,42 +53,43 @@ class Basic(unittest.TestCase):
                 # ("syn_datasets/syn_7350063254201195578_10000x200.csv_0001[0-9]", "syn_10.csv", 10 * avgSynSize, 700),
                 # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[23][0-9]", "syn_20.csv", 20 * avgSynSize, 700),
                 # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[45678][0-9]", "syn_50.csv", 50 * avgSynSize, 700),
-                ("manyfiles-nflx-gz/file_1[0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
-                # ("manyfiles-nflx-gz/file_2[0-9][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 3600),
+                ("file_1[0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
+                # ("file_2[0-9][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 3600),
 
-                ("manyfiles-nflx-gz/file_[1-2][0-5][0-9].dat.gz", "file_120_A.dat.gz", 120 * avgMichalSize, 3600),
-                # ("manyfiles-nflx-gz/file_[1-2][0-5][0-9].dat.gz", "file_120_B.dat.gz", 120 * avgMichalSize, 3600),
+                ("file_[1-2][0-5][0-9].dat.gz", "file_120_A.dat.gz", 120 * avgMichalSize, 3600),
+                # ("file_[1-2][0-5][0-9].dat.gz", "file_120_B.dat.gz", 120 * avgMichalSize, 3600),
 
-                ("manyfiles-nflx-gz/file_[1-2][0-6][0-9].dat.gz", "file_140_A.dat.gz", 140 * avgMichalSize, 3600),
-                # ("manyfiles-nflx-gz/file_[1-2][0-6][0-9].dat.gz", "file_140_B.dat.gz", 140 * avgMichalSize, 3600),
+                ("file_[1-2][0-6][0-9].dat.gz", "file_140_A.dat.gz", 140 * avgMichalSize, 3600),
+                # ("file_[1-2][0-6][0-9].dat.gz", "file_140_B.dat.gz", 140 * avgMichalSize, 3600),
 
-                ("manyfiles-nflx-gz/file_[1-2][0-7][0-9].dat.gz", "file_160_A.dat.gz", 160 * avgMichalSize, 3600),
-                # ("manyfiles-nflx-gz/file_[1-2][0-7][0-9].dat.gz", "file_160_B.dat.gz", 160 * avgMichalSize, 3600),
+                ("file_[1-2][0-7][0-9].dat.gz", "file_160_A.dat.gz", 160 * avgMichalSize, 3600),
+                # ("file_[1-2][0-7][0-9].dat.gz", "file_160_B.dat.gz", 160 * avgMichalSize, 3600),
 
-                ("manyfiles-nflx-gz/file_[1-2][0-8][0-9].dat.gz", "file_180_A.dat.gz", 180 * avgMichalSize, 3600),
-                # ("manyfiles-nflx-gz/file_[1-2][0-8][0-9].dat.gz", "file_180_B.dat.gz", 180 * avgMichalSize, 3600),
+                ("file_[1-2][0-8][0-9].dat.gz", "file_180_A.dat.gz", 180 * avgMichalSize, 3600),
+                # ("file_[1-2][0-8][0-9].dat.gz", "file_180_B.dat.gz", 180 * avgMichalSize, 3600),
 
-                ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 3600),
-                # ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200_B.dat.gz", 200 * avgMichalSize, 3600),
+                ("file_[12][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 3600),
+                # ("file_[12][0-9][0-9].dat.gz", "file_200_B.dat.gz", 200 * avgMichalSize, 3600),
 
-                ("manyfiles-nflx-gz/file_[123][0-9][0-9].dat.gz", "file_300_A.dat.gz", 300 * avgMichalSize, 3600),
-                ("manyfiles-nflx-gz/file_[123][0-9][0-9].dat.gz", "file_300_B.dat.gz", 300 * avgMichalSize, 3600),
-                ("manyfiles-nflx-gz/file_[123][0-9][0-9].dat.gz", "file_300_C.dat.gz", 300 * avgMichalSize, 3600),
+                ("file_[123][0-9][0-9].dat.gz", "file_300_A.dat.gz", 300 * avgMichalSize, 3600),
+                ("file_[123][0-9][0-9].dat.gz", "file_300_B.dat.gz", 300 * avgMichalSize, 3600),
+                ("file_[123][0-9][0-9].dat.gz", "file_300_C.dat.gz", 300 * avgMichalSize, 3600),
 
 
-                ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 300),
-                ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
-                ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 900),
-                ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 3600),
-                ("manyfiles-nflx-gz/file_1[0-4][0-9].dat.gz", "file_50_B.dat.gz", 50 * avgMichalSize, 3600),
-                ("manyfiles-nflx-gz/file_1[0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
-                ("manyfiles-nflx-gz/file_2[0-9][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 3600),
-                ("[A]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_A_200_x55.dat.gz", 200 * (avgMichalSize/2), 7200),
-                ("[A-B]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_B_400_x55.dat.gz", 400 * (avgMichalSize/2), 7200),
-                ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_C_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
-                ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_D_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
-                ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_E_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
-                ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_F_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
+                ("file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 300),
+                ("file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
+                ("file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 900),
+                ("file_[5-9][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 3600),
+                ("file_1[0-4][0-9].dat.gz", "file_50_B.dat.gz", 50 * avgMichalSize, 3600),
+                ("file_1[0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
+                ("file_2[0-9][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 3600),
+
+                # ("[A]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_A_200_x55.dat.gz", 200 * (avgMichalSize/2), 7200),
+                # ("[A-B]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_B_400_x55.dat.gz", 400 * (avgMichalSize/2), 7200),
+                # ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_C_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
+                # ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_D_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
+                # ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_E_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
+                # ("[A-D]-800-manyfiles-nflx-gz/file_[0-9]*.dat.gz", "file_F_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
             ]
 
         print "Using the -.gz files from s3"
@@ -97,10 +98,10 @@ class Basic(unittest.TestCase):
         if USE_HOME2:
             bucket = "home2-0xdiag-datasets/1k_small_gz"
         else:
-            bucket = "home-0xdiag-datasets"
+            bucket = "home-0xdiag-datasets/manyfiles-nflx-gz"
 
         if USE_S3:
-            URI = "s3://" + bucket + "/"
+            URI = "s3://" + bucket  + "/"
             protocol = "s3"
         else:
             URI = "s3n://" + bucket + "/"
@@ -115,7 +116,7 @@ class Basic(unittest.TestCase):
             ## for tryHeap in [54, 28]:
             h2oPerNode = 1
             # h1.4xlarge 60.5GB dram
-            for tryHeap in [14]:
+            for tryHeap in [28]:
                 
                 print "\n", tryHeap,"GB heap,", h2oPerNode, "jvm per host, import", protocol, "then parse"
                 # jea = "-XX:+UseParNewGC -XX:+UseConcMarkSweepGC"
