@@ -18,8 +18,8 @@ public class NewVectorTest extends TestUtil {
     nv._ls = ls;
     nv._xs = xs;
     nv._len= ls.length;
-    Chunk bv = nv.compress(0);
-    bv._vec = av.close();
+    Chunk bv = nv.compress();
+    bv._vec = av.close(new Futures());
     // Compression returns the expected compressed-type:
     assertTrue( "Found chunk class "+bv.getClass()+" but expected "+C, C.isInstance(bv) );
     assertEquals( hasFloat, bv.hasFloat() );
@@ -85,7 +85,7 @@ public class NewVectorTest extends TestUtil {
     nv._xs = new int []{0,0,0};
     nv._len= nv._ls.length;
     nv.close(0,null);
-    Vec vec = av.close();
+    Vec vec = av.close(new Futures());
     assertEquals( nv._ls.length, vec.length() );
     // Compression returns the expected constant-compression-type:
     Chunk c0 = vec.elem2BV(0);

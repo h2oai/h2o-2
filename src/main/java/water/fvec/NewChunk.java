@@ -248,7 +248,7 @@ public class NewChunk extends Chunk {
   }
   @Override public long   at8_impl( int i ) { assert _xs[i]==0 && _ds==null; return _ls[i]; }
   @Override public double atd_impl( int i ) { assert _xs==null; return _ds[i]; }
-  @Override boolean hasFloat() { throw H2O.fail(); }
+  @Override boolean hasFloat() { return _hasFloat; }
   @Override public AutoBuffer write(AutoBuffer bb) { throw H2O.fail(); }
   @Override public NewChunk read(AutoBuffer bb) { throw H2O.fail(); }
   @Override NewChunk inflate_impl(NewChunk nc) { throw H2O.fail(); }
