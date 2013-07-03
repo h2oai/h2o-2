@@ -160,6 +160,12 @@ public class Vec extends Iced {
     UDP.set4(bits, 6, -1);
     return Key.make(bits);
   }
+  /**
+   * Get the group this vector belongs to.
+   * In case of a group with only one vector, the object actually does not exist in KV store.
+   *
+   * @return VectorGroup this vector belongs to.
+   */
   public VectorGroup group(){
     Key gKey = groupKey();
     Value v = DKV.get(gKey);
@@ -241,6 +247,28 @@ public class Vec extends Iced {
   }
 
 
+  /**
+   * Class representing the group of vectors.
+   *
+   * Vectors from the same group have same distribution of chunks among nodes.
+   * Each vector is member of exactly one group. Default group of one vector is created for each vector.
+   * Group of each vector can be retrieved by calling group() method;
+   *
+   * The expected mode of operation is that user wants to add new vectors matching the source.
+   * E.g. parse creates several vectors (on for each column) which are all colocated and are
+   * colocated with the original bytevector.
+   *
+   * To do this, user should first ask for the set of keys for the new vectors by calling addVecs method on the
+   * target group.
+   *
+   * Vectors in the group will have the same keys except for the prefix which specifies index of the vector inside the group.
+   * The only information the group object carries is it's own key and the number of vectors it contains(deleted vectors still count).
+   *
+   * Because vectors(and chunks) share the same key-pattern with the group, default group with only one vector does not have to be actually created, it is implicit.
+   *
+   * @author tomasnykodym
+   *
+   */
   public static class VectorGroup extends Iced{
     public final int _len;
     public final Key _key;
@@ -251,11 +279,16 @@ public class Vec extends Iced {
       UDP.set4(bits,2,vecId);//
       return Key.make(bits);
     }
-
     public int vecId(Key k){
       return UDP.get4(k._kb, 2);
     }
 
+    /**
+     * Task to atomically add vectors into existing group.
+     *
+     * @author tomasnykodym
+     *
+     */
     private static class AddVecs2GroupTsk extends TAtomic<VectorGroup>{
       final Key _key;
       final int _addN;
@@ -266,6 +299,14 @@ public class Vec extends Iced {
         return new VectorGroup(_key, _finalN = (_addN + old._len));
       }
     }
+    /**
+     * Gets the next n keys of this group.
+     * Performs atomic udpate of the group object to assure we get unique keys.
+     * The group size will be udpated by adding n.
+     *
+     * @param n
+     * @return arrays of unique keys belonging to this group.
+     */
     Key [] addVecs(final int n){
       AddVecs2GroupTsk tsk = new AddVecs2GroupTsk(_key, n);
       tsk.invoke(_key);

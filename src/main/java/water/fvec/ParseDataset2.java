@@ -83,7 +83,7 @@ public final class ParseDataset2 extends Job {
 
   /**
    * Task to update enum values to match the global numbering scheme.
-   * Performs update in place.
+   * Performs update in place so that values originally numbered using node-local unordered numbering will be numbered using global numbering.
    *
    * @author tomasnykodym
    *
