@@ -47,7 +47,9 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
   private final T self() { return (T)this; }
 
   // Read-only accessor
-  public final Vec vecs(int i) { return _fr._vecs[i]; }
+  public final Vec vecs(int i) {
+    return _fr._vecs[i];
+  }
 
   // Top-level blocking call.
   public final T invoke( Vec... vecs ) { return invoke(new Frame(null,null,vecs)); }
@@ -146,8 +148,7 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
         if( true                  ) map(bvs );
         _res = self();          // Save results since called map() at least once!
         // Further D/K/V put any new vec results.
-        for( Chunk bv : bvs )
-            bv.close(_lo+_outputChkOffset,_fs);
+        for( Chunk bv : bvs )bv.close(_lo+_outputChkOffset,_fs);
       }
     }
     tryComplete();              // And this task is complete

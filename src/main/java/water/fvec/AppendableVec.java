@@ -16,14 +16,13 @@ import java.util.Arrays;
 // other Vec type.  NEW Vectors do NOT support reads!
 public class AppendableVec extends Vec {
   long _espc[];
-  int [] _homes;
   boolean _hasFloat;            // True if we found a float chunk
   long _missingCnt;
   long _strCnt;
   long _totalCnt;
 
-  AppendableVec( Key key ) {
-    super(key,null,false,Double.MAX_VALUE,Double.MIN_VALUE);
+  AppendableVec( Key key) {
+    super(key, null,false,Double.MAX_VALUE,Double.MIN_VALUE);
     _espc = new long[4];
   }
 
@@ -32,12 +31,9 @@ public class AppendableVec extends Vec {
   // not called distributed.
   synchronized void closeChunk( NewChunk chk) {
     final int cidx = chk._cidx;
-    while( cidx >= _espc.length ) {
-      _espc = Arrays.copyOf(_espc,_espc.length<<1);
-      _homes = Arrays.copyOf(_homes,_homes.length<<1);
-    }
+    while( cidx >= _espc.length ) _espc = Arrays.copyOf(_espc,_espc.length<<1);
     _espc[cidx] = chk._len;
-    _homes[cidx] = H2O.SELF.index();
+ //   _homes[cidx] = H2O.SELF.index();
     _hasFloat |= chk.hasFloat();
     // Roll-up totals for each chunk as it closes
     if( chk._min < _min ) _min = chk._min;
@@ -45,13 +41,6 @@ public class AppendableVec extends Vec {
     _missingCnt += chk._naCnt;
     _strCnt += chk._strCnt;
     _totalCnt += chk._len;
-  }
-
-  @Override
-  public Key chunkKey(int cidx){
-    Key k =  Key.make(_key._kb,(byte)1,Key.DVEC,H2O.SELF);
-    UDP.set4(k._kb,2,cidx);          // Chunk#
-    return k;
   }
 
   @Override
@@ -97,7 +86,8 @@ public class AppendableVec extends Vec {
     }
     espc[nchunk]=x;             // Total element count in last
     // Replacement plain Vec for AppendableVec.
-    Vec vec = new Vec(_key,espc,!_hasFloat,_min,_max);
+    Vec vec = new Vec(_key, espc,!_hasFloat,_min,_max);
+    vec._dtype = dtype();
     DKV.put(_key,vec,fs);       // Inject the header
     return vec;
   }

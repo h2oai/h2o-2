@@ -51,7 +51,7 @@ public class Vec extends Iced {
     Futures fs = new Futures();
     if( v._espc == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
     int nchunks = v.nChunks();
-    Vec v0 = new Vec(newKey(),v._espc,true,0,0);
+    Vec v0 = new Vec(v.group().addVecs(1)[0],v._espc,true,0,0);
     long row=0;                 // Start row
     for( int i=0; i<nchunks; i++ ) {
       long nrow = v.chunk2StartElem(i+1); // Next row
@@ -61,16 +61,6 @@ public class Vec extends Iced {
     DKV.put(v0._key,v0,fs);
     fs.blockForPending();
     return v0;
-  }
-
-  public static Key newKey() {
-    byte [] kb = Key.make()._kb;
-    byte[] bits = new byte[1+1+4+kb.length];
-    bits[0] = Key.VEC;
-    bits[1] = 0; // Not homed
-    UDP.set4(bits,2,-1); // 0xFFFFFFFF in the chunk# area
-    System.arraycopy(kb,0,bits,1+1+4,kb.length);
-    return Key.make(bits);
   }
 
   // Number of elements in the vector.  Overridden by subclasses that compute
@@ -140,22 +130,42 @@ public class Vec extends Iced {
   // table lookup.
   public long chunk2StartElem( int cidx ) { return _espc[cidx]; }
 
-  // Convert a chunk index into a data chunk key.  It's just the main Key with
-  // the given chunk#.
-  public Key chunkKey( int cidx ) {
-    byte[] bits = _key._kb.clone(); // Copy the Vec key
-    bits[0] = Key.DVEC;             // Data chunk key
-    bits[1] = -1;                   // Not homed
-    UDP.set4(bits,2,cidx);          // Chunk#
-    return Key.make(bits);
-  }
-
   // Get a Chunk.  Basically the index-to-key map, plus a DKV.get.  Can be
   // overridden for e.g., all-constant vectors where the Value is special.
+  public Key chunkKey(int cid){
+    byte [] bits = _key._kb.clone();
+    bits[0] = Key.DVEC;
+    UDP.set4(bits,6,cid); // chunk#
+    return Key.make(bits);
+  }
   public Value chunkIdx( int cidx ) {
     Value val = DKV.get(chunkKey(cidx));
     assert val != null;
     return val;
+  }
+  protected static Key newKey(){return newKey(Key.make());}
+  protected static Key newKey(Key k){
+    byte [] kb = k._kb;
+    byte [] bits = MemoryManager.malloc1(kb.length+4+4+1+1);
+    bits[0] = Key.VEC;
+    bits[1] = -1;         // Not homed
+    UDP.set4(bits,2,0);   // new group, so we're the first vector
+    UDP.set4(bits,6,-1);  // 0xFFFFFFFF in the   chunk# area
+    System.arraycopy(kb, 0, bits, 4+4+1+1, kb.length);
+    return Key.make(bits);
+  }
+  private Key groupKey(){
+    byte [] bits = _key._kb.clone();
+    UDP.set4(bits, 2, -1);
+    UDP.set4(bits, 6, -1);
+    return Key.make(bits);
+  }
+  public VectorGroup group(){
+    Key gKey = groupKey();
+    Value v = DKV.get(gKey);
+    if(v != null)return v.get(VectorGroup.class);
+    // no group exists so we have to create one
+    return new VectorGroup(gKey,1);
   }
 
   // Convert a global row# to a chunk-local row#.
@@ -227,6 +237,42 @@ public class Vec extends Iced {
   // [#elems, min/mean/max]
   @Override public String toString() {
     return "["+length()+(Double.isNaN(_min) ? "" : ","+_min+"/"+_max)+"]";
+  }
+
+
+  public static class VectorGroup extends Iced{
+    public final int _len;
+    public final Key _key;
+    private VectorGroup(Key key, int len){_key = key;_len = len;}
+
+    public Key vecKey(int vecId){
+      byte [] bits = _key._kb.clone();
+      UDP.set4(bits,2,vecId);//
+      return Key.make(bits);
+    }
+
+    public int vecId(Key k){
+      return UDP.get4(k._kb, 2);
+    }
+
+    private static class AddVecs2GroupTsk extends TAtomic<VectorGroup>{
+      final Key _key;
+      final int _addN;
+      int _finalN;
+      public AddVecs2GroupTsk(Key key, int n){_key = key; _addN = _finalN = n;}
+      @Override public VectorGroup atomic(VectorGroup old) {
+        if(old == null) return new VectorGroup(_key, ++_finalN);
+        return new VectorGroup(_key, _finalN = (_addN + old._len));
+      }
+    }
+    Key [] addVecs(final int n){
+      AddVecs2GroupTsk tsk = new AddVecs2GroupTsk(_key, n);
+      tsk.invoke(_key);
+      Key [] res = new Key[n];
+      for(int i = 0; i < n; ++i)
+        res[i] = vecKey(i + tsk._finalN - n);
+      return res;
+    }
   }
 }
 

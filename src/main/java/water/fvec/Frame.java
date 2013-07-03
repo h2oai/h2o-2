@@ -1,6 +1,7 @@
 package water.fvec;
 
 import water.*;
+import water.fvec.Vec.VectorGroup;
 
 import java.io.InputStream;
 import java.util.Arrays;
@@ -55,14 +56,14 @@ public class Frame extends Iced {
           throw new IllegalArgumentException("Vector chunks different numbers of rows, "+es+" and "+vec.chunk2StartElem(i));
     }
   }
-
+  public void closeAppendables() {closeAppendables(new Futures());}
   // Close all AppendableVec
-  public void closeAppendables() {
+  public void closeAppendables(Futures fs) {
     _col0 = null;               // Reset cache
     for( int i=0; i<_vecs.length; i++ ) {
       Vec v = _vecs[i];
       if( v != null && v instanceof AppendableVec )
-        _vecs[i] = ((AppendableVec)v).close();
+        _vecs[i] = ((AppendableVec)v).close(fs);
     }
   }
 
@@ -75,12 +76,19 @@ public class Frame extends Iced {
     return false;
   }
 
-  // Remove all embedded Vecs
-  public void remove() {
-    for( Vec v : _vecs )
-      UKV.remove(v._key);
+  public void remove(Futures fs){
+    if(_vecs.length > 0){
+      VectorGroup vg = _vecs[0].group();
+      for( Vec v : _vecs )
+        UKV.remove(v._key,fs);
+       DKV.remove(vg._key);
+    }
     _names = new String[0];
     _vecs = new Vec[0];
+  }
+  // Remove all embedded Vecs
+  public void remove() {
+    remove(new Futures());
   }
   @Override public Frame init( Key k ) { _key=k; return this; }
   @Override public String toString() {

@@ -33,12 +33,12 @@ public class NATest extends TestUtil {
     for(int i = 0; i < expectedTypes.length; ++i)
       assertTrue(expectedTypes[i].isInstance(fr._vecs[i].elem2BV(0)));
     for(int i = 0; i < nlines-1; ++i){
-    //  System.out.print(i+": ");
+//      System.out.print(i+": ");
       for(Vec v:fr._vecs){
-        //System.out.print(v.at(i) + " ");
+//      System.out.print(v.at(i) + " ");
         assertTrue("error at line "+i+", vec " + v.elem2BV(0).getClass().getSimpleName(),!v.isNA(v.at(i)) && !v.isNA(v.at8(i)));
       }
-      //System.out.println();
+//      System.out.println();
     }
     for(Vec v:fr._vecs){
       assertTrue(v.isNA(v.at(nlines-1)) && v.isNA(v.at8(nlines-1)));
@@ -53,31 +53,31 @@ public class NATest extends TestUtil {
     UKV.remove(okey);
   }
 
-  public void test2(){
-    System.out.println("Running test2!");
-    File file = new File("/Users/tomasnykodym/Downloads/140k_train_anonymised.csv");
-    assert file.exists();
-    Key key = NFSFileVec.make(file);
-    Key okey = Key.make("na_test.hex");
-    Frame fr = ParseDataset2.parse(okey,new Key[]{key});
-    System.out.println(Arrays.toString(fr._names));
-    for(int i = 0; i < 100; ++i){
-      for(Vec v:fr._vecs){
-        if(v._domain != null && i < v.length()) {
-          int eval = (int)v.at8(i);
-          if(eval < v._domain.length)
-            System.out.print(v._domain[(int)v.at8(i)]);
-          else
-            System.out.print(eval);
-        }
-        System.out.print(" ");
-      }
-      System.out.println();
-    }
-    for(Vec v:fr._vecs)
-      if(v._domain != null)System.out.println(Arrays.toString(v._domain));
-    System.out.println("DONE!");
-  }
+//  public void test2(){
+//    System.out.println("Running test2!");
+//    File file = new File("/Users/tomasnykodym/Downloads/140k_train_anonymised.csv");
+//    assert file.exists();
+//    Key key = NFSFileVec.make(file);
+//    Key okey = Key.make("na_test.hex");
+//    Frame fr = ParseDataset2.parse(okey,new Key[]{key});
+//    System.out.println(Arrays.toString(fr._names));
+//    for(int i = 0; i < 100; ++i){
+//      for(Vec v:fr._vecs){
+//        if(v._domain != null && i < v.length()) {
+//          int eval = (int)v.at8(i);
+//          if(eval < v._domain.length)
+//            System.out.print(v._domain[(int)v.at8(i)]);
+//          else
+//            System.out.print(eval);
+//        }
+//        System.out.print(" ");
+//      }
+//      System.out.println();
+//    }
+//    for(Vec v:fr._vecs)
+//      if(v._domain != null)System.out.println(Arrays.toString(v._domain));
+//    System.out.println("DONE!");
+//  }
   public static void main(String [] args) throws Exception{
     final int nnodes = 3;
     for( int i = 1; i < nnodes; i++ ) {
@@ -88,10 +88,23 @@ public class NATest extends TestUtil {
     H2O.main(args);
     H2O.waitForCloudSize(nnodes);
 //    System.out.println("test2");
-    new NATest().test2();
+    new NATest().testNAs();
+    new FVecTest().testBasicCRUD();
+    new FVecTest().testNewVec();
+    new FVecTest().testParse();
+    new FVecTest().testParse2();
+
+    new NewVectorTest().testCompression();
+    new NewVectorTest().testWrites();
+    checkLeakedKeys();
+//    NewVectorTest.checkLeakedKeys();
+//    new NATest().testNAs();
+//    new NATest().test2();
+//
 //    System.out.println("test3");
 //    new NATest().testNAs();
 //    System.out.println("test4");
 //    new NewVectorTest().testCompression();
+    System.out.println("DONE!!!");
   }
 }

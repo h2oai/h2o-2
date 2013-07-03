@@ -62,16 +62,11 @@ public class NewChunk extends Chunk {
   // (does not live on inside the K/V store).
   public Chunk close(Futures fs) {
     Chunk chk = compress();
-    if( _vec instanceof AppendableVec )
+    if(_vec instanceof AppendableVec)
       ((AppendableVec)_vec).closeChunk(this);
     return chk;
   }
 
-  public void ehisto(){
-    int [] vals = new int[256];
-    for(int i = 0; i < _len; ++i)if(_xs[i] >= 0)++vals[_xs[i]];
-    System.out.println(H2O.SELF+"_histo: " + Arrays.toString(vals) + "; " + Arrays.toString(_xs));
-  }
   // Study this NewVector and determine an appropriate compression scheme.
   // Return the data so compressed.
   static final int MAX_FLOAT_MANTISSA = 0x7FFFFF;
