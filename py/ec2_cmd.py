@@ -153,7 +153,7 @@ def run_instances(count, ec2_config, region, waitForSSH=True, tags=None):
         if waitForSSH:
             # kbn: changing to private address, so it should fail if not in right domain
             # used to have the public ip address
-            wait_for_ssh([ i.ip_private_address for i in reservation.instances ])
+            wait_for_ssh([ i.private_ip_address for i in reservation.instances ])
 
         # Tag instances
         try:
