@@ -1725,6 +1725,7 @@ class RemoteHost(object):
         # FIX! we won't find it here if it's hdfs://192.168.1.151/ file
         f = find_file(f)
         if f not in self.uploaded:
+            start = time.time()
             import md5
             m = md5.new()
             m.update(open(f).read())
@@ -1746,6 +1747,7 @@ class RemoteHost(object):
             except IOError, e:
                 if e.errno == errno.ENOENT:
                     sftp.put(f, dest, callback=progress)
+                    print "\n{0:.3f} seconds".format(time.time() - start)
             finally:
                 sftp.close()
             self.uploaded[f] = dest
