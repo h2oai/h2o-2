@@ -20,7 +20,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud(sandbox_ignore_errors=True)
 
     def test_parse_nflx_loop_s3n_hdfs(self):
-        DO_GLM = True
+        DO_GLM = False
         DO_GLMGRID = False
         USE_HOME2 = False
         USE_S3 = False
