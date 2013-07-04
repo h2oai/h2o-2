@@ -4,8 +4,12 @@ import java.util.Arrays;
 import water.Iced;
 import water.MemoryManager;
 import water.util.Log;
-import Jama.CholeskyDecomposition;
-import Jama.Matrix;
+// import Jama.CholeskyDecomposition;
+// import Jama.Matrix;
+
+import org.jblas.DoubleMatrix;
+import org.jblas.Decompose;
+import org.jblas.Solve;
 
 import com.google.gson.JsonObject;
 
@@ -121,15 +125,51 @@ public class DLSM {
       }
     }
 
-    public double [] solve(Matrix xx, Matrix xy, double [] z) {
-      final int N = xx.getRowDimension();
+    // Solve U'*U*X = B for X
+    public DoubleMatrix luSolve(DoubleMatrix U, DoubleMatrix B) {
+      int nx = B.getColumns();
+      int n = U.getRows();
+
+      double[][] X = B.toArray2();
+      double[][] Ua = U.toArray2();
+
+      // Solve U'*Y = B
+      for(int k = 0; k < n; k++) {
+        for(int j = 0; j < nx; j++) {
+          for(int i = 0; i < k; i++) {
+            X[k][j] -= X[i][j]*Ua[i][k];
+          }
+          X[k][j] /= Ua[k][k];
+        }
+      }
+
+      // Solve U*X = Y
+      for(int k = n-1; k >= 0; k--) {
+        for(int j = 0; j < nx; j++) {
+          for(int i = k+1; i < n; i++) {
+            X[k][j] -= X[i][j]*Ua[k][i];
+          }
+          X[k][j] /= Ua[k][k];
+        }
+      }
+      return new DoubleMatrix(X);
+    }
+
+    // public double [] solve(Matrix xx, Matrix xy, double [] z) {
+    public double [] solve(DoubleMatrix xx, DoubleMatrix xy, double [] z) {
+      // final int N = xx.getRowDimension();
+      final int N = xx.getRows();
       double lambda =  _lambda*(1-_alpha)*0.5 + _rho;
       if(_lambda != 0) for(int i = 0; i < N-1; ++i)
-          xx.set(i, i, xx.get(i,i)+lambda);
-      CholeskyDecomposition lu = new CholeskyDecomposition(xx);
+          // xx.set(i, i, xx.get(i,i)+lambda);
+          xx.put(i, i, xx.get(i,i)+lambda);
+      // CholeskyDecomposition lu = new CholeskyDecomposition(xx);
+      DoubleMatrix lu = Decompose.cholesky(xx);
       if(_alpha == 0 || _lambda == 0) // no l1 penalty
         try {
-          double[] res = lu.solve(xy).getColumnPackedCopy();
+          // double[] res = lu.solve(xy).getColumnPackedCopy();
+          // double[] res = Solve.solvePositive(xx, xy).reshape(xx.getColumns()*xy.getColumns(), 1).toArray();
+          double[] res = luSolve(lu, xy).reshape(lu.getColumns()*xy.getColumns(), 1).toArray();
           System.arraycopy(res, 0, z, 0, res.length);
           _converged = true;
           return res;
@@ -142,8 +182,10 @@ public class DLSM {
       final double ABSTOL = Math.sqrt(N) * 1e-4;
       final double RELTOL = 1e-2;
       double[] u = MemoryManager.malloc8d(N-1);
-      Matrix xm = null;
-      Matrix xyPrime = (Matrix)xy.clone();
+      // Matrix xm = null;
+      DoubleMatrix xm = null;
+      // Matrix xyPrime = (Matrix)xy.clone();
+      DoubleMatrix xyPrime = xy.dup();
       OUTER:
       for(int a = 0; a < 5; ++a){
         double kappa = _lambda*_alpha / _rho;
@@ -151,11 +193,14 @@ public class DLSM {
           // first compute the x update
           // add rho*(z-u) to A'*y
           for( int j = 0; j < N-1; ++j ) {
-            xyPrime.set(j, 0, xy.get(j, 0) + _rho * (z[j] - u[j]));
+            // xyPrime.set(j, 0, xy.get(j, 0) + _rho * (z[j] - u[j]));
+            xyPrime.put(j, 0, xy.get(j, 0) + _rho * (z[j] - u[j]));
           }
           // updated x
           try{
-            xm = lu.solve(xyPrime);
+            // xm = lu.solve(xyPrime);
+            // xm = Solve.solvePositive(xx, xyPrime);
+            xm = luSolve(lu, xyPrime);
           } catch(Exception e) {
             if( !e.getMessage().equals("Matrix is not symmetric positive definite.") )
               throw Log.errRTExcept(e);
@@ -163,7 +208,8 @@ public class DLSM {
             _rho *= 10;
             lambda = (_lambda*(1-_alpha) + _rho) - lambda;
             for(int j = 0; j < N-1; ++j)
-              xx.set(j, j, xx.get(j,j)+lambda);
+              // xx.set(j, j, xx.get(j,j)+lambda);
+              xx.put(j, j, xx.get(j,j)+lambda);
             Arrays.fill(z, 0);
             Arrays.fill(u, 0);
             continue OUTER;
@@ -208,7 +254,8 @@ public class DLSM {
     @Override
     public boolean solve(double[][] xx, double[] xy, double yy, double[] newBeta) {
       Arrays.fill(newBeta, 0);
-      solve(new Matrix(xx), new Matrix(xy,xy.length),newBeta);
+      // solve(new Matrix(xx), new Matrix(xy,xy.length),newBeta);
+      solve(new DoubleMatrix(xx), new DoubleMatrix(xy), newBeta);
       return _converged;
     }
 
