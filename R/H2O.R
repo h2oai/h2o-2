@@ -85,8 +85,20 @@ h2o.poll <- function(keyName) {
     if(res[[i]]$key == keyName)
       prog = res[[i]]
   }
-  # prog$end_time
-  prog$progress
+  prog$end_time
+}
+
+h2o.poll_rf <- function(keyName) {
+  type = tryCatch({ typeof(keyName) }, error = function(e) { "expr" })
+  if (type != "character")
+    keyName = deparse(substitute(keyName))
+  res = h2o.__remoteSend(h2o.__PAGE_JOBS)
+  res = res$jobs
+  for(i in 1:length(res)) {
+    if(res[[i]]$destination_key == keyName)
+      prog = res[[i]]
+  }
+  prog$end_time
 }
 
 # Inspects the given key on H2O cloud. Key can be either a string or a literal which will be translated to a string.
@@ -114,7 +126,6 @@ h2o.inspect <- function(keyName) {
       result = c(result,from[[i]][what]);
     result;    
   }
-  # result$rows = do.call(rbind, lapply(res$rows, data.frame))
   res = res$cols;
   result$cols = data.frame(name = as.character(extract(res,"name")),
                               offset = as.numeric(extract(res,"offset")),
@@ -154,10 +165,9 @@ h2o.importUrl <- function(keyName, url, parse = TRUE) {
   if (parse) {
     h2o.__printIfVerbose("  parsing key ",uploadKey," to key ",keyName)
     res = h2o.__remoteSend(h2o.__PAGE_PARSE, source_key = uploadKey, destination_key = paste(keyName,".hex",sep=""))    
-    # while(h2o.poll(res$response$redirect_request_args$job) == "") { Sys.sleep(1) }
-    while(h2o.poll(res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
-  }
-  res$response$redirect_request_args$job
+  } 
+  # res
+  while(h2o.poll(res$response$redirect_request_args$job) == "") { Sys.sleep(1) }
 }
 
 # Imports a file local to the server the interop is connecting to. Other arguments are the same as for the importUrl
@@ -206,8 +216,7 @@ h2o.filter <- function(keyName, expr, maxRows = h2o.MAX_GET_ROWS, forceDataFrame
 
 # GLM function. This should be rewiewed by someone who actually understands the GLM:-D
 # Please note that the x and negX arguments cannot be specified without quotes as lists are expected. 
-# h2o.glm = function(keyName, y, case="1.0", x = "", negX = "", family = "gaussian", xval = 0, threshold = 0.5, norm = "NONE", lambda = 0.1, rho = 1.0, alpha = 1.0) {
-h2o.glm = function(keyName, y, case="1.0", x = "", negX = "", family = "gaussian", xval = 0, threshold = 0.5, lambda = 1.0e-5, alpha = 0.5, weight = 1.0, rho = 1.0) {
+h2o.glm = function(keyName, y, case="1.0", x = "", negX = "", family = "gaussian", xval = 0, threshold = 0.5, norm = "NONE", lambda = 0.1, rho = 1.0, alpha = 1.0) {
   type = tryCatch({ typeof(keyName) }, error = function(e) { "expr" })
   if (type != "character")
     keyName = deparse(substitute(keyName))
@@ -224,32 +233,8 @@ h2o.glm = function(keyName, y, case="1.0", x = "", negX = "", family = "gaussian
   negX = paste(negX,sep="",collapse=",")
   h2o.__printIfVerbose("  running GLM on vector ",keyName," response column ",y)
   res = h2o.__remoteSend(h2o.__PAGE_GLM, key = keyName, y = y, case=case, x = x, "-x" = negX, family = family, xval = xval, threshold = threshold, norm = norm, lambda = lambda, rho = rho, alpha = alpha)
-  # while(h2o.poll(res$response$redirect_request_args$job) == "") { Sys.sleep(1) }
-  while(h2o.poll(res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
+  while(h2o.poll(res$response$redirect_request_args$job) == "") { Sys.sleep(1) }
   h2o.__printModel(res$destination_key, type = "GLM")
-}
-
-h2o.score = function(modelKey, scoreKey, type = "GLM") {
-  type = tryCatch({ typeof(modelKey) }, error = function(e) { "expr" })
-  if (type != "character")
-    modelKey = deparse(substitute(modelKey))
-  type = tryCatch({ typeof(scoreKey) }, error = function(e) { "expr" })
-    scoreKey = deparse(substitute(scoreKey))
-  result = list()
-  if(type == "GLM") {
-    res = h2o.__remoteSend(h2o.__PAGE_GLMSCORE, modelKey, scoreKey)
-    res = res$validation
-    result$resDev = res$resDev
-    result$nullDev = res$nullDev
-    result$aic = res$aic
-    result$training_error = res$err
-  }
-  else if(type == "KM") {
-    res = h2o.__remoteSend(h2o.__PAGE_KMSCORE, modelKey, scoreKey)
-    res = res$score
-    result$sq_error = res$sqr_error_per_cluster
-  }
-  result
 }
 
 # K-means function.
@@ -262,8 +247,7 @@ h2o.kmeans = function(keyName, k = 5, epsilon = 1.0E-6, normalize = 0) {
 
   h2o.__printIfVerbose("  running ", k, "-means on vector ",keyName)
   res = h2o.__remoteSend(h2o.__PAGE_KMEANS, source_key = keyName, k = k, epsilon = epsilon, normalize = normalize)
-  # while(h2o.poll(res$response$redirect_request_args$job) == "") { Sys.sleep(1) }
-  while(h2o.poll(res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
+  while(h2o.poll(res$response$redirect_request_args$job) == "") { Sys.sleep(1) }
   h2o.__printModel(res$destination_key, type = "KM")
 }
 
@@ -279,26 +263,10 @@ h2o.rf = function(keyName, ntree="", class = "", negX = "", family = "gaussian",
  
   h2o.__printIfVerbose("  running RF on vector ",keyName," class column ",class, " number of trees ", ntree)
   res = h2o.__remoteSend(h2o.__PAGE_RF, data_key = keyName, ntree = ntree, class = class)
-  # while(h2o.poll(res$response$redirect_request_args$job) == "") { Sys.sleep(1) }
-  while(h2o.poll(res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
+  # res
+  while(h2o.poll_rf(res$response$redirect_request_args$model_key) == "") { Sys.sleep(1) }
   h2o.inspect_rf(res$model_key, res$data_key)
 }
-
-# h2o.poll_rf <- function(keyName) {
-#  type = tryCatch({ typeof(keyName) }, error = function(e) { "expr" })
-#  if (type != "character")
-#    keyName = deparse(substitute(keyName))
-#  res = h2o.__remoteSend(h2o.__PAGE_JOBS)
-#  res = res$jobs
-#  for(i in 1:length(res)) {
-#    if(res[[i]]$key == keyName)
-#      prog = res[[i]]
-#    else if(grepl(keyName, res[[i]]$destination_key) && 
-#      regexpr("ConfusionMatrix of ",res[[i]]$destination_key)[1] == 1)
-#    conf = res[[i]]
-#  }
-#  prog$end_time
-# }
 
 h2o.inspect_rf = function(modelkey, datakey, oob_err = 1) {
   type = tryCatch({ typeof(modelkey) }, error = function(e) { "expr" })
@@ -311,42 +279,15 @@ h2o.inspect_rf = function(modelkey, datakey, oob_err = 1) {
   h2o.__printIfVerbose("  Inspecting model key ",modelkey, " for data key ", datakey)
   res = h2o.__remoteSend(h2o.__PAGE_RFVIEW, model_key = modelkey, data_key = datakey, out_of_bag_error_estimate = oob_err)
   result = list()
-  result$model_key = res$model_key
   result$data_key = res$data_key
+  result$model_key = res$model_key
   result$num_trees = res$ntree
-  # result$confusion_matrix = res$confusion_matrix
-  result$scores = res$scores
-  result$classes_errors = res$classes_errors
+  result$confusion_matrix = res$confusion_matrix
   result$trees = res$trees
   result
 }
 
-# h2o.score_rf = function(modelKey, dataKey, ntree = 50, no_confusion_matrix = 0, clear_confusion_matrix = 0) {
-#  type = tryCatch({ typeof(modelKey) }, error = function(e) { "expr" })
-#  if (type != "character")
-#    modelKey = deparse(substitute(modelKey))
-#  type = tryCatch({ typeof(dataKey) }, error = function(e) { "expr" })
-#  if (type != "character")
-#    dataKey  = deparse(substitute(datakey))
-#  res = h2o.__remoteSend(h2o.__PAGE_RFSCORE, dataKey, modelKey, ntree, no_confusion_matrix, clear_confusion_matrix)
-#  result = list()
-#  result$classes_errors = res$classes_errors
-#  result$scores = res$scores
-#  result$trees = res$trees
-# }
 
-h2o.km_apply = function(modelKey, dataKey, destKey) {
-  type = tryCatch({ typeof(modelKey) }, error = function(e) { "expr" })
-  if(type != "character")
-    modelKey = deparse(substitute(modelKey))
-  type = tryCatch({ typeof(dataKey) }, error = function(e) { "expr" })
-  if (type != "character")
-    dataKey  = deparse(substitute(datakey))
-  res = h2o.__remoteSend(h2o.__PAGE_KMAPPLY, model_key = modelKey, data_key = dataKey, destination_key = destKey)
-  # while(h2o.poll(res$response$redirect_request_args$job) == "") { Sys.sleep(1) }
-  while(h2o.poll(res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
-  h2o.__printModel(res$destination_key, type = "KMApply")
-}
 
 # Internal functions & declarations -----------------------------------------------------------------------------------
 
@@ -358,13 +299,9 @@ h2o.__PAGE_REMOVE = "Remove.json"
 h2o.__PAGE_IMPORT = "ImportUrl.json"
 h2o.__PAGE_PARSE = "Parse.json"
 h2o.__PAGE_GLM = "GLM.json"
-h2o.__PAGE_GLMSCORE = "GLMScore.json"
 h2o.__PAGE_KMEANS = "KMeans.json"
-h2o.__PAGE_KMSCORE = "KMeansScore.json"
-h2o.__PAGE_KMAPPLY = "KMeansApply.json"
 h2o.__PAGE_RF  = "RF.json"
 h2o.__PAGE_RFVIEW = "RFView.json"
-h2o.__PAGE_RFSCORE = "RFScore.json"
 h2o.__PAGE_JOBS = "Jobs.json"
 
 h2o.__printIfVerbose <- function(...) {
@@ -430,18 +367,7 @@ h2o.__printModel <- function(keyName, type) {
     result$params = res$GLMParams
     result
   }
-  else if(type == "KM") {
-    result = list()
-    result$key = keyName
-    result$clusters = res$KMeansModel$clusters
-    result
-  }
-  else if(type == "KMApply") {
-    # res = h2o.__remoteSend(h2o.__PAGE_INSPECT, key = keyName, view = 200)
-    result = res$rows
-    result = do.call(rbind, lapply(result, data.frame))[,2]
-    result
-  }
+  else if(type == "KM") { res$KMeansModel$clusters }
 }
 
 # h2o.rf <- function(key,ntree, depth=30,model=FALSE,gini=1,seed=42,wait=TRUE) {

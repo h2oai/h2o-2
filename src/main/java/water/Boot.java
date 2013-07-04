@@ -127,8 +127,7 @@ public class Boot extends ClassLoader {
       addInternalJars("apache");
       addInternalJars("gson");
       addInternalJars("junit");
-      // addInternalJars("jama");
-      addInternalJars("jblas");
+      addInternalJars("jama");
       addInternalJars("poi");
       addInternalJars("s3");
       addInternalJars("jets3t");
@@ -214,7 +213,7 @@ public class Boot extends ClassLoader {
       return _systemLoader.getResourceAsStream("resources"+uri);
     } else {
       try {
-        return new FileInputStream(new File("lib/resources"+uri));
+        return new FileInputStream(new File("lib/resources"+uri)); 
         // The following code is busted on windows with spaces in user-names,
         // and I've no idea where it comes from - GIT claims it came from
         // cliffc-fvec2 merge into master, but there's no indication of this

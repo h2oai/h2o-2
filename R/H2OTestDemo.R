@@ -9,13 +9,15 @@ h2o.SERVER="localhost:54321"
 h2o.importUrl("covtype", "http://www.stanford.edu/~anqif/covtype.20k.data")
 cov.view <- h2o.inspect(covtype.hex)
 print(cov.view$cols)
+#h2o(slice(covtype.hex,100,100))
+#h2o(sum(covtype.hex[12]))
 
 # h2o.glm(covtype.hex, y = 12, case="1",family=binomial)
 # h2o.glm(covtype.hex, y = 12, x = "1,2,3,4,5,6,7,8",case=1, family=binomial)
 cov.glm1 <- h2o.glm(covtype.hex, y = 12, case = "1", family = binomial)
 print(cov.glm1$coef)
 print(cov.glm1$dof)
-cov.glm2 <- h2o.glm(covtype.hex, y = 12, x = "1,2,3,4,5,6,7,8", family = binomial)
+cov.glm2 <- h2o.glm(covtype.hex, y = 12, x = "1,2,3,4,5,6,7,8", case = 1, family = binomial)
 print(cov.glm2$coef)
 print(cov.glm2$dof)
 
@@ -24,12 +26,7 @@ print(cov.glm2$dof)
 #h2o(log(covtype[1]))
 # add randomforest test
 h2o.rf(covtype.hex, class = "54", ntree = "10")
-
-h2o.importUrl("iris", "http://www.stanford.edu/~anqif/iris.csv")
-iris.view <- h2o.inspect(iris.hex)
-print(iris.view$cols)
-iris.rf <- h2o.rf(iris.hex, class = "4", ntree = "50")
-# h2o.score_rf(iris.rf$model_key, iris.hex)
+# while(h2o.poll(temp$response$redirect_request_args$key) == "") { Sys.sleep(1) }
 
 # Run GLM
 # h2o.importFile("prostate", paste(getwd(),"../smalldata/logreg/prostate.csv",sep="/"))
@@ -42,6 +39,4 @@ print(prostate.glm$coef)
 print(prostate.glm$dof)
 
 # Run K-Means
-covtype.km.model <- h2o.kmeans(covtype.hex, k = 10)
-covtype.km.cat <- h2o.km_apply(covtype.km.model$key, "covtype.hex", "covtype.km_apply")
-print(covtype.km.cat)
+h2o.kmeans(covtype.hex, k = 10)
