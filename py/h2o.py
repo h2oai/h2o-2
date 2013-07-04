@@ -310,8 +310,8 @@ def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True)
 
 
 def check_port_group(base_port):
-    # for now, only check for jenkins or kevin
-    if (1==1):
+    # disabled
+    if (1==0):
         username = getpass.getuser()
         if username=='jenkins' or username=='kevin' or username=='michal':
             # assumes you want to know about 3 ports starting at base_port
