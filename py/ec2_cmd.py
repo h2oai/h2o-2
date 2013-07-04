@@ -8,6 +8,7 @@ import h2o
 import h2o_hosts
 import json
 import commands
+import traceback
 
 '''
     Simple EC2 utility:
@@ -372,7 +373,7 @@ def invoke_hosts_action(action, hosts_config, args, ec2_reservation=None):
                 log("To kill the cloud please use Ctrl+C as usual.")
                 while (True): time.sleep(3600)
         except:
-            pass
+            print traceback.format_exc()
         finally:
             log("Goodbye H2O cloud...")
             h2o.tear_down_cloud()
