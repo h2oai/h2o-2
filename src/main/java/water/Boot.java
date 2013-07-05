@@ -128,6 +128,7 @@ public class Boot extends ClassLoader {
       addInternalJars("gson");
       addInternalJars("junit");
       addInternalJars("jama");
+      addInternalJars("jblas");
       addInternalJars("poi");
       addInternalJars("s3");
       addInternalJars("jets3t");
