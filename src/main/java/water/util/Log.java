@@ -4,14 +4,13 @@ import java.io.*;
 import java.lang.management.ManagementFactory;
 import java.util.Locale;
 
+import org.apache.log4j.LogManager;
+import org.apache.log4j.PropertyConfigurator;
+
 import water.*;
 import water.api.Constants.Schemes;
 import water.util.Log.Tag.Kind;
 import water.util.Log.Tag.Sys;
-
-import org.apache.log4j.Logger;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.PropertyConfigurator;
 
 /** Log for H2O. This class should be loaded before we start to print as it wraps around
  * System.{out,err}.
@@ -82,9 +81,7 @@ public abstract class Log {
   static final Timer time = new Timer();
   /** Some guess at the process ID. */
   public static final long PID = getPid();
-
-  private static final String LONG_HEADERS_PARAM = "long_log_headers";
-  private static final boolean LONG_HEADERS = System.getProperty(LONG_HEADERS_PARAM) != null;
+  /** Additional logging for debugging. */
   private static String _longHeaders;
 
   private static boolean printAll;
@@ -349,7 +346,8 @@ public abstract class Log {
     org.apache.log4j.Logger l4j = getLog4jLogger();
 
     // If no logger object exists, try to build one.
-    if (l4j == null) {
+    // Disable for debug, causes problems for multiple nodes per VM
+    if (l4j == null && !H2O.DEBUG) {
       if (H2O.SELF != null) {
         File dir;
         // Use ice folder if local, or default
@@ -382,7 +380,7 @@ public abstract class Log {
     }
 
     if( Paxos._cloudLocked ) logToKV(e.when.startAsString(), e.thread, e.kind, e.sys, e.body(0));
-    if(printOnOut || printAll) unwrap(System.out, (LONG_HEADERS ? e.toString() : e.toShortString()));
+    if(printOnOut || printAll) unwrap(System.out, (H2O.DEBUG ? e.toString() : e.toShortString()));
     e.printMe = false;
   }
   /** We also log events to the store. */

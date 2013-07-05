@@ -4,12 +4,12 @@ import java.io.File;
 import java.util.*;
 
 import water.Boot;
+import water.H2O;
 import water.util.Log;
 import water.util.Utils;
 
 public class Host {
   public static final String SSH_OPTS;
-  public static final boolean LOG_RSYNC = System.getProperty("logrsync") != null;
 
   static {
     SSH_OPTS = "" //
@@ -81,7 +81,7 @@ public class Host {
       ArrayList<String> args = new ArrayList<String>();
       File onWindows = new File("C:/cygwin/bin/rsync.exe");
       args.add(onWindows.exists() ? onWindows.getAbsolutePath() : "rsync");
-      args.add("-" + (LOG_RSYNC ? "" : "q") + "vrzute");
+      args.add("-" + (H2O.DEBUG ? "" : "q") + "vrzute");
       args.add(sshWithArgs());
       args.add("--chmod=u=rwx");
 
@@ -102,7 +102,7 @@ public class Host {
       builder.environment().put("CYGWIN", "nodosfilewarning");
       process = builder.start();
       String log = "rsync " + VM.localIP() + " -> " + _address;
-      if( !LOG_RSYNC ) Log.debug(log);
+      if( !H2O.DEBUG ) Log.debug(log);
       NodeVM.inheritIO(process, Log.padRight(log + ": ", 24));
       process.waitFor();
     } catch( Exception ex ) {

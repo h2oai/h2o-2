@@ -158,7 +158,7 @@ public class RFRunner {
     return files;
   }
 
-
+  @SuppressWarnings("unused")
   static boolean runTest(String cmd, String resultDB, PrintStream stdout, boolean check) throws Exception {
     RFProcess p = new RFProcess(cmd);
     p._stdout = stdout;
