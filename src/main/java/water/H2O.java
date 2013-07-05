@@ -101,6 +101,9 @@ public final class H2O {
   // Reverse cloud index to a cloud; limit of 256 old clouds.
   static private final H2O[] CLOUDS = new H2O[256];
 
+  // Enables debug features like more logging and multiple instances per JVM
+  public static final boolean DEBUG = System.getProperty("h2o.debug") != null;
+
   // Construct a new H2O Cloud from the member list
   public H2O( H2ONode[] h2os, int hash, int idx ) {
     _memary = h2os;             // Need to clone?
