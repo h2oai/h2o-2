@@ -25,7 +25,7 @@ public final class PersistNFS extends Persist {
   // Returns the file for given key.
   private static File getFileForKey(Key k) {
     final int len = KEY_PREFIX_LENGTH+1; // Strip key prefix & leading slash
-    final int off = k._kb[0]==Key.DVEC ? (1+1+4) : 0;
+    final int off = k._kb[0]==Key.DVEC ? (1+1+4+4) : 0;
     String s = new String(k._kb,len+off,k._kb.length-(len+off));
     return new File(s);
   }

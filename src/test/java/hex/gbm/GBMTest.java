@@ -1,13 +1,12 @@
-package hex;
+package hex.gbm;
 
 import static org.junit.Assert.assertEquals;
-import hex.gbm.GBM;
+
 import java.io.File;
+
 import org.junit.BeforeClass;
-import org.junit.Test;
-import water.Key;
-import water.TestUtil;
-import water.UKV;
+
+import water.*;
 import water.fvec.*;
 
 public class GBMTest extends TestUtil {
@@ -22,7 +21,7 @@ public class GBMTest extends TestUtil {
     UKV.remove(fkey);
     try {
       assertEquals(380,fr._vecs[0].length());
-      
+
       // Prostate: predict on CAPSULE which is in column #1; move it to last column
       int ncols = fr._names.length;
       String s = fr._names[1];    // capsule
@@ -31,7 +30,7 @@ public class GBMTest extends TestUtil {
       System.arraycopy(fr._vecs ,2,fr._vecs ,1,ncols-2);
       fr._names[ncols-1] = s;
       fr._vecs [ncols-1] = v;
-      
+
       GBM gbm = GBM.start(GBM.makeKey(),fr,3);
       gbm.get();                  // Block for result
       UKV.remove(gbm._dest);

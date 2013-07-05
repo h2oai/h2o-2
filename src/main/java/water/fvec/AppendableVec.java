@@ -17,25 +17,39 @@ import java.util.Arrays;
 public class AppendableVec extends Vec {
   long _espc[];
   boolean _hasFloat;            // True if we found a float chunk
+  long _missingCnt;
+  long _strCnt;
+  long _totalCnt;
 
-  AppendableVec( Key key ) {
-    super(key,null,false,Double.MAX_VALUE,Double.MIN_VALUE);
+  AppendableVec( Key key) {
+    super(key, null,false,Double.MAX_VALUE,Double.MIN_VALUE);
     _espc = new long[4];
   }
 
   // A NewVector chunk was "closed" - completed.  Add it's info to the roll-up.
   // This call is made in parallel across all node-local created chunks, but is
   // not called distributed.
-  synchronized void closeChunk( int cidx, int len, boolean hasFloat, double min, double max ) {
-    while( cidx >= _espc.length )
-      _espc = Arrays.copyOf(_espc,_espc.length<<1);
-    _espc[cidx] = len;
-    _hasFloat |= hasFloat;
+  synchronized void closeChunk( NewChunk chk) {
+    final int cidx = chk._cidx;
+    while( cidx >= _espc.length ) _espc = Arrays.copyOf(_espc,_espc.length<<1);
+    _espc[cidx] = chk._len;
+ //   _homes[cidx] = H2O.SELF.index();
+    _hasFloat |= chk.hasFloat();
     // Roll-up totals for each chunk as it closes
-    if( min < _min ) _min = min;
-    if( max > _max ) _max = max;
+    if( chk._min < _min ) _min = chk._min;
+    if( chk._max > _max ) _max = chk._max;
+    _missingCnt += chk._naCnt;
+    _strCnt += chk._strCnt;
+    _totalCnt += chk._len;
   }
 
+  @Override
+  public DType dtype() {
+    if(_missingCnt == _totalCnt)return DType.NA;
+    // TODO: we declare column to be string/enum only if it does not have ANY numbers in it.
+    if(_strCnt > 0 && (_strCnt + _missingCnt) == _totalCnt) return DType.S;
+    return _hasFloat?DType.F:DType.I;
+  }
   // Class 'reduce' call on new vectors; to combine the roll-up info.
   // Called single-threaded from the M/R framework.
   public void reduce( AppendableVec nv ) {
@@ -72,7 +86,8 @@ public class AppendableVec extends Vec {
     }
     espc[nchunk]=x;             // Total element count in last
     // Replacement plain Vec for AppendableVec.
-    Vec vec = new Vec(_key,espc,!_hasFloat,_min,_max);
+    Vec vec = new Vec(_key, espc,!_hasFloat,_min,_max);
+    vec._dtype = dtype();
     DKV.put(_key,vec,fs);       // Inject the header
     return vec;
   }

@@ -19,7 +19,7 @@ public class NewVectorTest extends TestUtil {
     nv._xs = xs;
     nv._len= ls.length;
     Chunk bv = nv.compress();
-    bv._vec = av.close(null);
+    bv._vec = av.close(new Futures());
     // Compression returns the expected compressed-type:
     assertTrue( "Found chunk class "+bv.getClass()+" but expected "+C, C.isInstance(bv) );
     assertEquals( hasFloat, bv.hasFloat() );
@@ -75,20 +75,17 @@ public class NewVectorTest extends TestUtil {
              new int [] {  40,     10,  -40},
              C8DChunk.class, true);
   }
-    
+
   // Testing writes to an existing Chunk causing inflation
   @Test public void testWrites() {
-    final Key key = Vec.newKey();
+    Key key = Vec.newKey();
     AppendableVec av = new AppendableVec(key);
     NewChunk nv = new NewChunk(av,0);
     nv._ls = new long[]{0,0,0}; // A 3-row chunk
     nv._xs = new int []{0,0,0};
     nv._len= nv._ls.length;
     nv.close(0,null);
-    Futures fs = new Futures();
-    Vec vec = av.close(fs);
-    fs.blockForPending();
-    
+    Vec vec = av.close(new Futures());
     assertEquals( nv._ls.length, vec.length() );
     // Compression returns the expected constant-compression-type:
     Chunk c0 = vec.elem2BV(0);
@@ -97,34 +94,28 @@ public class NewVectorTest extends TestUtil {
     // Also, we can decompress correctly
     for( int i=0; i<nv._ls.length; i++ )
       assertEquals(0, c0.at0(i), c0.at0(i)*EPSILON);
-    
+
     // Now write a zero into slot 0
     vec.set8(0,0);
     assertEquals(0,vec.at8(0));
     Chunk c1 = vec.elem2BV(0);
     assertTrue( "Found chunk class "+c1.getClass()+" but expected C0LChunk", c1 instanceof C0LChunk );
-    
+
     // Now write a one into slot 1; chunk should inflate.
     c1.set8(1,1);
     assertEquals(1,vec.at8(1)); // Immediate visibility in current thread
     c1.close(0,null);           // Done writing into chunk
     Chunk c2 = vec.elem2BV(0);  // Look again at the installed chunk
     assertTrue( "Found chunk class "+c2.getClass()+" but expected C1Chunk", c2 instanceof C1Chunk );
-    
+
     // Now write a two into slot 2; chunk should not inflate.
     c2.set8(2,2);
     assertEquals(2,vec.at8(2)); // Immediate visibility in current thread
     c2.close(0,null);           // Done writing into chunk
     Chunk c3 = vec.elem2BV(0);  // Look again at the installed chunk
     assertTrue( "Found chunk class "+c3.getClass()+" but expected C1Chunk", c3 instanceof C1Chunk );
-    
-    UKV.remove(av._key);
-  }
 
-  private static final class CheckVec extends TAtomic<Vec> {
-    @Override public Vec atomic(Vec v) { 
-      assert v != null : "check remote null Vec";
-      return v;
-    }
+
+    UKV.remove(av._key);
   }
 }

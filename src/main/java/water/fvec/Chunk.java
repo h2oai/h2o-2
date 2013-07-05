@@ -28,7 +28,7 @@ public abstract class Chunk extends Iced implements Cloneable {
   // This version uses absolute element numbers, but must convert them to
   // chunk-relative indices - requiring a load from an aliasing local var,
   // leading to lower quality JIT'd code (similar issue to using iterator
-  // objects).  
+  // objects).
   // Slightly slower than 'at0'; range checks within a chunk
   public final double at( long i ) {
     long x = i-_start;
@@ -110,8 +110,9 @@ public abstract class Chunk extends Iced implements Cloneable {
 
   // After writing we must call close() to register the bulk changes
   public void close( int cidx, Futures fs ) {
-    if( _chk instanceof NewChunk ) _chk = ((NewChunk)_chk).close(fs);
-    else if( _chk == this ) return;  // Nothing written?
+    if( _chk instanceof NewChunk )_chk = ((NewChunk)_chk).close(fs);
+    if(_chk == this) return;
+    assert _vec.chunkKey(cidx).home_node() == _vec.chunkKey(cidx).home_node():"incorrectly homed key in mrtask2: " + _vec.chunkKey(cidx) +", homed at " + _vec.chunkKey(cidx).home_node().index() + ", expected at " + _vec.chunkKey(cidx).home_node();
     DKV.put(_vec.chunkKey(cidx),_chk,fs); // Write updated chunk back into K/V
   }
 
