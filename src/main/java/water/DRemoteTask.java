@@ -30,6 +30,9 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
   // Combine results from 'drt' into 'this' DRemoteTask
   abstract public void reduce( T drt );
 
+  // Any exception from local work
+  protected DException _exception;
+
   // Support for fluid-programming with strong types
   private final T self() { return (T)this; }
 
@@ -50,20 +53,41 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
   }
 
   // Invoked with a set of keys
-  public T invoke( Key... keys ) { dfork(keys).join();     return self(); }
   public T dfork ( Key... keys ) { keys(keys); compute2(); return self(); }
   public void keys( Key... keys ) { _keys = flatten(keys); }
+  public T invoke( Key... keys ) { 
+    dfork(keys).quietlyJoin();  // Fork, then QUIETLY join to not propagate local exceptions out.
+    if( _exception != null )    // Propagate a Distro exception if one is available
+      throw _exception.toEx();
+    return self(); 
+  }
 
   // Decide to do local-work or remote-work
   @Override public final void compute2() {
-    if( _is_local ) lcompute();
-    else            dcompute();
+    if( _is_local ) {
+      try { lcompute(); } 
+      catch( RuntimeException e ) {
+        _exception = new DException(e);
+        completeExceptionally(e);
+      }
+    } else
+      dcompute();
   }
 
   // Decide to do local-completion or remote-completion
   @Override public final void onCompletion( CountedCompleter caller ) {
     if( _is_local ) lonCompletion(caller);
     else            donCompletion(caller);
+  }
+  // Exception completion from local work.
+  // If coming from local work, propagate exception.
+  // If coming from distr work, complete "normally" with an exception string.
+  @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller ) {
+    if( _exception == null && caller instanceof DRemoteTask )
+      _exception = ((DRemoteTask)caller)._exception;
+    if( _is_local ) return true;
+    tryComplete();              // This completer completes *normally*
+    return false;               // This completer completes *normally*
   }
 
   // Real Work(tm)!
@@ -116,18 +140,28 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
     assert _lo == null || _lo.isDone();
     assert _hi == null || _hi.isDone();
     // Fold up results from left & right subtrees
-    if( _lo    != null ) reduce(_lo.get());
-    if( _hi    != null ) reduce(_hi.get());
-    if( _local != null ) reduce(_local   );
+    if( _lo    != null ) reduce2(_lo.get());
+    if( _hi    != null ) reduce2(_hi.get());
+    if( _local != null ) reduce2(_local   );
     // Note: in theory (valid semantics) we could push these "over the wire"
     // and block for them as we're blocking for the top-level initial split.
     // However, that would require sending "isDone" flags over the wire also.
     // MUCH simpler to just block for them all now, and send over the empty set
     // of not-yet-blocked things.
-    if( _local != null && _local._fs != null )
+    if( _exception == null && _local != null && _local._fs != null )
       _local._fs.blockForPending(); // Block on all other pending tasks, also
     _keys = null;                   // Do not return _keys over wire
   };
+
+  // 'Reduce' left and right answers.  Gather exceptions
+  private void reduce2( T drt ) {
+    if( _exception != null ) return; // Ignore all, if already have an exception
+    if( drt == null ) return;
+    if( drt._exception != null ) // Capture other-side exception and start ignoring all
+      _exception = drt._exception;
+    else 
+      reduce(drt);
+  }
 
   private final RPC<T> remote_compute( ArrayList<Key> keys ) {
     if( keys.size() == 0 ) return null;

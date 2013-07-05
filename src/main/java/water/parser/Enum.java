@@ -1,6 +1,9 @@
 package water.parser;
 
 import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import water.AutoBuffer;
 import water.Iced;
 import water.nbhm.NonBlockingHashMap;
@@ -21,31 +24,35 @@ import water.nbhm.NonBlockingHashMap;
  *
  */
 public final class Enum extends Iced {
-
   public static final int MAX_ENUM_SIZE = 65000;
-
+  AtomicInteger _id = new AtomicInteger();
+  long _nElems;
   volatile NonBlockingHashMap<ValueString, Integer> _map;
 
-  public Enum(){
-    _map = new NonBlockingHashMap<ValueString, Integer>();
-  }
+  public Enum(){_map = new NonBlockingHashMap<ValueString, Integer>();}
 
   /**
    * Add key to this map (treated as hash set in this case).
    * All keys are added with value = 1.
    * @param str
    */
-  void addKey(ValueString str) {
+  public int addKey(ValueString str) {
     // _map is shared and be cast to null (if enum is killed) -> grab local copy
-    Map<ValueString, Integer> m = _map;
-    if( m == null ) return;     // Nuked already
-    if( m.get(str) != null ) return; // Recorded already
+    NonBlockingHashMap<ValueString, Integer> m = _map;
+    if( m == null ) return Integer.MAX_VALUE;     // Nuked already
+    Integer res = m.get(str);
+    if(res != null ) return res; // Recorded already
     assert str._length < 65535;      // Length limit so 65535 can be used as a sentinel
-    m.put(new ValueString(Arrays.copyOfRange(str._buf, str._off, str._off + str._length)), 1);
-    if(m.size() > MAX_ENUM_SIZE)
+    Integer newVal = new Integer(_id.incrementAndGet());
+    res = m.putIfAbsent(new ValueString(Arrays.copyOfRange(str._buf, str._off, str._off + str._length)), newVal);
+    if(res != null)return res;
+    if(m.size() > MAX_ENUM_SIZE){
       kill();
+      return Integer.MAX_VALUE;
+    }
+    return newVal;
   }
-
+  public final boolean containsKey(Object key){return _map.containsKey(key);}
   public void addKey(String str) {
     addKey(new ValueString(str));
   }
@@ -53,8 +60,15 @@ public final class Enum extends Iced {
   public int getTokenId(String str) {
     return getTokenId(new ValueString(str));
   }
+  public String toString(){
+    StringBuilder sb = new StringBuilder("{");
+    for(Entry e: _map.entrySet())sb.append(" " + e.getKey().toString() + "->" + e.getValue().toString());
+    sb.append(" }");
+    return sb.toString();
+  }
+  public long addedElems(){return _nElems;}
 
-  int getTokenId(ValueString str){
+  public int getTokenId(ValueString str){
     Integer I = _map.get(str);
     assert I != null : "missing value! " + str.toString();
     return I;
@@ -73,6 +87,7 @@ public final class Enum extends Iced {
     }
     kill(); // too many values, enum should be killed!
   }
+  public int maxId(){return _id.get();}
   public int size() { return _map.size(); }
   public boolean isKilled() { return _map == null; }
   public void kill() { _map = null; }

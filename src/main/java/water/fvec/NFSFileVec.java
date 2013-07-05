@@ -14,13 +14,7 @@ public class NFSFileVec extends ByteVec {
   // This name is used by the DVecs to load data on-demand.
   public static Key make(File f) {
     long size = f.length();
-    Key k1 = PersistNFS.decodeFile(f);
-    byte[] bits = new byte[1+1+4+k1._kb.length];
-    bits[0] = Key.VEC;
-    bits[1] = 0; // Not homed
-    UDP.set4(bits,2,-1); // 0xFFFFFFFF in the chunk# area
-    System.arraycopy(k1._kb,0,bits,1+1+4,k1._kb.length);
-    Key k = Key.make(bits);
+    Key k = Vec.newKey(PersistNFS.decodeFile(f));
     // Insert the top-level FileVec key into the store
     DKV.put(k,new NFSFileVec(k,size));
     return k;
@@ -53,7 +47,7 @@ public class NFSFileVec extends ByteVec {
   // Convert a chunk-key to a file offset. Size 1 rows, so this is a direct conversion.
   static public long chunkOffset ( Key ckey ) { return (long)chunkIdx(ckey)<<ValueArray.LOG_CHK; }
   // Reverse: convert a chunk-key into a cidx
-  static public int chunkIdx(Key ckey) { assert ckey._kb[0]==Key.DVEC; return UDP.get4(ckey._kb,1+1); }
+  static public int chunkIdx(Key ckey) { assert ckey._kb[0]==Key.DVEC; return UDP.get4(ckey._kb,1+1+4); }
 
   // Convert a chunk# into a chunk - does lazy-chunk creation. As chunks are
   // asked-for the first time, we make the Key and an empty backing DVec.
@@ -65,7 +59,7 @@ public class NFSFileVec extends ByteVec {
     Value val1 = DKV.get(dkey);// Check for an existing one... will fetch data as needed
     if( val1 != null ) return val1; // Found an existing one?
     // Lazily create a DVec for this chunk
-    int len = (int)(cidx < nchk-1 ? Vec.CHUNK_SZ : (_len-chunk2StartElem(cidx)));
+    int len = (int)(cidx < nchk-1 ? ValueArray.CHUNK_SZ : (_len-chunk2StartElem(cidx)));
     // DVec is just the raw file data with a null-compression scheme
     Value val2 = new Value(dkey,len,null,TypeMap.C1CHUNK,Value.NFS);
     val2.setdsk(); // It is already on disk.

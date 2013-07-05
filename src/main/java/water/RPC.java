@@ -292,6 +292,10 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
         Log.info("Done  remote task#"+_tsknum+" "+dt.getClass()+" to "+_client);
       _client.record_task_answer(this); // Setup for retrying Ack & AckAck
     }
+    @Override public boolean onExceptionalCompletion( Throwable ex, CountedCompleter caller ) {
+      System.out.println("RPC sees an exceptional completion");
+      return true;
+    }
     // Re-send strictly the ack, because we're missing an AckAck
     public final void resend_ack() {
       assert _computed : "Found RPCCall not computed "+_tsknum;

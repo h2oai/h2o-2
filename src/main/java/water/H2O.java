@@ -157,7 +157,29 @@ public final class H2O {
   // is nonsense, e.g. asking for replica #3 in a 2-Node system.
   public int D( Key key, int repl ) {
     if( repl >= size() ) return -1;
-
+    // Distribution of Fluid Vectors is a special case.
+    // Fluid Vectors are grouped into vector groups, each of which must have the same distribution of chunks
+    // so that MRTask2 run over group of vectors will keep data-locality.
+    // The fluid vecs from the same group share the same key pattern + each has 4 bytes identifying particular vector in the group.
+    // Since we need the same chunks end up on the smae node in the group, we need to skip the 4 bytes containing vec# from the hash.
+    // Apart from that, we keep previous mode of operation, so that ByteVec would have first 64MB distributed around cloud randomly and then go round-robin
+    // in 64MB chunks.
+    if(key._kb[0] == Key.DVEC || key._kb[0] == Key.VEC){
+      long idx = 0;
+      long hash = 0;
+      if(key._kb[0] == Key.DVEC){
+        long cSz = 1 << (26 - ValueArray.LOG_CHK);
+        idx = (UDP.get4(key._kb, 4));
+        if(idx > cSz){ // chunk after 64MB boundary -> go round robin according to chunk# / (64MB/chunksz)
+          idx = idx >>> (26 - ValueArray.LOG_CHK);
+          // skip all the size bytes including chunk# from the hash
+          hash = Key.hash(key._kb, 10, key._kb.length);
+        } else // we're in the first 64MB region, just skip the vec# bytes but keep the chunk# bytes in the hash
+          hash = Key.hash(key._kb, 6, key._kb.length);
+      } else // we want vec headers from the same group to be homed on the same node, so skip the differentiating bytes
+        hash = Key.hash(key._kb, 10, key._kb.length);
+      return  (int)((idx + 0x7FFFFFFF&hash + repl) % size());
+    }
     // See if this is a specifically homed DVEC Key (has shorter encoding).
     byte[] kb = key._kb;
     if( kb[0] == Key.DVEC && kb[1] != -1 ) {
@@ -1278,7 +1300,7 @@ public final class H2O {
     private void mySleep(int millis) {
       try {
         Thread.sleep (sleepMillis);
-      } 
+      }
       catch (Exception _)
         {}
     }
@@ -1319,8 +1341,8 @@ public final class H2O {
         final long deltaMillis = now - failureStartTimestampMillis;
         final long thresholdMillis = (maxFailureSeconds * millisPerSecond);
         if (deltaMillis > thresholdMillis) {
-          Log.err(threadName + ": Failure time threshold exceeded (>= " + 
-                  thresholdMillis + 
+          Log.err(threadName + ": Failure time threshold exceeded (>= " +
+                  thresholdMillis +
                   " ms), H2O node shutting down");
           System.exit(1);
         }
@@ -1338,20 +1360,20 @@ public final class H2O {
       }
       catch (SocketTimeoutException e) {
         if (gracefulShutdownInitiated) { return; }
-        Log.err(threadName + ": Timed out trying to connect to REST API IP and Port (" + 
+        Log.err(threadName + ": Timed out trying to connect to REST API IP and Port (" +
                 H2O.SELF_ADDRESS + ":" + H2O.API_PORT + ", " + timeoutMillis + " ms)");
         failed();
       }
       catch (IOException e) {
         if (gracefulShutdownInitiated) { return; }
-        Log.err(threadName + ": Failed to connect to REST API IP and Port (" + 
+        Log.err(threadName + ": Failed to connect to REST API IP and Port (" +
                 H2O.SELF_ADDRESS + ":" + H2O.API_PORT + ")");
         Log.err(threadName + ": " + e.getMessage());
         failed();
       }
       catch (Exception e) {
         if (gracefulShutdownInitiated) { return; }
-        Log.err(threadName + ": Failed unexpectedly trying to connect to REST API IP and Port (" + 
+        Log.err(threadName + ": Failed unexpectedly trying to connect to REST API IP and Port (" +
                 H2O.SELF_ADDRESS + ":" + H2O.API_PORT + ")",
                 e);
         failed();

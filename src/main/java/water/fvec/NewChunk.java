@@ -1,6 +1,7 @@
 package water.fvec;
 
 import java.util.Arrays;
+import water.parser.Enum;
 import water.*;
 import water.parser.DParseTask;
 
@@ -9,7 +10,10 @@ public class NewChunk extends Chunk {
   final int _cidx;
   transient long _ls[];         // Mantissa
   transient int _xs[];          // Exponent
+  transient double _ds[];       // Doubles, for inflating via doubles
   transient double _min, _max;
+  int _naCnt;
+  int _strCnt;
 
   NewChunk( Vec vec, int cidx ) {
     _vec = vec;
@@ -20,9 +24,23 @@ public class NewChunk extends Chunk {
     _max = -Double.MAX_VALUE;
   }
 
-  protected final boolean isNA(int idx){
-    return _ls[idx] == 0 && _xs[idx] == Integer.MIN_VALUE;
+  protected final boolean isNA(int idx) {
+    return (_ds == null) ? (_ls[idx] == 0 && _xs[idx] != 0) : Double.isNaN(_ds[idx]);
   }
+
+  public void addNA(){
+    append2(0,Integer.MIN_VALUE); ++_naCnt;
+  }
+  private boolean _hasFloat;
+  public void addNum(long val, int exp){
+    if(val == 0)exp = 0;
+    _hasFloat |= (exp < 0);
+    append2(val,exp);
+  }
+  public void addEnum(int e){
+    append2(0,e); ++_strCnt;
+  }
+
   // Fast-path append long data
   void append2( long l, int x ) {
     if( _len >= _ls.length ) append2slow();
@@ -45,8 +63,8 @@ public class NewChunk extends Chunk {
   // (does not live on inside the K/V store).
   public Chunk close(Futures fs) {
     Chunk chk = compress();
-    if( _vec instanceof AppendableVec )
-      ((AppendableVec)_vec).closeChunk(_cidx,_len,chk.hasFloat(),_min,_max);
+    if(_vec instanceof AppendableVec)
+      ((AppendableVec)_vec).closeChunk(this);
     return chk;
   }
 
@@ -59,6 +77,29 @@ public class NewChunk extends Chunk {
     long lemin= 0, lemax=lemin; // min/max at xmin fixed-point
     boolean overflow=false;
     boolean floatOverflow = false;
+
+    // Enum? We assume that columns with ALL strings (and NAs) are enums if there were less than 65k unique vals
+    // if there were some numbers, we assume it is a numcol with strings being NAs.
+    if(0 < _strCnt && (_strCnt + _naCnt) == _len){
+      // find ther max val
+      int sz = Integer.MIN_VALUE;
+      for(int x:_xs) if(x > sz)sz = x;
+      if(sz < Enum.MAX_ENUM_SIZE) {
+        if(sz < 255){ // we can fit into 1Byte
+          byte [] bs = MemoryManager.malloc1(_len);
+          for(int i = 0; i < _len; ++i)bs[i] = ((_xs[i] >= 0)?(byte)(0xFF&_xs[i]):(byte)0xFF);
+          int [] vals = new int[256];
+          for(int i = 0; i < bs.length; ++i)if(bs[i] >= 0)++vals[bs[i]];
+//          System.out.println(H2O.SELF+"_histo: " + Arrays.toString(vals) );
+          return new C1Chunk(bs);
+        } else if(sz < 65535){ // 2 bytes
+          byte [] bs = MemoryManager.malloc1(_len << 1);
+          for(int i = 0; i < _len; ++i)UDP.set2(bs, i << 1, ((_xs[i] >= 0)?(short)_xs[i]:(short)C2Chunk._NA));
+          return new C2Chunk(bs);
+        } else throw H2O.unimpl();
+      }
+    }
+    boolean first = true;
     for( int i=0; i<_len; i++ ) {
       if( isNA(i) ) continue;
       long l = _ls[i];
@@ -71,7 +112,8 @@ public class NewChunk extends Chunk {
       long t;
       while( l!=0 && (t=l/10)*10==l ) { l=t; x++; }
       floatOverflow = Math.abs(l) > MAX_FLOAT_MANTISSA;
-      if(i == 0){
+      if(first){
+        first = false;
         xmin = x;
         lemin = lemax = l;
         continue;
@@ -194,10 +236,19 @@ public class NewChunk extends Chunk {
   // chunk.  At this point the NewChunk is full size, no more appends allowed,
   // and the xs exponent array should be only full of zeros.  Accesses must be
   // in-range and refer to the inflated values of the original Chunk.
-  @Override boolean set8_impl(int i, long l) { _ls[i]=l; _xs[i]=0; return true; }
-  @Override public long   at8_impl( int i ) { assert _xs[i]==0; return _ls[i]; }
-  @Override public double atd_impl( int i ) { throw H2O.fail(); }
-  @Override boolean hasFloat() { throw H2O.fail(); }
+  @Override boolean set8_impl(int i, long l) {
+    if( _ds != null ) throw H2O.unimpl();
+    _ls[i]=l; _xs[i]=0;
+    return true;
+  }
+  @Override boolean set8_impl(int i, double d) {
+    if( _ls != null ) throw H2O.unimpl();
+    _ds[i]=d;
+    return true;
+  }
+  @Override public long   at8_impl( int i ) { assert _xs[i]==0 && _ds==null; return _ls[i]; }
+  @Override public double atd_impl( int i ) { assert _xs==null; return _ds[i]; }
+  @Override boolean hasFloat() { return _hasFloat; }
   @Override public AutoBuffer write(AutoBuffer bb) { throw H2O.fail(); }
   @Override public NewChunk read(AutoBuffer bb) { throw H2O.fail(); }
   @Override NewChunk inflate_impl(NewChunk nc) { throw H2O.fail(); }

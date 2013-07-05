@@ -311,11 +311,13 @@ public abstract class DGLM {
     }
     public double [][] getXX(){
       final int N = _xy.length;
-      double [][] xx = new double[N][N];
+      double [][] xx = new double[N][];
+      for( int i = 0; i < N; ++i )
+        xx[i] = MemoryManager.malloc8d(N);
       for( int i = 0; i < N; ++i ) {
         for( int j = 0; j < _xx[i].length; ++j ) {
-            xx[i][j] = _xx[i][j];
-            xx[j][i] = _xx[i][j];
+          xx[i][j] = _xx[i][j];
+          xx[j][i] = _xx[i][j];
         }
       }
       return xx;

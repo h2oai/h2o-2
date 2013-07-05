@@ -143,6 +143,21 @@ public final class Key extends Iced implements Comparable {
   // k-v pairs start with this replication factor.
   public static final byte DEFAULT_DESIRED_REPLICA_FACTOR = 2;
 
+  static public int hash(byte [] bits, int from, int to){
+    assert bits.length >= to;
+    assert to > from;
+    int hash = 0;
+    // Quicky hash: http://en.wikipedia.org/wiki/Jenkins_hash_function
+    for(int i = from;  i < to; ++i ) {
+      hash += bits[i];
+      hash += (hash << 10);
+      hash ^= (hash >> 6);
+    }
+    hash += (hash << 3);
+    hash ^= (hash >> 11);
+    hash += (hash << 15);
+    return hash;
+  }
   // Construct a new Key.
   private Key(byte[] kb) {
     if( kb.length > KEY_LENGTH ) throw new IllegalArgumentException("Key length would be "+kb.length);
@@ -159,16 +174,7 @@ public final class Key extends Iced implements Comparable {
         chk = (int)(off >>> (6+20)); // Divide by 64Meg; comes up with a "block number"
       }
     }
-    int hash = 0;
-    // Quicky hash: http://en.wikipedia.org/wiki/Jenkins_hash_function
-    for( ; i<kb.length; i++ ) {
-      hash += kb[i];
-      hash += (hash << 10);
-      hash ^= (hash >> 6);
-    }
-    hash += (hash << 3);
-    hash ^= (hash >> 11);
-    hash += (hash << 15);
+    int hash = hash(kb, i, kb.length);
     _hash = hash+chk; // Add sequential block numbering
   }
 
