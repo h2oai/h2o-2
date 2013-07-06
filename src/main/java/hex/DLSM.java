@@ -129,17 +129,23 @@ public class DLSM {
     public DoubleMatrix luSolve(DoubleMatrix U, DoubleMatrix B) {
       int nx = B.getColumns();
       int n = U.getRows();
+      double temp;
 
-      double[][] X = B.toArray2();
-      double[][] Ua = U.toArray2();
+      // double[][] X = B.toArray2();
+      // double[][] Ua = U.toArray2();
+      DoubleMatrix X = B.dup();
 
       // Solve U'*Y = B
       for(int k = 0; k < n; k++) {
         for(int j = 0; j < nx; j++) {
           for(int i = 0; i < k; i++) {
-            X[k][j] -= X[i][j]*Ua[i][k];
+            // X[k][j] -= X[i][j]*Ua[i][k];
+            temp = X.get(k,j) - X.get(i,j)*U.get(i,k);
+            X.put(k,j,temp);
           }
-          X[k][j] /= Ua[k][k];
+          // X[k][j] /= Ua[k][k];
+          temp = X.get(k,j)/U.get(k,k);
+          X.put(k,j,temp);
         }
       }
 
@@ -147,12 +153,17 @@ public class DLSM {
       for(int k = n-1; k >= 0; k--) {
         for(int j = 0; j < nx; j++) {
           for(int i = k+1; i < n; i++) {
-            X[k][j] -= X[i][j]*Ua[k][i];
+            // X[k][j] -= X[i][j]*Ua[k][i];
+            temp = X.get(k,j) - X.get(i,j)*U.get(k,i);
+            X.put(k,j,temp);
           }
-          X[k][j] /= Ua[k][k];
+          // X[k][j] /= Ua[k][k];
+          temp = X.get(k,j)/U.get(k,k);
+          X.put(k,j,temp);
         }
       }
-      return new DoubleMatrix(X);
+      // return new DoubleMatrix(X);
+      return X;
     }
 
     // public double [] solve(Matrix xx, Matrix xy, double [] z) {
