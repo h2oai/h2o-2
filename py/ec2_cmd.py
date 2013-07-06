@@ -8,6 +8,7 @@ import h2o
 import h2o_hosts
 import json
 import commands
+import traceback
 
 '''
     Simple EC2 utility:
@@ -150,7 +151,9 @@ def run_instances(count, ec2_config, region, waitForSSH=True, tags=None):
         for inst in reservation.instances: log("   {0} ({1}) : public ip: {2}, private ip: {3}".format(inst.public_dns_name, inst.id, inst.ip_address, inst.private_ip_address))
         
         if waitForSSH:
-            wait_for_ssh([ i.ip_address for i in reservation.instances ])
+            # kbn: changing to private address, so it should fail if not in right domain
+            # used to have the public ip address
+            wait_for_ssh([ i.private_ip_address for i in reservation.instances ])
 
         # Tag instances
         try:
@@ -372,7 +375,7 @@ def invoke_hosts_action(action, hosts_config, args, ec2_reservation=None):
                 log("To kill the cloud please use Ctrl+C as usual.")
                 while (True): time.sleep(3600)
         except:
-            pass
+            print traceback.format_exc()
         finally:
             log("Goodbye H2O cloud...")
             h2o.tear_down_cloud()
