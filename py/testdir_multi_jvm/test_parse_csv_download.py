@@ -51,7 +51,7 @@ class parse_rand_schmoo(unittest.TestCase):
 
         h2o.tear_down_cloud(h2o.nodes)
     
-    def test_sort_of_prostate_with_row_schmoo(self):
+    def test_parse_csv_download(self):
         SEED = random.randint(0, sys.maxint)
         # if you have to force to redo a test
         # SEED = 
@@ -70,7 +70,8 @@ class parse_rand_schmoo(unittest.TestCase):
 
         print "This is the same format/data file used by test_same_parse, but the non-gzed version"
         print "\nSchmoo the # of rows"
-        for trial in range (100):
+        # failed around 50 trials..python memory problem
+        for trial in range (40):
             rowData = rand_rowData()
             num = random.randint(4096, 10096)
             append_syn_dataset(csvPathname, rowData, num)
