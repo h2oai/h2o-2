@@ -51,7 +51,7 @@ public abstract class DRF {
                                new Key[0], ary._cols.length, samplingStrategy, sample, strataSamples, numSplitFeatures, ntrees);
     // Save the number of rows per chunk - it is needed for proper sampling.
     // But it will need to be changed with new fluid vectors
-    assert ary._rpc == null : "DRF does not support different sizes of chunks for now!";
+    //assert ary._rpc == null : "DRF does not support different sizes of chunks for now!";
     int numrows = (int) (ValueArray.CHUNK_SZ/ary._rowsize);
     drf._params = DRFParams.create(cols[cols.length-1], ntrees, depth, numrows, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, samplingStrategy, sample, strataSamples, verbose, exclusiveSplitLimit, useNonLocalData);
     // Verbose debug print

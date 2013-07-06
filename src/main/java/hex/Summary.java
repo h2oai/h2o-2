@@ -33,40 +33,44 @@ public class Summary extends Iced {
       _colId = colId;
       Column c = s.ary()._cols[colId];
       _enum = c.isEnum();
-      if(c.isFloat() || c.numDomainSize() > MAX_HIST_SZ){
-        _percentiles = Objects.firstNonNull(percentiles, DEFAULT_PERCENTILES);
-        double binsz = 3.5 *  c._sigma/ Math.cbrt(c._n);
-        int nbin = Math.max(1,(int)((c._max - c._min) / binsz));
-        long n = Math.max(c._n,1);
-        double a = (c._max - c._min) / n;
-        double b = Math.pow(10, Math.floor(Math.log10(a)));
-        // selects among d, 5*d, and 10*d so that the number of
-        // partitions go in [start, end] is closest to n
-        if (a > 20*b/3)
-           b *= 10;
-        else if (a > 5*b/3)
-           b *= 5;
-        double start = b * Math.floor(c._min / b);
-        double end = b * Math.ceil(c._max / b);
-        n = (int)((end - start) / b);
-        _bins = new long[nbin];
-        _start = start;
-        _binsz = binsz;
-        _binszInv = 1.0/binsz;
-        _end = start + nbin * binsz;
+      final long n = Math.max(c._n,1);
+      if(_enum){
+        _percentiles = null;
+        _binsz = _binszInv = 1;
+        _bins = new long[(int)n];
+        _start = 0;
+        _end = n;
       } else {
-        _start = c._min;
-        _end = c._max;
-        int sz = (int)c.numDomainSize();
-        _bins = new long[sz];
-        _binszInv = _binsz = 1.0;
-        _percentiles = (c.isEnum())?null:Objects.firstNonNull(percentiles, DEFAULT_PERCENTILES);
-      }
-      if(!_enum){
         _min = new double[NMAX];
         _max = new double[NMAX];
         Arrays.fill(_min, Double.POSITIVE_INFINITY);
         Arrays.fill(_max, Double.NEGATIVE_INFINITY);
+        if(c.isFloat() || c.numDomainSize() > MAX_HIST_SZ){
+          _percentiles = Objects.firstNonNull(percentiles, DEFAULT_PERCENTILES);
+          double binsz = Math.max(1e-4, 3.5 *  c._sigma/ Math.cbrt(c._n));
+          int nbin = Math.max(1,(int)((c._max - c._min) / binsz));
+          double a = (c._max - c._min) / n;
+          double b = Math.pow(10, Math.floor(Math.log10(a)));
+          // selects among d, 5*d, and 10*d so that the number of
+          // partitions go in [start, end] is closest to n
+          if (a > 20*b/3)
+             b *= 10;
+          else if (a > 5*b/3)
+             b *= 5;
+          double start = b * Math.floor(c._min / b);
+          _bins = new long[nbin];
+          _start = start;
+          _binsz = binsz;
+          _binszInv = 1.0/binsz;
+          _end = start + nbin * binsz;
+        } else {
+          _start = c._min;
+          _end = c._max;
+          int sz = (int)c.numDomainSize();
+          _bins = new long[sz];
+          _binszInv = _binsz = 1.0;
+          _percentiles = Objects.firstNonNull(percentiles, DEFAULT_PERCENTILES);
+        }
       }
     }
     public final double [] percentiles(){return _percentiles;}

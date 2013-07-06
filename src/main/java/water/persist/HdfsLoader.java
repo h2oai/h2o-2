@@ -5,7 +5,6 @@ import java.io.File;
 import water.Boot;
 import water.H2O;
 import water.util.Log;
-import water.util.Log.Tag.Sys;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Strings;
@@ -41,6 +40,5 @@ public class HdfsLoader {
       Log.err(e);
       Log.die("[hdfs] Unable to initialize hadoop version " + version + " please use different version.");
     }
-    Log.info(Sys.HDFS_, "Using HDFS version ", version);
   }
 }
