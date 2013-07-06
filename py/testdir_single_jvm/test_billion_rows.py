@@ -44,7 +44,7 @@ class Basic(unittest.TestCase):
             # creates csvFilename.hex from file in importFolder dir 
             start = time.time()
             parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
-                timeoutSecs=500, pollTimeoutSecs=60)
+                timeoutSecs=timeoutSecs, pollTimeoutSecs=60)
             elapsed = time.time() - start
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "Parse result['destination_key']:", parseKey['destination_key']

@@ -106,7 +106,7 @@ class Basic(unittest.TestCase):
             rowsToUse = rowsForPct[trial%10] 
             resultKey = "r" + str(trial)
             execExpr = resultKey + "=slice(" + dataKeyTrain + ",1," + str(rowsToUse) + ")"
-            execExpr = resultKey + "=slice(" + dataKeyTrain + ",1)"
+            # execExpr = resultKey + "=slice(" + dataKeyTrain + ",1)"
             h2o_exec.exec_expr(None, execExpr, resultKey=resultKey, timeoutSecs=10)
             parseKey['destination_key'] = resultKey
 
