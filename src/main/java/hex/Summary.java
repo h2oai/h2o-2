@@ -82,6 +82,7 @@ public class Summary extends Iced {
 
     private void computePercentiles(){
       _percentileValues = new double [_percentiles.length];
+      if( _bins.length == 0 ) return;
       int k = 0;
       long s = 0;
       double pval = Double.NEGATIVE_INFINITY;

@@ -14,7 +14,14 @@ public class SummaryTest extends TestUtil {
   @Test public void testConstSummary() {
     Key vkey = loadAndParseFile("con.hex","./smalldata/constantColumn.csv");
     ValueArray ary = UKV.get(vkey);
-    Summary sum = new ColSummaryTask(ary,new int[]{0}).invoke(vkey).result();
+    int[] cols = new int[ary.numCols()];
+    for( int i=0; i<cols.length; i++ ) cols[i]=i;
+    Summary sum = new ColSummaryTask(ary,cols).invoke(vkey).result();
+    for( int i=0; i<cols.length; i++ ) {
+      System.out.println("col "+i);
+      sum._sums[i].toJson();
+    }
+
     Summary.ColSummary csum = sum._sums[0];
     assertEquals(1,csum._bins.length);
     assertEquals(ary.length(),csum._bins[0]);
