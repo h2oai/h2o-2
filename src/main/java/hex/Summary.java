@@ -61,7 +61,7 @@ public class Summary extends Iced {
           // guard against improper parse (date type) or zero c._sigma
           double binsz = Math.max(1e-4, 3.5 *  c._sigma/ Math.cbrt(c._n));
           // Pick smaller of two for number of bins to avoid blowup of longs
-          int nbin = Math.min(MAX_HIST_SZ,(int)((c._max - c._min) / binsz));
+          int nbin = Math.max(Math.min(MAX_HIST_SZ,(int)((c._max - c._min) / binsz)),1);
           _bins = new long[nbin];
 
           _start = start;
