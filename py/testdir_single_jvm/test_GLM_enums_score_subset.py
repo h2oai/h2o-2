@@ -80,7 +80,6 @@ class Basic(unittest.TestCase):
             colSepChar = colSepHexString.decode('hex')
             colSepInt = int(colSepHexString, base=16)
             print "colSepChar:", colSepChar
-            print "colSepInt", colSepInt
 
             rowSepHexString = '0a' # newline
             rowSepChar = rowSepHexString.decode('hex')
@@ -92,7 +91,7 @@ class Basic(unittest.TestCase):
 
             print "Creating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, 
-                colSepChar=colSepChar, rowSepChar=rowSepChar, quoteChars=quoteChars)
+                colSepChar=colSepChar, rowSepChar=rowSepChar)
 
             parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, 
                 timeoutSecs=30, separator=colSepInt)
@@ -110,9 +109,26 @@ class Basic(unittest.TestCase):
                 'case_mode': '=', 'case': 0}
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
-            print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
+            print "glm end on ", parseKey['destination_key'], 'took', time.time() - start, 'seconds'
+
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
+            GLMModel = glm['GLMModel']
+            modelKey = GLMModel['model_key']
+
+            start = time.time()
+            # score with same dataset (will change to recreated dataset with one less enum
+            scoreDataKey = parseKey['destination_key']
+            glmScore = h2o_cmd.runGLMScore(key=scoreDataKey,
+                model_key=modelKey, thresholds="0.5", timeoutSecs=timeoutSecs)
+            print "glmScore end on ", scoreDataKey, 'took', time.time() - start, 'seconds'
+            ### print h2o.dump_json(glmScore)
+            classErr = glmScore['validation']['classErr']
+            auc = glmScore['validation']['auc']
+            err = glmScore['validation']['err']
+            print "classErr:", classErr
+            print "err:", err
+            print "auc:", auc
 
 if __name__ == '__main__':
     h2o.unit_main()

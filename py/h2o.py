@@ -1062,14 +1062,15 @@ class H2O(object):
         return a
 
     # 'destination_key', 'escape_nan' 'expression'
-    def exec_query(self, timeoutSecs=20, **kwargs):
+    def exec_query(self, timeoutSecs=20, ignoreH2oError=False, **kwargs):
         params_dict = {
             'expression': None,
             }
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
         verboseprint("\nexec_query:", params_dict)
-        a = self.__do_json_request('Exec.json', timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('Exec.json', 
+            timeout=timeoutSecs, ignoreH2oError=ignoreH2oError, params=params_dict)
         verboseprint("\nexec_query result:", dump_json(a))
         return a
 
