@@ -749,11 +749,27 @@ public final class H2O {
     new ApiIpPortWatchdogThread().start();
   }
 
+  // Used to update the Throwable detailMessage field.
+  private static java.lang.reflect.Field DETAILMESSAGE;
+  public static <T extends Throwable> T setDetailMessage( T t, String s ) {
+    try { if( DETAILMESSAGE != null )  DETAILMESSAGE.set(t,s); } 
+    catch( IllegalAccessException iae) {}
+    return t;
+  }
+
+
   /** Finalizes the node startup.
    *
    * Displays the startup message and runs the tests (if applicable).
    */
   private static void startupFinalize() {
+    // Allow Throwable detailMessage's to be updated on the fly.  Ugly, ugly,
+    // but I want to add info without rethrowing/rebuilding whole exceptions.
+    try { 
+      DETAILMESSAGE = Throwable.class.getDeclaredField("detailMessage");
+      DETAILMESSAGE.setAccessible(true);
+    } catch( NoSuchFieldException nsfe ) { }
+    
     // Sleep a bit so all my other threads can 'catch up'
     try { Thread.sleep(1000); } catch( InterruptedException e ) { }
   }
