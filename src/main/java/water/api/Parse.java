@@ -217,6 +217,7 @@ public class Parse extends Request {
       Key[] keys = p._keys.toArray(new Key[p._keys.size()]);
       Job job = ParseDataset.forkParseDataset(dest, keys,new_setup);
       JsonObject response = new JsonObject();
+      response.addProperty(RequestStatics.JOB, job.self().toString());
       response.addProperty(RequestStatics.DEST_KEY,dest.toString());
 
       Response r = Progress.redirect(response, job.self(), dest);

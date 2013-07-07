@@ -58,25 +58,13 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
   public T dfork ( Key... keys ) { keys(keys); compute2(); return self(); }
   public void keys( Key... keys ) { _keys = flatten(keys); }
   public T invoke( Key... keys ) {
-
-      try {
-          dfork(keys).get();
-      }
-
-      catch (ExecutionException eex){
-          Log.errRTExcept(eex);
-      }
-      catch(InterruptedException iex){
-          Log.errRTExcept(iex);
-      }
-      catch(CancellationException cex){
-          Log.errRTExcept(cex);
-      }
-
-      // Intent was to quietlyJoin();
-      // Which forks, then QUIETLY join to not propagate local exceptions out.
-
-      if( _exception != null )    // Propagate a Distro exception if one is available
+    try { dfork(keys).get(); }
+    catch(ExecutionException    eex) { }
+    catch(InterruptedException  iex) { Log.errRTExcept(iex); }
+    catch(CancellationException cex) { Log.errRTExcept(cex); }
+    // Intent was to quietlyJoin();
+    // Which forks, then QUIETLY join to not propagate local exceptions out.
+    if( _exception != null )    // Propagate a Distro exception if one is available
       throw _exception.toEx();
     return self(); 
   }
