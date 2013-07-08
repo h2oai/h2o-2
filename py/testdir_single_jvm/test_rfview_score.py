@@ -108,23 +108,23 @@ class Basic(unittest.TestCase):
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, 
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
             # new web page for predict? throw it in here for now
-            h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
 
             kwargs['iterative_cm'] = 0
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
-            h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
 
             kwargs['iterative_cm'] = 1
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, 
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
-            h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
 
             kwargs['iterative_cm'] = 1
             kwargs['class_weights'] = '1=1,2=2,3=3,4=4,5=5,6=6,7=7'
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
-            h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
 
             print "Trial #", trial, "completed"
 
