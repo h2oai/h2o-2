@@ -56,7 +56,7 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_GLM_many_enums(self):
+    def test_GLM_enums_score_subset(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         n = 200

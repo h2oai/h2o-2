@@ -1144,7 +1144,7 @@ class H2O(object):
             h2b.browseJsonHistoryAsUrlLastMatch("RFView")
         return a
 
-    def random_forest_predict(self, key, model_key, timeoutSecs=300, print_params=False, **kwargs):
+    def generate_predictions(self, key, model_key, timeoutSecs=300, print_params=False, **kwargs):
         params_dict = {
             'key': key,
             'model_key': model_key,
@@ -1158,11 +1158,11 @@ class H2O(object):
                 params_dict[k] = kwargs[k]
 
         if print_params:
-            print "\nrandom_forest_view parameters:", params_dict
+            print "\ngenerate_predictions parameters:", params_dict
             sys.stdout.flush()
 
         a = self.__do_json_request('GeneratePredictionsPage.json', timeout=timeoutSecs, params=params_dict)
-        verboseprint("\nrandom_forest_predict result:", dump_json(a))
+        verboseprint("\ngenerate_predictions result:", dump_json(a))
 
         if (browseAlso | browse_json):
             h2b.browseJsonHistoryAsUrlLastMatch("GeneratePredictions")

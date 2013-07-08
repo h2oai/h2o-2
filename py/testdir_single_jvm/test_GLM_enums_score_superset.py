@@ -56,7 +56,8 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_GLM_many_enums(self):
+    def test_GLM_enums_score_superset(self):
+        print "FIX!: this should cause an error. We should detect that it's not causing an error/warning?"
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         n = 200
