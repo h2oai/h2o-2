@@ -26,3 +26,4 @@ target/
 cypof*
 typemap
 /libpeerconnection.log
+tmp/
