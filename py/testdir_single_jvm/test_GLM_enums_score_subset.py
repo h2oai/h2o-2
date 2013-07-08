@@ -7,22 +7,19 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util
 
 # use randChars for the random chars to use
-def random_enum(maxEnumSize, randChars="abcd"):
+def random_enum(randChars, maxEnumSize):
     choiceStr = randChars
-    mightBeNumberOrWhite = True
-    while mightBeNumberOrWhite:
-        r = ''.join(random.choice(choiceStr) for x in range(maxEnumSize))
-        mightBeNumberOrWhite = h2o_util.might_h2o_think_number_or_whitespace(r)
+    r = ''.join(random.choice(choiceStr) for x in range(maxEnumSize))
     return r
 
-def create_enum_list(maxEnumSize=8, listSize=11000, **kwargs):
-    enumList = [random_enum(random.randint(2,maxEnumSize), **kwargs) for i in range(listSize)]
+def create_enum_list(randChars, maxEnumSize=8, listSize=11000):
+    enumList = [random_enum(randChars, random.randint(2,maxEnumSize)) for i in range(listSize)]
     return enumList
 
 def write_syn_dataset(csvPathname, rowCount, colCount=1, SEED='12345678', 
-        colSepChar=",", rowSepChar="\n"):
+        colSepChar=",", rowSepChar="\n", randChars="abcd"):
     r1 = random.Random(SEED)
-    enumList = create_enum_list()
+    enumList = create_enum_list(randChars)
 
     dsf = open(csvPathname, "w+")
     for row in range(rowCount):
@@ -89,9 +86,9 @@ class Basic(unittest.TestCase):
             csvFilename = 'syn_enums_' + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
-            print "Creating random", csvPathname
+            print "Creating random", csvPathname, "for glm model building"
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, 
-                colSepChar=colSepChar, rowSepChar=rowSepChar)
+                colSepChar=colSepChar, rowSepChar=rowSepChar, randChars="abcd")
 
             parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, 
                 timeoutSecs=30, separator=colSepInt)
@@ -115,6 +112,10 @@ class Basic(unittest.TestCase):
 
             GLMModel = glm['GLMModel']
             modelKey = GLMModel['model_key']
+
+            print "Creating random", csvPathname, "for glm scoring with prior model (using enum subset)"
+            write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, 
+                colSepChar=colSepChar, rowSepChar=rowSepChar, randChars="abc")
 
             start = time.time()
             # score with same dataset (will change to recreated dataset with one less enum
