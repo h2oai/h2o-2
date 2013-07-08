@@ -61,6 +61,7 @@ public abstract class Model extends Iced {
     C._max = classNames==null ? 0 : classNames.length-1;
     _va = new ValueArray(null,0L,8*Cs.length,Cs);
   }
+  double [] _row; // used for scoring
   /** Artificial model.  The 'va' defines the compatible data, but is not
    *  associated with any real dataset.  Data to be scored on the model has to
    *  have all the same columns (in any order, extra cols are ok).  The last
@@ -244,7 +245,7 @@ public abstract class Model extends Iced {
     boolean id = true;
     final int  [] colMap = columnMapping(ary.colNames());
     if(!isCompatible(colMap))throw new IllegalArgumentException("This model uses different columns than those provided");
-    final int[][] catMap =  new int[colMap.length][];
+    int[][] catMap =  new int[colMap.length][];
     for(int i = 0; i < colMap.length-1; ++i){
       Column c = ary._cols[colMap[i]];
       if(c.isEnum() && !Arrays.deepEquals(_va._cols[i]._domain, c._domain)){
@@ -254,7 +255,8 @@ public abstract class Model extends Iced {
           catMap[i][j] = find(c._domain[j],_va._cols[i]._domain);
       }
     }
-    return (id&&identityMap(colMap))?this:new ModelDataAdaptor(this,colMap[colMap.length-1],Arrays.copyOf(colMap,colMap.length-1),catMap);
+    if(id && identityMap(colMap)) catMap = null;
+    return new ModelDataAdaptor(this,colMap[colMap.length-1],Arrays.copyOf(colMap,colMap.length-1),catMap);
   }
   /**
    * Adapt model for given columns.
