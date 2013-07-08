@@ -1,3 +1,0 @@
-#!/bin/bash
-
-java -cp target/h2o.jar water.Boot -mainClass water.deploy.Hadoop $@
