@@ -59,6 +59,7 @@ public abstract class Model extends Iced {
     C._max = classNames==null ? 0 : classNames.length-1;
     _va = new ValueArray(null,0L,8*Cs.length,Cs);
   }
+  double [] _row; // used for scoring
   /** Artificial model.  The 'va' defines the compatible data, but is not
    *  associated with any real dataset.  Data to be scored on the model has to
    *  have all the same columns (in any order, extra cols are ok).  The last
@@ -183,12 +184,14 @@ public abstract class Model extends Iced {
    */
   private static class ModelDataAdaptor extends Model {
     final Model M;
+    final int _yCol;
     final int  []   _xCols;
     final int  [][] _catMap;
     final double [] _row;
 
-    public ModelDataAdaptor(Model M, int [] cols, int [][] catMap){
+    public ModelDataAdaptor(Model M, int yCol, int [] cols, int [][] catMap){
       this.M = M;
+      _yCol = yCol;
       _row = MemoryManager.malloc8d(cols.length);
       _xCols = cols;
       _catMap = catMap;
@@ -242,7 +245,7 @@ public abstract class Model extends Iced {
     boolean id = true;
     final int  [] colMap = columnMapping(ary.colNames());
     if(!isCompatible(colMap))throw new IllegalArgumentException("This model uses different columns than those provided");
-    final int[][] catMap =  new int[colMap.length][];
+    int[][] catMap =  new int[colMap.length][];
     for(int i = 0; i < colMap.length-1; ++i){
       Column c = ary._cols[colMap[i]];
       if(c.isEnum() && !Arrays.deepEquals(_va._cols[i]._domain, c._domain)){
@@ -252,7 +255,8 @@ public abstract class Model extends Iced {
           catMap[i][j] = find(c._domain[j],_va._cols[i]._domain);
       }
     }
-    return (id&&identityMap(colMap))?this:new ModelDataAdaptor(this,Arrays.copyOf(colMap,colMap.length-1),catMap);
+    if(id && identityMap(colMap)) catMap = null;
+    return new ModelDataAdaptor(this,colMap[colMap.length-1],Arrays.copyOf(colMap,colMap.length-1),catMap);
   }
   /**
    * Adapt model for given columns.
@@ -264,7 +268,7 @@ public abstract class Model extends Iced {
     final int [] colMap = columnMapping(colNames);
     if(!isCompatible(colMap))throw new IllegalArgumentException("This model uses different columns than those provided");
     if(identityMap(colMap))return this;
-    return new ModelDataAdaptor(this, Arrays.copyOf(colMap,colMap.length-1), null);
+    return new ModelDataAdaptor(this, colMap[colMap.length-1], Arrays.copyOf(colMap,colMap.length-1), null);
   }
   public double score(double [] data){
     return score0(data);
