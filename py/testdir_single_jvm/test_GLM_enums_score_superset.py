@@ -90,6 +90,9 @@ class Basic(unittest.TestCase):
             # use half of the enums for creating the scoring dataset
             enumListForScore = random.sample(enumList,5)
 
+            # add a extra enum for scoring that's not in the model enumList
+            enumListForScore.append("xyzzy")
+
             print "Creating random", csvPathname, "for glm model building"
             write_syn_dataset(csvPathname, enumList, rowCount, colCount, SEEDPERFILE, 
                 colSepChar=colSepChar, rowSepChar=rowSepChar)
