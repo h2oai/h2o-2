@@ -2,8 +2,6 @@ package water;
 
 import java.util.Arrays;
 
-import javax.management.RuntimeErrorException;
-
 import water.ValueArray.Column;
 import water.api.Constants;
 
@@ -86,8 +84,7 @@ public abstract class Model extends Iced {
     for( int i=0; i<cols.length-1; i++ ) {
       int col = cols[i];        // Gather selected columns
       ValueArray.Column C = ary._cols[col];
-      if( C._max != C._min &&   // Trim out constant columns
-          columnFilter(C) ) {   // Model-specific column trimmer function
+      if( columnFilter(C) ) {   // Model-specific column trimmer function
         Cs[idx++] = C;
         rowsize += Math.abs(C._size);
       }
@@ -100,7 +97,10 @@ public abstract class Model extends Iced {
   }
 
   // True if the column should be accepted.
-  public boolean columnFilter(ValueArray.Column C) { return true; }
+  public boolean columnFilter(ValueArray.Column C) {
+    // By default, trim out constant columns
+    return C._max != C._min;
+  }
 
   /** Called when deleting this model, to cleanup any internal keys */
   public void delete() { }
@@ -183,17 +183,15 @@ public abstract class Model extends Iced {
    */
   private static class ModelDataAdaptor extends Model {
     final Model M;
-    final int       _yCol;
     final int  []   _xCols;
     final int  [][] _catMap;
     final double [] _row;
 
-    public ModelDataAdaptor(Model M, int yCol, int [] cols, int [][] catMap){
+    public ModelDataAdaptor(Model M, int [] cols, int [][] catMap){
       this.M = M;
       _row = MemoryManager.malloc8d(cols.length);
       _xCols = cols;
       _catMap = catMap;
-      _yCol = yCol;
     }
     private final double translateCat(int col, int val){
       int res = _catMap[col][val];
@@ -254,7 +252,7 @@ public abstract class Model extends Iced {
           catMap[i][j] = find(c._domain[j],_va._cols[i]._domain);
       }
     }
-    return (id&&identityMap(colMap))?this:new ModelDataAdaptor(this,colMap[colMap.length-1],Arrays.copyOf(colMap,colMap.length-1),catMap);
+    return (id&&identityMap(colMap))?this:new ModelDataAdaptor(this,Arrays.copyOf(colMap,colMap.length-1),catMap);
   }
   /**
    * Adapt model for given columns.
@@ -266,7 +264,7 @@ public abstract class Model extends Iced {
     final int [] colMap = columnMapping(colNames);
     if(!isCompatible(colMap))throw new IllegalArgumentException("This model uses different columns than those provided");
     if(identityMap(colMap))return this;
-    return new ModelDataAdaptor(this, colMap[colMap.length-1],Arrays.copyOf(colMap,colMap.length-1), null);
+    return new ModelDataAdaptor(this, Arrays.copyOf(colMap,colMap.length-1), null);
   }
   public double score(double [] data){
     return score0(data);
