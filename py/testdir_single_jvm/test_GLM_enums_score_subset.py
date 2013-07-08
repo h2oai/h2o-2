@@ -7,23 +7,18 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util
 
 # use randChars for the random chars to use
-def random_enum(maxEnumSize, randChars="abcd"):
+def random_enum(randChars, maxEnumSize):
     choiceStr = randChars
-    mightBeNumberOrWhite = True
-    while mightBeNumberOrWhite:
-        r = ''.join(random.choice(choiceStr) for x in range(maxEnumSize))
-        mightBeNumberOrWhite = h2o_util.might_h2o_think_number_or_whitespace(r)
+    r = ''.join(random.choice(choiceStr) for x in range(maxEnumSize))
     return r
 
-def create_enum_list(maxEnumSize=8, listSize=11000, **kwargs):
-    enumList = [random_enum(random.randint(2,maxEnumSize), **kwargs) for i in range(listSize)]
+def create_enum_list(randChars="abcd", maxEnumSize=8, listSize=10):
+    enumList = [random_enum(randChars, random.randint(2,maxEnumSize)) for i in range(listSize)]
     return enumList
 
-def write_syn_dataset(csvPathname, rowCount, colCount=1, SEED='12345678', 
+def write_syn_dataset(csvPathname, enumList, rowCount, colCount=1, SEED='12345678', 
         colSepChar=",", rowSepChar="\n"):
     r1 = random.Random(SEED)
-    enumList = create_enum_list()
-
     dsf = open(csvPathname, "w+")
     for row in range(rowCount):
         rowData = []
@@ -80,7 +75,6 @@ class Basic(unittest.TestCase):
             colSepChar = colSepHexString.decode('hex')
             colSepInt = int(colSepHexString, base=16)
             print "colSepChar:", colSepChar
-            print "colSepInt", colSepInt
 
             rowSepHexString = '0a' # newline
             rowSepChar = rowSepHexString.decode('hex')
@@ -89,10 +83,20 @@ class Basic(unittest.TestCase):
             SEEDPERFILE = random.randint(0, sys.maxint)
             csvFilename = 'syn_enums_' + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
+            csvScoreFilename = 'syn_enums_score_' + str(rowCount) + 'x' + str(colCount) + '.csv'
+            csvScorePathname = SYNDATASETS_DIR + '/' + csvScoreFilename
 
-            print "Creating random", csvPathname
-            write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, 
-                colSepChar=colSepChar, rowSepChar=rowSepChar, quoteChars=quoteChars)
+            enumList = create_enum_list(listSize=10)
+            # use half of the enums for creating the scoring dataset
+            enumListForScore = random.sample(enumList,5)
+
+            print "Creating random", csvPathname, "for glm model building"
+            write_syn_dataset(csvPathname, enumList, rowCount, colCount, SEEDPERFILE, 
+                colSepChar=colSepChar, rowSepChar=rowSepChar)
+
+            print "Creating random", csvScorePathname, "for glm scoring with prior model (using enum subset)"
+            write_syn_dataset(csvScorePathname, enumListForScore, rowCount, colCount, SEEDPERFILE, 
+                colSepChar=colSepChar, rowSepChar=rowSepChar)
 
             parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, 
                 timeoutSecs=30, separator=colSepInt)
@@ -110,9 +114,28 @@ class Basic(unittest.TestCase):
                 'case_mode': '=', 'case': 0}
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
-            print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
+            print "glm end on ", parseKey['destination_key'], 'took', time.time() - start, 'seconds'
+
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
+            GLMModel = glm['GLMModel']
+            modelKey = GLMModel['model_key']
+
+            parseKey = h2o_cmd.parseFile(None, csvScorePathname, key2="score_" + key2, 
+                timeoutSecs=30, separator=colSepInt)
+
+            start = time.time()
+            # score with same dataset (will change to recreated dataset with one less enum
+            glmScore = h2o_cmd.runGLMScore(key=parseKey['destination_key'],
+                model_key=modelKey, thresholds="0.5", timeoutSecs=timeoutSecs)
+            print "glm end on ", parseKey['destination_key'], 'took', time.time() - start, 'seconds'
+            ### print h2o.dump_json(glmScore)
+            classErr = glmScore['validation']['classErr']
+            auc = glmScore['validation']['auc']
+            err = glmScore['validation']['err']
+            print "classErr:", classErr
+            print "err:", err
+            print "auc:", auc
 
 if __name__ == '__main__':
     h2o.unit_main()

@@ -780,8 +780,6 @@ public class DParseTask extends MRTask {
       case TCOL:                // Time; millis since jan 1, 1970
         _scale[i] = -1;
         _bases[i] = 0;
-        _min[i] = 0.0;
-        _max[i] = System.currentTimeMillis();
         _colTypes[i] = LONG;
         break;
 
@@ -889,11 +887,18 @@ public class DParseTask extends MRTask {
       case ONE:
         ++_colIdx;
         // If this is a yet unspecified but non-numeric column, attempt a time-parse
-        if( _colTypes[colIdx] == UCOL ) {
+        if( _colTypes[colIdx] == UCOL &&
+            attemptTimeParse(str) != Long.MIN_VALUE )
+          _colTypes[colIdx] = TCOL; // Passed a time-parse, so assume a time-column
+        if( _colTypes[colIdx] == TCOL ) {
           long time = attemptTimeParse(str);
-          if( time != Long.MIN_VALUE )
-            _colTypes[colIdx] = TCOL;
-        } else if( _colTypes[colIdx] == TCOL ) {
+          if( time != Long.MIN_VALUE ) {
+            if(time < _min[colIdx])_min[colIdx] = time;
+            if(time > _max[colIdx])_max[colIdx] = time;
+            _mean[colIdx] += time;
+          } else {
+            ++_invalidValues[colIdx];
+          }
           return;
         }
 
@@ -920,7 +925,13 @@ public class DParseTask extends MRTask {
         } else if( _colTypes[colIdx] == LONG ) {
           ++_colIdx;
           // Times are strings with a numeric column type of LONG
-          _ab.put8(attemptTimeParse(str));
+          long time = attemptTimeParse(str);
+          _ab.put8(time);
+          // Update sigma
+          if( !Double.isNaN(_mean[colIdx])) {
+            double d = time - _mean[colIdx];
+            _sigma[colIdx] += d*d;
+          }
         } else {
           addInvalidCol(colIdx);
         }

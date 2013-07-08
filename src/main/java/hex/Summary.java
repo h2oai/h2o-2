@@ -47,8 +47,7 @@ public class Summary extends Iced {
         Arrays.fill(_max, Double.NEGATIVE_INFINITY);
         if(c.isFloat() || c.numDomainSize() > MAX_HIST_SZ){
           _percentiles = Objects.firstNonNull(percentiles, DEFAULT_PERCENTILES);
-          double binsz = Math.max(1e-4, 3.5 *  c._sigma/ Math.cbrt(c._n));
-          int nbin = Math.max(1,(int)((c._max - c._min) / binsz));
+
           double a = (c._max - c._min) / n;
           double b = Math.pow(10, Math.floor(Math.log10(a)));
           // selects among d, 5*d, and 10*d so that the number of
@@ -58,7 +57,13 @@ public class Summary extends Iced {
           else if (a > 5*b/3)
              b *= 5;
           double start = b * Math.floor(c._min / b);
+
+          // guard against improper parse (date type) or zero c._sigma
+          double binsz = Math.max(1e-4, 3.5 *  c._sigma/ Math.cbrt(c._n));
+          // Pick smaller of two for number of bins to avoid blowup of longs
+          int nbin = Math.max(Math.min(MAX_HIST_SZ,(int)((c._max - c._min) / binsz)),1);
           _bins = new long[nbin];
+
           _start = start;
           _binsz = binsz;
           _binszInv = 1.0/binsz;
@@ -77,6 +82,7 @@ public class Summary extends Iced {
 
     private void computePercentiles(){
       _percentileValues = new double [_percentiles.length];
+      if( _bins.length == 0 ) return;
       int k = 0;
       long s = 0;
       double pval = Double.NEGATIVE_INFINITY;

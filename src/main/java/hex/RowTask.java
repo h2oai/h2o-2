@@ -5,7 +5,7 @@ import java.util.Arrays;
 import water.*;
 import water.ValueArray.Column;
 
-public abstract class RowTask<T extends Freezable> extends MRTask {
+public abstract class RowTask<T extends Freezable> extends MRTask<RowTask<T>> {
   final ValueArray _ary;
   private transient int _rid;
   private transient AutoBuffer _bits;
@@ -65,12 +65,8 @@ public abstract class RowTask<T extends Freezable> extends MRTask {
   public abstract void map(Row r, T t);
   public abstract T reduce(T left, T right);
 
-  @Override public void reduce(DRemoteTask drt) {
-    RowTask<T> other = (RowTask<T>)drt;
-    if(_res == null)
-      _res = other._res;
-    else
-      _res = reduce(_res, other._res);
+  @Override public void reduce(RowTask<T> other) {
+    _res = _res == null ? other._res : reduce(_res, other._res);
   }
 
   public T result(){return _res;}

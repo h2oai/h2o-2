@@ -310,8 +310,8 @@ def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True)
 
 
 def check_port_group(base_port):
-    # for now, only check for jenkins or kevin
-    if (1==1):
+    # disabled
+    if (1==0):
         username = getpass.getuser()
         if username=='jenkins' or username=='kevin' or username=='michal':
             # assumes you want to know about 3 ports starting at base_port
@@ -1062,14 +1062,15 @@ class H2O(object):
         return a
 
     # 'destination_key', 'escape_nan' 'expression'
-    def exec_query(self, timeoutSecs=20, **kwargs):
+    def exec_query(self, timeoutSecs=20, ignoreH2oError=False, **kwargs):
         params_dict = {
             'expression': None,
             }
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
         verboseprint("\nexec_query:", params_dict)
-        a = self.__do_json_request('Exec.json', timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('Exec.json', 
+            timeout=timeoutSecs, ignoreH2oError=ignoreH2oError, params=params_dict)
         verboseprint("\nexec_query result:", dump_json(a))
         return a
 

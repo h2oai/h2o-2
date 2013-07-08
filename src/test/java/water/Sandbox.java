@@ -3,11 +3,13 @@ package water;
 import hex.*;
 import hex.KMeansModel.KMeansApply;
 
+import java.io.File;
 import java.util.Random;
 
 import org.apache.commons.lang.ArrayUtils;
 
 import water.deploy.*;
+import water.parser.ParseDataset;
 import water.util.Utils;
 
 public class Sandbox {
@@ -20,28 +22,28 @@ public class Sandbox {
       localCloud(1, true, args);
 
       //File f = new File("lib/resources/datasets/gaussian.csv");
-      //File f = new File("smalldata/airlines/allyears2k.zip");
+      File f = new File("syn_5853362476331324036_100x11.csv");
       // // File f = new File("../../aaaa/datasets/millionx7_logreg.data.gz");
       // // File f = new File("smalldata/test/rmodels/iris_x-iris-1-4_y-species_ntree-500.rdata");
       // // File f = new File("py/testdir_single_jvm/syn_datasets/hastie_4x.data");
 //      File f = new File("smalldata/covtype/covtype.20k.data");
-//      Key key = TestUtil.load_test_file(f, "test");
-//      Key dest = Key.make("test.hex");
-//      ParseDataset.parse(dest, new Key[] { key });
-//      ValueArray va = (ValueArray) UKV.get(dest);
+      Key key = TestUtil.load_test_file(f, "test");
+      Key dest = Key.make("test.hex");
+      ParseDataset.parse(dest, new Key[] { key });
+      ValueArray va = (ValueArray) UKV.get(dest);
 
       // @formatter:off
-      double[][] array = new double[][] {
-        new double[] { 0,0,0,0 },
-        new double[] { 1.63475416828,1.63337340671,-7.01908639681,2.72330313693 },
-        new double[] { -7.01908639681,2.72330313693,-3.47665202262,4.71153347407 },
-      };
+//      double[][] array = new double[][] {
+//        new double[] { 0,0,0,0 },
+//        new double[] { 1.63475416828,1.63337340671,-7.01908639681,2.72330313693 },
+//        new double[] { -7.01908639681,2.72330313693,-3.47665202262,4.71153347407 },
+//      };
       // @formatter:on
-      Key key = Key.make("test.hex");
+//      Key key = Key.make("test.hex");
 //       final int columns = 100;
 //       double[][] goals = new double[8][columns];
 //       double[][] array = KMeansTest.gauss(columns, 10000, goals);
-      ValueArray va = TestUtil.va_maker(key, (Object[]) array);
+//      ValueArray va = TestUtil.va_maker(key, (Object[]) array);
 
       Key km = Key.make("test.kmeans");
       int[] cols = new int[va._cols.length];

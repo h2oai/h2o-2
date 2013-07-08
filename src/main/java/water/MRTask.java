@@ -64,10 +64,8 @@ public abstract class MRTask<T extends MRTask> extends DRemoteTask<T> {
       if( _hi > _lo ) {         // Single key?
         try {
           map(_keys[_lo]);      // Get it, run it locally
-        } catch( RuntimeException re ) {
-          RuntimeException t=new RuntimeException(re.getMessage()+" while mapping key "+_keys[_lo]);
-          t.setStackTrace(re.getStackTrace());
-          throw t;
+        } catch( RuntimeException re ) { // Catch user-map-thrown exceptions
+          throw H2O.setDetailMessage(re,re.getMessage()+" while mapping key "+_keys[_lo]);
         }
       }
       tryComplete();            // And this task is complete
