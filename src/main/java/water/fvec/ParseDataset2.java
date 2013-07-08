@@ -110,7 +110,6 @@ public final class ParseDataset2 extends Job {
           ValueString vs = new ValueString(_gDomain[i][j].getBytes());
           if(enums[_colIds[i]].containsKey(vs))_emap[i][e.getTokenId(vs)] = j;
         }
-        System.out.println(H2O.SELF + ": "+ e.toString() + ": " + i + ": " + Arrays.toString(_emap[i]));
       }
     }
 
@@ -119,9 +118,6 @@ public final class ParseDataset2 extends Job {
         for( int j = 0; j < chks[i]._len; ++j){
           long l = chks[i].at80(j);
           if(chks[i].valueIsNA(l))continue;
-          if(_emap[i].length <= chks[i].at80(j) || _emap[i][(int)chks[i].at80(j)] < 0)
-            System.err.println(H2O.SELF + ": haha");
-
           assert _emap[i][(int)chks[i].at80(j)] >= 0:H2O.SELF.toString() + ": missing enum at col:" + i + ", line: " + j + ", val = " + chks[i].at80(j);
           chks[i].set80(j, _emap[i][(int)chks[i].at80(j)]);
         }
@@ -142,9 +138,20 @@ public final class ParseDataset2 extends Job {
   public static class EnumFetchTask extends MRTask {
     final Key _k;
     final int [] _ecols;
-    public EnumFetchTask(Key k, int [] ecols){_k = k;_ecols = ecols;}
+    final int _homeNode; // node where the computation started, enum from this node MUST be cloned!
+    public EnumFetchTask(int homeNode, Key k, int [] ecols){_homeNode = homeNode; _k = k;_ecols = ecols;}
     Enum [] _enums;
-    @Override public void map(Key key) {_enums = MultiFileParseTask._enums.get(_k);}
+    @Override public void map(Key key) {
+      _enums = MultiFileParseTask._enums.get(_k).clone();
+      // if we are the original node (i.e. there will be no sending over wire),
+      // we have to clone the enums not to share the same object (causes problems when computing columnd domain and renumbering maps).
+      if(H2O.SELF.index() == _homeNode){
+        _enums = _enums.clone();
+        for(int i = 0; i < _enums.length; ++i)
+          _enums[i] = _enums[i].clone();
+      }
+
+    }
 
     @Override public void reduce(DRemoteTask drt) {
       EnumFetchTask etk = (EnumFetchTask)drt;
@@ -154,7 +161,7 @@ public final class ParseDataset2 extends Job {
       }
     }
     public static Enum [] fetchEnums(Key k, int [] ecols){
-      EnumFetchTask tsk = new EnumFetchTask(k, ecols);
+      EnumFetchTask tsk = new EnumFetchTask(H2O.SELF.index(), k, ecols);
       Key [] keys = new Key[H2O.CLOUD.size()];
       for(int i = 0; i < keys.length; ++i)
         keys[i] = Key.make("aaa",(byte)1, Key.DFJ_INTERNAL_USER,H2O.CLOUD._memary[i]);
@@ -191,10 +198,7 @@ public final class ParseDataset2 extends Job {
 
     if(ecols != null && ecols.length > 0){
       Enum [] enums = EnumFetchTask.fetchEnums(uzpt._eKey, ecols);
-      for(int i:ecols) {
-        uzpt._cols[i]._domain = enums[i].computeColumnDomain();
-        System.out.println(Arrays.toString(uzpt._cols[i]._domain));
-      }
+      for(int i:ecols) uzpt._cols[i]._domain = enums[i].computeColumnDomain();
       String [][] ds = new String[ecols.length][];
       for(int i = 0; i < ecols.length; ++i)ds[i] = uzpt._cols[ecols[i]]._domain;
       Vec [] evecs = new Vec[ecols.length];

@@ -23,14 +23,26 @@ import water.nbhm.NonBlockingHashMap;
  * @author tomasnykodym
  *
  */
-public final class Enum extends Iced {
+public final class Enum extends Iced implements Cloneable{
   public static final int MAX_ENUM_SIZE = 65000;
   AtomicInteger _id = new AtomicInteger();
   long _nElems;
   volatile NonBlockingHashMap<ValueString, Integer> _map;
-
   public Enum(){_map = new NonBlockingHashMap<ValueString, Integer>();}
-
+  private Enum(int id, long nElems, NonBlockingHashMap<ValueString,Integer>map){
+    _id = new AtomicInteger(id);
+    _nElems = nElems;
+    _map = map;
+  }
+  public Enum clone(){
+//    AutoBuffer ab = new AutoBuffer();
+//    write(ab);
+//    ab.flipForReading();
+//    Enum res = new Enum(_colId);
+//    res.read(ab);
+//    return res;
+    return new Enum(_id.get(),_nElems,(NonBlockingHashMap<ValueString,Integer>)_map.clone());
+  }
   /**
    * Add key to this map (treated as hash set in this case).
    * All keys are added with value = 1.
