@@ -18,7 +18,37 @@ public abstract class DocGen {
     //System.exit(0);
   }
 
+  // Class describing meta-info about H2O queries and results.  
+  public static class FieldDoc {
+    final String _name;           // Field name
+    final String _help;           // Some descriptive text
+    final int _min_ver, _max_ver; // Min/Max supported-version numbers
+    final Class _clazz; // Java type: subtypes of Argument are inputs, otherwise outputs
+    public FieldDoc( String name, String help, int min, int max, Class C ) {
+      _name = name; _help = help; _min_ver = min; _max_ver = max; _clazz = C;
+    }
+    @Override public String toString() {
+      return "{"+_name+", from "+_min_ver+" to "+_max_ver+", "+_clazz.getSimpleName()+", "+_help+"}";
+    }
+    public final boolean isArg () {
+      return RequestArguments.Argument.class.isAssignableFrom(_clazz);
+    }
+    public final boolean isJSON(){ return !isArg(); }
+    // Get the queryDescription results for this field, as it appears in the
+    // existing Request object.
+    public final String argHelp( Request R ) {
+      try {
+        Object o = R.getClass().getDeclaredField(_name).get(R);
+        return ((RequestArguments.Argument)o).queryDescription();
+      } 
+      catch( IllegalAccessException ie ) { return ""; }
+      catch(   NoSuchFieldException ie ) { return ""; }
+    }
+  }
+
   // --------------------------------------------------------------------------
+  // Abstract text generators, for building pretty docs in either HTML or
+  // ReStructuredText form.
   abstract StringBuilder bodyHead( StringBuilder sb );
   abstract StringBuilder bodyTail( StringBuilder sb );
   abstract StringBuilder title( StringBuilder sb, String t );
@@ -42,16 +72,27 @@ public abstract class DocGen {
     }
     section(sb,"URL");
     paragraph(sb,"http://<h2oHost>:<h2oApiPort>/"+name+".json");
+    FieldDoc docs[] = R.toFieldDoc();
     section(sb,"Input parameters");
-    section(sb,"Output JSON elements");
-    JSONDoc docs[] = R.toJSONDoc();
     if( docs != null ) {
       listHead(sb);
-      for( JSONDoc doc : docs )
-        listBullet(sb,
-                   doc._name+", a "+doc._clazz.getSimpleName(),
-                   doc._help+".  From version "+doc._min_ver+
-                   (doc._max_ver==Integer.MAX_VALUE?" onward":" to version "+doc._max_ver));
+      for( FieldDoc doc : docs )
+        if( doc.isArg() )
+          listBullet(sb,
+                     doc._name+", "+doc.argHelp(R),
+                     doc._help+"  From version "+doc._min_ver+
+                     (doc._max_ver==Integer.MAX_VALUE?" onward":" to version "+doc._max_ver));
+      listTail(sb);
+    }
+    section(sb,"Output JSON elements");
+    if( docs != null ) {
+      listHead(sb);
+      for( FieldDoc doc : docs )
+        if( doc.isJSON() )
+          listBullet(sb,
+                     doc._name+", a "+doc._clazz.getSimpleName(),
+                     doc._help+"  From version "+doc._min_ver+
+                     (doc._max_ver==Integer.MAX_VALUE?" onward":" to version "+doc._max_ver));
       listTail(sb);
     }
     bodyTail(sb);

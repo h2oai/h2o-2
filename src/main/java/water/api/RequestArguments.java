@@ -1430,25 +1430,17 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
 
   public class ExistingFile extends TypeaheadInputText<File> {
-    public ExistingFile(String name) {
-      super(TypeaheadFileRequest.class, name, true);
+    public ExistingFile() {
+      super(TypeaheadFileRequest.class, "path", true);
     }
-
     @Override protected File parse(String input) throws IllegalArgumentException {
       File f = new File(input);
       if( !f.exists() )
         throw new IllegalArgumentException("File "+input+" not found!");
       return f;
     }
-
-    @Override protected String queryDescription() {
-      return "Existing file or directory";
-    }
-
-    @Override
-    protected File defaultValue() {
-      return null;
-    }
+    @Override protected String queryDescription() { return "Existing file or directory"; }
+    @Override protected File defaultValue() { return null; }
   }
 
   // ---------------------------------------------------------------------------

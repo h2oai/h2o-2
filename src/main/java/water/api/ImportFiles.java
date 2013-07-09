@@ -7,7 +7,7 @@ import water.util.FileIntegrityChecker;
 
 public class ImportFiles extends Request {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
-  static public JSONDoc[] DOC_JSON; // Initialized from Auto-Gen code.
+  static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
   // This Request supports the HTML 'GET' command, and this is the help text
   // for GET.
@@ -17,8 +17,8 @@ public class ImportFiles extends Request {
     "(Warning: Every host in the cluster must have this file visible locally!)";
 
   // HTTP REQUEST PARAMETERS
-  static final String path_help = "File or directory to import.";
-  protected transient final ExistingFile path = new ExistingFile("path");
+  static final String pathHelp = "File or directory to import.";
+  protected final ExistingFile path = new ExistingFile();
 
 
   // JSON OUTPUT FIELDS
