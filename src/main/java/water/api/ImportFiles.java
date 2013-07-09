@@ -7,7 +7,7 @@ import water.util.FileIntegrityChecker;
 
 public class ImportFiles extends Request {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
-  static public JSONDoc[] DOC_JSON; // Initialized from Auto-Gen code.
+  static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
   // This Request supports the HTML 'GET' command, and this is the help text
   // for GET.
@@ -17,12 +17,12 @@ public class ImportFiles extends Request {
     "(Warning: Every host in the cluster must have this file visible locally!)";
 
   // HTTP REQUEST PARAMETERS
-  static final String path_help = "File or directory to import.";
-  protected transient final ExistingFile path = new ExistingFile("path");
+  static final String pathHelp = "File or directory to import.";
+  protected final ExistingFile path = new ExistingFile();
 
 
   // JSON OUTPUT FIELDS
-  static final String filesHelp="Files imported.  Imported files are merely Keys mapped over the existing files.  No data is loaded until the Key is used (usually in a Parse command)";
+  static final String filesHelp="Files imported.  Imported files are merely Keys mapped over the existing files.  No data is loaded until the Key is used (usually in a Parse command).";
   String[] files;
 
   static final String keysHelp="Keys of imported files, Keys map 1-to-1 with imported files.";
@@ -31,32 +31,6 @@ public class ImportFiles extends Request {
   static final String failsHelp="File names that failed the integrity check, can be empty.";
   String[] fails;
 
-  static final String DOC_4 = 
-    "Error JSON elements\n"+
-    "-------------------\n"+
-    "\n"+
-    "   error [string]\n"+
-    "\n"+
-    "      Required argument not specified.\n"+
-    "\n"+
-    "      File not found.\n"+
-    "\n"+
-    "HTTP response codes\n"+
-    "-------------------\n"+
-    "   \n"+
-    "   200 OK\n"+
-    "\n"+
-    "      Success and error responses are identical.\n"+
-    "\n"+
-    "Success Example\n"+
-    "---------------\n"+
-    "\n"+
-    ".. literalinclude:: ImportFiles_success_1.rest\n"+
-    "\n"+
-    "Error Example\n"+
-    "-------------\n"+
-    "\n"+
-    ".. literalinclude:: ImportFiles_error_1.rest\n";
 
   @Override protected Response serve() {
     FileIntegrityChecker c = FileIntegrityChecker.check(path.value());

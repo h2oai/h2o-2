@@ -12,7 +12,8 @@ public class Weaver {
   private final ClassPool _pool;
   private final CtClass _dtask, _iced, _enum, _api;
   private final CtClass[] _serBases;
-  private final CtClass _jsondoc;
+  private final CtClass _fielddoc;
+  private final CtClass _arg;
   public static Class _typeMap;
   public static java.lang.reflect.Method _onLoad;
   public static volatile String[] _packages = new String[] { "water", "hex", "org.junit" };
@@ -20,13 +21,14 @@ public class Weaver {
   Weaver() {
     try {
       _pool = ClassPool.getDefault();
-      _iced = _pool.get("water.Iced");
-      _dtask= _pool.get("water.DTask");
-      _enum = _pool.get("java.lang.Enum");
-      _api  = _pool.get("water.api.Request");
+      _iced = _pool.get("water.Iced"); // Needs serialization
+      _dtask= _pool.get("water.DTask");// Needs serialization and remote execution
+      _enum = _pool.get("java.lang.Enum"); // Needs serialization
+      _api  = _pool.get("water.api.Request"); // Needs auto-documentation
       _serBases = new CtClass[] { _iced, _dtask, _enum, _api, };
       for( CtClass c : _serBases ) c.freeze();
-      _jsondoc = _pool.get("water.api.JSONDoc");
+      _fielddoc = _pool.get("water.api.DocGen$FieldDoc");// Is auto-documentation result
+      _arg  = _pool.get("water.api.RequestArguments$Argument"); // Needs auto-documentation
     } catch( NotFoundException e ) {
       throw new RuntimeException(e);
     }
@@ -193,6 +195,10 @@ public class Weaver {
   }
 
 
+  // --------------------------------------------------------------------------
+  private static abstract class FieldFilter { 
+    abstract boolean filter( CtField ctf ) throws NotFoundException; 
+  }
   private void ensureAPImethods(CtClass cc) throws NotFoundException, CannotCompileException {
     CtField ctfs[] = cc.getDeclaredFields();
     boolean api = false;
@@ -201,6 +207,10 @@ public class Weaver {
         api = true;
     if( api == false ) return;
 
+    CtField fielddoc=null;
+    CtField getdoc=null;
+
+    // ---
     // Auto-gen JSON output to AutoBuffers
     make_body(cc,ctfs,false,
               "public water.AutoBuffer writeJSON(water.AutoBuffer ab) {\n  ab.put1('{');\n",
@@ -209,29 +219,38 @@ public class Weaver {
               "  ab.putEnumJSON(%s)",
               "  ab.putJSON%z(%s)",
               ".put1(',').put1('\\n');\n", 
-              ";\n  return ab.put1('\\n').put1('}');\n}"
-              );
-    
-    // Auto-gen JSON doc method.  Requires a structured java object.  Every
-    // non-transient field is ALSO a JSON field, and has some associated fields.
-    //     String[] someField;
+              ";\n  return ab.put1('\\n').put1('}');\n}",
+              new FieldFilter() {
+                boolean filter(CtField ctf) throws NotFoundException {return !ctf.getType().subclassOf(_arg); }
+              });
+
+    // ---
+
+    // Auto-gen JSON & Args doc method.  Requires a structured java object.
+    // Every non-transient field is ALSO either a JSON field or an Argument
+    // field, and has some associated fields.
+    //
+    //     H2OHexKey someField2; // Anything derived from RequestArguments$Argument
+    //     static final String someField2Help = "some help text";
+    //     static final int someField2MinVar = 1, someField2MaxVar = 1;
+    //
+    //     String[] someField; // Anything NOT derived from Argument is a JSON field
     //     static final String someFieldHelp = "some help text";
     //     static final int someFieldMinVar = 1, someFieldMaxVar = 1;
     // xxxMinVar and xxxMaxVar are optional; if xxxMinVar is missing it
     // defaults to 1, and if xxxMaxVar is missing it defaults "till now".
-    CtField jsondoc=null;
-    CtField getdoc=null;
     StringBuilder sb = new StringBuilder();
-    sb.append("new water.api.JSONDoc[]{");
+    sb.append("new water.api.DocGen$FieldDoc[] {");
     boolean first = true;
     for( CtField ctf : ctfs ) {
       int mods = ctf.getModifiers();
       if( javassist.Modifier.isTransient(mods) || javassist.Modifier.isStatic(mods) ) {
-        if( ctf.getName().equals("DOC_JSON") ) jsondoc = ctf;
+        if( ctf.getName().equals("DOC_FIELDS") ) fielddoc = ctf;
         if( ctf.getName().equals("DOC_GET") ) getdoc = ctf;
-        continue;  // Only serialize not-transient instance fields (not static)
+        continue;  // Only auto-doc not-transient instance fields (not static)
       }
-      // This field needs JSON documentation
+
+      // This field needs documentation
       String name = ctf.getName();
       String help = null;
       int minver = 1;
@@ -242,35 +261,37 @@ public class Weaver {
           if( sname.startsWith(name) ) {
             String x = sname.substring(name.length());
             Object o = ctf2.getConstantValue();
-            if     ( o == null ) throw new CannotCompileException("Found JSON static field '"+sname+"' but its value is not constant");
+            if     ( o == null ) throw new CannotCompileException("Found static field '"+sname+"' but its value is not constant");
             else if( x.equals("Help"  ) ) help   = (String )o;
             else if( x.equals("MinVer") ) minver = (Integer)o;
             else if( x.equals("MaxVer") ) maxver = (Integer)o;
-            else throw new CannotCompileException("Found JSON field '"+name+"' and also static field '"+sname+"' which is not one of "+name+"Help, "+name+"MinVer, or "+name+"MaxVer.");
+            else throw new CannotCompileException("Found field '"+name+"' and also static field '"+sname+"' which is not one of "+name+"Help, "+name+"MinVer, or "+name+"MaxVer.");
           }
         }
       }
-      if( help == null ) throw new CannotCompileException("Found JSON field '"+name+"' but did not find static final String "+name+"Help = 'some helper text';");
-      if( minver < 1 || minver > 1000000 ) throw new CannotCompileException("Found JSON field '"+name+"' but MinVer < 1 or MinVer > 1000000");
+      if( help == null ) throw new CannotCompileException("Found field '"+name+"' but did not find static final String "+name+"Help = 'some helper text';");
+      if( minver < 1 || minver > 1000000 ) throw new CannotCompileException("Found field '"+name+"' but MinVer < 1 or MinVer > 1000000");
       if( maxver < minver || (maxver > 1000000 && maxver != Integer.MAX_VALUE) ) 
-        throw new CannotCompileException("Found JSON field '"+name+"' but MaxVer < "+minver+" or MaxVer > 1000000");
+        throw new CannotCompileException("Found field '"+name+"' but MaxVer < "+minver+" or MaxVer > 1000000");
+
 
       if( first ) first = false;
       else sb.append(",");
-      sb.append("new water.api.JSONDoc(\""+name+"\",\""+help+"\","+minver+","+maxver+","+ctf.getType().getName()+".class)");
+      sb.append("new water.api.DocGen$FieldDoc(\""+name+"\",\""+help+"\","+minver+","+maxver+","+ctf.getType().getName()+".class)");
     }
     sb.append("}");
-    if( jsondoc == null ) throw new CannotCompileException("Did not find static final JSONDoc[] DOC_JSON field;");
-    if( !jsondoc.getType().isArray() ||
-        jsondoc.getType().getComponentType() != _jsondoc )
-      throw new CannotCompileException("DOC_JSON not declared static final JSONDoc[];");
-    cc.removeField(jsondoc);    // Remove the old one
-    cc.addField(jsondoc,CtField.Initializer.byExpr(sb.toString()));
-    cc.addMethod(CtNewMethod.make("  public water.api.JSONDoc[] toJSONDoc() { return DOC_JSON; }",cc));
+    if( fielddoc == null ) throw new CannotCompileException("Did not find static final DocGen.FieldDoc[] DOC_FIELDS field;");
+    if( !fielddoc.getType().isArray() ||
+        fielddoc.getType().getComponentType() != _fielddoc )
+      throw new CannotCompileException("DOC_FIELDS not declared static final DocGen.FieldDoc[];");
+    cc.removeField(fielddoc);    // Remove the old one
+    cc.addField(fielddoc,CtField.Initializer.byExpr(sb.toString()));
+    cc.addMethod(CtNewMethod.make("  public water.api.DocGen$FieldDoc[] toFieldDoc() { return DOC_FIELDS; }",cc));
     if( getdoc != null )
       cc.addMethod(CtNewMethod.make("  public String toGETDoc() { return DOC_GET; }",cc));
   }
 
+  // --------------------------------------------------------------------------
   // Support for a nullary constructor, for deserialization.
   private void ensureNullaryCtor(CtClass cc) throws NotFoundException, CannotCompileException {
     // Build a null-ary constructor if needed
@@ -332,7 +353,7 @@ public class Weaver {
               "  ab.put%z(%s);\n",
               "",
               "  return ab;\n" +
-              "}");
+              "}", null);
 
     // Build a read method that looks something like this:
     //     public T read( AutoBuffer s ) {
@@ -348,7 +369,7 @@ public class Weaver {
               "  %s = (%C)s.get%z(%c.class);\n",
               "",
               "  return this;\n" +
-              "}");
+              "}", null);
 
     // Build a copyOver method that looks something like this:
     //     public void copyOver( T s ) {
@@ -364,7 +385,7 @@ public class Weaver {
               "  %s = s.%s;\n",
               "  %s = s.%s;\n",
               "",
-              "}");
+              "}", null);
 
   }
 
@@ -376,7 +397,8 @@ public class Weaver {
                                String enums,
                                String freezables,
                                String field_sep,
-                               String trailer
+                               String trailer,
+                               FieldFilter ff
                                ) throws CannotCompileException, NotFoundException {
     StringBuilder sb = new StringBuilder();
     sb.append(header);
@@ -389,6 +411,7 @@ public class Weaver {
         debug_print |= ctf.getName().equals("DEBUG_WEAVER");
         continue;  // Only serialize not-transient instance fields (not static)
       }
+      if( ff != null && !ff.filter(ctf) ) continue; // Fails the filter
       if( first ) first = false;
       else sb.append(field_sep); 
 
