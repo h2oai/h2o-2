@@ -22,7 +22,7 @@ public class ImportFiles extends Request {
 
 
   // JSON OUTPUT FIELDS
-  static final String filesHelp="Files imported.  Imported files are merely Keys mapped over the existing files.  No data is loaded until the Key is used (usually in a Parse command)";
+  static final String filesHelp="Files imported.  Imported files are merely Keys mapped over the existing files.  No data is loaded until the Key is used (usually in a Parse command).";
   String[] files;
 
   static final String keysHelp="Keys of imported files, Keys map 1-to-1 with imported files.";
@@ -31,32 +31,6 @@ public class ImportFiles extends Request {
   static final String failsHelp="File names that failed the integrity check, can be empty.";
   String[] fails;
 
-  static final String DOC_4 = 
-    "Error JSON elements\n"+
-    "-------------------\n"+
-    "\n"+
-    "   error [string]\n"+
-    "\n"+
-    "      Required argument not specified.\n"+
-    "\n"+
-    "      File not found.\n"+
-    "\n"+
-    "HTTP response codes\n"+
-    "-------------------\n"+
-    "   \n"+
-    "   200 OK\n"+
-    "\n"+
-    "      Success and error responses are identical.\n"+
-    "\n"+
-    "Success Example\n"+
-    "---------------\n"+
-    "\n"+
-    ".. literalinclude:: ImportFiles_success_1.rest\n"+
-    "\n"+
-    "Error Example\n"+
-    "-------------\n"+
-    "\n"+
-    ".. literalinclude:: ImportFiles_error_1.rest\n";
 
   @Override protected Response serve() {
     FileIntegrityChecker c = FileIntegrityChecker.check(path.value());
