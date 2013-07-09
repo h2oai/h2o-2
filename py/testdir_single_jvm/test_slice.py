@@ -18,12 +18,19 @@ for i in range(5):
 # 'makeEnum'
 exprList = [
         'MatrixRes<n> = slice(<keyX>[<col1>],<row>)',
+        # last param should be optional
+        'MatrixRes<n> = slice(<keyX>[<col1>],1)',
+        'MatrixRes<n> = slice(<keyX>[<col1>],2)',
         'MatrixRes<n> = slice(<keyX>[<col1>],<row>,123)',
         'MatrixRes<n> = slice(<keyX>[<col1>],<row>,1)',
         'ColumnRes<n> = <keyX>[<col1>] + <keyX>[<col2>] + <keyX>[2]',
         'ColumnRes<n> = colSwap(<keyX>,<col1>,(<keyX>[2]==0 ? 54321 : 54321))',
         'ColumnRes<n> = <keyX>[<col1>]',
         'ScalarRes<n> = sum(<keyX>[<col1>]) + ScalarRes0',
+    ]
+exprErrorCaseList = [
+        # error case: more rows than in dataset?
+        'MatrixRes<n> = slice(<keyX>[<col1>],1,1000000)',
     ]
 
 class Basic(unittest.TestCase):
@@ -71,9 +78,14 @@ class Basic(unittest.TestCase):
 
             print "\n" + csvFilename
             h2e.exec_zero_list(zeroList)
+            # try the error case list
+            # I suppose we should test the expected error is correct. Right now just make sure
+            # things don't blow up
+            h2e.exec_expr_list_rand(lenNodes, exprErrorCaseList, key2, 
+                maxCol=53, maxRow=400000, maxTrials=5, timeoutSecs=timeoutSecs, ignoreH2oError=True)
             # we use colX+1 so keep it to 53
             h2e.exec_expr_list_rand(lenNodes, exprList, key2, 
-                maxCol=53, maxRow=400000, maxTrials=200, timeoutSecs=timeoutSecs)
+                maxCol=53, maxRow=400000, maxTrials=100, timeoutSecs=timeoutSecs)
 
 if __name__ == '__main__':
     h2o.unit_main()

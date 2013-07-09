@@ -117,6 +117,8 @@ NEXT_CHAR:
             break NEXT_CHAR;
           // we have parsed the string enum correctly
           if((_str._off + _str._length) > _str._buf.length){ // crossing chunk boundary
+            if(_str._buf == bits)
+              System.out.println("haha");
             assert _str._buf != bits;
             _str.addBuff(bits);
           }
@@ -396,7 +398,7 @@ NEXT_CHAR:
           assert (false) : " We have wrong state "+state;
       } // end NEXT_CHAR
       ++offset; // do not need to adjust for offset increase here - the offset is set to tokenStart-1!
-      if (offset < 0) {         // Offset is negative?  
+      if (offset < 0) {         // Offset is negative?
         assert !firstChunk;     // Caused by backing up from 2nd chunk into 1st chunk
         firstChunk = true;
         bits = bits0;
@@ -488,12 +490,14 @@ NEXT_CHAR:
       _bits = S._bits;
     }
 
+    public int numCols(){return _data == null?-1:_data[0].length;}
+
     @Override public boolean equals( Object o ) {
       if( o == null || !(o instanceof Setup) ) return false;
       if( o == this ) return true;
       Setup s = (Setup)o;
       // "Compatible" setups means same columns and same separators
-      return _separator == s._separator && 
+      return _separator == s._separator &&
         ((_data==null && s._data==null) ||
          (_data[0].length == s._data[0].length));
       }

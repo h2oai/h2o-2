@@ -49,7 +49,7 @@ public class Hadoop {
     try {
       Arguments arguments = new Arguments(args);
       arguments.extract(config);
-      if( config.help != null ) throw new Exception();
+      if( args.length == 0 || config.help != null ) throw new Exception();
       if( arguments.firstFlag() >= 0 ) remaining = Arrays.copyOfRange(args, arguments.firstFlag(), args.length);
     } catch( Exception ex ) {
       Config defaults = new Config();

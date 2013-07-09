@@ -310,8 +310,8 @@ def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True)
 
 
 def check_port_group(base_port):
-    # for now, only check for jenkins or kevin
-    if (1==1):
+    # disabled
+    if (1==0):
         username = getpass.getuser()
         if username=='jenkins' or username=='kevin' or username=='michal':
             # assumes you want to know about 3 ports starting at base_port
@@ -1062,14 +1062,15 @@ class H2O(object):
         return a
 
     # 'destination_key', 'escape_nan' 'expression'
-    def exec_query(self, timeoutSecs=20, **kwargs):
+    def exec_query(self, timeoutSecs=20, ignoreH2oError=False, **kwargs):
         params_dict = {
             'expression': None,
             }
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
         verboseprint("\nexec_query:", params_dict)
-        a = self.__do_json_request('Exec.json', timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('Exec.json', 
+            timeout=timeoutSecs, ignoreH2oError=ignoreH2oError, params=params_dict)
         verboseprint("\nexec_query result:", dump_json(a))
         return a
 
@@ -1143,7 +1144,7 @@ class H2O(object):
             h2b.browseJsonHistoryAsUrlLastMatch("RFView")
         return a
 
-    def random_forest_predict(self, key, model_key, timeoutSecs=300, print_params=False, **kwargs):
+    def generate_predictions(self, key, model_key, timeoutSecs=300, print_params=False, **kwargs):
         params_dict = {
             'key': key,
             'model_key': model_key,
@@ -1157,14 +1158,20 @@ class H2O(object):
                 params_dict[k] = kwargs[k]
 
         if print_params:
-            print "\nrandom_forest_view parameters:", params_dict
+            print "\ngenerate_predictions parameters:", params_dict
             sys.stdout.flush()
 
         a = self.__do_json_request('GeneratePredictionsPage.json', timeout=timeoutSecs, params=params_dict)
-        verboseprint("\nrandom_forest_predict result:", dump_json(a))
+        verboseprint("\ngenerate_predictions result:", dump_json(a))
 
         if (browseAlso | browse_json):
             h2b.browseJsonHistoryAsUrlLastMatch("GeneratePredictions")
+
+
+        # it will redirect to an inspect, so let's get that inspect stuff
+        resultKey = a['response']['redirect_request_args']['key']
+        a = self.__do_json_request('Inspect.json', timeout=timeoutSecs, params={"key": resultKey})
+        verboseprint("\nInspect of " + resultKey, dump_json(a))
         return a
 
     def random_forest_treeview(self, tree_number, data_key, model_key, 
@@ -1725,6 +1732,7 @@ class RemoteHost(object):
         # FIX! we won't find it here if it's hdfs://192.168.1.151/ file
         f = find_file(f)
         if f not in self.uploaded:
+            start = time.time()
             import md5
             m = md5.new()
             m.update(open(f).read())
@@ -1746,6 +1754,7 @@ class RemoteHost(object):
             except IOError, e:
                 if e.errno == errno.ENOENT:
                     sftp.put(f, dest, callback=progress)
+                    print "\n{0:.3f} seconds".format(time.time() - start)
             finally:
                 sftp.close()
             self.uploaded[f] = dest

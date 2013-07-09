@@ -91,11 +91,12 @@ def fill_in_expr_template(exprTemplate, colX, n, row, key2):
     return execExpr
 
 
-def exec_expr(node, execExpr, resultKey="Result.hex", timeoutSecs=10):
+def exec_expr(node, execExpr, resultKey="Result.hex", timeoutSecs=10, ignoreH2oError=False):
     start = time.time()
     # FIX! Exec has 'escape_nan' arg now. should we test?
     # 5/14/13 removed escape_nan=0
-    resultExec = h2o_cmd.runExecOnly(node, expression=execExpr, timeoutSecs=timeoutSecs)
+    resultExec = h2o_cmd.runExecOnly(node, expression=execExpr, 
+        timeoutSecs=timeoutSecs, ignoreH2oError=ignoreH2oError)
     h2o.verboseprint(resultExec)
     h2o.verboseprint('exec took', time.time() - start, 'seconds')
     ### print 'exec took', time.time() - start, 'seconds'
@@ -121,7 +122,8 @@ def exec_zero_list(zeroList):
 
 
 def exec_expr_list_rand(lenNodes, exprList, key2, 
-    minCol=0, maxCol=54, minRow=1, maxRow=400000, maxTrials=200, timeoutSecs=10):
+    minCol=0, maxCol=54, minRow=1, maxRow=400000, maxTrials=200, 
+    timeoutSecs=10, ignoreH2oError=False):
 
     trial = 0
     while trial < maxTrials: 
@@ -143,7 +145,8 @@ def exec_expr_list_rand(lenNodes, exprList, key2,
         row = str(random.randint(minRow,maxRow))
 
         execExpr = fill_in_expr_template(exprTemplate, colX, ((trial+1)%4)+1, row, key2)
-        execResultInspect = exec_expr(h2o.nodes[execNode], execExpr, "Result.hex", timeoutSecs)
+        execResultInspect = exec_expr(h2o.nodes[execNode], execExpr, "Result.hex", 
+            timeoutSecs, ignoreH2oError)
         ### print "\nexecResult:", execResultInspect
 
         checkScalarResult(execResultInspect, "Result.hex")

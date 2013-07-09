@@ -187,6 +187,7 @@ public class KMeansModel extends Model implements Progress {
     static final int ROW_SIZE = 4;
 
     public static Job run(final Key dest, final KMeansModel model, final ValueArray ary) {
+      UKV.remove(dest); // Delete dest first, or chunk size from previous key can crash job
       String desc = "KMeans apply model: " + model._selfKey + " to " + ary._key;
       final ChunkProgressJob job = new ChunkProgressJob(desc, dest, ary.chunks());
       final H2OCountedCompleter fjtask = new H2OCountedCompleter() {

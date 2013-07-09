@@ -28,7 +28,7 @@ class Basic(unittest.TestCase):
         missingValuesList = h2o_cmd.infoFromInspect(inspect, csvPathname)
         print missingValuesList
         # There should be only one col with missing values (the first col, 0)
-        self.assertEqual(missingValuesList, [501286], "Players.csv should have NAs due to col 0 only")
+        self.assertEqual(missingValuesList, [], "Players.csv should have no NAs")
 
 if __name__ == '__main__':
     h2o.unit_main()

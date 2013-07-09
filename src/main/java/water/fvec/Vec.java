@@ -1,5 +1,7 @@
 package water.fvec;
 
+import java.util.Arrays;
+
 import water.*;
 
 // A single distributed vector column.
@@ -14,16 +16,18 @@ import water.*;
 //  Vec Key format is: Key. VEC - byte, 0 - byte,   0    - int, normal Key bytes.
 // DVec Key format is: Key.DVEC - byte, 0 - byte, chunk# - int, normal Key bytes.
 public class Vec extends Iced {
+  public enum DType {U,I,F,E,S,NA};
   public static final int LOG_CHK = 20; // Chunks are 1<<20, or 1Meg
   public static final long CHUNK_SZ = 1L << LOG_CHK;
-
+  protected DType _dtype = DType.U;
+  public DType dtype(){return _dtype;}
   final public Key _key;        // Top-level key
   // Element-start per chunk.  Always zero for chunk 0.  One more entry than
   // chunks, so the last entry is the total number of rows.  This field is
   // dead/ignored in subclasses that are guaranteed to have fixed-sized chunks
   // such as file-backed Vecs.
   final long _espc[];
-
+  String [] _domain;
   // If we have active writers, then all cached roll-ups/reductions (e.g. _min,
   // _max) unavailable.  We won't even try to compute them (under the
   // assumption that we'll about to see a zillions writes/sec).
@@ -47,7 +51,7 @@ public class Vec extends Iced {
     Futures fs = new Futures();
     if( v._espc == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
     int nchunks = v.nChunks();
-    Vec v0 = new Vec(newKey(),v._espc,true,0,0);
+    Vec v0 = new Vec(v.group().addVecs(1)[0],v._espc,true,0,0);
     long row=0;                 // Start row
     for( int i=0; i<nchunks; i++ ) {
       long nrow = v.chunk2StartElem(i+1); // Next row
@@ -57,16 +61,6 @@ public class Vec extends Iced {
     DKV.put(v0._key,v0,fs);
     fs.blockForPending();
     return v0;
-  }
-
-  public static Key newKey() {
-    byte [] kb = Key.make()._kb;
-    byte[] bits = new byte[1+1+4+kb.length];
-    bits[0] = Key.VEC;
-    bits[1] = 0; // Not homed
-    UDP.set4(bits,2,-1); // 0xFFFFFFFF in the chunk# area
-    System.arraycopy(kb,0,bits,1+1+4,kb.length);
-    return Key.make(bits);
   }
 
   // Number of elements in the vector.  Overridden by subclasses that compute
@@ -118,12 +112,16 @@ public class Vec extends Iced {
   // compute chunks in an alternative way, such as file-backed Vecs.
   int elem2ChunkIdx( long i ) {
     assert 0 <= i && i < length();
+    int x = Arrays.binarySearch(_espc, i);
+    int res = x<0?-x - 2:x;
     int lo=0, hi = nChunks();
     while( lo < hi-1 ) {
       int mid = (hi+lo)>>>1;
       if( i < _espc[mid] ) hi = mid;
       else                 lo = mid;
     }
+    if(res != lo)
+      assert(res == lo):res + " != " + lo;
     return lo;
   }
 
@@ -132,22 +130,48 @@ public class Vec extends Iced {
   // table lookup.
   public long chunk2StartElem( int cidx ) { return _espc[cidx]; }
 
-  // Convert a chunk index into a data chunk key.  It's just the main Key with
-  // the given chunk#.
-  public Key chunkKey( int cidx ) {
-    byte[] bits = _key._kb.clone(); // Copy the Vec key
-    bits[0] = Key.DVEC;             // Data chunk key
-    bits[1] = -1;                   // Not homed
-    UDP.set4(bits,2,cidx);          // Chunk#
-    return Key.make(bits);
-  }
-
   // Get a Chunk.  Basically the index-to-key map, plus a DKV.get.  Can be
   // overridden for e.g., all-constant vectors where the Value is special.
+  public Key chunkKey(int cid){
+    byte [] bits = _key._kb.clone();
+    bits[0] = Key.DVEC;
+    UDP.set4(bits,6,cid); // chunk#
+    return Key.make(bits);
+  }
   public Value chunkIdx( int cidx ) {
     Value val = DKV.get(chunkKey(cidx));
     assert val != null;
     return val;
+  }
+  protected static Key newKey(){return newKey(Key.make());}
+  protected static Key newKey(Key k){
+    byte [] kb = k._kb;
+    byte [] bits = MemoryManager.malloc1(kb.length+4+4+1+1);
+    bits[0] = Key.VEC;
+    bits[1] = -1;         // Not homed
+    UDP.set4(bits,2,0);   // new group, so we're the first vector
+    UDP.set4(bits,6,-1);  // 0xFFFFFFFF in the   chunk# area
+    System.arraycopy(kb, 0, bits, 4+4+1+1, kb.length);
+    return Key.make(bits);
+  }
+  private Key groupKey(){
+    byte [] bits = _key._kb.clone();
+    UDP.set4(bits, 2, -1);
+    UDP.set4(bits, 6, -1);
+    return Key.make(bits);
+  }
+  /**
+   * Get the group this vector belongs to.
+   * In case of a group with only one vector, the object actually does not exist in KV store.
+   *
+   * @return VectorGroup this vector belongs to.
+   */
+  public VectorGroup group(){
+    Key gKey = groupKey();
+    Value v = DKV.get(gKey);
+    if(v != null)return v.get(VectorGroup.class);
+    // no group exists so we have to create one
+    return new VectorGroup(gKey,1);
   }
 
   // Convert a global row# to a chunk-local row#.
@@ -168,8 +192,10 @@ public class Vec extends Iced {
 
   // Next BigVector from the current one
   Chunk nextBV( Chunk bv ) {
-    int cidx = elem2ChunkIdx(bv._start+bv._len);
-    return cidx == nChunks() ? null : elem2BV(cidx);
+    int cidx = bv.cidx()+1;
+    Chunk next =  cidx == nChunks() ? null : elem2BV(cidx);
+    assert next == null || next.cidx() == cidx;
+    return next;
   }
 
   // Fetch element the slow way
@@ -218,6 +244,77 @@ public class Vec extends Iced {
   // [#elems, min/mean/max]
   @Override public String toString() {
     return "["+length()+(Double.isNaN(_min) ? "" : ","+_min+"/"+_max)+"]";
+  }
+
+
+  /**
+   * Class representing the group of vectors.
+   *
+   * Vectors from the same group have same distribution of chunks among nodes.
+   * Each vector is member of exactly one group. Default group of one vector is created for each vector.
+   * Group of each vector can be retrieved by calling group() method;
+   *
+   * The expected mode of operation is that user wants to add new vectors matching the source.
+   * E.g. parse creates several vectors (on for each column) which are all colocated and are
+   * colocated with the original bytevector.
+   *
+   * To do this, user should first ask for the set of keys for the new vectors by calling addVecs method on the
+   * target group.
+   *
+   * Vectors in the group will have the same keys except for the prefix which specifies index of the vector inside the group.
+   * The only information the group object carries is it's own key and the number of vectors it contains(deleted vectors still count).
+   *
+   * Because vectors(and chunks) share the same key-pattern with the group, default group with only one vector does not have to be actually created, it is implicit.
+   *
+   * @author tomasnykodym
+   *
+   */
+  public static class VectorGroup extends Iced{
+    public final int _len;
+    public final Key _key;
+    private VectorGroup(Key key, int len){_key = key;_len = len;}
+
+    public Key vecKey(int vecId){
+      byte [] bits = _key._kb.clone();
+      UDP.set4(bits,2,vecId);//
+      return Key.make(bits);
+    }
+    public int vecId(Key k){
+      return UDP.get4(k._kb, 2);
+    }
+
+    /**
+     * Task to atomically add vectors into existing group.
+     *
+     * @author tomasnykodym
+     *
+     */
+    private static class AddVecs2GroupTsk extends TAtomic<VectorGroup>{
+      final Key _key;
+      final int _addN;
+      int _finalN;
+      public AddVecs2GroupTsk(Key key, int n){_key = key; _addN = _finalN = n;}
+      @Override public VectorGroup atomic(VectorGroup old) {
+        if(old == null) return new VectorGroup(_key, ++_finalN);
+        return new VectorGroup(_key, _finalN = (_addN + old._len));
+      }
+    }
+    /**
+     * Gets the next n keys of this group.
+     * Performs atomic udpate of the group object to assure we get unique keys.
+     * The group size will be udpated by adding n.
+     *
+     * @param n
+     * @return arrays of unique keys belonging to this group.
+     */
+    Key [] addVecs(final int n){
+      AddVecs2GroupTsk tsk = new AddVecs2GroupTsk(_key, n);
+      tsk.invoke(_key);
+      Key [] res = new Key[n];
+      for(int i = 0; i < n; ++i)
+        res[i] = vecKey(i + tsk._finalN - n);
+      return res;
+    }
   }
 }
 
