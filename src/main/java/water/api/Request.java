@@ -65,7 +65,7 @@ public abstract class Request extends RequestBuilders {
         if (type == RequestType.json)
           return response._req == null 
             ? wrap(server, response.toJson())
-            : wrap(server, new String(response._req.writeJSON(new AutoBuffer()).buf()));
+            : wrap(server, new String(response._req.writeJSON(new AutoBuffer()).buf()),RequestType.json);
         return wrap(server,build(response));
       case debug:
         response = serve_debug();
