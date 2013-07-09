@@ -2,17 +2,18 @@ package water.api;
 
 import java.util.ArrayList;
 import water.Futures;
-import water.H2O;
-import water.AutoBuffer;
 import water.Key;
 import water.util.FileIntegrityChecker;
 
 public class ImportFiles extends Request {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
-  static public JSONDoc[] DOC_JSON; // Initialized from Auto-Gen code
+  static public JSONDoc[] DOC_JSON; // Initialized from Auto-Gen code.
 
+  // This Request supports the HTML 'GET' command, and this is the help text
+  // for GET.
   static final String DOC_GET = 
-    "  Read in a file from the local host filesystem into H2O memory. "+
+    "  Map a file from the local host filesystem into H2O memory.  Data is "+
+    "loaded lazily, when the Key is read (usually in a Parse command).  "+
     "(Warning: Every host in the cluster must have this file visible locally!)";
 
   // HTTP REQUEST PARAMETERS
@@ -21,13 +22,13 @@ public class ImportFiles extends Request {
 
 
   // JSON OUTPUT FIELDS
-  static final String filesHelp="Files imported";
+  static final String filesHelp="Files imported.  Imported files are merely Keys mapped over the existing files.  No data is loaded until the Key is used (usually in a Parse command)";
   String[] files;
 
-  static final String keysHelp="Keys of imported files";
+  static final String keysHelp="Keys of imported files, Keys map 1-to-1 with imported files.";
   String[] keys;
 
-  static final String failsHelp="File names that failed the integrity check";
+  static final String failsHelp="File names that failed the integrity check, can be empty.";
   String[] fails;
 
   static final String DOC_4 = 
