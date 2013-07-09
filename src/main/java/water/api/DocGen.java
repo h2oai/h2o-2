@@ -93,8 +93,8 @@ public abstract class DocGen {
     }
     @Override StringBuilder listTail( StringBuilder sb ) { return sb.append("</ul>"); }
 
-    public static StringBuilder arrayHead( StringBuilder sb ) { return arrayHead(sb,null); }
-    public static StringBuilder arrayHead( StringBuilder sb, String[] headers ) {
+    public StringBuilder arrayHead( StringBuilder sb ) { return arrayHead(sb,null); }
+    public StringBuilder arrayHead( StringBuilder sb, String[] headers ) {
       sb.append("<span style='display: inline-block;'>");
       sb.append("<table class='table table-striped table-bordered'>");
       if( headers != null ) {
@@ -104,8 +104,8 @@ public abstract class DocGen {
       }
       return sb;
     }
-    public static StringBuilder arrayTail( StringBuilder sb ) { return sb.append("</table></span>"); }
-    public static StringBuilder array( StringBuilder sb, String[] ss ) {
+    public StringBuilder arrayTail( StringBuilder sb ) { return sb.append("</table></span>"); }
+    public StringBuilder array( StringBuilder sb, String[] ss ) {
       arrayHead(sb);
       for( String s : ss ) sb.append("<tr><td>").append(s).append("</td></tr>");
       return arrayTail(sb);

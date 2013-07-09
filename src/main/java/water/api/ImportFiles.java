@@ -6,7 +6,6 @@ import water.H2O;
 import water.AutoBuffer;
 import water.Key;
 import water.util.FileIntegrityChecker;
-import com.google.gson.*;
 
 public class ImportFiles extends Request {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
