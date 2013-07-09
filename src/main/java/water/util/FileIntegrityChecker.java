@@ -77,5 +77,6 @@ public class FileIntegrityChecker extends DRemoteTask {
       : new Value(k,new ValueArray(k,size),Value.NFS);
     val.setdsk();
     UKV.put(k, val, fs);
+    return k;
   }
 }
