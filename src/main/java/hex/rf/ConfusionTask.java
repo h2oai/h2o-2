@@ -1,12 +1,9 @@
 package hex.rf;
 
-import hex.rf.DRF.DRFJob;
-
 import java.util.Arrays;
 import java.util.Random;
 
 import jsr166y.CountedCompleter;
-
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
@@ -116,17 +113,18 @@ public class ConfusionTask extends MRTask {
     H2OCountedCompleter fjtask = new H2OCountedCompleter() {
 
       @Override public void compute2() {
-        CMFinal cmResult = UKV.get(cmJob.dest());
+        Key key = cmJob.dest();
+        Value val = H2O.putIfMatch(key, new Value(key,CMFinal.make()), null);
         // Reuse cached results
-        if (cmResult == null) {
-          // Put non-valid CM. This is not properly synchronized
-          DKV.put(cmJob.dest(), CMFinal.make());
+        if (val == null) {
           ConfusionTask cmTask = new ConfusionTask(cmJob, model,modelSize,datakey,classcol,classWt,computeOOB);
-          cmTask.invoke(datakey);
-          cmResult = CMFinal.make(cmTask._matrix, model, cmTask.domain(), cmTask._errorsPerTree, computeOOB);
+          cmTask.invoke(datakey); // Invoke and wait for completion
+          // Create final matrix
+          CMFinal cmResult = CMFinal.make(cmTask._matrix, model, cmTask.domain(), cmTask._errorsPerTree, computeOOB);
           // Overwrite the result
           CMFinal.updateDKV(cmJob.dest(), cmResult);
         }
+        // Remove this jobs - it already finished or it was useless
         cmJob.remove();
         tryComplete();
       }
