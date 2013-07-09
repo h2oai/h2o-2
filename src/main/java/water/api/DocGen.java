@@ -1,76 +1,138 @@
 package water.api;
 
-import java.io.*;
-import java.util.Map;
+import water.*;
+import water.api.Request.*;
 
-import com.google.common.base.Charsets;
-import com.google.common.io.Files;
+/** 
+ * Auto-gen doc support, for JSON & REST API docs
+ * @author <a href="mailto:cliffc@0xdata.com"></a>
+ */
+public abstract class DocGen {
+  static final HTML HTML = new HTML();
+  static final ReST ReST = new ReST();
 
-import water.Arguments;
-import water.H2O;
-import water.util.IndentingAppender;
-
-public class DocGen {
-  public static class OptArgs extends Arguments.Opt {
-    public String type = "python";
-    public String destination = "docs/gen/";
+  public static void main(String[] args) {
+    H2O.main(args);
+    TestUtil.stall_till_cloudsize(1);
+    System.out.println(new ImportFiles().ReSTHelp());
+    //System.exit(0);
   }
 
-  public static void main(String[] args) throws IOException {
-    H2O.main(new String[0]);
-    OptArgs options = new OptArgs();
-    new Arguments(args).extract(options);
+  // --------------------------------------------------------------------------
+  abstract StringBuilder bodyHead( StringBuilder sb );
+  abstract StringBuilder bodyTail( StringBuilder sb );
+  abstract StringBuilder title( StringBuilder sb, String t );
+  abstract StringBuilder section( StringBuilder sb, String t );
+  abstract StringBuilder paragraph( StringBuilder sb, String s );
+  abstract StringBuilder listHead( StringBuilder sb );
+  abstract StringBuilder listBullet( StringBuilder sb, String s, String body );
+  abstract StringBuilder listTail( StringBuilder sb );
 
-    if(options.type.equalsIgnoreCase("wiki")) {
-      generateWiki(options);
-    } else if(options.type.equalsIgnoreCase("python")) {
-      genereratePython(options);
-    } else {
-      System.err.println("Unknown documentation type: " + options.type);
+  public String genHelp(Request R) {
+    String name = R.getClass().getSimpleName();
+    StringBuilder sb = new StringBuilder();
+    bodyHead(sb);
+    title(sb,name);
+    paragraph(sb,"");
+    section(sb,"Supported HTTP methods and descriptions");
+    String gs = R.toGETDoc();
+    if( gs != null ) {
+      paragraph(sb,"GET");
+      paragraph(sb,gs);
+    }
+    section(sb,"URL");
+    paragraph(sb,"http://<h2oHost>:<h2oApiPort>/"+name+".json");
+    section(sb,"Input parameters");
+    section(sb,"Output JSON elements");
+    JSONDoc docs[] = R.toJSONDoc();
+    if( docs != null ) {
+      listHead(sb);
+      for( JSONDoc doc : docs )
+        listBullet(sb,
+                   doc._name+", a "+doc._clazz.getSimpleName(),
+                   doc._help+".  From version "+doc._min_ver+
+                   (doc._max_ver==Integer.MAX_VALUE?" onward":" to version "+doc._max_ver));
+      listTail(sb);
+    }
+    bodyTail(sb);
+    return sb.toString();
+  }
+
+
+  // --------------------------------------------------------------------------
+  // HTML flavored help text
+  static class HTML extends DocGen {
+    private static StringBuilder escape(StringBuilder sb, String s ) {
+      int len=s.length();
+      for( int i=0; i<len; i++ ) {
+        char c = s.charAt(i);
+        if( false ) ;
+        else if( c=='<' ) sb.append("&lt;");
+        else if( c=='>' ) sb.append("&gt;");
+        else if( c=='&' ) sb.append("&amp;");
+        else if( c=='"' ) sb.append("&quot;");
+        else sb.append(c);
+      }
+      return sb;
+    }
+    @Override StringBuilder bodyHead( StringBuilder sb ) { 
+      return sb.append("<div class='container'>"+ 
+                       "<div class='row-fluid'>"+ 
+                       "<div class='span12'>");
+    }
+    @Override StringBuilder bodyTail( StringBuilder sb ) { return sb.append("</div></div></div>"); }
+    @Override StringBuilder title  ( StringBuilder sb, String t ) { return sb.append("<h3>").append(t).append("</h3>"); }
+    @Override StringBuilder section( StringBuilder sb, String t ) { return sb.append("<h4>").append(t).append("</h4>"); }
+    @Override StringBuilder paragraph( StringBuilder sb, String s ) { 
+      return escape(sb.append("<blockquote>"),s).append("</blockquote>");
     }
 
-    System.exit(0);
-  }
-
-  private static void genereratePython(OptArgs options) throws IOException {
-    File f = new File(options.destination);
-    if( !options.destination.endsWith(".py") ) {
-      f = new File(f, "h2o_base.py");
+    @Override StringBuilder listHead( StringBuilder sb ) { return sb.append("<ul>"); }
+    @Override StringBuilder listBullet( StringBuilder sb, String s, String body ) {
+      return sb.append("<li><b>").append(s).append("</b></li>").append(body);
     }
-    IndentingAppender ia = new IndentingAppender(Files.newWriter(f, Charsets.UTF_8));
-    ia.appendln("##################################");
-    ia.appendln("### GENERATED CODE DO NOT EDIT ###");
-    ia.appendln("##################################");
-    ia.appendln("import requests");
-    ia.appendln("");
-    ia.appendln("class H2OBase(object):");
-    ia.incrementIndent();
-    ia.appendln("'''");
-    ia.appendln("A generated base class with arguments and documentation");
-    ia.appendln("for accessing H2O's REST API from python");
-    ia.appendln("'''");
+    @Override StringBuilder listTail( StringBuilder sb ) { return sb.append("</ul>"); }
 
-    ia.appendln("").appendln("def __url(self, loc, port=None):");
-    ia.incrementIndent();
-    ia.appendln("raise Exception('__url should be implemented by a base class')");
-    ia.decrementIndent();
-
-    ia.appendln("").appendln("def __check_request(self, r, extraComment=None):");
-    ia.incrementIndent();
-    ia.appendln("raise Exception('__check_requests should be implemented by a base class')");
-    ia.decrementIndent();
-
-    Map<String, Request> requests = RequestServer._requests;
-    for( Request r : requests.values() ) {
-      r.buildPython(ia.appendln(""));
+    public StringBuilder arrayHead( StringBuilder sb ) { return arrayHead(sb,null); }
+    public StringBuilder arrayHead( StringBuilder sb, String[] headers ) {
+      sb.append("<span style='display: inline-block;'>");
+      sb.append("<table class='table table-striped table-bordered'>");
+      if( headers != null ) {
+        sb.append("<tr>");
+        for( String s : headers ) sb.append("<th>").append(s).append("</th>");
+        sb.append("</tr>");
+      }
+      return sb;
     }
-
-    ia.close();
+    public StringBuilder arrayTail( StringBuilder sb ) { return sb.append("</table></span>"); }
+    public StringBuilder array( StringBuilder sb, String[] ss ) {
+      arrayHead(sb);
+      for( String s : ss ) sb.append("<tr><td>").append(s).append("</td></tr>");
+      return arrayTail(sb);
+    }
   }
 
-  private static void generateWiki(OptArgs options) {
-    System.err.println("Generate WIKI unimplemented.");
+  // --------------------------------------------------------------------------
+  // ReST flavored help text
+  static class ReST extends DocGen { // Restructured text
+    private StringBuilder cr(StringBuilder sb) { return sb.append('\n'); }
+    private StringBuilder underLine( StringBuilder sb, String s, char c ) {
+      cr(cr(sb).append(s));
+      int len = s.length();
+      for( int i=0; i<len; i++ ) sb.append(c);
+      return cr(cr(sb));
+    }
+    @Override StringBuilder bodyHead( StringBuilder sb ) { return sb; }
+    @Override StringBuilder bodyTail( StringBuilder sb ) { return sb; }
+    @Override StringBuilder title  ( StringBuilder sb, String t ) { return underLine(sb,t,'='); }
+    @Override StringBuilder section( StringBuilder sb, String t ) { return underLine(sb,t,'-'); }
+    @Override StringBuilder paragraph( StringBuilder sb, String s ) { return cr(sb.append("  ").append(s)); }
+    @Override StringBuilder listHead( StringBuilder sb ) { return sb; }
+    @Override StringBuilder listBullet( StringBuilder sb, String s, String body ) {
+      cr(sb.append("  "  ).append(s   ));
+      cr(sb.append("    ").append(body));
+      return sb;
+    }
+    @Override StringBuilder listTail( StringBuilder sb ) { return sb; }
   }
-
 }
-

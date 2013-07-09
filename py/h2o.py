@@ -1166,6 +1166,12 @@ class H2O(object):
 
         if (browseAlso | browse_json):
             h2b.browseJsonHistoryAsUrlLastMatch("GeneratePredictions")
+
+
+        # it will redirect to an inspect, so let's get that inspect stuff
+        resultKey = a['response']['redirect_request_args']['key']
+        a = self.__do_json_request('Inspect.json', timeout=timeoutSecs, params={"key": resultKey})
+        verboseprint("\nInspect of " + resultKey, dump_json(a))
         return a
 
     def random_forest_treeview(self, tree_number, data_key, model_key, 
