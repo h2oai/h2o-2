@@ -11,6 +11,7 @@ import org.junit.BeforeClass;
 
 import water.parser.ParseDataset;
 import water.util.Log;
+import water.util.Utils;
 
 import com.google.common.io.Closeables;
 
@@ -87,14 +88,7 @@ public class TestUtil {
   }
 
   public static Key load_test_file(File file, String keyname) {
-    Key key = null;
-    FileInputStream fis = null;
-    try {
-      fis = new FileInputStream(file);
-      key = ValueArray.readPut(keyname, fis);
-    } catch( IOException e ) {
-      Closeables.closeQuietly(fis);
-    }
+    Key key = Utils.loadFile(file, keyname);
     if( key == null )
       fail("failed load to " + file.getName());
     return key;
@@ -121,32 +115,6 @@ public class TestUtil {
     ParseDataset.parse(okey, keys);
     for(Key k:keys)UKV.remove(k);
     return okey;
-  }
-
-  public static ValueArray parse_test_key(Key fileKey, Key parsedKey) {
-    ParseDataset.parse(parsedKey, new Key[]{fileKey});
-    return DKV.get(parsedKey).get();
-  }
-
-  public static ValueArray parse_test_key(Key fileKey) {
-    return parse_test_key(fileKey, Key.make());
-  }
-
-  public static String replaceExtension(String fname, String newExt) {
-    int i = fname.lastIndexOf('.');
-    if( i == -1 )
-      return fname + "." + newExt;
-    return fname.substring(0, i) + "." + newExt;
-  }
-
-  public static String getHexKeyFromFile(File f) {
-    return replaceExtension(f.getName(), "hex");
-  }
-
-  public static String getHexKeyFromRawKey(String str) {
-    if( str.startsWith("hdfs://") )
-      str = str.substring(7);
-    return replaceExtension(str, "hex");
   }
 
   // --------

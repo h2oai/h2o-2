@@ -39,6 +39,10 @@ public class Job extends Iced {
     Job[] _jobs = new Job[0];
   }
 
+  public static void putEmptyJobList() {
+    UKV.put(Job.LIST, new Job.List());
+  }
+
   public static Job[] all() {
     List list = UKV.get(LIST);
     return list != null ? list._jobs : new Job[0];

@@ -7,7 +7,6 @@ import java.net.*;
 import java.util.*;
 
 import water.Boot;
-import water.TestUtil;
 import water.util.Log;
 
 /**
@@ -77,7 +76,8 @@ public class NodeCL extends Thread implements Node {
   }
 
   public static void close_() {
-    TestUtil.checkLeakedKeys();
+    // FIXME Should not depend on testing codes
+    //TestUtil.checkLeakedKeys();
   }
 
   private Object invoke(String className, String methodName, Object... args) {

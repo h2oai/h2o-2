@@ -105,11 +105,16 @@ public class Cloud {
       }
       Boot.main(args);
 
-      TestUtil.stall_till_cloudsize(1 + workers.size());
+      waitForCloudSize(1 + workers.size(), 10000);
       Thread.sleep(1000);
       Log.unwrap(System.out, "");
       Log.unwrap(System.out, "The cloud is running. Connect through local port forwarding:");
       Log.unwrap(System.out, "http://127.0.0.1:54321");
+    }
+
+    static void waitForCloudSize(int size, int ms) {
+      H2O.waitForCloudSize(size, ms);
+      Job.putEmptyJobList();
     }
   }
 }

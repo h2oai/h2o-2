@@ -1,6 +1,5 @@
 package hex.rf;
 
-import hex.rf.ConfusionTask.CM;
 import hex.rf.ConfusionTask.CMFinal;
 import hex.rf.DRF.DRFJob;
 import hex.rf.DRF.DRFParams;
@@ -11,7 +10,6 @@ import java.io.File;
 import java.util.*;
 
 import jsr166y.ForkJoinTask;
-
 import water.*;
 import water.Timer;
 import water.util.*;
@@ -126,12 +124,12 @@ public class RandomForest {
     if(ARGS.parsedKey != null) // data already parsed
       va = DKV.get(Key.make(ARGS.parsedKey)).get();
     else if(ARGS.rawKey != null) // data loaded in K/V, not parsed yet
-      va = TestUtil.parse_test_key(Key.make(ARGS.rawKey),Key.make(TestUtil.getHexKeyFromRawKey(ARGS.rawKey)));
+      va = Utils.parseKey(Key.make(ARGS.rawKey),Key.make(Utils.getHexKeyFromRawKey(ARGS.rawKey)));
     else { // data outside of H2O, load and parse
       File f = new File(ARGS.file);
       Log.debug(Sys.RANDF,"Loading file ", f);
-      Key fk = TestUtil.load_test_file(f);
-      va = TestUtil.parse_test_key(fk,Key.make(TestUtil.getHexKeyFromFile(f)));
+      Key fk = Utils.loadFile(f);
+      va = Utils.parseKey(fk,Key.make(Utils.getHexKeyFromFile(f)));
       DKV.remove(fk);
     }
     if(ARGS.ntrees == 0) {
@@ -210,8 +208,8 @@ public class RandomForest {
     if(ARGS.validationFile != null && !ARGS.validationFile.isEmpty()){ // validate on the supplied file
       File f = new File(ARGS.validationFile);
       Log.debug(Sys.RANDF,"Loading validation file ",f);
-      Key fk = TestUtil.load_test_file(f);
-      ValueArray v = TestUtil.parse_test_key(fk,Key.make(TestUtil.getHexKeyFromFile(f)));
+      Key fk = Utils.loadFile(f);
+      ValueArray v = Utils.parseKey(fk,Key.make(Utils.getHexKeyFromFile(f)));
       valKey = v._key;
       DKV.remove(fk);
       CMFinal cm = ConfusionTask.make( model, valKey, classcol, null, false).get();

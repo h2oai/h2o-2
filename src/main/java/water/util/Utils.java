@@ -16,6 +16,8 @@ import org.apache.commons.lang.ArrayUtils;
 import water.*;
 import water.parser.ParseDataset;
 
+import com.google.common.io.Closeables;
+
 public class Utils {
 
   /** Returns the index of the largest value in the array.
@@ -308,4 +310,44 @@ public class Utils {
     return res;
   }
 
+  public static ValueArray parseKey(Key fileKey, Key parsedKey) {
+    ParseDataset.parse(parsedKey, new Key[]{fileKey});
+  return DKV.get(parsedKey).get();
+  }
+
+  public static ValueArray parseKey(Key fileKey) {
+    return parseKey(fileKey, Key.make());
+  }
+
+  public static String getHexKeyFromFile(File f) {
+    return replaceExtension(f.getName(), "hex");
+  }
+
+  public static String getHexKeyFromRawKey(String str) {
+    if( str.startsWith("hdfs://") )
+      str = str.substring(7);
+    return replaceExtension(str, "hex");
+  }
+
+  public static String replaceExtension(String fname, String newExt) {
+    int i = fname.lastIndexOf('.');
+    if( i == -1 )
+      return fname + "." + newExt;
+    return fname.substring(0, i) + "." + newExt;
+  }
+
+  public static Key loadFile(File file) {
+    return loadFile(file, file.getPath());
+  }
+  public static Key loadFile(File file, String keyname) {
+    Key key = null;
+    FileInputStream fis = null;
+    try {
+      fis = new FileInputStream(file);
+      key = ValueArray.readPut(keyname, fis);
+    } catch( IOException e ) {
+      Closeables.closeQuietly(fis);
+    }
+    return key;
+  }
 }
