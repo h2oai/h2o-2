@@ -20,6 +20,9 @@ import com.google.gson.*;
 public abstract class Request extends RequestBuilders {
   public String _requestHelp;
 
+  protected Request( String help ) { _requestHelp=help; }
+  protected Request( ) { }
+
   protected String href() {
     return getClass().getSimpleName();
   }
@@ -41,7 +44,7 @@ public abstract class Request extends RequestBuilders {
     String query = checkArguments(args, type);
     switch (type) {
       case help:
-        return wrap(server, build(Response.done(serveHelp())));
+        return wrap(server, HTMLHelp());
       case json:
       case www:
       case png:
@@ -60,7 +63,9 @@ public abstract class Request extends RequestBuilders {
         Response response = serve();
         response.setTimeStart(time);
         if (type == RequestType.json)
-          return wrap(server, response.toJson());
+          return response._req == null 
+            ? wrap(server, response.toJson())
+            : wrap(server, new String(response._req.writeJSON(new AutoBuffer()).buf()));
         return wrap(server,build(response));
       case debug:
         response = serve_debug();
@@ -70,49 +75,6 @@ public abstract class Request extends RequestBuilders {
       default:
         throw new RuntimeException("Invalid request type "+type.toString());
     }
-  }
-
-  protected JsonObject serveHelp() {
-    JsonObject r = new JsonObject();
-    r.addProperty(NAME, getClass().getSimpleName());
-    r.addProperty(DESCRIPTION, _requestHelp);
-    JsonArray args = new JsonArray();
-    for( Argument arg : _arguments ) {
-      args.add(arg.requestHelp());
-    }
-    r.add(ARGUMENTS, args);
-    return r;
-  }
-
-  protected void buildPython(IndentingAppender ia) throws IOException {
-    String name = getClass().getSimpleName();
-
-    ia.append("def ").append(name).append("(self");
-    ia.incrementIndent().incrementIndent();
-    for( Argument arg : _arguments ) {
-      ia.append(", ").append(arg._name);
-      if( !arg._required ) ia.append("=None");
-    }
-    ia.appendln("):");
-    ia.decrementIndent().decrementIndent();
-    ia.incrementIndent();
-    ia.appendln("'''");
-    ia.appendln(Objects.firstNonNull(_requestHelp, "MISSING HELP STRING"));
-
-    if( !_arguments.isEmpty() ) ia.appendln("Arguments:");
-    ia.incrementIndent();
-    for( Argument arg : _arguments ) {
-      ia.append(arg._name).append(" -- ");
-      if( arg._required ) ia.append("required -- ");
-      ia.appendln(arg.queryDescription());
-      ia.incrementIndent();
-      ia.appendln(Objects.firstNonNull(arg._requestHelp, "MISSING HELP STRING"));
-      ia.decrementIndent();
-    }
-    ia.decrementIndent();
-    ia.appendln("'''");
-    ia.appendln("pass");
-    ia.decrementIndent();
   }
 
   protected NanoHTTPD.Response wrap(NanoHTTPD server, String response) {
@@ -216,9 +178,6 @@ public abstract class Request extends RequestBuilders {
     return r;
   }
 
-  protected static final void help(Argument arg, String help) { arg._requestHelp = help; }
-  protected static final void help(Request r, String help)    { r._requestHelp   = help; }
-
   public static JsonObject execSync(Request request) {
     for( ;; ) {
       Response r = request.serve();
@@ -245,4 +204,15 @@ public abstract class Request extends RequestBuilders {
       }
     }
   }
+
+  // ==========================================================================
+  private RuntimeException barf() {
+    return new RuntimeException(getClass().toString()+" should be automatically overridden in the subclass by the Weaver");
+  }
+  public AutoBuffer writeJSON( AutoBuffer ab ) { throw barf(); }
+  public StringBuilder toHTML( StringBuilder sb ) { throw barf(); }
+  public JSONDoc[] toJSONDoc() { return null; }
+  public String toGETDoc() { return null; }
+  public String HTMLHelp() { return DocGen.HTML.genHelp(this); }
+  public String ReSTHelp() { return DocGen.ReST.genHelp(this); }
 }
