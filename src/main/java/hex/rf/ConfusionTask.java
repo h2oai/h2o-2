@@ -1,12 +1,9 @@
 package hex.rf;
 
-import hex.rf.DRF.DRFJob;
-
 import java.util.Arrays;
 import java.util.Random;
 
 import jsr166y.CountedCompleter;
-
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
@@ -116,17 +113,18 @@ public class ConfusionTask extends MRTask {
     H2OCountedCompleter fjtask = new H2OCountedCompleter() {
 
       @Override public void compute2() {
-        CMFinal cmResult = UKV.get(cmJob.dest());
+        Key key = cmJob.dest();
+        Value val = DKV.DputIfMatch(key, new Value(key, CMFinal.make()), null, null);
         // Reuse cached results
-        if (cmResult == null) {
-          // Put non-valid CM. This is not properly synchronized
-          DKV.put(cmJob.dest(), CMFinal.make());
-          ConfusionTask cmTask = new ConfusionTask(cmJob, model,modelSize,datakey,classcol,classWt,computeOOB);
-          cmTask.invoke(datakey);
-          cmResult = CMFinal.make(cmTask._matrix, model, cmTask.domain(), cmTask._errorsPerTree, computeOOB);
-          // Overwrite the result
+        if (val == null) {
+          ConfusionTask cmTask = new ConfusionTask(cmJob, model, modelSize, datakey, classcol, classWt, computeOOB);
+          cmTask.invoke(datakey); // Invoke and wait for completion
+          // Create final matrix
+          CMFinal cmResult = CMFinal.make(cmTask._matrix, model, cmTask.domain(), cmTask._errorsPerTree, computeOOB);
+          // Overwrite the dummy result
           CMFinal.updateDKV(cmJob.dest(), cmResult);
         }
+        // Remove this jobs - it already finished or it was useless
         cmJob.remove();
         tryComplete();
       }
@@ -483,7 +481,9 @@ public class ConfusionTask extends MRTask {
     /** Output information about this RF. */
     public final void report() {
       double err = classError();
-      RFModel model = DKV.get(_rfModelKey).get();
+      assert _valid == true : "Trying to report status of invalid CM!";
+
+      RFModel model = UKV.get(_rfModelKey);
       String s =
             "              Type of random forest: classification\n"
           + "                    Number of trees: " + model.size() + "\n"
