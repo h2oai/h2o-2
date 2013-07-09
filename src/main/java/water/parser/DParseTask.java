@@ -411,7 +411,7 @@ public class DParseTask extends MRTask {
   public void normalizeSigma() {
     // normalize sigma
     for(int i = 0; i < _ncolumns; ++i)
-      _sigma[i] = Math.sqrt(_sigma[i]/(_numRows - _invalidValues[i]));
+      _sigma[i] = Math.sqrt(_sigma[i]/(_numRows - _invalidValues[i] - 1));
   }
 
   /** Creates the value header based on the calculated columns.
