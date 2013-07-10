@@ -56,13 +56,13 @@ class Basic(unittest.TestCase):
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
             print "Creating random", csvPathname
-            legalValues = {1, 2, 3, 4} # set. http://docs.python.org/2/library/stdtypes.html#set
+            legalValues = {0, 1} # set. http://docs.python.org/2/library/stdtypes.html#set
             expectedMin = min(legalValues)
             expectedMax = max(legalValues)
             expectedUnique = (expectedMax - expectedMin) + 1
-            mode = 3 # rounding to nearest int will shift us from this for expected mean
-            expectedMean = 2.66
-            expectedSigma = 0.68
+            mode = 0.5 # rounding to nearest int will shift us from this for expected mean
+            expectedMean = 0.5
+            expectedSigma = 0.5
             write_syn_dataset(csvPathname, rowCount, colCount, 
                 low=expectedMin, high=expectedMax, mode=mode,
                 SEED=SEEDPERFILE)
@@ -101,10 +101,8 @@ class Basic(unittest.TestCase):
                 bins = histogram['bins']
                 self.assertEqual(len(bins), len(legalValues))
                 # this distribution assumes 4 values with mean on the 3rd
-                self.assertAlmostEqual(bins[0], 0.042 * rowCount, delta=.01*rowCount)
-                self.assertAlmostEqual(bins[1], 0.333 * rowCount, delta=.01*rowCount)
-                self.assertAlmostEqual(bins[2], 0.541 * rowCount, delta=.01*rowCount)
-                self.assertAlmostEqual(bins[3], 0.083 * rowCount, delta=.01*rowCount)
+                self.assertAlmostEqual(bins[0], 0.5 * rowCount, delta=.01*rowCount)
+                self.assertAlmostEqual(bins[1], 0.5 * rowCount, delta=.01*rowCount)
 
                 nbins = histogram['bins']
 
@@ -136,7 +134,7 @@ class Basic(unittest.TestCase):
                     # FIX! what thresholds?
 
                     print "len(values):", len(values), values
-                    if 1==0:
+                    if 1==1: # check it!
                         for v in values:
                             self.assertIn(v,legalValues,"Value in percentile 'values' is not present in the dataset") 
                 
