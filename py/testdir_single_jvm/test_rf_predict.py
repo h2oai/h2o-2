@@ -25,7 +25,13 @@ class Basic(unittest.TestCase):
         timeoutSecs = 20
         csvPathname = h2o.find_file('smalldata/iris/iris2.csv')
         h2o_cmd.runRF(trees=trees, model_key="iris_rf_model", timeoutSecs=timeoutSecs, csvPathname=csvPathname)
-        predict = h2o.nodes[0].generate_predictions(model_key="iris_rf_model", key="iris2.csv.hex")
+        print "\Doing generation_predictions using the generated model and the same data key, and inspecting result"
+
+        start = time.time()
+        key2 = "iris2.csv.hex"
+        predict = h2o.nodes[0].generate_predictions(model_key="iris_rf_model", key=key2)
+        print "generate_predictions end on ",  key2, " took", time.time() - start, 'seconds'
+
         # print h2o.dump_json(predict)
         expectedCols = {
               "base": 0, 
@@ -42,7 +48,7 @@ class Basic(unittest.TestCase):
         }
 
         predictCols = predict['cols'][0]
-        diffkeys = [k for k in expectedCols if expectedCols[k] != predictCols[k]]
+        diffkeys = [k for k in expectedCols if predictCols[k] != expectedCols[k]]
         for k in diffkeys:
             raise Exception ("%s : %s != %s" % (k, predictCols[k],expectedCols[k]))
 
@@ -52,9 +58,9 @@ class Basic(unittest.TestCase):
           "row_size": 8, 
         }
 
-        diffkeys = [k for k in expected if expected[k] != predict[k]]
+        diffkeys = [k for k in expected if predict[k] != expected[k]]
         for k in diffkeys:
-            raise Exception ("%s : %s != %s" % (k, predictCols[k],expectedCols[k]))
+            raise Exception ("%s : %s != %s" % (k, predict[k], expected[k]))
 
 if __name__ == '__main__':
     h2o.unit_main()

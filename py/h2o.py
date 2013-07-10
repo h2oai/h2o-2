@@ -1144,7 +1144,7 @@ class H2O(object):
             h2b.browseJsonHistoryAsUrlLastMatch("RFView")
         return a
 
-    def generate_predictions(self, key, model_key, timeoutSecs=300, print_params=False, **kwargs):
+    def generate_predictions(self, key, model_key, timeoutSecs=300, print_params=True, **kwargs):
         params_dict = {
             'key': key,
             'model_key': model_key,
