@@ -115,7 +115,7 @@ class Basic(unittest.TestCase):
                 "parse created result with the wrong number of cols %s %s" % (inspect['num_cols'], totalCols))
             self.assertEqual(inspect['num_rows'], totalRows,
                 "parse created result with the wrong number of rows (header shouldn't count) %s %s" % \
-                (inspect['num_rows'], totalCols))
+                (inspect['num_rows'], totalRows))
 
             # put in an ignore param, that will fail unless headers were parsed correctly
             if HEADER:
