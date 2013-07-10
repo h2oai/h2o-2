@@ -53,19 +53,25 @@ Team
 SriSatish Ambati
 Cliff Click
 Tom Kraljevic
+Earl Hathaway
 Tomas Nykodym
 Cyprien Noel
 Kevin Normoyle
 Irene Lang
+Spencer Aiello
+Anqi Fu
+Azra Tucic
 
-Petr Maj
-Matt Fowles
-Lauren Brems
 
 Opensource:
 Jan Vitek
 Michal Malohlava
 Mr.Jenkins
+
+Petr Maj
+Matt Fowles
+Lauren Brems
+
 
 ```
 
@@ -94,4 +100,5 @@ Investors
 Jishnu Bhattacharjee, Nexus Venture Partners
 Anand Babu Periasamy
 Anand Rajaraman
+Dipchand Nishar
 ```
