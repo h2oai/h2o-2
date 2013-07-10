@@ -31,6 +31,13 @@ public class ImportFiles extends Request {
   static final String failsHelp="File names that failed the integrity check, can be empty.";
   String[] fails;
 
+  // Example of passing & failing request.  Will be prepended with 
+  //   "curl -s localhost:54321/ImportFiles.json".
+  // Return param/value pairs that will be used to build up a URL,
+  // and the result from serving the URL will show up as an example.
+  @Override public String[] DocExampleSucc() { return new String[]{"path","smalldata/airlines"}; }
+  @Override public String[] DocExampleFail() { return new String[]{}; }
+
 
   @Override protected Response serve() {
     FileIntegrityChecker c = FileIntegrityChecker.check(path.value());

@@ -1,7 +1,10 @@
 package water.api;
 
+import java.io.IOException;
 import water.*;
+import water.util.Log;
 import water.api.Request.*;
+import java.util.Properties;
 
 /** 
  * Auto-gen doc support, for JSON & REST API docs
@@ -85,14 +88,14 @@ public abstract class DocGen {
 
   public String genHelp(Request R) {
     final String name = R.getClass().getSimpleName();
-    final FieldDoc docs[] = R.toFieldDoc();
+    final FieldDoc docs[] = R.toDocField();
     final StringBuilder sb = new StringBuilder();
     bodyHead(sb);
     title(sb,name);
     paragraph(sb,"");
 
     section(sb,"Supported HTTP methods and descriptions");
-    String gs = R.toGETDoc();
+    String gs = R.toDocGET();
     if( gs != null ) {
       paragraph(sb,"GET");
       paragraph(sb,gs);
@@ -140,13 +143,49 @@ public abstract class DocGen {
     paragraph(sb,"Success and error responses are identical.");
 
     section(sb,"Success Example");
+    String s[] = R.DocExampleSucc();
+    paraHead(sb);
+    url(sb,name,s);
+    paraTail(sb);
+    paragraph(sb,serve(name,s));
 
     section(sb,"Error Example");
+    String f[] = R.DocExampleFail();
+    paraHead(sb);
+    url(sb,name,f);
+    paraTail(sb);
+    paragraph(sb,serve(name,f));
 
     bodyTail(sb);
     return sb.toString();
   }
 
+  private static StringBuilder url( StringBuilder sb, String name, String[] parms ) {
+    sb.append("curl -s ").append(name).append(".json");
+    boolean first = true;
+    for( int i=0; i<parms.length; i+= 2 ) {
+      if( first ) { first = false; sb.append("?"); }
+      else        {                sb.append("&"); }
+      sb.append(parms[i]).append('=').append(parms[i+1]);
+    }
+    return sb.append('\n');
+  }
+
+  private static String serve( String name, String[] parms ) {
+    Properties p = new Properties();
+    for( int i=0; i<parms.length; i+= 2 )
+      p.setProperty(parms[i],parms[i+1]);
+    NanoHTTPD.Response r = RequestServer.SERVER.serve(name+".json",null,null,p);
+    try {
+      int l = r.data.available();
+      byte[] b = new byte[l];
+      r.data.read(b);
+      return new String(b);
+    } catch( IOException ioe ) { 
+      Log.err(ioe);
+      return null;
+    }
+  }
 
   // --------------------------------------------------------------------------
   // HTML flavored help text

@@ -218,8 +218,8 @@ public class Weaver {
               "  ab.putJSON%z(\"%s\",%s)",
               "  ab.putEnumJSON(%s)",
               "  ab.putJSON%z(%s)",
-              ".put1(',').put1('\\n');\n", 
-              ";\n  return ab.put1('\\n').put1('}');\n}",
+              ".put1(',');\n", 
+              ";\n  return ab.put1('}');\n}",
               new FieldFilter() {
                 boolean filter(CtField ctf) throws NotFoundException {return !ctf.getType().subclassOf(_arg); }
               });
@@ -286,9 +286,9 @@ public class Weaver {
       throw new CannotCompileException("DOC_FIELDS not declared static final DocGen.FieldDoc[];");
     cc.removeField(fielddoc);    // Remove the old one
     cc.addField(fielddoc,CtField.Initializer.byExpr(sb.toString()));
-    cc.addMethod(CtNewMethod.make("  public water.api.DocGen$FieldDoc[] toFieldDoc() { return DOC_FIELDS; }",cc));
+    cc.addMethod(CtNewMethod.make("  public water.api.DocGen$FieldDoc[] toDocField() { return DOC_FIELDS; }",cc));
     if( getdoc != null )
-      cc.addMethod(CtNewMethod.make("  public String toGETDoc() { return DOC_GET; }",cc));
+      cc.addMethod(CtNewMethod.make("  public String toDocGET() { return DOC_GET; }",cc));
   }
 
   // --------------------------------------------------------------------------
