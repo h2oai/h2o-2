@@ -158,6 +158,18 @@ public class Job extends Iced {
     return job;
   }
 
+  /** Finds a job with given dest key or returns null */
+  public static final Job findJobByDest(final Key destKey) {
+    Job job = null;
+    for (Job current : Job.all()) {
+      if (current.dest().equals(destKey)) {
+        job = current;
+        break;
+      }
+    }
+    return job;
+  }
+
   /** Returns job execution time in miliseconds */
   public final long executionTime() { return _endTime - _startTime; }
 
