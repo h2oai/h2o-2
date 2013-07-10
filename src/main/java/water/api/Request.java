@@ -211,8 +211,10 @@ public abstract class Request extends RequestBuilders {
   }
   public AutoBuffer writeJSON( AutoBuffer ab ) { throw barf(); }
   public StringBuilder toHTML( StringBuilder sb ) { throw barf(); }
-  public DocGen.FieldDoc[] toFieldDoc() { return null; }
-  public String toGETDoc() { return null; }
+  public DocGen.FieldDoc[] toDocField() { return null; }
+  public String toDocGET() { return null; }
+  public String[] DocExampleSucc() { return null; }
+  public String[] DocExampleFail() { return null; }
   public String HTMLHelp() { return DocGen.HTML.genHelp(this); }
   public String ReSTHelp() { return DocGen.ReST.genHelp(this); }
 }

@@ -17,6 +17,7 @@ import com.google.common.io.Closeables;
 
 /** This is a simple web server. */
 public class RequestServer extends NanoHTTPD {
+  static RequestServer SERVER;
 
   // cache of all loaded resources
   private static final ConcurrentHashMap<String,byte[]> _cache = new ConcurrentHashMap();
@@ -132,7 +133,7 @@ public class RequestServer extends NanoHTTPD {
           while( true ) {
             try {
               // Try to get the NanoHTTP daemon started
-              new RequestServer(H2O._apiSocket);
+              SERVER = new RequestServer(H2O._apiSocket);
               break;
             } catch ( Exception ioe ) {
               Log.err(Sys.HTTPD,"Launching NanoHTTP server got ",ioe);
@@ -144,7 +145,6 @@ public class RequestServer extends NanoHTTPD {
   }
 
   // uri serve -----------------------------------------------------------------
-
   @Override public NanoHTTPD.Response serve( String uri, String method, Properties header, Properties parms ) {
     // Jack priority for user-visible requests
     Thread.currentThread().setPriority(Thread.MAX_PRIORITY-1);
