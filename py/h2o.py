@@ -1065,6 +1065,8 @@ class H2O(object):
     def exec_query(self, timeoutSecs=20, ignoreH2oError=False, **kwargs):
         params_dict = {
             'expression': None,
+            ## 'escape_nan': 0,
+            ## 'destination_key': "Result.hex", # curious as to whether specifying destination key messes anything up.
             }
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
