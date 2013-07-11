@@ -9,7 +9,7 @@ import h2o_kmeans, h2o_import as h2i
 def define_params():
     print "Restricting epsilon to 1e-6 and up. Too slow otherwise and no stopping condition?"
     paramDict = {
-        'k': [2, 12],
+        'k': [2, 5], # seems two slow tih 12 clusters if all cols
         'epsilon': [1e-6, 1e-2, 1, 10],
         'cols': [None, "0", "3", "0,1,2,3,4,5,6"],
         }
