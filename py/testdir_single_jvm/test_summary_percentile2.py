@@ -177,10 +177,15 @@ class Basic(unittest.TestCase):
                     # FIX! what thresholds?
 
                     print "len(values):", len(values), values
-                    print "FIX! ignoring percentile value miscompare for now"
-                    if 1==0: 
-                        for v in values:
-                            self.assertIn(v,legalValues,"Value in percentile 'values' is not present in the dataset") 
+                    # apparently our 'percentile estimate" uses interpolation, so this check is not met by h2o
+                    for v in values:
+                    ##    self.assertIn(v,legalValues,"Value in percentile 'values' is not present in the dataset") 
+                    # but: you would think it should be within the min-max range?
+                        self.assertTrue(v >= expectedMin, 
+                            "Percentile value %s should all be >= the min dataset value %s" % (v, expectedMin))
+                        self.assertTrue(v <= expectedMax, 
+                            "Percentile value %s should all be <= the max dataset value %s" % (v, expectedMax))
+
                 
                     print "mean:", mean
                     self.assertAlmostEqual(mean, maxIntegerValue/2.0, delta=0.1)
