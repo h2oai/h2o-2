@@ -110,7 +110,6 @@ public class ConfusionTask extends MRTask {
     // Start a new job if CM is not yet computed
     final Value dummyCMVal = new Value(cmKey, CMFinal.make());
     final Value val = DKV.DputIfMatch(cmKey, dummyCMVal, null, null);
-    System.err.println(cmKey + " : val = " + (val != null ? val.<CMFinal>get().toString() : "NULL"));
     if (val==null) {
       final CMJob cmJob = new CMJob("CM computation", cmKey, modelSize);
       // and start a new confusion matrix computation
@@ -136,6 +135,9 @@ public class ConfusionTask extends MRTask {
         }
       };
       H2O.submitTask(cmJob.start(fjtask));
+      // FIXME the the job should be invoked asynchronously but for now we block immediately
+      // since we do not store a list of previous jobs
+      cmJob.get();
       return cmJob;
     } else {
       // We should return Job which is/was computing the CM with given cmKey
