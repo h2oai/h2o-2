@@ -245,12 +245,7 @@ def spawn_cmd(name, args, capture_output=True):
     if capture_output:
         outfd,outpath = tmp_file(name + '.stdout.', '.log')
         errfd,errpath = tmp_file(name + '.stderr.', '.log')
-        # make args a string, so we can do ulimit, and execute with shell
-        if (1==0):
-            argsStr = 'ulimit -u 1024;' + ' '.join(args)
-            ps = psutil.Popen(argsStr, stdin=None, stdout=outfd, stderr=errfd, shell=True)
-        else:
-            ps = psutil.Popen(args, stdin=None, stdout=outfd, stderr=errfd)
+        ps = psutil.Popen(args, stdin=None, stdout=outfd, stderr=errfd)
     else:
         outpath = '<stdout>'
         errpath = '<stderr>'
@@ -261,19 +256,24 @@ def spawn_cmd(name, args, capture_output=True):
     log(' '.join(args), comment=comment)
     return (ps, outpath, errpath)
 
-def spawn_cmd_and_wait(name, args, timeout=None):
-    (ps, stdout, stderr) = spawn_cmd(name, args)
-
+def spawn_wait(ps, stdout, stderr, timeout=None):
     rc = ps.wait(timeout)
     out = file(stdout).read()
     err = file(stderr).read()
+    ## print out
+    ## print err
 
     if rc is None:
         ps.terminate()
         raise Exception("%s %s timed out after %d\nstdout:\n%s\n\nstderr:\n%s" %
                 (name, args, timeout or 0, out, err))
     elif rc != 0:
-        raise Exception("%s %s failed.\nstdout:\n%s\n\nstderr:\n%s" % (name, args, out, err))
+        raise Exception("%s %s failed.\nstdout:\n%s\n\nstderr:\n%s" % (ps.name, ps.cmdline, out, err))
+    return rc
+
+def spawn_cmd_and_wait(name, args, timeout=None):
+    (ps, stdout, stderr) = spawn_cmd(name, args)
+    spawn_wait(ps, stdout, stderr, timeout=None)
 
 # used to get a browser pointing to the last RFview
 global json_url_history
