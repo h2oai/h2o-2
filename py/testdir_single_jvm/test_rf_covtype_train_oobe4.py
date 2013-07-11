@@ -43,9 +43,11 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_rf_covtype_train_oobe2(self):
+    def test_rf_covtype_train_oobe4(self):
         print "\nUse randomBitVector and filter to separate the dataset randomly"
         importFolderPath = "/home/0xdiag/datasets/standard"
+        # get different results
+        ### csvFilename = 'covtype.shuffled.data'
         csvFilename = 'covtype.data'
         csvPathname = importFolderPath + "/" + csvFilename
         key2 = csvFilename + ".hex"
@@ -65,33 +67,31 @@ class Basic(unittest.TestCase):
         pct10 = int(num_rows * .1)
         rowsForPct = [i * pct10 for i in range(0,11)]
         # this can be slightly less than 10%
-        # last10 = num_rows - rowsForPct[9]
+        last10 = num_rows - rowsForPct[9]
         rowsForPct[10] = num_rows
         # use mod below for picking "rows-to-do" in case we do more than 9 trials
         # use 10 if 0 just to see (we copied 10 to 0 above)
         rowsForPct[0] = rowsForPct[10]
 
-        expectTrainPctRightList = [0, 85.16, 88.45, 90.24, 91.27, 92.03, 92.64, 93.11, 93.48, 93.79]
-        expectScorePctRightList = [0, 88.81, 91.72, 93.06, 94.02, 94.52, 95.09, 95.41, 95.77, 95.78]
+        expectTrainPctRightList = [0, 93, 94, 94, 95, 94, 94, 94, 94, 94]
+        expectScorePctRightList = [0, 75, 77, 79, 83, 86, 89, 91, 93, 97]
 
         print "Creating the key of the last 10% data, for scoring"
         dataKeyTest = "rTest"
         dataKeyTrain = "rTrain"
-        # start at 90% rows + 1
-        # randomBitVector(size,selected)
-        # randomFilter(srcFrame,rows,seed)
-        # filter(srcFrame,bitVect)
 
         # Just for test purposes, create these using randomFilter..they overlap, so not valid for really test/train
-
         # FIX! too many digits (10) in the 2nd param seems to cause stack trace
-        execExpr = dataKeyTest + "=randomFilter(" + key2 + "," + str(pct10) + ",12345)"
+        ### execExpr = dataKeyTest + "=randomFilter(" + key2 + "," + str(pct10) + ",12345)"
+        execExpr = dataKeyTest + "=" + key2
         h2o_exec.exec_expr(None, execExpr, resultKey=dataKeyTest, timeoutSecs=10)
 
         execExpr = dataKeyTrain + "=randomFilter(" + key2 + "," + str(rowsForPct[9]) + ",12345)"
+        # FIX! don't do the randFilter for now. 
+        print "This generation of test/train isn't stats-legal since they overlap"
+        execExpr = dataKeyTrain + "=" + key2
         h2o_exec.exec_expr(None, execExpr, resultKey=dataKeyTrain, timeoutSecs=10)
 
-        ### time.sleep(3600)
         # keep the 0 entry empty
         actualTrainPctRightList = [0]
         actualScorePctRightList = [0]
@@ -100,10 +100,9 @@ class Basic(unittest.TestCase):
             # always slice from the beginning
             rowsToUse = rowsForPct[trial%10] 
             resultKey = "r" + str(trial)
-            # don't slice since that has other problems
-            execExpr = resultKey + "=" + dataKeyTrain
+
             execExpr = resultKey + "=slice(" + dataKeyTrain + ",1," + str(rowsToUse) + ")"
-            execExpr = resultKey + "=slice(" + dataKeyTrain + ",1)"
+            print "execExpr:", execExpr
             h2o_exec.exec_expr(None, execExpr, resultKey=resultKey, timeoutSecs=10)
             parseKey['destination_key'] = resultKey
 
@@ -124,8 +123,7 @@ class Basic(unittest.TestCase):
             oobeTrainPctRight = 100 * (1.0 - rfv['confusion_matrix']['classification_error'])
             self.assertAlmostEqual(oobeTrainPctRight, expectTrainPctRightList[trial],
                 msg="OOBE: pct. right for %s pct. training not close enough %6.2f %6.2f"% \
-                    ((trial*10), oobeTrainPctRight, expectTrainPctRightList[trial]), 
-                delta=0.2)
+                    ((trial*10), oobeTrainPctRight, expectTrainPctRightList[trial]), delta=1)
             actualTrainPctRightList.append(oobeTrainPctRight)
 
             print "Now score on the last 10%"
@@ -138,16 +136,6 @@ class Basic(unittest.TestCase):
 
             ntree = rfv['ntree']
             kwargs.pop('ntree',None)
-            # scoring
-            # RFView.html?
-            # dataKeyTest=a5m.hex&
-            # model_key=__RFModel_81c5063c-e724-4ebe-bfc1-3ac6838bc628&
-            # response_variable=1&
-            # ntree=50&
-            # class_weights=-1%3D1.0%2C0%3D1.0%2C1%3D1.0&
-            # out_of_bag_error_estimate=1&
-# http://192.168.1.28:54321/GeneratePredictionsPage.html?model_key=__RFModel_0e2531bc-2552-4f65-8a4a-843031b0cb99&key=iris
-# http://192.168.1.28:54321/RFView.html?data_key=iris.hex&model_key=__RFModel_0e2531bc-2552-4f65-8a4a-843031b0cb99&ntree=50&response_variable=4&class_weights=Iris-setosa%3D1.0%2CIris-versicolor%3D1.0%2CIris-virginica%3D1.0&out_of_bag_error_estimate=true&iterative_cm=true
 
             kwargs['iterative_cm'] = 1
             # do full scoring
@@ -160,23 +148,20 @@ class Basic(unittest.TestCase):
             fullScorePctRight = 100 * (1.0 - rfv['confusion_matrix']['classification_error'])
             self.assertAlmostEqual(fullScorePctRight,expectScorePctRightList[trial],
                 msg="Full: pct. right for scoring after %s pct. training not close enough %6.2f %6.2f"% \
-                    ((trial*10), fullScorePctRight, expectScorePctRightList[trial]), 
-                delta=0.2)
+                    ((trial*10), fullScorePctRight, expectScorePctRightList[trial]), delta=1)
             actualScorePctRightList.append(fullScorePctRight)
 
             print "Trial #", trial, "completed", "using %6.2f" % (rowsToUse*100.0/num_rows), "pct. of all rows"
 
         actualDelta = [abs(a-b) for a,b in zip(expectTrainPctRightList, actualTrainPctRightList)]
         niceFp = ["{0:0.2f}".format(i) for i in actualTrainPctRightList]
-        print "maybe should update with actual. Remove single quotes"  
-        print"expectTrainPctRightList =", niceFp
+        print "actualTrainPctRightList =", niceFp
         niceFp = ["{0:0.2f}".format(i) for i in actualDelta]
         print "actualDelta =", niceFp
 
         actualDelta = [abs(a-b) for a,b in zip(expectScorePctRightList, actualScorePctRightList)]
         niceFp = ["{0:0.2f}".format(i) for i in actualScorePctRightList]
-        print "maybe should update with actual. Remove single quotes"  
-        print "expectScorePctRightList =", niceFp
+        print "actualScorePctRightList =", niceFp
         niceFp = ["{0:0.2f}".format(i) for i in actualDelta]
         print "actualDelta =", niceFp
 

@@ -65,7 +65,7 @@ class Basic(unittest.TestCase):
         rowsForPct = [i * pct10 for i in range(0,11)]
         # this can be slightly less than 10%
         last10 = num_rows - rowsForPct[9]
-        rowsForPct[10] = last10
+        rowsForPct[10] = num_rows
         # use mod below for picking "rows-to-do" in case we do more than 9 trials
         # use 10 if 0 just to see (we copied 10 to 0 above)
         rowsForPct[0] = rowsForPct[10]
@@ -91,6 +91,7 @@ class Basic(unittest.TestCase):
             resultKey = "r" + str(trial)
             execExpr = resultKey + " = slice(" + key2 + ",1," + str(rowsToUse) + ")"
             h2o_exec.exec_expr(None, execExpr, resultKey=resultKey, timeoutSecs=10)
+            # hack so the RF will use the sliced result
             parseKey['destination_key'] = resultKey
 
             # adjust timeoutSecs with the number of trees
@@ -124,17 +125,6 @@ class Basic(unittest.TestCase):
 
             ntree = rfv['ntree']
             kwargs.pop('ntree',None)
-            # scoring
-            # RFView.html?
-            # dataKeyTest=a5m.hex&
-            # model_key=__RFModel_81c5063c-e724-4ebe-bfc1-3ac6838bc628&
-            # response_variable=1&
-            # ntree=50&
-            # class_weights=-1%3D1.0%2C0%3D1.0%2C1%3D1.0&
-            # out_of_bag_error_estimate=1&
-
-            # does this still exist?
-            # no_confusion_matrix=1
 
             kwargs['iterative_cm'] = 1
             kwargs['no_confusion_matrix'] = 1
@@ -158,14 +148,14 @@ class Basic(unittest.TestCase):
         actualDelta = [abs(a-b) for a,b in zip(expectTrainPctRightList, actualTrainPctRightList)]
         niceFp = ["{0:0.2f}".format(i) for i in actualTrainPctRightList]
         print "maybe should update with actual. Remove single quotes"  
-        print"expectTrainPctRightList =", niceFp
+        print "actualTrainPctRightList =", niceFp
         niceFp = ["{0:0.2f}".format(i) for i in actualDelta]
         print "actualDelta =", niceFp
 
         actualDelta = [abs(a-b) for a,b in zip(expectScorePctRightList, actualScorePctRightList)]
         niceFp = ["{0:0.2f}".format(i) for i in actualScorePctRightList]
         print "maybe should update with actual. Remove single quotes"  
-        print "expectScorePctRightList =", niceFp
+        print "actualScorePctRightList =", niceFp
         niceFp = ["{0:0.2f}".format(i) for i in actualDelta]
         print "actualDelta =", niceFp
 
