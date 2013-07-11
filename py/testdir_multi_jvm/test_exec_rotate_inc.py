@@ -24,13 +24,6 @@ exprList = [
         'Result<n> = Result<m> + ' + str(goback),
     ]
 
-def fill_in_expr_template(exprTemplate, n, m):
-    execExpr = exprTemplate
-    execExpr = re.sub('<n>',str(n),execExpr)
-    execExpr = re.sub('<m>',str(m),execExpr)
-    h2o.verboseprint("\nexecExpr:", execExpr)
-    return execExpr
-
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -62,7 +55,7 @@ class Basic(unittest.TestCase):
         # zero the list of Results using node[0]
         # FIX! is the zerolist not eing seen correctl? is it not initializing to non-zero?
         for exprTemplate in initList:
-            execExpr = fill_in_expr_template(exprTemplate, '0', '0')
+            execExpr = h2e.fill_in_expr_template(exprTemplate, '0', '0')
             print execExpr
             execResult = h2e.exec_expr(h2o.nodes[0], execExpr)
             ### print "\nexecResult:", execResult
@@ -82,7 +75,7 @@ class Basic(unittest.TestCase):
                 ### print nodeX
                 
                 number = trial + 10
-                execExpr = fill_in_expr_template(exprTemplate, 
+                execExpr = h2e.fill_in_expr_template(exprTemplate, 
                     str(number%period), str((number-goback)%period))
                 resultKey="Result" + str(number%period)
                 execResultInspect, min_value = h2e.exec_expr(h2o.nodes[nodeX], execExpr,
