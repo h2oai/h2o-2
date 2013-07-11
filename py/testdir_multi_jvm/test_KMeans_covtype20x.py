@@ -54,7 +54,7 @@ class Basic(unittest.TestCase):
             kwargs = {
                 'cols': None,
                 'epsilon': 1e-4,
-                'k': 7
+                'k': 2
             }
 
             start = time.time()

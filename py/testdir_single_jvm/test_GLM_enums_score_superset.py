@@ -56,7 +56,8 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_GLM_enums_score_subset(self):
+    def test_GLM_enums_score_superset(self):
+        print "FIX!: this should cause an error. We should detect that it's not causing an error/warning?"
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         n = 200
@@ -89,6 +90,9 @@ class Basic(unittest.TestCase):
             enumList = create_enum_list(listSize=10)
             # use half of the enums for creating the scoring dataset
             enumListForScore = random.sample(enumList,5)
+
+            # add a extra enum for scoring that's not in the model enumList
+            enumListForScore.append("xyzzy")
 
             print "Creating random", csvPathname, "for glm model building"
             write_syn_dataset(csvPathname, enumList, rowCount, colCount, SEEDPERFILE, 

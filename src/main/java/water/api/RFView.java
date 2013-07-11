@@ -2,6 +2,7 @@ package water.api;
 
 import hex.rf.*;
 import hex.rf.ConfusionTask.CMFinal;
+import hex.rf.ConfusionTask.CMJob;
 
 import java.util.Arrays;
 
@@ -132,15 +133,16 @@ public class RFView extends /* Progress */ Request {
       int modelSize = tasks * _refreshTresholdCM.value()/100;
       modelSize     = modelSize == 0 || finished==tasks ? finished : modelSize * (finished/modelSize);
 
-      // Get the confusion matrix
-      Key     cmKey = ConfusionTask.keyForCM(model._selfKey, modelSize, _dataKey.value()._key, _classCol.value(), _oobee.value());
-      CMFinal confusion = UKV.get(cmKey);
+      // Get the computing the matrix - if no job is computing, then start a new job
+      CMJob cmJob       = ConfusionTask.make(model, modelSize, _dataKey.value()._key, _classCol.value(), weights, _oobee.value());
+      // Here the the job is running - it saved a CM which can be already finished or in invalid state.
+      CMFinal confusion = UKV.get(cmJob.dest());
       // if the matrix is valid, report it in the JSON
       if (confusion!=null && confusion.valid() && modelSize > 0) {
         //finished += 1;
-        JsonObject cm = new JsonObject();
-        JsonArray cmHeader = new JsonArray();
-        JsonArray matrix = new JsonArray();
+        JsonObject cm       = new JsonObject();
+        JsonArray  cmHeader = new JsonArray();
+        JsonArray  matrix   = new JsonArray();
         cm.addProperty(JSON_CM_TYPE, _oobee.value() ? "OOB error estimate" : "full scoring");
         cm.addProperty(JSON_CM_CLASS_ERR, confusion.classError());
         cm.addProperty(JSON_CM_ROWS_SKIPPED, confusion.skippedRows());
@@ -167,11 +169,8 @@ public class RFView extends /* Progress */ Request {
         cm.add(JSON_CM_MATRIX,matrix);
         cm.addProperty(JSON_CM_TREES,modelSize);
         response.add(JSON_CM,cm);
-
+        // Signal end only and only if all trees were generated and confusion matrix is valid
         done = finished == tasks;
-      } else if (confusion == null) {
-        // Nobody start computation yet, thus we can start CM computation
-        ConfusionTask.make(model, modelSize, _dataKey.value()._key, _classCol.value(), weights, _oobee.value());
       }
     } else if (_noCM.value() && finished == tasks) done = true;
 

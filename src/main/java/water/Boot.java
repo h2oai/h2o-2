@@ -45,6 +45,7 @@ public class Boot extends ClassLoader {
     }
     return sb.toString();
   }
+  private final String _jarPath;
   private final ZipFile _h2oJar;
   private File _parentDir;
   private Weaver _weaver;
@@ -55,6 +56,7 @@ public class Boot extends ClassLoader {
   }
 
   public boolean fromJar() { return _h2oJar != null; }
+  public String jarPath() { return _jarPath; }
   private byte[] getMD5(InputStream is) throws IOException {
     try {
       MessageDigest md5 = MessageDigest.getInstance("MD5");
@@ -73,15 +75,15 @@ public class Boot extends ClassLoader {
     final String ownJar = getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
     ZipFile jar = null;
     if( ownJar.endsWith(".jar") ) { // do nothing if not run from jar
-      String path = URLDecoder.decode(ownJar, "UTF-8");
-      InputStream is = new FileInputStream(path);
+      _jarPath = URLDecoder.decode(ownJar, "UTF-8");
+      InputStream is = new FileInputStream(_jarPath);
       this._jarHash = getMD5(is);
       is.close();
-
-      jar = new ZipFile(path);
+      jar = new ZipFile(_jarPath);
     } else {
       this._jarHash = new byte[16];
       Arrays.fill(this._jarHash, (byte)0xFF);
+      _jarPath = null;
     }
     _h2oJar = jar;
   }
@@ -213,7 +215,7 @@ public class Boot extends ClassLoader {
       return _systemLoader.getResourceAsStream("resources"+uri);
     } else {
       try {
-        return new FileInputStream(new File("lib/resources"+uri)); 
+        return new FileInputStream(new File("lib/resources"+uri));
         // The following code is busted on windows with spaces in user-names,
         // and I've no idea where it comes from - GIT claims it came from
         // cliffc-fvec2 merge into master, but there's no indication of this

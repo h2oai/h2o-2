@@ -45,7 +45,7 @@ public class RequestQueries extends RequestArguments {
           queryArgumentValueSet(arg, args);
         } catch (IllegalArgumentException e) {
           if (type == RequestType.json)
-            return jsonError("Argument "+arg._name+" error: "+e.getMessage()).toString();
+            return jsonError("Argument '"+arg._name+"' error: "+e.getMessage()).toString();
           else
             return buildQuery(args,type);
         }

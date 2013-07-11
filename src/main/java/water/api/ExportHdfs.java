@@ -1,7 +1,6 @@
 package water.api;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.thirdparty.guava.common.base.Charsets;
 
 import water.*;
 import water.persist.PersistHdfs;
@@ -29,7 +28,7 @@ public class ExportHdfs extends Request {
       if( model != null ) {
         // Add extension, used during import
         if( !path.endsWith(Extensions.JSON) ) path += Extensions.JSON;
-        data = model.toJson().toString().getBytes(Charsets.UTF_8);
+        data = model.toJson().toString().getBytes("UTF-8");
       }
       if( data != null ) PersistHdfs.store(new Path(path), data);
       else throw new UnsupportedOperationException("Only models can be exported");
