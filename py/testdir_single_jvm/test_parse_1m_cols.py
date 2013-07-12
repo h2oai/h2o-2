@@ -47,12 +47,12 @@ class Basic(unittest.TestCase):
     def test_parse_1m_cols(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (10, 500000, 'cA', 30, 120),
-            (10, 600000, 'cB', 30, 120),
-            (10, 700000, 'cC', 30, 120),
-            (10, 800000, 'cD', 30, 120),
-            (10, 900000, 'cE', 30, 120),
-            (10, 1000000, 'cF', 60, 120),
+            (10, 700000, 'cA', 30, 60),
+            (10, 800000, 'cB', 30, 70),
+            (10, 900000, 'cC', 30, 80),
+            (10, 1000000, 'cD', 60, 90),
+            (10, 1100000, 'cE', 60, 100),
+            (10, 1200000, 'cF', 60, 120),
             ]
 
         h2b.browseTheCloud()
@@ -62,11 +62,11 @@ class Basic(unittest.TestCase):
             csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
-            print "Creating random", csvPathname
+            print "\nCreating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
             start = time.time()
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=timeoutSecs, doSummary=False)
+            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=timeoutSecs, doSummary=True)
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "Parse:", parseKey['destination_key'], "took", time.time() - start, "seconds"
 
