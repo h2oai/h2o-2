@@ -1018,14 +1018,15 @@ class H2O(object):
 
     # &offset=
     # &view=
-    def inspect(self, key, offset=None, view=None, ignoreH2oError=False):
+    def inspect(self, key, offset=None, view=None, ignoreH2oError=False, timeoutSecs=30):
         a = self.__do_json_request('Inspect.json',
             params={
                 "key": key,
                 "offset": offset,
                 "view": view,
                 },
-            ignoreH2oError=ignoreH2oError
+            ignoreH2oError=ignoreH2oError,
+            timeout=timeoutSecs
             )
         return a
 
@@ -1621,8 +1622,9 @@ class H2O(object):
         if use_debugger is None: use_debugger = debugger
         self.aws_credentials = aws_credentials
         self.port = port
-        # None is legal for self.addr. means we won't give an ip to the jar when we start, and it should
-        # figure out the right thing. Or we can say use use_this_ip_addr=127.0.0.1, or the known address 
+        # None is legal for self.addr. 
+        # means we won't give an ip to the jar when we start.
+        # Or we can say use use_this_ip_addr=127.0.0.1, or the known address 
         # if use_this_addr is None, use 127.0.0.1 for urls and json
         # Command line arg 'ipaddr' dominates:
         if ipaddr:
