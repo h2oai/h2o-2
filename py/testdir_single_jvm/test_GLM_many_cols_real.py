@@ -1,5 +1,5 @@
 import unittest
-import random, sys, time, os
+import random, sys, time, os, getpass
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
 
@@ -57,14 +57,20 @@ class Basic(unittest.TestCase):
 
     def test_GLM_many_cols_real(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
-        tryList = [
-            (100, 1000, 'cA', 100),
-            (100, 3000, 'cB', 300),
-            (100, 5000, 'cC', 1500),
-            (100, 7000, 'cD', 3600),
-            (100, 9000, 'cE', 3600),
-            (100, 10000, 'cF', 3600),
-            ]
+        if getpass.getuser() == 'kevin': # longer run
+            tryList = [
+                (100, 1000, 'cA', 100),
+                (100, 3000, 'cB', 300),
+                (100, 5000, 'cC', 1500),
+                (100, 7000, 'cD', 3600),
+                (100, 9000, 'cE', 3600),
+                (100, 10000, 'cF', 3600),
+                ]
+        else:
+            tryList = [
+                (100, 1000, 'cA', 100),
+                (100, 3000, 'cB', 300),
+                ]
 
         ### h2b.browseTheCloud()
         for (rowCount, colCount, key2, timeoutSecs) in tryList:
@@ -93,7 +99,20 @@ class Basic(unittest.TestCase):
 
             y = colCount
             # just limit to 2 iterations..assume it scales with more iterations
-            kwargs = {'y': y, 'max_iter': 2, 'case': '1', 'case_mode': '=', 'lambda': 1e-4, 'alpha': 0.6}
+            kwargs = {
+                'y': y,
+                'max_iter': 2, 
+                'case': 1,
+                'case_mode': '=',
+                'family': 'binomial',
+                'lambda': 1.e-4,
+                'alpha': 0.6,
+                'weight': 1.0,
+                'thresholds': 0.5,
+                'n_folds': 1,
+                'beta_eps': 1.e-4,
+            }
+
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start

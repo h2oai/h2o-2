@@ -1391,7 +1391,6 @@ class H2O(object):
             time.sleep(5)
         return a
 
-
     # GLMScore params
     # model_key=__GLMModel_7a3a73c1-f272-4a2e-b37f-d2f371d304ba&
     # key=cuse.hex&
@@ -1667,7 +1666,6 @@ class H2O(object):
 
         # this dumps stats from tests, and perf stats while polling to benchmark.log
         self.enable_benchmark_log = enable_benchmark_log
-
 
     def __str__(self):
         return '%s - http://%s:%d/' % (type(self), self.http_addr, self.port)
