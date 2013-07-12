@@ -70,6 +70,7 @@ public class GBM extends Job {
             t._hs[j].incr(fr._vecs[j].at(k),y);
       }
       double errAvg = error/fr._vecs[0].length();
+      Log.unwrap(System.out,"============================================================== ");
       Log.unwrap(System.out,"Average prediction error for tree of depth "+depth+" is "+errAvg);
 
       // Build up the next-generation tree splits from the current histograms.

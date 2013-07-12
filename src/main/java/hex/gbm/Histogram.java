@@ -64,7 +64,7 @@ class Histogram extends Iced {
   //   http://www.johndcook.com/standard_deviation.html
   void incr( double d, double y ) {
     int idx = bin(d);           // Compute bin# via linear interpolation
-    _bins[idx]++;        // Bump count in bin
+    _bins[idx]++;               // Bump count in bin
     // Track actual lower/upper bound per-bin
     if( d < _mins[idx] ) _mins[idx] = d;
     if( d > _maxs[idx] ) _maxs[idx] = d;
