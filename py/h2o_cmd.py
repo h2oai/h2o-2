@@ -5,7 +5,7 @@ import h2o_browse as h2b, h2o_rf as h2f
 # header, separator, exclude params are passed thru kwargs to node.parse
 def parseFile(node=None, csvPathname=None, key=None, key2=None, 
     timeoutSecs=30, retryDelaySecs=0.5, pollTimeoutSecs=30,
-    noise=None, noPoll=None, **kwargs):
+    noise=None, noPoll=None, doSummary=True, **kwargs):
     if not csvPathname: raise Exception('No file name specified')
     if not node: node = h2o.nodes[0]
     ### print "parseFile pollTimeoutSecs:", pollTimeoutSecs
@@ -20,7 +20,8 @@ def parseFile(node=None, csvPathname=None, key=None, key2=None,
         pollTimeoutSecs=pollTimeoutSecs, noise=noise, noPoll=noPoll, **kwargs)
 
     # do SummaryPage here too, just to get some coverage
-    node.summary_page(myKey2)
+    if doSummary:
+        node.summary_page(myKey2)
     return p
 
 def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, 
@@ -51,7 +52,7 @@ def runInspect(node=None, key=None, timeoutSecs=5, **kwargs):
     if not key: raise Exception('No key for Inspect specified')
     if not node: node = h2o.nodes[0]
     # FIX! currently there is no such thing as a timeout on node.inspect
-    return node.inspect(key, **kwargs)
+    return node.inspect(key, timeoutSecs=timeoutSecs, **kwargs)
 
 def infoFromInspect(inspect, csvPathname):
     # need more info about this dataset for debug

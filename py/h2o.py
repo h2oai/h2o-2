@@ -1018,14 +1018,15 @@ class H2O(object):
 
     # &offset=
     # &view=
-    def inspect(self, key, offset=None, view=None, ignoreH2oError=False):
+    def inspect(self, key, offset=None, view=None, ignoreH2oError=False, timeoutSecs=30):
         a = self.__do_json_request('Inspect.json',
             params={
                 "key": key,
                 "offset": offset,
                 "view": view,
                 },
-            ignoreH2oError=ignoreH2oError
+            ignoreH2oError=ignoreH2oError,
+            timeout=timeoutSecs
             )
         return a
 
