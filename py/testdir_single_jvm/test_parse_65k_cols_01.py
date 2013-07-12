@@ -64,7 +64,7 @@ class Basic(unittest.TestCase):
             print "Summary should work with 65k"
             parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=timeoutSecs, doSummary=True)
             print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse:", parseKey['destination_key'], "took", time.time() - start, "seconds"
+            print "Parse and summary:", parseKey['destination_key'], "took", time.time() - start, "seconds"
 
             # We should be able to see the parse result?
             start = time.time()
