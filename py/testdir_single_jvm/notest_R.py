@@ -18,6 +18,8 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        # shouldn't need this...placeholder for experiment
+        h2o.kill_child_processes()
         h2o.tear_down_cloud()
 
     def test_R(self):

@@ -275,6 +275,17 @@ def spawn_cmd_and_wait(name, args, timeout=None):
     (ps, stdout, stderr) = spawn_cmd(name, args)
     spawn_wait(ps, stdout, stderr, timeout=None)
 
+def kill_process_tree(pid, including_parent=True):    
+    parent = psutil.Process(pid)
+    for child in parent.get_children(recursive=True):
+        child.kill()
+    if including_parent:
+        parent.kill()
+
+def kill_child_processes():
+    me = os.getpid()
+    kill_process_tree(me, including_parent=False)
+
 # used to get a browser pointing to the last RFview
 global json_url_history
 json_url_history = []
