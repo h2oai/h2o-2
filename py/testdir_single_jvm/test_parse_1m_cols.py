@@ -40,18 +40,23 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        print "sleeping 3600"
-        time.sleep(3600)
+        ## print "sleeping 3600"
+        ## time.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_parse_1m_cols(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (10, 65000, 'cH', 30),
+            (10, 500000, 'cA', 30, 120),
+            (10, 600000, 'cB', 30, 120),
+            (10, 700000, 'cC', 30, 120),
+            (10, 800000, 'cD', 30, 120),
+            (10, 900000, 'cE', 30, 120),
+            (10, 1000000, 'cF', 60, 120),
             ]
 
         h2b.browseTheCloud()
-        for (rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (rowCount, colCount, key2, timeoutSecs, timeoutSecs2) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
 
             csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
@@ -61,14 +66,13 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
             start = time.time()
-            print "Summary should work with 65k"
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=timeoutSecs, doSummary=True)
+            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=timeoutSecs, doSummary=False)
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "Parse:", parseKey['destination_key'], "took", time.time() - start, "seconds"
 
             # We should be able to see the parse result?
             start = time.time()
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=timeoutSecs)
+            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=timeoutSecs2)
             print "Inspect:", parseKey['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspect, csvPathname)
             print "\n" + csvPathname, \
