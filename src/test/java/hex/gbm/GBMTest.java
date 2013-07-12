@@ -5,6 +5,7 @@ import static org.junit.Assert.assertEquals;
 import java.io.File;
 
 import org.junit.BeforeClass;
+import org.junit.Test;
 
 import water.*;
 import water.fvec.*;
@@ -31,7 +32,7 @@ public class GBMTest extends TestUtil {
       fr._names[ncols-1] = s;
       fr._vecs [ncols-1] = v;
 
-      GBM gbm = GBM.start(GBM.makeKey(),fr,3);
+      GBM gbm = GBM.start(GBM.makeKey(),fr,11);
       gbm.get();                  // Block for result
       UKV.remove(gbm._dest);
     } finally {
