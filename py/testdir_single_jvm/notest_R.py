@@ -23,8 +23,9 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_R(self):
-        rScript = h2o.find_file('R/H2OTestDemo.R')
-        shCmdString = "R " + rScript
+        rScript = h2o.find_file('R/tests/test_R_GLM_basic.R')
+        rLibrary = h2o.find_file('R/H2O_S4.R')
+        shCmdString = "R -f " + rScript + " --args " + rLibrary + " " + h2o.nodes[0].http_addr + ":" + str(h2o.nodes[0].port)
 
         (ps, outpath, errpath) =  h2o.spawn_cmd('rtest_with_h2o', shCmdString.split())
         h2o.spawn_wait(ps, outpath, errpath, timeout=10)
