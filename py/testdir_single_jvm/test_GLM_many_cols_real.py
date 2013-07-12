@@ -46,7 +46,7 @@ class Basic(unittest.TestCase):
         print "\nUsing random seed:", SEED
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1,use_flatfile=True)
+            h2o.build_cloud(1,java_heap_GB=14)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -57,12 +57,12 @@ class Basic(unittest.TestCase):
     def test_many_cols_real(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (1000, 100, 'cA', 300),
-            (1000, 200, 'cB', 300),
-            (1000, 300, 'cC', 300),
-            (1000, 400, 'cD', 300),
-            (1000, 500, 'cE', 300),
-            (1000, 1000, 'cJ', 300),
+            (100, 1000, 'cA', 300),
+            (100, 3000, 'cB', 300),
+            (100, 5000, 'cC', 300),
+            (100, 7000, 'cD', 300),
+            (100, 9000, 'cE', 300),
+            (100, 10000, 'cF', 300),
             ]
 
         ### h2b.browseTheCloud()
@@ -83,7 +83,7 @@ class Basic(unittest.TestCase):
             print "\n" + csvFilename
 
             y = colCount
-            kwargs = {'y': y, 'max_iter': 50, 'case': '1', 'case_mode': '=', 'lambda': 1e-4, 'alpha': 0.6}
+            kwargs = {'y': y, 'max_iter': 9, 'case': '1', 'case_mode': '=', 'lambda': 1e-4, 'alpha': 0.6}
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'

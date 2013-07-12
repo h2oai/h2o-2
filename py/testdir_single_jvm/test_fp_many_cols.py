@@ -139,6 +139,7 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel)
 
             start = time.time()
+            print csvFilename, "parse starting"
             parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=timeoutSecs, doSummary=True)
             h2o.check_sandbox_for_errors()
             print csvFilename, 'parse time:', parseKey['response']['time']
