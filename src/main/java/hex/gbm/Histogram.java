@@ -31,6 +31,7 @@ class Histogram extends Iced {
   public    final double[] _Ms;          // Rolling mean, per-bin
   public    final double[] _Ss;          // Rolling var , per-bin
   public    final double[] _mins, _maxs; // Min, Max, per-bin
+  public    final double[] _MSEs;        // Rolling mean-square-error, per-bin
 
   public Histogram( String name, long nelems, double min, double max, boolean isInt ) {
     assert nelems > 0;
@@ -48,6 +49,7 @@ class Histogram extends Iced {
     _Ss   = new double[nbins];
     _mins = new double[nbins];
     _maxs = new double[nbins];
+    _MSEs = new double[nbins];
     // Set step & min/max for each bin
     _step = (max-min)/nbins;       // Step size for linear interpolation
     for( int j=0; j<nbins; j++ ) { // Set bad bounds for min/max
@@ -64,7 +66,7 @@ class Histogram extends Iced {
   //   http://www.johndcook.com/standard_deviation.html
   void incr( double d, double y ) {
     int idx = bin(d);           // Compute bin# via linear interpolation
-    _bins[idx]++;        // Bump count in bin
+    _bins[idx]++;               // Bump count in bin
     // Track actual lower/upper bound per-bin
     if( d < _mins[idx] ) _mins[idx] = d;
     if( d > _maxs[idx] ) _maxs[idx] = d;
@@ -75,6 +77,18 @@ class Histogram extends Iced {
     double oldS = _Ss[idx], newS = oldS + (y-oldM)*(y-newM);
     _Ms[idx] = newM;
     _Ss[idx] = newS;
+  }
+
+  // Same as incr, but compute mean-square-error - which requires
+  // the mean as computed on the 1st pass above.
+  void incr2( double d, double y ) {
+    int idx = bin(d);           // Compute bin# via linear interpolation
+    double z = y-mean(idx);     // Error for this prediction
+    double e = z*z;             // Squared error
+    // Recursive mean of squared error
+    //    http://www.johndcook.com/standard_deviation.html
+    double oldMSE = _MSEs[idx];
+    _MSEs[idx] = oldMSE + (e-oldMSE)/_bins[idx];
   }
 
   // Interpolate d to find bin#
@@ -88,6 +102,7 @@ class Histogram extends Iced {
   double var ( int bin ) { 
     return _bins[bin] > 1 ? _Ss[bin]/(_bins[bin]-1) : 0; 
   }
+  double mse( int bin ) { return _MSEs[bin]; }
 
   // Compute a "score" for a column; lower score "wins" (is a better split).
   // CURRENTLY COMPUTING THE WRONG THING...
@@ -98,13 +113,16 @@ class Histogram extends Iced {
   // of squared errors, which can be done with the online mean algorithm.
   double score( ) {
     double sum = 0;
+    double sum2 = 0;
     int nbins = _bins.length;
     for( int i=0; i<nbins; i++ ) {
       double m = mean(i);
       double x = m==0.0 ? 0 : var(i)/m;
       sum += x;
+      sum2 += mse(i)*_bins[i];
     }
-    return sum;
+    //Log.unwrap(System.out,"var="+sum+" mse="+sum2);
+    return sum2;
   }
 
   // Pretty-print a histogram

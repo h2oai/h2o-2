@@ -172,14 +172,14 @@ class Basic(unittest.TestCase):
         actualDelta = [abs(a-b) for a,b in zip(expectTrainPctRightList, actualTrainPctRightList)]
         niceFp = ["{0:0.2f}".format(i) for i in actualTrainPctRightList]
         print "maybe should update with actual. Remove single quotes"  
-        print"expectTrainPctRightList =", niceFp
+        print "actualTrainPctRightList =", niceFp
         niceFp = ["{0:0.2f}".format(i) for i in actualDelta]
         print "actualDelta =", niceFp
 
         actualDelta = [abs(a-b) for a,b in zip(expectScorePctRightList, actualScorePctRightList)]
         niceFp = ["{0:0.2f}".format(i) for i in actualScorePctRightList]
         print "maybe should update with actual. Remove single quotes"  
-        print "expectScorePctRightList =", niceFp
+        print "actualScorePctRightList =", niceFp
         niceFp = ["{0:0.2f}".format(i) for i in actualDelta]
         print "actualDelta =", niceFp
 

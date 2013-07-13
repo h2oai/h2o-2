@@ -1,12 +1,11 @@
 import unittest
-import random, sys, time, os
+import random, sys, time, os, getpass
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     # 8 random generatators, 1 per column
     r1 = random.Random(SEED)
-    r2 = random.Random(SEED)
     dsf = open(csvPathname, "w+")
 
     for i in range(rowCount):
@@ -19,7 +18,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
             rowData.append(ri1 + 0.1) # odd bias shift
 
         # sum the row, and make output 1 if > (5 * rowCount)
-        if (rowTotal > (0.52 * colCount)): 
+        if (rowTotal > (0.5 * colCount)): 
             result = 1
         else:
             result = 0
@@ -45,25 +44,33 @@ class Basic(unittest.TestCase):
         random.seed(SEED)
         print "\nUsing random seed:", SEED
         localhost = h2o.decide_if_localhost()
+        global tryHeap
+        tryHeap = 14
         if (localhost):
-            h2o.build_cloud(1,use_flatfile=True)
+            h2o.build_cloud(1, enable_benchmark_log=True, java_heap_GB=tryHeap)
         else:
-            h2o_hosts.build_cloud_with_hosts()
+            h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_many_cols_real(self):
+    def test_GLM_many_cols_real(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
-        tryList = [
-            (1000, 100, 'cA', 300),
-            (1000, 200, 'cB', 300),
-            (1000, 300, 'cC', 300),
-            (1000, 400, 'cD', 300),
-            (1000, 500, 'cE', 300),
-            (1000, 1000, 'cJ', 300),
-            ]
+        if getpass.getuser() == 'kevin': # longer run
+            tryList = [
+                (100, 1000, 'cA', 100),
+                (100, 3000, 'cB', 300),
+                (100, 5000, 'cC', 1500),
+                (100, 7000, 'cD', 3600),
+                (100, 9000, 'cE', 3600),
+                (100, 10000, 'cF', 3600),
+                ]
+        else:
+            tryList = [
+                (100, 1000, 'cA', 100),
+                (100, 3000, 'cB', 300),
+                ]
 
         ### h2b.browseTheCloud()
         for (rowCount, colCount, key2, timeoutSecs) in tryList:
@@ -74,28 +81,53 @@ class Basic(unittest.TestCase):
             print "Creating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
+            start = time.time()
             parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10)
+            elapsed = time.time() - start
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "Parse result['destination_key']:", parseKey['destination_key']
+
+            algo = "Parse"
+            l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
+                len(h2o.nodes), tryHeap, algo, csvFilename, elapsed)
+            print l
+            h2o.cloudPerfH2O.message(l)
 
             # We should be able to see the parse result?
             inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             print "\n" + csvFilename
 
             y = colCount
-            kwargs = {'y': y, 'max_iter': 50, 'case': '1', 'case_mode': '=', 'lambda': 1e-4, 'alpha': 0.6}
+            # just limit to 2 iterations..assume it scales with more iterations
+            kwargs = {
+                'y': y,
+                'max_iter': 2, 
+                'case': 1,
+                'case_mode': '=',
+                'family': 'binomial',
+                'lambda': 1.e-4,
+                'alpha': 0.6,
+                'weight': 1.0,
+                'thresholds': 0.5,
+                'n_folds': 1,
+                'beta_eps': 1.e-4,
+            }
+
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
-            print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
+            elapsed = time.time() - start
+            h2o.check_sandbox_for_errors()
+            print "glm end on ", csvPathname, 'took', elapsed, 'seconds', \
+                "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
-            if not h2o.browse_disable:
-                h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
-                time.sleep(5)
+            iterations = glm['GLMModel']['iterations']
 
-            # try new offset/view
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], offset=100, view=100)
-
+            algo = "GLM " + str(iterations) + " iterations"
+            l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
+                len(h2o.nodes), tryHeap, algo, csvFilename, elapsed)
+            print l
+            h2o.cloudPerfH2O.message(l)
 
 if __name__ == '__main__':
     h2o.unit_main()

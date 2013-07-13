@@ -245,12 +245,7 @@ def spawn_cmd(name, args, capture_output=True):
     if capture_output:
         outfd,outpath = tmp_file(name + '.stdout.', '.log')
         errfd,errpath = tmp_file(name + '.stderr.', '.log')
-        # make args a string, so we can do ulimit, and execute with shell
-        if (1==0):
-            argsStr = 'ulimit -u 1024;' + ' '.join(args)
-            ps = psutil.Popen(argsStr, stdin=None, stdout=outfd, stderr=errfd, shell=True)
-        else:
-            ps = psutil.Popen(args, stdin=None, stdout=outfd, stderr=errfd)
+        ps = psutil.Popen(args, stdin=None, stdout=outfd, stderr=errfd)
     else:
         outpath = '<stdout>'
         errpath = '<stderr>'
@@ -261,19 +256,35 @@ def spawn_cmd(name, args, capture_output=True):
     log(' '.join(args), comment=comment)
     return (ps, outpath, errpath)
 
-def spawn_cmd_and_wait(name, args, timeout=None):
-    (ps, stdout, stderr) = spawn_cmd(name, args)
-
+def spawn_wait(ps, stdout, stderr, timeout=None):
     rc = ps.wait(timeout)
     out = file(stdout).read()
     err = file(stderr).read()
+    ## print out
+    ## print err
 
     if rc is None:
         ps.terminate()
         raise Exception("%s %s timed out after %d\nstdout:\n%s\n\nstderr:\n%s" %
                 (name, args, timeout or 0, out, err))
     elif rc != 0:
-        raise Exception("%s %s failed.\nstdout:\n%s\n\nstderr:\n%s" % (name, args, out, err))
+        raise Exception("%s %s failed.\nstdout:\n%s\n\nstderr:\n%s" % (ps.name, ps.cmdline, out, err))
+    return rc
+
+def spawn_cmd_and_wait(name, args, timeout=None):
+    (ps, stdout, stderr) = spawn_cmd(name, args)
+    spawn_wait(ps, stdout, stderr, timeout=None)
+
+def kill_process_tree(pid, including_parent=True):    
+    parent = psutil.Process(pid)
+    for child in parent.get_children(recursive=True):
+        child.kill()
+    if including_parent:
+        parent.kill()
+
+def kill_child_processes():
+    me = os.getpid()
+    kill_process_tree(me, including_parent=False)
 
 # used to get a browser pointing to the last RFview
 global json_url_history
@@ -1007,14 +1018,15 @@ class H2O(object):
 
     # &offset=
     # &view=
-    def inspect(self, key, offset=None, view=None, ignoreH2oError=False):
+    def inspect(self, key, offset=None, view=None, ignoreH2oError=False, timeoutSecs=30):
         a = self.__do_json_request('Inspect.json',
             params={
                 "key": key,
                 "offset": offset,
                 "view": view,
                 },
-            ignoreH2oError=ignoreH2oError
+            ignoreH2oError=ignoreH2oError,
+            timeout=timeoutSecs
             )
         return a
 
@@ -1379,7 +1391,6 @@ class H2O(object):
             time.sleep(5)
         return a
 
-
     # GLMScore params
     # model_key=__GLMModel_7a3a73c1-f272-4a2e-b37f-d2f371d304ba&
     # key=cuse.hex&
@@ -1610,8 +1621,9 @@ class H2O(object):
         if use_debugger is None: use_debugger = debugger
         self.aws_credentials = aws_credentials
         self.port = port
-        # None is legal for self.addr. means we won't give an ip to the jar when we start, and it should
-        # figure out the right thing. Or we can say use use_this_ip_addr=127.0.0.1, or the known address 
+        # None is legal for self.addr. 
+        # means we won't give an ip to the jar when we start.
+        # Or we can say use use_this_ip_addr=127.0.0.1, or the known address 
         # if use_this_addr is None, use 127.0.0.1 for urls and json
         # Command line arg 'ipaddr' dominates:
         if ipaddr:
@@ -1654,7 +1666,6 @@ class H2O(object):
 
         # this dumps stats from tests, and perf stats while polling to benchmark.log
         self.enable_benchmark_log = enable_benchmark_log
-
 
     def __str__(self):
         return '%s - http://%s:%d/' % (type(self), self.http_addr, self.port)

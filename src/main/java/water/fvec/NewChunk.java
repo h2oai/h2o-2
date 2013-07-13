@@ -78,19 +78,19 @@ public class NewChunk extends Chunk {
     boolean overflow=false;
     boolean floatOverflow = false;
 
-    // Enum? We assume that columns with ALL strings (and NAs) are enums if there were less than 65k unique vals
-    // if there were some numbers, we assume it is a numcol with strings being NAs.
-    if(0 < _strCnt && (_strCnt + _naCnt) == _len){
-      // find ther max val
+    // Enum?  We assume that columns with ALL strings (and NAs) are enums if
+    // there were less than 65k unique vals.  If there were some numbers, we
+    // assume it is a numcol with strings being NAs.
+    if( 0 < _strCnt && (_strCnt + _naCnt) == _len ) {
+      // find their max val
       int sz = Integer.MIN_VALUE;
       for(int x:_xs) if(x > sz)sz = x;
-      if(sz < Enum.MAX_ENUM_SIZE) {
+      if( sz < Enum.MAX_ENUM_SIZE ) {
         if(sz < 255){ // we can fit into 1Byte
           byte [] bs = MemoryManager.malloc1(_len);
           for(int i = 0; i < _len; ++i)bs[i] = ((_xs[i] >= 0)?(byte)(0xFF&_xs[i]):(byte)0xFF);
           int [] vals = new int[256];
           for(int i = 0; i < bs.length; ++i)if(bs[i] >= 0)++vals[bs[i]];
-//          System.out.println(H2O.SELF+"_histo: " + Arrays.toString(vals) );
           return new C1Chunk(bs);
         } else if(sz < 65535){ // 2 bytes
           byte [] bs = MemoryManager.malloc1(_len << 1);
@@ -99,6 +99,14 @@ public class NewChunk extends Chunk {
         } else throw H2O.unimpl();
       }
     }
+    
+    // If the data was set8 as doubles, we (weanily) give up on compression and
+    // just store it as a pile-o-doubles.
+    if( _ds != null ) 
+      return new C8DChunk(bufF(3));
+
+    // Look at the min & max & scaling.  See if we can sanely normalize the
+    // data in some fixed-point format.
     boolean first = true;
     for( int i=0; i<_len; i++ ) {
       if( isNA(i) ) continue;
@@ -112,7 +120,7 @@ public class NewChunk extends Chunk {
       long t;
       while( l!=0 && (t=l/10)*10==l ) { l=t; x++; }
       floatOverflow = Math.abs(l) > MAX_FLOAT_MANTISSA;
-      if(first){
+      if( first ) {
         first = false;
         xmin = x;
         lemin = lemax = l;
@@ -131,6 +139,7 @@ public class NewChunk extends Chunk {
       if( le < lemin ) lemin=le;
       if( le > lemax ) lemax=le;
     }
+
 
     // Constant column?
     if( _min==_max ) {
@@ -225,11 +234,11 @@ public class NewChunk extends Chunk {
     for( int i=0; i<_len; i++ ) {
       if(isNA(i)){
         switch( log ) {
-          case 2: UDP.set4f(bs,(i<<2), Float.NaN);  break;
+          case 2: UDP.set4f(bs,(i<<2), Float .NaN); break;
           case 3: UDP.set8d(bs,(i<<3), Double.NaN); break;
         }
       } else {
-        double le = _ls[i]*DParseTask.pow10(_xs[i]);
+        double le = _ds == null ? _ls[i]*DParseTask.pow10(_xs[i]) : _ds[i];
         switch( log ) {
         case 2: UDP.set4f(bs,(i<<2), (float)le); break;
         case 3: UDP.set8d(bs,(i<<3),        le); break;

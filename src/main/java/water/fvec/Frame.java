@@ -17,6 +17,15 @@ public class Frame extends Iced {
   public Frame( Key k, String[] names, Vec[] vecs ) {
     _key=k; _names=names; _vecs=vecs;
   }
+  // Find a named column
+  public int find( String name ) {
+    for( int i=0; i<_names.length; i++ )
+      if( name.equals(_names[i]) ) 
+        return i;
+    return -1;
+  }
+
+  // Add a named column
   public void add( String name, Vec vec ) {
     // needs a compatibility-check????
     _names = Arrays.copyOf(_names,_names.length+1);
@@ -24,6 +33,20 @@ public class Frame extends Iced {
     _names[_names.length-1] = name;
     _vecs [_vecs .length-1] = vec ;
   }
+  // Remove a named column
+  public Vec remove( String name ) { return remove(find(name)); }
+  // Remove a numbered column
+  public Vec remove( int idx ) { 
+    int len = _names.length;
+    if( idx < 0 || idx >= len ) return null;
+    Vec v = _vecs[idx];
+    System.arraycopy(_names,idx+1,_names,idx,len-idx-1);
+    System.arraycopy(_vecs ,idx+1,_vecs ,idx,len-idx-1);
+    _names = Arrays.copyOf(_names,len-1);
+    _vecs  = Arrays.copyOf(_vecs ,len-1);
+    return v;
+  }
+
 
   public final Vec[] vecs() {
     return _vecs;
