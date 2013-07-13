@@ -45,10 +45,6 @@ public class CBSChunk extends Chunk {
   @Override boolean set8_impl(int idx, double d) { return false; }
   @Override boolean hasFloat ()                  { return false; }
 
-  @Override NewChunk inflate_impl(NewChunk nc) {
-    throw H2O.unimpl();
-  }
-
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem, _mem.length); }
 
   @Override public Chunk read(AutoBuffer bb) {
@@ -58,6 +54,15 @@ public class CBSChunk extends Chunk {
     _bpv   = _mem[1];
     _len = ((_mem.length - OFF)*8 - _gap) / _bpv;
     return this;
+  }
+
+  @Override NewChunk inflate_impl(NewChunk nc) {
+    for (int i=0; i<_len; i++) {
+      long res = at8_impl(i);
+      if (res == _NA) nc.setInvalid(i);
+      else nc._ls[i] = res;
+    }
+    return nc;
   }
 
   /** Writes 1bit from value into b at given offset and return b */
