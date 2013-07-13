@@ -55,23 +55,39 @@ public class GBM extends Job {
     // One Big Loop till the tree is of proper depth.
     for( int depth=0; depth<maxDepth; depth++ ) {
 
-      // Build a histogram with a pass over the data.
-      // Should be an MRTask2.
+      // Report the average prediction error
       double error=0;
       for( int k=0; k<fr._vecs[0].length(); k++ ) {
         double y = fr._vecs[ncols].at(k);      // Response variable for row
         double z = y-vpred.at(k);              // Error for this prediction
         error += z*z;                          // Cumlative error
+      }
+      double errAvg = error/fr._vecs[0].length();
+      Log.unwrap(System.out,"============================================================== ");
+      Log.unwrap(System.out,"Average prediction error for tree of depth "+depth+" is "+errAvg);
+
+      // Build a histogram with a pass over the data.
+      // Should be an MRTask2.
+      for( int k=0; k<fr._vecs[0].length(); k++ ) {
         int split = (int)vsplit.at8(k);        // Split for this row
         if( split == -1 ) continue;  // Row does not need to split again (generally perfect prediction already)
+        double y = fr._vecs[ncols].at(k);      // Response variable for row
         Tree t = wood.get(split);    // This row is being split in Tree t
         for( int j=0; j<ncols; j++ ) // For all columns
           if( t._hs[j] != null ) // Some columns are ignored, since already split to death
             t._hs[j].incr(fr._vecs[j].at(k),y);
       }
-      double errAvg = error/fr._vecs[0].length();
-      Log.unwrap(System.out,"============================================================== ");
-      Log.unwrap(System.out,"Average prediction error for tree of depth "+depth+" is "+errAvg);
+
+      // Compute mean-square-error, per-column
+      for( int k=0; k<fr._vecs[0].length(); k++ ) {
+        int split = (int)vsplit.at8(k);        // Split for this row
+        if( split == -1 ) continue;  // Row does not need to split again (generally perfect prediction already)
+        double y = fr._vecs[ncols].at(k);      // Response variable for row
+        Tree t = wood.get(split);    // This row is being split in Tree t
+        for( int j=0; j<ncols; j++ ) // For all columns
+          if( t._hs[j] != null ) // Some columns are ignored, since already split to death
+            t._hs[j].incr2(fr._vecs[j].at(k),y);
+      }
 
       // Build up the next-generation tree splits from the current histograms.
       // Nearly all leaves will split one more level.  This loop nest is
@@ -165,13 +181,14 @@ public class GBM extends Job {
     // Also setup leaf Trees for when we split this Tree
     int bestSplit() {
       assert _ts==null;
-      double bs = Double.MAX_VALUE;
-      int idx = -1;
+      double bs = Double.MAX_VALUE; // Best score
+      int idx = -1;             // Column to split on
       for( int i=0; i<_hs.length; i++ ) {
         if( _hs[i]==null || _hs[i]._bins.length == 1 ) continue;
         double s = _hs[i].score();
         if( s < bs ) { bs = s; idx = i; }
       }
+      // Split on column 'idx' with score 'bs'
       _ts = new Tree[_hs[idx]._bins.length];
       return (_col=idx);
     }
@@ -194,7 +211,7 @@ public class GBM extends Job {
         p(sb,"min" ,mmmW).append('/');
         p(sb,"max" ,mmmW).append('/');
         p(sb,"mean",mmmW).append('/');
-        p(sb,"var" ,varW).append(colPad);
+        p(sb,"mse" ,varW).append(colPad);
       }
       sb.append('\n');
       for( int i=0; i<Histogram.BINS; i++ ) {
@@ -205,7 +222,8 @@ public class GBM extends Job {
             p(sb,              _hs[j]._mins[i] ,mmmW).append('/');
             p(sb,              _hs[j]._maxs[i] ,mmmW).append('/');
             p(sb,              _hs[j]. mean(i) ,mmmW).append('/');
-            p(sb,              _hs[j]. var (i) ,varW).append(colPad);
+            p(sb,              _hs[j]. mse (i) ,varW).append(colPad);
+            //p(sb,              _hs[j]. var (i) ,varW).append(colPad);
           } else {
             p(sb,"",colW).append(colPad);
           }
