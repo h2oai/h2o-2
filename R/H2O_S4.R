@@ -131,12 +131,6 @@ setMethod("h2o.kmeans", signature(data="H2OParsedData", centers="numeric"),
             resKMModel = new("H2OKMeansModel", key=destKey, data=data, km=result)
           })
 
-# Redefinitions of existing R functions
-setMethod("+", c("H2OParsedData", "H2OParsedData"),
-          function(e1, e2) {
-            cat('TOM: Arith called\n\n')
-          })
-
 setMethod("summary", signature(object="H2OParsedData"),
           function(object) {
             res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY, key=object@key)
@@ -213,24 +207,27 @@ h2o.__formatError <- function(error,prefix="  ") {
 h2o.__poll <- function(client, keyName) {
   res = h2o.__remoteSend(client, h2o.__PAGE_JOBS)
   res = res$jobs
+  if(length(res) == 0) stop("No jobs found in queue")
+  prog = NULL
   for(i in 1:length(res)) {
     if(res[[i]]$key == keyName)
       prog = res[[i]]
   }
+  if(is.null(prog)) stop("Job key ", keyName, " not found in job queue")
   prog$progress
 }
 
-h2o.__exec <- function(expr) {
+h2o.__exec <- function(client, expr) {
   type = tryCatch({ typeof(expr) }, error = function(e) { "expr" })
   if (type != "character")
     expr = deparse(substitute(expr))
-  res = h2o.__remoteSend(h2o.__PAGE_EXEC, expression=expr)
+  res = h2o.__remoteSend(client, h2o.__PAGE_EXEC, expression=expr)
   res$key
 }
 
-h2o.__remove <- function(keyName) {
+h2o.__remove <- function(client, keyName) {
   type = tryCatch({ typeof(keyName) }, error = function(e) { "expr" })
   if (type != "character")
     keyName = deparse(substitute(keyName))
-  res = h2o.__remoteSend(h2o.__PAGE_REMOVE, key=key)
+  res = h2o.__remoteSend(client, h2o.__PAGE_REMOVE, key=keyName)
 }
