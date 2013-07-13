@@ -138,6 +138,14 @@ public class NewChunk extends Chunk {
       return new C0LChunk((long)_min,_len);
     }
 
+    // Boolean column? (or in general two value column)
+    if (lemax-lemin == 1 && lemin == 0) {
+      int bpv = _naCnt > 0 ? 2 : 1;
+      byte[] cbuf = bufB(CBSChunk.OFF, bpv);
+      return new CBSChunk(cbuf, cbuf[0], cbuf[1]);
+    }
+
+
     // Exponent scaling: replacing numbers like 1.3 with 13e-1.  '13' fits in a
     // byte and we scale the column by 0.1.  A set of numbers like
     // {1.2,23,0.34} then is normalized to always be represented with 2 digits
@@ -229,6 +237,36 @@ public class NewChunk extends Chunk {
         }
       }
     }
+    return bs;
+  }
+
+  // Compute compressed boolean buffer
+  private byte[] bufB(int off, int bpv) {
+    assert bpv == 1 || bpv == 2 : "Only bit vectors with/without NA are supported";
+    int clen  = off + CBSChunk.clen(_len, bpv);
+    byte bs[] = new byte[clen];
+    int  boff = 0;
+    byte b    = 0;
+    int  idx  = off;
+    for (int i=0; i<_len; i++) {
+      byte val = isNA(i) ? CBSChunk._NA : (byte) _ls[i];
+      switch (bpv) {
+        case 1: assert val!=CBSChunk._NA;
+                b = CBSChunk.write1b(b, val, boff); break;
+        case 2: b = CBSChunk.write2b(b, val, boff); break;
+      }
+      boff += bpv;
+      if (boff>8-bpv) { bs[idx] = b; boff = 0; b = 0; idx++; }
+    }
+    // Save the gap = number of unfilled bits and bpv value
+    bs[0] = (byte) (boff == 0 ? 0 : 8-boff);
+    bs[1] = (byte) bpv;
+    // Flush last byte
+    if (boff>0) bs[idx++] = b;
+    /*for (int i=0; i<idx; i++) {
+      if (i==0 || i==1) System.err.println(bs[i]);
+      else System.err.println(bs[i] + " = " + Integer.toBinaryString(bs[i]));
+    }*/
     return bs;
   }
 
