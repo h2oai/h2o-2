@@ -48,14 +48,14 @@ class Basic(unittest.TestCase):
         # time.sleep(1500)
         h2o.tear_down_cloud()
 
-    def test_exec_rotating_inc(self):
+    def test_exec_rotate_inc(self):
         ### h2b.browseTheCloud()
 
         lenNodes = len(h2o.nodes)
         # zero the list of Results using node[0]
         # FIX! is the zerolist not eing seen correctl? is it not initializing to non-zero?
         for exprTemplate in initList:
-            execExpr = h2e.fill_in_expr_template(exprTemplate, '0', '0')
+            execExpr = h2e.fill_in_expr_template(exprTemplate, n=0, m=0)
             print execExpr
             execResult = h2e.exec_expr(h2o.nodes[0], execExpr)
             ### print "\nexecResult:", execResult
@@ -75,9 +75,8 @@ class Basic(unittest.TestCase):
                 ### print nodeX
                 
                 number = trial + 10
-                execExpr = h2e.fill_in_expr_template(exprTemplate, 
-                    str(number%period), str((number-goback)%period))
                 resultKey="Result" + str(number%period)
+                execExpr = h2e.fill_in_expr_template(exprTemplate, n=(number%period), m=((number-goback)%period))
                 execResultInspect, min_value = h2e.exec_expr(h2o.nodes[nodeX], execExpr,
                     resultKey=resultKey, timeoutSecs=4)
 
