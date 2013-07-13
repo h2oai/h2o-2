@@ -1,12 +1,6 @@
 package water.api;
 
 import org.apache.hadoop.fs.Path;
-<<<<<<< HEAD
-||||||| merged common ancestors
-import org.apache.hadoop.thirdparty.guava.common.base.Charsets;
-=======
-
->>>>>>> Removed dependency on Guava code.
 
 import water.*;
 import water.persist.PersistHdfs;
