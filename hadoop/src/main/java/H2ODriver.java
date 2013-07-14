@@ -88,6 +88,7 @@ public class H2ODriver extends Configured implements Tool {
 "\n" +
 "Usage: " + prog + "\n" +
 "          -files <.../flatfile.txt>\n" +
+"          -libjars <.../h2o.jar>\n" +
 "          [other generic Hadoop ToolRunner options]\n" +
 "          [-h | -help]\n" +
 "          [-jobname <name of job in jobtracker (default: '" + DEFAULT_JOBTRACKER_NAME + "')>]\n" +
@@ -104,12 +105,13 @@ public class H2ODriver extends Configured implements Tool {
 "          o  -mapperXmx is set to both Xms and Xmx of the mapper to reserve" +
 "             memory up front.\n" +
 "          o  There are no combiners or reducers.\n" +
-"          o  flatfile.txt is required and must be named flatfile.txt.\n" +
+"          o  -files flatfile.txt is required and must be named flatfile.txt.\n" +
+"          o  -libjars with an h2o.jar is required.\n" +
 "          o  -mapperXmx, -n and -o are required.\n" +
 "\n" +
 "Examples:\n" +
-"          " + prog + " -jt <yourjobtracker>:<yourport> -files flatfile.txt -mapperXmx 1g -n 1 -o hdfsOutputDir\n" +
-"          " + prog + " -jt <yourjobtracker>:<yourport> -files flatfile.txt -mapperXmx 1g -n 4 -o hdfsOutputDir -jobname H2O_PROD\n" +
+"          " + prog + " -jt <yourjobtracker>:<yourport> -files flatfile.txt -libjars h2o.jar -mapperXmx 1g -n 1 -o hdfsOutputDir\n" +
+"          " + prog + " -jt <yourjobtracker>:<yourport> -files flatfile.txt -libjars h2o.jar -mapperXmx 1g -n 4 -o hdfsOutputDir -jobname H2O_PROD\n" +
 "\n" +
 "flatfile.txt:\n" +
 "          The flat file must contain the list of possible IP addresses an H2O\n" +

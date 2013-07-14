@@ -7,62 +7,63 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Mapper;
+import water.H2O;
 
 /**
  * Interesting Configuration properties:
  * mapper	mapred.local.dir=/tmp/hadoop-tomk/mapred/local/taskTracker/tomk/jobcache/job_local1117903517_0001/attempt_local1117903517_0001_m_000000_0
  */
 public class H2OMapper extends Mapper<Text, Text, Text, Text> {
+    static Context _context;       // Hadoop mapreduce context
+    static String _mapredTaskId;
+
     /**
      * Emit a bunch of logging output at the beginning of the map task.
-     * @param context Hadoop MapReduce context
      * @throws IOException
      * @throws InterruptedException
      */
-    private void emitLogHeader(Context context) throws IOException, InterruptedException {
-        Configuration conf = context.getConfiguration();
-        String mapredTaskId = conf.get("mapred.task.id");
-        String id = mapredTaskId;
-        Text textId = new Text(id);
+    private void emitLogHeader() throws IOException, InterruptedException {
+        Configuration conf = _context.getConfiguration();
+        Text textId = new Text(_mapredTaskId);
 
         for (Map.Entry<String, String> entry: conf) {
             StringBuilder sb = new StringBuilder();
             sb.append(entry.getKey());
             sb.append("=");
             sb.append(entry.getValue());
-            context.write(textId, new Text(sb.toString()));
+            _context.write(textId, new Text(sb.toString()));
         }
 
-        context.write(textId, new Text("----- Properties -----"));
+        _context.write(textId, new Text("----- Properties -----"));
         String[] plist = {
                 "mapred.local.dir",
                 "mapred.child.java.opts",
-
         };
         for (String k : plist) {
             String v = conf.get(k);
             if (v == null) {
                 v = "(null)";
             }
-            context.write(textId, new Text(k + " " + v));
+            _context.write(textId, new Text(k + " " + v));
         }
         String userDir = System.getProperty("user.dir");
-        context.write(textId, new Text("user.dir " + userDir));
+        _context.write(textId, new Text("user.dir " + userDir));
 
         try {
             java.net.InetAddress localMachine = java.net.InetAddress.getLocalHost();
-            context.write(textId, new Text("hostname " + localMachine.getHostName()));
+            _context.write(textId, new Text("hostname " + localMachine.getHostName()));
         }
         catch (java.net.UnknownHostException uhe) { // [beware typo in code sample -dmw]
             // handle exception
         }
 
-        context.write(textId, new Text("----- Flat File -----"));
+        _context.write(textId, new Text("----- Flat File -----"));
         BufferedReader reader = new BufferedReader(new FileReader("flatfile.txt"));
-        String line = null;
+        String line;
         while ((line = reader.readLine()) != null) {
-            context.write(textId, new Text(line));
+            _context.write(textId, new Text(line));
         }
+        _context.write(textId, new Text("---------------------"));
     }
 
     /**
@@ -96,15 +97,91 @@ public class H2OMapper extends Mapper<Text, Text, Text, Text> {
         }
     }
 
+    public static class UserMain {
+        /**
+         * Start an H2O instance in the local JVM.
+         */
+        public static void main(String[] args) throws Exception {
+            Text textId = new Text(_mapredTaskId);
+            _context.write(textId, new Text("before H2O.main()"));
+            H2O.main(args);
+            _context.write(textId, new Text("after H2O.main()"));
+        }
+    }
+
     @Override
     public void run(Context context) throws IOException, InterruptedException {
-        emitLogHeader(context);
+//        try {
+//            String[] args = {};
+//            water.Boot.main(UserMain.class, args);
+//        }
+//        catch (Exception e) {
+//            e.printStackTrace();
+//        }
+
+        _context = context;
+        Configuration conf = context.getConfiguration();
+        _mapredTaskId = conf.get("mapred.task.id");
+        Text textId = new Text(_mapredTaskId);
+
+        emitLogHeader();
 
         Counter counter = context.getCounter(H2O_MAPPER_COUNTER.HADOOP_COUNTER_HEARTBEAT);
         Thread counterThread = new CounterThread(counter);
         counterThread.start();
 
-        int millis = 20 * 1000;
-        Thread.sleep(millis);
+        String ice_root = conf.get("mapred.local.dir");
+        _context.write(textId, new Text("mapred.local.dir is " + ice_root));
+
+        String[] args = {
+//            "-ice_root", ice_root,
+            "-flatfile", "flatfile.txt",
+            "-port", "54321",
+        };
+
+        _context.write(textId, new Text("before water.Boot.main()"));
+        try {
+            water.Boot.main(UserMain.class, args);
+        }
+        catch (Exception e) {
+            _context.write(textId, new Text("exception in water.Boot.main()"));
+
+            String s = e.getMessage();
+            if (s == null) {
+                s = "(null exception message)";
+            }
+            _context.write(textId, new Text(s));
+
+            s = e.toString();
+            if (s == null) {
+                s = "(null exception toString)";
+            }
+            _context.write(textId, new Text(s));
+
+            StackTraceElement[] els = e.getStackTrace();
+            for (int i = 0; i < els.length; i++) {
+                StackTraceElement el = els[i];
+                s = el.toString();
+                _context.write(textId, new Text("    " + s));
+            }
+        }
+        finally {
+            _context.write(textId, new Text("after water.Boot.main()"));
+
+            while (true) {
+                int FIVE_SECONDS_MILLIS = 5 * 1000;
+                Thread.sleep (FIVE_SECONDS_MILLIS);
+            }
+        }
+    }
+
+    public static void main (String[] args) {
+        try {
+            H2OMapper m = new H2OMapper();
+            m.run(null);
+        }
+        catch (Exception e) {
+            System.out.println (e);
+        }
     }
 }
