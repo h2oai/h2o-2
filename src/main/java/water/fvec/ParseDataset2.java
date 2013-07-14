@@ -94,7 +94,6 @@ public final class ParseDataset2 extends Job {
     final String [][] _gDomain;
     final int [] _colIds;
 
-
     public EnumUpdateTask(String [][] gDomain,Key lDomKey, int [] colIds){_gDomain = gDomain; _eKey = lDomKey;_colIds = colIds;}
 
     @Override public void init(){
@@ -144,13 +143,12 @@ public final class ParseDataset2 extends Job {
     @Override public void map(Key key) {
       _enums = MultiFileParseTask._enums.get(_k).clone();
       // if we are the original node (i.e. there will be no sending over wire),
-      // we have to clone the enums not to share the same object (causes problems when computing columnd domain and renumbering maps).
+      // we have to clone the enums not to share the same object (causes problems when computing column domain and renumbering maps).
       if(H2O.SELF.index() == _homeNode){
         _enums = _enums.clone();
         for(int i = 0; i < _enums.length; ++i)
           _enums[i] = _enums[i].clone();
       }
-
     }
 
     @Override public void reduce(DRemoteTask drt) {
@@ -260,6 +258,7 @@ public final class ParseDataset2 extends Job {
       Key [] keys = vec.group().addVecs(ncols);
       for( int i=0; i<ncols; i++ )
         _cols[i] = new AppendableVec(keys[i]);
+
       // Parse the file
       try {
         switch( cpr ) {
@@ -286,8 +285,6 @@ public final class ParseDataset2 extends Job {
         return;
       }
     }
-
-
 
     // Reduce: combine errors from across files.
     // Roll-up other meta data
@@ -325,6 +322,7 @@ public final class ParseDataset2 extends Job {
       int cidx=0;
       while( is.available() > 0 )
         parser.parse(cidx++);
+      parser.parse(cidx++);     // Parse the remaining partial 32K buffer
       // Close & compress all the NewChunks for this one file.
       for( int i=0; i<_cols.length; i++ ) {
         nvs[i].close(0/*actual chunk number*/,_fs);
@@ -342,8 +340,6 @@ public final class ParseDataset2 extends Job {
       // closed() and rewritten as plain Vecs.  Copy those back into the _cols
       // array.
       for( int i=0; i<_cols.length; i++ ) _cols[i] = dp.vecs(i);
-
-
     }
     private class DParse extends MRTask2<DParse> {
       final CsvParser.Setup _setup;
@@ -352,8 +348,7 @@ public final class ParseDataset2 extends Job {
         Enum [] enums = enums();
         // Break out the input & output vectors before the parse loop
         final Chunk in = bvs[bvs.length-1];
-        final NewChunk[] nvs = new NewChunk[bvs.length-1];
-        for( int i=0; i<nvs.length; i++ ) nvs[i] = (NewChunk)bvs[i];
+        final NewChunk[] nvs = Arrays.copyOf(bvs,bvs.length-1, NewChunk[].class);
         // The Parser
         ChunkParser parser = new ChunkParser(in,nvs,_setup,enums);
         parser.parse(0);

@@ -120,6 +120,15 @@ public class ValueArray extends Iced implements Cloneable {
     sb.append("}");
     return sb.toString();
   }
+  private String toStr( long idx, int col ) {
+    return _cols[col]._name+"="+(isNA(idx,col) ? "NA" : datad(idx,col));
+  }
+  public String toString( long idx ) {
+    String s="{"+toStr(idx,0);
+    for( int i=1; i<_cols.length; i++ )
+       s += ","+toStr(idx,i);
+    return s+"}";
+  }
 
   /** An array of column names */
   public final String[] colNames() {

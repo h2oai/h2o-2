@@ -111,7 +111,7 @@ public class Vec extends Iced {
   // with a sane API (JDK has an insane API).  Overridden by subclasses that
   // compute chunks in an alternative way, such as file-backed Vecs.
   int elem2ChunkIdx( long i ) {
-    assert 0 <= i && i < length();
+    assert 0 <= i && i < length() : "0 <= "+i+" < "+length();
     int x = Arrays.binarySearch(_espc, i);
     int res = x<0?-x - 2:x;
     int lo=0, hi = nChunks();
@@ -243,7 +243,20 @@ public class Vec extends Iced {
 
   // [#elems, min/mean/max]
   @Override public String toString() {
-    return "["+length()+(Double.isNaN(_min) ? "" : ","+_min+"/"+_max)+"]";
+    String s = "["+length()+(Double.isNaN(_min) ? "" : ","+_min+"/"+_max+", "+PrettyPrint.bytes(byteSize())+", {");
+    int nc = nChunks();
+    for( int i=0; i<nc; i++ )
+      s += (Chunk)(DKV.get(chunkKey(i)).get())+",";
+    return s+"}]";
+  }
+
+  // Size of compressed vector data
+  public long byteSize() {
+    long s = 0;
+    int nc = nChunks();
+    for( int i=0; i<nc; i++ )
+      s += ((Chunk)(DKV.get(chunkKey(i)).get())).byteSize();
+    return s;
   }
 
 

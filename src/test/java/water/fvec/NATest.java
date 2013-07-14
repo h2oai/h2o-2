@@ -1,6 +1,7 @@
 package water.fvec;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.util.Arrays;
@@ -32,6 +33,7 @@ public class NATest extends TestUtil {
     assertTrue(fr._vecs.length == expectedTypes.length);
     for(int i = 0; i < expectedTypes.length; ++i)
       assertTrue(expectedTypes[i].isInstance(fr._vecs[i].elem2BV(0)));
+    assertEquals(8,nlines);
     for(int i = 0; i < nlines-1; ++i){
 //      System.out.print(i+": ");
       for(Vec v:fr._vecs){

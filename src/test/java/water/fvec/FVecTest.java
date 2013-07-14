@@ -5,6 +5,7 @@ import java.io.File;
 import java.util.Arrays;
 import org.junit.*;
 import water.*;
+import water.parser.ParseDataset;
 
 public class FVecTest extends TestUtil {
   static final double EPSILON = 1e-6;
@@ -71,14 +72,46 @@ public class FVecTest extends TestUtil {
   @SuppressWarnings("unused")
   @Test public void testParse() {
     //File file = TestUtil.find_test_file("./smalldata/airlines/allyears2k_headers.zip");
+    //File file = TestUtil.find_test_file("../datasets/UCI/UCI-large/covtype/covtype.data");
+    //File file = TestUtil.find_test_file("./smalldata/hhp.cut3.214.data.gz");
     File file = TestUtil.find_test_file("./smalldata/logreg/prostate_long.csv.gz");
     Key fkey = NFSFileVec.make(file);
-
-    Key okey = Key.make("cars.hex");
-    Frame fr = ParseDataset2.parse(okey,new Key[]{fkey});
+    Frame fr = ParseDataset2.parse(Key.make("pro1.hex"),new Key[]{fkey});
     UKV.remove(fkey);
-    //System.out.println(fr);
-    UKV.remove(okey);
+    //System.out.println("Parsed into "+fr);
+    //for( int i=0; i<fr._vecs.length; i++ )
+    //  System.out.println("Vec "+i+" = "+fr._vecs[i]);
+
+    Key rkey = load_test_file(file,"pro2.data");
+    Key vkey = Key.make("pro2.hex");
+    ParseDataset.parse(vkey, new Key[]{rkey});
+    UKV.remove(rkey);
+    ValueArray ary = UKV.get(vkey);
+    //System.out.println("Parsed into "+ary);
+    assertEquals(ary.numRows(),fr._vecs[0].length());
+
+    try {
+      int errs=0;
+      long rows = ary.numRows();
+      for( long i=0; i<rows; i++ ) {
+        if( errs > 1 ) break;
+        for( int j=0; j<ary._cols.length; j++ ) {
+          double d1 = fr._vecs[j].at(i);
+          double d2 = ary.datad(i,j);
+          if( Math.abs((d1-d2)/d1) > 0.0000001  ) {
+            System.out.println("Row "+i);
+            System.out.println("FVec= "+fr .toString(i));
+            System.out.println("VAry= "+ary.toString(i));
+            errs++;
+            break;
+          }
+        }
+      }
+      assertEquals(0,errs);
+    } finally {
+      UKV.remove(fr ._key);
+      UKV.remove(ary._key);
+    }
   }
 
   // ==========================================================================
