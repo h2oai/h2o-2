@@ -56,7 +56,7 @@ public class GBM extends Job {
     for( int depth=0; depth<maxDepth; depth++ ) {
 
       // Report the average prediction error
-      double error = new CalcError(fr).invoke(fr._vecs[ncols],vpred)._sum;
+      double error = new CalcError().invoke(fr._vecs[ncols],vpred)._sum;
       double errAvg = error/fr._vecs[0].length();
       Log.unwrap(System.out,"============================================================== ");
       Log.unwrap(System.out,"Average prediction error for tree of depth "+depth+" is "+errAvg);
@@ -186,12 +186,10 @@ public class GBM extends Job {
   // --------------------------------------------------------------------------
   // Compute sum-squared-error
   private static class CalcError extends MRTask2<CalcError> {
-    final Frame _fr;
     double _sum;
-    CalcError( Frame fr ) { _fr=fr; }
     @Override public void map( Chunk ys, Chunk preds ) {
       for( int i=0; i<ys._len; i++ ) {
-        if( ys.isNA0(i) )  System.out.println("Row "+(i+ys._start)+" = "+_fr.toString(i+ys._start));
+        assert !ys.isNA0(i);
         double y    = ys   .at0(i);
         double pred = preds.at0(i);
         _sum += (y-pred)*(y-pred);
