@@ -69,25 +69,26 @@ public class GBM extends Job {
       // Build a histogram with a pass over the data.
       // Should be an MRTask2.
       for( int k=0; k<fr._vecs[0].length(); k++ ) {
-        int split = (int)vsplit.at8(k);        // Split for this row
+        int split = (int)vsplit.at8(k);   // Split for this row
         if( split == -1 ) continue;  // Row does not need to split again (generally perfect prediction already)
-        double y = fr._vecs[ncols].at(k);      // Response variable for row
-        Tree t = wood.get(split);    // This row is being split in Tree t
-        for( int j=0; j<ncols; j++ ) // For all columns
+        double y = fr._vecs[ncols].at(k); // Response variable for row
+        Tree t = wood.get(split);         // This row is being split in Tree t
+        for( int j=0; j<ncols; j++ )      // For all columns
           if( t._hs[j] != null ) // Some columns are ignored, since already split to death
             t._hs[j].incr(fr._vecs[j].at(k),y);
       }
 
-      // Compute mean-square-error, per-column
-      for( int k=0; k<fr._vecs[0].length(); k++ ) {
-        int split = (int)vsplit.at8(k);        // Split for this row
-        if( split == -1 ) continue;  // Row does not need to split again (generally perfect prediction already)
-        double y = fr._vecs[ncols].at(k);      // Response variable for row
-        Tree t = wood.get(split);    // This row is being split in Tree t
-        for( int j=0; j<ncols; j++ ) // For all columns
-          if( t._hs[j] != null ) // Some columns are ignored, since already split to death
-            t._hs[j].incr2(fr._vecs[j].at(k),y);
-      }
+      // Compute mean-square-error, per-column.  
+      // Requires mean from 1st pass, so requires a 2nd pass.
+      //for( int k=0; k<fr._vecs[0].length(); k++ ) {
+      //  int split = (int)vsplit.at8(k);        // Split for this row
+      //  if( split == -1 ) continue;  // Row does not need to split again (generally perfect prediction already)
+      //  double y = fr._vecs[ncols].at(k);      // Response variable for row
+      //  Tree t = wood.get(split);    // This row is being split in Tree t
+      //  for( int j=0; j<ncols; j++ ) // For all columns
+      //    if( t._hs[j] != null ) // Some columns are ignored, since already split to death
+      //      t._hs[j].incr2(fr._vecs[j].at(k),y);
+      //}
 
       // Build up the next-generation tree splits from the current histograms.
       // Nearly all leaves will split one more level.  This loop nest is
@@ -95,8 +96,29 @@ public class GBM extends Job {
       int nsplit=treeMax;
       for( int w=treeMin; w<treeMax; w++ ) {
         Tree t = wood.get(w);         // Tree being split
+
+        // Adjust for observed min/max in the histograms, as some of the bins
+        // might already be zero from a prior split (i.e., the maximal element
+        // in column 7 went to the "other split"), leaving behind a smaller new
+        // maximal element.
+        for( int j=0; j<ncols; j++ ) { // For every column in the new split
+          Histogram h = t._hs[j];      // Old histogram of column
+          if( h == null ) continue;    // Column was not being tracked?
+          int n = 0;
+          while( h._bins[n]==0 ) n++;  // First non-empty bin
+          int l = h._bins.length-1;    // Last bin
+          if( n > 0 ) h._mins[0] = h._mins[n];
+          int x = l;  
+          while( h._bins[x]==0 ) x--;  // Last non-empty bin
+          if( x < l ) h._maxs[l] = h._maxs[x];
+        }
+        
+        // Compute best split
         int col = t.bestSplit();      // Best split-point for this tree
         Log.unwrap(System.out,t.toString());
+
+        // Split the best split.  This is a BIN-way split; each bin gets it's
+        // own subtree.
         Histogram splitH = t._hs[col];// Histogram of the column being split
         int l = splitH._bins.length;  // Number of split choices
         assert l > 1;                 // 
@@ -112,7 +134,8 @@ public class GBM extends Job {
             // min & max come from the original column data, since splitting on
             // an unrelated column will not change the j'th columns min/max.
             double min = h._mins[0], max = h._maxs[h._maxs.length-1];
-            // Tighter bounds on the column getting split
+            // Tighter bounds on the column getting split: exactly each new
+            // Histogram's bound are the bins' min & max.
             if( col==j ) { min=h._mins[i]; max=h._maxs[i]; }
             if( min == max ) continue; // This column will not split again
             nhists[j] = new Histogram(fr._names[j],splitH._bins[i],min,max,vs[j]._isInt);
@@ -121,7 +144,6 @@ public class GBM extends Job {
           wood.add(t._ts[i]=new Tree(t,nhists,nsplit++));
         }
       }
-
       // "Score" each row against the new splits.  Assign a new split.
       // Should be an MRTask2.
       for( int k=0; k<fr._vecs[0].length(); k++ ) {
@@ -185,7 +207,7 @@ public class GBM extends Job {
       int idx = -1;             // Column to split on
       for( int i=0; i<_hs.length; i++ ) {
         if( _hs[i]==null || _hs[i]._bins.length == 1 ) continue;
-        double s = _hs[i].score();
+        double s = _hs[i].scoreVar();
         if( s < bs ) { bs = s; idx = i; }
       }
       // Split on column 'idx' with score 'bs'
@@ -203,7 +225,7 @@ public class GBM extends Job {
       final int ncols = _hs.length;
       for( int j=0; j<ncols; j++ )
         if( _hs[j] != null )
-          p(sb,_hs[j]._name+String.format(", %5.2f",_hs[j].score()),colW).append(colPad);
+          p(sb,_hs[j]._name+String.format(", %5.2f",_hs[j].scoreVar()),colW).append(colPad);
       sb.append('\n');
       for( int j=0; j<ncols; j++ ) {
         if( _hs[j] == null ) continue;
@@ -211,7 +233,7 @@ public class GBM extends Job {
         p(sb,"min" ,mmmW).append('/');
         p(sb,"max" ,mmmW).append('/');
         p(sb,"mean",mmmW).append('/');
-        p(sb,"mse" ,varW).append(colPad);
+        p(sb,"var" ,varW).append(colPad);
       }
       sb.append('\n');
       for( int i=0; i<Histogram.BINS; i++ ) {
@@ -222,8 +244,8 @@ public class GBM extends Job {
             p(sb,              _hs[j]._mins[i] ,mmmW).append('/');
             p(sb,              _hs[j]._maxs[i] ,mmmW).append('/');
             p(sb,              _hs[j]. mean(i) ,mmmW).append('/');
-            p(sb,              _hs[j]. mse (i) ,varW).append(colPad);
-            //p(sb,              _hs[j]. var (i) ,varW).append(colPad);
+            p(sb,              _hs[j]. var (i) ,varW).append(colPad);
+            //p(sb,              _hs[j]. mse (i) ,varW).append(colPad);
           } else {
             p(sb,"",colW).append(colPad);
           }

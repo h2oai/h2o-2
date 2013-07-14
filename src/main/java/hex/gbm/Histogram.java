@@ -15,28 +15,33 @@ import water.util.Log;
    but only ever take on 2 values, so only 2 bins are needed), then fewer bins
    are used.
 
+   If we are successively splitting rows (e.g. in a decision tree), then a
+   fresh {@code Histogram} for each split will dynamically re-bin the data.
+   Each successive split then, will logarithmically divide the data.  At the
+   first split, outliers will end up in their own bins - but perhaps some
+   central bins may be very full.  At the next split(s), the full bins will get
+   split, and again until (with a log number of splits) each bin holds roughly
+   the same amount of data.
+
    @author Cliff Click
 */
 
-// A Histogram over a particular Split.  The histogram runs from min to max
-// per each column (i.e., we actually make #cols histograms in parallel), and
-// is given the number of elements that will land in some bin (for small
-// enough elements, we make fewer bins).  Each column's range is independent
-// and recomputed at each split/histogram
 class Histogram extends Iced {
   public static final int BINS=4;
   transient final String   _name;        // Column name, for pretty-printing
   public    final double   _step;        // Linear interpolation step per bin
+  public    final double   _min;         // Lower-end of binning
   public    final long  [] _bins;        // Bin counts
   public    final double[] _Ms;          // Rolling mean, per-bin
   public    final double[] _Ss;          // Rolling var , per-bin
   public    final double[] _mins, _maxs; // Min, Max, per-bin
-  public    final double[] _MSEs;        // Rolling mean-square-error, per-bin
+  public          double[] _MSEs;        // Rolling mean-square-error, per-bin; requires 2nd pass
 
   public Histogram( String name, long nelems, double min, double max, boolean isInt ) {
     assert nelems > 0;
     assert max > min : "Caller ensures max>min, since if max==min the column is all constants";
     _name = name;
+    _min = min;
     int xbins = Math.max((int)Math.min(BINS,nelems),1); // Default bin count
     // See if we can show there are fewer unique elements than nbins.
     // Common for e.g. boolean columns, or near leaves.
@@ -49,7 +54,6 @@ class Histogram extends Iced {
     _Ss   = new double[nbins];
     _mins = new double[nbins];
     _maxs = new double[nbins];
-    _MSEs = new double[nbins];
     // Set step & min/max for each bin
     _step = (max-min)/nbins;       // Step size for linear interpolation
     for( int j=0; j<nbins; j++ ) { // Set bad bounds for min/max
@@ -79,9 +83,10 @@ class Histogram extends Iced {
     _Ss[idx] = newS;
   }
 
-  // Same as incr, but compute mean-square-error - which requires
-  // the mean as computed on the 1st pass above.
+  // Same as incr, but compute mean-square-error - which requires the mean as
+  // computed on the 1st pass above, meaning this requires a 2nd pass.
   void incr2( double d, double y ) {
+    if( _MSEs == null ) _MSEs = new double[_bins.length];
     int idx = bin(d);           // Compute bin# via linear interpolation
     double z = y-mean(idx);     // Error for this prediction
     double e = z*z;             // Squared error
@@ -94,7 +99,7 @@ class Histogram extends Iced {
   // Interpolate d to find bin#
   int bin( double d ) {
     int nbins = _bins .length;
-    int idx1  = _step <= 0.0 ? 0 : (int)((d-_mins[0])/_step);
+    int idx1  = _step <= 0.0 ? 0 : (int)((d-_min)/_step);
     int idx2  = Math.max(Math.min(idx1,nbins-1),0); // saturate at bounds
     return idx2;
   }
@@ -105,24 +110,23 @@ class Histogram extends Iced {
   double mse( int bin ) { return _MSEs[bin]; }
 
   // Compute a "score" for a column; lower score "wins" (is a better split).
-  // CURRENTLY COMPUTING THE WRONG THING...
-  // Score is related to variance; a lower variance is better.  For now
-  // return the sum of variance across the column, divided by the mean.
-  // Dividing normalizes the column to other columns.
-  // THE RIGHT THING: minimize the sum of squared errors.  Equivalent to mean
-  // of squared errors, which can be done with the online mean algorithm.
-  double score( ) {
+  // Score is the sum of variances.
+  double scoreVar( ) {
     double sum = 0;
-    double sum2 = 0;
-    int nbins = _bins.length;
-    for( int i=0; i<nbins; i++ ) {
-      double m = mean(i);
-      double x = m==0.0 ? 0 : var(i)/m;
-      sum += x;
-      sum2 += mse(i)*_bins[i];
-    }
-    //Log.unwrap(System.out,"var="+sum+" mse="+sum2);
-    return sum2;
+    for( int i=0; i<_bins.length; i++ )
+      sum += var(i)*_bins[i];
+    return sum;
+  }
+
+  // Compute a "score" for a column; lower score "wins" (is a better split).
+  // Score is the squared-error for the column.  Requires a 2nd pass, as the
+  // mean is computed on the 1st pass.
+  double scoreMSE( ) {
+    assert _MSEs != null : "Need to call incr2 to use MSE";
+    double sum = 0;
+    for( int i=0; i<_bins.length; i++ )
+      sum += mse(i)*_bins[i];
+    return sum;
   }
 
   // Pretty-print a histogram
