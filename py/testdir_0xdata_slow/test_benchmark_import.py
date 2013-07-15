@@ -210,7 +210,7 @@ class Basic(unittest.TestCase):
                     enable_benchmark_log=True)
 
             else:
-                h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap/2, base_port=base_port, 
+                h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap, base_port=base_port, 
                     # java_extra_args=jea,
                     enable_benchmark_log=True)
 
