@@ -6,7 +6,7 @@ import water.util.Log;
 import water.api.Request.*;
 import java.util.Properties;
 
-/** 
+/**
  * Auto-gen doc support, for JSON & REST API docs
  * @author <a href="mailto:cliffc@0xdata.com"></a>
  */
@@ -16,12 +16,17 @@ public abstract class DocGen {
 
   public static void main(String[] args) {
     H2O.main(args);
-    TestUtil.stall_till_cloudsize(1);
+    waitForCloudSize(1, 10000);
     System.out.println(new ImportFiles().ReSTHelp());
     //System.exit(0);
   }
 
-  // Class describing meta-info about H2O queries and results.  
+  static void waitForCloudSize(int size, int ms) {
+    H2O.waitForCloudSize(size, ms);
+    Job.putEmptyJobList();
+  }
+
+  // Class describing meta-info about H2O queries and results.
   public static class FieldDoc {
     final String _name;           // Field name
     final String _help;           // Some descriptive text
@@ -82,7 +87,7 @@ public abstract class DocGen {
   abstract String bold( String s );
   abstract StringBuilder paraHead( StringBuilder sb );
   abstract StringBuilder paraTail( StringBuilder sb );
-  StringBuilder paragraph( StringBuilder sb, String s ) { 
+  StringBuilder paragraph( StringBuilder sb, String s ) {
     return paraTail(paraHead(sb).append(s));
   }
 
@@ -181,7 +186,7 @@ public abstract class DocGen {
       byte[] b = new byte[l];
       r.data.read(b);
       return new String(b);
-    } catch( IOException ioe ) { 
+    } catch( IOException ioe ) {
       Log.err(ioe);
       return null;
     }
@@ -203,9 +208,9 @@ public abstract class DocGen {
       }
       return sb;
     }
-    @Override StringBuilder bodyHead( StringBuilder sb ) { 
-      return sb.append("<div class='container'>"+ 
-                       "<div class='row-fluid'>"+ 
+    @Override StringBuilder bodyHead( StringBuilder sb ) {
+      return sb.append("<div class='container'>"+
+                       "<div class='row-fluid'>"+
                        "<div class='span12'>");
     }
     @Override StringBuilder bodyTail( StringBuilder sb ) { return sb.append("</div></div></div>"); }
