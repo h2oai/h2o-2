@@ -102,6 +102,10 @@ class Basic(unittest.TestCase):
             for x in range(maxIntegerValue+1):
                 legalValues[x] = x
         
+            expectedMin = min(legalValues)
+            expectedMax = max(legalValues)
+            expectedUnique = (expectedMax - expectedMin) + 1
+
             write_syn_dataset(csvPathname, rowCount, colCount, maxIntegerValue, SEEDPERFILE)
 
             parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10)
