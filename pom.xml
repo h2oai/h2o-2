@@ -24,8 +24,39 @@
   </licenses>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- Default compile time version of Hadoop client: in directory structured referenced as cdh3 -->
+    <h2o.hadoop.default.version>0.20.2-cdh3u6</h2o.hadoop.default.version>
   </properties>
 
+  <!-- 
+  = Repositories =
+   -->
+  <repositories>
+  	<!-- In project repository
+  		* a way of having project specific jars bundled with project
+  		See http://charlie.cu.cc/2012/06/how-add-external-libraries-maven/
+  	-->
+  	<repository>
+  		<id>in-project</id>
+  		<name>This project in repository.</name>
+  		<url>file://${project.basedir}/lib</url>
+  	</repository>
+  	<!-- Cloudera release repository -->
+  	<repository>
+        <id>cloudera-releases</id>
+        <url>https://repository.cloudera.com/artifactory/cloudera-repos</url>
+        <releases>
+          <enabled>true</enabled>
+        </releases>
+        <snapshots>
+          <enabled>false</enabled>
+        </snapshots>
+      </repository>
+  </repositories>
+  
+  <!--
+  = Project dependencies =
+   -->
   <dependencies>
   	<!-- =Test dependencies= -->
     <dependency>
@@ -97,9 +128,8 @@
 	<dependency>
 		<groupId>gov.nist.math</groupId>
 		<artifactId>jama</artifactId>
-		<version>1.0.2</version>
-		<scope>system</scope>
-		<systemPath>${basedir}/lib/jama/Jama.jar</systemPath>
+		<version>1.0.2-modified</version>
+		<scope>compile</scope>
 	</dependency>
 	<!-- ==POI dependencies== -->
 	<dependency>
@@ -131,21 +161,12 @@
 	</dependency>
 	
 	<!-- ==Hadoop core dependencies== -->
-	<!-- ===Hadoop 0.20.2 is used for compile=== -->
 	<dependency>
 		<groupId>org.apache.hadoop</groupId>
-		<artifactId>hadoop-core</artifactId>
-		<version>0.20.2</version>
+		<artifactId>hadoop-client</artifactId>
+		<version>${h2o.hadoop.default.version}</version>
 		<scope>compile</scope>
 	</dependency>
-	<!-- ===Hadoop 0.23.4 can be used at runtime=== -->
-	<!-- ===Hadoop 1.0.0 can be used at runtime=== -->
-	<!-- <dependency>
-		<groupId>org.apache.hadoop</groupId>
-		<artifactId>hadoop-core</artifactId>
-		<version>1.0.0</version>
-		<scope>runtime</scope>
-	</dependency>-->
 	
   </dependencies>
   

@@ -14,7 +14,6 @@
 	</classpathentry>
 	<classpathentry including="**/*.java" kind="src" path="src/main/resources"/>
 	<classpathentry kind="src" path="src/samples/java"/>
-	<classpathentry kind="lib" path="lib/jama/Jama.jar"/>
 	<classpathentry kind="lib" path="lib/hadoop/cdh3/commons-cli-1.2.jar"/>
 	<classpathentry kind="lib" path="lib/hadoop/cdh3/guava-r09-jarjar.jar"/>
 	<classpathentry kind="lib" path="lib/hadoop/cdh3/hadoop-core-0.20.2-cdh3u6.jar" sourcepath="lib/hadoop/cdh3/hadoop-core-0.20.2-cdh3u6-sources.jar"/>
