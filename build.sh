@@ -155,8 +155,8 @@ build_classes
 if [ "$1" = "compile" ]; then exit 0; fi
 build_initializer
 build_jar
-if [ "$1" = "build" ]; then exit 0; fi
 build_src_jar
+if [ "$1" = "build" ]; then exit 0; fi
 build_javadoc
 if [ "$1" = "doc" ]; then exit 0; fi
 junit
