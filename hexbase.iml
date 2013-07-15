@@ -32,6 +32,11 @@
       <src_folder value="file://$MODULE_DIR$/src/samples/java" expected_position="3" />
     </src_description>
   </component>
+  <component name="FacetManager">
+    <facet type="Python" name="Python">
+      <configuration sdkName="Python 2.7.2 (/System/Library/Frameworks/Python.framework/Versions/2.7/bin/python)" />
+    </facet>
+  </component>
   <component name="NewModuleRootManager" inherit-compiler-output="false">
     <output url="file://$MODULE_DIR$/target/classes" />
     <exclude-output />
@@ -283,7 +288,7 @@
         <SOURCES />
       </library>
     </orderEntry>
-    <orderEntry type="library" name="python) interpreter library" level="project" />
+    <orderEntry type="library" name="Python 2.7.2 (/System/Library/Frameworks/Python.framework/Versions/2.7/bin/python) interpreter library" level="application" />
   </component>
 </module>
 

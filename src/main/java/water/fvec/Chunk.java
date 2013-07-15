@@ -143,4 +143,13 @@ public abstract class Chunk extends Iced implements Cloneable {
       throw water.util.Log.errRTExcept(e);
     }
   }
+
+  @Override public String toString() { return getClass().getSimpleName(); }
+
+  public long byteSize() {
+    long s= _mem == null ? 0 : _mem.length;
+    s += (2+5)*8 + 12; // 2 hdr words, 5 other words, @8bytes each, plus mem array hdr
+    if( _chk != null && _chk != this ) s += _chk.byteSize();
+    return s;
+  }
 }

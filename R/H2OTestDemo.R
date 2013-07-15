@@ -1,12 +1,12 @@
 # Test R functionality for Demo
-# to invoke this you need R 3.0.0 as of now
+# to invoke this you need R 3.0.1 as of now
 # R -f H2OTestDemo.R 
-source("../R/H2O.R")
+source("H2O.R")
 h2o.SERVER="localhost:54321"
 
 # Run expressions on covtype
-# h2o.importFile("covtype", paste(getwd(), "../smalldata/covtype/covtype.20k.data", sep="/"))
-h2o.importUrl("covtype", "http://www.stanford.edu/~anqif/covtype.20k.data")
+h2o.importFile("covtype", paste(getwd(), "../smalldata/covtype/covtype.20k.data", sep="/"))
+# h2o.importUrl("covtype", "http://www.stanford.edu/~anqif/covtype.20k.data")
 cov.view <- h2o.inspect(covtype.hex)
 print(cov.view$cols)
 #h2o(slice(covtype.hex,100,100))

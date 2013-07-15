@@ -73,10 +73,8 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
   @Override public final void compute2() {
     if( _is_local ) {
       try { lcompute(); } 
-      catch( RuntimeException e ) {
-        _exception = new DException(e);
-        completeExceptionally(e);
-      }
+      catch( RuntimeException e ) { _exception = new DException(e); completeExceptionally(e); }
+      catch( AssertionError   e ) { _exception = new DException(e); completeExceptionally(e); }
     } else
       dcompute();
   }
