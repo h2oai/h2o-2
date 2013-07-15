@@ -1,6 +1,7 @@
 import unittest
 import random, sys, time
 sys.path.extend(['.','..','py'])
+import h2o_browse as h2b
 
 print "This case failed with all rows_skipped?"
 import h2o, h2o_cmd, h2o_rf, h2o_hosts
@@ -22,11 +23,10 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        time.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_rf_params_rand2(self):
-        h2b.browseTheCloud()
+        ### h2b.browseTheCloud()
 
         # for determinism, I guess we should spit out the seed?
         # random.seed(SEED)
@@ -36,24 +36,24 @@ class Basic(unittest.TestCase):
         random.seed(SEED)
         print "\nUsing random seed:", SEED
         csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
+        kwargs = {
+            'response_variable': 54, 
+            'features': 7, 
+            'sampling_strategy': 'STRATIFIED_LOCAL', 
+            'out_of_bag_error_estimate': 1, 
+            'strata_samples': '1=10,2=99,3=99,4=99,5=99,6=99,7=99', 
+            'bin_limit': None, 
+            'seed': '11111', 
+            'model_key': '012345', 
+            'ntree': 13, 
+            'parallel': 1
+        }
         for trial in range(2):
-            kwargs = {
-                'response_variable': None, 
-                'features': 7, 
-                'sampling_strategy': 'STRATIFIED_LOCAL', 
-                'out_of_bag_error_estimate': 1, 
-                'strata_samples': '1=100,2=100,3=100,4=100,5=100,6=100,7=100', 
-                'bin_limit': None, 
-                'seed': '11111', 
-                'model_key': '012345', 
-                'ntree': 13, 
-                'parallel': 1
-            }
 
             # adjust timeoutSecs with the number of trees
             timeoutSecs = 30 + ((kwargs['ntree']*20) * max(1,kwargs['features']/15) * (kwargs['parallel'] and 1 or 3))
             start = time.time()
-            rfView = h2o_cmd.runRF(timeoutSecs=timeoutSecs, retryDelaySecs=1, csvPathname=csvPathname, **kwargs)
+            rfv = h2o_cmd.runRF(timeoutSecs=timeoutSecs, retryDelaySecs=1, csvPathname=csvPathname, **kwargs)
             elapsed = time.time()-start
 
             cm = rfv['confusion_matrix']
@@ -61,8 +61,8 @@ class Basic(unittest.TestCase):
             rows_skipped = cm['rows_skipped']
 
             # just want to catch the nan case when all rows are skipped
-            self.assertLessThan(rows_skipped, 581012)
-            self.assertLessThan(classification_error, 100) # error if nan
+            self.assertLess(rows_skipped, 581012)
+            self.assertLess(classification_error, 100) # error if nan
             print "Trial #", trial, "completed in", elapsed, "seconds.", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 

@@ -70,7 +70,7 @@ class Basic(unittest.TestCase):
                     else:
                         importResult = h2o.nodes[0].import_hdfs(URI)
 
-                    s3nFullList = importResult['succeeded']
+                    s3nFullList = importResult['files']
                     for k in s3nFullList:
                         key = k['key']
                         # just print the first tile

@@ -222,8 +222,8 @@ class Basic(unittest.TestCase):
 
             for trial in range(trialMax):
                 importFolderResult = h2i.setupImportFolder(None, importFolderPath)
-                importFullList = importFolderResult['succeeded']
-                importFailList = importFolderResult['failed']
+                importFullList = importFolderResult['files']
+                importFailList = importFolderResult['fails']
                 print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
                 # creates csvFilename.hex from file in importFolder dir 
 
