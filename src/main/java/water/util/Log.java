@@ -627,6 +627,16 @@ public abstract class Log {
           }
       }
   }
+  public static void POST(int n, Exception e) {
+      if (e.getMessage() != null) {
+          POST(n, e.getMessage());
+      }
+      POST(n, e.toString());
+      StackTraceElement[] els = e.getStackTrace();
+      for (int i = 0; i < els.length; i++) {
+          POST(n, els[i].toString());
+      }
+  }
 
   public static void main(String[]args) {
       Log.info("hi");
