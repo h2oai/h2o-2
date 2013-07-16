@@ -100,6 +100,14 @@ public class Boot extends ClassLoader {
   private Method _addUrl;
 
   public void boot( String[] args ) throws Exception {
+    // Catch some log setup stuff before anything else can happen.
+    for (String arg : args) {
+      if (arg.equals ("-inherit_log4j")) {
+        Log.POST(110, "Saw inherit_log4j");
+        H2O.INHERIT_LOG4J = true;
+      }
+    }
+
     if( fromJar() ) {
       _systemLoader = (URLClassLoader)getSystemClassLoader();
       _addUrl = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
@@ -149,14 +157,20 @@ public class Boot extends ClassLoader {
         args = Arrays.copyOfRange(args, index + 2, args.length);
       }
     }
+
     Class mainClazz = _init.loadClass(mainClass,true);
+    Log.POST(20, "before (in run) mainClass invoke " + mainClazz.getName());
     mainClazz.getMethod("main",String[].class).invoke(null,(Object)args);
+    Log.POST(20, "after (in run) mainClass invoke "+ mainClazz.getName());
+
     int index = Arrays.asList(args).indexOf("-runClass");
     if( index >= 0 && args.length > index + 1 ) {
       String className = args[index + 1];    // Swap out for requested main
       args = Arrays.copyOfRange(args, index + 2, args.length);
       Class clazz = _init.loadClass(className,true);
+      Log.POST(21, "before (in run) runClass invoke " + clazz.getName() + " main");
       clazz.getMethod("main",String[].class).invoke(null,(Object)args);
+      Log.POST(21, "after (in run) runClass invoke " + clazz.getName() + " main");
     }
   }
 
@@ -174,7 +188,9 @@ public class Boot extends ClassLoader {
     if( file.isDirectory() ) {
       for( File f : file.listFiles() ) addExternalJars(f);
     } else if( file.getName().endsWith(".jar") ) {
+      Log.POST(22, "before (in addExternalJars) invoke _addUrl " + file.toURI().toURL());
       _addUrl.invoke(_systemLoader, file.toURI().toURL());
+      Log.POST(22, "after (in addExternalJars) invoke _addUrl " + file.toURI().toURL());
     }
   }
 
