@@ -16,6 +16,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 /**
  * Driver class to start a Hadoop mapreduce job which wraps an H2O cluster launch.
@@ -28,9 +29,8 @@ import java.util.List;
  * https://svn.apache.org/repos/asf/hadoop/common/trunk/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-jobclient/src/test/java/org/apache/hadoop/SleepJob.java
  */
 public class H2ODriver extends Configured implements Tool {
-    final static String DEFAULT_JOBTRACKER_NAME = "H2O";
     final static String FLATFILE_NAME = "flatfile.txt";
-    static String jobtrackerName = DEFAULT_JOBTRACKER_NAME;
+    static String jobtrackerName;
     static int numNodes = -1;
     static String outputPath = null;
     static String mapperXmx = null;
@@ -93,7 +93,8 @@ public class H2ODriver extends Configured implements Tool {
 "          -libjars <.../h2o.jar>\n" +
 "          [other generic Hadoop ToolRunner options]\n" +
 "          [-h | -help]\n" +
-"          [-jobname <name of job in jobtracker (default: '" + DEFAULT_JOBTRACKER_NAME + "')>]\n" +
+"          [-jobname <name of job in jobtracker (defaults to: 'H2O_nnnnn')>]\n" +
+"              (Note nnnnn is chosen randomly to produce a unique name)\n" +
 "          -mapperXmx <per mapper Java Xmx heap size>\n" +
 "          -n | -nodes <number of h2o nodes (i.e. mappers) to create>\n" +
 "          -o | -output <hdfs output dir>\n" +
@@ -101,19 +102,19 @@ public class H2ODriver extends Configured implements Tool {
 "Notes:\n" +
 "          o  Each H2O node runs as a mapper.\n" +
 "          o  All mappers must come up simultaneously before the job proceeds.\n" +
-"          o  Only one mapper may be run per host (if more land on one host," +
+"          o  Only one mapper may be run per host (if more land on one host,\n" +
 "             the subsequent mappers will exit and get rescheduled by hadoop).\n" +
 "          o  Mapper output (part-n-xxxxx) is log output from that mapper.\n" +
-"          o  -mapperXmx is set to both Xms and Xmx of the mapper to reserve" +
+"          o  -mapperXmx is set to both Xms and Xmx of the mapper to reserve\n" +
 "             memory up front.\n" +
 "          o  There are no combiners or reducers.\n" +
 "          o  -files flatfile.txt is required and must be named flatfile.txt.\n" +
 "          o  -libjars with an h2o.jar is required.\n" +
 "          o  -mapperXmx, -n and -o are required.\n" +
+"          o  Each H2O cluster should have a unique jobname.\n" +
 "\n" +
 "Examples:\n" +
 "          " + prog + " -jt <yourjobtracker>:<yourport> -files flatfile.txt -libjars h2o.jar -mapperXmx 1g -n 1 -o hdfsOutputDir\n" +
-"          " + prog + " -jt <yourjobtracker>:<yourport> -files flatfile.txt -libjars h2o.jar -mapperXmx 1g -n 4 -o hdfsOutputDir -jobname H2O_PROD\n" +
 "\n" +
 "flatfile.txt:\n" +
 "          The flat file must contain the list of possible IP addresses an H2O\n" +
@@ -191,6 +192,12 @@ public class H2ODriver extends Configured implements Tool {
         if (! mapperXmx.matches("[1-9][0-9]*[mgMG]")) {
             error("-mapperXmx invalid (try something like -mapperXmx 4g)");
         }
+
+        if (jobtrackerName == null) {
+            Random rng = new Random();
+            int num = rng.nextInt(99999);
+            jobtrackerName = "H2O_" + num;
+        }
     }
 
     /**
@@ -232,6 +239,7 @@ public class H2ODriver extends Configured implements Tool {
         // Set up job stuff.
         // -----------------
     	Job job = new Job(conf, jobtrackerName);
+        conf.set("0xdata.jobtrackername", jobtrackerName);
     	job.setJarByClass(getClass());
         job.setInputFormatClass(H2OInputFormat.class);
     	job.setMapperClass(H2OMapper.class);
