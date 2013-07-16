@@ -118,7 +118,7 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
         rand_shuffle=paramsToUse['rand_shuffle']
         )
 
-    if hosts is not None:
+    if not paramsToUse['hadoop'] and hosts is not None:
         # this uploads the flatfile too
         h2o.upload_jar_to_remote_hosts(hosts, slow_connection=paramsToUse['slow_connection'])
         # timeout wants to be larger for large numbers of hosts * h2oPerHost

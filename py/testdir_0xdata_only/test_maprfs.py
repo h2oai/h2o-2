@@ -39,7 +39,15 @@ class Basic(unittest.TestCase):
         # fails because classes aren't integers
         #    "allstate_claim_prediction_train_set.zip",
         csvFilenameAll = [
-            "TEST-poker1000.csv",
+            "allyears2k.csv",
+            "billion_rows.csv.gz",
+            "covtype.data",
+            "covtype.shuffled.data",
+            "covtype10x.data",
+            "covtype200x.data",
+            "covtype20x.data",
+            "kddcup_1999.data.gz",
+            "rand_logreg_100000000x70.csv.gz",
         ]
 
         # pick 8 randomly!
@@ -56,7 +64,7 @@ class Basic(unittest.TestCase):
         # save the first, for all comparisions, to avoid slow drift with each iteration
         firstglm = {}
         h2i.setupImportHdfs(
-            path='/datasets', 
+            path='/datasets/standard', 
             schema='maprfs')
 
         for csvFilename in csvFilenameList:
@@ -64,7 +72,7 @@ class Basic(unittest.TestCase):
             print "Loading", csvFilename, 'from HDFS'
             parseKey = h2i.parseImportHdfsFile(
                 csvFilename=csvFilename, 
-                path='/datasets', 
+                path='/datasets/standard', 
                 schema='maprfs', 
                 timeoutSecs=1000)
 
