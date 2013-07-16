@@ -100,9 +100,21 @@ public class Boot extends ClassLoader {
   private Method _addUrl;
 
   public void boot( String[] args ) throws Exception {
+    try {
+      boot2(args);
+    }
+    catch (Exception e) {
+      Log.POST(119, e);
+      throw (e);
+    }
+  }
+
+  public void boot2( String[] args ) throws Exception {
     // Catch some log setup stuff before anything else can happen.
-    for (String arg : args) {
-      if (arg.equals ("-inherit_log4j")) {
+    for (int i = 0; i < args.length; i++) {
+      String arg = args[i];
+      Log.POST(110, arg == null ? "(arg is null)" : "arg is: " + arg);
+      if ((arg != null) && arg.equals ("-inherit_log4j")) {
         Log.POST(110, "Saw inherit_log4j");
         H2O.INHERIT_LOG4J = true;
       }
