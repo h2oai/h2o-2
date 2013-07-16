@@ -15,7 +15,7 @@ class Basic(unittest.TestCase):
     def test_Cloud(self):
         # FIX! weird timeout H2O exceptions with >8? maybe shouldn't
         # don't know if we care
-        base_port = 54300
+        base_port = 54500
         ports_per_node = 2
         tryNodes = 5
         for trial in range(10):
