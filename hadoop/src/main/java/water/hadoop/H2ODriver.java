@@ -235,11 +235,11 @@ public class H2ODriver extends Configured implements Tool {
 
         conf.set("mapred.map.max.attempts", "1");
         conf.set("mapred.job.reuse.jvm.num.tasks", "1");
+        conf.set("hexdata.jobtrackername", jobtrackerName);
 
         // Set up job stuff.
         // -----------------
     	Job job = new Job(conf, jobtrackerName);
-        conf.set("0xdata.jobtrackername", jobtrackerName);
     	job.setJarByClass(getClass());
         job.setInputFormatClass(H2OInputFormat.class);
     	job.setMapperClass(H2OMapper.class);

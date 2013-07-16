@@ -148,7 +148,7 @@ public class H2OMapper extends Mapper<Text, Text, Text, Text> {
         counterThread.start();
 
         String ice_root = conf.get("mapred.local.dir");
-        String jobtrackerName = conf.get("0xdata.jobtrackername");
+        String jobtrackerName = conf.get("hexdata.jobtrackername");
         context.write(textId, new Text("mapred.local.dir is " + ice_root));
 
         String[] args = {
