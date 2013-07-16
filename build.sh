@@ -139,7 +139,7 @@ function build_src_jar() {
 }
 
 function build_javadoc() {
-    echo "creating javadoc file... ${SRC_JAR_FILE}"
+    echo "creating javadoc files..."
     local CLASSPATH="${JAR_ROOT}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/*"
     "${JAVADOC}" -classpath "${CLASSPATH}" -d "${OUTDIR}"/javadoc -sourcepath "${SRC}" -subpackages hex:water 1> /dev/null 2> /dev/null
 }
@@ -155,8 +155,8 @@ build_classes
 if [ "$1" = "compile" ]; then exit 0; fi
 build_initializer
 build_jar
-if [ "$1" = "build" ]; then exit 0; fi
 build_src_jar
+if [ "$1" = "build" ]; then exit 0; fi
 build_javadoc
 if [ "$1" = "doc" ]; then exit 0; fi
 junit
