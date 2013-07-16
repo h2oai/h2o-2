@@ -32,6 +32,7 @@ build: clean
 	$(MAKE) build_inner HADOOP_VERSION=cdh4
 	mkdir h2o_hadoop
 	cp ../target/h2o.jar h2o_hadoop
+	cp README.txt h2o_hadoop
 	cp target/* h2o_hadoop
 	zip h2o_hadoop.zip h2o_hadoop/*
 	mv h2o_hadoop.zip target
