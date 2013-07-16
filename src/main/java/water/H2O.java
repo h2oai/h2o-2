@@ -53,7 +53,7 @@ public final class H2O {
   public static URI ICE_ROOT;
 
   // Logging setup
-  public static boolean INHERIT_LOG4J = true;
+  public static boolean INHERIT_LOG4J = false;
 
   // Initial arguments
   public static String[] ARGS;
