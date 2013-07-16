@@ -30,6 +30,11 @@
 	<classpathentry kind="lib" path="lib/hadoop/cdh3/log4j-1.2.15.jar" sourcepath="/home/cypof/.m2/repository/log4j/log4j/1.2.15/log4j-1.2.15-sources.jar"/>
 	<classpathentry kind="lib" path="lib/hadoop/cdh3/hadoop-core-0.20.2-cdh3u6.jar" sourcepath="lib/hadoop/cdh3/hadoop-core-0.20.2-cdh3u6-sources.jar"/>
 	<classpathentry kind="lib" path="lib/log4j/log4j-1.2.15.jar"/>
+    <classpathentry kind="lib" path="lib/aparapi/aparapi.jar" sourcepath="lib/aparapi/aparapi-sources.jar">
+      <attributes>
+        <attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="h2o/lib/aparapi"/>
+      </attributes>
+    </classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Python 2.7.2 (/System/Library/Frameworks/Python.framework/Versions/2.7/bin/python) interpreter library"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

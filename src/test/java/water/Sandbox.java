@@ -14,7 +14,21 @@ import water.util.Utils;
 
 public class Sandbox {
   public static void main(String[] args) throws Exception {
-    water.Boot.main(UserMain.class, args);
+    // water.Boot.main(UserMain.class, args);
+
+//    String s = "-name_server hdfs://192.168.1.151:8020 " + //
+//        "-job_tracker hdfs://192.168.1.155:8021 " + //
+//        "-port 55558 " + //
+//        "-version cdh4 ";
+//    Hadoop.main(s.split(" "));
+
+    String s = "-name_server hdfs://192.168.1.176:8020 " + //
+        "-job_tracker hdfs://192.168.1.180:8021 " + //
+        "-port 55558 " + //
+        "-version cdh3 ";
+    Hadoop.main(s.split(" "));
+
+    Utils.readConsole();
   }
 
   public static class UserMain {
