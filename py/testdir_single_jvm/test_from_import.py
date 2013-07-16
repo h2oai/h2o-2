@@ -22,7 +22,7 @@ class Basic(unittest.TestCase):
 
     def test_from_import(self):
         importFolderPath = '/home/0xdiag/datasets/standard'
-        importFullList = h2i.setupImportFolder(None, importFolderPath)
+        importFolderResult = h2i.setupImportFolder(None, importFolderPath)
         timeoutSecs = 500
         csvFilenameAll = [
             "covtype.data",
@@ -61,7 +61,7 @@ class Basic(unittest.TestCase):
             time.sleep(10)
 
             # just to make sure we test this
-            h2o_cmd.delete_csv_key(csvFilename, importFullList)
+            h2o_cmd.delete_csv_key(csvFilename, importFolderResult)
 
             sys.stdout.write('.')
             sys.stdout.flush() 

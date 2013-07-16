@@ -71,8 +71,7 @@ class Basic(unittest.TestCase):
                         importResult = h2o.nodes[0].import_hdfs(URI)
 
                     s3nFullList = importResult['files']
-                    for k in s3nFullList:
-                        key = k['key']
+                    for key in importResult:
                         # just print the first tile
                         # if 'nflx' in key and 'file_1.dat.gz' in key: 
                         if csvFilepattern in key:

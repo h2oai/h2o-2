@@ -130,9 +130,8 @@ class Basic(unittest.TestCase):
                         else:
                             importResult = h2o.nodes[0].import_hdfs(URI)
 
-                        s3nFullList = importResult['files']
-                        for k in s3nFullList:
-                            key = k['key']
+                        foundKeys = 0
+                        for key in importResult['keys']:
                             # just print the first tile
                             # if 'nflx' in key and 'file_1.dat.gz' in key: 
                             if csvFilepattern in key:
@@ -142,10 +141,11 @@ class Basic(unittest.TestCase):
                             else:
                                 ### print key
                                 pass
+                            foundKeys += 1
 
                         ### print "s3nFullList:", h2o.dump_json(s3nFullList)
                         # error if none? 
-                        self.assertGreater(len(s3nFullList),8,"Didn't see more than 8 files in s3n?")
+                        self.assertGreater(foundKeys,8,"Didn't see more than 8 files in s3n?")
 
                     s3nKey = csvFilepattern
                     key2 = csvFilename + "_" + str(trial) + ".hex"
@@ -273,7 +273,7 @@ class Basic(unittest.TestCase):
                     # by the parse. We use unique dest keys for those, so no worries.
                     # Leaving them is good because things fill up! (spill)
                     h2o_cmd.check_key_distribution()
-                    h2o_cmd.delete_csv_key(csvFilename, s3nFullList)
+                    h2o_cmd.delete_csv_key(csvFilename, importResult)
 
                 h2o.tear_down_cloud()
                 # sticky ports? wait a bit.
