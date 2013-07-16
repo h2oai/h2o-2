@@ -24,47 +24,10 @@ class Basic(unittest.TestCase):
         avgSynSize = 4020000
         covtype200xSize = 15033863400
         synSize =  183
-        if 1==0:
-            importFolderPath = '/home/0xdiag/datasets/10k_small_gz'
-            print "Using .gz'ed files in", importFolderPath
-            csvFilenameAll = [
-                # this should hit the "more" files too?
-                ("00[0-4][0-9]_syn.csv.gz", "file_50.dat.gz", 50 * synSize , 700),
-                ("[1][1][0-9][0-9]_.*", "file_100.dat.gz", 100 * synSize , 700),
-                ("[1][0-4][0-9][0-9]_.*", "file_500.dat.gz", 500 * synSize , 700),
-                ("[1][0-9][0-9][0-9]_.*", "file_1000.dat.gz", 1000 * synSize , 700),
-                ("[0-4][0-9][0-9][0-9]_.*", "file_5000.dat.gz", 5000 * synSize , 700),
-                ("[0-9][0-9][0-9][0-9]_.*", "file_10000.dat.gz", 10000 * synSize , 700),
-            ]
-
-        if 1==0:
-            importFolderPath = '/home/0xdiag/datasets/more1_1200_link'
-            print "Using .gz'ed files in", importFolderPath
-            csvFilenameAll = [
-                # this should hit the "more" files too?
-                # ("*.dat.gz", "file_200.dat.gz", 1200 * avgMichalSize, 1800),
-                # ("*.dat.gz", "file_200.dat.gz", 1200 * avgMichalSize, 1800),
-                # ("*[1][0-2][0-9].dat.gz", "file_30.dat.gz", 50 * avgMichalSize, 1800), 
-                ("*file_[0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 1800), 
-                ("*file_[12][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 1800), 
-                ("*file_[34][0-9][0-9].dat.gz", "file_200_B.dat.gz", 200 * avgMichalSize, 1800), 
-                ("*file_[56][0-9][0-9].dat.gz", "file_200_C.dat.gz", 200 * avgMichalSize, 1800), 
-                ("*file_[78][0-9][0-9].dat.gz", "file_200_D.dat.gz", 200 * avgMichalSize, 1800), 
-                # ("*.dat.gz", "file_1200.dat.gz", 1200 * avgMichalSize, 3600),
-            ]
-
         if 1==1:
             importFolderPath = '/home/0xdiag/datasets/more1_1200_link'
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
-                # this should hit the "more" files too?
-                # ("*10[0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 3600), 
-                # ("*1[0-4][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize, 3600), 
-                # ("*[1][0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 3600), 
-                # ("*3[0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 3600),
-                # ("*1[0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 1800), 
-                #("*[1-2][0-9][0-9].dat.gz", "file_200.dat.gz", 200 * avgMichalSize, 3600), 
-                # ("*[3-4][0-9][0-9].dat.gz", "file_200.dat.gz", 200 * avgMichalSize, 3600),
                 ("*[3-4][0-4][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
                 ("*[3-4][0-4][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 3600),
 
@@ -95,82 +58,6 @@ class Basic(unittest.TestCase):
                 ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
             ]
 
-        if 1==0:
-            importFolderPath = '/home/0xdiag/datasets/more1_300_link'
-            print "Using .gz'ed files in", importFolderPath
-            csvFilenameAll = [
-                # this should hit the "more" files too?
-                ("*.dat.gz", "file_300.dat.gz", 300 * avgMichalSize, 3600),
-            ]
-
-        if 1==0:
-            importFolderPath = '/home/0xdiag/datasets/manyfiles-nflx-gz'
-            print "Using .gz'ed files in", importFolderPath
-            csvFilenameAll = [
-                # this should hit the "more" files too?
-                ("*_[123][0-9][0-9]*.dat.gz", "file_300.dat.gz", 300 * avgMichalSize, 3600),
-                ("*_[1][5-9][0-9]*.dat.gz", "file_100.dat.gz", 50 * avgMichalSize, 3600),
-            ]
-
-        if 1==0:
-            importFolderPath = '/home2/0xdiag/datasets'
-            print "Using non-.gz'ed files in", importFolderPath
-            csvFilenameAll = [
-                # I use different files to avoid OS caching effects
-                ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSizeUncompressed, 700),
-                ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSizeUncompressed, 700),
-                ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSizeUncompressed, 700),
-                # ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSizeUncompressed, 1200),
-                # ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSizeUncompressed, 700),
-                # ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSizeUncompressed, 700),
-                # ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSizeUncompressed, 700),
-                # ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSizeUncompressed, 700),
-            ]
-        if 1==0: 
-            importFolderPath = '/home/0xdiag/datasets/standard'
-            print "Using .gz'ed files in", importFolderPath
-            # all exactly the same prior to gzip!
-            # could use this, but remember import folder -> import folder s3 for jenkins?
-            # how would it get it right?
-            # os.path.getsize(f)
-            csvFilenameAll = [
-                # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz", 700),
-                # 100 files takes too long on two machines?
-                # ("covtype200x.data", "covtype200x.data", 15033863400, 700),
-                # I use different files to avoid OS caching effects
-                # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[0-9][0-9]", "syn_100.csv", 100 * avgSynSize, 700),
-                # ("syn_datasets/syn_7350063254201195578_10000x200.csv_00000", "syn_1.csv", avgSynSize, 700),
-                # ("syn_datasets/syn_7350063254201195578_10000x200.csv_0001[0-9]", "syn_10.csv", 10 * avgSynSize, 700),
-                # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[23][0-9]", "syn_20.csv", 20 * avgSynSize, 700),
-                # ("syn_datasets/syn_7350063254201195578_10000x200.csv_000[45678][0-9]", "syn_50.csv", 50 * avgSynSize, 700),
-                # ("manyfiles-nflx-gz/file_10.dat.gz", "file_10_1.dat.gz", 1 * avgMichalSize, 700),
-                # ("manyfiles-nflx-gz/file_1[0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
-
-                ("manyfiles-nflx-gz/file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 700),
-                ("manyfiles-nflx-gz/file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
-                ("manyfiles-nflx-gz/file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 700),
-                ("manyfiles-nflx-gz/file_[5-9][0-9].dat.gz", "file_50.dat.gz", 50 * avgMichalSize, 700),
-                ("manyfiles-nflx-gz/file_1[0-9][0-9].dat.gz", "file_100.dat.gz", 50 * avgMichalSize, 700),
-                ("manyfiles-nflx-gz/file_[12][0-9][0-9].dat.gz", "file_200.dat.gz", 50 * avgMichalSize, 700),
-                ("manyfiles-nflx-gz/file_[12]?[0-9][0-9].dat.gz", "file_300.dat.gz", 50 * avgMichalSize, 700),
-                ("manyfiles-nflx-gz/file_*.dat.gz", "file_384.dat.gz", 100 * avgMichalSize, 1200),
-                ("covtype200x.data", "covtype200x.data", covtype200xSize, 700),
-
-                # do it twice
-                # ("covtype.data", "covtype.data"),
-                # ("covtype20x.data", "covtype20x.data"),
-                # "covtype200x.data",
-                # "100million_rows.csv",
-                # "200million_rows.csv",
-                # "a5m.csv",
-                # "a10m.csv",
-                # "a100m.csv",
-                # "a200m.csv",
-                # "a400m.csv",
-                # "a600m.csv",
-                # "billion_rows.csv.gz",
-                # "new-poker-hand.full.311M.txt.gz",
-                ]
         # csvFilenameList = random.sample(csvFilenameAll,1)
         csvFilenameList = csvFilenameAll
 
@@ -191,27 +78,14 @@ class Basic(unittest.TestCase):
         pollTimeoutSecs = 120
         retryDelaySecs = 10
 
-        jea = '-XX:MaxDirectMemorySize=512m -XX:+PrintGCDetails' + ' -Dh2o.find-ByteBuffer-leaks'
-        jea = '-XX:MaxDirectMemorySize=512m -XX:+PrintGCDetails'
-        jea = "-XX:+UseParNewGC -XX:+UseConcMarkSweepGC"
-        jea = ' -Dcom.sun.management.jmxremote.port=54330' + \
-              ' -Dcom.sun.management.jmxremote.authenticate=false' + \
-              ' -Dcom.sun.management.jmxremote.ssl=false'  + \
-              ' -Dcom.sun.management.jmxremote' + \
-              ' -Dcom.sun.management.jmxremote.local.only=false'
-        jea = ' -Dlog.printAll=true'
-
-
         for i,(csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
             localhost = h2o.decide_if_localhost()
             if (localhost):
                 h2o.build_cloud(2,java_heap_GB=tryHeap, base_port=base_port,
-                    # java_extra_args=jea,
                     enable_benchmark_log=True)
 
             else:
                 h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap, base_port=base_port, 
-                    # java_extra_args=jea,
                     enable_benchmark_log=True)
 
             # pop open a browser on the cloud
@@ -333,7 +207,6 @@ class Basic(unittest.TestCase):
                     h2o.cloudPerfH2O.message(l)
 
                 #**********************************************************************************
-
                 h2o_cmd.check_key_distribution()
                 h2o_cmd.delete_csv_key(csvFilename, importFolderResult)
                 ### time.sleep(3600)

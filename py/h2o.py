@@ -44,7 +44,6 @@ def unit_main():
     global python_test_name
     python_test_name = inspect.stack()[1][1]
 
-
     print "\nRunning: python", python_test_name
     # moved clean_sandbox out of here, because nosetests doesn't execute h2o.unit_main in our tests.
     # UPDATE: ..is that really true? I'm seeing the above print in the console output runnning
@@ -363,7 +362,7 @@ def decide_if_localhost():
 
 # node_count is per host if hosts is specified.
 def build_cloud(node_count=2, base_port=54321, hosts=None, 
-        timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True, **kwargs):
+        timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True, hadoop=False, **kwargs):
     # moved to here from unit_main. so will run with nosetests too!
     clean_sandbox()
     # keep this param in kwargs, because we pass to the H2O node build, so state
@@ -407,8 +406,13 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
                     hostPortList.append( (h,port) )
             if rand_shuffle: random.shuffle(hostPortList)
             for (h,p) in hostPortList:
-                verboseprint('ssh starting node', totalNodes, 'via', h)
-                newNode = h.remote_h2o(port=p, node_id=totalNodes, **kwargs)
+                # hack to dispatch h2o on hadoop
+                if hadoop:
+                    newNode = h.hadoop_h2o(port=p, node_id=totalNodes, **kwargs)
+                else:
+                    verboseprint('ssh starting node', totalNodes, 'via', h)
+                    newNode = h.remote_h2o(port=p, node_id=totalNodes, **kwargs)
+
                 node_list.append(newNode)
                 totalNodes += 1
 
@@ -1824,6 +1828,9 @@ class RemoteHost(object):
     def remote_h2o(self, *args, **kwargs):
         return RemoteH2O(self, self.addr, *args, **kwargs)
 
+    def hadoop_h2o(self, *args, **kwargs):
+        return HadoopH2O(self, self.addr, *args, **kwargs)
+
     def open_channel(self):
         ch = self.ssh.get_transport().open_session()
         ch.get_pty() # force the process to die without the connection
@@ -1927,3 +1934,75 @@ class RemoteH2O(H2O):
         self.shutdown_all()
         self.terminate_self_only()
     
+class HadoopH2O(H2O):
+    '''An H2O instance launched by the python framework on Hadoop'''
+    # This is work in progress
+    def __init__(self, host, *args, **kwargs):
+        super(HadoopH2O, self).__init__(*args, **kwargs)
+        ### self.jar = host.upload_file('target/h2o.jar')
+        # need to copy the flatfile. We don't always use it (depends on h2o args)
+        ### self.flatfile = host.upload_file(flatfile_name())
+        # distribute AWS credentials
+        ### if self.aws_credentials:
+        ###    self.aws_credentials = host.upload_file(self.aws_credentials)
+        ### if self.hdfs_config:
+        ###    self.hdfs_config = host.upload_file(self.hdfs_config)
+
+        if self.use_home_for_ice:
+            self.ice = "/home/" + host.username + '/ice.%d.%s' % (self.port, time.time())
+        else:
+            self.ice = '/tmp/ice.%d.%s' % (self.port, time.time())
+
+        ### self.channel = host.open_channel()
+        ### cmd = ' '.join(self.get_args())
+        shCmdString = "hadoop jar H2ODriver.jar water.hadoop.H2ODriver -jt akira:8021 -files flatfile.txt -libjars h2o.jar -mapperXmx 1g -nodes 4 -output output77"
+
+        # only do this if a node hasn't been created?
+        if len(nodes)==0:
+            print "Starting h2o on hadoop"
+            p1 = Popen(shCmdString.split(), stdout=PIPE)
+            output = p1.communicate()[0]
+            print output
+
+            comment = 'hadoop on %s' % self.addr
+            log(shCmdString, comment=comment)
+        else:
+            print "H2O must already be started on hadoop, just adding node to python list"
+
+    def get_h2o_jar(self):
+        return self.jar
+
+    def get_flatfile(self):
+        return self.flatfile
+
+    def get_ice_dir(self):
+        return self.ice
+
+    def is_alive(self):
+        verboseprint("Doing is_alive check for HadoopH2O")
+        # FIX! do hadoop dfsadmin --report?
+        # what version hadoop are we running if we execute this locally
+        shCmdString = "hadoop dfsadmin -report"
+        p1 = Popen(shCmdString.split(), stdout=PIPE)
+        output = p1.communicate()[0]
+        print output
+        try:
+            self.get_cloud()
+            return True
+        except:
+            return False
+
+    def terminate_self_only(self):
+        ## self.channel.close()
+        time.sleep(1) # a little delay needed?
+        # kbn: it should be dead now? want to make sure we don't have zombies
+        # we should get a connection error. doing a is_alive subset.
+        try:
+            gc_output = self.get_cloud()
+            raise Exception("get_cloud() should fail after we terminate a node. It isn't. %s %s" % (self, gc_output))
+        except:
+            return True
+
+    def terminate(self):
+        self.shutdown_all()
+        self.terminate_self_only()

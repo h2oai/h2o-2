@@ -94,9 +94,9 @@ class Basic(unittest.TestCase):
 
             for trial in range(trialMax):
                 importFolderResult = h2i.setupImportFolder(None, importFolderPath)
-                importFullList = importFolderResult['succeeded']
+                importFullList = importFolderResult['files']
                 print "importFullList:", importFullList
-                importFailList = importFolderResult['failed']
+                importFailList = importFolderResult['fails']
                 print "importFailList:", importFailList
                 print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
 
@@ -162,7 +162,7 @@ class Basic(unittest.TestCase):
                 #**********************************************************************************
 
                 h2o_cmd.check_key_distribution()
-                h2o_cmd.delete_csv_key(csvFilename, importFullList)
+                h2o_cmd.delete_csv_key(csvFilename, importFolderResult)
 
                 h2o.tear_down_cloud()
                 if not localhost:

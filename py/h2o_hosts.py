@@ -28,6 +28,7 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
     allParamsDefault = {
         'use_flatfile': None,
         'use_hdfs': True, # default to true, so when we flip import folder to hdfs+s3n import on ec2, the cloud is built correctly
+        'hadoop': False,
         'hdfs_name_node': None, 
         'hdfs_config': None,
         'hdfs_version': None,

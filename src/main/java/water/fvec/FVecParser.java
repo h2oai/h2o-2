@@ -13,15 +13,15 @@ import water.parser.Enum;
  * @author tomasnykodym
  *
  */
-public abstract class FVecParser extends CsvParser{
+public abstract class FVecParser extends CsvParser {
   final NewChunk [] _nvs;
   final Enum [] _enums;
   long _nLines;
   final int _nCols;
   int _col = 0;
 
-  public FVecParser(NewChunk [] nvs, CsvParser.Setup setup, Enum [] enums){
-    super(setup, false);
+  public FVecParser(NewChunk [] nvs, CsvParser.Setup setup, Enum [] enums, boolean skip){
+    super(setup, skip);
     _nvs = nvs;
     _enums = enums;
     _nCols = nvs.length;
@@ -72,7 +72,7 @@ public abstract class FVecParser extends CsvParser{
     Chunk _chk;
     final long _firstLine;
     public ChunkParser(Chunk chk, NewChunk [] nvs, CsvParser.Setup setup, Enum [] enums){
-      super(nvs,setup, enums);
+      super(nvs,setup, enums, chk._start>0);
       _chk = chk;
       _firstLine = _chk._start;
     }
@@ -93,7 +93,7 @@ public abstract class FVecParser extends CsvParser{
     private int _cidx0=-1, _cidx1=-1; // Chunk #s
 
     public StreamParser(InputStream is, NewChunk [] nvs, CsvParser.Setup setup, Enum [] enums){
-      super(nvs,setup,enums);
+      super(nvs,setup,enums,false);
       _is = is;
     }
     @Override public byte[] getChunkData(int cidx) {
@@ -102,7 +102,7 @@ public abstract class FVecParser extends CsvParser{
       assert cidx==_cidx0+1 || cidx==_cidx1+1;
       byte[] bits = _cidx0<_cidx1 ? _bits0 : _bits1;
       if( _cidx0<_cidx1 ) _cidx0 = cidx;
-      else              _cidx1 = cidx;
+      else                _cidx1 = cidx;
       // Read as much as the buffer will hold
       int off=0;
       try {
@@ -115,8 +115,11 @@ public abstract class FVecParser extends CsvParser{
         //_parserr = ioe.toString(); }
       }
       if( off == bits.length ) return bits;
-      if( off == 0 ) return null;
-      return Arrays.copyOf(bits,off);
+      // Final read is short; cache the short-read
+      byte[] bits2 = (off == 0) ? null : Arrays.copyOf(bits,off);
+      if( _cidx0==cidx ) _bits0 = bits2;
+      else               _bits1 = bits2;
+      return bits2;
     }
   }
 }
