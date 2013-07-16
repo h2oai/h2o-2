@@ -193,11 +193,11 @@ public class H2OMapper extends Mapper<Text, Text, Text, Text> {
         while (true) {
             int ONE_MINUTE_MILLIS = 60 * 1000;
             Thread.sleep (ONE_MINUTE_MILLIS);
-            break;
+//            break;
         }
 
-        Log.POST(1000, "Leaving run");
-        System.exit (0);
+//        Log.POST(1000, "Leaving run");
+//        System.exit (0);
     }
 
     /**
