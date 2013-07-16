@@ -2,43 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="3c805f33-4b7c-4c8b-b6f9-3870f205cfc5" name="Default" comment="">
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/0.20.2/hadoop-0.20.2-core.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/0.20.2mapr/hadoop-0.20.2-dev-core.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/0.20.2mapr/maprfs-0.1.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/0.20.2mapr/zookeeper-3.3.2.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/0.23.4/hadoop-auth.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/0.23.4/hadoop-common-0.23.4.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/0.23.4/hadoop-hdfs-0.23.4.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/0.23.4/protobuf-java-2.4.0a.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/0.23.4/slf4j-api-1.6.1.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/0.23.4/slf4j-nop-1.6.1.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/1.0.0/hadoop-core-1.0.0.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/cdh3/commons-cli-1.2.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/cdh3/guava-r09-jarjar.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/cdh3/hadoop-core-0.20.2-cdh3u6-sources.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/cdh3/hadoop-core-0.20.2-cdh3u6.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/cdh3/jackson-core-asl-1.5.2.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/cdh3/jackson-mapper-asl-1.5.2.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/cdh3/log4j-1.2.15.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/cdh4/hadoop-auth.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/cdh4/hadoop-common.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/cdh4/hadoop-hdfs.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/cdh4/protobuf-java-2.4.0a.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/cdh4/slf4j-api-1.6.1.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/cdh4/slf4j-nop-1.6.1.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/mapr2.1.3/commons-logging-1.1.1.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/mapr2.1.3/hadoop-0.20.2-dev-core.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/mapr2.1.3/log4j-1.2.15.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/mapr2.1.3/maprfs-0.20.2-2.1.3.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/mapr2.1.3/maprfs-jni-0.20.2-2.1.3.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../lib/hadoop/mapr2.1.3/zookeeper-3.3.6.jar" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../src/main/java/water/deploy/Hadoop.java" afterPath="" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/main/java/water/Boot.java" afterPath="$PROJECT_DIR$/../src/main/java/water/Boot.java" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/main/java/water/H2O.java" afterPath="$PROJECT_DIR$/../src/main/java/water/H2O.java" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/main/java/water/util/Log.java" afterPath="$PROJECT_DIR$/../src/main/java/water/util/Log.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Makefile" afterPath="$PROJECT_DIR$/Makefile" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../build.sh" afterPath="$PROJECT_DIR$/../build.sh" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/codeStyleSettings.xml" afterPath="$PROJECT_DIR$/.idea/codeStyleSettings.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <ignored path="hadoop.iws" />
@@ -50,7 +16,7 @@
     <file path="/Weaver.java" changelist="3c805f33-4b7c-4c8b-b6f9-3870f205cfc5" time="1373773828581" ignored="false" />
     <file path="/H2O.java" changelist="3c805f33-4b7c-4c8b-b6f9-3870f205cfc5" time="1373855370981" ignored="false" />
     <file path="/Log.java" changelist="3c805f33-4b7c-4c8b-b6f9-3870f205cfc5" time="1373855948065" ignored="false" />
-    <file path="/Boot.java" changelist="3c805f33-4b7c-4c8b-b6f9-3870f205cfc5" time="1373844747413" ignored="false" />
+    <file path="/Boot.java" changelist="3c805f33-4b7c-4c8b-b6f9-3870f205cfc5" time="1373951749589" ignored="false" />
     <file path="/a.java" changelist="3c805f33-4b7c-4c8b-b6f9-3870f205cfc5" time="1373840536998" ignored="false" />
     <file path="$PROJECT_DIR$/lib/h2o-sources.jar!/water/Boot.java" changelist="3c805f33-4b7c-4c8b-b6f9-3870f205cfc5" time="1373854776846" ignored="false" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -118,10 +84,10 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="H2OMapper.java" pinned="false" current="false" current-in-tab="false">
+      <file leaf-file-name="H2OMapper.java" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/main/java/water/hadoop/H2OMapper.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="198" column="0" selection-start="6516" selection-end="6516" vertical-scroll-proportion="-52.52">
+            <state line="198" column="0" selection-start="6516" selection-end="6516" vertical-scroll-proportion="0.714404">
               <folding>
                 <element signature="imports" expanded="true" />
               </folding>
@@ -129,10 +95,10 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="H2ODriver.java" pinned="false" current="true" current-in-tab="true">
+      <file leaf-file-name="H2ODriver.java" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/java/water/hadoop/H2ODriver.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="306" column="0" selection-start="10840" selection-end="10840" vertical-scroll-proportion="0.9254967">
+            <state line="237" column="41" selection-start="8691" selection-end="8691" vertical-scroll-proportion="-30.0">
               <folding />
             </state>
           </provider>
@@ -596,16 +562,6 @@
         <state line="44" column="9" selection-start="1615" selection-end="1615" vertical-scroll-proportion="0.0" />
       </provider>
     </entry>
-    <entry file="jar://$PROJECT_DIR$/lib/h2o-sources.jar!/water/Weaver.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="81" column="0" selection-start="2818" selection-end="2818" vertical-scroll-proportion="0.2254025" />
-      </provider>
-    </entry>
-    <entry file="jar://$PROJECT_DIR$/lib/hadoop-0.20.2-core.jar!/org/apache/hadoop/mapreduce/Mapper.class">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="7" column="11" selection-start="226" selection-end="226" vertical-scroll-proportion="0.16853933" />
-      </provider>
-    </entry>
     <entry file="uml://JAVA/water.hadoop.H2ODriver">
       <provider selected="true" editor-type-id="UmlEditorProvider">
         <state>
@@ -654,42 +610,19 @@
         </state>
       </provider>
     </entry>
-    <entry file="jar://$PROJECT_DIR$/lib/h2o-sources.jar!/water/util/Log.java">
+    <entry file="file://$PROJECT_DIR$/src/main/java/water/hadoop/H2ODriver.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="372" column="86" selection-start="13071" selection-end="13071" vertical-scroll-proportion="2.474273">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="jar://$PROJECT_DIR$/lib/h2o-sources.jar!/water/Boot.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="135" column="0" selection-start="4767" selection-end="4767" vertical-scroll-proportion="0.0">
-          <folding>
-            <element signature="e#2891#2899#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="jar://$PROJECT_DIR$/lib/hadoop-0.20.2-core.jar!/org/apache/hadoop/mapreduce/TaskInputOutputContext.class">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="25" column="16" selection-start="1598" selection-end="1598" vertical-scroll-proportion="0.35820895">
+        <state line="237" column="41" selection-start="8691" selection-end="8691" vertical-scroll-proportion="-30.0">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/water/hadoop/H2OMapper.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="198" column="0" selection-start="6516" selection-end="6516" vertical-scroll-proportion="-52.52">
+        <state line="198" column="0" selection-start="6516" selection-end="6516" vertical-scroll-proportion="0.714404">
           <folding>
             <element signature="imports" expanded="true" />
           </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/water/hadoop/H2ODriver.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="306" column="0" selection-start="10840" selection-end="10840" vertical-scroll-proportion="0.9254967">
-          <folding />
         </state>
       </provider>
     </entry>
