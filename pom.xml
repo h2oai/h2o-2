@@ -191,6 +191,7 @@
  		  </compilerArgs>
   	    </configuration>
   	  </plugin>
+  	  <!-- Enfore the Java version -->
   	  <plugin>
         <artifactId>maven-enforcer-plugin</artifactId>
         <version>1.3</version>
@@ -210,9 +211,34 @@
           </execution>
         </executions>
       </plugin>
+      <!-- Assembly the resulting project structure -->
+      <plugin>
+      	<groupId>org.apache.maven.plugins</groupId>
+      	<artifactId>maven-assembly-plugin</artifactId>
+      	<configuration>
+     		<descriptors>
+     			<descriptor>src/main/assembly/bin.xml</descriptor>
+     			<descriptor>src/main/assembly/src.xml</descriptor>
+     		</descriptors>
+      	</configuration>
+      </plugin>
+      <!-- Configuration of JAR packaging -->
+      <plugin>
+      	<groupId>org.apache.maven.plugins</groupId>
+      	<artifactId>maven-jar-plugin</artifactId>
+      	<configuration>
+     		<archive>
+     			<!-- Setup manifest -->
+     			<manifest>
+     				<mainClass>water.Boot</mainClass>
+     			</manifest>
+     		</archive>
+      	</configuration>
+      </plugin>
   	</plugins>
   </build>
 
+<!-- 
   <profiles>
     <profile>
       <id>release-profile</id>
@@ -223,7 +249,9 @@
         </property>
       </activation>
     </profile>
-  </profiles>
+  </profiles>-->
+  
+  <!-- GitHub is H2O primary SCM -->
   <scm>
   	<url>https://github.com/0xdata/h2o</url>
   	<connection>scm:git:https://github.com/0xdata/h2o.git</connection>
