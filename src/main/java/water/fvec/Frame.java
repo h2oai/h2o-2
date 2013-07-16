@@ -115,9 +115,31 @@ public class Frame extends Iced {
   }
   @Override public Frame init( Key k ) { _key=k; return this; }
   @Override public String toString() {
+    // Across
     String s="{"+_names[0];
-    for( int i=1; i<_names.length; i++ )
+    long bs=_vecs[0].byteSize();
+    for( int i=1; i<_names.length; i++ ) {
       s += ","+_names[i];
+      bs+= _vecs[i].byteSize();
+    }
+    s += "}, "+PrettyPrint.bytes(bs)+"\n";
+    // Down
+    Vec v0 = firstReadable();
+    if( v0 == null ) return s;
+    int nc = v0.nChunks();
+    s += "Chunk starts: {";
+    for( int i=0; i<nc; i++ ) s += v0.elem2BV(i)._start+",";
+    s += "}";
+    return s;
+  }
+
+  private String toStr( long idx, int col ) {
+    return _names[col]+"="+(_vecs[col].isNA(idx) ? "NA" : _vecs[col].at(idx));
+  }
+  public String toString( long idx ) {
+    String s="{"+toStr(idx,0);
+    for( int i=1; i<_names.length; i++ )
+       s += ","+toStr(idx,i);
     return s+"}";
   }
 }

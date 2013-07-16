@@ -50,7 +50,7 @@ public abstract class CsvParser extends CustomParser {
   @Override public final void parse(final int cidx) {
     ValueString _str = new ValueString();
     byte[] bits = getChunkData(cidx);
-    assert bits != null : "no bits for chunk "+cidx;
+    if( bits == null ) return;
     final byte[] bits0 = bits;  // Bits for chunk0
     boolean firstChunk = true;  // Have not rolled into the 2nd chunk
     byte[] bits1 = null;        // Bits for chunk1, loaded lazily.

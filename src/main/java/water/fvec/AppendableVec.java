@@ -106,4 +106,7 @@ public class AppendableVec extends Vec {
   public long chunk2StartElem( int cidx ) { throw H2O.fail(); }
   public long   get ( long i ) { throw H2O.fail(); }
   public double getd( long i ) { throw H2O.fail(); }
+
+  public long byteSize() { return 0; }
+  @Override public String toString() { return "[AppendableVec, unknown size]"; }
 }

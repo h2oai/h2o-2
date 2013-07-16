@@ -74,9 +74,7 @@ public class Weaver {
   }
 
   private static boolean inPackages(String pack) {
-    if (pack == null) {
-      return false;
-    }
+    if( pack==null ) return false;
     String[] p = _packages;
     for( int i = 0; i < p.length; i++ )
       if( pack.startsWith(p[i]) )

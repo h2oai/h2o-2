@@ -55,7 +55,7 @@ class Basic(unittest.TestCase):
             (10, 1200000, 'cF', 60, 120),
             ]
 
-        h2b.browseTheCloud()
+        ### h2b.browseTheCloud()
         for (rowCount, colCount, key2, timeoutSecs, timeoutSecs2) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
 
@@ -66,7 +66,7 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
             start = time.time()
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=timeoutSecs, doSummary=True)
+            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=timeoutSecs, doSummary=False)
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "Parse:", parseKey['destination_key'], "took", time.time() - start, "seconds"
 
