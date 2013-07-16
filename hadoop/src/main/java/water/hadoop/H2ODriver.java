@@ -28,7 +28,7 @@ import java.util.Random;
  * Adapted from
  * https://svn.apache.org/repos/asf/hadoop/common/trunk/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-jobclient/src/test/java/org/apache/hadoop/SleepJob.java
  */
-public class H2ODriver extends Configured implements Tool {
+public class h2odriver extends Configured implements Tool {
     final static String FLATFILE_NAME = "flatfile.txt";
     static String jobtrackerName;
     static int numNodes = -1;
@@ -84,7 +84,7 @@ public class H2ODriver extends Configured implements Tool {
      * Print usage and exit 1.
      */
     static void usage() {
-        String prog = H2ODriver.class.getSimpleName();
+        String prog = h2odriver.class.getSimpleName();
 
         System.err.printf(
 "\n" +
@@ -242,7 +242,7 @@ public class H2ODriver extends Configured implements Tool {
     	Job job = new Job(conf, jobtrackerName);
     	job.setJarByClass(getClass());
         job.setInputFormatClass(H2OInputFormat.class);
-    	job.setMapperClass(H2OMapper.class);
+    	job.setMapperClass(h2omapper.class);
         job.setNumReduceTasks(0);
     	job.setOutputKeyClass(Text.class);
     	job.setOutputValueClass(Text.class);
@@ -255,6 +255,7 @@ public class H2ODriver extends Configured implements Tool {
         // Run job.  Wait for all mappers to complete.  We are running a zero
         // combiner and zero reducer configuration.
         // ------------------------------------------------------------------
+        System.out.println("Job running (this command blocks until the H2O cluster shuts down)...");
         boolean success = job.waitForCompletion(true);
         if (! success) {
             return 1;
@@ -300,7 +301,7 @@ public class H2ODriver extends Configured implements Tool {
      */
     public static void main(String[] args) throws Exception {
         validateFlatfile(args);
-	    int exitCode = ToolRunner.run(new H2ODriver(), args);
+	    int exitCode = ToolRunner.run(new h2odriver(), args);
     	System.exit(exitCode);
     }
 }

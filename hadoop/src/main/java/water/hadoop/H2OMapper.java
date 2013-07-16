@@ -18,7 +18,7 @@ import water.util.Log;
  * Interesting Configuration properties:
  * mapper	mapred.local.dir=/tmp/hadoop-tomk/mapred/local/taskTracker/tomk/jobcache/job_local1117903517_0001/attempt_local1117903517_0001_m_000000_0
  */
-public class H2OMapper extends Mapper<Text, Text, Text, Text> {
+public class h2omapper extends Mapper<Text, Text, Text, Text> {
     /**
      * Start an H2O instance in the local JVM.
      */
@@ -205,7 +205,7 @@ public class H2OMapper extends Mapper<Text, Text, Text, Text> {
      */
     public static void main (String[] args) {
         try {
-            H2OMapper m = new H2OMapper();
+            h2omapper m = new h2omapper();
             m.run(null);
         }
         catch (Exception e) {
