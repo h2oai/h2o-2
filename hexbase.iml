@@ -289,6 +289,7 @@
       </library>
     </orderEntry>
     <orderEntry type="library" name="Python 2.7.2 (/System/Library/Frameworks/Python.framework/Versions/2.7/bin/python) interpreter library" level="application" />
+    <orderEntry type="library" name="mockito-all-1.9.5" level="project" />
   </component>
 </module>
 
