@@ -28,7 +28,7 @@ class Basic(unittest.TestCase):
             localhost = h2o.decide_if_localhost()
             if (localhost):
                 h2o_hosts.build_cloud(node_count=1, java_heap_GB=tryHeap,
-                    use_hdfs=True, hdfs_version='cdh3', hdfs_name_node='192.168.1.176')
+                    use_hdfs=True, hdfs_name_node='192.168.1.176', hdfs_version='cdh3')
             else:
                 h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap,
                     use_hdfs=True, hdfs_name_node='192.168.1.176', hdfs_version='cdh3')
@@ -42,7 +42,7 @@ class Basic(unittest.TestCase):
             for trial in range(trialMax):
                 # since we delete the key, we have to re-import every iteration, to get it again
                 importHdfsResult = h2o.nodes[0].import_hdfs(URI)
-                hdfsFullList = importHdfsResult['succeeded']
+                hdfsFullList = importHdfsResult['files']
                 for k in hdfsFullList:
                     key = k['key']
                     # just print the first tile

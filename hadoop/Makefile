@@ -18,7 +18,7 @@ default: build
 
 build_inner:
 	mkdir classes/$(HADOOP_VERSION)
-	javac -sourcepath src/main/java -classpath $(COMMON_JARS):$(HADOOP_JARS) -d classes/$(HADOOP_VERSION) src/main/java/water/hadoop/*.java
+	javac -source 1.6 -target 1.6 -sourcepath src/main/java -classpath $(COMMON_JARS):$(HADOOP_JARS) -d classes/$(HADOOP_VERSION) src/main/java/water/hadoop/*.java
 	jar cf target/h2odriver_$(HADOOP_VERSION).jar -C classes/$(HADOOP_VERSION) .
 
 clean:
