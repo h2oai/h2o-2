@@ -2,15 +2,15 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="3c805f33-4b7c-4c8b-b6f9-3870f205cfc5" name="Default" comment="">
+      <change type="MOVED" beforePath="$PROJECT_DIR$/src/main/java/water/hadoop/H2ODriver.java" afterPath="$PROJECT_DIR$/src/main/java/water/hadoop/h2odriver.java" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/src/main/java/water/hadoop/H2OMapper.java" afterPath="$PROJECT_DIR$/src/main/java/water/hadoop/h2omapper.java" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Makefile" afterPath="$PROJECT_DIR$/Makefile" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../hexbase.iml" afterPath="$PROJECT_DIR$/../hexbase.iml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <ignored path="hadoop.iws" />
     <ignored path=".idea/workspace.xml" />
     <file path="/H2OMapper.java" changelist="3c805f33-4b7c-4c8b-b6f9-3870f205cfc5" time="1373954315330" ignored="false" />
     <file path="/H2ODriver.java" changelist="3c805f33-4b7c-4c8b-b6f9-3870f205cfc5" time="1373947032763" ignored="false" />
-    <file path="/Dummy.txt" changelist="3c805f33-4b7c-4c8b-b6f9-3870f205cfc5" time="1373942752986" ignored="false" />
+    <file path="/Dummy.txt" changelist="3c805f33-4b7c-4c8b-b6f9-3870f205cfc5" time="1374004245452" ignored="false" />
     <file path="/fragment.java" changelist="3c805f33-4b7c-4c8b-b6f9-3870f205cfc5" time="1373778424567" ignored="false" />
     <file path="/Weaver.java" changelist="3c805f33-4b7c-4c8b-b6f9-3870f205cfc5" time="1373773828581" ignored="false" />
     <file path="/H2O.java" changelist="3c805f33-4b7c-4c8b-b6f9-3870f205cfc5" time="1373956113270" ignored="false" />
@@ -82,28 +82,7 @@
     <favorites_list name="hadoop" />
   </component>
   <component name="FileEditorManager">
-    <leaf>
-      <file leaf-file-name="H2OMapper.java" pinned="false" current="true" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/src/main/java/water/hadoop/H2OMapper.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="199" column="0" selection-start="6560" selection-end="6560" vertical-scroll-proportion="0.68838525">
-              <folding>
-                <element signature="imports" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="H2ODriver.java" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/main/java/water/hadoop/H2ODriver.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="238" column="0" selection-start="8751" selection-end="8751" vertical-scroll-proportion="2.04">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-    </leaf>
+    <leaf />
   </component>
   <component name="FindManager">
     <FindUsagesManager>
@@ -205,15 +184,11 @@
               <option name="myItemId" value="java" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="hadoop" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
           </PATH>
         </subPane>
       </pane>
-      <pane id="PackagesPane" />
       <pane id="Scope" />
+      <pane id="PackagesPane" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -232,9 +207,9 @@
     <property name="restartRequiresConfirmation" value="true" />
     <property name="MemberChooser.showClasses" value="true" />
     <property name="GoToClass.includeLibraries" value="false" />
-    <property name="options.splitter.details.proportions" value="0.2" />
-    <property name="options.searchVisible" value="true" />
     <property name="dynamic.classpath" value="false" />
+    <property name="options.searchVisible" value="true" />
+    <property name="options.splitter.details.proportions" value="0.2" />
   </component>
   <component name="PyConsoleOptionsProvider">
     <option name="myPythonConsoleState">
@@ -306,19 +281,6 @@
       <option name="PORT" value="8999" />
       <method />
     </configuration>
-    <configuration default="true" type="Applet" factoryName="Applet">
-      <module name="" />
-      <option name="MAIN_CLASS_NAME" />
-      <option name="HTML_FILE_NAME" />
-      <option name="HTML_USED" value="false" />
-      <option name="WIDTH" value="400" />
-      <option name="HEIGHT" value="300" />
-      <option name="POLICY_FILE" value="$APPLICATION_HOME_DIR$/bin/appletviewer.policy" />
-      <option name="VM_PARAMETERS" />
-      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
-      <option name="ALTERNATIVE_JRE_PATH" />
-      <method />
-    </configuration>
     <configuration default="true" type="TestNG" factoryName="TestNG">
       <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea" />
       <module name="" />
@@ -345,6 +307,19 @@
       <envs />
       <properties />
       <listeners />
+      <method />
+    </configuration>
+    <configuration default="true" type="Applet" factoryName="Applet">
+      <module name="" />
+      <option name="MAIN_CLASS_NAME" />
+      <option name="HTML_FILE_NAME" />
+      <option name="HTML_USED" value="false" />
+      <option name="WIDTH" value="400" />
+      <option name="HEIGHT" value="300" />
+      <option name="POLICY_FILE" value="$APPLICATION_HOME_DIR$/bin/appletviewer.policy" />
+      <option name="VM_PARAMETERS" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
+      <option name="ALTERNATIVE_JRE_PATH" />
       <method />
     </configuration>
     <configuration default="true" type="Application" factoryName="Application">
@@ -544,7 +519,23 @@
       <provider selected="true" editor-type-id="text-editor">
         <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
           <folding>
-            <element signature="imports" expanded="true" />
+            <element signature="imports" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/water/hadoop/H2ODriver.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="238" column="0" selection-start="8751" selection-end="8751" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/water/hadoop/H2OMapper.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
+          <folding>
+            <element signature="imports" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -567,8 +558,8 @@
           <ID>JAVA</ID>
           <OriginalElement>water.hadoop.H2ODriver</OriginalElement>
           <nodes>
-            <node x="124.0" y="80.0">org.apache.hadoop.util.Tool</node>
             <node x="46.0" y="0.0">org.apache.hadoop.conf.Configurable</node>
+            <node x="124.0" y="80.0">org.apache.hadoop.util.Tool</node>
             <node x="0.0" y="80.0">org.apache.hadoop.conf.Configured</node>
             <node x="53.5" y="160.0">water.hadoop.H2ODriver</node>
           </nodes>
@@ -611,16 +602,16 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/water/hadoop/H2ODriver.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="238" column="0" selection-start="8751" selection-end="8751" vertical-scroll-proportion="2.04">
+        <state line="238" column="0" selection-start="8751" selection-end="8751" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/water/hadoop/H2OMapper.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="199" column="0" selection-start="6560" selection-end="6560" vertical-scroll-proportion="0.68838525">
+        <state line="199" column="0" selection-start="6560" selection-end="6560" vertical-scroll-proportion="0.0">
           <folding>
-            <element signature="imports" expanded="true" />
+            <element signature="imports" expanded="false" />
           </folding>
         </state>
       </provider>
