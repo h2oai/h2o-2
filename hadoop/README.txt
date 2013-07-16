@@ -12,7 +12,6 @@ GET H2O TREE FROM GIT
 
 git clone https://github.com/0xdata/h2o.git
 cd h2o
-git checkout --track origin/tomk-hadoop		<<<<< TEMPORARY until code merges back into master branch (post-full-regression-test)
 
 
 BUILD CODE
