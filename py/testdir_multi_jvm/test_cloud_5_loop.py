@@ -1,4 +1,4 @@
-import os, json, unittest, time, shutil, sys
+import os, json, unittest, time, shutil, sys, random
 sys.path.extend(['.','..','py'])
 
 import h2o, h2o_hosts
@@ -29,6 +29,7 @@ class Basic(unittest.TestCase):
             print "trial #%d: Build cloud of %d in %d secs" % (trial, tryNodes, (time.time() - start))
 
             h2o.verify_cloud_size()
+            time.sleep(5)
             h2o.tear_down_cloud()
             # base_port += ports_per_node * tryNodes
 if __name__ == '__main__':
