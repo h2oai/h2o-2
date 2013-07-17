@@ -8,8 +8,6 @@ import java.util.Random;
 
 import javax.swing.*;
 
-import hex.Histogram;
-
 @SuppressWarnings("serial")
 public final class MnistCanvas extends Canvas {
   final Layer[] _ls;
@@ -17,6 +15,21 @@ public final class MnistCanvas extends Canvas {
   final byte[] _labels;
   final Random _rand = new Random();
   int _level = 1;
+
+  public static void main(String[] args) throws Exception {
+    MnistNeuralNetTest mnist = new MnistNeuralNetTest();
+    mnist.run();
+
+    // Basic visualization of images and weights
+
+    JFrame frame = new JFrame("RBM");
+    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    MnistCanvas canvas = new MnistCanvas(mnist._ls, mnist._train._images, mnist._train._labels);
+    frame.setContentPane(canvas.init());
+    frame.pack();
+    frame.setLocationRelativeTo(null);
+    frame.setVisible(true);
+  }
 
   MnistCanvas(Layer[] ls, float[] images, byte[] labels) {
     _ls = ls;
@@ -87,7 +100,8 @@ public final class MnistCanvas extends Canvas {
           int[] output = new int[visible.length];
           for( int v = 0; v < visible.length; v++ )
             output[v] = (int) Math.min(visible[v] * 255, 255);
-          BufferedImage out = new BufferedImage(MnistNeuralNetTest.EDGE, MnistNeuralNetTest.EDGE, BufferedImage.TYPE_INT_RGB);
+          BufferedImage out = new BufferedImage(MnistNeuralNetTest.EDGE, MnistNeuralNetTest.EDGE,
+              BufferedImage.TYPE_INT_RGB);
           WritableRaster r = out.getRaster();
           r.setDataElements(0, 0, MnistNeuralNetTest.EDGE, MnistNeuralNetTest.EDGE, output);
           BufferedImage image = new BufferedImage(edge, edge, BufferedImage.TYPE_INT_RGB);
@@ -135,13 +149,12 @@ public final class MnistCanvas extends Canvas {
       for( int i = 0; i < layer._in._len; i++ ) {
         double w = layer._w[o * layer._in._len + i];
         w = ((w - mean) / sigma) * 200;
-        if( w >= 0 )
-          start[i] = ((int) Math.min(+w, 255)) << 8;
-        else
-          start[i] = ((int) Math.min(-w, 255)) << 16;
+        if( w >= 0 ) start[i] = ((int) Math.min(+w, 255)) << 8;
+        else start[i] = ((int) Math.min(-w, 255)) << 16;
       }
 
-      BufferedImage out = new BufferedImage(MnistNeuralNetTest.EDGE, MnistNeuralNetTest.EDGE, BufferedImage.TYPE_INT_RGB);
+      BufferedImage out = new BufferedImage(MnistNeuralNetTest.EDGE, MnistNeuralNetTest.EDGE,
+          BufferedImage.TYPE_INT_RGB);
       WritableRaster r = out.getRaster();
       r.setDataElements(0, 0, MnistNeuralNetTest.EDGE, MnistNeuralNetTest.EDGE, start);
 

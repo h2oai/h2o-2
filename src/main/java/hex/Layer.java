@@ -11,7 +11,7 @@ import com.amd.aparapi.Range;
  * Neural network layer, can be used as one level of Perceptron, AA or RBM.
  */
 public abstract class Layer {
-  static final int BATCH = 16;
+  static final int BATCH = 20;
   static final boolean AUTO_RATE = false;
 
   float momentum = 0.9f;
@@ -250,6 +250,7 @@ public abstract class Layer {
 
     void close() {
       _fprop.dispose();
+      _bprop.dispose();
     }
 
     @Override void fprop(int off, int len) {

@@ -325,24 +325,30 @@ public class Utils {
     return res;
   }
 
-  public static <T> T deepClone(T o) {
+  public static <T> T deepClone(T o, String... except) {
     Class c = o.getClass();
     try {
       Layer clone = (Layer) c.newInstance();
       ArrayList<Field> fields = new ArrayList<Field>();
+      HashSet<String> excepts = new HashSet<String>(Arrays.asList(except));
       getAllFields(fields, c);
       for( Field f : fields ) {
         f.setAccessible(true);
         if( (f.getModifiers() & Modifier.STATIC) == 0 ) {
           Object v = f.get(o);
+          boolean except_ = excepts.remove(f.getName());
           if( v != null && !(v instanceof Layer) ) {
             if( v instanceof Number ) f.set(clone, v);
-            else if( v instanceof float[] ) f.set(clone, ((float[]) v).clone());
+            else if( v instanceof float[] ) {
+              if( except_ ) f.set(clone, v);
+              else f.set(clone, ((float[]) v).clone());
+            }
             // TODO other types
             else throw new RuntimeException("Field " + f + " cannot be cloned");
           }
         }
       }
+      assert excepts.size() == 0;
       return (T) clone;
     } catch( Exception e ) {
       throw new RuntimeException(e);

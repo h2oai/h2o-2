@@ -1,8 +1,9 @@
 package hex;
 
+import hex.rng.MersenneTwisterRNG;
+
 import java.io.*;
 import java.text.DecimalFormat;
-import java.util.Arrays;
 import java.util.zip.GZIPInputStream;
 
 import water.util.Utils;
@@ -19,12 +20,7 @@ public class MnistNeuralNetTest {
   Layer[] _ls;
   DecimalFormat _format = new DecimalFormat("0.00");
 
-  public static void main(String[] args) throws Exception {
-    MnistNeuralNetTest mnist = new MnistNeuralNetTest();
-    mnist.run();
-  }
-
-  void run() throws Exception {
+  public void run() throws Exception {
     {
       long time = System.nanoTime();
       String f = "smalldata/mnist70k/";
@@ -65,18 +61,6 @@ public class MnistNeuralNetTest {
         System.out.println((int) ((System.nanoTime() - time) / 1e6) + " ms");
       }
     }
-
-    // Basic visualization of images and weights
-
-//    JFrame frame = new JFrame("RBM");
-//    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-//    MnistCanvas canvas = new MnistCanvas(_ls, _train._images, _train._labels);
-//    frame.setContentPane(canvas.init());
-//    frame.pack();
-//    frame.setLocationRelativeTo(null);
-//    frame.setVisible(true);
-
-    //
 
     train();
 
@@ -144,67 +128,57 @@ public class MnistNeuralNetTest {
   }
 
   void train() {
-    Trainer trainer = new Trainer.Direct(_ls);
-    int n = 0;
+    //ParallelTrainers trainer = new ParallelTrainers(_ls, _train._labels);
+    Trainer trainer = new Trainer.Direct(_ls, _train._labels);
+    trainer.start();
+
+    long start = System.nanoTime();
+    long lastTime = start;
+    int n = 0, lastItems = 0;
     for( ;; ) {
-      for( int b = 0; b < Layer.BATCH; b++ ) {
-        _ls[0]._off = n * PIXELS;
-        trainer.fprop();
-
-        for( int i = 1; i < _ls.length; i++ )
-          Arrays.fill(_ls[i]._e, 0);
-        float[] err = _ls[_ls.length - 1]._e;
-        err[_train._labels[n]] = 1.0f;
-        for( int i = 0; i < err.length; i++ )
-          err[i] -= _ls[_ls.length - 1]._a[i];
-
-        trainer.bprop();
-        n = n == _train._labels.length - 1 ? 0 : n + 1;
+      try {
+        Thread.sleep(3000);
+      } catch( InterruptedException e ) {
+        throw new RuntimeException(e);
       }
 
-      for( int i = 1; i < _ls.length; i++ )
-        _ls[i].adjust();
+      String train = test(_train, 100);
+      String test = test(_test, 100);
+      long time = System.nanoTime();
+      int ms = (int) ((time - lastTime) / 1e6);
+      lastTime = time;
+      int items = trainer._count.get();
+      int ps = (items - lastItems) * 1000 / ms;
+      lastItems = items;
+      String s = ms + " ms " + (ps) + "/s, train: " + train + ", test: " + test;
 
-      if( n % 100 == 0 ) {
-        String train = test(_train, 100);
-        String test = test(_test, 100);
-        String s = "Train: " + train + ", test: " + test;
-
-        Layer layer = _ls[1];
-        double sqr = 0;
-        int zeros = 0;
-        for( int o = 0; o < layer._a.length; o++ ) {
-          for( int i = 0; i < layer._in._len; i++ ) {
-            float d = layer._gw[o * layer._in._len + i];
-            sqr += d * d;
-            zeros += d == 0 ? 1 : 0;
-          }
+      Layer layer = _ls[1];
+      double sqr = 0;
+      int zeros = 0;
+      for( int o = 0; o < layer._a.length; o++ ) {
+        for( int i = 0; i < layer._in._len; i++ ) {
+          float d = layer._gw[o * layer._in._len + i];
+          sqr += d * d;
+          zeros += d == 0 ? 1 : 0;
         }
-        s += ", gw: " + sqr + " (" + (zeros * 100 / layer._gw.length) + "% 0)";
-        sqr = 0;
-        for( int o = 0; o < layer._a.length; o++ ) {
-          for( int i = 0; i < layer._in._len; i++ ) {
-            float d = layer._w[o * layer._in._len + i];
-            sqr += d * d;
-          }
-        }
-        s += ", w: " + sqr;
-        sqr = 0;
-        for( int o = 0; o < layer._a.length; o++ ) {
-          float d = layer._a[o];
+      }
+      s += ", gw: " + sqr + " (" + (zeros * 100 / layer._gw.length) + "% 0)";
+      sqr = 0;
+      for( int o = 0; o < layer._a.length; o++ ) {
+        for( int i = 0; i < layer._in._len; i++ ) {
+          float d = layer._w[o * layer._in._len + i];
           sqr += d * d;
         }
-        System.out.println(s + ", a: " + sqr);
       }
+      s += ", w: " + sqr;
+      sqr = 0;
+      for( int o = 0; o < layer._a.length; o++ ) {
+        float d = layer._a[o];
+        sqr += d * d;
+      }
+      System.out.println(s + ", a: " + sqr);
 
-      if( n != 0 && n % 10000 == 0 ) {
-//        for( int i = 0; i < _gs.length; i++ ) {
-//          _gs[i].wRate *= 0.9;
-//          _gs[i].bRate *= 0.9;
-//          _gs[i].wl1 *= 0.9;
-//          _gs[i].bl1 *= 0.9;
-//        }
-
+      if( n != 0 && n % 10 == 0 ) {
         System.out.println("All: " + test(_test, _test._labels.length));
       }
     }
@@ -288,17 +262,16 @@ public class MnistNeuralNetTest {
         rawL[n] = labelsBuf.readByte();
       }
 
-      int todo;
-//      MersenneTwisterRNG rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-//      for( int i = 0; i < count; i++ ) {
-//        int shuffle = rand.nextInt(count);
-//        byte[] image = rawI[shuffle];
-//        rawI[shuffle] = rawI[i];
-//        rawI[i] = image;
-//        byte label = rawL[shuffle];
-//        rawL[shuffle] = rawL[i];
-//        rawL[i] = label;
-//      }
+      MersenneTwisterRNG rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+      for( int i = 0; i < count; i++ ) {
+        int shuffle = rand.nextInt(count);
+        byte[] image = rawI[shuffle];
+        rawI[shuffle] = rawI[i];
+        rawI[i] = image;
+        byte label = rawL[shuffle];
+        rawL[shuffle] = rawL[i];
+        rawL[i] = label;
+      }
 
       Data data = new Data();
       data._images = new float[count * PIXELS];
