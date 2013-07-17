@@ -6,21 +6,24 @@ Note: You may want to do all of this from the machine where you plan
 to launch the hadoop jar job from.  Otherwise you will end up having
 to copy files around.
 
+(If you grabbed a prebuilt h2o_hadoop.zip file, copy it to a hadoop 
+machine and skip to the PREPARE section below.)
+
 
 GET H2O TREE FROM GIT
 ---------------------
 
-git clone https://github.com/0xdata/h2o.git
-cd h2o
+$ git clone https://github.com/0xdata/h2o.git
+$ cd h2o
 
 
 BUILD CODE
 ----------
 
-make
-cd hadoop
-make
-cd ..
+$ make
+$ cd hadoop
+$ make
+$ cd ..
 
 
 COPY BUILD OUTPUT TO HADOOP NODE
@@ -32,8 +35,8 @@ Copy h2o/hadoop/target/h2o_hadoop.zip <to place where you intend to run hadoop c
 PREPARE JOB INPUT ON HADOOP NODE
 --------------------------------
 
-unzip h2o_hadoop.zip
-cd h2o_hadoop
+$ unzip h2o_hadoop.zip
+$ cd h2o_hadoop
 
 Create flatfile.txt.
 
@@ -54,10 +57,14 @@ $ cat flatfile.txt
 RUN JOB
 -------
 
-hadoop jar h2odriver_cdh4.jar water.hadoop.h2odriver [-jt <jobtracker:port>] -files flatfile.txt -libjars h2o.jar -mapperXmx 1g -nodes 1 -output hdfsOutputDirName
+$ hadoop jar h2odriver_cdh4.jar water.hadoop.h2odriver [-jt <jobtracker:port>] -files flatfile.txt -libjars h2o.jar -mapperXmx 1g -nodes 1 -output hdfsOutputDirName
+
+(Note: -nodes refers to H2O nodes.  This may be less than or equal to
+       the number of hadoop machines running TaskTrackers where hadoop 
+       mapreduce Tasks may land.)
 
 (Note: Make sure to use the h2odriver flavor for the correct version
-       of Hadoop!  We recommend running the hadoop command from a
+       of hadoop!  We recommend running the hadoop command from a
        machine in the hadoop cluster.)
 
 
