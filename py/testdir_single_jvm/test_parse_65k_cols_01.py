@@ -40,8 +40,6 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        print "sleeping 3600"
-        time.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_parse_1m_cols(self):
