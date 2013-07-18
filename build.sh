@@ -89,7 +89,7 @@ function clean() {
 function build_classes() {
     echo "building classes..."
 
-    BUILD_BRANCH=`git branch | grep '*'`
+    BUILD_BRANCH=`git branch | grep '*' | sed 's/* //'`
     BUILD_HASH=`git log -1 --format="%H"`
     BUILD_DESCRIBE=`git describe --always --dirty`
     BUILD_ON=`date`
