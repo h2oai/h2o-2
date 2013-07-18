@@ -643,6 +643,12 @@ public final class H2O {
     Log.info ("Build git describe: " + build_describe);
     Log.info ("Built by: '" + build_by + "'");
     Log.info ("Built on: '" + build_on + "'");
+
+    Runtime runtime = Runtime.getRuntime();
+    double ONE_GB = 1024 * 1024 * 1024;
+    Log.info ("Java availableProcessors: " + runtime.availableProcessors());
+    Log.info ("Java heap totalMemory: " + String.format("%.2f gb", (double)runtime.totalMemory() / ONE_GB));
+    Log.info ("Java heap maxMemory: " + String.format("%.2f gb", (double)runtime.maxMemory() / ONE_GB));
   }
 
   // Start up an H2O Node and join any local Cloud
