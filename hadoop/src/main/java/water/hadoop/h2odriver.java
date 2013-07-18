@@ -84,11 +84,9 @@ public class h2odriver extends Configured implements Tool {
      * Print usage and exit 1.
      */
     static void usage() {
-        String prog = h2odriver.class.getSimpleName();
-
         System.err.printf(
 "\n" +
-"Usage: " + prog + "\n" +
+"Usage: h2odriver\n" +
 "          -files <.../flatfile.txt>\n" +
 "          -libjars <.../h2o.jar>\n" +
 "          [other generic Hadoop ToolRunner options]\n" +
@@ -114,11 +112,16 @@ public class h2odriver extends Configured implements Tool {
 "          o  Each H2O cluster should have a unique jobname.\n" +
 "\n" +
 "Examples:\n" +
-"          " + prog + " -jt <yourjobtracker>:<yourport> -files flatfile.txt -libjars h2o.jar -mapperXmx 1g -n 1 -o hdfsOutputDir\n" +
+"          hadoop jar h2odriver_HHH.jar water.hadoop.h2odriver -jt <yourjobtracker>:<yourport> -files flatfile.txt -libjars h2o.jar -mapperXmx 1g -n 1 -o hdfsOutputDir\n" +
+"          (Choose the proper h2odriver (_HHH) for your version of hadoop.\n" +
 "\n" +
 "flatfile.txt:\n" +
 "          The flat file must contain the list of possible IP addresses an H2O\n" +
 "          node (i.e. mapper) may be scheduled on.  One IP address per line.\n" +
+"          For example:\n" +
+"              192.168.1.100\n" +
+"              192.168.1.101\n" +
+"              etc.\n" +
 "\n"
 );
 
