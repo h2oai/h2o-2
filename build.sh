@@ -91,6 +91,7 @@ function build_classes() {
 
     BUILD_BRANCH=`git branch | grep '*'`
     BUILD_HASH=`git log -1 --format="%H"`
+    BUILD_DESCRIBE=`git describe --always --dirty`
     BUILD_ON=`date`
     BUILD_BY=`whoami`
 
@@ -100,6 +101,7 @@ package water;
 public class BuildVersion extends AbstractBuildVersion {
     public String branchName()     { return "${BUILD_BRANCH}"; }
     public String lastCommitHash() { return "${BUILD_HASH}"; }
+    public String describe()       { return "${BUILD_DESCRIBE}"; }
     public String compiledOn()     { return "${BUILD_ON}"; }
     public String compiledBy()     { return "${BUILD_BY}"; }
 }
