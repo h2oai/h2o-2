@@ -89,13 +89,13 @@ public class RFModel extends Model implements Cloneable, Progress {
     }
   }
 
-  static public RFModel make(RFModel old, Key tkey) {
+  static public RFModel make(RFModel old, Key tkey, int nodeIdx) {
     RFModel m = old.clone();
     m._tkeys = Arrays.copyOf(old._tkeys,old._tkeys.length+1);
     m._tkeys[m._tkeys.length-1] = tkey;
-    int idx = H2O.SELF.index();
-    m._localForests[idx] = Arrays.copyOf(old._localForests[idx],old._localForests[idx].length+1);
-    m._localForests[idx][m._localForests[idx].length-1] = tkey;
+
+    m._localForests[nodeIdx] = Arrays.copyOf(old._localForests[nodeIdx],old._localForests[nodeIdx].length+1);
+    m._localForests[nodeIdx][m._localForests[nodeIdx].length-1] = tkey;
     return m;
   }
 
