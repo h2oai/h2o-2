@@ -1,6 +1,7 @@
 package water;
 
 import java.io.*;
+import java.lang.reflect.Constructor;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
@@ -13,6 +14,7 @@ import water.parser.ParseDataset;
 import water.persist.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
+import water.AbstractBuildVersion;
 
 import com.amazonaws.auth.PropertiesCredentials;
 import com.google.common.base.Objects;
@@ -51,6 +53,9 @@ public final class H2O {
 
   public static final String DEFAULT_ICE_ROOT = "/tmp";
   public static URI ICE_ROOT;
+
+  // Logging setup
+  public static boolean INHERIT_LOG4J = false;
 
   // Initial arguments
   public static String[] ARGS;
@@ -547,6 +552,7 @@ public final class H2O {
     public String random_udp_drop = null; // test only, randomly drop udp incoming
     public int pparse_limit = Integer.MAX_VALUE;
     public String no_requests_log = null; // disable logging of Web requests
+    public String inherit_log4j = null;
     public String h = null;
     public String help = null;
   }
@@ -575,9 +581,13 @@ public final class H2O {
     "          Port number for this node (note: port+1 is also used).\n" +
     "          (The default port is " + DEFAULT_PORT + ".)\n" +
     "\n" +
-    "    -ice_root <fileSystemPath>" +
-    "          The directory where H2O spills temporary data to disk." +
+    "    -ice_root <fileSystemPath>\n" +
+    "          The directory where H2O spills temporary data to disk.\n" +
     "          (The default is '" + DEFAULT_ICE_ROOT + "'.)\n" +
+    "\n" +
+    "    -inherit_log4j\n" +
+    "          Allow some other package to specify log4j configuration\n" +
+    "          (for embedding H2O, e.g. inside Hadoop mapreduce).\n" +
     "\n" +
     "    -h | -help\n" +
     "          Print this help.\n" +
@@ -607,8 +617,43 @@ public final class H2O {
 
   public static boolean IS_SYSTEM_RUNNING = false;
 
+  private static void sayHi() {
+    String build_branch = "(unknown)";
+    String build_hash = "(unknown)";
+    String build_describe = "(unknown)";
+    String build_by = "(unknown)";
+    String build_on = "(unknown)";
+    try {
+      Class klass = Class.forName("water.BuildVersion");
+      java.lang.reflect.Constructor constructor = klass.getConstructor();
+      AbstractBuildVersion abv = (AbstractBuildVersion) constructor.newInstance();
+      build_branch = abv.branchName();
+      build_hash = abv.lastCommitHash();
+      build_describe = abv.describe();
+      build_by = abv.compiledBy();
+      build_on = abv.compiledOn();
+      // it exists on the classpath
+    } catch (Exception e) {
+      // it does not exist on the classpath
+    }
+
+    Log.info ("----- H2O started -----");
+    Log.info ("Build git branch: " + build_branch);
+    Log.info ("Build git hash: " + build_hash);
+    Log.info ("Build git describe: " + build_describe);
+    Log.info ("Built by: '" + build_by + "'");
+    Log.info ("Built on: '" + build_on + "'");
+
+    Runtime runtime = Runtime.getRuntime();
+    double ONE_GB = 1024 * 1024 * 1024;
+    Log.info ("Java availableProcessors: " + runtime.availableProcessors());
+    Log.info ("Java heap totalMemory: " + String.format("%.2f gb", (double)runtime.totalMemory() / ONE_GB));
+    Log.info ("Java heap maxMemory: " + String.format("%.2f gb", (double)runtime.maxMemory() / ONE_GB));
+  }
+
   // Start up an H2O Node and join any local Cloud
   public static void main( String[] args ) {
+    Log.POST(300,"");
     // To support launching from JUnit, JUnit expects to call main() repeatedly.
     // We need exactly 1 call to main to startup all the local services.
     if (IS_SYSTEM_RUNNING) return;
@@ -624,7 +669,10 @@ public final class H2O {
       System.exit (0);
     }
 
+    sayHi();
+
     ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
+    Log.POST(310,"");
 
     // Get ice path before loading Log or Persist class
     String ice = DEFAULT_ICE_ROOT;
@@ -634,24 +682,36 @@ public final class H2O {
     } catch(URISyntaxException ex) {
       throw new RuntimeException("Invalid ice_root: " + ice + ", " + ex.getMessage());
     }
+
     Log.info ("ICE root: '" + ICE_ROOT + "'");
 
     SELF_ADDRESS = findInetAddressForSelf();
 
     //if (OPT_ARGS.rshell.equals("false"))
+    Log.POST(320,"");
     Log.wrap(); // Logging does not wrap when the rshell is on.
 
     // Start the local node
     startLocalNode();
+    Log.POST(330,"");
+
+    String logDir = (Log.getLogDir() != null) ? Log.getLogDir() : "(unknown)";
+    Log.info ("Log dir: '" + logDir + "'");
+
     // Load up from disk and initialize the persistence layer
     initializePersistence();
+    Log.POST(340,"");
     // Start network services, including heartbeats & Paxos
     startNetworkServices();   // start server services
+    Log.POST(350,"");
     startApiIpPortWatchdog(); // Check if the API port becomes unreachable
+    Log.POST(360,"");
 
     initializeExpressionEvaluation(); // starts the expression evaluation system
+    Log.POST(370,"");
 
     startupFinalize(); // finalizes the startup & tests (if any)
+    Log.POST(380,"");
   }
 
   private static void initializeExpressionEvaluation() {
@@ -683,7 +743,6 @@ public final class H2O {
     }
 
     Log.info ("H2O cloud name: '" + NAME + "'");
-
     Log.info("(v"+VERSION+") '"+NAME+"' on " + SELF+(OPT_ARGS.flatfile==null
         ? (", discovery address "+CLOUD_MULTICAST_GROUP+":"+CLOUD_MULTICAST_PORT)
             : ", static configuration based on -flatfile "+OPT_ARGS.flatfile));

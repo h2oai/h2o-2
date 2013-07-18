@@ -95,3 +95,5 @@
 ./n0.doit test_tree_view.py
 ./n0.doit test_tree_view_wrong_model.py
 ./n0.doit test_with_a_browser.py
+./n0.doit test_R_GLM_basic.py
+./n0.doit test_R_KMeans_basic.py
