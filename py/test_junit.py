@@ -16,7 +16,7 @@ class TestJUnit(unittest.TestCase):
                     '-Dh2o.arg.name='+h2o.cloud_name(),
                     '-Dh2o.arg.ip='+h2o.get_ip_address(),
                     '-ea', '-jar', h2o.find_file('target/h2o.jar'),
-                    '-mainClass', 'org.junit.runner.JUnitCore',
+                    '-mainClass', 'water.JUnitRunner',
                     # The tests
                     #'hex.GLMGridTest',
                     'hex.HistogramTest',
