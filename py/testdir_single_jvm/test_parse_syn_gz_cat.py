@@ -58,8 +58,8 @@ class Basic(unittest.TestCase):
             ]
 
         FILEREPL = 200
-        DOSUMMARY = True
-        h2b.browseTheCloud()
+        DOSUMMARY = False
+        # h2b.browseTheCloud()
         for (rowCount, colCount, key2, timeoutSecs) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
 
