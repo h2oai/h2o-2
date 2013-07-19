@@ -108,7 +108,7 @@ public class Data implements Iterable<Row> {
       int permIdx = permutation[l];
       int cls = classes[permIdx];
       // Hand-inlining for performance... CNC
-      int val = bins==null ? binb[permIdx] : bins[permIdx];
+      int val = bins==null ? (0xFF&binb[permIdx]) : bins[permIdx];
       if( val <= split ) {
         ls.addQValid(cls,permIdx,cs);
         ++l;
