@@ -147,8 +147,8 @@ abstract class Statistic {
     for (int f : _features)
       if ( f != -1) {
         short[] bins = cs[f]._binned;
-        int val = bins==null ? cs[f]._rawB[ridx] : bins[ridx];
-        if( val != DataAdapter.BAD )
+        int val = bins==null ? (0xFF&cs[f]._rawB[ridx]) : bins[ridx];
+        if( bins==null || val != DataAdapter.BAD )
           _columnDists[f][val][cls]++;
       }
   }
