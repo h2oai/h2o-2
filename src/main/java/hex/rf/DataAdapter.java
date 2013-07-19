@@ -114,7 +114,7 @@ final class DataAdapter  {
   public final boolean isIgnored(int col)             { return _c[col].isIgnored(); }
   public final void    markIgnoredRow(int row)        { _c[_c.length-1].addBad(row);  }
   public final int     classColIdx()                  { return _c.length - 1; }
-  public final boolean hasAnyInvalid(int col)         { return _c[col].invalidValues!=0; }
+  public final boolean hasAnyInvalid(int col)         { return _c[col]._invalidValues!=0; }
 
   static class Col {
     /** Encoded values*/

@@ -146,7 +146,8 @@ abstract class Statistic {
   void addQValid(int cls, int ridx, DataAdapter.Col cs[]) {
     for (int f : _features)
       if ( f != -1) {
-        int val = cs[f].binned[ridx];
+        short[] bins = cs[f]._binned;
+        int val = bins==null ? cs[f]._rawB[ridx] : bins[ridx];
         if( val != DataAdapter.BAD )
           _columnDists[f][val][cls]++;
       }
