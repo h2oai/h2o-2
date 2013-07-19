@@ -35,7 +35,7 @@ public class Summary extends Iced {
       _enum = c.isEnum();
       final long n = Math.max(c._n,1);
       if(_enum){
-        _percentiles = null;
+        _percentiles = Objects.firstNonNull(percentiles, DEFAULT_PERCENTILES);;
         _binsz = _binszInv = 1;
         _bins = new long[(int)n];
         _start = 0;
@@ -47,7 +47,6 @@ public class Summary extends Iced {
         Arrays.fill(_max, Double.NEGATIVE_INFINITY);
         if(c.isFloat() || c.numDomainSize() > MAX_HIST_SZ){
           _percentiles = Objects.firstNonNull(percentiles, DEFAULT_PERCENTILES);
-
           double a = (c._max - c._min) / n;
           double b = Math.pow(10, Math.floor(Math.log10(a)));
           // selects among d, 5*d, and 10*d so that the number of
@@ -57,13 +56,11 @@ public class Summary extends Iced {
           else if (a > 5*b/3)
              b *= 5;
           double start = b * Math.floor(c._min / b);
-
           // guard against improper parse (date type) or zero c._sigma
           double binsz = Math.max(1e-4, 3.5 *  c._sigma/ Math.cbrt(c._n));
           // Pick smaller of two for number of bins to avoid blowup of longs
           int nbin = Math.max(Math.min(MAX_HIST_SZ,(int)((c._max - c._min) / binsz)),1);
           _bins = new long[nbin];
-
           _start = start;
           _binsz = binsz;
           _binszInv = 1.0/binsz;
@@ -85,16 +82,14 @@ public class Summary extends Iced {
       if( _bins.length == 0 ) return;
       int k = 0;
       long s = 0;
-      double pval = Double.NEGATIVE_INFINITY;
       for(int j = 0; j < _percentiles.length; ++j){
-        double s1 = _percentiles[j]*_n - s;
+        final double s1 = _percentiles[j]*_n;
         long bc = 0;
-        while(s1 > (bc = binCount(k))){
-          s1 -= bc;
+        while(s1 > s+(bc = binCount(k))){
           s  += bc;
           k++;
         }
-        _percentileValues[j] = pval =  Math.max(pval,_min[0] + k*_binsz) + s1/bc*_binsz;
+        _percentileValues[j] = _min[0] + k*_binsz + ((_binsz > 1)?0.5*_binsz:0);
       }
     }
 
