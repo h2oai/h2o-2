@@ -98,16 +98,14 @@ public class Summary extends Iced {
       if( _bins.length == 0 ) return;
       int k = 0;
       long s = 0;
-      double pval = Double.NEGATIVE_INFINITY;
       for(int j = 0; j < _percentiles.length; ++j){
-        double s1 = _percentiles[j]*_n - s;
+        final double s1 = _percentiles[j]*_n;
         long bc = 0;
-        while(s1 > (bc = binCount(k))){
-          s1 -= bc;
+        while(s1 > s+(bc = binCount(k))){
           s  += bc;
           k++;
         }
-        _percentileValues[j] = pval =  Math.max(pval,_min[0] + k*_binsz) + s1/bc*_binsz;
+        _percentileValues[j] = _min[0] + k*_binsz + ((_binsz > 1)?0.5*_binsz:0);
       }
     }
 
