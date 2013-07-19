@@ -48,17 +48,21 @@ final class DataAdapter  {
     for( int i = 0; i < _c.length; i++ ) {
       assert ary._cols[modelDataMap[i]]._name.equals(model._va._cols[i]._name);
       Column column = model._va._cols[i];
-      if( !column.isFloat() && 
-          ((column._max-column._min)<255 || // Nobody using 255
-           (column._max-column._min)<256 && column._n==rows) // Or 255 is just valid
-          ) // we do not bin for small values
-        _c[i] = new Col(column._name, rows, i == _c.length-1, column._base);
+      if( isByteCol(column,rows) ) // we do not bin for small values
+        _c[i] = new Col(column._name, rows, i == _c.length-1);
       else
         _c[i] = new Col(column._name, rows, i == _c.length-1,_binLimit, column.isFloat());
     }
     boolean trivial = true;
     if (classWt != null) for(double f: classWt) if (f != 1.0) trivial = false;
     _classWt = trivial ?  null : classWt;
+  }
+
+  static boolean isByteCol( Column C, int rows ) {
+    double span = C._max-C._min;
+    return !C.isFloat() &&
+      (span<255 || // Nobody using 255
+       span<256 && C._n==rows); // Or 255 is just valid
   }
 
    /** Given a value in enum format, returns:  the value in the original format if no
@@ -81,7 +85,7 @@ final class DataAdapter  {
   public int unmapClass(int clazz) {
     Col c = _c[_c.length-1];
     if (c._isByte)
-      return clazz + c._byteMin + c._base;
+      return clazz;
     else {
       // OK, this is not fully correct bad handle corner-cases like for example dataset uses classes only
       // with 0 and 3. Our API reports that there are 4 classes but in fact there are only 2 classes.
@@ -109,8 +113,8 @@ final class DataAdapter  {
     return true;
   }
 
-  public final void    add(float v, int row, int col) { _c[col].add(row,v); }
-  public final void    add(byte v, int row, int col)  { _c[col].add(row, v); }
+  public final void    add(float v, int row, int col) { _c[col].add (row,v); }
+  public final void    add1(int  v, int row, int col) { _c[col].add1(row, v); }
   public final void    addBad(int row, int col)       { _c[col].addBad(row); }
   public final boolean hasBadValue(int row, int col)  { return _c[col].isBad(row); }
   public final boolean isBadRow(int row)              { return _c[_c.length-1].isBad(row); }
@@ -134,38 +138,33 @@ final class DataAdapter  {
     /** Total number of bad values in the column. */
     int _invalidValues;
     float _min, _max;
-    final int _base;
-    byte[] _usedValues;
-    int _arity; byte _byteMin;
+    int _arity;
 
     static final DecimalFormat df = new  DecimalFormat ("0.##");
     boolean _ignored;
 
-    Col(String s, int rows, boolean isClass, int base) {
+    Col(String s, int rows, boolean isClass) {
       _name = s; _isClass = isClass;
       _rawB = MemoryManager.malloc1(rows);
-      _base = base;
       _isFloat = false;
       _isByte  = true;
       _colBinLimit = 0;
-      _usedValues = new byte[256];
-      _byteMin = Byte.MIN_VALUE;
     }
 
     Col(String s, int rows, boolean isClass, int binLimit, boolean isFloat) {
       _name = s; _isFloat = isFloat; _isClass = isClass; _colBinLimit = binLimit; _isByte = false;
       _raw = MemoryManager.malloc4f(rows);
-      _ignored = false; _base = 0;
+      _ignored = false;
     }
 
     boolean isFloat()   { return _isFloat; }
     boolean isIgnored() { return _ignored; }
     int arity()         { return _ignored ? -1 : _arity; }
     String name()       { return _name;        }
-    short get(int row)  { return (short) (_isByte ? _rawB[row]-_byteMin : _binned[row]); }
+    short get(int row)  { return (short) (_isByte ? (_rawB[row]&0xFF) : _binned[row]); }
 
-    void add(int row, float val) { _raw[row] = val; }
-    void add(int row, byte val)  { _rawB[row] = val; _usedValues[val-Byte.MIN_VALUE]=1; }
+    void add(int row, float val) { _raw [row] = val; }
+    void add1(int row, int  val) { _rawB[row] = (byte)val; }
     void addBad(int row)         { if (!_isByte) _raw[row] = Float.NaN; else _rawB[row] = 0; }
 
     private boolean isBadRaw(float f) { return Float.isNaN(f); }
@@ -174,13 +173,7 @@ final class DataAdapter  {
     /** For all columns - encode all floats as unique shorts. */
     void shrink() {
       if (_isByte) {
-        boolean first = true;
-        for (int i = 0; i<_usedValues.length; i++) {
-          _arity += _usedValues[i] ;
-          if (_usedValues[i]!=0 && first) { first=false; _byteMin += i; }
-        }
-        _arity = 255;
-        _usedValues = null;
+        _arity = 256;
         return ; // do not shrink byte columns
       }
       float[] vs = _raw.clone();
@@ -247,7 +240,7 @@ final class DataAdapter  {
 
     /**Given an encoded short value, return the float that splits that value with the next.*/
     public float rawSplit(int idx){
-      if (_isByte) return idx+_byteMin + _base; // treat index as value
+      if (_isByte) return idx; // treat index as value
       if (idx == BAD) return Float.NaN;
       float flo = _binned2raw[idx+0]; // Convert to the original values
       float fhi = (idx+1 < _binned2raw.length)? _binned2raw[idx+1] : flo+1.f;
