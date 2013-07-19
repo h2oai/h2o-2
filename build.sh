@@ -93,7 +93,7 @@ function build_classes() {
     BUILD_HASH=`git log -1 --format="%H"`
     BUILD_DESCRIBE=`git describe --always --dirty`
     BUILD_ON=`date`
-    BUILD_BY=`whoami`
+    BUILD_BY=`whoami | sed 's/.*\\\\//'`
 
     cat > $SRC/water/BuildVersion.java <<EOF
 package water;
