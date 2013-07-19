@@ -60,14 +60,14 @@ Java exceptions if DNS and DHCP are not fully configured.
 This generator tool is still experimental, please double check the 
 output yourself before relying on it.
 
-$ hadoop jar h2odriver_cdh4.jar water.hadoop.gen_flatfile -jt <jobtracker:port> akira:8021
+$ hadoop jar h2odriver_cdh4.jar water.hadoop.gen_flatfile -jt <jobtracker:port> > flatfile.txt
 
 (Note: Make sure to use the h2odriver flavor for the correct version
        of hadoop!  We recommend running the hadoop command from a
        machine in the hadoop cluster.)
 
-(Note: Port 8021 is the default jobtracker port for some hadoop 
-       distributions.)
+(Note: Port 8021 is the default jobtracker port for Cloudera.
+       Port 9001 is the default jobtracker port for MapR.)
 
 
 RUN JOB
@@ -84,7 +84,7 @@ $ hadoop jar h2odriver_cdh4.jar water.hadoop.h2odriver [-jt <jobtracker:port>] -
        machine in the hadoop cluster.)
 
 (Note: Port 8021 is the default jobtracker port for some hadoop 
-       distributions.)
+       Port 9001 is the default jobtracker port for MapR.)
 
 
 MONITOR JOB
