@@ -83,10 +83,30 @@ function clean() {
     fi
     mkdir ${OUTDIR}
     mkdir ${CLASSES}
+    rm -f $SRC/water/BuildVersion.java
 }
 
 function build_classes() {
     echo "building classes..."
+
+    BUILD_BRANCH=`git branch | grep '*' | sed 's/* //'`
+    BUILD_HASH=`git log -1 --format="%H"`
+    BUILD_DESCRIBE=`git describe --always --dirty`
+    BUILD_ON=`date`
+    BUILD_BY=`whoami`
+
+    cat > $SRC/water/BuildVersion.java <<EOF
+package water;
+
+public class BuildVersion extends AbstractBuildVersion {
+    public String branchName()     { return "${BUILD_BRANCH}"; }
+    public String lastCommitHash() { return "${BUILD_HASH}"; }
+    public String describe()       { return "${BUILD_DESCRIBE}"; }
+    public String compiledOn()     { return "${BUILD_ON}"; }
+    public String compiledBy()     { return "${BUILD_BY}"; }
+}
+EOF
+
     local CLASSPATH="${JAR_ROOT}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/*"
     "$JAVAC" ${JAVAC_ARGS} \
         -cp "${CLASSPATH}" \

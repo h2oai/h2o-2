@@ -1,4 +1,4 @@
-import os, json, unittest, time, shutil, sys
+import os, json, unittest, time, shutil, sys, random
 sys.path.extend(['.','..','py'])
 
 import h2o, h2o_hosts
@@ -15,7 +15,7 @@ class Basic(unittest.TestCase):
     def test_Cloud(self):
         # FIX! weird timeout H2O exceptions with >8? maybe shouldn't
         # don't know if we care
-        base_port = 54300
+        base_port = 54321 + random.randint(0,256)
         ports_per_node = 2
         tryNodes = 5
         for trial in range(10):
@@ -29,6 +29,7 @@ class Basic(unittest.TestCase):
             print "trial #%d: Build cloud of %d in %d secs" % (trial, tryNodes, (time.time() - start))
 
             h2o.verify_cloud_size()
+            time.sleep(5)
             h2o.tear_down_cloud()
             # base_port += ports_per_node * tryNodes
 if __name__ == '__main__':

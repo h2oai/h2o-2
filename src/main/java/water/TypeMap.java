@@ -43,6 +43,12 @@ public class TypeMap {
     "water.util.JStackCollectorTask",
     "water.util.Log$1",
     "water.util.Log$LogStr",
+    // Classes required by tests - this is really nasty hack since it introduce
+    // dependency from core code into tests !!!!
+    "hex.DGLM$GLMParams",
+    "hex.NewRowVecTask$DataFrame",
+    "water.AutoSerialTest",
+    "water.KVTest$Atomic2",
   };
   // String -> ID mapping
   static private final NonBlockingHashMap<String, Integer> MAP = new NonBlockingHashMap();

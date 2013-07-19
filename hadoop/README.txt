@@ -6,22 +6,24 @@ Note: You may want to do all of this from the machine where you plan
 to launch the hadoop jar job from.  Otherwise you will end up having
 to copy files around.
 
+(If you grabbed a prebuilt h2o_hadoop.zip file, copy it to a hadoop 
+machine and skip to the PREPARE section below.)
+
 
 GET H2O TREE FROM GIT
 ---------------------
 
-git clone https://github.com/0xdata/h2o.git
-cd h2o
-git checkout --track origin/tomk-hadoop		<<<<< TEMPORARY until code merges back into master branch (post-full-regression-test)
+$ git clone https://github.com/0xdata/h2o.git
+$ cd h2o
 
 
 BUILD CODE
 ----------
 
-make
-cd hadoop
-make
-cd ..
+$ make
+$ cd hadoop
+$ make
+$ cd ..
 
 
 COPY BUILD OUTPUT TO HADOOP NODE
@@ -33,8 +35,8 @@ Copy h2o/hadoop/target/h2o_hadoop.zip <to place where you intend to run hadoop c
 PREPARE JOB INPUT ON HADOOP NODE
 --------------------------------
 
-unzip h2o_hadoop.zip
-cd h2o_hadoop
+$ unzip h2o_hadoop.zip
+$ cd h2o_hadoop
 
 Create flatfile.txt.
 
@@ -52,14 +54,37 @@ $ cat flatfile.txt
 192.168.1.155
 
 
+For your convenience, we have included a tool to help you genearate
+a flatfile.  This is only meant to assist you, and may encounter
+Java exceptions if DNS and DHCP are not fully configured.
+This generator tool is still experimental, please double check the 
+output yourself before relying on it.
+
+$ hadoop jar h2odriver_cdh4.jar water.hadoop.gen_flatfile -jt <jobtracker:port> akira:8021
+
+(Note: Make sure to use the h2odriver flavor for the correct version
+       of hadoop!  We recommend running the hadoop command from a
+       machine in the hadoop cluster.)
+
+(Note: Port 8021 is the default jobtracker port for some hadoop 
+       distributions.)
+
+
 RUN JOB
 -------
 
-hadoop jar h2odriver_cdh4.jar water.hadoop.h2odriver [-jt <jobtracker:port>] -files flatfile.txt -libjars h2o.jar -mapperXmx 1g -nodes 1 -output hdfsOutputDirName
+$ hadoop jar h2odriver_cdh4.jar water.hadoop.h2odriver [-jt <jobtracker:port>] -files flatfile.txt -libjars h2o.jar -mapperXmx 1g -nodes 1 -output hdfsOutputDirName
+
+(Note: -nodes refers to H2O nodes.  This may be less than or equal to
+       the number of hadoop machines running TaskTrackers where hadoop 
+       mapreduce Tasks may land.)
 
 (Note: Make sure to use the h2odriver flavor for the correct version
-       of Hadoop!  We recommend running the hadoop command from a
+       of hadoop!  We recommend running the hadoop command from a
        machine in the hadoop cluster.)
+
+(Note: Port 8021 is the default jobtracker port for some hadoop 
+       distributions.)
 
 
 MONITOR JOB
