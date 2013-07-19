@@ -21,7 +21,7 @@ final class DataAdapter  {
   /** Number of classes. */
   private final int _numClasses;
   /** Columns. */
-  private final Col[]    _c;
+  final Col[]    _c;
   /** Unique cookie identifying this dataset*/
   private final long     _dataId;
   /** Seed for sampling */
@@ -105,8 +105,9 @@ final class DataAdapter  {
   public final boolean isIgnored(int col)             { return _c[col].isIgnored(); }
   public final void    markIgnoredRow(int row)        { _c[_c.length-1].addBad(row);  }
   public final int     classColIdx()                  { return _c.length - 1; }
+  public final boolean hasAnyInvalid(int col)         { return _c[col].invalidValues!=0; }
 
-  private static class Col {
+  static class Col {
     /** Encoded values*/
     short[] binned;
     /** Original values, kept only during inhale*/
@@ -148,7 +149,7 @@ final class DataAdapter  {
       int ndups = 0, i = 0, nans = 0; // Counter of all NaNs
       while(i < vs.length-1){      // count dups
         int j = i+1;
-        if (isBadRaw(vs[i]))  { nans = vs.length - i; break; } // skipe all NaNs
+        if (isBadRaw(vs[i]))  { nans = vs.length - i; break; } // skip all NaNs
         if (isBadRaw(vs[j]))  { nans = vs.length - j; break; } // there is only one remaining NaN (do not forget on it)
         while(j < vs.length && vs[i] == vs[j]){  ++ndups; ++j; }
         i = j;
