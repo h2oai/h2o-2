@@ -293,7 +293,7 @@ public abstract class Log {
 
     String logFileName =
             getLogDir() + File.separator +
-            "h2o_" + ip + "_" + portString + ".log";
+                    "h2o_" + ip + "_" + portString + ".log";
 
     return logFileName;
   }

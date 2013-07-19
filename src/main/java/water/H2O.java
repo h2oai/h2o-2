@@ -1,6 +1,7 @@
 package water;
 
 import java.io.*;
+import java.lang.reflect.Constructor;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
@@ -13,6 +14,7 @@ import water.parser.ParseDataset;
 import water.persist.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
+import water.AbstractBuildVersion;
 
 import com.amazonaws.auth.PropertiesCredentials;
 import com.google.common.base.Objects;
@@ -615,6 +617,40 @@ public final class H2O {
 
   public static boolean IS_SYSTEM_RUNNING = false;
 
+  private static void sayHi() {
+    String build_branch = "(unknown)";
+    String build_hash = "(unknown)";
+    String build_describe = "(unknown)";
+    String build_by = "(unknown)";
+    String build_on = "(unknown)";
+    try {
+      Class klass = Class.forName("water.BuildVersion");
+      java.lang.reflect.Constructor constructor = klass.getConstructor();
+      AbstractBuildVersion abv = (AbstractBuildVersion) constructor.newInstance();
+      build_branch = abv.branchName();
+      build_hash = abv.lastCommitHash();
+      build_describe = abv.describe();
+      build_by = abv.compiledBy();
+      build_on = abv.compiledOn();
+      // it exists on the classpath
+    } catch (Exception e) {
+      // it does not exist on the classpath
+    }
+
+    Log.info ("----- H2O started -----");
+    Log.info ("Build git branch: " + build_branch);
+    Log.info ("Build git hash: " + build_hash);
+    Log.info ("Build git describe: " + build_describe);
+    Log.info ("Built by: '" + build_by + "'");
+    Log.info ("Built on: '" + build_on + "'");
+
+    Runtime runtime = Runtime.getRuntime();
+    double ONE_GB = 1024 * 1024 * 1024;
+    Log.info ("Java availableProcessors: " + runtime.availableProcessors());
+    Log.info ("Java heap totalMemory: " + String.format("%.2f gb", (double)runtime.totalMemory() / ONE_GB));
+    Log.info ("Java heap maxMemory: " + String.format("%.2f gb", (double)runtime.maxMemory() / ONE_GB));
+  }
+
   // Start up an H2O Node and join any local Cloud
   public static void main( String[] args ) {
     Log.POST(300,"");
@@ -633,6 +669,8 @@ public final class H2O {
       System.exit (0);
     }
 
+    sayHi();
+
     ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
     Log.POST(310,"");
 
@@ -644,6 +682,7 @@ public final class H2O {
     } catch(URISyntaxException ex) {
       throw new RuntimeException("Invalid ice_root: " + ice + ", " + ex.getMessage());
     }
+
     Log.info ("ICE root: '" + ICE_ROOT + "'");
 
     SELF_ADDRESS = findInetAddressForSelf();
@@ -655,6 +694,10 @@ public final class H2O {
     // Start the local node
     startLocalNode();
     Log.POST(330,"");
+
+    String logDir = (Log.getLogDir() != null) ? Log.getLogDir() : "(unknown)";
+    Log.info ("Log dir: '" + logDir + "'");
+
     // Load up from disk and initialize the persistence layer
     initializePersistence();
     Log.POST(340,"");
@@ -700,7 +743,6 @@ public final class H2O {
     }
 
     Log.info ("H2O cloud name: '" + NAME + "'");
-
     Log.info("(v"+VERSION+") '"+NAME+"' on " + SELF+(OPT_ARGS.flatfile==null
         ? (", discovery address "+CLOUD_MULTICAST_GROUP+":"+CLOUD_MULTICAST_PORT)
             : ", static configuration based on -flatfile "+OPT_ARGS.flatfile));
