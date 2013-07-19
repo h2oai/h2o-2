@@ -69,11 +69,10 @@ public class Data implements Iterable<Row> {
     public void    remove()            { throw new RuntimeException("Unsupported"); }
   }
 
-  public void filter(SplitNode node, Data[] result, Statistic ls, Statistic rs) {
+  // ----------------------
+  private int filterInv(SplitNode node, int[] permutation, Statistic ls, Statistic rs) {
     final Row row = new Row();
-    int[] permutation = getPermutationArray();
     int l = start(), r = end() - 1;
-
     while (l <= r) {
       int permIdx = row._index = permutation[l];
       boolean putToLeft = true;
@@ -82,7 +81,7 @@ public class Data implements Iterable<Row> {
       } else { // make a random choice about non
         putToLeft = _rng.nextBoolean();
       }
-
+      
       if (putToLeft) {
         ls.addQ(row);
         ++l;
@@ -92,7 +91,42 @@ public class Data implements Iterable<Row> {
         permutation[r--] = permIdx;
       }
     }
-    assert r+1 == l;
+    return l;
+  }
+
+  // Filter a column, with all valid data.  i.e., skip the invalid check
+  private int filterVal(SplitNode node, int[] permutation, Statistic ls, Statistic rs) {
+    int cidx = node._column;    // Decision column guiding the split
+    DataAdapter.Col cs[] = _dapt._c;
+    short bins[] = cs[cidx]._binned; // Bin#'s for each row
+    byte  binb[] = cs[cidx]._rawB;   // Bin#'s for each row
+    byte classes[]= cs[_dapt.classColIdx()]._rawB;
+    int split = node._split;          // Value to split on
+
+    int l = start(), r = end() - 1;
+    while (l <= r) {
+      int permIdx = permutation[l];
+      int cls = classes[permIdx];
+      // Hand-inlining for performance... CNC
+      int val = bins==null ? (0xFF&binb[permIdx]) : bins[permIdx];
+      if( val <= split ) {
+        ls.addQValid(cls,permIdx,cs);
+        ++l;
+      } else {
+        rs.addQValid(cls,permIdx,cs);
+        permutation[l] = permutation[r];
+        permutation[r--] = permIdx;
+      }
+    }
+    return l;
+  }
+
+  public void filter(SplitNode node, Data[] result, Statistic ls, Statistic rs) {
+    int[] permutation = getPermutationArray();
+    int cidx = node._column;
+    int l =  _dapt.hasAnyInvalid(cidx) || _dapt.hasAnyInvalid(_dapt.columns()-1)
+      ? filterInv(node,permutation,ls,rs) 
+      : filterVal(node,permutation,ls,rs);
     ls.applyClassWeights();     // Weight the distributions
     rs.applyClassWeights();     // Weight the distributions
     ColumnInfo[] linfo = _columnInfo.clone();

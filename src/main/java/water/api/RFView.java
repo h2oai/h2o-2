@@ -17,7 +17,7 @@ import com.google.gson.*;
 public class RFView extends /* Progress */ Request {
 
   /** The number specifies confusion matrix refresh threshold (in percent of trees). */
-  public static final int DEFAULT_CM_REFRESH_TRESHOLD   = 25; // = 25% - means the CM will be generated each 25% of trees has been built
+  public static final int DEFAULT_CM_REFRESH_THRESHOLD = 25; // = 25% - means the CM will be generated each 25% of trees has been built
 
   protected final H2OHexKey          _dataKey  = new H2OHexKey(DATA_KEY);
   protected final RFModelKey         _modelKey = new RFModelKey(MODEL_KEY);
@@ -28,11 +28,11 @@ public class RFView extends /* Progress */ Request {
   protected final Bool               _noCM     = new Bool(NO_CM, false,"Do not produce confusion matrix");
   protected final Bool               _clearCM  = new Bool(JSON_CLEAR_CM, false, "Clear cache of model confusion matrices");
   protected final Bool               _iterativeCM       = new Bool(ITERATIVE_CM, true, "Compute confusion matrix on-the-fly");
-  protected final Int                _refreshTresholdCM = new Int(JSON_REFRESH_TRESHOLD_CM, DEFAULT_CM_REFRESH_TRESHOLD);
+  protected final Int                _refreshThresholdCM = new Int(JSON_REFRESH_THRESHOLD_CM, DEFAULT_CM_REFRESH_THRESHOLD);
   /** RFView specific parameters names */
   public static final String JSON_CONFUSION_KEY   = "confusion_key";
   public static final String JSON_CLEAR_CM        = "clear_confusion_matrix";
-  public static final String JSON_REFRESH_TRESHOLD_CM = "refresh_treshold_cm";
+  public static final String JSON_REFRESH_THRESHOLD_CM = "refresh_threshold_cm";
 
   // JSON keys
   public static final String JSON_CM              = "confusion_matrix";
@@ -62,7 +62,7 @@ public class RFView extends /* Progress */ Request {
     if (weights != null)
       redirect.addProperty(WEIGHTS, weights);
     redirect.addProperty(OOBEE, oobee);
-    redirect.addProperty(ITERATIVE_CM, oobee);
+    redirect.addProperty(ITERATIVE_CM, iterativeCM);
 
     return Response.redirect(fromPageResponse, RFView.class, redirect);
   }
@@ -106,7 +106,7 @@ public class RFView extends /* Progress */ Request {
     r.addProperty(     OOBEE, _oobee.value());
     // CM specific options
     r.addProperty(NO_CM, _noCM.value());
-    r.addProperty(JSON_REFRESH_TRESHOLD_CM, _refreshTresholdCM.value());
+    r.addProperty(JSON_REFRESH_THRESHOLD_CM, _refreshThresholdCM.value());
 
     return r;
   }
@@ -130,7 +130,7 @@ public class RFView extends /* Progress */ Request {
     // CM return and possible computation is requested
     if (!_noCM.value() && (finished==tasks || _iterativeCM.value()) && finished > 0) {
       // Compute the highest number of trees which is less then a threshold
-      int modelSize = tasks * _refreshTresholdCM.value()/100;
+      int modelSize = tasks * _refreshThresholdCM.value()/100;
       modelSize     = modelSize == 0 || finished==tasks ? finished : modelSize * (finished/modelSize);
 
       // Get the computing the matrix - if no job is computing, then start a new job

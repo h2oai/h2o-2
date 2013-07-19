@@ -41,6 +41,8 @@ public class RFModel extends Model implements Cloneable, Progress {
   /** Total time in seconds to produce model */
   public long      _time;
 
+  public transient byte[][] _trees; // The raw tree data, for faster classification passes
+
   public static final String KEY_PREFIX = "__RFModel_";
 
   /** A RandomForest Model
@@ -89,13 +91,13 @@ public class RFModel extends Model implements Cloneable, Progress {
     }
   }
 
-  static public RFModel make(RFModel old, Key tkey) {
+  static public RFModel make(RFModel old, Key tkey, int nodeIdx) {
     RFModel m = old.clone();
     m._tkeys = Arrays.copyOf(old._tkeys,old._tkeys.length+1);
     m._tkeys[m._tkeys.length-1] = tkey;
-    int idx = H2O.SELF.index();
-    m._localForests[idx] = Arrays.copyOf(old._localForests[idx],old._localForests[idx].length+1);
-    m._localForests[idx][m._localForests[idx].length-1] = tkey;
+
+    m._localForests[nodeIdx] = Arrays.copyOf(old._localForests[nodeIdx],old._localForests[nodeIdx].length+1);
+    m._localForests[nodeIdx][m._localForests[nodeIdx].length-1] = tkey;
     return m;
   }
 
@@ -121,7 +123,11 @@ public class RFModel extends Model implements Cloneable, Progress {
 
   /** Return the bits for a particular tree */
   public byte[] tree(int tree_id) {
-    return DKV.get(_tkeys[tree_id]).memOrLoad();
+    byte[][] ts = _trees;
+    if( ts == null ) _trees = ts = new byte[tree_id+1][];
+    if( tree_id >= ts.length ) _trees = ts = Arrays.copyOf(ts,tree_id+1);
+    if( ts[tree_id] == null ) ts[tree_id] = DKV.get(_tkeys[tree_id]).memOrLoad();
+    return ts[tree_id];
   }
 
   /** Bad name, I know. But free all internal tree keys. */

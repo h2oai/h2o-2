@@ -520,7 +520,8 @@ def check_sandbox_for_errors(sandbox_ignore_errors=False):
                     # don't detect these class loader info messags as errors
                     #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
                     foundBad = regex1.search(line) and not (
-                        ('error rate' in line) or ('[Loaded ' in line) or ('[WARN]' in line))
+                        ('error rate' in line) or ('[Loaded ' in line) or
+                        ('[WARN]' in line) or ('CalcSquareErrorsTasks' in line))
 
                 if (printing==0 and foundBad):
                     printing = 1
@@ -1249,9 +1250,11 @@ class H2O(object):
             if stype != "enum":
                 smax = columns['max']
                 smin = columns['min']
-                percentiles = columns['percentiles']
-                thresholds = percentiles['thresholds']
-                values = percentiles['values']
+                if hasattr(columns,'percentiles'):
+                    percentiles = columns['percentiles']
+                    thresholds = percentiles['thresholds']
+                    values = percentiles['values']
+
                 mean = columns['mean']
                 sigma = columns['sigma']
 

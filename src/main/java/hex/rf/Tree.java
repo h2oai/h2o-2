@@ -132,10 +132,11 @@ public class Tree extends H2OCountedCompleter {
   // Stupid static method to make a static anonymous inner class
   // which serializes "for free".
   static void appendKey(Key model, final Key tKey) {
+    final int selfIdx = H2O.SELF.index();
     new TAtomic<RFModel>() {
       @Override public RFModel atomic(RFModel old) {
         if(old == null) return null;
-        return RFModel.make(old,tKey);
+        return RFModel.make(old,tKey,selfIdx);
       }
     }.invoke(model);
   }
