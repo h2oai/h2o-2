@@ -98,8 +98,9 @@ public class Data implements Iterable<Row> {
   private int filterVal(SplitNode node, int[] permutation, Statistic ls, Statistic rs) {
     int cidx = node._column;    // Decision column guiding the split
     DataAdapter.Col cs[] = _dapt._c;
-    short binned[] = cs[cidx].binned; // Bin#'s for each row
-    short classes[]= cs[cs.length-1].binned;
+    short bins[] = cs[cidx]._binned; // Bin#'s for each row
+    byte  binb[] = cs[cidx]._rawB;   // Bin#'s for each row
+    byte classes[]= cs[_dapt.classColIdx()]._rawB;
     int split = node._split;          // Value to split on
 
     int l = start(), r = end() - 1;
@@ -107,7 +108,7 @@ public class Data implements Iterable<Row> {
       int permIdx = permutation[l];
       int cls = classes[permIdx];
       // Hand-inlining for performance... CNC
-      int val = binned[permIdx];
+      int val = bins==null ? binb[permIdx] : bins[permIdx];
       if( val <= split ) {
         ls.addQValid(cls,permIdx,cs);
         ++l;
