@@ -1,9 +1,13 @@
 package hex;
 
+import hex.DGLM.Gram;
+
 import java.util.Arrays;
+
+import org.apache.poi.xslf.util.PPTX2PNG;
+
 import water.Iced;
 import water.MemoryManager;
-import water.util.Log;
 import Jama.CholeskyDecomposition;
 import Jama.Matrix;
 
@@ -39,7 +43,7 @@ public class DLSM {
      *  @return true if converged
      *
      */
-    public abstract boolean solve(double [][] xx, double [] xy, double yy,  double [] newBeta);
+    public abstract boolean solve(Gram gram, double [] newBeta);
     public abstract JsonObject toJson();
 
     protected boolean _converged;
@@ -121,96 +125,63 @@ public class DLSM {
       }
     }
 
-    public double [] solve(Matrix xx, Matrix xy, double [] z) {
-      final int N = xx.getRowDimension();
-      double lambda =  _lambda*(1-_alpha)*0.5 + _rho;
-      if(_lambda != 0) for(int i = 0; i < N-1; ++i)
-          xx.set(i, i, xx.get(i,i)+lambda);
-      CholeskyDecomposition lu = new CholeskyDecomposition(xx);
-      if(_alpha == 0 || _lambda == 0) // no l1 penalty
-        try {
-          double[] res = lu.solve(xy).getColumnPackedCopy();
-          System.arraycopy(res, 0, z, 0, res.length);
-          _converged = true;
-          return res;
-        } catch(Exception e) {
-          if( !e.getMessage().equals("Matrix is not symmetric positive definite.") )
-            throw Log.errRTExcept(e);
-          throw new NonSPDMatrixException();
-        }
-
+    @Override
+    public boolean solve(Gram gram, double[] z) {
+      final int N = gram._xy.length;
+      Arrays.fill(z, 0);
+      if(_lambda>0)gram.addDiag(_lambda*(1-_alpha)*0.5 + _rho);
+      gram.cholesky();
+      if(_alpha == 0 || _lambda == 0){ // no l1 penalty
+        System.arraycopy(gram._xy, 0, z, 0, gram._xy.length);
+        gram.solve(z);
+        return _converged = true;
+      }
       final double ABSTOL = Math.sqrt(N) * 1e-4;
       final double RELTOL = 1e-2;
-      double[] u = MemoryManager.malloc8d(N-1);
-      Matrix xm = null;
-      Matrix xyPrime = (Matrix)xy.clone();
-      OUTER:
-      for(int a = 0; a < 5; ++a){
-        double kappa = _lambda*_alpha / _rho;
-        for( int i = 0; i < 1000; ++i ) {
-          // first compute the x update
-          // add rho*(z-u) to A'*y
-          for( int j = 0; j < N-1; ++j ) {
-            xyPrime.set(j, 0, xy.get(j, 0) + _rho * (z[j] - u[j]));
-          }
-          // updated x
-          try{
-            xm = lu.solve(xyPrime);
-          } catch(Exception e) {
-            if( !e.getMessage().equals("Matrix is not symmetric positive definite.") )
-              throw Log.errRTExcept(e);
-            // bump the rho and try again
-            _rho *= 10;
-            lambda = (_lambda*(1-_alpha) + _rho) - lambda;
-            for(int j = 0; j < N-1; ++j)
-              xx.set(j, j, xx.get(j,j)+lambda);
-            Arrays.fill(z, 0);
-            Arrays.fill(u, 0);
-            continue OUTER;
-          }
-          // vars to be used for stopping criteria
-          double x_norm = 0;
-          double z_norm = 0;
-          double u_norm = 0;
-          double r_norm = 0;
-          double s_norm = 0;
-          double eps_pri = 0; // epsilon primal
-          double eps_dual = 0;
-          // compute u and z update
-          for( int j = 0; j < N-1; ++j ) {
-            double x_hat = xm.get(j, 0);
-            x_norm += x_hat * x_hat;
-            x_hat = x_hat * _orlx + (1 - _orlx) * z[j];
-            double zold = z[j];
-            z[j] = shrinkage(x_hat + u[j], kappa);
-            z_norm += z[j] * z[j];
-            s_norm += (z[j] - zold) * (z[j] - zold);
-            r_norm += (xm.get(j, 0) - z[j]) * (xm.get(j, 0) - z[j]);
-            u[j] += x_hat - z[j];
-            u_norm += u[j] * u[j];
-          }
-          z[N-1] = xm.get(N-1, 0);
-          // compute variables used for stopping criterium
-          r_norm = Math.sqrt(r_norm);
-          s_norm = _rho * Math.sqrt(s_norm);
-          eps_pri = ABSTOL + RELTOL * Math.sqrt(Math.max(x_norm, z_norm));
-          eps_dual = ABSTOL + _rho * RELTOL * Math.sqrt(u_norm);
-          if( r_norm < eps_pri && s_norm < eps_dual ){
-            _converged = true;
-            break;
-          }
+      double[] u = MemoryManager.malloc8d(N);
+      double [] xyPrime = gram._xy.clone();
+      double kappa = _lambda*_alpha / _rho;
+      for( int i = 0; i < 1000; ++i ) {
+        // first compute the x update
+        // add rho*(z-u) to A'*y
+        for( int j = 0; j < N-1; ++j )xyPrime[j] = gram._xy[j] + _rho * (z[j] - u[j]);
+        xyPrime[N-1] = gram._xy[N-1];
+        // updated x
+        gram.solve(xyPrime);
+        // vars to be used for stopping criteria
+        double x_norm = 0;
+        double z_norm = 0;
+        double u_norm = 0;
+        double r_norm = 0;
+        double s_norm = 0;
+        double eps_pri = 0; // epsilon primal
+        double eps_dual = 0;
+        // compute u and z update
+        for( int j = 0; j < N-1; ++j ) {
+          double x_hat = xyPrime[j];
+          x_norm += x_hat * x_hat;
+          x_hat = x_hat * _orlx + (1 - _orlx) * z[j];
+          double zold = z[j];
+          z[j] = shrinkage(x_hat + u[j], kappa);
+          z_norm += z[j] * z[j];
+          s_norm += (z[j] - zold) * (z[j] - zold);
+          r_norm += (xyPrime[j] - z[j]) * (xyPrime[j] - z[j]);
+          u[j] += x_hat - z[j];
+          u_norm += u[j] * u[j];
         }
-        return z;
+        z[N-1] = xyPrime[N-1];
+        // compute variables used for stopping criterium
+        r_norm = Math.sqrt(r_norm);
+        s_norm = _rho * Math.sqrt(s_norm);
+        eps_pri = ABSTOL + RELTOL * Math.sqrt(Math.max(x_norm, z_norm));
+        eps_dual = ABSTOL + _rho * RELTOL * Math.sqrt(u_norm);
+        if( r_norm < eps_pri && s_norm < eps_dual )
+          return _converged = true;
       }
-      throw new NonSPDMatrixException();
+      return false;
     }
 
-    @Override
-    public boolean solve(double[][] xx, double[] xy, double yy, double[] newBeta) {
-      Arrays.fill(newBeta, 0);
-      solve(new Matrix(xx), new Matrix(xy,xy.length),newBeta);
-      return _converged;
-    }
+
 
     @Override
     public String name() {
@@ -334,7 +305,10 @@ public class DLSM {
      * @return true if converged
      */
     @Override
-    public boolean solve(double[][] xx, double[] xy, double yy, double[] newBeta) {
+    public boolean solve(Gram gram, double[] newBeta) {
+      double [][] xx = gram.getXX();
+      double []   xy = gram._xy;
+      double      yy = gram._yy;
       if(_beta == null || _beta.length != newBeta.length){
         _beta = MemoryManager.malloc8d(newBeta.length);
         _betaGradient = MemoryManager.malloc8d(newBeta.length);
