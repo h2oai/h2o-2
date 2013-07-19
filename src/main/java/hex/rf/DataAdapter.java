@@ -48,10 +48,13 @@ final class DataAdapter  {
     for( int i = 0; i < _c.length; i++ ) {
       assert ary._cols[modelDataMap[i]]._name.equals(model._va._cols[i]._name);
       Column column = model._va._cols[i];
-      if (!column.isFloat() && column._size == 1) // we do not bin for small values
+      if( !column.isFloat() && 
+          ((column._max-column._min)<255 || // Nobody using 255
+           (column._max-column._min)<256 && column._n==rows) // Or 255 is just valid
+          ) // we do not bin for small values
         _c[i] = new Col(column._name, rows, i == _c.length-1, column._base);
       else
-        _c[i]= new Col(column._name, rows, i == _c.length-1,_binLimit, column.isFloat());
+        _c[i] = new Col(column._name, rows, i == _c.length-1,_binLimit, column.isFloat());
     }
     boolean trivial = true;
     if (classWt != null) for(double f: classWt) if (f != 1.0) trivial = false;
@@ -147,7 +150,6 @@ final class DataAdapter  {
       _colBinLimit = 0;
       _usedValues = new byte[256];
       _byteMin = Byte.MIN_VALUE;
-      System.err.println("Col " + s + " is byte column");
     }
 
     Col(String s, int rows, boolean isClass, int binLimit, boolean isFloat) {
