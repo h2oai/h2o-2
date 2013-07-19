@@ -70,8 +70,8 @@ public abstract class DGLM {
         }
         @Override public LambdaMax newResult() {return new LambdaMax(_sz,_var,_nobs);}
         @Override public void processRow(LambdaMax res, double[] x, int[] indexes) {
-            double w = (x[0]-_mu)*_gPrimeMu;
-            for(int i = 1; i < indexes.length; ++i)
+            double w = (x[x.length-1]-_mu)*_gPrimeMu;
+            for(int i = 0; i < x.length-1; ++i)
                 res._z[indexes[i]] += w*x[i];
         }
         @Override public LambdaMax reduce(LambdaMax x, LambdaMax y) {x.add(y); return x;}
@@ -1243,7 +1243,7 @@ public abstract class DGLM {
                 gram._xx[iii][indexes[j]] += w*x[i+denseStart]*x[j];
             }
             // SPARSE
-            for(int i = 1; i < denseStart; ++i){
+            for(int i = (_diag>0)?1:0; i < denseStart; ++i){
               final int idx = indexes[i];
               assert idx < N-_dense;
               final int iii = idx-_diag;
