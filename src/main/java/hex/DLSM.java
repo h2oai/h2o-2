@@ -130,7 +130,11 @@ public class DLSM {
       final int N = gram._xy.length;
       Arrays.fill(z, 0);
       if(_lambda>0)gram.addDiag(_lambda*(1-_alpha)*0.5 + _rho);
-      gram.cholesky();
+      int attempts = 0;
+      boolean isspd = false;
+      while(!(isspd = gram.cholesky()) && attempts < 10)
+        gram.addDiag(_rho*(1<< ++attempts)); // try to add L2 penalty to make the Gram issp
+      if(!isspd) throw new NonSPDMatrixException();
       if(_alpha == 0 || _lambda == 0){ // no l1 penalty
         System.arraycopy(gram._xy, 0, z, 0, gram._xy.length);
         gram.solve(z);

@@ -408,22 +408,20 @@ public abstract class DGLM {
           for(int i = 0; i < _xx.length-1;++i)
             _xx[i][_xx[i].length-1] += d;
         }
-        public void cholesky(){
+        public boolean cholesky(){
             _cholesky = true;
             final int sparseN = _diag.length;
             final int denseN = _xy.length - sparseN;
-            final int N = _xy.length;
             if(_diag != null) for(int i = 0; i < sparseN; ++i){
-                _diag[i] = Math.sqrt(_diag[i]);
-                double d = 1.0/_diag[i];
-                for(int j = 0; j < denseN;++j)
-                    _xx[j][i] *= d;
+              _diag[i] = Math.sqrt(_diag[i]);
+              double d = 1.0/_diag[i];
+              for(int j = 0; j < denseN;++j)
+                _xx[j][i] *= d;
             }
             for(int i = 0; i < denseN; ++i)
-                for(int j = 0; j <= i; ++j)
-                    for(int k = 0; k < sparseN; ++k)
-                        _xx[i][j+sparseN] -= _xx[i][k]*_xx[j][k];
-            // now do the cholesky decomp of the dense part
+              for(int j = 0; j <= i; ++j)
+                for(int k = 0; k < sparseN; ++k)
+                  _xx[i][j+sparseN] -= _xx[i][k]*_xx[j][k];
             //TODO do it here without copy
             double[][] arr = new double[denseN][];
             for(int i = 0; i < arr.length; ++i)
@@ -432,15 +430,12 @@ public abstract class DGLM {
             for(int i = 0; i < arr.length; ++i)
                 for(int j = 0; j < i; ++j)
                     arr[j][i] = arr[i][j];
-//            System.out.println("Gram(2):");
-//            System.out.println(pprint(arr));
             CholeskyDecomposition chol = new Matrix(arr).chol();
-            if(!chol.isSPD()) throw new NonSPDMatrixException();
+            if(!chol.isSPD()) return false;
             arr = chol.getL().getArray();
             for(int i = 0; i < arr.length; ++i)
               System.arraycopy(arr[i], 0, _xx[i], sparseN, i+1);
-//            System.out.println("Cholesky:");
-//            System.out.println(pprint(getXX2()));
+            return true;
         }
         public final void solve(double [] xy){
           if(!_cholesky)cholesky();
