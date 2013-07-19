@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import jsr166y.ForkJoinTask;
 import jsr166y.RecursiveAction;
 import water.*;
+import water.ValueArray.Column;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
@@ -78,7 +79,6 @@ class DABuilder {
     ArrayList<RecursiveAction> dataInhaleJobs = new ArrayList<RecursiveAction>();
     int start_row = 0;
     for( final Key k : keys ) {    // now read the values
-      System.err.println("loading: " + k);
       final int S = start_row;
       if (!k.home()) continue;     // This is not necessary, but for sure skip no local keys (we only inhale local data)
       final int rows = ary.rpc(ValueArray.getChunkIndex(k));
@@ -132,10 +132,16 @@ class DABuilder {
           boolean rowIsValid = false;
           for( int c = 0; c < ncolumns; ++c) { // For all columns being processed
             final int col = modelDataMap[c];   // Column in the dataset
+            Column column = ary._cols[col];
             if( ary.isNA(bits,j,col) ) { dapt.addBad(rowNum, c); continue; }
-            float f =(float)ary.datad(bits,j,col);
-            if( !dapt.isValid(c,f) ) { dapt.addBad(rowNum, c); continue; }
-            dapt.add(f, rowNum, c);
+            if (!column.isFloat() && column._size==1) {
+              long v = ary.data(bits, j, col);
+              dapt.add((byte) (v-column._base), rowNum, c);
+            } else {
+              float f =(float)ary.datad(bits,j,col);
+              if( !dapt.isValid(c,f) ) { dapt.addBad(rowNum, c); continue; }
+              dapt.add(f, rowNum, c);
+            }
             // if the row contains at least one correct value except class
             // column consider it as correct
             if( c != ncolumns-1 )
