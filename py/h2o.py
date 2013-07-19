@@ -1250,9 +1250,11 @@ class H2O(object):
             if stype != "enum":
                 smax = columns['max']
                 smin = columns['min']
-                percentiles = columns['percentiles']
-                thresholds = percentiles['thresholds']
-                values = percentiles['values']
+                if hasattr(columns,'percentiles'):
+                    percentiles = columns['percentiles']
+                    thresholds = percentiles['thresholds']
+                    values = percentiles['values']
+
                 mean = columns['mean']
                 sigma = columns['sigma']
 
