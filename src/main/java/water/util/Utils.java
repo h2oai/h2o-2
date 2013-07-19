@@ -26,6 +26,15 @@ public class Utils {
   public static int maxIndex(int[] from, Random rand) {
     assert rand != null;
     int result = 0;
+    boolean tie=false;
+    for( int i = 1; i < from.length; ++i ) {
+      if( from[i] > from[result] ) { result = i; tie = false; }
+      else if( from[i] == from[result] ) { tie = true; }
+    }
+    if( !tie ) return result;
+
+    // Retry, randomly picking from ties
+    result = 0;
     int maxCount = 0; // count of maximal element for a 1 item reservoir sample
     for( int i = 1; i < from.length; ++i ) {
       if( from[i] > from[result] ) {

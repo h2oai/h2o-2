@@ -135,12 +135,21 @@ abstract class Statistic {
       if ( f != -1) {
         if (row.isValid() && row.hasValidValue(f)) {
           short val = row.getEncodedColumnValue(f);
-          try {
           _columnDists[f][val][cls]++;
-          } catch( ArrayIndexOutOfBoundsException ab ) {
-            throw Log.err(Sys.RANDF,ab);
-          }
         }
+      }
+  }
+
+  /** Adds the given row to the statistic.  Updates the column distributions for
+   * the analyzed columns.  This version knows the row is always valid (always
+   * has a valid class), and is hand-inlined.  */
+  void addQValid(int cls, int ridx, DataAdapter.Col cs[]) {
+    for (int f : _features)
+      if ( f != -1) {
+        short[] bins = cs[f]._binned;
+        int val = bins==null ? (0xFF&cs[f]._rawB[ridx]) : bins[ridx];
+        if( bins==null || val != DataAdapter.BAD )
+          _columnDists[f][val][cls]++;
       }
   }
 

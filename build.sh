@@ -83,10 +83,30 @@ function clean() {
     fi
     mkdir ${OUTDIR}
     mkdir ${CLASSES}
+    rm -f $SRC/water/BuildVersion.java
 }
 
 function build_classes() {
     echo "building classes..."
+
+    BUILD_BRANCH=`git branch | grep '*' | sed 's/* //'`
+    BUILD_HASH=`git log -1 --format="%H"`
+    BUILD_DESCRIBE=`git describe --always --dirty`
+    BUILD_ON=`date`
+    BUILD_BY=`whoami | sed 's/.*\\\\//'`
+
+    cat > $SRC/water/BuildVersion.java <<EOF
+package water;
+
+public class BuildVersion extends AbstractBuildVersion {
+    public String branchName()     { return "${BUILD_BRANCH}"; }
+    public String lastCommitHash() { return "${BUILD_HASH}"; }
+    public String describe()       { return "${BUILD_DESCRIBE}"; }
+    public String compiledOn()     { return "${BUILD_ON}"; }
+    public String compiledBy()     { return "${BUILD_BY}"; }
+}
+EOF
+
     local CLASSPATH="${JAR_ROOT}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/*"
     "$JAVAC" ${JAVAC_ARGS} \
         -cp "${CLASSPATH}" \
@@ -139,7 +159,7 @@ function build_src_jar() {
 }
 
 function build_javadoc() {
-    echo "creating javadoc file... ${SRC_JAR_FILE}"
+    echo "creating javadoc files..."
     local CLASSPATH="${JAR_ROOT}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/*"
     "${JAVADOC}" -classpath "${CLASSPATH}" -d "${OUTDIR}"/javadoc -sourcepath "${SRC}" -subpackages hex:water 1> /dev/null 2> /dev/null
 }
@@ -155,8 +175,8 @@ build_classes
 if [ "$1" = "compile" ]; then exit 0; fi
 build_initializer
 build_jar
-if [ "$1" = "build" ]; then exit 0; fi
 build_src_jar
+if [ "$1" = "build" ]; then exit 0; fi
 build_javadoc
 if [ "$1" = "doc" ]; then exit 0; fi
 junit

@@ -27,3 +27,4 @@ cypof*
 typemap
 /libpeerconnection.log
 tmp/
+src/main/java/water/BuildVersion.java

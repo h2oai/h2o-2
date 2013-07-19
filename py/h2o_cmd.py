@@ -21,6 +21,7 @@ def parseFile(node=None, csvPathname=None, key=None, key2=None,
 
     # do SummaryPage here too, just to get some coverage
     if doSummary:
+        print "hello"
         node.summary_page(myKey2)
     return p
 

@@ -33,50 +33,63 @@ public class Summary extends Iced {
       _colId = colId;
       Column c = s.ary()._cols[colId];
       _enum = c.isEnum();
-      final long n = Math.max(c._n,1);
-      if(_enum){
-        _percentiles = null;
+      if(c._min == c._max){ // constant columns pecial case, not really any meaningfull data here, just don't blow up
+        _start = c._min;
         _binsz = _binszInv = 1;
-        _bins = new long[(int)n];
-        _start = 0;
-        _end = n;
+        _end = _start+1;
+        _percentiles = null;
+        _bins = new long[1];
+        _min = new double[]{c._min};
+        _max = new double[]{c._max};
       } else {
-        _min = new double[NMAX];
-        _max = new double[NMAX];
-        Arrays.fill(_min, Double.POSITIVE_INFINITY);
-        Arrays.fill(_max, Double.NEGATIVE_INFINITY);
-        if(c.isFloat() || c.numDomainSize() > MAX_HIST_SZ){
-          _percentiles = Objects.firstNonNull(percentiles, DEFAULT_PERCENTILES);
-
-          double a = (c._max - c._min) / n;
-          double b = Math.pow(10, Math.floor(Math.log10(a)));
-          // selects among d, 5*d, and 10*d so that the number of
-          // partitions go in [start, end] is closest to n
-          if (a > 20*b/3)
-             b *= 10;
-          else if (a > 5*b/3)
-             b *= 5;
-          double start = b * Math.floor(c._min / b);
-
-          // guard against improper parse (date type) or zero c._sigma
-          double binsz = Math.max(1e-4, 3.5 *  c._sigma/ Math.cbrt(c._n));
-          // Pick smaller of two for number of bins to avoid blowup of longs
-          int nbin = Math.max(Math.min(MAX_HIST_SZ,(int)((c._max - c._min) / binsz)),1);
-          _bins = new long[nbin];
-
-          _start = start;
-          _binsz = binsz;
-          _binszInv = 1.0/binsz;
-          _end = start + nbin * binsz;
+        final long n = Math.max(c._n,1);
+        if(_enum){
+          _percentiles = null;
+          _binsz = _binszInv = 1;
+          _bins = new long[(int)n];
+          _start = 0;
+          _end = n;
+          _min = _max = null;
         } else {
-          _start = c._min;
-          _end = c._max;
-          int sz = (int)c.numDomainSize();
-          _bins = new long[sz];
-          _binszInv = _binsz = 1.0;
-          _percentiles = Objects.firstNonNull(percentiles, DEFAULT_PERCENTILES);
+          _min = new double[NMAX];
+          _max = new double[NMAX];
+          Arrays.fill(_min, Double.POSITIVE_INFINITY);
+          Arrays.fill(_max, Double.NEGATIVE_INFINITY);
+          if(c.isFloat() || c.numDomainSize() > MAX_HIST_SZ){
+            double start, binsz;
+            int nbin;
+            double a = (c._max - c._min) / n;
+            double b = Math.pow(10, Math.floor(Math.log10(a)));
+            // selects among d, 5*d, and 10*d so that the number of
+            // partitions go in [start, end] is closest to n
+            if (a > 20*b/3)
+               b *= 10;
+            else if (a > 5*b/3)
+               b *= 5;
+            start = b * Math.floor(c._min / b);
+            if(Double.isNaN(start))
+              System.out.println("haha");
+            // guard against improper parse (date type) or zero c._sigma
+            binsz = Math.max(1e-4, 3.5 *  c._sigma/ Math.cbrt(c._n));
+            // Pick smaller of two for number of bins to avoid blowup of longs
+            nbin = Math.max(Math.min(MAX_HIST_SZ,(int)((c._max - c._min) / binsz)),1);
+            _bins = new long[nbin];
+            _start = start;
+            _binsz = binsz;
+            _binszInv = 1.0/binsz;
+            _end = start + nbin * binsz;
+            _percentiles = Objects.firstNonNull(percentiles, DEFAULT_PERCENTILES);
+          } else {
+            _start = c._min;
+            _end = c._max;
+            int sz = (int)c.numDomainSize();
+            _bins = new long[sz];
+            _binszInv = _binsz = 1.0;
+            _percentiles = Objects.firstNonNull(percentiles, DEFAULT_PERCENTILES);
+          }
         }
       }
+      assert !Double.isNaN(_start):"_start is NaN!";
     }
     public final double [] percentiles(){return _percentiles;}
 
@@ -85,16 +98,14 @@ public class Summary extends Iced {
       if( _bins.length == 0 ) return;
       int k = 0;
       long s = 0;
-      double pval = Double.NEGATIVE_INFINITY;
       for(int j = 0; j < _percentiles.length; ++j){
-        double s1 = _percentiles[j]*_n - s;
+        final double s1 = _percentiles[j]*_n;
         long bc = 0;
-        while(s1 > (bc = binCount(k))){
-          s1 -= bc;
+        while(s1 > s+(bc = binCount(k))){
           s  += bc;
           k++;
         }
-        _percentileValues[j] = pval =  Math.max(pval,_min[0] + k*_binsz) + s1/bc*_binsz;
+        _percentileValues[j] = _min[0] + k*_binsz + ((_binsz > 1)?0.5*_binsz:0);
       }
     }
 
@@ -108,7 +119,7 @@ public class Summary extends Iced {
 
     void add(ColSummary other) {
       assert _bins.length == other._bins.length;
-      assert Math.abs(_start - other._start) < 0.000001;
+      assert Math.abs(_start - other._start) < 0.000001:"start - other._start = " + (_start - other._start);
       assert Math.abs(_binszInv - other._binszInv) < 0.000000001;
       _n += other._n;
       for (int i = 0; i < _bins.length; i++)

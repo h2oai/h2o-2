@@ -24,7 +24,6 @@ class Basic(unittest.TestCase):
 
     # Try to put a file to each node in the cloud and checked reported size of the saved file 
     def test_A_putfile_to_all_nodes(self):
-        
         csvfile  = h2o.find_file(file_to_put())
         origSize = h2o.get_file_size(csvfile)
 
@@ -39,7 +38,6 @@ class Basic(unittest.TestCase):
 
     # Try to put a file, get file and diff original file and returned file.
     def test_B_putfile_and_getfile_to_all_nodes(self):
-
         csvfile = h2o.find_file(file_to_put())
         nodeTry = 0
         for node in h2o.nodes:
@@ -66,5 +64,4 @@ class Basic(unittest.TestCase):
 
 if __name__ == '__main__':
     h2o.unit_main()
-    print "hello2"
 
