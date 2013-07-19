@@ -409,74 +409,70 @@ public abstract class DGLM {
             _xx[i][_xx[i].length-1] += d;
         }
         public boolean cholesky(){
-            _cholesky = true;
-            final int sparseN = _diag.length;
-            final int denseN = _xy.length - sparseN;
-            if(_diag != null) for(int i = 0; i < sparseN; ++i){
-              _diag[i] = Math.sqrt(_diag[i]);
-              double d = 1.0/_diag[i];
-              for(int j = 0; j < denseN;++j)
-                _xx[j][i] *= d;
-            }
-            for(int i = 0; i < denseN; ++i)
-              for(int j = 0; j <= i; ++j)
-                for(int k = 0; k < sparseN; ++k)
-                  _xx[i][j+sparseN] -= _xx[i][k]*_xx[j][k];
-            //TODO do it here without copy
-            double[][] arr = new double[denseN][];
-            for(int i = 0; i < arr.length; ++i)
-                arr[i] = Arrays.copyOfRange(_xx[i], sparseN, sparseN+denseN);
-            // make it symmetric
-            for(int i = 0; i < arr.length; ++i)
-                for(int j = 0; j < i; ++j)
-                    arr[j][i] = arr[i][j];
-            CholeskyDecomposition chol = new Matrix(arr).chol();
-            if(!chol.isSPD()) return false;
-            arr = chol.getL().getArray();
-            for(int i = 0; i < arr.length; ++i)
-              System.arraycopy(arr[i], 0, _xx[i], sparseN, i+1);
-            return true;
+          final int sparseN = _diag.length;
+          final int denseN = _xy.length - sparseN;
+          if(_diag != null) for(int i = 0; i < sparseN; ++i){
+            _diag[i] = Math.sqrt(_diag[i]);
+            double d = 1.0/_diag[i];
+            for(int j = 0; j < denseN;++j)
+              _xx[j][i] *= d;
+          }
+          for(int i = 0; i < denseN; ++i)
+            for(int j = 0; j <= i; ++j)
+              for(int k = 0; k < sparseN; ++k)
+                _xx[i][j+sparseN] -= _xx[i][k]*_xx[j][k];
+          // TODO do it here without copy
+          double[][] arr = new double[denseN][];
+          for(int i = 0; i < arr.length; ++i)
+              arr[i] = Arrays.copyOfRange(_xx[i], sparseN, sparseN+denseN);
+          // make it symmetric
+          for(int i = 0; i < arr.length; ++i)
+            for(int j = 0; j < i; ++j)
+              arr[j][i] = arr[i][j];
+          CholeskyDecomposition chol = new Matrix(arr).chol();
+          if(!chol.isSPD()) return false;
+          arr = chol.getL().getArray();
+          for(int i = 0; i < arr.length; ++i)
+            System.arraycopy(arr[i], 0, _xx[i], sparseN, i+1);
+          _cholesky = true;
+          return true;
         }
-        public final void solve(double [] xy){
-          if(!_cholesky)cholesky();
-          assert _xx.length + _diag.length == xy.length;
+        /**
+         * Find solution to A*x = y.
+         *
+         * If the gram is not in Cholesky decomposed form, it will perform Cholesky decomposition first.
+         * Result is stored in the y input vector.
+         * May throw NonSPDMatrix exception in case Gram is not positive definite.
+         *
+         * @param y
+         */
+        public final void solve(double [] y){
+          if(!_cholesky && !cholesky())throw new NonSPDMatrixException();
+          assert _xx.length + _diag.length == y.length;
           // diagonal
           for (int k = 0; k < _diag.length; ++k)
-            xy[k] /= _diag[k];
+            y[k] /= _diag[k];
           // rest
-          final int n = xy.length;
+          final int n = y.length;
            // Solve L*Y = B;
            for (int k = _diag.length; k < n; ++k) {
               for (int i = 0; i < k ; i++)
-                  xy[k] -= xy[i]*_xx[k-_diag.length][i];
-              xy[k] /= _xx[k-_diag.length][k];
+                  y[k] -= y[i]*_xx[k-_diag.length][i];
+              y[k] /= _xx[k-_diag.length][k];
            }
            // Solve L'*X = Y;
            for (int k = n-1; k >= _diag.length; --k) {
               for (int i = k+1; i < n ; ++i)
-                  xy[k] -= xy[i]*_xx[i-_diag.length][k];
-              xy[k] /= _xx[k-_diag.length][k];
+                  y[k] -= y[i]*_xx[i-_diag.length][k];
+              y[k] /= _xx[k-_diag.length][k];
            }
            // diagonal
            for (int k = _diag.length-1; k >= 0; --k){
              for (int i = _diag.length; i < n ; ++i)
-               xy[k] -= xy[i]*_xx[i-_diag.length][k];
-             xy[k] /= _diag[k];
+               y[k] -= y[i]*_xx[i-_diag.length][k];
+             y[k] /= _diag[k];
            }
-//           System.out.println("Beta: " + Arrays.toString(xy));
         }
-        public double [][] getXX2(){
-          final int N = _xy.length;
-          double [][] xx = new double[N][];
-          for( int i = 0; i < N; ++i )
-              xx[i] = MemoryManager.malloc8d(N);
-          for(int i = 0; i < _diag.length; ++i)
-              xx[i][i] = _diag[i];
-          for( int i = 0; i < _xx.length; ++i )
-            for( int j = 0; j < _xx[i].length; ++j )
-              xx[i+_diag.length][j] = _xx[i][j];
-          return xx;
-      }
         public double [][] getXX(){
             final int N = _xy.length;
             double [][] xx = new double[N][];
@@ -492,11 +488,6 @@ public abstract class DGLM {
             }
             return xx;
         }
-        public double [] getXY(){
-            return _xy;
-        }
-        public double getYY(){return _yy;}
-
         public void add(Gram grm){
           final int N = _xy.length;
           assert N > 0;
@@ -1477,18 +1468,13 @@ public abstract class DGLM {
         double [] newBeta = MemoryManager.malloc8d(data.expandedSz());
         boolean converged = true;
         Gram gram = gramF.apply(job,data);
-//        System.out.println("GRAM:");
-//        System.out.println(gram.pprint(gram.getXX()));
-//        System.out.println("XY:");
-//        System.out.println(Arrays.toString(gram._xy));
         int iter = 1;
         long lsmSolveTime = 0;
         long t = System.currentTimeMillis();
         lsm.solve(gram, newBeta);
         lsmSolveTime += System.currentTimeMillis() - t;
-        if(params._family == Family.gaussian) {
-            currentModel = new GLMModel(Status.ComputingValidation, 0.0f,resKey,data, data.denormalizeBeta(newBeta), newBeta, params, lsm, gram._nobs, newBeta.length, converged, iter, System.currentTimeMillis() - t1, null);
-        } else do{ // IRLSM
+        currentModel = new GLMModel(Status.ComputingValidation, 0.0f,resKey,data, data.denormalizeBeta(newBeta), newBeta, params, lsm, gram._nobs, newBeta.length, converged, iter, System.currentTimeMillis() - t1, null);
+        if(params._family != Family.gaussian) do{ // IRLSM
             if(oldBeta == null)
                 oldBeta = MemoryManager.malloc8d(data.expandedSz());
             if(job.cancelled())
@@ -1498,7 +1484,7 @@ public abstract class DGLM {
             newBeta = b;
             gram = gramF.apply(job,data);
             if(gram.hasNaNsOrInfs()) // we can't solve this problem any further, user should increase regularization and try again
-                break;
+              break;
             t = System.currentTimeMillis();
             lsm.solve(gram, newBeta);
             lsmSolveTime += System.currentTimeMillis() - t;
