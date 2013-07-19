@@ -41,6 +41,8 @@ public class RFModel extends Model implements Cloneable, Progress {
   /** Total time in seconds to produce model */
   public long      _time;
 
+  public transient byte[][] _trees; // The raw tree data, for faster classification passes
+
   public static final String KEY_PREFIX = "__RFModel_";
 
   /** A RandomForest Model
@@ -121,7 +123,11 @@ public class RFModel extends Model implements Cloneable, Progress {
 
   /** Return the bits for a particular tree */
   public byte[] tree(int tree_id) {
-    return DKV.get(_tkeys[tree_id]).memOrLoad();
+    byte[][] ts = _trees;
+    if( ts == null ) _trees = ts = new byte[tree_id+1][];
+    if( tree_id >= ts.length ) _trees = ts = Arrays.copyOf(ts,tree_id+1);
+    if( ts[tree_id] == null ) ts[tree_id] = DKV.get(_tkeys[tree_id]).memOrLoad();
+    return ts[tree_id];
   }
 
   /** Bad name, I know. But free all internal tree keys. */
