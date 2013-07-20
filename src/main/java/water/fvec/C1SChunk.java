@@ -1,6 +1,7 @@
 package water.fvec;
 
 import water.*;
+import water.parser.DParseTask;
 
 // The scale/bias function, where data is in SIGNED bytes before scaling
 public class C1SChunk extends Chunk {
@@ -41,6 +42,17 @@ public class C1SChunk extends Chunk {
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
-    throw H2O.unimpl();
+    double dx = Math.log10(_scale);
+    int x = (int)dx;
+    if( DParseTask.pow10i(x) != _scale ) throw H2O.unimpl();
+    for( int i=0; i<_mem.length-OFF; i++ ) {
+      long res = 0xFF&_mem[i+OFF];
+      if( res == _NA ) nc.setInvalid(i);
+      else {
+        nc._ls[i] = res+_bias;
+        nc._xs[i] = x;
+      }
+    }
+    return nc;
   }
 }
