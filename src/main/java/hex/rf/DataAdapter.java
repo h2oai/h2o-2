@@ -113,7 +113,7 @@ final class DataAdapter  {
   }
 
   public final void    add(float v, int row, int col) { _c[col].add (row,v); }
-  public final void    add1(int  v, int row, int col) { _c[col].add1(row, v); }
+  public final void    add1(int  v, int row, int col) { _c[col].add1(row,v); }
   public final void    addBad(int row, int col)       { _c[col].addBad(row); }
   public final boolean hasBadValue(int row, int col)  { return _c[col].isBad(row); }
   public final boolean isBadRow(int row)              { return _c[_c.length-1].isBad(row); }
