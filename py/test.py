@@ -41,7 +41,11 @@ class Basic(unittest.TestCase):
     def test_F_StoreView(self):
         storeView = h2o.nodes[0].store_view()
 
-    def test_G_Slower_JUNIT(self):
+    def test_G_RF_covtype(self):
+        h2o_cmd.runRF(trees=6, timeoutSecs=120, 
+                csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data'))
+
+    def test_H_Slower_JUNIT(self):
         h2o.tear_down_cloud()
         h2o.build_cloud(node_count=2)
         # we don't have the port or ip configuration here
