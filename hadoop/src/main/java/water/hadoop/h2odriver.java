@@ -218,8 +218,12 @@ public class h2odriver extends Configured implements Tool {
         // Set up configuration.
         // ---------------------
         Configuration conf = getConf();
-        conf.set("mapred.child.java.opts", "-Xms" + mapperXmx + " -Xmx" + mapperXmx);
-//        conf.set("mapred.child.java.opts", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=8999");
+//        conf.set("mapred.child.java.opts", "-Dh2o.FINDME=ignored");
+//        conf.set("mapred.map.child.java.opts", "-Dh2o.FINDME2=ignored");
+//        conf.set("mapred.map.child.java.opts", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=8999");
+        String mapChildJavaOpts = "-Xms" + mapperXmx + " -Xmx" + mapperXmx;
+        conf.set("mapred.child.java.opts", mapChildJavaOpts);
+        conf.set("mapred.map.child.java.opts", mapChildJavaOpts);       // MapR 2.x requires this.
 
         // This is really silly, but without this line, the following ugly warning
         // gets emitted as the very first line of output, which is confusing for
