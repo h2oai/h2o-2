@@ -49,12 +49,13 @@ public class RandomForestTest extends TestUtil {
 
   @org.junit.Test public void covtype() {
     Key okey = loadAndParseFile("covtype.hex", "smalldata/covtype/covtype.20k.data");
+    //Key okey = loadAndParseFile("covtype.hex", "../datasets/UCI/UCI-large/covtype/covtype.data");
     ValueArray val = UKV.get(okey);
 
     // setup default values for DRF
-    int ntrees  = 6;
-    int depth   = 30;
-    int gini    = StatType.GINI.ordinal();
+    int ntrees  = 8;
+    int depth   = 60;
+    int gini    = StatType.ENTROPY.ordinal();
     int seed    = 42;
     StatType statType = StatType.values()[gini];
     final int cols[] = new int[val.numCols()];
