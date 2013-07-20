@@ -85,9 +85,7 @@ class DABuilder {
       start_row += rows;
     }
     // And invoke collected jobs (load all local data)
-    System.out.println("before invokeAll, jobs="+dataInhaleJobs.size());
     ForkJoinTask.invokeAll(dataInhaleJobs);
-    System.out.println("after invokeAll");
 
     // Now local data are loaded, try to inhale more data from other nodes.
     if (_drf._params._useNonLocalData) {
@@ -136,7 +134,7 @@ class DABuilder {
             final int col = modelDataMap[c];   // Column in the dataset
             Column column = ary._cols[col];
             if( ary.isNA(bits,j,col) ) { dapt.addBad(rowNum, c); continue; }
-            if( DataAdapter.isByteCol(column,(int)ary.numRows()) ) { // we do not bin for small values
+            if( DataAdapter.isByteCol(column,(int)ary.numRows(),c==ncolumns-1) ) { // we do not bin for small values
               int v = (int)ary.data(bits, j, col);
               dapt.add1(v, rowNum, c);
             } else {

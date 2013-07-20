@@ -48,7 +48,7 @@ final class DataAdapter  {
     for( int i = 0; i < _c.length; i++ ) {
       assert ary._cols[modelDataMap[i]]._name.equals(model._va._cols[i]._name);
       Column column = model._va._cols[i];
-      if( isByteCol(column,rows) ) // we do not bin for small values
+      if( isByteCol(column,rows,i == _c.length-1) ) // we do not bin for small values
         _c[i] = new Col(column._name, rows, i == _c.length-1);
       else
         _c[i] = new Col(column._name, rows, i == _c.length-1,_binLimit, column.isFloat());
@@ -58,11 +58,10 @@ final class DataAdapter  {
     _classWt = trivial ?  null : classWt;
   }
 
-  static boolean isByteCol( Column C, int rows ) {
-    double span = C._max-C._min;
-    return !C.isFloat() &&
-      (span<255 || // Nobody using 255
-       span<256 && C._n==rows); // Or 255 is just valid
+  static boolean isByteCol( Column C, int rows, boolean isClass ) {
+    return !C.isFloat() && !isClass && C._min >= 0 && C._n==rows &&
+      (C._max <255 ||
+       C._max <256 && C._n==rows);
   }
 
    /** Given a value in enum format, returns:  the value in the original format if no
@@ -165,10 +164,10 @@ final class DataAdapter  {
 
     void add(int row, float val) { _raw [row] = val; }
     void add1(int row, int  val) { _rawB[row] = (byte)val; }
-    void addBad(int row)         { if (!_isByte) _raw[row] = Float.NaN; else _rawB[row] = 0; }
+    void addBad(int row)         { if (!_isByte) _raw[row] = Float.NaN; else _rawB[row] = (byte)255; }
 
     private boolean isBadRaw(float f) { return Float.isNaN(f); }
-    boolean isBad(int row)            { return _isByte ? false : _binned[row] == BAD; }
+    boolean isBad(int row)            { return _isByte ? (_rawB[row]&0xFF)==255 : _binned[row] == BAD; }
 
     /** For all columns - encode all floats as unique shorts. */
     void shrink() {

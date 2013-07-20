@@ -100,13 +100,14 @@ public class Data implements Iterable<Row> {
     DataAdapter.Col cs[] = _dapt._c;
     short bins[] = cs[cidx]._binned; // Bin#'s for each row
     byte  binb[] = cs[cidx]._rawB;   // Bin#'s for each row
-    byte classes[]= cs[_dapt.classColIdx()]._rawB;
+    short classs[]= cs[_dapt.classColIdx()]._binned;
+    byte  classb[]= cs[_dapt.classColIdx()]._rawB;
     int split = node._split;          // Value to split on
 
     int l = start(), r = end() - 1;
     while (l <= r) {
       int permIdx = permutation[l];
-      int cls = classes[permIdx];
+      int cls = classs == null ? classb[permIdx] : classs[permIdx];
       // Hand-inlining for performance... CNC
       int val = bins==null ? (0xFF&binb[permIdx]) : bins[permIdx];
       if( val <= split ) {
