@@ -220,7 +220,7 @@ public final class H2O {
     return Arrays.toString(_memary);
   }
 
-  private static InetAddress findInetAddressForSelf() throws Error {
+  static InetAddress findInetAddressForSelf() throws Error {
     // Get a list of all valid IPs on this machine.  Typically 1 on Mac or
     // Windows, but could be many on Linux or if a hypervisor is present.
     ArrayList<InetAddress> ips = new ArrayList<InetAddress>();
@@ -811,7 +811,7 @@ public final class H2O {
   // Used to update the Throwable detailMessage field.
   private static java.lang.reflect.Field DETAILMESSAGE;
   public static <T extends Throwable> T setDetailMessage( T t, String s ) {
-    try { if( DETAILMESSAGE != null )  DETAILMESSAGE.set(t,s); } 
+    try { if( DETAILMESSAGE != null )  DETAILMESSAGE.set(t,s); }
     catch( IllegalAccessException iae) {}
     return t;
   }
@@ -824,11 +824,11 @@ public final class H2O {
   private static void startupFinalize() {
     // Allow Throwable detailMessage's to be updated on the fly.  Ugly, ugly,
     // but I want to add info without rethrowing/rebuilding whole exceptions.
-    try { 
+    try {
       DETAILMESSAGE = Throwable.class.getDeclaredField("detailMessage");
       DETAILMESSAGE.setAccessible(true);
     } catch( NoSuchFieldException nsfe ) { }
-    
+
     // Sleep a bit so all my other threads can 'catch up'
     try { Thread.sleep(1000); } catch( InterruptedException e ) { }
   }

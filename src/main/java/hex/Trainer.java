@@ -1,5 +1,7 @@
 package hex;
 
+import hex.Layer.Input;
+
 import java.util.Arrays;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -11,68 +13,121 @@ import water.util.Utils;
  * Trains a neural network.
  */
 public abstract class Trainer {
-  final byte[] _labels;
   final AtomicInteger _count;
+  int _batch = 20;
+  int _batches;
 
-  public Trainer(byte[] labels, AtomicInteger count) {
-    _labels = labels;
+  public Trainer(AtomicInteger count) {
     _count = count;
   }
 
+  abstract void join();
+
   abstract void start();
+
+  abstract Layer[] layers();
 
   public static class Direct extends Trainer {
     final Layer[] _ls;
     final Thread _thread;
-    int _n;
 
-    public Direct(Layer[] ls, byte[] labels) {
-      this(ls, labels, new AtomicInteger());
+    public Direct(Layer[] ls) {
+      this(ls, new AtomicInteger());
     }
 
-    public Direct(Layer[] ls, byte[] labels, AtomicInteger count) {
-      super(labels, count);
+    public Direct(Layer[] ls, AtomicInteger count) {
+      super(count);
       _ls = ls;
 
       _thread = new Thread() {
         public void run() {
-          for( ;; ) {
-            for( int b = 0; b < Layer.BATCH; b++ ) {
-              _ls[0]._off = _n * _ls[0]._len;
+          for( int batch = 0; _batches == 0 || batch < _batches; batch++ ) {
+            Input input = (Input) _ls[0];
+            for( int b = 0; b < _batch; b++ ) {
               fprop();
 
               for( int i = 1; i < _ls.length; i++ )
                 Arrays.fill(_ls[i]._e, 0);
               float[] err = _ls[_ls.length - 1]._e;
-              err[_labels[_n]] = 1.0f;
+              err[input.label()] = 1.0f;
               for( int i = 0; i < err.length; i++ )
                 err[i] -= _ls[_ls.length - 1]._a[i];
 
               bprop();
-              _n = _n == _labels.length - 1 ? 0 : _n + 1;
+              input._n = input._n == input._count - 1 ? 0 : input._n + 1;
             }
 
             for( int i = 1; i < _ls.length; i++ )
-              _ls[i].adjust();
+              _ls[i].adjust(_count.get());
 
-            _count.addAndGet(Layer.BATCH);
+            _count.addAndGet(_batch);
           }
         }
       };
+    }
+
+    @Override void join() {
+      try {
+        _thread.join();
+      } catch( InterruptedException e ) {
+        throw new RuntimeException(e);
+      }
     }
 
     @Override void start() {
       _thread.start();
     }
 
+    @Override Layer[] layers() {
+      return _ls;
+    }
+
     void fprop() {
-      for( int i = 1; i < _ls.length; i++ )
-        _ls[i].fprop(0, _ls[i]._len);
+      for( int i = 0; i < _ls.length; i++ )
+        _ls[i].fprop(0, _ls[i]._a.length);
     }
 
     void bprop() {
       for( int i = _ls.length - 1; i > 0; i-- )
-        _ls[i].bprop(0, _ls[i]._len);
+        _ls[i].bprop(0, _ls[i]._a.length);
+    }
+  }
+
+  /**
+   * Runs several trainers in parallel.
+   */
+  public static class ParallelTrainers extends Trainer {
+    final Direct[] _trainers;
+
+    public ParallelTrainers(Layer[] ls) {
+      super(new AtomicInteger());
+      _trainers = new Direct[Runtime.getRuntime().availableProcessors()];
+      for( int t = 0; t < _trainers.length; t++ ) {
+        Layer[] clones = new Layer[ls.length];
+        for( int i = 0; i < ls.length; i++ )
+          clones[i] = Utils.deepClone(ls[i], "_w", "_b");
+        for( int i = 1; i < ls.length; i++ )
+          clones[i]._in = clones[i - 1];
+        _trainers[t] = new Direct(clones, _count);
+        Input input = (Input) _trainers[t]._ls[0];
+        input._n = t * input._count / _trainers.length;
+      }
+    }
+
+    @Override void join() {
+      for( int i = 0; i < _trainers.length; i++ )
+        _trainers[i].join();
+    }
+
+    @Override void start() {
+      for( int t = 0; t < _trainers.length; t++ ) {
+        _trainers[t]._batches = _batches / _trainers.length;
+        _trainers[t].start();
+      }
+    }
+
+    @Override Layer[] layers() {
+      return _trainers[0]._ls;
     }
   }
 
@@ -83,8 +138,8 @@ public abstract class Trainer {
     final Chunk[] _chunks;
     final CyclicBarrier _wait, _done;
 
-    public Chunked(Layer[] ls, byte[] labels) {
-      super(ls, labels);
+    public Chunked(Layer[] ls) {
+      super(ls);
 
       _chunks = new Chunk[Runtime.getRuntime().availableProcessors()];
       _wait = new CyclicBarrier(_chunks.length);
@@ -95,12 +150,12 @@ public abstract class Trainer {
       for( int layer = 1; layer < _ls.length; layer++ ) {
         int last = 0;
         for( int i = 0; i < _chunks.length; i++ ) {
-          final int limit = _ls[layer]._len * (i + 1) / _chunks.length;
+          final int limit = _ls[layer]._a.length * (i + 1) / _chunks.length;
           offs[i][layer] = last;
           lens[i][layer] = limit - last;
           last = limit;
         }
-        assert last == _ls[layer]._len;
+        assert last == _ls[layer]._a.length;
       }
       for( int i = 0; i < _chunks.length; i++ ) {
         _chunks[i] = new Chunk(offs[i], lens[i]);
@@ -162,32 +217,6 @@ public abstract class Trainer {
       } catch( Exception e ) {
         throw new RuntimeException(e);
       }
-    }
-  }
-
-  /**
-   * Runs several trainers in parallel.
-   */
-  public static class ParallelTrainers extends Trainer {
-    final Direct[] _trainers;
-
-    public ParallelTrainers(Layer[] ls, byte[] labels) {
-      super(labels, new AtomicInteger());
-      _trainers = new Direct[Runtime.getRuntime().availableProcessors()];
-      for( int t = 0; t < _trainers.length; t++ ) {
-        Layer[] clones = new Layer[ls.length];
-        for( int i = 0; i < ls.length; i++ )
-          clones[i] = Utils.deepClone(ls[i], "_w", "_b");
-        for( int i = 1; i < ls.length; i++ )
-          clones[i]._in = clones[i - 1];
-        _trainers[t] = new Direct(clones, labels, _count);
-        _trainers[t]._n = t * labels.length / _trainers.length;
-      }
-    }
-
-    @Override void start() {
-      for( int t = 0; t < _trainers.length; t++ )
-        _trainers[t].start();
     }
   }
 

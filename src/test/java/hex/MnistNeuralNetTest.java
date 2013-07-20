@@ -1,5 +1,6 @@
 package hex;
 
+import hex.Layer.Input;
 import hex.rng.MersenneTwisterRNG;
 
 import java.io.*;
@@ -10,31 +11,43 @@ import water.util.Utils;
 
 public class MnistNeuralNetTest {
   static final int PIXELS = 784, EDGE = 28;
+  //static final String PATH = "smalldata/mnist70k/";
+  static final String PATH = "mnist/";
+  static final DecimalFormat _format = new DecimalFormat("0.000");
 
   static class Data {
     float[] _images;
     byte[] _labels;
   }
 
-  Data _train, _test;
+  static Data _train, _test;
   Layer[] _ls;
-  DecimalFormat _format = new DecimalFormat("0.00");
+
+  public static class TestInput extends Input {
+    public TestInput() {
+      super(PIXELS);
+      _count = _test._labels.length;
+    }
+
+    @Override int label() {
+      return _test._labels[_n];
+    }
+
+    @Override void fprop(int off, int len) {
+      System.arraycopy(_test._images, _n * PIXELS, _a, 0, PIXELS);
+    }
+  }
 
   public void run() throws Exception {
-    {
-      long time = System.nanoTime();
-      String f = "smalldata/mnist70k/";
-      _train = loadData(f + "train-images-idx3-ubyte.gz", f + "train-labels-idx1-ubyte.gz");
-      _test = loadData(f + "t10k-images-idx3-ubyte.gz", f + "t10k-labels-idx1-ubyte.gz");
-      System.out.println("load: " + (int) ((System.nanoTime() - time) / 1e6) + " ms");
-    }
+    loadTrain();
+    loadTest();
 
     boolean load = false;
     boolean pretrain = false;
     boolean rectifier = false;
     {
       _ls = new Layer[3];
-      _ls[0] = new Layer.Input(_train._images, PIXELS);
+      _ls[0] = new MnistInput(_train);
       if( rectifier ) {
         _ls[1] = new Layer.Rectifier(_ls[0], 500);
         _ls[2] = new Layer.Rectifier(_ls[1], 10);
@@ -200,26 +213,47 @@ public class MnistNeuralNetTest {
     Error error = new Error();
     int correct = 0;
     for( int n = 0; n < length; n++ ) {
-      if( MnistNeuralNetTest.test(clones, data, n, error) ) correct++;
+      if( MnistNeuralNetTest.test(clones, data, n, error) )
+        correct++;
     }
     String pct = _format.format(((length - correct) * 100f / length));
     return "err " + _format.format(error.Value / length) + " (" + pct + "%)";
   }
 
-  static boolean test(Layer[] clones, Data data, int n, Error error) {
-    clones[0]._a = data._images;
-    clones[0]._off = n * PIXELS;
-
-    for( int i = 1; i < clones.length; i++ )
-      clones[i].fprop(0, clones[i]._a.length);
-
-    float[] out = clones[clones.length - 1]._a;
-    for( int i = 0; i < out.length; i++ ) {
-      float t = i == data._labels[n] ? 1 : 0;
-      float d = t - out[i];
-      error.Value += d * d;
+  static String test(Layer[] ls, int count) {
+    Layer[] clones = new Layer[ls.length];
+    for( int i = 0; i < ls.length; i++ ) {
+//      _ls[i]._forward.get(_ls[i]._w);
+      clones[i] = Utils.deepClone(ls[i]);
     }
+    for( int i = 1; i < ls.length; i++ )
+      clones[i]._in = clones[i - 1];
 
+    Error error = new Error();
+    int correct = 0;
+    for( int n = 0; n < count; n++ ) {
+      if( test(clones, n, error) ) {
+        correct++;
+      }
+    }
+    String pct = _format.format(((count - correct) * 100f / count));
+    return _format.format(error.Value / count) + " (" + pct + "%)";
+  }
+
+  static boolean test(Layer[] ls, int n, Error error) {
+    Input input = (Input) ls[0];
+    input._n = n;
+    for( int i = 0; i < ls.length; i++ )
+      ls[i].fprop(0, ls[i]._a.length);
+
+    float[] out = ls[ls.length - 1]._a;
+    if( error != null ) {
+      for( int i = 0; i < out.length; i++ ) {
+        float t = i == input.label() ? 1 : 0;
+        float d = t - out[i];
+        error.Value += d * d;
+      }
+    }
     float max = Float.MIN_VALUE;
     int idx = -1;
     for( int i = 0; i < out.length; i++ ) {
@@ -228,20 +262,22 @@ public class MnistNeuralNetTest {
         idx = i;
       }
     }
-    return idx == data._labels[n];
+    return idx == input.label();
   }
 
   static float convert(byte b) {
     return (b & 0xff) / 255f;
   }
 
-  static void convert(byte[] bytes, float[] floats) {
-    assert bytes.length == floats.length;
-    for( int i = 0; i < floats.length; i++ )
-      floats[i] = convert(bytes[i]);
+  static void loadTrain() {
+    _train = loadZip(PATH + "train-images-idx3-ubyte.gz", PATH + "train-labels-idx1-ubyte.gz");
   }
 
-  static Data loadData(String images, String labels) {
+  static void loadTest() {
+    _test = loadZip(PATH + "t10k-images-idx3-ubyte.gz", PATH + "t10k-labels-idx1-ubyte.gz");
+  }
+
+  static Data loadZip(String images, String labels) {
     DataInputStream imagesBuf = null, labelsBuf = null;
     try {
       imagesBuf = new DataInputStream(new GZIPInputStream(new FileInputStream(new File(images))));
@@ -250,7 +286,8 @@ public class MnistNeuralNetTest {
       imagesBuf.readInt(); // Magic
       int count = imagesBuf.readInt();
       labelsBuf.readInt(); // Magic
-      if( count != labelsBuf.readInt() ) throw new RuntimeException();
+      if( count != labelsBuf.readInt() )
+        throw new RuntimeException();
       imagesBuf.readInt(); // Rows
       imagesBuf.readInt(); // Cols
 

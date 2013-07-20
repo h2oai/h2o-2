@@ -1,5 +1,7 @@
 package hex;
 
+import hex.Layer.Input;
+
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.image.BufferedImage;
@@ -10,31 +12,14 @@ import javax.swing.*;
 
 @SuppressWarnings("serial")
 public final class MnistCanvas extends Canvas {
-  final Layer[] _ls;
-  final float[] _images;
-  final byte[] _labels;
+  final Trainer _trainer;
+  final Input _input;
   final Random _rand = new Random();
   int _level = 1;
 
-  public static void main(String[] args) throws Exception {
-    MnistNeuralNetTest mnist = new MnistNeuralNetTest();
-    mnist.run();
-
-    // Basic visualization of images and weights
-
-    JFrame frame = new JFrame("RBM");
-    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    MnistCanvas canvas = new MnistCanvas(mnist._ls, mnist._train._images, mnist._train._labels);
-    frame.setContentPane(canvas.init());
-    frame.pack();
-    frame.setLocationRelativeTo(null);
-    frame.setVisible(true);
-  }
-
-  MnistCanvas(Layer[] ls, float[] images, byte[] labels) {
-    _ls = ls;
-    _images = images;
-    _labels = labels;
+  MnistCanvas(Trainer trainer, Input input) {
+    _trainer = trainer;
+    _input = input;
   }
 
   JPanel init() {
@@ -57,7 +42,7 @@ public final class MnistCanvas extends Canvas {
     bar.add(new JButton("histo") {
       @Override protected void fireActionPerformed(ActionEvent event) {
         Histogram.initFromSwingThread();
-        Histogram.build(_ls);
+        Histogram.build(_trainer.layers());
       }
     });
     JPanel pane = new JPanel();
@@ -71,7 +56,7 @@ public final class MnistCanvas extends Canvas {
 
   @Override public void paint(Graphics g) {
     int edge = 56, pad = 10;
-    int rand = _rand.nextInt(_labels.length);
+    int rand = _rand.nextInt(_input._count);
 
     // Side
     {
@@ -80,53 +65,55 @@ public final class MnistCanvas extends Canvas {
 
       // Input
       int[] pix = new int[MnistNeuralNetTest.PIXELS];
+      _input._n = rand;
+      _input.fprop(0, _input._a.length);
       for( int i = 0; i < pix.length; i++ )
-        pix[i] = (int) (_images[rand * MnistNeuralNetTest.PIXELS + i] * 255f);
+        pix[i] = (int) (_input._a[i] * 255f);
       r.setDataElements(0, 0, MnistNeuralNetTest.EDGE, MnistNeuralNetTest.EDGE, pix);
       g.drawImage(in, pad, pad, null);
 
       // Labels
-      // g.drawString("" + _labels[rand], 10, 50);
+      g.drawString("" + _input.label(), 10, 50);
       g.drawString("RBM " + _level, 10, 70);
     }
 
     // Outputs
     int offset = pad;
-    float[] visible = new float[MnistNeuralNetTest.PIXELS];
-    System.arraycopy(_images, rand * MnistNeuralNetTest.PIXELS, visible, 0, MnistNeuralNetTest.PIXELS);
-    for( int i = 0; i <= _level; i++ ) {
-      for( int pass = 0; pass < 10; pass++ ) {
-        if( i == _level ) {
-          int[] output = new int[visible.length];
-          for( int v = 0; v < visible.length; v++ )
-            output[v] = (int) Math.min(visible[v] * 255, 255);
-          BufferedImage out = new BufferedImage(MnistNeuralNetTest.EDGE, MnistNeuralNetTest.EDGE,
-              BufferedImage.TYPE_INT_RGB);
-          WritableRaster r = out.getRaster();
-          r.setDataElements(0, 0, MnistNeuralNetTest.EDGE, MnistNeuralNetTest.EDGE, output);
-          BufferedImage image = new BufferedImage(edge, edge, BufferedImage.TYPE_INT_RGB);
-          Graphics2D ig = image.createGraphics();
-          ig.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
-          ig.clearRect(0, 0, edge, edge);
-          ig.drawImage(out, 0, 0, edge, edge, null);
-          ig.dispose();
-          g.drawImage(image, pad * 2 + MnistNeuralNetTest.EDGE, offset, null);
-          offset += pad + edge;
-        }
+//    float[] visible = new float[MnistNeuralNetTest.PIXELS];
+//    System.arraycopy(_images, rand * MnistNeuralNetTest.PIXELS, visible, 0, MnistNeuralNetTest.PIXELS);
+//    for( int i = 0; i <= _level; i++ ) {
+//      for( int pass = 0; pass < 10; pass++ ) {
+//        if( i == _level ) {
+//          int[] output = new int[visible.length];
+//          for( int v = 0; v < visible.length; v++ )
+//            output[v] = (int) Math.min(visible[v] * 255, 255);
+//          BufferedImage out = new BufferedImage(MnistNeuralNetTest.EDGE, MnistNeuralNetTest.EDGE,
+//              BufferedImage.TYPE_INT_RGB);
+//          WritableRaster r = out.getRaster();
+//          r.setDataElements(0, 0, MnistNeuralNetTest.EDGE, MnistNeuralNetTest.EDGE, output);
+//          BufferedImage image = new BufferedImage(edge, edge, BufferedImage.TYPE_INT_RGB);
+//          Graphics2D ig = image.createGraphics();
+//          ig.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+//          ig.clearRect(0, 0, edge, edge);
+//          ig.drawImage(out, 0, 0, edge, edge, null);
+//          ig.dispose();
+//          g.drawImage(image, pad * 2 + MnistNeuralNetTest.EDGE, offset, null);
+//          offset += pad + edge;
+//        }
 //        if( _ls[i]._v != null ) {
 //          float[] hidden = new float[_ls[i]._b.length];
 //          _ls[i].forward(visible, hidden);
 //          visible = _ls[i].generate(hidden);
 //        }
-      }
+//      }
 //      float[] t = new float[_ls[i]._b.length];
 //      _ls[i].forward(visible, t);
 //      visible = t;
-    }
+//    }
 
     // Weights
     int buf = MnistNeuralNetTest.EDGE + pad + pad;
-    Layer layer = _ls[_level];
+    Layer layer = _trainer.layers()[_level];
     double mean = 0;
     int n = layer._w.length;
     for( int i = 0; i < n; i++ )
@@ -145,9 +132,9 @@ public final class MnistCanvas extends Canvas {
         buf += pad + edge;
       }
 
-      int[] start = new int[layer._in._len];
-      for( int i = 0; i < layer._in._len; i++ ) {
-        double w = layer._w[o * layer._in._len + i];
+      int[] start = new int[layer._in._a.length];
+      for( int i = 0; i < layer._in._a.length; i++ ) {
+        double w = layer._w[o * layer._in._a.length + i];
         w = ((w - mean) / sigma) * 200;
         if( w >= 0 ) start[i] = ((int) Math.min(+w, 255)) << 8;
         else start[i] = ((int) Math.min(-w, 255)) << 16;

@@ -26,3 +26,5 @@ target/
 cypof*
 typemap
 /libpeerconnection.log
+/mnist
+/mnist8m

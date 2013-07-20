@@ -90,8 +90,10 @@ public abstract class EC2 {
         String ip = ip(instance);
         if( ip != null ) {
           String name = null;
-          if( instance.getTags().size() > 0 ) name = instance.getTags().get(0).getValue();
-          if( NAME.equals(name) ) instances.add(instance);
+          if( instance.getTags().size() > 0 )
+            name = instance.getTags().get(0).getValue();
+          if( NAME.equals(name) )
+            instances.add(instance);
         }
       }
     }
@@ -107,24 +109,28 @@ public abstract class EC2 {
       if( confirm ) {
         System.out.println("Please confirm [y/n]");
         String s = Utils.readConsole();
-        if( s == null || !s.equalsIgnoreCase("y") ) throw new RuntimeException("Aborted");
+        if( s == null || !s.equalsIgnoreCase("y") )
+          throw new RuntimeException("Aborted");
       }
 
       RunInstancesRequest request = new RunInstancesRequest();
       request.withInstanceType(type);
-      if( region.startsWith("us-east-1") ) request.withImageId("ami-fc75ee95");
-      else if( region.startsWith("us-west-1") ) request.withImageId("ami-64d1fc21");
+      if( region.startsWith("us-east-1") )
+        request.withImageId("ami-fc75ee95");
+      else if( region.startsWith("us-west-1") )
+        request.withImageId("ami-64d1fc21");
       else if( region.startsWith("us-west-2") ) // Oregon
-      request.withImageId("ami-52bf2b62");
-      else if( region.startsWith("eu-west-1") ) request.withImageId("ami-5e93992a");
+        request.withImageId("ami-52bf2b62");
+      else if( region.startsWith("eu-west-1") )
+        request.withImageId("ami-5e93992a");
       else if( region.startsWith("ap-southeast-1") ) // Singapore
-      request.withImageId("ami-ac9ed2fe");
+        request.withImageId("ami-ac9ed2fe");
       else if( region.startsWith("ap-southeast-2") ) // Sydney
-      request.withImageId("ami-283eaf12");
+        request.withImageId("ami-283eaf12");
       else if( region.startsWith("ap-northeast-1") ) // Tokyo
-      request.withImageId("ami-153fbf14");
+        request.withImageId("ami-153fbf14");
       else if( region.startsWith("sa-east-1") ) // Sao Paulo
-      request.withImageId("ami-db6bb0c6");
+        request.withImageId("ami-db6bb0c6");
 
       request.withMinCount(launchCount).withMaxCount(launchCount);
       request.withSecurityGroupIds(secg);
@@ -186,11 +192,12 @@ public abstract class EC2 {
     } catch( IOException e ) {
       throw Log.errRTExcept(e);
     } finally {
-      if( r != null ) try {
-        r.close();
-      } catch( IOException e ) {
-        throw Log.errRTExcept(e);
-      }
+      if( r != null )
+        try {
+          r.close();
+        } catch( IOException e ) {
+          throw Log.errRTExcept(e);
+        }
     }
   }
 
@@ -212,10 +219,12 @@ public abstract class EC2 {
         List<Instance> instances = new ArrayList<Instance>();
         for( Reservation reservation : reservations )
           for( Instance instance : reservation.getInstances() )
-            if( ip(instance) != null ) instances.add(instance);
+            if( ip(instance) != null )
+              instances.add(instance);
         if( instances.size() == ids.size() ) {
           // Try to connect to SSH port on each box
-          if( canConnect(instances) ) return instances;
+          if( canConnect(instances) )
+            return instances;
         }
       } catch( AmazonServiceException _ ) {
         // Ignore and retry
@@ -230,19 +239,23 @@ public abstract class EC2 {
 
   private static String ip(Instance instance) {
     String ip = instance.getPublicIpAddress();
-    if( ip != null && ip.length() != 0 ) if( instance.getState().getName().equals("running") ) return ip;
+    if( ip != null && ip.length() != 0 )
+      if( instance.getState().getName().equals("running") )
+        return ip;
     return null;
   }
 
   private static boolean canConnect(List<Instance> instances) {
     for( Instance instance : instances ) {
       try {
-        String ssh = Host.ssh() + " -q" + Host.SSH_OPTS + " " + instance.getPublicIpAddress();
+        String ssh = "ssh -q" + Host.SSH_OPTS + " " + instance.getPublicIpAddress();
         Process p = Runtime.getRuntime().exec(ssh + " exit");
-        if( p.waitFor() != 0 ) return false;
+        if( p.waitFor() != 0 )
+          return false;
       } catch( Exception e ) {
         return false;
-      } finally {}
+      } finally {
+      }
     }
     return true;
   }

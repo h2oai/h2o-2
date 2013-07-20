@@ -3,8 +3,6 @@ package water.deploy;
 import java.io.File;
 import java.util.*;
 
-import org.apache.commons.lang.ArrayUtils;
-
 import water.*;
 import water.H2O.FlatFileEntry;
 import water.H2O.OptArgs;
@@ -31,11 +29,13 @@ public class Cloud {
   public void start(String[] includes, String[] excludes, String[] java_args, String[] args) {
     // Take first box as cloud master
     Host master = new Host(_publicIPs[0]);
-    includes = (String[]) ArrayUtils.addAll(Host.defaultIncludes(), includes);
-    excludes = (String[]) ArrayUtils.addAll(Host.defaultExcludes(), excludes);
+    Set<String> incls = Host.defaultIncludes();
+    Set<String> excls = Host.defaultExcludes();
+    incls.addAll(Arrays.asList(includes));
+    excls.addAll(Arrays.asList(excludes));
     File flatfile = Utils.writeFile(Utils.join('\n', _privateIPs));
-    includes = (String[]) ArrayUtils.add(includes, flatfile.getAbsolutePath());
-    master.rsync(includes, excludes);
+    incls.add(flatfile.getAbsolutePath());
+    master.rsync(incls, excls);
 
     ArrayList<String> list = new ArrayList<String>();
     list.add("-mainClass");
@@ -44,7 +44,8 @@ public class Cloud {
     list.add(flatfile.getName());
     list.add("-log_headers");
     list.addAll(Arrays.asList(args));
-    SSHWatchdog r = new SSHWatchdog(master, java_args, list.toArray(new String[0]));
+    String[] java = Utils.add(java_args, NodeVM.class.getName());
+    SSHWatchdog r = new SSHWatchdog(master, java, list.toArray(new String[0]));
     r.inheritIO();
     r.start();
   }
@@ -62,7 +63,7 @@ public class Cloud {
       String key = host.key() != null ? host.key() : "";
       String s = "ssh-agent sh -c \"ssh-add " + key + "; ssh -l " + host.user() + " -A" + Host.SSH_OPTS;
       s += " -L 54321:127.0.0.1:54321"; // Port forwarding
-      s += " " + host.address() + " '" + NodeHost.command(p._java, p._node) + "'\"";
+      s += " " + host.address() + " '" + SSH.command(p._java, p._node) + "'\"";
       s = s.replace("\\", "\\\\").replace("$", "\\$");
       ArrayList<String> list = new ArrayList<String>();
       // Have to copy to file for cygwin, but works also on -nix
@@ -71,7 +72,8 @@ public class Cloud {
       if( onWindows.exists() ) {
         list.add(onWindows.getPath());
         list.add("--login");
-      } else list.add("bash");
+      } else
+        list.add("bash");
       list.add(sh.getAbsolutePath());
       exec(list);
     }
@@ -95,8 +97,9 @@ public class Cloud {
         workers.add(new NodeHost(host, workerArgs));
       }
 
-      String[] includes = (String[]) ArrayUtils.add(Host.defaultIncludes(), h2oArgs.flatfile);
-      String[] excludes = Host.defaultExcludes();
+      Set<String> includes = Host.defaultIncludes();
+      includes.add(h2oArgs.flatfile);
+      Set<String> excludes = Host.defaultExcludes();
       Host.rsync(hosts.values().toArray(new Host[0]), includes, excludes);
 
       for( Node w : workers ) {

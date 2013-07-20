@@ -282,13 +282,17 @@ public class Utils {
   }
 
   public static String join(char sep, Object[] array) {
+    return join(sep, Arrays.asList(array));
+  }
+
+  public static String join(char sep, Iterable it) {
     String s = "";
-    for( Object o : array )
+    for( Object o : it )
       s += (s.length() == 0 ? "" : sep) + o.toString();
     return s;
   }
 
-  public static <T> T[] add(T[] a, String... b) {
+  public static <T> T[] add(T[] a, T... b) {
     return (T[]) ArrayUtils.addAll(a, b);
   }
 
@@ -339,9 +343,13 @@ public class Utils {
           boolean except_ = excepts.remove(f.getName());
           if( v != null && !(v instanceof Layer) ) {
             if( v instanceof Number ) f.set(clone, v);
+            else if( v instanceof Boolean ) f.set(clone, v);
             else if( v instanceof float[] ) {
               if( except_ ) f.set(clone, v);
               else f.set(clone, ((float[]) v).clone());
+            } else if( v instanceof int[] ) {
+              if( except_ ) f.set(clone, v);
+              else f.set(clone, ((int[]) v).clone());
             }
             // TODO other types
             else throw new RuntimeException("Field " + f + " cannot be cloned");
@@ -355,7 +363,7 @@ public class Utils {
     }
   }
 
-  private static void getAllFields(List<Field> fields, Class<?> type) {
+  public static void getAllFields(List<Field> fields, Class<?> type) {
     for( Field field : type.getDeclaredFields() )
       fields.add(field);
     if( type.getSuperclass() != null ) getAllFields(fields, type.getSuperclass());

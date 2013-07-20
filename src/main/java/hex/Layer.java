@@ -11,23 +11,19 @@ import com.amd.aparapi.Range;
  * Neural network layer, can be used as one level of Perceptron, AA or RBM.
  */
 public abstract class Layer {
-  static final int BATCH = 20;
-  static final boolean AUTO_RATE = false;
-
-  float momentum = 0.9f;
-  float rate = 0.0001f;
-  float l2 = 1f * rate;
-  float minMult = 0, maxMult = 50;
+  float _rate = .0001f;
+  float _momentum = .1f; // 1 - value, as parameter search is 0 based
+  float _annealing = .0001f;
+  float _l2 = .0001f;
+  boolean _auto = true;
+  float _autoDelta = .2f;
 
   // Weights, biases, activity, error
   float[] _w, _b, _a, _e;
 
-  // Gradients, last gradients, auto rate multipliers
-  float[] _gw, _gwLast, _gwMult;
-  float[] _gb, _gbLast, _gbMult;
-
-  // In case _a is a dataset (Aparapi needs flat arrays)
-  int _off, _len;
+  // Gradients & auto rate data
+  float[] _gw, _gwMult, _gwMtum;
+  float[] _gb, _gbMult, _gbMtum;
 
   // Previous layer
   Layer _in;
@@ -38,7 +34,7 @@ public abstract class Layer {
   public Layer() {}
 
   public Layer(Layer in, int len) {
-    _w = new float[len * in._len];
+    _w = new float[len * in._a.length];
     _b = new float[len];
     _a = new float[len];
     _e = new float[len];
@@ -46,17 +42,24 @@ public abstract class Layer {
     _gw = new float[_w.length];
     _gb = new float[_b.length];
 
-    _off = 0;
-    _len = len;
     _in = in;
+  }
 
-    if( AUTO_RATE ) {
-      _gwLast = new float[_w.length];
+  void init() {
+    // deeplearning.net tutorial (TODO figure out one for rectifiers)
+    Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+    float min = (float) -Math.sqrt(6. / (_in._a.length + _a.length));
+    float max = (float) +Math.sqrt(6. / (_in._a.length + _a.length));
+    for( int i = 0; i < _w.length; i++ )
+      _w[i] = rand(rand, min, max);
+
+    if( _auto ) {
       _gwMult = new float[_w.length];
-      _gbLast = new float[_b.length];
-      _gbMult = new float[_b.length];
+      _gwMtum = new float[_w.length];
       for( int i = 0; i < _gwMult.length; i++ )
         _gwMult[i] = 1;
+      _gbMult = new float[_b.length];
+      _gbMtum = new float[_b.length];
       for( int i = 0; i < _gbMult.length; i++ )
         _gbMult[i] = 1;
     }
@@ -66,51 +69,62 @@ public abstract class Layer {
 
   abstract void bprop(int off, int len);
 
-  public final void adjust() {
+  public final void adjust(long n) {
+    float rate = _rate / (1 + _annealing * n);
+
     for( int w = 0; w < _gw.length; w++ ) {
-      _gw[w] -= l2 * _w[w];
-      _w[w] += rate * delta(_gw, _gwLast, _gwMult, w);
-      _gw[w] *= momentum;
+      _gw[w] -= _l2 * _w[w];
+      _w[w] += rate * delta(_gw, _gwMult, _gwMtum, w);
     }
 
     for( int b = 0; b < _gb.length; b++ ) {
-      _b[b] += rate * delta(_gb, _gbLast, _gbMult, b);
-      _gb[b] *= momentum;
+      _gb[b] -= _l2 * _b[b];
+      _b[b] += rate * delta(_gb, _gbMult, _gbMtum, b);
     }
   }
 
   /**
    * Adjusts learning rate using a multiplier per parameter.
    */
-  private final float delta(float[] g, float[] gLast, float[] gMult, int i) {
-    float res = g[i];
-    if( AUTO_RATE ) {
+  private final float delta(float[] g, float[] mult, float[] mtum, int i) {
+    float res;
+    if( _auto ) {
+      boolean sign = g[i] > 0;
+      boolean last = mult[i] > 0;
+      float abs = Math.abs(mult[i]);
       // If the gradient kept its sign, increase
-      if( g[i] * gLast[i] > 0 ) {
-        gMult[i] += 0.05f;
-        gMult[i] = Math.min(gMult[i], maxMult);
+      if( sign == last ) {
+        if( abs < 4 ) abs += _autoDelta;
+      } else {
+        abs *= 1 - _autoDelta;
       }
-      if( g[i] * gLast[i] < 0 ) {
-        gMult[i] *= 0.95f;
-        gMult[i] = Math.max(gMult[i], minMult);
-      }
-      gLast[i] = g[i];
-      res *= gMult[i];
+      mtum[i] += g[i];
+      res = mtum[i] * abs;
+      mtum[i] *= 1 - _momentum;
+      mult[i] = sign ? abs : -abs;
+      g[i] = 0;
+    } else {
+      res = g[i];
+      g[i] *= 1 - _momentum;
     }
     return res;
   }
 
-  public static class Input extends Layer {
+  public static abstract class Input extends Layer {
+    int _count;
+    int _n;
+
     public Input() {}
 
-    public Input(float[] a, int len) {
-      _a = a;
-      _len = len;
+    public Input(int len) {
+      _a = new float[len];
     }
 
-    @Override void fprop(int off, int len) {
-      throw new UnsupportedOperationException();
+    @Override void init() {
+      //
     }
+
+    abstract int label();
 
     @Override void bprop(int off, int len) {
       throw new UnsupportedOperationException();
@@ -122,21 +136,15 @@ public abstract class Layer {
 
     public Tanh(Layer in, int len) {
       super(in, len);
-
-      // deeplearning.net tutorial
-      Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-      float min = (float) -Math.sqrt(6. / (in._len + len));
-      float max = (float) +Math.sqrt(6. / (in._len + len));
-      for( int i = 0; i < _w.length; i++ )
-        _w[i] = rand(rand, min, max);
     }
 
     @Override void fprop(int off, int len) {
       for( int o = off; o < off + len; o++ ) {
         _a[o] = 0;
-        for( int i = 0; i < _in._len; i++ )
-          _a[o] += _w[o * _in._len + i] * _in._a[_in._off + i];
+        for( int i = 0; i < _in._a.length; i++ )
+          _a[o] += _w[o * _in._a.length + i] * _in._a[i];
         _a[o] += _b[o];
+        //_a[o] = (float) (1.7159 * Math.tanh(0.66666667 * _a[o]));
         _a[o] = (float) Math.tanh(_a[o]);
       }
     }
@@ -144,10 +152,11 @@ public abstract class Layer {
     @Override void bprop(int off, int len) {
       for( int o = off; o < off + len; o++ ) {
         float d = _e[o] * (1 - _a[o] * _a[o]);
-        for( int i = 0; i < _in._len; i++ ) {
-          _gw[o * _in._len + i] += d * _in._a[_in._off + i];
+        // float d = (float) (0.66666667 / 1.7159 * (1.7159 + _a[o]) * (1.7159 - _a[o]));
+        for( int i = 0; i < _in._a.length; i++ ) {
+          _gw[o * _in._a.length + i] += d * _in._a[i];
           if( _in._e != null ) {
-            _in._e[i] += d * _w[o * _in._len + i];
+            _in._e[i] += d * _w[o * _in._a.length + i];
           }
         }
         _gb[o] += d;
@@ -160,13 +169,11 @@ public abstract class Layer {
 
     public Rectifier(Layer in, int len) {
       super(in, len);
+    }
 
-      // TODO ?
-      MersenneTwisterRNG rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-      float min = (float) -Math.sqrt(6. / (in._len + len));
-      float max = (float) +Math.sqrt(6. / (in._len + len));
-      for( int i = 0; i < _w.length; i++ )
-        _w[i] = rand(rand, min, max);
+    @Override void init() {
+      super.init();
+
       for( int i = 0; i < _b.length; i++ )
         _b[i] = 1;
       for( int i = 0; _v != null && i < _v.length; i++ )
@@ -176,8 +183,8 @@ public abstract class Layer {
     @Override void fprop(int off, int len) {
       for( int o = off; o < off + len; o++ ) {
         _a[o] = 0;
-        for( int i = 0; i < _in._len; i++ )
-          _a[o] += _w[o * _in._len + i] * _in._a[_in._off + i];
+        for( int i = 0; i < _in._a.length; i++ )
+          _a[o] += _w[o * _in._a.length + i] * _in._a[i];
         _a[o] += _b[o];
         if( _a[o] < 0 ) {
           _a[o] = 0;
@@ -189,10 +196,10 @@ public abstract class Layer {
       for( int o = off; o < off + len; o++ ) {
         float d = _e[o];
         if( _a[o] < 0 ) d = 0;
-        for( int i = 0; i < _in._len; i++ ) {
-          _gw[o * _in._len + i] += d * _in._a[_in._off + i];
+        for( int i = 0; i < _in._a.length; i++ ) {
+          _gw[o * _in._a.length + i] += d * _in._a[i];
           if( _in._e != null ) {
-            _in._e[i] += d * _w[o * _in._len + i];
+            _in._e[i] += d * _w[o * _in._a.length + i];
           }
         }
         _gb[o] += d;
@@ -212,7 +219,7 @@ public abstract class Layer {
         float[] w = _w, b = _b, a = _a, inA = _in._a;
         // @Local
         int[] indexes = _indexes;
-        int inLen = _in._len;
+        int inLen = _in._a.length;
 
         @Override public void run() {
           int o = getGlobalId(0);
@@ -229,15 +236,14 @@ public abstract class Layer {
 
       _bprop = new Kernel() {
         float[] w = _w, gw = _gw, gb = _gb, a = _a, e = _e, inA = _in._a, inE = _in._e;
-        int inOff = _in._off;
-        int inLen = _in._len;
+        int inLen = _in._a.length;
 
         @Override public void run() {
           int o = getGlobalId(0);
           float d = e[o];
           if( a[o] < 0 ) d = 0;
           for( int i = 0; i < inLen; i++ ) {
-            gw[o * inLen + i] += d * inA[inOff + i];
+            gw[o * inLen + i] += d * inA[i];
             if( inE != null ) {
               inE[i] += d * w[o * inLen + i];
             }
@@ -281,20 +287,20 @@ public abstract class Layer {
 
     for( int o = 0; o < _b.length; o++ )
       for( int i = 0; i < _v.length; i++ )
-        _gw[o * _v.length + i] += rate * ((h1[o] * v1[i]) - (h2[o] * v2[i]));
+        _gw[o * _v.length + i] += _rate * ((h1[o] * v1[i]) - (h2[o] * v2[i]));
 
     for( int o = 0; o < _gb.length; o++ )
-      _gb[o] += rate * (h1[o] - h2[o]);
+      _gb[o] += _rate * (h1[o] - h2[o]);
 
     for( int i = 0; i < _gv.length; i++ )
-      _gv[i] += rate * (v1[i] - v2[i]);
+      _gv[i] += _rate * (v1[i] - v2[i]);
   }
 
   final void adjustVisible() {
     if( _gv != null ) {
       for( int v = 0; v < _gv.length; v++ ) {
         _v[v] += _gv[v];
-        _gv[v] *= momentum;
+        _gv[v] *= 1 - _momentum;
       }
     }
   }
@@ -303,8 +309,8 @@ public abstract class Layer {
     assert hidden.length == _b.length;
     float[] visible = new float[_v.length];
     for( int o = 0; o < hidden.length; o++ )
-      for( int i = 0; i < _in._len; i++ )
-        visible[i] += _w[o * _in._len + i] * hidden[o];
+      for( int i = 0; i < _in._a.length; i++ )
+        visible[i] += _w[o * _in._a.length + i] * hidden[o];
     for( int i = 0; i < visible.length; i++ ) {
       visible[i] += _v[i];
       if( visible[i] < 0 ) visible[i] = 0;
