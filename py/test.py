@@ -42,7 +42,7 @@ class Basic(unittest.TestCase):
         storeView = h2o.nodes[0].store_view()
 
     def test_G_RF_covtype(self):
-        h2o_cmd.runRF(trees=6, timeoutSecs=120, 
+        h2o_cmd.runRF(trees=6, timeoutSecs=15, 
                 csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data'))
 
     def test_H_Slower_JUNIT(self):
