@@ -16,11 +16,9 @@ import water.*;
 //  Vec Key format is: Key. VEC - byte, 0 - byte,   0    - int, normal Key bytes.
 // DVec Key format is: Key.DVEC - byte, 0 - byte, chunk# - int, normal Key bytes.
 public class Vec extends Iced {
-  public enum DType {U,I,F,E,S,NA};
   public static final int LOG_CHK = 20; // Chunks are 1<<20, or 1Meg
   public static final long CHUNK_SZ = 1L << LOG_CHK;
-  protected DType _dtype = DType.U;
-  public DType dtype(){return _dtype;}
+
   final public Key _key;        // Top-level key
   // Element-start per chunk.  Always zero for chunk 0.  One more entry than
   // chunks, so the last entry is the total number of rows.  This field is
@@ -36,6 +34,18 @@ public class Vec extends Iced {
   public boolean _isInt;  // true if column is all integer data
   // min/max/mean lazily computed.
   double _min, _max;
+
+  // Base datatype of the entire column.  
+  // Decided on when we close an AppendableVec.
+  // U - Unknown (or empty)
+  // I - Integer/Long
+  // F - Float/Double
+  // S - String/Enum
+  // NA- All missing data
+  public enum DType {U,I,F,S,NA};
+  protected DType _dtype = DType.U;
+  // Overridden in AppendableVec
+  public DType dtype(){return _dtype;}
 
   Vec( Key key, long espc[], boolean isInt, double min, double max ) {
     assert key._kb[0]==Key.VEC;

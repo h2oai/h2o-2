@@ -43,13 +43,14 @@ public class AppendableVec extends Vec {
     _totalCnt += chk._len;
   }
 
-  @Override
-  public DType dtype() {
-    if(_missingCnt == _totalCnt)return DType.NA;
+  // What kind of data did we find?  NA's?  Strings-only?  Floats or Ints?
+  @Override  public DType dtype() {
+    if( _missingCnt == _totalCnt ) return DType.NA;
     // TODO: we declare column to be string/enum only if it does not have ANY numbers in it.
-    if(_strCnt > 0 && (_strCnt + _missingCnt) == _totalCnt) return DType.S;
-    return _hasFloat?DType.F:DType.I;
+    if( _strCnt > 0 && (_strCnt + _missingCnt) == _totalCnt ) return DType.S;
+    return _hasFloat ? DType.F : DType.I;
   }
+
   // Class 'reduce' call on new vectors; to combine the roll-up info.
   // Called single-threaded from the M/R framework.
   public void reduce( AppendableVec nv ) {
