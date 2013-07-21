@@ -38,25 +38,29 @@ public class GBM extends Job {
     final int ncols = fr._vecs.length-1; // Last column is the response column
     Vec vs[] = fr._vecs;
 
+    // Response column is the last one in the frame
+    Vec vresponse = vs[ncols];
+
     // Make a new Vec to hold the split-number for each row (initially all zero).
-    Vec vsplit = Vec.makeZero(vs[0]);
+    Vec vnids = Vec.makeZero(vs[0]);
+    fr.add("NIDs",vnids);
     // Make a new Vec to hold the prediction value for each row
     Vec vpred  = Vec.makeZero(vs[0]);
+    fr.add("Predictions",vpred);
 
     // Initially setup as-if an empty-split had just happened
+    Tree tree = new Tree();
     Histogram hists[] = new Histogram[ncols];
     for( int j=0; j<ncols; j++ )
       hists[j] = new Histogram(fr._names[j],vs[j].length(),vs[j].min(),vs[j].max(),vs[j]._isInt);
-    Tree root = new Tree(null,hists,0);
-    ArrayList<Tree> wood = new ArrayList<Tree>();
-    wood.add(root);
-    int treeMin = 0, treeMax = 1; // Define a "working set" of leaf splits
+    Tree.Node root = tree.newNode(null,hists);
+    int treeMin = 0;            // Define a "working set" of leaf splits
 
     // One Big Loop till the tree is of proper depth.
     for( int depth=0; depth<maxDepth; depth++ ) {
 
       // Report the average prediction error
-      double error = new CalcError().invoke(fr._vecs[ncols],vpred)._sum;
+      double error = new CalcError().doAll(vresponse,vpred)._sum;
       double errAvg = error/fr._vecs[0].length();
       Log.unwrap(System.out,"============================================================== ");
       Log.unwrap(System.out,"Average prediction error for tree of depth "+depth+" is "+errAvg);
@@ -64,33 +68,22 @@ public class GBM extends Job {
       // Build a histogram with a pass over the data.
       // Should be an MRTask2.
       for( int k=0; k<fr._vecs[0].length(); k++ ) {
-        int split = (int)vsplit.at8(k);   // Split for this row
-        if( split == -1 ) continue;  // Row does not need to split again (generally perfect prediction already)
-        double y = fr._vecs[ncols].at(k); // Response variable for row
-        Tree t = wood.get(split);         // This row is being split in Tree t
-        for( int j=0; j<ncols; j++ )      // For all columns
+        int nid = (int)vnids.at8(k); // Node id for this row
+        if( nid==-1 ) continue; // Row does not need to split again (generally perfect prediction already)
+        double y = vresponse.at(k);  // Response variable for row
+        Tree.Node t = tree.n(nid);   // This row is being split in Node t
+        for( int j=0; j<ncols; j++ ) // For all columns
           if( t._hs[j] != null ) // Some columns are ignored, since already split to death
             t._hs[j].incr(fr._vecs[j].at(k),y);
       }
 
-      // Compute mean-square-error, per-column.  
-      // Requires mean from 1st pass, so requires a 2nd pass.
-      //for( int k=0; k<fr._vecs[0].length(); k++ ) {
-      //  int split = (int)vsplit.at8(k);        // Split for this row
-      //  if( split == -1 ) continue;  // Row does not need to split again (generally perfect prediction already)
-      //  double y = fr._vecs[ncols].at(k);      // Response variable for row
-      //  Tree t = wood.get(split);    // This row is being split in Tree t
-      //  for( int j=0; j<ncols; j++ ) // For all columns
-      //    if( t._hs[j] != null ) // Some columns are ignored, since already split to death
-      //      t._hs[j].incr2(fr._vecs[j].at(k),y);
-      //}
-
       // Build up the next-generation tree splits from the current histograms.
       // Nearly all leaves will split one more level.  This loop nest is
-      // O( #active_splits * #bins * #ncols )
-      int nsplit=treeMax;
+      //           O( #active_splits * #bins * #ncols )
+      // but is NOT over all the data.
+      final int treeMax = tree._len; // Number of total splits
       for( int w=treeMin; w<treeMax; w++ ) {
-        Tree t = wood.get(w);         // Tree being split
+        Tree.Node t = tree.n(w); // Node being split
 
         // Adjust for observed min/max in the histograms, as some of the bins
         // might already be zero from a prior split (i.e., the maximal element
@@ -136,55 +129,27 @@ public class GBM extends Job {
             nhists[j] = new Histogram(fr._names[j],splitH._bins[i],min,max,vs[j]._isInt);
           }
           // Add a new (unsplit) Tree
-          wood.add(t._ts[i]=new Tree(t,nhists,nsplit++));
+          t._ns[i]=tree.newNode(t,nhists)._nid;
         }
       }
-      // "Score" each row against the new splits.  Assign a new split.
-      // Should be an MRTask2.
-      for( int k=0; k<fr._vecs[0].length(); k++ ) {
-        double y = fr._vecs[ncols].at(k);  // Response variable for row
-        int oldSplit = (int)vsplit.at8(k); // Get the tree/split number
-        if( oldSplit == -1 ) continue;     // row already predicts perfectly
-        Tree t = wood.get(oldSplit);       // This row is being split in Tree t
-        double d = fr._vecs[t._col].at(k); // Value to split on
-        int bin = t._hs[t._col].bin(d);    // Bin in the histogram in the tree
-        double pred = t._hs[t._col].mean(bin);// Current prediction
-        Tree tsplit = t._ts[bin];          // Tree split
-        int newSplit = tsplit==null ? -1 : tsplit._split; // New split# or -1 for "row is done"
-        //StringBuilder sb = new StringBuilder("{");
-        //for( int j=0; j<ncols; j++ )
-        //  sb.append(fr._vecs[j].at(k)).append(",");
-        //sb.append("}=").append(y).append(", pred=").append(pred).append(", split=").append(newSplit);
-        //Log.unwrap(System.out,sb.toString());
-        vsplit.set8(k,newSplit); // Save the new split# for this row
-        vpred .set8(k,pred);     // Save the new prediction also
-      }
-      for( int i=0; i<vsplit.nChunks(); i++ ) {
-        vsplit.elem2BV(i).close(i,null); // "close" the written vsplit vec
-        vpred .elem2BV(i).close(i,null); // "close" the written vsplit vec
-      }
-
       treeMin = treeMax;        // Move the "working set" of splits forward
-      treeMax = nsplit;
+
+      // "Score" each row against the new splits.  Assign a new split.
+      new ScoreAndAssign(tree).doAll(fr);
     }
 
     // One more pass for prediction error
-    double error=0;
-    for( int k=0; k<fr._vecs[0].length(); k++ ) {
-      double y = fr._vecs[ncols].at(k);      // Response variable for row
-      double z = y-vpred.at(k);              // Error for this prediction
-      error += z*z;                          // Cumlative error
-    }
+    double error = new CalcError().doAll(vresponse,vpred)._sum;
     double errAvg = error/fr._vecs[0].length();
     Log.unwrap(System.out,"Average prediction error for tree of depth "+maxDepth+" is "+errAvg);
 
     // Remove temp vectors
-    UKV.remove(vsplit._key);
-    UKV.remove(vpred ._key);
+    UKV.remove(vnids._key);
+    UKV.remove(vpred._key);
   }
 
   // --------------------------------------------------------------------------
-  // Compute sum-squared-error
+  // Compute sum-squared-error.  Should use the recursive-mean technique.
   private static class CalcError extends MRTask2<CalcError> {
     double _sum;
     @Override public void map( Chunk ys, Chunk preds ) {
@@ -199,109 +164,25 @@ public class GBM extends Job {
   }
 
   // --------------------------------------------------------------------------
-  // A tree of splits.  Each node describes how to split the datarows into
-  // smaller subsets... or describes a leaf with a specific regression.
-  private static class Tree extends Iced {
-    final Tree _parent;         // Parent tree
-    final Histogram _hs[];      // Histograms per column
-    final int _split;           // Split# for this tree
-    Tree _ts[];                 // Child trees (maybe more than 2)
-    int _col;                   // Column we split over
-    Tree( Tree parent, Histogram hs[], int split ) { _parent=parent; _hs = hs; _split=split; }
-    // Find the column with the best split (lowest score).
-    // Also setup leaf Trees for when we split this Tree
-    int bestSplit() {
-      assert _ts==null;
-      double bs = Double.MAX_VALUE; // Best score
-      int idx = -1;             // Column to split on
-      for( int i=0; i<_hs.length; i++ ) {
-        if( _hs[i]==null || _hs[i]._bins.length == 1 ) continue;
-        double s = _hs[i].scoreVar();
-        if( s < bs ) { bs = s; idx = i; }
+  // "Score" each row against the new splits.  Assign a new split.
+  private static class ScoreAndAssign extends MRTask2<ScoreAndAssign> {
+    final Tree _tree;
+    ScoreAndAssign(Tree tree) { _tree=tree; }
+    @Override public void map( Chunk[] chks ) {
+      Chunk preds = chks[chks.length-1];
+      Chunk nids  = chks[chks.length-2];
+      for( int i=0; i<nids._len; i++ ) {
+        int oldNid = (int)nids.at80(i); // Get Tree.Node to decide from
+        if( oldNid==-1 ) continue;      // row already predicts perfectly
+        Tree.Node t = _tree.n(oldNid);  // This row is being split in Tree t
+        double d = chks[t._col].at(i);  // Value to split on for this row
+        int bin = t._hs[t._col].bin(d); // Bin in the histogram in the tree
+        double pred = t._hs[t._col].mean(bin);// Current prediction
+        int newNid = t._ns[bin];// Tree.Node split
+        nids .set8(i,newNid);   // Save the new split# for this row
+        preds.set8(i,pred);     // Save the new prediction also
       }
-      // Split on column 'idx' with score 'bs'
-      _ts = new Tree[_hs[idx]._bins.length];
-      return (_col=idx);
     }
-
-    @Override public String toString() {
-      final String colPad="  ";
-      final int cntW=4, mmmW=4, varW=4;
-      final int colW=cntW+1+mmmW+1+mmmW+1+mmmW+1+varW;
-      StringBuilder sb = new StringBuilder();
-      sb.append("Split# ").append(_split).append(", ");
-      printLine(sb).append("\n");
-      final int ncols = _hs.length;
-      for( int j=0; j<ncols; j++ )
-        if( _hs[j] != null )
-          p(sb,_hs[j]._name+String.format(", %5.2f",_hs[j].scoreVar()),colW).append(colPad);
-      sb.append('\n');
-      for( int j=0; j<ncols; j++ ) {
-        if( _hs[j] == null ) continue;
-        p(sb,"cnt" ,cntW).append('/');
-        p(sb,"min" ,mmmW).append('/');
-        p(sb,"max" ,mmmW).append('/');
-        p(sb,"mean",mmmW).append('/');
-        p(sb,"var" ,varW).append(colPad);
-      }
-      sb.append('\n');
-      for( int i=0; i<Histogram.BINS; i++ ) {
-        for( int j=0; j<ncols; j++ ) {
-          if( _hs[j] == null ) continue;
-          if( i < _hs[j]._bins.length ) {
-            p(sb,Long.toString(_hs[j]._bins[i]),cntW).append('/');
-            p(sb,              _hs[j]._mins[i] ,mmmW).append('/');
-            p(sb,              _hs[j]._maxs[i] ,mmmW).append('/');
-            p(sb,              _hs[j]. mean(i) ,mmmW).append('/');
-            p(sb,              _hs[j]. var (i) ,varW).append(colPad);
-            //p(sb,              _hs[j]. mse (i) ,varW).append(colPad);
-          } else {
-            p(sb,"",colW).append(colPad);
-          }
-        }
-        sb.append('\n');
-      }
-      sb.append("Split# ").append(_split);
-      if( _ts != null ) sb.append(", split on column "+_col+", "+_hs[_col]._name);
-      return sb.toString();
-    }
-    static private StringBuilder p(StringBuilder sb, String s, int w) {
-      return sb.append(Log.fixedLength(s,w));
-    }
-    static private StringBuilder p(StringBuilder sb, double d, int w) {
-      String s = Double.isNaN(d) ? "NaN" :
-        ((d==Double.MAX_VALUE || d==-Double.MAX_VALUE) ? " -" : 
-         Double.toString(d));
-      if( s.length() <= w ) return p(sb,s,w);
-      s = String.format("%4.1f",d);
-      if( s.length() > w )
-        s = String.format("%4.0f",d);
-      return sb.append(s);
-    }
-
-    StringBuilder printLine(StringBuilder sb ) {
-      if( _parent==null ) return sb.append("root");
-      Tree ts[] = _parent._ts;
-      Histogram h = _parent._hs[_parent._col];
-      for( int i=0; i<ts.length; i++ )
-        if( ts[i]==this )
-          return _parent.printLine(sb.append("[").append(h._mins[i]).append(" <= ").append(h._name).
-                                   append(" <= ").append(h._maxs[i]).append("] from "));
-      throw H2O.fail();
-    }
-
-
-  }
-
-  private static double[] removeCol( double[] A, int i ) {
-    double B[] = Arrays.copyOf(A,A.length-1);
-    System.arraycopy(A,i+1,B,i,B.length-i);
-    return B;
-  }
-  private static <T> T[] removeCol( T[] A, int i ) {
-    T B[] = Arrays.copyOf(A,A.length-1);
-    System.arraycopy(A,i+1,B,i,B.length-i);
-    return B;
   }
 
 }
