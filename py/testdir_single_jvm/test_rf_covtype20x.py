@@ -33,7 +33,7 @@ paramDict = {
         "1=5",
         "2=3",
         "1=1,2=1,3=1,4=1,5=1,6=1,7=1",
-        "1=100,2=100,3=100,4=100,5=100,6=100,7=100",
+        "1=99,2=99,3=99,4=99,5=99,6=99,7=99",
         "1=0,2=0,3=0,4=0,5=0,6=0,7=0",
         ]
     }
@@ -79,8 +79,13 @@ class Basic(unittest.TestCase):
         print "Parse result['destination_key']:", parseKeyTest['destination_key']
         inspect = h2o_cmd.runInspect(key=parseKeyTest['destination_key'])
         dataKeyTest = parseKeyTest['destination_key']
+        dataKeyTest2 = 'covtype20x.data.C.hex'
 
         print "Parse end", dataKeyTest
+        
+        # make a 3rd key so the predict is uncached too!
+        execExpr = dataKeyTest2 + "=" + dataKeyTest
+        resultExec = h2o_cmd.runExecOnly(expression=execExpr, timeoutSecs=15)
 
         # train
         # this does RFView to understand when RF completes, so the time reported for RFView here, should be 
@@ -128,7 +133,7 @@ class Basic(unittest.TestCase):
             print "rfview", trial, "end on ", dataKeyTest, 'took', time.time() - start, 'seconds.'
 
             start = time.time()
-            predict = h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest2)
             print "predict", trial, "end on ", dataKeyTest, 'took', time.time() - start, 'seconds.'
 
             print "Trial #", trial, "completed"
