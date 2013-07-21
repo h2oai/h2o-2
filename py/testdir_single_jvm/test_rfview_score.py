@@ -1,5 +1,5 @@
 import unittest
-import random, sys
+import random, sys, time
 sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_rf, h2o_hosts
@@ -103,24 +103,33 @@ class Basic(unittest.TestCase):
             # new web page for predict? throw it in here for now
             start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
-            print "predict end on ", parseKey['source_key'], 'took', elapsed, 'seconds.', \
-                "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
+            elapsed = time.time() - start
+            print "predict end on ", dataKeyTest, 'took', elapsed, 'seconds.'
 
             kwargs['iterative_cm'] = 0
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
+            start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
+            elapsed = time.time() - start
+            print "predict end on ", dataKeyTest, 'took', elapsed, 'seconds.'
 
             kwargs['iterative_cm'] = 1
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, 
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
+            start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
+            elapsed = time.time() - start
+            print "predict end on ", dataKeyTest, 'took', elapsed, 'seconds.'
 
             kwargs['iterative_cm'] = 1
             kwargs['class_weights'] = '1=1,2=2,3=3,4=4,5=5,6=6,7=7'
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
+            start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
+            elapsed = time.time() - start
+            print "predict end on ", dataKeyTest, 'took', elapsed, 'seconds.'
 
             print "Trial #", trial, "completed"
 
