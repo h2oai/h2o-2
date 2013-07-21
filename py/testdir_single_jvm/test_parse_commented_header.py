@@ -42,7 +42,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
     
-    def test_parse_multi_header_single(self):
+    def test_commented_header(self):
         print "If header=1, and the first char of first line is #, the # should be removed/ignored" + \
             "and the line parsed normally as a header"
         SYNDATASETS_DIR = h2o.make_syn_dir()
