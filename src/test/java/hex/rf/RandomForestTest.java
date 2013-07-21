@@ -47,19 +47,23 @@ public class RandomForestTest extends TestUtil {
     UKV.remove(okey);
   }
 
-  @org.junit.Test public void covtype() {
-    Key okey = loadAndParseFile("covtype.hex", "smalldata/covtype/covtype.20k.data");
+  /*@org.junit.Test*/ public void covtype() {
+    //Key okey = loadAndParseFile("covtype.hex", "smalldata/covtype/covtype.20k.data");
     //Key okey = loadAndParseFile("covtype.hex", "../datasets/UCI/UCI-large/covtype/covtype.data");
+    //Key okey = loadAndParseFile("covtype.hex", "/home/0xdiag/datasets/standard/covtype.data");
+    Key okey = loadAndParseFile("mnist.hex", "smalldata/mnist/mnist8m.10k.csv.gz");
+    //Key okey = loadAndParseFile("mnist.hex", "/home/0xdiag/datasets/mnist/mnist8m.csv");
     ValueArray val = UKV.get(okey);
 
     // setup default values for DRF
     int ntrees  = 8;
-    int depth   = 60;
+    int depth   = 999;
     int gini    = StatType.ENTROPY.ordinal();
     int seed    = 42;
     StatType statType = StatType.values()[gini];
     final int cols[] = new int[val.numCols()];
-    for( int i=0; i<cols.length; i++ ) cols[i]=i;
+    for( int i=1; i<cols.length; i++ ) cols[i]=i-1;
+    cols[cols.length-1]=0;      // Class is in column 0 for mnist
 
     // Start the distributed Random Forest
     final Key modelKey = Key.make("model");
@@ -67,7 +71,7 @@ public class RandomForestTest extends TestUtil {
     // Wait for completion on all nodes
     RFModel model = result.get();
 
-    assertEquals("Number of classes", 7,  model.classes());
+    assertEquals("Number of classes", 10,  model.classes());
     assertEquals("Number of trees", ntrees, model.size());
 
     model.deleteKeys();
