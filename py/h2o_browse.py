@@ -15,7 +15,6 @@ def browseTheCloud():
 
         # Open URL in new window, raising the window if possible.
         h2o.verboseprint("browseTheCloud:", cloud_url)
-        a
         webbrowser.open_new(cloud_url)
 
 # match the first, swap the 2nd

@@ -69,13 +69,14 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        global SEED, localhost
+        SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(2,java_heap_GB=10,use_flatfile=True)
         else:
             import h2o_hosts
             h2o_hosts.build_cloud_with_hosts()
-        h2b.browseTheCloud()
 
     @classmethod
     def tearDownClass(cls):
@@ -83,12 +84,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud(h2o.nodes)
     
     def test_parse_time(self):
-        SEED = random.randint(0, sys.maxint)
-        # if you have to force to redo a test
-        # SEED = 
-        random.seed(SEED)
-        print "\nUsing random seed:", SEED
-
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn_time.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename

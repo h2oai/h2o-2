@@ -15,7 +15,9 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
+        global SEED, localhost
+        # SEED = h2o.setup_random_seed()
+        SEED = 6204672511291494176
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(1)
@@ -27,10 +29,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_parse_small_many(self):
-        SEED = 6204672511291494176
-        random.seed(SEED)
-        print "\nUsing random seed:", SEED
-
         SYNDATASETS_DIR = h2o.make_syn_dir()
         # can try the other two possibilities also
         eol = "\n"
