@@ -202,7 +202,7 @@ public final class ParseDataset2 extends Job {
       Vec [] evecs = new Vec[ecols.length];
       for(int i = 0; i < evecs.length; ++i)evecs[i] = uzpt._cols[ecols[i]];
       EnumUpdateTask t = new EnumUpdateTask(ds, uzpt._eKey, ecols);
-      t.invoke(evecs);
+      t.doAll(evecs);
     }
     // Jam the frame of columns into the K/V store
     UKV.put(job.dest(),new Frame(job.dest(),names,uzpt._cols));
@@ -335,7 +335,7 @@ public final class ParseDataset2 extends Job {
     private void distroParse( ByteVec vec, final CsvParser.Setup localSetup ) throws IOException {
       Vec bvs[] = Arrays.copyOf(_cols,_cols.length+1,Vec[].class);
       bvs[bvs.length-1] = vec;
-      DParse dp = new DParse(localSetup).invoke(bvs);
+      DParse dp = new DParse(localSetup).doAll(bvs);
       // After the MRTask2, the input Vec array has all the AppendableVecs
       // closed() and rewritten as plain Vecs.  Copy those back into the _cols
       // array.

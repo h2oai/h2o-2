@@ -178,7 +178,7 @@ public class NewChunk extends Chunk {
 
     // Compress column into a byte
     if( 0<=lemin && lemax <= 255 && _naCnt==0 )
-      return new C1NChunk( bufX(0,0,C1Chunk.OFF,0));
+      return new C1NChunk( bufX(0,0,C1NChunk.OFF,0));
     if( lemax-lemin < 255 ) {         // Span fits in a byte?
       if( 0 <= lemin && lemax < 255 ) // Span fits in an unbiased byte?
         return new C1Chunk( bufX(0,0,C1Chunk.OFF,0));

@@ -10,7 +10,6 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
 
   // The Vectors to work on
   protected Frame _fr;          // Vectors to work on
-  int _outputChkOffset = 0;
   // Run some useful function over this <strong>local</strong> Chunk, and
   // record the results in the <em>this<em> MRTask2.
   public void map(    Chunk bv ) { }
@@ -52,8 +51,8 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
   }
 
   // Top-level blocking call.
-  public final T invoke( Vec... vecs ) { return invoke(new Frame(null,null,vecs)); }
-  public final T invoke( Frame fr ) {
+  public final T doAll( Vec... vecs ) { return doAll(new Frame(null,null,vecs)); }
+  public final T doAll( Frame fr ) {
     dfork(fr);
     return getResult();
   }
@@ -148,7 +147,7 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
         if( true                  ) map(bvs );
         _res = self();          // Save results since called map() at least once!
         // Further D/K/V put any new vec results.
-        for( Chunk bv : bvs )bv.close(_lo+_outputChkOffset,_fs);
+        for( Chunk bv : bvs )bv.close(_lo,_fs);
       }
     }
     tryComplete();              // And this task is complete

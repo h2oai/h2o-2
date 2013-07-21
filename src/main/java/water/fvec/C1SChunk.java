@@ -9,7 +9,7 @@ public class C1SChunk extends Chunk {
   static final int OFF=8+4;
   double _scale;
   int _bias;
-  C1SChunk( byte[] bs, int bias, double scale ) { _mem=bs; _start = -1; _len = _mem.length;
+  C1SChunk( byte[] bs, int bias, double scale ) { _mem=bs; _start = -1; _len = _mem.length-OFF;
     _bias = bias; _scale = scale;
     UDP.set8d(_mem,0,scale);
     UDP.set4 (_mem,8,bias );
@@ -36,7 +36,7 @@ public class C1SChunk extends Chunk {
   @Override public C1SChunk read(AutoBuffer bb) {
     _mem = bb.bufClose();
     _start = -1;
-    _len = _mem.length;
+    _len = _mem.length-OFF;
     _scale= UDP.get8d(_mem,0);
     _bias = UDP.get4 (_mem,8);
     return this;
@@ -45,7 +45,7 @@ public class C1SChunk extends Chunk {
     double dx = Math.log10(_scale);
     int x = (int)dx;
     if( DParseTask.pow10i(x) != _scale ) throw H2O.unimpl();
-    for( int i=0; i<_mem.length-OFF; i++ ) {
+    for( int i=0; i<_len; i++ ) {
       long res = 0xFF&_mem[i+OFF];
       if( res == _NA ) nc.setInvalid(i);
       else {
