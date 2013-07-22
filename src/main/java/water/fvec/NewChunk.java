@@ -140,7 +140,6 @@ public class NewChunk extends Chunk {
       if( le > lemax ) lemax=le;
     }
 
-
     // Constant column?
     if( _min==_max ) {
       if( xmin < 0 ) throw H2O.unimpl();
@@ -187,9 +186,10 @@ public class NewChunk extends Chunk {
 
     // Compress column into a short
     if( lemax-lemin < 65535 ) {               // Span fits in a biased short?
-      if( -32767 <= lemin && lemax <= 32767 ) // Span fits in an unbiased short?
+      if( Short.MIN_VALUE < lemin && lemax <= Short.MAX_VALUE ) // Span fits in an unbiased short?
         return new C2Chunk( bufX(0,0,C2Chunk.OFF,1));
-      return new C2SChunk( bufX(lemin,0,C2SChunk.OFF,1),(int)lemin,1);
+      int bias = (int)(lemin-(Short.MIN_VALUE+1));
+      return new C2SChunk( bufX(bias,0,C2SChunk.OFF,1),bias,1);
     }
 
     // Compress column into ints
