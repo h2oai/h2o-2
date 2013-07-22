@@ -299,7 +299,8 @@ def check_enums_from_inspect(parseKey):
     missingValuesDict = {}
     for i,c in enumerate(cols):
         # print i, "name:", c['name']
-        msg = "column %d" % i
+        # msg = "column %d" % i
+        msg = "column %s %d" % (c['name'], i)
         msg = msg + " type: %s" % c['type']
         if c['type'] == 'enum':
             msg = msg + (" enum_domain_size: %d" % c['enum_domain_size'])
