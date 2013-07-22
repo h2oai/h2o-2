@@ -257,10 +257,10 @@ public class h2odriver extends Configured implements Tool {
                     "          [-h | -help]\n" +
                     "          [-jobname <name of job in jobtracker (defaults to: 'H2O_nnnnn')>]\n" +
                     "              (Note nnnnn is chosen randomly to produce a unique name)\n" +
-                    "          [-driverif <ip address of mapper->driver callback interface>]" +
-                    "          [-driverport <port of mapper->driver callback interface>]" +
-                    "          [-disown]" +
-                    "          [-notify <notification file name>]" +
+                    "          [-driverif <ip address of mapper->driver callback interface>]\n" +
+                    "          [-driverport <port of mapper->driver callback interface>]\n" +
+                    "          [-disown]\n" +
+                    "          [-notify <notification file name>]\n" +
                     "          -mapperXmx <per mapper Java Xmx heap size>\n" +
                     "          -n | -nodes <number of H2O nodes (i.e. mappers) to create>\n" +
                     "          -o | -output <hdfs output dir>\n" +
