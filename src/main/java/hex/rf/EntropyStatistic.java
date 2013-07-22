@@ -32,24 +32,40 @@ class EntropyStatistic extends Statistic {
     final double upperBoundReduction = upperBoundReduction(d.classes());
     double maxReduction = -1;
     int bestSplit = -1;
+    int totL = 0, totR = 0;     // Totals in the distribution
+    int classL = 0, classR = 0; // Count of non-zero classes in the left/right distributions
+    for (int e: distR) { // All zeros for the left, but need to compute for the right
+      totR += e;   
+      if( e != 0 ) classR++;
+    }
+    // For this one column, look at all his split points and find the one with the best gain.
     for (int i = 0; i < _columnDists[col].length - 1; ++i) {
+      int [] cdis = _columnDists[col][i];
       for (int j = 0; j < distL.length; ++j) {
-        double v = _columnDists[col][i][j];
+        int v = cdis[j];
+        if( v == 0 ) continue;              // No rows with this class
+        totL     += v;  totR     -= v;
+        if( distL[j]== 0 ) classL++; // One-time transit from zero to non-zero for class j
         distL[j] += v;  distR[j] -= v;
+        if( distR[j]== 0 ) classR--; // One-time transit from non-zero to zero for class j
       }
-      int totL = 0, totR = 0;
-      for (int e: distL) totL += e;
-      if (totL == 0)   continue;
-      for (int e: distR) totR += e;
-      if (totR == 0) continue;
+      if (totL == 0) continue;  // Totals are zero ==> this will not actually split anything
+      if (totR == 0) continue;  // Totals are zero ==> this will not actually split anything
 
+      // Compute gain.
+      // If the distribution has only 1 class, the gain will be zero.
       double eL = 0, eR = 0;
-      for (int e: distL) eL += gain(e,totL);
-      for (int e: distR) eR += gain(e,totR);
+      if( classL > 1 ) for (int e: distL) eL += gain(e,totL);
+      if( classR > 1 ) for (int e: distR) eR += gain(e,totR);
       double eReduction = upperBoundReduction - ( (eL * totL + eR * totR) / (totL + totR) );
 
       if (eReduction == maxReduction) {
-        if (rand.nextInt(10)<2) bestSplit=i;
+        // For now, don't break ties.  Most ties are because we have several
+        // splits with NO GAIN.  This happens *billions* of times in a standard
+        // covtype RF, because we have >100K leaves per tree (and 50 trees and
+        // 54 columns per leave and however many bins per column), and most
+        // leaves have no gain at most split points.
+        //if (rand.nextInt(10)<2) bestSplit=i;
       } else if (eReduction > maxReduction) {
         bestSplit = i;  maxReduction = eReduction;
       }

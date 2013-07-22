@@ -29,7 +29,9 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
+        global SEED, localhost
+        # SEED = h2o.setup_random_seed()
+        SEED = 8977501266014959103
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(node_count=1)
@@ -44,15 +46,6 @@ class Basic(unittest.TestCase):
         # csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
         csvPathname = h2o.find_file('smalldata/covtype/covtype.20k.data')
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname)
-
-        # for determinism, I guess we should spit out the seed?
-        # random.seed(SEED)
-        # SEED = random.randint(0, sys.maxint)
-        SEED = 8977501266014959103
-        # if you have to force to redo a test
-        # SEED =
-        random.seed(SEED)
-        print "\nUsing random seed:", SEED
         paramDict = define_params()
         for trial in range(20):
             # params is mutable. This is default.

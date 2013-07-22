@@ -21,7 +21,6 @@ def parseFile(node=None, csvPathname=None, key=None, key2=None,
 
     # do SummaryPage here too, just to get some coverage
     if doSummary:
-        print "hello"
         node.summary_page(myKey2)
     return p
 
@@ -52,7 +51,6 @@ def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None,
 def runInspect(node=None, key=None, timeoutSecs=5, **kwargs):
     if not key: raise Exception('No key for Inspect specified')
     if not node: node = h2o.nodes[0]
-    # FIX! currently there is no such thing as a timeout on node.inspect
     return node.inspect(key, timeoutSecs=timeoutSecs, **kwargs)
 
 def infoFromInspect(inspect, csvPathname):
@@ -301,7 +299,8 @@ def check_enums_from_inspect(parseKey):
     missingValuesDict = {}
     for i,c in enumerate(cols):
         # print i, "name:", c['name']
-        msg = "column %d" % i
+        # msg = "column %d" % i
+        msg = "column %s %d" % (c['name'], i)
         msg = msg + " type: %s" % c['type']
         if c['type'] == 'enum':
             msg = msg + (" enum_domain_size: %d" % c['enum_domain_size'])

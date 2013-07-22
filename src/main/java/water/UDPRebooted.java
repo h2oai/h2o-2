@@ -41,7 +41,7 @@ public class UDPRebooted extends UDP {
     case shutdown:
       closeAll();
       Log.info("Orderly shutdown command from "+killer);
-      System.exit(0);
+      H2O.exit(0);
       return;
     case oom:      m = "Out of Memory and no swap space left!"      ; break;
     case error:    m = "Error leading to a cloud kill"              ; break;
@@ -51,7 +51,7 @@ public class UDPRebooted extends UDP {
     }
     closeAll();
     Log.warn(m+" from "+killer);
-    System.exit(-1);
+    H2O.exit(-1);
   }
 
   AutoBuffer call(AutoBuffer ab) {

@@ -83,7 +83,7 @@ $ hadoop jar h2odriver_cdh4.jar water.hadoop.h2odriver [-jt <jobtracker:port>] -
        of hadoop!  We recommend running the hadoop command from a
        machine in the hadoop cluster.)
 
-(Note: Port 8021 is the default jobtracker port for some hadoop 
+(Note: Port 8021 is the default jobtracker port for Cloudera.
        Port 9001 is the default jobtracker port for MapR.)
 
 
@@ -102,4 +102,10 @@ Bring up H2O web UI:  http://<h2onode>:54321
 Choose Admin->Shutdown
 
 (Note: Alternately use the "hadoop job -kill" command.)
+
+
+FOR MORE INFORMATION
+--------------------
+
+$ hadoop jar h2odriver_cdh4.jar water.hadoop.h2odriver -help
 
