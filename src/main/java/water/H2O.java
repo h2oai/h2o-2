@@ -94,6 +94,12 @@ public final class H2O {
     embeddedH2OConfig.notifyAboutEmbeddedWebServerIpPort(ip, port);
   }
 
+  /**
+   * Notify embedding software instance about the H2O cluster size..
+   * @param ip H2O browser IP address
+   * @param port H2O browser port
+   * @param size H2O cluster size
+   */
   public static void notifyAboutCloudSize(InetAddress ip, int port, int size) {
     if (embeddedH2OConfig == null) { return; }
     embeddedH2OConfig.notifyAboutCloudSize(ip, port, size);
