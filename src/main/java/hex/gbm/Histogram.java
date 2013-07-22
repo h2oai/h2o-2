@@ -38,6 +38,7 @@ class Histogram extends Iced implements Cloneable {
   public          double[] _mins, _maxs; // Min, Max, per-bin
   public          double[] _MSEs;        // Rolling mean-square-error, per-bin; requires 2nd pass
 
+  // Fill in read-only sharable values
   public Histogram( String name, long nelems, double min, double max, boolean isInt ) {
     assert nelems > 0;
     assert max > min : "Caller ensures max>min, since if max==min the column is all constants";
@@ -53,6 +54,7 @@ class Histogram extends Iced implements Cloneable {
     _step = (max-min)/_nbins;   // Step size for linear interpolation
   }
 
+  // Copy from the original Histogram, but then allocate private arrays
   public Histogram copy() {
     assert _bins==null && _maxs == null; // Nothing filled-in yet
     Histogram h=clone();
@@ -139,6 +141,19 @@ class Histogram extends Iced implements Cloneable {
   // Remove old histogram data, but keep enough info to predict.  Cuts down
   // the size of data to move over the wires
   public void clean() {  _bins=null;  _Ss = _mins = _maxs = _MSEs = null; }
+
+  // After having filled in histogram bins, compute tighter min/max bounds.
+  // Store tighter bounds into the first and last bins.
+  public void tightenMinMax() {
+    int n = 0;
+    while( _bins[n]==0 ) n++;   // First non-empty bin
+    if( n > 0 ) _mins[0] = _mins[n]; // Take min from  1st non-empty bin into bin 0
+    int l = _bins.length-1;     // Last bin
+    int x = l;  
+    while( _bins[x]==0 ) x--;   // Last non-empty bin
+    if( x < l ) _maxs[l] = _maxs[x]; // Take max from last non-empty bin into bin last
+  }
+
 
   public void add( Histogram h ) {
     assert _nbins == h._nbins;
