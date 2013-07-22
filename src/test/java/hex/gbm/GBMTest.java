@@ -38,7 +38,7 @@ public class GBMTest extends TestUtil {
     }
   }
 
-  /*@Test*/ public void testCovtypeGBM() {
+  @Test public void testCovtypeGBM() {
     File file = TestUtil.find_test_file("../datasets/UCI/UCI-large/covtype/covtype.data");
     Key fkey = NFSFileVec.make(file);
     Frame fr = ParseDataset2.parse(Key.make("cov1.hex"),new Key[]{fkey});
@@ -47,23 +47,15 @@ public class GBMTest extends TestUtil {
     for( int i=0; i<fr._vecs.length; i++ )
       System.out.println("Vec "+i+" = "+fr._vecs[i]);
 
-    Key rkey = load_test_file(file,"covtype.data");
-    Key vkey = Key.make("cov2.hex");
-    ParseDataset.parse(vkey, new Key[]{rkey});
-    UKV.remove(rkey);
-    ValueArray ary = UKV.get(vkey);
-    System.out.println("Parsed into "+ary);
-
     try {
       assertEquals(581012,fr._vecs[0].length());
 
       // Covtype: predict on last column
-      GBM gbm = GBM.start(GBM.makeKey(),fr,10);
+      GBM gbm = GBM.start(GBM.makeKey(),fr,30);
       gbm.get();                  // Block for result
       UKV.remove(gbm._dest);
     } finally {
       UKV.remove(fr ._key);
-      UKV.remove(ary._key);
     }
   }
 
