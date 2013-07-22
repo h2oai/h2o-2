@@ -52,7 +52,8 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
+        global SEED, localhost
+        SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(node_count=1)
@@ -64,15 +65,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_loop_random_param_poker1000(self):
-        # for determinism, I guess we should spit out the seed?
-        # random.seed(SEED)
-        SEED = random.randint(0, sys.maxint)
-        # if you have to force to redo a test
-        # SEED = 
-        random.seed(SEED)
-        print "\nUsing random seed:", SEED
         csvPathname = h2o.find_file('smalldata/poker/poker1000')
-
         for trial in range(10):
             # params is mutable. This is default.
             params = {'ntree': 17, 'parallel': 1}

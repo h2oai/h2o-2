@@ -59,6 +59,13 @@
 (setq explicit-sh-args '("-login" "-i"))
 (setenv '"PS1" '"[\w] ")
 
+;; eshell clear
+(defun eshell/clear ()
+  "04Dec2001 - sailor, to clear the eshell buffer."
+  (interactive)
+  (let ((inhibit-read-only t))
+    (erase-buffer)))
+
 (custom-set-variables
   ;; custom-set-variables was added by Custom.
   ;; If you edit it by hand, you could mess it up, so be careful.

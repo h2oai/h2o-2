@@ -61,6 +61,7 @@ ipaddr = None
 config_json = None
 debugger = False
 random_udp_drop = False
+random_seed = None
 # jenkins gets this assign, but not the unit_main one?
 python_test_name = inspect.stack()[1][1]
 
@@ -74,10 +75,12 @@ def parse_our_args():
     parser.add_argument('-cj', '--config_json', help='Use this json format file to provide multi-host defaults. Overrides the default file pytest_config-<username>.json. These are used only if you do build_cloud_with_hosts()')
     parser.add_argument('-dbg', '--debugger', help='Launch java processes with java debug attach mechanisms', action='store_true')
     parser.add_argument('-rud', '--random_udp_drop', help='Drop 20 pct. of the UDP packets at the receive side', action='store_true')
+    parser.add_argument('-s', '--random_seed', type=int, help='initialize SEED (64-bit integer) for random generators')
+    parser.add_argument('unittest_args', nargs='*')
     parser.add_argument('unittest_args', nargs='*')
 
     args = parser.parse_args()
-    global browse_disable, browse_json, verbose, ipaddr, config_json, debugger, random_udp_drop
+    global browse_disable, browse_json, verbose, ipaddr, config_json, debugger, random_udp_drop, random_seed
 
     browse_disable = args.browse_disable or getpass.getuser()=='jenkins'
     browse_json = args.browse_json
@@ -86,6 +89,7 @@ def parse_our_args():
     config_json = args.config_json
     debugger = args.debugger
     random_udp_drop = args.random_udp_drop
+    random_seed = args.random_seed
 
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
     # FIX! this isn't working to grab the args we don't care about
@@ -360,6 +364,15 @@ def decide_if_localhost():
     print "No config json used. Launching local cloud..."
     return True
 
+def setup_random_seed():
+    if random_seed is not None:
+        SEED = random_seed
+    else:
+        SEED = random.randint(0, sys.maxint)
+    random.seed(SEED)
+    print "\nUsing random seed:", SEED
+    return SEED
+
 # node_count is per host if hosts is specified.
 def build_cloud(node_count=2, base_port=54321, hosts=None, 
         timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True, hadoop=False, **kwargs):
@@ -629,10 +642,10 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25):
         if 'nodes' not in c:
             emsg = "\nH2O didn't include a list of nodes in get_cloud response after initial cloud build"
             raise Exception(emsg)
-        if (cloud_size != node_count):
-            print "\nNodes in current cloud:"
-            for c in c['nodes']:
-                print c['name']
+
+        print "\nNodes in current cloud:"
+        for ci in c['nodes']:
+            print ci['name']
         
         if (cloud_size > node_count):
             emsg = (
@@ -651,9 +664,9 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25):
         a = (cloud_size==node_count) and consensus
         if a:
             verboseprint("\tLocked won't happen until after keys are written")
-            verboseprint("\nNodes in current cloud:")
-            for c in c['nodes']:
-                verboseprint(c['name'])
+            verboseprint("\nNodes in final cloud:")
+            for ci in c['nodes']:
+                verboseprint(ci['name'])
 
         return a
 
@@ -1153,7 +1166,9 @@ class H2O(object):
                 params_dict[k] = kwargs[k]
 
         if print_params:
+            print "hello1"
             print "\nrandom_forest_view parameters:", params_dict
+            print "hello2"
             sys.stdout.flush()
 
         a = self.__do_json_request('RFView.json', timeout=timeoutSecs, params=params_dict)
@@ -1184,7 +1199,7 @@ class H2O(object):
         verboseprint("\ngenerate_predictions result:", dump_json(a))
 
         if (browseAlso | browse_json):
-            h2b.browseJsonHistoryAsUrlLastMatch("GeneratePredictions")
+            h2b.browseJsonHistoryAsUrlLastMatch("GeneratePredictionsPage")
 
 
         # it will redirect to an inspect, so let's get that inspect stuff

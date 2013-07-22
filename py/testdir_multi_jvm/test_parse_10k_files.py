@@ -30,7 +30,8 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        pass
+        global SEED
+        SEED = h2o.setup_random_seed()
 
     @classmethod
     def tearDownClass(cls):
@@ -40,12 +41,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud(h2o.nodes)
     
     def test_parse_1k_files(self):
-        SEED = random.randint(0, sys.maxint)
-        # if you have to force to redo a test
-        # SEED = 
-        random.seed(SEED)
-        print "\nUsing random seed:", SEED
-
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn.csv.gz"
         headerData = "ID,CAPSULE,AGE,RACE,DPROS,DCAPS,PSA,VOL,GLEASON"

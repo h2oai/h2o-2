@@ -45,7 +45,7 @@ public class Part05_KMeansNewAPI {
       for( int i = 0; i < 10; i++ ) {
         KMeans task = new KMeans();
         task._clusters = clusters;
-        task.invoke(frame);
+        task.doAll(frame);
 
         for( int c = 0; c < clusters.length; c++ ) {
           if( task._counts[c] > 0 ) {

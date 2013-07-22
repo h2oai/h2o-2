@@ -117,13 +117,13 @@ public class NewVectorTest extends TestUtil {
     assertEquals(2,vec.at8(2)); // Immediate visibility in current thread
     c2.close(0,null);           // Done writing into chunk
     Chunk c3 = vec.elem2BV(0);  // Look again at the installed chunk
-    assertTrue( "Found chunk class "+c3.getClass()+" but expected C1Chunk", c3 instanceof C1Chunk );
+    assertTrue( "Found chunk class "+c3.getClass()+" but expected C1NChunk", c3 instanceof C1NChunk );
 
     c3.set8(3,3);
     assertEquals(3,vec.at8(3)); // Immediate visibility in current thread
     c3.close(0,null);           // Done writing into chunk
     Chunk c4 = vec.elem2BV(0);  // Look again at the installed chunk
-    assertTrue( "Found chunk class "+c4.getClass()+" but expected C1Chunk", c4 instanceof C1Chunk );
+    assertTrue( "Found chunk class "+c4.getClass()+" but expected C1NChunk", c4 instanceof C1NChunk );
 
     UKV.remove(av._key);
   }

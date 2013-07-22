@@ -21,7 +21,6 @@ def parseFile(node=None, csvPathname=None, key=None, key2=None,
 
     # do SummaryPage here too, just to get some coverage
     if doSummary:
-        print "hello"
         node.summary_page(myKey2)
     return p
 
@@ -52,7 +51,6 @@ def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None,
 def runInspect(node=None, key=None, timeoutSecs=5, **kwargs):
     if not key: raise Exception('No key for Inspect specified')
     if not node: node = h2o.nodes[0]
-    # FIX! currently there is no such thing as a timeout on node.inspect
     return node.inspect(key, timeoutSecs=timeoutSecs, **kwargs)
 
 def infoFromInspect(inspect, csvPathname):
