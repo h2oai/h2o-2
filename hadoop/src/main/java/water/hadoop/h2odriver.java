@@ -5,6 +5,10 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapred.JobClient;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.TaskReport;
+import org.apache.hadoop.mapred.TaskAttemptID;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -14,9 +18,8 @@ import org.apache.hadoop.util.ToolRunner;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import java.net.*;
+import java.util.*;
 
 /**
  * Driver class to start a Hadoop mapreduce job which wraps an H2O cluster launch.
@@ -30,10 +33,17 @@ import java.util.Random;
  */
 public class h2odriver extends Configured implements Tool {
     final static String FLATFILE_NAME = "flatfile.txt";
-    static String jobtrackerName;
+
+    static String jobtrackerName = null;
     static int numNodes = -1;
     static String outputPath = null;
     static String mapperXmx = null;
+    static String driverCallbackIp = null;
+    static int driverCallbackPort = 0;          // By default, let the system pick the port.
+    ServerSocket driverCallbackSocket = null;
+
+    Job job = null;
+    CtrlCHandler ctrlc = null;
 
     public static class H2ORecordReader extends RecordReader<Text, Text> {
         H2ORecordReader() {
@@ -81,6 +91,129 @@ public class h2odriver extends Configured implements Tool {
     }
 
     /**
+     * Handle Ctrl-C and other catchable shutdown events.
+     * If we successfully catch one, then try to kill the hadoop job if
+     * we have not already been told it completed.
+     *
+     * (Of course kill -9 cannot be handled.)
+     */
+    class CtrlCHandler extends Thread {
+        volatile boolean _complete = false;
+
+        public void setComplete() {
+            _complete = true;
+        }
+
+        @Override
+        public void run() {
+            if (_complete) {
+                return;
+            }
+
+            boolean killed = false;
+
+            try {
+                System.out.println("Attempting to clean up hadoop job...");
+                job.killJob();
+                for (int i = 0; i < 5; i++) {
+                    if (job.isComplete()) {
+                      System.out.println("Killed.");
+                      killed = true;
+                      break;
+                    }
+
+                    Thread.sleep(1000);
+                }
+            }
+            catch (Exception _) {
+            }
+            finally {
+                if (! killed) {
+                    System.out.println("Kill attempt failed, please clean up job manually.");
+                }
+            }
+        }
+    }
+
+    /**
+     * Read and handle one Mapper->Driver Callback message.
+     */
+    class CallbackHandlerThread extends Thread {
+        private Socket _s;
+
+        public void setSocket (Socket value) {
+            _s = value;
+        }
+
+        @Override
+        public void run() {
+            MapperToDriverMessage msg = new MapperToDriverMessage();
+            try {
+                msg.readMessage(_s);
+                char type = msg.getType();
+                if (type == MapperToDriverMessage.TYPE_EOF_NO_MESSAGE) {
+                    // Ignore it.
+                    return;
+                }
+
+                // System.out.println("Read message with type " + (int)type);
+                if (type == MapperToDriverMessage.TYPE_EMBEDDED_WEB_SERVER_IP_PORT) {
+                    System.out.println("H2O node " + msg.getEmbeddedWebServerIp() + ":" + msg.getEmbeddedWebServerPort() + " started");
+                }
+                else if (type == MapperToDriverMessage.TYPE_CLOUD_SIZE) {
+                    System.out.println("H2O node " + msg.getEmbeddedWebServerIp() + ":" + msg.getEmbeddedWebServerPort() + " reports cloud size " + msg.getCloudSize());
+                }
+                else if (type == MapperToDriverMessage.TYPE_EXIT) {
+                    System.out.println("H2O node " + msg.getEmbeddedWebServerIp() + ":" + msg.getEmbeddedWebServerPort() + " exited with status " + msg.getExitStatus());
+                }
+                else {
+                    System.err.println("MapperToDriverMessage: Read invalid type (" + type + ") from socket, ignoring...");
+                }
+                _s.close();
+            }
+            catch (Exception e) {
+                System.out.println("Exception occurred in CallbackHandlerThread");
+                System.out.println(e.toString());
+                if (e.getMessage() != null) {
+                    System.out.println(e.getMessage());
+                }
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * Start a long-running thread ready to handle Mapper->Driver messages.
+     */
+    class CallbackManager extends Thread {
+        private ServerSocket _ss;
+
+        public void setServerSocket (ServerSocket value) {
+            _ss = value;
+        }
+
+        @Override
+        public void run() {
+            while (true) {
+                try {
+                    Socket s = _ss.accept();
+                    CallbackHandlerThread t = new CallbackHandlerThread();
+                    t.setSocket(s);
+                    t.start();
+                }
+                catch (Exception e) {
+                    System.out.println("Exception occurred in CallbackManager");
+                    System.out.println(e.toString());
+                    if (e.getMessage() != null) {
+                      System.out.println(e.getMessage());
+                    }
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    /**
      * Print usage and exit 1.
      */
     static void usage() {
@@ -93,6 +226,8 @@ public class h2odriver extends Configured implements Tool {
 "          [-h | -help]\n" +
 "          [-jobname <name of job in jobtracker (defaults to: 'H2O_nnnnn')>]\n" +
 "              (Note nnnnn is chosen randomly to produce a unique name)\n" +
+"          [-driverif <ip address of mapper->driver callback interface>]" +
+"          [-driverport <port of mapper->driver callback interface>]" +
 "          -mapperXmx <per mapper Java Xmx heap size>\n" +
 "          -n | -nodes <number of h2o nodes (i.e. mappers) to create>\n" +
 "          -o | -output <hdfs output dir>\n" +
@@ -108,6 +243,9 @@ public class h2odriver extends Configured implements Tool {
 "          o  There are no combiners or reducers.\n" +
 "          o  -files flatfile.txt is required and must be named flatfile.txt.\n" +
 "          o  -libjars with an h2o.jar is required.\n" +
+"          o  -driverif and -driverport let the user optionally specify the\n" +
+"             network interface and port (on the driver host) for callback\n" +
+"             messages from the mapper to the driver.\n" +
 "          o  -mapperXmx, -n and -o are required.\n" +
 "          o  Each H2O cluster should have a unique jobname.\n" +
 "\n" +
@@ -173,6 +311,14 @@ public class h2odriver extends Configured implements Tool {
                 i++; if (i >= args.length) { usage(); }
                 mapperXmx = args[i];
             }
+            else if (s.equals("-driverif")) {
+                i++; if (i >= args.length) { usage(); }
+                driverCallbackIp = args[i];
+            }
+            else if (s.equals("-driverport")) {
+                i++; if (i >= args.length) { usage(); }
+                driverCallbackPort = Integer.parseInt(args[i]);
+            }
             else {
                 error("Unrecognized option " + s);
             }
@@ -203,6 +349,26 @@ public class h2odriver extends Configured implements Tool {
         }
     }
 
+    static String calcMyIp() throws Exception {
+        Enumeration nis = NetworkInterface.getNetworkInterfaces();
+
+        System.out.println("Determining driver host interface for mapper->driver callback...");
+        while (nis.hasMoreElements()) {
+            NetworkInterface ni = (NetworkInterface) nis.nextElement();
+            Enumeration ias = ni.getInetAddresses();
+            while (ias.hasMoreElements()) {
+                InetAddress ia = (InetAddress) ias.nextElement();
+                String s = ia.getHostAddress();
+                System.out.println("    [Possible callback IP address: " + s + "]");
+            }
+        }
+
+        InetAddress ia = InetAddress.getLocalHost();
+        String s = ia.getHostAddress();
+
+        return s;
+    }
+
     /**
      * The run method called by ToolRunner.
      * @param args Arguments after ToolRunner arguments have been removed.
@@ -210,10 +376,46 @@ public class h2odriver extends Configured implements Tool {
      * @throws Exception
      */
     @Override
-    public int run(String[] args) throws Exception {
+    public int run(String[] args) {
+        int rv = -1;
+
+        try {
+            rv = run2(args);
+        }
+        catch (org.apache.hadoop.mapred.FileAlreadyExistsException e) {
+            if (ctrlc != null) { ctrlc.setComplete(); }
+            System.out.println("ERROR: " + (e.getMessage() != null ? e.getMessage() : "(null)"));
+            System.exit(1);
+        }
+        catch (Exception e) {
+            System.out.println("ERROR: " + (e.getMessage() != null ? e.getMessage() : "(null)"));
+            e.printStackTrace();
+            System.exit(1);
+        }
+
+        return rv;
+    }
+
+    private int run2(String[] args) throws Exception {
         // Parse arguments.
         // ----------------
         parseArgs (args);
+
+        // Set up callback address and port.
+        // ---------------------------------
+        if (driverCallbackIp == null) {
+            driverCallbackIp = calcMyIp();
+        }
+        driverCallbackSocket = new ServerSocket();
+        driverCallbackSocket.setReuseAddress(true);
+        InetSocketAddress sa = new InetSocketAddress(driverCallbackIp, driverCallbackPort);
+        driverCallbackSocket.bind(sa, driverCallbackPort);
+        int actualDriverCallbackPort = driverCallbackSocket.getLocalPort();
+        CallbackManager cm = new CallbackManager();
+        cm.setServerSocket(driverCallbackSocket);
+        cm.start();
+        System.out.println("    [Using mapper->driver callback IP address and port: " + driverCallbackIp + ":" + actualDriverCallbackPort + "]");
+        System.out.println("    [You can override these with -driverif and -driverport.]");
 
         // Set up configuration.
         // ---------------------
@@ -242,11 +444,14 @@ public class h2odriver extends Configured implements Tool {
 
         conf.set("mapred.map.max.attempts", "1");
         conf.set("mapred.job.reuse.jvm.num.tasks", "1");
-        conf.set("hexdata.jobtrackername", jobtrackerName);
+        conf.set(h2omapper.H2O_JOBTRACKERNAME_KEY, jobtrackerName);
+
+        conf.set(h2omapper.H2O_DRIVER_IP_KEY, driverCallbackIp);
+        conf.set(h2omapper.H2O_DRIVER_PORT_KEY, Integer.toString(actualDriverCallbackPort));
 
         // Set up job stuff.
         // -----------------
-    	Job job = new Job(conf, jobtrackerName);
+    	job = new Job(conf, jobtrackerName);
     	job.setJarByClass(getClass());
         job.setInputFormatClass(H2OInputFormat.class);
     	job.setMapperClass(h2omapper.class);
@@ -262,8 +467,48 @@ public class h2odriver extends Configured implements Tool {
         // Run job.  Wait for all mappers to complete.  We are running a zero
         // combiner and zero reducer configuration.
         // ------------------------------------------------------------------
-        System.out.println("Job running (this command blocks until the H2O cluster shuts down)...");
-        boolean success = job.waitForCompletion(true);
+        System.out.printf("Job name '%s' submitted.\n", jobtrackerName);
+
+        // Register ctrl-c handler to try to clean up job when possible.
+        ctrlc = new CtrlCHandler();
+        Runtime.getRuntime().addShutdownHook(ctrlc);
+
+        job.submit();
+
+//        JobConf jconf = new JobConf(conf);
+//        JobClient client = new JobClient(jconf);
+//        System.out.println(client.toString());
+//        org.apache.hadoop.mapred.JobID oldApiJobID = org.apache.hadoop.mapred.JobID.downgrade(job.getJobID());
+
+        System.out.println("JobTracker job ID is: " + job.getJobID());
+        System.out.println("This command blocks until the H2O cluster shuts down...");
+
+        while (true) {
+            if (job.isComplete()) {
+                break;
+            }
+
+//            TaskReport[] reports = client.getMapTaskReports(oldApiJobID);
+//            for (int i = 0; i < reports.length; i++) {
+//                TaskReport report = reports[i];
+//                Collection<org.apache.hadoop.mapred.TaskAttemptID> attemptIDs = report.getRunningTaskAttempts();
+//
+//                for (Iterator<org.apache.hadoop.mapred.TaskAttemptID> it = attemptIDs.iterator();
+//                     it.hasNext();) {
+//                    org.apache.hadoop.mapred.TaskAttemptID attemptID = it.next();
+//                    System.out.println(attemptID);
+//                }
+//            }
+//
+//            System.out.println("");
+
+            final int ONE_SECOND_MILLIS = 1000;
+            Thread.sleep (ONE_SECOND_MILLIS);
+        }
+
+        ctrlc.setComplete();
+
+        boolean success = job.isSuccessful();
         if (! success) {
             return 1;
         }

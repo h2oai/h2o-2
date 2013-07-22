@@ -499,7 +499,7 @@ public abstract class Log {
   // Print to the original STDERR & die
   public static void die(String s) {
     System.err.println(s);
-    if( !_dontDie ) System.exit(-1);
+    if( !_dontDie ) H2O.exit(-1);
   }
 
   /** Print a message to the stream without the logging information. */
@@ -609,7 +609,7 @@ public abstract class Log {
 //              boolean success = f.mkdirs();
 //              if (! success) {
 //                  try { System.err.print ("Exiting from POST now!"); } catch (Exception _) {}
-//                  System.exit (0);
+//                  H2O.exit (0);
 //              }
 //          }
 //
@@ -623,7 +623,7 @@ public abstract class Log {
 //          }
 //          catch (Exception e) {
 //              try { System.err.print ("Exiting from POST now!"); } catch (Exception _) {}
-//              System.exit (0);
+//              H2O.exit (0);
 //          }
 //      }
   }

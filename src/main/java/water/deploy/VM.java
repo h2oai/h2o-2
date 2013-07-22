@@ -117,7 +117,7 @@ public abstract class VM {
             }
             if( b < 0 ) {
               Log.info("Assuming parent done, exit(0)");
-              System.exit(0);
+              H2O.exit(0);
             }
           }
         }

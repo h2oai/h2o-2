@@ -20,7 +20,7 @@ public class Shutdown extends Request {
       @Override
       public void run() {
         UDPRebooted.T.shutdown.send(H2O.SELF);
-        System.exit(-1);
+        H2O.exit(0);
       }
     }, 100);
 
