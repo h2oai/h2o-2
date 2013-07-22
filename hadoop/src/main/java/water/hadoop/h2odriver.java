@@ -5,10 +5,6 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.TaskReport;
-import org.apache.hadoop.mapred.TaskAttemptID;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -474,12 +470,6 @@ public class h2odriver extends Configured implements Tool {
         Runtime.getRuntime().addShutdownHook(ctrlc);
 
         job.submit();
-
-//        JobConf jconf = new JobConf(conf);
-//        JobClient client = new JobClient(jconf);
-//        System.out.println(client.toString());
-//        org.apache.hadoop.mapred.JobID oldApiJobID = org.apache.hadoop.mapred.JobID.downgrade(job.getJobID());
-
         System.out.println("JobTracker job ID is: " + job.getJobID());
         System.out.println("This command blocks until the H2O cluster shuts down...");
 
@@ -487,20 +477,6 @@ public class h2odriver extends Configured implements Tool {
             if (job.isComplete()) {
                 break;
             }
-
-//            TaskReport[] reports = client.getMapTaskReports(oldApiJobID);
-//            for (int i = 0; i < reports.length; i++) {
-//                TaskReport report = reports[i];
-//                Collection<org.apache.hadoop.mapred.TaskAttemptID> attemptIDs = report.getRunningTaskAttempts();
-//
-//                for (Iterator<org.apache.hadoop.mapred.TaskAttemptID> it = attemptIDs.iterator();
-//                     it.hasNext();) {
-//                    org.apache.hadoop.mapred.TaskAttemptID attemptID = it.next();
-//                    System.out.println(attemptID);
-//                }
-//            }
-//
-//            System.out.println("");
 
             final int ONE_SECOND_MILLIS = 1000;
             Thread.sleep (ONE_SECOND_MILLIS);
