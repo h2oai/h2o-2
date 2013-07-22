@@ -561,7 +561,7 @@ public abstract class DGLM {
       if( _diag != null ) for( int i = 0; i < sparseN; ++i ) {
         double d = 1.0 / (chol._diag[i] = Math.sqrt(_diag[i]));
         for( int j = 0; j < denseN; ++j )
-          chol._xx[j][i] *= d;
+          chol._xx[j][i] = d*_xx[j][i];
       }
       Futures fs = new Futures();
       // compute the outer product of diagonal*dense
@@ -573,7 +573,7 @@ public abstract class DGLM {
               double s = 0;
               for( int k = 0; k < sparseN; ++k )
                 s += fchol._xx[fi][k] * fchol._xx[j][k];
-              fchol._xx[fi][j + sparseN] = fchol._xx[fi][j + sparseN] - s;
+              fchol._xx[fi][j + sparseN] = _xx[fi][j + sparseN] - s;
             }
           }
         }.fork());
@@ -1634,6 +1634,7 @@ public abstract class DGLM {
       float progress = Math.max((float) iter / params._maxIter, Math.min((float) (params._betaEps / betaDiff), 1.0f));
       currentModel = new GLMModel(Status.ComputingModel, progress, resKey, data, data.denormalizeBeta(newBeta),
           newBeta, params, lsm, gram._nobs, newBeta.length, converged, iter, System.currentTimeMillis() - t1, warnings);
+      currentModel._lsmSolveTime = lsmSolveTime;
       currentModel.store();
     } while( ++iter < params._maxIter && !converged );
     currentModel._lsmSolveTime = lsmSolveTime;
