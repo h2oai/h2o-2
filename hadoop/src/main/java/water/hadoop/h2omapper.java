@@ -11,7 +11,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Mapper;
-import water.AbstractEmbeddedH2OConfig;
 import water.H2O;
 
 import water.util.Log;
@@ -110,7 +109,13 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
           Socket s = new Socket(_m.getDriverCallbackIp(), _m.getDriverCallbackPort());
           _m.write(s);
         }
+        catch (java.net.ConnectException e) {
+          System.out.println("EmbeddedH2OConfig: BackgroundWriterThread could not connect to driver");
+          System.out.println("(This is normal when the driver disowns the hadoop job and exits.)");
+        }
         catch (Exception e) {
+          System.out.println("EmbeddedH2OConfig: BackgroundWriterThread caught an Exception");
+          e.printStackTrace();
         }
       }
     }
@@ -131,8 +136,6 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
       }
       catch (Exception e) {
         System.out.println("EmbeddedH2OConfig: notifyAboutEmbeddedWebServerIpPort caught an Exception");
-        System.out.println(e.toString());
-        System.out.println((e.getStackTrace() != null) ? e.getStackTrace() : "(null)");
         e.printStackTrace();
       }
     }
@@ -143,7 +146,6 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
       _embeddedWebServerPort = port;
 
       try {
-        Socket s = new Socket(_driverCallbackIp, _driverCallbackPort);
         MapperToDriverMessage msg = new MapperToDriverMessage();
         msg.setDriverCallbackIpPort(_driverCallbackIp, _driverCallbackPort);
         msg.setMessageCloudSize(ip.getHostAddress(), port, size);
@@ -154,8 +156,6 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
       }
       catch (Exception e) {
         System.out.println("EmbeddedH2OConfig: notifyAboutCloudSize caught an Exception");
-        System.out.println(e.toString());
-        System.out.println((e.getStackTrace() != null) ? e.getStackTrace() : "(null)");
         e.printStackTrace();
       }
     }
@@ -163,7 +163,6 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
     @Override
     public void exit(int status) {
       try {
-        Socket s = new Socket(_driverCallbackIp, _driverCallbackPort);
         MapperToDriverMessage msg = new MapperToDriverMessage();
         msg.setDriverCallbackIpPort(_driverCallbackIp, _driverCallbackPort);
         msg.setMessageExit(_embeddedWebServerIp, _embeddedWebServerPort, status);
@@ -177,8 +176,6 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
       }
       catch (Exception e) {
         System.out.println("EmbeddedH2OConfig: exit caught an exception");
-        System.out.println(e.toString());
-        System.out.println((e.getStackTrace() != null) ? e.getStackTrace() : "(null)");
         e.printStackTrace();
       }
 
