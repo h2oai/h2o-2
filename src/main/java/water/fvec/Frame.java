@@ -99,6 +99,7 @@ public class Frame extends Iced {
     return false;
   }
 
+  // Actually remove/delete all Vecs from memory, not just from the Frame
   public void remove(Futures fs){
     if(_vecs.length > 0){
       VectorGroup vg = _vecs[0].group();
