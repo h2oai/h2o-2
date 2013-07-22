@@ -38,7 +38,7 @@ public class GBMTest extends TestUtil {
     }
   }
 
-  @Test public void testCovtypeGBM() {
+  /*@Test*/ public void testCovtypeGBM() {
     File file = TestUtil.find_test_file("../datasets/UCI/UCI-large/covtype/covtype.data");
     Key fkey = NFSFileVec.make(file);
     Frame fr = ParseDataset2.parse(Key.make("cov1.hex"),new Key[]{fkey});
