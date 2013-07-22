@@ -1,0 +1,15 @@
+{
+    "contents" : "# Demo to test R functionality\n# To invoke, need R 3.0.1 as of now\n# R -f H2OTestDemo.R\nsource(\"H2O.R\")\nh2o = new(\"H2OClient\", ip=\"localhost\", port=54321)\n\n# Test using prostate cancer data set\nprostate.hex = importURL(h2o, \"http://www.stanford.edu/~anqif/prostate.csv\", \"prostate.hex\")\nprostate.sum = summary(prostate.hex)\nprint(prostate.sum)\n\n# Run GLM of CAPSULE ~ AGE + RACE + PSA + DCAPS\nprostate.glm = h2o.glm(y = \"CAPSULE\", x = c(\"AGE\",\"RACE\",\"PSA\",\"DCAPS\"), data = prostate.hex, family = \"binomial\", nfolds = 10, alpha = 0.5)\nprint(prostate.glm)\n\n# Run GLM of VOL ~ CAPSULE + AGE + RACE + PSA + GLEASON\nmyX = setdiff(colnames(prostate.hex), c(\"ID\", \"DPROS\", \"DCAPS\", \"VOL\"))\nprostate.glm2 = h2o.glm(y = \"VOL\", x = myX, data = prostate.hex, family = \"gaussian\", nfolds = 5, alpha = 0.1)\nprint(prostate.glm2)\n\n# Run k-means on all columns\nprostate.km = h2o.kmeans(data = prostate.hex, centers = 5)\nprint(prostate.km)\n\n# Test of random forest using iris data set\niris.hex = importFile(h2o, \"../smalldata/iris/iris.csv\", \"iris.hex\")\niris.sum = summary(iris.hex)\nprint(iris.sum)\niris.rf = h2o.randomForest(y = \"4\", data = iris.hex, ntree = 50)\nprint(iris.rf)\nh2o.getTree(iris.rf, k = 5)\n\n# Test of k-means using random Gaussian data set\ncovtype.hex = importFile(h2o, \"../smalldata/covtype/covtype.20k.data\")\ncovtype.sum = summary(covtype.hex)\nprint(covtype.sum)\ncovtype.km = h2o.kmeans(data = covtype.hex, centers = 10, cols = c(1, 2, 3))\nprint(covtype.km)",
+    "created" : 1374253759930.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "648110540",
+    "id" : "D629CF64",
+    "lastKnownWriteTime" : 1374278405,
+    "path" : "~/workspace/h2o/R/H2OTestDemo.R",
+    "properties" : {
+    },
+    "source_on_save" : false,
+    "type" : "r_source"
+}
