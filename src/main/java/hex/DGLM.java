@@ -529,6 +529,24 @@ public abstract class DGLM {
         _xx[i][_xx[i].length - 1] += d;
     }
 
+    /**
+     * Compute the cholesky decomposition.
+     *
+     * In case our gram starts with diagonal submatrix of dimension N, we exploit this fact to reduce the complexity of the problem.
+     * We use the standard decompostion of the cholesky factorization into submatrices.
+     *
+     * We split the Gram into 3 regions (4 but we only consider lower diagonal, sparse means diagonal region in this context):
+     *     diagonal
+     *     diagonal*dense
+     *     dense*dense
+     * Then we can solve the cholesky in 3 steps:
+     *  1. We solve the diagnonal part right away (just do the sqrt of the elements).
+     *  2. The diagonal*dense part is simply divided by the sqrt of diagonal.
+     *  3. Compute Cholesky of dense*dense - outer product of cholesky of diagonal*dense computed in previous step
+     *
+     * @param chol
+     * @return
+     */
     public Cholesky cholesky(Cholesky chol) {
       if( chol == null ) {
         double[][] xx = _xx.clone();
@@ -539,12 +557,14 @@ public abstract class DGLM {
       final Cholesky fchol = chol;
       final int sparseN = _diag.length;
       final int denseN = _xy.length - sparseN;
+      // compute the cholesky of the diagonal and diagonal*dense parts
       if( _diag != null ) for( int i = 0; i < sparseN; ++i ) {
         double d = 1.0 / (chol._diag[i] = Math.sqrt(_diag[i]));
         for( int j = 0; j < denseN; ++j )
           chol._xx[j][i] *= d;
       }
       Futures fs = new Futures();
+      // compute the outer product of diagonal*dense
       for( int i = 0; i < denseN; ++i ) {
         final int fi = i;
         fs.add(new RecursiveAction() {
@@ -559,7 +579,8 @@ public abstract class DGLM {
         }.fork());
       }
       fs.blockForPending();
-      // TODO do it here without copy
+      // compute the choesky of dense*dense-outer_product(diagonal*dense)
+      // TODO we still use Jama, which requires (among other things) copy and expansion of the matrix. Do it here without copy and faster.
       double[][] arr = new double[denseN][];
       for( int i = 0; i < arr.length; ++i )
         arr[i] = Arrays.copyOfRange(fchol._xx[i], sparseN, sparseN + denseN);
