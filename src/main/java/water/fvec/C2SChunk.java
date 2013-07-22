@@ -21,8 +21,18 @@ public class C2SChunk extends Chunk {
     long res = UDP.get2(_mem,(i<<1)+OFF);
     return (res == _NA)?_vec._fNA:(res + _bias)*_scale;
   }
-  @Override boolean set8_impl(int idx, long l) { return false; }
-  @Override boolean set8_impl(int i, double d) { return false; }
+  @Override boolean set8_impl(int idx, long l) { 
+    long res = (long)(l/_scale)-_bias; // Compressed value
+    double d = (res+_bias)*_scale;     // Reverse it
+    if( (long)d != l ) return false;   // Does not reverse cleanly?
+    if( !(Short.MIN_VALUE < res && res <= Short.MAX_VALUE) ) return false; // Out-o-range for a short array
+    UDP.set2(_mem,(idx<<1)+OFF,(short)res);
+    return true; 
+  }
+  @Override boolean set8_impl(int i, double d) { 
+    throw H2O.unimpl();
+    //return false; 
+  }
   @Override boolean hasFloat() { return _scale < 1.0; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
   @Override public C2SChunk read(AutoBuffer bb) {
