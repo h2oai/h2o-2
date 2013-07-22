@@ -83,7 +83,7 @@ $ hadoop jar h2odriver_cdh4.jar water.hadoop.h2odriver [-jt <jobtracker:port>] -
        of hadoop!  We recommend running the hadoop command from a
        machine in the hadoop cluster.)
 
-(Note: Port 8021 is the default jobtracker port for some hadoop 
+(Note: Port 8021 is the default jobtracker port for Cloudera.
        Port 9001 is the default jobtracker port for MapR.)
 
 
