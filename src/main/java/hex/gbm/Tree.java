@@ -51,7 +51,7 @@ class Tree extends Iced {
     final int _pid;             // Parent node id, root has no parent and uses -1
     int[] _ns;                  // Child node ids.  Null if no split decision has been made.
 
-    final Histogram _hs[];      // Histograms per column
+    Histogram _hs[];            // Histograms per column
     int _col;                   // Column we split over
 
     private Node( Tree tree, int pid, int nid, Histogram hs[] ) { _tree=tree; _nid=nid; _pid= pid; _hs = hs; }
@@ -71,6 +71,15 @@ class Tree extends Iced {
       _ns = new int[_hs[idx]._bins.length];
       Arrays.fill(_ns,-1);      // Mark as "no child split assigned yet"
       return (_col=idx);        // Record & return split column
+    }
+
+    // Remove old histogram data, but keep enough info to predict.  Cuts down
+    // the size of data to move over the wires
+    public void clean() {
+      assert _ns != null;
+      for( int i=0; i<_hs.length; i++ )
+        if( i != _col ) _hs[i] = null;
+      _hs[_col].clean();
     }
 
     @Override public String toString() {

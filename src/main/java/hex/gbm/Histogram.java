@@ -26,42 +26,50 @@ import water.util.Log;
    @author Cliff Click
 */
 
-class Histogram extends Iced {
+class Histogram extends Iced implements Cloneable {
   public static final int BINS=4;
   transient final String   _name;        // Column name, for pretty-printing
   public    final double   _step;        // Linear interpolation step per bin
-  public    final double   _min;         // Lower-end of binning
-  public    final long  [] _bins;        // Bin counts
-  public    final double[] _Ms;          // Rolling mean, per-bin
-  public    final double[] _Ss;          // Rolling var , per-bin
-  public    final double[] _mins, _maxs; // Min, Max, per-bin
+  public    final double   _min, _max;   // Lower-end of binning
+  public    final int      _nbins;       // Number of bins
+  public          long  [] _bins;        // Bin counts
+  public          double[] _Ms;          // Rolling mean, per-bin
+  public          double[] _Ss;          // Rolling var , per-bin
+  public          double[] _mins, _maxs; // Min, Max, per-bin
   public          double[] _MSEs;        // Rolling mean-square-error, per-bin; requires 2nd pass
 
   public Histogram( String name, long nelems, double min, double max, boolean isInt ) {
     assert nelems > 0;
     assert max > min : "Caller ensures max>min, since if max==min the column is all constants";
     _name = name;
-    _min = min;
+    _min = min;  _max=max;
     int xbins = Math.max((int)Math.min(BINS,nelems),1); // Default bin count
     // See if we can show there are fewer unique elements than nbins.
     // Common for e.g. boolean columns, or near leaves.
     int nbins = xbins;      // Default size for most columns        
     if( isInt && max-min < xbins )
       nbins = (int)((long)max-(long)min+1L); // Shrink bins
+    _nbins = nbins;
+    _step = (max-min)/_nbins;   // Step size for linear interpolation
+  }
+
+  public Histogram copy() {
+    assert _bins==null && _maxs == null; // Nothing filled-in yet
+    Histogram h=clone();
     // Build bin stats
-    _bins = new long  [nbins];
-    _Ms   = new double[nbins];
-    _Ss   = new double[nbins];
-    _mins = new double[nbins];
-    _maxs = new double[nbins];
+    h._bins = new long  [_nbins];
+    h._Ms   = new double[_nbins];
+    h._Ss   = new double[_nbins];
+    h._mins = new double[_nbins];
+    h._maxs = new double[_nbins];
     // Set step & min/max for each bin
-    _step = (max-min)/nbins;       // Step size for linear interpolation
-    for( int j=0; j<nbins; j++ ) { // Set bad bounds for min/max
-      _mins[j] =  Double.MAX_VALUE;
-      _maxs[j] = -Double.MAX_VALUE;
+    for( int j=0; j<_nbins; j++ ) { // Set bad bounds for min/max
+      h._mins[j] =  Double.MAX_VALUE;
+      h._maxs[j] = -Double.MAX_VALUE;
     }
-    _mins[      0] = min; // Know better bounds for whole column min/max
-    _maxs[nbins-1] = max;
+    h._mins[       0] = _min; // Know better bounds for whole column min/max
+    h._maxs[_nbins-1] = _max;
+    return h;
   }
 
   // Add 1 count to bin specified by double.  Simple linear interpolation to
@@ -98,9 +106,8 @@ class Histogram extends Iced {
 
   // Interpolate d to find bin#
   int bin( double d ) {
-    int nbins = _bins .length;
     int idx1  = _step <= 0.0 ? 0 : (int)((d-_min)/_step);
-    int idx2  = Math.max(Math.min(idx1,nbins-1),0); // saturate at bounds
+    int idx2  = Math.max(Math.min(idx1,_nbins-1),0); // saturate at bounds
     return idx2;
   }
   double mean( int bin ) { return _Ms[bin]; }
@@ -129,6 +136,31 @@ class Histogram extends Iced {
     return sum;
   }
 
+  // Remove old histogram data, but keep enough info to predict.  Cuts down
+  // the size of data to move over the wires
+  public void clean() {  _bins=null;  _Ss = _mins = _maxs = _MSEs = null; }
+
+  public void add( Histogram h ) {
+    assert _nbins == h._nbins;
+    // Recursive mean & variance
+    //    http://www.johndcook.com/standard_deviation.html
+    //    http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+    for( int i=0; i<_Ms.length; i++ ) {
+      long k1 = _bins[i], k2 = h._bins[i];
+      if( k1==0 && k2==0 ) continue;
+      double m1 = _Ms[i], m2 = h.  _Ms[i];
+      double s1 = _Ss[i], s2 = h.  _Ss[i];
+      double delta=m2-m1;
+      _Ms[i] = (k1*m1+k2*m2)/(k1+k2);           // Mean
+      _Ss[i] = s1+s2+delta*delta*k1*k2/(k1+k2); // 2nd moment
+      _bins[i]=k1+k2;
+    }
+
+    for( int i=0; i<_mins.length; i++ ) if( h._mins[i] < _mins[i] ) _mins[i] = h._mins[i];
+    for( int i=0; i<_maxs.length; i++ ) if( h._maxs[i] > _maxs[i] ) _maxs[i] = h._maxs[i];
+    if( _MSEs != null ) throw H2O.unimpl();
+  }
+
   // Pretty-print a histogram
   @Override public String toString() {
     StringBuilder sb = new StringBuilder();
@@ -138,5 +170,13 @@ class Histogram extends Iced {
                               _bins[i],_mins[i],_maxs[i],mean(i),var(i)));
       
     return sb.toString();
+  }
+
+  @Override protected Histogram clone() {
+    try {
+      return (Histogram)super.clone();
+    } catch( CloneNotSupportedException e ) {
+      throw Log.errRTExcept(e);
+    }
   }
 }
