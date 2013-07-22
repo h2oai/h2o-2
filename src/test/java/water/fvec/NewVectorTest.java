@@ -29,7 +29,7 @@ public class NewVectorTest extends TestUtil {
     UKV.remove(av._key);
   }
   // Test that various collections of parsed numbers compress as expected.
-  /*@Test*/ public void testCompression() {
+  @Test public void testCompression() {
     // A simple no-compress
     testImpl(new long[] {120, 12,120},
              new int [] {  0,  1,  0},
@@ -37,7 +37,7 @@ public class NewVectorTest extends TestUtil {
     // A simple no-compress
     testImpl(new long[] {122, 3,44},
              new int [] {  0, 0, 0},
-             C1Chunk.class,false);
+             C1NChunk.class,false);
     // A simple compressed boolean vector
     testImpl(new long[] {1, 0, 1},
              new int [] {0, 0, 0},

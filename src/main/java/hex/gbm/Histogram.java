@@ -1,6 +1,7 @@
 package hex.gbm;
 
 import water.*;
+import water.fvec.Frame;
 import water.util.Log;
 
 /**
@@ -38,6 +39,7 @@ class Histogram extends Iced implements Cloneable {
   public          double[] _mins, _maxs; // Min, Max, per-bin
   public          double[] _MSEs;        // Rolling mean-square-error, per-bin; requires 2nd pass
 
+  // Fill in read-only sharable values
   public Histogram( String name, long nelems, double min, double max, boolean isInt ) {
     assert nelems > 0;
     assert max > min : "Caller ensures max>min, since if max==min the column is all constants";
@@ -53,6 +55,7 @@ class Histogram extends Iced implements Cloneable {
     _step = (max-min)/_nbins;   // Step size for linear interpolation
   }
 
+  // Copy from the original Histogram, but then allocate private arrays
   public Histogram copy() {
     assert _bins==null && _maxs == null; // Nothing filled-in yet
     Histogram h=clone();
@@ -140,6 +143,49 @@ class Histogram extends Iced implements Cloneable {
   // the size of data to move over the wires
   public void clean() {  _bins=null;  _Ss = _mins = _maxs = _MSEs = null; }
 
+  // After having filled in histogram bins, compute tighter min/max bounds.
+  // Store tighter bounds into the first and last bins.
+  public void tightenMinMax() {
+    int n = 0;
+    while( _bins[n]==0 ) n++;   // First non-empty bin
+    if( n > 0 ) _mins[0] = _mins[n]; // Take min from  1st non-empty bin into bin 0
+    int l = _bins.length-1;     // Last bin
+    int x = l;  
+    while( _bins[x]==0 ) x--;   // Last non-empty bin
+    if( x < l ) _maxs[l] = _maxs[x]; // Take max from last non-empty bin into bin last
+  }
+
+  // Split bin 'i' of this Histogram.  Return null if there is no point in
+  // splitting this bin further (such as there's only 1 element, or zero
+  // variance in the response column).  Return an array of Histograms (one per
+  // column), which are bounded by the split bin-limits.  If the column has
+  // constant data, or was not being tracked by a prior Histogram (for being
+  // constant data from a prior split), then that column will be null in the
+  // returned array.
+  public Histogram[] split( int col, int i, Histogram hs[], Frame fr, int ncols ) {
+    assert hs[col] == this;
+    if( _bins[i] <= 1 ) return null; // Zero or 1 elements
+    if( var(i) == 0.0 ) return null; // No point in splitting a perfect prediction
+
+    // Build a next-gen split point from the splitting bin
+    Histogram nhists[] = new Histogram[ncols]; // A new histogram set
+    for( int j=0; j<ncols; j++ ) { // For every column in the new split
+      Histogram h = hs[j];         // Old histogram of column
+      if( h == null ) continue;    // Column was not being tracked?
+      // min & max come from the original column data, since splitting on an
+      // unrelated column will not change the j'th columns min/max.
+      double min = h._mins[0], max = h._maxs[h._maxs.length-1];
+      // Tighter bounds on the column getting split: exactly each new
+      // Histogram's bound are the bins' min & max.
+      if( col==j ) { min=h._mins[i]; max=h._maxs[i]; }
+      if( min == max ) continue; // This column will not split again
+      nhists[j] = new Histogram(fr._names[j],_bins[i],min,max,fr._vecs[j]._isInt);
+    }
+    return nhists;
+  }
+
+  // "reduce" 'h' into 'this'.  Combine mean & variance using the
+  // recursive-mean technique.  Compute min-of-mins and max-of-maxes, etc.
   public void add( Histogram h ) {
     assert _nbins == h._nbins;
     // Recursive mean & variance
