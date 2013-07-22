@@ -288,7 +288,8 @@ public class h2odriver extends Configured implements Tool {
                     "          o  All mappers must start before the H2O cloud is considered up.\n" +
                     "\n" +
                     "Examples:\n" +
-                    "          hadoop jar h2odriver_HHH.jar water.hadoop.h2odriver -jt <yourjobtracker>:<yourport> -files flatfile.txt -libjars h2o.jar -mapperXmx 1g -n 1 -o hdfsOutputDir\n" +
+                    "          hadoop jar h2odriver_HHH.jar water.hadoop.h2odriver -jt <yourjobtracker>:<yourport> -files flatfile.txt -libjars h2o.jar -mapperXmx 1g -nodes 1 -output hdfsOutputDir\n" +
+                    "          hadoop jar h2odriver_HHH.jar water.hadoop.h2odriver -jt <yourjobtracker>:<yourport> -files flatfile.txt -libjars h2o.jar -mapperXmx 1g -nodes 1 -notify notify.txt -disown -output hdfsOutputDir\n" +
                     "          (Choose the proper h2odriver (_HHH) for your version of hadoop.\n" +
                     "\n" +
                     "flatfile.txt:\n" +
@@ -458,8 +459,8 @@ public class h2odriver extends Configured implements Tool {
     CallbackManager cm = new CallbackManager();
     cm.setServerSocket(driverCallbackSocket);
     cm.start();
-    System.out.println("    [Using mapper->driver callback IP address and port: " + driverCallbackIp + ":" + actualDriverCallbackPort + "]");
-    System.out.println("    [You can override these with -driverif and -driverport.]");
+    System.out.println("Using mapper->driver callback IP address and port: " + driverCallbackIp + ":" + actualDriverCallbackPort);
+    System.out.println("(You can override these with -driverif and -driverport.)");
 
     // Set up configuration.
     // ---------------------
@@ -521,7 +522,7 @@ public class h2odriver extends Configured implements Tool {
     System.out.printf("Waiting for H2O cluster to come up...\n", numNodes);
     waitForClusterToComeUp();
     if (job.isComplete()) {
-      System.out.println("H2O cluster failed to come up.");
+      System.out.println("ERROR: H2O cluster failed to come up.");
       ctrlc.setComplete();
       return 2;
     }
