@@ -103,3 +103,9 @@ Choose Admin->Shutdown
 
 (Note: Alternately use the "hadoop job -kill" command.)
 
+
+FOR MORE INFORMATION
+--------------------
+
+$ hadoop jar h2odriver_cdh4.jar water.hadoop.h2odriver -help
+
