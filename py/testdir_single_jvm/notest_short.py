@@ -17,7 +17,7 @@ class Basic(unittest.TestCase):
         if (localhost):
             h2o.build_cloud(1,java_heap_GB=28)
         else:
-            h2o_hosts.build_cloud_with_hosts()
+            h2o_hosts.build_cloud_with_hosts(java_heap_GB=28)
 
     @classmethod
     def tearDownClass(cls):
@@ -25,7 +25,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_short(self):
-            csvFilename = 'short'
+            csvFilename = 'part-00000b'
             importFolderPath = '/home/hduser/data'
             importFolderResult = h2i.setupImportFolder(None, importFolderPath)
             csvPathname = importFolderPath + "/" + csvFilename
