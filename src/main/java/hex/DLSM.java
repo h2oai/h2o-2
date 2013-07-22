@@ -136,6 +136,7 @@ public class DLSM {
         double rhoIncrement = _rho*(1<< ++attempts);
         gram.addDiag(rhoIncrement); // try to add L2 penalty to make the Gram issp
         rhoAdd += rhoIncrement;
+        gram.cholesky(chol);
       }
       if(!chol._isSPD) throw new NonSPDMatrixException();
       _rho += rhoAdd;
