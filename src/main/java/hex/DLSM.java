@@ -1,15 +1,14 @@
 package hex;
 
+
+
+import hex.DGLM.Cholesky;
 import hex.DGLM.Gram;
 
 import java.util.Arrays;
 
-import org.apache.poi.xslf.util.PPTX2PNG;
-
 import water.Iced;
 import water.MemoryManager;
-import Jama.CholeskyDecomposition;
-import Jama.Matrix;
 
 import com.google.gson.JsonObject;
 
@@ -131,13 +130,18 @@ public class DLSM {
       Arrays.fill(z, 0);
       if(_lambda>0)gram.addDiag(_lambda*(1-_alpha)*0.5 + _rho);
       int attempts = 0;
-      boolean isspd = false;
-      while(!(isspd = gram.cholesky()) && attempts < 10)
-        gram.addDiag(_rho*(1<< ++attempts)); // try to add L2 penalty to make the Gram issp
-      if(!isspd) throw new NonSPDMatrixException();
+      Cholesky chol = gram.cholesky(null);
+      double rhoAdd = 0;
+      while(!chol._isSPD && attempts < 10){
+        double rhoIncrement = _rho*(1<< ++attempts);
+        gram.addDiag(rhoIncrement); // try to add L2 penalty to make the Gram issp
+        rhoAdd += rhoIncrement;
+      }
+      if(!chol._isSPD) throw new NonSPDMatrixException();
+      _rho += rhoAdd;
       if(_alpha == 0 || _lambda == 0){ // no l1 penalty
         System.arraycopy(gram._xy, 0, z, 0, gram._xy.length);
-        gram.solve(z);
+        chol.solve(z);
         return _converged = true;
       }
       final double ABSTOL = Math.sqrt(N) * 1e-4;
@@ -151,7 +155,7 @@ public class DLSM {
         for( int j = 0; j < N-1; ++j )xyPrime[j] = gram._xy[j] + _rho * (z[j] - u[j]);
         xyPrime[N-1] = gram._xy[N-1];
         // updated x
-        gram.solve(xyPrime);
+        chol.solve(xyPrime);
         // vars to be used for stopping criteria
         double x_norm = 0;
         double z_norm = 0;
