@@ -619,15 +619,19 @@ public final class H2O {
     "Usage:  java [-Xmx<size>] -jar h2o.jar [options]\n" +
     "        (Note that every option has a default and is optional.)\n" +
     "\n" +
+    "    -h | -help\n" +
+    "          Print this help.\n" +
+    "\n" +
+    "    -version\n" +
+    "          Print version info and exit.\n" +
+    "\n" +
     "    -name <h2oCloudName>\n" +
-    "          Cloud name used for Multicast discovery.\n" +
+    "          Cloud name used for discovery of other nodes.\n" +
     "          Nodes with the same cloud name will form an H2O cloud\n" +
     "          (also known as an H2O cluster).\n" +
-    "          (Not to be used with -flatfile.)\n" +
     "\n" +
     "    -flatfile <flatFileName>\n" +
     "          Configuration file explicitly listing H2O cloud node members.\n" +
-    "          (Not to be used with -name.)\n" +
     "\n" +
     "    -ip <ipAddressOfNode>\n" +
     "          IP address of this node.\n" +
@@ -644,30 +648,24 @@ public final class H2O {
     "          Allow some other package to specify log4j configuration\n" +
     "          (for embedding H2O, e.g. inside Hadoop mapreduce).\n" +
     "\n" +
-    "    -h | -help\n" +
-    "          Print this help.\n" +
-    "\n" +
-    "    -version\n" +
-    "          Print version info and exit.\n" +
-    "\n" +
     "Cloud formation behavior:\n" +
     "\n" +
     "    New H2O nodes join together to form a cloud at startup time.\n" +
-    "    Once a cloud is given work to perform, it locks out new members.\n" +
+    "    Once a cloud is given work to perform, it locks out new members\n" +
     "    from joining.\n" +
     "\n" +
     "Examples:\n" +
     "\n" +
     "    Start an H2O node with 4GB of memory and a default cloud name:\n" +
-    "        java -Xmx4g -jar h2o.jar\n" +
+    "        $ java -Xmx4g -jar h2o.jar\n" +
     "\n" +
     "    Start an H2O node with 6GB of memory and a specify the cloud name:\n" +
-    "        java -Xmx6g -jar h2o.jar -name MyCloud\n" +
+    "        $ java -Xmx6g -jar h2o.jar -name MyCloud\n" +
     "\n" +
     "    Start an H2O cloud with three 2GB nodes and a default cloud name:\n" +
-    "        java -Xmx2g -jar h2o.jar\n" +
-    "        java -Xmx2g -jar h2o.jar\n" +
-    "        java -Xmx2g -jar h2o.jar\n" +
+    "        $ java -Xmx2g -jar h2o.jar &\n" +
+    "        $ java -Xmx2g -jar h2o.jar &\n" +
+    "        $ java -Xmx2g -jar h2o.jar &\n" +
     "\n";
 
     System.out.print(s);
