@@ -18,7 +18,7 @@ public abstract class DocGen {
     H2O.main(args);
     TestUtil.stall_till_cloudsize(1);
     System.out.println(new ImportFiles().ReSTHelp());
-    //System.exit(0);
+    //H2O.exit(0);
   }
 
   // Class describing meta-info about H2O queries and results.  

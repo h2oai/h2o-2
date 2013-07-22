@@ -66,6 +66,6 @@ public class MinorityClassTest extends TestUtil {
         System.err.println(f.getTrace());
       }
     }
-    System.exit(0);
+    H2O.exit(0);
   }
 }

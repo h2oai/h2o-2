@@ -54,36 +54,31 @@ public class GBM extends Job {
     for( int j=0; j<ncols; j++ )
       hists[j] = new Histogram(fr._names[j],vs[j].length(),vs[j].min(),vs[j].max(),vs[j]._isInt);
     Tree.Node root = tree.newNode(null,hists);
-    int treeMin = 0;            // Define a "working set" of leaf splits
+    int leaf = 0; // Define a "working set" of leaf splits, from here to tree._len
 
     // One Big Loop till the tree is of proper depth.
     for( int depth=0; depth<maxDepth; depth++ ) {
 
       // Report the average prediction error
-      double error = new CalcError().doAll(vresponse,vpred)._sum;
-      double errAvg = error/fr._vecs[0].length();
+      CalcError ce = new CalcError().doAll(vresponse,vpred);
+      double errAvg = ce._sum/fr._vecs[0].length();
       Log.unwrap(System.out,"============================================================== ");
-      Log.unwrap(System.out,"Average prediction error for tree of depth "+depth+" is "+errAvg);
+      Log.unwrap(System.out,"Average squared prediction error for tree of depth "+depth+" is "+errAvg);
+      Log.unwrap(System.out,"Total of "+ce._err+" errors on "+vpred.length()+" rows, with "+tree._len+" nodes");
 
       // Build a histogram with a pass over the data.
-      // Should be an MRTask2.
-      for( int k=0; k<fr._vecs[0].length(); k++ ) {
-        int nid = (int)vnids.at8(k); // Node id for this row
-        if( nid==-1 ) continue; // Row does not need to split again (generally perfect prediction already)
-        double y = vresponse.at(k);  // Response variable for row
-        Tree.Node t = tree.n(nid);   // This row is being split in Node t
-        for( int j=0; j<ncols; j++ ) // For all columns
-          if( t._hs[j] != null ) // Some columns are ignored, since already split to death
-            t._hs[j].incr(fr._vecs[j].at(k),y);
-      }
+      Histogram hs[][] = new BuildHistogram(tree,leaf,ncols).doAll(fr)._hcs;
+      // Reassign the new Histogram back into the Tree
+      final int tmax = tree._len; // Number of total splits
+      for( int i=leaf; i<tmax; i++ )
+        tree.n(i)._hs = hs[i-leaf];
 
       // Build up the next-generation tree splits from the current histograms.
       // Nearly all leaves will split one more level.  This loop nest is
       //           O( #active_splits * #bins * #ncols )
       // but is NOT over all the data.
-      final int treeMax = tree._len; // Number of total splits
-      for( int w=treeMin; w<treeMax; w++ ) {
-        Tree.Node t = tree.n(w); // Node being split
+      for( ; leaf<tmax; leaf++ ) {
+        Tree.Node t = tree.n(leaf); // Node being split
 
         // Adjust for observed min/max in the histograms, as some of the bins
         // might already be zero from a prior split (i.e., the maximal element
@@ -103,7 +98,7 @@ public class GBM extends Job {
         
         // Compute best split
         int col = t.bestSplit();      // Best split-point for this tree
-        Log.unwrap(System.out,t.toString());
+        //Log.unwrap(System.out,t.toString());
 
         // Split the best split.  This is a BIN-way split; each bin gets it's
         // own subtree.
@@ -131,19 +126,23 @@ public class GBM extends Job {
           // Add a new (unsplit) Tree
           t._ns[i]=tree.newNode(t,nhists)._nid;
         }
+        t.clean();              // Toss old histogram data
       }
-      treeMin = treeMax;        // Move the "working set" of splits forward
 
       // "Score" each row against the new splits.  Assign a new split.
       new ScoreAndAssign(tree).doAll(fr);
     }
 
-    // One more pass for prediction error
-    double error = new CalcError().doAll(vresponse,vpred)._sum;
-    double errAvg = error/fr._vecs[0].length();
-    Log.unwrap(System.out,"Average prediction error for tree of depth "+maxDepth+" is "+errAvg);
+    // One more pass for final prediction error
+    CalcError ce = new CalcError().doAll(vresponse,vpred);
+    double errAvg = ce._sum/fr._vecs[0].length();
+    Log.unwrap(System.out,"============================================================== ");
+    Log.unwrap(System.out,"Average squared prediction error for tree of depth "+maxDepth+" is "+errAvg);
+    Log.unwrap(System.out,"Total of "+ce._err+" errors on "+vpred.length()+" rows, with "+tree._len+" nodes");
 
     // Remove temp vectors
+    fr.remove("Predictions");
+    fr.remove("NIDs");
     UKV.remove(vnids._key);
     UKV.remove(vpred._key);
   }
@@ -152,15 +151,69 @@ public class GBM extends Job {
   // Compute sum-squared-error.  Should use the recursive-mean technique.
   private static class CalcError extends MRTask2<CalcError> {
     double _sum;
+    long _err;
     @Override public void map( Chunk ys, Chunk preds ) {
       for( int i=0; i<ys._len; i++ ) {
         assert !ys.isNA0(i);
         double y    = ys   .at0(i);
         double pred = preds.at0(i);
         _sum += (y-pred)*(y-pred);
+        if( (int)y != (int)(pred+0.5) ) _err++;
       }
     }
-    @Override public void reduce( CalcError t ) { _sum += t._sum; }
+    @Override public void reduce( CalcError t ) { _sum += t._sum; _err += t._err; }
+  }
+
+  // --------------------------------------------------------------------------
+  // Collect histogram data for each row, in it's own Tree.Node split.
+  // Collect counts, mean, variance, min, max per bin, per column.
+  private static class BuildHistogram extends MRTask2<BuildHistogram> {
+    final Tree _tree;           // Read-only, shared (except at the histograms in the Tree.Nodes)
+    final int _ncols;
+    final int _leaf;
+    Histogram _hcs[][];         // Output: histograms-per-nid-per-column
+    BuildHistogram(Tree tree, int leaf, int ncols) { _tree=tree; _leaf=leaf; _ncols=ncols; }
+
+    @Override public void map( Chunk[] chks ) {
+      Chunk nids = chks[chks.length-2];
+      // We need private (local) space to gather the histograms.
+      // Make local clones of all the histograms that appear in this chunk.
+      _hcs = new Histogram[_tree._len-_leaf][]; // A leaf-biased array of all active histograms
+      for( int i=0; i<nids._len; i++ ) {
+        int nid = (int)nids.at80(i); // Node id for this row
+        if( nid==-1 ) continue; // Row does not need to split again (generally perfect prediction already)
+        if( _hcs[nid-_leaf] == null ) { // Lazily manifest this histogram for 'nid'
+          _hcs[nid-_leaf] = new Histogram[_ncols];
+          Histogram hs[] = _tree.n(nid)._hs; // The existing column of Histograms
+          for( int j=0; j<_ncols; j++ )      // Make private copies
+            if( hs[j] != null )
+              _hcs[nid-_leaf][j] = hs[j].copy();
+        }
+      }
+
+      // Now revisit all rows again, bumping the local histogram counts
+      Chunk ys = chks[chks.length-3];
+      for( int i=0; i<nids._len; i++ ) {
+        int nid = (int)nids.at80(i); // Node id for this row
+        if( nid==-1 ) continue; // Row does not need to split again (generally perfect prediction already)
+        Histogram hs[] = _hcs[nid-_leaf];
+        double y = ys.at0(i);        // Response variable for row
+        for( int j=0; j<_ncols; j++) // For all columns
+          if( hs[j] != null ) // Some columns are ignored, since already split to death
+            hs[j].incr(chks[j].at0(i),y);
+      }
+    }
+    @Override public void reduce( BuildHistogram bh ) {
+      for( int i=0; i<_hcs.length; i++ ) {
+        Histogram hs1[] = _hcs[i], hs2[] = bh._hcs[i];
+        if( hs1 == null ) _hcs[i] = hs2;
+        else if( hs2 != null )
+          for( int j=0; j<hs1.length; j++ )
+            if( hs1[j] == null ) hs1[j] = hs2[j];
+            else if( hs2[j] != null )
+              hs1[j].add(hs2[j]);
+      }
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -175,12 +228,12 @@ public class GBM extends Job {
         int oldNid = (int)nids.at80(i); // Get Tree.Node to decide from
         if( oldNid==-1 ) continue;      // row already predicts perfectly
         Tree.Node t = _tree.n(oldNid);  // This row is being split in Tree t
-        double d = chks[t._col].at(i);  // Value to split on for this row
+        double d = chks[t._col].at0(i); // Value to split on for this row
         int bin = t._hs[t._col].bin(d); // Bin in the histogram in the tree
         double pred = t._hs[t._col].mean(bin);// Current prediction
         int newNid = t._ns[bin];// Tree.Node split
-        nids .set8(i,newNid);   // Save the new split# for this row
-        preds.set8(i,pred);     // Save the new prediction also
+        nids .set80(i,newNid);  // Save the new split# for this row
+        preds.set80(i,pred);    // Save the new prediction also
       }
     }
   }

@@ -25,7 +25,7 @@ public class C1NChunk extends Chunk {
   }
   @Override boolean set8_impl(int i, double d) { return false; }
   @Override NewChunk inflate_impl(NewChunk nc) {
-    for( int i=0; i<_mem.length; i++ )
+    for( int i=0; i<_len; i++ )
       nc._ls[i] = at8_impl(i);
     return nc;
   }
