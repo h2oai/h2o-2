@@ -43,10 +43,12 @@ class Basic(unittest.TestCase):
         h2b.browseTheCloud()
 
         importFolderPath = '/home/0xdiag/datasets/standard'
-        h2i.setupImportFolder(None, importFolderPath, timeoutSecs=60)
         validations1= {}
         coefficients1= {}
         for csvFilename in csvFilenameList:
+            # have to re-import each iteration now, since the source key
+            # is removed and if we re-parse it, it's not there
+            h2i.setupImportFolder(None, importFolderPath, timeoutSecs=60)
             # creates csvFilename.hex from file in importFolder dir 
             parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=2000)
             print csvFilename, 'parse time:', parseKey['response']['time']
