@@ -6,7 +6,7 @@ source(args[1])
 argsplit = strsplit(args[2], ":")[[1]]
 h2o = new("H2OClient", ip=argsplit[1], port=as.numeric(argsplit[2]))
 
-benign.hex = importFile(h2o, "../../smalldata/logreg/benign.csv")
+benign.hex = importFile(h2o, "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv")
 summary(benign.hex)
 
 for(i in 1:2) {
