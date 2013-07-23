@@ -522,28 +522,33 @@ public class h2odriver extends Configured implements Tool {
     System.out.printf("Waiting for H2O cluster to come up...\n", numNodes);
     waitForClusterToComeUp();
     if (job.isComplete()) {
-      System.out.println("ERROR: H2O cluster failed to come up.");
+      System.out.println("ERROR: H2O cluster failed to come up");
       ctrlc.setComplete();
       return 2;
     }
 
-    System.out.printf("H2O cluster (%d nodes) is up.\n", numNodes);
+    System.out.printf("H2O cluster (%d nodes) is up\n", numNodes);
     if (disown) {
       System.out.println("Disowning cluster and exiting.");
       Runtime.getRuntime().removeShutdownHook(ctrlc);
       return 0;
     }
 
-    System.out.println("(Press Ctrl-C to kill the cluster.)");
+    System.out.println("(Press Ctrl-C to kill the cluster)");
     System.out.println("Blocking until the H2O cluster shuts down...");
     waitForClusterToShutdown();
     ctrlc.setComplete();
     boolean success = job.isSuccessful();
-    if (! success) {
-      return 1;
+    int exitStatus;
+    exitStatus = success ? 0 : 1;
+    System.out.println((success ? "" : "ERROR: ") + "Job was" + (success ? " " : " not ") + "successful");
+    if (success) {
+      System.out.println("Exiting with status 0");
     }
-
-    return 0;
+    else {
+      System.out.println("Exiting with nonzero exit status");
+    }
+    return exitStatus;
   }
 
   /**

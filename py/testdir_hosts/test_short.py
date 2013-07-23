@@ -122,7 +122,7 @@ class Basic(unittest.TestCase):
                     'family': 'binomial',
                     'lambda': 1.0E-5,
                     'alpha': 0.5,
-                    'max_iter': 2,
+                    'max_iter': 5,
                     'thresholds': 0.5,
                     'n_folds': 1,
                     'weight': 100,
