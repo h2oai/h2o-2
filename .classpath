@@ -38,5 +38,10 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Python 2.7.2 (/System/Library/Frameworks/Python.framework/Versions/2.7/bin/python) interpreter library"/>
+	<classpathentry kind="lib" path="lib/gpu/jocl-natives-linux-amd64.jar"/>
+	<classpathentry kind="lib" path="lib/gpu/jocl.jar" sourcepath="lib/gpu/jocl-java-src.zip"/>
+	<classpathentry kind="lib" path="lib/gpu/gluegen-rt-natives-linux-amd64.jar"/>
+	<classpathentry kind="lib" path="lib/gpu/gluegen-rt.jar"/>
+	<classpathentry kind="lib" path="lib/gpu/gluegen-sources.zip"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

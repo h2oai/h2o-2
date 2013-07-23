@@ -1,13 +1,22 @@
 package hex;
 
+import static java.lang.System.nanoTime;
+import static java.lang.System.out;
 import hex.Layer.Input;
 
+import java.io.IOException;
+import java.nio.FloatBuffer;
 import java.util.Arrays;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import jsr166y.*;
+import water.Boot;
+import water.util.Log;
 import water.util.Utils;
+
+import com.jogamp.opencl.*;
+import com.jogamp.opencl.CLMemory.Mem;
 
 /**
  * Trains a neural network.
@@ -21,15 +30,12 @@ public abstract class Trainer {
     _count = count;
   }
 
-  abstract void join();
-
-  abstract void start();
-
   abstract Layer[] layers();
+
+  abstract void run();
 
   public static class Direct extends Trainer {
     final Layer[] _ls;
-    final Thread _thread;
 
     public Direct(Layer[] ls) {
       this(ls, new AtomicInteger());
@@ -38,48 +44,34 @@ public abstract class Trainer {
     public Direct(Layer[] ls, AtomicInteger count) {
       super(count);
       _ls = ls;
-
-      _thread = new Thread() {
-        public void run() {
-          for( int batch = 0; _batches == 0 || batch < _batches; batch++ ) {
-            Input input = (Input) _ls[0];
-            for( int b = 0; b < _batch; b++ ) {
-              fprop();
-
-              for( int i = 1; i < _ls.length; i++ )
-                Arrays.fill(_ls[i]._e, 0);
-              float[] err = _ls[_ls.length - 1]._e;
-              err[input.label()] = 1.0f;
-              for( int i = 0; i < err.length; i++ )
-                err[i] -= _ls[_ls.length - 1]._a[i];
-
-              bprop();
-              input._n = input._n == input._count - 1 ? 0 : input._n + 1;
-            }
-
-            for( int i = 1; i < _ls.length; i++ )
-              _ls[i].adjust(_count.get());
-
-            _count.addAndGet(_batch);
-          }
-        }
-      };
-    }
-
-    @Override void join() {
-      try {
-        _thread.join();
-      } catch( InterruptedException e ) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    @Override void start() {
-      _thread.start();
     }
 
     @Override Layer[] layers() {
       return _ls;
+    }
+
+    @Override void run() {
+      for( int batch = 0; _batches == 0 || batch < _batches; batch++ ) {
+        Input input = (Input) _ls[0];
+        for( int b = 0; b < _batch; b++ ) {
+          fprop();
+
+          for( int i = 1; i < _ls.length; i++ )
+            Arrays.fill(_ls[i]._e, 0);
+          float[] err = _ls[_ls.length - 1]._e;
+          err[input.label()] = 1.0f;
+          for( int i = 0; i < err.length; i++ )
+            err[i] -= _ls[_ls.length - 1]._a[i];
+
+          bprop();
+          input._n = input._n == input._count - 1 ? 0 : input._n + 1;
+        }
+
+        for( int i = 1; i < _ls.length; i++ )
+          _ls[i].adjust(_count.get());
+
+        _count.addAndGet(_batch);
+      }
     }
 
     void fprop() {
@@ -98,10 +90,12 @@ public abstract class Trainer {
    */
   public static class ParallelTrainers extends Trainer {
     final Direct[] _trainers;
+    final Thread[] _threads;
 
     public ParallelTrainers(Layer[] ls) {
       super(new AtomicInteger());
       _trainers = new Direct[Runtime.getRuntime().availableProcessors()];
+      _threads = new Thread[_trainers.length];
       for( int t = 0; t < _trainers.length; t++ ) {
         Layer[] clones = new Layer[ls.length];
         for( int i = 0; i < ls.length; i++ )
@@ -109,25 +103,33 @@ public abstract class Trainer {
         for( int i = 1; i < ls.length; i++ )
           clones[i]._in = clones[i - 1];
         _trainers[t] = new Direct(clones, _count);
+        _trainers[t]._batches = _batches / _trainers.length;
         Input input = (Input) _trainers[t]._ls[0];
         input._n = t * input._count / _trainers.length;
-      }
-    }
 
-    @Override void join() {
-      for( int i = 0; i < _trainers.length; i++ )
-        _trainers[i].join();
-    }
-
-    @Override void start() {
-      for( int t = 0; t < _trainers.length; t++ ) {
-        _trainers[t]._batches = _batches / _trainers.length;
-        _trainers[t].start();
+        final Direct d = _trainers[t];
+        _threads[t] = new Thread("H2O Trainer " + t) {
+          @Override public void run() {
+            d.run();
+          }
+        };
       }
     }
 
     @Override Layer[] layers() {
       return _trainers[0]._ls;
+    }
+
+    @Override void run() {
+      for( int t = 0; t < _threads.length; t++ )
+        _threads[t].start();
+      for( int i = 0; i < _threads.length; i++ ) {
+        try {
+          _threads[i].join();
+        } catch( InterruptedException e ) {
+          throw new RuntimeException(e);
+        }
+      }
     }
   }
 
@@ -228,28 +230,38 @@ public abstract class Trainer {
     final CyclicBarrier _wait, _done;
     final int _perThread;
 
-    public ParallelBatch(Layer[] ls, byte[] labels) {
-      super(labels);
+    public ParallelBatch(Layer[] ls) {
+      super(new AtomicInteger());
 
       _threads = new Thread0[Runtime.getRuntime().availableProcessors()];
       _wait = new CyclicBarrier(_threads.length + 1);
       _done = new CyclicBarrier(_threads.length + 1);
 
-      assert Layer.BATCH % _threads.length == 0;
-      _perThread = Layer.BATCH / _threads.length;
+      assert _batch % _threads.length == 0;
+      _perThread = _batch / _threads.length;
 
       for( int t = 0; t < _threads.length; t++ ) {
         Layer[] clones = new Layer[ls.length];
         for( int i = 0; i < clones.length; i++ )
           clones[i] = Utils.deepClone(ls[i], "_w", "_b");
         _threads[t] = new Thread0(clones, t);
-        _threads[t].start();
       }
     }
 
-    @Override void batch() {
+    @Override Layer[] layers() {
+      return _threads[0]._ls;
+    }
+
+    @Override void run() {
       for( int t = 0; t < _threads.length; t++ )
-        _threads[t].batch();
+        _threads[t].start();
+      for( int i = 0; i < _threads.length; i++ ) {
+        try {
+          _threads[i].join();
+        } catch( InterruptedException e ) {
+          throw new RuntimeException(e);
+        }
+      }
     }
 
     final class Thread0 extends Thread {
@@ -259,37 +271,6 @@ public abstract class Trainer {
       Thread0(Layer[] ls, int n) {
         _ls = ls;
         _n = n;
-      }
-
-      @Override void batch() {
-        for( int b = 0; b < _perThread; b++ ) {
-          _ls[0]._off = _n * _ls[0]._len;
-          fprop();
-
-          for( int i = 1; i < _ls.length; i++ )
-            Arrays.fill(_ls[i]._e, 0);
-          float[] err = _ls[_ls.length - 1]._e;
-          err[_labels[_n]] = 1.0f;
-          for( int i = 0; i < err.length; i++ )
-            err[i] -= _ls[_ls.length - 1]._a[i];
-
-          bprop();
-          _n = _n == _labels.length - 1 ? 0 : _n + 1;
-        }
-
-        for( int i = 1; i < _ls.length; i++ )
-          _ls[i].adjust();
-      }
-    }
-
-    private void pass() {
-      try {
-        for( int i = 1; i < _ls.length; i++ ) {
-          _wait.await();
-          _done.await();
-        }
-      } catch( Exception e ) {
-        throw new RuntimeException(e);
       }
     }
   }
@@ -303,8 +284,8 @@ public abstract class Trainer {
     // F/J tasks for forward and back propagation
     private ForkJoinTask[][] _fprops, _bprops;
 
-    public TrainerFJ(Layer[] ls, byte[] labels) {
-      super(ls, labels);
+    public TrainerFJ(Layer[] ls) {
+      super(new AtomicInteger());
 
       int cores = Runtime.getRuntime().availableProcessors();
       _fprops = new ForkJoinTask[ls.length][cores];
@@ -313,7 +294,7 @@ public abstract class Trainer {
         final Layer layer = ls[n];
         int last = 0;
         for( int i = 0; i < cores; i++ ) {
-          final int limit = layer._len * (i + 1) / cores, off = last, len = limit - last;
+          final int limit = layer._a.length * (i + 1) / cores, off = last, len = limit - last;
           last = limit;
           _fprops[n][i] = new RecursiveAction() {
             @Override protected void compute() {
@@ -326,26 +307,104 @@ public abstract class Trainer {
             }
           };
         }
-        assert last == layer._len;
+        assert last == layer._a.length;
       }
     }
 
-    @Override void fprop() {
-//      for( int i = 0; i < _fprops.length; i++ )
-//        _fj.submit(_fprops[i]);
-//      for( int i = 0; i < _fprops.length; i++ ) {
-//        _fprops[i].join();
-//        _fprops[i].reinitialize();
-//      }
+    @Override Layer[] layers() {
+      throw new RuntimeException("TODO Auto-generated method stub");
     }
 
-    @Override void bprop() {
-//      for( int i = 0; i < _bprops.length; i++ )
-//        _fj.submit(_bprops[i]);
-//      for( int i = 0; i < _bprops.length; i++ ) {
-//        _bprops[i].join();
-//        _bprops[i].reinitialize();
-//      }
+    @Override void run() {
+      throw new RuntimeException("TODO Auto-generated method stub");
+    }
+  }
+
+  public static class OpenCL extends Trainer {
+    final Layer[] _ls;
+
+    public OpenCL(Layer[] ls) {
+      super(new AtomicInteger());
+      _ls = ls;
+    }
+
+    @Override Layer[] layers() {
+      return _ls;
+    }
+
+    @Override void run() {
+      CLContext context = CLContext.create();
+      Log.debug("Created " + context);
+
+      try {
+        CLDevice device = context.getMaxFlopsDevice();
+        Log.debug("Using " + device);
+        CLCommandQueue queue = device.createCommandQueue();
+
+        CLProgram program = context.createProgram(Boot._init.getResource2("/kernels.cl")).build();
+        CLKernel[] fprops = new CLKernel[_ls.length];
+        CLKernel[] bprops = new CLKernel[_ls.length];
+        CLBuffer<FloatBuffer>[] e = new CLBuffer[_ls.length];
+        for( int y = 0; y < _ls.length; y++ ) {
+          fprops[y] = program.createCLKernel(_ls.getClass().getSimpleName() + "_fprop");
+          bprops[y] = program.createCLKernel(_ls.getClass().getSimpleName() + "_bprop");
+          if( y > 0 ) {
+            CLBuffer<FloatBuffer> ia = context.createFloatBuffer(_ls[y - 1]._a.length, Mem.READ_ONLY);
+            CLBuffer<FloatBuffer> w = context.createFloatBuffer(_ls[y]._w.length, Mem.READ_ONLY);
+            CLBuffer<FloatBuffer> b = context.createFloatBuffer(_ls[y]._b.length, Mem.READ_ONLY);
+            CLBuffer<FloatBuffer> a = context.createFloatBuffer(_ls[y]._a.length, Mem.READ_WRITE);
+            fprops[y].putArgs(ia, w, b, a);
+
+            CLBuffer<FloatBuffer> gw = context.createFloatBuffer(_ls[y]._gw.length, Mem.READ_WRITE);
+            CLBuffer<FloatBuffer> gb = context.createFloatBuffer(_ls[y]._gb.length, Mem.READ_WRITE);
+            CLBuffer<FloatBuffer> e = context.createFloatBuffer(_ls[y]._e.length, Mem.READ_ONLY);
+            CLBuffer<FloatBuffer> ie = context.createFloatBuffer(_ls[y]._e.length, Mem.READ_WRITE);
+            bprops[y].putArgs(w, gw, gb, a, e, ia, ie);
+
+            queue.putWriteBuffer(w, false);
+            queue.putWriteBuffer(b, false);
+          }
+        }
+        int group = device.getMaxWorkGroupSize();
+        for( int batch = 0; _batches == 0 || batch < _batches; batch++ ) {
+          Input input = (Input) _ls[0];
+          for( int b = 0; b < _batch; b++ ) {
+            for( int y = 0; y < fprops.length; y++ )
+              queue.put1DRangeKernel(fprops[y], 0, _ls[y]._a.length, group);
+
+            for( int i = 1; i < _ls.length; i++ )
+              Arrays.fill(_ls[i]._e, 0);
+            float[] err = _ls[_ls.length - 1]._e;
+            err[input.label()] = 1.0f;
+            for( int i = 0; i < err.length; i++ )
+              err[i] -= _ls[_ls.length - 1]._a[i];
+
+            bprop();
+            input._n = input._n == input._count - 1 ? 0 : input._n + 1;
+          }
+
+          for( int i = 1; i < _ls.length; i++ )
+            _ls[i].adjust(_count.get());
+
+          _count.addAndGet(_batch);
+        }
+
+        queue.put1DRangeKernel(fprops[y], 0, globalWorkSize, localWorkSize).putReadBuffer(clBufferC, true);
+        queue.put1DRangeKernel(kernel, 0, globalWorkSize, localWorkSize).putReadBuffer(clBufferC, true);
+        time = nanoTime() - time;
+
+        // print first few elements of the resulting buffer to the console.
+        out.println("a+b=c results snapshot: ");
+        for( int i = 0; i < 10; i++ )
+          out.print(clBufferC.getBuffer().get() + ", ");
+        out.println("...; " + clBufferC.getBuffer().remaining() + " more");
+
+        out.println("computation took: " + (time / 1000000) + "ms");
+      } catch( IOException ex ) {
+        throw new RuntimeException(ex);
+      } finally {
+        context.release();
+      }
     }
   }
 }
