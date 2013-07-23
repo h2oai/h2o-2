@@ -45,6 +45,7 @@ public class Boot extends ClassLoader {
     }
     return sb.toString();
   }
+  private final String _jarPath;
   private final ZipFile _h2oJar;
   private File _parentDir;
   private Weaver _weaver;
@@ -55,6 +56,7 @@ public class Boot extends ClassLoader {
   }
 
   public boolean fromJar() { return _h2oJar != null; }
+  public String jarPath() { return _jarPath; }
   private byte[] getMD5(InputStream is) throws IOException {
     try {
       MessageDigest md5 = MessageDigest.getInstance("MD5");
@@ -73,15 +75,15 @@ public class Boot extends ClassLoader {
     final String ownJar = getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
     ZipFile jar = null;
     if( ownJar.endsWith(".jar") ) { // do nothing if not run from jar
-      String path = URLDecoder.decode(ownJar, "UTF-8");
-      InputStream is = new FileInputStream(path);
+      _jarPath = URLDecoder.decode(ownJar, "UTF-8");
+      InputStream is = new FileInputStream(_jarPath);
       this._jarHash = getMD5(is);
       is.close();
-
-      jar = new ZipFile(path);
+      jar = new ZipFile(_jarPath);
     } else {
       this._jarHash = new byte[16];
       Arrays.fill(this._jarHash, (byte)0xFF);
+      _jarPath = null;
     }
     _h2oJar = jar;
   }
@@ -98,6 +100,26 @@ public class Boot extends ClassLoader {
   private Method _addUrl;
 
   public void boot( String[] args ) throws Exception {
+    try {
+      boot2(args);
+    }
+    catch (Exception e) {
+      Log.POST(119, e);
+      throw (e);
+    }
+  }
+
+  public void boot2( String[] args ) throws Exception {
+    // Catch some log setup stuff before anything else can happen.
+    for (int i = 0; i < args.length; i++) {
+      String arg = args[i];
+      Log.POST(110, arg == null ? "(arg is null)" : "arg is: " + arg);
+      if ((arg != null) && arg.equals ("-inherit_log4j")) {
+        Log.POST(110, "Saw inherit_log4j");
+        H2O.INHERIT_LOG4J = true;
+      }
+    }
+
     if( fromJar() ) {
       _systemLoader = (URLClassLoader)getSystemClassLoader();
       _addUrl = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
@@ -106,8 +128,8 @@ public class Boot extends ClassLoader {
       // Find --ice_root and use it to set the unpack directory
       String sroot = System.getProperty("java.io.tmpdir");
       for( int i=0; i<args.length; i++ )
-        if( args[i].startsWith("--ice_root=") || args[i].startsWith("-ice_root=") )
-          sroot = args[i].substring(11);
+        if( args[i].startsWith("--ice_root=") ) sroot = args[i].substring(11);
+        else if( args[i].startsWith("-ice_root=") ) sroot = args[i].substring(10);
         else if( (args[i].equals("--ice_root") || args[i].startsWith("-ice_root")) && i < args.length-1 )
           sroot = args[i+1];
 
@@ -147,14 +169,20 @@ public class Boot extends ClassLoader {
         args = Arrays.copyOfRange(args, index + 2, args.length);
       }
     }
+
     Class mainClazz = _init.loadClass(mainClass,true);
+    Log.POST(20, "before (in run) mainClass invoke " + mainClazz.getName());
     mainClazz.getMethod("main",String[].class).invoke(null,(Object)args);
+    Log.POST(20, "after (in run) mainClass invoke "+ mainClazz.getName());
+
     int index = Arrays.asList(args).indexOf("-runClass");
     if( index >= 0 && args.length > index + 1 ) {
       String className = args[index + 1];    // Swap out for requested main
       args = Arrays.copyOfRange(args, index + 2, args.length);
       Class clazz = _init.loadClass(className,true);
+      Log.POST(21, "before (in run) runClass invoke " + clazz.getName() + " main");
       clazz.getMethod("main",String[].class).invoke(null,(Object)args);
+      Log.POST(21, "after (in run) runClass invoke " + clazz.getName() + " main");
     }
   }
 
@@ -172,7 +200,9 @@ public class Boot extends ClassLoader {
     if( file.isDirectory() ) {
       for( File f : file.listFiles() ) addExternalJars(f);
     } else if( file.getName().endsWith(".jar") ) {
+      Log.POST(22, "before (in addExternalJars) invoke _addUrl " + file.toURI().toURL());
       _addUrl.invoke(_systemLoader, file.toURI().toURL());
+      Log.POST(22, "after (in addExternalJars) invoke _addUrl " + file.toURI().toURL());
     }
   }
 
@@ -213,7 +243,7 @@ public class Boot extends ClassLoader {
       return _systemLoader.getResourceAsStream("resources"+uri);
     } else {
       try {
-        return new FileInputStream(new File("lib/resources"+uri)); 
+        return new FileInputStream(new File("lib/resources"+uri));
         // The following code is busted on windows with spaces in user-names,
         // and I've no idea where it comes from - GIT claims it came from
         // cliffc-fvec2 merge into master, but there's no indication of this

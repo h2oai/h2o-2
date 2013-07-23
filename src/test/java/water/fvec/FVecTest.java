@@ -5,6 +5,7 @@ import java.io.File;
 import java.util.Arrays;
 import org.junit.*;
 import water.*;
+import water.parser.ParseDataset;
 
 public class FVecTest extends TestUtil {
   static final double EPSILON = 1e-6;
@@ -17,7 +18,7 @@ public class FVecTest extends TestUtil {
     Key key = NFSFileVec.make(file);
     NFSFileVec nfs=DKV.get(key).get();
 
-    int[] x = new ByteHisto().invoke(nfs)._x;
+    int[] x = new ByteHisto().doAll(nfs)._x;
     int sum=0;
     for( int i : x )
       sum += i;
@@ -51,7 +52,7 @@ public class FVecTest extends TestUtil {
     NFSFileVec nfs=DKV.get(key).get();
     Key key2 = Key.make("newKey",(byte)0,Key.VEC);
     AppendableVec nv = new AppendableVec(key2);
-    Vec res = new TestNewVec().invoke(nv,nfs).vecs(0);
+    Vec res = new TestNewVec().doAll(nv,nfs).vecs(0);
     assertEquals(nfs.at8(0)+1,res.at8(0));
     assertEquals(nfs.at8(1)+1,res.at8(1));
     assertEquals(nfs.at8(2)+1,res.at8(2));
@@ -71,14 +72,46 @@ public class FVecTest extends TestUtil {
   @SuppressWarnings("unused")
   @Test public void testParse() {
     //File file = TestUtil.find_test_file("./smalldata/airlines/allyears2k_headers.zip");
+    //File file = TestUtil.find_test_file("../datasets/UCI/UCI-large/covtype/covtype.data");
+    //File file = TestUtil.find_test_file("./smalldata/hhp.cut3.214.data.gz");
     File file = TestUtil.find_test_file("./smalldata/logreg/prostate_long.csv.gz");
     Key fkey = NFSFileVec.make(file);
-
-    Key okey = Key.make("cars.hex");
-    Frame fr = ParseDataset2.parse(okey,new Key[]{fkey});
+    Frame fr = ParseDataset2.parse(Key.make("pro1.hex"),new Key[]{fkey});
     UKV.remove(fkey);
-    //System.out.println(fr);
-    UKV.remove(okey);
+    //System.out.println("Parsed into "+fr);
+    //for( int i=0; i<fr._vecs.length; i++ )
+    //  System.out.println("Vec "+i+" = "+fr._vecs[i]);
+
+    Key rkey = load_test_file(file,"pro2.data");
+    Key vkey = Key.make("pro2.hex");
+    ParseDataset.parse(vkey, new Key[]{rkey});
+    UKV.remove(rkey);
+    ValueArray ary = UKV.get(vkey);
+    //System.out.println("Parsed into "+ary);
+    assertEquals(ary.numRows(),fr._vecs[0].length());
+
+    try {
+      int errs=0;
+      long rows = ary.numRows();
+      for( long i=0; i<rows; i++ ) {
+        if( errs > 1 ) break;
+        for( int j=0; j<ary._cols.length; j++ ) {
+          double d1 = fr._vecs[j].at(i);
+          double d2 = ary.datad(i,j);
+          if( Math.abs((d1-d2)/d1) > 0.0000001  ) {
+            System.out.println("Row "+i);
+            System.out.println("FVec= "+fr .toString(i));
+            System.out.println("VAry= "+ary.toString(i));
+            errs++;
+            break;
+          }
+        }
+      }
+      assertEquals(0,errs);
+    } finally {
+      UKV.remove(fr ._key);
+      UKV.remove(ary._key);
+    }
   }
 
   // ==========================================================================
@@ -93,7 +126,7 @@ public class FVecTest extends TestUtil {
       assertEquals(fr.numCols(),1050); // Count of columns
       assertEquals(fr._vecs[0].length(),2659); // Count of rows
 
-      double[] sums = new Sum().invoke(fr)._sums;
+      double[] sums = new Sum().doAll(fr)._sums;
       assertEquals(3949,sums[0],EPSILON);
       assertEquals(3986,sums[1],EPSILON);
       assertEquals(3993,sums[2],EPSILON);
@@ -103,12 +136,12 @@ public class FVecTest extends TestUtil {
       Vec v1 = fr._vecs[1];
       Vec vz = Vec.makeZero(v0);
       // Add column 0 & 1 into the temp column
-      new PairSum().invoke(vz,v0,v1);
+      new PairSum().doAll(vz,v0,v1);
       // Add the temp to frame
       // Now total the temp col
       fr.remove();              // Remove all other columns
       fr.add("tmp",vz);         // Add just this one
-      sums = new Sum().invoke(fr)._sums;
+      sums = new Sum().doAll(fr)._sums;
       assertEquals(3949+3986,sums[0],EPSILON);
 
     } finally {

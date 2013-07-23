@@ -238,7 +238,8 @@ public class Hadoop {
       conf.set("mapred.job.reuse.jvm.num.tasks", "1");
       conf.set("mapred.map.max.attempts", "0");
       conf.set("mapred.fairscheduler.locality.delay", "120000");
-      conf.set("mapred.jar", "/home/cypof/h2o/target/h2o.jar");
+      String jar = Boot._init.jarPath();
+      conf.set("mapred.jar", jar != null ? jar : "target/h2o.jar");
       conf.set("mapred.child.java.opts", "-Xms" + config.memory + "m -Xmx" + config.memory + "m");
       conf.set("mapred.job.map.memory.mb", "" + config.memory);
       conf.set("mapred.job.reduce.memory.mb", "" + config.memory);

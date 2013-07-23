@@ -16,11 +16,9 @@ import water.*;
 //  Vec Key format is: Key. VEC - byte, 0 - byte,   0    - int, normal Key bytes.
 // DVec Key format is: Key.DVEC - byte, 0 - byte, chunk# - int, normal Key bytes.
 public class Vec extends Iced {
-  public enum DType {U,I,F,E,S,NA};
   public static final int LOG_CHK = 20; // Chunks are 1<<20, or 1Meg
   public static final long CHUNK_SZ = 1L << LOG_CHK;
-  protected DType _dtype = DType.U;
-  public DType dtype(){return _dtype;}
+
   final public Key _key;        // Top-level key
   // Element-start per chunk.  Always zero for chunk 0.  One more entry than
   // chunks, so the last entry is the total number of rows.  This field is
@@ -36,6 +34,18 @@ public class Vec extends Iced {
   public boolean _isInt;  // true if column is all integer data
   // min/max/mean lazily computed.
   double _min, _max;
+
+  // Base datatype of the entire column.
+  // Decided on when we close an AppendableVec.
+  // U - Unknown (or empty)
+  // I - Integer/Long
+  // F - Float/Double
+  // S - String/Enum
+  // NA- All missing data
+  public enum DType {U,I,F,S,NA};
+  protected DType _dtype = DType.U;
+  // Overridden in AppendableVec
+  public DType dtype(){return _dtype;}
 
   Vec( Key key, long espc[], boolean isInt, double min, double max ) {
     assert key._kb[0]==Key.VEC;
@@ -111,7 +121,7 @@ public class Vec extends Iced {
   // with a sane API (JDK has an insane API).  Overridden by subclasses that
   // compute chunks in an alternative way, such as file-backed Vecs.
   int elem2ChunkIdx( long i ) {
-    assert 0 <= i && i < length();
+    assert 0 <= i && i < length() : "0 <= "+i+" < "+length();
     int x = Arrays.binarySearch(_espc, i);
     int res = x<0?-x - 2:x;
     int lo=0, hi = nChunks();
@@ -121,7 +131,7 @@ public class Vec extends Iced {
       else                 lo = mid;
     }
     if(res != lo)
-      assert(res == lo):res + " != " + lo;
+      assert(res == lo):res + " != " + lo + ", i = " + i + ", espc = " + Arrays.toString(_espc);
     return lo;
   }
 
@@ -243,7 +253,20 @@ public class Vec extends Iced {
 
   // [#elems, min/mean/max]
   @Override public String toString() {
-    return "["+length()+(Double.isNaN(_min) ? "" : ","+_min+"/"+_max)+"]";
+    String s = "["+length()+(Double.isNaN(_min) ? "" : ","+_min+"/"+_max+", "+PrettyPrint.bytes(byteSize())+", {");
+    int nc = nChunks();
+    for( int i=0; i<nc; i++ )
+      s += (Chunk)(DKV.get(chunkKey(i)).get())+",";
+    return s+"}]";
+  }
+
+  // Size of compressed vector data
+  public long byteSize() {
+    long s = 0;
+    int nc = nChunks();
+    for( int i=0; i<nc; i++ )
+      s += ((Chunk)(DKV.get(chunkKey(i)).get())).byteSize();
+    return s;
   }
 
 
@@ -255,7 +278,7 @@ public class Vec extends Iced {
    * Group of each vector can be retrieved by calling group() method;
    *
    * The expected mode of operation is that user wants to add new vectors matching the source.
-   * E.g. parse creates several vectors (on for each column) which are all colocated and are
+   * E.g. parse creates several vectors (one for each column) which are all colocated and are
    * colocated with the original bytevector.
    *
    * To do this, user should first ask for the set of keys for the new vectors by calling addVecs method on the

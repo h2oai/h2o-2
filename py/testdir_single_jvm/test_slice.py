@@ -39,12 +39,8 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # random.seed(SEED)
-        SEED = random.randint(0, sys.maxint)
-        # if you have to force to redo a test
-        # SEED = 
-        random.seed(SEED)
-        print "\nUsing random seed:", SEED
+        global SEED, localhost
+        SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(1)
@@ -55,12 +51,10 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_exec_import_hosts(self):
+    def test_slice(self):
         importFolderPath = "/home/0xdiag/datasets/standard"
         h2o_import.setupImportFolder(None, importFolderPath)
 
-        # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
-        # so probably 10x that for covtype200
         csvFilenameAll = [
             ("covtype.data", "cA", 5),
         ]
@@ -70,8 +64,8 @@ class Basic(unittest.TestCase):
         lenNodes = len(h2o.nodes)
         for (csvFilename, key2, timeoutSecs) in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2o_import.parseImportFolderFile(None, csvFilename, importFolderPath, 
-                key2=key2, timeoutSecs=2000)
+            parseKey = h2o_import.parseImportFolderFile(None, 
+                csvFilename, importFolderPath, key2=key2, timeoutSecs=2000)
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "Parse result['desination_key']:", parseKey['destination_key']
             inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
@@ -79,10 +73,11 @@ class Basic(unittest.TestCase):
             print "\n" + csvFilename
             h2e.exec_zero_list(zeroList)
             # try the error case list
-            # I suppose we should test the expected error is correct. Right now just make sure
-            # things don't blow up
+            # I suppose we should test the expected error is correct. 
+            # Right now just make sure things don't blow up
             h2e.exec_expr_list_rand(lenNodes, exprErrorCaseList, key2, 
-                maxCol=53, maxRow=400000, maxTrials=5, timeoutSecs=timeoutSecs, ignoreH2oError=True)
+                maxCol=53, maxRow=400000, maxTrials=5, 
+                timeoutSecs=timeoutSecs, ignoreH2oError=True)
             # we use colX+1 so keep it to 53
             h2e.exec_expr_list_rand(lenNodes, exprList, key2, 
                 maxCol=53, maxRow=400000, maxTrials=100, timeoutSecs=timeoutSecs)

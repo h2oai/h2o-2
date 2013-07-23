@@ -47,7 +47,7 @@ public abstract class Log {
   public static interface Tag {
     /** Which subsystem of h2o? */
     public static enum Sys implements Tag {
-      RANDF, GENLM, KMEAN, PARSE, STORE, WATER, HDFS_, HTTPD, CLEAN, CONFM, EXCEL, SCORM;
+      RANDF, GBM__, GENLM, KMEAN, PARSE, STORE, WATER, HDFS_, HTTPD, CLEAN, CONFM, EXCEL, SCORM;
       boolean _enable;
     }
 
@@ -293,7 +293,7 @@ public abstract class Log {
 
     String logFileName =
             getLogDir() + File.separator +
-            "h2o_" + ip + "_" + portString + ".log";
+                    "h2o_" + ip + "_" + portString + ".log";
 
     return logFileName;
   }
@@ -308,31 +308,32 @@ public abstract class Log {
         return _logger;
       }
 
-      // If a log4j properties file was specified on the command-line, use it.
-      // Otherwise, create some default properties on the fly.
-      String log4jProperties = System.getProperty ("log4j.properties");
-      if (log4jProperties != null) {
-        PropertyConfigurator.configure(log4jProperties);
-        // TODO:  Need some way to set LOG_DIR here for LogCollectorTask to work.
-      }
-      else {
-        LOG_DIR = logDirParent + File.separator + "h2ologs";
-        String logPathFileName = getLogPathFileName();
+      if (! H2O.INHERIT_LOG4J) {
+        // If a log4j properties file was specified on the command-line, use it.
+        // Otherwise, create some default properties on the fly.
+        String log4jProperties = System.getProperty ("log4j.properties");
+        if (log4jProperties != null) {
+          PropertyConfigurator.configure(log4jProperties);
+          // TODO:  Need some way to set LOG_DIR here for LogCollectorTask to work.
+        }
+        else {
+          LOG_DIR = logDirParent + File.separator + "h2ologs";
+          String logPathFileName = getLogPathFileName();
+          java.util.Properties p = new java.util.Properties();
 
-        java.util.Properties p = new java.util.Properties();
+          p.setProperty("log4j.rootLogger", "debug, R");
+          p.setProperty("log4j.appender.R", "org.apache.log4j.RollingFileAppender");
+          p.setProperty("log4j.appender.R.File", logPathFileName);
+          p.setProperty("log4j.appender.R.MaxFileSize", "256KB");
+          p.setProperty("log4j.appender.R.MaxBackupIndex", "5");
+          p.setProperty("log4j.appender.R.layout", "org.apache.log4j.PatternLayout");
 
-        p.setProperty("log4j.rootLogger", "debug, R");
-        p.setProperty("log4j.appender.R", "org.apache.log4j.RollingFileAppender");
-        p.setProperty("log4j.appender.R.File", logPathFileName);
-        p.setProperty("log4j.appender.R.MaxFileSize", "256KB");
-        p.setProperty("log4j.appender.R.MaxBackupIndex", "5");
-        p.setProperty("log4j.appender.R.layout", "org.apache.log4j.PatternLayout");
+          // See the following document for information about the pattern layout.
+          // http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/PatternLayout.html
+          p.setProperty("log4j.appender.R.layout.ConversionPattern", "%m%n");
 
-        // See the following document for information about the pattern layout.
-        // http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/PatternLayout.html
-        p.setProperty("log4j.appender.R.layout.ConversionPattern", "%m%n");
-
-        PropertyConfigurator.configure(p);
+          PropertyConfigurator.configure(p);
+        }
       }
 
       _logger = LogManager.getLogger(Log.class.getName());
@@ -498,7 +499,7 @@ public abstract class Log {
   // Print to the original STDERR & die
   public static void die(String s) {
     System.err.println(s);
-    if( !_dontDie ) System.exit(-1);
+    if( !_dontDie ) H2O.exit(-1);
   }
 
   /** Print a message to the stream without the logging information. */
@@ -586,6 +587,55 @@ public abstract class Log {
       _syss[_idx] = (byte) sys.ordinal();
       _msgs[_idx] = msg;
     }
+  }
+
+  /**
+   * POST stands for "Power on self test".
+   * Stamp a POST code to /tmp.
+   * This is for bringup, when no logging or stdout I/O is reliable.
+   * (Especially when embedded, such as in hadoop mapreduce, for example.)
+   *
+   * @param n POST code.
+   * @param s String to emit.
+   */
+  private static final Object postLock = new Object();
+  public static void POST(int n, String s) {
+      // DO NOTHING UNLESS ENABLED BY REMOVING THIS RETURN!
+      return;
+
+//      synchronized (postLock) {
+//          File f = new File ("/tmp/h2o.POST");
+//          if (! f.exists()) {
+//              boolean success = f.mkdirs();
+//              if (! success) {
+//                  try { System.err.print ("Exiting from POST now!"); } catch (Exception _) {}
+//                  H2O.exit (0);
+//              }
+//          }
+//
+//          f = new File ("/tmp/h2o.POST/" + n);
+//          try {
+//              f.createNewFile();
+//              FileWriter fstream = new FileWriter(f.getAbsolutePath(), true);
+//              BufferedWriter out = new BufferedWriter(fstream);
+//              out.write(s + "\n");
+//              out.close();
+//          }
+//          catch (Exception e) {
+//              try { System.err.print ("Exiting from POST now!"); } catch (Exception _) {}
+//              H2O.exit (0);
+//          }
+//      }
+  }
+  public static void POST(int n, Exception e) {
+      if (e.getMessage() != null) {
+          POST(n, e.getMessage());
+      }
+      POST(n, e.toString());
+      StackTraceElement[] els = e.getStackTrace();
+      for (int i = 0; i < els.length; i++) {
+          POST(n, els[i].toString());
+      }
   }
 
   public static void main(String[]args) {

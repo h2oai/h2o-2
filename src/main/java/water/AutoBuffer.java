@@ -934,4 +934,37 @@ public final class AutoBuffer {
   public void shift(int source, int target, int length) {
     System.arraycopy(_bb.array(), source, _bb.array(), target, length);
   }
+
+
+  // ==========================================================================
+  // JSON Autobuffer printers
+  
+  private AutoBuffer putStr2( String s ) {
+    byte[] b = s.getBytes();
+    int off=0;
+    for( int i=0; i<b.length; i++ ) {
+      if( b[i] == '\\' ) {      // Double up backslashes
+        putA1(b,off,i);         // Everything so far (no backslashes)
+        put1('\\');             // The extra backslash
+        off=i;                  // Advance the "so far" variable
+      }
+    }
+    return putA1(b,off,b.length);
+  }
+
+  public AutoBuffer putNULL( ) { return put1('n').put1('u').put1('l').put1('l'); }
+  public AutoBuffer putJSONStr( String s ) {
+    return s==null ? putNULL() : put1('"').putStr2(s).put1('"');
+  }
+
+  public AutoBuffer putJSONAStr(String name, String[] fs) {
+    putJSONStr(name).put1(':');
+    if( fs == null ) return putNULL();
+    put1('[');
+    for( int i=0; i<fs.length; i++ ) {
+      if( i>0 ) put1(',');
+      putJSONStr(fs[i]);
+    }
+    return put1(']');
+  }
 }

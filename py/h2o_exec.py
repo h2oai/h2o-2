@@ -76,16 +76,23 @@ def checkScalarResult(resultInspect, resultKey):
 
     return min_value
 
-def fill_in_expr_template(exprTemplate, colX, n, row, key2):
+def fill_in_expr_template(exprTemplate, colX=None, n=None, row=None, key2=None, m=None):
     # FIX! does this push col2 too far? past the output col?
     # just a string? 
     execExpr = exprTemplate
-    execExpr = re.sub('<col1>',str(colX),execExpr)
-    execExpr = re.sub('<col2>',str(colX+1),execExpr)
-    execExpr = re.sub('<n>',str(n),execExpr)
-    execExpr = re.sub('<n-1>',str(n-1),execExpr)
-    execExpr = re.sub('<row>',str(row),execExpr)
-    execExpr = re.sub('<keyX>',str(key2),execExpr)
+    if colX is not None:
+        execExpr = re.sub('<col1>', str(colX), execExpr)
+        execExpr = re.sub('<col2>', str(colX+1), execExpr)
+    if n is not None:
+        execExpr = re.sub('<n>', str(n), execExpr)
+        execExpr = re.sub('<n-1>', str(n-1), execExpr)
+    if row is not None:
+        execExpr = re.sub('<row>', str(row), execExpr)
+    if key2 is not None:
+        execExpr = re.sub('<keyX>', str(key2), execExpr)
+    if m is not None:
+        execExpr = re.sub('<m>', str(m), execExpr)
+        execExpr = re.sub('<m-1>', str(m-1), execExpr)
     ### h2o.verboseprint("\nexecExpr:", execExpr)
     print "execExpr:", execExpr
     return execExpr

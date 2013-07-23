@@ -17,6 +17,15 @@ public class Frame extends Iced {
   public Frame( Key k, String[] names, Vec[] vecs ) {
     _key=k; _names=names; _vecs=vecs;
   }
+  // Find a named column
+  public int find( String name ) {
+    for( int i=0; i<_names.length; i++ )
+      if( name.equals(_names[i]) )
+        return i;
+    return -1;
+  }
+
+  // Add a named column
   public void add( String name, Vec vec ) {
     // needs a compatibility-check????
     _names = Arrays.copyOf(_names,_names.length+1);
@@ -24,11 +33,26 @@ public class Frame extends Iced {
     _names[_names.length-1] = name;
     _vecs [_vecs .length-1] = vec ;
   }
+  // Remove a named column
+  public Vec remove( String name ) { return remove(find(name)); }
+  // Remove a numbered column
+  public Vec remove( int idx ) {
+    int len = _names.length;
+    if( idx < 0 || idx >= len ) return null;
+    Vec v = _vecs[idx];
+    System.arraycopy(_names,idx+1,_names,idx,len-idx-1);
+    System.arraycopy(_vecs ,idx+1,_vecs ,idx,len-idx-1);
+    _names = Arrays.copyOf(_names,len-1);
+    _vecs  = Arrays.copyOf(_vecs ,len-1);
+    return v;
+  }
+
 
   public final Vec[] vecs() {
     return _vecs;
   }
-  int numCols() { return _vecs.length; }
+  public int  numCols() { return _vecs.length; }
+  public long numRows(){ return _vecs[0].length();}
 
   // Return first readable vector
   public Vec firstReadable() {
@@ -76,12 +100,15 @@ public class Frame extends Iced {
     return false;
   }
 
+  // Actually remove/delete all Vecs from memory, not just from the Frame
   public void remove(Futures fs){
     if(_vecs.length > 0){
       VectorGroup vg = _vecs[0].group();
-      for( Vec v : _vecs )
+      for( Vec v : _vecs ){
+        System.out.println("removing " + v._key);
         UKV.remove(v._key,fs);
-       DKV.remove(vg._key);
+      }
+      DKV.remove(vg._key);
     }
     _names = new String[0];
     _vecs = new Vec[0];
@@ -92,9 +119,31 @@ public class Frame extends Iced {
   }
   @Override public Frame init( Key k ) { _key=k; return this; }
   @Override public String toString() {
+    // Across
     String s="{"+_names[0];
-    for( int i=1; i<_names.length; i++ )
+    long bs=_vecs[0].byteSize();
+    for( int i=1; i<_names.length; i++ ) {
       s += ","+_names[i];
+      bs+= _vecs[i].byteSize();
+    }
+    s += "}, "+PrettyPrint.bytes(bs)+"\n";
+    // Down
+    Vec v0 = firstReadable();
+    if( v0 == null ) return s;
+    int nc = v0.nChunks();
+    s += "Chunk starts: {";
+    for( int i=0; i<nc; i++ ) s += v0.elem2BV(i)._start+",";
+    s += "}";
+    return s;
+  }
+
+  private String toStr( long idx, int col ) {
+    return _names[col]+"="+(_vecs[col].isNA(idx) ? "NA" : _vecs[col].at(idx));
+  }
+  public String toString( long idx ) {
+    String s="{"+toStr(idx,0);
+    for( int i=1; i<_names.length; i++ )
+       s += ","+toStr(idx,i);
     return s+"}";
   }
 }

@@ -35,6 +35,8 @@ class parse_rand_schmoo(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        global SEED, localhost
+        SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(2,java_heap_GB=4,use_flatfile=True)
@@ -52,12 +54,6 @@ class parse_rand_schmoo(unittest.TestCase):
         h2o.tear_down_cloud(h2o.nodes)
     
     def test_sort_of_prostate_with_row_schmoo(self):
-        SEED = random.randint(0, sys.maxint)
-        # if you have to force to redo a test
-        # SEED = 
-        random.seed(SEED)
-        print "\nUsing random seed:", SEED
-
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn_prostate.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename

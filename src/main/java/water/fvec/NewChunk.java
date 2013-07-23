@@ -78,19 +78,19 @@ public class NewChunk extends Chunk {
     boolean overflow=false;
     boolean floatOverflow = false;
 
-    // Enum? We assume that columns with ALL strings (and NAs) are enums if there were less than 65k unique vals
-    // if there were some numbers, we assume it is a numcol with strings being NAs.
-    if(0 < _strCnt && (_strCnt + _naCnt) == _len){
-      // find ther max val
+    // Enum?  We assume that columns with ALL strings (and NAs) are enums if
+    // there were less than 65k unique vals.  If there were some numbers, we
+    // assume it is a numcol with strings being NAs.
+    if( 0 < _strCnt && (_strCnt + _naCnt) == _len ) {
+      // find their max val
       int sz = Integer.MIN_VALUE;
       for(int x:_xs) if(x > sz)sz = x;
-      if(sz < Enum.MAX_ENUM_SIZE) {
+      if( sz < Enum.MAX_ENUM_SIZE ) {
         if(sz < 255){ // we can fit into 1Byte
           byte [] bs = MemoryManager.malloc1(_len);
           for(int i = 0; i < _len; ++i)bs[i] = ((_xs[i] >= 0)?(byte)(0xFF&_xs[i]):(byte)0xFF);
           int [] vals = new int[256];
           for(int i = 0; i < bs.length; ++i)if(bs[i] >= 0)++vals[bs[i]];
-//          System.out.println(H2O.SELF+"_histo: " + Arrays.toString(vals) );
           return new C1Chunk(bs);
         } else if(sz < 65535){ // 2 bytes
           byte [] bs = MemoryManager.malloc1(_len << 1);
@@ -99,6 +99,14 @@ public class NewChunk extends Chunk {
         } else throw H2O.unimpl();
       }
     }
+    
+    // If the data was set8 as doubles, we (weanily) give up on compression and
+    // just store it as a pile-o-doubles.
+    if( _ds != null ) 
+      return new C8DChunk(bufF(3));
+
+    // Look at the min & max & scaling.  See if we can sanely normalize the
+    // data in some fixed-point format.
     boolean first = true;
     for( int i=0; i<_len; i++ ) {
       if( isNA(i) ) continue;
@@ -112,7 +120,7 @@ public class NewChunk extends Chunk {
       long t;
       while( l!=0 && (t=l/10)*10==l ) { l=t; x++; }
       floatOverflow = Math.abs(l) > MAX_FLOAT_MANTISSA;
-      if(first){
+      if( first ) {
         first = false;
         xmin = x;
         lemin = lemax = l;
@@ -134,9 +142,19 @@ public class NewChunk extends Chunk {
 
     // Constant column?
     if( _min==_max ) {
-      if( xmin < 0 ) throw H2O.unimpl();
-      return new C0LChunk((long)_min,_len);
+      return ((long)_min  == _min)
+          ?new C0LChunk((long)_min,_len)
+          :new C0DChunk(_min, _len);
+
     }
+
+    // Boolean column? (or in general two value column)
+    if (lemax-lemin == 1 && lemin == 0) {
+      int bpv = _naCnt > 0 ? 2 : 1;
+      byte[] cbuf = bufB(CBSChunk.OFF, bpv);
+      return new CBSChunk(cbuf, cbuf[0], cbuf[1]);
+    }
+
 
     // Exponent scaling: replacing numbers like 1.3 with 13e-1.  '13' fits in a
     // byte and we scale the column by 0.1.  A set of numbers like
@@ -156,11 +174,11 @@ public class NewChunk extends Chunk {
         return new C1SChunk( bufX(lemin,xmin,C1SChunk.OFF,0),(int)lemin,DParseTask.pow10(xmin));
       if(lemax-lemin < 65535 )
         return new C2SChunk( bufX(lemin,xmin,C2SChunk.OFF,1),(int)lemin,DParseTask.pow10(xmin));
-
       return new C4FChunk( bufF(2));
     }
-
     // Compress column into a byte
+    if( 0<=lemin && lemax <= 255 && ((_naCnt + _strCnt)==0) )
+      return new C1NChunk( bufX(0,0,C1NChunk.OFF,0));
     if( lemax-lemin < 255 ) {         // Span fits in a byte?
       if( 0 <= lemin && lemax < 255 ) // Span fits in an unbiased byte?
         return new C1Chunk( bufX(0,0,C1Chunk.OFF,0));
@@ -169,9 +187,10 @@ public class NewChunk extends Chunk {
 
     // Compress column into a short
     if( lemax-lemin < 65535 ) {               // Span fits in a biased short?
-      if( -32767 <= lemin && lemax <= 32767 ) // Span fits in an unbiased short?
+      if( Short.MIN_VALUE < lemin && lemax <= Short.MAX_VALUE ) // Span fits in an unbiased short?
         return new C2Chunk( bufX(0,0,C2Chunk.OFF,1));
-      return new C2SChunk( bufX(lemin,0,C2SChunk.OFF,1),(int)lemin,1);
+      int bias = (int)(lemin-(Short.MIN_VALUE+1));
+      return new C2SChunk( bufX(bias,0,C2SChunk.OFF,1),bias,1);
     }
 
     // Compress column into ints
@@ -217,11 +236,11 @@ public class NewChunk extends Chunk {
     for( int i=0; i<_len; i++ ) {
       if(isNA(i)){
         switch( log ) {
-          case 2: UDP.set4f(bs,(i<<2), Float.NaN);  break;
+          case 2: UDP.set4f(bs,(i<<2), Float .NaN); break;
           case 3: UDP.set8d(bs,(i<<3), Double.NaN); break;
         }
       } else {
-        double le = _ls[i]*DParseTask.pow10(_xs[i]);
+        double le = _ds == null ? _ls[i]*DParseTask.pow10(_xs[i]) : _ds[i];
         switch( log ) {
         case 2: UDP.set4f(bs,(i<<2), (float)le); break;
         case 3: UDP.set8d(bs,(i<<3),        le); break;
@@ -229,6 +248,36 @@ public class NewChunk extends Chunk {
         }
       }
     }
+    return bs;
+  }
+
+  // Compute compressed boolean buffer
+  private byte[] bufB(int off, int bpv) {
+    assert bpv == 1 || bpv == 2 : "Only bit vectors with/without NA are supported";
+    int clen  = off + CBSChunk.clen(_len, bpv);
+    byte bs[] = new byte[clen];
+    int  boff = 0;
+    byte b    = 0;
+    int  idx  = off;
+    for (int i=0; i<_len; i++) {
+      byte val = isNA(i) ? CBSChunk._NA : (byte) _ls[i];
+      switch (bpv) {
+        case 1: assert val!=CBSChunk._NA;
+                b = CBSChunk.write1b(b, val, boff); break;
+        case 2: b = CBSChunk.write2b(b, val, boff); break;
+      }
+      boff += bpv;
+      if (boff>8-bpv) { bs[idx] = b; boff = 0; b = 0; idx++; }
+    }
+    // Save the gap = number of unfilled bits and bpv value
+    bs[0] = (byte) (boff == 0 ? 0 : 8-boff);
+    bs[1] = (byte) bpv;
+    // Flush last byte
+    if (boff>0) bs[idx++] = b;
+    /*for (int i=0; i<idx; i++) {
+      if (i==0 || i==1) System.err.println(bs[i]);
+      else System.err.println(bs[i] + " = " + Integer.toBinaryString(bs[i]));
+    }*/
     return bs;
   }
 

@@ -24,10 +24,13 @@ public class ImportUrl extends Request {
     InputStream s = null;
     String urlStr = _url.value();
     try {
-      if( urlStr.startsWith("file://") ) {
-        urlStr = urlStr.substring("file://".length());
+       // if( urlStr.startsWith("file://") ) {
+       // urlStr = urlStr.substring("file://".length());
+       if( urlStr.startsWith("file:///") ) {
+        urlStr = urlStr.substring("file:///".length());
         File f = new File(urlStr);
-        urlStr = "file://"+f.getCanonicalPath();
+        // urlStr = "file://"+f.getCanonicalPath();
+        urlStr = "file:///"+f.getCanonicalPath();
       }
       URL url = new URL(urlStr);
       Key k = _key.value();

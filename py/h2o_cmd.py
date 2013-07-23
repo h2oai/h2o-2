@@ -5,7 +5,7 @@ import h2o_browse as h2b, h2o_rf as h2f
 # header, separator, exclude params are passed thru kwargs to node.parse
 def parseFile(node=None, csvPathname=None, key=None, key2=None, 
     timeoutSecs=30, retryDelaySecs=0.5, pollTimeoutSecs=30,
-    noise=None, noPoll=None, **kwargs):
+    noise=None, noPoll=None, doSummary=True, **kwargs):
     if not csvPathname: raise Exception('No file name specified')
     if not node: node = h2o.nodes[0]
     ### print "parseFile pollTimeoutSecs:", pollTimeoutSecs
@@ -20,7 +20,8 @@ def parseFile(node=None, csvPathname=None, key=None, key2=None,
         pollTimeoutSecs=pollTimeoutSecs, noise=noise, noPoll=noPoll, **kwargs)
 
     # do SummaryPage here too, just to get some coverage
-    node.summary_page(myKey2)
+    if doSummary:
+        node.summary_page(myKey2)
     return p
 
 def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, 
@@ -50,8 +51,7 @@ def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None,
 def runInspect(node=None, key=None, timeoutSecs=5, **kwargs):
     if not key: raise Exception('No key for Inspect specified')
     if not node: node = h2o.nodes[0]
-    # FIX! currently there is no such thing as a timeout on node.inspect
-    return node.inspect(key, **kwargs)
+    return node.inspect(key, timeoutSecs=timeoutSecs, **kwargs)
 
 def infoFromInspect(inspect, csvPathname):
     # need more info about this dataset for debug
@@ -289,28 +289,41 @@ def sleep_with_dot(sec, message=None):
 # I use these in testdir_hosts/test_parse_nflx_loop_s3n_hdfs.py
 # and testdir_multi_jvm/test_benchmark_import.py
 # might be able to use more widely
-def check_enums_from_inspect(parseKey):
-    inspect = runInspect(key=parseKey['destination_key'])
+def get_column_info_from_inspect(parseKey, **kwargs):
+    inspect = runInspect(key=parseKey['destination_key'], **kwargs)
     print "num_rows:", inspect['num_rows']
     print "num_cols:", inspect['num_cols']
     cols = inspect['cols']
     # trying to see how many enums we get
     # don't print int
     missingValuesDict = {}
+    constantValuesDict = {}
+    enumSizeDict = {}
+    colNameDict = {}
+    colTypeDict = {}
+    # all dictionaries created are keyed by col index
     for i,c in enumerate(cols):
+        colNameDict[str(i)] = c['name']
+        colTypeDict[str(i)] = c['type']
         # print i, "name:", c['name']
-        msg = "column %d" % i
-        msg = msg + " type: %s" % c['type']
+        # msg = "column %d" % i
+        msg = "column %s %d" % (c['name'], i)
+        msg += " type: %s" % c['type']
         if c['type'] == 'enum':
-            msg = msg + (" enum_domain_size: %d" % c['enum_domain_size'])
-        if c['num_missing_values'] != 0:
-            msg = msg + (" num_missing_values: %s" % c['num_missing_values'])
-            # dictionary by col #
-            missingValuesDict[str(i)] = c['num_missing_values']
-        if c['type'] != 'int' or c['num_missing_values'] != 0:
-            print msg
+            msg += (" enum_domain_size: %d" % c['enum_domain_size'])
+            enumSizeDict[str(i)] = c['enum_domain_size']
 
-    return missingValuesDict # so we can check if there were any missing values due to flipped enums?
+        if c['num_missing_values'] != 0:
+            msg += (" num_missing_values: %s" % c['num_missing_values'])
+            missingValuesDict[str(i)] = c['num_missing_values']
+
+        # if c['type'] != 'int' or c['num_missing_values'] != 0:
+        print msg
+
+        if c['min'] == c['max']:
+            constantValuesDict[str(i)] = c['min']
+
+    return (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) 
 
 # looks for the key that matches the pattern, in the keys you saved from the 
 # import (that you saved from import of the folder/s3/hdfs)
@@ -318,14 +331,14 @@ def check_enums_from_inspect(parseKey):
 # see how it's used in tests named above
 def delete_csv_key(csvFilename, importFullList):
     # remove the original data key
-    for k in importFullList:
-        deleteKey = k['key']
+    for k in importFullList['keys']:
         ### print "possible delete:", deleteKey
         # don't delete any ".hex" keys. the parse results above have .hex
         # this is the name of the multi-file (it comes in as a single file?)
-        if csvFilename in deleteKey and not '.hex' in deleteKey:
-            print "\nRemoving", deleteKey
-            removeKeyResult = h2o.nodes[0].remove_key(key=deleteKey)
+        # This deletes the source key?
+        if csvFilename in k:
+            print "\nRemoving", k
+            removeKeyResult = h2o.nodes[0].remove_key(key=k)
             ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
 
 # checks the key distribution in the cloud, and prints warning if delta against avg

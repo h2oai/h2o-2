@@ -26,12 +26,13 @@ set -o errexit   ## set -e : exit the script if any statement returns a non-true
   TESTSRC=src/test/java
 SAMPLESRC=src/samples/java
 RESOURCES=src/main/resources
+RSRC=R/h2o-package
 # and this is where the jar contents is stored relative to this file again
 JAR_ROOT=lib
 
 # additional dependencies, relative to this file, but all dependencies should be
 # inside the JAR_ROOT tree so that they are packed to the jar file properly
-DEPENDENCIES="${JAR_ROOT}/jama/*${SEP}${JAR_ROOT}/apache/*${SEP}${JAR_ROOT}/junit/*${SEP}${JAR_ROOT}/gson/*${SEP}${JAR_ROOT}/javassist.jar${SEP}${JAR_ROOT}/poi/*${SEP}${JAR_ROOT}/s3/*${SEP}${JAR_ROOT}/jets3t/*${SEP}${JAR_ROOT}/log4j/*"
+DEPENDENCIES="${JAR_ROOT}/jama/*${SEP}${JAR_ROOT}/apache/*${SEP}${JAR_ROOT}/junit/*${SEP}${JAR_ROOT}/gson/*${SEP}${JAR_ROOT}/javassist.jar${SEP}${JAR_ROOT}/poi/*${SEP}${JAR_ROOT}/s3/*${SEP}${JAR_ROOT}/jets3t/*${SEP}${JAR_ROOT}/log4j/*${SEP}${JAR_ROOT}/mockito/*"
 
 DEFAULT_HADOOP_VERSION="cdh3"
 OUTDIR="target"
@@ -83,10 +84,30 @@ function clean() {
     fi
     mkdir ${OUTDIR}
     mkdir ${CLASSES}
+    rm -f $SRC/water/BuildVersion.java
 }
 
 function build_classes() {
     echo "building classes..."
+
+    BUILD_BRANCH=`git branch | grep '*' | sed 's/* //'`
+    BUILD_HASH=`git log -1 --format="%H"`
+    BUILD_DESCRIBE=`git describe --always --dirty`
+    BUILD_ON=`date`
+    BUILD_BY=`whoami | sed 's/.*\\\\//'`
+
+    cat > $SRC/water/BuildVersion.java <<EOF
+package water;
+
+public class BuildVersion extends AbstractBuildVersion {
+    public String branchName()     { return "${BUILD_BRANCH}"; }
+    public String lastCommitHash() { return "${BUILD_HASH}"; }
+    public String describe()       { return "${BUILD_DESCRIBE}"; }
+    public String compiledOn()     { return "${BUILD_ON}"; }
+    public String compiledBy()     { return "${BUILD_BY}"; }
+}
+EOF
+
     local CLASSPATH="${JAR_ROOT}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/*"
     "$JAVAC" ${JAVAC_ARGS} \
         -cp "${CLASSPATH}" \
@@ -139,9 +160,19 @@ function build_src_jar() {
 }
 
 function build_javadoc() {
-    echo "creating javadoc file... ${SRC_JAR_FILE}"
+    echo "creating javadoc files..."
     local CLASSPATH="${JAR_ROOT}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/*"
     "${JAVADOC}" -classpath "${CLASSPATH}" -d "${OUTDIR}"/javadoc -sourcepath "${SRC}" -subpackages hex:water 1> /dev/null 2> /dev/null
+}
+
+function build_rpackage() {
+    echo "creating R package..."
+    if which R > /dev/null; then
+        R CMD build ${RSRC} > /dev/null
+        mv -f h2o_*.tar.gz target
+    else
+        echo "Missing R, please install"
+    fi	
 }
 
 function junit() {
@@ -155,8 +186,9 @@ build_classes
 if [ "$1" = "compile" ]; then exit 0; fi
 build_initializer
 build_jar
-if [ "$1" = "build" ]; then exit 0; fi
 build_src_jar
+if [ "$1" = "build" ]; then exit 0; fi
 build_javadoc
 if [ "$1" = "doc" ]; then exit 0; fi
+build_rpackage
 junit

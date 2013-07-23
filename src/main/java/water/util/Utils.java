@@ -24,6 +24,15 @@ public class Utils {
   public static int maxIndex(int[] from, Random rand) {
     assert rand != null;
     int result = 0;
+    boolean tie=false;
+    for( int i = 1; i < from.length; ++i ) {
+      if( from[i] > from[result] ) { result = i; tie = false; }
+      else if( from[i] == from[result] ) { tie = true; }
+    }
+    if( !tie ) return result;
+
+    // Retry, randomly picking from ties
+    result = 0;
     int maxCount = 0; // count of maximal element for a 1 item reservoir sample
     for( int i = 1; i < from.length; ++i ) {
       if( from[i] > from[result] ) {
@@ -115,7 +124,7 @@ public class Utils {
   }
 
   /* Returns the configured random generator */
-  public synchronized static Random getRNG(long... seed) {
+  public static Random getRNG(long... seed) {
     assert _rngType != null : "Random generator type has to be configured";
     switch (_rngType) {
     case JavaRNG:
@@ -125,11 +134,12 @@ public class Utils {
       // do not copy the seeds - use them, and initialize the first two ints by seeds based given argument
       // the call is locked, and also MersenneTwisterRNG will just copy the seeds into its datastructures
       assert seed.length == 1;
-      int[] seeds    = MersenneTwisterRNG.SEEDS;
-      int[] inSeeds = unpackInts(seed);
-      seeds[0] = inSeeds[0];
-      seeds[1] = inSeeds[1];
-      return new MersenneTwisterRNG(seeds);
+      long s = seed[0];
+      synchronized(Utils.class) {
+        MersenneTwisterRNG.SEEDS[0] = (int)(s&0xffffffffL);
+        MersenneTwisterRNG.SEEDS[1] = (int)(s>>32);
+        return new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+      }
     case XorShiftRNG:
       assert seed.length >= 1;
       return new XorShiftRNG(seed[0]);

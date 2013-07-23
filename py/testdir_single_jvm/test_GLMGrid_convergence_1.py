@@ -41,12 +41,8 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED
-        ### SEED = random.randint(0, sys.maxint)
-        ### SEED = 8389506152467586392
-        SEED = 2437856391921621805
-        random.seed(SEED)
-        print "\nUsing random seed:", SEED
+        global SEED, localhost
+        SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(1,use_flatfile=True)
@@ -96,8 +92,7 @@ class Basic(unittest.TestCase):
                     'weight': 1.0,
                     'link': 'familyDefault',
                     'n_folds': 2,
-                    'beta_eps': 1e-4,
-                    #***********
+                    'beta_epsilon': 1e-4,
                     'lambda': '1e-8:1e-3:1e2',
                     'alpha': '0,0.5,.75',
                     'thresholds': '0,1,0.2'
@@ -109,9 +104,10 @@ class Basic(unittest.TestCase):
                 kwargs['y'] = y
 
             emsg = None
-            for i in range(25):
+            for i in range(2):
                 start = time.time()
-                glm = h2o_cmd.runGLMGridOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, noise=("Jstack", None), **kwargs)
+                # get rid of the Jstack polling
+                glm = h2o_cmd.runGLMGridOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
                 print 'glm #', i, 'end on', csvPathname, 'took', time.time() - start, 'seconds'
                 # we can pass the warning, without stopping in the test, so we can 
                 # redo it in the browser for comparison

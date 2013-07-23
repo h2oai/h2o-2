@@ -264,7 +264,7 @@ public class TestUtil {
     }
     // RSS to sigma
     for( ValueArray.Column col : cols )
-      col._sigma = Math.sqrt(col._sigma / col._n);
+      col._sigma = Math.sqrt(col._sigma / (col._n - 1));
 
     // Write out data & keys
     DKV.put(key, ary);

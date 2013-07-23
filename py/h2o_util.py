@@ -1,12 +1,13 @@
 import subprocess
 import gzip, shutil, random, time, re
 import os, zipfile
+import h2o
 
 # x = choice_with_probability( [('one',0.25), ('two',0.25), ('three',0.5)] )
 # need to sum to 1 or less. check error case if you go negative
-def choice_with_probability(lst):
+def choice_with_probability(tupleList):
     n = random.uniform(0, 1)
-    for item, prob in lst:
+    for item, prob in tupleList:
         if n < prob: break
         n = n - prob
         if n < 0: 
@@ -42,6 +43,7 @@ def flat_unzip(my_zip, my_dir):
             with source, target:
                 shutil.copyfileobj(source, target)
                 resultList.append(target)
+    return resultList
 
 # gunzip gzfile to outfile
 def file_gunzip(gzfile, outfile):
@@ -54,6 +56,18 @@ def file_gunzip(gzfile, outfile):
     zipped_file.close()
     print "\nGunzip took",  (time.time() - start), "secs"
 
+# gzip infile to gzfile
+def file_gzip(infile, gzfile):
+    print "\nGzip-ing", infile, "to", gzfile
+    start = time.time()
+    in_file = open(infile, 'rb')
+    zipped_file = gzip.open(gzfile, 'wb')
+    zipped_file.writelines(in_file)
+    in_file.close()
+    zipped_file.close()
+    print "\nGzip took",  (time.time() - start), "secs"
+
+
 # cat file1 and file2 to outfile
 def file_cat(file1, file2, outfile):
     print "\nCat'ing", file1, file2, "to", outfile
@@ -63,6 +77,16 @@ def file_cat(file1, file2, outfile):
     shutil.copyfileobj(open(file2,'rb'), destination)
     destination.close()
     print "\nCat took",  (time.time() - start), "secs"
+
+# used in loop, so doing always print
+def file_append(infile, outfile):
+    h2o.verboseprint("\nAppend'ing", infile, "to", outfile)
+    start = time.time()
+    in_file = open(infile,'rb')
+    out_file = open(outfile,'a')
+    out_file.write(in_file.read())
+    out_file.close()
+    h2o.verboseprint("\nAppend took",  (time.time() - start), "secs")
 
 
 def file_shuffle(infile, outfile):

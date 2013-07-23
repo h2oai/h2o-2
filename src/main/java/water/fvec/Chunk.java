@@ -111,8 +111,7 @@ public abstract class Chunk extends Iced implements Cloneable {
   // After writing we must call close() to register the bulk changes
   public void close( int cidx, Futures fs ) {
     if( _chk instanceof NewChunk )_chk = ((NewChunk)_chk).close(fs);
-    if(_chk == this) return;
-    assert _vec.chunkKey(cidx).home_node() == _vec.chunkKey(cidx).home_node():"incorrectly homed key in mrtask2: " + _vec.chunkKey(cidx) +", homed at " + _vec.chunkKey(cidx).home_node().index() + ", expected at " + _vec.chunkKey(cidx).home_node();
+    if( _chk == this ) return;
     DKV.put(_vec.chunkKey(cidx),_chk,fs); // Write updated chunk back into K/V
   }
 
@@ -143,5 +142,14 @@ public abstract class Chunk extends Iced implements Cloneable {
     } catch( CloneNotSupportedException e ) {
       throw water.util.Log.errRTExcept(e);
     }
+  }
+
+  @Override public String toString() { return getClass().getSimpleName(); }
+
+  public long byteSize() {
+    long s= _mem == null ? 0 : _mem.length;
+    s += (2+5)*8 + 12; // 2 hdr words, 5 other words, @8bytes each, plus mem array hdr
+    if( _chk != null && _chk != this ) s += _chk.byteSize();
+    return s;
   }
 }

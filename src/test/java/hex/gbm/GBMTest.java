@@ -3,10 +3,13 @@ package hex.gbm;
 import static org.junit.Assert.assertEquals;
 
 import java.io.File;
+import java.util.Arrays;
 
 import org.junit.BeforeClass;
+import org.junit.Test;
 
 import water.*;
+import water.parser.*;
 import water.fvec.*;
 
 public class GBMTest extends TestUtil {
@@ -23,19 +26,37 @@ public class GBMTest extends TestUtil {
       assertEquals(380,fr._vecs[0].length());
 
       // Prostate: predict on CAPSULE which is in column #1; move it to last column
-      int ncols = fr._names.length;
-      String s = fr._names[1];    // capsule
-      Vec v    = fr._vecs [1];
-      System.arraycopy(fr._names,2,fr._names,1,ncols-2);
-      System.arraycopy(fr._vecs ,2,fr._vecs ,1,ncols-2);
-      fr._names[ncols-1] = s;
-      fr._vecs [ncols-1] = v;
+      UKV.remove(fr.remove("ID")._key);   // Remove patient ID vector
+      Vec capsule = fr.remove("CAPSULE"); // Remove capsule
+      fr.add("CAPSULE",capsule);          // Move it to the end
 
-      GBM gbm = GBM.start(GBM.makeKey(),fr,3);
+      GBM gbm = GBM.start(GBM.makeKey(),fr,11);
       gbm.get();                  // Block for result
       UKV.remove(gbm._dest);
     } finally {
       UKV.remove(fr._key);
     }
   }
+
+  /*@Test*/ public void testCovtypeGBM() {
+    File file = TestUtil.find_test_file("../datasets/UCI/UCI-large/covtype/covtype.data");
+    Key fkey = NFSFileVec.make(file);
+    Frame fr = ParseDataset2.parse(Key.make("cov1.hex"),new Key[]{fkey});
+    UKV.remove(fkey);
+    System.out.println("Parsed into "+fr);
+    for( int i=0; i<fr._vecs.length; i++ )
+      System.out.println("Vec "+i+" = "+fr._vecs[i]);
+
+    try {
+      assertEquals(581012,fr._vecs[0].length());
+
+      // Covtype: predict on last column
+      GBM gbm = GBM.start(GBM.makeKey(),fr,30);
+      gbm.get();                  // Block for result
+      UKV.remove(gbm._dest);
+    } finally {
+      UKV.remove(fr ._key);
+    }
+  }
+
 }

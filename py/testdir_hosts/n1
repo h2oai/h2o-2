@@ -5,7 +5,7 @@
 ./n1.doit test_allstate_claim_prediction.py
 ./n1.doit test_arity.py
 ./n1.doit test_bad_nofinaltrees.py
-# ./n1.doit test_big_local_cloud.py
+./n1.doit test_big_local_cloud.py
 # ./n1.doit test_cloud_127_2_loop.py
 # ./n1.doit test_cloud_127.py
 # ./n1.doit test_cloud_17to25.py
@@ -21,6 +21,7 @@
 ./n1.doit test_exec_covtype_rand2.py
 ./n1.doit test_exec_import_hosts.py
 ./n1.doit test_exec_rotate_inc.py
+./n1.doit test_exec_vector_filter_factor.py
 ./n1.doit test_factor_only.py
 ./n1.doit test_factor.py
 ./n1.doit test_flatfile.py
@@ -34,7 +35,6 @@
 ./n1.doit test_GLM_from_import_hosts.py
 ./n1.doit test_GLMGrid_hastie.py
 ./n1.doit test_GLM_many_cols_4.py
-./n1.doit test_GLM_many_cols_enum.py
 ./n1.doit test_GLM_many_cols_int2cat.py
 ./n1.doit test_GLM_many_cols_tridist.py
 ./n1.doit test_GLM_prob_cols_4.py
@@ -57,15 +57,13 @@
 ./n1.doit test_KMeans_sphere3.py
 ./n1.doit test_KMeans_sphere5_bad_inits.py
 ./n1.doit test_KMeans_winesPCA.py
-./n1.doit test_log_download_terminate2.py
-./n1.doit test_log_download_terminate.py
 ./n1.doit test_log_download_view.py
 ./n1.doit test_many_cols_01.py
 ./n1.doit test_many_cols_0.py
 ./n1.doit test_many_cols_and_types.py
 ./n1.doit test_many_fp_formats.py
 ./n1.doit test_multi_with_a_browser.py
-./n1.doit test_parse_1k_files.py
+./n1.doit test_parse_10k_files.py
 ./n1.doit test_parse_csv_download.py
 ./n1.doit test_parse_file_loop.py
 ./n1.doit test_parse_fs_schmoo.py
@@ -75,6 +73,8 @@
 ./n1.doit test_parse_rand_schmoo.py
 ./n1.doit test_parse_small_nopoll2.py
 ./n1.doit test_parse_small_nopoll.py
+./n1.doit test_parse_time2.py
+./n1.doit test_parse_time.py
 ./n1.doit test_poisson_covtype20x_hosts.py
 ./n1.doit test_poker_1m_rf.py
 ./n1.doit test_put_1m_keys.py
@@ -93,7 +93,7 @@
 ./n1.doit test_stedo.py
 ./n1.doit test_sum_dkv_fail.py
 ./n1.doit test_sum_import_hosts.py
+./n1.doit test_summary_percentile_hosts.py
 ./n1.doit test_sum.py
-./n1.doit test_vector_filter_factor.py
 ./n1.doit test_xls.py
 ./n1.doit test_xls_w_hosts.py

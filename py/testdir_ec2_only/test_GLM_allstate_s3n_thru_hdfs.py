@@ -43,7 +43,7 @@ class Basic(unittest.TestCase):
             # since we delete the key, we have to re-import every iteration
             # s3n URI thru HDFS is not typical.
             importHDFSResult = h2o.nodes[0].import_hdfs(URI)
-            s3nFullList = importHDFSResult['succeeded']
+            s3nFullList = importHDFSResult['files']
             ### print "s3nFullList:", h2o.dump_json(s3nFullList)
             self.assertGreater(len(s3nFullList),8,"Didn't see more than 8 files in s3n?")
             storeView = h2o.nodes[0].store_view()
@@ -78,7 +78,7 @@ class Basic(unittest.TestCase):
                 'link': 'logit',
                 'n_folds': 2,
                 'max_iter': 8,
-                'beta_eps': 1e-3}
+                'beta_epsilon': 1e-3}
 
             timeoutSecs = 500
             # L2 

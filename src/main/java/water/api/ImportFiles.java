@@ -1,71 +1,84 @@
 package water.api;
 
+import java.util.ArrayList;
 import water.Futures;
 import water.Key;
 import water.util.FileIntegrityChecker;
 
-import com.google.gson.*;
-
 public class ImportFiles extends Request {
-  protected final ExistingFile _path = new ExistingFile(PATH);
+  static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
+  static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  public ImportFiles() {
-    _requestHelp = "Imports the given file or directory.  All nodes in the " +
-        "cloud must have an identical copy of the files in their local " +
-        "file systems.";
-    _path._requestHelp = "File or directory to import.";
-  }
+  // This Request supports the HTML 'GET' command, and this is the help text
+  // for GET.
+  static final String DOC_GET = 
+    "  Map a file from the local host filesystem into H2O memory.  Data is "+
+    "loaded lazily, when the Key is read (usually in a Parse command).  "+
+    "(Warning: Every host in the cluster must have this file visible locally!)";
 
-  @Override
-  protected Response serve() {
-    FileIntegrityChecker c = FileIntegrityChecker.check(_path.value());
+  // HTTP REQUEST PARAMETERS
+  static final String pathHelp = "File or directory to import.";
+  protected final ExistingFile path = new ExistingFile();
 
-    JsonObject json = new JsonObject();
 
-    JsonArray succ = new JsonArray();
-    JsonArray fail = new JsonArray();
+  // JSON OUTPUT FIELDS
+  static final String filesHelp="Files imported.  Imported files are merely Keys mapped over the existing files.  No data is loaded until the Key is used (usually in a Parse command).";
+  String[] files;
+
+  static final String keysHelp="Keys of imported files, Keys map 1-to-1 with imported files.";
+  String[] keys;
+
+  static final String failsHelp="File names that failed the integrity check, can be empty.";
+  String[] fails;
+
+  // Example of passing & failing request.  Will be prepended with 
+  //   "curl -s localhost:54321/ImportFiles.json".
+  // Return param/value pairs that will be used to build up a URL,
+  // and the result from serving the URL will show up as an example.
+  @Override public String[] DocExampleSucc() { return new String[]{"path","smalldata/airlines"}; }
+  @Override public String[] DocExampleFail() { return new String[]{}; }
+
+
+  @Override protected Response serve() {
+    FileIntegrityChecker c = FileIntegrityChecker.check(path.value());
+    ArrayList<String> afails = new ArrayList();
+    ArrayList<String> afiles = new ArrayList();
+    ArrayList<String> akeys  = new ArrayList();
     Futures fs = new Futures();
     for( int i = 0; i < c.size(); ++i ) {
       Key k = c.importFile(i, fs);
       if( k == null ) {
-        fail.add(new JsonPrimitive(c.getFileName(i)));
+        afails.add(c.getFileName(i));
       } else {
-        JsonObject o = new JsonObject();
-        o.addProperty(KEY, k.toString());
-        o.addProperty(FILE, c.getFileName(i));
-        succ.add(o);
+        afiles.add(c.getFileName(i));
+        akeys .add(k.toString());
       }
     }
     fs.blockForPending();
+    fails = afails.toArray(new String[0]);
+    files = afiles.toArray(new String[0]);
+    keys  = akeys .toArray(new String[0]);
 
-    json.add(SUCCEEDED, succ);
-    json.add(FAILED, fail);
+    return new Response(Response.Status.done, this);
+  }
 
-    Response r = Response.done(json);
-    r.setBuilder(SUCCEEDED, new ArrayBuilder() {
-      @Override
-      public String header(JsonArray array) {
-        return "<table class='table table-striped table-bordered'>" +
-            "<tr><th>File</th></tr>";
-      }
+  // HTML builder
+  @Override public StringBuilder toHTML( StringBuilder sb ) {
+    if( files.length > 1 )
+      sb.append("<div class='alert'>")
+        .append(Parse.link("*"+path.value()+"*", "Parse all into hex format"))
+        .append(" </div>");
 
-      @Override
-      public Builder defaultBuilder(JsonElement element) {
-        return new ObjectBuilder() {
-          @Override
-          public String build(Response response, JsonObject object,
-              String contextName) {
-            return "<tr><td>" +
-                "<a href='Parse.html?source_key="+object.get(KEY).getAsString()+"'>" +
-                object.get(FILE).getAsString() +
-                "</a></td></tr>";
-          }
-        };
-      }
-    });
-    if (succ.size() > 1)
-      r.addHeader("<div class='alert'>" //
-          + Parse.link("*"+_path.value()+"*", "Parse all into hex format") + " </div>");
-    return r;
+    DocGen.HTML.title(sb,"files");
+    DocGen.HTML.arrayHead(sb);
+    for( int i=0; i<files.length; i++ )
+      sb.append("<tr><td><a href='Parse.html?source_key=").append(keys[i]).
+        append("'>").append(files[i]).append("</a></td></tr>");
+    DocGen.HTML.arrayTail(sb);
+
+    if( fails.length > 0 )
+      DocGen.HTML.array(DocGen.HTML.title(sb,"fails"),fails);
+
+    return sb;
   }
 }

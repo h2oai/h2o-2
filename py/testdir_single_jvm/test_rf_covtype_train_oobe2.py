@@ -158,7 +158,7 @@ class Basic(unittest.TestCase):
             rfv = h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
 
-            h2o.nodes[0].random_forest_predict(model_key=model_key, key=dataKeyTest)
+            h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
 
             fullScorePctRight = 100 * (1.0 - rfv['confusion_matrix']['classification_error'])
             self.assertAlmostEqual(fullScorePctRight,expectScorePctRightList[trial],
@@ -172,14 +172,14 @@ class Basic(unittest.TestCase):
         actualDelta = [abs(a-b) for a,b in zip(expectTrainPctRightList, actualTrainPctRightList)]
         niceFp = ["{0:0.2f}".format(i) for i in actualTrainPctRightList]
         print "maybe should update with actual. Remove single quotes"  
-        print"expectTrainPctRightList =", niceFp
+        print "actualTrainPctRightList =", niceFp
         niceFp = ["{0:0.2f}".format(i) for i in actualDelta]
         print "actualDelta =", niceFp
 
         actualDelta = [abs(a-b) for a,b in zip(expectScorePctRightList, actualScorePctRightList)]
         niceFp = ["{0:0.2f}".format(i) for i in actualScorePctRightList]
         print "maybe should update with actual. Remove single quotes"  
-        print "expectScorePctRightList =", niceFp
+        print "actualScorePctRightList =", niceFp
         niceFp = ["{0:0.2f}".format(i) for i in actualDelta]
         print "actualDelta =", niceFp
 

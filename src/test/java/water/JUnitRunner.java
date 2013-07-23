@@ -15,6 +15,7 @@ import org.junit.runner.notification.Failure;
 
 import water.deploy.Node;
 import water.deploy.NodeVM;
+import water.fvec.CBSChunkTest;
 import water.parser.ParseFolderTestBig;
 import water.util.Log;
 import water.util.Utils;
@@ -25,6 +26,8 @@ public class JUnitRunner {
     tests.remove(ParseFolderTestBig.class);
     // Too slow
     tests.remove(ConcurrentKeyTest.class);
+    // Pure JUnit test
+    tests.remove(CBSChunkTest.class);
     // Uncomment to run tests selectively
     // tests.clear();
     // tests.add(KMeansTest.class);

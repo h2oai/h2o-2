@@ -45,7 +45,7 @@ public abstract class Paxos {
         UDPRebooted.T.mismatch.send(h2o);
       } else {
         Log.warn("Attempting to join "+h2o+" with a jar mismatch. Killing self.");
-        System.exit(-1);
+        H2O.exit(-1);
       }
       return 0;
     }
@@ -83,6 +83,7 @@ public abstract class Paxos {
     H2O.CLOUD.set_next_Cloud(h2os,chash);
     Paxos.class.notify(); // Also, wake up a worker thread stuck in DKV.put
     Log.info("Cloud of size ", H2O.CLOUD.size(), " formed ", H2O.CLOUD.toString());
+    H2O.notifyAboutCloudSize(H2O.SELF_ADDRESS, H2O.API_PORT, H2O.CLOUD.size());
     return 0;
   }
 

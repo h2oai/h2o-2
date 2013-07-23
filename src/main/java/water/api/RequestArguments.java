@@ -17,7 +17,6 @@ import water.util.Check;
 import water.util.RString;
 
 import com.google.common.base.Objects;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.google.gson.JsonObject;
@@ -262,6 +261,11 @@ public class RequestArguments extends RequestStatics {
      */
     protected abstract String queryDescription();
 
+    /** Returns a list of possible error strings, that could be thrown in an
+     * IllegalArgumentException.
+     */
+    protected String[] errors() { return null; }
+
     /** Any query addons can be specified here. These will be displayed with
      * the query html code and should be used for instance for default value
      * calculators, etc.
@@ -482,7 +486,7 @@ public class RequestArguments extends RequestStatics {
       // if input is null, throw if required, otherwise use the default value
       if (input == null) {
         if (_required)
-          throw new IllegalArgumentException("Argument "+_name+" is required, but not specified");
+          throw new IllegalArgumentException("Argument '"+_name+"' is required, but not specified");
         record._value = defaultValue();
         record._valid = true;
       // parse the argument, if parse throws we will still be invalid correctly
@@ -492,7 +496,7 @@ public class RequestArguments extends RequestStatics {
           record._valid = true;
         } catch (IllegalArgumentException e) {
           record._value = defaultValue();
-          Throwables.propagate(e);
+          throw e;
         }
       }
     }
@@ -1430,25 +1434,18 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
 
   public class ExistingFile extends TypeaheadInputText<File> {
-    public ExistingFile(String name) {
-      super(TypeaheadFileRequest.class, name, true);
+    public ExistingFile() {
+      super(TypeaheadFileRequest.class, "path", true);
     }
-
     @Override protected File parse(String input) throws IllegalArgumentException {
       File f = new File(input);
       if( !f.exists() )
-        throw new IllegalArgumentException("File "+input+" not found!");
+        throw new IllegalArgumentException("File "+input+" not found");
       return f;
     }
-
-    @Override protected String queryDescription() {
-      return "Existing file or directory";
-    }
-
-    @Override
-    protected File defaultValue() {
-      return null;
-    }
+    @Override protected String queryDescription() { return "Existing file or directory"; }
+    @Override protected File defaultValue() { return null; }
+    @Override protected String[] errors() { return new String[] { "File not found" }; }
   }
 
   // ---------------------------------------------------------------------------

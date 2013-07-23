@@ -19,17 +19,24 @@ public class KVSpeedTest extends TestUtil {
 
     for( int i=0; i<10; i++ ) {
       long start = System.currentTimeMillis();
-      impl_testKeys(ITERS,keys,vals);
+      impl_testKeys(keys,vals);
       long now   = System.currentTimeMillis();
-      System.out.println("(put+get+remove)/sec="+(now-start)+"ms / "+ITERS+
+      System.out.println("(put+get+remove+get)/sec="+(now-start)+"ms / "+ITERS+
                          " = "+((double)(now-start)/ITERS));
     }
+    for( int i=0; i<keys.length; i++ )
+      DKV.remove(keys[i]);
   }
 
 
   // ---
   // Make 100K keys, verify them all, delete them all.
-  public void impl_testKeys(int iter,Key[]keys,Value[]vals) {
+  public void impl_testKeys(Key[]keys,Value[]vals) {
+    //for( int i=0; i<keys.length; i++ ) {
+    //  Key k = keys[i];
+    //  Value v1 = vals[i] = new Value(k,"test2 bits for Value"+i);
+    //  DKV.put(k,v1);
+    //}
     for( int i=0; i<keys.length; i++ ) {
       Value v = DKV.get(keys[i]);
       assert v == vals[i];
@@ -39,7 +46,7 @@ public class KVSpeedTest extends TestUtil {
     //}
     //for( int i=0; i<keys.length; i++ ) {
     //  Value v3 = DKV.get(keys[i]);
-    //  assertNull(v3);
+    //  Assert.assertNull(v3);
     //}
   }
 }

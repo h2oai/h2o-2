@@ -1,2 +1,3 @@
-nosetests $1 --nologcapture --with-xunit --xunit-file=$1.nosetests.xml
+# nosetests $1 --nologcapture --with-xunit --xunit-file=$1.nosetests.xml
+nosetests $1 --nologcapture
 

@@ -29,12 +29,8 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED
-        SEED = random.randint(0, sys.maxint)
-        # SEED = 
-        random.seed(SEED)
-        print "\nUsing random seed:", SEED
-        global localhost
+        global SEED, localhost
+        SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(1,java_heap_GB=10)
@@ -51,12 +47,9 @@ class Basic(unittest.TestCase):
 
         if localhost:
             tryList = [
-                (10000, 100, 'cD', 300), 
-                (10000, 200, 'cE', 300), 
-                (10000, 300, 'cF', 300), 
-                (10000, 400, 'cG', 300), 
-                (10000, 500, 'cH', 300), 
-                (10000, 1000, 'cI', 300), 
+                (10000, 100, 'cA', 300), 
+                (10000, 1000, 'cB', 300), 
+                (10000, 3000, 'cC', 500), 
                 ]
         else:
             tryList = [

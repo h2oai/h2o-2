@@ -24,25 +24,14 @@ exprList = [
         'Result<n> = Result<m> + ' + str(goback),
     ]
 
-def fill_in_expr_template(exprTemplate, n, m):
-    execExpr = exprTemplate
-    execExpr = re.sub('<n>',str(n),execExpr)
-    execExpr = re.sub('<m>',str(m),execExpr)
-    h2o.verboseprint("\nexecExpr:", execExpr)
-    return execExpr
-
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
     @classmethod
     def setUpClass(cls):
-        # random.seed(SEED)
-        SEED = random.randint(0, sys.maxint)
-        # if you have to force to redo a test
-        # SEED = 
-        random.seed(SEED)
-        print "\nUsing random seed:", SEED
+        global SEED, localhost
+        SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(3,java_heap_GB=4)
@@ -55,14 +44,14 @@ class Basic(unittest.TestCase):
         # time.sleep(1500)
         h2o.tear_down_cloud()
 
-    def test_exec_rotating_inc(self):
+    def test_exec_rotate_inc(self):
         ### h2b.browseTheCloud()
 
         lenNodes = len(h2o.nodes)
         # zero the list of Results using node[0]
         # FIX! is the zerolist not eing seen correctl? is it not initializing to non-zero?
         for exprTemplate in initList:
-            execExpr = fill_in_expr_template(exprTemplate, '0', '0')
+            execExpr = h2e.fill_in_expr_template(exprTemplate, n=0, m=0)
             print execExpr
             execResult = h2e.exec_expr(h2o.nodes[0], execExpr)
             ### print "\nexecResult:", execResult
@@ -82,9 +71,8 @@ class Basic(unittest.TestCase):
                 ### print nodeX
                 
                 number = trial + 10
-                execExpr = fill_in_expr_template(exprTemplate, 
-                    str(number%period), str((number-goback)%period))
                 resultKey="Result" + str(number%period)
+                execExpr = h2e.fill_in_expr_template(exprTemplate, n=(number%period), m=((number-goback)%period))
                 execResultInspect, min_value = h2e.exec_expr(h2o.nodes[nodeX], execExpr,
                     resultKey=resultKey, timeoutSecs=4)
 

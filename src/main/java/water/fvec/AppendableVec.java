@@ -43,13 +43,14 @@ public class AppendableVec extends Vec {
     _totalCnt += chk._len;
   }
 
-  @Override
-  public DType dtype() {
-    if(_missingCnt == _totalCnt)return DType.NA;
+  // What kind of data did we find?  NA's?  Strings-only?  Floats or Ints?
+  @Override  public DType dtype() {
+    if( _missingCnt == _totalCnt ) return DType.NA;
     // TODO: we declare column to be string/enum only if it does not have ANY numbers in it.
-    if(_strCnt > 0 && (_strCnt + _missingCnt) == _totalCnt) return DType.S;
-    return _hasFloat?DType.F:DType.I;
+    if( _strCnt > 0 && (_strCnt + _missingCnt) == _totalCnt ) return DType.S;
+    return _hasFloat ? DType.F : DType.I;
   }
+
   // Class 'reduce' call on new vectors; to combine the roll-up info.
   // Called single-threaded from the M/R framework.
   public void reduce( AppendableVec nv ) {
@@ -73,7 +74,7 @@ public class AppendableVec extends Vec {
     // Compute #chunks
     int nchunk = _espc.length;
     while( nchunk > 0 && _espc[nchunk-1] == 0 ) nchunk--;
-
+    DKV.remove(chunkKey(nchunk)); // remove potential trailing key
     // Compute elems-per-chunk.
     // Roll-up elem counts, so espc[i] is the starting element# of chunk i.
     // TODO: Complete fail: loads all data locally - will force OOM.  Needs to be
@@ -106,4 +107,7 @@ public class AppendableVec extends Vec {
   public long chunk2StartElem( int cidx ) { throw H2O.fail(); }
   public long   get ( long i ) { throw H2O.fail(); }
   public double getd( long i ) { throw H2O.fail(); }
+
+  public long byteSize() { return 0; }
+  @Override public String toString() { return "[AppendableVec, unknown size]"; }
 }

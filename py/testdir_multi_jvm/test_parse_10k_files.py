@@ -30,7 +30,8 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        pass
+        global SEED
+        SEED = h2o.setup_random_seed()
 
     @classmethod
     def tearDownClass(cls):
@@ -40,12 +41,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud(h2o.nodes)
     
     def test_parse_1k_files(self):
-        SEED = random.randint(0, sys.maxint)
-        # if you have to force to redo a test
-        # SEED = 
-        random.seed(SEED)
-        print "\nUsing random seed:", SEED
-
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn.csv.gz"
         headerData = "ID,CAPSULE,AGE,RACE,DPROS,DCAPS,PSA,VOL,GLEASON"
@@ -62,7 +57,10 @@ class Basic(unittest.TestCase):
         importFolderPath = os.path.abspath(SYNDATASETS_DIR)
         print "\nimportFolderPath:", importFolderPath
         csvFilenameList = [
-            ("*_syn.csv.gz", "syn_all.csv", maxFilenum * avgFileSize, 1200),
+            # try one thousand files first
+            ("*[1][0-9][0-9][0-9]_syn.csv.gz", "syn_all.1000.csv", maxFilenum * avgFileSize, 1200),
+            # try two thousand
+            ("*[1-2][0-9][0-9][0-9]_syn.csv.gz", "syn_all.2000.csv", maxFilenum * avgFileSize, 1200),
             ]
 
         trialMax = 1
@@ -94,9 +92,9 @@ class Basic(unittest.TestCase):
 
             for trial in range(trialMax):
                 importFolderResult = h2i.setupImportFolder(None, importFolderPath)
-                importFullList = importFolderResult['succeeded']
+                importFullList = importFolderResult['files']
                 print "importFullList:", importFullList
-                importFailList = importFolderResult['failed']
+                importFailList = importFolderResult['fails']
                 print "importFailList:", importFailList
                 print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
 
@@ -138,8 +136,7 @@ class Basic(unittest.TestCase):
 
                 # BUG here?
                 if not noPoll:
-                    # We should be able to see the parse result?
-                    h2o_cmd.check_enums_from_inspect(parseKey)
+                    h2o_cmd.get_column_info_from_inspect(parseKey)
                         
                 print "\n" + csvFilepattern
 
@@ -162,7 +159,7 @@ class Basic(unittest.TestCase):
                 #**********************************************************************************
 
                 h2o_cmd.check_key_distribution()
-                h2o_cmd.delete_csv_key(csvFilename, importFullList)
+                h2o_cmd.delete_csv_key(csvFilename, importFolderResult)
 
                 h2o.tear_down_cloud()
                 if not localhost:

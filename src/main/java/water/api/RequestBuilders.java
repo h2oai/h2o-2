@@ -7,6 +7,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Map.Entry;
 
+import water.AutoBuffer;
 import water.H2O;
 import water.PrettyPrint;
 import water.util.*;
@@ -62,7 +63,8 @@ public class RequestBuilders extends RequestQueries {
       builder = OBJECT_BUILDER;
     }
     for( String h : response.getHeaders() ) sb.append(h);
-    sb.append(builder.build(response,response._response,""));
+    if( response._response==null ) response._req.toHTML(sb);
+    else sb.append(builder.build(response,response._response,""));
     sb.append("</div></div></div>");
     return sb.toString();
   }
@@ -120,7 +122,9 @@ public class RequestBuilders extends RequestQueries {
     switch (response._status) {
       case done    :
         RString result = new RString(_jsonResponseBox);
-        result.replace("JSON_RESPONSE_BOX", GSON_BUILDER.toJson(response.toJson()));
+        result.replace("JSON_RESPONSE_BOX", response._response == null
+                       ? new String(response._req.writeJSON(new AutoBuffer()).buf())
+                       : GSON_BUILDER.toJson(response.toJson()));
         return result.toString();
       case error   :
       case redirect:
@@ -278,6 +282,7 @@ public class RequestBuilders extends RequestQueries {
     /** Response object for JSON requests.
      */
     protected final JsonObject _response;
+    protected final Request _req;
 
     protected boolean _strictJsonCompliance = false;
 
@@ -302,6 +307,7 @@ public class RequestBuilders extends RequestQueries {
       _redirectArgs = null;
       _pollProgress = -1;
       _pollProgressElements = -1;
+      _req = null;
     }
 
     private Response(Status status, JsonObject response, String redirectName, JsonObject redirectArgs) {
@@ -312,6 +318,7 @@ public class RequestBuilders extends RequestQueries {
       _redirectArgs = redirectArgs;
       _pollProgress = -1;
       _pollProgressElements = -1;
+      _req = null;
     }
 
     private Response(Status status, JsonObject response, int progress, int total, JsonObject pollArgs) {
@@ -322,7 +329,19 @@ public class RequestBuilders extends RequestQueries {
       _redirectArgs = pollArgs;
       _pollProgress = progress;
       _pollProgressElements = total;
+      _req = null;
     }
+
+    public Response(Status status, Request req) {
+      _status = status;
+      _response = null;
+      _redirectName = null;
+      _redirectArgs = null;
+      _pollProgress = -1;
+      _pollProgressElements = -1;
+      _req = req;
+    }
+
 
     /** Returns new error response with given error message.
      */
@@ -458,7 +477,7 @@ public class RequestBuilders extends RequestQueries {
       if( _strictJsonCompliance ) res = JsonUtil.escape(res);
 
       // in this case, creating a cyclical structure would kill us.
-      if( _response == _redirectArgs ) {
+      if( _response != null && _response == _redirectArgs ) {
         res = new JsonObject();
         for( Entry<String, JsonElement> e : _response.entrySet() ) {
           res.add(e.getKey(), e.getValue());

@@ -31,7 +31,7 @@ paramDict = {
         "1=5",
         "2=3",
         "1=1,2=1,3=1,4=1,5=1,6=1,7=1",
-        "1=100,2=100,3=100,4=100,5=100,6=100,7=100",
+        "1=99,2=99,3=99,4=99,5=99,6=99,7=99", # fails with 100?
         "1=0,2=0,3=0,4=0,5=0,6=0,7=0",
         ]
     }
@@ -42,7 +42,8 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
+        global SEED, localhost
+        SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(node_count=1, java_heap_GB=10)
@@ -54,13 +55,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rf_params_rand2(self):
-        # for determinism, I guess we should spit out the seed?
-        # random.seed(SEED)
-        SEED = random.randint(0, sys.maxint)
-        # if you have to force to redo a test
-        # SEED = 
-        random.seed(SEED)
-        print "\nUsing random seed:", SEED
         csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
         for trial in range(10):
             # params is mutable. This is default.

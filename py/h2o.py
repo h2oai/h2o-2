@@ -44,7 +44,6 @@ def unit_main():
     global python_test_name
     python_test_name = inspect.stack()[1][1]
 
-
     print "\nRunning: python", python_test_name
     # moved clean_sandbox out of here, because nosetests doesn't execute h2o.unit_main in our tests.
     # UPDATE: ..is that really true? I'm seeing the above print in the console output runnning
@@ -62,6 +61,7 @@ ipaddr = None
 config_json = None
 debugger = False
 random_udp_drop = False
+random_seed = None
 # jenkins gets this assign, but not the unit_main one?
 python_test_name = inspect.stack()[1][1]
 
@@ -75,10 +75,12 @@ def parse_our_args():
     parser.add_argument('-cj', '--config_json', help='Use this json format file to provide multi-host defaults. Overrides the default file pytest_config-<username>.json. These are used only if you do build_cloud_with_hosts()')
     parser.add_argument('-dbg', '--debugger', help='Launch java processes with java debug attach mechanisms', action='store_true')
     parser.add_argument('-rud', '--random_udp_drop', help='Drop 20 pct. of the UDP packets at the receive side', action='store_true')
+    parser.add_argument('-s', '--random_seed', type=int, help='initialize SEED (64-bit integer) for random generators')
+    parser.add_argument('unittest_args', nargs='*')
     parser.add_argument('unittest_args', nargs='*')
 
     args = parser.parse_args()
-    global browse_disable, browse_json, verbose, ipaddr, config_json, debugger, random_udp_drop
+    global browse_disable, browse_json, verbose, ipaddr, config_json, debugger, random_udp_drop, random_seed
 
     browse_disable = args.browse_disable or getpass.getuser()=='jenkins'
     browse_json = args.browse_json
@@ -87,6 +89,7 @@ def parse_our_args():
     config_json = args.config_json
     debugger = args.debugger
     random_udp_drop = args.random_udp_drop
+    random_seed = args.random_seed
 
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
     # FIX! this isn't working to grab the args we don't care about
@@ -245,12 +248,7 @@ def spawn_cmd(name, args, capture_output=True):
     if capture_output:
         outfd,outpath = tmp_file(name + '.stdout.', '.log')
         errfd,errpath = tmp_file(name + '.stderr.', '.log')
-        # make args a string, so we can do ulimit, and execute with shell
-        if (1==0):
-            argsStr = 'ulimit -u 1024;' + ' '.join(args)
-            ps = psutil.Popen(argsStr, stdin=None, stdout=outfd, stderr=errfd, shell=True)
-        else:
-            ps = psutil.Popen(args, stdin=None, stdout=outfd, stderr=errfd)
+        ps = psutil.Popen(args, stdin=None, stdout=outfd, stderr=errfd)
     else:
         outpath = '<stdout>'
         errpath = '<stderr>'
@@ -261,19 +259,35 @@ def spawn_cmd(name, args, capture_output=True):
     log(' '.join(args), comment=comment)
     return (ps, outpath, errpath)
 
-def spawn_cmd_and_wait(name, args, timeout=None):
-    (ps, stdout, stderr) = spawn_cmd(name, args)
-
+def spawn_wait(ps, stdout, stderr, timeout=None):
     rc = ps.wait(timeout)
     out = file(stdout).read()
     err = file(stderr).read()
+    ## print out
+    ## print err
 
     if rc is None:
         ps.terminate()
         raise Exception("%s %s timed out after %d\nstdout:\n%s\n\nstderr:\n%s" %
                 (name, args, timeout or 0, out, err))
     elif rc != 0:
-        raise Exception("%s %s failed.\nstdout:\n%s\n\nstderr:\n%s" % (name, args, out, err))
+        raise Exception("%s %s failed.\nstdout:\n%s\n\nstderr:\n%s" % (ps.name, ps.cmdline, out, err))
+    return rc
+
+def spawn_cmd_and_wait(name, args, timeout=None):
+    (ps, stdout, stderr) = spawn_cmd(name, args)
+    spawn_wait(ps, stdout, stderr, timeout=None)
+
+def kill_process_tree(pid, including_parent=True):    
+    parent = psutil.Process(pid)
+    for child in parent.get_children(recursive=True):
+        child.kill()
+    if including_parent:
+        parent.kill()
+
+def kill_child_processes():
+    me = os.getpid()
+    kill_process_tree(me, including_parent=False)
 
 # used to get a browser pointing to the last RFview
 global json_url_history
@@ -350,9 +364,18 @@ def decide_if_localhost():
     print "No config json used. Launching local cloud..."
     return True
 
+def setup_random_seed():
+    if random_seed is not None:
+        SEED = random_seed
+    else:
+        SEED = random.randint(0, sys.maxint)
+    random.seed(SEED)
+    print "\nUsing random seed:", SEED
+    return SEED
+
 # node_count is per host if hosts is specified.
 def build_cloud(node_count=2, base_port=54321, hosts=None, 
-        timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True, **kwargs):
+        timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True, hadoop=False, **kwargs):
     # moved to here from unit_main. so will run with nosetests too!
     clean_sandbox()
     # keep this param in kwargs, because we pass to the H2O node build, so state
@@ -396,8 +419,13 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
                     hostPortList.append( (h,port) )
             if rand_shuffle: random.shuffle(hostPortList)
             for (h,p) in hostPortList:
-                verboseprint('ssh starting node', totalNodes, 'via', h)
-                newNode = h.remote_h2o(port=p, node_id=totalNodes, **kwargs)
+                # hack to dispatch h2o on hadoop
+                if hadoop:
+                    newNode = h.hadoop_h2o(port=p, node_id=totalNodes, **kwargs)
+                else:
+                    verboseprint('ssh starting node', totalNodes, 'via', h)
+                    newNode = h.remote_h2o(port=p, node_id=totalNodes, **kwargs)
+
                 node_list.append(newNode)
                 totalNodes += 1
 
@@ -407,8 +435,8 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         stabilize_cloud(node_list[-1], len(node_list), 
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
         verboseprint(len(node_list), "Last added node stabilized in ", time.time()-start, " secs")
-        verboseprint("Built cloud: %d node_list, %d hosts, in %d s" % (len(node_list), 
-            hostCount, (time.time() - start))) 
+        verboseprint("Built cloud: %d nodes on %d hosts, in %d s" % (len(node_list), 
+            hostCount, (time.time() - start)))
 
         # FIX! using "consensus" in node[-1] should mean this is unnecessary?
         # maybe there's a bug. For now do this. long term: don't want?
@@ -505,7 +533,8 @@ def check_sandbox_for_errors(sandbox_ignore_errors=False):
                     # don't detect these class loader info messags as errors
                     #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
                     foundBad = regex1.search(line) and not (
-                        ('error rate' in line) or ('[Loaded ' in line) or ('[WARN]' in line))
+                        ('error rate' in line) or ('[Loaded ' in line) or
+                        ('[WARN]' in line) or ('CalcSquareErrorsTasks' in line))
 
                 if (printing==0 and foundBad):
                     printing = 1
@@ -600,6 +629,7 @@ def verify_cloud_size():
     
 def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25):
     node.wait_for_node_to_accept_connections(timeoutSecs)
+
     # want node saying cloud = expected size, plus thinking everyone agrees with that.
     def test(n, tries=None):
         c = n.get_cloud()
@@ -613,10 +643,12 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25):
         if 'nodes' not in c:
             emsg = "\nH2O didn't include a list of nodes in get_cloud response after initial cloud build"
             raise Exception(emsg)
-        if (cloud_size != node_count):
-            print "\nNodes in current cloud:"
-            for c in c['nodes']:
-                print c['name']
+
+        # only print it when you get consensus 
+        if cloud_size!=node_count:
+            verboseprint("\nNodes in cloud while building:")
+            for ci in c['nodes']:
+                verboseprint(ci['name'])
         
         if (cloud_size > node_count):
             emsg = (
@@ -635,9 +667,9 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25):
         a = (cloud_size==node_count) and consensus
         if a:
             verboseprint("\tLocked won't happen until after keys are written")
-            verboseprint("\nNodes in current cloud:")
-            for c in c['nodes']:
-                verboseprint(c['name'])
+            verboseprint("\nNodes in final cloud:")
+            for ci in c['nodes']:
+                verboseprint(ci['name'])
 
         return a
 
@@ -1007,14 +1039,15 @@ class H2O(object):
 
     # &offset=
     # &view=
-    def inspect(self, key, offset=None, view=None, ignoreH2oError=False):
+    def inspect(self, key, offset=None, view=None, ignoreH2oError=False, timeoutSecs=30):
         a = self.__do_json_request('Inspect.json',
             params={
                 "key": key,
                 "offset": offset,
                 "view": view,
                 },
-            ignoreH2oError=ignoreH2oError
+            ignoreH2oError=ignoreH2oError,
+            timeout=timeoutSecs
             )
         return a
 
@@ -1065,6 +1098,8 @@ class H2O(object):
     def exec_query(self, timeoutSecs=20, ignoreH2oError=False, **kwargs):
         params_dict = {
             'expression': None,
+            ## 'escape_nan': 0,
+            ## 'destination_key': "Result.hex", # curious as to whether specifying destination key messes anything up.
             }
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
@@ -1134,7 +1169,9 @@ class H2O(object):
                 params_dict[k] = kwargs[k]
 
         if print_params:
+            print "hello1"
             print "\nrandom_forest_view parameters:", params_dict
+            print "hello2"
             sys.stdout.flush()
 
         a = self.__do_json_request('RFView.json', timeout=timeoutSecs, params=params_dict)
@@ -1144,7 +1181,7 @@ class H2O(object):
             h2b.browseJsonHistoryAsUrlLastMatch("RFView")
         return a
 
-    def random_forest_predict(self, key, model_key, timeoutSecs=300, print_params=False, **kwargs):
+    def generate_predictions(self, key, model_key, timeoutSecs=300, print_params=True, **kwargs):
         params_dict = {
             'key': key,
             'model_key': model_key,
@@ -1158,14 +1195,20 @@ class H2O(object):
                 params_dict[k] = kwargs[k]
 
         if print_params:
-            print "\nrandom_forest_view parameters:", params_dict
+            print "\ngenerate_predictions parameters:", params_dict
             sys.stdout.flush()
 
         a = self.__do_json_request('GeneratePredictionsPage.json', timeout=timeoutSecs, params=params_dict)
-        verboseprint("\nrandom_forest_predict result:", dump_json(a))
+        verboseprint("\ngenerate_predictions result:", dump_json(a))
 
         if (browseAlso | browse_json):
-            h2b.browseJsonHistoryAsUrlLastMatch("GeneratePredictions")
+            h2b.browseJsonHistoryAsUrlLastMatch("GeneratePredictionsPage")
+
+
+        # it will redirect to an inspect, so let's get that inspect stuff
+        resultKey = a['response']['redirect_request_args']['key']
+        a = self.__do_json_request('Inspect.json', timeout=timeoutSecs, params={"key": resultKey})
+        verboseprint("\nInspect of " + resultKey, dump_json(a))
         return a
 
     def random_forest_treeview(self, tree_number, data_key, model_key, 
@@ -1225,9 +1268,11 @@ class H2O(object):
             if stype != "enum":
                 smax = columns['max']
                 smin = columns['min']
-                percentiles = columns['percentiles']
-                thresholds = percentiles['thresholds']
-                values = percentiles['values']
+                if hasattr(columns,'percentiles'):
+                    percentiles = columns['percentiles']
+                    thresholds = percentiles['thresholds']
+                    values = percentiles['values']
+
                 mean = columns['mean']
                 sigma = columns['sigma']
 
@@ -1370,7 +1415,6 @@ class H2O(object):
             h2b.browseJsonHistoryAsUrlLastMatch('GLMGridProgress')
             time.sleep(5)
         return a
-
 
     # GLMScore params
     # model_key=__GLMModel_7a3a73c1-f272-4a2e-b37f-d2f371d304ba&
@@ -1602,8 +1646,9 @@ class H2O(object):
         if use_debugger is None: use_debugger = debugger
         self.aws_credentials = aws_credentials
         self.port = port
-        # None is legal for self.addr. means we won't give an ip to the jar when we start, and it should
-        # figure out the right thing. Or we can say use use_this_ip_addr=127.0.0.1, or the known address 
+        # None is legal for self.addr. 
+        # means we won't give an ip to the jar when we start.
+        # Or we can say use use_this_ip_addr=127.0.0.1, or the known address 
         # if use_this_addr is None, use 127.0.0.1 for urls and json
         # Command line arg 'ipaddr' dominates:
         if ipaddr:
@@ -1646,7 +1691,6 @@ class H2O(object):
 
         # this dumps stats from tests, and perf stats while polling to benchmark.log
         self.enable_benchmark_log = enable_benchmark_log
-
 
     def __str__(self):
         return '%s - http://%s:%d/' % (type(self), self.http_addr, self.port)
@@ -1805,6 +1849,9 @@ class RemoteHost(object):
     def remote_h2o(self, *args, **kwargs):
         return RemoteH2O(self, self.addr, *args, **kwargs)
 
+    def hadoop_h2o(self, *args, **kwargs):
+        return HadoopH2O(self, self.addr, *args, **kwargs)
+
     def open_channel(self):
         ch = self.ssh.get_transport().open_session()
         ch.get_pty() # force the process to die without the connection
@@ -1908,3 +1955,75 @@ class RemoteH2O(H2O):
         self.shutdown_all()
         self.terminate_self_only()
     
+class HadoopH2O(H2O):
+    '''An H2O instance launched by the python framework on Hadoop'''
+    # This is work in progress
+    def __init__(self, host, *args, **kwargs):
+        super(HadoopH2O, self).__init__(*args, **kwargs)
+        ### self.jar = host.upload_file('target/h2o.jar')
+        # need to copy the flatfile. We don't always use it (depends on h2o args)
+        ### self.flatfile = host.upload_file(flatfile_name())
+        # distribute AWS credentials
+        ### if self.aws_credentials:
+        ###    self.aws_credentials = host.upload_file(self.aws_credentials)
+        ### if self.hdfs_config:
+        ###    self.hdfs_config = host.upload_file(self.hdfs_config)
+
+        if self.use_home_for_ice:
+            self.ice = "/home/" + host.username + '/ice.%d.%s' % (self.port, time.time())
+        else:
+            self.ice = '/tmp/ice.%d.%s' % (self.port, time.time())
+
+        ### self.channel = host.open_channel()
+        ### cmd = ' '.join(self.get_args())
+        shCmdString = "hadoop jar H2ODriver.jar water.hadoop.H2ODriver -jt akira:8021 -files flatfile.txt -libjars h2o.jar -mapperXmx 1g -nodes 4 -output output77"
+
+        # only do this if a node hasn't been created?
+        if len(nodes)==0:
+            print "Starting h2o on hadoop"
+            p1 = Popen(shCmdString.split(), stdout=PIPE)
+            output = p1.communicate()[0]
+            print output
+
+            comment = 'hadoop on %s' % self.addr
+            log(shCmdString, comment=comment)
+        else:
+            print "H2O must already be started on hadoop, just adding node to python list"
+
+    def get_h2o_jar(self):
+        return self.jar
+
+    def get_flatfile(self):
+        return self.flatfile
+
+    def get_ice_dir(self):
+        return self.ice
+
+    def is_alive(self):
+        verboseprint("Doing is_alive check for HadoopH2O")
+        # FIX! do hadoop dfsadmin --report?
+        # what version hadoop are we running if we execute this locally
+        shCmdString = "hadoop dfsadmin -report"
+        p1 = Popen(shCmdString.split(), stdout=PIPE)
+        output = p1.communicate()[0]
+        print output
+        try:
+            self.get_cloud()
+            return True
+        except:
+            return False
+
+    def terminate_self_only(self):
+        ## self.channel.close()
+        time.sleep(1) # a little delay needed?
+        # kbn: it should be dead now? want to make sure we don't have zombies
+        # we should get a connection error. doing a is_alive subset.
+        try:
+            gc_output = self.get_cloud()
+            raise Exception("get_cloud() should fail after we terminate a node. It isn't. %s %s" % (self, gc_output))
+        except:
+            return True
+
+    def terminate(self):
+        self.shutdown_all()
+        self.terminate_self_only()

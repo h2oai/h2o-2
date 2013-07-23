@@ -20,7 +20,8 @@ argcaseList = [
 # FIX! we get stack trace if we specify a column that was dropped because it's constant
 # for instance, column 9
 ###    {   'x': '0,1,2,3,4,5,6,7,8,9,10,11',
-    {   'x': '0,1,2,3,4,5,6,7,8,10,11',
+    {   
+        'x': '0,1,2,3,4,5,6,7,8,10,11',
         'y': 106,
         'family': 'gaussian',
         'lambda': 1.0E-5,
@@ -30,8 +31,9 @@ argcaseList = [
         'link': 'familyDefault',
         'n_folds': 0,
         'alpha': 1,
-        'beta_eps': 1.0E-4 },
-    ]
+        'beta_epsilon': 1.0E-4 
+    },
+]
 
 class Basic(unittest.TestCase):
     def tearDown(self):

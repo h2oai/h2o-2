@@ -1,12 +1,9 @@
 package hex.rf;
 
-import hex.rf.DRF.DRFJob;
-
 import java.util.Arrays;
 import java.util.Random;
 
 import jsr166y.CountedCompleter;
-
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
@@ -108,38 +105,44 @@ public class ConfusionTask extends MRTask {
     return make(model, model.size(), datakey, classcol, classWt, computeOOB);
   }
   static public CMJob make(final RFModel model, final int modelSize, final Key datakey, final int classcol, final double[] classWt, final boolean computeOOB) {
-    // Create a unique key for given RFModel, validation data and parameters
+    // Create a unique key for CM regarding given RFModel, validation data and parameters
     final Key cmKey = keyForCM(model._selfKey, modelSize, datakey, classcol, computeOOB);
-    // Start a new job
-    final CMJob cmJob = new CMJob("CM computation", cmKey, modelSize);
-    // and start a new confusion matrix computation
-    H2OCountedCompleter fjtask = new H2OCountedCompleter() {
-
-      @Override public void compute2() {
-        CMFinal cmResult = UKV.get(cmJob.dest());
-        // Reuse cached results
-        if (cmResult == null) {
-          // Put non-valid CM. This is not properly synchronized
-          DKV.put(cmJob.dest(), CMFinal.make());
-          ConfusionTask cmTask = new ConfusionTask(cmJob, model,modelSize,datakey,classcol,classWt,computeOOB);
-          cmTask.invoke(datakey);
-          cmResult = CMFinal.make(cmTask._matrix, model, cmTask.domain(), cmTask._errorsPerTree, computeOOB);
-          // Overwrite the result
-          CMFinal.updateDKV(cmJob.dest(), cmResult);
+    // Start a new job if CM is not yet computed
+    final Value dummyCMVal = new Value(cmKey, CMFinal.make());
+    final Value val = DKV.DputIfMatch(cmKey, dummyCMVal, null, null);
+    if (val==null) {
+      final CMJob cmJob = new CMJob("CM computation", cmKey, modelSize);
+      // and start a new confusion matrix computation
+      H2OCountedCompleter fjtask = new H2OCountedCompleter() {
+        @Override public void compute2() {
+          ConfusionTask cmTask = new ConfusionTask(cmJob, model, modelSize, datakey, classcol, classWt, computeOOB);
+          cmTask.invoke(datakey); // Invoke and wait for completion
+          // Create final matrix
+          CMFinal cmResult = CMFinal.make(cmTask._matrix, model, cmTask.domain(), cmTask._errorsPerTree, computeOOB);
+          // Atomically overwrite the dummy result
+          // Doing update via atomic is a bad idea since it can be overwritten by DputIfMatch above - CMFinal.updateDKV(cmJob.dest(), cmResult);
+          // Rather do it directly
+          Value oldVal = DKV.DputIfMatch(cmKey, new Value(cmKey, cmResult), dummyCMVal, null);
+          // Be sure that nobody overwrite the value since I am only one writter
+          assert oldVal == dummyCMVal;
+          // Remove this jobs - it already finished or it was useless
+          cmJob.remove();
+          tryComplete();
         }
-        cmJob.remove();
-        tryComplete();
-      }
-
-      @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
-        cmJob.onException(ex);
-        return super.onExceptionalCompletion(ex, caller);
-      }
-    };
-
-    H2O.submitTask(cmJob.start(fjtask));
-
-    return cmJob;
+        @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
+          cmJob.onException(ex);
+          return super.onExceptionalCompletion(ex, caller);
+        }
+      };
+      H2O.submitTask(cmJob.start(fjtask));
+      // FIXME the the job should be invoked asynchronously but for now we block immediately
+      // since we do not store a list of previous jobs
+      cmJob.get();
+      return cmJob;
+    } else {
+      // We should return Job which is/was computing the CM with given cmKey
+      return (CMJob) Job.findJobByDest(cmKey);
+    }
   }
 
   /** Shared init: pre-compute local data for new Confusions, for remote Confusions*/
@@ -452,20 +455,21 @@ public class ConfusionTask extends MRTask {
     final protected long  [] _errorsPerTree;
     final protected boolean  _computedOOB;
     protected boolean        _valid;
+
     private CMFinal() {
-      _valid = false;
-      _rfModelKey = null;
-      _domain = null;
+      _valid         = false;
+      _rfModelKey    = null;
+      _domain        = null;
       _errorsPerTree = null;
-      _computedOOB = false;
+      _computedOOB   = false;
     }
     private CMFinal(CM cm, Key rfModelKey, String[] domain, long[] errorsPerTree, boolean computedOOB, boolean valid) {
       _matrix = cm._matrix; _errors = cm._errors; _rows = cm._rows; _skippedRows = cm._skippedRows;
-      _rfModelKey = rfModelKey;
-      _domain = domain;
+      _rfModelKey    = rfModelKey;
+      _domain        = domain;
       _errorsPerTree = errorsPerTree;
-      _computedOOB = computedOOB;
-      _valid = valid;
+      _computedOOB   = computedOOB;
+      _valid         = valid;
     }
     /** Make non-valid confusion matrix */
     public static final CMFinal make() {
@@ -483,7 +487,9 @@ public class ConfusionTask extends MRTask {
     /** Output information about this RF. */
     public final void report() {
       double err = classError();
-      RFModel model = DKV.get(_rfModelKey).get();
+      assert _valid == true : "Trying to report status of invalid CM!";
+
+      RFModel model = UKV.get(_rfModelKey);
       String s =
             "              Type of random forest: classification\n"
           + "                    Number of trees: " + model.size() + "\n"
