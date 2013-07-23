@@ -6,29 +6,18 @@ import h2o, h2o_cmd, h2o_glm, h2o_hosts
 
 def define_params():
     paramDict = {
-        ## 'x': [0,1,15,33,34],
-        ## 'family': ['poisson'],
+        'standardize': [None, 0,1],
+        'lsm_solver': [None, 'AUTO','ADMM','GenGradient'],
+        'beta_epsilon': [None, 0.0001],
+        'expert': [None, 0, 1],
+        'thresholds': [None, 0.1, 0.5, 0.7, 0.9],
 
         'family': ['binomial'],
         'case_mode': ['>'],
         'case': [20],
-
         'n_folds': [0],
-        'thresholds': [0.1, 0.5, 0.7, 0.9],
-        # 'lambda': [1e-8, 1e-4],
-        # 'alpha': [0,0.5,0.75],
-        # don't use defaults? they have issues?
-        'beta_eps': [0.001, 0.0001],
-        # case_mode not used for poisson?
-        # inverse and log causing problems
-        # 'link': [None, 'logit','identity', 'log', 'inverse'],
-        # don't use defaults? they have issues?
         'max_iter': [9],
         'weight': [None, 1, 2, 4],
-        # new expert stuff
-        'expert': [None,0,1],
-        'lsm_solver': ['ADMM'],
-        'standardize': [None, 0, 1],
 
         }
     return paramDict
@@ -74,7 +63,7 @@ class Basic(unittest.TestCase):
                 'alpha': 0, 
                 # seems we always need a little regularization
                 'lambda': 1e-4,
-                'beta_eps': 0.001, 
+                'beta_epsilon': 0.001, 
                 'max_iter': 8
                 }
 

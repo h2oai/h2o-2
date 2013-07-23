@@ -26,6 +26,7 @@ set -o errexit   ## set -e : exit the script if any statement returns a non-true
   TESTSRC=src/test/java
 SAMPLESRC=src/samples/java
 RESOURCES=src/main/resources
+RSRC=R/h2o-package
 # and this is where the jar contents is stored relative to this file again
 JAR_ROOT=lib
 
@@ -164,6 +165,16 @@ function build_javadoc() {
     "${JAVADOC}" -classpath "${CLASSPATH}" -d "${OUTDIR}"/javadoc -sourcepath "${SRC}" -subpackages hex:water 1> /dev/null 2> /dev/null
 }
 
+function build_rpackage() {
+    echo "creating R package..."
+    if which R > /dev/null; then
+        R CMD build ${RSRC} > /dev/null
+        mv -f h2o_*.tar.gz target
+    else
+        echo "Missing R, please install"
+    fi	
+}
+
 function junit() {
     echo "running JUnit tests..."
     "$JAVA" -ea -cp ${JAR_FILE} water.Boot -mainClass water.JUnitRunner
@@ -179,4 +190,5 @@ build_src_jar
 if [ "$1" = "build" ]; then exit 0; fi
 build_javadoc
 if [ "$1" = "doc" ]; then exit 0; fi
+build_rpackage
 junit

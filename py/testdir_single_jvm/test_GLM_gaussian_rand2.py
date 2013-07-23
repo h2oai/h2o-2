@@ -6,13 +6,18 @@ import h2o, h2o_cmd, h2o_glm, h2o_hosts
 
 def define_params():
     paramDict = {
+        'standardize': [None, 0,1],
+        'lsm_solver': [None, 'AUTO','ADMM','GenGradient'],
+        'beta_epsilon': [None, 0.0001],
+        'expert': [None, 0, 1],
+
+        'thresholds': [None, 0.1, 0.5, 0.7, 0.9],
         'x': [0,1,15,33,34],
         'family': ['gaussian'],
         'n_folds': [2,3,4,9,15],
-        'thresholds': [0.1, 0.5, 0.7, 0.9],
         'lambda': [1e-8, 1e-4],
         'alpha': [0,0.5,0.75],
-        'beta_eps': [None, 0.0001],
+        'beta_epsilon': [None, 0.0001],
         'case': [1,2,3,4,5,6,7],
         # inverse and log causing problems
         # 'link': [None, 'logit','identity', 'log', 'inverse'],

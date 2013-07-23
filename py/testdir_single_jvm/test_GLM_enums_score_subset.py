@@ -100,7 +100,8 @@ class Basic(unittest.TestCase):
             print "Parse result['destination_key']:", parseKey['destination_key']
 
             print "\n" + csvFilename
-            missingValuesDict = h2o_cmd.check_enums_from_inspect(parseKey)
+            (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
+                h2o_cmd.get_column_info_from_inspect(parseKey)
             if missingValuesDict:
                 m = [str(k) + ":" + str(v) for k,v in missingValuesDict.iteritems()]
                 raise Exception("Looks like columns got flipped to NAs: " + ", ".join(m))

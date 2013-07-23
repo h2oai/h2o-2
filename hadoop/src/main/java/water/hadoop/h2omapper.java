@@ -1,10 +1,7 @@
 package water.hadoop;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.Socket;
+import java.io.*;
+import java.net.*;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
@@ -34,6 +31,7 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
     private static void registerEmbeddedH2OConfig(String[] args) {
       String ip = null;
       int port = -1;
+      int mport = -1;
 
       for (int i = 0; i < args.length; i++) {
         if (args[i].equals("-driverip")) {
@@ -44,11 +42,16 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
           i++;
           port = Integer.parseInt(args[i]);
         }
+        else if (args[i].equals("-mapperport")) {
+          i++;
+          mport = Integer.parseInt(args[i]);
+        }
       }
 
       _embeddedH2OConfig = new EmbeddedH2OConfig();
       _embeddedH2OConfig.setDriverCallbackIp(ip);
       _embeddedH2OConfig.setDriverCallbackPort(port);
+      _embeddedH2OConfig.setMapperCallbackPort(mport);
       H2O.setEmbeddedH2OConfig(_embeddedH2OConfig);
     }
 
@@ -86,6 +89,7 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
   private static class EmbeddedH2OConfig extends water.AbstractEmbeddedH2OConfig {
     volatile String _driverCallbackIp;
     volatile int _driverCallbackPort = -1;
+    volatile int _mapperCallbackPort = -1;
     volatile String _embeddedWebServerIp = "(Unknown)";
     volatile int _embeddedWebServerPort = -1;
 
@@ -95,6 +99,10 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
 
     void setDriverCallbackPort(int value) {
       _driverCallbackPort = value;
+    }
+
+    void setMapperCallbackPort(int value) {
+      _mapperCallbackPort = value;
     }
 
     private class BackgroundWriterThread extends Thread {
@@ -170,16 +178,34 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
         BackgroundWriterThread bwt = new BackgroundWriterThread();
         bwt.setMessage(msg);
         bwt.start();
-
-        // Wait one second to deliver the message before exiting.
-        Thread.sleep (1000);
+        System.out.println("EmbeddedH2OConfig: after bwt.start()");
       }
       catch (Exception e) {
-        System.out.println("EmbeddedH2OConfig: exit caught an exception");
+        System.out.println("EmbeddedH2OConfig: exit caught an exception 1");
         e.printStackTrace();
       }
 
-      System.exit(status);
+      try {
+        // Wait one second to deliver the message before exiting.
+        Thread.sleep (1000);
+        Socket s = new Socket("127.0.0.1", _mapperCallbackPort);
+        byte[] b = new byte[1];
+        b[0] = (byte)status;
+        OutputStream os = s.getOutputStream();
+        os.write(b);
+        os.flush();
+        s.close();
+        System.out.println("EmbeddedH2OConfig: after write to mapperCallbackPort");
+
+        Thread.sleep(60 * 1000);
+        // Should never make it this far!
+      }
+      catch (Exception e) {
+        System.out.println("EmbeddedH2OConfig: exit caught an exception 2");
+        e.printStackTrace();
+      }
+
+      System.exit(111);
     }
 
     @Override
@@ -275,10 +301,7 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
     }
   }
 
-  @Override
-  public void run(Context context) throws IOException, InterruptedException {
-    Log.POST(0, "Entered run");
-
+  private int run2(Context context) throws IOException, InterruptedException {
     Configuration conf = context.getConfiguration();
     String mapredTaskId = conf.get("mapred.task.id");
     Text textId = new Text(mapredTaskId);
@@ -295,6 +318,10 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
     context.write(textId, new Text("mapred.local.dir is " + ice_root));
     String driverIp = conf.get(H2O_DRIVER_IP_KEY);
     String driverPortString = conf.get(H2O_DRIVER_PORT_KEY);
+    ServerSocket ss = new ServerSocket();
+    InetSocketAddress sa = new InetSocketAddress("127.0.0.1", 0);
+    ss.bind(sa);
+    String localPortString = Integer.toString(ss.getLocalPort());
 
     String[] args = {
             "-ice_root", ice_root,
@@ -303,6 +330,7 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
             "-name", jobtrackerName,
             "-driverip", driverIp,
             "-driverport", driverPortString,
+            "-mapperport", localPortString,
             "-inherit_log4j"
     };
 
@@ -336,15 +364,55 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
       context.write(textId, new Text("after water.Boot.main()"));
     }
 
-    Log.POST(15, "Entering wait loop");
-    while (true) {
-      int ONE_MINUTE_MILLIS = 60 * 1000;
-      Thread.sleep (ONE_MINUTE_MILLIS);
-//            break;
+    Log.POST(15, "Waiting for exit");
+    // EmbeddedH2OConfig will send a one-byte exit status to this socket.
+    Socket sock = ss.accept();
+    System.out.println("Wait for exit woke up from accept");
+    byte[] b = new byte[1];
+    InputStream is = sock.getInputStream();
+    int expectedBytes = 1;
+    int receivedBytes = 0;
+    while (receivedBytes < expectedBytes) {
+      int n = is.read(b, receivedBytes, expectedBytes-receivedBytes);
+      System.out.println("is.read returned " + n);
+      if (n < 0) {
+        System.exit(112);
+      }
+      receivedBytes += n;
     }
 
-//        Log.POST(1000, "Leaving run");
-//        System.exit (0);
+    int exitStatus = (int)b[0];
+    System.out.println("Received exitStatus " + exitStatus);
+    return exitStatus;
+  }
+
+  @Override
+  public void run(Context context) throws IOException, InterruptedException {
+    try {
+      Log.POST(0, "Entered run");
+
+      setup(context);
+
+      // "Consume" mapped input.
+      while (context.nextKeyValue()) {
+      }
+
+      int exitStatus = run2(context);
+      cleanup(context);
+
+      Log.POST(1000, "Leaving run");
+      System.out.println("Exiting with status " + exitStatus);
+      System.out.flush();
+      if (exitStatus != 0) {
+        System.exit(exitStatus);
+      }
+    }
+    catch (Exception e) {
+      System.exit(100);
+    }
+
+    System.out.println("Exiting mapper run method");
+    System.out.flush();
   }
 
   /**

@@ -1,6 +1,7 @@
 
 build:
 	./build.sh build
+	make -C hadoop
 
 test:
 	./build.sh
@@ -12,4 +13,5 @@ run:
 
 clean:
 	./build.sh clean
+	make -C hadoop clean
 
