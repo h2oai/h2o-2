@@ -104,10 +104,8 @@ public class Frame extends Iced {
   public void remove(Futures fs){
     if(_vecs.length > 0){
       VectorGroup vg = _vecs[0].group();
-      for( Vec v : _vecs ){
-        System.out.println("removing " + v._key);
+      for( Vec v : _vecs )
         UKV.remove(v._key,fs);
-      }
       DKV.remove(vg._key);
     }
     _names = new String[0];
