@@ -297,6 +297,7 @@ def get_column_info_from_inspect(parseKey, **kwargs):
     # trying to see how many enums we get
     # don't print int
     missingValuesDict = {}
+    constantValuesDict = {}
     enumSizeDict = {}
     colNameDict = {}
     colTypeDict = {}
@@ -316,10 +317,13 @@ def get_column_info_from_inspect(parseKey, **kwargs):
             msg += (" num_missing_values: %s" % c['num_missing_values'])
             missingValuesDict[str(i)] = c['num_missing_values']
 
-        if c['type'] != 'int' or c['num_missing_values'] != 0:
-            print msg
+        # if c['type'] != 'int' or c['num_missing_values'] != 0:
+        print msg
 
-    return (missingValuesDict, enumSizeDict, colTypeDict, colNameDict) 
+        if c['min'] == c['max']:
+            constantValuesDict[str(i)] = c['min']
+
+    return (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) 
 
 # looks for the key that matches the pattern, in the keys you saved from the 
 # import (that you saved from import of the folder/s3/hdfs)
