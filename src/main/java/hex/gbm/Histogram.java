@@ -2,6 +2,7 @@ package hex.gbm;
 
 import water.*;
 import water.fvec.Frame;
+import water.fvec.Vec;
 import water.util.Log;
 
 /**
@@ -182,6 +183,15 @@ class Histogram extends Iced implements Cloneable {
       nhists[j] = new Histogram(fr._names[j],_bins[i],min,max,fr._vecs[j]._isInt);
     }
     return nhists;
+  }
+
+  // An initial set of Histograms (one per column) for this column set
+  public static Histogram[] initialHist( Frame fr, int ncols ) {
+    Histogram hists[] = new Histogram[ncols];
+    Vec[] vs = fr._vecs;
+    for( int j=0; j<ncols; j++ )
+      hists[j] = new Histogram(fr._names[j],vs[j].length(),vs[j].min(),vs[j].max(),vs[j]._isInt);
+    return hists;
   }
 
   // "reduce" 'h' into 'this'.  Combine mean & variance using the
