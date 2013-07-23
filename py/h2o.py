@@ -435,8 +435,8 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         stabilize_cloud(node_list[-1], len(node_list), 
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
         verboseprint(len(node_list), "Last added node stabilized in ", time.time()-start, " secs")
-        verboseprint("Built cloud: %d node_list, %d hosts, in %d s" % (len(node_list), 
-            hostCount, (time.time() - start))) 
+        verboseprint("Built cloud: %d nodes on %d hosts, in %d s" % (len(node_list), 
+            hostCount, (time.time() - start)))
 
         # FIX! using "consensus" in node[-1] should mean this is unnecessary?
         # maybe there's a bug. For now do this. long term: don't want?
@@ -629,6 +629,7 @@ def verify_cloud_size():
     
 def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25):
     node.wait_for_node_to_accept_connections(timeoutSecs)
+
     # want node saying cloud = expected size, plus thinking everyone agrees with that.
     def test(n, tries=None):
         c = n.get_cloud()
@@ -643,9 +644,11 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25):
             emsg = "\nH2O didn't include a list of nodes in get_cloud response after initial cloud build"
             raise Exception(emsg)
 
-        print "\nNodes in current cloud:"
-        for ci in c['nodes']:
-            print ci['name']
+        # only print it when you get consensus 
+        if cloud_size!=node_count:
+            verboseprint("\nNodes in cloud while building:")
+            for ci in c['nodes']:
+                verboseprint(ci['name'])
         
         if (cloud_size > node_count):
             emsg = (

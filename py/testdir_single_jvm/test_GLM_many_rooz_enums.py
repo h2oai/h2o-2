@@ -177,7 +177,7 @@ class Basic(unittest.TestCase):
             # We should be able to see the parse result?
             ### inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             print "\n" + csvFilename
-            missingValuesDict = h2o_cmd.check_enums_from_inspect(parseKey)
+            (missingValuesDict, enumSizeDict, colTypeDict, colNameDict) = h2o_cmd.get_column_info_from_inspect(parseKey)
             if missingValuesDict:
                 # we allow some NAs in the list above
                 pass
