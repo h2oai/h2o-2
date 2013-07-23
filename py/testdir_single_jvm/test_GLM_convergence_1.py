@@ -86,15 +86,11 @@ class Basic(unittest.TestCase):
             kwargs = {
                     'max_iter': 10, 
                     'lambda': 1e-8,
-                    # alpha=1 is slower?
                     'alpha': 0.5,
-                    # weight for true (1). 
                     'weight': 1.0,
                     'link': 'familyDefault',
-                    # what about these?
-                    # 'link': [None, 'logit','identity', 'log', 'inverse'],
                     'n_folds': 0,
-                    'beta_eps': 1e-4,
+                    'beta_epsilon': 1e-4,
                     'thresholds': '0:1:0.01',
                     }
 

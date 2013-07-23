@@ -7,20 +7,18 @@ import h2o, h2o_cmd, h2o_hosts, h2o_glm
 
 def define_params():
     paramDict = {
+        'standardize': [None, 0,1],
+        'lsm_solver': [None, 'AUTO','ADMM','GenGradient'],
+        'beta_epsilon': [None, 0.0001],
+        'expert': [None, 0, 1],
         'family': [None, 'gaussian', 'binomial', 'poisson'],
-        'thresholds': [0.1, 0.5, 0.7, 0.9],
+        'thresholds': [None, 0.1, 0.5, 0.7, 0.9],
         # seem to get zero coeffs with lamba=1 case=7
         # just keep the range smaller for this dataset
         'lambda': [0,1e-8,1e-4,1e-3],
         'alpha': [0,0.8,0.75],
-        # new?
-        'beta_eps': [None, 0.0001],
         # eliminate case=7 because it's so rare, especially with cross validation
         'case': [1,2,3,4,5,6],
-        # inverse and log causing problems
-        # 'link': [None, 'logit','identity', 'log', 'inverse'],
-        # 'link': [None, 'logit','identity'],
-        # This is the new name? fine, we don't care for old or old testing (maxIter?)
         'max_iter': [None, 10],
         'weight': [None, 1, 2, 4],
         }

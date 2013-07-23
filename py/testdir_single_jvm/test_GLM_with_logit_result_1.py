@@ -128,14 +128,14 @@ class Basic(unittest.TestCase):
             print "\n" + csvFilename
 
             y = colCount
-            kwargs = {'y': y, 'max_iter': 60, 
+            kwargs = {
+                    'y': y, 
+                    'max_iter': 60, 
                     'lambda': 1e-4,
                     'alpha': 0,
                     'weight': 1.0,
-                    # what about these?
-                    # 'link': [None, 'logit','identity', 'log', 'inverse'],
                     'n_folds': 3,
-                    'beta_eps': 1e-4,
+                    'beta_epsilon': 1e-4,
                     'thresholds': 0.5,
                     }
 

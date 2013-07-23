@@ -126,7 +126,7 @@ class Basic(unittest.TestCase):
                     'thresholds': 0.5,
                     'n_folds': 1,
                     'weight': 100,
-                    'beta_eps': 1.0E-4,
+                    'beta_epsilon': 1.0E-4,
                     }
 
                 timeoutSecs = 1800

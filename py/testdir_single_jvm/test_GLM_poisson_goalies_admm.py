@@ -8,25 +8,19 @@ def define_params():
 
     print "Always using standardize=1. Unable to solve sometimes if not?"
     paramDict = {
-        ## 'x': [0,1,15,33,34],
+        'standardize': [1],
+        'lsm_solver': [None, 'AUTO','ADMM','GenGradient'],
+        'beta_epsilon': [None, 0.0001],
+        'expert': [None, 0, 1],
+        'family': [None, 'gaussian', 'binomial', 'poisson'],
+        'thresholds': [None, 0.1, 0.5, 0.7, 0.9],
         'family': ['poisson'],
         'n_folds': [1],
         'thresholds': [0.5],
         'lambda': [0,1e-8],
         'alpha': [0],
-        # don't use defaults? they have issues?
-        'beta_eps': [0.001, 0.0001],
-        # case_mode not used for poisson?
-        # inverse and log causing problems
-        # 'link': [None, 'logit','identity', 'log', 'inverse'],
-        # don't use defaults? they have issues?
         'max_iter': [3],
         'weight': [None, 1, 2, 4],
-        # new expert stuff
-        'expert': [None,0,1],
-        'lsm_solver': ['ADMM'],
-        'standardize': [1],
-
         }
     return paramDict
 
@@ -64,7 +58,7 @@ class Basic(unittest.TestCase):
                 'alpha': 0.0,
                 # 'lambda': 1e-8,
                 'lambda': 0,
-                'beta_eps': 0.001,
+                'beta_epsilon': 0.001,
                 'max_iter': 3,
                 'standardize': 1,
                 'expert': 1,

@@ -199,7 +199,7 @@ class Basic(unittest.TestCase):
             kwargs = { 'n_folds': 0, 'y': y, 'x': x,
                 'family': family, 'link': 'familyDefault',
                 'alpha': 0, 'lambda': 0, 'case_mode': '=', 'case': 1,
-                'beta_eps': 1.0E-4, 'max_iter': 50 }
+                'beta_epsilon': 1.0E-4, 'max_iter': 50 }
 
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)

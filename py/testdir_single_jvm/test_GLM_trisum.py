@@ -12,9 +12,8 @@ def define_params():
         'max_iter': [2000],
         'weight': [1.0],
         'thresholds': [0.5],
-        # 'link': [familyDefault],
         'n_folds': [1],
-        'beta_eps': [1.0E-4],
+        'beta_epsilon': [1.0E-4],
         }
     return paramDict
 
