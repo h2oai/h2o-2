@@ -49,11 +49,16 @@ class Basic(unittest.TestCase):
             # We should be able to see the parse result?
             ### inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             print "\n" + csvFilename
-            (missingValuesDict, enumSizeDict, colTypeDict, colNameDict) = h2o_cmd.get_column_info_from_inspect(parseKey, timeoutSecs=300)
+            (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
+                h2o_cmd.get_column_info_from_inspect(parseKey, timeoutSecs=300)
+
             if missingValuesDict:
                 print len(missingValuesDict), "columns with missing values"
                 ### m = [str(k) + ":" + str(v) for k,v in missingValuesDict.iteritems()]
                 ### raise Exception("Looks like columns got flipped to NAs: " + ", ".join(m))
+
+            if constantValuesDict:
+                print len(constantValuesDict), "columns with constant values"
 
             print "\n" + csvPathname, \
                 "    num_rows:", "{:,}".format(num_rows), \
@@ -64,34 +69,44 @@ class Basic(unittest.TestCase):
                 y = "is_purchase"
 
                 x = range(maxx)
-                # this is extra pruning
-                if 1==1: 
-                    # remove all cols with missing values
-                    for m in missingValuesDict:
-                        if int(m) < maxx:
-                            name = colNameDict[m]
-                            print "Removing %s %s because it has missing values" % (m, name)
-                            x.remove(int(m))
-                    # remove all cols with enums, if not already removed
-                    for e in enumSizeDict:
-                        if e not in missingValuesDict: # we would have already removed it
-                            if int(e) < maxx:
-                                name = colNameDict[e]
-                                print "Removing %s %s because it has enums" % (e, name)
-                                x.remove(int(e))
-
+                xOrig = x[:]
                 # now remove any whose names don't match the required pattern
                 pattern = "oly_|mt_|b_"
                 keepX = re.compile(pattern)
-                for i in x:
-                    name = colNameDict[str(i)]
+                # need to walk over a copy, cause we change x
+                for i in xOrig:
+                    iStr = str(i)
+                    if i == 5:
+                        print "hello", colNameDict[iStr], iStr
+                    name = colNameDict[iStr]
                     # remove it if it has the same name as the y output
                     if name == y:
-                        print "Removing %s because name: %s matches output %s" % (i, name, y)
+                        print "Removing %s because name: %s matches output %s" % (iStr, name, y)
                         x.remove(i)
+
                     elif not keepX.match(name):
-                        print "Removing %s because name: %s doesn't match desired pattern %s" % (i, name, pattern)
+                        print "Removing %s because name: %s doesn't match desired pattern %s" % (iStr, name, pattern)
                         x.remove(i)
+
+                    elif iStr in constantValuesDict:
+                        value = constantValuesDict[iStr]
+                        print "Removing %s with name: %s because it has constant value: %s " % (iStr, name, str(value))
+                        x.remove(i)
+
+                    # remove all cols with missing values
+                    # could change it against num_rows for a ratio
+                    elif iStr in missingValuesDict:
+                        value = missingValuesDict[iStr]
+                        print "Removing %s with name: %s because it has %d missing values" % (iStr, name, value)
+                        x.remove(i)
+
+                    # this is extra pruning..
+                    # remove all cols with enums, if not already removed
+                    elif iStr in enumSizeDict:
+                        value = enumSizeDict[k]
+                        print "Removing %s %s because it has enums of size: %d" % (iStr, name, value)
+                        x.remove(i)
+
 
                 print "The pruned x has length", len(x)
                 x = ",".join(map(str,x))
@@ -107,13 +122,20 @@ class Basic(unittest.TestCase):
                     'family': 'binomial',
                     'lambda': 1.0E-5,
                     'alpha': 0.5,
-                    'max_iter': 10,
+                    'max_iter': 5,
                     'thresholds': 0.5,
                     'n_folds': 1,
+                    'weight': 100,
                     'beta_eps': 1.0E-4,
                     }
 
-                glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=3600, pollTimeoutsecs=60, **kwargs)
+                timeoutSecs = 1800
+                start = time.time()
+                glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutsecs=60, **kwargs)
+                elapsed = time.time() - start
+                print "glm completed in", elapsed, "seconds.", \
+                    "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+
                 h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
 
