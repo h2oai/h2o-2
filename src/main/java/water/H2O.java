@@ -28,6 +28,7 @@ import com.google.common.io.Closeables;
 */
 public final class H2O {
   public static volatile AbstractEmbeddedH2OConfig embeddedH2OConfig;
+  public static volatile ApiIpPortWatchdogThread apiIpPortWatchdog;
 
   static boolean _hdfsActive = false;
 
@@ -114,6 +115,11 @@ public final class H2O {
     // another software instance (e.g. a Hadoop mapper task).
     //
     // Expect embeddedH2OConfig to be null if H2O is run standalone.
+
+    // Cleanly shutdown internal H2O services.
+    if (apiIpPortWatchdog != null) {
+      apiIpPortWatchdog.shutdown();
+    }
 
     if (embeddedH2OConfig == null) {
       // Standalone H2O path.
@@ -866,7 +872,8 @@ public final class H2O {
    * DHCP assigns them a new IP address.
    */
   private static void startApiIpPortWatchdog() {
-    new ApiIpPortWatchdogThread().start();
+    apiIpPortWatchdog = new ApiIpPortWatchdogThread();
+    apiIpPortWatchdog.start();
   }
 
   // Used to update the Throwable detailMessage field.
@@ -1432,7 +1439,6 @@ public final class H2O {
 
     // Exit this watchdog thread.
     public void shutdown() {
-      Log.debug (threadName + ": Graceful shutdown requested");
       gracefulShutdownInitiated = true;
     }
 
@@ -1532,13 +1538,10 @@ public final class H2O {
 
       while (true) {
         mySleep (sleepMillis);
+        if (gracefulShutdownInitiated) { break; }
         check();
-        if (gracefulShutdownInitiated) {
-          break;
-        }
+        if (gracefulShutdownInitiated) { break; }
       }
-
-      Log.debug (threadName + ": Thread run() exited");
     }
   }
 }
