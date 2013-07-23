@@ -57,7 +57,10 @@ class Basic(unittest.TestCase):
         importFolderPath = os.path.abspath(SYNDATASETS_DIR)
         print "\nimportFolderPath:", importFolderPath
         csvFilenameList = [
-            ("*_syn.csv.gz", "syn_all.csv", maxFilenum * avgFileSize, 1200),
+            # try one thousand files first
+            ("*[1][0-9][0-9][0-9]_syn.csv.gz", "syn_all.1000.csv", maxFilenum * avgFileSize, 1200),
+            # try two thousand
+            ("*[1-2][0-9][0-9][0-9]_syn.csv.gz", "syn_all.2000.csv", maxFilenum * avgFileSize, 1200),
             ]
 
         trialMax = 1
