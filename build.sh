@@ -166,9 +166,10 @@ function build_javadoc() {
 }
 
 function build_rpackage() {
-	echo "creating R package..."
+    echo "creating R package..."
     if which R > /dev/null; then
-        R CMD build ${RSRC}
+        R CMD build ${RSRC} > /dev/null
+        mv -f h2o_*.tar.gz target
     else
         echo "Missing R, please install"
     fi	
