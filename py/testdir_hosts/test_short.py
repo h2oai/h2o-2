@@ -122,13 +122,20 @@ class Basic(unittest.TestCase):
                     'family': 'binomial',
                     'lambda': 1.0E-5,
                     'alpha': 0.5,
-                    'max_iter': 10,
+                    'max_iter': 2,
                     'thresholds': 0.5,
                     'n_folds': 1,
+                    'weight': 100,
                     'beta_eps': 1.0E-4,
                     }
 
-                glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=3600, pollTimeoutsecs=60, **kwargs)
+                timeoutSecs = 1800
+                start = time.time()
+                glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutsecs=60, **kwargs)
+                elapsed = time.time() - start
+                print "glm completed in", elapsed, "seconds.", \
+                    "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+
                 h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
 
