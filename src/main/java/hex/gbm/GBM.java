@@ -42,13 +42,11 @@ public class GBM extends Job {
 
     // Response column is the last one in the frame
     Vec vresponse = vs[ncols];
+    final long nrows = vresponse.length();
 
     // Make a new Vec to hold the split-number for each row (initially all zero).
     Vec vnids = Vec.makeZero(vs[0]);
     fr.add("NIDs",vnids);
-    // Make a new Vec to hold the prediction value for each row
-    Vec vpred  = Vec.makeZero(vs[0]);
-    fr.add("Predictions",vpred);
 
     // Initially setup as-if an empty-split had just happened
     Tree tree = new Tree();
@@ -60,23 +58,22 @@ public class GBM extends Job {
     // Adds a layer to the tree each pass.
     for( int depth=0; depth<maxDepth; depth++ ) {
 
-      // Fuse 3 conceptual passes into 1 pass:
+      // Fuse 2 conceptual passes into one:
       // Pass 1: Score a prior Histogram, and make new Tree.Node assignments to
       // every row.  This involves pulling out the current assigned Node,
       // "scoring" the row against that Node's decision criteria, and assigning
       // the row to a new child Node (and giving it an improved prediction).
-      // Pass 2: Score and compute errors for every row, based on their new
-      // Node assignment.  Report the prediction errors.
       // Pass 3: Build new summary Histograms on the new child Nodes every row
       // got assigned into.  Collect counts, mean, variance, min, max per bin,
       // per column.
       ScoreBuildHistogram sbh = new ScoreBuildHistogram(tree,leaf,ncols).doAll(fr);
-      CalcError.report( sbh._sum, sbh._err, vpred.length(), tree._len, depth );
 
       // Reassign the new Histogram back into the Tree
       final int tmax = tree._len; // Number of total splits
       for( int i=leaf; i<tmax; i++ )
         tree.n(i)._hs = sbh._hcs[i-leaf];
+      
+      //new BulkScore(tree).doAll(fr).report( nrows, depth );
 
       // Build up the next-generation tree splits from the current histograms.
       // Nearly all leaves will split one more level.  This loop nest is
@@ -85,15 +82,15 @@ public class GBM extends Job {
       for( ; leaf<tmax; leaf++ )
         pickSplits(tree, tree.n(leaf), fr, ncols);
     }
-
-    // One more pass for final prediction error
-    CalcError ce = new CalcError().doAll(vresponse,vpred);
-    CalcError.report( ce._sum, ce._err, vpred.length(), tree._len, maxDepth );
     Log.info(Sys.GBM__,"GBM done in "+t_gbm);
 
-    // Remove temp vectors; cleanup the Frame
-    UKV.remove(fr.remove("NIDs"       )._key);
-    UKV.remove(fr.remove("Predictions")._key);
+    // One more pass for final prediction error
+    Timer t_score = new Timer();
+    new BulkScore(tree).doAll(fr).report( nrows, maxDepth );
+    Log.info(Sys.GBM__,"GBM score done in "+t_score);
+
+    // Remove temp vector; cleanup the Frame
+    UKV.remove(fr.remove("NIDs")._key);
   }
 
   // --------------------------------------------------------------------------
@@ -127,30 +124,7 @@ public class GBM extends Job {
   }
 
   // --------------------------------------------------------------------------
-  // Compute sum-squared-error.  Should use the recursive-mean technique.
-  private static class CalcError extends MRTask2<CalcError> {
-    double _sum;
-    long _err;
-    @Override public void map( Chunk ys, Chunk preds ) {
-      for( int i=0; i<ys._len; i++ ) {
-        assert !ys.isNA0(i);
-        double y    = ys   .at0(i);
-        double pred = preds.at0(i);
-        _sum += (y-pred)*(y-pred);
-        if( (int)y != (int)(pred+0.5) ) _err++;
-      }
-    }
-    @Override public void reduce( CalcError t ) { _sum += t._sum; _err += t._err; }
-
-    static public void report( double sumsqr, long err, long nrows, int tlen, int depth ) {
-      Log.info(Sys.GBM__,"============================================================== ");
-      Log.info(Sys.GBM__,"Average squared prediction error for tree of depth "+depth+" is "+(sumsqr/nrows));
-      Log.info(Sys.GBM__,"Total of "+err+" errors on "+nrows+" rows, with "+tlen+" nodes");
-    }
-  }
-
-  // --------------------------------------------------------------------------
-  // Fuse 3 conceptual passes into 1 pass:
+  // Fuse 2 conceptual passes into one:
   //
   // Pass 1: Score a prior Histogram, and make new Tree.Node assignments to
   //         every row.  This involves pulling out the current assigned Node,
@@ -158,10 +132,7 @@ public class GBM extends Job {
   //         assigning the row to a new child Node (and giving it an improved
   //         prediction).
   //
-  // Pass 2: Score and compute errors for every row, based on their new Node
-  //         assignment.  Report the prediction errors.
-  //
-  // Pass 3: Build new summary Histograms on the new child Nodes every row got
+  // Pass 2: Build new summary Histograms on the new child Nodes every row got
   //         assigned into.  Collect counts, mean, variance, min, max per bin,
   //         per column.
   //
@@ -177,44 +148,31 @@ public class GBM extends Job {
     final int _ncols;
     final int _leaf;
     Histogram _hcs[][];         // Output: histograms-per-nid-per-column
-    double _sum;                // Output: sum of squared errors
-    long _err;                  // Output: classification errors
     ScoreBuildHistogram(Tree tree, int leaf, int ncols) { _tree=tree; _leaf=leaf; _ncols=ncols; }
 
     @Override public void map( Chunk[] chks ) {
-      Chunk preds = chks[chks.length-1];
-      Chunk nids  = chks[chks.length-2];
-      Chunk ys    = chks[chks.length-3];
+      Chunk nids  = chks[chks.length-1];
+      Chunk ys    = chks[chks.length-2];
 
       // We need private (local) space to gather the histograms.
       // Make local clones of all the histograms that appear in this chunk.
       _hcs = new Histogram[_tree._len-_leaf][]; // A leaf-biased array of all active histograms
 
-      // Pass 1, 2 & 3
+      // Pass 1 & 2
       for( int i=0; i<nids._len; i++ ) {
         int nid = (int)nids.at80(i);       // Get Tree.Node to decide from
         if( nid==-1 ) continue;            // row already predicts perfectly
 
         // Pass 1: Score row against current decisions & assign new split
-        Tree.Node node = _tree.n(nid);     // This row is being split in Tree t
-        double d = chks[node._col].at0(i); // Value to split on for this row
-        int bin = node._hs[node._col].bin(d); // Bin in the histogram in the tree
-        double pred;
-        if( _leaf > 0 ) {                       // Prior pass exists?
-          pred = node._hs[node._col].mean(bin); // Current prediction
+        if( _leaf > 0 ) {                // Prior pass exists?
+          Tree.Node node = _tree.n(nid); // This row is being split in Tree t
+          double d = chks[node._col].at0(i); // Value to split on for this row
+          int bin = node._hs[node._col].bin(d); // Bin in the histogram in the tree
           nid = node._ns[bin];                  // Tree.Node split
-          nids .set80(i,nid);  // Save the new split# for this row
-          preds.set80(i,pred); // Save the new prediction also
-        } else {               // No prior pass: predict response variable mean
-          pred = 0; /*ys._mean;*/
+          nids .set80(i,nid);   // Save the new split# for this row
         }
-        // Pass 2
-        assert !ys.isNA0(i);       // Not expecting missing response variable
-        double y = ys.at0(i);      // Response variable
-        _sum += (y-pred)*(y-pred); // Regression error
-        if( (int)y != (int)(pred+0.5) ) _err++;
 
-        // Pass 2.9
+        // Pass 1.9
         if( nid==-1 ) continue;         // row already predicts perfectly
         // We need private (local) space to gather the histograms.
         // Make local clones of all the histograms that appear in this chunk.
@@ -227,8 +185,9 @@ public class GBM extends Job {
               nhs[j] = ohs[j].copy();
         }
 
-        // Pass 3
+        // Pass 2
         // Bump the local histogram counts
+        double y = ys.at0(i);
         for( int j=0; j<_ncols; j++) // For all columns
           if( nhs[j] != null ) // Some columns are ignored, since already split to death
             nhs[j].incr(chks[j].at0(i),y);
@@ -236,8 +195,6 @@ public class GBM extends Job {
     }
 
     @Override public void reduce( ScoreBuildHistogram sbh ) {
-      _sum += sbh._sum;         // Accumulate errors for pass 2
-      _err += sbh._err;         // Accumulate errors for pass 2
       // Merge histograms
       for( int i=0; i<_hcs.length; i++ ) {
         Histogram hs1[] = _hcs[i], hs2[] = sbh._hcs[i];
@@ -248,6 +205,48 @@ public class GBM extends Job {
             else if( hs2[j] != null )
               hs1[j].add(hs2[j]);
       }
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Compute sum-squared-error.  Should use the recursive-mean technique.
+  private static class BulkScore extends MRTask2<BulkScore> {
+    final Tree _tree; // Read-only, shared (except at the histograms in the Tree.Nodes)
+    double _sum;
+    long _err;
+    BulkScore( Tree tree ) { _tree = tree; }
+    @Override public void map( Chunk chks[] ) {
+      Chunk ys = chks[chks.length-2];
+      for( int i=0; i<ys._len; i++ ) {
+        double y    = ys.at0(i);
+        double pred = score0( chks, i );
+        _sum += (y-pred)*(y-pred);
+        if( (int)y != (int)(pred+0.5) ) _err++;
+      }
+    }
+    @Override public void reduce( BulkScore t ) { _sum += t._sum; _err += t._err; }
+
+    private double score0( Chunk chks[], int i ) {
+      int nid=0;                // Root nid
+      double pred=Double.NaN;   // Current prediction
+      while( true ) {           // Tree walk
+        Tree.Node node = _tree.n(nid);     // This Tree Node
+        Histogram h = node._hs[node._col]; // Chosen histogram
+        if( h == null ) break;             // Not available yet
+        double d = chks[node._col].at0(i); // Value to split on for this row
+        int bin = h.bin(d);                // Bin in the histogram in the tree
+        pred = h.mean(bin);                // Current prediction
+        if( node._ns == null ) break;      // No next decision available
+        nid = node._ns[bin];               // Next Tree.Node
+        if( nid == -1 ) break;             // Did not split again this bin
+      }
+      return pred;
+    }
+
+    public void report( long nrows, int depth ) {
+      Log.info(Sys.GBM__,"============================================================== ");
+      Log.info(Sys.GBM__,"Average squared prediction error for tree of depth "+depth+" is "+(_sum/nrows));
+      Log.info(Sys.GBM__,"Total of "+_err+" errors on "+nrows+" rows, with "+_tree._len+" nodes");
     }
   }
 }
