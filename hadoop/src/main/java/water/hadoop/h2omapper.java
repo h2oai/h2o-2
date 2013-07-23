@@ -178,7 +178,14 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
         BackgroundWriterThread bwt = new BackgroundWriterThread();
         bwt.setMessage(msg);
         bwt.start();
+        System.out.println("EmbeddedH2OConfig: after bwt.start()");
+      }
+      catch (Exception e) {
+        System.out.println("EmbeddedH2OConfig: exit caught an exception 1");
+        e.printStackTrace();
+      }
 
+      try {
         // Wait one second to deliver the message before exiting.
         Thread.sleep (1000);
         Socket s = new Socket("127.0.0.1", _mapperCallbackPort);
@@ -188,12 +195,13 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
         os.write(b);
         os.flush();
         s.close();
+        System.out.println("EmbeddedH2OConfig: after write to mapperCallbackPort");
 
-        Thread.sleep(10 * 000);
+        Thread.sleep(60 * 1000);
         // Should never make it this far!
       }
       catch (Exception e) {
-        System.out.println("EmbeddedH2OConfig: exit caught an exception");
+        System.out.println("EmbeddedH2OConfig: exit caught an exception 2");
         e.printStackTrace();
       }
 
@@ -293,10 +301,7 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
     }
   }
 
-  @Override
-  public void run(Context context) throws IOException, InterruptedException {
-    Log.POST(0, "Entered run");
-
+  private int run2(Context context) throws IOException, InterruptedException {
     Configuration conf = context.getConfiguration();
     String mapredTaskId = conf.get("mapred.task.id");
     Text textId = new Text(mapredTaskId);
@@ -359,14 +364,17 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
       context.write(textId, new Text("after water.Boot.main()"));
     }
 
-    Log.POST(15, "Entering wait loop");
+    Log.POST(15, "Waiting for exit");
+    // EmbeddedH2OConfig will send a one-byte exit status to this socket.
     Socket sock = ss.accept();
+    System.out.println("Wait for exit woke up from accept");
     byte[] b = new byte[1];
     InputStream is = sock.getInputStream();
     int expectedBytes = 1;
     int receivedBytes = 0;
     while (receivedBytes < expectedBytes) {
-      int n = is.read(b, 0, 0);
+      int n = is.read(b, receivedBytes, expectedBytes-receivedBytes);
+      System.out.println("is.read returned " + n);
       if (n < 0) {
         System.exit(112);
       }
@@ -374,7 +382,37 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
     }
 
     int exitStatus = (int)b[0];
-    System.exit(exitStatus);
+    System.out.println("Received exitStatus " + exitStatus);
+    return exitStatus;
+  }
+
+  @Override
+  public void run(Context context) throws IOException, InterruptedException {
+    try {
+      Log.POST(0, "Entered run");
+
+      setup(context);
+
+      // "Consume" mapped input.
+      while (context.nextKeyValue()) {
+      }
+
+      int exitStatus = run2(context);
+      cleanup(context);
+
+      Log.POST(1000, "Leaving run");
+      System.out.println("Exiting with status " + exitStatus);
+      System.out.flush();
+      if (exitStatus != 0) {
+        System.exit(exitStatus);
+      }
+    }
+    catch (Exception e) {
+      System.exit(100);
+    }
+
+    System.out.println("Exiting mapper run method");
+    System.out.flush();
   }
 
   /**
