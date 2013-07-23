@@ -133,8 +133,7 @@ class Basic(unittest.TestCase):
 
                 # BUG here?
                 if not noPoll:
-                    # We should be able to see the parse result?
-                    h2o_cmd.check_enums_from_inspect(parseKey)
+                    h2o_cmd.get_column_info_from_inspect(parseKey)
                         
                 print "\n" + csvFilepattern
 
