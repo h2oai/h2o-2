@@ -59,7 +59,7 @@ class Basic(unittest.TestCase):
                 "    num_rows:", "{:,}".format(num_rows), \
                 "    num_cols:", "{:,}".format(num_cols)
 
-            for maxx in [400]:
+            for maxx in [num_cols]:
                 # don't have a quick reverse mapping for col number, but this will work
                 y = "is_purchase"
 
@@ -101,19 +101,19 @@ class Basic(unittest.TestCase):
 
                 kwargs = {
                     'x': x, 
-                    'y':  y,
+                    'y': y,
                     # 'case_mode': '>',
                     # 'case': 0,
-                    'family': ['gaussian'],
-                    'lambda': [1.0E-5],
-                    'alpha': [0.5],
-                    'max_iter': [10],
-                    'thresholds': [0.5],
-                    'n_folds': [1],
-                    'beta_eps': [1.0E-4],
+                    'family': 'binomial',
+                    'lambda': 1.0E-5,
+                    'alpha': 0.5,
+                    'max_iter': 10,
+                    'thresholds': 0.5,
+                    'n_folds': 1,
+                    'beta_eps': 1.0E-4,
                     }
 
-                glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=15, **kwargs)
+                glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=3600, pollTimeoutsecs=60, **kwargs)
                 h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
 
