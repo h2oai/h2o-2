@@ -9,20 +9,20 @@ public abstract class LR2 {
   public static JsonObject run( Vec X, Vec Y ) {
     // Pass 1: compute sums & sums-of-squares
     long start = System.currentTimeMillis();
-    CalcSumsTask lr1 = new CalcSumsTask().invoke(X,Y);
+    CalcSumsTask lr1 = new CalcSumsTask().doAll(X,Y);
     long pass1 = System.currentTimeMillis();
     final long n = lr1._n;
 
     // Pass 2: Compute squared errors
     final double meanX = lr1._sumX/n;
     final double meanY = lr1._sumY/n;
-    CalcSquareErrorsTasks lr2 = new CalcSquareErrorsTasks(meanX, meanY).invoke(X,Y);
+    CalcSquareErrorsTasks lr2 = new CalcSquareErrorsTasks(meanX, meanY).doAll(X,Y);
     long pass2 = System.currentTimeMillis();
 
     // Compute the regression
     double beta1 = lr2._XYbar / lr2._XXbar;
     double beta0 = meanY - beta1 * meanX;
-    CalcRegressionTask lr3 = new CalcRegressionTask(beta0,beta1,meanY).invoke(X,Y);
+    CalcRegressionTask lr3 = new CalcRegressionTask(beta0,beta1,meanY).doAll(X,Y);
     long pass3 = System.currentTimeMillis();
 
     long df = n - 2;
