@@ -74,7 +74,7 @@ public class AppendableVec extends Vec {
     // Compute #chunks
     int nchunk = _espc.length;
     while( nchunk > 0 && _espc[nchunk-1] == 0 ) nchunk--;
-
+    DKV.remove(chunkKey(nchunk)); // remove potential trailing key
     // Compute elems-per-chunk.
     // Roll-up elem counts, so espc[i] is the starting element# of chunk i.
     // TODO: Complete fail: loads all data locally - will force OOM.  Needs to be

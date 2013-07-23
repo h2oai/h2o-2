@@ -35,7 +35,7 @@ public class Vec extends Iced {
   // min/max/mean lazily computed.
   double _min, _max;
 
-  // Base datatype of the entire column.  
+  // Base datatype of the entire column.
   // Decided on when we close an AppendableVec.
   // U - Unknown (or empty)
   // I - Integer/Long
@@ -131,7 +131,7 @@ public class Vec extends Iced {
       else                 lo = mid;
     }
     if(res != lo)
-      assert(res == lo):res + " != " + lo;
+      assert(res == lo):res + " != " + lo + ", i = " + i + ", espc = " + Arrays.toString(_espc);
     return lo;
   }
 
@@ -278,7 +278,7 @@ public class Vec extends Iced {
    * Group of each vector can be retrieved by calling group() method;
    *
    * The expected mode of operation is that user wants to add new vectors matching the source.
-   * E.g. parse creates several vectors (on for each column) which are all colocated and are
+   * E.g. parse creates several vectors (one for each column) which are all colocated and are
    * colocated with the original bytevector.
    *
    * To do this, user should first ask for the set of keys for the new vectors by calling addVecs method on the

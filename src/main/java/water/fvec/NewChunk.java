@@ -142,8 +142,10 @@ public class NewChunk extends Chunk {
 
     // Constant column?
     if( _min==_max ) {
-      if( xmin < 0 ) throw H2O.unimpl();
-      return new C0LChunk((long)_min,_len);
+      return ((long)_min  == _min)
+          ?new C0LChunk((long)_min,_len)
+          :new C0DChunk(_min, _len);
+
     }
 
     // Boolean column? (or in general two value column)
@@ -174,9 +176,8 @@ public class NewChunk extends Chunk {
         return new C2SChunk( bufX(lemin,xmin,C2SChunk.OFF,1),(int)lemin,DParseTask.pow10(xmin));
       return new C4FChunk( bufF(2));
     }
-
     // Compress column into a byte
-    if( 0<=lemin && lemax <= 255 && _naCnt==0 )
+    if( 0<=lemin && lemax <= 255 && ((_naCnt + _strCnt)==0) )
       return new C1NChunk( bufX(0,0,C1NChunk.OFF,0));
     if( lemax-lemin < 255 ) {         // Span fits in a byte?
       if( 0 <= lemin && lemax < 255 ) // Span fits in an unbiased byte?
