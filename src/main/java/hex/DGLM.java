@@ -630,11 +630,11 @@ public abstract class DGLM {
     }
 
     public final boolean hasNaNsOrInfs() {
-      for( int i = 0; i < _xx.length; ++i ) {
+      for( int i = 0; i < _xy.length; ++i )
         if( Double.isInfinite(_xy[i]) || Double.isNaN(_xy[i]) ) return true;
+      for( int i = 0; i < _xx.length; ++i )
         for( int j = 0; j < _xx[i].length; ++j )
           if( Double.isInfinite(_xx[i][j]) || Double.isNaN(_xx[i][j]) ) return true;
-      }
       for( double d : _diag )
         if( Double.isInfinite(d) || Double.isNaN(d) ) return true;
       return false;
@@ -1584,7 +1584,6 @@ public abstract class DGLM {
     H2O.submitTask(job.start(fjtask));
     return job;
   }
-
   public static GLMModel buildModel(Job job, Key resKey, DataFrame data, LSMSolver lsm, GLMParams params,
       double[] oldBeta, int xval, boolean parallel) throws JobCancelledException {
     GLMModel currentModel = null;
