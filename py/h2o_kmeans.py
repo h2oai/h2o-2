@@ -45,12 +45,14 @@ def bigCheckResults(self, kmeans, csvPathname, parseKey, applyDestinationKey, **
     rows_per_cluster = score['rows_per_cluster']
     sqr_error_per_cluster = score['sqr_error_per_cluster']
 
+    tupleResultList = []
     for i,c in enumerate(centers):
         print "\ncenters["+str(i)+"]: ", centers[i]
         print "rows_per_cluster["+str(i)+"]: ", rows_per_cluster[i]
         print "sqr_error_per_cluster["+str(i)+"]: ", sqr_error_per_cluster[i]
+        tupleResultList.append( (centers[i], rows_per_cluster[i], sqr_error_per_cluster[i]) )
 
-    return centers
+    return (centers, tupleResultList)
 
 
 # compare this clusters to last one. since the files are concatenations, 
