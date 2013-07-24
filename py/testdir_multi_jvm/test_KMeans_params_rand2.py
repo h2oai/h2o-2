@@ -6,12 +6,17 @@ import json
 import h2o, h2o_cmd, h2o_hosts
 import h2o_kmeans, h2o_import as h2i
 
-def define_params():
+def define_params(SEED):
     print "Restricting epsilon to 1e-6 and up. Too slow otherwise and no stopping condition?"
     paramDict = {
         'k': [2, 5], # seems two slow tih 12 clusters if all cols
         'epsilon': [1e-6, 1e-2, 1, 10],
         'cols': [None, "0", "3", "0,1,2,3,4,5,6"],
+        'max_iter': [None, 0, 1, 5, 10],
+        'seed': [None, 12345678, SEED],
+        'normalize': [None, 0, 1],
+        # 'destination_key:': "junk",
+        
         }
     return paramDict
 
@@ -57,19 +62,14 @@ class Basic(unittest.TestCase):
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \
                 "    num_cols:", "{:,}".format(inspect['num_cols'])
 
-            paramDict = define_params()
+            paramDict = define_params(SEED)
             for trial in range(3):
-                randomV = paramDict['k']
-                k = random.choice(randomV)
+                # default
+                params = {'k': 1, 'destination_key': csvFilename + "_" + str(trial) + '.hex'}
 
-                randomV = paramDict['epsilon']
-                epsilon = random.choice(randomV)
+                h2o_kmeans.pickRandKMeansParams(paramDict, params)
+                kwargs = params.copy()
 
-                randomV = paramDict['cols']
-                cols = random.choice(randomV)
-
-                kwargs = {'k': k, 'epsilon': epsilon, 'cols': cols, 
-                    'destination_key': csvFilename + "_" + str(trial) + '.hex'}
                 start = time.time()
                 kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, \
                     timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=60, **kwargs)

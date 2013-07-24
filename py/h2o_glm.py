@@ -12,6 +12,12 @@ def pickRandGlmParams(paramDict, params):
         if (randomKey=='x'):
             colX = randomValue
 
+        if 'family' in params and 'link' in params: 
+            # don't allow logit for poisson
+            if params['family'] == 'poisson':
+                if params['link'] in ('logit'):
+                    params['link'] = None # use default link for poisson always
+
         # case only used if binomial? binomial is default if no family
         if 'family' not in params or params['family'] == 'binomial':
             maxCase = max(paramDict['case'])
