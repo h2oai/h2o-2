@@ -1,14 +1,22 @@
 package water;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
-import java.util.ArrayList;
 
 import javassist.*;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
 
 public class Weaver {
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface Weave {
+    String help();
+    int minVersion() default 1;
+    int maxVersion() default Integer.MAX_VALUE;
+  }
+
   private final ClassPool _pool;
   private final CtClass _dtask, _iced, _enum, _api;
   private final CtClass[] _serBases;
@@ -197,8 +205,8 @@ public class Weaver {
 
 
   // --------------------------------------------------------------------------
-  private static abstract class FieldFilter { 
-    abstract boolean filter( CtField ctf ) throws NotFoundException; 
+  private static abstract class FieldFilter {
+    abstract boolean filter( CtField ctf ) throws NotFoundException;
   }
   private void ensureAPImethods(CtClass cc) throws NotFoundException, CannotCompileException {
     CtField ctfs[] = cc.getDeclaredFields();
@@ -219,7 +227,7 @@ public class Weaver {
               "  ab.putJSON%z(\"%s\",%s)",
               "  ab.putEnumJSON(%s)",
               "  ab.putJSON%z(%s)",
-              ".put1(',');\n", 
+              ".put1(',');\n",
               ";\n  return ab.put1('}');\n}",
               new FieldFilter() {
                 boolean filter(CtField ctf) throws NotFoundException {return !ctf.getType().subclassOf(_arg); }
@@ -253,32 +261,28 @@ public class Weaver {
 
       // This field needs documentation
       String name = ctf.getName();
-      String help = null;
-      int minver = 1;
-      int maxver = Integer.MAX_VALUE;
-      for( CtField ctf2 : ctfs ) {
-        if( javassist.Modifier.isStatic(ctf2.getModifiers()) ) {
-          String sname = ctf2.getName();
-          if( sname.startsWith(name) ) {
-            String x = sname.substring(name.length());
-            Object o = ctf2.getConstantValue();
-            if     ( o == null ) throw new CannotCompileException("Found static field '"+sname+"' but its value is not constant");
-            else if( x.equals("Help"  ) ) help   = (String )o;
-            else if( x.equals("MinVer") ) minver = (Integer)o;
-            else if( x.equals("MaxVer") ) maxver = (Integer)o;
-            else throw new CannotCompileException("Found field '"+name+"' and also static field '"+sname+"' which is not one of "+name+"Help, "+name+"MinVer, or "+name+"MaxVer.");
-          }
-        }
+      Object[] as;
+      try {
+        as = ctf.getAnnotations();
+      } catch( ClassNotFoundException ex) {
+        throw new RuntimeException(ex);
       }
-      if( help == null ) throw new CannotCompileException("Found field '"+name+"' but did not find static final String "+name+"Help = 'some helper text';");
-      if( minver < 1 || minver > 1000000 ) throw new CannotCompileException("Found field '"+name+"' but MinVer < 1 or MinVer > 1000000");
-      if( maxver < minver || (maxver > 1000000 && maxver != Integer.MAX_VALUE) ) 
-        throw new CannotCompileException("Found field '"+name+"' but MaxVer < "+minver+" or MaxVer > 1000000");
-
+      Weave w = null;
+      for(Object a : as) {
+        if(a instanceof Weave)
+          w = (Weave) a;
+      }
+      if( w == null ) throw new CannotCompileException("Class "+cc.getName()+" has non-transient field '"+name+"' without a Weave annotation");
+      String help = w.help();
+      int min = w.minVersion();
+      int max = w.maxVersion();
+      if( min < 1 || min > 1000000 ) throw new CannotCompileException("Found field '"+name+"' but MinVer < 1 or MinVer > 1000000");
+      if( max < min || (max > 1000000 && max != Integer.MAX_VALUE) )
+        throw new CannotCompileException("Found field '"+name+"' but MaxVer < "+min+" or MaxVer > 1000000");
 
       if( first ) first = false;
       else sb.append(",");
-      sb.append("new water.api.DocGen$FieldDoc(\""+name+"\",\""+help+"\","+minver+","+maxver+","+ctf.getType().getName()+".class)");
+      sb.append("new water.api.DocGen$FieldDoc(\""+name+"\",\""+help+"\","+min+","+max+","+ctf.getType().getName()+".class)");
     }
     sb.append("}");
     if( fielddoc == null ) throw new CannotCompileException("Did not find static final DocGen.FieldDoc[] DOC_FIELDS field;");
@@ -414,7 +418,7 @@ public class Weaver {
       }
       if( ff != null && !ff.filter(ctf) ) continue; // Fails the filter
       if( first ) first = false;
-      else sb.append(field_sep); 
+      else sb.append(field_sep);
 
       CtClass base = ctf.getType();
       while( base.isArray() ) base = base.getComponentType();

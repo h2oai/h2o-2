@@ -13,7 +13,7 @@ public class ByteVec extends Vec {
   public C1Chunk elem2BV( int cidx ) { return (C1Chunk)super.elem2BV(cidx); }
 
   // Open a stream view over the underlying data
-  InputStream openStream() {
+  public InputStream openStream() {
     return new InputStream() {
       private int _cidx, _sz;
       private C1Chunk _c0;

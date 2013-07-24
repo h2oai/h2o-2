@@ -13,6 +13,8 @@ import java.util.zip.*;
 import water.*;
 import water.ValueArray.Column;
 import water.api.GLMProgressPage.GLMBuilder;
+import water.fvec.ByteVec;
+import water.fvec.Vec;
 import water.parser.CsvParser;
 import water.util.Log;
 import water.util.Utils;
@@ -65,19 +67,24 @@ public class Inspect extends Request {
 
   @Override
   protected Response serve() {
+    // Key might not be the same as Value._key, e.g. a user key
+    Key key = Key.make(_key.record()._originalValue);
     Value val = _key.value();
     if(val == null) {
       // Some requests redirect before creating dest
       return RequestServer._http404.serve();
     }
     if( val.type() == TypeMap.PRIM_B )
-      return serveUnparsedValue(val);
+      return serveUnparsedValue(key, val);
     Freezable f = val.getFreezable();
     if( f instanceof ValueArray ) {
       ValueArray ary = (ValueArray)f;
       if( ary._cols.length==1 && ary._cols[0]._name==null )
-        return serveUnparsedValue(val);
+        return serveUnparsedValue(key, val);
       return serveValueArray(ary);
+    }
+    if( f instanceof Vec ) {
+      return serveUnparsedValue(key, ((Vec) f).chunkIdx(0));
     }
     if( f instanceof GLMModel ) {
       GLMModel m = (GLMModel)f;
@@ -115,6 +122,10 @@ public class Inspect extends Request {
   // Look at unparsed data; guess its setup, separator can be enforced.
   public static CsvParser.Setup csvGuessValue(Value v) { return csvGuessValue(v, CsvParser.NO_SEPARATOR); }
   public static CsvParser.Setup csvGuessValue(Value v, byte separator) {
+    Object o = v.type() != TypeMap.PRIM_B ? v.get() : null;
+    if(o instanceof ByteVec) {
+      v = ((ByteVec) o).chunkIdx(0);
+    }
     // See if we can make sense of the first few rows.
     byte[] bs = v.getFirstBytes(); // Read some bytes
     int off = 0;
@@ -167,7 +178,7 @@ public class Inspect extends Request {
   }
 
   // Build a response JSON
-  private final Response serveUnparsedValue(Value v) {
+  private final Response serveUnparsedValue(Key key, Value v) {
     JsonObject result = new JsonObject();
     result.addProperty(VALUE_TYPE, "unparsed");
 
@@ -189,8 +200,8 @@ public class Inspect extends Request {
     Response r = Response.done(result);
     // Some nice links in the response
     r.addHeader("<div class='alert'>" //
-        + Parse.link(v._key, "Parse into hex format") + " or " //
-        + RReader.link(v._key, "from R data") + " </div>");
+        + Parse.link(key, "Parse into hex format") + " or " //
+        + RReader.link(key, "from R data") + " </div>");
     // Set the builder for showing the rows
     r.setBuilder(ROWS, new ArrayBuilder() {
       public String caption(JsonArray array, String name) {

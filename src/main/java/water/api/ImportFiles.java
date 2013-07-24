@@ -1,8 +1,11 @@
 package water.api;
 
+import java.io.File;
 import java.util.ArrayList;
+
 import water.Futures;
 import water.Key;
+import water.Weaver.Weave;
 import water.util.FileIntegrityChecker;
 
 public class ImportFiles extends Request {
@@ -11,36 +14,34 @@ public class ImportFiles extends Request {
 
   // This Request supports the HTML 'GET' command, and this is the help text
   // for GET.
-  static final String DOC_GET = 
+  static final String DOC_GET =
     "  Map a file from the local host filesystem into H2O memory.  Data is "+
     "loaded lazily, when the Key is read (usually in a Parse command).  "+
     "(Warning: Every host in the cluster must have this file visible locally!)";
 
   // HTTP REQUEST PARAMETERS
-  static final String pathHelp = "File or directory to import.";
-  protected final ExistingFile path = new ExistingFile();
-
+  @Weave(help="File or directory to import.")
+  protected final ExistingFile _path = new ExistingFile(PATH);
 
   // JSON OUTPUT FIELDS
-  static final String filesHelp="Files imported.  Imported files are merely Keys mapped over the existing files.  No data is loaded until the Key is used (usually in a Parse command).";
+  @Weave(help="Files imported.  Imported files are merely Keys mapped over the existing files.  No data is loaded until the Key is used (usually in a Parse command).")
   String[] files;
 
-  static final String keysHelp="Keys of imported files, Keys map 1-to-1 with imported files.";
+  @Weave(help="Keys of imported files, Keys map 1-to-1 with imported files.")
   String[] keys;
 
-  static final String failsHelp="File names that failed the integrity check, can be empty.";
+  @Weave(help="File names that failed the integrity check, can be empty.")
   String[] fails;
 
-  // Example of passing & failing request.  Will be prepended with 
-  //   "curl -s localhost:54321/ImportFiles.json".
-  // Return param/value pairs that will be used to build up a URL,
-  // and the result from serving the URL will show up as an example.
   @Override public String[] DocExampleSucc() { return new String[]{"path","smalldata/airlines"}; }
   @Override public String[] DocExampleFail() { return new String[]{}; }
 
+  FileIntegrityChecker load(File path) {
+    return FileIntegrityChecker.check(path);
+  }
 
   @Override protected Response serve() {
-    FileIntegrityChecker c = FileIntegrityChecker.check(path.value());
+    FileIntegrityChecker c = load(_path.value());
     ArrayList<String> afails = new ArrayList();
     ArrayList<String> afiles = new ArrayList();
     ArrayList<String> akeys  = new ArrayList();
@@ -58,7 +59,6 @@ public class ImportFiles extends Request {
     fails = afails.toArray(new String[0]);
     files = afiles.toArray(new String[0]);
     keys  = akeys .toArray(new String[0]);
-
     return new Response(Response.Status.done, this);
   }
 
@@ -66,7 +66,7 @@ public class ImportFiles extends Request {
   @Override public StringBuilder toHTML( StringBuilder sb ) {
     if( files.length > 1 )
       sb.append("<div class='alert'>")
-        .append(Parse.link("*"+path.value()+"*", "Parse all into hex format"))
+        .append(Parse.link("*"+_path.value()+"*", "Parse all into hex format"))
         .append(" </div>");
 
     DocGen.HTML.title(sb,"files");

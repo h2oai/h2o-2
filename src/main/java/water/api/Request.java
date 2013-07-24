@@ -1,7 +1,6 @@
 package water.api;
 
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
 import java.util.Map.Entry;
@@ -10,10 +9,10 @@ import water.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
-import com.google.common.base.Objects;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
-import com.google.gson.*;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 
 /** A basic class for a JSON request.
  */
@@ -63,7 +62,7 @@ public abstract class Request extends RequestBuilders {
         Response response = serve();
         response.setTimeStart(time);
         if (type == RequestType.json)
-          return response._req == null 
+          return response._req == null
             ? wrap(server, response.toJson())
             : wrap(server, new String(response._req.writeJSON(new AutoBuffer()).buf()),RequestType.json);
         return wrap(server,build(response));
@@ -213,8 +212,16 @@ public abstract class Request extends RequestBuilders {
   public StringBuilder toHTML( StringBuilder sb ) { throw barf(); }
   public DocGen.FieldDoc[] toDocField() { return null; }
   public String toDocGET() { return null; }
+
+  /**
+   * Example of passing & failing request.  Will be prepended with
+   *   "curl -s localhost:54321/Request.json".
+   * Return param/value pairs that will be used to build up a URL,
+   * and the result from serving the URL will show up as an example.
+   */
   public String[] DocExampleSucc() { return null; }
   public String[] DocExampleFail() { return null; }
+
   public String HTMLHelp() { return DocGen.HTML.genHelp(this); }
   public String ReSTHelp() { return DocGen.ReST.genHelp(this); }
 }

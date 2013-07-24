@@ -59,6 +59,7 @@ public class Constants {
   public static final String EPSILON               = "epsilon";
   public static final String ERROR                 = "error";
   public static final String ESCAPE_NAN            = "escape_nan";
+  public static final String EXCLUDE               = "exclude";
   public static final String EXCLUSIVE_SPLIT_LIMIT = "exclusive_split_limit";
   public static final String EXPRESSION            = "expression";
   public static final String FAILED                = "failed";
