@@ -126,7 +126,7 @@ public class Utils {
   }
 
   /* Returns the configured random generator */
-  public synchronized static Random getRNG(long... seed) {
+  public static Random getRNG(long... seed) {
     assert _rngType != null : "Random generator type has to be configured";
     switch (_rngType) {
     case JavaRNG:
@@ -136,11 +136,12 @@ public class Utils {
       // do not copy the seeds - use them, and initialize the first two ints by seeds based given argument
       // the call is locked, and also MersenneTwisterRNG will just copy the seeds into its datastructures
       assert seed.length == 1;
-      int[] seeds    = MersenneTwisterRNG.SEEDS;
-      int[] inSeeds = unpackInts(seed);
-      seeds[0] = inSeeds[0];
-      seeds[1] = inSeeds[1];
-      return new MersenneTwisterRNG(seeds);
+      long s = seed[0];
+      synchronized(Utils.class) {
+        MersenneTwisterRNG.SEEDS[0] = (int)(s&0xffffffffL);
+        MersenneTwisterRNG.SEEDS[1] = (int)(s>>32);
+        return new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+      }
     case XorShiftRNG:
       assert seed.length >= 1;
       return new XorShiftRNG(seed[0]);

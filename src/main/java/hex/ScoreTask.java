@@ -7,7 +7,7 @@ import water.ValueArray.Column;
 public class ScoreTask extends MRTask {
 
   final Model _M;
-  final ValueArray _outputAry;
+  final Key _outKey;
   final int _nchunks;
   private double _min = Double.POSITIVE_INFINITY;
   private double _max = Double.NEGATIVE_INFINITY;
@@ -17,11 +17,14 @@ public class ScoreTask extends MRTask {
 
   private int [] _rpc;
 
-  private ScoreTask(Model M,ValueArray output, int nchunks){_M = M; _outputAry=output; _nchunks = nchunks;}
+  private ScoreTask(Model M, Key outKey, int nchunks){
+    _M = M; 
+    _outKey = outKey;
+    _nchunks = nchunks;
+  }
 
   public static Key score(Model M, ValueArray data, Key outputKey){
-    ValueArray output = new ValueArray(outputKey, data.length());
-    ScoreTask t = new ScoreTask(M.adapt(data),output,(int)data.chunks());
+    ScoreTask t = new ScoreTask(M.adapt(data),outputKey,(int)data.chunks());
     t.invoke(data._key);
     Column c = new Column();
     c._max = t._max;
@@ -63,7 +66,7 @@ public class ScoreTask extends MRTask {
       res.put8d(p);
     }
     int idx = (int)ValueArray.getChunkIndex(key);
-    Key outputKey = _outputAry.getChunkKey(idx);
+    Key outputKey = ValueArray.getChunkKey(idx,_outKey);
     _rpc[idx] += nrows;
     DKV.put(outputKey, new Value(outputKey,res.buf()));
   }

@@ -39,8 +39,6 @@ class Basic(unittest.TestCase):
             print "y:", y
 
             kwargs = {'x': x, 'y':  y}
-            # fails with n_folds
-            print "Not doing n_folds with benign. Fails with 'unable to solve?'"
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=15, **kwargs)
             # no longer look at STR?
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)

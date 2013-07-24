@@ -11,6 +11,25 @@ public class FVecTest extends TestUtil {
   static final double EPSILON = 1e-6;
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
+  public static  Key makeByteVec(String kname, String... data) {
+    Key k = Vec.newKey(Key.make(kname));
+    byte [][] chunks = new byte[data.length][];
+    long [] espc = new long[data.length+1];
+    for(int i = 0; i < chunks.length; ++i){
+      chunks[i] = data[i].getBytes();
+      espc[i+1] = espc[i] + data[i].length();
+    }
+    Futures fs = new Futures();
+    ByteVec bv = new ByteVec(k,espc);
+    DKV.put(k, bv, fs);
+    for(int i = 0; i < chunks.length; ++i){
+      Key chunkKey = bv.chunkKey(i);
+      DKV.put(chunkKey, new Value(chunkKey,chunks[i].length,chunks[i],TypeMap.C1CHUNK,Value.ICE));
+    }
+    fs.blockForPending();
+    return k;
+  }
+
   // ==========================================================================
   @Test public void testBasicCRUD() {
     // Make and insert a FileVec to the global store
@@ -18,7 +37,7 @@ public class FVecTest extends TestUtil {
     Key key = NFSFileVec.make(file);
     NFSFileVec nfs=DKV.get(key).get();
 
-    int[] x = new ByteHisto().invoke(nfs)._x;
+    int[] x = new ByteHisto().doAll(nfs)._x;
     int sum=0;
     for( int i : x )
       sum += i;
@@ -52,7 +71,7 @@ public class FVecTest extends TestUtil {
     NFSFileVec nfs=DKV.get(key).get();
     Key key2 = Key.make("newKey",(byte)0,Key.VEC);
     AppendableVec nv = new AppendableVec(key2);
-    Vec res = new TestNewVec().invoke(nv,nfs).vecs(0);
+    Vec res = new TestNewVec().doAll(nv,nfs).vecs(0);
     assertEquals(nfs.at8(0)+1,res.at8(0));
     assertEquals(nfs.at8(1)+1,res.at8(1));
     assertEquals(nfs.at8(2)+1,res.at8(2));
@@ -126,7 +145,7 @@ public class FVecTest extends TestUtil {
       assertEquals(fr.numCols(),1050); // Count of columns
       assertEquals(fr._vecs[0].length(),2659); // Count of rows
 
-      double[] sums = new Sum().invoke(fr)._sums;
+      double[] sums = new Sum().doAll(fr)._sums;
       assertEquals(3949,sums[0],EPSILON);
       assertEquals(3986,sums[1],EPSILON);
       assertEquals(3993,sums[2],EPSILON);
@@ -136,12 +155,12 @@ public class FVecTest extends TestUtil {
       Vec v1 = fr._vecs[1];
       Vec vz = Vec.makeZero(v0);
       // Add column 0 & 1 into the temp column
-      new PairSum().invoke(vz,v0,v1);
+      new PairSum().doAll(vz,v0,v1);
       // Add the temp to frame
       // Now total the temp col
       fr.remove();              // Remove all other columns
       fr.add("tmp",vz);         // Add just this one
-      sums = new Sum().invoke(fr)._sums;
+      sums = new Sum().doAll(fr)._sums;
       assertEquals(3949+3986,sums[0],EPSILON);
 
     } finally {

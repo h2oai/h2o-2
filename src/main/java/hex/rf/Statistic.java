@@ -143,14 +143,20 @@ abstract class Statistic {
   /** Adds the given row to the statistic.  Updates the column distributions for
    * the analyzed columns.  This version knows the row is always valid (always
    * has a valid class), and is hand-inlined.  */
-  void addQValid(int cls, int ridx, DataAdapter.Col cs[]) {
-    for (int f : _features)
-      if ( f != -1) {
-        short[] bins = cs[f]._binned;
-        int val = bins==null ? (0xFF&cs[f]._rawB[ridx]) : bins[ridx];
-        if( bins==null || val != DataAdapter.BAD )
-          _columnDists[f][val][cls]++;
+  void addQValid( final int cls, final int ridx, final DataAdapter.Col cs[]) {
+    for( int i=0; i<_features.length; i++ ) {
+      int f = _features[i];
+      if( f == -1) break;
+      short[] bins = cs[f]._binned; // null if byte col, otherwise bin#
+      int val;
+      if( bins != null ) {      // binned?
+        val = bins[ridx];       // Grab bin#
+        if( val == DataAdapter.BAD ) continue; // ignore bad rows
+      } else {                  // not binned?
+        val = (0xFF&cs[f]._rawB[ridx]); // raw byte value, has no bad rows
       }
+      _columnDists[f][val][cls]++;
+    }
   }
 
   /** Apply any class weights to the distributions.*/

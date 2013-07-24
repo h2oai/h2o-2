@@ -93,31 +93,34 @@ public final class ParseDataset2 extends Job {
     final Key _eKey;
     final String [][] _gDomain;
     final int [] _colIds;
-
+    boolean _run;
     public EnumUpdateTask(String [][] gDomain,Key lDomKey, int [] colIds){_gDomain = gDomain; _eKey = lDomKey;_colIds = colIds;}
 
     @Override public void init(){
       // compute the emap
-      Enum [] enums = MultiFileParseTask._enums.get(_eKey);
-      MultiFileParseTask._enums.remove(_eKey);
-      _emap = new int[_gDomain.length][];
-      for(int i = 0; i < _gDomain.length; ++i){
-        _emap[i] = new int[enums[_colIds[i]].maxId()+1];
-        Arrays.fill(_emap[i], -1);
-        final Enum e = enums[_colIds[i]];
-        for(int j = 0; j < _gDomain[i].length; ++j){
-          ValueString vs = new ValueString(_gDomain[i][j].getBytes());
-          if(enums[_colIds[i]].containsKey(vs))_emap[i][e.getTokenId(vs)] = j;
+      if((_run = MultiFileParseTask._enums.containsKey(_eKey))){
+        Enum [] enums = MultiFileParseTask._enums.get(_eKey);
+        MultiFileParseTask._enums.remove(_eKey);
+        _emap = new int[_gDomain.length][];
+        for(int i = 0; i < _gDomain.length; ++i){
+          _emap[i] = new int[enums[_colIds[i]].maxId()+1];
+          Arrays.fill(_emap[i], -1);
+          final Enum e = enums[_colIds[i]];
+          for(int j = 0; j < _gDomain[i].length; ++j){
+            ValueString vs = new ValueString(_gDomain[i][j].getBytes());
+            if(enums[_colIds[i]].containsKey(vs))_emap[i][e.getTokenId(vs)] = j;
+          }
         }
       }
     }
 
     @Override public void map(Chunk [] chks){
+      if(_run)
       for(int i = 0; i < chks.length; ++i){
         for( int j = 0; j < chks[i]._len; ++j){
           long l = chks[i].at80(j);
           if(chks[i].valueIsNA(l))continue;
-          assert _emap[i][(int)chks[i].at80(j)] >= 0:H2O.SELF.toString() + ": missing enum at col:" + i + ", line: " + j + ", val = " + chks[i].at80(j);
+          assert _emap[i][(int)chks[i].at80(j)] >= 0:H2O.SELF.toString() + ": missing enum at col:" + i + ", line: " + j + ", val = " + chks[i].at80(j) + "chunk=" + chks[i].getClass().getSimpleName();
           chks[i].set80(j, _emap[i][(int)chks[i].at80(j)]);
         }
         chks[i].close(chks[i].cidx(), _fs);
@@ -141,13 +144,15 @@ public final class ParseDataset2 extends Job {
     public EnumFetchTask(int homeNode, Key k, int [] ecols){_homeNode = homeNode; _k = k;_ecols = ecols;}
     Enum [] _enums;
     @Override public void map(Key key) {
-      _enums = MultiFileParseTask._enums.get(_k).clone();
-      // if we are the original node (i.e. there will be no sending over wire),
-      // we have to clone the enums not to share the same object (causes problems when computing column domain and renumbering maps).
-      if(H2O.SELF.index() == _homeNode){
-        _enums = _enums.clone();
-        for(int i = 0; i < _enums.length; ++i)
-          _enums[i] = _enums[i].clone();
+      if(MultiFileParseTask._enums.containsKey(_k)){
+        _enums = MultiFileParseTask._enums.get(_k);
+        // if we are the original node (i.e. there will be no sending over wire),
+        // we have to clone the enums not to share the same object (causes problems when computing column domain and renumbering maps).
+        if(H2O.SELF.index() == _homeNode){
+          _enums = _enums.clone();
+          for(int i = 0; i < _enums.length; ++i)
+            _enums[i] = _enums[i].clone();
+        }
       }
     }
 
@@ -160,10 +165,10 @@ public final class ParseDataset2 extends Job {
     }
     public static Enum [] fetchEnums(Key k, int [] ecols){
       EnumFetchTask tsk = new EnumFetchTask(H2O.SELF.index(), k, ecols);
-      Key [] keys = new Key[H2O.CLOUD.size()];
-      for(int i = 0; i < keys.length; ++i)
-        keys[i] = Key.make("aaa",(byte)1, Key.DFJ_INTERNAL_USER,H2O.CLOUD._memary[i]);
-      tsk.invoke(keys);
+//      Key [] keys = new Key[H2O.CLOUD.size()];
+//      for(int i = 0; i < keys.length; ++i) // make a bogus key for every node in the cloud to
+//        keys[i] = Key.make("aaa",(byte)1, Key.DFJ_INTERNAL_USER,H2O.CLOUD._memary[i]);
+      tsk.invokeOnAllNodes();
       return tsk._enums;
     }
   }
@@ -190,22 +195,22 @@ public final class ParseDataset2 extends Job {
     if( uzpt._parserr != null )
       throw new ParseException(uzpt._parserr);
     int [] ecols = uzpt.enumCols();
-    String[] names = new String[uzpt._cols.length];
+    String[] names = new String[uzpt._vecs.length];
     for( int i=0; i<names.length; i++ )
       names[i] = setup._header ? setup._data[0][i] : (""+i);
 
     if(ecols != null && ecols.length > 0){
       Enum [] enums = EnumFetchTask.fetchEnums(uzpt._eKey, ecols);
-      for(int i:ecols) uzpt._cols[i]._domain = enums[i].computeColumnDomain();
+      for(int i:ecols) uzpt._vecs[i]._domain = enums[i].computeColumnDomain();
       String [][] ds = new String[ecols.length][];
-      for(int i = 0; i < ecols.length; ++i)ds[i] = uzpt._cols[ecols[i]]._domain;
+      for(int i = 0; i < ecols.length; ++i)ds[i] = uzpt._vecs[ecols[i]]._domain;
       Vec [] evecs = new Vec[ecols.length];
-      for(int i = 0; i < evecs.length; ++i)evecs[i] = uzpt._cols[ecols[i]];
+      for(int i = 0; i < evecs.length; ++i)evecs[i] = uzpt._vecs[ecols[i]];
       EnumUpdateTask t = new EnumUpdateTask(ds, uzpt._eKey, ecols);
-      t.invoke(evecs);
+      t.doAll(evecs);
     }
     // Jam the frame of columns into the K/V store
-    UKV.put(job.dest(),new Frame(job.dest(),names,uzpt._cols));
+    UKV.put(job.dest(),new Frame(job.dest(),names,uzpt._vecs));
   }
 
   // --------------------------------------------------------------------------
@@ -219,14 +224,14 @@ public final class ParseDataset2 extends Job {
     // OUTPUT fields:
     public String _parserr;              // NULL if parse is OK, else an error string
     // All column data for this one file
-    Vec _cols[];
+    Vec _vecs[];
     MultiFileParseTask( CsvParser.Setup setup ) {_setup = setup;}
 
     public int [] enumCols (){
-      int [] res = new int[_cols.length];
+      int [] res = new int[_vecs.length];
       int n = 0;
-      for(int i = 0; i < _cols.length; ++i){
-        if(_cols[i].dtype() == Vec.DType.S)
+      for(int i = 0; i < _vecs.length; ++i){
+        if(_vecs[i].dtype() == Vec.DType.S)
           res[n++] = i;
       }
       return Arrays.copyOf(res, n);
@@ -254,10 +259,10 @@ public final class ParseDataset2 extends Job {
       }
 
       final int ncols = _setup._data[0].length;
-      _cols = new Vec[ncols];
+      _vecs = new Vec[ncols];
       Key [] keys = vec.group().addVecs(ncols);
       for( int i=0; i<ncols; i++ )
-        _cols[i] = new AppendableVec(keys[i]);
+        _vecs[i] = new AppendableVec(keys[i]);
 
       // Parse the file
       try {
@@ -293,14 +298,14 @@ public final class ParseDataset2 extends Job {
       if( _parserr == null ) _parserr = uzpt._parserr;
       else if( uzpt._parserr != null ) _parserr += uzpt._parserr;
       // Collect & combine columns across files
-      if( _cols == null ) { _cols = uzpt._cols; return; }
+      if( _vecs == null ) { _vecs = uzpt._vecs; return; }
       // Reduce multiple AppendableVecs together
       throw H2O.unimpl();
     }
 
     private Enum [] enums(){
       if(!_enums.containsKey(_eKey)){
-        Enum [] enums = new Enum[_cols.length];
+        Enum [] enums = new Enum[_vecs.length];
         for(int i = 0; i < enums.length; ++i)enums[i] = new Enum();
         _enums.putIfAbsent(_eKey, enums);
       }
@@ -311,9 +316,9 @@ public final class ParseDataset2 extends Job {
     // parse local chunks; distribute chunks later.
     private void streamParse( final InputStream is, final CsvParser.Setup localSetup ) throws IOException {
       // All output into a fresh pile of NewChunks, one per column
-      final NewChunk nvs[] = new NewChunk[_cols.length];
+      final NewChunk nvs[] = new NewChunk[_vecs.length];
       for( int i=0; i<nvs.length; i++ )
-        nvs[i] = new NewChunk(_cols[i],0/*starting chunk#*/);
+        nvs[i] = new NewChunk(_vecs[i],0/*starting chunk#*/);
 
       StreamParser parser = new StreamParser(is, nvs, localSetup, enums());
       // Parse all internal "chunks", until we drain the zip-stream dry.  Not
@@ -324,22 +329,22 @@ public final class ParseDataset2 extends Job {
         parser.parse(cidx++);
       parser.parse(cidx++);     // Parse the remaining partial 32K buffer
       // Close & compress all the NewChunks for this one file.
-      for( int i=0; i<_cols.length; i++ ) {
+      for( int i=0; i<_vecs.length; i++ ) {
         nvs[i].close(0/*actual chunk number*/,_fs);
-        _cols[i] = ((AppendableVec)_cols[i]).close(_fs);
+        _vecs[i] = ((AppendableVec)_vecs[i]).close(_fs);
       }
     }
 
     // ------------------------------------------------------------------------
     // Distributed parse of an unzipped raw text file.
     private void distroParse( ByteVec vec, final CsvParser.Setup localSetup ) throws IOException {
-      Vec bvs[] = Arrays.copyOf(_cols,_cols.length+1,Vec[].class);
+      Vec bvs[] = Arrays.copyOf(_vecs,_vecs.length+1,Vec[].class);
       bvs[bvs.length-1] = vec;
-      DParse dp = new DParse(localSetup).invoke(bvs);
+      DParse dp = new DParse(localSetup).doAll(bvs);
       // After the MRTask2, the input Vec array has all the AppendableVecs
       // closed() and rewritten as plain Vecs.  Copy those back into the _cols
       // array.
-      for( int i=0; i<_cols.length; i++ ) _cols[i] = dp.vecs(i);
+      for( int i=0; i<_vecs.length; i++ ) _vecs[i] = dp.vecs(i);
     }
     private class DParse extends MRTask2<DParse> {
       final CsvParser.Setup _setup;

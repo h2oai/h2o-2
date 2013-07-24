@@ -20,7 +20,7 @@ public class WordCountTest extends TestUtil {
     NFSFileVec nfs=DKV.get(key).get();
 
     final long start = System.currentTimeMillis();
-    NonBlockingHashMap<VStr,VStr> words = new WordCount().invoke(nfs)._words;
+    NonBlockingHashMap<VStr,VStr> words = new WordCount().doAll(nfs)._words;
     final long time_wc = System.currentTimeMillis();
     VStr[] vss = new VStr[words.size()];
     System.out.println("WC takes "+(time_wc-start)+"msec for "+vss.length+" words");

@@ -18,7 +18,7 @@ public abstract class DocGen {
     H2O.main(args);
     waitForCloudSize(1, 10000);
     System.out.println(new ImportFiles().ReSTHelp());
-    //System.exit(0);
+    //H2O.exit(0);
   }
 
   static void waitForCloudSize(int size, int ms) {
