@@ -67,13 +67,19 @@ public class AppendableVec extends Vec {
 
     // Combine arrays of elements-per-chunk
     long e1[] = nv._espc;       // Shorter array of longs?
+    byte t1[] = nv._chunkTypes;
     if( e1.length > _espc.length ) {
       e1 = _espc;               // Keep the shorter one in e1
+      t1 = _chunkTypes;
       _espc = nv._espc;         // Keep longer in the object
+      _chunkTypes = nv._chunkTypes;
     }
-    for( int i=0; i<e1.length; i++ ) // Copy non-zero elements over
+    for( int i=0; i<e1.length; i++ ){ // Copy non-zero elements over
+      assert _chunkTypes[i] == 0 || t1[i] == 0;
       if( e1[i] != 0 && _espc[i]==0 )
         _espc[i] = e1[i];
+      _chunkTypes[i] |= t1[i];
+    }
   }
 
 
@@ -84,9 +90,8 @@ public class AppendableVec extends Vec {
     int nchunk = _espc.length;
     while( nchunk > 0 && _espc[nchunk-1] == 0 ) nchunk--;
     DKV.remove(chunkKey(nchunk)); // remove potential trailing key
-    byte vecType = 0;
     boolean hasNumber = false, hasEnum = false;
-    for(int i = 0; i < nchunk && !(hasEnum && hasNumber); ++i)
+    for(int i = 0; i < nchunk; ++i)
       if(_chunkTypes[i] == NUMBER){
         hasNumber = true;
       } else if(_chunkTypes[i] == ENUM)
@@ -94,7 +99,7 @@ public class AppendableVec extends Vec {
     if(hasNumber && hasEnum){ // number wins, we need to go through the enum chunks and declare them all NAs (chunk is considered enum iff it has only enums + possibly some nas)
       for(int i = 0; i < nchunk; ++i)
         if(_chunkTypes[i] == ENUM)
-          DKV.put(chunkKey(i), new C0DChunk(Double.NaN, (int)_espc[i]));
+          DKV.put(chunkKey(i), new C0DChunk(Double.NaN, (int)_espc[i]),fs);
     }
     // Compute elems-per-chunk.
     // Roll-up elem counts, so espc[i] is the starting element# of chunk i.
