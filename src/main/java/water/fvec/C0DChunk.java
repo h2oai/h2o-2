@@ -9,13 +9,13 @@ import water.UDP;
 public class C0DChunk extends Chunk {
   static final int OFF=8+4;
   double _con;
-  C0DChunk(double con, int len) { _mem=new byte[OFF]; _start = -1; _len = len;
+  public C0DChunk(double con, int len) { _mem=new byte[OFF]; _start = -1; _len = len;
     _con = con;
     UDP.set8d(_mem,0,con);
     UDP.set4(_mem,8,len);
   }
-  @Override protected final long at8_impl( int i ) { return (long)_con; }
-  @Override protected final double atd_impl( int i ) {return _con; }
+  @Override protected final long at8_impl( int i ) { return Double.isNaN(_con)?_vec._iNA:(long)_con;}
+  @Override protected final double atd_impl( int i ) {return Double.isNaN(_con)?_vec._fNA:_con;}
   @Override boolean set8_impl(int idx, long l) { return l==_con; }
   @Override boolean set8_impl(int i, double d) { return d==_con; }
   @Override boolean hasFloat() { return false; }

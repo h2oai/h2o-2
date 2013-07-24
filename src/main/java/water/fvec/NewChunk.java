@@ -24,6 +24,13 @@ public class NewChunk extends Chunk {
     _max = -Double.MAX_VALUE;
   }
 
+  public byte type(){
+    if(_naCnt == _len)
+      return AppendableVec.NA;
+    if(_strCnt > 0 && _strCnt + _naCnt == _len)
+      return AppendableVec.ENUM;
+    return AppendableVec.NUMBER;
+  }
   protected final boolean isNA(int idx) {
     return (_ds == null) ? (_ls[idx] == 0 && _xs[idx] != 0) : Double.isNaN(_ds[idx]);
   }
@@ -78,10 +85,12 @@ public class NewChunk extends Chunk {
     boolean overflow=false;
     boolean floatOverflow = false;
 
+    if(_naCnt == _len) // ALL NAs, nothing to do
+      return new C0DChunk(Double.NaN,_len);
     // Enum?  We assume that columns with ALL strings (and NAs) are enums if
     // there were less than 65k unique vals.  If there were some numbers, we
     // assume it is a numcol with strings being NAs.
-    if( 0 < _strCnt && (_strCnt + _naCnt) == _len ) {
+    if( type() == AppendableVec.ENUM) {
       // find their max val
       int sz = Integer.MIN_VALUE;
       for(int x:_xs) if(x > sz)sz = x;
@@ -99,10 +108,9 @@ public class NewChunk extends Chunk {
         } else throw H2O.unimpl();
       }
     }
-    
     // If the data was set8 as doubles, we (weanily) give up on compression and
     // just store it as a pile-o-doubles.
-    if( _ds != null ) 
+    if( _ds != null )
       return new C8DChunk(bufF(3));
 
     // Look at the min & max & scaling.  See if we can sanely normalize the

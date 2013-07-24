@@ -115,12 +115,12 @@ public final class ParseDataset2 extends Job {
     }
 
     @Override public void map(Chunk [] chks){
-      if(_run) 
+      if(_run)
       for(int i = 0; i < chks.length; ++i){
         for( int j = 0; j < chks[i]._len; ++j){
           long l = chks[i].at80(j);
           if(chks[i].valueIsNA(l))continue;
-          assert _emap[i][(int)chks[i].at80(j)] >= 0:H2O.SELF.toString() + ": missing enum at col:" + i + ", line: " + j + ", val = " + chks[i].at80(j);
+          assert _emap[i][(int)chks[i].at80(j)] >= 0:H2O.SELF.toString() + ": missing enum at col:" + i + ", line: " + j + ", val = " + chks[i].at80(j) + "chunk=" + chks[i].getClass().getSimpleName();
           chks[i].set80(j, _emap[i][(int)chks[i].at80(j)]);
         }
         chks[i].close(chks[i].cidx(), _fs);
