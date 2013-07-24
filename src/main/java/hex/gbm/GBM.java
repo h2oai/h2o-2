@@ -43,6 +43,9 @@ public class GBM extends Job {
     // Response column is the last one in the frame
     Vec vresponse = vs[ncols];
     final long nrows = vresponse.length();
+    int ymin = (int)vresponse.min();
+    int numClasses = vresponse._isInt ? ((int)vresponse.max()-ymin+1) : 0;
+    //if( numClasses == 2 ) numClasses = 0; // Specifically force 2 classes into a regression
 
     // Make a new Vec to hold the split-number for each row (initially all zero).
     Vec vnids = Vec.makeZero(vs[0]);
@@ -66,14 +69,14 @@ public class GBM extends Job {
       // Pass 3: Build new summary Histograms on the new child Nodes every row
       // got assigned into.  Collect counts, mean, variance, min, max per bin,
       // per column.
-      ScoreBuildHistogram sbh = new ScoreBuildHistogram(tree,leaf,ncols).doAll(fr);
+      ScoreBuildHistogram sbh = new ScoreBuildHistogram(tree,leaf,ncols,numClasses,ymin).doAll(fr);
 
       // Reassign the new Histogram back into the Tree
       final int tmax = tree._len; // Number of total splits
       for( int i=leaf; i<tmax; i++ )
         tree.n(i)._hs = sbh._hcs[i-leaf];
       
-      //new BulkScore(tree).doAll(fr).report( nrows, depth );
+      //new BulkScore(tree,numClasses,ymin).doAll(fr).report( nrows, depth );
 
       // Build up the next-generation tree splits from the current histograms.
       // Nearly all leaves will split one more level.  This loop nest is
@@ -86,7 +89,7 @@ public class GBM extends Job {
 
     // One more pass for final prediction error
     Timer t_score = new Timer();
-    new BulkScore(tree).doAll(fr).report( nrows, maxDepth );
+    new BulkScore(tree,numClasses,ymin).doAll(fr).report( nrows, maxDepth );
     Log.info(Sys.GBM__,"GBM score done in "+t_score);
 
     // Remove temp vector; cleanup the Frame
@@ -146,9 +149,17 @@ public class GBM extends Job {
   private static class ScoreBuildHistogram extends MRTask2<ScoreBuildHistogram> {
     final Tree _tree;           // Read-only, shared (except at the histograms in the Tree.Nodes)
     final int _ncols;
+    final int _numClasses;      // Zero for regression, else #classes
+    final int _ymin;            // Bias classes to zero
     final int _leaf;
     Histogram _hcs[][];         // Output: histograms-per-nid-per-column
-    ScoreBuildHistogram(Tree tree, int leaf, int ncols) { _tree=tree; _leaf=leaf; _ncols=ncols; }
+    ScoreBuildHistogram(Tree tree, int leaf, int ncols, int numClasses, int ymin) { 
+      _tree=tree; 
+      _leaf=leaf; 
+      _ncols=ncols; 
+      _numClasses = numClasses; 
+      _ymin = ymin;
+    }
 
     @Override public void map( Chunk[] chks ) {
       Chunk nids  = chks[chks.length-1];
@@ -182,15 +193,22 @@ public class GBM extends Job {
           Histogram ohs[] = _tree.n(nid)._hs; // The existing column of Histograms
           for( int j=0; j<_ncols; j++ )       // Make private copies
             if( ohs[j] != null )
-              nhs[j] = ohs[j].copy();
+              nhs[j] = ohs[j].copy(_numClasses);
         }
 
         // Pass 2
         // Bump the local histogram counts
-        double y = ys.at0(i);
-        for( int j=0; j<_ncols; j++) // For all columns
-          if( nhs[j] != null ) // Some columns are ignored, since already split to death
-            nhs[j].incr(chks[j].at0(i),y);
+        if( _numClasses == 0 ) { // Regression?
+          double y = ys.at0(i);
+          for( int j=0; j<_ncols; j++) // For all columns
+            if( nhs[j] != null ) // Some columns are ignored, since already split to death
+              nhs[j].incr(chks[j].at0(i),y);
+        } else {                // Classification
+          int y = (int)ys.at80(i) - _ymin;
+          for( int j=0; j<_ncols; j++) // For all columns
+            if( nhs[j] != null ) // Some columns are ignored, since already split to death
+              nhs[j].incr(chks[j].at0(i),y);
+        }
       }
     }
 
@@ -212,35 +230,49 @@ public class GBM extends Job {
   // Compute sum-squared-error.  Should use the recursive-mean technique.
   private static class BulkScore extends MRTask2<BulkScore> {
     final Tree _tree; // Read-only, shared (except at the histograms in the Tree.Nodes)
+    final int _numClasses;
+    final int _ymin;
     double _sum;
     long _err;
-    BulkScore( Tree tree ) { _tree = tree; }
+    BulkScore( Tree tree, int numClasses, int ymin ) { _tree = tree; _numClasses = numClasses; _ymin = ymin; }
     @Override public void map( Chunk chks[] ) {
       Chunk ys = chks[chks.length-2];
       for( int i=0; i<ys._len; i++ ) {
-        double y    = ys.at0(i);
-        double pred = score0( chks, i );
-        _sum += (y-pred)*(y-pred);
-        if( (int)y != (int)(pred+0.5) ) _err++;
+        double err = score0( chks, i, ys.at0(i) );
+        _sum += err*err;        // Squared error
       }
     }
     @Override public void reduce( BulkScore t ) { _sum += t._sum; _err += t._err; }
 
-    private double score0( Chunk chks[], int i ) {
-      int nid=0;                // Root nid
-      double pred=Double.NaN;   // Current prediction
+    // Return a relative error.  For regression it's y-mean.  For classification, 
+    // it's the %-tage of the response class out of all rows in the leaf, plus
+    // a count of absolute errors when we predict the majority class.
+    private double score0( Chunk chks[], int i, double y ) {
+      int nid=0, bin=0;         // Root nid
+      Histogram h=null;
       while( true ) {           // Tree walk
-        Tree.Node node = _tree.n(nid);     // This Tree Node
-        Histogram h = node._hs[node._col]; // Chosen histogram
-        if( h == null ) break;             // Not available yet
-        double d = chks[node._col].at0(i); // Value to split on for this row
-        int bin = h.bin(d);                // Bin in the histogram in the tree
-        pred = h.mean(bin);                // Current prediction
-        if( node._ns == null ) break;      // No next decision available
-        nid = node._ns[bin];               // Next Tree.Node
-        if( nid == -1 ) break;             // Did not split again this bin
+        Tree.Node node = _tree.n(nid);      // This Tree Node
+        Histogram h2 = node._hs[node._col]; // Chosen histogram
+        if( h2 == null ) break;             // Not available yet
+        h = h2;                             // Last good histogram
+        double d = chks[node._col].at0(i);  // Value to split on for this row
+        bin = h2.bin(d);                    // Bin in the histogram in the tree
+        if( node._ns == null ) break;       // No next decision available
+        nid = node._ns[bin];                // Next Tree.Node
+        if( nid == -1 ) break;              // Did not split again this bin
       }
-      return pred;
+
+      if( _numClasses == 0 )    // Regression?
+        return h.mean(bin)-y;   // Current prediction minus actual
+
+      int ycls = (int)y-_ymin;    // Zero-based response class
+      long num = h._bins[bin];    // Size of this bin
+      long clss[] = h._clss[bin]; // Class histogram
+      int best=0;                 // Find largest single class
+      for( int k=1; k<_numClasses; k++ )
+        if( clss[best] < clss[k] ) best=k;
+      if( best != ycls ) _err++; // Absolution prediction error
+      return (double)(num-clss[ycls])/num; // Error rate of response class
     }
 
     public void report( long nrows, int depth ) {
