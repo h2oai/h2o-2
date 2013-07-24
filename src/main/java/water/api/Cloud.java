@@ -14,6 +14,7 @@ public class Cloud extends Request {
     JsonObject response = new JsonObject();
     final H2O cloud = H2O.CLOUD;
     final H2ONode self = H2O.SELF;
+    response.addProperty(VERSION, H2O.VERSION);
     response.addProperty(CLOUD_NAME, H2O.NAME);
     response.addProperty(NODE_NAME, self.toString());
     response.addProperty(CLOUD_SIZE, cloud._memary.length);

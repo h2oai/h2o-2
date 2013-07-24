@@ -2,7 +2,14 @@ library('RCurl');
 library('rjson');
 
 # Class definitions
-setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321))
+# setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321))
+setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321), 
+         validity = function(object) { 
+           if(!is.character(getURL(paste0("http://", object@ip, ":", object@port)))) 
+             "Couldn't connect to host"
+           else if(packageVersion("h2o") != (sv = h2o.__version(object)))
+             paste("Version mismatch! Server running H2O version", sv)
+           else TRUE })
 setClass("H2ORawData", representation(h2o="H2OClient", key="character"))
 setClass("H2OParsedData", representation(h2o="H2OClient", key="character"))
 setClass("H2OGLMModel", representation(key="character", data="H2OParsedData", model="list"))
@@ -60,54 +67,82 @@ setMethod("show", "H2ORForestModel", function(object) {
 })
 
 # Generic method definitions
-# setGeneric("importFile", function(object, path, key="", header=FALSE, parse=TRUE) { standardGeneric("importFile") })
-setGeneric("importFile", function(object, path, key) { standardGeneric("importFile") })
-# setGeneric("importURL", function(object, path, key="", header=FALSE, parse=TRUE) { standardGeneric("importURL") })
-setGeneric("importURL", function(object, path, key="") { standardGeneric("importURL") })
-setGeneric("parseRaw", function(object, key, header) { standardGeneric("parseRaw") })
-# setGeneric("h2o.glm", function(x, y, data, family, nfolds, alpha) { standardGeneric("h2o.glm") })
+# setGeneric("importFile", function(object, path, key = "", header = FALSE, parse = TRUE) { standardGeneric("importFile") })
+setGeneric("importFile", function(object, path, key = "", parse = TRUE) { standardGeneric("importFile") })
+setGeneric("importFolder", function(object, path, parse = TRUE) { standardGeneric("importFolder") })
+# setGeneric("importURL", function(object, path, key="", header = FALSE, parse = TRUE) { standardGeneric("importURL") })
+setGeneric("importURL", function(object, path, key = "", parse = TRUE) { standardGeneric("importURL") })
+# setGeneric("importURL", function(object, path, key="") { standardGeneric("importURL") })
+setGeneric("parseRaw", function(data, key = "") { standardGeneric("parseRaw") })
 setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5) { standardGeneric("h2o.glm") })
-# setGeneric("h2o.kmeans", function(data, centers, iter.max) { standardGeneric("h2o.kmeans") })
 setGeneric("h2o.kmeans", function(data, centers, cols = "", iter.max = 10) { standardGeneric("h2o.kmeans") })
 # setGeneric("h2o.randomForest", function(y, x_ignore, data, ntree) { standardGeneric("h2o.randomForest") })
 setGeneric("h2o.randomForest", function(y, data, ntree) { standardGeneric("h2o.randomForest") })
 setGeneric("h2o.getTree", function(forest, k) { standardGeneric("h2o.getTree") })
 
 # Unique methods to H2O
-setMethod("importURL", signature(object="H2OClient", path="character", key="character"),
-          function(object, path, key) {
-            res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTURL, url=path)
-            # rawData = new("H2ORawData", h2o=object, key=res$destination_key)
-            # if(parse)
-            #  parsedData = parseRaw(rawData, key, header)
-            res = h2o.__remoteSend(object, h2o.__PAGE_PARSE, source_key=res$key, destination_key=key)
-            while(h2o.__poll(object, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
-            parsedData = new("H2OParsedData", h2o=object, key=res$destination_key)
-          })
+setMethod("importURL", signature(object="H2OClient", path="character", key="character", parse="logical"),
+          function(object, path, key, parse) {
+            destKey = ifelse(parse, "", key)
+            res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTURL, url=path, key=destKey)
+            rawData = new("H2ORawData", h2o=object, key=res$key)
+            if(parse) parsedData = parseRaw(rawData, key) else rawData
+            })
 
-setMethod("importURL", signature(object="H2OClient", path="character", key="ANY"),
-          function(object, path, key) { importURL(object, path, key) })
+setMethod("importURL", signature(object="H2OClient", path="character", key="character", parse="missing"),
+          function(object, path, key, parse) { importURL(object, path, key, parse) })
+          
+setMethod("importURL", signature(object="H2OClient", path="character", key="missing", parse="logical"),
+          function(object, path, key, parse) { importURL(object, path, key, parse) })
 
-setMethod("importFile", signature(object="H2OClient", path="character", key="missing"), 
-          function(object, path) {
+setMethod("importURL", signature(object="H2OClient", path="character", key="missing", parse="missing"),
+          function(object, path, key, parse) { importURL(object, path, key, parse) })
+
+setMethod("importFolder", signature(object="H2OClient", path="character", parse="logical"),
+          function(object, path, parse) {
+            if(!file.exists(path)) stop("Directory does not exist!")
             res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTFILES, path=normalizePath(path))
-            # rawData = new("H2ORawData", h2o=object, key=res$destination_key)
-            # if(parse)
-            #  parsedData = parseRaw(rawData, "", header)
-            res = h2o.__remoteSend(object, h2o.__PAGE_PARSE, source_key=res$keys[1])
-            while(h2o.__poll(object, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
-            parsedData = new("H2OParsedData", h2o=object, key=res$destination_key)
+            myKeys = res$keys
+            myData = vector("list", length(myKeys))
+            for(i in 1:length(myKeys)) {
+              rawData = new("H2ORawData", h2o=object, key=myKeys[i])
+              if(parse) {
+                cat("Parsing key", myKeys[i], "\n")
+                myData[[i]] = parseRaw(rawData, key="")
+              }
+              else myData[[i]] = rawData
+            }
+            myData
           })
 
-setMethod("importFile", signature(object="H2OClient", path="character", key="character"), 
-          function(object, path, key) { importURL(object, paste0("file:///", normalizePath(path)), key) })
+setMethod("importFolder", signature(object="H2OClient", path="character", parse="missing"),
+          function(object, path) { importFolder(object, path, parse = TRUE) })
 
-setMethod("parseRaw", signature(object="H2ORawData", key="character", header="logical"), 
-          function(object, key, header) {
-            res = h2o.__remoteSend(object, h2o.__PAGE_PARSE, source_key=object@key, destination_key=key, header=header*1)
-            while(h2o.__poll(object, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
-            parsedData = new("H2OParsedData", h2o=object@h2o, key=res$destination_key)
+setMethod("importFile", signature(object="H2OClient", path="character", key="missing", parse="logical"), 
+          function(object, path, parse) { 
+            if(!file.exists(path)) stop("File does not exist!")
+            importFolder(object, path, parse)[[1]] })
+
+setMethod("importFile", signature(object="H2OClient", path="character", key="missing", parse="missing"), 
+          function(object, path) { importFile(object, path, parse = TRUE) })
+
+setMethod("importFile", signature(object="H2OClient", path="character", key="character", parse="logical"), 
+          function(object, path, key, parse) {
+            if(!file.exists(path)) stop("File does not exist!")
+            importURL(object, paste0("file:///", normalizePath(path)), key, parse) })
+
+setMethod("importFile", signature(object="H2OClient", path="character", key="character", parse="missing"), 
+          function(object, path, key) { importFile(object, path, key, parse = TRUE) })
+
+setMethod("parseRaw", signature(data="H2ORawData", key="character"), 
+          function(data, key) {
+            res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key)
+            while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
+            parsedData = new("H2OParsedData", h2o=data@h2o, key=res$destination_key)
           })
+
+setMethod("parseRaw", signature(data="H2ORawData", key="missing"),
+          function(data, key) { parseRaw(data, key) })
 
 setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="numeric", alpha="numeric", lambda="numeric"),
           function(x, y, data, family, nfolds, alpha, lambda) {
@@ -291,6 +326,7 @@ h2o.__PAGE_JOBS = "Jobs.json"
 h2o.__PAGE_PARSE = "Parse.json"
 h2o.__PAGE_PUT = "PutVector.json"
 h2o.__PAGE_REMOVE = "Remove.json"
+h2o.__PAGE_CLOUD = "Cloud.json"
 
 h2o.__PAGE_SUMMARY = "SummaryPage.json"
 h2o.__PAGE_PREDICT = "GeneratePredictionsPage.json"
@@ -371,4 +407,9 @@ h2o.__remove <- function(client, keyName) {
   if (type != "character")
     keyName = deparse(substitute(keyName))
   res = h2o.__remoteSend(client, h2o.__PAGE_REMOVE, key=keyName)
+}
+
+h2o.__version <- function(client) {
+  res = h2o.__remoteSend(client, h2o.__PAGE_CLOUD)
+  as.numeric(res$version)
 }
