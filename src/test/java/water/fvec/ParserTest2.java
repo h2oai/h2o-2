@@ -1,5 +1,10 @@
 package water.fvec;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.io.File;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -12,24 +17,7 @@ public class ParserTest2 extends TestUtil {
   private String[] s(String...ss) { return ss; }
   private final double NaN = Double.NaN;
   private final char[] SEPARATORS = new char[] {',', ' '};
-  private Key k(String kname, String... data) {
-    Key k = Vec.newKey(Key.make(kname));
-    byte [][] chunks = new byte[data.length][];
-    long [] espc = new long[data.length+1];
-    for(int i = 0; i < chunks.length; ++i){
-      chunks[i] = data[i].getBytes();
-      espc[i+1] = espc[i] + data[i].length();
-    }
-    Futures fs = new Futures();
-    ByteVec bv = new ByteVec(k,espc);
-    DKV.put(k, bv, fs);
-    for(int i = 0; i < chunks.length; ++i){
-      Key chunkKey = bv.chunkKey(i);
-      DKV.put(chunkKey, new Value(chunkKey,chunks[i].length,chunks[i],TypeMap.C1CHUNK,Value.ICE));
-    }
-    fs.blockForPending();
-    return k;
-  }
+
   public static boolean compareDoubles(double a, double b, double threshold){
     int e1 = 0;
     int e2 = 0;
@@ -84,13 +72,13 @@ public class ParserTest2 extends TestUtil {
       String[] dataset = getDataForSeparator(separator, data);
       StringBuilder sb = new StringBuilder();
       for( int i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\n");
-      Key k = k(Key.make().toString(),sb.toString());
+      Key k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
       Key r1 = Key.make("r1");
       ParseDataset2.parse(r1, new Key[]{k});
       testParsed(r1,exp,k);
       sb = new StringBuilder();
       for( int i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\r\n");
-      k = k(k.toString(),sb.toString());
+      k = FVecTest.makeByteVec(k.toString(),sb.toString());
       Key r2 = Key.make("r2");
       ParseDataset2.parse(r2, new Key[]{k});
       testParsed(r2,exp,k);
@@ -125,7 +113,7 @@ public class ParserTest2 extends TestUtil {
 
     for (char separator : SEPARATORS) {
       String[] dataset = getDataForSeparator(separator, data);
-      Key k = k("ChunkBoundaries",dataset);
+      Key k = FVecTest.makeByteVec("ChunkBoundaries",dataset);
       Key r3 = Key.make();
       ParseDataset2.parse(r3,new Key[]{k});
       testParsed(r3,exp,k);
@@ -156,7 +144,7 @@ public class ParserTest2 extends TestUtil {
 
     for (char separator : SEPARATORS) {
       String[] dataset = getDataForSeparator(separator, data);
-      Key k = k("ChunkBoundariesMixedLineEndings",dataset);
+      Key k = FVecTest.makeByteVec("ChunkBoundariesMixedLineEndings",dataset);
       Key r4 = Key.make();
       ParseDataset2.parse(r4,new Key[]{k});
       testParsed(r4,exp,k);
@@ -206,7 +194,7 @@ public class ParserTest2 extends TestUtil {
 
     for (char separator : SEPARATORS) {
       String[] dataset = getDataForSeparator(separator, data);
-      Key key = k("NondecimalColumns",dataset);
+      Key key = FVecTest.makeByteVec("NondecimalColumns",dataset);
       Key r = Key.make();
       ParseDataset2.parse(r,new Key[]{key});
       Frame fr = DKV.get(r).get();
@@ -228,7 +216,7 @@ public class ParserTest2 extends TestUtil {
     };
     for (char separator : SEPARATORS) {
       String[] dataset = getDataForSeparator(separator, data);
-      Key key = k("NumberFormats",dataset);
+      Key key = FVecTest.makeByteVec("NumberFormats",dataset);
       Key r = Key.make();
       ParseDataset2.parse(r,new Key[]{key});
       testParsed(r, expDouble,key);
@@ -257,7 +245,7 @@ public class ParserTest2 extends TestUtil {
 
     for (char separator : SEPARATORS) {
       String[] dataset = getDataForSeparator(separator, data);
-      Key key = k("MultipleNondecimalColumns",dataset);
+      Key key = FVecTest.makeByteVec("MultipleNondecimalColumns",dataset);
       Key r = Key.make();
       ParseDataset2.parse(r,new Key[]{key});
       Frame fr = DKV.get(r).get();
@@ -305,7 +293,7 @@ public class ParserTest2 extends TestUtil {
     final char separator = ',';
 
     String[] dataset = getDataForSeparator(separator, data);
-    Key key = k("EmptyColumnValues",dataset);
+    Key key = FVecTest.makeByteVec("EmptyColumnValues",dataset);
     Key r = Key.make();
     ParseDataset2.parse(r,new Key[]{key});
     Frame fr = DKV.get(r).get();
@@ -338,7 +326,7 @@ public class ParserTest2 extends TestUtil {
       int i = 0;
       StringBuilder sb = new StringBuilder();
       for( i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\n");
-      Key k = k("test_"+separator,sb.toString());
+      Key k = FVecTest.makeByteVec("test_"+separator,sb.toString());
       Key r5 = Key.make();
       ParseDataset2.parse(r5, new Key[]{k});
       testParsed(r5, exp,k);
@@ -379,34 +367,83 @@ public class ParserTest2 extends TestUtil {
     testParsed(okey,exp,fkey,25);
   }
 
+  @Test public void testNAs() {
+    String [] data = new String[]{
+        "'C1Chunk',C1SChunk, 'C2Chunk', 'C2SChunk',  'C4Chunk',  'C4FChunk',  'C8Chunk',  'C8DChunk',   'Enum'\n"  +
+        "0,       0.0,          0,           0,           0,          0 ,          0,   8.878979,           A \n" ,
+        "1,       0.1,          1,         0.1,           1,          1 ,          1,   1.985934,           B \n" ,
+        "2,       0.2,          2,         0.2,           2,          2 ,          2,   3.398018,           C \n" ,
+        "3,       0.3,          3,         0.3,           3,          3 ,          3,   9.329589,           D \n" ,
+        "4,       0.4,          4,           4,           4,          4 , 2147483649,   0.290184,           A \n" ,
+        "0,       0.5,          0,           0,     -100000,    1.234e2 ,-2147483650,   1e-30,              B \n" ,
+      "254,       0.25,      2550,       6553.4,     100000,    2.345e-2,          0,   1e30,               C \n" ,
+      "   ,           ,          ,            ,            ,            ,           ,       ,                 \n" ,
+      "  ?,         NA,         ?,           ?,           ?,           ?,          ?,       ?,                \n" ,
+    };
+
+    //File file = find_test_file("./smalldata/test/na_test.zip");
+    //Key key = NFSFileVec.make(file);
+    Key rkey = FVecTest.makeByteVec("na_test",data);
+    Key okey = Key.make("na_test.hex");
+    Frame fr = ParseDataset2.parse(okey, new Key[]{rkey});
+    int nlines = (int)fr._vecs[0].length();
+    // This variable could be declared static, except that that causes an issue
+    // with the weaver trying to load these classes before a Cloud is formed.
+    Class [] expectedTypes = new Class[]{C1Chunk.class,C1SChunk.class,C2Chunk.class,C2SChunk.class,C4Chunk.class,C4FChunk.class,C8Chunk.class,C8DChunk.class, C1Chunk.class};
+    assertTrue(fr._vecs.length == expectedTypes.length);
+//    for(int i = 0; i < expectedTypes.length; ++i)
+//      assertTrue("unpextected vector type, got: " + fr._vecs[i].elem2BV(0).getClass().getSimpleName() + ", expected: " + expectedTypes[i].getSimpleName(),expectedTypes[i].isInstance(fr._vecs[i].elem2BV(0)));
+    assertEquals(9,nlines);
+    for(int i = 0; i < nlines-2; ++i)
+      for(Vec v:fr._vecs)
+        assertTrue("error at line "+i+", vec " + v.elem2BV(0).getClass().getSimpleName(),!v.isNA(v.at(i)) && !v.isNA(v.at8(i)));
+    System.out.println("nlines = " + nlines);
+    int j = 0;
+    for(Vec v:fr._vecs){
+      for(int i = nlines-2; i < nlines; ++i){
+        assertTrue(i + ", " + j + ":" + v.at(i) + ", " + v.at8(i),v.isNA(v.at(i)) && v.isNA(v.at8(i)));
+//        v.replaceNAs(1.0, 2);
+//        assertTrue(!v.isNA(v.at(i)) && !v.isNA(v.at8(i)));
+//        assertTrue(v.at(i) == 1.0 && v.at8(i) == 2);
+//        v.setNAs(3.0, 4);
+//        assertTrue(v.isNA(v.at(i)) && v.isNA(v.at8(i)));
+//        assertTrue(v.at(i) == 3.0 && v.at8(i) == 4);
+      }
+      ++j;
+    }
+    UKV.remove(rkey);
+    UKV.remove(okey);
+  }
   void runTests(){
-    System.out.println("testBasic");
-    testBasic();
-    System.out.println("testBasicSpaceAsSeparator");
-    testBasicSpaceAsSeparator();
-    System.out.println("testChunkBoundaries");
-    testChunkBoundaries();
-    System.out.println("testChunkBoundariesMixedLineEndings");
-    testChunkBoundariesMixedLineEndings();
-    System.out.println("testEmptyColumnValues");
-    testEmptyColumnValues();
-    System.out.println("testMixedSeps");
-    testMixedSeps();
-    System.out.println("testMultipleNondecimalColumns");
-    testMultipleNondecimalColumns();
-    System.out.println("testNondecimalColumns");
-    testNondecimalColumns();
-    System.out.println("testNumberFormats");
-    testNumberFormats();
-    System.out.println("testTimeParse");
-    testTimeParse();
+//    System.out.println("testBasic");
+//    testBasic();
+//    System.out.println("testBasicSpaceAsSeparator");
+//    testBasicSpaceAsSeparator();
+//    System.out.println("testChunkBoundaries");
+//    testChunkBoundaries();
+//    System.out.println("testChunkBoundariesMixedLineEndings");
+//    testChunkBoundariesMixedLineEndings();
+//    System.out.println("testEmptyColumnValues");
+//    testEmptyColumnValues();
+//    System.out.println("testMixedSeps");
+//    testMixedSeps();
+//    System.out.println("testMultipleNondecimalColumns");
+//    testMultipleNondecimalColumns();
+//    System.out.println("testNondecimalColumns");
+//    testNondecimalColumns();
+//    System.out.println("testNumberFormats");
+//    testNumberFormats();
+//    System.out.println("testTimeParse");
+//    testTimeParse();
+    System.out.println("testNAs");
+    testNAs();
     checkLeakedKeys();
     System.out.println("DONE!!!");
   }
 
   public static void main(String [] args) throws Exception{
     System.out.println("Running ParserTest2");
-    final int nnodes = 3;
+    final int nnodes = 1;
     for( int i = 1; i < nnodes; i++ ) {
       Node n = new NodeVM(args);
       n.inheritIO();

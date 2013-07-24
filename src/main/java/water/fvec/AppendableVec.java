@@ -16,6 +16,10 @@ import java.util.Arrays;
 // other Vec type.  NEW Vectors do NOT support reads!
 public class AppendableVec extends Vec {
   long _espc[];
+  public static final byte NUMBER = 3;
+  public static final byte ENUM   = 2;
+  public static final byte NA     = 1;
+  byte [] _chunkTypes;
   boolean _hasFloat;            // True if we found a float chunk
   long _missingCnt;
   long _strCnt;
@@ -24,6 +28,7 @@ public class AppendableVec extends Vec {
   AppendableVec( Key key) {
     super(key, null,false,Double.MAX_VALUE,Double.MIN_VALUE);
     _espc = new long[4];
+    _chunkTypes = new byte[4];
   }
 
   // A NewVector chunk was "closed" - completed.  Add it's info to the roll-up.
@@ -31,8 +36,12 @@ public class AppendableVec extends Vec {
   // not called distributed.
   synchronized void closeChunk( NewChunk chk) {
     final int cidx = chk._cidx;
-    while( cidx >= _espc.length ) _espc = Arrays.copyOf(_espc,_espc.length<<1);
+    while( cidx >= _espc.length ) {
+      _espc   = Arrays.copyOf(_espc,_espc.length<<1);
+      _chunkTypes = Arrays.copyOf(_chunkTypes,_chunkTypes.length<<1);
+    }
     _espc[cidx] = chk._len;
+    _chunkTypes[cidx] = chk.type();
  //   _homes[cidx] = H2O.SELF.index();
     _hasFloat |= chk.hasFloat();
     // Roll-up totals for each chunk as it closes
@@ -58,13 +67,19 @@ public class AppendableVec extends Vec {
 
     // Combine arrays of elements-per-chunk
     long e1[] = nv._espc;       // Shorter array of longs?
+    byte t1[] = nv._chunkTypes;
     if( e1.length > _espc.length ) {
       e1 = _espc;               // Keep the shorter one in e1
+      t1 = _chunkTypes;
       _espc = nv._espc;         // Keep longer in the object
+      _chunkTypes = nv._chunkTypes;
     }
-    for( int i=0; i<e1.length; i++ ) // Copy non-zero elements over
+    for( int i=0; i<e1.length; i++ ){ // Copy non-zero elements over
+      assert _chunkTypes[i] == 0 || t1[i] == 0;
       if( e1[i] != 0 && _espc[i]==0 )
         _espc[i] = e1[i];
+      _chunkTypes[i] |= t1[i];
+    }
   }
 
 
@@ -75,6 +90,17 @@ public class AppendableVec extends Vec {
     int nchunk = _espc.length;
     while( nchunk > 0 && _espc[nchunk-1] == 0 ) nchunk--;
     DKV.remove(chunkKey(nchunk)); // remove potential trailing key
+    boolean hasNumber = false, hasEnum = false;
+    for(int i = 0; i < nchunk; ++i)
+      if(_chunkTypes[i] == NUMBER){
+        hasNumber = true;
+      } else if(_chunkTypes[i] == ENUM)
+        hasEnum = true;
+    if(hasNumber && hasEnum){ // number wins, we need to go through the enum chunks and declare them all NAs (chunk is considered enum iff it has only enums + possibly some nas)
+      for(int i = 0; i < nchunk; ++i)
+        if(_chunkTypes[i] == ENUM)
+          DKV.put(chunkKey(i), new C0DChunk(Double.NaN, (int)_espc[i]),fs);
+    }
     // Compute elems-per-chunk.
     // Roll-up elem counts, so espc[i] is the starting element# of chunk i.
     // TODO: Complete fail: loads all data locally - will force OOM.  Needs to be
