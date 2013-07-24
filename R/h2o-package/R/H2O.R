@@ -77,7 +77,7 @@ setGeneric("parseRaw", function(data, key = "") { standardGeneric("parseRaw") })
 setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5) { standardGeneric("h2o.glm") })
 setGeneric("h2o.kmeans", function(data, centers, cols = "", iter.max = 10) { standardGeneric("h2o.kmeans") })
 # setGeneric("h2o.randomForest", function(y, x_ignore, data, ntree) { standardGeneric("h2o.randomForest") })
-setGeneric("h2o.randomForest", function(y, data, ntree) { standardGeneric("h2o.randomForest") })
+setGeneric("h2o.randomForest", function(y, data, ntree, depth, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 setGeneric("h2o.getTree", function(forest, k) { standardGeneric("h2o.getTree") })
 
 # Unique methods to H2O
@@ -229,9 +229,18 @@ setMethod("h2o.kmeans", signature(data="H2OParsedData", centers="numeric", cols=
 # setMethod("h2o.randomForest", signature(y="character", x_ignore="character", data="H2OParsedData", ntree="numeric"),
 #          function(y, x_ignore, data, ntree) {
 #           res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=y, ignore=x_ignore, ntree=ntree)
-setMethod("h2o.randomForest", signature(y="character", data="H2OParsedData", ntree="numeric"),
-          function(y, data, ntree) {
-            res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=y, ntree=ntree)
+
+setMethod("h2o.randomForest", signature(y="character", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="numeric"),
+          function(y, data, ntree, depth, classwt) {
+            # If no class weights, then default to all 1.0
+            if(!any(is.na(classwt))) {
+              myWeights = rep(NA, length(classwt))
+              for(i in 1:length(classwt))
+                myWeights[i] = paste(names(classwt)[i], classwt[i], sep="=")
+              res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=y, ntree=ntree, depth=depth, class_weights=paste(myWeights, collapse=","))
+            }
+            else
+              res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=y, ntree=ntree, depth=depth, class_weights="")
             while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
             destKey = res$destination_key
             res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RFVIEW, model_key=destKey, data_key=data@key, out_of_bag_error_estimate=1)
@@ -256,6 +265,9 @@ setMethod("h2o.randomForest", signature(y="character", data="H2OParsedData", ntr
             resRFModel = new("H2ORForestModel", key=destKey, data=data, model=result)
             resRFModel
           })
+
+setMethod("h2o.randomForest", signature(y="character", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="missing"),
+          function(y, data, ntree, depth) { h2o.randomForest(y, data, ntree, depth, classwt = as.numeric(NA)) })
 
 # setMethod("h2o.randomForest", signature(y="character", x_ignore="missing", data="H2OParsedData", ntree="numeric"),
 #          function(y, data, ntree) { h2o.randomForest(y, "", data, ntree) })
