@@ -39,6 +39,6 @@ build: clean
 	cp README.txt h2o_hadoop
 	cp target/* h2o_hadoop
 	zip h2o_hadoop.zip h2o_hadoop/*
-	mv h2o_hadoop.zip target
+	mv h2o_hadoop.zip ../target
 	rm -fr h2o_hadoop
 

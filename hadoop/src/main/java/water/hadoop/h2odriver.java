@@ -299,6 +299,13 @@ public class h2odriver extends Configured implements Tool {
                     "              192.168.1.100\n" +
                     "              192.168.1.101\n" +
                     "              etc.\n" +
+                    "\n" +
+                    "Exit value:\n" +
+                    "          0 means the cluster exited successfully with an orderly Shutdown.\n" +
+                    "              (From the Web UI or the REST API.)\n" +
+                    "\n" +
+                    "          non-zero means the cluster exited with a failure.\n" +
+                    "              (Note that Ctrl-C is treated as a failure.)\n" +
                     "\n"
     );
 
