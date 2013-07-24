@@ -7,7 +7,7 @@ public class Mnist extends Mnist8m {
     load();
     // One shot
     // normalize();
-
+    //TODO try subtract mean for each sample before col norm
     Mnist mnist = new Mnist();
     mnist.run();
   }

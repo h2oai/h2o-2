@@ -1,6 +1,7 @@
+// OpenCL kernels
 
-// OpenCL Kernel Function for element by element vector addition
-kernel void VectorAdd(global const float* a, global const float* b, global float* c, int numElements) {
+ia, w, b, a[y]
+kernel void Tanh_fprop(global const float* a, global const float* b, global float* c, int numElements) {
 
     // get index into global data array
     int iGID = get_global_id(0);

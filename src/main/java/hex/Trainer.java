@@ -1,7 +1,5 @@
 package hex;
 
-import static java.lang.System.nanoTime;
-import static java.lang.System.out;
 import hex.Layer.Input;
 
 import java.io.IOException;
@@ -56,12 +54,13 @@ public abstract class Trainer {
         for( int b = 0; b < _batch; b++ ) {
           fprop();
 
-          for( int i = 1; i < _ls.length; i++ )
+          for( int i = 1; i < _ls.length - 1; i++ )
             Arrays.fill(_ls[i]._e, 0);
           float[] err = _ls[_ls.length - 1]._e;
-          err[input.label()] = 1.0f;
-          for( int i = 0; i < err.length; i++ )
-            err[i] -= _ls[_ls.length - 1]._a[i];
+          for( int i = 0; i < err.length; i++ ) {
+            float t = i == input.label() ? .9f : -.1f;
+            err[i] = t - _ls[_ls.length - 1]._a[i];
+          }
 
           bprop();
           input._n = input._n == input._count - 1 ? 0 : input._n + 1;
@@ -344,6 +343,7 @@ public abstract class Trainer {
         CLProgram program = context.createProgram(Boot._init.getResource2("/kernels.cl")).build();
         CLKernel[] fprops = new CLKernel[_ls.length];
         CLKernel[] bprops = new CLKernel[_ls.length];
+        CLBuffer<FloatBuffer>[] a = new CLBuffer[_ls.length];
         CLBuffer<FloatBuffer>[] e = new CLBuffer[_ls.length];
         for( int y = 0; y < _ls.length; y++ ) {
           fprops[y] = program.createCLKernel(_ls.getClass().getSimpleName() + "_fprop");
@@ -352,14 +352,14 @@ public abstract class Trainer {
             CLBuffer<FloatBuffer> ia = context.createFloatBuffer(_ls[y - 1]._a.length, Mem.READ_ONLY);
             CLBuffer<FloatBuffer> w = context.createFloatBuffer(_ls[y]._w.length, Mem.READ_ONLY);
             CLBuffer<FloatBuffer> b = context.createFloatBuffer(_ls[y]._b.length, Mem.READ_ONLY);
-            CLBuffer<FloatBuffer> a = context.createFloatBuffer(_ls[y]._a.length, Mem.READ_WRITE);
-            fprops[y].putArgs(ia, w, b, a);
+            a[y] = context.createFloatBuffer(_ls[y]._a.length, Mem.READ_WRITE);
+            fprops[y].putArgs(ia, w, b, a[y]);
 
             CLBuffer<FloatBuffer> gw = context.createFloatBuffer(_ls[y]._gw.length, Mem.READ_WRITE);
             CLBuffer<FloatBuffer> gb = context.createFloatBuffer(_ls[y]._gb.length, Mem.READ_WRITE);
-            CLBuffer<FloatBuffer> e = context.createFloatBuffer(_ls[y]._e.length, Mem.READ_ONLY);
+            e[y] = context.createFloatBuffer(_ls[y]._e.length, Mem.READ_ONLY);
             CLBuffer<FloatBuffer> ie = context.createFloatBuffer(_ls[y]._e.length, Mem.READ_WRITE);
-            bprops[y].putArgs(w, gw, gb, a, e, ia, ie);
+            bprops[y].putArgs(w, gw, gb, a[y], e[y], ia, ie);
 
             queue.putWriteBuffer(w, false);
             queue.putWriteBuffer(b, false);
@@ -369,17 +369,25 @@ public abstract class Trainer {
         for( int batch = 0; _batches == 0 || batch < _batches; batch++ ) {
           Input input = (Input) _ls[0];
           for( int b = 0; b < _batch; b++ ) {
+            putSample(a[a.length - 1].getBuffer(), input._n);
+
             for( int y = 0; y < fprops.length; y++ )
               queue.put1DRangeKernel(fprops[y], 0, _ls[y]._a.length, group);
 
-            for( int i = 1; i < _ls.length; i++ )
-              Arrays.fill(_ls[i]._e, 0);
-            float[] err = _ls[_ls.length - 1]._e;
-            err[input.label()] = 1.0f;
-            for( int i = 0; i < err.length; i++ )
-              err[i] -= _ls[_ls.length - 1]._a[i];
+            queue.putReadBuffer(a[_ls.length - 1], true);
+            for( int y = 1; y < _ls.length - 1; y++ ) {
+              FloatBuffer buffer = e[y].getBuffer();
+              for( int i = 0; i < buffer.capacity(); i++ )
+                buffer.put(i, 0);
+            }
+            FloatBuffer err = e[e.length - 1].getBuffer();
+            FloatBuffer act = a[a.length - 1].getBuffer();
+            for( int i = 0; i < err.capacity(); i++ )
+              err.put(i, (i == input.label() ? .9f : -.1f) - act.get(i));
 
-            bprop();
+            queue.putWriteBuffer(a[_ls.length - 1], false);
+            for( int y = _ls.length - 1; y > 0; y-- )
+              queue.put1DRangeKernel(bprops[y], 0, _ls[y]._a.length, group);
             input._n = input._n == input._count - 1 ? 0 : input._n + 1;
           }
 
@@ -388,23 +396,16 @@ public abstract class Trainer {
 
           _count.addAndGet(_batch);
         }
-
-        queue.put1DRangeKernel(fprops[y], 0, globalWorkSize, localWorkSize).putReadBuffer(clBufferC, true);
-        queue.put1DRangeKernel(kernel, 0, globalWorkSize, localWorkSize).putReadBuffer(clBufferC, true);
-        time = nanoTime() - time;
-
-        // print first few elements of the resulting buffer to the console.
-        out.println("a+b=c results snapshot: ");
-        for( int i = 0; i < 10; i++ )
-          out.print(clBufferC.getBuffer().get() + ", ");
-        out.println("...; " + clBufferC.getBuffer().remaining() + " more");
-
-        out.println("computation took: " + (time / 1000000) + "ms");
       } catch( IOException ex ) {
         throw new RuntimeException(ex);
       } finally {
         context.release();
       }
+    }
+
+    private static void putSample(FloatBuffer b, int n) {
+
+      queue.putWriteBuffer(a[0], false);
     }
   }
 }
