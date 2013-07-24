@@ -33,7 +33,9 @@ def pickRandGlmParams(paramDict, params):
     return colX
 
 def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False,
-    prettyPrint=False, noPrint=False, **kwargs):
+    prettyPrint=False, noPrint=False, maxExpectedIterations=None, **kwargs):
+    # if we hit the max_iter, that means it probably didn't converge. should be 1-maxExpectedIter
+
     # h2o GLM will verboseprint the result and print errors. 
     # so don't have to do that
     # different when cross validation  is used? No trainingErrorDetails?
@@ -65,6 +67,10 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     iterations = GLMModel['iterations']
     print "GLMModel/iterations:", iterations
 
+            # if we hit the max_iter, that means it probably didn't converge. should be 1-maxExpectedIter
+    if maxExpectedIterations is not None and iterations  > maxExpectedIterations:
+            raise Exception("GLM did iterations: %d which is greater than expected: %d" % (iterations, maxExpectedIterations) )
+
     # pop the first validation from the list
     validationsList = GLMModel['validations']
     # don't want to modify validationsList in case someone else looks at it
@@ -74,7 +80,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     n_folds = kwargs.setdefault('n_folds', None)
     if not 'xval_models' in validations:
         if n_folds > 1:
-                raise Exception("No cross validation models returned. Asked for "+n_folds)
+            raise Exception("No cross validation models returned. Asked for "+n_folds)
     else:
         xval_models = validations['xval_models']
         if n_folds and n_folds > 1:
