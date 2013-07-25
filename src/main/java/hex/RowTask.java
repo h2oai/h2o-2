@@ -36,29 +36,13 @@ public abstract class RowTask<T extends Freezable> extends MRTask<RowTask<T>> {
   public static abstract class RowFunction<T extends Iced> extends Iced {
     public abstract void processRow(Row r, T res);
   }
-  public abstract static class RowFilter extends Iced {
-    public abstract boolean useRow(Row r);
-  }
-
-  RowFilter [] _filters = {};
-
-  public void addFilter(RowFilter r){
-    int n = _filters.length;
-    _filters = Arrays.copyOf(_filters, n+1);
-    _filters[n] = r;
-  }
-
   @Override public void map(Key key) {
     _bits = new AutoBuffer(DKV.get(key).memOrLoad());
-    final int nrows = _bits.remaining()/_ary.rowSize();
+    final int nrows = _ary.rpc(ValueArray.getChunkIndex(key));
     final Row r = new Row(this);
     _res = newRes();
-    for(_rid = 0; _rid < nrows; ++_rid){
-      if(_filters != null)
-        for(RowFilter f:_filters) if(!f.useRow(r))
-          continue;
+    for(_rid = 0; _rid < nrows; ++_rid)
       map(r,_res);
-    }
   }
 
   public abstract T newRes();
