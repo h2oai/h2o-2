@@ -4,7 +4,7 @@ package hex;
 //import hex.DGLM.GramMatrixFunc;
 import hex.RowVecTask.Sampling;
 
-import java.util.Arrays;
+import java.util.*;
 
 import water.*;
 import water.Job.ChunkProgressJob;
@@ -68,53 +68,83 @@ public class NewRowVecTask<T extends Iced> extends MRTask {
     final int[] _colCatMap;
     final double [] _normSub;
     final double [] _normMul;
+    final int _dense;
+    final int _response;
     final long _nobs;
     public final boolean _standardized;
 
     public DataFrame(ValueArray ary, int [] colIds, Sampling s, boolean standardize, boolean expandCat){
+      ArrayList<Integer> numeric = new ArrayList<Integer>();
+      ArrayList<Integer> categorical = new ArrayList<Integer>();
+      for(int i = 0; i < colIds.length-1; ++i){
+        int c = colIds[i];
+        if(ary._cols[c]._domain != null)
+          categorical.add(c);
+        else
+          numeric.add(c);
+      }
+      _dense = numeric.size()+1; // numeric + 1 for response/intercept
+      final Column [] cols = ary._cols;
+      Collections.sort(categorical, new Comparator<Integer>() {
+        @Override public int compare(Integer o1, Integer o2) {
+          return cols[o2]._domain.length-cols[o1]._domain.length;
+        }
+      });
+
+      int idx = 0;
+      for(int i:categorical)colIds[idx++] = i;
+      for(int i:numeric)colIds[idx++] = i;
+      colIds[idx] = colIds[colIds.length-1];
+      _response = idx;
       _ary = ary;
       _modelDataMap = colIds;
       _s = s;
       _colCatMap = new int[colIds.length+1];
       int len=0;
-      for( int i=0; i<colIds.length-1; i++ ) {
+      for( int i=0; i<colIds.length; i++ ) {
         _colCatMap[i] = len;
-        ValueArray.Column C = ary._cols[colIds[i]];
-        len += ( expandCat && C._domain != null )?C._domain.length-1:1;
+        if(i == _response){
+        ++len;
+        } else {
+          ValueArray.Column C = ary._cols[colIds[i]];
+          len += ( expandCat && C._domain != null )?C._domain.length-1:1;
+        }
       }
-      // the last element (response variable) is NEVER expanded
-      _colCatMap[colIds.length-1] = len++;
       _colCatMap[colIds.length] = len;
       _normSub = new double[len];
       _normMul = new double[len];
       Arrays.fill(_normMul, 1);
       boolean standardized = false;
-      if(standardize )for(int i = 0; i < colIds.length-1; ++i){
+      if(standardize )for(int i = 0; i < colIds.length; ++i){
+        if(i == _response)continue;
         standardized = true;
         Column col = ary._cols[colIds[i]];
         if(col._domain == null){
-          int idx = _colCatMap[i];
-          _normSub[idx] = col._mean;
-          _normMul[idx] = 1.0/col._sigma;
+          int ii = _colCatMap[i];
+          _normSub[ii] = col._mean;
+          _normMul[ii] = 1.0/col._sigma;
         }
       }
       _standardized = standardized;
       _nobs = (s != null)?(long)(ary._numrows*s.ratio()):ary._numrows;
     }
+    public int largestCatSz(){
+      return _colCatMap[1] - _colCatMap[0];
+    }
     public Sampling getSampling() {return (_s != null)?_s.clone():null;}
     public Sampling getSamplingComplement() {return (_s != null)?_s.complement():null;}
     public int expandedSz() {return _colCatMap[_colCatMap.length-1];}
     public int compactSz(){return _modelDataMap.length;}
-    public int dense(){
-      for(int i = 0; i < _modelDataMap.length; ++i)
-        if(_colCatMap[i] != i)return i-1;
-      return _modelDataMap.length;
+    public int dense(){return _dense;}
+    public int [] betaColMap(){
+      int [] res = _modelDataMap.clone();
+      System.arraycopy(_modelDataMap, 0, res, _modelDataMap.length-_dense, _dense);
+      System.arraycopy(_modelDataMap, _dense, res, 0, _modelDataMap.length-_dense);
+      return res;
     }
-
     public double [] denormalizeBeta(double [] beta) {
       if(!_standardized)
         return beta;
-
       double [] newBeta = beta.clone();
       double norm = 0.0;        // Reverse any normalization on the intercept
       for( int i=0; i<newBeta.length-1; i++ ) {

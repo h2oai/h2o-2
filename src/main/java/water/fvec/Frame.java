@@ -20,7 +20,7 @@ public class Frame extends Iced {
   // Find a named column
   public int find( String name ) {
     for( int i=0; i<_names.length; i++ )
-      if( name.equals(_names[i]) ) 
+      if( name.equals(_names[i]) )
         return i;
     return -1;
   }
@@ -36,7 +36,7 @@ public class Frame extends Iced {
   // Remove a named column
   public Vec remove( String name ) { return remove(find(name)); }
   // Remove a numbered column
-  public Vec remove( int idx ) { 
+  public Vec remove( int idx ) {
     int len = _names.length;
     if( idx < 0 || idx >= len ) return null;
     Vec v = _vecs[idx];
@@ -51,7 +51,8 @@ public class Frame extends Iced {
   public final Vec[] vecs() {
     return _vecs;
   }
-  int numCols() { return _vecs.length; }
+  public int  numCols() { return _vecs.length; }
+  public long numRows(){ return _vecs[0].length();}
 
   // Return first readable vector
   public Vec firstReadable() {
@@ -105,7 +106,7 @@ public class Frame extends Iced {
       VectorGroup vg = _vecs[0].group();
       for( Vec v : _vecs )
         UKV.remove(v._key,fs);
-       DKV.remove(vg._key);
+      DKV.remove(vg._key);
     }
     _names = new String[0];
     _vecs = new Vec[0];

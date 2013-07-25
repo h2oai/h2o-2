@@ -64,7 +64,7 @@ class Tree extends Iced {
       int idx = -1;             // Column to split on
       for( int i=0; i<_hs.length; i++ ) {
         if( _hs[i]==null || _hs[i]._bins.length == 1 ) continue;
-        double s = _hs[i].scoreVar();
+        double s = _hs[i].score();
         if( s < bs ) { bs = s; idx = i; }
       }
       // Split on column 'idx' with score 'bs'
@@ -89,18 +89,26 @@ class Tree extends Iced {
       StringBuilder sb = new StringBuilder();
       sb.append("Nid# ").append(_nid).append(", ");
       printLine(sb).append("\n");
+      int numClasses = 0;       // Assume Regression
       final int ncols = _hs.length;
       for( int j=0; j<ncols; j++ )
-        if( _hs[j] != null )
-          p(sb,_hs[j]._name+String.format(", %5.2f",_hs[j].scoreVar()),colW).append(colPad);
+        if( _hs[j] != null ) {
+          p(sb,_hs[j]._name+String.format(", err=%5.2f",_hs[j].score()),colW).append(colPad);
+          if( _hs[j]._clss != null ) numClasses = _hs[j]._clss[0].length; // Classification
+        }
       sb.append('\n');
       for( int j=0; j<ncols; j++ ) {
         if( _hs[j] == null ) continue;
         p(sb,"cnt" ,cntW).append('/');
         p(sb,"min" ,mmmW).append('/');
         p(sb,"max" ,mmmW).append('/');
-        p(sb,"mean",mmmW).append('/');
-        p(sb,"var" ,varW).append(colPad);
+        if( numClasses == 0 ) {
+          p(sb,"mean",mmmW).append('/');
+          p(sb,"var" ,varW).append(colPad);
+        } else {
+          p(sb,"C0",mmmW).append('-');
+          p(sb,"C"+(numClasses-1),varW).append(colPad);
+        }
       }
       sb.append('\n');
       for( int i=0; i<Histogram.BINS; i++ ) {
@@ -110,9 +118,17 @@ class Tree extends Iced {
             p(sb,Long.toString(_hs[j]._bins[i]),cntW).append('/');
             p(sb,              _hs[j]._mins[i] ,mmmW).append('/');
             p(sb,              _hs[j]._maxs[i] ,mmmW).append('/');
-            p(sb,              _hs[j]. mean(i) ,mmmW).append('/');
-            p(sb,              _hs[j]. var (i) ,varW).append(colPad);
-            //p(sb,              _hs[j]. mse (i) ,varW).append(colPad);
+            if( numClasses==0 ) { // Regression
+              p(sb,              _hs[j]. mean(i) ,mmmW).append('/');
+              p(sb,              _hs[j]. var (i) ,varW).append(colPad);
+            } else {            // Classification
+              StringBuilder sb2 = new StringBuilder();
+              long N = _hs[j]._bins[i];
+              long cls[] = _hs[j]._clss[i];
+              for( int k = 0; k<cls.length; k++ )
+                sb2.append(cls[k]).append(',');
+              p(sb,sb2.toString(),mmmW+1+varW).append(colPad);
+            }
           } else {
             p(sb,"",colW).append(colPad);
           }

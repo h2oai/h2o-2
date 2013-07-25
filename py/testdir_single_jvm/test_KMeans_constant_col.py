@@ -75,7 +75,7 @@ class Basic(unittest.TestCase):
 
             kwargs = {'k': 2, 'epsilon': 1e-6, 'cols': None, 'destination_key': 'benign_k.hex'}
             kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=5, **kwargs)
-            centers = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
+            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
 
             # check center list (first center) has same number of cols as source data
             self.assertEqual(colCount, len(centers[0]),

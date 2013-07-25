@@ -11,6 +11,25 @@ public class FVecTest extends TestUtil {
   static final double EPSILON = 1e-6;
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
+  public static  Key makeByteVec(String kname, String... data) {
+    Key k = Vec.newKey(Key.make(kname));
+    byte [][] chunks = new byte[data.length][];
+    long [] espc = new long[data.length+1];
+    for(int i = 0; i < chunks.length; ++i){
+      chunks[i] = data[i].getBytes();
+      espc[i+1] = espc[i] + data[i].length();
+    }
+    Futures fs = new Futures();
+    ByteVec bv = new ByteVec(k,espc);
+    DKV.put(k, bv, fs);
+    for(int i = 0; i < chunks.length; ++i){
+      Key chunkKey = bv.chunkKey(i);
+      DKV.put(chunkKey, new Value(chunkKey,chunks[i].length,chunks[i],TypeMap.C1CHUNK,Value.ICE));
+    }
+    fs.blockForPending();
+    return k;
+  }
+
   // ==========================================================================
   @Test public void testBasicCRUD() {
     // Make and insert a FileVec to the global store

@@ -40,6 +40,7 @@ public class GBMTest extends TestUtil {
 
   /*@Test*/ public void testCovtypeGBM() {
     File file = TestUtil.find_test_file("../datasets/UCI/UCI-large/covtype/covtype.data");
+    if( file == null ) return;  // Silently abort test if the large covtype is missing
     Key fkey = NFSFileVec.make(file);
     Frame fr = ParseDataset2.parse(Key.make("cov1.hex"),new Key[]{fkey});
     UKV.remove(fkey);

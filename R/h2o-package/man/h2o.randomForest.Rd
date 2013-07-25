@@ -8,7 +8,7 @@ H2O: Random Forest
 Performs random forest classification on a parsed data set.
 }
 \usage{
-h2o.randomForest(y, data, ntree)
+h2o.randomForest(y, data, ntree, depth, classwt = as.numeric(NA))
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -21,6 +21,12 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
   \item{ntree}{
 Number of trees to grow. (Must be a nonnegative integer).
 }
+  \item{depth}{
+  Maximum depth to grow the tree.
+  }
+  \item{classwt} {
+  (Optional) Priors of the classes. Need not add up to one. If missing, defaults to all weights set at 1.0.
+  }
 }
 \details{
 Currently, only classification regression trees are supported, and there is no way to ignore predictor variables during growth of the tree.
@@ -56,7 +62,8 @@ An object of class \code{\linkS4class{H2ORForestModel}} with slots key, data, an
 \examples{
 # Assuming your working directory is h2o/R
 iris.hex = importFile(h2o, "../smalldata/iris/iris.csv", "iris.hex")
-h2o.randomForest(y = "4", data = iris.hex, ntree = 50)
+h2o.randomForest(y = "4", data = iris.hex, ntree = 50, depth = 100, 
+   classwt = c("Iris-versicolor" = 20.0, "Iris-virginica" = 30.0))
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

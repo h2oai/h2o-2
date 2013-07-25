@@ -85,6 +85,7 @@ function clean() {
     mkdir ${OUTDIR}
     mkdir ${CLASSES}
     rm -f $SRC/water/BuildVersion.java
+    rm -fr hadoop/target
 }
 
 function build_classes() {
@@ -159,6 +160,11 @@ function build_src_jar() {
     cp ${SRC_JAR_FILE} ${OUTDIR}/h2o-sources-${JAR_TIME}.jar
 }
 
+function build_hadoop() {
+    echo "building hadoop package..."
+    make -C hadoop SEP=${SEP} >& hadoop/build.log || ( grep failed hadoop/build.log ; exit 1 )
+}
+
 function build_javadoc() {
     echo "creating javadoc files..."
     local CLASSPATH="${JAR_ROOT}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/*"
@@ -187,6 +193,7 @@ if [ "$1" = "compile" ]; then exit 0; fi
 build_initializer
 build_jar
 build_src_jar
+build_hadoop
 if [ "$1" = "build" ]; then exit 0; fi
 build_javadoc
 if [ "$1" = "doc" ]; then exit 0; fi

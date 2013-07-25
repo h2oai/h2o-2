@@ -8,7 +8,7 @@ Import Data from URL
 Imports a file from the URL and parses it, returning an object containing the identifying hex key.
 }
 \usage{
-importURL(object, path, key = "")
+importURL(object, path, key = "", parse = TRUE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -21,14 +21,15 @@ The complete URL of the file to be imported. Each row of data appears as one lin
   \item{key}{
 (Optional) The unique hex key assigned to the imported file. If none is given, a key will automatically be generated based on the URL path.
 }
+\item{parse} {
+(Optional) A logical value indicating whether the file should be parsed after import.
+  }
 }
 \details{
-%%  ~~ If necessary, more details than the description above ~~
+WARNING: In H2O, import is lazy! Do not modify the data on hard disk until after parsing is complete.
 }
 \value{
-An object of class \code{\linkS4class{H2OParsedData}}, which contains the following components:
-\item{h2o }{The \code{\linkS4class{H2OClient}} object that was passed into the function call.}
-\item{key }{The hex key assigned to the imported data.}
+If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedData}}, otherwise it returns an object of class \code{\linkS4class{H2ORawData}}.
 %%  ~Describe the value returned
 %%  If it is a LIST, use
 %%  \item{comp1 }{Description of 'comp1'}
@@ -53,7 +54,7 @@ An object of class \code{\linkS4class{H2OParsedData}}, which contains the follow
 \examples{
 h2o = new("H2OClient", ip="localhost", port=54321)
 prostate.hex = importURL(h2o, "https://raw.github.com/0xdata/h2o/master/smalldata/
-logreg/prostate.csv", "prostate.hex")
+   logreg/prostate.csv", "prostate.hex")
 summary(prostate.hex)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

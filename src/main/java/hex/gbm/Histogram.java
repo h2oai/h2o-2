@@ -35,9 +35,12 @@ class Histogram extends Iced implements Cloneable {
   public    final double   _min, _max;   // Lower-end of binning
   public    final int      _nbins;       // Number of bins
   public          long  [] _bins;        // Bin counts
+  public          double[] _mins, _maxs; // Min, Max, per-bin
+  // For Classification trees, use class-counts
+  public          long[][] _clss;        // Class counts, per-bin
+  // For Regression trees, using mean & variance
   public          double[] _Ms;          // Rolling mean, per-bin
   public          double[] _Ss;          // Rolling var , per-bin
-  public          double[] _mins, _maxs; // Min, Max, per-bin
   public          double[] _MSEs;        // Rolling mean-square-error, per-bin; requires 2nd pass
 
   // Fill in read-only sharable values
@@ -57,13 +60,11 @@ class Histogram extends Iced implements Cloneable {
   }
 
   // Copy from the original Histogram, but then allocate private arrays
-  public Histogram copy() {
+  public Histogram copy( int numClasses ) {
     assert _bins==null && _maxs == null; // Nothing filled-in yet
     Histogram h=clone();
     // Build bin stats
     h._bins = new long  [_nbins];
-    h._Ms   = new double[_nbins];
-    h._Ss   = new double[_nbins];
     h._mins = new double[_nbins];
     h._maxs = new double[_nbins];
     // Set step & min/max for each bin
@@ -73,6 +74,12 @@ class Histogram extends Iced implements Cloneable {
     }
     h._mins[       0] = _min; // Know better bounds for whole column min/max
     h._maxs[_nbins-1] = _max;
+    if( numClasses == 0 ) {
+      h._Ms = new double[_nbins];
+      h._Ss = new double[_nbins];
+    } else {
+      h._clss = new long[_nbins][numClasses];
+    }
     return h;
   }
 
@@ -93,6 +100,16 @@ class Histogram extends Iced implements Cloneable {
     double oldS = _Ss[idx], newS = oldS + (y-oldM)*(y-newM);
     _Ms[idx] = newM;
     _Ss[idx] = newS;
+  }
+  // Add 1 count to bin specified by double.  Simple linear interpolation to
+  // specify bin.  Also passed in the response variable, which is a class.
+  void incr( double d, int y ) {
+    int idx = bin(d);           // Compute bin# via linear interpolation
+    _bins[idx]++;               // Bump count in bin
+    // Track actual lower/upper bound per-bin
+    if( d < _mins[idx] ) _mins[idx] = d;
+    if( d > _maxs[idx] ) _maxs[idx] = d;
+    _clss[idx][y]++;            // Bump class count
   }
 
   // Same as incr, but compute mean-square-error - which requires the mean as
@@ -121,13 +138,44 @@ class Histogram extends Iced implements Cloneable {
   double mse( int bin ) { return _MSEs[bin]; }
 
   // Compute a "score" for a column; lower score "wins" (is a better split).
-  // Score is the sum of variances.
-  double scoreVar( ) {
+  double score( ) {
+    return _clss == null ? scoreRegression() : scoreClassification();
+  }
+  // Compute a "score" for a column; lower score "wins" (is a better split).
+  // Score for a Regression tree is the sum of variances.
+  private double scoreRegression( ) {
     double sum = 0;
     for( int i=0; i<_bins.length; i++ )
       sum += var(i)*_bins[i];
     return sum;
   }
+  // Compute a "score" for a column; lower score "wins" (is a better split).
+  // Score for a Classification tree is sum of the errors per-class.  We
+  // predict a row using the ratio of the response class to all the rows in the
+  // split.  
+  //
+  // Example: we have 10 rows, classed as 8 C0's, 1 C1's and 1 C2's.  The C0's
+  // are all predicted as "80% C0".  We have 8 rows which are 80% correctly C0,
+  // and 2 rows which are 10% correct.  The total error is 8*(1-.8)+2*(1-.1) =
+  // 3.4.
+  //
+  // Example: we have 10 rows, classed as 6 C0's, 2 C1's and 2 C2's.  Total
+  // error is: 6*(1-.6)+4*(1-.2) = 5.6
+  private double scoreClassification( ) {
+    double sum = 0;
+    int numClasses = _clss[0].length;
+    for( int i=0; i<_bins.length; i++ ) {
+      if( _bins[i] == 0 ) continue;
+      // A little algebra, and the math we need is:
+      //    N - (sum(clss^2)/N)
+      int err=0;
+      for( int j=0; j<numClasses; j++ )
+        err += _clss[i][j]*_clss[i][j];
+      sum += (double)_bins[i] - ((double)err/_bins[i]);
+    }
+    return sum;
+  }
+
 
   // Compute a "score" for a column; lower score "wins" (is a better split).
   // Score is the squared-error for the column.  Requires a 2nd pass, as the
@@ -142,7 +190,10 @@ class Histogram extends Iced implements Cloneable {
 
   // Remove old histogram data, but keep enough info to predict.  Cuts down
   // the size of data to move over the wires
-  public void clean() {  _bins=null;  _Ss = _mins = _maxs = _MSEs = null; }
+  public void clean() {  
+    if( _clss == null ) _bins = null; // Not needed for regression trees
+    _Ss = _mins = _maxs = _MSEs = null; 
+  }
 
   // After having filled in histogram bins, compute tighter min/max bounds.
   // Store tighter bounds into the first and last bins.
@@ -166,7 +217,14 @@ class Histogram extends Iced implements Cloneable {
   public Histogram[] split( int col, int i, Histogram hs[], Frame fr, int ncols ) {
     assert hs[col] == this;
     if( _bins[i] <= 1 ) return null; // Zero or 1 elements
-    if( var(i) == 0.0 ) return null; // No point in splitting a perfect prediction
+    if( _clss == null ) {            // Regresion?
+      if( var(i) == 0.0 ) return null; // No point in splitting a perfect prediction
+    } else {                         // Classification
+      long cls[] = _clss[i];         // See if we got a perfect prediction
+      for( int j=0; j<cls.length; j++ )
+        if( cls[j] == _bins[i] )     // Some class has all the bin counts?
+          return null;
+    }
 
     // Build a next-gen split point from the splitting bin
     Histogram nhists[] = new Histogram[ncols]; // A new histogram set
@@ -198,18 +256,23 @@ class Histogram extends Iced implements Cloneable {
   // recursive-mean technique.  Compute min-of-mins and max-of-maxes, etc.
   public void add( Histogram h ) {
     assert _nbins == h._nbins;
-    // Recursive mean & variance
-    //    http://www.johndcook.com/standard_deviation.html
-    //    http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
-    for( int i=0; i<_Ms.length; i++ ) {
+    for( int i=0; i<_bins.length; i++ ) {
       long k1 = _bins[i], k2 = h._bins[i];
       if( k1==0 && k2==0 ) continue;
-      double m1 = _Ms[i], m2 = h.  _Ms[i];
-      double s1 = _Ss[i], s2 = h.  _Ss[i];
-      double delta=m2-m1;
-      _Ms[i] = (k1*m1+k2*m2)/(k1+k2);           // Mean
-      _Ss[i] = s1+s2+delta*delta*k1*k2/(k1+k2); // 2nd moment
       _bins[i]=k1+k2;
+      if( _clss == null ) {     // Regression roll-up
+        // Recursive mean & variance
+        //    http://www.johndcook.com/standard_deviation.html
+        //    http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+        double m1 = _Ms[i], m2 = h.  _Ms[i];
+        double s1 = _Ss[i], s2 = h.  _Ss[i];
+        double delta=m2-m1;
+        _Ms[i] = (k1*m1+k2*m2)/(k1+k2);           // Mean
+        _Ss[i] = s1+s2+delta*delta*k1*k2/(k1+k2); // 2nd moment
+      } else {               // Classification: just sum up the class histogram
+        for( int j=0; j<_clss[i].length; j++ )
+          _clss[i][j] += h._clss[i][j];
+      }
     }
 
     for( int i=0; i<_mins.length; i++ ) if( h._mins[i] < _mins[i] ) _mins[i] = h._mins[i];
