@@ -162,7 +162,7 @@ function build_src_jar() {
 
 function build_hadoop() {
     echo "building hadoop package..."
-    make -C hadoop SEP=${SEP} >& hadoop/build.log || ( grep failed hadoop/build.log ; exit 1 )
+    make -C hadoop SEP=${SEP} >& hadoop/build.log || ( grep -E "(failed||line)" hadoop/build.log ; exit 1 )
 }
 
 function build_javadoc() {

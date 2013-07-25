@@ -24,9 +24,8 @@ Number of trees to grow. (Must be a nonnegative integer).
   \item{depth}{
   Maximum depth to grow the tree.
   }
-  \item{classwt} {
-  (Optional) Priors of the classes. Need not add up to one. If missing, defaults to all weights set at 1.0.
-  }
+\item{classwt}{
+  (Optional) Priors of the classes. Need not add up to one. If missing, defaults to all weights set at 1.0.}
 }
 \details{
 Currently, only classification regression trees are supported, and there is no way to ignore predictor variables during growth of the tree.
