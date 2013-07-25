@@ -8,7 +8,7 @@ Import Local Data File
 Imports a file from the local path and parses it, returning an object containing the identifying hex key.
 }
 \usage{
-importFile(object, path, key)
+importFile(object, path, key = "", parse = TRUE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -21,12 +21,15 @@ The path of the file to be imported. Each row of data appears as one line of the
   \item{key}{
 (Optional) The unique hex key assigned to the imported file. If none is given, a key will automatically be generated based on the file path.
 }
+  \item{parse} {
+(Optional) A logical value indicating whether the file should be parsed after import.
+  }
 }
 \details{
-%%  ~~ If necessary, more details than the description above ~~
+WARNING: In H2O, import is lazy! Do not modify the data on hard disk until after parsing is complete.
 }
 \value{
-An object of class \code{\linkS4class{H2OParsedData}}.
+If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedData}}, otherwise it returns an object of class \code{\linkS4class{H2ORawData}}.
 %%  ~Describe the value returned
 %%  If it is a LIST, use
 %%  \item{comp1 }{Description of 'comp1'}
@@ -50,7 +53,7 @@ An object of class \code{\linkS4class{H2OParsedData}}.
 }
 \examples{
 h2o = new("H2OClient", ip="localhost", port=54321)
-benign.hex = importURL(h2o, "../smalldata/logreg/benign.csv", "benign.hex")
+benign.hex = importFile(h2o, "../smalldata/logreg/benign.csv", "benign.hex")
 summary(benign.hex)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

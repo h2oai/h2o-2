@@ -9,6 +9,8 @@ import h2o, h2o_cmd, h2o_rf, h2o_hosts
 # don't allow None on ntree..causes 50 tree default!
 print "Temporarily not using bin_limit=1 to 4"
 paramDict = {
+    'use_non_local_data': [None, 0, 1],
+    'iterative_cm': [None, 0, 1],
     'response_variable': [None,54],
     'class_weights': [None,'1=2','2=2','3=2','4=2','5=2','6=2','7=2'],
     'ntree': [1,3,7,19],

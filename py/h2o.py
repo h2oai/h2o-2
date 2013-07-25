@@ -1169,9 +1169,7 @@ class H2O(object):
                 params_dict[k] = kwargs[k]
 
         if print_params:
-            print "hello1"
             print "\nrandom_forest_view parameters:", params_dict
-            print "hello2"
             sys.stdout.flush()
 
         a = self.__do_json_request('RFView.json', timeout=timeoutSecs, params=params_dict)

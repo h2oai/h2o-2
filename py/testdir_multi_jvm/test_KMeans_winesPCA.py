@@ -41,7 +41,9 @@ class Basic(unittest.TestCase):
             #appears not to take 'cols'?
             'cols': None,
             'epsilon': 1e-6,
-            'k': 3
+            'k': 3,
+            # reuse the same seed, to get deterministic results (otherwise sometimes fails
+            'seed': 265211114317615310,
         }
 
         timeoutSecs = 480
@@ -49,6 +51,7 @@ class Basic(unittest.TestCase):
         # try the same thing 5 times
         for trial in range (10):
             start = time.time()
+
             kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, \
                 timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=60, **kwargs)
             elapsed = time.time() - start
@@ -57,38 +60,19 @@ class Basic(unittest.TestCase):
             h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
             (centers, tupleResultList) = \
                 h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
-            # tupleResultList has tuples = center, rows_per_cluster, sqr_error_per_cluster
 
-            # sort by centers
-            from operator import itemgetter
-            tupleResultList.sort(key=itemgetter(0))
+            # tupleResultList has tuples = center, rows_per_cluster, sqr_error_per_cluster
 
             # now compare expected vs actual. By sorting on center, we should be able to compare
             # since the centers should be separated enough to have the order be consistent
             expected = [
-                ([-2.2824436059344264, -0.9572469619836067], 61, 71.04484889371177),
-                ([0.04072444664179102, 1.738305108029851], 67, 118.83608173427331),
-                ([2.7300104405999996, -1.16148755108], 50, 68.67496427685141)
-
+                ([-2.25977535371875, -0.8631572635625001], 64, 83.77800617624794) ,
+                ([0.16232721958461543, 1.7626161107230771], 65, 111.64440134649745) ,
+                ([2.7362112930204074, -1.2107751495102044], 49, 62.6290553489474) ,
             ]
-            print "\nExpected:"
-            for e in expected:
-                print e
-
-            # now compare to expected, with some delta allowed
-            print "\nActual:"
-            for t in tupleResultList:
-                print t
-
-            for i, (expCenter, expRows, expError)  in enumerate(expected):
-                (actCenter, actRows, actError) = tupleResultList[i]
-                for (a,b) in zip(expCenter, actCenter):
-                    self.assertAlmostEqual(a, b, delta=0.2, 
-                        msg="Trial %d Center expected: %s actual: %s Too big a mismatch" % (trial, expCenter, actCenter))
-                self.assertAlmostEqual(expRows, actRows, delta=7, 
-                    msg="Trial %d Rows expected: %s actual: %s Too big a mismatch" % (trial, expRows, actRows))
-                self.assertAlmostEqual(expError, actError, delta=2, 
-                    msg="Trial %d Error expected: %s actual: %s Too big a mismatch" % (trial, expError, actError))
+            # multipliers on the expected values for allowed
+            allowedDelta = (0.01, 0.01, 0.01)
+            h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial)
 	    
 
 if __name__ == '__main__':

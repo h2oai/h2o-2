@@ -6,6 +6,7 @@ exportMethods(
     "h2o.kmeans",
     "h2o.randomForest",
     "importFile",
+	"importFolder",
     "importURL",
     "parseRaw",
     "show",

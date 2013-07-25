@@ -73,7 +73,7 @@ An object of class \code{\linkS4class{H2OGLMModel}} with slots key, data, and gl
 \examples{
 # Run GLM of CAPSULE ~ AGE + RACE + PSA + DCAPS
 prostate.hex = importURL(h2o, "https://raw.github.com/0xdata/h2o/master/smalldata/
-logreg/prostate.csv", "prostate.hex")
+   logreg/prostate.csv", "prostate.hex")
 h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = 
 "binomial", nfolds = 10, alpha = 0.5)
 
