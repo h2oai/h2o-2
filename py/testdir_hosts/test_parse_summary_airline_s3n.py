@@ -42,8 +42,8 @@ def infoFromSummary(self,summary):
             print "mean:", mean
             print "sigma:", sigma
 
-            # sometimes we don't get percentiles?
-            if len(bins)!=0:
+            # sometimes we don't get percentiles? (if 0 or 1 bins?)
+            if len(bins) >= 2:
                 percentiles = columns['percentiles']
                 thresholds = percentiles['thresholds']
                 values = percentiles['values']
@@ -87,7 +87,8 @@ class Basic(unittest.TestCase):
     def test_parse_summary_airline_s3n(self):
         URI = "s3n://h2o-airlines-unpacked/"
         csvFilelist = [
-            ("allyears2k.csv",   300), #130.1MB
+            ("allyears2k.csv",   300), #4.4MB
+            ("year1987.csv",     600), #130MB
             ("allyears.csv",     900), #12GB
             ("allyears_10.csv", 1800), #119.98GB
         ]
@@ -158,11 +159,12 @@ class Basic(unittest.TestCase):
             infoFromSummary(self, summary)
 
             # STOREVIEW***************************************
-            storeView = h2o.nodes[0].store_view()
-            for s in storeView['keys']:
-                print "\nStoreView: key:", s['key']
-                if 'rows' in s: 
-                    print "StoreView: rows:", s['rows'], "value_size_bytes:", s['value_size_bytes']
+            if 1==0: # seems to timeout
+                storeView = h2o.nodes[0].store_view()
+                for s in storeView['keys']:
+                    print "\nStoreView: key:", s['key']
+                    if 'rows' in s: 
+                        print "StoreView: rows:", s['rows'], "value_size_bytes:", s['value_size_bytes']
 
             print "Trial #", trial, "completed in", time.time() - trialStart, "seconds."
             trial += 0
