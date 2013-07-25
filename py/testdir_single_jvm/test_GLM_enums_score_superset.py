@@ -105,10 +105,7 @@ class Basic(unittest.TestCase):
 
             print "\n" + csvFilename
             (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
-                h2o_cmd.get_column_info_from_inspect(parseKey)
-            if missingValuesDict:
-                m = [str(k) + ":" + str(v) for k,v in missingValuesDict.iteritems()]
-                raise Exception("Looks like columns got flipped to NAs: " + ", ".join(m))
+                h2o_cmd.columnInfoFromInspect(parseKey, exceptionOnMissingValues=True)
 
             y = colCount
             kwargs = {'y': y, 'max_iter': 1, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5, 
@@ -116,7 +113,6 @@ class Basic(unittest.TestCase):
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
             print "glm end on ", parseKey['destination_key'], 'took', time.time() - start, 'seconds'
-
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
             GLMModel = glm['GLMModel']

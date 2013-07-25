@@ -43,100 +43,39 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=500)
             print "Inspect:", parseKey['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspect, csvPathname)
-            num_rows = inspect['num_rows']
-            num_cols = inspect['num_cols']
+            # num_rows = inspect['num_rows']
+            # num_cols = inspect['num_cols']
 
-            # We should be able to see the parse result?
-            ### inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
-            print "\n" + csvFilename
-            (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
-                h2o_cmd.get_column_info_from_inspect(parseKey, timeoutSecs=300)
+            keepPattern = "oly_|mt_|b_"
+            y = "is_purchase"
+            print "y:", y
+            # don't need the intermediate Dicts produced from columnInfoFromInspect
+            x = h2o_glm.goodXFromColumnInfo(y, keepPattern=pattern, parseKey=parseKey, timeoutSecs=300)
+            print "x:", x
 
-            if missingValuesDict:
-                print len(missingValuesDict), "columns with missing values"
-                ### m = [str(k) + ":" + str(v) for k,v in missingValuesDict.iteritems()]
-                ### raise Exception("Looks like columns got flipped to NAs: " + ", ".join(m))
+            kwargs = {
+                'x': x, 
+                'y': y,
+                # 'case_mode': '>',
+                # 'case': 0,
+                'family': 'binomial',
+                'lambda': 1.0E-5,
+                'alpha': 0.5,
+                'max_iter': 5,
+                'thresholds': 0.5,
+                'n_folds': 1,
+                'weight': 100,
+                'beta_epsilon': 1.0E-4,
+                }
 
-            if constantValuesDict:
-                print len(constantValuesDict), "columns with constant values"
+            timeoutSecs = 1800
+            start = time.time()
+            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutsecs=60, **kwargs)
+            elapsed = time.time() - start
+            print "glm completed in", elapsed, "seconds.", \
+                "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
-            print "\n" + csvPathname, \
-                "    num_rows:", "{:,}".format(num_rows), \
-                "    num_cols:", "{:,}".format(num_cols)
-
-            for maxx in [num_cols]:
-                # don't have a quick reverse mapping for col number, but this will work
-                y = "is_purchase"
-
-                x = range(maxx)
-                xOrig = x[:]
-                # now remove any whose names don't match the required pattern
-                pattern = "oly_|mt_|b_"
-                keepX = re.compile(pattern)
-                # need to walk over a copy, cause we change x
-                for i in xOrig:
-                    iStr = str(i)
-                    if i == 5:
-                        print "hello", colNameDict[iStr], iStr
-                    name = colNameDict[iStr]
-                    # remove it if it has the same name as the y output
-                    if name == y:
-                        print "Removing %s because name: %s matches output %s" % (iStr, name, y)
-                        x.remove(i)
-
-                    elif not keepX.match(name):
-                        print "Removing %s because name: %s doesn't match desired pattern %s" % (iStr, name, pattern)
-                        x.remove(i)
-
-                    elif iStr in constantValuesDict:
-                        value = constantValuesDict[iStr]
-                        print "Removing %s with name: %s because it has constant value: %s " % (iStr, name, str(value))
-                        x.remove(i)
-
-                    # remove all cols with missing values
-                    # could change it against num_rows for a ratio
-                    elif iStr in missingValuesDict:
-                        value = missingValuesDict[iStr]
-                        print "Removing %s with name: %s because it has %d missing values" % (iStr, name, value)
-                        x.remove(i)
-
-                    # this is extra pruning..
-                    # remove all cols with enums, if not already removed
-                    elif iStr in enumSizeDict:
-                        value = enumSizeDict[k]
-                        print "Removing %s %s because it has enums of size: %d" % (iStr, name, value)
-                        x.remove(i)
-
-
-                print "The pruned x has length", len(x)
-                x = ",".join(map(str,x))
-                print "\nx:", x
-                
-                print "y:", y
-
-                kwargs = {
-                    'x': x, 
-                    'y': y,
-                    # 'case_mode': '>',
-                    # 'case': 0,
-                    'family': 'binomial',
-                    'lambda': 1.0E-5,
-                    'alpha': 0.5,
-                    'max_iter': 5,
-                    'thresholds': 0.5,
-                    'n_folds': 1,
-                    'weight': 100,
-                    'beta_epsilon': 1.0E-4,
-                    }
-
-                timeoutSecs = 1800
-                start = time.time()
-                glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutsecs=60, **kwargs)
-                elapsed = time.time() - start
-                print "glm completed in", elapsed, "seconds.", \
-                    "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-
-                h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
+            h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
 
 if __name__ == '__main__':

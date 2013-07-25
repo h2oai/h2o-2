@@ -131,26 +131,11 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=360)
             print "Inspect:", parseKey['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspect, csvPathname)
-            num_rows = inspect['num_rows']
-            num_cols = inspect['num_cols']
+            # num_rows = inspect['num_rows']
+            # num_cols = inspect['num_cols']
 
             (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
-                h2o_cmd.get_column_info_from_inspect(parseKey, timeoutSecs=300)
-
-            if missingValuesDict:
-                print len(missingValuesDict), "columns with missing values"
-                m = [str(k) + ":" + str(v) for k,v in missingValuesDict.iteritems()]
-                print "Maybe columns got flipped to NAs: " + ", ".join(m)
-                ### raise Exception("Looks like columns got flipped to NAs: " + ", ".join(m))
-
-            if constantValuesDict:
-                print len(constantValuesDict), "columns with constant values"
-                m = [str(k) + ":" + str(v) for k,v in constantValuesDict.iteritems()]
-                print "constant columns: " + ", ".join(m)
-
-            print "\n" + csvPathname, \
-                "    num_rows:", "{:,}".format(num_rows), \
-                "    num_cols:", "{:,}".format(num_cols)
+                h2o_cmd.columnInfoFromInspect(parseKey, timeoutSecs=300)
 
             # SUMMARY****************************************
             summaryResult = h2o.nodes[0].summary_page(key2, timeoutSecs=360)

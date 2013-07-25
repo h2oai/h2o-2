@@ -136,7 +136,7 @@ class Basic(unittest.TestCase):
 
                 # BUG here?
                 if not noPoll:
-                    h2o_cmd.get_column_info_from_inspect(parseKey)
+                    h2o_cmd.get_columnInfoFromInspect(parseKey, exceptionOnMissingValues=True)
                         
                 print "\n" + csvFilepattern
 
