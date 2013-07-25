@@ -15,7 +15,7 @@ parseRaw(data, key = "")
   \item{data}{
 An \code{\linkS4class{H2ORawData}} object to be parsed.
 }
-  \item{key} {
+  \item{key}{
 (Optional) The hex key assigned to the parsed file.
   }
 }
