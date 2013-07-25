@@ -209,7 +209,7 @@ public abstract class Request extends RequestBuilders {
     return new RuntimeException(getClass().toString()+" should be automatically overridden in the subclass by the Weaver");
   }
   public AutoBuffer writeJSON( AutoBuffer ab ) { throw barf(); }
-  public StringBuilder toHTML( StringBuilder sb ) { throw barf(); }
+  public boolean toHTML( StringBuilder sb ) { return false; }
   public DocGen.FieldDoc[] toDocField() { return null; }
   public String toDocGET() { return null; }
 

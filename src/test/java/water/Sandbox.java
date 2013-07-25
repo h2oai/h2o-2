@@ -17,6 +17,7 @@ public class Sandbox {
     public static void main(String[] args) throws Exception {
       localCloud(1, true, args);
 
+      Utils.readConsole();
       File f = new File("lib/resources/datasets/gaussian.csv");
       Key fkey = NFSFileVec.make(f);
       Key key = Key.make("test");

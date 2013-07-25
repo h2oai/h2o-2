@@ -21,7 +21,7 @@ public class ImportFiles extends Request {
 
   // HTTP REQUEST PARAMETERS
   @Weave(help="File or directory to import.")
-  protected final ExistingFile _path = new ExistingFile(PATH);
+  protected final ExistingFile path = new ExistingFile("path");
 
   // JSON OUTPUT FIELDS
   @Weave(help="Files imported.  Imported files are merely Keys mapped over the existing files.  No data is loaded until the Key is used (usually in a Parse command).")
@@ -41,7 +41,7 @@ public class ImportFiles extends Request {
   }
 
   @Override protected Response serve() {
-    FileIntegrityChecker c = load(_path.value());
+    FileIntegrityChecker c = load(path.value());
     ArrayList<String> afails = new ArrayList();
     ArrayList<String> afiles = new ArrayList();
     ArrayList<String> akeys  = new ArrayList();
@@ -62,23 +62,27 @@ public class ImportFiles extends Request {
     return new Response(Response.Status.done, this);
   }
 
+  String parse() {
+    return "Parse.html";
+  }
+
   // HTML builder
-  @Override public StringBuilder toHTML( StringBuilder sb ) {
+  @Override public boolean toHTML( StringBuilder sb ) {
     if( files.length > 1 )
       sb.append("<div class='alert'>")
-        .append(Parse.link("*"+_path.value()+"*", "Parse all into hex format"))
+        .append(Parse.link("*"+path.value()+"*", "Parse all into hex format"))
         .append(" </div>");
 
     DocGen.HTML.title(sb,"files");
     DocGen.HTML.arrayHead(sb);
     for( int i=0; i<files.length; i++ )
-      sb.append("<tr><td><a href='Parse.html?source_key=").append(keys[i]).
+      sb.append("<tr><td><a href='"+parse()+"?source_key=").append(keys[i]).
         append("'>").append(files[i]).append("</a></td></tr>");
     DocGen.HTML.arrayTail(sb);
 
     if( fails.length > 0 )
       DocGen.HTML.array(DocGen.HTML.title(sb,"fails"),fails);
 
-    return sb;
+    return true;
   }
 }

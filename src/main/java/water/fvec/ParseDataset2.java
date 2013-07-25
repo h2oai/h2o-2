@@ -64,7 +64,7 @@ public final class ParseDataset2 extends Job {
     static ParseProgress make( Key[] fkeys ) {
       long total = 0;
       for( Key fkey : fkeys )
-        total += ((ByteVec)UKV.get(fkey)).length();
+        total += ((Frame)UKV.get(fkey))._vecs[0].byteSize();
       return new ParseProgress(0,total);
     }
   }
@@ -185,7 +185,8 @@ public final class ParseDataset2 extends Job {
     }
     // Guess column layout.  For multiple files, the caller is supposed to
     // guarantee they have equal & compatible columns and/or headers.
-    ByteVec vec = UKV.get(fkeys[0]);
+    Frame f = UKV.get(fkeys[0]);
+    ByteVec vec = (ByteVec) f._vecs[0];
     Compression compression = guessCompressionMethod(vec);
     byte sep = setup == null ? CsvParser.NO_SEPARATOR : setup._separator;
     if( setup == null || setup._data == null || setup._data[0] == null )
@@ -210,7 +211,7 @@ public final class ParseDataset2 extends Job {
       t.doAll(evecs);
     }
     // Jam the frame of columns into the K/V store
-    UKV.put(job.dest(),new Frame(job.dest(),names,uzpt._vecs));
+    UKV.put(job.dest(),new Frame(names,uzpt._vecs));
   }
 
   // --------------------------------------------------------------------------
@@ -239,7 +240,8 @@ public final class ParseDataset2 extends Job {
     // Called once per file
     @Override public void map( Key key ) {
       // Get parser setup info for this chunk
-      ByteVec vec = UKV.get(key);
+      Frame f = UKV.get(key);
+      ByteVec vec = (ByteVec) f._vecs[0];
       Compression cpr = guessCompressionMethod(vec);
       // Local setup: nearly the same as the global all-files setup, but maybe
       // has the header-flag changed.

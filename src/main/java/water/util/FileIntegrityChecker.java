@@ -4,7 +4,7 @@ import java.io.File;
 import java.util.ArrayList;
 
 import water.*;
-import water.fvec.NFSFileVec;
+import water.fvec.*;
 import water.persist.PersistNFS;
 
 public class FileIntegrityChecker extends DRemoteTask {
@@ -79,7 +79,9 @@ public class FileIntegrityChecker extends DRemoteTask {
     File f = new File(_files[i]);
     Key k;
     if(_newApi) {
-      k = NFSFileVec.make(f, fs);
+      k = PersistNFS.decodeFile(f);
+      NFSFileVec nfs = DKV.get(NFSFileVec.make(f, fs)).get();
+      UKV.put(k, new Frame(new String[] { "0" }, new Vec[] { nfs }), fs);
     } else {
       k = PersistNFS.decodeFile(f);
       long size = f.length();

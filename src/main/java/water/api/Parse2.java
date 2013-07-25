@@ -6,7 +6,8 @@ import java.util.regex.Pattern;
 
 import water.*;
 import water.Weaver.Weave;
-import water.fvec.ParseDataset2;
+import water.api.RequestBuilders.Response.Status;
+import water.fvec.*;
 import water.parser.CsvParser;
 import water.parser.CsvParser.Setup;
 import water.util.RString;
@@ -23,19 +24,19 @@ public class Parse2 extends Request {
   // HTTP request parameters
 
   @Weave(help="Cell separator, e.g. ','")
-  final Separator _separator = new Separator(SEPARATOR);
+  final Separator separator = new Separator("separator");
 
   @Weave(help="Keys to ignore (Regex)")
-  final Str _excludeExpression = new Str(EXCLUDE, "");
+  final Str exclude = new Str("exclude", "");
 
   @Weave(help="Key to parse")
-  final ExistingCSVKey _source = new ExistingCSVKey(SOURCE_KEY);
+  final ExistingCSVKey source_key = new ExistingCSVKey("source_key");
 
   @Weave(help="Destination key")
-  final NewH2OHexKey _dest = new NewH2OHexKey(DEST_KEY);
+  final NewH2OHexKey dest = new NewH2OHexKey("dest");
 
   @Weave(help="Keys to ignore (Regex)")
-  final Header _header = new Header(HEADER);
+  final Header header = new Header("header");
 
   // JSON output fields
 
@@ -45,11 +46,11 @@ public class Parse2 extends Request {
   @Weave(help="Destination key")
   String destination_key;
 
-  @Override public String[] DocExampleSucc() { return new String[]{ SOURCE_KEY,"test.cvs" }; }
+  @Override public String[] DocExampleSucc() { return new String[]{ "","test.cvs" }; }
   @Override public String[] DocExampleFail() { return new String[]{}; }
 
   public Parse2() {
-    _excludeExpression.setRefreshOnChange();
+    exclude.setRefreshOnChange();
   }
 
   private static class PSetup {
@@ -73,29 +74,29 @@ public class Parse2 extends Request {
     @Override protected PSetup parse(String input) throws IllegalArgumentException {
       Key k1 = Key.make(input);
       Value v1 = DKV.get(k1);
-      if( v1 != null  && (input.endsWith(".xlsx") || input.endsWith(".xls")) )
+      if( v1 != null && (input.endsWith(".xlsx") || input.endsWith(".xls")) )
         return new PSetup(k1, new Setup((byte) 0,false,null,0,null));
-      Pattern p = makePattern(input);
-      Pattern exclude = null;
-      if(_excludeExpression.specified())
-        exclude = makePattern(_excludeExpression.value());
+      Pattern incl = makePattern(input);
+      Pattern excl = null;
+      if(exclude.specified())
+        excl = makePattern(exclude.value());
 
       ArrayList<Key> keys = new ArrayList();
-     // boolean badkeys = false;
-
       for( Key key : H2O.keySet() ) { // For all keys
         if( !key.user_allowed() ) continue;
         String ks = key.toString();
-        if( !p.matcher(ks).matches() ) // Ignore non-matching keys
+        if( !incl.matcher(ks).matches() ) // Ignore non-matching keys
           continue;
-        if(exclude != null && exclude.matcher(ks).matches())
+        if(excl != null && excl.matcher(ks).matches())
           continue;
         Value v2 = DKV.get(key);  // Look at it
         if( v2 == null  || input.endsWith(".xlsx") || input.endsWith(".xls") || v2.length() == 0)
           continue;           // Missed key (racing deletes) or XLS files
         if(v2.isHex())// filter common mistake such as *filename* with filename.hex already present
           continue;
-        keys.add(key);        // Add to list
+        Object o = v2.type() != TypeMap.PRIM_B ? v2.get() : null;
+        if(o instanceof Frame && ((Frame) o)._vecs[0] instanceof ByteVec)
+          keys.add(key);
       }
 
       if(keys.size() == 0 )
@@ -104,39 +105,12 @@ public class Parse2 extends Request {
       // now we assume the first key has the header
       Key hKey = keys.get(0);
       Value v = DKV.get(hKey);
-
-      byte sep = _separator.specified() ? _separator.value() : CsvParser.NO_SEPARATOR;
+      v = ((Frame) v.get())._vecs[0].chunkIdx(0);
+      byte sep = separator.specified() ? separator.value() : CsvParser.NO_SEPARATOR;
       CsvParser.Setup setup = Inspect.csvGuessValue(v, sep);
       if( setup._data == null || setup._data[0].length == 0 )
         throw new IllegalArgumentException("I cannot figure out this file; I only handle common CSV formats: "+hKey);
       return new PSetup(keys,setup);
-    }
-
-    private final String keyRow(Key k){
-      return "<tr><td>" + k + "</td></tr>\n";
-    }
-
-    @Override
-    public String queryComment(){
-      if(!specified())return "";
-      PSetup p = value();
-      StringBuilder sb = new StringBuilder();
-      if(p._keys.size() <= 10){
-        for(Key k:p._keys)
-          sb.append(keyRow(k));
-      } else {
-        int n = p._keys.size();
-        for(int i = 0; i < 5; ++i)
-          sb.append(keyRow(p._keys.get(i)));
-        sb.append("<tr><td>...</td></tr>\n");
-        for(int i = 5; i > 0; --i)
-          sb.append(keyRow(p._keys.get(n-i)));
-      }
-      return
-          "<div class='alert'><b> Found " + p._keys.size() +  " files matching the expression.</b><br/>\n" +
-          "<table>\n" +
-           sb.toString() +
-          "</table></div>";
     }
 
     private Pattern makePattern(String input) {
@@ -158,10 +132,10 @@ public class Parse2 extends Request {
   private class NewH2OHexKey extends Str {
     NewH2OHexKey(String name) {
       super(name,null/*not required flag*/);
-      addPrerequisite(_source);
+      addPrerequisite(source_key);
     }
     @Override protected String defaultValue() {
-      PSetup setup = _source.value();
+      PSetup setup = source_key.value();
       if( setup == null ) return null;
       String n = setup._keys.get(0).toString();
       int dot = n.lastIndexOf('.');
@@ -182,7 +156,7 @@ public class Parse2 extends Request {
   public class Header extends Bool {
     Header(String name) {
       super(name, false, "First row is column headers?");
-      addPrerequisite(_source);
+      addPrerequisite(source_key);
       setRefreshOnChange();
     }
     @Override protected String queryElement() {
@@ -190,7 +164,7 @@ public class Parse2 extends Request {
       Record record = record();
       String value = record._originalValue;
       // if no original value was supplied, use the provided one
-      PSetup psetup = _source.value();
+      PSetup psetup = source_key.value();
       if (value == null)
         value = psetup._setup._header ? "1" : "";
       StringBuilder sb = new StringBuilder();
@@ -227,29 +201,29 @@ public class Parse2 extends Request {
     return link(k.toString(),content);
   }
   public static String link(String k, String content) {
-    RString rs = new RString("<a href='Parse.query?%key_param=%$key'>%content</a>");
-    rs.replace("key_param", SOURCE_KEY);
+    RString rs = new RString("<a href='Parse2.query?%key_param=%$key'>%content</a>");
+    rs.replace("key_param", "");
     rs.replace("key", k.toString());
     rs.replace("content", content);
     return rs.toString();
   }
 
   @Override protected Response serve() {
-    PSetup p = _source.value();
+    PSetup p = source_key.value();
     CsvParser.Setup q = p._setup;
-    Key dest = Key.make(_dest.value());
+    Key d = Key.make(dest.value());
     try {
       // Make a new Setup, with the 'header' flag set according to user wishes.
-      CsvParser.Setup new_setup = _header.originalValue() == null // No user wish?
+      CsvParser.Setup new_setup = header.originalValue() == null // No user wish?
         ? q                     // Default to heuristic
         // Else use what user choose
-        : new CsvParser.Setup(q._separator,_header.value(),q._data,q._numlines,q._bits);
+        : new CsvParser.Setup(q._separator,header.value(),q._data,q._numlines,q._bits);
 
       Key[] keys = p._keys.toArray(new Key[p._keys.size()]);
-      job = ParseDataset2.forkParseDataset(dest, keys,new_setup)._self.toString();
-      destination_key = dest.toString();
+      job = ParseDataset2.forkParseDataset(d, keys,new_setup)._self.toString();
+      destination_key = d.toString();
 
-      return new Response(Response.Status.done, this);
+      return new Response(Status.done, this);
     } catch (IllegalArgumentException e) {
       return Response.error(e.getMessage());
     } catch (Error e) {
@@ -301,8 +275,4 @@ public class Parse2 extends Request {
     DEFAULT_DELIMS[i]     = "Guess separator ...";
     DEFAULT_IDX_DELIMS[i] = String.valueOf(CsvParser.NO_SEPARATOR);
   };
-
-  @Override public StringBuilder toHTML( StringBuilder sb ) {
-    return sb;
-  }
 }

@@ -8,4 +8,8 @@ public class ImportFiles2 extends ImportFiles {
   @Override FileIntegrityChecker load(File path) {
     return FileIntegrityChecker.check(path, true);
   }
+
+  @Override String parse() {
+    return "Parse2.query";
+  }
 }

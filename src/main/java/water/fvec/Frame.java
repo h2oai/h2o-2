@@ -1,21 +1,19 @@
 package water.fvec;
 
+import java.util.Arrays;
+
 import water.*;
 import water.fvec.Vec.VectorGroup;
 
-import java.io.InputStream;
-import java.util.Arrays;
-
 // A collection of named Vecs.  Essentially an R-like data-frame.
 public class Frame extends Iced {
-  transient public Key _key;
   public String[] _names;
   public Vec[] _vecs;
   public Vec _col0;             // First readable vec
 
 
-  public Frame( Key k, String[] names, Vec[] vecs ) {
-    _key=k; _names=names; _vecs=vecs;
+  public Frame( String[] names, Vec[] vecs ) {
+    _names=names; _vecs=vecs;
   }
   // Find a named column
   public int find( String name ) {
@@ -115,7 +113,6 @@ public class Frame extends Iced {
   public void remove() {
     remove(new Futures());
   }
-  @Override public Frame init( Key k ) { _key=k; return this; }
   @Override public String toString() {
     // Across
     String s="{"+_names[0];
