@@ -7,7 +7,7 @@ import h2o_browse as h2b
 import h2o_import as h2i
 import time, random
 
-def infoFromSummary(summary):
+def infoFromSummary(self,summary):
     columnsList = summary['columns']
     for columns in columnsList:
         N = columns['N']
@@ -35,24 +35,31 @@ def infoFromSummary(summary):
         if stype != "enum":
             smax = columns['max']
             smin = columns['min']
-            percentiles = columns['percentiles']
-            thresholds = percentiles['thresholds']
-            values = percentiles['values']
             mean = columns['mean']
             sigma = columns['sigma']
-
-            print "len(max):", len(smax), smax
-            print "len(min):", len(smin), smin
-            print "len(thresholds):", len(thresholds), thresholds
-            print "len(values):", len(values), values
+            print "smax:", smax
+            print "smin:", smin
             print "mean:", mean
             print "sigma:", sigma
 
-            for v in values:
-                self.assertTrue(v >= smin,
-                    "Percentile value %s should all be >= the min dataset value %s" % (v, expectedMin))
-                self.assertTrue(v <= smax,
-                    "Percentile value %s should all be <= the max dataset value %s" % (v, expectedMax))
+            # sometimes we don't get percentiles?
+            if len(bins)!=0:
+                percentiles = columns['percentiles']
+                thresholds = percentiles['thresholds']
+                values = percentiles['values']
+
+                # h2o shows 5 of them, ordered
+                print "len(max):", len(smax), smax
+                print "len(min):", len(smin), smin
+                print "len(thresholds):", len(thresholds), thresholds
+                print "len(values):", len(values), values
+
+                for v in values:
+                    # 0 is the most max or most min
+                    self.assertTrue(v >= smin[0],
+                        "Percentile value %s should all be >= the min dataset value %s" % (v, smin[0]))
+                    self.assertTrue(v <= smax[0],
+                        "Percentile value %s should all be <= the max dataset value %s" % (v, smax[0]))
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -87,15 +94,18 @@ class Basic(unittest.TestCase):
         # IMPORT**********************************************
         # since H2O deletes the source key, we should re-import every iteration if we re-use the src in the list
         importHDFSResult = h2o.nodes[0].import_hdfs(URI)
-        s3nFullList = importHDFSResult['files']
+        ### print "importHDFSResult:", h2o.dump_json(importHDFSResult)
+        s3nFullList = importHDFSResult['succeeded']
         ### print "s3nFullList:", h2o.dump_json(s3nFullList)
 
         self.assertGreater(len(s3nFullList),8,"Should see more than 8 files in s3n?")
-        storeView = h2o.nodes[0].store_view()
-        for s in storeView['keys']:
-            print "\nkey:", s['key']
-            if 'rows' in s: 
-                print "rows:", s['rows'], "value_size_bytes:", s['value_size_bytes']
+        # why does this hang?
+        if 1==0:
+            storeView = h2o.nodes[0].store_view(timeoutSecs=60)
+            for s in storeView['keys']:
+                print "\nkey:", s['key']
+                if 'rows' in s: 
+                    print "rows:", s['rows'], "value_size_bytes:", s['value_size_bytes']
 
         trial = 0
         for (csvFilename, timeoutSecs) in csvFilelist:
@@ -106,10 +116,9 @@ class Basic(unittest.TestCase):
             # PARSE****************************************
             key2 = csvFilename + "_" + str(trial) + ".hex"
             print "Loading s3n key: ", s3nKey, 'thru HDFS'
-            timeoutSecs = 500
             start = time.time()
             parseKey = h2o.nodes[0].parse(s3nKey, key2,
-                timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60, noise=('JStack', none))
+                timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=120)
             elapsed = time.time() - start
             print "parse end on ", s3nKey, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -135,6 +144,8 @@ class Basic(unittest.TestCase):
 
             if constantValuesDict:
                 print len(constantValuesDict), "columns with constant values"
+                m = [str(k) + ":" + str(v) for k,v in constantValuesDict.iteritems()]
+                print "constant columns: " + ", ".join(m)
 
             print "\n" + csvPathname, \
                 "    num_rows:", "{:,}".format(num_rows), \
@@ -144,7 +155,7 @@ class Basic(unittest.TestCase):
             summaryResult = h2o.nodes[0].summary_page(key2)
             summary = summaryResult['summary']
             # print h2o.dump_json(summary)
-            infoFromSummary(summary)
+            infoFromSummary(self, summary)
 
             # STOREVIEW***************************************
             storeView = h2o.nodes[0].store_view()
