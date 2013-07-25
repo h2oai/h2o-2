@@ -75,6 +75,7 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
       try { lcompute(); } 
       catch( RuntimeException e ) { _exception = new DException(e); completeExceptionally(e); }
       catch( AssertionError   e ) { _exception = new DException(e); completeExceptionally(e); }
+      catch( OutOfMemoryError e ) { _exception = new DException(e); completeExceptionally(e); }
     } else
       dcompute();
   }
@@ -90,6 +91,7 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
   @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller ) {
     if( _exception == null && caller instanceof DRemoteTask )
       _exception = ((DRemoteTask)caller)._exception;
+    if( _exception == null ) _exception = new DException(ex);
     if( _is_local ) return true;
     tryComplete();              // This completer completes *normally*
     return false;               // This completer completes *normally*

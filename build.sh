@@ -162,7 +162,7 @@ function build_src_jar() {
 
 function build_hadoop() {
     echo "building hadoop package..."
-    make -C hadoop
+    make -C hadoop SEP=${SEP} >& hadoop/build.log || ( grep -E "(failed||line)" hadoop/build.log ; exit 1 )
 }
 
 function build_javadoc() {
@@ -194,8 +194,8 @@ build_initializer
 build_jar
 build_src_jar
 build_hadoop
+build_rpackage
 if [ "$1" = "build" ]; then exit 0; fi
 build_javadoc
 if [ "$1" = "doc" ]; then exit 0; fi
-build_rpackage
 junit

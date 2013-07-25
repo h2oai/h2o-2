@@ -33,14 +33,15 @@ class Basic(unittest.TestCase):
                 'y': 54, 
                 'lambda': 0.0001,
                 'alpha': 0.5, 
-                'max_iter': 10, 
+                'max_iter': 15, 
                 'n_folds': 1, 
             }
             start = time.time()
             glm = h2o_cmd.runGLMOnly(timeoutSecs=120, parseKey=parseKey, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
 
-            h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
+            # if we hit the max_iter, that means it probably didn't converge. should be 1-maxExpectedIter
+            h2o_glm.simpleCheckGLM(self, glm, None, maxExpectedIterations=kwargs['max_iter']-2, **kwargs)
             print "Trial #", trial, "completed\n"
 
 

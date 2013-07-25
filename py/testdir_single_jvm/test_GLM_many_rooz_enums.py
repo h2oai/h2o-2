@@ -177,13 +177,9 @@ class Basic(unittest.TestCase):
             # We should be able to see the parse result?
             ### inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             print "\n" + csvFilename
+            # we allow some NAs in the list above
             (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
-                h2o_cmd.get_column_info_from_inspect(parseKey)
-            if missingValuesDict:
-                # we allow some NAs in the list above
-                pass
-                ### m = [str(k) + ":" + str(v) for k,v in missingValuesDict.iteritems()]
-                ### raise Exception("Looks like columns got flipped to NAs: " + ", ".join(m))
+                h2o_cmd.columnInfoFromInspect(parseKey,exceptionOnMissingValues=False)
 
             y = colCount
             x = range(colCount)

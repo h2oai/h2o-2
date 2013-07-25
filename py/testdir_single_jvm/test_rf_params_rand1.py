@@ -16,9 +16,11 @@ print "Temporarily not using bin_limit=1 to 3"
 print "Temporarily not using 100% sampling with out_of_bag_error_estimate==1"
 print "Temporarily only using max of 3 features, rather than the 4 non-constant input columns"
 paramDict = {
+    'use_non_local_data': [None, 0, 1],
+    'iterative_cm': [None, 0, 1],
     'response_variable': [None,10],
     'class_weights': [None,'1=2','2=2','3=2','4=2','5=2','6=2','7=2','8=2'],
-    'ntree': [1,10,100],
+    'ntree': [10, 100,120],
     'model_key': ['model_keyA', '012345', '__hello'],
     'out_of_bag_error_estimate': [None,0,1],
     'stat_type': [None, 'ENTROPY', 'GINI'],
@@ -68,7 +70,7 @@ class Basic(unittest.TestCase):
         csvPathname = h2o.find_file('smalldata/poker/poker1000')
         for trial in range(10):
             # params is mutable. This is default.
-            params = {'ntree': 17, 'parallel': 1}
+            params = {'ntree': 63, 'parallel': 1, 'use_non_local_data': 1}
             colX = h2o_rf.pickRandRfParams(paramDict, params)
             kwargs = params.copy()
             # adjust timeoutSecs with the number of trees

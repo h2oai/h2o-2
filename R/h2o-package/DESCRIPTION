@@ -1,7 +1,7 @@
 Package: h2o
 Type: Package
 Title: H2O R Interface
-Version: 0.1
+Version: 0.3
 Date: 2013-07-16
 Author: Anqi Fu and Tom Kraljevic, with contributions from the 0xdata team
 Maintainer: Anqi Fu <anqi@0xdata.com>
