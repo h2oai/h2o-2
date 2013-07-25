@@ -21,7 +21,7 @@ The complete URL of the file to be imported. Each row of data appears as one lin
   \item{key}{
 (Optional) The unique hex key assigned to the imported file. If none is given, a key will automatically be generated based on the URL path.
 }
-\item{parse} {
+\item{parse}{
 (Optional) A logical value indicating whether the file should be parsed after import.
   }
 }
