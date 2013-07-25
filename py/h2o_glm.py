@@ -14,8 +14,8 @@ def pickRandGlmParams(paramDict, params):
 
         if 'family' in params and 'link' in params: 
             # don't allow logit for poisson
-            if params['family'] == 'poisson':
-                if params['link'] in ('logit'):
+            if params['family'] is not None and params['family'] == 'poisson':
+                if params['link'] is not None and params['link'] in ('logit'):
                     params['link'] = None # use default link for poisson always
 
         # case only used if binomial? binomial is default if no family
@@ -75,7 +75,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
 
             # if we hit the max_iter, that means it probably didn't converge. should be 1-maxExpectedIter
     if maxExpectedIterations is not None and iterations  > maxExpectedIterations:
-            raise Exception("GLM did iterations: %d which is greater than expected: %d" % (iterations, maxExpectedIterations) )
+            raise Exception("Convergence issue? GLM did iterations: %d which is greater than expected: %d" % (iterations, maxExpectedIterations) )
 
     # pop the first validation from the list
     validationsList = GLMModel['validations']
@@ -295,12 +295,12 @@ def simpleCheckGLMGrid(self, glmGridResult, colX=None, allowFailWarning=False, *
 
 def goodXFromColumnInfo(y, 
     num_cols=None, missingValuesDict=None, constantValuesDict=None, enumSizeDict=None, colTypeDict=None, colNameDict=None, 
-    keepPattern=None, parseKey=None, timeoutSecs=120):
+    keepPattern=None, key=None, timeoutSecs=120):
 
     # if we pass a parseKey, means we want to get the info ourselves here
-    if parseKey is not None:
+    if key is not None:
         (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
-            h2o_cmd.columnInfoFromInspect(parseKey, exceptionOnMissingValues=False, timeoutSecs=timeoutSecs)
+            h2o_cmd.columnInfoFromInspect(key, exceptionOnMissingValues=False, timeoutSecs=timeoutSecs)
         num_cols = len(colNameDict)
 
     # now remove any whose names don't match the required keepPattern
@@ -313,8 +313,6 @@ def goodXFromColumnInfo(y,
     # need to walk over a copy, cause we change x
     xOrig = x[:]
     for k in xOrig:
-        if k == 5:
-            print "hello", colNameDict[k], k
         name = colNameDict[k]
         # remove it if it has the same name as the y output
         if name == y:
@@ -346,6 +344,7 @@ def goodXFromColumnInfo(y,
 
     print "The pruned x has length", len(x)
     x = ",".join(map(str,x))
+    print "\nx:", x
     return x
 
 

@@ -33,7 +33,7 @@ class Basic(unittest.TestCase):
                 'y': 54, 
                 'lambda': 0.0001,
                 'alpha': 0.5, 
-                'max_iter': 15, 
+                'max_iter': 25, 
                 'n_folds': 1, 
             }
             start = time.time()

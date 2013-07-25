@@ -179,7 +179,7 @@ class Basic(unittest.TestCase):
             print "\n" + csvFilename
             # we allow some NAs in the list above
             (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
-                h2o_cmd.columnInfoFromInspect(parseKey,exceptionOnMissingValues=False)
+                h2o_cmd.columnInfoFromInspect(parseKey['destination_key'],exceptionOnMissingValues=False)
 
             y = colCount
             x = range(colCount)

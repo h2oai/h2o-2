@@ -33,7 +33,8 @@ class Basic(unittest.TestCase):
             # looks like it takes the hex string (two chars)
             start = time.time()
             # hardwire TAB as a separator, as opposed to white space (9)
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=500, separator=9)
+            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
+                timeoutSecs=500, separator=9)
             print "Parse of", parseKey['destination_key'], "took", time.time() - start, "seconds"
 
             print csvFilename, 'parse time:', parseKey['response']['time']
@@ -50,7 +51,7 @@ class Basic(unittest.TestCase):
             y = "is_purchase"
             print "y:", y
             # don't need the intermediate Dicts produced from columnInfoFromInspect
-            x = h2o_glm.goodXFromColumnInfo(y, keepPattern=pattern, parseKey=parseKey, timeoutSecs=300)
+            x = h2o_glm.goodXFromColumnInfo(y, keepPattern=keepPattern, key=parseKey['destination_key'], timeoutSecs=300)
             print "x:", x
 
             kwargs = {

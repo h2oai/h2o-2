@@ -156,7 +156,7 @@ class Basic(unittest.TestCase):
             ### inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             print "\n" + csvFilename
             (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
-                h2o_cmd.columnInfoFromInspect(parseKey, exceptionOnMissingValues=True)
+                h2o_cmd.columnInfoFromInspect(parseKey['destination_key'], exceptionOnMissingValues=True)
 
 if __name__ == '__main__':
     h2o.unit_main()

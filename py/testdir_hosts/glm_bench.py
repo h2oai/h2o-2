@@ -6,19 +6,16 @@ sys.path.extend(['.','..','py'])
 
 import h2o_cmd, h2o, h2o_hosts, h2o_glm
 import h2o_browse as h2b
-import os
-import csv
-import time
-import socket
+import os, csv, time, socket
 
-csv_header = ('time','nodes#','dataset','y','x','family','alpha','lambda','n_folds','nLines','nCols','dof','nullDev','resDev','aic','auc','iterations','model_time','model_iterations','val_time','val_iterations','lsm_time', 'wall_clock_secs')
+csv_header = ('time','nodes#','java_heap_GB','dataset','y','x','family','alpha','lambda','n_folds','nLines','nCols','dof','nullDev','resDev','aic','auc','iterations','model_time','model_iterations','val_time','val_iterations','lsm_time', 'wall_clock_secs')
 
 ec2_files = {'allstate':'s3n://h2o-datasets/allstate/train_set.zip','airlines':'s3n://h2o-airlines-unpacked/allyears.csv'}
 local_files = {'allstate':'hdfs://192.168.1.176/datasets/allstate.csv','airlines':'hdfs://192.168.1.176/datasets/airlines_all.csv'}
 
 def is_ec2():
-    return False
-    # return  'AWS_ACCESS_KEY_ID' in os.environ
+    # return False
+    return  'AWS_ACCESS_KEY_ID' in os.environ
 
 def run_glms(file,configs):
     output = None
@@ -29,21 +26,29 @@ def run_glms(file,configs):
         output = open('glmbench.csv','a')
     csvWrt = csv.DictWriter(output, fieldnames=csv_header, restval=None, dialect='excel', extrasaction='ignore',delimiter=',')
     # header!
-    csvWrt.writerow(dict((fn,fn) for fn in csv_header))
+    # csvWrt.writerow(dict((fn,fn) for fn in csv_header))
+    csvWrt.writeheader()
     try:
+        java_heap_GB = h2o.nodes[0].java_heap_GB
         k = parse_file(file)
         # gives us some reporting on missing values, constant values, to see if we have x specified well
         # figures out everything from parseKey['destination_key']
         # needs y to avoid output column (which can be index or name)
-        goodX = h2o_glm.goodXFromColumnInfo(y=kwargs['y'], parseKey=parseKey, timeoutSecs=300)
+        # assume all the configs have the same y..just check with the firs tone
+        goodX = h2o_glm.goodXFromColumnInfo(y=configs[0]['y'], key=k, timeoutSecs=300)
 
         for kwargs in configs:
             start = time.time()
             res = h2o.nodes[0].GLM(k, timeoutSecs=6000000, pollTimeoutSecs=180, **kwargs)
             wall_clock_secs = time.time() - start
             glm = res['GLMModel']
+
+            print "glm model time (milliseconds):", glm['model_time']
+            print "glm validations[0] time (milliseconds):", glm['validations'][0]['val_time']
+            print "glm lsm time (milliseconds):", glm['lsm_time']
+            print 'glm computation time',res['computation_time']
+
             coefs = glm['coefficients']
-            print 'model computed in',res['computation_time']
             print 'wall clock in', wall_clock_secs, 'secs'
             max_len = 0
             val = glm['validations'][0]
@@ -53,6 +58,7 @@ def run_glms(file,configs):
             row.update(glm)
             row.update(val)
             row.update({'wall_clock_secs': wall_clock_secs})
+            row.update({'java_heap_GB': java_heap_GB})
             csvWrt.writerow(row)
         h2o.nodes[0].remove_key(k)
     finally:

@@ -135,7 +135,7 @@ class Basic(unittest.TestCase):
             # num_cols = inspect['num_cols']
 
             (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
-                h2o_cmd.columnInfoFromInspect(parseKey, timeoutSecs=300)
+                h2o_cmd.columnInfoFromInspect(parseKey['destination_key'], timeoutSecs=300)
 
             # SUMMARY****************************************
             summaryResult = h2o.nodes[0].summary_page(key2, timeoutSecs=360)

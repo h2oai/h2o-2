@@ -289,8 +289,8 @@ def sleep_with_dot(sec, message=None):
 # I use these in testdir_hosts/test_parse_nflx_loop_s3n_hdfs.py
 # and testdir_multi_jvm/test_benchmark_import.py
 # might be able to use more widely
-def columnInfoFromInspect(parseKey, exceptionOnMissingValues=True, **kwargs):
-    inspect = runInspect(key=parseKey['destination_key'], **kwargs)
+def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
+    inspect = runInspect(key=key, **kwargs)
     num_rows = inspect['num_rows']
     num_cols = inspect['num_cols']
     cols = inspect['cols']
@@ -302,39 +302,37 @@ def columnInfoFromInspect(parseKey, exceptionOnMissingValues=True, **kwargs):
     colNameDict = {}
     colTypeDict = {}
     # all dictionaries created are keyed by col index
+    print "Column Summary:"
     for k,c in enumerate(cols):
         colNameDict[k] = c['name']
         colTypeDict[k] = c['type']
-        # print i, "name:", c['name']
-        # msg = "column %d" % i
-        msg = "column %s %d" % (c['name'], k)
+        msg = "%s %d" % (c['name'], k)
         msg += " type: %s" % c['type']
         if c['type'] == 'enum':
             msg += (" enum_domain_size: %d" % c['enum_domain_size'])
             enumSizeDict[k] = c['enum_domain_size']
 
         if c['num_missing_values'] != 0:
-            msg += (" num_missing_values: %s" % c['num_missing_values'])
+            pct = ((c['num_missing_values'] + 0.0)/ num_rows) * 100
+            msg += (" num_missing_values: %s (%0.1f%s)" % (c['num_missing_values'], pct, '%'))
             missingValuesDict[k] = c['num_missing_values']
 
+        if c['min'] == c['max']:
+            msg += (" constant value: %s" % c['min'])
+            constantValuesDict[k] = c['min']
         # if c['type'] != 'int' or c['num_missing_values'] != 0:
         print msg
 
-        if c['min'] == c['max']:
-            constantValuesDict[k] = c['min']
-
     if missingValuesDict:
-        print len(missingValuesDict), "columns with missing values"
         m = [str(k) + ":" + str(v) for k,v in missingValuesDict.iteritems()]
-        print "Maybe columns got flipped to NAs: " + ", ".join(m)
+        print len(missingValuesDict), "columns with missing values", ", ".join(m)
         ### raise Exception("Looks like columns got flipped to NAs: " + ", ".join(m))
 
     if constantValuesDict:
-        print len(constantValuesDict), "columns with constant values"
         m = [str(k) + ":" + str(v) for k,v in constantValuesDict.iteritems()]
-        print "constant columns: " + ", ".join(m)
+        print len(constantValuesDict), "columns with constant values", ", ".join(m)
 
-    print "\n" + parseKey['destination_key'], \
+    print "\n" + key, \
         "    num_rows:", "{:,}".format(num_rows), \
         "    num_cols:", "{:,}".format(num_cols)
 
