@@ -64,7 +64,7 @@ public final class ParseDataset2 extends Job {
     static ParseProgress make( Key[] fkeys ) {
       long total = 0;
       for( Key fkey : fkeys )
-        total += ((ByteVec)UKV.get(fkey)).length();
+        total += getVec(fkey).length();
       return new ParseProgress(0,total);
     }
   }
@@ -173,6 +173,11 @@ public final class ParseDataset2 extends Job {
     }
   }
 
+  private static Vec getVec(Key key) {
+    Object o = UKV.get(key);
+    return o instanceof Vec ? (ByteVec) o : ((Frame) o)._vecs[0];
+  }
+
   // --------------------------------------------------------------------------
   // Top-level parser driver
   private static void parse_impl(ParseDataset2 job, Key [] fkeys, CsvParser.Setup setup) {
@@ -185,7 +190,7 @@ public final class ParseDataset2 extends Job {
     }
     // Guess column layout.  For multiple files, the caller is supposed to
     // guarantee they have equal & compatible columns and/or headers.
-    ByteVec vec = UKV.get(fkeys[0]);
+    ByteVec vec = (ByteVec) getVec(fkeys[0]);
     Compression compression = guessCompressionMethod(vec);
     byte sep = setup == null ? CsvParser.NO_SEPARATOR : setup._separator;
     if( setup == null || setup._data == null || setup._data[0] == null )
@@ -210,7 +215,7 @@ public final class ParseDataset2 extends Job {
       t.doAll(evecs);
     }
     // Jam the frame of columns into the K/V store
-    UKV.put(job.dest(),new Frame(job.dest(),names,uzpt._vecs));
+    UKV.put(job.dest(),new Frame(names,uzpt._vecs));
   }
 
   // --------------------------------------------------------------------------
@@ -239,7 +244,7 @@ public final class ParseDataset2 extends Job {
     // Called once per file
     @Override public void map( Key key ) {
       // Get parser setup info for this chunk
-      ByteVec vec = UKV.get(key);
+      ByteVec vec = (ByteVec) getVec(key);
       Compression cpr = guessCompressionMethod(vec);
       // Local setup: nearly the same as the global all-files setup, but maybe
       // has the header-flag changed.
@@ -428,5 +433,3 @@ public final class ParseDataset2 extends Job {
     public ParseException(String msg) { super(msg); }
   }
 }
-
-

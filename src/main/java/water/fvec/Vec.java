@@ -184,10 +184,6 @@ public class Vec extends Iced {
     return new VectorGroup(gKey,1);
   }
 
-  // Convert a global row# to a chunk-local row#.
-  private final int elem2ChunkElem( long i, int cidx ) {
-    return (int)(i - chunk2StartElem(cidx));
-  }
   // Matching CVec for a given element
   public Chunk elem2BV( int cidx ) {
     long start = chunk2StartElem(cidx); // Chunk# to chunk starting element#
@@ -198,6 +194,10 @@ public class Vec extends Iced {
     bv._start = start;          // Fields not filled in by unpacking from Value
     bv._vec = this;             // Fields not filled in by unpacking from Value
     return bv;
+  }
+  // Chunk at a row
+  public Chunk chunk( long i ) {
+    return elem2BV(elem2ChunkIdx(i));
   }
 
   // Next BigVector from the current one
@@ -256,7 +256,7 @@ public class Vec extends Iced {
     String s = "["+length()+(Double.isNaN(_min) ? "" : ","+_min+"/"+_max+", "+PrettyPrint.bytes(byteSize())+", {");
     int nc = nChunks();
     for( int i=0; i<nc; i++ )
-      s += (Chunk)(DKV.get(chunkKey(i)).get())+",";
+      s += (DKV.get(chunkKey(i)).get())+",";
     return s+"}]";
   }
 

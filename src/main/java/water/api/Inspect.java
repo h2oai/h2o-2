@@ -13,6 +13,7 @@ import java.util.zip.*;
 import water.*;
 import water.ValueArray.Column;
 import water.api.GLMProgressPage.GLMBuilder;
+import water.fvec.*;
 import water.parser.CsvParser;
 import water.util.Log;
 import water.util.Utils;
@@ -65,19 +66,27 @@ public class Inspect extends Request {
 
   @Override
   protected Response serve() {
+    // Key might not be the same as Value._key, e.g. a user key
+    Key key = Key.make(_key.record()._originalValue);
     Value val = _key.value();
     if(val == null) {
       // Some requests redirect before creating dest
       return RequestServer._http404.serve();
     }
     if( val.type() == TypeMap.PRIM_B )
-      return serveUnparsedValue(val);
+      return serveUnparsedValue(key, val);
     Freezable f = val.getFreezable();
     if( f instanceof ValueArray ) {
       ValueArray ary = (ValueArray)f;
       if( ary._cols.length==1 && ary._cols[0]._name==null )
-        return serveUnparsedValue(val);
+        return serveUnparsedValue(key, val);
       return serveValueArray(ary);
+    }
+    if( f instanceof Vec ) {
+      return serveUnparsedValue(key, ((Vec) f).chunkIdx(0));
+    }
+    if( f instanceof Frame ) {
+      return serveFrame(key, (Frame) f);
     }
     if( f instanceof GLMModel ) {
       GLMModel m = (GLMModel)f;
@@ -167,7 +176,7 @@ public class Inspect extends Request {
   }
 
   // Build a response JSON
-  private final Response serveUnparsedValue(Value v) {
+  private final Response serveUnparsedValue(Key key, Value v) {
     JsonObject result = new JsonObject();
     result.addProperty(VALUE_TYPE, "unparsed");
 
@@ -189,8 +198,8 @@ public class Inspect extends Request {
     Response r = Response.done(result);
     // Some nice links in the response
     r.addHeader("<div class='alert'>" //
-        + Parse.link(v._key, "Parse into hex format") + " or " //
-        + RReader.link(v._key, "from R data") + " </div>");
+        + Parse.link(key, "Parse into hex format") + " or " //
+        + RReader.link(key, "from R data") + " </div>");
     // Set the builder for showing the rows
     r.setBuilder(ROWS, new ArrayBuilder() {
       public String caption(JsonArray array, String name) {
@@ -253,7 +262,7 @@ public class Inspect extends Request {
     r.setBuilder(ROOT_OBJECT, new ObjectBuilder() {
       @Override
       public String build(Response response, JsonObject object, String contextName) {
-        String s = html(va);
+        String s = html(va._key, va._numrows, va._cols.length, va._rowsize, va.length());
         Table t = new Table(argumentsToJson(), _offset.value(), _view.value(), va);
         s += t.build(response, object.get(ROWS), ROWS);
         return s;
@@ -288,15 +297,39 @@ public class Inspect extends Request {
     }
   }
 
-  private final String html(ValueArray ary) {
-    String keyParam = KEY + "=" + ary._key.toString();
+  private static void format(JsonObject obj, Frame f, long rowIdx, int colIdx) {
+    Vec v = f._vecs[colIdx];
+    if( rowIdx < 0 || rowIdx >= v.length() )
+      return;
+    String name = f._names[colIdx] != null ? f._names[colIdx] : "" + colIdx;
+    switch(v.dtype()) {
+      case U:
+        obj.addProperty(name, "Unknown");
+        break;
+      case NA:
+        obj.addProperty(name, "NA");
+        break;
+      case S:
+        // TODO enums
+        break;
+      case I:
+        obj.addProperty(name, v.at8(rowIdx));
+        break;
+      case F:
+        obj.addProperty(name, v.at(rowIdx));
+        break;
+    }
+  }
+
+  private final String html(Key key, long rows, int cols, int bytesPerRow, long bytes) {
+    String keyParam = KEY + "=" + key.toString();
     StringBuilder sb = new StringBuilder();
     // @formatter:off
     sb.append(""
         + "<h3>"
           + "<a href='RemoveAck.html?" + keyParam + "'>"
           + "<button class='btn btn-danger btn-mini'>X</button></a>"
-          + "&nbsp;&nbsp;" + ary._key.toString()
+          + "&nbsp;&nbsp;" + key.toString()
         + "</h3>");
     if (_producer.valid() && _producer.value()!=null) {
       Job job = Job.findJob(Key.make(_producer.value()));
@@ -304,20 +337,80 @@ public class Inspect extends Request {
         sb.append("<div class='alert alert-success'>"
         		+ "<b>Produced in ").append(PrettyPrint.msecs(job.executionTime(),true)).append(".</b></div>");
     }
-    sb.append("<div class='alert'>" +"View " + SummaryPage.link(ary._key, "Summary") +  "<br/>Build models using "
-          + RF.link(ary._key, "Random Forest") + ", "
-          + GLM.link(ary._key, "GLM") + ", " + GLMGrid.link(ary._key, "GLM Grid Search") + ", or "
-          + KMeans.link(ary._key, "KMeans") + "<br />"
+    sb.append("<div class='alert'>" +"View " + SummaryPage.link(key, "Summary") +  "<br/>Build models using "
+          + RF.link(key, "Random Forest") + ", "
+          + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", or "
+          + KMeans.link(key, "KMeans") + "<br />"
           + "Score data using "
-          + RFScore.link(ary._key, "Random Forest") + ", "
-          + GLMScore.link(KEY, ary._key, 0.0, "GLM") + "</br><b>Download as</b> " + DownloadDataset.link(ary._key, "CSV")
+          + RFScore.link(key, "Random Forest") + ", "
+          + GLMScore.link(KEY, key, 0.0, "GLM") + "</br><b>Download as</b> " + DownloadDataset.link(key, "CSV")
         + "</div>"
         + "<p><b><font size=+1>"
-          + ary._cols.length + " columns, "
-          + ary._rowsize + " bytes-per-row * " + ary._numrows + " rows = " + PrettyPrint.bytes(ary.length())
+          + cols + " columns"
+          + (bytesPerRow != 0 ? (", " + bytesPerRow + " bytes-per-row * " + rows + " rows = " + PrettyPrint.bytes(bytes)) : "")
         + "</font></b></p>");
     // @formatter:on
     return sb.toString();
+  }
+
+  // Frame
+
+  public Response serveFrame(final Key key, final Frame f) {
+    if( _offset.value() > f._vecs[0].length() )
+      return Response.error("Value only has " + f._vecs[0].length() + " rows");
+
+    JsonObject result = new JsonObject();
+    result.addProperty(VALUE_TYPE, "parsed");
+    result.addProperty(KEY, key.toString());
+    result.addProperty(NUM_ROWS, f._vecs[0].length());
+    result.addProperty(NUM_COLS, f._vecs.length);
+
+    JsonArray cols = new JsonArray();
+    JsonArray rows = new JsonArray();
+
+    for( int i = 0; i < f._vecs.length; i++ ) {
+      Vec v = f._vecs[i];
+      JsonObject json = new JsonObject();
+      json.addProperty(NAME, f._names[i]);
+      json.addProperty(MIN, v.min());
+      json.addProperty(MAX, v.max());
+      cols.add(json);
+    }
+
+    if( _offset.value() != INFO_PAGE ) {
+      long endRow = Math.min(_offset.value() + _view.value(), f._vecs[0].length());
+      long startRow = Math.min(_offset.value(), f._vecs[0].length() - _view.value());
+      for( long row = Math.max(0, startRow); row < endRow; ++row ) {
+        JsonObject obj = new JsonObject();
+        obj.addProperty(ROW, row);
+        for( int i = 0; i < f._vecs.length; ++i )
+          format(obj, f, row, i);
+        rows.add(obj);
+      }
+    }
+
+    result.add(COLS, cols);
+    result.add(ROWS, rows);
+
+    Response r = Response.done(result);
+    r.setBuilder(ROOT_OBJECT, new ObjectBuilder() {
+      @Override
+      public String build(Response response, JsonObject object, String contextName) {
+        String s = html(key, f._vecs[0].length(), f._vecs.length, 0, 0);
+        Table2 t = new Table2(argumentsToJson(), _offset.value(), _view.value(), f);
+        s += t.build(response, object.get(ROWS), ROWS);
+        return s;
+      }
+    });
+    r.setBuilder(ROWS + "." + ROW, new ArrayRowElementBuilder() {
+      @Override
+      public String elementToString(JsonElement elm, String contextName) {
+        String json = elm.getAsString();
+        String html = _displayNames.get(json);
+        return html != null ? html : RequestStatics.JSON2HTML(json);
+      }
+    });
+    return r;
   }
 
   private static final class Table extends PaginatedTable {
@@ -393,6 +486,73 @@ public class Inspect extends Request {
         for( int i = 0; i < _va._cols.length; i++ )
           row.addProperty(_va._cols[i]._name, _va._cols[i]._domain != null ? _va._cols[i]._domain.length : 0);
         sb.append(defaultBuilder(row).build(response, row, contextName));
+      } else {
+        for( JsonElement e : array ) {
+          Builder builder = response.getBuilderFor(contextName + "_ROW");
+          if( builder == null )
+            builder = defaultBuilder(e);
+          sb.append(builder.build(response, e, contextName));
+        }
+      }
+
+      sb.append(footer(array));
+      return sb.toString();
+    }
+  }
+
+  private static final class Table2 extends PaginatedTable {
+    private final Frame _f;
+
+    public Table2(JsonObject query, long offset, int view, Frame f) {
+      super(query, offset, view, f._vecs[0].length(), true);
+      _f = f;
+    }
+
+    @Override
+    public String build(Response response, JsonArray array, String contextName) {
+      StringBuilder sb = new StringBuilder();
+      if( array.size() == 0 ) { // Fake row, needed by builder
+        array = new JsonArray();
+        JsonObject fake = new JsonObject();
+        fake.addProperty(ROW, 0);
+        for( int i = 0; i < _f._vecs.length; ++i )
+          format(fake, _f, 0, i);
+        array.add(fake);
+      }
+      sb.append(header(array));
+
+      JsonObject row = new JsonObject();
+
+      row.addProperty(ROW, MIN);
+      for( int i = 0; i < _f._vecs.length; i++ )
+        row.addProperty(_f._names[i], _f._vecs[i].min());
+      sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
+
+      row.addProperty(ROW, MAX);
+      for( int i = 0; i < _f._vecs.length; i++ )
+        row.addProperty(_f._names[i], _f._vecs[i].max());
+      sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
+
+      row.addProperty(ROW, FIRST_CHUNK);
+      for( int i = 0; i < _f._vecs.length; i++ )
+        row.addProperty(_f._names[i], _f._vecs[i].chunk(0).getClass().getSimpleName());
+      sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
+
+      if( _offset == INFO_PAGE ) {
+        for( int ci = 0; ci < _f._vecs[0].nChunks(); ci++ ) {
+          Chunk chunk = _f._vecs[ci].elem2BV(ci);
+          String prefix = CHUNK + " " + ci + " ";
+
+          row.addProperty(ROW, prefix + TYPE);
+          for( int i = 0; i < _f._vecs.length; i++ )
+            row.addProperty(_f._names[i], chunk.getClass().getSimpleName());
+          sb.append(defaultBuilder(row).build(response, row, contextName));
+
+          row.addProperty(ROW, prefix + SIZE);
+          for( int i = 0; i < _f._vecs.length; i++ )
+            row.addProperty(_f._names[i], chunk.byteSize());
+          sb.append(defaultBuilder(row).build(response, row, contextName));
+        }
       } else {
         for( JsonElement e : array ) {
           Builder builder = response.getBuilderFor(contextName + "_ROW");

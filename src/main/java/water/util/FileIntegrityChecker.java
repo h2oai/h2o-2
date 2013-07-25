@@ -4,12 +4,14 @@ import java.io.File;
 import java.util.ArrayList;
 
 import water.*;
+import water.fvec.*;
 import water.persist.PersistNFS;
 
 public class FileIntegrityChecker extends DRemoteTask {
   String[] _files;
   long[] _sizes;
   int[] _ok;
+  boolean _newApi;
 
   @Override public void lcompute() {
     _ok = new int[_files.length];
@@ -47,7 +49,12 @@ public class FileIntegrityChecker extends DRemoteTask {
   }
 
   public static FileIntegrityChecker check(File r) {
+    return check(r, false);
+  }
+
+  public static FileIntegrityChecker check(File r, boolean newApi) {
     FileIntegrityChecker checker = new FileIntegrityChecker(r);
+    checker._newApi = newApi;
     checker.invokeOnAllNodes();
     return checker;
   }
@@ -70,13 +77,20 @@ public class FileIntegrityChecker extends DRemoteTask {
   public Key importFile(int i, Futures fs) {
     if( _ok[i] < H2O.CLOUD.size() ) return null;
     File f = new File(_files[i]);
-    Key k = PersistNFS.decodeFile(f);
-    long size = f.length();
-    Value val = (size < 2*ValueArray.CHUNK_SZ)
-      ? new Value(k,(int)size,Value.NFS)
-      : new Value(k,new ValueArray(k,size),Value.NFS);
-    val.setdsk();
-    UKV.put(k, val, fs);
+    Key k;
+    if(_newApi) {
+      k = PersistNFS.decodeFile(f);
+      NFSFileVec nfs = DKV.get(NFSFileVec.make(f, fs)).get();
+      UKV.put(k, new Frame(new String[] { "0" }, new Vec[] { nfs }), fs);
+    } else {
+      k = PersistNFS.decodeFile(f);
+      long size = f.length();
+      Value val = (size < 2*ValueArray.CHUNK_SZ)
+        ? new Value(k,(int)size,Value.NFS)
+        : new Value(k,new ValueArray(k,size),Value.NFS);
+      val.setdsk();
+      UKV.put(k, val, fs);
+    }
     return k;
   }
 }

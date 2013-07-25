@@ -51,7 +51,7 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
   }
 
   // Top-level blocking call.
-  public final T doAll( Vec... vecs ) { return doAll(new Frame(null,null,vecs)); }
+  public final T doAll( Vec... vecs ) { return doAll(new Frame(null,vecs)); }
   public final T doAll( Frame fr ) {
     dfork(fr);
     return getResult();
@@ -191,10 +191,6 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
       copyOver(_res);             // So copy into self
     if( nlo==0 && nhi == H2O.CLOUD.size() ) // All-done on head of whole MRTask tree?
       _fr.closeAppendables();   // Final close ops on any new appendable vec
-  }
-  private static String p(MRTask2 x) {
-    if( x==null ) return "(null)";
-    return "("+x._lo+"-"+(x._hi-1)+")";
   }
 
   // Block for RPCs to complete, then reduce global results into self results

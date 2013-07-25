@@ -194,8 +194,8 @@ build_initializer
 build_jar
 build_src_jar
 build_hadoop
+build_rpackage
 if [ "$1" = "build" ]; then exit 0; fi
 build_javadoc
 if [ "$1" = "doc" ]; then exit 0; fi
-build_rpackage
 junit

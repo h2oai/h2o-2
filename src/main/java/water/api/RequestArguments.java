@@ -1434,8 +1434,8 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
 
   public class ExistingFile extends TypeaheadInputText<File> {
-    public ExistingFile() {
-      super(TypeaheadFileRequest.class, "path", true);
+    public ExistingFile(String name) {
+      super(TypeaheadFileRequest.class, name, true);
     }
     @Override protected File parse(String input) throws IllegalArgumentException {
       File f = new File(input);
