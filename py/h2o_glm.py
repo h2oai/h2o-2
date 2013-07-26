@@ -312,21 +312,25 @@ def goodXFromColumnInfo(y,
     x = range(num_cols)
     # need to walk over a copy, cause we change x
     xOrig = x[:]
+    ignore_x = [] # for use by RF
     for k in xOrig:
         name = colNameDict[k]
         # remove it if it has the same name as the y output
         if name == y:
             print "Removing %d because name: %s matches output %s" % (k, name, y)
             x.remove(k)
+            ignore_x.append(k)
 
         elif keepX is not None and not keepX.match(name):
             print "Removing %d because name: %s doesn't match desired keepPattern %s" % (k, name, keepPattern)
             x.remove(k)
+            ignore_x.append(k)
 
         elif k in constantValuesDict:
             value = constantValuesDict[k]
             print "Removing %d with name: %s because it has constant value: %s " % (k, name, str(value))
             x.remove(k)
+            ignore_x.append(k)
 
         # remove all cols with missing values
         # could change it against num_rows for a ratio
@@ -334,6 +338,7 @@ def goodXFromColumnInfo(y,
             value = missingValuesDict[k]
             print "Removing %d with name: %s because it has %d missing values" % (k, name, value)
             x.remove(k)
+            ignore_x.append(k)
 
         # this is extra pruning..
         # remove all cols with enums, if not already removed
@@ -341,10 +346,12 @@ def goodXFromColumnInfo(y,
             value = enumSizeDict[k]
             print "Removing %d %s because it has enums of size: %d" % (k, name, value)
             x.remove(k)
+            ignore_x.append(k)
 
     print "The pruned x has length", len(x)
     x = ",".join(map(str,x))
     print "\nx:", x
+    print "\nignore_x:", ignore_x
     return x
 
 

@@ -40,8 +40,8 @@ class Basic(unittest.TestCase):
             pass
         h2o.tear_down_cloud(h2o.nodes)
     
-    def test_parse_1k_files(self):
-        SYNDATASETS_DIR = h2o.make_syn_dir()
+    def test_parse_10k_files(self):
+        SYNDATASETS_DIR = os.path.abspath(h2o.make_syn_dir())
         csvFilename = "syn.csv.gz"
         headerData = "ID,CAPSULE,AGE,RACE,DPROS,DCAPS,PSA,VOL,GLEASON"
         totalRows = 10
@@ -54,7 +54,7 @@ class Basic(unittest.TestCase):
 
         avgFileSize = os.path.getsize(csvPathname)
 
-        importFolderPath = os.path.abspath(SYNDATASETS_DIR)
+        importFolderPath = SYNDATASETS_DIR
         print "\nimportFolderPath:", importFolderPath
         csvFilenameList = [
             # try one thousand files first
