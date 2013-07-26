@@ -326,17 +326,18 @@ def goodXFromColumnInfo(y,
             x.remove(k)
             ignore_x.append(k)
 
-        elif k in constantValuesDict:
-            value = constantValuesDict[k]
-            print "Removing %d with name: %s because it has constant value: %s " % (k, name, str(value))
-            x.remove(k)
-            ignore_x.append(k)
-
+        # missing values reports as constant also. so do missing first.
         # remove all cols with missing values
         # could change it against num_rows for a ratio
         elif k in missingValuesDict:
             value = missingValuesDict[k]
             print "Removing %d with name: %s because it has %d missing values" % (k, name, value)
+            x.remove(k)
+            ignore_x.append(k)
+
+        elif k in constantValuesDict:
+            value = constantValuesDict[k]
+            print "Removing %d with name: %s because it has constant value: %s " % (k, name, str(value))
             x.remove(k)
             ignore_x.append(k)
 
