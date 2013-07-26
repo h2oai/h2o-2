@@ -26,6 +26,7 @@ set -o errexit   ## set -e : exit the script if any statement returns a non-true
   TESTSRC=src/test/java
 SAMPLESRC=src/samples/java
 RESOURCES=src/main/resources
+RSRC=R/h2o-package
 # and this is where the jar contents is stored relative to this file again
 JAR_ROOT=lib
 
@@ -84,6 +85,7 @@ function clean() {
     mkdir ${OUTDIR}
     mkdir ${CLASSES}
     rm -f $SRC/water/BuildVersion.java
+    rm -fr hadoop/target
 }
 
 function build_classes() {
@@ -93,7 +95,7 @@ function build_classes() {
     BUILD_HASH=`git log -1 --format="%H"`
     BUILD_DESCRIBE=`git describe --always --dirty`
     BUILD_ON=`date`
-    BUILD_BY=`whoami`
+    BUILD_BY=`whoami | sed 's/.*\\\\//'`
 
     cat > $SRC/water/BuildVersion.java <<EOF
 package water;
@@ -158,10 +160,25 @@ function build_src_jar() {
     cp ${SRC_JAR_FILE} ${OUTDIR}/h2o-sources-${JAR_TIME}.jar
 }
 
+function build_hadoop() {
+    echo "building hadoop package..."
+    make -C hadoop SEP=${SEP} >& hadoop/build.log || ( grep -E "(failed||line)" hadoop/build.log ; exit 1 )
+}
+
 function build_javadoc() {
     echo "creating javadoc files..."
     local CLASSPATH="${JAR_ROOT}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/*"
     "${JAVADOC}" -classpath "${CLASSPATH}" -d "${OUTDIR}"/javadoc -sourcepath "${SRC}" -subpackages hex:water 1> /dev/null 2> /dev/null
+}
+
+function build_rpackage() {
+    echo "creating R package..."
+    if which R > /dev/null; then
+        R CMD build ${RSRC} > /dev/null
+        mv -f h2o_*.tar.gz target
+    else
+        echo "Missing R, please install"
+    fi	
 }
 
 function junit() {
@@ -176,6 +193,8 @@ if [ "$1" = "compile" ]; then exit 0; fi
 build_initializer
 build_jar
 build_src_jar
+build_hadoop
+build_rpackage
 if [ "$1" = "build" ]; then exit 0; fi
 build_javadoc
 if [ "$1" = "doc" ]; then exit 0; fi

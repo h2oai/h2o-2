@@ -51,7 +51,6 @@ def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None,
 def runInspect(node=None, key=None, timeoutSecs=5, **kwargs):
     if not key: raise Exception('No key for Inspect specified')
     if not node: node = h2o.nodes[0]
-    # FIX! currently there is no such thing as a timeout on node.inspect
     return node.inspect(key, timeoutSecs=timeoutSecs, **kwargs)
 
 def infoFromInspect(inspect, csvPathname):
@@ -73,7 +72,7 @@ def infoFromInspect(inspect, csvPathname):
     response = inspect['response']
     ptime = response['time']
 
-    print "num_cols: %s, num_rows: %s, row_size: %s, ptype: %s, \
+    print "\n" + csvPathname, "num_cols: %s, num_rows: %s, row_size: %s, ptype: %s, \
            value_size_bytes: %s, time: %s" % \
            (num_cols, num_rows, row_size, ptype, value_size_bytes, ptime)
     return missingValuesList
@@ -290,28 +289,63 @@ def sleep_with_dot(sec, message=None):
 # I use these in testdir_hosts/test_parse_nflx_loop_s3n_hdfs.py
 # and testdir_multi_jvm/test_benchmark_import.py
 # might be able to use more widely
-def check_enums_from_inspect(parseKey):
-    inspect = runInspect(key=parseKey['destination_key'])
-    print "num_rows:", inspect['num_rows']
-    print "num_cols:", inspect['num_cols']
+def columnInfoFromInspect(parseKey, exceptionOnMissingValues=True, **kwargs):
+    inspect = runInspect(key=parseKey['destination_key'], **kwargs)
+    num_rows = inspect['num_rows']
+    num_cols = inspect['num_cols']
     cols = inspect['cols']
     # trying to see how many enums we get
     # don't print int
     missingValuesDict = {}
-    for i,c in enumerate(cols):
+    constantValuesDict = {}
+    enumSizeDict = {}
+    colNameDict = {}
+    colTypeDict = {}
+    # all dictionaries created are keyed by col index
+    for k,c in enumerate(cols):
+        colNameDict[k] = c['name']
+        colTypeDict[k] = c['type']
         # print i, "name:", c['name']
-        msg = "column %d" % i
-        msg = msg + " type: %s" % c['type']
+        # msg = "column %d" % i
+        msg = "column %s %d" % (c['name'], k)
+        msg += " type: %s" % c['type']
         if c['type'] == 'enum':
-            msg = msg + (" enum_domain_size: %d" % c['enum_domain_size'])
-        if c['num_missing_values'] != 0:
-            msg = msg + (" num_missing_values: %s" % c['num_missing_values'])
-            # dictionary by col #
-            missingValuesDict[str(i)] = c['num_missing_values']
-        if c['type'] != 'int' or c['num_missing_values'] != 0:
-            print msg
+            msg += (" enum_domain_size: %d" % c['enum_domain_size'])
+            enumSizeDict[k] = c['enum_domain_size']
 
-    return missingValuesDict # so we can check if there were any missing values due to flipped enums?
+        if c['num_missing_values'] != 0:
+            msg += (" num_missing_values: %s" % c['num_missing_values'])
+            missingValuesDict[k] = c['num_missing_values']
+
+        # if c['type'] != 'int' or c['num_missing_values'] != 0:
+        print msg
+
+        if c['min'] == c['max']:
+            constantValuesDict[k] = c['min']
+
+    if missingValuesDict:
+        print len(missingValuesDict), "columns with missing values"
+        m = [str(k) + ":" + str(v) for k,v in missingValuesDict.iteritems()]
+        print "Maybe columns got flipped to NAs: " + ", ".join(m)
+        ### raise Exception("Looks like columns got flipped to NAs: " + ", ".join(m))
+
+    if constantValuesDict:
+        print len(constantValuesDict), "columns with constant values"
+        m = [str(k) + ":" + str(v) for k,v in constantValuesDict.iteritems()]
+        print "constant columns: " + ", ".join(m)
+
+    print "\n" + parseKey['destination_key'], \
+        "    num_rows:", "{:,}".format(num_rows), \
+        "    num_cols:", "{:,}".format(num_cols)
+
+    if missingValuesDict and exceptionOnMissingValues:
+        m = [str(k) + ":" + str(v) for k,v in missingValuesDict.iteritems()]
+        raise Exception("Looks like columns got flipped to NAs: " + ", ".join(m))
+
+    if num_cols != len(colNameDict): 
+        raise Exception("num_cols doesn't agree with len(colNameDict)" % num_cols, colNameDict)
+
+    return (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) 
 
 # looks for the key that matches the pattern, in the keys you saved from the 
 # import (that you saved from import of the folder/s3/hdfs)

@@ -74,12 +74,8 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED
-        SEED = random.randint(0, sys.maxint)
-        # SEED = 
-        random.seed(SEED)
-        print "\nUsing random seed:", SEED
-        global localhost
+        global SEED, localhost
+        SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(1,java_heap_GB=1)
@@ -159,10 +155,8 @@ class Basic(unittest.TestCase):
             # We should be able to see the parse result?
             ### inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             print "\n" + csvFilename
-            missingValuesDict = h2o_cmd.check_enums_from_inspect(parseKey)
-            if missingValuesDict:
-                m = [str(k) + ":" + str(v) for k,v in missingValuesDict.iteritems()]
-                raise Exception("Looks like columns got flipped to NAs: " + ", ".join(m))
+            (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
+                h2o_cmd.columnInfoFromInspect(parseKey, exceptionOnMissingValues=True)
 
 if __name__ == '__main__':
     h2o.unit_main()

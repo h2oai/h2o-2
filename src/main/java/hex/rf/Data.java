@@ -69,11 +69,10 @@ public class Data implements Iterable<Row> {
     public void    remove()            { throw new RuntimeException("Unsupported"); }
   }
 
-  public void filter(SplitNode node, Data[] result, Statistic ls, Statistic rs) {
+  // ----------------------
+  private int filterInv(SplitNode node, int[] permutation, Statistic ls, Statistic rs) {
     final Row row = new Row();
-    int[] permutation = getPermutationArray();
     int l = start(), r = end() - 1;
-
     while (l <= r) {
       int permIdx = row._index = permutation[l];
       boolean putToLeft = true;
@@ -82,7 +81,7 @@ public class Data implements Iterable<Row> {
       } else { // make a random choice about non
         putToLeft = _rng.nextBoolean();
       }
-
+      
       if (putToLeft) {
         ls.addQ(row);
         ++l;
@@ -92,7 +91,82 @@ public class Data implements Iterable<Row> {
         permutation[r--] = permIdx;
       }
     }
-    assert r+1 == l;
+    return l;
+  }
+
+  // Filter a column, with all valid data.  i.e., skip the invalid check
+  private int filterVal(SplitNode node, int[] permutation, Statistic ls, Statistic rs) {
+    final int l =filterVal1(node,permutation,ls,rs);
+    filterVal3(permutation,ls,start(),l);
+    filterVal3(permutation,rs,l,end());
+    return l;
+  }
+
+  // Hand-inlining for performance... CNC
+  private int filterVal1(SplitNode node, int[] permutation, Statistic ls, Statistic rs) {
+    int cidx = node._column;    // Decision column guiding the split
+    DataAdapter.Col cs[] = _dapt._c;
+    short bins[] = cs[cidx]._binned; // Bin#'s for each row
+    byte  binb[] = cs[cidx]._rawB;   // Bin#'s for each row
+    int split = node._split;          // Value to split on
+
+    // Move the data into left/right halves
+    int l = start(), r = end() - 1;
+    while (l <= r) {
+      int permIdx = permutation[l];
+      int val = bins==null ? (0xFF&binb[permIdx]) : bins[permIdx];
+      if( val <= split ) {
+        ++l;
+      } else {
+        permutation[l] = permutation[r];
+        permutation[r--] = permIdx;
+      }
+    }
+    return l;
+  }
+
+  // Update the histogram
+  private void filterVal3(int[] permutation, Statistic s, final int lo, final int hi) {
+    DataAdapter.Col cs[] = _dapt._c;
+    short classs[]= cs[_dapt.classColIdx()]._binned;
+    int cds[][][] = s._columnDists;
+    int fs[] = s._features;
+
+    // Run this loop by-feature instead of by-row - so that the updates in the
+    // inner loops do not need to start from loading the feature array.
+    for( int j=0; j<fs.length; j++ ) {
+      int f = fs[j];            // Feature column
+      if( f == -1) break;       // Short features.
+      int cdsf[][] = cds[f];    // Histogram per-column (by value & class)
+      short[] bins = cs[f]._binned; // null if byte col, otherwise bin#
+
+      if( bins != null ) {              // binned?
+        for( int i=lo; i<hi; i++ ) {    // Binned-loop
+          int permIdx = permutation[i]; // Get the row
+          int val = bins[permIdx];      // Bin-for-row
+          if( val == DataAdapter.BAD ) continue; // ignore bad rows
+          int cls = classs[permIdx];    // Class-for-row
+          cdsf[val][cls]++;             // Bump histogram
+        }
+
+      } else {                          // not binned?
+        byte[] raw = cs[f]._rawB;       // Raw unbinned byte array
+        for( int i=lo; i<hi; i++ ) {    // not-binned loop
+          int permIdx = permutation[i]; // Get the row
+          int val = (0xFF&raw[permIdx]);// raw byte value, has no bad rows
+          int cls = classs[permIdx];    // Class-for-row
+          cdsf[val][cls]++;             // Bump histogram
+        }
+      }
+    }
+  }
+
+  public void filter(SplitNode node, Data[] result, Statistic ls, Statistic rs) {
+    int[] permutation = getPermutationArray();
+    int cidx = node._column;
+    int l =  _dapt.hasAnyInvalid(cidx) || _dapt.hasAnyInvalid(_dapt.columns()-1)
+      ? filterInv(node,permutation,ls,rs) 
+      : filterVal(node,permutation,ls,rs);
     ls.applyClassWeights();     // Weight the distributions
     rs.applyClassWeights();     // Weight the distributions
     ColumnInfo[] linfo = _columnInfo.clone();

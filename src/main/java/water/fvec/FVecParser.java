@@ -18,7 +18,7 @@ public abstract class FVecParser extends CsvParser {
   final Enum [] _enums;
   long _nLines;
   final int _nCols;
-  int _col = 0;
+  int _col = -1;
 
   public FVecParser(NewChunk [] nvs, CsvParser.Setup setup, Enum [] enums, boolean skip){
     super(setup, skip);
@@ -28,11 +28,12 @@ public abstract class FVecParser extends CsvParser {
   }
 
   @Override public final void newLine() {
-    if(_col > 0){
+    if(_col >= 0){
       ++_nLines;
       for(int i = _col+1; i < _nCols; ++i)
         addInvalidCol(i);
     }
+    _col = -1;
   }
   protected long linenum(){return _nLines;}
   @Override public final void addNumCol(int colIdx, long number, int exp) {

@@ -32,7 +32,7 @@ public class C1Chunk extends Chunk {
   }
   @Override boolean set8_impl(int i, double d) { return false; }
   @Override NewChunk inflate_impl(NewChunk nc) {
-    for( int i=0; i<_mem.length; i++ ) {
+    for( int i=0; i<_len; i++ ) {
       long res = at8_impl(i);
       if( _vec.isNA(res) ) nc.setInvalid(i);
       else nc._ls[i] = res;

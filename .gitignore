@@ -23,8 +23,7 @@ sandbox
 syn_datasets
 target/
 .settings/*
-cypof*
-typemap
 /libpeerconnection.log
 classes
-build.log
+src/main/java/water/BuildVersion.java
+hadoop/build.log

@@ -59,16 +59,10 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED
-        SEED = random.randint(0, sys.maxint)
-
-        # if you have to force to redo a test
-        # SEED = 
-        random.seed(SEED)
-        print "\nUsing random seed:", SEED
+        global SEED, localhost
+        SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            # h2o.build_cloud(3,java_heap_GB=4)
             h2o.build_cloud(3,java_heap_GB=4)
         else:
             h2o_hosts.build_cloud_with_hosts()

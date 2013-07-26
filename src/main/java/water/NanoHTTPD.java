@@ -247,7 +247,7 @@ public class NanoHTTPD
       new NanoHTTPD( new ServerSocket(port), wwwroot );
     } catch( IOException ioe ) {
       Log.err(Sys.HTTPD, "Couldn't start server:\n", ioe );
-      System.exit( -1 );
+      H2O.exit( -1 );
     }
 
     myOut.println( "Now serving files in port " + port + " from \"" + wwwroot + "\"" );

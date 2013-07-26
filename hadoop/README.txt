@@ -54,6 +54,22 @@ $ cat flatfile.txt
 192.168.1.155
 
 
+For your convenience, we have included a tool to help you genearate
+a flatfile.  This is only meant to assist you, and may encounter
+Java exceptions if DNS and DHCP are not fully configured.
+This generator tool is still experimental, please double check the 
+output yourself before relying on it.
+
+$ hadoop jar h2odriver_cdh4.jar water.hadoop.gen_flatfile -jt <jobtracker:port> > flatfile.txt
+
+(Note: Make sure to use the h2odriver flavor for the correct version
+       of hadoop!  We recommend running the hadoop command from a
+       machine in the hadoop cluster.)
+
+(Note: Port 8021 is the default jobtracker port for Cloudera.
+       Port 9001 is the default jobtracker port for MapR.)
+
+
 RUN JOB
 -------
 
@@ -66,6 +82,9 @@ $ hadoop jar h2odriver_cdh4.jar water.hadoop.h2odriver [-jt <jobtracker:port>] -
 (Note: Make sure to use the h2odriver flavor for the correct version
        of hadoop!  We recommend running the hadoop command from a
        machine in the hadoop cluster.)
+
+(Note: Port 8021 is the default jobtracker port for Cloudera.
+       Port 9001 is the default jobtracker port for MapR.)
 
 
 MONITOR JOB
@@ -83,4 +102,10 @@ Bring up H2O web UI:  http://<h2onode>:54321
 Choose Admin->Shutdown
 
 (Note: Alternately use the "hadoop job -kill" command.)
+
+
+FOR MORE INFORMATION
+--------------------
+
+$ hadoop jar h2odriver_cdh4.jar water.hadoop.h2odriver -help
 

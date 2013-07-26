@@ -47,7 +47,6 @@ class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
-
     @classmethod
     def setUpClass(cls):
         global localhost
@@ -62,7 +61,6 @@ class Basic(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
-
 
     validations1 = {}
 

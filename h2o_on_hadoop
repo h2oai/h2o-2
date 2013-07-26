@@ -1,0 +1,7 @@
+#!/bin/bash
+
+echo
+echo Please read hadoop/README.txt
+echo After building, the hadoop zip file is in target/h2o_hadoop.zip
+echo For more info, look at docs/h2oOnHadoopWhitepaper.pdf
+echo

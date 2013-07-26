@@ -11,7 +11,7 @@ def define_params():
         'y': 54,
         'weight': None, 
         'family': 'poisson', 
-        'beta_eps': 0.001, 
+        'beta_epsilon': 0.001, 
         'thresholds': 0.1, 
         'max_iter': 15, 
         'link': 'familyDefault', 

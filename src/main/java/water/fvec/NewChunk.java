@@ -24,6 +24,13 @@ public class NewChunk extends Chunk {
     _max = -Double.MAX_VALUE;
   }
 
+  public byte type(){
+    if(_naCnt == _len)
+      return AppendableVec.NA;
+    if(_strCnt > 0 && _strCnt + _naCnt == _len)
+      return AppendableVec.ENUM;
+    return AppendableVec.NUMBER;
+  }
   protected final boolean isNA(int idx) {
     return (_ds == null) ? (_ls[idx] == 0 && _xs[idx] != 0) : Double.isNaN(_ds[idx]);
   }
@@ -78,10 +85,12 @@ public class NewChunk extends Chunk {
     boolean overflow=false;
     boolean floatOverflow = false;
 
+    if(_naCnt == _len) // ALL NAs, nothing to do
+      return new C0DChunk(Double.NaN,_len);
     // Enum?  We assume that columns with ALL strings (and NAs) are enums if
     // there were less than 65k unique vals.  If there were some numbers, we
     // assume it is a numcol with strings being NAs.
-    if( 0 < _strCnt && (_strCnt + _naCnt) == _len ) {
+    if( type() == AppendableVec.ENUM) {
       // find their max val
       int sz = Integer.MIN_VALUE;
       for(int x:_xs) if(x > sz)sz = x;
@@ -99,10 +108,9 @@ public class NewChunk extends Chunk {
         } else throw H2O.unimpl();
       }
     }
-    
     // If the data was set8 as doubles, we (weanily) give up on compression and
     // just store it as a pile-o-doubles.
-    if( _ds != null ) 
+    if( _ds != null )
       return new C8DChunk(bufF(3));
 
     // Look at the min & max & scaling.  See if we can sanely normalize the
@@ -140,11 +148,12 @@ public class NewChunk extends Chunk {
       if( le > lemax ) lemax=le;
     }
 
-
     // Constant column?
     if( _min==_max ) {
-      if( xmin < 0 ) throw H2O.unimpl();
-      return new C0LChunk((long)_min,_len);
+      return ((long)_min  == _min)
+          ?new C0LChunk((long)_min,_len)
+          :new C0DChunk(_min, _len);
+
     }
 
     // Boolean column? (or in general two value column)
@@ -173,11 +182,11 @@ public class NewChunk extends Chunk {
         return new C1SChunk( bufX(lemin,xmin,C1SChunk.OFF,0),(int)lemin,DParseTask.pow10(xmin));
       if(lemax-lemin < 65535 )
         return new C2SChunk( bufX(lemin,xmin,C2SChunk.OFF,1),(int)lemin,DParseTask.pow10(xmin));
-
       return new C4FChunk( bufF(2));
     }
-
     // Compress column into a byte
+    if( 0<=lemin && lemax <= 255 && ((_naCnt + _strCnt)==0) )
+      return new C1NChunk( bufX(0,0,C1NChunk.OFF,0));
     if( lemax-lemin < 255 ) {         // Span fits in a byte?
       if( 0 <= lemin && lemax < 255 ) // Span fits in an unbiased byte?
         return new C1Chunk( bufX(0,0,C1Chunk.OFF,0));
@@ -186,9 +195,10 @@ public class NewChunk extends Chunk {
 
     // Compress column into a short
     if( lemax-lemin < 65535 ) {               // Span fits in a biased short?
-      if( -32767 <= lemin && lemax <= 32767 ) // Span fits in an unbiased short?
+      if( Short.MIN_VALUE < lemin && lemax <= Short.MAX_VALUE ) // Span fits in an unbiased short?
         return new C2Chunk( bufX(0,0,C2Chunk.OFF,1));
-      return new C2SChunk( bufX(lemin,0,C2SChunk.OFF,1),(int)lemin,1);
+      int bias = (int)(lemin-(Short.MIN_VALUE+1));
+      return new C2SChunk( bufX(bias,0,C2SChunk.OFF,1),bias,1);
     }
 
     // Compress column into ints

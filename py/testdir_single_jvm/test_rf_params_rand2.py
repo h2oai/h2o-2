@@ -9,6 +9,8 @@ import h2o, h2o_cmd, h2o_rf, h2o_hosts
 # don't allow None on ntree..causes 50 tree default!
 print "Temporarily not using bin_limit=1 to 4"
 paramDict = {
+    'use_non_local_data': [None, 0, 1],
+    'iterative_cm': [None, 0, 1],
     'response_variable': [None,54],
     'class_weights': [None,'1=2','2=2','3=2','4=2','5=2','6=2','7=2'],
     'ntree': [1,3,7,19],
@@ -42,7 +44,8 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
+        global SEED, localhost
+        SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(node_count=1, java_heap_GB=10)
@@ -54,13 +57,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rf_params_rand2(self):
-        # for determinism, I guess we should spit out the seed?
-        # random.seed(SEED)
-        SEED = random.randint(0, sys.maxint)
-        # if you have to force to redo a test
-        # SEED = 
-        random.seed(SEED)
-        print "\nUsing random seed:", SEED
         csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
         for trial in range(10):
             # params is mutable. This is default.

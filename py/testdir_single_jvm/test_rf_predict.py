@@ -25,7 +25,7 @@ class Basic(unittest.TestCase):
         timeoutSecs = 20
         csvPathname = h2o.find_file('smalldata/iris/iris2.csv')
         h2o_cmd.runRF(trees=trees, model_key="iris_rf_model", timeoutSecs=timeoutSecs, csvPathname=csvPathname)
-        print "\Doing generation_predictions using the generated model and the same data key, and inspecting result"
+        print "\Use H2O GeneratePredictionsPage with a H2O generated model and the same data key. Inspect/Summary result"
 
         start = time.time()
         key2 = "iris2.csv.hex"
@@ -50,7 +50,7 @@ class Basic(unittest.TestCase):
         predictCols = predict['cols'][0]
         diffkeys = [k for k in expectedCols if predictCols[k] != expectedCols[k]]
         for k in diffkeys:
-            raise Exception ("%s : %s != %s" % (k, predictCols[k],expectedCols[k]))
+            raise Exception ("Checking H2O summary results, wrong %s: %s, should be: %s" % (k, predictCols[k], expectedCols[k]))
 
         expected = {
           "num_rows": 150, 

@@ -1,7 +1,6 @@
 package water.fvec;
 
 import water.*;
-import java.util.Arrays;
 
 // A compression scheme, over a chunk - a single array of bytes.  The *actual*
 // BigVector header info is in the Vec struct - which contains info to find all

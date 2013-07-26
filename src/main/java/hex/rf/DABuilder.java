@@ -1,12 +1,12 @@
 package hex.rf;
 
 import hex.rf.DRF.DRFTask;
-
 import java.util.ArrayList;
-
+import jsr166y.CountedCompleter;
 import jsr166y.ForkJoinTask;
 import jsr166y.RecursiveAction;
 import water.*;
+import water.ValueArray.Column;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
@@ -63,8 +63,9 @@ class DABuilder {
     // building dataset's columns.
     final int[] modelDataMap = rfmodel.columnMapping(ary.colNames());
 
+    final int totalRows = getRowCount(keys);
     final DataAdapter dapt = new DataAdapter( ary, rfmodel, modelDataMap,
-                                              getRowCount(keys),
+                                              totalRows,
                                               getChunkId(keys),
                                               _drf._params._seed,
                                               _drf._params._binLimit,
@@ -78,11 +79,10 @@ class DABuilder {
     ArrayList<RecursiveAction> dataInhaleJobs = new ArrayList<RecursiveAction>();
     int start_row = 0;
     for( final Key k : keys ) {    // now read the values
-      System.err.println("loading: " + k);
       final int S = start_row;
       if (!k.home()) continue;     // This is not necessary, but for sure skip no local keys (we only inhale local data)
       final int rows = ary.rpc(ValueArray.getChunkIndex(k));
-      dataInhaleJobs.add( loadChunkAction(dapt, ary, k, modelDataMap, ncolumns, rows, S) );
+      dataInhaleJobs.add( loadChunkAction(dapt, ary, k, modelDataMap, ncolumns, rows, S, totalRows) );
       start_row += rows;
     }
     // And invoke collected jobs (load all local data)
@@ -110,7 +110,8 @@ class DABuilder {
           System.err.println("-> reloading more keys: " + k + " from " + k.home_node());
           final int S = start_row;
           final int rows = ary.rpc(ValueArray.getChunkIndex(k));
-          dataInhaleJobs.add( loadChunkAction(dapt, ary, k, modelDataMap, ncolumns, rows, S) );
+          // FIXME totalRows need to be corrected to respect the keys loaded after normal load
+          dataInhaleJobs.add( loadChunkAction(dapt, ary, k, modelDataMap, ncolumns, rows, S, totalRows) );
           start_row += rows;
         }
       }
@@ -123,19 +124,26 @@ class DABuilder {
     return dapt;
   }
 
-  static RecursiveAction loadChunkAction(final DataAdapter dapt, final ValueArray ary, final Key k, final int[] modelDataMap, final int ncolumns, final int rows, final int S) {
+  static RecursiveAction loadChunkAction(final DataAdapter dapt, final ValueArray ary, final Key k, final int[] modelDataMap, final int ncolumns, final int rows, final int S, final int totalRows) {
     return new RecursiveAction() {
       @Override protected void compute() {
+        try {
         AutoBuffer bits = ary.getChunk(k);
         for(int j = 0; j < rows; ++j) {
           int rowNum = S + j; // row number in the subset of the data on the node
           boolean rowIsValid = false;
           for( int c = 0; c < ncolumns; ++c) { // For all columns being processed
             final int col = modelDataMap[c];   // Column in the dataset
+            Column column = ary._cols[col];
             if( ary.isNA(bits,j,col) ) { dapt.addBad(rowNum, c); continue; }
-            float f =(float)ary.datad(bits,j,col);
-            if( !dapt.isValid(c,f) ) { dapt.addBad(rowNum, c); continue; }
-            dapt.add(f, rowNum, c);
+            if( DataAdapter.isByteCol(column,totalRows,c==ncolumns-1) ) { // we do not bin for small values
+              int v = (int)ary.data(bits, j, col);
+              dapt.add1(v, rowNum, c);
+            } else {
+              float f =(float)ary.datad(bits,j,col);
+              if( !dapt.isValid(c,f) ) { dapt.addBad(rowNum, c); continue; }
+              dapt.add(f, rowNum, c);
+            }
             // if the row contains at least one correct value except class
             // column consider it as correct
             if( c != ncolumns-1 )
@@ -143,6 +151,9 @@ class DABuilder {
           }
           // The whole row is invalid in the following cases: all values are NaN or there is no class specified (NaN in class column)
           if (!rowIsValid) dapt.markIgnoredRow(j);
+        }
+        } catch( Throwable t ) {
+          t.printStackTrace();
         }
       }
     };

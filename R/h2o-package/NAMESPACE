@@ -1,0 +1,22 @@
+exportPattern("^[[:alpha:]]+")
+exportMethods(
+    "colnames",
+    "h2o.getTree",
+    "h2o.glm",
+    "h2o.kmeans",
+    "h2o.randomForest",
+    "importFile",
+	"importFolder",
+    "importURL",
+    "parseRaw",
+    "show",
+    "summary" 
+)
+exportClasses(
+    "H2OClient",
+     "H2OGLMModel",
+     "H2OKMeansModel",
+     "H2OParsedData",
+     "H2ORawData",
+     "H2ORForestModel" 
+)

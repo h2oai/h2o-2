@@ -1,15 +1,11 @@
 package water;
 
-import hex.*;
-import hex.KMeansModel.KMeansApply;
-
 import java.io.File;
-import java.util.Random;
 
 import org.apache.commons.lang.ArrayUtils;
 
 import water.deploy.*;
-import water.parser.ParseDataset;
+import water.fvec.NFSFileVec;
 import water.util.Utils;
 
 public class Sandbox {
@@ -21,16 +17,22 @@ public class Sandbox {
     public static void main(String[] args) throws Exception {
       localCloud(2, true, args);
 
-      //File f = new File("lib/resources/datasets/gaussian.csv");
-      File f = new File("syn_5853362476331324036_100x11.csv");
+      Utils.readConsole();
+      File f = new File("lib/resources/datasets/gaussian.csv");
+      Key fkey = NFSFileVec.make(f);
+      Key key = Key.make("test");
+      UKV.put(key, UKV.get(fkey));
+      Utils.readConsole();
+
+      // File f = new File("syn_5853362476331324036_100x11.csv");
       // // File f = new File("../../aaaa/datasets/millionx7_logreg.data.gz");
       // // File f = new File("smalldata/test/rmodels/iris_x-iris-1-4_y-species_ntree-500.rdata");
       // // File f = new File("py/testdir_single_jvm/syn_datasets/hastie_4x.data");
 //      File f = new File("smalldata/covtype/covtype.20k.data");
-      Key key = TestUtil.load_test_file(f, "test");
-      Key dest = Key.make("test.hex");
-      ParseDataset.parse(dest, new Key[] { key });
-      ValueArray va = (ValueArray) UKV.get(dest);
+//      Key key = TestUtil.load_test_file(f, "test");
+//      Key dest = Key.make("test.hex");
+//      ParseDataset.parse(dest, new Key[] { key });
+//      ValueArray va = (ValueArray) UKV.get(dest);
 
       // @formatter:off
 //      double[][] array = new double[][] {
@@ -45,18 +47,18 @@ public class Sandbox {
 //       double[][] array = KMeansTest.gauss(columns, 10000, goals);
 //      ValueArray va = TestUtil.va_maker(key, (Object[]) array);
 
-      Key km = Key.make("test.kmeans");
-      int[] cols = new int[va._cols.length];
-      for( int i = 0; i < cols.length; i++ )
-        cols[i] = i;
-      for( int i = 0; i < 1; i++ ) {
-        KMeans job = KMeans.start(km, va, 2, 1e-6, 0, new Random().nextLong(), false, cols);
-        KMeansModel m = job.get();
-        System.out.println(m._error);
-      }
-
-      Key ap = Key.make("test.kmeans-apply");
-      KMeansApply.run(ap, (KMeansModel) UKV.get(km), va);
+//      Key km = Key.make("test.kmeans");
+//      int[] cols = new int[va._cols.length];
+//      for( int i = 0; i < cols.length; i++ )
+//        cols[i] = i;
+//      for( int i = 0; i < 1; i++ ) {
+//        KMeans job = KMeans.start(km, va, 2, 1e-6, 0, new Random().nextLong(), false, cols);
+//        KMeansModel m = job.get();
+//        System.out.println(m._error);
+//      }
+//
+//      Key ap = Key.make("test.kmeans-apply");
+//      KMeansApply.run(ap, (KMeansModel) UKV.get(km), va);
 
 //    String s = "";
 //    for( int i = 0; i < cols.length; i++ ) {

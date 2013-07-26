@@ -1,5 +1,5 @@
 import unittest
-import random, sys
+import random, sys, time
 sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_rf, h2o_hosts
@@ -11,7 +11,7 @@ print "Temporarily not using bin_limit=1 to 4"
 paramDict = {
     'response_variable': [None,54],
     'class_weights': [None,'1=2','2=2','3=2','4=2','5=2','6=2','7=2'],
-    'ntree': [1,3,7,19],
+    'ntree': [50],
     'model_key': ['model_keyA', '012345', '__hello'],
     # UPDATE: H2O...OOBE has to be 0 for scoring
     'out_of_bag_error_estimate': [0],
@@ -46,7 +46,8 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
+        global SEED, localhost
+        SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(node_count=1)
@@ -58,22 +59,14 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rfview_score(self):
-        # for determinism, I guess we should spit out the seed?
-        # random.seed(SEED)
-        SEED = random.randint(0, sys.maxint)
-        # if you have to force to redo a test
-        # SEED = 
-        random.seed(SEED)
-        print "\nUsing random seed:", SEED
-
-        csvPathnameTrain = h2o.find_file('smalldata/covtype/covtype.20k.data')
+        csvPathnameTrain = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
         print "Train with:", csvPathnameTrain
-        parseKeyTrain = h2o_cmd.parseFile(csvPathname=csvPathnameTrain, key2="covtype.20k.hex", timeoutSecs=10)
+        parseKeyTrain = h2o_cmd.parseFile(csvPathname=csvPathnameTrain, key2="covtype.hex", timeoutSecs=15)
         dataKeyTrain = parseKeyTrain['destination_key']
 
         csvPathnameTest = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
         print "Test with:", csvPathnameTest
-        parseKeyTest = h2o_cmd.parseFile(csvPathname=csvPathnameTrain, key2="covtype.hex", timeoutSecs=10)
+        parseKeyTest = h2o_cmd.parseFile(csvPathname=csvPathnameTrain, key2="covtype.hex", timeoutSecs=15)
         dataKeyTest = parseKeyTest['destination_key']
 
         for trial in range(5):
@@ -83,7 +76,7 @@ class Basic(unittest.TestCase):
             kwargs = params.copy()
             # adjust timeoutSecs with the number of trees
             # seems ec2 can be really slow
-            timeoutSecs = 30 + 15 * (kwargs['parallel'] and 5 or 10)
+            timeoutSecs = 30 + kwargs['ntree'] * 10 * (kwargs['parallel'] and 1 or 5)
             rfv = h2o_cmd.runRFOnly(parseKey=parseKeyTrain, timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)
     
             ### print "rf response:", h2o.dump_json(rfv)
@@ -108,23 +101,35 @@ class Basic(unittest.TestCase):
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, 
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
             # new web page for predict? throw it in here for now
+            start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
+            elapsed = time.time() - start
+            print "predict end on ", dataKeyTest, 'took', elapsed, 'seconds.'
 
             kwargs['iterative_cm'] = 0
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
+            start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
+            elapsed = time.time() - start
+            print "predict end on ", dataKeyTest, 'took', elapsed, 'seconds.'
 
             kwargs['iterative_cm'] = 1
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, 
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
+            start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
+            elapsed = time.time() - start
+            print "predict end on ", dataKeyTest, 'took', elapsed, 'seconds.'
 
             kwargs['iterative_cm'] = 1
             kwargs['class_weights'] = '1=1,2=2,3=3,4=4,5=5,6=6,7=7'
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
+            start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
+            elapsed = time.time() - start
+            print "predict end on ", dataKeyTest, 'took', elapsed, 'seconds.'
 
             print "Trial #", trial, "completed"
 

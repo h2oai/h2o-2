@@ -47,7 +47,7 @@ public class GLMRunner {
       int ncols = ary.numCols();
       if(ycol < 0 || ycol >= ary.numCols()){
         System.err.println("invalid y column: " + ycol);
-        System.exit(-1);
+        H2O.exit(-1);
       }
       int [] xcols;
       if(ARGS.xs.equalsIgnoreCase("all")){
@@ -69,7 +69,7 @@ public class GLMRunner {
       }
       for(int x:xcols) if(x < 0){
         System.err.println("Invalid predictor specification " + ARGS.xs);
-        System.exit(-1);
+        H2O.exit(-1);
       }
       GLMJob j = DGLM.startGLMJob(DGLM.getData(ary, xcols,ycol, null, true), new ADMMSolver(ARGS.lambda,ARGS._alpha), new GLMParams(Family.valueOf(ARGS.family)), null, ARGS.xval, true);
       System.out.print("[GLM] computing model...");

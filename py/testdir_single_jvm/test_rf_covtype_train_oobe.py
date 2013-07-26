@@ -112,7 +112,7 @@ class Basic(unittest.TestCase):
             self.assertAlmostEqual(oobeTrainPctRight, expectTrainPctRightList[trial],
                 msg="OOBE: pct. right for %s pct. training not close enough %6.2f %6.2f"% \
                     ((trial*10), oobeTrainPctRight, expectTrainPctRightList[trial]), 
-                delta=0.2)
+                delta=0.4)
             actualTrainPctRightList.append(oobeTrainPctRight)
 
             print "Now score on the last 10%"
@@ -140,7 +140,7 @@ class Basic(unittest.TestCase):
             self.assertAlmostEqual(fullScorePctRight,expectScorePctRightList[trial],
                 msg="Full: pct. right for scoring after %s pct. training not close enough %6.2f %6.2f"% \
                     ((trial*10), fullScorePctRight, expectScorePctRightList[trial]), 
-                delta=0.2)
+                delta=0.4)
             actualScorePctRightList.append(fullScorePctRight)
 
             print "Trial #", trial, "completed", "using %6.2f" % (rowsToUse*100.0/num_rows), "pct. of all rows"
