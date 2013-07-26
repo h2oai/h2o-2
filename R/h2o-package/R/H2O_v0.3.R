@@ -74,6 +74,7 @@ setGeneric("importFolder", function(object, path, parse = TRUE) { standardGeneri
 # setGeneric("importURL", function(object, path, key="", header = FALSE, parse = TRUE) { standardGeneric("importURL") })
 setGeneric("importURL", function(object, path, key = "", parse = TRUE) { standardGeneric("importURL") })
 # setGeneric("importURL", function(object, path, key="") { standardGeneric("importURL") })
+setGeneric("importHDFS", function(object, path, parse = TRUE) { standardGeneric("importHDFS") })
 setGeneric("parseRaw", function(data, key = "") { standardGeneric("parseRaw") })
 setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5) { standardGeneric("h2o.glm") })
 setGeneric("h2o.kmeans", function(data, centers, cols = "", iter.max = 10) { standardGeneric("h2o.kmeans") })
@@ -134,6 +135,28 @@ setMethod("importFile", signature(object="H2OClient", path="character", key="cha
 
 setMethod("importFile", signature(object="H2OClient", path="character", key="character", parse="missing"), 
           function(object, path, key) { importFile(object, path, key, parse = TRUE) })
+
+setMethod("importHDFS", signature(object="H2OClient", path="character", parse="logical"),
+          function(object, path, parse) {
+            res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTHDFS, path=path)
+            myData = vector("list", res$num_succeeded)
+            if(length(res$failed) > 0) {
+              for(i in 1:res$num_failed) 
+                cat(res$failed[[i]]$file, "failed to import")
+            }
+            for(i in 1:res$num_succeeded) {
+              rawData = new("H2ORawData", h2o=object, key=res$succeeded[[i]]$key)
+              if(parse) {
+                cat("Parsing key", res$succeeded[[i]]$key, "\n")
+                myData[[i]] = parseRaw(rawData, key="")
+              }
+              else myData[[i]] = rawData
+            }
+            myData
+          })
+
+setMethod("importHDFS", signature(object="H2OClient", path="character", parse="missing"),
+          function(object, path) { importHDFS(object, path, parse = TRUE) })
 
 setMethod("parseRaw", signature(data="H2ORawData", key="character"), 
           function(data, key) {
