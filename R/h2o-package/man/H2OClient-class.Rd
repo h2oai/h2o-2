@@ -9,10 +9,10 @@
 
 \title{Class \code{"H2OClient"}}
 \description{
-%%  ~~ A concise (1-5 lines) description of what the class is. ~~
+An object representing the server/local machine on which H2O is running.
 }
 \section{Objects from the Class}{
-Objects can be created by calls of the form \code{new("H2OClient", ...)}.
+Objects can be created by calls of the form \code{new("H2OClient", ...)}
 %%  ~~ describe objects here ~~ 
 }
 \section{Slots}{
@@ -47,5 +47,7 @@ Objects can be created by calls of the form \code{new("H2OClient", ...)}.
 }
 \examples{
 showClass("H2OClient")
+localClient = new("H2OClient", ip = "localhost", port = 54321)
+remoteClient = new("H2OClient", ip = "192.168.1.173", port = 54322)
 }
 \keyword{classes}
