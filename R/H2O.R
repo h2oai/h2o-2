@@ -190,14 +190,12 @@ setMethod("h2o.kmeans", signature(data="H2OParsedData", centers="numeric", cols=
             destKey = res$destination_key
             res = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=res$destination_key)
             res = res$KMeansModel
-            
             result = list()
             if(typeof(res$clusters) == "double")
               result$centers = res$clusters
             else {
               result$centers = do.call(rbind, res$clusters)
               rownames(result$centers) <- seq(1,nrow(result$centers))
-              
               if(cols[1] == "")
                 colnames(result$centers) <- colnames(data)
               else {
