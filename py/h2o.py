@@ -1620,7 +1620,7 @@ class H2O(object):
             # see if we can touch a 0xdata machine
             try:
                 # long timeout in ec2...bad
-                a = requests.get('http://169.168.1.176:80', timeout=1)
+                a = requests.get('http://192.168.1.176:80', timeout=1)
                 hdfs_0xdata_visible = True
             except:
                 hdfs_0xdata_visible = False
