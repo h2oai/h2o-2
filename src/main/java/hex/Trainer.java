@@ -369,7 +369,7 @@ public abstract class Trainer {
         for( int batch = 0; _batches == 0 || batch < _batches; batch++ ) {
           Input input = (Input) _ls[0];
           for( int b = 0; b < _batch; b++ ) {
-            putSample(a[a.length - 1].getBuffer(), input._n);
+//            putSample(a[a.length - 1].getBuffer(), input._n);
 
             for( int y = 0; y < fprops.length; y++ )
               queue.put1DRangeKernel(fprops[y], 0, _ls[y]._a.length, group);
@@ -401,11 +401,6 @@ public abstract class Trainer {
       } finally {
         context.release();
       }
-    }
-
-    private static void putSample(FloatBuffer b, int n) {
-
-      queue.putWriteBuffer(a[0], false);
     }
   }
 }

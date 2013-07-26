@@ -35,14 +35,13 @@ public class Cloud {
     excls.addAll(Arrays.asList(excludes));
     File flatfile = Utils.writeFile(Utils.join('\n', _privateIPs));
     incls.add(flatfile.getAbsolutePath());
-    master.rsync(incls, excls);
+    master.rsync(incls, excls, false);
 
     ArrayList<String> list = new ArrayList<String>();
     list.add("-mainClass");
     list.add(Master.class.getName());
     list.add("-flatfile");
     list.add(flatfile.getName());
-    list.add("-log_headers");
     list.addAll(Arrays.asList(args));
     String[] java = Utils.add(java_args, NodeVM.class.getName());
     SSHWatchdog r = new SSHWatchdog(master, java, list.toArray(new String[0]));
@@ -86,7 +85,7 @@ public class Cloud {
       Arguments arguments = new Arguments(args);
       OptArgs h2oArgs = new OptArgs();
       arguments.extract(h2oArgs);
-      String[] workerArgs = new String[] { "-flatfile", h2oArgs.flatfile, "-log_headers" };
+      String[] workerArgs = new String[] { "-flatfile", h2oArgs.flatfile };
 
       List<FlatFileEntry> flatfile = H2O.parseFlatFile(new File(h2oArgs.flatfile));
       HashMap<String, Host> hosts = new HashMap<String, Host>();
@@ -100,7 +99,7 @@ public class Cloud {
       Set<String> includes = Host.defaultIncludes();
       includes.add(h2oArgs.flatfile);
       Set<String> excludes = Host.defaultExcludes();
-      Host.rsync(hosts.values().toArray(new Host[0]), includes, excludes);
+      Host.rsync(hosts.values().toArray(new Host[0]), includes, excludes, false);
 
       for( Node w : workers ) {
         w.inheritIO();

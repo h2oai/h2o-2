@@ -1,7 +1,6 @@
 package water;
 
 import java.io.*;
-import java.lang.reflect.Constructor;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
@@ -14,7 +13,6 @@ import water.parser.ParseDataset;
 import water.persist.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
-import water.AbstractBuildVersion;
 
 import com.amazonaws.auth.PropertiesCredentials;
 import com.google.common.base.Objects;
@@ -220,73 +218,76 @@ public final class H2O {
     return Arrays.toString(_memary);
   }
 
-  static InetAddress findInetAddressForSelf() throws Error {
-    // Get a list of all valid IPs on this machine.  Typically 1 on Mac or
-    // Windows, but could be many on Linux or if a hypervisor is present.
-    ArrayList<InetAddress> ips = new ArrayList<InetAddress>();
-    try {
-      Enumeration<NetworkInterface> nis = NetworkInterface.getNetworkInterfaces();
-      while( nis.hasMoreElements() ) {
-        NetworkInterface ni = nis.nextElement();
-        Enumeration<InetAddress> ias = ni.getInetAddresses();
-        while( ias.hasMoreElements() ) {
-          ips.add(ias.nextElement());
-        }
-      }
-    } catch( SocketException e ) { Log.err(e); }
-
-    InetAddress local = null;   // My final choice
-
-    // Check for an "-ip xxxx" option and accept a valid user choice; required
-    // if there are multiple valid IP addresses.
-    InetAddress arg = null;
-    if (OPT_ARGS.ip != null) {
-      try{
-        arg = InetAddress.getByName(OPT_ARGS.ip);
-      } catch( UnknownHostException e ) {
-        Log.err(e);
-        System.exit(-1);
-      }
-      if( !(arg instanceof Inet4Address) ) {
-        Log.warn("Only IP4 addresses allowed.");
-        System.exit(-1);
-      }
-      if( !ips.contains(arg) ) {
-        Log.warn("IP address not found on this machine");
-        System.exit(-1);
-      }
-      local = arg;
-    } else {
-      // No user-specified IP address.  Attempt auto-discovery.  Roll through
-      // all the network choices on looking for a single Inet4.
-      ArrayList<InetAddress> validIps = new ArrayList();
-      for( InetAddress ip : ips ) {
-        // make sure the given IP address can be found here
-        if( ip instanceof Inet4Address &&
-            !ip.isLoopbackAddress() &&
-            !ip.isLinkLocalAddress() ) {
-          validIps.add(ip);
-        }
-      }
-      if( validIps.size() == 1 ) {
-        local = validIps.get(0);
-      } else {
-        local = guessInetAddress(validIps);
-      }
-    }
-
-    // The above fails with no network connection, in that case go for a truly
-    // local host.
-    if( local == null ) {
+  public static InetAddress findInetAddressForSelf() throws Error {
+    if(SELF_ADDRESS == null) {
+      // Get a list of all valid IPs on this machine.  Typically 1 on Mac or
+      // Windows, but could be many on Linux or if a hypervisor is present.
+      ArrayList<InetAddress> ips = new ArrayList<InetAddress>();
       try {
-        Log.warn("Failed to determine IP, falling back to localhost.");
-        // set default ip address to be 127.0.0.1 /localhost
-        local = InetAddress.getByName("127.0.0.1");
-      } catch( UnknownHostException e ) {
-        throw  Log.errRTExcept(e);
+        Enumeration<NetworkInterface> nis = NetworkInterface.getNetworkInterfaces();
+        while( nis.hasMoreElements() ) {
+          NetworkInterface ni = nis.nextElement();
+          Enumeration<InetAddress> ias = ni.getInetAddresses();
+          while( ias.hasMoreElements() ) {
+            ips.add(ias.nextElement());
+          }
+        }
+      } catch( SocketException e ) { Log.err(e); }
+
+      InetAddress local = null;   // My final choice
+
+      // Check for an "-ip xxxx" option and accept a valid user choice; required
+      // if there are multiple valid IP addresses.
+      InetAddress arg = null;
+      if (OPT_ARGS.ip != null) {
+        try{
+          arg = InetAddress.getByName(OPT_ARGS.ip);
+        } catch( UnknownHostException e ) {
+          Log.err(e);
+          System.exit(-1);
+        }
+        if( !(arg instanceof Inet4Address) ) {
+          Log.warn("Only IP4 addresses allowed.");
+          System.exit(-1);
+        }
+        if( !ips.contains(arg) ) {
+          Log.warn("IP address not found on this machine");
+          System.exit(-1);
+        }
+        local = arg;
+      } else {
+        // No user-specified IP address.  Attempt auto-discovery.  Roll through
+        // all the network choices on looking for a single Inet4.
+        ArrayList<InetAddress> validIps = new ArrayList();
+        for( InetAddress ip : ips ) {
+          // make sure the given IP address can be found here
+          if( ip instanceof Inet4Address &&
+              !ip.isLoopbackAddress() &&
+              !ip.isLinkLocalAddress() ) {
+            validIps.add(ip);
+          }
+        }
+        if( validIps.size() == 1 ) {
+          local = validIps.get(0);
+        } else {
+          local = guessInetAddress(validIps);
+        }
       }
+
+      // The above fails with no network connection, in that case go for a truly
+      // local host.
+      if( local == null ) {
+        try {
+          Log.warn("Failed to determine IP, falling back to localhost.");
+          // set default ip address to be 127.0.0.1 /localhost
+          local = InetAddress.getByName("127.0.0.1");
+        } catch( UnknownHostException e ) {
+          throw  Log.errRTExcept(e);
+        }
+      }
+      SELF_ADDRESS = local;
     }
-    return local;
+    return SELF_ADDRESS;
   }
 
   private static InetAddress guessInetAddress(List<InetAddress> ips) {
@@ -647,8 +648,8 @@ public final class H2O {
     Runtime runtime = Runtime.getRuntime();
     double ONE_GB = 1024 * 1024 * 1024;
     Log.info ("Java availableProcessors: " + runtime.availableProcessors());
-    Log.info ("Java heap totalMemory: " + String.format("%.2f gb", (double)runtime.totalMemory() / ONE_GB));
-    Log.info ("Java heap maxMemory: " + String.format("%.2f gb", (double)runtime.maxMemory() / ONE_GB));
+    Log.info ("Java heap totalMemory: " + String.format("%.2f gb", runtime.totalMemory() / ONE_GB));
+    Log.info ("Java heap maxMemory: " + String.format("%.2f gb", runtime.maxMemory() / ONE_GB));
   }
 
   // Start up an H2O Node and join any local Cloud
@@ -685,7 +686,7 @@ public final class H2O {
 
     Log.info ("ICE root: '" + ICE_ROOT + "'");
 
-    SELF_ADDRESS = findInetAddressForSelf();
+    findInetAddressForSelf();
 
     //if (OPT_ARGS.rshell.equals("false"))
     Log.POST(320,"");
@@ -983,7 +984,10 @@ public final class H2O {
   private static HashSet<H2ONode> parseFlatFile( String fname ) {
     if( fname == null ) return null;
     File f = new File(fname);
-    if( !f.exists() ) return null; // No flat file
+    if( !f.exists() ) {
+      Log.warn("-flatfile specified but not found: " + fname);
+      return null; // No flat file
+    }
     HashSet<H2ONode> h2os = new HashSet<H2ONode>();
     List<FlatFileEntry> list = parseFlatFile(f);
     for(FlatFileEntry entry : list)
