@@ -1067,13 +1067,13 @@ class H2O(object):
     # only model keys can be exported?
     def export_hdfs(self, source_key, path):
         a = self.__do_json_request('ExportHdfs.json', 
-            params={"source_key": key, "path": path})
+            params={"source_key": source_key, "path": path})
         verboseprint("\nexport_hdfs result:", dump_json(a))
         return a
 
     def export_s3(self, source_key, bucket, obj):
         a = self.__do_json_request('ExportS3.json', 
-            params={"source_key": key, "bucket": bucket, "object": obj})
+            params={"source_key": source_key, "bucket": bucket, "object": obj})
         verboseprint("\nexport_s3 result:", dump_json(a))
         return a
 
