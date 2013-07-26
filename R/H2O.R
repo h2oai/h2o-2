@@ -1,8 +1,10 @@
-if(!"RCurl" %in% installed.packages()) install.packages(RCurl)
-if(!"rjson" %in% installed.packages()) install.packages(rjson)
+if(!"RCurl" %in% rownames(installed.packages())) install.packages(RCurl)
+if(!"rjson" %in% rownames(installed.packages())) install.packages(rjson)
 
 library(RCurl)
 library(rjson)
+
+h2o.VERSION = 0.3
 
 # Class definitions
 # setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321))
@@ -10,10 +12,10 @@ setClass("H2OClient", representation(ip="character", port="numeric"), prototype(
          validity = function(object) { 
            # if(!is.character(getURL(paste0("http://", object@ip, ":", object@port)))) 
            if(!url.exists(paste0("http://", object@ip, ":", object@port))) {
-             "Couldn't connect to host" }
-           else if(packageVersion("h2o") != (sv = h2o.__version(object))) {
-             warning(paste("Version mismatch! Server running H2O version", sv)); TRUE }
-           else TRUE })
+             "Couldn't connect to host. Do you have H2O running? See http://0xdata.com/h2o/docs/ for details" }
+           else if(h2o.VERSION != (sv = h2o.__version(object))) {
+             warning(paste("Version mismatch! Server running H2O version", sv, "but R package is version", h2o.VERSION)); TRUE }
+           else { cat("Successfully connected to", paste0(object@ip, ":", object@port), "\n"); TRUE } })
 setClass("H2ORawData", representation(h2o="H2OClient", key="character"))
 setClass("H2OParsedData", representation(h2o="H2OClient", key="character"))
 setClass("H2OGLMModel", representation(key="character", data="H2OParsedData", model="list"))
@@ -152,6 +154,7 @@ setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData
           function(x, y, data, family, nfolds, alpha, lambda) {
             # res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key = data@key, y = y, x = paste0(x, collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda)
             res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key = data@key, y = y, x = paste0(x, collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, case_mode="=", case=1.0)
+            # while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
             while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
             destKey = res$destination_key
             res = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=res$destination_key)
@@ -407,6 +410,7 @@ h2o.__poll <- function(client, keyName) {
       prog = res[[i]]
   }
   if(is.null(prog)) stop("Job key ", keyName, " not found in job queue")
+  if(prog$cancelled) stop("Job key ", keyName, " has been cancelled")
   prog$progress
 }
 

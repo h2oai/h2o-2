@@ -6,12 +6,12 @@ source("H2O.R")
 h2o = new("H2OClient", ip="localhost", port=54321)
 
 # Test using prostate cancer data set
-prostate.hex = importURL(h2o, "http://www.stanford.edu/~anqif/prostate.csv", "prostate.hex")
+prostate.hex = importURL(h2o, "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", "prostate.hex")
 prostate.sum = summary(prostate.hex)
 print(prostate.sum)
 prostate.glm = h2o.glm(y = "CAPSULE", x = "AGE,RACE,PSA,DCAPS", data = prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5)
 print(prostate.glm)
-prostate.km = h2o.kmeans(prostate.hex, 5)
+prostate.km = h2o.kmeans(prostate.hex, centers = 5, cols = c("AGE,RACE,GLEASON,CAPSULE,DCAPS"))
 print(prostate.km)
 
 # Test of random forest using iris data set
