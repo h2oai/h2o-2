@@ -1,14 +1,18 @@
-library('RCurl');
-library('rjson');
+if(!"RCurl" %in% installed.packages()) install.packages(RCurl)
+if(!"rjson" %in% installed.packages()) install.packages(rjson)
+
+library(RCurl)
+library(rjson)
 
 # Class definitions
 # setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321))
 setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321), 
          validity = function(object) { 
-           if(!is.character(getURL(paste0("http://", object@ip, ":", object@port)))) 
-             "Couldn't connect to host"
-           else if(packageVersion("h2o") != (sv = h2o.__version(object)))
-             paste("Version mismatch! Server running H2O version", sv)
+           # if(!is.character(getURL(paste0("http://", object@ip, ":", object@port)))) 
+           if(!url.exists(paste0("http://", object@ip, ":", object@port))) {
+             "Couldn't connect to host" }
+           else if(packageVersion("h2o") != (sv = h2o.__version(object))) {
+             warning(paste("Version mismatch! Server running H2O version", sv)); TRUE }
            else TRUE })
 setClass("H2ORawData", representation(h2o="H2OClient", key="character"))
 setClass("H2OParsedData", representation(h2o="H2OClient", key="character"))
