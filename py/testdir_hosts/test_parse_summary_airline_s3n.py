@@ -134,8 +134,11 @@ class Basic(unittest.TestCase):
             # num_rows = inspect['num_rows']
             # num_cols = inspect['num_cols']
 
-            (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
-                h2o_cmd.columnInfoFromInspect(parseKey['destination_key'], timeoutSecs=300)
+            # gives us some reporting on missing values, constant values, to see if we have x specified well
+            # figures out everything from parseKey['destination_key']
+            # needs y to avoid output column (which can be index or name)
+            # assume all the configs have the same y..just check with the firs tone
+            goodX = h2o_glm.goodXFromColumnInfo(y='IsArrDelayed', key=parseKey['destination_key'], timeoutSecs=300)
 
             # SUMMARY****************************************
             summaryResult = h2o.nodes[0].summary_page(key2, timeoutSecs=360)
