@@ -21,22 +21,19 @@ BUILD CODE
 ----------
 
 $ make
-$ cd hadoop
-$ make
-$ cd ..
 
 
 COPY BUILD OUTPUT TO HADOOP NODE
 --------------------------------
 
-Copy h2o/hadoop/target/h2o_hadoop.zip <to place where you intend to run hadoop command>
+Copy target/h2o-*.zip <to place where you intend to run hadoop command>
 
 
 PREPARE JOB INPUT ON HADOOP NODE
 --------------------------------
 
-$ unzip h2o_hadoop.zip
-$ cd h2o_hadoop
+$ unzip h2o-*.zip
+$ cd h2o-*
 
 Create flatfile.txt.
 
@@ -60,7 +57,7 @@ Java exceptions if DNS and DHCP are not fully configured.
 This generator tool is still experimental, please double check the 
 output yourself before relying on it.
 
-$ hadoop jar h2odriver_cdh4.jar water.hadoop.gen_flatfile -jt <jobtracker:port> > flatfile.txt
+$ hadoop jar hadoop/h2odriver_cdh4.jar water.hadoop.gen_flatfile -jt <jobtracker:port> > flatfile.txt
 
 (Note: Make sure to use the h2odriver flavor for the correct version
        of hadoop!  We recommend running the hadoop command from a
@@ -73,7 +70,7 @@ $ hadoop jar h2odriver_cdh4.jar water.hadoop.gen_flatfile -jt <jobtracker:port> 
 RUN JOB
 -------
 
-$ hadoop jar h2odriver_cdh4.jar water.hadoop.h2odriver [-jt <jobtracker:port>] -files flatfile.txt -libjars h2o.jar -mapperXmx 1g -nodes 1 -output hdfsOutputDirName
+$ hadoop jar hadoop/h2odriver_cdh4.jar water.hadoop.h2odriver [-jt <jobtracker:port>] -files flatfile.txt -libjars h2o.jar -mapperXmx 1g -nodes 1 -output hdfsOutputDirName
 
 (Note: -nodes refers to H2O nodes.  This may be less than or equal to
        the number of hadoop machines running TaskTrackers where hadoop 
@@ -107,5 +104,5 @@ Choose Admin->Shutdown
 FOR MORE INFORMATION
 --------------------
 
-$ hadoop jar h2odriver_cdh4.jar water.hadoop.h2odriver -help
+$ hadoop jar hadoop/h2odriver_cdh4.jar water.hadoop.h2odriver -help
 
