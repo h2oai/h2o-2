@@ -6,6 +6,7 @@ import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.fvec.*;
 import water.util.Log;
+import water.util.Log.Tag.Sys;
 
 /**
    A Decision Tree, laid over a Frame of Vecs, and built distributed.
@@ -73,18 +74,6 @@ class Tree extends Iced {
   static class UndecidedNode extends Node {
     Histogram _hs[];            // Histograms per column
     UndecidedNode( Tree tree, int pid, Histogram hs[] ) { super(tree,pid,tree.newIdx()); _hs=hs; }
-
-    // Find the column with the best split (lowest score).
-    int bestDecided() {
-      double bs = Double.MAX_VALUE; // Best score
-      int idx = -1;             // Column to split on
-      for( int i=0; i<_hs.length; i++ ) {
-        if( _hs[i]==null || _hs[i]._bins.length == 1 ) continue;
-        double s = _hs[i].score();
-        if( s < bs ) { bs = s; idx = i; }
-      }
-      return idx;
-    }
 
     @Override public String toString() {
       final String colPad="  ";
@@ -160,7 +149,7 @@ class Tree extends Iced {
   // Internal tree nodes which split into several children over a single
   // column.  Includes a split-decision: which child does this Row belong to?
   // Does not contain a histogram describing how the decision was made.
-  static class DecidedNode extends Node {
+  static abstract class DecidedNode extends Node {
     final int _col;             // Column we split over
     final double _min, _step;   // Binning info of column
     // The following arrays are all based on a bin# extracted from linear
@@ -176,9 +165,12 @@ class Tree extends Iced {
     final double _pred[];       // Regression: this is the prediction
     final double _mins[], _maxs[];  // Hang onto for printing purposes
 
+    // Pick the best column from the given histograms
+    abstract int bestCol( Histogram[] hs );
+
     DecidedNode( UndecidedNode n ) {
       super(n._tree,n._pid,n._nid); // Replace Undecided with this DecidedNode
-      _col = n.bestDecided();       // Best split-point for this tree
+      _col = bestCol(n._hs);        // Best split-point for this tree
       // From the splitting Undecided, get the column, min, max
       Histogram splitH = n._hs[_col];// Histogram of the column being split
       int nums = splitH._nbins;      // Number of split choices
@@ -232,5 +224,159 @@ class Tree extends Iced {
             append(_tree._names[_col]).append(" <= ").append(_maxs[i]).append("]");
       throw H2O.fail();
     }    
+  }
+
+
+  // --------------------------------------------------------------------------
+  // Fuse 2 conceptual passes into one:
+  //
+  // Pass 1: Score a prior Histogram, and make new Tree.Node assignments to
+  //         every row.  This involves pulling out the current assigned Node,
+  //         "scoring" the row against that Node's decision criteria, and
+  //         assigning the row to a new child Node (and giving it an improved
+  //         prediction).
+  //
+  // Pass 2: Build new summary Histograms on the new child Nodes every row got
+  //         assigned into.  Collect counts, mean, variance, min, max per bin,
+  //         per column.
+  //
+  // The result is a set of Histogram arrays; one Histogram array for each
+  // unique 'leaf' in the tree being histogramed in parallel.  These have node
+  // ID's (nids) from 'leaf' to 'tree._len'.  Each Histogram array is for all
+  // the columns in that 'leaf'.
+  //
+  // The other result is a prediction "score" for the whole dataset, based on
+  // the previous passes' Histograms.
+  static class ScoreBuildHistogram extends MRTask2<ScoreBuildHistogram> {
+    final Tree _tree;           // Read-only, shared (except at the histograms in the Tree.Nodes)
+    final int _ncols;
+    final int _numClasses;      // Zero for regression, else #classes
+    final int _ymin;            // Bias classes to zero
+    final int _leaf;
+    Histogram _hcs[][];         // Output: histograms-per-nid-per-column
+    ScoreBuildHistogram(Tree tree, int leaf, int ncols, int numClasses, int ymin) { 
+      _tree=tree; 
+      _leaf=leaf; 
+      _ncols=ncols; 
+      _numClasses = numClasses; 
+      _ymin = ymin;
+    }
+
+    public Histogram[] getFinalHisto( int nid ) {
+      Histogram hs[] = _hcs[nid-_leaf];
+      // Having gather min/max/mean/class/etc on all the data, we can now
+      // tighten the min & max numbers.
+      for( int j=0; j<hs.length; j++ ) {
+        Histogram h = hs[j];    // Old histogram of column
+        if( h != null ) h.tightenMinMax();
+      }
+      return hs;
+    }
+
+    @Override public void map( Chunk[] chks ) {
+      Chunk nids  = chks[chks.length-1];
+      Chunk ys    = chks[chks.length-2];
+
+      // We need private (local) space to gather the histograms.
+      // Make local clones of all the histograms that appear in this chunk.
+      _hcs = new Histogram[_tree._len-_leaf][]; // A leaf-biased array of all active histograms
+
+      // Pass 1 & 2
+      for( int i=0; i<nids._len; i++ ) {
+        int nid = (int)nids.at80(i);       // Get Tree.Node to decide from
+        if( nid==-1 ) continue;            // row already predicts perfectly
+
+        // Pass 1: Score row against current decisions & assign new split
+        if( _leaf > 0 )         // Prior pass exists?
+          nids.set80(i,nid = _tree.decided(nid).ns(chks,i));
+
+        // Pass 1.9
+        if( nid==-1 ) continue;         // row already predicts perfectly
+
+        // We need private (local) space to gather the histograms.
+        // Make local clones of all the histograms that appear in this chunk.
+        Histogram nhs[] = _hcs[nid-_leaf];
+        if( nhs == null ) {     // Lazily manifest this histogram for 'nid'
+          nhs = _hcs[nid-_leaf] = new Histogram[_ncols];
+          Histogram ohs[] = _tree.undecided(nid)._hs; // The existing column of Histograms
+          for( int j=0; j<_ncols; j++ )       // Make private copies
+            if( ohs[j] != null )
+              nhs[j] = ohs[j].copy(_numClasses);
+        }
+
+        // Pass 2
+        // Bump the local histogram counts
+        if( _numClasses == 0 ) { // Regression?
+          double y = ys.at0(i);
+          for( int j=0; j<_ncols; j++) // For all columns
+            if( nhs[j] != null ) // Some columns are ignored, since already split to death
+              nhs[j].incr(chks[j].at0(i),y);
+        } else {                // Classification
+          int ycls = (int)ys.at80(i) - _ymin;
+          for( int j=0; j<_ncols; j++) // For all columns
+            if( nhs[j] != null ) // Some columns are ignored, since already split to death
+              nhs[j].incr(chks[j].at0(i),ycls);
+        }
+      }
+    }
+
+    @Override public void reduce( ScoreBuildHistogram sbh ) {
+      // Merge histograms
+      for( int i=0; i<_hcs.length; i++ ) {
+        Histogram hs1[] = _hcs[i], hs2[] = sbh._hcs[i];
+        if( hs1 == null ) _hcs[i] = hs2;
+        else if( hs2 != null )
+          for( int j=0; j<hs1.length; j++ )
+            if( hs1[j] == null ) hs1[j] = hs2[j];
+            else if( hs2[j] != null )
+              hs1[j].add(hs2[j]);
+      }
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Compute sum-squared-error.  Should use the recursive-mean technique.
+  public static class BulkScore extends MRTask2<BulkScore> {
+    final Tree _tree; // Read-only, shared (except at the histograms in the Tree.Nodes)
+    final int _numClasses;
+    final int _ymin;
+    double _sum;
+    long _err;
+    BulkScore( Tree tree, int numClasses, int ymin ) { _tree = tree; _numClasses = numClasses; _ymin = ymin; }
+    @Override public void map( Chunk chks[] ) {
+      Chunk ys = chks[chks.length-2];
+      for( int i=0; i<ys._len; i++ ) {
+        double err = score0( chks, i, ys.at0(i) );
+        _sum += err*err;        // Squared error
+      }
+    }
+    @Override public void reduce( BulkScore t ) { _sum += t._sum; _err += t._err; }
+
+    // Return a relative error.  For regression it's y-mean.  For classification, 
+    // it's the %-tage of the response class out of all rows in the leaf, plus
+    // a count of absolute errors when we predict the majority class.
+    private double score0( Chunk chks[], int i, double y ) {
+      Tree.DecidedNode prev = null;
+      Tree.Node node = _tree.root();
+      while( node instanceof Tree.DecidedNode ) {
+        prev = (Tree.DecidedNode)node;
+        int nid = prev.ns(chks,i);
+        if( nid == -1 ) break;
+        node = _tree.node(nid);
+      }
+      int bin = prev.bin(chks,i); // Which bin did we decide on?
+      if( _numClasses == 0 )      // Regression?
+        return prev._pred[bin]-y; // Current prediction minus actual
+
+      int ycls = (int)y-_ymin;  // Zero-based response class
+      if( prev._ycls[bin] != ycls ) _err++;
+      return prev._pred[bin];   // Confidence of our prediction
+    }
+
+    public void report( Sys tag, long nrows, int depth ) {
+      Log.info(tag,"============================================================== ");
+      Log.info(tag,"Average squared prediction error for tree of depth "+depth+" is "+(_sum/nrows));
+      Log.info(tag,"Total of "+_err+" errors on "+nrows+" rows, with "+_tree._len+" nodes");
+    }
   }
 }
