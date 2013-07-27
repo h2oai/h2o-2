@@ -14,6 +14,9 @@ mapr2.1.3_JARS=$(mapr2.1.3_JAR_DIR)/hadoop-0.20.2-dev-core.jar
 
 # ------------------------------
 
+# By default, use linux-style separator.
+SEP?=:
+
 COMMON_JARS=../lib/log4j/log4j-1.2.15.jar${SEP}../target/h2o.jar
 HADOOP_JARS=$($(HADOOP_VERSION)_JARS)
 
