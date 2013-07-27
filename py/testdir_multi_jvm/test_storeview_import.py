@@ -31,10 +31,10 @@ class Basic(unittest.TestCase):
         # since H2O deletes the source key, we should re-import every iteration if we re-use the src in the list
         importFolderResult = h2i.setupImportFolder(None, importFolderPath)
         ### print "importHDFSResult:", h2o.dump_json(importFolderResult)
-        succeededList = importFolderResult['succeeded']
+        succeededList = importFolderResult['files']
         ### print "succeededList:", h2o.dump_json(succeededList)
 
-        self.assertGreater(len(suceededList),3,"Should see more than 3 files in the import?")
+        self.assertGreater(len(succeededList),3,"Should see more than 3 files in the import?")
         # why does this hang? can't look at storeview after import?
         print "\nTrying StoreView after the import folder"
         h2o_cmd.runStoreView(timeoutSecs=30)
