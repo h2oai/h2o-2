@@ -43,10 +43,9 @@ class Basic(unittest.TestCase):
         ### print "s3nFullList:", h2o.dump_json(s3nFullList)
 
         self.assertGreater(len(s3nFullList),8,"Should see more than 8 files in s3n?")
-        # why does this hang?
-        if 1==0:
+        if 1==0: # slow?
             print "\nTrying StoreView after the import hdfs"
-            h2o_cmd.runStoreView(timeoutSecs=30)
+            h2o_cmd.runStoreView(timeoutSecs=120)
 
         trial = 0
         for (csvFilename, timeoutSecs) in csvFilelist:
@@ -85,9 +84,9 @@ class Basic(unittest.TestCase):
             h2o_cmd.infoFromSummary(summary)
 
             # STOREVIEW***************************************
-            if 1==0: # seems to timeout
+            if 1==0: # slow
                 print "\nTrying StoreView after the parse"
-                h2o_cmd.runStoreView(timeoutSecs=30)
+                h2o_cmd.runStoreView(timeoutSecs=120)
 
             print "Trial #", trial, "completed in", time.time() - trialStart, "seconds."
             trial += 1

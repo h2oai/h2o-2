@@ -112,7 +112,7 @@ def runGLMGrid(node=None, csvPathname=None, key=None,
     return runGLMGridOnly(node, parseKey, 
         timeoutSecs, retryDelaySecs, noise=noise, **kwargs)
 
-def runGLMGridOnly(node=None,parseKey=None,
+def runGLMGridOnly(node=None, parseKey=None,
         timeoutSecs=60, retryDelaySecs=2, noise=None, **kwargs):
     if not parseKey: raise Exception('No parsed key for GLMGrid specified')
     if not node: node = h2o.nodes[0]
