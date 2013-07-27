@@ -63,12 +63,10 @@ class Basic(unittest.TestCase):
                     sys.stdout.flush()
 
 
-            # a = h2o.nodes[0].jobs_admin()
-            # print "jobs-admin():", h2o.dump_json(a)
+                # a = h2o.nodes[0].jobs_admin()
+                # print "jobs-admin():", h2o.dump_json(a)
 
-            # do a storeview ..was causing npe while parsing?
-            # maybe fire to each node?
-            if 1==1:
+                # do a storeview to each node
                 for node in h2o.nodes:
                     storeView = node.store_view()
 

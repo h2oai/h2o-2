@@ -1,4 +1,4 @@
-import unittest, time, sys, random
+import unittest, time, random, sys
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_glm
 import h2o_browse as h2b
@@ -27,7 +27,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_parse_summary_airline_s3n(self):
+    def test_storeview_fails_s3n(self):
         URI = "s3n://h2o-airlines-unpacked/"
         csvFilelist = [
             ("allyears2k.csv",   300), #4.4MB
@@ -43,9 +43,9 @@ class Basic(unittest.TestCase):
         ### print "s3nFullList:", h2o.dump_json(s3nFullList)
 
         self.assertGreater(len(s3nFullList),8,"Should see more than 8 files in s3n?")
-        # why does this hang?
-        if 1==0:
-            print "\nTrying StoreView after the import hdfs"
+        # why does this hang? can't look at storeview after import?
+        if 1==1:
+            print "\nTrying StoreView after the import hdfs/s3n"
             h2o_cmd.runStoreView(timeoutSecs=30)
 
         trial = 0
@@ -72,21 +72,23 @@ class Basic(unittest.TestCase):
             print "Inspect:", parseKey['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspect, csvPathname)
 
-            # gives us some reporting on missing values, constant values, to see if we have x specified well
-            # figures out everything from parseKey['destination_key']
-            # needs y to avoid output column (which can be index or name)
-            # assume all the configs have the same y..just check with the firs tone
-            goodX = h2o_glm.goodXFromColumnInfo(y='IsArrDelayed', key=parseKey['destination_key'], timeoutSecs=300)
-
             # SUMMARY****************************************
-            summaryResult = h2o.nodes[0].summary_page(key2, timeoutSecs=360)
-            summary = summaryResult['summary']
-            # print h2o.dump_json(summary)
-            h2o_cmd.infoFromSummary(summary)
+            if 1==0:
+                # gives us some reporting on missing values, constant values, 
+                # to see if we have x specified well
+                # figures out everything from parseKey['destination_key']
+                # needs y to avoid output column (which can be index or name)
+                # assume all the configs have the same y..just check with the firs tone
+                goodX = h2o_glm.goodXFromColumnInfo(y='IsArrDelayed', 
+                    key=parseKey['destination_key'], timeoutSecs=300)
+                summaryResult = h2o.nodes[0].summary_page(key2, timeoutSecs=360)
+                summary = summaryResult['summary']
+                # print h2o.dump_json(summary)
+                infoFromSummary(self, summary)
 
             # STOREVIEW***************************************
-            if 1==0: # seems to timeout
-                print "\nTrying StoreView after the parse"
+            if 1==1: # seems to timeout
+                print "Trying StoreView after the parse"
                 h2o_cmd.runStoreView(timeoutSecs=30)
 
             print "Trial #", trial, "completed in", time.time() - trialStart, "seconds."

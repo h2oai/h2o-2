@@ -53,30 +53,6 @@ def runInspect(node=None, key=None, timeoutSecs=5, **kwargs):
     if not node: node = h2o.nodes[0]
     return node.inspect(key, timeoutSecs=timeoutSecs, **kwargs)
 
-def infoFromInspect(inspect, csvPathname):
-    # need more info about this dataset for debug
-    cols = inspect['cols']
-    # look for nonzero num_missing_values count in each col
-    missingValuesList = []
-    for i, colDict in enumerate(cols):
-        num_missing_values = colDict['num_missing_values']
-        if num_missing_values != 0:
-            print "%s: col: %d, num_missing_values: %d" % (csvPathname, i, num_missing_values)
-            missingValuesList.append(num_missing_values)
-
-    num_cols = inspect['num_cols']
-    num_rows = inspect['num_rows']
-    row_size = inspect['row_size']
-    ptype = inspect['type']
-    value_size_bytes = inspect['value_size_bytes']
-    response = inspect['response']
-    ptime = response['time']
-
-    print "\n" + csvPathname, "num_cols: %s, num_rows: %s, row_size: %s, ptype: %s, \
-           value_size_bytes: %s, time: %s" % \
-           (num_cols, num_rows, row_size, ptype, value_size_bytes, ptime)
-    return missingValuesList
-
 # Not working in H2O yet, but support the test
 def runStore2HDFS(node=None, key=None, timeoutSecs=5, **kwargs):
     if not key: raise Exception('No key for Inspect specified')
@@ -191,7 +167,6 @@ def runRFTreeView(node=None, n=None, data_key=None, model_key=None, timeoutSecs=
     if not node: node = h2o.nodes[0]
     return node.random_forest_treeview(n, data_key, model_key, timeoutSecs, **kwargs)
 
-
 def runRFView(node=None, data_key=None, model_key=None, ntree=None, 
     timeoutSecs=15, retryDelaySecs=2, 
     noise=None, noPoll=False, noPrint=False, **kwargs):
@@ -250,6 +225,15 @@ def runRFView(node=None, data_key=None, model_key=None, ntree=None,
     h2f.simpleCheckRFView(node, rfView, noPrint=noPrint)
     return rfView
 
+def runStoreView(node=None, timeoutSecs=30):
+    if not node: node = h2o.nodes[0]
+    storeView = node.store_view(timeoutSecs)
+    for s in storeView['keys']:
+        print "\nStoreView: key:", s['key']
+        if 'rows' in s: 
+            print "StoreView: rows:", s['rows'], "value_size_bytes:", s['value_size_bytes']
+    return storeView
+
 def port_live(ip, port):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
@@ -273,18 +257,42 @@ def wait_for_live_port(ip, port, retries=3):
     if not port_live(ip,port):
         raise Exception("[h2o_cmd] Error waiting for {0}:{1} {2}times...".format(ip,port,retries))
 
-def dot():
-    sys.stdout.write('.')
-    sys.stdout.flush()
 
-def sleep_with_dot(sec, message=None):
-    if message:
-        print message
-    count = 0
-    while count < sec:
-        time.sleep(1)
-        dot()
-        count += 1
+# looks for the key that matches the pattern, in the keys you saved from the 
+# import (that you saved from import of the folder/s3/hdfs)
+# I guess I should change to just be the raw result of the import? not sure
+# see how it's used in tests named above
+def delete_csv_key(csvFilename, importFullList):
+    # remove the original data key
+    for k in importFullList['succeeded']:
+        ### print "possible delete:", deleteKey
+        # don't delete any ".hex" keys. the parse results above have .hex
+        # this is the name of the multi-file (it comes in as a single file?)
+        # This deletes the source key?
+        key = k['key']
+        if csvFilename in key:
+            print "\nRemoving", key
+            removeKeyResult = h2o.nodes[0].remove_key(key=key)
+            ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
+
+# checks the key distribution in the cloud, and prints warning if delta against avg
+# is > expected
+def check_key_distribution():
+    c = h2o.nodes[0].get_cloud()
+    nodes = c['nodes']
+    print "Key distribution post parse, should be balanced"
+    # get average
+    totalKeys = 0
+    for n in nodes:
+        totalKeys += int(n['num_keys'])
+    avgKeys = (totalKeys + 0.0)/len(nodes)
+    # if more than 5% difference from average, print warning
+    for n in nodes:
+        print 'num_keys:', n['num_keys'], 'value_size_bytes:', n['value_size_bytes'],\
+            'name:', n['name']
+        delta = (abs(avgKeys - int(n['num_keys']))/avgKeys)
+        if delta > 0.10:
+            print "WARNING. avgKeys:", avgKeys, "and n['num_keys']:", n['num_keys'], "have >", "%.1f" % (100 * delta), "% delta"
 
 # I use these in testdir_hosts/test_parse_nflx_loop_s3n_hdfs.py
 # and testdir_multi_jvm/test_benchmark_import.py
@@ -345,40 +353,95 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
 
     return (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) 
 
-# looks for the key that matches the pattern, in the keys you saved from the 
-# import (that you saved from import of the folder/s3/hdfs)
-# I guess I should change to just be the raw result of the import? not sure
-# see how it's used in tests named above
-def delete_csv_key(csvFilename, importFullList):
-    # remove the original data key
-    for k in importFullList['succeeded']:
-        ### print "possible delete:", deleteKey
-        # don't delete any ".hex" keys. the parse results above have .hex
-        # this is the name of the multi-file (it comes in as a single file?)
-        # This deletes the source key?
-        key = k['key']
-        if csvFilename in key:
-            print "\nRemoving", key
-            removeKeyResult = h2o.nodes[0].remove_key(key=key)
-            ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
+def infoFromInspect(inspect, csvPathname):
+    # need more info about this dataset for debug
+    cols = inspect['cols']
+    # look for nonzero num_missing_values count in each col
+    missingValuesList = []
+    for i, colDict in enumerate(cols):
+        num_missing_values = colDict['num_missing_values']
+        if num_missing_values != 0:
+            print "%s: col: %d, num_missing_values: %d" % (csvPathname, i, num_missing_values)
+            missingValuesList.append(num_missing_values)
 
-# checks the key distribution in the cloud, and prints warning if delta against avg
-# is > expected
-def check_key_distribution():
-    c = h2o.nodes[0].get_cloud()
-    nodes = c['nodes']
-    print "Key distribution post parse, should be balanced"
-    # get average
-    totalKeys = 0
-    for n in nodes:
-        totalKeys += int(n['num_keys'])
-    avgKeys = (totalKeys + 0.0)/len(nodes)
-    # if more than 5% difference from average, print warning
-    for n in nodes:
-        print 'num_keys:', n['num_keys'], 'value_size_bytes:', n['value_size_bytes'],\
-            'name:', n['name']
-        delta = (abs(avgKeys - int(n['num_keys']))/avgKeys)
-        if delta > 0.10:
-            print "WARNING. avgKeys:", avgKeys, "and n['num_keys']:", n['num_keys'], "have >", "%.1f" % (100 * delta), "% delta"
+    num_cols = inspect['num_cols']
+    num_rows = inspect['num_rows']
+    row_size = inspect['row_size']
+    ptype = inspect['type']
+    value_size_bytes = inspect['value_size_bytes']
+    response = inspect['response']
+    ptime = response['time']
 
+    print "\n" + csvPathname, "num_cols: %s, num_rows: %s, row_size: %s, ptype: %s, \
+           value_size_bytes: %s, time: %s" % \
+           (num_cols, num_rows, row_size, ptype, value_size_bytes, ptime)
+    return missingValuesList
 
+def infoFromSummary(summary):
+    columnsList = summary['columns']
+    for columns in columnsList:
+        N = columns['N']
+        # self.assertEqual(N, rowCount)
+        name = columns['name']
+        stype = columns['type']
+        histogram = columns['histogram']
+        bin_size = histogram['bin_size']
+        bin_names = histogram['bin_names']
+        for b in bin_names:
+            print "bin_name:", b
+
+        bins = histogram['bins']
+        nbins = histogram['bins']
+        print "\n\n************************"
+        print "N:", N
+        print "name:", name
+        print "type:", stype
+        print "bin_size:", bin_size
+        print "len(bin_names):", len(bin_names), bin_names
+        print "len(bins):", len(bins), bins
+        print "len(nbins):", len(nbins), nbins
+
+        # not done if enum
+        if stype != "enum":
+            smax = columns['max']
+            smin = columns['min']
+            mean = columns['mean']
+            sigma = columns['sigma']
+            print "smax:", smax
+            print "smin:", smin
+            print "mean:", mean
+            print "sigma:", sigma
+
+            # sometimes we don't get percentiles? (if 0 or 1 bins?)
+            if len(bins) >= 2:
+                percentiles = columns['percentiles']
+                thresholds = percentiles['thresholds']
+                values = percentiles['values']
+
+                # h2o shows 5 of them, ordered
+                print "len(max):", len(smax), smax
+                print "len(min):", len(smin), smin
+                print "len(thresholds):", len(thresholds), thresholds
+                print "len(values):", len(values), values
+
+                for v in values:
+                    # 0 is the most max or most min
+                   if not v >= smin[0]:
+                        m = "Percentile value %s should all be >= the min dataset value %s" % (v, smin[0])
+                        raise Exception(m)
+                   if not v <= smax[0]:
+                        m = "Percentile value %s should all be <= the max dataset value %s" % (v, smax[0])
+                        raise Exception(m)
+
+def dot():
+    sys.stdout.write('.')
+    sys.stdout.flush()
+
+def sleep_with_dot(sec, message=None):
+    if message:
+        print message
+    count = 0
+    while count < sec:
+        time.sleep(1)
+        dot()
+        count += 1

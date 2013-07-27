@@ -61,9 +61,7 @@ class Basic(unittest.TestCase):
                     sys.stdout.write('.')
                     sys.stdout.flush()
 
-            # do a storeview ..was causing npe while parsing?
-            # maybe fire to each node?
-            if 1==0:
+                # do a storeview to each node
                 for node in h2o.nodes:
                     storeView = node.store_view()
 
