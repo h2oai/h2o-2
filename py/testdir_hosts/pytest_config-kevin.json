@@ -1,27 +1,58 @@
-
 {
-     "_comment" : "no password, or None,  means none will be used in ssh. Assumes keys have been exchanged. Watch out for common error: last entry in list can't have comma. Only ip is used. Others ignored, saved here for sometime use. Last ip value used if duplicates? Leading _ means not used. First ip/h2o is used for H2O json communication..vary ip list to direct that. See http://docs.python.org/library/json.html for json->python data types. Note lower case for true/false. null is None, but can just not have an entry. Defaults are in h2o_hosts.py",
-
     "username": "0xdiag", 
-    "password": "0xdiag", 
-    "use_home_for_ice": true,
-
+    "hdfs_config": "/home/kevin/.ec2/core-site.xml", 
+    "java_extra_args": "", 
     "h2o_per_host": 1, 
-    "sigar": true,
-    "java_heap_GB": 28, 
-
-    "hdfs_name_node": "192.168.1.176",
-    "hdfs_version": "cdh3",
-    "use_hdfs": false,
-
-    "use_flatfile": true,
-
     "ip": [
-        "192.168.1.171",
-        "192.168.1.172",
-        "192.168.1.173",
-        "192.168.1.174",
-        "192.168.1.175"
-    ]
+        "10.171.10.27", 
+        "10.159.1.183", 
+        "10.171.28.241", 
+        "10.29.140.201", 
+        "10.232.31.99"
+    ], 
+    "ec2_instances": [
+        {
+            "private_ip_address": "10.171.10.27", 
+            "public_dns_name": "ec2-54-225-53-138.compute-1.amazonaws.com", 
+            "id": "i-22a35948", 
+            "public_ip_address": "54.225.53.138"
+        }, 
+        {
+            "private_ip_address": "10.159.1.183", 
+            "public_dns_name": "ec2-23-20-149-45.compute-1.amazonaws.com", 
+            "id": "i-20a3594a", 
+            "public_ip_address": "23.20.149.45"
+        }, 
+        {
+            "private_ip_address": "10.171.28.241", 
+            "public_dns_name": "ec2-23-23-63-228.compute-1.amazonaws.com", 
+            "id": "i-38a35952", 
+            "public_ip_address": "23.23.63.228"
+        }, 
+        {
+            "private_ip_address": "10.29.140.201", 
+            "public_dns_name": "ec2-23-22-224-64.compute-1.amazonaws.com", 
+            "id": "i-3ea35954", 
+            "public_ip_address": "23.22.224.64"
+        }, 
+        {
+            "private_ip_address": "10.232.31.99", 
+            "public_dns_name": "ec2-54-227-36-85.compute-1.amazonaws.com", 
+            "id": "i-3ca35956", 
+            "public_ip_address": "54.227.36.85"
+        }
+    ], 
+    "key_filename": "/home/kevin/.ec2/keys/mrjenkins_test.pem", 
+    "aws_credentials": "/home/kevin/.ec2/AwsCredentials.properties", 
+    "ec2_comment_ssh_3": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.171.28.241", 
+    "ec2_comment_ssh_2": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.159.1.183", 
+    "ec2_comment_ssh_1": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.171.10.27", 
+    "java_heap_GB": 30, 
+    "ec2_comment_ssh_5": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.232.31.99", 
+    "ec2_comment_ssh_4": "ssh -i ~/.ec2/keys/mrjenkins_test.pem  ubuntu@10.29.140.201", 
+    "redirect_import_folder_to_s3n_path": true, 
+    "base_port": 54321, 
+    "use_flatfile": true, 
+    "ec2_reservation_id": "r-3b67a658", 
+    "ec2_region": "us-east-1"
 }
-

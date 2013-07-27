@@ -351,14 +351,15 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
 # see how it's used in tests named above
 def delete_csv_key(csvFilename, importFullList):
     # remove the original data key
-    for k in importFullList['keys']:
+    for k in importFullList['succeeded']:
         ### print "possible delete:", deleteKey
         # don't delete any ".hex" keys. the parse results above have .hex
         # this is the name of the multi-file (it comes in as a single file?)
         # This deletes the source key?
-        if csvFilename in k:
-            print "\nRemoving", k
-            removeKeyResult = h2o.nodes[0].remove_key(key=k)
+        key = k['key']
+        if csvFilename in key:
+            print "\nRemoving", key
+            removeKeyResult = h2o.nodes[0].remove_key(key=key)
             ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
 
 # checks the key distribution in the cloud, and prints warning if delta against avg

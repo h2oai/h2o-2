@@ -1,10 +1,5 @@
-if(!"RCurl" %in% rownames(installed.packages())) install.packages(RCurl)
-if(!"rjson" %in% rownames(installed.packages())) install.packages(rjson)
-
 library(RCurl)
 library(rjson)
-
-h2o.VERSION = 0.3
 
 # Class definitions
 # setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321))
@@ -13,8 +8,8 @@ setClass("H2OClient", representation(ip="character", port="numeric"), prototype(
            # if(!is.character(getURL(paste0("http://", object@ip, ":", object@port)))) 
            if(!url.exists(paste0("http://", object@ip, ":", object@port))) {
              "Couldn't connect to host. Do you have H2O running? See http://0xdata.com/h2o/docs/ for details" }
-           else if(h2o.VERSION != (sv = h2o.__version(object))) {
-             warning(paste("Version mismatch! Server running H2O version", sv, "but R package is version", h2o.VERSION)); TRUE }
+           else if(packageVersion("h2o") != (sv = h2o.__version(object))) {
+             warning(paste("Version mismatch! Server running H2O version", sv, "but R package is version", packageVersion("h2o"))); TRUE }
            else { cat("Successfully connected to", paste0(object@ip, ":", object@port), "\n"); TRUE } })
 setClass("H2ORawData", representation(h2o="H2OClient", key="character"))
 setClass("H2OParsedData", representation(h2o="H2OClient", key="character"))
@@ -157,7 +152,7 @@ setMethod("importHDFS", signature(object="H2OClient", path="character", parse="l
               }
               else myData[[i]] = rawData
             }
-           myData
+            myData
           })
 
 setMethod("importHDFS", signature(object="H2OClient", path="character", parse="missing"),
@@ -177,7 +172,6 @@ setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData
           function(x, y, data, family, nfolds, alpha, lambda) {
             # res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key = data@key, y = y, x = paste0(x, collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda)
             res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key = data@key, y = y, x = paste0(x, collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, case_mode="=", case=1.0)
-            # while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
             while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
             destKey = res$destination_key
             res = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=res$destination_key)
@@ -213,12 +207,14 @@ setMethod("h2o.kmeans", signature(data="H2OParsedData", centers="numeric", cols=
             destKey = res$destination_key
             res = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=res$destination_key)
             res = res$KMeansModel
+            
             result = list()
             if(typeof(res$clusters) == "double")
               result$centers = res$clusters
             else {
               result$centers = do.call(rbind, res$clusters)
               rownames(result$centers) <- seq(1,nrow(result$centers))
+              
               if(cols[1] == "")
                 colnames(result$centers) <- colnames(data)
               else {
@@ -260,17 +256,15 @@ setMethod("h2o.kmeans", signature(data="H2OParsedData", centers="numeric", cols=
 
 setMethod("h2o.randomForest", signature(y="character", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="numeric"),
           function(y, data, ntree, depth, classwt) {
-			# set randomized model_key
-			rand_model_key=paste0("__RF_Model__",runif(n=1, max=1e10))
             # If no class weights, then default to all 1.0
             if(!any(is.na(classwt))) {
               myWeights = rep(NA, length(classwt))
               for(i in 1:length(classwt))
                 myWeights[i] = paste(names(classwt)[i], classwt[i], sep="=")
-              res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=y, ntree=ntree, depth=depth, class_weights=paste(myWeights, collapse=","),model_key=rand_model_key)
+              res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=y, ntree=ntree, depth=depth, class_weights=paste(myWeights, collapse=","))
             }
             else
-              res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=y, ntree=ntree, depth=depth, class_weights="",model_key=rand_model_key)
+              res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=y, ntree=ntree, depth=depth, class_weights="")
             while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
             destKey = res$destination_key
             res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RFVIEW, model_key=destKey, data_key=data@key, out_of_bag_error_estimate=1)
@@ -363,7 +357,6 @@ h2o.__PAGE_EXEC = "Exec.json"
 h2o.__PAGE_GET = "GetVector.json"
 h2o.__PAGE_IMPORTURL = "ImportUrl.json"
 h2o.__PAGE_IMPORTFILES = "ImportFiles.json"
-h2o.__PAGE_IMPORTHDFS = "ImportHdfs.json"
 h2o.__PAGE_INSPECT = "Inspect.json"
 h2o.__PAGE_JOBS = "Jobs.json"
 h2o.__PAGE_PARSE = "Parse.json"

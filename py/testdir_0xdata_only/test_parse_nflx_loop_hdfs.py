@@ -42,7 +42,7 @@ class Basic(unittest.TestCase):
             for trial in range(trialMax):
                 # since we delete the key, we have to re-import every iteration, to get it again
                 importHdfsResult = h2o.nodes[0].import_hdfs(URI)
-                hdfsFullList = importHdfsResult['files']
+                hdfsFullList = importHdfsResult['succeeded']
                 for k in hdfsFullList:
                     key = k['key']
                     # just print the first tile

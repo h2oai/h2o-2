@@ -24,7 +24,7 @@ H2O supports a number of standard statistical models, such as GLM, K-means, and 
 Note that no actual data is stored in the workspace - R only saves the hex keys, which uniquely identify the data set, model, etc on the server. When the user makes a request, R queries the server via the REST API, which returns a JSON file with the relevant information that R then displays in the console.
 }
 \author{
-Anqi Fu and Tom Kraljevic, with contributions from the 0xdata team
+Anqi Fu, Tom Kraljevic and Petr Maj, with contributions from the 0xdata team
 
 Maintainer: Anqi Fu <anqi@0xdata.com>
 }

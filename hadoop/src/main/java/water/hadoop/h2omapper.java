@@ -118,7 +118,7 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
           _m.write(s);
         }
         catch (java.net.ConnectException e) {
-          System.out.println("EmbeddedH2OConfig: BackgroundWriterThread could not connect to driver");
+          System.out.println("EmbeddedH2OConfig: BackgroundWriterThread could not connect to driver at " + _driverCallbackIp + ":" + _driverCallbackPort);
           System.out.println("(This is normal when the driver disowns the hadoop job and exits.)");
         }
         catch (Exception e) {
