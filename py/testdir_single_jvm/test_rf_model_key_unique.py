@@ -12,7 +12,7 @@ class Basic(unittest.TestCase):
     def setUpClass(cls):
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(2)
+            h2o.build_cloud(1)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -21,14 +21,9 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rf_model_key_unique(self):
-        SYNDATASETS_DIR = h2o.make_syn_dir()
         modelKeyDict = {}
         for trial in xrange (1,5,1):
             csvPathname = h2o.find_file('smalldata/iris/iris2.csv')
-            # key = h2o.nodes[0].put_file(csvPathname)
-            # parseKey = h2o.nodes[0].parse(key, key + "_" + str(trial) + ".hex")
-
-            h2o.verboseprint("Trial", trial)
             start = time.time()
             # rfview=False used to inhibit the rfview completion
             rfResult = h2o_cmd.runRF(trees=6, timeoutSecs=10, rfview=False, csvPathname=csvPathname)
