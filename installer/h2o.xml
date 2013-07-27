@@ -1,6 +1,6 @@
 <project>
     <shortName>h2o</shortName>
-    <fullName>H2O</fullName>
+    <fullName>h2o</fullName>
     <version>1.0</version>
     <componentList>
         <component>
@@ -33,7 +33,7 @@
                     <platforms>all</platforms>
                     <distributionFileList>
                         <distributionFile>
-                            <origin>${build_project_directory}/../launcher/target/H2OLauncher.jar</origin>
+                            <origin>${build_project_directory}/../target/launcher/H2OLauncher.jar</origin>
                         </distributionFile>
                         <distributionFile>
                             <origin>${build_project_directory}/../target/h2o.jar</origin>
