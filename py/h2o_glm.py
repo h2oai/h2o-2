@@ -297,6 +297,8 @@ def goodXFromColumnInfo(y,
     num_cols=None, missingValuesDict=None, constantValuesDict=None, enumSizeDict=None, colTypeDict=None, colNameDict=None, 
     keepPattern=None, key=None, timeoutSecs=120):
 
+    y = str(y)
+
     # if we pass a parseKey, means we want to get the info ourselves here
     if key is not None:
         (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
@@ -316,7 +318,11 @@ def goodXFromColumnInfo(y,
     for k in xOrig:
         name = colNameDict[k]
         # remove it if it has the same name as the y output
-        if name == y:
+        if str(k)== y: # if they pass the col index as y
+            print "Removing %d because name: %s matches output %s" % (k, str(k), y)
+            x.remove(k)
+            ignore_x.append(k)
+        elif name == y: # if they pass the name as y 
             print "Removing %d because name: %s matches output %s" % (k, name, y)
             x.remove(k)
             ignore_x.append(k)
