@@ -26,40 +26,56 @@ import water.util.Log;
 */
 
 class Tree extends Iced {
-  private Node[] _ns = new Node[1]; // All the nodes in the tree.  Node 0 is the root.
-  int _len;                         // Resizable array
+  final String[] _names; // Column names
+  private Node[] _ns;    // All the nodes in the tree.  Node 0 is the root.
+  int _len;              // Resizable array
+  Tree( String[] names ) { _names = names; _ns = new Node[1]; }
+
+  public final Node root() { return _ns[0]; }
 
   // Return Tree.Node i
-  public final Node n( int i ) { 
+  public final Node node( int i ) { 
     if( i >= _len ) throw new ArrayIndexOutOfBoundsException(i); 
     return _ns[i]; 
   }
+  public final UndecidedNode undecided( int i ) { return (UndecidedNode)node(i); }
+  public final   DecidedNode   decided( int i ) { return (  DecidedNode)node(i); }
 
-  // Add a new Node to Tree, growing innards on demand
-  Node newNode( Node parent, Histogram hs[] ) {
+  // Get a new node index, growing innards on demand
+  private int newIdx() {
     if( _len == _ns.length ) _ns = Arrays.copyOf(_ns,_len<<1);
-    int i=_len++;
-    return (_ns[i] = new Node(this,parent==null?-1:parent._nid,i,hs));
+    return _len++;
   }
 
-  // Inner Tree.Node.  Has a Histogram which is filled in (in parallel with
-  // other histograms) in a single pass over the data.  Has a split decision
-  // and a regression/classification filled in after the Histogram is filled in.
-  static class Node extends Iced {
+  // Abstract node flavor
+  static abstract class Node extends Iced {
     transient Tree _tree;
-    final int _nid;             // My node-ID, 0 is root
     final int _pid;             // Parent node id, root has no parent and uses -1
-    int[] _ns;                  // Child node ids.  Null if no split decision has been made.
+    final int _nid;             // My node-ID, 0 is root
+    Node( Tree tree, int pid, int nid ) { 
+      _tree = tree; 
+      _pid=pid;
+      tree._ns[_nid=nid] = this;
+    }
 
+    // Recursively print the decision-line from tree root to this child.
+    StringBuilder printLine(StringBuilder sb ) {
+      if( _pid==-1 ) return sb.append("[root]");
+      DecidedNode parent = _tree.decided(_pid);
+      parent.printLine(sb).append(" to ");
+      return parent.printChild(sb,_nid);
+    }
+  }
+
+  // An UndecidedNode: Has a Histogram which is filled in (in parallel with other
+  // histograms) in a single pass over the data.  Does not contain any
+  // split-decision.
+  static class UndecidedNode extends Node {
     Histogram _hs[];            // Histograms per column
-    int _col;                   // Column we split over
-
-    private Node( Tree tree, int pid, int nid, Histogram hs[] ) { _tree=tree; _nid=nid; _pid= pid; _hs = hs; }
+    UndecidedNode( Tree tree, int pid, Histogram hs[] ) { super(tree,pid,tree.newIdx()); _hs=hs; }
 
     // Find the column with the best split (lowest score).
-    // Also setup leaf Trees for when we split this Tree
-    int bestSplit() {
-      assert _ns==null;
+    int bestDecided() {
       double bs = Double.MAX_VALUE; // Best score
       int idx = -1;             // Column to split on
       for( int i=0; i<_hs.length; i++ ) {
@@ -67,19 +83,7 @@ class Tree extends Iced {
         double s = _hs[i].score();
         if( s < bs ) { bs = s; idx = i; }
       }
-      // Split on column 'idx' with score 'bs'
-      _ns = new int[_hs[idx]._bins.length];
-      Arrays.fill(_ns,-1);      // Mark as "no child split assigned yet"
-      return (_col=idx);        // Record & return split column
-    }
-
-    // Remove old histogram data, but keep enough info to predict.  Cuts down
-    // the size of data to move over the wires
-    public void clean() {
-      assert _ns != null;
-      for( int i=0; i<_hs.length; i++ )
-        if( i != _col ) _hs[i] = null;
-      _hs[_col].clean();
+      return idx;
     }
 
     @Override public String toString() {
@@ -136,7 +140,6 @@ class Tree extends Iced {
         sb.append('\n');
       }
       sb.append("Nid# ").append(_nid);
-      if( _ns != null ) sb.append(", split on column "+_col+", "+_hs[_col]._name);
       return sb.toString();
     }
     static private StringBuilder p(StringBuilder sb, String s, int w) {
@@ -152,16 +155,82 @@ class Tree extends Iced {
         s = String.format("%4.0f",d);
       return sb.append(s);
     }
+  }
 
-    StringBuilder printLine(StringBuilder sb ) {
-      if( _pid==-1 ) return sb.append("root");
-      Node parent = _tree.n(_pid);
-      Histogram h = parent._hs[parent._col];
-      for( int i=0; i<parent._ns.length; i++ )
-        if( parent._ns[i]==_nid )
-          return parent.printLine(sb.append("[").append(h._mins[i]).append(" <= ").append(h._name).
-                                  append(" <= ").append(h._maxs[i]).append("] from "));
-      throw H2O.fail();
+  // Internal tree nodes which split into several children over a single
+  // column.  Includes a split-decision: which child does this Row belong to?
+  // Does not contain a histogram describing how the decision was made.
+  static class DecidedNode extends Node {
+    final int _col;             // Column we split over
+    final double _min, _step;   // Binning info of column
+    // The following arrays are all based on a bin# extracted from linear
+    // interpolation of _col, _min and _step.
+
+    // For classification, we return a zero-based class, and the prediction is
+    // a value from zero to 1 describing how weak our guess is.  For instance,
+    // during tree-building we decide to build a DecidedNode from 10 rows; 8
+    // rows are class A, and 2 rows are class B.  Then our class is A, but our
+    // error is 0.2 (2 out of 10 wrong).
+    final int _ns[];            // An n-way split node
+    final int _ycls[];          // Classification: this is the class
+    final double _pred[];       // Regression: this is the prediction
+    final double _mins[], _maxs[];  // Hang onto for printing purposes
+
+    DecidedNode( UndecidedNode n ) {
+      super(n._tree,n._pid,n._nid); // Replace Undecided with this DecidedNode
+      _col = n.bestDecided();       // Best split-point for this tree
+      // From the splitting Undecided, get the column, min, max
+      Histogram splitH = n._hs[_col];// Histogram of the column being split
+      int nums = splitH._nbins;      // Number of split choices
+      assert nums > 1;          // Should always be some bins to split between
+      _min  = splitH._min ;     // Binning info
+      _step = splitH._step;
+      assert _step > 0;
+      _mins = splitH._mins;     // Hang onto for printing purposes
+      _maxs = splitH._maxs;     // Hang onto for printing purposes
+      _ns = new int[nums];
+      _ycls = new int[nums];
+      _pred = new double[nums];
+      int ncols = _tree._names.length-1; // ncols: all columns, minus response
+      for( int i=0; i<nums; i++ ) { // For all split-points
+        // Setup for children splits
+        Histogram nhists[] = splitH.split(_col,i,n._hs,_tree._names,ncols);
+        _ns[i] = nhists == null ? -1 : new UndecidedNode(_tree,_nid,nhists)._nid;
+        // Also setup predictions locally
+        if( splitH._clss == null )   // Regression?
+          _pred[i] = splitH.mean(i); // Prediction is mean of bin
+        else {                       // Classification
+          double num = splitH._bins[i];      // Number of entries this histogram
+	  long clss[] = splitH._clss[i];     // Class histogram
+          int best=0;                        // Largest class so far
+	  for( int k=1; k<clss.length; k++ ) // Find largest class
+	    if( clss[best] < clss[k] ) best = k;
+          _pred[i] = (num-clss[_ycls[i]=best])/num;
+        }
+      }
     }
+
+    // Bin #.
+    public int bin( Chunk[] chks, int i ) {
+      double d = chks[_col].at0(i);         // Value to split on for this row
+      int idx1 = (int)((d-_min)/_step);     // Interpolate bin#
+      assert idx1 >= 0;                     // Expect sanity
+      int bin = Math.min(idx1,_ns.length-1);// Cap at length
+      return bin;
+    }
+
+    public int ns( Chunk[] chks, int i ) { return _ns[bin(chks,i)]; }
+
+    @Override public String toString() {
+      throw H2O.unimpl();
+    }
+
+    StringBuilder printChild( StringBuilder sb, int nid ) {
+      for( int i=0; i<_ns.length; i++ ) 
+        if( _ns[i]==nid ) 
+          return sb.append("[").append(_mins[i]).append(" <= ").
+            append(_tree._names[_col]).append(" <= ").append(_maxs[i]).append("]");
+      throw H2O.fail();
+    }    
   }
 }

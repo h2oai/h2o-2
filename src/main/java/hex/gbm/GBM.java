@@ -37,8 +37,9 @@ public class GBM extends Job {
   // variable.  Depth is capped at maxDepth.
   private void run(Frame fr, int maxDepth) {
     Timer t_gbm = new Timer();
-    final int ncols = fr._vecs.length-1; // Last column is the response column
+    final String names[] = fr._names;
     Vec vs[] = fr._vecs;
+    final int ncols = vs.length-1; // Last column is the response column
 
     // Response column is the last one in the frame
     Vec vresponse = vs[ncols];
@@ -52,8 +53,8 @@ public class GBM extends Job {
     fr.add("NIDs",vnids);
 
     // Initially setup as-if an empty-split had just happened
-    Tree tree = new Tree();
-    tree.newNode(null,Histogram.initialHist(fr,ncols)); // The "root" node
+    Tree tree = new Tree(names);
+    new Tree.UndecidedNode(tree,-1,Histogram.initialHist(fr,ncols)); // The "root" node
     int leaf = 0; // Define a "working set" of leaf splits, from here to tree._len
 
     // ----
@@ -74,16 +75,19 @@ public class GBM extends Job {
       // Reassign the new Histogram back into the Tree
       final int tmax = tree._len; // Number of total splits
       for( int i=leaf; i<tmax; i++ )
-        tree.n(i)._hs = sbh._hcs[i-leaf];
-      
-      //new BulkScore(tree,numClasses,ymin).doAll(fr).report( nrows, depth );
+        tree.undecided(i)._hs = sbh.getFinalHisto(i);
 
       // Build up the next-generation tree splits from the current histograms.
       // Nearly all leaves will split one more level.  This loop nest is
       //           O( #active_splits * #bins * #ncols )
       // but is NOT over all the data.
-      for( ; leaf<tmax; leaf++ )
-        pickSplits(tree, tree.n(leaf), fr, ncols);
+      for( ; leaf<tmax; leaf++ ) {
+        //System.out.println(tree.undecided(leaf));
+        // Replace the Undecided with the Split decision
+        new Tree.DecidedNode(tree.undecided(leaf));
+      }
+
+      //new BulkScore(tree,numClasses,ymin).doAll(fr).report( nrows, depth );
     }
     Log.info(Sys.GBM__,"GBM done in "+t_gbm);
 
@@ -96,35 +100,6 @@ public class GBM extends Job {
     UKV.remove(fr.remove("NIDs")._key);
   }
 
-  // --------------------------------------------------------------------------
-  // Build up the next-generation tree splits from the current histograms.
-  // Nearly all leaves will split one more level.  This loop nest is
-  //           O( #active_splits * #bins * #ncols )
-  // but is NOT over all the data.
-  private void pickSplits( Tree tree, Tree.Node node, Frame fr, int ncols ) {
-    // Adjust for observed min/max in the histograms, as some of the bins might
-    // already be zero from a prior split (i.e., the maximal element in column
-    // 7 went to the "other split"), leaving behind a smaller new maximal element.
-    for( int j=0; j<ncols; j++ ) { // For every column in the new split
-      Histogram h = node._hs[j];   // Old histogram of column
-      if( h != null ) h.tightenMinMax();
-    }
-        
-    // Compute best split
-    int col = node.bestSplit(); // Best split-point for this tree
-
-    // Split the best split.  This is a BIN-way split; each bin gets it's own
-    // subtree.
-    Histogram splitH = node._hs[col];// Histogram of the column being split
-    int l = splitH._bins.length;     // Number of split choices
-    assert l > 1;               // Should always be some bins to split between
-    for( int i=0; i<l; i++ ) {  // For all split-points
-      Histogram nhists[] = splitH.split(col,i,node._hs,fr,ncols);
-      if( nhists != null )      // Add a new (unsplit) Tree
-        node._ns[i]=tree.newNode(node,nhists)._nid;
-    }
-    node.clean();               // Toss old histogram data
-  }
 
   // --------------------------------------------------------------------------
   // Fuse 2 conceptual passes into one:
@@ -161,6 +136,17 @@ public class GBM extends Job {
       _ymin = ymin;
     }
 
+    public Histogram[] getFinalHisto( int nid ) {
+      Histogram hs[] = _hcs[nid-_leaf];
+      // Having gather min/max/mean/class/etc on all the data, we can now
+      // tighten the min & max numbers.
+      for( int j=0; j<hs.length; j++ ) {
+        Histogram h = hs[j];    // Old histogram of column
+        if( h != null ) h.tightenMinMax();
+      }
+      return hs;
+    }
+
     @Override public void map( Chunk[] chks ) {
       Chunk nids  = chks[chks.length-1];
       Chunk ys    = chks[chks.length-2];
@@ -175,22 +161,18 @@ public class GBM extends Job {
         if( nid==-1 ) continue;            // row already predicts perfectly
 
         // Pass 1: Score row against current decisions & assign new split
-        if( _leaf > 0 ) {                // Prior pass exists?
-          Tree.Node node = _tree.n(nid); // This row is being split in Tree t
-          double d = chks[node._col].at0(i); // Value to split on for this row
-          int bin = node._hs[node._col].bin(d); // Bin in the histogram in the tree
-          nid = node._ns[bin];                  // Tree.Node split
-          nids .set80(i,nid);   // Save the new split# for this row
-        }
+        if( _leaf > 0 )         // Prior pass exists?
+          nids.set80(i,nid = _tree.decided(nid).ns(chks,i));
 
         // Pass 1.9
         if( nid==-1 ) continue;         // row already predicts perfectly
+
         // We need private (local) space to gather the histograms.
         // Make local clones of all the histograms that appear in this chunk.
         Histogram nhs[] = _hcs[nid-_leaf];
         if( nhs == null ) {     // Lazily manifest this histogram for 'nid'
           nhs = _hcs[nid-_leaf] = new Histogram[_ncols];
-          Histogram ohs[] = _tree.n(nid)._hs; // The existing column of Histograms
+          Histogram ohs[] = _tree.undecided(nid)._hs; // The existing column of Histograms
           for( int j=0; j<_ncols; j++ )       // Make private copies
             if( ohs[j] != null )
               nhs[j] = ohs[j].copy(_numClasses);
@@ -204,10 +186,10 @@ public class GBM extends Job {
             if( nhs[j] != null ) // Some columns are ignored, since already split to death
               nhs[j].incr(chks[j].at0(i),y);
         } else {                // Classification
-          int y = (int)ys.at80(i) - _ymin;
+          int ycls = (int)ys.at80(i) - _ymin;
           for( int j=0; j<_ncols; j++) // For all columns
             if( nhs[j] != null ) // Some columns are ignored, since already split to death
-              nhs[j].incr(chks[j].at0(i),y);
+              nhs[j].incr(chks[j].at0(i),ycls);
         }
       }
     }
@@ -248,31 +230,21 @@ public class GBM extends Job {
     // it's the %-tage of the response class out of all rows in the leaf, plus
     // a count of absolute errors when we predict the majority class.
     private double score0( Chunk chks[], int i, double y ) {
-      int nid=0, bin=0;         // Root nid
-      Histogram h=null;
-      while( true ) {           // Tree walk
-        Tree.Node node = _tree.n(nid);      // This Tree Node
-        Histogram h2 = node._hs[node._col]; // Chosen histogram
-        if( h2 == null ) break;             // Not available yet
-        h = h2;                             // Last good histogram
-        double d = chks[node._col].at0(i);  // Value to split on for this row
-        bin = h2.bin(d);                    // Bin in the histogram in the tree
-        if( node._ns == null ) break;       // No next decision available
-        nid = node._ns[bin];                // Next Tree.Node
-        if( nid == -1 ) break;              // Did not split again this bin
+      Tree.DecidedNode prev = null;
+      Tree.Node node = _tree.root();
+      while( node instanceof Tree.DecidedNode ) {
+        prev = (Tree.DecidedNode)node;
+        int nid = prev.ns(chks,i);
+        if( nid == -1 ) break;
+        node = _tree.node(nid);
       }
+      int bin = prev.bin(chks,i); // Which bin did we decide on?
+      if( _numClasses == 0 )      // Regression?
+        return prev._pred[bin]-y; // Current prediction minus actual
 
-      if( _numClasses == 0 )    // Regression?
-        return h.mean(bin)-y;   // Current prediction minus actual
-
-      int ycls = (int)y-_ymin;    // Zero-based response class
-      long num = h._bins[bin];    // Size of this bin
-      long clss[] = h._clss[bin]; // Class histogram
-      int best=0;                 // Find largest single class
-      for( int k=1; k<_numClasses; k++ )
-        if( clss[best] < clss[k] ) best=k;
-      if( best != ycls ) _err++; // Absolution prediction error
-      return (double)(num-clss[ycls])/num; // Error rate of response class
+      int ycls = (int)y-_ymin;  // Zero-based response class
+      if( prev._ycls[bin] != ycls ) _err++;
+      return prev._pred[bin];   // Confidence of our prediction
     }
 
     public void report( long nrows, int depth ) {

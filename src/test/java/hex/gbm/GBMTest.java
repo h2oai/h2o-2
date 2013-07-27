@@ -15,7 +15,7 @@ public class GBMTest extends TestUtil {
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   // ==========================================================================
-  /*@Test*/ public void testBasicGBM() {
+  @Test public void testBasicGBM() {
     File file = TestUtil.find_test_file("./smalldata/logreg/prostate.csv");
     Key fkey = NFSFileVec.make(file);
     Key dest = Key.make("prostate.hex");
@@ -37,7 +37,7 @@ public class GBMTest extends TestUtil {
     }
   }
 
-  /*@Test*/ public void testCovtypeGBM() {
+  @Test public void testCovtypeGBM() {
     File file = TestUtil.find_test_file("../datasets/UCI/UCI-large/covtype/covtype.data");
     if( file == null ) return;  // Silently abort test if the large covtype is missing
     Key fkey = NFSFileVec.make(file);
