@@ -18,7 +18,14 @@ mapr2.1.3_JARS=$(mapr2.1.3_JAR_DIR)/hadoop-0.20.2-dev-core.jar
 # ------------------------------
 
 # By default, use linux-style separator.
-SEP?=:
+ifndef SEP
+    UNAME = $(shell uname)
+    ifeq ($(UNAME),Cygwin)
+        SEP?=;
+    else
+        SEP?=:
+    endif
+endif
 
 COMMON_JARS=../lib/log4j/log4j-1.2.15.jar${SEP}../target/h2o.jar
 HADOOP_JARS=$($(HADOOP_VERSION)_JARS)
@@ -31,7 +38,6 @@ build_inner:
 	jar cf target/h2odriver_$(HADOOP_VERSION).jar -C classes/$(HADOOP_VERSION) .
 
 clean:
-	rm -fr h2o_hadoop
 	rm -fr classes target
 
 build: clean
@@ -41,11 +47,7 @@ build: clean
 	$(MAKE) build_inner HADOOP_VERSION=cdh3
 	$(MAKE) build_inner HADOOP_VERSION=cdh4
 	$(MAKE) build_inner HADOOP_VERSION=cdh4_yarn
-	mkdir h2o_hadoop
-	cp ../target/h2o.jar h2o_hadoop
-	cp README.txt h2o_hadoop
-	cp target/* h2o_hadoop
-	zip h2o_hadoop.zip h2o_hadoop/*
-	mv h2o_hadoop.zip ../target
-	rm -fr h2o_hadoop
-
+	rm -rf ../target/hadoop
+	mkdir ../target/hadoop
+	cp README.txt ../target/hadoop
+	cp target/* ../target/hadoop
