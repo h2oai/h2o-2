@@ -260,15 +260,17 @@ setMethod("h2o.kmeans", signature(data="H2OParsedData", centers="numeric", cols=
 
 setMethod("h2o.randomForest", signature(y="character", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="numeric"),
           function(y, data, ntree, depth, classwt) {
+			# set randomized model_key
+			rand_model_key=paste0("__RF_Model__",runif(n=1, max=1e10))
             # If no class weights, then default to all 1.0
             if(!any(is.na(classwt))) {
               myWeights = rep(NA, length(classwt))
               for(i in 1:length(classwt))
                 myWeights[i] = paste(names(classwt)[i], classwt[i], sep="=")
-              res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=y, ntree=ntree, depth=depth, class_weights=paste(myWeights, collapse=","))
+              res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=y, ntree=ntree, depth=depth, class_weights=paste(myWeights, collapse=","),model_key=rand_model_key)
             }
             else
-              res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=y, ntree=ntree, depth=depth, class_weights="")
+              res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=y, ntree=ntree, depth=depth, class_weights="",model_key=rand_model_key)
             while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
             destKey = res$destination_key
             res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RFVIEW, model_key=destKey, data_key=data@key, out_of_bag_error_estimate=1)
