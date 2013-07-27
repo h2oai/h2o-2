@@ -180,12 +180,12 @@ def runRFOnly(node=None, parseKey=None, trees=5,
     # /ip:port of cloud (can't use h2o name)
     rfClass= rf['response_variable']
 
-    rfViewResult = None
     if rfview:
         rfViewResult = runRFView(node, data_key, model_key, ntree, 
             timeoutSecs, retryDelaySecs, noise=noise, noPrint=noPrint, **kwargs)
-    
-    return rfViewResult
+        return rfViewResult
+    else:
+        return rf
 
 def runRFTreeView(node=None, n=None, data_key=None, model_key=None, timeoutSecs=20, **kwargs):
     if not node: node = h2o.nodes[0]

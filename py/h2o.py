@@ -1150,7 +1150,7 @@ class H2O(object):
         params_dict = {
             'data_key': data_key,
             'ntree':  trees,
-            'model_key': 'pytest_model',
+            'model_key': None,
             # new default. h2o defaults to 0, better for tracking oobe problems
             'out_of_bag_error_estimate': 1, 
             }

@@ -45,9 +45,11 @@ class Basic(unittest.TestCase):
             h2o.verboseprint("Trial", trial)
             start = time.time()
             # rfview=False used to inhibit the rfview completion
-            h2o_cmd.runRFOnly(parseKey=parseKey, trees=1000, depth=2, rfview=False,
+            rfResult = h2o_cmd.runRFOnly(parseKey=parseKey, trees=1000, depth=2, rfview=False,
                 timeoutSecs=600, retryDelaySecs=3)
             print "RF #", trial,  "started on ", csvFilename, 'took', time.time() - start, 'seconds'
+            model_key = rfResult['model_key']
+            print "model_key:", model_key
 
             # FIX! need to get more intelligent here
             a = h2o.nodes[0].jobs_admin()
@@ -55,7 +57,7 @@ class Basic(unittest.TestCase):
             # this is the wrong key to ancel with
             # "destination_key": "pytest_model", 
             print "cancelling with a bad key"
-            b = h2o.nodes[0].jobs_cancel(key='pytest_model')
+            b = h2o.nodes[0].jobs_cancel(key=model_key)
             print "jobs_cancel():", h2o.dump_json(b)
 
 
