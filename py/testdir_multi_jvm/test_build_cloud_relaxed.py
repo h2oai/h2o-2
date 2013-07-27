@@ -11,6 +11,8 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        print "Test cloud building with completion = one node says desired size plus consensus=1"
+        print "Check is that all nodes agree on cloud size after completion rule"
         pass
 
     @classmethod
