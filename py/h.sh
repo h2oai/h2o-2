@@ -1,8 +1,11 @@
 
 
 
-hadoop dfs -rmr /user/kevin/hdfsOutputDir
-hadoop jar ../hadoop/target/h2odriver_cdh3.jar water.hadoop.h2odriver -jt 192.168.1.180:50030 -files flatfile.txt -libjars ../target/h2o.jar -mapperXmx 1g -nodes 1 -output hdfsOutputDir
+hadoop dfs -rmr /user/kevin/hdfsOutputDir3
+# hadoop jar ../hadoop/target/h2odriver_cdh3.jar water.hadoop.h2odriver -jt 192.168.1.180:50030 -files flatfile.txt -libjars ../target/h2o.jar -mapperXmx 1g -nodes 1 -output hdfsOutputDir
+
+date
+hadoop jar ../hadoop/target/h2odriver_cdh3.jar water.hadoop.h2odriver -jt 192.168.1.180:8021 -files flatfile.txt -libjars ../target/h2o.jar -mapperXmx 1g -nodes 4 -output hdfsOutputDir3 -driverif 192.168.1.80
       
 
 # Job name 'H2O_44047' submitted
