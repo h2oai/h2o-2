@@ -108,8 +108,7 @@ class Basic(unittest.TestCase):
                 timeoutSecs=60)
             print "GLMScore in",  (time.time() - start), "secs", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-            h2o.verboseprint(h2o.dump_json(glmScore))
-
+            h2o_glm.simpleCheckGLMScore(self, glmScore, 'gaussian', **kwargs)
 
 if __name__ == '__main__':
     h2o.unit_main()
