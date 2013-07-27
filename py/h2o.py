@@ -387,7 +387,7 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         cloudPerfH2O = h2o_perf.PerfH2O(python_test_name)
 
     ports_per_node = 2 
-    node_list = []
+    nodeList = []
     try:
         # if no hosts list, use psutil method on local host.
         totalNodes = 0
@@ -404,7 +404,7 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
             for p in portList:
                 verboseprint("psutil starting node", i)
                 newNode = LocalH2O(port=p, node_id=totalNodes, **kwargs)
-                node_list.append(newNode)
+                nodeList.append(newNode)
                 totalNodes += 1
         else:
             # if hosts, the flatfile was created and uploaded to hosts already
@@ -426,38 +426,42 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
                     verboseprint('ssh starting node', totalNodes, 'via', h)
                     newNode = h.remote_h2o(port=p, node_id=totalNodes, **kwargs)
 
-                node_list.append(newNode)
+                nodeList.append(newNode)
                 totalNodes += 1
 
         verboseprint("Attempting Cloud stabilize of", totalNodes, "nodes on", hostCount, "hosts")
         start = time.time()
         # UPDATE: best to stabilize on the last node!
-        stabilize_cloud(node_list[-1], len(node_list), 
+        stabilize_cloud(nodeList[-1], len(nodeList), 
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
-        verboseprint(len(node_list), "Last added node stabilized in ", time.time()-start, " secs")
-        verboseprint("Built cloud: %d nodes on %d hosts, in %d s" % (len(node_list), 
+        verboseprint(len(nodeList), "Last added node stabilized in ", time.time()-start, " secs")
+        verboseprint("Built cloud: %d nodes on %d hosts, in %d s" % (len(nodeList), 
             hostCount, (time.time() - start)))
 
         # FIX! using "consensus" in node[-1] should mean this is unnecessary?
         # maybe there's a bug. For now do this. long term: don't want?
         # UPDATE: do it for all cases now 2/14/13
-        for n in node_list:
-            stabilize_cloud(n, len(node_list), timeoutSecs=timeoutSecs)
+        if 1==0: # not needd now?
+            for n in nodeList:
+                stabilize_cloud(n, len(nodeList), timeoutSecs=timeoutSecs)
+        else:
+            verify_cloud_size(nodeList)
+
         # best to check for any errors due to cloud building right away?
         check_sandbox_for_errors()
 
     except:
         if cleanup:
-            for n in node_list: n.terminate()
+            for n in nodeList: n.terminate()
         else:
-            nodes[:] = node_list
+            nodes[:] = nodeList
         check_sandbox_for_errors()
         raise
 
     # this is just in case they don't assign the return to the nodes global?
-    nodes[:] = node_list
-    print len(node_list), "total jvms in H2O cloud"
-    return node_list
+    nodes[:] = nodeList
+    print len(nodeList), "total jvms in H2O cloud"
+    return nodeList
 
 def upload_jar_to_remote_hosts(hosts, slow_connection=False):
     def prog(sofar, total):
@@ -597,33 +601,42 @@ def check_sandbox_for_errors(sandbox_ignore_errors=False):
             else:
                 raise Exception(python_test_name + emsg1 + emsg2)
 
-def tear_down_cloud(node_list=None, sandbox_ignore_errors=False):
-    if not node_list: node_list = nodes
+def tear_down_cloud(nodeList=None, sandbox_ignore_errors=False):
+    if not nodeList: nodeList = nodes
     try:
-        for n in node_list:
+        for n in nodeList:
             n.terminate()
             verboseprint("tear_down_cloud n:", n)
     finally:
         check_sandbox_for_errors(sandbox_ignore_errors=sandbox_ignore_errors)
-        node_list[:] = []
+        nodeList[:] = []
 
 # don't need any more? 
 # Used before to make sure cloud didn't go away between unittest defs
-def touch_cloud(node_list=None):
-    if not node_list: node_list = nodes
-    for n in node_list:
+def touch_cloud(nodeList=None):
+    if not nodeList: nodeList = nodes
+    for n in nodeList:
         n.is_alive()
 
-def verify_cloud_size():
-    expectedSize = len(nodes)
-    cloudSizes = [n.get_cloud()['cloud_size'] for n in nodes]
-    cloudConsensus = [n.get_cloud()['consensus'] for n in nodes]
+def verify_cloud_size(nodeList=None):
+    if not nodeList: nodeList = nodes
+
+    expectedSize = len(nodeList)
+    cloudSizes = [n.get_cloud()['cloud_size'] for n in nodeList]
+    cloudConsensus = [n.get_cloud()['consensus'] for n in nodeList]
+
+    if expectedSize==0 or len(cloudSizes)==0 or len(cloudConsensus)==0:
+        print "\nexpectedSize:", expectedSize
+        print "cloudSizes:", cloudSizes
+        print "cloudConsensus:", cloudConsensus
+        raise Exception("Nothing in cloud. Can't verify size")
+
     for s in cloudSizes:
         consensusStr = (",".join(map(str,cloudConsensus)))
         sizeStr =   (",".join(map(str,cloudSizes)))
         if (s != expectedSize):
             raise Exception("Inconsistent cloud size." + 
-                "nodes report size: %s consensus: %s instead of %d." % \
+                "nodeList report size: %s consensus: %s instead of %d." % \
                 (sizeStr, consensusStr, expectedSize))
     return (sizeStr, consensusStr, expectedSize)
     
