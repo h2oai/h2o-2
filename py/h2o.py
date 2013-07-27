@@ -441,7 +441,7 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         # FIX! using "consensus" in node[-1] should mean this is unnecessary?
         # maybe there's a bug. For now do this. long term: don't want?
         # UPDATE: do it for all cases now 2/14/13
-        if 1==0: # not needd now?
+        if 1==1: # still needed?
             for n in nodeList:
                 stabilize_cloud(n, len(nodeList), timeoutSecs=timeoutSecs)
         else:
