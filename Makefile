@@ -1,8 +1,7 @@
 #
 # Nightly build directions:
 #
-# make PROJECT_VERSION=correct.project.version
-# make build_installer PROJECT_VERSION=correct.project.version
+# make all PROJECT_VERSION=correct.project.version
 #
 # PROJECT_VERSION must be strictly numerical.  E.g. 1.3.1853
 #
@@ -10,6 +9,10 @@
 PROJECT_VERSION ?= 99.90
 
 default: build
+
+all:
+	$(MAKE) build PROJECT_VERSION=$(PROJECT_VERSION)
+	$(MAKE) build_installer PROJECT_VERSION=$(PROJECT_VERSION)
 
 build:
 	(export PROJECT_VERSION=$(PROJECT_VERSION); ./build.sh doc)
@@ -25,15 +28,14 @@ package:
 	cp -rp target/hadoop target/h2o-$(PROJECT_VERSION)
 	cp -p target/h2o.jar target/h2o-$(PROJECT_VERSION)
 	cp -p target/h2o-sources.jar target/h2o-$(PROJECT_VERSION)
-	(cd target; tar cf h2o-$(PROJECT_VERSION).tar h2o-$(PROJECT_VERSION))
-	rm -f target/h2o-$(PROJECT_VERSION).tar.gz
-	gzip target/h2o-$(PROJECT_VERSION).tar
+	(cd target; zip -r h2o-$(PROJECT_VERSION).zip h2o-$(PROJECT_VERSION))
 	rm -fr target/h2o-$(PROJECT_VERSION)
 
 # This is run directly from the nightly build.  Most people won't have
 # this software installed.
 build_installer:
 	$(MAKE) -C installer build PROJECT_VERSION=$(PROJECT_VERSION)
+	rm -fr target/h2o-$(PROJECT_VERSION)-osx-installer.app
 	rm -f target/h2o-*-windows-installer.exe.dmg
 
 test:
