@@ -38,6 +38,12 @@
                         <distributionFile>
                             <origin>${build_project_directory}/../target/h2o.jar</origin>
                         </distributionFile>
+                        <distributionDirectory>
+                            <origin>${build_project_directory}/../target/R</origin>
+                        </distributionDirectory>
+                        <distributionDirectory>
+                            <origin>${build_project_directory}/../target/hadoop</origin>
+                        </distributionDirectory>
                     </distributionFileList>
                     <shortcutList>
                         <shortcut>
@@ -202,6 +208,24 @@
         <renameFile>
             <destination>${installdir}/Contents/Resources/h2o.jar</destination>
             <origin>${installdir}/h2o.jar</origin>
+            <ruleList>
+                <platformTest>
+                    <type>osx</type>
+                </platformTest>
+            </ruleList>
+        </renameFile>
+        <renameFile>
+            <destination>${installdir}/Contents/Resources/R</destination>
+            <origin>${installdir}/R</origin>
+            <ruleList>
+                <platformTest>
+                    <type>osx</type>
+                </platformTest>
+            </ruleList>
+        </renameFile>
+        <renameFile>
+            <destination>${installdir}/Contents/Resources/hadoop</destination>
+            <origin>${installdir}/hadoop</origin>
             <ruleList>
                 <platformTest>
                     <type>osx</type>
