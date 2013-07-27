@@ -9,6 +9,9 @@ cdh3_JARS=$(cdh3_JAR_DIR)/hadoop-core-0.20.2-cdh3u6.jar
 cdh4_JAR_DIR=../lib/hadoop/cdh4
 cdh4_JARS=$(cdh4_JAR_DIR)/hadoop-common.jar${SEP}$(cdh4_JAR_DIR)/hadoop-mapreduce-client-core-2.0.0-cdh4.2.0.jar
 
+cdh4_yarn_JAR_DIR=../lib/hadoop/cdh4_yarn
+cdh4_yarn_JARS=$(cdh4_yarn_JAR_DIR)/common/hadoop-common-2.0.0-cdh4.3.0.jar${SEP}$(cdh4_yarn_JAR_DIR)/mapreduce2/hadoop-mapreduce-client-core-2.0.0-cdh4.3.0.jar
+
 mapr2.1.3_JAR_DIR=../lib/hadoop/mapr2.1.3
 mapr2.1.3_JARS=$(mapr2.1.3_JAR_DIR)/hadoop-0.20.2-dev-core.jar
 
@@ -37,6 +40,7 @@ build: clean
 	$(MAKE) build_inner HADOOP_VERSION=mapr2.1.3
 	$(MAKE) build_inner HADOOP_VERSION=cdh3
 	$(MAKE) build_inner HADOOP_VERSION=cdh4
+	$(MAKE) build_inner HADOOP_VERSION=cdh4_yarn
 	mkdir h2o_hadoop
 	cp ../target/h2o.jar h2o_hadoop
 	cp README.txt h2o_hadoop
