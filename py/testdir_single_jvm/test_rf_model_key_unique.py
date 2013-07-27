@@ -2,7 +2,6 @@ import os, json, unittest, time, shutil, sys
 sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_hosts
-import argparse
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -22,7 +21,7 @@ class Basic(unittest.TestCase):
 
     def test_rf_model_key_unique(self):
         modelKeyDict = {}
-        for trial in xrange (1,5,1):
+        for trial in range (1,5):
             csvPathname = h2o.find_file('smalldata/iris/iris2.csv')
             start = time.time()
             # rfview=False used to inhibit the rfview completion

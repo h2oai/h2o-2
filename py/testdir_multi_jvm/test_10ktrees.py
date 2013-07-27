@@ -1,8 +1,6 @@
 import os, json, unittest, time, shutil, sys
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd as cmd, h2o_hosts
-import argparse
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -31,7 +29,7 @@ class Basic(unittest.TestCase):
             csvFilename = "parity_128_4_" + str(x) + "_quad.data"  
 
         # always match the gen above!
-        for trial in xrange (1,3,1):
+        for trial in range (1,3):
             sys.stdout.write('.')
             sys.stdout.flush()
 
