@@ -26,49 +26,48 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_mnist_s3n(self):
-        URI = "s3n://home-0xdiag-datasets/mnist/"
+    def test_GLM_mnist(self):
+        importFolderPath = "/home/0xdiag/datasets/mnist"
         csvFilelist = [
             ("mnist_train.csv.gz", "mnist_test.csv.gz",    600), 
-            ("mnist_test.csv.gz",  "mnist_train.csv.gz",    600), 
+            # ("mnist_test.csv.gz",  "mnist_train.csv.gz",    600), 
             ("mnist_train.csv.gz", "mnist_train.csv.gz",    600), 
         ]
         # IMPORT**********************************************
-        importHDFSResult = h2o.nodes[0].import_hdfs(URI)
-        ### print "importHDFSResult:", h2o.dump_json(importHDFSResult)
-        s3nFullList = importHDFSResult['succeeded']
-        ### print "s3nFullList:", h2o.dump_json(s3nFullList)
+        # since H2O deletes the source key, we should re-import every iteration if we re-use the src in the list
+        importFolderResult = h2i.setupImportFolder(None, importFolderPath)
+        ### print "importHDFSResult:", h2o.dump_json(importFolderResult)
+        succeededList = importFolderResult['files']
+        ### print "succeededList:", h2o.dump_json(succeededList)
 
-        self.assertGreater(len(s3nFullList),1,"Should see more than 1 files in s3n?")
+        self.assertGreater(len(succeededList),1,"Should see more than 1 files in the import?")
+        # why does this hang? can't look at storeview after import?
+        print "\nTrying StoreView after the import folder"
+        h2o_cmd.runStoreView(timeoutSecs=30)
 
         trial = 0
         for (trainCsvFilename, testCsvFilename, timeoutSecs) in csvFilelist:
             trialStart = time.time()
 
             # PARSE test****************************************
-            s3nKey = URI + testCsvFilename
             testKey2 = testCsvFilename + "_" + str(trial) + ".hex"
-            print "Loading s3n key: ", s3nKey, 'thru HDFS'
             start = time.time()
-            parseKey = h2o.nodes[0].parse(s3nKey, testKey2,
-                timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=120)
+            parseKey = h2i.parseImportFolderFile(None, testCsvFilename, importFolderPath,
+                key2=testKey2, timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
-            print "parse end on ", s3nKey, 'took', elapsed, 'seconds',\
+            print "parse end on ", testCsvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             print "parse result:", parseKey['destination_key']
 
             # PARSE train****************************************
-            s3nKey = URI + trainCsvFilename
             trainKey2 = trainCsvFilename + "_" + str(trial) + ".hex"
-            print "Loading s3n key: ", s3nKey, 'thru HDFS'
             start = time.time()
-            parseKey = h2o.nodes[0].parse(s3nKey, trainKey2,
-                timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=120)
+            parseKey = h2i.parseImportFolderFile(None, trainCsvFilename, importFolderPath,
+                key2=testKey2, timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
-            print "parse end on ", s3nKey, 'took', elapsed, 'seconds',\
+            print "parse end on ", trainCsvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             print "parse result:", parseKey['destination_key']
-
 
             # GLM****************************************
             y = 0 # first column is pixel value
@@ -84,7 +83,7 @@ class Basic(unittest.TestCase):
                 # 'case': 0,
                 'family': 'gaussian',
                 'lambda': 1.0E-5,
-                'alpha': 0.5,
+                'alpha': 0.0,
                 'max_iter': 5,
                 'thresholds': 0.5,
                 'n_folds': 1,
@@ -109,8 +108,7 @@ class Basic(unittest.TestCase):
                 timeoutSecs=60)
             print "GLMScore in",  (time.time() - start), "secs", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-            h2o.verboseprint(h2o.dump_json(glmScore))
-
+            h2o_glm.simpleCheckGLMScore(self, glmScore, 'gaussian', **kwargs)
 
 if __name__ == '__main__':
     h2o.unit_main()
