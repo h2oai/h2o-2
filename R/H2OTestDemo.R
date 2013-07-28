@@ -13,6 +13,7 @@ prostate.glm = h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = 
 print(prostate.glm)
 prostate.km = h2o.kmeans(prostate.hex, centers = 5, cols = c("AGE","RACE","GLEASON","CAPSULE","DCAPS"))
 print(prostate.km)
+prostate.rf = h2o.randomForest(y = "CAPSULE", x_ignore = c("ID","DPROS"), data = prostate.hex, ntree = 50, depth = 150)
 
 # Test of random forest using iris data set
 iris.hex = importFile(h2o, "../smalldata/iris/iris.csv", "iris.hex")
