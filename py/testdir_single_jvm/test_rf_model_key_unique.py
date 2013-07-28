@@ -22,7 +22,10 @@ class Basic(unittest.TestCase):
     def test_rf_model_key_unique(self):
         modelKeyDict = {}
         for trial in range (1,5):
-            csvPathname = h2o.find_file('smalldata/iris/iris2.csv')
+            if trial == 1:
+                csvPathname = h2o.find_file('smalldata/iris/iris.csv')
+            else:
+                csvPathname = h2o.find_file('smalldata/iris/iris2.csv')
             start = time.time()
             # rfview=False used to inhibit the rfview completion
             rfResult = h2o_cmd.runRF(trees=6, timeoutSecs=10, rfview=False, csvPathname=csvPathname)

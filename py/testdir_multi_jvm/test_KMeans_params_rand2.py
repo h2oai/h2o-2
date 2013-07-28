@@ -42,11 +42,11 @@ class Basic(unittest.TestCase):
         if localhost:
             csvFilenameList = [
                 # ('covtype.data', 60),
-                ('covtype20x.data', 400),
+                ('covtype20x.data', 800),
                 ]
         else:
             csvFilenameList = [
-                ('covtype20x.data', 400),
+                ('covtype20x.data', 800),
                 ('covtype200x.data', 2000),
                 ]
 

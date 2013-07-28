@@ -33,7 +33,7 @@ class Basic(unittest.TestCase):
             ("allyears2k.csv",   300), #4.4MB
             ("year1987.csv",     600), #130MB
             ("allyears.csv",     900), #12GB
-            ("allyears_10.csv", 1800), #119.98GB
+            # ("allyears_10.csv", 1800), #119.98GB
         ]
         # IMPORT**********************************************
         # since H2O deletes the source key, we should re-import every iteration if we re-use the src in the list
