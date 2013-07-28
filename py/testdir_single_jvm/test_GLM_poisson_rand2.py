@@ -16,7 +16,7 @@ def define_params():
         'n_folds': [2,3,4,9],
         'lambda': [1e-8, 1e-4],
         'alpha': [0,0.5,0.75],
-        'max_iter': [5, 10, 19, 31],
+        'max_iter': [5, 10, 19],
         'weight': [None, 1, 2, 4],
         }
     return paramDict
@@ -53,7 +53,7 @@ class Basic(unittest.TestCase):
                 'alpha': 0.5, 
                 'lambda': 1e-4, 
                 'beta_epsilon': 0.001, 
-                'max_iter': 30
+                'max_iter': 15,
                 }
 
             colX = h2o_glm.pickRandGlmParams(paramDict, params)
