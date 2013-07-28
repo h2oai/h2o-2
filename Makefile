@@ -1,25 +1,28 @@
 #
 # Nightly build directions:
 #
-# make all PROJECT_VERSION=correct.project.version
+# make PROJECT_VERSION=correct.project.version
 #
 # PROJECT_VERSION must be strictly numerical.  E.g. 1.3.1853
 #
 
 PROJECT_VERSION ?= 99.90
 
-default: build
+default: nightly_build_stuff
 
-all:
+nightly_build_stuff:
 	$(MAKE) build PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) build_installer PROJECT_VERSION=$(PROJECT_VERSION)
 
 build:
-	(export PROJECT_VERSION=$(PROJECT_VERSION); ./build.sh doc)
+	$(MAKE) build_h2o PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) -C hadoop build PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) -C R build PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) -C launcher build PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) package
+
+build_h2o:
+	(export PROJECT_VERSION=$(PROJECT_VERSION); ./build.sh doc)
 
 package:
 	rm -fr target/h2o-$(PROJECT_VERSION)
@@ -31,15 +34,16 @@ package:
 	(cd target; zip -r h2o-$(PROJECT_VERSION).zip h2o-$(PROJECT_VERSION))
 	rm -fr target/h2o-$(PROJECT_VERSION)
 
-# This is run directly from the nightly build.  Most people won't have
-# this software installed.
+# Most people won't have the BitRock InstallBuilder software
+# installed, which is OK.  It will harmlessly do nothing for that
+# case.
 build_installer:
 	$(MAKE) -C installer build PROJECT_VERSION=$(PROJECT_VERSION)
 	rm -fr target/h2o-$(PROJECT_VERSION)-osx-installer.app
 	rm -f target/h2o-*-windows-installer.exe.dmg
 
 test:
-	./build.sh
+	(export PROJECT_VERSION=$(PROJECT_VERSION); ./build.sh)
 
 #
 # Set appropriately for your data size to quickly try out H2O.
