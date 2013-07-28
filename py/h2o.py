@@ -375,7 +375,8 @@ def setup_random_seed():
 
 # node_count is per host if hosts is specified.
 def build_cloud(node_count=2, base_port=54321, hosts=None, 
-        timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True, hadoop=False, **kwargs):
+        timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True, 
+        hadoop=False, conservative=True, **kwargs):
     # moved to here from unit_main. so will run with nosetests too!
     clean_sandbox()
     # keep this param in kwargs, because we pass to the H2O node build, so state
@@ -441,7 +442,7 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         # FIX! using "consensus" in node[-1] should mean this is unnecessary?
         # maybe there's a bug. For now do this. long term: don't want?
         # UPDATE: do it for all cases now 2/14/13
-        if 1==1: # still needed?
+        if conservative: # still needed?
             for n in nodeList:
                 stabilize_cloud(n, len(nodeList), timeoutSecs=timeoutSecs)
         else:

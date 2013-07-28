@@ -1,7 +1,7 @@
 # Demo to test R functionality
 # To invoke, need R 2.15.0 or higher
 # R -f H2OTestDemo.R
-source("H2O.R")
+source("h2o-package/R/H2O.R")
 # library(h2o)
 h2o = new("H2OClient", ip="localhost", port=54321)
 
@@ -13,6 +13,7 @@ prostate.glm = h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = 
 print(prostate.glm)
 prostate.km = h2o.kmeans(prostate.hex, centers = 5, cols = c("AGE","RACE","GLEASON","CAPSULE","DCAPS"))
 print(prostate.km)
+prostate.rf = h2o.randomForest(y = "CAPSULE", x_ignore = c("ID","DPROS"), data = prostate.hex, ntree = 50, depth = 150)
 
 # Test of random forest using iris data set
 iris.hex = importFile(h2o, "../smalldata/iris/iris.csv", "iris.hex")

@@ -31,6 +31,7 @@ import water.util.Log;
 class Histogram extends Iced implements Cloneable {
   public static final int BINS=4;
   transient final String   _name;        // Column name, for pretty-printing
+  public    final boolean  _isInt;       // Column only holds integers
   public    final double   _step;        // Linear interpolation step per bin
   public    final double   _min, _max;   // Lower-end of binning
   public    final int      _nbins;       // Number of bins
@@ -48,7 +49,7 @@ class Histogram extends Iced implements Cloneable {
     assert nelems > 0;
     assert max > min : "Caller ensures max>min, since if max==min the column is all constants";
     _name = name;
-    _min = min;  _max=max;
+    _min = min;  _max=max;  _isInt = isInt;
     int xbins = Math.max((int)Math.min(BINS,nelems),1); // Default bin count
     // See if we can show there are fewer unique elements than nbins.
     // Common for e.g. boolean columns, or near leaves.
@@ -214,7 +215,7 @@ class Histogram extends Iced implements Cloneable {
   // constant data, or was not being tracked by a prior Histogram (for being
   // constant data from a prior split), then that column will be null in the
   // returned array.
-  public Histogram[] split( int col, int i, Histogram hs[], Frame fr, int ncols ) {
+  public Histogram[] split( int col, int i, Histogram hs[], String[] names, int ncols ) {
     assert hs[col] == this;
     if( _bins[i] <= 1 ) return null; // Zero or 1 elements
     if( _clss == null ) {            // Regresion?
@@ -238,7 +239,7 @@ class Histogram extends Iced implements Cloneable {
       // Histogram's bound are the bins' min & max.
       if( col==j ) { min=h._mins[i]; max=h._maxs[i]; }
       if( min == max ) continue; // This column will not split again
-      nhists[j] = new Histogram(fr._names[j],_bins[i],min,max,fr._vecs[j]._isInt);
+      nhists[j] = new Histogram(names[j],_bins[i],min,max,hs[j]._isInt);
     }
     return nhists;
   }

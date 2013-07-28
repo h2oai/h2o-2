@@ -8,12 +8,15 @@ H2O: Random Forest
 Performs random forest classification on a parsed data set.
 }
 \usage{
-h2o.randomForest(y, data, ntree, depth, classwt = as.numeric(NA))
+h2o.randomForest(y, x_ignore = "", data, ntree, depth, classwt = as.numeric(NA))
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{y}{
 The name of the response variable. If the data does not contain a header, this is the column index. (This must be either an integer or a categorical variable).
+}
+\item{x_ignore}{
+(Optional) A vector containing the names of the predictor variables to ignore in building the random forest model. If blank, random forest will use all variables except \code{y} for classification.
 }
   \item{data}{
 An \code{\linkS4class{H2OParsedData}} object containing the variables in the model.
@@ -63,6 +66,10 @@ An object of class \code{\linkS4class{H2ORForestModel}} with slots key, data, an
 iris.hex = importFile(h2o, "../smalldata/iris/iris.csv", "iris.hex")
 h2o.randomForest(y = "4", data = iris.hex, ntree = 50, depth = 100, 
    classwt = c("Iris-versicolor" = 20.0, "Iris-virginica" = 30.0))
+   
+prostate.hex = importFile(h2o, "../smalldata/logreg/prostate.csv", "prostate.hex")
+h2o.randomForest(y = "CAPSULE", x_ignore = c("ID", "DPROS"), data = prostate.hex,
+  ntree = 50, depth = 100)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

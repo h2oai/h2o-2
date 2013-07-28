@@ -59,4 +59,27 @@ public class GBMTest extends TestUtil {
       UKV.remove(dest);
     }
   }
+
+  /*@Test*/ public void testBasicDRF() {
+    File file = TestUtil.find_test_file("./smalldata/logreg/prostate.csv");
+    Key fkey = NFSFileVec.make(file);
+    Key dest = Key.make("prostate.hex");
+    Frame fr = ParseDataset2.parse(dest,new Key[]{fkey});
+    UKV.remove(fkey);
+    try {
+      assertEquals(380,fr._vecs[0].length());
+
+      // Prostate: predict on CAPSULE which is in column #1; move it to last column
+      UKV.remove(fr.remove("ID")._key);   // Remove patient ID vector
+      Vec capsule = fr.remove("CAPSULE"); // Remove capsule
+      fr.add("CAPSULE",capsule);          // Move it to the end
+      int mtrys = Math.max((int)Math.sqrt(fr.numCols()),1);
+
+      DRF drf = DRF.start(DRF.makeKey(),fr,/*maxdepth*/50,/*ntrees*/2,mtrys);
+      drf.get();                  // Block for result
+      UKV.remove(drf._dest);
+    } finally {
+      UKV.remove(dest);
+    }
+  }
 }

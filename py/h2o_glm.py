@@ -38,6 +38,51 @@ def pickRandGlmParams(paramDict, params):
 
     return colX
 
+
+def simpleCheckGLMScore(self, glmScore, family='gaussian', allowFailWarning=False, **kwargs):
+    warnings = None
+    if 'warnings' in glmScore:
+        warnings = glmScore['warnings']
+        # stop on failed
+        x = re.compile("failed", re.IGNORECASE)
+        # don't stop if fail to converge
+        c = re.compile("converge", re.IGNORECASE)
+        for w in warnings:
+            print "\nwarning:", w
+            if re.search(x,w) and not allowFailWarning: 
+                if re.search(c,w):
+                    # ignore the fail to converge warning now
+                    pass
+                else: 
+                    # stop on other 'fail' warnings (are there any? fail to solve?
+                    raise Exception(w)
+
+    validation = glmScore['validation']
+    if math.isnan(validation['err']):
+        emsg = "Why is this err = 'nan'?? %6s %s" % ("err:\t", validation['err'])
+        raise Exception(emsg)
+
+    if math.isnan(validation['resDev']):
+        emsg = "Why is this resDev = 'nan'?? %6s %s" % ("resDev:\t", validation['resDev'])
+        raise Exception(emsg)
+
+    if math.isnan(validation['nullDev']):
+        emsg = "Why is this nullDev = 'nan'?? %6s %s" % ("nullDev:\t", validation['nullDev'])
+        raise Exception(emsg)
+
+    print "%15s %s" % ("err:\t", validation['err'])
+    print "%15s %s" % ("nullDev:\t", validation['nullDev'])
+    print "%15s %s" % ("resDev:\t", validation['resDev'])
+
+    # threshold only there if binomial?
+    # auc only for binomial
+    if family=="binomial":
+        print "%15s %s" % ("auc:\t", validation['auc'])
+        print "%15s %s" % ("threshold:\t", validation['threshold'])
+
+    if family=="poisson" or family=="gaussian":
+        print "%15s %s" % ("aic:\t", validation['aic'])
+
 def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False,
     prettyPrint=False, noPrint=False, maxExpectedIterations=None, **kwargs):
     # if we hit the max_iter, that means it probably didn't converge. should be 1-maxExpectedIter
@@ -297,6 +342,8 @@ def goodXFromColumnInfo(y,
     num_cols=None, missingValuesDict=None, constantValuesDict=None, enumSizeDict=None, colTypeDict=None, colNameDict=None, 
     keepPattern=None, key=None, timeoutSecs=120):
 
+    y = str(y)
+
     # if we pass a parseKey, means we want to get the info ourselves here
     if key is not None:
         (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
@@ -316,7 +363,11 @@ def goodXFromColumnInfo(y,
     for k in xOrig:
         name = colNameDict[k]
         # remove it if it has the same name as the y output
-        if name == y:
+        if str(k)== y: # if they pass the col index as y
+            print "Removing %d because name: %s matches output %s" % (k, str(k), y)
+            x.remove(k)
+            ignore_x.append(k)
+        elif name == y: # if they pass the name as y 
             print "Removing %d because name: %s matches output %s" % (k, name, y)
             x.remove(k)
             ignore_x.append(k)

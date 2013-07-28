@@ -98,10 +98,10 @@ class Basic(unittest.TestCase):
                 bins = histogram['bins']
                 self.assertEqual(len(bins), len(legalValues))
                 # this distribution assumes 4 values with mean on the 3rd
-                self.assertAlmostEqual(bins[0], 0.042 * rowCount, delta=.01*rowCount)
-                self.assertAlmostEqual(bins[1], 0.333 * rowCount, delta=.01*rowCount)
-                self.assertAlmostEqual(bins[2], 0.541 * rowCount, delta=.01*rowCount)
-                self.assertAlmostEqual(bins[3], 0.083 * rowCount, delta=.01*rowCount)
+                self.assertAlmostEqual(bins[0], 0.042 * rowCount, delta=.01*rowCount, msg="histogram bins 0")
+                self.assertAlmostEqual(bins[1], 0.333 * rowCount, delta=.01*rowCount, msg="histogram bins 1")
+                self.assertAlmostEqual(bins[2], 0.541 * rowCount, delta=.01*rowCount, msg="histogram bins 2")
+                self.assertAlmostEqual(bins[3], 0.083 * rowCount, delta=.01*rowCount, msg="histogram bins 3")
 
                 nbins = histogram['bins']
 
@@ -144,9 +144,9 @@ class Basic(unittest.TestCase):
                 
                     print "mean:", mean
                     # we round to int, so we may introduce up to 0.5 rounding error? compared to "mode" target
-                    self.assertAlmostEqual(mean, expectedMean, delta=0.01)
+                    self.assertAlmostEqual(mean, expectedMean, delta=0.02, msg="mean")
                     print "sigma:", sigma
-                    self.assertAlmostEqual(sigma, expectedSigma, delta=0.01)
+                    self.assertAlmostEqual(sigma, expectedSigma, delta=0.02, msg="sigma")
 
             ### print 'Trial:', trial
             sys.stdout.write('.')
