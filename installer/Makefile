@@ -5,6 +5,7 @@ ifeq ($(UNAME),Darwin)
     INSTALLBUILDER="/Applications/BitRock InstallBuilder Enterprise 8.6.0/bin/Builder.app/Contents/MacOS/installbuilder.sh"
 endif
 ifeq ($(UNAME),Linux)
+    INSTALLBUILDER=/var/lib/jenkins/0xdata/frozen/installbuilder-8.6.0/bin/builder
 endif
 ifndef INSTALLBUILDER
     $(error Cannot find installbuilder)
