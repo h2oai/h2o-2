@@ -78,7 +78,7 @@
                             <origin>${build_project_directory}/windows</origin>
                         </distributionDirectory>
                         <distributionDirectory>
-                            <origin>${build_project_directory}/../../../H2OInstallerJRE/windows</origin>
+                            <origin>${env(HOME)}/0xdata/frozen/H2OInstallerJRE-1.7.0_21/windows</origin>
                         </distributionDirectory>
                     </distributionFileList>
                 </folder>
@@ -92,7 +92,7 @@
                             <origin>${build_project_directory}/macosx/Contents</origin>
                         </distributionDirectory>
                         <distributionDirectory>
-                            <origin>${build_project_directory}/../../../H2OInstallerJRE/macosx/Contents</origin>
+                            <origin>${env(HOME)}/0xdata/frozen/H2OInstallerJRE-1.7.0_21/macosx/Contents</origin>
                         </distributionDirectory>
                     </distributionFileList>
                 </folder>
