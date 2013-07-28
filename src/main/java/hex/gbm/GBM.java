@@ -1,5 +1,6 @@
 package hex.gbm;
 
+import hex.gbm.DTree.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import water.*;
@@ -53,8 +54,8 @@ public class GBM extends Job {
     fr.add("NIDs",vnids);
 
     // Initially setup as-if an empty-split had just happened
-    Tree tree = new Tree(names);
-    new Tree.UndecidedNode(tree,-1,Histogram.initialHist(fr,ncols)); // The "root" node
+    DTree tree = new DTree(names);
+    new UndecidedNode(tree,-1,Histogram.initialHist(fr,ncols)); // The "root" node
     int leaf = 0; // Define a "working set" of leaf splits, from here to tree._len
 
     // ----
@@ -64,19 +65,19 @@ public class GBM extends Job {
     for( ; depth<maxDepth; depth++ ) {
 
       // Fuse 2 conceptual passes into one:
-      // Pass 1: Score a prior Histogram, and make new Tree.Node assignments to
+      // Pass 1: Score a prior Histogram, and make new DTree.Node assignments to
       // every row.  This involves pulling out the current assigned Node,
       // "scoring" the row against that Node's decision criteria, and assigning
       // the row to a new child Node (and giving it an improved prediction).
       // Pass 2: Build new summary Histograms on the new child Nodes every row
       // got assigned into.  Collect counts, mean, variance, min, max per bin,
       // per column.
-      Tree.ScoreBuildHistogram sbh = new Tree.ScoreBuildHistogram(tree,leaf,ncols,numClasses,ymin).doAll(fr);
+      ScoreBuildHistogram sbh = new ScoreBuildHistogram(new DTree[]{tree},new int[]{leaf},ncols,numClasses,ymin).doAll(fr);
 
-      // Reassign the new Histogram back into the Tree
+      // Reassign the new Histogram back into the DTree
       final int tmax = tree._len; // Number of total splits
       for( int i=leaf; i<tmax; i++ )
-        tree.undecided(i)._hs = sbh.getFinalHisto(i);
+        tree.undecided(i)._hs = sbh.getFinalHisto(0,i);
 
       // Build up the next-generation tree splits from the current histograms.
       // Nearly all leaves will split one more level.  This loop nest is
@@ -91,24 +92,24 @@ public class GBM extends Job {
       // If we did not make any new splits, then the tree is split-to-death
       if( tmax == tree._len ) break;
 
-      //new BulkScore(tree,numClasses,ymin).doAll(fr).report( nrows, depth );
+      //new BulkScore(new DTree[]{tree},numClasses,ymin).doAll(fr).report( nrows, depth );
     }
     Log.info(Sys.GBM__,"GBM done in "+t_gbm);
 
     // One more pass for final prediction error
     Timer t_score = new Timer();
-    new Tree.BulkScore(tree,numClasses,ymin).doAll(fr).report( Sys.GBM__, nrows, depth );
+    new BulkScore(new DTree[]{tree},ncols,numClasses,ymin).doAll(fr).report( Sys.GBM__, nrows, depth );
     Log.info(Sys.GBM__,"GBM score done in "+t_score);
 
     // Remove temp vector; cleanup the Frame
     UKV.remove(fr.remove("NIDs")._key);
   }
   
-  // GBM Tree decision node: same as the normal DecidedNode, but specifies a
+  // GBM DTree decision node: same as the normal DecidedNode, but specifies a
   // decision algorithm given complete histograms on all columns.  
   // GBM algo: find the lowest error amongst *all* columns.
-  static class GBMDecidedNode extends Tree.DecidedNode {
-    GBMDecidedNode( Tree.UndecidedNode n ) { super(n); }
+  static class GBMDecidedNode extends DecidedNode {
+    GBMDecidedNode( UndecidedNode n ) { super(n); }
     // Find the column with the best split (lowest score).
     @Override int bestCol( Histogram[] hs ) {
       double bs = Double.MAX_VALUE; // Best score

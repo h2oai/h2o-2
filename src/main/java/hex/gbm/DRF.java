@@ -1,7 +1,7 @@
 package hex.gbm;
 
+import hex.gbm.DTree.*;
 import hex.rng.MersenneTwisterRNG;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 import water.*;
@@ -10,7 +10,7 @@ import water.fvec.*;
 import water.util.Log.Tag.Sys;
 import water.util.Log;
 
-// Gradient Boosted Trees
+// Random Forest Trees
 public class DRF extends Job {
   public static final String KEY_PREFIX = "__DRFModel_";
 
@@ -50,17 +50,19 @@ public class DRF extends Job {
     int numClasses = vresponse._isInt ? ((int)vresponse.max()-ymin+1) : 0;
     //if( numClasses == 2 ) numClasses = 0; // Specifically force 2 classes into a regression
 
-    // Make a new Vec to hold the split-number for each row (initially all zero).
-    Vec vnids = Vec.makeZero(vs[0]);
-    fr.add("NIDs",vnids);
-
     // The RNG used to pick split columns
     Random rand = new MersenneTwisterRNG(new int[]{1,2});
 
     // Initially setup as-if an empty-split had just happened
-    DRFTree tree = new DRFTree(names,mtrys,rand);
-    new Tree.UndecidedNode(tree,-1,Histogram.initialHist(fr,ncols)); // The "root" node
-    int leaf = 0; // Define a "working set" of leaf splits, from here to tree._len
+    Histogram hs[] = Histogram.initialHist(fr,ncols);
+    DRFTree trees[] = new DRFTree[ntrees];
+    for( int t=0; t<ntrees; t++ ) {
+      trees[t] = new DRFTree(names,mtrys,rand);
+      new UndecidedNode(trees[t],-1,hs); // The "root" node 
+      // Make a new Vec to hold the split-number for each row (initially all zero).
+      fr.add("NIDs"+t,Vec.makeZero(vs[0]));
+    }
+    int leafs[] = new int[ntrees]; // Define a "working set" of leaf splits, from here to tree._len
 
     // ----
     // One Big Loop till the tree is of proper depth.
@@ -69,58 +71,71 @@ public class DRF extends Job {
     for( ; depth<maxDepth; depth++ ) {
 
       // Fuse 2 conceptual passes into one:
-      // Pass 1: Score a prior Histogram, and make new Tree.Node assignments to
-      // every row.  This involves pulling out the current assigned Node,
+      // Pass 1: Score a prior Histogram, and make new DTree.Node assignments
+      // to every row.  This involves pulling out the current assigned Node,
       // "scoring" the row against that Node's decision criteria, and assigning
       // the row to a new child Node (and giving it an improved prediction).
       // Pass 2: Build new summary Histograms on the new child Nodes every row
       // got assigned into.  Collect counts, mean, variance, min, max per bin,
       // per column.
-      Tree.ScoreBuildHistogram sbh = new Tree.ScoreBuildHistogram(tree,leaf,ncols,numClasses,ymin).doAll(fr);
+      ScoreBuildHistogram sbh = new ScoreBuildHistogram(trees,leafs,ncols,numClasses,ymin).doAll(fr);
 
-      // Reassign the new Histogram back into the Tree
-      final int tmax = tree._len; // Number of total splits
-      for( int i=leaf; i<tmax; i++ )
-        tree.undecided(i)._hs = sbh.getFinalHisto(i);
+      // Reassign the new Histograms back into the DTrees
+      for( int t=0; t<ntrees; t++ ) {
+        final int tmax = trees[t]._len; // Number of total splits
+        final DTree tree = trees[t];
+        for( int i=leafs[t]; i<tmax; i++ )
+          tree.undecided(i)._hs = sbh.getFinalHisto(t,i);
+      }
 
       // Build up the next-generation tree splits from the current histograms.
       // Nearly all leaves will split one more level.  This loop nest is
       //           O( #active_splits * #bins * #ncols )
       // but is NOT over all the data.
-      for( ; leaf<tmax; leaf++ ) {
-        //System.out.println(tree.undecided(leaf));
-        // Replace the Undecided with the Split decision
-        new DRFDecidedNode(tree.undecided(leaf));
+      boolean still_splitting=false;
+      for( int t=0; t<ntrees; t++ ) {
+        final DTree tree = trees[t];
+        final int tmax = tree._len; // Number of total splits
+        int leaf = leafs[t];
+        for( ; leaf<tmax; leaf++ ) {
+          //System.out.println("Tree#"+t+", "+tree.undecided(leaf));
+          // Replace the Undecided with the Split decision
+          new DRFDecidedNode(tree.undecided(leaf));
+        }
+        leafs[t] = leaf;
+        // If we did not make any new splits, then the tree is split-to-death
+        if( tmax < tree._len ) still_splitting = true;
       }
 
-      // If we did not make any new splits, then the tree is split-to-death
-      if( tmax == tree._len ) break;
+      // If all trees are done, then so are we
+      if( !still_splitting ) break;
 
-      //new BulkScore(tree,numClasses,ymin).doAll(fr).report( nrows, depth );
+      new BulkScore(trees,ncols,numClasses,ymin).doAll(fr).report( Sys.DRF__, nrows, depth );
     }
     Log.info(Sys.DRF__,"DRF done in "+t_drf);
 
     // One more pass for final prediction error
     Timer t_score = new Timer();
-    new Tree.BulkScore(tree,numClasses,ymin).doAll(fr).report( Sys.DRF__, nrows, depth );
+    new BulkScore(trees,ncols,numClasses,ymin).doAll(fr).report( Sys.DRF__, nrows, depth );
     Log.info(Sys.DRF__,"DRF score done in "+t_score);
 
-    // Remove temp vector; cleanup the Frame
-    UKV.remove(fr.remove("NIDs")._key);
+    // Remove temp vectors; cleanup the Frame
+    while( fr.numCols() > ncols+1 )
+      UKV.remove(fr.remove(fr.numCols()-1)._key);
   }
 
-  static class DRFTree extends Tree {
+  static class DRFTree extends DTree {
     final int _mtrys;           // Number of columns to choose amongst in splits
     final transient Random _rand; // Pseudo-random gen; not locked; only used in the driver thread
     DRFTree( String names[], int mtrys, Random rand ) { super(names); _mtrys = mtrys; _rand = rand; }
   }
 
 
-  // DRF Tree decision node: same as the normal DecidedNode, but specifies a
+  // DRF DTree decision node: same as the normal DecidedNode, but specifies a
   // decision algorithm given complete histograms on all columns.  
   // DRF algo: find the lowest error amongst a random mtry columns.
-  static class DRFDecidedNode extends Tree.DecidedNode {
-    DRFDecidedNode( Tree.UndecidedNode n ) { super(n); }
+  static class DRFDecidedNode extends DecidedNode {
+    DRFDecidedNode( UndecidedNode n ) { super(n); }
     // Find the column with the best split (lowest score).
     @Override int bestCol( Histogram[] hs ) {
       DRFTree tree = (DRFTree)_tree;

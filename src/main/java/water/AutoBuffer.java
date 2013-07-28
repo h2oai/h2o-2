@@ -591,6 +591,12 @@ public final class AutoBuffer {
     for( Iced[] f : fs ) putA(f);
     return this;
   }
+  public AutoBuffer putAAA(Iced[][][] fs) {
+    if( fs == null ) return put4(-1);
+    put4(fs.length);
+    for( Iced[][] f : fs ) putAA(f);
+    return this;
+  }
 
   public <T extends Freezable> T get(Class<T> t) {
     short id = (short)get2();
@@ -613,6 +619,14 @@ public final class AutoBuffer {
     Class<T[]> tcA = (Class<T[]>) Array.newInstance(tc, 0).getClass();
     T[][] ts = (T[][]) Array.newInstance(tcA, len);
     for( int i = 0; i < len; ++i ) ts[i] = getA(tc);
+    return ts;
+  }
+  public <T extends Iced> T[][][] getAAA(Class<T> tc) {
+    int len = get4(); if( len == -1 ) return null;
+    Class<T[]  > tcA  = (Class<T[]  >) Array.newInstance(tc , 0).getClass();
+    Class<T[][]> tcAA = (Class<T[][]>) Array.newInstance(tcA, 0).getClass();
+    T[][][] ts = (T[][][]) Array.newInstance(tcAA, len);
+    for( int i = 0; i < len; ++i ) ts[i] = getAA(tc);
     return ts;
   }
 
