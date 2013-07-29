@@ -96,6 +96,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new RReaderProgress());
     registerRequest(new PostFile());
     registerRequest(new Progress());
+    registerRequest(new Progress2());
     registerRequest(new PutValue());
     registerRequest(new PutVector());
     registerRequest(new Remove());
