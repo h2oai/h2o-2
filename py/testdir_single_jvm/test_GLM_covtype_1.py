@@ -1,6 +1,5 @@
-import os, json, unittest, time, shutil, sys, random
+import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_glm, h2o_hosts
 
 class Basic(unittest.TestCase):

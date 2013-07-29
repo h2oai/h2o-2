@@ -1,9 +1,5 @@
-import unittest
-import random, sys, time, os
-import string
-import re
+import unittest, random, sys, time, re
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util
 
 # use randChars for the random chars to use

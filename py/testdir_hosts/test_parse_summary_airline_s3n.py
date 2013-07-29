@@ -78,10 +78,8 @@ class Basic(unittest.TestCase):
             goodX = h2o_glm.goodXFromColumnInfo(y='IsArrDelayed', key=parseKey['destination_key'], timeoutSecs=300)
 
             # SUMMARY****************************************
-            summaryResult = h2o.nodes[0].summary_page(key2, timeoutSecs=360)
-            summary = summaryResult['summary']
-            # print h2o.dump_json(summary)
-            h2o_cmd.infoFromSummary(summary)
+            summaryResult = h2o_cmd.runSummary(key=key2, timeoutSecs=360)
+            h2o_cmd.infoFromSummary(summaryResult)
 
             # STOREVIEW***************************************
             if 1==0: # slow

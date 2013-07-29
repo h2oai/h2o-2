@@ -1,6 +1,5 @@
-import os, json, unittest, time, shutil, sys, random
+import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts
 
 def randint_triangular(low, high, mode): # inclusive bounds
@@ -64,7 +63,7 @@ class Basic(unittest.TestCase):
                 low=expectedMin, high=expectedMax, mode=mode,
                 SEED=SEEDPERFILE)
 
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10)
+            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10, doSummary=False)
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "Parse result['destination_key']:", parseKey['destination_key']
 
@@ -72,11 +71,10 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             print "\n" + csvFilename
 
-            summaryResult = h2o.nodes[0].summary_page(key2)
+            summaryResult = runSummary(key=key2)
             # remove bin_names because it's too big (256?) and bins
             # just touch all the stuff returned
             summary = summaryResult['summary']
-            print h2o.dump_json(summary)
 
             columnsList = summary['columns']
             for columns in columnsList:

@@ -1,6 +1,5 @@
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts
 
 # Test of glm comparing result against R-implementation
@@ -11,7 +10,6 @@ class GLMTest(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
-    
     @classmethod
     def setUpClass(cls):
         localhost = h2o.decide_if_localhost()

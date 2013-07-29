@@ -1,4 +1,4 @@
-import os, json, unittest, time, shutil, sys, getpass
+import unittest, time
 import h2o
 
 class PetaTest(unittest.TestCase):

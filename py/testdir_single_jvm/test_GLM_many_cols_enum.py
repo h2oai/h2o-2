@@ -1,5 +1,4 @@
-import unittest
-import random, sys, time, os, getpass
+import unittest, random, sys, time, getpass
 sys.path.extend(['.','..','py'])
 
 # FIX! add cases with shuffled data!

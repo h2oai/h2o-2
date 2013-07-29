@@ -1,4 +1,4 @@
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts
 
@@ -36,9 +36,8 @@ class Basic(unittest.TestCase):
             csvFilename = "parity_128_4_" + str(1000) + "_quad.data"  
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
-            # broke out the put separately so we can iterate a test just on the RF
-            key = h2o.nodes[0].put_file(csvPathname)
-            parseKey = h2o.nodes[0].parse(key, key + "_" + str(trial) + ".hex")
+            key2 = csvFilename + "_" + str(trial) + ".hex"
+            parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, timeoutSecs=30)
 
             h2o.verboseprint("Trial", trial)
             start = time.time()

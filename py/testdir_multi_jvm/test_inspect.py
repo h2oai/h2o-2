@@ -1,8 +1,6 @@
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts
-import itertools
 
 def crange(start, end):
     for c in xrange(ord(start), ord(end)):
@@ -38,7 +36,7 @@ class Basic(unittest.TestCase):
         cvsfile = h2o.find_file("smalldata/poker/poker1000")
         node    = h2o.nodes[0]
         
-        res  = self.putfile_and_parse(node, cvsfile)
+        res = h2o_cmd.parseFile(node=node, csvPathname=cvsfile)
         ary  = node.inspect(res['destination_key'])
         # count lines in input file - there is no header for poker 1000
         rows = wcl(cvsfile)
@@ -81,7 +79,7 @@ class Basic(unittest.TestCase):
         cvsfile = h2o.find_file(filename)
         node    = h2o.nodes[0]
         
-        res  = self.putfile_and_parse(node, cvsfile)
+        res = h2o_cmd.parseFile(node=node, csvPathname=cvsfile)
         ary  = node.inspect(res['destination_key'])
 
         self.assertEqual(rows, ary['num_rows'])
@@ -99,10 +97,5 @@ class Basic(unittest.TestCase):
 
         return ary
 
-    def putfile_and_parse(self, node, f):
-        key = node.put_file(f) 
-        return node.parse(key);
-
-    
 if __name__ == '__main__':
     h2o.unit_main()

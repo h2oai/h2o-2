@@ -1,7 +1,6 @@
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys
 sys.path.extend(['.','..','py'])
-
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_hosts, h2o_cmd
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -27,15 +26,12 @@ class Basic(unittest.TestCase):
         for x in xrange (2):
             # csvPathname = h2o.find_file("smalldata/hhp_107_01.data.gz")
             csvPathname = h2o.find_file('smalldata/iris/iris_wheader.csv.gz')
-            key = n.put_file(csvPathname)
-            key2 = key + "_" + str(x) + ".hex"
-            parseKey = n.parse(key, key2)
-
-            summaryResult = n.summary_page(key2)
+            key2 = "iris" + "_" + str(x) + ".hex"
+            parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, doSummary=False)
+            summaryResult = h2o_cmd.runSummary(key=key2)
             # remove bin_names because it's too big (256?) and bins
             # just touch all the stuff returned
             summary = summaryResult['summary']
-            print h2o.dump_json(summary)
 
             columnsList = summary['columns']
             for columns in columnsList:
