@@ -44,7 +44,7 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
   public void init() { }
 
   // Invokes the task on all nodes
-  public void invokeOnAllNodes() {
+  public T invokeOnAllNodes() {
     H2O cloud = H2O.CLOUD;
     Key[] args = new Key[cloud.size()];
     String skey = "RunOnAll__"+UUID.randomUUID().toString();
@@ -52,6 +52,7 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
       args[i] = Key.make(skey,(byte)0,Key.DFJ_INTERNAL_USER,cloud._memary[i]);
     invoke(args);
     for( Key arg : args ) DKV.remove(arg);
+    return self();
   }
 
   // Invoked with a set of keys
