@@ -1,6 +1,6 @@
 #! /bin/bash
 
-if [ '${PROJECT_VERSION}x' = "x" ]; then
+if [ -z ${PROJECT_VERSION} ]; then
     PROJECT_VERSION=99.80
 fi
 
