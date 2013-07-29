@@ -75,7 +75,7 @@ public class GBMTest extends TestUtil {
       fr.add("CAPSULE",capsule);          // Move it to the end
       int mtrys = Math.max((int)Math.sqrt(fr.numCols()),1);
 
-      DRF drf = DRF.start(DRF.makeKey(),fr,/*maxdepth*/50,/*ntrees*/2,mtrys);
+      DRF drf = DRF.start(DRF.makeKey(),fr,/*maxdepth*/50,/*ntrees*/5,mtrys,/*sampleRate*/0.67);
       drf.get();                  // Block for result
       UKV.remove(drf._dest);
     } finally {
@@ -100,7 +100,7 @@ public class GBMTest extends TestUtil {
       // Covtype: predict on last column
       int mtrys = Math.max((int)Math.sqrt(fr.numCols()),1);
 
-      DRF drf = DRF.start(DRF.makeKey(),fr,/*maxdepth*/40,/*ntrees*/10,mtrys);
+      DRF drf = DRF.start(DRF.makeKey(),fr,/*maxdepth*/40,/*ntrees*/10,mtrys,/*sampleRate*/0.67);
       drf.get();                  // Block for result
       UKV.remove(drf._dest);
     } finally {

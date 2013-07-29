@@ -54,7 +54,7 @@ public class GBM extends Job {
     fr.add("NIDs",vnids);
 
     // Initially setup as-if an empty-split had just happened
-    DTree tree = new DTree(names);
+    DTree tree = new DTree(names,ncols);
     new UndecidedNode(tree,-1,Histogram.initialHist(fr,ncols)); // The "root" node
     int leaf = 0; // Define a "working set" of leaf splits, from here to tree._len
 
@@ -98,7 +98,7 @@ public class GBM extends Job {
 
     // One more pass for final prediction error
     Timer t_score = new Timer();
-    new BulkScore(new DTree[]{tree},ncols,numClasses,ymin).doAll(fr).report( Sys.GBM__, nrows, depth );
+    new BulkScore(new DTree[]{tree},ncols,numClasses,ymin,1.0).doAll(fr).report( Sys.GBM__, nrows, depth );
     Log.info(Sys.GBM__,"GBM score done in "+t_score);
 
     // Remove temp vector; cleanup the Frame

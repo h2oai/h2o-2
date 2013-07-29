@@ -1,12 +1,12 @@
 package hex.gbm;
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Random;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.fvec.*;
-import water.util.Log;
 import water.util.Log.Tag.Sys;
+import water.util.Log;
 
 /**
    A Decision Tree, laid over a Frame of Vecs, and built distributed.
@@ -28,9 +28,10 @@ import water.util.Log.Tag.Sys;
 
 class DTree extends Iced {
   final String[] _names; // Column names
+  final int _ncols;      // Active training columns
   private Node[] _ns;    // All the nodes in the tree.  Node 0 is the root.
   int _len;              // Resizable array
-  DTree( String[] names ) { _names = names; _ns = new Node[1]; }
+  DTree( String[] names, int ncols ) { _names = names; _ncols = ncols; _ns = new Node[1]; }
 
   public final Node root() { return _ns[0]; }
 
@@ -47,6 +48,10 @@ class DTree extends Iced {
     if( _len == _ns.length ) _ns = Arrays.copyOf(_ns,_len<<1);
     return _len++;
   }
+
+  // Return a deterministic chunk-local RNG.  Can be kinda expensive.
+  // Override this in, e.g. Random Forest algos, to get a per-chunk RNG
+  public Random rngForChunk( int cidx ) { throw H2O.fail(); }
 
   // Abstract node flavor
   static abstract class Node extends Iced {
@@ -189,7 +194,7 @@ class DTree extends Iced {
       _ns = new int[nums];
       _ycls = (clss==null) ? new long[nums][] : clss;
       _pred = new double[nums];
-      int ncols = _tree._names.length-1; // ncols: all columns, minus response
+      int ncols = _tree._ncols; // ncols: all columns, minus response
       for( int i=0; i<nums; i++ ) { // For all split-points
         // Setup for children splits
         Histogram nhists[] = splitH.split(_col,i,n._hs,_tree._names,ncols);
@@ -205,16 +210,21 @@ class DTree extends Iced {
     // Bin #.
     public int bin( Chunk chks[], int i ) {
       double d = chks[_col].at0(i);         // Value to split on for this row
+      // Note that during *scoring* (as opposed to training), we can be exposed
+      // to data which is outside the bin limits, so we must cap at both ends.
       int idx1 = (int)((d-_min)/_step);     // Interpolate bin#
-      assert idx1 >= 0;                     // Expect sanity
-      int bin = Math.min(idx1,_ns.length-1);// Cap at length
+      int bin = Math.max(Math.min(idx1,_ns.length-1),0);// Cap at length
       return bin;
     }
 
     public int ns( Chunk chks[], int i ) { return _ns[bin(chks,i)]; }
 
     @Override public String toString() {
-      throw H2O.unimpl();
+      String n= " <= "+_tree._names[_col]+" <= ";
+      String s = new String();
+      for( int i=0; i<_ns.length; i++ ) 
+        s += _mins[i]+n+_maxs[i]+" = "+Arrays.toString(_ycls[i])+"\n";
+      return s;
     }
 
     StringBuilder printChild( StringBuilder sb, int nid ) {
@@ -294,7 +304,7 @@ class DTree extends Iced {
         // Pass 1 & 2
         for( int i=0; i<nids._len; i++ ) {
           int nid = (int)nids.at80(i);       // Get Node to decide from
-          if( nid==-1 ) continue;            // row already predicts perfectly
+          if( nid==-1 ) continue;            // row already predicts perfectly or sampled away
           
           // Pass 1: Score row against current decisions & assign new split
           if( leaf > 0 )   // Prior pass exists?
@@ -357,16 +367,38 @@ class DTree extends Iced {
     // Bias classes to zero; e.g. covtype classes range from 1-7 so this is 1.
     // e.g. prostate classes range 0-1 so this is 0
     final int _ymin;
+    // Out-Of-Bag-Error-Estimate.  This is fairly specific to Random Forest,
+    // and involves scoring each tree only on rows for which is was not
+    // trained, which only makes sense when scoring the Forest while the
+    // training data is handy, i.e., scoring during & after training.
+    // Pass in a 1.0 if turned off.
+    final float _rate;
     double _sum;
     long _err;
-    BulkScore( DTree trees[], int ncols, int numClasses, int ymin ) { _trees = trees; _ncols = ncols; _numClasses = numClasses; _ymin = ymin; }
+    BulkScore( DTree trees[], int ncols, int numClasses, int ymin, double sampleRate ) { 
+      _trees = trees; _ncols = ncols; 
+      _numClasses = numClasses; _ymin = ymin; 
+      _rate = (float)sampleRate;
+    }
+
     @Override public void map( Chunk chks[] ) {
       assert _ncols+1/*response variable*/+_trees.length == chks.length 
         : "Missing columns?  ncols="+_ncols+", 1 for response, ntrees="+_trees.length+", and found "+chks.length+" vecs";
       Chunk ys = chks[_ncols];
       long clss[] = new long[_numClasses]; // Shared array for computing classes
+
+      // Get an array of RNGs to replay the sampling in reverse, only for OOBEE.
+      // Note the fairly expense MerseenTwisterRNG built per-tree (per-chunk).
+      Random rands[] = null;
+      if( _rate < 1.0f ) {      // oobee vs full scoring?
+        rands = new Random[_trees.length];
+        for( int t=0; t<_trees.length; t++ )
+          rands[t] = _trees[t].rngForChunk(ys.cidx());
+      }
+
+      // Score all Rows
       for( int i=0; i<ys._len; i++ ) {
-        double err = score0( chks, i, ys.at0(i), clss );
+        double err = score0( chks, i, ys.at0(i), clss, rands );
         _sum += err*err;        // Squared error
       }
     }
@@ -375,13 +407,16 @@ class DTree extends Iced {
     // Return a relative error.  For regression it's y-mean.  For classification, 
     // it's the %-tage of the response class out of all rows in the leaf, plus
     // a count of absolute errors when we predict the majority class.
-    private double score0( Chunk chks[], int i, double y, long clss[] ) {
+    private double score0( Chunk chks[], int i, double y, long clss[], Random rands[] ) {
       double sum=0;             // Regression: average across trees
       long rows=0;
       if( _numClasses > 0 )     // Classification: zero class distribution
         Arrays.fill(clss,0);
       // For all trees
       for( int t=0; t<_trees.length; t++ ) {
+        // For OOBEE error, do not score rows on trees trained on that row
+        if( rands != null && !(rands[t].nextFloat() >= _rate) ) continue;
+
         final DTree tree = _trees[t];
         // "score" this row on this tree.  Apply the tree decisions at each
         // point, walking down the tree to a leaf.
@@ -407,6 +442,7 @@ class DTree extends Iced {
       }
 
       if( _numClasses == 0 ) {
+        if( rows == 0 ) return 0;     // OOBEE: all rows trained, so no rows scored
         double prediction = sum/rows; // Average of trees is prediction
         return prediction - y;        // Error
       } else {
@@ -416,9 +452,10 @@ class DTree extends Iced {
           rows += clss[c];
           if( clss[c] > clss[best] ) best=c;
         }
+        if( rows == 0 ) return 0;  // OOBEE: all rows trained, so no rows scored
         int ycls = (int)y-_ymin;   // Zero-based response class
         if( best != ycls ) _err++; // Absolute prediction error
-        return (double)(rows-clss[best])/rows; // Error
+        return (double)(rows-clss[ycls])/rows; // Error
       }
     }
 
