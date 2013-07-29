@@ -7,11 +7,12 @@ import water.*;
 import water.fvec.*;
 import water.persist.PersistNFS;
 
-public class FileIntegrityChecker extends DRemoteTask {
-  String[] _files;
-  long[] _sizes;
-  int[] _ok;
-  boolean _newApi;
+public class FileIntegrityChecker extends DRemoteTask<FileIntegrityChecker> {
+  final String[] _files;        // File names found locally
+  final long  [] _sizes;        // File sizes found locally
+  final boolean  _newApi;       // Produce NFSFileVec instead of ValueArray
+  int[] _ok;                    // OUTPUT: files which are globally compatible
+
 
   @Override public void lcompute() {
     _ok = new int[_files.length];
@@ -23,8 +24,7 @@ public class FileIntegrityChecker extends DRemoteTask {
     tryComplete();
   }
 
-  @Override public void reduce(DRemoteTask drt) {
-    FileIntegrityChecker o = (FileIntegrityChecker) drt;
+  @Override public void reduce(FileIntegrityChecker o) {
     if( _ok == null ) _ok = o._ok;
     else for ( int i = 0; i < _ok.length; ++i ) _ok[i] += o._ok[i];
   }
@@ -48,18 +48,12 @@ public class FileIntegrityChecker extends DRemoteTask {
     }
   }
 
-  public static FileIntegrityChecker check(File r) {
-    return check(r, false);
-  }
-
   public static FileIntegrityChecker check(File r, boolean newApi) {
-    FileIntegrityChecker checker = new FileIntegrityChecker(r);
-    checker._newApi = newApi;
-    checker.invokeOnAllNodes();
-    return checker;
+    return new FileIntegrityChecker(r,newApi).invokeOnAllNodes();
   }
 
-  public FileIntegrityChecker(File root) {
+  public FileIntegrityChecker(File root, boolean newApi) {
+    _newApi = newApi;
     ArrayList<File> filesInProgress = new ArrayList();
     addFolder(root,filesInProgress);
     _files = new String[filesInProgress.size()];
