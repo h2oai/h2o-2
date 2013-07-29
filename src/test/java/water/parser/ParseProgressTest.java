@@ -22,7 +22,7 @@ public class ParseProgressTest extends TestUtil {
       f = find_test_file("../demo/UCI-large/covtype/covtype.data");
     if( !f.exists() )
       return;
-    FileIntegrityChecker c = FileIntegrityChecker.check(f);
+    FileIntegrityChecker c = FileIntegrityChecker.check(f,false);
     assertEquals(1,c.size());   // Exactly 1 file
     Key k = c.importFile(0, null);
     assertEquals(true,k!=null);
