@@ -142,12 +142,14 @@ public abstract class DocGen {
     paragraph(sb,"200 OK");
     paragraph(sb,"Success and error responses are identical.");
 
-    section(sb,"Success Example");
     String s[] = R.DocExampleSucc();
-    paraHead(sb);
-    url(sb,name,s);
-    paraTail(sb);
-    paragraph(sb,serve(name,s));
+    if( s != null ) {
+      section(sb,"Success Example");
+      paraHead(sb);
+      url(sb,name,s);
+      paraTail(sb);
+      paragraph(sb,serve(name,s));
+    }
 
     section(sb,"Error Example");
     String f[] = R.DocExampleFail();

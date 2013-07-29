@@ -38,10 +38,8 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new Inspect()),     "Inspect",      "Data");
     Request.addToNavbar(registerRequest(new StoreView()),   "View All",     "Data");
     Request.addToNavbar(registerRequest(new Parse()),       "Parse",        "Data");
-    Request.addToNavbar(registerRequest(new Parse2()),      "Parse2",       "Data");
     Request.addToNavbar(registerRequest(new RReader()),     "Parse R Data", "Data");
     Request.addToNavbar(registerRequest(new ImportFiles()), "Import Files", "Data");
-    Request.addToNavbar(registerRequest(new ImportFiles2()),"Import Files2", "Data");
     Request.addToNavbar(registerRequest(new ImportUrl()),   "Import URL",   "Data");
     Request.addToNavbar(registerRequest(new ImportS3()),    "Import S3",    "Data");
     Request.addToNavbar(registerRequest(new ExportS3()),    "Export S3",    "Data");
@@ -82,6 +80,9 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new TutorialGLMProstate()), "GLM",           "Tutorials");
     Request.addToNavbar(registerRequest(new TutorialKMeans()),      "KMeans",        "Tutorials");
 
+    Request.addToNavbar(registerRequest(new ImportFiles2()),"Import Files2","Beta (FluidVecs!)");
+    Request.addToNavbar(registerRequest(new Parse2()),      "Parse2"       ,"Beta (FluidVecs!)");
+
     // internal handlers
     //registerRequest(new StaticHTMLPage("/h2o/CoefficientChart.html","chart"));
     registerRequest(new DownloadDataset());
@@ -95,6 +96,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new RReaderProgress());
     registerRequest(new PostFile());
     registerRequest(new Progress());
+    registerRequest(new Progress2());
     registerRequest(new PutValue());
     registerRequest(new PutVector());
     registerRequest(new Remove());

@@ -38,7 +38,7 @@ class Basic(unittest.TestCase):
     def test_R_C_prostate(self):
         print "\nStarting prostate.csv"
         rScript = h2o.find_file('R/tests/test_R_C_prostate.R')
-        rLibrary = h2o.find_file('R/H2O.R')
+        rLibrary = h2o.find_file('R/h2o-package/R/H2O.R')
 
         # Columns start at 0
         # Test columns 1-8, with 1 as response

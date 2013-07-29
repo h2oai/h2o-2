@@ -37,7 +37,7 @@ public class ImportFiles extends Request {
   @Override public String[] DocExampleFail() { return new String[]{}; }
 
   FileIntegrityChecker load(File path) {
-    return FileIntegrityChecker.check(path);
+    return FileIntegrityChecker.check(path,false);
   }
 
   @Override protected Response serve() {
@@ -59,12 +59,11 @@ public class ImportFiles extends Request {
     fails = afails.toArray(new String[0]);
     files = afiles.toArray(new String[0]);
     keys  = akeys .toArray(new String[0]);
-    return new Response(Response.Status.done, this);
+    return new Response(Response.Status.done, this, -1, -1, null);
   }
 
-  String parse() {
-    return "Parse.html";
-  }
+  // Auto-link to Parse
+  String parse() { return "Parse.html"; }
 
   // HTML builder
   @Override public boolean toHTML( StringBuilder sb ) {

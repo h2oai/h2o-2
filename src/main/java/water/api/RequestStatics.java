@@ -123,9 +123,22 @@ public class RequestStatics extends Constants {
     return result;
   }
 
-  protected static String encodeRedirectArgs(JsonObject args) {
-    if (args == null)
-      return "";
+  protected static String encodeRedirectArgs(JsonObject args, Object[] args2) {
+    if( args == null && args2 == null ) return "";
+    if( args2 != null ) {
+      StringBuilder sb = new StringBuilder();
+      assert (args2.length &1)==0; // Must be field-name / value pairs
+      for( int i=0; i<args2.length; i+=2 ) {
+        sb.append(i==0?'?':'&').append(args2[i]).append('=');
+        try {
+          sb.append(URLEncoder.encode(args2[i+1].toString(),"UTF-8"));
+        } catch (UnsupportedEncodingException ex) {
+          throw  Log.errRTExcept(ex);
+        }
+      }
+      return sb.toString();
+    }
+
     StringBuilder sb = new StringBuilder();
     sb.append("?");
     for (Map.Entry<String,JsonElement> entry : args.entrySet()) {
@@ -142,6 +155,4 @@ public class RequestStatics extends Constants {
     }
     return sb.toString();
   }
-
-
 }

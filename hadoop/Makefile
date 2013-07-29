@@ -17,13 +17,23 @@ mapr2.1.3_JARS=$(mapr2.1.3_JAR_DIR)/hadoop-0.20.2-dev-core.jar
 
 # ------------------------------
 
-# By default, use linux-style separator.
+# Figure out classpath separator for Unix vs. Windows
 ifndef SEP
     UNAME = $(shell uname)
-    ifeq ($(UNAME),Cygwin)
-        SEP?=;
-    else
-        SEP?=:
+    ifeq ($(UNAME),Darwin)
+        SEP=:
+    endif
+    ifeq ($(UNAME),Linux)
+        SEP=:
+    endif
+
+    ifndef SEP
+        UNAME_DASH_O = $(shell uname -o)
+        ifeq ($(UNAME_DASH_O),Cygwin)
+            SEP?=;
+        else
+            SEP?=:
+        endif
     endif
 endif
 
