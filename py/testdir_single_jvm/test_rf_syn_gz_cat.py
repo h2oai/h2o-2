@@ -100,7 +100,7 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         global SEED, localhost, tryHeap
-        tryHeap = 28
+        tryHeap = 14
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
