@@ -337,6 +337,24 @@ public class Utils {
             } else if( v instanceof int[] ) {
               if( except_ ) f.set(clone, v);
               else f.set(clone, ((int[]) v).clone());
+            } else if( v instanceof float[][] ) {
+              if( except_ ) f.set(clone, v);
+              else {
+                float[][] a = (float[][]) v;
+                float[][] t = new float[a.length][];
+                for( int i = 0; i < a.length; i++ )
+                  t[i] = a[i].clone();
+                f.set(clone, t);
+              }
+            } else if( v instanceof int[][] ) {
+              if( except_ ) f.set(clone, v);
+              else {
+                int[][] a = (int[][]) v;
+                int[][] t = new int[a.length][];
+                for( int i = 0; i < a.length; i++ )
+                  t[i] = a[i].clone();
+                f.set(clone, t);
+              }
             }
             // TODO other types
             else throw new RuntimeException("Field " + f + " cannot be cloned");

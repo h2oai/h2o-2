@@ -5,11 +5,12 @@ import hex.Layer.Input;
 import java.io.IOException;
 import java.nio.FloatBuffer;
 import java.util.Arrays;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import jsr166y.*;
-import water.Boot;
+import water.*;
+import water.fvec.Chunk;
 import water.util.Log;
 import water.util.Utils;
 
@@ -92,6 +93,10 @@ public abstract class Trainer {
     final Thread[] _threads;
 
     public ParallelTrainers(Layer[] ls) {
+      this(ls, 1, 0);
+    }
+
+    public ParallelTrainers(Layer[] ls, int nodes, int index) {
       super(new AtomicInteger());
       _trainers = new Direct[Runtime.getRuntime().availableProcessors()];
       _threads = new Thread[_trainers.length];
@@ -104,7 +109,8 @@ public abstract class Trainer {
         _trainers[t] = new Direct(clones, _count);
         _trainers[t]._batches = _batches / _trainers.length;
         Input input = (Input) _trainers[t]._ls[0];
-        input._n = t * input._count / _trainers.length;
+        int chunks = nodes * _trainers.length;
+        input._n = (int) (input._count * ((long) index * _trainers.length + t) / chunks);
 
         final Direct d = _trainers[t];
         _threads[t] = new Thread("H2O Trainer " + t) {
@@ -120,8 +126,16 @@ public abstract class Trainer {
     }
 
     @Override void run() {
+      start();
+      join();
+    }
+
+    void start() {
       for( int t = 0; t < _threads.length; t++ )
         _threads[t].start();
+    }
+
+    void join() {
       for( int i = 0; i < _threads.length; i++ ) {
         try {
           _threads[i].join();
@@ -274,51 +288,150 @@ public abstract class Trainer {
     }
   }
 
+  //
+
   /**
    *
    */
-  public static class TrainerFJ extends Trainer {
-    static ForkJoinPool _pool = new ForkJoinPool();
+  public static class Distributed extends Trainer {
+    private static final ConcurrentHashMap<Key, Distributed> _instances = new ConcurrentHashMap<Key, Distributed>();
+    private Layer[] _ls;
+    private Parameters[] _ps;
 
-    // F/J tasks for forward and back propagation
-    private ForkJoinTask[][] _fprops, _bprops;
-
-    public TrainerFJ(Layer[] ls) {
+    public Distributed(Layer[] ls) {
       super(new AtomicInteger());
-
-      int cores = Runtime.getRuntime().availableProcessors();
-      _fprops = new ForkJoinTask[ls.length][cores];
-      _bprops = new ForkJoinTask[ls.length][cores];
-      for( int n = 0; n < ls.length; n++ ) {
-        final Layer layer = ls[n];
-        int last = 0;
-        for( int i = 0; i < cores; i++ ) {
-          final int limit = layer._a.length * (i + 1) / cores, off = last, len = limit - last;
-          last = limit;
-          _fprops[n][i] = new RecursiveAction() {
-            @Override protected void compute() {
-              layer.fprop(off, len);
-            }
-          };
-          _bprops[n][i] = new RecursiveAction() {
-            @Override protected void compute() {
-              layer.bprop(off, len);
-            }
-          };
-        }
-        assert last == layer._a.length;
-      }
+      _ls = ls;
     }
 
     @Override Layer[] layers() {
-      throw new RuntimeException("TODO Auto-generated method stub");
+      return _ls;
     }
 
     @Override void run() {
-      throw new RuntimeException("TODO Auto-generated method stub");
+      Key key = Key.make();
+      try {
+        _instances.put(key, this);
+        Parameters p = new Parameters();
+        p._ws = new float[_ls.length][];
+        p._bs = new float[_ls.length][];
+        for( int i = 0; i < _ls.length; i++ ) {
+          p._ws[i] = _ls[i]._w;
+          p._bs[i] = _ls[i]._b;
+        }
+        UKV.put(key, p);
+        H2ONode[] nodes = H2O.CLOUD._memary;
+        RPC<Task>[] tasks = new RPC[nodes.length];
+        for( int i = 0; i < nodes.length; i++ ) {
+          _ps[i] = Utils.deepClone(p);
+          tasks[i] = RPC.call(nodes[i], new Task(_ls, key, i));
+        }
+        for( int i = 0; i < nodes.length; i++ )
+          tasks[i].get();
+      } finally {
+        _instances.remove(key);
+      }
     }
   }
 
+  static class Parameters extends Iced {
+    float[][] _ws, _bs;
+  }
+
+  static class Task extends DTask<Task> {
+    Layer[] _ls;
+    Key _ws;
+    int _index;
+
+    private Task(Layer[] ls, Key ws, int index) {
+      _ls = ls;
+      _ws = ws;
+      _index = index;
+    }
+
+    @Override public void compute2() {
+      Parameters p = UKV.get(_ws);
+      for( int y = 1; y < _ls.length; y++ ) {
+        _ls[y]._in = _ls[y - 1];
+        _ls[y]._w = p._ws[y].clone();
+        _ls[y]._b = p._bs[y].clone();
+        _ls[y].init(true);
+      }
+      ParallelTrainers t = new ParallelTrainers(_ls, H2O.CLOUD._memary.length, _index);
+      t.start();
+      for( ;; ) {
+        Parameters delta = new Parameters();
+        for( int y = 1; y < _ls.length; y++ ) {
+          delta._ws[y] = new float[_ls[y]._w.length];
+          delta._bs[y] = new float[_ls[y]._b.length];
+          for( int i = 0; i < _ls[y]._w.length; i++ )
+            delta._ws[y][i] = _ls[y]._w[i] - p._ws[y][i];
+          for( int i = 0; i < _ls[y]._b.length; i++ )
+            delta._bs[y][i] = _ls[y]._b[i] - p._bs[y][i];
+        }
+        Update u = new Update();
+        u._delta = delta;
+        u.invoke(_ws);
+      }
+    }
+  }
+
+  static class Update extends TAtomic<Parameters> {
+    Parameters _delta;
+
+    @Override public Parameters atomic(Parameters old) {
+      for( int y = 1; y < old._ws.length; y++ ) {
+        for( int i = 0; i < _ls[y]._w.length; i++ )
+          old._ws[y][i] += _ls[y]._w[i] - p._ws[y][i];
+      }
+      for( int y = 1; y < old._bs.length; y++ ) {
+        delta._bs[y] = new float[_ls[y]._b.length];
+        for( int i = 0; i < _ls[y]._b.length; i++ )
+          delta._bs[y][i] = _ls[y]._b[i] - p._bs[y][i];
+      }
+      return delta;
+    }
+  }
+
+  /**
+   *
+   */
+  public static class TrainerMR extends Trainer {
+    private Layer[] _ls;
+
+    public TrainerMR(Layer[] ls) {
+      super(new AtomicInteger());
+      _ls = ls;
+    }
+
+    @Override Layer[] layers() {
+      return _ls;
+    }
+
+    @Override void run() {
+      Weights w = new Weights();
+      //w._w =
+      Key ls = Key.make();
+      UKV.put(ls, w);
+      Pass pass = new Pass();
+      //pass.doAll(X,Y);
+    }
+  }
+
+  static class Pass extends MRTask2<Pass> {
+    Key _ls;
+
+    @Override public void map(Chunk[] bvs) {
+      ;
+    }
+
+    @Override public void reduce(Pass mrt) {
+      ;
+    }
+  }
+
+  /**
+   *
+   */
   public static class OpenCL extends Trainer {
     final Layer[] _ls;
 

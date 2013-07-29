@@ -14,42 +14,46 @@ public abstract class Layer {
   float _l2 = .0001f;
   boolean _auto = true;
   float _autoDelta = .2f;
-
-  // Weights, biases, activity, error
-  float[] _w, _b, _a, _e;
-
-  // Gradients & auto rate data
-  float[] _gw, _gwMult, _gwMtum;
-  float[] _gb, _gbMult, _gbMtum;
+  int _len;
 
   // Previous layer
-  Layer _in;
+  transient Layer _in;
+
+  // Weights, biases, activity, error
+  transient float[] _w, _b, _a, _e;
+
+  // Gradients & auto rate data
+  transient float[] _gw, _gwMult, _gwMtum;
+  transient float[] _gb, _gbMult, _gbMtum;
 
   // Optional visible units bias, e.g. for pre-training
-  float[] _v, _gv;
+  transient float[] _v, _gv;
 
   public Layer() {
   }
 
   public Layer(Layer in, int len) {
-    _w = new float[len * in._a.length];
-    _b = new float[len];
-    _a = new float[len];
-    _e = new float[len];
-
-    _gw = new float[_w.length];
-    _gb = new float[_b.length];
-
     _in = in;
+    _len = len;
   }
 
-  void init() {
-    // deeplearning.net tutorial (TODO figure out one for rectifiers)
-    Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-    float min = (float) -Math.sqrt(6. / (_in._a.length + _a.length));
-    float max = (float) +Math.sqrt(6. / (_in._a.length + _a.length));
-    for( int i = 0; i < _w.length; i++ )
-      _w[i] = rand(rand, min, max);
+  void init(boolean skipWeights) {
+    _a = new float[_len];
+    _e = new float[_len];
+    _gw = new float[_len * _in._len];
+    _gb = new float[_len];
+
+    if( !skipWeights ) {
+      _w = new float[_len * _in._len];
+      _b = new float[_len];
+
+      // deeplearning.net tutorial (TODO figure out one for rectifiers)
+      Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+      float min = (float) -Math.sqrt(6. / (_in._a.length + _a.length));
+      float max = (float) +Math.sqrt(6. / (_in._a.length + _a.length));
+      for( int i = 0; i < _w.length; i++ )
+        _w[i] = rand(rand, min, max);
+    }
 
     if( _auto ) {
       _gwMult = new float[_w.length];
@@ -120,8 +124,7 @@ public abstract class Layer {
       _a = new float[len];
     }
 
-    @Override void init() {
-      //
+    @Override void init(boolean skipWeights) {
     }
 
     abstract int label();
@@ -173,8 +176,8 @@ public abstract class Layer {
       super(in, len);
     }
 
-    @Override void init() {
-      super.init();
+    @Override void init(boolean skipWeights) {
+      super.init(skipWeights);
 
       for( int i = 0; i < _b.length; i++ )
         _b[i] = 1;

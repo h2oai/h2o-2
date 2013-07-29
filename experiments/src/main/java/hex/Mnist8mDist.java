@@ -20,16 +20,14 @@ public class Mnist8mDist {
       String local = H2O.findInetAddressForSelf().getHostAddress();
 
       ArrayList<Host> list = new ArrayList<Host>();
-      list.add(new Host("192.168.1.176"));
-      list.add(new Host("192.168.1.177"));
-//      for( int i = 0; i < 10; i++ )
-//        list.add(new Host("192.168.1." + (171 + i)));
-//      for( int i = 0; i < 6; i++ )
-//        list.add(new Host("192.168.1.15" + i));
+      for( int i = 0; i < 10; i++ )
+        list.add(new Host("192.168.1." + (171 + i)));
+      for( int i = 0; i < 6; i++ )
+        list.add(new Host("192.168.1.15" + i));
       Host[] workers = list.toArray(new Host[0]);
 
       int port = 54321;
-      String flat = "";//local + ":" + port + '\n';
+      String flat = local + ":" + port + '\n';
       for( int i = 0; i < workers.length; i++ )
         flat += workers[i].address() + ":" + port + '\n';
       String flatfile = "target/flatfile";

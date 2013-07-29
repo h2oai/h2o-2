@@ -159,4 +159,8 @@ public class Host {
     }
     return "ssh -l " + _user + " -A" + k + SSH_OPTS;
   }
+
+  @Override public String toString() {
+    return "Host " + _address;
+  }
 }
