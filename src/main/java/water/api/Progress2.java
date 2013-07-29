@@ -30,8 +30,7 @@ public class Progress2 extends Request {
 
   /** Return {@link Response} for finished job. */
   protected Response jobDone(final Job job, final String dst) {
-    throw H2O.unimpl();
-    //return Inspect.redirect(jsonResp, job, Key.make(_dest.value()));
+    return Inspect2.redirect(this,dst);
   }
 
   /** Return default progress {@link Response}. */

@@ -73,7 +73,6 @@ public final class ParseDataset2 extends Job {
       @Override public ParseProgress atomic(ParseProgress old) {
         if (old == null) return null;
         old._value += len;
-        System.out.println(old._value+"/"+old._total);
         return old;
       }
     }.fork(progress);
@@ -219,6 +218,7 @@ public final class ParseDataset2 extends Job {
     }
     // Jam the frame of columns into the K/V store
     UKV.put(job.dest(),new Frame(names,uzpt._vecs));
+    job.remove();
   }
 
   // --------------------------------------------------------------------------
