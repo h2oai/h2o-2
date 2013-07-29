@@ -1,7 +1,5 @@
-import unittest
-import random, sys, time
+import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts
 
 zeroList = [

@@ -1,5 +1,4 @@
-import unittest
-import random, sys
+import unittest, random, sys
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_rf, h2o_hosts
 

@@ -5,7 +5,8 @@
 ./n0.doit test_allstate_claim_prediction.py
 ./n0.doit test_arity.py
 ./n0.doit test_bad_nofinaltrees.py
-./n0.doit test_big_local_cloud.py
+# ./n0.doit test_big_local_cloud.py
+# ./n0.doit test_build_cloud_relaxed.py
 # ./n0.doit test_cloud_127_2_loop.py
 # ./n0.doit test_cloud_127.py
 # ./n0.doit test_cloud_17to25.py
@@ -63,7 +64,6 @@
 ./n0.doit test_many_cols_and_types.py
 ./n0.doit test_many_fp_formats.py
 ./n0.doit test_multi_with_a_browser.py
-./n0.doit test_parse_10k_files.py
 ./n0.doit test_parse_csv_download.py
 ./n0.doit test_parse_file_loop.py
 ./n0.doit test_parse_fs_schmoo.py
@@ -91,6 +91,7 @@
 ./n0.doit test_same_parse.py
 ./n0.doit test_sigar.py
 ./n0.doit test_stedo.py
+./n0.doit test_storeview_import.py
 ./n0.doit test_sum_dkv_fail.py
 ./n0.doit test_sum_import_hosts.py
 ./n0.doit test_summary_percentile_hosts.py

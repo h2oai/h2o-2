@@ -1,5 +1,4 @@
-import unittest
-import re, os, shutil, sys
+import unittest, sys
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts
 

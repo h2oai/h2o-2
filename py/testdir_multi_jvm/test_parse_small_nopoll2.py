@@ -1,7 +1,5 @@
-import unittest
-import re, os, shutil, sys, random, time
+import unittest, sys, random, time
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts
 
 def writeRows(csvPathname,row,eol,repeat):
@@ -51,12 +49,11 @@ class Basic(unittest.TestCase):
             for trial in range(trialMax):
                 # have to repeat the put because h2o deletes the source key now after parse
                 key = csvFilename + "_" + str(trial)
-                pkey = node.put_file(csvPathname, key=key, timeoutSecs=timeoutSecs)
-                ## print h2o.dump_json(pkey)
                 key2 = csvFilename + "_" + str(trial) + ".hex"
                 # just parse, without polling, except for last one..will that make prior ones complete too?
                 noPoll = trial!=(trialMax-1)
-                node.parse(pkey, key2, timeoutSecs=timeoutSecs, retryDelaySecs=0.5, noPoll=noPoll)
+                parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2, timeoutSecs=30)
+
                 if not trial%10:
                     sys.stdout.write('.')
                     sys.stdout.flush()

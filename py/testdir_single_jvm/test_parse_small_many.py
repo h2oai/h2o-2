@@ -1,7 +1,5 @@
-import unittest
-import re, os, shutil, sys, random
+import unittest, re, sys, random
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts
 
 def writeRows(csvPathname,row,eol,repeat):
@@ -48,13 +46,10 @@ class Basic(unittest.TestCase):
             csvPathname = SYNDATASETS_DIR + "/" + csvFilename
             writeRows(csvPathname,row,eol,size)
             key = csvFilename
-            print h2o.dump_json(key)
             for trial in range(5):
-                # data key is deleted after parse now, so have to put it again
-                pkey = node.put_file(csvPathname, key=key, timeoutSecs=timeoutSecs)
                 key2 = csvFilename + "_" + str(trial) + ".hex"
-                # just parse
-                node.parse(pkey, key2, timeoutSecs=timeoutSecs, retryDelaySecs=0.00)
+                parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2)
+
                 sys.stdout.write('.')
                 sys.stdout.flush()
 

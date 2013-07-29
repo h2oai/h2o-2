@@ -1,9 +1,5 @@
-# this lets me be lazy..starts the cloud up like I want from my json, and gives me a browser
-# copies the jars for me, etc. Just hangs at the end for 10 minutes while I play with the browser
-import unittest
-import time,sys
+import unittest, time, sys
 sys.path.extend(['.','..','py'])
-
 import h2o_cmd, h2o, h2o_hosts
 import h2o_browse as h2b
 

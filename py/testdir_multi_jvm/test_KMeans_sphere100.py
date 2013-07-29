@@ -1,8 +1,6 @@
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys, random, math
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_browse as h2b
-import random
-import math
 import h2o_util
 
 # a truly uniform sphere

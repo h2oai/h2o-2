@@ -1,11 +1,7 @@
-import unittest
-import random, sys, time, os
+import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
 import h2o_kmeans
-
-# the shared exec expression creator and executor
 import h2o_exec as h2e
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):

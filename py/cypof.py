@@ -4,7 +4,7 @@ import h2o_hosts
 import sys
 import time
 import webbrowser
-#import os, json, unittest, time, shutil, sys
+#import unittest, time, sys
 #sys.path.extend(['.','..','py'])
 
 h2o.config_json = "testdir_hosts/pytest_config-cypof.json"

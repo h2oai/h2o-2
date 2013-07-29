@@ -1,4 +1,4 @@
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys
 # not needed, but in case you move it down to subdir
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts

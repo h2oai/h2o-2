@@ -53,6 +53,11 @@ def runInspect(node=None, key=None, timeoutSecs=5, **kwargs):
     if not node: node = h2o.nodes[0]
     return node.inspect(key, timeoutSecs=timeoutSecs, **kwargs)
 
+def runSummary(node=None, key=None, timeoutSecs=30, **kwargs):
+    if not key: raise Exception('No key for Summary specified')
+    if not node: node = h2o.nodes[0]
+    return node.summary_page(key, timeoutSecs=timeoutSecs, **kwargs)
+
 # Not working in H2O yet, but support the test
 def runStore2HDFS(node=None, key=None, timeoutSecs=5, **kwargs):
     if not key: raise Exception('No key for Inspect specified')
@@ -377,7 +382,8 @@ def infoFromInspect(inspect, csvPathname):
            (num_cols, num_rows, row_size, ptype, value_size_bytes, ptime)
     return missingValuesList
 
-def infoFromSummary(summary):
+def infoFromSummary(summaryResult):
+    summary = summaryResult['summary']
     columnsList = summary['columns']
     for columns in columnsList:
         N = columns['N']
