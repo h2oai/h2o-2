@@ -32,7 +32,8 @@ public final class H2O {
 
   static boolean _hdfsActive = false;
 
-  public static final String VERSION = "0.3";
+  // public static final String VERSION = "0.3";
+  public static final String VERSION = "99.99.99.99999";
 
   // User name for this Cloud
   public static String NAME;
@@ -879,7 +880,7 @@ public final class H2O {
   // Used to update the Throwable detailMessage field.
   private static java.lang.reflect.Field DETAILMESSAGE;
   public static <T extends Throwable> T setDetailMessage( T t, String s ) {
-    try { if( DETAILMESSAGE != null )  DETAILMESSAGE.set(t,s); } 
+    try { if( DETAILMESSAGE != null )  DETAILMESSAGE.set(t,s); }
     catch( IllegalAccessException iae) {}
     return t;
   }
@@ -892,11 +893,11 @@ public final class H2O {
   private static void startupFinalize() {
     // Allow Throwable detailMessage's to be updated on the fly.  Ugly, ugly,
     // but I want to add info without rethrowing/rebuilding whole exceptions.
-    try { 
+    try {
       DETAILMESSAGE = Throwable.class.getDeclaredField("detailMessage");
       DETAILMESSAGE.setAccessible(true);
     } catch( NoSuchFieldException nsfe ) { }
-    
+
     // Sleep a bit so all my other threads can 'catch up'
     try { Thread.sleep(1000); } catch( InterruptedException e ) { }
   }

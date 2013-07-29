@@ -4,7 +4,7 @@ if(!"rjson" %in% rownames(installed.packages())) install.packages(rjson)
 library(RCurl)
 library(rjson)
 
-h2o.VERSION = 0.3
+h2o.VERSION = "99.99.99.99999"
 
 # Class definitions
 # setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321))
@@ -463,5 +463,5 @@ h2o.__packageVersion <- function() {
   if("h2o" %in% rownames(installed.packages()))
     packageVersion("h2o")
   else
-    as.character(h2o.VERSION)
+    h2o.VERSION
 }
