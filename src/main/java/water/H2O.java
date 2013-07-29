@@ -684,6 +684,7 @@ public final class H2O {
     String build_branch = "(unknown)";
     String build_hash = "(unknown)";
     String build_describe = "(unknown)";
+    String build_project_version = "(unknown)";
     String build_by = "(unknown)";
     String build_on = "(unknown)";
     try {
@@ -693,6 +694,7 @@ public final class H2O {
       build_branch = abv.branchName();
       build_hash = abv.lastCommitHash();
       build_describe = abv.describe();
+      build_project_version = abv.projectVersion();
       build_by = abv.compiledBy();
       build_on = abv.compiledOn();
       // it exists on the classpath
@@ -704,6 +706,7 @@ public final class H2O {
     Log.info ("Build git branch: " + build_branch);
     Log.info ("Build git hash: " + build_hash);
     Log.info ("Build git describe: " + build_describe);
+    Log.info ("Build project version: " + build_project_version);
     Log.info ("Built by: '" + build_by + "'");
     Log.info ("Built on: '" + build_on + "'");
 
