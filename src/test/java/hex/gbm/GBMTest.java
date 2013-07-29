@@ -82,4 +82,29 @@ public class GBMTest extends TestUtil {
       UKV.remove(dest);
     }
   }
+
+  /*@Test*/ public void testCovtypeDRF() {
+    File file = TestUtil.find_test_file("../datasets/UCI/UCI-large/covtype/covtype.data");
+    if( file == null ) return;  // Silently abort test if the large covtype is missing
+    Key fkey = NFSFileVec.make(file);
+    Key dest = Key.make("cov1.hex");
+    Frame fr = ParseDataset2.parse(dest,new Key[]{fkey});
+    UKV.remove(fkey);
+    System.out.println("Parsed into "+fr);
+    for( int i=0; i<fr._vecs.length; i++ )
+      System.out.println("Vec "+i+" = "+fr._vecs[i]);
+
+    try {
+      assertEquals(581012,fr._vecs[0].length());
+
+      // Covtype: predict on last column
+      int mtrys = Math.max((int)Math.sqrt(fr.numCols()),1);
+
+      DRF drf = DRF.start(DRF.makeKey(),fr,/*maxdepth*/40,/*ntrees*/10,mtrys);
+      drf.get();                  // Block for result
+      UKV.remove(drf._dest);
+    } finally {
+      UKV.remove(dest);
+    }
+  }
 }
