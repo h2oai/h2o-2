@@ -1356,9 +1356,7 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
 
   public class Bool extends InputCheckBox {
-
     public final String _description;
-
     public Bool(String name, boolean defaultValue, String description) {
       super(name, defaultValue);
       _description = description;
@@ -1367,7 +1365,6 @@ public class RequestArguments extends RequestStatics {
     @Override protected String queryDescription() {
       return _description;
     }
-
   }
 
   // ---------------------------------------------------------------------------

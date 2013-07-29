@@ -37,7 +37,7 @@ public class ImportFiles extends Request {
   @Override public String[] DocExampleFail() { return new String[]{}; }
 
   FileIntegrityChecker load(File path) {
-    return FileIntegrityChecker.check(path);
+    return FileIntegrityChecker.check(path,false);
   }
 
   @Override protected Response serve() {
@@ -62,9 +62,8 @@ public class ImportFiles extends Request {
     return new Response(Response.Status.done, this);
   }
 
-  String parse() {
-    return "Parse.html";
-  }
+  // Auto-link to Parse
+  String parse() { return "Parse.html"; }
 
   // HTML builder
   @Override public boolean toHTML( StringBuilder sb ) {
