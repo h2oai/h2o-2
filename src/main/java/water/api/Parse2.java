@@ -223,10 +223,11 @@ public class Parse2 extends Request {
         : new CsvParser.Setup(q._separator,header.value(),q._data,q._numlines,q._bits);
 
       Key[] keys = p._keys.toArray(new Key[p._keys.size()]);
-      job = ParseDataset2.forkParseDataset(d, keys,new_setup)._self.toString();
+      Key jobkey = ParseDataset2.forkParseDataset(d, keys,new_setup)._self;
+      job = jobkey.toString();
       destination_key = d.toString();
 
-      return new Response(Status.done, this);
+      return Progress2.redirect(this,jobkey,d);
     } catch (IllegalArgumentException e) {
       return Response.error(e.getMessage());
     } catch (Error e) {

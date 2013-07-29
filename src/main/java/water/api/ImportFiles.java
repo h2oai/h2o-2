@@ -59,7 +59,7 @@ public class ImportFiles extends Request {
     fails = afails.toArray(new String[0]);
     files = afiles.toArray(new String[0]);
     keys  = akeys .toArray(new String[0]);
-    return new Response(Response.Status.done, this);
+    return new Response(Response.Status.done, this, -1, -1, null);
   }
 
   // Auto-link to Parse

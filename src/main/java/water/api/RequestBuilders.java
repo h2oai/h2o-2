@@ -161,13 +161,13 @@ public class RequestBuilders extends RequestQueries {
         result.replace("TEXT","Request was successful and the process was started. You will be redirected to the new page in 1 seconds, or when you click on the redirect"
                 + " button on the left. If you want to keep this page for longer you can <a href='#' onclick='countdown_stop()'>stop the countdown</a>.");
         RString redirect = new RString(_redirectJs);
-        redirect.replace("REDIRECT_URL",response._redirectName+".html"+encodeRedirectArgs(response._redirectArgs));
+        redirect.replace("REDIRECT_URL",response._redirectName+".html"+encodeRedirectArgs(response._redirectArgs,response._redirArgs));
         result.replace("JSSTUFF", redirect.toString());
         break;
       case poll:
         if (response._redirectArgs != null) {
           RString poll = new RString(_redirectJs);
-          poll.replace("REDIRECT_URL",getClass().getSimpleName()+".html"+encodeRedirectArgs(response._redirectArgs));
+          poll.replace("REDIRECT_URL",getClass().getSimpleName()+".html"+encodeRedirectArgs(response._redirectArgs,response._redirArgs));
           result.replace("JSSTUFF", poll.toString());
         } else {
           result.replace("JSSTUFF", _pollJs);
@@ -277,6 +277,7 @@ public class RequestBuilders extends RequestQueries {
      * object when called.
      */
     protected final JsonObject _redirectArgs;
+    protected final Object[] _redirArgs;
 
     /** Poll progress in terms of finished elements.
      */
@@ -312,6 +313,7 @@ public class RequestBuilders extends RequestQueries {
       _response = response;
       _redirectName = null;
       _redirectArgs = null;
+      _redirArgs = null;
       _pollProgress = -1;
       _pollProgressElements = -1;
       _req = null;
@@ -323,6 +325,7 @@ public class RequestBuilders extends RequestQueries {
       _response = response;
       _redirectName = redirectName;
       _redirectArgs = redirectArgs;
+      _redirArgs = null;
       _pollProgress = -1;
       _pollProgressElements = -1;
       _req = null;
@@ -334,18 +337,20 @@ public class RequestBuilders extends RequestQueries {
       _response = response;
       _redirectName = null;
       _redirectArgs = pollArgs;
+      _redirArgs = null;
       _pollProgress = progress;
       _pollProgressElements = total;
       _req = null;
     }
 
-    public Response(Status status, Request req) {
+    public Response(Status status, Request req, int progress, int total, String redirTo, Object... args) {
       _status = status;
       _response = null;
-      _redirectName = null;
+      _redirectName = redirTo;
       _redirectArgs = null;
-      _pollProgress = -1;
-      _pollProgressElements = -1;
+      _redirArgs = args;
+      _pollProgress = progress;
+      _pollProgressElements = total;
       _req = req;
     }
 
@@ -954,7 +959,7 @@ public class RequestBuilders extends RequestQueries {
       if (disabled)
         return "<li class='disabled'><a>"+caption+"</a></li>";
       else
-        return "<li><a href='"+RequestStatics.encodeRedirectArgs(_query)+"'>"+caption+"</a></li>";
+        return "<li><a href='"+RequestStatics.encodeRedirectArgs(_query,null)+"'>"+caption+"</a></li>";
     }
 
     protected String infoButton() {
