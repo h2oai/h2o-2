@@ -1,16 +1,57 @@
 #
-# Nightly build directions:
+# Standard developer directions:
 #
-# make PROJECT_VERSION=correct.project.version
-#
-# PROJECT_VERSION must be strictly numerical.  E.g. 1.3.1853
+# $ make
 #
 
-PROJECT_VERSION ?= 99.90
+#
+# Nightly build directions:
+#
+# Create ci/buildnumber.properties with the following entry:
+#     BUILD_NUMBER=n
+# 
+# $ make
+#
+
+
+###########################################################################
+# Figure out how to create PROJECT_VERSION variable.
+###########################################################################
+
+# 'ci' directory stands for Continuous Integration, which is where the
+# version number stuff for a release is stored.
+#
+# ci/release.properties is a file that exists in git and is updated by
+# hand on a per-branch basis.  This file contains the variables
+#     BUILD_MAJOR_VERSION=x
+#     BUILD_MINOR_VERSION=y
+#     BUILD_INCREMENTAL_VERSION=z
+#
+# ci/buildnumber.properties is a file that gets created by jenkins.
+# This file contains the variable
+#     BUILD_NUMBER=n
+#
+# Simply cloning a git repository won't get you a real build number.
+# Only jenkins manages them.
+
+include ci/release.properties
+
+# Use buildnumber.properties if it exists.  Otherwise, use 99999
+BUILDNUMBER_PROPERTIES_FILE=$(wildcard ci/buildnumber.properties)
+ifneq ($(BUILDNUMBER_PROPERTIES_FILE),)
+include ci/buildnumber.properties
+else
+BUILD_NUMBER=99999
+endif
+
+PROJECT_VERSION ?= $(BUILD_MAJOR_VERSION).$(BUILD_MINOR_VERSION).$(BUILD_INCREMENTAL_VERSION).$(BUILD_NUMBER)
+
+###########################################################################
 
 default: nightly_build_stuff
 
 nightly_build_stuff:
+	@echo PROJECT_VERSION is $(PROJECT_VERSION)
 	$(MAKE) build PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) build_installer PROJECT_VERSION=$(PROJECT_VERSION)
 
