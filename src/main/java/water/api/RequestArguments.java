@@ -1538,7 +1538,7 @@ public class RequestArguments extends RequestStatics {
     }
 
     @Override protected ValueArray defaultValue() {
-      return _defaultKey == null ? null : DKV.get(_defaultKey).get();
+      return _defaultKey == null ? null : (ValueArray)DKV.get(_defaultKey).get();
     }
 
     @Override protected String queryDescription() { return "An existing H2O HEX key"; }
