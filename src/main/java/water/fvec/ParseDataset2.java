@@ -57,7 +57,7 @@ public final class ParseDataset2 extends Job {
   // --------------------------------------------------------------------------
   // Parser progress
   static class ParseProgress extends Iced {
-    long _total;
+    final long _total;
     long _value;
     ParseProgress(long val, long total){_value = val; _total = total;}
     // Total number of steps is equal to total bytecount across files
@@ -67,6 +67,16 @@ public final class ParseDataset2 extends Job {
         total += getVec(fkey).length();
       return new ParseProgress(0,total);
     }
+  }
+  static final void onProgress(final long len, final Key progress) {
+    new TAtomic<ParseProgress>() {
+      @Override public ParseProgress atomic(ParseProgress old) {
+        if (old == null) return null;
+        old._value += len;
+        System.out.println(old._value+"/"+old._total);
+        return old;
+      }
+    }.fork(progress);
   }
 
   @Override public float progress() {
@@ -137,7 +147,7 @@ public final class ParseDataset2 extends Job {
     }
   }
 
-  public static class EnumFetchTask extends MRTask {
+  public static class EnumFetchTask extends MRTask<EnumFetchTask> {
     final Key _k;
     final int [] _ecols;
     final int _homeNode; // node where the computation started, enum from this node MUST be cloned!
@@ -156,20 +166,13 @@ public final class ParseDataset2 extends Job {
       }
     }
 
-    @Override public void reduce(DRemoteTask drt) {
-      EnumFetchTask etk = (EnumFetchTask)drt;
+    @Override public void reduce(EnumFetchTask etk) {
       if(_enums == null) _enums = etk._enums;
-      else if (etk._enums != null){
-        for(int i:_ecols)_enums[i].merge(etk._enums[i]);
-      }
+      else if (etk._enums != null)
+        for(int i:_ecols) _enums[i].merge(etk._enums[i]);
     }
     public static Enum [] fetchEnums(Key k, int [] ecols){
-      EnumFetchTask tsk = new EnumFetchTask(H2O.SELF.index(), k, ecols);
-//      Key [] keys = new Key[H2O.CLOUD.size()];
-//      for(int i = 0; i < keys.length; ++i) // make a bogus key for every node in the cloud to
-//        keys[i] = Key.make("aaa",(byte)1, Key.DFJ_INTERNAL_USER,H2O.CLOUD._memary[i]);
-      tsk.invokeOnAllNodes();
-      return tsk._enums;
+      return new EnumFetchTask(H2O.SELF.index(), k, ecols).invokeOnAllNodes()._enums;
     }
   }
 
@@ -196,7 +199,7 @@ public final class ParseDataset2 extends Job {
     if( setup == null || setup._data == null || setup._data[0] == null )
       setup = csvGuessValue(vec, sep, compression);
     // Parallel file parse launches across the cluster
-    MultiFileParseTask uzpt = new MultiFileParseTask(setup).invoke(fkeys);
+    MultiFileParseTask uzpt = new MultiFileParseTask(setup,job._progress).invoke(fkeys);
     if( uzpt._parserr != null )
       throw new ParseException(uzpt._parserr);
     int [] ecols = uzpt.enumCols();
@@ -224,23 +227,16 @@ public final class ParseDataset2 extends Job {
   // the parallelism on each node.
   public static class MultiFileParseTask extends MRTask<MultiFileParseTask> {
     public static NonBlockingHashMap<Key, Enum[]> _enums = new NonBlockingHashMap<Key, Enum[]>();
-    private final  Key _eKey = Key.make();
+    private final Key _eKey = Key.make();
+    private final Key _progress;
     public final CsvParser.Setup _setup; // The expected column layout
     // OUTPUT fields:
     public String _parserr;              // NULL if parse is OK, else an error string
     // All column data for this one file
     Vec _vecs[];
-    MultiFileParseTask( CsvParser.Setup setup ) {_setup = setup;}
 
-    public int [] enumCols (){
-      int [] res = new int[_vecs.length];
-      int n = 0;
-      for(int i = 0; i < _vecs.length; ++i){
-        if(_vecs[i].dtype() == Vec.DType.S)
-          res[n++] = i;
-      }
-      return Arrays.copyOf(res, n);
-    }
+    MultiFileParseTask( CsvParser.Setup setup, Key progress ) {_setup = setup; _progress = progress; }
+
     // Called once per file
     @Override public void map( Key key ) {
       // Get parser setup info for this chunk
@@ -278,7 +274,7 @@ public final class ParseDataset2 extends Job {
           break;
         case ZIP: {
           // Zipped file; no parallel decompression;
-          ZipInputStream zis = new ZipInputStream(vec.openStream());
+          ZipInputStream zis = new ZipInputStream(vec.openStream(_progress));
           ZipEntry ze = zis.getNextEntry(); // Get the *FIRST* entry
           // There is at least one entry in zip file and it is not a directory.
           if( ze != null && !ze.isDirectory() ) streamParse(zis,setup);
@@ -287,7 +283,7 @@ public final class ParseDataset2 extends Job {
         }
         case GZIP:
           // Zipped file; no parallel decompression;
-          streamParse(new GZIPInputStream(vec.openStream()),setup);
+          streamParse(new GZIPInputStream(vec.openStream(_progress)),setup);
           break;
         }
       } catch( IOException ioe ) {
@@ -345,7 +341,7 @@ public final class ParseDataset2 extends Job {
     private void distroParse( ByteVec vec, final CsvParser.Setup localSetup ) throws IOException {
       Vec bvs[] = Arrays.copyOf(_vecs,_vecs.length+1,Vec[].class);
       bvs[bvs.length-1] = vec;
-      DParse dp = new DParse(localSetup).doAll(bvs);
+      DParse dp = new DParse(localSetup,_progress).doAll(bvs);
       // After the MRTask2, the input Vec array has all the AppendableVecs
       // closed() and rewritten as plain Vecs.  Copy those back into the _cols
       // array.
@@ -353,7 +349,8 @@ public final class ParseDataset2 extends Job {
     }
     private class DParse extends MRTask2<DParse> {
       final CsvParser.Setup _setup;
-      DParse(CsvParser.Setup setup) {_setup = setup;}
+      final Key _progress;
+      DParse(CsvParser.Setup setup, Key progress) {_setup = setup; _progress = progress;}
       @Override public void map( Chunk[] bvs ) {
         Enum [] enums = enums();
         // Break out the input & output vectors before the parse loop
@@ -362,7 +359,18 @@ public final class ParseDataset2 extends Job {
         // The Parser
         ChunkParser parser = new ChunkParser(in,nvs,_setup,enums);
         parser.parse(0);
+        onProgress(in._len, _progress); // Record bytes parsed
       }
+    }
+
+    // Collect the string columns
+    public int [] enumCols (){
+      int [] res = new int[_vecs.length];
+      int n = 0;
+      for(int i = 0; i < _vecs.length; ++i)
+        if(_vecs[i].dtype() == Vec.DType.S)
+          res[n++] = i;
+      return Arrays.copyOf(res, n);
     }
   }
 
@@ -371,7 +379,7 @@ public final class ParseDataset2 extends Job {
 
   public static enum Compression { NONE, ZIP, GZIP }
   public static Compression guessCompressionMethod( ByteVec vec) {
-    C1Chunk bv = vec.elem2BV(0); // First chunk of bytes
+    C1NChunk bv = vec.elem2BV(0); // First chunk of bytes
     // Look for ZIP magic
     if( vec.length() > ZipFile.LOCHDR && bv.get4(0) == ZipFile.LOCSIG )
       return Compression.ZIP;
@@ -382,7 +390,7 @@ public final class ParseDataset2 extends Job {
 
   public static CsvParser.Setup csvGuessValue( ByteVec vec, byte separator, Compression compression ) {
     // Since this data is all bytes, we know each chunk is just raw text.
-    C1Chunk bv = vec.elem2BV(0);
+    C1NChunk bv = vec.elem2BV(0);
     // See if we can make sense of the first few rows.
     byte[] bs = bv._mem;
     int off = 0;                   // Offset of read/decompressed bytes
@@ -391,9 +399,9 @@ public final class ParseDataset2 extends Job {
     try {
       switch( compression ) {
       case NONE: off = bs.length; break; // All bytes ready already
-      case GZIP: is = new GZIPInputStream(vec.openStream()); break;
+      case GZIP: is = new GZIPInputStream(vec.openStream(null)); break;
       case ZIP: {
-        ZipInputStream zis = new ZipInputStream(vec.openStream());
+        ZipInputStream zis = new ZipInputStream(vec.openStream(null));
         ZipEntry ze = zis.getNextEntry(); // Get the *FIRST* entry
         // There is at least one entry in zip file and it is not a directory.
         if( ze != null && !ze.isDirectory() ) is = zis;

@@ -141,7 +141,9 @@ public class Parse2 extends Request {
       PSetup setup = source_key.value();
       if( setup == null ) return null;
       String n = setup._keys.get(0).toString();
-      int dot = n.lastIndexOf('.');
+      int dot = n.lastIndexOf('.'); // Peel off common .csv or .csv.gz suffix
+      if( dot > 0 ) n = n.substring(0, dot);
+      dot = n.lastIndexOf('.'); // Peel off common .csv.gz suffix
       if( dot > 0 ) n = n.substring(0, dot);
       int i = 0;
       String res = n + Extensions.HEX;

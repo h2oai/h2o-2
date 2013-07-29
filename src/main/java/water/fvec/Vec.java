@@ -274,20 +274,26 @@ public class Vec extends Iced {
    * Class representing the group of vectors.
    *
    * Vectors from the same group have same distribution of chunks among nodes.
-   * Each vector is member of exactly one group. Default group of one vector is created for each vector.
-   * Group of each vector can be retrieved by calling group() method;
+   * Each vector is member of exactly one group.  Default group of one vector
+   * is created for each vector.  Group of each vector can be retrieved by
+   * calling group() method;
    *
-   * The expected mode of operation is that user wants to add new vectors matching the source.
-   * E.g. parse creates several vectors (one for each column) which are all colocated and are
-   * colocated with the original bytevector.
+   * The expected mode of operation is that user wants to add new vectors
+   * matching the source.  E.g. parse creates several vectors (one for each
+   * column) which are all colocated and are colocated with the original
+   * bytevector.
    *
-   * To do this, user should first ask for the set of keys for the new vectors by calling addVecs method on the
-   * target group.
+   * To do this, user should first ask for the set of keys for the new vectors
+   * by calling addVecs method on the target group.
    *
-   * Vectors in the group will have the same keys except for the prefix which specifies index of the vector inside the group.
-   * The only information the group object carries is it's own key and the number of vectors it contains(deleted vectors still count).
+   * Vectors in the group will have the same keys except for the prefix which
+   * specifies index of the vector inside the group.  The only information the
+   * group object carries is it's own key and the number of vectors it
+   * contains(deleted vectors still count).
    *
-   * Because vectors(and chunks) share the same key-pattern with the group, default group with only one vector does not have to be actually created, it is implicit.
+   * Because vectors(and chunks) share the same key-pattern with the group,
+   * default group with only one vector does not have to be actually created,
+   * it is implicit.
    *
    * @author tomasnykodym
    *
