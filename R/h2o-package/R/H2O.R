@@ -276,7 +276,7 @@ setMethod("h2o.randomForest", signature(y="character", x_ignore="character", dat
             result$type = "classification"
             result$ntree = ntree
             result$oob_err = res$confusion_matrix$classification_error
-            if(x_ignore != "") result$x_ignore = paste(x_ignore, collapse = ", ")
+            if(x_ignore[1] != "") result$x_ignore = paste(x_ignore, collapse = ", ")
             
             rf_matrix = cbind(matrix(unlist(res$trees$depth), nrow=3), matrix(unlist(res$trees$leaves), nrow=3))
             rownames(rf_matrix) = c("Min.", "Mean.", "Max.")

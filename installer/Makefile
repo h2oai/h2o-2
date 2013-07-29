@@ -23,9 +23,14 @@ really_build: build_mac build_win
 
 build_mac:
 	$(INSTALLBUILDER) build h2o.xml osx $(BITROCK_OPTS)
+ifeq ($(UNAME),Linux)
+	(cd $(INSTALLER_OUTPUT_DIR); sudo ../installer/bin/make_dmg.sh h2o-$(PROJECT_VERSION)-osx-installer.app h2o-$(PROJECT_VERSION)-osx-installer.dmg h2o-$(PROJECT_VERSION))
+endif
+	rm -fr $(INSTALLER_OUTPUT_DIR)/h2o-$(PROJECT_VERSION)-osx-installer.app
 
 build_win:
 	$(INSTALLBUILDER) build h2o.xml windows $(BITROCK_OPTS)
+	rm -f $(INSTALLER_OUTPUT_DIR)/h2o-*-windows-installer.exe.dmg
 
 clean:
 
