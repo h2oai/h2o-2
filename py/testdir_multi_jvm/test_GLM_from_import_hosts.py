@@ -1,11 +1,9 @@
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys, random, copy
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd
 import h2o_hosts, h2o_glm
 import h2o_browse as h2b
 import h2o_import as h2i
-import time, random, copy
 
 class Basic(unittest.TestCase):
     def tearDown(self):

@@ -29,9 +29,9 @@ class Basic(unittest.TestCase):
     def test_GLM_mnist(self):
         importFolderPath = "/home/0xdiag/datasets/mnist"
         csvFilelist = [
-            ("mnist_train.csv.gz", "mnist_test.csv.gz",    600), 
-            # ("mnist_test.csv.gz",  "mnist_train.csv.gz",    600), 
             ("mnist_train.csv.gz", "mnist_train.csv.gz",    600), 
+            # can't do this because the test dataset doesn't have the output col (col 0 in train)
+            # ("mnist_train.csv.gz", "mnist_test.csv.gz",    600), 
         ]
         # IMPORT**********************************************
         # since H2O deletes the source key, we should re-import every iteration if we re-use the src in the list
@@ -59,20 +59,23 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             print "parse result:", parseKey['destination_key']
 
+            print "We won't use this pruning of x on test data. See if it prunes the same as the training"
+            y = 0 # first column is pixel value
+            print "y:"
+            x = h2o_glm.goodXFromColumnInfo(y, key=parseKey['destination_key'], timeoutSecs=300)
+
             # PARSE train****************************************
             trainKey2 = trainCsvFilename + "_" + str(trial) + ".hex"
             start = time.time()
             parseKey = h2i.parseImportFolderFile(None, trainCsvFilename, importFolderPath,
-                key2=testKey2, timeoutSecs=timeoutSecs)
+                key2=trainKey2, timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
             print "parse end on ", trainCsvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             print "parse result:", parseKey['destination_key']
 
             # GLM****************************************
-            y = 0 # first column is pixel value
-            print "y:"
-            # don't need the intermediate Dicts produced from columnInfoFromInspect
+            print "This is the pruned x we'll use"
             x = h2o_glm.goodXFromColumnInfo(y, key=parseKey['destination_key'], timeoutSecs=300)
             print "x:", x
 

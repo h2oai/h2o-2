@@ -10,10 +10,9 @@
 # Y = np.hstack((X,y))
 # np.savetxt('./1mx' + str(f) + '_hastie_10_2.data', Y, delimiter=',', fmt='%.2f');
 
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys, copy
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_glm, h2o_util, h2o_hosts
-import copy
 
 def glm_doit(self, csvFilename, csvPathname, timeoutSecs=30):
     print "\nStarting GLM of", csvFilename

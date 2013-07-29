@@ -63,18 +63,15 @@ class Basic(unittest.TestCase):
             h2o_cmd.infoFromInspect(inspect, csvPathname)
 
             # SUMMARY****************************************
-            if 1==0:
-                # gives us some reporting on missing values, constant values, 
-                # to see if we have x specified well
-                # figures out everything from parseKey['destination_key']
-                # needs y to avoid output column (which can be index or name)
-                # assume all the configs have the same y..just check with the firs tone
-                goodX = h2o_glm.goodXFromColumnInfo(y=0,
-                    key=parseKey['destination_key'], timeoutSecs=300)
-                summaryResult = h2o.nodes[0].summary_page(key2, timeoutSecs=360)
-                summary = summaryResult['summary']
-                # print h2o.dump_json(summary)
-                infoFromSummary(self, summary)
+            # gives us some reporting on missing values, constant values, 
+            # to see if we have x specified well
+            # figures out everything from parseKey['destination_key']
+            # needs y to avoid output column (which can be index or name)
+            # assume all the configs have the same y..just check with the firs tone
+            goodX = h2o_glm.goodXFromColumnInfo(y=0,
+                key=parseKey['destination_key'], timeoutSecs=300)
+            summaryResult = h2o_cmd.runSummary(key=key2, timeoutSecs=360)
+            h2o_cmd.infoFromSummary(summaryResult)
 
             # STOREVIEW***************************************
             print "Trying StoreView after the parse"

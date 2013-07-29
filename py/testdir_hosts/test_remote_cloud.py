@@ -1,9 +1,7 @@
-import os, json, unittest, time, shutil, sys, time
+import unittest, time, sys,
 sys.path.extend(['.','..','py'])
-
 import h2o_cmd, h2o, h2o_hosts
 import h2o_browse as h2b
-import time
 
 node_count = 5
 global base_port

@@ -16,10 +16,9 @@
 # Y = np.hstack((X,y))
 # np.savetxt('./1mx' + str(f) + '_hastie_10_2.data', Y, delimiter=',', fmt='%.2f');
 
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys, copy
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_kmeans, h2o_util, h2o_hosts
-import copy
 
 def kmeans_doit(self, csvFilename, csvPathname, num_rows, timeoutSecs=30):
     print "\nStarting KMeans of", csvFilename

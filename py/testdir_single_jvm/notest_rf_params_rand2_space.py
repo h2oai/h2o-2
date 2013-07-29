@@ -1,7 +1,5 @@
-import unittest
-import random, sys, time
+import unittest, sys
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_rf, h2o_hosts
 
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF

@@ -1,9 +1,6 @@
-import unittest
-import re, os, shutil, sys
+import unittest, re, sys, random
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts
-import random
 
 class Basic(unittest.TestCase):
     def tearDown(self):

@@ -2,7 +2,7 @@ import unittest
 import random, sys, time, os, re
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
+import h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
 initList = [
         'Result0 = 0',

@@ -1,13 +1,9 @@
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys, time, random, logging, gzip
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_glm
 import h2o_exec as h2e, h2o_jobs
-import time, random, logging
-
 import h2o, h2o_cmd
 import h2o_browse as h2b
-import random
-import gzip
 
 def write_syn_dataset_gz(csvPathname, rowCount, headerData, rowData):
     f = gzip.open(csvPathname, 'wb')

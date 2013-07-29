@@ -1,5 +1,4 @@
-import unittest
-import random, sys, time
+import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
 import h2o_browse as h2b
 

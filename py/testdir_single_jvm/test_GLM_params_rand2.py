@@ -1,8 +1,5 @@
-import unittest
-import random, sys, time
+import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import json
-
 import h2o, h2o_cmd, h2o_hosts, h2o_glm
 
 def define_params():
