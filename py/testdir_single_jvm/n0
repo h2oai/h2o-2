@@ -110,6 +110,7 @@
 ./n0.doit test_rfview_score.py
 ./n0.doit test_R_GLM_basic.py
 ./n0.doit test_R_KMeans_basic.py
+./n0 doit test_R_RF_basic.py
 ./n0.doit test_simple.py
 ./n0.doit test_slice.py
 ./n0.doit test_summary_percentile2.py
