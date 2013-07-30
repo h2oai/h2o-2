@@ -40,7 +40,8 @@ class Basic(unittest.TestCase):
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
 
             # if we hit the max_iter, that means it probably didn't converge. should be 1-maxExpectedIter
-            h2o_glm.simpleCheckGLM(self, glm, None, maxExpectedIterations=kwargs['max_iter']-2, **kwargs)
+            # h2o_glm.simpleCheckGLM(self, glm, None, maxExpectedIterations=kwargs['max_iter']-2, **kwargs)
+            h2o_glm.simpleCheckGLM(self, glm, None, None, **kwargs)
             print "Trial #", trial, "completed\n"
 
 
