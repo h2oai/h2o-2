@@ -586,17 +586,15 @@ def check_sandbox_for_errors(sandbox_ignore_errors=False):
             justInfo &= re.match("INFO:", e) or ("apache" in e)
 
         if not justInfo:
-            emsg1 = " check_sandbox_for_errors: Errors in sandbox stdout or stderr.\n" + \
+            emsg1 = " check_sandbox_for_errors: Errors in sandbox stdout or stderr (including R stdout/stderr).\n" + \
                      "Could have occurred at any prior time\n\n"
             emsg2 = "".join(errLines)
             if nodes: 
                 nodes[0].sandbox_error_report(True)
 
-            # can build a cloud that ignores all sandbox things that normally fatal the test
-            # kludge, test will set this directly if it wants, rather than thru build_cloud
-            # parameter. 
-            # we need the sandbox_ignore_errors, for the test teardown_cloud..the state 
-            # disappears!
+            # Can build a cloud that ignores all sandbox things that normally fatal the test
+            # Kludge, test will set this directly if it wants, rather than thru build_cloud parameter. 
+            # we need the sandbox_ignore_errors, for the test teardown_cloud..the state disappears!
             if sandbox_ignore_errors or (nodes and nodes[0].sandbox_ignore_errors):
                 pass
             else:

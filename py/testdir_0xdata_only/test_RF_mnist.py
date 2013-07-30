@@ -87,7 +87,7 @@ class Basic(unittest.TestCase):
                 'iterative_cm': 1,
                 'out_of_bag_error_estimate': 1,
                 # 'data_key='mnist_training.csv.hex'
-                'features': None,
+                'features': 28, # fix because we ignore some cols, which will change the srt(cols) calc?
                 'exclusive_split_limit': None,
                 'depth': 2147483647,
                 'stat_type': 'ENTROPY',
@@ -106,13 +106,13 @@ class Basic(unittest.TestCase):
             print "Trying rf"
             timeoutSecs = 1800
             start = time.time()
-            rf = h2o_cmd.runRFOnly(parseKey=parseKey, rfView=False,
+            rfView = h2o_cmd.runRFOnly(parseKey=parseKey, rfView=False,
                 timeoutSecs=timeoutSecs, pollTimeoutsecs=60, retryDelaySecs=2, **kwargs)
             elapsed = time.time() - start
             print "RF completed in", elapsed, "seconds.", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-            h2o_rf.simpleCheckRFView(None, rf, **params)
-            modelKey = rf['model_key']
+            h2o_rf.simpleCheckRFView(None, rfView, **params)
+            modelKey = rfView['model_key']
 
             start = time.time()
             # FIX! 1 on oobe causes stack trace?
