@@ -18,6 +18,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        time.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_GLM_gamma_fail1(self):
@@ -25,7 +26,7 @@ class Basic(unittest.TestCase):
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname)
         for trial in range(5):
             kwargs = {
-                'standardize': 0, 
+                'standardize': 1, 
                 'family': 'gamma', 
                 'link': 'familyDefault', 
                 'y': 54, 

@@ -1172,7 +1172,7 @@ class H2O(object):
             'model_key': model_key,
             'out_of_bag_error_estimate': 1, 
             'class_weights': None,
-            'response_variable': -3, # put -3 here to make H2O blow up if it's not specified. required to be correct (same as RF)
+            'response_variable': None, 
             }
         browseAlso = kwargs.pop('browseAlso',False)
 
