@@ -308,7 +308,10 @@ public class H2OLauncher extends JPanel implements ActionListener {
 
 		// Buttons and status.
 		{
+            float buttonFontSize = 20f;
+
 			startButton = new JButton ("Start H2O");
+            startButton.setFont(startButton.getFont().deriveFont(buttonFontSize));
 			startButton.setToolTipText("Start a new Java process running H2O.");
 			startButton.addActionListener(this);
 			startButton.setActionCommand (START_COMMAND);
@@ -320,6 +323,7 @@ public class H2OLauncher extends JPanel implements ActionListener {
 			}
 			
 			stopButton = new JButton ("Stop H2O");
+            stopButton.setFont(stopButton.getFont().deriveFont(buttonFontSize));
 			stopButton.setToolTipText("Stop the currently running H2O Java process.");
 			stopButton.addActionListener(this);
 			stopButton.setActionCommand (STOP_COMMAND);
