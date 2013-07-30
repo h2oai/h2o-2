@@ -1,3 +1,4 @@
+import java.net.URI;
 import java.util.Random;
 import java.awt.*;
 import java.awt.event.*;
@@ -119,6 +120,12 @@ public class H2OLauncher extends JPanel implements ActionListener {
 		javax.swing.SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
 				browserField.setText(s);
+                try {
+                    URI uri = new URI(s);
+                    Desktop.getDesktop().browse(uri);
+                }
+                catch (Exception e) {
+                }
 			}
 		});
 	}
