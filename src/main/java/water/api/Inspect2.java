@@ -2,7 +2,7 @@ package water.api;
 
 import water.*;
 import water.Weaver.Weave;
-import water.fvec.Frame;
+import water.fvec.*;
 
 public class Inspect2 extends Request {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
@@ -20,28 +20,89 @@ public class Inspect2 extends Request {
   }
 
   @Override protected Response serve() {
-    Frame fr = src_key.value();
+    Frame fr = DKV.get(src_key.value()).get();
     if( fr == null ) return RequestServer._http404.serve();
     return new Response(Response.Status.done, this, -1, -1, null);
   }
 
   @Override public boolean toHTML( StringBuilder sb ) {
-    Frame fr = src_key.value();
-    throw H2O.unimpl();
+    Key skey = src_key.value();
+    Frame fr = DKV.get(skey).get();
+
+    DocGen.HTML.title(sb,skey.toString());
+    DocGen.HTML.arrayHead(sb);
+    // Column labels
+    sb.append("<tr>");
+    for( int i=0; i<fr.numCols(); i++ ) 
+      sb.append("<td>").append(fr._names[i]).append("</td>");
+    sb.append("</tr>");
+
+    // First N rows
+    int N = (int)Math.min(100,fr.numRows());
+    for( int j=0; j<N; j++ ) {
+      sb.append("<tr>");
+      for( int i=0; i<fr.numCols(); i++ ) 
+        sb.append("<td>").append(x1(fr._vecs[i],j)).append("</td>");
+      sb.append("</tr>");
+    }
+
+    DocGen.HTML.arrayTail(sb);
+
+    //throw H2O.unimpl();
+    return true;
   }
 
-  public class FrameKey extends TypeaheadInputText<Frame> {
+  // ---
+  // Return a well-formated string for this kind of Vec
+  private String x1( Vec v, int row ) {
+    switch( v.dtype() ) {
+    case I: 
+      return Long.toString(v.at8(row));
+    case F: {
+      Chunk c = v.elem2BV(0);
+      Class Cc = c.getClass();
+      if(        Cc == null ) {
+      } else if( Cc == C1SChunk.class ) {
+        return x2(v,row,((C1SChunk)c)._scale);
+      } else if( Cc == C2SChunk.class ) {
+        return x2(v,row,((C2SChunk)c)._scale);
+      } else {
+        return Double.toString(v.at (row));
+        //throw H2O.unimpl();
+      }
+      return Double.toString(v.at (row));
+    }
+    default: throw H2O.unimpl();
+    }
+  }
+
+  private String x2( Vec v, int row, double scale ) {
+    String s = Double.toString(v.at(row));
+    // Double math roundoff error means sometimes we get very long trailing
+    // strings of junk 0's with 1 digit at the end... when we *know* the data
+    // has only "scale" digits.  Chop back to actual digits
+    int ex = (int)Math.log10(scale);
+    int x = s.indexOf('.');
+    int y = x+1+(-ex);
+    if( x != -1 && y < s.length() ) s = s.substring(0,x+1+(-ex));
+    while( s.charAt(s.length()-1)=='0' )
+      s = s.substring(0,s.length()-1);
+    return s;
+  }
+
+  // ---
+  public class FrameKey extends TypeaheadInputText<Key> {
     public FrameKey(String name) { super(TypeaheadHexKeyRequest.class, name, true); }
 
-    @Override protected Frame parse(String input) throws IllegalArgumentException {
+    @Override protected Key parse(String input) throws IllegalArgumentException {
       Key k = Key.make(input);
       Value v = DKV.get(k);
       if (v == null)    throw new IllegalArgumentException("Key "+input+" not found!");
       Iced ice = v.get();
       if( !(ice instanceof Frame) ) throw new IllegalArgumentException("Key "+input+" is not a valid Frame key");
-      return v.get();
+      return k;
     }
-    @Override protected Frame defaultValue() { return null; }
+    @Override protected Key defaultValue() { return null; }
     @Override protected String queryDescription() { return "An existing H2O Frame key."; }
   }
 }
