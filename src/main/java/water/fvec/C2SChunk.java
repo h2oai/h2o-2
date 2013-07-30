@@ -6,7 +6,7 @@ import water.*;
 public class C2SChunk extends Chunk {
   static private final long _NA = Short.MIN_VALUE;
   static final int OFF=8+4;
-  double _scale;
+  public double _scale;
   int _bias;
   C2SChunk( byte[] bs, int bias, double scale ) { _mem=bs; _start = -1; _len = (_mem.length-OFF)>>1;
     _bias = bias; _scale = scale;
