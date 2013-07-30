@@ -173,7 +173,7 @@ def runRFTreeView(node=None, n=None, data_key=None, model_key=None, timeoutSecs=
     return node.random_forest_treeview(n, data_key, model_key, timeoutSecs, **kwargs)
 
 def runRFView(node=None, data_key=None, model_key=None, ntree=None, 
-    timeoutSecs=15, retryDelaySecs=2, 
+    timeoutSecs=15, retryDelaySecs=2, doSimpleCheck=True,
     noise=None, noPoll=False, noPrint=False, **kwargs):
     if not node: node = h2o.nodes[0]
 
@@ -227,7 +227,8 @@ def runRFView(node=None, data_key=None, model_key=None, ntree=None,
 
     # kind of wasteful re-read, but maybe good for testing
     rfView = node.random_forest_view(data_key, model_key, timeoutSecs, noise=noise, **kwargs)
-    h2f.simpleCheckRFView(node, rfView, noPrint=noPrint)
+    if doSimpleCheck:
+        h2f.simpleCheckRFView(node, rfView, noPrint=noPrint)
     return rfView
 
 def runStoreView(node=None, timeoutSecs=30):

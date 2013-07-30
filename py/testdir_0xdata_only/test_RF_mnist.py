@@ -73,48 +73,33 @@ class Basic(unittest.TestCase):
             print "parse result:", parseKey['destination_key']
 
             # GLM****************************************
-            print "This is the pruned x we'll use"
-            x = h2o_glm.goodXFromColumnInfo(y, key=parseKey['destination_key'], timeoutSecs=300)
-            print "x:", x
+            print "This is the 'ignore=' we'll use"
+            ignore_x = h2o_glm.goodXFromColumnInfo(y, key=parseKey['destination_key'], timeoutSecs=300, forRF=True)
+            print "ignore_x:", ignore_x
 
             params = {
-                'x': x, 
-                'y': y,
-                'case_mode': '=',
-                'case': 0,
-                'family': 'binomial',
-                'lambda': 1.0E-5,
-                'alpha': 0.0,
-                'max_iter': 5,
-                'thresholds': 0.5,
-                'n_folds': 1,
-                'weight': 1,
-                'beta_epsilon': 1.0E-4,
+                'ignore': ignore_x, 
+                'response_variable': y,
                 }
 
-            for c in [0,1,2,3,4,5,6,7,8,9]:
-                kwargs = params.copy()
-                print "Trying binomial with case:", c
-                kwargs['case'] = c
+            kwargs = params.copy()
+            print "Trying rf"
+            timeoutSecs = 1800
+            start = time.time()
+            rf = h2o_cmd.runRFOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutsecs=60, **kwargs)
+            elapsed = time.time() - start
+            print "RF completed in", elapsed, "seconds.", \
+                "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+            h2o_rf.simpleCheckRF(self, rf, None, noPrint=True, **kwargs)
+            modelKey = rf['model_key']
 
-                timeoutSecs = 1800
-                start = time.time()
-                glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutsecs=60, **kwargs)
-                elapsed = time.time() - start
-                print "GLM completed in", elapsed, "seconds.", \
-                    "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-
-                h2o_glm.simpleCheckGLM(self, glm, None, noPrint=True, **kwargs)
-                GLMModel = glm['GLMModel']
-                modelKey = GLMModel['model_key']
-
-                start = time.time()
-                glmScore = h2o_cmd.runGLMScore(key=testKey2, model_key=modelKey, thresholds="0.5",
-                    timeoutSecs=60)
-                elapsed = time.time() - start
-                print "GLMScore in",  elapsed, "secs", \
-                    "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-                h2o_glm.simpleCheckGLMScore(self, glmScore, **kwargs)
+            start = time.time()
+            rfView = h2o_cmd.runRFView(key=testKey2, model_key=modelKey, thresholds="0.5",
+                timeoutSecs=60, noSimpleCheck=True)
+            elapsed = time.time() - start
+            print "RFView in",  elapsed, "secs", \
+                "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+            h2o_rf.simpleCheckRF(self, rfView, **kwargs)
 
 if __name__ == '__main__':
     h2o.unit_main()

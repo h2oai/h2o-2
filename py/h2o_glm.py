@@ -340,7 +340,7 @@ def simpleCheckGLMGrid(self, glmGridResult, colX=None, allowFailWarning=False, *
 
 def goodXFromColumnInfo(y, 
     num_cols=None, missingValuesDict=None, constantValuesDict=None, enumSizeDict=None, colTypeDict=None, colNameDict=None, 
-    keepPattern=None, key=None, timeoutSecs=120):
+    keepPattern=None, key=None, timeoutSecs=120, forRF=False):
 
     y = str(y)
 
@@ -404,6 +404,9 @@ def goodXFromColumnInfo(y,
     x = ",".join(map(str,x))
     print "\nx:", x
     print "\nignore_x:", ignore_x
-    return x
+    if forRF:
+        return ignore_x
+    else:
+        return x
 
 
