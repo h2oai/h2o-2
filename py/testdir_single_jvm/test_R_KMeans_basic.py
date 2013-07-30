@@ -37,7 +37,7 @@ class Basic(unittest.TestCase):
     def test_R_C_kmeans_prostate(self):
         print "\nStarting prostate.csv"
         rScript = h2o.find_file('R/tests/test_R_C_kmeans_prostate.R')
-        rLibrary = h2o.find_file('R/H2O.R')
+        rLibrary = h2o.find_file('R/h2o-package/R/H2O.R')
 
         # Run k-means with k = 5 on column 2 (Age)
         # Loop to see if we get same centers

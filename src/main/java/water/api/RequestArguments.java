@@ -1519,16 +1519,11 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
   public class H2OHexKey extends TypeaheadInputText<ValueArray> {
     public final Key _defaultKey;
-
+    public H2OHexKey(String name, String keyName) { this(name, Key.make(keyName)); }
     public H2OHexKey(String name) {
       super(TypeaheadHexKeyRequest.class, name, true);
       _defaultKey = null;
     }
-
-    public H2OHexKey(String name, String keyName) {
-      this(name, Key.make(keyName));
-    }
-
     public H2OHexKey(String name, Key key) {
       super(TypeaheadHexKeyRequest.class, name, false);
       _defaultKey = key;
@@ -1537,21 +1532,16 @@ public class RequestArguments extends RequestStatics {
     @Override protected ValueArray parse(String input) throws IllegalArgumentException {
       Key k = Key.make(input);
       Value v = DKV.get(k);
-      if (v == null)
-        throw new IllegalArgumentException("Key "+input+" not found!");
-      if (!v.isArray())
-        throw new IllegalArgumentException("Key "+input+" is not a valid HEX key");
+      if (v == null)    throw new IllegalArgumentException("Key "+input+" not found!");
+      if (!v.isArray()) throw new IllegalArgumentException("Key "+input+" is not a valid HEX key");
       return v.get();
     }
 
     @Override protected ValueArray defaultValue() {
-      if(_defaultKey == null) return null;
-      return DKV.get(_defaultKey).get();
+      return _defaultKey == null ? null : (ValueArray)DKV.get(_defaultKey).get();
     }
 
-    @Override protected String queryDescription() {
-      return "An existing H2O HEX key";
-    }
+    @Override protected String queryDescription() { return "An existing H2O HEX key"; }
   }
 
   // -------------------------------------------------------------------------

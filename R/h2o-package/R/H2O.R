@@ -4,7 +4,7 @@ if(!"rjson" %in% rownames(installed.packages())) install.packages(rjson)
 library(RCurl)
 library(rjson)
 
-h2o.VERSION = 0.3
+h2o.VERSION = "99.99.99.99999"
 
 # Class definitions
 # setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321))
@@ -13,8 +13,8 @@ setClass("H2OClient", representation(ip="character", port="numeric"), prototype(
            # if(!is.character(getURL(paste0("http://", object@ip, ":", object@port)))) 
            if(!url.exists(paste0("http://", object@ip, ":", object@port))) {
              "Couldn't connect to host. Do you have H2O running? See http://0xdata.com/h2o/docs/ for details" }
-           else if((pv=h2o.__packageVersion()) != (sv=h2o.__version(object))) {
-             warning(paste("Version mismatch! Server running H2O version", sv, "but R package is version", pv)); TRUE }
+           else if("h2o" %in% rownames(installed.packages()) && (pv=packageVersion("h2o")) != (sv=h2o.__version(object))) {
+            warning(paste("Version mismatch! Server running H2O version", sv, "but R package is version", pv)); TRUE }
            else { cat("Successfully connected to", paste0(object@ip, ":", object@port), "\n"); TRUE } })
 setClass("H2ORawData", representation(h2o="H2OClient", key="character"))
 setClass("H2OParsedData", representation(h2o="H2OClient", key="character"))
@@ -463,5 +463,5 @@ h2o.__packageVersion <- function() {
   if("h2o" %in% rownames(installed.packages()))
     packageVersion("h2o")
   else
-    as.character(h2o.VERSION)
+    h2o.VERSION
 }
