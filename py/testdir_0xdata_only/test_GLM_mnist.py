@@ -29,9 +29,7 @@ class Basic(unittest.TestCase):
     def test_GLM_mnist(self):
         importFolderPath = "/home/0xdiag/datasets/mnist"
         csvFilelist = [
-            ("mnist_train.csv.gz", "mnist_train.csv.gz",    600), 
-            # can't do this because the test dataset doesn't have the output col (col 0 in train)
-            # ("mnist_train.csv.gz", "mnist_test.csv.gz",    600), 
+            ("mnist_training.csv.gz", "mnist_testing.csv.gz",    600), 
         ]
         # IMPORT**********************************************
         # since H2O deletes the source key, we should re-import every iteration if we re-use the src in the list
@@ -79,12 +77,12 @@ class Basic(unittest.TestCase):
             x = h2o_glm.goodXFromColumnInfo(y, key=parseKey['destination_key'], timeoutSecs=300)
             print "x:", x
 
-            kwargs = {
+            params = {
                 'x': x, 
                 'y': y,
-                # 'case_mode': '>',
-                # 'case': 0,
-                'family': 'gaussian',
+                'case_mode': '=',
+                'case': 0,
+                'family': 'binomial',
                 'lambda': 1.0E-5,
                 'alpha': 0.0,
                 'max_iter': 5,
@@ -94,24 +92,29 @@ class Basic(unittest.TestCase):
                 'beta_epsilon': 1.0E-4,
                 }
 
-            timeoutSecs = 1800
-            start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutsecs=60, **kwargs)
-            elapsed = time.time() - start
-            print "GLM completed in", elapsed, "seconds.", \
-                "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+            for c in {0,1,2,3,4,5,6,7,8,9}:
+                kwargs = params.copy()
+                timeoutSecs = 1800
+                start = time.time()
+                glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutsecs=60, **kwargs)
+                elapsed = time.time() - start
+                print "GLM completed in", elapsed, "seconds.", \
+                    "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
-            h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
-            GLMModel = glm['GLMModel']
-            modelKey = GLMModel['model_key']
+                h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
+                GLMModel = glm['GLMModel']
+                modelKey = GLMModel['model_key']
 
-            kwargs = {'x': x, 'y':  y, 'thresholds': 0.5}
-            start = time.time()
-            glmScore = h2o_cmd.runGLMScore(key=testKey2, model_key=modelKey, thresholds="0.5",
-                timeoutSecs=60)
-            print "GLMScore in",  (time.time() - start), "secs", \
-                "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-            h2o_glm.simpleCheckGLMScore(self, glmScore, 'gaussian', **kwargs)
+                print "Trying binomial with case:", c
+                kwargs['case'] = c
+
+                start = time.time()
+                glmScore = h2o_cmd.runGLMScore(key=testKey2, model_key=modelKey, thresholds="0.5",
+                    timeoutSecs=60)
+                elapsed = time.time() - start
+                print "GLMScore in",  elapsed, "secs", \
+                    "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+                h2o_glm.simpleCheckGLMScore(self, glmScore, **kwargs)
 
 if __name__ == '__main__':
     h2o.unit_main()
