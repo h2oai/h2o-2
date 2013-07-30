@@ -321,20 +321,25 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
         colTypeDict[k] = c['type']
         msg = "%s %d" % (c['name'], k)
         msg += " type: %s" % c['type']
+        printMsg = False
         if c['type'] == 'enum':
             msg += (" enum_domain_size: %d" % c['enum_domain_size'])
             enumSizeDict[k] = c['enum_domain_size']
+            printMsg = True
 
         if c['num_missing_values'] != 0:
             pct = ((c['num_missing_values'] + 0.0)/ num_rows) * 100
             msg += (" num_missing_values: %s (%0.1f%s)" % (c['num_missing_values'], pct, '%'))
             missingValuesDict[k] = c['num_missing_values']
+            printMsg = True
 
         if c['min'] == c['max']:
             msg += (" constant value: %s" % c['min'])
             constantValuesDict[k] = c['min']
-        # if c['type'] != 'int' or c['num_missing_values'] != 0:
-        print msg
+            printMsg = True
+
+        if printMsg: # don't print ints or floats if ok
+            print msg
 
     if missingValuesDict:
         m = [str(k) + ":" + str(v) for k,v in missingValuesDict.iteritems()]

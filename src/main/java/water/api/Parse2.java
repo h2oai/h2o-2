@@ -3,6 +3,7 @@ package water.api;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.regex.Pattern;
+import java.io.File;
 
 import water.*;
 import water.Weaver.Weave;
@@ -18,7 +19,7 @@ public class Parse2 extends Request {
 
   // This Request supports the HTML 'GET' command, and this is the help text
   // for GET.
-  static final String DOC_GET = "Parses a key to H2O's fluid-vector (fvec) hex format";
+  static final String DOC_GET = "Parses a key to H2O's Frame format";
 
   // HTTP request parameters
 
@@ -142,9 +143,11 @@ public class Parse2 extends Request {
       if( setup == null ) return null;
       String n = setup._keys.get(0).toString();
       int dot = n.lastIndexOf('.'); // Peel off common .csv or .csv.gz suffix
-      if( dot > 0 ) n = n.substring(0, dot);
+      if( dot > 0 && n.lastIndexOf(File.separator) < dot ) 
+        n = n.substring(0, dot);
       dot = n.lastIndexOf('.'); // Peel off common .csv.gz suffix
-      if( dot > 0 ) n = n.substring(0, dot);
+      if( dot > 0 && n.lastIndexOf(File.separator) < dot )
+        n = n.substring(0, dot);
       int i = 0;
       String res = n + Extensions.HEX;
       Key k = Key.make(res);

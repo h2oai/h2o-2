@@ -619,14 +619,14 @@ def touch_cloud(nodeList=None):
     for n in nodeList:
         n.is_alive()
 
-def verify_cloud_size(nodeList=None):
+def verify_cloud_size(nodeList=None, verbose=False):
     if not nodeList: nodeList = nodes
 
     expectedSize = len(nodeList)
     cloudSizes = [n.get_cloud()['cloud_size'] for n in nodeList]
     cloudConsensus = [n.get_cloud()['consensus'] for n in nodeList]
 
-    if expectedSize==0 or len(cloudSizes)==0 or len(cloudConsensus)==0:
+    if verbose or expectedSize==0 or len(cloudSizes)==0 or len(cloudConsensus)==0:
         print "\nexpectedSize:", expectedSize
         print "cloudSizes:", cloudSizes
         print "cloudConsensus:", cloudConsensus
