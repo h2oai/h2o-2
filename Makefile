@@ -80,8 +80,6 @@ package:
 # case.
 build_installer:
 	$(MAKE) -C installer build PROJECT_VERSION=$(PROJECT_VERSION)
-	rm -fr target/h2o-$(PROJECT_VERSION)-osx-installer.app
-	rm -f target/h2o-*-windows-installer.exe.dmg
 
 test:
 	(export PROJECT_VERSION=$(PROJECT_VERSION); ./build.sh)

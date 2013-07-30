@@ -1,6 +1,6 @@
 #! /bin/bash
 
-if [ '${PROJECT_VERSION}x' = "x" ]; then
+if [ -z ${PROJECT_VERSION} ]; then
     PROJECT_VERSION=99.80
 fi
 
@@ -108,6 +108,7 @@ public class BuildVersion extends AbstractBuildVersion {
     public String branchName()     { return "${BUILD_BRANCH}"; }
     public String lastCommitHash() { return "${BUILD_HASH}"; }
     public String describe()       { return "${BUILD_DESCRIBE}"; }
+    public String projectVersion() { return "${PROJECT_VERSION}"; }
     public String compiledOn()     { return "${BUILD_ON}"; }
     public String compiledBy()     { return "${BUILD_BY}"; }
 }

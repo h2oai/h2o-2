@@ -36,7 +36,7 @@ public class XlsParser extends CustomParser implements HSSFListener {
     if(value.type() != TypeMap.PRIM_B) {
       Object o = value.get();
       if(o instanceof ByteVec)
-        is = ((ByteVec) o).openStream();
+        is = ((ByteVec) o).openStream(null);
     }
     if(is == null) is = value.openStream();
     try {

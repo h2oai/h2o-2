@@ -3,6 +3,7 @@ package water.api;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.regex.Pattern;
+import java.io.File;
 
 import water.*;
 import water.Weaver.Weave;
@@ -18,7 +19,7 @@ public class Parse2 extends Request {
 
   // This Request supports the HTML 'GET' command, and this is the help text
   // for GET.
-  static final String DOC_GET = "Parses a key to H2O's fluid-vector (fvec) hex format";
+  static final String DOC_GET = "Parses a key to H2O's Frame format";
 
   // HTTP request parameters
 
@@ -141,8 +142,12 @@ public class Parse2 extends Request {
       PSetup setup = source_key.value();
       if( setup == null ) return null;
       String n = setup._keys.get(0).toString();
-      int dot = n.lastIndexOf('.');
-      if( dot > 0 ) n = n.substring(0, dot);
+      int dot = n.lastIndexOf('.'); // Peel off common .csv or .csv.gz suffix
+      if( dot > 0 && n.lastIndexOf(File.separator) < dot ) 
+        n = n.substring(0, dot);
+      dot = n.lastIndexOf('.'); // Peel off common .csv.gz suffix
+      if( dot > 0 && n.lastIndexOf(File.separator) < dot )
+        n = n.substring(0, dot);
       int i = 0;
       String res = n + Extensions.HEX;
       Key k = Key.make(res);
@@ -223,10 +228,11 @@ public class Parse2 extends Request {
         : new CsvParser.Setup(q._separator,header.value(),q._data,q._numlines,q._bits);
 
       Key[] keys = p._keys.toArray(new Key[p._keys.size()]);
-      job = ParseDataset2.forkParseDataset(d, keys,new_setup)._self.toString();
+      Key jobkey = ParseDataset2.forkParseDataset(d, keys,new_setup)._self;
+      job = jobkey.toString();
       destination_key = d.toString();
 
-      return new Response(Status.done, this);
+      return Progress2.redirect(this,jobkey,d);
     } catch (IllegalArgumentException e) {
       return Response.error(e.getMessage());
     } catch (Error e) {
