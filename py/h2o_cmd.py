@@ -157,11 +157,10 @@ def runRFOnly(node=None, parseKey=None, trees=5,
 
     # this is important. it's the only accurate value for how many trees RF was asked for.
     ntree    = rf['ntree']
-
-    # /ip:port of cloud (can't use h2o name)
-    rfClass= rf['response_variable']
-
+    response_variable = rf['response_variable']
     if rfview:
+        # ugly..we apparently pass/use response_variable in RFView, gets passed thru kwargs here
+        # print kwargs['response_variable']
         rfViewResult = runRFView(node, data_key, model_key, ntree, 
             timeoutSecs, retryDelaySecs, noise=noise, noPrint=noPrint, **kwargs)
         return rfViewResult

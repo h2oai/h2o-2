@@ -366,11 +366,13 @@ def goodXFromColumnInfo(y,
         if str(k)== y: # if they pass the col index as y
             print "Removing %d because name: %s matches output %s" % (k, str(k), y)
             x.remove(k)
-            ignore_x.append(k)
+            # rf doesn't want it in ignore list
+            # ignore_x.append(k)
         elif name == y: # if they pass the name as y 
             print "Removing %d because name: %s matches output %s" % (k, name, y)
             x.remove(k)
-            ignore_x.append(k)
+            # rf doesn't want it in ignore list
+            # ignore_x.append(k)
 
         elif keepX is not None and not keepX.match(name):
             print "Removing %d because name: %s doesn't match desired keepPattern %s" % (k, name, keepPattern)
@@ -400,8 +402,10 @@ def goodXFromColumnInfo(y,
             x.remove(k)
             ignore_x.append(k)
 
-    print "The pruned x has length", len(x)
+    print "x has", len(x), "cols"
+    print "ignore_x has", len(ignore_x), "cols"
     x = ",".join(map(str,x))
+    ignore_x = ",".join(map(str,ignore_x))
     print "\nx:", x
     print "\nignore_x:", ignore_x
     if forRF:

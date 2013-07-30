@@ -1167,12 +1167,14 @@ class H2O(object):
         return a
 
     def random_forest_view(self, data_key, model_key, timeoutSecs=300, print_params=False, **kwargs):
+        # is response_variable needed here? it shouldn't be
         # do_json_request will ignore any that remain = None
         params_dict = {
             'data_key': data_key,
             'model_key': model_key,
             'out_of_bag_error_estimate': 1, 
             'class_weights': None,
+            'response_variable': -3, # put -3 here to make H2O blow up if it's not specified. required to be correct (same as RF)
             }
         browseAlso = kwargs.pop('browseAlso',False)
 
