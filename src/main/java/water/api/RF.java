@@ -26,7 +26,7 @@ public class RF extends Request {
   protected final H2OCategoryStrata               _strataSamples    = new H2OCategoryStrata(STRATA_SAMPLES, _dataKey, _classCol, 67);
   protected final Int               _sample     = new Int(SAMPLE, 67, 1, 100);
   protected final Bool              _oobee      = new Bool(OOBEE,true,"Out of bag error");
-  protected final H2OKey            _modelKey   = new H2OKey(MODEL_KEY, RFModel.makeKey());
+  protected final H2OKey            _modelKey   = new H2OKey(MODEL_KEY, false);
   /* Advanced settings */
   protected final Int               _binLimit   = new Int(BIN_LIMIT,1024, 0,65534);
   protected final LongInt           _seed       = new LongInt(SEED,0xae44a87f9edf1cbL,"High order bits make better seeds");
@@ -104,7 +104,7 @@ public class RF extends Request {
     assert idx==cols.length;
 
     Key dataKey = ary._key;
-    Key modelKey = _modelKey.value();
+    Key modelKey = _modelKey.value()!=null ? _modelKey.value() : RFModel.makeKey();
     UKV.remove(modelKey);       // Remove any prior model first
     for (int i = 0; i < ntree; ++i) {
       UKV.remove(ConfusionTask.keyForCM(modelKey,i,dataKey,classCol,true));
