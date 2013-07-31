@@ -106,17 +106,8 @@ class Basic(unittest.TestCase):
                    value_size_bytes: %s, response: %s, time: %s" % \
                    (num_cols, num_rows, row_size, ptype, value_size_bytes, response, ptime)
 
-            h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
-
+            # h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
             print "\n" + csvFilename
-#             start = time.time()
-#             RFview = h2o_cmd.runRFOnly(trees=1,parseKey=parseKey,timeoutSecs=2000)
-#             h2b.browseJsonHistoryAsUrlLastMatch("RFView")
-#             # wait in case it recomputes it
-#             time.sleep(10)
-
-            sys.stdout.write('.')
-            sys.stdout.flush() 
 
 if __name__ == '__main__':
     h2o.unit_main()

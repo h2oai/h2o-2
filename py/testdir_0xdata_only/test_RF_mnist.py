@@ -24,7 +24,6 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        time.sleep(15)
         h2o.tear_down_cloud()
 
     def test_RF_mnist(self):
