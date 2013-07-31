@@ -78,7 +78,7 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             print "parse result:", parseKey['destination_key']
 
-            # GLM****************************************
+            # RF+RFView (train)****************************************
             print "This is the 'ignore=' we'll use"
             ignore_x = h2o_glm.goodXFromColumnInfo(y, key=parseKey['destination_key'], timeoutSecs=300, forRF=True)
             ntree = 100
@@ -122,6 +122,7 @@ class Basic(unittest.TestCase):
             h2o_rf.simpleCheckRFView(None, rfView, **params)
             modelKey = rfView['model_key']
 
+            # RFView (score on test)****************************************
             start = time.time()
             # FIX! 1 on oobe causes stack trace?
             kwargs = {'response_variable': y}
@@ -154,7 +155,15 @@ class Basic(unittest.TestCase):
                 print d
                 allDelta.append(d)
 
-        # just print them all again in one place for comparison
+            # Predict (on test)****************************************
+            start = time.time()
+            predict = h2o.nodes[0].generate_predictions(model_key=modelKey, key=testKey2, timeoutSecs=timeoutSecs)
+            elapsed = time.time() - start
+            print "generate_predictions in",  elapsed, "secs", \
+                "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+
+        # Done *******************************************************
+        print "\nShowing the results again from all the trials, to see variance"
         for d in allDelta:
             print d
 

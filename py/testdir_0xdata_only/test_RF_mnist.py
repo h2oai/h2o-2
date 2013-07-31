@@ -75,7 +75,7 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             print "parse result:", parseKey['destination_key']
 
-            # GLM****************************************
+            # RF+RFView (train)****************************************
             print "This is the 'ignore=' we'll use"
             ignore_x = h2o_glm.goodXFromColumnInfo(y, key=parseKey['destination_key'], timeoutSecs=300, forRF=True)
             ntree = 100
@@ -102,7 +102,6 @@ class Basic(unittest.TestCase):
                 }
 
             kwargs = params.copy()
-            print "Trying rf"
             timeoutSecs = 1800
             start = time.time()
             rfView = h2o_cmd.runRFOnly(parseKey=parseKey, rfView=False,
@@ -113,6 +112,7 @@ class Basic(unittest.TestCase):
             h2o_rf.simpleCheckRFView(None, rfView, **params)
             modelKey = rfView['model_key']
 
+            # RFView (score on test)****************************************
             start = time.time()
             # FIX! 1 on oobe causes stack trace?
             kwargs = {'response_variable': y}
@@ -124,6 +124,12 @@ class Basic(unittest.TestCase):
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(None, rfView, **params)
             self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
 
+            # Predict (on test)****************************************
+            start = time.time()
+            predict = h2o.nodes[0].generate_predictions(model_key=modelKey, key=testKey2, timeoutSecs=timeoutSecs)
+            elapsed = time.time() - start
+            print "generate_predictions in",  elapsed, "secs", \
+                "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
 if __name__ == '__main__':
     h2o.unit_main()
