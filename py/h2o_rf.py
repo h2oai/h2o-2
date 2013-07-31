@@ -129,23 +129,24 @@ def simpleCheckRFView(node, rfv, noPrint=False, **kwargs):
     if ' 0.0 ' in leaves:
         raise Exception("leaves in RFView seems wrong. leaves:", leaves)
 
-    print """
- Leaves: {0} / {1} / {2}
-  Depth: {3} / {4} / {5}
-   mtry: {6}
-   Type: {7}
-    Err: {8} %
-""".format(
-        rfv['trees']['leaves']['min'],
-        rfv['trees']['leaves']['mean'],
-        rfv['trees']['leaves']['max'],
-        rfv['trees']['depth']['min'],
-        rfv['trees']['depth']['mean'],
-        rfv['trees']['depth']['max'],
-        rfv['mtry'],
-        rfv['confusion_matrix']['type'],
-        rfv['confusion_matrix']['classification_error'] *100,
-        )
+    if not noPrint: 
+        print """
+         Leaves: {0} / {1} / {2}
+          Depth: {3} / {4} / {5}
+           mtry: {6}
+           Type: {7}
+            Err: {8} %
+        """.format(
+                rfv['trees']['leaves']['min'],
+                rfv['trees']['leaves']['mean'],
+                rfv['trees']['leaves']['max'],
+                rfv['trees']['depth']['min'],
+                rfv['trees']['depth']['mean'],
+                rfv['trees']['depth']['max'],
+                rfv['mtry'],
+                rfv['confusion_matrix']['type'],
+                rfv['confusion_matrix']['classification_error'] *100,
+                )
         
     number_built = trees['number_built']
     if (number_built<=0 or number_built>20000):

@@ -62,6 +62,7 @@ config_json = None
 debugger = False
 random_udp_drop = False
 random_seed = None
+beta_features = False
 # jenkins gets this assign, but not the unit_main one?
 python_test_name = inspect.stack()[1][1]
 
@@ -76,11 +77,11 @@ def parse_our_args():
     parser.add_argument('-dbg', '--debugger', help='Launch java processes with java debug attach mechanisms', action='store_true')
     parser.add_argument('-rud', '--random_udp_drop', help='Drop 20 pct. of the UDP packets at the receive side', action='store_true')
     parser.add_argument('-s', '--random_seed', type=int, help='initialize SEED (64-bit integer) for random generators')
-    parser.add_argument('unittest_args', nargs='*')
+    parser.add_argument('-bf', '--beta_features', help='enable or switch to beta features (import2/parse2)', action='store_true')
     parser.add_argument('unittest_args', nargs='*')
 
     args = parser.parse_args()
-    global browse_disable, browse_json, verbose, ipaddr, config_json, debugger, random_udp_drop, random_seed
+    global browse_disable, browse_json, verbose, ipaddr, config_json, debugger, random_udp_drop, random_seed, beta_features
 
     browse_disable = args.browse_disable or getpass.getuser()=='jenkins'
     browse_json = args.browse_json
@@ -90,6 +91,7 @@ def parse_our_args():
     debugger = args.debugger
     random_udp_drop = args.random_udp_drop
     random_seed = args.random_seed
+    beta_features = args.beta_features
 
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
     # FIX! this isn't working to grab the args we don't care about
@@ -1020,11 +1022,12 @@ class H2O(object):
         if benchmarkLogging:
             cloudPerfH2O.get_log_save(initOnly=True)
 
-        a = self.__do_json_request('Parse.json', timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('Parse2.json' if beta_features else 'Parse.json',
+            timeout=timeoutSecs, params=params_dict)
 
         # Check that the response has the right Progress url it's going to steer us to.
+        verboseprint("Parse2" if beta_features else "Parse" + " result:", dump_json(a))
         if a['response']['redirect_request']!='Progress':
-            print dump_json(a)
             raise Exception('H2O parse redirect is not Progress. Parse json response precedes.')
 
         if noPoll:
@@ -1032,12 +1035,13 @@ class H2O(object):
 
         # noise is a 2-tuple ("StoreView, none) for url plus args for doing during poll to create noise
         # no noise if None
-        verboseprint('Parse.Json noise:', noise)
+        verboseprint('Parse noise:', noise)
         a = self.poll_url(a['response'],
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
             noise=noise, benchmarkLogging=benchmarkLogging)
-        verboseprint("\nParse result:", dump_json(a))
+
+        verboseprint("\nParse2" if beta_features else "\nParse" + " result:", dump_json(a))
         return a
 
     def netstat(self):
@@ -1052,7 +1056,7 @@ class H2O(object):
     # &offset=
     # &view=
     def inspect(self, key, offset=None, view=None, ignoreH2oError=False, timeoutSecs=30):
-        a = self.__do_json_request('Inspect.json',
+        a = self.__do_json_request('Inspect2.json' if beta_features else 'Inspect.json',
             params={
                 "key": key,
                 "offset": offset,
@@ -1092,7 +1096,10 @@ class H2O(object):
     # the param name for ImportFiles is 'file', but it can take a directory or a file.
     # 192.168.0.37:54323/ImportFiles.html?file=%2Fhome%2F0xdiag%2Fdatasets
     def import_files(self, path, timeoutSecs=180):
-        a = self.__do_json_request('ImportFiles.json', timeout=timeoutSecs, params={"path": path})
+        a = self.__do_json_request('ImportFiles2.json' if beta_features else 'ImportFiles.json',
+            timeout=timeoutSecs, 
+            params={"path": path}
+        )
         verboseprint("\nimport_files result:", dump_json(a))
         return a
 
@@ -1219,7 +1226,8 @@ class H2O(object):
 
         # it will redirect to an inspect, so let's get that inspect stuff
         resultKey = a['response']['redirect_request_args']['key']
-        a = self.__do_json_request('Inspect.json', timeout=timeoutSecs, params={"key": resultKey})
+        a = self.__do_json_request('Inspect2.json' if beta_features else 'Inspect.json',
+            timeout=timeoutSecs, params={"key": resultKey})
         verboseprint("\nInspect of " + resultKey, dump_json(a))
         return a
 
