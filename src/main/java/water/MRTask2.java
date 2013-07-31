@@ -3,16 +3,36 @@ package water;
 import jsr166y.CountedCompleter;
 import water.fvec.*;
 import water.util.Log;
-import java.util.Arrays;
 
-/** Map/Reduce style distributed computation. */
+/**
+ * Map/Reduce style distributed computation.
+ * <nl>
+ * MRTask2 provides several <code>map</code> and reduce methods that can be
+ * overriden to specify a computation. Several instances of this class will be
+ * created to distribute the computation over F/J threads and machines. Non-transient
+ * fields are copied and serialized to instances created for map invocations. Reduce
+ * methods can store their results in fields. Results are serialized and reduced all the
+ * way back to the invoking node. When the last reduce method has been called, fields
+ * of the initial MRTask2 instance contains the computation results.
+ */
 public abstract class MRTask2<T extends MRTask2> extends DTask implements Cloneable {
 
   // The Vectors to work on
   protected Frame _fr;          // Vectors to work on
-  // Run some useful function over this <strong>local</strong> Chunk, and
+  //
   // record the results in the <em>this<em> MRTask2.
+
+  /**
+   * Override with your map implementation. This version is given a
+   * single <strong>local</strong> Chunk. It is meant for map/reduce
+   * jobs over single column frames.
+   */
   public void map(    Chunk bv ) { }
+
+  /**
+   * Override with your map implementation. This version is given two
+   * <strong>local</strong> Chunks.
+   */
   public void map(    Chunk bv0, Chunk bv1 ) { }
   public void map( NewChunk bv0, Chunk bv1 ) { }
   public void map(    Chunk bv0, Chunk bv1, Chunk bv2 ) { }
