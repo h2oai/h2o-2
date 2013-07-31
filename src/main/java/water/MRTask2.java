@@ -23,28 +23,48 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
   // record the results in the <em>this<em> MRTask2.
 
   /**
-   * Override with your map implementation. This version is given a
+   * Override with your map implementation. This overload is given a
    * single <strong>local</strong> Chunk. It is meant for map/reduce
-   * jobs over single column frames.
+   * jobs that use a single column in a Frame.
    */
-  public void map(    Chunk bv ) { }
+  public void map( Chunk bv ) { }
 
   /**
-   * Override with your map implementation. This version is given two
+   * Override with your map implementation. This overload is given two
    * <strong>local</strong> Chunks.
    */
-  public void map(    Chunk bv0, Chunk bv1 ) { }
+  public void map( Chunk bv0, Chunk bv1 ) { }
+
+  /**
+   * Override with your map implementation. This overload is designed to
+   * efficiently modify or append data to a column.
+   */
   public void map( NewChunk bv0, Chunk bv1 ) { }
+
+  /**
+   * Override with your map implementation. This overload is given three
+   * <strong>local</strong> Chunks.
+   */
   public void map(    Chunk bv0, Chunk bv1, Chunk bv2 ) { }
+
+  /**
+   * Override with your map implementation. This overload is given an
+   * array of <strong>local</strong> Chunks, for Frames with arbitrary
+   * column numbers.
+   */
   public void map(    Chunk bvs[] ) { }
 
-  // Combine results from 'mrt' into 'this' MRTask2.  Both 'this' and 'mrt' are
-  // guaranteed to either have map() run on them, or be the results of a prior
-  // reduce().  Reduce is optional if, e.g., the result is some output vector.
+  /**
+   * Combine results from 'mrt' into 'this' MRTask2.  Both 'this' and 'mrt' are
+   * guaranteed to either have map() run on them, or be the results of a prior
+   * reduce().  Reduce is optional if, e.g., the result is some output vector.
+   */
   public void reduce( T mrt ) { }
 
-  // Sub-class init on the 1st remote instance of this object, for initializing
-  // node-local shared data structures.
+  /**
+   * Sub-class init on the 1st remote instance of this object, for initializing
+   * node-local shared data structures.
+   */
   public void init() { }
 
   // Remote/Global work: other nodes we are awaiting results from
@@ -65,17 +85,31 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
   // Support for fluid-programming with strong types
   private final T self() { return (T)this; }
 
-  // Read-only accessor
+  /**
+   * Returns a Vec from the Frame.
+   */
   public final Vec vecs(int i) {
     return _fr._vecs[i];
   }
 
-  // Top-level blocking call.
+  /**
+   * Invokes the map/reduce computation over the given Vecs. This call is blocking.
+   */
   public final T doAll( Vec... vecs ) { return doAll(new Frame(null,vecs)); }
+
+  /**
+   * Invokes the map/reduce computation over the given Frame. This call is blocking.
+   */
   public final T doAll( Frame fr ) {
     dfork(fr);
     return getResult();
   }
+
+  /**
+   * Invokes the map/reduce computation over the given Frame. This call is
+   * asynchronous. It return 'this', on which getResult() can be invoked
+   * later to wait on the computation.
+   */
   public final T dfork( Frame fr ) {
     // Use first readable vector to gate home/not-home
     fr.checkCompatible();       // Check for compatible vectors
@@ -86,8 +120,10 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
     return self();
   }
 
-  // Block for & get any final results from a dfork'd MRTask2.
-  // Note: the desired name 'get' is final in ForkJoinTask.
+  /**
+   * Block for & get any final results from a dfork'd MRTask2.
+   * Note: the desired name 'get' is final in ForkJoinTask.
+   */
   public final T getResult() {
     join();
     // Do any post-writing work (zap rollup fields, etc)
