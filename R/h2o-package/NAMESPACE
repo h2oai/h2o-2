@@ -5,6 +5,7 @@ exportMethods(
     "h2o.glm",
     "h2o.kmeans",
     "h2o.randomForest",
+	"checkH2OClient",
     "importFile",
 	"importFolder",
     "importURL",

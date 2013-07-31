@@ -3,6 +3,7 @@
 # Then, it runs GLM with a binomial link function using 10-fold cross-validation
 library(h2o)
 h2o = new("H2OClient", ip="localhost", port=54321)
+checkH2OClient(h2o)
 
 prostate.hex = importFile(h2o, system.file("extdata", "prostate.csv", package="h2o"), "prostate.hex")
 summary(prostate.hex)

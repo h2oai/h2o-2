@@ -15,6 +15,9 @@ public class Inspect2 extends Request {
   @Weave(help="An existing H2O Frame key.")
   final FrameKey src_key = new FrameKey("src_key");
 
+  @Weave(help="Offset to begin viewing rows, or -1 to see a structural representation of the data")
+  private final LongInt offset = new LongInt("offset", 0L, -1, Long.MAX_VALUE, "");
+
   @Weave(help="Number of data rows.") long numRows;
   @Weave(help="Number of data columns.") int numCols;
   @Weave(help="byte size in memory.") long byteSize;
@@ -64,11 +67,20 @@ public class Inspect2 extends Request {
   }
 
   @Override public boolean toHTML( StringBuilder sb ) {
-    Key skey = src_key.value();
-    Frame fr = DKV.get(skey).get();
+    final Key skey = src_key.value();
+    final Frame fr = DKV.get(skey).get();
+    final long off = offset.value();
 
     DocGen.HTML.title(sb,skey.toString());
     DocGen.HTML.section(sb,""+numCols+" columns, "+numRows+" rows, "+PrettyPrint.bytes(byteSize));
+
+    // Start of where the pagination table goes.  For now, just the info button.
+    sb.append("<div style='text-align:center;'>");
+    sb.append("<span class='pagination'><ul><li>"+"<a href='"+
+              RequestStatics.encodeRedirectArgs(null,new String[]{"src_key",skey.toString(),"offset",off>=0?"-1":"0"})+
+              "'>"+(off>=0?"info":"rows")+"</a>"+"</li></ul></span>&nbsp;&nbsp;");
+    sb.append("</div>");
+
     DocGen.HTML.arrayHead(sb);
     // Column labels
     sb.append("<tr class='warning'>");
@@ -113,14 +125,37 @@ public class Inspect2 extends Request {
       sb.append("</tr>");
     }
 
-    // First N rows
-    int N = (int)Math.min(100,numRows);
-    for( int j=0; j<N; j++ ) {
-      sb.append("<tr>");
-      sb.append("<td>").append(j).append("</td>");
+    if( off == -1 ) {           // Info display
+      sb.append("<tr class='warning'>");
+      sb.append("<td>").append("Size").append("</td>");
       for( int i=0; i<cols.length; i++ ) 
-        sb.append("<td>").append(x0(fr._vecs[i],j)).append("</td>");
+        sb.append("<td>").append(PrettyPrint.bytes(fr._vecs[i].byteSize())).append("</td>");
       sb.append("</tr>");
+
+      Vec c0 = fr.firstReadable();
+      int N = c0.nChunks();
+      for( int j=0; j<N; j++ ) {
+        sb.append("<tr>");
+        sb.append("<td>").append(c0.chunkKey(j).home_node())
+          .append(", ").append(c0.chunk2StartElem(j)).append("</td>");
+        for( int i=0; i<cols.length; i++ ) {
+          String clazz = fr._vecs[i].elem2BV(j).getClass().getSimpleName();
+          String trim = clazz.replaceAll("Chunk","");
+          sb.append("<td>").append(trim).append("</td>");
+        }
+        sb.append("</tr>");
+      }
+
+    } else {
+      // First N rows
+      int N = (int)Math.min(100,numRows);
+      for( int j=0; j<N; j++ ) {
+        sb.append("<tr>");
+        sb.append("<td>").append(j).append("</td>");
+        for( int i=0; i<cols.length; i++ ) 
+          sb.append("<td>").append(x0(fr._vecs[i],j)).append("</td>");
+        sb.append("</tr>");
+      }
     }
 
     DocGen.HTML.arrayTail(sb);
