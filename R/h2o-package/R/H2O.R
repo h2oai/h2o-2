@@ -4,18 +4,8 @@ if(!"rjson" %in% rownames(installed.packages())) install.packages(rjson)
 library(RCurl)
 library(rjson)
 
-h2o.VERSION = "99.99.99.99999"
-
 # Class definitions
-# setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321))
-setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321), 
-         validity = function(object) { 
-           # if(!is.character(getURL(paste0("http://", object@ip, ":", object@port)))) 
-           if(!url.exists(paste0("http://", object@ip, ":", object@port))) {
-             "Couldn't connect to host. Do you have H2O running? See http://0xdata.com/h2o/docs/ for details" }
-           else if("h2o" %in% rownames(installed.packages()) && (pv=packageVersion("h2o")) != (sv=h2o.__version(object))) {
-            warning(paste("Version mismatch! Server running H2O version", sv, "but R package is version", pv)); TRUE }
-           else { cat("Successfully connected to", paste0(object@ip, ":", object@port), "\n"); TRUE } })
+setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321))
 setClass("H2ORawData", representation(h2o="H2OClient", key="character"))
 setClass("H2OParsedData", representation(h2o="H2OClient", key="character"))
 setClass("H2OGLMModel", representation(key="character", data="H2OParsedData", model="list"))
@@ -73,6 +63,7 @@ setMethod("show", "H2ORForestModel", function(object) {
 })
 
 # Generic method definitions
+setGeneric("checkH2OClient", function(object) { standardGeneric("checkH2OClient") })
 # setGeneric("importFile", function(object, path, key = "", header = FALSE, parse = TRUE) { standardGeneric("importFile") })
 setGeneric("importFile", function(object, path, key = "", parse = TRUE) { standardGeneric("importFile") })
 setGeneric("importFolder", function(object, path, parse = TRUE) { standardGeneric("importFolder") })
@@ -88,6 +79,16 @@ setGeneric("h2o.randomForest", function(y, x_ignore = "", data, ntree, depth, cl
 setGeneric("h2o.getTree", function(forest, k) { standardGeneric("h2o.getTree") })
 
 # Unique methods to H2O
+setMethod("checkH2OClient", signature(object="H2OClient"),
+          function(object) { 
+            myURL = paste("http://", object@ip, ":", object@port, sep="")
+            if(!url.exists(myURL))
+              stop("H2O does not seem to be running. See http://0xdata.com/h2o/docs/ for how to get started")
+            cat("Successfully connected to", myURL, "\n")
+            if("h2o" %in% rownames(installed.packages()) && (pv=packageVersion("h2o")) != (sv=h2o.__version(object)))
+                warning(paste("Version mismatch! Server running H2O version", sv, "but R package is version", pv))
+            })
+
 setMethod("importURL", signature(object="H2OClient", path="character", key="character", parse="logical"),
           function(object, path, key, parse) {
             destKey = ifelse(parse, "", key)
@@ -136,7 +137,7 @@ setMethod("importFile", signature(object="H2OClient", path="character", key="mis
 setMethod("importFile", signature(object="H2OClient", path="character", key="character", parse="logical"), 
           function(object, path, key, parse) {
             if(!file.exists(path)) stop("File does not exist!")
-            importURL(object, paste0("file:///", normalizePath(path)), key, parse) })
+            importURL(object, paste("file:///", normalizePath(path), sep=""), key, parse) })
 
 setMethod("importFile", signature(object="H2OClient", path="character", key="character", parse="missing"), 
           function(object, path, key) { importFile(object, path, key, parse = TRUE) })
@@ -175,8 +176,8 @@ setMethod("parseRaw", signature(data="H2ORawData", key="missing"),
 
 setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="numeric", alpha="numeric", lambda="numeric"),
           function(x, y, data, family, nfolds, alpha, lambda) {
-            # res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key = data@key, y = y, x = paste0(x, collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda)
-            res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key = data@key, y = y, x = paste0(x, collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, case_mode="=", case=1.0)
+            # res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key = data@key, y = y, x = paste(x, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda)
+            res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key = data@key, y = y, x = paste(x, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, case_mode="=", case=1.0)
             # while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
             while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
             destKey = res$destination_key
@@ -208,7 +209,7 @@ setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData
 setMethod("h2o.kmeans", signature(data="H2OParsedData", centers="numeric", cols="character", iter.max="numeric"),
           function(data, centers, cols, iter.max) {
             # Build K-means model
-            res = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMEANS, source_key=data@key, k=centers, max_iter=iter.max, cols=paste0(cols, collapse=","))
+            res = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMEANS, source_key=data@key, k=centers, max_iter=iter.max, cols=paste(cols, sep="", collapse=","))
             while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
             destKey = res$destination_key
             res = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=res$destination_key)
@@ -231,7 +232,7 @@ setMethod("h2o.kmeans", signature(data="H2OParsedData", centers="numeric", cols=
             }
             
             # Apply model to data set
-            scoreKey = paste0(strsplit(data@key, ".hex")[[1]], ".kmapply")
+            scoreKey = paste(strsplit(data@key, ".hex")[[1]], ".kmapply", sep="")
             res = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMAPPLY, model_key=destKey, data_key=data@key, destination_key=scoreKey)
             while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
             result$cluster = new("H2OParsedData", h2o=data@h2o, key=res$destination_key)
@@ -257,7 +258,7 @@ setMethod("h2o.kmeans", signature(data="H2OParsedData", centers="numeric", cols=
 setMethod("h2o.randomForest", signature(y="character", x_ignore="character", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="numeric"),
           function(y, x_ignore, data, ntree, depth, classwt) {
             # Set randomized model_key
-            rand_model_key = paste0("__RF_Model__",runif(n=1, max=1e10))
+            rand_model_key = paste("__RF_Model__", runif(n=1, max=1e10), sep="")
             
             # If no class weights, then default to all 1.0
             if(!any(is.na(classwt))) {
@@ -322,21 +323,21 @@ setMethod("summary", signature(object="H2OParsedData"),
             result = NULL
             cnames = NULL
             for(i in 1:length(res)) {
-              cnames = c(cnames, paste0("      ", res[[i]]$name))
+              cnames = c(cnames, paste("      ", res[[i]]$name, sep=""))
               if(res[[i]]$type == "number") {
                 if(is.null(res[[i]]$percentiles))
                   params = format(rep(round(res[[i]]$mean, 3), 6), nsmall = 3)
                 else
                   params = format(round(c(res[[i]]$min[1], res[[i]]$percentiles$values[4], res[[i]]$percentiles$values[6], res[[i]]$mean, res[[i]]$percentiles$values[8], res[[i]]$max[1]), 3), nsmall = 3)
-                  result = cbind(result, c(paste0("Min.   :", params[1], "  "), paste0("1st Qu.:", params[2], "  "),
-                            paste0("Median :", params[3], "  "), paste0("Mean   :", params[4], "  "),
-                            paste0("3rd Qu.:", params[5], "  "), paste0("Max.   :", params[6], "  ")))                 
+                  result = cbind(result, c(paste("Min.   :", params[1], "  ", sep=""), paste("1st Qu.:", params[2], "  ", sep=""),
+                            paste("Median :", params[3], "  ", sep=""), paste("Mean   :", params[4], "  ", sep=""),
+                            paste("3rd Qu.:", params[5], "  ", sep=""), paste("Max.   :", params[6], "  ", sep="")))                 
                   }
               else if(res[[i]]$type == "enum") {
                 col = matrix(rep("", 6), ncol=1)
                 len = length(res[[i]]$histogram$bins)
                 for(j in 1:min(6,len))
-                  col[j] = paste0(res[[i]]$histogram$bin_names[len-j+1], ": ", res[[i]]$histogram$bins[len-j+1])
+                  col[j] = paste(res[[i]]$histogram$bin_names[len-j+1], ": ", res[[i]]$histogram$bins[len-j+1], sep="")
                 result = cbind(result, col)
               }
             }
@@ -387,7 +388,7 @@ h2o.__remoteSend <- function(client, page, ...) {
   port = client@port
   
   # Sends the given arguments as URL arguments to the given page on the specified server
-  url = paste0("http://", ip, ":", port, "/", page)
+  url = paste("http://", ip, ":", port, "/", page, sep="")
   temp = postForm(url, style = "POST", ...)
   after = gsub("NaN", "\"NaN\"", temp[1])
   after = gsub("Inf", "\"Inf\"", after)
@@ -395,7 +396,7 @@ h2o.__remoteSend <- function(client, page, ...) {
   
   if (!is.null(res$error)) {
     myTime = gsub(":", "-", date()); myTime = gsub(" ", "_", myTime)
-    h2o.__writeToFile(res, paste0("error_json_", myTime, ".log"))
+    h2o.__writeToFile(res, paste("error_json_", myTime, ".log", sep=""))
     stop(paste(url," returned the following error:\n", h2o.__formatError(res$error)))
   }
   res
@@ -408,7 +409,7 @@ h2o.__writeToFile <- function(res, fileName) {
   formatVector = function(vec) {
     result = rep(" ", length(vec))
     for(i in 1:length(vec))
-      result[i] = paste0(names(vec)[i], ": ", vec[i])
+      result[i] = paste(names(vec)[i], ": ", vec[i], sep="")
     paste(result, collapse="\n")
   }
   
@@ -457,11 +458,4 @@ h2o.__remove <- function(client, keyName) {
 h2o.__version <- function(client) {
   res = h2o.__remoteSend(client, h2o.__PAGE_CLOUD)
   res$version
-}
-
-h2o.__packageVersion <- function() {
-  if("h2o" %in% rownames(installed.packages()))
-    packageVersion("h2o")
-  else
-    h2o.VERSION
 }

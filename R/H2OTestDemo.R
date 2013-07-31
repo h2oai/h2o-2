@@ -1,9 +1,10 @@
 # Demo to test R functionality
-# To invoke, need R 2.15.0 or higher
+# To invoke, need R 2.13.0 or higher
 # R -f H2OTestDemo.R
 source("h2o-package/R/H2O.R")
 # library(h2o)
 h2o = new("H2OClient", ip="localhost", port=54321)
+checkH2OClient(h2o)
 
 # Test using prostate cancer data set
 prostate.hex = importURL(h2o, "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", "prostate.hex")
