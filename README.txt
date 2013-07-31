@@ -2,6 +2,8 @@
 This package contains:
 
     README.txt               The file you are reading right now.
+    LICENSE.txt              This software is released under the Apache v2.0
+                             open source license.
     h2o.jar                  The H2O engine.
     h2o-sources.jar          Source code to compile h2o.jar.
 
