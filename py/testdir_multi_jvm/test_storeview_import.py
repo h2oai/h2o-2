@@ -28,10 +28,18 @@ class Basic(unittest.TestCase):
             ("covtype.data", 300),
         ]
         # IMPORT**********************************************
-        # since H2O deletes the source key, we should re-import every iteration if we re-use the src in the list
+        # H2O deletes the source key. So re-import every iteration if we re-use the src in the list
         importFolderResult = h2i.setupImportFolder(None, importFolderPath)
         ### print "importHDFSResult:", h2o.dump_json(importFolderResult)
         succeededList = importFolderResult['files']
+        # the list could be from hdfs/s3 (ec2 remap) or local. They have to different list structures
+        if 'succeeded' in importFolderResult:
+            succeededList = importFolderResult['succeeded']
+        elif 'files' in importFolderResult:
+            succeededList = importFolderResult['files']
+        else:
+            raise Exception ("Can't find 'files' or 'succeeded' in import list")
+
         ### print "succeededList:", h2o.dump_json(succeededList)
 
         self.assertGreater(len(succeededList),3,"Should see more than 3 files in the import?")
