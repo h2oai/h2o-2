@@ -26,7 +26,7 @@ public class AppendableVec extends Vec {
   long _totalCnt;
 
   AppendableVec( Key key) {
-    super(key, null,false,Double.MAX_VALUE,Double.MIN_VALUE,0);
+    super(key, null,false,0);
     _espc = new long[4];
     _chunkTypes = new byte[4];
   }
@@ -42,11 +42,7 @@ public class AppendableVec extends Vec {
     }
     _espc[cidx] = chk._len;
     _chunkTypes[cidx] = chk.type();
- //   _homes[cidx] = H2O.SELF.index();
     _hasFloat |= chk.hasFloat();
-    // Roll-up totals for each chunk as it closes
-    if( chk._min < _min ) _min = chk._min;
-    if( chk._max > _max ) _max = chk._max;
     _missingCnt += chk._naCnt;
     _strCnt += chk._strCnt;
     _totalCnt += chk._len;
@@ -114,7 +110,7 @@ public class AppendableVec extends Vec {
     }
     espc[nchunk]=x;             // Total element count in last
     // Replacement plain Vec for AppendableVec.
-    Vec vec = new Vec(_key, espc,!_hasFloat,_min,_max,_missingCnt);
+    Vec vec = new Vec(_key, espc,!_hasFloat,_missingCnt);
     vec._dtype = dtype();
     DKV.put(_key,vec,fs);       // Inject the header
     return vec;

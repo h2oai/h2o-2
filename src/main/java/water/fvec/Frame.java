@@ -113,6 +113,14 @@ public class Frame extends Iced {
   public void remove() {
     remove(new Futures());
   }
+
+  public long byteSize() {
+    long sum=0;
+    for( int i=0; i<_vecs.length; i++ )
+      sum += _vecs[i].byteSize();
+    return sum;
+  }
+
   @Override public String toString() {
     // Across
     String s="{"+_names[0];

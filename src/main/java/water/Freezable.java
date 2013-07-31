@@ -12,4 +12,9 @@ public interface Freezable {
   public <T extends Freezable> T newInstance();
   /** Return the cluster-wide-unique 2-byte type ID for instances of this class */
   public int frozenType();
+  /** Serialize the 'this' object into the AutoBuffer, returning the AutoBuffer. 
+      Output is legal JSON. */
+  public AutoBuffer writeJSONFields(AutoBuffer bb);
+  /** Reflective list of fields */
+  public water.api.DocGen.FieldDoc[] toDocField();
 }

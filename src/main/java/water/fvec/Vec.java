@@ -34,6 +34,7 @@ public class Vec extends Iced {
   public boolean _isInt;  // true if column is all integer data
   // min/max/mean lazily computed.
   double _min, _max;
+  double _mean;
   long _nas;                    // Count of NA's, lazily computed
 
   // Base datatype of the entire column.
@@ -48,13 +49,12 @@ public class Vec extends Iced {
   // Overridden in AppendableVec
   public DType dtype(){return _dtype;}
 
-  Vec( Key key, long espc[], boolean isInt, double min, double max, long NAs ) {
+  Vec( Key key, long espc[], boolean isInt, long NAs ) {
     assert key._kb[0]==Key.VEC;
     _key = key;
     _espc = espc;
     _isInt = isInt;
-    _min = (min == Double.MIN_VALUE) ? Double.NaN : min;
-    _max = max;
+    _min = Double.NaN;
     _nas = NAs;
   }
 
@@ -63,7 +63,7 @@ public class Vec extends Iced {
     Futures fs = new Futures();
     if( v._espc == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
     int nchunks = v.nChunks();
-    Vec v0 = new Vec(v.group().addVecs(1)[0],v._espc,true,0,0,0);
+    Vec v0 = new Vec(v.group().addVecs(1)[0],v._espc,true,0);
     long row=0;                 // Start row
     for( int i=0; i<nchunks; i++ ) {
       long nrow = v.chunk2StartElem(i+1); // Next row
@@ -96,21 +96,18 @@ public class Vec extends Iced {
       RollupStats rs = new RollupStats().doAll(this);
       _min = rs._min;
       _max = rs._max;
+      _mean= rs._mean;
       _nas = rs._nas;
     }
     return _min;
   }
-  public double max() {
-    if( Double.isNaN(_min) ) min();
-    return _max;
-  }
-  public long NAcnt() {
-    if( Double.isNaN(_min) ) min();
-    return _nas;
-  }
+  public double max () { if( Double.isNaN(_min) ) min(); return _max;  }
+  public double mean() { if( Double.isNaN(_min) ) min(); return _mean; }
+  public long  NAcnt() { if( Double.isNaN(_min) ) min(); return _nas;  }
+
   private static class RollupStats extends MRTask2<RollupStats> {
-    double _min, _max;
-    long _nas;
+    double _min, _max, _mean;
+    long _rows, _nas;
     @Override public void map( Chunk c ) {
       for( int i=0; i<c._len; i++ ) {
         if( c.isNA0(i) ) _nas++;
@@ -118,13 +115,18 @@ public class Vec extends Iced {
           double d= c.at0(i);
           if( d < _min ) _min = d;
           if( d > _max ) _max = d;
+          _mean += d;
+          _rows++;
         }
       }
+      _mean = _mean/_rows;
     }
     @Override public void reduce( RollupStats rs ) {
       _min = Math.min(_min,rs._min);
       _max = Math.max(_max,rs._max);
       _nas += rs._nas;
+      _mean = (_mean*_rows + rs._mean*rs._rows)/(_rows+rs._rows);
+      _rows += rs._rows;
     }
   }
 

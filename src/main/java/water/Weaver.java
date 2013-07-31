@@ -119,7 +119,7 @@ public class Weaver {
   // water.DTask.  Add any missing serialization methods.
   CtClass addSerializationMethods( CtClass cc ) throws CannotCompileException, NotFoundException {
     if( cc.subclassOf(_enum) ) exposeRawEnumArray(cc);
-    if( cc.subclassOf(_api ) ) ensureAPImethods(cc);
+    if( cc.subclassOf(_iced) || cc.subclassOf(_api ) ) ensureAPImethods(cc);
     if( cc.subclassOf(_iced) ||
         cc.subclassOf(_dtask) ) {
       cc.setModifiers(javassist.Modifier.setPublic(cc.getModifiers()));
@@ -222,13 +222,13 @@ public class Weaver {
     // ---
     // Auto-gen JSON output to AutoBuffers
     make_body(cc,ctfs,false,
-              "public water.AutoBuffer writeJSON(water.AutoBuffer ab) {\n  ab.put1('{');\n",
-              "  super.writeJSON(ab);\n",
+              "public water.AutoBuffer writeJSONFields(water.AutoBuffer ab) {\n",
+              "  super.writeJSONFields(ab);\n",
               "  ab.putJSON%z(\"%s\",%s)",
-              "  ab.putEnumJSON(%s)",
-              "  ab.putJSON%z(%s)",
+              "  ab.putEnumJSON(\"%s\",%s)",
+              "  ab.putJSON%z(\"%s\",%s)",
               ".put1(',');\n",
-              ";\n  return ab.put1('}');\n}",
+              ";\n  return ab;\n}",
               new FieldFilter() {
                 boolean filter(CtField ctf) throws NotFoundException {return !ctf.getType().subclassOf(_arg); }
               });
