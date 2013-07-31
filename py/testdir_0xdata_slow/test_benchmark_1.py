@@ -206,8 +206,8 @@ class Basic(unittest.TestCase):
                     h2o.cloudPerfH2O.message(l)
 
                 #**********************************************************************************
-                h2o_cmd.check_key_distribution()
-                h2o_cmd.delete_csv_key(csvFilename, importFolderResult)
+                h2o_cmd.checkKeyDistribution()
+                h2o_cmd.deleteCsvKey(csvFilename, importFolderResult)
                 ### time.sleep(3600)
                 h2o.tear_down_cloud()
                 if not localhost:

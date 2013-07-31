@@ -267,7 +267,7 @@ def wait_for_live_port(ip, port, retries=3):
 # import (that you saved from import of the folder/s3/hdfs)
 # I guess I should change to just be the raw result of the import? not sure
 # see how it's used in tests named above
-def delete_csv_key(csvFilename, importFullList):
+def deleteCsvKey(csvFilename, importFullList):
     # remove the original data key
     # the list could be from hdfs/s3 or local. They have to different list structures
     if 'succeeded' in importFullList:
