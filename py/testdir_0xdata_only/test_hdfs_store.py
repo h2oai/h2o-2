@@ -84,12 +84,7 @@ class Basic(unittest.TestCase):
             print "Storing", parseKey['destination_key'], 'to HDFS'
             ### print "FIX! temporarily disabling since it causes HDFS corruption"
             storeKey = h2o_cmd.runStore2HDFS(key=parseKey['destination_key'], timeoutSecs=1000)
-
-
-            h2b.browseJsonHistoryAsUrlLastMatch("Parse")
-
-            sys.stdout.write('.')
-            sys.stdout.flush() 
+            # h2b.browseJsonHistoryAsUrlLastMatch("Parse")
 
 if __name__ == '__main__':
     h2o.unit_main()

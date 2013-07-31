@@ -70,9 +70,7 @@ class Basic(unittest.TestCase):
             elapsed = time.time() - start
             print "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 
-            # so we can see!
-            h2b.browseJsonHistoryAsUrlLastMatch("RFView")
-            time.sleep(5)
+            # h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
 if __name__ == '__main__':
     h2o.unit_main()
