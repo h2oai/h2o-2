@@ -94,7 +94,7 @@ public class WordCountTest extends TestUtil {
 
     @Override public AutoBuffer write(AutoBuffer ab) {
       super.write(ab);
-      if( _res != null && WORDS != null )
+      if( /*_res != null &&*/ WORDS != null )
         for( VStr key : WORDS.keySet() )
           ab.put2((char)key._len).putA1(key._cs,key._off,key._off+key._len).put4(key._cnt);
       return ab.put2((char)65535); // End of map marker
