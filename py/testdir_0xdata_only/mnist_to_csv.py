@@ -5,7 +5,8 @@ from array import array as pyarray
 import numpy
 from numpy import append, array, int8, uint8, zeros
 
-DO_REALS=True
+DO_REALS=False
+DO_IMAGES=False
 
 # gzip infile to gzfile
 def file_gzip(infile, gzfile):
@@ -120,8 +121,8 @@ if __name__ == '__main__':
     file_gzip(prefix + 'testing.csv',  prefix + 'testing.csv.gz')
 
     # show merged images
-    if 1==0:
-        images, labels = read([7,8,9], 'training')
+    if DO_IMAGES:
+        images, labels = read(range(0,10), 'training')
         imshow(images.mean(axis=0), cmap=cm.gray)
         show()
 

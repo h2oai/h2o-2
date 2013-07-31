@@ -31,8 +31,7 @@ class Basic(unittest.TestCase):
         csvFilelist = [
             # ("mnist_training.csv.gz", "mnist_testing.csv.gz", 600, 784834182943470027),
             ("mnist_training.csv.gz", "mnist_testing.csv.gz", 600, None, '*mnist*gz'),
-            ("mnist_training.csv.gz", "mnist_testing.csv.gz", 600, None, '*mnist*gz'),
-            ("mnist_training.csv.gz", "mnist_testing.csv.gz", 600, None, '*mnist*gz'),
+            # to see results a 2nd time
             ("mnist_training.csv.gz", "mnist_testing.csv.gz", 600, None, '*mnist*gz'),
         ]
         # IMPORT**********************************************
@@ -78,7 +77,7 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             print "parse result:", parseKey['destination_key']
 
-            # GLM****************************************
+            # RF+RFView (train)****************************************
             print "This is the 'ignore=' we'll use"
             ignore_x = h2o_glm.goodXFromColumnInfo(y, key=parseKey['destination_key'], timeoutSecs=300, forRF=True)
             ntree = 10
@@ -122,6 +121,7 @@ class Basic(unittest.TestCase):
             h2o_rf.simpleCheckRFView(None, rfView, **params)
             modelKey = rfView['model_key']
 
+            # RFView (score on test)****************************************
             start = time.time()
             # FIX! 1 on oobe causes stack trace?
             kwargs = {'response_variable': y}
@@ -132,7 +132,7 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(None, rfView, **params)
             print "classification error is expected to be low because we included the test data in with the training!"
-            self.assertAlmostEqual(classification_error, 0.0005, delta=0.0002, msg="Classification error %s differs too much" % classification_error)
+            self.assertAlmostEqual(classification_error, 0.0004, delta=0.0003, msg="Classification error %s differs too much" % classification_error)
         
             leaves = rfView['trees']['leaves']
             # Expected values are from this case:
@@ -154,7 +154,16 @@ class Basic(unittest.TestCase):
                 print d
                 allDelta.append(d)
 
-        # just print them all again in one place for comparison
+            # Predict (on test)****************************************
+            start = time.time()
+            predict = h2o.nodes[0].generate_predictions(model_key=modelKey, key=testKey2, timeoutSecs=timeoutSecs)
+            elapsed = time.time() - start
+            print "generate_predictions in",  elapsed, "secs", \
+                "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+
+        # Done *******************************************************
+        print "\nShowing the results again from all the trials, to see variance"
+    
         for d in allDelta:
             print d
 
