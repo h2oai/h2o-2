@@ -290,7 +290,8 @@ class Basic(unittest.TestCase):
                 # BUG here?
                 if not noPoll:
                     # We should be able to see the parse result?
-                    h2o_cmd.check_enums_from_inspect(parseKey)
+                    h2o_cmd.columnInfoFromInspect(parseKey['destination_key'], exceptionOnMissingValues=False)
+
                         
                 # the nflx data doesn't have a small enough # of classes in any col
                 # use exec to randomFilter out 200 rows for a quick RF. that should work for everyone?
