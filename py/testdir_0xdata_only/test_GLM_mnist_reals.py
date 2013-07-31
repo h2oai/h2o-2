@@ -2,7 +2,7 @@ import unittest
 import random, sys, time, re
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -13,7 +13,7 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1, java_heap_GB=14)
+            h2o.build_cloud(1)
         else:
             # all hdfs info is done thru the hdfs_config michal's ec2 config sets up?
             h2o_hosts.build_cloud_with_hosts(1, 
@@ -24,16 +24,12 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        time.sleep(15)
         h2o.tear_down_cloud()
 
-    def test_RF_mnist(self):
+    def test_GLM_mnist_reals(self):
         importFolderPath = "/home/0xdiag/datasets/mnist"
         csvFilelist = [
-            # ("mnist_testing.csv.gz", "mnist_testing.csv.gz",    600), 
-            # ("a.csv", "b.csv", 60),
-            # ("mnist_testing.csv.gz", "mnist_testing.csv.gz",    600), 
-            ("mnist_training.csv.gz", "mnist_testing.csv.gz",    600), 
+            ("mnist_reals_training.csv.gz", "mnist_reals_testing.csv.gz",    600), 
         ]
         # IMPORT**********************************************
         # since H2O deletes the source key, we should re-import every iteration if we re-use the src in the list
@@ -77,54 +73,48 @@ class Basic(unittest.TestCase):
             print "parse result:", parseKey['destination_key']
 
             # GLM****************************************
-            print "This is the 'ignore=' we'll use"
-            ignore_x = h2o_glm.goodXFromColumnInfo(y, key=parseKey['destination_key'], timeoutSecs=300, forRF=True)
-            ntree = 100
+            print "This is the pruned x we'll use"
+            x = h2o_glm.goodXFromColumnInfo(y, key=parseKey['destination_key'], timeoutSecs=300)
+            print "x:", x
+
             params = {
-                'response_variable': 0,
-                'ignore': ignore_x, 
-                'ntree': ntree,
-                'iterative_cm': 1,
-                'out_of_bag_error_estimate': 1,
-                # 'data_key='mnist_training.csv.hex'
-                'features': 28, # fix because we ignore some cols, which will change the srt(cols) calc?
-                'exclusive_split_limit': None,
-                'depth': 2147483647,
-                'stat_type': 'ENTROPY',
-                'sampling_strategy': 'RANDOM',
-                'sample': 67,
-                # 'model_key': '__RFModel_7055e6cf-a0de-44db-b165-f5994730ac77',
-                'model_key': 'RF_model',
-                'bin_limit': 1024,
-                'seed': 784834182943470027,
-                'parallel': 1,
-                'use_non_local_data': 0,
-                'class_weights': '0=1.0,1=1.0,2=1.0,3=1.0,4=1.0,5=1.0,6=1.0,7=1.0,8=1.0,9=1.0',
+                'x': x, 
+                'y': y,
+                'case_mode': '=',
+                'case': 0,
+                'family': 'binomial',
+                'lambda': 1.0E-5,
+                'alpha': 0.0,
+                'max_iter': 5,
+                'thresholds': 0.5,
+                'n_folds': 1,
+                'weight': 1,
+                'beta_epsilon': 1.0E-4,
                 }
 
-            kwargs = params.copy()
-            print "Trying rf"
-            timeoutSecs = 1800
-            start = time.time()
-            rfView = h2o_cmd.runRFOnly(parseKey=parseKey, rfView=False,
-                timeoutSecs=timeoutSecs, pollTimeoutsecs=60, retryDelaySecs=2, **kwargs)
-            elapsed = time.time() - start
-            print "RF completed in", elapsed, "seconds.", \
-                "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-            h2o_rf.simpleCheckRFView(None, rfView, **params)
-            modelKey = rfView['model_key']
+            for c in [0,1,2,3,4,5,6,7,8,9]:
+                kwargs = params.copy()
+                print "Trying binomial with case:", c
+                kwargs['case'] = c
 
-            start = time.time()
-            # FIX! 1 on oobe causes stack trace?
-            kwargs = {'response_variable': y}
-            rfView = h2o_cmd.runRFView(data_key=testKey2, model_key=modelKey, ntree=ntree, out_of_bag_error_estimate=0, 
-                timeoutSecs=60, pollTimeoutSecs=60, noSimpleCheck=False, **kwargs)
-            elapsed = time.time() - start
-            print "RFView in",  elapsed, "secs", \
-                "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(None, rfView, **params)
-            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
+                timeoutSecs = 1800
+                start = time.time()
+                glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutsecs=60, **kwargs)
+                elapsed = time.time() - start
+                print "GLM completed in", elapsed, "seconds.", \
+                    "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
+                h2o_glm.simpleCheckGLM(self, glm, None, noPrint=True, **kwargs)
+                GLMModel = glm['GLMModel']
+                modelKey = GLMModel['model_key']
+
+                start = time.time()
+                glmScore = h2o_cmd.runGLMScore(key=testKey2, model_key=modelKey, thresholds="0.5",
+                    timeoutSecs=60)
+                elapsed = time.time() - start
+                print "GLMScore in",  elapsed, "secs", \
+                    "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+                h2o_glm.simpleCheckGLMScore(self, glmScore, **kwargs)
 
 if __name__ == '__main__':
     h2o.unit_main()

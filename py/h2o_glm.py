@@ -336,7 +336,8 @@ def simpleCheckGLMGrid(self, glmGridResult, colX=None, allowFailWarning=False, *
 
 # get input from this.
 #   (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
-#                h2o_cmd.columnInfoFromInspect(parseKey, exceptionOnMissingValues=False, timeoutSecs=300)
+#                h2o_cmd.columnInfoFromInspect(parseKey['destination_key', 
+#                exceptionOnMissingValues=False, timeoutSecs=300)
 
 def goodXFromColumnInfo(y, 
     num_cols=None, missingValuesDict=None, constantValuesDict=None, enumSizeDict=None, colTypeDict=None, colNameDict=None, 
@@ -344,7 +345,7 @@ def goodXFromColumnInfo(y,
 
     y = str(y)
 
-    # if we pass a parseKey, means we want to get the info ourselves here
+    # if we pass a key, means we want to get the info ourselves here
     if key is not None:
         (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
             h2o_cmd.columnInfoFromInspect(key, exceptionOnMissingValues=False, timeoutSecs=timeoutSecs)

@@ -269,16 +269,24 @@ def wait_for_live_port(ip, port, retries=3):
 # see how it's used in tests named above
 def delete_csv_key(csvFilename, importFullList):
     # remove the original data key
-    for k in importFullList['succeeded']:
-        ### print "possible delete:", deleteKey
-        # don't delete any ".hex" keys. the parse results above have .hex
-        # this is the name of the multi-file (it comes in as a single file?)
-        # This deletes the source key?
-        key = k['key']
-        if csvFilename in key:
-            print "\nRemoving", key
-            removeKeyResult = h2o.nodes[0].remove_key(key=key)
-            ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
+    # the list could be from hdfs/s3 or local. They have to different list structures
+    if 'succeeded' in importFullList:
+        kDict = importFullList['succeeded']
+        for k in kDict:
+            key = k['key']
+            if csvFilename in key:
+                print "\nRemoving", key
+                removeKeyResult = h2o.nodes[0].remove_key(key=key)
+    elif 'keys' in importFullList:
+        kDict = importFullList['keys']
+        for k in kDict:
+            key = k
+            if csvFilename in key:
+                print "\nRemoving", key
+                removeKeyResult = h2o.nodes[0].remove_key(key=key)
+    else:
+        raise Exception ("Can't find 'files' or 'succeeded' in your file dict. why? not from hdfs/s3 or local?")
+
 
 # checks the key distribution in the cloud, and prints warning if delta against avg
 # is > expected

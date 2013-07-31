@@ -121,13 +121,32 @@ def simpleCheckRFView(node, rfv, noPrint=False, **kwargs):
     time = response['time']
 
     trees = rfv['trees'] # Dict
-    depth = trees['depth']
+    depth = trees['depth'] # Dict
     # zero depth okay?
     ## if ' 0.0 ' in depth:
     ##     raise Exception("depth in RFView seems wrong. depth:", depth)
-    leaves = trees['leaves']
+    leaves = trees['leaves'] # Dict
     if ' 0.0 ' in leaves:
         raise Exception("leaves in RFView seems wrong. leaves:", leaves)
+
+    print """
+ Leaves: {0} / {1} / {2}
+  Depth: {3} / {4} / {5}
+   mtry: {6}
+   Type: {7}
+    Err: {8} %
+""".format(
+        rfv['trees']['leaves']['min'],
+        rfv['trees']['leaves']['mean'],
+        rfv['trees']['leaves']['max'],
+        rfv['trees']['depth']['min'],
+        rfv['trees']['depth']['mean'],
+        rfv['trees']['depth']['max'],
+        rfv['mtry'],
+        rfv['confusion_matrix']['type'],
+        rfv['confusion_matrix']['classification_error'] *100,
+        )
+        
     number_built = trees['number_built']
     if (number_built<=0 or number_built>20000):
         raise Exception("number_built in RFView seems wrong. number_built:", number_built)
@@ -160,6 +179,7 @@ def scoreRF(scoreParseKey, trainResult, **kwargs):
     
     start = time.time()
     data_key = scoreParseKey['destination_key']
+    # NOTE: response_variable is required, and passed from kwargs here
     scoreResult = h2o_cmd.runRFView(None, data_key, rfModelKey, ntree, **kwargs)
 
     rftime      = time.time()-start 
@@ -196,10 +216,6 @@ def pp_rf_result(rf):
    mtry: {6}
    Type: {7}
     Err: {8} %
-   Time: {9} seconds
-
-   Confusion matrix:
-{10}
 """.format(
         rf['trees']['leaves']['min'],
         rf['trees']['leaves']['mean'],
@@ -210,6 +226,5 @@ def pp_rf_result(rf):
         rf['mtry'], 
         rf['confusion_matrix']['type'],
         rf['confusion_matrix']['classification_error'] *100,
-        rf['response']['time'],
         cm)
 
