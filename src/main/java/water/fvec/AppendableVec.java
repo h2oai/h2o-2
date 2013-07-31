@@ -26,7 +26,7 @@ public class AppendableVec extends Vec {
   long _totalCnt;
 
   AppendableVec( Key key) {
-    super(key, null,false,Double.MAX_VALUE,Double.MIN_VALUE);
+    super(key, null,false,Double.MAX_VALUE,Double.MIN_VALUE,0);
     _espc = new long[4];
     _chunkTypes = new byte[4];
   }
@@ -101,6 +101,7 @@ public class AppendableVec extends Vec {
         if(_chunkTypes[i] == ENUM)
           DKV.put(chunkKey(i), new C0DChunk(Double.NaN, (int)_espc[i]),fs);
     }
+
     // Compute elems-per-chunk.
     // Roll-up elem counts, so espc[i] is the starting element# of chunk i.
     // TODO: Complete fail: loads all data locally - will force OOM.  Needs to be
@@ -113,7 +114,7 @@ public class AppendableVec extends Vec {
     }
     espc[nchunk]=x;             // Total element count in last
     // Replacement plain Vec for AppendableVec.
-    Vec vec = new Vec(_key, espc,!_hasFloat,_min,_max);
+    Vec vec = new Vec(_key, espc,!_hasFloat,_min,_max,_missingCnt);
     vec._dtype = dtype();
     DKV.put(_key,vec,fs);       // Inject the header
     return vec;

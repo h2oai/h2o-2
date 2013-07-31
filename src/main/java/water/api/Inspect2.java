@@ -28,20 +28,54 @@ public class Inspect2 extends Request {
   @Override public boolean toHTML( StringBuilder sb ) {
     Key skey = src_key.value();
     Frame fr = DKV.get(skey).get();
+    final int numCols = fr.numCols();
 
     DocGen.HTML.title(sb,skey.toString());
     DocGen.HTML.arrayHead(sb);
     // Column labels
-    sb.append("<tr>");
-    for( int i=0; i<fr.numCols(); i++ ) 
-      sb.append("<td>").append(fr._names[i]).append("</td>");
+    sb.append("<tr class='warning'>");
+    sb.append("<td>").append("Row").append("</td>");
+    for( int i=0; i<numCols; i++ ) 
+      sb.append("<td><b>").append(fr._names[i]).append("</b></td>");
     sb.append("</tr>");
+
+    //sb.append("<tr class='warning'>");
+    //sb.append("<td>").append("Bytes").append("</td>");
+    //for( int i=0; i<numCols; i++ ) 
+    //  sb.append("<td>").append(PrettyPrint.bytes(fr._vecs[i].byteSize())).append("</td>");
+    //sb.append("</tr>");
+
+    sb.append("<tr class='warning'>");
+    sb.append("<td>").append("Min").append("</td>");
+    for( int i=0; i<numCols; i++ )
+      sb.append("<td>").append(x3(fr._vecs[i].min())).append("</td>");
+    sb.append("</tr>");
+
+    sb.append("<tr class='warning'>");
+    sb.append("<td>").append("Max").append("</td>");
+    for( int i=0; i<numCols; i++ ) 
+      sb.append("<td>").append(x3(fr._vecs[i].max())).append("</td>");
+    sb.append("</tr>");
+
+    boolean hasNAs = false;
+    long nas[] = new long[numCols];
+    for( int i=0; i<numCols; i++ ) 
+      if( (nas[i]=fr._vecs[i].NAcnt()) > 0 ) hasNAs = true;
+
+    if( hasNAs ) {
+      sb.append("<tr class='warning'>");
+      sb.append("<td>").append("Missing").append("</td>");
+      for( int i=0; i<numCols; i++ ) 
+        sb.append("<td>").append(nas[i] > 0 ? Long.toString(nas[i]) : "").append("</td>");
+      sb.append("</tr>");
+    }
 
     // First N rows
     int N = (int)Math.min(100,fr.numRows());
     for( int j=0; j<N; j++ ) {
       sb.append("<tr>");
-      for( int i=0; i<fr.numCols(); i++ ) 
+      sb.append("<td>").append(j).append("</td>");
+      for( int i=0; i<numCols; i++ ) 
         sb.append("<td>").append(x1(fr._vecs[i],j)).append("</td>");
       sb.append("</tr>");
     }
@@ -72,6 +106,8 @@ public class Inspect2 extends Request {
       }
       return Double.toString(v.at (row));
     }
+    case S:
+      return v.domain(v.at8(row));
     default: throw H2O.unimpl();
     }
   }
@@ -88,6 +124,10 @@ public class Inspect2 extends Request {
     while( s.charAt(s.length()-1)=='0' )
       s = s.substring(0,s.length()-1);
     return s;
+  }
+
+  private String x3( double d ) {
+    return (long)d==d ? Long.toString((long)d) : Double.toString(d);
   }
 
   // ---
