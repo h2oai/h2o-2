@@ -157,11 +157,10 @@ def runRFOnly(node=None, parseKey=None, trees=5,
 
     # this is important. it's the only accurate value for how many trees RF was asked for.
     ntree    = rf['ntree']
-
-    # /ip:port of cloud (can't use h2o name)
-    rfClass= rf['response_variable']
-
+    response_variable = rf['response_variable']
     if rfview:
+        # ugly..we apparently pass/use response_variable in RFView, gets passed thru kwargs here
+        # print kwargs['response_variable']
         rfViewResult = runRFView(node, data_key, model_key, ntree, 
             timeoutSecs, retryDelaySecs, noise=noise, noPrint=noPrint, **kwargs)
         return rfViewResult
@@ -270,16 +269,24 @@ def wait_for_live_port(ip, port, retries=3):
 # see how it's used in tests named above
 def delete_csv_key(csvFilename, importFullList):
     # remove the original data key
-    for k in importFullList['succeeded']:
-        ### print "possible delete:", deleteKey
-        # don't delete any ".hex" keys. the parse results above have .hex
-        # this is the name of the multi-file (it comes in as a single file?)
-        # This deletes the source key?
-        key = k['key']
-        if csvFilename in key:
-            print "\nRemoving", key
-            removeKeyResult = h2o.nodes[0].remove_key(key=key)
-            ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
+    # the list could be from hdfs/s3 or local. They have to different list structures
+    if 'succeeded' in importFullList:
+        kDict = importFullList['succeeded']
+        for k in kDict:
+            key = k['key']
+            if csvFilename in key:
+                print "\nRemoving", key
+                removeKeyResult = h2o.nodes[0].remove_key(key=key)
+    elif 'keys' in importFullList:
+        kDict = importFullList['keys']
+        for k in kDict:
+            key = k
+            if csvFilename in key:
+                print "\nRemoving", key
+                removeKeyResult = h2o.nodes[0].remove_key(key=key)
+    else:
+        raise Exception ("Can't find 'files' or 'succeeded' in your file dict. why? not from hdfs/s3 or local?")
+
 
 # checks the key distribution in the cloud, and prints warning if delta against avg
 # is > expected

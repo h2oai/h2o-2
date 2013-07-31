@@ -5,6 +5,8 @@ from array import array as pyarray
 import numpy
 from numpy import append, array, int8, uint8, zeros
 
+DO_REALS=True
+
 # gzip infile to gzfile
 def file_gzip(infile, gzfile):
     import gzip
@@ -16,7 +18,7 @@ def file_gzip(infile, gzfile):
     zipped_file.close()
     print "\nGzip:", gzfile, "done"
 
-def read(digits, dataset = "training", path = "."):
+def read(digits, dataset="training", path="."):
     """
     Loads MNIST files into 3D numpy arrays
 
@@ -32,7 +34,7 @@ def read(digits, dataset = "training", path = "."):
         fname_img = os.path.join(path, 't10k-images-idx3-ubyte')
         fname_lbl = os.path.join(path, 't10k-labels-idx1-ubyte')
     else:
-        raise ValueError, "dataset must be 'testing' or 'training'"
+        raise ValueError, "dataset must be 'testing' or 'training"
 
     flbl = open(fname_lbl, 'rb')
     magic_nr, size = struct.unpack(">II", flbl.read(8))
@@ -47,8 +49,13 @@ def read(digits, dataset = "training", path = "."):
     ind = [ k for k in xrange(size) if lbl[k] in digits ]
     N = len(ind)
 
-    images = zeros((N, rows, cols), dtype=uint8)
-    labels = zeros((N, 1), dtype=int8)
+    if DO_REALS:
+        images = zeros((N, rows, cols), dtype=float)
+        labels = zeros((N, 1), dtype=int8) # always need these to be int for H2O RF output
+    else:
+        images = zeros((N, rows, cols), dtype=int8)
+        labels = zeros((N, 1), dtype=int8)
+
     for i in xrange(len(ind)):
         images[i] = array(img[ ind[i]*rows*cols : (ind[i]+1)*rows*cols ]).reshape((rows, cols))
         labels[i] = lbl[ind[i]]
@@ -60,13 +67,22 @@ if __name__ == '__main__':
     from pylab import *
     # from numpy import *
 
-    def doit(f):
+    def doit(prefix, f):
         print "we want all the images"
         images, labels = read(range(10), f) 
+        if DO_REALS:
+            # If you want the values as floats between 0.0 and 1.0, just do
+            images /= 255.0
+        print images[0]
+
         print "labels.shape", labels.shape
         print "images.shape", images.shape
         print "images[0].shape", images[0].shape
         (a,b,c) = images.shape
+        if DO_REALS:
+            # If you want the values as floats between 0.0 and 1.0, just do
+            images /= 255.0
+
         imagesF = images.reshape(a,b*c)
         labelsF = labels
 
@@ -74,7 +90,7 @@ if __name__ == '__main__':
         bothF = numpy.concatenate((labelsF, imagesF), 1)
         print "labelsF.shape", labelsF.shape
         print "imagesF.shape", imagesF.shape
-        print "both.shape", bothF.shape
+        print "bothF.shape", bothF.shape
         
         # the output label was first in the concatenate. do the same for header 
         headerList = ['label']
@@ -82,14 +98,26 @@ if __name__ == '__main__':
         # comma separated!
         header = ','.join(map(str,headerList))
         print header # just so we can see it.
-        numpy.savetxt('mnist_'+ f + '.csv', bothF, header=header, delimiter=',', fmt='%d')
+        if DO_REALS:
+            # first has to be integer for stupid h2o rf output (doesn't take fp)
+            # have to create a format string for each one as a result!
+            fmt = ",".join(["%i"] + ["%f"] * imagesF.shape[1])
+        else:
+            fmt = '%d'
+        numpy.savetxt(prefix + f + '.csv', bothF, header=header, delimiter=',', fmt=fmt)
 
     # create the two csv files
-    doit('training')
-    doit('testing')
+    if DO_REALS:
+        prefix = "mnist_reals_"
+    else:
+        prefix = "mnist_"
+
+    doit(prefix, 'training')
+    doit(prefix, 'testing')
+
     # we can copy this multiple times to get bigger parsed gz
-    file_gzip('mnist_training.csv', 'mnist_training.csv.gz')
-    file_gzip('mnist_testing.csv', 'mnist_testing.csv.gz')
+    file_gzip(prefix + 'training.csv', prefix + 'training.csv.gz')
+    file_gzip(prefix + 'testing.csv',  prefix + 'testing.csv.gz')
 
     # show merged images
     if 1==0:

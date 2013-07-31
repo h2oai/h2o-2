@@ -31,7 +31,8 @@ class Basic(unittest.TestCase):
         shCmdString = "R -f " + rScript + " --args " + rLibrary + " " + h2o.nodes[0].http_addr + ":" + str(h2o.nodes[0].port)
         
         (ps, outpath, errpath) =  h2o.spawn_cmd('rtest_with_h2o', shCmdString.split())
-        h2o.spawn_wait(ps, outpath, errpath, timeout=10)
+        rc = h2o.spawn_wait(ps, outpath, errpath, timeout=10)
+        if(rc != 0): raise Exception("R exited with non-zero return code %s" % rc)
 
     def test_R_RF_diff_ignore(self):
         print "\nStarting iris.csv ignore predictor(s) test"
@@ -42,7 +43,9 @@ class Basic(unittest.TestCase):
         shCmdString = "R -f " + rScript + " --args " + rLibrary + " " + h2o.nodes[0].http_addr + ":" + str(h2o.nodes[0].port)
         
         (ps, outpath, errpath) =  h2o.spawn_cmd('rtest_with_h2o', shCmdString.split())
-        h2o.spawn_wait(ps, outpath, errpath, timeout=10)
+        rc = h2o.spawn_wait(ps, outpath, errpath, timeout=10)
+        if(rc != 0): raise Exception("R exited with non-zero return code %s" % rc)
 
 if __name__ == '__main__':
     h2o.unit_main()
+    

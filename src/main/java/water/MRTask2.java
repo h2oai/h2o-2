@@ -70,6 +70,9 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
   // Note: the desired name 'get' is final in ForkJoinTask.
   public final T getResult() {
     join();
+    // Do any post-writing work (zap rollup fields, etc)
+    for( int i=0; i<_fr.numCols(); i++ )
+      _fr._vecs[i].postWrite();
     return self();
   }
 

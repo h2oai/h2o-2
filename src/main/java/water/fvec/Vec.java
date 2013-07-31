@@ -34,6 +34,8 @@ public class Vec extends Iced {
   public boolean _isInt;  // true if column is all integer data
   // min/max/mean lazily computed.
   double _min, _max;
+  double _mean;
+  long _nas;                    // Count of NA's, lazily computed
 
   // Base datatype of the entire column.
   // Decided on when we close an AppendableVec.
@@ -47,13 +49,13 @@ public class Vec extends Iced {
   // Overridden in AppendableVec
   public DType dtype(){return _dtype;}
 
-  Vec( Key key, long espc[], boolean isInt, double min, double max ) {
+  Vec( Key key, long espc[], boolean isInt, long NAs ) {
     assert key._kb[0]==Key.VEC;
     _key = key;
     _espc = espc;
     _isInt = isInt;
-    _min = min == Double.MIN_VALUE ? Double.NaN : min;
-    _max = max;
+    _min = Double.NaN;
+    _nas = NAs;
   }
 
   // Make a new vector same size as the old one, and initialized to zero.
@@ -61,7 +63,7 @@ public class Vec extends Iced {
     Futures fs = new Futures();
     if( v._espc == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
     int nchunks = v.nChunks();
-    Vec v0 = new Vec(v.group().addVecs(1)[0],v._espc,true,0,0);
+    Vec v0 = new Vec(v.group().addVecs(1)[0],v._espc,true,0);
     long row=0;                 // Start row
     for( int i=0; i<nchunks; i++ ) {
       long nrow = v.chunk2StartElem(i+1); // Next row
@@ -80,6 +82,7 @@ public class Vec extends Iced {
   // Number of chunks.  Overridden by subclasses that compute chunks in an
   // alternative way, such as file-backed Vecs.
   public int nChunks() { return _espc.length-1; }
+  public String domain(long i) { return _domain[(int)i]; }
 
   // Default read/write behavior for Vecs.
   // File-backed Vecs are read-only.
@@ -89,13 +92,45 @@ public class Vec extends Iced {
 
   // Return column min & max - lazily computing as needed.
   public double min() {
-    if( _min == Double.NaN ) throw H2O.unimpl();
+    if( Double.isNaN(_min) ) {
+      RollupStats rs = new RollupStats().doAll(this);
+      _min = rs._min;
+      _max = rs._max;
+      _mean= rs._mean;
+      _nas = rs._nas;
+    }
     return _min;
   }
-  public double max() {
-    if( _min == Double.NaN ) throw H2O.unimpl();
-    return _max;
+  public double max () { if( Double.isNaN(_min) ) min(); return _max;  }
+  public double mean() { if( Double.isNaN(_min) ) min(); return _mean; }
+  public long  NAcnt() { if( Double.isNaN(_min) ) min(); return _nas;  }
+
+  private static class RollupStats extends MRTask2<RollupStats> {
+    double _min, _max, _mean;
+    long _rows, _nas;
+    @Override public void map( Chunk c ) {
+      for( int i=0; i<c._len; i++ ) {
+        if( c.isNA0(i) ) _nas++;
+        else {
+          double d= c.at0(i);
+          if( d < _min ) _min = d;
+          if( d > _max ) _max = d;
+          _mean += d;
+          _rows++;
+        }
+      }
+      _mean = _mean/_rows;
+    }
+    @Override public void reduce( RollupStats rs ) {
+      _min = Math.min(_min,rs._min);
+      _max = Math.max(_max,rs._max);
+      _nas += rs._nas;
+      _mean = (_mean*_rows + rs._mean*rs._rows)/(_rows+rs._rows);
+      _rows += rs._rows;
+    }
   }
+
+
   void setActiveWrites() { _activeWrites = true; _min = _max = Double.NaN; }
   // Writing into this Vector from *some* chunk.  Immediately clear all caches
   // (_min, _max, _mean, etc).  Can be called repeatedly from one or all
@@ -114,6 +149,16 @@ public class Vec extends Iced {
   }
   private static final class SetActiveWrites extends TAtomic<Vec> {
     @Override public Vec atomic(Vec v) { v.setActiveWrites(); return v; }
+  }
+  private static final class ClrActiveWrites extends TAtomic<Vec> {
+    @Override public Vec atomic(Vec v) { v._activeWrites=false; return v; }
+  }
+  // Stop writing into this Vec
+  public void postWrite() {
+    if( _activeWrites ) {
+      _activeWrites=false;
+      new ClrActiveWrites().invoke(_key);
+    }
   }
 
   // Convert a row# to a chunk#.  For constant-sized chunks this is a little

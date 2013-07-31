@@ -538,7 +538,7 @@ def check_sandbox_for_errors(sandbox_ignore_errors=False):
                     # don't detect these class loader info messags as errors
                     #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
                     foundBad = regex1.search(line) and not (
-                        ('error rate' in line) or ('[Loaded ' in line) or
+                        ('error rate' in line) or ('[Loaded ' in line) or ('class.error' in line) or
                         ('[WARN]' in line) or ('CalcSquareErrorsTasks' in line))
 
                 if (printing==0 and foundBad):
@@ -586,17 +586,15 @@ def check_sandbox_for_errors(sandbox_ignore_errors=False):
             justInfo &= re.match("INFO:", e) or ("apache" in e)
 
         if not justInfo:
-            emsg1 = " check_sandbox_for_errors: Errors in sandbox stdout or stderr.\n" + \
+            emsg1 = " check_sandbox_for_errors: Errors in sandbox stdout or stderr (including R stdout/stderr).\n" + \
                      "Could have occurred at any prior time\n\n"
             emsg2 = "".join(errLines)
             if nodes: 
                 nodes[0].sandbox_error_report(True)
 
-            # can build a cloud that ignores all sandbox things that normally fatal the test
-            # kludge, test will set this directly if it wants, rather than thru build_cloud
-            # parameter. 
-            # we need the sandbox_ignore_errors, for the test teardown_cloud..the state 
-            # disappears!
+            # Can build a cloud that ignores all sandbox things that normally fatal the test
+            # Kludge, test will set this directly if it wants, rather than thru build_cloud parameter. 
+            # we need the sandbox_ignore_errors, for the test teardown_cloud..the state disappears!
             if sandbox_ignore_errors or (nodes and nodes[0].sandbox_ignore_errors):
                 pass
             else:
@@ -1167,12 +1165,14 @@ class H2O(object):
         return a
 
     def random_forest_view(self, data_key, model_key, timeoutSecs=300, print_params=False, **kwargs):
+        # is response_variable needed here? it shouldn't be
         # do_json_request will ignore any that remain = None
         params_dict = {
             'data_key': data_key,
             'model_key': model_key,
             'out_of_bag_error_estimate': 1, 
             'class_weights': None,
+            'response_variable': None, 
             }
         browseAlso = kwargs.pop('browseAlso',False)
 

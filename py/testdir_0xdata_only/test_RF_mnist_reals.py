@@ -27,13 +27,13 @@ class Basic(unittest.TestCase):
         time.sleep(15)
         h2o.tear_down_cloud()
 
-    def test_RF_mnist(self):
+    def test_RF_mnist_reals(self):
         importFolderPath = "/home/0xdiag/datasets/mnist"
         csvFilelist = [
-            # ("mnist_testing.csv.gz", "mnist_testing.csv.gz",    600), 
+            # ("mnist_reals_testing.csv.gz", "mnist_reals_testing.csv.gz",    600), 
             # ("a.csv", "b.csv", 60),
-            # ("mnist_testing.csv.gz", "mnist_testing.csv.gz",    600), 
-            ("mnist_training.csv.gz", "mnist_testing.csv.gz",    600), 
+            # ("mnist_reals_testing.csv.gz", "mnist_reals_testing.csv.gz",    600), 
+            ("mnist_reals_training.csv.gz", "mnist_reals_testing.csv.gz",    600), 
         ]
         # IMPORT**********************************************
         # since H2O deletes the source key, we should re-import every iteration if we re-use the src in the list
@@ -86,7 +86,7 @@ class Basic(unittest.TestCase):
                 'ntree': ntree,
                 'iterative_cm': 1,
                 'out_of_bag_error_estimate': 1,
-                # 'data_key='mnist_training.csv.hex'
+                # 'data_key='mnist_reals_training.csv.hex'
                 'features': 28, # fix because we ignore some cols, which will change the srt(cols) calc?
                 'exclusive_split_limit': None,
                 'depth': 2147483647,
