@@ -5,6 +5,7 @@ build:
 	sed 's/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/' DESCRIPTION.template > h2o-package/DESCRIPTION
 	R CMD build h2o-package
 	mkdir -p ../target/R
+	cp -p README.txt ../target/R
 	mv h2o_$(PROJECT_VERSION).tar.gz ../target/R
 
 clean:
