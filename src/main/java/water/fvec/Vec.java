@@ -106,7 +106,7 @@ public class Vec extends Iced {
   public long  NAcnt() { if( Double.isNaN(_min) ) min(); return _nas;  }
 
   private static class RollupStats extends MRTask2<RollupStats> {
-    double _min, _max, _mean;
+    double _min=Double.MAX_VALUE, _max=-Double.MAX_VALUE, _mean;
     long _rows, _nas;
     @Override public void map( Chunk c ) {
       for( int i=0; i<c._len; i++ ) {
