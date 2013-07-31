@@ -1,50 +1,41 @@
 package water.api;
 
 import hex.KMeansModel;
-
-import java.util.Random;
-
 import water.Key;
-import water.ValueArray;
 import water.util.RString;
 
 import com.google.gson.*;
 
-public class KMeans extends Request {
-  protected final H2OHexKey _source = new H2OHexKey(SOURCE_KEY);
-  protected final Int _k = new Int(K);
-  protected final Int _maxIter = new Int(MAX_ITER, 0);
-  protected final Real _epsilon = new Real(EPSILON, 1e-4);
-  protected final LongInt _seed = new LongInt(SEED, new Random().nextLong(), "");
-  protected final Bool _normalize = new Bool(NORMALIZE, false, "");
-  protected final HexAllColumnSelect _columns = new HexAllColumnSelect(COLS, _source);
-  protected final H2OKey _dest = new H2OKey(DEST_KEY, hex.KMeans.makeKey());
+public class KMeans extends KMeansShared {
+  static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+  static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+
+  // This Request supports the HTML 'GET' command, and this is the help text
+  // for GET.
+  static final String DOC_GET = "K-means algorithm";
+
+  @API(help = "Number of clusters")
+  final Int k = new Int("k");
+
+  @API(help = "Maximum number of iterations before stopping")
+  final Int max_iter = new Int("max_iter", 0);
+
+  public KMeans() {
+    // Reorder arguments
+    _arguments.remove(k);
+    _arguments.add(1, k);
+    _arguments.remove(max_iter);
+    _arguments.add(2, max_iter);
+  }
 
   @Override protected Response serve() {
-    ValueArray va = _source.value();
-    Key source = va._key;
-    int k = _k.value();
-    double epsilon = _epsilon.value();
-    int maxIter = _maxIter.value();
-    long seed = _seed.record()._valid ? _seed.value() : _seed._defaultValue;
-    boolean normalize = _normalize.record()._valid ? _normalize.value() : _normalize._defaultValue;
-    int[] cols = _columns.value();
-    Key dest = _dest.value();
-
-    if( dest == null ) {
-      String n = source.toString();
-      int dot = n.lastIndexOf('.');
-      if( dot > 0 ) n = n.substring(0, dot);
-      dest = Key.make(n + Extensions.KMEANS);
-    }
-
     try {
-      hex.KMeans job = hex.KMeans.start(dest, va, k, epsilon, maxIter, seed, normalize, cols);
+      hex.KMeans job = start(destination_key.value(), k.value(), max_iter.value());
       JsonObject response = new JsonObject();
       response.addProperty(JOB, job.self().toString());
-      response.addProperty(DEST_KEY, dest.toString());
+      response.addProperty(DEST_KEY, job.dest().toString());
 
-      Response r = Progress.redirect(response, job.self(), dest);
+      Response r = Progress.redirect(response, job.self(), job.dest());
       r.setBuilder(DEST_KEY, new KeyElementBuilder());
       return r;
     } catch( IllegalArgumentException e ) {

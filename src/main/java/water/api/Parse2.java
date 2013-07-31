@@ -5,12 +5,10 @@ import java.util.Collections;
 import java.util.regex.Pattern;
 
 import water.*;
-import water.Weaver.Weave;
 import water.api.RequestBuilders.Response.Status;
 import water.fvec.*;
 import water.parser.CsvParser;
 import water.parser.CsvParser.Setup;
-import water.util.RString;
 
 public class Parse2 extends Request {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
@@ -22,27 +20,27 @@ public class Parse2 extends Request {
 
   // HTTP request parameters
 
-  @Weave(help="Field separator, typically commas ',' or TABs.")
+  @API(help="Field separator, typically commas ',' or TABs.")
   final Separator separator = new Separator("separator");
 
-  @Weave(help="Key (or regex of keys) to ignore.")
+  @API(help="Key (or regex of keys) to ignore.")
   final Str exclude = new Str("exclude", "");
 
-  @Weave(help="An existing H2O CSV text key (or regex of keys).")
+  @API(help="An existing H2O CSV text key (or regex of keys).")
   final ExistingCSVKey source_key = new ExistingCSVKey("source_key");
 
-  @Weave(help="Destination key.")
+  @API(help="Destination key.")
   final NewH2OHexKey dst_key = new NewH2OHexKey("dst");
 
-  @Weave(help="If checked, first data row is assumed to be a header.  If unchecked, first data row is assumed to be data.")
+  @API(help="If checked, first data row is assumed to be a header.  If unchecked, first data row is assumed to be data.")
   final Header header = new Header("header");
 
   // JSON output fields
 
-  @Weave(help="Job key, useful to query for progress.")
+  @API(help="Job key, useful to query for progress.")
   String job;
 
-  @Weave(help="Destination key.")
+  @API(help="Destination key.")
   String destination_key;
 
   //@Override public String[] DocExampleSucc() { return new String[]{ "source_key","./smalldata/logreg/prostate.cvs" }; }
@@ -124,7 +122,7 @@ public class Parse2 extends Request {
 
     @Override protected PSetup defaultValue() { return null; }
     @Override protected String queryDescription() { return "Source CSV key"; }
-    @Override protected String[] errors() { return new String[] { 
+    @Override protected String[] errors() { return new String[] {
         "I did not find any keys matching this pattern!",
         "I cannot figure out this file; I only handle common CSV formats: "
       }; }
@@ -223,7 +221,7 @@ public class Parse2 extends Request {
         : new CsvParser.Setup(q._separator,header.value(),q._data,q._numlines,q._bits);
 
       Key[] keys = p._keys.toArray(new Key[p._keys.size()]);
-      job = ParseDataset2.forkParseDataset(d, keys,new_setup)._self.toString();
+      job = ParseDataset2.forkParseDataset(d, keys,new_setup).job_key.toString();
       destination_key = d.toString();
 
       return new Response(Status.done, this);

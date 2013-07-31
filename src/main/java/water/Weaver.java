@@ -1,22 +1,14 @@
 package water;
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 
 import javassist.*;
+import water.api.Request.API;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
 
 public class Weaver {
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface Weave {
-    String help();
-    int minVersion() default 1;
-    int maxVersion() default Integer.MAX_VALUE;
-  }
-
   private final ClassPool _pool;
   private final CtClass _dtask, _iced, _enum, _api;
   private final CtClass[] _serBases;
@@ -267,15 +259,15 @@ public class Weaver {
       } catch( ClassNotFoundException ex) {
         throw new RuntimeException(ex);
       }
-      Weave w = null;
-      for(Object a : as) {
-        if(a instanceof Weave)
-          w = (Weave) a;
+      API a = null;
+      for(Object attribute : as) {
+        if(attribute instanceof API)
+          a = (API) attribute;
       }
-      if( w == null ) throw new CannotCompileException("Class "+cc.getName()+" has non-transient field '"+name+"' without a Weave annotation");
-      String help = w.help();
-      int min = w.minVersion();
-      int max = w.maxVersion();
+      if( a == null ) throw new CannotCompileException("Class "+cc.getName()+" has non-transient field '"+name+"' without a Weave annotation");
+      String help = a.help();
+      int min = a.minVersion();
+      int max = a.maxVersion();
       if( min < 1 || min > 1000000 ) throw new CannotCompileException("Found field '"+name+"' but MinVer < 1 or MinVer > 1000000");
       if( max < min || (max > 1000000 && max != Integer.MAX_VALUE) )
         throw new CannotCompileException("Found field '"+name+"' but MaxVer < "+min+" or MaxVer > 1000000");

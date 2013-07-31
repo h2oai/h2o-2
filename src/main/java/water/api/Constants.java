@@ -1,8 +1,9 @@
 package water.api;
 
+import water.Iced;
 import water.util.Check;
 
-public class Constants {
+public class Constants extends Iced {
   public static class Suffixes {
     // JSON fields with these suffixes will automatically provide some
     // pretty printing.  Users can still override the fields later
@@ -84,7 +85,6 @@ public class Constants {
   public static final String JOB                   = "job";
   public static final String JOBS                  = "jobs";
   public static final String JSON_H2O              = "h2o";
-  public static final String K                     = "k";
   public static final String KEY                   = "key";
   public static final String KEYS                  = "keys";
   public static final String LAST_CONTACT          = "last_contact";

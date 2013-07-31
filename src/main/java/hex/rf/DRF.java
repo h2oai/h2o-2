@@ -266,7 +266,7 @@ public abstract class DRF {
       return super.start(jobRemoval);
     }
     @Override public float progress() {
-      Progress p = (Progress) UKV.get(_dest);
+      Progress p = (Progress) UKV.get(destination_key);
       return p.progress();
     }
   }

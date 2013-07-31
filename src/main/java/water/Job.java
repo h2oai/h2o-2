@@ -5,23 +5,35 @@ import java.util.UUID;
 
 import water.H2O.H2OCountedCompleter;
 import water.api.Constants;
+import water.api.Request;
 
-public class Job extends Iced {
+public class Job extends Request {
   // Global LIST of Jobs key.
   static final Key LIST = Key.make(Constants.BUILT_IN_KEY_JOBS, (byte) 0, Key.BUILT_IN_KEY);
   private static final int KEEP_LAST_COUNT = 100;
   public static final long CANCELLED_END_TIME = -1;
 
-  // Per-job fields
-  public final Key    _self; // Boolean read-only value; exists==>running, not-exists==>canceled/removed
-  public final Key    _dest; // Key holding final value after job is removed
-  public final String _description;
-  public final long   _startTime;
-  public long         _endTime;
+  @API(help = "Job key")
+  public Key job_key; // Boolean read-only value; exists==>running, not-exists==>canceled/removed
+
+  @API(help = "Destination key")
+  @Input
+  public Key destination_key; // Key holding final value after job is removed
+
+  public String _description;
+  public long _startTime;
+  public long _endTime;
   transient public H2OCountedCompleter _fjtask; // Top-level task you can block on
 
-  public Key self() { return _self; }
-  public Key dest() { return _dest; }
+  public Key self() { return job_key; }
+  public Key dest() { return destination_key; }
+
+  public static abstract class FrameJob extends Job {
+    @API(help = "Key with input frame")
+    @Input
+    @ExistingFrame
+    public Key source_key;
+  }
 
   public interface Progress {
     float progress();
@@ -44,6 +56,9 @@ public class Job extends Iced {
     return list != null ? list._jobs : new Job[0];
   }
 
+  protected Job() {
+  }
+
   public Job(String description, Key dest) {
     // Pinned to self, because it should be almost always updated locally
     this(UUID.randomUUID().toString(), description, dest);
@@ -51,15 +66,15 @@ public class Job extends Iced {
 
   protected Job(String keyName, String description, Key dest) {
     // Pinned to self, because it should be almost always updated locally
-    _self = Key.make(keyName, (byte) 0, Key.JOB, H2O.SELF);
+    job_key = Key.make(keyName, (byte) 0, Key.JOB, H2O.SELF);
     _description = description;
     _startTime = System.currentTimeMillis();
-    _dest = dest;
+    destination_key = dest;
   }
 
   public <T extends H2OCountedCompleter> T start(T fjtask) {
     _fjtask = fjtask;
-    DKV.put(_self, new Value(_self, new byte[0]));
+    DKV.put(job_key, new Value(job_key, new byte[0]));
     new TAtomic<List>() {
       @Override public List atomic(List old) {
         if( old == null ) old = new List();
@@ -72,9 +87,24 @@ public class Job extends Iced {
     return fjtask;
   }
 
+  @Override protected Response serve() {
+    H2OCountedCompleter task = new H2OCountedCompleter() {
+      @Override public void compute2() {
+        run();
+        tryComplete();
+      }
+    };
+    H2O.submitTask(start(task));
+    return new Response(Response.Status.done, this);
+  }
+
+  protected void run() {
+    throw new RuntimeException("Should be overridden if job is a request");
+  }
+
   // Overriden for Parse
   public float progress() {
-    Freezable f = UKV.get(_dest);
+    Freezable f = UKV.get(destination_key);
     if(f instanceof Job)
       return ((Job.Progress) f).progress();
     return 0;
@@ -83,12 +113,12 @@ public class Job extends Iced {
   // Block until the Job finishes.
   public <T> T get() {
     _fjtask.join();             // Block until top-level job is done
-    T ans = (T) UKV.get(_dest);
+    T ans = (T) UKV.get(destination_key);
     remove();                   // Remove self-job
     return ans;
   }
 
-  public void cancel() { cancel(_self); }
+  public void cancel() { cancel(job_key); }
   public static void cancel(final Key self) {
     DKV.remove(self);
     DKV.write_barrier();
@@ -97,7 +127,7 @@ public class Job extends Iced {
         if( old == null ) old = new List();
         Job[] jobs = old._jobs;
         for( int i = 0; i < jobs.length; i++ ) {
-          if( jobs[i]._self.equals(self) ) {
+          if( jobs[i].job_key.equals(self) ) {
             jobs[i]._endTime = CANCELLED_END_TIME;
             break;
           }
@@ -107,19 +137,19 @@ public class Job extends Iced {
     }.fork(LIST);
   }
 
-  public boolean cancelled() { return cancelled(_self); }
+  public boolean cancelled() { return cancelled(job_key); }
   public static boolean cancelled(Key self) {
     return DKV.get(self) == null;
   }
 
   public void remove() {
-    DKV.remove(_self);
+    DKV.remove(job_key);
     new TAtomic<List>() {
       @Override public List atomic(List old) {
         if( old == null ) return null;
         Job[] jobs = old._jobs;
         for( int i = 0; i < jobs.length; i++ ) {
-          if( jobs[i]._self.equals(_self) ) {
+          if( jobs[i].job_key.equals(job_key) ) {
             if(jobs[i]._endTime != CANCELLED_END_TIME)
               jobs[i]._endTime = System.currentTimeMillis();
             break;
@@ -170,7 +200,7 @@ public class Job extends Iced {
     return job;
   }
 
-  /** Returns job execution time in miliseconds */
+  /** Returns job execution time in milliseconds */
   public final long executionTime() { return _endTime - _startTime; }
 
   public static class ChunkProgress extends Iced implements Progress {

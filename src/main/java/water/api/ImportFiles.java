@@ -5,7 +5,6 @@ import java.util.ArrayList;
 
 import water.Futures;
 import water.Key;
-import water.Weaver.Weave;
 import water.util.FileIntegrityChecker;
 
 public class ImportFiles extends Request {
@@ -20,17 +19,17 @@ public class ImportFiles extends Request {
     "(Warning: Every host in the cluster must have this file visible locally!)";
 
   // HTTP REQUEST PARAMETERS
-  @Weave(help="File or directory to import.")
+  @API(help="File or directory to import.")
   protected final ExistingFile path = new ExistingFile("path");
 
   // JSON OUTPUT FIELDS
-  @Weave(help="Files imported.  Imported files are merely Keys mapped over the existing files.  No data is loaded until the Key is used (usually in a Parse command).")
+  @API(help="Files imported.  Imported files are merely Keys mapped over the existing files.  No data is loaded until the Key is used (usually in a Parse command).")
   String[] files;
 
-  @Weave(help="Keys of imported files, Keys map 1-to-1 with imported files.")
+  @API(help="Keys of imported files, Keys map 1-to-1 with imported files.")
   String[] keys;
 
-  @Weave(help="File names that failed the integrity check, can be empty.")
+  @API(help="File names that failed the integrity check, can be empty.")
   String[] fails;
 
   @Override public String[] DocExampleSucc() { return new String[]{"path","smalldata/airlines"}; }

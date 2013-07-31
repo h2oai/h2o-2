@@ -51,7 +51,7 @@ public class Inspect extends Request {
 
   public static Response redirect(JsonObject resp, Job keyProducer, Key dest) {
     JsonObject redir = new JsonObject();
-    if (keyProducer!=null) redir.addProperty(JOB, keyProducer._self.toString());
+    if (keyProducer!=null) redir.addProperty(JOB, keyProducer.job_key.toString());
     redir.addProperty(KEY, dest.toString());
     return Response.redirect(resp, Inspect.class, redir);
   }
@@ -339,8 +339,9 @@ public class Inspect extends Request {
     }
     sb.append("<div class='alert'>" +"View " + SummaryPage.link(key, "Summary") +  "<br/>Build models using "
           + RF.link(key, "Random Forest") + ", "
-          + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", or "
-          + KMeans.link(key, "KMeans") + "<br />"
+          + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", "
+          + KMeans.link(key, "KMeans") + ", or "
+          + KMeansGrid.link(key, "KMeansGrid") + "<br />"
           + "Score data using "
           + RFScore.link(key, "Random Forest") + ", "
           + GLMScore.link(KEY, key, 0.0, "GLM") + "</br><b>Download as</b> " + DownloadDataset.link(key, "CSV")

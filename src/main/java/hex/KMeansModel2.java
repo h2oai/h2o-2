@@ -5,7 +5,6 @@ import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
-import water.Job.Progress;
 import water.ValueArray.Column;
 import water.api.Constants;
 import water.util.Log;
@@ -13,23 +12,13 @@ import water.util.Log.Tag.Sys;
 
 import com.google.gson.*;
 
-public class KMeansModel extends Model implements Progress {
-  public static final String NAME = KMeansModel.class.getSimpleName();
+public class KMeansModel2 extends Model {
   public double[][] _clusters; // The cluster centers, normalized according to _va
   public double _error; // Sum of min square distances
-  public int _iteration;
-  public double _epsilon;
-  public int _maxIter;
-  public long _randSeed;
-  public boolean _normalized;
+  public KMeans2 _job;
 
-  public KMeansModel(Key selfKey, int cols[], Key dataKey) {
+  public KMeansModel2(Key selfKey, int cols[], Key dataKey) {
     super(selfKey, cols, dataKey);
-  }
-
-  // Progress reporting for the job/progress page
-  @Override public float progress() {
-    return Math.min(1f, _iteration / (float) 20);
   }
 
   // Accept only columns with a defined mean. Used during the Model.<init> call.
@@ -41,7 +30,7 @@ public class KMeansModel extends Model implements Progress {
   public JsonObject toJson() {
     JsonObject res = new JsonObject();
     res.addProperty(Constants.VERSION, H2O.VERSION);
-    res.addProperty(Constants.TYPE, KMeansModel.class.getName());
+    res.addProperty(Constants.TYPE, KMeansModel2.class.getName());
     JsonArray ary = new JsonArray();
     for( double[] dd : clusters() ) {
       JsonArray ary2 = new JsonArray();
@@ -61,7 +50,7 @@ public class KMeansModel extends Model implements Progress {
       for( int i = 0; i < ds.length; i++ ) {
         ValueArray.Column C = _va._cols[i];
         double d = ds[i];
-        if( _normalized ) {
+        if( _job.normalize ) {
           if( C._sigma != 0.0 && !Double.isNaN(C._sigma) ) d *= C._sigma;
           d += C._mean;
         }
@@ -80,7 +69,7 @@ public class KMeansModel extends Model implements Progress {
     for( int i = 0; i < data.length - 1; i++ ) { // Normalize the data before scoring
       ValueArray.Column C = _va._cols[i];
       double d = data[i];
-      if( _normalized ) {
+      if( _job.normalize ) {
         d -= C._mean;
         if( C._sigma != 0.0 && !Double.isNaN(C._sigma) ) d /= C._sigma;
       }
@@ -102,7 +91,7 @@ public class KMeansModel extends Model implements Progress {
 
   public final void print() {
     StringBuilder sb = new StringBuilder();
-    sb.append("I: ").append(_iteration).append("[");
+    sb.append("I: ").append(_job.iterations).append("[");
     double[][] c = clusters();
     for( int i = 0; i < c.length; i++ )
       sb.append(c[i][2]).append(",");
@@ -120,12 +109,12 @@ public class KMeansModel extends Model implements Progress {
     public long _rows[];        // OUT: Count of rows per-cluster
     public double _dist[];      // OUT: Normalized sqr-error per-cluster
 
-    public static KMeansScore score(KMeansModel model, ValueArray ary) {
+    public static KMeansScore score(KMeansModel2 model, ValueArray ary) {
       KMeansScore kms = new KMeansScore();
       kms._arykey = ary._key;
       kms._cols = model.columnMapping(ary.colNames());
       kms._clusters = model._clusters;
-      kms._normalized = model._normalized;
+      kms._normalized = model._job.normalize;
       kms.invoke(ary._key);
       return kms;
     }
@@ -187,7 +176,7 @@ public class KMeansModel extends Model implements Progress {
 
     static final int ROW_SIZE = 4;
 
-    public static Job run(final Key dest, final KMeansModel model, final ValueArray ary) {
+    public static Job run(final Key dest, final KMeansModel2 model, final ValueArray ary) {
       UKV.remove(dest); // Delete dest first, or chunk size from previous key can crash job
       String desc = "KMeans apply model: " + model._selfKey + " to " + ary._key;
       final ChunkProgressJob job = new ChunkProgressJob(desc, dest, ary.chunks());
@@ -198,7 +187,7 @@ public class KMeansModel extends Model implements Progress {
           kms._arykey = ary._key;
           kms._cols = model.columnMapping(ary.colNames());
           kms._clusters = model._clusters;
-          kms._normalized = model._normalized;
+          kms._normalized = model._job.normalize;
           kms.invoke(ary._key);
 
           Column c = new Column();
