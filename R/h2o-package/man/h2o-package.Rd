@@ -12,10 +12,10 @@ This is a package for running H2O via its REST API from within R.
 \tabular{ll}{
 Package: \tab h2o\cr
 Type: \tab Package\cr
-Version: \tab 0.3\cr
+Version: \tab 99.99.99.99999\cr
 Date: \tab 2013-07-16\cr
 License: \tab Apache-2\cr
-Depends: \tab R (>= 2.15.0), RCurl, rjson\cr
+Depends: \tab R (>= 2.13.0), RCurl, rjson\cr
 }
 This package allows the user to run basic H2O commands using R commands. In order to use it, you must first have H2O running (See \href{http://0xdata.com/h2o/docs/}{How to Start H2O}). Load the library and create a \code{\linkS4class{H2OClient}} object with the server IP and port. The command \code{\link{importFile}} will import and parse a delimited data file, returning an \code{\linkS4class{H2OParsedData}} object.
 
@@ -37,8 +37,9 @@ Maintainer: Anqi Fu <anqi@0xdata.com>
 \examples{
 library(h2o)
 h2o = new("H2OClient", ip = "localhost", port = 54321)
+checkH2OClient(h2o)
 prostate.hex = importURL(h2o, "https://raw.github.com/0xdata/h2o/master/smalldata/
-  logreg/prostate.csv", "prostate.hex")
+logreg/prostate.csv", "prostate.hex")
 summary(prostate.hex)
 prostate.glm = h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, 
 family = "binomial", nfolds = 10, alpha = 0.5)
