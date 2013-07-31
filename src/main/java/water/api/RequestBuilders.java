@@ -110,7 +110,7 @@ public class RequestBuilders extends RequestQueries {
           ;
 
   private static final String _pollJs =
-            "var timer = setTimeout(redirect,5000);\n"
+            "var timer = setTimeout(redirect,%TIMEOUT);\n"
           + "function countdown_stop() {\n"
           + "  clearTimeout(timer);\n"
           + "}\n"
@@ -170,7 +170,9 @@ public class RequestBuilders extends RequestQueries {
           poll.replace("REDIRECT_URL",getClass().getSimpleName()+".html"+encodeRedirectArgs(response._redirectArgs,response._redirArgs));
           result.replace("JSSTUFF", poll.toString());
         } else {
-          result.replace("JSSTUFF", _pollJs);
+          RString poll = new RString(_pollJs);
+          poll.replace("TIMEOUT", response._pollProgress==0 ? 500 : 2000);
+          result.replace("JSSTUFF", poll.toString());
         }
         int pct = (int) ((double)response._pollProgress / response._pollProgressElements * 100);
         result.replace("BUTTON","<button class='btn btn-primary' onclick='redirect()'>"+response._status.toString()+"</button>");

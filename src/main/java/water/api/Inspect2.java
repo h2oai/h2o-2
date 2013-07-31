@@ -65,6 +65,7 @@ public class Inspect2 extends Request {
 
   @Override public boolean toHTML( StringBuilder sb ) {
     Key skey = src_key.value();
+    Frame fr = DKV.get(skey).get();
 
     DocGen.HTML.title(sb,skey.toString());
     DocGen.HTML.section(sb,""+numCols+" columns, "+numRows+" rows, "+PrettyPrint.bytes(byteSize));
@@ -76,22 +77,16 @@ public class Inspect2 extends Request {
       sb.append("<td><b>").append(cols[i].name).append("</b></td>");
     sb.append("</tr>");
 
-    //sb.append("<tr class='warning'>");
-    //sb.append("<td>").append("Bytes").append("</td>");
-    //for( int i=0; i<cols.length; i++ ) 
-    //  sb.append("<td>").append(PrettyPrint.bytes(fr._vecs[i].byteSize())).append("</td>");
-    //sb.append("</tr>");
-
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Min").append("</td>");
     for( int i=0; i<cols.length; i++ )
-      sb.append("<td>").append(x3(cols[i].min)).append("</td>");
+      sb.append("<td>").append(x1(fr._vecs[i],-1,cols[i].min)).append("</td>");
     sb.append("</tr>");
 
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Max").append("</td>");
     for( int i=0; i<cols.length; i++ ) 
-      sb.append("<td>").append(x3(cols[i].max)).append("</td>");
+      sb.append("<td>").append(x1(fr._vecs[i],-1,cols[i].max)).append("</td>");
     sb.append("</tr>");
 
     sb.append("<tr class='warning'>");
@@ -119,13 +114,12 @@ public class Inspect2 extends Request {
     }
 
     // First N rows
-    Frame fr = DKV.get(skey).get();
     int N = (int)Math.min(100,numRows);
     for( int j=0; j<N; j++ ) {
       sb.append("<tr>");
       sb.append("<td>").append(j).append("</td>");
       for( int i=0; i<cols.length; i++ ) 
-        sb.append("<td>").append(x1(fr._vecs[i],j)).append("</td>");
+        sb.append("<td>").append(x0(fr._vecs[i],j)).append("</td>");
       sb.append("</tr>");
     }
 
@@ -136,25 +130,30 @@ public class Inspect2 extends Request {
 
   // ---
   // Return a well-formated string for this kind of Vec
-  private String x1( Vec v, int row ) {
+  private String x0( Vec v, int row ) { return x1(v,row,v.at(row)); }
+
+  // Format a row, OR the min/max
+  private String x1( Vec v, int row, double d ) {
+    if( (row >= 0 && v.isNA(row)) || Double.isNaN(d) ) 
+      return "-";               // Display of missing elements
     switch( v.dtype() ) {
     case I: 
-      return Long.toString(v.at8(row));
+      return Long.toString(row >= 0 ? v.at8(row) : (long)d);
     case F: {
       Chunk c = v.elem2BV(0);
       Class Cc = c.getClass();
-      if( Cc == C1SChunk.class ) return x2(v,row,((C1SChunk)c)._scale);
-      if( Cc == C2SChunk.class ) return x2(v,row,((C2SChunk)c)._scale);
-      return Double.toString(v.at (row));
+      if( Cc == C1SChunk.class ) return x2(d,((C1SChunk)c)._scale);
+      if( Cc == C2SChunk.class ) return x2(d,((C2SChunk)c)._scale);
+      return Double.toString(d);
     }
     case S:
-      return v.domain(v.at8(row));
+      return row >= 0 ? v.domain(v.at8(row)) : Long.toString((long)d);
     default: throw H2O.unimpl();
     }
   }
 
-  private String x2( Vec v, int row, double scale ) {
-    String s = Double.toString(v.at(row));
+  private String x2( double d, double scale ) {
+    String s = Double.toString(d);
     // Double math roundoff error means sometimes we get very long trailing
     // strings of junk 0's with 1 digit at the end... when we *know* the data
     // has only "scale" digits.  Chop back to actual digits
@@ -165,10 +164,6 @@ public class Inspect2 extends Request {
     while( s.charAt(s.length()-1)=='0' )
       s = s.substring(0,s.length()-1);
     return s;
-  }
-
-  private String x3( double d ) {
-    return (long)d==d ? Long.toString((long)d) : Double.toString(d);
   }
 
   // ---
