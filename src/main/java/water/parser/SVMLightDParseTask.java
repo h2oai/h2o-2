@@ -43,4 +43,5 @@ public class SVMLightDParseTask extends DParseTask {
     _colNames = colNames;
     super.createValueArrayHeader();
   }
+  @Override protected void createEnums() {} // SVMlight has no strings, we don't need any enums
 }
