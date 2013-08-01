@@ -1,22 +1,18 @@
-\name{h2o.getTree}
-\alias{h2o.getTree}
+\name{h2o.checkClient}
+\alias{h2o.checkClient}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Get Tree from Random Forest Model
+Check if H2O is Running
 }
 \description{
-Returns the depth and number of leaves of a particular tree in the random forest ensemble.
+Checks if H2O is running on the specified IP and port, and stops the program if it is not. Th method also compares the version number of the H2O program and the installed h2o R package. If there is a mismatch, it will warn the user.
 }
 \usage{
-h2o.getTree(forest, k)
+h2o.checkClient(object)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{forest}{
-An \code{\linkS4class{H2ORForestModel}} object indicating the random forest model to examine.
-}
-  \item{k}{
-The particular tree to retrieve. (Must be an integer between 1 and \code{ntree}).
+  \item{object}{An \code{\linkS4class{H2OClient}} object containing the IP address and port of the server running H2O.
 }
 }
 \details{
@@ -42,12 +38,11 @@ The particular tree to retrieve. (Must be an integer between 1 and \code{ntree})
 %% ~Make other sections like Warning with \section{Warning }{....} ~
 
 \seealso{
-\code{\link{h2o.randomForest}}, \code{\linkS4class{H2ORForestModel}}
+%% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-iris.hex = h2o.importFile(localH2O, path = "../smalldata/iris/iris.csv", key = "iris.hex")
-iris.rf = h2o.randomForest(y = "4", data = iris.hex, ntree = 50)
-h2o.getTree(forest = iris.rf, k = 5)
+localH2O = new("H2OClient", ip = "localhost", port = 54321)
+h2o.checkClient(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

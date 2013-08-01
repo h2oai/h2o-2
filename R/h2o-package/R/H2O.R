@@ -63,23 +63,23 @@ setMethod("show", "H2ORForestModel", function(object) {
 })
 
 # Generic method definitions
-setGeneric("checkH2OClient", function(object) { standardGeneric("checkH2OClient") })
-# setGeneric("importFile", function(object, path, key = "", header = FALSE, parse = TRUE) { standardGeneric("importFile") })
-setGeneric("importFile", function(object, path, key = "", parse = TRUE) { standardGeneric("importFile") })
-setGeneric("importFolder", function(object, path, parse = TRUE) { standardGeneric("importFolder") })
-# setGeneric("importURL", function(object, path, key="", header = FALSE, parse = TRUE) { standardGeneric("importURL") })
-setGeneric("importURL", function(object, path, key = "", parse = TRUE) { standardGeneric("importURL") })
-# setGeneric("importURL", function(object, path, key="") { standardGeneric("importURL") })
-setGeneric("importHDFS", function(object, path, parse = TRUE) { standardGeneric("importHDFS") })
-setGeneric("parseRaw", function(data, key = "") { standardGeneric("parseRaw") })
+setGeneric("h2o.checkClient", function(object) { standardGeneric("h2o.checkClient") })
+# setGeneric("h2o.importFile", function(object, path, key = "", header = FALSE, parse = TRUE) { standardGeneric("h2o.importFile") })
+setGeneric("h2o.importFile", function(object, path, key = "", parse = TRUE) { standardGeneric("h2o.importFile") })
+setGeneric("h2o.importFolder", function(object, path, parse = TRUE) { standardGeneric("h2o.importFolder") })
+# setGeneric("h2o.importURL", function(object, path, key="", header = FALSE, parse = TRUE) { standardGeneric("h2o.importURL") })
+setGeneric("h2o.importURL", function(object, path, key = "", parse = TRUE) { standardGeneric("h2o.importURL") })
+# setGeneric("h2o.importURL", function(object, path, key="") { standardGeneric("h2o.importURL") })
+setGeneric("h2o.importHDFS", function(object, path, parse = TRUE) { standardGeneric("h2o.importHDFS") })
+setGeneric("h2o.parseRaw", function(data, key = "") { standardGeneric("h2o.parseRaw") })
 setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5) { standardGeneric("h2o.glm") })
 setGeneric("h2o.kmeans", function(data, centers, cols = "", iter.max = 10) { standardGeneric("h2o.kmeans") })
 setGeneric("h2o.randomForest", function(y, x_ignore = "", data, ntree, depth, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 # setGeneric("h2o.randomForest", function(y, data, ntree, depth, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
-setGeneric("h2o.getTree", function(forest, k) { standardGeneric("h2o.getTree") })
+setGeneric("h2o.getTree", function(forest, k, plot = FALSE) { standardGeneric("h2o.getTree") })
 
 # Unique methods to H2O
-setMethod("checkH2OClient", signature(object="H2OClient"),
+setMethod("h2o.checkClient", signature(object="H2OClient"),
           function(object) { 
             myURL = paste("http://", object@ip, ":", object@port, sep="")
             if(!url.exists(myURL))
@@ -89,24 +89,24 @@ setMethod("checkH2OClient", signature(object="H2OClient"),
                 warning(paste("Version mismatch! Server running H2O version", sv, "but R package is version", pv))
             })
 
-setMethod("importURL", signature(object="H2OClient", path="character", key="character", parse="logical"),
+setMethod("h2o.importURL", signature(object="H2OClient", path="character", key="character", parse="logical"),
           function(object, path, key, parse) {
             destKey = ifelse(parse, "", key)
             res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTURL, url=path, key=destKey)
             rawData = new("H2ORawData", h2o=object, key=res$key)
-            if(parse) parsedData = parseRaw(rawData, key) else rawData
+            if(parse) parsedData = h2o.parseRaw(rawData, key) else rawData
             })
 
-setMethod("importURL", signature(object="H2OClient", path="character", key="character", parse="missing"),
-          function(object, path, key, parse) { importURL(object, path, key, parse) })
+setMethod("h2o.importURL", signature(object="H2OClient", path="character", key="character", parse="missing"),
+          function(object, path, key, parse) { h2o.importURL(object, path, key, parse) })
           
-setMethod("importURL", signature(object="H2OClient", path="character", key="missing", parse="logical"),
-          function(object, path, key, parse) { importURL(object, path, key, parse) })
+setMethod("h2o.importURL", signature(object="H2OClient", path="character", key="missing", parse="logical"),
+          function(object, path, key, parse) { h2o.importURL(object, path, key, parse) })
 
-setMethod("importURL", signature(object="H2OClient", path="character", key="missing", parse="missing"),
-          function(object, path, key, parse) { importURL(object, path, key, parse) })
+setMethod("h2o.importURL", signature(object="H2OClient", path="character", key="missing", parse="missing"),
+          function(object, path, key, parse) { h2o.importURL(object, path, key, parse) })
 
-setMethod("importFolder", signature(object="H2OClient", path="character", parse="logical"),
+setMethod("h2o.importFolder", signature(object="H2OClient", path="character", parse="logical"),
           function(object, path, parse) {
             if(!file.exists(path)) stop("Directory does not exist!")
             res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTFILES, path=normalizePath(path))
@@ -116,33 +116,33 @@ setMethod("importFolder", signature(object="H2OClient", path="character", parse=
               rawData = new("H2ORawData", h2o=object, key=myKeys[i])
               if(parse) {
                 cat("Parsing key", myKeys[i], "\n")
-                myData[[i]] = parseRaw(rawData, key="")
+                myData[[i]] = h2o.parseRaw(rawData, key="")
               }
               else myData[[i]] = rawData
             }
             myData
           })
 
-setMethod("importFolder", signature(object="H2OClient", path="character", parse="missing"),
-          function(object, path) { importFolder(object, path, parse = TRUE) })
+setMethod("h2o.importFolder", signature(object="H2OClient", path="character", parse="missing"),
+          function(object, path) { h2o.importFolder(object, path, parse = TRUE) })
 
-setMethod("importFile", signature(object="H2OClient", path="character", key="missing", parse="logical"), 
+setMethod("h2o.importFile", signature(object="H2OClient", path="character", key="missing", parse="logical"), 
           function(object, path, parse) { 
             if(!file.exists(path)) stop("File does not exist!")
-            importFolder(object, path, parse)[[1]] })
+            h2o.importFolder(object, path, parse)[[1]] })
 
-setMethod("importFile", signature(object="H2OClient", path="character", key="missing", parse="missing"), 
-          function(object, path) { importFile(object, path, parse = TRUE) })
+setMethod("h2o.importFile", signature(object="H2OClient", path="character", key="missing", parse="missing"), 
+          function(object, path) { h2o.importFile(object, path, parse = TRUE) })
 
-setMethod("importFile", signature(object="H2OClient", path="character", key="character", parse="logical"), 
+setMethod("h2o.importFile", signature(object="H2OClient", path="character", key="character", parse="logical"), 
           function(object, path, key, parse) {
             if(!file.exists(path)) stop("File does not exist!")
-            importURL(object, paste("file:///", normalizePath(path), sep=""), key, parse) })
+            h2o.importURL(object, paste("file:///", normalizePath(path), sep=""), key, parse) })
 
-setMethod("importFile", signature(object="H2OClient", path="character", key="character", parse="missing"), 
-          function(object, path, key) { importFile(object, path, key, parse = TRUE) })
+setMethod("h2o.importFile", signature(object="H2OClient", path="character", key="character", parse="missing"), 
+          function(object, path, key) { h2o.importFile(object, path, key, parse = TRUE) })
 
-setMethod("importHDFS", signature(object="H2OClient", path="character", parse="logical"),
+setMethod("h2o.importHDFS", signature(object="H2OClient", path="character", parse="logical"),
           function(object, path, parse) {
             res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTHDFS, path=path)
             myData = vector("list", res$num_succeeded)
@@ -154,25 +154,25 @@ setMethod("importHDFS", signature(object="H2OClient", path="character", parse="l
               rawData = new("H2ORawData", h2o=object, key=res$succeeded[[i]]$key)
               if(parse) {
                 cat("Parsing key", res$succeeded[[i]]$key, "\n")
-                myData[[i]] = parseRaw(rawData, key="")
+                myData[[i]] = h2o.parseRaw(rawData, key="")
               }
               else myData[[i]] = rawData
             }
            myData
           })
 
-setMethod("importHDFS", signature(object="H2OClient", path="character", parse="missing"),
-          function(object, path) { importHDFS(object, path, parse = TRUE) })
+setMethod("h2o.importHDFS", signature(object="H2OClient", path="character", parse="missing"),
+          function(object, path) { h2o.importHDFS(object, path, parse = TRUE) })
 
-setMethod("parseRaw", signature(data="H2ORawData", key="character"), 
+setMethod("h2o.parseRaw", signature(data="H2ORawData", key="character"), 
           function(data, key) {
             res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key)
             while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
             parsedData = new("H2OParsedData", h2o=data@h2o, key=res$destination_key)
           })
 
-setMethod("parseRaw", signature(data="H2ORawData", key="missing"),
-          function(data, key) { parseRaw(data, key) })
+setMethod("h2o.parseRaw", signature(data="H2ORawData", key="missing"),
+          function(data, key) { h2o.parseRaw(data, key) })
 
 setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="numeric", alpha="numeric", lambda="numeric"),
           function(x, y, data, family, nfolds, alpha, lambda) {
@@ -304,17 +304,21 @@ setMethod("h2o.randomForest", signature(y="character", x_ignore="missing", data=
 setMethod("h2o.randomForest", signature(y="character", x_ignore="missing", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="missing"),
           function(y, data, ntree, depth) { h2o.randomForest(y, x_ignore = "", data, ntree, depth, classwt = as.numeric(NA)) })
 
-setMethod("h2o.getTree", signature(forest="H2ORForestModel", k="numeric"),
-          function(forest, k) {
+setMethod("h2o.getTree", signature(forest="H2ORForestModel", k="numeric", plot="logical"),
+          function(forest, k, plot) {
             if(k < 1 || k > forest@model$ntree)
               stop(paste("k must be between 1 and", forest@model$ntree))
             res = h2o.__remoteSend(forest@data@h2o, h2o.__PAGE_RFTREEVIEW, model_key=forest@key, tree_number=k-1, data_key=forest@data@key)
+            if(plot) browseURL(paste0("http://", forest@data@h2o@ip, ":", forest@data@h2o@port, "/RFTreeView.html?model_key=", forest@key, "&data_key=", forest@data@key, "&tree_number=", k-1))
+            
             result = list()
             result$depth = res$depth
             result$leaves = res$leaves
             result
-            # Need to edit Java to output more data! Also consider plotting?
           })
+
+setMethod("h2o.getTree", signature(forest="H2ORForestModel", k="numeric", plot="missing"),
+          function(forest, k) { h2o.getTree(forest, k, plot = FALSE) })
 
 setMethod("summary", signature(object="H2OParsedData"),
           function(object) {
