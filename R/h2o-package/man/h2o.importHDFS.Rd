@@ -16,7 +16,7 @@ h2o.importHDFS(object, path, parse = TRUE)
     An \code{\linkS4class{H2OClient}} object containing the IP address and port of the server running H2O.
   }
   \item{path}{
-    The path of the folder directory to be imported. Each row of data appears as one line of the file. If it does not contain an absolute path, the file name is relative to the current working directory.
+    The path of the file or folder directory to be imported. If it does not contain an absolute path, the file name is relative to the current working directory.
   }
   \item{parse}{
   (Optional) A logical value indicating whether the file should be parsed after import.
@@ -26,7 +26,7 @@ h2o.importHDFS(object, path, parse = TRUE)
 WARNING: In H2O, import is lazy! Do not modify the data files on hard disk until after parsing is complete.
 }
 \value{
-If \code{parse = TRUE}, the function returns a list of objects of class \code{\linkS4class{H2OParsedData}}, otherwise it returns a list of objects of class \code{\linkS4class{H2ORawData}}.
+When the path is a directory, if \code{parse = TRUE}, the function returns a list of objects of class \code{\linkS4class{H2OParsedData}}, otherwise it returns a list of objects of class \code{\linkS4class{H2ORawData}}. When the path is a single file, the same holds, except the function returns a single object rather than a list.
 %%  ~Describe the value returned
 %%  If it is a LIST, use
 %%  \item{comp1 }{Description of 'comp1'}
@@ -50,7 +50,13 @@ If \code{parse = TRUE}, the function returns a list of objects of class \code{\l
 }
 \examples{
 localH2O = new("H2OClient", ip = "localhost", port = 54321)
-importHDFS(localH2O, path = "http://192.168.1.173:54321/0xdiag/datasets/standard/covtype.data", parse = TRUE)
+covtype.hex = importHDFS(localH2O, path = "hdfs://192.168.1.173:54321/0xdiag/datasets/standard/covtype.data", parse = TRUE)
+summary(covtype.hex)
+
+stdfolder.data = importHDFS(localH2O, path = "hdfs://192.168.1.173:54321/0xdiag/datasets/standard", parse = FALSE)
+stdfolder.parsed = vector("list", length(stdfolder.data))
+for(i in 1:length(stdfolder.data))
+  stdfolder.parsed[[i]] = h2o.parseRaw(stdfolder.data[[i]])
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

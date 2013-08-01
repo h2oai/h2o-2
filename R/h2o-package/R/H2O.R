@@ -150,15 +150,17 @@ setMethod("h2o.importHDFS", signature(object="H2OClient", path="character", pars
               for(i in 1:res$num_failed) 
                 cat(res$failed[[i]]$file, "failed to import")
             }
-            for(i in 1:res$num_succeeded) {
-              rawData = new("H2ORawData", h2o=object, key=res$succeeded[[i]]$key)
-              if(parse) {
-                cat("Parsing key", res$succeeded[[i]]$key, "\n")
-                myData[[i]] = h2o.parseRaw(rawData, key="")
+            if(res$num_succeeded > 0) {
+              for(i in 1:res$num_succeeded) {
+                rawData = new("H2ORawData", h2o=object, key=res$succeeded[[i]]$key)
+                if(parse) {
+                  cat("Parsing key", res$succeeded[[i]]$key, "\n")
+                  myData[[i]] = h2o.parseRaw(rawData, key="")
+                }
+                else myData[[i]] = rawData
               }
-              else myData[[i]] = rawData
             }
-           myData
+            if(res$num_succeeded == 1) myData[[1]] else myData
           })
 
 setMethod("h2o.importHDFS", signature(object="H2OClient", path="character", parse="missing"),
@@ -359,7 +361,7 @@ setMethod("colnames", signature(x="H2OParsedData"),
 
 # setMethod("predict", signature(object="H2OGLMModel"), 
 #          function(object) {
-#            res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT, model_key=object@key, key=object@data@key)
+#            res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT, model_key=object@key, data_key=object@data@key)
 #            res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT, key=res$response$redirect_request_args$key)
 #            result = new("H2OParsedData", h2o=object@data@h2o, key=res$key)
 #          })
@@ -400,7 +402,9 @@ h2o.__remoteSend <- function(client, page, ...) {
   
   if (!is.null(res$error)) {
     myTime = gsub(":", "-", date()); myTime = gsub(" ", "_", myTime)
-    h2o.__writeToFile(res, paste("error_json_", myTime, ".log", sep=""))
+    errorFolder = "h2o_error_logs"
+    if(!file.exists(errorFolder)) dir.create(errorFolder)
+    h2o.__writeToFile(res, paste(errorFolder, "/", "error_json_", myTime, ".log", sep=""))
     stop(paste(url," returned the following error:\n", h2o.__formatError(res$error)))
   }
   res
