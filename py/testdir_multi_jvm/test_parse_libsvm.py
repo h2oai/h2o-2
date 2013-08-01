@@ -2,7 +2,7 @@ import unittest
 import random, sys, time, os
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e, h2o_glm
 
 zeroList = [
         'Result0 = 0',
@@ -67,10 +67,24 @@ class Basic(unittest.TestCase):
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "Parse result['destination_key']:", parseKey['destination_key']
 
-            # We should be able to see the parse result?
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            # INSPECT******************************************
+            start = time.time()
+            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=360)
+            print "Inspect:", parseKey['destination_key'], "took", time.time() - start, "seconds"
+            h2o_cmd.infoFromInspect(inspect, csvFilename)
 
-            print "\n" + csvFilename
+            # SUMMARY****************************************
+            # gives us some reporting on missing values, constant values, 
+            # to see if we have x specified well
+            # figures out everything from parseKey['destination_key']
+            # needs y to avoid output column (which can be index or name)
+            # assume all the configs have the same y..just check with the firs tone
+            goodX = h2o_glm.goodXFromColumnInfo(y=0,
+                key=parseKey['destination_key'], timeoutSecs=300)
+            summaryResult = h2o_cmd.runSummary(key=key2, timeoutSecs=360)
+            h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
+
+            # Exec (column sums)*************************************************
             h2e.exec_zero_list(zeroList)
             colResultList = h2e.exec_expr_list_across_cols(lenNodes, exprList, key2, maxCol=54, 
                 timeoutSecs=timeoutSecs)
@@ -78,16 +92,18 @@ class Basic(unittest.TestCase):
             print "colResultList", colResultList
             print "*************"
 
-            if not firstDone:
-                colResultList0 = list(colResultList)
-                good = [float(x) for x in colResultList0] 
-                firstDone = True
-            else:
-                print "\n", colResultList0, "\n", colResultList
-                # create the expected answer...i.e. N * first
-                compare = [float(x)/resultMult for x in colResultList] 
-                print "\n", good, "\n", compare
-                # self.assertEqual(good, compare, 'compare is not equal to good (first try * resultMult)')
+            # need to fix this for compare to expected
+            if 1==0:
+                if not firstDone:
+                    colResultList0 = list(colResultList)
+                    good = [float(x) for x in colResultList0] 
+                    firstDone = True
+                else:
+                    print "\n", colResultList0, "\n", colResultList
+                    # create the expected answer...i.e. N * first
+                    compare = [float(x)/resultMult for x in colResultList] 
+                    print "\n", good, "\n", compare
+                    self.assertEqual(good, compare, 'compare is not equal to good (first try * resultMult)')
         
 
 if __name__ == '__main__':
