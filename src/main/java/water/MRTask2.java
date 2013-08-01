@@ -7,9 +7,9 @@ import water.util.Log;
 /**
  * Map/Reduce style distributed computation.
  * <nl>
- * MRTask2 provides several <code>map</code> and reduce methods that can be
+ * MRTask2 provides several <code>map</code> and <code>reduce</code> methods that can be
  * overriden to specify a computation. Several instances of this class will be
- * created to distribute the computation over F/J threads and machines. Non-transient
+ * created to distribute the computation over F/J threads and machines.  Non-transient
  * fields are copied and serialized to instances created for map invocations. Reduce
  * methods can store their results in fields. Results are serialized and reduced all the
  * way back to the invoking node. When the last reduce method has been called, fields
@@ -17,65 +17,85 @@ import water.util.Log;
  */
 public abstract class MRTask2<T extends MRTask2> extends DTask implements Cloneable {
 
-  // The Vectors to work on
-  protected Frame _fr;          // Vectors to work on
-  //
-  // record the results in the <em>this<em> MRTask2.
+  /** The Vectors to work on. */
+  protected Frame _fr;       // Vectors to work on
 
-  /**
-   * Override with your map implementation. This version is given a
-   * single <strong>local</strong> Chunk. It is meant for map/reduce
-   * jobs over single column frames.
-   */
-  public void map(    Chunk bv ) { }
+  /** Override with your map implementation.  This overload is given a single
+   *  <strong>local</strong> Chunk.  It is meant for map/reduce jobs that use a
+   *  single column in a Frame.  All map variants are called, but only one is
+   *  expected to be overridden. */
+  public void map( Chunk bv ) { }
 
-  /**
-   * Override with your map implementation. This version is given two
-   * <strong>local</strong> Chunks.
-   */
-  public void map(    Chunk bv0, Chunk bv1 ) { }
+  /** Override with your map implementation.  This overload is given two
+   *  <strong>local</strong> Chunks.  All map variants are called, but only one
+   *  is expected to be overridden. */
+  public void map( Chunk bv0, Chunk bv1 ) { }
+
+  /** Override with your map implementation.  This overload is designed to
+   *  efficiently modify or append data to the first column.  All map variants
+   *  are called, but only one is expected to be overridden. */
   public void map( NewChunk bv0, Chunk bv1 ) { }
+
+  /** Override with your map implementation.  This overload is given three
+   * <strong>local</strong> Chunks.  All map variants are called, but only one
+   * is expected to be overridden. */
   public void map(    Chunk bv0, Chunk bv1, Chunk bv2 ) { }
+
+  /** Override with your map implementation.  This overload is given an array
+   *  of <strong>local</strong> Chunks, for Frames with arbitrary column
+   *  numbers.  All map variants are called, but only one is expected to be
+   *  overridden. */
   public void map(    Chunk bvs[] ) { }
 
-  // Combine results from 'mrt' into 'this' MRTask2.  Both 'this' and 'mrt' are
-  // guaranteed to either have map() run on them, or be the results of a prior
-  // reduce().  Reduce is optional if, e.g., the result is some output vector.
+  /** Override to combine results from 'mrt' into 'this' MRTask2.  Both 'this'
+   *  and 'mrt' are guaranteed to either have map() run on them, or be the
+   *  results of a prior reduce().  Reduce is optional if, e.g., the result is
+   *  some output vector.  */
   public void reduce( T mrt ) { }
 
-  // Sub-class init on the 1st remote instance of this object, for initializing
-  // node-local shared data structures.
+  /** Override to do any remote initialization on the 1st remote instance of
+   *  this object, for initializing node-local shared data structures.  */
   public void init() { }
 
-  // Remote/Global work: other nodes we are awaiting results from
+  /** Internal field to track a range of remote nodes/JVMs to work on */
   protected int _nlo, _nhi;           // Range of NODEs to work on - remotely
+  /** Internal field to track the left & right remote nodes/JVMs to work on */
   transient protected RPC<T> _nleft, _nrite;
-  transient boolean _topLocal;        // Top-level local call, returning results over the wire
-  // Local work: range of local chunks we are working on
+  /** Internal field to track if this is a top-level local call */
+  transient protected boolean _topLocal; // Top-level local call, returning results over the wire
+  /** Internal field to track a range of local Chunks to work on */
   transient protected int _lo, _hi;   // Range of Chunks to work on - locally
+  /** Internal field to track the left & right sub-range of chunks to work on */
   transient protected T _left, _rite; // In-progress execution tree
-  transient protected T _res;         // Result
 
-  // We can add more things to block on - in case we want a bunch of lazy tasks
-  // produced by children to all end before this top-level task ends.
-  // Semantically, these will all complete before we return from the top-level
-  // task.  Pragmatically, we block on a finer grained basis.
+  transient private T _res;           // Result
+
+  /** We can add more things to block on - in case we want a bunch of lazy
+   *  tasks produced by children to all end before this top-level task ends.
+   *  Semantically, these will all complete before we return from the top-level
+   *  task.  Pragmatically, we block on a finer grained basis. */
   transient protected Futures _fs; // More things to block on
 
   // Support for fluid-programming with strong types
   private final T self() { return (T)this; }
 
-  // Read-only accessor
-  public final Vec vecs(int i) {
-    return _fr._vecs[i];
-  }
+  /** Returns a Vec from the Frame.  */
+  public final Vec vecs(int i) { return _fr._vecs[i]; }
 
-  // Top-level blocking call.
+  /** Invokes the map/reduce computation over the given Vecs.  This call is
+   *  blocking. */
   public final T doAll( Vec... vecs ) { return doAll(new Frame(null,vecs)); }
+
+  /** Invokes the map/reduce computation over the given Frame.  This call is
+   *  blocking.  */
   public final T doAll( Frame fr ) {
     dfork(fr);
     return getResult();
   }
+
+  /** Invokes the map/reduce computation over the given Frame. This call is
+   *  asynchronous. It return 'this', on which getResult() can be invoked
+   *  later to wait on the computation.  */
   public final T dfork( Frame fr ) {
     // Use first readable vector to gate home/not-home
     fr.checkCompatible();       // Check for compatible vectors
@@ -86,8 +106,8 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
     return self();
   }
 
-  // Block for & get any final results from a dfork'd MRTask2.
-  // Note: the desired name 'get' is final in ForkJoinTask.
+  /** Block for & get any final results from a dfork'd MRTask2.
+   *  Note: the desired name 'get' is final in ForkJoinTask.  */
   public final T getResult() {
     join();
     // Do any post-writing work (zap rollup fields, etc)
@@ -96,7 +116,8 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
     return self();
   }
 
-  // Called once on remote at top level, probably with a subset of the cloud.
+  /** Called once on remote at top level, probably with a subset of the cloud.
+   *  Called internal by D/F/J.  Not expected to be user-called.  */
   @Override public final void dinvoke(H2ONode sender) {
     setupLocal();               // Local setup
     compute2();                 // Do The Main Work
@@ -136,8 +157,9 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
     return new RPC(H2O.CLOUD._memary[mid], rpc).addCompleter(this).call();
   }
 
-  // Called from FJ threads to do local work.  The first called Task (which is
-  // also the last one to Complete) also reduces any global work.
+  /** Called from FJ threads to do local work.  The first called Task (which is
+   *  also the last one to Complete) also reduces any global work.  Called
+   *  internal by F/J.  Not expected to be user-called.  */
   @Override public final void compute2() {
     assert _left == null && _rite == null && _res == null;
     if( _hi-_lo >= 2 ) { // Multi-chunk case: just divide-and-conquer to 1 chunk
@@ -176,7 +198,8 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
     tryComplete();              // And this task is complete
   }
 
-  // OnCompletion - reduce the left & right into self
+  /** OnCompletion - reduce the left & right into self.  Called internal by
+   *  F/J.  Not expected to be user-called. */
   @Override public final void onCompletion( CountedCompleter caller ) {
     // Reduce results into 'this' so they collapse going up the execution tree.
     // NULL out child-references so we don't accidentally keep large subtrees
@@ -226,8 +249,9 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
     else if( mrt._nlo != -1 ) _res.reduce4(mrt);
   }
 
-  // Call user's reduction.  Also reduce any new AppendableVecs.
-  public void reduce4( T mrt ) {
+  /** Call user's reduction.  Also reduce any new AppendableVecs.  Called
+   *  internal by F/J.  Not expected to be user-called.  */
+  protected void reduce4( T mrt ) {
     // Reduce any AppendableVecs
     for( int i=0; i<_fr._vecs.length; i++ )
       if( _fr._vecs[i] instanceof AppendableVec )
@@ -236,8 +260,9 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
     reduce(mrt);
   }
 
-  // Cancel/kill all work as we can, then rethrow... do not invisibly swallow
-  // exceptions (which is the F/J default)
+  /** Cancel/kill all work as we can, then rethrow... do not invisibly swallow
+   *  exceptions (which is the F/J default).  Called internal by F/J.  Not
+   *  expected to be user-called.  */
   @Override public final boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller ) {
     if( _nleft != null ) _nleft.cancel(true); _nleft = null;
     if( _nrite != null ) _nrite.cancel(true); _nrite = null;
@@ -246,7 +271,7 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
     return super.onExceptionalCompletion(ex, caller);
   }
 
-  // Local Clone - setting final-field completer
+  /** Local Clone - setting final-field completer */
   @Override protected T clone() {
     try {
       T x = (T)super.clone();
