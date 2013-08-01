@@ -443,7 +443,7 @@ public class ParserTest2 extends TestUtil {
 
   public static void main(String [] args) throws Exception{
     System.out.println("Running ParserTest2");
-    final int nnodes = 1;
+    final int nnodes = 3;
     for( int i = 1; i < nnodes; i++ ) {
       Node n = new NodeVM(args);
       n.inheritIO();

@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import jsr166y.ForkJoinPool;
 import water.Job.ProgressMonitor;
 import water.api.Constants.Extensions;
+import water.fvec.*;
 import water.persist.*;
 
 /**
@@ -233,14 +234,20 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     return sb;
   }
 
-  public boolean isArray() { return _type == TypeMap.VALUE_ARRAY; }
-  public boolean isFrame() { return _type == TypeMap.FRAME; }
+  public boolean isArray()   { return _type == TypeMap.VALUE_ARRAY; }
+  public boolean isFrame()   { return _type == TypeMap.FRAME; }
+  public boolean isVec()     { return _type != TypeMap.PRIM_B && (TypeMap.newInstance(_type) instanceof Vec); }
+  public boolean isByteVec() { return _type != TypeMap.PRIM_B && (TypeMap.newInstance(_type) instanceof ByteVec); }
 
   // Get the 1st bytes from either a plain Value, or chunk 0 of a ValueArray
   public byte[] getFirstBytes() {
     Value v = this;
     if(isArray())
       v = DKV.get(ValueArray.getChunkKey(0,_key));
+    else if(isByteVec()){
+      ByteVec vec = get();
+      return vec.elem2BV(0).getBytes();
+    }
     // Return empty array if key has been deleted
     return v != null ? v.memOrLoad() : new byte[0];
   }
