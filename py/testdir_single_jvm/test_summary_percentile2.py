@@ -108,17 +108,16 @@ class Basic(unittest.TestCase):
             print "\n" + csvFilename
 
             summaryResult = h2o_cmd.runSummary(key=key2)
+            h2o_cmd.infoFromSummary(summaryResult, noPrint=False)
             # remove bin_names because it's too big (256?) and bins
             # just touch all the stuff returned
             summary = summaryResult['summary']
-
             columnsList = summary['columns']
             for columns in columnsList:
                 N = columns['N']
                 self.assertEqual(N, rowCount)
 
                 name = columns['name']
-
                 stype = columns['type']
                 self.assertEqual(stype, 'number')
 
@@ -129,16 +128,6 @@ class Basic(unittest.TestCase):
                 bin_names = histogram['bin_names']
                 bins = histogram['bins']
                 nbins = histogram['bins']
-                # only values are 0 and 1
-                print "bins:", bins
-                print "\n\n************************"
-                print "name:", name
-                print "type:", stype
-                print "N:", N
-                print "bin_size:", bin_size
-                print "len(bin_names):", len(bin_names), bin_names
-                print "len(bins):", len(bins), bins
-                print "len(nbins):", len(nbins), nbins
 
                 for b in bins:
                     e = .1 * rowCount
@@ -155,13 +144,12 @@ class Basic(unittest.TestCase):
                     mean = columns['mean']
                     sigma = columns['sigma']
 
-                    print "len(max):", len(smax), smax
                     self.assertEqual(smax[0], expectedMax)
                     self.assertEqual(smax[1], expectedMax-1)
                     self.assertEqual(smax[2], expectedMax-2)
                     self.assertEqual(smax[3], expectedMax-3)
                     self.assertEqual(smax[4], expectedMax-4)
-                    print "len(min):", len(smin), smin
+                    
                     self.assertEqual(smin[0], expectedMin)
                     self.assertEqual(smin[1], expectedMin+1)
                     self.assertEqual(smin[2], expectedMin+2)
@@ -170,20 +158,16 @@ class Basic(unittest.TestCase):
 
                     # apparently our 'percentile estimate" uses interpolation, so this check is not met by h2o
                     for v in values:
-                    ##    self.assertIn(v,legalValues,"Value in percentile 'values' is not present in the dataset") 
-                    # but: you would think it should be within the min-max range?
+                        ##    self.assertIn(v,legalValues,"Value in percentile 'values' is not present in the dataset") 
+                        # but: you would think it should be within the min-max range?
                         self.assertTrue(v >= expectedMin, 
                             "Percentile value %s should all be >= the min dataset value %s" % (v, expectedMin))
                         self.assertTrue(v <= expectedMax, 
                             "Percentile value %s should all be <= the max dataset value %s" % (v, expectedMax))
-
                 
-                    print "mean:", mean
                     self.assertAlmostEqual(mean, (expectedMax+expectedMin)/2.0, delta=0.1)
-                    print "sigma:", sigma
                     # FIX! how do we estimate this
                     self.assertAlmostEqual(sigma, 2.9, delta=0.1)
-
                     
                     # since we distribute the outputs evenly from 0 to 9, we can check 
                     # that the value is equal to the threshold (within some delta
@@ -191,9 +175,6 @@ class Basic(unittest.TestCase):
                     # is this right?
                     # if thresholds   = [0.01, 0.05, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.95, 0.99]
                     # values = [   0,    0,   1,    2,    3,   5,    7,    7,   9,    9,    10]
-                    print "len(thresholds):", len(thresholds), thresholds
-                    print "len(values):", len(values), values
-                
                     eV1 = [1.0, 1.0, 1.0, 3.0, 4.0, 5.0, 7.0, 8.0, 9.0, 10.0, 10.0]
                     if expectedMin==1:
                         eV = eV1
@@ -208,9 +189,6 @@ class Basic(unittest.TestCase):
                         m = "Percentile threshold: %s with value %s should ~= %s" % (t, v, e)
                         self.assertAlmostEqual(v, e, delta=0.5, msg=m)
 
-            ### print 'Trial:', trial
-            sys.stdout.write('.')
-            sys.stdout.flush()
             trial += 1
 
             if (1==0): 
