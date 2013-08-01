@@ -111,11 +111,14 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     _scale = Arrays.copyOf(_scale, ncols);
     _mean = Arrays.copyOf(_mean, ncols);
     _invalidValues = Arrays.copyOf(_invalidValues, ncols);
-    _enums = Arrays.copyOf(_enums, ncols);
+    if(_enums != null) {
+      _enums = Arrays.copyOf(_enums, ncols);
+      for(int i = _ncolumns; i < ncols; ++i)
+        _enums[i] = new Enum();
+    }
     for(int i = _ncolumns; i < ncols; ++i){
       _min[i] = Double.POSITIVE_INFINITY;
       _max[i] = Double.NEGATIVE_INFINITY;
-      _enums[i] = new Enum();
     }
     _ncolumns = ncols;
     assert _ncolumns == _colTypes.length;
@@ -348,6 +351,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
         _streamMode = true;
         _parser.streamParse(DKV.get(_sourceDataset._key).openStream(), this);
         _numRows = _myrows;
+        _map = true;
         // TODO,do  I have to call tryComplete here?
         tryComplete();
       } catch(Exception e){throw new RuntimeException(e);}
@@ -357,7 +361,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
    * Creates the second pass dparse task from a first phase one.
    */
   public DParseTask createPassTwo() {
-    assert _ncolumns == _colTypes.length;
+    assert _map:"creating pass two on an instance which did not have any map result from pass 1 stored in.";
     DParseTask t = clone2();
     t._phase = Pass.TWO;
     // calculate proper numbers of rows for the chunks
@@ -368,12 +372,13 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     t._colDomains = new String[t._ncolumns][];
     t._bases = new int[t._ncolumns];
     // calculate the column domains
-    for(int i = 0; i < t._enums.length; ++i){
-      if(t._colTypes[i] == ECOL && t._enums[i] != null && !t._enums[i].isKilled())
-        t._colDomains[i] = t._enums[i].computeColumnDomain();
-      else
-        t._enums[i] = null;
-    }
+    if(_enums != null)
+      for(int i = 0; i < t._enums.length; ++i){
+        if(t._colTypes[i] == ECOL && t._enums[i] != null && !t._enums[i].isKilled())
+          t._colDomains[i] = t._enums[i].computeColumnDomain();
+        else
+          t._enums[i] = null;
+      }
     t.calculateColumnEncodings();
     assert t._bases != null;
     return t;
@@ -461,7 +466,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     UKV.put(_job.dest(), ary);
   }
 
-  private void createEnums() {
+  protected void createEnums() {
     if(_enums == null){
       _enums = new Enum[_ncolumns];
       for(int i = 0; i < _ncolumns; ++i)
@@ -520,108 +525,109 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
   @Override public void map(Key key) {
     if(_job.cancelled())
       return;
-    _map = true;
-    Key aryKey = null;
-    boolean arraylet = key._kb[0] == Key.ARRAYLET_CHUNK;
-    if(arraylet) {
-      aryKey = ValueArray.getArrayKey(key);
-      _chunkId = (int)ValueArray.getChunkIndex(key);
-    }
-    switch (_phase) {
-    case ONE:
-      assert (_ncolumns != 0);
-      // initialize the column statistics
-      phaseOneInitialize();
-      // perform the parse
-      _parser.clone().parallelParse(_chunkId, new VAChunkDataIn(key), this);
+    try{
+      _map = true;
+      Key aryKey = null;
+      boolean arraylet = key._kb[0] == Key.ARRAYLET_CHUNK;
       if(arraylet) {
-        long idx = _chunkId+1;
-        int idx2 = (int)idx;
-        assert idx2 == idx;
-        if(idx2 >= _nrows.length){
-          System.err.println("incorrect index/array size for key = " + key + ": " + _nrows.length + " <= " + idx2 + ", aryKey = " + aryKey + ", chunks# = " + DKV.get(aryKey).get(ValueArray.class).chunks());
-          assert false;
-        }
-        assert (_nrows[idx2] == 0) : idx+": "+Arrays.toString(_nrows)+" ("+_nrows[idx2]+" -- "+_numRows+")";
-        _nrows[idx2] = _myrows;
-      } else
-        _nrows[1] = _myrows;
-      _numRows = _myrows;
-      break;
-    case TWO:
-      assert (_ncolumns != 0);
-      assert (_phase == Pass.TWO);
-      // initialize statistics - invalid rows, sigma and row size
-      phaseTwoInitialize();
-      // calculate the first row and the number of rows to parse
-      long firstRow = _nrows[_chunkId];
-      long lastRow = _nrows[_chunkId+1];
-      int rowsToParse = (int)(lastRow - firstRow);
-      // create the output streams
-      _outputStreams2 = createRecords(firstRow, rowsToParse);
-      assert (_outputStreams2.length > 0);
-      _ab = _outputStreams2[0].initialize();
-      // perform the second parse pass
-      _parser.clone().parallelParse(_chunkId, new VAChunkDataIn(key), this);
-      // store the last stream if not stored during the parse
-      if( _ab != null )
-        _outputStreams2[_outputIdx].store();
-      getFutures().blockForPending();
-      break;
-    default:
-      assert (false);
+        aryKey = ValueArray.getArrayKey(key);
+        _chunkId = (int)ValueArray.getChunkIndex(key);
+      }
+      switch (_phase) {
+      case ONE:
+        // initialize the column statistics
+        phaseOneInitialize();
+        // perform the parse
+        _parser.clone().parallelParse(_chunkId, new VAChunkDataIn(key), this);
+        if(arraylet) {
+          long idx = _chunkId+1;
+          int idx2 = (int)idx;
+          assert idx2 == idx;
+          if(idx2 >= _nrows.length){
+            System.err.println("incorrect index/array size for key = " + key + ": " + _nrows.length + " <= " + idx2 + ", aryKey = " + aryKey + ", chunks# = " + DKV.get(aryKey).get(ValueArray.class).chunks());
+            assert false;
+          }
+          assert (_nrows[idx2] == 0) : idx+": "+Arrays.toString(_nrows)+" ("+_nrows[idx2]+" -- "+_numRows+")";
+          _nrows[idx2] = _myrows;
+        } else
+          _nrows[1] = _myrows;
+        _numRows = _myrows;
+        break;
+      case TWO:
+        assert (_ncolumns != 0);
+        assert (_phase == Pass.TWO);
+        // initialize statistics - invalid rows, sigma and row size
+        phaseTwoInitialize();
+        // calculate the first row and the number of rows to parse
+        long firstRow = _nrows[_chunkId];
+        long lastRow = _nrows[_chunkId+1];
+        int rowsToParse = (int)(lastRow - firstRow);
+        // create the output streams
+        _outputStreams2 = createRecords(firstRow, rowsToParse);
+        assert (_outputStreams2.length > 0);
+        _ab = _outputStreams2[0].initialize();
+        // perform the second parse pass
+        _parser.clone().parallelParse(_chunkId, new VAChunkDataIn(key), this);
+        // store the last stream if not stored during the parse
+        if( _ab != null )
+          _outputStreams2[_outputIdx].store();
+        getFutures().blockForPending();
+        break;
+      default:
+        assert (false);
+      }
+      assert _ncolumns == _colTypes.length;
+      ParseDataset.onProgress(key,_job._progress);
+    }catch(Throwable t){
+      t.printStackTrace();
     }
-    assert _ncolumns == _colTypes.length;
-    ParseDataset.onProgress(key,_job._progress);
   }
 
   @Override
   public void reduce(DParseTask dpt) {
     if(_job.cancelled())
       return;
-    try {
-      if(_sigma == null)_sigma = dpt._sigma;
-      if(_invalidValues == null){
-        _enums = dpt._enums;
-        _min = dpt._min;
-        _max = dpt._max;
-        _mean = dpt._mean;
-        _sigma = dpt._sigma;
-        _scale = dpt._scale;
-        _colTypes = dpt._colTypes;
-        _ncolumns = dpt._ncolumns;
-        _nrows = dpt._nrows;
-        _invalidValues = dpt._invalidValues;
-      } else {
-        if (_phase == Pass.ONE) {
-          if (_nrows != dpt._nrows)
-            for (int i = 0; i < _nrows.length; ++i)
-              _nrows[i] |= dpt._nrows[i];
-          for(int i = 0; i < _ncolumns; ++i) {
-            if(_enums[i] != dpt._enums[i])
-              _enums[i].merge(dpt._enums[i]);
-            if(dpt._min[i] < _min[i])_min[i] = dpt._min[i];
-            if(dpt._max[i] > _max[i])_max[i] = dpt._max[i];
-            if(dpt._scale[i] < _scale[i])_scale[i] = dpt._scale[i];
-            if(dpt._colTypes[i] > _colTypes[i])_colTypes[i] = dpt._colTypes[i];
-            _mean[i] += dpt._mean[i];
-          }
-        } else if(_phase == Pass.TWO) {
-          for(int i = 0; i < _ncolumns; ++i)
-              _sigma[i] += dpt._sigma[i];
-        } else
-          assert false:"unexpected _phase value:" + _phase;
+    assert dpt._map;
+    if(_sigma == null)_sigma = dpt._sigma;
+    if(!_map){
+      _map = dpt._map;
+      _enums = dpt._enums;
+      _min = dpt._min;
+      _max = dpt._max;
+      _mean = dpt._mean;
+      _sigma = dpt._sigma;
+      _scale = dpt._scale;
+      _colTypes = dpt._colTypes;
+      _ncolumns = dpt._ncolumns;
+      _nrows = dpt._nrows;
+      _invalidValues = dpt._invalidValues;
+    } else {
+      if (_phase == Pass.ONE) {
+        if (_nrows != dpt._nrows)
+          for (int i = 0; i < _nrows.length; ++i)
+            _nrows[i] |= dpt._nrows[i];
+        if(_enums != null) for(int i = 0; i < _ncolumns; ++i)
+          if(_enums[i] != dpt._enums[i])
+            _enums[i].merge(dpt._enums[i]);
+        for(int i = 0; i < _ncolumns; ++i) {
+          if(dpt._min[i] < _min[i])_min[i] = dpt._min[i];
+          if(dpt._max[i] > _max[i])_max[i] = dpt._max[i];
+          if(dpt._scale[i] < _scale[i])_scale[i] = dpt._scale[i];
+          if(dpt._colTypes[i] > _colTypes[i])_colTypes[i] = dpt._colTypes[i];
+          _mean[i] += dpt._mean[i];
+        }
+      } else if(_phase == Pass.TWO) {
         for(int i = 0; i < _ncolumns; ++i)
-          _invalidValues[i] += dpt._invalidValues[i];
-      }
-      _numRows += dpt._numRows;
-      if(_error == null)_error = dpt._error;
-      else if(dpt._error != null) _error = _error + "\n" + dpt._error;
-      assert _colTypes.length == _ncolumns;
-
-    } catch (Throwable  t) {
-      t.printStackTrace();
+          _sigma[i] += dpt._sigma[i];
+      } else
+        assert false:"unexpected _phase value:" + _phase;
+      for(int i = 0; i < _ncolumns; ++i)
+        _invalidValues[i] += dpt._invalidValues[i];
     }
+    _numRows += dpt._numRows;
+    if(_error == null)_error = dpt._error;
+    else if(dpt._error != null) _error = _error + "\n" + dpt._error;
+    assert _colTypes.length == _ncolumns;
   }
 
   static double [] powers10 = new double[]{
