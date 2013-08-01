@@ -1,6 +1,6 @@
 import time, os, json, signal, tempfile, shutil, datetime, inspect, threading, os.path, getpass
 import requests, psutil, argparse, sys, unittest, glob
-import h2o_browse as h2b, h2o_perf, h2o_util
+import h2o_browse as h2b, h2o_perf, h2o_util, h2o_cmd
 import re, webbrowser, random
 # used in shutil.rmtree permission hack for windows
 import errno
@@ -1252,64 +1252,13 @@ class H2O(object):
             time.sleep(3) # to be able to see it
         return a
 
-    def summary_page(self, key, timeoutSecs=30, **kwargs):
+    def summary_page(self, key, timeoutSecs=30, noPrint=True, **kwargs):
         params_dict = {
             'key': key,
             }
         browseAlso = kwargs.pop('browseAlso',False)
-
         a = self.__do_json_request('SummaryPage.json', timeout=timeoutSecs, params=params_dict)
-
-        # just touch all the stuff returned
-        summary = a['summary']
-        columnsList = summary['columns']
-        for columns in columnsList:
-            N = columns['N']
-            name = columns['name']
-            stype = columns['type']
-
-            histogram = columns['histogram']
-            bin_size = histogram['bin_size']
-            bin_names = histogram['bin_names']
-            bins = histogram['bins']
-            nbins = histogram['bins']
-
-            if 1==0:
-                print "\n\n************************"
-                print "name:", name
-                print "type:", stype
-                print "N:", N
-                print "bin_size:", bin_size
-                print "len(bin_names):", len(bin_names)
-                print "len(bins):", len(bins)
-                print "len(nbins):", len(nbins)
-
-            # not done if enum
-            if stype != "enum":
-                smax = columns['max']
-                smin = columns['min']
-                if hasattr(columns,'percentiles'):
-                    percentiles = columns['percentiles']
-                    thresholds = percentiles['thresholds']
-                    values = percentiles['values']
-
-                mean = columns['mean']
-                sigma = columns['sigma']
-
-                if 1==0:
-                    print "len(max):", len(smax)
-                    print "len(min):", len(smin)
-                    print "len(thresholds):", len(thresholds)
-                    print "len(values):", len(values)
-                    print "mean:", mean
-                    print "sigma:", sigma
-
-
-        verboseprint("\nsummary result:", dump_json(a))
-        if (browseAlso | browse_json):
-            h2b.browseJsonHistoryAsUrlLastMatch("SummaryPage")
-            time.sleep(3) # to be able to see it
-
+        h2o_cmd.infoFromSummary(a, noPrint=noPrint)
         return a
 
     def log_view(self, timeoutSecs=10, **kwargs):
