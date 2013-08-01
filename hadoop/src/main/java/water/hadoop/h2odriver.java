@@ -14,6 +14,8 @@ import org.apache.hadoop.util.ToolRunner;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Driver class to start a Hadoop mapreduce job which wraps an H2O cluster launch.
@@ -475,9 +477,33 @@ public class h2odriver extends Configured implements Tool {
 //        conf.set("mapred.child.java.opts", "-Dh2o.FINDME=ignored");
 //        conf.set("mapred.map.child.java.opts", "-Dh2o.FINDME2=ignored");
 //        conf.set("mapred.map.child.java.opts", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=8999");
-    String mapChildJavaOpts = "-Xms" + mapperXmx + " -Xmx" + mapperXmx;
-    conf.set("mapred.child.java.opts", mapChildJavaOpts);
-    conf.set("mapred.map.child.java.opts", mapChildJavaOpts);       // MapR 2.x requires this.
+
+    if (h2odriver_config.usingYarn()) {
+      System.out.println("Driver program compiled with MapReduce V2 (Yarn)");
+      Pattern p = Pattern.compile("([1-9][0-9]*)([mgMG])");
+      Matcher m = p.matcher(mapperXmx);
+      boolean b = m.matches();
+      if (b == false) {
+        System.out.println("(Could not parse mapperXmx.");
+        System.out.println("INTERNAL FAILURE.  PLEASE CONTACT TECHNICAL SUPPORT.");
+        System.exit(1);
+      }
+      assert (m.groupCount() == 2);
+      String number = m.group(1);
+      String units = m.group(2);
+      long megabytes = Long.parseLong(number);
+      if (units.equals("g") || units.equals("G")) {
+        megabytes = megabytes * 1024;
+      }
+      conf.set("mapreduce.job.ubertask.enable", "false");
+      conf.set("mapreduce.map.memory.mb", Long.toString(megabytes));
+    }
+    else {
+      System.out.println("Driver program compiled with MapReduce V1 (Classic)");
+      String mapChildJavaOpts = "-Xms" + mapperXmx + " -Xmx" + mapperXmx;
+      conf.set("mapred.child.java.opts", mapChildJavaOpts);
+      conf.set("mapred.map.child.java.opts", mapChildJavaOpts);       // MapR 2.x requires this.
+    }
 
     // This is really silly, but without this line, the following ugly warning
     // gets emitted as the very first line of output, which is confusing for

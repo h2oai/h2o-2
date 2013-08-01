@@ -42,7 +42,13 @@ HADOOP_JARS=$($(HADOOP_VERSION)_JARS)
 
 default: build
 
+F=src/main/java/water/hadoop/h2odriver_config.java
 build_inner:
+	rm -f $(F)
+	@echo "package water.hadoop;" >> $(F)
+	@echo "class h2odriver_config {" >> $(F)
+	@echo "    public static boolean usingYarn() { return $(YARN); }" >> $(F)
+	@echo "}" >> $(F)
 	mkdir classes/$(HADOOP_VERSION)
 	javac -source 1.6 -target 1.6 -sourcepath src/main/java -classpath "$(COMMON_JARS)${SEP}$(HADOOP_JARS)" -d classes/$(HADOOP_VERSION) src/main/java/water/hadoop/*.java
 	jar cf target/h2odriver_$(HADOOP_VERSION).jar -C classes/$(HADOOP_VERSION) .
@@ -53,11 +59,12 @@ clean:
 build: clean
 	mkdir classes
 	mkdir target
-	$(MAKE) build_inner HADOOP_VERSION=mapr2.1.3
-	$(MAKE) build_inner HADOOP_VERSION=cdh3
-	$(MAKE) build_inner HADOOP_VERSION=cdh4
-	$(MAKE) build_inner HADOOP_VERSION=cdh4_yarn
+	$(MAKE) build_inner HADOOP_VERSION=mapr2.1.3 YARN=false
+	$(MAKE) build_inner HADOOP_VERSION=cdh3      YARN=false
+	$(MAKE) build_inner HADOOP_VERSION=cdh4      YARN=false
+	$(MAKE) build_inner HADOOP_VERSION=cdh4_yarn YARN=true
 	rm -rf ../target/hadoop
 	mkdir ../target/hadoop
 	cp README.txt ../target/hadoop
 	cp target/* ../target/hadoop
+
