@@ -128,7 +128,7 @@ def setupImportHdfs(node=None, path=None, schema='hdfs', timeoutSecs=180):
     h2o.verboseprint(h2o.dump_json(importHdfsResult))
     return importHdfsResult
 
-def parseImportHdfsFile(node=None, csvFilename=None, path=None, key2=None, schema='hdfs',
+def parseImportHdfsFile(node=None, csvFilename=None, path='/datasets', key2=None, schema='hdfs',
     timeoutSecs=3600, retryDelaySecs=2, initialDelaySecs=1, pollTimeoutSecs=180, noise=None,
     benchmarkLogging=None, noPoll=False, **kwargs):
     if not csvFilename: raise Exception('No csvFilename parameter in parseImportHdfsFile')
@@ -151,8 +151,10 @@ def parseImportHdfsFile(node=None, csvFilename=None, path=None, key2=None, schem
 
     hdfsKey = URI + "/" + csvFilename
     print "parseImportHdfsFile hdfsKey:", hdfsKey
-    inspect = h2o_cmd.runInspect(key=hdfsKey, timeoutSecs=180)
-    print "parseImportHdfsFile inspect of source:", inspect
+
+    ## This fails for pattern matching. parse works, but not inspect?
+    ## inspect = h2o_cmd.runInspect(key=hdfsKey, timeoutSecs=180)
+    ## print "parseImportHdfsFile inspect of source:", inspect
 
     if key2 is None:
         myKey2 = csvFilename + ".hex"
