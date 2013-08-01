@@ -160,7 +160,7 @@ setMethod("h2o.importHDFS", signature(object="H2OClient", path="character", pars
                 else myData[[i]] = rawData
               }
             }
-            ifelse(res$num_succeeded == 1, myData[[1]], myData)
+            if(res$num_succeeded == 1) myData[[1]] else myData
           })
 
 setMethod("h2o.importHDFS", signature(object="H2OClient", path="character", parse="missing"),
