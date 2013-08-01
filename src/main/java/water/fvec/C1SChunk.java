@@ -7,7 +7,7 @@ import water.parser.DParseTask;
 public class C1SChunk extends Chunk {
   static private final long _NA = 0xFF;
   static final int OFF=8+4;
-  double _scale;
+  public double _scale;
   int _bias;
   C1SChunk( byte[] bs, int bias, double scale ) { _mem=bs; _start = -1; _len = _mem.length-OFF;
     _bias = bias; _scale = scale;

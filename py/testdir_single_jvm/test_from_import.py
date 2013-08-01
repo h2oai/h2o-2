@@ -61,7 +61,7 @@ class Basic(unittest.TestCase):
             time.sleep(10)
 
             # just to make sure we test this
-            h2o_cmd.delete_csv_key(csvFilename, importFolderResult)
+            h2o_cmd.deleteCsvKey(csvFilename, importFolderResult)
 
             sys.stdout.write('.')
             sys.stdout.flush() 

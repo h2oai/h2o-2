@@ -60,12 +60,8 @@ public abstract class Request extends RequestBuilders {
 
   public String _requestHelp;
 
-  protected Request(String help) {
-    _requestHelp = help;
-  }
-
-  protected Request() {
-  }
+  protected Request( String help ) { _requestHelp=help; }
+  protected Request( ) { }
 
   protected String href() {
     return getClass().getSimpleName();
@@ -77,9 +73,7 @@ public abstract class Request extends RequestBuilders {
 
   protected abstract Response serve();
 
-  protected Response serve_debug() {
-    throw H2O.unimpl();
-  }
+  protected Response serve_debug() { throw H2O.unimpl(); }
 
   protected boolean log() {
     return true;
@@ -109,8 +103,9 @@ public abstract class Request extends RequestBuilders {
         Response response = serve();
         response.setTimeStart(time);
         if( type == RequestType.json )
-          return response._req == null ? wrap(server, response.toJson()) : wrap(server, new String(response._req
-              .writeJSON(new AutoBuffer()).buf()), RequestType.json);
+          return response._req == null
+            ? wrap(server, response.toJson())
+            : wrap(server, new String(response._req.writeJSON(new AutoBuffer()).buf()),RequestType.json);
         return wrap(server, build(response));
       case debug:
         response = serve_debug();
@@ -129,7 +124,8 @@ public abstract class Request extends RequestBuilders {
   }
 
   protected NanoHTTPD.Response wrap(NanoHTTPD server, JsonObject response) {
-    return server.new Response(NanoHTTPD.HTTP_OK, NanoHTTPD.MIME_JSON, response.toString());
+    return server.new Response(NanoHTTPD.HTTP_OK, NanoHTTPD.MIME_JSON,
+        response.toString());
   }
 
   protected NanoHTTPD.Response wrap(NanoHTTPD server, String value, RequestType type) {
@@ -253,44 +249,23 @@ public abstract class Request extends RequestBuilders {
 
   // ==========================================================================
   private RuntimeException barf() {
-    return new RuntimeException(getClass().toString()
-        + " should be automatically overridden in the subclass by the Weaver");
+    return new RuntimeException(getClass().toString()+" should be automatically overridden in the subclass by the Weaver");
   }
-
-  public AutoBuffer writeJSON(AutoBuffer ab) {
-    throw barf();
-  }
-
-  public boolean toHTML(StringBuilder sb) {
-    return false;
-  }
-
-  public DocGen.FieldDoc[] toDocField() {
-    return null;
-  }
-
-  public String toDocGET() {
-    return null;
-  }
+  public AutoBuffer writeJSONFields( AutoBuffer ab ) { throw barf(); }
+  public final AutoBuffer writeJSON( AutoBuffer ab ) { return writeJSONFields(ab.put1('{')).put1('}'); }
+  public boolean toHTML( StringBuilder sb ) { return false; }
+  public DocGen.FieldDoc[] toDocField() { return null; }
+  public String toDocGET() { return null; }
 
   /**
    * Example of passing & failing request. Will be prepended with
-   * "curl -s localhost:54321/Request.json". Return param/value pairs that will be used to build up
-   * a URL, and the result from serving the URL will show up as an example.
+   *   "curl -s localhost:54321/Request.json".
+   * Return param/value pairs that will be used to build up a URL,
+   * and the result from serving the URL will show up as an example.
    */
-  public String[] DocExampleSucc() {
-    return null;
-  }
+  public String[] DocExampleSucc() { return null; }
+  public String[] DocExampleFail() { return null; }
 
-  public String[] DocExampleFail() {
-    return null;
-  }
-
-  public String HTMLHelp() {
-    return DocGen.HTML.genHelp(this);
-  }
-
-  public String ReSTHelp() {
-    return DocGen.ReST.genHelp(this);
-  }
+  public String HTMLHelp() { return DocGen.HTML.genHelp(this); }
+  public String ReSTHelp() { return DocGen.ReST.genHelp(this); }
 }

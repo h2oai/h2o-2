@@ -71,7 +71,7 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             print "\n" + csvFilename
 
-            summaryResult = runSummary(key=key2)
+            summaryResult = h2o_cmd.runSummary(key=key2)
             # remove bin_names because it's too big (256?) and bins
             # just touch all the stuff returned
             summary = summaryResult['summary']

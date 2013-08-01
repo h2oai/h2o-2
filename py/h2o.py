@@ -62,6 +62,7 @@ config_json = None
 debugger = False
 random_udp_drop = False
 random_seed = None
+beta_features = False
 # jenkins gets this assign, but not the unit_main one?
 python_test_name = inspect.stack()[1][1]
 
@@ -76,11 +77,11 @@ def parse_our_args():
     parser.add_argument('-dbg', '--debugger', help='Launch java processes with java debug attach mechanisms', action='store_true')
     parser.add_argument('-rud', '--random_udp_drop', help='Drop 20 pct. of the UDP packets at the receive side', action='store_true')
     parser.add_argument('-s', '--random_seed', type=int, help='initialize SEED (64-bit integer) for random generators')
-    parser.add_argument('unittest_args', nargs='*')
+    parser.add_argument('-bf', '--beta_features', help='enable or switch to beta features (import2/parse2)', action='store_true')
     parser.add_argument('unittest_args', nargs='*')
 
     args = parser.parse_args()
-    global browse_disable, browse_json, verbose, ipaddr, config_json, debugger, random_udp_drop, random_seed
+    global browse_disable, browse_json, verbose, ipaddr, config_json, debugger, random_udp_drop, random_seed, beta_features
 
     browse_disable = args.browse_disable or getpass.getuser()=='jenkins'
     browse_json = args.browse_json
@@ -90,6 +91,7 @@ def parse_our_args():
     debugger = args.debugger
     random_udp_drop = args.random_udp_drop
     random_seed = args.random_seed
+    beta_features = args.beta_features
 
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
     # FIX! this isn't working to grab the args we don't care about
@@ -538,7 +540,7 @@ def check_sandbox_for_errors(sandbox_ignore_errors=False):
                     # don't detect these class loader info messags as errors
                     #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
                     foundBad = regex1.search(line) and not (
-                        ('error rate' in line) or ('[Loaded ' in line) or
+                        ('error rate' in line) or ('[Loaded ' in line) or ('class.error' in line) or
                         ('[WARN]' in line) or ('CalcSquareErrorsTasks' in line))
 
                 if (printing==0 and foundBad):
@@ -586,17 +588,15 @@ def check_sandbox_for_errors(sandbox_ignore_errors=False):
             justInfo &= re.match("INFO:", e) or ("apache" in e)
 
         if not justInfo:
-            emsg1 = " check_sandbox_for_errors: Errors in sandbox stdout or stderr.\n" + \
+            emsg1 = " check_sandbox_for_errors: Errors in sandbox stdout or stderr (including R stdout/stderr).\n" + \
                      "Could have occurred at any prior time\n\n"
             emsg2 = "".join(errLines)
             if nodes: 
                 nodes[0].sandbox_error_report(True)
 
-            # can build a cloud that ignores all sandbox things that normally fatal the test
-            # kludge, test will set this directly if it wants, rather than thru build_cloud
-            # parameter. 
-            # we need the sandbox_ignore_errors, for the test teardown_cloud..the state 
-            # disappears!
+            # Can build a cloud that ignores all sandbox things that normally fatal the test
+            # Kludge, test will set this directly if it wants, rather than thru build_cloud parameter. 
+            # we need the sandbox_ignore_errors, for the test teardown_cloud..the state disappears!
             if sandbox_ignore_errors or (nodes and nodes[0].sandbox_ignore_errors):
                 pass
             else:
@@ -619,7 +619,7 @@ def touch_cloud(nodeList=None):
     for n in nodeList:
         n.is_alive()
 
-def verify_cloud_size(nodeList=None):
+def verify_cloud_size(nodeList=None, verbose=False):
     if not nodeList: nodeList = nodes
 
     expectedSize = len(nodeList)
@@ -1022,11 +1022,12 @@ class H2O(object):
         if benchmarkLogging:
             cloudPerfH2O.get_log_save(initOnly=True)
 
-        a = self.__do_json_request('Parse.json', timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('Parse2.json' if beta_features else 'Parse.json',
+            timeout=timeoutSecs, params=params_dict)
 
         # Check that the response has the right Progress url it's going to steer us to.
+        verboseprint("Parse2" if beta_features else "Parse" + " result:", dump_json(a))
         if a['response']['redirect_request']!='Progress':
-            print dump_json(a)
             raise Exception('H2O parse redirect is not Progress. Parse json response precedes.')
 
         if noPoll:
@@ -1034,12 +1035,13 @@ class H2O(object):
 
         # noise is a 2-tuple ("StoreView, none) for url plus args for doing during poll to create noise
         # no noise if None
-        verboseprint('Parse.Json noise:', noise)
+        verboseprint('Parse noise:', noise)
         a = self.poll_url(a['response'],
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
             noise=noise, benchmarkLogging=benchmarkLogging)
-        verboseprint("\nParse result:", dump_json(a))
+
+        verboseprint("\nParse2" if beta_features else "\nParse" + " result:", dump_json(a))
         return a
 
     def netstat(self):
@@ -1054,7 +1056,7 @@ class H2O(object):
     # &offset=
     # &view=
     def inspect(self, key, offset=None, view=None, ignoreH2oError=False, timeoutSecs=30):
-        a = self.__do_json_request('Inspect.json',
+        a = self.__do_json_request('Inspect2.json' if beta_features else 'Inspect.json',
             params={
                 "key": key,
                 "offset": offset,
@@ -1094,7 +1096,10 @@ class H2O(object):
     # the param name for ImportFiles is 'file', but it can take a directory or a file.
     # 192.168.0.37:54323/ImportFiles.html?file=%2Fhome%2F0xdiag%2Fdatasets
     def import_files(self, path, timeoutSecs=180):
-        a = self.__do_json_request('ImportFiles.json', timeout=timeoutSecs, params={"path": path})
+        a = self.__do_json_request('ImportFiles2.json' if beta_features else 'ImportFiles.json',
+            timeout=timeoutSecs, 
+            params={"path": path}
+        )
         verboseprint("\nimport_files result:", dump_json(a))
         return a
 
@@ -1167,12 +1172,14 @@ class H2O(object):
         return a
 
     def random_forest_view(self, data_key, model_key, timeoutSecs=300, print_params=False, **kwargs):
+        # is response_variable needed here? it shouldn't be
         # do_json_request will ignore any that remain = None
         params_dict = {
             'data_key': data_key,
             'model_key': model_key,
             'out_of_bag_error_estimate': 1, 
             'class_weights': None,
+            'response_variable': None, 
             }
         browseAlso = kwargs.pop('browseAlso',False)
 
@@ -1219,7 +1226,8 @@ class H2O(object):
 
         # it will redirect to an inspect, so let's get that inspect stuff
         resultKey = a['response']['redirect_request_args']['key']
-        a = self.__do_json_request('Inspect.json', timeout=timeoutSecs, params={"key": resultKey})
+        a = self.__do_json_request('Inspect2.json' if beta_features else 'Inspect.json',
+            timeout=timeoutSecs, params={"key": resultKey})
         verboseprint("\nInspect of " + resultKey, dump_json(a))
         return a
 

@@ -82,13 +82,7 @@ class Basic(unittest.TestCase):
             print "\n" + csvFilename
             start = time.time()
             RFview = h2o_cmd.runRFOnly(trees=1,parseKey=parseKey,timeoutSecs=2000)
-            h2b.browseJsonHistoryAsUrlLastMatch("RFView")
-            # wait in case it recomputes it
-            time.sleep(10)
-
-            sys.stdout.write('.')
-            sys.stdout.flush() 
-
+            # h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
 
 if __name__ == '__main__':

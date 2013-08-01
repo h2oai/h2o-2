@@ -1,6 +1,5 @@
 # Demo to test R functionality
 # To invoke, need R 2.15.0 or higher
-# R -f H2OTestDemo.R
 
 # R -f test_R_RF_diff_class.R --args Path/To/H2O.R H2OServer:Port
 args <- commandArgs(trailingOnly = TRUE)
@@ -19,4 +18,3 @@ iris.rf = h2o.randomForest(y = "4", data = iris.hex, ntree = 50, depth = 100, cl
 print(iris.rf)
 iris.rf = h2o.randomForest(y = "5", data = iris.hex, ntree = 50, depth = 100 )
 print(iris.rf)
-

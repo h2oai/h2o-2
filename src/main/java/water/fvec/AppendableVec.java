@@ -4,16 +4,18 @@ import water.*;
 import water.fvec.Vec;
 import java.util.Arrays;
 
-// A NEW single distributed vector column.
-//
-// The NEW vector has no data, and takes no space.  It supports distributed
-// parallel writes to it, via calls to append2.  Such writes happen in parallel
-// and no guarantees about order are made.  Writes *will* be local to the node
-// doing them, specifically to allow control over locality.  By default, writes
-// will go local-homed chunks with no compression; there is a final 'close' to
-// the NEW vector which may do compression, and will collect info like row-
-// counts-per-chunk, min/max/mean, etc.; the final 'close' will return some
-// other Vec type.  NEW Vectors do NOT support reads!
+/**
+ * A NEW single distributed vector column.
+ *
+ * The NEW vector has no data, and takes no space.  It supports distributed
+ * parallel writes to it, via calls to append2.  Such writes happen in parallel
+ * and no guarantees about order are made.  Writes *will* be local to the node
+ * doing them, specifically to allow control over locality.  By default, writes
+ * will go local-homed chunks with no compression; there is a final 'close' to
+ * the NEW vector which may do compression, and will collect info like row-
+ * counts-per-chunk, min/max/mean, etc.; the final 'close' will return some
+ * other Vec type.  NEW Vectors do NOT support reads!
+ */
 public class AppendableVec extends Vec {
   long _espc[];
   public static final byte NUMBER = 3;
@@ -26,7 +28,7 @@ public class AppendableVec extends Vec {
   long _totalCnt;
 
   AppendableVec( Key key) {
-    super(key, null,false,Double.MAX_VALUE,Double.MIN_VALUE);
+    super(key, null,false,0);
     _espc = new long[4];
     _chunkTypes = new byte[4];
   }
@@ -42,11 +44,7 @@ public class AppendableVec extends Vec {
     }
     _espc[cidx] = chk._len;
     _chunkTypes[cidx] = chk.type();
- //   _homes[cidx] = H2O.SELF.index();
     _hasFloat |= chk.hasFloat();
-    // Roll-up totals for each chunk as it closes
-    if( chk._min < _min ) _min = chk._min;
-    if( chk._max > _max ) _max = chk._max;
     _missingCnt += chk._naCnt;
     _strCnt += chk._strCnt;
     _totalCnt += chk._len;
@@ -101,6 +99,7 @@ public class AppendableVec extends Vec {
         if(_chunkTypes[i] == ENUM)
           DKV.put(chunkKey(i), new C0DChunk(Double.NaN, (int)_espc[i]),fs);
     }
+
     // Compute elems-per-chunk.
     // Roll-up elem counts, so espc[i] is the starting element# of chunk i.
     // TODO: Complete fail: loads all data locally - will force OOM.  Needs to be
@@ -113,7 +112,7 @@ public class AppendableVec extends Vec {
     }
     espc[nchunk]=x;             // Total element count in last
     // Replacement plain Vec for AppendableVec.
-    Vec vec = new Vec(_key, espc,!_hasFloat,_min,_max);
+    Vec vec = new Vec(_key, espc,!_hasFloat,_missingCnt);
     vec._dtype = dtype();
     DKV.put(_key,vec,fs);       // Inject the header
     return vec;

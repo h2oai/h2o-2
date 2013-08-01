@@ -271,8 +271,8 @@ class Basic(unittest.TestCase):
                     # we're deleting the keys in the initial import. We leave the keys we created
                     # by the parse. We use unique dest keys for those, so no worries.
                     # Leaving them is good because things fill up! (spill)
-                    h2o_cmd.check_key_distribution()
-                    h2o_cmd.delete_csv_key(csvFilename, importResult)
+                    h2o_cmd.checkKeyDistribution()
+                    h2o_cmd.deleteCsvKey(csvFilename, importResult)
 
                 h2o.tear_down_cloud()
                 # sticky ports? wait a bit.

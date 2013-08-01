@@ -33,12 +33,13 @@ class Basic(unittest.TestCase):
         shCmdString = "R -f " + rScript + " --args " + rLibrary + " " + h2o.nodes[0].http_addr + ":" + str(h2o.nodes[0].port)
         
         (ps, outpath, errpath) =  h2o.spawn_cmd('rtest_with_h2o', shCmdString.split())
-        h2o.spawn_wait(ps, outpath, errpath, timeout=10)
+        rc = h2o.spawn_wait(ps, outpath, errpath, timeout=10)
+        if(rc != 0): raise Exception("R exited with non-zero return code %s" % rc)
 
     def test_R_C_prostate(self):
         print "\nStarting prostate.csv"
         rScript = h2o.find_file('R/tests/test_R_C_prostate.R')
-        rLibrary = h2o.find_file('R/H2O.R')
+        rLibrary = h2o.find_file('R/h2o-package/R/H2O.R')
 
         # Columns start at 0
         # Test columns 1-8, with 1 as response
@@ -46,7 +47,8 @@ class Basic(unittest.TestCase):
         shCmdString = "R -f " + rScript + " --args " + rLibrary + " " + h2o.nodes[0].http_addr + ":" + str(h2o.nodes[0].port)
 
         (ps, outpath, errpath) =  h2o.spawn_cmd('rtest_with_h2o', shCmdString.split())
-        h2o.spawn_wait(ps, outpath, errpath, timeout=10)
+        rc = h2o.spawn_wait(ps, outpath, errpath, timeout=10)
+        if(rc != 0): raise Exception("R exited with non-zero return code %s" % rc)
 
 if __name__ == '__main__':
     h2o.unit_main()

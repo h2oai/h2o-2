@@ -61,7 +61,7 @@ class Basic(unittest.TestCase):
 
             # different when n_foldsidation is used? No trainingErrorDetails?
             h2o.verboseprint("\nglm:", glm)
-            h2b.browseJsonHistoryAsUrlLastMatch("GLM")
+            ### h2b.browseJsonHistoryAsUrlLastMatch("GLM")
 
             GLMModel = glm['GLMModel']
             print "GLM time", GLMModel['time']

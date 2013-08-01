@@ -18,7 +18,7 @@ public class ParseProgressTest extends TestUtil {
   // Silently exits if it cannot find covtype.
   @Test public void testCovtype() {
     File f = find_test_file("../datasets/UCI/UCI-large/covtype/covtype.data");
-    if( !f.exists() )
+    if( f == null || !f.exists() )
       f = find_test_file("../demo/UCI-large/covtype/covtype.data");
     if( !f.exists() )
       return;

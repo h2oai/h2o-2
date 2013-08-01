@@ -336,15 +336,16 @@ def simpleCheckGLMGrid(self, glmGridResult, colX=None, allowFailWarning=False, *
 
 # get input from this.
 #   (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
-#                h2o_cmd.columnInfoFromInspect(parseKey, exceptionOnMissingValues=False, timeoutSecs=300)
+#                h2o_cmd.columnInfoFromInspect(parseKey['destination_key', 
+#                exceptionOnMissingValues=False, timeoutSecs=300)
 
 def goodXFromColumnInfo(y, 
     num_cols=None, missingValuesDict=None, constantValuesDict=None, enumSizeDict=None, colTypeDict=None, colNameDict=None, 
-    keepPattern=None, key=None, timeoutSecs=120):
+    keepPattern=None, key=None, timeoutSecs=120, forRF=False):
 
     y = str(y)
 
-    # if we pass a parseKey, means we want to get the info ourselves here
+    # if we pass a key, means we want to get the info ourselves here
     if key is not None:
         (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
             h2o_cmd.columnInfoFromInspect(key, exceptionOnMissingValues=False, timeoutSecs=timeoutSecs)
@@ -366,11 +367,13 @@ def goodXFromColumnInfo(y,
         if str(k)== y: # if they pass the col index as y
             print "Removing %d because name: %s matches output %s" % (k, str(k), y)
             x.remove(k)
-            ignore_x.append(k)
+            # rf doesn't want it in ignore list
+            # ignore_x.append(k)
         elif name == y: # if they pass the name as y 
             print "Removing %d because name: %s matches output %s" % (k, name, y)
             x.remove(k)
-            ignore_x.append(k)
+            # rf doesn't want it in ignore list
+            # ignore_x.append(k)
 
         elif keepX is not None and not keepX.match(name):
             print "Removing %d because name: %s doesn't match desired keepPattern %s" % (k, name, keepPattern)
@@ -400,10 +403,15 @@ def goodXFromColumnInfo(y,
             x.remove(k)
             ignore_x.append(k)
 
-    print "The pruned x has length", len(x)
+    print "x has", len(x), "cols"
+    print "ignore_x has", len(ignore_x), "cols"
     x = ",".join(map(str,x))
+    ignore_x = ",".join(map(str,ignore_x))
     print "\nx:", x
     print "\nignore_x:", ignore_x
-    return x
+    if forRF:
+        return ignore_x
+    else:
+        return x
 
 
