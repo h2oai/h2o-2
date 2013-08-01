@@ -224,14 +224,14 @@ public class Parse extends Request {
     Key dest = Key.make(_dest.value());
     try {
       // Make a new Setup, with the 'header' flag set according to user wishes.
-      if((p._setup != null && p._setup._pType == CustomParser.ParserType.CSV) && _header.value() != null)
-        setup = CustomParser.ParserSetup.makeCSVSetup(setup._separator, _header.value(), setup._data,setup._bits, setup._ncols);
+      if(p._setup != null && _header.specified())
+        setup.setHeader(_header.value());
+
       Key[] keys = p._keys.toArray(new Key[p._keys.size()]);
       Job job = ParseDataset.forkParseDataset(dest, keys,setup);
       JsonObject response = new JsonObject();
       response.addProperty(RequestStatics.JOB, job.self().toString());
       response.addProperty(RequestStatics.DEST_KEY,dest.toString());
-
       Response r = Progress.redirect(response, job.self(), dest);
       r.setBuilder(RequestStatics.DEST_KEY, new KeyElementBuilder());
       return r;

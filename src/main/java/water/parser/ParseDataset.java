@@ -252,15 +252,15 @@ public final class ParseDataset extends Job {
         Value v = DKV.get(key);
         assert v != null;
         ParserSetup localSetup = ParseDataset.guessSetup(v, _parserSetup._pType, _parserSetup._separator);
+        localSetup._header &= _parserSetup._header;
         if(!_parserSetup.isCompatible(localSetup))throw new ParseException("Parsing incompatible files. " + _parserSetup.toString() + " is not compatible with " + localSetup.toString());
         _fileInfo[_idx] = new FileInfo();
         _fileInfo[_idx]._ikey = key;
         _fileInfo[_idx]._okey = key;
-        if(_parserSetup._header && localSetup._header){
-          _fileInfo[_idx]._header = true;
+        if(localSetup._header)
           for(int i = 0; i < _parserSetup._ncols; ++i)
-            _fileInfo[_idx]._header &= _parserSetup._columnNames[i].equalsIgnoreCase(localSetup._columnNames[i]);
-        }
+            localSetup._header &= _parserSetup._columnNames[i].equalsIgnoreCase(localSetup._columnNames[i]);
+        _fileInfo[_idx]._header = localSetup._header;
         CustomParser parser = null;
         DParseTask dpt = null;
         switch(localSetup._pType){

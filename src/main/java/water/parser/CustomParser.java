@@ -28,7 +28,7 @@ public abstract class CustomParser extends Iced {
     public final ParserType _pType;
     public final byte _separator;
     public boolean _header;
-    public final String [] _columnNames;
+    public String [] _columnNames;
     public final transient String [][] _data;
     public final transient byte[] _bits;
     public final int _ncols;
@@ -59,6 +59,16 @@ public abstract class CustomParser extends Iced {
       _columnNames = columnNames;
       _data = data;
       _bits = bits;
+    }
+    public void setHeader(boolean val){
+      if(!val){
+        _header = false;
+        _columnNames = null;
+      } else if(_data != null){
+        _header = true;
+        _columnNames = _data[0];
+      } else
+        assert false;
     }
     public ParserSetup clone(){
       return new ParserSetup(_pType, _separator, _ncols, _header, _columnNames, _data,_bits);
