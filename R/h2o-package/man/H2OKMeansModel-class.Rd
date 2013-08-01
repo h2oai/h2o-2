@@ -6,7 +6,7 @@
 
 \title{Class \code{"H2OKMeansModel"}}
 \description{
-An class for representing k-means models.
+A class for representing k-means models.
 }
 \section{Objects from the Class}{
 Objects can be created by calls of the form \code{new("H2OKMeansModel", ...)}.

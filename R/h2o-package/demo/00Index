@@ -1,0 +1,3 @@
+h2o.glm   H2O GLM using prostate cancer data
+h2o.kmeans   H2O K-means using prostate cancer data
+h2o.randomForest   H2O random forest classification using iris and covertype data
