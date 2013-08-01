@@ -8,8 +8,7 @@ import java.util.zip.*;
 
 import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.fvec.FVecParser.ChunkParser;
-import water.fvec.FVecParser.StreamParser;
+import water.api.Inspect;
 import water.nbhm.NonBlockingHashMap;
 import water.parser.*;
 import water.parser.Enum;
@@ -24,7 +23,7 @@ public final class ParseDataset2 extends Job {
     return forkParseDataset(okey, keys, null).get();
   }
   // Same parse, as a backgroundable Job
-  public static ParseDataset2 forkParseDataset(final Key dest, final Key[] keys, final CsvParser.Setup setup) {
+  public static ParseDataset2 forkParseDataset(final Key dest, final Key[] keys, final CustomParser.ParserSetup setup) {
     ParseDataset2 job = new ParseDataset2(dest, keys);
     H2O.submitTask(job.start(new ParserFJTask(job, keys, setup)));
     return job;
@@ -41,9 +40,9 @@ public final class ParseDataset2 extends Job {
   public static class ParserFJTask extends H2OCountedCompleter {
     final ParseDataset2 _job;
     Key [] _keys;
-    CsvParser.Setup _setup;
+    CustomParser.ParserSetup _setup;
 
-    public ParserFJTask( ParseDataset2 job, Key [] keys, CsvParser.Setup setup) {
+    public ParserFJTask( ParseDataset2 job, Key [] keys, CustomParser.ParserSetup setup) {
       _job = job;
       _keys = keys;
       _setup = setup;
@@ -182,7 +181,7 @@ public final class ParseDataset2 extends Job {
 
   // --------------------------------------------------------------------------
   // Top-level parser driver
-  private static void parse_impl(ParseDataset2 job, Key [] fkeys, CsvParser.Setup setup) {
+  private static void parse_impl(ParseDataset2 job, Key [] fkeys, CustomParser.ParserSetup setup) {
     // remove any previous instance and insert a sentinel (to ensure no one has
     // been writing to the same keys during our parse)!
     UKV.remove(job.dest());
@@ -195,8 +194,21 @@ public final class ParseDataset2 extends Job {
     ByteVec vec = (ByteVec) getVec(fkeys[0]);
     Compression compression = guessCompressionMethod(vec);
     byte sep = setup == null ? CsvParser.NO_SEPARATOR : setup._separator;
-    if( setup == null || setup._data == null || setup._data[0] == null )
-      setup = csvGuessValue(vec, sep, compression);
+    if( setup == null || setup._data == null || setup._data[0] == null ){
+      if(setup == null || setup._pType == CustomParser.ParserType.AUTO)
+        setup = ParseDataset.guessSetup(DKV.get(fkeys[0]));
+      else switch(setup._pType){
+        case CSV:
+          setup = CsvParser.guessSetup(DKV.get(fkeys[0]).getFirstBytes(), sep);
+          break;
+        case SVMLight:
+          //setup = SVMLightParser.guessSetup(DKV.get(fkeys[0]).getFirstBytes());
+          throw H2O.unimpl();
+          //break;
+        default:
+          throw H2O.unimpl();
+      }
+    }
     // Parallel file parse launches across the cluster
     MultiFileParseTask uzpt = new MultiFileParseTask(setup,job._progress).invoke(fkeys);
     if( uzpt._parserr != null )
@@ -229,61 +241,70 @@ public final class ParseDataset2 extends Job {
     public static NonBlockingHashMap<Key, Enum[]> _enums = new NonBlockingHashMap<Key, Enum[]>();
     private final Key _eKey = Key.make();
     private final Key _progress;
-    public final CsvParser.Setup _setup; // The expected column layout
+    public final CustomParser.ParserSetup _setup; // The expected column layout
     // OUTPUT fields:
     public String _parserr;              // NULL if parse is OK, else an error string
     // All column data for this one file
     Vec _vecs[];
 
-    MultiFileParseTask( CsvParser.Setup setup, Key progress ) {_setup = setup; _progress = progress; }
+    MultiFileParseTask( CustomParser.ParserSetup setup, Key progress ) {_setup = setup; _progress = progress; }
 
     // Called once per file
     @Override public void map( Key key ) {
       // Get parser setup info for this chunk
       ByteVec vec = (ByteVec) getVec(key);
       Compression cpr = guessCompressionMethod(vec);
+      CustomParser.ParserSetup localSetup;
       // Local setup: nearly the same as the global all-files setup, but maybe
       // has the header-flag changed.
-      CsvParser.Setup setup = csvGuessValue(vec,_setup._separator,cpr);
-      if( !_setup.equals(setup) ) {
-        _parserr = "Conflicting file layouts, expecting: "+_setup+" but found "+setup;
+      byte [] bits = Inspect.getFirstBytes(DKV.get(key));
+      switch(_setup._pType){
+        case SVMLight:
+          localSetup = SVMLightParser.guessSetup(bits);
+          break;
+        case CSV:
+          localSetup = CsvParser.guessSetup(bits, _setup._separator);
+          break;
+        default:
+          throw H2O.unimpl();
+      }
+      if(!_setup.isCompatible(localSetup)) {
+        _parserr = "Conflicting file layouts, expecting: "+_setup+" but found "+localSetup;
         return;
       }
       // Allow dup headers, if they are equals-ignoring-case
-      boolean has_hdr = _setup._header && setup._header;
+      boolean has_hdr = _setup._header && localSetup._header;
       if( has_hdr ) {           // Both have headers?
-        for( int i = 0; i < setup._data[0].length; ++i )
-          has_hdr &= setup._data[0][i].equalsIgnoreCase(_setup._data[0][i]);
+        for( int i = 0; i < localSetup._columnNames.length; ++i )
+          has_hdr = localSetup._columnNames[i].equalsIgnoreCase(_setup._columnNames[i]);
         if( !has_hdr )          // Headers not compatible?
           // Then treat as no-headers, i.e., parse it as a normal row
-          setup = new CsvParser.Setup(setup,false);
+          localSetup = CustomParser.ParserSetup.makeCSVSetup(localSetup._separator, false, localSetup._data, localSetup._bits, localSetup._ncols);
       }
-
-      final int ncols = _setup._data[0].length;
+      final int ncols = _setup._ncols;
       _vecs = new Vec[ncols];
       Key [] keys = vec.group().addVecs(ncols);
       for( int i=0; i<ncols; i++ )
         _vecs[i] = new AppendableVec(keys[i]);
-
       // Parse the file
       try {
         switch( cpr ) {
         case NONE:
           // Parallel decompress
-          distroParse(vec,setup);
+          distroParse(vec,localSetup);
           break;
         case ZIP: {
           // Zipped file; no parallel decompression;
           ZipInputStream zis = new ZipInputStream(vec.openStream(_progress));
           ZipEntry ze = zis.getNextEntry(); // Get the *FIRST* entry
           // There is at least one entry in zip file and it is not a directory.
-          if( ze != null && !ze.isDirectory() ) streamParse(zis,setup);
+          if( ze != null && !ze.isDirectory() ) streamParse(zis,localSetup);
           else zis.close();       // Confused: which zipped file to decompress
           break;
         }
         case GZIP:
           // Zipped file; no parallel decompression;
-          streamParse(new GZIPInputStream(vec.openStream(_progress)),setup);
+          streamParse(new GZIPInputStream(vec.openStream(_progress)),localSetup);
           break;
         }
       } catch( IOException ioe ) {
@@ -315,21 +336,17 @@ public final class ParseDataset2 extends Job {
     // ------------------------------------------------------------------------
     // Zipped file; no parallel decompression; decompress into local chunks,
     // parse local chunks; distribute chunks later.
-    private void streamParse( final InputStream is, final CsvParser.Setup localSetup ) throws IOException {
+    private void streamParse( final InputStream is, final CustomParser.ParserSetup localSetup ) throws IOException {
       // All output into a fresh pile of NewChunks, one per column
       final NewChunk nvs[] = new NewChunk[_vecs.length];
       for( int i=0; i<nvs.length; i++ )
         nvs[i] = new NewChunk(_vecs[i],0/*starting chunk#*/);
-
-      StreamParser parser = new StreamParser(is, nvs, localSetup, enums());
+      FVecDataOut dout = new FVecDataOut(nvs, enums());
+      CsvParser p = new CsvParser(localSetup, false);
+      try{p.streamParse(is, dout);}catch(Exception e){throw new RuntimeException(e);}
       // Parse all internal "chunks", until we drain the zip-stream dry.  Not
       // real chunks, just flipping between 32K buffers.  Fills up the single
       // very large NewChunk.
-      int cidx=0;
-      while( is.available() > 0 )
-        parser.parse(cidx++);
-      parser.parse(cidx++);     // Parse the remaining partial 32K buffer
-      // Close & compress all the NewChunks for this one file.
       for( int i=0; i<_vecs.length; i++ ) {
         nvs[i].close(0/*actual chunk number*/,_fs);
         _vecs[i] = ((AppendableVec)_vecs[i]).close(_fs);
@@ -338,31 +355,30 @@ public final class ParseDataset2 extends Job {
 
     // ------------------------------------------------------------------------
     // Distributed parse of an unzipped raw text file.
-    private void distroParse( ByteVec vec, final CsvParser.Setup localSetup ) throws IOException {
+    private void distroParse( ByteVec vec, final CustomParser.ParserSetup localSetup ) throws IOException {
       Vec bvs[] = Arrays.copyOf(_vecs,_vecs.length+1,Vec[].class);
       bvs[bvs.length-1] = vec;
-      DParse dp = new DParse(localSetup,_progress).doAll(bvs);
+      DParse dp = new DParse(localSetup).doAll(bvs);
       // After the MRTask2, the input Vec array has all the AppendableVecs
       // closed() and rewritten as plain Vecs.  Copy those back into the _cols
       // array.
       for( int i=0; i<_vecs.length; i++ ) _vecs[i] = dp.vecs(i);
     }
     private class DParse extends MRTask2<DParse> {
-      final CsvParser.Setup _setup;
-      final Key _progress;
-      DParse(CsvParser.Setup setup, Key progress) {_setup = setup; _progress = progress;}
+      final CustomParser.ParserSetup _setup;
+      DParse(CustomParser.ParserSetup setup) {_setup = setup;}
       @Override public void map( Chunk[] bvs ) {
         Enum [] enums = enums();
         // Break out the input & output vectors before the parse loop
         final Chunk in = bvs[bvs.length-1];
         final NewChunk[] nvs = Arrays.copyOf(bvs,bvs.length-1, NewChunk[].class);
         // The Parser
-        ChunkParser parser = new ChunkParser(in,nvs,_setup,enums);
-        parser.parse(0);
-        onProgress(in._len, _progress); // Record bytes parsed
+        FVecDataIn din = new FVecDataIn(in);
+        FVecDataOut dout = new FVecDataOut(nvs,enums);
+        CsvParser p = new CsvParser(_setup,in._start > 0);
+        p.parallelParse(0,din,dout);
       }
     }
-
     // Collect the string columns
     public int [] enumCols (){
       int [] res = new int[_vecs.length];
@@ -388,7 +404,7 @@ public final class ParseDataset2 extends Job {
     return Compression.NONE;
   }
 
-  public static CsvParser.Setup csvGuessValue( ByteVec vec, byte separator, Compression compression ) {
+  public static CustomParser.ParserSetup csvGuessValue( ByteVec vec, byte separator, Compression compression ) {
     // Since this data is all bytes, we know each chunk is just raw text.
     C1NChunk bv = vec.elem2BV(0);
     // See if we can make sense of the first few rows.
@@ -432,11 +448,110 @@ public final class ParseDataset2 extends Job {
     }
     if( off < bs.length )
       bs = Arrays.copyOf(bs, off); // Trim array to length read
-
     // Now try to interpret the unzipped data as a CSV
-    return CsvParser.inspect(bs, separator);
+    return CsvParser.guessSetup(bs, separator);
   }
 
+  /**
+   * Parsed data output specialized for fluid vecs.
+   *
+   * @author tomasnykodym
+   *
+   */
+  public static class FVecDataOut extends Iced implements CustomParser.DataOut {
+    final NewChunk [] _nvs;
+    final Enum [] _enums;
+    long _nLines;
+    final int _nCols;
+    int _col = -1;
+
+    public FVecDataOut(NewChunk [] nvs, Enum [] enums){
+      _nvs = nvs;
+      _enums = enums;
+      _nCols = nvs.length;
+    }
+
+    @Override public final void newLine() {
+      if(_col >= 0){
+        ++_nLines;
+        for(int i = _col+1; i < _nCols; ++i)
+          addInvalidCol(i);
+      }
+      _col = -1;
+    }
+    protected long linenum(){return _nLines;}
+    @Override public final void addNumCol(int colIdx, long number, int exp) {
+      if(colIdx >= _nvs.length)
+        System.err.println("Additional column ("+ _nvs.length + " < " + colIdx + ":" + number + "," + exp + ") on line " + linenum());
+      else
+        _nvs[_col = colIdx].addNum(number,exp);
+    }
+
+    @Override public final void addInvalidCol(int colIdx) {
+      _nvs[_col = colIdx].addNA();
+    }
+    @Override public final boolean isString(int colIdx) { return false; }
+
+    @Override public final void addStrCol(int colIdx, ValueString str) {
+      if(colIdx >= _nvs.length){
+        System.err.println("additional column (" + colIdx + ":" + str + ") on line " + linenum());
+        return;
+      }
+      if(!_enums[_col = colIdx].isKilled()) {
+        // store enum id into exponent, so that it will be interpreted as NA if compressing as numcol.
+        int id = _enums[colIdx].addKey(str);
+        _nvs[colIdx].addEnum(id);
+        assert _enums[colIdx].getTokenId(str) == id;
+        assert id <= _enums[colIdx].maxId();
+      } else // turn the column into NAs by adding value overflowing Enum.MAX_SIZE
+        _nvs[colIdx].addEnum(Integer.MAX_VALUE);
+    }
+
+    /** Adds double value to the column.
+    *
+    * @param colIdx
+    * @param value
+    */
+    public void addNumCol(int colIdx, double value) {
+      if (Double.isNaN(value)) {
+        addInvalidCol(colIdx);
+      } else {
+        double d= value;
+        int exp = 0;
+        long number = (long)d;
+        while (number != d) {
+          d = d * 10;
+          --exp;
+          number = (long)d;
+        }
+        addNumCol(colIdx, number, exp);
+      }
+    }
+    public void setColumnNames(String [] names){}
+    @Override public final void rollbackLine() {}
+    @Override public void invalidLine(int lineNum) {} // TODO
+    @Override public void invalidValue(int line, int col) {} // TODO
+  }
+
+  /**
+   * Parser data in taking data from fluid vec chunk.
+   *
+   * @author tomasnykodym
+   *
+   */
+  public static class FVecDataIn implements CustomParser.DataIn {
+    Chunk _chk;
+    final long _firstLine;
+    public FVecDataIn(Chunk chk){
+      _chk = chk;
+      _firstLine = _chk._start;
+    }
+    @Override public byte[] getChunkData(int cidx) {
+      if(cidx == 0) return _chk._mem;
+      Chunk nextChk = _chk._vec.nextBV(_chk);
+      return (nextChk == null)?null:nextChk._mem;
+    }
+  }
   public static class ParseException extends RuntimeException {
     public ParseException(String msg) { super(msg); }
   }

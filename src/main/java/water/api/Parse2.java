@@ -9,8 +9,8 @@ import water.*;
 import water.Weaver.Weave;
 import water.api.RequestBuilders.Response.Status;
 import water.fvec.*;
-import water.parser.CsvParser;
-import water.parser.CsvParser.Setup;
+import water.parser.*;
+import water.parser.CustomParser.ParserSetup;
 import water.util.RString;
 
 public class Parse2 extends Request {
@@ -55,9 +55,9 @@ public class Parse2 extends Request {
 
   private static class PSetup {
     final ArrayList<Key> _keys;
-    final CsvParser.Setup _setup;
-    PSetup( ArrayList<Key> keys, CsvParser.Setup setup) { _keys=keys; _setup=setup; }
-    PSetup( Key key, CsvParser.Setup setup) {
+    final CustomParser.ParserSetup _setup;
+    PSetup( ArrayList<Key> keys, CustomParser.ParserSetup setup) { _keys=keys; _setup=setup; }
+    PSetup( Key key, CustomParser.ParserSetup setup) {
       _keys = new ArrayList();
       _keys.add(key);
       _setup=setup;
@@ -75,7 +75,7 @@ public class Parse2 extends Request {
       Key k1 = Key.make(input);
       Value v1 = DKV.get(k1);
       if( v1 != null && (input.endsWith(".xlsx") || input.endsWith(".xls")) )
-        return new PSetup(k1, new Setup((byte) 0,false,null,0,null));
+        return new PSetup(k1,CustomParser.ParserSetup.makeSetup());
       Pattern incl = makePattern(input);
       Pattern excl = null;
       if(exclude.specified())
@@ -107,7 +107,7 @@ public class Parse2 extends Request {
       Value v = DKV.get(hKey);
       v = ((Frame) v.get())._vecs[0].chunkIdx(0);
       byte sep = separator.specified() ? separator.value() : CsvParser.NO_SEPARATOR;
-      CsvParser.Setup setup = Inspect.csvGuessValue(v, sep);
+      CustomParser.ParserSetup setup = ParseDataset.guessSetup(v, CustomParser.ParserType.CSV, sep);
       if( setup._data == null || setup._data[0].length == 0 )
         throw new IllegalArgumentException(errors()[1]+hKey);
       return new PSetup(keys,setup);
@@ -125,12 +125,11 @@ public class Parse2 extends Request {
 
     @Override protected PSetup defaultValue() { return null; }
     @Override protected String queryDescription() { return "Source CSV key"; }
-    @Override protected String[] errors() { return new String[] { 
+    @Override protected String[] errors() { return new String[] {
         "I did not find any keys matching this pattern!",
         "I cannot figure out this file; I only handle common CSV formats: "
       }; }
   }
-
 
   // A Query String, which defaults to the source Key with a '.hex' suffix
   private class NewH2OHexKey extends Str {
@@ -143,7 +142,7 @@ public class Parse2 extends Request {
       if( setup == null ) return null;
       String n = setup._keys.get(0).toString();
       int dot = n.lastIndexOf('.'); // Peel off common .csv or .csv.gz suffix
-      if( dot > 0 && n.lastIndexOf(File.separator) < dot ) 
+      if( dot > 0 && n.lastIndexOf(File.separator) < dot )
         n = n.substring(0, dot);
       dot = n.lastIndexOf('.'); // Peel off common .csv.gz suffix
       if( dot > 0 && n.lastIndexOf(File.separator) < dot )
@@ -218,17 +217,14 @@ public class Parse2 extends Request {
 
   @Override protected Response serve() {
     PSetup p = source_key.value();
-    CsvParser.Setup q = p._setup;
+    CustomParser.ParserSetup setup = p._setup;
     Key d = Key.make(dst_key.value());
     try {
       // Make a new Setup, with the 'header' flag set according to user wishes.
-      CsvParser.Setup new_setup = header.originalValue() == null // No user wish?
-        ? q                     // Default to heuristic
-        // Else use what user choose
-        : new CsvParser.Setup(q._separator,header.value(),q._data,q._numlines,q._bits);
-
+      if(header.originalValue() != null) // No user wish?
+         setup._header = header.value();
       Key[] keys = p._keys.toArray(new Key[p._keys.size()]);
-      Key jobkey = ParseDataset2.forkParseDataset(d, keys,new_setup)._self;
+      Key jobkey = ParseDataset2.forkParseDataset(d, keys,setup)._self;
       job = jobkey.toString();
       destination_key = d.toString();
 

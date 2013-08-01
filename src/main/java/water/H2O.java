@@ -757,7 +757,6 @@ public final class H2O {
 
     sayHi();
 
-    ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
     Log.POST(310,"");
 
     // Get ice path before loading Log or Persist class
@@ -795,7 +794,7 @@ public final class H2O {
 
     initializeExpressionEvaluation(); // starts the expression evaluation system
     Log.POST(370,"");
-
+    ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
     startupFinalize(); // finalizes the startup & tests (if any)
     Log.POST(380,"");
   }

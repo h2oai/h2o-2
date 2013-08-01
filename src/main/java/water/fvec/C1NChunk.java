@@ -29,4 +29,5 @@ public class C1NChunk extends Chunk {
       nc._ls[i] = at8_impl(i);
     return nc;
   }
+  public byte[] getBytes(){return _mem;}
 }
