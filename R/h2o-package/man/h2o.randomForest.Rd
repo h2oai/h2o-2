@@ -63,13 +63,13 @@ An object of class \code{\linkS4class{H2ORForestModel}} with slots key, data, an
 }
 \examples{
 # Assuming your working directory is h2o/R
-iris.hex = importFile(h2o, "../smalldata/iris/iris.csv", "iris.hex")
+iris.hex = h2o.importFile(localH2O, path = "../smalldata/iris/iris.csv", key = "iris.hex")
 h2o.randomForest(y = "4", data = iris.hex, ntree = 50, depth = 100, 
-   classwt = c("Iris-versicolor" = 20.0, "Iris-virginica" = 30.0))
+classwt = c("Iris-versicolor" = 20.0, "Iris-virginica" = 30.0))
    
-prostate.hex = importFile(h2o, "../smalldata/logreg/prostate.csv", "prostate.hex")
+prostate.hex = h2o.importFile(localH2O, path = "../smalldata/logreg/prostate.csv", key = "prostate.hex")
 h2o.randomForest(y = "CAPSULE", x_ignore = c("ID", "DPROS"), data = prostate.hex,
-  ntree = 50, depth = 100)
+ntree = 50, depth = 100)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

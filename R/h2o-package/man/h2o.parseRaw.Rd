@@ -1,26 +1,26 @@
-\name{h2o.getTree}
-\alias{h2o.getTree}
+\name{h2o.parseRaw}
+\alias{h2o.parseRaw}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Get Tree from Random Forest Model
+Parse Raw Data File
 }
 \description{
-Returns the depth and number of leaves of a particular tree in the random forest ensemble.
+Parses a raw data file, returning an object containing the identifying hex key.
 }
 \usage{
-h2o.getTree(forest, k)
+h2o.parseRaw(data, key = "")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{forest}{
-An \code{\linkS4class{H2ORForestModel}} object indicating the random forest model to examine.
+  \item{data}{
+An \code{\linkS4class{H2ORawData}} object to be parsed.
 }
-  \item{k}{
-The particular tree to retrieve. (Must be an integer between 1 and \code{ntree}).
-}
+  \item{key}{
+(Optional) The hex key assigned to the parsed file.
+  }
 }
 \details{
-%%  ~~ If necessary, more details than the description above ~~
+After the raw data file is parsed, it will be automatically deleted from the H2O server.
 }
 \value{
 %%  ~Describe the value returned
@@ -42,12 +42,12 @@ The particular tree to retrieve. (Must be an integer between 1 and \code{ntree})
 %% ~Make other sections like Warning with \section{Warning }{....} ~
 
 \seealso{
-\code{\link{h2o.randomForest}}, \code{\linkS4class{H2ORForestModel}}
+%% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-iris.hex = h2o.importFile(localH2O, path = "../smalldata/iris/iris.csv", key = "iris.hex")
-iris.rf = h2o.randomForest(y = "4", data = iris.hex, ntree = 50)
-h2o.getTree(forest = iris.rf, k = 5)
+localH2O = new("H2OClient", ip = "localhost", port = 54321)
+benign.raw = h2o.importFile(localH2O, path = "../smalldata/logreg/benign.csv", parse = FALSE)
+benign.hex = h2o.parseRaw(data = benign.hex, key = "benign.hex")
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
