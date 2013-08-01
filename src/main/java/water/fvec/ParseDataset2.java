@@ -90,8 +90,9 @@ public final class ParseDataset2 extends Job {
   public enum ColType {I, F, E}
 
   /**
-   * Task to update enum values to match the global numbering scheme.
-   * Performs update in place so that values originally numbered using node-local unordered numbering will be numbered using global numbering.
+   * Task to update enum values to match the global numbering scheme.  Performs
+   * update in place so that values originally numbered using node-local
+   * unordered numbering will be numbered using global numbering.
    *
    * @author tomasnykodym
    *
@@ -110,13 +111,13 @@ public final class ParseDataset2 extends Job {
         Enum [] enums = MultiFileParseTask._enums.get(_eKey);
         MultiFileParseTask._enums.remove(_eKey);
         _emap = new int[_gDomain.length][];
-        for(int i = 0; i < _gDomain.length; ++i){
-          _emap[i] = new int[enums[_colIds[i]].maxId()+1];
-          Arrays.fill(_emap[i], -1);
+        for( int i = 0; i < _gDomain.length; ++i ) {
           final Enum e = enums[_colIds[i]];
-          for(int j = 0; j < _gDomain[i].length; ++j){
+          _emap[i] = new int[e.maxId()+1];
+          Arrays.fill(_emap[i], -1);
+          for(int j = 0; j < _gDomain[i].length; ++j) {
             ValueString vs = new ValueString(_gDomain[i][j].getBytes());
-            if(enums[_colIds[i]].containsKey(vs))_emap[i][e.getTokenId(vs)] = j;
+            if( e.containsKey(vs) ) _emap[i][e.getTokenId(vs)] = j;
           }
         }
       }
@@ -127,11 +128,10 @@ public final class ParseDataset2 extends Job {
       for(int i = 0; i < chks.length; ++i){
         for( int j = 0; j < chks[i]._len; ++j){
           long l = chks[i].at80(j);
-          if(chks[i].valueIsNA(l))continue;
-          assert _emap[i][(int)chks[i].at80(j)] >= 0:H2O.SELF.toString() + ": missing enum at col:" + i + ", line: " + j + ", val = " + chks[i].at80(j) + "chunk=" + chks[i].getClass().getSimpleName();
-          chks[i].set80(j, _emap[i][(int)chks[i].at80(j)]);
+          if( chks[i].valueIsNA(l) ) continue;
+          assert _emap[i][(int)l] >= 0:H2O.SELF.toString() + ": missing enum at col:" + i + ", line: " + j + ", val = " + l + "chunk=" + chks[i].getClass().getSimpleName();
+          chks[i].set80(j, _emap[i][(int)l]);
         }
-        chks[i].close(chks[i].cidx(), _fs);
       }
     }
   }
@@ -218,15 +218,15 @@ public final class ParseDataset2 extends Job {
     for( int i=0; i<names.length; i++ )
       names[i] = setup._header ? setup._data[0][i] : (""+i);
 
-    if(ecols != null && ecols.length > 0){
+    // Rollup all the enum columns; uniformly renumber enums per chunk, etc.
+    if( ecols != null && ecols.length > 0 ) {
       Enum [] enums = EnumFetchTask.fetchEnums(uzpt._eKey, ecols);
       for(int i:ecols) uzpt._vecs[i]._domain = enums[i].computeColumnDomain();
       String [][] ds = new String[ecols.length][];
       for(int i = 0; i < ecols.length; ++i)ds[i] = uzpt._vecs[ecols[i]]._domain;
       Vec [] evecs = new Vec[ecols.length];
       for(int i = 0; i < evecs.length; ++i)evecs[i] = uzpt._vecs[ecols[i]];
-      EnumUpdateTask t = new EnumUpdateTask(ds, uzpt._eKey, ecols);
-      t.doAll(evecs);
+      new EnumUpdateTask(ds, uzpt._eKey, ecols).doAll(evecs);
     }
     // Jam the frame of columns into the K/V store
     UKV.put(job.dest(),new Frame(names,uzpt._vecs));

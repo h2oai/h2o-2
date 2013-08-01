@@ -116,7 +116,7 @@ class Basic(unittest.TestCase):
                     h2o.cloudPerfH2O.message(l)
 
                 #**********************************************************************************
-                h2o_cmd.check_key_distribution()
+                h2o_cmd.checkKeyDistribution()
                 h2o.tear_down_cloud()
 
                 sys.stdout.write('.')

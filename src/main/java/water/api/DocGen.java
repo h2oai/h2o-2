@@ -130,13 +130,7 @@ public abstract class DocGen {
     listTail(sb);
 
     section(sb,"Output JSON elements");
-    listHead(sb);
-    for( FieldDoc doc : docs )
-      if( doc.isJSON() )
-        listBullet(sb,
-                   bold(doc._name)+", a "+doc._clazz.getSimpleName(),
-                   doc._help+doc.version(),0);
-    listTail(sb);
+    listJSONFields(sb,docs);
 
     section(sb,"HTTP response codes");
     paragraph(sb,"200 OK");
@@ -151,15 +145,38 @@ public abstract class DocGen {
       paragraph(sb,serve(name,s));
     }
 
-    section(sb,"Error Example");
     String f[] = R.DocExampleFail();
-    paraHead(sb);
-    url(sb,name,f);
-    paraTail(sb);
-    paragraph(sb,serve(name,f));
+    if( f != null ) {
+      section(sb,"Error Example");
+      paraHead(sb);
+      url(sb,name,f);
+      paraTail(sb);
+      paragraph(sb,serve(name,f));
+    }
 
     bodyTail(sb);
     return sb.toString();
+  }
+
+  private void listJSONFields( StringBuilder sb, FieldDoc[] docs ) {
+    listHead(sb);
+    for( FieldDoc doc : docs )
+      if( doc.isJSON() ) {
+        listBullet(sb,
+                   bold(doc._name)+", a "+doc._clazz.getSimpleName(),
+                   doc._help+doc.version(),0);
+        Class c = doc._clazz.getComponentType();
+        if( c==null ) c = doc._clazz;
+        if( Iced.class.isAssignableFrom(c) ) {
+          try {
+            FieldDoc[] nested = ((Iced)c.newInstance()).toDocField();
+            listJSONFields(sb,nested);
+          } 
+          catch( InstantiationException ie ) { water.util.Log.errRTExcept(ie); }
+          catch( IllegalAccessException ie ) { water.util.Log.errRTExcept(ie); }
+        }
+      }
+    listTail(sb);
   }
 
   private static StringBuilder url( StringBuilder sb, String name, String[] parms ) {

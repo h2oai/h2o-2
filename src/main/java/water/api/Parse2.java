@@ -39,12 +39,14 @@ public class Parse2 extends Request {
   final Header header = new Header("header");
 
   // JSON output fields
+  @Weave(help="Destination key.")
+  String destination_key;
 
   @Weave(help="Job key, useful to query for progress.")
   String job;
 
-  @Weave(help="Destination key.")
-  String destination_key;
+  @Weave(help="Web page to redirect to, once the job is done")
+  final String redirect="Inspect2";
 
   //@Override public String[] DocExampleSucc() { return new String[]{ "source_key","./smalldata/logreg/prostate.cvs" }; }
   @Override public String[] DocExampleFail() { return new String[]{ "source_key","./aMispeltFile" }; }

@@ -26,10 +26,10 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_mnist(self):
+    def test_GLM_mnist_reals(self):
         importFolderPath = "/home/0xdiag/datasets/mnist"
         csvFilelist = [
-            ("mnist_training.csv.gz", "mnist_testing.csv.gz",    600), 
+            ("mnist_reals_training.csv.gz", "mnist_reals_testing.csv.gz",    600), 
         ]
         # IMPORT**********************************************
         # since H2O deletes the source key, we should re-import every iteration if we re-use the src in the list

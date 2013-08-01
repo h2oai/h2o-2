@@ -1,4 +1,4 @@
-import unittest, time, sys, time, random, logging, gzip
+import unittest, time, sys, time, random, logging, gzip, os
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_glm
 import h2o_exec as h2e, h2o_jobs
@@ -37,7 +37,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud(h2o.nodes)
     
     def test_parse_10k_files(self):
-        SYNDATASETS_DIR = os.path.abspath(h2o.make_syn_dir())
+        SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn.csv.gz"
         headerData = "ID,CAPSULE,AGE,RACE,DPROS,DCAPS,PSA,VOL,GLEASON"
         totalRows = 10
@@ -154,8 +154,8 @@ class Basic(unittest.TestCase):
 
                 #**********************************************************************************
 
-                h2o_cmd.check_key_distribution()
-                h2o_cmd.delete_csv_key(csvFilename, importFolderResult)
+                h2o_cmd.checkKeyDistribution()
+                h2o_cmd.deleteCsvKey(csvFilename, importFolderResult)
 
                 h2o.tear_down_cloud()
                 if not localhost:
