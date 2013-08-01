@@ -28,7 +28,7 @@ class Basic(unittest.TestCase):
 
         start = time.time()
         key2 = "iris2.csv.hex"
-        predict = h2o.nodes[0].generate_predictions(model_key="iris_rf_model", key=key2)
+        predict = h2o.nodes[0].generate_predictions(model_key="iris_rf_model", data_key=key2)
         print "generate_predictions end on ",  key2, " took", time.time() - start, 'seconds'
 
         # print h2o.dump_json(predict)
