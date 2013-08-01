@@ -226,7 +226,7 @@ public final class ParseDataset extends Job {
           _counter = (int)n;
       }
     }
-    // actual implementation of unzip and parse, intedned for the FJ computation
+    // actual implementation of unzip and parse, intended for the FJ computation
     private class UnzipAndParseLocalTask extends H2OCountedCompleter {
       final int _idx;
       public UnzipAndParseLocalTask(int idx){

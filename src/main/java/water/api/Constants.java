@@ -16,6 +16,7 @@ public class Constants extends Iced {
     public static final String HEX = ".hex";
     public static final String JOB = ".job";
     public static final String KMEANS = ".kmeans";
+    public static final String KMEANS_GRID = ".kmeans_grid";
     public static final String R = ".r";
     public static final String JSON = ".json";
   }

@@ -5,6 +5,8 @@ import java.util.Random;
 
 import water.*;
 import water.api.DocGen;
+import water.fvec.Frame;
+import water.fvec.Vec;
 import water.util.Utils;
 
 /**
@@ -31,47 +33,25 @@ public class KMeans2 extends KMeansShared {
   @API(help = "Iterations the algorithm ran")
   int iterations;
 
-  public static final String KEY_PREFIX = "__KMeansModel_";
+  private transient Frame _frame;
 
-  public static final Key makeKey() {
-    return Key.make(KEY_PREFIX + Key.make());
-  }
+  @Override protected void run() {
+    if( destination_key == null ) {
+      String n = source_key.toString();
+      int dot = n.lastIndexOf('.');
+      if( dot > 0 )
+        n = n.substring(0, dot);
+      String res = n + Extensions.KMEANS_GRID;
+      destination_key = Key.make(res);
+    }
 
-  private KMeans2(Key dest, int k, int... cols) {
-    _description = "KMeans K: " + k + ", Cols: " + cols.length;
-    destination_key = dest;
-  }
-
-  @Override protected Response serve() {
-//    // k-means is an unsupervised learning algorithm and does not require a
-//    // response-column to train. This also means the clusters are not classes
-//    // (although, if a class/response is associated with each
-//    // row we could count the number of each class in each cluster).
-//    int cols2[] = Arrays.copyOf(cols, cols.length + 1);
-//    cols2[cols.length] = -1;  // No response column
-//    final KMeansModel2 res = new KMeansModel2(job.dest(), cols2, va._key);
-//    res._job = job;
-//    UKV.put(job.dest(), res);
-//    // Updated column mapping selection after removing various junk columns
-//    final int[] filteredCols = res.columnMapping(va.colNames());
-//
-//    H2OCountedCompleter task = new H2OCountedCompleter() {
-//      @Override public void compute2() {
-//        job.run(res, va, k, filteredCols);
-//        tryComplete();
-//      }
-//    };
-//    H2O.submitTask(job.start(task));
-    return new Response(Response.Status.done, this);
-  }
-
-  private void run(KMeansModel2 res, ValueArray va, int k, int[] cols) {
+    _frame = DKV.get(source_key).get();
     // -1 to be different from all chunk indexes (C.f. Sampler)
     Random rand = Utils.getRNG(seed - 1);
     // Initialize first cluster to random row
     double[][] clusters = new double[1][];
     clusters[0] = new double[cols.length - 1];
-    long row = Math.max(0, (long) (rand.nextDouble() * va._numrows) - 1);
+    long row = Math.max(0, (long) (rand.nextDouble() * frame._vecs[0].length()) - 1);
     AutoBuffer bits = va.getChunk(va.chknum(row));
     datad(va, bits, va.rowInChunk(va.chknum(row), row), cols, normalize, clusters[0]);
 
@@ -366,16 +346,16 @@ public class KMeans2 extends KMeansShared {
 
   // Return a row of normalized values.  If missing, use the mean (which we
   // know exists because we filtered out columns with no mean).
-  public static double[] datad(ValueArray va, AutoBuffer bits, int row, int[] cols, boolean normalize, double[] res) {
-    for( int c = 0; c < cols.length - 1; c++ ) {
-      ValueArray.Column C = va._cols[cols[c]];
+  double[] datad(long row, double[] res) {
+    for( int i = 0; i < _frame._vecs.length; i++ ) {
       // Use the mean if missing data, then center & normalize
-      double d = (va.isNA(bits, row, C) ? C._mean : va.datad(bits, row, C));
+      Vec v = _frame._vecs[i];
+      double d = (v.isNA(row) ? v._mean : va.datad(bits, row, C));
       if( normalize ) {
         d -= C._mean;
         d = (C._sigma == 0.0 || Double.isNaN(C._sigma)) ? d : d / C._sigma;
       }
-      res[c] = d;
+      res[i] = d;
     }
     return res;
   }

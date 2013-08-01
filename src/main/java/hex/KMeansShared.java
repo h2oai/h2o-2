@@ -17,9 +17,4 @@ public class KMeansShared extends FrameJob {
   @API(help = "Whether data should be normalized")
   @Input
   boolean normalize;
-
-  @API(help = "Columns to use as input")
-  @Input
-  @ColumnSelect(key = "source_key")
-  int[] cols;
 }

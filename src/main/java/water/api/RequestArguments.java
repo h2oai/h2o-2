@@ -119,7 +119,7 @@ public class RequestArguments extends RequestStatics {
   /** List of arguments for the request. Automatically filled in by the argument
    * constructors.
    */
-  protected final ArrayList<Argument> _arguments = new ArrayList();
+  protected transient final ArrayList<Argument> _arguments = new ArrayList();
   public ArrayList<Argument> arguments() {
     return _arguments;
   }
@@ -191,7 +191,7 @@ public class RequestArguments extends RequestStatics {
   // Argument
   // ===========================================================================
 
-  public abstract class Argument<T> {
+  public abstract class Argument<T> extends Iced {
 
     /** As with request's _requestHelp, this provides the extended help that
      * will be displayed on the help and wiki pages. Specify this in the
@@ -330,12 +330,12 @@ public class RequestArguments extends RequestStatics {
     /** List of all prerequisite arguments for the current argument. All the
      * prerequisite arguments must be created before the current argument.
      */
-    public ArrayList<Argument<T>> _prerequisites = null;
+    public transient ArrayList<Argument<T>> _prerequisites = null;
 
     /** The thread local argument state record. Must be initialized at the
      * beginning of each request before it can be used.
      */
-    private ThreadLocal<Record> _argumentRecord = new ThreadLocal();
+    private transient ThreadLocal<Record> _argumentRecord = new ThreadLocal();
 
     /** Creates the argument of given name. Also specifies whether the argument
      * is required or not. This cannot be changed later.
@@ -626,7 +626,7 @@ public class RequestArguments extends RequestStatics {
 
     /** Default value.
      */
-    public final Boolean _defaultValue;
+    public final transient Boolean _defaultValue;
 
     /** Creates the argument with specified default value.
      */
@@ -1044,7 +1044,7 @@ public class RequestArguments extends RequestStatics {
 
   public class RSeq extends InputText<NumberSequence> {
     boolean _multiplicative;
-    NumberSequence _dVal;
+    transient NumberSequence _dVal;
     double _defaultStep;
 
     @Override
@@ -1091,7 +1091,7 @@ public class RequestArguments extends RequestStatics {
 
   public class Int extends InputText<Integer> {
 
-    public final Integer _defaultValue;
+    public final transient Integer _defaultValue;
 
     public final int _min;
     public final int _max;
@@ -1145,7 +1145,7 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
 
   public class LongInt extends InputText<Long> {
-    public final Long _defaultValue;
+    public final transient Long _defaultValue;
     public final long _min;
     public final long _max;
     public final String _comment;
@@ -1202,7 +1202,7 @@ public class RequestArguments extends RequestStatics {
   // Real
   // ---------------------------------------------------------------------------
   public class Real extends InputText<Double> {
-    public final Double _defaultValue;
+    public transient final Double _defaultValue;
     public       double _min;
     public       double _max;
     public final String _comment;
@@ -1373,8 +1373,8 @@ public class RequestArguments extends RequestStatics {
 
   public class EnumArgument<T extends Enum<T>> extends InputSelect<T> {
 
-    protected final Class<T> _enumClass;
-    private final T _defaultValue;
+    protected transient final Class<T> _enumClass;
+    private transient final T _defaultValue;
 
 
     public EnumArgument(String name, T defaultValue, boolean refreshOnChange) {
@@ -1724,7 +1724,7 @@ public class RequestArguments extends RequestStatics {
       return null;
     }
 
-    ArrayList<Integer> _selectedCols; // All the columns I'm willing to show the user
+    transient ArrayList<Integer> _selectedCols; // All the columns I'm willing to show the user
 
     // Select which columns I'll show the user
     @Override protected String queryElement() {
@@ -1863,8 +1863,8 @@ public class RequestArguments extends RequestStatics {
       };
     }
     double _maxNAsRatio = 0.1;
-    ThreadLocal<TreeSet<String>> _constantColumns = new ThreadLocal<TreeSet<String>>();
-    ThreadLocal<Integer> _badColumns = new ThreadLocal<Integer>();
+    transient ThreadLocal<TreeSet<String>> _constantColumns = new ThreadLocal<TreeSet<String>>();
+    transient ThreadLocal<Integer> _badColumns = new ThreadLocal<Integer>();
 
     @Override
     public boolean shouldIgnore(int i, ValueArray.Column ca ) {

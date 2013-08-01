@@ -738,9 +738,6 @@ public final class H2O {
 
     sayHi();
 
-    ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
-    Log.POST(310,"");
-
     // Get ice path before loading Log or Persist class
     String ice = DEFAULT_ICE_ROOT;
     if( OPT_ARGS.ice_root != null ) ice = OPT_ARGS.ice_root.replace("\\", "/");
@@ -755,11 +752,14 @@ public final class H2O {
     SELF_ADDRESS = findInetAddressForSelf();
 
     //if (OPT_ARGS.rshell.equals("false"))
-    Log.POST(320,"");
+    Log.POST(310,"");
     Log.wrap(); // Logging does not wrap when the rshell is on.
 
     // Start the local node
     startLocalNode();
+    Log.POST(320,"");
+
+    ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
     Log.POST(330,"");
 
     String logDir = (Log.getLogDir() != null) ? Log.getLogDir() : "(unknown)";
@@ -879,7 +879,7 @@ public final class H2O {
   // Used to update the Throwable detailMessage field.
   private static java.lang.reflect.Field DETAILMESSAGE;
   public static <T extends Throwable> T setDetailMessage( T t, String s ) {
-    try { if( DETAILMESSAGE != null )  DETAILMESSAGE.set(t,s); } 
+    try { if( DETAILMESSAGE != null )  DETAILMESSAGE.set(t,s); }
     catch( IllegalAccessException iae) {}
     return t;
   }
@@ -892,11 +892,11 @@ public final class H2O {
   private static void startupFinalize() {
     // Allow Throwable detailMessage's to be updated on the fly.  Ugly, ugly,
     // but I want to add info without rethrowing/rebuilding whole exceptions.
-    try { 
+    try {
       DETAILMESSAGE = Throwable.class.getDeclaredField("detailMessage");
       DETAILMESSAGE.setAccessible(true);
     } catch( NoSuchFieldException nsfe ) { }
-    
+
     // Sleep a bit so all my other threads can 'catch up'
     try { Thread.sleep(1000); } catch( InterruptedException e ) { }
   }
