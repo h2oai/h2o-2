@@ -42,7 +42,7 @@ public class SVMLightParser extends CustomParser{
   final static char DECIMAL_SEP = '.';
   int _failedLines = 0;
 
-  public SVMLightParser() {super(ParserSetup.makeSVMLightSetup(0, null, null));}
+  public SVMLightParser() {super(ParserSetup.makeSVMLightSetup(0, null));}
   public SVMLightParser(ParserSetup setup) {super(setup);}
   @Override
   public SVMLightParser clone(){return new SVMLightParser(_setup);}
@@ -56,11 +56,11 @@ public class SVMLightParser extends CustomParser{
    */
   public static CustomParser.ParserSetup guessSetup(byte [] bits){
     InputStream is = new ByteArrayInputStream(bits);
-    SVMLightParser p = new SVMLightParser(CustomParser.ParserSetup.makeSVMLightSetup(0, null,null));
+    SVMLightParser p = new SVMLightParser(CustomParser.ParserSetup.makeSVMLightSetup(0, null));
     InspectDataOut dout = new InspectDataOut();
     try{p.streamParse(is, dout);}catch(Exception e){throw new RuntimeException(e);}
     return(dout._ncols > 1 && dout._nlines > 0 && (double)dout._invalidLines / dout._nlines < 0.1)
-      ?CustomParser.ParserSetup.makeSVMLightSetup(dout._ncols,dout.data(),bits):null;
+      ?CustomParser.ParserSetup.makeSVMLightSetup(dout._ncols,dout.data()):null;
   }
   @Override
   public boolean isCompatible(CustomParser p){return p instanceof SVMLightParser;}

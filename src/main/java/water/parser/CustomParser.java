@@ -30,7 +30,6 @@ public abstract class CustomParser extends Iced {
     public boolean _header;
     public String [] _columnNames;
     public final transient String [][] _data;
-    public final transient byte[] _bits;
     public final int _ncols;
 
     public ParserSetup() {
@@ -38,27 +37,24 @@ public abstract class CustomParser extends Iced {
       _separator = CsvParser.NO_SEPARATOR;
       _header = false;
       _data = null;
-      _bits = null;
       _ncols = 0;
       _columnNames = null;
     }
-    protected ParserSetup(ParserType t, byte sep, int ncols, boolean header, String [][] data, byte [] bits) {
+    protected ParserSetup(ParserType t, byte sep, int ncols, boolean header, String [][] data) {
       _pType = t;
       _separator = sep;
       _header = header;
       _columnNames = _header?data[0]:null;
       _data = data;
-      _bits = bits;
       _ncols = ncols;
     }
-    private ParserSetup(ParserType t, byte sep, int ncols, boolean header, String [] columnNames, String [][] data, byte [] bits) {
+    private ParserSetup(ParserType t, byte sep, int ncols, boolean header, String [] columnNames, String [][] data) {
       _pType = t;
       _separator = sep;
       _ncols = ncols;
       _header = header;
       _columnNames = columnNames;
       _data = data;
-      _bits = bits;
     }
     public void setHeader(boolean val){
       if(!val){
@@ -71,7 +67,7 @@ public abstract class CustomParser extends Iced {
         assert false;
     }
     public ParserSetup clone(){
-      return new ParserSetup(_pType, _separator, _ncols, _header, _columnNames, _data,_bits);
+      return new ParserSetup(_pType, _separator, _ncols, _header, _columnNames, _data);
     }
     public boolean isCompatible(ParserSetup other){
       if(other == null || _pType != other._pType)return false;
@@ -84,9 +80,9 @@ public abstract class CustomParser extends Iced {
       ParserSetup s = ParseDataset.guessSetup(DKV.get(k), _pType, _separator);
       return isCompatible(s);
     }
-    public static ParserSetup makeSetup(){return new ParserSetup(ParserType.AUTO,CsvParser.NO_SEPARATOR, 0, false, null,null);}
-    public static ParserSetup makeSVMLightSetup(int ncols, String [][] data, byte [] bits){return new ParserSetup(ParserType.SVMLight,(byte)' ', ncols, false, data,bits);}
-    public static ParserSetup makeCSVSetup(byte sep, boolean hdr, String [][] data, byte [] bits, int ncols){return new ParserSetup(ParserType.CSV,sep, ncols,hdr, data,bits);}
+    public static ParserSetup makeSetup(){return new ParserSetup(ParserType.AUTO,CsvParser.NO_SEPARATOR, 0, false, null);}
+    public static ParserSetup makeSVMLightSetup(int ncols, String [][] data){return new ParserSetup(ParserType.SVMLight,(byte)' ', ncols, false, data);}
+    public static ParserSetup makeCSVSetup(byte sep, boolean hdr, String [][] data,int ncols){return new ParserSetup(ParserType.CSV,sep, ncols,hdr, data);}
   }
   public boolean isCompatible(CustomParser p){return _setup == p._setup || (_setup != null && _setup.isCompatible(p._setup));}
   public void parallelParse(int cidx, final DataIn din, final DataOut dout) {throw new UnsupportedOperationException();}

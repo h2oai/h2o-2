@@ -279,7 +279,7 @@ public final class ParseDataset2 extends Job {
           has_hdr = localSetup._columnNames[i].equalsIgnoreCase(_setup._columnNames[i]);
         if( !has_hdr )          // Headers not compatible?
           // Then treat as no-headers, i.e., parse it as a normal row
-          localSetup = CustomParser.ParserSetup.makeCSVSetup(localSetup._separator, false, localSetup._data, localSetup._bits, localSetup._ncols);
+          localSetup = CustomParser.ParserSetup.makeCSVSetup(localSetup._separator, false, localSetup._data, localSetup._ncols);
       }
       final int ncols = _setup._ncols;
       _vecs = new Vec[ncols];

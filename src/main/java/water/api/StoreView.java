@@ -122,7 +122,8 @@ public class StoreView extends Request {
     }
     // If not a proper ValueArray, estimate by parsing the first 1meg chunk
     if( rows == -1 ) {
-      CustomParser.ParserSetup setup = ParseDataset.guessSetup(val);
+      byte [] bits = val.getFirstBytes();
+      CustomParser.ParserSetup setup = ParseDataset.guessSetup(bits);
       if( setup._data != null && setup._data[1].length > 0 ) { // Able to parse sanely?
         int zipped_len = val.getFirstBytes().length;
         double bytes_per_row = (double) zipped_len / setup._data.length;
@@ -145,7 +146,7 @@ public class StoreView extends Request {
       }
       // Now the first 100 bytes of Value as a String
       StringBuilder sb = new StringBuilder();
-      byte[] b = setup._bits;   // Unzipped bits, if any
+      byte[] b = bits;   // Unzipped bits, if any
       int newlines=0;
       int len = Math.min(b.length,100);
       for( int i=0; i<len; i++ ) {

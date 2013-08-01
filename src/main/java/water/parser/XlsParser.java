@@ -25,7 +25,7 @@ public class XlsParser extends CustomParser implements HSSFListener {
   private transient final ValueString _str = new ValueString();
   private transient CustomParser.DataOut _dout;
 
-  public XlsParser(){super(new ParserSetup(ParserType.XLS,(byte) 0,0,false,null,null));}
+  public XlsParser(){super(new ParserSetup(ParserType.XLS,(byte) 0,0,false,null));}
   public XlsParser(CustomParser.ParserSetup setup){super(null);}
   public XlsParser clone(){return new XlsParser(_setup);}
 

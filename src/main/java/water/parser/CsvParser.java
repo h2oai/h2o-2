@@ -611,7 +611,7 @@ NEXT_CHAR:
     while( m < lines.size() )
       data[l++] = determineTokens(lines.get(m++), separator);
     assert data.length==l : data.length +" "+l+" has="+hasHeader;
-    return ParserSetup.makeCSVSetup(separator, hasHeader, data, bits, numcols);
+    return ParserSetup.makeCSVSetup(separator, hasHeader, data, numcols);
   }
 
 
@@ -641,7 +641,7 @@ NEXT_CHAR:
       }
     }
     // we do not have enough lines to decide
-    if( lines.size() < 2 ) return CustomParser.ParserSetup.makeCSVSetup(separator==NO_SEPARATOR?(byte)' ':separator,false,null,null,0);
+    if( lines.size() < 2 ) return CustomParser.ParserSetup.makeCSVSetup(separator==NO_SEPARATOR?(byte)' ':separator,false,null,0);
     // when we have two lines, calculate the separator counts on them
 
     // If the separator is specified parse with its value
@@ -671,7 +671,7 @@ NEXT_CHAR:
           } catch (Exception e) { /*pass; try another parse attempt*/ }
         }
     }
-    return CustomParser.ParserSetup.makeCSVSetup((byte)' ',false,null,null,0);
+    return CustomParser.ParserSetup.makeCSVSetup((byte)' ',false,null,0);
   }
 
   public static CustomParser inspect(byte[] bits, CustomParser.ParserSetup setup) {

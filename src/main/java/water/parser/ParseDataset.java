@@ -61,11 +61,15 @@ public final class ParseDataset extends Job {
   public static ParserSetup guessSetup(Value v){
     return guessSetup(v,ParserType.AUTO,CsvParser.NO_SEPARATOR);
   }
+  public static ParserSetup guessSetup(byte [] bits){
+    return guessSetup(bits,ParserType.AUTO,CsvParser.NO_SEPARATOR);
+  }
+
   public static ParserSetup guessSetup(Value v, ParserType pType){
     return guessSetup(v, pType, CsvParser.NO_SEPARATOR);
   }
-  public static ParserSetup guessSetup(Value v, ParserType pType, byte sep){
-    byte [] bits = Inspect.getFirstBytes(v);
+  public static ParserSetup guessSetup(Value v, ParserType pType, byte sep){return guessSetup(Inspect.getFirstBytes(v),pType,sep);}
+  public static ParserSetup guessSetup(byte [] bits, ParserType pType, byte sep){
     ParserSetup res = null;
     switch(pType){
       case CSV:
