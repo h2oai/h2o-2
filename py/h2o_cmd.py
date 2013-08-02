@@ -290,7 +290,7 @@ def deleteCsvKey(csvFilename, importFullList):
 
 # checks the key distribution in the cloud, and prints warning if delta against avg
 # is > expected
-def check_key_distribution():
+def checkKeyDistribution():
     c = h2o.nodes[0].get_cloud()
     nodes = c['nodes']
     print "Key distribution post parse, should be balanced"
