@@ -86,8 +86,8 @@ def make_datasetgz_and_parse(SYNDATASETS_DIR, csvFilename, key2, rowCount, colCo
         raise Exception("parse created result with the wrong number of rows (header shouldn't count) %s %s" % \
         (inspect['num_rows'], rowCount))
 
-    # hack it in!
-    parseKey['source_key'] = csvFilenameReplgz
+    # hack it in! for test purposees only
+    parseKey['python_source_key'] = csvFilenameReplgz
     parseKey['num_rows'] = inspect['num_rows']
     parseKey['num_cols'] = inspect['num_cols']
     parseKey['value_size_bytes'] = inspect['value_size_bytes']
@@ -162,7 +162,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             rfView = h2o_cmd.runRFOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
-            print "RF end on ", parseKey['source_key'], 'took', elapsed, 'seconds.', \
+            print "RF end on ", parseKey['python_source_key'], 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 
             classification_error = rfView['confusion_matrix']['classification_error']
@@ -171,7 +171,7 @@ class Basic(unittest.TestCase):
             algo = "RF " 
             l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs. trees: {:d} Error: {:6.2f} \
                 num_rows: {:d} num_cols: {:d} value_size_bytes: {:d}'.format(
-                len(h2o.nodes), tryHeap, algo, parseKey['source_key'], elapsed, kwargs['ntree'], \
+                len(h2o.nodes), tryHeap, algo, parseKey['python_source_key'], elapsed, kwargs['ntree'], \
                 classification_error, parseKey['num_rows'], parseKey['num_cols'], parseKey['value_size_bytes'])
             print l
             h2o.cloudPerfH2O.message(l)

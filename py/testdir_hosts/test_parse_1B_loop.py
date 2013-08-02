@@ -42,8 +42,8 @@ class Basic(unittest.TestCase):
                 storeView = h2o.nodes[0].store_view()
                 ### print "storeView:", h2o.dump_json(storeView)
                 # h2o removes key after parse now
-                ## print "Removing", parseKey['source_key']
-                ## removeKeyResult = h2o.nodes[0].remove_key(key=parseKey['source_key'])
+                ## print "Removing", parseKey['python_source_key']
+                ## removeKeyResult = h2o.nodes[0].remove_key(key=parseKey['python_source_key'])
                 ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
 
             # sticky ports?

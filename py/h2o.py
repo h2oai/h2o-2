@@ -1027,7 +1027,9 @@ class H2O(object):
 
         # Check that the response has the right Progress url it's going to steer us to.
         verboseprint("Parse2" if beta_features else "Parse" + " result:", dump_json(a))
-        if a['response']['redirect_request']!='Progress':
+        
+        # FIX! not using h2o redirect info for Parse2 yet
+        if not beta_features and a['response']['redirect_request']!='Progress':
             raise Exception('H2O parse redirect is not Progress. Parse json response precedes.')
 
         if noPoll:
@@ -1056,12 +1058,22 @@ class H2O(object):
     # &offset=
     # &view=
     def inspect(self, key, offset=None, view=None, ignoreH2oError=False, timeoutSecs=30):
-        a = self.__do_json_request('Inspect2.json' if beta_features else 'Inspect.json',
-            params={
+        if beta_features:
+            params = {
                 "key": key,
                 "offset": offset,
                 "view": view,
-                },
+                }
+        else:
+            params = {
+                "key": key, # need both to avoid errors?
+                "src_key": key,
+                "offset": offset,
+                "view": view,
+                }
+
+        a = self.__do_json_request('Inspect2.json' if beta_features else 'Inspect.json',
+            params=params,
             ignoreH2oError=ignoreH2oError,
             timeout=timeoutSecs
             )
