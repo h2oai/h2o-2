@@ -7,7 +7,7 @@ h2o.checkClient(localH2O)
 
 iris.hex = h2o.importFile(localH2O, path = system.file("extdata", "iris.csv", package="h2o"), key = "iris.hex")
 summary(iris.hex)
-iris.rf = h2o.randomForest(y = "4", data = iris.hex, ntree = 50, depth = 100, classwt = c("Iris-versicolor" = 20.0, "Iris-virginica" = 30.0))
+iris.rf = h2o.randomForest(y = 4, data = iris.hex, ntree = 50, depth = 100, classwt = c("Iris-versicolor" = 20.0, "Iris-virginica" = 30.0))
 print(iris.rf)
 
 invisible(readline("Hit <Return> to continue: "))
