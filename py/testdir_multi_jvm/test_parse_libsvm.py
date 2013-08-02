@@ -50,7 +50,11 @@ class Basic(unittest.TestCase):
             ("news20.svm",         "cH", 30, 1),
             ("sector.libsvm.svm",  "cI", 30, 1),
             ("tmc2007_train.svm",  "cJ", 30, 1),
-            ("covtype.data",       "cK", 30,  1),
+            ("syn_6_1000_10.svm",  "cK", 30, 1),
+            ("syn_0_100_1000.svm", "cL", 30, 1),
+            ("mnist_training.svm", "cM", 30, 1),
+            # normal csv
+            ("covtype.data",       "cN", 30,  1),
         ]
 
         ### csvFilenameList = random.sample(csvFilenameAll,1)

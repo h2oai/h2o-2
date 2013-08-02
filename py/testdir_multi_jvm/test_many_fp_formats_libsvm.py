@@ -139,6 +139,7 @@ class Basic(unittest.TestCase):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (1000, 10, 'cA', 30, 'sparse'),
+            (100000, 1000, 'cA', 30, 'sparse'),
             (1000, 10, 'cA', 30, 'sparse50'),
             (100, 1000, 'cB', 30,'sparse'),
             (100, 1000, 'cB', 30,'sparse50'),
