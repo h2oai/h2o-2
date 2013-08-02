@@ -84,7 +84,7 @@ class Basic(unittest.TestCase):
 
                     ### print "s3nFullList:", h2o.dump_json(s3nFullList)
                     # error if none? 
-                    self.assertGreater(len(s3nFullList),8,"Didn't see more than 8 files in s3n?")
+                    self.assertGreater(len(s3nFullList),1,"Didn't see more than 1 file in s3n?")
 
                     s3nKey = URI + csvFilepattern
                     key2 = csvFilename + "_" + str(trial) + ".hex"
