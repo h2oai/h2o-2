@@ -109,7 +109,7 @@ public class Parse2 extends Request {
       Value v = DKV.get(hKey);
       v = ((Frame) v.get())._vecs[0].chunkIdx(0);
       byte sep = separator.specified() ? separator.value() : CsvParser.NO_SEPARATOR;
-      CustomParser.ParserSetup setup = ParseDataset.guessSetup(v, CustomParser.ParserType.CSV, sep);
+      CustomParser.ParserSetup setup = ParseDataset.guessSetup(v, CustomParser.ParserType.AUTO, sep);
       if( setup._data == null || setup._data[0].length == 0 )
         throw new IllegalArgumentException(errors()[1]+hKey);
       return new PSetup(keys,setup);
@@ -186,7 +186,7 @@ public class Parse2 extends Request {
       if( data != null ) {
         int sep = psetup._setup._separator;
         sb.append("<div class='alert'><b>");
-        sb.append(String.format("Detected %d columns using '%s' (\\u%04d) as a separator.", data[0].length,sep<33 ? WHITE_DELIMS[sep] : Character.toString((char)sep),sep));
+        sb.append(String.format("Detected %d columns using '%s' (\\u%04d) as a separator.", psetup._setup._ncols,sep<33 ? WHITE_DELIMS[sep] : Character.toString((char)sep),sep));
         sb.append("</b></div>");
         sb.append("<table class='table table-striped table-bordered'>");
         int j=psetup._setup._header?0:1; // Skip auto-gen header in data[0]
