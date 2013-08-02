@@ -19,7 +19,6 @@ public class KMeans extends Request {
   static final String DOC_GET = "K-means algorithm";
 
   @API(help = "Key for input dataset")
-  @Input
   final H2OHexKey source_key = new H2OHexKey("source_key");
 
   @API(help = "Number of clusters")

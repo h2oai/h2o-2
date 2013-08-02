@@ -16,8 +16,7 @@ public class Job extends Request2 {
   @API(help = "Job key")
   public Key job_key; // Boolean read-only value; exists==>running, not-exists==>canceled/removed
 
-  @API(help = "Destination key")
-  @Input(required = true)
+  @API(help = "Destination key", required = true)
   public Key destination_key; // Key holding final value after job is removed
 
   public String _description;
@@ -29,10 +28,9 @@ public class Job extends Request2 {
   public Key dest() { return destination_key; }
 
   public static abstract class FrameJob extends Job {
-    @API(help = "Key with input frame")
-    @Input
-    @ExistingHexKey
+    @API(help = "Key with input frame", required = true, filter = source_keyFilter.class)
     public Key source_key;
+    class source_keyFilter extends H2OHexKey { public source_keyFilter() { super(""); } }
   }
 
   public interface Progress {

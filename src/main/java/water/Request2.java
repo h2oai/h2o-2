@@ -1,96 +1,81 @@
 package water;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
+import java.lang.reflect.*;
 import java.util.*;
 
 import water.api.Request;
 
 public abstract class Request2 extends Request {
   @Override protected void registered() {
-    ArrayList<Class> classes = new ArrayList<Class>();
-    {
-      Class c = getClass();
-      while( c != null ) {
-        classes.add(c);
-        c = c.getSuperclass();
+    try {
+      ArrayList<Class> classes = new ArrayList<Class>();
+      {
+        Class c = getClass();
+        while( c != null ) {
+          classes.add(c);
+          c = c.getSuperclass();
+        }
       }
-    }
-    // Fields from parent classes first
-    Collections.reverse(classes);
-    ArrayList<Field> fields = new ArrayList<Field>();
-    for( Class c : classes )
-      for( Field field : c.getDeclaredFields() )
-        if( !Modifier.isStatic(field.getModifiers()) )
-          fields.add(field);
+      // Fields from parent classes first
+      Collections.reverse(classes);
+      ArrayList<Field> fields = new ArrayList<Field>();
+      for( Class c : classes )
+        for( Field field : c.getDeclaredFields() )
+          if( !Modifier.isStatic(field.getModifiers()) )
+            fields.add(field);
 
-    for( Field f : fields ) {
-      Annotation[] as = f.getAnnotations();
-      Input input = find(as, Input.class);
-
-      if( input != null ) {
-        f.setAccessible(true);
-        Object defaultValue;
-        try {
-          defaultValue = f.get(this);
-        } catch( Exception e ) {
-          throw new RuntimeException(e);
-        }
-
+      for( Field f : fields ) {
+        Annotation[] as = f.getAnnotations();
         API api = find(as, API.class);
-        ExistingHexKey hexKey = find(as, ExistingHexKey.class);
-        Bounds bounds = find(as, Bounds.class);
-        ColumnSelect cols = find(as, ColumnSelect.class);
-        Sequence seq = find(as, Sequence.class);
-        Argument arg = null;
 
-        // H2OHexKey
-        if( f.getType() == Key.class ) {
-          if( hexKey != null )
-            arg = new H2OHexKey(f.getName());
-          else
-            arg = new H2OKey(f.getName(), input.required());
-        }
+        if( api != null ) {
+          f.setAccessible(true);
+          Object defaultValue = f.get(this);
 
-        // Real
-        else if( f.getType() == float.class || f.getType() == double.class ) {
-          double val = ((Number) defaultValue).doubleValue();
-          Double min = bounds != null ? bounds.min() : null;
-          Double max = bounds != null ? bounds.max() : null;
-          arg = new Real(f.getName(), input.required(), val, min, max, api.help());
-        }
+          // Create an Argument instance to reuse existing Web framework for now
+          Argument arg = null;
 
-        // LongInt
-        else if( f.getType() == int.class || f.getType() == long.class ) {
-          long val = ((Number) defaultValue).longValue();
-          Long min = bounds != null ? (long) bounds.min() : null;
-          Long max = bounds != null ? (long) bounds.max() : null;
-          arg = new LongInt(f.getName(), input.required(), val, min, max, api.help());
-        }
+          if( Argument.class.isAssignableFrom(api.filter()) )
+            arg = (Argument) getInnerClassConstructor(api.filter()).newInstance(this);
+          else {
+            // Real
+            if( f.getType() == float.class || f.getType() == double.class ) {
+              double val = ((Number) defaultValue).doubleValue();
+              arg = new Real(f.getName(), api.required(), val, null, null, api.help());
+            }
 
-        // Bool
-        else if( f.getType() == boolean.class ) {
-          boolean val = (Boolean) defaultValue;
-          arg = new Bool(f.getName(), val, api.help());
-        }
+            // LongInt
+            else if( f.getType() == int.class || f.getType() == long.class ) {
+              long val = ((Number) defaultValue).longValue();
+              arg = new LongInt(f.getName(), api.required(), val, null, null, api.help());
+            }
 
-        // NumberSequence & HexAllColumnSelect
-        else if( f.getType() == int[].class ) {
-          if( seq != null ) {
-            NumberSequence val = new NumberSequence(seq.pattern(), seq.mult(), 0);
-            arg = new RSeq(f.getName(), input.required(), val, seq.mult());
-          } else if( cols != null ) {
+            // Bool
+            else if( f.getType() == boolean.class ) {
+              boolean val = (Boolean) defaultValue;
+              arg = new Bool(f.getName(), val, api.help());
+            }
+          }
+
+          if( ColumnSelect.class.isAssignableFrom(api.filter()) ) {
+            ColumnSelect name = (ColumnSelect) api.filter().newInstance();
             H2OHexKey key = null;
-            for( Argument t : _arguments )
-              if( t instanceof H2OHexKey && cols.key().equals(((H2OHexKey) t)._name) )
-                key = (H2OHexKey) t;
+            for( Argument a : _arguments )
+              if( a instanceof H2OHexKey && name._key.equals(((H2OHexKey) a)._name) )
+                key = (H2OHexKey) a;
             arg = new HexAllColumnSelect(f.getName(), key);
           }
-        }
 
-        arg._field = f;
+          if( arg != null ) {
+            arg._name = f.getName();
+            arg._required = api.required();
+            arg._field = f;
+          }
+        }
       }
+    } catch( Exception e ) {
+      throw new RuntimeException(e);
     }
   }
 
@@ -99,6 +84,15 @@ public abstract class Request2 extends Request {
       if( a.annotationType() == c )
         return (T) a;
     return null;
+  }
+
+  private static Constructor getInnerClassConstructor(Class cl) throws Exception {
+    for( Constructor c : cl.getConstructors() ) {
+      Class[] ps = c.getParameterTypes();
+      if( ps.length == 1 && Request2.class.isAssignableFrom(ps[0]) )
+        return c;
+    }
+    throw new Exception("Class " + cl.getName() + " must have an empty constructor");
   }
 
   // Create an instance per call instead of ThreadLocals

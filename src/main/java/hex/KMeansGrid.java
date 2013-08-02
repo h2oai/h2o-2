@@ -2,34 +2,32 @@ package hex;
 
 import water.*;
 import water.api.DocGen;
-import water.api.Constants.Extensions;
 import water.util.RString;
 
 public class KMeansGrid extends KMeansShared {
-//  static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
-//  static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-//
-//  // This Request supports the HTML 'GET' command, and this is the help text
-//  // for GET.
-//  static final String DOC_GET = "Grid search for k-means parameters";
+  static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+  static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @API(help = "Number of clusters")
-  @Input(required = true)
-  @Sequence(pattern = "2:10:1")
+  // This Request supports the HTML 'GET' command, and this is the help text
+  // for GET.
+  static final String DOC_GET = "Grid search for k-means parameters";
+
+//@formatter:off
+  @API(help = "Number of clusters", required = true, filter = kFilter.class)
   int[] k;
+  class kFilter extends RSeq { public kFilter() { super("2:10:1", false); } }
 
-  @API(help = "Maximum number of iterations before stopping")
-  @Input(required = true)
-  @Sequence(pattern = "10:100:10", mult = true)
+  @API(help = "Maximum number of iterations before stopping", required = true, filter = max_iterFilter.class)
   int[] max_iter;
+  class max_iterFilter extends RSeq { public max_iterFilter() { super("10:100:10", true); } }
 
   @API(help = "Columns to use as input")
-  @Input
-  @ColumnSelect(key = "source_key")
   int[] cols;
+  class colsFilter extends ColumnSelect { public colsFilter() { super("source_key"); } }
 
   @API(help = "Square error for each parameter combination")
   double[][] errors;
+//@formatter:on
 
   public static String link(Key k, String content) {
     RString rs = new RString("<a href='KMeansGrid.query?%key_param=%$key'>%content</a>");

@@ -290,8 +290,8 @@ public class Weaver {
     if( a == null ) throw new CannotCompileException("Class "+cc.getName()+" has non-transient field '"+name+"' without a Weave annotation");
 
     String help = a.help();
-    int min = a.minVersion();
-    int max = a.maxVersion();
+    int min = a.since();
+    int max = a.until();
     if( min < 1 || min > 1000000 ) throw new CannotCompileException("Found field '"+name+"' but MinVer < 1 or MinVer > 1000000");
     if( max < min || (max > 1000000 && max != Integer.MAX_VALUE) )
       throw new CannotCompileException("Found field '"+name+"' but MaxVer < "+min+" or MaxVer > 1000000");

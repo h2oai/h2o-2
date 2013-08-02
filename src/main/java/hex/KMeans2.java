@@ -15,13 +15,24 @@ public class KMeans2 extends KMeansShared {
   // for GET.
   static final String DOC_GET = "Starts a job that runs the k-means algorithm";
 
-  @API(help = "Number of clusters")
-  @Input(required = true)
+//@formatter:off
+  @API(help = "Number of clusters", required = true)
   int k;
 
-  @API(help = "Maximum number of iterations before stopping")
-  @Input
+  @API(help = "Maximum number of iterations before stopping", required = true, filter = MyBound.class)
   int max_iter = 100;
+//@formatter:on
+
+  static class MyBound implements Filter {
+    @Override public boolean run(Object value) {
+      int v = (Integer) value;
+      return v >= 0 && v <= 1;
+    }
+  }
+
+  @API(help = "Maximum number of iterations before stopping", required = true, filter = LegacyInt.class)
+  int max_iter2 = 100;
+  class LegacyInt extends Int { public LegacyInt() { super("", 0, 1); } }
 
   @API(help = "Iterations the algorithm ran")
   int iterations;

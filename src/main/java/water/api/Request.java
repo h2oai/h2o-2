@@ -20,44 +20,29 @@ public abstract class Request extends RequestBuilders {
   public @interface API {
     String help();
 
-    int minVersion() default 1;
-
-    int maxVersion() default Integer.MAX_VALUE;
-  }
-
-  /**
-   * Field is a request parameter.
-   */
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface Input {
     boolean required() default false;
+
+    int since() default 1;
+
+    int until() default Integer.MAX_VALUE;
+
+    Class<? extends Filter> filter() default Filter.class;
+
+    Class<? extends Filter>[] filters() default {};
   }
 
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface Bounds {
-    double min();
-
-    double max();
+  public interface Filter {
+    boolean run(Object value);
   }
 
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface ExistingHexKey {
-  }
-
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface ExistingFrame {
-  }
-
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface ColumnSelect {
-    String key();
-  }
-
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface Sequence {
-    String pattern();
-
-    boolean mult() default false;
+  public class ColumnSelect implements Filter {
+    public final String _key;
+    protected ColumnSelect(String key) {
+      _key = key;
+    }
+    @Override public boolean run(Object value) {
+      return true;
+    }
   }
 
   //

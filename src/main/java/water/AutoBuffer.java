@@ -1022,13 +1022,26 @@ public final class AutoBuffer {
 
   public AutoBuffer putJSON8d( double d ) { return putStr2(Double .toString(d)); }
   public AutoBuffer putJSON8d( String name, double d ) { return putJSONStr(name).put1(':').putJSON8d(d); }
-  public AutoBuffer putJSONA8d( String name, double[] a ) {
-    putJSONStr(name).put1(':');
+  public AutoBuffer putJSONA8d( double[] a ) {
     if( a == null ) return putNULL();
     put1('[');
     for( int i=0; i<a.length; i++ ) {
       if( i>0 ) put1(',');
       putJSON8d(a[i]);
+    }
+    return put1(']');
+  }
+  public AutoBuffer putJSONA8d( String name, double[] a ) {
+    putJSONStr(name).put1(':');
+    return putJSONA8d(a);
+  }
+  public AutoBuffer putJSONAA8d( String name, double[][] a ) {
+    putJSONStr(name).put1(':');
+    if( a == null ) return putNULL();
+    put1('[');
+    for( int i=0; i<a.length; i++ ) {
+      if( i>0 ) put1(',');
+      putJSONA8d(a[i]);
     }
     return put1(']');
   }
