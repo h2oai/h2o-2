@@ -62,6 +62,12 @@ setMethod("show", "H2ORForestModel", function(object) {
   cat("\nConfusion matrix:\n"); print(model$confusion)
 })
 
+setMethod("nrow", "H2OParsedData", function(x) { 
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key); res$num_rows })
+
+setMethod("ncol", "H2OParsedData", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key); res$num_cols })
+
 # Generic method definitions
 setGeneric("h2o.checkClient", function(object) { standardGeneric("h2o.checkClient") })
 # setGeneric("h2o.importFile", function(object, path, key = "", header = FALSE, parse = TRUE) { standardGeneric("h2o.importFile") })
@@ -204,7 +210,15 @@ setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData
           })
 
 setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY"),
-          function(x, y, data, family, nfolds, alpha, lambda) { h2o.glm(x, y, data, family, nfolds, alpha, lambda) })
+          function(x, y, data, family, nfolds, alpha, lambda) {
+            if(!(missing(nfolds) || class(nfolds) == "numeric"))
+              stop(paste("nfolds cannot be of class", class(nfolds)))
+            else if(!(missing(alpha) || class(alpha) == "numeric"))
+              stop(paste("alpha cannot be of class", class(alpha)))
+            else if(!(missing(lambda) || class(lambda) == "numeric"))
+              stop(paste("lambda cannot be of class", class(lambda)))
+            h2o.glm(x, y, data, family, nfolds, alpha, lambda) 
+            })
 
 # setMethod("h2o.kmeans", signature(data="H2OParsedData", centers="numeric", iter.max="numeric"),
 #          function(data, centers, iter.max) {
@@ -251,11 +265,14 @@ setMethod("h2o.kmeans", signature(data="H2OParsedData", centers="numeric", cols=
             resKMModel
           })
 
-setMethod("h2o.kmeans", signature(data="H2OParsedData", centers="numeric", cols="numeric", iter.max="ANY"),
-          function(data, centers, cols, iter.max) { h2o.kmeans(data, centers, as.character(cols), iter.max) })
-
 setMethod("h2o.kmeans", signature(data="H2OParsedData", centers="numeric", cols="ANY", iter.max="ANY"),
-          function(data, centers, cols, iter.max) { h2o.kmeans(data, centers, cols, iter.max) })
+          function(data, centers, cols, iter.max) { 
+            if(!(missing(cols) || class(cols) == "character" || class(cols) == "numeric"))
+              stop(paste("cols cannot be of class", class(cols)))
+            else if(!(missing(iter.max) || class(iter.max) == "numeric"))
+              stop(paste("iter.max cannot be of class", class(iter.max)))
+            h2o.kmeans(data, centers, as.character(cols), iter.max) 
+            })
 
 setMethod("h2o.randomForest", signature(y="character", x_ignore="character", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="numeric"),
           function(y, x_ignore, data, ntree, depth, classwt) {
@@ -297,14 +314,23 @@ setMethod("h2o.randomForest", signature(y="character", x_ignore="character", dat
             resRFModel
           })
             
-setMethod("h2o.randomForest", signature(y="character", x_ignore="character", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="missing"),
-          function(y, x_ignore, data, ntree, depth) { h2o.randomForest(y, x_ignore, data, ntree, depth, classwt = as.numeric(NA)) })
+setMethod("h2o.randomForest", signature(y="character", x_ignore="ANY", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="ANY"),
+          function(y, x_ignore, data, ntree, depth, classwt) {
+            if(!(missing(x_ignore) || class(x_ignore) == "character" || class(x_ignore) == "numeric"))
+               stop(paste("x_ignore cannot be of class", class(x_ignore)))
+            if(!(missing(classwt) || class(classwt) == "numeric"))
+              stop(paste("classwt cannot be of class", class(classwt)))
+            h2o.randomForest(y, as.character(x_ignore), data, ntree, depth, classwt)
+            })
 
-setMethod("h2o.randomForest", signature(y="character", x_ignore="missing", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="numeric"),
-          function(y, data, ntree, depth, classwt) { h2o.randomForest(y, x_ignore = "", data, ntree, depth, classwt) })
-
-setMethod("h2o.randomForest", signature(y="character", x_ignore="missing", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="missing"),
-          function(y, data, ntree, depth) { h2o.randomForest(y, x_ignore = "", data, ntree, depth, classwt = as.numeric(NA)) })
+setMethod("h2o.randomForest", signature(y="numeric", x_ignore="ANY", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="ANY"),
+          function(y, x_ignore, data, ntree, depth, classwt) {
+            if(!(missing(x_ignore) || class(x_ignore) == "character" || class(x_ignore) == "numeric"))
+              stop(paste("x_ignore cannot be of class", class(x_ignore)))
+            if(!(missing(classwt) || class(classwt) == "numeric"))
+              stop(paste("classwt cannot be of class", class(classwt)))
+            h2o.randomForest(as.character(y), as.character(x_ignore), data, ntree, depth, classwt)
+          })
 
 setMethod("h2o.getTree", signature(forest="H2ORForestModel", k="numeric", plot="logical"),
           function(forest, k, plot) {

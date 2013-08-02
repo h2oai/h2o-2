@@ -8,8 +8,8 @@ public class SVMLightDParseTask extends DParseTask {
 
   @Override
   public void newLine() {
-    if (_phase == Pass.TWO && _colIdx < _ncolumns)
-      addNumCol(_ncolumns-1, 0);
+    if (_colIdx < _ncolumns)
+      addNumCol(_ncolumns-1,0,0);
     super.newLine();
     _colIdx = 0;
   }  private int _colIdx = 0;
@@ -19,7 +19,7 @@ public class SVMLightDParseTask extends DParseTask {
       addColumns(colIdx+1);
     assert colIdx >= _colIdx;
     for(int i = _colIdx; i < colIdx; ++i)
-      super.addNumCol(i, 0);
+      super.addNumCol(i, 0,0);
     super.addNumCol(colIdx, number, exp);
     _colIdx = colIdx+1;
   }
