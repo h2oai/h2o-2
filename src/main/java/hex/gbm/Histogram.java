@@ -47,7 +47,7 @@ class Histogram extends Iced implements Cloneable {
   // Fill in read-only sharable values
   public Histogram( String name, long nelems, double min, double max, boolean isInt ) {
     assert nelems > 0;
-    assert max > min : "Caller ensures max>min, since if max==min the column is all constants";
+    assert max > min : "Caller ensures "+max+">"+min+", since if max==min== the column "+name+" is all constants";
     _name = name;
     _min = min;  _max=max;  _isInt = isInt;
     int xbins = Math.max((int)Math.min(BINS,nelems),1); // Default bin count
@@ -89,6 +89,7 @@ class Histogram extends Iced implements Cloneable {
   // per-bin using the recursive strategy.
   //   http://www.johndcook.com/standard_deviation.html
   void incr( double d, double y ) {
+    assert !Double.isNaN(y);
     int idx = bin(d);           // Compute bin# via linear interpolation
     _bins[idx]++;               // Bump count in bin
     // Track actual lower/upper bound per-bin
@@ -105,6 +106,7 @@ class Histogram extends Iced implements Cloneable {
   // Add 1 count to bin specified by double.  Simple linear interpolation to
   // specify bin.  Also passed in the response variable, which is a class.
   void incr( double d, int y ) {
+    assert !Double.isNaN(y);
     int idx = bin(d);           // Compute bin# via linear interpolation
     _bins[idx]++;               // Bump count in bin
     // Track actual lower/upper bound per-bin
@@ -202,10 +204,12 @@ class Histogram extends Iced implements Cloneable {
     int n = 0;
     while( _bins[n]==0 ) n++;   // First non-empty bin
     if( n > 0 ) _mins[0] = _mins[n]; // Take min from  1st non-empty bin into bin 0
+    if( _mins[0] > _maxs[0] ) _maxs[0] = _mins[0];
     int l = _bins.length-1;     // Last bin
     int x = l;  
     while( _bins[x]==0 ) x--;   // Last non-empty bin
     if( x < l ) _maxs[l] = _maxs[x]; // Take max from last non-empty bin into bin last
+    if( _maxs[l] < _mins[l] ) _mins[l] = _maxs[x];
   }
 
   // Split bin 'i' of this Histogram.  Return null if there is no point in
@@ -287,8 +291,9 @@ class Histogram extends Iced implements Cloneable {
     sb.append(_name).append("\n");
     for( int i=0; i<_bins.length; i++ )
       sb.append(String.format("cnt=%d, min=%f, max=%f, mean=%f, var=%f\n",
-                              _bins[i],_mins[i],_maxs[i],mean(i),var(i)));
-      
+                              _bins[i],_mins[i],_maxs[i],
+                              _Ms==null?Double.NaN:mean(i),
+                              _Ms==null?Double.NaN:var (i)));
     return sb.toString();
   }
 

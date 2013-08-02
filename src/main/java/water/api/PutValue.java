@@ -7,7 +7,7 @@ import water.UKV;
 import water.Value;
 
 public class PutValue extends Request {
-  protected final H2OKey _key = new H2OKey(KEY);
+  protected final H2OKey _key = new H2OKey(KEY,true);
   protected final Str _value = new Str(VALUE);
   protected final Int _rf = new Int(REPLICATION_FACTOR,2,0,255);
 

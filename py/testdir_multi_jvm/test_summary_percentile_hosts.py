@@ -47,6 +47,7 @@ class Basic(unittest.TestCase):
         timeoutSecs = 10
         trial = 1
         for (rowCount, colCount, key2, timeoutSecs) in tryList:
+            print 'Trial:', trial
             SEEDPERFILE = random.randint(0, sys.maxint)
             csvFilename = 'syn_' + "binary" + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
@@ -72,8 +73,8 @@ class Basic(unittest.TestCase):
             print "\n" + csvFilename
 
             summaryResult = h2o_cmd.runSummary(key=key2)
-            # remove bin_names because it's too big (256?) and bins
             # just touch all the stuff returned
+            h2o_cmd.infoFromSummary(summaryResult, noPrint=False)
             summary = summaryResult['summary']
 
             columnsList = summary['columns']
@@ -94,23 +95,13 @@ class Basic(unittest.TestCase):
                     self.assertIn(int(b), legalValues)
 
                 bins = histogram['bins']
+                nbins = histogram['bins']
                 self.assertEqual(len(bins), len(legalValues))
                 # this distribution assumes 4 values with mean on the 3rd
                 self.assertAlmostEqual(bins[0], 0.042 * rowCount, delta=.01*rowCount, msg="histogram bins 0")
                 self.assertAlmostEqual(bins[1], 0.333 * rowCount, delta=.01*rowCount, msg="histogram bins 1")
                 self.assertAlmostEqual(bins[2], 0.541 * rowCount, delta=.01*rowCount, msg="histogram bins 2")
                 self.assertAlmostEqual(bins[3], 0.083 * rowCount, delta=.01*rowCount, msg="histogram bins 3")
-
-                nbins = histogram['bins']
-
-                print "\n\n************************"
-                print "name:", name
-                print "type:", stype
-                print "N:", N
-                print "bin_size:", bin_size
-                print "len(bin_names):", len(bin_names), bin_names
-                print "len(bins):", len(bins), bins
-                print "len(nbins):", len(nbins), nbins
 
                 # not done if enum
                 if stype != "enum":
@@ -122,33 +113,21 @@ class Basic(unittest.TestCase):
                     mean = columns['mean']
                     sigma = columns['sigma']
 
-                    print "len(max):", len(smax), smax
                     self.assertEqual(smax[0], expectedMax)
-                    print "len(min):", len(smin), smin
                     self.assertEqual(smin[0], expectedMin)
-
-                    print "len(thresholds):", len(thresholds), thresholds
-                    # FIX! what thresholds?
-
-                    print "len(values):", len(values), values
                     # apparently our 'percentile estimate" uses interpolation, so this check is not met by h2o
                     for v in values:
-                    ##    self.assertIn(v,legalValues,"Value in percentile 'values' is not present in the dataset") 
-                    # but: you would think it should be within the min-max range?
+                        ##    self.assertIn(v,legalValues,"Value in percentile 'values' is not present in the dataset") 
+                        # but: you would think it should be within the min-max range?
                         self.assertTrue(v >= expectedMin, 
                             "Percentile value %s should all be >= the min dataset value %s" % (v, expectedMin))
                         self.assertTrue(v <= expectedMax, 
                             "Percentile value %s should all be <= the max dataset value %s" % (v, expectedMax))
                 
-                    print "mean:", mean
                     # we round to int, so we may introduce up to 0.5 rounding error? compared to "mode" target
                     self.assertAlmostEqual(mean, expectedMean, delta=0.02, msg="mean")
-                    print "sigma:", sigma
                     self.assertAlmostEqual(sigma, expectedSigma, delta=0.02, msg="sigma")
 
-            ### print 'Trial:', trial
-            sys.stdout.write('.')
-            sys.stdout.flush()
             trial += 1
 
 

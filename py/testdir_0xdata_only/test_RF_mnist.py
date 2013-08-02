@@ -15,12 +15,7 @@ class Basic(unittest.TestCase):
         if (localhost):
             h2o.build_cloud(1, java_heap_GB=14)
         else:
-            # all hdfs info is done thru the hdfs_config michal's ec2 config sets up?
-            h2o_hosts.build_cloud_with_hosts(1, 
-                # this is for our amazon ec hdfs
-                # see https://github.com/0xdata/h2o/wiki/H2O-and-s3n
-                hdfs_name_node='10.78.14.235:9000',
-                hdfs_version='0.20.2')
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
@@ -126,7 +121,7 @@ class Basic(unittest.TestCase):
 
             # Predict (on test)****************************************
             start = time.time()
-            predict = h2o.nodes[0].generate_predictions(model_key=modelKey, key=testKey2, timeoutSecs=timeoutSecs)
+            predict = h2o.nodes[0].generate_predictions(model_key=modelKey, data_key=testKey2, timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
             print "generate_predictions in",  elapsed, "secs", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)

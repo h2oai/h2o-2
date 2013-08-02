@@ -11,7 +11,7 @@ import com.google.gson.JsonObject;
 
 public class ImportUrl extends Request {
   private final Str _url = new Str(URL);
-  private final H2OKey _key = new H2OKey(KEY, (Key)null);
+  private final H2OKey _key = new H2OKey(KEY, false);
 
   public ImportUrl() {
     _requestHelp = "Imports the given URL.";

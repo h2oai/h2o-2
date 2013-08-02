@@ -144,6 +144,7 @@ public class Constants extends Iced {
   public static final String SAMPLING_STRATEGY     = "sampling_strategy";
   public static final String SEED                  = "seed";
   public static final String SEPARATOR             = "separator";
+  public static final String PARSER_TYPE           = "parser_type";
   public static final String SENT_ROWS             = "sent_rows";
   public static final String SIZE                  = "size";
   public static final String SOURCE_KEY            = "source_key";

@@ -131,7 +131,7 @@ class Basic(unittest.TestCase):
             print "rfview", trial, "end on ", dataKeyTest, 'took', time.time() - start, 'seconds.'
 
             start = time.time()
-            predict = h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest2)
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest2)
             print "predict", trial, "end on ", dataKeyTest, 'took', time.time() - start, 'seconds.'
 
             print "Trial #", trial, "completed"

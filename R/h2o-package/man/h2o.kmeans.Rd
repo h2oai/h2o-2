@@ -13,7 +13,7 @@ h2o.kmeans(data, centers, cols = "", iter.max = 10)
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{data}{
-An H2OParsedData object containing the variables in the model.
+An \code{\linkS4class{H2OParsedData}} object containing the variables in the model.
 }
   \item{centers}{
 The number of clusters k.
@@ -57,10 +57,10 @@ An object of class \code{\linkS4class{H2OKMeansModel}} with slots key, data, and
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-prostate.hex = importFile(h2o, "../smalldata/logreg/prostate.csv")
+prostate.hex = h2o.importFile(localH2O, path = "../smalldata/logreg/prostate.csv")
 h2o.kmeans(data = prostate.hex, centers = 10, cols = c("AGE", "RACE", "VOL", "GLEASON"))
 
-covtype.hex = importFile(h2o, "../smalldata/covtype/covtype.20k.data")
+covtype.hex = h2o.importFile(localH2O, path = "../smalldata/covtype/covtype.20k.data")
 covtype.km = h2o.kmeans(data = covtype.hex, centers = 10, cols = c(1, 2, 3))
 print(covtype.km)
 }

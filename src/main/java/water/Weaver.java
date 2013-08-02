@@ -242,39 +242,31 @@ public class Weaver {
     StringBuilder sb = new StringBuilder();
     sb.append("new water.api.DocGen$FieldDoc[] {");
     boolean first = true;
-    for( CtField ctf : ctfs ) {
-      int mods = ctf.getModifiers();
-      if( javassist.Modifier.isTransient(mods) || javassist.Modifier.isStatic(mods) ) {
-        if( ctf.getName().equals("DOC_FIELDS") ) fielddoc = ctf;
-        if( ctf.getName().equals("DOC_GET") ) getdoc = ctf;
-        continue;  // Only auto-doc not-transient instance fields (not static)
+    CtClass cc2 = cc;
+    while( true ) {             // For all self & superclasses
+      for( CtField ctf : ctfs ) { // For all fields
+        int mods = ctf.getModifiers();
+        if( javassist.Modifier.isTransient(mods) || javassist.Modifier.isStatic(mods) ) {
+          if( cc2 == cc ) {     // Capture the DOC_* fields for self only
+            if( ctf.getName().equals("DOC_FIELDS") ) fielddoc = ctf;
+            if( ctf.getName().equals("DOC_GET") ) getdoc = ctf;
+          }
+          continue;  // Only auto-doc not-transient instance fields (not static)
+        }
+        // This field needs documentation. Get the required API annotation.
+        first = addFieldWeave(sb,ctf,cc,first);
       }
 
-      // This field needs documentation
-      String name = ctf.getName();
-      Object[] as;
-      try {
-        as = ctf.getAnnotations();
-      } catch( ClassNotFoundException ex) {
-        throw new RuntimeException(ex);
-      }
-      API a = null;
-      for(Object attribute : as) {
-        if(attribute instanceof API)
-          a = (API) attribute;
-      }
-      if( a == null ) throw new CannotCompileException("Class "+cc.getName()+" has non-transient field '"+name+"' without a Weave annotation");
-      String help = a.help();
-      int min = a.minVersion();
-      int max = a.maxVersion();
-      if( min < 1 || min > 1000000 ) throw new CannotCompileException("Found field '"+name+"' but MinVer < 1 or MinVer > 1000000");
-      if( max < min || (max > 1000000 && max != Integer.MAX_VALUE) )
-        throw new CannotCompileException("Found field '"+name+"' but MaxVer < "+min+" or MaxVer > 1000000");
-
-      if( first ) first = false;
-      else sb.append(",");
-      sb.append("new water.api.DocGen$FieldDoc(\""+name+"\",\""+help+"\","+min+","+max+","+ctf.getType().getName()+".class)");
+      // Now roll up the superclass chain, weaving super fields also
+      cc2 = cc2.getSuperclass();
+      ctfs = cc2.getDeclaredFields();
+      api = false;
+      for( CtField ctf : ctfs )
+        if( ctf.getName().equals("API_WEAVER") )
+          api = true;
+      if( api == false ) break;
     }
+
     sb.append("}");
     if( fielddoc == null ) throw new CannotCompileException("Did not find static final DocGen.FieldDoc[] DOC_FIELDS field;");
     if( !fielddoc.getType().isArray() ||
@@ -285,6 +277,29 @@ public class Weaver {
     cc.addMethod(CtNewMethod.make("  public water.api.DocGen$FieldDoc[] toDocField() { return DOC_FIELDS; }",cc));
     if( getdoc != null )
       cc.addMethod(CtNewMethod.make("  public String toDocGET() { return DOC_GET; }",cc));
+  }
+
+  private boolean addFieldWeave( StringBuilder sb, CtField ctf, CtClass cc, boolean first ) throws NotFoundException, CannotCompileException {
+    // This field needs documentation.  Get the required API annotation.
+    String name = ctf.getName();
+    Object[] as;
+    try { as = ctf.getAnnotations(); }
+    catch( ClassNotFoundException ex) { throw new NotFoundException("getAnnotations throws ", ex); }
+    API a = null;
+    for(Object o : as) if(o instanceof API)  a = (API) o;
+    if( a == null ) throw new CannotCompileException("Class "+cc.getName()+" has non-transient field '"+name+"' without a Weave annotation");
+
+    String help = a.help();
+    int min = a.minVersion();
+    int max = a.maxVersion();
+    if( min < 1 || min > 1000000 ) throw new CannotCompileException("Found field '"+name+"' but MinVer < 1 or MinVer > 1000000");
+    if( max < min || (max > 1000000 && max != Integer.MAX_VALUE) )
+      throw new CannotCompileException("Found field '"+name+"' but MaxVer < "+min+" or MaxVer > 1000000");
+
+    if( first ) first = false;
+    else sb.append(",");
+    sb.append("new water.api.DocGen$FieldDoc(\""+name+"\",\""+help+"\","+min+","+max+","+ctf.getType().getName()+".class)");
+    return first;
   }
 
   // --------------------------------------------------------------------------

@@ -100,7 +100,7 @@ class Basic(unittest.TestCase):
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
             # new web page for predict? throw it in here for now
             start = time.time()
-            predict = h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             elapsed = time.time() - start
             print "predict end on ", dataKeyTest, 'took', elapsed, 'seconds.'
 
@@ -108,7 +108,7 @@ class Basic(unittest.TestCase):
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
             start = time.time()
-            predict = h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             elapsed = time.time() - start
             print "predict end on ", dataKeyTest, 'took', elapsed, 'seconds.'
 
@@ -116,7 +116,7 @@ class Basic(unittest.TestCase):
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, 
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
             start = time.time()
-            predict = h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             elapsed = time.time() - start
             print "predict end on ", dataKeyTest, 'took', elapsed, 'seconds.'
 
@@ -125,7 +125,7 @@ class Basic(unittest.TestCase):
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
             start = time.time()
-            predict = h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             elapsed = time.time() - start
             print "predict end on ", dataKeyTest, 'took', elapsed, 'seconds.'
 

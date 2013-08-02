@@ -1,4 +1,3 @@
-
 package water.api;
 
 import com.google.gson.JsonArray;

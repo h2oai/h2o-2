@@ -5,7 +5,7 @@ import water.*;
 
 /**
  * A single distributed vector column.
- * <p> 
+ * <p>
  * A distributed vector has a count of elements, an element-to-chunk mapping, a
  * Java type (mostly determines rounding on store and display), and functions
  * to directly load elements without further indirections.  The data is
@@ -380,12 +380,12 @@ public class Vec extends Iced {
     final Key _key;
     private VectorGroup(Key key, int len){_key = key;_len = len;}
 
-    private Key vecKey(int vecId){
+    public Key vecKey(int vecId){
       byte [] bits = _key._kb.clone();
       UDP.set4(bits,2,vecId);//
       return Key.make(bits);
     }
-    private int vecId(Key k){
+    private int vecIdx(Key k){
       return UDP.get4(k._kb, 2);
     }
 
@@ -404,6 +404,10 @@ public class Vec extends Iced {
         if(old == null) return new VectorGroup(_key, ++_finalN);
         return new VectorGroup(_key, _finalN = (_addN + old._len));
       }
+    }
+    public void reserveKeys(final int n){
+      AddVecs2GroupTsk tsk = new AddVecs2GroupTsk(_key, n);
+      tsk.invoke(_key);
     }
     /**
      * Gets the next n keys of this group.

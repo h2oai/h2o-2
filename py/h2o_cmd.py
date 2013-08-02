@@ -395,7 +395,7 @@ def infoFromInspect(inspect, csvPathname):
            (num_cols, num_rows, row_size, ptype, value_size_bytes, ptime)
     return missingValuesList
 
-def infoFromSummary(summaryResult):
+def infoFromSummary(summaryResult, noPrint=False):
     summary = summaryResult['summary']
     columnsList = summary['columns']
     for columns in columnsList:
@@ -406,19 +406,21 @@ def infoFromSummary(summaryResult):
         histogram = columns['histogram']
         bin_size = histogram['bin_size']
         bin_names = histogram['bin_names']
-        for b in bin_names:
-            print "bin_name:", b
+        if not noPrint:
+            for b in bin_names:
+                print "bin_name:", b
 
         bins = histogram['bins']
         nbins = histogram['bins']
-        print "\n\n************************"
-        print "N:", N
-        print "name:", name
-        print "type:", stype
-        print "bin_size:", bin_size
-        print "len(bin_names):", len(bin_names), bin_names
-        print "len(bins):", len(bins), bins
-        print "len(nbins):", len(nbins), nbins
+        if not noPrint:
+            print "\n\n************************"
+            print "N:", N
+            print "name:", name
+            print "type:", stype
+            print "bin_size:", bin_size
+            print "len(bin_names):", len(bin_names), bin_names
+            print "len(bins):", len(bins), bins
+            print "len(nbins):", len(nbins), nbins
 
         # not done if enum
         if stype != "enum":
@@ -426,10 +428,11 @@ def infoFromSummary(summaryResult):
             smin = columns['min']
             mean = columns['mean']
             sigma = columns['sigma']
-            print "smax:", smax
-            print "smin:", smin
-            print "mean:", mean
-            print "sigma:", sigma
+            if not noPrint:
+                print "smax:", smax
+                print "smin:", smin
+                print "mean:", mean
+                print "sigma:", sigma
 
             # sometimes we don't get percentiles? (if 0 or 1 bins?)
             if len(bins) >= 2:
@@ -437,11 +440,12 @@ def infoFromSummary(summaryResult):
                 thresholds = percentiles['thresholds']
                 values = percentiles['values']
 
-                # h2o shows 5 of them, ordered
-                print "len(max):", len(smax), smax
-                print "len(min):", len(smin), smin
-                print "len(thresholds):", len(thresholds), thresholds
-                print "len(values):", len(values), values
+                if not noPrint:
+                    # h2o shows 5 of them, ordered
+                    print "len(max):", len(smax), smax
+                    print "len(min):", len(smin), smin
+                    print "len(thresholds):", len(thresholds), thresholds
+                    print "len(values):", len(values), values
 
                 for v in values:
                     # 0 is the most max or most min

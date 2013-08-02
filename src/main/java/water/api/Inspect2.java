@@ -80,6 +80,11 @@ public class Inspect2 extends Request {
                         PrettyPrint.bytes(byteSize)+" bytes, "+
                         (NAcnt== 0 ? "no":PrettyPrint.bytes(NAcnt))+" missing elements");
 
+    sb.append("<div class='alert'>" +
+              //"View " + SummaryPage2.link(key, "Summary") +
+              "<br/>Build models using " + DRF2.link(src_key.value(), "Distributed Random Forest") +
+              "</div>");
+
     // Start of where the pagination table goes.  For now, just the info button.
     sb.append("<div style='text-align:center;'>");
     sb.append("<span class='pagination'><ul><li>"+"<a href='"+
@@ -207,21 +212,5 @@ public class Inspect2 extends Request {
     while( s.charAt(s.length()-1)=='0' )
       s = s.substring(0,s.length()-1);
     return s;
-  }
-
-  // ---
-  public class FrameKey extends TypeaheadInputText<Key> {
-    public FrameKey(String name) { super(TypeaheadHexKeyRequest.class, name, true); }
-
-    @Override protected Key parse(String input) throws IllegalArgumentException {
-      Key k = Key.make(input);
-      Value v = DKV.get(k);
-      if (v == null)    throw new IllegalArgumentException("Key "+input+" not found!");
-      Iced ice = v.get();
-      if( !(ice instanceof Frame) ) throw new IllegalArgumentException("Key "+input+" is not a valid Frame key");
-      return k;
-    }
-    @Override protected Key defaultValue() { return null; }
-    @Override protected String queryDescription() { return "An existing H2O Frame key."; }
   }
 }
