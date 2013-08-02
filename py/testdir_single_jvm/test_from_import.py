@@ -48,17 +48,16 @@ class Basic(unittest.TestCase):
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
             parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=500)
-            print csvFilename, 'parse time:', parseKey['response']['time']
+            if not h2o.beta_features:
+                print csvFilename, 'parse time:', parseKey['response']['time']
             print "Parse result['destination_key']:", parseKey['destination_key']
             inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
 
-            print "\n" + csvFilename
-            start = time.time()
-            RFview = h2o_cmd.runRFOnly(trees=1,depth=25,parseKey=parseKey,
-                timeoutSecs=timeoutSecs)
+            if not h2o.beta_features:
+                RFview = h2o_cmd.runRFOnly(trees=1,depth=25,parseKey=parseKey, timeoutSecs=timeoutSecs)
 
-            h2b.browseJsonHistoryAsUrlLastMatch("RFView")
-            time.sleep(10)
+            ## h2b.browseJsonHistoryAsUrlLastMatch("RFView")
+            ## time.sleep(10)
 
             # just to make sure we test this
             h2o_cmd.deleteCsvKey(csvFilename, importFolderResult)

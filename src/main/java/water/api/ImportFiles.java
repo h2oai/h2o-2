@@ -15,9 +15,9 @@ public class ImportFiles extends Request {
   // This Request supports the HTML 'GET' command, and this is the help text
   // for GET.
   static final String DOC_GET =
-    "  Map a file from the local host filesystem into H2O memory.  Data is "+
-    "loaded lazily, when the Key is read (usually in a Parse command).  "+
-    "(Warning: Every host in the cluster must have this file visible locally!)";
+    "Map a file from the local host filesystem into H2O memory.  Data is "+
+    "loaded lazily, when the Key is read (usually in a Parse command, to build " +
+    "a Hex key).  (Warning: Every host in the cluster must have this file visible locally!)";
 
   // HTTP REQUEST PARAMETERS
   @Weave(help="File or directory to import.")

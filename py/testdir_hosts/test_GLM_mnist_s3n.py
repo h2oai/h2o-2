@@ -29,9 +29,9 @@ class Basic(unittest.TestCase):
     def test_GLM_mnist_s3n(self):
         URI = "s3n://home-0xdiag-datasets/mnist/"
         csvFilelist = [
-            ("mnist_train.csv.gz", "mnist_test.csv.gz",    600), 
-            ("mnist_test.csv.gz",  "mnist_train.csv.gz",    600), 
-            ("mnist_train.csv.gz", "mnist_train.csv.gz",    600), 
+            ("mnist_training.csv.gz", "mnist_testing.csv.gz",    600), 
+            ("mnist_testing.csv.gz",  "mnist_training.csv.gz",    600), 
+            ("mnist_training.csv.gz", "mnist_training.csv.gz",    600), 
         ]
         # IMPORT**********************************************
         importHDFSResult = h2o.nodes[0].import_hdfs(URI)

@@ -180,7 +180,21 @@ class DTree extends Iced {
 
     DecidedNode( UndecidedNode n ) {
       super(n._tree,n._pid,n._nid); // Replace Undecided with this DecidedNode
-      _col = bestCol(n._hs);        // Best split-point for this tree
+      int col = bestCol(n._hs);     // Best split-point for this tree
+
+      // If I have 2 identical predictor rows leading to 2 different responses,
+      // then this dataset cannot distinguish these rows... and we have to bail
+      // out here.  Note that the column picked here is strictly to grab the
+      // average prediction; we will not split.
+      boolean canDecide = true;
+      if( col == -1 ) {
+        canDecide = false;
+        for( int i=0; i<n._hs.length; i++ )
+          if( n._hs[i]!=null && n._hs[i]._nbins > 1 )
+            { col = i; break; } // Take some random junky column
+      }
+      _col = col;
+
       // From the splitting Undecided, get the column, min, max
       Histogram splitH = n._hs[_col];// Histogram of the column being split
       int nums = splitH._nbins;      // Number of split choices
@@ -197,7 +211,7 @@ class DTree extends Iced {
       int ncols = _tree._ncols; // ncols: all columns, minus response
       for( int i=0; i<nums; i++ ) { // For all split-points
         // Setup for children splits
-        Histogram nhists[] = splitH.split(_col,i,n._hs,_tree._names,ncols);
+        Histogram nhists[] = canDecide ? splitH.split(_col,i,n._hs,_tree._names,ncols) : null;
         _ns[i] = nhists == null ? -1 : new UndecidedNode(_tree,_nid,nhists)._nid;
         // Also setup predictions locally
         if( clss == null ) {                      // Regression?
@@ -303,8 +317,8 @@ class DTree extends Iced {
 
         // Pass 1 & 2
         for( int i=0; i<nids._len; i++ ) {
-          int nid = (int)nids.at80(i);       // Get Node to decide from
-          if( nid==-1 ) continue;            // row already predicts perfectly or sampled away
+          int nid = (int)nids.at80(i); // Get Node to decide from
+          if( nid<0 ) continue; // row already predicts perfectly or sampled away
           
           // Pass 1: Score row against current decisions & assign new split
           if( leaf > 0 )   // Prior pass exists?
@@ -409,9 +423,8 @@ class DTree extends Iced {
     // a count of absolute errors when we predict the majority class.
     private double score0( Chunk chks[], int i, double y, long clss[], Random rands[] ) {
       double sum=0;             // Regression: average across trees
-      long rows=0;
-      if( _numClasses > 0 )     // Classification: zero class distribution
-        Arrays.fill(clss,0);
+      Arrays.fill(clss,0);      // Recycled temp array
+
       // For all trees
       for( int t=0; t<_trees.length; t++ ) {
         // For OOBEE error, do not score rows on trees trained on that row
@@ -427,29 +440,28 @@ class DTree extends Iced {
           int nid = prev.ns(chks,i);
           if( nid == -1 ) break;
           node = tree.node(nid);
+          assert node._tree==tree;
         }
         // We hit the end of the tree walk.  Get this tree's prediction
-        int bin = prev.bin(chks,i);    // Which bin did we decide on?
-        long[] ycls = prev._ycls[bin]; // Classes for that bin
         if( _numClasses == 0 ) {       // Regression?
-          long num = ycls[0];          // "classes" is really just bin-count
-          rows += num;                 // More total rows
-          sum  += prev._pred[bin]*num; // More total regression count
+          sum += regressScore(prev,clss,chks,i,true,sum);
         } else {                // Classification?
-          for( int c=0; c<_numClasses; c++ )
-            clss[c] += ycls[c]; // Compute distribution
+          classScore(prev,clss,chks,i,true);
         }
-      }
+      } // End of for-all trees
 
+      // Having computed the votes across all trees, find the majority class
+      // and it's error rate.
       if( _numClasses == 0 ) {
-        if( rows == 0 ) return 0;     // OOBEE: all rows trained, so no rows scored
+        long rows = clss[0];         // Find total rows trained
+        if( clss[0] == 0 ) return 0; // OOBEE: all rows trained, so no rows scored
         double prediction = sum/rows; // Average of trees is prediction
         return prediction - y;        // Error
       } else {
-        rows += clss[0];        // Find total rows
+        long rows = clss[0];    // Find total rows trained
         int best=0;             // Find largest class across all trees
         for( int c=1; c<_numClasses; c++ ) {
-          rows += clss[c];
+          rows += clss[c];      // Total rows trained
           if( clss[c] > clss[best] ) best=c;
         }
         if( rows == 0 ) return 0;  // OOBEE: all rows trained, so no rows scored
@@ -457,6 +469,38 @@ class DTree extends Iced {
         if( best != ycls ) _err++; // Absolute prediction error
         return (double)(rows-clss[ycls])/rows; // Error
       }
+    }
+
+    // Compute classification score: add this leaf decision node's response-
+    // variable distribution to the total forest distribution.  If the selected
+    // bin is empty - we've got no distribution.  Go back up 1 layer and take
+    // the (weaker) distribution from the parent.
+    private void classScore( DecidedNode prev, long clss[], Chunk chks[], int i, boolean recur ) {
+      int bin = prev.bin(chks,i);    // Which bin did we decide on?
+      long[] ycls = prev._ycls[bin]; // Classes for that bin
+      long bits=0;
+      for( int c=0; c<_numClasses; c++ ) {
+        clss[c] += ycls[c];     // Compute distribution
+        bits |= ycls[c];        // Detect empty distribution
+      }
+      if( bits == 0 && prev._pid != -1 ) { // No class prediction here, and we can back up a layer?
+        assert recur;
+        prev = prev._tree.decided(prev._pid); // Backup 1 layer in tree
+        classScore(prev,clss,chks,i,false);   // And predict again (weaker)
+      }
+    }
+
+    private double regressScore( DecidedNode prev, long clss[], Chunk chks[], int i, boolean recur, double sum ) {
+      int bin = prev.bin(chks,i);    // Which bin did we decide on?
+      long[] ycls = prev._ycls[bin]; // Classes for that bin
+      long num = ycls[0];            // "classes" is really just bin-count
+      clss[0] += num;                // More total rows
+      sum += prev._pred[bin]*num;   // More total regression count
+      if( num==0 ) {
+        prev = prev._tree.decided(prev._pid); // Backup 1 layer in tree
+        return regressScore(prev,clss,chks,i,false,sum); // And predict again (weaker)
+      }
+      return sum;
     }
 
     public void report( Sys tag, long nrows, int depth ) {

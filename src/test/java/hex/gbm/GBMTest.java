@@ -1,12 +1,9 @@
 package hex.gbm;
 
 import static org.junit.Assert.assertEquals;
-
 import java.io.File;
-
 import org.junit.BeforeClass;
 import org.junit.Test;
-
 import water.*;
 import water.fvec.*;
 
@@ -74,8 +71,9 @@ public class GBMTest extends TestUtil {
       Vec capsule = fr.remove("CAPSULE"); // Remove capsule
       fr.add("CAPSULE",capsule);          // Move it to the end
       int mtrys = Math.max((int)Math.sqrt(fr.numCols()),1);
+      long seed = (1L<<32)|2;
 
-      DRF drf = DRF.start(DRF.makeKey(),fr,/*maxdepth*/50,/*ntrees*/5,mtrys,/*sampleRate*/0.67);
+      DRF drf = DRF.start(DRF.makeKey(),fr,/*maxdepth*/50,/*ntrees*/5,mtrys,/*sampleRate*/0.67,seed);
       drf.get();                  // Block for result
       UKV.remove(drf._dest);
     } finally {
@@ -99,8 +97,9 @@ public class GBMTest extends TestUtil {
 
       // Covtype: predict on last column
       int mtrys = Math.max((int)Math.sqrt(fr.numCols()),1);
+      long seed = (1L<<32)|2;
 
-      DRF drf = DRF.start(DRF.makeKey(),fr,/*maxdepth*/40,/*ntrees*/10,mtrys,/*sampleRate*/0.67);
+      DRF drf = DRF.start(DRF.makeKey(),fr,/*maxdepth*/40,/*ntrees*/10,mtrys,/*sampleRate*/0.67,seed);
       drf.get();                  // Block for result
       UKV.remove(drf._dest);
     } finally {

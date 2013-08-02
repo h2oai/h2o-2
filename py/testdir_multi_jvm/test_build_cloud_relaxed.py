@@ -1,6 +1,6 @@
 import unittest, time, sys
 # not needed, but in case you move it down to subdir
-sys.path.extend(['.','..'])
+sys.path.extend(['.','..','py'])
 import h2o
 
 class Basic(unittest.TestCase):

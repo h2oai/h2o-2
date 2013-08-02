@@ -728,14 +728,14 @@ class H2O(object):
             r = requests.get(url, timeout=timeout, params=params, **kwargs)
 
         # fatal if no response
-        if not r: 
-            raise Exception("Maybe bad url? no r in __do_json_request %s in %s:" % (e, inspect.stack()[1][3]))
+        if not beta_features and not r: 
+            raise Exception("Maybe bad url? no r in __do_json_request in %s:" % inspect.stack()[1][3])
 
         # this is used to open a browser on results, or to redo the operation in the browser
         # we don't' have that may urls flying around, so let's keep them all
         json_url_history.append(r.url)
-        if not r.json():
-            raise Exception("Maybe bad url? no r.json in __do_json_request %s in %s:" % (e, inspect.stack()[1][3]))
+        if not beta_features and not r.json():
+            raise Exception("Maybe bad url? no r.json in __do_json_request in %s:" % inspect.stack()[1][3])
             
         rjson = r.json()
 
@@ -1027,7 +1027,9 @@ class H2O(object):
 
         # Check that the response has the right Progress url it's going to steer us to.
         verboseprint("Parse2" if beta_features else "Parse" + " result:", dump_json(a))
-        if a['response']['redirect_request']!='Progress':
+        
+        # FIX! not using h2o redirect info for Parse2 yet
+        if not beta_features and a['response']['redirect_request']!='Progress':
             raise Exception('H2O parse redirect is not Progress. Parse json response precedes.')
 
         if noPoll:
@@ -1056,12 +1058,22 @@ class H2O(object):
     # &offset=
     # &view=
     def inspect(self, key, offset=None, view=None, ignoreH2oError=False, timeoutSecs=30):
-        a = self.__do_json_request('Inspect2.json' if beta_features else 'Inspect.json',
-            params={
+        if beta_features:
+            params = {
                 "key": key,
                 "offset": offset,
                 "view": view,
-                },
+                }
+        else:
+            params = {
+                "key": key, # need both to avoid errors?
+                "src_key": key,
+                "offset": offset,
+                "view": view,
+                }
+
+        a = self.__do_json_request('Inspect2.json' if beta_features else 'Inspect.json',
+            params=params,
             ignoreH2oError=ignoreH2oError,
             timeout=timeoutSecs
             )
@@ -1295,7 +1307,7 @@ class H2O(object):
         print "\nDownloading h2o log(s) using:", url
         r = requests.get(url, timeout=timeoutSecs, **kwargs)
         if not r or not r.ok: 
-            raise Exception("Maybe bad url? no r in log_download %s in %s:" % (e, inspect.stack()[1][3]))
+            raise Exception("Maybe bad url? no r in log_download %s in %s:" % inspect.stack()[1][3])
 
         z = zipfile.ZipFile(StringIO.StringIO(r.content))
         print "z.namelist:", z.namelist()

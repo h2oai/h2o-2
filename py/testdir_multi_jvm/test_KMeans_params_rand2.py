@@ -47,7 +47,6 @@ class Basic(unittest.TestCase):
         else:
             csvFilenameList = [
                 ('covtype20x.data', 800),
-                ('covtype200x.data', 2000),
                 ]
 
         importFolderPath = '/home/0xdiag/datasets/standard'

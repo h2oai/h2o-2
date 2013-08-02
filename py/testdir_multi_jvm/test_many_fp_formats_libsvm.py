@@ -2,7 +2,16 @@ import unittest
 import random, sys, time, os
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e, h2o_glm
+
+zeroList = [
+        'Result0 = 0',
+]
+
+# the first column should use this
+exprList = [
+        'Result<n> = sum(<keyX>[<col1>])',
+    ]
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel, distribution):
     # we can do all sorts of methods off the r object
@@ -72,14 +81,18 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel, distrib
         raise Exception("sel out of range in write_syn_dataset:", sel)
     f = caseList[sel]
 
-    def makeVal(valMin,valMax):
+    def addRandValToRowStuff(colNumber, valMin, valMax, rowData, synColSumDict):
         ## val = r.uniform(MIN,MAX)
         val = r.triangular(valMin,valMax,0)
         # force it to be zero in this range. so we don't print zeroes for svm!
         if (val > valMin/2) and (val < valMax/2):
-            return None
+            return
         else:
-            return val
+            rowData.append(str(colNumber) + ":" + f(val)) # f should always return string
+            if val in synColSumDict:
+                synColSumDict[colNumber] += val # sum of column (dict)
+            else:
+                synColSumDict[colNumber] = val # sum of column (dict)
 
     valMin = -1e2
     valMax =  1e2
@@ -88,34 +101,30 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel, distrib
     dsf = open(csvPathname, "w+")
     for i in range(rowCount):
         rowData = []
+        synColSumDict = {}
         d = random.randint(0,2)
         if d==0:
             if distribution == 'sparse':
                 # only one value per row!
-                j = random.randint(0, colCount)
-                val = makeVal(valMin, valMax)
-                # cols start with 1!
-                if val:
-                    rowData.append(str(j+1) + ":" + f(val)) # f should always return string
+                colNumber = random.randint(0, colCount-1)
+                addRandValToRowStuff(colNumber, valMin, valMax, rowData, synColSumDict)
             else:
                 # some number of values per row.. 50% or so?
-                for j in range(colCount):
-                    val = makeVal(valMin, valMax)
-                    # cols start with 1!
-                    if val:
-                        rowData.append(str(j+1) + ":" + f(val)) # f should always return string
+                for colNumber in range(colCount):
+                    addRandValToRowStuff(colNumber, valMin, valMax, rowData, synColSumDict)
 
-            if len(rowData)!=0:
-                # space is the only valid separator
-                # random integer for class
-                rowData.insert(0, random.randint(classMin,classMax))
+            # always need an output class, even if no cols are non-zero
 
+        # space is the only valid separator
+        # random integer for class
+        rowData.insert(0, random.randint(classMin,classMax))
         rowDataCsv = " ".join(map(str,rowData))
         # FIX! vary the eol ?
         # randomly skip some rows. only write 1/3
         dsf.write(rowDataCsv + "\n")
 
     dsf.close()
+    return synColSumDict
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -139,35 +148,75 @@ class Basic(unittest.TestCase):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (1000, 10, 'cA', 30, 'sparse'),
-            (100000, 1000, 'cA', 30, 'sparse'),
-            (1000, 10, 'cA', 30, 'sparse50'),
-            (100, 1000, 'cB', 30,'sparse'),
-            (100, 1000, 'cB', 30,'sparse50'),
-            # (100, 900, 'cC', 30),
-            # (100, 500, 'cD', 30),
-            # (100, 100, 'cE', 30),
+            (100000, 100, 'cB', 30, 'sparse'),
+            (1000, 10, 'cC', 30, 'sparse50'),
+            (100, 100, 'cD', 30,'sparse'),
+            (100, 100, 'cE', 30,'sparse50'),
+            # (100, 900, 'cF', 30),
+            # (100, 500, 'cG', 30),
+            # (100, 100, 'cH', 30),
             ]
 
         # h2b.browseTheCloud()
         for (rowCount, colCount, key2, timeoutSecs, distribution) in tryList:
-            for sel in range(48): # len(caseList)
+            # for sel in range(48): # len(caseList)
+            for sel in [random.randint(0,47)]: # len(caseList)
                 SEEDPERFILE = random.randint(0, sys.maxint)
                 csvFilename = "syn_%s_%s_%s_%s.csv" % (SEEDPERFILE, sel, rowCount, colCount)
                 csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
                 print "Creating random", csvPathname
-                write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel, distribution)
+                # dict of col sums for comparison to exec col sums below
+                synColSumDict = write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel, distribution)
 
                 selKey2 = key2 + "_" + str(sel)
                 parseKey = h2o_cmd.parseFile(None, csvPathname, key2=selKey2, timeoutSecs=timeoutSecs)
                 print csvFilename, 'parse time:', parseKey['response']['time']
                 print "Parse result['destination_key']:", parseKey['destination_key']
                 inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+                num_cols = inspect['num_cols']
+                num_rows = inspect['num_rows']
                 print "\n" + csvFilename
 
-                # if not h2o.browse_disable:
-                #     h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
-                #     time.sleep(3)
+                # SUMMARY****************************************
+                # gives us some reporting on missing values, constant values, 
+                # to see if we have x specified well
+                # figures out everything from parseKey['destination_key']
+                # needs y to avoid output column (which can be index or name)
+                # assume all the configs have the same y..just check with the firs tone
+                goodX = h2o_glm.goodXFromColumnInfo(y=0,
+                    key=parseKey['destination_key'], timeoutSecs=300)
+                summaryResult = h2o_cmd.runSummary(key=selKey2, timeoutSecs=360)
+                h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
+
+                # Exec (column sums)*************************************************
+                h2e.exec_zero_list(zeroList)
+                # how do we know the max dimension (synthetic may not generate anything for the last col)
+                # use num_cols?. num_cols should be <= colCount. 
+                self.assertEqual(colCount, num_cols, msg="generated %s cols, parsed to %s cols" % (colCount, num_cols))
+
+                colResultList = h2e.exec_expr_list_across_cols(None, exprList, selKey2, maxCol=num_cols,
+                    timeoutSecs=timeoutSecs)
+                print "\n*************"
+                print "colResultList", colResultList
+                print "*************"
+
+                self.assertEqual(rowCount, num_rows, msg="generated %s rows, parsed to %s rows" % (rowCount, num_rows))
+                # need to fix this for compare to expected
+                # we should be able to keep the list of fp sums per col above
+                # when we generate the dataset
+                print "\ncolResultList:", colResultList
+                print "\nsynColSumDict:", synColSumDict
+                for k,v in synColSumDict:
+                    # k should be integers that match the number of cols
+                    self.assertTrue(k>=0 and k<len(colResultList))
+                    compare = float(colResultList[k])
+                    print "\n", good, "\n", compare
+                    # Even though we're comparing floating point sums, the operations probably should have
+                    # been done in same order, so maybe the comparison can be exact (or not!)
+                    self.assertEqual(good, compare, 'compare is not equal to good')
+
+
 
 if __name__ == '__main__':
     h2o.unit_main()

@@ -1,4 +1,4 @@
-import h2o, h2o_cmd
+import h2o, h2o_cmd, h2o_jobs
 import time, re, getpass
 
 def setupImportS3(node=None, bucket='home-0xdiag-datasets', timeoutSecs=180):
@@ -96,11 +96,24 @@ def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
             print "michal: Temp hack of /home/0xdiag/datasets/standard to /home/0xdiag/datasets till EC2 image is fixed"
             path = re.sub('/home/0xdiag/datasets/standard', '/home/0xdiag/datasets', path)
         importKey = "nfs:/" + path + "/" + csvFilename
+        if h2o.beta_features:
+            print "Temp hack to look at the jobs list for parse completion. No multiple outstanding parses"
+            print "The parse result will be just from the first noPoll response. Parse is done as noPoll"
+
         parseKey = node.parse(importKey, myKey2, 
             timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs, noise, 
-            benchmarkLogging, noPoll, **kwargs)
-        # a hack so we know what the source_key was, bask at the caller
-        parseKey['source_key'] = importKey
+            benchmarkLogging, noPoll=noPoll or h2o.beta_features, **kwargs)
+
+        if h2o.beta_features:
+            print "Temp hack to look at the jobs list for parse completion. No multiple outstanding parses"
+            print "The parse result will be just from the first noPoll response."
+            print "\nWaiting on Parse job for ", importKey
+            start = time.time()
+            h2o_jobs.pollWaitJobs(pattern='arse', timeoutSecs=timeoutSecs, pollTimeoutSecs=120, retryDelaySecs=5)
+            print "Parse job end for ", importKey, 'took', time.time() - start, 'seconds'
+
+         # a hack so we know what the source_key was, bask at the caller
+        parseKey['python_source_key'] = importKey
         print "\nParse result:", parseKey
     return parseKey
 
