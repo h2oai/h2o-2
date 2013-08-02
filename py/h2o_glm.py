@@ -340,15 +340,17 @@ def simpleCheckGLMGrid(self, glmGridResult, colX=None, allowFailWarning=False, *
 #                exceptionOnMissingValues=False, timeoutSecs=300)
 
 def goodXFromColumnInfo(y, 
-    num_cols=None, missingValuesDict=None, constantValuesDict=None, enumSizeDict=None, colTypeDict=None, colNameDict=None, 
-    keepPattern=None, key=None, timeoutSecs=120, forRF=False):
+    num_cols=None, missingValuesDict=None, constantValuesDict=None, enumSizeDict=None, 
+    colTypeDict=None, colNameDict=None, keepPattern=None, key=None, 
+    timeoutSecs=120, forRF=False, noPrint=False):
 
     y = str(y)
 
     # if we pass a key, means we want to get the info ourselves here
     if key is not None:
         (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
-            h2o_cmd.columnInfoFromInspect(key, exceptionOnMissingValues=False, timeoutSecs=timeoutSecs)
+            h2o_cmd.columnInfoFromInspect(key, exceptionOnMissingValues=False, 
+            timeoutSecs=timeoutSecs)
         num_cols = len(colNameDict)
 
     # now remove any whose names don't match the required keepPattern
@@ -403,12 +405,16 @@ def goodXFromColumnInfo(y,
             x.remove(k)
             ignore_x.append(k)
 
-    print "x has", len(x), "cols"
-    print "ignore_x has", len(ignore_x), "cols"
+    if not noPrint:
+        print "x has", len(x), "cols"
+        print "ignore_x has", len(ignore_x), "cols"
     x = ",".join(map(str,x))
     ignore_x = ",".join(map(str,ignore_x))
-    print "\nx:", x
-    print "\nignore_x:", ignore_x
+
+    if not noPrint:
+        print "\nx:", x
+        print "\nignore_x:", ignore_x
+
     if forRF:
         return ignore_x
     else:
