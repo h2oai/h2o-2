@@ -38,11 +38,11 @@ public class Inspect extends Request {
   // Constructor called from 'Exec' query instead of the direct view links
   Inspect(Key k) {
     _key.reset();
-    _key.check(k.toString());
+    _key.check(this, k.toString());
     _offset.reset();
-    _offset.check("");
+    _offset.check(this, "");
     _view.reset();
-    _view.check("");
+    _view.check(this, "");
   }
 
   // Default no-args constructor

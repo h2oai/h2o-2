@@ -9,6 +9,7 @@ import hex.rf.ConfusionTask;
 import hex.rf.RFModel;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.util.*;
 
 import water.*;
@@ -119,7 +120,7 @@ public class RequestArguments extends RequestStatics {
   /** List of arguments for the request. Automatically filled in by the argument
    * constructors.
    */
-  protected transient final ArrayList<Argument> _arguments = new ArrayList();
+  protected transient ArrayList<Argument> _arguments = new ArrayList();
   public ArrayList<Argument> arguments() {
     return _arguments;
   }
@@ -337,6 +338,11 @@ public class RequestArguments extends RequestStatics {
      */
     private transient ThreadLocal<Record> _argumentRecord = new ThreadLocal();
 
+    /**
+     * If argument has been created reflectively from a request field.
+     */
+    public transient Field _field;
+
     /** Creates the argument of given name. Also specifies whether the argument
      * is required or not. This cannot be changed later.
      */
@@ -461,7 +467,7 @@ public class RequestArguments extends RequestStatics {
      * parse() call or a defaultValue or null if the argument is disabled.
      * However if the argument is disabled a defaultValue should not be called.
      */
-    public void check(String input) throws IllegalArgumentException {
+    public void check(RequestQueries callInstance, String input) throws IllegalArgumentException {
       // get the record -- we assume we have been reset properly
       Record record = record();
       // check that the input is canonical == value or null and store it to the
@@ -494,6 +500,9 @@ public class RequestArguments extends RequestStatics {
         try {
           record._value = parse(input);
           record._valid = true;
+
+          if(callInstance instanceof Request2)
+            ((Request2) callInstance).set(this, record._value);
         } catch (IllegalArgumentException e) {
           record._value = defaultValue();
           throw e;
@@ -1163,14 +1172,18 @@ public class RequestArguments extends RequestStatics {
     }
 
     public LongInt(String name, Long defaultValue, String comment) {
-      this(name, defaultValue, Long.MIN_VALUE, Long.MAX_VALUE, comment);
+      this(name, false, defaultValue, null, null, comment);
     }
 
     public LongInt(String name, Long defaultValue, long min, long max, String comment) {
-      super(name,false);
+      this(name, false, defaultValue, min, max, comment);
+    }
+
+    public LongInt(String name, boolean req, Long defaultValue, Long min, Long max, String comment) {
+      super(name, req);
       _defaultValue = defaultValue;
-      _min = min;
-      _max = max;
+      _min = min != null ? min : Long.MIN_VALUE;
+      _max = max != null ? max : Long.MAX_VALUE;
       _comment = comment;
     }
 
@@ -1220,18 +1233,22 @@ public class RequestArguments extends RequestStatics {
     }
 
     public Real(String name, Double defaultValue) {
-      this(name, defaultValue, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, "");
+      this(name, false, defaultValue, null, null, "");
     }
 
     public Real(String name, Double defaultValue, String comment) {
-      this(name, defaultValue, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, comment);
+      this(name, false, defaultValue, null, null, comment);
     }
 
     public Real(String name, Double defaultValue, double min, double max, String comment) {
-      super(name,false);
+      this(name, false, defaultValue, min, max, comment);
+    }
+
+    public Real(String name, boolean req, Double defaultValue, Double min, Double max, String comment) {
+      super(name,req);
       _defaultValue = defaultValue;
-      _min = min;
-      _max = max;
+      _min = min != null ? min : Double.NEGATIVE_INFINITY;
+      _max = max != null ? max : Double.POSITIVE_INFINITY;
       _comment = comment;
     }
 

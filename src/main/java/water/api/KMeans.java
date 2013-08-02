@@ -10,7 +10,7 @@ import water.util.RString;
 
 import com.google.gson.*;
 
-public class KMeans extends KMeansShared {
+public class KMeans extends Request {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
@@ -29,8 +29,6 @@ public class KMeans extends KMeansShared {
   final Int max_iter = new Int("max_iter", 0);
 
   @API(help = "Minimum change in clusters before stopping. Can be used instead of, or in addition to max_iter")
-  @Input
-  @Bounds(min = 0, max = 1)
   final Real epsilon = new Real("epsilon", 1e-4);
 
   @API(help = "Seed for the random number generator")

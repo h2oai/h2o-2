@@ -1,7 +1,6 @@
 package water.api;
 
 import water.*;
-import water.Weaver.Weave;
 import water.fvec.*;
 
 public class Inspect2 extends Request {
@@ -12,38 +11,38 @@ public class Inspect2 extends Request {
   // for GET.
   static final String DOC_GET = "Inspect a fluid-vec frame";
 
-  @Weave(help="An existing H2O Frame key.")
+  @API(help="An existing H2O Frame key.")
   final FrameKey src_key = new FrameKey("src_key");
 
-  @Weave(help="Offset to begin viewing rows, or -1 to see a structural representation of the data")
+  @API(help="Offset to begin viewing rows, or -1 to see a structural representation of the data")
   private final LongInt offset = new LongInt("offset", 0L, -1, Long.MAX_VALUE, "");
 
-  @Weave(help="Number of data rows.") long numRows;
-  @Weave(help="Number of data columns.") int numCols;
-  @Weave(help="byte size in memory.") long byteSize;
+  @API(help="Number of data rows.") long numRows;
+  @API(help="Number of data columns.") int numCols;
+  @API(help="byte size in memory.") long byteSize;
 
   // An internal JSON-output-only class
   private static class ColSummary extends Iced {
     static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     public ColSummary( String name, Vec vec ) {
-      this.name = name;  
+      this.name = name;
       this.min  = vec.min();
       this.max  = vec.max();
       this.mean = vec.mean();
       this.NAcnt= vec.NAcnt();
       this.type = vec.dtype();
     }
-    @Weave(help="Label."           ) final String name;    
-    @Weave(help="min."             ) final double min;
-    @Weave(help="max."             ) final double max;
-    @Weave(help="mean."            ) final double mean;
-    @Weave(help="Missing elements.") final long   NAcnt;
-    @Weave(help="Data type, one of I=Integer, F=Float, S=String, NA=all rows missing.")
+    @API(help="Label."           ) final String name;
+    @API(help="min."             ) final double min;
+    @API(help="max."             ) final double max;
+    @API(help="mean."            ) final double mean;
+    @API(help="Missing elements.") final long   NAcnt;
+    @API(help="Data type, one of I=Integer, F=Float, S=String, NA=all rows missing.")
     final Vec.DType type;
   }
-  
-  @Weave(help="Array of Column Summaries.")
+
+  @API(help="Array of Column Summaries.")
   ColSummary cols[];
 
 
@@ -73,14 +72,14 @@ public class Inspect2 extends Request {
 
     // Missing/NA count
     long NAcnt = 0;
-    for( int i=0; i<cols.length; i++ ) 
+    for( int i=0; i<cols.length; i++ )
       NAcnt += cols[i].NAcnt;
 
     DocGen.HTML.title(sb,skey.toString());
     DocGen.HTML.section(sb,""+numCols+" columns, "+numRows+" rows, "+
                         PrettyPrint.bytes(byteSize)+" bytes, "+
                         (NAcnt== 0 ? "no":PrettyPrint.bytes(NAcnt))+" missing elements");
-    
+
     // Start of where the pagination table goes.  For now, just the info button.
     sb.append("<div style='text-align:center;'>");
     sb.append("<span class='pagination'><ul><li>"+"<a href='"+
@@ -92,7 +91,7 @@ public class Inspect2 extends Request {
     // Column labels
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Row").append("</td>");
-    for( int i=0; i<cols.length; i++ ) 
+    for( int i=0; i<cols.length; i++ )
       sb.append("<td><b>").append(cols[i].name).append("</b></td>");
     sb.append("</tr>");
 
@@ -104,19 +103,19 @@ public class Inspect2 extends Request {
 
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Max").append("</td>");
-    for( int i=0; i<cols.length; i++ ) 
+    for( int i=0; i<cols.length; i++ )
       sb.append("<td>").append(x1(fr._vecs[i],-1,cols[i].max)).append("</td>");
     sb.append("</tr>");
 
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Mean").append("</td>");
-    for( int i=0; i<cols.length; i++ ) 
+    for( int i=0; i<cols.length; i++ )
       sb.append("<td>").append(String.format("%5.3f",cols[i].mean)).append("</td>");
     sb.append("</tr>");
 
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Type").append("</td>");
-    for( int i=0; i<cols.length; i++ ) 
+    for( int i=0; i<cols.length; i++ )
       sb.append("<td>").append(cols[i].type).append("</td>");
     sb.append("</tr>");
 
@@ -124,7 +123,7 @@ public class Inspect2 extends Request {
     if( NAcnt > 0 ) {
       sb.append("<tr class='warning'>");
       sb.append("<td>").append("Missing").append("</td>");
-      for( int i=0; i<cols.length; i++ ) 
+      for( int i=0; i<cols.length; i++ )
         sb.append("<td>").append(cols[i].NAcnt > 0 ? Long.toString(cols[i].NAcnt) : "").append("</td>");
       sb.append("</tr>");
     }
@@ -133,7 +132,7 @@ public class Inspect2 extends Request {
       sb.append("<tr class='warning'>");
       // An extra row holding vec's compressed bytesize
       sb.append("<td>").append("Size").append("</td>");
-      for( int i=0; i<cols.length; i++ ) 
+      for( int i=0; i<cols.length; i++ )
         sb.append("<td>").append(PrettyPrint.bytes(fr._vecs[i].byteSize())).append("</td>");
       sb.append("</tr>");
 
@@ -178,10 +177,10 @@ public class Inspect2 extends Request {
 
   // Format a row, OR the min/max
   private String x1( Vec v, int row, double d ) {
-    if( (row >= 0 && v.isNA(row)) || Double.isNaN(d) ) 
+    if( (row >= 0 && v.isNA(row)) || Double.isNaN(d) )
       return "-";               // Display of missing elements
     switch( v.dtype() ) {
-    case I: 
+    case I:
       return Long.toString(row >= 0 ? v.at8(row) : (long)d);
     case F: {
       Chunk c = v.elem2BV(0);

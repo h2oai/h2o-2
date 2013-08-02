@@ -41,7 +41,7 @@ public class RequestQueries extends RequestArguments {
     for (Argument arg: _arguments) {
       if (!arg.disabled()) {
         try {
-          arg.check(args.getProperty(arg._name,""));
+          arg.check(RequestQueries.this, args.getProperty(arg._name,""));
           queryArgumentValueSet(arg, args);
         } catch (IllegalArgumentException e) {
           if (type == RequestType.json)
@@ -117,7 +117,7 @@ public class RequestQueries extends RequestArguments {
     script.replace("REQUEST_NAME", getClass().getSimpleName());
     for (Argument arg: _arguments) {
       try {
-        arg.check(args.getProperty(arg._name,""));
+        arg.check(RequestQueries.this, args.getProperty(arg._name,""));
         queryArgumentValueSet(arg, args);
       } catch (IllegalArgumentException e) {
         // in query mode only display error for arguments present

@@ -1,12 +1,18 @@
 package hex;
 
 import water.*;
+import water.api.DocGen;
+import water.api.Constants.Extensions;
 import water.util.RString;
 
-/**
- * Grid search for k-means parameters.
- */
 public class KMeansGrid extends KMeansShared {
+//  static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+//  static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+//
+//  // This Request supports the HTML 'GET' command, and this is the help text
+//  // for GET.
+//  static final String DOC_GET = "Grid search for k-means parameters";
+
   @API(help = "Number of clusters")
   @Input(required = true)
   @Sequence(pattern = "2:10:1")
@@ -31,6 +37,17 @@ public class KMeansGrid extends KMeansShared {
     rs.replace("key", k.toString());
     rs.replace("content", content);
     return rs.toString();
+  }
+
+  @Override protected void onArgumentsParsed() {
+    if( source_key != null && destination_key == null ) {
+      String n = source_key.toString();
+      int dot = n.lastIndexOf('.');
+      if( dot > 0 )
+        n = n.substring(0, dot);
+      String res = n + Extensions.KMEANS_GRID;
+      destination_key = Key.make(res);
+    }
   }
 
   @Override protected void run() {

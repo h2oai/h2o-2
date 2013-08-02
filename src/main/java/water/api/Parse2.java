@@ -1,12 +1,11 @@
 package water.api;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.regex.Pattern;
-import java.io.File;
 
 import water.*;
-import water.api.RequestBuilders.Response.Status;
 import water.fvec.*;
 import water.parser.CsvParser;
 import water.parser.CsvParser.Setup;
@@ -143,7 +142,7 @@ public class Parse2 extends Request {
       if( setup == null ) return null;
       String n = setup._keys.get(0).toString();
       int dot = n.lastIndexOf('.'); // Peel off common .csv or .csv.gz suffix
-      if( dot > 0 && n.lastIndexOf(File.separator) < dot ) 
+      if( dot > 0 && n.lastIndexOf(File.separator) < dot )
         n = n.substring(0, dot);
       dot = n.lastIndexOf('.'); // Peel off common .csv.gz suffix
       if( dot > 0 && n.lastIndexOf(File.separator) < dot )
@@ -228,7 +227,7 @@ public class Parse2 extends Request {
         : new CsvParser.Setup(q._separator,header.value(),q._data,q._numlines,q._bits);
 
       Key[] keys = p._keys.toArray(new Key[p._keys.size()]);
-      Key jobkey = ParseDataset2.forkParseDataset(d, keys,new_setup)._self;
+      Key jobkey = ParseDataset2.forkParseDataset(d, keys,new_setup).job_key;
       job = jobkey.toString();
       destination_key = d.toString();
 

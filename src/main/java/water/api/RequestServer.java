@@ -133,6 +133,7 @@ public class RequestServer extends NanoHTTPD {
     String href = req.href();
     assert (! _requests.containsKey(href)) : "Request with href "+href+" already registered";
     _requests.put(href,req);
+    req.registered();
     return req;
   }
 
@@ -170,9 +171,8 @@ public class RequestServer extends NanoHTTPD {
       // found
       if (request == null)
         return getResource(uri);
-      // Dynamic Request instead of static request
-      if( request instanceof Score )
-        request = Score.create(parms);
+      // Some requests create an instance per call
+      request = request.create(parms);
       // call the request
       return request.serve(this,parms,type);
     } catch (Exception e) {

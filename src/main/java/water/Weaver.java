@@ -10,7 +10,7 @@ import water.util.Log.Tag.Sys;
 
 public class Weaver {
   private final ClassPool _pool;
-  private final CtClass _dtask, _iced, _enum, _api;
+  private final CtClass _dtask, _iced, _enum;
   private final CtClass[] _serBases;
   private final CtClass _fielddoc;
   private final CtClass _arg;
@@ -24,8 +24,7 @@ public class Weaver {
       _iced = _pool.get("water.Iced"); // Needs serialization
       _dtask= _pool.get("water.DTask");// Needs serialization and remote execution
       _enum = _pool.get("java.lang.Enum"); // Needs serialization
-      _api  = _pool.get("water.api.Request"); // Needs auto-documentation
-      _serBases = new CtClass[] { _iced, _dtask, _enum, _api, };
+      _serBases = new CtClass[] { _iced, _dtask, _enum, };
       for( CtClass c : _serBases ) c.freeze();
       _fielddoc = _pool.get("water.api.DocGen$FieldDoc");// Is auto-documentation result
       _arg  = _pool.get("water.api.RequestArguments$Argument"); // Needs auto-documentation
@@ -111,7 +110,7 @@ public class Weaver {
   // water.DTask.  Add any missing serialization methods.
   CtClass addSerializationMethods( CtClass cc ) throws CannotCompileException, NotFoundException {
     if( cc.subclassOf(_enum) ) exposeRawEnumArray(cc);
-    if( cc.subclassOf(_iced) || cc.subclassOf(_api ) ) ensureAPImethods(cc);
+    if( cc.subclassOf(_iced) ) ensureAPImethods(cc);
     if( cc.subclassOf(_iced) ||
         cc.subclassOf(_dtask) ) {
       cc.setModifiers(javassist.Modifier.setPublic(cc.getModifiers()));
