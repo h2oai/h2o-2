@@ -53,7 +53,6 @@ public class ParserTest extends TestUtil {
     for (int i = 0; i < expected.length; ++i)
       for (int j = 0; j < va._cols.length; ++j) {
         double pval = va.datad(i, j);
-        System.out.println("parsed: " + pval + " expected: "+expected[i][j]);
         if (Double.isNaN(expected[i][j]))
           Assert.assertFalse(i+" -- "+j, !va.isNA(i,j));
         else
