@@ -468,7 +468,7 @@ public final class ParseDataset2 extends Job {
    *
    */
   public static class FVecDataOut extends Iced implements CustomParser.DataOut {
-    NewChunk [] _nvs;
+    transient NewChunk [] _nvs;
     final Enum [] _enums;
     long _nLines;
     int _nCols;
