@@ -141,7 +141,7 @@ class Basic(unittest.TestCase):
             rfv = h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
 
-            h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
+            h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
 
             fullScorePctRight = 100 * (1.0 - rfv['confusion_matrix']['classification_error'])
             self.assertAlmostEqual(fullScorePctRight,expectScorePctRightList[trial],
