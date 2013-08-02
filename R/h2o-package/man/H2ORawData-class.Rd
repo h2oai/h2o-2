@@ -2,13 +2,13 @@
 \Rdversion{1.1}
 \docType{class}
 \alias{H2ORawData-class}
-\alias{parseRaw,H2ORawData,character-method}
-\alias{parseRaw,H2ORawData,missing-method}
+\alias{h2o.parseRaw,H2ORawData,character-method}
+\alias{h2o.parseRaw,H2ORawData,missing-method}
 \alias{show,H2ORawData-method}
 
 \title{Class \code{"H2ORawData"}}
 \description{
-%%  ~~ A concise (1-5 lines) description of what the class is. ~~
+A class for representing imported data sets that have not been parsed.
 }
 \section{Objects from the Class}{
 Objects can be created by calls of the form \code{new("H2ORawData", ...)}.

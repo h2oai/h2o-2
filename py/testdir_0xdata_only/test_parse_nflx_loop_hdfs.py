@@ -27,21 +27,20 @@ class Basic(unittest.TestCase):
             print "\n", tryHeap,"GB heap, 1 jvm per host, import 192.168.1.176 hdfs, then parse"
             localhost = h2o.decide_if_localhost()
             if (localhost):
-                h2o_hosts.build_cloud(node_count=1, java_heap_GB=tryHeap,
+                h2o.build_cloud(node_count=1, java_heap_GB=tryHeap,
                     use_hdfs=True, hdfs_name_node='192.168.1.176', hdfs_version='cdh3')
             else:
                 h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap,
                     use_hdfs=True, hdfs_name_node='192.168.1.176', hdfs_version='cdh3')
 
             # don't raise exception if we find something bad in h2o stdout/stderr?
-            h2o.nodes[0].sandbox_ignore_errors = True
-            URI = "hdfs://" + h2o.nodes[0].hdfs_name_node + "/datasets/manyfiles-nflx-gz"
-            hdfsKey = URI + "/" + csvFilepattern
+            # h2o.nodes[0].sandbox_ignore_errors = True
 
             timeoutSecs = 500
+            importFolderPath = "/datasets/manyfiles-nflx-gz"
             for trial in range(trialMax):
                 # since we delete the key, we have to re-import every iteration, to get it again
-                importHdfsResult = h2o.nodes[0].import_hdfs(URI)
+                importHdfsResult = h2i.setupImportHdfs(path=importFolderPath)
                 hdfsFullList = importHdfsResult['succeeded']
                 for k in hdfsFullList:
                     key = k['key']
@@ -55,10 +54,14 @@ class Basic(unittest.TestCase):
                 self.assertGreater(len(hdfsFullList),8,"Didn't see more than 8 files in hdfs?")
 
                 key2 = csvFilename + "_" + str(trial) + ".hex"
-                print "Loading hdfs key: ", hdfsKey
+                csvFilePattern = 'file_1.dat.gz'
+                # "key": "hdfs://192.168.1.176/datasets/manyfiles-nflx-gz/file_99.dat.gz", 
+
+                time.sleep(5)
+                print "Loading from hdfs:", importFolderPath + "/" + csvFilePattern
                 start = time.time()
-                parseKey = h2o.nodes[0].parse(hdfsKey, key2,
-                    timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
+                parseKey = h2i.parseImportHdfsFile(csvFilename=csvFilePattern, path=importFolderPath,
+                    key2=key2, timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
                 elapsed = time.time() - start
 
                 print hdfsKey, 'parse time:', parseKey['response']['time']
@@ -66,24 +69,7 @@ class Basic(unittest.TestCase):
                 print "Parse #", trial, "completed in", "%6.2f" % elapsed, "seconds.", \
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
-                print "Deleting key in H2O so we get it from hdfs", \
-                      "Otherwise it would just parse the cached key."
-
-                storeView = h2o.nodes[0].store_view()
-                ### print "storeView:", h2o.dump_json(storeView)
-                # "key": "hdfs://home-0xdiag-datasets/manyfiles-nflx-gz/file_84.dat.gz"
-                # have to do the pattern match ourself, to figure out what keys to delete
-                # we're deleting the keys in the initial import. We leave the keys we created
-                # by the parse. We use unique dest keys for those, so no worries.
-                # Leaving them is good because things fill up! (spill)
-                for k in hdfsFullList:
-                    deleteKey = k['key']
-                    if csvFilename in deleteKey and not ".hex" in key: 
-                        pass
-                        # nflx removes key after parse now
-                        ## print "Removing", deleteKey
-                        ## removeKeyResult = h2o.nodes[0].remove_key(key=deleteKey)
-                        ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
+                h2o_cmd.runStoreView()
 
             h2o.tear_down_cloud()
             # sticky ports? wait a bit.

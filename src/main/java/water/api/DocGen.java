@@ -48,12 +48,19 @@ public abstract class DocGen {
     // Specific accessors for input arguments.  Not valid for JSON output fields.
     public RequestArguments.Argument arg(Request R) {
       if( _arg != null ) return _arg;
-      try {
-        Object o = R.getClass().getDeclaredField(_name).get(R);
-        return _arg=((RequestArguments.Argument)o);
+      Class clzz = R.getClass();
+      // An amazing crazy API from the JDK again.  Cannot search for protected
+      // fields without either (1) throwing NoSuchFieldException if you ask in
+      // a subclass, or (2) sorting through the list of ALL fields and EACH
+      // level of the hierarchy.  Sadly, I catch NSFE & loop.
+      while( true ) {
+        try {
+          Object o = clzz.getDeclaredField(_name).get(R);
+          return _arg=((RequestArguments.Argument)o);
+        }
+        catch(   NoSuchFieldException ie ) { clzz = clzz.getSuperclass(); }
+        catch( IllegalAccessException ie ) { ie.printStackTrace(); return null; }
       }
-      catch( IllegalAccessException ie ) { return null; }
-      catch(   NoSuchFieldException ie ) { return null; }
     }
 
     // Get the queryDescription results for this field, as it appears in the

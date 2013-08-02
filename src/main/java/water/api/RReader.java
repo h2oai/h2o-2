@@ -13,7 +13,7 @@ import com.google.gson.JsonObject;
 
 public class RReader extends Request {
   protected final H2OExistingKey _source = new H2OExistingKey(SOURCE_KEY);
-  protected final H2OKey         _dest   = new H2OKey(DEST_KEY, (Key) null);
+  protected final H2OKey         _dest   = new H2OKey(DEST_KEY, false);
 
   public static String link(Key k, String content) {
     RString rs = new RString("<a href='RReader.html?%key_param=%$key'>%content</a>");

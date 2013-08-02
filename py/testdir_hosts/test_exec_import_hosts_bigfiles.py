@@ -37,13 +37,14 @@ def exec_list(exprList, lenNodes, csvFilename, key2):
                 execExpr = h2e.fill_in_expr_template(exprTemplate, colX, trial, row, key2)
                 execResultInspect = h2e.exec_expr(h2o.nodes[nodeX], execExpr, 
                     resultKey="Result"+str(trial)+".hex", timeoutSecs=60)
+
                 eri0 = execResultInspect[0]
                 eri1 = execResultInspect[1]
                 columns = eri0.pop('cols')
                 columnsDict = columns[0]
-                print "\nexecResult cols[0]:", h2o.dump_json(columnsDict)
+                print "\nexecResult columns[0]:", h2o.dump_json(columnsDict)
+                print "\nexecResult [0]:", h2o.dump_json(eri0)
                 print "\nexecResult [1] :", h2o.dump_json(eri1)
-                print "\nexecResult rest:", h2o.dump_json(eri0)
                 
                 min = columnsDict["min"]
                 h2o.verboseprint("min: ", min, "trial:", trial)
@@ -63,7 +64,12 @@ class Basic(unittest.TestCase):
     def setUpClass(cls):
         global SEED
         SEED = h2o.setup_random_seed()
-        h2o_hosts.build_cloud_with_hosts()
+        global localhost
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(node_count=1)
+        else:
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):

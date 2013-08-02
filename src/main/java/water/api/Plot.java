@@ -18,7 +18,7 @@ public class Plot extends Request {
   protected final Int _width = new Int(WIDTH, 800);
   protected final Int _height = new Int(HEIGHT, 800);
   protected final HexColumnSelect _columns = new HexColumnSelect(COLS, _source);
-  protected final H2OKey _dest = new H2OKey(DEST_KEY, (Key) null);
+  protected final H2OKey _dest = new H2OKey(DEST_KEY, false);
 
   public NanoHTTPD.Response serve(NanoHTTPD server, Properties args, RequestType type) {
     checkArguments(args, type);

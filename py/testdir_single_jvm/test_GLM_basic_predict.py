@@ -45,7 +45,7 @@ class Basic(unittest.TestCase):
             GLMModel = glm['GLMModel']
             modelKey = GLMModel['model_key']
             print "Doing predict with same dataset, and the GLM model"
-            h2o.nodes[0].generate_predictions(model_key=modelKey, key=parseKey['destination_key'])
+            h2o.nodes[0].generate_predictions(model_key=modelKey, data_key=parseKey['destination_key'])
 
     def test_C_prostate_w_predict(self):
         h2o.nodes[0].log_view()

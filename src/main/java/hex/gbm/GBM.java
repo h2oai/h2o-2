@@ -91,8 +91,8 @@ public class GBM extends Job {
 
       // If we did not make any new splits, then the tree is split-to-death
       if( tmax == tree._len ) break;
-
-      //new BulkScore(new DTree[]{tree},numClasses,ymin).doAll(fr).report( nrows, depth );
+      
+      //new BulkScore(new DTree[]{tree},ncols,numClasses,ymin,1.0).doAll(fr).report( Sys.GBM__, nrows, depth );
     }
     Log.info(Sys.GBM__,"GBM done in "+t_gbm);
 

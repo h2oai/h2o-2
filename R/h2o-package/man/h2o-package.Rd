@@ -12,7 +12,7 @@ This is a package for running H2O via its REST API from within R.
 \tabular{ll}{
 Package: \tab h2o\cr
 Type: \tab Package\cr
-Version: \tab 99.99.99.99999\cr
+Version: \tab 99.70\cr
 Date: \tab 2013-07-16\cr
 License: \tab Apache-2\cr
 Depends: \tab R (>= 2.13.0), RCurl, rjson\cr
@@ -36,10 +36,9 @@ Maintainer: Anqi Fu <anqi@0xdata.com>
 }
 \examples{
 library(h2o)
-h2o = new("H2OClient", ip = "localhost", port = 54321)
-checkH2OClient(h2o)
-prostate.hex = importURL(h2o, "https://raw.github.com/0xdata/h2o/master/smalldata/
-logreg/prostate.csv", "prostate.hex")
+localH2O = new("H2OClient", ip = "localhost", port = 54321)
+prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/
+logreg/prostate.csv", key = "prostate.hex")
 summary(prostate.hex)
 prostate.glm = h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, 
 family = "binomial", nfolds = 10, alpha = 0.5)

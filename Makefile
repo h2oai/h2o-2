@@ -52,6 +52,7 @@ default: nightly_build_stuff
 
 nightly_build_stuff:
 	@echo PROJECT_VERSION is $(PROJECT_VERSION)
+	$(MAKE) clean PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) build PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) build_installer PROJECT_VERSION=$(PROJECT_VERSION)
 
@@ -72,7 +73,7 @@ package:
 	cp -rp target/hadoop target/h2o-$(PROJECT_VERSION)
 	cp -p target/h2o.jar target/h2o-$(PROJECT_VERSION)
 	cp -p target/h2o-sources.jar target/h2o-$(PROJECT_VERSION)
-	cp -p README.txt target/h2o-$(PROJECT_VERSION)
+	cp -p packaging/README.txt target/h2o-$(PROJECT_VERSION)
 	cp -p LICENSE.txt target/h2o-$(PROJECT_VERSION)
 	(cd target; zip -r h2o-$(PROJECT_VERSION).zip h2o-$(PROJECT_VERSION))
 	rm -fr target/h2o-$(PROJECT_VERSION)
@@ -97,6 +98,7 @@ run:
 	java $(JAVA_HEAP_SIZE) -jar target/h2o.jar
 
 clean:
+	rm -fr target
 	./build.sh clean
 	$(MAKE) -C hadoop clean
 	$(MAKE) -C R clean

@@ -71,8 +71,20 @@ public class Inspect2 extends Request {
     final Frame fr = DKV.get(skey).get();
     final long off = offset.value();
 
+    // Missing/NA count
+    long NAcnt = 0;
+    for( int i=0; i<cols.length; i++ ) 
+      NAcnt += cols[i].NAcnt;
+
     DocGen.HTML.title(sb,skey.toString());
-    DocGen.HTML.section(sb,""+numCols+" columns, "+numRows+" rows, "+PrettyPrint.bytes(byteSize));
+    DocGen.HTML.section(sb,""+numCols+" columns, "+numRows+" rows, "+
+                        PrettyPrint.bytes(byteSize)+" bytes, "+
+                        (NAcnt== 0 ? "no":PrettyPrint.bytes(NAcnt))+" missing elements");
+    
+    sb.append("<div class='alert'>" +
+              //"View " + SummaryPage2.link(key, "Summary") +
+              "<br/>Build models using " + DRF2.link(src_key.value(), "Distributed Random Forest") +
+              "</div>");
 
     // Start of where the pagination table goes.  For now, just the info button.
     sb.append("<div style='text-align:center;'>");
@@ -113,11 +125,8 @@ public class Inspect2 extends Request {
       sb.append("<td>").append(cols[i].type).append("</td>");
     sb.append("</tr>");
 
-    boolean hasNAs = false;
-    for( int i=0; i<cols.length; i++ ) 
-      if( cols[i].NAcnt > 0 ) hasNAs = true;
-
-    if( hasNAs ) {
+    // Missing / NA row is optional; skip it if the entire dataset is clean
+    if( NAcnt > 0 ) {
       sb.append("<tr class='warning'>");
       sb.append("<td>").append("Missing").append("</td>");
       for( int i=0; i<cols.length; i++ ) 
@@ -127,18 +136,23 @@ public class Inspect2 extends Request {
 
     if( off == -1 ) {           // Info display
       sb.append("<tr class='warning'>");
+      // An extra row holding vec's compressed bytesize
       sb.append("<td>").append("Size").append("</td>");
       for( int i=0; i<cols.length; i++ ) 
         sb.append("<td>").append(PrettyPrint.bytes(fr._vecs[i].byteSize())).append("</td>");
       sb.append("</tr>");
 
+      // All Vecs within a frame are compatible, so just read the
+      // home-node/data-placement and start-row from 1st Vec
       Vec c0 = fr.firstReadable();
       int N = c0.nChunks();
-      for( int j=0; j<N; j++ ) {
-        sb.append("<tr>");
+      for( int j=0; j<N; j++ ) { // All the chunks
+        sb.append("<tr>");       // Row header
+        // 1st column: report data home node (data placement), and row start
         sb.append("<td>").append(c0.chunkKey(j).home_node())
           .append(", ").append(c0.chunk2StartElem(j)).append("</td>");
         for( int i=0; i<cols.length; i++ ) {
+          // Report chunk-type (compression scheme)
           String clazz = fr._vecs[i].elem2BV(j).getClass().getSimpleName();
           String trim = clazz.replaceAll("Chunk","");
           sb.append("<td>").append(trim).append("</td>");
@@ -146,13 +160,13 @@ public class Inspect2 extends Request {
         sb.append("</tr>");
       }
 
-    } else {
+    } else {                    // Row/data display
       // First N rows
       int N = (int)Math.min(100,numRows);
-      for( int j=0; j<N; j++ ) {
-        sb.append("<tr>");
+      for( int j=0; j<N; j++ ) {// N rows
+        sb.append("<tr>");      // Row header
         sb.append("<td>").append(j).append("</td>");
-        for( int i=0; i<cols.length; i++ ) 
+        for( int i=0; i<cols.length; i++ ) // Columns w/in row
           sb.append("<td>").append(x0(fr._vecs[i],j)).append("</td>");
         sb.append("</tr>");
       }
@@ -199,21 +213,5 @@ public class Inspect2 extends Request {
     while( s.charAt(s.length()-1)=='0' )
       s = s.substring(0,s.length()-1);
     return s;
-  }
-
-  // ---
-  public class FrameKey extends TypeaheadInputText<Key> {
-    public FrameKey(String name) { super(TypeaheadHexKeyRequest.class, name, true); }
-
-    @Override protected Key parse(String input) throws IllegalArgumentException {
-      Key k = Key.make(input);
-      Value v = DKV.get(k);
-      if (v == null)    throw new IllegalArgumentException("Key "+input+" not found!");
-      Iced ice = v.get();
-      if( !(ice instanceof Frame) ) throw new IllegalArgumentException("Key "+input+" is not a valid Frame key");
-      return k;
-    }
-    @Override protected Key defaultValue() { return null; }
-    @Override protected String queryDescription() { return "An existing H2O Frame key."; }
   }
 }

@@ -64,7 +64,6 @@ class Basic(unittest.TestCase):
             print "parse result:", parseKey['destination_key']
 
             # INSPECT******************************************
-            # We should be able to see the parse result?
             start = time.time()
             inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=360)
             print "Inspect:", parseKey['destination_key'], "took", time.time() - start, "seconds"

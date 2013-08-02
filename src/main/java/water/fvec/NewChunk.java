@@ -157,7 +157,7 @@ public class NewChunk extends Chunk {
     }
 
     // Boolean column? (or in general two value column)
-    if (lemax-lemin == 1 && lemin == 0) {
+    if (lemax-lemin == 1 && lemin == 0 && xmin == 0) {
       int bpv = _naCnt > 0 ? 2 : 1;
       byte[] cbuf = bufB(CBSChunk.OFF, bpv);
       return new CBSChunk(cbuf, cbuf[0], cbuf[1]);

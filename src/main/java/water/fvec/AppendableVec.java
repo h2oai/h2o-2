@@ -4,16 +4,18 @@ import water.*;
 import water.fvec.Vec;
 import java.util.Arrays;
 
-// A NEW single distributed vector column.
-//
-// The NEW vector has no data, and takes no space.  It supports distributed
-// parallel writes to it, via calls to append2.  Such writes happen in parallel
-// and no guarantees about order are made.  Writes *will* be local to the node
-// doing them, specifically to allow control over locality.  By default, writes
-// will go local-homed chunks with no compression; there is a final 'close' to
-// the NEW vector which may do compression, and will collect info like row-
-// counts-per-chunk, min/max/mean, etc.; the final 'close' will return some
-// other Vec type.  NEW Vectors do NOT support reads!
+/**
+ * A NEW single distributed vector column.
+ *
+ * The NEW vector has no data, and takes no space.  It supports distributed
+ * parallel writes to it, via calls to append2.  Such writes happen in parallel
+ * and no guarantees about order are made.  Writes *will* be local to the node
+ * doing them, specifically to allow control over locality.  By default, writes
+ * will go local-homed chunks with no compression; there is a final 'close' to
+ * the NEW vector which may do compression, and will collect info like row-
+ * counts-per-chunk, min/max/mean, etc.; the final 'close' will return some
+ * other Vec type.  NEW Vectors do NOT support reads!
+ */
 public class AppendableVec extends Vec {
   long _espc[];
   public static final byte NUMBER = 3;
