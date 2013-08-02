@@ -10,10 +10,12 @@ import java.security.SecureRandom;
 import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.zip.*;
 
 import org.apache.commons.lang.ArrayUtils;
 
 import water.*;
+import water.fvec.ParseDataset2.Compression;
 import water.parser.ParseDataset;
 
 public class Utils {
@@ -318,4 +320,47 @@ public class Utils {
     return res;
   }
 
+  public static byte [] unzipBytes(byte [] bs, Compression cmp){
+    InputStream is = null;
+    int off = 0;
+    try {
+      switch(cmp) {
+      case NONE: // No compression
+        return bs;
+      case ZIP: {
+        ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(bs));
+        ZipEntry ze = zis.getNextEntry(); // Get the *FIRST* entry
+        // There is at least one entry in zip file and it is not a directory.
+        if( ze != null && !ze.isDirectory() )
+          is = zis;
+        else
+          zis.close();
+        break;
+      }
+      case GZIP:
+        is = new GZIPInputStream(new ByteArrayInputStream(bs));
+        break;
+      }
+      // If reading from a compressed stream, estimate we can read 2x uncompressed
+      if( is != null )
+        bs = new byte[bs.length * 2];
+      // Now read from the (possibly compressed) stream
+      while( off < bs.length ) {
+        int len = is.read(bs, off, bs.length - off);
+        if( len < 0 )
+          break;
+        off += len;
+        if( off == bs.length ) { // Dataset is uncompressing alot! Need more space...
+          if( bs.length >= ValueArray.CHUNK_SZ )
+            break; // Already got enough
+          bs = Arrays.copyOf(bs, bs.length * 2);
+        }
+      }
+    } catch( IOException ioe ) { // Stop at any io error
+      Log.err(ioe);
+    } finally {
+      Utils.close(is);
+    }
+    return bs;
+  }
 }

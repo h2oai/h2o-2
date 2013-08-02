@@ -76,8 +76,6 @@ public class Parse2 extends Request {
     @Override protected PSetup parse(String input) throws IllegalArgumentException {
       Key k1 = Key.make(input);
       Value v1 = DKV.get(k1);
-      if( v1 != null && (input.endsWith(".xlsx") || input.endsWith(".xls")) )
-        return new PSetup(k1,CustomParser.ParserSetup.makeSetup());
       Pattern incl = makePattern(input);
       Pattern excl = null;
       if(exclude.specified())
@@ -92,8 +90,6 @@ public class Parse2 extends Request {
         if(excl != null && excl.matcher(ks).matches())
           continue;
         Value v2 = DKV.get(key);  // Look at it
-        if( v2 == null  || input.endsWith(".xlsx") || input.endsWith(".xls") || v2.length() == 0)
-          continue;           // Missed key (racing deletes) or XLS files
         if(v2.isHex())// filter common mistake such as *filename* with filename.hex already present
           continue;
         Object o = v2.type() != TypeMap.PRIM_B ? v2.get() : null;
@@ -184,9 +180,8 @@ public class Parse2 extends Request {
       sb.append("/>&nbsp;&nbsp;").append(queryDescription()).append("<p>");
       String[][] data = psetup._setup._data;
       if( data != null ) {
-        int sep = psetup._setup._separator;
         sb.append("<div class='alert'><b>");
-        sb.append(String.format("Detected %d columns using '%s' (\\u%04d) as a separator.", psetup._setup._ncols,sep<33 ? WHITE_DELIMS[sep] : Character.toString((char)sep),sep));
+        sb.append(String.format("Detected %s ",psetup._setup.toString()));
         sb.append("</b></div>");
         sb.append("<table class='table table-striped table-bordered'>");
         int j=psetup._setup._header?0:1; // Skip auto-gen header in data[0]

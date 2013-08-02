@@ -13,6 +13,7 @@ import water.nbhm.NonBlockingHashMap;
 import water.parser.*;
 import water.parser.CustomParser.ParserType;
 import water.parser.Enum;
+import water.util.Utils;
 
 public final class ParseDataset2 extends Job {
   public final Key  _progress;  // Job progress Key
@@ -216,21 +217,7 @@ public final class ParseDataset2 extends Job {
     // guarantee they have equal & compatible columns and/or headers.
     ByteVec vec = (ByteVec) getVec(fkeys[0]);
     Compression compression = guessCompressionMethod(vec);
-    byte sep = setup == null ? CsvParser.NO_SEPARATOR : setup._separator;
-    if( setup == null || setup._data == null || setup._data[0] == null ){
-      if(setup == null || setup._pType == CustomParser.ParserType.AUTO)
-        setup = ParseDataset.guessSetup(DKV.get(fkeys[0]));
-      else switch(setup._pType){
-        case CSV:
-          setup = CsvParser.guessSetup(DKV.get(fkeys[0]).getFirstBytes(), sep);
-          break;
-        case SVMLight:
-          setup = SVMLightParser.guessSetup(DKV.get(fkeys[0]).getFirstBytes());
-          break;
-        default:
-          throw H2O.unimpl();
-      }
-    }
+    if( setup == null) setup = ParseDataset.guessSetup(DKV.get(fkeys[0]));
     // Parallel file parse launches across the cluster
     MultiFileParseTask uzpt = new MultiFileParseTask(setup,job._progress).invoke(fkeys);
     if( uzpt._parserr != null )
@@ -275,21 +262,11 @@ public final class ParseDataset2 extends Job {
     @Override public void map( Key key ) {
       // Get parser setup info for this chunk
       ByteVec vec = (ByteVec) getVec(key);
+      byte [] bits = vec.elem2BV(0)._mem;
       Compression cpr = guessCompressionMethod(vec);
-      CustomParser.ParserSetup localSetup;
+      CustomParser.ParserSetup localSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), _setup._pType, _setup._separator);
       // Local setup: nearly the same as the global all-files setup, but maybe
       // has the header-flag changed.
-      byte [] bits = Inspect.getFirstBytes(DKV.get(key));
-      switch(_setup._pType){
-        case SVMLight:
-          localSetup = CustomParser.ParserSetup.makeSVMLightSetup(0, null);
-          break;
-        case CSV:
-          localSetup = CsvParser.guessSetup(bits, _setup._separator);
-          break;
-        default:
-          throw H2O.unimpl();
-      }
       if(!_setup.isCompatible(localSetup)) {
         _parserr = "Conflicting file layouts, expecting: "+_setup+" but found "+localSetup;
         return;
@@ -313,7 +290,10 @@ public final class ParseDataset2 extends Job {
         switch( cpr ) {
         case NONE:
           // Parallel decompress
-          distroParse(vec,localSetup);
+          if(localSetup._pType.parallelParseSupported)
+            distroParse(vec,localSetup);
+          else
+            streamParse(vec.openStream(_progress), localSetup);
           break;
         case ZIP: {
           // Zipped file; no parallel decompression;
@@ -364,7 +344,7 @@ public final class ParseDataset2 extends Job {
       for( int i=0; i<nvs.length; i++ )
         nvs[i] = new NewChunk(_vecs[i],0/*starting chunk#*/);
       FVecDataOut dout = new FVecDataOut(nvs, enums());
-      CsvParser p = new CsvParser(localSetup, false);
+      CustomParser p = localSetup.parser();
       try{p.streamParse(is, dout);}catch(Exception e){throw new RuntimeException(e);}
       // Parse all internal "chunks", until we drain the zip-stream dry.  Not
       // real chunks, just flipping between 32K buffers.  Fills up the single
@@ -497,7 +477,10 @@ public final class ParseDataset2 extends Job {
     }
 
     @Override public final void addInvalidCol(int colIdx) {
-      _nvs[_col = colIdx].addNA();
+      if(colIdx >= _nCols)
+        System.err.println("Additional column ("+ _nvs.length + " < " + colIdx + " NA) on line " + linenum());
+      else
+        _nvs[_col = colIdx].addNA();
     }
     @Override public final boolean isString(int colIdx) { return false; }
 

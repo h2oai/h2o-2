@@ -23,7 +23,11 @@ public abstract class CustomParser extends Iced {
 
   public CustomParser(ParserSetup setup){_setup = setup;}
 
-  public enum ParserType {AUTO,XLS,XLSX,CSV, SVMLight}
+  public enum ParserType {
+    AUTO(false),XLS(false),XLSX(false),CSV(true), SVMLight(true);
+    public final boolean parallelParseSupported;
+    ParserType(boolean par){parallelParseSupported = par;}
+  }
   public static class ParserSetup extends Iced implements Cloneable{
     public final ParserType _pType;
     public final byte _separator;
@@ -75,14 +79,44 @@ public abstract class CustomParser extends Iced {
         return false;
       return true;
     }
-
+    public CustomParser parser(){
+      switch(this._pType){
+        case CSV:
+          return new CsvParser(this,false);
+        case SVMLight:
+          return new SVMLightParser(this);
+        case XLS:
+          return new XlsParser(this);
+        default:
+          throw H2O.unimpl();
+      }
+    }
     public boolean isCompatible(Key k){
       ParserSetup s = ParseDataset.guessSetup(DKV.get(k), _pType, _separator);
       return isCompatible(s);
     }
     public static ParserSetup makeSetup(){return new ParserSetup(ParserType.AUTO,CsvParser.NO_SEPARATOR, 0, false, null);}
     public static ParserSetup makeSVMLightSetup(int ncols, String [][] data){return new ParserSetup(ParserType.SVMLight,(byte)' ', ncols, false, data);}
+    public static ParserSetup makeXlsSetup(int ncols, boolean header, String [][] data){return new ParserSetup(ParserType.XLS,(byte)0, ncols, header, data);}
     public static ParserSetup makeCSVSetup(byte sep, boolean hdr, String [][] data,int ncols){return new ParserSetup(ParserType.CSV,sep, ncols,hdr, data);}
+
+    public String toString(){
+      StringBuilder sb = new StringBuilder(_pType.name());
+      switch(_pType){
+        case SVMLight:
+          sb.append(" data with (estimated) " + _ncols + " columns.");
+          break;
+        case CSV:
+          sb.append(" data with " + _ncols + " columns using '" + (char)_separator + "' (\\" + _separator + "04d) as separator.");
+          break;
+        case XLS:
+          sb.append(" data with " + _ncols + " columns.");
+          break;
+        default:
+          throw H2O.unimpl();
+      }
+      return sb.toString();
+    }
   }
   public boolean isCompatible(CustomParser p){return _setup == p._setup || (_setup != null && _setup.isCompatible(p._setup));}
   public void parallelParse(int cidx, final DataIn din, final DataOut dout) {throw new UnsupportedOperationException();}
@@ -92,11 +126,15 @@ public abstract class CustomParser extends Iced {
   // parse local chunks; distribute chunks later.
   public void streamParse( final InputStream is, final DataOut dout) throws Exception {
     // All output into a fresh pile of NewChunks, one per column
-    StreamData din = new StreamData(is);
-    int cidx=0;
-    while( is.available() > 0 )
-      parallelParse(cidx++,din,dout);
-    parallelParse(cidx++,din,dout);     // Parse the remaining partial 32K buffer
+    if(_setup._pType.parallelParseSupported){
+      StreamData din = new StreamData(is);
+      int cidx=0;
+      while( is.available() > 0 )
+        parallelParse(cidx++,din,dout);
+      parallelParse(cidx++,din,dout);     // Parse the remaining partial 32K buffer
+    } else {
+      throw H2O.unimpl();
+    }
   }
   protected static final boolean isWhitespace(byte c) {
     return (c == CHAR_SPACE) || (c == CHAR_TAB);
@@ -163,6 +201,60 @@ public abstract class CustomParser extends Iced {
   }
   public abstract CustomParser clone();
   public String [] headers(){return null;}
+
+
+  protected static class CustomInspectDataOut extends Iced implements DataOut {
+    public int _nlines;
+    public int _ncols;
+    public int _invalidLines;
+    public boolean _header;
+    public final static int MAX_COLS = 100;
+    public final static int MAX_LINES = 50;
+    private String []   _colNames;
+    private String [][] _data = new String[MAX_LINES][MAX_COLS];
+    public CustomInspectDataOut() {
+     for(int i = 0; i < MAX_LINES;++i)
+       Arrays.fill(_data[i],"NA");
+    }
+    public String [][] data(){
+      String [][] res = Arrays.copyOf(_data, Math.min(MAX_LINES, _nlines));
+      for(int i = 0; i < res.length; ++i)
+        res[i] = Arrays.copyOf(_data[i], Math.min(MAX_COLS,_ncols));
+      return (_data = res);
+    }
+    @Override public void setColumnNames(String[] names) {
+      _colNames = names;
+      _data[0] = names;
+      ++_nlines;
+      _ncols = names.length;
+      _header = true;
+    }
+    @Override public void newLine() {
+      ++_nlines;
+    }
+    @Override public boolean isString(int colIdx) {return false;}
+    @Override public void addNumCol(int colIdx, long number, int exp) {
+      if(colIdx < _ncols && _nlines < MAX_LINES)
+        _data[_nlines][colIdx] = Double.toString(number*DParseTask.pow10(exp));
+    }
+    @Override public void addNumCol(int colIdx, double d) {
+      _ncols = Math.max(_ncols,colIdx);
+      if(_nlines < MAX_LINES && colIdx < MAX_COLS)
+        _data[_nlines][colIdx] = Double.toString(d);
+    }
+    @Override public void addInvalidCol(int colIdx) {
+      if(colIdx < _ncols && _nlines < MAX_LINES)
+        _data[_nlines][colIdx] = "NA";
+    }
+    @Override public void addStrCol(int colIdx, ValueString str) {
+      if(colIdx < _ncols && _nlines < MAX_LINES)
+        _data[_nlines][colIdx] = str.toString();
+    }
+    @Override public void rollbackLine() {--_nlines;}
+    @Override public void invalidLine(int linenum) {++_invalidLines;}
+    @Override public void invalidValue(int linenum, int colnum) {}
+  }
+
 }
 
 

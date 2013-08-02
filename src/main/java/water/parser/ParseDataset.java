@@ -68,7 +68,9 @@ public final class ParseDataset extends Job {
   public static ParserSetup guessSetup(Value v, ParserType pType){
     return guessSetup(v, pType, CsvParser.NO_SEPARATOR);
   }
-  public static ParserSetup guessSetup(Value v, ParserType pType, byte sep){return guessSetup(Inspect.getFirstBytes(v),pType,sep);}
+  public static ParserSetup guessSetup(Value v, ParserType pType, byte sep){
+    return guessSetup(Inspect.getFirstBytes(v),pType,sep);
+  }
   public static ParserSetup guessSetup(byte [] bits, ParserType pType, byte sep){
     ParserSetup res = null;
     switch(pType){
@@ -76,8 +78,14 @@ public final class ParseDataset extends Job {
         return CsvParser.guessSetup(bits,sep);
       case SVMLight:
         return SVMLightParser.guessSetup(bits);
+      case XLS:
+        return XlsParser.guessSetup(bits);
       case AUTO:
-        return (res = SVMLightParser.guessSetup(bits)) != null?res:CsvParser.guessSetup(bits,sep);
+        if((res = XlsParser.guessSetup(bits)) != null)
+          return res;
+        if((res = SVMLightParser.guessSetup(bits)) != null)
+          return res;
+        return CsvParser.guessSetup(bits,sep);
       default:
         throw H2O.unimpl();
     }
