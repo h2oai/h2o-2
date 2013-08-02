@@ -20,7 +20,7 @@ public class GeneratePredictionsPage extends Request {
   // protected final H2OHexKey _dataKey = new H2OHexKey(KEY);
   protected final H2OHexKey _dataKey = new H2OHexKey(DATA_KEY);
   // protected final H2OKey _dest = new H2OKey(DEST_KEY, true);
-  protected final H2OKey _dest = new H2OKey(DEST_KEY, "__Prediction_" + Key.make());
+  protected final H2OKey _dest = new H2OKey(DEST_KEY, Key.make("__Prediction_" + Key.make()));
 
 
   public static String link(Key k, String content) {
