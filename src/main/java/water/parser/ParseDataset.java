@@ -348,7 +348,6 @@ public final class ParseDataset extends Job {
       @Override
       public void onCompletion(CountedCompleter caller){
         try{
-          assert _p1._ncolumns == _p1._colTypes.length;
           _fileInfo[_idx]._nrows = _p1._nrows;
           long numRows = 0;
           for(int i = 0; i < _p1._nrows.length; ++i){

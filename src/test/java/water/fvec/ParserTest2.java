@@ -42,7 +42,7 @@ public class ParserTest2 extends TestUtil {
       for (int j = 0; j < fr.numCols(); ++j) {
         double parsedVal = fr._vecs[j].at(i);
         Assert.assertTrue((Double.isNaN(parsedVal) == Double.isNaN(expected[i][j])));
-        Assert.assertTrue(Double.isNaN(expected[i][j]) || compareDoubles(expected[i][j],parsedVal,1e-8));
+        Assert.assertTrue(Double.isNaN(expected[i][j]) || compareDoubles(expected[i][j],parsedVal,1e-5));
       }
     UKV.remove(k);
     UKV.remove(inputkey);
@@ -397,7 +397,6 @@ public class ParserTest2 extends TestUtil {
     for(int i = 0; i < nlines-2; ++i)
       for(Vec v:fr._vecs)
         assertTrue("error at line "+i+", vec " + v.elem2BV(0).getClass().getSimpleName(),!v.isNA(v.at(i)) && !v.isNA(v.at8(i)));
-    System.out.println("nlines = " + nlines);
     int j = 0;
     for(Vec v:fr._vecs){
       for(int i = nlines-2; i < nlines; ++i){
@@ -414,6 +413,59 @@ public class ParserTest2 extends TestUtil {
     UKV.remove(rkey);
     UKV.remove(okey);
   }
+
+  @Test public void testSVMLight1() {
+    String[] data = new String[] {
+        "1 1:.1 2:.2 5:.5 9:.9\n"  +
+        "-1 7:.7 8:.8 9:.9\n" +
+        "+1 1:.1 5:.5 6:.6\n"
+    };
+    double[][] exp = new double[][] {
+        d( 1., .1, .2, .0, .0, .5, .0, .0, .0, .9),
+        d(-1., .0, .0, .0, .0, .0, .0, .7, .8, .9),
+        d( 1., .1, .0, .0, .0, .5, .6, .0, .0, .0),
+    };
+    String[] dataset = data;
+    StringBuilder sb = new StringBuilder();
+    for( int i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\n");
+    Key k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
+    Key r1 = Key.make("r1");
+    ParseDataset2.parse(r1, new Key[]{k});
+    testParsed(r1,exp,k);
+    sb = new StringBuilder();
+    for( int i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\r\n");
+    k = FVecTest.makeByteVec(k.toString(),sb.toString());
+    Key r2 = Key.make("r2");
+    ParseDataset2.parse(r2, new Key[]{k});
+    testParsed(r2,exp,k);
+  }
+//  @Test public void testSVMLight() {
+//    String[] data = new String[] {
+//        "1 2:.2 5:.5 9:.9\n",
+//        "-1 7:.7 8:.8 9:.9\n",
+//        "+1 1:.1 5:.5 6:.6\n"
+//    };
+//
+//    double[][] exp = new double[][] {
+//        d( 1., .0, .2, .0, .0, .5, .0, .0, .0, .9),
+//        d(-1., .0, .0, .0, .0, .0, .0, .7, .8, .9),
+//        d( 1., .1, .0, .0, .0, .5, .6, .0, .0, .0),
+//    };
+//    String[] dataset = data;
+//    StringBuilder sb = new StringBuilder();
+//    for( int i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\n");
+//    Key k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
+//    Key r1 = Key.make("r1");
+//    ParseDataset2.parse(r1, new Key[]{k});
+//    testParsed(r1,exp,k);
+//    sb = new StringBuilder();
+//    for( int i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\r\n");
+//    k = FVecTest.makeByteVec(k.toString(),sb.toString());
+//    Key r2 = Key.make("r2");
+//    ParseDataset2.parse(r2, new Key[]{k});
+//    testParsed(r2,exp,k);
+//  }
+
   void runTests(){
 //    System.out.println("testBasic");
 //    testBasic();
@@ -443,7 +495,7 @@ public class ParserTest2 extends TestUtil {
 
   public static void main(String [] args) throws Exception{
     System.out.println("Running ParserTest2");
-    final int nnodes = 3;
+    final int nnodes = 1;
     for( int i = 1; i < nnodes; i++ ) {
       Node n = new NodeVM(args);
       n.inheritIO();
@@ -451,6 +503,8 @@ public class ParserTest2 extends TestUtil {
     }
     H2O.waitForCloudSize(nnodes);
     System.out.println("Cloud formed");
-    new ParserTest2().runTests();
+    //new ParserTest2().runTests();
+    new ParserTest2().testSVMLight1();
+    System.out.println("DONE!");
   }
 }
