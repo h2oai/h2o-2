@@ -419,7 +419,7 @@ public class RequestArguments extends RequestStatics {
      * argument value was submitted by the user and parsed correctly.
      */
     public final boolean specified() {
-      return record().specified();
+      return record() != null && record().specified();
     }
 
     /** Returns the value of the argument. This is either the value parsed, if
@@ -2143,8 +2143,8 @@ public class RequestArguments extends RequestStatics {
   /** A Frame Key */
   public class FrameKey extends H2OKey {
     public FrameKey(String name) { super(name,true); }
-    @Override protected Key parse(String input) { 
-      Key k = Key.make(input); 
+    @Override protected Key parse(String input) {
+      Key k = Key.make(input);
       Value v = DKV.get(k);
       if( v == null )
         throw new IllegalArgumentException(input+":"+errors()[0]);
@@ -2184,7 +2184,7 @@ public class RequestArguments extends RequestStatics {
   /** A Class Vec/Column within a Frame */
   public class FrameClassVec extends FrameKeyVec {
     public FrameClassVec(String name, FrameKey key ) { super(name, key); }
-    @Override protected String[] selectValues() { 
+    @Override protected String[] selectValues() {
       ArrayList<String> as = new ArrayList();
       Vec vecs[] = fr().vecs();
       for( int i=0; i<vecs.length; i++ )
@@ -2215,7 +2215,7 @@ public class RequestArguments extends RequestStatics {
     public boolean shouldIgnore (Vec vec) { return false; }
     public void    checkLegality(Vec vec) throws IllegalArgumentException { }
 
-    private int[] allCols() { 
+    private int[] allCols() {
       int is[] = new int[2];
       Vec vecs[] = fr().vecs();
       for( int i = 0; i < vecs.length; ++i )
@@ -2279,9 +2279,9 @@ public class RequestArguments extends RequestStatics {
 
     // By default, everything is selected.  For some reason I cannot get the
     // browser to start with these selected.
-    @Override protected int[] defaultValue() { 
+    @Override protected int[] defaultValue() {
       int[] is = allCols();
-      return Arrays.copyOf(is,len(is)); 
+      return Arrays.copyOf(is,len(is));
     }
     @Override protected String queryDescription() { return "Columns to select"; }
     // A weenie experimental ArrayList<Integer> API using primitive ints
