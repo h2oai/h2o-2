@@ -187,7 +187,7 @@ public class Parse extends Request {
       if( data != null ) {
         int sep = psetup._setup._separator;
         sb.append("<div class='alert'><b>");
-        sb.append(String.format("Detected %d columns using '%s' (\\u%04d) as a separator.", data[0].length,sep<33 ? WHITE_DELIMS[sep] : Character.toString((char)sep),sep));
+        sb.append(String.format("Detected %d columns using '%s' (\\u%04d) as a separator.", psetup._setup._ncols,sep<33 ? WHITE_DELIMS[sep] : Character.toString((char)sep),sep));
         sb.append("</b></div>");
         sb.append("<table class='table table-striped table-bordered'>");
         int j=psetup._setup._header?0:1; // Skip auto-gen header in data[0]

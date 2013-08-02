@@ -1,11 +1,7 @@
 package water.parser;
 
-import java.util.Arrays;
-
-
 public class SVMLightDParseTask extends DParseTask {
   public SVMLightDParseTask() {}
-
   @Override
   public void newLine() {
     if (_colIdx < _ncolumns)
@@ -30,8 +26,10 @@ public class SVMLightDParseTask extends DParseTask {
     throw new UnsupportedOperationException();
   }
   @Override public void reduce(DParseTask dpt){
-    if(dpt._ncolumns > _ncolumns && _map)
+    if(dpt._ncolumns > _ncolumns && _map){
+      int n = _ncolumns;
       addColumns(dpt._ncolumns); // not effective, quick solution for now...
+    }
     super.reduce(dpt);
   }
 

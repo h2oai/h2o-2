@@ -96,7 +96,7 @@ public class SVMLightParser extends CustomParser{
         }
       }
       int linestart = 0;
-      String linePrefix = "";
+//      String linePrefix = "";
   MAIN_LOOP:
       while (true) {
   NEXT_CHAR:
@@ -111,7 +111,7 @@ public class SVMLightParser extends CustomParser{
               colIdx = 0;
 //              System.out.println("parsed line '" + linePrefix + new String(Arrays.copyOfRange(bits, linestart, offset)) + "'");
               linestart = offset+1;
-              linePrefix = "";
+//              linePrefix = "";
               dout.newLine();
             }
             if( !firstChunk )
@@ -320,7 +320,7 @@ public class SVMLightParser extends CustomParser{
           // Attempt to get more data.
           if( firstChunk && bits1 == null ){
             bits1 = din.getChunkData(cidx+1);
-            linePrefix = new String(Arrays.copyOfRange(bits, linestart, bits.length));
+//            linePrefix = new String(Arrays.copyOfRange(bits, linestart, bits.length));
             linestart = 0;
           }
           // if we can't get further we might have been the last one and we must

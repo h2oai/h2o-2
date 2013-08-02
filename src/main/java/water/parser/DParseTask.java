@@ -43,6 +43,18 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
 
   private static final int [] COL_SIZES = new int[]{0,1,2,4,8,1,2,-4,-8,1};
 
+  public void addColumns(int ncols){
+    _colTypes = Arrays.copyOf(_colTypes, ncols);
+    _min = Arrays.copyOf(_min, ncols); // additional columns has min/max/mean 0
+    Arrays.fill(_min, Double.POSITIVE_INFINITY);
+    _max = Arrays.copyOf(_max, ncols);
+    Arrays.fill(_max, Double.NEGATIVE_INFINITY);
+    _scale = Arrays.copyOf(_scale, ncols);
+    _mean = Arrays.copyOf(_mean, ncols);
+    _invalidValues = Arrays.copyOf(_invalidValues, ncols);
+    _ncolumns = ncols;
+    createEnums();
+  }
   // scalar variables
   Pass _phase;
   long _numRows;
@@ -104,25 +116,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     return t;
   }
 
-  public void addColumns(int ncols){
-    _colTypes = Arrays.copyOf(_colTypes, ncols);
-    _min = Arrays.copyOf(_min, ncols);
-    _max = Arrays.copyOf(_max, ncols);
-    _scale = Arrays.copyOf(_scale, ncols);
-    _mean = Arrays.copyOf(_mean, ncols);
-    _invalidValues = Arrays.copyOf(_invalidValues, ncols);
-    if(_enums != null) {
-      _enums = Arrays.copyOf(_enums, ncols);
-      for(int i = _ncolumns; i < ncols; ++i)
-        _enums[i] = new Enum();
-    }
-    for(int i = _ncolumns; i < ncols; ++i){
-      _min[i] = Double.POSITIVE_INFINITY;
-      _max[i] = Double.NEGATIVE_INFINITY;
-    }
-    _ncolumns = ncols;
-    assert _ncolumns == _colTypes.length;
-  }
+
   private static final class VAChunkDataIn implements CustomParser.DataIn {
     final Key _key;
     public VAChunkDataIn(Key k) {_key = k;}
@@ -467,16 +461,14 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
   }
 
   protected void createEnums() {
-    if(_enums == null){
-      _enums = new Enum[_ncolumns];
-      for(int i = 0; i < _ncolumns; ++i)
-        _enums[i] = new Enum();
-    }
+    _enums = new Enum[_ncolumns];
+    for(int i = 0; i < _ncolumns; ++i)
+      _enums[i] = new Enum();
   }
 
   @Override public void init(){
     super.init();
-    createEnums();
+    if(_phase == Pass.ONE)createEnums();
   }
   /** Sets the column names and creates the array of the enums for each
    * column.
@@ -604,12 +596,12 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     } else {
       if (_phase == Pass.ONE) {
         if (_nrows != dpt._nrows)
-          for (int i = 0; i < _nrows.length; ++i)
+          for (int i = 0; i < dpt._nrows.length; ++i)
             _nrows[i] |= dpt._nrows[i];
-        if(_enums != null) for(int i = 0; i < _ncolumns; ++i)
+        if(_enums != null) for(int i = 0; i < dpt._ncolumns; ++i)
           if(_enums[i] != dpt._enums[i])
             _enums[i].merge(dpt._enums[i]);
-        for(int i = 0; i < _ncolumns; ++i) {
+        for(int i = 0; i < dpt._ncolumns; ++i) {
           if(dpt._min[i] < _min[i])_min[i] = dpt._min[i];
           if(dpt._max[i] > _max[i])_max[i] = dpt._max[i];
           if(dpt._scale[i] < _scale[i])_scale[i] = dpt._scale[i];
@@ -617,11 +609,11 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
           _mean[i] += dpt._mean[i];
         }
       } else if(_phase == Pass.TWO) {
-        for(int i = 0; i < _ncolumns; ++i)
+        for(int i = 0; i < dpt._ncolumns; ++i)
           _sigma[i] += dpt._sigma[i];
       } else
         assert false:"unexpected _phase value:" + _phase;
-      for(int i = 0; i < _ncolumns; ++i)
+      for(int i = 0; i < dpt._ncolumns; ++i)
         _invalidValues[i] += dpt._invalidValues[i];
     }
     _numRows += dpt._numRows;

@@ -84,7 +84,7 @@ class Basic(unittest.TestCase):
             # needs y to avoid output column (which can be index or name)
             # assume all the configs have the same y..just check with the firs tone
             goodX = h2o_glm.goodXFromColumnInfo(y=0,
-                key=parseKey['destination_key'], timeoutSecs=300)
+                key=parseKey['destination_key'], timeoutSecs=300, noPrint=True)
             summaryResult = h2o_cmd.runSummary(key=key2, timeoutSecs=360)
             h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
 

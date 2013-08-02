@@ -48,7 +48,7 @@ class Basic(unittest.TestCase):
         s3nFullList = importHDFSResult['succeeded']
         print "s3nFullList:", h2o.dump_json(s3nFullList)
         # error if none? 
-        self.assertGreater(len(s3nFullList),8,"Didn't see more than 8 files in s3n?")
+        self.assertGreater(len(s3nFullList),1,"Didn't see more than 1 files in s3n?")
 
         if (1==0):
             s3nList = random.sample(s3nFullList,8)
