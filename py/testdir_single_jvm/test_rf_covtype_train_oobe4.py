@@ -73,7 +73,7 @@ class Basic(unittest.TestCase):
         # use 10 if 0 just to see (we copied 10 to 0 above)
         rowsForPct[0] = rowsForPct[10]
 
-        expectTrainPctRightList = [0, 93, 94, 94, 95, 94, 94, 94, 94, 94]
+        expectTrainPctRightList = [0, 93, 94, 94, 94, 94, 94, 94, 94, 94]
         expectScorePctRightList = [0, 75, 77, 79, 83, 86, 89, 91, 93, 97]
 
         print "Creating the key of the last 10% data, for scoring"

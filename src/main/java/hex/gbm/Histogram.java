@@ -1,6 +1,8 @@
 package hex.gbm;
 
 import water.*;
+import water.fvec.Frame;
+import water.fvec.Vec;
 import water.util.Log;
 
 /**
@@ -26,42 +28,59 @@ import water.util.Log;
    @author Cliff Click
 */
 
-class Histogram extends Iced {
+class Histogram extends Iced implements Cloneable {
   public static final int BINS=4;
   transient final String   _name;        // Column name, for pretty-printing
   public    final double   _step;        // Linear interpolation step per bin
-  public    final double   _min;         // Lower-end of binning
-  public    final long  [] _bins;        // Bin counts
-  public    final double[] _Ms;          // Rolling mean, per-bin
-  public    final double[] _Ss;          // Rolling var , per-bin
-  public    final double[] _mins, _maxs; // Min, Max, per-bin
+  public    final double   _min, _max;   // Lower-end of binning
+  public    final int      _nbins;       // Number of bins
+  public          long  [] _bins;        // Bin counts
+  public          double[] _mins, _maxs; // Min, Max, per-bin
+  // For Classification trees, use class-counts
+  public          long[][] _clss;        // Class counts, per-bin
+  // For Regression trees, using mean & variance
+  public          double[] _Ms;          // Rolling mean, per-bin
+  public          double[] _Ss;          // Rolling var , per-bin
   public          double[] _MSEs;        // Rolling mean-square-error, per-bin; requires 2nd pass
 
+  // Fill in read-only sharable values
   public Histogram( String name, long nelems, double min, double max, boolean isInt ) {
     assert nelems > 0;
     assert max > min : "Caller ensures max>min, since if max==min the column is all constants";
     _name = name;
-    _min = min;
+    _min = min;  _max=max;
     int xbins = Math.max((int)Math.min(BINS,nelems),1); // Default bin count
     // See if we can show there are fewer unique elements than nbins.
     // Common for e.g. boolean columns, or near leaves.
     int nbins = xbins;      // Default size for most columns        
     if( isInt && max-min < xbins )
       nbins = (int)((long)max-(long)min+1L); // Shrink bins
+    _nbins = nbins;
+    _step = (max-min)/_nbins;   // Step size for linear interpolation
+  }
+
+  // Copy from the original Histogram, but then allocate private arrays
+  public Histogram copy( int numClasses ) {
+    assert _bins==null && _maxs == null; // Nothing filled-in yet
+    Histogram h=clone();
     // Build bin stats
-    _bins = new long  [nbins];
-    _Ms   = new double[nbins];
-    _Ss   = new double[nbins];
-    _mins = new double[nbins];
-    _maxs = new double[nbins];
+    h._bins = new long  [_nbins];
+    h._mins = new double[_nbins];
+    h._maxs = new double[_nbins];
     // Set step & min/max for each bin
-    _step = (max-min)/nbins;       // Step size for linear interpolation
-    for( int j=0; j<nbins; j++ ) { // Set bad bounds for min/max
-      _mins[j] =  Double.MAX_VALUE;
-      _maxs[j] = -Double.MAX_VALUE;
+    for( int j=0; j<_nbins; j++ ) { // Set bad bounds for min/max
+      h._mins[j] =  Double.MAX_VALUE;
+      h._maxs[j] = -Double.MAX_VALUE;
     }
-    _mins[      0] = min; // Know better bounds for whole column min/max
-    _maxs[nbins-1] = max;
+    h._mins[       0] = _min; // Know better bounds for whole column min/max
+    h._maxs[_nbins-1] = _max;
+    if( numClasses == 0 ) {
+      h._Ms = new double[_nbins];
+      h._Ss = new double[_nbins];
+    } else {
+      h._clss = new long[_nbins][numClasses];
+    }
+    return h;
   }
 
   // Add 1 count to bin specified by double.  Simple linear interpolation to
@@ -82,6 +101,16 @@ class Histogram extends Iced {
     _Ms[idx] = newM;
     _Ss[idx] = newS;
   }
+  // Add 1 count to bin specified by double.  Simple linear interpolation to
+  // specify bin.  Also passed in the response variable, which is a class.
+  void incr( double d, int y ) {
+    int idx = bin(d);           // Compute bin# via linear interpolation
+    _bins[idx]++;               // Bump count in bin
+    // Track actual lower/upper bound per-bin
+    if( d < _mins[idx] ) _mins[idx] = d;
+    if( d > _maxs[idx] ) _maxs[idx] = d;
+    _clss[idx][y]++;            // Bump class count
+  }
 
   // Same as incr, but compute mean-square-error - which requires the mean as
   // computed on the 1st pass above, meaning this requires a 2nd pass.
@@ -98,9 +127,8 @@ class Histogram extends Iced {
 
   // Interpolate d to find bin#
   int bin( double d ) {
-    int nbins = _bins .length;
     int idx1  = _step <= 0.0 ? 0 : (int)((d-_min)/_step);
-    int idx2  = Math.max(Math.min(idx1,nbins-1),0); // saturate at bounds
+    int idx2  = Math.max(Math.min(idx1,_nbins-1),0); // saturate at bounds
     return idx2;
   }
   double mean( int bin ) { return _Ms[bin]; }
@@ -110,13 +138,44 @@ class Histogram extends Iced {
   double mse( int bin ) { return _MSEs[bin]; }
 
   // Compute a "score" for a column; lower score "wins" (is a better split).
-  // Score is the sum of variances.
-  double scoreVar( ) {
+  double score( ) {
+    return _clss == null ? scoreRegression() : scoreClassification();
+  }
+  // Compute a "score" for a column; lower score "wins" (is a better split).
+  // Score for a Regression tree is the sum of variances.
+  private double scoreRegression( ) {
     double sum = 0;
     for( int i=0; i<_bins.length; i++ )
       sum += var(i)*_bins[i];
     return sum;
   }
+  // Compute a "score" for a column; lower score "wins" (is a better split).
+  // Score for a Classification tree is sum of the errors per-class.  We
+  // predict a row using the ratio of the response class to all the rows in the
+  // split.  
+  //
+  // Example: we have 10 rows, classed as 8 C0's, 1 C1's and 1 C2's.  The C0's
+  // are all predicted as "80% C0".  We have 8 rows which are 80% correctly C0,
+  // and 2 rows which are 10% correct.  The total error is 8*(1-.8)+2*(1-.1) =
+  // 3.4.
+  //
+  // Example: we have 10 rows, classed as 6 C0's, 2 C1's and 2 C2's.  Total
+  // error is: 6*(1-.6)+4*(1-.2) = 5.6
+  private double scoreClassification( ) {
+    double sum = 0;
+    int numClasses = _clss[0].length;
+    for( int i=0; i<_bins.length; i++ ) {
+      if( _bins[i] == 0 ) continue;
+      // A little algebra, and the math we need is:
+      //    N - (sum(clss^2)/N)
+      int err=0;
+      for( int j=0; j<numClasses; j++ )
+        err += _clss[i][j]*_clss[i][j];
+      sum += (double)_bins[i] - ((double)err/_bins[i]);
+    }
+    return sum;
+  }
+
 
   // Compute a "score" for a column; lower score "wins" (is a better split).
   // Score is the squared-error for the column.  Requires a 2nd pass, as the
@@ -129,6 +188,98 @@ class Histogram extends Iced {
     return sum;
   }
 
+  // Remove old histogram data, but keep enough info to predict.  Cuts down
+  // the size of data to move over the wires
+  public void clean() {  
+    if( _clss == null ) _bins = null; // Not needed for regression trees
+    _Ss = _mins = _maxs = _MSEs = null; 
+  }
+
+  // After having filled in histogram bins, compute tighter min/max bounds.
+  // Store tighter bounds into the first and last bins.
+  public void tightenMinMax() {
+    int n = 0;
+    while( _bins[n]==0 ) n++;   // First non-empty bin
+    if( n > 0 ) _mins[0] = _mins[n]; // Take min from  1st non-empty bin into bin 0
+    int l = _bins.length-1;     // Last bin
+    int x = l;  
+    while( _bins[x]==0 ) x--;   // Last non-empty bin
+    if( x < l ) _maxs[l] = _maxs[x]; // Take max from last non-empty bin into bin last
+  }
+
+  // Split bin 'i' of this Histogram.  Return null if there is no point in
+  // splitting this bin further (such as there's only 1 element, or zero
+  // variance in the response column).  Return an array of Histograms (one per
+  // column), which are bounded by the split bin-limits.  If the column has
+  // constant data, or was not being tracked by a prior Histogram (for being
+  // constant data from a prior split), then that column will be null in the
+  // returned array.
+  public Histogram[] split( int col, int i, Histogram hs[], Frame fr, int ncols ) {
+    assert hs[col] == this;
+    if( _bins[i] <= 1 ) return null; // Zero or 1 elements
+    if( _clss == null ) {            // Regresion?
+      if( var(i) == 0.0 ) return null; // No point in splitting a perfect prediction
+    } else {                         // Classification
+      long cls[] = _clss[i];         // See if we got a perfect prediction
+      for( int j=0; j<cls.length; j++ )
+        if( cls[j] == _bins[i] )     // Some class has all the bin counts?
+          return null;
+    }
+
+    // Build a next-gen split point from the splitting bin
+    Histogram nhists[] = new Histogram[ncols]; // A new histogram set
+    for( int j=0; j<ncols; j++ ) { // For every column in the new split
+      Histogram h = hs[j];         // Old histogram of column
+      if( h == null ) continue;    // Column was not being tracked?
+      // min & max come from the original column data, since splitting on an
+      // unrelated column will not change the j'th columns min/max.
+      double min = h._mins[0], max = h._maxs[h._maxs.length-1];
+      // Tighter bounds on the column getting split: exactly each new
+      // Histogram's bound are the bins' min & max.
+      if( col==j ) { min=h._mins[i]; max=h._maxs[i]; }
+      if( min == max ) continue; // This column will not split again
+      nhists[j] = new Histogram(fr._names[j],_bins[i],min,max,fr._vecs[j]._isInt);
+    }
+    return nhists;
+  }
+
+  // An initial set of Histograms (one per column) for this column set
+  public static Histogram[] initialHist( Frame fr, int ncols ) {
+    Histogram hists[] = new Histogram[ncols];
+    Vec[] vs = fr._vecs;
+    for( int j=0; j<ncols; j++ )
+      hists[j] = new Histogram(fr._names[j],vs[j].length(),vs[j].min(),vs[j].max(),vs[j]._isInt);
+    return hists;
+  }
+
+  // "reduce" 'h' into 'this'.  Combine mean & variance using the
+  // recursive-mean technique.  Compute min-of-mins and max-of-maxes, etc.
+  public void add( Histogram h ) {
+    assert _nbins == h._nbins;
+    for( int i=0; i<_bins.length; i++ ) {
+      long k1 = _bins[i], k2 = h._bins[i];
+      if( k1==0 && k2==0 ) continue;
+      _bins[i]=k1+k2;
+      if( _clss == null ) {     // Regression roll-up
+        // Recursive mean & variance
+        //    http://www.johndcook.com/standard_deviation.html
+        //    http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+        double m1 = _Ms[i], m2 = h.  _Ms[i];
+        double s1 = _Ss[i], s2 = h.  _Ss[i];
+        double delta=m2-m1;
+        _Ms[i] = (k1*m1+k2*m2)/(k1+k2);           // Mean
+        _Ss[i] = s1+s2+delta*delta*k1*k2/(k1+k2); // 2nd moment
+      } else {               // Classification: just sum up the class histogram
+        for( int j=0; j<_clss[i].length; j++ )
+          _clss[i][j] += h._clss[i][j];
+      }
+    }
+
+    for( int i=0; i<_mins.length; i++ ) if( h._mins[i] < _mins[i] ) _mins[i] = h._mins[i];
+    for( int i=0; i<_maxs.length; i++ ) if( h._maxs[i] > _maxs[i] ) _maxs[i] = h._maxs[i];
+    if( _MSEs != null ) throw H2O.unimpl();
+  }
+
   // Pretty-print a histogram
   @Override public String toString() {
     StringBuilder sb = new StringBuilder();
@@ -138,5 +289,13 @@ class Histogram extends Iced {
                               _bins[i],_mins[i],_maxs[i],mean(i),var(i)));
       
     return sb.toString();
+  }
+
+  @Override protected Histogram clone() {
+    try {
+      return (Histogram)super.clone();
+    } catch( CloneNotSupportedException e ) {
+      throw Log.errRTExcept(e);
+    }
   }
 }

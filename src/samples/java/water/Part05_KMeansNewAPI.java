@@ -25,7 +25,7 @@ public class Part05_KMeansNewAPI {
       Frame frame = ParseDataset2.parse(Key.make("test"), new Key[] { file });
 
       // Optionally create a frame with less columns, e.g. skip first
-      frame = new Frame(null, Utils.remove(frame._names, 0), Utils.remove(frame._vecs, 0));
+      frame = new Frame(Utils.remove(frame._names, 0), Utils.remove(frame._vecs, 0));
 
       // Create k clusters as arrays of doubles
       int k = 7;
@@ -45,7 +45,7 @@ public class Part05_KMeansNewAPI {
       for( int i = 0; i < 10; i++ ) {
         KMeans task = new KMeans();
         task._clusters = clusters;
-        task.invoke(frame);
+        task.doAll(frame);
 
         for( int c = 0; c < clusters.length; c++ ) {
           if( task._counts[c] > 0 ) {

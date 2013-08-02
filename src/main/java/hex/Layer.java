@@ -4,9 +4,6 @@ import hex.rng.MersenneTwisterRNG;
 
 import java.util.Random;
 
-import com.amd.aparapi.Kernel;
-import com.amd.aparapi.Range;
-
 /**
  * Neural network layer, can be used as one level of Perceptron, AA or RBM.
  */
@@ -17,41 +14,46 @@ public abstract class Layer {
   float _l2 = .0001f;
   boolean _auto = true;
   float _autoDelta = .2f;
-
-  // Weights, biases, activity, error
-  float[] _w, _b, _a, _e;
-
-  // Gradients & auto rate data
-  float[] _gw, _gwMult, _gwMtum;
-  float[] _gb, _gbMult, _gbMtum;
+  int _len;
 
   // Previous layer
-  Layer _in;
+  transient Layer _in;
+
+  // Weights, biases, activity, error
+  transient float[] _w, _b, _a, _e;
+
+  // Gradients & auto rate data
+  transient float[] _gw, _gwMult, _gwMtum;
+  transient float[] _gb, _gbMult, _gbMtum;
 
   // Optional visible units bias, e.g. for pre-training
-  float[] _v, _gv;
+  transient float[] _v, _gv;
 
-  public Layer() {}
-
-  public Layer(Layer in, int len) {
-    _w = new float[len * in._a.length];
-    _b = new float[len];
-    _a = new float[len];
-    _e = new float[len];
-
-    _gw = new float[_w.length];
-    _gb = new float[_b.length];
-
-    _in = in;
+  public Layer() {
   }
 
-  void init() {
-    // deeplearning.net tutorial (TODO figure out one for rectifiers)
-    Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-    float min = (float) -Math.sqrt(6. / (_in._a.length + _a.length));
-    float max = (float) +Math.sqrt(6. / (_in._a.length + _a.length));
-    for( int i = 0; i < _w.length; i++ )
-      _w[i] = rand(rand, min, max);
+  public Layer(Layer in, int len) {
+    _in = in;
+    _len = len;
+  }
+
+  void init(boolean skipWeights) {
+    _a = new float[_len];
+    _e = new float[_len];
+    _gw = new float[_len * _in._len];
+    _gb = new float[_len];
+
+    if( !skipWeights ) {
+      _w = new float[_len * _in._len];
+      _b = new float[_len];
+
+      // deeplearning.net tutorial (TODO figure out one for rectifiers)
+      Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+      float min = (float) -Math.sqrt(6. / (_in._a.length + _a.length));
+      float max = (float) +Math.sqrt(6. / (_in._a.length + _a.length));
+      for( int i = 0; i < _w.length; i++ )
+        _w[i] = rand(rand, min, max);
+    }
 
     if( _auto ) {
       _gwMult = new float[_w.length];
@@ -94,7 +96,8 @@ public abstract class Layer {
       float abs = Math.abs(mult[i]);
       // If the gradient kept its sign, increase
       if( sign == last ) {
-        if( abs < 4 ) abs += _autoDelta;
+        if( abs < 4 )
+          abs += _autoDelta;
       } else {
         abs *= 1 - _autoDelta;
       }
@@ -114,14 +117,14 @@ public abstract class Layer {
     int _count;
     int _n;
 
-    public Input() {}
+    public Input() {
+    }
 
     public Input(int len) {
       _a = new float[len];
     }
 
-    @Override void init() {
-      //
+    @Override void init(boolean skipWeights) {
     }
 
     abstract int label();
@@ -132,7 +135,8 @@ public abstract class Layer {
   }
 
   public static class Tanh extends Layer {
-    public Tanh() {}
+    public Tanh() {
+    }
 
     public Tanh(Layer in, int len) {
       super(in, len);
@@ -165,14 +169,15 @@ public abstract class Layer {
   }
 
   public static class Rectifier extends Layer {
-    public Rectifier() {}
+    public Rectifier() {
+    }
 
     public Rectifier(Layer in, int len) {
       super(in, len);
     }
 
-    @Override void init() {
-      super.init();
+    @Override void init(boolean skipWeights) {
+      super.init(skipWeights);
 
       for( int i = 0; i < _b.length; i++ )
         _b[i] = 1;
@@ -195,7 +200,8 @@ public abstract class Layer {
     @Override void bprop(int off, int len) {
       for( int o = off; o < off + len; o++ ) {
         float d = _e[o];
-        if( _a[o] < 0 ) d = 0;
+        if( _a[o] < 0 )
+          d = 0;
         for( int i = 0; i < _in._a.length; i++ ) {
           _gw[o * _in._a.length + i] += d * _in._a[i];
           if( _in._e != null ) {
@@ -204,70 +210,6 @@ public abstract class Layer {
         }
         _gb[o] += d;
       }
-    }
-  }
-
-  public class RectifierGPU extends Rectifier {
-    static final boolean EXPLICIT = true;
-    Kernel _fprop, _bprop;
-    int[] _indexes = new int[2];
-
-    public RectifierGPU(Layer in, int len) {
-      super(in, len);
-
-      _fprop = new Kernel() {
-        float[] w = _w, b = _b, a = _a, inA = _in._a;
-        // @Local
-        int[] indexes = _indexes;
-        int inLen = _in._a.length;
-
-        @Override public void run() {
-          int o = getGlobalId(0);
-          int offset = indexes[0];
-          int length = indexes[1];
-          a[o] = 0;
-          for( int i = 0; i < length; i++ )
-            a[o] += w[o * inLen + i] * inA[offset + i];
-          a[o] += b[o];
-          a[o] = max(0, a[o]);
-        }
-      };
-      _fprop.setExplicit(EXPLICIT);
-
-      _bprop = new Kernel() {
-        float[] w = _w, gw = _gw, gb = _gb, a = _a, e = _e, inA = _in._a, inE = _in._e;
-        int inLen = _in._a.length;
-
-        @Override public void run() {
-          int o = getGlobalId(0);
-          float d = e[o];
-          if( a[o] < 0 ) d = 0;
-          for( int i = 0; i < inLen; i++ ) {
-            gw[o * inLen + i] += d * inA[i];
-            if( inE != null ) {
-              inE[i] += d * w[o * inLen + i];
-            }
-          }
-          gb[o] += d;
-        }
-      };
-      _bprop.setExplicit(EXPLICIT);
-    }
-
-    void close() {
-      _fprop.dispose();
-      _bprop.dispose();
-    }
-
-    @Override void fprop(int off, int len) {
-      _indexes[0] = off;
-      _indexes[1] = len;
-      _fprop.put(_indexes);
-      _fprop.execute(Range.create(_a.length));
-    }
-
-    @Override void bprop(int off, int len) {
-      _bprop.execute(Range.create(_in._e.length));
     }
   }
 
@@ -313,7 +255,8 @@ public abstract class Layer {
         visible[i] += _w[o * _in._a.length + i] * hidden[o];
     for( int i = 0; i < visible.length; i++ ) {
       visible[i] += _v[i];
-      if( visible[i] < 0 ) visible[i] = 0;
+      if( visible[i] < 0 )
+        visible[i] = 0;
     }
     return visible;
   }

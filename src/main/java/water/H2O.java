@@ -1,7 +1,6 @@
 package water;
 
 import java.io.*;
-import java.lang.reflect.Constructor;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
@@ -14,7 +13,6 @@ import water.parser.ParseDataset;
 import water.persist.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
-import water.AbstractBuildVersion;
 
 import com.amazonaws.auth.PropertiesCredentials;
 import com.google.common.base.Objects;
@@ -27,6 +25,9 @@ import com.google.common.io.Closeables;
 * @version 1.0
 */
 public final class H2O {
+  public static volatile AbstractEmbeddedH2OConfig embeddedH2OConfig;
+  public static volatile ApiIpPortWatchdogThread apiIpPortWatchdog;
+
   static boolean _hdfsActive = false;
 
   public static final String VERSION = "0.3";
@@ -72,6 +73,63 @@ public final class H2O {
   public static final void ignore(Throwable e)             { ignore(e,"[h2o] Problem ignored: "); }
   public static final void ignore(Throwable e, String msg) { ignore(e, msg, true); }
   public static final void ignore(Throwable e, String msg, boolean printException) { Log.debug(Sys.WATER, msg + (printException? e.toString() : "")); }
+
+  // --------------------------------------------------------------------------
+  // Embedded configuration for a full H2O node to be implanted in another
+  // piece of software (e.g. Hadoop mapper task).
+  /**
+   * Register embedded H2O configuration object with H2O instance.
+   */
+  public static void setEmbeddedH2OConfig(AbstractEmbeddedH2OConfig c) { embeddedH2OConfig = c; }
+  public static AbstractEmbeddedH2OConfig getEmbeddedH2OConfig() { return embeddedH2OConfig; }
+
+  /**
+   * Notify embedding software instance about H2O's embedded web server.
+   * @param ip H2O browser IP address
+   * @param port H2O browser port
+   */
+  public static void notifyAboutEmbeddedWebServerIpPort(InetAddress ip, int port) {
+    if (embeddedH2OConfig == null) { return; }
+    embeddedH2OConfig.notifyAboutEmbeddedWebServerIpPort(ip, port);
+  }
+
+  /**
+   * Notify embedding software instance about the H2O cluster size..
+   * @param ip H2O browser IP address
+   * @param port H2O browser port
+   * @param size H2O cluster size
+   */
+  public static void notifyAboutCloudSize(InetAddress ip, int port, int size) {
+    if (embeddedH2OConfig == null) { return; }
+    embeddedH2OConfig.notifyAboutCloudSize(ip, port, size);
+  }
+
+  /**
+   * Notify embedding software instance H2O wants to exit.
+   * @param status H2O's requested process exit value.
+   */
+  public static void exit(int status) {
+    // embeddedH2OConfig is only valid if this H2O node is living inside
+    // another software instance (e.g. a Hadoop mapper task).
+    //
+    // Expect embeddedH2OConfig to be null if H2O is run standalone.
+
+    // Cleanly shutdown internal H2O services.
+    if (apiIpPortWatchdog != null) {
+      apiIpPortWatchdog.shutdown();
+    }
+
+    if (embeddedH2OConfig == null) {
+      // Standalone H2O path.
+      System.exit (status);
+    }
+
+    // Embedded H2O path (e.g. inside Hadoop mapper task).
+    embeddedH2OConfig.exit(status);
+
+    // Should never reach here.
+    System.exit(222);
+  }
 
   // --------------------------------------------------------------------------
   // The Current Cloud. A list of all the Nodes in the Cloud. Changes if we
@@ -220,73 +278,76 @@ public final class H2O {
     return Arrays.toString(_memary);
   }
 
-  static InetAddress findInetAddressForSelf() throws Error {
-    // Get a list of all valid IPs on this machine.  Typically 1 on Mac or
-    // Windows, but could be many on Linux or if a hypervisor is present.
-    ArrayList<InetAddress> ips = new ArrayList<InetAddress>();
-    try {
-      Enumeration<NetworkInterface> nis = NetworkInterface.getNetworkInterfaces();
-      while( nis.hasMoreElements() ) {
-        NetworkInterface ni = nis.nextElement();
-        Enumeration<InetAddress> ias = ni.getInetAddresses();
-        while( ias.hasMoreElements() ) {
-          ips.add(ias.nextElement());
-        }
-      }
-    } catch( SocketException e ) { Log.err(e); }
-
-    InetAddress local = null;   // My final choice
-
-    // Check for an "-ip xxxx" option and accept a valid user choice; required
-    // if there are multiple valid IP addresses.
-    InetAddress arg = null;
-    if (OPT_ARGS.ip != null) {
-      try{
-        arg = InetAddress.getByName(OPT_ARGS.ip);
-      } catch( UnknownHostException e ) {
-        Log.err(e);
-        System.exit(-1);
-      }
-      if( !(arg instanceof Inet4Address) ) {
-        Log.warn("Only IP4 addresses allowed.");
-        System.exit(-1);
-      }
-      if( !ips.contains(arg) ) {
-        Log.warn("IP address not found on this machine");
-        System.exit(-1);
-      }
-      local = arg;
-    } else {
-      // No user-specified IP address.  Attempt auto-discovery.  Roll through
-      // all the network choices on looking for a single Inet4.
-      ArrayList<InetAddress> validIps = new ArrayList();
-      for( InetAddress ip : ips ) {
-        // make sure the given IP address can be found here
-        if( ip instanceof Inet4Address &&
-            !ip.isLoopbackAddress() &&
-            !ip.isLinkLocalAddress() ) {
-          validIps.add(ip);
-        }
-      }
-      if( validIps.size() == 1 ) {
-        local = validIps.get(0);
-      } else {
-        local = guessInetAddress(validIps);
-      }
-    }
-
-    // The above fails with no network connection, in that case go for a truly
-    // local host.
-    if( local == null ) {
+  public static InetAddress findInetAddressForSelf() throws Error {
+    if(SELF_ADDRESS == null) {
+      // Get a list of all valid IPs on this machine.  Typically 1 on Mac or
+      // Windows, but could be many on Linux or if a hypervisor is present.
+      ArrayList<InetAddress> ips = new ArrayList<InetAddress>();
       try {
-        Log.warn("Failed to determine IP, falling back to localhost.");
-        // set default ip address to be 127.0.0.1 /localhost
-        local = InetAddress.getByName("127.0.0.1");
-      } catch( UnknownHostException e ) {
-        throw  Log.errRTExcept(e);
+        Enumeration<NetworkInterface> nis = NetworkInterface.getNetworkInterfaces();
+        while( nis.hasMoreElements() ) {
+          NetworkInterface ni = nis.nextElement();
+          Enumeration<InetAddress> ias = ni.getInetAddresses();
+          while( ias.hasMoreElements() ) {
+            ips.add(ias.nextElement());
+          }
+        }
+      } catch( SocketException e ) { Log.err(e); }
+
+      InetAddress local = null;   // My final choice
+
+      // Check for an "-ip xxxx" option and accept a valid user choice; required
+      // if there are multiple valid IP addresses.
+      InetAddress arg = null;
+      if (OPT_ARGS.ip != null) {
+        try{
+          arg = InetAddress.getByName(OPT_ARGS.ip);
+        } catch( UnknownHostException e ) {
+          Log.err(e);
+          H2O.exit(-1);
+        }
+        if( !(arg instanceof Inet4Address) ) {
+          Log.warn("Only IP4 addresses allowed.");
+          H2O.exit(-1);
+        }
+        if( !ips.contains(arg) ) {
+          Log.warn("IP address not found on this machine");
+          H2O.exit(-1);
+        }
+        local = arg;
+      } else {
+        // No user-specified IP address.  Attempt auto-discovery.  Roll through
+        // all the network choices on looking for a single Inet4.
+        ArrayList<InetAddress> validIps = new ArrayList();
+        for( InetAddress ip : ips ) {
+          // make sure the given IP address can be found here
+          if( ip instanceof Inet4Address &&
+              !ip.isLoopbackAddress() &&
+              !ip.isLinkLocalAddress() ) {
+            validIps.add(ip);
+          }
+        }
+        if( validIps.size() == 1 ) {
+          local = validIps.get(0);
+        } else {
+          local = guessInetAddress(validIps);
+        }
       }
+
+      // The above fails with no network connection, in that case go for a truly
+      // local host.
+      if( local == null ) {
+        try {
+          Log.warn("Failed to determine IP, falling back to localhost.");
+          // set default ip address to be 127.0.0.1 /localhost
+          local = InetAddress.getByName("127.0.0.1");
+        } catch( UnknownHostException e ) {
+          throw  Log.errRTExcept(e);
+        }
+      }
+      SELF_ADDRESS = local;
     }
-    return local;
+    return SELF_ADDRESS;
   }
 
   private static InetAddress guessInetAddress(List<InetAddress> ips) {
@@ -555,6 +616,7 @@ public final class H2O {
     public String inherit_log4j = null;
     public String h = null;
     public String help = null;
+    public String version = null;
   }
 
   public static void printHelp() {
@@ -564,15 +626,19 @@ public final class H2O {
     "Usage:  java [-Xmx<size>] -jar h2o.jar [options]\n" +
     "        (Note that every option has a default and is optional.)\n" +
     "\n" +
+    "    -h | -help\n" +
+    "          Print this help.\n" +
+    "\n" +
+    "    -version\n" +
+    "          Print version info and exit.\n" +
+    "\n" +
     "    -name <h2oCloudName>\n" +
-    "          Cloud name used for Multicast discovery.\n" +
+    "          Cloud name used for discovery of other nodes.\n" +
     "          Nodes with the same cloud name will form an H2O cloud\n" +
     "          (also known as an H2O cluster).\n" +
-    "          (Not to be used with -flatfile.)\n" +
     "\n" +
     "    -flatfile <flatFileName>\n" +
     "          Configuration file explicitly listing H2O cloud node members.\n" +
-    "          (Not to be used with -name.)\n" +
     "\n" +
     "    -ip <ipAddressOfNode>\n" +
     "          IP address of this node.\n" +
@@ -589,27 +655,24 @@ public final class H2O {
     "          Allow some other package to specify log4j configuration\n" +
     "          (for embedding H2O, e.g. inside Hadoop mapreduce).\n" +
     "\n" +
-    "    -h | -help\n" +
-    "          Print this help.\n" +
-    "\n" +
     "Cloud formation behavior:\n" +
     "\n" +
     "    New H2O nodes join together to form a cloud at startup time.\n" +
-    "    Once a cloud is given work to perform, it locks out new members.\n" +
+    "    Once a cloud is given work to perform, it locks out new members\n" +
     "    from joining.\n" +
     "\n" +
     "Examples:\n" +
     "\n" +
     "    Start an H2O node with 4GB of memory and a default cloud name:\n" +
-    "        java -Xmx4g -jar h2o.jar\n" +
+    "        $ java -Xmx4g -jar h2o.jar\n" +
     "\n" +
     "    Start an H2O node with 6GB of memory and a specify the cloud name:\n" +
-    "        java -Xmx6g -jar h2o.jar -name MyCloud\n" +
+    "        $ java -Xmx6g -jar h2o.jar -name MyCloud\n" +
     "\n" +
     "    Start an H2O cloud with three 2GB nodes and a default cloud name:\n" +
-    "        java -Xmx2g -jar h2o.jar\n" +
-    "        java -Xmx2g -jar h2o.jar\n" +
-    "        java -Xmx2g -jar h2o.jar\n" +
+    "        $ java -Xmx2g -jar h2o.jar &\n" +
+    "        $ java -Xmx2g -jar h2o.jar &\n" +
+    "        $ java -Xmx2g -jar h2o.jar &\n" +
     "\n";
 
     System.out.print(s);
@@ -647,8 +710,8 @@ public final class H2O {
     Runtime runtime = Runtime.getRuntime();
     double ONE_GB = 1024 * 1024 * 1024;
     Log.info ("Java availableProcessors: " + runtime.availableProcessors());
-    Log.info ("Java heap totalMemory: " + String.format("%.2f gb", (double)runtime.totalMemory() / ONE_GB));
-    Log.info ("Java heap maxMemory: " + String.format("%.2f gb", (double)runtime.maxMemory() / ONE_GB));
+    Log.info ("Java heap totalMemory: " + String.format("%.2f gb", runtime.totalMemory() / ONE_GB));
+    Log.info ("Java heap maxMemory: " + String.format("%.2f gb", runtime.maxMemory() / ONE_GB));
   }
 
   // Start up an H2O Node and join any local Cloud
@@ -666,7 +729,12 @@ public final class H2O {
 
     if ((OPT_ARGS.h != null) || (OPT_ARGS.help != null)) {
       printHelp();
-      System.exit (0);
+      H2O.exit (0);
+    }
+
+    if (OPT_ARGS.version != null) {
+      sayHi();
+      H2O.exit (0);
     }
 
     sayHi();
@@ -685,7 +753,7 @@ public final class H2O {
 
     Log.info ("ICE root: '" + ICE_ROOT + "'");
 
-    SELF_ADDRESS = findInetAddressForSelf();
+    findInetAddressForSelf();
 
     //if (OPT_ARGS.rshell.equals("false"))
     Log.POST(320,"");
@@ -805,7 +873,8 @@ public final class H2O {
    * DHCP assigns them a new IP address.
    */
   private static void startApiIpPortWatchdog() {
-    new ApiIpPortWatchdogThread().start();
+    apiIpPortWatchdog = new ApiIpPortWatchdogThread();
+    apiIpPortWatchdog.start();
   }
 
   // Used to update the Throwable detailMessage field.
@@ -877,6 +946,7 @@ public final class H2O {
     }
     SELF = H2ONode.self(SELF_ADDRESS);
     Log.info("Internal communication uses port: ",UDP_PORT,"\nListening for HTTP and REST traffic on  http:/",SELF_ADDRESS,":"+_apiSocket.getLocalPort()+"/");
+    notifyAboutEmbeddedWebServerIpPort (SELF_ADDRESS, API_PORT);
 
     NAME = OPT_ARGS.name==null? System.getProperty("user.name") : OPT_ARGS.name;
     // Read a flatfile of allowed nodes
@@ -983,7 +1053,10 @@ public final class H2O {
   private static HashSet<H2ONode> parseFlatFile( String fname ) {
     if( fname == null ) return null;
     File f = new File(fname);
-    if( !f.exists() ) return null; // No flat file
+    if( !f.exists() ) {
+      Log.warn("-flatfile specified but not found: " + fname);
+      return null; // No flat file
+    }
     HashSet<H2ONode> h2os = new HashSet<H2ONode>();
     List<FlatFileEntry> list = parseFlatFile(f);
     for(FlatFileEntry entry : list)
@@ -1370,7 +1443,6 @@ public final class H2O {
 
     // Exit this watchdog thread.
     public void shutdown() {
-      Log.debug (threadName + ": Graceful shutdown requested");
       gracefulShutdownInitiated = true;
     }
 
@@ -1411,7 +1483,7 @@ public final class H2O {
     private void testForFailureShutdown() {
       if (consecutiveFailures >= maxConsecutiveFailures) {
         Log.err(threadName + ": Too many failures (>= " + maxConsecutiveFailures + "), H2O node shutting down");
-        System.exit(1);
+        H2O.exit(1);
       }
 
       if (consecutiveFailures > 0) {
@@ -1422,7 +1494,7 @@ public final class H2O {
           Log.err(threadName + ": Failure time threshold exceeded (>= " +
                   thresholdMillis +
                   " ms), H2O node shutting down");
-          System.exit(1);
+          H2O.exit(1);
         }
       }
     }
@@ -1470,13 +1542,10 @@ public final class H2O {
 
       while (true) {
         mySleep (sleepMillis);
+        if (gracefulShutdownInitiated) { break; }
         check();
-        if (gracefulShutdownInitiated) {
-          break;
-        }
+        if (gracefulShutdownInitiated) { break; }
       }
-
-      Log.debug (threadName + ": Thread run() exited");
     }
   }
 }

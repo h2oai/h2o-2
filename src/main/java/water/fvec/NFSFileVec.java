@@ -13,10 +13,14 @@ public class NFSFileVec extends ByteVec {
   // Make a new NFSFileVec key which holds the filename implicitly.
   // This name is used by the DVecs to load data on-demand.
   public static Key make(File f) {
+    return make(f, null);
+  }
+
+  public static Key make(File f, Futures fs) {
     long size = f.length();
     Key k = Vec.newKey(PersistNFS.decodeFile(f));
     // Insert the top-level FileVec key into the store
-    DKV.put(k,new NFSFileVec(k,size));
+    DKV.put(k,new NFSFileVec(k,size), fs);
     return k;
   }
 

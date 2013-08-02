@@ -25,12 +25,8 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED
-        SEED = random.randint(0, sys.maxint)
-
-        # SEED = 
-        random.seed(SEED)
-        print "\nUsing random seed:", SEED
+        global SEED, localhost
+        SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(2,java_heap_GB=4)
@@ -61,7 +57,7 @@ class Basic(unittest.TestCase):
             parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=30)
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "Parse result['destination_key']:", parseKey['destination_key']
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=120)
             print "\n" + csvFilename
 
             if not h2o.browse_disable:

@@ -34,23 +34,17 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED
-        SEED = random.randint(0, sys.maxint)
-
-        # SEED = 
-        random.seed(SEED)
-        print "\nUsing random seed:", SEED
+        global SEED, localhost
+        SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(1,java_heap_GB=4)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
-
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
-
 
     def test_KMeans_constant_col(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
@@ -81,7 +75,7 @@ class Basic(unittest.TestCase):
 
             kwargs = {'k': 2, 'epsilon': 1e-6, 'cols': None, 'destination_key': 'benign_k.hex'}
             kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=5, **kwargs)
-            centers = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
+            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
 
             # check center list (first center) has same number of cols as source data
             self.assertEqual(colCount, len(centers[0]),

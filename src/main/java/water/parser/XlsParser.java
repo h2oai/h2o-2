@@ -10,8 +10,8 @@ import org.apache.poi.hssf.eventusermodel.dummyrecord.MissingCellDummyRecord;
 import org.apache.poi.hssf.record.*;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 
-import water.DKV;
-import water.Key;
+import water.*;
+import water.fvec.ByteVec;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
 
@@ -31,7 +31,14 @@ public class XlsParser extends CustomParser implements HSSFListener {
 
   @Override public void parse(int cidx) throws IOException {
     _firstRow = true;
-    InputStream is = DKV.get(_key).openStream();
+    Value value = DKV.get(_key);
+    InputStream is = null;
+    if(value.type() != TypeMap.PRIM_B) {
+      Object o = value.get();
+      if(o instanceof ByteVec)
+        is = ((ByteVec) o).openStream();
+    }
+    if(is == null) is = value.openStream();
     try {
       _fs = new POIFSFileSystem(is);
       MissingRecordAwareHSSFListener listener = new MissingRecordAwareHSSFListener(this);

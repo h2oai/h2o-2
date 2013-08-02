@@ -175,9 +175,11 @@ public abstract class Model extends Iced {
   /**
    * Simple model wrapper adapting original model to different dataset.
    *
-   * Basically does column and categorical mapping. Each row (irrespectfull of its source) is first
-   * loaded into internal array which is permuted to match the original column order.
-   * Categorical values are mapped to the values corresponding strings had in original dataset or NaN if we did not see this value before.
+   * Basically does column and categorical mapping. Each row (irrespectfull of
+   * its source) is first loaded into internal array which is permuted to match
+   * the original column order.  Categorical values are mapped to the values
+   * corresponding strings had in original dataset or NaN if we did not see
+   * this value before.
    *
    * @author tomasnykodym
    *

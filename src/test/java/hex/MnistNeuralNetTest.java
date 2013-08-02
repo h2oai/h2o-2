@@ -11,8 +11,7 @@ import water.util.Utils;
 
 public class MnistNeuralNetTest {
   static final int PIXELS = 784, EDGE = 28;
-  //static final String PATH = "smalldata/mnist70k/";
-  static final String PATH = "mnist/";
+  static final String PATH = "smalldata/mnist70k/";
   static final DecimalFormat _format = new DecimalFormat("0.000");
 
   static class Data {
@@ -22,6 +21,21 @@ public class MnistNeuralNetTest {
 
   static Data _train, _test;
   Layer[] _ls;
+
+  public static class TrainInput extends Input {
+    public TrainInput() {
+      super(PIXELS);
+      _count = _train._labels.length;
+    }
+
+    @Override int label() {
+      return _train._labels[_n];
+    }
+
+    @Override void fprop(int off, int len) {
+      System.arraycopy(_train._images, _n * PIXELS, _a, 0, PIXELS);
+    }
+  }
 
   public static class TestInput extends Input {
     public TestInput() {
@@ -42,12 +56,12 @@ public class MnistNeuralNetTest {
     loadTrain();
     loadTest();
 
-    boolean load = false;
+    boolean load = false, save = false;
     boolean pretrain = false;
     boolean rectifier = false;
     {
       _ls = new Layer[3];
-      _ls[0] = new MnistInput(_train);
+      _ls[0] = new TrainInput();
       if( rectifier ) {
         _ls[1] = new Layer.Rectifier(_ls[0], 500);
         _ls[2] = new Layer.Rectifier(_ls[1], 10);
@@ -63,39 +77,43 @@ public class MnistNeuralNetTest {
         String json = Utils.readFile(new File("layer" + i + ".json"));
         _ls[i] = Utils.json(json, Layer.class);
       }
-      System.out.println("json: " + (int) ((System.nanoTime() - time) / 1e6) + " ms");
+      System.out.println("load: " + (int) ((System.nanoTime() - time) / 1e6) + " ms");
     }
+
+    //ParallelTrainers trainer = new ParallelTrainers(_ls, _train._labels);
+    Trainer trainer = new Trainer.Direct(_ls);
 
     if( pretrain ) {
       for( int i = 0; i < _ls.length; i++ ) {
         System.out.println("Training level " + i);
         long time = System.nanoTime();
-        preTrain(i);
+        preTrain(trainer, i);
         System.out.println((int) ((System.nanoTime() - time) / 1e6) + " ms");
       }
     }
+    train(trainer);
 
-    train();
-
-//    long time = System.nanoTime();
-//    for( int i = 0; i < _rbms.length; i++ ) {
-//      String json = Utils.json(_rbms[i]);
-//      Utils.writeFile(new File("rbm" + i + ".json"), json);
-//    }
-//    System.out.println("save: " + (int) ((System.nanoTime() - time) / 1e6) + " ms");
+    if( save ) {
+      long time = System.nanoTime();
+      for( int i = 0; i < _ls.length; i++ ) {
+        String json = Utils.json(_ls[i]);
+        Utils.writeFile(new File("rbm" + i + ".json"), json);
+      }
+      System.out.println("save: " + (int) ((System.nanoTime() - time) / 1e6) + " ms");
+    }
   }
 
-  void preTrain(int upTo) {
-    float[][] inputs = new float[Layer.BATCH][];
+  void preTrain(Trainer trainer, int upTo) {
+    float[][] inputs = new float[trainer._batch][];
     float[][] tester = new float[100][];
     int n = 0;
     float trainError = 0, testError = 0, trainEnergy = 0, testEnergy = 0;
     for( int i = 0; i < 10000; i++ ) {
       n = up(_train, n, inputs, upTo);
 
-      for( int b = 0; b < Layer.BATCH; b++ )
+      for( int b = 0; b < trainer._batch; b++ )
         _ls[upTo].contrastiveDivergence(inputs[b]);
-      _ls[upTo].adjust();
+      _ls[upTo].adjust(n);
 
       if( i % 100 == 0 ) {
         up(_train, 0, tester, upTo);
@@ -140,10 +158,13 @@ public class MnistNeuralNetTest {
     return n;
   }
 
-  void train() {
-    //ParallelTrainers trainer = new ParallelTrainers(_ls, _train._labels);
-    Trainer trainer = new Trainer.Direct(_ls, _train._labels);
-    trainer.start();
+  void train(final Trainer trainer) {
+    Thread thread = new Thread() {
+      @Override public void run() {
+        trainer.run();
+      }
+    };
+    thread.start();
 
     long start = System.nanoTime();
     long lastTime = start;
@@ -169,8 +190,8 @@ public class MnistNeuralNetTest {
       double sqr = 0;
       int zeros = 0;
       for( int o = 0; o < layer._a.length; o++ ) {
-        for( int i = 0; i < layer._in._len; i++ ) {
-          float d = layer._gw[o * layer._in._len + i];
+        for( int i = 0; i < layer._in._a.length; i++ ) {
+          float d = layer._gw[o * layer._a.length + i];
           sqr += d * d;
           zeros += d == 0 ? 1 : 0;
         }
@@ -178,8 +199,8 @@ public class MnistNeuralNetTest {
       s += ", gw: " + sqr + " (" + (zeros * 100 / layer._gw.length) + "% 0)";
       sqr = 0;
       for( int o = 0; o < layer._a.length; o++ ) {
-        for( int i = 0; i < layer._in._len; i++ ) {
-          float d = layer._w[o * layer._in._len + i];
+        for( int i = 0; i < layer._in._a.length; i++ ) {
+          float d = layer._w[o * layer._in._a.length + i];
           sqr += d * d;
         }
       }
@@ -203,17 +224,18 @@ public class MnistNeuralNetTest {
 
   String test(Data data, int length) {
     Layer[] clones = new Layer[_ls.length];
-    for( int i = 0; i < _ls.length; i++ ) {
+    for( int i = 1; i < _ls.length; i++ ) {
 //      _ls[i]._forward.get(_ls[i]._w);
       clones[i] = Utils.deepClone(_ls[i]);
     }
+    clones[0] = data == _train ? new TrainInput() : new TestInput();
     for( int i = 1; i < _ls.length; i++ )
       clones[i]._in = clones[i - 1];
 
     Error error = new Error();
     int correct = 0;
     for( int n = 0; n < length; n++ ) {
-      if( MnistNeuralNetTest.test(clones, data, n, error) )
+      if( MnistNeuralNetTest.test(clones, n, error) )
         correct++;
     }
     String pct = _format.format(((length - correct) * 100f / length));

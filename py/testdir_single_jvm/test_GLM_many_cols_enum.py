@@ -46,18 +46,14 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED
-        SEED = random.randint(0, sys.maxint)
-        random.seed(SEED)
-        print "\nUsing random seed:", SEED
-        localhost = h2o.decide_if_localhost()
-        global tryHeap
+        global SEED, localhost, tryHeap
         tryHeap = 14
+        SEED = h2o.setup_random_seed()
+        localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(1, enable_benchmark_log=True, java_heap_GB=tryHeap)
         else:
             h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
-
 
     @classmethod
     def tearDownClass(cls):
@@ -127,7 +123,7 @@ class Basic(unittest.TestCase):
                 'weight': 1.0,
                 'thresholds': 0.5,
                 'n_folds': 1,
-                'beta_eps': 1e-4,
+                'beta_epsilon': 1e-4,
             }
 
             start = time.time()

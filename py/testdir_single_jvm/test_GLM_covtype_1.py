@@ -11,15 +11,15 @@ class Basic(unittest.TestCase):
     def setUpClass(cls):
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1,java_heap_GB=4)
+            h2o.build_cloud(1,java_heap_GB=4, base_port=54323)
         else:
-            h2o_hosts.build_cloud_with_hosts()
+            h2o_hosts.build_cloud_with_hosts(base_port=54323)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_covtype(self):
+    def test_GLM_covtype_1(self):
         csvFilename = 'covtype.data'
         csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/' + csvFilename)
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname,timeoutSecs=10)
@@ -48,7 +48,7 @@ class Basic(unittest.TestCase):
             'case_mode': '=',
             'case': 1,
             'max_iter': max_iter,
-            'beta_eps': 1e-3}
+            'beta_epsilon': 1e-3}
 
         timeoutSecs = 120
         # L2 

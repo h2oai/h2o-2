@@ -20,7 +20,7 @@ class Basic(unittest.TestCase):
         importFolderPath = "/home/0xdiag/datasets/standard"
         trialMax = 2
         for tryJvms in [1,2,3,4]:
-            for tryHeap in [1,3]:
+            for tryHeap in [3]:
                 print "\n", tryHeap,"GB heap,", tryJvms, "jvm per host, import folder,", \
                     "then loop parsing 'covtype20x.data' to unique keys"
                 h2o_hosts.build_cloud_with_hosts(node_count=tryJvms, java_heap_GB=tryHeap)

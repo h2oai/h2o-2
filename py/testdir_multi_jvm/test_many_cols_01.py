@@ -26,12 +26,8 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED
-        SEED = random.randint(0, sys.maxint)
-
-        # SEED = 
-        random.seed(SEED)
-        print "\nUsing random seed:", SEED
+        global SEED, localhost
+        SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(2,java_heap_GB=1)
@@ -42,7 +38,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_many_cols_with_syn(self):
+    def test_many_cols_01(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (100, 10000, 'cI', 5),
@@ -71,7 +67,7 @@ class Basic(unittest.TestCase):
             print "Parse result['destination_key']:", parseKey['destination_key']
 
             # We should be able to see the parse result?
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=120)
             print "\n" + csvFilename
 
             if not h2o.browse_disable:

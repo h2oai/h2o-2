@@ -74,10 +74,10 @@ public class Host {
   }
 
   public void rsync() {
-    rsync(defaultIncludes(), defaultExcludes());
+    rsync(defaultIncludes(), defaultExcludes(), false);
   }
 
-  public void rsync(Set<String> includes, Set<String> excludes) {
+  public void rsync(Set<String> includes, Set<String> excludes, boolean delete) {
     Process process = null;
     try {
       ArrayList<String> args = new ArrayList<String>();
@@ -93,6 +93,8 @@ public class Host {
       File file = Utils.writeFile(Utils.join('\n', excludes));
       args.add("--exclude-from");
       args.add(file.getCanonicalPath());
+      if( delete )
+        args.add("--delete");
 
       args.add(_address + ":" + "/home/" + _user + "/" + FOLDER);
       ProcessBuilder builder = new ProcessBuilder(args);
@@ -114,17 +116,18 @@ public class Host {
   }
 
   public static void rsync(final Host... hosts) {
-    rsync(hosts, defaultIncludes(), defaultExcludes());
+    rsync(hosts, defaultIncludes(), defaultExcludes(), false);
   }
 
-  public static void rsync(final Host[] hosts, final Set<String> includes, final Set<String> excludes) {
+  public static void rsync(final Host[] hosts, final Set<String> includes, final Set<String> excludes,
+      final boolean delete) {
     ArrayList<Thread> threads = new ArrayList<Thread>();
 
     for( int i = 0; i < hosts.length; i++ ) {
       final int i_ = i;
       Thread t = new Thread() {
         @Override public void run() {
-          hosts[i_].rsync(includes, excludes);
+          hosts[i_].rsync(includes, excludes, delete);
         }
       };
       t.setDaemon(true);
@@ -155,5 +158,9 @@ public class Host {
       k = " -i " + _key;
     }
     return "ssh -l " + _user + " -A" + k + SSH_OPTS;
+  }
+
+  @Override public String toString() {
+    return "Host " + _address;
   }
 }

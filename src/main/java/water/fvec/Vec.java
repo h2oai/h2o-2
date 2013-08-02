@@ -16,11 +16,9 @@ import water.*;
 //  Vec Key format is: Key. VEC - byte, 0 - byte,   0    - int, normal Key bytes.
 // DVec Key format is: Key.DVEC - byte, 0 - byte, chunk# - int, normal Key bytes.
 public class Vec extends Iced {
-  public enum DType {U,I,F,E,S,NA};
   public static final int LOG_CHK = 20; // Chunks are 1<<20, or 1Meg
   public static final long CHUNK_SZ = 1L << LOG_CHK;
-  protected DType _dtype = DType.U;
-  public DType dtype(){return _dtype;}
+
   final public Key _key;        // Top-level key
   // Element-start per chunk.  Always zero for chunk 0.  One more entry than
   // chunks, so the last entry is the total number of rows.  This field is
@@ -36,6 +34,18 @@ public class Vec extends Iced {
   public boolean _isInt;  // true if column is all integer data
   // min/max/mean lazily computed.
   double _min, _max;
+
+  // Base datatype of the entire column.
+  // Decided on when we close an AppendableVec.
+  // U - Unknown (or empty)
+  // I - Integer/Long
+  // F - Float/Double
+  // S - String/Enum
+  // NA- All missing data
+  public enum DType {U,I,F,S,NA};
+  protected DType _dtype = DType.U;
+  // Overridden in AppendableVec
+  public DType dtype(){return _dtype;}
 
   Vec( Key key, long espc[], boolean isInt, double min, double max ) {
     assert key._kb[0]==Key.VEC;
@@ -121,7 +131,7 @@ public class Vec extends Iced {
       else                 lo = mid;
     }
     if(res != lo)
-      assert(res == lo):res + " != " + lo;
+      assert(res == lo):res + " != " + lo + ", i = " + i + ", espc = " + Arrays.toString(_espc);
     return lo;
   }
 
@@ -174,10 +184,6 @@ public class Vec extends Iced {
     return new VectorGroup(gKey,1);
   }
 
-  // Convert a global row# to a chunk-local row#.
-  private final int elem2ChunkElem( long i, int cidx ) {
-    return (int)(i - chunk2StartElem(cidx));
-  }
   // Matching CVec for a given element
   public Chunk elem2BV( int cidx ) {
     long start = chunk2StartElem(cidx); // Chunk# to chunk starting element#
@@ -188,6 +194,10 @@ public class Vec extends Iced {
     bv._start = start;          // Fields not filled in by unpacking from Value
     bv._vec = this;             // Fields not filled in by unpacking from Value
     return bv;
+  }
+  // Chunk at a row
+  public Chunk chunk( long i ) {
+    return elem2BV(elem2ChunkIdx(i));
   }
 
   // Next BigVector from the current one
@@ -246,7 +256,7 @@ public class Vec extends Iced {
     String s = "["+length()+(Double.isNaN(_min) ? "" : ","+_min+"/"+_max+", "+PrettyPrint.bytes(byteSize())+", {");
     int nc = nChunks();
     for( int i=0; i<nc; i++ )
-      s += (Chunk)(DKV.get(chunkKey(i)).get())+",";
+      s += (DKV.get(chunkKey(i)).get())+",";
     return s+"}]";
   }
 
@@ -268,7 +278,7 @@ public class Vec extends Iced {
    * Group of each vector can be retrieved by calling group() method;
    *
    * The expected mode of operation is that user wants to add new vectors matching the source.
-   * E.g. parse creates several vectors (on for each column) which are all colocated and are
+   * E.g. parse creates several vectors (one for each column) which are all colocated and are
    * colocated with the original bytevector.
    *
    * To do this, user should first ask for the set of keys for the new vectors by calling addVecs method on the

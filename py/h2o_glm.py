@@ -12,6 +12,12 @@ def pickRandGlmParams(paramDict, params):
         if (randomKey=='x'):
             colX = randomValue
 
+        if 'family' in params and 'link' in params: 
+            # don't allow logit for poisson
+            if params['family'] == 'poisson':
+                if params['link'] in ('logit'):
+                    params['link'] = None # use default link for poisson always
+
         # case only used if binomial? binomial is default if no family
         if 'family' not in params or params['family'] == 'binomial':
             maxCase = max(paramDict['case'])
@@ -33,7 +39,9 @@ def pickRandGlmParams(paramDict, params):
     return colX
 
 def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False,
-    prettyPrint=False, noPrint=False, **kwargs):
+    prettyPrint=False, noPrint=False, maxExpectedIterations=None, **kwargs):
+    # if we hit the max_iter, that means it probably didn't converge. should be 1-maxExpectedIter
+
     # h2o GLM will verboseprint the result and print errors. 
     # so don't have to do that
     # different when cross validation  is used? No trainingErrorDetails?
@@ -65,6 +73,10 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     iterations = GLMModel['iterations']
     print "GLMModel/iterations:", iterations
 
+            # if we hit the max_iter, that means it probably didn't converge. should be 1-maxExpectedIter
+    if maxExpectedIterations is not None and iterations  > maxExpectedIterations:
+            raise Exception("GLM did iterations: %d which is greater than expected: %d" % (iterations, maxExpectedIterations) )
+
     # pop the first validation from the list
     validationsList = GLMModel['validations']
     # don't want to modify validationsList in case someone else looks at it
@@ -74,7 +86,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     n_folds = kwargs.setdefault('n_folds', None)
     if not 'xval_models' in validations:
         if n_folds > 1:
-                raise Exception("No cross validation models returned. Asked for "+n_folds)
+            raise Exception("No cross validation models returned. Asked for "+n_folds)
     else:
         xval_models = validations['xval_models']
         if n_folds and n_folds > 1:
@@ -272,4 +284,68 @@ def simpleCheckGLMGrid(self, glmGridResult, colX=None, allowFailWarning=False, *
     inspectGLM = h2o_cmd.runInspect(None, model_key)
     h2o.verboseprint("GLMGrid inspectGLM:", h2o.dump_json(inspectGLM))
     simpleCheckGLM(self, inspectGLM, colX, allowFailWarning=allowFailWarning, **kwargs)
+
+# This gives me a comma separated x string, for all the columns, with cols with
+# missing values, enums, and optionally matching a pattern, removed. useful for GLM
+# since it removes rows with any col with NA
+
+# get input from this.
+#   (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
+#                h2o_cmd.columnInfoFromInspect(parseKey, exceptionOnMissingValues=False, timeoutSecs=300)
+
+def goodXFromColumnInfo(y, 
+    num_cols=None, missingValuesDict=None, constantValuesDict=None, enumSizeDict=None, colTypeDict=None, colNameDict=None, 
+    keepPattern=None, parseKey=None, timeoutSecs=120):
+
+    # if we pass a parseKey, means we want to get the info ourselves here
+    if parseKey is not None:
+        (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
+            h2o_cmd.columnInfoFromInspect(parseKey, exceptionOnMissingValues=False, timeoutSecs=timeoutSecs)
+        num_cols = len(colNameDict)
+
+    # now remove any whose names don't match the required keepPattern
+    if keepPattern is not None:
+        keepX = re.compile(keepPattern)
+    else:
+        keepX = None
+
+    x = range(num_cols)
+    # need to walk over a copy, cause we change x
+    xOrig = x[:]
+    for k in xOrig:
+        if k == 5:
+            print "hello", colNameDict[k], k
+        name = colNameDict[k]
+        # remove it if it has the same name as the y output
+        if name == y:
+            print "Removing %d because name: %s matches output %s" % (k, name, y)
+            x.remove(k)
+
+        elif keepX is not None and not keepX.match(name):
+            print "Removing %d because name: %s doesn't match desired keepPattern %s" % (k, name, keepPattern)
+            x.remove(k)
+
+        elif k in constantValuesDict:
+            value = constantValuesDict[k]
+            print "Removing %d with name: %s because it has constant value: %s " % (k, name, str(value))
+            x.remove(k)
+
+        # remove all cols with missing values
+        # could change it against num_rows for a ratio
+        elif k in missingValuesDict:
+            value = missingValuesDict[k]
+            print "Removing %d with name: %s because it has %d missing values" % (k, name, value)
+            x.remove(k)
+
+        # this is extra pruning..
+        # remove all cols with enums, if not already removed
+        elif k in enumSizeDict:
+            value = enumSizeDict[k]
+            print "Removing %d %s because it has enums of size: %d" % (k, name, value)
+            x.remove(k)
+
+    print "The pruned x has length", len(x)
+    x = ",".join(map(str,x))
+    return x
+
 

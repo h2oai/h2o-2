@@ -4,7 +4,6 @@
 	<classpathentry kind="src" path="src/test/java"/>
 	<classpathentry kind="src" path="src/main/resources"/>
 	<classpathentry kind="src" path="src/samples/java"/>
-	<classpathentry kind="src" path="src/sandbox/java"/>
 	<classpathentry kind="lib" path="lib/apache/commons-configuration-1.6.jar"/>
 	<classpathentry kind="lib" path="lib/apache/commons-lang-2.4.jar" sourcepath="lib/apache/commons-lang-2.4-sources.jar"/>
 	<classpathentry kind="lib" path="lib/apache/commons-logging-1.1.1.jar" sourcepath="lib/apache/commons-logging-1.1.1-src.zip"/>
@@ -21,7 +20,6 @@
 	<classpathentry kind="lib" path="lib/javassist.jar" sourcepath="lib/javassist-sources.jar"/>
 	<classpathentry kind="lib" path="lib/apache/commons-codec-1.4.jar" sourcepath="lib/apache/commons-codec-1.4-sources.zip"/>
 	<classpathentry kind="lib" path="lib/mockito/mockito-all-1.9.5.jar"/>
-	<classpathentry kind="lib" path="/home/cypof/h2o/lib/gpu/JOCL-0.1.9.jar" sourcepath="lib/gpu/JOCL-0.1.9-sources.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="lib/jets3t/commons-httpclient-3.1.jar"/>
 	<classpathentry kind="lib" path="lib/jets3t/jets3t-0.6.1.jar"/>
@@ -32,11 +30,10 @@
 	<classpathentry kind="lib" path="lib/hadoop/cdh3/log4j-1.2.15.jar" sourcepath="/home/cypof/.m2/repository/log4j/log4j/1.2.15/log4j-1.2.15-sources.jar"/>
 	<classpathentry kind="lib" path="lib/hadoop/cdh3/hadoop-core-0.20.2-cdh3u6.jar" sourcepath="lib/hadoop/cdh3/hadoop-core-0.20.2-cdh3u6-sources.jar"/>
 	<classpathentry kind="lib" path="lib/log4j/log4j-1.2.15.jar"/>
-	<classpathentry kind="lib" path="/home/cypof/h2o/lib/gpu/aparapi.jar" sourcepath="lib/gpu/aparapi-sources.jar">
-		<attributes>
-			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="h2o/lib/gpu"/>
-		</attributes>
-	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Python 2.7.2 (/System/Library/Frameworks/Python.framework/Versions/2.7/bin/python) interpreter library"/>
+	<classpathentry kind="lib" path="lib/jogamp/jocl-natives-linux-amd64.jar"/>
+	<classpathentry kind="lib" path="lib/jogamp/jocl.jar" sourcepath="lib/jogamp/jocl-sources.jar"/>
+	<classpathentry kind="lib" path="lib/jogamp/gluegen-rt-natives-linux-amd64.jar"/>
+	<classpathentry kind="lib" path="lib/jogamp/gluegen-rt.jar" sourcepath="lib/jogamp/gluegen-sources.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

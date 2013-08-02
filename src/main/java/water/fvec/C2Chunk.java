@@ -15,7 +15,11 @@ public class C2Chunk extends Chunk {
     int res = UDP.get2(_mem,(i<<1)+OFF);
     return res == _NA?_vec._fNA:res;
   }
-  @Override boolean set8_impl(int idx, long l) { return false; }
+  @Override boolean set8_impl(int idx, long l) { 
+    if( !(Short.MIN_VALUE < l && l <= Short.MAX_VALUE) ) return false;
+    UDP.set2(_mem,(idx<<1)+OFF,(short)l);
+    return true; 
+  }
   @Override boolean set8_impl(int i, double d) { return false; }
   @Override boolean hasFloat() { return false; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
@@ -27,6 +31,11 @@ public class C2Chunk extends Chunk {
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
-    throw H2O.unimpl();
+    for( int i=0; i<_len; i++ ) {
+      long res = at8_impl(i);
+      if( _vec.isNA(res) ) nc.setInvalid(i);
+      else nc._ls[i] = res;
+    }
+    return nc;
   }
 }

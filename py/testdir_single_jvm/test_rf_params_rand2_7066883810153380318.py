@@ -48,7 +48,7 @@ paramDict = {
     'bin_limit': [None,5,10,100,1000],
     'parallel': [1],
     'ignore': [None,0,1,2,3,4,5,6,7,8,9],
-    'sample': [None,20,40,60,80,100],
+    'sample': [None,20,40,60,80,90], # don't use 100 if oobe error reporting
     'seed': [None,'0','1','11111','19823134','1231231'],
     'features': [1,3,5,7,9,11,13,17,19,23,37,53],
     'sampling_strategy': [None, 'RANDOM', 'STRATIFIED_LOCAL' ],
@@ -57,7 +57,7 @@ paramDict = {
         "1=5",
         "2=3",
         "1=1,2=1,3=1,4=1,5=1,6=1,7=1",
-        "1=100,2=100,3=100,4=100,5=100,6=100,7=100",
+        "1=99,2=99,3=99,4=99,5=99,6=99,7=99", # 100 seems to cause zero results
         "1=0,2=0,3=0,4=0,5=0,6=0,7=0",
         ]
     }
@@ -68,7 +68,9 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
+        global SEED, localhost
+        # SEED = h2o.setup_random_seed()
+        SEED = 7066883810153380318
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(node_count=1, java_heap_GB=10)
@@ -81,14 +83,6 @@ class Basic(unittest.TestCase):
 
     def test_rf_params_rand2_7066883810153380318(self):
         csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
-
-        # for determinism, I guess we should spit out the seed?
-        # random.seed(SEED)
-        # SEED = random.randint(0, sys.maxint)
-        # if you have to force to redo a test
-        SEED = 7066883810153380318
-        random.seed(SEED)
-        print "\nUsing random seed:", SEED
         for trial in range(10):
             # params is mutable. This is default.
             params = {'ntree': 23, 'parallel': 1, 'features': 7}

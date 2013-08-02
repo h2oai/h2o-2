@@ -85,11 +85,8 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED
-        SEED = random.randint(0, sys.maxint)
-        # SEED = 
-        random.seed(SEED)
-        print "\nUsing random seed:", SEED
+        global SEED, localhost
+        SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(1,java_heap_GB=10)
@@ -131,14 +128,14 @@ class Basic(unittest.TestCase):
             print "\n" + csvFilename
 
             y = colCount
-            kwargs = {'y': y, 'max_iter': 60, 
+            kwargs = {
+                    'y': y, 
+                    'max_iter': 60, 
                     'lambda': 1e-4,
                     'alpha': 0,
                     'weight': 1.0,
-                    # what about these?
-                    # 'link': [None, 'logit','identity', 'log', 'inverse'],
                     'n_folds': 3,
-                    'beta_eps': 1e-4,
+                    'beta_epsilon': 1e-4,
                     'thresholds': 0.5,
                     }
 

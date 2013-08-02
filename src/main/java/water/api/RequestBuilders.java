@@ -13,6 +13,7 @@ import water.PrettyPrint;
 import water.util.*;
 
 import com.google.gson.*;
+import com.google.gson.stream.JsonReader;
 
 /** Builders & response object.
  *
@@ -63,8 +64,14 @@ public class RequestBuilders extends RequestQueries {
       builder = OBJECT_BUILDER;
     }
     for( String h : response.getHeaders() ) sb.append(h);
-    if( response._response==null ) response._req.toHTML(sb);
-    else sb.append(builder.build(response,response._response,""));
+    if( response._response==null ) {
+      boolean done = response._req.toHTML(sb);
+      if(!done) {
+        JsonParser parser = new JsonParser();
+        JsonObject o = (JsonObject) parser.parse(new String(response._req.writeJSON(new AutoBuffer()).buf()));
+        sb.append(builder.build(response, o, ""));
+      }
+    } else sb.append(builder.build(response,response._response,""));
     sb.append("</div></div></div>");
     return sb.toString();
   }

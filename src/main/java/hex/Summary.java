@@ -42,17 +42,17 @@ public class Summary extends Iced {
         _min = new double[]{c._min};
         _max = new double[]{c._max};
       } else {
-        final long n = Math.max(c._n,1);
         if(_enum){
           _percentiles = null;
           _binsz = _binszInv = 1;
-          _bins = new long[(int)n];
+          _bins = MemoryManager.malloc8((int)c.numDomainSize());
           _start = 0;
-          _end = n;
+          _end = _bins.length;
           _min = _max = null;
         } else {
-          _min = new double[NMAX];
-          _max = new double[NMAX];
+          final long n = Math.max(c._n,1);
+          _min = MemoryManager.malloc8d(NMAX);
+          _max = MemoryManager.malloc8d(NMAX);
           Arrays.fill(_min, Double.POSITIVE_INFINITY);
           Arrays.fill(_max, Double.NEGATIVE_INFINITY);
           if(c.isFloat() || c.numDomainSize() > MAX_HIST_SZ){
@@ -98,16 +98,14 @@ public class Summary extends Iced {
       if( _bins.length == 0 ) return;
       int k = 0;
       long s = 0;
-      double pval = Double.NEGATIVE_INFINITY;
       for(int j = 0; j < _percentiles.length; ++j){
-        double s1 = _percentiles[j]*_n - s;
+        final double s1 = _percentiles[j]*_n;
         long bc = 0;
-        while(s1 > (bc = binCount(k))){
-          s1 -= bc;
+        while(s1 > s+(bc = binCount(k))){
           s  += bc;
           k++;
         }
-        _percentileValues[j] = pval =  Math.max(pval,_min[0] + k*_binsz) + s1/bc*_binsz;
+        _percentileValues[j] = _min[0] + k*_binsz + ((_binsz > 1)?0.5*_binsz:0);
       }
     }
 

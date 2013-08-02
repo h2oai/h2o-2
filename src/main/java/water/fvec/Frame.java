@@ -1,26 +1,24 @@
 package water.fvec;
 
+import java.util.Arrays;
+
 import water.*;
 import water.fvec.Vec.VectorGroup;
 
-import java.io.InputStream;
-import java.util.Arrays;
-
 // A collection of named Vecs.  Essentially an R-like data-frame.
 public class Frame extends Iced {
-  transient public Key _key;
   public String[] _names;
   public Vec[] _vecs;
   public Vec _col0;             // First readable vec
 
 
-  public Frame( Key k, String[] names, Vec[] vecs ) {
-    _key=k; _names=names; _vecs=vecs;
+  public Frame( String[] names, Vec[] vecs ) {
+    _names=names; _vecs=vecs;
   }
   // Find a named column
   public int find( String name ) {
     for( int i=0; i<_names.length; i++ )
-      if( name.equals(_names[i]) ) 
+      if( name.equals(_names[i]) )
         return i;
     return -1;
   }
@@ -36,7 +34,7 @@ public class Frame extends Iced {
   // Remove a named column
   public Vec remove( String name ) { return remove(find(name)); }
   // Remove a numbered column
-  public Vec remove( int idx ) { 
+  public Vec remove( int idx ) {
     int len = _names.length;
     if( idx < 0 || idx >= len ) return null;
     Vec v = _vecs[idx];
@@ -51,7 +49,8 @@ public class Frame extends Iced {
   public final Vec[] vecs() {
     return _vecs;
   }
-  int numCols() { return _vecs.length; }
+  public int  numCols() { return _vecs.length; }
+  public long numRows(){ return _vecs[0].length();}
 
   // Return first readable vector
   public Vec firstReadable() {
@@ -99,12 +98,13 @@ public class Frame extends Iced {
     return false;
   }
 
+  // Actually remove/delete all Vecs from memory, not just from the Frame
   public void remove(Futures fs){
     if(_vecs.length > 0){
       VectorGroup vg = _vecs[0].group();
       for( Vec v : _vecs )
         UKV.remove(v._key,fs);
-       DKV.remove(vg._key);
+      DKV.remove(vg._key);
     }
     _names = new String[0];
     _vecs = new Vec[0];
@@ -113,7 +113,6 @@ public class Frame extends Iced {
   public void remove() {
     remove(new Futures());
   }
-  @Override public Frame init( Key k ) { _key=k; return this; }
   @Override public String toString() {
     // Across
     String s="{"+_names[0];

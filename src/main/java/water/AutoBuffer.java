@@ -938,7 +938,7 @@ public final class AutoBuffer {
 
   // ==========================================================================
   // JSON Autobuffer printers
-  
+
   private AutoBuffer putStr2( String s ) {
     byte[] b = s.getBytes();
     int off=0;
@@ -955,6 +955,9 @@ public final class AutoBuffer {
   public AutoBuffer putNULL( ) { return put1('n').put1('u').put1('l').put1('l'); }
   public AutoBuffer putJSONStr( String s ) {
     return s==null ? putNULL() : put1('"').putStr2(s).put1('"');
+  }
+  public AutoBuffer putJSONStr( String name, String value ) {
+    return putJSONStr(name).put1(':').putJSONStr(value);
   }
 
   public AutoBuffer putJSONAStr(String name, String[] fs) {

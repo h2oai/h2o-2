@@ -39,12 +39,8 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED
-        SEED = random.randint(0, sys.maxint)
-        # SEED = 
-        random.seed(SEED)
-        print "\nUsing random seed:", SEED
-        global localhost
+        global SEED, localhost
+        SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(1,java_heap_GB=1)
@@ -108,10 +104,8 @@ class Basic(unittest.TestCase):
             print "Parse result['destination_key']:", parseKey['destination_key']
 
             print "\n" + csvFilename
-            missingValuesDict = h2o_cmd.check_enums_from_inspect(parseKey)
-            if missingValuesDict:
-                m = [str(k) + ":" + str(v) for k,v in missingValuesDict.iteritems()]
-                raise Exception("Looks like columns got flipped to NAs: " + ", ".join(m))
+            (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
+                h2o_cmd.columnInfoFromInspect(parseKey, exceptionOnMissingValues=True)
 
             y = colCount
             kwargs = {'y': y, 'max_iter': 1, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5, 
@@ -119,7 +113,6 @@ class Basic(unittest.TestCase):
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
             print "glm end on ", parseKey['destination_key'], 'took', time.time() - start, 'seconds'
-
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
             GLMModel = glm['GLMModel']

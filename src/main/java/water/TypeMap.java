@@ -34,15 +34,22 @@ public class TypeMap {
     "water.ValueArray",
     "water.ValueArray$Column",
     "water.api.Script$Done",
+    "water.fvec.AppendableVec",
+    "water.fvec.ByteVec",
     "water.fvec.C1Chunk",
     "water.fvec.Frame",
     "water.fvec.Vec",
-    "water.fvec.AppendableVec",
     "water.parser.ParseDataset",
     "water.parser.ParseDataset$Progress",
     "water.util.JStackCollectorTask",
     "water.util.Log$1",
     "water.util.Log$LogStr",
+    // Classes required by tests - this is really nasty hack since it introduce
+    // dependency from core code into tests !!!!
+    "hex.DGLM$GLMParams",
+    "hex.NewRowVecTask$DataFrame",
+    "water.AutoSerialTest",
+    "water.KVTest$Atomic2",
   };
   // String -> ID mapping
   static private final NonBlockingHashMap<String, Integer> MAP = new NonBlockingHashMap();
