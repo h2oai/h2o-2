@@ -1,17 +1,13 @@
 package water.api;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.regex.Pattern;
-import java.io.File;
 
 import water.*;
-import water.Weaver.Weave;
-import water.api.RequestBuilders.Response.Status;
 import water.fvec.*;
 import water.parser.*;
-import water.parser.CustomParser.ParserSetup;
-import water.util.RString;
 
 public class Parse2 extends Request {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
@@ -23,29 +19,29 @@ public class Parse2 extends Request {
 
   // HTTP request parameters
 
-  @Weave(help="Field separator, typically commas ',' or TABs.")
+  @API(help="Field separator, typically commas ',' or TABs.")
   final Separator separator = new Separator("separator");
 
-  @Weave(help="Key (or regex of keys) to ignore.")
+  @API(help="Key (or regex of keys) to ignore.")
   final Str exclude = new Str("exclude", "");
 
-  @Weave(help="An existing H2O CSV text key (or regex of keys).")
+  @API(help="An existing H2O CSV text key (or regex of keys).")
   final ExistingCSVKey source_key = new ExistingCSVKey("source_key");
 
-  @Weave(help="Destination key.")
+  @API(help="Destination key.")
   final NewH2OHexKey dst_key = new NewH2OHexKey("dst");
 
-  @Weave(help="If checked, first data row is assumed to be a header.  If unchecked, first data row is assumed to be data.")
+  @API(help="If checked, first data row is assumed to be a header.  If unchecked, first data row is assumed to be data.")
   final Header header = new Header("header");
 
   // JSON output fields
-  @Weave(help="Destination key.")
+  @API(help="Destination key.")
   String destination_key;
 
-  @Weave(help="Job key, useful to query for progress.")
+  @API(help="Job key, useful to query for progress.")
   String job;
 
-  @Weave(help="Web page to redirect to, once the job is done")
+  @API(help="Web page to redirect to, once the job is done")
   final String redirect="Inspect2";
 
   //@Override public String[] DocExampleSucc() { return new String[]{ "source_key","./smalldata/logreg/prostate.cvs" }; }
@@ -221,7 +217,7 @@ public class Parse2 extends Request {
       if(header.originalValue() != null) // No user wish?
          setup._header = header.value();
       Key[] keys = p._keys.toArray(new Key[p._keys.size()]);
-      Key jobkey = ParseDataset2.forkParseDataset(d, keys,setup)._self;
+      Key jobkey = ParseDataset2.forkParseDataset(d, keys, setup).job_key;
       job = jobkey.toString();
       destination_key = d.toString();
 

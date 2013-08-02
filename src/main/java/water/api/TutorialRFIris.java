@@ -7,7 +7,7 @@ package water.api;
  */
 public class TutorialRFIris extends TutorialWorkflow {
 
-  private final TutorWorkflow _wf;
+  private final transient TutorWorkflow _wf;
   private final static String[][] TUTORIAL_STEPS = new String[][]{
     /*               Title     Short Summary     File containing step description */
     new String[] { "Step 1", "Introduction", "/tutorials/rf.iris/step1.html" },

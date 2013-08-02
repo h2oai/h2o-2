@@ -757,8 +757,6 @@ public final class H2O {
 
     sayHi();
 
-    Log.POST(310,"");
-
     // Get ice path before loading Log or Persist class
     String ice = DEFAULT_ICE_ROOT;
     if( OPT_ARGS.ice_root != null ) ice = OPT_ARGS.ice_root.replace("\\", "/");
@@ -773,11 +771,14 @@ public final class H2O {
     SELF_ADDRESS = findInetAddressForSelf();
 
     //if (OPT_ARGS.rshell.equals("false"))
-    Log.POST(320,"");
+    Log.POST(310,"");
     Log.wrap(); // Logging does not wrap when the rshell is on.
 
     // Start the local node
     startLocalNode();
+    Log.POST(320,"");
+
+    ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
     Log.POST(330,"");
 
     String logDir = (Log.getLogDir() != null) ? Log.getLogDir() : "(unknown)";
