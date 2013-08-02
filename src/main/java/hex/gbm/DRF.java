@@ -17,10 +17,10 @@ public class DRF extends Job {
   public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
   private DRF(Key dest, Frame fr) { super("DRF "+fr, dest); }
   // Called from a non-FJ thread; makea a DRF and hands it over to FJ threads
-  public static DRF start(Key dest, final Frame fr, final int maxDepth, final int ntrees, final int mtrys, final double sampleRate) {
+  public static DRF start(Key dest, final Frame fr, final int maxDepth, final int ntrees, final int mtrys, final double sampleRate, final long seed) {
     final DRF job = new DRF(dest, fr);
     H2O.submitTask(job.start(new H2OCountedCompleter() {
-        @Override public void compute2() { job.run(fr,maxDepth,ntrees,mtrys,sampleRate); tryComplete(); }
+        @Override public void compute2() { job.run(fr,maxDepth,ntrees,mtrys,sampleRate,seed); tryComplete(); }
       })); 
     return job;
   }
@@ -37,7 +37,7 @@ public class DRF extends Job {
 
   // Compute a single DRF tree from the Frame.  Last column is the response
   // variable.  Depth is capped at maxDepth.
-  private void run(Frame fr, int maxDepth, int ntrees, int mtrys, double sampleRate ) {
+  private void run(Frame fr, int maxDepth, int ntrees, int mtrys, double sampleRate, long seed ) {
     Timer t_drf = new Timer();
     assert 0 <= ntrees && ntrees < 1000000;
     assert 0 <= mtrys && mtrys < fr.numCols();
@@ -55,7 +55,7 @@ public class DRF extends Job {
     //if( numClasses == 2 ) numClasses = 0; // Specifically force 2 classes into a regression
 
     // The RNG used to pick split columns
-    Random rand = new MersenneTwisterRNG(new int[]{1,2});
+    Random rand = new MersenneTwisterRNG(new int[]{(int)(seed>>32L),(int)seed});
 
     // Initially setup as-if an empty-split had just happened
     Histogram hs[] = Histogram.initialHist(fr,ncols);
@@ -84,7 +84,7 @@ public class DRF extends Job {
       }
 
       // Make NTREE trees at once
-      int d = makeSomeTrees(someTrees,someLeafs, xtrees, maxDepth, fr, ncols, numClasses, ymin, nrows, sampleRate);
+      int d = makeSomeTrees(st, someTrees,someLeafs, xtrees, maxDepth, fr, ncols, numClasses, ymin, nrows, sampleRate);
       if( d>depth ) depth=d;    // Actual max depth used
 
       // Remove temp vectors; cleanup the Frame
@@ -95,7 +95,7 @@ public class DRF extends Job {
 
     // One more pass for final prediction error
     Timer t_score = new Timer();
-    for( int t=0; t<ntrees; t++ ) fr.add("NIDs"+t,nids[t]);
+    /*junk?*/    for( int t=0; t<ntrees; t++ ) fr.add("NIDs"+t,nids[t]);
     new BulkScore(trees,ncols,numClasses,ymin,sampleRate).doAll(fr).report( Sys.DRF__, nrows, depth );
 
     while( fr.numCols() > ncols+1 )
@@ -105,7 +105,7 @@ public class DRF extends Job {
   // ----
   // One Big Loop till the tree is of proper depth.
   // Adds a layer to the tree each pass.
-  public int makeSomeTrees( DRFTree trees[], int leafs[], int ntrees, int maxDepth, Frame fr, int ncols, int numClasses, int ymin, long nrows, double sampleRate ) {
+  public int makeSomeTrees( int st, DRFTree trees[], int leafs[], int ntrees, int maxDepth, Frame fr, int ncols, int numClasses, int ymin, long nrows, double sampleRate ) {
     for( int depth=0; depth<maxDepth; depth++ ) {
 
       // Fuse 2 conceptual passes into one:
@@ -136,7 +136,7 @@ public class DRF extends Job {
         final int tmax = tree._len; // Number of total splits
         int leaf = leafs[t];
         for( ; leaf<tmax; leaf++ ) {
-          //System.out.println("Tree#"+t+", "+tree.undecided(leaf));
+          //System.out.println("Tree#"+(st+t)+", "+tree.undecided(leaf));
           // Replace the Undecided with the Split decision
           new DRFDecidedNode(tree.undecided(leaf));
         }
@@ -221,7 +221,7 @@ public class DRF extends Job {
       Random rand = _tree.rngForChunk(nids.cidx());
       for( int i=0; i<nids._len; i++ )
         if( rand.nextFloat() >= _rate )
-          nids.set80(i,-1);     // Flag row as being ignored
+          nids.set80(i,-2);     // Flag row as being ignored by sampling
     }
   }
 }

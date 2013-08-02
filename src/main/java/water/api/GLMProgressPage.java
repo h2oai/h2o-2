@@ -34,7 +34,7 @@ public class GLMProgressPage extends Request {
     return hrs + "hrs " + mins + "m " + secs + "s " + millis + "ms";
   }
   protected final H2OKey _job  = new H2OKey(JOB,false);
-  protected final H2OKey _dest = new H2OKey(DEST_KEY);
+  protected final H2OKey _dest = new H2OKey(DEST_KEY,true);
   protected final H2OKey _progress = new H2OKey(PROGRESS_KEY,false);
 
    public static Response redirect(JsonObject resp, Key job, Key dest, Key progress) {

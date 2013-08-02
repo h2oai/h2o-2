@@ -44,7 +44,7 @@ public class PutVector extends JSONOnlyRequest {
     return d;
   }
 
-  protected H2OKey _key = new H2OKey(KEY);
+  protected H2OKey _key = new H2OKey(KEY,true);
   protected Str _value = new Str(VALUE);
 
   @Override protected Response serve() {
