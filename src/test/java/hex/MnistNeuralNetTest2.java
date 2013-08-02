@@ -1,6 +1,6 @@
 package hex;
 
-import hex.Layer.Input;
+import hex.Layer2.Input;
 import hex.rng.MersenneTwisterRNG;
 
 import java.io.*;
@@ -9,7 +9,7 @@ import java.util.zip.GZIPInputStream;
 
 import water.util.Utils;
 
-public class MnistNeuralNetTest {
+public class MnistNeuralNetTest2 {
   static final int PIXELS = 784, EDGE = 28;
   static final String PATH = "smalldata/mnist70k/";
   static final DecimalFormat _format = new DecimalFormat("0.000");
@@ -20,7 +20,7 @@ public class MnistNeuralNetTest {
   }
 
   static Data _train, _test;
-  Layer[] _ls;
+  Layer2[] _ls;
 
   public static class TrainInput extends Input {
     public TrainInput() {
@@ -60,32 +60,32 @@ public class MnistNeuralNetTest {
     boolean pretrain = false;
     boolean rectifier = false;
     {
-      _ls = new Layer[3];
+      _ls = new Layer2[3];
       _ls[0] = new TrainInput();
       if( rectifier ) {
-        _ls[1] = new Layer.Rectifier(_ls[0], 500);
-        _ls[2] = new Layer.Rectifier(_ls[1], 10);
+        _ls[1] = new Layer2.Rectifier(_ls[0], 500);
+        _ls[2] = new Layer2.Rectifier(_ls[1], 10);
       } else {
-        _ls[1] = new Layer.Tanh(_ls[0], 1000);
+        _ls[1] = new Layer2.Tanh(_ls[0], 1000);
         _ls[1]._rate = 0.001f;
-        _ls[2] = new Layer.Tanh(_ls[1], 10);
+        _ls[2] = new Layer2.Tanh(_ls[1], 10);
         _ls[2]._rate = 0.00005f;
       }
     }
     for( int i = 0; i < _ls.length; i++ )
-      _ls[i].init(false);
+      _ls[i].init();
 
     if( load ) {
       long time = System.nanoTime();
       for( int i = 0; i < _ls.length; i++ ) {
-        String json = Utils.readFile(new File("layer" + i + ".json"));
-        _ls[i] = Utils.json(json, Layer.class);
+        String json = Utils.readFile(new File("Layer2" + i + ".json"));
+        _ls[i] = Utils.json(json, Layer2.class);
       }
       System.out.println("load: " + (int) ((System.nanoTime() - time) / 1e6) + " ms");
     }
 
     //ParallelTrainers trainer = new ParallelTrainers(_ls, _train._labels);
-    Trainer trainer = new Trainer.Direct(_ls);
+    Trainer2 trainer = new Trainer2.Direct(_ls);
 
     if( pretrain ) {
       for( int i = 0; i < _ls.length; i++ ) {
@@ -107,7 +107,7 @@ public class MnistNeuralNetTest {
     }
   }
 
-  void preTrain(Trainer trainer, int upTo) {
+  void preTrain(Trainer2 trainer, int upTo) {
     float[][] inputs = new float[trainer._batch][];
     float[][] tester = new float[100][];
     int n = 0;
@@ -162,7 +162,7 @@ public class MnistNeuralNetTest {
     return n;
   }
 
-  void train(final Trainer trainer) {
+  void train(final Trainer2 trainer) {
     Thread thread = new Thread() {
       @Override public void run() {
         trainer.run();
@@ -190,17 +190,17 @@ public class MnistNeuralNetTest {
       lastItems = items;
       String s = ms + " ms " + (ps) + "/s, train: " + train + ", test: " + test;
 
-      Layer layer = _ls[1];
+      Layer2 layer = _ls[1];
       double sqr = 0;
       int zeros = 0;
       for( int o = 0; o < layer._a.length; o++ ) {
         for( int i = 0; i < layer._in._a.length; i++ ) {
-          float d = layer._gw[o * layer._in._a.length + i];
+          float d = layer._w[o * layer._in._a.length + i] - layer._wLast[o * layer._in._a.length + i];
           sqr += d * d;
           zeros += d == 0 ? 1 : 0;
         }
       }
-      s += ", gw: " + sqr + " (" + (zeros * 100 / layer._gw.length) + "% 0)";
+      s += ", gw: " + sqr + " (" + (zeros * 100 / layer._w.length) + "% 0)";
       sqr = 0;
       for( int o = 0; o < layer._a.length; o++ ) {
         for( int i = 0; i < layer._in._a.length; i++ ) {
@@ -227,7 +227,7 @@ public class MnistNeuralNetTest {
   }
 
   String test(Data data, int length) {
-    Layer[] clones = new Layer[_ls.length];
+    Layer2[] clones = new Layer2[_ls.length];
     for( int i = 1; i < _ls.length; i++ ) {
 //      _ls[i]._forward.get(_ls[i]._w);
       clones[i] = Utils.deepClone(_ls[i], "_in");
@@ -239,15 +239,15 @@ public class MnistNeuralNetTest {
     Error error = new Error();
     int correct = 0;
     for( int n = 0; n < length; n++ ) {
-      if( MnistNeuralNetTest.test(clones, n, error) )
+      if( MnistNeuralNetTest2.test(clones, n, error) )
         correct++;
     }
     String pct = _format.format(((length - correct) * 100f / length));
     return "err " + _format.format(error.Value / length) + " (" + pct + "%)";
   }
 
-  static String test(Layer[] ls, int count) {
-    Layer[] clones = new Layer[ls.length];
+  static String test(Layer2[] ls, int count) {
+    Layer2[] clones = new Layer2[ls.length];
     for( int i = 0; i < ls.length; i++ ) {
 //      _ls[i]._forward.get(_ls[i]._w);
       clones[i] = Utils.deepClone(ls[i], "_in");
@@ -266,7 +266,7 @@ public class MnistNeuralNetTest {
     return _format.format(error.Value / count) + " (" + pct + "%)";
   }
 
-  static boolean test(Layer[] ls, int n, Error error) {
+  static boolean test(Layer2[] ls, int n, Error error) {
     Input input = (Input) ls[0];
     input._n = n;
     for( int i = 0; i < ls.length; i++ )

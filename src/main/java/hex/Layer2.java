@@ -9,11 +9,11 @@ import java.util.Random;
  */
 public abstract class Layer2 {
   // Initial parameters
-  float _rate = .0001f;
+  float _rate = .0005f;
   float _momentum = .1f; // 1 - value, as parameter search is 0 based
-  float _annealing = .0001f;
+  float _annealing = .00001f;
   float _l2 = .0001f;
-  boolean _auto = true;
+  boolean _auto = false;
   float _autoDelta = .2f;
 
   // Current rate

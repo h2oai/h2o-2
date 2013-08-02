@@ -14,7 +14,6 @@ public abstract class Layer {
   float _l2 = .0001f;
   boolean _auto = true;
   float _autoDelta = .2f;
-  int _len;
 
   // Previous layer
   transient Layer _in;
@@ -33,27 +32,23 @@ public abstract class Layer {
   }
 
   public Layer(Layer in, int len) {
+    _w = new float[len * in._a.length];
+    _b = new float[len];
+    _a = new float[len];
+    _e = new float[len];
+    _gw = new float[len * in._a.length];
+    _gb = new float[len];
+
     _in = in;
-    _len = len;
   }
 
   void init(boolean skipWeights) {
-    _a = new float[_len];
-    _e = new float[_len];
-    _gw = new float[_len * _in._len];
-    _gb = new float[_len];
-
-    if( !skipWeights ) {
-      _w = new float[_len * _in._len];
-      _b = new float[_len];
-
-      // deeplearning.net tutorial (TODO figure out one for rectifiers)
-      Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-      float min = (float) -Math.sqrt(6. / (_in._a.length + _a.length));
-      float max = (float) +Math.sqrt(6. / (_in._a.length + _a.length));
-      for( int i = 0; i < _w.length; i++ )
-        _w[i] = rand(rand, min, max);
-    }
+    // deeplearning.net tutorial (TODO figure out one for rectifiers)
+    Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+    float min = (float) -Math.sqrt(6. / (_in._a.length + _a.length));
+    float max = (float) +Math.sqrt(6. / (_in._a.length + _a.length));
+    for( int i = 0; i < _w.length; i++ )
+      _w[i] = rand(rand, min, max);
 
     if( _auto ) {
       _gwMult = new float[_w.length];

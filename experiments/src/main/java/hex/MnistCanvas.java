@@ -17,6 +17,12 @@ public final class MnistCanvas extends Canvas {
   final Random _rand = new Random();
   int _level = 1;
 
+  public static void main(String[] args) throws Exception {
+    MnistNeuralNetTest mnist = new MnistNeuralNetTest();
+    //MnistNeuralNetTest2 mnist = new MnistNeuralNetTest2();
+    mnist.run();
+  }
+
   MnistCanvas(Trainer trainer, Input input) {
     _trainer = trainer;
     _input = input;
@@ -136,8 +142,10 @@ public final class MnistCanvas extends Canvas {
       for( int i = 0; i < layer._in._a.length; i++ ) {
         double w = layer._w[o * layer._in._a.length + i];
         w = ((w - mean) / sigma) * 200;
-        if( w >= 0 ) start[i] = ((int) Math.min(+w, 255)) << 8;
-        else start[i] = ((int) Math.min(-w, 255)) << 16;
+        if( w >= 0 )
+          start[i] = ((int) Math.min(+w, 255)) << 8;
+        else
+          start[i] = ((int) Math.min(-w, 255)) << 16;
       }
 
       BufferedImage out = new BufferedImage(MnistNeuralNetTest.EDGE, MnistNeuralNetTest.EDGE,

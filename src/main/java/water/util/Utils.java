@@ -319,42 +319,34 @@ public class Utils {
   public static <T> T deepClone(T o, String... except) {
     Class c = o.getClass();
     try {
-      Layer clone = (Layer) c.newInstance();
+      Object clone = c.newInstance();
       ArrayList<Field> fields = new ArrayList<Field>();
       HashSet<String> excepts = new HashSet<String>(Arrays.asList(except));
       getAllFields(fields, c);
       for( Field f : fields ) {
         f.setAccessible(true);
-        if( (f.getModifiers() & Modifier.STATIC) == 0 ) {
+        if( !Modifier.isStatic(f.getModifiers()) ) {
           Object v = f.get(o);
           boolean except_ = excepts.remove(f.getName());
-          if( v != null && !(v instanceof Layer) ) {
-            if( v instanceof Number ) f.set(clone, v);
+          if( v != null ) {
+            if( except_ )
+              f.set(clone, v);
+            else if( v instanceof Number ) f.set(clone, v);
             else if( v instanceof Boolean ) f.set(clone, v);
-            else if( v instanceof float[] ) {
-              if( except_ ) f.set(clone, v);
-              else f.set(clone, ((float[]) v).clone());
-            } else if( v instanceof int[] ) {
-              if( except_ ) f.set(clone, v);
-              else f.set(clone, ((int[]) v).clone());
-            } else if( v instanceof float[][] ) {
-              if( except_ ) f.set(clone, v);
-              else {
-                float[][] a = (float[][]) v;
-                float[][] t = new float[a.length][];
-                for( int i = 0; i < a.length; i++ )
-                  t[i] = a[i].clone();
-                f.set(clone, t);
-              }
+            else if( v instanceof float[] ) f.set(clone, ((float[]) v).clone());
+            else if( v instanceof int[] ) f.set(clone, ((int[]) v).clone());
+            else if( v instanceof float[][] ) {
+              float[][] a = (float[][]) v;
+              float[][] t = new float[a.length][];
+              for( int i = 0; i < a.length; i++ )
+                t[i] = a[i].clone();
+              f.set(clone, t);
             } else if( v instanceof int[][] ) {
-              if( except_ ) f.set(clone, v);
-              else {
-                int[][] a = (int[][]) v;
-                int[][] t = new int[a.length][];
-                for( int i = 0; i < a.length; i++ )
-                  t[i] = a[i].clone();
-                f.set(clone, t);
-              }
+              int[][] a = (int[][]) v;
+              int[][] t = new int[a.length][];
+              for( int i = 0; i < a.length; i++ )
+                t[i] = a[i].clone();
+              f.set(clone, t);
             }
             // TODO other types
             else throw new RuntimeException("Field " + f + " cannot be cloned");
