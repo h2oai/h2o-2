@@ -22,7 +22,6 @@ class Basic(unittest.TestCase):
     def test_parse_nflx_loop_s3n_hdfs(self):
         DO_GLM = False
         DO_GLMGRID = False
-        USE_HOME2 = False
         USE_S3 = False
         noPoll = False
         benchmarkLogging = ['jstack','iostats']
@@ -33,46 +32,31 @@ class Basic(unittest.TestCase):
         avgSynSize = 4020000
         synSize = 183
 
-        if USE_HOME2:
-            csvFilenameList = [
-                # this should hit the "more" files too?
-                (["10k_small_gz"], "00[0-4][0-9]_syn.csv.gz", "file_50.dat.gz", 50 * synSize , 700),
-                (["10k_small_gz"], "[0][1][0-9][0-9]_.*", "file_100.dat.gz", 100 * synSize , 700),
-                (["10k_small_gz"], "[0][0-4][0-9][0-9]_.*", "file_500.dat.gz", 500 * synSize , 700),
-                (["10k_small_gz"], "[0][0-9][0-9][0-9]_.*", "file_1000.dat.gz", 1000 * synSize , 700),
-                # (["10k_small_gz"], "[0-4][0-9][0-9][0-9]_.*", "file_5000.dat.gz", 5000 * synSize , 700),
-                # (["10k_small_gz"], "[0-9][0-9][0-9][0-9]_.*", "file_10000.dat.gz", 10000 * synSize , 700),
-            ]
-        else:
-            csvFilenameList = [
-                (["manyfiles-nflx-gz"], "file_1[0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
-                (["manyfiles-nflx-gz"], "file_[1-2][0-5][0-9].dat.gz", "file_120_A.dat.gz", 120 * avgMichalSize, 3600),
-                (["manyfiles-nflx-gz"], "file_[1-2][0-6][0-9].dat.gz", "file_140_A.dat.gz", 140 * avgMichalSize, 3600),
-                (["manyfiles-nflx-gz"], "file_[1-2][0-7][0-9].dat.gz", "file_160_A.dat.gz", 160 * avgMichalSize, 3600),
-                (["manyfiles-nflx-gz"], "file_[1-2][0-8][0-9].dat.gz", "file_180_A.dat.gz", 180 * avgMichalSize, 3600),
-                (["manyfiles-nflx-gz"], "file_[12][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 3600),
-                (["manyfiles-nflx-gz"], "file_[123][0-9][0-9].dat.gz", "file_300_A.dat.gz", 300 * avgMichalSize, 3600),
-                (["manyfiles-nflx-gz"], "file_[123][0-9][0-9].dat.gz", "file_300_B.dat.gz", 300 * avgMichalSize, 3600),
-                (["manyfiles-nflx-gz"], "file_[123][0-9][0-9].dat.gz", "file_300_C.dat.gz", 300 * avgMichalSize, 3600),
-                (["manyfiles-nflx-gz"], "file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 300),
-                (["manyfiles-nflx-gz"], "file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
-                (["manyfiles-nflx-gz"], "file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 900),
-                (["manyfiles-nflx-gz"], "file_[5-9][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 3600),
-                (["manyfiles-nflx-gz"], "file_1[0-4][0-9].dat.gz", "file_50_B.dat.gz", 50 * avgMichalSize, 3600),
-                (["manyfiles-nflx-gz"], "file_1[0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
-                (["manyfiles-nflx-gz"], "file_2[0-9][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 3600),
-            ]
-
-            # import doesn't do pattern match.
-            csvFilenameList = [
-                # beware: the files should be non-overlapping sequentially if noPoll is used, to avoid deleting keys in use    
-                (["A-800-manyfiles-nflx-gz"],
-                    "*file_[0-9]*.dat.gz", "file_A_200_x55.dat.gz", 200 * (avgMichalSize/2), 7200),
-                (["A-800-manyfiles-nflx-gz", "B-800-manyfiles-nflx-gz"],
-                    "*file_[0-9]*.dat.gz", "file_A_400_x55.dat.gz", 400 * (avgMichalSize/2), 7200),
-                (["A-800-manyfiles-nflx-gz", "B-800-manyfiles-nflx-gz", "C-800-manyfiles-nflx-gz", "D-800-manyfiles-nflx-gz"],
-                    "*file_[0-9]*.dat.gz", "file_A_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
-            ]
+        csvFilenameList = [
+            (["manyfiles-nflx-gz"], "file_1[0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
+            (["manyfiles-nflx-gz"], "file_[1-2][0-5][0-9].dat.gz", "file_120_A.dat.gz", 120 * avgMichalSize, 3600),
+            (["manyfiles-nflx-gz"], "file_[1-2][0-6][0-9].dat.gz", "file_140_A.dat.gz", 140 * avgMichalSize, 3600),
+            (["manyfiles-nflx-gz"], "file_[1-2][0-7][0-9].dat.gz", "file_160_A.dat.gz", 160 * avgMichalSize, 3600),
+            (["manyfiles-nflx-gz"], "file_[1-2][0-8][0-9].dat.gz", "file_180_A.dat.gz", 180 * avgMichalSize, 3600),
+            (["manyfiles-nflx-gz"], "file_[12][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 3600),
+            (["manyfiles-nflx-gz"], "file_[123][0-9][0-9].dat.gz", "file_300_A.dat.gz", 300 * avgMichalSize, 3600),
+            (["manyfiles-nflx-gz"], "file_[123][0-9][0-9].dat.gz", "file_300_B.dat.gz", 300 * avgMichalSize, 3600),
+            (["manyfiles-nflx-gz"], "file_[123][0-9][0-9].dat.gz", "file_300_C.dat.gz", 300 * avgMichalSize, 3600),
+            (["manyfiles-nflx-gz"], "file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 300),
+            (["manyfiles-nflx-gz"], "file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
+            (["manyfiles-nflx-gz"], "file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 900),
+            (["manyfiles-nflx-gz"], "file_[5-9][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 3600),
+            (["manyfiles-nflx-gz"], "file_1[0-4][0-9].dat.gz", "file_50_B.dat.gz", 50 * avgMichalSize, 3600),
+            (["manyfiles-nflx-gz"], "file_1[0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
+            (["manyfiles-nflx-gz"], "file_2[0-9][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 3600),
+            # beware: the files should be non-overlapping sequentially if noPoll is used, to avoid deleting keys in use    
+            (["A-800-manyfiles-nflx-gz"],
+                "*file_[0-9]*.dat.gz", "file_A_200_x55.dat.gz", 200 * (avgMichalSize/2), 7200),
+            (["A-800-manyfiles-nflx-gz", "B-800-manyfiles-nflx-gz"],
+                "*file_[0-9]*.dat.gz", "file_A_400_x55.dat.gz", 400 * (avgMichalSize/2), 7200),
+            (["A-800-manyfiles-nflx-gz", "B-800-manyfiles-nflx-gz", "C-800-manyfiles-nflx-gz", "D-800-manyfiles-nflx-gz"],
+                "*file_[0-9]*.dat.gz", "file_A_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
+        ]
 
         print "Using the -.gz files from s3"
         # want just s3n://home-0xdiag-datasets/manyfiles-nflx-gz/file_1.dat.gz
@@ -84,11 +68,7 @@ class Basic(unittest.TestCase):
         # use i to forward reference in the list, so we can do multiple outstanding parses below
         for i, (csvFolderList, csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
 
-            if USE_HOME2:
-                bucket = "home2-0xdiag-datasets"
-            else:
-                bucket = "home-0xdiag-datasets"
-
+            bucket = "home-0xdiag-datasets"
             ## for tryHeap in [54, 28]:
             h2oPerNode = 1
             # h1.4xlarge 60.5GB dram
