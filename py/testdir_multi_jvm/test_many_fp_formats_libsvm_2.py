@@ -167,10 +167,10 @@ class Basic(unittest.TestCase):
         h2b.browseTheCloud()
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (100, 100000, 'cA', 300, 'sparse50'),
-            (100, 100000, 'cB', 300, 'sparse'),
-            (100, 400000, 'cC', 300, 'sparse50'),
-            (100, 400000, 'cD', 300, 'sparse'),
+            (100, 10000, 'cA', 300, 'sparse50'),
+            (100, 10000, 'cB', 300, 'sparse'),
+            (100, 40000, 'cC', 300, 'sparse50'),
+            (100, 40000, 'cD', 300, 'sparse'),
             ]
 
         # h2b.browseTheCloud()

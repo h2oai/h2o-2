@@ -21,7 +21,7 @@ def parseFile(node=None, csvPathname=None, key=None, key2=None,
 
     # do SummaryPage here too, just to get some coverage
     if doSummary:
-        node.summary_page(myKey2)
+        node.summary_page(myKey2, timeoutSecs=timeoutSecs)
     return p
 
 def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, 
