@@ -13,6 +13,8 @@ exprList = [
         'Result<n> = sum(<keyX>[<col1>])',
     ]
 
+DO_SUMMARY=True
+
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -40,21 +42,21 @@ class Basic(unittest.TestCase):
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
         csvFilenameList = [
-            ("colon-cancer.svm",   "cA", 30, 1),
-            ("connect4.svm",       "cB", 30, 1),
-            ("covtype.binary.svm", "cC", 30, 1),
-            ("duke.svm",           "cD", 30, 1),
-            ("E2006.train.svm",    "cE", 30, 1),
-            ("gisette_scale.svm",  "cF", 30, 1),
-            ("mushrooms.svm",      "cG", 30, 1),
-            ("news20.svm",         "cH", 30, 1),
-            ("sector.libsvm.svm",  "cI", 30, 1),
             ("tmc2007_train.svm",  "cJ", 30, 1),
             ("syn_6_1000_10.svm",  "cK", 30, 1),
             ("syn_0_100_1000.svm", "cL", 30, 1),
             ("mnist_training.svm", "cM", 30, 1),
+            ("colon-cancer.svm",   "cA", 30, 1),
+            ("connect4.svm",       "cB", 30, 1),
+            ("covtype.binary.svm", "cC", 30, 1),
+            ("duke.svm",           "cD", 30, 1),
+            # too many features? 150K inspect timeout?
+            # ("E2006.train.svm",    "cE", 30, 1),
+            ("gisette_scale.svm",  "cF", 30, 1),
+            ("mushrooms.svm",      "cG", 30, 1),
+            ("news20.svm",         "cH", 30, 1),
             # normal csv
-            ("covtype.data",       "cN", 30,  1),
+            # ("covtype.data",       "cN", 30,  1),
         ]
 
         ### csvFilenameList = random.sample(csvFilenameAll,1)
@@ -83,10 +85,11 @@ class Basic(unittest.TestCase):
             # figures out everything from parseKey['destination_key']
             # needs y to avoid output column (which can be index or name)
             # assume all the configs have the same y..just check with the firs tone
-            goodX = h2o_glm.goodXFromColumnInfo(y=0,
-                key=parseKey['destination_key'], timeoutSecs=300, noPrint=True)
-            summaryResult = h2o_cmd.runSummary(key=key2, timeoutSecs=360)
-            h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
+            if DO_SUMMARY:
+                goodX = h2o_glm.goodXFromColumnInfo(y=0,
+                    key=parseKey['destination_key'], timeoutSecs=300, noPrint=True)
+                summaryResult = h2o_cmd.runSummary(key=key2, timeoutSecs=360)
+                h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
 
             # Exec (column sums)*************************************************
             h2e.exec_zero_list(zeroList)
@@ -96,19 +99,6 @@ class Basic(unittest.TestCase):
             print "colResultList", colResultList
             print "*************"
 
-            # need to fix this for compare to expected
-            if 1==0:
-                if not firstDone:
-                    colResultList0 = list(colResultList)
-                    good = [float(x) for x in colResultList0] 
-                    firstDone = True
-                else:
-                    print "\n", colResultList0, "\n", colResultList
-                    # create the expected answer...i.e. N * first
-                    compare = [float(x)/resultMult for x in colResultList] 
-                    print "\n", good, "\n", compare
-                    self.assertEqual(good, compare, 'compare is not equal to good (first try * resultMult)')
-        
 
 if __name__ == '__main__':
     h2o.unit_main()
