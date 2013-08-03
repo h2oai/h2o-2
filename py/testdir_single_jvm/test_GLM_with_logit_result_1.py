@@ -97,7 +97,7 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_GLM_many_cols(self):
+    def test_GLM_with_logit_result_1(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (100000, 5, 'cA', 300), 

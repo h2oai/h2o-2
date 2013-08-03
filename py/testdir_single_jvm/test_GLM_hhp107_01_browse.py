@@ -40,7 +40,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_hhp_107_01(self):
+    def test_hhp_107_01_browse(self):
         csvPathname = h2o.find_file("smalldata/hhp_107_01.data.gz")
         print "\n" + csvPathname
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2="hhp_107_01.data.hex", timeoutSecs=15)

@@ -84,7 +84,7 @@ class Basic(unittest.TestCase):
 
     validations1 = {}
 
-    def test_A_1mx10_hastie_10_2(self):
+    def test_GLM_score_same(self):
         # gunzip it and cat it to create 2x and 4x replications in SYNDATASETS_DIR
         csvFilename = "1mx10_hastie_10_2.data.gz"
         csvPathname = h2o.find_dataset('logreg' + '/' + csvFilename)

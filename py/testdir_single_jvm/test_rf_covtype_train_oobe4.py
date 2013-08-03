@@ -42,7 +42,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rf_covtype_train_oobe4(self):
-        print "\nUse randomBitVector and filter to separate the dataset randomly"
+        print "\nUse randomFilter to sample the dataset, then slice it"
         importFolderPath = "/home/0xdiag/datasets/standard"
         # get different results
         ### csvFilename = 'covtype.shuffled.data'
