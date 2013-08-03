@@ -435,7 +435,7 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         verboseprint("Attempting Cloud stabilize of", totalNodes, "nodes on", hostCount, "hosts")
         start = time.time()
         # UPDATE: best to stabilize on the last node!
-        stabilize_cloud(nodeList[-1], len(nodeList), 
+        stabilize_cloud(nodeList[0], len(nodeList), 
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
         verboseprint(len(nodeList), "Last added node stabilized in ", time.time()-start, " secs")
         verboseprint("Built cloud: %d nodes on %d hosts, in %d s" % (len(nodeList), 
