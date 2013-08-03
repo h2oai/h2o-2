@@ -218,7 +218,7 @@ class Basic(unittest.TestCase):
                     print "\nComparing:", v, compare
                     # Even though we're comparing floating point sums, the operations probably should have
                     # been done in same order, so maybe the comparison can be exact (or not!)
-                    self.assertEqual(good, compare, 'compare is not equal to good')
+                    self.assertEqual(v, compare, 'compare is not equal to good')
 
 
 

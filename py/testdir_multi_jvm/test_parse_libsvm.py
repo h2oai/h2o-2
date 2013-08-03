@@ -99,19 +99,6 @@ class Basic(unittest.TestCase):
             print "colResultList", colResultList
             print "*************"
 
-            # need to fix this for compare to expected
-            if 1==0:
-                if not firstDone:
-                    colResultList0 = list(colResultList)
-                    good = [float(x) for x in colResultList0] 
-                    firstDone = True
-                else:
-                    print "\n", colResultList0, "\n", colResultList
-                    # create the expected answer...i.e. N * first
-                    compare = [float(x)/resultMult for x in colResultList] 
-                    print "\n", good, "\n", compare
-                    self.assertEqual(good, compare, 'compare is not equal to good (first try * resultMult)')
-        
 
 if __name__ == '__main__':
     h2o.unit_main()
