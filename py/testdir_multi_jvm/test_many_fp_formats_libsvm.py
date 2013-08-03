@@ -13,6 +13,8 @@ exprList = [
         'Result<n> = sum(<keyX>[<col1>])',
     ]
 
+DO_SUMMARY = True
+
 def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel, distribution):
     # we can do all sorts of methods off the r object
     r = random.Random(SEEDPERFILE)
@@ -99,9 +101,9 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel, distrib
     classMin = -36
     classMax = 36
     dsf = open(csvPathname, "w+")
+    synColSumDict = {}
     for i in range(rowCount):
         rowData = []
-        synColSumDict = {}
         d = random.randint(0,2)
         if d==0:
             if distribution == 'sparse':
@@ -144,7 +146,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_many_cols_and_values_with_syn(self):
+    def test_many_fp_formats_libsvm (self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (1000, 10, 'cA', 30, 'sparse'),
@@ -186,8 +188,10 @@ class Basic(unittest.TestCase):
                 # assume all the configs have the same y..just check with the firs tone
                 goodX = h2o_glm.goodXFromColumnInfo(y=0,
                     key=parseKey['destination_key'], timeoutSecs=300)
-                ## summaryResult = h2o_cmd.runSummary(key=selKey2, timeoutSecs=360)
-                ## h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
+
+                if DO_SUMMARY:
+                    summaryResult = h2o_cmd.runSummary(key=selKey2, timeoutSecs=360)
+                    h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
 
                 # Exec (column sums)*************************************************
                 h2e.exec_zero_list(zeroList)
@@ -207,11 +211,11 @@ class Basic(unittest.TestCase):
                 # when we generate the dataset
                 print "\ncolResultList:", colResultList
                 print "\nsynColSumDict:", synColSumDict
-                for k,v in synColSumDict:
+                for k,v in synColSumDict.iteritems():
                     # k should be integers that match the number of cols
                     self.assertTrue(k>=0 and k<len(colResultList))
                     compare = float(colResultList[k])
-                    print "\n", good, "\n", compare
+                    print "\nComparing:", v, compare
                     # Even though we're comparing floating point sums, the operations probably should have
                     # been done in same order, so maybe the comparison can be exact (or not!)
                     self.assertEqual(good, compare, 'compare is not equal to good')
