@@ -45,10 +45,12 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
 
   public void addColumns(int ncols){
     _colTypes = Arrays.copyOf(_colTypes, ncols);
-    _min = Arrays.copyOf(_min, ncols); // additional columns has min/max/mean 0
-    Arrays.fill(_min, Double.POSITIVE_INFINITY);
+    _min = Arrays.copyOf(_min, ncols);
     _max = Arrays.copyOf(_max, ncols);
-    Arrays.fill(_max, Double.NEGATIVE_INFINITY);
+    for(int i = _ncolumns; i < ncols; ++i){
+      _min[i] = Double.POSITIVE_INFINITY;
+      _max[i] = Double.NEGATIVE_INFINITY;
+    }
     _scale = Arrays.copyOf(_scale, ncols);
     _mean = Arrays.copyOf(_mean, ncols);
     _invalidValues = Arrays.copyOf(_invalidValues, ncols);
@@ -594,6 +596,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
       _nrows = dpt._nrows;
       _invalidValues = dpt._invalidValues;
     } else {
+      assert _ncolumns >= dpt._ncolumns;
       if (_phase == Pass.ONE) {
         if (_nrows != dpt._nrows)
           for (int i = 0; i < dpt._nrows.length; ++i)
