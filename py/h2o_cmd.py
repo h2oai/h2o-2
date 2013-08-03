@@ -89,6 +89,22 @@ def runKMeansOnly(node=None, parseKey=None,
     return node.kmeans(parseKey['destination_key'], None, 
         timeoutSecs, retryDelaySecs, **kwargs)
 
+def runKMeansGrid(node=None, csvPathname=None, key=None, key2=None,
+        timeoutSecs=60, retryDelaySecs=2, noise=None, **kwargs):
+    # use 1/5th the KMeans timeoutSecs for allowed parse time.
+    pto = max(timeoutSecs/5,10)
+    noise = kwargs.pop('noise',None)
+    parseKey = parseFile(node, csvPathname, key, key=key2, timeoutSecs=pto, noise=noise)
+    return runKMeansGridOnly(node, parseKey, 
+        timeoutSecs, retryDelaySecs, noise=noise, **kwargs)
+
+def runKMeansGridOnly(node=None, parseKey=None,
+        timeoutSecs=60, retryDelaySecs=2, noise=None, **kwargs):
+    if not parseKey: raise Exception('No parsed key for KMeansGrid specified')
+    if not node: node = h2o.nodes[0]
+    # no such thing as KMeansGridView..don't use retryDelaySecs
+    return node.kmeans_grid(parseKey['destination_key'], timeoutSecs, **kwargs)
+
 def runGLM(node=None, csvPathname=None, key=None, key2=None, 
         timeoutSecs=20, retryDelaySecs=2, noise=None, **kwargs):
     # use 1/5th the GLM timeoutSecs for allowed parse time.
