@@ -48,8 +48,8 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     _min = Arrays.copyOf(_min, ncols);
     _max = Arrays.copyOf(_max, ncols);
     for(int i = _ncolumns; i < ncols; ++i){
-      _min[i] = Double.NEGATIVE_INFINITY;
-      _max[i] = Double.POSITIVE_INFINITY;
+      _min[i] = Double.POSITIVE_INFINITY;
+      _max[i] = Double.NEGATIVE_INFINITY;
     }
     _scale = Arrays.copyOf(_scale, ncols);
     _mean = Arrays.copyOf(_mean, ncols);
