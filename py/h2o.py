@@ -378,7 +378,7 @@ def setup_random_seed():
 # node_count is per host if hosts is specified.
 def build_cloud(node_count=2, base_port=54321, hosts=None, 
         timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True, 
-        hadoop=False, conservative=True, **kwargs):
+        hadoop=False, conservative=False, **kwargs):
     # moved to here from unit_main. so will run with nosetests too!
     clean_sandbox()
     # keep this param in kwargs, because we pass to the H2O node build, so state
@@ -448,7 +448,8 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
             for n in nodeList:
                 stabilize_cloud(n, len(nodeList), timeoutSecs=timeoutSecs)
         else:
-            verify_cloud_size(nodeList)
+            pass
+            # verify_cloud_size(nodeList)
 
         # best to check for any errors due to cloud building right away?
         check_sandbox_for_errors()
