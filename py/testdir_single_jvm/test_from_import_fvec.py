@@ -20,7 +20,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_from_import(self):
+    def test_from_import_fvec(self):
 
         print "Sets h2o.beat_features like -bf at command line"
         print "this will redirect import and parse to the 2 variants"
