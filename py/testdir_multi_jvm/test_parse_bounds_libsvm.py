@@ -67,7 +67,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_parse_bounds_libsvm (self):
-        print "Empty rows except for the last, with all zeros for class. Single col at max"
+        print "Random 0/1 for col1. Last has max col = 1, All have zeros for class."
         h2b.browseTheCloud()
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
@@ -128,6 +128,7 @@ class Basic(unittest.TestCase):
                     # a single 1 in the last col
                     if name == "V" + str(colNumberMax): # h2o puts a "V" prefix
                         synZeros = num_rows - 1
+                        synSigma = None # not sure..depends on the # rows somehow (0 count vs 1 count)
                         synMean = 1.0/num_rows # why does this need to be a 1 entry list
                         synMin = [0.0, 1.0]
                         synMax = [1.0, 0.0]
@@ -135,11 +136,13 @@ class Basic(unittest.TestCase):
                         # can reverse-engineer the # of zeroes, since data is always 1
                         synSum = synColSumDict[1] # could get the same sum for all ccols
                         synZeros = num_rows - synSum
+                        synSigma = 0.50
                         synMean = (synSum + 0.0)/num_rows
                         synMin = [0.0, 1.0]
                         synMax = [1.0, 0.0]
                     else:
                         synZeros = num_rows
+                        synSigma = 0.0
                         synMean = 0.0
                         synMin = [0.0]
                         synMax = [0.0]
@@ -158,6 +161,11 @@ class Basic(unittest.TestCase):
 
                     self.assertEqual(zeros, synZeros,
                         msg='col %s zeros %s is not equal to generated zeros count %s' % (name, zeros, synZeros))
+
+                    # our random generation will have some variance for col 1. so just check to 2 places
+                    if synSigma:
+                        self.assertAlmostEqual(float(sigma), synSigma, places=2,
+                            msg='col %s sigma %s is not equal to generated sigma %s' % (name, sigma, synSigma))
 
                     if CHECK_MAX:
                         self.assertEqual(smax, synMax,
