@@ -33,6 +33,8 @@ public abstract class DocGen {
 
   public static void createReSTFilesInCwd() {
     createFile("ImportFiles.rst", new ImportFiles().ReSTHelp());
+    createFile("ImportFiles2.rst", new ImportFiles2().ReSTHelp());
+    createFile("Parse2.rst", new Parse2().ReSTHelp());
   }
 
   public static void main(String[] args) {
