@@ -440,11 +440,15 @@ def infoFromSummary(summaryResult, noPrint=False):
 
         # not done if enum
         if stype != "enum":
+            zeros = columns['zeros']
+            na = columns['na']
             smax = columns['max']
             smin = columns['min']
             mean = columns['mean']
             sigma = columns['sigma']
             if not noPrint:
+                print "zeros:", zeros
+                print "na:", na
                 print "smax:", smax
                 print "smin:", smin
                 print "mean:", mean

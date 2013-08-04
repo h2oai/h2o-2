@@ -89,7 +89,7 @@ class Basic(unittest.TestCase):
                 goodX = h2o_glm.goodXFromColumnInfo(y=0,
                     key=parseKey['destination_key'], timeoutSecs=300, noPrint=True)
                 summaryResult = h2o_cmd.runSummary(key=key2, timeoutSecs=360)
-                h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
+                h2o_cmd.infoFromSummary(summaryResult, noPrint=False)
 
             # Exec (column sums)*************************************************
             h2e.exec_zero_list(zeroList)
