@@ -34,7 +34,7 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_many_cols_with_syn(self):
+    def test_GLM_trisum(self):
         ### h2b.browseTheCloud()
 
         csvFilename = "logreg_trisum_int_cat_10000x10.csv"

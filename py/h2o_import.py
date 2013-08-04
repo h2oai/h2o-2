@@ -54,7 +54,7 @@ def setupImportFolder(node=None, path='/home/0xdiag/datasets', timeoutSecs=180):
             timeoutSecs=timeoutSecs)
     else:
         if getpass.getuser()=='jenkins':
-            print "michal: Temp hack of /home/0xdiag/datasets/standard to /home/0xdiag/datasets till EC2 image is fixed"
+            print "Temp hack of /home/0xdiag/datasets/standard to /home/0xdiag/datasets"
             path = re.sub('/home/0xdiag/datasets/standard', '/home/0xdiag/datasets', path)
         importFolderResult = node.import_files(path, timeoutSecs=timeoutSecs)
     ### h2o.dump_json(importFolderResult)
@@ -93,7 +93,7 @@ def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
             benchmarkLogging, noPoll)
     else:
         if getpass.getuser()=='jenkins':
-            print "michal: Temp hack of /home/0xdiag/datasets/standard to /home/0xdiag/datasets till EC2 image is fixed"
+            print "Temp hack of /home/0xdiag/datasets/standard to /home/0xdiag/datasets"
             path = re.sub('/home/0xdiag/datasets/standard', '/home/0xdiag/datasets', path)
         importKey = "nfs:/" + path + "/" + csvFilename
         if h2o.beta_features:

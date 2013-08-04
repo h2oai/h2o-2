@@ -24,19 +24,6 @@ class Basic(unittest.TestCase):
         covtype200xSize = 15033863400
         synSize =  183
         if 1==0:
-            importFolderPath = '/home/0xdiag/datasets/10k_small_gz'
-            print "Using .gz'ed files in", importFolderPath
-            csvFilenameAll = [
-                # this should hit the "more" files too?
-                ("00[0-4][0-9]_syn.csv.gz", "file_50.dat.gz", 50 * synSize , 700),
-                ("[1][1][0-9][0-9]_.*", "file_100.dat.gz", 100 * synSize , 700),
-                ("[1][0-4][0-9][0-9]_.*", "file_500.dat.gz", 500 * synSize , 700),
-                ("[1][0-9][0-9][0-9]_.*", "file_1000.dat.gz", 1000 * synSize , 700),
-                ("[0-4][0-9][0-9][0-9]_.*", "file_5000.dat.gz", 5000 * synSize , 700),
-                ("[0-9][0-9][0-9][0-9]_.*", "file_10000.dat.gz", 10000 * synSize , 700),
-            ]
-
-        if 1==0:
             importFolderPath = '/home/0xdiag/datasets/more1_1200_link'
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
@@ -92,14 +79,6 @@ class Basic(unittest.TestCase):
                 ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
                 ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
                 ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
-            ]
-
-        if 1==0:
-            importFolderPath = '/home/0xdiag/datasets/more1_300_link'
-            print "Using .gz'ed files in", importFolderPath
-            csvFilenameAll = [
-                # this should hit the "more" files too?
-                ("*.dat.gz", "file_300.dat.gz", 300 * avgMichalSize, 3600),
             ]
 
         if 1==0:

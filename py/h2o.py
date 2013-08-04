@@ -995,6 +995,36 @@ class H2O(object):
             time.sleep(5)
         return a
 
+    def kmeans_grid(self, key, key2=None, 
+        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
+        **kwargs):
+        # defaults
+        params_dict = {
+            'epsilon': 1e-6,
+            'k': 1,
+            'max_iter': 10,
+            'source_key': key,
+            }
+        browseAlso = kwargs.get('browseAlso', False)
+        params_dict.update(kwargs)
+        print "\nKMeansGrid params list:", params_dict
+        a = self.__do_json_request('KMeansGrid.json', timeout=timeoutSecs, params=params_dict)
+
+        # Check that the response has the right Progress url it's going to steer us to.
+        if a['response']['redirect_request']!='Progress':
+            print dump_json(a)
+            raise Exception('H2O kmeans_grid redirect is not Progress. KMeans json response precedes.')
+        a = self.poll_url(a['response'],
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+        verboseprint("\nKMeansGrid result:", dump_json(a))
+
+        if (browseAlso | browse_json):
+            print "Redoing the KMeansGrid through the browser, no results saved though"
+            h2b.browseJsonHistoryAsUrlLastMatch('KMeansGrid')
+            time.sleep(5)
+        return a
+
     # params: 
     # header=1, 
     # separator=1 (hex encode?
@@ -1265,7 +1295,7 @@ class H2O(object):
             time.sleep(3) # to be able to see it
         return a
 
-    def summary_page(self, key, timeoutSecs=30, noPrint=True, **kwargs):
+    def summary_page(self, key, timeoutSecs=60, noPrint=True, **kwargs):
         params_dict = {
             'key': key,
             }

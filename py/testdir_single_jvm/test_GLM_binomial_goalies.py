@@ -39,7 +39,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_loop_random_param_covtype(self):
+    def test_GLM_binomial_goalies(self):
         csvPathname = h2o.find_file('smalldata/poisson/Goalies.csv')
         print "\nParsing", csvPathname
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname)
