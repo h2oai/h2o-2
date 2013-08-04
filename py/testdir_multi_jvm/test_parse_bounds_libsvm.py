@@ -91,6 +91,10 @@ class Basic(unittest.TestCase):
                 inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=timeoutSecs)
                 num_cols = inspect['num_cols']
                 num_rows = inspect['num_rows']
+                print "\n" + csvPathname, \
+                    "    num_rows:", "{:,}".format(inspect['num_rows']), \
+                    "    num_cols:", "{:,}".format(inspect['num_cols'])
+
 
                 summaryResult = h2o_cmd.runSummary(key=key2, timeoutSecs=timeoutSecs)
                 h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
