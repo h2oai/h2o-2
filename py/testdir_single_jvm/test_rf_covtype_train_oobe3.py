@@ -39,10 +39,11 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_rf_covtype_train_oobe2(self):
-        print "\nUse randomBitVector and filter to separate the dataset randomly"
+    def test_rf_covtype_train_oobe3(self):
+        print "\nUse randomFilter to sample the dataset randomly. then slice it"
         importFolderPath = "/home/0xdiag/datasets/standard"
         csvFilename = 'covtype.data'
         csvPathname = importFolderPath + "/" + csvFilename

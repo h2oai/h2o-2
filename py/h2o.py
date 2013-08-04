@@ -1091,17 +1091,18 @@ class H2O(object):
     def inspect(self, key, offset=None, view=None, ignoreH2oError=False, timeoutSecs=30):
         if beta_features:
             params = {
-                "key": key,
+                "src_key": key,
                 "offset": offset,
                 "view": view,
                 }
         else:
             params = {
-                "key": key, # need both to avoid errors?
-                "src_key": key,
+                "key": key,
                 "offset": offset,
                 "view": view,
                 }
+
+            
 
         a = self.__do_json_request('Inspect2.json' if beta_features else 'Inspect.json',
             params=params,
@@ -1295,7 +1296,7 @@ class H2O(object):
             time.sleep(3) # to be able to see it
         return a
 
-    def summary_page(self, key, timeoutSecs=30, noPrint=True, **kwargs):
+    def summary_page(self, key, timeoutSecs=60, noPrint=True, **kwargs):
         params_dict = {
             'key': key,
             }

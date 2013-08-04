@@ -36,7 +36,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_loop_random_param_covtype(self):
+    def test_GLM_poisson_timeout_fail(self):
         start = time.time()
         csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname)

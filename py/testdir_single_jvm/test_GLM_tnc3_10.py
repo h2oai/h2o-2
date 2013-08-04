@@ -37,7 +37,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_tnc3_ignore(self):
+    def test_GLM_tnc3_10(self):
         csvFilename = 'tnc3_10.csv'
         csvPathname = h2o.find_file('smalldata/' + csvFilename)
         print "\n" + csvPathname

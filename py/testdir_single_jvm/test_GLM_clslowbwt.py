@@ -20,7 +20,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_umass(self):
+    def test_GLM_clslowbwt(self):
         # filename, y, timeoutSecs
         # this hangs during parse for some reason
         csvFilenameList = [
