@@ -35,7 +35,7 @@ class Basic(unittest.TestCase):
         # time.sleep(1500)
         h2o.tear_down_cloud()
 
-    def test_parse_libsvm(self):
+    def test_parse_bounds_libsvm(self):
         # just do the import folder once
         importFolderPath = "/home/0xdiag/datasets/libsvm"
 

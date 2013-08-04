@@ -1317,6 +1317,7 @@ class H2O(object):
             'key': key,
             }
         browseAlso = kwargs.pop('browseAlso',False)
+        params_dict.update(kwargs)
         a = self.__do_json_request('SummaryPage.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nsummary_page result:", dump_json(a))
         h2o_cmd.infoFromSummary(a, noPrint=noPrint)
