@@ -968,6 +968,9 @@ class H2O(object):
         timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
         **kwargs):
         # defaults
+        # KMeans has more params than shown here
+        # KMeans2 has these params?
+        # max_iter=100&max_iter2=1&iterations=0
         params_dict = {
             'epsilon': 1e-6,
             'k': 1,
@@ -978,7 +981,7 @@ class H2O(object):
         browseAlso = kwargs.get('browseAlso', False)
         params_dict.update(kwargs)
         print "\nKMeans params list:", params_dict
-        a = self.__do_json_request('KMeans.json', timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('KMeans2.json' if beta_features else 'KMeans.json', timeout=timeoutSecs, params=params_dict)
 
         # Check that the response has the right Progress url it's going to steer us to.
         if a['response']['redirect_request']!='Progress':
@@ -1203,7 +1206,18 @@ class H2O(object):
             'model_key': None,
             # new default. h2o defaults to 0, better for tracking oobe problems
             'out_of_bag_error_estimate': 1, 
+            'response_variable': None,
+            'sample': None,
             }
+
+        # new names for these things
+        if beta_features:
+            params_dict['class_vec'] = kwargs['response_variable']
+            if kwargs['sample'] is None:
+                params_dict['sample_rate'] = None
+            else:
+                params_dict['sample_rate'] = kwargs['sample'] / 100 # has to be modified?
+            
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
 
@@ -1211,7 +1225,8 @@ class H2O(object):
             print "\nrandom_forest parameters:", params_dict
             sys.stdout.flush()
 
-        a = self.__do_json_request('RF.json', timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('DRF2.json' if beta_features else 'RF.json', 
+            timeout=timeoutSecs, params=params_dict)
         verboseprint("\nrandom_forest result:", dump_json(a))
         return a
 
@@ -1237,7 +1252,8 @@ class H2O(object):
             print "\nrandom_forest_view parameters:", params_dict
             sys.stdout.flush()
 
-        a = self.__do_json_request('RFView.json', timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('DRFView2.json' if beta_features else 'RFView.json', 
+            timeout=timeoutSecs, params=params_dict)
         verboseprint("\nrandom_forest_view result:", dump_json(a))
 
         if (browseAlso | browse_json):
@@ -1326,6 +1342,18 @@ class H2O(object):
         print "csv_download r.headers:", r.headers
         if r.status_code == 200:
             f = open(csvPathname, 'wb')
+            for chunk in r.iter_content(1024):
+                f.write(chunk)
+
+    def script_download(self, pathname, timeoutSecs=30):
+        url = self.__url('script.txt')
+        log('Start ' + url,  comment=pathname)
+
+        # do it (absorb in 1024 byte chunks)
+        r = requests.get(url, params=None, timeout=timeoutSecs)
+        print "script_download r.headers:", r.headers
+        if r.status_code == 200:
+            f = open(pathname, 'wb')
             for chunk in r.iter_content(1024):
                 f.write(chunk)
 
