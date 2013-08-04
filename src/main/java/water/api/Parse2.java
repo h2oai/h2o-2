@@ -34,6 +34,9 @@ public class Parse2 extends Request {
   @API(help="If checked, first data row is assumed to be a header.  If unchecked, first data row is assumed to be data.")
   final Header header = new Header("header");
 
+  @API(help="Whether the parse call should block until the operation is complete.  (This is meant for API use, not browser use.)")
+  final Bool blocking = new Bool("blocking",false,"");
+
   // JSON output fields
   @API(help="Destination key.")
   String destination_key;
@@ -208,6 +211,7 @@ public class Parse2 extends Request {
   //  return rs.toString();
   //}
 
+
   @Override protected Response serve() {
     PSetup p = source_key.value();
     CustomParser.ParserSetup setup = p._setup;
@@ -220,6 +224,11 @@ public class Parse2 extends Request {
       Key jobkey = ParseDataset2.forkParseDataset(d, keys, setup).job_key;
       job = jobkey.toString();
       destination_key = d.toString();
+
+      // Allow the user to specify whether to block synchronously for a response or not.
+      if (blocking.value()) {
+        Job.waitUntilJobEnded(jobkey);
+      }
 
       return Progress2.redirect(this,jobkey,d);
     } catch (IllegalArgumentException e) {

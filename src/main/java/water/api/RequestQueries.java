@@ -1,6 +1,7 @@
 package water.api;
 
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.Properties;
 
 import water.util.RString;
@@ -37,6 +38,33 @@ public class RequestQueries extends RequestArguments {
     // return query if in query mode
     if (type == RequestType.query)
       return buildQuery(args,type);
+
+    /*
+    // I'd like to be able to run this code, however this method is called in an
+    // inconsistent way from several places, and basic things fail.
+    // PostFiles.json, for example, does not work when this check is enabled.
+
+    // Check that for each actual input argument from the user, there is some
+    // request argument that this method is expecting.
+    {
+      Enumeration en = args.propertyNames();
+      while (en.hasMoreElements()) {
+        boolean found = false;
+        String key = (String) en.nextElement();
+        for (Argument arg: _arguments) {
+          if (arg._name.equals(key)) {
+            found = true;
+            break;
+          }
+        }
+
+        if (! found) {
+          return jsonError("Argument '"+key+"' error: Not a valid parameter for this query").toString();
+        }
+      }
+    }
+    */
+
     // check the arguments now
     for (Argument arg: _arguments) {
       if (!arg.disabled()) {
