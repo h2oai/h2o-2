@@ -1,17 +1,13 @@
 package water.api;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.regex.Pattern;
-import java.io.File;
 
 import water.*;
-import water.Weaver.Weave;
-import water.api.RequestBuilders.Response.Status;
 import water.fvec.*;
 import water.parser.*;
-import water.parser.CustomParser.ParserSetup;
-import water.util.RString;
 
 public class Parse2 extends Request {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
@@ -23,29 +19,32 @@ public class Parse2 extends Request {
 
   // HTTP request parameters
 
-  @Weave(help="Field separator, typically commas ',' or TABs.")
+  @API(help="Field separator, typically commas ',' or TABs.")
   final Separator separator = new Separator("separator");
 
-  @Weave(help="Key (or regex of keys) to ignore.")
+  @API(help="Key (or regex of keys) to ignore.")
   final Str exclude = new Str("exclude", "");
 
-  @Weave(help="An existing H2O CSV text key (or regex of keys).")
+  @API(help="An existing H2O CSV text key (or regex of keys).")
   final ExistingCSVKey source_key = new ExistingCSVKey("source_key");
 
-  @Weave(help="Destination key.")
+  @API(help="Destination key.")
   final NewH2OHexKey dst_key = new NewH2OHexKey("dst");
 
-  @Weave(help="If checked, first data row is assumed to be a header.  If unchecked, first data row is assumed to be data.")
+  @API(help="If checked, first data row is assumed to be a header.  If unchecked, first data row is assumed to be data.")
   final Header header = new Header("header");
 
+  @API(help="Whether the parse call should block until the operation is complete.  (This is meant for API use, not browser use.)")
+  final Bool blocking = new Bool("blocking",false,"");
+
   // JSON output fields
-  @Weave(help="Destination key.")
+  @API(help="Destination key.")
   String destination_key;
 
-  @Weave(help="Job key, useful to query for progress.")
+  @API(help="Job key, useful to query for progress.")
   String job;
 
-  @Weave(help="Web page to redirect to, once the job is done")
+  @API(help="Web page to redirect to, once the job is done")
   final String redirect="Inspect2";
 
   //@Override public String[] DocExampleSucc() { return new String[]{ "source_key","./smalldata/logreg/prostate.cvs" }; }
@@ -76,8 +75,6 @@ public class Parse2 extends Request {
     @Override protected PSetup parse(String input) throws IllegalArgumentException {
       Key k1 = Key.make(input);
       Value v1 = DKV.get(k1);
-      if( v1 != null && (input.endsWith(".xlsx") || input.endsWith(".xls")) )
-        return new PSetup(k1,CustomParser.ParserSetup.makeSetup());
       Pattern incl = makePattern(input);
       Pattern excl = null;
       if(exclude.specified())
@@ -92,8 +89,6 @@ public class Parse2 extends Request {
         if(excl != null && excl.matcher(ks).matches())
           continue;
         Value v2 = DKV.get(key);  // Look at it
-        if( v2 == null  || input.endsWith(".xlsx") || input.endsWith(".xls") || v2.length() == 0)
-          continue;           // Missed key (racing deletes) or XLS files
         if(v2.isHex())// filter common mistake such as *filename* with filename.hex already present
           continue;
         Object o = v2.type() != TypeMap.PRIM_B ? v2.get() : null;
@@ -109,7 +104,7 @@ public class Parse2 extends Request {
       Value v = DKV.get(hKey);
       v = ((Frame) v.get())._vecs[0].chunkIdx(0);
       byte sep = separator.specified() ? separator.value() : CsvParser.NO_SEPARATOR;
-      CustomParser.ParserSetup setup = ParseDataset.guessSetup(v, CustomParser.ParserType.CSV, sep);
+      CustomParser.ParserSetup setup = ParseDataset.guessSetup(v, CustomParser.ParserType.AUTO, sep);
       if( setup._data == null || setup._data[0].length == 0 )
         throw new IllegalArgumentException(errors()[1]+hKey);
       return new PSetup(keys,setup);
@@ -184,9 +179,8 @@ public class Parse2 extends Request {
       sb.append("/>&nbsp;&nbsp;").append(queryDescription()).append("<p>");
       String[][] data = psetup._setup._data;
       if( data != null ) {
-        int sep = psetup._setup._separator;
         sb.append("<div class='alert'><b>");
-        sb.append(String.format("Detected %d columns using '%s' (\\u%04d) as a separator.", data[0].length,sep<33 ? WHITE_DELIMS[sep] : Character.toString((char)sep),sep));
+        sb.append(String.format("Detected %s ",psetup._setup.toString()));
         sb.append("</b></div>");
         sb.append("<table class='table table-striped table-bordered'>");
         int j=psetup._setup._header?0:1; // Skip auto-gen header in data[0]
@@ -217,6 +211,7 @@ public class Parse2 extends Request {
   //  return rs.toString();
   //}
 
+
   @Override protected Response serve() {
     PSetup p = source_key.value();
     CustomParser.ParserSetup setup = p._setup;
@@ -226,9 +221,14 @@ public class Parse2 extends Request {
       if(header.originalValue() != null) // No user wish?
          setup._header = header.value();
       Key[] keys = p._keys.toArray(new Key[p._keys.size()]);
-      Key jobkey = ParseDataset2.forkParseDataset(d, keys,setup)._self;
+      Key jobkey = ParseDataset2.forkParseDataset(d, keys, setup).job_key;
       job = jobkey.toString();
       destination_key = d.toString();
+
+      // Allow the user to specify whether to block synchronously for a response or not.
+      if (blocking.value()) {
+        Job.waitUntilJobEnded(jobkey);
+      }
 
       return Progress2.redirect(this,jobkey,d);
     } catch (IllegalArgumentException e) {

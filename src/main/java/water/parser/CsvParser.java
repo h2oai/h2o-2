@@ -1,7 +1,6 @@
 package water.parser;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.*;
 
 import water.*;
 
@@ -123,8 +122,6 @@ NEXT_CHAR:
             break NEXT_CHAR;
           // we have parsed the string enum correctly
           if((_str._off + _str._length) > _str._buf.length){ // crossing chunk boundary
-            if(_str._buf == bits)
-              System.out.println("haha");
             assert _str._buf != bits;
             _str.addBuff(bits);
           }

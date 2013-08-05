@@ -3,8 +3,8 @@ package water.api;
 import hex.gbm.DRF;
 import water.DKV;
 import water.Key;
-import water.Weaver.Weave;
-import water.fvec.*;
+import water.fvec.Frame;
+import water.fvec.Vec;
 import water.util.RString;
 
 public class DRF2 extends Request {
@@ -15,41 +15,41 @@ public class DRF2 extends Request {
   // for GET.
   static final String DOC_GET = "Build a model using distributed Random Forest";
 
-  @Weave(help="Frame to build model from.")
+  @API(help="Frame to build model from.")
   final FrameKey data_key = new FrameKey("data_key");
 
-  @Weave(help="Response variable that is being learned.")
+  @API(help="Response variable that is being learned.")
   protected final FrameClassVec class_vec = new FrameClassVec("class_vec", data_key);
 
-  @Weave(help="Number of trees to build.")
+  @API(help="Number of trees to build.")
   protected final Int ntrees = new Int("ntrees",10,0,1000000);
 
-  @Weave(help="Number of split features used for tree building.  The default value is sqrt(#columns).")
+  @API(help="Number of split features used for tree building.  The default value is sqrt(#columns).")
   protected final Int features = new Int("features", null, 1, Integer.MAX_VALUE);
 
-  @Weave(help="Max tree depth.")
+  @API(help="Max tree depth.")
   protected final Int depth = new Int("depth",Integer.MAX_VALUE,0,Integer.MAX_VALUE);
 
-  @Weave(help="Select columns to model on.")
+  @API(help="Select columns to model on.")
   protected final FrameNonClassVecSelect vecs  = new FrameNonClassVecSelect("vecs",data_key,class_vec);
 
-  @Weave(help="Sampling rate during tree building.")
+  @API(help="Sampling rate during tree building.")
   protected final Real sample_rate = new Real("sample_rate", 0.67, 0.0, 1.0,"");
 
-  @Weave(help="Psuedo-random number generator seed.")
+  @API(help="Psuedo-random number generator seed.")
   protected final LongInt seed = new LongInt("seed",0xae44a87f9edf1cbL,"High order bits make better seeds");
 
 //  protected final Bool              _oobee      = new Bool(OOBEE,true,"Out of bag error");
 //  protected final H2OKey            _modelKey   = new H2OKey(MODEL_KEY, false);
 
   // JSON Output Fields
-  @Weave(help="Classes")
+  @API(help="Classes")
   public String domain[];
   
-  @Weave(help="mtrys: number of columns to randomly select amongst at each split")
+  @API(help="mtrys: number of columns to randomly select amongst at each split")
   public int mtrys;
 
-  @Weave(help="Confusion Matrix from this run")
+  @API(help="Confusion Matrix from this run")
   public long cm[/*actual*/][/*predicted*/]; // Confusion matrix
 
   /** Return the query link to this page */

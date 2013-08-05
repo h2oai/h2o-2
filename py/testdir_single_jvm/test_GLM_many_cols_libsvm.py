@@ -42,13 +42,14 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_GLM_many_cols(self):
+    def test_GLM_many_cols_libsvm(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         tryList = [
             (100,  3000, 'cA', 300), 
             (100,  5000, 'cB', 500), 
-            (100, 10000, 'cC', 500), 
+            # too slow!
+            # (100, 10000, 'cC', 800), 
             ]
 
         ### h2b.browseTheCloud()

@@ -54,8 +54,8 @@ def setupImportFolder(node=None, path='/home/0xdiag/datasets', timeoutSecs=180):
             timeoutSecs=timeoutSecs)
     else:
         if getpass.getuser()=='jenkins':
-            print "michal: Temp hack of /home/0xdiag/datasets/standard to /home/0xdiag/datasets till EC2 image is fixed"
-            path = re.sub('/home/0xdiag/datasets/standard', '/home/0xdiag/datasets', path)
+            print "Now: not doing Temp hack of /home/0xdiag/datasets/standard to /home/0xdiag/datasets"
+            ## path = re.sub('/home/0xdiag/datasets/standard', '/home/0xdiag/datasets', path)
         importFolderResult = node.import_files(path, timeoutSecs=timeoutSecs)
     ### h2o.dump_json(importFolderResult)
     return importFolderResult
@@ -65,8 +65,6 @@ def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=1, pollTimeoutSecs=180, noise=None,
     benchmarkLogging=None, noPoll=False, **kwargs):
     if not node: node = h2o.nodes[0]
-    # a little hack to redirect import folder tests to an s3 folder
-    # TEMP hack: translate /home/0xdiag/datasets to /home-0xdiag-datasets
 
     if not csvFilename: raise Exception('parseImportFolderFile: No csvFilename')
 
@@ -80,6 +78,7 @@ def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
 
     print "Waiting for the slow parse of the file:", csvFilename
 
+    # a little hack to redirect import folder tests to an s3 folder
     if node.redirect_import_folder_to_s3_path:
         # why no leading / for s3 key here. only one / after s3:/ ?
         path = re.sub('/home/0xdiag/datasets', 'home-0xdiag-datasets', path)
@@ -93,8 +92,8 @@ def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
             benchmarkLogging, noPoll)
     else:
         if getpass.getuser()=='jenkins':
-            print "michal: Temp hack of /home/0xdiag/datasets/standard to /home/0xdiag/datasets till EC2 image is fixed"
-            path = re.sub('/home/0xdiag/datasets/standard', '/home/0xdiag/datasets', path)
+            print "Now: not doing Temp hack of /home/0xdiag/datasets/standard to /home/0xdiag/datasets"
+            ### path = re.sub('/home/0xdiag/datasets/standard', '/home/0xdiag/datasets', path)
         importKey = "nfs:/" + path + "/" + csvFilename
         if h2o.beta_features:
             print "Temp hack to look at the jobs list for parse completion. No multiple outstanding parses"

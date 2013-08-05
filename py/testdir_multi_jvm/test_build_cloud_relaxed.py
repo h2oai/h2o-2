@@ -20,17 +20,23 @@ class Basic(unittest.TestCase):
     def test_A_build_cloud_relaxed_2(self):
         for trials in range(3):
             h2o.build_cloud(2,java_heap_GB=1, conservative=False)
+            h2o.verify_cloud_size()
             h2o.tear_down_cloud()
+            time.sleep(5)
 
     def test_B_build_cloud_relaxed_3(self):
         for trials in range(3):
             h2o.build_cloud(3,java_heap_GB=1, conservative=False)
+            h2o.verify_cloud_size()
             h2o.tear_down_cloud()
+            time.sleep(5)
 
     def test_C_build_cloud_relaxed_1(self):
         for trials in range(1):
             h2o.build_cloud(1,java_heap_GB=1, conservative=False)
+            h2o.verify_cloud_size()
             h2o.tear_down_cloud()
+            time.sleep(5)
 
 if __name__ == '__main__':
     h2o.unit_main()

@@ -28,7 +28,7 @@ public class GBMTest extends TestUtil {
 
       GBM gbm = GBM.start(GBM.makeKey(),fr,11);
       gbm.get();                  // Block for result
-      UKV.remove(gbm._dest);
+      UKV.remove(gbm.destination_key);
     } finally {
       UKV.remove(dest);
     }
@@ -51,7 +51,7 @@ public class GBMTest extends TestUtil {
       // Covtype: predict on last column
       GBM gbm = GBM.start(GBM.makeKey(),fr,30);
       gbm.get();                  // Block for result
-      UKV.remove(gbm._dest);
+      UKV.remove(gbm.destination_key);
     } finally {
       UKV.remove(dest);
     }
@@ -75,7 +75,7 @@ public class GBMTest extends TestUtil {
 
       DRF drf = DRF.start(DRF.makeKey(),fr,/*maxdepth*/50,/*ntrees*/5,mtrys,/*sampleRate*/0.67,seed);
       drf.get();                  // Block for result
-      UKV.remove(drf._dest);
+      UKV.remove(drf.destination_key);
     } finally {
       UKV.remove(dest);
     }
@@ -101,7 +101,7 @@ public class GBMTest extends TestUtil {
 
       DRF drf = DRF.start(DRF.makeKey(),fr,/*maxdepth*/40,/*ntrees*/10,mtrys,/*sampleRate*/0.67,seed);
       drf.get();                  // Block for result
-      UKV.remove(drf._dest);
+      UKV.remove(drf.destination_key);
     } finally {
       UKV.remove(dest);
     }

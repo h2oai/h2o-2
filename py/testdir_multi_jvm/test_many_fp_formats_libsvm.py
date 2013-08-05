@@ -13,6 +13,8 @@ exprList = [
         'Result<n> = sum(<keyX>[<col1>])',
     ]
 
+DO_SUMMARY = True
+
 def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel, distribution):
     # we can do all sorts of methods off the r object
     r = random.Random(SEEDPERFILE)
@@ -82,49 +84,65 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel, distrib
     f = caseList[sel]
 
     def addRandValToRowStuff(colNumber, valMin, valMax, rowData, synColSumDict):
+        # colNumber should not be 0, because the output will be there
+        
         ## val = r.uniform(MIN,MAX)
         val = r.triangular(valMin,valMax,0)
         # force it to be zero in this range. so we don't print zeroes for svm!
         if (val > valMin/2) and (val < valMax/2):
-            return
+            return None
         else:
             rowData.append(str(colNumber) + ":" + f(val)) # f should always return string
-            if val in synColSumDict:
+            if colNumber in synColSumDict:
                 synColSumDict[colNumber] += val # sum of column (dict)
             else:
                 synColSumDict[colNumber] = val # sum of column (dict)
+            return val
 
     valMin = -1e2
     valMax =  1e2
-    classMin = -36
-    classMax = 36
+    classMin = 0
+    classMax = 255
     dsf = open(csvPathname, "w+")
+    synColSumDict = {0: 0} # guaranteed to have col 0 for output
+    # even though we try to get a max colCount with random, we might fall short
+    # track what max we really got
+    colNumberMax = 0
     for i in range(rowCount):
         rowData = []
-        synColSumDict = {}
         d = random.randint(0,2)
         if d==0:
             if distribution == 'sparse':
                 # only one value per row!
-                colNumber = random.randint(0, colCount-1)
-                addRandValToRowStuff(colNumber, valMin, valMax, rowData, synColSumDict)
+                # is it okay to specify col 0 in svm? where does the output data go? (col 0)
+                colNumber = random.randint(1, colCount)
+                val = addRandValToRowStuff(colNumber, valMin, valMax, rowData, synColSumDict)
+                # did we add a val?
+                if val and (colNumber > colNumberMax):
+                    colNumberMax = colNumber
             else:
                 # some number of values per row.. 50% or so?
-                for colNumber in range(colCount):
-                    addRandValToRowStuff(colNumber, valMin, valMax, rowData, synColSumDict)
+                for colNumber in range(1, colCount+1):
+                    val = addRandValToRowStuff(colNumber, valMin, valMax, rowData, synColSumDict)
+                    if val and (colNumber > colNumberMax):
+                        colNumberMax = colNumber
 
             # always need an output class, even if no cols are non-zero
 
         # space is the only valid separator
+        # add the output (col 0)
         # random integer for class
-        rowData.insert(0, random.randint(classMin,classMax))
+        val = random.randint(classMin,classMax)
+        rowData.insert(0, val)
+        synColSumDict[0] += val # sum of column (dict)
+
         rowDataCsv = " ".join(map(str,rowData))
         # FIX! vary the eol ?
         # randomly skip some rows. only write 1/3
         dsf.write(rowDataCsv + "\n")
 
     dsf.close()
-    return synColSumDict
+    return (colNumberMax, synColSumDict)
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -144,17 +162,16 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_many_cols_and_values_with_syn(self):
+    def test_many_fp_formats_libsvm (self):
+        h2b.browseTheCloud()
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (1000, 10, 'cA', 30, 'sparse'),
-            (100000, 100, 'cB', 30, 'sparse'),
-            (1000, 10, 'cC', 30, 'sparse50'),
-            (100, 100, 'cD', 30,'sparse'),
-            (100, 100, 'cE', 30,'sparse50'),
-            # (100, 900, 'cF', 30),
-            # (100, 500, 'cG', 30),
-            # (100, 100, 'cH', 30),
+            (10, 10, 'cA', 30, 'sparse50'),
+            (100, 10, 'cB', 30, 'sparse'),
+            (100000, 100, 'cC', 30, 'sparse'),
+            (1000, 10, 'cD', 30, 'sparse50'),
+            (100, 100, 'cE', 30,'sparse'),
+            (100, 100, 'cF', 30,'sparse50'),
             ]
 
         # h2b.browseTheCloud()
@@ -167,7 +184,7 @@ class Basic(unittest.TestCase):
 
                 print "Creating random", csvPathname
                 # dict of col sums for comparison to exec col sums below
-                synColSumDict = write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel, distribution)
+                (colNumberMax, synColSumDict) = write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel, distribution)
 
                 selKey2 = key2 + "_" + str(sel)
                 parseKey = h2o_cmd.parseFile(None, csvPathname, key2=selKey2, timeoutSecs=timeoutSecs)
@@ -186,16 +203,19 @@ class Basic(unittest.TestCase):
                 # assume all the configs have the same y..just check with the firs tone
                 goodX = h2o_glm.goodXFromColumnInfo(y=0,
                     key=parseKey['destination_key'], timeoutSecs=300)
-                summaryResult = h2o_cmd.runSummary(key=selKey2, timeoutSecs=360)
-                h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
+
+                if DO_SUMMARY:
+                    summaryResult = h2o_cmd.runSummary(key=selKey2, timeoutSecs=360)
+                    h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
+
+                self.assertEqual(colNumberMax+1, num_cols, msg="generated %s cols (including output).  parsed to %s cols" % (colNumberMax+1, num_cols))
 
                 # Exec (column sums)*************************************************
                 h2e.exec_zero_list(zeroList)
                 # how do we know the max dimension (synthetic may not generate anything for the last col)
                 # use num_cols?. num_cols should be <= colCount. 
-                self.assertEqual(colCount, num_cols, msg="generated %s cols, parsed to %s cols" % (colCount, num_cols))
 
-                colResultList = h2e.exec_expr_list_across_cols(None, exprList, selKey2, maxCol=num_cols,
+                colResultList = h2e.exec_expr_list_across_cols(None, exprList, selKey2, maxCol=colNumberMax+1,
                     timeoutSecs=timeoutSecs)
                 print "\n*************"
                 print "colResultList", colResultList
@@ -207,14 +227,31 @@ class Basic(unittest.TestCase):
                 # when we generate the dataset
                 print "\ncolResultList:", colResultList
                 print "\nsynColSumDict:", synColSumDict
-                for k,v in synColSumDict:
+
+                # might use this
+                def almost_equal(value_1, value_2, accuracy = 10**-8):
+                    return abs(value_1 - value_2) < accuracy
+
+                for k,v in synColSumDict.iteritems():
                     # k should be integers that match the number of cols
                     self.assertTrue(k>=0 and k<len(colResultList))
-                    compare = float(colResultList[k])
-                    print "\n", good, "\n", compare
+                    compare = colResultList[k]
+                    print "\nComparing col", k, "sums:", v, compare
                     # Even though we're comparing floating point sums, the operations probably should have
                     # been done in same order, so maybe the comparison can be exact (or not!)
-                    self.assertEqual(good, compare, 'compare is not equal to good')
+                    self.assertAlmostEqual(v, compare, places=0, 
+                        msg='%0.6f col sum is not equal to expected %0.6f' % (v, compare))
+
+                    synMean = (v + 0.0)/rowCount
+                    # enums don't have mean, but we're not enums
+                    mean = inspect['cols'][k]['mean']
+                    # our fp formats in the syn generation sometimes only have two places?
+                    self.assertAlmostEqual(mean, synMean, places=0,
+                        msg='col %s mean %0.6f is not equal to generated mean %0.6f' % (k, mean, synMean))
+
+                    num_missing_values = inspect['cols'][k]['num_missing_values']
+                    self.assertEqual(0, num_missing_values,
+                        msg='col %s num_missing_values %d should be 0' % (k, num_missing_values))
 
 
 

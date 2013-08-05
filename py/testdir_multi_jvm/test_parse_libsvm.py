@@ -13,6 +13,8 @@ exprList = [
         'Result<n> = sum(<keyX>[<col1>])',
     ]
 
+DO_SUMMARY=True
+
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -33,28 +35,28 @@ class Basic(unittest.TestCase):
         # time.sleep(1500)
         h2o.tear_down_cloud()
 
-    def test_parse_libsvm(self):
+    def test_parse_bounds_libsvm(self):
         # just do the import folder once
         importFolderPath = "/home/0xdiag/datasets/libsvm"
 
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
         csvFilenameList = [
-            ("colon-cancer.svm",   "cA", 30, 1),
-            ("connect4.svm",       "cB", 30, 1),
-            ("covtype.binary.svm", "cC", 30, 1),
-            ("duke.svm",           "cD", 30, 1),
-            ("E2006.train.svm",    "cE", 30, 1),
-            ("gisette_scale.svm",  "cF", 30, 1),
-            ("mushrooms.svm",      "cG", 30, 1),
-            ("news20.svm",         "cH", 30, 1),
-            ("sector.libsvm.svm",  "cI", 30, 1),
-            ("tmc2007_train.svm",  "cJ", 30, 1),
-            ("syn_6_1000_10.svm",  "cK", 30, 1),
-            ("syn_0_100_1000.svm", "cL", 30, 1),
-            ("mnist_training.svm", "cM", 30, 1),
-            # normal csv
-            ("covtype.data",       "cN", 30,  1),
+            # multi-label target like 1,2,5 ..not sure what that means
+            # ("tmc2007_train.svm",  "cJ", 30, 0, 21.0),
+            ("syn_6_1000_10.svm",  "cK", 30, -36, 36),
+            ("syn_0_100_1000.svm", "cL", 30, -36, 36), 
+            ("mnist_training.svm", "cM", 30, 0, 9),
+            ("colon-cancer.svm",   "cA", 30, -1.000000, 1.000000),
+            ("news20.svm",         "cH", 30, 1, 20), 
+            ("connect4.svm",       "cB", 30, -1, 1),
+            ("covtype.binary.svm", "cC", 30, 1, 2),
+            ("duke.svm",           "cD", 30, -1.000000, 1.000000),
+            # too many features? 150K inspect timeout?
+            # ("E2006.train.svm",    "cE", 30, 1, -7.89957807346873 -0.519409526940154)
+
+            ("gisette_scale.svm",  "cF", 30, -1, 1),
+            ("mushrooms.svm",      "cG", 30, 1, 2),
         ]
 
         ### csvFilenameList = random.sample(csvFilenameAll,1)
@@ -62,7 +64,7 @@ class Basic(unittest.TestCase):
         lenNodes = len(h2o.nodes)
 
         firstDone = False
-        for (csvFilename, key2, timeoutSecs, resultMult) in csvFilenameList:
+        for (csvFilename, key2, timeoutSecs, expectedCol0Min, expectedCol0Max) in csvFilenameList:
             # have to import each time, because h2o deletes source after parse
             h2i.setupImportFolder(None, importFolderPath)
             # creates csvFilename.hex from file in importFolder dir 
@@ -76,6 +78,19 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=360)
             print "Inspect:", parseKey['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspect, csvFilename)
+            # look at the min/max for the target col (0) and compare to expected for the dataset
+            
+            imin = inspect['cols'][0]['min']
+            imax = inspect['cols'][0]['max']
+
+            if expectedCol0Min:
+                self.assertEqual(imin, expectedCol0Min,
+                    msg='col %s min %s is not equal to expected min %s' % (0, imin, expectedCol0Min))
+            if expectedCol0Max:
+                self.assertEqual(imax, expectedCol0Max,
+                    msg='col %s max %s is not equal to expected max %s' % (0, imax, expectedCol0Max))
+
+            print "\nmin/max for col0:", imin, imax
 
             # SUMMARY****************************************
             # gives us some reporting on missing values, constant values, 
@@ -83,32 +98,13 @@ class Basic(unittest.TestCase):
             # figures out everything from parseKey['destination_key']
             # needs y to avoid output column (which can be index or name)
             # assume all the configs have the same y..just check with the firs tone
-            goodX = h2o_glm.goodXFromColumnInfo(y=0,
-                key=parseKey['destination_key'], timeoutSecs=300)
-            summaryResult = h2o_cmd.runSummary(key=key2, timeoutSecs=360)
-            h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
+            if DO_SUMMARY:
+                goodX = h2o_glm.goodXFromColumnInfo(y=0,
+                    key=parseKey['destination_key'], timeoutSecs=300, noPrint=True)
+                summaryResult = h2o_cmd.runSummary(key=key2, timeoutSecs=360)
+                h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
 
-            # Exec (column sums)*************************************************
-            h2e.exec_zero_list(zeroList)
-            colResultList = h2e.exec_expr_list_across_cols(lenNodes, exprList, key2, maxCol=54, 
-                timeoutSecs=timeoutSecs)
-            print "\n*************"
-            print "colResultList", colResultList
-            print "*************"
 
-            # need to fix this for compare to expected
-            if 1==0:
-                if not firstDone:
-                    colResultList0 = list(colResultList)
-                    good = [float(x) for x in colResultList0] 
-                    firstDone = True
-                else:
-                    print "\n", colResultList0, "\n", colResultList
-                    # create the expected answer...i.e. N * first
-                    compare = [float(x)/resultMult for x in colResultList] 
-                    print "\n", good, "\n", compare
-                    self.assertEqual(good, compare, 'compare is not equal to good (first try * resultMult)')
-        
 
 if __name__ == '__main__':
     h2o.unit_main()

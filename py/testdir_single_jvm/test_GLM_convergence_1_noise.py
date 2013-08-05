@@ -62,7 +62,7 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_GLM_convergence_1(self):
+    def test_GLM_convergence_1_noise(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (10000, 50,  'cD', 300),

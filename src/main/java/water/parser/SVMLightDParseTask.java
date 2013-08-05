@@ -2,10 +2,8 @@ package water.parser;
 
 import java.util.Arrays;
 
-
 public class SVMLightDParseTask extends DParseTask {
   public SVMLightDParseTask() {}
-
   @Override
   public void newLine() {
     if (_colIdx < _ncolumns)
@@ -13,6 +11,19 @@ public class SVMLightDParseTask extends DParseTask {
     super.newLine();
     _colIdx = 0;
   }  private int _colIdx = 0;
+
+  @Override
+  public void addColumns(int ncols){
+    _colTypes = Arrays.copyOf(_colTypes, ncols);
+    _min = Arrays.copyOf(_min, ncols); // additional columns has min/max/mean 0
+    _max = Arrays.copyOf(_max, ncols);
+    _scale = Arrays.copyOf(_scale, ncols);
+    _mean = Arrays.copyOf(_mean, ncols);
+    _invalidValues = Arrays.copyOf(_invalidValues, ncols);
+    _ncolumns = ncols;
+    createEnums();
+  }
+
   @Override
   public void addNumCol(int colIdx, long number, int exp){
     if(_phase == Pass.ONE && colIdx >= _ncolumns)
@@ -30,8 +41,10 @@ public class SVMLightDParseTask extends DParseTask {
     throw new UnsupportedOperationException();
   }
   @Override public void reduce(DParseTask dpt){
-    if(dpt._ncolumns > _ncolumns && _map)
+    if(dpt._ncolumns > _ncolumns && _map){
+      int n = _ncolumns;
       addColumns(dpt._ncolumns); // not effective, quick solution for now...
+    }
     super.reduce(dpt);
   }
 

@@ -40,7 +40,6 @@ class Basic(unittest.TestCase):
             "billion_rows.csv.gz",
             "covtype.data",
             "covtype.shuffled.data",
-            "covtype10x.data",
             "covtype200x.data",
             "covtype20x.data",
             "kddcup_1999.data.gz",

@@ -1,9 +1,7 @@
 package water.parser;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import org.apache.poi.hssf.eventusermodel.*;
 import org.apache.poi.hssf.eventusermodel.dummyrecord.LastCellOfRowDummyRecord;
@@ -11,10 +9,6 @@ import org.apache.poi.hssf.eventusermodel.dummyrecord.MissingCellDummyRecord;
 import org.apache.poi.hssf.record.*;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 
-import water.*;
-import water.fvec.ByteVec;
-import water.parser.CustomParser.DataIn;
-import water.parser.CustomParser.DataOut;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
 
@@ -29,6 +23,7 @@ public class XlsParser extends CustomParser implements HSSFListener {
   public XlsParser(CustomParser.ParserSetup setup){super(null);}
   public XlsParser clone(){return new XlsParser(_setup);}
 
+  @Override
   public void streamParse( final InputStream is, final DataOut dout) throws Exception {
     _dout = dout;
     _firstRow = true;
@@ -43,6 +38,19 @@ public class XlsParser extends CustomParser implements HSSFListener {
     } finally {
       try { is.close(); } catch (IOException e) { }
     }
+  }
+
+  /**
+   * Try to parse the bits as svm light format, return SVMParser instance if the input is in svm light format, null otherwise.
+   * @param bits
+   * @return SVMLightPArser instance or null
+   */
+  public static CustomParser.ParserSetup guessSetup(byte [] bits){
+    InputStream is = new ByteArrayInputStream(bits);
+    XlsParser p = new XlsParser();
+    CustomInspectDataOut dout = new CustomInspectDataOut();
+    try{p.streamParse(is, dout);}catch(Exception e){}
+    return (dout._ncols > 0 && dout._nlines > 0)?CustomParser.ParserSetup.makeXlsSetup(dout._ncols, dout._header, dout.data()):null;
   }
 
   transient ArrayList<String> _columnNames = new ArrayList();
@@ -141,8 +149,10 @@ public class XlsParser extends CustomParser implements HSSFListener {
         String[] arr = new String[_columnNames.size()];
         arr = _columnNames.toArray(arr);
         _dout.setColumnNames(arr);
-      } else
+      } else {
         _dout.newLine();
+        curCol = -1;
+      }
     }
 
     if (curCol == -1)
