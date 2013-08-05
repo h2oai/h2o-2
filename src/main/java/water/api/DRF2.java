@@ -130,7 +130,7 @@ public class DRF2 extends Request {
 
     DocGen.HTML.section(sb,"Summary");
     DocGen.HTML.listHead(sb);    
-    DocGen.HTML.listBullet(sb, "ntrees", ntrees.toString(), 0 );
+    DocGen.HTML.listBullet(sb, "ntrees", ntrees.value().toString(), 0 );
     DocGen.HTML.listBullet(sb, "mtrys", Integer.toString(mtrys), 0 );
     DocGen.HTML.listTail(sb);    
 

@@ -252,8 +252,11 @@ class Histogram extends Iced implements Cloneable {
   public static Histogram[] initialHist( Frame fr, int ncols ) {
     Histogram hists[] = new Histogram[ncols];
     Vec[] vs = fr._vecs;
-    for( int j=0; j<ncols; j++ )
-      hists[j] = new Histogram(fr._names[j],vs[j].length(),vs[j].min(),vs[j].max(),vs[j]._isInt);
+    for( int j=0; j<ncols; j++ ) {
+      Vec v = vs[j];
+      hists[j] = v.min()==v.max() ? null 
+        : new Histogram(fr._names[j],v.length(),v.min(),v.max(),v._isInt);
+    }
     return hists;
   }
 
