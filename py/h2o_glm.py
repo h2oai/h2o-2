@@ -367,18 +367,21 @@ def goodXFromColumnInfo(y,
         name = colNameDict[k]
         # remove it if it has the same name as the y output
         if str(k)== y: # if they pass the col index as y
-            print "Removing %d because name: %s matches output %s" % (k, str(k), y)
+            if not noPrint:
+                print "Removing %d because name: %s matches output %s" % (k, str(k), y)
             x.remove(k)
             # rf doesn't want it in ignore list
             # ignore_x.append(k)
         elif name == y: # if they pass the name as y 
-            print "Removing %d because name: %s matches output %s" % (k, name, y)
+            if not noPrint:
+                print "Removing %d because name: %s matches output %s" % (k, name, y)
             x.remove(k)
             # rf doesn't want it in ignore list
             # ignore_x.append(k)
 
         elif keepX is not None and not keepX.match(name):
-            print "Removing %d because name: %s doesn't match desired keepPattern %s" % (k, name, keepPattern)
+            if not noPrint:
+                print "Removing %d because name: %s doesn't match desired keepPattern %s" % (k, name, keepPattern)
             x.remove(k)
             ignore_x.append(k)
 
@@ -387,13 +390,15 @@ def goodXFromColumnInfo(y,
         # could change it against num_rows for a ratio
         elif k in missingValuesDict:
             value = missingValuesDict[k]
-            print "Removing %d with name: %s because it has %d missing values" % (k, name, value)
+            if not noPrint:
+                print "Removing %d with name: %s because it has %d missing values" % (k, name, value)
             x.remove(k)
             ignore_x.append(k)
 
         elif k in constantValuesDict:
             value = constantValuesDict[k]
-            print "Removing %d with name: %s because it has constant value: %s " % (k, name, str(value))
+            if not noPrint:
+                print "Removing %d with name: %s because it has constant value: %s " % (k, name, str(value))
             x.remove(k)
             ignore_x.append(k)
 
@@ -401,7 +406,8 @@ def goodXFromColumnInfo(y,
         # remove all cols with enums, if not already removed
         elif k in enumSizeDict:
             value = enumSizeDict[k]
-            print "Removing %d %s because it has enums of size: %d" % (k, name, value)
+            if not noPrint:
+                print "Removing %d %s because it has enums of size: %d" % (k, name, value)
             x.remove(k)
             ignore_x.append(k)
 
