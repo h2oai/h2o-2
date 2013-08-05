@@ -144,19 +144,22 @@ public class Summary extends Iced {
           if(other._min[k] < _min[j]){
             min[i] = other._min[k++];
           } else if(_min[j] < other._min[k]){
-            ++j;
+            min[i] = _min[j++];
           } else {
+            min[i] = other._min[k];
             ++j; ++k;
           }
         }
+
         j = k = 0;
         for(int i = 0; i < _max.length; ++i){
           if(other._max[k] > _max[j]){
             max[i] = other._max[k++];
           } else if (_max[j] > other._max[k]){
-            ++j;
+            max[i] = _max[j++];
           } else {
-            ++j;++k;
+            max[i] = other._max[k];
+            ++j; ++k;
           }
         }
         _min = min;
@@ -178,7 +181,8 @@ public class Summary extends Iced {
             _min[j] = val;
           }
         }
-        if(val > _max[_min.length-1]){
+
+        if(val > _max[_max.length-1]){
           int j = _max.length-1;
           while(j > 0 && _max[j-1] < val)--j;
           if(j == 0 || _max[j-1] > val){ // skip dups
@@ -186,6 +190,7 @@ public class Summary extends Iced {
               _max[k] = _max[k-1];
             _max[j] = val;
           }
+
         }
       }
       // update the histogram
@@ -227,6 +232,7 @@ public class Summary extends Iced {
         }
         res.add("min", min);
         JsonArray max = new JsonArray();
+
         for(double d:_max){
           if(Double.isInfinite(d))break;
           max.add(new JsonPrimitive(d));
