@@ -234,7 +234,7 @@ public class Summary extends Iced {
         res.add("max", max);
         res.addProperty("mean", _summary._ary._cols[_colId]._mean);
         res.addProperty("sigma", _summary._ary._cols[_colId]._sigma);
-        res.addProperty("zeros", _summary._sums[ _colId ]._nzero);
+        res.addProperty("zeros", _nzero);
       }
       res.addProperty("N", _n);
       res.addProperty("na", _n_na);
