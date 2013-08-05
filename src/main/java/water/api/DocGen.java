@@ -1,5 +1,8 @@
 package water.api;
 
+import java.io.BufferedWriter;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import water.*;
 import water.util.Log;
@@ -14,11 +17,31 @@ public abstract class DocGen {
   static final HTML HTML = new HTML();
   static final ReST ReST = new ReST();
 
+  public static void createFile (String fileName, String content) {
+    try
+    {
+      FileWriter fstream = new FileWriter(fileName, false); //true tells to append data.
+      BufferedWriter out = new BufferedWriter(fstream);
+      out.write(content);
+      out.close();
+    }
+    catch (Exception e)
+    {
+      System.err.println("Error: " + e.getMessage());
+    }
+  }
+
+  public static void createReSTFilesInCwd() {
+    createFile("ImportFiles.rst", new ImportFiles().ReSTHelp());
+    createFile("ImportFiles2.rst", new ImportFiles2().ReSTHelp());
+    createFile("Parse2.rst", new Parse2().ReSTHelp());
+  }
+
   public static void main(String[] args) {
     H2O.main(args);
     TestUtil.stall_till_cloudsize(1);
-    System.out.println(new ImportFiles().ReSTHelp());
-    //H2O.exit(0);
+    createReSTFilesInCwd();
+    H2O.exit(0);
   }
 
   // Class describing meta-info about H2O queries and results.  
@@ -48,12 +71,19 @@ public abstract class DocGen {
     // Specific accessors for input arguments.  Not valid for JSON output fields.
     public RequestArguments.Argument arg(Request R) {
       if( _arg != null ) return _arg;
-      try {
-        Object o = R.getClass().getDeclaredField(_name).get(R);
-        return _arg=((RequestArguments.Argument)o);
+      Class clzz = R.getClass();
+      // An amazing crazy API from the JDK again.  Cannot search for protected
+      // fields without either (1) throwing NoSuchFieldException if you ask in
+      // a subclass, or (2) sorting through the list of ALL fields and EACH
+      // level of the hierarchy.  Sadly, I catch NSFE & loop.
+      while( true ) {
+        try {
+          Object o = clzz.getDeclaredField(_name).get(R);
+          return _arg=((RequestArguments.Argument)o);
+        }
+        catch(   NoSuchFieldException ie ) { clzz = clzz.getSuperclass(); }
+        catch( IllegalAccessException ie ) { ie.printStackTrace(); return null; }
       }
-      catch( IllegalAccessException ie ) { return null; }
-      catch(   NoSuchFieldException ie ) { return null; }
     }
 
     // Get the queryDescription results for this field, as it appears in the
@@ -130,34 +160,53 @@ public abstract class DocGen {
     listTail(sb);
 
     section(sb,"Output JSON elements");
-    listHead(sb);
-    for( FieldDoc doc : docs )
-      if( doc.isJSON() )
-        listBullet(sb,
-                   bold(doc._name)+", a "+doc._clazz.getSimpleName(),
-                   doc._help+doc.version(),0);
-    listTail(sb);
+    listJSONFields(sb,docs);
 
     section(sb,"HTTP response codes");
     paragraph(sb,"200 OK");
     paragraph(sb,"Success and error responses are identical.");
 
-    section(sb,"Success Example");
     String s[] = R.DocExampleSucc();
-    paraHead(sb);
-    url(sb,name,s);
-    paraTail(sb);
-    paragraph(sb,serve(name,s));
+    if( s != null ) {
+      section(sb,"Success Example");
+      paraHead(sb);
+      url(sb,name,s);
+      paraTail(sb);
+      paragraph(sb,serve(name,s));
+    }
 
-    section(sb,"Error Example");
     String f[] = R.DocExampleFail();
-    paraHead(sb);
-    url(sb,name,f);
-    paraTail(sb);
-    paragraph(sb,serve(name,f));
+    if( f != null ) {
+      section(sb,"Error Example");
+      paraHead(sb);
+      url(sb,name,f);
+      paraTail(sb);
+      paragraph(sb,serve(name,f));
+    }
 
     bodyTail(sb);
     return sb.toString();
+  }
+
+  private void listJSONFields( StringBuilder sb, FieldDoc[] docs ) {
+    listHead(sb);
+    for( FieldDoc doc : docs )
+      if( doc.isJSON() ) {
+        listBullet(sb,
+                   bold(doc._name)+", a "+doc._clazz.getSimpleName(),
+                   doc._help+doc.version(),0);
+        Class c = doc._clazz.getComponentType();
+        if( c==null ) c = doc._clazz;
+        if( Iced.class.isAssignableFrom(c) ) {
+          try {
+            FieldDoc[] nested = ((Iced)c.newInstance()).toDocField();
+            listJSONFields(sb,nested);
+          } 
+          catch( InstantiationException ie ) { water.util.Log.errRTExcept(ie); }
+          catch( IllegalAccessException ie ) { water.util.Log.errRTExcept(ie); }
+        }
+      }
+    listTail(sb);
   }
 
   private static StringBuilder url( StringBuilder sb, String name, String[] parms ) {

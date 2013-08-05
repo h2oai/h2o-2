@@ -1,12 +1,10 @@
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts
 
 class glm_same_parse(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
-
     
     @classmethod
     def setUpClass(cls):

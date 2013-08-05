@@ -9,12 +9,15 @@ import hex.rf.ConfusionTask;
 import hex.rf.RFModel;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.util.*;
 
 import water.*;
 import water.ValueArray.Column;
 import water.util.Check;
 import water.util.RString;
+import water.api.Request.Filter;
+import water.fvec.*;
 
 import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
@@ -119,7 +122,7 @@ public class RequestArguments extends RequestStatics {
   /** List of arguments for the request. Automatically filled in by the argument
    * constructors.
    */
-  protected final ArrayList<Argument> _arguments = new ArrayList();
+  protected transient ArrayList<Argument> _arguments = new ArrayList();
   public ArrayList<Argument> arguments() {
     return _arguments;
   }
@@ -191,7 +194,10 @@ public class RequestArguments extends RequestStatics {
   // Argument
   // ===========================================================================
 
-  public abstract class Argument<T> {
+  public abstract class Argument<T> extends Iced implements Filter {
+    @Override public boolean run(Object value) {
+      throw new RuntimeException("Should not be called for special case Argument");
+    }
 
     /** As with request's _requestHelp, this provides the extended help that
      * will be displayed on the help and wiki pages. Specify this in the
@@ -278,7 +284,7 @@ public class RequestArguments extends RequestStatics {
      * formatting. That means not only the queryElement, but also the argument
      * name in front of it, etc.
      *
-     * You may want to override this if you wont different form layouts to be
+     * You may want to override this if you want different form layouts to be
      * present.
      */
     protected String query() {
@@ -311,11 +317,11 @@ public class RequestArguments extends RequestStatics {
     /** Name of the argument. This must correspond to the name of the JSON
      * request argument.
      */
-    public final String _name;
+    public String _name;
 
     /** True if the argument is required, false if it may be skipped.
      */
-    public final boolean _required;
+    public boolean _required;
 
     /** True if change of the value in the query controls should trigger an
      * automatic refresh of the query form.
@@ -330,12 +336,17 @@ public class RequestArguments extends RequestStatics {
     /** List of all prerequisite arguments for the current argument. All the
      * prerequisite arguments must be created before the current argument.
      */
-    public ArrayList<Argument<T>> _prerequisites = null;
+    public transient ArrayList<Argument<T>> _prerequisites = null;
 
     /** The thread local argument state record. Must be initialized at the
      * beginning of each request before it can be used.
      */
-    private ThreadLocal<Record> _argumentRecord = new ThreadLocal();
+    private transient ThreadLocal<Record> _argumentRecord = new ThreadLocal();
+
+    /**
+     * If argument has been created reflectively from a request field.
+     */
+    public transient Field _field;
 
     /** Creates the argument of given name. Also specifies whether the argument
      * is required or not. This cannot be changed later.
@@ -418,7 +429,7 @@ public class RequestArguments extends RequestStatics {
      * argument value was submitted by the user and parsed correctly.
      */
     public final boolean specified() {
-      return record().specified();
+      return record() != null && record().specified();
     }
 
     /** Returns the value of the argument. This is either the value parsed, if
@@ -461,7 +472,7 @@ public class RequestArguments extends RequestStatics {
      * parse() call or a defaultValue or null if the argument is disabled.
      * However if the argument is disabled a defaultValue should not be called.
      */
-    public void check(String input) throws IllegalArgumentException {
+    public void check(RequestQueries callInstance, String input) throws IllegalArgumentException {
       // get the record -- we assume we have been reset properly
       Record record = record();
       // check that the input is canonical == value or null and store it to the
@@ -494,6 +505,9 @@ public class RequestArguments extends RequestStatics {
         try {
           record._value = parse(input);
           record._valid = true;
+
+          if(callInstance instanceof Request2)
+            ((Request2) callInstance).set(this, record._value);
         } catch (IllegalArgumentException e) {
           record._value = defaultValue();
           throw e;
@@ -626,7 +640,7 @@ public class RequestArguments extends RequestStatics {
 
     /** Default value.
      */
-    public final Boolean _defaultValue;
+    public final transient Boolean _defaultValue;
 
     /** Creates the argument with specified default value.
      */
@@ -1044,7 +1058,7 @@ public class RequestArguments extends RequestStatics {
 
   public class RSeq extends InputText<NumberSequence> {
     boolean _multiplicative;
-    NumberSequence _dVal;
+    transient NumberSequence _dVal;
     double _defaultStep;
 
     @Override
@@ -1054,7 +1068,9 @@ public class RequestArguments extends RequestStatics {
 
     public RSeq(String name, boolean req, boolean mul){
       this(name,req,null,mul);
-
+    }
+    public RSeq(String seq, boolean mul){
+      this("", false, new NumberSequence(seq, mul, 0), mul);
     }
     public RSeq(String name, boolean req, NumberSequence dVal, boolean mul){
       super(name,req);
@@ -1091,7 +1107,7 @@ public class RequestArguments extends RequestStatics {
 
   public class Int extends InputText<Integer> {
 
-    public final Integer _defaultValue;
+    public final transient Integer _defaultValue;
 
     public final int _min;
     public final int _max;
@@ -1145,7 +1161,7 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
 
   public class LongInt extends InputText<Long> {
-    public final Long _defaultValue;
+    public final transient Long _defaultValue;
     public final long _min;
     public final long _max;
     public final String _comment;
@@ -1163,14 +1179,18 @@ public class RequestArguments extends RequestStatics {
     }
 
     public LongInt(String name, Long defaultValue, String comment) {
-      this(name, defaultValue, Long.MIN_VALUE, Long.MAX_VALUE, comment);
+      this(name, false, defaultValue, null, null, comment);
     }
 
     public LongInt(String name, Long defaultValue, long min, long max, String comment) {
-      super(name,false);
+      this(name, false, defaultValue, min, max, comment);
+    }
+
+    public LongInt(String name, boolean req, Long defaultValue, Long min, Long max, String comment) {
+      super(name, req);
       _defaultValue = defaultValue;
-      _min = min;
-      _max = max;
+      _min = min != null ? min : Long.MIN_VALUE;
+      _max = max != null ? max : Long.MAX_VALUE;
       _comment = comment;
     }
 
@@ -1202,7 +1222,7 @@ public class RequestArguments extends RequestStatics {
   // Real
   // ---------------------------------------------------------------------------
   public class Real extends InputText<Double> {
-    public final Double _defaultValue;
+    public transient final Double _defaultValue;
     public       double _min;
     public       double _max;
     public final String _comment;
@@ -1220,18 +1240,22 @@ public class RequestArguments extends RequestStatics {
     }
 
     public Real(String name, Double defaultValue) {
-      this(name, defaultValue, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, "");
+      this(name, false, defaultValue, null, null, "");
     }
 
     public Real(String name, Double defaultValue, String comment) {
-      this(name, defaultValue, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, comment);
+      this(name, false, defaultValue, null, null, comment);
     }
 
     public Real(String name, Double defaultValue, double min, double max, String comment) {
-      super(name,false);
+      this(name, false, defaultValue, min, max, comment);
+    }
+
+    public Real(String name, boolean req, Double defaultValue, Double min, Double max, String comment) {
+      super(name,req);
       _defaultValue = defaultValue;
-      _min = min;
-      _max = max;
+      _min = min != null ? min : Double.NEGATIVE_INFINITY;
+      _max = max != null ? max : Double.POSITIVE_INFINITY;
       _comment = comment;
     }
 
@@ -1356,9 +1380,7 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
 
   public class Bool extends InputCheckBox {
-
     public final String _description;
-
     public Bool(String name, boolean defaultValue, String description) {
       super(name, defaultValue);
       _description = description;
@@ -1367,7 +1389,6 @@ public class RequestArguments extends RequestStatics {
     @Override protected String queryDescription() {
       return _description;
     }
-
   }
 
   // ---------------------------------------------------------------------------
@@ -1376,8 +1397,8 @@ public class RequestArguments extends RequestStatics {
 
   public class EnumArgument<T extends Enum<T>> extends InputSelect<T> {
 
-    protected final Class<T> _enumClass;
-    private final T _defaultValue;
+    protected transient final Class<T> _enumClass;
+    private transient final T _defaultValue;
 
 
     public EnumArgument(String name, T defaultValue, boolean refreshOnChange) {
@@ -1453,33 +1474,11 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
   public class H2OKey extends InputText<Key> {
     public final Key _defaultValue;
-    public H2OKey(String name) {
-      this(name, true);
-    }
-    public H2OKey(String name, boolean required) {
-      super(name, required);
-      _defaultValue = null;
-    }
-    public H2OKey(String name, String keyName) {
-      this(name, Key.make(keyName));
-    }
-    public H2OKey(String name, Key key) {
-      super(name, false);
-      _defaultValue = key;
-    }
-
-    @Override protected Key parse(String input) throws IllegalArgumentException {
-      Key k = Key.make(input);
-      return k;
-    }
-
-    @Override protected Key defaultValue() {
-      return _defaultValue;
-    }
-
-    @Override protected String queryDescription() {
-      return "Valid H2O key";
-    }
+    public H2OKey(String name, boolean required) { super(name, required); _defaultValue = null; }
+    public H2OKey(String name, Key key) { super(name, false); _defaultValue = key;  }
+    @Override protected Key parse(String input) { return Key.make(input); }
+    @Override protected Key defaultValue() { return _defaultValue; }
+    @Override protected String queryDescription() { return "Valid H2O key"; }
   }
 
   // ---------------------------------------------------------------------------
@@ -1522,16 +1521,11 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
   public class H2OHexKey extends TypeaheadInputText<ValueArray> {
     public final Key _defaultKey;
-
+    public H2OHexKey(String name, String keyName) { this(name, Key.make(keyName)); }
     public H2OHexKey(String name) {
       super(TypeaheadHexKeyRequest.class, name, true);
       _defaultKey = null;
     }
-
-    public H2OHexKey(String name, String keyName) {
-      this(name, Key.make(keyName));
-    }
-
     public H2OHexKey(String name, Key key) {
       super(TypeaheadHexKeyRequest.class, name, false);
       _defaultKey = key;
@@ -1540,21 +1534,16 @@ public class RequestArguments extends RequestStatics {
     @Override protected ValueArray parse(String input) throws IllegalArgumentException {
       Key k = Key.make(input);
       Value v = DKV.get(k);
-      if (v == null)
-        throw new IllegalArgumentException("Key "+input+" not found!");
-      if (!v.isArray())
-        throw new IllegalArgumentException("Key "+input+" is not a valid HEX key");
+      if (v == null)    throw new IllegalArgumentException("Key "+input+" not found!");
+      if (!v.isArray()) throw new IllegalArgumentException("Key "+input+" is not a valid HEX key");
       return v.get();
     }
 
     @Override protected ValueArray defaultValue() {
-      if(_defaultKey == null) return null;
-      return DKV.get(_defaultKey).get();
+      return _defaultKey == null ? null : (ValueArray)DKV.get(_defaultKey).get();
     }
 
-    @Override protected String queryDescription() {
-      return "An existing H2O HEX key";
-    }
+    @Override protected String queryDescription() { return "An existing H2O HEX key"; }
   }
 
   // -------------------------------------------------------------------------
@@ -1727,7 +1716,7 @@ public class RequestArguments extends RequestStatics {
       return null;
     }
 
-    ArrayList<Integer> _selectedCols; // All the columns I'm willing to show the user
+    transient ArrayList<Integer> _selectedCols; // All the columns I'm willing to show the user
 
     // Select which columns I'll show the user
     @Override protected String queryElement() {
@@ -1866,8 +1855,8 @@ public class RequestArguments extends RequestStatics {
       };
     }
     double _maxNAsRatio = 0.1;
-    ThreadLocal<TreeSet<String>> _constantColumns = new ThreadLocal<TreeSet<String>>();
-    ThreadLocal<Integer> _badColumns = new ThreadLocal<Integer>();
+    transient ThreadLocal<TreeSet<String>> _constantColumns = new ThreadLocal<TreeSet<String>>();
+    transient ThreadLocal<Integer> _badColumns = new ThreadLocal<Integer>();
 
     @Override
     public boolean shouldIgnore(int i, ValueArray.Column ca ) {
@@ -2153,7 +2142,6 @@ public class RequestArguments extends RequestStatics {
     public NTree(String name, final RFModelKey modelKey) {
       super(name, 50, 0, Integer.MAX_VALUE);
       _modelKey     = modelKey;
-
       addPrerequisite(modelKey);
     }
     @Override
@@ -2169,6 +2157,184 @@ public class RequestArguments extends RequestStatics {
     protected Integer defaultValue() {
       RFModel model = _modelKey.value();
       return model != null ? model.treeCount() : 0;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Fluid Vec Arguments
+  // ---------------------------------------------------------------------------
+  /** A Frame Key */
+  public class FrameKey extends H2OKey {
+    public FrameKey(String name) { super(name,true); }
+    @Override protected Key parse(String input) {
+      Key k = Key.make(input);
+      Value v = DKV.get(k);
+      if( v == null )
+        throw new IllegalArgumentException(input+":"+errors()[0]);
+      if( v.type() != TypeMap.onLoad(Frame.class.getName()) )
+        throw new IllegalArgumentException(input+":"+errors()[1]);
+      return k;
+    }
+    @Override protected String queryDescription() { return "An existing H2O Frame key."; }
+    @Override protected String[] errors() { return new String[] { "Key not found", "Key is not a valid Frame key" }; }
+  }
+
+  /** A Fluid Vec, via a column name in a Frame */
+  public class FrameKeyVec extends InputSelect<Vec> {
+    final FrameKey _key;
+    protected transient ThreadLocal<Integer> _colIdx= new ThreadLocal();
+    public FrameKeyVec(String name, FrameKey key) {
+      super(name, true);
+      addPrerequisite(_key=key);
+    }
+    protected Frame fr() { return DKV.get(_key.value()).get(); }
+    @Override protected String[] selectValues() { return fr()._names;  }
+    @Override protected String selectedItemValue() {
+      return value()==null || fr()==null ? "" : fr()._names[_colIdx.get()];
+    }
+    @Override protected Vec parse(String input) throws IllegalArgumentException {
+      int cidx = fr().find(input);
+      if (cidx == -1)
+        throw new IllegalArgumentException(input+" not a name of column, or a column index");
+      _colIdx.set(cidx);
+      return fr().vecs()[cidx];
+    }
+    @Override protected Vec defaultValue() { return null; }
+    @Override protected String queryDescription() { return "Column name"; }
+    @Override protected String[] errors() { return new String[] { "Not a name of column, or a column index" }; }
+  }
+
+  /** A Class Vec/Column within a Frame */
+  public class FrameClassVec extends FrameKeyVec {
+    public FrameClassVec(String name, FrameKey key ) { super(name, key); }
+    @Override protected String[] selectValues() {
+      ArrayList<String> as = new ArrayList();
+      Vec vecs[] = fr().vecs();
+      for( int i=0; i<vecs.length; i++ )
+        if( filter(vecs[i]) ) as.add(fr()._names[i]);
+      return as.toArray(new String[as.size()]);
+    }
+    @Override protected Vec parse(String input) throws IllegalArgumentException {
+      Vec vec = super.parse(input);
+      if( !filter(vec) ) throw new IllegalArgumentException(errors()[0]);
+      return vec;
+    }
+    private boolean filter( Vec vec ) {
+      return vec.dtype() == Vec.DType.I || vec.dtype() == Vec.DType.S;
+    }
+    @Override protected Vec defaultValue() { return null; }
+    @Override protected String[] errors() { return new String[] { "Only integer or enum/factor columns can be classified" }; }
+  }
+
+  /** Select a range of Vecs from a Frame */
+  public class FrameVecSelect extends MultipleSelect<int[]> {
+    public final FrameKey _key;
+    //int _selectedCols[] = new int[2]; // All the columns I'm willing to show the user
+    public FrameVecSelect(String name, FrameKey key) {
+      super(name);
+      addPrerequisite(_key = key);
+    }
+    protected Frame fr() { return DKV.get(_key.value()).get(); }
+    public boolean shouldIgnore (Vec vec) { return false; }
+    public void    checkLegality(Vec vec) throws IllegalArgumentException { }
+
+    private int[] allCols() {
+      int is[] = new int[2];
+      Vec vecs[] = fr().vecs();
+      for( int i = 0; i < vecs.length; ++i )
+        if( !shouldIgnore(vecs[i]) )
+          is = add(is,i);
+      return is;
+    }
+
+    // Select which columns I'll show the user
+    @Override protected String queryElement() {
+      //_selectedCols = allCols();
+      return super.queryElement();
+    }
+
+    // "values" to send back and for in URLs.  Use numbers for density (shorter URLs).
+    @Override protected final String[] selectValues() {
+      int is[] = allCols();
+      String [] res = new String[len(is)];
+      for( int i=0; i<len(is); i++ ) res[i] = String.valueOf(is[i]);
+      return res;
+    }
+
+    // "names" to select in the boxes.
+    @Override protected String[] selectNames() {
+      Frame fr = fr();
+      int is[] = allCols();
+      String [] res = new String[len(is)];
+      for( int i=0; i<len(is); i++ ) {
+        Vec vec = fr.vecs()[is[i]];
+        String name = fr._names[is[i]];
+        double ratio = (double)vec.NAcnt()/vec.length();
+        res[i] = name + (ratio > 0.01 ? (" (" + Math.round(ratio*100) + "% NAs)") : "");
+      }
+      return res;
+    }
+
+    @Override protected boolean isSelected(String value) {
+      int[] val = value();
+      if (val == null) return false;
+      int idx = fr().find(value);
+      return Arrays.binarySearch(val,idx) >= 0;
+    }
+
+    @Override protected int[] parse(String input) throws IllegalArgumentException {
+      int is[] = new int[2];
+      for( String col : input.split(",") ) {
+        try {
+          int idx = Integer.valueOf(col.trim());
+          if (idx < 0 || idx >= fr().vecs().length )
+            throw new IllegalArgumentException("Column "+col+" not part of Frame "+_key);
+          if( find(is,idx) != -1 )
+            throw new IllegalArgumentException("Column "+col+" is already selected.");
+          checkLegality(fr().vecs()[idx]);
+          is = add(is,idx);
+        } catch( NumberFormatException nfe ) {
+          throw new IllegalArgumentException("Column #"+col+" is not a number.");
+        }
+      }
+      return Arrays.copyOf(is,len(is));
+    }
+
+    // By default, everything is selected.  For some reason I cannot get the
+    // browser to start with these selected.
+    @Override protected int[] defaultValue() {
+      int[] is = allCols();
+      return Arrays.copyOf(is,len(is));
+    }
+    @Override protected String queryDescription() { return "Columns to select"; }
+    // A weenie experimental ArrayList<Integer> API using primitive ints
+    protected void clr(int[] is) { is[is.length-1]=0; }
+    protected int len(int[] is) { return is[is.length-1]; }
+    protected int find(int[] is, int x) {
+      for( int i=0; i<len(is); i++ )
+        if( is[i]==x ) return i;
+      return -1;
+    }
+    protected int[] add(int[] is, int x) {
+      int len = len(is);
+      if( len==is.length-1 ) is=Arrays.copyOf(is,(len+1)<<1);
+      is[len] = x;
+      is[is.length-1] = len+1;
+      return is;
+    }
+  }
+
+  /** Select any/all Vecs, excluding a certain one */
+  public class FrameNonClassVecSelect extends FrameVecSelect {
+    public final FrameKeyVec _classVec;
+    public FrameNonClassVecSelect(String name, FrameKey key, FrameKeyVec classVec) {
+      super(name, key);
+      addPrerequisite(_classVec = classVec);
+    }
+    @Override public boolean shouldIgnore(Vec vec) { return vec == _classVec.value(); }
+    @Override public void checkLegality(Vec vec) throws IllegalArgumentException {
+      if( vec == _classVec.value() )
+        throw new IllegalArgumentException("Class Vec cannot be selected");
     }
   }
 }

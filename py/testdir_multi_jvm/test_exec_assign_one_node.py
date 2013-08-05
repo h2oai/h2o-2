@@ -2,7 +2,7 @@ import unittest
 import random, sys, time, os
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
+import h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
 # keep two lists the same size
 # best if prime relative to the # jvms (len(h2o.nodes))

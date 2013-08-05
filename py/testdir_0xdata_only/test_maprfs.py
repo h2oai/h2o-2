@@ -1,11 +1,8 @@
-
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys, time, random
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts
 import h2o_browse as h2b
 import h2o_import as h2i
-import time, random
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -43,7 +40,6 @@ class Basic(unittest.TestCase):
             "billion_rows.csv.gz",
             "covtype.data",
             "covtype.shuffled.data",
-            "covtype10x.data",
             "covtype200x.data",
             "covtype20x.data",
             "kddcup_1999.data.gz",
@@ -82,13 +78,7 @@ class Basic(unittest.TestCase):
             print "\n" + csvFilename
             start = time.time()
             RFview = h2o_cmd.runRFOnly(trees=1,parseKey=parseKey,timeoutSecs=2000)
-            h2b.browseJsonHistoryAsUrlLastMatch("RFView")
-            # wait in case it recomputes it
-            time.sleep(10)
-
-            sys.stdout.write('.')
-            sys.stdout.flush() 
-
+            # h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
 if __name__ == '__main__':
     h2o.unit_main()

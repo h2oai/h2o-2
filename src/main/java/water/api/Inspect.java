@@ -1,20 +1,18 @@
 package water.api;
 
 import hex.DGLM.GLMModel;
-import hex.KMeansModel;
+import hex.*;
 import hex.rf.RFModel;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.zip.*;
-
 import water.*;
 import water.ValueArray.Column;
 import water.api.GLMProgressPage.GLMBuilder;
 import water.fvec.*;
-import water.parser.CsvParser;
+import water.parser.*;
 import water.util.Log;
 import water.util.Utils;
 
@@ -38,11 +36,11 @@ public class Inspect extends Request {
   // Constructor called from 'Exec' query instead of the direct view links
   Inspect(Key k) {
     _key.reset();
-    _key.check(k.toString());
+    _key.check(this, k.toString());
     _offset.reset();
-    _offset.check("");
+    _offset.check(this, "");
     _view.reset();
-    _view.check("");
+    _view.check(this, "");
   }
 
   // Default no-args constructor
@@ -51,7 +49,7 @@ public class Inspect extends Request {
 
   public static Response redirect(JsonObject resp, Job keyProducer, Key dest) {
     JsonObject redir = new JsonObject();
-    if (keyProducer!=null) redir.addProperty(JOB, keyProducer._self.toString());
+    if (keyProducer!=null) redir.addProperty(JOB, keyProducer.job_key.toString());
     redir.addProperty(KEY, dest.toString());
     return Response.redirect(resp, Inspect.class, redir);
   }
@@ -121,11 +119,8 @@ public class Inspect extends Request {
     return Response.error("No idea how to display a "+f.getClass());
   }
 
-  // Look at unparsed data; guess its setup, separator can be enforced.
-  public static CsvParser.Setup csvGuessValue(Value v) { return csvGuessValue(v, CsvParser.NO_SEPARATOR); }
-  public static CsvParser.Setup csvGuessValue(Value v, byte separator) {
-    // See if we can make sense of the first few rows.
-    byte[] bs = v.getFirstBytes(); // Read some bytes
+  public static byte [] getFirstBytes(Value v){
+    byte[] bs = v.getFirstBytes();
     int off = 0;
     // First decrypt compression
     InputStream is = null;
@@ -135,7 +130,7 @@ public class Inspect extends Request {
         off = bs.length; // All bytes ready already
         break;
       case ZIP: {
-        ZipInputStream zis = new ZipInputStream(v.openStream());
+        ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(bs));
         ZipEntry ze = zis.getNextEntry(); // Get the *FIRST* entry
         // There is at least one entry in zip file and it is not a directory.
         if( ze != null && !ze.isDirectory() )
@@ -145,7 +140,7 @@ public class Inspect extends Request {
         break;
       }
       case GZIP:
-        is = new GZIPInputStream(v.openStream());
+        is = new GZIPInputStream(new ByteArrayInputStream(bs));
         break;
       }
       // If reading from a compressed stream, estimate we can read 2x uncompressed
@@ -170,20 +165,17 @@ public class Inspect extends Request {
     }
     if( off < bs.length )
       bs = Arrays.copyOf(bs, off); // Trim array to length read
-
-    // Now try to interpret the unzipped data as a CSV
-    return CsvParser.inspect(bs, separator);
+    return bs;
   }
 
   // Build a response JSON
   private final Response serveUnparsedValue(Key key, Value v) {
     JsonObject result = new JsonObject();
     result.addProperty(VALUE_TYPE, "unparsed");
-
-    CsvParser.Setup setup = csvGuessValue(v);
+    CustomParser.ParserSetup setup = ParseDataset.guessSetup(v);
     if( setup._data != null && setup._data[1].length > 0 ) { // Able to parse sanely?
       int zipped_len = v.getFirstBytes().length;
-      double bytes_per_row = (double) zipped_len / setup._numlines;
+      double bytes_per_row = (double) zipped_len / setup._data.length;
       long rows = (long) (v.length() / bytes_per_row);
       result.addProperty(NUM_ROWS, "~" + rows); // approx rows
       result.addProperty(NUM_COLS, setup._data[1].length);
@@ -206,7 +198,6 @@ public class Inspect extends Request {
         return "<h4>First few sample rows</h4>";
       }
     });
-
     return r;
   }
 
@@ -339,8 +330,9 @@ public class Inspect extends Request {
     }
     sb.append("<div class='alert'>" +"View " + SummaryPage.link(key, "Summary") +  "<br/>Build models using "
           + RF.link(key, "Random Forest") + ", "
-          + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", or "
-          + KMeans.link(key, "KMeans") + "<br />"
+          + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", "
+          + KMeans.link(key, "KMeans") + ", or "
+          + KMeansGrid.link(key, "KMeansGrid") + "<br />"
           + "Score data using "
           + RFScore.link(key, "Random Forest") + ", "
           + GLMScore.link(KEY, key, 0.0, "GLM") + "</br><b>Download as</b> " + DownloadDataset.link(key, "CSV")

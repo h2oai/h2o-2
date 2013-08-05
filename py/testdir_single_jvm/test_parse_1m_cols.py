@@ -1,7 +1,5 @@
-import unittest
-import random, sys, time, os
+import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
@@ -43,12 +41,12 @@ class Basic(unittest.TestCase):
     def test_parse_1m_cols(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (10, 700000, 'cA', 30, 60),
-            (10, 800000, 'cB', 30, 70),
-            (10, 900000, 'cC', 30, 80),
-            (10, 1000000, 'cD', 60, 90),
-            (10, 1100000, 'cE', 60, 100),
-            (10, 1200000, 'cF', 60, 120),
+            # (10, 700000, 'cA', 30, 60),
+            # (10, 800000, 'cB', 30, 70),
+            # (10, 900000, 'cC', 30, 80),
+            (10, 1000000, 'cD', 60, 360),
+            # (10, 1100000, 'cE', 60, 100),
+            # (10, 1200000, 'cF', 60, 120),
             ]
 
         ### h2b.browseTheCloud()

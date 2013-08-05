@@ -1,11 +1,8 @@
-
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts, h2o_glm
 import h2o_browse as h2b
 import h2o_import as h2i
-import time, random
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -46,9 +43,9 @@ class Basic(unittest.TestCase):
             # since we delete the key, we have to re-import every iteration
             # s3n URI thru HDFS is not typical.
             importHDFSResult = h2o.nodes[0].import_hdfs(URI)
-            s3nFullList = importHDFSResult['files']
+            s3nFullList = importHDFSResult['succeeded']
             ### print "s3nFullList:", h2o.dump_json(s3nFullList)
-            self.assertGreater(len(s3nFullList),8,"Didn't see more than 8 files in s3n?")
+            self.assertGreater(len(s3nFullList),1,"Didn't see more than 1 files in s3n?")
 
             storeView = h2o.nodes[0].store_view()
             ### print "storeView:", h2o.dump_json(storeView)

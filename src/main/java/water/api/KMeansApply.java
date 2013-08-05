@@ -12,7 +12,7 @@ import com.google.gson.JsonObject;
 public class KMeansApply extends Request {
   protected final H2OKMeansModelKey _modelKey = new H2OKMeansModelKey(MODEL_KEY, true);
   protected final H2OHexKey _dataKey = new H2OHexKey(DATA_KEY);
-  protected final H2OKey _dest = new H2OKey(DEST_KEY, true);;
+  protected final H2OKey _dest = new H2OKey(DEST_KEY, true);
 
   public KMeansApply() {
   }
@@ -47,7 +47,7 @@ public class KMeansApply extends Request {
       Job job = KMeansModel.KMeansApply.run(dest, model, data);
       JsonObject response = new JsonObject();
       response.addProperty(RequestStatics.DEST_KEY, _dest.value().toString());
-      return Progress.redirect(response, job._self, _dest.value());
+      return Progress.redirect(response, job.job_key, _dest.value());
     } catch( Error e ) {
       return Response.error(e.getMessage());
     }

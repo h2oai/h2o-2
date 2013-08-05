@@ -1,24 +1,16 @@
 package water;
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 
 import javassist.*;
+import water.api.Request.API;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
 
 public class Weaver {
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface Weave {
-    String help();
-    int minVersion() default 1;
-    int maxVersion() default Integer.MAX_VALUE;
-  }
-
   private final ClassPool _pool;
-  private final CtClass _dtask, _iced, _enum, _api;
+  private final CtClass _dtask, _iced, _enum;
   private final CtClass[] _serBases;
   private final CtClass _fielddoc;
   private final CtClass _arg;
@@ -32,8 +24,7 @@ public class Weaver {
       _iced = _pool.get("water.Iced"); // Needs serialization
       _dtask= _pool.get("water.DTask");// Needs serialization and remote execution
       _enum = _pool.get("java.lang.Enum"); // Needs serialization
-      _api  = _pool.get("water.api.Request"); // Needs auto-documentation
-      _serBases = new CtClass[] { _iced, _dtask, _enum, _api, };
+      _serBases = new CtClass[] { _iced, _dtask, _enum, };
       for( CtClass c : _serBases ) c.freeze();
       _fielddoc = _pool.get("water.api.DocGen$FieldDoc");// Is auto-documentation result
       _arg  = _pool.get("water.api.RequestArguments$Argument"); // Needs auto-documentation
@@ -119,7 +110,7 @@ public class Weaver {
   // water.DTask.  Add any missing serialization methods.
   CtClass addSerializationMethods( CtClass cc ) throws CannotCompileException, NotFoundException {
     if( cc.subclassOf(_enum) ) exposeRawEnumArray(cc);
-    if( cc.subclassOf(_api ) ) ensureAPImethods(cc);
+    if( cc.subclassOf(_iced) ) ensureAPImethods(cc);
     if( cc.subclassOf(_iced) ||
         cc.subclassOf(_dtask) ) {
       cc.setModifiers(javassist.Modifier.setPublic(cc.getModifiers()));
@@ -222,13 +213,13 @@ public class Weaver {
     // ---
     // Auto-gen JSON output to AutoBuffers
     make_body(cc,ctfs,false,
-              "public water.AutoBuffer writeJSON(water.AutoBuffer ab) {\n  ab.put1('{');\n",
-              "  super.writeJSON(ab);\n",
+              "public water.AutoBuffer writeJSONFields(water.AutoBuffer ab) {\n",
+              "  super.writeJSONFields(ab);\n",
               "  ab.putJSON%z(\"%s\",%s)",
-              "  ab.putEnumJSON(%s)",
-              "  ab.putJSON%z(%s)",
+              "  ab.putEnumJSON(\"%s\",%s)",
+              "  ab.putJSON%z(\"%s\",%s)",
               ".put1(',');\n",
-              ";\n  return ab.put1('}');\n}",
+              ";\n  return ab;\n}",
               new FieldFilter() {
                 boolean filter(CtField ctf) throws NotFoundException {return !ctf.getType().subclassOf(_arg); }
               });
@@ -251,39 +242,31 @@ public class Weaver {
     StringBuilder sb = new StringBuilder();
     sb.append("new water.api.DocGen$FieldDoc[] {");
     boolean first = true;
-    for( CtField ctf : ctfs ) {
-      int mods = ctf.getModifiers();
-      if( javassist.Modifier.isTransient(mods) || javassist.Modifier.isStatic(mods) ) {
-        if( ctf.getName().equals("DOC_FIELDS") ) fielddoc = ctf;
-        if( ctf.getName().equals("DOC_GET") ) getdoc = ctf;
-        continue;  // Only auto-doc not-transient instance fields (not static)
+    CtClass cc2 = cc;
+    while( true ) {             // For all self & superclasses
+      for( CtField ctf : ctfs ) { // For all fields
+        int mods = ctf.getModifiers();
+        if( javassist.Modifier.isTransient(mods) || javassist.Modifier.isStatic(mods) ) {
+          if( cc2 == cc ) {     // Capture the DOC_* fields for self only
+            if( ctf.getName().equals("DOC_FIELDS") ) fielddoc = ctf;
+            if( ctf.getName().equals("DOC_GET") ) getdoc = ctf;
+          }
+          continue;  // Only auto-doc not-transient instance fields (not static)
+        }
+        // This field needs documentation. Get the required API annotation.
+        first = addFieldWeave(sb,ctf,cc,first);
       }
 
-      // This field needs documentation
-      String name = ctf.getName();
-      Object[] as;
-      try {
-        as = ctf.getAnnotations();
-      } catch( ClassNotFoundException ex) {
-        throw new RuntimeException(ex);
-      }
-      Weave w = null;
-      for(Object a : as) {
-        if(a instanceof Weave)
-          w = (Weave) a;
-      }
-      if( w == null ) throw new CannotCompileException("Class "+cc.getName()+" has non-transient field '"+name+"' without a Weave annotation");
-      String help = w.help();
-      int min = w.minVersion();
-      int max = w.maxVersion();
-      if( min < 1 || min > 1000000 ) throw new CannotCompileException("Found field '"+name+"' but MinVer < 1 or MinVer > 1000000");
-      if( max < min || (max > 1000000 && max != Integer.MAX_VALUE) )
-        throw new CannotCompileException("Found field '"+name+"' but MaxVer < "+min+" or MaxVer > 1000000");
-
-      if( first ) first = false;
-      else sb.append(",");
-      sb.append("new water.api.DocGen$FieldDoc(\""+name+"\",\""+help+"\","+min+","+max+","+ctf.getType().getName()+".class)");
+      // Now roll up the superclass chain, weaving super fields also
+      cc2 = cc2.getSuperclass();
+      ctfs = cc2.getDeclaredFields();
+      api = false;
+      for( CtField ctf : ctfs )
+        if( ctf.getName().equals("API_WEAVER") )
+          api = true;
+      if( api == false ) break;
     }
+
     sb.append("}");
     if( fielddoc == null ) throw new CannotCompileException("Did not find static final DocGen.FieldDoc[] DOC_FIELDS field;");
     if( !fielddoc.getType().isArray() ||
@@ -294,6 +277,29 @@ public class Weaver {
     cc.addMethod(CtNewMethod.make("  public water.api.DocGen$FieldDoc[] toDocField() { return DOC_FIELDS; }",cc));
     if( getdoc != null )
       cc.addMethod(CtNewMethod.make("  public String toDocGET() { return DOC_GET; }",cc));
+  }
+
+  private boolean addFieldWeave( StringBuilder sb, CtField ctf, CtClass cc, boolean first ) throws NotFoundException, CannotCompileException {
+    // This field needs documentation.  Get the required API annotation.
+    String name = ctf.getName();
+    Object[] as;
+    try { as = ctf.getAnnotations(); }
+    catch( ClassNotFoundException ex) { throw new NotFoundException("getAnnotations throws ", ex); }
+    API a = null;
+    for(Object o : as) if(o instanceof API)  a = (API) o;
+    if( a == null ) throw new CannotCompileException("Class "+cc.getName()+" has non-transient field '"+name+"' without a Weave annotation");
+
+    String help = a.help();
+    int min = a.since();
+    int max = a.until();
+    if( min < 1 || min > 1000000 ) throw new CannotCompileException("Found field '"+name+"' but MinVer < 1 or MinVer > 1000000");
+    if( max < min || (max > 1000000 && max != Integer.MAX_VALUE) )
+      throw new CannotCompileException("Found field '"+name+"' but MaxVer < "+min+" or MaxVer > 1000000");
+
+    if( first ) first = false;
+    else sb.append(",");
+    sb.append("new water.api.DocGen$FieldDoc(\""+name+"\",\""+help+"\","+min+","+max+","+ctf.getType().getName()+".class)");
+    return first;
   }
 
   // --------------------------------------------------------------------------

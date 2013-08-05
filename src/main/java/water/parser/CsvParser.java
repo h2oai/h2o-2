@@ -1,10 +1,10 @@
 package water.parser;
 
-import java.util.ArrayList;
+import java.util.*;
 
 import water.*;
 
-public abstract class CsvParser extends CustomParser {
+public class CsvParser extends CustomParser {
 
   /* Constant to specify that separator is not specified. */
   public static final byte NO_SEPARATOR = -1;
@@ -37,19 +37,24 @@ public abstract class CsvParser extends CustomParser {
 
   private static final long LARGEST_DIGIT_NUMBER = 1000000000000000000L;
 
-  public final Setup _setup;
   public final boolean _skip;
 
-  public CsvParser(Setup setup, boolean skip) {
-    _setup = setup;
+  public CsvParser(ParserSetup setup, boolean skip) {
+    super(setup);
     _skip = skip;
     CHAR_SEPARATOR = setup._separator;
   }
 
+  public CsvParser clone(){
+    return new CsvParser(_setup == null?null:_setup.clone(), _skip);
+  }
+
+  @Override public boolean parallelParseSupported(){return true;}
+
   @SuppressWarnings("fallthrough")
-  @Override public final void parse(final int cidx) {
+  @Override public final void parallelParse(int cidx, final CustomParser.DataIn din, final CustomParser.DataOut dout) {
     ValueString _str = new ValueString();
-    byte[] bits = getChunkData(cidx);
+    byte[] bits = din.getChunkData(cidx);
     if( bits == null ) return;
     final byte[] bits0 = bits;  // Bits for chunk0
     boolean firstChunk = true;  // Have not rolled into the 2nd chunk
@@ -79,7 +84,7 @@ public abstract class CsvParser extends CustomParser {
         c = bits[offset];
       }
     }
-    newLine();
+    dout.newLine();
 
 MAIN_LOOP:
     while (true) {
@@ -117,12 +122,10 @@ NEXT_CHAR:
             break NEXT_CHAR;
           // we have parsed the string enum correctly
           if((_str._off + _str._length) > _str._buf.length){ // crossing chunk boundary
-            if(_str._buf == bits)
-              System.out.println("haha");
             assert _str._buf != bits;
             _str.addBuff(bits);
           }
-          addStrCol(colIdx, _str);
+          dout.addStrCol(colIdx, _str);
           _str.set(null, 0, 0);
           ++colIdx;
           state = SEPARATOR_OR_EOL;
@@ -140,7 +143,7 @@ NEXT_CHAR:
         case EOL:
           if (colIdx != 0) {
             colIdx = 0;
-            newLine();
+            dout.newLine();
           }
           state = (c == CHAR_CR) ? EXPECT_COND_LF : POSSIBLE_EMPTY_LINE;
           if( !firstChunk )
@@ -179,11 +182,11 @@ NEXT_CHAR:
               break NEXT_CHAR;
           } else if (c == CHAR_SEPARATOR) {
             // we have empty token, store as NaN
-            addInvalidCol(colIdx);
+            dout.addInvalidCol(colIdx);
             ++colIdx;
             break NEXT_CHAR;
           } else if (isEOL(c)) {
-            addInvalidCol(colIdx);
+            dout.addInvalidCol(colIdx);
             state = EOL;
             continue MAIN_LOOP;
           }
@@ -200,7 +203,7 @@ NEXT_CHAR:
           // fallthrough to TOKEN
         // ---------------------------------------------------------------------
         case TOKEN:
-          if( isString(colIdx) ) { // Forced already to a string col?
+          if( dout.isString(colIdx) ) { // Forced already to a string col?
             state = STRING; // Do not attempt a number parse, just do a string parse
             _str.set(bits, offset, 0);
             continue MAIN_LOOP;
@@ -267,17 +270,17 @@ NEXT_CHAR:
         case NUMBER_END:
           if (c == CHAR_SEPARATOR) {
             exp = exp - fractionDigits;
-            addNumCol(colIdx,number,exp);
+            dout.addNumCol(colIdx,number,exp);
             ++colIdx;
             // do separator state here too
             state = WHITESPACE_BEFORE_TOKEN;
             break NEXT_CHAR;
           } else if (isEOL(c)) {
             exp = exp - fractionDigits;
-            addNumCol(colIdx,number,exp);
+            dout.addNumCol(colIdx,number,exp);
             // do EOL here for speedup reasons
             colIdx = 0;
-            newLine();
+            dout.newLine();
             state = (c == CHAR_CR) ? EXPECT_COND_LF : POSSIBLE_EMPTY_LINE;
             if( !firstChunk )
               break MAIN_LOOP; // second chunk only does the first row
@@ -407,7 +410,7 @@ NEXT_CHAR:
       } else if (offset >= bits.length) { // Off end of 1st chunk?  Parse into 2nd chunk
         // Attempt to get more data.
         if( firstChunk && bits1 == null )
-          bits1 = getChunkData(cidx+1);
+          bits1 = din.getChunkData(cidx+1);
         // if we can't get further we might have been the last one and we must
         // commit the latest guy if we had one.
         if( !firstChunk || bits1 == null ) { // No more data available or allowed
@@ -433,78 +436,55 @@ NEXT_CHAR:
       c = bits[offset];
     } // end MAIN_LOOP
     if (colIdx == 0)
-      rollbackLine();
+      dout.rollbackLine();
   }
-
-  private static boolean isWhitespace(byte c) {
-    return (c == CHAR_SPACE) || (c == CHAR_TAB);
-  }
-
-  private static boolean isEOL(byte c) {
-    return (c >= CHAR_LF) && ( c<= CHAR_CR);
-  }
-
-  // Get another chunk of byte data
-  public abstract byte[] getChunkData( int cidx );
-  // Register a newLine from the parser
-  public abstract void newLine();
-  // True if already forced into a string column (skip number parsing)
-  public abstract boolean isString(int colIdx);
-  // Add a number column with given digits & exp
-  public abstract void addNumCol(int colIdx, long number, int exp);
-  // An an invalid / missing entry
-  public abstract void addInvalidCol(int colIdx);
-  // Add a String column
-  public abstract void addStrCol( int colIdx, ValueString str );
-  // Final rolling back of partial line
-  public abstract void rollbackLine();
 
   // ==========================================================================
-  /** Setup of the parser.
-   *
-   * Simply holds the column names, their length also determines the number of
-   * columns, the separator used and whether the CSV file had a header or not.
-   */
-  public static class Setup extends Iced {
-    public final byte _separator;
-    public final boolean _header;
-    // Row zero is column names.
-    // Remaining rows are parsed from the given data, until we run out
-    // of data or hit some arbitrary display limit.
-    public final String[][] _data;
-    public final int _numlines;        // Number of lines parsed
-    public final byte[] _bits;  // The original bits
-
-    public Setup(byte separator, boolean header, String[][] data, int numlines, byte[] bits) {
-      _separator = separator;
-      _header = header;
-      _data = data;
-      _numlines = numlines;
-      _bits = bits;
-    }
-    public Setup(Setup S, boolean header) {
-      _separator = S._separator;
-      _header = header;
-      _data = S._data;
-      _numlines = S._numlines;
-      _bits = S._bits;
-    }
-
-    public int numCols(){return _data == null?-1:_data[0].length;}
-
-    @Override public boolean equals( Object o ) {
-      if( o == null || !(o instanceof Setup) ) return false;
-      if( o == this ) return true;
-      Setup s = (Setup)o;
-      // "Compatible" setups means same columns and same separators
-      return _separator == s._separator &&
-        ((_data==null && s._data==null) ||
-         (_data[0].length == s._data[0].length));
-      }
-    @Override public String toString() {
-      return "'"+(char)_separator+"' head="+_header+" cols="+(_data==null?-2:(_data[0]==null?-1:_data[0].length));
-    }
-  }
+//  /** Setup of the parser.
+//   *
+//   * Simply holds the column names, their length also determines the number of
+//   * columns, the separator used and whether the CSV file had a header or not.
+//   */
+//  public static class Setup extends Iced {
+//    public final byte _separator;
+//    public final boolean _header;
+//    // Row zero is column names.
+//    // Remaining rows are parsed from the given data, until we run out
+//    // of data or hit some arbitrary display limit.
+//    public final String[][] _data;
+//    public final int _numlines;        // Number of lines parsed
+//    public final byte[] _bits;  // The original bits
+//
+//    public Setup(byte separator, boolean header, String[][] data, int numlines, byte[] bits) {
+//      _separator = separator;
+//      _header = header;
+//      _data = data;
+//      _numlines = numlines;
+//      _bits = bits;
+//    }
+//    public Setup(Setup S, boolean header) {
+//      _separator = S._separator;
+//      _header = header;
+//      _data = S._data;
+//      _numlines = S._numlines;
+//      _bits = S._bits;
+//    }
+//
+//    public int numCols(){return _data == null?-1:_data[0].length;}
+//
+//    @Override public boolean equals( Object o ) {
+//      if( o == null || !(o instanceof Setup) ) return false;
+//      if( o == this ) return true;
+//      Setup s = (Setup)o;
+//      // "Compatible" setups means same columns and same separators
+//      return _separator == s._separator &&
+//        ((_data==null && s._data==null) ||
+//         (_data[0].length == s._data[0].length));
+//      }
+//    @Override public String toString() {
+//      return "'"+(char)_separator+"' head="+_header+" cols="+(_data==null?-2:(_data[0]==null?-1:_data[0].length));
+//    }
+//  }
 
   /** Separators recognized by the parser.  You can add new separators to this
    *  list and the parser will automatically attempt to recognize them.  In
@@ -591,12 +571,14 @@ NEXT_CHAR:
    * tokens in first line are strings and at least one token in the second line
    * is a number.
    */
-  private static Setup guessColumnNames(String[] l1, String[] l2, byte separator, ArrayList<String> lines, int numlines, byte[] bits) {
+  private static ParserSetup guessColumnNames(String[] l1, String[] l2, byte separator, ArrayList<String> lines, int numlines, byte[] bits) {
     boolean hasNumber = false;
+    int numcols = -1;
     for( String s : l1 ) {
       try {
         Double.parseDouble(s);
         hasNumber = true;       // Number in 1st row guesses: No Column Header
+        numcols = l1.length;
         break;
       } catch (NumberFormatException e) { /*Pass - determining if number is possible*/ }
     }
@@ -606,6 +588,7 @@ NEXT_CHAR:
         try {
           Double.parseDouble(s);
           hasHeader = true; // Has number in 2nd row, so guess: has Column Header
+          numcols = l2.length;
           break;
         } catch (NumberFormatException e) { /*Pass - determining if number is possible*/ }
       }
@@ -615,6 +598,7 @@ NEXT_CHAR:
     String[][] data = new String[lines.size()+(hasHeader?0:1)][];
     int l=0;
     if( !hasHeader ) {          // Make junky 0,1,2,3,... headers
+      numcols = l1.length;
       data[l++] = new String[l1.length];
       for( int i=0; i<l1.length; i++ ) data[0][i] = Integer.toString(i);
     }
@@ -624,9 +608,9 @@ NEXT_CHAR:
     while( m < lines.size() )
       data[l++] = determineTokens(lines.get(m++), separator);
     assert data.length==l : data.length +" "+l+" has="+hasHeader;
-
-    return new Setup(separator, hasHeader, data, numlines, bits);
+    return ParserSetup.makeCSVSetup(separator, hasHeader, data, numcols);
   }
+
 
   /** Determines the CSV parser setup from the first two lines.  Also parses
    *  the next few lines, tossing out comments and blank lines.
@@ -634,8 +618,8 @@ NEXT_CHAR:
    *  A separator is given or it is selected if both two lines have the same ammount of them
    *  and the tokenization then returns same number of columns.
    */
-  public static Setup guessCsvSetup(byte[] bits) { return guessCsvSetup(bits, NO_SEPARATOR); }
-  public static Setup guessCsvSetup(byte[] bits, byte separator) {
+  public static CustomParser.ParserSetup guessSetup(byte[] bits) { return guessSetup(bits, NO_SEPARATOR); }
+  public static CustomParser.ParserSetup guessSetup(byte[] bits, byte separator) {
     ArrayList<String> lines = new ArrayList();
     int offset = 0;
     int numlines = 0;
@@ -654,10 +638,9 @@ NEXT_CHAR:
       }
     }
     // we do not have enough lines to decide
-    if( lines.size() < 2 ) return new Setup(separator!=NO_SEPARATOR ? (byte)' ' : separator,false,null,0,bits);
+    if( lines.size() < 2 ) return CustomParser.ParserSetup.makeCSVSetup(separator==NO_SEPARATOR?(byte)' ':separator,false,null,0);
     // when we have two lines, calculate the separator counts on them
-    int[] s1 = determineSeparatorCounts(lines.get(0));
-    int[] s2 = determineSeparatorCounts(lines.get(1));
+
     // If the separator is specified parse with its value
     if (separator!=NO_SEPARATOR) {
       try {
@@ -668,6 +651,8 @@ NEXT_CHAR:
       } catch (Exception e) { /*pass; try another parse attempt*/ }
     // Or try to guess the separator
     } else {
+      int[] s1 = determineSeparatorCounts(lines.get(0));
+      int[] s2 = determineSeparatorCounts(lines.get(1));
       // now we have the counts - if both lines have the same number of separators
       // the we assume it is the separator. Separators are ordered by their
       // likelyhoods. If no separators have same counts, space will be used as the
@@ -683,11 +668,19 @@ NEXT_CHAR:
           } catch (Exception e) { /*pass; try another parse attempt*/ }
         }
     }
-    return new Setup((byte)' ',false,null,0,bits);
+    return CustomParser.ParserSetup.makeCSVSetup((byte)' ',false,null,0);
   }
 
-  public static Setup inspect(byte[] bits) { return inspect(bits, NO_SEPARATOR); }
-  public static Setup inspect(byte[] bits, byte separator) {
-    return guessCsvSetup(bits, separator);
+  public static CustomParser inspect(byte[] bits, CustomParser.ParserSetup setup) {
+    if(setup == null)setup = new CustomParser.ParserSetup();
+
+    if(setup._pType == ParserType.AUTO){
+
+    }
+    return null;
+  }
+
+  @Override public boolean isCompatible(CustomParser p) {
+    return (p instanceof CsvParser) && p._setup._separator == _setup._separator && p._setup._ncols == _setup._ncols;
   }
 }

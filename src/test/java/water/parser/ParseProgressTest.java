@@ -17,12 +17,19 @@ public class ParseProgressTest extends TestUtil {
   // Attempt a multi-jvm parse of covtype.
   // Silently exits if it cannot find covtype.
   @Test public void testCovtype() {
-    File f = find_test_file("../datasets/UCI/UCI-large/covtype/covtype.data");
-    if( !f.exists() )
-      f = find_test_file("../demo/UCI-large/covtype/covtype.data");
-    if( !f.exists() )
+    String[] covtype_locations = new String[]{"../datasets/UCI/UCI-large/covtype/covtype.data", "../datasets/UCI/UCI-large/covtype/covtype.data.gz",  "../demo/UCI-large/covtype/covtype.data", };
+    File f = null;
+    for (String covtype_location : covtype_locations) {
+      f = find_test_file( covtype_location );
+      if (f != null && f.exists())
+        break;
+    }
+    if (f == null || !f.exists()) {
+      System.out.println("Could not find covtype.data, skipping ParseProgressTest.testCovtype()");
       return;
-    FileIntegrityChecker c = FileIntegrityChecker.check(f);
+	 }
+
+    FileIntegrityChecker c = FileIntegrityChecker.check(f,false);
     assertEquals(1,c.size());   // Exactly 1 file
     Key k = c.importFile(0, null);
     assertEquals(true,k!=null);

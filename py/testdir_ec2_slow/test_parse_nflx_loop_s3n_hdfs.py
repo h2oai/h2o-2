@@ -20,9 +20,8 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud(sandbox_ignore_errors=True)
 
     def test_parse_nflx_loop_s3n_hdfs(self):
-        DO_GLM = False
+        DO_GLM = True
         DO_GLMGRID = False
-        USE_HOME2 = False
         USE_S3 = False
         noPoll = False
         benchmarkLogging = ['jstack','iostats']
@@ -33,46 +32,31 @@ class Basic(unittest.TestCase):
         avgSynSize = 4020000
         synSize = 183
 
-        if USE_HOME2:
-            csvFilenameList = [
-                # this should hit the "more" files too?
-                (["10k_small_gz"], "00[0-4][0-9]_syn.csv.gz", "file_50.dat.gz", 50 * synSize , 700),
-                (["10k_small_gz"], "[0][1][0-9][0-9]_.*", "file_100.dat.gz", 100 * synSize , 700),
-                (["10k_small_gz"], "[0][0-4][0-9][0-9]_.*", "file_500.dat.gz", 500 * synSize , 700),
-                (["10k_small_gz"], "[0][0-9][0-9][0-9]_.*", "file_1000.dat.gz", 1000 * synSize , 700),
-                # (["10k_small_gz"], "[0-4][0-9][0-9][0-9]_.*", "file_5000.dat.gz", 5000 * synSize , 700),
-                # (["10k_small_gz"], "[0-9][0-9][0-9][0-9]_.*", "file_10000.dat.gz", 10000 * synSize , 700),
-            ]
-        else:
-            csvFilenameList = [
-                (["manyfiles-nflx-gz"], "file_1[0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
-                (["manyfiles-nflx-gz"], "file_[1-2][0-5][0-9].dat.gz", "file_120_A.dat.gz", 120 * avgMichalSize, 3600),
-                (["manyfiles-nflx-gz"], "file_[1-2][0-6][0-9].dat.gz", "file_140_A.dat.gz", 140 * avgMichalSize, 3600),
-                (["manyfiles-nflx-gz"], "file_[1-2][0-7][0-9].dat.gz", "file_160_A.dat.gz", 160 * avgMichalSize, 3600),
-                (["manyfiles-nflx-gz"], "file_[1-2][0-8][0-9].dat.gz", "file_180_A.dat.gz", 180 * avgMichalSize, 3600),
-                (["manyfiles-nflx-gz"], "file_[12][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 3600),
-                (["manyfiles-nflx-gz"], "file_[123][0-9][0-9].dat.gz", "file_300_A.dat.gz", 300 * avgMichalSize, 3600),
-                (["manyfiles-nflx-gz"], "file_[123][0-9][0-9].dat.gz", "file_300_B.dat.gz", 300 * avgMichalSize, 3600),
-                (["manyfiles-nflx-gz"], "file_[123][0-9][0-9].dat.gz", "file_300_C.dat.gz", 300 * avgMichalSize, 3600),
-                (["manyfiles-nflx-gz"], "file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 300),
-                (["manyfiles-nflx-gz"], "file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
-                (["manyfiles-nflx-gz"], "file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 900),
-                (["manyfiles-nflx-gz"], "file_[5-9][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 3600),
-                (["manyfiles-nflx-gz"], "file_1[0-4][0-9].dat.gz", "file_50_B.dat.gz", 50 * avgMichalSize, 3600),
-                (["manyfiles-nflx-gz"], "file_1[0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
-                (["manyfiles-nflx-gz"], "file_2[0-9][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 3600),
-            ]
-
-            # import doesn't do pattern match.
-            csvFilenameList = [
-                # beware: the files should be non-overlapping sequentially if noPoll is used, to avoid deleting keys in use    
-                (["A-800-manyfiles-nflx-gz"],
-                    "*file_[0-9]*.dat.gz", "file_A_200_x55.dat.gz", 200 * (avgMichalSize/2), 7200),
-                (["A-800-manyfiles-nflx-gz", "B-800-manyfiles-nflx-gz"],
-                    "*file_[0-9]*.dat.gz", "file_A_400_x55.dat.gz", 400 * (avgMichalSize/2), 7200),
-                (["A-800-manyfiles-nflx-gz", "B-800-manyfiles-nflx-gz", "C-800-manyfiles-nflx-gz", "D-800-manyfiles-nflx-gz"],
-                    "*file_[0-9]*.dat.gz", "file_A_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
-            ]
+        csvFilenameList = [
+            (["manyfiles-nflx-gz"], "file_1[0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
+            (["manyfiles-nflx-gz"], "file_[1-2][0-5][0-9].dat.gz", "file_120_A.dat.gz", 120 * avgMichalSize, 3600),
+            (["manyfiles-nflx-gz"], "file_[1-2][0-6][0-9].dat.gz", "file_140_A.dat.gz", 140 * avgMichalSize, 3600),
+            (["manyfiles-nflx-gz"], "file_[1-2][0-7][0-9].dat.gz", "file_160_A.dat.gz", 160 * avgMichalSize, 3600),
+            (["manyfiles-nflx-gz"], "file_[1-2][0-8][0-9].dat.gz", "file_180_A.dat.gz", 180 * avgMichalSize, 3600),
+            (["manyfiles-nflx-gz"], "file_[12][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 3600),
+            (["manyfiles-nflx-gz"], "file_[123][0-9][0-9].dat.gz", "file_300_A.dat.gz", 300 * avgMichalSize, 3600),
+            (["manyfiles-nflx-gz"], "file_[123][0-9][0-9].dat.gz", "file_300_B.dat.gz", 300 * avgMichalSize, 3600),
+            (["manyfiles-nflx-gz"], "file_[123][0-9][0-9].dat.gz", "file_300_C.dat.gz", 300 * avgMichalSize, 3600),
+            (["manyfiles-nflx-gz"], "file_1.dat.gz", "file_1.dat.gz", 1 * avgMichalSize, 300),
+            (["manyfiles-nflx-gz"], "file_[2][0-9].dat.gz", "file_10.dat.gz", 10 * avgMichalSize, 700),
+            (["manyfiles-nflx-gz"], "file_[34][0-9].dat.gz", "file_20.dat.gz", 20 * avgMichalSize, 900),
+            (["manyfiles-nflx-gz"], "file_[5-9][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 3600),
+            (["manyfiles-nflx-gz"], "file_1[0-4][0-9].dat.gz", "file_50_B.dat.gz", 50 * avgMichalSize, 3600),
+            (["manyfiles-nflx-gz"], "file_1[0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
+            (["manyfiles-nflx-gz"], "file_2[0-9][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 3600),
+            # beware: the files should be non-overlapping sequentially if noPoll is used, to avoid deleting keys in use    
+            (["A-800-manyfiles-nflx-gz"],
+                "*file_[0-9]*.dat.gz", "file_A_200_x55.dat.gz", 200 * (avgMichalSize/2), 7200),
+            (["A-800-manyfiles-nflx-gz", "B-800-manyfiles-nflx-gz"],
+                "*file_[0-9]*.dat.gz", "file_A_400_x55.dat.gz", 400 * (avgMichalSize/2), 7200),
+            (["A-800-manyfiles-nflx-gz", "B-800-manyfiles-nflx-gz", "C-800-manyfiles-nflx-gz", "D-800-manyfiles-nflx-gz"],
+                "*file_[0-9]*.dat.gz", "file_A_800_x55.dat.gz", 800 * (avgMichalSize/2), 7200),
+        ]
 
         print "Using the -.gz files from s3"
         # want just s3n://home-0xdiag-datasets/manyfiles-nflx-gz/file_1.dat.gz
@@ -84,11 +68,7 @@ class Basic(unittest.TestCase):
         # use i to forward reference in the list, so we can do multiple outstanding parses below
         for i, (csvFolderList, csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
 
-            if USE_HOME2:
-                bucket = "home2-0xdiag-datasets"
-            else:
-                bucket = "home-0xdiag-datasets"
-
+            bucket = "home-0xdiag-datasets"
             ## for tryHeap in [54, 28]:
             h2oPerNode = 1
             # h1.4xlarge 60.5GB dram
@@ -131,15 +111,14 @@ class Basic(unittest.TestCase):
                             importResult = h2o.nodes[0].import_hdfs(URI)
 
                         foundKeys = 0
-                        for key in importResult['keys']:
+                        for s in importResult['succeeded']:
                             # just print the first tile
                             # if 'nflx' in key and 'file_1.dat.gz' in key: 
-                            if csvFilepattern in key:
+                            if csvFilepattern in s['key']:
                                 # should be s3n://home-0xdiag-datasets/manyfiles-nflx-gz/file_1.dat.gz
-                                print "example file we'll use:", key
+                                print "example file we'll use:", s['key']
                                 break
                             else:
-                                ### print key
                                 pass
                             foundKeys += 1
 
@@ -212,10 +191,10 @@ class Basic(unittest.TestCase):
                         print l
                         h2o.cloudPerfH2O.message(l)
 
-                    # BUG here?
+                    y = 378
                     if not noPoll:
-                        # We should be able to see the parse result?
-                        h2o_cmd.check_enums_from_inspect(parseKey)
+                        x = h2o_glm.goodXFromColumnInfo(y, key=parseKey['destination_key'], timeoutSecs=300)
+
 
                     #**********************************************************************************
                     # Do GLM too
@@ -224,13 +203,13 @@ class Basic(unittest.TestCase):
                         # these are all the columns that are enums in the dataset...too many for GLM!
                         x = range(542) # don't include the output column
                         # remove the output too! (378)
-                        for i in [3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 16, 17, 18, 19, 20, 424, 425, 426, 540, 541, 378]:
+                        for i in [3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 16, 17, 18, 19, 20, 424, 425, 426, 540, 541, y]:
                             x.remove(i)
                         x = ",".join(map(str,x))
 
                         if DO_GLM:
                             algo = 'GLM'
-                            GLMkwargs = {'x': x, 'y': 378, 'case': 15, 'case_mode': '>', 'family': 'binomial',
+                            GLMkwargs = {'x': x, 'y': y, 'case': 15, 'case_mode': '>', 'family': 'binomial',
                                 'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
                             start = time.time()
                             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, 
@@ -242,7 +221,7 @@ class Basic(unittest.TestCase):
 
                         else:
                             algo = 'GLMGrid'
-                            GLMkwargs = {'x': x, 'y': 378, 'case': 15, 'case_mode': '>', 'family': 'binomial',
+                            GLMkwargs = {'x': x, 'y': y, 'case': 15, 'case_mode': '>', 'family': 'binomial',
                                 'max_iter': 10, 'n_folds': 1, 'beta_epsilon': 1e-4,
                                 'lambda': '1e-4',
                                 'alpha': '0,0.5',
@@ -272,8 +251,8 @@ class Basic(unittest.TestCase):
                     # we're deleting the keys in the initial import. We leave the keys we created
                     # by the parse. We use unique dest keys for those, so no worries.
                     # Leaving them is good because things fill up! (spill)
-                    h2o_cmd.check_key_distribution()
-                    h2o_cmd.delete_csv_key(csvFilename, importResult)
+                    h2o_cmd.checkKeyDistribution()
+                    h2o_cmd.deleteCsvKey(csvFilename, importResult)
 
                 h2o.tear_down_cloud()
                 # sticky ports? wait a bit.

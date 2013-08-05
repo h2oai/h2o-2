@@ -6,13 +6,14 @@ import java.util.regex.Pattern;
 
 import water.*;
 import water.parser.*;
-import water.parser.CsvParser.Setup;
+import water.parser.CustomParser.ParserSetup;
 import water.util.RString;
 
 import com.google.gson.JsonObject;
 
 public class Parse extends Request {
   private   final Separator      _separator = new Separator(SEPARATOR);
+  private   final ParserType _parserType    = new ParserType(PARSER_TYPE);
   protected final Str _excludeExpression    = new Str("exclude","");
   protected final ExistingCSVKey _source    = new ExistingCSVKey(SOURCE_KEY);
   protected final NewH2OHexKey   _dest      = new NewH2OHexKey(DEST_KEY);
@@ -24,12 +25,12 @@ public class Parse extends Request {
 
   private static class PSetup {
     final ArrayList<Key> _keys;
-    final CsvParser.Setup _setup;
-    PSetup( ArrayList<Key> keys, CsvParser.Setup setup) { _keys=keys; _setup=setup; }
-    PSetup( Key key, CsvParser.Setup setup) {
+    final CustomParser.ParserSetup _setup;
+    PSetup( ArrayList<Key> keys, CustomParser.ParserSetup parser) { _keys=keys; _setup = parser; }
+    PSetup( Key key, CustomParser.ParserSetup setup) {
       _keys = new ArrayList();
       _keys.add(key);
-      _setup=setup;
+      _setup = setup;
     }
   };
 
@@ -44,7 +45,7 @@ public class Parse extends Request {
       Key k1 = Key.make(input);
       Value v1 = DKV.get(k1);
       if( v1 != null  && (input.endsWith(".xlsx") || input.endsWith(".xls")) )
-        return new PSetup(k1, new Setup((byte) 0,false,null,0,null));
+        return new PSetup(k1, null);
       Pattern p = makePattern(input);
       Pattern exclude = null;
       if(_excludeExpression.specified())
@@ -67,18 +68,29 @@ public class Parse extends Request {
           continue;
         keys.add(key);        // Add to list
       }
-
       if(keys.size() == 0 )
         throw new IllegalArgumentException("I did not find any keys matching this pattern!");
       Collections.sort(keys);   // Sort all the keys, except the 1 header guy
       // now we assume the first key has the header
       Key hKey = keys.get(0);
       Value v = DKV.get(hKey);
-
-      byte separator = _separator.specified() ? _separator.value() : CsvParser.NO_SEPARATOR;
-      CsvParser.Setup setup = Inspect.csvGuessValue(v, separator);
-      if( setup._data == null || setup._data[0].length == 0 )
-        throw new IllegalArgumentException("I cannot figure out this file; I only handle common CSV formats: "+hKey);
+      byte [] bits = Inspect.getFirstBytes(v);
+      CustomParser.ParserType pType = _parserType.value();
+      CustomParser.ParserSetup setup;
+      if(pType == CustomParser.ParserType.CSV){
+        byte separator = _separator.specified() ? _separator.value() : CsvParser.NO_SEPARATOR;
+        setup = CsvParser.guessSetup(bits, separator);
+        if( setup == null || setup._data == null || setup._data[0].length == 0 )
+          throw new IllegalArgumentException("I cannot figure out this file; I only handle common CSV formats: "+hKey);
+      } else if(pType == CustomParser.ParserType.SVMLight){
+        setup = SVMLightParser.guessSetup(bits);
+        if(setup == null)
+          throw new IllegalArgumentException("The file " + hKey + " does not appear to be valid SVMLight parse.");
+      } else {
+        setup = ParseDataset.guessSetup(v);
+        if(setup == null)
+          throw new IllegalArgumentException("I cannot figure out this file; It does not match any of the supported formats. " + hKey);
+      }
       return new PSetup(keys,setup);
     }
 
@@ -162,18 +174,20 @@ public class Parse extends Request {
       // if no original value was supplied, use the provided one
       PSetup psetup = _source.value();
       if (value == null)
-        value = psetup._setup._header ? "1" : "";
+        value = psetup._setup != null && psetup._setup._header ? "1" : "";
       StringBuilder sb = new StringBuilder();
       sb.append("<input value='1' class='span5' type='checkbox' ");
       sb.append("name='").append(_name).append("' ");
       sb.append("id='").append(_name).append("' ");
       if( value.equals("1") ) sb.append("checked");
       sb.append("/>&nbsp;&nbsp;").append(queryDescription()).append("<p>");
-      String[][] data = psetup._setup._data;
+      String[][] data = null;
+      if(psetup._setup != null)
+        data = psetup._setup._data;
       if( data != null ) {
         int sep = psetup._setup._separator;
         sb.append("<div class='alert'><b>");
-        sb.append(String.format("Detected %d columns using '%s' (\\u%04d) as a separator.", data[0].length,sep<33 ? WHITE_DELIMS[sep] : Character.toString((char)sep),sep));
+        sb.append(String.format("Detected %d columns using '%s' (\\u%04d) as a separator.", psetup._setup._ncols,sep<33 ? WHITE_DELIMS[sep] : Character.toString((char)sep),sep));
         sb.append("</b></div>");
         sb.append("<table class='table table-striped table-bordered'>");
         int j=psetup._setup._header?0:1; // Skip auto-gen header in data[0]
@@ -206,20 +220,18 @@ public class Parse extends Request {
 
   @Override protected Response serve() {
     PSetup p = _source.value();
-    CsvParser.Setup q = p._setup;
+    CustomParser.ParserSetup setup = p._setup;
     Key dest = Key.make(_dest.value());
     try {
       // Make a new Setup, with the 'header' flag set according to user wishes.
-      CsvParser.Setup new_setup = _header.originalValue() == null // No user wish?
-        ? q                     // Default to heuristic
-        // Else use what user choose
-        : new CsvParser.Setup(q._separator,_header.value(),q._data,q._numlines,q._bits);
+      if(p._setup != null && _header.specified())
+        setup.setHeader(_header.value());
+
       Key[] keys = p._keys.toArray(new Key[p._keys.size()]);
-      Job job = ParseDataset.forkParseDataset(dest, keys,new_setup);
+      Job job = ParseDataset.forkParseDataset(dest, keys,setup);
       JsonObject response = new JsonObject();
       response.addProperty(RequestStatics.JOB, job.self().toString());
       response.addProperty(RequestStatics.DEST_KEY,dest.toString());
-
       Response r = Progress.redirect(response, job.self(), dest);
       r.setBuilder(RequestStatics.DEST_KEY, new KeyElementBuilder());
       return r;
@@ -244,6 +256,30 @@ public class Parse extends Request {
     @Override protected Byte parse(String input) throws IllegalArgumentException {
       Byte result = Byte.valueOf(input);
       return result;
+    }
+  }
+
+  private class ParserType extends InputSelect<CustomParser.ParserType> {
+    public ParserType(String name) {
+      super(name,false);
+      setRefreshOnChange();
+      _values = new String [CustomParser.ParserType.values().length];
+      int i = 0;
+      for(CustomParser.ParserType t:CustomParser.ParserType.values())
+        _values[i++] = t.name();
+    }
+    private final String [] _values;
+    @Override protected String   queryDescription() { return "File type"; }
+    @Override protected String[] selectValues()     {
+      return _values;
+    }
+    @Override protected String[] selectNames()      {
+      return _values;
+    }
+    @Override protected CustomParser.ParserType defaultValue() { return CustomParser.ParserType.AUTO; }
+    @Override protected String   selectedItemValue(){ return value() != null ? value().toString() : defaultValue().toString(); }
+    @Override protected CustomParser.ParserType parse(String input) throws IllegalArgumentException {
+      return  CustomParser.ParserType.valueOf(input);
     }
   }
 

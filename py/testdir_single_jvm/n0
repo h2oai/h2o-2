@@ -26,6 +26,7 @@
 ./n0.doit test_GLM_enums_score_subset.py
 ./n0.doit test_GLM_enums_score_superset.py
 ./n0.doit test_GLM_expert.py
+./n0.doit test_GLM_gamma_fail1.py
 ./n0.doit test_GLM_gamma_rand2.py
 ./n0.doit test_GLM_gaussian_rand2.py
 ./n0.doit test_GLMGrid_basic.py
@@ -38,6 +39,7 @@
 ./n0.doit test_GLM_many_cols_real.py
 ./n0.doit test_GLM_many_enums.py
 ./n0.doit test_GLM_many_rooz_enums.py
+./n0.doit test_GLM_model_key_unique.py
 ./n0.doit test_GLM_params_rand2_4082088627997819015.py
 ./n0.doit test_GLM_params_rand2_8977501266014959103.py
 ./n0.doit test_GLM_params_rand2_expert.py
@@ -85,11 +87,14 @@
 ./n0.doit test_redirect.py
 ./n0.doit test_rf1.py
 ./n0.doit test_rf_big1_nopoll.py
+./n0.doit test_rf_change_data_key.py
+./n0.doit test_rf_covtype20x.py
 ./n0.doit test_rf_covtype_train_full.py
 ./n0.doit test_rf_covtype_train_oobe2.py
 ./n0.doit test_rf_covtype_train_oobe3.py
 ./n0.doit test_rf_covtype_train_oobe4.py
 ./n0.doit test_rf_covtype_train_oobe.py
+./n0.doit test_rf_model_key_unique.py
 ./n0.doit test_rf_noise.py
 ./n0.doit test_rf_params_rand1.py
 ./n0.doit test_rf_params_rand2_4201285065147091758.py
@@ -101,10 +106,11 @@
 ./n0.doit test_rf_predict.py
 ./n0.doit test_rf_strata_fail.py
 ./n0.doit test_rf_strata_rand1.py
-./n0.doit test_rf_syngzcat_perf.py
+./n0.doit test_rf_syn_gz_cat.py
 ./n0.doit test_rfview_score.py
 ./n0.doit test_R_GLM_basic.py
 ./n0.doit test_R_KMeans_basic.py
+./n0 doit test_R_RF_basic.py
 ./n0.doit test_simple.py
 ./n0.doit test_slice.py
 ./n0.doit test_summary_percentile2.py

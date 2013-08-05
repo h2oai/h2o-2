@@ -1,4 +1,4 @@
-import h2o, h2o_cmd
+import h2o, h2o_cmd, h2o_jobs
 import time, re, getpass
 
 def setupImportS3(node=None, bucket='home-0xdiag-datasets', timeoutSecs=180):
@@ -54,8 +54,8 @@ def setupImportFolder(node=None, path='/home/0xdiag/datasets', timeoutSecs=180):
             timeoutSecs=timeoutSecs)
     else:
         if getpass.getuser()=='jenkins':
-            print "michal: Temp hack of /home/0xdiag/datasets/standard to /home/0xdiag/datasets till EC2 image is fixed"
-            path = re.sub('/home/0xdiag/datasets/standard', '/home/0xdiag/datasets', path)
+            print "Now: not doing Temp hack of /home/0xdiag/datasets/standard to /home/0xdiag/datasets"
+            ## path = re.sub('/home/0xdiag/datasets/standard', '/home/0xdiag/datasets', path)
         importFolderResult = node.import_files(path, timeoutSecs=timeoutSecs)
     ### h2o.dump_json(importFolderResult)
     return importFolderResult
@@ -65,8 +65,6 @@ def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=1, pollTimeoutSecs=180, noise=None,
     benchmarkLogging=None, noPoll=False, **kwargs):
     if not node: node = h2o.nodes[0]
-    # a little hack to redirect import folder tests to an s3 folder
-    # TEMP hack: translate /home/0xdiag/datasets to /home-0xdiag-datasets
 
     if not csvFilename: raise Exception('parseImportFolderFile: No csvFilename')
 
@@ -80,6 +78,7 @@ def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
 
     print "Waiting for the slow parse of the file:", csvFilename
 
+    # a little hack to redirect import folder tests to an s3 folder
     if node.redirect_import_folder_to_s3_path:
         # why no leading / for s3 key here. only one / after s3:/ ?
         path = re.sub('/home/0xdiag/datasets', 'home-0xdiag-datasets', path)
@@ -93,14 +92,27 @@ def parseImportFolderFile(node=None, csvFilename=None, path=None, key2=None,
             benchmarkLogging, noPoll)
     else:
         if getpass.getuser()=='jenkins':
-            print "michal: Temp hack of /home/0xdiag/datasets/standard to /home/0xdiag/datasets till EC2 image is fixed"
-            path = re.sub('/home/0xdiag/datasets/standard', '/home/0xdiag/datasets', path)
+            print "Now: not doing Temp hack of /home/0xdiag/datasets/standard to /home/0xdiag/datasets"
+            ### path = re.sub('/home/0xdiag/datasets/standard', '/home/0xdiag/datasets', path)
         importKey = "nfs:/" + path + "/" + csvFilename
+        if h2o.beta_features:
+            print "Temp hack to look at the jobs list for parse completion. No multiple outstanding parses"
+            print "The parse result will be just from the first noPoll response. Parse is done as noPoll"
+
         parseKey = node.parse(importKey, myKey2, 
             timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs, noise, 
-            benchmarkLogging, noPoll, **kwargs)
-        # a hack so we know what the source_key was, bask at the caller
-        parseKey['source_key'] = importKey
+            benchmarkLogging, noPoll=noPoll or h2o.beta_features, **kwargs)
+
+        if h2o.beta_features:
+            print "Temp hack to look at the jobs list for parse completion. No multiple outstanding parses"
+            print "The parse result will be just from the first noPoll response."
+            print "\nWaiting on Parse job for ", importKey
+            start = time.time()
+            h2o_jobs.pollWaitJobs(pattern='arse', timeoutSecs=timeoutSecs, pollTimeoutSecs=120, retryDelaySecs=5)
+            print "Parse job end for ", importKey, 'took', time.time() - start, 'seconds'
+
+         # a hack so we know what the source_key was, bask at the caller
+        parseKey['python_source_key'] = importKey
         print "\nParse result:", parseKey
     return parseKey
 
@@ -128,7 +140,7 @@ def setupImportHdfs(node=None, path=None, schema='hdfs', timeoutSecs=180):
     h2o.verboseprint(h2o.dump_json(importHdfsResult))
     return importHdfsResult
 
-def parseImportHdfsFile(node=None, csvFilename=None, path=None, key2=None, schema='hdfs',
+def parseImportHdfsFile(node=None, csvFilename=None, path='/datasets', key2=None, schema='hdfs',
     timeoutSecs=3600, retryDelaySecs=2, initialDelaySecs=1, pollTimeoutSecs=180, noise=None,
     benchmarkLogging=None, noPoll=False, **kwargs):
     if not csvFilename: raise Exception('No csvFilename parameter in parseImportHdfsFile')
@@ -151,8 +163,10 @@ def parseImportHdfsFile(node=None, csvFilename=None, path=None, key2=None, schem
 
     hdfsKey = URI + "/" + csvFilename
     print "parseImportHdfsFile hdfsKey:", hdfsKey
-    inspect = h2o_cmd.runInspect(key=hdfsKey, timeoutSecs=180)
-    print "parseImportHdfsFile inspect of source:", inspect
+
+    ## This fails for pattern matching. parse works, but not inspect?
+    ## inspect = h2o_cmd.runInspect(key=hdfsKey, timeoutSecs=180)
+    ## print "parseImportHdfsFile inspect of source:", inspect
 
     if key2 is None:
         myKey2 = csvFilename + ".hex"

@@ -1,11 +1,8 @@
-
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts
 import h2o_browse as h2b
 import h2o_import as h2i
-import time, random
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -48,10 +45,10 @@ class Basic(unittest.TestCase):
 #      "file": "billion_rows.csv.gz", 
 #      "key": "s3n://home-0xdiag-datasets/billion_rows.csv.gz"
 #    }, 
-        s3nFullList = importHDFSResult['files']
+        s3nFullList = importHDFSResult['succeeded']
         print "s3nFullList:", h2o.dump_json(s3nFullList)
         # error if none? 
-        self.assertGreater(len(s3nFullList),8,"Didn't see more than 8 files in s3n?")
+        self.assertGreater(len(s3nFullList),1,"Didn't see more than 1 files in s3n?")
 
         if (1==0):
             s3nList = random.sample(s3nFullList,8)

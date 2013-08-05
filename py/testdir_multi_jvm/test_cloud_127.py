@@ -1,4 +1,4 @@
-import os, json, unittest, time, shutil, sys 
+import unittest, time, sys 
 sys.path.extend(['.','..','py'])
 
 import h2o

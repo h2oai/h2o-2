@@ -1,6 +1,5 @@
-import os, json, unittest, time, shutil, sys, random
+import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_glm, h2o_hosts
 
 class Basic(unittest.TestCase):
@@ -19,7 +18,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_covtype(self):
+    def test_GLM_poisson_1(self):
         csvFilename = 'covtype.data'
         csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/' + csvFilename)
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname,timeoutSecs=10)

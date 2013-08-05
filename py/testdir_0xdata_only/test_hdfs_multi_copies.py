@@ -1,11 +1,8 @@
-
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts
 import h2o_browse as h2b
 import h2o_import as h2i
-import time, random
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -32,7 +29,7 @@ class Basic(unittest.TestCase):
         h2b.browseTheCloud()
         # defaults to /datasets
         h2i.setupImportHdfs()
-        parseKey = h2o.nodes[0].parse('*covtype10x_copies*', key2='copies.hex', 
+        parseKey = h2i.parseImportHdfsFile(csvFilename='*covtype10x_copies*', key2='copies.hex', 
             exclude=None, header=None, timeoutSecs=600)
         print "*copies* regex to hdfs /datasets", 'parse time:', parseKey['response']['time']
         print "parse result:", parseKey['destination_key']

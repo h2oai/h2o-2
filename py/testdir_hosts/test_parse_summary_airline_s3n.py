@@ -1,65 +1,8 @@
-
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts, h2o_glm
 import h2o_browse as h2b
 import h2o_import as h2i
-import time, random
-
-def infoFromSummary(self,summary):
-    columnsList = summary['columns']
-    for columns in columnsList:
-        N = columns['N']
-        # self.assertEqual(N, rowCount)
-        name = columns['name']
-        stype = columns['type']
-        histogram = columns['histogram']
-        bin_size = histogram['bin_size']
-        bin_names = histogram['bin_names']
-        for b in bin_names:
-            print "bin_name:", b
-
-        bins = histogram['bins']
-        nbins = histogram['bins']
-        print "\n\n************************"
-        print "N:", N
-        print "name:", name
-        print "type:", stype
-        print "bin_size:", bin_size
-        print "len(bin_names):", len(bin_names), bin_names
-        print "len(bins):", len(bins), bins
-        print "len(nbins):", len(nbins), nbins
-
-        # not done if enum
-        if stype != "enum":
-            smax = columns['max']
-            smin = columns['min']
-            mean = columns['mean']
-            sigma = columns['sigma']
-            print "smax:", smax
-            print "smin:", smin
-            print "mean:", mean
-            print "sigma:", sigma
-
-            # sometimes we don't get percentiles? (if 0 or 1 bins?)
-            if len(bins) >= 2:
-                percentiles = columns['percentiles']
-                thresholds = percentiles['thresholds']
-                values = percentiles['values']
-
-                # h2o shows 5 of them, ordered
-                print "len(max):", len(smax), smax
-                print "len(min):", len(smin), smin
-                print "len(thresholds):", len(thresholds), thresholds
-                print "len(values):", len(values), values
-
-                for v in values:
-                    # 0 is the most max or most min
-                    self.assertTrue(v >= smin[0],
-                        "Percentile value %s should all be >= the min dataset value %s" % (v, smin[0]))
-                    self.assertTrue(v <= smax[0],
-                        "Percentile value %s should all be <= the max dataset value %s" % (v, smax[0]))
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -90,7 +33,7 @@ class Basic(unittest.TestCase):
             ("allyears2k.csv",   300), #4.4MB
             ("year1987.csv",     600), #130MB
             ("allyears.csv",     900), #12GB
-            ("allyears_10.csv", 1800), #119.98GB
+            # ("allyears_10.csv", 1800), #119.98GB
         ]
         # IMPORT**********************************************
         # since H2O deletes the source key, we should re-import every iteration if we re-use the src in the list
@@ -100,13 +43,9 @@ class Basic(unittest.TestCase):
         ### print "s3nFullList:", h2o.dump_json(s3nFullList)
 
         self.assertGreater(len(s3nFullList),8,"Should see more than 8 files in s3n?")
-        # why does this hang?
-        if 1==0:
-            storeView = h2o.nodes[0].store_view(timeoutSecs=60)
-            for s in storeView['keys']:
-                print "\nkey:", s['key']
-                if 'rows' in s: 
-                    print "rows:", s['rows'], "value_size_bytes:", s['value_size_bytes']
+        if 1==0: # slow?
+            print "\nTrying StoreView after the import hdfs"
+            h2o_cmd.runStoreView(timeoutSecs=120)
 
         trial = 0
         for (csvFilename, timeoutSecs) in csvFilelist:
@@ -131,28 +70,24 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=360)
             print "Inspect:", parseKey['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspect, csvPathname)
-            # num_rows = inspect['num_rows']
-            # num_cols = inspect['num_cols']
 
-            (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
-                h2o_cmd.columnInfoFromInspect(parseKey, timeoutSecs=300)
+            # gives us some reporting on missing values, constant values, to see if we have x specified well
+            # figures out everything from parseKey['destination_key']
+            # needs y to avoid output column (which can be index or name)
+            # assume all the configs have the same y..just check with the firs tone
+            goodX = h2o_glm.goodXFromColumnInfo(y='IsArrDelayed', key=parseKey['destination_key'], timeoutSecs=300)
 
             # SUMMARY****************************************
-            summaryResult = h2o.nodes[0].summary_page(key2, timeoutSecs=360)
-            summary = summaryResult['summary']
-            # print h2o.dump_json(summary)
-            infoFromSummary(self, summary)
+            summaryResult = h2o_cmd.runSummary(key=key2, timeoutSecs=360)
+            h2o_cmd.infoFromSummary(summaryResult)
 
             # STOREVIEW***************************************
-            if 1==0: # seems to timeout
-                storeView = h2o.nodes[0].store_view()
-                for s in storeView['keys']:
-                    print "\nStoreView: key:", s['key']
-                    if 'rows' in s: 
-                        print "StoreView: rows:", s['rows'], "value_size_bytes:", s['value_size_bytes']
+            if 1==0: # slow
+                print "\nTrying StoreView after the parse"
+                h2o_cmd.runStoreView(timeoutSecs=120)
 
             print "Trial #", trial, "completed in", time.time() - trialStart, "seconds."
-            trial += 0
+            trial += 1
 
 if __name__ == '__main__':
     h2o.unit_main()

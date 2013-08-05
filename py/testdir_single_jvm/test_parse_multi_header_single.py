@@ -1,12 +1,11 @@
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts
 import h2o_browse as h2b
-import random
 
 # for test debug
 HEADER = True
+dataRowsWithHeader = 0
 
 # Don't write headerData if None (for non-header files)
 # Don't write data if rowCount is None
@@ -21,7 +20,10 @@ def write_syn_dataset(csvPathname, rowCount, headerData, rList):
             # two choices on the input. Make output choices random
             r = rList[random.randint(0,1)] + "," + str(random.randint(0,7))
             dsf.write(r + "\n")
-    dsf.close()
+        dsf.close()
+        return rowCount # rows done
+    else:
+        return 0 # rows done
 
 def rand_rowData(colCount):
     rowData = [random.randint(0,7) for i in range(colCount)]
@@ -60,30 +62,35 @@ class Basic(unittest.TestCase):
         # cols must be 9 to match the header above, otherwise a different bug is hit
         # extra output is added, so it's 10 total
         tryList = [
-            (57, 300, 9, 'cA', 60),
+            (57, 300, 9, 'cA', 60, 0),
+            # try with 1-3 data lines in the header file too
+            (57, 300, 9, 'cB', 60, 1),
+            (57, 300, 9, 'cC', 60, 2),
+            (57, 300, 9, 'cD', 60, 3),
             ]
 
         trial = 0
-        for (fileNum, rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (fileNum, rowCount, colCount, key2, timeoutSecs, dataRowsWithHeader) in tryList:
             trial += 1
             # FIX! should we add a header to them randomly???
             print "Wait while", fileNum, "synthetic files are created in", SYNDATASETS_DIR
             rowxcol = str(rowCount) + 'x' + str(colCount)
             totalCols = colCount + 1 # 1 extra for output
-            totalRows = 0
+            totalDataRows = 0
             for fileN in range(fileNum):
                 csvFilename = 'syn_' + str(fileN) + "_" + str(SEED) + "_" + rowxcol + '.csv'
                 csvPathname = SYNDATASETS_DIR + '/' + csvFilename
                 rList = rand_rowData(colCount)
-                write_syn_dataset(csvPathname, rowCount, headerData=None, rList=rList)
-                totalRows += rowCount
+                dataRowsDone = write_syn_dataset(csvPathname, rowCount, headerData=None, rList=rList)
+                totalDataRows += dataRowsDone
 
             # create the header file
             # can make it pass by not doing this
             if HEADER:
                 csvFilename = 'syn_header_' + str(SEED) + "_" + rowxcol + '.csv'
                 csvPathname = SYNDATASETS_DIR + '/' + csvFilename
-                write_syn_dataset(csvPathname, None, headerData, rList)
+                dataRowsDone = write_syn_dataset(csvPathname, dataRowsWithHeader, headerData, rList)
+                totalDataRows += dataRowsDone
 
             # make sure all key names are unique, when we re-put and re-parse (h2o caching issues)
             key = "syn_" + str(trial)
@@ -109,9 +116,9 @@ class Basic(unittest.TestCase):
             # should match # of cols in header or ??
             self.assertEqual(inspect['num_cols'], totalCols, 
                 "parse created result with the wrong number of cols %s %s" % (inspect['num_cols'], totalCols))
-            self.assertEqual(inspect['num_rows'], totalRows,
+            self.assertEqual(inspect['num_rows'], totalDataRows,
                 "parse created result with the wrong number of rows (header shouldn't count) %s %s" % \
-                (inspect['num_rows'], totalRows))
+                (inspect['num_rows'], totalDataRows))
 
             # put in an ignore param, that will fail unless headers were parsed correctly
             if HEADER:
@@ -123,7 +130,7 @@ class Basic(unittest.TestCase):
             rfv = h2o_cmd.runRFOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
-            print "trial #", trial, "totalRows:", totalRows, "parse end on ", csvFilename, \
+            print "trial #", trial, "totalDataRows:", totalDataRows, "parse end on ", csvFilename, \
                 'took', time.time() - start, 'seconds'
 
             h2o.check_sandbox_for_errors()

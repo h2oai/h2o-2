@@ -1,8 +1,7 @@
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys, random, logging
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_glm
 import h2o_exec as h2e, h2o_jobs
-import time, random, logging
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -207,8 +206,8 @@ class Basic(unittest.TestCase):
                     h2o.cloudPerfH2O.message(l)
 
                 #**********************************************************************************
-                h2o_cmd.check_key_distribution()
-                h2o_cmd.delete_csv_key(csvFilename, importFolderResult)
+                h2o_cmd.checkKeyDistribution()
+                h2o_cmd.deleteCsvKey(csvFilename, importFolderResult)
                 ### time.sleep(3600)
                 h2o.tear_down_cloud()
                 if not localhost:

@@ -1,6 +1,5 @@
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts, h2o_rf
 
 # RF train parameters
@@ -17,6 +16,10 @@ paramsTrainRF = {
 
 # RF test parameters
 paramsScoreRF = {
+            # scoring requires the response_variable. it defaults to last, so normally
+            # we don't need to specify. But put this here and (above if used) 
+            # in case a dataset doesn't use last col 
+            'response_variable': None,
             'timeoutSecs': 14800,
             'out_of_bag_error_estimate': 0, 
         }

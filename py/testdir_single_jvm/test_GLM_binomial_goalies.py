@@ -1,5 +1,4 @@
-import unittest
-import random, sys, time
+import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_glm, h2o_hosts
@@ -40,7 +39,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_loop_random_param_covtype(self):
+    def test_GLM_binomial_goalies(self):
         csvPathname = h2o.find_file('smalldata/poisson/Goalies.csv')
         print "\nParsing", csvPathname
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname)

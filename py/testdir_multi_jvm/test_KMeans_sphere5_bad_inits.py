@@ -1,9 +1,7 @@
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys, random, math
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_kmeans, h2o_hosts
 from operator import itemgetter
-import random
-import math
 
 # a truly uniform sphere
 # http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution

@@ -1,7 +1,5 @@
-import unittest
-import re, os, shutil, sys, random, time
+import sys, unittest, random, time
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts
 
 def writeRows(csvPathname,row,eol,repeat):
@@ -49,26 +47,21 @@ class Basic(unittest.TestCase):
             
             trialMax = 100
             for trial in range(trialMax):
-                # have to put the file repeatedly since it gets deleted after parse now
                 key = csvFilename + "_" + str(trial)
-                pkey = node.put_file(csvPathname, key=key, timeoutSecs=timeoutSecs)
-                ### print h2o.dump_json(pkey)
-
                 key2 = csvFilename + "_" + str(trial) + ".hex"
+                # have to put the file repeatedly since it gets deleted after parse now
                 # just parse, without polling, except for last one..will that make prior ones complete too?
                 noPoll = trial==(trialMax-1)
-                node.parse(pkey, key2, timeoutSecs=timeoutSecs, retryDelaySecs=0.00, noPoll=noPoll)
+                parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2, timeoutSecs=30)
+
                 if not trial%10:
                     sys.stdout.write('.')
                     sys.stdout.flush()
 
+                # a = h2o.nodes[0].jobs_admin()
+                # print "jobs-admin():", h2o.dump_json(a)
 
-            # a = h2o.nodes[0].jobs_admin()
-            # print "jobs-admin():", h2o.dump_json(a)
-
-            # do a storeview ..was causing npe while parsing?
-            # maybe fire to each node?
-            if 1==1:
+                # do a storeview to each node
                 for node in h2o.nodes:
                     storeView = node.store_view()
 

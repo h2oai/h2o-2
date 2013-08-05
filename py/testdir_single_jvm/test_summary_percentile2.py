@@ -1,8 +1,6 @@
-import os, json, unittest, time, shutil, sys, random
+import unittest, time, sys, random, math
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts
-
 
 def generate_scipy_comparison(csvPathname):
     # this is some hack code for reading the csv and doing some percentile stuff in scipy
@@ -39,14 +37,16 @@ def generate_scipy_comparison(csvPathname):
     from scipy import stats
     stats.scoreatpercentile(dataset, [10,20,30,40,50,60,70,80,90])
 
-def write_syn_dataset(csvPathname, rowCount, colCount, maxIntegerValue, SEED):
+def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEED):
     r1 = random.Random(SEED)
     dsf = open(csvPathname, "w+")
 
+    expectedRange = (expectedMax - expectedMin) + 1
     for i in range(rowCount):
         rowData = []
+        ri = expectedMin + (i % expectedRange)
         for j in range(colCount):
-            ri = r1.randint(0,maxIntegerValue)
+            # ri = r1.randint(expectedMin, expectedMax)
             rowData.append(ri)
 
         rowDataCsv = ",".join(map(str,rowData))
@@ -64,7 +64,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(node_count=1)
+            h2o.build_cloud(node_count=1, base_port=54327)
         else:
             h2o_hosts.build_cloud_with_hosts(node_count=1)
 
@@ -75,8 +75,9 @@ class Basic(unittest.TestCase):
     def test_summary(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (500000, 1, 'cD', 300),
-            (500000, 2, 'cE', 300),
+            (500000, 1, 'cD', 300, 0, 9), # expectedMin/Max must cause 10 values
+            (500000, 2, 'cE', 300, 1, 10), # expectedMin/Max must cause 10 values
+            (500000, 2, 'cF', 300, 2, 11), # expectedMin/Max must cause 10 values
         ]
 
         timeoutSecs = 10
@@ -85,7 +86,7 @@ class Basic(unittest.TestCase):
         lenNodes = len(h2o.nodes)
 
         x = 0
-        for (rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (rowCount, colCount, key2, timeoutSecs, expectedMin, expectedMax) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
             x += 1
 
@@ -94,17 +95,11 @@ class Basic(unittest.TestCase):
 
             print "Creating random", csvPathname
             legalValues = {}
-            maxIntegerValue = 9
-            for x in range(maxIntegerValue+1):
+            for x in range(expectedMin, expectedMax):
                 legalValues[x] = x
         
-            expectedMin = min(legalValues)
-            expectedMax = max(legalValues)
-            expectedUnique = (expectedMax - expectedMin) + 1
-
-            write_syn_dataset(csvPathname, rowCount, colCount, maxIntegerValue, SEEDPERFILE)
-
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10)
+            write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEEDPERFILE)
+            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10, doSummary=False)
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "Parse result['destination_key']:", parseKey['destination_key']
 
@@ -112,20 +107,17 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             print "\n" + csvFilename
 
-
-            summaryResult = n.summary_page(key2)
+            summaryResult = h2o_cmd.runSummary(key=key2)
+            h2o_cmd.infoFromSummary(summaryResult, noPrint=False)
             # remove bin_names because it's too big (256?) and bins
             # just touch all the stuff returned
             summary = summaryResult['summary']
-            print h2o.dump_json(summary)
-
             columnsList = summary['columns']
             for columns in columnsList:
                 N = columns['N']
                 self.assertEqual(N, rowCount)
 
                 name = columns['name']
-
                 stype = columns['type']
                 self.assertEqual(stype, 'number')
 
@@ -135,20 +127,12 @@ class Basic(unittest.TestCase):
 
                 bin_names = histogram['bin_names']
                 bins = histogram['bins']
-                # only values are 0 and 1
-                for b in bins:
-                    self.assertAlmostEqual(b, .1 * rowCount, delta=.01*rowCount)
-
                 nbins = histogram['bins']
 
-                print "\n\n************************"
-                print "name:", name
-                print "type:", stype
-                print "N:", N
-                print "bin_size:", bin_size
-                print "len(bin_names):", len(bin_names), bin_names
-                print "len(bins):", len(bins), bins
-                print "len(nbins):", len(nbins), nbins
+                for b in bins:
+                    e = .1 * rowCount
+                    self.assertAlmostEqual(b, .1 * rowCount, delta=.01*rowCount, 
+                        msg="Bins not right. b: %s e: %s" % (b, e))
 
                 # not done if enum
                 if stype != "enum":
@@ -160,42 +144,51 @@ class Basic(unittest.TestCase):
                     mean = columns['mean']
                     sigma = columns['sigma']
 
-                    print "len(max):", len(smax), smax
-                    self.assertEqual(smax[0], maxIntegerValue)
-                    self.assertEqual(smax[1], maxIntegerValue-1)
-                    self.assertEqual(smax[2], maxIntegerValue-2)
-                    self.assertEqual(smax[3], maxIntegerValue-3)
-                    self.assertEqual(smax[4], maxIntegerValue-4)
-                    print "len(min):", len(smin), smin
-                    self.assertEqual(smin[0], 0)
-                    self.assertEqual(smin[1], 1)
-                    self.assertEqual(smin[2], 2)
-                    self.assertEqual(smin[3], 3)
-                    self.assertEqual(smin[4], 4)
+                    self.assertEqual(smax[0], expectedMax)
+                    self.assertEqual(smax[1], expectedMax-1)
+                    self.assertEqual(smax[2], expectedMax-2)
+                    self.assertEqual(smax[3], expectedMax-3)
+                    self.assertEqual(smax[4], expectedMax-4)
+                    
+                    self.assertEqual(smin[0], expectedMin)
+                    self.assertEqual(smin[1], expectedMin+1)
+                    self.assertEqual(smin[2], expectedMin+2)
+                    self.assertEqual(smin[3], expectedMin+3)
+                    self.assertEqual(smin[4], expectedMin+4)
 
-                    print "len(thresholds):", len(thresholds), thresholds
-                    # FIX! what thresholds?
-
-                    print "len(values):", len(values), values
                     # apparently our 'percentile estimate" uses interpolation, so this check is not met by h2o
                     for v in values:
-                    ##    self.assertIn(v,legalValues,"Value in percentile 'values' is not present in the dataset") 
-                    # but: you would think it should be within the min-max range?
+                        ##    self.assertIn(v,legalValues,"Value in percentile 'values' is not present in the dataset") 
+                        # but: you would think it should be within the min-max range?
                         self.assertTrue(v >= expectedMin, 
                             "Percentile value %s should all be >= the min dataset value %s" % (v, expectedMin))
                         self.assertTrue(v <= expectedMax, 
                             "Percentile value %s should all be <= the max dataset value %s" % (v, expectedMax))
-
                 
-                    print "mean:", mean
-                    self.assertAlmostEqual(mean, maxIntegerValue/2.0, delta=0.1)
-                    print "sigma:", sigma
+                    self.assertAlmostEqual(mean, (expectedMax+expectedMin)/2.0, delta=0.1)
                     # FIX! how do we estimate this
                     self.assertAlmostEqual(sigma, 2.9, delta=0.1)
+                    
+                    # since we distribute the outputs evenly from 0 to 9, we can check 
+                    # that the value is equal to the threshold (within some delta
 
-            ### print 'Trial:', trial
-            sys.stdout.write('.')
-            sys.stdout.flush()
+                    # is this right?
+                    # if thresholds   = [0.01, 0.05, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.95, 0.99]
+                    # values = [   0,    0,   1,    2,    3,   5,    7,    7,   9,    9,    10]
+                    eV1 = [1.0, 1.0, 1.0, 3.0, 4.0, 5.0, 7.0, 8.0, 9.0, 10.0, 10.0]
+                    if expectedMin==1:
+                        eV = eV1
+                    elif expectedMin==0:
+                        eV = [e-1 for e in eV1]
+                    elif expectedMin==2:
+                        eV = [e+1 for e in eV1]
+                    else:
+                        raise Exception("Test doesn't have the expected values for expectedMin: %s" % expectedMin)
+
+                    for t,v,e in zip(thresholds, values, eV):
+                        m = "Percentile threshold: %s with value %s should ~= %s" % (t, v, e)
+                        self.assertAlmostEqual(v, e, delta=0.5, msg=m)
+
             trial += 1
 
             if (1==0): 

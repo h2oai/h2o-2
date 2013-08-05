@@ -1,0 +1,12 @@
+Package: h2o
+Type: Package
+Title: H2O R Interface
+Version: SUBST_PROJECT_VERSION
+Date: 2013-07-16
+Author: Anqi Fu, Tom Kraljevic and Petr Maj, with contributions from the 0xdata team
+Maintainer: Anqi Fu <anqi@0xdata.com>
+Description: This is a package for running H2O via its REST API from within R.
+License: Apache-2
+Depends: R (>= 2.13.0), RCurl, rjson
+NeedsCompilation: no
+URL: http://www.0xdata.com

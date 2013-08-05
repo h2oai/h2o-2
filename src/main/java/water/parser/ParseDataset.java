@@ -5,10 +5,14 @@ import java.io.InputStream;
 import java.util.*;
 import java.util.zip.*;
 
+import org.apache.hadoop.thirdparty.guava.common.base.Objects;
+
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.api.Inspect;
+import water.parser.CustomParser.ParserSetup;
+import water.parser.CustomParser.ParserType;
 import water.parser.DParseTask.Pass;
 import water.util.Log;
 import water.util.RIStream;
@@ -54,17 +58,50 @@ public final class ParseDataset extends Job {
     return Compression.NONE;
   }
 
+  public static ParserSetup guessSetup(Value v){
+    return guessSetup(v,ParserType.AUTO,CsvParser.NO_SEPARATOR);
+  }
+  public static ParserSetup guessSetup(byte [] bits){
+    return guessSetup(bits,ParserType.AUTO,CsvParser.NO_SEPARATOR);
+  }
+
+  public static ParserSetup guessSetup(Value v, ParserType pType){
+    return guessSetup(v, pType, CsvParser.NO_SEPARATOR);
+  }
+  public static ParserSetup guessSetup(Value v, ParserType pType, byte sep){
+    return guessSetup(Inspect.getFirstBytes(v),pType,sep);
+  }
+  public static ParserSetup guessSetup(byte [] bits, ParserType pType, byte sep){
+    ParserSetup res = null;
+    switch(pType){
+      case CSV:
+        return CsvParser.guessSetup(bits,sep);
+      case SVMLight:
+        return SVMLightParser.guessSetup(bits);
+      case XLS:
+        return XlsParser.guessSetup(bits);
+      case AUTO:
+        if((res = XlsParser.guessSetup(bits)) != null)
+          return res;
+        if((res = SVMLightParser.guessSetup(bits)) != null)
+          return res;
+        return CsvParser.guessSetup(bits,sep);
+      default:
+        throw H2O.unimpl();
+    }
+  }
+
   public static void parse(Key okey, Key [] keys){
     forkParseDataset(okey, keys, null).get();
   }
 
   static DParseTask tryParseXls(Value v,ParseDataset job){
-    DParseTask t = DParseTask.createPassOne(v, job, CustomParser.Type.XLS);
-    try{t.passOne(null);}catch(Exception e){return null;}
+    DParseTask t =  new DParseTask().createPassOne(v, job, new XlsParser(null));
+    try{t.passOne();} catch(Exception e) {return null;}
     return t;
   }
 
-  public static void parse(ParseDataset job, Key [] keys, CsvParser.Setup setup){
+  public static void parse(ParseDataset job, Key [] keys, CustomParser.ParserSetup setup){
     int j = 0;
     UKV.remove(job.dest());// remove any previous instance and insert a sentinel (to ensure no one has been writing to the same keys during our parse!
     Key [] nonEmptyKeys = new Key[keys.length];
@@ -79,30 +116,26 @@ public final class ParseDataset extends Job {
       job.cancel();
       return;
     }
-    CustomParser.Type ptype = CustomParser.Type.CSV;
     Value v = DKV.get(keys[0]);
     DParseTask p1 = tryParseXls(v,job);
     if(p1 != null) {
       if(keys.length == 1){ // shortcut for 1 xls file, we already have pass one done, just do the 2nd pass and we're done
-        DParseTask p2 = DParseTask.createPassTwo(p1);
+        DParseTask p2 = p1.createPassTwo();
         p2.passTwo();
-        p2.normalizeSigma();
         p2.createValueArrayHeader();
         job.remove();
         return;
-      }
-      ptype = CustomParser.Type.XLS;
-    } else if (setup == null || setup._data == null || setup._data[0] == null) {
-      setup = Inspect.csvGuessValue(v, (setup != null)?setup._separator:CsvParser.NO_SEPARATOR);
-      assert setup._data[0] != null;
+      } else
+        throw H2O.unimpl();
     }
-    final int ncolumns = setup._data[0].length;
+    if(setup == null || setup._pType == CustomParser.ParserType.AUTO)
+      setup = ParseDataset.guessSetup(v);
     Compression compression = guessCompressionMethod(v);
     try {
-      UnzipAndParseTask tsk = new UnzipAndParseTask(job, compression, setup,ptype);
+      UnzipAndParseTask tsk = new UnzipAndParseTask(job, compression, setup);
       tsk.invoke(keys);
       DParseTask [] p2s = new DParseTask[keys.length];
-      DParseTask phaseTwo = DParseTask.createPassTwo(tsk._tsk);
+      DParseTask phaseTwo = tsk._tsk.createPassTwo();
       // too keep original order of the keys...
       HashMap<Key, FileInfo> fileInfo = new HashMap<Key, FileInfo>();
       long rowCount = 0;
@@ -116,10 +149,10 @@ public final class ParseDataset extends Job {
         for(j = 0; j < finfo._nrows.length; ++j)
           finfo._nrows[j] += rowCount;
         rowCount += nrows;
-        p2s[i] = (DParseTask) new DParseTask(phaseTwo, finfo).dfork(k);
+        p2s[i] = phaseTwo.makePhase2Clone(finfo).dfork(k);
       }
-      phaseTwo._sigma = new double[ncolumns];
-      phaseTwo._invalidValues = new long[ncolumns];
+      phaseTwo._sigma = new double[phaseTwo._ncolumns];
+      phaseTwo._invalidValues = new long[phaseTwo._ncolumns];
       // now put the results together and create ValueArray header
       for(int i = 0; i < p2s.length; ++i){
         DParseTask t = p2s[i];
@@ -138,7 +171,7 @@ public final class ParseDataset extends Job {
       phaseTwo.normalizeSigma();
       phaseTwo._colNames = setup._data[0];
       phaseTwo.createValueArrayHeader();
-    } catch (Exception e) {
+    } catch (Throwable e) {
       UKV.put(job.dest(), new Fail(e.getMessage()));
       throw Throwables.propagate(e);
     } finally {
@@ -149,9 +182,9 @@ public final class ParseDataset extends Job {
   public static class ParserFJTask extends H2OCountedCompleter {
     final ParseDataset job;
     Key [] keys;
-    CsvParser.Setup setup;
+    CustomParser.ParserSetup setup;
 
-    public ParserFJTask(ParseDataset job, Key [] keys, CsvParser.Setup setup){
+    public ParserFJTask(ParseDataset job, Key [] keys, CustomParser.ParserSetup setup){
       this.job = job;
       this.keys = keys;
       this.setup = setup;
@@ -162,21 +195,18 @@ public final class ParseDataset extends Job {
       tryComplete();
     }
   }
-
-  public static Job forkParseDataset(final Key dest, final Key[] keys, final CsvParser.Setup setup) {
+  public static Job forkParseDataset(final Key dest, final Key[] keys, final CustomParser.ParserSetup setup) {
     ParseDataset job = new ParseDataset(dest, keys);
     H2OCountedCompleter fjt = new ParserFJTask(job, keys, setup);
     job.start(fjt);
     H2O.submitTask(fjt);
     return job;
   }
-
   public static class ParseException extends RuntimeException {
     public ParseException(String msg) {
       super(msg);
     }
   }
-
   public static class FileInfo extends Iced{
     Key _ikey;
     Key _okey;
@@ -189,21 +219,15 @@ public final class ParseDataset extends Job {
     final Compression _comp;
     DParseTask _tsk;
     FileInfo [] _fileInfo;
-    final byte _sep;
-    final int _ncolumns;
-    final CustomParser.Type _pType;
-    final String [] _headers;
+    final CustomParser.ParserSetup _parserSetup;
 
-    public UnzipAndParseTask(ParseDataset job, Compression comp, CsvParser.Setup setup, CustomParser.Type pType) {
-      this(job,comp,setup,pType,Integer.MAX_VALUE);
+    public UnzipAndParseTask(ParseDataset job, Compression comp, CustomParser.ParserSetup parserSetup) {
+      this(job,comp,parserSetup, Integer.MAX_VALUE);
     }
-    public UnzipAndParseTask(ParseDataset job, Compression comp, CsvParser.Setup setup, CustomParser.Type pType, int maxParallelism) {
+    public UnzipAndParseTask(ParseDataset job, Compression comp, CustomParser.ParserSetup parserSetup, int maxParallelism) {
       _job = job;
       _comp = comp;
-      _sep = setup._separator;
-      _ncolumns = setup._data[0].length;
-      _pType = pType;
-      _headers = (setup._header)?setup._data[0]:null;
+      _parserSetup = parserSetup;
     }
     @Override
     public DRemoteTask dfork( Key... keys ) {
@@ -226,7 +250,7 @@ public final class ParseDataset extends Job {
           _counter = (int)n;
       }
     }
-    // actual implementation of unzip and parse, intedned for the FJ computation
+    // actual implementation of unzip and parse, intended for the FJ computation
     private class UnzipAndParseLocalTask extends H2OCountedCompleter {
       final int _idx;
       public UnzipAndParseLocalTask(int idx){
@@ -237,11 +261,32 @@ public final class ParseDataset extends Job {
       @Override
       public void compute2() {
         final Key key = _keys[_idx];
+        Value v = DKV.get(key);
+        assert v != null;
+        ParserSetup localSetup = ParseDataset.guessSetup(v, _parserSetup._pType, _parserSetup._separator);
+        localSetup._header &= _parserSetup._header;
+        if(!_parserSetup.isCompatible(localSetup))throw new ParseException("Parsing incompatible files. " + _parserSetup.toString() + " is not compatible with " + localSetup.toString());
         _fileInfo[_idx] = new FileInfo();
         _fileInfo[_idx]._ikey = key;
         _fileInfo[_idx]._okey = key;
-        Value v = DKV.get(key);
-        assert v != null;
+        if(localSetup._header)
+          for(int i = 0; i < _parserSetup._ncols; ++i)
+            localSetup._header &= _parserSetup._columnNames[i].equalsIgnoreCase(localSetup._columnNames[i]);
+        _fileInfo[_idx]._header = localSetup._header;
+        CustomParser parser = null;
+        DParseTask dpt = null;
+        switch(localSetup._pType){
+          case CSV:
+            parser = new CsvParser(localSetup, false);
+            dpt = new DParseTask();
+            break;
+          case SVMLight:
+            parser = new SVMLightParser(localSetup);
+            dpt = new SVMLightDParseTask();
+            break;
+          default:
+            throw H2O.unimpl();
+        }
         long csz = v.length();
         if(_comp != Compression.NONE){
           onProgressSizeChange(csz,_job); // additional pass through the data to decompress
@@ -284,79 +329,89 @@ public final class ParseDataset extends Job {
            Closeables.closeQuietly(is);
           }
         }
-        CsvParser.Setup setup = null;
-        if(_pType == CustomParser.Type.CSV){
-          setup = Inspect.csvGuessValue(v,_sep);
-          if(setup._data[0].length != _ncolumns)
-            throw new ParseException("Found conflicting number of columns (using separator " + (int)_sep + ") when parsing multiple files. Found " + setup._data[0].length + " columns  in " + key + " , but expected " + _ncolumns);
-          _fileInfo[_idx]._header = setup._header;
-          if(_fileInfo[_idx]._header && _headers != null) // check if we have the header, it should be the same one as we got from the head
-            for(int i = 0; i < setup._data[0].length; ++i)
-              _fileInfo[_idx]._header = _fileInfo[_idx]._header && setup._data[0][i].equalsIgnoreCase(_headers[i]);
-          setup = new CsvParser.Setup(_sep, _fileInfo[_idx]._header, setup._data, setup._numlines, setup._bits);
-          _p1 = DParseTask.createPassOne(v, _job, _pType);
-          _p1.setCompleter(this);
-          _p1.passOne(setup);
+        _p1 = dpt.createPassOne(v, _job, parser);
+        _p1.setCompleter(this);
+        _p1.passOne();
+//        if(_parser instanceof CsvParser){
+//          CustomParser p2 = null; // gues parser hereInspect.csvGuessValue(v);
+//          if(setup._data[0].length != _ncolumns)
+//            throw new ParseException("Found conflicting number of columns (using separator " + (int)_sep + ") when parsing multiple files. Found " + setup._data[0].length + " columns  in " + key + " , but expected " + _ncolumns);
+//          _fileInfo[_idx]._header = setup._header;
+//          if(_fileInfo[_idx]._header && _headers != null) // check if we have the header, it should be the same one as we got from the head
+//            for(int i = 0; i < setup._data[0].length; ++i)
+//              _fileInfo[_idx]._header = _fileInfo[_idx]._header && setup._data[0][i].equalsIgnoreCase(_headers[i]);
+//          setup = new CsvParser.Setup(_sep, _fileInfo[_idx]._header, setup._data, setup._numlines, setup._bits);
+//          _p1 = DParseTask.createPassOne(v, _job, _pType);
+//          _p1.setCompleter(this);
+//          _p1.passOne(setup);
           // DO NOT call tryComplete here, _p1 calls it!
-        } else {
-         _p1 = tryParseXls(v,_job);
-         if(_p1 == null)
-           throw new ParseException("Found conflicting types of files. Can not parse xls and not-xls files together");
-         tryComplete();
-        }
+//        } else {
+//         _p1 = tryParseXls(v,_job);
+//         if(_p1 == null)
+//           throw new ParseException("Found conflicting types of files. Can not parse xls and not-xls files together");
+//         tryComplete();
+//        }
       }
 
       @Override
       public void onCompletion(CountedCompleter caller){
-        _fileInfo[_idx]._nrows = _p1._nrows;
-        long numRows = 0;
-        for(int i = 0; i < _p1._nrows.length; ++i){
-          numRows += _p1._nrows[i];
-          _fileInfo[_idx]._nrows[i] = numRows;
-        }
+        try{
+          _fileInfo[_idx]._nrows = _p1._nrows;
+          long numRows = 0;
+          for(int i = 0; i < _p1._nrows.length; ++i){
+            numRows += _p1._nrows[i];
+            _fileInfo[_idx]._nrows[i] = numRows;
+          }
+        }catch(Throwable t){t.printStackTrace();}
         quietlyComplete(); // wake up anyone  who is joining on this task!
       }
     }
 
     @Override
     public void lcompute() {
-      _fileInfo = new FileInfo[_keys.length];
-      subTasks = new UnzipAndParseLocalTask[_keys.length];
-      setPendingCount(subTasks.length);
-      int p = 0;
-      int j = 0;
-      for(int i = 0; i < _keys.length; ++i){
-        if(p == ParseDataset.PLIMIT) subTasks[j++].join(); else ++p;
-        H2O.submitTask((subTasks[i] = new UnzipAndParseLocalTask(i)));
-      }
+      try{
+        _fileInfo = new FileInfo[_keys.length];
+        subTasks = new UnzipAndParseLocalTask[_keys.length];
+        setPendingCount(subTasks.length);
+        int p = 0;
+        int j = 0;
+        for(int i = 0; i < _keys.length; ++i){
+          if(p == ParseDataset.PLIMIT) subTasks[j++].join(); else ++p;
+          H2O.submitTask((subTasks[i] = new UnzipAndParseLocalTask(i)));
+        }
+      }catch(Throwable t){t.printStackTrace();}
       tryComplete();
     }
 
     transient UnzipAndParseLocalTask [] subTasks;
     @Override
     public final void lonCompletion(CountedCompleter caller){
-      _tsk = subTasks[0]._p1;
-      for(int i = 1; i < _keys.length; ++i){
-        DParseTask tsk = subTasks[i]._p1;
-        tsk._nrows = _tsk._nrows;
-        _tsk.reduce(tsk);
-      }
+      try{
+        _tsk = subTasks[0]._p1;
+        for(int i = 1; i < _keys.length; ++i){
+          DParseTask tsk = subTasks[i]._p1;
+          tsk._nrows = _tsk._nrows;
+          _tsk.reduce(tsk);
+        }
+      }catch(Throwable t){t.printStackTrace();}
     }
 
     @Override
     public void reduce(DRemoteTask drt) {
-      UnzipAndParseTask tsk = (UnzipAndParseTask)drt;
-      if(_tsk == null && _fileInfo == null){
-        _fileInfo = tsk._fileInfo;
-        _tsk = tsk._tsk;
-      } else {
-        final int n = _fileInfo.length;
-        _fileInfo = Arrays.copyOf(_fileInfo, n + tsk._fileInfo.length);
-        System.arraycopy(tsk._fileInfo, 0, _fileInfo, n, tsk._fileInfo.length);
-        // we do not want to merge nrows from different files, apart from that, we want to use standard reduce!
-        tsk._tsk._nrows = _tsk._nrows;
-        _tsk.reduce(tsk._tsk);
-      }
+      try{
+        UnzipAndParseTask tsk = (UnzipAndParseTask)drt;
+        if(_tsk == null && _fileInfo == null){
+          _fileInfo = tsk._fileInfo;
+          _tsk = tsk._tsk;
+        } else {
+          final int n = _fileInfo.length;
+          _fileInfo = Arrays.copyOf(_fileInfo, n + tsk._fileInfo.length);
+          System.arraycopy(tsk._fileInfo, 0, _fileInfo, n, tsk._fileInfo.length);
+          // we do not want to merge nrows from different files, apart from that, we want to use standard reduce!
+          tsk._tsk._nrows = _tsk._nrows;
+          _tsk.reduce(tsk._tsk);
+        }
+      }catch(Throwable t){t.printStackTrace();}
     }
   }
 

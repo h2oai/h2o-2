@@ -591,6 +591,12 @@ public final class AutoBuffer {
     for( Iced[] f : fs ) putA(f);
     return this;
   }
+  public AutoBuffer putAAA(Iced[][][] fs) {
+    if( fs == null ) return put4(-1);
+    put4(fs.length);
+    for( Iced[][] f : fs ) putAA(f);
+    return this;
+  }
 
   public <T extends Freezable> T get(Class<T> t) {
     short id = (short)get2();
@@ -613,6 +619,14 @@ public final class AutoBuffer {
     Class<T[]> tcA = (Class<T[]>) Array.newInstance(tc, 0).getClass();
     T[][] ts = (T[][]) Array.newInstance(tcA, len);
     for( int i = 0; i < len; ++i ) ts[i] = getA(tc);
+    return ts;
+  }
+  public <T extends Iced> T[][][] getAAA(Class<T> tc) {
+    int len = get4(); if( len == -1 ) return null;
+    Class<T[]  > tcA  = (Class<T[]  >) Array.newInstance(tc , 0).getClass();
+    Class<T[][]> tcAA = (Class<T[][]>) Array.newInstance(tcA, 0).getClass();
+    T[][][] ts = (T[][][]) Array.newInstance(tcAA, len);
+    for( int i = 0; i < len; ++i ) ts[i] = getAA(tc);
     return ts;
   }
 
@@ -937,7 +951,7 @@ public final class AutoBuffer {
 
 
   // ==========================================================================
-  // JSON Autobuffer printers
+  // JSON AutoBuffer printers
 
   private AutoBuffer putStr2( String s ) {
     byte[] b = s.getBytes();
@@ -967,6 +981,88 @@ public final class AutoBuffer {
     for( int i=0; i<fs.length; i++ ) {
       if( i>0 ) put1(',');
       putJSONStr(fs[i]);
+    }
+    return put1(']');
+  }
+
+  public AutoBuffer putJSON( Iced ice ) {
+    return ice == null ? putNULL() : ice.writeJSON(this);
+  }
+  public AutoBuffer putJSONA( Iced fs[] ) {
+    if( fs == null ) return putNULL();
+    put1('[');
+    for( int i=0; i<fs.length; i++ ) {
+      if( i>0 ) put1(',');
+      putJSON(fs[i]);
+    }
+    return put1(']');
+  }
+  public AutoBuffer putJSON8 ( long l ) { return putStr2(Long.toString(l)); }
+  public AutoBuffer putJSONA8( long ary[] ) {
+    if( ary == null ) return putNULL();
+    put1('[');
+    for( int i=0; i<ary.length; i++ ) {
+      if( i>0 ) put1(',');
+      putJSON8(ary[i]);
+    }
+    return put1(']');
+  }
+  public AutoBuffer putJSONAA8( long ary[][] ) {
+    if( ary == null ) return putNULL();
+    put1('[');
+    for( int i=0; i<ary.length; i++ ) {
+      if( i>0 ) put1(',');
+      putJSONA8(ary[i]);
+    }
+    return put1(']');
+  }
+
+  public AutoBuffer putEnumJSON( Enum e ) {
+    return e==null ? putNULL() : put1('"').putStr2(e.toString()).put1('"');
+  }
+
+  public AutoBuffer putJSON  ( String name, Iced f   ) { return putJSONStr(name).put1(':').putJSON (f); }
+  public AutoBuffer putJSONA ( String name, Iced f[] ) { return putJSONStr(name).put1(':').putJSONA(f); }
+  public AutoBuffer putJSON8 ( String name, long l   ) { return putJSONStr(name).put1(':').putJSON8(l); }
+  public AutoBuffer putEnumJSON( String name, Enum e ) { return putJSONStr(name).put1(':').putEnumJSON(e); }
+
+  public AutoBuffer putJSONA8( String name, long ary[] ) { return putJSONStr(name).put1(':').putJSONA8(ary); }
+  public AutoBuffer putJSONAA8( String name, long ary[][] ) { return putJSONStr(name).put1(':').putJSONAA8(ary); }
+  public AutoBuffer putJSON4 ( int i ) { return putStr2(Integer.toString(i)); }
+  public AutoBuffer putJSON4 ( String name, int i ) { return putJSONStr(name).put1(':').putJSON4(i); }
+  public AutoBuffer putJSONA4(String name, int[] a) {
+    putJSONStr(name).put1(':');
+    if( a == null ) return putNULL();
+    put1('[');
+    for( int i=0; i<a.length; i++ ) {
+      if( i>0 ) put1(',');
+      putJSON4(a[i]);
+    }
+    return put1(']');
+  }
+
+  public AutoBuffer putJSON8d( double d ) { return putStr2(Double .toString(d)); }
+  public AutoBuffer putJSON8d( String name, double d ) { return putJSONStr(name).put1(':').putJSON8d(d); }
+  public AutoBuffer putJSONA8d( double[] a ) {
+    if( a == null ) return putNULL();
+    put1('[');
+    for( int i=0; i<a.length; i++ ) {
+      if( i>0 ) put1(',');
+      putJSON8d(a[i]);
+    }
+    return put1(']');
+  }
+  public AutoBuffer putJSONA8d( String name, double[] a ) {
+    putJSONStr(name).put1(':');
+    return putJSONA8d(a);
+  }
+  public AutoBuffer putJSONAA8d( String name, double[][] a ) {
+    putJSONStr(name).put1(':');
+    if( a == null ) return putNULL();
+    put1('[');
+    for( int i=0; i<a.length; i++ ) {
+      if( i>0 ) put1(',');
+      putJSONA8d(a[i]);
     }
     return put1(']');
   }

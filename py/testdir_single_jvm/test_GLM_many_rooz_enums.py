@@ -1,9 +1,5 @@
-import unittest
-import random, sys, time, os
-import string
-import re
+import unittest, random, sys, time, re
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
 
 targetList = ['red', 'mail', 'black flag', 5, 1981, 'central park', 'good', 'liquor store rooftoop', 'facebook']
@@ -99,7 +95,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_many_enums(self):
+    def test_GLM_many_rooz_enums(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         if localhost:
@@ -179,7 +175,7 @@ class Basic(unittest.TestCase):
             print "\n" + csvFilename
             # we allow some NAs in the list above
             (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
-                h2o_cmd.columnInfoFromInspect(parseKey,exceptionOnMissingValues=False)
+                h2o_cmd.columnInfoFromInspect(parseKey['destination_key'],exceptionOnMissingValues=False)
 
             y = colCount
             x = range(colCount)

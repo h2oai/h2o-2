@@ -45,9 +45,9 @@ The particular tree to retrieve. (Must be an integer between 1 and \code{ntree})
 \code{\link{h2o.randomForest}}, \code{\linkS4class{H2ORForestModel}}
 }
 \examples{
-iris.hex = importFile(h2o, "../smalldata/iris/iris.csv", "iris.hex")
+iris.hex = h2o.importFile(localH2O, path = "../smalldata/iris/iris.csv", key = "iris.hex")
 iris.rf = h2o.randomForest(y = "4", data = iris.hex, ntree = 50)
-h2o.getTree(iris.rf, k = 5)
+h2o.getTree(forest = iris.rf, k = 5)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

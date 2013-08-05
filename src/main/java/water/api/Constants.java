@@ -1,8 +1,9 @@
 package water.api;
 
+import water.Iced;
 import water.util.Check;
 
-public class Constants {
+public class Constants extends Iced {
   public static class Suffixes {
     // JSON fields with these suffixes will automatically provide some
     // pretty printing.  Users can still override the fields later
@@ -15,6 +16,7 @@ public class Constants {
     public static final String HEX = ".hex";
     public static final String JOB = ".job";
     public static final String KMEANS = ".kmeans";
+    public static final String KMEANS_GRID = ".kmeans_grid";
     public static final String R = ".r";
     public static final String JSON = ".json";
   }
@@ -84,7 +86,6 @@ public class Constants {
   public static final String JOB                   = "job";
   public static final String JOBS                  = "jobs";
   public static final String JSON_H2O              = "h2o";
-  public static final String K                     = "k";
   public static final String KEY                   = "key";
   public static final String KEYS                  = "keys";
   public static final String LAST_CONTACT          = "last_contact";
@@ -143,6 +144,7 @@ public class Constants {
   public static final String SAMPLING_STRATEGY     = "sampling_strategy";
   public static final String SEED                  = "seed";
   public static final String SEPARATOR             = "separator";
+  public static final String PARSER_TYPE           = "parser_type";
   public static final String SENT_ROWS             = "sent_rows";
   public static final String SIZE                  = "size";
   public static final String SOURCE_KEY            = "source_key";

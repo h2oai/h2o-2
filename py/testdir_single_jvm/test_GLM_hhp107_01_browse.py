@@ -1,18 +1,7 @@
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys
 sys.path.extend(['.','..','py'])
-
-# auto-ignores constant columns? fails with exception below in browser
-# ignoring constant column 9
-# ignoring constant column 12
-# ignoring constant column 25
-# ignoring constant column 54
-# ignoring constant column 76
-# ignoring constant column 91
-# ignoring constant column 103
-
 import h2o, h2o_cmd, h2o_hosts, h2o_glm
 import h2o_browse as h2b
-import time
 
 # can expand this with specific combinations
 # I suppose these args will be ignored with old??
@@ -51,7 +40,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_hhp_107_01(self):
+    def test_hhp_107_01_browse(self):
         csvPathname = h2o.find_file("smalldata/hhp_107_01.data.gz")
         print "\n" + csvPathname
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2="hhp_107_01.data.hex", timeoutSecs=15)

@@ -1,16 +1,13 @@
 package water.api;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.regex.Pattern;
 
 import water.*;
-import water.Weaver.Weave;
-import water.api.RequestBuilders.Response.Status;
 import water.fvec.*;
-import water.parser.CsvParser;
-import water.parser.CsvParser.Setup;
-import water.util.RString;
+import water.parser.*;
 
 public class Parse2 extends Request {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
@@ -18,36 +15,40 @@ public class Parse2 extends Request {
 
   // This Request supports the HTML 'GET' command, and this is the help text
   // for GET.
-  static final String DOC_GET =
-    "Parses a key to H2O's hex format";
+  static final String DOC_GET = "Parses a key to H2O's Frame format";
 
   // HTTP request parameters
 
-  @Weave(help="Cell separator, e.g. ','")
+  @API(help="Field separator, typically commas ',' or TABs.")
   final Separator separator = new Separator("separator");
 
-  @Weave(help="Keys to ignore (Regex)")
+  @API(help="Key (or regex of keys) to ignore.")
   final Str exclude = new Str("exclude", "");
 
-  @Weave(help="Key to parse")
+  @API(help="An existing H2O CSV text key (or regex of keys).")
   final ExistingCSVKey source_key = new ExistingCSVKey("source_key");
 
-  @Weave(help="Destination key")
-  final NewH2OHexKey dest = new NewH2OHexKey("dest");
+  @API(help="Destination key.")
+  final NewH2OHexKey dst_key = new NewH2OHexKey("dst");
 
-  @Weave(help="Keys to ignore (Regex)")
+  @API(help="If checked, first data row is assumed to be a header.  If unchecked, first data row is assumed to be data.")
   final Header header = new Header("header");
 
+  @API(help="Whether the parse call should block until the operation is complete.  (This is meant for API use, not browser use.)")
+  final Bool blocking = new Bool("blocking",false,"");
+
   // JSON output fields
-
-  @Weave(help="Job key, e.g. to query for progress")
-  String job;
-
-  @Weave(help="Destination key")
+  @API(help="Destination key.")
   String destination_key;
 
-  @Override public String[] DocExampleSucc() { return new String[]{ "","test.cvs" }; }
-  @Override public String[] DocExampleFail() { return new String[]{}; }
+  @API(help="Job key, useful to query for progress.")
+  String job;
+
+  @API(help="Web page to redirect to, once the job is done")
+  final String redirect="Inspect2";
+
+  //@Override public String[] DocExampleSucc() { return new String[]{ "source_key","./smalldata/logreg/prostate.cvs" }; }
+  @Override public String[] DocExampleFail() { return new String[]{ "source_key","./aMispeltFile" }; }
 
   public Parse2() {
     exclude.setRefreshOnChange();
@@ -55,9 +56,9 @@ public class Parse2 extends Request {
 
   private static class PSetup {
     final ArrayList<Key> _keys;
-    final CsvParser.Setup _setup;
-    PSetup( ArrayList<Key> keys, CsvParser.Setup setup) { _keys=keys; _setup=setup; }
-    PSetup( Key key, CsvParser.Setup setup) {
+    final CustomParser.ParserSetup _setup;
+    PSetup( ArrayList<Key> keys, CustomParser.ParserSetup setup) { _keys=keys; _setup=setup; }
+    PSetup( Key key, CustomParser.ParserSetup setup) {
       _keys = new ArrayList();
       _keys.add(key);
       _setup=setup;
@@ -74,8 +75,6 @@ public class Parse2 extends Request {
     @Override protected PSetup parse(String input) throws IllegalArgumentException {
       Key k1 = Key.make(input);
       Value v1 = DKV.get(k1);
-      if( v1 != null && (input.endsWith(".xlsx") || input.endsWith(".xls")) )
-        return new PSetup(k1, new Setup((byte) 0,false,null,0,null));
       Pattern incl = makePattern(input);
       Pattern excl = null;
       if(exclude.specified())
@@ -90,8 +89,6 @@ public class Parse2 extends Request {
         if(excl != null && excl.matcher(ks).matches())
           continue;
         Value v2 = DKV.get(key);  // Look at it
-        if( v2 == null  || input.endsWith(".xlsx") || input.endsWith(".xls") || v2.length() == 0)
-          continue;           // Missed key (racing deletes) or XLS files
         if(v2.isHex())// filter common mistake such as *filename* with filename.hex already present
           continue;
         Object o = v2.type() != TypeMap.PRIM_B ? v2.get() : null;
@@ -100,16 +97,16 @@ public class Parse2 extends Request {
       }
 
       if(keys.size() == 0 )
-        throw new IllegalArgumentException("I did not find any keys matching this pattern!");
+        throw new IllegalArgumentException(errors()[0]);
       Collections.sort(keys);   // Sort all the keys, except the 1 header guy
       // now we assume the first key has the header
       Key hKey = keys.get(0);
       Value v = DKV.get(hKey);
       v = ((Frame) v.get())._vecs[0].chunkIdx(0);
       byte sep = separator.specified() ? separator.value() : CsvParser.NO_SEPARATOR;
-      CsvParser.Setup setup = Inspect.csvGuessValue(v, sep);
+      CustomParser.ParserSetup setup = ParseDataset.guessSetup(v, CustomParser.ParserType.AUTO, sep);
       if( setup._data == null || setup._data[0].length == 0 )
-        throw new IllegalArgumentException("I cannot figure out this file; I only handle common CSV formats: "+hKey);
+        throw new IllegalArgumentException(errors()[1]+hKey);
       return new PSetup(keys,setup);
     }
 
@@ -124,9 +121,12 @@ public class Parse2 extends Request {
     }
 
     @Override protected PSetup defaultValue() { return null; }
-    @Override protected String queryDescription() { return "An existing H2O key (or regex of keys) of CSV text"; }
+    @Override protected String queryDescription() { return "Source CSV key"; }
+    @Override protected String[] errors() { return new String[] {
+        "I did not find any keys matching this pattern!",
+        "I cannot figure out this file; I only handle common CSV formats: "
+      }; }
   }
-
 
   // A Query String, which defaults to the source Key with a '.hex' suffix
   private class NewH2OHexKey extends Str {
@@ -138,8 +138,12 @@ public class Parse2 extends Request {
       PSetup setup = source_key.value();
       if( setup == null ) return null;
       String n = setup._keys.get(0).toString();
-      int dot = n.lastIndexOf('.');
-      if( dot > 0 ) n = n.substring(0, dot);
+      int dot = n.lastIndexOf('.'); // Peel off common .csv or .csv.gz suffix
+      if( dot > 0 && n.lastIndexOf(File.separator) < dot )
+        n = n.substring(0, dot);
+      dot = n.lastIndexOf('.'); // Peel off common .csv.gz suffix
+      if( dot > 0 && n.lastIndexOf(File.separator) < dot )
+        n = n.substring(0, dot);
       int i = 0;
       String res = n + Extensions.HEX;
       Key k = Key.make(res);
@@ -175,9 +179,8 @@ public class Parse2 extends Request {
       sb.append("/>&nbsp;&nbsp;").append(queryDescription()).append("<p>");
       String[][] data = psetup._setup._data;
       if( data != null ) {
-        int sep = psetup._setup._separator;
         sb.append("<div class='alert'><b>");
-        sb.append(String.format("Detected %d columns using '%s' (\\u%04d) as a separator.", data[0].length,sep<33 ? WHITE_DELIMS[sep] : Character.toString((char)sep),sep));
+        sb.append(String.format("Detected %s ",psetup._setup.toString()));
         sb.append("</b></div>");
         sb.append("<table class='table table-striped table-bordered'>");
         int j=psetup._setup._header?0:1; // Skip auto-gen header in data[0]
@@ -197,33 +200,37 @@ public class Parse2 extends Request {
     }
   }
 
-  public static String link(Key k, String content) {
-    return link(k.toString(),content);
-  }
-  public static String link(String k, String content) {
-    RString rs = new RString("<a href='Parse2.query?%key_param=%$key'>%content</a>");
-    rs.replace("key_param", "");
-    rs.replace("key", k.toString());
-    rs.replace("content", content);
-    return rs.toString();
-  }
+  //public static String link(Key k, String content) {
+  //  return link(k.toString(),content);
+  //}
+  //public static String link(String k, String content) {
+  //  RString rs = new RString("<a href='Parse2.query?%key_param=%$key'>%content</a>");
+  //  rs.replace("key_param", "");
+  //  rs.replace("key", k.toString());
+  //  rs.replace("content", content);
+  //  return rs.toString();
+  //}
+
 
   @Override protected Response serve() {
     PSetup p = source_key.value();
-    CsvParser.Setup q = p._setup;
-    Key d = Key.make(dest.value());
+    CustomParser.ParserSetup setup = p._setup;
+    Key d = Key.make(dst_key.value());
     try {
       // Make a new Setup, with the 'header' flag set according to user wishes.
-      CsvParser.Setup new_setup = header.originalValue() == null // No user wish?
-        ? q                     // Default to heuristic
-        // Else use what user choose
-        : new CsvParser.Setup(q._separator,header.value(),q._data,q._numlines,q._bits);
-
+      if(header.originalValue() != null) // No user wish?
+         setup._header = header.value();
       Key[] keys = p._keys.toArray(new Key[p._keys.size()]);
-      job = ParseDataset2.forkParseDataset(d, keys,new_setup)._self.toString();
+      Key jobkey = ParseDataset2.forkParseDataset(d, keys, setup).job_key;
+      job = jobkey.toString();
       destination_key = d.toString();
 
-      return new Response(Status.done, this);
+      // Allow the user to specify whether to block synchronously for a response or not.
+      if (blocking.value()) {
+        Job.waitUntilJobEnded(jobkey);
+      }
+
+      return Progress2.redirect(this,jobkey,d);
     } catch (IllegalArgumentException e) {
       return Response.error(e.getMessage());
     } catch (Error e) {
@@ -237,15 +244,12 @@ public class Parse2 extends Request {
       setRefreshOnChange();
     }
 
-    @Override protected String   queryDescription() { return "Utilized separator"; }
+    @Override protected String   queryDescription() { return "ASCII character"; }
     @Override protected String[] selectValues()     { return DEFAULT_IDX_DELIMS;   }
     @Override protected String[] selectNames()      { return DEFAULT_DELIMS; }
     @Override protected Byte     defaultValue()     { return -1;             }
     @Override protected String   selectedItemValue(){ return value() != null ? value().toString() : defaultValue().toString(); }
-    @Override protected Byte parse(String input) throws IllegalArgumentException {
-      Byte result = Byte.valueOf(input);
-      return result;
-    }
+    @Override protected Byte parse(String input) { return Byte.valueOf(input); }
   }
 
   /** List of white space delimiters */

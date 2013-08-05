@@ -1,7 +1,5 @@
-import unittest
-import random, sys, time
+import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import as h2i, h2o_jobs
 
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
@@ -127,7 +125,7 @@ class Basic(unittest.TestCase):
             print "rfview", trial, "end on ", dataKeyTest, 'took', time.time() - start, 'seconds.'
 
             start = time.time()
-            predict = h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             print "predict", trial, "end on ", dataKeyTest, 'took', time.time() - start, 'seconds.'
 
             print "Trial #", trial, "completed"

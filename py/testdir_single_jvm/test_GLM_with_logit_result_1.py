@@ -1,5 +1,4 @@
-import unittest
-import random, sys, time, os, math
+import unittest, random, sys, time, math
 sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
@@ -98,7 +97,7 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_GLM_many_cols(self):
+    def test_GLM_with_logit_result_1(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (100000, 5, 'cA', 300), 

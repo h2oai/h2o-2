@@ -1,6 +1,6 @@
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
+import h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
 import time, random
 
 class Basic(unittest.TestCase):
@@ -52,15 +52,15 @@ class Basic(unittest.TestCase):
                 print csvFilename, 'H2O reports parse time:', parseKey['response']['time']
 
                 # h2o doesn't produce this, but h2o_import.py adds it for us.
-                print "Parse result['source_key']:", parseKey['source_key']
+                print "Parse result['python_source_key']:", parseKey['python_source_key']
                 print "Parse result['destination_key']:", parseKey['destination_key']
                 print "\n" + csvFilename
 
                 storeView = h2o.nodes[0].store_view()
                 ### print "storeView:", h2o.dump_json(storeView)
                 # h2o deletes key after parse now
-                ## print "Removing", parseKey['source_key'], "so we can re-import it"
-                ## removeKeyResult = h2o.nodes[0].remove_key(key=parseKey['source_key'])
+                ## print "Removing", parseKey['python_source_key'], "so we can re-import it"
+                ## removeKeyResult = h2o.nodes[0].remove_key(key=parseKey['python_source_key'])
                 ## print "removeKeyResult:", h2o.dump_json(removeKeyResult)
 
             print "\nTrial", trial, "completed\n"

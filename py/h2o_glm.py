@@ -14,8 +14,8 @@ def pickRandGlmParams(paramDict, params):
 
         if 'family' in params and 'link' in params: 
             # don't allow logit for poisson
-            if params['family'] == 'poisson':
-                if params['link'] in ('logit'):
+            if params['family'] is not None and params['family'] == 'poisson':
+                if params['link'] is not None and params['link'] in ('logit'):
                     params['link'] = None # use default link for poisson always
 
         # case only used if binomial? binomial is default if no family
@@ -37,6 +37,51 @@ def pickRandGlmParams(paramDict, params):
                     params['case'] -= 1
 
     return colX
+
+
+def simpleCheckGLMScore(self, glmScore, family='gaussian', allowFailWarning=False, **kwargs):
+    warnings = None
+    if 'warnings' in glmScore:
+        warnings = glmScore['warnings']
+        # stop on failed
+        x = re.compile("failed", re.IGNORECASE)
+        # don't stop if fail to converge
+        c = re.compile("converge", re.IGNORECASE)
+        for w in warnings:
+            print "\nwarning:", w
+            if re.search(x,w) and not allowFailWarning: 
+                if re.search(c,w):
+                    # ignore the fail to converge warning now
+                    pass
+                else: 
+                    # stop on other 'fail' warnings (are there any? fail to solve?
+                    raise Exception(w)
+
+    validation = glmScore['validation']
+    print "%15s %s" % ("err:\t", validation['err'])
+    print "%15s %s" % ("nullDev:\t", validation['nullDev'])
+    print "%15s %s" % ("resDev:\t", validation['resDev'])
+
+    # threshold only there if binomial?
+    # auc only for binomial
+    if family=="binomial":
+        print "%15s %s" % ("auc:\t", validation['auc'])
+        print "%15s %s" % ("threshold:\t", validation['threshold'])
+
+    if family=="poisson" or family=="gaussian":
+        print "%15s %s" % ("aic:\t", validation['aic'])
+
+    if math.isnan(validation['err']):
+        emsg = "Why is this err = 'nan'?? %6s %s" % ("err:\t", validation['err'])
+        raise Exception(emsg)
+
+    if math.isnan(validation['resDev']):
+        emsg = "Why is this resDev = 'nan'?? %6s %s" % ("resDev:\t", validation['resDev'])
+        raise Exception(emsg)
+
+    if math.isnan(validation['nullDev']):
+        emsg = "Why is this nullDev = 'nan'?? %6s %s" % ("nullDev:\t", validation['nullDev'])
+        raise Exception(emsg)
 
 def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False,
     prettyPrint=False, noPrint=False, maxExpectedIterations=None, **kwargs):
@@ -75,7 +120,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
 
             # if we hit the max_iter, that means it probably didn't converge. should be 1-maxExpectedIter
     if maxExpectedIterations is not None and iterations  > maxExpectedIterations:
-            raise Exception("GLM did iterations: %d which is greater than expected: %d" % (iterations, maxExpectedIterations) )
+            raise Exception("Convergence issue? GLM did iterations: %d which is greater than expected: %d" % (iterations, maxExpectedIterations) )
 
     # pop the first validation from the list
     validationsList = GLMModel['validations']
@@ -97,18 +142,6 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
             if len(xval_models) != 10:
                 raise Exception(str(len(xval_models))+" cross validation models returned. Default should be 10")
 
-    if math.isnan(validations['err']):
-        emsg = "Why is this err = 'nan'?? %6s %s" % ("err:\t", validations['err'])
-        raise Exception(emsg)
-
-    if math.isnan(validations['resDev']):
-        emsg = "Why is this resDev = 'nan'?? %6s %s" % ("resDev:\t", validations['resDev'])
-        raise Exception(emsg)
-
-    if math.isnan(validations['nullDev']):
-        emsg = "Why is this nullDev = 'nan'?? %6s %s" % ("nullDev:\t", validations['nullDev'])
-        raise Exception(emsg)
-
     print "GLMModel/validations"
     print "%15s %s" % ("err:\t", validations['err'])
     print "%15s %s" % ("nullDev:\t", validations['nullDev'])
@@ -122,6 +155,18 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
 
     if family=="poisson" or family=="gaussian":
         print "%15s %s" % ("aic:\t", validations['aic'])
+
+    if math.isnan(validations['err']):
+        emsg = "Why is this err = 'nan'?? %6s %s" % ("err:\t", validations['err'])
+        raise Exception(emsg)
+
+    if math.isnan(validations['resDev']):
+        emsg = "Why is this resDev = 'nan'?? %6s %s" % ("resDev:\t", validations['resDev'])
+        raise Exception(emsg)
+
+    if math.isnan(validations['nullDev']):
+        emsg = "Why is this nullDev = 'nan'?? %6s %s" % ("nullDev:\t", validations['nullDev'])
+        raise Exception(emsg)
 
     # get a copy, so we don't destroy the original when we pop the intercept
     coefficients = GLMModel['coefficients'].copy()
@@ -291,16 +336,21 @@ def simpleCheckGLMGrid(self, glmGridResult, colX=None, allowFailWarning=False, *
 
 # get input from this.
 #   (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
-#                h2o_cmd.columnInfoFromInspect(parseKey, exceptionOnMissingValues=False, timeoutSecs=300)
+#                h2o_cmd.columnInfoFromInspect(parseKey['destination_key', 
+#                exceptionOnMissingValues=False, timeoutSecs=300)
 
 def goodXFromColumnInfo(y, 
-    num_cols=None, missingValuesDict=None, constantValuesDict=None, enumSizeDict=None, colTypeDict=None, colNameDict=None, 
-    keepPattern=None, parseKey=None, timeoutSecs=120):
+    num_cols=None, missingValuesDict=None, constantValuesDict=None, enumSizeDict=None, 
+    colTypeDict=None, colNameDict=None, keepPattern=None, key=None, 
+    timeoutSecs=120, forRF=False, noPrint=False):
 
-    # if we pass a parseKey, means we want to get the info ourselves here
-    if parseKey is not None:
+    y = str(y)
+
+    # if we pass a key, means we want to get the info ourselves here
+    if key is not None:
         (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
-            h2o_cmd.columnInfoFromInspect(parseKey, exceptionOnMissingValues=False, timeoutSecs=timeoutSecs)
+            h2o_cmd.columnInfoFromInspect(key, exceptionOnMissingValues=False, 
+            timeoutSecs=timeoutSecs)
         num_cols = len(colNameDict)
 
     # now remove any whose names don't match the required keepPattern
@@ -312,40 +362,68 @@ def goodXFromColumnInfo(y,
     x = range(num_cols)
     # need to walk over a copy, cause we change x
     xOrig = x[:]
+    ignore_x = [] # for use by RF
     for k in xOrig:
-        if k == 5:
-            print "hello", colNameDict[k], k
         name = colNameDict[k]
         # remove it if it has the same name as the y output
-        if name == y:
-            print "Removing %d because name: %s matches output %s" % (k, name, y)
+        if str(k)== y: # if they pass the col index as y
+            if not noPrint:
+                print "Removing %d because name: %s matches output %s" % (k, str(k), y)
             x.remove(k)
+            # rf doesn't want it in ignore list
+            # ignore_x.append(k)
+        elif name == y: # if they pass the name as y 
+            if not noPrint:
+                print "Removing %d because name: %s matches output %s" % (k, name, y)
+            x.remove(k)
+            # rf doesn't want it in ignore list
+            # ignore_x.append(k)
 
         elif keepX is not None and not keepX.match(name):
-            print "Removing %d because name: %s doesn't match desired keepPattern %s" % (k, name, keepPattern)
+            if not noPrint:
+                print "Removing %d because name: %s doesn't match desired keepPattern %s" % (k, name, keepPattern)
             x.remove(k)
+            ignore_x.append(k)
 
-        elif k in constantValuesDict:
-            value = constantValuesDict[k]
-            print "Removing %d with name: %s because it has constant value: %s " % (k, name, str(value))
-            x.remove(k)
-
+        # missing values reports as constant also. so do missing first.
         # remove all cols with missing values
         # could change it against num_rows for a ratio
         elif k in missingValuesDict:
             value = missingValuesDict[k]
-            print "Removing %d with name: %s because it has %d missing values" % (k, name, value)
+            if not noPrint:
+                print "Removing %d with name: %s because it has %d missing values" % (k, name, value)
             x.remove(k)
+            ignore_x.append(k)
+
+        elif k in constantValuesDict:
+            value = constantValuesDict[k]
+            if not noPrint:
+                print "Removing %d with name: %s because it has constant value: %s " % (k, name, str(value))
+            x.remove(k)
+            ignore_x.append(k)
 
         # this is extra pruning..
         # remove all cols with enums, if not already removed
         elif k in enumSizeDict:
             value = enumSizeDict[k]
-            print "Removing %d %s because it has enums of size: %d" % (k, name, value)
+            if not noPrint:
+                print "Removing %d %s because it has enums of size: %d" % (k, name, value)
             x.remove(k)
+            ignore_x.append(k)
 
-    print "The pruned x has length", len(x)
+    if not noPrint:
+        print "x has", len(x), "cols"
+        print "ignore_x has", len(ignore_x), "cols"
     x = ",".join(map(str,x))
-    return x
+    ignore_x = ",".join(map(str,ignore_x))
+
+    if not noPrint:
+        print "\nx:", x
+        print "\nignore_x:", ignore_x
+
+    if forRF:
+        return ignore_x
+    else:
+        return x
 
 

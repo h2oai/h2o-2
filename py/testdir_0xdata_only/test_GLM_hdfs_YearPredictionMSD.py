@@ -1,11 +1,9 @@
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys, time, random, copy
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd
 import h2o_hosts
 import h2o_browse as h2b
 import h2o_import as h2i
-import time, random, copy
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -63,7 +61,7 @@ class Basic(unittest.TestCase):
 
             # different when n_foldsidation is used? No trainingErrorDetails?
             h2o.verboseprint("\nglm:", glm)
-            h2b.browseJsonHistoryAsUrlLastMatch("GLM")
+            ### h2b.browseJsonHistoryAsUrlLastMatch("GLM")
 
             GLMModel = glm['GLMModel']
             print "GLM time", GLMModel['time']

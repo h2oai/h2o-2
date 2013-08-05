@@ -10,11 +10,9 @@
 # Y = np.hstack((X,y))
 # np.savetxt('./1mx' + str(f) + '_hastie_10_2.data', Y, delimiter=',', fmt='%.2f');
 
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys, copy
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_glm, h2o_util, h2o_hosts
-import copy
-
 
 def glm_doit(self, csvFilename, csvPathname, timeoutSecs, pollTimeoutSecs, **kwargs):
     print "\nStarting GLM of", csvFilename
@@ -86,7 +84,7 @@ class Basic(unittest.TestCase):
 
     validations1 = {}
 
-    def test_A_1mx10_hastie_10_2(self):
+    def test_GLM_score_same(self):
         # gunzip it and cat it to create 2x and 4x replications in SYNDATASETS_DIR
         csvFilename = "1mx10_hastie_10_2.data.gz"
         csvPathname = h2o.find_dataset('logreg' + '/' + csvFilename)

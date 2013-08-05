@@ -1,7 +1,5 @@
-import unittest
-import random, sys, time, os
+import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
 
 def define_params():
@@ -36,7 +34,7 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_many_cols_with_syn(self):
+    def test_GLM_trisum(self):
         ### h2b.browseTheCloud()
 
         csvFilename = "logreg_trisum_int_cat_10000x10.csv"

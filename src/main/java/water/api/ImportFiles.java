@@ -5,7 +5,6 @@ import java.util.ArrayList;
 
 import water.Futures;
 import water.Key;
-import water.Weaver.Weave;
 import water.util.FileIntegrityChecker;
 
 public class ImportFiles extends Request {
@@ -15,29 +14,29 @@ public class ImportFiles extends Request {
   // This Request supports the HTML 'GET' command, and this is the help text
   // for GET.
   static final String DOC_GET =
-    "  Map a file from the local host filesystem into H2O memory.  Data is "+
-    "loaded lazily, when the Key is read (usually in a Parse command).  "+
-    "(Warning: Every host in the cluster must have this file visible locally!)";
+    "Map a file from the local host filesystem into H2O memory.  Data is "+
+    "loaded lazily, when the Key is read (usually in a Parse command, to build " +
+    "a Hex key).  (Warning: Every host in the cluster must have this file visible locally!)";
 
   // HTTP REQUEST PARAMETERS
-  @Weave(help="File or directory to import.")
+  @API(help="File or directory to import.")
   protected final ExistingFile path = new ExistingFile("path");
 
   // JSON OUTPUT FIELDS
-  @Weave(help="Files imported.  Imported files are merely Keys mapped over the existing files.  No data is loaded until the Key is used (usually in a Parse command).")
+  @API(help="Files imported.  Imported files are merely Keys mapped over the existing files.  No data is loaded until the Key is used (usually in a Parse command).")
   String[] files;
 
-  @Weave(help="Keys of imported files, Keys map 1-to-1 with imported files.")
+  @API(help="Keys of imported files, Keys map 1-to-1 with imported files.")
   String[] keys;
 
-  @Weave(help="File names that failed the integrity check, can be empty.")
+  @API(help="File names that failed the integrity check, can be empty.")
   String[] fails;
 
   @Override public String[] DocExampleSucc() { return new String[]{"path","smalldata/airlines"}; }
   @Override public String[] DocExampleFail() { return new String[]{}; }
 
   FileIntegrityChecker load(File path) {
-    return FileIntegrityChecker.check(path);
+    return FileIntegrityChecker.check(path,false);
   }
 
   @Override protected Response serve() {
@@ -59,12 +58,11 @@ public class ImportFiles extends Request {
     fails = afails.toArray(new String[0]);
     files = afiles.toArray(new String[0]);
     keys  = akeys .toArray(new String[0]);
-    return new Response(Response.Status.done, this);
+    return new Response(Response.Status.done, this, -1, -1, null);
   }
 
-  String parse() {
-    return "Parse.html";
-  }
+  // Auto-link to Parse
+  String parse() { return "Parse.html"; }
 
   // HTML builder
   @Override public boolean toHTML( StringBuilder sb ) {

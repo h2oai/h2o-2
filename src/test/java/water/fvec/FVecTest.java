@@ -27,7 +27,7 @@ public class FVecTest extends TestUtil {
     DKV.put(k, bv, fs);
     for(int i = 0; i < chunks.length; ++i){
       Key chunkKey = bv.chunkKey(i);
-      DKV.put(chunkKey, new Value(chunkKey,chunks[i].length,chunks[i],TypeMap.C1CHUNK,Value.ICE));
+      DKV.put(chunkKey, new Value(chunkKey,chunks[i].length,chunks[i],TypeMap.C1NCHUNK,Value.ICE));
     }
     fs.blockForPending();
     return k;

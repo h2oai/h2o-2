@@ -1,7 +1,5 @@
-import unittest
-import random, sys, time
+import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import as h2i, h2o_exec
 import h2o_browse as h2b
 
@@ -41,10 +39,11 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_rf_covtype_train_oobe2(self):
-        print "\nUse randomBitVector and filter to separate the dataset randomly"
+    def test_rf_covtype_train_oobe3(self):
+        print "\nUse randomFilter to sample the dataset randomly. then slice it"
         importFolderPath = "/home/0xdiag/datasets/standard"
         csvFilename = 'covtype.data'
         csvPathname = importFolderPath + "/" + csvFilename
@@ -134,7 +133,7 @@ class Basic(unittest.TestCase):
             rfv = h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
 
-            h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
+            h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
 
             fullScorePctRight = 100 * (1.0 - rfv['confusion_matrix']['classification_error'])
             self.assertAlmostEqual(fullScorePctRight,expectScorePctRightList[trial],

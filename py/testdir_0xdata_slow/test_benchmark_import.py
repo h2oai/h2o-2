@@ -1,8 +1,7 @@
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys, random, logging
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_glm
 import h2o_exec as h2e, h2o_jobs
-import time, random, logging
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -24,19 +23,6 @@ class Basic(unittest.TestCase):
         avgSynSize = 4020000
         covtype200xSize = 15033863400
         synSize =  183
-        if 1==0:
-            importFolderPath = '/home/0xdiag/datasets/10k_small_gz'
-            print "Using .gz'ed files in", importFolderPath
-            csvFilenameAll = [
-                # this should hit the "more" files too?
-                ("00[0-4][0-9]_syn.csv.gz", "file_50.dat.gz", 50 * synSize , 700),
-                ("[1][1][0-9][0-9]_.*", "file_100.dat.gz", 100 * synSize , 700),
-                ("[1][0-4][0-9][0-9]_.*", "file_500.dat.gz", 500 * synSize , 700),
-                ("[1][0-9][0-9][0-9]_.*", "file_1000.dat.gz", 1000 * synSize , 700),
-                ("[0-4][0-9][0-9][0-9]_.*", "file_5000.dat.gz", 5000 * synSize , 700),
-                ("[0-9][0-9][0-9][0-9]_.*", "file_10000.dat.gz", 10000 * synSize , 700),
-            ]
-
         if 1==0:
             importFolderPath = '/home/0xdiag/datasets/more1_1200_link'
             print "Using .gz'ed files in", importFolderPath
@@ -93,14 +79,6 @@ class Basic(unittest.TestCase):
                 ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
                 ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
                 ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
-            ]
-
-        if 1==0:
-            importFolderPath = '/home/0xdiag/datasets/more1_300_link'
-            print "Using .gz'ed files in", importFolderPath
-            csvFilenameAll = [
-                # this should hit the "more" files too?
-                ("*.dat.gz", "file_300.dat.gz", 300 * avgMichalSize, 3600),
             ]
 
         if 1==0:
@@ -291,7 +269,8 @@ class Basic(unittest.TestCase):
                 # BUG here?
                 if not noPoll:
                     # We should be able to see the parse result?
-                    h2o_cmd.check_enums_from_inspect(parseKey)
+                    h2o_cmd.columnInfoFromInspect(parseKey['destination_key'], exceptionOnMissingValues=False)
+
                         
                 # the nflx data doesn't have a small enough # of classes in any col
                 # use exec to randomFilter out 200 rows for a quick RF. that should work for everyone?
@@ -334,8 +313,8 @@ class Basic(unittest.TestCase):
 
                 #**********************************************************************************
 
-                h2o_cmd.check_key_distribution()
-                h2o_cmd.delete_csv_key(csvFilename, importFolderResult)
+                h2o_cmd.checkKeyDistribution()
+                h2o_cmd.deleteCsvKey(csvFilename, importFolderResult)
                 ### time.sleep(3600)
                 h2o.tear_down_cloud()
                 if not localhost:
