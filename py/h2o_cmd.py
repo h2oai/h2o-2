@@ -406,9 +406,8 @@ def infoFromInspect(inspect, csvPathname):
     response = inspect['response']
     ptime = response['time']
 
-    print "\n" + csvPathname, "num_cols: %s, num_rows: %s, row_size: %s, ptype: %s, \
-           value_size_bytes: %s, time: %s" % \
-           (num_cols, num_rows, row_size, ptype, value_size_bytes, ptime)
+    print "\n" + csvPathname, "num_cols: %s, num_rows: %s, row_size: %s, ptype: %s, value_size_bytes: %s" % \
+           (num_cols, num_rows, row_size, ptype, value_size_bytes)
     return missingValuesList
 
 def infoFromSummary(summaryResult, noPrint=False):

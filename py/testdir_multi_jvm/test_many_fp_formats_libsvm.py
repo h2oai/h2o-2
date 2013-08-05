@@ -101,8 +101,8 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel, distrib
 
     valMin = -1e2
     valMax =  1e2
-    classMin = -36
-    classMax = 36
+    classMin = 0
+    classMax = 255
     dsf = open(csvPathname, "w+")
     synColSumDict = {0: 0} # guaranteed to have col 0 for output
     # even though we try to get a max colCount with random, we might fall short
@@ -236,7 +236,7 @@ class Basic(unittest.TestCase):
                     # k should be integers that match the number of cols
                     self.assertTrue(k>=0 and k<len(colResultList))
                     compare = colResultList[k]
-                    print "\nComparing col sums:", v, compare
+                    print "\nComparing col", k, "sums:", v, compare
                     # Even though we're comparing floating point sums, the operations probably should have
                     # been done in same order, so maybe the comparison can be exact (or not!)
                     self.assertAlmostEqual(v, compare, places=0, 
