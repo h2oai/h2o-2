@@ -91,9 +91,22 @@ class Basic(unittest.TestCase):
                 inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=timeoutSecs)
                 num_cols = inspect['num_cols']
                 num_rows = inspect['num_rows']
+                row_size = inspect['row_size']
+                value_size_bytes = inspect['value_size_bytes']
                 print "\n" + csvPathname, \
-                    "    num_rows:", "{:,}".format(inspect['num_rows']), \
-                    "    num_cols:", "{:,}".format(inspect['num_cols'])
+                    "    num_rows:", "{:,}".format(num_rows), \
+                    "    num_cols:", "{:,}".format(num_cols), \
+                    "    value_size_bytes:", "{:,}".format(value_size_bytes), \
+                    "    row_size:", "{:,}".format(row_size)
+
+                expectedRowSize = num_cols * 1 # plus output
+                expectedValueSize = expectedRowSize * num_rows
+                self.assertEqual(row_size, expectedRowSize,
+                    msg='row_size %s is not expected num_cols * 1 byte: %s' % \
+                    (row_size, expectedRowSize))
+                self.assertEqual(value_size_bytes, expectedValueSize,
+                    msg='value_size_bytes %s is not expected row_size * rows: %s' % \
+                    (value_size_bytes, expectedValueSize))
 
 
                 summaryResult = h2o_cmd.runSummary(key=key2, timeoutSecs=timeoutSecs)
@@ -166,9 +179,12 @@ class Basic(unittest.TestCase):
                     self.assertEqual(zeros, synZeros,
                         msg='col %s zeros %s is not equal to generated zeros count %s' % (name, zeros, synZeros))
 
+                    self.assertEqual(stype, 'number',
+                        msg='col %s type %s is not equal to %s' % (name, stype, 'number'))
+
                     # our random generation will have some variance for col 1. so just check to 2 places
                     if synSigma:
-                        self.assertAlmostEqual(float(sigma), synSigma, places=2,
+                        self.assertAlmostEqual(float(sigma), synSigma, delta=0.03,
                             msg='col %s sigma %s is not equal to generated sigma %s' % (name, sigma, synSigma))
 
                     if CHECK_MAX:
