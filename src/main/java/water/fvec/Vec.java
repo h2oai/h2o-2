@@ -102,6 +102,21 @@ public class Vec extends Iced {
   /** Map the integer value for a enum/factor/catagorical to it's String */
   public String domain(long i) { return _domain[(int)i]; }
 
+  /** Return an array of domains.  This is eagerly manifested for
+   *  enum/catagorical columns, and lazily manifested for integer columns with
+   *  a min-to-max range of < 10000.  */
+  public String[] domain() { 
+    if( _domain != null ) return _domain;
+    assert _dtype == DType.I;
+    long min = (long)min();
+    long max = (long)max();
+    int len = (int)(max-min+1);
+    _domain = new String[len];
+    for( int i=0; i<len; i++ )
+      _domain[i] = Long.toString(i+min);
+    return _domain; 
+  }
+
   /** Default read/write behavior for Vecs.  File-backed Vecs are read-only. */
   protected boolean readable() { return true ; }
   /** Default read/write behavior for Vecs.  AppendableVecs are write-only. */

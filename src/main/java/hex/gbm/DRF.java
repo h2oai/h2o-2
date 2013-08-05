@@ -14,6 +14,9 @@ import water.util.Log;
 public class DRF extends Job {
   public static final String KEY_PREFIX = "__DRFModel_";
 
+  long _cm[/*actual*/][/*predicted*/]; // Confusion matrix
+  public long[][] cm() { return _cm; }
+
   public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
   private DRF(Key dest, Frame fr) { super("DRF "+fr, dest); }
   // Called from a non-FJ thread; makea a DRF and hands it over to FJ threads
@@ -89,17 +92,12 @@ public class DRF extends Job {
 
       // Remove temp vectors; cleanup the Frame
       while( fr.numCols() > ncols+1 )
-        fr.remove(fr.numCols()-1);
+        UKV.remove(fr.remove(fr.numCols()-1)._key);
     }
     Log.info(Sys.DRF__,"DRF done in "+t_drf);
 
     // One more pass for final prediction error
-    Timer t_score = new Timer();
-    /*junk?*/    for( int t=0; t<ntrees; t++ ) fr.add("NIDs"+t,nids[t]);
-    new BulkScore(trees,ncols,numClasses,ymin,sampleRate).doAll(fr).report( Sys.DRF__, nrows, depth );
-
-    while( fr.numCols() > ncols+1 )
-      UKV.remove(fr.remove(fr.numCols()-1)._key);
+    _cm = new BulkScore(trees,ncols,numClasses,ymin,sampleRate).doAll(fr).report( Sys.DRF__, nrows, depth )._cm;
   }
 
   // ----

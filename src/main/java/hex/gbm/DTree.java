@@ -387,8 +387,11 @@ class DTree extends Iced {
     // training data is handy, i.e., scoring during & after training.
     // Pass in a 1.0 if turned off.
     final float _rate;
-    double _sum;
-    long _err;
+    // OUTPUT fields
+    long _cm[/*actual*/][/*predicted*/]; // Confusion matrix
+    double _sum;                // Sum-squared-error
+    long _err;                  // Total absolute errors
+
     BulkScore( DTree trees[], int ncols, int numClasses, int ymin, double sampleRate ) { 
       _trees = trees; _ncols = ncols; 
       _numClasses = numClasses; _ymin = ymin; 
@@ -396,10 +399,8 @@ class DTree extends Iced {
     }
 
     @Override public void map( Chunk chks[] ) {
-      assert _ncols+1/*response variable*/+_trees.length == chks.length 
-        : "Missing columns?  ncols="+_ncols+", 1 for response, ntrees="+_trees.length+", and found "+chks.length+" vecs";
       Chunk ys = chks[_ncols];
-      long clss[] = new long[_numClasses]; // Shared array for computing classes
+      _cm = new long[_numClasses][_numClasses];
 
       // Get an array of RNGs to replay the sampling in reverse, only for OOBEE.
       // Note the fairly expense MerseenTwisterRNG built per-tree (per-chunk).
@@ -411,12 +412,20 @@ class DTree extends Iced {
       }
 
       // Score all Rows
+      long clss[] = new long[_numClasses]; // Shared temp array for computing classes
       for( int i=0; i<ys._len; i++ ) {
         double err = score0( chks, i, ys.at0(i), clss, rands );
         _sum += err*err;        // Squared error
       }
     }
-    @Override public void reduce( BulkScore t ) { _sum += t._sum; _err += t._err; }
+
+    @Override public void reduce( BulkScore t ) { 
+      _sum += t._sum; 
+      _err += t._err; 
+      for( int i=0; i<_numClasses; i++ )
+        for( int j=0; j<_numClasses; j++ )
+          _cm[i][j] += t._cm[i][j];
+    }
 
     // Return a relative error.  For regression it's y-mean.  For classification, 
     // it's the %-tage of the response class out of all rows in the leaf, plus
@@ -467,6 +476,7 @@ class DTree extends Iced {
         if( rows == 0 ) return 0;  // OOBEE: all rows trained, so no rows scored
         int ycls = (int)y-_ymin;   // Zero-based response class
         if( best != ycls ) _err++; // Absolute prediction error
+        _cm[ycls][best]++;         // Confusion Matrix
         return (double)(rows-clss[ycls])/rows; // Error
       }
     }
@@ -503,12 +513,13 @@ class DTree extends Iced {
       return sum;
     }
 
-    public void report( Sys tag, long nrows, int depth ) {
+    public BulkScore report( Sys tag, long nrows, int depth ) {
       int lcnt=0;
       for( int t=0; t<_trees.length; t++ ) lcnt += _trees[t]._len;
       Log.info(tag,"============================================================== ");
       Log.info(tag,"Average squared prediction error for tree of depth "+depth+" is "+(_sum/nrows));
       Log.info(tag,"Total of "+_err+" errors on "+nrows+" rows, with "+_trees.length+" trees (average of "+((double)lcnt/_trees.length)+" nodes)");
+      return this;
     }
   }
 }
