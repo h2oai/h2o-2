@@ -17,7 +17,7 @@ import javax.swing.JFrame;
 import water.util.Log;
 import water.util.Utils;
 
-public class Mnist8m extends MnistNeuralNetTest {
+public class Mnist8m extends NeuralNetMnistTest {
   static final String IMAGES_SOURCE = "../datasets/mnist8m/train8m-images-idx3-ubyte";
   static final String LABELS_SOURCE = "../datasets/mnist8m/train8m-labels-idx1-ubyte";
   static final String IMAGES_SHUFFLED = "../mnist8m/shuffled-images";
@@ -117,12 +117,12 @@ public class Mnist8m extends MnistNeuralNetTest {
       for( int i = 0; i < _ls.length; i++ ) {
         System.out.println("Training level " + i);
         long time = System.nanoTime();
-        preTrain(i);
+        //preTrain(i);
         System.out.println((int) ((System.nanoTime() - time) / 1e6) + " ms");
       }
     }
 
-    Trainer trainer = new ParallelTrainers(_ls);
+    ParallelTrainers trainer = new ParallelTrainers(_ls);
     trainer.start();
     //Trainer trainer = new Trainer.Direct(_ls, _labels);
     monitor(trainer);

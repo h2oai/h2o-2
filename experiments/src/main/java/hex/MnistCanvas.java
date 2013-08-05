@@ -18,7 +18,7 @@ public final class MnistCanvas extends Canvas {
   int _level = 1;
 
   public static void main(String[] args) throws Exception {
-    MnistNeuralNetTest mnist = new MnistNeuralNetTest();
+    NeuralNetMnistTest mnist = new NeuralNetMnistTest();
     //MnistNeuralNetTest2 mnist = new MnistNeuralNetTest2();
     mnist.run();
   }
@@ -66,16 +66,16 @@ public final class MnistCanvas extends Canvas {
 
     // Side
     {
-      BufferedImage in = new BufferedImage(MnistNeuralNetTest.EDGE, MnistNeuralNetTest.EDGE, BufferedImage.TYPE_INT_RGB);
+      BufferedImage in = new BufferedImage(NeuralNetMnistTest.EDGE, NeuralNetMnistTest.EDGE, BufferedImage.TYPE_INT_RGB);
       WritableRaster r = in.getRaster();
 
       // Input
-      int[] pix = new int[MnistNeuralNetTest.PIXELS];
+      int[] pix = new int[NeuralNetMnistTest.PIXELS];
       _input._n = rand;
       _input.fprop(0, _input._a.length);
       for( int i = 0; i < pix.length; i++ )
         pix[i] = (int) (_input._a[i] * 255f);
-      r.setDataElements(0, 0, MnistNeuralNetTest.EDGE, MnistNeuralNetTest.EDGE, pix);
+      r.setDataElements(0, 0, NeuralNetMnistTest.EDGE, NeuralNetMnistTest.EDGE, pix);
       g.drawImage(in, pad, pad, null);
 
       // Labels
@@ -118,7 +118,7 @@ public final class MnistCanvas extends Canvas {
 //    }
 
     // Weights
-    int buf = MnistNeuralNetTest.EDGE + pad + pad;
+    int buf = NeuralNetMnistTest.EDGE + pad + pad;
     Layer layer = _trainer.layers()[_level];
     double mean = 0;
     int n = layer._w.length;
@@ -148,10 +148,10 @@ public final class MnistCanvas extends Canvas {
           start[i] = ((int) Math.min(-w, 255)) << 16;
       }
 
-      BufferedImage out = new BufferedImage(MnistNeuralNetTest.EDGE, MnistNeuralNetTest.EDGE,
+      BufferedImage out = new BufferedImage(NeuralNetMnistTest.EDGE, NeuralNetMnistTest.EDGE,
           BufferedImage.TYPE_INT_RGB);
       WritableRaster r = out.getRaster();
-      r.setDataElements(0, 0, MnistNeuralNetTest.EDGE, MnistNeuralNetTest.EDGE, start);
+      r.setDataElements(0, 0, NeuralNetMnistTest.EDGE, NeuralNetMnistTest.EDGE, start);
 
       BufferedImage resized = new BufferedImage(edge, edge, BufferedImage.TYPE_INT_RGB);
       Graphics2D g2 = resized.createGraphics();

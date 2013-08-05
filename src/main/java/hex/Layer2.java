@@ -4,6 +4,8 @@ import hex.rng.MersenneTwisterRNG;
 
 import java.util.Random;
 
+import water.fvec.Frame;
+
 /**
  * Neural network layer, can be used as one level of Perceptron, AA or RBM.
  */
@@ -108,8 +110,8 @@ public abstract class Layer2 {
   }
 
   public static abstract class Input extends Layer2 {
-    int _count;
-    int _n;
+    long _count;
+    long _n;
 
     public Input() {
     }
@@ -129,6 +131,25 @@ public abstract class Layer2 {
     }
   }
 
+  public static class FrameInput extends Input {
+    private final Frame _frame;
+
+    public FrameInput(Frame frame) {
+      super(frame.numCols());
+      _frame = frame;
+      _count = frame.numRows();
+    }
+
+    @Override int label() {
+      return (int) _frame._vecs[_frame._vecs.length - 1].at8(_n);
+    }
+
+    @Override void fprop(int off, int len) {
+      for( int i = 0; i < _frame._vecs.length - 1; i++ )
+        _a[i] = _frame._vecs[i].at8(_n);
+    }
+  }
+
   public static class Tanh extends Layer2 {
     public Tanh() {
     }
@@ -143,7 +164,6 @@ public abstract class Layer2 {
         for( int i = 0; i < _in._a.length; i++ )
           _a[o] += _w[o * _in._a.length + i] * _in._a[i];
         _a[o] += _b[o];
-        //_a[o] = (float) (1.7159 * Math.tanh(0.66666667 * _a[o]));
         _a[o] = (float) Math.tanh(_a[o]);
       }
     }
@@ -152,7 +172,6 @@ public abstract class Layer2 {
       for( int o = off; o < off + len; o++ ) {
         float d = _e[o] * (1 - _a[o] * _a[o]);
         float u = _r * d;
-        // float d = (float) (0.66666667 / 1.7159 * (1.7159 + _a[o]) * (1.7159 - _a[o]));
         for( int i = 0; i < _in._a.length; i++ ) {
           _w[o * _in._a.length + i] += u * _in._a[i];
           if( _in._e != null ) {
@@ -224,12 +243,12 @@ public abstract class Layer2 {
     float[] h2 = new float[_b.length];
 //    fprop(v2, h2);
 
-    for( int o = 0; o < _b.length; o++ )
-      for( int i = 0; i < _v.length; i++ )
-        _gw[o * _v.length + i] += _rate * ((h1[o] * v1[i]) - (h2[o] * v2[i]));
-
-    for( int o = 0; o < _gb.length; o++ )
-      _gb[o] += _rate * (h1[o] - h2[o]);
+//    for( int o = 0; o < _b.length; o++ )
+//      for( int i = 0; i < _v.length; i++ )
+//        _gw[o * _v.length + i] += _rate * ((h1[o] * v1[i]) - (h2[o] * v2[i]));
+//
+//    for( int o = 0; o < _gb.length; o++ )
+//      _gb[o] += _rate * (h1[o] - h2[o]);
 
     for( int i = 0; i < _gv.length; i++ )
       _gv[i] += _rate * (v1[i] - v2[i]);

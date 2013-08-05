@@ -9,7 +9,7 @@ import java.util.zip.GZIPInputStream;
 
 import water.util.Utils;
 
-public class MnistNeuralNetTest2 {
+public class NeuralNetMnistTest2 {
   static final int PIXELS = 784, EDGE = 28;
   static final String PATH = "smalldata/mnist70k/";
   static final DecimalFormat _format = new DecimalFormat("0.000");
@@ -239,7 +239,7 @@ public class MnistNeuralNetTest2 {
     Error error = new Error();
     int correct = 0;
     for( int n = 0; n < length; n++ ) {
-      if( MnistNeuralNetTest2.test(clones, n, error) )
+      if( NeuralNetMnistTest2.test(clones, n, error) )
         correct++;
     }
     String pct = _format.format(((length - correct) * 100f / length));

@@ -55,7 +55,7 @@ public class Mnist8mSearch {
 
     ls[0] = new TestInput();
     ls[1]._in = ls[0];
-    count = MnistNeuralNetTest._test._labels.length;
+    count = NeuralNetMnistTest._test._labels.length;
     correct = 0;
     for( int n = 0; n < count; n++ ) {
       if( Mnist8m.test(ls, n, null) ) {
