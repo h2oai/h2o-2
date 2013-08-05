@@ -1,9 +1,7 @@
-import os, json, unittest, time, shutil, sys, random
+import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_kmeans
 import h2o_browse as h2b, h2o_import as h2i
-
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -54,7 +52,9 @@ class Basic(unittest.TestCase):
             kwargs = {
                 'cols': None,
                 'epsilon': 1e-4,
-                'k': 2
+                'k': 2, 
+                # reuse the same seed, to get deterministic results (otherwise sometimes fails
+                'seed': 265211114317615310,
             }
 
             start = time.time()
@@ -64,7 +64,7 @@ class Basic(unittest.TestCase):
             print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
-            centers = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
+            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
 
 if __name__ == '__main__':
     h2o.unit_main()

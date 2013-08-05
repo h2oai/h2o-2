@@ -1,7 +1,5 @@
-import unittest
-import random, sys, time
+import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_rf, h2o_hosts
 
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
@@ -102,7 +100,7 @@ class Basic(unittest.TestCase):
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
             # new web page for predict? throw it in here for now
             start = time.time()
-            predict = h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             elapsed = time.time() - start
             print "predict end on ", dataKeyTest, 'took', elapsed, 'seconds.'
 
@@ -110,7 +108,7 @@ class Basic(unittest.TestCase):
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
             start = time.time()
-            predict = h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             elapsed = time.time() - start
             print "predict end on ", dataKeyTest, 'took', elapsed, 'seconds.'
 
@@ -118,7 +116,7 @@ class Basic(unittest.TestCase):
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, 
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
             start = time.time()
-            predict = h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             elapsed = time.time() - start
             print "predict end on ", dataKeyTest, 'took', elapsed, 'seconds.'
 
@@ -127,7 +125,7 @@ class Basic(unittest.TestCase):
             h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
             start = time.time()
-            predict = h2o.nodes[0].generate_predictions(model_key=model_key, key=dataKeyTest)
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             elapsed = time.time() - start
             print "predict end on ", dataKeyTest, 'took', elapsed, 'seconds.'
 

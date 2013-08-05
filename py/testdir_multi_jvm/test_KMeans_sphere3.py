@@ -1,9 +1,6 @@
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys, random, math
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_kmeans, h2o_hosts
-from operator import itemgetter
-import random
-import math
 
 # a truly uniform sphere
 # http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution
@@ -92,28 +89,25 @@ class Basic(unittest.TestCase):
         print "\nStarting", csvFilename
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
 
-        kwargs = {'k': 3, 'epsilon': 1e-6, 'cols': None, 'destination_key': 'spheres3.hex'}
+        # reuse the same seed, to get deterministic results (otherwise sometimes fails
+        kwargs = {'k': 3, 'epsilon': 1e-6, 'cols': None, 'destination_key': 'spheres3.hex', 'seed': 265211114317615310}
+
         timeoutSecs = 30
         start = time.time()
         kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
         elapsed = time.time() - start
         print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 
-        centers = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
-        # cluster centers can return in any order
-        centersSorted = sorted(centers, key=itemgetter(0))
+        (centers, tupleResultList)  = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
 
-        self.assertAlmostEqual(centersSorted[0][0],100,delta=.2)
-        self.assertAlmostEqual(centersSorted[1][0],200,delta=.2)
-        self.assertAlmostEqual(centersSorted[2][0],300,delta=.2)
-
-        self.assertAlmostEqual(centersSorted[0][1],100,delta=.2)
-        self.assertAlmostEqual(centersSorted[1][1],200,delta=.2)
-        self.assertAlmostEqual(centersSorted[2][1],300,delta=.2)
-
-        self.assertAlmostEqual(centersSorted[0][2],100,delta=.2)
-        self.assertAlmostEqual(centersSorted[1][2],200,delta=.2)
-        self.assertAlmostEqual(centersSorted[2][2],300,delta=.2)
+        expected = [
+            ([100, 100, 100], 1000000,   60028168),
+            ([200, 200, 200], 2000000,  479913618),
+            ([300, 300, 300], 3000000, 1619244994),
+        ]
+        # all are multipliers of expected tuple value
+        allowedDelta = (0.01, 0.01, 0.01) 
+        h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=0)
 
 if __name__ == '__main__':
     h2o.unit_main()

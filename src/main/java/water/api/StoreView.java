@@ -4,7 +4,7 @@ package water.api;
 import java.util.Arrays;
 
 import water.*;
-import water.parser.CsvParser;
+import water.parser.*;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -120,13 +120,13 @@ public class StoreView extends Request {
         }
       }
     }
-
     // If not a proper ValueArray, estimate by parsing the first 1meg chunk
     if( rows == -1 ) {
-      CsvParser.Setup setup = Inspect.csvGuessValue(val);
+      byte [] bits = val.getFirstBytes();
+      CustomParser.ParserSetup setup = ParseDataset.guessSetup(bits);
       if( setup._data != null && setup._data[1].length > 0 ) { // Able to parse sanely?
         int zipped_len = val.getFirstBytes().length;
-        double bytes_per_row = (double) zipped_len / setup._numlines;
+        double bytes_per_row = (double) zipped_len / setup._data.length;
         rows = (long) (val.length() / bytes_per_row);
         cols = setup._data[1].length;
         result.addProperty(ROWS, "~" + rows);
@@ -146,7 +146,7 @@ public class StoreView extends Request {
       }
       // Now the first 100 bytes of Value as a String
       StringBuilder sb = new StringBuilder();
-      byte[] b = setup._bits;   // Unzipped bits, if any
+      byte[] b = bits;   // Unzipped bits, if any
       int newlines=0;
       int len = Math.min(b.length,100);
       for( int i=0; i<len; i++ ) {

@@ -591,6 +591,12 @@ public final class AutoBuffer {
     for( Iced[] f : fs ) putA(f);
     return this;
   }
+  public AutoBuffer putAAA(Iced[][][] fs) {
+    if( fs == null ) return put4(-1);
+    put4(fs.length);
+    for( Iced[][] f : fs ) putAA(f);
+    return this;
+  }
 
   public <T extends Freezable> T get(Class<T> t) {
     short id = (short)get2();
@@ -613,6 +619,14 @@ public final class AutoBuffer {
     Class<T[]> tcA = (Class<T[]>) Array.newInstance(tc, 0).getClass();
     T[][] ts = (T[][]) Array.newInstance(tcA, len);
     for( int i = 0; i < len; ++i ) ts[i] = getA(tc);
+    return ts;
+  }
+  public <T extends Iced> T[][][] getAAA(Class<T> tc) {
+    int len = get4(); if( len == -1 ) return null;
+    Class<T[]  > tcA  = (Class<T[]  >) Array.newInstance(tc , 0).getClass();
+    Class<T[][]> tcAA = (Class<T[][]>) Array.newInstance(tcA, 0).getClass();
+    T[][][] ts = (T[][][]) Array.newInstance(tcAA, len);
+    for( int i = 0; i < len; ++i ) ts[i] = getAA(tc);
     return ts;
   }
 
@@ -938,7 +952,7 @@ public final class AutoBuffer {
 
   // ==========================================================================
   // JSON Autobuffer printers
-  
+
   private AutoBuffer putStr2( String s ) {
     byte[] b = s.getBytes();
     int off=0;
@@ -956,6 +970,9 @@ public final class AutoBuffer {
   public AutoBuffer putJSONStr( String s ) {
     return s==null ? putNULL() : put1('"').putStr2(s).put1('"');
   }
+  public AutoBuffer putJSONStr( String name, String value ) {
+    return putJSONStr(name).put1(':').putJSONStr(value);
+  }
 
   public AutoBuffer putJSONAStr(String name, String[] fs) {
     putJSONStr(name).put1(':');
@@ -967,4 +984,28 @@ public final class AutoBuffer {
     }
     return put1(']');
   }
+
+  public AutoBuffer putJSON( Iced ice ) {
+    return ice == null ? putNULL() : ice.writeJSON(this);
+  }
+  public AutoBuffer putJSONA( Iced fs[] ) {
+    if( fs == null ) return putNULL();
+    put1('[');
+    for( int i=0; i<fs.length; i++ ) {
+      if( i>0 ) put1(',');
+      putJSON(fs[i]);
+    }
+    return put1(']');
+  }
+
+  public AutoBuffer putEnumJSON( Enum e ) {
+    return e==null ? putNULL() : put1('"').putStr2(e.toString()).put1('"');
+  }
+
+  public AutoBuffer putJSON  ( String name, Iced f   ) { return putJSONStr(name).put1(':').putJSON (f); }
+  public AutoBuffer putJSONA ( String name, Iced f[] ) { return putJSONStr(name).put1(':').putJSONA(f); }
+  public AutoBuffer putJSON8d( String name, double d ) { return putJSONStr(name).put1(':').putStr2(Double .toString(d)); }
+  public AutoBuffer putJSON8 ( String name, long l   ) { return putJSONStr(name).put1(':').putStr2(Long   .toString(l)); }
+  public AutoBuffer putJSON4 ( String name, int i    ) { return putJSONStr(name).put1(':').putStr2(Integer.toString(i)); }
+  public AutoBuffer putEnumJSON( String name, Enum e ) { return putJSONStr(name).put1(':').putEnumJSON(e); }
 }

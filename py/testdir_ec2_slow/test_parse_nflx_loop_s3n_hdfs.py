@@ -131,15 +131,14 @@ class Basic(unittest.TestCase):
                             importResult = h2o.nodes[0].import_hdfs(URI)
 
                         foundKeys = 0
-                        for key in importResult['keys']:
+                        for s in importResult['succeeded']:
                             # just print the first tile
                             # if 'nflx' in key and 'file_1.dat.gz' in key: 
-                            if csvFilepattern in key:
+                            if csvFilepattern in s['key']:
                                 # should be s3n://home-0xdiag-datasets/manyfiles-nflx-gz/file_1.dat.gz
-                                print "example file we'll use:", key
+                                print "example file we'll use:", s['key']
                                 break
                             else:
-                                ### print key
                                 pass
                             foundKeys += 1
 
@@ -212,10 +211,10 @@ class Basic(unittest.TestCase):
                         print l
                         h2o.cloudPerfH2O.message(l)
 
-                    # BUG here?
+                    y = 378
                     if not noPoll:
-                        # We should be able to see the parse result?
-                        h2o_cmd.check_enums_from_inspect(parseKey)
+                        x = h2o_glm.goodXFromColumnInfo(y, key=parseKey['destination_key'], timeoutSecs=300)
+
 
                     #**********************************************************************************
                     # Do GLM too
@@ -224,13 +223,13 @@ class Basic(unittest.TestCase):
                         # these are all the columns that are enums in the dataset...too many for GLM!
                         x = range(542) # don't include the output column
                         # remove the output too! (378)
-                        for i in [3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 16, 17, 18, 19, 20, 424, 425, 426, 540, 541, 378]:
+                        for i in [3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 16, 17, 18, 19, 20, 424, 425, 426, 540, 541, y]:
                             x.remove(i)
                         x = ",".join(map(str,x))
 
                         if DO_GLM:
                             algo = 'GLM'
-                            GLMkwargs = {'x': x, 'y': 378, 'case': 15, 'case_mode': '>', 'family': 'binomial',
+                            GLMkwargs = {'x': x, 'y': y, 'case': 15, 'case_mode': '>', 'family': 'binomial',
                                 'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
                             start = time.time()
                             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, 
@@ -242,7 +241,7 @@ class Basic(unittest.TestCase):
 
                         else:
                             algo = 'GLMGrid'
-                            GLMkwargs = {'x': x, 'y': 378, 'case': 15, 'case_mode': '>', 'family': 'binomial',
+                            GLMkwargs = {'x': x, 'y': y, 'case': 15, 'case_mode': '>', 'family': 'binomial',
                                 'max_iter': 10, 'n_folds': 1, 'beta_epsilon': 1e-4,
                                 'lambda': '1e-4',
                                 'alpha': '0,0.5',
@@ -272,8 +271,8 @@ class Basic(unittest.TestCase):
                     # we're deleting the keys in the initial import. We leave the keys we created
                     # by the parse. We use unique dest keys for those, so no worries.
                     # Leaving them is good because things fill up! (spill)
-                    h2o_cmd.check_key_distribution()
-                    h2o_cmd.delete_csv_key(csvFilename, importResult)
+                    h2o_cmd.checkKeyDistribution()
+                    h2o_cmd.deleteCsvKey(csvFilename, importResult)
 
                 h2o.tear_down_cloud()
                 # sticky ports? wait a bit.

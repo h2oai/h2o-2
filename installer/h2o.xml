@@ -1,6 +1,6 @@
 <project>
     <shortName>h2o</shortName>
-    <fullName>H2O</fullName>
+    <fullName>h2o</fullName>
     <version>1.0</version>
     <componentList>
         <component>
@@ -33,11 +33,17 @@
                     <platforms>all</platforms>
                     <distributionFileList>
                         <distributionFile>
-                            <origin>${build_project_directory}/../launcher/target/H2OLauncher.jar</origin>
+                            <origin>${build_project_directory}/../target/launcher/H2OLauncher.jar</origin>
                         </distributionFile>
                         <distributionFile>
                             <origin>${build_project_directory}/../target/h2o.jar</origin>
                         </distributionFile>
+                        <distributionDirectory>
+                            <origin>${build_project_directory}/../target/R</origin>
+                        </distributionDirectory>
+                        <distributionDirectory>
+                            <origin>${build_project_directory}/../target/hadoop</origin>
+                        </distributionDirectory>
                     </distributionFileList>
                     <shortcutList>
                         <shortcut>
@@ -72,7 +78,7 @@
                             <origin>${build_project_directory}/windows</origin>
                         </distributionDirectory>
                         <distributionDirectory>
-                            <origin>${build_project_directory}/../../../H2OInstallerJRE/windows</origin>
+                            <origin>${env(HOME)}/0xdata/frozen/H2OInstallerJRE-1.7.0_21/windows</origin>
                         </distributionDirectory>
                     </distributionFileList>
                 </folder>
@@ -86,7 +92,7 @@
                             <origin>${build_project_directory}/macosx/Contents</origin>
                         </distributionDirectory>
                         <distributionDirectory>
-                            <origin>${build_project_directory}/../../../H2OInstallerJRE/macosx/Contents</origin>
+                            <origin>${env(HOME)}/0xdata/frozen/H2OInstallerJRE-1.7.0_21/macosx/Contents</origin>
                         </distributionDirectory>
                     </distributionFileList>
                 </folder>
@@ -202,6 +208,24 @@
         <renameFile>
             <destination>${installdir}/Contents/Resources/h2o.jar</destination>
             <origin>${installdir}/h2o.jar</origin>
+            <ruleList>
+                <platformTest>
+                    <type>osx</type>
+                </platformTest>
+            </ruleList>
+        </renameFile>
+        <renameFile>
+            <destination>${installdir}/Contents/Resources/R</destination>
+            <origin>${installdir}/R</origin>
+            <ruleList>
+                <platformTest>
+                    <type>osx</type>
+                </platformTest>
+            </ruleList>
+        </renameFile>
+        <renameFile>
+            <destination>${installdir}/Contents/Resources/hadoop</destination>
+            <origin>${installdir}/hadoop</origin>
             <ruleList>
                 <platformTest>
                     <type>osx</type>

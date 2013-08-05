@@ -1,7 +1,5 @@
-import unittest
-import random, sys
+import unittest, random, sys
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_rf, h2o_hosts
 
 # make a dict of lists, with some legal choices for each. None means no value.
@@ -48,7 +46,7 @@ paramDict = {
     'bin_limit': [None,5,10,100,1000],
     'parallel': [1],
     'ignore': [None,0,1,2,3,4,5,6,7,8,9],
-    'sample': [None,20,40,60,80,100],
+    'sample': [None,20,40,60,80,90], # don't use 100 if oobe error reporting
     'seed': [None,'0','1','11111','19823134','1231231'],
     'features': [1,3,5,7,9,11,13,17,19,23,37,53],
     'sampling_strategy': [None, 'RANDOM', 'STRATIFIED_LOCAL' ],
@@ -57,7 +55,7 @@ paramDict = {
         "1=5",
         "2=3",
         "1=1,2=1,3=1,4=1,5=1,6=1,7=1",
-        "1=100,2=100,3=100,4=100,5=100,6=100,7=100",
+        "1=99,2=99,3=99,4=99,5=99,6=99,7=99", # 100 seems to cause zero results
         "1=0,2=0,3=0,4=0,5=0,6=0,7=0",
         ]
     }

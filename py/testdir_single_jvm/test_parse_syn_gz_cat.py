@@ -1,7 +1,5 @@
-import unittest
-import random, sys, time, os
+import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e, h2o_util
 
 print "Create csv with lots of same data (95% 0?), so gz will have high compression ratio"
@@ -48,13 +46,13 @@ class Basic(unittest.TestCase):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             # summary fails with 100000 cols
-            (10, 4000, 'cD', 600),
             (10, 5000, 'cE', 600),
             (10, 10000, 'cF', 600),
+            (10, 50000, 'cF', 600),
             ]
 
         FILEREPL = 200
-        DOSUMMARY = False
+        DOSUMMARY = True
         # h2b.browseTheCloud()
         for (rowCount, colCount, key2, timeoutSecs) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)

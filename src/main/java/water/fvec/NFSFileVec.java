@@ -13,10 +13,14 @@ public class NFSFileVec extends ByteVec {
   // Make a new NFSFileVec key which holds the filename implicitly.
   // This name is used by the DVecs to load data on-demand.
   public static Key make(File f) {
+    return make(f, null);
+  }
+
+  public static Key make(File f, Futures fs) {
     long size = f.length();
     Key k = Vec.newKey(PersistNFS.decodeFile(f));
     // Insert the top-level FileVec key into the store
-    DKV.put(k,new NFSFileVec(k,size));
+    DKV.put(k,new NFSFileVec(k,size), fs);
     return k;
   }
 
@@ -61,7 +65,7 @@ public class NFSFileVec extends ByteVec {
     // Lazily create a DVec for this chunk
     int len = (int)(cidx < nchk-1 ? ValueArray.CHUNK_SZ : (_len-chunk2StartElem(cidx)));
     // DVec is just the raw file data with a null-compression scheme
-    Value val2 = new Value(dkey,len,null,TypeMap.C1CHUNK,Value.NFS);
+    Value val2 = new Value(dkey,len,null,TypeMap.C1NCHUNK,Value.NFS);
     val2.setdsk(); // It is already on disk.
     // Atomically insert: fails on a race, but then return the old version
     Value val3 = DKV.DputIfMatch(dkey,val2,null,null);

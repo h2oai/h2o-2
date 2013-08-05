@@ -4,6 +4,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import water.*;
+import water.fvec.FVecTest;
+import water.fvec.ParseDataset2;
 
 public class ParserTest extends TestUtil {
 
@@ -50,6 +52,7 @@ public class ParserTest extends TestUtil {
     Assert.assertEquals(expected[0].length,va._cols.length);
     for (int i = 0; i < expected.length; ++i)
       for (int j = 0; j < va._cols.length; ++j) {
+        double pval = va.datad(i, j);
         if (Double.isNaN(expected[i][j]))
           Assert.assertFalse(i+" -- "+j, !va.isNA(i,j));
         else
@@ -383,4 +386,27 @@ public class ParserTest extends TestUtil {
     ParseDataset.parse(okey,new Key[]{fkey});
     testParsed(okey,exp,fkey,25);
   }
+
+  @Test public void testSVMLight() {
+    String[] data = new String[] {
+        " 1 2:.2 5:.5 9:.9\n",
+        "-1 7:.7 8:.8 9:.9\n",
+        "+1 1:.1 5:.5 6:.6\n"
+    };
+
+    double[][] exp = new double[][] {
+        d( 1., .0, .2, .0, .0, .5, .0, .0, .0, .9),
+        d(-1., .0, .0, .0, .0, .0, .0, .7, .8, .9),
+        d( 1., .1, .0, .0, .0, .5, .6, .0, .0, .0),
+    };
+    String[] dataset = data;
+    StringBuilder sb = new StringBuilder();
+    for( int i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\n");
+    Key k = k(Key.make().toString(),sb.toString());
+    Key r1 = Key.make("r1");
+    ParseDataset.parse(r1, new Key[]{k});
+    testParsed(r1,exp,k);
+  }
+
+
 }

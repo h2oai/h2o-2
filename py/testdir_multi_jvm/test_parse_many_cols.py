@@ -37,18 +37,18 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_many_cols_with_syn(self):
+    def test_parse_many_cols(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (100, 10000, 'cI', 5),
-            (100, 5000, 'cA', 5),
-            (100, 6000, 'cB', 5),
-            (100, 7000, 'cC', 5),
-            (100, 8000, 'cD', 5),
-            (100, 8200, 'cE', 5),
-            (100, 8500, 'cF', 5),
-            (100, 9000, 'cG', 5),
-            (100, 11000, 'cH', 5),
+            (100, 5000, 'cA', 10),
+            (100, 6000, 'cB', 10),
+            (100, 7000, 'cC', 10),
+            (100, 8000, 'cD', 10),
+            (100, 8200, 'cE', 10),
+            (100, 8500, 'cF', 10),
+            (100, 9000, 'cG', 10),
+            (100, 10000, 'cI', 10),
+            (100, 11000, 'cH', 10),
             ]
 
         ### h2b.browseTheCloud()
@@ -62,7 +62,7 @@ class Basic(unittest.TestCase):
             parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=30)
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "Parse result['destination_key']:", parseKey['destination_key']
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=60)
             print "\n" + csvFilename
 
             if not h2o.browse_disable:

@@ -5,9 +5,11 @@ exportMethods(
     "h2o.glm",
     "h2o.kmeans",
     "h2o.randomForest",
-    "importFile",
-    "importURL",
-    "parseRaw",
+	"h2o.checkClient",
+    "h2o.importFile",
+	"h2o.importFolder",
+    "h2o.importURL",
+    "h2o.parseRaw",
     "show",
     "summary" 
 )

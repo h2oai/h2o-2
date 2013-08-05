@@ -1,5 +1,9 @@
 #! /bin/bash
 
+if [ -z ${PROJECT_VERSION} ]; then
+    PROJECT_VERSION=99.80
+fi
+
 # determine the correct separator of multiple paths
 if [ `uname` = "Darwin" ]
 then 
@@ -104,6 +108,7 @@ public class BuildVersion extends AbstractBuildVersion {
     public String branchName()     { return "${BUILD_BRANCH}"; }
     public String lastCommitHash() { return "${BUILD_HASH}"; }
     public String describe()       { return "${BUILD_DESCRIBE}"; }
+    public String projectVersion() { return "${PROJECT_VERSION}"; }
     public String compiledOn()     { return "${BUILD_ON}"; }
     public String compiledBy()     { return "${BUILD_BY}"; }
 }
@@ -160,25 +165,16 @@ function build_src_jar() {
     cp ${SRC_JAR_FILE} ${OUTDIR}/h2o-sources-${JAR_TIME}.jar
 }
 
-function build_hadoop() {
-    echo "building hadoop package..."
-    make -C hadoop
-}
-
 function build_javadoc() {
     echo "creating javadoc files..."
     local CLASSPATH="${JAR_ROOT}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/*"
-    "${JAVADOC}" -classpath "${CLASSPATH}" -d "${OUTDIR}"/javadoc -sourcepath "${SRC}" -subpackages hex:water 1> /dev/null 2> /dev/null
+    mkdir -p target/logs
+    "${JAVADOC}" -classpath "${CLASSPATH}" -d "${OUTDIR}"/javadoc -sourcepath "${SRC}" -subpackages hex:water >& target/logs/javadoc_build.log
 }
 
-function build_rpackage() {
-    echo "creating R package..."
-    if which R > /dev/null; then
-        R CMD build ${RSRC} > /dev/null
-        mv -f h2o_*.tar.gz target
-    else
-        echo "Missing R, please install"
-    fi	
+function build_package() {
+    echo "creating package..."
+    make package >& target/package_build.log
 }
 
 function junit() {
@@ -193,9 +189,7 @@ if [ "$1" = "compile" ]; then exit 0; fi
 build_initializer
 build_jar
 build_src_jar
-build_hadoop
 if [ "$1" = "build" ]; then exit 0; fi
 build_javadoc
 if [ "$1" = "doc" ]; then exit 0; fi
-build_rpackage
 junit

@@ -40,6 +40,7 @@ public class Constants {
   public static final String CANCELLED             = "cancelled";
   public static final String CASE                  = "case";
   public static final String CASE_MODE             = "case_mode";
+  public static final String CHUNK                 = "chunk";
   public static final String CLASS                 = "response_variable";
   public static final String CLOUD_NAME            = "cloud_name";
   public static final String CLOUD_SIZE            = "cloud_size";
@@ -67,6 +68,7 @@ public class Constants {
   public static final String FILE                  = "file";
   public static final String FILES                 = "files";
   public static final String FILTER                = "filter";
+  public static final String FIRST_CHUNK           = "first_chunk";
   public static final String FJ_QUEUE_HI           = "fj_queue_hi";
   public static final String FJ_QUEUE_LO           = "fj_queue_lo";
   public static final String FJ_THREADS_HI         = "fj_threads_hi";
@@ -141,6 +143,7 @@ public class Constants {
   public static final String SAMPLING_STRATEGY     = "sampling_strategy";
   public static final String SEED                  = "seed";
   public static final String SEPARATOR             = "separator";
+  public static final String PARSER_TYPE           = "parser_type";
   public static final String SENT_ROWS             = "sent_rows";
   public static final String SIZE                  = "size";
   public static final String SOURCE_KEY            = "source_key";

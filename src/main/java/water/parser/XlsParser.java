@@ -3,6 +3,7 @@ package water.parser;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import org.apache.poi.hssf.eventusermodel.*;
 import org.apache.poi.hssf.eventusermodel.dummyrecord.LastCellOfRowDummyRecord;
@@ -10,44 +11,41 @@ import org.apache.poi.hssf.eventusermodel.dummyrecord.MissingCellDummyRecord;
 import org.apache.poi.hssf.record.*;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 
-import water.DKV;
-import water.Key;
+import water.*;
+import water.fvec.ByteVec;
+import water.parser.CustomParser.DataIn;
+import water.parser.CustomParser.DataOut;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
 
 public class XlsParser extends CustomParser implements HSSFListener {
 
-  private POIFSFileSystem _fs;
-  private final DParseTask _callback;
-  private FormatTrackingHSSFListener _formatListener;
+  private transient POIFSFileSystem _fs;
+  private transient FormatTrackingHSSFListener _formatListener;
+  private transient final ValueString _str = new ValueString();
+  private transient CustomParser.DataOut _dout;
 
-  private final ValueString _str = new ValueString();
-  private final Key _key;
+  public XlsParser(){super(new ParserSetup(ParserType.XLS,(byte) 0,0,false,null));}
+  public XlsParser(CustomParser.ParserSetup setup){super(null);}
+  public XlsParser clone(){return new XlsParser(_setup);}
 
-  public XlsParser(DParseTask callback, Key key) throws IOException {
-    _callback = callback;
-    _key = key;
-  }
-
-  @Override public void parse(int cidx) throws IOException {
+  public void streamParse( final InputStream is, final DataOut dout) throws Exception {
+    _dout = dout;
     _firstRow = true;
-    InputStream is = DKV.get(_key).openStream();
     try {
       _fs = new POIFSFileSystem(is);
       MissingRecordAwareHSSFListener listener = new MissingRecordAwareHSSFListener(this);
       _formatListener = new FormatTrackingHSSFListener(listener);
-
       HSSFEventFactory factory = new HSSFEventFactory();
       HSSFRequest request = new HSSFRequest();
       request.addListenerForAllRecords(_formatListener);
-
       factory.processWorkbookEvents(request, _fs);
     } finally {
       try { is.close(); } catch (IOException e) { }
     }
   }
 
-  ArrayList<String> _columnNames = new ArrayList();
+  transient ArrayList<String> _columnNames = new ArrayList();
   boolean _firstRow;
 
   @Override
@@ -142,9 +140,9 @@ public class XlsParser extends CustomParser implements HSSFListener {
         _firstRow = false;
         String[] arr = new String[_columnNames.size()];
         arr = _columnNames.toArray(arr);
-        _callback.setColumnNames(arr);
-      }
-      _callback.newLine();
+        _dout.setColumnNames(arr);
+      } else
+        _dout.newLine();
     }
 
     if (curCol == -1)
@@ -155,16 +153,20 @@ public class XlsParser extends CustomParser implements HSSFListener {
     } else {
       if (curStr == null)
         if (Double.isNaN(curNum))
-          _callback.addInvalidCol(curCol);
+          _dout.addInvalidCol(curCol);
         else
-          _callback.addCol(curCol, curNum);
+          _dout.addNumCol(curCol, curNum);
       else
-        _callback.addStrCol(curCol, curStr);
+        _dout.addStrCol(curCol, curStr);
     }
   }
 
-  private SSTRecord _sstRecord;
+  private transient  SSTRecord _sstRecord;
   private int _nextCol;
   private boolean _outputNextStringRecord;
+
+  @Override public boolean isCompatible(CustomParser p) {
+    return p instanceof XlsParser;
+  }
 }
 

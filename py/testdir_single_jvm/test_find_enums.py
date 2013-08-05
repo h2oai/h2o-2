@@ -1,7 +1,4 @@
-import unittest
-import random, sys, time, os
-import string
-import re
+import unittest, random, sys, time, re
 sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util
@@ -156,11 +153,7 @@ class Basic(unittest.TestCase):
             ### inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             print "\n" + csvFilename
             (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
-                h2o_cmd.get_column_info_from_inspect(parseKey)
-
-            if missingValuesDict:
-                m = [str(k) + ":" + str(v) for k,v in missingValuesDict.iteritems()]
-                raise Exception("Looks like columns got flipped to NAs: " + ", ".join(m))
+                h2o_cmd.columnInfoFromInspect(parseKey['destination_key'], exceptionOnMissingValues=True)
 
 if __name__ == '__main__':
     h2o.unit_main()

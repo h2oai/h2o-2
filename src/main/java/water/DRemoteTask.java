@@ -44,7 +44,7 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
   public void init() { }
 
   // Invokes the task on all nodes
-  public void invokeOnAllNodes() {
+  public T invokeOnAllNodes() {
     H2O cloud = H2O.CLOUD;
     Key[] args = new Key[cloud.size()];
     String skey = "RunOnAll__"+UUID.randomUUID().toString();
@@ -52,6 +52,7 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
       args[i] = Key.make(skey,(byte)0,Key.DFJ_INTERNAL_USER,cloud._memary[i]);
     invoke(args);
     for( Key arg : args ) DKV.remove(arg);
+    return self();
   }
 
   // Invoked with a set of keys
@@ -75,6 +76,7 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
       try { lcompute(); } 
       catch( RuntimeException e ) { _exception = new DException(e); completeExceptionally(e); }
       catch( AssertionError   e ) { _exception = new DException(e); completeExceptionally(e); }
+      catch( OutOfMemoryError e ) { _exception = new DException(e); completeExceptionally(e); }
     } else
       dcompute();
   }
@@ -90,6 +92,7 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
   @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller ) {
     if( _exception == null && caller instanceof DRemoteTask )
       _exception = ((DRemoteTask)caller)._exception;
+    if( _exception == null ) _exception = new DException(ex);
     if( _is_local ) return true;
     tryComplete();              // This completer completes *normally*
     return false;               // This completer completes *normally*

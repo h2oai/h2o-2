@@ -31,6 +31,7 @@ import water.util.Log;
 class Histogram extends Iced implements Cloneable {
   public static final int BINS=4;
   transient final String   _name;        // Column name, for pretty-printing
+  public    final boolean  _isInt;       // Column only holds integers
   public    final double   _step;        // Linear interpolation step per bin
   public    final double   _min, _max;   // Lower-end of binning
   public    final int      _nbins;       // Number of bins
@@ -46,9 +47,9 @@ class Histogram extends Iced implements Cloneable {
   // Fill in read-only sharable values
   public Histogram( String name, long nelems, double min, double max, boolean isInt ) {
     assert nelems > 0;
-    assert max > min : "Caller ensures max>min, since if max==min the column is all constants";
+    assert max > min : "Caller ensures "+max+">"+min+", since if max==min== the column "+name+" is all constants";
     _name = name;
-    _min = min;  _max=max;
+    _min = min;  _max=max;  _isInt = isInt;
     int xbins = Math.max((int)Math.min(BINS,nelems),1); // Default bin count
     // See if we can show there are fewer unique elements than nbins.
     // Common for e.g. boolean columns, or near leaves.
@@ -88,6 +89,7 @@ class Histogram extends Iced implements Cloneable {
   // per-bin using the recursive strategy.
   //   http://www.johndcook.com/standard_deviation.html
   void incr( double d, double y ) {
+    assert !Double.isNaN(y);
     int idx = bin(d);           // Compute bin# via linear interpolation
     _bins[idx]++;               // Bump count in bin
     // Track actual lower/upper bound per-bin
@@ -104,6 +106,7 @@ class Histogram extends Iced implements Cloneable {
   // Add 1 count to bin specified by double.  Simple linear interpolation to
   // specify bin.  Also passed in the response variable, which is a class.
   void incr( double d, int y ) {
+    assert !Double.isNaN(y);
     int idx = bin(d);           // Compute bin# via linear interpolation
     _bins[idx]++;               // Bump count in bin
     // Track actual lower/upper bound per-bin
@@ -201,10 +204,12 @@ class Histogram extends Iced implements Cloneable {
     int n = 0;
     while( _bins[n]==0 ) n++;   // First non-empty bin
     if( n > 0 ) _mins[0] = _mins[n]; // Take min from  1st non-empty bin into bin 0
+    if( _mins[0] > _maxs[0] ) _maxs[0] = _mins[0];
     int l = _bins.length-1;     // Last bin
     int x = l;  
     while( _bins[x]==0 ) x--;   // Last non-empty bin
     if( x < l ) _maxs[l] = _maxs[x]; // Take max from last non-empty bin into bin last
+    if( _maxs[l] < _mins[l] ) _mins[l] = _maxs[x];
   }
 
   // Split bin 'i' of this Histogram.  Return null if there is no point in
@@ -214,7 +219,7 @@ class Histogram extends Iced implements Cloneable {
   // constant data, or was not being tracked by a prior Histogram (for being
   // constant data from a prior split), then that column will be null in the
   // returned array.
-  public Histogram[] split( int col, int i, Histogram hs[], Frame fr, int ncols ) {
+  public Histogram[] split( int col, int i, Histogram hs[], String[] names, int ncols ) {
     assert hs[col] == this;
     if( _bins[i] <= 1 ) return null; // Zero or 1 elements
     if( _clss == null ) {            // Regresion?
@@ -238,7 +243,7 @@ class Histogram extends Iced implements Cloneable {
       // Histogram's bound are the bins' min & max.
       if( col==j ) { min=h._mins[i]; max=h._maxs[i]; }
       if( min == max ) continue; // This column will not split again
-      nhists[j] = new Histogram(fr._names[j],_bins[i],min,max,fr._vecs[j]._isInt);
+      nhists[j] = new Histogram(names[j],_bins[i],min,max,hs[j]._isInt);
     }
     return nhists;
   }
@@ -286,8 +291,9 @@ class Histogram extends Iced implements Cloneable {
     sb.append(_name).append("\n");
     for( int i=0; i<_bins.length; i++ )
       sb.append(String.format("cnt=%d, min=%f, max=%f, mean=%f, var=%f\n",
-                              _bins[i],_mins[i],_maxs[i],mean(i),var(i)));
-      
+                              _bins[i],_mins[i],_maxs[i],
+                              _Ms==null?Double.NaN:mean(i),
+                              _Ms==null?Double.NaN:var (i)));
     return sb.toString();
   }
 

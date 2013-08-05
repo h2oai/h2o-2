@@ -310,7 +310,7 @@ public class Utils {
   }
 
   public static ValueArray loadAndParseKey(Key okey, String path) {
-    FileIntegrityChecker c = FileIntegrityChecker.check(new File(path));
+    FileIntegrityChecker c = FileIntegrityChecker.check(new File(path),false);
     Futures fs = new Futures();
     Key k = c.importFile(0, fs);
     fs.blockForPending();

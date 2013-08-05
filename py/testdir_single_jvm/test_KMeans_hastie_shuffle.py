@@ -16,12 +16,11 @@
 # Y = np.hstack((X,y))
 # np.savetxt('./1mx' + str(f) + '_hastie_10_2.data', Y, delimiter=',', fmt='%.2f');
 
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys, copy
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_kmeans, h2o_util, h2o_hosts
-import copy
 
-def kmeans_doit(self, csvFilename, csvPathname, timeoutSecs=30):
+def kmeans_doit(self, csvFilename, csvPathname, num_rows, timeoutSecs=30):
     print "\nStarting KMeans of", csvFilename
     parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", timeoutSecs=10)
     # hastie has two values, 1 and -1.
@@ -31,7 +30,9 @@ def kmeans_doit(self, csvFilename, csvPathname, timeoutSecs=30):
         'k': 1, 
         'epsilon': 1e-6,
         'cols': cols, 
-        'destination_key': 'KMeansModel.hex'
+        'destination_key': 'KMeansModel.hex',
+        # reuse the same seed, to get deterministic results (otherwise sometimes fails
+        'seed': 265211114317615310,
     }
     start = time.time()
     kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, \
@@ -39,7 +40,16 @@ def kmeans_doit(self, csvFilename, csvPathname, timeoutSecs=30):
     elapsed = time.time() - start
     print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', \
         "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
-    h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
+
+    (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
+
+    expected = [
+        ([-0.0006628900000000158, -0.0004671200060434639, 0.0009330300069879741, 0.0007883800000000272, 0.0007548200000000111, 0.0005617899864856153, 0.0013246499999999897, 0.0004036299999999859, -0.0014307100000000314, 0.0021324000161308796, 0.00154], num_rows, None)
+    ]
+    # all are multipliers of expected tuple value
+    allowedDelta = (0.01, 0.01, 0.01)
+    h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=0)
+
 
 
     # compare this kmeans to the first one. since the files are replications, the results
@@ -82,7 +92,7 @@ class Basic(unittest.TestCase):
         # This test also adds file shuffling, to see that row order doesn't matter
         csvFilename = "1mx10_hastie_10_2.data.gz"
         csvPathname = h2o.find_dataset('logreg' + '/' + csvFilename)
-        kmeans_doit(self, csvFilename, csvPathname, timeoutSecs=60)
+        kmeans_doit(self, csvFilename, csvPathname, num_rows=1000000, timeoutSecs=60)
 
         filename1x = "hastie_1x.data"
         pathname1x = SYNDATASETS_DIR + '/' + filename1x
@@ -99,13 +109,13 @@ class Basic(unittest.TestCase):
         filename2xShuf = "hastie_2x.data_shuf"
         pathname2xShuf = SYNDATASETS_DIR + '/' + filename2xShuf
         h2o_util.file_shuffle(pathname2x, pathname2xShuf)
-        kmeans_doit(self, filename2xShuf, pathname2xShuf, timeoutSecs=90)
+        kmeans_doit(self, filename2xShuf, pathname2xShuf, num_rows=2000000, timeoutSecs=90)
 
         # too big to shuffle?
         filename4x = "hastie_4x.data"
         pathname4x = SYNDATASETS_DIR + '/' + filename4x
         h2o_util.file_cat(pathname2xShuf, pathname2xShuf, pathname4x)
-        kmeans_doit(self, filename4x, pathname4x, timeoutSecs=120)
+        kmeans_doit(self, filename4x, pathname4x, num_rows=4000000, timeoutSecs=120)
 
 if __name__ == '__main__':
     h2o.unit_main()

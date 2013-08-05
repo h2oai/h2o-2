@@ -1,5 +1,4 @@
-import unittest
-import random, sys, time
+import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_glm, h2o_hosts
@@ -20,7 +19,7 @@ def define_params():
         'case': [1,2,3,4,5,6,7],
         # inverse and log causing problems
         # 'link': [None, 'logit','identity', 'log', 'inverse'],
-        'max_iter': [10],
+        'max_iter': [24],
         'weight': [None, 1, 2, 4],
         }
     return paramDict
@@ -44,13 +43,13 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_gaussian_rand2(self):
+    def test_GLM_gamma_rand2(self):
         csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname)
         paramDict = define_params()
         for trial in range(20):
             # params is mutable. This is default.
-            params = {'y': 54, 'n_folds': 3, 'family': "gamma", 'alpha': 0.5, 'lambda': 1e-4, 'max_iter': 10}
+            params = {'y': 54, 'n_folds': 3, 'family': "gamma", 'alpha': 0.5, 'lambda': 1e-4, 'max_iter': 24}
             colX = h2o_glm.pickRandGlmParams(paramDict, params)
             kwargs = params.copy()
 

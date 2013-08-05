@@ -61,6 +61,8 @@ public class TestUtil {
       file = new File("../" + fname);
     if( !file.exists() )
       file = new File("../target/" + fname);
+    if( !file.exists() )
+      file = null;
     return file;
   }
 

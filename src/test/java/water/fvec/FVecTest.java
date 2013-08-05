@@ -1,9 +1,12 @@
 package water.fvec;
 
 import static org.junit.Assert.assertEquals;
+
 import java.io.File;
-import java.util.Arrays;
-import org.junit.*;
+
+import org.junit.BeforeClass;
+import org.junit.Test;
+
 import water.*;
 import water.parser.ParseDataset;
 
@@ -24,7 +27,7 @@ public class FVecTest extends TestUtil {
     DKV.put(k, bv, fs);
     for(int i = 0; i < chunks.length; ++i){
       Key chunkKey = bv.chunkKey(i);
-      DKV.put(chunkKey, new Value(chunkKey,chunks[i].length,chunks[i],TypeMap.C1CHUNK,Value.ICE));
+      DKV.put(chunkKey, new Value(chunkKey,chunks[i].length,chunks[i],TypeMap.C1NCHUNK,Value.ICE));
     }
     fs.blockForPending();
     return k;
@@ -88,14 +91,14 @@ public class FVecTest extends TestUtil {
   }
 
   // ==========================================================================
-  @SuppressWarnings("unused")
   @Test public void testParse() {
     //File file = TestUtil.find_test_file("./smalldata/airlines/allyears2k_headers.zip");
     //File file = TestUtil.find_test_file("../datasets/UCI/UCI-large/covtype/covtype.data");
     //File file = TestUtil.find_test_file("./smalldata/hhp.cut3.214.data.gz");
     File file = TestUtil.find_test_file("./smalldata/logreg/prostate_long.csv.gz");
     Key fkey = NFSFileVec.make(file);
-    Frame fr = ParseDataset2.parse(Key.make("pro1.hex"),new Key[]{fkey});
+    Key dest = Key.make("pro1.hex");
+    Frame fr = ParseDataset2.parse(dest, new Key[]{fkey});
     UKV.remove(fkey);
     //System.out.println("Parsed into "+fr);
     //for( int i=0; i<fr._vecs.length; i++ )
@@ -128,7 +131,7 @@ public class FVecTest extends TestUtil {
       }
       assertEquals(0,errs);
     } finally {
-      UKV.remove(fr ._key);
+      UKV.remove(dest);
       UKV.remove(ary._key);
     }
   }
@@ -187,7 +190,6 @@ public class FVecTest extends TestUtil {
 
   // Simple vector sum C=A+B
   private static class PairSum extends MRTask2<Sum> {
-    double _sums[];
     @Override public void map( Chunk out, Chunk in1, Chunk in2 ) {
       for( int i=0; i<out._len; i++ )
         out.set80(i,in1.at80(i)+in2.at80(i));

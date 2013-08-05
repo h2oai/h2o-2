@@ -24,7 +24,7 @@ syn_datasets
 target/
 .settings/*
 cypof*
-typemap
 /libpeerconnection.log
 tmp/
 src/main/java/water/BuildVersion.java
+hadoop/build.log

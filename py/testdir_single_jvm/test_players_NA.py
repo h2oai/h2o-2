@@ -1,7 +1,5 @@
-import unittest
-import random, sys, time
+import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd
 
 class Basic(unittest.TestCase):

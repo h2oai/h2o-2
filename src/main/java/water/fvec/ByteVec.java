@@ -8,22 +8,23 @@ import water.Key;
 // A vector of plain Bytes.
 public class ByteVec extends Vec {
 
-  ByteVec( Key key, long espc[] ) { super(key,espc,true,Double.NaN,Double.NaN); }
+  ByteVec( Key key, long espc[] ) { super(key,espc,true,0); }
 
-  public C1Chunk elem2BV( int cidx ) { return (C1Chunk)super.elem2BV(cidx); }
+  public C1NChunk elem2BV( int cidx ) { return (C1NChunk)super.elem2BV(cidx); }
 
   // Open a stream view over the underlying data
-  InputStream openStream() {
+  public InputStream openStream(final Key progress) {
     return new InputStream() {
       private int _cidx, _sz;
-      private C1Chunk _c0;
+      private C1NChunk _c0;
       @Override public int available() throws IOException {
-        if( _c0 == null || _sz >= _c0._mem.length ) {
+        if( _c0 == null || _sz >= _c0._len ) {
           if( _cidx >= nChunks() ) return 0;
           _c0 = elem2BV(_cidx++);
           _sz = 0;
+          if( progress != null ) ParseDataset2.onProgress(_c0._len,progress);
         }
-        return _c0._mem.length-_sz;
+        return _c0._len-_sz;
       }
       @Override public void close() { _cidx = nChunks(); _c0 = null; _sz = 0;}
       @Override public int read() throws IOException {

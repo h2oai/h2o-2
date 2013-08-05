@@ -1,11 +1,8 @@
-
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts
 import h2o_browse as h2b
 import h2o_import as h2i
-import time, random
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -87,12 +84,7 @@ class Basic(unittest.TestCase):
             print "Storing", parseKey['destination_key'], 'to HDFS'
             ### print "FIX! temporarily disabling since it causes HDFS corruption"
             storeKey = h2o_cmd.runStore2HDFS(key=parseKey['destination_key'], timeoutSecs=1000)
-
-
-            h2b.browseJsonHistoryAsUrlLastMatch("Parse")
-
-            sys.stdout.write('.')
-            sys.stdout.flush() 
+            # h2b.browseJsonHistoryAsUrlLastMatch("Parse")
 
 if __name__ == '__main__':
     h2o.unit_main()

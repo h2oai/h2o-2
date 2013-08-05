@@ -21,27 +21,25 @@ import com.google.common.base.Strings;
 
 public class XlsxParser extends CustomParser {
 
+  public XlsxParser(ParserSetup setup) {super(setup);}
+  public XlsxParser() {super(null);}
+
   private SharedStringsTable _sst;
   private boolean _firstRow;
-  private final DParseTask _callback;
   private ArrayList<String> _colNames = new ArrayList();
   private ValueString _str = new ValueString();
-  private final Key _key;
+  private CustomParser.DataOut _dout;
 
-  public XlsxParser(DParseTask callback, Key key) {
-    _callback = callback;
-    _key = key;
-  }
-
+  public XlsxParser clone() {return new XlsxParser(_setup);}
   private XMLReader makeSheetParser() throws SAXException {
     XMLReader parser = XMLReaderFactory.createXMLReader();
     parser.setContentHandler(new SheetHandler());
     return parser;
   }
 
-  @Override public void parse(int cidx) throws Exception {
+  @Override public void streamParse(InputStream is, CustomParser.DataOut dout){
     _firstRow = true;
-    InputStream is = DKV.get(_key).openStream();
+    _dout = dout;
     try {
       XSSFReader reader = new XSSFReader(OPCPackage.open(is));
       _sst = reader.getSharedStringsTable();
@@ -55,6 +53,8 @@ public class XlsxParser extends CustomParser {
           sheet.close();
         }
       }
+    }catch(Exception e){
+      throw new RuntimeException(e);
     } finally {
       try { is.close(); } catch (IOException e) { Log.err(e); }
     }
@@ -114,14 +114,14 @@ public class XlsxParser extends CustomParser {
             try {
               Double d = Double.parseDouble(_lastContents);
               if (Double.isNaN(d))
-                _callback.addInvalidCol(_curCol);
+                _dout.addInvalidCol(_curCol);
               else
-                _callback.addCol(_curCol,d);
+                _dout.addNumCol(_curCol,d);
             } catch( NumberFormatException e ) {
               if (_lastContents.isEmpty())
-                _callback.addInvalidCol(_curCol);
+                _dout.addInvalidCol(_curCol);
               else
-                _callback.addStrCol(_curCol, _str.setTo(_lastContents));
+                _dout.addStrCol(_curCol, _str.setTo(_lastContents));
             }
           } catch (Exception e) {
             Log.err(e);
@@ -129,10 +129,10 @@ public class XlsxParser extends CustomParser {
         }
       } else if( name.equals("row") ) {
         if( _firstRow == true ) {
-          _callback.setColumnNames(_colNames.toArray(new String[_colNames.size()]));
+          _dout.setColumnNames(_colNames.toArray(new String[_colNames.size()]));
           _firstRow = false;
         } else {
-          _callback.newLine();
+          _dout.newLine();
         }
       }
     }
@@ -141,5 +141,9 @@ public class XlsxParser extends CustomParser {
         throws SAXException {
       _lastContents += new String(ch, start, length);
     }
+  }
+
+  @Override public boolean isCompatible(CustomParser p) {
+    return p instanceof XlsxParser;
   }
 }

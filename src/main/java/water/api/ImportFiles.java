@@ -1,8 +1,11 @@
 package water.api;
 
+import java.io.File;
 import java.util.ArrayList;
+
 import water.Futures;
 import water.Key;
+import water.Weaver.Weave;
 import water.util.FileIntegrityChecker;
 
 public class ImportFiles extends Request {
@@ -11,36 +14,34 @@ public class ImportFiles extends Request {
 
   // This Request supports the HTML 'GET' command, and this is the help text
   // for GET.
-  static final String DOC_GET = 
-    "  Map a file from the local host filesystem into H2O memory.  Data is "+
-    "loaded lazily, when the Key is read (usually in a Parse command).  "+
-    "(Warning: Every host in the cluster must have this file visible locally!)";
+  static final String DOC_GET =
+    "Map a file from the local host filesystem into H2O memory.  Data is "+
+    "loaded lazily, when the Key is read (usually in a Parse command, to build " +
+    "a Hex key).  (Warning: Every host in the cluster must have this file visible locally!)";
 
   // HTTP REQUEST PARAMETERS
-  static final String pathHelp = "File or directory to import.";
-  protected final ExistingFile path = new ExistingFile();
-
+  @Weave(help="File or directory to import.")
+  protected final ExistingFile path = new ExistingFile("path");
 
   // JSON OUTPUT FIELDS
-  static final String filesHelp="Files imported.  Imported files are merely Keys mapped over the existing files.  No data is loaded until the Key is used (usually in a Parse command).";
+  @Weave(help="Files imported.  Imported files are merely Keys mapped over the existing files.  No data is loaded until the Key is used (usually in a Parse command).")
   String[] files;
 
-  static final String keysHelp="Keys of imported files, Keys map 1-to-1 with imported files.";
+  @Weave(help="Keys of imported files, Keys map 1-to-1 with imported files.")
   String[] keys;
 
-  static final String failsHelp="File names that failed the integrity check, can be empty.";
+  @Weave(help="File names that failed the integrity check, can be empty.")
   String[] fails;
 
-  // Example of passing & failing request.  Will be prepended with 
-  //   "curl -s localhost:54321/ImportFiles.json".
-  // Return param/value pairs that will be used to build up a URL,
-  // and the result from serving the URL will show up as an example.
   @Override public String[] DocExampleSucc() { return new String[]{"path","smalldata/airlines"}; }
   @Override public String[] DocExampleFail() { return new String[]{}; }
 
+  FileIntegrityChecker load(File path) {
+    return FileIntegrityChecker.check(path,false);
+  }
 
   @Override protected Response serve() {
-    FileIntegrityChecker c = FileIntegrityChecker.check(path.value());
+    FileIntegrityChecker c = load(path.value());
     ArrayList<String> afails = new ArrayList();
     ArrayList<String> afiles = new ArrayList();
     ArrayList<String> akeys  = new ArrayList();
@@ -58,12 +59,14 @@ public class ImportFiles extends Request {
     fails = afails.toArray(new String[0]);
     files = afiles.toArray(new String[0]);
     keys  = akeys .toArray(new String[0]);
-
-    return new Response(Response.Status.done, this);
+    return new Response(Response.Status.done, this, -1, -1, null);
   }
 
+  // Auto-link to Parse
+  String parse() { return "Parse.html"; }
+
   // HTML builder
-  @Override public StringBuilder toHTML( StringBuilder sb ) {
+  @Override public boolean toHTML( StringBuilder sb ) {
     if( files.length > 1 )
       sb.append("<div class='alert'>")
         .append(Parse.link("*"+path.value()+"*", "Parse all into hex format"))
@@ -72,13 +75,13 @@ public class ImportFiles extends Request {
     DocGen.HTML.title(sb,"files");
     DocGen.HTML.arrayHead(sb);
     for( int i=0; i<files.length; i++ )
-      sb.append("<tr><td><a href='Parse.html?source_key=").append(keys[i]).
+      sb.append("<tr><td><a href='"+parse()+"?source_key=").append(keys[i]).
         append("'>").append(files[i]).append("</a></td></tr>");
     DocGen.HTML.arrayTail(sb);
 
     if( fails.length > 0 )
       DocGen.HTML.array(DocGen.HTML.title(sb,"fails"),fails);
 
-    return sb;
+    return true;
   }
 }

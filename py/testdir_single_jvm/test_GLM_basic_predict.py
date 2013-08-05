@@ -1,4 +1,4 @@
-import os, json, unittest, time, shutil, sys
+import unittest, time, sys
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_glm, h2o_hosts
 
@@ -45,7 +45,7 @@ class Basic(unittest.TestCase):
             GLMModel = glm['GLMModel']
             modelKey = GLMModel['model_key']
             print "Doing predict with same dataset, and the GLM model"
-            h2o.nodes[0].generate_predictions(model_key=modelKey, key=parseKey['destination_key'])
+            h2o.nodes[0].generate_predictions(model_key=modelKey, data_key=parseKey['destination_key'])
 
     def test_C_prostate_w_predict(self):
         h2o.nodes[0].log_view()

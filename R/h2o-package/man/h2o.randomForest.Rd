@@ -8,12 +8,15 @@ H2O: Random Forest
 Performs random forest classification on a parsed data set.
 }
 \usage{
-h2o.randomForest(y, data, ntree)
+h2o.randomForest(y, x_ignore = "", data, ntree, depth, classwt = as.numeric(NA))
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{y}{
-The name of the response variable. If the data does not contain a header, this is the column index. (This must be either an integer or a categorical variable).
+The name of index of the response variable. If the data does not contain a header, this is the column index. (This must be either an integer or a categorical variable).
+}
+\item{x_ignore}{
+(Optional) A vector containing the names or indices of the predictor variables to ignore in building the random forest model. If blank, random forest will use all variables except \code{y} for classification.
 }
   \item{data}{
 An \code{\linkS4class{H2OParsedData}} object containing the variables in the model.
@@ -21,9 +24,14 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
   \item{ntree}{
 Number of trees to grow. (Must be a nonnegative integer).
 }
+  \item{depth}{
+  Maximum depth to grow the tree.
+  }
+\item{classwt}{
+  (Optional) Priors of the classes. Need not add up to one. If missing, defaults to all weights set at 1.0.}
 }
 \details{
-Currently, only classification regression trees are supported, and there is no way to ignore predictor variables during growth of the tree.
+Currently, only classification regression trees are supported. Note that indexing begins at zero, so for example, to specify the first column as the response variable, set \code{y = 0}.
 }
 \value{
 An object of class \code{\linkS4class{H2ORForestModel}} with slots key, data, and rf, where the last is a list of the following components:
@@ -55,8 +63,13 @@ An object of class \code{\linkS4class{H2ORForestModel}} with slots key, data, an
 }
 \examples{
 # Assuming your working directory is h2o/R
-iris.hex = importFile(h2o, "../smalldata/iris/iris.csv", "iris.hex")
-h2o.randomForest(y = "4", data = iris.hex, ntree = 50)
+iris.hex = h2o.importFile(localH2O, path = "../smalldata/iris/iris.csv", key = "iris.hex")
+h2o.randomForest(y = 4, x_ignore = 0, data = iris.hex, ntree = 50, depth = 100, 
+classwt = c("Iris-versicolor" = 20.0, "Iris-virginica" = 30.0))
+
+prostate.hex = h2o.importFile(localH2O, path = "../smalldata/logreg/prostate.csv", key = "prostate.hex")
+h2o.randomForest(y = "CAPSULE", x_ignore = c("ID", "DPROS"), data = prostate.hex,
+ntree = 50, depth = 100)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

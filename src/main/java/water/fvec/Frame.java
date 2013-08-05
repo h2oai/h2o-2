@@ -1,23 +1,29 @@
 package water.fvec;
 
+import java.util.Arrays;
+
 import water.*;
 import water.fvec.Vec.VectorGroup;
 
-import java.io.InputStream;
-import java.util.Arrays;
-
-// A collection of named Vecs.  Essentially an R-like data-frame.
+/**
+ * A collection of named Vecs. Essentially an R-like data-frame. Multiple
+ * Frames can reference the same Vecs. A Frame is a lightweight object, it
+ * is meant to be cheaply created and discarded for data munging purposes.
+ * E.g. to exclude a Vec from a computation on a Frame, create a new Frame
+ * that references all the Vecs but this one.
+ */
 public class Frame extends Iced {
-  transient public Key _key;
   public String[] _names;
   public Vec[] _vecs;
   public Vec _col0;             // First readable vec
 
-
-  public Frame( Key k, String[] names, Vec[] vecs ) {
-    _key=k; _names=names; _vecs=vecs;
+  public Frame( String[] names, Vec[] vecs ) {
+    _names=names; _vecs=vecs;
   }
-  // Find a named column
+
+  /**
+   * Finds a named column.
+   */
   public int find( String name ) {
     for( int i=0; i<_names.length; i++ )
       if( name.equals(_names[i]) )
@@ -25,7 +31,9 @@ public class Frame extends Iced {
     return -1;
   }
 
-  // Add a named column
+  /**
+   * Adds a named column.
+   */
   public void add( String name, Vec vec ) {
     // needs a compatibility-check????
     _names = Arrays.copyOf(_names,_names.length+1);
@@ -33,9 +41,15 @@ public class Frame extends Iced {
     _names[_names.length-1] = name;
     _vecs [_vecs .length-1] = vec ;
   }
-  // Remove a named column
+
+  /**
+   * Removes a named column.
+   */
   public Vec remove( String name ) { return remove(find(name)); }
-  // Remove a numbered column
+
+  /**
+   * Removes a numbered column.
+   */
   public Vec remove( int idx ) {
     int len = _names.length;
     if( idx < 0 || idx >= len ) return null;
@@ -47,14 +61,15 @@ public class Frame extends Iced {
     return v;
   }
 
-
   public final Vec[] vecs() {
     return _vecs;
   }
   public int  numCols() { return _vecs.length; }
   public long numRows(){ return _vecs[0].length();}
 
-  // Return first readable vector
+  /**
+   * Returns the first readable vector.
+   */
   public Vec firstReadable() {
     if( _col0 != null ) return _col0;
     for( Vec v : _vecs )
@@ -63,7 +78,10 @@ public class Frame extends Iced {
     return null;
   }
 
-  // Check that the vectors are all compatible: same number of rows per chunk
+  /**
+   * Check that the vectors are all compatible. All Vecs have their content sharded
+   * using same number of rows per chunk.
+   */
   public void checkCompatible( ) {
     Vec v0 = firstReadable();
     int nchunks = v0.nChunks();
@@ -80,6 +98,7 @@ public class Frame extends Iced {
           throw new IllegalArgumentException("Vector chunks different numbers of rows, "+es+" and "+vec.chunk2StartElem(i));
     }
   }
+
   public void closeAppendables() {closeAppendables(new Futures());}
   // Close all AppendableVec
   public void closeAppendables(Futures fs) {
@@ -91,7 +110,6 @@ public class Frame extends Iced {
     }
   }
 
-
   // True if any Appendables exist
   public boolean hasAppendables() {
     for( Vec v : _vecs )
@@ -100,7 +118,13 @@ public class Frame extends Iced {
     return false;
   }
 
-  // Actually remove/delete all Vecs from memory, not just from the Frame
+  public void remove() {
+    remove(new Futures());
+  }
+
+  /**
+   * Actually remove/delete all Vecs from memory, not just from the Frame.
+   */
   public void remove(Futures fs){
     if(_vecs.length > 0){
       VectorGroup vg = _vecs[0].group();
@@ -111,11 +135,14 @@ public class Frame extends Iced {
     _names = new String[0];
     _vecs = new Vec[0];
   }
-  // Remove all embedded Vecs
-  public void remove() {
-    remove(new Futures());
+
+  public long byteSize() {
+    long sum=0;
+    for( int i=0; i<_vecs.length; i++ )
+      sum += _vecs[i].byteSize();
+    return sum;
   }
-  @Override public Frame init( Key k ) { _key=k; return this; }
+
   @Override public String toString() {
     // Across
     String s="{"+_names[0];

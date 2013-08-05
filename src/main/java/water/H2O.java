@@ -32,7 +32,7 @@ public final class H2O {
 
   static boolean _hdfsActive = false;
 
-  public static final String VERSION = "0.3";
+  public static String VERSION = "(unknown)";
 
   // User name for this Cloud
   public static String NAME;
@@ -683,6 +683,7 @@ public final class H2O {
     String build_branch = "(unknown)";
     String build_hash = "(unknown)";
     String build_describe = "(unknown)";
+    String build_project_version = "(unknown)";
     String build_by = "(unknown)";
     String build_on = "(unknown)";
     try {
@@ -692,6 +693,7 @@ public final class H2O {
       build_branch = abv.branchName();
       build_hash = abv.lastCommitHash();
       build_describe = abv.describe();
+      build_project_version = abv.projectVersion();
       build_by = abv.compiledBy();
       build_on = abv.compiledOn();
       // it exists on the classpath
@@ -703,6 +705,7 @@ public final class H2O {
     Log.info ("Build git branch: " + build_branch);
     Log.info ("Build git hash: " + build_hash);
     Log.info ("Build git describe: " + build_describe);
+    Log.info ("Build project version: " + build_project_version);
     Log.info ("Built by: '" + build_by + "'");
     Log.info ("Built on: '" + build_on + "'");
 
@@ -713,6 +716,20 @@ public final class H2O {
     Log.info ("Java heap maxMemory: " + String.format("%.2f gb", (double)runtime.maxMemory() / ONE_GB));
   }
 
+  public static String getVersion() {
+    String build_project_version = "(unknown)";
+    try {
+      Class klass = Class.forName("water.BuildVersion");
+      java.lang.reflect.Constructor constructor = klass.getConstructor();
+      AbstractBuildVersion abv = (AbstractBuildVersion) constructor.newInstance();
+      build_project_version = abv.projectVersion();
+      // it exists on the classpath
+    } catch (Exception e) {
+      // it does not exist on the classpath
+    }
+    return build_project_version;
+  }
+
   // Start up an H2O Node and join any local Cloud
   public static void main( String[] args ) {
     Log.POST(300,"");
@@ -720,6 +737,8 @@ public final class H2O {
     // We need exactly 1 call to main to startup all the local services.
     if (IS_SYSTEM_RUNNING) return;
     IS_SYSTEM_RUNNING = true;
+
+    VERSION = getVersion();   // Pick this up from build-specific info.
 
     // Parse args
     Arguments arguments = new Arguments(args);
@@ -738,7 +757,6 @@ public final class H2O {
 
     sayHi();
 
-    ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
     Log.POST(310,"");
 
     // Get ice path before loading Log or Persist class
@@ -776,7 +794,7 @@ public final class H2O {
 
     initializeExpressionEvaluation(); // starts the expression evaluation system
     Log.POST(370,"");
-
+    ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
     startupFinalize(); // finalizes the startup & tests (if any)
     Log.POST(380,"");
   }
@@ -879,7 +897,7 @@ public final class H2O {
   // Used to update the Throwable detailMessage field.
   private static java.lang.reflect.Field DETAILMESSAGE;
   public static <T extends Throwable> T setDetailMessage( T t, String s ) {
-    try { if( DETAILMESSAGE != null )  DETAILMESSAGE.set(t,s); } 
+    try { if( DETAILMESSAGE != null )  DETAILMESSAGE.set(t,s); }
     catch( IllegalAccessException iae) {}
     return t;
   }
@@ -892,11 +910,11 @@ public final class H2O {
   private static void startupFinalize() {
     // Allow Throwable detailMessage's to be updated on the fly.  Ugly, ugly,
     // but I want to add info without rethrowing/rebuilding whole exceptions.
-    try { 
+    try {
       DETAILMESSAGE = Throwable.class.getDeclaredField("detailMessage");
       DETAILMESSAGE.setAccessible(true);
     } catch( NoSuchFieldException nsfe ) { }
-    
+
     // Sleep a bit so all my other threads can 'catch up'
     try { Thread.sleep(1000); } catch( InterruptedException e ) { }
   }
