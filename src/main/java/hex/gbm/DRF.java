@@ -199,13 +199,16 @@ public class DRF extends Job {
       double bs = Double.MAX_VALUE; // Best score
       int idx = -1;                 // Column to split on
       for( int i=0; i<tree._mtrys; i++ ) {
-        if( len == 0 ) break;       // Out of choices!
+        if( len == 0 ) break;   // Out of choices!
         int idx2 = tree._rand.nextInt(len);
-        int col = cols[idx2];       // The chosen column
-        cols[idx2] = cols[--len];   // Compress out of array; do not choose again
+        int col = cols[idx2];     // The chosen column
+        cols[idx2] = cols[--len]; // Compress out of array; do not choose again
         double s = hs[col].score();
+        //System.out.print("col="+col+" score="+s+", ");
         if( s < bs ) { bs = s; idx = col; }
+        if( s <= 0 ) break;     // No point in looking further!
       }
+      //System.out.println("bestcol="+idx+"hist="+hs[idx]);
       return idx;
     }
   }
