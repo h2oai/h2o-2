@@ -26,6 +26,15 @@ def ping_host_if_verbose(host):
 def file_line_count(fname):
     return sum(1 for line in open(fname))
 
+def file_size_formatted(fname):
+    size = os.path.getsize(fname)
+    print "size:", size
+    for x in ['bytes','KB','MB','GB','TB']:
+        if size < 1024.0:
+            return "%3.1f %s" % (size, x)
+        size /= 1024.0
+    return "%3.1f %s" % (size, 'TB')
+
 # the logfiles are zipped with directory structure
 # unzip it to the zipdir, throwing away the directory structure.
 # (so we don't have to know the names of the intermediate directories)
@@ -285,7 +294,7 @@ class JsonDiff(object):
             if with_values and second != None:
                 if first != second:
                     self.save_diff('%s - %s | %s' % (path, first, second), 'diff')
-            return 
+        return
             
     def save_diff(self, diff_message, type_):
         message = '%s: %s' % (type_, diff_message)

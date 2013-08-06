@@ -46,6 +46,7 @@ class Basic(unittest.TestCase):
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
         csvFilenameList = [
+            ("mnist_train.svm", "cM", 30, 0, 9, False, False),
             # multi-label target like 1,2,5 ..not sure what that means
             # ("tmc2007_train.svm",  "cJ", 30, 0, 21.0, False, False),
             ("syn_6_1000_10.svm",  "cK", 30, -36, 36, True, False),
@@ -56,7 +57,6 @@ class Basic(unittest.TestCase):
             ("colon-cancer.svm",   "cA", 30, -1.000000, 1.000000, False, False),
             ("news20.svm",         "cH", 30, 1, 20, False, False), 
             ("connect4.svm",       "cB", 30, -1, 1, False, False),
-            ("mnist_training.svm", "cM", 30, 0, 9, False, False),
             # too many features? 150K inspect timeout?
             # ("E2006.train.svm",    "cE", 30, 1, -7.89957807346873 -0.519409526940154, False, False)
 

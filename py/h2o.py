@@ -1,4 +1,4 @@
-import time, os, json, signal, tempfile, shutil, datetime, inspect, threading, os.path, getpass
+import time, os, json, signal, tempfile, shutil, datetime, inspect, threading, getpass
 import requests, psutil, argparse, sys, unittest, glob
 import h2o_browse as h2b, h2o_perf, h2o_util, h2o_cmd
 import re, webbrowser, random
@@ -1356,6 +1356,7 @@ class H2O(object):
             f = open(csvPathname, 'wb')
             for chunk in r.iter_content(1024):
                 f.write(chunk)
+        print csvPathname, "size:", h2o_util.file_size_formatted(csvPathname)
 
     def script_download(self, pathname, timeoutSecs=30):
         url = self.__url('script.txt')

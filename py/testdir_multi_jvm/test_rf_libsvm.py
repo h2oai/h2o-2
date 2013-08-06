@@ -31,13 +31,13 @@ class Basic(unittest.TestCase):
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
         csvFilenameList = [
+            ("mnist_train.svm", "cM", 30, 1),
             # FIX! fails KMeansScore
             # not integer output
             # ("colon-cancer.svm",   "cA", 30, 1),
             ("connect4.svm",       "cB", 30, 1),
             ("syn_6_1000_10.svm",  "cK", 30, 1),
             ("syn_0_100_1000.svm", "cL", 30, 1),
-            ("mnist_training.svm", "cM", 30, 1),
             ("mushrooms.svm",      "cG", 30, 1),
             ("duke.svm",           "cD", 30, 1),
             # too many features? 150K inspect timeout?
