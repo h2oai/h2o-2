@@ -422,7 +422,8 @@ public class RequestArguments extends RequestStatics {
      * and parsed properly, or not required and not specified.
      */
     public final boolean valid() {
-      return record().valid();
+      // return record().valid();
+      return record() != null && record().valid();
     }
 
     /** Returns true if the argument is specified by the user. That is if the

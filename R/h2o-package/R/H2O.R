@@ -62,10 +62,12 @@ setMethod("show", "H2ORForestModel", function(object) {
   cat("\nConfusion matrix:\n"); print(model$confusion)
 })
 
-setMethod("colnames", signature(x="H2OParsedData"), function(x) {
+setMethod("colnames", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key)
   unlist(lapply(res$cols, function(y) y$name))
 })
+
+setMethod("names", "H2OParsedData", function(x) { colnames(x) })
 
 setMethod("nrow", "H2OParsedData", function(x) { 
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key); res$num_rows })
@@ -112,6 +114,7 @@ setMethod("as.data.frame", "H2OParsedData", function(x) {
 
 # Generic method definitions
 setGeneric("h2o.checkClient", function(object) { standardGeneric("h2o.checkClient") })
+setGeneric("h2o.ls", function(object) { standardGeneric("h2o.ls") })
 # setGeneric("h2o.importFile", function(object, path, key = "", header = FALSE, parse = TRUE) { standardGeneric("h2o.importFile") })
 setGeneric("h2o.importFile", function(object, path, key = "", parse = TRUE) { standardGeneric("h2o.importFile") })
 setGeneric("h2o.importFolder", function(object, path, parse = TRUE) { standardGeneric("h2o.importFolder") })
@@ -127,36 +130,28 @@ setGeneric("h2o.randomForest", function(y, x_ignore = "", data, ntree, depth, cl
 setGeneric("h2o.getTree", function(forest, k, plot = FALSE) { standardGeneric("h2o.getTree") })
 
 # Unique methods to H2O
+# H2O client management operations
 setMethod("h2o.checkClient", signature(object="H2OClient"), function(object) { 
             myURL = paste("http://", object@ip, ":", object@port, sep="")
             if(!url.exists(myURL)) {
               print("H2O is not running yet, starting it now.")
-              myOS = Sys.info()["sysname"]; myHome = Sys.getenv("HOME")
-              
-              if(myOS == "Windows") verPath = paste(myHome, "AppData/Roaming/h2o", sep="/")
-              else verPath = paste(myHome, "Library/Application Support/h2o", sep="/")
-              myFiles = list.files(verPath)
-              if(length(myFiles) == 0) stop("Cannot find config file or folder")
-              # Must trim myFiles so all have format 1.2.3.45678.txt (use regexpr)!
-              
-              # Get H2O with latest version number
-              # If latest isn't working, maybe go down list to earliest until one executes?
-              fileName = paste(verPath, tail(myFiles, n=1), sep="/")
-              myVersion = strsplit(tail(myFiles, n=1), ".txt")[[1]]
-              launchPath = readChar(fileName, file.info(fileName)$size)
-              if(is.null(launchPath) || launchPath == "")
-                stop(paste("No H2OLauncher.jar matching H2O version", myVersion, "found"))
-              
-              temp = getwd(); setwd(launchPath)
-              if(myOS == "Windows") shell.exec("H2OLauncher.jar")
-              else system(paste("open", launchPath))
-              setwd(temp)
+              h2o.__startLauncher()
             } else { 
               cat("Successfully connected to", myURL, "\n")
               if("h2o" %in% rownames(installed.packages()) && (pv=packageVersion("h2o")) != (sv=h2o.__version(object)))
                 warning(paste("Version mismatch! Server running H2O version", sv, "but R package is version", pv))
-            } })
+            }
+          })
 
+setMethod("h2o.ls", signature(object="H2OClient"), function(object) {
+  res = h2o.__remoteSend(object, h2o.__PAGE_VIEWALL)
+  myList = lapply(res$keys, function(y) c(y$key, y$value_size_bytes))
+  temp = data.frame(matrix(unlist(myList), nrow = res$num_keys, byrow = TRUE))
+  colnames(temp) = c("Key", "Bytesize")
+  temp
+})
+
+# Data import operations
 setMethod("h2o.importURL", signature(object="H2OClient", path="character", key="character", parse="logical"),
           function(object, path, key, parse) {
             destKey = ifelse(parse, "", key)
@@ -241,9 +236,9 @@ setMethod("h2o.parseRaw", signature(data="H2ORawData", key="character"),
             parsedData = new("H2OParsedData", h2o=data@h2o, key=res$destination_key)
           })
 
-setMethod("h2o.parseRaw", signature(data="H2ORawData", key="missing"),
-          function(data, key) { h2o.parseRaw(data, key) })
+setMethod("h2o.parseRaw", signature(data="H2ORawData", key="missing"), function(data, key) { h2o.parseRaw(data, key) })
 
+# Model-building operations and algorithms
 setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="numeric", alpha="numeric", lambda="numeric"),
           function(x, y, data, family, nfolds, alpha, lambda) {
             # res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key = data@key, y = y, x = paste(x, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda)
@@ -418,6 +413,7 @@ setMethod("h2o.getTree", signature(forest="H2ORForestModel", k="numeric", plot="
 #          })
 
 # Internal functions & declarations
+h2o.__PAGE_CLOUD = "Cloud.json"
 h2o.__PAGE_EXEC = "Exec.json"
 h2o.__PAGE_GET = "GetVector.json"
 h2o.__PAGE_IMPORTURL = "ImportUrl.json"
@@ -428,7 +424,7 @@ h2o.__PAGE_JOBS = "Jobs.json"
 h2o.__PAGE_PARSE = "Parse.json"
 h2o.__PAGE_PUT = "PutVector.json"
 h2o.__PAGE_REMOVE = "Remove.json"
-h2o.__PAGE_CLOUD = "Cloud.json"
+h2o.__PAGE_VIEWALL = "StoreView.json"
 
 h2o.__PAGE_SUMMARY = "SummaryPage.json"
 h2o.__PAGE_PREDICT = "GeneratePredictionsPage.json"
@@ -448,7 +444,8 @@ h2o.__remoteSend <- function(client, page, ...) {
   url = paste("http://", ip, ":", port, "/", page, sep="")
   temp = postForm(url, style = "POST", ...)
   after = gsub("NaN", "\"NaN\"", temp[1])
-  after = gsub("Inf", "\"Inf\"", after)
+  # after = gsub("Inf", "\"Inf\"", after)
+  after = gsub("Infinity", "\"Inf\"", after)
   res = fromJSON(after)
   
   if (!is.null(res$error)) {
@@ -517,4 +514,27 @@ h2o.__remove <- function(client, keyName) {
 h2o.__version <- function(client) {
   res = h2o.__remoteSend(client, h2o.__PAGE_CLOUD)
   res$version
+}
+
+h2o.__startLauncher <- function() {
+  myOS = Sys.info()["sysname"]; myHome = Sys.getenv("HOME")
+  
+  if(myOS == "Windows") verPath = paste(myHome, "AppData/Roaming/h2o", sep="/")
+  else verPath = paste(myHome, "Library/Application Support/h2o", sep="/")
+  myFiles = list.files(verPath)
+  if(length(myFiles) == 0) stop("Cannot find config file or folder")
+  # Must trim myFiles so all have format 1.2.3.45678.txt (use regexpr)!
+  
+  # Get H2O with latest version number
+  # If latest isn't working, maybe go down list to earliest until one executes?
+  fileName = paste(verPath, tail(myFiles, n=1), sep="/")
+  myVersion = strsplit(tail(myFiles, n=1), ".txt")[[1]]
+  launchPath = readChar(fileName, file.info(fileName)$size)
+  if(is.null(launchPath) || launchPath == "")
+    stop(paste("No H2OLauncher.jar matching H2O version", myVersion, "found"))
+  
+  temp = getwd(); setwd(launchPath)
+  if(myOS == "Windows") shell.exec("H2OLauncher.jar")
+  else system(paste("open", launchPath))
+  setwd(temp)
 }
