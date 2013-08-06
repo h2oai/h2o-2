@@ -17,6 +17,10 @@ public class SVMLightDParseTask extends DParseTask {
     _colTypes = Arrays.copyOf(_colTypes, ncols);
     _min = Arrays.copyOf(_min, ncols); // additional columns has min/max/mean 0
     _max = Arrays.copyOf(_max, ncols);
+    if(_myrows == 0) { // in this case we can not be sure if 0 ever occurs in this particular column
+      _min[ncols-1] = Double.POSITIVE_INFINITY;
+      _max[ncols-1] = Double.NEGATIVE_INFINITY;
+    }
     _scale = Arrays.copyOf(_scale, ncols);
     _mean = Arrays.copyOf(_mean, ncols);
     _invalidValues = Arrays.copyOf(_invalidValues, ncols);

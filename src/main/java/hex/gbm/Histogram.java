@@ -65,9 +65,9 @@ class Histogram extends Iced implements Cloneable {
     assert _bins==null && _maxs == null; // Nothing filled-in yet
     Histogram h=clone();
     // Build bin stats
-    h._bins = new long  [_nbins];
-    h._mins = new double[_nbins];
-    h._maxs = new double[_nbins];
+    h._bins = MemoryManager.malloc8 (_nbins);
+    h._mins = MemoryManager.malloc8d(_nbins);
+    h._maxs = MemoryManager.malloc8d(_nbins);
     // Set step & min/max for each bin
     for( int j=0; j<_nbins; j++ ) { // Set bad bounds for min/max
       h._mins[j] =  Double.MAX_VALUE;
@@ -76,10 +76,11 @@ class Histogram extends Iced implements Cloneable {
     h._mins[       0] = _min; // Know better bounds for whole column min/max
     h._maxs[_nbins-1] = _max;
     if( numClasses == 0 ) {
-      h._Ms = new double[_nbins];
-      h._Ss = new double[_nbins];
+      h._Ms = MemoryManager.malloc8d(_nbins);
+      h._Ss = MemoryManager.malloc8d(_nbins);
     } else {
-      h._clss = new long[_nbins][numClasses];
+      h._clss = new long[_nbins][];
+      for( int i=0; i<_nbins; i++ ) h._clss[i] = MemoryManager.malloc8(numClasses);
     }
     return h;
   }
@@ -168,7 +169,7 @@ class Histogram extends Iced implements Cloneable {
     double sum = 0;
     int numClasses = _clss[0].length;
     for( int i=0; i<_bins.length; i++ ) {
-      if( _bins[i] == 0 ) continue;
+      if( _bins[i] <= 1 ) continue;
       // A little algebra, and the math we need is:
       //    N - (sum(clss^2)/N)
       int err=0;
@@ -252,8 +253,11 @@ class Histogram extends Iced implements Cloneable {
   public static Histogram[] initialHist( Frame fr, int ncols ) {
     Histogram hists[] = new Histogram[ncols];
     Vec[] vs = fr._vecs;
-    for( int j=0; j<ncols; j++ )
-      hists[j] = new Histogram(fr._names[j],vs[j].length(),vs[j].min(),vs[j].max(),vs[j]._isInt);
+    for( int j=0; j<ncols; j++ ) {
+      Vec v = vs[j];
+      hists[j] = v.min()==v.max() ? null 
+        : new Histogram(fr._names[j],v.length(),v.min(),v.max(),v._isInt);
+    }
     return hists;
   }
 
@@ -289,11 +293,21 @@ class Histogram extends Iced implements Cloneable {
   @Override public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append(_name).append("\n");
-    for( int i=0; i<_bins.length; i++ )
-      sb.append(String.format("cnt=%d, min=%f, max=%f, mean=%f, var=%f\n",
-                              _bins[i],_mins[i],_maxs[i],
-                              _Ms==null?Double.NaN:mean(i),
-                              _Ms==null?Double.NaN:var (i)));
+    if( _clss == null ) {
+      for( int i=0; i<_bins.length; i++ )
+        sb.append(String.format("cnt=%d, min=%f, max=%f, mean=%f, var=%f\n",
+                                _bins[i],_mins[i],_maxs[i],
+                                _Ms==null?Double.NaN:mean(i),
+                                _Ms==null?Double.NaN:var (i)));
+    } else {
+      int numClasses = _clss[0].length;
+      for( int i=0; i<_bins.length; i++ ) {
+        sb.append(String.format("cnt=%d, min=%f, max=%f, ", _bins[i],_mins[i],_maxs[i]));
+        for( int c=0; c<numClasses; c++ )
+          sb.append("c").append(c).append("=").append(_clss[i][c]).append(",");
+        sb.append("\n");
+      }
+    }
     return sb.toString();
   }
 
