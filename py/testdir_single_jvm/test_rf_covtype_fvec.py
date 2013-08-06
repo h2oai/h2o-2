@@ -72,6 +72,7 @@ class Basic(unittest.TestCase):
 
             h2o_jobs.pollWaitJobs(pattern='RF_model', timeoutSecs=180, pollTimeoutSecs=120, retryDelaySecs=5)
 
+            print h2o.dump_json(rfv)
 
 if __name__ == '__main__':
     h2o.unit_main()

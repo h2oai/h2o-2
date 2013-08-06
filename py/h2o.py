@@ -1216,7 +1216,7 @@ class H2O(object):
             if kwargs['sample'] is None:
                 params_dict['sample_rate'] = None
             else:
-                params_dict['sample_rate'] = kwargs['sample'] / 100 # has to be modified?
+                params_dict['sample_rate'] = (kwargs['sample'] + 0.0)/ 100 # has to be modified?
             
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
