@@ -3,6 +3,7 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_glm
 import h2o_browse as h2b
 import h2o_import as h2i
+import json
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -22,7 +23,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_parse_storeview_import(self):
+    def test_storeview_import(self):
+        SYNDATASETS_DIR = h2o.make_syn_dir()
         importFolderPath = "/home/0xdiag/datasets/standard"
         csvFilelist = [
             ("covtype.data", 300),
@@ -77,11 +79,20 @@ class Basic(unittest.TestCase):
             goodX = h2o_glm.goodXFromColumnInfo(y=0,
                 key=parseKey['destination_key'], timeoutSecs=300)
             summaryResult = h2o_cmd.runSummary(key=key2, timeoutSecs=360)
-            h2o_cmd.infoFromSummary(summaryResult)
+            h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
 
             # STOREVIEW***************************************
-            print "Trying StoreView after the parse"
-            h2o_cmd.runStoreView(timeoutSecs=30)
+            print "Trying StoreView to all nodes after the parse"
+            
+            for n, node in enumerate(h2o.nodes):
+                print "\n*****************"
+                print "StoreView node %s:%s" % (node.http_addr, node.port)
+                storeViewResult = h2o_cmd.runStoreView(node, timeoutSecs=30)
+                f = open(SYNDATASETS_DIR + "/storeview_" + str(n) + ".txt", "w" )
+                result = json.dump(storeViewResult, f, indent=4, sort_keys=True, default=str)
+                f.close()
+                lastStoreViewResult = storeViewResult
+            
 
             print "Trial #", trial, "completed in", time.time() - trialStart, "seconds."
             trial += 1

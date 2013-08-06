@@ -1,6 +1,7 @@
 package hex.gbm;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import java.io.File;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -95,11 +96,20 @@ public class GBMTest extends TestUtil {
     try {
       assertEquals(581012,fr._vecs[0].length());
 
+      // Confirm that on a multi-JVM test setup, covtype gets spread around
+      Vec c0 = fr.firstReadable();
+      int N = c0.nChunks();
+      H2ONode h2o =  c0.chunkKey(0).home_node(); // A chunkkey home
+      boolean found=false;        // Found another chunkkey home?
+      for( int j=1; j<N; j++ )    // All the chunks
+        if( h2o != c0.chunkKey(j).home_node() ) found = true;
+      assertTrue("Expecting to find distribution",found || H2O.CLOUD.size()==1);
+
       // Covtype: predict on last column
       int mtrys = Math.max((int)Math.sqrt(fr.numCols()),1);
       long seed = (1L<<32)|2;
 
-      DRF drf = DRF.start(DRF.makeKey(),fr,/*maxdepth*/40,/*ntrees*/10,mtrys,/*sampleRate*/0.67,seed);
+      DRF drf = DRF.start(DRF.makeKey(),fr,/*maxdepth*/50,/*ntrees*/5,mtrys,/*sampleRate*/0.67,seed);
       drf.get();                  // Block for result
       UKV.remove(drf.destination_key);
     } finally {

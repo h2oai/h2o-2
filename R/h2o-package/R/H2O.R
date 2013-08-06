@@ -62,11 +62,53 @@ setMethod("show", "H2ORForestModel", function(object) {
   cat("\nConfusion matrix:\n"); print(model$confusion)
 })
 
+setMethod("colnames", signature(x="H2OParsedData"), function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key)
+  unlist(lapply(res$cols, function(y) y$name))
+})
+
 setMethod("nrow", "H2OParsedData", function(x) { 
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key); res$num_rows })
 
 setMethod("ncol", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key); res$num_cols })
+
+setMethod("summary", "H2OParsedData", function(object) {
+  res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY, key=object@key)
+  res = res$summary$columns
+  result = NULL; cnames = NULL
+  for(i in 1:length(res)) {
+    cnames = c(cnames, paste("      ", res[[i]]$name, sep=""))
+    if(res[[i]]$type == "number") {
+      if(is.null(res[[i]]$percentiles))
+        params = format(rep(round(as.numeric(res[[i]]$mean), 3), 6), nsmall = 3)
+      else
+        params = format(round(as.numeric(c(res[[i]]$min[1], res[[i]]$percentiles$values[4], res[[i]]$percentiles$values[6], res[[i]]$mean, res[[i]]$percentiles$values[8], res[[i]]$max[1])), 3), nsmall = 3)
+      result = cbind(result, c(paste("Min.   :", params[1], "  ", sep=""), paste("1st Qu.:", params[2], "  ", sep=""),
+                               paste("Median :", params[3], "  ", sep=""), paste("Mean   :", params[4], "  ", sep=""),
+                               paste("3rd Qu.:", params[5], "  ", sep=""), paste("Max.   :", params[6], "  ", sep="")))                 
+    }
+    else if(res[[i]]$type == "enum") {
+      col = matrix(rep("", 6), ncol=1)
+      len = length(res[[i]]$histogram$bins)
+      for(j in 1:min(6,len))
+        col[j] = paste(res[[i]]$histogram$bin_names[len-j+1], ": ", res[[i]]$histogram$bins[len-j+1], sep="")
+      result = cbind(result, col)
+    }
+  }
+  result = as.table(result)
+  rownames(result) <- rep("", 6)
+  colnames(result) <- cnames
+  result
+})
+
+setMethod("as.data.frame", "H2OParsedData", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=0, view=nrow(x))
+  temp = unlist(lapply(res$rows, function(y) { y$row = NULL; y }))
+  x.df = data.frame(matrix(temp, nrow = res$num_rows, byrow = TRUE))
+  colnames(x.df) = unlist(lapply(res$cols, function(y) y$name))
+  x.df
+})
 
 # Generic method definitions
 setGeneric("h2o.checkClient", function(object) { standardGeneric("h2o.checkClient") })
@@ -85,15 +127,35 @@ setGeneric("h2o.randomForest", function(y, x_ignore = "", data, ntree, depth, cl
 setGeneric("h2o.getTree", function(forest, k, plot = FALSE) { standardGeneric("h2o.getTree") })
 
 # Unique methods to H2O
-setMethod("h2o.checkClient", signature(object="H2OClient"),
-          function(object) { 
+setMethod("h2o.checkClient", signature(object="H2OClient"), function(object) { 
             myURL = paste("http://", object@ip, ":", object@port, sep="")
-            if(!url.exists(myURL))
-              stop("H2O does not seem to be running. See http://0xdata.com/h2o/docs/ for how to get started")
-            cat("Successfully connected to", myURL, "\n")
-            if("h2o" %in% rownames(installed.packages()) && (pv=packageVersion("h2o")) != (sv=h2o.__version(object)))
+            if(!url.exists(myURL)) {
+              print("H2O is not running yet, starting it now.")
+              myOS = Sys.info()["sysname"]; myHome = Sys.getenv("HOME")
+              
+              if(myOS == "Windows") verPath = paste(myHome, "AppData/Roaming/h2o", sep="/")
+              else verPath = paste(myHome, "Library/Application Support/h2o", sep="/")
+              myFiles = list.files(verPath)
+              if(length(myFiles) == 0) stop("Cannot find config file or folder")
+              # Must trim myFiles so all have format 1.2.3.45678.txt (use regexpr)!
+              
+              # Get H2O with latest version number
+              # If latest isn't working, maybe go down list to earliest until one executes?
+              fileName = paste(verPath, tail(myFiles, n=1), sep="/")
+              myVersion = strsplit(tail(myFiles, n=1), ".txt")[[1]]
+              launchPath = readChar(fileName, file.info(fileName)$size)
+              if(is.null(launchPath) || launchPath == "")
+                stop(paste("No H2OLauncher.jar matching H2O version", myVersion, "found"))
+              
+              temp = getwd(); setwd(launchPath)
+              if(myOS == "Windows") shell.exec("H2OLauncher.jar")
+              else system(paste("open", launchPath))
+              setwd(temp)
+            } else { 
+              cat("Successfully connected to", myURL, "\n")
+              if("h2o" %in% rownames(installed.packages()) && (pv=packageVersion("h2o")) != (sv=h2o.__version(object)))
                 warning(paste("Version mismatch! Server running H2O version", sv, "but R package is version", pv))
-            })
+            } })
 
 setMethod("h2o.importURL", signature(object="H2OClient", path="character", key="character", parse="logical"),
           function(object, path, key, parse) {
@@ -347,43 +409,6 @@ setMethod("h2o.getTree", signature(forest="H2ORForestModel", k="numeric", plot="
 
 setMethod("h2o.getTree", signature(forest="H2ORForestModel", k="numeric", plot="missing"),
           function(forest, k) { h2o.getTree(forest, k, plot = FALSE) })
-
-setMethod("summary", signature(object="H2OParsedData"),
-          function(object) {
-            res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY, key=object@key)
-            res = res$summary$columns
-            result = NULL
-            cnames = NULL
-            for(i in 1:length(res)) {
-              cnames = c(cnames, paste("      ", res[[i]]$name, sep=""))
-              if(res[[i]]$type == "number") {
-                if(is.null(res[[i]]$percentiles))
-                  params = format(rep(round(res[[i]]$mean, 3), 6), nsmall = 3)
-                else
-                  params = format(round(c(res[[i]]$min[1], res[[i]]$percentiles$values[4], res[[i]]$percentiles$values[6], res[[i]]$mean, res[[i]]$percentiles$values[8], res[[i]]$max[1]), 3), nsmall = 3)
-                  result = cbind(result, c(paste("Min.   :", params[1], "  ", sep=""), paste("1st Qu.:", params[2], "  ", sep=""),
-                            paste("Median :", params[3], "  ", sep=""), paste("Mean   :", params[4], "  ", sep=""),
-                            paste("3rd Qu.:", params[5], "  ", sep=""), paste("Max.   :", params[6], "  ", sep="")))                 
-                  }
-              else if(res[[i]]$type == "enum") {
-                col = matrix(rep("", 6), ncol=1)
-                len = length(res[[i]]$histogram$bins)
-                for(j in 1:min(6,len))
-                  col[j] = paste(res[[i]]$histogram$bin_names[len-j+1], ": ", res[[i]]$histogram$bins[len-j+1], sep="")
-                result = cbind(result, col)
-              }
-            }
-            result = as.table(result)
-            rownames(result) <- rep("", 6)
-            colnames(result) <- cnames
-            result
-          })
-
-setMethod("colnames", signature(x="H2OParsedData"),
-          function(x) {
-            res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key)
-            unlist(lapply(res$cols, function(y) y$name))
-          })
 
 # setMethod("predict", signature(object="H2OGLMModel"), 
 #          function(object) {
