@@ -55,9 +55,9 @@ class DTree extends Iced {
 
   // Abstract node flavor
   static abstract class Node extends Iced {
-    transient DTree _tree;
-    final int _pid;             // Parent node id, root has no parent and uses -1
-    final int _nid;             // My node-ID, 0 is root
+    transient DTree _tree;    // Make transient, lest we clone the whole tree
+    final int _pid;           // Parent node id, root has no parent and uses -1
+    final int _nid;           // My node-ID, 0 is root
     Node( DTree tree, int pid, int nid ) { 
       _tree = tree; 
       _pid=pid;
@@ -288,6 +288,13 @@ class DTree extends Iced {
       _ymin = ymin;
     }
 
+    // Init all the internal tree fields after shipping over the wire
+    @Override public void init( ) {
+      for( DTree dt : _trees )
+        for( int j=0; j<dt._len; j++ )
+          dt._ns[j]._tree = dt;
+    }
+
     public Histogram[] getFinalHisto( int tid, int nid ) {
       Histogram hs[] = _hcs[tid][nid-_leafs[tid]];
       // Having gather min/max/mean/class/etc on all the data, we can now
@@ -396,6 +403,13 @@ class DTree extends Iced {
       _trees = trees; _ncols = ncols; 
       _numClasses = numClasses; _ymin = ymin; 
       _rate = (float)sampleRate;
+    }
+
+    // Init all the internal tree fields after shipping over the wire
+    @Override public void init( ) {
+      for( DTree dt : _trees )
+        for( int j=0; j<dt._len; j++ )
+          dt._ns[j]._tree = dt;
     }
 
     @Override public void map( Chunk chks[] ) {

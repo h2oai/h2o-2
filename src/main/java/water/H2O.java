@@ -225,28 +225,30 @@ public final class H2O {
   // is nonsense, e.g. asking for replica #3 in a 2-Node system.
   public int D( Key key, int repl ) {
     if( repl >= size() ) return -1;
-    // Distribution of Fluid Vectors is a special case.
-    // Fluid Vectors are grouped into vector groups, each of which must have the same distribution of chunks
-    // so that MRTask2 run over group of vectors will keep data-locality.
-    // The fluid vecs from the same group share the same key pattern + each has 4 bytes identifying particular vector in the group.
-    // Since we need the same chunks end up on the smae node in the group, we need to skip the 4 bytes containing vec# from the hash.
-    // Apart from that, we keep previous mode of operation, so that ByteVec would have first 64MB distributed around cloud randomly and then go round-robin
-    // in 64MB chunks.
+
+    // Distribution of Fluid Vectors is a special case.  
+    // Fluid Vectors are grouped into vector groups, each of which must have
+    // the same distribution of chunks so that MRTask2 run over group of
+    // vectors will keep data-locality.  The fluid vecs from the same group
+    // share the same key pattern + each has 4 bytes identifying particular
+    // vector in the group.  Since we need the same chunks end up on the smae
+    // node in the group, we need to skip the 4 bytes containing vec# from the
+    // hash.  Apart from that, we keep the previous mode of operation, so that
+    // ByteVec would have first 64MB distributed around cloud randomly and then
+    // go round-robin in 64MB chunks.
     if(key._kb[0] == Key.DVEC || key._kb[0] == Key.VEC){
-      long idx = 0;
-      long hash = 0;
-      if(key._kb[0] == Key.DVEC){
-        long cSz = 1 << (26 - ValueArray.LOG_CHK);
-        idx = (UDP.get4(key._kb, 4));
-        if(idx > cSz){ // chunk after 64MB boundary -> go round robin according to chunk# / (64MB/chunksz)
-          idx = idx >>> (26 - ValueArray.LOG_CHK);
-          // skip all the size bytes including chunk# from the hash
-          hash = Key.hash(key._kb, 10, key._kb.length);
-        } else // we're in the first 64MB region, just skip the vec# bytes but keep the chunk# bytes in the hash
-          hash = Key.hash(key._kb, 6, key._kb.length);
-      } else // we want vec headers from the same group to be homed on the same node, so skip the differentiating bytes
-        hash = Key.hash(key._kb, 10, key._kb.length);
-      return  (int)((idx + 0x7FFFFFFF&hash + repl) % size());
+      long cidx = 0;
+      int skip = 1+1+4+4;       // Skip both the vec# and chunk#?
+      if( key._kb[0] == Key.DVEC ) {
+        long cSz = 1L << (26 - water.fvec.Vec.LOG_CHK);
+        cidx = UDP.get4(key._kb, 1+1+4); // Chunk index
+        if( cidx > cSz ) // chunk after 64MB boundary -> go round robin according to chunk# / (64MB/chunksz)
+          cidx >>>= (26 - water.fvec.Vec.LOG_CHK);
+        else // we're in the first 64MB region, just skip the vec# bytes but keep the chunk# bytes in the hash
+          skip = 1+1+4/*+4*/;
+      } // we want vec headers from the same group to be homed on the same node, so skip the differentiating bytes
+      long hash = Key.hash(key._kb, skip, key._kb.length);
+      return (int)((cidx + (0x7FFFFFFF&hash) + repl) % size());
     }
     // See if this is a specifically homed DVEC Key (has shorter encoding).
     byte[] kb = key._kb;
