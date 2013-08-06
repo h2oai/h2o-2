@@ -26,8 +26,7 @@ class Basic(unittest.TestCase):
             else:
                 csvPathname = h2o.find_file('smalldata/iris/iris2.csv')
             start = time.time()
-            # rfview=False used to inhibit the rfview completion
-            rfResult = h2o_cmd.runRF(trees=6, timeoutSecs=10, rfview=False, csvPathname=csvPathname)
+            rfResult = h2o_cmd.runRF(trees=6, timeoutSecs=10, rfView=False, csvPathname=csvPathname)
             print "RF #%d" % trial,  "started on ", csvPathname, 'took', time.time() - start, 'seconds'
             model_key = rfResult['model_key']
             print "model_key:", model_key

@@ -541,7 +541,12 @@ def check_sandbox_for_errors(sandbox_ignore_errors=False):
                     # don't detect these class loader info messags as errors
                     #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
                     foundBad = regex1.search(line) and not (
-                        ('error rate' in line) or ('[Loaded ' in line) or ('class.error' in line) or
+                        # fvec
+                        ('prediction error' in line) or ('errors on' in line) or
+                        # R
+                        ('class.error' in line) or
+                        # original RF
+                        ('error rate' in line) or ('[Loaded ' in line) or 
                         ('[WARN]' in line) or ('CalcSquareErrorsTasks' in line))
 
                 if (printing==0 and foundBad):
@@ -1231,6 +1236,11 @@ class H2O(object):
         return a
 
     def random_forest_view(self, data_key, model_key, timeoutSecs=300, print_params=False, **kwargs):
+        # not supported yet
+        if beta_features:
+            print "random_forest_view not supported in H2O fvec yet. hacking done response"
+            r = {'response': {'status': 'done'}, 'trees': {'number_built': 0}}
+            return r
         # is response_variable needed here? it shouldn't be
         # do_json_request will ignore any that remain = None
         params_dict = {

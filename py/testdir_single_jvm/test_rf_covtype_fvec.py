@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import as h2i, h2o_exec
+import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import as h2i, h2o_exec, h2o_jobs
 
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
 # only classes 1-7 in the 55th col
@@ -54,7 +54,8 @@ class Basic(unittest.TestCase):
 
         inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
 
-        for trial in range(1):
+        rfViewInitial = []
+        for jobDispatch in range(1):
             # adjust timeoutSecs with the number of trees
             # seems ec2 can be really slow
             kwargs = paramDict.copy()
@@ -62,17 +63,41 @@ class Basic(unittest.TestCase):
             start = time.time()
             # do oobe
             kwargs['out_of_bag_error_estimate'] = 1
-            kwargs['model_key'] = "model_" + str(trial)
+            kwargs['model_key'] = "model_" + str(jobDispatch)
             
             # don't poll for fvec 
-            rfv = h2o_cmd.runRFOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
+            rfResult = h2o_cmd.runRFOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, noPoll=True, rfView=False, **kwargs)
             elapsed = time.time() - start
             print "RF dispatch end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 
+            print h2o.dump_json(rfResult)
+            # FIX! are these already in there?
+            rfView = {}
+            rfView['data_key'] = key2
+            rfView['model_key'] = kwargs['model_key']
+            rfView['ntree'] = kwargs['ntree']
+            rfViewInitial.append(rfView)
+
+            print "rf job dispatch end on ", csvPathname, 'took', time.time() - start, 'seconds'
+            print "\njobDispatch #", jobDispatch
+
             h2o_jobs.pollWaitJobs(pattern='RF_model', timeoutSecs=180, pollTimeoutSecs=120, retryDelaySecs=5)
 
-            print h2o.dump_json(rfv)
+
+        # we saved the initial response?
+        # if we do another poll they should be done now, and better to get it that 
+        # way rather than the inspect (to match what simpleCheckGLM is expected
+        print "rfViewInitial", rfViewInitial
+        for rfView in rfViewInitial:
+            print "Checking completed job:", rfView
+            print "rfView", h2o.dump_json(rfView)
+            data_key = rfView['data_key']
+            model_key = rfView['model_key']
+            ntree = rfView['ntree']
+            # allow it to poll to complete
+            rfViewResult = h2o_cmd.runRFView(None, data_key, model_key, ntree=ntree, timeoutSecs=60, noPoll=False)
+
 
 if __name__ == '__main__':
     h2o.unit_main()
