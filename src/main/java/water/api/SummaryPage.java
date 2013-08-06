@@ -44,42 +44,72 @@ public class SummaryPage extends Request {
           pageBldr.append("<div><a href='#col_" + cname + "'>" + cname + "</a></div>");
           long N = o.get("N").getAsLong();
           sb.append("<div class='table' id='col_" + cname + "' style='width:90%;heigth:90%;overflow-y:scroll;border-top-style:solid;'><div class='alert-success'><h4>Column: " + cname + "</h4></div>\n");
+          // !enum
           if(o.has("min") && o.has("max")){
-            StringBuilder minRow = new StringBuilder("<tr><th>&mu;</th><td>" + Utils.p2d(o.get("mean").getAsDouble())+"</td><th style='border-left-style:solid; borde-left:1px;border-left-color:#ddd;'>min[5]</th>");
-            StringBuilder maxRow = new StringBuilder("<tr><th>&sigma;</th><td>" + Utils.p2d(o.get("sigma").getAsDouble()) + "</td><th style='border-left-style:solid; borde-left:1px;border-left-color:#ddd;'>max[5]</th>");
+            StringBuilder baseStats = new StringBuilder("<div style='width:100%;overflow:scroll;'><table class='table-bordered'>");
+            baseStats.append("<tr><th colspan='" + 100 + "' style='text-align:center;'>Base Stats</th></tr>");
+
+            baseStats.append("<th>&mu;</th><td>" + Utils.p2d(o.get("mean").getAsDouble())+"</td>");
+            baseStats.append("<th>&sigma;</th><td>" + Utils.p2d(o.get("sigma").getAsDouble()) + "</td>");
+
+            baseStats.append("<th>NAs</th>  <td>" + o.get("na").getAsLong() + "</td>");
+            baseStats.append("<th>zeros</th>");
+            baseStats.append("<td>" + o.get("zeros").getAsLong() + "</td>");
+
+            StringBuilder minmax = new StringBuilder();
+            int min_count = 0;
             Iterator<JsonElement> iter = o.get("min").getAsJsonArray().iterator();
-            int nCols = 3;
             while(iter.hasNext()){
-              ++nCols;
-              minRow.append("<td>" + Utils.p2d(iter.next().getAsDouble()) + "</td>");
+              min_count++;
+              minmax.append("<td>" + Utils.p2d(iter.next().getAsDouble()) + "</td>");
             }
+            baseStats.append("<th>min[" + min_count + "]</th>");
+            baseStats.append(minmax.toString());
+
+            baseStats.append("<th>max[" + min_count + "]</th>");
             iter = o.get("max").getAsJsonArray().iterator();
-            while(iter.hasNext())maxRow.append("<td>" + Utils.p2d(iter.next().getAsDouble()) + "</td>");
-            StringBuilder firstRow = new StringBuilder("<tr><th colspan='" + nCols + "' style='text-align:center;'>Base Stats</th>");
+            while(iter.hasNext()) baseStats.append("<td>" + Utils.p2d(iter.next().getAsDouble()) + "</td>");
+            baseStats.append("</tr> </table>");
+            baseStats.append("</div>");
+
+            sb.append( baseStats.toString());
+
+            StringBuilder threshold = new StringBuilder();
+            StringBuilder value = new StringBuilder();
             if(o.has("percentiles")){
-              firstRow.append("<th colspan='12' style='text-align:center;border-left-style:solid; borde-left:1px;border-left-color:#ddd;'>Percentiles</th>");
               JsonObject percentiles = o.get("percentiles").getAsJsonObject();
               JsonArray thresholds = percentiles.get("thresholds").getAsJsonArray();
               JsonArray values = percentiles.get("values").getAsJsonArray();
               Iterator<JsonElement> tIter = thresholds.iterator();
               Iterator<JsonElement> vIter = values.iterator();
-              minRow.append("<th style='border-left-style:solid; borde-left:1px;border-left-color:#ddd;'>Threshold</th>");
-              maxRow.append("<th style='border-left-style:solid; borde-left:1px;border-left-color:#ddd;'>Value</th>");
+
+              threshold.append("<tr><th>Threshold</th>");
+              value.append("<tr><th>Value</th>");
               while(tIter.hasNext() && vIter.hasNext()){
-                minRow.append("<td>" + tIter.next().getAsString() + "</td>");
-                maxRow.append("<td>" + Utils.p2d(vIter.next().getAsDouble()) + "</td>");
+                threshold.append("<td>" + tIter.next().getAsString() + "</td>");
+                value.append("<td>" + Utils.p2d(vIter.next().getAsDouble()) + "</td>");
               }
+              threshold.append("</tr>");
+              value.append("</tr>");
+
+              sb.append("<div style='width:100%;overflow:scroll;'><table class='table-bordered'>");
+              sb.append("<th colspan='12' style='text-align:center;'>Percentiles</th>");
+              sb.append(threshold.toString());
+              sb.append(value.toString());
+              sb.append("</table>");
+              sb.append("</div>");
             }
-            firstRow.append("</tr>");
-            minRow.append("</tr>");
-            maxRow.append("</tr>");
-            sb.append("<div style='width:100%;overflow:scroll;'><table>");
-            sb.append(firstRow.toString());
-            sb.append(minRow.toString());
-            sb.append(maxRow.toString());
+
+          } else {
+            // this should be the _enum case, in which I want to report NA count
+            sb.append("<div style='width:100%;overflow:scroll;'><table class='table-bordered'>");
+            sb.append("<tr><th colspan='" + 4 + "' style='text-align:center;'>Base Stats</th></tr>");
+            // na row
+            sb.append("<tr><th>NAs</th>  <td>" + o.get("na").getAsLong() + "</td>");
+            sb.append("<th>cardinality</th>  <td>" + o.get("enumCardinality").getAsLong() + "</td></tr>");
             sb.append("</table></div>");
           }
-          sb.append("<h5>Histogram</h5>");
+          // sb.append("<h5>Histogram</h5>");
           JsonObject histo = o.get("histogram").getAsJsonObject();
           JsonArray bins = histo.get("bins").getAsJsonArray();
           JsonArray names = histo.get("bin_names").getAsJsonArray();
@@ -90,7 +120,7 @@ public class SummaryPage extends Request {
           StringBuilder p = new StringBuilder("<tr>");
           int i = 0;
           while(bIter.hasNext() && nIter.hasNext() && i++ < MAX_HISTO_BINS_DISPLAYED){
-            n.append("<td>" + nIter.next().getAsString() + "</td>");
+            n.append("<th>" + nIter.next().getAsString() + "</th>");
             long cnt = bIter.next().getAsLong();
             b.append("<td>" + cnt + "</td>");
             p.append(String.format("<td>%.1f%%</td>",(100.0*cnt/N)));
@@ -100,7 +130,9 @@ public class SummaryPage extends Request {
           n.append("</tr>\n");
           b.append("</tr>\n");
           p.append("</tr>\n");
-          sb.append("<div style='width:100%;overflow:scroll;'><table>" + n.toString() + b.toString() + p.toString() + "</table></div>");
+          sb.append("<div style='width:100%;overflow:scroll;'><table class='table-bordered'>");
+          sb.append("<thead> <th colspan=" + (MAX_HISTO_BINS_DISPLAYED + 1) + " style='text-align:center;'>Histogram </th> </thead>");
+          sb.append(n.toString() + b.toString() + p.toString() + "</table></div>");
           sb.append("\n</div>\n");
         }
         sb.append("</div>");

@@ -507,8 +507,8 @@ public class ValueArray extends Iced implements Cloneable {
         }
         sb.append('\n');
         _currentLine = sb.toString().getBytes();
+        _i = 0;
       }
-      _i = 0;
       return _currentLine.length - _i;
     }
     @Override public void close() { super.close(); _currentLine = null;}

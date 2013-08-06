@@ -20,7 +20,7 @@ import water.*;
  */
 public class Vec extends Iced {
   /** Log-2 of Chunk size. */
-  private static final int LOG_CHK = 20; // Chunks are 1<<20, or 1Meg
+  public static final int LOG_CHK = 20; // Chunks are 1<<20, or 1Meg
   /** Chunk size.  Bigger increases batch sizes, lowers overhead costs, lower
    * increases fine-grained parallelism. */
   static final long CHUNK_SZ = 1L << LOG_CHK;
@@ -101,6 +101,21 @@ public class Vec extends Iced {
 
   /** Map the integer value for a enum/factor/catagorical to it's String */
   public String domain(long i) { return _domain[(int)i]; }
+
+  /** Return an array of domains.  This is eagerly manifested for
+   *  enum/catagorical columns, and lazily manifested for integer columns with
+   *  a min-to-max range of < 10000.  */
+  public String[] domain() { 
+    if( _domain != null ) return _domain;
+    assert _dtype == DType.I;
+    long min = (long)min();
+    long max = (long)max();
+    int len = (int)(max-min+1);
+    _domain = new String[len];
+    for( int i=0; i<len; i++ )
+      _domain[i] = Long.toString(i+min);
+    return _domain; 
+  }
 
   /** Default read/write behavior for Vecs.  File-backed Vecs are read-only. */
   protected boolean readable() { return true ; }
@@ -239,7 +254,7 @@ public class Vec extends Iced {
     bits[0] = Key.VEC;
     bits[1] = -1;         // Not homed
     UDP.set4(bits,2,0);   // new group, so we're the first vector
-    UDP.set4(bits,6,-1);  // 0xFFFFFFFF in the   chunk# area
+    UDP.set4(bits,6,-1);  // 0xFFFFFFFF in the chunk# area
     System.arraycopy(kb, 0, bits, 4+4+1+1, kb.length);
     return Key.make(bits);
   }
@@ -341,8 +356,11 @@ public class Vec extends Iced {
   @Override public String toString() {
     String s = "["+length()+(Double.isNaN(_min) ? "" : ","+_min+"/"+_mean+"/"+_max+", "+PrettyPrint.bytes(byteSize())+", {");
     int nc = nChunks();
-    for( int i=0; i<nc; i++ )
-      s += (DKV.get(chunkKey(i)).get())+",";
+    for( int i=0; i<nc; i++ ) {
+      s += chunkKey(i).home_node()+":"+chunk2StartElem(i)+":";
+      // Stupidly elem2BV loads all data locally
+      s += elem2BV(i).getClass().getSimpleName().replaceAll("Chunk","")+", ";
+    }
     return s+"}]";
   }
 

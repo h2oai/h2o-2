@@ -62,7 +62,7 @@ def make_datasetgz_and_parse(SYNDATASETS_DIR, csvFilename, key2, rowCount, colCo
     start = time.time()
     print "Parse start:", csvPathnameReplgz
     doSummary = False
-    parseKey = h2o_cmd.parseFile(None, csvPathnameReplgz, key2=key2, timeoutSecs=timeoutSecs, doSummary=doSummary)
+    parseKey = h2o_cmd.parseFile(None, csvPathnameReplgz, key2=key2, timeoutSecs=timeoutSecs, pollTimeoutSecs=120, doSummary=doSummary)
     print csvFilenameReplgz, 'parse time:', parseKey['response']['time']
     if doSummary:
         algo = "Parse and Summary:"
@@ -112,7 +112,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_rf_syngzcat_perf(self):
+    def test_rf_syn_gz_cat(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             # summary fails with 100000 cols
