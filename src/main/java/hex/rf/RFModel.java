@@ -18,7 +18,7 @@ import com.google.gson.*;
  * A model is an ensemble of trees that can be serialized and that can be used
  * to classify data.
  */
-public class RFModel extends Model implements Cloneable, Progress {
+public class RFModel extends Model implements Progress {
   /** Number of features these trees are built for */
   public int _features;
   /** Sampling strategy used for model */
@@ -83,16 +83,8 @@ public class RFModel extends Model implements Cloneable, Progress {
   /** Empty constructor for deserialization */
   public RFModel() {}
 
-  @Override protected RFModel clone() {
-    try {
-      return (RFModel) super.clone();
-    } catch( CloneNotSupportedException cne ) {
-      throw Log.err(Sys.RANDF, "", H2O.unimpl());
-    }
-  }
-
   static public RFModel make(RFModel old, Key tkey, int nodeIdx) {
-    RFModel m = old.clone();
+    RFModel m = (RFModel)old.clone();
     m._tkeys = Arrays.copyOf(old._tkeys,old._tkeys.length+1);
     m._tkeys[m._tkeys.length-1] = tkey;
 
