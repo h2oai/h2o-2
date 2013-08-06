@@ -99,10 +99,7 @@ public class ValueArray extends Iced implements Cloneable {
   /** Return the key that denotes this entire ValueArray in the K/V store. */
   public final Key getKey() { return _key; }
 
-  @Override public ValueArray clone() {
-    try { return (ValueArray)super.clone(); }
-    catch( CloneNotSupportedException cne ) { throw Log.err(H2O.unimpl()); }
-  }
+  @Override public ValueArray clone() { return (ValueArray)super.clone(); }
 
   // Init of transient fields from deserialization calls
   @Override public final ValueArray init( Key key ) {
@@ -228,10 +225,7 @@ public class ValueArray extends Iced implements Cloneable {
     public final boolean isScaled() { return _scale != 1; }
     /** Compute size of numeric integer domain */
     public final long    numDomainSize() { return (long) ((_max - _min)+1); }
-    @Override public Column clone() {
-      try { return (Column)super.clone(); }
-      catch( CloneNotSupportedException cne ) { throw H2O.unimpl(); }
-    }
+    @Override public Column clone() { return (Column)super.clone(); }
 
     private static boolean eq(double x, double y, double precision){
       return (Math.abs(x-y) < precision);

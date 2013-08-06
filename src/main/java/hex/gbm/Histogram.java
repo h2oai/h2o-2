@@ -63,7 +63,7 @@ class Histogram extends Iced implements Cloneable {
   // Copy from the original Histogram, but then allocate private arrays
   public Histogram copy( int numClasses ) {
     assert _bins==null && _maxs == null; // Nothing filled-in yet
-    Histogram h=clone();
+    Histogram h=(Histogram)clone();
     // Build bin stats
     h._bins = MemoryManager.malloc8 (_nbins);
     h._mins = MemoryManager.malloc8d(_nbins);
@@ -309,13 +309,5 @@ class Histogram extends Iced implements Cloneable {
       }
     }
     return sb.toString();
-  }
-
-  @Override protected Histogram clone() {
-    try {
-      return (Histogram)super.clone();
-    } catch( CloneNotSupportedException e ) {
-      throw Log.errRTExcept(e);
-    }
   }
 }

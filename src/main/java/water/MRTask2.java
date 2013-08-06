@@ -272,18 +272,14 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
   }
 
   /** Local Clone - setting final-field completer */
-  @Override protected T clone() {
-    try {
-      T x = (T)super.clone();
-      x.setCompleter(this); // Set completer, what used to be a final field
-      x._topLocal = false;  // Not a top job
-      x._nleft = x._nrite = null;
-      x. _left = x. _rite = null;
-      x._fs = null;         // Clone does not depend on extent futures
-      x.setPendingCount(0); // Volatile write for completer field; reset pending count also
-      return x;
-    } catch( CloneNotSupportedException e ) {
-      throw Log.errRTExcept(e);
-    }
+  @Override public T clone() {
+    T x = (T)super.clone();
+    x.setCompleter(this); // Set completer, what used to be a final field
+    x._topLocal = false;  // Not a top job
+    x._nleft = x._nrite = null;
+    x. _left = x. _rite = null;
+    x._fs = null;         // Clone does not depend on extent futures
+    x.setPendingCount(0); // Volatile write for completer field; reset pending count also
+    return x;
   }
 }

@@ -53,4 +53,8 @@ public abstract class DTask<T extends DTask> extends H2OCountedCompleter impleme
   @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { throw barf(); }
   @Override public water.api.DocGen.FieldDoc[] toDocField() { return null; }
   public void copyOver(T that) { throw barf(); }
+  @Override public DTask clone() {
+    try { return (DTask)super.clone(); }
+    catch( CloneNotSupportedException e ) { throw water.util.Log.errRTExcept(e); }
+  }
 }

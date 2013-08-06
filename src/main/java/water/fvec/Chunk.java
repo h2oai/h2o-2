@@ -136,15 +136,7 @@ public abstract class Chunk extends Iced implements Cloneable {
   public abstract Chunk  read (AutoBuffer bb);
   public final boolean valueIsNA(long val){return val == _vec._iNA;}
 
-  // Local Clone
-  @Override protected Chunk clone() {
-    try {
-      return (Chunk)super.clone();
-    } catch( CloneNotSupportedException e ) {
-      throw water.util.Log.errRTExcept(e);
-    }
-  }
-
+  @Override public Chunk clone() { return (Chunk)super.clone(); }
   @Override public String toString() { return getClass().getSimpleName(); }
 
   public long byteSize() {

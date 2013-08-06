@@ -254,15 +254,11 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
     return res;
   }
 
-  @Override protected T clone() {
-    try {
-      T dt = (T)super.clone();
-      dt.setCompleter(this); // Set completer, what used to be a final field
-      dt._fs = null;         // Clone does not depend on extent futures
-      dt.setPendingCount(0); // Volatile write for completer field; reset pending count also
-      return dt;
-    } catch( CloneNotSupportedException e ) {
-      throw  Log.errRTExcept(e);
-    }
+  @Override public T clone() {
+    T dt = (T)super.clone();
+    dt.setCompleter(this); // Set completer, what used to be a final field
+    dt._fs = null;         // Clone does not depend on extent futures
+    dt.setPendingCount(0); // Volatile write for completer field; reset pending count also
+    return dt;
   }
 }
