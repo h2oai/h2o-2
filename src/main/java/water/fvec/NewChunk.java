@@ -15,7 +15,7 @@ public class NewChunk extends Chunk {
   int _naCnt;
   int _strCnt;
 
-  NewChunk( Vec vec, int cidx ) {
+  public NewChunk( Vec vec, int cidx ) {
     _vec = vec;
     _cidx = cidx;               // This chunk#
     _ls = new long[4];          // A little room for data
@@ -39,13 +39,26 @@ public class NewChunk extends Chunk {
     append2(0,Integer.MIN_VALUE); ++_naCnt;
   }
   private boolean _hasFloat;
-  public void addNum(long val, int exp){
+  public void addNum(long val, int exp) {
     if(val == 0)exp = 0;
     _hasFloat |= (exp < 0);
     append2(val,exp);
   }
-  public void addEnum(int e){
+  public void addEnum(int e) {
     append2(0,e); ++_strCnt;
+  }
+  public void addNum(double d) {
+    if(_ds == null) {
+      assert _len == 0;
+      _ds = new double[1];
+    }
+    if( _len >= _ds.length ) {
+      if( _len > Vec.CHUNK_SZ )
+        throw new ArrayIndexOutOfBoundsException(_len);
+      _ds = Arrays.copyOf(_ds,_len<<1);
+    }
+    _ds[_len] = d;
+    _len++;
   }
 
   // Fast-path append long data

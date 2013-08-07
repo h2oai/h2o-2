@@ -27,6 +27,10 @@ public class AppendableVec extends Vec {
   long _strCnt;
   long _totalCnt;
 
+  public AppendableVec( String keyName ) {
+    this(Key.make(keyName, (byte) 0, Key.VEC));
+  }
+
   AppendableVec( Key key) {
     super(key, null,false,0);
     _espc = new long[4];

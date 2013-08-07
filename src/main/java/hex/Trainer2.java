@@ -58,8 +58,9 @@ public abstract class Trainer2 {
           for( int i = 1; i < _ls.length - 1; i++ )
             Arrays.fill(_ls[i]._e, 0);
           float[] err = _ls[_ls.length - 1]._e;
+          int label = input.label();
           for( int i = 0; i < err.length; i++ ) {
-            float t = i == input.label() ? .9f : -.1f;
+            float t = i == label ? 1 : 0;
             err[i] = t - _ls[_ls.length - 1]._a[i];
           }
 
@@ -76,12 +77,12 @@ public abstract class Trainer2 {
 
     void fprop() {
       for( int i = 0; i < _ls.length; i++ )
-        _ls[i].fprop(0, _ls[i]._a.length);
+        _ls[i].fprop();
     }
 
     void bprop() {
       for( int i = _ls.length - 1; i > 0; i-- )
-        _ls[i].bprop(0, _ls[i]._a.length);
+        _ls[i].bprop();
     }
   }
 
@@ -142,95 +143,6 @@ public abstract class Trainer2 {
         } catch( InterruptedException e ) {
           throw new RuntimeException(e);
         }
-      }
-    }
-  }
-
-  /**
-   * Chunks weight matrices over multiple threads.
-   */
-  public static class Chunked extends Direct {
-    final Chunk[] _chunks;
-    final CyclicBarrier _wait, _done;
-
-    public Chunked(Layer2[] ls) {
-      super(ls);
-
-      _chunks = new Chunk[Runtime.getRuntime().availableProcessors()];
-      _wait = new CyclicBarrier(_chunks.length);
-      _done = new CyclicBarrier(_chunks.length);
-
-      int[][] offs = new int[_chunks.length][_ls.length];
-      int[][] lens = new int[_chunks.length][_ls.length];
-      for( int Layer2 = 1; Layer2 < _ls.length; Layer2++ ) {
-        int last = 0;
-        for( int i = 0; i < _chunks.length; i++ ) {
-          final int limit = _ls[Layer2]._a.length * (i + 1) / _chunks.length;
-          offs[i][Layer2] = last;
-          lens[i][Layer2] = limit - last;
-          last = limit;
-        }
-        assert last == _ls[Layer2]._a.length;
-      }
-      for( int i = 0; i < _chunks.length; i++ ) {
-        _chunks[i] = new Chunk(offs[i], lens[i]);
-        _chunks[i].start();
-      }
-    }
-
-    final class Chunk extends Thread {
-      final int[] _offs, _lens;
-      int _level = 1;
-      boolean _up = true;
-
-      Chunk(int[] offs, int[] lens) {
-        _offs = offs;
-        _lens = lens;
-      }
-
-      @Override public void run() {
-        try {
-          for( ;; ) {
-            _wait.await();
-            if( _up ) {
-              _ls[_level].fprop(_offs[_level], _lens[_level]);
-              _level++;
-              if( _level == _ls.length ) {
-                _up = false;
-                _level--;
-              }
-            } else {
-              _ls[_level].bprop(_offs[_level], _lens[_level]);
-              _level--;
-              if( _level == 0 ) {
-                _up = true;
-                _level++;
-              }
-            }
-            _done.await();
-          }
-        } catch( Exception e ) {
-          throw new RuntimeException(e);
-        }
-      }
-    }
-
-    @Override void fprop() {
-      pass();
-    }
-
-    @Override void bprop() {
-      pass();
-    }
-
-    private void pass() {
-      try {
-        for( int i = 1; i < _ls.length; i++ ) {
-          _wait.await();
-          _done.await();
-        }
-      } catch( Exception e ) {
-        throw new RuntimeException(e);
       }
     }
   }

@@ -5,15 +5,16 @@ import hex.rng.MersenneTwisterRNG;
 import java.util.Random;
 
 import water.fvec.Frame;
+import water.fvec.Vec;
 
 /**
  * Neural network layer, can be used as one level of Perceptron, AA or RBM.
  */
 public abstract class Layer2 {
   // Initial parameters
-  float _rate = .0005f;
-  float _momentum = .1f; // 1 - value, as parameter search is 0 based
-  float _annealing = .00001f;
+  float _rate = .001f;
+  float _oneMinusMomentum = 1f; // 1 - value, as parameter search is 0 based
+  float _annealing = .0f;
   float _l2 = .0001f;
   boolean _auto = false;
   float _autoDelta = .2f;
@@ -54,24 +55,32 @@ public abstract class Layer2 {
     Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
     float min = (float) -Math.sqrt(6. / (_in._a.length + _a.length));
     float max = (float) +Math.sqrt(6. / (_in._a.length + _a.length));
-    for( int i = 0; i < _w.length; i++ )
+    for( int i = 0; i < _w.length; i++ ) {
       _w[i] = rand(rand, min, max);
+      _wLast[i] = _w[i];
+    }
 
     if( _auto ) {
       _wInit = new float[_w.length];
       _wMult = new float[_w.length];
-      for( int i = 0; i < _wMult.length; i++ )
+      for( int i = 0; i < _w.length; i++ ) {
+        _wInit[i] = _w[i];
         _wMult[i] = 1;
+      }
       _bInit = new float[_b.length];
       _bMult = new float[_b.length];
-      for( int i = 0; i < _bMult.length; i++ )
+      for( int i = 0; i < _b.length; i++ ) {
+        _bInit[i] = _b[i];
         _bMult[i] = 1;
+      }
     }
+
+    _r = _rate;
   }
 
-  abstract void fprop(int off, int len);
+  abstract void fprop();
 
-  abstract void bprop(int off, int len);
+  abstract void bprop();
 
   public final void adjust(long n) {
     for( int i = 0; i < _w.length; i++ )
@@ -86,7 +95,7 @@ public abstract class Layer2 {
   private final void adjust(int i, float[] w, float[] last, float[] init, float[] mult) {
     w[i] *= 1 - _l2;
     if( !_auto ) {
-      float m = (w[i] - last[i]) * (1 - _momentum);
+      float m = (w[i] - last[i]) * (1 - _oneMinusMomentum);
       last[i] = w[i];
       w[i] += m;
     } else {
@@ -102,7 +111,7 @@ public abstract class Layer2 {
         abs *= 1 - _autoDelta;
       mult[i] = sign ? abs : -abs;
       w[i] = init[i] + abs * g;
-      float m = (w[i] - last[i]) * (1 - _momentum);
+      float m = (w[i] - last[i]) * (1 - _oneMinusMomentum);
       last[i] = w[i];
       w[i] += abs * m;
       init[i] = w[i];
@@ -126,27 +135,76 @@ public abstract class Layer2 {
 
     abstract int label();
 
-    @Override void bprop(int off, int len) {
+    @Override void bprop() {
       throw new UnsupportedOperationException();
     }
   }
 
   public static class FrameInput extends Input {
-    private final Frame _frame;
+    final Frame _frame;
+    final boolean _normalize;
 
-    public FrameInput(Frame frame) {
-      super(frame.numCols());
+    public FrameInput(Frame frame, boolean normalize) {
+      super(frame.numCols() - 1);
       _frame = frame;
+      _normalize = normalize;
       _count = frame.numRows();
     }
 
     @Override int label() {
-      return (int) _frame._vecs[_frame._vecs.length - 1].at8(_n);
+      return (int) _frame._vecs[_frame.numCols() - 1].at8(_n);
     }
 
-    @Override void fprop(int off, int len) {
-      for( int i = 0; i < _frame._vecs.length - 1; i++ )
-        _a[i] = _frame._vecs[i].at8(_n);
+    @Override void fprop() {
+      for( int i = 0; i < _frame.numCols() - 1; i++ ) {
+        Vec v = _frame._vecs[i];
+        double d = v.at(_n);
+        if( _normalize )
+          d = (d - v.mean()) / v.sigma();
+        _a[i] = (float) d;
+      }
+    }
+  }
+
+  public static class Softmax extends Layer2 {
+    public Softmax() {
+    }
+
+    public Softmax(Layer2 in, int len) {
+      super(in, len);
+    }
+
+    @Override void fprop() {
+      float max = Float.NEGATIVE_INFINITY;
+      for( int o = 0; o < _a.length; o++ ) {
+        _a[o] = 0;
+        for( int i = 0; i < _in._a.length; i++ )
+          _a[o] += _w[o * _in._a.length + i] * _in._a[i];
+        _a[o] += _b[o];
+        if( max < _a[o] )
+          max = _a[o];
+      }
+      float scale = 0;
+      for( int o = 0; o < _a.length; o++ ) {
+        _a[o] = (float) Math.exp(_a[o] - max);
+        scale += _a[o];
+      }
+      for( int o = 0; o < _a.length; o++ )
+        _a[o] /= scale;
+    }
+
+    @Override void bprop() {
+      for( int o = 0; o < _a.length; o++ ) {
+        // Gradient is error * derivative of Softmax: (1 - x) * x
+        float g = _e[o] * (1 - _a[o]) * _a[o];
+        float u = _r * g;
+        for( int i = 0; i < _in._a.length; i++ ) {
+          int w = o * _in._a.length + i;
+          _in._e[i] += g * _w[w];
+          _w[w] += u * _in._a[i];
+        }
+        _b[o] += u;
+      }
     }
   }
 
@@ -158,8 +216,8 @@ public abstract class Layer2 {
       super(in, len);
     }
 
-    @Override void fprop(int off, int len) {
-      for( int o = off; o < off + len; o++ ) {
+    @Override void fprop() {
+      for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
         for( int i = 0; i < _in._a.length; i++ )
           _a[o] += _w[o * _in._a.length + i] * _in._a[i];
@@ -168,15 +226,16 @@ public abstract class Layer2 {
       }
     }
 
-    @Override void bprop(int off, int len) {
-      for( int o = off; o < off + len; o++ ) {
-        float d = _e[o] * (1 - _a[o] * _a[o]);
-        float u = _r * d;
+    @Override void bprop() {
+      for( int o = 0; o < _a.length; o++ ) {
+        // Gradient is error * derivative of hyperbolic tangent: (1 - x^2)
+        float g = _e[o] * (1 - _a[o] * _a[o]);
+        float u = _r * g;
         for( int i = 0; i < _in._a.length; i++ ) {
-          _w[o * _in._a.length + i] += u * _in._a[i];
-          if( _in._e != null ) {
-            _in._e[i] += d * _w[o * _in._a.length + i];
-          }
+          int w = o * _in._a.length + i;
+          _w[w] += u * _in._a[i];
+          if( _in._e != null )
+            _in._e[i] += g * _w[w];
         }
         _b[o] += u;
       }
@@ -200,29 +259,28 @@ public abstract class Layer2 {
         _v[i] = 1;
     }
 
-    @Override void fprop(int off, int len) {
-      for( int o = off; o < off + len; o++ ) {
+    @Override void fprop() {
+      for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
         for( int i = 0; i < _in._a.length; i++ )
           _a[o] += _w[o * _in._a.length + i] * _in._a[i];
         _a[o] += _b[o];
-        if( _a[o] < 0 ) {
+        if( _a[o] < 0 )
           _a[o] = 0;
-        }
       }
     }
 
-    @Override void bprop(int off, int len) {
-      for( int o = off; o < off + len; o++ ) {
-        float d = _e[o];
+    @Override void bprop() {
+      for( int o = 0; o < _a.length; o++ ) {
+        float g = _e[o];
         if( _a[o] < 0 )
-          d = 0;
-        float u = _r * d;
+          g = 0;
+        float u = _r * g;
         for( int i = 0; i < _in._a.length; i++ ) {
-          _w[o * _in._a.length + i] += u * _in._a[i];
-          if( _in._e != null ) {
-            _in._e[i] += d * _w[o * _in._a.length + i];
-          }
+          int w = o * _in._a.length + i;
+          _w[w] += u * _in._a[i];
+          if( _in._e != null )
+            _in._e[i] += g * _w[w];
         }
         _b[o] += u;
       }
@@ -258,7 +316,7 @@ public abstract class Layer2 {
     if( _gv != null ) {
       for( int v = 0; v < _gv.length; v++ ) {
         _v[v] += _gv[v];
-        _gv[v] *= 1 - _momentum;
+        _gv[v] *= 1 - _oneMinusMomentum;
       }
     }
   }

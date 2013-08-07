@@ -1,6 +1,7 @@
 package water.fvec;
 
 import java.util.Arrays;
+
 import water.*;
 
 /**
@@ -42,11 +43,13 @@ public class Vec extends Iced {
   public final boolean _isInt;  // true if column is all integer data
   /** min/max/mean of this Vec lazily computed.  _min is set to Double.NaN if
    *  any of these are not computed. */
-  private double _min, _max, _mean;
+  private double _min, _max, _mean, _sigma;
   /** Count of missing elements, lazily computed.  */
   private long _nas;            // Count of NA's, lazily computed
   /** Bytesize of all data, lazily computed. */
   private long _byteSize;
+  /** Caches last accessed chunk for performance **/
+  private transient volatile Chunk _cache;
 
   /** Base datatype of the entire column.<nl>
    *  Decided on when we close an AppendableVec. */
@@ -105,7 +108,7 @@ public class Vec extends Iced {
   /** Return an array of domains.  This is eagerly manifested for
    *  enum/catagorical columns, and lazily manifested for integer columns with
    *  a min-to-max range of < 10000.  */
-  public String[] domain() { 
+  public String[] domain() {
     if( _domain != null ) return _domain;
     assert _dtype == DType.I;
     long min = (long)min();
@@ -114,7 +117,7 @@ public class Vec extends Iced {
     _domain = new String[len];
     for( int i=0; i<len; i++ )
       _domain[i] = Long.toString(i+min);
-    return _domain; 
+    return _domain;
   }
 
   /** Default read/write behavior for Vecs.  File-backed Vecs are read-only. */
@@ -126,10 +129,11 @@ public class Vec extends Iced {
   public double min() {
     if( Double.isNaN(_min) ) {
       RollupStats rs = new RollupStats().doAll(this);
-      _min = rs._min;
-      _max = rs._max;
-      _mean= rs._mean;
-      _nas = rs._nas;
+      _min      = rs._min;
+      _max      = rs._max;
+      _mean     = rs._mean;
+      _sigma    = rs._sigma;
+      _nas      = rs._nas;
       _byteSize = rs._size;
     }
     return _min;
@@ -138,6 +142,8 @@ public class Vec extends Iced {
   public double max () { if( Double.isNaN(_min) ) min(); return _max;  }
   /** Return column mean - lazily computed as needed. */
   public double mean() { if( Double.isNaN(_min) ) min(); return _mean; }
+  /** Return column standard deviation - lazily computed as needed. */
+  public double sigma() { if( Double.isNaN(_min) ) min(); return _sigma; }
   /** Return column missing-element-count - lazily computed as needed. */
   public long  NAcnt() { if( Double.isNaN(_min) ) min(); return _nas;  }
   /** Size of compressed vector data. */
@@ -146,7 +152,7 @@ public class Vec extends Iced {
 
   /** A private class to compute the rollup stats */
   private static class RollupStats extends MRTask2<RollupStats> {
-    double _min=Double.MAX_VALUE, _max=-Double.MAX_VALUE, _mean;
+    double _min=Double.MAX_VALUE, _max=-Double.MAX_VALUE, _mean, _sigma;
     long _rows, _nas, _size;
     @Override public void map( Chunk c ) {
       _size = c.byteSize();
@@ -160,13 +166,22 @@ public class Vec extends Iced {
           _rows++;
         }
       }
-      _mean = _mean/_rows;
+      _mean = _mean / _rows;
+      for( int i=0; i<c._len; i++ ) {
+        if( !c.isNA0(i) ) {
+          double d = c.at0(i);
+          _sigma += (d - _mean) * (d - _mean);
+        }
+      }
+      _sigma = Math.sqrt(_sigma / (_rows - 1));
     }
     @Override public void reduce( RollupStats rs ) {
       _min = Math.min(_min,rs._min);
       _max = Math.max(_max,rs._max);
       _nas += rs._nas;
-      _mean = (_mean*_rows + rs._mean*rs._rows)/(_rows+rs._rows);
+      _mean = (_mean*_rows + rs._mean*rs._rows)/(_rows + rs._rows);
+      double delta = _mean - rs._mean;
+      _sigma = _sigma + rs._sigma + delta*delta * _rows*rs._rows / (_rows+rs._rows);
       _rows += rs._rows;
       _size += rs._size;
     }
@@ -272,7 +287,7 @@ public class Vec extends Iced {
    *
    * @return VectorGroup this vector belongs to.
    */
-  VectorGroup group() {
+  final VectorGroup group() {
     Key gKey = groupKey();
     Value v = DKV.get(gKey);
     if(v != null)return v.get(VectorGroup.class);
@@ -292,12 +307,15 @@ public class Vec extends Iced {
     return bv;
   }
   /** The Chunk for a row#.  Warning: this loads the data locally!  */
-  public Chunk chunk( long i ) {
-    return elem2BV(elem2ChunkIdx(i));
+  public final Chunk chunk( long i ) {
+    Chunk chunk = _cache;
+    if(chunk != null && chunk._start <= i && i< chunk._start + chunk._len)
+      return chunk;
+    return _cache = elem2BV(elem2ChunkIdx(i));
   }
 
   /** Next Chunk from the current one. */
-  Chunk nextBV( Chunk bv ) {
+  final Chunk nextBV( Chunk bv ) {
     int cidx = bv.cidx()+1;
     Chunk next =  cidx == nChunks() ? null : elem2BV(cidx);
     assert next == null || next.cidx() == cidx;
@@ -305,14 +323,14 @@ public class Vec extends Iced {
   }
 
   /** Fetch element the slow way, as a long */
-  public long  at8( long i ) { return elem2BV(elem2ChunkIdx(i)).at8(i); }
+  public final long  at8( long i ) { return chunk(i).at8(i); }
   /** Fetch element the slow way, as a double */
-  public double at( long i ) { return elem2BV(elem2ChunkIdx(i)).at (i); }
+  public final double at( long i ) { return chunk(i).at (i); }
 
   /** Write element the slow way, as a long */
-  public long   set8( long i, long   l) { return elem2BV(elem2ChunkIdx(i)).set8(i,l); }
+  public final long   set8( long i, long   l) { return chunk(i).set8(i,l); }
   /** Write element the slow way, as a double */
-  public double set8( long i, double d) { return elem2BV(elem2ChunkIdx(i)).set8(i,d); }
+  public final double set8( long i, double d) { return chunk(i).set8(i,d); }
 
   /** handling of NAs: pick a value in the same dataspace but unlikely to
    *  collide with user data. */

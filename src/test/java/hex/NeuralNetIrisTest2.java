@@ -1,8 +1,8 @@
 package hex;
 
-import hex.Layer.FrameInput;
-import hex.Layer.Input;
-import hex.Layer.Softmax;
+import hex.Layer2.FrameInput;
+import hex.Layer2.Input;
+import hex.Layer2.Softmax;
 import hex.rng.MersenneTwisterRNG;
 
 import java.io.File;
@@ -13,12 +13,12 @@ import water.*;
 import water.fvec.*;
 import water.util.Utils;
 
-public class NeuralNetIrisTest {
+public class NeuralNetIrisTest2 {
   static final String PATH = "smalldata/iris/iris.csv";
   static final DecimalFormat _format = new DecimalFormat("0.000");
 
   FrameInput _train, _test;
-  Layer[] _ls;
+  Layer2[] _ls;
 
   public static void main(String[] args) throws Exception {
     water.Boot.main(UserMain.class, args);
@@ -28,7 +28,7 @@ public class NeuralNetIrisTest {
     public static void main(String[] args) throws Exception {
       Sandbox.localCloud(1, true, args);
 
-      NeuralNetIrisTest test = new NeuralNetIrisTest();
+      NeuralNetIrisTest2 test = new NeuralNetIrisTest2();
       test.run();
     }
   }
@@ -90,9 +90,9 @@ public class NeuralNetIrisTest {
     float momentum = .9f;
     int epochs = 100000;
 
-    _ls = new Layer[3];
+    _ls = new Layer2[3];
     _ls[0] = _train;
-    _ls[1] = new Layer.Tanh(_ls[0], 7);
+    _ls[1] = new Layer2.Tanh(_ls[0], 7);
     _ls[1]._rate = rate;
     _ls[1]._oneMinusMomentum = 1 - momentum;
     _ls[1]._l2 = 0;
@@ -105,7 +105,7 @@ public class NeuralNetIrisTest {
 
     CSharp cs = new CSharp();
     cs.init();
-    Layer l = _ls[1];
+    Layer2 l = _ls[1];
     for( int o = 0; o < l._a.length; o++ ) {
       for( int i = 0; i < l._in._a.length; i++ )
         cs._nn.ihWeights[i][o] = l._w[o * l._in._a.length + i];
@@ -159,7 +159,7 @@ public class NeuralNetIrisTest {
   }
 
   String test(FrameInput input, long count) {
-    Layer[] clones = new Layer[_ls.length];
+    Layer2[] clones = new Layer2[_ls.length];
     for( int i = 1; i < _ls.length; i++ )
       clones[i] = Utils.deepClone(_ls[i], "_in");
     clones[0] = new FrameInput(input._frame, input._normalize);
@@ -174,7 +174,7 @@ public class NeuralNetIrisTest {
     return pct + "%";
   }
 
-  static boolean test(Layer[] ls, int n) {
+  static boolean test(Layer2[] ls, int n) {
     Input input = (Input) ls[0];
     input._n = n;
     for( int i = 0; i < ls.length; i++ )

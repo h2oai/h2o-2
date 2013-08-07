@@ -326,8 +326,8 @@ public class NeuralNetMnistTest2 {
       }
 
       MersenneTwisterRNG rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-      for( int i = 0; i < count; i++ ) {
-        int shuffle = rand.nextInt(count);
+      for (int i = count - 1; i >= 0; i--) {
+        int shuffle = rand.nextInt(i + 1);
         byte[] image = rawI[shuffle];
         rawI[shuffle] = rawI[i];
         rawI[i] = image;
