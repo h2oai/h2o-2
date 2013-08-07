@@ -6,29 +6,29 @@ import water.fvec.Vec;
 import water.util.Log;
 
 /**
-   A Histogram, computed in parallel over a Vec.
-
-   A {@code Histogram} bins (by default into {@value BINS} bins) every value
-   added to it, and computes a the min, max, mean & variance for each bin.
-   {@code Histogram}s are initialized with a min, max and number-of-elements to
-   be added (all of which are generally available from a Vec).  Bins normally
-   run from min to max in uniform sizes, but if the {@code Histogram} can
-   determine that fewer bins are needed (e.g. boolean columns run from 0 to 1,
-   but only ever take on 2 values, so only 2 bins are needed), then fewer bins
-   are used.
-
+   A DHistogram, computed in parallel over a Vec.
+   <p>
+   A {@code DHistogram} bins (by default into {@value BINS} bins)
+   every value added to it, and computes a the min, max, and either
+   class distribution or mean & variance for each bin.  {@code
+   DHistogram}s are initialized with a min, max and number-of-elements
+   to be added (all of which are generally available from a Vec).
+   Bins normally run from min to max in uniform sizes, but if the
+   {@code DHistogram} can determine that fewer bins are needed
+   (e.g. boolean columns run from 0 to 1, but only ever take on 2
+   values, so only 2 bins are needed), then fewer bins are used.
+   <p>
    If we are successively splitting rows (e.g. in a decision tree), then a
-   fresh {@code Histogram} for each split will dynamically re-bin the data.
+   fresh {@code DHistogram} for each split will dynamically re-bin the data.
    Each successive split then, will logarithmically divide the data.  At the
    first split, outliers will end up in their own bins - but perhaps some
    central bins may be very full.  At the next split(s), the full bins will get
    split, and again until (with a log number of splits) each bin holds roughly
    the same amount of data.
-
+   <p>
    @author Cliff Click
 */
-
-class Histogram extends Iced implements Cloneable {
+public class DHistogram extends Iced implements Cloneable {
   public static final int BINS=4;
   transient final String   _name;        // Column name, for pretty-printing
   public    final boolean  _isInt;       // Column only holds integers
@@ -45,7 +45,7 @@ class Histogram extends Iced implements Cloneable {
   public          double[] _MSEs;        // Rolling mean-square-error, per-bin; requires 2nd pass
 
   // Fill in read-only sharable values
-  public Histogram( String name, long nelems, double min, double max, boolean isInt ) {
+  public DHistogram( String name, long nelems, double min, double max, boolean isInt ) {
     assert nelems > 0;
     assert max > min : "Caller ensures "+max+">"+min+", since if max==min== the column "+name+" is all constants";
     _name = name;
@@ -60,10 +60,10 @@ class Histogram extends Iced implements Cloneable {
     _step = (max-min)/_nbins;   // Step size for linear interpolation
   }
 
-  // Copy from the original Histogram, but then allocate private arrays
-  public Histogram copy( int numClasses ) {
+  // Copy from the original DHistogram, but then allocate private arrays
+  public DHistogram copy( int numClasses ) {
     assert _bins==null && _maxs == null; // Nothing filled-in yet
-    Histogram h=(Histogram)clone();
+    DHistogram h=(DHistogram)clone();
     // Build bin stats
     h._bins = MemoryManager.malloc8 (_nbins);
     h._mins = MemoryManager.malloc8d(_nbins);
@@ -213,14 +213,14 @@ class Histogram extends Iced implements Cloneable {
     if( _maxs[l] < _mins[l] ) _mins[l] = _maxs[x];
   }
 
-  // Split bin 'i' of this Histogram.  Return null if there is no point in
+  // Split bin 'i' of this DHistogram.  Return null if there is no point in
   // splitting this bin further (such as there's only 1 element, or zero
-  // variance in the response column).  Return an array of Histograms (one per
+  // variance in the response column).  Return an array of DHistograms (one per
   // column), which are bounded by the split bin-limits.  If the column has
-  // constant data, or was not being tracked by a prior Histogram (for being
+  // constant data, or was not being tracked by a prior DHistogram (for being
   // constant data from a prior split), then that column will be null in the
   // returned array.
-  public Histogram[] split( int col, int i, Histogram hs[], String[] names, int ncols ) {
+  public DHistogram[] split( int col, int i, DHistogram hs[], String[] names, int ncols ) {
     assert hs[col] == this;
     if( _bins[i] <= 1 ) return null; // Zero or 1 elements
     if( _clss == null ) {            // Regresion?
@@ -233,37 +233,37 @@ class Histogram extends Iced implements Cloneable {
     }
 
     // Build a next-gen split point from the splitting bin
-    Histogram nhists[] = new Histogram[ncols]; // A new histogram set
+    DHistogram nhists[] = new DHistogram[ncols]; // A new histogram set
     for( int j=0; j<ncols; j++ ) { // For every column in the new split
-      Histogram h = hs[j];         // Old histogram of column
+      DHistogram h = hs[j];         // Old histogram of column
       if( h == null ) continue;    // Column was not being tracked?
       // min & max come from the original column data, since splitting on an
       // unrelated column will not change the j'th columns min/max.
       double min = h._mins[0], max = h._maxs[h._maxs.length-1];
       // Tighter bounds on the column getting split: exactly each new
-      // Histogram's bound are the bins' min & max.
+      // DHistogram's bound are the bins' min & max.
       if( col==j ) { min=h._mins[i]; max=h._maxs[i]; }
       if( min == max ) continue; // This column will not split again
-      nhists[j] = new Histogram(names[j],_bins[i],min,max,hs[j]._isInt);
+      nhists[j] = new DHistogram(names[j],_bins[i],min,max,hs[j]._isInt);
     }
     return nhists;
   }
 
-  // An initial set of Histograms (one per column) for this column set
-  public static Histogram[] initialHist( Frame fr, int ncols ) {
-    Histogram hists[] = new Histogram[ncols];
+  // An initial set of DHistograms (one per column) for this column set
+  public static DHistogram[] initialHist( Frame fr, int ncols ) {
+    DHistogram hists[] = new DHistogram[ncols];
     Vec[] vs = fr._vecs;
     for( int j=0; j<ncols; j++ ) {
       Vec v = vs[j];
       hists[j] = v.min()==v.max() ? null 
-        : new Histogram(fr._names[j],v.length(),v.min(),v.max(),v._isInt);
+        : new DHistogram(fr._names[j],v.length(),v.min(),v.max(),v._isInt);
     }
     return hists;
   }
 
   // "reduce" 'h' into 'this'.  Combine mean & variance using the
   // recursive-mean technique.  Compute min-of-mins and max-of-maxes, etc.
-  public void add( Histogram h ) {
+  public void add( DHistogram h ) {
     assert _nbins == h._nbins;
     for( int i=0; i<_bins.length; i++ ) {
       long k1 = _bins[i], k2 = h._bins[i];

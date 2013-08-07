@@ -61,7 +61,7 @@ public class DRF extends Job {
     Random rand = new MersenneTwisterRNG(new int[]{(int)(seed>>32L),(int)seed});
 
     // Initially setup as-if an empty-split had just happened
-    Histogram hs[] = Histogram.initialHist(fr,ncols);
+    DHistogram hs[] = DHistogram.initialHist(fr,ncols);
     DRFTree trees[] = new DRFTree[ntrees];
     Vec[] nids = new Vec[ntrees];
 
@@ -107,16 +107,16 @@ public class DRF extends Job {
     for( int depth=0; depth<maxDepth; depth++ ) {
 
       // Fuse 2 conceptual passes into one:
-      // Pass 1: Score a prior Histogram, and make new DTree.Node assignments
+      // Pass 1: Score a prior DHistogram, and make new DTree.Node assignments
       // to every row.  This involves pulling out the current assigned Node,
       // "scoring" the row against that Node's decision criteria, and assigning
       // the row to a new child Node (and giving it an improved prediction).
-      // Pass 2: Build new summary Histograms on the new child Nodes every row
+      // Pass 2: Build new summary DHistograms on the new child Nodes every row
       // got assigned into.  Collect counts, mean, variance, min, max per bin,
       // per column.
       ScoreBuildHistogram sbh = new ScoreBuildHistogram(trees,leafs,ncols,numClasses,ymin).doAll(fr);
 
-      // Reassign the new Histograms back into the DTrees
+      // Reassign the new DHistograms back into the DTrees
       for( int t=0; t<ntrees; t++ ) {
         final int tmax = trees[t]._len; // Number of total splits
         final DTree tree = trees[t];
@@ -158,7 +158,7 @@ public class DRF extends Job {
     final long _seed;           // RNG seed; drives sampling seeds
     final long _seeds[];        // One seed for each chunk, for sampling
     final transient Random _rand; // RNG for split decisions & sampling
-    DRFTree( Frame fr, int ncols, Histogram hs[], int mtrys, long seed ) { 
+    DRFTree( Frame fr, int ncols, DHistogram hs[], int mtrys, long seed ) { 
       super(fr._names, ncols); 
       _mtrys = mtrys; 
       new UndecidedNode(this,-1,hs); // The "root" node 
@@ -181,7 +181,7 @@ public class DRF extends Job {
   static class DRFDecidedNode extends DecidedNode {
     DRFDecidedNode( UndecidedNode n ) { super(n); }
     // Find the column with the best split (lowest score).
-    @Override int bestCol( Histogram[] hs ) {
+    @Override int bestCol( DHistogram[] hs ) {
       DRFTree tree = (DRFTree)_tree;
       int[] cols = new int[hs.length];
       int len=0;
