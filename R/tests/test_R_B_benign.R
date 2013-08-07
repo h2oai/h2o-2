@@ -1,16 +1,9 @@
-# R -f test_R_B_benign.R --args Path/To/h2o-package/R H2OServer:Port
+# R -f test_R_B_benign.R --args Path/To/H2O_Load.R H2OServer:Port
 args <- commandArgs(trailingOnly = TRUE)
 if(length(args) != 2)
-  stop("Usage: R -f test_R_B_benign.R --args Path/To/h2o-package/R H2OServer:Port")
+  stop("Usage: R -f test_R_B_benign.R --args Path/To/H2O_Load.R H2OServer:Port")
 
-sourceDir <- function(path, trace = TRUE, ...) {
-  for (nm in list.files(path, pattern = "\\.[RrSsQq]$")) {
-    if(trace) cat(nm,":")           
-    source(file.path(path, nm), ...)
-    if(trace) cat("\n")
-  }
-}
-sourceDir(args[1])
+source(args[1], chdir = TRUE)
 argsplit = strsplit(args[2], ":")[[1]]
 localH2O = new("H2OClient", ip=argsplit[1], port=as.numeric(argsplit[2]))
 

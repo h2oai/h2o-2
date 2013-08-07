@@ -1,11 +1,4 @@
-sourceDir <- function(path, trace = TRUE, ...) {
-  for (nm in list.files(path, pattern = "\\.[RrSsQq]$")) {
-    if(trace) cat(nm,":")           
-    source(file.path(path, nm), ...)
-    if(trace) cat("\n")
-  }
-}
-sourceDir("h2o-package/R")
+source("H2O_Load.R", chdir = TRUE)
 localH2O = new("H2OClient", ip="localhost", port=54321)
 
 p.url = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv"
