@@ -12,7 +12,7 @@ h2o.startLauncher()
 }
 %- maybe also 'usage' for other objects documented here.
 \details{
-%%  ~~ If necessary, more details than the description above ~~
+Upon launch, use the graphical user interface to configure the IP, port, and amount of memory to allot H2O. Hit the "Start H2O" button to run the program with the settings. If no errors occur, a browser window will pop up with the H2O start page.
 }
 \value{
 %%  ~Describe the value returned
@@ -37,35 +37,8 @@ h2o.startLauncher()
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-##---- Should be DIRECTLY executable !! ----
-##-- ==>  Define data, use random,
-##--	or do  help(data=index)  for the standard data sets.
-
-## The function is currently defined as
-function () 
-{
-    myOS = Sys.info()["sysname"]
-    myHome = Sys.getenv("HOME")
-    if (myOS == "Windows") 
-        verPath = paste(myHome, "AppData/Roaming/h2o", sep = "/")
-    else verPath = paste(myHome, "Library/Application Support/h2o", 
-        sep = "/")
-    myFiles = list.files(verPath)
-    if (length(myFiles) == 0) 
-        stop("Cannot find config file or folder")
-    fileName = paste(verPath, tail(myFiles, n = 1), sep = "/")
-    myVersion = strsplit(tail(myFiles, n = 1), ".txt")[[1]]
-    launchPath = readChar(fileName, file.info(fileName)$size)
-    if (is.null(launchPath) || launchPath == "") 
-        stop(paste("No H2OLauncher.jar matching H2O version", 
-            myVersion, "found"))
-    temp = getwd()
-    setwd(launchPath)
-    if (myOS == "Windows") 
-        shell.exec("H2OLauncher.jar")
-    else system(paste("open", launchPath))
-    setwd(temp)
-  }
+library(h2o)
+h2o.startLauncher()
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

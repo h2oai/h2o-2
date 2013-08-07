@@ -26,7 +26,7 @@ The path of the file to be imported. Each row of data appears as one line of the
   }
 }
 \details{
-WARNING: In H2O, import is lazy! Do not modify the data on hard disk until after parsing is complete.
+WARNING: In H2O, import is lazy! Do not modify the data on hard disk until after parsing is complete. By default, h2o.importFile will automatically parse the file.
 }
 \value{
 If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedData}}, otherwise it returns an object of class \code{\linkS4class{H2ORawData}}.
