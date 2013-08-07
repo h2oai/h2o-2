@@ -324,11 +324,7 @@ public class DHistogram extends Iced implements Cloneable {
     sum += byteSize(_MSEs);
     if( _clss != null ) {
       sum += (_clss.length+3)*8;
-      for( short[] ss : _clss ) sum += byteSize(ss);
-    }
-    if( _clss2 != null ) {
-      sum += (_clss2.length+3)*8;
-      for( long[] ss : _clss2 ) sum += byteSize(ss);
+      for( long[] ls : _clss ) sum += byteSize(ls);
     }
     return sum;
   }
