@@ -34,7 +34,7 @@ public class DRF2 extends Request {
   protected final FrameNonClassVecSelect vecs  = new FrameNonClassVecSelect("vecs",data_key,class_vec);
 
   @API(help="Sampling rate during tree building.")
-  protected final Real sample_rate = new Real("sample_rate", 0.67, 0.0, 1.0,"");
+  protected final Real sample_rate = new Real("sample_rate", 0.67, 0.000001, 1.0,"");
 
   @API(help="Psuedo-random number generator seed.")
   protected final LongInt seed = new LongInt("seed",0xae44a87f9edf1cbL,"High order bits make better seeds");
