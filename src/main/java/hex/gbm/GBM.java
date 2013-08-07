@@ -55,7 +55,7 @@ public class GBM extends Job {
 
     // Initially setup as-if an empty-split had just happened
     DTree tree = new DTree(names,ncols);
-    new UndecidedNode(tree,-1,Histogram.initialHist(fr,ncols)); // The "root" node
+    new UndecidedNode(tree,-1,DHistogram.initialHist(fr,ncols)); // The "root" node
     int leaf = 0; // Define a "working set" of leaf splits, from here to tree._len
 
     // ----
@@ -65,16 +65,17 @@ public class GBM extends Job {
     for( ; depth<maxDepth; depth++ ) {
 
       // Fuse 2 conceptual passes into one:
-      // Pass 1: Score a prior Histogram, and make new DTree.Node assignments to
-      // every row.  This involves pulling out the current assigned Node,
-      // "scoring" the row against that Node's decision criteria, and assigning
-      // the row to a new child Node (and giving it an improved prediction).
-      // Pass 2: Build new summary Histograms on the new child Nodes every row
-      // got assigned into.  Collect counts, mean, variance, min, max per bin,
-      // per column.
+      // Pass 1: Score a prior DHistogram, and make new DTree.Node
+      // assignments to every row.  This involves pulling out the
+      // current assigned Node, "scoring" the row against that Node's
+      // decision criteria, and assigning the row to a new child Node
+      // (and giving it an improved prediction).
+      // Pass 2: Build new summary DHistograms on the new child Nodes
+      // every row got assigned into.  Collect counts, mean, variance,
+      // min, max per bin, per column.
       ScoreBuildHistogram sbh = new ScoreBuildHistogram(new DTree[]{tree},new int[]{leaf},ncols,numClasses,ymin).doAll(fr);
 
-      // Reassign the new Histogram back into the DTree
+      // Reassign the new DHistogram back into the DTree
       final int tmax = tree._len; // Number of total splits
       for( int i=leaf; i<tmax; i++ )
         tree.undecided(i)._hs = sbh.getFinalHisto(0,i);
@@ -105,13 +106,13 @@ public class GBM extends Job {
     UKV.remove(fr.remove("NIDs")._key);
   }
   
-  // GBM DTree decision node: same as the normal DecidedNode, but specifies a
-  // decision algorithm given complete histograms on all columns.  
-  // GBM algo: find the lowest error amongst *all* columns.
+  // GBM DTree decision node: same as the normal DecidedNode, but
+  // specifies a decision algorithm given complete histograms on all
+  // columns.  GBM algo: find the lowest error amongst *all* columns.
   static class GBMDecidedNode extends DecidedNode {
     GBMDecidedNode( UndecidedNode n ) { super(n); }
     // Find the column with the best split (lowest score).
-    @Override int bestCol( Histogram[] hs ) {
+    @Override int bestCol( DHistogram[] hs ) {
       double bs = Double.MAX_VALUE; // Best score
       int idx = -1;             // Column to split on
       for( int i=0; i<hs.length; i++ ) {
