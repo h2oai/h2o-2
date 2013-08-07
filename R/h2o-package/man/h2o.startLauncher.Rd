@@ -1,26 +1,18 @@
-\name{h2o.parseRaw}
-\alias{h2o.parseRaw}
+\name{h2o.startLauncher}
+\alias{h2o.startLauncher}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Parse Raw Data File
+Launch H2O GUI
 }
 \description{
-Parses a raw data file, returning an object containing the identifying hex key.
+Launches the H2O graphical user interface from inside R.
 }
 \usage{
-h2o.parseRaw(data, key = "")
+h2o.startLauncher()
 }
 %- maybe also 'usage' for other objects documented here.
-\arguments{
-  \item{data}{
-An \code{\linkS4class{H2ORawData}} object to be parsed.
-}
-  \item{key}{
-(Optional) The hex key assigned to the parsed file.
-  }
-}
 \details{
-After the raw data file is parsed, it will be automatically deleted from the H2O server.
+Upon launch, use the graphical user interface to configure the IP, port, and amount of memory to allot H2O. Hit the "Start H2O" button to run the program with the settings. If no errors occur, a browser window will pop up with the H2O start page.
 }
 \value{
 %%  ~Describe the value returned
@@ -45,11 +37,8 @@ After the raw data file is parsed, it will be automatically deleted from the H2O
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-localH2O = new("H2OClient", ip = "localhost", port = 54321)
-benign.raw = h2o.importFile(localH2O, path = "../smalldata/logreg/benign.csv", parse = FALSE)
-# Do not modify benign.csv on disk at this point!
-benign.hex = h2o.parseRaw(data = benign.hex, key = "benign.hex")
-# After parsing, it is okay to modify or delete benign.csv
+library(h2o)
+h2o.startLauncher()
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

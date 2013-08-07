@@ -17,10 +17,10 @@ import water.util.Log;
    where the obvious technique is to have a Vec of {@code _nid}s (ints), one
    per each element of the data Vecs.
 
-   Each {@code Node} has a {@code Histogram}, describing summary data about the
-   rows.  The Histogram requires a pass over the data to be filled in, and we
+   Each {@code Node} has a {@code DHistogram}, describing summary data about the
+   rows.  The DHistogram requires a pass over the data to be filled in, and we
    expect to fill in all rows for Nodes at the same depth at the same time.
-   i.e., a single pass over the data will fill in all leaf Nodes' Histograms
+   i.e., a single pass over the data will fill in all leaf Nodes' DHistograms
    at once.
 
    @author Cliff Click
@@ -73,12 +73,12 @@ class DTree extends Iced {
     }
   }
 
-  // An UndecidedNode: Has a Histogram which is filled in (in parallel with other
+  // An UndecidedNode: Has a DHistogram which is filled in (in parallel with other
   // histograms) in a single pass over the data.  Does not contain any
   // split-decision.
   static class UndecidedNode extends Node {
-    Histogram _hs[];            // Histograms per column
-    UndecidedNode( DTree tree, int pid, Histogram hs[] ) { super(tree,pid,tree.newIdx()); _hs=hs; }
+    DHistogram _hs[];            // DHistograms per column
+    UndecidedNode( DTree tree, int pid, DHistogram hs[] ) { super(tree,pid,tree.newIdx()); _hs=hs; }
 
     @Override public String toString() {
       final String colPad="  ";
@@ -109,7 +109,7 @@ class DTree extends Iced {
         }
       }
       sb.append('\n');
-      for( int i=0; i<Histogram.BINS; i++ ) {
+      for( int i=0; i<DHistogram.BINS; i++ ) {
         for( int j=0; j<ncols; j++ ) {
           if( _hs[j] == null ) continue;
           if( i < _hs[j]._bins.length ) {
@@ -176,7 +176,7 @@ class DTree extends Iced {
     final double _pred[/*split*/]; // Regression: this is the prediction
 
     // Pick the best column from the given histograms
-    abstract int bestCol( Histogram[] hs );
+    abstract int bestCol( DHistogram[] hs );
 
     DecidedNode( UndecidedNode n ) {
       super(n._tree,n._pid,n._nid); // Replace Undecided with this DecidedNode
@@ -196,7 +196,7 @@ class DTree extends Iced {
       _col = col;
 
       // From the splitting Undecided, get the column, min, max
-      Histogram splitH = n._hs[_col];// Histogram of the column being split
+      DHistogram splitH = n._hs[_col];// DHistogram of the column being split
       int nums = splitH._nbins;      // Number of split choices
       long clss[][] = splitH._clss;  // Class histogram
       assert nums > 1;          // Should always be some bins to split between
@@ -211,7 +211,7 @@ class DTree extends Iced {
       int ncols = _tree._ncols; // ncols: all columns, minus response
       for( int i=0; i<nums; i++ ) { // For all split-points
         // Setup for children splits
-        Histogram nhists[] = canDecide ? splitH.split(_col,i,n._hs,_tree._names,ncols) : null;
+        DHistogram nhists[] = canDecide ? splitH.split(_col,i,n._hs,_tree._names,ncols) : null;
         _ns[i] = nhists == null ? -1 : new UndecidedNode(_tree,_nid,nhists)._nid;
         // Also setup predictions locally
         if( clss == null ) {                      // Regression?
@@ -260,17 +260,17 @@ class DTree extends Iced {
   //         decision criteria, and assigning the row to a new child
   //         UndecidedNode (and giving it an improved prediction).
   //
-  // Pass 2: Build new summary Histograms on the new child UndecidedNodes every
+  // Pass 2: Build new summary DHistograms on the new child UndecidedNodes every
   //         row got assigned into.  Collect counts, mean, variance, min, max
   //         per bin, per column.
   //
-  // The result is a set of Histogram arrays; one Histogram array for each
+  // The result is a set of DHistogram arrays; one DHistogram array for each
   // unique 'leaf' in the tree being histogramed in parallel.  These have node
-  // ID's (nids) from 'leaf' to 'tree._len'.  Each Histogram array is for all
+  // ID's (nids) from 'leaf' to 'tree._len'.  Each DHistogram array is for all
   // the columns in that 'leaf'.
   //
   // The other result is a prediction "score" for the whole dataset, based on
-  // the previous passes' Histograms.
+  // the previous passes' DHistograms.
   static class ScoreBuildHistogram extends MRTask2<ScoreBuildHistogram> {
     final DTree _trees[]; // Read-only, shared (except at the histograms in the Nodes)
     final int   _leafs[]; // Number of active leaves (per tree)
@@ -279,7 +279,7 @@ class DTree extends Iced {
     // Bias classes to zero; e.g. covtype classes range from 1-7 so this is 1.
     // e.g. prostate classes range 0-1 so this is 0
     final int _ymin;
-    Histogram _hcs[/*tree id*/][/*tree-relative node-id*/][/*column*/];
+    DHistogram _hcs[/*tree id*/][/*tree-relative node-id*/][/*column*/];
     ScoreBuildHistogram(DTree trees[], int leafs[], int ncols, int numClasses, int ymin) { 
       _trees=trees; 
       _leafs=leafs; 
@@ -295,12 +295,12 @@ class DTree extends Iced {
           dt._ns[j]._tree = dt;
     }
 
-    public Histogram[] getFinalHisto( int tid, int nid ) {
-      Histogram hs[] = _hcs[tid][nid-_leafs[tid]];
+    public DHistogram[] getFinalHisto( int tid, int nid ) {
+      DHistogram hs[] = _hcs[tid][nid-_leafs[tid]];
       // Having gather min/max/mean/class/etc on all the data, we can now
       // tighten the min & max numbers.
       for( int j=0; j<hs.length; j++ ) {
-        Histogram h = hs[j];    // Old histogram of column
+        DHistogram h = hs[j];    // Old histogram of column
         if( h != null ) h.tightenMinMax();
       }
       return hs;
@@ -313,13 +313,13 @@ class DTree extends Iced {
 
       // We need private (local) space to gather the histograms.
       // Make local clones of all the histograms that appear in this chunk.
-      _hcs = new Histogram[_trees.length][][];
+      _hcs = new DHistogram[_trees.length][][];
 
       // For all trees
       for( int t=0; t<_trees.length; t++ ) {
         DTree tree = _trees[t];
         int leaf = _leafs[t];
-        Histogram hcs[][] = _hcs[t] = new Histogram[tree._len-leaf][]; // A leaf-biased array of all active histograms
+        DHistogram hcs[][] = _hcs[t] = new DHistogram[tree._len-leaf][]; // A leaf-biased array of all active histograms
         Chunk nids = chks[_ncols+1/*response col*/+t];
 
         // Pass 1 & 2
@@ -336,38 +336,54 @@ class DTree extends Iced {
           
           // We need private (local) space to gather the histograms.
           // Make local clones of all the histograms that appear in this chunk.
-          Histogram nhs[] = hcs[nid-leaf];
+          DHistogram nhs[] = hcs[nid-leaf];
           if( nhs == null ) {     // Lazily manifest this histogram for 'nid'
-            nhs = hcs[nid-leaf] = new Histogram[_ncols];
-            Histogram ohs[] = tree.undecided(nid)._hs; // The existing column of Histograms
+            nhs = hcs[nid-leaf] = new DHistogram[_ncols];
+            DHistogram ohs[] = tree.undecided(nid)._hs; // The existing column of Histograms
             for( int j=0; j<_ncols; j++ )       // Make private copies
               if( ohs[j] != null )
                 nhs[j] = ohs[j].copy(_numClasses);
           }
+        }
           
           // Pass 2
-          // Bump the local histogram counts
-          if( _numClasses == 0 ) { // Regression?
+        if( _numClasses == 0 ) { // Regression?
+          for( int i=0; i<nids._len; i++ ) {
+            int nid = (int)nids.at80(i); // Get Node to decide from
+            if( nid<0 ) continue; // row already predicts perfectly or sampled away
+            DHistogram nhs[] = hcs[nid-leaf];
             double y = ys.at0(i);
             for( int j=0; j<_ncols; j++) // For all columns
               if( nhs[j] != null ) // Some columns are ignored, since already split to death
                 nhs[j].incr(chks[j].at0(i),y);
-          } else {                // Classification
-            int ycls = (int)ys.at80(i) - _ymin;
-            for( int j=0; j<_ncols; j++) // For all columns
-              if( nhs[j] != null ) // Some columns are ignored, since already split to death
-                nhs[j].incr(chks[j].at0(i),ycls);
           }
+        } else {
+          countClasses(nids,ys,chks,hcs,leaf);
         }
       }
     }
 
+    // Count Classes for rows & columns
+    private void countClasses( Chunk nids, Chunk ys, Chunk chks[], DHistogram hcs[][], int leaf ) {
+      // Bump the local histogram counts
+      for( int i=0; i<nids._len; i++ ) {
+        int nid = (int)nids.at80(i); // Get Node to decide from
+        if( nid<0 ) continue; // row already predicts perfectly or sampled away
+        DHistogram nhs[] = hcs[nid-leaf];
+        int ycls = (int)ys.at80(i) - _ymin;
+        for( int j=0; j<_ncols; j++) // For all columns
+          if( nhs[j] != null ) // Some columns are ignored, since already split to death
+            nhs[j].incr(chks[j].at0(i),ycls);
+      }
+    }
+
+
     @Override public void reduce( ScoreBuildHistogram sbh ) {
       // Merge histograms
       for( int t=0; t<_hcs.length; t++ ) {
-        Histogram hcs[][] = _hcs[t];
+        DHistogram hcs[][] = _hcs[t];
         for( int i=0; i<hcs.length; i++ ) {
-          Histogram hs1[] = hcs[i], hs2[] = sbh._hcs[t][i];
+          DHistogram hs1[] = hcs[i], hs2[] = sbh._hcs[t][i];
           if( hs1 == null ) hcs[i] = hs2;
           else if( hs2 != null )
             for( int j=0; j<hs1.length; j++ )

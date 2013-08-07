@@ -19,13 +19,13 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE):
     dsf = open(csvPathname, "w+")
 
     synColSumDict = {0: 0} # guaranteed to have col 0 for output
+    colNumberMax = 0
     for i in range(rowCount):
         rowData = []
 
         if i==(rowCount-1): # last row
             val = 1
             colNumber = colCount # max
-            colNumberMax = colNumber
         else:
             # 50%
             d = random.randint(0,1)
@@ -36,6 +36,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE):
             colNumber = 1 # always make it col 1
 
         addValToRowStuff(colNumber, val, rowData, synColSumDict)
+        colNumberMax = max(colNumber, colNumberMax)
 
         # add output
         val = 0
@@ -68,7 +69,7 @@ class Basic(unittest.TestCase):
 
     def test_parse_bounds_libsvm (self):
         print "Random 0/1 for col1. Last has max col = 1, All have zeros for class."
-        h2b.browseTheCloud()
+        ## h2b.browseTheCloud()
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (100, 100, 'cA', 300),

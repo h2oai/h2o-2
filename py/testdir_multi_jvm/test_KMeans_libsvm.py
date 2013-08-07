@@ -31,6 +31,7 @@ class Basic(unittest.TestCase):
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
         csvFilenameList = [
+            ("mnist_train.svm", "cM", 30, 1),
             # FIX! fails KMeansScore
             ("tmc2007_train.svm",  "cJ", 30, 1),
             ("covtype.binary.svm", "cC", 30, 1),
@@ -45,7 +46,6 @@ class Basic(unittest.TestCase):
 
             ("syn_6_1000_10.svm",  "cK", 30, 1),
             ("syn_0_100_1000.svm", "cL", 30, 1),
-            ("mnist_training.svm", "cM", 30, 1),
             # normal csv
         ]
 

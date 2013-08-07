@@ -1,7 +1,8 @@
 # Demo to test R functionality
 # To invoke, need R 2.13.0 or higher
 # R -f H2OTestDemo.R
-source("h2o-package/R/H2O.R")
+
+source("H2O_Load.R")
 # library(h2o)
 localH2O = new("H2OClient", ip = "localhost", port = 54321)
 h2o.checkClient(localH2O)

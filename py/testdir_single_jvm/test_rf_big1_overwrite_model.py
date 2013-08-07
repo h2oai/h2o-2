@@ -5,7 +5,7 @@ import h2o_browse as h2b
 import h2o_jobs
 
 
-OVERWRITE_RF_MODEL = False
+OVERWRITE_RF_MODEL = True
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -35,7 +35,7 @@ class Basic(unittest.TestCase):
         print "\n" + csvPathname
 
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, timeoutSecs=15)
-        rfViewInitial = []
+        firstRfView = None
         # dispatch multiple jobs back to back
         for jobDispatch in range(3):
             start = time.time()
@@ -45,37 +45,34 @@ class Basic(unittest.TestCase):
                 model_key = 'RF_model'
             else:
                 model_key = 'RF_model' + str(jobDispatch)
-            kwargs['ntree'] = 7
 
+            print "Change the number of trees, while keeping the rf model key name the same"
+            print "Checks that we correctly overwrite previous rf model"
             if OVERWRITE_RF_MODEL:
-                print "Change the number of trees, while keeping the rf model key name the same"
-                print "Checks that we correctly overwrite previous rf model"
-                kwargs['ntree'] += 1
-
-            kwargs['seed'] = random.randint(0, sys.maxint)
+                kwargs['ntree'] = 7 + jobDispatch
+            else:
+                kwargs['ntree'] = 7
+                # don't change the seed if we're overwriting the model. It should get 
+                # different results just from changing the tree count
+                kwargs['seed'] = random.randint(0, sys.maxint)
 
             # FIX! what model keys do these get?
             randomNode = h2o.nodes[random.randint(0,len(h2o.nodes)-1)]
             h2o_cmd.runRFOnly(node=randomNode, parseKey=parseKey, model_key=model_key, timeoutSecs=300,
-                 noPoll=False if OVERWRITE_RF_MODEL else True, **kwargs)
+                 noPoll=True, **kwargs)
             # FIX! are these already in there?
             rfView = {}
             rfView['data_key'] = key2
             rfView['model_key'] = model_key
             rfView['ntree'] = kwargs['ntree']
-            rfViewInitial.append(rfView)
 
             print "rf job dispatch end on ", csvPathname, 'took', time.time() - start, 'seconds'
             print "\njobDispatch #", jobDispatch
 
-        h2o_jobs.pollWaitJobs(pattern='RF_model', timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
-
-        # we saved the initial response?
-        # if we do another poll they should be done now, and better to get it that 
-        # way rather than the inspect (to match what simpleCheckGLM is expected
-        first = None
-        print "rfViewInitial", rfViewInitial
-        for rfView in rfViewInitial:
+            # we're going to compare rf results to previous as we go along (so we save rf view results
+            h2o_jobs.pollWaitJobs(pattern='RF_model', timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
+    
+            # In this test we're waiting after each one, so we can save the RFView results for comparison to future
             print "Checking completed job:", rfView
             print "rfView", h2o.dump_json(rfView)
             data_key = rfView['data_key']
@@ -85,15 +82,18 @@ class Basic(unittest.TestCase):
             print "Temporary hack: need to do two rf views minimum, to complete a RF (confusion matrix creation)"
             # allow it to poll to complete
             rfViewResult = h2o_cmd.runRFView(None, data_key, model_key, ntree=ntree, timeoutSecs=60, noPoll=False)
-            if first is None: # we'll use this to compare the others
-                first = rfViewResult.copy()
+            if firstRfView is None: # we'll use this to compare the others
+                firstRfView = rfViewResult.copy()
                 firstModelKey = model_key
-                print "first", h2o.dump_json(first)
+                print "firstRfView", h2o.dump_json(firstRfView)
             else:
                 print "Comparing", model_key, "to", firstModelKey
-                df = h2o_util.JsonDiff(rfViewResult, first, vice_versa=True, with_values=True)
-
+                df = h2o_util.JsonDiff(rfViewResult, firstRfView, vice_versa=True, with_values=True)
                 print "df.difference:", h2o.dump_json(df.difference)
+                self.assertGreater(len(df.difference), 29, 
+                    msg="Want >=30 , not %d differences between the two rfView json responses. %s" % \
+                        (len(df.difference), h2o.dump_json(df.difference)))
+                
 
 if __name__ == '__main__':
     h2o.unit_main()
