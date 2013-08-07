@@ -227,16 +227,17 @@ public class Vec extends Iced {
    *  table lookup. */
   public long chunk2StartElem( int cidx ) { return _espc[cidx]; }
 
-  /** Get a Chunk Key.  Basically the index-to-key map. */
+  /** Get a Chunk Key from a chunk-index.  Basically the index-to-key map. */
   public Key chunkKey(int cidx ) {
     byte [] bits = _key._kb.clone();
     bits[0] = Key.DVEC;
     UDP.set4(bits,6,cidx); // chunk#
     return Key.make(bits);
   }
-  /** Get a Chunk Key.  Basically the index-to-key map, plus the {@link
-   *  DKV.get}.  Warning: this pulls the data locally; using this call on every
-   *  Chunk index on the same node will probably trigger an OOM!  */
+  /** Get a Chunk's Value by index.  Basically the index-to-key map,
+   *  plus the {@link DKV.get}.  Warning: this pulls the data locally;
+   *  using this call on every Chunk index on the same node will
+   *  probably trigger an OOM!  */
   public Value chunkIdx( int cidx ) {
     Value val = DKV.get(chunkKey(cidx));
     assert val != null;
@@ -345,9 +346,13 @@ public class Vec extends Iced {
     }
   }
   private final void replaceNAs(long ival){replaceNAs(ival, ival);}
+
+  /** True if this value is the canonical "missing element" sentinel. */
   public final boolean isNA(long l){
     return !_replaceNAs && l == _iNA;
   }
+
+  /** True if this value is the canonical "missing element" sentinel. */
   public final boolean isNA(double d){
     return !_replaceNAs && (Double.isNaN(d) || d == _fNA);
   }
