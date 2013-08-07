@@ -50,7 +50,7 @@ class Basic(unittest.TestCase):
         h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
         ### time.sleep(10)
 
-        if (1==0):
+        if 1==1:
             lenNodes = len(h2o.nodes)
             colResultList = h2e.exec_expr_list_across_cols(lenNodes, numExprList, key2, maxCol=10,
                 incrementingResult=False, timeoutSecs=10)
@@ -67,12 +67,12 @@ class Basic(unittest.TestCase):
         h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
         #******************
-        if (1==0):
+        if 1==1:
             colResultList = h2e.exec_expr_list_across_cols(lenNodes, charExprList, key2, maxCol=10,
                 incrementingResult=False, timeoutSecs=10)
             print "\ncolResultList after char swap", colResultList
 
-        if (1==1):
+        if 1==1:
             print "\nNow the bad case (no ignore)"
             rfv = h2o_cmd.runRF(trees=5, timeoutSecs=10, csvPathname=csvPathname)
 
