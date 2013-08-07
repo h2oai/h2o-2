@@ -68,7 +68,7 @@ public class DRF extends Job {
     // ----
     // Only work on so many trees at once, else get GC issues.
     // Hand the inner loop a smaller set of trees.
-    final int NTREE=5;          // Limit of 5 trees at once
+    final int NTREE=1;          // Limit of 5 trees at once
     int depth=0;
     for( int st = 0; st < ntrees; st+= NTREE ) {
       int xtrees = Math.min(NTREE,ntrees-st);

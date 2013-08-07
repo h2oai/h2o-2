@@ -344,23 +344,39 @@ class DTree extends Iced {
               if( ohs[j] != null )
                 nhs[j] = ohs[j].copy(_numClasses);
           }
+        }
           
           // Pass 2
-          // Bump the local histogram counts
-          if( _numClasses == 0 ) { // Regression?
+        if( _numClasses == 0 ) { // Regression?
+          for( int i=0; i<nids._len; i++ ) {
+            int nid = (int)nids.at80(i); // Get Node to decide from
+            if( nid<0 ) continue; // row already predicts perfectly or sampled away
+            Histogram nhs[] = hcs[nid-leaf];
             double y = ys.at0(i);
             for( int j=0; j<_ncols; j++) // For all columns
               if( nhs[j] != null ) // Some columns are ignored, since already split to death
                 nhs[j].incr(chks[j].at0(i),y);
-          } else {                // Classification
-            int ycls = (int)ys.at80(i) - _ymin;
-            for( int j=0; j<_ncols; j++) // For all columns
-              if( nhs[j] != null ) // Some columns are ignored, since already split to death
-                nhs[j].incr(chks[j].at0(i),ycls);
           }
+        } else {
+          countClasses(nids,ys,chks,hcs,leaf);
         }
       }
     }
+
+    // Count Classes for rows & columns
+    private void countClasses( Chunk nids, Chunk ys, Chunk chks[], Histogram hcs[][], int leaf ) {
+      // Bump the local histogram counts
+      for( int i=0; i<nids._len; i++ ) {
+        int nid = (int)nids.at80(i); // Get Node to decide from
+        if( nid<0 ) continue; // row already predicts perfectly or sampled away
+        Histogram nhs[] = hcs[nid-leaf];
+        int ycls = (int)ys.at80(i) - _ymin;
+        for( int j=0; j<_ncols; j++) // For all columns
+          if( nhs[j] != null ) // Some columns are ignored, since already split to death
+            nhs[j].incr(chks[j].at0(i),ycls);
+      }
+    }
+
 
     @Override public void reduce( ScoreBuildHistogram sbh ) {
       // Merge histograms
