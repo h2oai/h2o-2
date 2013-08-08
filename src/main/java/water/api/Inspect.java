@@ -224,7 +224,7 @@ public class Inspect extends Request {
       Column c = va._cols[i];
       JsonObject json = new JsonObject();
       json.addProperty(NAME, c._name);
-      json.addProperty(OFFSET, (int) c._off);
+      json.addProperty(OFFSET, c._off);
       json.addProperty(SIZE, Math.abs(c._size));
       json.addProperty(BASE, c._base);
       json.addProperty(SCALE, (int) c._scale);
@@ -462,7 +462,7 @@ public class Inspect extends Request {
       if( _offset == INFO_PAGE ) {
         row.addProperty(ROW, OFFSET);
         for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY,_va._cols.length); i++ )
-          row.addProperty(_va._cols[i]._name, (int) _va._cols[i]._off);
+          row.addProperty(_va._cols[i]._name, _va._cols[i]._off);
         sb.append(defaultBuilder(row).build(response, row, contextName));
 
         row.addProperty(ROW, SIZE);
