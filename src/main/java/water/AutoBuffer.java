@@ -792,6 +792,12 @@ public final class AutoBuffer {
     for( int i=0; i<len; i++ ) ary[i] = getA1();
     return ary;
   }
+  public short[][] getAA2( ) {
+    int len = get4();  if( len == -1 ) return null;
+    short[][] ary  = new short[len][];
+    for( int i=0; i<len; i++ ) ary[i] = getA2();
+    return ary;
+  }
   public int[][] getAA4( ) {
     int len = get4();  if( len == -1 ) return null;
     int[][] ary  = new int[len][];
@@ -904,6 +910,12 @@ public final class AutoBuffer {
     if( ary == null ) return put4(-1);
     put4(ary.length);
     for( int i=0; i<ary.length; i++ ) putA1(ary[i]);
+    return this;
+  }
+  public AutoBuffer putAA2( short[][] ary ) {
+    if( ary == null ) return put4(-1);
+    put4(ary.length);
+    for( int i=0; i<ary.length; i++ ) putA2(ary[i]);
     return this;
   }
   public AutoBuffer putAA4( int[][] ary ) {

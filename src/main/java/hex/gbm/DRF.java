@@ -44,7 +44,7 @@ public class DRF extends Job {
     Timer t_drf = new Timer();
     assert 0 <= ntrees && ntrees < 1000000;
     assert 0 <= mtrys && mtrys < fr.numCols();
-    assert 0.0 <= sampleRate && sampleRate <= 1.0;
+    assert 0.0 < sampleRate && sampleRate <= 1.0;
 
     final String names[] = fr._names;
     Vec vs[] = fr._vecs;
@@ -120,8 +120,14 @@ public class DRF extends Job {
       for( int t=0; t<ntrees; t++ ) {
         final int tmax = trees[t]._len; // Number of total splits
         final DTree tree = trees[t];
-        for( int i=leafs[t]; i<tmax; i++ )
+        //int sum=0;
+        for( int i=leafs[t]; i<tmax; i++ ) {
           tree.undecided(i)._hs = sbh.getFinalHisto(t,i);
+          //Histogram hs[] = tree.undecided(i)._hs;
+          //for( Histogram h : hs )
+          //  if( h != null ) sum += h.byteSize();
+        }
+        //System.out.println("Tree#"+(st+t)+", leaves="+(trees[t]._len-leafs[t])+", histo size="+PrettyPrint.bytes(sum));
       }
 
       // Build up the next-generation tree splits from the current histograms.

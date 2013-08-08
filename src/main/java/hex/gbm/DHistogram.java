@@ -310,4 +310,22 @@ public class DHistogram extends Iced implements Cloneable {
     }
     return sb.toString();
   }
+
+  private int byteSize(double[]ds) { return ds==null ? 0 : 24+ds.length*8; }
+  private int byteSize(long  []ls) { return ls==null ? 0 : 24+ls.length*8; }
+  private int byteSize(short []ss) { return ss==null ? 0 : 20+ss.length*2; }
+  public long byteSize() {
+    int sum = 14*8;             // Rough size of empty Histogram
+    sum += byteSize(_bins);
+    sum += byteSize(_mins);
+    sum += byteSize(_maxs);
+    sum += byteSize(_Ms);
+    sum += byteSize(_Ss);
+    sum += byteSize(_MSEs);
+    if( _clss != null ) {
+      sum += (_clss.length+3)*8;
+      for( long[] ls : _clss ) sum += byteSize(ls);
+    }
+    return sum;
+  }
 }
