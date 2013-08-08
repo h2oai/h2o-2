@@ -1,8 +1,8 @@
-source("H2O_Load.R")
+library(h2o)
 localH2O = new("H2OClient", ip = "localhost", port = 54321)
 h2o.checkClient(localH2O)
 
-prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
+prostate.hex = h2o.importFile(localH2O, path = system.file("extdata", "prostate.csv", package="h2o"), key = "prostate.hex")
 alpha = c(0.25,0.5,0.75)
 lambda = c(1,10)
   for(i in 1:length(lambda)){
