@@ -47,7 +47,9 @@ After the raw data file is parsed, it will be automatically deleted from the H2O
 \examples{
 localH2O = new("H2OClient", ip = "localhost", port = 54321)
 benign.raw = h2o.importFile(localH2O, path = "../smalldata/logreg/benign.csv", parse = FALSE)
+# Do not modify benign.csv on disk at this point!
 benign.hex = h2o.parseRaw(data = benign.hex, key = "benign.hex")
+# After parsing, it is okay to modify or delete benign.csv
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

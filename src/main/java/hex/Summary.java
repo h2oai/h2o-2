@@ -18,6 +18,8 @@ public class Summary extends Iced {
     public static final double [] DEFAULT_PERCENTILES = {0.01,0.05,0.10,0.25,0.33,0.50,0.66,0.75,0.90,0.95,0.99};
     final long [] _bins; // bins for histogram
     long _n;
+    long _nzero;
+    long _n_na;
     final double _start, _end, _binsz, _binszInv;
     double [] _min; // min N elements
     double [] _max; // max N elements
@@ -93,6 +95,13 @@ public class Summary extends Iced {
     }
     public final double [] percentiles(){return _percentiles;}
 
+    public long getEnumCardinality(){
+      if (_enum)
+        return _bins.length;
+      else
+        throw new IllegalArgumentException("summary: non enums don't have enum cardinality");
+    }
+
     private void computePercentiles(){
       _percentileValues = new double [_percentiles.length];
       if( _bins.length == 0 ) return;
@@ -122,6 +131,9 @@ public class Summary extends Iced {
       assert Math.abs(_start - other._start) < 0.000001:"start - other._start = " + (_start - other._start);
       assert Math.abs(_binszInv - other._binszInv) < 0.000000001;
       _n += other._n;
+      _nzero += other._nzero;
+      _n_na += other._n_na;
+
       for (int i = 0; i < _bins.length; i++)
         _bins[i] += other._bins[i];
       if(_min != null){
@@ -132,19 +144,22 @@ public class Summary extends Iced {
           if(other._min[k] < _min[j]){
             min[i] = other._min[k++];
           } else if(_min[j] < other._min[k]){
-            ++j;
+            min[i] = _min[j++];
           } else {
+            min[i] = other._min[k];
             ++j; ++k;
           }
         }
+
         j = k = 0;
         for(int i = 0; i < _max.length; ++i){
           if(other._max[k] > _max[j]){
             max[i] = other._max[k++];
           } else if (_max[j] > other._max[k]){
-            ++j;
+            max[i] = _max[j++];
           } else {
-            ++j;++k;
+            max[i] = other._max[k];
+            ++j; ++k;
           }
         }
         _min = min;
@@ -154,6 +169,8 @@ public class Summary extends Iced {
 
     void add(double val) {
       if(!_enum){
+        if (val == 0.)
+          _nzero++;
         // first update min/max
         if(val < _min[_min.length-1]){
           int j = _min.length-1;
@@ -164,7 +181,8 @@ public class Summary extends Iced {
             _min[j] = val;
           }
         }
-        if(val > _max[_min.length-1]){
+
+        if(val > _max[_max.length-1]){
           int j = _max.length-1;
           while(j > 0 && _max[j-1] < val)--j;
           if(j == 0 || _max[j-1] > val){ // skip dups
@@ -172,6 +190,7 @@ public class Summary extends Iced {
               _max[k] = _max[k-1];
             _max[j] = val;
           }
+
         }
       }
       // update the histogram
@@ -203,6 +222,8 @@ public class Summary extends Iced {
       JsonObject res = new JsonObject();
       res.addProperty("type", _enum?"enum":"number");
       res.addProperty("name", _summary._ary._cols[_colId]._name);
+      if (_enum)
+        res.addProperty("enumCardinality", getEnumCardinality());
       if(!_enum){
         JsonArray min = new JsonArray();
         for(double d:_min){
@@ -211,6 +232,7 @@ public class Summary extends Iced {
         }
         res.add("min", min);
         JsonArray max = new JsonArray();
+
         for(double d:_max){
           if(Double.isInfinite(d))break;
           max.add(new JsonPrimitive(d));
@@ -218,8 +240,10 @@ public class Summary extends Iced {
         res.add("max", max);
         res.addProperty("mean", _summary._ary._cols[_colId]._mean);
         res.addProperty("sigma", _summary._ary._cols[_colId]._sigma);
+        res.addProperty("zeros", _nzero);
       }
       res.addProperty("N", _n);
+      res.addProperty("na", _n_na);
       JsonObject histo = new JsonObject();
       histo.addProperty("bin_size", _binsz);
       histo.addProperty("nbins", _bins.length);

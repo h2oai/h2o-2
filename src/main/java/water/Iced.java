@@ -2,7 +2,7 @@ package water;
 /**
  * Empty marker class.  Used by the auto-serializer.
  */
-public abstract class Iced implements Freezable {
+public abstract class Iced implements Freezable, Cloneable {
   // The abstract methods to be filled in by subclasses.  These are automatically
   // filled in by any subclass of Iced during class-load-time, unless one
   // is already defined.  These methods are NOT DECLARED ABSTRACT, because javac
@@ -19,4 +19,8 @@ public abstract class Iced implements Freezable {
   @Override public water.api.DocGen.FieldDoc[] toDocField() { return null; }
 
   public Iced init( Key k ) { return this; }
+  @Override public Iced clone() {
+    try { return (Iced)super.clone(); }
+    catch( CloneNotSupportedException e ) { throw water.util.Log.errRTExcept(e); }
+  }
 }

@@ -10,10 +10,12 @@ import java.security.SecureRandom;
 import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.zip.*;
 
 import org.apache.commons.lang.ArrayUtils;
 
 import water.*;
+import water.fvec.ParseDataset2.Compression;
 import water.parser.ParseDataset;
 
 import com.google.common.io.Closeables;
@@ -58,8 +60,8 @@ public class Utils {
     return (what < 1e-06) ? 0 : what * Math.log(what);
   }
 
-  public static String p2d(double d) { return new DecimalFormat ("0.##"   ).format(d); }
-  public static String p5d(double d) { return new DecimalFormat ("0.#####").format(d); }
+  public static String p2d(double d) { return !Double.isNaN(d) ? new DecimalFormat ("0.##"   ).format(d) : "nan"; }
+  public static String p5d(double d) { return !Double.isNaN(d) ? new DecimalFormat ("0.#####").format(d) : "nan"; }
 
   public static int set4( byte[] buf, int off, int x ) {
     for( int i=0; i<4; i++ ) buf[i+off] = (byte)(x>>(i<<3));
@@ -319,7 +321,6 @@ public class Utils {
     ValueArray res = DKV.get(okey).get();
     return res;
   }
-
   public static ValueArray parseKey(Key fileKey, Key parsedKey) {
     ParseDataset.parse(parsedKey, new Key[]{fileKey});
   return DKV.get(parsedKey).get();
@@ -359,5 +360,49 @@ public class Utils {
       Closeables.closeQuietly(fis);
     }
     return key;
+  }
+
+  public static byte [] unzipBytes(byte [] bs, Compression cmp){
+    InputStream is = null;
+    int off = 0;
+    try {
+      switch(cmp) {
+      case NONE: // No compression
+        return bs;
+      case ZIP: {
+        ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(bs));
+        ZipEntry ze = zis.getNextEntry(); // Get the *FIRST* entry
+        // There is at least one entry in zip file and it is not a directory.
+        if( ze != null && !ze.isDirectory() )
+          is = zis;
+        else
+          zis.close();
+        break;
+      }
+      case GZIP:
+        is = new GZIPInputStream(new ByteArrayInputStream(bs));
+        break;
+      }
+      // If reading from a compressed stream, estimate we can read 2x uncompressed
+      if( is != null )
+        bs = new byte[bs.length * 2];
+      // Now read from the (possibly compressed) stream
+      while( off < bs.length ) {
+        int len = is.read(bs, off, bs.length - off);
+        if( len < 0 )
+          break;
+        off += len;
+        if( off == bs.length ) { // Dataset is uncompressing alot! Need more space...
+          if( bs.length >= ValueArray.CHUNK_SZ )
+            break; // Already got enough
+          bs = Arrays.copyOf(bs, bs.length * 2);
+        }
+      }
+    } catch( IOException ioe ) { // Stop at any io error
+      Log.err(ioe);
+    } finally {
+      Utils.close(is);
+    }
+    return bs;
   }
 }

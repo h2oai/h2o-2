@@ -5,7 +5,7 @@ import java.io.File;
 import org.apache.commons.lang.ArrayUtils;
 
 import water.deploy.*;
-import water.fvec.NFSFileVec;
+import water.parser.ParseDataset;
 import water.util.Utils;
 
 public class Sandbox {
@@ -17,22 +17,22 @@ public class Sandbox {
     public static void main(String[] args) throws Exception {
       localCloud(1, true, args);
 
-      Utils.readConsole();
       File f = new File("lib/resources/datasets/gaussian.csv");
-      Key fkey = NFSFileVec.make(f);
-      Key key = Key.make("test");
-      UKV.put(key, UKV.get(fkey));
-      Utils.readConsole();
-
+      // File f = new File("smalldata/covtype/covtype.20k.data");
       // File f = new File("syn_5853362476331324036_100x11.csv");
-      // // File f = new File("../../aaaa/datasets/millionx7_logreg.data.gz");
-      // // File f = new File("smalldata/test/rmodels/iris_x-iris-1-4_y-species_ntree-500.rdata");
-      // // File f = new File("py/testdir_single_jvm/syn_datasets/hastie_4x.data");
-//      File f = new File("smalldata/covtype/covtype.20k.data");
-//      Key key = TestUtil.load_test_file(f, "test");
-//      Key dest = Key.make("test.hex");
-//      ParseDataset.parse(dest, new Key[] { key });
-//      ValueArray va = (ValueArray) UKV.get(dest);
+      // File f = new File("../../aaaa/datasets/millionx7_logreg.data.gz");
+      // File f = new File("smalldata/test/rmodels/iris_x-iris-1-4_y-species_ntree-500.rdata");
+      // File f = new File("py/testdir_single_jvm/syn_datasets/hastie_4x.data");
+
+//      Key fkey = NFSFileVec.make(f);
+//      Key key = Key.make("test");
+//      UKV.put(key, UKV.get(fkey));
+//      Utils.readConsole();
+
+      Key key = TestUtil.load_test_file(f, "test");
+      Key dest = Key.make("test.hex");
+      ParseDataset.parse(dest, new Key[] { key });
+      ValueArray va = (ValueArray) UKV.get(dest);
 
       // @formatter:off
 //      double[][] array = new double[][] {

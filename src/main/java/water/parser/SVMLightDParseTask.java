@@ -1,5 +1,7 @@
 package water.parser;
 
+import java.util.Arrays;
+
 public class SVMLightDParseTask extends DParseTask {
   public SVMLightDParseTask() {}
   @Override
@@ -9,6 +11,23 @@ public class SVMLightDParseTask extends DParseTask {
     super.newLine();
     _colIdx = 0;
   }  private int _colIdx = 0;
+
+  @Override
+  public void addColumns(int ncols){
+    _colTypes = Arrays.copyOf(_colTypes, ncols);
+    _min = Arrays.copyOf(_min, ncols); // additional columns has min/max/mean 0
+    _max = Arrays.copyOf(_max, ncols);
+    if(_myrows == 0) { // in this case we can not be sure if 0 ever occurs in this particular column
+      _min[ncols-1] = Double.POSITIVE_INFINITY;
+      _max[ncols-1] = Double.NEGATIVE_INFINITY;
+    }
+    _scale = Arrays.copyOf(_scale, ncols);
+    _mean = Arrays.copyOf(_mean, ncols);
+    _invalidValues = Arrays.copyOf(_invalidValues, ncols);
+    _ncolumns = ncols;
+    createEnums();
+  }
+
   @Override
   public void addNumCol(int colIdx, long number, int exp){
     if(_phase == Pass.ONE && colIdx >= _ncolumns)

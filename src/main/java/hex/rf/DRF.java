@@ -134,7 +134,7 @@ public abstract class DRF {
       new TAtomic<RFModel>() {
         @Override public RFModel atomic(RFModel old) {
           if(old == null) return null;
-          RFModel newModel = old.clone();
+          RFModel newModel = (RFModel)old.clone();
           newModel._nodesSplitFeatures[idx] = numSplitFeatures;
           return newModel;
         }
@@ -266,7 +266,7 @@ public abstract class DRF {
       return super.start(jobRemoval);
     }
     @Override public float progress() {
-      Progress p = (Progress) UKV.get(_dest);
+      Progress p = (Progress) UKV.get(destination_key);
       return p.progress();
     }
   }

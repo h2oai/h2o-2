@@ -23,9 +23,11 @@ public class Timer {
   };
 
   public final long _start = System.currentTimeMillis();
+  public final long _nanos = System.nanoTime();
 
   /**Return the difference between when the timer was created and the current time. */
   public long time() { return System.currentTimeMillis() - _start; }
+  public long nanos(){ return System.nanoTime() - _nanos; }
 
   /**Return the difference between when the timer was created and the current time as a
    * string along with the time of creation in date format. */

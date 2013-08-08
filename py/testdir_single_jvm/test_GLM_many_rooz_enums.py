@@ -95,7 +95,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_many_enums(self):
+    def test_GLM_many_rooz_enums(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         if localhost:

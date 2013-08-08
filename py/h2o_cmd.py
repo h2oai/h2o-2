@@ -21,7 +21,7 @@ def parseFile(node=None, csvPathname=None, key=None, key2=None,
 
     # do SummaryPage here too, just to get some coverage
     if doSummary:
-        node.summary_page(myKey2)
+        node.summary_page(myKey2, timeoutSecs=timeoutSecs)
     return p
 
 def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, 
@@ -89,6 +89,22 @@ def runKMeansOnly(node=None, parseKey=None,
     return node.kmeans(parseKey['destination_key'], None, 
         timeoutSecs, retryDelaySecs, **kwargs)
 
+def runKMeansGrid(node=None, csvPathname=None, key=None, key2=None,
+        timeoutSecs=60, retryDelaySecs=2, noise=None, **kwargs):
+    # use 1/5th the KMeans timeoutSecs for allowed parse time.
+    pto = max(timeoutSecs/5,10)
+    noise = kwargs.pop('noise',None)
+    parseKey = parseFile(node, csvPathname, key, key=key2, timeoutSecs=pto, noise=noise)
+    return runKMeansGridOnly(node, parseKey, 
+        timeoutSecs, retryDelaySecs, noise=noise, **kwargs)
+
+def runKMeansGridOnly(node=None, parseKey=None,
+        timeoutSecs=60, retryDelaySecs=2, noise=None, **kwargs):
+    if not parseKey: raise Exception('No parsed key for KMeansGrid specified')
+    if not node: node = h2o.nodes[0]
+    # no such thing as KMeansGridView..don't use retryDelaySecs
+    return node.kmeans_grid(parseKey['destination_key'], timeoutSecs, **kwargs)
+
 def runGLM(node=None, csvPathname=None, key=None, key2=None, 
         timeoutSecs=20, retryDelaySecs=2, noise=None, **kwargs):
     # use 1/5th the GLM timeoutSecs for allowed parse time.
@@ -125,18 +141,18 @@ def runGLMGridOnly(node=None, parseKey=None,
     return node.GLMGrid(parseKey['destination_key'], timeoutSecs, **kwargs)
 
 def runRF(node=None, csvPathname=None, trees=5, key=None, key2=None,
-        timeoutSecs=20, retryDelaySecs=2, rfview=True, noise=None, **kwargs):
+        timeoutSecs=20, retryDelaySecs=2, rfView=True, noise=None, **kwargs):
     # use 1/5th the RF timeoutSecs for allowed parse time.
     pto = max(timeoutSecs/5,30)
     noise = kwargs.pop('noise',None)
     parseKey = parseFile(node, csvPathname, key, key2=key2, timeoutSecs=pto, noise=noise)
     return runRFOnly(node, parseKey, trees, timeoutSecs, retryDelaySecs, 
-        rfview=rfview, noise=noise, **kwargs)
+        rfView=rfView, noise=noise, **kwargs)
 
 # rfView can be used to skip the rf completion view
 # for creating multiple rf jobs
 def runRFOnly(node=None, parseKey=None, trees=5, 
-        timeoutSecs=20, retryDelaySecs=2, rfview=True, noise=None, noPrint=False, **kwargs):
+        timeoutSecs=20, retryDelaySecs=2, rfView=True, noise=None, noPrint=False, **kwargs):
     if not parseKey: raise Exception('No parsed key for RF specified')
     if not node: node = h2o.nodes[0]
     #! FIX! what else is in parseKey that we should check?
@@ -144,6 +160,9 @@ def runRFOnly(node=None, parseKey=None, trees=5,
     Key = parseKey['destination_key']
     rf = node.random_forest(Key, trees, timeoutSecs, **kwargs)
 
+    if h2o.beta_features and rfView==False:
+        # just return for now
+        return rf
     # FIX! check all of these somehow?
     # if we model_key was given to rf via **kwargs, remove it, since we're passing 
     # model_key from rf. can't pass it in two places. (ok if it doesn't exist in kwargs)
@@ -158,7 +177,7 @@ def runRFOnly(node=None, parseKey=None, trees=5,
     # this is important. it's the only accurate value for how many trees RF was asked for.
     ntree    = rf['ntree']
     response_variable = rf['response_variable']
-    if rfview:
+    if rfView:
         # ugly..we apparently pass/use response_variable in RFView, gets passed thru kwargs here
         # print kwargs['response_variable']
         rfViewResult = runRFView(node, data_key, model_key, ntree, 
@@ -183,8 +202,7 @@ def runRFView(node=None, data_key=None, model_key=None, ntree=None,
 
         if status == 'done': 
             if numberBuilt!=ntree: 
-                raise Exception("RFview done but number_built!=ntree: %s %s", 
-                    numberBuilt, ntree)
+                raise Exception("RFview done but number_built!=ntree: %s %s" % (numberBuilt, ntree))
             return True
         if status != 'poll': raise Exception('Unexpected status: ' + status)
 
@@ -390,9 +408,8 @@ def infoFromInspect(inspect, csvPathname):
     response = inspect['response']
     ptime = response['time']
 
-    print "\n" + csvPathname, "num_cols: %s, num_rows: %s, row_size: %s, ptype: %s, \
-           value_size_bytes: %s, time: %s" % \
-           (num_cols, num_rows, row_size, ptype, value_size_bytes, ptime)
+    print "\n" + csvPathname, "num_cols: %s, num_rows: %s, row_size: %s, ptype: %s, value_size_bytes: %s" % \
+           (num_cols, num_rows, row_size, ptype, value_size_bytes)
     return missingValuesList
 
 def infoFromSummary(summaryResult, noPrint=False):
@@ -424,11 +441,15 @@ def infoFromSummary(summaryResult, noPrint=False):
 
         # not done if enum
         if stype != "enum":
+            zeros = columns['zeros']
+            na = columns['na']
             smax = columns['max']
             smin = columns['min']
             mean = columns['mean']
             sigma = columns['sigma']
             if not noPrint:
+                print "zeros:", zeros
+                print "na:", na
                 print "smax:", smax
                 print "smin:", smin
                 print "mean:", mean

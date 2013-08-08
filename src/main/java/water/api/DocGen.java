@@ -1,5 +1,8 @@
 package water.api;
 
+import java.io.BufferedWriter;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import water.*;
 import water.util.Log;
@@ -14,11 +17,32 @@ public abstract class DocGen {
   static final HTML HTML = new HTML();
   static final ReST ReST = new ReST();
 
+  public static void createFile (String fileName, String content) {
+    try
+    {
+      FileWriter fstream = new FileWriter(fileName, false); //true tells to append data.
+      BufferedWriter out = new BufferedWriter(fstream);
+      out.write(content);
+      out.close();
+    }
+    catch (Exception e)
+    {
+      System.err.println("Error: " + e.getMessage());
+    }
+  }
+
+  public static void createReSTFilesInCwd() {
+    createFile("ImportFiles.rst", new ImportFiles().ReSTHelp());
+    createFile("ImportFiles2.rst", new ImportFiles2().ReSTHelp());
+    createFile("Parse2.rst", new Parse2().ReSTHelp());
+  }
+
   public static void main(String[] args) {
     H2O.main(args);
+
     waitForCloudSize(1, 10000);
-    System.out.println(new ImportFiles().ReSTHelp());
-    //H2O.exit(0);
+    createReSTFilesInCwd();
+    H2O.exit(0);
   }
 
   static void waitForCloudSize(int size, int ms) {
@@ -183,7 +207,7 @@ public abstract class DocGen {
           try {
             FieldDoc[] nested = ((Iced)c.newInstance()).toDocField();
             listJSONFields(sb,nested);
-          } 
+          }
           catch( InstantiationException ie ) { water.util.Log.errRTExcept(ie); }
           catch( IllegalAccessException ie ) { water.util.Log.errRTExcept(ie); }
         }

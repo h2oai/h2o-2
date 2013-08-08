@@ -1,4 +1,4 @@
-import time, os, json, signal, tempfile, shutil, datetime, inspect, threading, os.path, getpass
+import time, os, json, signal, tempfile, shutil, datetime, inspect, threading, getpass
 import requests, psutil, argparse, sys, unittest, glob
 import h2o_browse as h2b, h2o_perf, h2o_util, h2o_cmd
 import re, webbrowser, random
@@ -378,7 +378,7 @@ def setup_random_seed():
 # node_count is per host if hosts is specified.
 def build_cloud(node_count=2, base_port=54321, hosts=None, 
         timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True, 
-        hadoop=False, conservative=True, **kwargs):
+        hadoop=False, conservative=False, **kwargs):
     # moved to here from unit_main. so will run with nosetests too!
     clean_sandbox()
     # keep this param in kwargs, because we pass to the H2O node build, so state
@@ -435,7 +435,7 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         verboseprint("Attempting Cloud stabilize of", totalNodes, "nodes on", hostCount, "hosts")
         start = time.time()
         # UPDATE: best to stabilize on the last node!
-        stabilize_cloud(nodeList[-1], len(nodeList), 
+        stabilize_cloud(nodeList[0], len(nodeList), 
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
         verboseprint(len(nodeList), "Last added node stabilized in ", time.time()-start, " secs")
         verboseprint("Built cloud: %d nodes on %d hosts, in %d s" % (len(nodeList), 
@@ -448,7 +448,8 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
             for n in nodeList:
                 stabilize_cloud(n, len(nodeList), timeoutSecs=timeoutSecs)
         else:
-            verify_cloud_size(nodeList)
+            pass
+            # verify_cloud_size(nodeList)
 
         # best to check for any errors due to cloud building right away?
         check_sandbox_for_errors()
@@ -540,7 +541,12 @@ def check_sandbox_for_errors(sandbox_ignore_errors=False):
                     # don't detect these class loader info messags as errors
                     #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
                     foundBad = regex1.search(line) and not (
-                        ('error rate' in line) or ('[Loaded ' in line) or ('class.error' in line) or
+                        # fvec
+                        ('prediction error' in line) or ('errors on' in line) or
+                        # R
+                        ('class.error' in line) or
+                        # original RF
+                        ('error rate' in line) or ('[Loaded ' in line) or 
                         ('[WARN]' in line) or ('CalcSquareErrorsTasks' in line))
 
                 if (printing==0 and foundBad):
@@ -967,6 +973,9 @@ class H2O(object):
         timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
         **kwargs):
         # defaults
+        # KMeans has more params than shown here
+        # KMeans2 has these params?
+        # max_iter=100&max_iter2=1&iterations=0
         params_dict = {
             'epsilon': 1e-6,
             'k': 1,
@@ -977,7 +986,7 @@ class H2O(object):
         browseAlso = kwargs.get('browseAlso', False)
         params_dict.update(kwargs)
         print "\nKMeans params list:", params_dict
-        a = self.__do_json_request('KMeans.json', timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('KMeans2.json' if beta_features else 'KMeans.json', timeout=timeoutSecs, params=params_dict)
 
         # Check that the response has the right Progress url it's going to steer us to.
         if a['response']['redirect_request']!='Progress':
@@ -991,6 +1000,36 @@ class H2O(object):
         if (browseAlso | browse_json):
             print "Redoing the KMeans through the browser, no results saved though"
             h2b.browseJsonHistoryAsUrlLastMatch('KMeans')
+            time.sleep(5)
+        return a
+
+    def kmeans_grid(self, key, key2=None, 
+        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
+        **kwargs):
+        # defaults
+        params_dict = {
+            'epsilon': 1e-6,
+            'k': 1,
+            'max_iter': 10,
+            'source_key': key,
+            }
+        browseAlso = kwargs.get('browseAlso', False)
+        params_dict.update(kwargs)
+        print "\nKMeansGrid params list:", params_dict
+        a = self.__do_json_request('KMeansGrid.json', timeout=timeoutSecs, params=params_dict)
+
+        # Check that the response has the right Progress url it's going to steer us to.
+        if a['response']['redirect_request']!='Progress':
+            print dump_json(a)
+            raise Exception('H2O kmeans_grid redirect is not Progress. KMeans json response precedes.')
+        a = self.poll_url(a['response'],
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+        verboseprint("\nKMeansGrid result:", dump_json(a))
+
+        if (browseAlso | browse_json):
+            print "Redoing the KMeansGrid through the browser, no results saved though"
+            h2b.browseJsonHistoryAsUrlLastMatch('KMeansGrid')
             time.sleep(5)
         return a
 
@@ -1060,17 +1099,18 @@ class H2O(object):
     def inspect(self, key, offset=None, view=None, ignoreH2oError=False, timeoutSecs=30):
         if beta_features:
             params = {
-                "key": key,
+                "src_key": key,
                 "offset": offset,
                 "view": view,
                 }
         else:
             params = {
-                "key": key, # need both to avoid errors?
-                "src_key": key,
+                "key": key,
                 "offset": offset,
                 "view": view,
                 }
+
+            
 
         a = self.__do_json_request('Inspect2.json' if beta_features else 'Inspect.json',
             params=params,
@@ -1171,7 +1211,18 @@ class H2O(object):
             'model_key': None,
             # new default. h2o defaults to 0, better for tracking oobe problems
             'out_of_bag_error_estimate': 1, 
+            'response_variable': None,
+            'sample': None,
             }
+
+        # new names for these things
+        if beta_features:
+            params_dict['class_vec'] = kwargs['response_variable']
+            if kwargs['sample'] is None:
+                params_dict['sample_rate'] = None
+            else:
+                params_dict['sample_rate'] = (kwargs['sample'] + 0.0)/ 100 # has to be modified?
+            
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
 
@@ -1179,11 +1230,17 @@ class H2O(object):
             print "\nrandom_forest parameters:", params_dict
             sys.stdout.flush()
 
-        a = self.__do_json_request('RF.json', timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('DRF2.json' if beta_features else 'RF.json', 
+            timeout=timeoutSecs, params=params_dict)
         verboseprint("\nrandom_forest result:", dump_json(a))
         return a
 
     def random_forest_view(self, data_key, model_key, timeoutSecs=300, print_params=False, **kwargs):
+        # not supported yet
+        if beta_features:
+            print "random_forest_view not supported in H2O fvec yet. hacking done response"
+            r = {'response': {'status': 'done'}, 'trees': {'number_built': 0}}
+            return r
         # is response_variable needed here? it shouldn't be
         # do_json_request will ignore any that remain = None
         params_dict = {
@@ -1205,7 +1262,8 @@ class H2O(object):
             print "\nrandom_forest_view parameters:", params_dict
             sys.stdout.flush()
 
-        a = self.__do_json_request('RFView.json', timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('DRFView2.json' if beta_features else 'RFView.json', 
+            timeout=timeoutSecs, params=params_dict)
         verboseprint("\nrandom_forest_view result:", dump_json(a))
 
         if (browseAlso | browse_json):
@@ -1264,12 +1322,14 @@ class H2O(object):
             time.sleep(3) # to be able to see it
         return a
 
-    def summary_page(self, key, timeoutSecs=30, noPrint=True, **kwargs):
+    def summary_page(self, key, timeoutSecs=60, noPrint=True, **kwargs):
         params_dict = {
             'key': key,
             }
         browseAlso = kwargs.pop('browseAlso',False)
+        params_dict.update(kwargs)
         a = self.__do_json_request('SummaryPage.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nsummary_page result:", dump_json(a))
         h2o_cmd.infoFromSummary(a, noPrint=noPrint)
         return a
 
@@ -1294,6 +1354,19 @@ class H2O(object):
         print "csv_download r.headers:", r.headers
         if r.status_code == 200:
             f = open(csvPathname, 'wb')
+            for chunk in r.iter_content(1024):
+                f.write(chunk)
+        print csvPathname, "size:", h2o_util.file_size_formatted(csvPathname)
+
+    def script_download(self, pathname, timeoutSecs=30):
+        url = self.__url('script.txt')
+        log('Start ' + url,  comment=pathname)
+
+        # do it (absorb in 1024 byte chunks)
+        r = requests.get(url, params=None, timeout=timeoutSecs)
+        print "script_download r.headers:", r.headers
+        if r.status_code == 200:
+            f = open(pathname, 'wb')
             for chunk in r.iter_content(1024):
                 f.write(chunk)
 

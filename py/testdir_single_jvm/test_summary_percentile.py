@@ -105,6 +105,8 @@ class Basic(unittest.TestCase):
 
                 # not done if enum
                 if stype != "enum":
+                    zeros = columns['zeros']
+                    na = columns['na']
                     smax = columns['max']
                     smin = columns['min']
                     percentiles = columns['percentiles']

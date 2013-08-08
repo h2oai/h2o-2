@@ -99,10 +99,7 @@ public class ValueArray extends Iced implements Cloneable {
   /** Return the key that denotes this entire ValueArray in the K/V store. */
   public final Key getKey() { return _key; }
 
-  @Override public ValueArray clone() {
-    try { return (ValueArray)super.clone(); }
-    catch( CloneNotSupportedException cne ) { throw Log.err(H2O.unimpl()); }
-  }
+  @Override public ValueArray clone() { return (ValueArray)super.clone(); }
 
   // Init of transient fields from deserialization calls
   @Override public final ValueArray init( Key key ) {
@@ -214,7 +211,7 @@ public class ValueArray extends Iced implements Cloneable {
     public long _n;
     public int  _base;  // Base
     public char _scale; // Actual value is (((double)(stored_value+base))/scale); 1,10,100,1000
-    public char _off;   // Offset within a row
+    public int _off;   // Offset within a row
     public byte _size;  // Size is 1,2,4 or 8 bytes, or -4,-8 for float/double data
 
     public Column() { _min = Double.MAX_VALUE; _max = -Double.MAX_VALUE; _scale = 1; }
@@ -228,10 +225,7 @@ public class ValueArray extends Iced implements Cloneable {
     public final boolean isScaled() { return _scale != 1; }
     /** Compute size of numeric integer domain */
     public final long    numDomainSize() { return (long) ((_max - _min)+1); }
-    @Override public Column clone() {
-      try { return (Column)super.clone(); }
-      catch( CloneNotSupportedException cne ) { throw H2O.unimpl(); }
-    }
+    @Override public Column clone() { return (Column)super.clone(); }
 
     private static boolean eq(double x, double y, double precision){
       return (Math.abs(x-y) < precision);
@@ -507,8 +501,8 @@ public class ValueArray extends Iced implements Cloneable {
         }
         sb.append('\n');
         _currentLine = sb.toString().getBytes();
+        _i = 0;
       }
-      _i = 0;
       return _currentLine.length - _i;
     }
     @Override public void close() { super.close(); _currentLine = null;}

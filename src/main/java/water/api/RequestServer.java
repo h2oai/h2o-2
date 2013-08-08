@@ -1,5 +1,8 @@
 package water.api;
 
+import hex.KMeans2;
+import hex.KMeansGrid;
+
 import java.io.*;
 import java.net.ServerSocket;
 import java.util.HashMap;
@@ -53,6 +56,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new GLM()),         "GLM",           "Model");
     Request.addToNavbar(registerRequest(new GLMGrid()),     "GLMGrid",       "Model");
     Request.addToNavbar(registerRequest(new KMeans()),      "KMeans",        "Model");
+    Request.addToNavbar(registerRequest(new KMeansGrid()),  "KMeansGrid",    "Model");
     Request.addToNavbar(registerRequest(new Console()),     "Console",       "Model");
 
     Request.addToNavbar(registerRequest(new RFScore()),     "Random Forest", "Score");
@@ -82,7 +86,8 @@ public class RequestServer extends NanoHTTPD {
 
     Request.addToNavbar(registerRequest(new ImportFiles2()),"Import Files2","Beta (FluidVecs!)");
     Request.addToNavbar(registerRequest(new Parse2()),      "Parse2"       ,"Beta (FluidVecs!)");
-    Request.addToNavbar(registerRequest(new Inspect2()),    "Inspect2"     ,"Beta (FluidVecs!)");
+    Request.addToNavbar(registerRequest(new Inspect2()),    "Inspect",      "Beta (FluidVecs!)");
+    Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2"      ,"Beta (FluidVecs!)");
     Request.addToNavbar(registerRequest(new DRF2()),        "DRF2"         ,"Beta (FluidVecs!)");
 
     // internal handlers
@@ -129,6 +134,7 @@ public class RequestServer extends NanoHTTPD {
     String href = req.href();
     assert (! _requests.containsKey(href)) : "Request with href "+href+" already registered";
     _requests.put(href,req);
+    req.registered();
     return req;
   }
 
@@ -166,9 +172,8 @@ public class RequestServer extends NanoHTTPD {
       // found
       if (request == null)
         return getResource(uri);
-      // Dynamic Request instead of static request
-      if( request instanceof Score )
-        request = Score.create(parms);
+      // Some requests create an instance per call
+      request = request.create(parms);
       // call the request
       return request.serve(this,parms,type);
     } catch (Exception e) {

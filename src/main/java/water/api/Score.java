@@ -23,7 +23,7 @@ public class Score extends Request {
   // Each 'Score' query/request is unique, and reflects the Model that is
   // initially fed into it.  Really it should reflect the ValueArray...  so
   // this mechanism can be used to hand-roll new rows.
-  public static Score create( Properties parms ) {
+  @Override protected Score create( Properties parms ) {
     Score S = new Score();
     String mstr = parms.getProperty(MODEL_KEY);
     if( mstr == null ) return S;

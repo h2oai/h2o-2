@@ -13,6 +13,7 @@ import water.nbhm.NonBlockingHashMap;
 import water.parser.*;
 import water.parser.CustomParser.ParserType;
 import water.parser.Enum;
+import water.util.Utils;
 
 public final class ParseDataset2 extends Job {
   public final Key  _progress;  // Job progress Key
@@ -174,29 +175,38 @@ public final class ParseDataset2 extends Job {
     }
   }
 
+  // Run once on all nodes; fill in missing zero chunks
   public static class SVFTask extends MRTask<SVFTask> {
-    Frame _f;
+    final Frame _f;
+    SVFTask( Frame f ) { _f = f; }
     @Override public void map(Key key) {
-      for(int i = 0; i < _f._vecs[0].nChunks(); ++i){
-        if(!_f._vecs[0].chunkKey(i).home())continue;
-        // first find the nrows as the # rows of non-missing chunks
+      Vec v0 = _f._vecs[0];
+      for(int i = 0; i < v0.nChunks(); ++i) {
+        if( !v0.chunkKey(i).home() ) continue;
+        // First find the nrows as the # rows of non-missing chunks; done on
+        // locally-homed chunks only - to keep the data distribution.
         int nlines = 0;
-        for(Vec vec:_f._vecs){
-          Key k  = vec.chunkKey(i);
-          if(H2O.get(k) != null){
-            Chunk c = H2O.get(k).get();
-            assert nlines == 0 || nlines == c._len;
-            nlines = c._len;
+        for( Vec vec : _f._vecs ) {
+          Value val = H2O.get(vec.chunkKey(i)); // Local-get only
+          if( val != null ) {
+            nlines = ((Chunk)val.get())._len;
+            break;
           }
         }
-        for(Vec vec:_f._vecs){
-          Key k  = vec.chunkKey(i);
-          H2O.putIfMatch(k, new Value(k,new C0DChunk(0, nlines)), null);
+
+        // Now fill in appropriate-sized zero chunks
+        for( Vec vec:_f._vecs ) {
+          Key k = vec.chunkKey(i);
+          if( !k.home() ) continue; // Local keys only
+          Value val = H2O.get(k);   // Local-get only
+          if( val == null )         // Missing?  Fill in w/zero chunk
+            H2O.putIfMatch(k, new Value(k,new C0DChunk(0, nlines)), null);
         }
       }
     }
-    @Override public void reduce(SVFTask drt) {}
+    @Override public void reduce( SVFTask drt ) {}
   }
+
   private static Vec getVec(Key key) {
     Object o = UKV.get(key);
     return o instanceof Vec ? (ByteVec) o : ((Frame) o)._vecs[0];
@@ -216,21 +226,7 @@ public final class ParseDataset2 extends Job {
     // guarantee they have equal & compatible columns and/or headers.
     ByteVec vec = (ByteVec) getVec(fkeys[0]);
     Compression compression = guessCompressionMethod(vec);
-    byte sep = setup == null ? CsvParser.NO_SEPARATOR : setup._separator;
-    if( setup == null || setup._data == null || setup._data[0] == null ){
-      if(setup == null || setup._pType == CustomParser.ParserType.AUTO)
-        setup = ParseDataset.guessSetup(DKV.get(fkeys[0]));
-      else switch(setup._pType){
-        case CSV:
-          setup = CsvParser.guessSetup(DKV.get(fkeys[0]).getFirstBytes(), sep);
-          break;
-        case SVMLight:
-          setup = SVMLightParser.guessSetup(DKV.get(fkeys[0]).getFirstBytes());
-          break;
-        default:
-          throw H2O.unimpl();
-      }
-    }
+    if( setup == null) setup = ParseDataset.guessSetup(DKV.get(fkeys[0]));
     // Parallel file parse launches across the cluster
     MultiFileParseTask uzpt = new MultiFileParseTask(setup,job._progress).invoke(fkeys);
     if( uzpt._parserr != null )
@@ -275,21 +271,11 @@ public final class ParseDataset2 extends Job {
     @Override public void map( Key key ) {
       // Get parser setup info for this chunk
       ByteVec vec = (ByteVec) getVec(key);
+      byte [] bits = vec.elem2BV(0)._mem;
       Compression cpr = guessCompressionMethod(vec);
-      CustomParser.ParserSetup localSetup;
+      CustomParser.ParserSetup localSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), _setup._pType, _setup._separator);
       // Local setup: nearly the same as the global all-files setup, but maybe
       // has the header-flag changed.
-      byte [] bits = Inspect.getFirstBytes(DKV.get(key));
-      switch(_setup._pType){
-        case SVMLight:
-          localSetup = CustomParser.ParserSetup.makeSVMLightSetup(0, null);
-          break;
-        case CSV:
-          localSetup = CsvParser.guessSetup(bits, _setup._separator);
-          break;
-        default:
-          throw H2O.unimpl();
-      }
       if(!_setup.isCompatible(localSetup)) {
         _parserr = "Conflicting file layouts, expecting: "+_setup+" but found "+localSetup;
         return;
@@ -312,8 +298,26 @@ public final class ParseDataset2 extends Job {
       try {
         switch( cpr ) {
         case NONE:
-          // Parallel decompress
-          distroParse(vec,localSetup);
+          if( !localSetup._pType.parallelParseSupported ) {
+            // XLS types end up here
+            streamParse(vec.openStream(_progress), localSetup);
+          } else if( localSetup._pType == ParserType.CSV ) {
+            // Parallel decompress of CSV
+            Vec bvs[] = Arrays.copyOf(_vecs,_vecs.length+1,Vec[].class);
+            bvs[bvs.length-1] = vec;
+            DParse dp = new DParse(localSetup).doAll(bvs);
+            // After the MRTask2, the input Vec array has all the AppendableVecs
+            // closed() and rewritten as plain Vecs.  Copy those back into the _cols
+            // array.
+            for( int i=0; i<_vecs.length; i++ ) _vecs[i] = dp.vecs(i);
+          } else {
+            // Parallel decompress of SVMLight
+            SVMLightDParse sdp = new SVMLightDParse().doAll(vec);
+            // svmlight is sparse, some chunks might be missing, fill them with all 0s
+            Vec [] newVecs = sdp._dout.closeVecs(_fs);
+            new SVFTask(new Frame(null,newVecs)).invokeOnAllNodes();
+            _vecs = newVecs;
+          }
           break;
         case ZIP: {
           // Zipped file; no parallel decompression;
@@ -364,7 +368,7 @@ public final class ParseDataset2 extends Job {
       for( int i=0; i<nvs.length; i++ )
         nvs[i] = new NewChunk(_vecs[i],0/*starting chunk#*/);
       FVecDataOut dout = new FVecDataOut(nvs, enums());
-      CsvParser p = new CsvParser(localSetup, false);
+      CustomParser p = localSetup.parser();
       try{p.streamParse(is, dout);}catch(Exception e){throw new RuntimeException(e);}
       // Parse all internal "chunks", until we drain the zip-stream dry.  Not
       // real chunks, just flipping between 32K buffers.  Fills up the single
@@ -376,30 +380,6 @@ public final class ParseDataset2 extends Job {
     }
 
     // ------------------------------------------------------------------------
-    // Distributed parse of an unzipped raw text file.
-    private void distroParse( ByteVec vec, final CustomParser.ParserSetup localSetup ) throws IOException {
-      switch(localSetup._pType){
-        case CSV:
-          Vec bvs[] = Arrays.copyOf(_vecs,_vecs.length+1,Vec[].class);
-          bvs[bvs.length-1] = vec;
-          DParse dp = new DParse(localSetup).doAll(bvs);
-          // After the MRTask2, the input Vec array has all the AppendableVecs
-          // closed() and rewritten as plain Vecs.  Copy those back into the _cols
-          // array.
-          for( int i=0; i<_vecs.length; i++ ) _vecs[i] = dp.vecs(i);
-          break;
-        case SVMLight:
-          SVMLightDParse sdp = new SVMLightDParse().doAll(vec);
-          // svmlight is sparse, some chunks might be missing, fill them with all 0s
-          Vec [] newVecs = sdp._dout.closeVecs(_fs);
-          SVFTask t = new SVFTask();
-          t._f = new Frame(null,newVecs);
-          t.invokeOnAllNodes();
-          _vecs = newVecs;
-          break;
-      }
-    }
-
     private class SVMLightDParse extends MRTask2<SVMLightDParse> {
       SVMLightFVecDataOut _dout;
       @Override public void map( Chunk in ) { // svm light version, we do not know how many cols we're gonna have, keep them separate from MRTask2!
@@ -419,10 +399,10 @@ public final class ParseDataset2 extends Job {
           _dout.reduce(dp._dout);
       }
     }
+
     private class DParse extends MRTask2<DParse> {
       final CustomParser.ParserSetup _setup;
       DParse(CustomParser.ParserSetup setup) {_setup = setup;}
-
 
       @Override public void map( Chunk[] bvs ) {
         Enum [] enums = enums();
@@ -434,6 +414,7 @@ public final class ParseDataset2 extends Job {
         FVecDataOut dout = new FVecDataOut(nvs,enums);
         CsvParser p = new CsvParser(_setup,in._start > 0);
         p.parallelParse(in.cidx(),din,dout);
+        onProgress(in._len, _progress); // Record bytes parsed
       }
     }
     // Collect the string columns
@@ -497,7 +478,10 @@ public final class ParseDataset2 extends Job {
     }
 
     @Override public final void addInvalidCol(int colIdx) {
-      _nvs[_col = colIdx].addNA();
+      if(colIdx >= _nCols)
+        System.err.println("Additional column ("+ _nvs.length + " < " + colIdx + " NA) on line " + linenum());
+      else
+        _nvs[_col = colIdx].addNA();
     }
     @Override public final boolean isString(int colIdx) { return false; }
 

@@ -18,6 +18,7 @@ public class KMeansModel extends Model implements Progress {
   public double[][] _clusters; // The cluster centers, normalized according to _va
   public double _error; // Sum of min square distances
   public int _iteration;
+  public double _epsilon;
   public int _maxIter;
   public long _randSeed;
   public boolean _normalized;

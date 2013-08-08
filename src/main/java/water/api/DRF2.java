@@ -3,8 +3,8 @@ package water.api;
 import hex.gbm.DRF;
 import water.DKV;
 import water.Key;
-import water.Weaver.Weave;
-import water.fvec.*;
+import water.fvec.Frame;
+import water.fvec.Vec;
 import water.util.RString;
 
 public class DRF2 extends Request {
@@ -15,32 +15,42 @@ public class DRF2 extends Request {
   // for GET.
   static final String DOC_GET = "Build a model using distributed Random Forest";
 
-  @Weave(help="Frame to build model from.")
+  @API(help="Frame to build model from.")
   final FrameKey data_key = new FrameKey("data_key");
 
-  @Weave(help="Response variable that is being learned.")
+  @API(help="Response variable that is being learned.")
   protected final FrameClassVec class_vec = new FrameClassVec("class_vec", data_key);
 
-  @Weave(help="Number of trees to build.")
+  @API(help="Number of trees to build.")
   protected final Int ntrees = new Int("ntrees",10,0,1000000);
 
-  @Weave(help="Number of split features used for tree building.  The default value is sqrt(#columns).")
+  @API(help="Number of split features used for tree building.  The default value is sqrt(#columns).")
   protected final Int features = new Int("features", null, 1, Integer.MAX_VALUE);
 
-  @Weave(help="Max tree depth.")
+  @API(help="Max tree depth.")
   protected final Int depth = new Int("depth",Integer.MAX_VALUE,0,Integer.MAX_VALUE);
 
-  @Weave(help="Select columns to model on.")
+  @API(help="Select columns to model on.")
   protected final FrameNonClassVecSelect vecs  = new FrameNonClassVecSelect("vecs",data_key,class_vec);
 
-  @Weave(help="Sampling rate during tree building.")
-  protected final Real sample_rate = new Real("sample_rate", 0.67, 0.0, 1.0,"");
+  @API(help="Sampling rate during tree building.")
+  protected final Real sample_rate = new Real("sample_rate", 0.67, 0.000001, 1.0,"");
 
-  @Weave(help="Psuedo-random number generator seed.")
+  @API(help="Psuedo-random number generator seed.")
   protected final LongInt seed = new LongInt("seed",0xae44a87f9edf1cbL,"High order bits make better seeds");
 
 //  protected final Bool              _oobee      = new Bool(OOBEE,true,"Out of bag error");
 //  protected final H2OKey            _modelKey   = new H2OKey(MODEL_KEY, false);
+
+  // JSON Output Fields
+  @API(help="Classes")
+  public String domain[];
+  
+  @API(help="mtrys: number of columns to randomly select amongst at each split")
+  public int mtrys;
+
+  @API(help="Confusion Matrix from this run")
+  public long cm[/*actual*/][/*predicted*/]; // Confusion matrix
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {
@@ -59,8 +69,10 @@ public class DRF2 extends Request {
     for( int idx : idxs )       // The selected frame columns
       fr2.add(fr._names[idx],fr._vecs[idx]);
     // Add the class-vec last
-    fr2.add(fr._names[class_vec._colIdx.get()],class_vec.value());
-    int mtrys = features.value()==null 
+    Vec cvec = class_vec.value();
+    fr2.add(fr._names[class_vec._colIdx.get()],cvec);
+    domain = cvec.domain();     // Class/enum/factor names
+    mtrys = features.value()==null 
       ? (int)(Math.sqrt(idxs.length)+0.5) 
       : features.value();
 
@@ -73,9 +85,58 @@ public class DRF2 extends Request {
                         seed.value());
 
     drf.get();                  // Block for result
+    cm = drf.cm();              // Get CM result
 
     return new Response(Response.Status.done, this, -1, -1, null);
   }
+
+
+  @Override public boolean toHTML( StringBuilder sb ) {
+    DocGen.HTML.title(sb,"Confusion Matrix");
+    DocGen.HTML.arrayHead(sb);
+    sb.append("<tr>");
+    sb.append("<th>Actual \\ Predicted</th>");
+    for( int i=0; i<domain.length; i++ )
+      sb.append("<th>").append(domain[i]).append("</th>");
+    sb.append("<th>Error</th>");
+    sb.append("</tr>\n");
+
+    long tots[] = new long[cm.length];
+    long errs=0, nrows=0;
+    for( int i=0; i<domain.length; i++ ) {
+      sb.append("<tr>");
+      sb.append("<th>").append(domain[i]).append("</th>");
+      long sum=0;
+      for( int j=0; j<domain.length; j++ ) {
+        sum += cm[i][j];
+        tots[j] += cm[i][j];
+        sb.append(i==j?"<td style='background-color:LightGreen'>":"<td>")
+          .append(cm[i][j]).append("</td>");
+      }
+      long err = sum-cm[i][i];
+      errs += err;
+      nrows += sum;
+      sb.append(String.format("<td>%5.3f = %d / %d</td>", (double)err/sum, err, sum));
+      sb.append("</tr>\n");
+    }
+
+    sb.append("<tr>");
+    sb.append("<th>Totals</th>");
+    for( int i=0; i<domain.length; i++ )
+      sb.append("<td>").append(tots[i]).append("</td>");
+    sb.append(String.format("<th>%5.3f = %d / %d</th>", (double)errs/nrows, errs, nrows));
+    sb.append("</tr>\n");
+    DocGen.HTML.arrayTail(sb);
+
+    DocGen.HTML.section(sb,"Summary");
+    DocGen.HTML.listHead(sb);    
+    DocGen.HTML.listBullet(sb, "ntrees", ntrees.value().toString(), 0 );
+    DocGen.HTML.listBullet(sb, "mtrys", Integer.toString(mtrys), 0 );
+    DocGen.HTML.listTail(sb);    
+
+    return true;
+  }
+
 
 //  // By default ignore all constants columns and warn about "bad" columns,
 //  // i.e., columns with many NAs (>25% of NAs).

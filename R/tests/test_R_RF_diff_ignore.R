@@ -1,12 +1,12 @@
 # Demo to test R functionality
-# To invoke, need R 2.15.0 or higher
-
-# R -f test_R_RF_diff_class.R --args Path/To/H2O.R H2OServer:Port
+# To invoke, need R 2.13.0 or higher
+# R -f test_R_RF_diff_class.R --args Path/To/H2O_Load.R H2OServer:Port
 args <- commandArgs(trailingOnly = TRUE)
 if(length(args) != 2)
-	  stop("Usage: R -f test_R_RF_diff_class.R --args Path/To/H2O.R H2OServer:Port")
-	  source(args[1])
-	  argsplit = strsplit(args[2], ":")[[1]]
+	  stop("Usage: R -f test_R_RF_diff_class.R --args Path/To/H2O_Load.R H2OServer:Port")
+
+source(args[1], chdir = TRUE)
+argsplit = strsplit(args[2], ":")[[1]]
 localH2O = new("H2OClient", ip=argsplit[1], port=as.numeric(argsplit[2]))
 
 # library(h2o)

@@ -20,7 +20,7 @@
   }
 }
 \details{
-WARNING: In H2O, import is lazy! Do not modify the data files on hard disk until after parsing is complete.
+WARNING: In H2O, import is lazy! Do not modify the data files on hard disk until after parsing is complete. By default, h2o.importFolder will automatically parse all files in the directory.
 }
 \value{
   If \code{parse = TRUE}, the function returns a list of objects of class \code{\linkS4class{H2OParsedData}}, otherwise it returns a list of objects of class \code{\linkS4class{H2ORawData}}.

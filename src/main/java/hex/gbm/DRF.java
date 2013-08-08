@@ -14,6 +14,9 @@ import water.util.Log;
 public class DRF extends Job {
   public static final String KEY_PREFIX = "__DRFModel_";
 
+  long _cm[/*actual*/][/*predicted*/]; // Confusion matrix
+  public long[][] cm() { return _cm; }
+
   public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
   private DRF(Key dest, Frame fr) { super("DRF "+fr, dest); }
   // Called from a non-FJ thread; makea a DRF and hands it over to FJ threads
@@ -41,7 +44,7 @@ public class DRF extends Job {
     Timer t_drf = new Timer();
     assert 0 <= ntrees && ntrees < 1000000;
     assert 0 <= mtrys && mtrys < fr.numCols();
-    assert 0.0 <= sampleRate && sampleRate <= 1.0;
+    assert 0.0 < sampleRate && sampleRate <= 1.0;
 
     final String names[] = fr._names;
     Vec vs[] = fr._vecs;
@@ -58,14 +61,14 @@ public class DRF extends Job {
     Random rand = new MersenneTwisterRNG(new int[]{(int)(seed>>32L),(int)seed});
 
     // Initially setup as-if an empty-split had just happened
-    Histogram hs[] = Histogram.initialHist(fr,ncols);
+    DHistogram hs[] = DHistogram.initialHist(fr,ncols);
     DRFTree trees[] = new DRFTree[ntrees];
     Vec[] nids = new Vec[ntrees];
 
     // ----
     // Only work on so many trees at once, else get GC issues.
     // Hand the inner loop a smaller set of trees.
-    final int NTREE=5;          // Limit of 5 trees at once
+    final int NTREE=1;          // Limit of 5 trees at once
     int depth=0;
     for( int st = 0; st < ntrees; st+= NTREE ) {
       int xtrees = Math.min(NTREE,ntrees-st);
@@ -89,17 +92,12 @@ public class DRF extends Job {
 
       // Remove temp vectors; cleanup the Frame
       while( fr.numCols() > ncols+1 )
-        fr.remove(fr.numCols()-1);
+        UKV.remove(fr.remove(fr.numCols()-1)._key);
     }
     Log.info(Sys.DRF__,"DRF done in "+t_drf);
 
     // One more pass for final prediction error
-    Timer t_score = new Timer();
-    /*junk?*/    for( int t=0; t<ntrees; t++ ) fr.add("NIDs"+t,nids[t]);
-    new BulkScore(trees,ncols,numClasses,ymin,sampleRate).doAll(fr).report( Sys.DRF__, nrows, depth );
-
-    while( fr.numCols() > ncols+1 )
-      UKV.remove(fr.remove(fr.numCols()-1)._key);
+    _cm = new BulkScore(trees,ncols,numClasses,ymin,sampleRate).doAll(fr).report( Sys.DRF__, nrows, depth )._cm;
   }
 
   // ----
@@ -109,21 +107,27 @@ public class DRF extends Job {
     for( int depth=0; depth<maxDepth; depth++ ) {
 
       // Fuse 2 conceptual passes into one:
-      // Pass 1: Score a prior Histogram, and make new DTree.Node assignments
+      // Pass 1: Score a prior DHistogram, and make new DTree.Node assignments
       // to every row.  This involves pulling out the current assigned Node,
       // "scoring" the row against that Node's decision criteria, and assigning
       // the row to a new child Node (and giving it an improved prediction).
-      // Pass 2: Build new summary Histograms on the new child Nodes every row
+      // Pass 2: Build new summary DHistograms on the new child Nodes every row
       // got assigned into.  Collect counts, mean, variance, min, max per bin,
       // per column.
       ScoreBuildHistogram sbh = new ScoreBuildHistogram(trees,leafs,ncols,numClasses,ymin).doAll(fr);
 
-      // Reassign the new Histograms back into the DTrees
+      // Reassign the new DHistograms back into the DTrees
       for( int t=0; t<ntrees; t++ ) {
         final int tmax = trees[t]._len; // Number of total splits
         final DTree tree = trees[t];
-        for( int i=leafs[t]; i<tmax; i++ )
+        //int sum=0;
+        for( int i=leafs[t]; i<tmax; i++ ) {
           tree.undecided(i)._hs = sbh.getFinalHisto(t,i);
+          //Histogram hs[] = tree.undecided(i)._hs;
+          //for( Histogram h : hs )
+          //  if( h != null ) sum += h.byteSize();
+        }
+        //System.out.println("Tree#"+(st+t)+", leaves="+(trees[t]._len-leafs[t])+", histo size="+PrettyPrint.bytes(sum));
       }
 
       // Build up the next-generation tree splits from the current histograms.
@@ -160,7 +164,7 @@ public class DRF extends Job {
     final long _seed;           // RNG seed; drives sampling seeds
     final long _seeds[];        // One seed for each chunk, for sampling
     final transient Random _rand; // RNG for split decisions & sampling
-    DRFTree( Frame fr, int ncols, Histogram hs[], int mtrys, long seed ) { 
+    DRFTree( Frame fr, int ncols, DHistogram hs[], int mtrys, long seed ) { 
       super(fr._names, ncols); 
       _mtrys = mtrys; 
       new UndecidedNode(this,-1,hs); // The "root" node 
@@ -183,7 +187,7 @@ public class DRF extends Job {
   static class DRFDecidedNode extends DecidedNode {
     DRFDecidedNode( UndecidedNode n ) { super(n); }
     // Find the column with the best split (lowest score).
-    @Override int bestCol( Histogram[] hs ) {
+    @Override int bestCol( DHistogram[] hs ) {
       DRFTree tree = (DRFTree)_tree;
       int[] cols = new int[hs.length];
       int len=0;
@@ -201,13 +205,16 @@ public class DRF extends Job {
       double bs = Double.MAX_VALUE; // Best score
       int idx = -1;                 // Column to split on
       for( int i=0; i<tree._mtrys; i++ ) {
-        if( len == 0 ) break;       // Out of choices!
+        if( len == 0 ) break;   // Out of choices!
         int idx2 = tree._rand.nextInt(len);
-        int col = cols[idx2];       // The chosen column
-        cols[idx2] = cols[--len];   // Compress out of array; do not choose again
+        int col = cols[idx2];     // The chosen column
+        cols[idx2] = cols[--len]; // Compress out of array; do not choose again
         double s = hs[col].score();
+        //System.out.print("col="+col+" score="+s+", ");
         if( s < bs ) { bs = s; idx = col; }
+        if( s <= 0 ) break;     // No point in looking further!
       }
+      //System.out.println("bestcol="+idx+"hist="+hs[idx]);
       return idx;
     }
   }

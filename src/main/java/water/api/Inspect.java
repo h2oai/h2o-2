@@ -1,7 +1,7 @@
 package water.api;
 
 import hex.DGLM.GLMModel;
-import hex.KMeansModel;
+import hex.*;
 import hex.rf.RFModel;
 
 import java.io.*;
@@ -13,6 +13,7 @@ import water.ValueArray.Column;
 import water.api.GLMProgressPage.GLMBuilder;
 import water.fvec.*;
 import water.parser.*;
+
 import water.util.Log;
 import water.util.Utils;
 
@@ -26,6 +27,8 @@ public class Inspect extends Request {
   private final Int                            _view         = new Int(VIEW, 100, 0, 10000);
   private final Str                            _producer     = new Str(JOB, null);
 
+  static final int MAX_COLUMNS_TO_DISPLAY = 1000;
+
   static {
     _displayNames.put(ENUM_DOMAIN_SIZE, "Enum Domain");
     _displayNames.put(MEAN, "&mu;");
@@ -36,11 +39,11 @@ public class Inspect extends Request {
   // Constructor called from 'Exec' query instead of the direct view links
   Inspect(Key k) {
     _key.reset();
-    _key.check(k.toString());
+    _key.check(this, k.toString());
     _offset.reset();
-    _offset.check("");
+    _offset.check(this, "");
     _view.reset();
-    _view.check("");
+    _view.check(this, "");
   }
 
   // Default no-args constructor
@@ -49,7 +52,7 @@ public class Inspect extends Request {
 
   public static Response redirect(JsonObject resp, Job keyProducer, Key dest) {
     JsonObject redir = new JsonObject();
-    if (keyProducer!=null) redir.addProperty(JOB, keyProducer._self.toString());
+    if (keyProducer!=null) redir.addProperty(JOB, keyProducer.job_key.toString());
     redir.addProperty(KEY, dest.toString());
     return Response.redirect(resp, Inspect.class, redir);
   }
@@ -179,6 +182,7 @@ public class Inspect extends Request {
       long rows = (long) (v.length() / bytes_per_row);
       result.addProperty(NUM_ROWS, "~" + rows); // approx rows
       result.addProperty(NUM_COLS, setup._data[1].length);
+
       result.add(ROWS, new Gson().toJsonTree(setup._data));
     } else {
       result.addProperty(NUM_ROWS, "unknown");
@@ -216,11 +220,11 @@ public class Inspect extends Request {
     JsonArray cols = new JsonArray();
     JsonArray rows = new JsonArray();
 
-    for( int i = 0; i < va._cols.length; i++ ) {
+    for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY, va._cols.length); i++ ) {
       Column c = va._cols[i];
       JsonObject json = new JsonObject();
       json.addProperty(NAME, c._name);
-      json.addProperty(OFFSET, (int) c._off);
+      json.addProperty(OFFSET, c._off);
       json.addProperty(SIZE, Math.abs(c._size));
       json.addProperty(BASE, c._base);
       json.addProperty(SCALE, (int) c._scale);
@@ -240,7 +244,7 @@ public class Inspect extends Request {
       for( long row = Math.max(0, startRow); row < endRow; ++row ) {
         JsonObject obj = new JsonObject();
         obj.addProperty(ROW, row);
-        for( int i = 0; i < va._cols.length; ++i )
+        for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY, va._cols.length); ++i )
           format(obj, va, row, i);
         rows.add(obj);
       }
@@ -330,8 +334,9 @@ public class Inspect extends Request {
     }
     sb.append("<div class='alert'>" +"View " + SummaryPage.link(key, "Summary") +  "<br/>Build models using "
           + RF.link(key, "Random Forest") + ", "
-          + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", or "
-          + KMeans.link(key, "KMeans") + "<br />"
+          + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", "
+          + KMeans.link(key, "KMeans") + ", or "
+          + KMeansGrid.link(key, "KMeansGrid") + "<br />"
           + "Score data using "
           + RFScore.link(key, "Random Forest") + ", "
           + GLMScore.link(KEY, key, 0.0, "GLM") + "</br><b>Download as</b> " + DownloadDataset.link(key, "CSV")
@@ -415,11 +420,13 @@ public class Inspect extends Request {
     @Override
     public String build(Response response, JsonArray array, String contextName) {
       StringBuilder sb = new StringBuilder();
+      if (_va._cols.length > MAX_COLUMNS_TO_DISPLAY)
+        sb.append("<p style='text-align:center;'><center><h5 style='font-weight:800; color:red;'>Columns trimmed to " + MAX_COLUMNS_TO_DISPLAY + "</h5></center></p>");
       if( array.size() == 0 ) { // Fake row, needed by builder
         array = new JsonArray();
         JsonObject fake = new JsonObject();
         fake.addProperty(ROW, 0);
-        for( int i = 0; i < _va._cols.length; ++i )
+        for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY, _va._cols.length); ++i )
           format(fake, _va, 0, i);
         array.add(fake);
       }
@@ -428,53 +435,53 @@ public class Inspect extends Request {
       JsonObject row = new JsonObject();
 
       row.addProperty(ROW, MIN);
-      for( int i = 0; i < _va._cols.length; i++ )
+      for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY,_va._cols.length); i++ )
         row.addProperty(_va._cols[i]._name, _va._cols[i]._min);
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       row.addProperty(ROW, MAX);
-      for( int i = 0; i < _va._cols.length; i++ )
+      for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY,_va._cols.length); i++ )
         row.addProperty(_va._cols[i]._name, _va._cols[i]._max);
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       row.addProperty(ROW, MEAN);
-      for( int i = 0; i < _va._cols.length; i++ )
+      for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY,_va._cols.length); i++ )
         row.addProperty(_va._cols[i]._name, _va._cols[i]._mean);
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       row.addProperty(ROW, VARIANCE);
-      for( int i = 0; i < _va._cols.length; i++ )
+      for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY,_va._cols.length); i++ )
         row.addProperty(_va._cols[i]._name, _va._cols[i]._sigma);
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       row.addProperty(ROW, NUM_MISSING_VALUES);
-      for( int i = 0; i < _va._cols.length; i++ )
+      for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY,_va._cols.length); i++ )
         row.addProperty(_va._cols[i]._name, _va._numrows - _va._cols[i]._n);
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       if( _offset == INFO_PAGE ) {
         row.addProperty(ROW, OFFSET);
-        for( int i = 0; i < _va._cols.length; i++ )
-          row.addProperty(_va._cols[i]._name, (int) _va._cols[i]._off);
+        for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY,_va._cols.length); i++ )
+          row.addProperty(_va._cols[i]._name, _va._cols[i]._off);
         sb.append(defaultBuilder(row).build(response, row, contextName));
 
         row.addProperty(ROW, SIZE);
-        for( int i = 0; i < _va._cols.length; i++ )
+        for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY,_va._cols.length); i++ )
           row.addProperty(_va._cols[i]._name, Math.abs(_va._cols[i]._size));
         sb.append(defaultBuilder(row).build(response, row, contextName));
 
         row.addProperty(ROW, BASE);
-        for( int i = 0; i < _va._cols.length; i++ )
+        for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY,_va._cols.length); i++ )
           row.addProperty(_va._cols[i]._name, _va._cols[i]._base);
         sb.append(defaultBuilder(row).build(response, row, contextName));
 
         row.addProperty(ROW, SCALE);
-        for( int i = 0; i < _va._cols.length; i++ )
+        for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY,_va._cols.length); i++ )
           row.addProperty(_va._cols[i]._name, (int) _va._cols[i]._scale);
         sb.append(defaultBuilder(row).build(response, row, contextName));
 
         row.addProperty(ROW, ENUM_DOMAIN_SIZE);
-        for( int i = 0; i < _va._cols.length; i++ )
+        for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY,_va._cols.length); i++ )
           row.addProperty(_va._cols[i]._name, _va._cols[i]._domain != null ? _va._cols[i]._domain.length : 0);
         sb.append(defaultBuilder(row).build(response, row, contextName));
       } else {
@@ -487,6 +494,8 @@ public class Inspect extends Request {
       }
 
       sb.append(footer(array));
+      if (_va._cols.length > MAX_COLUMNS_TO_DISPLAY)
+        sb.append("<p style='text-align:center;'><center><h5 style='font-weight:800; color:red;'>Columns trimmed to " + MAX_COLUMNS_TO_DISPLAY + "</h5></center></p>");
       return sb.toString();
     }
   }

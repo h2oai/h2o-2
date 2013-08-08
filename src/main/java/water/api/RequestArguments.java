@@ -9,12 +9,14 @@ import hex.rf.ConfusionTask;
 import hex.rf.RFModel;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.util.*;
 
 import water.*;
 import water.ValueArray.Column;
 import water.util.Check;
 import water.util.RString;
+import water.api.Request.Filter;
 import water.fvec.*;
 
 import com.google.common.base.Objects;
@@ -120,7 +122,7 @@ public class RequestArguments extends RequestStatics {
   /** List of arguments for the request. Automatically filled in by the argument
    * constructors.
    */
-  protected final ArrayList<Argument> _arguments = new ArrayList();
+  protected transient ArrayList<Argument> _arguments = new ArrayList();
   public ArrayList<Argument> arguments() {
     return _arguments;
   }
@@ -192,7 +194,10 @@ public class RequestArguments extends RequestStatics {
   // Argument
   // ===========================================================================
 
-  public abstract class Argument<T> {
+  public abstract class Argument<T> extends Iced implements Filter {
+    @Override public boolean run(Object value) {
+      throw new RuntimeException("Should not be called for special case Argument");
+    }
 
     /** As with request's _requestHelp, this provides the extended help that
      * will be displayed on the help and wiki pages. Specify this in the
@@ -312,11 +317,11 @@ public class RequestArguments extends RequestStatics {
     /** Name of the argument. This must correspond to the name of the JSON
      * request argument.
      */
-    public final String _name;
+    public String _name;
 
     /** True if the argument is required, false if it may be skipped.
      */
-    public final boolean _required;
+    public boolean _required;
 
     /** True if change of the value in the query controls should trigger an
      * automatic refresh of the query form.
@@ -331,12 +336,17 @@ public class RequestArguments extends RequestStatics {
     /** List of all prerequisite arguments for the current argument. All the
      * prerequisite arguments must be created before the current argument.
      */
-    public ArrayList<Argument<T>> _prerequisites = null;
+    public transient ArrayList<Argument<T>> _prerequisites = null;
 
     /** The thread local argument state record. Must be initialized at the
      * beginning of each request before it can be used.
      */
-    private ThreadLocal<Record> _argumentRecord = new ThreadLocal();
+    private transient ThreadLocal<Record> _argumentRecord = new ThreadLocal();
+
+    /**
+     * If argument has been created reflectively from a request field.
+     */
+    public transient Field _field;
 
     /** Creates the argument of given name. Also specifies whether the argument
      * is required or not. This cannot be changed later.
@@ -412,14 +422,15 @@ public class RequestArguments extends RequestStatics {
      * and parsed properly, or not required and not specified.
      */
     public final boolean valid() {
-      return record().valid();
+      // return record().valid();
+      return record() != null && record().valid();
     }
 
     /** Returns true if the argument is specified by the user. That is if the
      * argument value was submitted by the user and parsed correctly.
      */
     public final boolean specified() {
-      return record().specified();
+      return record() != null && record().specified();
     }
 
     /** Returns the value of the argument. This is either the value parsed, if
@@ -462,7 +473,7 @@ public class RequestArguments extends RequestStatics {
      * parse() call or a defaultValue or null if the argument is disabled.
      * However if the argument is disabled a defaultValue should not be called.
      */
-    public void check(String input) throws IllegalArgumentException {
+    public void check(RequestQueries callInstance, String input) throws IllegalArgumentException {
       // get the record -- we assume we have been reset properly
       Record record = record();
       // check that the input is canonical == value or null and store it to the
@@ -495,6 +506,9 @@ public class RequestArguments extends RequestStatics {
         try {
           record._value = parse(input);
           record._valid = true;
+
+          if(callInstance instanceof Request2)
+            ((Request2) callInstance).set(this, record._value);
         } catch (IllegalArgumentException e) {
           record._value = defaultValue();
           throw e;
@@ -627,7 +641,7 @@ public class RequestArguments extends RequestStatics {
 
     /** Default value.
      */
-    public final Boolean _defaultValue;
+    public final transient Boolean _defaultValue;
 
     /** Creates the argument with specified default value.
      */
@@ -1045,7 +1059,7 @@ public class RequestArguments extends RequestStatics {
 
   public class RSeq extends InputText<NumberSequence> {
     boolean _multiplicative;
-    NumberSequence _dVal;
+    transient NumberSequence _dVal;
     double _defaultStep;
 
     @Override
@@ -1055,7 +1069,9 @@ public class RequestArguments extends RequestStatics {
 
     public RSeq(String name, boolean req, boolean mul){
       this(name,req,null,mul);
-
+    }
+    public RSeq(String seq, boolean mul){
+      this("", false, new NumberSequence(seq, mul, 0), mul);
     }
     public RSeq(String name, boolean req, NumberSequence dVal, boolean mul){
       super(name,req);
@@ -1092,7 +1108,7 @@ public class RequestArguments extends RequestStatics {
 
   public class Int extends InputText<Integer> {
 
-    public final Integer _defaultValue;
+    public final transient Integer _defaultValue;
 
     public final int _min;
     public final int _max;
@@ -1146,7 +1162,7 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
 
   public class LongInt extends InputText<Long> {
-    public final Long _defaultValue;
+    public final transient Long _defaultValue;
     public final long _min;
     public final long _max;
     public final String _comment;
@@ -1164,14 +1180,18 @@ public class RequestArguments extends RequestStatics {
     }
 
     public LongInt(String name, Long defaultValue, String comment) {
-      this(name, defaultValue, Long.MIN_VALUE, Long.MAX_VALUE, comment);
+      this(name, false, defaultValue, null, null, comment);
     }
 
     public LongInt(String name, Long defaultValue, long min, long max, String comment) {
-      super(name,false);
+      this(name, false, defaultValue, min, max, comment);
+    }
+
+    public LongInt(String name, boolean req, Long defaultValue, Long min, Long max, String comment) {
+      super(name, req);
       _defaultValue = defaultValue;
-      _min = min;
-      _max = max;
+      _min = min != null ? min : Long.MIN_VALUE;
+      _max = max != null ? max : Long.MAX_VALUE;
       _comment = comment;
     }
 
@@ -1203,7 +1223,7 @@ public class RequestArguments extends RequestStatics {
   // Real
   // ---------------------------------------------------------------------------
   public class Real extends InputText<Double> {
-    public final Double _defaultValue;
+    public transient final Double _defaultValue;
     public       double _min;
     public       double _max;
     public final String _comment;
@@ -1221,18 +1241,22 @@ public class RequestArguments extends RequestStatics {
     }
 
     public Real(String name, Double defaultValue) {
-      this(name, defaultValue, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, "");
+      this(name, false, defaultValue, null, null, "");
     }
 
     public Real(String name, Double defaultValue, String comment) {
-      this(name, defaultValue, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, comment);
+      this(name, false, defaultValue, null, null, comment);
     }
 
     public Real(String name, Double defaultValue, double min, double max, String comment) {
-      super(name,false);
+      this(name, false, defaultValue, min, max, comment);
+    }
+
+    public Real(String name, boolean req, Double defaultValue, Double min, Double max, String comment) {
+      super(name,req);
       _defaultValue = defaultValue;
-      _min = min;
-      _max = max;
+      _min = min != null ? min : Double.NEGATIVE_INFINITY;
+      _max = max != null ? max : Double.POSITIVE_INFINITY;
       _comment = comment;
     }
 
@@ -1374,8 +1398,8 @@ public class RequestArguments extends RequestStatics {
 
   public class EnumArgument<T extends Enum<T>> extends InputSelect<T> {
 
-    protected final Class<T> _enumClass;
-    private final T _defaultValue;
+    protected transient final Class<T> _enumClass;
+    private transient final T _defaultValue;
 
 
     public EnumArgument(String name, T defaultValue, boolean refreshOnChange) {
@@ -1693,13 +1717,15 @@ public class RequestArguments extends RequestStatics {
       return null;
     }
 
-    ArrayList<Integer> _selectedCols; // All the columns I'm willing to show the user
+    transient ArrayList<Integer> _selectedCols; // All the columns I'm willing to show the user
 
-    // Select which columns I'll show the user
+    /* Select which columns I'll show the user
+     * NB: elh limited to 5k because I couldn't figure out an easier way to do this
+     */
     @Override protected String queryElement() {
       ValueArray va = _key.value();
       ArrayList<Integer> cols = Lists.newArrayList();
-      for (int i = 0; i < va._cols.length; ++i)
+      for (int i = 0; i < Math.min(5000, va._cols.length); ++i)
         if( !shouldIgnore(i, va._cols[i]) )
           cols.add(i);
       Comparator<Integer> cmp = colComp(va);
@@ -1832,8 +1858,8 @@ public class RequestArguments extends RequestStatics {
       };
     }
     double _maxNAsRatio = 0.1;
-    ThreadLocal<TreeSet<String>> _constantColumns = new ThreadLocal<TreeSet<String>>();
-    ThreadLocal<Integer> _badColumns = new ThreadLocal<Integer>();
+    transient ThreadLocal<TreeSet<String>> _constantColumns = new ThreadLocal<TreeSet<String>>();
+    transient ThreadLocal<Integer> _badColumns = new ThreadLocal<Integer>();
 
     @Override
     public boolean shouldIgnore(int i, ValueArray.Column ca ) {
@@ -2143,8 +2169,8 @@ public class RequestArguments extends RequestStatics {
   /** A Frame Key */
   public class FrameKey extends H2OKey {
     public FrameKey(String name) { super(name,true); }
-    @Override protected Key parse(String input) { 
-      Key k = Key.make(input); 
+    @Override protected Key parse(String input) {
+      Key k = Key.make(input);
       Value v = DKV.get(k);
       if( v == null )
         throw new IllegalArgumentException(input+":"+errors()[0]);
@@ -2159,7 +2185,7 @@ public class RequestArguments extends RequestStatics {
   /** A Fluid Vec, via a column name in a Frame */
   public class FrameKeyVec extends InputSelect<Vec> {
     final FrameKey _key;
-    protected ThreadLocal<Integer> _colIdx= new ThreadLocal();
+    protected transient ThreadLocal<Integer> _colIdx= new ThreadLocal();
     public FrameKeyVec(String name, FrameKey key) {
       super(name, true);
       addPrerequisite(_key=key);
@@ -2184,7 +2210,7 @@ public class RequestArguments extends RequestStatics {
   /** A Class Vec/Column within a Frame */
   public class FrameClassVec extends FrameKeyVec {
     public FrameClassVec(String name, FrameKey key ) { super(name, key); }
-    @Override protected String[] selectValues() { 
+    @Override protected String[] selectValues() {
       ArrayList<String> as = new ArrayList();
       Vec vecs[] = fr().vecs();
       for( int i=0; i<vecs.length; i++ )
@@ -2215,7 +2241,7 @@ public class RequestArguments extends RequestStatics {
     public boolean shouldIgnore (Vec vec) { return false; }
     public void    checkLegality(Vec vec) throws IllegalArgumentException { }
 
-    private int[] allCols() { 
+    private int[] allCols() {
       int is[] = new int[2];
       Vec vecs[] = fr().vecs();
       for( int i = 0; i < vecs.length; ++i )
@@ -2279,9 +2305,9 @@ public class RequestArguments extends RequestStatics {
 
     // By default, everything is selected.  For some reason I cannot get the
     // browser to start with these selected.
-    @Override protected int[] defaultValue() { 
+    @Override protected int[] defaultValue() {
       int[] is = allCols();
-      return Arrays.copyOf(is,len(is)); 
+      return Arrays.copyOf(is,len(is));
     }
     @Override protected String queryDescription() { return "Columns to select"; }
     // A weenie experimental ArrayList<Integer> API using primitive ints
