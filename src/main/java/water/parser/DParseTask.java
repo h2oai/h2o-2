@@ -445,7 +445,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
       cols[i]._base = _bases[i];
       assert (char)pow10i(-_scale[i]) == pow10i(-_scale[i]):"scale out of bounds!, col = " + i + ", scale = " + _scale[i];
       cols[i]._scale = (char)pow10i(-_scale[i]);
-      cols[i]._off = (char)off;
+      cols[i]._off = off;
       cols[i]._size = (byte)COL_SIZES[_colTypes[i]];
       cols[i]._domain = _colDomains[i];
       cols[i]._max = _max[i];
