@@ -5,7 +5,17 @@
 	<formats>
 		<format>jar</format>
 	</formats>
-	
-	
-	
+	<!--  Do not make top-level directory in jar. -->
+	<includeBaseDirectory>false</includeBaseDirectory>
+	<dependencySets>
+		<dependencySet>
+			<useProjectArtifact>false</useProjectArtifact>
+      		<useTransitiveDependencies>true</useTransitiveDependencies>
+      		<!-- <baseDirectory>${groupId}.${artifactId}-${version}</baseDirectory> -->
+			<outputDirectory>/lib</outputDirectory>
+			<directoryMode>0755</directoryMode>
+			<outputFileNameMapping>${artifact.groupId}/${artifact.artifactId}-${artifact.version}${dashClassifier?}.${artifact.extension}</outputFileNameMapping>
+			<scope>runtime</scope>
+		</dependencySet>
+	</dependencySets>
 </assembly>

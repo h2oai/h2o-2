@@ -6,7 +6,7 @@
   <artifactId>h2o</artifactId>
   <version>0.3-SNAPSHOT</version>
   <packaging>jar</packaging>
-
+  
   <name>h2o</name>
   <description>A distributed platform for large data analysis.</description>
   <url>http://0xdata.com/</url>
@@ -22,10 +22,15 @@
       <distribution>repo</distribution>
     </license>
   </licenses>
+  <!-- List of build properties. -->
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <!-- Default compile time version of Hadoop client: in directory structured referenced as cdh3 -->
-    <h2o.hadoop.default.version>0.20.2-cdh3u6</h2o.hadoop.default.version>
+    <!-- Default compile time version of Hadoop client: in directory structured referenced as cdh3. -->
+    <h2o.hadoop.version>0.20.2-cdh3u6</h2o.hadoop.version>
+    <!-- Java version used by javac for -source/-target parameters.-->
+    <h2o.java.version>1.6</h2o.java.version>
+    <!-- Skip all unit tests by default -->
+    <h2o.skipTests>false</h2o.skipTests>
   </properties>
 
   <!-- 
@@ -164,7 +169,7 @@
 	<dependency>
 		<groupId>org.apache.hadoop</groupId>
 		<artifactId>hadoop-client</artifactId>
-		<version>${h2o.hadoop.default.version}</version>
+		<version>${h2o.hadoop.version}</version>
 		<scope>compile</scope>
 	</dependency>
 	
@@ -172,15 +177,19 @@
   
   <!-- Configure build -->
   <build>
+    <defaultGoal>assembly:assembly</defaultGoal>
+    <!-- Setup plugins for this POM and all kids POMs. -->
+  	<pluginManagement>
   	<plugins>
   	  <!-- Enforce compiler version - see http://stackoverflow.com/questions/3138384/java-warning-build-path-specifies-execution-environment-j2se-1-4 -->
   	  <plugin>
   	    <groupId>org.apache.maven.plugins</groupId>
   	    <artifactId>maven-compiler-plugin</artifactId>
+  	    <version>3.1</version>
   	    <configuration>
-  	      <source>1.6</source>
-  	      <target>1.6</target>
-  	      <verbose>true</verbose>
+  	      <source>${h2o.java.version}</source>
+  	      <target>${h2o.java.version}</target>
+  	      <verbose>false</verbose>
  		  <compilerArgs>
  		  	<arg>-XDignore.symbol.file</arg>
  		  	<arg>-Xlint:all</arg>
@@ -204,7 +213,7 @@
             <configuration>
               <rules>
                 <requireJavaVersion>
-                  <version>1.6</version>
+                  <version>${h2o.java.version}</version>
                 </requireJavaVersion>
               </rules>
             </configuration>
@@ -221,11 +230,22 @@
      			<descriptor>src/main/assembly/src.xml</descriptor>
      		</descriptors>
       	</configuration>
+      	<!-- Execute goal assembly:single during life-cycle phase 'package' -->
+      	<executions>
+      		<execution>
+      			<id>make-assembly</id>
+      			<phase>package</phase>
+      			<goals>
+      				<goal>single</goal>
+      			</goals>
+      		</execution>
+      	</executions>
       </plugin>
       <!-- Configuration of JAR packaging -->
       <plugin>
       	<groupId>org.apache.maven.plugins</groupId>
       	<artifactId>maven-jar-plugin</artifactId>
+      	<version>2.4</version>
       	<configuration>
      		<archive>
      			<!-- Setup manifest -->
@@ -235,10 +255,41 @@
      		</archive>
       	</configuration>
       </plugin>
+      <!-- Configure creation of source package. -->
+      <plugin>
+         <groupId>org.apache.maven.plugins</groupId>
+         <artifactId>maven-source-plugin</artifactId>
+         <version>2.2.1</version>
+         <configuration>
+           <attach>true</attach>
+         </configuration>
+         <executions>
+           <execution>
+             <id>create-source-jar</id>
+             <goals>
+               <goal>jar-no-fork</goal>
+             </goals>
+           </execution>
+         </executions>
+       </plugin>
+       <!-- Configure invocation of tests. -->        
+       <plugin>
+         <groupId>org.apache.maven.plugins</groupId>
+         <artifactId>maven-surefire-plugin</artifactId>
+         <version>2.12.4</version>
+         <configuration>
+           <!-- Uses scalatest instead -->
+           <skipTests>${h2o.skipTests}</skipTests>          
+	       <includes>
+	       	 <include>**/CBSChunkTest.java</include>
+	       </includes>
+         </configuration>
+       </plugin>
   	</plugins>
+  	</pluginManagement>
   </build>
 
-<!-- 
+<!-- TODO: have profiles for each target Jenkins, developer, ...
   <profiles>
     <profile>
       <id>release-profile</id>
