@@ -190,6 +190,7 @@ class Basic(unittest.TestCase):
                         self.assertAlmostEqual(float(sigma), synSigma, delta=0.03,
                             msg='col %s sigma %s is not equal to generated sigma %s' % (name, sigma, synSigma))
 
+
                     self.assertEqual(0, na,
                         msg='col %s num_missing_values %d should be 0' % (name, na))
 
