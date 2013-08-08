@@ -211,7 +211,7 @@ public class ValueArray extends Iced implements Cloneable {
     public long _n;
     public int  _base;  // Base
     public char _scale; // Actual value is (((double)(stored_value+base))/scale); 1,10,100,1000
-    public char _off;   // Offset within a row
+    public int _off;   // Offset within a row
     public byte _size;  // Size is 1,2,4 or 8 bytes, or -4,-8 for float/double data
 
     public Column() { _min = Double.MAX_VALUE; _max = -Double.MAX_VALUE; _scale = 1; }

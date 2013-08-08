@@ -1719,11 +1719,13 @@ public class RequestArguments extends RequestStatics {
 
     transient ArrayList<Integer> _selectedCols; // All the columns I'm willing to show the user
 
-    // Select which columns I'll show the user
+    /* Select which columns I'll show the user
+     * NB: elh limited to 5k because I couldn't figure out an easier way to do this
+     */
     @Override protected String queryElement() {
       ValueArray va = _key.value();
       ArrayList<Integer> cols = Lists.newArrayList();
-      for (int i = 0; i < va._cols.length; ++i)
+      for (int i = 0; i < Math.min(5000, va._cols.length); ++i)
         if( !shouldIgnore(i, va._cols[i]) )
           cols.add(i);
       Comparator<Integer> cmp = colComp(va);
