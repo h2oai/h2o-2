@@ -4,57 +4,45 @@ sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
 
-DO_LIBSVM = False
-def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE):
-    # we can do all sorts of methods off the r object
-    r = random.Random(SEEDPERFILE)
-    def addValToRowStuff(colNumber, val, rowData, synColSumDict):
-        if DO_LIBSVM:
-            if val!=0:
-                rowData.append(str(colNumber) + ":" + str(val))
-        else:
-            # append all the zeroes
-            for j in range(colNumber):
-                rowData.append('0')
-            rowData.append(str(val))
-
-        if colNumber in synColSumDict:
-            synColSumDict[colNumber] += val # sum of column (dict)
-        else:
-            synColSumDict[colNumber] = val # sum of column (dict)
-
+DO_MEAN = False
+def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
+    r1 = random.Random(SEED)
     dsf = open(csvPathname, "w+")
+    # write header
+    rowData = ['Target']
+    rowData.extend(['V' + str(i) for i in range(1, colCount)])
+    rowDataCsv = ",".join(rowData)
+    dsf.write(rowDataCsv + "\n")
 
-    synColSumDict = {0: 0} # guaranteed to have col 0 for output
-    colNumberMax = 0
+    synSumList = [0 for i in range(colCount)]
     for i in range(rowCount):
         rowData = []
-
-        if i==(rowCount-1): # last row
-            val = 1
-            colNumber = colCount # max
-        else:
-            # 50%
-            d = random.randint(0,1)
-            if d==1:
-                val = 1
+        for j in range(colCount):
+            if j==1:
+                ri = random.randint(0,1) # random in col 1
+            elif j==2:
+                ri = None # na in col 2
             else:
-                val = 0
-            colNumber = 1 # always make it col 1
+                # single 1 in last col of last row
+                # if i==(rowCount-1) and j==(rowCount-1):
+                #     ri = 1
+                # else:
+                #     ri = 0
+                ri = 0
 
-        addValToRowStuff(colNumber, val, rowData, synColSumDict)
-        colNumberMax = max(colNumber, colNumberMax)
+            if ri is None:
+                ri = ''
+            else:
+                synSumList[j] += ri
+                ri = str(ri)
+            rowData.append(ri)
 
-        # add output
-        val = 0
-        rowData.insert(0, val)
-        synColSumDict[0] += val # sum of column (dict)
-
-        rowDataCsv = " ".join(map(str,rowData))
+        rowDataCsv = ",".join(rowData)
         dsf.write(rowDataCsv + "\n")
 
     dsf.close()
-    return (colNumberMax, synColSumDict)
+    return synSumList
+
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -74,13 +62,13 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_parse_bounds_libsvm (self):
+    def test_parse_bounds_csv (self):
         print "Random 0/1 for col1. Last has max col = 1, All have zeros for class."
         ## h2b.browseTheCloud()
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (100, 100, 'cA', 300),
             (100000, 100, 'cB', 300),
+            (100, 100, 'cA', 300),
             (100, 999, 'cC', 300),
             ]
 
@@ -92,7 +80,7 @@ class Basic(unittest.TestCase):
 
                 print "Creating random", csvPathname
                 # dict of col sums for comparison to exec col sums below
-                (colNumberMax, synColSumDict) = write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
+                synSumList = write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
                 parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=timeoutSecs, doSummary=False)
                 print "Parse result['destination_key']:", parseKey['destination_key']
@@ -119,15 +107,13 @@ class Basic(unittest.TestCase):
                 summaryResult = h2o_cmd.runSummary(key=key2, timeoutSecs=timeoutSecs)
                 h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
 
-                self.assertEqual(colNumberMax+1, num_cols, 
-                    msg="generated %s cols (including output).  parsed to %s cols" % (colNumberMax+1, num_cols))
                 self.assertEqual(rowCount, num_rows, 
                     msg="generated %s rows, parsed to %s rows" % (rowCount, num_rows))
 
                 summary = summaryResult['summary']
                 columnsList = summary['columns']
-                self.assertEqual(colNumberMax+1, len(columnsList), 
-                    msg="generated %s cols (including output).  summary has %s columns" % (colNumberMax+1, len(columnsList)))
+                self.assertEqual(colCount, len(columnsList), 
+                    msg="generated %s cols (including output).  summary has %s columns" % (colCount, len(columnsList)))
 
                 for columns in columnsList:
                     N = columns['N']
@@ -141,7 +127,9 @@ class Basic(unittest.TestCase):
                     bins = histogram['bins']
                     nbins = histogram['bins']
 
-                    # definitely not enums
+                    # definitely not type enum
+                    print h2o.dump_json(columns)
+                    # no zeroes if enum
                     zeros = columns['zeros']
                     na = columns['na']
                     smax = columns['max']
@@ -149,31 +137,46 @@ class Basic(unittest.TestCase):
                     mean = columns['mean']
                     sigma = columns['sigma']
 
+
                     # a single 1 in the last col
-                    if name == "V" + str(colNumberMax): # h2o puts a "V" prefix
+                    if name == "V" + str(colCount): # h2o puts a "V" prefix
+                        synNa = 0
+                        synSum = synSumList[colCount] 
                         synZeros = num_rows - 1
                         synSigma = None # not sure..depends on the # rows somehow (0 count vs 1 count)
                         synMean = 1.0/num_rows # why does this need to be a 1 entry list
                         synMin = [0.0, 1.0]
                         synMax = [1.0, 0.0]
                     elif name == ("V1"):
+                        synNa = 0
                         # can reverse-engineer the # of zeroes, since data is always 1
-                        synSum = synColSumDict[1] # could get the same sum for all ccols
+                        synSum = synSumList[1] # could get the same sum for all ccols
                         synZeros = num_rows - synSum
                         synSigma = 0.50
                         synMean = (synSum + 0.0)/num_rows
                         synMin = [0.0, 1.0]
                         synMax = [1.0, 0.0]
+                    elif name == ("V2"):
+                        synNa = num_rows
+                        # can reverse-engineer the # of zeroes, since data is always 1
+                        synSum = 0
+                        synZeros = 0
+                        synSigma = 0
+                        synMean = 0
+                        synMin = []
+                        synMax = []
                     else:
+                        synNa = 0
+                        synSum = 0
                         synZeros = num_rows
                         synSigma = 0.0
                         synMean = 0.0
                         synMin = [0.0]
                         synMax = [0.0]
 
-                    # print zeros, synZeros
-                    self.assertAlmostEqual(float(mean), synMean, places=6,
-                        msg='col %s mean %s is not equal to generated mean %s' % (name, mean, 0))
+                    if DO_MEAN:
+                        self.assertAlmostEqual(float(mean), synMean, places=6,
+                            msg='col %s mean %s is not equal to generated mean %s' % (name, mean, 0))
 
                     # why are min/max one-entry lists in summary result. Oh..it puts N min, N max
                     self.assertTrue(smin >= synMin,
@@ -186,6 +189,9 @@ class Basic(unittest.TestCase):
                     if name == "V65536" or name == "V65537":
                         print "columns around possible zeros mismatch:", h2o.dump_json(columns)
 
+                    self.assertEqual(na, synNa,
+                        msg='col %s na %s is not equal to generated na %s' % (name, na, synNa))
+
                     self.assertEqual(zeros, synZeros,
                         msg='col %s zeros %s is not equal to generated zeros count %s' % (name, zeros, synZeros))
 
@@ -196,8 +202,6 @@ class Basic(unittest.TestCase):
                     if synSigma:
                         self.assertAlmostEqual(float(sigma), synSigma, delta=0.03,
                             msg='col %s sigma %s is not equal to generated sigma %s' % (name, sigma, synSigma))
-                    self.assertEqual(0, na,
-                        msg='col %s num_missing_values %d should be 0' % (name, na))
 
 
 if __name__ == '__main__':
