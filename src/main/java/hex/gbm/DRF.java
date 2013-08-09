@@ -106,6 +106,7 @@ public class DRF extends Job {
   // Adds a layer to the tree each pass.
   public int makeSomeTrees( int st, DRFTree trees[], int leafs[], int ntrees, int maxDepth, Frame fr, int ncols, short nclass, int ymin, long nrows, double sampleRate ) {
     for( int depth=0; depth<maxDepth; depth++ ) {
+      Timer t_pass = new Timer();
 
       // Fuse 2 conceptual passes into one:
       // Pass 1: Score a prior DHistogram, and make new DTree.Node assignments
@@ -121,14 +122,14 @@ public class DRF extends Job {
       for( int t=0; t<ntrees; t++ ) {
         final int tmax = trees[t]._len; // Number of total splits
         final DTree tree = trees[t];
-        int sum=0;
+        long sum=0;
         for( int i=leafs[t]; i<tmax; i++ ) {
           tree.undecided(i)._hs = sbh.getFinalHisto(t,i);
           DHistogram hs[] = tree.undecided(i)._hs;
           for( DHistogram h : hs )
             if( h != null ) sum += h.byteSize();
         }
-        System.out.println("Tree#"+(st+t)+", leaves="+(trees[t]._len-leafs[t])+", histo size="+PrettyPrint.bytes(sum));
+        //System.out.println("Tree#"+(st+t)+", leaves="+(trees[t]._len-leafs[t])+", histo size="+PrettyPrint.bytes(sum)+", time="+t_pass);
       }
 
       // Build up the next-generation tree splits from the current histograms.

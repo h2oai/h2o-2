@@ -38,8 +38,12 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   public       float[] _Ms;          // Rolling mean, per-bin
   public       float[] _Ss;          // Rolling var , per-bin
   public       float[] _MSEs;        // Rolling mean-square-error, per-bin; requires 2nd pass
-  // For Classification trees, use class-counts
-  public       long [][] _clss;      // Class counts, per-bin
+  // For Classification trees, use class-counts - which are held in
+  // a compressed format.  See end of this file for all accessors.
+  private      byte [][] _clss1;     // Class counts, per-bin
+  private      short[][] _clss2;     // Class counts, per-bin, overflow
+  private      int  [][] _clss4;     // Class counts, per-bin, overflow
+  private      long [][] _clss8;     // Class counts, per-bin, overflow
 
   // Fill in read-only sharable values
   public DBinHistogram( String name, short nclass, boolean isInt, float min, float max, long nelems ) {
@@ -60,7 +64,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   // Copy from the original DBinHistogram, but return a smaller non-binning DHistogram.
   // The new DHistogram will only collect more refined min/max values.
   @Override public DHistogram smallCopy( ) {
-    return new DHistogram(_name,_nclass,_isInt,_min,_max);
+    return new DHistogram(_name,_nclass,_isInt/*,_min,_max*/);
   }
 
   // Copy from the original DBinHistogram, but then allocate private arrays
@@ -80,8 +84,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
       h._Ms = MemoryManager.malloc4f(_nbins);
       h._Ss = MemoryManager.malloc4f(_nbins);
     } else {
-      h._clss = new long[_nbins][];
-      for( int i=0; i<_nbins; i++ ) h._clss[i] = MemoryManager.malloc8(_nclass);
+      h._clss1 = new byte[_nbins][];
     }
     return h;
   }
@@ -95,7 +98,6 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
 
   @Override int nbins() { return _nbins; }
   @Override long bins(int i) { return _bins[i]; }
-  @Override long clss(int i, int c) { return _clss[i][c]; }
   @Override float mins(int i) { return _mins[i]; }
   @Override float maxs(int i) { return _maxs[i]; }
 
@@ -113,7 +115,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     // Track actual lower/upper bound per-bin
     if( d < _mins[idx] ) _mins[idx] = d;
     if( d > _maxs[idx] ) _maxs[idx] = d;
-    _clss[idx][y]++;            // Bump class count
+    add_class(idx,y,1);         // Bump class count
   }
 
   // Compute a "score" for a column; lower score "wins" (is a better split).
@@ -134,9 +136,11 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
       if( _bins[i] <= 1 ) continue;
       // A little algebra, and the math we need is:
       //    N - (sum(clss^2)/N)
-      int err=0;
-      for( int j=0; j<_nclass; j++ )
-        err += _clss[i][j]*_clss[i][j];
+      long err=0;
+      for( int j=0; j<_nclass; j++ ) {
+        long c = clss(i,j);
+        err += c*c;
+      }
       sum += (float)_bins[i] - ((float)err/_bins[i]);
     }
     return sum;
@@ -225,9 +229,8 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     if( _nclass == 0 ) {             // Regression?
       if( var(i) == 0.0 ) return null; // No point in splitting a perfect prediction
     } else {                         // Classification
-      long cls[] = _clss[i];         // See if we got a perfect prediction
-      for( int j=0; j<cls.length; j++ )
-        if( cls[j] == _bins[i] )     // Some class has all the bin counts?
+      for( int j=0; j<_nclass; j++ ) // See if we got a perfect prediction
+        if( clss(i,j) == _bins[i] )  // Some class has all the bin counts?
           return null;
     }
 
@@ -279,8 +282,8 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
         _Ms[i] = (k1*m1+k2*m2)/(k1+k2);           // Mean
         _Ss[i] = s1+s2+delta*delta*k1*k2/(k1+k2); // 2nd moment
       } else {               // Classification: just sum up the class histogram
-        for( int j=0; j<_clss[i].length; j++ )
-          _clss[i][j] += h._clss[i][j];
+        for( int j=0; j<_nclass; j++ )
+          add_class(i,j,h.clss(i,j));
       }
     }
 
@@ -303,7 +306,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
       for( int i=0; i<nbins(); i++ ) {
         sb.append(String.format("cnt=%d, min=%f, max=%f, ", _bins[i],_mins[i],_maxs[i]));
         for( int c=0; c<_nclass; c++ )
-          sb.append("c").append(c).append("=").append(_clss[i][c]).append(",");
+          sb.append("c").append(c).append("=").append(clss(i,c)).append(",");
         sb.append("\n");
       }
     }
@@ -312,16 +315,81 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
 
   @Override long byteSize() {
     long sum = super.byteSize();
-    sum += byteSize(_bins);
-    sum += byteSize(_mins);
-    sum += byteSize(_maxs);
-    sum += byteSize(_Ms);
-    sum += byteSize(_Ss);
-    sum += byteSize(_MSEs);
-    if( _nclass > 0 ) {
-      sum += (_clss.length+3)*8;
-      for( long[] ls : _clss ) sum += byteSize(ls);
-    }
+    sum += 8+byteSize(_bins);
+    sum += 8+byteSize(_mins);
+    sum += 8+byteSize(_maxs);
+    sum += 8+byteSize(_Ms);
+    sum += 8+byteSize(_Ss);
+    sum += 8+byteSize(_MSEs);
+    sum += 8+byteSize(_clss1);
+    if( _clss1 != null )         // Have class data at all?
+      for( int i=0; i<_clss1.length; i++ )
+        sum += byteSize(_clss1[i]);
+    sum += 8+byteSize(_clss2);
+    if( _clss2 != null )         // Have class data at all?
+      for( int i=0; i<_clss2.length; i++ )
+        sum += byteSize(_clss2[i]);
+    sum += 8+byteSize(_clss4);
+    if( _clss4 != null )         // Have class data at all?
+      for( int i=0; i<_clss4.length; i++ )
+        sum += byteSize(_clss4[i]);
+    sum += 8+byteSize(_clss8);
+    if( _clss8 != null )        // Have class data at all?
+      for( int i=0; i<_clss8.length; i++ )
+        sum += byteSize(_clss8[i]);
     return sum;
+  }
+
+  // ------------------------------------------
+  // For Classification trees, use class-counts
+  //
+  // But class-counts are big with a wide dynamic range, we use a dynamic
+  // compression.  Counts are kept in bytes until they overflow, then chars,
+  // then ints, then longs.
+  //
+  // The base _clss field is an array of Objects, but each Object is just an
+  // array - but each a different type according to the largest count held there.
+
+  // Fetch a value
+  @Override long clss(int bin, int cls) { 
+    byte bs[] = _clss1[bin];
+    long x = bs==null ? 0 : bs[cls];
+    if( _clss2==null ) return x; // No overflow?  then done
+    short ss[] = _clss2[bin];    // Load the overflow
+    x += (ss==null ? 0 : ss[cls]);
+    if( _clss4==null ) return x; // No overflow?  then done
+    int is[] = _clss4[bin];      // Load the overflow
+    x += (is==null ? 0 : is[cls]);
+    if( _clss8==null ) return x; // No overflow?  then done
+    long ls[] = _clss8[bin];     // Load the overflow
+    return x+(ls==null ? 0 : ls[cls]);
+  }
+
+  // Increment a class-count, inflating the array flavor as needed.
+  long add_class( int bin, int cls, long v ) {
+    byte bs[] = _clss1[bin];
+    if( bs==null ) _clss1[bin] = bs = new byte[_nclass];
+    long x = bs[cls]+v;
+    if( x <= Byte.MAX_VALUE ) return (bs[cls]=(byte)x);
+    bs[cls]=0;                  // Reset byte counter; move counts to overflow
+
+    if( _clss2 == null ) _clss2 = new short[_nbins][];
+    short ss[] = _clss2[bin];
+    if( ss==null ) _clss2[bin] = ss = new short[_nclass];
+    long y = ss[cls] + x;
+    if( y <= Short.MAX_VALUE ) return (ss[cls]=(short)y);
+    ss[cls] = 0;                // Reset short counter; move counts to overflow
+
+    if( _clss4 == null ) _clss4 = new int[_nbins][];
+    int is[] = _clss4[bin];
+    if( is==null ) _clss4[bin] = is = new int[_nclass];
+    long z = is[cls] + y;
+    if( z <= Integer.MAX_VALUE ) return (is[cls]=(int)z);
+    is[cls] = 0;                // Reset int counter; move counts to overflow
+
+    if( _clss8 == null ) _clss8 = new long[_nbins][];
+    long ls[] = _clss8[bin];
+    if( ls==null ) _clss8[bin] = ls = new long[_nclass];
+    return (ls[cls] += z);
   }
 }

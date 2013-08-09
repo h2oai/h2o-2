@@ -404,22 +404,22 @@ class DTree extends Iced {
         DHistogram nhs[] = hcs[nid-leaf];
         int ycls = (int)ys.at80(i) - _ymin;
 
-        int sCols[] = tree.undecided(nid)._scoreCols;
-        for( int idx=0; idx<sCols.length; idx++) { // For all columns
-          int j = sCols[idx];                      // Just the selected columns
-          DHistogram nh = nhs[j];
-          float f = (float)chks[j].at0(i);
-          nh.incr(f);
-          ((DBinHistogram)nh).incr(f,ycls);
-        }
-        //for( int j=0; j<_ncols; j++) { // For all columns
+        //int sCols[] = tree.undecided(nid)._scoreCols;
+        //for( int idx=0; idx<sCols.length; idx++) { // For all columns
+        //  int j = sCols[idx];                      // Just the selected columns
         //  DHistogram nh = nhs[j];
-        //  if( nh != null ) {
-        //    float f = (float)chks[j].at0(i);
-        //    nh.incr(f);
-        //    if( nh instanceof DBinHistogram ) ((DBinHistogram)nh).incr(f,ycls);
-        //  }
+        //  float f = (float)chks[j].at0(i);
+        //  nh.incr(f);
+        //  ((DBinHistogram)nh).incr(f,ycls);
         //}
+        for( int j=0; j<_ncols; j++) { // For all columns
+          DHistogram nh = nhs[j];
+          if( nh != null ) {
+            float f = (float)chks[j].at0(i);
+            nh.incr(f);
+            if( nh instanceof DBinHistogram ) ((DBinHistogram)nh).incr(f,ycls);
+          }
+        }
       }
     }
 

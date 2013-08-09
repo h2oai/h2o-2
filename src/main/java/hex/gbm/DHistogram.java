@@ -86,9 +86,12 @@ public class DHistogram<T extends DHistogram> extends Iced {
   // Nothing to tighten
   public void tightenMinMax() { }
 
-  protected static int byteSize(short[]ss) { return ss==null ? 0 : 20+ss.length*2; }
-  protected static int byteSize(float[]fs) { return fs==null ? 0 : 20+fs.length*4; }
-  protected static int byteSize(long []ls) { return ls==null ? 0 : 24+ls.length*8; }
+  protected static int byteSize(byte  []bs) { return bs==null ? 0 : 20+bs.length<<0; }
+  protected static int byteSize(short []ss) { return ss==null ? 0 : 20+ss.length<<1; }
+  protected static int byteSize(float []fs) { return fs==null ? 0 : 20+fs.length<<2; }
+  protected static int byteSize(int   []is) { return is==null ? 0 : 20+is.length<<2; }
+  protected static int byteSize(long  []ls) { return ls==null ? 0 : 24+ls.length<<3; }
+  protected static int byteSize(Object[]ls) { return ls==null ? 0 : 24+ls.length<<3; }
 
   long byteSize() {
     return 16+8+(4+4)+(2+1+5);
