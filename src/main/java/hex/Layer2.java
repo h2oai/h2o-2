@@ -19,15 +19,15 @@ public abstract class Layer2 {
   boolean _auto = false;
   float _autoDelta = .2f;
 
-  // Current rate
-  float _r;
+  // Current rate and momentum
+  float _r, _m;
 
   // Weights, biases, activity, error
   float[] _w, _b, _a, _e;
 
   // Last weights & auto rate data
-  float[] _wLast, _wInit, _wMult;
-  float[] _bLast, _bInit, _bMult;
+  float[] _wPrev, _wInit, _wMult;
+  float[] _bPrev, _bInit, _bMult;
 
   // Previous layer
   Layer2 _in;
@@ -44,8 +44,8 @@ public abstract class Layer2 {
     _a = new float[len];
     _e = new float[len];
 
-    _wLast = new float[_w.length];
-    _bLast = new float[_b.length];
+    _wPrev = new float[_w.length];
+    _bPrev = new float[_b.length];
 
     _in = in;
   }
@@ -57,7 +57,7 @@ public abstract class Layer2 {
     float max = (float) +Math.sqrt(6. / (_in._a.length + _a.length));
     for( int i = 0; i < _w.length; i++ ) {
       _w[i] = rand(rand, min, max);
-      _wLast[i] = _w[i];
+      _wPrev[i] = _w[i];
     }
 
     if( _auto ) {
@@ -75,7 +75,7 @@ public abstract class Layer2 {
       }
     }
 
-    _r = _rate;
+    adjust(0);
   }
 
   abstract void fprop();
@@ -84,36 +84,40 @@ public abstract class Layer2 {
 
   public final void adjust(long n) {
     for( int i = 0; i < _w.length; i++ )
-      adjust(i, _w, _wLast, _wInit, _wMult);
+      adjust(i, _w, _wPrev, _wInit, _wMult);
 
     for( int i = 0; i < _b.length; i++ )
-      adjust(i, _b, _bLast, _bInit, _bMult);
+      adjust(i, _b, _bPrev, _bInit, _bMult);
 
-    _r = _rate / (1 + _annealing * n);
+    _r = _rate;
+    _m = 1 - _oneMinusMomentum;
+//    _r = _rate / (1 + _annealing * n);
+//    _m = (1 - _oneMinusMomentum) * n / (n + 3);
   }
 
-  private final void adjust(int i, float[] w, float[] last, float[] init, float[] mult) {
+  private final void adjust(int i, float[] w, float[] prev, float[] init, float[] mult) {
     w[i] *= 1 - _l2;
     if( !_auto ) {
-      float m = (w[i] - last[i]) * (1 - _oneMinusMomentum);
-      last[i] = w[i];
-      w[i] += m;
+      // Nesterov Accelerated Gradient
+      float v = (w[i] - prev[i]) * _m;
+      prev[i] = w[i];
+      w[i] += v;
     } else {
       float g = w[i] - init[i];
       boolean sign = g > 0;
-      boolean prev = mult[i] > 0;
+      boolean last = mult[i] > 0;
       float abs = Math.abs(mult[i]);
       // If the gradient kept its sign, increase
-      if( sign == prev ) {
+      if( sign == last ) {
         if( abs < 4 )
           abs += _autoDelta;
       } else
         abs *= 1 - _autoDelta;
       mult[i] = sign ? abs : -abs;
       w[i] = init[i] + abs * g;
-      float m = (w[i] - last[i]) * (1 - _oneMinusMomentum);
-      last[i] = w[i];
-      w[i] += abs * m;
+      float v = (w[i] - prev[i]) * _m;
+      prev[i] = w[i];
+      w[i] += abs * v;
       init[i] = w[i];
     }
   }
@@ -156,7 +160,7 @@ public abstract class Layer2 {
     }
 
     @Override void fprop() {
-      for( int i = 0; i < _frame.numCols() - 1; i++ ) {
+      for( int i = 0; i < _a.length; i++ ) {
         Vec v = _frame._vecs[i];
         double d = v.at(_n);
         if( _normalize )

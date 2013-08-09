@@ -5,7 +5,14 @@ import hex.rng.MersenneTwisterRNG;
 import java.text.DecimalFormat;
 import java.util.Random;
 
-public class CSharp {
+/**
+ * James McCaffrey's MLP on Iris.
+ * <nl>
+ * Adapted to Java as a reference implementation for testing.
+ * <nl>
+ * http://channel9.msdn.com/Events/Build/2013/2-401
+ */
+public class NeuralNetMLPReference {
   static final DecimalFormat _format = new DecimalFormat("0.000");
 
   float[][] _trainData;
@@ -13,7 +20,7 @@ public class CSharp {
   NeuralNetwork _nn;
 
   public static void main(String[] args) {
-    CSharp cs = new CSharp();
+    NeuralNetMLPReference cs = new NeuralNetMLPReference();
     cs.init();
     cs.train(10000, 0.01f, 0.001f);
     cs.test();
@@ -682,28 +689,6 @@ public class CSharp {
         sequence[r] = sequence[i];
         sequence[i] = tmp;
       }
-    }
-
-    private float MeanSquaredError(float[][] trainData) // used as a training stopping condition
-    {
-      // average squared error per training tuple
-      float sumSquaredError = 0;
-      float[] xValues = new float[numInput]; // first numInput values in trainData
-      float[] tValues = new float[numOutput]; // last numOutput values
-
-      for( int i = 0; i < trainData.length; ++i ) {
-        // walk thru each training case. looks like (6.9 3.2 5.7 2.3) (0 0 1)
-        // where the parens are not really there
-        System.arraycopy(trainData[i], 0, xValues, 0, numInput); // get xValues.
-        System.arraycopy(trainData[i], numInput, tValues, 0, numOutput); // get target values
-        float[] yValues = this.ComputeOutputs(xValues); // compute output using current weights
-        for( int j = 0; j < numOutput; ++j ) {
-          float err = tValues[j] - yValues[j];
-          sumSquaredError += err * err;
-        }
-      }
-
-      return sumSquaredError / trainData.length;
     }
 
     // ----------------------------------------------------------------------------------------

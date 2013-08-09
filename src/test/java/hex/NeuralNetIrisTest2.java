@@ -87,7 +87,7 @@ public class NeuralNetIrisTest2 {
     _train._n = _test._n = 0;
 
     float rate = 0.01f;
-    float momentum = .9f;
+    float momentum = .0f;
     int epochs = 100000;
 
     _ls = new Layer2[3];
@@ -103,7 +103,7 @@ public class NeuralNetIrisTest2 {
     for( int i = 0; i < _ls.length; i++ )
       _ls[i].init();
 
-    CSharp cs = new CSharp();
+    NeuralNetMLPReference cs = new NeuralNetMLPReference();
     cs.init();
     Layer2 l = _ls[1];
     for( int o = 0; o < l._a.length; o++ ) {
@@ -133,7 +133,7 @@ public class NeuralNetIrisTest2 {
       trainer.run();
       ended = System.nanoTime();
       ms = (int) ((ended - start) / 1e6);
-      System.out.println(_ls[1]._w[0] + ", last: " + _ls[1]._wLast[0]);
+      System.out.println(_ls[1]._w[0] + ", last: " + _ls[1]._wPrev[0]);
     }
 
     String train = test(_train, _train._count);

@@ -361,7 +361,15 @@ public class Utils {
     return bs;
   }
 
+  public static <T> T clone(T o) {
+    return clone(o, false);
+  }
+
   public static <T> T deepClone(T o, String... except) {
+    return clone(o, true, except);
+  }
+
+  private static <T> T clone(T o, boolean deep, String... except) {
     Class c = o.getClass();
     try {
       Object clone = c.newInstance();
@@ -374,7 +382,7 @@ public class Utils {
           Object v = f.get(o);
           boolean except_ = excepts.remove(f.getName());
           if( v != null ) {
-            if( except_ )
+            if( !deep || except_ )
               f.set(clone, v);
             else if( v instanceof Number ) f.set(clone, v);
             else if( v instanceof Boolean ) f.set(clone, v);

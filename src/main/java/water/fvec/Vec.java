@@ -48,8 +48,6 @@ public class Vec extends Iced {
   private long _nas;            // Count of NA's, lazily computed
   /** Bytesize of all data, lazily computed. */
   private long _byteSize;
-  /** Caches last accessed chunk for performance **/
-  private transient volatile Chunk _cache;
 
   /** Base datatype of the entire column.<nl>
    *  Decided on when we close an AppendableVec. */
@@ -308,10 +306,7 @@ public class Vec extends Iced {
   }
   /** The Chunk for a row#.  Warning: this loads the data locally!  */
   public final Chunk chunk( long i ) {
-    Chunk chunk = _cache;
-    if(chunk != null && chunk._start <= i && i< chunk._start + chunk._len)
-      return chunk;
-    return _cache = elem2BV(elem2ChunkIdx(i));
+    return elem2BV(elem2ChunkIdx(i));
   }
 
   /** Next Chunk from the current one. */

@@ -16,6 +16,7 @@ class ParamsSearch {
   Param[] _params;
   Random _rand = new MersenneTwisterRNG(new Random().nextLong());
   boolean _oneAtaTime;
+  boolean _booleans;
 
   class Param {
     int _objectIndex;
@@ -40,11 +41,19 @@ class ParamsSearch {
           _field.set(o, (int) _last);
       }
       String change = _best + " -> " + _last;
-      Log.info("Param change: " + objectName() + "." + _field.getName() + ": " + change);
+      Log.info(this + ": " + change);
+    }
+
+    void write() {
+      Log.info(this + ": " + _best);
     }
 
     String objectName() {
       return _field.getDeclaringClass().getName() + " " + _objectIndex;
+    }
+
+    @Override public String toString() {
+      return objectName() + "." + _field.getName();
     }
   }
 
@@ -69,7 +78,7 @@ class ParamsSearch {
           f.setAccessible(true);
           if( (f.getModifiers() & Modifier.STATIC) == 0 ) {
             Object v = f.get(expanded.get(i));
-            if( v instanceof Boolean || v instanceof Number ) {
+            if( v instanceof Number || (_booleans && v instanceof Boolean) ) {
               Param param = new Param();
               param._objectIndex = i;
               param._field = f;
@@ -79,21 +88,25 @@ class ParamsSearch {
                 param._initial = ((Number) v).doubleValue();
               param._last = param._best = param._initial;
               params.add(param);
+              param.write();
             }
           }
         }
       }
       _params = params.toArray(new Param[0]);
       Log.info(toString());
-    }
-
-    if( _oneAtaTime ) {
-      int rand = _rand.nextInt(_params.length);
-      modify(expanded, rand);
     } else {
-      for( int i = 0; i < _params.length; i++ )
-        if( _rand.nextBoolean() )
-          modify(expanded, i);
+      if( _oneAtaTime ) {
+        int rand = _rand.nextInt(_params.length);
+        modify(expanded, rand);
+      } else {
+        for( int i = 0; i < _params.length; i++ ) {
+          if( _rand.nextBoolean() )
+            modify(expanded, i);
+          else
+            _params[i].write();
+        }
+      }
     }
   }
 
@@ -107,16 +120,16 @@ class ParamsSearch {
       _params[i]._best = _params[i]._last;
   }
 
-  @Override public String toString() {
-    StringBuilder sb = new StringBuilder();
-    int objectIndex = -1;
-    for( Param param : _params ) {
-      if( objectIndex != param._objectIndex ) {
-        objectIndex = param._objectIndex;
-        sb.append(param._field.getDeclaringClass().getName() + " " + objectIndex + '\n');
-      }
-      sb.append("  " + param._field.getName() + ": " + param._best + '\n');
-    }
-    return sb.toString();
-  }
+//  @Override public String toString() {
+//    StringBuilder sb = new StringBuilder();
+//    int objectIndex = -1;
+//    for( Param param : _params ) {
+//      if( objectIndex != param._objectIndex ) {
+//        objectIndex = param._objectIndex;
+//        sb.append(param._field.getDeclaringClass().getName() + " " + objectIndex + '\n');
+//      }
+//      sb.append("  " + param._field.getName() + ": " + param._best + '\n');
+//    }
+//    return sb.toString();
+//  }
 }

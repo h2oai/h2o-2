@@ -1,24 +1,18 @@
 package hex;
 
 import hex.Layer.FrameInput;
-import hex.Layer.Input;
 import hex.Layer.Softmax;
 import hex.rng.MersenneTwisterRNG;
 
 import java.io.File;
-import java.text.DecimalFormat;
 import java.util.UUID;
 
 import water.*;
 import water.fvec.*;
-import water.util.Utils;
 
-public class NeuralNetIrisTest {
+public class NeuralNetIrisTest extends NeuralNetTest {
   static final String PATH = "smalldata/iris/iris.csv";
-  static final DecimalFormat _format = new DecimalFormat("0.000");
-
   FrameInput _train, _test;
-  Layer[] _ls;
 
   public static void main(String[] args) throws Exception {
     water.Boot.main(UserMain.class, args);
@@ -46,7 +40,7 @@ public class NeuralNetIrisTest {
     return new Frame(null, vecs);
   }
 
-  public void run() throws Exception {
+  public void load() {
     Key file = NFSFileVec.make(new File(PATH));
     Frame frame = ParseDataset2.parse(Key.make(), new Key[] { file });
     UKV.remove(file);
@@ -67,43 +61,31 @@ public class NeuralNetIrisTest {
     int limit = (int) frame.numRows() * 80 / 100;
     _train = new FrameInput(frame(rows, 0, limit), false);
     _test = new FrameInput(frame(rows, limit, (int) frame.numRows() - limit), false);
+  }
 
-    System.out.println("Train:");
-    for( int n = 0; n < 5; n++ ) {
-      _train._n = n;
-      _train.fprop();
-      for( int i = 0; i < _train._a.length; i++ )
-        System.out.print(_train._a[i] + ", ");
-      System.out.println();
-    }
-    System.out.println("Test:");
-    for( int n = 0; n < 3; n++ ) {
-      _test._n = n;
-      _test.fprop();
-      for( int i = 0; i < _test._a.length; i++ )
-        System.out.print(_test._a[i] + ", ");
-      System.out.println();
-    }
-    _train._n = _test._n = 0;
-
-    float rate = 0.01f;
-    float momentum = .9f;
-    int epochs = 100000;
-
+  public void create(float rate, float momentum) {
     _ls = new Layer[3];
     _ls[0] = _train;
     _ls[1] = new Layer.Tanh(_ls[0], 7);
     _ls[1]._rate = rate;
-    _ls[1]._oneMinusMomentum = 1 - momentum;
+    _ls[1]._momentum = 1 - momentum;
     _ls[1]._l2 = 0;
     _ls[2] = new Softmax(_ls[1], 3);
     _ls[2]._rate = rate;
-    _ls[2]._oneMinusMomentum = 1 - momentum;
+    _ls[2]._momentum = 1 - momentum;
     _ls[2]._l2 = 0;
     for( int i = 0; i < _ls.length; i++ )
-      _ls[i].init();
+      _ls[i].init(false);
+  }
 
-    CSharp cs = new CSharp();
+  public void run() throws Exception {
+    load();
+    float rate = 0.001f;
+    float momentum = .9f;
+    int epochs = 100;
+    create(rate, momentum);
+
+    NeuralNetMLPReference cs = new NeuralNetMLPReference();
     cs.init();
     Layer l = _ls[1];
     for( int o = 0; o < l._a.length; o++ ) {
@@ -124,8 +106,8 @@ public class NeuralNetIrisTest {
     System.out.println("CSharp " + ms);
 
     //ParallelTrainers trainer = new ParallelTrainers(_ls, _train._labels);
-    Trainer2 trainer = new Trainer2.Direct(_ls);
-    trainer._batches = limit;
+    Trainer trainer = new Trainer.Direct(_ls);
+    trainer._batches = (int) _train._frame.numRows();
     trainer._batch = 1;
 
     for( int i = 0; i < epochs; i++ ) {
@@ -133,11 +115,11 @@ public class NeuralNetIrisTest {
       trainer.run();
       ended = System.nanoTime();
       ms = (int) ((ended - start) / 1e6);
-      System.out.println(_ls[1]._w[0] + ", last: " + _ls[1]._wLast[0]);
+      System.out.println(_ls[1]._w[0] + ", g: " + _ls[1]._gw[0]);
     }
 
-    String train = test(_train, _train._count);
-    String test = test(_test, _test._count);
+    Error train = eval(_train);
+    Error test = eval(_test);
     System.out.println("train: " + train + ", test: " + test);
 
     for( int o = 0; o < _ls[2]._a.length; o++ ) {
@@ -156,39 +138,5 @@ public class NeuralNetIrisTest {
     }
 
     cs.test();
-  }
-
-  String test(FrameInput input, long count) {
-    Layer[] clones = new Layer[_ls.length];
-    for( int i = 1; i < _ls.length; i++ )
-      clones[i] = Utils.deepClone(_ls[i], "_in");
-    clones[0] = new FrameInput(input._frame, input._normalize);
-    for( int i = 1; i < _ls.length; i++ )
-      clones[i]._in = clones[i - 1];
-
-    int correct = 0;
-    for( int n = 0; n < count; n++ )
-      if( test(clones, n) )
-        correct++;
-    String pct = _format.format(((count - correct) * 100f / count));
-    return pct + "%";
-  }
-
-  static boolean test(Layer[] ls, int n) {
-    Input input = (Input) ls[0];
-    input._n = n;
-    for( int i = 0; i < ls.length; i++ )
-      ls[i].fprop();
-
-    float[] out = ls[ls.length - 1]._a;
-    float max = Float.MIN_VALUE;
-    int idx = -1;
-    for( int i = 0; i < out.length; i++ ) {
-      if( out[i] > max ) {
-        max = out[i];
-        idx = i;
-      }
-    }
-    return idx == input.label();
   }
 }

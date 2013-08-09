@@ -43,11 +43,11 @@ public class Mnist8m extends NeuralNetMnistTest {
     }
 
     @Override int label() {
-      return _labels[_n];
+      return _labels[(int) _n];
     }
 
     @Override void fprop(int off, int len) {
-      long offset = _n * (long) PIXELS;
+      long offset = _n * PIXELS;
       int page = (int) (offset / PAGE_SIZE);
       int indx = (int) (offset % PAGE_SIZE);
       ByteBuffer buffer = _images[page];
@@ -67,12 +67,12 @@ public class Mnist8m extends NeuralNetMnistTest {
     }
 
     @Override int label() {
-      return _test._labels[_n];
+      return _test._labels[(int) _n];
     }
 
     @Override void fprop(int off, int len) {
       for( int i = 0; i < _a.length; i++ ) {
-        double d = _test._images[_n * PIXELS + i];
+        double d = _test._images[(int) _n * PIXELS + i];
         d -= Mnist8mNorm.MEANS[i];
         d = Mnist8mNorm.SIGMS[i] > 1e-4 ? d / Mnist8mNorm.SIGMS[i] : d;
         _a[i] = (float) d;

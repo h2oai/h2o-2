@@ -1,6 +1,7 @@
 package hex;
 
 import hex.Layer2.Input;
+import hex.Trainer2.ParallelTrainers;
 import hex.rng.MersenneTwisterRNG;
 
 import java.io.*;
@@ -29,11 +30,11 @@ public class NeuralNetMnistTest2 {
     }
 
     @Override int label() {
-      return _train._labels[_n];
+      return _train._labels[(int) _n];
     }
 
-    @Override void fprop(int off, int len) {
-      System.arraycopy(_train._images, _n * PIXELS, _a, 0, PIXELS);
+    @Override void fprop() {
+      System.arraycopy(_train._images, (int) _n * PIXELS, _a, 0, PIXELS);
     }
   }
 
@@ -44,11 +45,11 @@ public class NeuralNetMnistTest2 {
     }
 
     @Override int label() {
-      return _test._labels[_n];
+      return _test._labels[(int) _n];
     }
 
-    @Override void fprop(int off, int len) {
-      System.arraycopy(_test._images, _n * PIXELS, _a, 0, PIXELS);
+    @Override void fprop() {
+      System.arraycopy(_test._images, (int) _n * PIXELS, _a, 0, PIXELS);
     }
   }
 
@@ -67,9 +68,9 @@ public class NeuralNetMnistTest2 {
         _ls[2] = new Layer2.Rectifier(_ls[1], 10);
       } else {
         _ls[1] = new Layer2.Tanh(_ls[0], 1000);
-        _ls[1]._rate = 0.001f;
-        _ls[2] = new Layer2.Tanh(_ls[1], 10);
-        _ls[2]._rate = 0.00005f;
+        _ls[1]._rate = 0.01f;
+        _ls[2] = new Layer2.Softmax(_ls[1], 10);
+        _ls[2]._rate = 0.001f;
       }
     }
     for( int i = 0; i < _ls.length; i++ )
@@ -84,8 +85,8 @@ public class NeuralNetMnistTest2 {
       System.out.println("load: " + (int) ((System.nanoTime() - time) / 1e6) + " ms");
     }
 
-    //ParallelTrainers trainer = new ParallelTrainers(_ls, _train._labels);
-    Trainer2 trainer = new Trainer2.Direct(_ls);
+    ParallelTrainers trainer = new ParallelTrainers(_ls);
+    //Trainer2 trainer = new Trainer2.Direct(_ls);
 
     if( pretrain ) {
       for( int i = 0; i < _ls.length; i++ ) {
@@ -195,7 +196,7 @@ public class NeuralNetMnistTest2 {
       int zeros = 0;
       for( int o = 0; o < layer._a.length; o++ ) {
         for( int i = 0; i < layer._in._a.length; i++ ) {
-          float d = layer._w[o * layer._in._a.length + i] - layer._wLast[o * layer._in._a.length + i];
+          float d = layer._w[o * layer._in._a.length + i] - layer._wPrev[o * layer._in._a.length + i];
           sqr += d * d;
           zeros += d == 0 ? 1 : 0;
         }
@@ -270,7 +271,7 @@ public class NeuralNetMnistTest2 {
     Input input = (Input) ls[0];
     input._n = n;
     for( int i = 0; i < ls.length; i++ )
-      ls[i].fprop(0, ls[i]._a.length);
+      ls[i].fprop();
 
     float[] out = ls[ls.length - 1]._a;
     if( error != null ) {
@@ -326,7 +327,7 @@ public class NeuralNetMnistTest2 {
       }
 
       MersenneTwisterRNG rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-      for (int i = count - 1; i >= 0; i--) {
+      for( int i = count - 1; i >= 0; i-- ) {
         int shuffle = rand.nextInt(i + 1);
         byte[] image = rawI[shuffle];
         rawI[shuffle] = rawI[i];

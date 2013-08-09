@@ -20,10 +20,10 @@ public class Mnist8mDist {
       String local = H2O.findInetAddressForSelf().getHostAddress();
 
       ArrayList<Host> list = new ArrayList<Host>();
-      for( int i = 0; i < 10; i++ )
+      for( int i = 0; i < 4; i++ )
         list.add(new Host("192.168.1." + (171 + i)));
-      for( int i = 0; i < 6; i++ )
-        list.add(new Host("192.168.1.15" + i));
+//      for( int i = 0; i < 6; i++ )
+//        list.add(new Host("192.168.1.15" + i));
       Host[] workers = list.toArray(new Host[0]);
 
       int port = 54321;

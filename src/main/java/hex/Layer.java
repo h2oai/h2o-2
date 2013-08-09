@@ -1,8 +1,12 @@
 package hex;
 
+import hex.Layer2.Input;
 import hex.rng.MersenneTwisterRNG;
 
 import java.util.Random;
+
+import water.fvec.Frame;
+import water.fvec.Vec;
 
 /**
  * Neural network layer, can be used as one level of Perceptron, AA or RBM.
@@ -12,7 +16,7 @@ public abstract class Layer {
   float _momentum = .1f; // 1 - value, as parameter search is 0 based
   float _annealing = .0001f;
   float _l2 = .0001f;
-  boolean _auto = true;
+  boolean _auto = false;
   float _autoDelta = .2f;
 
   // Previous layer
@@ -109,8 +113,8 @@ public abstract class Layer {
   }
 
   public static abstract class Input extends Layer {
-    int _count;
-    int _n;
+    long _count;
+    long _n;
 
     public Input() {
     }
@@ -126,6 +130,73 @@ public abstract class Layer {
 
     @Override void bprop(int off, int len) {
       throw new UnsupportedOperationException();
+    }
+  }
+
+  public static class FrameInput extends Input {
+    final Frame _frame;
+    final boolean _normalize;
+
+    public FrameInput(Frame frame, boolean normalize) {
+      super(frame.numCols() - 1);
+      _frame = frame;
+      _normalize = normalize;
+      _count = frame.numRows();
+    }
+
+    @Override int label() {
+      return (int) _frame._vecs[_frame.numCols() - 1].at8(_n);
+    }
+
+    @Override void fprop(int off, int len) {
+      for( int i = 0; i < _a.length; i++ ) {
+        Vec v = _frame._vecs[i];
+        double d = v.at(_n);
+        if( _normalize )
+          d = (d - v.mean()) / v.sigma();
+        _a[i] = (float) d;
+      }
+    }
+  }
+
+  public static class Softmax extends Layer {
+    public Softmax() {
+    }
+
+    public Softmax(Layer in, int len) {
+      super(in, len);
+    }
+
+    @Override void fprop(int off, int len) {
+      float max = Float.NEGATIVE_INFINITY;
+      for( int o = 0; o < _a.length; o++ ) {
+        _a[o] = 0;
+        for( int i = 0; i < _in._a.length; i++ )
+          _a[o] += _w[o * _in._a.length + i] * _in._a[i];
+        _a[o] += _b[o];
+        if( max < _a[o] )
+          max = _a[o];
+      }
+      float scale = 0;
+      for( int o = 0; o < _a.length; o++ ) {
+        _a[o] = (float) Math.exp(_a[o] - max);
+        scale += _a[o];
+      }
+      for( int o = 0; o < _a.length; o++ )
+        _a[o] /= scale;
+    }
+
+    @Override void bprop(int off, int len) {
+      for( int o = 0; o < _a.length; o++ ) {
+        // Gradient is error * derivative of Softmax: (1 - x) * x
+        float g = _e[o] * (1 - _a[o]) * _a[o];
+        for( int i = 0; i < _in._a.length; i++ ) {
+          int w = o * _in._a.length + i;
+          _in._e[i] += g * _w[w];
+          _gw[w] += g * _in._a[i];
+        }
+        _gb[o] += g;
+      }
     }
   }
 
@@ -150,15 +221,15 @@ public abstract class Layer {
 
     @Override void bprop(int off, int len) {
       for( int o = off; o < off + len; o++ ) {
-        float d = _e[o] * (1 - _a[o] * _a[o]);
+        float g = _e[o] * (1 - _a[o] * _a[o]);
         // float d = (float) (0.66666667 / 1.7159 * (1.7159 + _a[o]) * (1.7159 - _a[o]));
         for( int i = 0; i < _in._a.length; i++ ) {
-          _gw[o * _in._a.length + i] += d * _in._a[i];
+          _gw[o * _in._a.length + i] += g * _in._a[i];
           if( _in._e != null ) {
-            _in._e[i] += d * _w[o * _in._a.length + i];
+            _in._e[i] += g * _w[o * _in._a.length + i];
           }
         }
-        _gb[o] += d;
+        _gb[o] += g;
       }
     }
   }

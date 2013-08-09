@@ -1,6 +1,7 @@
 package hex;
 
 import hex.Layer.Input;
+import hex.Mnist8m.Train8mInput;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -19,8 +20,17 @@ public final class MnistCanvas extends Canvas {
 
   public static void main(String[] args) throws Exception {
     NeuralNetMnistTest mnist = new NeuralNetMnistTest();
-    //MnistNeuralNetTest2 mnist = new MnistNeuralNetTest2();
+    // NeuralNetMnistTest2 mnist = new NeuralNetMnistTest2();
     mnist.run();
+
+    // Basic visualization of images and weights
+    JFrame frame = new JFrame("H2O");
+    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    MnistCanvas canvas = new MnistCanvas(trainer, new Train8mInput());
+    frame.setContentPane(canvas.init());
+    frame.pack();
+    frame.setLocationRelativeTo(null);
+    frame.setVisible(true);
   }
 
   MnistCanvas(Trainer trainer, Input input) {
@@ -62,7 +72,7 @@ public final class MnistCanvas extends Canvas {
 
   @Override public void paint(Graphics g) {
     int edge = 56, pad = 10;
-    int rand = _rand.nextInt(_input._count);
+    int rand = _rand.nextInt((int) _input._count);
 
     // Side
     {

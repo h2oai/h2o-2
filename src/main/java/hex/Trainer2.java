@@ -104,7 +104,7 @@ public abstract class Trainer2 {
       for( int t = 0; t < _trainers.length; t++ ) {
         Layer2[] clones = new Layer2[ls.length];
         for( int i = 0; i < ls.length; i++ )
-          clones[i] = Utils.deepClone(ls[i], "_w", "_b");
+          clones[i] = Utils.deepClone(ls[i], "_w", "_b", "_in");
         for( int i = 1; i < ls.length; i++ )
           clones[i]._in = clones[i - 1];
         _trainers[t] = new Direct(clones, _count);
