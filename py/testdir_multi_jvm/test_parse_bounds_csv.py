@@ -4,17 +4,25 @@ sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
 
+DO_LIBSVM = False
 def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE):
     # we can do all sorts of methods off the r object
     r = random.Random(SEEDPERFILE)
-
     def addValToRowStuff(colNumber, val, rowData, synColSumDict):
-        if val!=0:
-            rowData.append(str(colNumber) + ":" + str(val)) # f should always return string
-            if colNumber in synColSumDict:
-                synColSumDict[colNumber] += val # sum of column (dict)
-            else:
-                synColSumDict[colNumber] = val # sum of column (dict)
+        if DO_LIBSVM:
+            if val!=0:
+                rowData.append(str(colNumber) + ":" + str(val))
+        else:
+            # append all the zeroes
+            for j in range(colNumber):
+                rowData.append('0')
+            rowData.append(str(val))
+
+        if colNumber in synColSumDict:
+            synColSumDict[colNumber] += val # sum of column (dict)
+        else:
+            synColSumDict[colNumber] = val # sum of column (dict)
+
     dsf = open(csvPathname, "w+")
 
     synColSumDict = {0: 0} # guaranteed to have col 0 for output
@@ -73,7 +81,7 @@ class Basic(unittest.TestCase):
         tryList = [
             (100, 100, 'cA', 300),
             (100000, 100, 'cB', 300),
-            (100, 100000, 'cC', 300),
+            (100, 999, 'cC', 300),
             ]
 
         # h2b.browseTheCloud()
@@ -107,7 +115,6 @@ class Basic(unittest.TestCase):
                 self.assertEqual(value_size_bytes, expectedValueSize,
                     msg='value_size_bytes %s is not expected row_size * rows: %s' % \
                     (value_size_bytes, expectedValueSize))
-
 
                 summaryResult = h2o_cmd.runSummary(key=key2, timeoutSecs=timeoutSecs)
                 h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
@@ -189,7 +196,6 @@ class Basic(unittest.TestCase):
                     if synSigma:
                         self.assertAlmostEqual(float(sigma), synSigma, delta=0.03,
                             msg='col %s sigma %s is not equal to generated sigma %s' % (name, sigma, synSigma))
-
                     self.assertEqual(0, na,
                         msg='col %s num_missing_values %d should be 0' % (name, na))
 
