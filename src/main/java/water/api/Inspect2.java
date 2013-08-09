@@ -82,7 +82,9 @@ public class Inspect2 extends Request {
 
     sb.append("<div class='alert'>" +
               //"View " + SummaryPage2.link(key, "Summary") +
-              "<br/>Build models using " + DRF2.link(src_key.value(), "Distributed Random Forest") +
+              "<br/>Build models using " + 
+              DRF2.link(src_key.value(), "Distributed Random Forest") +
+              hex.LR2.link(src_key.value(), "Linear Regression") +
               "</div>");
 
     // Start of where the pagination table goes.  For now, just the info button.

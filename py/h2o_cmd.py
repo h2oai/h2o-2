@@ -385,7 +385,7 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
         raise Exception("Looks like columns got flipped to NAs: " + ", ".join(m))
 
     if num_cols != len(colNameDict): 
-        raise Exception("num_cols doesn't agree with len(colNameDict)" % num_cols, colNameDict)
+        raise Exception("num_cols: %s doesn't agree with len(colNameDict): %s" % (num_cols, len(colNameDict)))
 
     return (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) 
 

@@ -33,7 +33,7 @@ def simpleCheckRFView(node, rfv, noPrint=False, **kwargs):
                 raise Exception(w)
 
     oclass = rfv['response_variable']
-    if (oclass<0 or oclass>20000):
+    if (oclass<0 or oclass>20000000):
         raise Exception("class in RFView seems wrong. class:", oclass)
 
     # the simple assigns will at least check the key exists

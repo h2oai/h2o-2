@@ -40,6 +40,7 @@ setMethod("h2o.checkClient", signature(object="H2OClient"), function(object) {
   if(!url.exists(myURL)) {
     print("H2O is not running yet, starting it now.")
     h2o.startLauncher()
+    invisible(readline("Hit <Return> to continue: "))
   } else { 
     cat("Successfully connected to", myURL, "\n")
     if("h2o" %in% rownames(installed.packages()) && (pv=packageVersion("h2o")) != (sv=h2o.__version(object)))
