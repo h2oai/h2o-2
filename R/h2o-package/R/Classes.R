@@ -5,6 +5,7 @@ setClass("H2OParsedData", representation(h2o="H2OClient", key="character"))
 setClass("H2OGLMModel", representation(key="character", data="H2OParsedData", model="list"))
 setClass("H2OKMeansModel", representation(key="character", data="H2OParsedData", model="list"))
 setClass("H2ORForestModel", representation(key="character", data="H2OParsedData", model="list"))
+setClass("H2OGLMGridModel", representation(key="character", data="H2OParsedData", model="list"))
 
 # Class display functions
 setMethod("show", "H2OClient", function(object) {
@@ -105,3 +106,12 @@ setMethod("as.data.frame", "H2OParsedData", function(x) {
   colnames(x.df) = unlist(lapply(res$cols, function(y) y$name))
   x.df
 })
+
+
+setMethod("show", "H2OGLMGridModel", function(object) {
+  print(object@data)
+  cat("GLMGrid Model Key:", object@key, "\n\nSummary\n")
+  
+  model = object@model
+  print(model$Summary)
+  })
