@@ -22,7 +22,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_RF_poker_1m_rf(self):
+    def test_simple_w_hosts(self):
         csvPathname = h2o.find_file('smalldata/poker/poker1000')
         h2o_cmd.runRF(trees=50, timeoutSecs=60, csvPathname=csvPathname)
 

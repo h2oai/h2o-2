@@ -333,8 +333,12 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
     num_rows = inspect['num_rows']
     num_cols = inspect['num_cols']
     cols = inspect['cols']
-    # trying to see how many enums we get
-    # don't print int
+    # type
+    # key
+    # row_size
+    # value_size_bytes
+    # cols
+    # rows
     missingValuesDict = {}
     constantValuesDict = {}
     enumSizeDict = {}
@@ -343,6 +347,12 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
     # all dictionaries created are keyed by col index
     print "Column Summary:"
     for k,c in enumerate(cols):
+        # offset
+        # base
+        # scale
+        # mean
+        # variance
+        # enum_domain_size
         colNameDict[k] = c['name']
         colTypeDict[k] = c['type']
         msg = "%s %d" % (c['name'], k)
@@ -385,7 +395,7 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
         raise Exception("Looks like columns got flipped to NAs: " + ", ".join(m))
 
     if num_cols != len(colNameDict): 
-        raise Exception("num_cols doesn't agree with len(colNameDict)" % num_cols, colNameDict)
+        raise Exception("num_cols: %s doesn't agree with len(colNameDict): %s" % (num_cols, len(colNameDict)))
 
     return (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) 
 

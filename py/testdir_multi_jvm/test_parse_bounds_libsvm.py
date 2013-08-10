@@ -3,7 +3,6 @@ import random, sys, time, os
 sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
-CHECK_MAX = False
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE):
     # we can do all sorts of methods off the r object
@@ -170,8 +169,11 @@ class Basic(unittest.TestCase):
                         msg='col %s mean %s is not equal to generated mean %s' % (name, mean, 0))
 
                     # why are min/max one-entry lists in summary result. Oh..it puts N min, N max
-                    self.assertEqual(smin, synMin,
-                        msg='col %s min %s is not equal to generated min %s' % (name, smin, synMin))
+                    self.assertTrue(smin >= synMin,
+                        msg='col %s min %s is not >= generated min %s' % (name, smin, synMin))
+
+                    self.assertTrue(smax <= synMax,
+                        msg='col %s max %s is not <= generated max %s' % (name, smax, synMax))
 
                     # reverse engineered the number of zeroes, knowing data was always 1 if present?
                     if name == "V65536" or name == "V65537":
@@ -187,10 +189,6 @@ class Basic(unittest.TestCase):
                     if synSigma:
                         self.assertAlmostEqual(float(sigma), synSigma, delta=0.03,
                             msg='col %s sigma %s is not equal to generated sigma %s' % (name, sigma, synSigma))
-
-                    if CHECK_MAX:
-                        self.assertEqual(smax, synMax,
-                            msg='col %s max %s is not equal to generated max %s' % (name, smax, synMax))
 
                     self.assertEqual(0, na,
                         msg='col %s num_missing_values %d should be 0' % (name, na))

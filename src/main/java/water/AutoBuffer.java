@@ -816,6 +816,12 @@ public final class AutoBuffer {
     for( int i=0; i<len; i++ ) ary[i] = getA8d();
     return ary;
   }
+  public int[][][] getAAA4( ) {
+    int len = get4();  if( len == -1 ) return null;
+    int[][][] ary  = new int[len][][];
+    for( int i=0; i<len; i++ ) ary[i] = getAA4();
+    return ary;
+  }
 
   public String getStr( ) {
     int len = get2();
@@ -934,6 +940,12 @@ public final class AutoBuffer {
     if( ary == null ) return put4(-1);
     put4(ary.length);
     for( int i=0; i<ary.length; i++ ) putA8d(ary[i]);
+    return this;
+  }
+  public AutoBuffer putAAA4( int[][][] ary ) {
+    if( ary == null ) return put4(-1);
+    put4(ary.length);
+    for( int i=0; i<ary.length; i++ ) putAA4(ary[i]);
     return this;
   }
   // Put a String as 2bytes of length then string bytes (not chars!)
