@@ -177,7 +177,7 @@
   
   <!-- Configure build -->
   <build>
-    <defaultGoal>assembly:assembly</defaultGoal>
+    <defaultGoal>package</defaultGoal>
     <!-- Setup plugins for this POM and all kids POMs. -->
   	<pluginManagement>
   	<plugins>
@@ -227,13 +227,22 @@
       	<configuration>
      		<descriptors>
      			<descriptor>src/main/assembly/bin.xml</descriptor>
-     			<descriptor>src/main/assembly/src.xml</descriptor>
+     			<!-- <descriptor>src/main/assembly/src.xml</descriptor> -->
      		</descriptors>
+    		<descriptorRefs>
+    			<!-- <descriptorRef>src</descriptorRef> -->
+    		</descriptorRefs>
+     		<archive>
+     			<!-- Setup manifest -->
+     			<manifest>
+     				<mainClass>water.Boot</mainClass>
+     			</manifest>
+     		</archive>
       	</configuration>
       	<!-- Execute goal assembly:single during life-cycle phase 'package' -->
       	<executions>
       		<execution>
-      			<id>make-assembly</id>
+      			<id>create-executable-jar</id>
       			<phase>package</phase>
       			<goals>
       				<goal>single</goal>
@@ -287,6 +296,12 @@
        </plugin>
   	</plugins>
   	</pluginManagement>
+  	<!-- activating plugins -->
+  	<plugins>
+        <plugin>
+            <artifactId>maven-assembly-plugin</artifactId>
+        </plugin>
+    </plugins>
   </build>
 
 <!-- TODO: have profiles for each target Jenkins, developer, ...

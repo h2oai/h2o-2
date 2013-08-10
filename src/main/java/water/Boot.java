@@ -146,14 +146,7 @@ public class Boot extends ClassLoader {
 
       // Make all the embedded jars visible to the custom class loader
       extractInternalFiles(); // Resources
-      addInternalJars("apache");
-      addInternalJars("gson");
-      addInternalJars("junit");
-      addInternalJars("jama");
-      addInternalJars("poi");
-      addInternalJars("s3");
-      addInternalJars("jets3t");
-      addInternalJars("log4j");
+      addInternalJars("lib");
     }
 
     run(args);
