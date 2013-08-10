@@ -20,7 +20,7 @@
 			<scope>runtime</scope>
 			<excludes>
 				<exclude>org.javassist:javassist</exclude>
-				<exclude>org.apache.hadoop:hadoop-client</exclude>
+				<!-- <exclude>org.apache.hadoop:hadoop-client</exclude>-->
 			</excludes>
 			<!-- Transitively filter hadoop and javassis dependencies. -->
 			<useTransitiveFiltering>true</useTransitiveFiltering>
