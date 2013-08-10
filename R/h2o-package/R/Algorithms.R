@@ -4,6 +4,7 @@ setGeneric("h2o.kmeans", function(data, centers, cols = "", iter.max = 10) { sta
 setGeneric("h2o.randomForest", function(y, x_ignore = "", data, ntree, depth, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 # setGeneric("h2o.randomForest", function(y, data, ntree, depth, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 setGeneric("h2o.getTree", function(forest, k, plot = FALSE) { standardGeneric("h2o.getTree") })
+setGeneric("h2o.glmgrid", function(x, y, data, family, nfolds = 10, alpha = c(0.25,0.5), lambda = 1.0e-5) { standardGeneric("h2o.glmgrid") })
 
 setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="numeric", alpha="numeric", lambda="numeric"),
           function(x, y, data, family, nfolds, alpha, lambda) {
@@ -177,3 +178,48 @@ setMethod("h2o.getTree", signature(forest="H2ORForestModel", k="numeric", plot="
 #            res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT, key=res$response$redirect_request_args$key)
 #            result = new("H2OParsedData", h2o=object@data@h2o, key=res$key)
 #          })
+
+
+setMethod("h2o.glmgrid", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="numeric", alpha="numeric", lambda="numeric"),
+          function(x, y, data, family, nfolds, alpha, lambda) {
+            
+	    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMGrid, key = data@key, y = y, x = paste(x, sep="", collapse=","), family = family, 		    n_folds = nfolds, alpha = alpha, lambda = lambda, case_mode="=",case=1.0,parallel= 1 )
+            while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { 
+		Sys.sleep(1) 
+	    }
+	    res=h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMGridProgress, destination_key=res$destination_key)
+		result$Summary = t(sapply(res$models,c))
+#            result=rep( list(list()),length(res$models)+1  ) 
+#            result[[length(result)]]$Summary = t(sapply(res$models,c))
+		
+#		for(i in 1:length(res$models)){
+#			resH=h2o.__remoteSend(data@h2o, "Inspect.json",key=res$models[[i]]$key)
+#			resH = resH$GLMModel
+#			    result[[i]]$LSMParams=unlist(resH$LSMParams)
+#	            result[[i]]$coefficients = unlist(resH$coefficients)
+#	            result[[i]]$normalized_coefficients = unlist(resH$normalized_coefficients)
+#            		result[[i]]$dof = resH$dof            
+#			result[[i]]$null.deviance = resH$validations[[1]]$nullDev
+#			result[[i]]$deviance = resH$validations[[1]]$resDev
+#			result[[i]]$aic = resH$validations[[1]]$aic
+#			result[[i]]$auc = resH$validations[[1]]$auc
+#			result[[i]]$iter = resH$iterations
+#		        result[[i]]$threshold = resH$validations[[1]]$threshold
+#	                result[[i]]$error_table = t(sapply(resH$validations[[1]]$cm,c))
+#
+#            }
+	    resGLMGridModel = new("H2OGLMGridModel", key=destKey, data=data, model=result)
+            resGLMGridModel
+	})
+
+
+setMethod("h2o.glmgrid", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY"),
+          function(x, y, data, family, nfolds, alpha, lambda) {
+            if(!(missing(nfolds) || class(nfolds) == "numeric"))
+              stop(paste("nfolds cannot be of class", class(nfolds)))
+            else if(!(missing(alpha) || class(alpha) == "numeric"))
+              stop(paste("alpha cannot be of class", class(alpha)))
+            else if(!(missing(lambda) || class(lambda) == "numeric"))
+              stop(paste("lambda cannot be of class", class(lambda)))
+            h2o.glmgrid(x, y, data, family, nfolds, alpha, lambda) 
+          })
