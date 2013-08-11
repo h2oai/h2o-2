@@ -111,10 +111,13 @@ public abstract class Request2 extends Request {
     for( Constructor c : api.filter().getDeclaredConstructors() ) {
       c.setAccessible(true);
       Class[] ps = c.getParameterTypes();
-      if( ps.length == 0 )
-        return (Filter) c.newInstance();
       if( ps.length == 1 && RequestArguments.class.isAssignableFrom(ps[0]) )
         return (Filter) c.newInstance(this);
+    }
+    for( Constructor c : api.filter().getDeclaredConstructors() ) {
+      Class[] ps = c.getParameterTypes();
+      if( ps.length == 0 )
+        return (Filter) c.newInstance();
     }
     throw new Exception("Class " + api.filter().getName() + " must have an empty constructor");
   }
