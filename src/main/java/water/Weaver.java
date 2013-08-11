@@ -473,7 +473,7 @@ public class Weaver {
     try {
       cc.addMethod(CtNewMethod.make(body,cc));
     } catch( CannotCompileException e ) {
-      throw Log.err("--- Compilation failure while compiler serializers for "+cc.getName()+"\n"+body+"\n-----",e);
+      throw Log.err("--- Compilation failure while compiling serializers for "+cc.getName()+"\n"+body+"\n-----",e);
     }
   }
 

@@ -7,6 +7,7 @@ import java.util.Locale;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.PropertyConfigurator;
 
+import org.omg.PortableServer.ThreadPolicyOperations;
 import water.*;
 import water.api.Constants.Schemes;
 import water.util.Log.Tag.Kind;
@@ -342,13 +343,15 @@ public abstract class Log {
     return _logger;
   }
 
+  static volatile boolean loggerCreateWasCalled = false;
+
   /** the actual write code. */
   private static void write0(Event e, boolean printOnOut) {
     org.apache.log4j.Logger l4j = getLog4jLogger();
 
     // If no logger object exists, try to build one.
     // Disable for debug, causes problems for multiple nodes per VM
-    if (l4j == null && !H2O.DEBUG) {
+    if ((l4j == null) && !loggerCreateWasCalled && !H2O.DEBUG) {
       if (H2O.SELF != null) {
         File dir;
         // Use ice folder if local, or default
@@ -357,6 +360,7 @@ public abstract class Log {
         else
           dir = new File(H2O.DEFAULT_ICE_ROOT);
 
+        loggerCreateWasCalled = true;
         l4j = createLog4jLogger(dir.toString());
       }
     }
