@@ -1,11 +1,11 @@
 package hex;
 
 import water.*;
-import water.api.*;
+import water.api.DocGen;
 import water.fvec.*;
 import water.util.RString;
 
-public class LR2 extends Request {
+public class LR2 extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
@@ -13,35 +13,33 @@ public class LR2 extends Request {
   // for GET.
   static final String DOC_GET = "Linear Regression between 2 columns";
 
-  @API(help="Data Frame")
-  final FrameKey data_key = new FrameKey("data_key");
+  @API(help="Data Frame", required=true, filter=FrameKey.class)
+  Frame source;
 
-  @API(help="Column X")
-  final FrameKeyVec vec_x = new FrameKeyVec("vec_x",data_key);
+  @API(help="Column X", required=true, filter=LR2VecSelect.class)
+  Vec vec_x;
 
-  @API(help="Column Y")
-  final FrameKeyVec vec_y = new FrameKeyVec("vec_y",data_key);
+  @API(help="Column Y", required=true, filter=LR2VecSelect.class)
+  Vec vec_y;
+  class LR2VecSelect extends VecSelect { LR2VecSelect() { super("source"); } }
 
-  @API(help="Pass 1 msec")     public long pass1time;
-  @API(help="Pass 2 msec")     public long pass2time;
-  @API(help="Pass 3 msec")     public long pass3time;
-  @API(help="nrows")           public long nrows;
-  @API(help="beta0")           public double beta0;
-  @API(help="beta1")           public double beta1;
-  @API(help="r-squared")       public double r2;
-  @API(help="SSTO")            public double ssto;
-  @API(help="SSE")             public double sse;
-  @API(help="SSR")             public double ssr;
-  @API(help="beta0 Std Error") public double beta0stderr;
-  @API(help="beta1 Std Error") public double beta1stderr;
+  @API(help="Pass 1 msec")     long pass1time;
+  @API(help="Pass 2 msec")     long pass2time;
+  @API(help="Pass 3 msec")     long pass3time;
+  @API(help="nrows")           long nrows;
+  @API(help="beta0")           double beta0;
+  @API(help="beta1")           double beta1;
+  @API(help="r-squared")       double r2;
+  @API(help="SSTO")            double ssto;
+  @API(help="SSE")             double sse;
+  @API(help="SSR")             double ssr;
+  @API(help="beta0 Std Error") double beta0stderr;
+  @API(help="beta1 Std Error") double beta1stderr;
 
   @Override public Response serve() {
-    Vec X = vec_x.value();
-    Vec Y = vec_y.value();
-
     // Pass 1: compute sums & sums-of-squares
     long start = System.currentTimeMillis();
-    CalcSumsTask lr1 = new CalcSumsTask().doAll(X,Y);
+    CalcSumsTask lr1 = new CalcSumsTask().doAll(vec_x, vec_y);
     long pass1 = System.currentTimeMillis();
     pass1time = pass1 - start;
     nrows = lr1._n;
@@ -49,7 +47,7 @@ public class LR2 extends Request {
     // Pass 2: Compute squared errors
     final double meanX = lr1._sumX/nrows;
     final double meanY = lr1._sumY/nrows;
-    CalcSquareErrorsTasks lr2 = new CalcSquareErrorsTasks(meanX, meanY).doAll(X,Y);
+    CalcSquareErrorsTasks lr2 = new CalcSquareErrorsTasks(meanX, meanY).doAll(vec_x, vec_y);
     long pass2 = System.currentTimeMillis();
     pass2time = pass2 - pass1;
     ssto = lr2._YYbar;
@@ -57,7 +55,7 @@ public class LR2 extends Request {
     // Compute the regression
     beta1 = lr2._XYbar / lr2._XXbar;
     beta0 = meanY - beta1 * meanX;
-    CalcRegressionTask lr3 = new CalcRegressionTask(beta0,beta1,meanY).doAll(X,Y);
+    CalcRegressionTask lr3 = new CalcRegressionTask(beta0, beta1, meanY).doAll(vec_x, vec_y);
     long pass3 = System.currentTimeMillis();
     pass3time = pass3 - pass2;
 

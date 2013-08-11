@@ -2168,6 +2168,7 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
   /** A Frame Key */
   public class FrameKey extends H2OKey {
+    public FrameKey() { this(""); }
     public FrameKey(String name) { super(name,true); }
     @Override protected Key parse(String input) {
       Key k = Key.make(input);

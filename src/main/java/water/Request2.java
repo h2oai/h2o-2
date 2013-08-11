@@ -5,6 +5,8 @@ import java.lang.reflect.*;
 import java.util.*;
 
 import water.api.Request;
+import water.api.RequestArguments;
+import water.fvec.Frame;
 
 public abstract class Request2 extends Request {
   @Override protected void registered() {
@@ -29,7 +31,7 @@ public abstract class Request2 extends Request {
         Annotation[] as = f.getAnnotations();
         API api = find(as, API.class);
 
-        if( api != null ) {
+        if( api != null && Helper.isInput(api) ) {
           f.setAccessible(true);
           Object defaultValue = f.get(this);
 
@@ -37,7 +39,7 @@ public abstract class Request2 extends Request {
           Argument arg = null;
 
           if( Argument.class.isAssignableFrom(api.filter()) )
-            arg = (Argument) getInnerClassConstructor(api.filter()).newInstance(this);
+            arg = (Argument) newInstance(api);
           else {
             // Real
             if( f.getType() == float.class || f.getType() == double.class ) {
@@ -56,15 +58,27 @@ public abstract class Request2 extends Request {
               boolean val = (Boolean) defaultValue;
               arg = new Bool(f.getName(), val, api.help());
             }
+
+            // Key
+            else if( f.getType() == Key.class )
+              arg = new H2OKey(f.getName(), api.required());
           }
 
           if( ColumnSelect.class.isAssignableFrom(api.filter()) ) {
-            ColumnSelect name = (ColumnSelect) api.filter().newInstance();
+            ColumnSelect name = (ColumnSelect) newInstance(api);
             H2OHexKey key = null;
             for( Argument a : _arguments )
               if( a instanceof H2OHexKey && name._key.equals(((H2OHexKey) a)._name) )
                 key = (H2OHexKey) a;
             arg = new HexAllColumnSelect(f.getName(), key);
+          }
+          if( VecSelect.class.isAssignableFrom(api.filter()) ) {
+            VecSelect name = (VecSelect) newInstance(api);
+            FrameKey key = null;
+            for( Argument a : _arguments )
+              if( a instanceof FrameKey && name._key.equals(((FrameKey) a)._name) )
+                key = (FrameKey) a;
+            arg = new FrameKeyVec(f.getName(), key);
           }
 
           if( arg != null ) {
@@ -79,6 +93,13 @@ public abstract class Request2 extends Request {
     }
   }
 
+  // Extracted in separate class as Weaver cannot load REquest during boot
+  static final class Helper {
+    static boolean isInput(API api) {
+      return api.filter() != Filter.class || api.filters().length != 0;
+    }
+  }
+
   private static <T> T find(Annotation[] as, Class<T> c) {
     for( Annotation a : as )
       if( a.annotationType() == c )
@@ -86,13 +107,16 @@ public abstract class Request2 extends Request {
     return null;
   }
 
-  private static Constructor getInnerClassConstructor(Class cl) throws Exception {
-    for( Constructor c : cl.getConstructors() ) {
+  private Filter newInstance(API api) throws Exception {
+    for( Constructor c : api.filter().getDeclaredConstructors() ) {
+      c.setAccessible(true);
       Class[] ps = c.getParameterTypes();
-      if( ps.length == 1 && Request2.class.isAssignableFrom(ps[0]) )
-        return c;
+      if( ps.length == 0 )
+        return (Filter) c.newInstance();
+      if( ps.length == 1 && RequestArguments.class.isAssignableFrom(ps[0]) )
+        return (Filter) c.newInstance(this);
     }
-    throw new Exception("Class " + cl.getName() + " must have an empty constructor");
+    throw new Exception("Class " + api.filter().getName() + " must have an empty constructor");
   }
 
   // Create an instance per call instead of ThreadLocals
@@ -111,6 +135,8 @@ public abstract class Request2 extends Request {
     try {
       if( arg._field.getType() == Key.class && value instanceof ValueArray )
         value = ((ValueArray) value)._key;
+      if( arg._field.getType() == Frame.class && value instanceof Key )
+        value = UKV.get((Key) value);
       if( arg._field.getType() == int.class && value instanceof Long )
         value = ((Long) value).intValue();
       if( arg._field.getType() == float.class && value instanceof Double )

@@ -15,13 +15,11 @@ public class KMeans2 extends KMeansShared {
   // for GET.
   static final String DOC_GET = "Starts a job that runs the k-means algorithm";
 
-//@formatter:off
-  @API(help = "Number of clusters", required = true)
+  @API(help = "Number of clusters", required = true, filter = Default.class)
   int k;
 
   @API(help = "Maximum number of iterations before stopping", required = true, filter = MyBound.class)
   int max_iter = 100;
-//@formatter:on
 
   static class MyBound implements Filter {
     @Override public boolean run(Object value) {
@@ -30,17 +28,12 @@ public class KMeans2 extends KMeansShared {
     }
   }
 
-  @API(help = "Maximum number of iterations before stopping", required = true, filter = LegacyInt.class)
-  int max_iter2 = 100;
-  class LegacyInt extends Int { public LegacyInt() { super("", 0, 1); } }
-
   @API(help = "Iterations the algorithm ran")
   int iterations;
 
 //  private transient Frame _frame;
 
   @Override protected void run() {
-//
 //    _frame = DKV.get(source_key).get();
 //    // -1 to be different from all chunk indexes (C.f. Sampler)
 //    Random rand = Utils.getRNG(seed - 1);

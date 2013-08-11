@@ -281,7 +281,7 @@ public class Utils {
     return s;
   }
 
-  public static <T> T[] add(T[] a, String... b) {
+  public static <T> T[] add(T[] a, T... b) {
     return (T[]) ArrayUtils.addAll(a, b);
   }
 
