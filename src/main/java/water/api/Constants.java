@@ -78,6 +78,7 @@ public class Constants extends Iced {
   public static final String FREE_DISK             = "free_disk" + Suffixes.BYTES;
   public static final String FREE_MEM              = "free_mem" + Suffixes.BYTES;
   public static final String HEADER                = "header";
+  public static final String PREVIEW               = "preview";
   public static final String HEIGHT                = "height";
   public static final String HELP                  = "help";
   public static final String IGNORE                = "ignore";

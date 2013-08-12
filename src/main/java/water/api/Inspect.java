@@ -175,7 +175,7 @@ public class Inspect extends Request {
   private final Response serveUnparsedValue(Key key, Value v) {
     JsonObject result = new JsonObject();
     result.addProperty(VALUE_TYPE, "unparsed");
-    CustomParser.ParserSetup setup = ParseDataset.guessSetup(v);
+    CustomParser.ParserSetup setup = ParseDataset.guessSetup(getFirstBytes(v));
     if( setup._data != null && setup._data[1].length > 0 ) { // Able to parse sanely?
       int zipped_len = v.getFirstBytes().length;
       double bytes_per_row = (double) zipped_len / setup._data.length;
@@ -224,7 +224,7 @@ public class Inspect extends Request {
       Column c = va._cols[i];
       JsonObject json = new JsonObject();
       json.addProperty(NAME, c._name);
-      json.addProperty(OFFSET, (int) c._off);
+      json.addProperty(OFFSET, c._off);
       json.addProperty(SIZE, Math.abs(c._size));
       json.addProperty(BASE, c._base);
       json.addProperty(SCALE, (int) c._scale);
@@ -332,7 +332,7 @@ public class Inspect extends Request {
         sb.append("<div class='alert alert-success'>"
         		+ "<b>Produced in ").append(PrettyPrint.msecs(job.executionTime(),true)).append(".</b></div>");
     }
-    sb.append("<div class='alert'>" +"View " + SummaryPage.link(key, "Summary") +  "<br/>Build models using "
+    sb.append("<div class='alert'>Set " + SetColumnNames.link(key,"Column Names") +"<br/>View " + SummaryPage.link(key, "Summary") +  "<br/>Build models using "
           + RF.link(key, "Random Forest") + ", "
           + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", "
           + KMeans.link(key, "KMeans") + ", or "
@@ -462,7 +462,7 @@ public class Inspect extends Request {
       if( _offset == INFO_PAGE ) {
         row.addProperty(ROW, OFFSET);
         for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY,_va._cols.length); i++ )
-          row.addProperty(_va._cols[i]._name, (int) _va._cols[i]._off);
+          row.addProperty(_va._cols[i]._name, _va._cols[i]._off);
         sb.append(defaultBuilder(row).build(response, row, contextName));
 
         row.addProperty(ROW, SIZE);
