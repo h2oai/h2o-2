@@ -8,6 +8,8 @@ import java.util.regex.Pattern;
 import water.*;
 import water.fvec.*;
 import water.parser.*;
+import water.parser.CustomParser.ParserSetup;
+import water.parser.CustomParser.ParserType;
 
 public class Parse2 extends Request {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
@@ -103,8 +105,8 @@ public class Parse2 extends Request {
       Key hKey = keys.get(0);
       Value v = DKV.get(hKey);
       v = ((Frame) v.get())._vecs[0].chunkIdx(0);
-      byte sep = separator.specified() ? separator.value() : CsvParser.NO_SEPARATOR;
-      CustomParser.ParserSetup setup = ParseDataset.guessSetup(v, CustomParser.ParserType.AUTO, sep);
+      byte sep = separator.specified() ? separator.value() : CsvParser.AUTO_SEP;
+      CustomParser.ParserSetup setup = ParseDataset2.guessSetup(hKey, new ParserSetup(ParserType.AUTO,sep,header.value()));
       if( setup._data == null || setup._data[0].length == 0 )
         throw new IllegalArgumentException(errors()[1]+hKey);
       return new PSetup(keys,setup);
@@ -277,6 +279,6 @@ public class Parse2 extends Request {
     }
     for (i = 0; i < 126; i++) DEFAULT_IDX_DELIMS[i] = String.valueOf(i);
     DEFAULT_DELIMS[i]     = "Guess separator ...";
-    DEFAULT_IDX_DELIMS[i] = String.valueOf(CsvParser.NO_SEPARATOR);
+    DEFAULT_IDX_DELIMS[i] = String.valueOf(CsvParser.AUTO_SEP);
   };
 }

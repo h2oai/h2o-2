@@ -1387,6 +1387,10 @@ public class RequestArguments extends RequestStatics {
       _description = description;
     }
 
+    public void setValue(boolean b){
+      record()._value = b;
+      record()._originalValue = b?"1":"0";
+    }
     @Override protected String queryDescription() {
       return _description;
     }

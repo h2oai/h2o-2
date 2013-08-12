@@ -8,9 +8,9 @@ import java.util.zip.*;
 
 import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.api.Inspect;
 import water.nbhm.NonBlockingHashMap;
 import water.parser.*;
+import water.parser.CustomParser.ParserSetup;
 import water.parser.CustomParser.ParserType;
 import water.parser.Enum;
 import water.util.Utils;
@@ -21,7 +21,13 @@ public final class ParseDataset2 extends Job {
   // --------------------------------------------------------------------------
   // Parse an array of csv input/file keys into an array of distributed output Vecs.
   public static Frame parse(Key okey, Key [] keys) {
-    return forkParseDataset(okey, keys, null).get();
+    // TODO, get global setup from all files!
+    Key k = keys[0];
+    ByteVec v = (ByteVec)getVec(k);
+    byte [] bits = v.elem2BV(0)._mem;
+    Compression cpr = guessCompressionMethod(v);
+    CustomParser.ParserSetup globalSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), new ParserSetup(),true);
+    return forkParseDataset(okey, keys, globalSetup).get();
   }
   // Same parse, as a backgroundable Job
   public static ParseDataset2 forkParseDataset(final Key dest, final Key[] keys, final CustomParser.ParserSetup setup) {
@@ -222,12 +228,6 @@ public final class ParseDataset2 extends Job {
       job.cancel();
       return;
     }
-    // Guess column layout.  For multiple files, the caller is supposed to
-    // guarantee they have equal & compatible columns and/or headers.
-    ByteVec vec = (ByteVec) getVec(fkeys[0]);
-    Compression compression = guessCompressionMethod(vec);
-    if( setup == null) setup = ParseDataset.guessSetup(DKV.get(fkeys[0]));
-    // Parallel file parse launches across the cluster
     MultiFileParseTask uzpt = new MultiFileParseTask(setup,job._progress).invoke(fkeys);
     if( uzpt._parserr != null )
       throw new ParseException(uzpt._parserr);
@@ -251,6 +251,12 @@ public final class ParseDataset2 extends Job {
     job.remove();
   }
 
+  public static ParserSetup guessSetup(Key key, ParserSetup setup){
+    ByteVec vec = (ByteVec) getVec(key);
+    byte [] bits = vec.elem2BV(0)._mem;
+    Compression cpr = guessCompressionMethod(vec);
+    return ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), setup,true);
+  }
   // --------------------------------------------------------------------------
   // We want to do a standard MRTask with a collection of file-keys (so the
   // files are parsed in parallel across the cluster), but we want to throttle
@@ -273,7 +279,7 @@ public final class ParseDataset2 extends Job {
       ByteVec vec = (ByteVec) getVec(key);
       byte [] bits = vec.elem2BV(0)._mem;
       Compression cpr = guessCompressionMethod(vec);
-      CustomParser.ParserSetup localSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), _setup._pType, _setup._separator);
+      CustomParser.ParserSetup localSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), _setup,true);
       // Local setup: nearly the same as the global all-files setup, but maybe
       // has the header-flag changed.
       if(!_setup.isCompatible(localSetup)) {
@@ -287,7 +293,7 @@ public final class ParseDataset2 extends Job {
           has_hdr = localSetup._columnNames[i].equalsIgnoreCase(_setup._columnNames[i]);
         if( !has_hdr )          // Headers not compatible?
           // Then treat as no-headers, i.e., parse it as a normal row
-          localSetup = CustomParser.ParserSetup.makeCSVSetup(localSetup._separator, false, localSetup._data, localSetup._ncols);
+          localSetup = new CustomParser.ParserSetup(ParserType.CSV,localSetup._separator, false, localSetup._data);
       }
       final int ncols = _setup._ncols;
       _vecs = new Vec[ncols];

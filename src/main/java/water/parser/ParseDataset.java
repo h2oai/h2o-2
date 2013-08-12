@@ -14,8 +14,7 @@ import water.api.Inspect;
 import water.parser.CustomParser.ParserSetup;
 import water.parser.CustomParser.ParserType;
 import water.parser.DParseTask.Pass;
-import water.util.Log;
-import water.util.RIStream;
+import water.util.*;
 
 import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
@@ -58,34 +57,33 @@ public final class ParseDataset extends Job {
     return Compression.NONE;
   }
 
-  public static ParserSetup guessSetup(Value v){
-    return guessSetup(v,ParserType.AUTO,CsvParser.NO_SEPARATOR);
-  }
   public static ParserSetup guessSetup(byte [] bits){
-    return guessSetup(bits,ParserType.AUTO,CsvParser.NO_SEPARATOR);
+    return guessSetup(bits,new ParserSetup(),true);
   }
 
-  public static ParserSetup guessSetup(Value v, ParserType pType){
-    return guessSetup(v, pType, CsvParser.NO_SEPARATOR);
-  }
-  public static ParserSetup guessSetup(Value v, ParserType pType, byte sep){
-    return guessSetup(Inspect.getFirstBytes(v),pType,sep);
-  }
-  public static ParserSetup guessSetup(byte [] bits, ParserType pType, byte sep){
+  public static ParserSetup guessSetup(byte [] bits, ParserSetup setup, boolean checkHeader){
     ParserSetup res = null;
-    switch(pType){
+    if(setup == null)setup = new ParserSetup();
+    switch(setup._pType){
       case CSV:
-        return CsvParser.guessSetup(bits,sep);
+        return CsvParser.guessSetup(bits,setup,checkHeader);
       case SVMLight:
         return SVMLightParser.guessSetup(bits);
       case XLS:
         return XlsParser.guessSetup(bits);
       case AUTO:
-        if((res = XlsParser.guessSetup(bits)) != null)
-          return res;
-        if((res = SVMLightParser.guessSetup(bits)) != null)
-          return res;
-        return CsvParser.guessSetup(bits,sep);
+        try{
+          if((res = XlsParser.guessSetup(bits)) != null)
+            return res;
+        }catch(Exception e){}
+        try{
+          if((res = SVMLightParser.guessSetup(bits)) != null)
+            return res;
+        }catch(Exception e){}
+        try{
+          return CsvParser.guessSetup(bits,setup,true);
+        }catch(Exception e){e.printStackTrace();}
+        throw new RuntimeException("Can't recognize the file type.");
       default:
         throw H2O.unimpl();
     }
@@ -128,9 +126,10 @@ public final class ParseDataset extends Job {
       } else
         throw H2O.unimpl();
     }
-    if(setup == null || setup._pType == CustomParser.ParserType.AUTO)
-      setup = ParseDataset.guessSetup(v);
     Compression compression = guessCompressionMethod(v);
+    if(setup == null || setup._pType == CustomParser.ParserType.AUTO)
+      setup = ParseDataset.guessSetup(Inspect.getFirstBytes(v));
+
     try {
       UnzipAndParseTask tsk = new UnzipAndParseTask(job, compression, setup);
       tsk.invoke(keys);
@@ -169,7 +168,7 @@ public final class ParseDataset extends Job {
         UKV.remove(finfo._okey);
       }
       phaseTwo.normalizeSigma();
-      phaseTwo._colNames = setup._data[0];
+      phaseTwo._colNames = setup._columnNames;
       phaseTwo.createValueArrayHeader();
     } catch (Throwable e) {
       UKV.put(job.dest(), new Fail(e.getMessage()));
@@ -263,8 +262,7 @@ public final class ParseDataset extends Job {
         final Key key = _keys[_idx];
         Value v = DKV.get(key);
         assert v != null;
-        ParserSetup localSetup = ParseDataset.guessSetup(v, _parserSetup._pType, _parserSetup._separator);
-        localSetup._header &= _parserSetup._header;
+        ParserSetup localSetup = ParseDataset.guessSetup(Inspect.getFirstBytes(v), _parserSetup,true);
         if(!_parserSetup.isCompatible(localSetup))throw new ParseException("Parsing incompatible files. " + _parserSetup.toString() + " is not compatible with " + localSetup.toString());
         _fileInfo[_idx] = new FileInfo();
         _fileInfo[_idx]._ikey = key;

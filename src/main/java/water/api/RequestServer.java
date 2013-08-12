@@ -118,7 +118,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new TypeaheadHdfsPathRequest());
     registerRequest(new TypeaheadRFModelKeyRequest());
     registerRequest(new TypeaheadGLMModelKeyRequest());
-
+    registerRequest(new SetColumnNames());
     // testing hooks
     registerRequest(new TestPoll());
     registerRequest(new TestRedirect());

@@ -7,7 +7,7 @@ import water.*;
 public class CsvParser extends CustomParser {
 
   /* Constant to specify that separator is not specified. */
-  public static final byte NO_SEPARATOR = -1;
+  public static final byte AUTO_SEP = -1;
 
   public final byte CHAR_DECIMAL_SEPARATOR = '.';
   public final byte CHAR_SEPARATOR;
@@ -565,51 +565,40 @@ NEXT_CHAR:
     return tokens.toArray(new String[tokens.size()]);
   }
 
-  /** Assumption is no numbers in l1 and at least one number in l2.
-   *
-   * For simplicity I am using Java's parsing functions.  Header means that all
-   * tokens in first line are strings and at least one token in the second line
-   * is a number.
-   */
-  private static ParserSetup guessColumnNames(String[] l1, String[] l2, byte separator, ArrayList<String> lines, int numlines, byte[] bits) {
-    boolean hasNumber = false;
-    int numcols = -1;
-    for( String s : l1 ) {
+  private static boolean allStrings(String [] line){
+    for( String s : line )
       try {
         Double.parseDouble(s);
-        hasNumber = true;       // Number in 1st row guesses: No Column Header
-        numcols = l1.length;
-        break;
+        return false;       // Number in 1st row guesses: No Column Header
       } catch (NumberFormatException e) { /*Pass - determining if number is possible*/ }
-    }
-    boolean hasHeader = false;
-    if (!hasNumber) {
-      for( String s : l2 ) {
-        try {
-          Double.parseDouble(s);
-          hasHeader = true; // Has number in 2nd row, so guess: has Column Header
-          numcols = l2.length;
-          break;
-        } catch (NumberFormatException e) { /*Pass - determining if number is possible*/ }
-      }
-    }
-
-    // Return an array with headers in data[0] and the remaining rows pre-parsed.
-    String[][] data = new String[lines.size()+(hasHeader?0:1)][];
-    int l=0;
-    if( !hasHeader ) {          // Make junky 0,1,2,3,... headers
-      numcols = l1.length;
-      data[l++] = new String[l1.length];
-      for( int i=0; i<l1.length; i++ ) data[0][i] = Integer.toString(i);
-    }
-    data[l++] = l1;
-    data[l++] = l2;
-    int m=2;
-    while( m < lines.size() )
-      data[l++] = determineTokens(lines.get(m++), separator);
-    assert data.length==l : data.length +" "+l+" has="+hasHeader;
-    return ParserSetup.makeCSVSetup(separator, hasHeader, data, numcols);
+    return true;
   }
+  // simple heuristic to determine if we have headers:
+  // return true iff the first line is all strings and second line has at least one number
+  private static boolean hasHeader(String[] l1, String[] l2) {
+    return allStrings(l1) && !allStrings(l2);
+  }
+
+  private static byte guessSeparator(String l1, String l2){
+    int[] s1 = determineSeparatorCounts(l1);
+    int[] s2 = determineSeparatorCounts(l2);
+    // now we have the counts - if both lines have the same number of separators
+    // the we assume it is the separator. Separators are ordered by their
+    // likelyhoods. If no separators have same counts, space will be used as the
+    // default one
+    for (int i = 0; i < s1.length; ++i)
+      if (((s1[i] == s2[i]) && (s1[i] != 0)) || (i == separators.length-1)) {
+        try {
+          String[] t1 = determineTokens(l1, separators[i]);
+          String[] t2 = determineTokens(l2, separators[i]);
+          if (t1.length != t2.length)
+            continue;
+          return separators[i];
+        } catch (Exception e) { /*pass; try another parse attempt*/ }
+      }
+    return (byte)' ';
+  }
+
 
 
   /** Determines the CSV parser setup from the first two lines.  Also parses
@@ -618,12 +607,12 @@ NEXT_CHAR:
    *  A separator is given or it is selected if both two lines have the same ammount of them
    *  and the tokenization then returns same number of columns.
    */
-  public static CustomParser.ParserSetup guessSetup(byte[] bits) { return guessSetup(bits, NO_SEPARATOR); }
-  public static CustomParser.ParserSetup guessSetup(byte[] bits, byte separator) {
+  public static CustomParser.ParserSetup guessSetup(byte[] bits) { return guessSetup(bits, new ParserSetup(ParserType.CSV),true); }
+  public static CustomParser.ParserSetup guessSetup(byte[] bits, ParserSetup setup){return guessSetup(bits,setup,false);}
+  public static CustomParser.ParserSetup guessSetup(byte[] bits, ParserSetup setup, boolean checkHeader) {
     ArrayList<String> lines = new ArrayList();
     int offset = 0;
-    int numlines = 0;
-    while (offset < bits.length ) {
+    while (offset < bits.length && lines.size() < 10) {
       int lineStart = offset;
       while ((offset < bits.length) && (bits[offset] != CHAR_CR) && (bits[offset] != CHAR_LF)) ++offset;
       int lineEnd = offset;
@@ -631,53 +620,33 @@ NEXT_CHAR:
       if ((offset < bits.length) && (bits[offset] == CHAR_LF)) ++offset;
       if (bits[lineStart] == '#') continue; // Ignore      comment lines
       if (bits[lineStart] == '@') continue; // Ignore ARFF comment lines
-      if (lineEnd>lineStart) {
-        numlines++;                           // Estimate data lines in this chunk
-        if( lines.size() < 5 )
-          lines.add(new String(bits,lineStart, lineEnd-lineStart));
+      if (lineEnd>lineStart)
+        lines.add(new String(bits,lineStart, lineEnd-lineStart));
+    }
+    final String [][] data = new String[lines.size()][];
+    if( lines.size() < 2 ) {
+      byte sep = setup._separator;
+      if(sep == AUTO_SEP){
+        if(lines.get(0).split(",").length > 2)
+          sep = (byte)',';
+        else if(lines.get(0).split(" ").length > 2)
+          sep = ' ';
+        else
+          return null;//throw new RuntimeException("Can't guess the separator(delimiter) character and/or header with only one line of input!");
       }
+      if(lines.size() == 1)
+        data[0] = determineTokens(lines.get(0), sep);
+      boolean hasHeader = (checkHeader && allStrings(data[0])) || setup._header;
+      return new ParserSetup(ParserType.CSV,sep,hasHeader,data);
     }
+    byte sep = setup._separator;
+    if(setup._separator == AUTO_SEP) // first guess the separator
+      sep = guessSeparator(lines.get(0), lines.get(1));
+    for(int i = 0; i < lines.size(); ++i)
+      data[i] = determineTokens(lines.get(i), sep);
     // we do not have enough lines to decide
-    if( lines.size() < 2 ) return CustomParser.ParserSetup.makeCSVSetup(separator==NO_SEPARATOR?(byte)' ':separator,false,null,0);
-    // when we have two lines, calculate the separator counts on them
-
-    // If the separator is specified parse with its value
-    if (separator!=NO_SEPARATOR) {
-      try {
-        String[] t1 = determineTokens(lines.get(0), separator);
-        String[] t2 = determineTokens(lines.get(1), separator);
-        if (t1.length == t2.length)
-          return guessColumnNames(t1,t2,separator,lines,numlines, bits);
-      } catch (Exception e) { /*pass; try another parse attempt*/ }
-    // Or try to guess the separator
-    } else {
-      int[] s1 = determineSeparatorCounts(lines.get(0));
-      int[] s2 = determineSeparatorCounts(lines.get(1));
-      // now we have the counts - if both lines have the same number of separators
-      // the we assume it is the separator. Separators are ordered by their
-      // likelyhoods. If no separators have same counts, space will be used as the
-      // default one
-      for (int i = 0; i < s1.length; ++i)
-        if (((s1[i] == s2[i]) && (s1[i] != 0)) || (i == separators.length-1)) {
-          try {
-            String[] t1 = determineTokens(lines.get(0), separators[i]);
-            String[] t2 = determineTokens(lines.get(1), separators[i]);
-            if (t1.length != t2.length)
-              continue;
-            return guessColumnNames(t1,t2,separators[i],lines,numlines, bits);
-          } catch (Exception e) { /*pass; try another parse attempt*/ }
-        }
-    }
-    return CustomParser.ParserSetup.makeCSVSetup((byte)' ',false,null,0);
-  }
-
-  public static CustomParser inspect(byte[] bits, CustomParser.ParserSetup setup) {
-    if(setup == null)setup = new CustomParser.ParserSetup();
-
-    if(setup._pType == ParserType.AUTO){
-
-    }
-    return null;
+    boolean hasHeader = (checkHeader && hasHeader(data[0],data[1])) || setup._header;
+    return new ParserSetup(ParserType.CSV, sep, hasHeader, data);
   }
 
   @Override public boolean isCompatible(CustomParser p) {
