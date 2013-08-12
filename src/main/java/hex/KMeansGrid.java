@@ -49,15 +49,6 @@ public class KMeansGrid extends KMeansShared {
   }
 
   @Override protected void run() {
-    if( destination_key == null ) {
-      String n = source_key.toString();
-      int dot = n.lastIndexOf('.');
-      if( dot > 0 )
-        n = n.substring(0, dot);
-      String res = n + Extensions.KMEANS_GRID;
-      destination_key = Key.make(res);
-    }
-
     ValueArray va = DKV.get(source_key).get();
     hex.KMeans first = hex.KMeans.start(Key.make(), va, k[0], 0, max_iter[0], seed, normalize, cols);
     KMeansModel model = first.get();

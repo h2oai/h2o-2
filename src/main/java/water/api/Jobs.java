@@ -27,10 +27,10 @@ public class Jobs extends Request {
     for( int i = jobs.length - 1; i >= 0; i-- ) {
       JsonObject json = new JsonObject();
       json.addProperty(KEY, jobs[i].self().toString());
-      json.addProperty(DESCRIPTION, jobs[i]._description);
+      json.addProperty(DESCRIPTION, jobs[i].description);
       json.addProperty(DEST_KEY, jobs[i].dest() != null ? jobs[i].dest().toString() : "");
-      json.addProperty(START_TIME, RequestBuilders.ISO8601.get().format(new Date(jobs[i]._startTime)));
-      long end = jobs[i]._endTime;
+      json.addProperty(START_TIME, RequestBuilders.ISO8601.get().format(new Date(jobs[i].start_time)));
+      long end = jobs[i].end_time;
       boolean cancelled = (end == 0 ? jobs[i].cancelled() : end == Job.CANCELLED_END_TIME);
       json.addProperty(END_TIME, end == 0 ? "" : RequestBuilders.ISO8601.get().format(new Date(end)));
       json.addProperty(PROGRESS, end == 0 ? (cancelled ? -2 : jobs[i].progress()) : (cancelled ? -2 : -1));
