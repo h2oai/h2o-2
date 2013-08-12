@@ -75,7 +75,7 @@ public abstract class CustomParser extends Iced {
       return new ParserSetup(_pType, _separator, _header);
     }
     public boolean isCompatible(ParserSetup other){
-      if(other == null || _pType == ParserType.AUTO || _pType != other._pType)return false;
+      if(other == null || _pType != other._pType)return false;
       if(_pType == ParserType.CSV && (_separator != other._separator || _ncols != other._ncols))
         return false;
       return true;

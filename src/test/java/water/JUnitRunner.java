@@ -1,5 +1,7 @@
 package water;
 
+import hex.gbm.GBMTest;
+
 import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
@@ -28,6 +30,7 @@ public class JUnitRunner {
     tests.remove(ConcurrentKeyTest.class);
     // Pure JUnit test
     tests.remove(CBSChunkTest.class);
+    tests.remove(GBMTest.class);
     // Uncomment to run tests selectively
     // tests.clear();
     // tests.add(KMeansTest.class);

@@ -20,12 +20,7 @@ public class Parse extends Request {
   protected final NewH2OHexKey   _dest      = new NewH2OHexKey(DEST_KEY);
   private   final Preview        _preview   = new Preview(PREVIEW);
 
-  public Parse() {
-    _excludeExpression.setRefreshOnChange();
-    StringBuilder sb = new StringBuilder("arguments:");
-    for(Argument a:arguments())sb.append( " " + a._name);
-    System.out.println(sb.toString());
-  }
+  public Parse() {_excludeExpression.setRefreshOnChange();}
 
   private static class PSetup {
     final transient ArrayList<Key> _keys;
