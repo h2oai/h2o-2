@@ -436,7 +436,7 @@ public class RequestArguments extends RequestStatics {
      * specified, or defaultValue. Note that default value is returned also for
      * invalid arguments.
      */
-    public final T value() {
+    final T value() {
       return record()._value;
     }
 

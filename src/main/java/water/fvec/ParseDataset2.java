@@ -251,11 +251,11 @@ public final class ParseDataset2 extends Job {
     job.remove();
   }
 
-  public static ParserSetup guessSetup(Key key, ParserSetup setup){
+  public static ParserSetup guessSetup(Key key, ParserSetup setup, boolean checkHeader){
     ByteVec vec = (ByteVec) getVec(key);
     byte [] bits = vec.elem2BV(0)._mem;
     Compression cpr = guessCompressionMethod(vec);
-    return ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), setup,true);
+    return ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), setup,checkHeader);
   }
   // --------------------------------------------------------------------------
   // We want to do a standard MRTask with a collection of file-keys (so the

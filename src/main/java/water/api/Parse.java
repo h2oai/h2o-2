@@ -23,7 +23,12 @@ public class Parse extends Request {
 
   public Parse() {_excludeExpression.setRefreshOnChange();}
 
-  private static class PSetup {
+
+  protected CustomParser.ParserSetup guessSetup(Key k,CustomParser.ParserSetup setup, boolean checkHeader){
+    return ParseDataset.guessSetup(Inspect.getFirstBytes(DKV.get(k)),setup,checkHeader);
+  }
+
+  protected static class PSetup {
     final transient ArrayList<Key> _keys;
     final CustomParser.ParserSetup _setup;
     PSetup( ArrayList<Key> keys, CustomParser.ParserSetup parser) { _keys=keys; _setup = parser; }
@@ -38,6 +43,7 @@ public class Parse extends Request {
 //      addPrerequisite(_parserType);
 //      addPrerequisite(_separator);
     }
+
 
     @Override protected PSetup parse(String input) throws IllegalArgumentException {
       Pattern p = makePattern(input);
@@ -62,11 +68,7 @@ public class Parse extends Request {
         throw new IllegalArgumentException("I did not find any keys matching this pattern!");
       Collections.sort(keys);   // Sort all the keys, except the 1 header guy
       // now we assume the first key has the header
-      Key hKey = keys.get(0);
-      Value v = DKV.get(hKey);
-      byte [] bits = Inspect.getFirstBytes(v);
-      System.out.println("header value = " + _header.value());
-      CustomParser.ParserSetup setup = ParseDataset.guessSetup(bits, new CustomParser.ParserSetup(_parserType.value(),_separator.value(),_header.specified()?_header.value():false),_header.specified());
+      CustomParser.ParserSetup setup = guessSetup(keys.get(0), new CustomParser.ParserSetup(_parserType.value(),_separator.value(),_header.specified()?_header.value():false),_header.specified());
       if(setup == null)
         throw new IllegalArgumentException("I cannot figure out this file; Please select the parse setup manually.");
       PSetup res = new PSetup(keys,setup);
@@ -121,7 +123,7 @@ public class Parse extends Request {
 
 
   // A Query String, which defaults to the source Key with a '.hex' suffix
-  private class NewH2OHexKey extends Str {
+  protected class NewH2OHexKey extends Str {
     NewH2OHexKey(String name) {
       super(name,null/*not required flag*/);
       addPrerequisite(_source);
