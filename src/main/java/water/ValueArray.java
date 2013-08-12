@@ -136,7 +136,7 @@ public class ValueArray extends Iced implements Cloneable {
   }
   /** An array of column names */
   public final void setColumnNames(String [] names) {
-    for(int i = 0; i < _cols.length; ++i)
+    for(int i = 0; i < Math.min(_cols.length,names.length); ++i)
       _cols[i]._name = names[i];
   }
 
