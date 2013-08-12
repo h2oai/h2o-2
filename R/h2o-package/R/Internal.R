@@ -20,6 +20,7 @@ h2o.__PAGE_VIEWALL = "StoreView.json"
 
 h2o.__PAGE_SUMMARY = "SummaryPage.json"
 h2o.__PAGE_PREDICT = "GeneratePredictionsPage.json"
+h2o.__PAGE_COLNAMES = "SetColumnNames.json"
 h2o.__PAGE_GLM = "GLM.json"
 h2o.__PAGE_KMEANS = "KMeans.json"
 h2o.__PAGE_KMAPPLY = "KMeansApply.json"

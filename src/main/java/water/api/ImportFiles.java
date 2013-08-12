@@ -62,7 +62,7 @@ public class ImportFiles extends Request {
   }
 
   // Auto-link to Parse
-  String parse() { return "Parse.html"; }
+  String parse() { return "Parse.query"; }
 
   // HTML builder
   @Override public boolean toHTML( StringBuilder sb ) {
