@@ -46,6 +46,9 @@ If the number of columns do not match between \code{data} and \code{col.names}, 
 localH2O = new("H2OClient", ip = "localhost", port = 54321)
 iris.hex = h2o.importFile(localH2O, path = "../smalldata/iris/iris.csv", key = "iris.hex")
 names.hex = h2o.importFile(localH2O, path = "../smalldata/iris/iris_header.csv", key = "iris_names.hex")
+
+# This modifies iris.hex directly.  It does not create a new copy,
+# so it does not take much additional memory.
 h2o.setColNames(data = iris.hex, col.names = names.hex)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
