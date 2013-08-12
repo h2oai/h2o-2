@@ -9,6 +9,7 @@ setGeneric("h2o.importURL", function(object, path, key = "", parse = TRUE) { sta
 # setGeneric("h2o.importURL", function(object, path, key="") { standardGeneric("h2o.importURL") })
 setGeneric("h2o.importHDFS", function(object, path, parse = TRUE) { standardGeneric("h2o.importHDFS") })
 setGeneric("h2o.parseRaw", function(data, key = "") { standardGeneric("h2o.parseRaw") })
+setGeneric("h2o.setColNames", function(data, col.names) { standardGeneric("h2o.setColNames") })
 
 # Unique methods to H2O
 # H2O client management operations
@@ -155,3 +156,8 @@ setMethod("h2o.parseRaw", signature(data="H2ORawData", key="character"),
           })
 
 setMethod("h2o.parseRaw", signature(data="H2ORawData", key="missing"), function(data, key) { h2o.parseRaw(data, key) })
+
+setMethod("h2o.setColNames", signature(data="H2OParsedData", col.names="H2OParsedData"),
+          function(data, col.names) {
+            res = h2o.__remoteSend(data@h2o, h2o.__PAGE_COLNAMES, target=data@key, source=col.names@key)
+          })
