@@ -85,7 +85,7 @@ public class GLMGrid extends Job {
         for( int l1 = 1; l1 <= _job._lambdas.length && !_job.cancelled(); l1++ ) {
           GLMModel m = DGLM.buildModel(_job,GLMModel.makeKey(false),DGLM.getData(ary, _job._xs, null, true), new ADMMSolver(_job._lambdas[N-l1], _job._alphas[_aidx]), _job._glmp,beta,_job._xfold, _parallel);
           beta = m._normBeta.clone();
-          _job.update(m, (_job._lambdas.length-l1) + _aidx * _job._lambdas.length, System.currentTimeMillis() - _job._startTime,fs);
+          _job.update(m, (_job._lambdas.length-l1) + _aidx * _job._lambdas.length, System.currentTimeMillis() - _job.start_time,fs);
         }
         fs.blockForPending();
       }catch(JobCancelledException e){/* do not need to do anything here but stop the execution*/}

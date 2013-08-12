@@ -1096,21 +1096,20 @@ class H2O(object):
 
     # &offset=
     # &view=
-    def inspect(self, key, offset=None, view=None, ignoreH2oError=False, timeoutSecs=30):
+    def inspect(self, key, offset=None, view=None, max_column_display=1000, ignoreH2oError=False, timeoutSecs=30):
         if beta_features:
             params = {
                 "src_key": key,
                 "offset": offset,
-                "view": view,
+                "view": view
                 }
         else:
             params = {
                 "key": key,
                 "offset": offset,
                 "view": view,
+                "max_column_display": max_column_display
                 }
-
-            
 
         a = self.__do_json_request('Inspect2.json' if beta_features else 'Inspect.json',
             params=params,

@@ -35,9 +35,28 @@ public abstract class Request extends RequestBuilders {
     boolean run(Object value);
   }
 
+  /**
+   * NOP filter, use to define a field as input.
+   */
+  public class Default implements Filter {
+    @Override public boolean run(Object value) {
+      return true;
+    }
+  }
+
   public class ColumnSelect implements Filter {
     public final String _key;
     protected ColumnSelect(String key) {
+      _key = key;
+    }
+    @Override public boolean run(Object value) {
+      return true;
+    }
+  }
+
+  public class VecSelect implements Filter {
+    public final String _key;
+    protected VecSelect(String key) {
       _key = key;
     }
     @Override public boolean run(Object value) {

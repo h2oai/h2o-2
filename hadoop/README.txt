@@ -36,42 +36,11 @@ $ unzip h2o-*.zip
 $ cd h2o-*
 $ cd hadoop
 
-Create flatfile.txt.
-
-(Note: The flat file must contain the list of possible IP addresses an
-       H2O node (i.e. mapper) may be scheduled on.  One IP address
-       per line.)
-
-Here is an example flatfile.txt:
-$ cat flatfile.txt 
-192.168.1.150
-192.168.1.151
-192.168.1.152
-192.168.1.153
-192.168.1.154
-192.168.1.155
-
-
-For your convenience, we have included a tool to help you genearate
-a flatfile.  This is only meant to assist you, and may encounter
-Java exceptions if DNS and DHCP are not fully configured.
-This generator tool is still experimental, please double check the 
-output yourself before relying on it.
-
-$ hadoop jar h2odriver_cdh4.jar water.hadoop.gen_flatfile -jt <jobtracker:port> > flatfile.txt
-
-(Note: Make sure to use the h2odriver flavor for the correct version
-       of hadoop!  We recommend running the hadoop command from a
-       machine in the hadoop cluster.)
-
-(Note: Port 8021 is the default jobtracker port for Cloudera.
-       Port 9001 is the default jobtracker port for MapR.)
-
 
 RUN JOB
 -------
 
-$ hadoop jar h2odriver_cdh4.jar water.hadoop.h2odriver [-jt <jobtracker:port>] -files flatfile.txt -libjars ../h2o.jar -mapperXmx 1g -nodes 1 -output hdfsOutputDirName
+$ hadoop jar h2odriver_cdh4.jar water.hadoop.h2odriver [-jt <jobtracker:port>] -libjars ../h2o.jar -mapperXmx 1g -nodes 1 -output hdfsOutputDirName
 
 (Note: -nodes refers to H2O nodes.  This may be less than or equal to
        the number of hadoop machines running TaskTrackers where hadoop 

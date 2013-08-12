@@ -86,20 +86,13 @@ public final class H2O {
   public static AbstractEmbeddedH2OConfig getEmbeddedH2OConfig() { return embeddedH2OConfig; }
 
   /**
-   * Notify embedding software instance about H2O's embedded web server.
-   * @param ip H2O browser IP address
-   * @param port H2O browser port
-   */
-  public static void notifyAboutEmbeddedWebServerIpPort(InetAddress ip, int port) {
-    if (embeddedH2OConfig == null) { return; }
-    embeddedH2OConfig.notifyAboutEmbeddedWebServerIpPort(ip, port);
-  }
-
-  /**
-   * Notify embedding software instance about the H2O cluster size..
-   * @param ip H2O browser IP address
-   * @param port H2O browser port
-   * @param size H2O cluster size
+   * Tell the embedding software that this H2O instance belongs to
+   * a cloud of a certain size.
+   * This may be nonblocking.
+   *
+   * @param ip IP address this H2O can be reached at.
+   * @param port Port this H2O can be reached at (for REST API and browser).
+   * @param size Number of H2O instances in the cloud.
    */
   public static void notifyAboutCloudSize(InetAddress ip, int port, int size) {
     if (embeddedH2OConfig == null) { return; }
@@ -966,11 +959,31 @@ public final class H2O {
     }
     SELF = H2ONode.self(SELF_ADDRESS);
     Log.info("Internal communication uses port: ",UDP_PORT,"\nListening for HTTP and REST traffic on  http:/",SELF_ADDRESS,":"+_apiSocket.getLocalPort()+"/");
-    notifyAboutEmbeddedWebServerIpPort (SELF_ADDRESS, API_PORT);
+
+    String embeddedConfigFlatfile = null;
+    AbstractEmbeddedH2OConfig ec = getEmbeddedH2OConfig();
+    if (ec != null) {
+      ec.notifyAboutEmbeddedWebServerIpPort (SELF_ADDRESS, API_PORT);
+      if (ec.providesFlatfile()) {
+        try {
+          embeddedConfigFlatfile = ec.fetchFlatfile();
+        }
+        catch (Exception e) {
+          Log.err("Failed to get embedded config flatfile");
+          Log.err(e);
+          H2O.exit(1);
+        }
+      }
+    }
 
     NAME = OPT_ARGS.name==null? System.getProperty("user.name") : OPT_ARGS.name;
     // Read a flatfile of allowed nodes
-    STATIC_H2OS = parseFlatFile(OPT_ARGS.flatfile);
+    if (embeddedConfigFlatfile != null) {
+      STATIC_H2OS = parseFlatFileFromString(embeddedConfigFlatfile);
+    }
+    else {
+      STATIC_H2OS = parseFlatFile(OPT_ARGS.flatfile);
+    }
 
     // Multi-cast ports are in the range E1.00.00.00 to EF.FF.FF.FF
     int hash = NAME.hashCode()&0x7fffffff;
@@ -1080,16 +1093,36 @@ public final class H2O {
       h2os.add(H2ONode.intern(entry.inet, entry.port+1));// use the UDP port here
     return h2os;
   }
+
+  public static HashSet<H2ONode> parseFlatFileFromString( String s ) {
+    HashSet<H2ONode> h2os = new HashSet<H2ONode>();
+    InputStream is = new ByteArrayInputStream(s.getBytes());
+    List<FlatFileEntry> list = parseFlatFile(is);
+    for(FlatFileEntry entry : list)
+      h2os.add(H2ONode.intern(entry.inet, entry.port+1));// use the UDP port here
+    return h2os;
+  }
+
   public static class FlatFileEntry {
     public InetAddress inet;
     public int port;
   }
+
   public static List<FlatFileEntry> parseFlatFile( File f ) {
+    InputStream is = null;
+    try {
+      is = new FileInputStream(f);
+    }
+    catch (Exception e) { Log.die(e.toString()); }
+    return parseFlatFile(is);
+  }
+
+  public static List<FlatFileEntry> parseFlatFile( InputStream is ) {
     List<FlatFileEntry> list = new ArrayList<FlatFileEntry>();
     BufferedReader br = null;
     int port = DEFAULT_PORT;
     try {
-      br = new BufferedReader(new InputStreamReader(new FileInputStream(f)));
+      br = new BufferedReader(new InputStreamReader(is));
       String strLine = null;
       while( (strLine = br.readLine()) != null) {
         strLine = strLine.trim();

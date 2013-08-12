@@ -1,15 +1,14 @@
 package water.api;
 
-import java.io.BufferedWriter;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import water.*;
-import water.util.Log;
-import water.api.Request.*;
+import java.io.*;
+import java.lang.reflect.Field;
 import java.util.Properties;
 
-/** 
+import water.*;
+import water.api.RequestArguments.Argument;
+import water.util.Log;
+
+/**
  * Auto-gen doc support, for JSON & REST API docs
  * @author <a href="mailto:cliffc@0xdata.com"></a>
  */
@@ -44,32 +43,33 @@ public abstract class DocGen {
     H2O.exit(0);
   }
 
-  // Class describing meta-info about H2O queries and results.  
+  // Class describing meta-info about H2O queries and results.
   public static class FieldDoc {
     final String _name;           // Field name
     final String _help;           // Some descriptive text
-    final int _min_ver, _max_ver; // Min/Max supported-version numbers
+    final int _since, _until; // Min/Max supported-version numbers
     final Class _clazz; // Java type: subtypes of Argument are inputs, otherwise outputs
+    final boolean _input, _required;
     RequestArguments.Argument _arg; // Lazily filled in, as docs are asked for.
-    public FieldDoc( String name, String help, int min, int max, Class C ) {
-      _name = name; _help = help; _min_ver = min; _max_ver = max; _clazz = C;
+    public FieldDoc( String name, String help, int min, int max, Class C, boolean input, boolean required ) {
+      _name = name; _help = help; _since = min; _until = max; _clazz = C; _input = input; _required = required;
     }
     @Override public String toString() {
-      return "{"+_name+", from "+_min_ver+" to "+_max_ver+", "+_clazz.getSimpleName()+", "+_help+"}";
+      return "{"+_name+", from "+_since+" to "+_until+", "+_clazz.getSimpleName()+", "+_help+"}";
     }
 
-    public final String version() {
-      return "  From version "+_min_ver+
-        (_max_ver==Integer.MAX_VALUE?" onward":" to version "+_max_ver);
+    private final String version() {
+      return "Since version "+_since+
+        (_until==Integer.MAX_VALUE?"":", deprecated on version "+_until);
     }
 
-    public final boolean isArg () {
-      return RequestArguments.Argument.class.isAssignableFrom(_clazz);
+    public final boolean isInput () {
+      return _input;
     }
-    public final boolean isJSON(){ return !isArg(); }
+    public final boolean isJSON() { return !isInput(); }
 
     // Specific accessors for input arguments.  Not valid for JSON output fields.
-    public RequestArguments.Argument arg(Request R) {
+    private RequestArguments.Argument arg(Request R) {
       if( _arg != null ) return _arg;
       Class clzz = R.getClass();
       // An amazing crazy API from the JDK again.  Cannot search for protected
@@ -78,24 +78,17 @@ public abstract class DocGen {
       // level of the hierarchy.  Sadly, I catch NSFE & loop.
       while( true ) {
         try {
-          Object o = clzz.getDeclaredField(_name).get(R);
+          Field field = clzz.getDeclaredField(_name);
+          field.setAccessible(true);
+          Object o = field.get(R);
           return _arg=((RequestArguments.Argument)o);
         }
         catch(   NoSuchFieldException ie ) { clzz = clzz.getSuperclass(); }
-        catch( IllegalAccessException ie ) { ie.printStackTrace(); return null; }
+        catch( IllegalAccessException ie ) { break; }
+        catch( ClassCastException ie ) { break; }
       }
+      return null;
     }
-
-    // Get the queryDescription results for this field, as it appears in the
-    // existing Request object.  This can vary for different Request R objects
-    // for the same field type.  E.g. the GLM Int field 'XVAL' (cross-
-    // validation count) has a min/max of 0 to 1000000, with a default of 10,
-    // while the Plot Int field '_width' has a default of 800, and the PutValue
-    // Int field '_rf' has a min/max of 0 to 255 (and default of 2).
-    public final String argHelp( Request R ) { return arg(R).queryDescription(); }
-    public final boolean required( Request R ) { return arg(R)._required; }
-    public final String[] errors( Request R ) { return arg(R).errors(); }
-    String argErr( ) { return "Argument '"+_name+"' error: "; }
   }
 
   // --------------------------------------------------------------------------
@@ -112,7 +105,7 @@ public abstract class DocGen {
   abstract String bold( String s );
   abstract StringBuilder paraHead( StringBuilder sb );
   abstract StringBuilder paraTail( StringBuilder sb );
-  StringBuilder paragraph( StringBuilder sb, String s ) { 
+  StringBuilder paragraph( StringBuilder sb, String s ) {
     return paraTail(paraHead(sb).append(s));
   }
 
@@ -139,24 +132,36 @@ public abstract class DocGen {
 
     section(sb,"Input parameters");
     listHead(sb);
-    for( FieldDoc doc : docs )
-      if( doc.isArg() ) {
+    for( FieldDoc doc : docs ) {
+      if( doc.isInput() ) {
+        Argument arg = doc.arg(R); // Legacy
+        String help = doc._help;
+        boolean required = doc._required;
+        String[] errors = null;
+        if(arg != null) {
+          String description = arg.queryDescription();
+          if(description != null && description.length() != 0)
+            help = description;
+          required |= arg._required;
+          errors = arg.errors();
+        }
         listBullet(sb,
-                   bold(doc._name)+", "+doc.argHelp(R),
-                   doc._help+doc.version(),0);
-        String[] errors = doc.errors(R);
-        if( errors != null || doc.required(R) ) {
+                   bold(doc._name)+", a "+doc._clazz.getSimpleName(),
+                   help+".  "+doc.version(), 0);
+        if( errors != null || required ) {
           paragraph(sb,"");
           paragraph(sb,bold("Possible JSON error field returns:"));
           listHead(sb);
+          String argErr = "Argument '"+doc._name+"' error: ";
           if( errors != null )
             for( String err : errors )
-              listBullet(sb,doc.argErr()+err,"",1);
-          if( doc.required(R) )
-            listBullet(sb,doc.argErr()+"Argument '"+doc._name+"' is required, but not specified","",1);
+              listBullet(sb,argErr+err,"",1);
+          if( required )
+            listBullet(sb,argErr+"Argument '"+doc._name+"' is required, but not specified","",1);
           listTail(sb);
         }
       }
+    }
     listTail(sb);
 
     section(sb,"Output JSON elements");
@@ -194,14 +199,15 @@ public abstract class DocGen {
       if( doc.isJSON() ) {
         listBullet(sb,
                    bold(doc._name)+", a "+doc._clazz.getSimpleName(),
-                   doc._help+doc.version(),0);
+                   doc._help+".  "+doc.version(),0);
         Class c = doc._clazz.getComponentType();
         if( c==null ) c = doc._clazz;
         if( Iced.class.isAssignableFrom(c) ) {
           try {
             FieldDoc[] nested = ((Iced)c.newInstance()).toDocField();
-            listJSONFields(sb,nested);
-          } 
+            if( nested != null ) // Can be empty, e.g. for Key
+              listJSONFields(sb,nested);
+          }
           catch( InstantiationException ie ) { water.util.Log.errRTExcept(ie); }
           catch( IllegalAccessException ie ) { water.util.Log.errRTExcept(ie); }
         }
@@ -230,7 +236,7 @@ public abstract class DocGen {
       byte[] b = new byte[l];
       r.data.read(b);
       return new String(b);
-    } catch( IOException ioe ) { 
+    } catch( IOException ioe ) {
       Log.err(ioe);
       return null;
     }
@@ -239,6 +245,7 @@ public abstract class DocGen {
   // --------------------------------------------------------------------------
   // HTML flavored help text
   static class HTML extends DocGen {
+    @SuppressWarnings("unused")
     @Override StringBuilder escape(StringBuilder sb, String s ) {
       int len=s.length();
       for( int i=0; i<len; i++ ) {
@@ -252,9 +259,9 @@ public abstract class DocGen {
       }
       return sb;
     }
-    @Override StringBuilder bodyHead( StringBuilder sb ) { 
-      return sb.append("<div class='container'>"+ 
-                       "<div class='row-fluid'>"+ 
+    @Override StringBuilder bodyHead( StringBuilder sb ) {
+      return sb.append("<div class='container'>"+
+                       "<div class='row-fluid'>"+
                        "<div class='span12'>");
     }
     @Override StringBuilder bodyTail( StringBuilder sb ) { return sb.append("</div></div></div>"); }

@@ -3,7 +3,7 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd
 import h2o_browse as h2b
 
-print "ASSUMING max FP single precision (hex rep. 7f7f ffff) approx. 3.4028234 * 10**38"
+# fyi max FP single precision (hex rep. 7f7f ffff) approx. 3.4028234 * 10**38"
 
 def write_syn_dataset(csvPathname, rowCount, headerData):
     dsf = open(csvPathname, "w+")
@@ -34,7 +34,7 @@ def rand_rowData():
         rowData = rowData + "," + str(random.uniform(-1e59,1e59))
     return rowData
 
-class parse_rand_schmoo(unittest.TestCase):
+class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
@@ -55,7 +55,7 @@ class parse_rand_schmoo(unittest.TestCase):
             # time.sleep(500000)
             pass
 
-        h2o.tear_down_cloud(h2o.nodes)
+        h2o.tear_down_cloud()
     
     def test_rf_float_rand(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
@@ -73,17 +73,28 @@ class parse_rand_schmoo(unittest.TestCase):
             num = random.randint(4096, 10096)
             append_syn_dataset(csvPathname, num)
             totalRows += num
-            start = time.time()
 
             # make sure all key names are unique, when we re-put and re-parse (h2o caching issues)
             key = csvFilename + "_" + str(trial)
             key2 = csvFilename + "_" + str(trial) + ".hex"
             # On EC2 once we get to 30 trials or so, do we see polling hang? GC or spill of heap or ??
             kwargs = {'ntree': 5, 'depth': 5}
+            start = time.time()
             key = h2o_cmd.runRF(csvPathname=csvPathname, key=key, key2=key2, 
                 timeoutSecs=15, pollTimeoutSecs=5, **kwargs)
             print "trial #", trial, "totalRows:", totalRows, "num:", num, "RF end on ", csvFilename, \
                 'took', time.time() - start, 'seconds'
+
+            inspect = h2o_cmd.runInspect(key=key2)
+            cols = inspect['cols']
+            num_cols = inspect['num_cols']
+            for i,c in enumerate(cols):
+                if i < (num_cols-1): # everything except the last col (output) should be 8 byte float
+                    colType = c['type']
+                    colSize = c['size']
+                    self.assertEqual(colType, 'float', msg="col %d should be type float: %s" % (i, colType))
+                    self.assertEqual(colSize, 8, msg="col %d should be size 8: %d" % (i, colSize))
+
             ### h2o_cmd.runInspect(key=key2)
             ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
             h2o.check_sandbox_for_errors()

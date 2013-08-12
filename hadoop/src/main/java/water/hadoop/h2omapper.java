@@ -116,6 +116,7 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
         try {
           Socket s = new Socket(_m.getDriverCallbackIp(), _m.getDriverCallbackPort());
           _m.write(s);
+          s.close();
         }
         catch (java.net.ConnectException e) {
           System.out.println("EmbeddedH2OConfig: BackgroundWriterThread could not connect to driver at " + _driverCallbackIp + ":" + _driverCallbackPort);
@@ -146,6 +147,33 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
         System.out.println("EmbeddedH2OConfig: notifyAboutEmbeddedWebServerIpPort caught an Exception");
         e.printStackTrace();
       }
+    }
+
+    @Override
+    public boolean providesFlatfile() {
+      return true;
+    }
+
+    @Override
+    public String fetchFlatfile() throws Exception {
+      System.out.printf("EmbeddedH2OConfig: fetchFlatfile called\n");
+      MapperToDriverMessage msg = new MapperToDriverMessage();
+      msg.setMessageFetchFlatfile(_embeddedWebServerIp, _embeddedWebServerPort);
+      Socket s = new Socket(_driverCallbackIp, _driverCallbackPort);
+      msg.write(s);
+      DriverToMapperMessage msg2 = new DriverToMapperMessage();
+      msg2.read(s);
+      if (msg2.getType() != DriverToMapperMessage.TYPE_FETCH_FLATFILE_RESPONSE) {
+        Log.err("DriverToMapperMessage type unrecognized");
+        throw new Exception ("DriverToMapperMessage type unrecognized");
+      }
+      s.close();
+      String flatfile = msg2.getFlatfile();
+      System.out.printf("EmbeddedH2OConfig: fetchFlatfile returned\n");
+      System.out.println("------------------------------------------------------------");
+      System.out.println(flatfile);
+      System.out.println("------------------------------------------------------------");
+      return flatfile;
     }
 
     @Override
@@ -257,14 +285,6 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
     catch (java.net.UnknownHostException uhe) {
       // handle exception
     }
-
-    context.write(textId, new Text("----- Flat File -----"));
-    BufferedReader reader = new BufferedReader(new FileReader("flatfile.txt"));
-    String line;
-    while ((line = reader.readLine()) != null) {
-      context.write(textId, new Text(line));
-    }
-    context.write(textId, new Text("---------------------"));
   }
 
   /**
@@ -325,8 +345,6 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
 
     String[] args = {
             "-ice_root", ice_root,
-            "-flatfile", "flatfile.txt",
-            "-port", "54321",
             "-name", jobtrackerName,
             "-driverip", driverIp,
             "-driverport", driverPortString,
@@ -408,6 +426,7 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
       }
     }
     catch (Exception e) {
+      Log.POST(999, e);
       System.exit(100);
     }
 
