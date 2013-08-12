@@ -18,6 +18,7 @@ public class Parse extends Request {
   protected final Str _excludeExpression    = new Str("exclude","");
   protected final ExistingCSVKey _source    = new ExistingCSVKey(SOURCE_KEY);
   protected final NewH2OHexKey   _dest      = new NewH2OHexKey(DEST_KEY);
+  @SuppressWarnings("unused")
   private   final Preview        _preview   = new Preview(PREVIEW);
 
   public Parse() {_excludeExpression.setRefreshOnChange();}
@@ -26,11 +27,6 @@ public class Parse extends Request {
     final transient ArrayList<Key> _keys;
     final CustomParser.ParserSetup _setup;
     PSetup( ArrayList<Key> keys, CustomParser.ParserSetup parser) { _keys=keys; _setup = parser; }
-    PSetup( Key key, CustomParser.ParserSetup setup) {
-      _keys = new ArrayList();
-      _keys.add(key);
-      _setup = setup;
-    }
   };
   // An H2O Key Query, which runs the basic CSV parsing heuristics.  Accepts
   // Key wildcards, and gathers all matching Keys for simultaneous parsing.
@@ -44,13 +40,10 @@ public class Parse extends Request {
     }
 
     @Override protected PSetup parse(String input) throws IllegalArgumentException {
-      Key k1 = Key.make(input);
-      Value v1 = DKV.get(k1);
       Pattern p = makePattern(input);
       Pattern exclude = null;
       if(_excludeExpression.specified())
         exclude = makePattern(_excludeExpression.value());
-
       ArrayList<Key> keys = new ArrayList();
      // boolean badkeys = false;
       for( Key key : H2O.keySet() ) { // For all keys
@@ -163,12 +156,10 @@ public class Parse extends Request {
     }
     @Override protected String queryElement() {
       // first determine the value to put in the field
-      Record record = record();
       // if no original value was supplied, use the provided one
-      String value = _header.value()?"1":"";
-      StringBuilder sb = new StringBuilder();
       String[][] data = null;
       PSetup psetup = _source.value();
+      StringBuilder sb = new StringBuilder("<div class='alert'>" + psetup._setup.toString() + "</div>");
       if(psetup._setup != null)
         data = psetup._setup._data;
       if( data != null ) {
