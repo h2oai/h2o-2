@@ -50,64 +50,74 @@ public abstract class Trainer {
     }
 
     @Override void run() {
-      for( int batch = 0; _batches == 0 || batch < _batches; batch++ ) {
-        Input input = (Input) _ls[0];
-        for( int b = 0; b < _batch; b++ ) {
-          fprop();
-
-          for( int i = 1; i < _ls.length - 1; i++ )
-            Arrays.fill(_ls[i]._e, 0);
-          float[] err = _ls[_ls.length - 1]._e;
-          for( int i = 0; i < err.length; i++ ) {
-            float t = i == input.label() ? .9f : -.1f;
-            err[i] = t - _ls[_ls.length - 1]._a[i];
-          }
-
-          bprop();
-          input._n = input._n == input._count - 1 ? 0 : input._n + 1;
-        }
-
-        for( int i = 1; i < _ls.length; i++ )
-          _ls[i].adjust(_count.get());
-
-        _count.addAndGet(_batch);
+      for( int b = 0; _batches == 0 || b < _batches; b++ ) {
+        for( int s = 0; s < _batch; s++ )
+          step();
+        adjust();
       }
+    }
+
+    final void step() {
+      Input input = (Input) _ls[0];
+      fprop();
+
+      for( int i = 1; i < _ls.length - 1; i++ )
+        Arrays.fill(_ls[i]._e, 0);
+      float[] err = _ls[_ls.length - 1]._e;
+      int label = input.label();
+      for( int i = 0; i < err.length; i++ ) {
+        float t = i == label ? 1 : 0;
+        err[i] = t - _ls[_ls.length - 1]._a[i];
+      }
+
+      bprop();
+      input._n = input._n == input._count - 1 ? 0 : input._n + 1;
+      _count.incrementAndGet();
+    }
+
+    final void adjust() {
+      for( int i = 1; i < _ls.length; i++ )
+        _ls[i].adjust(_count.get());
     }
 
     void fprop() {
       for( int i = 0; i < _ls.length; i++ )
-        _ls[i].fprop(0, _ls[i]._a.length);
+        _ls[i].fprop();
     }
 
     void bprop() {
       for( int i = _ls.length - 1; i > 0; i-- )
-        _ls[i].bprop(0, _ls[i]._a.length);
+        _ls[i].bprop();
     }
   }
 
   /**
-   * Runs several trainers in parallel.
+   * Runs several trainers in parallel on the same weights. There might be lost updates, but seems
+   * to work well in practice. Cyclic barriers are used to suspend computation.
    */
-  public static class ParallelTrainers extends Trainer {
+  public static class ParallelTrainers extends Direct {
     final Direct[] _trainers;
     final Thread[] _threads;
+    static final CyclicBarrier DONE = new CyclicBarrier(1);
+    volatile CyclicBarrier _suspend;
+    final CyclicBarrier _resume;
 
     public ParallelTrainers(Layer[] ls) {
       this(ls, 1, 0);
     }
 
     public ParallelTrainers(Layer[] ls, int nodes, int index) {
-      super(new AtomicInteger());
+      super(ls, new AtomicInteger());
       _trainers = new Direct[Runtime.getRuntime().availableProcessors()];
       _threads = new Thread[_trainers.length];
+      _resume = new CyclicBarrier(_threads.length + 1);
       for( int t = 0; t < _trainers.length; t++ ) {
         Layer[] clones = new Layer[ls.length];
         for( int i = 0; i < ls.length; i++ )
-          clones[i] = Utils.deepClone(ls[i], "_w", "_b", "_in");
+          clones[i] = Utils.deepClone(ls[i], "_w", "_b", "_in", "_images", "_labels", "_frame", "_caches");
         for( int i = 1; i < ls.length; i++ )
           clones[i]._in = clones[i - 1];
         _trainers[t] = new Direct(clones, _count);
-        _trainers[t]._batches = _batches / _trainers.length;
         Input input = (Input) _trainers[t]._ls[0];
         int chunks = nodes * _trainers.length;
         input._n = (int) (input._count * ((long) index * _trainers.length + t) / chunks);
@@ -115,24 +125,66 @@ public abstract class Trainer {
         final Direct d = _trainers[t];
         _threads[t] = new Thread("H2O Trainer " + t) {
           @Override public void run() {
-            d.run();
+            for( ;; ) {
+              CyclicBarrier b = _suspend;
+              if( b == DONE )
+                break;
+              if( b != null ) {
+                try {
+                  b.await();
+                  _resume.await();
+                } catch( Exception e ) {
+                  throw new RuntimeException(e);
+                }
+              }
+              d.step();
+            }
           }
         };
       }
     }
 
     @Override Layer[] layers() {
-      return _trainers[0]._ls;
+      return _ls;
     }
 
     @Override void run() {
       start();
+      while( _batches == 0 || _count.get() < _batch * _batches ) {
+        try {
+          Thread.sleep(10);
+        } catch( InterruptedException e ) {
+          throw new RuntimeException(e);
+        }
+      }
+      _suspend = DONE;
       join();
     }
 
     void start() {
-      for( int t = 0; t < _threads.length; t++ )
+      for( int t = 0; t < _threads.length; t++ ) {
+        _trainers[t]._batch = _batch;
+        _trainers[t]._batches = _batches / _trainers.length;
         _threads[t].start();
+      }
+    }
+
+    void suspend() {
+      try {
+        _suspend = new CyclicBarrier(_threads.length + 1);
+        _suspend.await();
+        _suspend = null;
+      } catch( Exception e ) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    void resume() {
+      try {
+        _resume.await();
+      } catch( Exception e ) {
+        throw new RuntimeException(e);
+      }
     }
 
     void join() {
@@ -142,148 +194,6 @@ public abstract class Trainer {
         } catch( InterruptedException e ) {
           throw new RuntimeException(e);
         }
-      }
-    }
-  }
-
-  /**
-   * Chunks weight matrices over multiple threads.
-   */
-  public static class Chunked extends Direct {
-    final Chunk[] _chunks;
-    final CyclicBarrier _wait, _done;
-
-    public Chunked(Layer[] ls) {
-      super(ls);
-
-      _chunks = new Chunk[Runtime.getRuntime().availableProcessors()];
-      _wait = new CyclicBarrier(_chunks.length);
-      _done = new CyclicBarrier(_chunks.length);
-
-      int[][] offs = new int[_chunks.length][_ls.length];
-      int[][] lens = new int[_chunks.length][_ls.length];
-      for( int layer = 1; layer < _ls.length; layer++ ) {
-        int last = 0;
-        for( int i = 0; i < _chunks.length; i++ ) {
-          final int limit = _ls[layer]._a.length * (i + 1) / _chunks.length;
-          offs[i][layer] = last;
-          lens[i][layer] = limit - last;
-          last = limit;
-        }
-        assert last == _ls[layer]._a.length;
-      }
-      for( int i = 0; i < _chunks.length; i++ ) {
-        _chunks[i] = new Chunk(offs[i], lens[i]);
-        _chunks[i].start();
-      }
-    }
-
-    final class Chunk extends Thread {
-      final int[] _offs, _lens;
-      int _level = 1;
-      boolean _up = true;
-
-      Chunk(int[] offs, int[] lens) {
-        _offs = offs;
-        _lens = lens;
-      }
-
-      @Override public void run() {
-        try {
-          for( ;; ) {
-            _wait.await();
-            if( _up ) {
-              _ls[_level].fprop(_offs[_level], _lens[_level]);
-              _level++;
-              if( _level == _ls.length ) {
-                _up = false;
-                _level--;
-              }
-            } else {
-              _ls[_level].bprop(_offs[_level], _lens[_level]);
-              _level--;
-              if( _level == 0 ) {
-                _up = true;
-                _level++;
-              }
-            }
-            _done.await();
-          }
-        } catch( Exception e ) {
-          throw new RuntimeException(e);
-        }
-      }
-    }
-
-    @Override void fprop() {
-      pass();
-    }
-
-    @Override void bprop() {
-      pass();
-    }
-
-    private void pass() {
-      try {
-        for( int i = 1; i < _ls.length; i++ ) {
-          _wait.await();
-          _done.await();
-        }
-      } catch( Exception e ) {
-        throw new RuntimeException(e);
-      }
-    }
-  }
-
-  /**
-   * Process items of a batch in parallel.
-   */
-  public static class ParallelBatch extends Trainer {
-    final Thread0[] _threads;
-    final CyclicBarrier _wait, _done;
-    final int _perThread;
-
-    public ParallelBatch(Layer[] ls) {
-      super(new AtomicInteger());
-
-      _threads = new Thread0[Runtime.getRuntime().availableProcessors()];
-      _wait = new CyclicBarrier(_threads.length + 1);
-      _done = new CyclicBarrier(_threads.length + 1);
-
-      assert _batch % _threads.length == 0;
-      _perThread = _batch / _threads.length;
-
-      for( int t = 0; t < _threads.length; t++ ) {
-        Layer[] clones = new Layer[ls.length];
-        for( int i = 0; i < clones.length; i++ )
-          clones[i] = Utils.deepClone(ls[i], "_w", "_b");
-        _threads[t] = new Thread0(clones, t);
-      }
-    }
-
-    @Override Layer[] layers() {
-      return _threads[0]._ls;
-    }
-
-    @Override void run() {
-      for( int t = 0; t < _threads.length; t++ )
-        _threads[t].start();
-      for( int i = 0; i < _threads.length; i++ ) {
-        try {
-          _threads[i].join();
-        } catch( InterruptedException e ) {
-          throw new RuntimeException(e);
-        }
-      }
-    }
-
-    final class Thread0 extends Thread {
-      final Layer[] _ls;
-      int _n;
-
-      Thread0(Layer[] ls, int n) {
-        _ls = ls;
-        _n = n;
       }
     }
   }
@@ -354,7 +264,7 @@ public abstract class Trainer {
         _ls[y]._in = _ls[y - 1];
         _ls[y]._w = p._ws[y].clone();
         _ls[y]._b = p._bs[y].clone();
-        _ls[y].init(true);
+        _ls[y].init();
       }
       ParallelTrainers t = new ParallelTrainers(_ls, H2O.CLOUD._memary.length, _index);
       t.start();

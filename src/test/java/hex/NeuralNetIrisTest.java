@@ -7,8 +7,14 @@ import hex.rng.MersenneTwisterRNG;
 import java.io.File;
 import java.util.UUID;
 
+import junit.framework.Assert;
+
+import org.junit.BeforeClass;
+import org.junit.Test;
+
 import water.*;
 import water.fvec.*;
+import water.util.Log;
 
 public class NeuralNetIrisTest extends NeuralNetTest {
   static final String PATH = "smalldata/iris/iris.csv";
@@ -23,6 +29,7 @@ public class NeuralNetIrisTest extends NeuralNetTest {
       Sandbox.localCloud(1, true, args);
 
       NeuralNetIrisTest test = new NeuralNetIrisTest();
+      test.load();
       test.run();
     }
   }
@@ -40,7 +47,7 @@ public class NeuralNetIrisTest extends NeuralNetTest {
     return new Frame(null, vecs);
   }
 
-  public void load() {
+  @BeforeClass public void load() {
     Key file = NFSFileVec.make(new File(PATH));
     Frame frame = ParseDataset2.parse(Key.make(), new Key[] { file });
     UKV.remove(file);
@@ -63,80 +70,102 @@ public class NeuralNetIrisTest extends NeuralNetTest {
     _test = new FrameInput(frame(rows, limit, (int) frame.numRows() - limit), false);
   }
 
-  public void create(float rate, float momentum) {
+  @Test public void compare() throws Exception {
+    float rate = 0.01f;
+    // We think the reference implementation's momentum
+    // approach is incorrect, turn it off
+    float momentum = 0;
+    int epochs = 1000;
     _ls = new Layer[3];
     _ls[0] = _train;
     _ls[1] = new Layer.Tanh(_ls[0], 7);
     _ls[1]._rate = rate;
-    _ls[1]._momentum = 1 - momentum;
+    _ls[1]._rateAnnealing = 0;
+    _ls[1]._momentum = momentum;
     _ls[1]._l2 = 0;
     _ls[2] = new Softmax(_ls[1], 3);
     _ls[2]._rate = rate;
-    _ls[2]._momentum = 1 - momentum;
+    _ls[2]._rateAnnealing = 0;
+    _ls[2]._momentum = momentum;
     _ls[2]._l2 = 0;
     for( int i = 0; i < _ls.length; i++ )
-      _ls[i].init(false);
-  }
+      _ls[i].init();
 
-  public void run() throws Exception {
-    load();
-    float rate = 0.001f;
-    float momentum = .9f;
-    int epochs = 100;
-    create(rate, momentum);
-
-    NeuralNetMLPReference cs = new NeuralNetMLPReference();
-    cs.init();
+    NeuralNetMLPReference ref = new NeuralNetMLPReference();
+    ref.init();
     Layer l = _ls[1];
     for( int o = 0; o < l._a.length; o++ ) {
       for( int i = 0; i < l._in._a.length; i++ )
-        cs._nn.ihWeights[i][o] = l._w[o * l._in._a.length + i];
-      cs._nn.hBiases[o] = l._b[o];
+        ref._nn.ihWeights[i][o] = l._w[o * l._in._a.length + i];
+      ref._nn.hBiases[o] = l._b[o];
     }
     l = _ls[2];
     for( int o = 0; o < l._a.length; o++ ) {
       for( int i = 0; i < l._in._a.length; i++ )
-        cs._nn.hoWeights[i][o] = l._w[o * l._in._a.length + i];
-      cs._nn.oBiases[o] = l._b[o];
+        ref._nn.hoWeights[i][o] = l._w[o * l._in._a.length + i];
+      ref._nn.oBiases[o] = l._b[o];
     }
-    long start = System.nanoTime();
-    cs.train(epochs, rate, momentum);
-    long ended = System.nanoTime();
-    int ms = (int) ((ended - start) / 1e6);
-    System.out.println("CSharp " + ms);
 
-    //ParallelTrainers trainer = new ParallelTrainers(_ls, _train._labels);
+    // Reference
+    ref.train(epochs, rate, momentum);
+
+    // H2O
     Trainer trainer = new Trainer.Direct(_ls);
-    trainer._batches = (int) _train._frame.numRows();
+    trainer._batches = epochs * (int) _train._frame.numRows();
     trainer._batch = 1;
+    trainer.run();
 
-    for( int i = 0; i < epochs; i++ ) {
-      start = System.nanoTime();
-      trainer.run();
-      ended = System.nanoTime();
-      ms = (int) ((ended - start) / 1e6);
-      System.out.println(_ls[1]._w[0] + ", g: " + _ls[1]._gw[0]);
-    }
-
-    Error train = eval(_train);
-    Error test = eval(_test);
-    System.out.println("train: " + train + ", test: " + test);
-
+    // Make sure outputs are equal
+    float epsilon = 1e-4f;
     for( int o = 0; o < _ls[2]._a.length; o++ ) {
-      float a = cs._nn.outputs[o];
+      float a = ref._nn.outputs[o];
       float b = _ls[2]._a[o];
-      System.out.println(a - b);
+      Assert.assertEquals(a, b, epsilon);
     }
 
+    // Make sure weights are equal
     l = _ls[1];
     for( int o = 0; o < l._a.length; o++ ) {
       for( int i = 0; i < l._in._a.length; i++ ) {
-        float a = cs._nn.ihWeights[i][o];
+        float a = ref._nn.ihWeights[i][o];
         float b = l._w[o * l._in._a.length + i];
-        System.out.println(a - b);
+        Assert.assertEquals(a, b, epsilon);
       }
     }
 
-    cs.test();
+    // Make sure errors are equal
+    Error train = eval(_train);
+    Error test = eval(_test);
+    float trainAcc = ref._nn.Accuracy(ref._trainData);
+    Assert.assertEquals(trainAcc, train.Value, epsilon);
+    float testAcc = ref._nn.Accuracy(ref._testData);
+    Assert.assertEquals(testAcc, test.Value, epsilon);
+
+    Log.info("H2O and Reference equal, train: " + train + ", test: " + test);
+  }
+
+  public void run() {
+    for( int t = 0; t < 10; t++ ) {
+      int epochs = 100;
+      float m = (t + 0) / 10f;
+      _ls = new Layer[3];
+      _ls[0] = _train;
+      _ls[1] = new Layer.Tanh(_ls[0], 7);
+      _ls[1]._rate = 0.01f;
+      _ls[1]._momentum = m;
+      _ls[2] = new Softmax(_ls[1], 3);
+      _ls[2]._rate = 0.01f;
+      _ls[2]._momentum = m;
+      for( int i = 0; i < _ls.length; i++ )
+        _ls[i].init();
+
+      Trainer trainer = new Trainer.Direct(_ls);
+      int count = epochs * (int) _train._frame.numRows();
+      trainer._batches = count / trainer._batch;
+      trainer.run();
+      Error train = eval(_train);
+      Error test = eval(_test);
+      Log.info("Iris run: train: " + train + ", test: " + test);
+    }
   }
 }

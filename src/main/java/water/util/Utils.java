@@ -5,8 +5,7 @@ import hex.rng.H2ORandomRNG.RNGKind;
 import hex.rng.H2ORandomRNG.RNGType;
 
 import java.io.*;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
+import java.lang.reflect.*;
 import java.net.Socket;
 import java.security.SecureRandom;
 import java.text.DecimalFormat;
@@ -372,7 +371,9 @@ public class Utils {
   private static <T> T clone(T o, boolean deep, String... except) {
     Class c = o.getClass();
     try {
-      Object clone = c.newInstance();
+      Constructor ctor = c.getDeclaredConstructor();
+      ctor.setAccessible(true);
+      Object clone = ctor.newInstance();
       ArrayList<Field> fields = new ArrayList<Field>();
       HashSet<String> excepts = new HashSet<String>(Arrays.asList(except));
       getAllFields(fields, c);
@@ -406,7 +407,6 @@ public class Utils {
           }
         }
       }
-      assert excepts.size() == 0;
       return (T) clone;
     } catch( Exception e ) {
       throw new RuntimeException(e);
@@ -419,7 +419,7 @@ public class Utils {
     if( type.getSuperclass() != null ) getAllFields(fields, type.getSuperclass());
   }
 
-  public static String json(Object o) throws IOException {
+  public static String json(Object o) {
     Gson gson = new GsonBuilder().setFieldNamingStrategy(new FieldNamingStrategy() {
       @Override public String translateName(Field f) {
         String result = "";
@@ -432,7 +432,7 @@ public class Utils {
     return gson.toJson(o);
   }
 
-  public static <T> T json(String json, Class<T> c) throws IOException {
+  public static <T> T json(String json, Class<T> c) {
     Gson gson = new GsonBuilder().setFieldNamingStrategy(new FieldNamingStrategy() {
       @Override public String translateName(Field f) {
         String result = "";

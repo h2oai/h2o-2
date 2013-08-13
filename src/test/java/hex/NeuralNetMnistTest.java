@@ -1,6 +1,7 @@
 package hex;
 
 import hex.Layer.Input;
+import hex.Trainer.ParallelTrainers;
 import hex.rng.MersenneTwisterRNG;
 
 import java.io.*;
@@ -26,38 +27,40 @@ public class NeuralNetMnistTest extends NeuralNetTest {
       return _labels[(int) _n];
     }
 
-    @Override void fprop(int off, int len) {
+    @Override void fprop() {
       System.arraycopy(_images, (int) _n * PIXELS, _a, 0, PIXELS);
     }
   }
 
-  void load() {
+  @Override void init() {
+    super.init();
     _train = loadZip(PATH + "train-images-idx3-ubyte.gz", PATH + "train-labels-idx1-ubyte.gz");
     _test = loadZip(PATH + "t10k-images-idx3-ubyte.gz", PATH + "t10k-labels-idx1-ubyte.gz");
-  }
+    normalize();
 
-  public void run() throws Exception {
-    load();
-
-    boolean load = false, save = false;
-    boolean pretrain = false;
     boolean rectifier = false;
     {
       _ls = new Layer[3];
       _ls[0] = _train;
       if( rectifier ) {
         _ls[1] = new Layer.Rectifier(_ls[0], 500);
-        _ls[2] = new Layer.Rectifier(_ls[1], 10);
-      } else {
-        _ls[1] = new Layer.Tanh(_ls[0], 1000);
-        _ls[1]._rate = 0.01f;
         _ls[2] = new Layer.Softmax(_ls[1], 10);
-        _ls[2]._rate = 0.01f;
+      } else {
+        _ls[1] = new Layer.Tanh(_ls[0], 500);
+        _ls[2] = new Layer.Softmax(_ls[1], 10);
       }
+      _ls[1]._rate = .05f;
+      _ls[1]._l2 = .0001f;
+      _ls[2]._rate = .02f;
+      _ls[2]._l2 = .0001f;
     }
     for( int i = 0; i < _ls.length; i++ )
-      _ls[i].init(false);
+      _ls[i].init();
+  }
 
+  @Override public void run() {
+    boolean load = false, save = false;
+    boolean pretrain = false;
     if( load ) {
       long time = System.nanoTime();
       for( int i = 0; i < _ls.length; i++ ) {
@@ -67,18 +70,17 @@ public class NeuralNetMnistTest extends NeuralNetTest {
       System.out.println("load: " + (int) ((System.nanoTime() - time) / 1e6) + " ms");
     }
 
-    //ParallelTrainers trainer = new ParallelTrainers(_ls, _train._labels);
-    Trainer trainer = new Trainer.Direct(_ls);
+    _trainer = new ParallelTrainers(_ls);
 
     if( pretrain ) {
       for( int i = 0; i < _ls.length; i++ ) {
         System.out.println("Training level " + i);
         long time = System.nanoTime();
-        preTrain(trainer, i);
+        preTrain(_trainer, i);
         System.out.println((int) ((System.nanoTime() - time) / 1e6) + " ms");
       }
     }
-    train(trainer);
+    train(_trainer);
 
     if( save ) {
       long time = System.nanoTime();
@@ -155,7 +157,7 @@ public class NeuralNetMnistTest extends NeuralNetTest {
 
     long start = System.nanoTime();
     long lastTime = start;
-    int n = 0, lastItems = 0;
+    int lastItems = 0;
     for( ;; ) {
       try {
         Thread.sleep(3000);
@@ -166,41 +168,15 @@ public class NeuralNetMnistTest extends NeuralNetTest {
       Error train = eval(_train);
       Error test = eval(_test);
       long time = System.nanoTime();
-      int ms = (int) ((time - lastTime) / 1e6);
+      double delta = (time - lastTime) / 1e9;
+      double total = (time - start) / 1e9;
       lastTime = time;
       int items = trainer._count.get();
-      int ps = (items - lastItems) * 1000 / ms;
+      int ps = (int) ((items - lastItems) / delta);
+
       lastItems = items;
-      String s = ms + " ms " + (ps) + "/s, train: " + train + ", test: " + test;
-
-      Layer layer = _ls[1];
-      double sqr = 0;
-      int zeros = 0;
-      for( int o = 0; o < layer._a.length; o++ ) {
-        for( int i = 0; i < layer._in._a.length; i++ ) {
-          float d = layer._gw[o * layer._in._a.length + i];
-          sqr += d * d;
-          zeros += d == 0 ? 1 : 0;
-        }
-      }
-      s += ", gw: " + sqr + " (" + (zeros * 100 / layer._gw.length) + "% 0)";
-      sqr = 0;
-      for( int o = 0; o < layer._a.length; o++ ) {
-        for( int i = 0; i < layer._in._a.length; i++ ) {
-          float d = layer._w[o * layer._in._a.length + i];
-          sqr += d * d;
-        }
-      }
-      s += ", w: " + sqr;
-      sqr = 0;
-      for( int o = 0; o < layer._a.length; o++ ) {
-        float d = layer._a[o];
-        sqr += d * d;
-      }
-      System.out.println(s + ", a: " + sqr);
-
-      if( n != 0 && n % 10 == 0 )
-        System.out.println("All: " + eval(_train));
+      String m = _format.format(total) + "s " + (ps) + "/s, train: " + train + ", test: " + test;
+      System.out.println(m);
     }
   }
 
@@ -254,5 +230,31 @@ public class NeuralNetMnistTest extends NeuralNetTest {
     } finally {
       Utils.close(labelsBuf, imagesBuf);
     }
+  }
+
+  private void normalize() {
+    for( int i = 0; i < PIXELS; i++ ) {
+      double mean = 0, sigma = 0;
+      for( int n = 0; n < _train._labels.length; n++ )
+        mean += _train._images[n * PIXELS + i];
+      mean /= _train._images.length;
+      for( int n = 0; n < _train._labels.length; n++ ) {
+        double d = _train._images[n * PIXELS + i] - mean;
+        sigma += d * d;
+      }
+      sigma = Math.sqrt(sigma / (_train._labels.length - 1));
+
+      for( int n = 0; n < _train._labels.length; n++ )
+        normalize(_train._images, n, i, mean, sigma);
+      for( int n = 0; n < _test._labels.length; n++ )
+        normalize(_test._images, n, i, mean, sigma);
+    }
+  }
+
+  static void normalize(float[] values, int n, int i, double mean, double sigma) {
+    double d = values[n * PIXELS + i];
+    d -= mean;
+    d = sigma > 1e-4 ? d / sigma : d;
+    values[n * PIXELS + i] = (float) d;
   }
 }

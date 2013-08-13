@@ -10,6 +10,13 @@ public class NeuralNetTest {
   static final DecimalFormat _format = new DecimalFormat("0.000");
   static final int MAX_TEST_COUNT = 1000;
   Layer[] _ls;
+  Trainer _trainer;
+
+  void init() {
+  }
+
+  void run() {
+  }
 
   static class Error {
     double Value;
@@ -46,8 +53,9 @@ public class NeuralNetTest {
     Input input = (Input) ls[0];
     input._n = n;
     for( int i = 0; i < ls.length; i++ )
-      ls[i].fprop(0, ls[i]._a.length);
+      ls[i].fprop();
     float[] out = ls[ls.length - 1]._a;
+    error.SqrDist = 0;
     for( int i = 0; i < out.length; i++ ) {
       float t = i == input.label() ? 1 : 0;
       float d = t - out[i];

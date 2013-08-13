@@ -46,12 +46,12 @@ public class Mnist8m extends NeuralNetMnistTest {
       return _labels[(int) _n];
     }
 
-    @Override void fprop(int off, int len) {
+    @Override void fprop() {
       long offset = _n * PIXELS;
       int page = (int) (offset / PAGE_SIZE);
       int indx = (int) (offset % PAGE_SIZE);
       ByteBuffer buffer = _images[page];
-      for( int i = off; i < len; i++ ) {
+      for( int i = 0; i < _a.length; i++ ) {
         double d = convert(buffer.get(indx + i));
         d -= Mnist8mNorm.MEANS[i];
         d = Mnist8mNorm.SIGMS[i] > 1e-4 ? d / Mnist8mNorm.SIGMS[i] : d;
@@ -61,18 +61,20 @@ public class Mnist8m extends NeuralNetMnistTest {
   }
 
   public static class TestInput extends Input {
+    MnistInput _raw = loadZip(PATH + "t10k-images-idx3-ubyte.gz", PATH + "t10k-labels-idx1-ubyte.gz");
+
     public TestInput() {
       super(PIXELS);
-      _count = _test._labels.length;
+      _count = _raw._labels.length;
     }
 
     @Override int label() {
-      return _test._labels[(int) _n];
+      return _raw._labels[(int) _n];
     }
 
-    @Override void fprop(int off, int len) {
+    @Override void fprop() {
       for( int i = 0; i < _a.length; i++ ) {
-        double d = _test._images[(int) _n * PIXELS + i];
+        double d = _raw._images[(int) _n * PIXELS + i];
         d -= Mnist8mNorm.MEANS[i];
         d = Mnist8mNorm.SIGMS[i] > 1e-4 ? d / Mnist8mNorm.SIGMS[i] : d;
         _a[i] = (float) d;
@@ -82,7 +84,7 @@ public class Mnist8m extends NeuralNetMnistTest {
 
   @Override public void run() throws Exception {
     String f = "smalldata/mnist70k/";
-    _test = loadZip(f + "t10k-images-idx3-ubyte.gz", f + "t10k-labels-idx1-ubyte.gz");
+    _test =
 
     boolean load = false;
     boolean deep = false;

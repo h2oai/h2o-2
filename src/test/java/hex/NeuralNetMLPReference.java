@@ -19,20 +19,7 @@ public class NeuralNetMLPReference {
   float[][] _testData;
   NeuralNetwork _nn;
 
-  public static void main(String[] args) {
-    NeuralNetMLPReference cs = new NeuralNetMLPReference();
-    cs.init();
-    cs.train(10000, 0.01f, 0.001f);
-    cs.test();
-  }
-
   void init() {
-    System.out.println("\nBegin neural network classification and prediction demo");
-    System.out.println("\nData is dummy, artificial data.");
-    System.out.println("X-data is x0, x1, x2, x3");
-    System.out.println("Y-data is Red = 0 0 1, Yellow = 0 1 0, Blue = 1 0 0 "); // 1-of-N encoded
-    System.out.println("The goal is to predict color from x0, x1, x2, x3\n");
-
     double[][] ds = new double[150][];
     int r = 0;
     ds[r++] = new double[] { 5.1, 3.5, 1.4, 0.2, 0, 0, 1 };
@@ -196,50 +183,23 @@ public class NeuralNetMLPReference {
       allData[j][6] = (float) ds[j][4];
     }
 
-    System.out.println("\nFirst 6 rows of entire 150-item data set:");
-    ShowMatrix(allData, 6, 1, true);
-
-    System.out.println("Creating 80% training and 20% test data matrices");
     int trainRows = (int) (allData.length * 0.80);
     int testRows = allData.length - trainRows;
     _trainData = new float[trainRows][];
     _testData = new float[testRows][];
     MakeTrainTest(allData, _trainData, _testData);
 
-    System.out.println("\nFirst 5 rows of training data:");
-    ShowMatrix(_trainData, 5, 1, true);
-    System.out.println("First 3 rows of test data:");
-    ShowMatrix(_testData, 3, 1, true);
-
     // Data really should be normalized here!
 
-    System.out.println("\nCreating a 4-input, 7-hidden, 3-output neural network");
-    System.out.println("Hard-coded tanh for input-to-hidden and softmax for hidden-to-output activations");
     int numInput = 4;
     int numHidden = 7;
     int numOutput = 3;
     _nn = new NeuralNetwork(numInput, numHidden, numOutput);
-
-    System.out.println("\nInitializing weights and bias to small random values");
     _nn.InitializeWeights();
   }
 
   void train(int maxEpochs, float learnRate, float momentum) {
-    System.out.println("\nBeginning training using incremental back-propagation\n");
     _nn.Train(_trainData, maxEpochs, learnRate, momentum);
-    System.out.println("Training complete");
-  }
-
-  void test() {
-    float[] weights = _nn.GetWeights();
-    System.out.println("Final neural network weights and bias values:");
-    ShowVector(weights, 10, 3, true);
-
-    float trainAcc = _nn.Accuracy(_trainData);
-    System.out.println("\nAccuracy on training data = " + (trainAcc * 100) + "%");
-
-    float testAcc = _nn.Accuracy(_testData);
-    System.out.println("\nAccuracy on test data = " + (testAcc * 100) + "%");
   }
 
   static void MakeTrainTest(float[][] allData, float[][] trainData, float[][] testData) {

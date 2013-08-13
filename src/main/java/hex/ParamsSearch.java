@@ -2,6 +2,8 @@ package hex;
 
 import hex.rng.MersenneTwisterRNG;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.*;
@@ -13,9 +15,17 @@ import water.util.Utils;
  * Looks for parameters on a set of objects and perform random search.
  */
 class ParamsSearch {
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface Info {
+    /**
+     * Parameter search will move the value relative to origin.
+     */
+    double origin() default 0;
+  }
+
   Param[] _params;
   Random _rand = new MersenneTwisterRNG(new Random().nextLong());
-  boolean _oneAtaTime;
+  double _rate = .1;
   boolean _booleans;
 
   class Param {
@@ -30,11 +40,14 @@ class ParamsSearch {
 
     void modify(Object o) throws Exception {
       if( _field.getType() == boolean.class ) {
-        _last = _best == 0 ? 1 : 0;
-        _field.set(o, _last == 1);
+        if( _rand.nextDouble() < _rate ) {
+          _last = _best == 0 ? 1 : 0;
+          _field.set(o, _last == 1);
+        }
       } else {
-        double min = 0.5, max = 2;
-        _last = _best * (min + _rand.nextDouble() * (max - min));
+        double delta = _best * _rate;
+        double min = _best - delta, max = _best + delta;
+        _last = min + _rand.nextDouble() * (max - min);
         if( _field.getType() == float.class )
           _field.set(o, (float) _last);
         else if( _field.getType() == int.class )
@@ -96,17 +109,8 @@ class ParamsSearch {
       _params = params.toArray(new Param[0]);
       Log.info(toString());
     } else {
-      if( _oneAtaTime ) {
-        int rand = _rand.nextInt(_params.length);
-        modify(expanded, rand);
-      } else {
-        for( int i = 0; i < _params.length; i++ ) {
-          if( _rand.nextBoolean() )
-            modify(expanded, i);
-          else
-            _params[i].write();
-        }
-      }
+      for( int i = 0; i < _params.length; i++ )
+        modify(expanded, i);
     }
   }
 

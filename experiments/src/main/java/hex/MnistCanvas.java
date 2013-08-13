@@ -1,7 +1,6 @@
 package hex;
 
 import hex.Layer.Input;
-import hex.Mnist8m.Train8mInput;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -13,29 +12,25 @@ import javax.swing.*;
 
 @SuppressWarnings("serial")
 public final class MnistCanvas extends Canvas {
-  final Trainer _trainer;
-  final Input _input;
-  final Random _rand = new Random();
-  int _level = 1;
+  static NeuralNetTest _test;
+  static Random _rand = new Random();
+  static int _level = 1;
 
   public static void main(String[] args) throws Exception {
     NeuralNetMnistTest mnist = new NeuralNetMnistTest();
-    // NeuralNetMnistTest2 mnist = new NeuralNetMnistTest2();
-    mnist.run();
+    mnist.init();
+    _test = mnist;
 
     // Basic visualization of images and weights
     JFrame frame = new JFrame("H2O");
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    MnistCanvas canvas = new MnistCanvas(trainer, new Train8mInput());
+    MnistCanvas canvas = new MnistCanvas();
     frame.setContentPane(canvas.init());
     frame.pack();
     frame.setLocationRelativeTo(null);
     frame.setVisible(true);
-  }
 
-  MnistCanvas(Trainer trainer, Input input) {
-    _trainer = trainer;
-    _input = input;
+    mnist.run();
   }
 
   JPanel init() {
@@ -58,7 +53,7 @@ public final class MnistCanvas extends Canvas {
     bar.add(new JButton("histo") {
       @Override protected void fireActionPerformed(ActionEvent event) {
         Histogram.initFromSwingThread();
-        Histogram.build(_trainer.layers());
+        Histogram.build(_test._trainer.layers());
       }
     });
     JPanel pane = new JPanel();
@@ -71,8 +66,9 @@ public final class MnistCanvas extends Canvas {
   }
 
   @Override public void paint(Graphics g) {
+    Input input = (Input) _test._ls[0];
     int edge = 56, pad = 10;
-    int rand = _rand.nextInt((int) _input._count);
+    int rand = _rand.nextInt((int) input._count);
 
     // Side
     {
@@ -81,15 +77,15 @@ public final class MnistCanvas extends Canvas {
 
       // Input
       int[] pix = new int[NeuralNetMnistTest.PIXELS];
-      _input._n = rand;
-      _input.fprop(0, _input._a.length);
+      input._n = rand;
+      input.fprop();
       for( int i = 0; i < pix.length; i++ )
-        pix[i] = (int) (_input._a[i] * 255f);
+        pix[i] = (int) (input._a[i] * 255f);
       r.setDataElements(0, 0, NeuralNetMnistTest.EDGE, NeuralNetMnistTest.EDGE, pix);
       g.drawImage(in, pad, pad, null);
 
       // Labels
-      g.drawString("" + _input.label(), 10, 50);
+      g.drawString("" + input.label(), 10, 50);
       g.drawString("RBM " + _level, 10, 70);
     }
 
@@ -129,7 +125,7 @@ public final class MnistCanvas extends Canvas {
 
     // Weights
     int buf = NeuralNetMnistTest.EDGE + pad + pad;
-    Layer layer = _trainer.layers()[_level];
+    Layer layer = _test._trainer.layers()[_level];
     double mean = 0;
     int n = layer._w.length;
     for( int i = 0; i < n; i++ )
