@@ -102,6 +102,7 @@ setMethod("summary", "H2OParsedData", function(object) {
 setMethod("as.data.frame", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=0, view=nrow(x))
   temp = unlist(lapply(res$rows, function(y) { y$row = NULL; y }))
+  if(is.null(temp)) return(temp)
   x.df = data.frame(matrix(temp, nrow = res$num_rows, byrow = TRUE))
   colnames(x.df) = unlist(lapply(res$cols, function(y) y$name))
   x.df

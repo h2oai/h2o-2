@@ -18,7 +18,7 @@ An \code{\linkS4class{H2OParsedData}} object containing the new column names.
   }
 }
 \details{
-If the number of columns do not match between \code{data} and \code{col.names}, just set the names of the provided columns (from left to right) and skip the rest.
+This function modifies the \code{data} file directly. It does not create a new copy, and thus does not take up much additional memory. If the number of columns in \code{data} and \code{col.names} do not match, then it will simply set the names of the provided columns (from left to right) and skip the rest.
 }
 \value{
 %%  ~Describe the value returned
@@ -44,12 +44,11 @@ If the number of columns do not match between \code{data} and \code{col.names}, 
 }
 \examples{
 localH2O = new("H2OClient", ip = "localhost", port = 54321)
-iris.hex = h2o.importFile(localH2O, path = "../smalldata/iris/iris.csv", key = "iris.hex")
-names.hex = h2o.importFile(localH2O, path = "../smalldata/iris/iris_header.csv", key = "iris_names.hex")
-
-# This modifies iris.hex directly.  It does not create a new copy,
-# so it does not take much additional memory.
+h2o.checkClient(localH2O)
+iris.hex = h2o.importFile(localH2O, path = system.file("extdata", "iris.csv", package="h2o"), key = "iris.hex")
+names.hex = h2o.importFile(localH2O, path = system.file("extdata", "iris_header.csv", package="h2o"), key = "iris_names.hex")
 h2o.setColNames(data = iris.hex, col.names = names.hex)
+summary(iris.hex)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
