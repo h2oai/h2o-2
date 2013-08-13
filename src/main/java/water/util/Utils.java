@@ -15,8 +15,8 @@ import java.util.zip.*;
 import org.apache.commons.lang.ArrayUtils;
 
 import water.*;
-import water.fvec.ParseDataset2.Compression;
 import water.parser.ParseDataset;
+import water.parser.ParseDataset.Compression;
 
 public class Utils {
 
@@ -320,6 +320,24 @@ public class Utils {
     return res;
   }
 
+  public static byte [] getFirstUnzipedBytes(Key k){
+    return getFirstUnzipedBytes(DKV.get(k));
+  }
+  public static byte [] getFirstUnzipedBytes(Value v){
+    byte [] bits = v.getFirstBytes();
+    return unzipBytes(bits, guessCompressionMethod(bits));
+  }
+
+  public static Compression guessCompressionMethod(byte [] bits){
+    AutoBuffer ab = new AutoBuffer(bits);
+    // Look for ZIP magic
+    if( bits.length > ZipFile.LOCHDR && ab.get4(0) == ZipFile.LOCSIG )
+      return Compression.ZIP;
+    if( bits.length > 2 && ab.get2(0) == GZIPInputStream.GZIP_MAGIC )
+      return Compression.GZIP;
+    return Compression.NONE;
+  }
+
   public static byte [] unzipBytes(byte [] bs, Compression cmp){
     InputStream is = null;
     int off = 0;
@@ -363,4 +381,5 @@ public class Utils {
     }
     return bs;
   }
+
 }
