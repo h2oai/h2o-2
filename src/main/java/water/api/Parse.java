@@ -119,12 +119,13 @@ public class Parse extends Request {
       CustomParser.ParserSetup setup = guessSetup(keys, hKey, new CustomParser.ParserSetup(_parserType.value(),_separator.value(),_header.specified()?_header.value():false),_header.specified());
       if(setup == null)
         throw new IllegalArgumentException("I cannot figure out this file; Please select the parse setup manually.");
+      if(_header.specified())
+        setup.setHeader(_header.value());
       PSetup res = new PSetup(keys,setup);
       _parserType.setValue(res._setup._pType);
       _separator.setValue(res._setup._separator);
-      if(_header.specified()){
+      if(!_header.specified())
         _header.setValue(res._setup._header);
-      }
       _header._hideInQuery = _separator._hideInQuery = res._setup._pType != CustomParser.ParserType.CSV;
       return res;
     }
@@ -217,7 +218,7 @@ public class Parse extends Request {
       if( data != null ) {
         sb.append("<table class='table table-striped table-bordered'>");
         int j = 0;
-        if( header != null) { // Obvious header display, if asked for
+        if( psetup._setup._header && header != null) { // Obvious header display, if asked for
           sb.append("<tr><th>Row#</th>");
           for( String s : header ) sb.append("<th>").append(s).append("</th>");
           sb.append("</tr>");
