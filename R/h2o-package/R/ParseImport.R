@@ -19,7 +19,7 @@ h2o.startLauncher <- function() {
   if(myOS == "Windows") verPath = paste(myHome, "AppData/Roaming/h2o", sep="/")
   else verPath = paste(myHome, "Library/Application Support/h2o", sep="/")
   myFiles = list.files(verPath)
-  if(length(myFiles) == 0) stop("Cannot find location of H2OLauncher.jar. Please check that your H2O installation is complete.")
+  if(length(myFiles) == 0) stop("Cannot find location of H2O launcher. Please check that your H2O installation is complete.")
   # Must trim myFiles so all have format 1.2.3.45678.txt (use regexpr)!
   
   # Get H2O with latest version number
@@ -28,13 +28,17 @@ h2o.startLauncher <- function() {
   myVersion = strsplit(tail(myFiles, n=1), ".txt")[[1]]
   launchPath = readChar(fileName, file.info(fileName)$size)
   if(is.null(launchPath) || !file.exists(launchPath) || launchPath == "")
-    stop(paste("No H2OLauncher.jar matching H2O version", myVersion, "found"))
+    stop(paste("No H2O launcher matching H2O version", myVersion, "found"))
   
-  temp = getwd(); setwd(launchPath)
   # if(!file.exists("H2OLauncher.jar")) stop(paste("Cannot open H2OLauncher.jar! Please check if it exists at", launchPath))
-  if(myOS == "Windows") shell.exec("H2OLauncher.jar")
-  else system(paste("open", launchPath))
-  setwd(temp)
+  if(myOS == "Windows") {
+    temp = paste(launchPath, "windows/h2o.bat", sep="/")
+    system(paste("call", temp))
+  }
+  else {
+    temp = paste(launchPath, "Contents/MacOS/h2o", sep="/")
+    system(paste("bash", temp))
+  }
 }
 
 setMethod("h2o.checkClient", signature(object="H2OClient"), function(object) { 
