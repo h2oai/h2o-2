@@ -40,6 +40,7 @@ h2o.__remoteSend <- function(client, page, ...) {
   temp = postForm(url, style = "POST", ...)
   after = gsub("NaN", "\"NaN\"", temp[1])
   # after = gsub("Inf", "\"Inf\"", after)
+  after = gsub("-Infinity", "\"-Inf\"", after)
   after = gsub("Infinity", "\"Inf\"", after)
   res = fromJSON(after)
   

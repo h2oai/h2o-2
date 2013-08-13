@@ -130,60 +130,13 @@ public class Inspect extends Request {
     return Response.error("No idea how to display a "+f.getClass());
   }
 
-  public static byte [] getFirstBytes(Value v){
-    byte[] bs = v.getFirstBytes();
-    int off = 0;
-    // First decrypt compression
-    InputStream is = null;
-    try {
-      switch( water.parser.ParseDataset.guessCompressionMethod(v) ) {
-      case NONE: // No compression
-        off = bs.length; // All bytes ready already
-        break;
-      case ZIP: {
-        ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(bs));
-        ZipEntry ze = zis.getNextEntry(); // Get the *FIRST* entry
-        // There is at least one entry in zip file and it is not a directory.
-        if( ze != null && !ze.isDirectory() )
-          is = zis;
-        else
-          zis.close();
-        break;
-      }
-      case GZIP:
-        is = new GZIPInputStream(new ByteArrayInputStream(bs));
-        break;
-      }
-      // If reading from a compressed stream, estimate we can read 2x uncompressed
-      if( is != null )
-        bs = new byte[bs.length * 2];
-      // Now read from the (possibly compressed) stream
-      while( off < bs.length ) {
-        int len = is.read(bs, off, bs.length - off);
-        if( len < 0 )
-          break;
-        off += len;
-        if( off == bs.length ) { // Dataset is uncompressing alot! Need more space...
-          if( bs.length >= ValueArray.CHUNK_SZ )
-            break; // Already got enough
-          bs = Arrays.copyOf(bs, bs.length * 2);
-        }
-      }
-    } catch( IOException ioe ) { // Stop at any io error
-      Log.err(ioe);
-    } finally {
-      Utils.close(is);
-    }
-    if( off < bs.length )
-      bs = Arrays.copyOf(bs, off); // Trim array to length read
-    return bs;
-  }
-
   // Build a response JSON
   private final Response serveUnparsedValue(Key key, Value v) {
     JsonObject result = new JsonObject();
     result.addProperty(VALUE_TYPE, "unparsed");
-    CustomParser.ParserSetup setup = ParseDataset.guessSetup(getFirstBytes(v));
+    byte [] bits = v.getFirstBytes();
+    bits = Utils.unzipBytes(bits, Utils.guessCompressionMethod(bits));
+    CustomParser.ParserSetup setup = ParseDataset.guessSetup(bits);
     if( setup._data != null && setup._data[1].length > 0 ) { // Able to parse sanely?
       int zipped_len = v.getFirstBytes().length;
       double bytes_per_row = (double) zipped_len / setup._data.length;

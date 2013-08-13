@@ -1,6 +1,7 @@
 package water.api;
 
-import water.*;
+import water.Job;
+import water.Key;
 import water.fvec.ParseDataset2;
 import water.parser.CustomParser;
 
@@ -11,10 +12,6 @@ public class Parse2 extends Parse {
   @API(help="Should block and wait for result?")
   protected Bool _blocking = new Bool("blocking",false, "");
 
-  @Override
-  protected CustomParser.ParserSetup guessSetup(Key k, CustomParser.ParserSetup setup, boolean checkHeader){
-    return ParseDataset2.guessSetup(k, setup,checkHeader);
-  }
   public Parse2(){_blocking._hideInQuery = true;}
   @Override protected Response serve() {
     PSetup p = _source.value();
