@@ -19,7 +19,7 @@ h2o.startLauncher <- function() {
   if(myOS == "Windows") verPath = paste(myHome, "AppData/Roaming/h2o", sep="/")
   else verPath = paste(myHome, "Library/Application Support/h2o", sep="/")
   myFiles = list.files(verPath)
-  if(length(myFiles) == 0) stop("Cannot find config file or folder")
+  if(length(myFiles) == 0) stop("Cannot find location of H2OLauncher.jar. Please check that your H2O installation is complete.")
   # Must trim myFiles so all have format 1.2.3.45678.txt (use regexpr)!
   
   # Get H2O with latest version number
@@ -27,10 +27,11 @@ h2o.startLauncher <- function() {
   fileName = paste(verPath, tail(myFiles, n=1), sep="/")
   myVersion = strsplit(tail(myFiles, n=1), ".txt")[[1]]
   launchPath = readChar(fileName, file.info(fileName)$size)
-  if(is.null(launchPath) || launchPath == "")
+  if(is.null(launchPath) || !file.exists(launchPath) || launchPath == "")
     stop(paste("No H2OLauncher.jar matching H2O version", myVersion, "found"))
   
   temp = getwd(); setwd(launchPath)
+  # if(!file.exists("H2OLauncher.jar")) stop(paste("Cannot open H2OLauncher.jar! Please check if it exists at", launchPath))
   if(myOS == "Windows") shell.exec("H2OLauncher.jar")
   else system(paste("open", launchPath))
   setwd(temp)
@@ -39,9 +40,10 @@ h2o.startLauncher <- function() {
 setMethod("h2o.checkClient", signature(object="H2OClient"), function(object) { 
   myURL = paste("http://", object@ip, ":", object@port, sep="")
   if(!url.exists(myURL)) {
-    print("H2O is not running yet, starting it now.")
+    print("H2O is not running yet, launching it now.")
     h2o.startLauncher()
-    invisible(readline("Hit <Return> to continue: "))
+    invisible(readline("Start H2O, then hit <Return> to continue: "))
+    if(!url.exists(myURL)) stop("H2O failed to start, stopping execution.")
   } else { 
     cat("Successfully connected to", myURL, "\n")
     if("h2o" %in% rownames(installed.packages()) && (pv=packageVersion("h2o")) != (sv=h2o.__version(object)))
