@@ -29,12 +29,10 @@ h2o.startLauncher <- function() {
   launchPath = readChar(fileName, file.info(fileName)$size)
   if(is.null(launchPath) || !file.exists(launchPath) || launchPath == "")
     stop(paste("No H2O launcher matching H2O version", myVersion, "found"))
+  print(launchPath)
   
   # if(!file.exists("H2OLauncher.jar")) stop(paste("Cannot open H2OLauncher.jar! Please check if it exists at", launchPath))
-  if(myOS == "Windows") {
-    temp = paste(launchPath, "windows/h2o.bat", sep="/")
-    system(paste("call", temp))
-  }
+  if(myOS == "Windows") shell.exec(paste(launchPath, "windows/h2o.bat", sep="/"))
   else {
     temp = paste(launchPath, "Contents/MacOS/h2o", sep="/")
     system(paste("bash", temp))
