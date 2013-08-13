@@ -12,7 +12,7 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1)
+            h2o.build_cloud(1,java_heap_GB=5)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -24,7 +24,7 @@ class Basic(unittest.TestCase):
 		noPoll = True
 		timeoutSecs = 180
 		num_trials = 0
-		trial_max = 100
+		trial_max = 230
 		while num_trials < trial_max:
 			num_trials += 1
 			csvPathname = h2o.find_file('smalldata/poker')
