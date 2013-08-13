@@ -125,8 +125,7 @@ public class StoreView extends Request {
     if( rows == -1 ) {
       byte [] bits = Utils.getFirstUnzipedBytes(val);
       CustomParser.ParserSetup setup = ParseDataset.guessSetup(bits);
-      System.out.println("setup of " + val._key + ": " + Arrays.toString(setup._data[0]));
-      if( setup._data != null && setup._ncols > 0 ) { // Able to parse sanely?
+      if(setup != null &&  setup._data != null && setup._ncols > 0 ) { // Able to parse sanely?
         int zipped_len = val.getFirstBytes().length;
         double bytes_per_row = (double) zipped_len / setup._data.length;
         rows = (long) (val.length() / bytes_per_row);

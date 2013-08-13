@@ -17,7 +17,7 @@ public class Parse extends Request {
   private   final ParserType _parserType    = new ParserType(PARSER_TYPE);
   private   final Separator      _separator = new Separator(SEPARATOR);
   private   final Bool           _header    = new Bool(HEADER,false,"Use first line as a header");
-  protected final H2OExistingKey  _hdrFrom  = new H2OExistingKey("header_from_file");
+  protected final H2OExistingKey  _hdrFrom  = new H2OExistingKey("header_from_file",false);
   protected final Str _excludeExpression    = new Str("exclude","");
   protected final ExistingCSVKey _source    = new ExistingCSVKey(SOURCE_KEY);
   protected final NewH2OHexKey   _dest      = new NewH2OHexKey(DEST_KEY);
