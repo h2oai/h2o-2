@@ -6,8 +6,21 @@ import water.ValueArray;
 import com.google.gson.JsonObject;
 
 public class SetColumnNames extends Request {
+
+
   protected final H2OHexKey _tgtKey = new H2OHexKey("target");
-  protected final H2OHexKey _srcKey = new H2OHexKey("source");
+
+  private class HeaderKey extends H2OHexKey {
+    public HeaderKey(){super("source");}
+    @Override protected ValueArray parse(String input) throws IllegalArgumentException {
+      ValueArray res = super.parse(input);
+      if(res.numCols() != _tgtKey.value().numCols())
+        throw new IllegalArgumentException("number of columns don't match!");
+      return res;
+    }
+  }
+  protected final HeaderKey _srcKey = new HeaderKey();
+
   @Override protected Response serve() {
     ValueArray tgt = _tgtKey.value();
     tgt.setColumnNames(_srcKey.value().colNames());
