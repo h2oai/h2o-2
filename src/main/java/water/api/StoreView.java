@@ -5,6 +5,7 @@ import java.util.Arrays;
 
 import water.*;
 import water.parser.*;
+import water.util.Utils;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -122,13 +123,13 @@ public class StoreView extends Request {
     }
     // If not a proper ValueArray, estimate by parsing the first 1meg chunk
     if( rows == -1 ) {
-      byte [] bits = val.getFirstBytes();
+      byte [] bits = Utils.getFirstUnzipedBytes(val);
       CustomParser.ParserSetup setup = ParseDataset.guessSetup(bits);
-      if( setup._data != null && setup._data[1].length > 0 ) { // Able to parse sanely?
+      if(setup != null &&  setup._data != null && setup._ncols > 0 ) { // Able to parse sanely?
         int zipped_len = val.getFirstBytes().length;
         double bytes_per_row = (double) zipped_len / setup._data.length;
         rows = (long) (val.length() / bytes_per_row);
-        cols = setup._data[1].length;
+        cols = setup._ncols;
         result.addProperty(ROWS, "~" + rows);
         result.addProperty(COLS, cols);
         final int len = setup._data.length;

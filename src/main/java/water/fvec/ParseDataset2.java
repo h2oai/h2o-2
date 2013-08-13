@@ -12,6 +12,7 @@ import water.nbhm.NonBlockingHashMap;
 import water.parser.*;
 import water.parser.CustomParser.ParserSetup;
 import water.parser.CustomParser.ParserType;
+import water.parser.ParseDataset.Compression;
 import water.parser.Enum;
 import water.util.Utils;
 
@@ -25,7 +26,7 @@ public final class ParseDataset2 extends Job {
     Key k = keys[0];
     ByteVec v = (ByteVec)getVec(k);
     byte [] bits = v.elem2BV(0)._mem;
-    Compression cpr = guessCompressionMethod(v);
+    Compression cpr = Utils.guessCompressionMethod(bits);
     CustomParser.ParserSetup globalSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), new ParserSetup(),true);
     return forkParseDataset(okey, keys, globalSetup).get();
   }
@@ -252,9 +253,10 @@ public final class ParseDataset2 extends Job {
   }
 
   public static ParserSetup guessSetup(Key key, ParserSetup setup, boolean checkHeader){
+
     ByteVec vec = (ByteVec) getVec(key);
     byte [] bits = vec.elem2BV(0)._mem;
-    Compression cpr = guessCompressionMethod(vec);
+    Compression cpr = Utils.guessCompressionMethod(bits);
     return ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), setup,checkHeader);
   }
   // --------------------------------------------------------------------------
@@ -278,7 +280,7 @@ public final class ParseDataset2 extends Job {
       // Get parser setup info for this chunk
       ByteVec vec = (ByteVec) getVec(key);
       byte [] bits = vec.elem2BV(0)._mem;
-      Compression cpr = guessCompressionMethod(vec);
+      Compression cpr = Utils.guessCompressionMethod(bits);
       CustomParser.ParserSetup localSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), _setup,true);
       // Local setup: nearly the same as the global all-files setup, but maybe
       // has the header-flag changed.
@@ -434,19 +436,6 @@ public final class ParseDataset2 extends Job {
     }
   }
 
-  // --------------------------------------------------------------------------
-  // Heuristics
-
-  public static enum Compression { NONE, ZIP, GZIP }
-  public static Compression guessCompressionMethod( ByteVec vec) {
-    C1NChunk bv = vec.elem2BV(0); // First chunk of bytes
-    // Look for ZIP magic
-    if( vec.length() > ZipFile.LOCHDR && bv.get4(0) == ZipFile.LOCSIG )
-      return Compression.ZIP;
-    if( vec.length() > 2 && (0xFFFF&bv.get2(0)) == GZIPInputStream.GZIP_MAGIC )
-      return Compression.GZIP;
-    return Compression.NONE;
-  }
 
   /**
    * Parsed data output specialized for fluid vecs.

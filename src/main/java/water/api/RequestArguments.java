@@ -1491,11 +1491,19 @@ public class RequestArguments extends RequestStatics {
   public class H2OExistingKey extends TypeaheadInputText<Value> {
     public final Key _defaultValue;
     public H2OExistingKey(String name) {
-      super(TypeaheadKeysRequest.class, name, true);
+      this(name,true);
+    }
+    public H2OExistingKey(String name,boolean required) {
+      super(TypeaheadKeysRequest.class, name, required);
+      setRefreshOnChange();
       _defaultValue = null;
     }
     public H2OExistingKey(String name, String keyName) {
       this(name, Key.make(keyName));
+    }
+    public void setValue(Value v){
+      record()._value = v;
+      record()._originalValue = v._key.toString();
     }
     public H2OExistingKey(String name, Key key) {
       super(TypeaheadKeysRequest.class, name, false);
