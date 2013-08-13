@@ -79,10 +79,12 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",   "Admin");
     Request.addToNavbar(registerRequest(new Script()),      "Get Script",    "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",      "Admin");
-    Request.addToNavbar(registerRequest(new Tutorials()),           "View All",      "Tutorials");
-    Request.addToNavbar(registerRequest(new TutorialRFIris()),      "Random Forest", "Tutorials");
-    Request.addToNavbar(registerRequest(new TutorialGLMProstate()), "GLM",           "Tutorials");
-    Request.addToNavbar(registerRequest(new TutorialKMeans()),      "KMeans",        "Tutorials");
+
+    Request.addToNavbar(registerRequest(new Documentation()),       "H2O Documentation",      "Help");
+    Request.addToNavbar(registerRequest(new Tutorials()),           "Tutorials Home",         "Help");
+    Request.addToNavbar(registerRequest(new TutorialRFIris()),      "Random Forest Tutorial", "Help");
+    Request.addToNavbar(registerRequest(new TutorialGLMProstate()), "GLM Tutorial",           "Help");
+    Request.addToNavbar(registerRequest(new TutorialKMeans()),      "KMeans Tutorial",        "Help");
 
     Request.addToNavbar(registerRequest(new ImportFiles2()),"Import Files2","Beta (FluidVecs!)");
     Request.addToNavbar(registerRequest(new Parse2()),      "Parse2"       ,"Beta (FluidVecs!)");
