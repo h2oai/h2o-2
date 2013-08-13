@@ -130,7 +130,7 @@ public class Parse extends Request {
       _separator.setValue(res._setup._separator);
       if(!_header.specified())
         _header.setValue(res._setup._header);
-      _header._hideInQuery = _separator._hideInQuery = res._setup._pType != CustomParser.ParserType.CSV;
+      _hdrFrom._hideInQuery = _header._hideInQuery = _separator._hideInQuery = res._setup._pType != CustomParser.ParserType.CSV;
       return res;
     }
 
