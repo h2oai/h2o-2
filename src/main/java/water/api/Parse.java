@@ -17,7 +17,7 @@ public class Parse extends Request {
   private   final ParserType _parserType    = new ParserType(PARSER_TYPE);
   private   final Separator      _separator = new Separator(SEPARATOR);
   private   final Bool           _header    = new Bool(HEADER,false,"Use first line as a header");
-  protected final H2OExistingKey  _hdrFrom  = new H2OExistingKey("header_from_file",false);
+  protected final HeaderKey      _hdrFrom   = new HeaderKey("header_from_file",false);
   protected final Str _excludeExpression    = new Str("exclude","");
   protected final ExistingCSVKey _source    = new ExistingCSVKey(SOURCE_KEY);
   protected final NewH2OHexKey   _dest      = new NewH2OHexKey(DEST_KEY);
@@ -119,8 +119,10 @@ public class Parse extends Request {
       CustomParser.ParserSetup setup = guessSetup(keys, hKey, new CustomParser.ParserSetup(_parserType.value(),_separator.value(),_header.specified()?_header.value():false),_header.specified());
       if(setup == null)
         throw new IllegalArgumentException("I cannot figure out this file; Please select the parse setup manually.");
-      if(_header.specified())
+      if(!_header.value()){
         setup.setHeader(_header.value());
+        if(!_header.value()) _hdrFrom.disable("Header is disabled.");
+      }
       PSetup res = new PSetup(keys,setup);
       _parserType.setValue(res._setup._pType);
       _separator.setValue(res._setup._separator);
@@ -193,7 +195,22 @@ public class Parse extends Request {
     }
     @Override protected String queryDescription() { return "Destination hex key"; }
   }
+  public class HeaderKey extends H2OExistingKey {
+    public HeaderKey(String name, boolean required) {
+      super(name, required);
+    }
+    @Override protected String queryElement() {
+      String [] colnames = _source.value()._setup._columnNames;
+      StringBuilder sb = new StringBuilder(super.queryElement() + "\n");
+      if(colnames != null){
+        sb.append("<table class='table table-striped table-bordered'>").append("<tr><th>Header:</th>");
+        for( String s : colnames ) sb.append("<th>").append(s).append("</th>");
+        sb.append("</tr></table>");
+      }
+      return sb.toString();
+    }
 
+  }
   // A Query Bool, which includes a pretty HTML-ized version of the first few
   // parsed data rows.  If the value() is TRUE, we display as-if the first row
   // is a label/header column, and if FALSE not.
