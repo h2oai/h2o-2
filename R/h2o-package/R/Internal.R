@@ -20,6 +20,7 @@ h2o.__PAGE_VIEWALL = "StoreView.json"
 
 h2o.__PAGE_SUMMARY = "SummaryPage.json"
 h2o.__PAGE_PREDICT = "GeneratePredictionsPage.json"
+h2o.__PAGE_COLNAMES = "SetColumnNames.json"
 h2o.__PAGE_GLM = "GLM.json"
 h2o.__PAGE_KMEANS = "KMeans.json"
 h2o.__PAGE_KMAPPLY = "KMeansApply.json"
@@ -39,6 +40,7 @@ h2o.__remoteSend <- function(client, page, ...) {
   temp = postForm(url, style = "POST", ...)
   after = gsub("NaN", "\"NaN\"", temp[1])
   # after = gsub("Inf", "\"Inf\"", after)
+  after = gsub("-Infinity", "\"-Inf\"", after)
   after = gsub("Infinity", "\"Inf\"", after)
   res = fromJSON(after)
   

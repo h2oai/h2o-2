@@ -26,6 +26,7 @@ public class Inspect extends Request {
   private final LongInt                        _offset       = new LongInt(OFFSET, 0L, INFO_PAGE, Long.MAX_VALUE, "");
   private final Int                            _view         = new Int(VIEW, 100, 0, 10000);
   private final Str                            _producer     = new Str(JOB, null);
+  private final Int                            _max_column   = new Int(COLUMNS_DISPLAY, MAX_COLUMNS_TO_DISPLAY);
 
   static final int MAX_COLUMNS_TO_DISPLAY = 1000;
 
@@ -42,6 +43,8 @@ public class Inspect extends Request {
     _key.check(this, k.toString());
     _offset.reset();
     _offset.check(this, "");
+    _max_column.reset();
+    _max_column.check(this, "");
     _view.reset();
     _view.check(this, "");
   }
@@ -81,7 +84,12 @@ public class Inspect extends Request {
       ValueArray ary = (ValueArray)f;
       if( ary._cols.length==1 && ary._cols[0]._name==null )
         return serveUnparsedValue(key, val);
-      return serveValueArray(ary);
+
+      int columns_to_display = 0;
+      if (_max_column.value() > 0)
+        columns_to_display = _max_column.value();
+
+      return serveValueArray(ary, columns_to_display);
     }
     if( f instanceof Vec ) {
       return serveUnparsedValue(key, ((Vec) f).chunkIdx(0));
@@ -122,60 +130,13 @@ public class Inspect extends Request {
     return Response.error("No idea how to display a "+f.getClass());
   }
 
-  public static byte [] getFirstBytes(Value v){
-    byte[] bs = v.getFirstBytes();
-    int off = 0;
-    // First decrypt compression
-    InputStream is = null;
-    try {
-      switch( water.parser.ParseDataset.guessCompressionMethod(v) ) {
-      case NONE: // No compression
-        off = bs.length; // All bytes ready already
-        break;
-      case ZIP: {
-        ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(bs));
-        ZipEntry ze = zis.getNextEntry(); // Get the *FIRST* entry
-        // There is at least one entry in zip file and it is not a directory.
-        if( ze != null && !ze.isDirectory() )
-          is = zis;
-        else
-          zis.close();
-        break;
-      }
-      case GZIP:
-        is = new GZIPInputStream(new ByteArrayInputStream(bs));
-        break;
-      }
-      // If reading from a compressed stream, estimate we can read 2x uncompressed
-      if( is != null )
-        bs = new byte[bs.length * 2];
-      // Now read from the (possibly compressed) stream
-      while( off < bs.length ) {
-        int len = is.read(bs, off, bs.length - off);
-        if( len < 0 )
-          break;
-        off += len;
-        if( off == bs.length ) { // Dataset is uncompressing alot! Need more space...
-          if( bs.length >= ValueArray.CHUNK_SZ )
-            break; // Already got enough
-          bs = Arrays.copyOf(bs, bs.length * 2);
-        }
-      }
-    } catch( IOException ioe ) { // Stop at any io error
-      Log.err(ioe);
-    } finally {
-      Utils.close(is);
-    }
-    if( off < bs.length )
-      bs = Arrays.copyOf(bs, off); // Trim array to length read
-    return bs;
-  }
-
   // Build a response JSON
   private final Response serveUnparsedValue(Key key, Value v) {
     JsonObject result = new JsonObject();
     result.addProperty(VALUE_TYPE, "unparsed");
-    CustomParser.ParserSetup setup = ParseDataset.guessSetup(v);
+    byte [] bits = v.getFirstBytes();
+    bits = Utils.unzipBytes(bits, Utils.guessCompressionMethod(bits));
+    CustomParser.ParserSetup setup = ParseDataset.guessSetup(bits);
     if( setup._data != null && setup._data[1].length > 0 ) { // Able to parse sanely?
       int zipped_len = v.getFirstBytes().length;
       double bytes_per_row = (double) zipped_len / setup._data.length;
@@ -205,7 +166,15 @@ public class Inspect extends Request {
     return r;
   }
 
+
   public Response serveValueArray(final ValueArray va) {
+    return serveValueArray(va, va._cols.length);
+  }
+
+  /**
+   * serve the value array with a capped # of columns [0,max_columns)
+   */
+  public Response serveValueArray(final ValueArray va, int max_column) {
     if( _offset.value() > va._numrows )
       return Response.error("Value only has " + va._numrows + " rows");
 
@@ -220,7 +189,9 @@ public class Inspect extends Request {
     JsonArray cols = new JsonArray();
     JsonArray rows = new JsonArray();
 
-    for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY, va._cols.length); i++ ) {
+    final int col_limit = Math.min(max_column, va._cols.length);
+
+    for( int i = 0; i < col_limit; i++ ) {
       Column c = va._cols[i];
       JsonObject json = new JsonObject();
       json.addProperty(NAME, c._name);
@@ -244,7 +215,7 @@ public class Inspect extends Request {
       for( long row = Math.max(0, startRow); row < endRow; ++row ) {
         JsonObject obj = new JsonObject();
         obj.addProperty(ROW, row);
-        for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY, va._cols.length); ++i )
+        for( int i = 0; i < col_limit; ++i )
           format(obj, va, row, i);
         rows.add(obj);
       }
@@ -258,7 +229,7 @@ public class Inspect extends Request {
       @Override
       public String build(Response response, JsonObject object, String contextName) {
         String s = html(va._key, va._numrows, va._cols.length, va._rowsize, va.length());
-        Table t = new Table(argumentsToJson(), _offset.value(), _view.value(), va);
+        Table t = new Table(argumentsToJson(), _offset.value(), _view.value(), va, col_limit);
         s += t.build(response, object.get(ROWS), ROWS);
         return s;
       }
@@ -332,7 +303,7 @@ public class Inspect extends Request {
         sb.append("<div class='alert alert-success'>"
         		+ "<b>Produced in ").append(PrettyPrint.msecs(job.executionTime(),true)).append(".</b></div>");
     }
-    sb.append("<div class='alert'>" +"View " + SummaryPage.link(key, "Summary") +  "<br/>Build models using "
+    sb.append("<div class='alert'>Set " + SetColumnNames.link(key,"Column Names") +"<br/>View " + SummaryPage.link(key, "Summary") +  "<br/>Build models using "
           + RF.link(key, "Random Forest") + ", "
           + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", "
           + KMeans.link(key, "KMeans") + ", or "
@@ -411,22 +382,31 @@ public class Inspect extends Request {
 
   private static final class Table extends PaginatedTable {
     private final ValueArray _va;
+    private final int _max_columns;
+
+    public Table(JsonObject query, long offset, int view, ValueArray va, int max_columns_to_display) {
+      super(query, offset, view, va._numrows, true);
+      _va = va;
+      _max_columns = Math.min(max_columns_to_display, va._cols.length);
+    }
 
     public Table(JsonObject query, long offset, int view, ValueArray va) {
       super(query, offset, view, va._numrows, true);
       _va = va;
+      _max_columns = va._cols.length;
     }
 
     @Override
     public String build(Response response, JsonArray array, String contextName) {
       StringBuilder sb = new StringBuilder();
-      if (_va._cols.length > MAX_COLUMNS_TO_DISPLAY)
-        sb.append("<p style='text-align:center;'><center><h5 style='font-weight:800; color:red;'>Columns trimmed to " + MAX_COLUMNS_TO_DISPLAY + "</h5></center></p>");
+
+      if (_va._cols.length > _max_columns)
+        sb.append("<p style='text-align:center;'><center><h5 style='font-weight:800; color:red;'>Columns trimmed to " + _max_columns + "</h5></center></p>");
       if( array.size() == 0 ) { // Fake row, needed by builder
         array = new JsonArray();
         JsonObject fake = new JsonObject();
         fake.addProperty(ROW, 0);
-        for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY, _va._cols.length); ++i )
+        for( int i = 0; i < _max_columns; ++i )
           format(fake, _va, 0, i);
         array.add(fake);
       }
@@ -435,27 +415,27 @@ public class Inspect extends Request {
       JsonObject row = new JsonObject();
 
       row.addProperty(ROW, MIN);
-      for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY,_va._cols.length); i++ )
+      for( int i = 0; i < _max_columns; i++ )
         row.addProperty(_va._cols[i]._name, _va._cols[i]._min);
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       row.addProperty(ROW, MAX);
-      for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY,_va._cols.length); i++ )
+      for( int i = 0; i < _max_columns; i++ )
         row.addProperty(_va._cols[i]._name, _va._cols[i]._max);
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       row.addProperty(ROW, MEAN);
-      for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY,_va._cols.length); i++ )
+      for( int i = 0; i < _max_columns; i++ )
         row.addProperty(_va._cols[i]._name, _va._cols[i]._mean);
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       row.addProperty(ROW, VARIANCE);
-      for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY,_va._cols.length); i++ )
+      for( int i = 0; i < _max_columns; i++ )
         row.addProperty(_va._cols[i]._name, _va._cols[i]._sigma);
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       row.addProperty(ROW, NUM_MISSING_VALUES);
-      for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY,_va._cols.length); i++ )
+      for( int i = 0; i < _max_columns; i++ )
         row.addProperty(_va._cols[i]._name, _va._numrows - _va._cols[i]._n);
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
@@ -466,22 +446,22 @@ public class Inspect extends Request {
         sb.append(defaultBuilder(row).build(response, row, contextName));
 
         row.addProperty(ROW, SIZE);
-        for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY,_va._cols.length); i++ )
+        for( int i = 0; i < _max_columns; i++ )
           row.addProperty(_va._cols[i]._name, Math.abs(_va._cols[i]._size));
         sb.append(defaultBuilder(row).build(response, row, contextName));
 
         row.addProperty(ROW, BASE);
-        for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY,_va._cols.length); i++ )
+        for( int i = 0; i < _max_columns; i++ )
           row.addProperty(_va._cols[i]._name, _va._cols[i]._base);
         sb.append(defaultBuilder(row).build(response, row, contextName));
 
         row.addProperty(ROW, SCALE);
-        for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY,_va._cols.length); i++ )
+        for( int i = 0; i < _max_columns; i++ )
           row.addProperty(_va._cols[i]._name, (int) _va._cols[i]._scale);
         sb.append(defaultBuilder(row).build(response, row, contextName));
 
         row.addProperty(ROW, ENUM_DOMAIN_SIZE);
-        for( int i = 0; i < Math.min(MAX_COLUMNS_TO_DISPLAY,_va._cols.length); i++ )
+        for( int i = 0; i < _max_columns; i++ )
           row.addProperty(_va._cols[i]._name, _va._cols[i]._domain != null ? _va._cols[i]._domain.length : 0);
         sb.append(defaultBuilder(row).build(response, row, contextName));
       } else {
@@ -494,8 +474,8 @@ public class Inspect extends Request {
       }
 
       sb.append(footer(array));
-      if (_va._cols.length > MAX_COLUMNS_TO_DISPLAY)
-        sb.append("<p style='text-align:center;'><center><h5 style='font-weight:800; color:red;'>Columns trimmed to " + MAX_COLUMNS_TO_DISPLAY + "</h5></center></p>");
+      if (_va._cols.length > _max_columns)
+        sb.append("<p style='text-align:center;'><center><h5 style='font-weight:800; color:red;'>Columns trimmed to " + _max_columns + "</h5></center></p>");
       return sb.toString();
     }
   }

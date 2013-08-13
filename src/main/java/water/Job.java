@@ -4,10 +4,13 @@ import java.util.Arrays;
 import java.util.UUID;
 
 import water.H2O.H2OCountedCompleter;
-import water.api.Constants;
-import water.api.Progress2;
+import water.api.*;
+import water.fvec.Frame;
 
 public class Job extends Request2 {
+  static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+  static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+
   // Global LIST of Jobs key.
   static final Key LIST = Key.make(Constants.BUILT_IN_KEY_JOBS, (byte) 0, Key.BUILT_IN_KEY);
   private static final int KEEP_LAST_COUNT = 100;
@@ -16,19 +19,37 @@ public class Job extends Request2 {
   @API(help = "Job key")
   public Key job_key; // Boolean read-only value; exists==>running, not-exists==>canceled/removed
 
-  @API(help = "Destination key", required = true)
+  @API(help = "Destination key", required = true, filter = Default.class)
   public Key destination_key; // Key holding final value after job is removed
 
-  public String _description;
-  public long _startTime;
-  public long _endTime;
+  @API(help = "Job description")
+  public String description;
+
+  @API(help = "Job start time")
+  public long start_time;
+
+  @API(help = "Job end time")
+  public long end_time;
+
   transient public H2OCountedCompleter _fjtask; // Top-level task you can block on
 
   public Key self() { return job_key; }
   public Key dest() { return destination_key; }
 
   public static abstract class FrameJob extends Job {
-    @API(help = "Key with input frame", required = true, filter = source_keyFilter.class)
+    static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+    static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+
+    @API(help = "Source frame", required = true, filter = sourceFilter.class)
+    public Frame source;
+    class sourceFilter extends FrameKey { public sourceFilter() { super(""); } }
+  }
+
+  public static abstract class HexJob extends Job {
+    static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+    static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+
+    @API(help = "Source key", required = true, filter = source_keyFilter.class)
     public Key source_key;
     class source_keyFilter extends H2OHexKey { public source_keyFilter() { super(""); } }
   }
@@ -71,8 +92,8 @@ public class Job extends Request2 {
   protected Job(String keyName, String description, Key dest) {
     // Pinned to self, because it should be almost always updated locally
     setJobKey(keyName);
-    _description = description;
-    _startTime = System.currentTimeMillis();
+    this.description = description;
+    start_time = System.currentTimeMillis();
     destination_key = dest;
   }
 
@@ -121,7 +142,7 @@ public class Job extends Request2 {
         Job[] jobs = old._jobs;
         for( int i = 0; i < jobs.length; i++ ) {
           if( jobs[i].job_key.equals(self) ) {
-            jobs[i]._endTime = CANCELLED_END_TIME;
+            jobs[i].end_time = CANCELLED_END_TIME;
             break;
           }
         }
@@ -143,8 +164,8 @@ public class Job extends Request2 {
         Job[] jobs = old._jobs;
         for( int i = 0; i < jobs.length; i++ ) {
           if( jobs[i].job_key.equals(job_key) ) {
-            if( jobs[i]._endTime != CANCELLED_END_TIME )
-              jobs[i]._endTime = System.currentTimeMillis();
+            if( jobs[i].end_time != CANCELLED_END_TIME )
+              jobs[i].end_time = System.currentTimeMillis();
             break;
           }
         }
@@ -153,8 +174,8 @@ public class Job extends Request2 {
           long min = Long.MAX_VALUE;
           int n = -1;
           for( int i = 0; i < jobs.length; i++ ) {
-            if( jobs[i]._endTime != 0 && jobs[i]._startTime < min ) {
-              min = jobs[i]._startTime;
+            if( jobs[i].end_time != 0 && jobs[i].start_time < min ) {
+              min = jobs[i].start_time;
               n = i;
             }
           }
@@ -194,7 +215,7 @@ public class Job extends Request2 {
   }
 
   /** Returns job execution time in milliseconds */
-  public final long executionTime() { return _endTime - _startTime; }
+  public final long executionTime() { return end_time - start_time; }
 
   // If job is a request
 
@@ -232,7 +253,7 @@ public class Job extends Request2 {
         // This is the job we are looking for.
         found = true;
 
-        if (jobs[i]._endTime > 0) {
+        if (jobs[i].end_time > 0) {
           done = true;
         }
 

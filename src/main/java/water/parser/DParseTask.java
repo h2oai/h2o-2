@@ -312,8 +312,11 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     t._job = job;
     t._phase = Pass.ONE;
     t._parser = parser;
-    if(t._parser._setup != null)
+    if(t._parser._setup != null) {
       t._ncolumns = parser._setup._ncols;
+      t._colNames = parser._setup._columnNames;
+      System.out.println("Column names = " + Arrays.toString(parser._setup._columnNames));
+    }
     return t;
   }
 
@@ -452,7 +455,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
       cols[i]._min = _min[i];
       cols[i]._mean = _mean[i];
       cols[i]._sigma = _sigma[i];
-      cols[i]._name = _colNames[i];
+      cols[i]._name = _colNames != null?_colNames[i]:Integer.toString(i);
       off += Math.abs(cols[i]._size);
     }
     // let any pending progress reports finish

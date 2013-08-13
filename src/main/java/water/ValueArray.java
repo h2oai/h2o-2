@@ -134,6 +134,11 @@ public class ValueArray extends Iced implements Cloneable {
       names[i] = _cols[i]._name;
     return names;
   }
+  /** An array of column names */
+  public final void setColumnNames(String [] names) {
+    for(int i = 0; i < Math.min(_cols.length,names.length); ++i)
+      _cols[i]._name = names[i];
+  }
 
 
   /**Returns the width of a row.*/

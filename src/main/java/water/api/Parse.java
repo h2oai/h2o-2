@@ -5,55 +5,96 @@ import java.util.Collections;
 import java.util.regex.Pattern;
 
 import water.*;
+import water.fvec.Frame;
 import water.parser.*;
-import water.parser.CustomParser.ParserSetup;
 import water.util.RString;
+import water.util.Utils;
 
 import com.google.gson.JsonObject;
 
 public class Parse extends Request {
-  private   final Separator      _separator = new Separator(SEPARATOR);
+
   private   final ParserType _parserType    = new ParserType(PARSER_TYPE);
+  private   final Separator      _separator = new Separator(SEPARATOR);
+  private   final Bool           _header    = new Bool(HEADER,false,"Use first line as a header");
+  protected final HeaderKey      _hdrFrom   = new HeaderKey("header_from_file",false);
   protected final Str _excludeExpression    = new Str("exclude","");
   protected final ExistingCSVKey _source    = new ExistingCSVKey(SOURCE_KEY);
   protected final NewH2OHexKey   _dest      = new NewH2OHexKey(DEST_KEY);
-  private   final Header         _header    = new Header(HEADER);
+  @SuppressWarnings("unused")
+  private   final Preview        _preview   = new Preview(PREVIEW);
 
   public Parse() {
-    _excludeExpression.setRefreshOnChange();
+    _hdrFrom.addPrerequisite(_header);
+    _excludeExpression.setRefreshOnChange();}
+
+
+  protected CustomParser.ParserSetup guessSetup(ArrayList<Key> keys,Key headerKey, CustomParser.ParserSetup setup, boolean checkHeader){
+    String [] colNames = null;
+    CustomParser.ParserSetup gSetup = null, hSetup = null;
+    if(headerKey != null){ // handle the header file!
+      Value v = DKV.get(headerKey);
+      if(!v.isRawData()){ // either ValueArray or a Frame, just extract the headers
+        if(v.isArray()){
+          ValueArray ary = v.get();
+          colNames = ary.colNames();
+        } else if(v.isFrame()){
+          Frame fr = v.get();
+          colNames = fr._names;
+        } else
+          throw new IllegalArgumentException("Headers can only come from unparsed data, ValueArray or a frame. Got " + v.newInstance().getClass().getSimpleName());
+      } else { // check the hdr setup by parsing first bytes
+        hSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(headerKey),setup,checkHeader);
+        if(hSetup._data != null && hSetup._data.length > 1){ // the hdr file had both hdr and data, it better be part of the parse and represent the global parser setup
+          if(!keys.contains(headerKey))
+            throw new IllegalArgumentException("Header file must either be part of the parse or contain only header (no data!).");
+          gSetup = hSetup; // else we got a global setup file all other files must comply with!
+        }
+        colNames = hSetup._columnNames;
+      }
+    }
+    if(gSetup == null){ // we did not get global setup
+      Key k = keys.get(0);
+      if(headerKey != null && k.equals(headerKey) && keys.size() > 1)
+        k = keys.get(1);
+      gSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(k), new CustomParser.ParserSetup(), checkHeader && headerKey == null);
+      if(colNames.length != gSetup._ncols) throw new IllegalArgumentException("number of columns in the header file and the parsed files don't match!");
+    }
+    // now set the header info in the final setup
+    if(colNames != null){
+      gSetup._header = true;
+      gSetup._columnNames = colNames;
+    } else
+      gSetup._header = false;
+    return gSetup;
+
   }
 
-  private static class PSetup {
-    final ArrayList<Key> _keys;
+
+  protected static class PSetup {
+    final transient ArrayList<Key> _keys;
     final CustomParser.ParserSetup _setup;
     PSetup( ArrayList<Key> keys, CustomParser.ParserSetup parser) { _keys=keys; _setup = parser; }
-    PSetup( Key key, CustomParser.ParserSetup setup) {
-      _keys = new ArrayList();
-      _keys.add(key);
-      _setup = setup;
-    }
   };
-
   // An H2O Key Query, which runs the basic CSV parsing heuristics.  Accepts
   // Key wildcards, and gathers all matching Keys for simultaneous parsing.
   // Multi-key parses are only allowed on compatible CSV files, and only 1 is
   // allowed to have headers.
   public class ExistingCSVKey extends TypeaheadInputText<PSetup> {
-    public ExistingCSVKey(String name) { super(TypeaheadKeysRequest.class, name, true); }
+    public ExistingCSVKey(String name) {
+      super(TypeaheadKeysRequest.class, name, true);
+//      addPrerequisite(_parserType);
+//      addPrerequisite(_separator);
+    }
+
 
     @Override protected PSetup parse(String input) throws IllegalArgumentException {
-      Key k1 = Key.make(input);
-      Value v1 = DKV.get(k1);
-      if( v1 != null  && (input.endsWith(".xlsx") || input.endsWith(".xls")) )
-        return new PSetup(k1, null);
       Pattern p = makePattern(input);
       Pattern exclude = null;
       if(_excludeExpression.specified())
         exclude = makePattern(_excludeExpression.value());
-
       ArrayList<Key> keys = new ArrayList();
      // boolean badkeys = false;
-
       for( Key key : H2O.keySet() ) { // For all keys
         if( !key.user_allowed() ) continue;
         String ks = key.toString();
@@ -62,8 +103,6 @@ public class Parse extends Request {
         if(exclude != null && exclude.matcher(ks).matches())
           continue;
         Value v2 = DKV.get(key);  // Look at it
-        if( v2 == null  || input.endsWith(".xlsx") || input.endsWith(".xls") || v2.length() == 0)
-          continue;           // Missed key (racing deletes) or XLS files
         if(v2.isHex())// filter common mistake such as *filename* with filename.hex already present
           continue;
         keys.add(key);        // Add to list
@@ -73,25 +112,24 @@ public class Parse extends Request {
       Collections.sort(keys);   // Sort all the keys, except the 1 header guy
       // now we assume the first key has the header
       Key hKey = keys.get(0);
-      Value v = DKV.get(hKey);
-      byte [] bits = Inspect.getFirstBytes(v);
-      CustomParser.ParserType pType = _parserType.value();
-      CustomParser.ParserSetup setup;
-      if(pType == CustomParser.ParserType.CSV){
-        byte separator = _separator.specified() ? _separator.value() : CsvParser.NO_SEPARATOR;
-        setup = CsvParser.guessSetup(bits, separator);
-        if( setup == null || setup._data == null || setup._data[0].length == 0 )
-          throw new IllegalArgumentException("I cannot figure out this file; I only handle common CSV formats: "+hKey);
-      } else if(pType == CustomParser.ParserType.SVMLight){
-        setup = SVMLightParser.guessSetup(bits);
-        if(setup == null)
-          throw new IllegalArgumentException("The file " + hKey + " does not appear to be valid SVMLight parse.");
-      } else {
-        setup = ParseDataset.guessSetup(v);
-        if(setup == null)
-          throw new IllegalArgumentException("I cannot figure out this file; It does not match any of the supported formats. " + hKey);
+      if(_hdrFrom.specified())
+        hKey = _hdrFrom.value()._key;
+      else
+        _hdrFrom.setValue(DKV.get(hKey));
+      CustomParser.ParserSetup setup = guessSetup(keys, hKey, new CustomParser.ParserSetup(_parserType.value(),_separator.value(),_header.specified()?_header.value():false),_header.specified());
+      if(setup == null)
+        throw new IllegalArgumentException("I cannot figure out this file; Please select the parse setup manually.");
+      if(!_header.value()){
+        setup.setHeader(_header.value());
+        if(!_header.value()) _hdrFrom.disable("Header is disabled.");
       }
-      return new PSetup(keys,setup);
+      PSetup res = new PSetup(keys,setup);
+      _parserType.setValue(res._setup._pType);
+      _separator.setValue(res._setup._separator);
+      if(!_header.specified())
+        _header.setValue(res._setup._header);
+      _header._hideInQuery = _separator._hideInQuery = res._setup._pType != CustomParser.ParserType.CSV;
+      return res;
     }
 
     private final String keyRow(Key k){
@@ -137,7 +175,7 @@ public class Parse extends Request {
 
 
   // A Query String, which defaults to the source Key with a '.hex' suffix
-  private class NewH2OHexKey extends Str {
+  protected class NewH2OHexKey extends Str {
     NewH2OHexKey(String name) {
       super(name,null/*not required flag*/);
       addPrerequisite(_source);
@@ -157,44 +195,51 @@ public class Parse extends Request {
     }
     @Override protected String queryDescription() { return "Destination hex key"; }
   }
+  public class HeaderKey extends H2OExistingKey {
+    public HeaderKey(String name, boolean required) {
+      super(name, required);
+    }
+    @Override protected String queryElement() {
+      String [] colnames = _source.value()._setup._columnNames;
+      StringBuilder sb = new StringBuilder(super.queryElement() + "\n");
+      if(colnames != null){
+        sb.append("<table class='table table-striped table-bordered'>").append("<tr><th>Header:</th>");
+        for( String s : colnames ) sb.append("<th>").append(s).append("</th>");
+        sb.append("</tr></table>");
+      }
+      return sb.toString();
+    }
 
+  }
   // A Query Bool, which includes a pretty HTML-ized version of the first few
   // parsed data rows.  If the value() is TRUE, we display as-if the first row
   // is a label/header column, and if FALSE not.
-  public class Header extends Bool {
-    Header(String name) {
-      super(name, false, "First row is column headers?");
+  public class Preview extends Argument {
+      Preview(String name) {
+      super(name,false);
       addPrerequisite(_source);
+      addPrerequisite(_separator);
+      addPrerequisite(_parserType);
+      addPrerequisite(_header);
       setRefreshOnChange();
     }
     @Override protected String queryElement() {
       // first determine the value to put in the field
-      Record record = record();
-      String value = record._originalValue;
       // if no original value was supplied, use the provided one
-      PSetup psetup = _source.value();
-      if (value == null)
-        value = psetup._setup != null && psetup._setup._header ? "1" : "";
-      StringBuilder sb = new StringBuilder();
-      sb.append("<input value='1' class='span5' type='checkbox' ");
-      sb.append("name='").append(_name).append("' ");
-      sb.append("id='").append(_name).append("' ");
-      if( value.equals("1") ) sb.append("checked");
-      sb.append("/>&nbsp;&nbsp;").append(queryDescription()).append("<p>");
       String[][] data = null;
+      PSetup psetup = _source.value();
+      StringBuilder sb = new StringBuilder("<div class='alert'>" + psetup._setup.toString() + "</div>");
       if(psetup._setup != null)
         data = psetup._setup._data;
+      String [] header = psetup._setup._columnNames;
       if( data != null ) {
-        int sep = psetup._setup._separator;
-        sb.append("<div class='alert'><b>");
-        sb.append(String.format("Detected %d columns using '%s' (\\u%04d) as a separator.", psetup._setup._ncols,sep<33 ? WHITE_DELIMS[sep] : Character.toString((char)sep),sep));
-        sb.append("</b></div>");
         sb.append("<table class='table table-striped table-bordered'>");
-        int j=psetup._setup._header?0:1; // Skip auto-gen header in data[0]
-        if( value.equals("1") ) { // Obvious header display, if asked for
+        int j = 0;
+        if( psetup._setup._header && header != null) { // Obvious header display, if asked for
           sb.append("<tr><th>Row#</th>");
-          for( String s : data[j++] ) sb.append("<th>").append(s).append("</th>");
+          for( String s : header ) sb.append("<th>").append(s).append("</th>");
           sb.append("</tr>");
+          if(header == data[0]) ++j;
         }
         for( int i=j; i<data.length; i++ ) { // The first few rows
           sb.append("<tr><td>Row ").append(i-j).append("</td>");
@@ -204,6 +249,18 @@ public class Parse extends Request {
         sb.append("</table>");
       }
       return sb.toString();
+    }
+    @Override protected Object parse(String input) throws IllegalArgumentException {return null;}
+    @Override protected Object defaultValue() {return null;}
+
+    @Override protected String queryDescription() {
+      return "Preview of the parsed data";
+    }
+    @Override protected String jsRefresh(String callbackName) {
+      return "";
+    }
+    @Override protected String jsValue() {
+      return "";
     }
   }
 
@@ -220,13 +277,11 @@ public class Parse extends Request {
 
   @Override protected Response serve() {
     PSetup p = _source.value();
+    System.out.println("setup = " + p._setup.toString());
     CustomParser.ParserSetup setup = p._setup;
     Key dest = Key.make(_dest.value());
     try {
       // Make a new Setup, with the 'header' flag set according to user wishes.
-      if(p._setup != null && _header.specified())
-        setup.setHeader(_header.value());
-
       Key[] keys = p._keys.toArray(new Key[p._keys.size()]);
       Job job = ParseDataset.forkParseDataset(dest, keys,setup);
       JsonObject response = new JsonObject();
@@ -241,18 +296,17 @@ public class Parse extends Request {
       return Response.error(e.getMessage());
     }
   }
-
   private class Separator extends InputSelect<Byte> {
     public Separator(String name) {
       super(name,false);
       setRefreshOnChange();
     }
-
     @Override protected String   queryDescription() { return "Utilized separator"; }
     @Override protected String[] selectValues()     { return DEFAULT_IDX_DELIMS;   }
     @Override protected String[] selectNames()      { return DEFAULT_DELIMS; }
-    @Override protected Byte     defaultValue()     { return -1;             }
-    @Override protected String   selectedItemValue(){ return value() != null ? value().toString() : defaultValue().toString(); }
+    @Override protected Byte     defaultValue()     {return CsvParser.AUTO_SEP;}
+    public void setValue(Byte b){record()._value = b;}
+    @Override protected String selectedItemValue(){ return value() != null ? value().toString() : defaultValue().toString(); }
     @Override protected Byte parse(String input) throws IllegalArgumentException {
       Byte result = Byte.valueOf(input);
       return result;
@@ -276,8 +330,12 @@ public class Parse extends Request {
     @Override protected String[] selectNames()      {
       return _values;
     }
-    @Override protected CustomParser.ParserType defaultValue() { return CustomParser.ParserType.AUTO; }
-    @Override protected String   selectedItemValue(){ return value() != null ? value().toString() : defaultValue().toString(); }
+    @Override protected CustomParser.ParserType defaultValue() {
+      return CustomParser.ParserType.AUTO;
+    }
+    public void setValue(CustomParser.ParserType pt){record()._value = pt;}
+    @Override protected String   selectedItemValue(){
+      return value() != null ? value().toString() : defaultValue().toString(); }
     @Override protected CustomParser.ParserType parse(String input) throws IllegalArgumentException {
       return  CustomParser.ParserType.valueOf(input);
     }
@@ -307,7 +365,7 @@ public class Parse extends Request {
       DEFAULT_DELIMS[i] = String.format("%s: '%02d'", s, i);
     }
     for (i = 0; i < 126; i++) DEFAULT_IDX_DELIMS[i] = String.valueOf(i);
-    DEFAULT_DELIMS[i]     = "Guess separator ...";
-    DEFAULT_IDX_DELIMS[i] = String.valueOf(CsvParser.NO_SEPARATOR);
+    DEFAULT_DELIMS[i]     = "AUTO";
+    DEFAULT_IDX_DELIMS[i] = String.valueOf(CsvParser.AUTO_SEP);
   };
 }

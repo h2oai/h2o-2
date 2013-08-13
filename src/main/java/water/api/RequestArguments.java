@@ -14,8 +14,7 @@ import java.util.*;
 
 import water.*;
 import water.ValueArray.Column;
-import water.util.Check;
-import water.util.RString;
+import water.util.*;
 import water.api.Request.Filter;
 import water.fvec.*;
 
@@ -437,7 +436,7 @@ public class RequestArguments extends RequestStatics {
      * specified, or defaultValue. Note that default value is returned also for
      * invalid arguments.
      */
-    public final T value() {
+    final T value() {
       return record()._value;
     }
 
@@ -1387,6 +1386,10 @@ public class RequestArguments extends RequestStatics {
       _description = description;
     }
 
+    public void setValue(boolean b){
+      record()._value = b;
+      record()._originalValue = b?"1":"0";
+    }
     @Override protected String queryDescription() {
       return _description;
     }
@@ -1488,11 +1491,19 @@ public class RequestArguments extends RequestStatics {
   public class H2OExistingKey extends TypeaheadInputText<Value> {
     public final Key _defaultValue;
     public H2OExistingKey(String name) {
-      super(TypeaheadKeysRequest.class, name, true);
+      this(name,true);
+    }
+    public H2OExistingKey(String name,boolean required) {
+      super(TypeaheadKeysRequest.class, name, required);
+      setRefreshOnChange();
       _defaultValue = null;
     }
     public H2OExistingKey(String name, String keyName) {
       this(name, Key.make(keyName));
+    }
+    public void setValue(Value v){
+      record()._value = v;
+      record()._originalValue = v._key.toString();
     }
     public H2OExistingKey(String name, Key key) {
       super(TypeaheadKeysRequest.class, name, false);
@@ -1704,10 +1715,18 @@ public class RequestArguments extends RequestStatics {
 
   public class HexColumnSelect extends MultipleSelect<int[]> {
     public final H2OHexKey _key;
+    public final int _elementLimit;
 
     public HexColumnSelect(String name, H2OHexKey key) {
       super(name);
       addPrerequisite(_key = key);
+      _elementLimit = -1;
+    }
+
+    public HexColumnSelect(String name, H2OHexKey key, int elementLimit){
+      super(name);
+      addPrerequisite(_key = key);
+      _elementLimit = elementLimit;
     }
 
     public boolean shouldIgnore(int i, ValueArray.Column ca ) { return false; }
@@ -1719,13 +1738,12 @@ public class RequestArguments extends RequestStatics {
 
     transient ArrayList<Integer> _selectedCols; // All the columns I'm willing to show the user
 
-    /* Select which columns I'll show the user
-     * NB: elh limited to 5k because I couldn't figure out an easier way to do this
-     */
     @Override protected String queryElement() {
+
       ValueArray va = _key.value();
       ArrayList<Integer> cols = Lists.newArrayList();
-      for (int i = 0; i < Math.min(5000, va._cols.length); ++i)
+      int lim = _elementLimit == -1 ? va._cols.length : Math.min(_elementLimit, va._cols.length);
+      for (int i = 0; i < lim; ++i)
         if( !shouldIgnore(i, va._cols[i]) )
           cols.add(i);
       Comparator<Integer> cmp = colComp(va);
@@ -2168,6 +2186,7 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
   /** A Frame Key */
   public class FrameKey extends H2OKey {
+    public FrameKey() { this(""); }
     public FrameKey(String name) { super(name,true); }
     @Override protected Key parse(String input) {
       Key k = Key.make(input);

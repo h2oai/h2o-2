@@ -1,7 +1,7 @@
 package water;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.Arrays;
+import java.util.*;
 
 import javassist.*;
 import water.api.Request.API;
@@ -221,7 +221,14 @@ public class Weaver {
               ".put1(',');\n",
               ";\n  return ab;\n}",
               new FieldFilter() {
-                boolean filter(CtField ctf) throws NotFoundException {return !ctf.getType().subclassOf(_arg); }
+                boolean filter(CtField ctf) throws NotFoundException {
+                  Object[] as;
+                  try { as = ctf.getAnnotations(); }
+                  catch( ClassNotFoundException ex) { throw new NotFoundException("getAnnotations throws ", ex); }
+                  API api = null;
+                  for(Object o : as) if(o instanceof API) { api = (API) o; break; }
+                  return api != null && !isInput(ctf.getType(), api);
+                }
               });
 
     // ---
@@ -241,13 +248,26 @@ public class Weaver {
     // defaults to 1, and if xxxMaxVar is missing it defaults "till now".
     StringBuilder sb = new StringBuilder();
     sb.append("new water.api.DocGen$FieldDoc[] {");
-    boolean first = true;
-    CtClass cc2 = cc;
+    // Get classes in the hierarchy with marker field
+    ArrayList<CtClass> classes = new ArrayList<CtClass>();
+    CtClass current = cc;
     while( true ) {             // For all self & superclasses
-      for( CtField ctf : ctfs ) { // For all fields
+      classes.add(current);
+      current = current.getSuperclass();
+      api = false;
+      for( CtField ctf : current.getDeclaredFields() )
+        if( ctf.getName().equals("API_WEAVER") )
+          api = true;
+      if( api == false ) break;
+    }
+    // Start with parent classes to get fields in order
+    Collections.reverse(classes);
+    boolean first = true;
+    for(CtClass c : classes) {
+      for( CtField ctf : c.getDeclaredFields() ) {
         int mods = ctf.getModifiers();
         if( javassist.Modifier.isTransient(mods) || javassist.Modifier.isStatic(mods) ) {
-          if( cc2 == cc ) {     // Capture the DOC_* fields for self only
+          if( c == cc ) {     // Capture the DOC_* fields for self only
             if( ctf.getName().equals("DOC_FIELDS") ) fielddoc = ctf;
             if( ctf.getName().equals("DOC_GET") ) getdoc = ctf;
           }
@@ -256,15 +276,6 @@ public class Weaver {
         // This field needs documentation. Get the required API annotation.
         first = addFieldWeave(sb,ctf,cc,first);
       }
-
-      // Now roll up the superclass chain, weaving super fields also
-      cc2 = cc2.getSuperclass();
-      ctfs = cc2.getDeclaredFields();
-      api = false;
-      for( CtField ctf : ctfs )
-        if( ctf.getName().equals("API_WEAVER") )
-          api = true;
-      if( api == false ) break;
     }
 
     sb.append("}");
@@ -285,21 +296,28 @@ public class Weaver {
     Object[] as;
     try { as = ctf.getAnnotations(); }
     catch( ClassNotFoundException ex) { throw new NotFoundException("getAnnotations throws ", ex); }
-    API a = null;
-    for(Object o : as) if(o instanceof API)  a = (API) o;
-    if( a == null ) throw new CannotCompileException("Class "+cc.getName()+" has non-transient field '"+name+"' without a Weave annotation");
+    API api = null;
+    for(Object o : as) if(o instanceof API)  api = (API) o;
+    if( api == null ) throw new CannotCompileException("Class "+cc.getName()+" has non-transient field '"+name+"' without an API annotation");
 
-    String help = a.help();
-    int min = a.since();
-    int max = a.until();
-    if( min < 1 || min > 1000000 ) throw new CannotCompileException("Found field '"+name+"' but MinVer < 1 or MinVer > 1000000");
+    String help = api.help();
+    int min = api.since();
+    int max = api.until();
+    if( min < 1 || min > 1000000 ) throw new CannotCompileException("Found field '"+name+"' but 'since' < 1 or 'since' > 1000000");
     if( max < min || (max > 1000000 && max != Integer.MAX_VALUE) )
-      throw new CannotCompileException("Found field '"+name+"' but MaxVer < "+min+" or MaxVer > 1000000");
+      throw new CannotCompileException("Found field '"+name+"' but 'until' < "+min+" or 'until' > 1000000");
 
     if( first ) first = false;
     else sb.append(",");
-    sb.append("new water.api.DocGen$FieldDoc(\""+name+"\",\""+help+"\","+min+","+max+","+ctf.getType().getName()+".class)");
+    boolean input = isInput(ctf.getType(), api);
+    sb.append("new water.api.DocGen$FieldDoc(\""+name+"\",\""+help+"\","+min+","+max+","+ctf.getType().getName()+".class,"+input+","+api.required()+")");
     return first;
+  }
+
+  private final boolean isInput(CtClass fieldType, API api) {
+    return Request2.Helper.isInput(api) || //
+      // Legacy
+      fieldType.subclassOf(_arg);
   }
 
   // --------------------------------------------------------------------------

@@ -21,7 +21,7 @@ public class Progress extends Request {
     Job job = findJob();
     JsonObject jsonResponse = defaultJsonResponse();
 
-    if( job == null || job._endTime != 0 )
+    if( job == null || job.end_time != 0 )
       return jobDone(job, jsonResponse);
 
     return jobInProgress(job, jsonResponse);
@@ -49,7 +49,7 @@ public class Progress extends Request {
   protected Response jobInProgress(final Job job, JsonObject jsonResp) {
     Response r = Response.poll(jsonResp, job.progress());
 
-    final String description = job._description;
+    final String description = job.description;
     r.setBuilder(ROOT_OBJECT, defaultProgressBuilder(description));
     r.setBuilder(RequestStatics.DEST_KEY, new KeyElementBuilder());
     return r;

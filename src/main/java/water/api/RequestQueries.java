@@ -152,9 +152,7 @@ public class RequestQueries extends RequestArguments {
         if ((type != RequestType.query) || !args.getProperty(arg._name,"").isEmpty())
           query.append("<div class='alert alert-error'>"+e.getMessage()+"</div>");
       }
-      if (arg._hideInQuery)
-        continue;
-      query.append(arg.query());
+
       if (!arg.disabled()) {
         RString x = script.restartGroup("REQUEST_ELEMENT");
         x.replace("ELEMENT_NAME",arg._name);
@@ -185,6 +183,11 @@ public class RequestQueries extends RequestArguments {
       RString x = script.restartGroup("ELEMENT_ADDONS");
       x.replace("BODY", arg.jsAddons());
       x.append();
+    }
+    for(Argument arg:_arguments){
+      if (arg._hideInQuery)
+        continue;
+      query.append(arg.query());
     }
     query.append("</form>");
     result.replace("QUERY",query.toString());

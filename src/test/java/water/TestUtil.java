@@ -29,7 +29,7 @@ public class TestUtil {
   public static void checkLeakedKeys() {
     Job[] jobs = Job.all();
     for(Job job : jobs)
-      assert job._endTime != 0 : job;  // No pending job
+      assert job.end_time != 0 : job;  // No pending job
     DKV.remove(Job.LIST);         // Remove all keys
     DKV.remove(Log.LOG_KEY);
     DKV.write_barrier();
