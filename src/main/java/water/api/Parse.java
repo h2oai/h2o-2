@@ -1,7 +1,6 @@
 package water.api;
 
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.*;
 import java.util.regex.Pattern;
 
 import water.*;
@@ -45,10 +44,12 @@ public class Parse extends Request {
           throw new IllegalArgumentException("Headers can only come from unparsed data, ValueArray or a frame. Got " + v.newInstance().getClass().getSimpleName());
       } else { // check the hdr setup by parsing first bytes
         hSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(headerKey),setup,checkHeader);
-        if(hSetup._data != null && hSetup._data.length > 1){ // the hdr file had both hdr and data, it better be part of the parse and represent the global parser setup
-          if(!keys.contains(headerKey))
-            throw new IllegalArgumentException("Header file must either be part of the parse or contain only header (no data!).");
-          gSetup = hSetup; // else we got a global setup file all other files must comply with!
+        if(setup._pType != CustomParser.ParserType.AUTO && hSetup._ncols != setup._ncols && hSetup._data.length == 1) // no match with global setup, try once more with general setup (e.g. header file can have different separator than the rest)
+          hSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(headerKey),new CustomParser.ParserSetup(),checkHeader);
+        else if(hSetup._data != null && hSetup._data.length > 1){ // the hdr file had both hdr and data, it better be part of the parse and represent the global parser setup
+          if(keys.contains(headerKey))
+            gSetup = hSetup; // else we got a global setup file all other files must comply with!
+          else throw new IllegalArgumentException(headerKey + " can not be used as a header file. Please either parse it separately first or include the file in the parse. Raw (unparsed) files can only be used as headers if they are included in the parse or they contain ONLY the header and NO DATA.");
         }
         colNames = hSetup._columnNames;
       }
@@ -119,10 +120,11 @@ public class Parse extends Request {
       CustomParser.ParserSetup setup = guessSetup(keys, hKey, new CustomParser.ParserSetup(_parserType.value(),_separator.value(),_header.specified()?_header.value():false),_header.specified());
       if(setup == null)
         throw new IllegalArgumentException("I cannot figure out this file; Please select the parse setup manually.");
-      if(!_header.value()){
-        setup.setHeader(_header.value());
-        if(!_header.value()) _hdrFrom.disable("Header is disabled.");
-      }
+      if(!_header.specified())
+        _header.setValue(setup._header);
+      else
+        setup._header = _header.value();
+      if(!_header.value()) _hdrFrom.disable("Header is disabled.");
       PSetup res = new PSetup(keys,setup);
       _parserType.setValue(res._setup._pType);
       _separator.setValue(res._setup._separator);
@@ -200,13 +202,15 @@ public class Parse extends Request {
       super(name, required);
     }
     @Override protected String queryElement() {
-      String [] colnames = _source.value()._setup._columnNames;
       StringBuilder sb = new StringBuilder(super.queryElement() + "\n");
-      if(colnames != null){
-        sb.append("<table class='table table-striped table-bordered'>").append("<tr><th>Header:</th>");
-        for( String s : colnames ) sb.append("<th>").append(s).append("</th>");
-        sb.append("</tr></table>");
-      }
+      try{
+        String [] colnames = _source.value()._setup._columnNames;
+        if(colnames != null){
+          sb.append("<table class='table table-striped table-bordered'>").append("<tr><th>Header:</th>");
+          for( String s : colnames ) sb.append("<th>").append(s).append("</th>");
+          sb.append("</tr></table>");
+        }
+      }catch(Exception e){}
       return sb.toString();
     }
 
