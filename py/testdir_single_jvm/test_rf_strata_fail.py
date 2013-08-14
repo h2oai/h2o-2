@@ -20,19 +20,29 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rf_strata_fail(self):
-        csvPathname = h2o.find_file('smalldata/poker/poker1000')
-        for trial in range(20):
-            # params is mutable. This is default.
-            kwargs = {
-                'sampling_strategy': 'STRATIFIED_LOCAL', 
-                'out_of_bag_error_estimate': 1, 
-                'strata_samples': '0=0,1=0,2=0,3=0,4=0,5=0,6=0,7=0,8=0', 
-                'ntree': 19, 
-                'parallel': 1
-            }
-            timeoutSecs = 10
-            h2o_cmd.runRF(timeoutSecs=timeoutSecs, csvPathname=csvPathname, **kwargs)
-            print "Trial #", trial, "completed"
+        csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
+        timeoutSecs = 60
+        kwargs = {
+            'response_variable': 54,
+            'ntree': 50,
+            'features': '',
+            'depth': 2147483647,
+            'stat_type': 'ENTROPY',
+            'ignore': '',
+            'class_weights': '1=1.0,2=1.0,3=1.0,4=1.0,5=1.0,6=1.0,7=1.0',
+            'sampling_strategy': 'RANDOM',
+            'strata_samples': 'undefined=undefined,undefined=undefined,undefined=undefined,undefined=undefined,undefined=undefined,undefined=undefined,undefined=undefined',
+            'sample': '67',
+            'out_of_bag_error_estimate': 1,
+            'model_key': '',
+            'bin_limit': 1024,
+            'seed': 784834182943470027,
+            'parallel': 1,
+            'exclusive_split_limit': '', 
+            'iterative_cm': 1,
+            'use_non_local_data': 0,
+        }
+        h2o_cmd.runRF(timeoutSecs=timeoutSecs, csvPathname=csvPathname, **kwargs)
 
 if __name__ == '__main__':
     h2o.unit_main()
