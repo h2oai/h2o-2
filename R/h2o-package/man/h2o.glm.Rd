@@ -71,12 +71,12 @@ An object of class \code{\linkS4class{H2OGLMModel}} with slots key, data, and gl
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
+localH2O = new("H2OClient")
+h2o.checkClient(localH2O)
 # Run GLM of CAPSULE ~ AGE + RACE + PSA + DCAPS
-prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/
-logreg/prostate.csv", key = "prostate.hex")
+prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
 h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = 
 "binomial", nfolds = 10, alpha = 0.5)
-
 # Run GLM of VOL ~ CAPSULE + AGE + RACE + PSA + GLEASON
 myX = setdiff(colnames(prostate.hex), c("ID", "DPROS", "DCAPS", "VOL"))
 h2o.glm(y = "VOL", x = myX, data = prostate.hex, family = "gaussian", nfolds = 5, alpha = 0.1)

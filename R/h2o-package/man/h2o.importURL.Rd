@@ -53,8 +53,8 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 }
 \examples{
 localH2O = new("H2OClient", ip = "localhost", port = 54321)
-prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/
-   logreg/prostate.csv", key = "prostate.hex")
+h2o.checkClient(localH2O)
+prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
 summary(prostate.hex)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

@@ -45,8 +45,11 @@ This function modifies the \code{data} file directly. It does not create a new c
 \examples{
 localH2O = new("H2OClient", ip = "localhost", port = 54321)
 h2o.checkClient(localH2O)
-iris.hex = h2o.importFile(localH2O, path = system.file("extdata", "iris.csv", package="h2o"), key = "iris.hex")
-names.hex = h2o.importFile(localH2O, path = system.file("extdata", "iris_header.csv", package="h2o"), key = "iris_names.hex")
+irisPath = system.file("extdata", "iris.csv", package="h2o")
+iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
+summary(iris.hex)
+namesPath = system.file("extdata", "iris_header.csv", package="h2o")
+names.hex = h2o.importFile(localH2O, path = namesPath, key = "iris_names.hex")
 h2o.setColNames(data = iris.hex, col.names = names.hex)
 summary(iris.hex)
 }
