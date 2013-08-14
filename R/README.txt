@@ -67,7 +67,8 @@ Afterward, to access the help, type ??h2o. This should bring up a browser or Hel
 all the H2O R methods.
 
 To view all available demos, type demo(package = "h2o"), and to run a demo, type demo(NAME_OF_DEMO). For example, to run
-the h2o.glm demo, you would enter demo(h2o.glm).
+the h2o.glm demo, you would enter demo(h2o.glm). To access help for a particular method, type ?NAME_OF_METHOD, for example, 
+?h2o.glm. Runnable examples are given at the bottom of the documentation.
 
 Additional information
 ========================
