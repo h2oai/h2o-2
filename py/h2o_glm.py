@@ -350,7 +350,7 @@ def goodXFromColumnInfo(y,
     if key is not None:
         (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
             h2o_cmd.columnInfoFromInspect(key, exceptionOnMissingValues=False, 
-            timeoutSecs=timeoutSecs)
+            max_column_display=99999999, timeoutSecs=timeoutSecs)
         num_cols = len(colNameDict)
 
     # now remove any whose names don't match the required keepPattern

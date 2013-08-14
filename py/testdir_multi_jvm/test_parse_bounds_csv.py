@@ -81,7 +81,7 @@ class Basic(unittest.TestCase):
                 print "Parse result['destination_key']:", parseKey['destination_key']
 
                 # INSPECT*******************
-                inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=timeoutSecs)
+                inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], max_column_display=colCount, timeoutSecs=timeoutSecs)
                 num_cols = inspect['num_cols']
                 num_rows = inspect['num_rows']
                 row_size = inspect['row_size']
@@ -117,7 +117,7 @@ class Basic(unittest.TestCase):
                     iVariance = iColDict['variance']
 
                 # SUMMARY********************************
-                summaryResult = h2o_cmd.runSummary(key=key2, timeoutSecs=timeoutSecs)
+                summaryResult = h2o_cmd.runSummary(key=key2, max_column_display=colCount, timeoutSecs=timeoutSecs)
                 h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
 
                 self.assertEqual(rowCount, num_rows, 

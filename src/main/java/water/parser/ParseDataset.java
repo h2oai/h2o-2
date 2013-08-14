@@ -255,9 +255,12 @@ public final class ParseDataset extends Job {
         _fileInfo[_idx] = new FileInfo();
         _fileInfo[_idx]._ikey = key;
         _fileInfo[_idx]._okey = key;
-        if(localSetup._header)
+        if(localSetup._header &= _parserSetup._header) {
+          assert localSetup._columnNames != null:"parsing " + key;
+          assert _parserSetup._columnNames != null:"parsing " + key;
           for(int i = 0; i < _parserSetup._ncols; ++i)
             localSetup._header &= _parserSetup._columnNames[i].equalsIgnoreCase(localSetup._columnNames[i]);
+        }
         _fileInfo[_idx]._header = localSetup._header;
         CustomParser parser = null;
         DParseTask dpt = null;

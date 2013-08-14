@@ -187,7 +187,9 @@ setMethod("h2o.glmgrid", signature(x="character", y="character", data="H2OParsed
             while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { 
 		Sys.sleep(1) 
 	    }
+	    destKey = res$destination_key
 	    res=h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMGridProgress, destination_key=res$destination_key)
+	    	result = list()
 		result$Summary = t(sapply(res$models,c))
 #            result=rep( list(list()),length(res$models)+1  ) 
 #            result[[length(result)]]$Summary = t(sapply(res$models,c))
