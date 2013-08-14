@@ -99,11 +99,12 @@ class Basic(unittest.TestCase):
             # DON"T get redirected to S3! (EC2 hack in config, remember!)
             # use it at the node level directly (because we gen'ed the files.
             # I suppose we could force the redirect state bits in h2o.nodes[0] to False, instead?:w
-            h2o.nodes[0].import_files(SYNDATASETS_DIR)
+            xs = h2o.nodes[0].import_files(SYNDATASETS_DIR)['keys']
+            header = [x for x in xs if 'header' in x][0]
             # use regex. the only files in the dir will be the ones we just created with  *fileN* match
-            print "Don't force header or comma selection"
+            print "Header Key = " + header
             start = time.time()
-            parseKey = h2o.nodes[0].parse('*'+rowxcol+'*', key2=key2, timeoutSecs=timeoutSecs)
+            parseKey = h2o.nodes[0].parse('*'+rowxcol+'*', key2=key2, timeoutSecs=timeoutSecs,header="1",header_from_file=header)
             print "parseKey['destination_key']: " + parseKey['destination_key']
             print 'parse time:', parseKey['response']['time']
 

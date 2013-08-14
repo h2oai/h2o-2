@@ -18,7 +18,7 @@ public class ScoreTask extends MRTask {
   private int [] _rpc;
 
   private ScoreTask(Model M, Key outKey, int nchunks){
-    _M = M; 
+    _M = M;
     _outKey = outKey;
     _nchunks = nchunks;
   }
@@ -30,6 +30,7 @@ public class ScoreTask extends MRTask {
     c._max = t._max;
     c._min = t._min;
     c._mean = t._sum/t._n;
+    c._n = t._n;
     double norm = 1.0/t._n;
     double s = t._sum*norm;
     c._sigma =  Math.sqrt(t._sumsq*norm - s*s);
