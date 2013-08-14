@@ -189,7 +189,7 @@ class Basic(unittest.TestCase):
                 parseKey = h2o_cmd.parseFile(None, csvPathname, key2=selKey2, timeoutSecs=timeoutSecs, doSummary=False)
                 print csvFilename, 'parse time:', parseKey['response']['time']
                 print "Parse result['destination_key']:", parseKey['destination_key']
-                inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=timeoutSecs)
+                inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], max_column_display=colNumberMax+1, timeoutSecs=timeoutSecs)
                 num_cols = inspect['num_cols']
                 num_rows = inspect['num_rows']
                 print "\n" + csvFilename
@@ -204,7 +204,7 @@ class Basic(unittest.TestCase):
                     key=parseKey['destination_key'], timeoutSecs=300, noPrint=True)
 
                 if DO_SUMMARY:
-                    summaryResult = h2o_cmd.runSummary(key=selKey2, timeoutSecs=timeoutSecs)
+                    summaryResult = h2o_cmd.runSummary(key=selKey2, max_column_display=colNumberMax+1, timeoutSecs=timeoutSecs)
                     h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
 
                 self.assertEqual(colNumberMax+1, num_cols, msg="generated %s cols (including output).  parsed to %s cols" % (colNumberMax+1, num_cols))

@@ -5,6 +5,8 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import org.apache.poi.ss.formula.ptg.PowerPtg;
+
 import water.Iced;
 
 /**
@@ -78,6 +80,7 @@ public class SVMLightParser extends CustomParser{
       int lstate = (cidx > 0)? SKIP_LINE : WHITESPACE_BEFORE_TOKEN;
       int gstate = TGT;
       long number = 0;
+      int zeros = 0;
       int exp = 0;
       int sgn_exp = 1;
       boolean decimal = false;
@@ -225,26 +228,33 @@ public class SVMLightParser extends CustomParser{
             }
           // ---------------------------------------------------------------------
           case NUMBER_FRACTION:
-            if ((c >= '0') && (c <= '9')) {
+            if(c == '0'){
+              ++zeros;
+              break NEXT_CHAR;
+            }
+            if ((c > '0') && (c <= '9')) {
               if (number < LARGEST_DIGIT_NUMBER) {
-                number = (number*10)+(c-'0');
+                number = (number*DParseTask.pow10i(zeros+1))+(c-'0');
               } else
                 lstate = SKIP_LINE;
+              zeros = 0;
               break NEXT_CHAR;
             } else if ((c == 'e') || (c == 'E')) {
               if (decimal)
-                fractionDigits = offset - 1 - fractionDigits;
+                fractionDigits = offset - zeros - 1 - fractionDigits;
               lstate = NUMBER_EXP_START;
               sgn_exp = 1;
+              zeros = 0;
               break NEXT_CHAR;
             }
             lstate = NUMBER_END;
             if (decimal)
-              fractionDigits = offset - fractionDigits-1;
+              fractionDigits = offset - zeros - fractionDigits-1;
             if (exp == -1) {
               number = -number;
             }
             exp = 0;
+            zeros = 0;
             continue MAIN_LOOP;
           // ---------------------------------------------------------------------
           case NUMBER_EXP_START:

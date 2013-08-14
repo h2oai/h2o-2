@@ -21,26 +21,26 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
  
     def test_big_parse_overlap_diff_dest_nopoll(self):
-			noPoll = True
-			timeoutSecs = 180
-			num_trials = 0
-			trial_max = 4
-			keys = []
-			key2s = []
-			while num_trials < trial_max:
-				csvPathname = h2o.find_file('smalldata/mnist')
-				csvFilename = csvPathname + '/' + 'mnist8m-test-1.csv'
-				key = csvFilename
-				key2 = key + "_" + str(num_trials) + '.hex'
-				keys.append(key)
-				key2s.append(key2)
-				parseKey = h2o_cmd.parseFile(csvPathname=csvFilename, 
-    				key=key, key2=key2, timeoutSecs=timeoutSecs, noPoll=noPoll,
-    				doSummary=False)
-				num_trials += 1
-				node=h2o.nodes[0]
-				#[node.remove_key(key) for key in keys]
-				#[node.remove_key(key2) for key2 in key2s]
+            noPoll = True
+            timeoutSecs = 180
+            num_trials = 0
+            trial_max = 4
+            keys = []
+            key2s = []
+            while num_trials < trial_max:
+                csvPathname = h2o.find_file('smalldata/mnist')
+                csvFilename = csvPathname + '/' + 'mnist8m-test-1.csv'
+                key = csvFilename
+                key2 = key + "_" + str(num_trials) + '.hex'
+                keys.append(key)
+                key2s.append(key2)
+                parseKey = h2o_cmd.parseFile(csvPathname=csvFilename, 
+                    key=key, key2=key2, timeoutSecs=timeoutSecs, noPoll=noPoll,
+                    doSummary=False)
+                num_trials += 1
+                node=h2o.nodes[0]
+                #[node.remove_key(key) for key in keys]
+                #[node.remove_key(key2) for key2 in key2s]
 
 if __name__ == "__main__":
-	h2o.unit_main()
+    h2o.unit_main()

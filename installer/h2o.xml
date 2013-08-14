@@ -214,9 +214,16 @@
                 </platformTest>
             </ruleList>
         </renameFile>
+        <createDirectory>
+            <path>${env(HOME)}/Desktop/h2o_package</path>
+        </createDirectory>
         <copyFile>
-            <destination>${env(HOME)}/Desktop/h2o_R_package_${project.version}.tar.gz</destination>
+            <destination>${env(HOME)}/Desktop/h2o_package/h2o_R_package_${project.version}.tar.gz</destination>
             <origin>${installdir}/R/h2o_${project.version}.tar.gz</origin>
+        </copyFile>
+        <copyFile>
+            <destination>${env(HOME)}/Desktop/h2o_package/README.txt</destination>
+            <origin>${installdir}/R/README.txt</origin>
         </copyFile>
         <renameFile>
             <destination>${installdir}/Contents/Resources/R</destination>
