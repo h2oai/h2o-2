@@ -4,16 +4,22 @@ import h2o_browse as h2b
 
 # poll the Jobs queue and wait if not all done. Return matching keys to a pattern for 'destination_key"
 # for a job (model usually)
-def pollWaitJobs(pattern=None, timeoutSecs=30, pollTimeoutSecs=30, retryDelaySecs=5, benchmarkLogging=None):
+def pollWaitJobs(pattern=None, timeoutSecs=30, pollTimeoutSecs=30, retryDelaySecs=5, benchmarkLogging=None, stallForNJobs=-1):
     anyBusy = True
     waitTime = 0
     while (anyBusy):
+        patternKeys = []
         # timeout checking has to move in here now! just count loops
         anyBusy = False
         a = h2o.nodes[0].jobs_admin(timeoutSecs=pollTimeoutSecs)
         ## print "jobs_admin():", h2o.dump_json(a)
         jobs = a['jobs']
-        patternKeys = []
+        stall = -1
+        if stallForNJobs != -1:
+            stall = 0
+            for j in jobs: stall += 1 if j['end_time'] == '' else 0
+            if stall <= stallForNJobs: break
+            print str(stall), " jobs in progress.", "Waiting to poll on ", str(stallForNJobs), " jobs."
         for j in jobs:
             ### h2o.verboseprint(j)
             # save the destination keys for any GLMModel in progress
@@ -27,7 +33,13 @@ def pollWaitJobs(pattern=None, timeoutSecs=30, pollTimeoutSecs=30, retryDelaySec
                     "progress:",  j['progress'], \
                     "cancelled:", j['cancelled'],\
                     "end_time:",  j['end_time'])
-
+            else:
+                if stallForNJobs != -1:
+                    stall -= 1
+                    if stall <= stallForNJobs: 
+                        anyBusy = False
+                        break
+                    print str(stall), " jobs in progress.", "Waiting to poll on ", str(stallForNJobs), " jobs."
         ### h2b.browseJsonHistoryAsUrlLastMatch("Jobs")
         if (anyBusy and waitTime > timeoutSecs):
             print h2o.dump_json(jobs)
@@ -43,5 +55,3 @@ def pollWaitJobs(pattern=None, timeoutSecs=30, pollTimeoutSecs=30, retryDelaySec
         if benchmarkLogging:
             h2o.cloudPerfH2O.get_log_save(benchmarkLogging)
     return patternKeys
-
-
