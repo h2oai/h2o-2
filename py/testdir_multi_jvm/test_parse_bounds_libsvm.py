@@ -2,6 +2,8 @@ import unittest
 import random, sys, time, os
 sys.path.extend(['.','..','py'])
 
+from math import floor
+
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE):
@@ -109,9 +111,15 @@ class Basic(unittest.TestCase):
                     (value_size_bytes, expectedValueSize))
 
 
-                summaryResult = h2o_cmd.runSummary(key=key2, timeoutSecs=timeoutSecs)
-                h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
+                # summary respects column limits
+                col_limit = int(floor( 0.3 * colNumberMax ))
 
+                summaryResult = h2o_cmd.runSummary(key=key2, max_column_display=col_limit, timeoutSecs=timeoutSecs)
+                h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
+                self.assertEqual(col_limit, len( summaryResult[ 'summary'][ 'columns' ] ), "summary respects column limit of %d on %d cols" % (col_limit, colNumberMax+1))
+
+                summaryResult = h2o_cmd.runSummary(key=key2, max_column_display=10*num_cols, timeoutSecs=timeoutSecs)
+                h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
                 self.assertEqual(colNumberMax+1, num_cols, 
                     msg="generated %s cols (including output).  parsed to %s cols" % (colNumberMax+1, num_cols))
                 self.assertEqual(rowCount, num_rows, 
