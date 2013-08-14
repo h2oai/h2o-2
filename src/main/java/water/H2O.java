@@ -57,9 +57,6 @@ public final class H2O {
   public static final String DEFAULT_ICE_ROOT = "/tmp";
   public static URI ICE_ROOT;
 
-  // Logging setup
-  public static boolean INHERIT_LOG4J = false;
-
   // Initial arguments
   public static String[] ARGS;
 
@@ -607,7 +604,6 @@ public final class H2O {
     public String random_udp_drop = null; // test only, randomly drop udp incoming
     public int pparse_limit = Integer.MAX_VALUE;
     public String no_requests_log = null; // disable logging of Web requests
-    public String inherit_log4j = null;
     public String h = null;
     public String help = null;
     public String version = null;
@@ -644,10 +640,6 @@ public final class H2O {
     "    -ice_root <fileSystemPath>\n" +
     "          The directory where H2O spills temporary data to disk.\n" +
     "          (The default is '" + DEFAULT_ICE_ROOT + "'.)\n" +
-    "\n" +
-    "    -inherit_log4j\n" +
-    "          Allow some other package to specify log4j configuration\n" +
-    "          (for embedding H2O, e.g. inside Hadoop mapreduce).\n" +
     "\n" +
     "Cloud formation behavior:\n" +
     "\n" +

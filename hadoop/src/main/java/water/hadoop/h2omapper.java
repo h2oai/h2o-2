@@ -348,8 +348,7 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
             "-name", jobtrackerName,
             "-driverip", driverIp,
             "-driverport", driverPortString,
-            "-mapperport", localPortString,
-            "-inherit_log4j"
+            "-mapperport", localPortString
     };
 
     context.write(textId, new Text("before water.Boot.main()"));

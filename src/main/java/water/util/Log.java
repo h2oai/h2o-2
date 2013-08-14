@@ -309,32 +309,30 @@ public abstract class Log {
         return _logger;
       }
 
-      if (! H2O.INHERIT_LOG4J) {
-        // If a log4j properties file was specified on the command-line, use it.
-        // Otherwise, create some default properties on the fly.
-        String log4jProperties = System.getProperty ("log4j.properties");
-        if (log4jProperties != null) {
-          PropertyConfigurator.configure(log4jProperties);
-          // TODO:  Need some way to set LOG_DIR here for LogCollectorTask to work.
-        }
-        else {
-          LOG_DIR = logDirParent + File.separator + "h2ologs";
-          String logPathFileName = getLogPathFileName();
-          java.util.Properties p = new java.util.Properties();
+      // If a log4j properties file was specified on the command-line, use it.
+      // Otherwise, create some default properties on the fly.
+      String log4jProperties = System.getProperty ("log4j.properties");
+      if (log4jProperties != null) {
+        PropertyConfigurator.configure(log4jProperties);
+        // TODO:  Need some way to set LOG_DIR here for LogCollectorTask to work.
+      }
+      else {
+        LOG_DIR = logDirParent + File.separator + "h2ologs";
+        String logPathFileName = getLogPathFileName();
+        java.util.Properties p = new java.util.Properties();
 
-          p.setProperty("log4j.rootLogger", "debug, R");
-          p.setProperty("log4j.appender.R", "org.apache.log4j.RollingFileAppender");
-          p.setProperty("log4j.appender.R.File", logPathFileName);
-          p.setProperty("log4j.appender.R.MaxFileSize", "256KB");
-          p.setProperty("log4j.appender.R.MaxBackupIndex", "5");
-          p.setProperty("log4j.appender.R.layout", "org.apache.log4j.PatternLayout");
+        p.setProperty("log4j.rootLogger", "debug, R");
+        p.setProperty("log4j.appender.R", "org.apache.log4j.RollingFileAppender");
+        p.setProperty("log4j.appender.R.File", logPathFileName);
+        p.setProperty("log4j.appender.R.MaxFileSize", "256KB");
+        p.setProperty("log4j.appender.R.MaxBackupIndex", "5");
+        p.setProperty("log4j.appender.R.layout", "org.apache.log4j.PatternLayout");
 
-          // See the following document for information about the pattern layout.
-          // http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/PatternLayout.html
-          p.setProperty("log4j.appender.R.layout.ConversionPattern", "%m%n");
+        // See the following document for information about the pattern layout.
+        // http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/PatternLayout.html
+        p.setProperty("log4j.appender.R.layout.ConversionPattern", "%m%n");
 
-          PropertyConfigurator.configure(p);
-        }
+        PropertyConfigurator.configure(p);
       }
 
       _logger = LogManager.getLogger(Log.class.getName());
