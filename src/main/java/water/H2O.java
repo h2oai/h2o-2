@@ -596,6 +596,7 @@ public final class H2O {
     public String hdfs; // HDFS backend
     public String hdfs_version; // version of the filesystem
     public String hdfs_config; // configuration file of the HDFS
+    public String hdfs_skip = null; // used by hadoop driver to not unpack and load any hdfs jar file at runtime.
     public String aws_credentials; // properties file for aws credentials
     public String keepice; // Do not delete ice on startup
     public String soft = null; // soft launch for demos
