@@ -30,8 +30,6 @@ public final class H2O {
   public static volatile AbstractEmbeddedH2OConfig embeddedH2OConfig;
   public static volatile ApiIpPortWatchdogThread apiIpPortWatchdog;
 
-  static boolean _hdfsActive = false;
-
   public static String VERSION = "(unknown)";
 
   // User name for this Cloud
