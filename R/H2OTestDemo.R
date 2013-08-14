@@ -35,3 +35,10 @@ print(covtype.km)
 glm_test.hex = h2o.importFolder(localH2O, path = "../smalldata/glm_test")
 for(i in 1:length(glm_test.hex))
   print(summary(glm_test.hex[[i]]))
+  
+  
+#Test of GLMGrid using prostate cancer data set
+prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
+prostate.sum = summary(prostate.hex)
+prostate.glmgrid = h2o.glmgrid(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 10, alpha = c(0.2,0.5,1),lambda=c(1e-4,1))
+print(prostate.glmgrid)

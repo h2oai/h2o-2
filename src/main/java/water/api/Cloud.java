@@ -70,9 +70,13 @@ public class Cloud extends Request {
   private static class NodeCellBuilder extends ArrayRowElementBuilder {
     @Override public String elementToString(JsonElement element, String contextName) {
       String str = element.getAsString();
-      if( str.equals(H2O.SELF.toString()) )
+      if( str.equals(H2O.SELF.toString()) ) {
         return "<a href='StoreView.html'>"+str+"</a>";
-      return "<a href='Remote.html?Node="+str+"'>"+str+"</a>";
+      }
+
+      String str2 = str.startsWith("/") ? str.substring(1) : str;
+      String str3 = "<a href='http://" + str2 + "/StoreView.html'>" + str + "</a>";
+      return str3;
     }
   }
   // Highlight sick nodes

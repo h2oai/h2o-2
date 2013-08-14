@@ -34,7 +34,11 @@ class Basic(unittest.TestCase):
         # since H2O deletes the source key, we should re-import every iteration if we re-use the src in the list
         importFolderResult = h2i.setupImportFolder(None, importFolderPath)
         ### print "importHDFSResult:", h2o.dump_json(importFolderResult)
-        succeededList = importFolderResult['files']
+        if 'files' in importFolderResult:
+            succeededList = importFolderResult['files']
+        else:
+            succeededList = importFolderResult['succeeded']
+
         ### print "succeededList:", h2o.dump_json(succeededList)
 
         self.assertGreater(len(succeededList),1,"Should see more than 1 files in the import?")
@@ -74,7 +78,7 @@ class Basic(unittest.TestCase):
             # RF+RFView (train)****************************************
             print "This is the 'ignore=' we'll use"
             ignore_x = h2o_glm.goodXFromColumnInfo(y, key=parseKey['destination_key'], timeoutSecs=300, forRF=True)
-            ntree = 100
+            ntree = 10
             params = {
                 'response_variable': 0,
                 'ignore': ignore_x, 
@@ -101,7 +105,7 @@ class Basic(unittest.TestCase):
             print "Trying rf"
             timeoutSecs = 1800
             start = time.time()
-            rfView = h2o_cmd.runRFOnly(parseKey=parseKey, rfView=False,
+            rfView = h2o_cmd.runRFOnly(parseKey=parseKey, rfView=True,
                 timeoutSecs=timeoutSecs, pollTimeoutsecs=60, retryDelaySecs=2, **kwargs)
             elapsed = time.time() - start
             print "RF completed in", elapsed, "seconds.", \

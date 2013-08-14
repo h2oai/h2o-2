@@ -344,12 +344,15 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
     String localPortString = Integer.toString(ss.getLocalPort());
 
     String[] args = {
+            // Options used by H2O.
             "-ice_root", ice_root,
             "-name", jobtrackerName,
+            "-hdfs_skip",
+
+            // Options passed through to UserMain for configuring the EmbeddedH2OConfig.
             "-driverip", driverIp,
             "-driverport", driverPortString,
-            "-mapperport", localPortString,
-            "-inherit_log4j"
+            "-mapperport", localPortString
     };
 
     context.write(textId, new Text("before water.Boot.main()"));
