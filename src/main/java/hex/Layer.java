@@ -2,14 +2,18 @@ package hex;
 
 import hex.rng.MersenneTwisterRNG;
 
+import java.lang.reflect.Field;
 import java.util.Random;
 
+import com.google.gson.*;
+
+import water.Iced;
 import water.fvec.*;
 
 /**
  * Neural network layer, can be used as one level of Perceptron, AA or RBM.
  */
-public abstract class Layer {
+public abstract class Layer extends Iced {
   // Initial parameters
   float _rate = .01f;
   float _rateAnnealing = 0;
@@ -24,22 +28,22 @@ public abstract class Layer {
   float _l2 = .0001f;
 
   // Current rate and momentum
-  float _r, _m;
+  transient float _r, _m;
 
   // Weights, biases, activity, error
-  float[] _w, _b, _a, _e;
+  transient float[] _w, _b, _a, _e;
 
   // Last weights & per-weight rate data
-  float[] _wPrev, _wInit, _wMult;
-  float[] _bPrev, _bInit, _bMult;
+  transient float[] _wPrev, _wInit, _wMult;
+  transient float[] _bPrev, _bInit, _bMult;
 
-  float[] _wSpeed, _bSpeed;
+  transient float[] _wSpeed, _bSpeed;
 
   // Previous layer
-  Layer _in;
+  transient Layer _in;
 
   // Optional visible units bias, e.g. for pre-training
-  float[] _v, _gv;
+  transient float[] _v, _gv;
 
   public Layer() {
   }
@@ -163,7 +167,7 @@ public abstract class Layer {
   public static class FrameInput extends Input {
     Frame _frame;
     boolean _normalize;
-    Chunk[] _caches;
+    transient Chunk[] _caches;
 
     public FrameInput() {
     }
@@ -406,5 +410,33 @@ public abstract class Layer {
 
   private static float rand(Random rand, float min, float max) {
     return min + rand.nextFloat() * (max - min);
+  }
+
+  //
+
+  public static String json(Object o) {
+    Gson gson = new GsonBuilder().setFieldNamingStrategy(new FieldNamingStrategy() {
+      @Override public String translateName(Field f) {
+        String result = "";
+        String name = f.getName().substring(1);
+        for( char ch : name.toCharArray() )
+          result += ((Character.isUpperCase(ch)) ? "_" : "") + Character.toLowerCase(ch);
+        return result;
+      }
+    }).setPrettyPrinting().create();
+    return gson.toJson(o);
+  }
+
+  public static <T> T json(String json, Class<T> c) {
+    Gson gson = new GsonBuilder().setFieldNamingStrategy(new FieldNamingStrategy() {
+      @Override public String translateName(Field f) {
+        String result = "";
+        String name = f.getName().substring(1);
+        for( char ch : name.toCharArray() )
+          result += ((Character.isUpperCase(ch)) ? "_" : "") + Character.toLowerCase(ch);
+        return result;
+      }
+    }).setPrettyPrinting().create();
+    return gson.fromJson(json, c);
   }
 }

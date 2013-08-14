@@ -262,8 +262,8 @@ public abstract class Trainer {
       Parameters p = UKV.get(_ws);
       for( int y = 1; y < _ls.length; y++ ) {
         _ls[y]._in = _ls[y - 1];
-        _ls[y]._w = p._ws[y].clone();
-        _ls[y]._b = p._bs[y].clone();
+        _ls[y]._w = p._ws[y];
+        _ls[y]._b = p._bs[y];
         _ls[y].init();
       }
       ParallelTrainers t = new ParallelTrainers(_ls, H2O.CLOUD._memary.length, _index);

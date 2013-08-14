@@ -418,30 +418,4 @@ public class Utils {
       fields.add(field);
     if( type.getSuperclass() != null ) getAllFields(fields, type.getSuperclass());
   }
-
-  public static String json(Object o) {
-    Gson gson = new GsonBuilder().setFieldNamingStrategy(new FieldNamingStrategy() {
-      @Override public String translateName(Field f) {
-        String result = "";
-        String name = f.getName().substring(1);
-        for( char ch : name.toCharArray() )
-          result += ((Character.isUpperCase(ch)) ? "_" : "") + Character.toLowerCase(ch);
-        return result;
-      }
-    }).setPrettyPrinting().create();
-    return gson.toJson(o);
-  }
-
-  public static <T> T json(String json, Class<T> c) {
-    Gson gson = new GsonBuilder().setFieldNamingStrategy(new FieldNamingStrategy() {
-      @Override public String translateName(Field f) {
-        String result = "";
-        String name = f.getName().substring(1);
-        for( char ch : name.toCharArray() )
-          result += ((Character.isUpperCase(ch)) ? "_" : "") + Character.toLowerCase(ch);
-        return result;
-      }
-    }).setPrettyPrinting().create();
-    return gson.fromJson(json, c);
-  }
 }
