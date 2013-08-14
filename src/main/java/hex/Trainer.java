@@ -4,8 +4,8 @@ import hex.Layer.Input;
 
 import java.io.IOException;
 import java.nio.FloatBuffer;
+import java.security.Policy.Parameters;
 import java.util.Arrays;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -204,9 +204,7 @@ public abstract class Trainer {
    *
    */
   public static class Distributed extends Trainer {
-    private static final ConcurrentHashMap<Key, Distributed> _instances = new ConcurrentHashMap<Key, Distributed>();
     private Layer[] _ls;
-    private Parameters[] _ps;
 
     public Distributed(Layer[] ls) {
       super(new AtomicInteger());
@@ -220,16 +218,8 @@ public abstract class Trainer {
     @Override void run() {
       Key key = Key.make();
       try {
-        _instances.put(key, this);
-        Parameters p = new Parameters();
-        p._ws = new float[_ls.length][];
-        p._bs = new float[_ls.length][];
-        for( int i = 0; i < _ls.length; i++ ) {
-          p._ws[i] = _ls[i]._w;
-          p._bs[i] = _ls[i]._b;
-        }
-        UKV.put(key, p);
         H2ONode[] nodes = H2O.CLOUD._memary;
+        H2O.CLOUD._idx
         RPC<Task>[] tasks = new RPC[nodes.length];
         for( int i = 0; i < nodes.length; i++ ) {
           _ps[i] = Utils.deepClone(p);
@@ -243,22 +233,21 @@ public abstract class Trainer {
     }
   }
 
-  static class Parameters extends Iced {
-    float[][] _ws, _bs;
-  }
-
-  static class Task extends DTask<Task> {
+  static class Task extends DRemoteTask<Task> {
     Layer[] _ls;
-    Key _ws;
-    int _index;
+    float[][] _ws, _bs;
 
-    private Task(Layer[] ls, Key ws, int index) {
+    Task(Layer[] ls) {
       _ls = ls;
-      _ws = ws;
-      _index = index;
+      _ws = new float[_ls.length][];
+      _bs = new float[_ls.length][];
+      for( int i = 0; i < _ls.length; i++ ) {
+        _ws[i] = _ls[i]._w.clone();
+        _bs[i] = _ls[i]._b.clone();
+      }
     }
 
-    @Override public void compute2() {
+    @Override public void lcompute() {
       Parameters p = UKV.get(_ws);
       for( int y = 1; y < _ls.length; y++ ) {
         _ls[y]._in = _ls[y - 1];
