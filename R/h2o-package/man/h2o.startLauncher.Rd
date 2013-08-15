@@ -37,7 +37,6 @@ Upon launch, use the graphical user interface to configure the IP, port, and amo
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-library(h2o)
 h2o.startLauncher()
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

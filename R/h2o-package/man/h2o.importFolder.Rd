@@ -46,10 +46,12 @@ WARNING: In H2O, import is lazy! Do not modify the data files on hard disk until
     %% ~~objects to See Also as \code{\link{help}}, ~~~
   }
 \examples{
-  localH2O = new("H2OClient", ip = "localhost", port = 54321)
-  glm_test.hex = h2o.importFolder(localH2O, path = "../smalldata/glm_test")
-  for(i in 1:length(glm_test.hex))
-    print(summary(glm_test.hex[[i]]))
+localH2O = new("H2OClient", ip = "localhost", port = 54321)
+h2o.checkClient(localH2O)
+myPath = paste(path.package("h2o"), "extdata", sep="/")
+all_files.hex = h2o.importFolder(localH2O, path = myPath)
+for(i in 1:length(all_files.hex))
+  print(summary(all_files.hex[[i]]))
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
