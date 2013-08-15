@@ -77,6 +77,9 @@ setMethod("summary", "H2OParsedData", function(object) {
   for(i in 1:length(res)) {
     cnames = c(cnames, paste("      ", res[[i]]$name, sep=""))
     if(res[[i]]$type == "number") {
+      if(is.null(res[[i]]$min) || length(res[[i]]$min) == 0) res[[i]]$min = NaN
+      if(is.null(res[[i]]$max) || length(res[[i]]$max) == 0) res[[i]]$max = NaN
+      if(is.null(res[[i]]$mean) || length(res[[i]]$mean) == 0) res[[i]]$mean = NaN
       if(is.null(res[[i]]$percentiles))
         params = format(rep(round(as.numeric(res[[i]]$mean), 3), 6), nsmall = 3)
       else
