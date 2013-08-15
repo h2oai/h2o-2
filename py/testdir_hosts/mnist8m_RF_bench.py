@@ -12,7 +12,7 @@ s3n_files = {'train':'s3n://h2o-datasets/mnist8m/mnist8m-train-1.csv','test':'s3
 def run_rf(files,configs):
     overallWallStart = time.time()
     uri = "s3n://h2o-datasets/mnist8m/"
-    importHDFSRes = h2o.nodes[0]/import_hdfs(uri)
+    importHDFSRes = h2o.nodes[0].import_hdfs(uri)
     s3nList = importHDFSRes['succeeded']
     self.assertGreater(len(s3nFullList),1,"<= 1 file found!")
     output = None
