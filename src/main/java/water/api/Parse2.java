@@ -15,7 +15,7 @@ public class Parse2 extends Parse {
   public Parse2(){_blocking._hideInQuery = true;}
   @Override protected Response serve() {
     PSetup p = _source.value();
-    CustomParser.ParserSetup setup = p._setup;
+    CustomParser.ParserSetup setup = p != null?p._setup._setup:null;
     Key d = Key.make(_dest.value());
     try {
       // Make a new Setup, with the 'header' flag set according to user wishes.

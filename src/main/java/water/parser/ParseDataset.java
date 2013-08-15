@@ -8,8 +8,7 @@ import java.util.zip.*;
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.parser.CustomParser.ParserSetup;
-import water.parser.CustomParser.ParserType;
+import water.parser.CustomParser.*;
 import water.parser.DParseTask.Pass;
 import water.util.*;
 
@@ -41,12 +40,13 @@ public final class ParseDataset extends Job {
     UKV.put(_progress, new Progress(0,total));
   }
 
-  public static ParserSetup guessSetup(byte [] bits){
+  public static PSetupGuess guessSetup(byte [] bits){
     return guessSetup(bits,new ParserSetup(),true);
   }
 
-  public static ParserSetup guessSetup(byte [] bits, ParserSetup setup, boolean checkHeader){
-    ParserSetup res = null;
+  public static PSetupGuess guessSetup(byte [] bits, ParserSetup setup, boolean checkHeader){
+    ArrayList<PSetupGuess> guesses = new ArrayList<CustomParser.PSetupGuess>();
+    PSetupGuess res = null;
     if(setup == null)setup = new ParserSetup();
     switch(setup._pType){
       case CSV:
@@ -57,19 +57,28 @@ public final class ParseDataset extends Job {
         return XlsParser.guessSetup(bits);
       case AUTO:
         try{
-          if((res = XlsParser.guessSetup(bits)) != null)
-            return res;
+          if((res = XlsParser.guessSetup(bits)) != null && res.valid())
+            if(!res.hasErrors())return res;
+            else guesses.add(res);
         }catch(Exception e){}
         try{
-          if((res = SVMLightParser.guessSetup(bits)) != null)
-            return res;
+          if((res = SVMLightParser.guessSetup(bits)) != null && res.valid())
+            if(!res.hasErrors())return res;
+            else guesses.add(res);
         }catch(Exception e){}
         try{
-          return CsvParser.guessSetup(bits,setup,true);
-        }catch(Exception e){e.printStackTrace();}
-        throw new RuntimeException("Can't recognize the file type.");
+          if((res = CsvParser.guessSetup(bits,setup,true)) != null && res.valid())
+            if(!res.hasErrors())return res;
+            else guesses.add(res);
+        }catch(Exception e){}
+        if(guesses.isEmpty())
+          return null;
+        else {
+          for(PSetupGuess guess:guesses) if(guess._invalidLines < res._invalidLines)res = guess;
+          return res;
+        }
       default:
-        throw H2O.unimpl();
+        throw new IllegalArgumentException(setup._pType + " is not implemented.");
     }
   }
 
@@ -85,7 +94,7 @@ public final class ParseDataset extends Job {
 
   public static void parse(ParseDataset job, Key [] keys, CustomParser.ParserSetup setup){
     if(setup == null)
-      setup = guessSetup(Utils.getFirstUnzipedBytes(keys[0]));
+      setup = guessSetup(Utils.getFirstUnzipedBytes(keys[0]))._setup;
     int j = 0;
     UKV.remove(job.dest());// remove any previous instance and insert a sentinel (to ensure no one has been writing to the same keys during our parse!
     Key [] nonEmptyKeys = new Key[keys.length];
@@ -218,7 +227,7 @@ public final class ParseDataset extends Job {
     public DRemoteTask dfork( Key... keys ) {
       _keys = keys;
       if(_parserSetup == null)
-        _parserSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(keys[0]));
+        _parserSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(keys[0]))._setup;
       H2O.submitTask(this);
       return this;
     }
@@ -250,7 +259,7 @@ public final class ParseDataset extends Job {
         final Key key = _keys[_idx];
         Value v = DKV.get(key);
         assert v != null;
-        ParserSetup localSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(v), _parserSetup,true);
+        ParserSetup localSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(v), _parserSetup,true)._setup;
         if(!_parserSetup.isCompatible(localSetup))throw new ParseException("Parsing incompatible files. " + _parserSetup.toString() + " is not compatible with " + localSetup.toString());
         _fileInfo[_idx] = new FileInfo();
         _fileInfo[_idx]._ikey = key;

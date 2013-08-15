@@ -607,9 +607,9 @@ NEXT_CHAR:
    *  A separator is given or it is selected if both two lines have the same ammount of them
    *  and the tokenization then returns same number of columns.
    */
-  public static CustomParser.ParserSetup guessSetup(byte[] bits) { return guessSetup(bits, new ParserSetup(ParserType.CSV),true); }
-  public static CustomParser.ParserSetup guessSetup(byte[] bits, ParserSetup setup){return guessSetup(bits,setup,false);}
-  public static CustomParser.ParserSetup guessSetup(byte[] bits, ParserSetup setup, boolean checkHeader) {
+  public static CustomParser.PSetupGuess guessSetup(byte[] bits) { return guessSetup(bits, new ParserSetup(ParserType.CSV),true); }
+  public static CustomParser.PSetupGuess guessSetup(byte[] bits, ParserSetup setup){return guessSetup(bits,setup,false);}
+  public static CustomParser.PSetupGuess guessSetup(byte[] bits, ParserSetup setup, boolean checkHeader) {
     ArrayList<String> lines = new ArrayList();
     int offset = 0;
     while (offset < bits.length && lines.size() < 10) {
@@ -637,7 +637,7 @@ NEXT_CHAR:
       if(lines.size() == 1)
         data[0] = determineTokens(lines.get(0), sep);
       boolean hasHeader = (checkHeader && allStrings(data[0])) || setup._header;
-      return new ParserSetup(ParserType.CSV,sep,hasHeader,data);
+      return new PSetupGuess(new ParserSetup(ParserType.CSV,sep,hasHeader,data),lines.size(),0,null);
     }
     byte sep = setup._separator;
     if(setup._separator == AUTO_SEP) // first guess the separator
@@ -646,7 +646,29 @@ NEXT_CHAR:
       data[i] = determineTokens(lines.get(i), sep);
     // we do not have enough lines to decide
     boolean hasHeader = (checkHeader && hasHeader(data[0],data[1])) || setup._header;
-    return new ParserSetup(ParserType.CSV, sep, hasHeader, data);
+    ParserSetup resSetup = new ParserSetup(ParserType.CSV, sep, hasHeader, data);
+    ArrayList<String> errors = new ArrayList<String>();
+    int ilines = 0;
+    int start = hasHeader?1:0;
+    OUTER:
+    for(int i = start; i < data.length; ++i){
+      if(data[i].length != resSetup._ncols){
+        errors.add("error at line " + i + " : incompatoble line length. Got " + data[i].length + " columns.");
+        ++ilines;
+        continue;
+      }
+//      if(allStrings(data[i])){ //TODO turn this into a warning?
+//        errors.add("error at line " + i + " : got all strings(NAs?), not a single number");
+//        ++ilines;
+//        continue;
+//      }
+    }
+    String [] err = null;
+    if(!errors.isEmpty()){
+      err = new String[errors.size()];
+      errors.toArray(err);
+    }
+    return new PSetupGuess(new ParserSetup(ParserType.CSV, sep, hasHeader, data),lines.size(),ilines,err);
   }
 
   @Override public boolean isCompatible(CustomParser p) {

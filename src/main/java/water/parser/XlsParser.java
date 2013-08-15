@@ -45,12 +45,12 @@ public class XlsParser extends CustomParser implements HSSFListener {
    * @param bits
    * @return SVMLightPArser instance or null
    */
-  public static CustomParser.ParserSetup guessSetup(byte [] bits){
+  public static PSetupGuess guessSetup(byte [] bits){
     InputStream is = new ByteArrayInputStream(bits);
     XlsParser p = new XlsParser();
     CustomInspectDataOut dout = new CustomInspectDataOut();
     try{p.streamParse(is, dout);}catch(Exception e){}
-    return (dout._ncols > 0 && dout._nlines > 0)?new ParserSetup(ParserType.XLS,CsvParser.AUTO_SEP,dout._header,dout.data()):null;
+    return (dout._ncols > 0 && dout._nlines > 0)?new PSetupGuess(new ParserSetup(ParserType.XLS,CsvParser.AUTO_SEP,dout._header,dout.data()),dout._nlines,dout._invalidLines,null):null;
   }
 
   transient ArrayList<String> _columnNames = new ArrayList();

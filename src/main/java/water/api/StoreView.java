@@ -6,8 +6,8 @@ import java.util.Arrays;
 import water.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.parser.CustomParser;
-import water.parser.ParseDataset;
+import water.parser.*;
+import water.parser.CustomParser.PSetupGuess;
 import water.util.Utils;
 
 import com.google.gson.JsonArray;
@@ -151,7 +151,8 @@ public class StoreView extends Request {
     }
     if( rows == -1 ) {
       byte [] bits = Utils.getFirstUnzipedBytes(val);
-      CustomParser.ParserSetup setup = ParseDataset.guessSetup(bits);
+      PSetupGuess sguess = ParseDataset.guessSetup(bits);
+      CustomParser.ParserSetup setup = (sguess != null)?sguess._setup:null;
       if(setup != null &&  setup._data != null && setup._ncols > 0 ) { // Able to parse sanely?
         int zipped_len = val.getFirstBytes().length;
         double bytes_per_row = (double) zipped_len / setup._data.length;
