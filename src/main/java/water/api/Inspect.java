@@ -13,6 +13,7 @@ import water.ValueArray.Column;
 import water.api.GLMProgressPage.GLMBuilder;
 import water.fvec.*;
 import water.parser.*;
+import water.parser.CustomParser.PSetupGuess;
 
 import water.util.Log;
 import water.util.Utils;
@@ -136,8 +137,9 @@ public class Inspect extends Request {
     result.addProperty(VALUE_TYPE, "unparsed");
     byte [] bits = v.getFirstBytes();
     bits = Utils.unzipBytes(bits, Utils.guessCompressionMethod(bits));
-    CustomParser.ParserSetup setup = ParseDataset.guessSetup(bits);
-    if( setup._data != null && setup._data[1].length > 0 ) { // Able to parse sanely?
+    PSetupGuess sguess = ParseDataset.guessSetup(bits);
+    CustomParser.ParserSetup setup = sguess != null?sguess._setup:null;
+    if(setup != null && setup._data != null && setup._data[1].length > 0 ) { // Able to parse sanely?
       int zipped_len = v.getFirstBytes().length;
       double bytes_per_row = (double) zipped_len / setup._data.length;
       long rows = (long) (v.length() / bytes_per_row);

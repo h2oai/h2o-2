@@ -56,13 +56,12 @@ public class SVMLightParser extends CustomParser{
    * @param bits
    * @return SVMLightPArser instance or null
    */
-  public static CustomParser.ParserSetup guessSetup(byte [] bits){
+  public static PSetupGuess guessSetup(byte [] bits){
     InputStream is = new ByteArrayInputStream(bits);
     SVMLightParser p = new SVMLightParser(new ParserSetup(ParserType.SVMLight, CsvParser.AUTO_SEP, false));
     InspectDataOut dout = new InspectDataOut();
     try{p.streamParse(is, dout);}catch(Exception e){throw new RuntimeException(e);}
-    return(dout._ncols > 1 && dout._nlines > 0 && (double)dout._invalidLines / dout._nlines < 0.1)
-      ?new ParserSetup(ParserType.SVMLight, CsvParser.AUTO_SEP, false,dout.data()):null;
+    return new PSetupGuess(new ParserSetup(ParserType.SVMLight, CsvParser.AUTO_SEP, false,dout.data()),dout._nlines,dout._invalidLines,dout.errors());
   }
   @Override
   public boolean isCompatible(CustomParser p){return p instanceof SVMLightParser;}
@@ -112,10 +111,9 @@ public class SVMLightParser extends CustomParser{
           case EOL:
             if (colIdx != 0) {
               colIdx = 0;
-//              System.out.println("parsed line '" + linePrefix + new String(Arrays.copyOfRange(bits, linestart, offset)) + "'");
               linestart = offset+1;
-//              linePrefix = "";
-              dout.newLine();
+              if(lstate != SKIP_LINE)
+                dout.newLine();
             }
             if( !firstChunk )
               break MAIN_LOOP; // second chunk only does the first row
@@ -172,6 +170,7 @@ public class SVMLightParser extends CustomParser{
               lstate = QID0;
             } else { // failed, skip the line
               // TODO
+              dout.invalidLine("Unexpected character, expected number or qid, got '" + new String(Arrays.copyOfRange(bits, offset,Math.min(bits.length,offset+5))) + "...'");
               lstate = SKIP_LINE;
               continue MAIN_LOOP;
             }
@@ -211,10 +210,18 @@ public class SVMLightParser extends CustomParser{
                     // wrong col Idx, just skip the token and try to continue
                     // col idx is either too small (according to spec, cols must come in strictly increasing order)
                     // or too small (col ids currently must fit into int)
-                    // TODO output error
-                    lstate = SKIP_TOKEN;
+                    String err = "";
+                    if(number <= colIdx)
+                      err = "Columns come in non-increasing sequence. Got " + number + " after " + colIdx + ".";
+                    else if(exp != 0)
+                      err = "Got non-integer as column id: " + number*DParseTask.pow10(exp);
+                    else
+                      err = "column index out of range, " + number + " does not fit into integer.";
+                    dout.invalidLine("invalid column id:" + err);
+                    lstate = SKIP_LINE;
                   }
                 } else { // we're probably out of sync, skip the rest of the line
+                  dout.invalidLine("unexpected character after column id: " + c);
                   lstate = SKIP_LINE;
                   // TODO output error
                 }
@@ -235,8 +242,10 @@ public class SVMLightParser extends CustomParser{
             if ((c > '0') && (c <= '9')) {
               if (number < LARGEST_DIGIT_NUMBER) {
                 number = (number*DParseTask.pow10i(zeros+1))+(c-'0');
-              } else
+              } else {
+                dout.invalidLine("number " + number + " is out of bounds.");
                 lstate = SKIP_LINE;
+              }
               zeros = 0;
               break NEXT_CHAR;
             } else if ((c == 'e') || (c == 'E')) {
@@ -286,6 +295,7 @@ public class SVMLightParser extends CustomParser{
           case INVALID_NUMBER:
             if(gstate == TGT) { // invalid tgt -> skip the whole row
               lstate = SKIP_LINE;
+              dout.invalidLine("invalid number (expecting target)");
               continue MAIN_LOOP;
             }
             if(gstate == VAL){ // add invalid value and skip until whitespace or eol
@@ -360,8 +370,9 @@ public class SVMLightParser extends CustomParser{
     public int _ncols;
     public int _invalidLines;
     public final static int MAX_COLS = 100;
-    public final static int MAX_LINES = 50;
+    public final static int MAX_LINES = 10;
     private String [][] _data = new String[MAX_LINES][MAX_COLS];
+    transient ArrayList<String> _errors = new ArrayList<String>();
     public InspectDataOut() {
      for(int i = 0; i < MAX_LINES;++i)
        Arrays.fill(_data[i],"0");
@@ -392,8 +403,16 @@ public class SVMLightParser extends CustomParser{
     @Override public void addInvalidCol(int colIdx) {}
     @Override public void addStrCol(int colIdx, ValueString str) {}
     @Override public void rollbackLine() {--_nlines;}
-    @Override public void invalidLine(int linenum) {++_invalidLines;}
+    @Override public void invalidLine(String error) {
+      ++_invalidLines;
+      if(_errors.size() < 10)
+        _errors.add("error at line " + (_nlines +_invalidLines) + ", cause: " + error);
+    }
     @Override public void invalidValue(int linenum, int colnum) {}
+    public String [] errors(){
+      String [] res = new String[_errors.size()];
+      return _errors.toArray(res);
+    }
 
   }
 }

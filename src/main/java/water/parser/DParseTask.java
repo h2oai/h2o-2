@@ -1098,6 +1098,6 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     return new GregorianCalendar(yy,MM,dd).getTimeInMillis();
   }
 
-  @Override public void invalidLine(int lineNum) {} //TODO
+  @Override public void invalidLine(String err) {newLine();} //TODO
   @Override public void invalidValue(int line, int col) {} //TODO
 }
