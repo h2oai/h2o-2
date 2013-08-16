@@ -31,18 +31,18 @@ public class Cloud {
     Host master = new Host(_publicIPs[0]);
     Set<String> incls = Host.defaultIncludes();
     Set<String> excls = Host.defaultExcludes();
-    incls.addAll(Arrays.asList(includes));
-    excls.addAll(Arrays.asList(excludes));
+    if( includes != null )
+      incls.addAll(Arrays.asList(includes));
+    if( excludes != null )
+      excls.addAll(Arrays.asList(excludes));
     File flatfile = Utils.writeFile(Utils.join('\n', _privateIPs));
     incls.add(flatfile.getAbsolutePath());
     master.rsync(incls, excls, false);
 
     ArrayList<String> list = new ArrayList<String>();
-    list.add("-mainClass");
-    list.add(Master.class.getName());
+    list.addAll(Arrays.asList(args));
     list.add("-flatfile");
     list.add(flatfile.getName());
-    list.addAll(Arrays.asList(args));
     String[] java = Utils.add(java_args, NodeVM.class.getName());
     SSHWatchdog r = new SSHWatchdog(master, java, list.toArray(new String[0]));
     r.inheritIO();
@@ -51,7 +51,7 @@ public class Cloud {
 
   static class SSHWatchdog extends Watchdog {
     public SSHWatchdog(Host host, String[] java, String[] node) {
-      super(null, new String[] { new Params(host, java, node).write() });
+      super(javaArgs(SSHWatchdog.class.getName()), new String[] { new Params(host, java, node).write() });
     }
 
     public static void main(String[] args) throws Exception {

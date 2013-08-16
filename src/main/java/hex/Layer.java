@@ -5,10 +5,10 @@ import hex.rng.MersenneTwisterRNG;
 import java.lang.reflect.Field;
 import java.util.Random;
 
-import com.google.gson.*;
-
 import water.Iced;
 import water.fvec.*;
+
+import com.google.gson.*;
 
 /**
  * Neural network layer, can be used as one level of Perceptron, AA or RBM.
@@ -45,28 +45,14 @@ public abstract class Layer extends Iced {
   // Optional visible units bias, e.g. for pre-training
   transient float[] _v, _gv;
 
-  public Layer() {
-  }
-
-  public Layer(Layer in, int len) {
+  void init(Layer in, int len) {
     _w = new float[len * in._a.length];
     _b = new float[len];
     _a = new float[len];
     _e = new float[len];
-
     _wSpeed = new float[_w.length];
     _bSpeed = new float[_b.length];
-
     _in = in;
-  }
-
-  void init() {
-    // deeplearning.net tutorial (TODO figure out one for rectifiers)
-    Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-    float min = (float) -Math.sqrt(6. / (_in._a.length + _a.length));
-    float max = (float) +Math.sqrt(6. / (_in._a.length + _a.length));
-    for( int i = 0; i < _w.length; i++ )
-      _w[i] = rand(rand, min, max);
 
     if( _momentum != 0 ) {
       _wPrev = new float[_w.length];
@@ -91,6 +77,15 @@ public abstract class Layer extends Iced {
     }
 
     adjust(0);
+  }
+
+  void randomize() {
+    // deeplearning.net tutorial (TODO figure out one for rectifiers)
+    Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+    float min = (float) -Math.sqrt(6. / (_in._a.length + _a.length));
+    float max = (float) +Math.sqrt(6. / (_in._a.length + _a.length));
+    for( int i = 0; i < _w.length; i++ )
+      _w[i] = rand(rand, min, max);
   }
 
   abstract void fprop();
@@ -146,15 +141,8 @@ public abstract class Layer extends Iced {
     long _count;
     long _n;
 
-    public Input() {
-    }
-
-    public Input(int len) {
+    @Override void init(Layer in, int len) {
       _a = new float[len];
-    }
-
-    @Override void init() {
-      //
     }
 
     abstract int label();
@@ -173,7 +161,6 @@ public abstract class Layer extends Iced {
     }
 
     public FrameInput(Frame frame, boolean normalize) {
-      super(frame.numCols() - 1);
       _frame = frame;
       _normalize = normalize;
       _count = frame.numRows();
@@ -206,13 +193,6 @@ public abstract class Layer extends Iced {
   }
 
   public static class Softmax extends Layer {
-    public Softmax() {
-    }
-
-    public Softmax(Layer in, int len) {
-      super(in, len);
-    }
-
     @Override void fprop() {
       float max = Float.NEGATIVE_INFINITY;
       for( int o = 0; o < _a.length; o++ ) {
@@ -248,13 +228,6 @@ public abstract class Layer extends Iced {
   }
 
   public static class Tanh extends Layer {
-    public Tanh() {
-    }
-
-    public Tanh(Layer in, int len) {
-      super(in, len);
-    }
-
     @Override void fprop() {
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
@@ -288,15 +261,8 @@ public abstract class Layer extends Iced {
   }
 
   public static class Rectifier extends Layer {
-    public Rectifier() {
-    }
-
-    public Rectifier(Layer in, int len) {
-      super(in, len);
-    }
-
-    @Override void init() {
-      super.init();
+    @Override void randomize() {
+      super.randomize();
 
       for( int i = 0; i < _b.length; i++ )
         _b[i] = 1;

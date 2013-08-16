@@ -72,6 +72,10 @@ public class Sandbox {
     }
   }
 
+  /**
+   * Creates nodes on local machines. For in-process, launch H2O in debug to avoid conflicts with
+   * multiple instances of log4j, e.g. "-ea -Xmx12G -Dh2o.debug".
+   */
   public static void localCloud(int nodes, boolean inProcess, String[] args) {
     String ip = "127.0.0.1";
     int port = 54321;

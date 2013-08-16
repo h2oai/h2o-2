@@ -73,8 +73,10 @@ public class NeuralNetMnistTest2 {
         _ls[2]._rate = 0.001f;
       }
     }
-    for( int i = 0; i < _ls.length; i++ )
+    for( int i = 0; i < _ls.length; i++ ) {
+      _ls[i].randomize();
       _ls[i].init();
+    }
 
     if( load ) {
       long time = System.nanoTime();

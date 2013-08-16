@@ -10,8 +10,7 @@ import java.util.Random;
 
 import javax.swing.*;
 
-@SuppressWarnings("serial")
-public final class MnistCanvas extends Canvas {
+public class MnistCanvas extends Canvas {
   static NeuralNetTest _test;
   static Random _rand = new Random();
   static int _level = 1;
@@ -22,13 +21,13 @@ public final class MnistCanvas extends Canvas {
     _test = mnist;
 
     // Basic visualization of images and weights
-    JFrame frame = new JFrame("H2O");
-    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    MnistCanvas canvas = new MnistCanvas();
-    frame.setContentPane(canvas.init());
-    frame.pack();
-    frame.setLocationRelativeTo(null);
-    frame.setVisible(true);
+//    JFrame frame = new JFrame("H2O");
+//    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+//    MnistCanvas canvas = new MnistCanvas();
+//    frame.setContentPane(canvas.init());
+//    frame.pack();
+//    frame.setLocationRelativeTo(null);
+//    frame.setVisible(true);
 
     mnist.run();
   }

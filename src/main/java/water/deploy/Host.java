@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.*;
 
 import water.Boot;
+import water.H2O;
 import water.util.Log;
 import water.util.Utils;
 
@@ -99,7 +100,7 @@ public class Host {
       args.add(_address + ":" + "/home/" + _user + "/" + FOLDER);
       ProcessBuilder builder = new ProcessBuilder(args);
       process = builder.start();
-      String log = "rsync " + VM.localIP() + " -> " + _address;
+      String log = "rsync " + H2O.findInetAddressForSelf() + " -> " + _address;
       NodeVM.inheritIO(process, Log.padRight(log + ": ", 24));
       process.waitFor();
     } catch( Exception ex ) {

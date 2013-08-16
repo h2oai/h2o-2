@@ -7,6 +7,7 @@ import org.apache.commons.codec.binary.Base64;
 
 import water.Arguments;
 import water.H2O;
+import water.deploy.Cloud.Master;
 import water.util.Log;
 import water.util.Utils;
 
@@ -70,6 +71,7 @@ public abstract class EC2 {
     String[] includes = config.incl != null ? config.incl.split(File.pathSeparator) : null;
     String[] excludes = config.excl != null ? config.excl.split(File.pathSeparator) : null;
     String[] java = config.java_args != null ? config.java_args.split(" ") : null;
+    args = Utils.add(args, "-mainClass", Master.class.getName());
     c.start(includes, excludes, java, args);
   }
 

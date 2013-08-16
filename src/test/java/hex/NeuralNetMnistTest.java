@@ -1,7 +1,6 @@
 package hex;
 
 import hex.Layer.Input;
-import hex.Trainer.ParallelTrainers;
 import hex.rng.MersenneTwisterRNG;
 
 import java.io.*;
@@ -18,10 +17,6 @@ public class NeuralNetMnistTest extends NeuralNetTest {
   public static class MnistInput extends Input {
     float[] _images;
     byte[] _labels;
-
-    public MnistInput() {
-      super(PIXELS);
-    }
 
     @Override int label() {
       return _labels[(int) _n];
@@ -43,19 +38,21 @@ public class NeuralNetMnistTest extends NeuralNetTest {
       _ls = new Layer[3];
       _ls[0] = _train;
       if( rectifier ) {
-        _ls[1] = new Layer.Rectifier(_ls[0], 500);
-        _ls[2] = new Layer.Softmax(_ls[1], 10);
+        _ls[1] = new Layer.Rectifier();
+        _ls[2] = new Layer.Softmax();
       } else {
-        _ls[1] = new Layer.Tanh(_ls[0], 500);
-        _ls[2] = new Layer.Softmax(_ls[1], 10);
+        _ls[1] = new Layer.Tanh();
+        _ls[2] = new Layer.Softmax();
       }
+      _ls[1].init(_ls[0], 500);
+      _ls[2].init(_ls[1], 10);
       _ls[1]._rate = .05f;
-      _ls[1]._l2 = .0001f;
       _ls[2]._rate = .02f;
+      _ls[1]._l2 = .0001f;
       _ls[2]._l2 = .0001f;
     }
-    for( int i = 0; i < _ls.length; i++ )
-      _ls[i].init();
+    for( int i = 1; i < _ls.length; i++ )
+      _ls[i].randomize();
   }
 
   @Override public void run() {
@@ -65,12 +62,13 @@ public class NeuralNetMnistTest extends NeuralNetTest {
       long time = System.nanoTime();
       for( int i = 0; i < _ls.length; i++ ) {
         String json = Utils.readFile(new File("layer" + i + ".json"));
-        _ls[i] = Utils.json(json, Layer.class);
+        _ls[i] = Layer.json(json, Layer.class);
       }
       System.out.println("load: " + (int) ((System.nanoTime() - time) / 1e6) + " ms");
     }
 
-    _trainer = new ParallelTrainers(_ls);
+    //_trainer = new ParallelTrainers(_ls);
+    _trainer = new Trainer.Distributed(_ls);
 
     if( pretrain ) {
       for( int i = 0; i < _ls.length; i++ ) {
@@ -85,7 +83,7 @@ public class NeuralNetMnistTest extends NeuralNetTest {
     if( save ) {
       long time = System.nanoTime();
       for( int i = 0; i < _ls.length; i++ ) {
-        String json = Utils.json(_ls[i]);
+        String json = Layer.json(_ls[i]);
         Utils.writeFile(new File("rbm" + i + ".json"), json);
       }
       System.out.println("save: " + (int) ((System.nanoTime() - time) / 1e6) + " ms");
@@ -171,7 +169,7 @@ public class NeuralNetMnistTest extends NeuralNetTest {
       double delta = (time - lastTime) / 1e9;
       double total = (time - start) / 1e9;
       lastTime = time;
-      int items = trainer._count.get();
+      int items = trainer.count();
       int ps = (int) ((items - lastItems) / delta);
 
       lastItems = items;
@@ -218,6 +216,7 @@ public class NeuralNetMnistTest extends NeuralNetTest {
       }
 
       MnistInput input = new MnistInput();
+      input.init(null, PIXELS);
       input._images = new float[count * PIXELS];
       input._labels = rawL;
       input._count = rawL.length;

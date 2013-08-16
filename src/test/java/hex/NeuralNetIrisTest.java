@@ -88,8 +88,10 @@ public class NeuralNetIrisTest extends NeuralNetTest {
     _ls[2]._rateAnnealing = 0;
     _ls[2]._momentum = momentum;
     _ls[2]._l2 = 0;
-    for( int i = 0; i < _ls.length; i++ )
+    for( int i = 0; i < _ls.length; i++ ) {
+      _ls[i].randomize();
       _ls[i].init();
+    }
 
     NeuralNetMLPReference ref = new NeuralNetMLPReference();
     ref.init();
@@ -156,8 +158,10 @@ public class NeuralNetIrisTest extends NeuralNetTest {
       _ls[2] = new Softmax(_ls[1], 3);
       _ls[2]._rate = 0.01f;
       _ls[2]._momentum = m;
-      for( int i = 0; i < _ls.length; i++ )
+      for( int i = 0; i < _ls.length; i++ ) {
+        _ls[i].randomize();
         _ls[i].init();
+      }
 
       Trainer trainer = new Trainer.Direct(_ls);
       int count = epochs * (int) _train._frame.numRows();
