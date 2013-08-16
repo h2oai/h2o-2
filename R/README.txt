@@ -80,11 +80,11 @@ Which returns the following output:
   ** demo
   ** inst
   ** preparing package for lazy loading
-  Creating a generic function for ‘colnames’ from package ‘base’ in package h2o
-  Creating a generic function for ‘nrow’ from package ‘base’ in package ‘h2o’
-  Creating a generic function for ‘ncol’ from package ‘base’ in package ‘h2o’
-  Creating a generic function for ‘summary’ from package ‘base’ in package ‘h2o’
-  Creating a generic function for as.data.frame from package ‘base’ in package h2o
+  Creating a generic function for colnames from package base in package h2o
+  Creating a generic function for nrow from package base in package h2o
+  Creating a generic function for ncol from package base in package h2o
+  Creating a generic function for summary from package base in package h2o
+  Creating a generic function for as.data.frame from package base in package h2o
   ** help
   *** installing help indices
   ** building package indices
