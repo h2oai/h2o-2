@@ -1057,6 +1057,7 @@ class H2O(object):
             'destination_key': key2,
             }
         params_dict.update(kwargs)
+        print "\nParse params list:", params_dict
 
         if benchmarkLogging:
             cloudPerfH2O.get_log_save(initOnly=True)
