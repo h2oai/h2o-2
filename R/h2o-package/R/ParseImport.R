@@ -177,14 +177,8 @@ setMethod("h2o.parseRaw", signature(data="H2ORawData", key="ANY", header="logica
 
 setMethod("h2o.parseRaw", signature(data="H2ORawData", key="ANY", header="logical", sep="ANY", col.names="missing"), 
           function(data, key, header, sep) {
-            if(!(missing(key) || class(key) == "character"))
-              stop(paste("key cannot be of class", class(key)))
-            if(!(missing(sep) || class(sep) == "character"))
-              stop(paste("sep cannot be of class", class(sep)))
-            sepAscii = ifelse(sep == "", sep, strtoi(charToRaw(sep), 16L))
-            res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, header=as.numeric(header), separator=sepAscii)
-            while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
-            parsedData = new("H2OParsedData", h2o=data@h2o, key=res$destination_key)
+            temp = new("H2OParsedData", h2o=new("H2OClient"), key="")
+            h2o.parseRaw(data, key, header, sep, temp)
           })
 
 setMethod("h2o.parseRaw", signature(data="H2ORawData", key="ANY", header="missing", sep="ANY", col.names="H2OParsedData"), 
@@ -194,21 +188,15 @@ setMethod("h2o.parseRaw", signature(data="H2ORawData", key="ANY", header="missin
             if(!(missing(sep) || class(sep) == "character"))
               stop(paste("sep cannot be of class", class(sep)))
             sepAscii = ifelse(sep == "", sep, strtoi(charToRaw(sep), 16L))
-            res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, header=1, header_from_file=col.names@key, separator=sepAscii)
+            res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, header_from_file=col.names@key, separator=sepAscii)
             while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
             parsedData = new("H2OParsedData", h2o=data@h2o, key=res$destination_key)
           })
 
 setMethod("h2o.parseRaw", signature(data="H2ORawData", key="ANY", header="missing", sep="ANY", col.names="missing"), 
           function(data, key, sep) {
-            if(!(missing(key) || class(key) == "character"))
-              stop(paste("key cannot be of class", class(key)))
-            if(!(missing(sep) || class(sep) == "character"))
-              stop(paste("sep cannot be of class", class(sep)))
-            sepAscii = ifelse(sep == "", sep, strtoi(charToRaw(sep), 16L))
-            res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, separator=sepAscii)
-            while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
-            parsedData = new("H2OParsedData", h2o=data@h2o, key=res$destination_key)
+            temp = new("H2OParsedData", h2o=new("H2OClient"), key="")
+            h2o.parseRaw(data=data, key=key, sep=sep, col.names=temp)
           })
       
 setMethod("h2o.setColNames", signature(data="H2OParsedData", col.names="H2OParsedData"),
