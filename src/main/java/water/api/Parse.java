@@ -292,7 +292,6 @@ public class Parse extends Request {
     PSetup p = _source.value();
     if(!p._setup.valid())
       return Response.error("Given parser setup is not valid, I can not parse this file.");
-    System.out.println("setup = " + p._setup.toString());
     CustomParser.ParserSetup setup = p._setup._setup;
     Key dest = Key.make(_dest.value());
     try {

@@ -69,8 +69,6 @@ public class Summary extends Iced {
             else if (a > 5*b/3)
                b *= 5;
             start = b * Math.floor(c._min / b);
-            if(Double.isNaN(start))
-              System.out.println("haha");
             // guard against improper parse (date type) or zero c._sigma
             binsz = Math.max(1e-4, 3.5 *  c._sigma/ Math.cbrt(c._n));
             // Pick smaller of two for number of bins to avoid blowup of longs
