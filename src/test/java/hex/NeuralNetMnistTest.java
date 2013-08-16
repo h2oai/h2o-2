@@ -1,6 +1,7 @@
 package hex;
 
 import hex.Layer.Input;
+import hex.Trainer.ParallelTrainers;
 import hex.rng.MersenneTwisterRNG;
 
 import java.io.*;
@@ -67,8 +68,8 @@ public class NeuralNetMnistTest extends NeuralNetTest {
       System.out.println("load: " + (int) ((System.nanoTime() - time) / 1e6) + " ms");
     }
 
-    //_trainer = new ParallelTrainers(_ls);
-    _trainer = new Trainer.Distributed(_ls);
+    _trainer = new ParallelTrainers(_ls);
+    //_trainer = new Trainer.Distributed(_ls);
 
     if( pretrain ) {
       for( int i = 0; i < _ls.length; i++ ) {
@@ -155,7 +156,7 @@ public class NeuralNetMnistTest extends NeuralNetTest {
 
     long start = System.nanoTime();
     long lastTime = start;
-    int lastItems = 0;
+    long lastItems = 0;
     for( ;; ) {
       try {
         Thread.sleep(3000);
@@ -169,7 +170,7 @@ public class NeuralNetMnistTest extends NeuralNetTest {
       double delta = (time - lastTime) / 1e9;
       double total = (time - start) / 1e9;
       lastTime = time;
-      int items = trainer.count();
+      long items = trainer.steps();
       int ps = (int) ((items - lastItems) / delta);
 
       lastItems = items;

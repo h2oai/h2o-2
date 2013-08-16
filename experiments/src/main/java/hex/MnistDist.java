@@ -1,9 +1,8 @@
 package hex;
 
-import java.util.ArrayList;
-
-import water.Sandbox;
+import water.*;
 import water.deploy.Cloud;
+import water.util.Log;
 
 public class MnistDist extends MnistCanvas {
   public static void main(String[] args) throws Exception {
@@ -13,6 +12,9 @@ public class MnistDist extends MnistCanvas {
 
   public static class UserMain {
     public static void main(String[] args) throws Exception {
+      H2O.main(args);
+      TestUtil.stall_till_cloudsize(1);
+      Log.info("blah");
       // localCloud();
 
       NeuralNetMnistTest mnist = new NeuralNetMnistTest();
@@ -37,11 +39,16 @@ public class MnistDist extends MnistCanvas {
   }
 
   static void cloud4() {
-    ArrayList<String> list = new ArrayList<String>();
-    for( int i = 0; i < 4; i++ )
-      list.add("192.168.1." + (161 + i));
-    Cloud c = new Cloud(list.toArray(new String[0]), list.toArray(new String[0]));
-    String args = "-mainclass " + MnistDist.UserMain.class.getName();
-    c.start(null, null, new String[0], args.split(" "));
+    Cloud cloud = new Cloud();
+    for( int i = 0; i < 1; i++ )
+      cloud._publicIPs.add("192.168.1." + (161 + i));
+    cloud._clientRSyncIncludes.add("../libs/jdk");
+    cloud._clientRSyncIncludes.add("smalldata");
+    cloud._clientRSyncIncludes.add("experiments/target");
+    cloud._fannedRSyncIncludes.add("jdk");
+    cloud._fannedRSyncIncludes.add("smalldata");
+    String java = "-ea -Xmx12G -Dh2o.debug";
+    String args = "-mainClass " + MnistDist.UserMain.class.getName();
+    cloud.start(java.split(" "), args.split(" "));
   }
 }

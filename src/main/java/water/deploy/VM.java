@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.binary.StringUtils;
 
 import water.Boot;
 import water.H2O;
@@ -17,7 +18,6 @@ import water.util.Log;
  * Executes code in a separate VM.
  */
 public abstract class VM {
-  public static final String JAVA_PATH = "h2o.java";
   private final ArrayList<String> _args;
   private Process _process;
   private boolean _inherit;
@@ -186,6 +186,16 @@ public abstract class VM {
     }
   }
 
+  static class Params implements Serializable {
+    String[] _host, _java, _node;
+
+    Params(Host host, String[] java, String[] node) {
+      _host = new String[] { host.address(), host.user(), host.key() };
+      _java = java;
+      _node = node;
+    }
+  }
+
   /**
    * A remote JVM, launched over SSH.
    */
@@ -198,7 +208,7 @@ public abstract class VM {
     }
 
     public SSH(String[] localJava, Host host, String[] java, String[] node) {
-      super(localJava, Params.get(host, java, node));
+      super(localJava, new String[] { write(new Params(host, java, node)) });
       _host = host;
     }
 
@@ -223,7 +233,7 @@ public abstract class VM {
 
     public static void main(String[] args) throws Exception {
       exitWithParent();
-      Params p = Params.read(args[0]);
+      Params p = read(args[0]);
       Host host = new Host(p._host[0], p._host[1], p._host[2]);
       ArrayList<String> list = new ArrayList<String>();
       list.addAll(Arrays.asList(host.sshWithArgs().split(" ")));
@@ -246,10 +256,7 @@ public abstract class VM {
       } catch( IOException e ) {
         throw Log.errRTExcept(e);
       }
-      String java = System.getProperty(JAVA_PATH);
-      if( java == null )
-        java = "java";
-      String command = "cd " + Host.FOLDER + ";" + java + " -cp " + cp;
+      String command = "cd " + Host.FOLDER + ";jdk/jre/bin/java -cp " + cp;
       for( String s : javaArgs )
         command += " " + s;
       for( String s : nodeArgs )
@@ -258,47 +265,33 @@ public abstract class VM {
     }
   }
 
-  static class Params implements Serializable {
-    String[] _host, _java, _node;
-
-    public Params(Host host, String[] java, String[] node) {
-      _host = new String[] { host.address(), host.user(), host.key() };
-      _java = java;
-      _node = node;
-    }
-
-    static String[] get(Host host, String[] java, String[] node) {
-      return new String[] { new Params(host, java, node).write() };
-    }
-
-    String write() {
+  static String write(Serializable s) {
+    try {
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      ObjectOutput out = null;
       try {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutput out = null;
-        try {
-          out = new ObjectOutputStream(bos);
-          out.writeObject(this);
-          return Base64.encodeBase64String(bos.toByteArray());
-        } finally {
-          out.close();
-          bos.close();
-        }
-      } catch( Exception ex ) {
-        throw Log.errRTExcept(ex);
+        out = new ObjectOutputStream(bos);
+        out.writeObject(s);
+        return StringUtils.newStringUtf8(Base64.encodeBase64(bos.toByteArray(), false));
+      } finally {
+        out.close();
+        bos.close();
       }
+    } catch( Exception ex ) {
+      throw Log.errRTExcept(ex);
     }
+  }
 
-    static Params read(String s) {
+  static <T> T read(String s) {
+    try {
+      ObjectInput in = new ObjectInputStream(new ByteArrayInputStream(Base64.decodeBase64(s)));
       try {
-        ObjectInput in = new ObjectInputStream(new ByteArrayInputStream(Base64.decodeBase64(s)));
-        try {
-          return (Params) in.readObject();
-        } finally {
-          in.close();
-        }
-      } catch( Exception ex ) {
-        throw Log.errRTExcept(ex);
+        return (T) in.readObject();
+      } finally {
+        in.close();
       }
+    } catch( Exception ex ) {
+      throw Log.errRTExcept(ex);
     }
   }
 }

@@ -72,7 +72,9 @@ public abstract class EC2 {
     String[] excludes = config.excl != null ? config.excl.split(File.pathSeparator) : null;
     String[] java = config.java_args != null ? config.java_args.split(" ") : null;
     args = Utils.add(args, "-mainClass", Master.class.getName());
-    c.start(includes, excludes, java, args);
+    c._clientRSyncIncludes.addAll(Arrays.asList(includes));
+    c._clientRSyncExcludes.addAll(Arrays.asList(excludes));
+    c.start(java, args);
   }
 
   /**
@@ -159,7 +161,10 @@ public abstract class EC2 {
     }
     System.out.println("EC2 public IPs: " + Utils.join(' ', pub));
     System.out.println("EC2 private IPs: " + Utils.join(' ', prv));
-    return new Cloud(pub, prv);
+    Cloud cloud = new Cloud();
+    cloud._publicIPs.addAll(Arrays.asList(pub));
+    cloud._privateIPs.addAll(Arrays.asList(prv));
+    return cloud;
   }
 
 //@formatter:off

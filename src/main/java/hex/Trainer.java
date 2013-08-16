@@ -7,6 +7,7 @@ import java.nio.FloatBuffer;
 import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.atomic.AtomicLong;
 
 import water.*;
 import water.fvec.Chunk;
@@ -27,7 +28,7 @@ public abstract class Trainer {
 
   abstract void run();
 
-  int count() {
+  long steps() {
     throw new UnsupportedOperationException();
   }
 
@@ -111,6 +112,7 @@ public abstract class Trainer {
     static final CyclicBarrier DONE = new CyclicBarrier(1);
     volatile CyclicBarrier _suspend;
     final CyclicBarrier _resume;
+    final AtomicLong _steps = new AtomicLong();
 
     public ParallelTrainers(Layer[] ls) {
       this(ls, 1, 0, 0);
@@ -148,10 +150,12 @@ public abstract class Trainer {
                 }
               }
               trainer.step();
+              _steps.incrementAndGet();
             }
           }
         };
       }
+      Log.info("Started " + _trainers.length + " neural network trainers");
     }
 
     @Override Layer[] layers() {
@@ -161,6 +165,10 @@ public abstract class Trainer {
     @Override void run() {
       start();
       join();
+    }
+
+    @Override long steps() {
+      return _steps.get();
     }
 
     void start() {
@@ -204,13 +212,13 @@ public abstract class Trainer {
    */
   public static class Distributed extends Trainer {
     private Layer[] _ls;
-    private int _count;
+    private long _count;
 
     public Distributed(Layer[] ls) {
       _ls = ls;
     }
 
-    @Override int count() {
+    @Override long steps() {
       return _count;
     }
 
