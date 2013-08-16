@@ -366,9 +366,11 @@ def decide_if_localhost():
     print "No config json used. Launching local cloud..."
     return True
 
-def setup_random_seed():
+def setup_random_seed(seed=None):
     if random_seed is not None:
         SEED = random_seed
+    elif seed is not None:
+        SEED = seed
     else:
         SEED = random.randint(0, sys.maxint)
     random.seed(SEED)

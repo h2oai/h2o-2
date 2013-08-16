@@ -3,8 +3,6 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts
 import h2o_browse as h2b
 
-
-
 # ord('a') gives 97. Use that when you pass it as url param to h2o
 # str(unichr(97)) gives 'a'
 paramsDict = {
@@ -19,7 +17,6 @@ paramsDict = {
     'header_from_file': [None, 'syn_header', 'syn_data'],
 }
 
-
 # ability to selectively comment the first line (which may be data or header)
 # Does not write an extra line as the comment first in that case (header can be picked from the comment line)
 # H2O always just strips the comment from the first line? and continues parsing?
@@ -31,14 +28,16 @@ def write_syn_dataset(csvPathname, rowCount, headerString, rList, commentFirst=F
     dsf = open(csvPathname, "w+")
 
     # this should never add to the actual count of data rows
+    # UPDATE: comments are always ignored. So a commented header, commented data, is ignored.
+    headerRowsDone = 0
     if headerString is not None:
         if commentFirst and not commentDone:
             h = "# " + headerString
             commentDone = True
-        else:
-            h = headerString
+        # FIX: for now, always put the header in even if we're told to!
+        h = headerString
+        headerRowsDone += 1
         dsf.write(h + "\n")
-
     
     if rowCount is not None:        
         for i in range(rowCount):
@@ -51,9 +50,9 @@ def write_syn_dataset(csvPathname, rowCount, headerString, rList, commentFirst=F
                 commentDone = True
             dsf.write(r + "\n")
         dsf.close()
-        return rowCount # rows done
+        return (headerRowsDone, rowCount) # rows done
     else:
-        return 0 # rows done
+        return (headerRowsDone, 0) # rows done
 
 def rand_rowData(colCount, sepChar):
     rowData = [random.randint(0,7) for i in range(colCount)]
@@ -72,6 +71,8 @@ class Basic(unittest.TestCase):
     def setUpClass(cls):
         global SEED, localhost
         SEED = h2o.setup_random_seed()
+        # SEED = h2o.setup_random_seed(8968685305521902318)
+
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(2,java_heap_MB=1300,use_flatfile=True)
@@ -130,24 +131,17 @@ class Basic(unittest.TestCase):
             rowxcol = str(rowCount) + 'x' + str(colCount)
             totalCols = colCount + 1 # 1 extra for output
             totalDataRows = 0
+            totalHeaderRows = 0
 
             HEADER_HAS_HEADER = random.randint(0,1)
             DATA_HAS_HEADER = random.randint(0,1)
-            CREATE_HEADER_FILE = random.randint(0,1)
-            # doesn't make sense to not pass a data file?
-            # plus the import files needs to see something? or index error
-            CREATE_DATA_FILE = 1
-
             DATA_FIRST_IS_COMMENT = random.randint(0,1)
             HEADER_FIRST_IS_COMMENT = random.randint(0,1)
             # none is not legal
             SEP_CHAR_GEN = random.choice([",", "\t", " "])
-
             
             print '\nHEADER_HAS_HEADER:', HEADER_HAS_HEADER
             print 'DATA_HAS_HEADER:', DATA_HAS_HEADER
-            print 'CREATE_HEADER_FILE:', CREATE_HEADER_FILE
-            print 'CREATE_DATA_FILE:', CREATE_DATA_FILE
             print 'DATA_FIRST_IS_COMMENT:', DATA_FIRST_IS_COMMENT
             print 'HEADER_FIRST_IS_COMMENT:', HEADER_FIRST_IS_COMMENT
             print 'SEP_CHAR_GEN:', SEP_CHAR_GEN
@@ -177,25 +171,25 @@ class Basic(unittest.TestCase):
             if kwargs['separator']:
                 kwargs['separator'] = ord(SEP_CHAR_GEN)
         
-
-            if CREATE_DATA_FILE:
-                for fileN in range(fileNum):
-                    csvFilename = 'syn_data_' + str(fileN) + "_" + str(SEED) + "_" + rowxcol + '.csv'
-                    csvPathname = SYNDATASETS_DIR + '/' + csvFilename
-                    rList = rand_rowData(colCount, sepChar=SEP_CHAR_GEN)
-                    dataRowsDone = write_syn_dataset(csvPathname, rowCount, 
-                        headerString=(headerForData if DATA_HAS_HEADER else None), rList=rList,
-                        commentFirst=DATA_FIRST_IS_COMMENT, sepChar=SEP_CHAR_GEN)
-                    totalDataRows += dataRowsDone
+            # create data files
+            for fileN in range(fileNum):
+                csvFilename = 'syn_data_' + str(fileN) + "_" + str(SEED) + "_" + rowxcol + '.csv'
+                csvPathname = SYNDATASETS_DIR + '/' + csvFilename
+                rList = rand_rowData(colCount, sepChar=SEP_CHAR_GEN)
+                (headerRowsDone, dataRowsDone) = write_syn_dataset(csvPathname, rowCount, 
+                    headerString=(headerForData if DATA_HAS_HEADER else None), rList=rList,
+                    commentFirst=DATA_FIRST_IS_COMMENT, sepChar=SEP_CHAR_GEN)
+                totalDataRows += dataRowsDone
+                totalHeaderRows += headerRowsDone
 
             # create the header file
-            if CREATE_HEADER_FILE:
-                hdrFilename = 'syn_header_' + str(SEED) + "_" + rowxcol + '.csv'
-                hdrPathname = SYNDATASETS_DIR + '/' + hdrFilename
-                dataRowsDone = write_syn_dataset(hdrPathname, dataRowsWithHeader, 
-                    headerString=(headerForHeader if HEADER_HAS_HEADER else None), rList=rList,
-                    commentFirst=HEADER_FIRST_IS_COMMENT, sepChar=SEP_CHAR_GEN)
-                totalDataRows += dataRowsDone
+            hdrFilename = 'syn_header_' + str(SEED) + "_" + rowxcol + '.csv'
+            hdrPathname = SYNDATASETS_DIR + '/' + hdrFilename
+            (headerRowsDone, dataRowsDone) = write_syn_dataset(hdrPathname, dataRowsWithHeader, 
+                headerString=(headerForHeader if HEADER_HAS_HEADER else None), rList=rList,
+                commentFirst=HEADER_FIRST_IS_COMMENT, sepChar=SEP_CHAR_GEN)
+            totalDataRows += dataRowsDone
+            totalHeaderRows += headerRowsDone
 
             # make sure all key names are unique, when we re-put and re-parse (h2o caching issues)
             key = "syn_" + str(trial)
@@ -205,16 +199,8 @@ class Basic(unittest.TestCase):
             # use it at the node level directly (because we gen'ed the files.
             # I suppose we could force the redirect state bits in h2o.nodes[0] to False, instead?:w
             xs = h2o.nodes[0].import_files(SYNDATASETS_DIR)['keys']
-
-            if CREATE_HEADER_FILE:
-                headerKey = [x for x in xs if hdrFilename in x][0]
-            else:
-                headerKey = None
-
-            if CREATE_DATA_FILE:
-                dataKey = [x for x in xs if csvFilename not in x][0]
-            else:
-                dataKey = None
+            headerKey = [x for x in xs if hdrFilename in x][0]
+            dataKey = [x for x in xs if csvFilename not in x][0]
 
             # use regex. the only files in the dir will be the ones we just created with  *fileN* match
             print "Header Key =", headerKey
@@ -226,14 +212,13 @@ class Basic(unittest.TestCase):
             elif kwargs['header_from_file'] == 'syn_data':
                 kwargs['header_from_file'] = dataKey
 
+            print "If header_from_file= is used, we are currently required to force header=1 for h2o"
+            if kwargs['header_from_file']:
+                kwargs['header'] =  1
 
             # may have error if h2o doesn't get anything!
-            h2oShouldSeeSomething = (CREATE_HEADER_FILE and (kwargs['header_from_file']==1)) or CREATE_DATA_FILE
-            ignoreH2oError = not h2oShouldSeeSomething
-
             start = time.time()
-            parseKey = h2o.nodes[0].parse('*syn_data_*'+rowxcol+'*', key2=key2, timeoutSecs=timeoutSecs, 
-                ignoreH2oError=ignoreH2oError, **kwargs)
+            parseKey = h2o.nodes[0].parse('*syn_data_*'+rowxcol+'*', key2=key2, timeoutSecs=timeoutSecs, **kwargs)
 
             print "parseKey['destination_key']: " + parseKey['destination_key']
             print 'parse time:', parseKey['response']['time']
@@ -251,11 +236,8 @@ class Basic(unittest.TestCase):
             self.assertEqual(inspect['num_cols'], totalCols, \
                 "parse created result with the wrong number of cols %s %s" % (inspect['num_cols'], totalCols))
 
-            h2oShouldSeeHeader = (HEADER_HAS_HEADER and CREATE_HEADER_FILE and (kwargs['header_from_file']==1)) or \
-                (DATA_HAS_HEADER and CREATE_DATA_FILE)
-
-            # do we end up parsing one data rows as a header because of bad user?
-            h2oLosesOneData = (not HEADER_HAS_HEADER and not DATA_HAS_HEADER) and (kwargs['header']==1)
+            # do we end up parsing one data rows as a header because of mismatch in gen/param
+            h2oLosesOneData = (headerRowsDone==0) and (kwargs['header']==1)
             print "h2oLosesOneData:", h2oLosesOneData
             if h2oLosesOneData:
                 totalDataRows -= 1
@@ -266,9 +248,7 @@ class Basic(unittest.TestCase):
 
             # put in an ignore param, that will fail unless headers were parsed correctly
             # doesn't matter if the header got a comment, should see it
-
-        
-
+            h2oShouldSeeHeader = (HEADER_HAS_HEADER and (kwargs['header_from_file']==1)) or DATA_HAS_HEADER
             if h2oShouldSeeHeader:
                 kwargs = {'sample': 75, 'depth': 25, 'ntree': 1, 'ignore': 'A'}
             else:
