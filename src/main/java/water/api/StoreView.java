@@ -4,7 +4,11 @@ package water.api;
 import java.util.Arrays;
 
 import water.*;
+import water.fvec.Frame;
+import water.fvec.Vec;
 import water.parser.*;
+import water.parser.CustomParser.PSetupGuess;
+import water.util.Utils;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -120,15 +124,40 @@ public class StoreView extends Request {
         }
       }
     }
-    // If not a proper ValueArray, estimate by parsing the first 1meg chunk
+    if(val.isFrame()){
+      Frame fr = val.get();
+      rows = fr.numRows();
+      cols = fr.numCols();
+      result.addProperty(ROWS,rows); // exact rows
+      result.addProperty(COLS,cols); // exact cols
+      for( int i = 0; i < jcols.length; ++i ) {
+        JsonObject col = new JsonObject();
+        if (i < cols) {
+          Vec v = fr._vecs[i];
+          col.addProperty(HEADER,fr._names[i]);
+          if( !v.isEnum()) {
+            col.addProperty(MIN , noNaN(v.min() ));
+            col.addProperty(MEAN, noNaN(v.mean()));
+            col.addProperty(MAX , noNaN(v.max() ));
+          } else if( v.domain().length > 0 ) {
+            int max = v.domain().length;
+            col.addProperty(MIN , v.domain()[0]);
+            col.addProperty(MEAN, v.domain()[max/2]);
+            col.addProperty(MAX , v.domain()[max-1]);
+          }
+        }
+        jcols[i] = col;
+      }
+    }
     if( rows == -1 ) {
-      byte [] bits = val.getFirstBytes();
-      CustomParser.ParserSetup setup = ParseDataset.guessSetup(bits);
-      if( setup._data != null && setup._data[1].length > 0 ) { // Able to parse sanely?
+      byte [] bits = Utils.getFirstUnzipedBytes(val);
+      PSetupGuess sguess = ParseDataset.guessSetup(bits);
+      CustomParser.ParserSetup setup = (sguess != null)?sguess._setup:null;
+      if(setup != null &&  setup._data != null && setup._ncols > 0 ) { // Able to parse sanely?
         int zipped_len = val.getFirstBytes().length;
         double bytes_per_row = (double) zipped_len / setup._data.length;
         rows = (long) (val.length() / bytes_per_row);
-        cols = setup._data[1].length;
+        cols = setup._ncols;
         result.addProperty(ROWS, "~" + rows);
         result.addProperty(COLS, cols);
         final int len = setup._data.length;

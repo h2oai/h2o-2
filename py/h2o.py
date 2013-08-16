@@ -1,4 +1,4 @@
-import time, os, json, signal, tempfile, shutil, datetime, inspect, threading, os.path, getpass
+import time, os, json, signal, tempfile, shutil, datetime, inspect, threading, getpass
 import requests, psutil, argparse, sys, unittest, glob
 import h2o_browse as h2b, h2o_perf, h2o_util, h2o_cmd
 import re, webbrowser, random
@@ -541,7 +541,12 @@ def check_sandbox_for_errors(sandbox_ignore_errors=False):
                     # don't detect these class loader info messags as errors
                     #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
                     foundBad = regex1.search(line) and not (
-                        ('error rate' in line) or ('[Loaded ' in line) or ('class.error' in line) or
+                        # fvec
+                        ('prediction error' in line) or ('errors on' in line) or
+                        # R
+                        ('class.error' in line) or
+                        # original RF
+                        ('error rate' in line) or ('[Loaded ' in line) or 
                         ('[WARN]' in line) or ('CalcSquareErrorsTasks' in line))
 
                 if (printing==0 and foundBad):
@@ -1052,6 +1057,7 @@ class H2O(object):
             'destination_key': key2,
             }
         params_dict.update(kwargs)
+        print "\nParse params list:", params_dict
 
         if benchmarkLogging:
             cloudPerfH2O.get_log_save(initOnly=True)
@@ -1091,21 +1097,20 @@ class H2O(object):
 
     # &offset=
     # &view=
-    def inspect(self, key, offset=None, view=None, ignoreH2oError=False, timeoutSecs=30):
+    def inspect(self, key, offset=None, view=None, max_column_display=1000, ignoreH2oError=False, timeoutSecs=30):
         if beta_features:
             params = {
                 "src_key": key,
                 "offset": offset,
-                "view": view,
+                "view": view
                 }
         else:
             params = {
                 "key": key,
                 "offset": offset,
                 "view": view,
+                "max_column_display": max_column_display
                 }
-
-            
 
         a = self.__do_json_request('Inspect2.json' if beta_features else 'Inspect.json',
             params=params,
@@ -1216,7 +1221,7 @@ class H2O(object):
             if kwargs['sample'] is None:
                 params_dict['sample_rate'] = None
             else:
-                params_dict['sample_rate'] = kwargs['sample'] / 100 # has to be modified?
+                params_dict['sample_rate'] = (kwargs['sample'] + 0.0)/ 100 # has to be modified?
             
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
@@ -1231,6 +1236,11 @@ class H2O(object):
         return a
 
     def random_forest_view(self, data_key, model_key, timeoutSecs=300, print_params=False, **kwargs):
+        # not supported yet
+        if beta_features:
+            print "random_forest_view not supported in H2O fvec yet. hacking done response"
+            r = {'response': {'status': 'done'}, 'trees': {'number_built': 0}}
+            return r
         # is response_variable needed here? it shouldn't be
         # do_json_request will ignore any that remain = None
         params_dict = {
@@ -1312,9 +1322,10 @@ class H2O(object):
             time.sleep(3) # to be able to see it
         return a
 
-    def summary_page(self, key, timeoutSecs=60, noPrint=True, **kwargs):
+    def summary_page(self, key, max_column_display=1000, timeoutSecs=60, noPrint=True, **kwargs):
         params_dict = {
             'key': key,
+            'max_column_display': max_column_display,
             }
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
@@ -1346,6 +1357,7 @@ class H2O(object):
             f = open(csvPathname, 'wb')
             for chunk in r.iter_content(1024):
                 f.write(chunk)
+        print csvPathname, "size:", h2o_util.file_size_formatted(csvPathname)
 
     def script_download(self, pathname, timeoutSecs=30):
         url = self.__url('script.txt')

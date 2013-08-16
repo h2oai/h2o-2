@@ -41,8 +41,7 @@ class Basic(unittest.TestCase):
 
             h2o.verboseprint("Trial", trial)
             start = time.time()
-            # rfview=False used to inhibit the rfview completion
-            rfResult = h2o_cmd.runRFOnly(parseKey=parseKey, trees=1000, depth=2, rfview=False,
+            rfResult = h2o_cmd.runRFOnly(parseKey=parseKey, trees=1000, depth=2, rfView=False,
                 timeoutSecs=600, retryDelaySecs=3)
             print "RF #", trial,  "started on ", csvFilename, 'took', time.time() - start, 'seconds'
             model_key = rfResult['model_key']

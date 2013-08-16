@@ -134,7 +134,7 @@ public abstract class DRF {
       new TAtomic<RFModel>() {
         @Override public RFModel atomic(RFModel old) {
           if(old == null) return null;
-          RFModel newModel = old.clone();
+          RFModel newModel = (RFModel)old.clone();
           newModel._nodesSplitFeatures[idx] = numSplitFeatures;
           return newModel;
         }

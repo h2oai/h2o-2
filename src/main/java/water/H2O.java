@@ -28,8 +28,6 @@ public final class H2O {
   public static volatile AbstractEmbeddedH2OConfig embeddedH2OConfig;
   public static volatile ApiIpPortWatchdogThread apiIpPortWatchdog;
 
-  static boolean _hdfsActive = false;
-
   public static String VERSION = "(unknown)";
 
   // User name for this Cloud
@@ -54,9 +52,6 @@ public final class H2O {
 
   public static final String DEFAULT_ICE_ROOT = "/tmp";
   public static URI ICE_ROOT;
-
-  // Logging setup
-  public static boolean INHERIT_LOG4J = false;
 
   // Initial arguments
   public static String[] ARGS;
@@ -84,20 +79,13 @@ public final class H2O {
   public static AbstractEmbeddedH2OConfig getEmbeddedH2OConfig() { return embeddedH2OConfig; }
 
   /**
-   * Notify embedding software instance about H2O's embedded web server.
-   * @param ip H2O browser IP address
-   * @param port H2O browser port
-   */
-  public static void notifyAboutEmbeddedWebServerIpPort(InetAddress ip, int port) {
-    if (embeddedH2OConfig == null) { return; }
-    embeddedH2OConfig.notifyAboutEmbeddedWebServerIpPort(ip, port);
-  }
-
-  /**
-   * Notify embedding software instance about the H2O cluster size..
-   * @param ip H2O browser IP address
-   * @param port H2O browser port
-   * @param size H2O cluster size
+   * Tell the embedding software that this H2O instance belongs to
+   * a cloud of a certain size.
+   * This may be nonblocking.
+   *
+   * @param ip IP address this H2O can be reached at.
+   * @param port Port this H2O can be reached at (for REST API and browser).
+   * @param size Number of H2O instances in the cloud.
    */
   public static void notifyAboutCloudSize(InetAddress ip, int port, int size) {
     if (embeddedH2OConfig == null) { return; }
@@ -223,28 +211,30 @@ public final class H2O {
   // is nonsense, e.g. asking for replica #3 in a 2-Node system.
   public int D( Key key, int repl ) {
     if( repl >= size() ) return -1;
-    // Distribution of Fluid Vectors is a special case.
-    // Fluid Vectors are grouped into vector groups, each of which must have the same distribution of chunks
-    // so that MRTask2 run over group of vectors will keep data-locality.
-    // The fluid vecs from the same group share the same key pattern + each has 4 bytes identifying particular vector in the group.
-    // Since we need the same chunks end up on the smae node in the group, we need to skip the 4 bytes containing vec# from the hash.
-    // Apart from that, we keep previous mode of operation, so that ByteVec would have first 64MB distributed around cloud randomly and then go round-robin
-    // in 64MB chunks.
+
+    // Distribution of Fluid Vectors is a special case.  
+    // Fluid Vectors are grouped into vector groups, each of which must have
+    // the same distribution of chunks so that MRTask2 run over group of
+    // vectors will keep data-locality.  The fluid vecs from the same group
+    // share the same key pattern + each has 4 bytes identifying particular
+    // vector in the group.  Since we need the same chunks end up on the smae
+    // node in the group, we need to skip the 4 bytes containing vec# from the
+    // hash.  Apart from that, we keep the previous mode of operation, so that
+    // ByteVec would have first 64MB distributed around cloud randomly and then
+    // go round-robin in 64MB chunks.
     if(key._kb[0] == Key.DVEC || key._kb[0] == Key.VEC){
-      long idx = 0;
-      long hash = 0;
-      if(key._kb[0] == Key.DVEC){
-        long cSz = 1 << (26 - ValueArray.LOG_CHK);
-        idx = (UDP.get4(key._kb, 4));
-        if(idx > cSz){ // chunk after 64MB boundary -> go round robin according to chunk# / (64MB/chunksz)
-          idx = idx >>> (26 - ValueArray.LOG_CHK);
-          // skip all the size bytes including chunk# from the hash
-          hash = Key.hash(key._kb, 10, key._kb.length);
-        } else // we're in the first 64MB region, just skip the vec# bytes but keep the chunk# bytes in the hash
-          hash = Key.hash(key._kb, 6, key._kb.length);
-      } else // we want vec headers from the same group to be homed on the same node, so skip the differentiating bytes
-        hash = Key.hash(key._kb, 10, key._kb.length);
-      return  (int)((idx + 0x7FFFFFFF&hash + repl) % size());
+      long cidx = 0;
+      int skip = 1+1+4+4;       // Skip both the vec# and chunk#?
+      if( key._kb[0] == Key.DVEC ) {
+        long cSz = 1L << (26 - water.fvec.Vec.LOG_CHK);
+        cidx = UDP.get4(key._kb, 1+1+4); // Chunk index
+        if( cidx > cSz ) // chunk after 64MB boundary -> go round robin according to chunk# / (64MB/chunksz)
+          cidx >>>= (26 - water.fvec.Vec.LOG_CHK);
+        else // we're in the first 64MB region, just skip the vec# bytes but keep the chunk# bytes in the hash
+          skip = 1+1+4/*+4*/;
+      } // we want vec headers from the same group to be homed on the same node, so skip the differentiating bytes
+      long hash = Key.hash(key._kb, skip, key._kb.length);
+      return (int)((cidx + (0x7FFFFFFF&hash) + repl) % size());
     }
     // See if this is a specifically homed DVEC Key (has shorter encoding).
     byte[] kb = key._kb;
@@ -607,13 +597,13 @@ public final class H2O {
     public String hdfs; // HDFS backend
     public String hdfs_version; // version of the filesystem
     public String hdfs_config; // configuration file of the HDFS
+    public String hdfs_skip = null; // used by hadoop driver to not unpack and load any hdfs jar file at runtime.
     public String aws_credentials; // properties file for aws credentials
     public String keepice; // Do not delete ice on startup
     public String soft = null; // soft launch for demos
     public String random_udp_drop = null; // test only, randomly drop udp incoming
     public int pparse_limit = Integer.MAX_VALUE;
     public String no_requests_log = null; // disable logging of Web requests
-    public String inherit_log4j = null;
     public String h = null;
     public String help = null;
     public String version = null;
@@ -650,10 +640,6 @@ public final class H2O {
     "    -ice_root <fileSystemPath>\n" +
     "          The directory where H2O spills temporary data to disk.\n" +
     "          (The default is '" + DEFAULT_ICE_ROOT + "'.)\n" +
-    "\n" +
-    "    -inherit_log4j\n" +
-    "          Allow some other package to specify log4j configuration\n" +
-    "          (for embedding H2O, e.g. inside Hadoop mapreduce).\n" +
     "\n" +
     "Cloud formation behavior:\n" +
     "\n" +
@@ -965,11 +951,31 @@ public final class H2O {
     }
     SELF = H2ONode.self(SELF_ADDRESS);
     Log.info("Internal communication uses port: ",UDP_PORT,"\nListening for HTTP and REST traffic on  http:/",SELF_ADDRESS,":"+_apiSocket.getLocalPort()+"/");
-    notifyAboutEmbeddedWebServerIpPort (SELF_ADDRESS, API_PORT);
+
+    String embeddedConfigFlatfile = null;
+    AbstractEmbeddedH2OConfig ec = getEmbeddedH2OConfig();
+    if (ec != null) {
+      ec.notifyAboutEmbeddedWebServerIpPort (SELF_ADDRESS, API_PORT);
+      if (ec.providesFlatfile()) {
+        try {
+          embeddedConfigFlatfile = ec.fetchFlatfile();
+        }
+        catch (Exception e) {
+          Log.err("Failed to get embedded config flatfile");
+          Log.err(e);
+          H2O.exit(1);
+        }
+      }
+    }
 
     NAME = OPT_ARGS.name==null? System.getProperty("user.name") : OPT_ARGS.name;
     // Read a flatfile of allowed nodes
-    STATIC_H2OS = parseFlatFile(OPT_ARGS.flatfile);
+    if (embeddedConfigFlatfile != null) {
+      STATIC_H2OS = parseFlatFileFromString(embeddedConfigFlatfile);
+    }
+    else {
+      STATIC_H2OS = parseFlatFile(OPT_ARGS.flatfile);
+    }
 
     // Multi-cast ports are in the range E1.00.00.00 to EF.FF.FF.FF
     int hash = NAME.hashCode()&0x7fffffff;
@@ -1082,16 +1088,36 @@ public final class H2O {
       h2os.add(H2ONode.intern(entry.inet, entry.port+1));// use the UDP port here
     return h2os;
   }
+
+  public static HashSet<H2ONode> parseFlatFileFromString( String s ) {
+    HashSet<H2ONode> h2os = new HashSet<H2ONode>();
+    InputStream is = new ByteArrayInputStream(s.getBytes());
+    List<FlatFileEntry> list = parseFlatFile(is);
+    for(FlatFileEntry entry : list)
+      h2os.add(H2ONode.intern(entry.inet, entry.port+1));// use the UDP port here
+    return h2os;
+  }
+
   public static class FlatFileEntry {
     public InetAddress inet;
     public int port;
   }
+
   public static List<FlatFileEntry> parseFlatFile( File f ) {
+    InputStream is = null;
+    try {
+      is = new FileInputStream(f);
+    }
+    catch (Exception e) { Log.die(e.toString()); }
+    return parseFlatFile(is);
+  }
+
+  public static List<FlatFileEntry> parseFlatFile( InputStream is ) {
     List<FlatFileEntry> list = new ArrayList<FlatFileEntry>();
     BufferedReader br = null;
     int port = DEFAULT_PORT;
     try {
-      br = new BufferedReader(new InputStreamReader(new FileInputStream(f)));
+      br = new BufferedReader(new InputStreamReader(is));
       String strLine = null;
       while( (strLine = br.readLine()) != null) {
         strLine = strLine.trim();

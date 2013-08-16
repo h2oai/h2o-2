@@ -14,6 +14,15 @@ public class HdfsLoader {
   private static final String MAPRFS_HDFS_VERSION = "mapr2.1.3";
 
   public static void loadJars() {
+    if (H2O.OPT_ARGS.hdfs_skip != null) {
+      // When H2O is launched by hadoop itself, it should use the HDFS library that
+      // the hadoop mapper task picks up by default.
+      //
+      // Do not load any hadoop jar that is packed with H2O.
+      Log.info("H2O was started by Hadoop; inheriting HDFS library from mapper task.");
+      return;
+    }
+
     // Load the HDFS backend for existing hadoop installations.
     // FIX! hadoop/mapr supports other variants? also why isn't port an option on mapr, and why volume?
     // port should be optional

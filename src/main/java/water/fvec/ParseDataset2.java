@@ -8,10 +8,11 @@ import java.util.zip.*;
 
 import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.api.Inspect;
 import water.nbhm.NonBlockingHashMap;
 import water.parser.*;
+import water.parser.CustomParser.ParserSetup;
 import water.parser.CustomParser.ParserType;
+import water.parser.ParseDataset.Compression;
 import water.parser.Enum;
 import water.util.Utils;
 
@@ -19,9 +20,19 @@ public final class ParseDataset2 extends Job {
   public final Key  _progress;  // Job progress Key
 
   // --------------------------------------------------------------------------
-  // Parse an array of csv input/file keys into an array of distributed output Vecs.
+  // Parse an array of csv input/file keys into an array of distributed output Vecs
   public static Frame parse(Key okey, Key [] keys) {
-    return forkParseDataset(okey, keys, null).get();
+    // TODO, get global setup from all files!
+    Key k = keys[0];
+    ByteVec v = (ByteVec)getVec(k);
+    byte [] bits = v.elem2BV(0)._mem;
+    Compression cpr = Utils.guessCompressionMethod(bits);
+    CustomParser.ParserSetup globalSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), new ParserSetup(),true)._setup;
+    return forkParseDataset(okey, keys, globalSetup).get();
+  }
+
+  public static Frame parse(Key okey, Key [] keys, CustomParser.ParserSetup globalSetup) {
+    return forkParseDataset(okey, keys, globalSetup).get();
   }
   // Same parse, as a backgroundable Job
   public static ParseDataset2 forkParseDataset(final Key dest, final Key[] keys, final CustomParser.ParserSetup setup) {
@@ -175,29 +186,38 @@ public final class ParseDataset2 extends Job {
     }
   }
 
+  // Run once on all nodes; fill in missing zero chunks
   public static class SVFTask extends MRTask<SVFTask> {
-    Frame _f;
+    final Frame _f;
+    SVFTask( Frame f ) { _f = f; }
     @Override public void map(Key key) {
-      for(int i = 0; i < _f._vecs[0].nChunks(); ++i){
-        if(!_f._vecs[0].chunkKey(i).home())continue;
-        // first find the nrows as the # rows of non-missing chunks
+      Vec v0 = _f._vecs[0];
+      for(int i = 0; i < v0.nChunks(); ++i) {
+        if( !v0.chunkKey(i).home() ) continue;
+        // First find the nrows as the # rows of non-missing chunks; done on
+        // locally-homed chunks only - to keep the data distribution.
         int nlines = 0;
-        for(Vec vec:_f._vecs){
-          Key k  = vec.chunkKey(i);
-          if(H2O.get(k) != null){
-            Chunk c = H2O.get(k).get();
-            assert nlines == 0 || nlines == c._len;
-            nlines = c._len;
+        for( Vec vec : _f._vecs ) {
+          Value val = H2O.get(vec.chunkKey(i)); // Local-get only
+          if( val != null ) {
+            nlines = ((Chunk)val.get())._len;
+            break;
           }
         }
-        for(Vec vec:_f._vecs){
-          Key k  = vec.chunkKey(i);
-          H2O.putIfMatch(k, new Value(k,new C0DChunk(0, nlines)), null);
+
+        // Now fill in appropriate-sized zero chunks
+        for( Vec vec:_f._vecs ) {
+          Key k = vec.chunkKey(i);
+          if( !k.home() ) continue; // Local keys only
+          Value val = H2O.get(k);   // Local-get only
+          if( val == null )         // Missing?  Fill in w/zero chunk
+            H2O.putIfMatch(k, new Value(k,new C0DChunk(0, nlines)), null);
         }
       }
     }
-    @Override public void reduce(SVFTask drt) {}
+    @Override public void reduce( SVFTask drt ) {}
   }
+
   private static Vec getVec(Key key) {
     Object o = UKV.get(key);
     return o instanceof Vec ? (ByteVec) o : ((Frame) o)._vecs[0];
@@ -213,12 +233,6 @@ public final class ParseDataset2 extends Job {
       job.cancel();
       return;
     }
-    // Guess column layout.  For multiple files, the caller is supposed to
-    // guarantee they have equal & compatible columns and/or headers.
-    ByteVec vec = (ByteVec) getVec(fkeys[0]);
-    Compression compression = guessCompressionMethod(vec);
-    if( setup == null) setup = ParseDataset.guessSetup(DKV.get(fkeys[0]));
-    // Parallel file parse launches across the cluster
     MultiFileParseTask uzpt = new MultiFileParseTask(setup,job._progress).invoke(fkeys);
     if( uzpt._parserr != null )
       throw new ParseException(uzpt._parserr);
@@ -242,6 +256,13 @@ public final class ParseDataset2 extends Job {
     job.remove();
   }
 
+  public static ParserSetup guessSetup(Key key, ParserSetup setup, boolean checkHeader){
+
+    ByteVec vec = (ByteVec) getVec(key);
+    byte [] bits = vec.elem2BV(0)._mem;
+    Compression cpr = Utils.guessCompressionMethod(bits);
+    return ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), setup,checkHeader)._setup;
+  }
   // --------------------------------------------------------------------------
   // We want to do a standard MRTask with a collection of file-keys (so the
   // files are parsed in parallel across the cluster), but we want to throttle
@@ -263,8 +284,8 @@ public final class ParseDataset2 extends Job {
       // Get parser setup info for this chunk
       ByteVec vec = (ByteVec) getVec(key);
       byte [] bits = vec.elem2BV(0)._mem;
-      Compression cpr = guessCompressionMethod(vec);
-      CustomParser.ParserSetup localSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), _setup._pType, _setup._separator);
+      Compression cpr = Utils.guessCompressionMethod(bits);
+      CustomParser.ParserSetup localSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), _setup,true)._setup;
       // Local setup: nearly the same as the global all-files setup, but maybe
       // has the header-flag changed.
       if(!_setup.isCompatible(localSetup)) {
@@ -278,7 +299,7 @@ public final class ParseDataset2 extends Job {
           has_hdr = localSetup._columnNames[i].equalsIgnoreCase(_setup._columnNames[i]);
         if( !has_hdr )          // Headers not compatible?
           // Then treat as no-headers, i.e., parse it as a normal row
-          localSetup = CustomParser.ParserSetup.makeCSVSetup(localSetup._separator, false, localSetup._data, localSetup._ncols);
+          localSetup = new CustomParser.ParserSetup(ParserType.CSV,localSetup._separator, false, localSetup._data);
       }
       final int ncols = _setup._ncols;
       _vecs = new Vec[ncols];
@@ -289,11 +310,26 @@ public final class ParseDataset2 extends Job {
       try {
         switch( cpr ) {
         case NONE:
-          // Parallel decompress
-          if(localSetup._pType.parallelParseSupported)
-            distroParse(vec,localSetup);
-          else
+          if( !localSetup._pType.parallelParseSupported ) {
+            // XLS types end up here
             streamParse(vec.openStream(_progress), localSetup);
+          } else if( localSetup._pType == ParserType.CSV ) {
+            // Parallel decompress of CSV
+            Vec bvs[] = Arrays.copyOf(_vecs,_vecs.length+1,Vec[].class);
+            bvs[bvs.length-1] = vec;
+            DParse dp = new DParse(localSetup).doAll(bvs);
+            // After the MRTask2, the input Vec array has all the AppendableVecs
+            // closed() and rewritten as plain Vecs.  Copy those back into the _cols
+            // array.
+            for( int i=0; i<_vecs.length; i++ ) _vecs[i] = dp.vecs(i);
+          } else {
+            // Parallel decompress of SVMLight
+            SVMLightDParse sdp = new SVMLightDParse().doAll(vec);
+            // svmlight is sparse, some chunks might be missing, fill them with all 0s
+            Vec [] newVecs = sdp._dout.closeVecs(_fs);
+            new SVFTask(new Frame(null,newVecs)).invokeOnAllNodes();
+            _vecs = newVecs;
+          }
           break;
         case ZIP: {
           // Zipped file; no parallel decompression;
@@ -356,30 +392,6 @@ public final class ParseDataset2 extends Job {
     }
 
     // ------------------------------------------------------------------------
-    // Distributed parse of an unzipped raw text file.
-    private void distroParse( ByteVec vec, final CustomParser.ParserSetup localSetup ) throws IOException {
-      switch(localSetup._pType){
-        case CSV:
-          Vec bvs[] = Arrays.copyOf(_vecs,_vecs.length+1,Vec[].class);
-          bvs[bvs.length-1] = vec;
-          DParse dp = new DParse(localSetup).doAll(bvs);
-          // After the MRTask2, the input Vec array has all the AppendableVecs
-          // closed() and rewritten as plain Vecs.  Copy those back into the _cols
-          // array.
-          for( int i=0; i<_vecs.length; i++ ) _vecs[i] = dp.vecs(i);
-          break;
-        case SVMLight:
-          SVMLightDParse sdp = new SVMLightDParse().doAll(vec);
-          // svmlight is sparse, some chunks might be missing, fill them with all 0s
-          Vec [] newVecs = sdp._dout.closeVecs(_fs);
-          SVFTask t = new SVFTask();
-          t._f = new Frame(null,newVecs);
-          t.invokeOnAllNodes();
-          _vecs = newVecs;
-          break;
-      }
-    }
-
     private class SVMLightDParse extends MRTask2<SVMLightDParse> {
       SVMLightFVecDataOut _dout;
       @Override public void map( Chunk in ) { // svm light version, we do not know how many cols we're gonna have, keep them separate from MRTask2!
@@ -399,10 +411,10 @@ public final class ParseDataset2 extends Job {
           _dout.reduce(dp._dout);
       }
     }
+
     private class DParse extends MRTask2<DParse> {
       final CustomParser.ParserSetup _setup;
       DParse(CustomParser.ParserSetup setup) {_setup = setup;}
-
 
       @Override public void map( Chunk[] bvs ) {
         Enum [] enums = enums();
@@ -414,6 +426,7 @@ public final class ParseDataset2 extends Job {
         FVecDataOut dout = new FVecDataOut(nvs,enums);
         CsvParser p = new CsvParser(_setup,in._start > 0);
         p.parallelParse(in.cidx(),din,dout);
+        onProgress(in._len, _progress); // Record bytes parsed
       }
     }
     // Collect the string columns
@@ -427,19 +440,6 @@ public final class ParseDataset2 extends Job {
     }
   }
 
-  // --------------------------------------------------------------------------
-  // Heuristics
-
-  public static enum Compression { NONE, ZIP, GZIP }
-  public static Compression guessCompressionMethod( ByteVec vec) {
-    C1NChunk bv = vec.elem2BV(0); // First chunk of bytes
-    // Look for ZIP magic
-    if( vec.length() > ZipFile.LOCHDR && bv.get4(0) == ZipFile.LOCSIG )
-      return Compression.ZIP;
-    if( vec.length() > 2 && (0xFFFF&bv.get2(0)) == GZIPInputStream.GZIP_MAGIC )
-      return Compression.GZIP;
-    return Compression.NONE;
-  }
 
   /**
    * Parsed data output specialized for fluid vecs.
@@ -521,7 +521,9 @@ public final class ParseDataset2 extends Job {
     }
     public void setColumnNames(String [] names){}
     @Override public final void rollbackLine() {}
-    @Override public void invalidLine(int lineNum) {} // TODO
+    @Override public void invalidLine(String err) {
+      newLine();
+    } // TODO
     @Override public void invalidValue(int line, int col) {} // TODO
   }
 

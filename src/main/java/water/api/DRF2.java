@@ -34,7 +34,7 @@ public class DRF2 extends Request {
   protected final FrameNonClassVecSelect vecs  = new FrameNonClassVecSelect("vecs",data_key,class_vec);
 
   @API(help="Sampling rate during tree building.")
-  protected final Real sample_rate = new Real("sample_rate", 0.67, 0.0, 1.0,"");
+  protected final Real sample_rate = new Real("sample_rate", 0.67, 0.000001, 1.0,"");
 
   @API(help="Psuedo-random number generator seed.")
   protected final LongInt seed = new LongInt("seed",0xae44a87f9edf1cbL,"High order bits make better seeds");
@@ -130,7 +130,7 @@ public class DRF2 extends Request {
 
     DocGen.HTML.section(sb,"Summary");
     DocGen.HTML.listHead(sb);    
-    DocGen.HTML.listBullet(sb, "ntrees", ntrees.toString(), 0 );
+    DocGen.HTML.listBullet(sb, "ntrees", ntrees.value().toString(), 0 );
     DocGen.HTML.listBullet(sb, "mtrys", Integer.toString(mtrys), 0 );
     DocGen.HTML.listTail(sb);    
 

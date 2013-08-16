@@ -312,8 +312,10 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     t._job = job;
     t._phase = Pass.ONE;
     t._parser = parser;
-    if(t._parser._setup != null)
+    if(t._parser._setup != null) {
       t._ncolumns = parser._setup._ncols;
+      t._colNames = parser._setup._columnNames;
+    }
     return t;
   }
 
@@ -331,8 +333,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
    * @throws Exception
    */
   public void passOne() {
-    boolean arraylet;
-    if((arraylet =  _sourceDataset.isArray())) {
+    if((_sourceDataset.isArray())) {
       ValueArray ary = _sourceDataset.get();
       _nrows = new long[(int)ary.chunks()+1];
     } else
@@ -445,14 +446,14 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
       cols[i]._base = _bases[i];
       assert (char)pow10i(-_scale[i]) == pow10i(-_scale[i]):"scale out of bounds!, col = " + i + ", scale = " + _scale[i];
       cols[i]._scale = (char)pow10i(-_scale[i]);
-      cols[i]._off = (char)off;
+      cols[i]._off = off;
       cols[i]._size = (byte)COL_SIZES[_colTypes[i]];
       cols[i]._domain = _colDomains[i];
       cols[i]._max = _max[i];
       cols[i]._min = _min[i];
       cols[i]._mean = _mean[i];
       cols[i]._sigma = _sigma[i];
-      cols[i]._name = _colNames[i];
+      cols[i]._name = _colNames != null?_colNames[i]:Integer.toString(i);
       off += Math.abs(cols[i]._size);
     }
     // let any pending progress reports finish
@@ -1095,6 +1096,6 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     return new GregorianCalendar(yy,MM,dd).getTimeInMillis();
   }
 
-  @Override public void invalidLine(int lineNum) {} //TODO
+  @Override public void invalidLine(String err) {newLine();} //TODO
   @Override public void invalidValue(int line, int col) {} //TODO
 }

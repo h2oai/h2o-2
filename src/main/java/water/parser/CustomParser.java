@@ -2,6 +2,7 @@ package water.parser;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 import water.*;
@@ -23,6 +24,32 @@ public abstract class CustomParser extends Iced {
 
   public CustomParser(ParserSetup setup){_setup = setup;}
 
+  public static class PSetupGuess {
+    public final ParserSetup _setup;
+    public final int _invalidLines;
+    public final int _validLines;
+    public final String [] _errors;
+    public PSetupGuess(ParserSetup ps, int vlines, int ilines, String [] errors){
+      _setup = ps;
+      _invalidLines = ilines;
+      _validLines = vlines;
+      _errors = errors;
+    }
+    public final boolean valid(){
+      return _invalidLines < _validLines;
+    }
+    public final boolean hasErrors(){
+      return _errors != null && _errors.length > 0;
+    }
+    public String toString(){
+      if(!valid())
+        return "Parser setup appears to be broken, got " + _setup.toString();
+      else if(hasErrors())
+        return "Parser setup appears to work with some errors, got " + _setup.toString();
+      else
+        return "Parser setup working fine, got " + _setup.toString();
+    }
+  }
   public enum ParserType {
     AUTO(false),XLS(false),XLSX(false),CSV(true), SVMLight(true);
     public final boolean parallelParseSupported;
@@ -38,40 +65,41 @@ public abstract class CustomParser extends Iced {
 
     public ParserSetup() {
       _pType = ParserType.AUTO;
-      _separator = CsvParser.NO_SEPARATOR;
+      _separator = CsvParser.AUTO_SEP;
       _header = false;
       _data = null;
       _ncols = 0;
       _columnNames = null;
     }
-    protected ParserSetup(ParserType t, byte sep, int ncols, boolean header, String [][] data) {
+    protected ParserSetup(ParserType t) {
+      this(t,CsvParser.AUTO_SEP,false,null);
+    }
+    public ParserSetup(ParserType t, byte sep, boolean header) {
+      _pType = t;
+      _separator = sep;
+      _header = header;
+      _columnNames = null;
+      _data = null;
+      _ncols = 0;
+    }
+    public ParserSetup(ParserType t, byte sep, boolean header, String [][] data) {
       _pType = t;
       _separator = sep;
       _header = header;
       _columnNames = _header?data[0]:null;
       _data = data;
-      _ncols = ncols;
-    }
-    private ParserSetup(ParserType t, byte sep, int ncols, boolean header, String [] columnNames, String [][] data) {
-      _pType = t;
-      _separator = sep;
-      _ncols = ncols;
-      _header = header;
-      _columnNames = columnNames;
-      _data = data;
+      _ncols = data != null && data.length > 0?data[0].length:0;
     }
     public void setHeader(boolean val){
-      if(!val){
-        _header = false;
+      if(!(_header = val))
         _columnNames = null;
-      } else if(_data != null){
-        _header = true;
+      else if(_data != null)
         _columnNames = _data[0];
-      } else
+      else
         assert false;
     }
     public ParserSetup clone(){
-      return new ParserSetup(_pType, _separator, _ncols, _header, _columnNames, _data);
+      return new ParserSetup(_pType, _separator, _header);
     }
     public boolean isCompatible(ParserSetup other){
       if(other == null || _pType != other._pType)return false;
@@ -91,15 +119,6 @@ public abstract class CustomParser extends Iced {
           throw H2O.unimpl();
       }
     }
-    public boolean isCompatible(Key k){
-      ParserSetup s = ParseDataset.guessSetup(DKV.get(k), _pType, _separator);
-      return isCompatible(s);
-    }
-    public static ParserSetup makeSetup(){return new ParserSetup(ParserType.AUTO,CsvParser.NO_SEPARATOR, 0, false, null);}
-    public static ParserSetup makeSVMLightSetup(int ncols, String [][] data){return new ParserSetup(ParserType.SVMLight,(byte)' ', ncols, false, data);}
-    public static ParserSetup makeXlsSetup(int ncols, boolean header, String [][] data){return new ParserSetup(ParserType.XLS,(byte)0, ncols, header, data);}
-    public static ParserSetup makeCSVSetup(byte sep, boolean hdr, String [][] data,int ncols){return new ParserSetup(ParserType.CSV,sep, ncols,hdr, data);}
-
     public String toString(){
       StringBuilder sb = new StringBuilder(_pType.name());
       switch(_pType){
@@ -111,6 +130,9 @@ public abstract class CustomParser extends Iced {
           break;
         case XLS:
           sb.append(" data with " + _ncols + " columns.");
+          break;
+        case AUTO:
+          sb.append("");
           break;
         default:
           throw H2O.unimpl();
@@ -163,7 +185,7 @@ public abstract class CustomParser extends Iced {
     public void addStrCol( int colIdx, ValueString str );
     // Final rolling back of partial line
     public void rollbackLine();
-    public void invalidLine(int lineNum);
+    public void invalidLine(String err);
     public void invalidValue(int line, int col);
   }
 
@@ -212,6 +234,7 @@ public abstract class CustomParser extends Iced {
     public final static int MAX_LINES = 50;
     private String []   _colNames;
     private String [][] _data = new String[MAX_LINES][MAX_COLS];
+    transient ArrayList<String> _errors;
     public CustomInspectDataOut() {
      for(int i = 0; i < MAX_LINES;++i)
        Arrays.fill(_data[i],"NA");
@@ -251,7 +274,10 @@ public abstract class CustomParser extends Iced {
         _data[_nlines][colIdx] = str.toString();
     }
     @Override public void rollbackLine() {--_nlines;}
-    @Override public void invalidLine(int linenum) {++_invalidLines;}
+    @Override public void invalidLine(String err) {
+      ++_invalidLines;
+      _errors.add("Error at line: " + _nlines + ", reason: " + err);
+    }
     @Override public void invalidValue(int linenum, int colnum) {}
   }
 

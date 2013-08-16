@@ -23,7 +23,7 @@ h2o.importHDFS(object, path, parse = TRUE)
   }
 }
 \details{
-WARNING: In H2O, import is lazy! Do not modify the data files on hard disk until after parsing is complete.
+WARNING: In H2O, import is lazy! Do not modify the data files on hard disk until after parsing is complete. By default, h2o.importHDFS will automatically parse the file.
 }
 \value{
 When the path is a directory, if \code{parse = TRUE}, the function returns a list of objects of class \code{\linkS4class{H2OParsedData}}, otherwise it returns a list of objects of class \code{\linkS4class{H2ORawData}}. When the path is a single file, the same holds, except the function returns a single object rather than a list.
@@ -50,6 +50,7 @@ When the path is a directory, if \code{parse = TRUE}, the function returns a lis
 }
 \examples{
 localH2O = new("H2OClient", ip = "localhost", port = 54321)
+h2o.checkClient(localH2O)
 covtype.hex = importHDFS(localH2O, path = "hdfs://192.168.1.173:54321/0xdiag/datasets/standard/covtype.data", parse = TRUE)
 summary(covtype.hex)
 

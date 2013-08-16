@@ -7,6 +7,7 @@ import java.util.Locale;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.PropertyConfigurator;
 
+import org.omg.PortableServer.ThreadPolicyOperations;
 import water.*;
 import water.api.Constants.Schemes;
 import water.util.Log.Tag.Kind;
@@ -308,32 +309,30 @@ public abstract class Log {
         return _logger;
       }
 
-      if (! H2O.INHERIT_LOG4J) {
-        // If a log4j properties file was specified on the command-line, use it.
-        // Otherwise, create some default properties on the fly.
-        String log4jProperties = System.getProperty ("log4j.properties");
-        if (log4jProperties != null) {
-          PropertyConfigurator.configure(log4jProperties);
-          // TODO:  Need some way to set LOG_DIR here for LogCollectorTask to work.
-        }
-        else {
-          LOG_DIR = logDirParent + File.separator + "h2ologs";
-          String logPathFileName = getLogPathFileName();
-          java.util.Properties p = new java.util.Properties();
+      // If a log4j properties file was specified on the command-line, use it.
+      // Otherwise, create some default properties on the fly.
+      String log4jProperties = System.getProperty ("log4j.properties");
+      if (log4jProperties != null) {
+        PropertyConfigurator.configure(log4jProperties);
+        // TODO:  Need some way to set LOG_DIR here for LogCollectorTask to work.
+      }
+      else {
+        LOG_DIR = logDirParent + File.separator + "h2ologs";
+        String logPathFileName = getLogPathFileName();
+        java.util.Properties p = new java.util.Properties();
 
-          p.setProperty("log4j.rootLogger", "debug, R");
-          p.setProperty("log4j.appender.R", "org.apache.log4j.RollingFileAppender");
-          p.setProperty("log4j.appender.R.File", logPathFileName);
-          p.setProperty("log4j.appender.R.MaxFileSize", "256KB");
-          p.setProperty("log4j.appender.R.MaxBackupIndex", "5");
-          p.setProperty("log4j.appender.R.layout", "org.apache.log4j.PatternLayout");
+        p.setProperty("log4j.rootLogger", "debug, R");
+        p.setProperty("log4j.appender.R", "org.apache.log4j.RollingFileAppender");
+        p.setProperty("log4j.appender.R.File", logPathFileName);
+        p.setProperty("log4j.appender.R.MaxFileSize", "256KB");
+        p.setProperty("log4j.appender.R.MaxBackupIndex", "5");
+        p.setProperty("log4j.appender.R.layout", "org.apache.log4j.PatternLayout");
 
-          // See the following document for information about the pattern layout.
-          // http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/PatternLayout.html
-          p.setProperty("log4j.appender.R.layout.ConversionPattern", "%m%n");
+        // See the following document for information about the pattern layout.
+        // http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/PatternLayout.html
+        p.setProperty("log4j.appender.R.layout.ConversionPattern", "%m%n");
 
-          PropertyConfigurator.configure(p);
-        }
+        PropertyConfigurator.configure(p);
       }
 
       _logger = LogManager.getLogger(Log.class.getName());
@@ -342,13 +341,15 @@ public abstract class Log {
     return _logger;
   }
 
+  static volatile boolean loggerCreateWasCalled = false;
+
   /** the actual write code. */
   private static void write0(Event e, boolean printOnOut) {
     org.apache.log4j.Logger l4j = getLog4jLogger();
 
     // If no logger object exists, try to build one.
     // Disable for debug, causes problems for multiple nodes per VM
-    if (l4j == null && !H2O.DEBUG) {
+    if ((l4j == null) && !loggerCreateWasCalled && !H2O.DEBUG) {
       if (H2O.SELF != null) {
         File dir;
         // Use ice folder if local, or default
@@ -357,6 +358,7 @@ public abstract class Log {
         else
           dir = new File(H2O.DEFAULT_ICE_ROOT);
 
+        loggerCreateWasCalled = true;
         l4j = createLog4jLogger(dir.toString());
       }
     }

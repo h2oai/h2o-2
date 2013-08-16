@@ -115,9 +115,6 @@ class parse_rand_schmoo(unittest.TestCase):
             self.assertEqual(value_size_bytesA, value_size_bytesB, 
                 "value_size_bytes mismatches after re-parse of downloadCsv result")
 
-            # FIX! should compare the results of the two parses. The infoFromInspect result?
-
-            ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
             h2o.check_sandbox_for_errors()
 
 if __name__ == '__main__':

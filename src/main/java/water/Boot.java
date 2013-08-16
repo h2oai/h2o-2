@@ -114,10 +114,6 @@ public class Boot extends ClassLoader {
     for (int i = 0; i < args.length; i++) {
       String arg = args[i];
       Log.POST(110, arg == null ? "(arg is null)" : "arg is: " + arg);
-      if ((arg != null) && arg.equals ("-inherit_log4j")) {
-        Log.POST(110, "Saw inherit_log4j");
-        H2O.INHERIT_LOG4J = true;
-      }
     }
 
     if( fromJar() ) {

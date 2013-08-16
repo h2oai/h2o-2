@@ -8,12 +8,11 @@ import java.net.Socket;
 /**
  * Simple class to help serialize messages from the Mapper to the Driver.
  */
-class MapperToDriverMessage {
-  public static final char TYPE_UNKNOWN = 0;
-  public static final char TYPE_EOF_NO_MESSAGE = 1;
-  public static final char TYPE_EMBEDDED_WEB_SERVER_IP_PORT = 2;
-  public static final char TYPE_CLOUD_SIZE = 3;
-  public static final char TYPE_EXIT = 4;
+class MapperToDriverMessage extends AbstractMessage {
+  public static final char TYPE_EMBEDDED_WEB_SERVER_IP_PORT = 12;
+  public static final char TYPE_FETCH_FLATFILE = 13;
+  public static final char TYPE_CLOUD_SIZE = 14;
+  public static final char TYPE_EXIT = 15;
 
 
   private String _driverCallbackIp = null;
@@ -36,10 +35,14 @@ class MapperToDriverMessage {
   public int getCloudSize() { return _cloudSize; }
   public int getExitStatus() { return _exitStatus; }
 
-  public void readMessage(Socket s) throws Exception {
+  public void read(Socket s) throws Exception {
     _type = readType(s);
 
     if (_type == TYPE_EMBEDDED_WEB_SERVER_IP_PORT) {
+      _embeddedWebServerIp = readString(s);
+      _embeddedWebServerPort = readInt(s);
+    }
+    else if (_type == TYPE_FETCH_FLATFILE) {
       _embeddedWebServerIp = readString(s);
       _embeddedWebServerPort = readInt(s);
     }
@@ -54,6 +57,7 @@ class MapperToDriverMessage {
       _exitStatus = readInt(s);
     }
     else {
+      System.out.println ("MapperToDriverMessage: read: Unknown type");
       // Ignore unknown types.
     }
   }
@@ -71,6 +75,12 @@ class MapperToDriverMessage {
 
   public void setMessageEmbeddedWebServerIpPort(String ip, int port) {
     _type = TYPE_EMBEDDED_WEB_SERVER_IP_PORT;
+    _embeddedWebServerIp = ip;
+    _embeddedWebServerPort = port;
+  }
+
+  public void setMessageFetchFlatfile(String ip, int port) {
+    _type = TYPE_FETCH_FLATFILE;
     _embeddedWebServerIp = ip;
     _embeddedWebServerPort = port;
   }
@@ -93,6 +103,9 @@ class MapperToDriverMessage {
     if (_type == TYPE_EMBEDDED_WEB_SERVER_IP_PORT) {
       writeMessageEmbeddedWebServerIpPort(s);
     }
+    else if (_type == TYPE_FETCH_FLATFILE) {
+      writeMessageFetchFlatfile(s);
+    }
     else if (_type == TYPE_CLOUD_SIZE) {
       writeMessageCloudSize(s);
     }
@@ -102,108 +115,24 @@ class MapperToDriverMessage {
     else {
       throw new Exception("MapperToDriverMessage: write: Unknown type");
     }
+
+    s.getOutputStream().flush();
   }
 
   //-----------------------------------------------------------------
   // Private below this line.
   //-----------------------------------------------------------------
 
-  // Readers
-  // -------
-  private int readBytes(Socket s, byte[] b) throws Exception {
-    int bytesRead = 0;
-    int bytesExpected = b.length;
-    InputStream is = s.getInputStream();
-    while (bytesRead < bytesExpected) {
-      int n = is.read(b, bytesRead, bytesExpected - bytesRead);
-      if (n < 0) {
-        return n;
-      }
-      bytesRead += n;
-    }
-
-    return bytesRead;
-  }
-
-  private char readType(Socket s) throws Exception {
-    byte b[] = new byte[1];
-    int n = readBytes(s, b);
-    if (n < 0) {
-      return TYPE_EOF_NO_MESSAGE;
-    }
-    // System.out.println("readType: " + b[0]);
-    return (char) b[0];
-  }
-
-  private int readInt(Socket s) throws Exception {
-    byte b[] = new byte[4];
-    int n = readBytes(s, b);
-    if (n < 0) {
-      throw new IOException("MapperToDriverMessage: readBytes failed");
-    }
-
-    int i =
-            (
-                    ((((int) b[0]) << (8*0)) & 0x000000ff) |
-                    ((((int) b[1]) << (8*1)) & 0x0000ff00) |
-                    ((((int) b[2]) << (8*2)) & 0x00ff0000) |
-                    ((((int) b[3]) << (8*3)) & 0xff000000)
-            );
-    // System.out.println("readInt: " + i);
-    // System.out.println("readInt: " + b[0] + " " + b[1] + " " + b[2] + " " + b[3]);
-
-    return i;
-  }
-
-  private String readString(Socket s) throws Exception {
-    int length = readInt(s);
-
-    byte b[] = new byte[length];
-    int n = readBytes(s, b);
-    if (n < 0) {
-      throw new IOException("MapperToDriverMessage: readBytes failed");
-    }
-
-    String str = new String(b, "UTF-8");
-    // System.out.println("readString: " + str);
-    return str;
-  }
-
-  // Writers
-  // -------
-  private void writeBytes(Socket s, byte[] b) throws Exception {
-    OutputStream os = s.getOutputStream();
-    os.write(b);
-  }
-
-  private void writeType(Socket s, int type) throws Exception {
-    byte b[] = new byte[1];
-    b[0] = (byte)(char)type;
-    writeBytes(s, b);
-  }
-
-  private void writeInt(Socket s, int i) throws Exception {
-    byte b[] = new byte[4];
-    b[0] = (byte)((i >> (8*0)) & 0xff);
-    b[1] = (byte)((i >> (8*1)) & 0xff);
-    b[2] = (byte)((i >> (8*2)) & 0xff);
-    b[3] = (byte)((i >> (8*3)) & 0xff);
-    // System.out.println("writeInt: " + b[0] + " " + b[1] + " " + b[2] + " " + b[3]);
-    writeBytes(s, b);
-  }
-
-  private void writeString(Socket s, String str) throws Exception {
-    byte b[] = str.getBytes("UTF-8");
-    writeInt(s, b.length);
-    writeBytes(s, b);
-  }
-
   private void writeMessageEmbeddedWebServerIpPort(Socket s) throws Exception {
     writeType(s, TYPE_EMBEDDED_WEB_SERVER_IP_PORT);
     writeString(s, _embeddedWebServerIp);
     writeInt(s, _embeddedWebServerPort);
-    s.getOutputStream().flush();
-    s.close();
+  }
+
+  private void writeMessageFetchFlatfile(Socket s) throws Exception {
+    writeType(s, TYPE_FETCH_FLATFILE);
+    writeString(s, _embeddedWebServerIp);
+    writeInt(s, _embeddedWebServerPort);
   }
 
   private void writeMessageCloudSize(Socket s) throws Exception {
@@ -211,8 +140,6 @@ class MapperToDriverMessage {
     writeString(s, _embeddedWebServerIp);
     writeInt(s, _embeddedWebServerPort);
     writeInt(s, _cloudSize);
-    s.getOutputStream().flush();
-    s.close();
   }
 
   private void writeMessageExit(Socket s) throws Exception {
@@ -220,7 +147,5 @@ class MapperToDriverMessage {
     writeString(s, _embeddedWebServerIp);
     writeInt(s, _embeddedWebServerPort);
     writeInt(s, _exitStatus);
-    s.getOutputStream().flush();
-    s.close();
   }
 }

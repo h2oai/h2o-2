@@ -23,7 +23,7 @@ public class Progress2 extends Request {
 
   @Override protected Response serve() {
     Job jjob = Job.findJob(Key.make(job.value()));
-    return (jjob == null || jjob._endTime != 0 )
+    return (jjob == null || jjob.end_time != 0 )
       ? jobDone      (jjob, dst_key.value())
       : jobInProgress(jjob, dst_key.value());
   }
@@ -40,7 +40,7 @@ public class Progress2 extends Request {
 
   @Override public boolean toHTML( StringBuilder sb ) {
     Job jjob = Job.findJob(Key.make(job.value()));
-    DocGen.HTML.title(sb,jjob._description);
+    DocGen.HTML.title(sb,jjob.description);
     DocGen.HTML.section(sb,dst_key.value());
     return true;
   }

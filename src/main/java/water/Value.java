@@ -238,8 +238,15 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   public boolean isFrame()   { return _type == TypeMap.FRAME; }
   public boolean isVec()     { return _type != TypeMap.PRIM_B && (TypeMap.newInstance(_type) instanceof Vec); }
   public boolean isByteVec() { return _type != TypeMap.PRIM_B && (TypeMap.newInstance(_type) instanceof ByteVec); }
+  public boolean isRawData() {
+    if(isFrame()){
+      Frame fr = get();
+      return fr._vecs.length == 1 && (fr._vecs[0] instanceof ByteVec);
+    }
+    // either simple value with bytearray, un-parsed value array or byte vec
+    return _type == TypeMap.PRIM_B || (isArray() && !isHex()) || isByteVec();
+  }
 
-  // Get the 1st bytes from either a plain Value, or chunk 0 of a ValueArray
   public byte[] getFirstBytes() {
     Value v = this;
     if(isArray())
@@ -247,6 +254,9 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     else if(isByteVec()){
       ByteVec vec = get();
       return vec.elem2BV(0).getBytes();
+    } else if(isFrame()){
+      Frame fr = get();
+      return ((ByteVec)fr._vecs[0]).elem2BV(0).getBytes();
     }
     // Return empty array if key has been deleted
     return v != null ? v.memOrLoad() : new byte[0];

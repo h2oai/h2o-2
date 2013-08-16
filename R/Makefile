@@ -18,5 +18,7 @@ endif
 
 clean:
 	rm -f h2o-package/DESCRIPTION
+	rm -f h2o-package/h2o_package.pdf
+	rm -f h2o-package/man/h2o-package.Rd
 	rm -f h2o_*.tar.gz
 

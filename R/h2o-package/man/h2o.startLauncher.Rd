@@ -1,22 +1,18 @@
-\name{checkH2OClient}
-\alias{checkH2OClient}
+\name{h2o.startLauncher}
+\alias{h2o.startLauncher}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Check if H2O is Running
+Launch H2O GUI
 }
 \description{
-Checks if H2O is running on the specified IP and port, and stops the program if it is not. Th method also compares the version number of the H2O program and the installed h2o R package. If there is a mismatch, it will warn the user.
+Launches the H2O graphical user interface from inside R.
 }
 \usage{
-checkH2OClient(object)
+h2o.startLauncher()
 }
 %- maybe also 'usage' for other objects documented here.
-\arguments{
-  \item{object}{An \code{\linkS4class{H2OClient}} object containing the IP address and port of the server running H2O.
-}
-}
 \details{
-%%  ~~ If necessary, more details than the description above ~~
+Upon launch, use the graphical user interface to configure the IP, port, and amount of memory to allot H2O. Hit the "Start H2O" button to run the program with the settings. If no errors occur, a browser window will pop up with the H2O start page.
 }
 \value{
 %%  ~Describe the value returned
@@ -41,8 +37,7 @@ checkH2OClient(object)
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-myClient = new("H2OClient", ip = "localhost", port = 54321)
-checkH2OClient(myClient)
+h2o.startLauncher()
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

@@ -5,17 +5,12 @@ import java.io.InputStream;
 import java.util.*;
 import java.util.zip.*;
 
-import org.apache.hadoop.thirdparty.guava.common.base.Objects;
-
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.api.Inspect;
-import water.parser.CustomParser.ParserSetup;
-import water.parser.CustomParser.ParserType;
+import water.parser.CustomParser.*;
 import water.parser.DParseTask.Pass;
-import water.util.Log;
-import water.util.RIStream;
+import water.util.*;
 
 import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
@@ -27,9 +22,9 @@ import com.google.common.io.Closeables;
  */
 @SuppressWarnings("fallthrough")
 public final class ParseDataset extends Job {
+  public static enum Compression { NONE, ZIP, GZIP }
 
   public static int PLIMIT = Integer.MAX_VALUE;
-  public static enum Compression { NONE, ZIP, GZIP }
 
   public final Key  _progress;
 
@@ -45,49 +40,45 @@ public final class ParseDataset extends Job {
     UKV.put(_progress, new Progress(0,total));
   }
 
-  // Guess
-  public static Compression guessCompressionMethod(Value dataset) {
-    byte[] b = dataset.getFirstBytes(); // First chunk
-    AutoBuffer ab = new AutoBuffer(b);
-
-    // Look for ZIP magic
-    if( b.length > ZipFile.LOCHDR && ab.get4(0) == ZipFile.LOCSIG )
-      return Compression.ZIP;
-    if( b.length > 2 && ab.get2(0) == GZIPInputStream.GZIP_MAGIC )
-      return Compression.GZIP;
-    return Compression.NONE;
+  public static PSetupGuess guessSetup(byte [] bits){
+    return guessSetup(bits,new ParserSetup(),true);
   }
 
-  public static ParserSetup guessSetup(Value v){
-    return guessSetup(v,ParserType.AUTO,CsvParser.NO_SEPARATOR);
-  }
-  public static ParserSetup guessSetup(byte [] bits){
-    return guessSetup(bits,ParserType.AUTO,CsvParser.NO_SEPARATOR);
-  }
-
-  public static ParserSetup guessSetup(Value v, ParserType pType){
-    return guessSetup(v, pType, CsvParser.NO_SEPARATOR);
-  }
-  public static ParserSetup guessSetup(Value v, ParserType pType, byte sep){
-    return guessSetup(Inspect.getFirstBytes(v),pType,sep);
-  }
-  public static ParserSetup guessSetup(byte [] bits, ParserType pType, byte sep){
-    ParserSetup res = null;
-    switch(pType){
+  public static PSetupGuess guessSetup(byte [] bits, ParserSetup setup, boolean checkHeader){
+    ArrayList<PSetupGuess> guesses = new ArrayList<CustomParser.PSetupGuess>();
+    PSetupGuess res = null;
+    if(setup == null)setup = new ParserSetup();
+    switch(setup._pType){
       case CSV:
-        return CsvParser.guessSetup(bits,sep);
+        return CsvParser.guessSetup(bits,setup,checkHeader);
       case SVMLight:
         return SVMLightParser.guessSetup(bits);
       case XLS:
         return XlsParser.guessSetup(bits);
       case AUTO:
-        if((res = XlsParser.guessSetup(bits)) != null)
+        try{
+          if((res = XlsParser.guessSetup(bits)) != null && res.valid())
+            if(!res.hasErrors())return res;
+            else guesses.add(res);
+        }catch(Exception e){}
+        try{
+          if((res = SVMLightParser.guessSetup(bits)) != null && res.valid())
+            if(!res.hasErrors())return res;
+            else guesses.add(res);
+        }catch(Exception e){}
+        try{
+          if((res = CsvParser.guessSetup(bits,setup,true)) != null && res.valid())
+            if(!res.hasErrors())return res;
+            else guesses.add(res);
+        }catch(Exception e){}
+        if(guesses.isEmpty())
+          return null;
+        else {
+          for(PSetupGuess guess:guesses) if(guess._invalidLines < res._invalidLines)res = guess;
           return res;
-        if((res = SVMLightParser.guessSetup(bits)) != null)
-          return res;
-        return CsvParser.guessSetup(bits,sep);
+        }
       default:
-        throw H2O.unimpl();
+        throw new IllegalArgumentException(setup._pType + " is not implemented.");
     }
   }
 
@@ -102,6 +93,8 @@ public final class ParseDataset extends Job {
   }
 
   public static void parse(ParseDataset job, Key [] keys, CustomParser.ParserSetup setup){
+    if(setup == null)
+      setup = guessSetup(Utils.getFirstUnzipedBytes(keys[0]))._setup;
     int j = 0;
     UKV.remove(job.dest());// remove any previous instance and insert a sentinel (to ensure no one has been writing to the same keys during our parse!
     Key [] nonEmptyKeys = new Key[keys.length];
@@ -116,21 +109,20 @@ public final class ParseDataset extends Job {
       job.cancel();
       return;
     }
-    Value v = DKV.get(keys[0]);
-    DParseTask p1 = tryParseXls(v,job);
-    if(p1 != null) {
-      if(keys.length == 1){ // shortcut for 1 xls file, we already have pass one done, just do the 2nd pass and we're done
-        DParseTask p2 = p1.createPassTwo();
-        p2.passTwo();
-        p2.createValueArrayHeader();
-        job.remove();
-        return;
-      } else
-        throw H2O.unimpl();
+    if(setup == null || setup._pType == ParserType.XLS){
+      DParseTask p1 = tryParseXls(DKV.get(keys[0]),job);
+      if(p1 != null) {
+        if(keys.length == 1){ // shortcut for 1 xls file, we already have pass one done, just do the 2nd pass and we're done
+          DParseTask p2 = p1.createPassTwo();
+          p2.passTwo();
+          p2.createValueArrayHeader();
+          job.remove();
+          return;
+        } else
+          throw H2O.unimpl();
+      }
     }
-    if(setup == null || setup._pType == CustomParser.ParserType.AUTO)
-      setup = ParseDataset.guessSetup(v);
-    Compression compression = guessCompressionMethod(v);
+    Compression compression = Utils.guessCompressionMethod(DKV.get(keys[0]).getFirstBytes());
     try {
       UnzipAndParseTask tsk = new UnzipAndParseTask(job, compression, setup);
       tsk.invoke(keys);
@@ -169,7 +161,9 @@ public final class ParseDataset extends Job {
         UKV.remove(finfo._okey);
       }
       phaseTwo.normalizeSigma();
-      phaseTwo._colNames = setup._data[0];
+      phaseTwo._colNames = setup._columnNames;
+      if(setup._header)
+        phaseTwo.setColumnNames(setup._columnNames);
       phaseTwo.createValueArrayHeader();
     } catch (Throwable e) {
       UKV.put(job.dest(), new Fail(e.getMessage()));
@@ -219,7 +213,7 @@ public final class ParseDataset extends Job {
     final Compression _comp;
     DParseTask _tsk;
     FileInfo [] _fileInfo;
-    final CustomParser.ParserSetup _parserSetup;
+    CustomParser.ParserSetup _parserSetup;
 
     public UnzipAndParseTask(ParseDataset job, Compression comp, CustomParser.ParserSetup parserSetup) {
       this(job,comp,parserSetup, Integer.MAX_VALUE);
@@ -232,6 +226,8 @@ public final class ParseDataset extends Job {
     @Override
     public DRemoteTask dfork( Key... keys ) {
       _keys = keys;
+      if(_parserSetup == null)
+        _parserSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(keys[0]))._setup;
       H2O.submitTask(this);
       return this;
     }
@@ -263,15 +259,17 @@ public final class ParseDataset extends Job {
         final Key key = _keys[_idx];
         Value v = DKV.get(key);
         assert v != null;
-        ParserSetup localSetup = ParseDataset.guessSetup(v, _parserSetup._pType, _parserSetup._separator);
-        localSetup._header &= _parserSetup._header;
+        ParserSetup localSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(v), _parserSetup,true)._setup;
         if(!_parserSetup.isCompatible(localSetup))throw new ParseException("Parsing incompatible files. " + _parserSetup.toString() + " is not compatible with " + localSetup.toString());
         _fileInfo[_idx] = new FileInfo();
         _fileInfo[_idx]._ikey = key;
         _fileInfo[_idx]._okey = key;
-        if(localSetup._header)
+        if(localSetup._header &= _parserSetup._header) {
+          assert localSetup._columnNames != null:"parsing " + key;
+          assert _parserSetup._columnNames != null:"parsing " + key;
           for(int i = 0; i < _parserSetup._ncols; ++i)
             localSetup._header &= _parserSetup._columnNames[i].equalsIgnoreCase(localSetup._columnNames[i]);
+        }
         _fileInfo[_idx]._header = localSetup._header;
         CustomParser parser = null;
         DParseTask dpt = null;

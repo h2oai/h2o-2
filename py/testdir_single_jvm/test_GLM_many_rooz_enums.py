@@ -101,7 +101,7 @@ class Basic(unittest.TestCase):
         if localhost:
             n = 4000
             tryList = [
-                (n, 1000, 'cI', 300), 
+                (n, 999, 'cI', 300), 
                 ]
         else:
             n = 5

@@ -49,6 +49,7 @@ public class Constants extends Iced {
   public static final String CLUSTERS              = "clusters";
   public static final String COEFFICIENTS          = "coefficients";
   public static final String COLS                  = "cols";
+  public static final String COLUMNS_DISPLAY       = "max_column_display";
   public static final String CONSENSUS             = "consensus";
   public static final String CONTENTS              = "contents";
   public static final String COUNT                 = "count";
@@ -78,6 +79,7 @@ public class Constants extends Iced {
   public static final String FREE_DISK             = "free_disk" + Suffixes.BYTES;
   public static final String FREE_MEM              = "free_mem" + Suffixes.BYTES;
   public static final String HEADER                = "header";
+  public static final String PREVIEW               = "preview";
   public static final String HEIGHT                = "height";
   public static final String HELP                  = "help";
   public static final String IGNORE                = "ignore";

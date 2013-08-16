@@ -56,7 +56,7 @@ class Basic(unittest.TestCase):
             if not h2o.beta_features:
                 print csvFilename, 'parse time:', parseKey['response']['time']
             print "Parse result['destination_key']:", parseKey['destination_key']
-            inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(key=parseKey['destination_key'], timeoutSecs=30)
 
             if not h2o.beta_features:
                 RFview = h2o_cmd.runRFOnly(trees=1,depth=25,parseKey=parseKey, timeoutSecs=timeoutSecs)

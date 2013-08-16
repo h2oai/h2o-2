@@ -26,7 +26,7 @@ The complete URL of the file to be imported. Each row of data appears as one lin
   }
 }
 \details{
-WARNING: In H2O, import is lazy! Do not modify the data on hard disk until after parsing is complete.
+WARNING: In H2O, import is lazy! Do not modify the data on hard disk until after parsing is complete. By default, h2o.importURL will automatically parse the file.
 }
 \value{
 If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedData}}, otherwise it returns an object of class \code{\linkS4class{H2ORawData}}.
@@ -53,8 +53,8 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 }
 \examples{
 localH2O = new("H2OClient", ip = "localhost", port = 54321)
-prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/
-   logreg/prostate.csv", key = "prostate.hex")
+h2o.checkClient(localH2O)
+prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
 summary(prostate.hex)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

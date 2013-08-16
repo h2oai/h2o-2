@@ -141,18 +141,18 @@ def runGLMGridOnly(node=None, parseKey=None,
     return node.GLMGrid(parseKey['destination_key'], timeoutSecs, **kwargs)
 
 def runRF(node=None, csvPathname=None, trees=5, key=None, key2=None,
-        timeoutSecs=20, retryDelaySecs=2, rfview=True, noise=None, **kwargs):
+        timeoutSecs=20, retryDelaySecs=2, rfView=True, noise=None, **kwargs):
     # use 1/5th the RF timeoutSecs for allowed parse time.
     pto = max(timeoutSecs/5,30)
     noise = kwargs.pop('noise',None)
     parseKey = parseFile(node, csvPathname, key, key2=key2, timeoutSecs=pto, noise=noise)
     return runRFOnly(node, parseKey, trees, timeoutSecs, retryDelaySecs, 
-        rfview=rfview, noise=noise, **kwargs)
+        rfView=rfView, noise=noise, **kwargs)
 
 # rfView can be used to skip the rf completion view
 # for creating multiple rf jobs
 def runRFOnly(node=None, parseKey=None, trees=5, 
-        timeoutSecs=20, retryDelaySecs=2, rfview=True, noise=None, noPrint=False, **kwargs):
+        timeoutSecs=20, retryDelaySecs=2, rfView=True, noise=None, noPrint=False, **kwargs):
     if not parseKey: raise Exception('No parsed key for RF specified')
     if not node: node = h2o.nodes[0]
     #! FIX! what else is in parseKey that we should check?
@@ -160,6 +160,9 @@ def runRFOnly(node=None, parseKey=None, trees=5,
     Key = parseKey['destination_key']
     rf = node.random_forest(Key, trees, timeoutSecs, **kwargs)
 
+    if h2o.beta_features and rfView==False:
+        # just return for now
+        return rf
     # FIX! check all of these somehow?
     # if we model_key was given to rf via **kwargs, remove it, since we're passing 
     # model_key from rf. can't pass it in two places. (ok if it doesn't exist in kwargs)
@@ -174,7 +177,7 @@ def runRFOnly(node=None, parseKey=None, trees=5,
     # this is important. it's the only accurate value for how many trees RF was asked for.
     ntree    = rf['ntree']
     response_variable = rf['response_variable']
-    if rfview:
+    if rfView:
         # ugly..we apparently pass/use response_variable in RFView, gets passed thru kwargs here
         # print kwargs['response_variable']
         rfViewResult = runRFView(node, data_key, model_key, ntree, 
@@ -199,8 +202,7 @@ def runRFView(node=None, data_key=None, model_key=None, ntree=None,
 
         if status == 'done': 
             if numberBuilt!=ntree: 
-                raise Exception("RFview done but number_built!=ntree: %s %s", 
-                    numberBuilt, ntree)
+                raise Exception("RFview done but number_built!=ntree: %s %s" % (numberBuilt, ntree))
             return True
         if status != 'poll': raise Exception('Unexpected status: ' + status)
 
@@ -331,8 +333,12 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
     num_rows = inspect['num_rows']
     num_cols = inspect['num_cols']
     cols = inspect['cols']
-    # trying to see how many enums we get
-    # don't print int
+    # type
+    # key
+    # row_size
+    # value_size_bytes
+    # cols
+    # rows
     missingValuesDict = {}
     constantValuesDict = {}
     enumSizeDict = {}
@@ -341,6 +347,12 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
     # all dictionaries created are keyed by col index
     print "Column Summary:"
     for k,c in enumerate(cols):
+        # offset
+        # base
+        # scale
+        # mean
+        # variance
+        # enum_domain_size
         colNameDict[k] = c['name']
         colTypeDict[k] = c['type']
         msg = "%s %d" % (c['name'], k)
@@ -383,7 +395,7 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
         raise Exception("Looks like columns got flipped to NAs: " + ", ".join(m))
 
     if num_cols != len(colNameDict): 
-        raise Exception("num_cols doesn't agree with len(colNameDict)" % num_cols, colNameDict)
+        raise Exception("num_cols: %s doesn't agree with len(colNameDict): %s" % (num_cols, len(colNameDict)))
 
     return (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) 
 

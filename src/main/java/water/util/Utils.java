@@ -15,10 +15,9 @@ import java.util.zip.*;
 import org.apache.commons.lang.ArrayUtils;
 
 import water.*;
-import water.fvec.ParseDataset2.Compression;
 import water.parser.ParseDataset;
-
 import com.google.gson.*;
+import water.parser.ParseDataset.Compression;
 
 public class Utils {
 
@@ -51,8 +50,8 @@ public class Utils {
     return (what < 1e-06) ? 0 : what * Math.log(what);
   }
 
-  public static String p2d(double d) { return new DecimalFormat ("0.##"   ).format(d); }
-  public static String p5d(double d) { return new DecimalFormat ("0.#####").format(d); }
+  public static String p2d(double d) { return !Double.isNaN(d) ? new DecimalFormat ("0.##"   ).format(d) : "nan"; }
+  public static String p5d(double d) { return !Double.isNaN(d) ? new DecimalFormat ("0.#####").format(d) : "nan"; }
 
   public static int set4( byte[] buf, int off, int x ) {
     for( int i=0; i<4; i++ ) buf[i+off] = (byte)(x>>(i<<3));
@@ -314,6 +313,24 @@ public class Utils {
     UKV.remove(k);
     ValueArray res = DKV.get(okey).get();
     return res;
+  }
+
+  public static byte [] getFirstUnzipedBytes(Key k){
+    return getFirstUnzipedBytes(DKV.get(k));
+  }
+  public static byte [] getFirstUnzipedBytes(Value v){
+    byte [] bits = v.getFirstBytes();
+    return unzipBytes(bits, guessCompressionMethod(bits));
+  }
+
+  public static Compression guessCompressionMethod(byte [] bits){
+    AutoBuffer ab = new AutoBuffer(bits);
+    // Look for ZIP magic
+    if( bits.length > ZipFile.LOCHDR && ab.get4(0) == ZipFile.LOCSIG )
+      return Compression.ZIP;
+    if( bits.length > 2 && ab.get2(0) == GZIPInputStream.GZIP_MAGIC )
+      return Compression.GZIP;
+    return Compression.NONE;
   }
 
   public static byte [] unzipBytes(byte [] bs, Compression cmp) {

@@ -14,7 +14,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(3,java_heap_GB=4)
+            h2o.build_cloud(1,java_heap_GB=14)
         else:
             h2o_hosts.build_cloud_with_hosts() # uses import Hdfs for s3n instead of import folder
 
@@ -33,6 +33,7 @@ class Basic(unittest.TestCase):
         csvFilenameList = [
             # FIX! fails KMeansScore
             ("tmc2007_train.svm",  "cJ", 30, 1),
+            ("mnist_train.svm", "cM", 30, 1),
             ("covtype.binary.svm", "cC", 30, 1),
             ("colon-cancer.svm",   "cA", 30, 1),
             ("connect4.svm",       "cB", 30, 1),
@@ -45,7 +46,6 @@ class Basic(unittest.TestCase):
 
             ("syn_6_1000_10.svm",  "cK", 30, 1),
             ("syn_0_100_1000.svm", "cL", 30, 1),
-            ("mnist_training.svm", "cM", 30, 1),
             # normal csv
         ]
 

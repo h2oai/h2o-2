@@ -74,9 +74,21 @@ class Basic(unittest.TestCase):
                 "parse created result with the wrong number of rows (header shouldn't count) %s %s" % \
                 (inspect['num_rows'], rowCount))
 
-            # if not h2o.browse_disable:
-            #    h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
-            #    time.sleep(5)
+            
+
+            # we should obey max_column_display
+            column_limits = [25, 25000, 50000]
+            for column_limit in column_limits:
+                inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], max_column_display=column_limit, timeoutSecs=timeoutSecs)
+                self.assertEqual(len( inspect['cols'] ) , column_limit, "inspect obeys max_column_display = " + str(column_limit))
+                for r in range(0, len( inspect[ 'rows' ] )):
+                    # NB: +1 below because each row includes a row header row: #{row}
+                    self.assertEqual(len( inspect['rows'][r] ) , column_limit + 1, "inspect data rows obeys max_column_display = " + str(column_limit))
+
+
+             # if not h2o.browse_disable:
+             #    h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
+             #    time.sleep(5)
 
 if __name__ == '__main__':
     h2o.unit_main()

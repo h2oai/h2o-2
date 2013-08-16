@@ -214,6 +214,17 @@
                 </platformTest>
             </ruleList>
         </renameFile>
+        <createDirectory>
+            <path>${env(HOME)}/Desktop/h2o_package</path>
+        </createDirectory>
+        <copyFile>
+            <destination>${env(HOME)}/Desktop/h2o_package/h2o_R_package_${project.version}.tar.gz</destination>
+            <origin>${installdir}/R/h2o_${project.version}.tar.gz</origin>
+        </copyFile>
+        <copyFile>
+            <destination>${env(HOME)}/Desktop/h2o_package/README.txt</destination>
+            <origin>${installdir}/R/README.txt</origin>
+        </copyFile>
         <renameFile>
             <destination>${installdir}/Contents/Resources/R</destination>
             <origin>${installdir}/R</origin>
@@ -268,6 +279,48 @@
                 </isTrue>
             </conditionRuleList>
         </if>
+        <createDirectory>
+            <path>${env(HOME)}/Library/Application Support/h2o</path>
+            <ruleList>
+                <fileExists>
+                    <negate>1</negate>
+                    <path>${env(HOME)}/Library/Application Support/h2o</path>
+                </fileExists>
+                <platformTest>
+                    <type>osx</type>
+                </platformTest>
+            </ruleList>
+        </createDirectory>
+        <createDirectory>
+            <path>${env(HOME)}/AppData/Roaming/h2o</path>
+            <ruleList>
+                <fileExists>
+                    <negate>1</negate>
+                    <path>${env(HOME)}/AppData/Roaming/h2o</path>
+                </fileExists>
+                <platformTest>
+                    <type>windows</type>
+                </platformTest>
+            </ruleList>
+        </createDirectory>
+        <writeFile>
+            <path>${env(HOME)}/Library/Application Support/h2o/${product_version}.txt</path>
+            <text>${installdir}</text>
+            <ruleList>
+                <platformTest>
+                    <type>osx</type>
+                </platformTest>
+            </ruleList>
+        </writeFile>
+        <writeFile>
+            <path>${env(HOME)}/AppData/Roaming/h2o/${product_version}.txt</path>
+            <text>${installdir}</text>
+            <ruleList>
+                <platformTest>
+                    <type>windows</type>
+                </platformTest>
+            </ruleList>
+        </writeFile>
     </postUninstallerCreationActionList>
     <enableRollback>1</enableRollback>
     <enableTimestamp>1</enableTimestamp>

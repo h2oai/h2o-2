@@ -2,8 +2,9 @@ import unittest
 import random, sys, time, os
 sys.path.extend(['.','..','py'])
 
+from math import floor
+
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
-CHECK_MAX = False
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE):
     # we can do all sorts of methods off the r object
@@ -19,13 +20,13 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE):
     dsf = open(csvPathname, "w+")
 
     synColSumDict = {0: 0} # guaranteed to have col 0 for output
+    colNumberMax = 0
     for i in range(rowCount):
         rowData = []
 
         if i==(rowCount-1): # last row
             val = 1
             colNumber = colCount # max
-            colNumberMax = colNumber
         else:
             # 50%
             d = random.randint(0,1)
@@ -36,6 +37,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE):
             colNumber = 1 # always make it col 1
 
         addValToRowStuff(colNumber, val, rowData, synColSumDict)
+        colNumberMax = max(colNumber, colNumberMax)
 
         # add output
         val = 0
@@ -68,7 +70,7 @@ class Basic(unittest.TestCase):
 
     def test_parse_bounds_libsvm (self):
         print "Random 0/1 for col1. Last has max col = 1, All have zeros for class."
-        h2b.browseTheCloud()
+        ## h2b.browseTheCloud()
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (100, 100, 'cA', 300),
@@ -109,9 +111,15 @@ class Basic(unittest.TestCase):
                     (value_size_bytes, expectedValueSize))
 
 
-                summaryResult = h2o_cmd.runSummary(key=key2, timeoutSecs=timeoutSecs)
-                h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
+                # summary respects column limits
+                col_limit = int(floor( 0.3 * colNumberMax ))
 
+                summaryResult = h2o_cmd.runSummary(key=key2, max_column_display=col_limit, timeoutSecs=timeoutSecs)
+                h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
+                self.assertEqual(col_limit, len( summaryResult[ 'summary'][ 'columns' ] ), "summary respects column limit of %d on %d cols" % (col_limit, colNumberMax+1))
+
+                summaryResult = h2o_cmd.runSummary(key=key2, max_column_display=10*num_cols, timeoutSecs=timeoutSecs)
+                h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
                 self.assertEqual(colNumberMax+1, num_cols, 
                     msg="generated %s cols (including output).  parsed to %s cols" % (colNumberMax+1, num_cols))
                 self.assertEqual(rowCount, num_rows, 
@@ -169,8 +177,11 @@ class Basic(unittest.TestCase):
                         msg='col %s mean %s is not equal to generated mean %s' % (name, mean, 0))
 
                     # why are min/max one-entry lists in summary result. Oh..it puts N min, N max
-                    self.assertEqual(smin, synMin,
-                        msg='col %s min %s is not equal to generated min %s' % (name, smin, synMin))
+                    self.assertTrue(smin >= synMin,
+                        msg='col %s min %s is not >= generated min %s' % (name, smin, synMin))
+
+                    self.assertTrue(smax <= synMax,
+                        msg='col %s max %s is not <= generated max %s' % (name, smax, synMax))
 
                     # reverse engineered the number of zeroes, knowing data was always 1 if present?
                     if name == "V65536" or name == "V65537":
@@ -186,10 +197,6 @@ class Basic(unittest.TestCase):
                     if synSigma:
                         self.assertAlmostEqual(float(sigma), synSigma, delta=0.03,
                             msg='col %s sigma %s is not equal to generated sigma %s' % (name, sigma, synSigma))
-
-                    if CHECK_MAX:
-                        self.assertEqual(smax, synMax,
-                            msg='col %s max %s is not equal to generated max %s' % (name, smax, synMax))
 
                     self.assertEqual(0, na,
                         msg='col %s num_missing_values %d should be 0' % (name, na))

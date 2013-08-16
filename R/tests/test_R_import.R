@@ -1,4 +1,4 @@
-source("H2O.R")
+source("H2O_Load.R", chdir = TRUE)
 localH2O = new("H2OClient", ip="localhost", port=54321)
 
 p.url = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv"
