@@ -9,3 +9,11 @@ prostate.hex = h2o.importFile(localH2O, path = system.file("extdata", "prostate.
 summary(prostate.hex)
 prostate.glm = h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5)
 print(prostate.glm)
+
+myLabels = c(prostate.glm@model$x, "Intercept")
+plot(prostate.glm@model$coefficients, xaxt = "n", xlab = "Coefficients", ylab = "Values")
+axis(1, at = 1:length(myLabels), labels = myLabels)
+abline(h = 0, col = 2, lty = 2)
+title("Coefficients from Logistic Regression\n of Prostate Cancer Data")
+
+barplot(prostate.glm@model$coefficients, main = "Coefficients from Logistic Regression\n of Prostate Cancer Data")
