@@ -4,17 +4,17 @@ import h2o_cmd, h2o, h2o_hosts
 import h2o_browse as h2b
 import h2o_import as h2i
 import h2o_rf
+from pprint import pprint
 
-csv_header = ('java_heap_GB','dataset','nRows','nCols',
+csv_header = ('java_heap_GB','dataset','nTrainRows','nTestRows','nCols',
                 #'nIgnoredCols','ignoredCols',
               'trainParseWallTime','trainViewTime','testParseWallTime',
               'testViewTime','overallWallTime','errRate')
-
 local_files = {'train':'mnist8m-train-1.csv',
                'test':'mnist8m-test-1.csv'}
 def run_rf(files,configs,s3n):
     overallWallStart = time.time()
-    importFolderPath = '/home/0xdiag/datasets/mnist'
+    importFolderPath = '/home/0xdiag/datasets/mnist/mnist8m'
     importFolderResult = h2i.setupImportFolder(None, importFolderPath)
     output = None
     if not os.path.exists('rfbench.csv'):
@@ -24,7 +24,7 @@ def run_rf(files,configs,s3n):
         output = open('rfbench.csv','a')
     csvWrt = csv.DictWriter(output, fieldnames=csv_header, restval=None, 
                 dialect='excel', extrasaction='ignore',delimiter=',')
-    csvWrt.writeheader()
+    #csvWrt.writeheader()
     try:
         java_heap_GB = h2o.nodes[0].java_heap_GB
         #Train File Parsing#
@@ -40,7 +40,7 @@ def run_rf(files,configs,s3n):
 
         inspect = h2o.nodes[0].inspect(parseKey['destination_key'])
         row = {'java_heap_GB':java_heap_GB,'dataset':'mnist8m',
-                'nRows': inspect['num_rows'],'nCols':inspect['num_cols'],
+                'nTrainRows': inspect['num_rows'],'nCols':inspect['num_cols'],
                 #'nIgnoredCols':nIgnoredCols,'ignoredCols':ignoredCols,
                 'trainParseWallTime':trainParseWallTime}
 
@@ -58,29 +58,34 @@ def run_rf(files,configs,s3n):
         
         #Test File Parsing#
         testParseWallStart = time.time()
-        print "Testing file is: ", file['test']
+        print "Testing file is: ", files['test']
         csvPathname = files['test']
         destKey = files['test'] + '.hex'
         parseKey = h2i.parseImportFolderFile(None,csvPathname,
-                            importFolderPath,key2=destKey,
-                            timeoutSecs=300,retryDelaySecs=5,pollTimeoutSecs=120)
+                           importFolderPath,key2=destKey,
+                           timeoutSecs=300,retryDelaySecs=5,pollTimeoutSecs=120)
         testParseWallTime = time.time() - testParseWallStart
         #End Test File Parse#
+        inspect = h2o.nodes[0].inspect(parseKey['destination_key'])
+        row.update({'nTestRows':inspect['num_rows']})
         row.update({'testParseWallTime':testParseWallTime})
         modelKey = rfView['model_key']
         
         #RFView (score on test)#
         kwargs = configs.copy()
         testRFStart = time.time()
-        rfView = h2o_cmd.runRFView(data_key=destKey,model_key=modelKey,ntree=10,
-                                   timeoutSecs=180,doSimpleCheck=False,**kwargs)
+        kwargs.update({'model_key':modelKey,'ntree':10})
+        rfView = h2o_cmd.runRFView(data_key=destKey,timeoutSecs=180,
+                                       doSimpleCheck=False,**kwargs)
         testViewTime = time.time() - testRFStart
         #End RFView (score on test)#
-        errRate = rfView['classification_error']
+        pprint(rfView)
+        errRate = rfView['confusion_matrix']['classification_error']
         row.update({'testViewTime':testViewTime})
         overallWallTime = time.time() - overallWallStart 
         row.update({'overallWallTime':overallWallTime})
-        row.uodate({'errRate':errRate})
+        row.update({'errRate':errRate})
+        csvWrt.writerow(row)
         #h2o.nodes[0].remove_key(k)
     finally:
         output.close()
