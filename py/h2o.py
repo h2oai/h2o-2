@@ -1566,14 +1566,14 @@ class H2O(object):
         # defaults to not specifying
 	# FIX! we need to check that it's not outside the limits of the dram of the machine it's running on?
         if self.java_heap_GB is not None:
-            if (1 > self.java_heap_GB > 63):
-                raise Exception('java_heap_GB <1 or >63  (GB): %s' % (self.java_heap_GB))
+            if not (1 <= self.java_heap_GB <= 256):
+                raise Exception('java_heap_GB <1 or >256  (GB): %s' % (self.java_heap_GB))
             args += [ '-Xms%dG' % self.java_heap_GB ]
             args += [ '-Xmx%dG' % self.java_heap_GB ]
 
         if self.java_heap_MB is not None:
-            if (1 > self.java_heap_MB > 63000):
-                raise Exception('java_heap_MB <1 or >63000  (MB): %s' % (self.java_heap_MB))
+            if not (1 <= self.java_heap_MB <= 256000):
+                raise Exception('java_heap_MB <1 or >256000  (MB): %s' % (self.java_heap_MB))
             args += [ '-Xms%dm' % self.java_heap_MB ]
             args += [ '-Xmx%dm' % self.java_heap_MB ]
 

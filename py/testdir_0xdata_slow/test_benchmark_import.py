@@ -259,7 +259,7 @@ class Basic(unittest.TestCase):
                 if totalBytes is not None:
                     fileMBS = (totalBytes/1e6)/elapsed
                     l = '{!s} jvms, {!s}GB heap, {:s} {:s} {:6.2f} MB/sec for {:.2f} secs'.format(
-                        len(h2o.nodes), tryHeap, csvFilepattern, csvFilename, fileMBS, elapsed)
+                        len(h2o.nodes), h2o.nodes[0].java_heap_GB, csvFilepattern, csvFilename, fileMBS, elapsed)
                     print l
                     h2o.cloudPerfH2O.message(l)
 
@@ -307,7 +307,7 @@ class Basic(unittest.TestCase):
                     elapsed = time.time() - start
                     h2o.check_sandbox_for_errors()
                     l = '{:d} jvms, {:d}GB heap, {:s} {:s} GLM: {:6.2f} secs'.format(
-                        len(h2o.nodes), tryHeap, csvFilepattern, csvFilename, elapsed)
+                        len(h2o.nodes), h2o.nodes[0].java_heap_GB, csvFilepattern, csvFilename, elapsed)
                     print l
                     h2o.cloudPerfH2O.message(l)
 
