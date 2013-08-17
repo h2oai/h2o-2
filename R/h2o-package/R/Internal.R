@@ -17,6 +17,7 @@ h2o.__PAGE_PARSE = "Parse.json"
 h2o.__PAGE_PUT = "PutVector.json"
 h2o.__PAGE_REMOVE = "Remove.json"
 h2o.__PAGE_VIEWALL = "StoreView.json"
+h2o.__DOWNLOAD_LOGS = "LogDownload.json"
 
 h2o.__PAGE_SUMMARY = "SummaryPage.json"
 h2o.__PAGE_PREDICT = "GeneratePredictionsPage.json"
@@ -45,10 +46,11 @@ h2o.__remoteSend <- function(client, page, ...) {
   res = fromJSON(after)
   
   if (!is.null(res$error)) {
-    myTime = gsub(":", "-", date()); myTime = gsub(" ", "_", myTime)
+    temp = strsplit(as.character(Sys.time()), " ")[[1]]
+    myDate = gsub("-", "", temp[1]); myTime = gsub(":", "", temp[2])
     errorFolder = "h2o_error_logs"
     if(!file.exists(errorFolder)) dir.create(errorFolder)
-    h2o.__writeToFile(res, paste(errorFolder, "/", "error_json_", myTime, ".log", sep=""))
+    h2o.__writeToFile(res, paste(errorFolder, "/", "h2oerror_json_", myDate, "_", myTime, ".log", sep=""))
     stop(paste(url," returned the following error:\n", h2o.__formatError(res$error)))
   }
   res
@@ -76,6 +78,21 @@ h2o.__formatError <- function(error,prefix="  ") {
   for (i in 1:length(items))
     result = paste(result,prefix,items[i],"\n",sep="")
   result
+}
+
+h2o.__dumpLogs <- function(client) {
+  ip = client@ip
+  port = client@port
+  
+  # Sends the given arguments as URL arguments to the given page on the specified server
+  url = paste("http://", ip, ":", port, "/", h2o.__DOWNLOAD_LOGS, sep="")
+  temp = strsplit(as.character(Sys.time()), " ")[[1]]
+  myDate = gsub("-", "", temp[1]); myTime = gsub(":", "", temp[2])
+  myFile = paste("h2ologs_", myDate, "_", myTime, ".zip", sep="")
+  errorFolder = "h2o_error_logs"
+  
+  if(!file.exists(errorFolder)) dir.create(errorFolder)
+  download.file(url, destfile = paste(getwd(), "h2o_error_logs", myFile, sep="/"))
 }
 
 h2o.__poll <- function(client, keyName) {

@@ -366,9 +366,11 @@ def decide_if_localhost():
     print "No config json used. Launching local cloud..."
     return True
 
-def setup_random_seed():
+def setup_random_seed(seed=None):
     if random_seed is not None:
         SEED = random_seed
+    elif seed is not None:
+        SEED = seed
     else:
         SEED = random.randint(0, sys.maxint)
     random.seed(SEED)
@@ -1410,7 +1412,9 @@ class H2O(object):
             'family': 'binomial',
             'key': key,
             'y': 1,
-            'link': 'familyDefault'
+            'link': 'familyDefault',
+            # can name GLM models now. pass a name here.
+            'destination_key': 'GLM_model_$python_0_default_0',
         }
         params_dict.update(kwargs)
         print "\n"+parentName, "params list:", params_dict

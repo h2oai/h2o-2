@@ -1,10 +1,12 @@
 package water;
 
-import hex.KMeansTest;
-
 import java.util.ArrayList;
 
+import org.junit.runner.Result;
+import org.junit.runner.notification.Failure;
+
 import water.deploy.NodeCL;
+import water.util.Log;
 import water.util.Utils;
 
 public class JUnitRunnerDebug {
@@ -16,7 +18,7 @@ public class JUnitRunnerDebug {
     public static void main(String[] args) {
       String flat = "";
       flat += "127.0.0.1:54321\n";
-      flat += "127.0.0.1:54322\n";
+      flat += "127.0.0.1:54323\n";
       flat += "127.0.0.1:54325\n";
       flat = Utils.writeFile(flat).getAbsolutePath();
 
@@ -25,9 +27,15 @@ public class JUnitRunnerDebug {
       new NodeCL(("-ip 127.0.0.1 -port 54325 -flatfile " + flat).split(" ")).start();
 
       ArrayList<Class> tests = new ArrayList<Class>();
-      tests.add(KMeansTest.class);
-      org.junit.runner.JUnitCore.runClasses(tests.toArray(new Class[0]));
-      System.out.println("Success!");
+      tests.add(ValueArrayToFrameTest.class);
+      Result result = org.junit.runner.JUnitCore.runClasses(tests.toArray(new Class[0]));
+      if( result.getFailures().size() == 0 )
+        System.out.println("Success!");
+      else
+        for( Failure f : result.getFailures() ) {
+          Log.info(f.getDescription());
+          f.getException().printStackTrace();;
+        }
     }
   }
 }

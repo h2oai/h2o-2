@@ -99,7 +99,7 @@ class Basic(unittest.TestCase):
                     # too slow
                     for csvFolder in csvFolderList:
                         if USE_S3:
-                            URI = protocol + "://" + bucket  + "/" + csvFolder + "/"
+                            URI = protocol + "://" + bucket + "/" + csvFolder + "/"
                         else:
                             URI = protocol + "://" + bucket + "/" + csvFolder + "/"
 

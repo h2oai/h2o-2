@@ -334,27 +334,31 @@ public class Vec extends Iced {
    * @param fval
    * @param ival
    */
-  private final void replaceNAs(double fval, long ival){
+  final void replaceNAs(double fval, long ival){
     _replaceNAs = true;
     _iNA = ival;
     _fNA = fval;
   }
-  private final void replaceNAs(double fval){
+  final void replaceNAs(double fval){
     if(!Double.isNaN(fval))replaceNAs(fval,(long)fval);
     else {
       _fNA = fval;
       _replaceNAs = false;
     }
   }
-  private final void replaceNAs(long ival){replaceNAs(ival, ival);}
+  final void replaceNAs(long ival){replaceNAs(ival, ival);}
+
+  public final boolean isNA(long row){
+    return chunk(row).isNA(row);
+  }
 
   /** True if this value is the canonical "missing element" sentinel. */
-  public final boolean isNA(long l){
+  final boolean valueIsNA(long l){
     return !_replaceNAs && l == _iNA;
   }
 
   /** True if this value is the canonical "missing element" sentinel. */
-  public final boolean isNA(double d){
+  final boolean valueIsNA(double d){
     return !_replaceNAs && (Double.isNaN(d) || d == _fNA);
   }
 
