@@ -4,18 +4,14 @@ import hex.DGLM.GLMModel;
 import hex.*;
 import hex.rf.RFModel;
 
-import java.io.*;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.zip.*;
+
 import water.*;
 import water.ValueArray.Column;
 import water.api.GLMProgressPage.GLMBuilder;
 import water.fvec.*;
 import water.parser.*;
 import water.parser.CustomParser.PSetupGuess;
-
-import water.util.Log;
 import water.util.Utils;
 
 import com.google.gson.*;
@@ -271,6 +267,9 @@ public class Inspect extends Request {
       return;
     String name = f._names[colIdx] != null ? f._names[colIdx] : "" + colIdx;
     switch(v.dtype()) {
+      case bad:
+        obj.addProperty(name, "Bad");
+        break;
       case U:
         obj.addProperty(name, "Unknown");
         break;
