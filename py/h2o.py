@@ -1412,7 +1412,9 @@ class H2O(object):
             'family': 'binomial',
             'key': key,
             'y': 1,
-            'link': 'familyDefault'
+            'link': 'familyDefault',
+            # can name GLM models now. pass a name here.
+            'destination_key': 'GLM_model_$python_0_default_0',
         }
         params_dict.update(kwargs)
         print "\n"+parentName, "params list:", params_dict

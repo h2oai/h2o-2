@@ -69,7 +69,8 @@ class Basic(unittest.TestCase):
             trainKey2 = trainCsvFilename + "_" + str(trial) + ".hex"
             start = time.time()
             parseKey = h2i.parseImportFolderFile(None, trainCsvFilename, importFolderPath,
-                key2=trainKey2, timeoutSecs=timeoutSecs)
+                key2=trainKey2, timeoutSecs=timeoutSecs, noise=('StoreView', None))
+
             elapsed = time.time() - start
             print "parse end on ", trainCsvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -102,7 +103,8 @@ class Basic(unittest.TestCase):
 
                 timeoutSecs = 1800
                 start = time.time()
-                glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutsecs=60, **kwargs)
+                glm = h2o_cmd.runGLMOnly(parseKey=parseKey, 
+                    timeoutSecs=timeoutSecs, pollTimeoutsecs=60, noise=('StoreView', None), **kwargs)
                 elapsed = time.time() - start
                 print "GLM completed in", elapsed, "seconds.", \
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
