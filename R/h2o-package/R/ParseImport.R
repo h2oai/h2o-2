@@ -96,8 +96,9 @@ setMethod("h2o.importURL", signature(object="H2OClient", path="character", key="
 
 setMethod("h2o.importFolder", signature(object="H2OClient", path="character", parse="logical", sep="character"),
           function(object, path, parse, sep) {
-            if(!file.exists(path)) stop("Directory does not exist!")
-            res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTFILES, path=normalizePath(path))
+            # if(!file.exists(path)) stop("Directory does not exist!")
+            # res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTFILES, path=normalizePath(path))
+            res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTFILES, path=path)
             myKeys = res$keys
             myData = vector("list", length(myKeys))
             for(i in 1:length(myKeys)) {
@@ -122,14 +123,15 @@ setMethod("h2o.importFolder", signature(object="H2OClient", path="character", pa
 
 setMethod("h2o.importFile", signature(object="H2OClient", path="character", key="missing", parse="ANY", sep="ANY"), 
           function(object, path, parse, sep) { 
-            if(!file.exists(path)) stop("File does not exist!")
-            h2o.importFolder(object, path, parse, sep)[[1]] 
+            # if(!file.exists(path)) stop("File does not exist!")
+            h2o.importFolder(object, path, parse, sep)[[1]]
           })
 
 setMethod("h2o.importFile", signature(object="H2OClient", path="character", key="character", parse="ANY", sep="ANY"), 
           function(object, path, key, parse, sep) {
-            if(!file.exists(path)) stop("File does not exist!")
-            h2o.importURL(object, paste("file:///", normalizePath(path), sep=""), key, parse, sep) 
+            # if(!file.exists(path)) stop("File does not exist!")
+            # h2o.importURL(object, paste("file:///", normalizePath(path), sep=""), key, parse, sep) 
+            h2o.importURL(object, paste("file:///", path, sep=""), key, parse, sep)
           })
 
 setMethod("h2o.importHDFS", signature(object="H2OClient", path="character", parse="ANY", sep="ANY"),
