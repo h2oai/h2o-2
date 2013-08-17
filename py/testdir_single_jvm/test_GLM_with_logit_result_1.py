@@ -11,9 +11,9 @@ def gen_rand_equation(colCount, SEED):
     for j in range(colCount):
         # ri = r1.randint(-1,1)
         rif = r1.uniform(0,1)
+        coefficients.append(rif)
         # FIX! temporary try fixed = col+1
-        # coefficients.append(rif)
-        coefficients.append(j+1)
+        # coefficients.append(j+1)
         # coefficients.append(2 + 2*(j%2))
 
     ### ri = r1.randint(-1,1)
@@ -55,7 +55,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, coefficients, intercept, 
     for i in range(rowCount):
         rowData = []
         for j in range(colCount):
-            ri = r1.randint(0,1) 
+            ri = r1.uniform(0,1) 
             rowData.append(ri)
         
         # flip if within the noise percentage
@@ -64,15 +64,23 @@ def write_syn_dataset(csvPathname, rowCount, colCount, coefficients, intercept, 
         else: 
             flip = False
 
+        
+        # ignore the binomial decision. Do a walk from 0 to 1 by .1
+        # writing 0 or 1 depending on whether you are below or above the probability
+        # coarse approximation to get better coefficient match in GLM
         (binomial, actual) = gen_binomial_from_eqn_and_data(
             coefficients, intercept, rowData, flip=flip)
 
         if minActual is None or actual<minActual: minActual = actual
         if maxActual is None or actual>maxActual: maxActual = actual
-
-        rowData.append(binomial)
-        rowDataCsv = ",".join(map(str,rowData))
-        dsf.write(rowDataCsv + "\n")
+        
+        for i in range(1,11): # 10 bins
+            if actual > (i + 0.0)/10:
+                binomial = 1
+            else:
+                binomial = 0
+            rowDataCsv = ",".join(map(str,rowData + [binomial]))
+            dsf.write(rowDataCsv + "\n")
 
     dsf.close()
     print "minActual:", minActual, " maxActual:", maxActual
@@ -116,7 +124,6 @@ class Basic(unittest.TestCase):
             (coefficients, intercept) = gen_rand_equation(colCount, SEEDPERFILE)
             print coefficients, intercept
             write_syn_dataset(csvPathname, rowCount, colCount, coefficients, intercept, SEEDPERFILE)
-
 
             parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10)
             print csvFilename, 'parse time:', parseKey['response']['time']
