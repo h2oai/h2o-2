@@ -1,16 +1,18 @@
 package hex.rf;
 
 import hex.rf.DRF.DRFTask;
+
 import java.util.ArrayList;
-import jsr166y.CountedCompleter;
+
 import jsr166y.ForkJoinTask;
 import jsr166y.RecursiveAction;
 import water.*;
 import water.ValueArray.Column;
-import water.util.*;
+import water.util.Log;
 import water.util.Log.Tag.Sys;
 
 class DABuilder {
+  private static final Key[] NO_KEYS = new Key[] {};
 
   protected final DRFTask _drf;
 
@@ -39,10 +41,10 @@ class DABuilder {
   }
 
   /** Return the number of rows on this node. */
-  private final int getRowCount(final Key[] keys) {
+  private final int getRowCount(ValueArray ary, Key[] localCKeys, Key[] remoteCKeys) {
     int num_rows = 0;    // One pass over all chunks to compute max rows
-    ValueArray ary = DKV.get(_drf._rfmodel._dataKey).get();
-    for( Key key : keys ) if( key.home() ) num_rows += ary.rpc(ValueArray.getChunkIndex(key));
+    for( Key key : localCKeys  ) num_rows += ary.rpc(ValueArray.getChunkIndex(key));
+    for( Key key : remoteCKeys ) num_rows += ary.rpc(ValueArray.getChunkIndex(key));
     return num_rows;
   }
 
@@ -52,21 +54,51 @@ class DABuilder {
     throw new Error("No key on this node");
   }
 
+  /** Return a list of chunk keys which can be loaded from other nodes. */
+  private Key[] getNonLocalChunks(ValueArray ary, Key[] localCKeys) {
+    Log.info(Sys.RANDF, "Use non-local data: " + _drf._params._useNonLocalData);
+    if (_drf._params._useNonLocalData) {
+      final float OVERHEAD_MAGIC = 3/8.f; // magic !
+      long totalmem = Runtime.getRuntime().totalMemory();
+      long localChunks = localCKeys.length * ValueArray.CHUNK_SZ;
+      long availMem = (long) (OVERHEAD_MAGIC * totalmem) - localChunks; // theoretically available memory
+
+      if (availMem > 0) {
+        // Try to fill the memory up to ratio 3/8
+        int numkeys = Math.min( (int) (availMem / ValueArray.CHUNK_SZ), (int) (ary.chunks()-localCKeys.length));
+        Log.info(Sys.RANDF, "Avail. mem: " + PrettyPrint.bytes(availMem));
+        Log.info(Sys.RANDF, "Can load keys: " + numkeys);
+        if (numkeys>0) {
+          Key[] rkeys = new Key[numkeys];
+          int c = 0;
+          for(int i=0; i<ary.chunks(); i++) {
+            Key k = ary.getChunkKey(i);
+            if (!k.home()) rkeys[c++] = k;
+            if (c == numkeys) break;
+          }
+          return rkeys;
+        }
+      }
+    }
+    return NO_KEYS;
+  }
+
   /** Build data adapter for given array */
-  protected  DataAdapter inhaleData(Key [] keys) {
+  protected  DataAdapter inhaleData(Key [] lkeys) {
     Timer t_inhale = new Timer();
     RFModel rfmodel = _drf._rfmodel;
-    final ValueArray ary = DKV.get(rfmodel._dataKey).get();
+    final ValueArray ary = UKV.get(rfmodel._dataKey);
 
     // The model columns are dense packed - but there will be columns in the
     // data being ignored.  This is a map from the model's columns to the
     // building dataset's columns.
     final int[] modelDataMap = rfmodel.columnMapping(ary.colNames());
-
-    final int totalRows = getRowCount(keys);
+    // list of non-local keys which should be load in case of request to load remote keys
+    final Key[] rkeys   = getNonLocalChunks(ary, lkeys);
+    final int totalRows = getRowCount(ary, lkeys, rkeys);
     final DataAdapter dapt = new DataAdapter( ary, rfmodel, modelDataMap,
                                               totalRows,
-                                              getChunkId(keys),
+                                              getChunkId(lkeys),
                                               _drf._params._seed,
                                               _drf._params._binLimit,
                                               _drf._params._classWt);
@@ -75,48 +107,26 @@ class DABuilder {
     // Now load the DataAdapter with all the rows on this node.
     final int ncolumns = rfmodel._va._cols.length;
 
-    // Collects jobs
+    // Collects jobs loading local chunks
     ArrayList<RecursiveAction> dataInhaleJobs = new ArrayList<RecursiveAction>();
     int start_row = 0;
-    for( final Key k : keys ) {    // now read the values
+    for( final Key k : lkeys ) {    // now read the values
       final int S = start_row;
       if (!k.home()) continue;     // This is not necessary, but for sure skip no local keys (we only inhale local data)
       final int rows = ary.rpc(ValueArray.getChunkIndex(k));
       dataInhaleJobs.add( loadChunkAction(dapt, ary, k, modelDataMap, ncolumns, rows, S, totalRows) );
       start_row += rows;
     }
+    // Collects jobs loading remote chunks
+    for (final Key k : rkeys) {
+      Log.info(Sys.RANDF,"-> reloading more keys: " + k + " from " + k.home_node());
+      final int S = start_row;
+      final int rows = ary.rpc(ValueArray.getChunkIndex(k));
+      dataInhaleJobs.add( loadChunkAction(dapt, ary, k, modelDataMap, ncolumns, rows, S, totalRows) );
+      start_row += rows;
+    }
     // And invoke collected jobs (load all local data)
     ForkJoinTask.invokeAll(dataInhaleJobs);
-
-    // Now local data are loaded, try to inhale more data from other nodes.
-    if (_drf._params._useNonLocalData) {
-      final float OVERHEAD_MAGIC = 3/8.f;
-      long totalmem = Runtime.getRuntime().totalMemory();
-      long localChunks = keys.length * ValueArray.CHUNK_SZ;
-      long availMem = (long) (OVERHEAD_MAGIC * totalmem) - localChunks; // theoretically available memory
-
-      if (availMem > 0) {
-        // Try to fill the memory up to ratio 3/8
-        int numkeys = (int) (availMem / ValueArray.CHUNK_SZ);
-        System.err.println("TAvailM: MB " + availMem / 1024 / 1024);
-        System.err.println("Can load keys: " + numkeys);
-        ArrayList<Key> allkeys = new ArrayList<Key>(numkeys);
-        for(int i=0; i<ary.chunks(); i++) {
-          Key k = ary.getChunkKey(i);
-          if (!k.home()) allkeys.add(k);
-          if (allkeys.size() == numkeys) break;
-        }
-        for (final Key k : allkeys) {
-          System.err.println("-> reloading more keys: " + k + " from " + k.home_node());
-          final int S = start_row;
-          final int rows = ary.rpc(ValueArray.getChunkIndex(k));
-          // FIXME totalRows need to be corrected to respect the keys loaded after normal load
-          dataInhaleJobs.add( loadChunkAction(dapt, ary, k, modelDataMap, ncolumns, rows, S, totalRows) );
-          start_row += rows;
-        }
-      }
-    }
-    // ----
 
     // Shrink data
     dapt.shrink();
