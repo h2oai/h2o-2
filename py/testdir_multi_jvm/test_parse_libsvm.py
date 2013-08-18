@@ -50,8 +50,9 @@ class Basic(unittest.TestCase):
             ("mnist_train.svm", "cM", 30, 0, 9, False, False),
             # multi-label target like 1,2,5 ..not sure what that means
             # ("tmc2007_train.svm",  "cJ", 30, 0, 21.0, False, False),
-            ("syn_6_1000_10.svm",  "cK", 30, -36, 36, True, False),
-            ("syn_0_100_1000.svm", "cL", 30, -36, 36, True, False), 
+            # illegal non-ascending cols
+            # ("syn_6_1000_10.svm",  "cK", 30, -36, 36, True, False),
+            # ("syn_0_100_1000.svm", "cL", 30, -36, 36, True, False), 
             # fails csvDownload
             ("duke.svm",           "cD", 30, -1.000000, 1.000000, False, False),
             ("colon-cancer.svm",   "cA", 30, -1.000000, 1.000000, False, False),
@@ -65,7 +66,7 @@ class Basic(unittest.TestCase):
         ]
 
         ### csvFilenameList = random.sample(csvFilenameAll,1)
-        h2b.browseTheCloud()
+        ### h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
 
         firstDone = False
@@ -74,8 +75,7 @@ class Basic(unittest.TestCase):
             h2i.setupImportFolder(None, importFolderPath)
             csvPathname = importFolderPath + "/" + csvFilename
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
-                key2=key2, timeoutSecs=2000)
+            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2, timeoutSecs=2000)
             print csvPathname, 'parse time:', parseKey['response']['time']
             print "Parse result['destination_key']:", parseKey['destination_key']
 
@@ -138,20 +138,23 @@ class Basic(unittest.TestCase):
                 row_sizeB = inspect['row_size']
                 value_size_bytesB = inspect['value_size_bytes']
 
-                print "missingValuesListA:", missingValuesListA
-                print "missingValuesListB:", missingValuesListB
-                self.assertEqual(missingValuesListA, missingValuesListB,
-                    "missingValuesList mismatches after re-parse of downloadCsv result" % (m)
-                self.assertEqual(num_colsA, num_colsB,
-                    "num_cols mismatches after re-parse of downloadCsv result %d %d" % (num_colsA, num_colsB))
-                self.assertEqual(num_rowsA, num_rowsB,
-                    "num_rows mismatches after re-parse of downloadCsv result %d %d" % (num_rowsA, num_rowsB))
+                df = h2o_util.JsonDiff(inspectFirst, inspect, with_values=True)
+                print "df.difference:", h2o.dump_json(df.difference)
+
+                for i,d in enumerate(df.difference):
+                    # ignore mismatches in these
+                    #  "variance"
+                    #  "response.time"
+                    #  "key"
+                    if "variance" in d or "response.time" in d or "key" in d or "value_size_bytes" in d or "row_size" in d:
+                        pass
+                    else: 
+                        raise Exception ("testing %s, found unexpected mismatch in df.difference[%d]: %s" % (csvPathname, i, d))
+
                 if DO_SIZE_CHECKS and enableSizeChecks: 
                     # if we're allowed to do size checks. ccompare the full json response!
                     print "Comparing original inspect to the inspect after parsing the downloaded csv"
                     # vice_versa=True
-                    df = h2o_util.JsonDiff(inspectFirst, inspect, with_values=True)
-                    print "df.difference:", h2o.dump_json(df.difference)
                     self.assertGreater(len(df.difference), 29,
                         msg="Want >=30 , not %d differences between the two rfView json responses. %s" % \
                             (len(df.difference), h2o.dump_json(df.difference)))
@@ -163,6 +166,15 @@ class Basic(unittest.TestCase):
                         "row_size mismatches after re-parse of downloadCsv result %d %d" % (row_sizeA, row_sizeB))
                     self.assertEqual(value_size_bytesA, value_size_bytesB,
                         "value_size_bytes mismatches after re-parse of downloadCsv result %d %d" % (value_size_bytesA, value_size_bytesB))
+
+                print "missingValuesListA:", missingValuesListA
+                print "missingValuesListB:", missingValuesListB
+                self.assertEqual(missingValuesListA, missingValuesListB,
+                    "missingValuesList mismatches after re-parse of downloadCsv result")
+                self.assertEqual(num_colsA, num_colsB,
+                    "num_cols mismatches after re-parse of downloadCsv result %d %d" % (num_colsA, num_colsB))
+                self.assertEqual(num_rowsA, num_rowsB,
+                    "num_rows mismatches after re-parse of downloadCsv result %d %d" % (num_rowsA, num_rowsB))
 
             ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
             h2o.check_sandbox_for_errors()
