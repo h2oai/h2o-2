@@ -138,8 +138,10 @@ class Basic(unittest.TestCase):
                 row_sizeB = inspect['row_size']
                 value_size_bytesB = inspect['value_size_bytes']
 
+                print "missingValuesListA:", missingValuesListA
+                print "missingValuesListB:", missingValuesListB
                 self.assertEqual(missingValuesListA, missingValuesListB,
-                    "missingValuesList mismatches after re-parse of downloadCsv result")
+                    "missingValuesList mismatches after re-parse of downloadCsv result" % (m)
                 self.assertEqual(num_colsA, num_colsB,
                     "num_cols mismatches after re-parse of downloadCsv result %d %d" % (num_colsA, num_colsB))
                 self.assertEqual(num_rowsA, num_rowsB,
