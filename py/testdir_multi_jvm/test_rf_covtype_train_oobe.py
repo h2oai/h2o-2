@@ -9,10 +9,12 @@ import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import as h2i, h2o_exec, h
 # this sucks!
 ALLOWED_DELTA=40.0
 paramDict = {
+    # FIX! does this force each jvm to see all the data? or is it conditional or ??
+    'use_non_local_data': 0,
     # FIX! if there's a header, can you specify column number or column header
     'response_variable': 54,
     'class_weight': None,
-    'ntree': 10,
+    'ntree': 50,
     'out_of_bag_error_estimate': 1,
     'stat_type': 'ENTROPY',
     'depth': 2147483647, 
@@ -36,7 +38,7 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(node_count=2, java_heap_GB=3)
+            h2o.build_cloud(node_count=2, java_heap_GB=7)
         else:
             h2o_hosts.build_cloud_with_hosts(java_heap_GB=10)
 
@@ -57,7 +59,7 @@ class Basic(unittest.TestCase):
         parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2,
             header=0, timeoutSecs=180)
 
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
         print "\n" + csvPathname, \
             "    num_rows:", "{:,}".format(inspect['num_rows']), \
             "    num_cols:", "{:,}".format(inspect['num_cols'])
@@ -102,12 +104,15 @@ class Basic(unittest.TestCase):
             # seems ec2 can be really slow
             kwargs = paramDict.copy()
             timeoutSecs = 30 + kwargs['ntree'] * 20
-            start = time.time()
             # do oobe
             kwargs['out_of_bag_error_estimate'] = 1
             kwargs['model_key'] = "model_" + csvFilename + "_" + str(trial)
             # kwargs['model_key'] = "model"
+            # double check the rows/cols
+            inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
+            h2o_cmd.infoFromInspect(inspect, "going into RF")
             
+            start = time.time()
             rfv = h2o_cmd.runRFOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "RF end on ", csvPathname, 'took', elapsed, 'seconds.', \
@@ -119,8 +124,11 @@ class Basic(unittest.TestCase):
                     msg="OOBE: pct. right for %s pct. training not close enough %6.2f %6.2f"% \
                         ((trial*10), oobeTrainPctRight, expectTrainPctRightList[trial]), delta=ALLOWED_DELTA)
             actualTrainPctRightList.append(oobeTrainPctRight)
+            
 
-            print "Now score on the last 10%"
+
+            print "Now score on the last 10%. Note this is silly if we trained on 100% of the data"
+            print "Or sorted by output class, so that the last 10% is the last few classes"
             # pop the stuff from kwargs that were passing as params
             model_key = rfv['model_key']
             kwargs.pop('model_key',None)
@@ -136,12 +144,16 @@ class Basic(unittest.TestCase):
 
             # do full scoring
             kwargs['out_of_bag_error_estimate'] = 0
-            rfv = h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
+            # double check the rows/cols
+            inspect = h2o_cmd.runInspect(key=dataKeyTest)
+            h2o_cmd.infoFromInspect(inspect, "dataKeyTest")
+
+            rfvScoring = h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
 
             h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
 
-            fullScorePctRight = 100 * (1.0 - rfv['confusion_matrix']['classification_error'])
+            fullScorePctRight = 100 * (1.0 - rfvScoring['confusion_matrix']['classification_error'])
 
             if checkExpectedResults:
                 self.assertAlmostEqual(fullScorePctRight,expectScorePctRightList[trial],
@@ -165,7 +177,7 @@ class Basic(unittest.TestCase):
         niceFp = ["{0:0.2f}".format(i) for i in actualDelta]
         print "actualDelta =", niceFp
 
-        # return the last rfv done
+        # return the last rfv done during training
         return rfv
 
     def test_rf_covtype_train_oobe(self):
