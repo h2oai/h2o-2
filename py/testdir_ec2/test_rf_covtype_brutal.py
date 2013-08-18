@@ -4,7 +4,7 @@ import h2o, h2o_cmd, h2o_hosts, h2o_rf, h2o_util
 
 # set to true, if the files are available locally in /home/0xdiag/datasets/standard
 # will parse from there with import 
-USE_LOCAL=False
+USE_LOCAL=True
 
 # RF train parameters
 paramsTrainRF = { 
@@ -74,7 +74,7 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(node_count=1)
+            h2o.build_cloud(2)
         else:
             h2o_hosts.build_cloud_with_hosts()
         
