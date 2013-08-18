@@ -1251,6 +1251,7 @@ class H2O(object):
             'out_of_bag_error_estimate': 1, 
             'class_weights': None,
             'response_variable': None, 
+            'clear_confusion_matrix': None,
             }
         browseAlso = kwargs.pop('browseAlso',False)
 
