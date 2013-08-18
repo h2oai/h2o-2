@@ -67,7 +67,7 @@ class Basic(unittest.TestCase):
         h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
         #******************
-        if 1==1:
+        if 1==0:
             colResultList = h2e.exec_expr_list_across_cols(lenNodes, charExprList, key2, maxCol=10,
                 incrementingResult=False, timeoutSecs=10)
             print "\ncolResultList after char swap", colResultList

@@ -18,7 +18,6 @@ def gen_rand_equation(colCount, SEED):
 
     ### ri = r1.randint(-1,1)
     ### intercept = (ri)
-    intercept =  -0.25
     intercept =  0
     print "Expected coefficients:", coefficients
     print "Expected intercept:", intercept
@@ -36,7 +35,7 @@ def gen_binomial_from_eqn_and_data(coefficients, intercept, rowData, flip=False)
     ### print y
     if (y<0 or y>1):
         raise Exception("Generated y result is should be between 0 and 1: " + y)
-    if (y>=0.75):
+    if (y>=0.5):
         result = 1
     else:
         result = 0
@@ -74,8 +73,9 @@ def write_syn_dataset(csvPathname, rowCount, colCount, coefficients, intercept, 
         if minActual is None or actual<minActual: minActual = actual
         if maxActual is None or actual>maxActual: maxActual = actual
         
-        for i in range(1,11): # 10 bins
-            if actual > (i + 0.0)/10:
+        BINS = 100
+        for i in range(1,BINS+1): # 10 bins
+            if actual > (i + 0.0)/BINS:
                 binomial = 1
             else:
                 binomial = 0
@@ -108,7 +108,7 @@ class Basic(unittest.TestCase):
     def test_GLM_with_logit_result_1(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (100000, 5, 'cA', 300), 
+            (10000, 3, 'cA', 300), 
             ]
 
         ### h2b.browseTheCloud()
@@ -137,12 +137,12 @@ class Basic(unittest.TestCase):
             kwargs = {
                     'y': y, 
                     'max_iter': 60, 
-                    'lambda': 1e-4,
-                    'alpha': 0,
+                    'lambda': 0,
+                    'alpha': 0.0,
                     'weight': 1.0,
-                    'n_folds': 3,
+                    'n_folds': 0,
                     'beta_epsilon': 1e-4,
-                    'thresholds': 0.5,
+                    # 'thresholds': 0.5,
                     }
 
             start = time.time()
