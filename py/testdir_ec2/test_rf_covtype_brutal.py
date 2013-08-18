@@ -4,7 +4,7 @@ import h2o, h2o_cmd, h2o_hosts, h2o_rf, h2o_util
 
 # set to true, if the files are available locally in /home/0xdiag/datasets/standard
 # will parse from there with import 
-USE_LOCAL=True
+USE_LOCAL=False
 
 # RF train parameters
 paramsTrainRF = { 
