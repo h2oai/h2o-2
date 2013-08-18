@@ -12,7 +12,7 @@ print "there's currently a question about whether the CM is cleared if you don't
 paramDict = {
     'clear_confusion_matrix': 1,
     # FIX! does this force each jvm to see all the data? or is it conditional or ??
-    'use_non_local_data': 0,
+    'use_non_local_data': 1,
     # FIX! if there's a header, can you specify column number or column header
     'response_variable': 54,
     'class_weight': None,
