@@ -8,7 +8,9 @@ import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import as h2i, h2o_exec, h
 
 # this sucks!
 ALLOWED_DELTA=40.0
+print "there's currently a question about whether the CM is cleared if you don't change the model name between RF's. Clear it manually using secret param"
 paramDict = {
+    'clear_confusion_matrix': 1,
     # FIX! does this force each jvm to see all the data? or is it conditional or ??
     'use_non_local_data': 0,
     # FIX! if there's a header, can you specify column number or column header
