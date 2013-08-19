@@ -137,8 +137,11 @@ class Basic(unittest.TestCase):
 
             HEADER_HAS_HEADER = random.randint(0,1)
             DATA_HAS_HEADER = random.randint(0,1)
-            DATA_FIRST_IS_COMMENT = random.randint(0,1)
-            HEADER_FIRST_IS_COMMENT = random.randint(0,1)
+            ## DATA_FIRST_IS_COMMENT = random.randint(0,1)
+            ## HEADER_FIRST_IS_COMMENT = random.randint(0,1)
+            print "TEMPORARY: don't put any comments in"
+            DATA_FIRST_IS_COMMENT = 0
+            HEADER_FIRST_IS_COMMENT = 0
             # none is not legal
             SEP_CHAR_GEN = random.choice([",", "\t", " "])
             
