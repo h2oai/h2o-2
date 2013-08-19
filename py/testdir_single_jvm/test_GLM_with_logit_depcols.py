@@ -51,7 +51,6 @@ def gen_rand_equation(colCount, SEED):
     coefficients = []
     # y = 1/(1 + exp(-(sum(coefficients*x)+intercept))
     for j in range(colCount):
-        # ri = r1.randint(-1,1)
         rif = r1.uniform(COEFF_VALUE_MIN, COEFF_VALUE_MAX)
         # rif = (j+0.0)/colCount # git bigger for each one
         coefficients.append(rif)
