@@ -11,13 +11,14 @@ print "Try params to get best result on build_cloud(1) local (1 jvm) "
 print "experimenting with class_weights and strata_samples" 
 paramsTrainRF = { 
             # 'class_weights': '1=1,2=2,3=3,4=4,5=5,6=6,7=7',
-            'class_weights': '1=1,2=1,3=1,4=1,5=1,6=1,7=1',
+            # 'class_weights': '1=1,2=1,3=1,4=1,5=1,6=1,7=1',
             # 'sampling_strategy': 'RANDOM',
             # 'sampling_strategy': 'STRATIFIED_LOCAL',
             # 'strata_samples': '1=39,2=49,3=59,4=69,5=79,6=89,7=99',
             # 'strata_samples': '1=100000,2=100000,3=100000,4=100000,5=100000,6=100000,7=100000',
             # 'strata_samples': '1=99,2=99,3=99,4=99,5=99,6=99,7=99',
             'use_non_local_data' : 0,
+            'sample': 90,
             'clear_confusion_matrix' : 1,
             'ntree'      : 10, 
             'depth'      : 300,
@@ -27,7 +28,7 @@ paramsTrainRF = {
             # 'stat_type'  : 'GINI',
             'out_of_bag_error_estimate': 1, 
             'exclusive_split_limit'    : 0,
-            'timeoutSecs': 60,
+            'timeoutSecs': 300,
             }
 
 # RF test parameters
@@ -36,7 +37,7 @@ paramsScoreRF = {
             # we don't need to specify. But put this here and (above if used) 
             # in case a dataset doesn't use last col 
             'response_variable': None,
-            'timeoutSecs': 60,
+            'timeoutSecs': 300,
             'out_of_bag_error_estimate': 0, 
             'clear_confusion_matrix' : 1,
         }
@@ -45,7 +46,7 @@ trainDS1 = {
         's3bucket'    : 'home-0xdiag-datasets',
         'localbucket' : 'home/0xdiag/datasets',
         'pathname'    : '/standard/covtype.shuffled.90pct.sorted.data',
-        'timeoutSecs' : 60,
+        'timeoutSecs' : 300,
         'header'      : 0
         }
 
@@ -53,7 +54,7 @@ scoreDS1 = {
         's3bucket'    : 'home-0xdiag-datasets',
         'localbucket' : 'home/0xdiag/datasets',
         'pathname'    : '/standard/covtype.shuffled.10pct.sorted.data',
-        'timeoutSecs' : 60,
+        'timeoutSecs' : 300,
         'header'      : 0
         }
 
@@ -61,7 +62,7 @@ trainDS2 = {
         's3bucket'    : 'home-0xdiag-datasets',
         'localbucket' : 'home/0xdiag/datasets',
         'pathname'    : '/standard/covtype.shuffled.90pct.data',
-        'timeoutSecs' : 60,
+        'timeoutSecs' : 300,
         'header'      : 0
         }
 
@@ -69,7 +70,7 @@ scoreDS2 = {
         's3bucket'    : 'home-0xdiag-datasets',
         'localbucket' : 'home/0xdiag/datasets',
         'pathname'    : '/standard/covtype.shuffled.10pct.data',
-        'timeoutSecs' : 60,
+        'timeoutSecs' : 300,
         'header'      : 0
         }
 
