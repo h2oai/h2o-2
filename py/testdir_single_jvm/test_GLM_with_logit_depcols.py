@@ -91,7 +91,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, coefficients, intercept, 
     if COL_DATA_DISTS == 'UNIQUE':
         colModes = [((random.randint(0,1) * -1) * j/colCount) for j in range(colCount)]
     elif COL_DATA_DISTS == 'SAME':
-        colDataMean = (DATA_VALUE_MAX - DATA_VALUE_MIN) / 2
+        colDataMean = (abs(DATA_VALUE_MAX - DATA_VALUE_MIN) / 2) + DATA_VALUE_MIN
         colModes = [colDataMean for j in range(colCount)]
     else: # random
         colModes = [r1.uniform(DATA_VALUE_MIN, DATA_VALUE_MAX) for j in range(colCount)]
