@@ -6,6 +6,9 @@ import h2o_browse as h2b
 # ord('a') gives 97. Use that when you pass it as url param to h2o
 # str(unichr(97)) gives 'a'
 
+print "Data rows in header_from_file are ignored unless that file was part of the parse pattern"
+print "Tab in header is not auto-detected separator. comma and space are"
+
 print "Maybe a rows count problem if using tabs? temporary only tabs"
 print "passes if only , is used"
 print "just do one file with tab"
@@ -16,8 +19,8 @@ paramsDict = {
     'parser_type': [None, 'AUTO'],
     # gets used for separator=
     # 'separator': [",", " ", "\t"],
-    # 'separator': [",", " "],
-    'separator': ["\t"],
+    'separator': ["\1", "|", ",", " "],
+    # 'separator': ["\t"],
     'header': [None, 0,1],
     # we can point to the 'wrong' file!
     # assume this is always used, otherwise we sum data rows without knowing if we'll use the header file?
@@ -116,7 +119,7 @@ class Basic(unittest.TestCase):
 
             # try with col mismatch on header. 
             # FIX! causes exception? don't test for now
-            # (7, 300, 10, 'cA', 60, 0),
+            (7, 300, 10, 'cA', 60, 0),
             # (7, 300, 10, 'cB', 60, 1),
             # (7, 300, 10, 'cC', 60, 2),
             # (7, 300, 10, 'cD', 60, 3),
@@ -138,8 +141,9 @@ class Basic(unittest.TestCase):
             totalDataRows = 0
             totalHeaderRows = 0
 
-            HEADER_HAS_HEADER = random.randint(0,1)
-            DATA_HAS_HEADER = random.randint(0,1)
+            HEADER_HAS_HDR_ROW = random.randint(0,1)
+            DATA_HAS_HDR_ROW = random.randint(0,1)
+            PARSE_PATTERN_INCLUDES_HEADER = random.randint(0,1)
             ## DATA_FIRST_IS_COMMENT = random.randint(0,1)
             ## HEADER_FIRST_IS_COMMENT = random.randint(0,1)
             print "TEMPORARY: don't put any comments in"
@@ -148,8 +152,9 @@ class Basic(unittest.TestCase):
             # none is not legal
             SEP_CHAR_GEN = random.choice(paramsDict['separator'])
             
-            print '\nHEADER_HAS_HEADER:', HEADER_HAS_HEADER
-            print 'DATA_HAS_HEADER:', DATA_HAS_HEADER
+            print '\nHEADER_HAS_HDR_ROW:', HEADER_HAS_HDR_ROW
+            print 'DATA_HAS_HDR_ROW:', DATA_HAS_HDR_ROW
+            print 'PARSE_PATTERN_INCLUDES_HEADER', PARSE_PATTERN_INCLUDES_HEADER
             print 'DATA_FIRST_IS_COMMENT:', DATA_FIRST_IS_COMMENT
             print 'HEADER_FIRST_IS_COMMENT:', HEADER_FIRST_IS_COMMENT
             print 'SEP_CHAR_GEN:', SEP_CHAR_GEN
@@ -177,7 +182,10 @@ class Basic(unittest.TestCase):
             # FOR NOW: ..override the rand choice if it exists, so we can parse and expect 'A' to be found
             # match what was gen'ed if choice is not None
             if kwargs['separator']:
-                kwargs['separator'] = ord(SEP_CHAR_GEN)
+                if SEP_CHAR_GEN==" "  or SEP_CHAR_GEN==",": # parse doesn't auto-detect tab. will autodetect space and comma
+                    del kwargs['separator']
+                else:
+                    kwargs['separator'] = ord(SEP_CHAR_GEN)
         
             # create data files
             for fileN in range(fileNum):
@@ -185,7 +193,7 @@ class Basic(unittest.TestCase):
                 csvPathname = SYNDATASETS_DIR + '/' + csvFilename
                 rList = rand_rowData(colCount, sepChar=SEP_CHAR_GEN)
                 (headerRowsDone, dataRowsDone) = write_syn_dataset(csvPathname, rowCount, 
-                    headerString=(headerForData if DATA_HAS_HEADER else None), rList=rList,
+                    headerString=(headerForData if DATA_HAS_HDR_ROW else None), rList=rList,
                     commentFirst=DATA_FIRST_IS_COMMENT, sepChar=SEP_CHAR_GEN)
                 totalDataRows += dataRowsDone
                 totalHeaderRows += headerRowsDone
@@ -193,11 +201,12 @@ class Basic(unittest.TestCase):
             # create the header file
             hdrFilename = 'syn_header_' + str(SEED) + "_" + str(trial) + "_" + rowxcol + '.csv'
             hdrPathname = SYNDATASETS_DIR + '/' + hdrFilename
-            dataRowsWithHeader = 0 # temp hack
+            # dataRowsWithHeader = 0 # temp hack
             (headerRowsDone, dataRowsDone) = write_syn_dataset(hdrPathname, dataRowsWithHeader, 
-                headerString=(headerForHeader if HEADER_HAS_HEADER else None), rList=rList,
+                headerString=(headerForHeader if HEADER_HAS_HDR_ROW else None), rList=rList,
                 commentFirst=HEADER_FIRST_IS_COMMENT, sepChar=SEP_CHAR_GEN)
-            totalDataRows += dataRowsDone
+            if PARSE_PATTERN_INCLUDES_HEADER: # only include header file data rows if the parse pattern includes it
+                totalDataRows += dataRowsDone
             totalHeaderRows += headerRowsDone
 
             # make sure all key names are unique, when we re-put and re-parse (h2o caching issues)
@@ -225,14 +234,18 @@ class Basic(unittest.TestCase):
             if kwargs['header_from_file']:
                 kwargs['header'] =  1
             # if we have a header in a data file, tell h2o (for now)
-            elif DATA_HAS_HEADER:
+            elif DATA_HAS_HDR_ROW:
                 kwargs['header'] =  1
             else:
                 kwargs['header'] =  0
 
             # may have error if h2o doesn't get anything!
             start = time.time()
-            parseKey = h2o.nodes[0].parse('*syn_data_*'+str(trial)+"_"+rowxcol+'*', key2=key2, timeoutSecs=timeoutSecs, **kwargs)
+            if PARSE_PATTERN_INCLUDES_HEADER:
+                pattern = '*syn_*'+str(trial)+"_"+rowxcol+'*'
+            else:
+                pattern = '*syn_data_*'+str(trial)+"_"+rowxcol+'*'
+            parseKey = h2o.nodes[0].parse(pattern, key2=key2, timeoutSecs=timeoutSecs, **kwargs)
 
             print "parseKey['destination_key']: " + parseKey['destination_key']
             print 'parse time:', parseKey['response']['time']
@@ -251,7 +264,7 @@ class Basic(unittest.TestCase):
                 "parse created result with the wrong number of cols %s %s" % (inspect['num_cols'], totalCols))
 
             # do we end up parsing one data rows as a header because of mismatch in gen/param
-            h2oLosesOneData = (headerRowsDone==0) and (kwargs['header']==1) and not DATA_HAS_HEADER
+            h2oLosesOneData = (headerRowsDone==0) and (kwargs['header']==1) and not DATA_HAS_HDR_ROW
             print "h2oLosesOneData:", h2oLosesOneData
             if h2oLosesOneData:
                 totalDataRows -= 1
@@ -262,7 +275,7 @@ class Basic(unittest.TestCase):
 
             # put in an ignore param, that will fail unless headers were parsed correctly
             # doesn't matter if the header got a comment, should see it
-            h2oShouldSeeHeader = (HEADER_HAS_HEADER and (kwargs['header_from_file']==1)) or DATA_HAS_HEADER
+            h2oShouldSeeHeader = (HEADER_HAS_HDR_ROW and (kwargs['header_from_file']==1)) or DATA_HAS_HDR_ROW
             if h2oShouldSeeHeader:
                 kwargs = {'sample': 75, 'depth': 25, 'ntree': 1, 'ignore': 'A'}
             else:
