@@ -1404,7 +1404,9 @@ public class RequestArguments extends RequestStatics {
     protected transient final Class<T> _enumClass;
     private transient final T _defaultValue;
 
-
+    public EnumArgument(T defaultValue) {
+      this("", defaultValue, false);
+    }
     public EnumArgument(String name, T defaultValue, boolean refreshOnChange) {
       this(name,defaultValue);
       if(refreshOnChange)setRefreshOnChange();

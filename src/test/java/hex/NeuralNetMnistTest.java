@@ -68,8 +68,9 @@ public class NeuralNetMnistTest extends NeuralNetTest {
       System.out.println("load: " + (int) ((System.nanoTime() - time) / 1e6) + " ms");
     }
 
-    _trainer = new ParallelTrainers(_ls);
-    //_trainer = new Trainer.Distributed(_ls);
+//    _trainer = new ParallelTrainers(_ls);
+//    _trainer = new Trainer.Distributed(_ls);
+    _trainer = new Trainer.OpenCL(_ls);
 
     if( pretrain ) {
       for( int i = 0; i < _ls.length; i++ ) {

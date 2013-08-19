@@ -351,63 +351,76 @@ public abstract class Trainer {
         CLProgram program = context.createProgram(Boot._init.getResource2("/kernels.cl")).build();
         CLKernel[] fprops = new CLKernel[_ls.length];
         CLKernel[] bprops = new CLKernel[_ls.length];
+        CLKernel[] resets = new CLKernel[_ls.length];
+        CLBuffer<FloatBuffer>[] w = new CLBuffer[_ls.length];
+        CLBuffer<FloatBuffer>[] b = new CLBuffer[_ls.length];
         CLBuffer<FloatBuffer>[] a = new CLBuffer[_ls.length];
         CLBuffer<FloatBuffer>[] e = new CLBuffer[_ls.length];
         for( int y = 0; y < _ls.length; y++ ) {
-          fprops[y] = program.createCLKernel(_ls.getClass().getSimpleName() + "_fprop");
-          bprops[y] = program.createCLKernel(_ls.getClass().getSimpleName() + "_bprop");
+          a[y] = context.createFloatBuffer(_ls[y]._a.length, Mem.READ_WRITE);
           if( y > 0 ) {
-            CLBuffer<FloatBuffer> ia = context.createFloatBuffer(_ls[y - 1]._a.length, Mem.READ_ONLY);
-            CLBuffer<FloatBuffer> w = context.createFloatBuffer(_ls[y]._w.length, Mem.READ_ONLY);
-            CLBuffer<FloatBuffer> b = context.createFloatBuffer(_ls[y]._b.length, Mem.READ_ONLY);
-            a[y] = context.createFloatBuffer(_ls[y]._a.length, Mem.READ_WRITE);
-            fprops[y].putArgs(ia, w, b, a[y]);
-
-            CLBuffer<FloatBuffer> gw = context.createFloatBuffer(_ls[y]._gw.length, Mem.READ_WRITE);
-            CLBuffer<FloatBuffer> gb = context.createFloatBuffer(_ls[y]._gb.length, Mem.READ_WRITE);
+            w[y] = context.createFloatBuffer(_ls[y]._w.length, Mem.READ_ONLY);
+            b[y] = context.createFloatBuffer(_ls[y]._b.length, Mem.READ_ONLY);
             e[y] = context.createFloatBuffer(_ls[y]._e.length, Mem.READ_ONLY);
-            CLBuffer<FloatBuffer> ie = context.createFloatBuffer(_ls[y]._e.length, Mem.READ_WRITE);
-            bprops[y].putArgs(w, gw, gb, a[y], e[y], ia, ie);
+            queue.putWriteBuffer(w[y], false);
+            queue.putWriteBuffer(b[y], false);
 
-            queue.putWriteBuffer(w, false);
-            queue.putWriteBuffer(b, false);
+            fprops[y] = program.createCLKernel(_ls.getClass().getSimpleName() + "_fprop");
+            fprops[y].putArg(_ls[y - 1]._a.length);
+            fprops[y].putArgs(a[y - 1], w[y], b[y], a[y]);
+
+            bprops[y] = program.createCLKernel(_ls.getClass().getSimpleName() + "_bprop");
+            bprops[y].putArg(_ls[y - 1]._a.length);
+            bprops[y].putArgs(a[y - 1], w[y], b[y], a[y], e[y]);
+            bprops[y].putArg(_ls[y]._r);
+            if( e[y - 1] != null )
+              bprops[y].putArg(e[y - 1]);
+
+            resets[y] = program.createCLKernel("reset_error");
+            resets[y].putArg(e[y]);
           }
         }
         int group = device.getMaxWorkGroupSize();
-        for( int batch = 0; _batches == 0 || batch < _batches; batch++ ) {
-          Input input = (Input) _ls[0];
-          for( int b = 0; b < _batch; b++ ) {
-//            putSample(a[a.length - 1].getBuffer(), input._n);
+        Input input = (Input) _ls[0];
+        for( ;; ) {
+          input.fprop();
+          for( int i = 0; i < input._a.length; i++ )
+            a[0].getBuffer().put(i, input._a[i]);
+          queue.putWriteBuffer(a[0], false);
+          for( int y = 1; y < fprops.length; y++ )
+            queue.put1DRangeKernel(fprops[y], 0, _ls[y]._a.length, group);
 
-            for( int y = 0; y < fprops.length; y++ )
-              queue.put1DRangeKernel(fprops[y], 0, _ls[y]._a.length, group);
+          queue.putReadBuffer(a[_ls.length - 1], true);
+          for( int y = 1; y < fprops.length - 1; y++ )
+            queue.put1DRangeKernel(resets[y], 0, _ls[y]._a.length, group);
+          softmax(input, a[a.length - 1].getBuffer(), e[e.length - 1].getBuffer());
+          queue.putWriteBuffer(a[_ls.length - 1], false);
+          queue.putWriteBuffer(e[_ls.length - 1], false);
 
-            queue.putReadBuffer(a[_ls.length - 1], true);
-            for( int y = 1; y < _ls.length - 1; y++ ) {
-              FloatBuffer buffer = e[y].getBuffer();
-              for( int i = 0; i < buffer.capacity(); i++ )
-                buffer.put(i, 0);
-            }
-            FloatBuffer err = e[e.length - 1].getBuffer();
-            FloatBuffer act = a[a.length - 1].getBuffer();
-            for( int i = 0; i < err.capacity(); i++ )
-              err.put(i, (i == input.label() ? .9f : -.1f) - act.get(i));
-
-            queue.putWriteBuffer(a[_ls.length - 1], false);
-            for( int y = _ls.length - 1; y > 0; y-- )
-              queue.put1DRangeKernel(bprops[y], 0, _ls[y]._a.length, group);
-            input._n = input._n == input._count - 1 ? 0 : input._n + 1;
-          }
-
-          for( int i = 1; i < _ls.length; i++ )
-            _ls[i].adjust(_count.get());
-
-          _count.addAndGet(_batch);
+          for( int y = _ls.length - 1; y > 0; y-- )
+            queue.put1DRangeKernel(bprops[y], 0, _ls[y]._a.length, group);
+          input._n = input._n == input._count - 1 ? 0 : input._n + 1;
         }
       } catch( IOException ex ) {
         throw new RuntimeException(ex);
       } finally {
         context.release();
+      }
+    }
+
+    static void softmax(Input input, FloatBuffer a, FloatBuffer e) {
+      float max = Float.NEGATIVE_INFINITY;
+      for( int o = 0; o < a.capacity(); o++ )
+        if( max < a.get(o) )
+          max = a.get(o);
+      float scale = 0;
+      for( int o = 0; o < a.capacity(); o++ ) {
+        a.put(o, (float) Math.exp(a.get(o) - max));
+        scale += a.get(o);
+      }
+      for( int o = 0; o < a.capacity(); o++ ) {
+        a.put(o, a.get(o) / scale);
+        e.put(o, (o == input.label() ? 1 : 0) - a.get(o));
       }
     }
   }

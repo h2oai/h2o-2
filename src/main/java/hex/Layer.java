@@ -252,8 +252,21 @@ public abstract class Layer extends Iced {
         for( int i = 0; i < _in._a.length; i++ ) {
           int w = o * _in._a.length + i;
           _w[w] += u * _in._a[i];
-          if( _in._e != null )
-            _in._e[i] += g * _w[w];
+        }
+        _b[o] += u;
+      }
+    }
+  }
+
+  public static class TanhDeep extends Tanh {
+    @Override void bprop() {
+      for( int o = 0; o < _a.length; o++ ) {
+        float g = _e[o] * (1 - _a[o] * _a[o]);
+        float u = _r * g;
+        for( int i = 0; i < _in._a.length; i++ ) {
+          int w = o * _in._a.length + i;
+          _in._e[i] += g * _w[w]; // Deep: also set previous error
+          _w[w] += u * _in._a[i];
         }
         _b[o] += u;
       }
@@ -289,9 +302,9 @@ public abstract class Layer extends Iced {
         float u = _r * g;
         for( int i = 0; i < _in._a.length; i++ ) {
           int w = o * _in._a.length + i;
-          _w[w] += u * _in._a[i];
           if( _in._e != null )
             _in._e[i] += g * _w[w];
+          _w[w] += u * _in._a[i];
         }
         _b[o] += u;
       }
