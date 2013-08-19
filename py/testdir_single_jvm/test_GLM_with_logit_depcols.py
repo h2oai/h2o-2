@@ -4,20 +4,62 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
 
 
+if 1==0: # works
+    DATA_VALUE_MIN = -1
+    DATA_VALUE_MAX = 1
+    COEFF_VALUE_MIN = -1
+    COEFF_VALUE_MAX = 1
+    INTCPT_VALUE_MIN = -1
+    INTCPT_VALUE_MAX = 1
+    # COL_DATA_DISTS = 'UNIQUE'
+    COL_DATA_DISTS = 'SAME'
+
+if 1==0: # works
+    DATA_VALUE_MIN = -1
+    DATA_VALUE_MAX = 0
+    COEFF_VALUE_MIN = -1
+    COEFF_VALUE_MAX = 1
+    INTCPT_VALUE_MIN = -1
+    INTCPT_VALUE_MAX = 1
+    # COL_DATA_DISTS = 'UNIQUE'
+    COL_DATA_DISTS = 'SAME'
+
+if 1==1:
+    DATA_VALUE_MIN = -1
+    DATA_VALUE_MAX = 1
+    COEFF_VALUE_MIN = 0.1
+    COEFF_VALUE_MAX = 1
+    INTCPT_VALUE_MIN = -1
+    INTCPT_VALUE_MAX = 1
+    # COL_DATA_DISTS = 'UNIQUE'
+    COL_DATA_DISTS = 'SAME'
+
+
+modeString = \
+    "_Dmin" + str(DATA_VALUE_MIN) + \
+    "_Dmax" + str(DATA_VALUE_MAX) + \
+    "_Cmin" + str(COEFF_VALUE_MIN) + \
+    "_Cmax" + str(COEFF_VALUE_MAX) + \
+    "_Imin" + str(INTCPT_VALUE_MIN) + \
+    "_Imax" + str(INTCPT_VALUE_MAX) + \
+    "_Ddist" + str(COL_DATA_DISTS)
+
+print "modeString:", modeString
+
 def gen_rand_equation(colCount, SEED):
     r1 = random.Random(SEED)
     coefficients = []
     # y = 1/(1 + exp(-(sum(coefficients*x)+intercept))
     for j in range(colCount):
         # ri = r1.randint(-1,1)
-        rif = r1.uniform(-1,1)
+        rif = r1.uniform(COEFF_VALUE_MIN, COEFF_VALUE_MAX)
         # rif = (j+0.0)/colCount # git bigger for each one
         coefficients.append(rif)
         # FIX! temporary try fixed = col+1
         # coefficients.append(j+1)
         # coefficients.append(2 + 2*(j%2))
 
-    intercept = r1.uniform(-1,1)
+    intercept = r1.uniform(INTCPT_VALUE_MIN, INTCPT_VALUE_MAX)
     # intercept =  0
     print "Expected coefficients:", coefficients
     print "Expected intercept:", intercept
@@ -47,13 +89,19 @@ def write_syn_dataset(csvPathname, rowCount, colCount, coefficients, intercept, 
     print  "this means we should get 1 place of accuracy in the result coefficients/intercept????"
     # generate a mode per column that is reused
     # this will make every column have a different data distribution
-    colModes = [r1.uniform(-1,1) for j in range(colCount)]
-    colModes = [((random.randint(0,1) * -1) * j/colCount) for j in range(colCount)]
+    if COL_DATA_DISTS == 'UNIQUE':
+        colModes = [((random.randint(0,1) * -1) * j/colCount) for j in range(colCount)]
+    elif COL_DATA_DISTS == 'SAME':
+        colDataMean = (DATA_VALUE_MAX - DATA_VALUE_MIN) / 2
+        colModes = [colDataMean for j in range(colCount)]
+    else: # random
+        colModes = [r1.uniform(DATA_VALUE_MIN, DATA_VALUE_MAX) for j in range(colCount)]
+
     for i in range(rowCount):
         rowData = []
         for j in range(colCount):
             # ri = r1.uniform(0,1) 
-            ri = r1.triangular(-1,1,colModes[j])
+            ri = r1.triangular(DATA_VALUE_MIN, DATA_VALUE_MAX, colModes[j])
             rowData.append(ri)
         
         # flip if within the noise percentage
@@ -102,10 +150,10 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_GLM_with_logit_result_1(self):
+    def test_GLM_with_logit_depcols(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (100, 1, 'cA', 300), 
+            # (100, 1, 'cA', 300), 
             # (100, 25, 'cB', 300), 
             # (1000, 25, 'cC', 300), 
             # 50 fails, 40 fails
@@ -113,7 +161,8 @@ class Basic(unittest.TestCase):
             # 30 passes
             # (10000, 30, 'cD', 300), 
             # 50 passed if I made the data distributions per col, unique by guaranteeing different triangular modes per col
-            (1000, 100, 'cD', 300), 
+            (1000, 30, 'cD', 300), 
+            (1000, 30, 'cD', 300), 
             ]
 
         ### h2b.browseTheCloud()
@@ -121,7 +170,7 @@ class Basic(unittest.TestCase):
 
         for (rowCount, colCount, key2, timeoutSecs) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
-            csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
+            csvFilename = 'syn_' + modeString + "_" + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
             print "Creating random", csvPathname, \
