@@ -5,18 +5,25 @@ import h2o_browse as h2b
 
 # ord('a') gives 97. Use that when you pass it as url param to h2o
 # str(unichr(97)) gives 'a'
+
+print "Maybe a rows count problem if using tabs? temporary only tabs"
+print "passes if only , is used"
+print "just do one file with tab"
 paramsDict = {
     # don't worry about these variants in this test (just parse normal)
     # 'parser_type': [None, 'AUTO', 'XLS', 'XLSX', 'SVMLight'],
     # I suppose, libsvm could have strangeness!..but there is no header with libsvm?
     'parser_type': [None, 'AUTO'],
     # gets used for separator=
-    'separator': [None, ",", "\t", " "],
+    # 'separator': [",", " ", "\t"],
+    # 'separator': [",", " "],
+    'separator': ["\t"],
     'header': [None, 0,1],
     # we can point to the 'wrong' file!
     # assume this is always used, otherwise we sum data rows without knowing if we'll use the header file?
     # always point to the header file..again, if we switch it around, the counts are off
     'header_from_file': ['syn_header'],
+    # 'header_from_file': [None],
 }
 
 # ability to selectively comment the first line (which may be data or header)
@@ -86,13 +93,14 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
     
     def test_parse_multi_header_rand(self):
+        h2b.browseTheCloud()
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn_ints.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
         headerList = [
             # consistent with A, so we can decide when A should have been used (see below)
-            ['A','B','C','D','E','F','G','H','I','output'],
+            ['aA','aB','aC','aD','aE','aF','aG','aH','aI','output'],
             # FIX! don't mess with the header size to data size now (stack trace
             # ['A','B2','C2','D2','E2','F2','G2','H2','I2','output2'],
             # ['A','B','C','D','E','F','G','H','I'],
@@ -104,12 +112,7 @@ class Basic(unittest.TestCase):
         tryList = [
             # FIX! one fails count for now
             # (1, 5, 9, 'cA', 60, 0),
-            (2, 5, 9, 'cA', 60, 0),
-
-            (3, 5, 9, 'cA', 60, 0),
-            (3, 5, 9, 'cB', 60, 1),
-            (3, 5, 9, 'cC', 60, 2),
-            (3, 5, 9, 'cD', 60, 3),
+            (1, 5, 9, 'cA', 60, 0),
 
             # try with col mismatch on header. 
             # FIX! causes exception? don't test for now
@@ -143,7 +146,7 @@ class Basic(unittest.TestCase):
             DATA_FIRST_IS_COMMENT = 0
             HEADER_FIRST_IS_COMMENT = 0
             # none is not legal
-            SEP_CHAR_GEN = random.choice([",", "\t", " "])
+            SEP_CHAR_GEN = random.choice(paramsDict['separator'])
             
             print '\nHEADER_HAS_HEADER:', HEADER_HAS_HEADER
             print 'DATA_HAS_HEADER:', DATA_HAS_HEADER
@@ -221,6 +224,11 @@ class Basic(unittest.TestCase):
             print "If header_from_file= is used, we are currently required to force header=1 for h2o"
             if kwargs['header_from_file']:
                 kwargs['header'] =  1
+            # if we have a header in a data file, tell h2o (for now)
+            elif DATA_HAS_HEADER:
+                kwargs['header'] =  1
+            else:
+                kwargs['header'] =  0
 
             # may have error if h2o doesn't get anything!
             start = time.time()
