@@ -14,7 +14,9 @@ paramsDict = {
     'separator': [None, ",", "\t", " "],
     'header': [None, 0,1],
     # we can point to the 'wrong' file!
-    'header_from_file': [None, 'syn_header', 'syn_data'],
+    # assume this is always used, otherwise we sum data rows without knowing if we'll use the header file?
+    # always point to the header file..again, if we switch it around, the counts are off
+    'header_from_file': ['syn_header'],
 }
 
 # ability to selectively comment the first line (which may be data or header)
@@ -173,7 +175,7 @@ class Basic(unittest.TestCase):
         
             # create data files
             for fileN in range(fileNum):
-                csvFilename = 'syn_data_' + str(fileN) + "_" + str(SEED) + "_" + rowxcol + '.csv'
+                csvFilename = 'syn_data_' + str(fileN) + "_" + str(SEED) + "_" + str(trial) + "_" + rowxcol + '.csv'
                 csvPathname = SYNDATASETS_DIR + '/' + csvFilename
                 rList = rand_rowData(colCount, sepChar=SEP_CHAR_GEN)
                 (headerRowsDone, dataRowsDone) = write_syn_dataset(csvPathname, rowCount, 
@@ -183,8 +185,9 @@ class Basic(unittest.TestCase):
                 totalHeaderRows += headerRowsDone
 
             # create the header file
-            hdrFilename = 'syn_header_' + str(SEED) + "_" + rowxcol + '.csv'
+            hdrFilename = 'syn_header_' + str(SEED) + "_" + str(trial) + "_" + rowxcol + '.csv'
             hdrPathname = SYNDATASETS_DIR + '/' + hdrFilename
+            dataRowsWithHeader = 0 # temp hack
             (headerRowsDone, dataRowsDone) = write_syn_dataset(hdrPathname, dataRowsWithHeader, 
                 headerString=(headerForHeader if HEADER_HAS_HEADER else None), rList=rList,
                 commentFirst=HEADER_FIRST_IS_COMMENT, sepChar=SEP_CHAR_GEN)
@@ -218,7 +221,7 @@ class Basic(unittest.TestCase):
 
             # may have error if h2o doesn't get anything!
             start = time.time()
-            parseKey = h2o.nodes[0].parse('*syn_data_*'+rowxcol+'*', key2=key2, timeoutSecs=timeoutSecs, **kwargs)
+            parseKey = h2o.nodes[0].parse('*syn_data_*'+str(trial)+"_"+rowxcol+'*', key2=key2, timeoutSecs=timeoutSecs, **kwargs)
 
             print "parseKey['destination_key']: " + parseKey['destination_key']
             print 'parse time:', parseKey['response']['time']
@@ -237,13 +240,13 @@ class Basic(unittest.TestCase):
                 "parse created result with the wrong number of cols %s %s" % (inspect['num_cols'], totalCols))
 
             # do we end up parsing one data rows as a header because of mismatch in gen/param
-            h2oLosesOneData = (headerRowsDone==0) and (kwargs['header']==1)
+            h2oLosesOneData = (headerRowsDone==0) and (kwargs['header']==1) and not DATA_HAS_HEADER
             print "h2oLosesOneData:", h2oLosesOneData
             if h2oLosesOneData:
                 totalDataRows -= 1
                 
             self.assertEqual(inspect['num_rows'], totalDataRows,
-                "parse created result with the wrong number of rows (header shouldn't count) h2o: %s gen'ed: %s" % \
+                "parse created result with the wrong number of rows (header rows don't count) h2o: %s gen'ed: %s" % \
                 (inspect['num_rows'], totalDataRows))
 
             # put in an ignore param, that will fail unless headers were parsed correctly
