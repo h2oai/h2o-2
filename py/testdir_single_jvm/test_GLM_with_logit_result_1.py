@@ -48,7 +48,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, coefficients, intercept, 
     # generate a mode per column that is reused
     # this will make every column have a different data distribution
     colModes = [r1.uniform(-1,1) for j in range(colCount)]
-    colModes = [((random.randint(0,1) * -1) * j/colCount) for j in range(colCount)]
+    colModes = [((random.randint(0,1) * -1) * (j + 0.0)/colCount) for j in range(colCount)]
     for i in range(rowCount):
         rowData = []
         for j in range(colCount):

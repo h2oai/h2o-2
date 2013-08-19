@@ -4,6 +4,7 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
 
 
+BINS = 100
 if 1==0: # works
     DATA_VALUE_MIN = -1
     DATA_VALUE_MAX = 1
@@ -24,7 +25,7 @@ if 1==0: # works
     # COL_DATA_DISTS = 'UNIQUE'
     COL_DATA_DISTS = 'SAME'
 
-if 1==1:
+if 1==0: # works
     DATA_VALUE_MIN = -1
     DATA_VALUE_MAX = 1
     COEFF_VALUE_MIN = 0.1
@@ -34,8 +35,29 @@ if 1==1:
     # COL_DATA_DISTS = 'UNIQUE'
     COL_DATA_DISTS = 'SAME'
 
+if 1==0: # works
+    DATA_VALUE_MIN = -1
+    DATA_VALUE_MAX = 1
+    COEFF_VALUE_MIN = 0.5
+    COEFF_VALUE_MAX = 1
+    INTCPT_VALUE_MIN = -1
+    INTCPT_VALUE_MAX = 1
+    # COL_DATA_DISTS = 'UNIQUE'
+    COL_DATA_DISTS = 'SAME'
+
+if 1==1:
+    DATA_VALUE_MIN = 0
+    DATA_VALUE_MAX = 1
+    COEFF_VALUE_MIN = -1
+    COEFF_VALUE_MAX = 1
+    INTCPT_VALUE_MIN = -1
+    INTCPT_VALUE_MAX = 1
+    # COL_DATA_DISTS = 'UNIQUE'
+    COL_DATA_DISTS = 'SAME'
+
 
 modeString = \
+    "_Bins" + str(BINS) + \
     "_Dmin" + str(DATA_VALUE_MIN) + \
     "_Dmax" + str(DATA_VALUE_MAX) + \
     "_Cmin" + str(COEFF_VALUE_MIN) + \
@@ -82,7 +104,6 @@ def write_syn_dataset(csvPathname, rowCount, colCount, coefficients, intercept, 
     # assuming output is always last col
     yMin = None  
     yMax = None
-    BINS = 100
     print "gen'ed y will be a probability! generate 1/0 data rows to reflect that probability, binned to %d bins" % BINS
     print "100 implies 2 places of accuracy in getting the probability." 
     print  "this means we should get 1 place of accuracy in the result coefficients/intercept????"
@@ -91,7 +112,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, coefficients, intercept, 
     if COL_DATA_DISTS == 'UNIQUE':
         colModes = [((random.randint(0,1) * -1) * j/colCount) for j in range(colCount)]
     elif COL_DATA_DISTS == 'SAME':
-        colDataMean = (abs(DATA_VALUE_MAX - DATA_VALUE_MIN) / 2) + DATA_VALUE_MIN
+        colDataMean = (DATA_VALUE_MIN + DATA_VALUE_MAX) / 2
         colModes = [colDataMean for j in range(colCount)]
     else: # random
         colModes = [r1.uniform(DATA_VALUE_MIN, DATA_VALUE_MAX) for j in range(colCount)]
@@ -160,8 +181,8 @@ class Basic(unittest.TestCase):
             # 30 passes
             # (10000, 30, 'cD', 300), 
             # 50 passed if I made the data distributions per col, unique by guaranteeing different triangular modes per col
-            (1000, 30, 'cD', 300), 
-            (1000, 30, 'cD', 300), 
+            (500, 200, 'cD', 300), 
+            (500, 200, 'cD', 300), 
             ]
 
         ### h2b.browseTheCloud()
@@ -212,7 +233,7 @@ class Basic(unittest.TestCase):
             c = intercept
             g = interceptGen
             print "intercept: %8.4f generated: %8.4f delta: %8.4f" % (c, g, abs(g-c))
-            print "Why do we need larger delta allowed for intercept? 0.2 here"
+            print "need a larger delta compare for intercept?"
             self.assertAlmostEqual(c, g, delta=.2, msg="not close enough. intercept: %s generated %s" % (c, g))
             
 
