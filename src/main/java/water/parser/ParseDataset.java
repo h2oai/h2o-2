@@ -135,39 +135,36 @@ public final class ParseDataset extends Job {
       gSetup = t._gSetup;
       if(!gSetup.valid())
         throw new IllegalArgumentException("<h3>Can not parse:</h3>" +( setup._pType == CustomParser.ParserType.AUTO?"Did not finad any matching consistent parser setup, please specify manually":"None of the files is consistent with the given setup!"));
-      if(!t._failedSetup.isEmpty() || !t._conflicts.isEmpty()){
+      if((!t._failedSetup.isEmpty() || !t._conflicts.isEmpty())){
         StringBuilder sb = new StringBuilder();
-        if(!t._conflicts.isEmpty()){
-          if(gSetup.valid()){ // we got a valid setup, filter the conflicts to find the incompatible ones
-            GuessSetupTsk t2 = new GuessSetupTsk(gSetup._setup, checkHeader);
-            Key [] keys2 = new Key[t._conflicts.size()];
-            t2.invoke(t._conflicts.toArray(keys2));
-            t._failedSetup.addAll(t2._failedSetup);
-            assert t2._conflicts.isEmpty():gSetup._setup.toString() + ", " + Arrays.toString(keys2) + "," + t2._conflicts.toString();
-          } else { // shouldnot really happen?
-            assert false;
-          }
-        }
-        if(!t._failedSetup.isEmpty()){
-          if(setup._pType == CustomParser.ParserType.AUTO){
-            sb.append("<div>\n<b>Failed to find setup for " + t._failedSetup.size() + " files:</b>\n</div>");
-          } else
-            sb.append("<div>\n<b>Found " + t._failedSetup.size() + " files which are not compatible with the given setup:</b></div>");
-          if(t._failedSetup.size() > 5){
-            int n = t._failedSetup.size();
-            sb.append("<div>" + t._failedSetup.get(0) + "</div>");
-            sb.append("<div>" + t._failedSetup.get(1) + "</div>");
-            sb.append("<div>...</div>");
-            sb.append("<div>" + t._failedSetup.get(n-2) + "</div>");
-            sb.append("<div>" + t._failedSetup.get(n-1) + "</div>");
-          } else for(int i = 0; i < t._failedSetup.size();++i)
-            sb.append("<div>" + t._failedSetup.get(i) + "</div>");
-        }
+        // run guess setup once more, this time knowing the global setup to get rid of conflicts (turns them into failures) and bogus failures (i.e. single line files with unexpected separator)
+        GuessSetupTsk t2 = new GuessSetupTsk(gSetup._setup, checkHeader);
+        Key [] keys2 = new Key[t._conflicts.size() + t._failedSetup.size()];
+        int i = 0;
+        for(Key k:t._conflicts)keys2[i++] = k;
+        for(Key k:t._failedSetup)keys2[i++] = k;
+        t2.invoke(keys2);
+        t._failedSetup = t2._failedSetup;
+        t._conflicts = t2._conflicts;
+      }
+      if(!t._conflicts.isEmpty())
+        System.out.println(setup);
+      assert t._conflicts.isEmpty(); // we should not have any conflicts here, either we failed to find any valid global setup, or conflicts should've been converted into failures in the second pass
+      if(!t._failedSetup.isEmpty()){
+        StringBuilder sb = new StringBuilder("<div>\n<b>Found " + t._failedSetup.size() + " files which are not compatible with the given setup:</b></div>");
+        if(t._failedSetup.size() > 5){
+          int n = t._failedSetup.size();
+          sb.append("<div>" + t._failedSetup.get(0) + "</div>");
+          sb.append("<div>" + t._failedSetup.get(1) + "</div>");
+          sb.append("<div>...</div>");
+          sb.append("<div>" + t._failedSetup.get(n-2) + "</div>");
+          sb.append("<div>" + t._failedSetup.get(n-1) + "</div>");
+        } else for(int i = 0; i < t._failedSetup.size();++i)
+          sb.append("<div>" + t._failedSetup.get(i) + "</div>");
         throw new IllegalArgumentException("<h3>Can not parse:</h3>" + sb.toString());
       }
     } else
       gSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(keys.get(0)),setup,checkHeader);
-
     if(headerKey != null){ // separate headerKey
       Value v = DKV.get(headerKey);
       if(!v.isRawData()){ // either ValueArray or a Frame, just extract the headers

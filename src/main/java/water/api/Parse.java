@@ -292,10 +292,11 @@ public class Parse extends Request {
     public ParserType(String name) {
       super(name,false);
       setRefreshOnChange();
-      _values = new String [CustomParser.ParserType.values().length];
+      _values = new String [CustomParser.ParserType.values().length-1];
       int i = 0;
       for(CustomParser.ParserType t:CustomParser.ParserType.values())
-        _values[i++] = t.name();
+        if(t != CustomParser.ParserType.XLSX)
+          _values[i++] = t.name();
     }
     private final String [] _values;
     @Override protected String   queryDescription() { return "File type"; }
