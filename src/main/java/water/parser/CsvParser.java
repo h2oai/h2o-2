@@ -623,6 +623,8 @@ NEXT_CHAR:
       if (lineEnd>lineStart)
         lines.add(new String(bits,lineStart, lineEnd-lineStart));
     }
+    if(lines.isEmpty())
+      return new PSetupGuess(new ParserSetup(ParserType.AUTO,CsvParser.AUTO_SEP,0,false,null),lines.size(),0,null,null);;
     final String [][] data = new String[lines.size()][];
     if( lines.size() < 2 ) {
       byte sep = setup._separator;
