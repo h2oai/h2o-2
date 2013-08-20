@@ -28,13 +28,13 @@ public class C1Chunk extends Chunk {
   @Override boolean set8_impl(int i, long l) {
     if( !(0 <= l && l < 255) ) return false;
     _mem[i+OFF] = (byte)l;
-    return true; 
+    return true;
   }
   @Override boolean set8_impl(int i, double d) { return false; }
   @Override NewChunk inflate_impl(NewChunk nc) {
     for( int i=0; i<_len; i++ ) {
       long res = at8_impl(i);
-      if( _vec.isNA(res) ) nc.setInvalid(i);
+      if( _vec.valueIsNA(res) ) nc.setInvalid(i);
       else nc._ls[i] = res;
     }
     return nc;

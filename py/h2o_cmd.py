@@ -167,12 +167,12 @@ def runRFOnly(node=None, parseKey=None, trees=5,
     # if we model_key was given to rf via **kwargs, remove it, since we're passing 
     # model_key from rf. can't pass it in two places. (ok if it doesn't exist in kwargs)
     data_key  = rf['data_key']
-    kwargs.pop('model_key',None)
+    kwargs.pop('model_key', None)
     model_key = rf['model_key']
     rfCloud = rf['response']['h2o']
 
     # same thing. if we use random param generation and have ntree in kwargs, get rid of it.
-    kwargs.pop('ntree',None)
+    kwargs.pop('ntree', None)
 
     # this is important. it's the only accurate value for how many trees RF was asked for.
     ntree    = rf['ntree']

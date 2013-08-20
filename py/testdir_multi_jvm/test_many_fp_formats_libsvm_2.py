@@ -147,6 +147,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel, distrib
 
 class Basic(unittest.TestCase):
     def tearDown(self):
+        time.sleep(3600)
         h2o.check_sandbox_for_errors()
 
     @classmethod
@@ -186,7 +187,8 @@ class Basic(unittest.TestCase):
                 (colNumberMax, synColSumDict) = write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel, distribution)
 
                 selKey2 = key2 + "_" + str(sel)
-                parseKey = h2o_cmd.parseFile(None, csvPathname, key2=selKey2, timeoutSecs=timeoutSecs, doSummary=False)
+                print "This dataset requires telling h2o parse it's a libsvm..doesn't detect automatically"
+                parseKey = h2o_cmd.parseFile(None, csvPathname, key2=selKey2, timeoutSecs=timeoutSecs, doSummary=False, parser_type='SVMLight')
                 print csvFilename, 'parse time:', parseKey['response']['time']
                 print "Parse result['destination_key']:", parseKey['destination_key']
                 inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], max_column_display=colNumberMax+1, timeoutSecs=timeoutSecs)

@@ -584,12 +584,16 @@ public class h2odriver extends Configured implements Tool {
     // Set up configuration.
     // ---------------------
     Configuration conf = getConf();
-//        conf.set("mapred.child.java.opts", "-Dh2o.FINDME=ignored");
-//        conf.set("mapred.map.child.java.opts", "-Dh2o.FINDME2=ignored");
-//        conf.set("mapred.map.child.java.opts", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=8999");
 
     if (h2odriver_config.usingYarn()) {
       System.out.println("Driver program compiled with MapReduce V2 (Yarn)");
+    }
+    else {
+      System.out.println("Driver program compiled with MapReduce V1 (Classic)");
+    }
+
+    // Set memory parameters.
+    {
       Pattern p = Pattern.compile("([1-9][0-9]*)([mgMG])");
       Matcher m = p.matcher(mapperXmx);
       boolean b = m.matches();
@@ -607,13 +611,17 @@ public class h2odriver extends Configured implements Tool {
       }
       conf.set("mapreduce.job.ubertask.enable", "false");
       conf.set("mapreduce.map.memory.mb", Long.toString(megabytes));
-    }
-    else {
-      System.out.println("Driver program compiled with MapReduce V1 (Classic)");
       String mapChildJavaOpts = "-Xms" + mapperXmx + " -Xmx" + mapperXmx;
       conf.set("mapred.child.java.opts", mapChildJavaOpts);
       conf.set("mapred.map.child.java.opts", mapChildJavaOpts);       // MapR 2.x requires this.
     }
+
+    // Sometimes for debugging purposes, it helps to jam stuff in to the Java command
+    // of the mapper child.
+    //
+    //        conf.set("mapred.child.java.opts", "-Dh2o.FINDME=ignored");
+    //        conf.set("mapred.map.child.java.opts", "-Dh2o.FINDME2=ignored");
+    //        conf.set("mapred.map.child.java.opts", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=8999");
 
     // This is really silly, but without this line, the following ugly warning
     // gets emitted as the very first line of output, which is confusing for

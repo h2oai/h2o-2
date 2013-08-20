@@ -2,12 +2,12 @@ package water;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
-import java.util.HashMap;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 
 import water.H2O.H2OCountedCompleter;
 import water.Job.ProgressMonitor;
+import water.fvec.*;
 import water.util.Log;
 
 /**
@@ -526,4 +526,61 @@ public class ValueArray extends Iced implements Cloneable {
   // Wrap a InputStream over this ValueArray
   public InputStream openStream() {return openStream(null);}
   public InputStream openStream(ProgressMonitor p) {return new VAStream(this, p);}
+
+  /**
+   * Convert to a Frame.
+   */
+  public Frame asFrame() {
+    String[] names = new String[_cols.length];
+    AppendableVec[] avs = new AppendableVec[_cols.length];
+    for(int i = 0; i < _cols.length; ++i) {
+      names[i] = _cols[i]._name;
+      avs[i] = new AppendableVec(UUID.randomUUID().toString());
+    }
+    Converter task = new Converter();
+    task._vaKey = _key;
+    task._vecs = avs;
+    task.invoke(_key);
+    Vec[] vecs = new Vec[avs.length];
+    for(int i = 0; i < avs.length; ++i)
+      vecs[i] = avs[i].close(null);
+    return new Frame(names, vecs);
+  }
+
+  static class Converter extends MRTask<Converter> {
+    Key _vaKey;
+    AppendableVec[] _vecs;
+
+    @Override public void map(Key key) {
+      NewChunk [] chunks = new NewChunk[_vecs.length];
+      for(int i = 0; i < _vecs.length; ++i)
+        chunks[i] = new NewChunk(_vecs[i], i);
+
+      ValueArray va = DKV.get(_vaKey).get();
+      AutoBuffer bits = va.getChunk(key);
+      int cidx = (int) ValueArray.getChunkIndex(key);
+      int rows = va.rpc(cidx);
+
+      for( int row = 0; row < rows; row++ ) {
+        for( int i = 0; i < _vecs.length; i++ ) {
+          ValueArray.Column c = va._cols[i];
+          if(va.isNA(row, i))
+            chunks[i].addNA();
+          else if(va._cols[i]._domain != null)
+            chunks[i].addEnum((int) va.data(bits, row, c));
+          else if(va._cols[i].isFloat())
+            chunks[i].addNum(va.datad(bits, row, c));
+          else
+            chunks[i].addNum(va.data(bits, row, c), 0);
+        }
+      }
+      for(int i = 0; i < _vecs.length; ++i)
+        chunks[i].close(cidx, null);
+    }
+
+    @Override public void reduce(Converter other) {
+      for(int i = 0; i < _vecs.length; i++)
+        _vecs[i].reduce(other._vecs[i]);
+    }
+  }
 }

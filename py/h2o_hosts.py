@@ -132,4 +132,5 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
     # legacy param issue
     node_count = paramsToUse['h2o_per_host']
     paramsToUse.pop('h2o_per_host')
+    print "java_heap_GB", paramsToUse['java_heap_GB']
     h2o.build_cloud(node_count, hosts=hosts, **paramsToUse)
