@@ -254,7 +254,7 @@ public final class ParseDataset extends Job {
     if(setup == null){
       ArrayList<Key> ks = new ArrayList<Key>(keys.length);
       for (Key k:keys)ks.add(k);
-      PSetupGuess guess = guessSetup(ks, null, null, true);
+      PSetupGuess guess = guessSetup(ks, null, new ParserSetup(), true);
       if(!guess.valid())throw new RuntimeException("can not parse ethis dataset, did not find working setup");
       setup = guess._setup;
     }
