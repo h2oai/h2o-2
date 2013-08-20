@@ -111,17 +111,21 @@ public abstract class DRF {
     @Override public final void lcompute() {
       // Build data adapter for this node.
       Timer t_extract = new Timer();
-      DataAdapter dapt = DABuilder.create(this).build(_keys);
+      // Collect remote keys to load if necessary
+      final Key[] lkeys = _keys;
+      final Key[] rkeys = getNonLocalChunks(lkeys);
+      final DataAdapter dapt = DABuilder.create(this).build(lkeys, rkeys);
       Log.debug(Sys.RANDF,"Data adapter built in " + t_extract );
       // Prepare data and compute missing parameters.
       Data localData        = Data.make(dapt);
       int numSplitFeatures  = howManySplitFeatures(localData);
       int ntrees            = howManyTrees();
+      int[] rowsPerChunks   = howManyRPC(lkeys, rkeys);
       // write number of split features
-      updateRFModel(_job.dest(), numSplitFeatures);
+      updateRFModel(_job.dest(), numSplitFeatures, rkeys);
 
       // Build local random forest
-      RandomForest.build(_job, _params, localData, ntrees, numSplitFeatures);
+      RandomForest.build(_job, _params, localData, ntrees, numSplitFeatures, rowsPerChunks);
       // Wait for the running jobs
       tryComplete();
     }
@@ -129,16 +133,49 @@ public abstract class DRF {
     @Override public final void reduce( DRemoteTask drt ) { }
 
     /** Write number of split features computed on this node to a model */
-    static void updateRFModel(Key modelKey, final int numSplitFeatures) {
+    static void updateRFModel(Key modelKey, final int numSplitFeatures, final Key[] rkeys) {
       final int idx = H2O.SELF.index();
       new TAtomic<RFModel>() {
         @Override public RFModel atomic(RFModel old) {
           if(old == null) return null;
           RFModel newModel = (RFModel)old.clone();
           newModel._nodesSplitFeatures[idx] = numSplitFeatures;
+          newModel._remoteChunksKeys  [idx] = rkeys;
           return newModel;
         }
       }.invoke(modelKey);
+    }
+
+    private static final Key[] NO_KEYS = new Key[] {};
+
+    /** Return a list of chunk keys which can be loaded from other nodes. */
+    private Key[] getNonLocalChunks(Key[] localCKeys) {
+      Log.info(Sys.RANDF, "Use non-local data: " + _params._useNonLocalData);
+      if (_params._useNonLocalData) {
+        final float OVERHEAD_MAGIC = 3/8.f; // magic !
+        long totalmem = Runtime.getRuntime().totalMemory();
+        long localChunks = localCKeys.length * ValueArray.CHUNK_SZ;
+        long availMem = (long) (OVERHEAD_MAGIC * totalmem) - localChunks; // theoretically available memory
+
+        if (availMem > 0) {
+          final ValueArray ary = UKV.get(_rfmodel._dataKey);
+          // Try to fill the memory up to ratio 3/8
+          int numkeys = Math.min( (int) (availMem / ValueArray.CHUNK_SZ), (int) (ary.chunks()-localCKeys.length));
+          Log.info(Sys.RANDF, "Avail. mem: " + PrettyPrint.bytes(availMem));
+          Log.info(Sys.RANDF, "Can load keys: " + numkeys);
+          if (numkeys>0) {
+            Key[] rkeys = new Key[numkeys];
+            int c = 0;
+            for(int i=0; i<ary.chunks(); i++) {
+              Key k = ary.getChunkKey(i);
+              if (!k.home()) rkeys[c++] = k;
+              if (c == numkeys) break;
+            }
+            return rkeys;
+          }
+        }
+      }
+      return NO_KEYS;
     }
 
     /** Unless otherwise specified each split looks at sqrt(#features). */
@@ -173,6 +210,15 @@ public abstract class DRF {
         ++ntrees;
 
       return ntrees;
+    }
+
+    private int[] howManyRPC(Key[] lkeys, Key[] rkeys) {
+      int[] result = new int[lkeys.length+rkeys.length];
+      final ValueArray ary = UKV.get(_rfmodel._dataKey);
+      int idx = 0;
+      for (Key k : lkeys) result[idx++] = ary.rpc(ValueArray.getChunkIndex(k));
+      for (Key k : rkeys) result[idx++] = ary.rpc(ValueArray.getChunkIndex(k));
+      return result;
     }
   }
 

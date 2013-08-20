@@ -623,6 +623,8 @@ NEXT_CHAR:
       if (lineEnd>lineStart)
         lines.add(new String(bits,lineStart, lineEnd-lineStart));
     }
+    if(lines.isEmpty())
+      return new PSetupGuess(new ParserSetup(ParserType.AUTO,CsvParser.AUTO_SEP,0,false,null),lines.size(),0,null,null);;
     final String [][] data = new String[lines.size()][];
     if( lines.size() < 2 ) {
       byte sep = setup._separator;
@@ -637,7 +639,7 @@ NEXT_CHAR:
       if(lines.size() == 1)
         data[0] = determineTokens(lines.get(0), sep);
       boolean hasHeader = (checkHeader && allStrings(data[0])) || setup._header;
-      return new PSetupGuess(new ParserSetup(ParserType.CSV,sep,hasHeader,data),lines.size(),0,null);
+      return new PSetupGuess(new ParserSetup(ParserType.CSV,sep,data[0].length,hasHeader,hasHeader?data[0]:null),lines.size(),0,data,null);
     }
     byte sep = setup._separator;
     if(setup._separator == AUTO_SEP) // first guess the separator
@@ -645,30 +647,36 @@ NEXT_CHAR:
     for(int i = 0; i < lines.size(); ++i)
       data[i] = determineTokens(lines.get(i), sep);
     // we do not have enough lines to decide
-    boolean hasHeader = (checkHeader && hasHeader(data[0],data[1])) || setup._header;
-    ParserSetup resSetup = new ParserSetup(ParserType.CSV, sep, hasHeader, data);
+    boolean hasHeader = false;
+    if(checkHeader){
+      assert !setup._header;
+      assert setup._columnNames == null;
+      hasHeader = hasHeader(data[0],data[1]);
+    } else if(setup._header){
+      if(setup._columnNames != null){ // we know what the header looks like, check if the current file has matching header
+        hasHeader = data[0].length == setup._columnNames.length;
+        for(int i = 0; hasHeader && i < data[0].length; ++i)
+          hasHeader = data[0][i].equalsIgnoreCase(setup._columnNames[i]);
+      } else // otherwise we're told to take the first line as header whatever it might be
+        hasHeader = true;
+    }
+    int ncols = (setup._ncols > 0)?setup._ncols:data[0].length;
+    ParserSetup resSetup = new ParserSetup(ParserType.CSV, sep, ncols,hasHeader, hasHeader?data[0]:null);
     ArrayList<String> errors = new ArrayList<String>();
     int ilines = 0;
     int start = hasHeader?1:0;
-    OUTER:
     for(int i = start; i < data.length; ++i){
       if(data[i].length != resSetup._ncols){
         errors.add("error at line " + i + " : incompatoble line length. Got " + data[i].length + " columns.");
         ++ilines;
-        continue;
       }
-//      if(allStrings(data[i])){ //TODO turn this into a warning?
-//        errors.add("error at line " + i + " : got all strings(NAs?), not a single number");
-//        ++ilines;
-//        continue;
-//      }
     }
     String [] err = null;
     if(!errors.isEmpty()){
       err = new String[errors.size()];
       errors.toArray(err);
     }
-    return new PSetupGuess(new ParserSetup(ParserType.CSV, sep, hasHeader, data),lines.size(),ilines,err);
+    return new PSetupGuess(resSetup,lines.size()-ilines,ilines,data,err);
   }
 
   @Override public boolean isCompatible(CustomParser p) {
