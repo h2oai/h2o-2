@@ -15,7 +15,7 @@ setGeneric("h2o.setColNames", function(data, col.names) { standardGeneric("h2o.s
 h2o.startLauncher <- function() {
   myOS = Sys.info()["sysname"]
   
-  if(myOS == "Windows") verPath = Sys.getenv("APPDATA")
+  if(myOS == "Windows") verPath = paste(Sys.getenv("APPDATA"), "h2o", sep="/")
   else verPath = paste(Sys.getenv("HOME"), "Library/Application Support/h2o", sep="/")
   myFiles = list.files(verPath)
   if(length(myFiles) == 0) stop("Cannot find location of H2O launcher. Please check that your H2O installation is complete.")
