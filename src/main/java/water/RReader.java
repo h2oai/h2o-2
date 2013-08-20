@@ -157,8 +157,9 @@ public class RReader {
 
   private static AutoBuffer build(String[] classes, Object[] forest, int jump, int tree) throws Exception {
     AutoBuffer buffer = new AutoBuffer();
-    buffer.put4(0);
-    buffer.put8(0);
+    buffer.put4(0); // Tree ID
+    buffer.put8(0); // Seed
+    buffer.put1(0); // Producer ID
     write(buffer, forest, jump, tree * jump, 0);
     return buffer;
   }

@@ -35,18 +35,20 @@ public class RandomForest {
                       final DRFParams drfParams,
                       final Data data,
                       int ntrees,
-                      int numSplitFeatures) {
+                      int numSplitFeatures,
+                      int[] rowsPerChunks) {
     Timer  t_alltrees = new Timer();
     Tree[] trees      = new Tree[ntrees];
     Log.debug(Sys.RANDF,"Building "+ntrees+" trees");
     Log.debug(Sys.RANDF,"Number of split features: "+ numSplitFeatures);
     Log.debug(Sys.RANDF,"Starting RF computation with "+ data.rows()+" rows ");
 
-    Random  rnd     = Utils.getRNG(data.seed() + ROOT_SEED_ADD);
-    Sampling sampler = createSampler(drfParams);
+    Random  rnd = Utils.getRNG(data.seed() + ROOT_SEED_ADD);
+    Sampling sampler = createSampler(drfParams, rowsPerChunks);
+    byte producerId = (byte) H2O.SELF.index();
     for (int i = 0; i < ntrees; ++i) {
       long treeSeed = rnd.nextLong() + TREE_SEED_INIT; // make sure that enough bits is initialized
-      trees[i] = new Tree(job, data, drfParams._depth, drfParams._stat, numSplitFeatures, treeSeed,
+      trees[i] = new Tree(job, data, producerId, drfParams._depth, drfParams._stat, numSplitFeatures, treeSeed,
                           i, drfParams._exclusiveSplitLimit, sampler, drfParams._verbose);
       if (!drfParams._parallel)   ForkJoinTask.invokeAll(new Tree[]{trees[i]});
     }
@@ -55,9 +57,9 @@ public class RandomForest {
     Log.debug(Sys.RANDF,"All trees ("+ntrees+") done in "+ t_alltrees);
   }
 
-  static Sampling createSampler(final DRFParams params) {
+  static Sampling createSampler(final DRFParams params, int[] rowsPerChunks) {
     switch(params._samplingStrategy) {
-    case RANDOM          : return new Sampling.Random(params._sample, params._numrows);
+    case RANDOM          : return new Sampling.Random(params._sample, rowsPerChunks);
     case STRATIFIED_LOCAL:
       float[] ss = new float[params._strataSamples.length];
       for (int i=0;i<ss.length;i++) ss[i] = params._strataSamples[i] / 100.f;

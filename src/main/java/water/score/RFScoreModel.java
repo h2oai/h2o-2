@@ -122,6 +122,7 @@ public class RFScoreModel extends ScoreModel {
     AutoBuffer ab = new AutoBuffer();
     ab.put4(_tnum++);           // Tree number
     ab.put8(0);                 // Seed
+    ab.put1(0);                 // Producer ID
     rfn.toPackedTree(ab);       // Packed tree bits
     pmml.skipWS().expect("</Segment>");
     return ab.buf();
