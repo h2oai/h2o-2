@@ -62,14 +62,15 @@ An object of class \code{\linkS4class{H2ORForestModel}} with slots key, data, an
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-# Assuming your working directory is h2o/R
-iris.hex = h2o.importFile(localH2O, path = "../smalldata/iris/iris.csv", key = "iris.hex")
+localH2O = new("H2OClient")
+h2o.checkClient(localH2O)
+irisPath = system.file("extdata", "iris.csv", package="h2o")
+iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 h2o.randomForest(y = 4, x_ignore = 0, data = iris.hex, ntree = 50, depth = 100, 
 classwt = c("Iris-versicolor" = 20.0, "Iris-virginica" = 30.0))
-
-prostate.hex = h2o.importFile(localH2O, path = "../smalldata/logreg/prostate.csv", key = "prostate.hex")
-h2o.randomForest(y = "CAPSULE", x_ignore = c("ID", "DPROS"), data = prostate.hex,
-ntree = 50, depth = 100)
+covPath = system.file("extdata", "covtype.csv", package="h2o")
+covtype.hex = h2o.importFile(localH2O, path = covPath, key = "covtype.hex")
+h2o.randomForest(y = "Cover_Type", x_ignore = c("Aspect", "Hillshade_9am"), data = covtype.hex, ntree = 50, depth = 150)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

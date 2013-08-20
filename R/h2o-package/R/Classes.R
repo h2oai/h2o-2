@@ -57,6 +57,40 @@ setMethod("show", "H2ORForestModel", function(object) {
   cat("\nConfusion matrix:\n"); print(model$confusion)
 })
 
+setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
+  # Currently, you can only select one column at a time
+  if(!missing(j) && length(j) > 1) stop("Currently, can only select one column at a time")
+  if(missing(i) && missing(j)) return(x)
+  if(missing(i) && !missing(j)) {
+    if(is.character(j)) return(do.call("$", c(x, j)))
+    expr = paste(x@key, "[", j-1, "]", sep="")
+  } else {
+    if(!is.numeric(i)) stop("Can only select rows by index values")
+    start = min(i); i_off = i - start + 1;
+    opt = paste(x@key, start-1, max(i_off), sep=",")
+    if(missing(j))
+      expr = paste("slice(", opt, ")", sep="")
+    else if(is.character(j))
+      expr = paste("slice(", opt, ")$", j, sep="")
+    else
+      expr = paste("slice(", opt, ")[", j-1, "]", sep="")
+  }
+  res = h2o.__exec(x@h2o, expr)
+  new("H2OParsedData", h2o=x@h2o, key=res)
+})
+
+setMethod("$", "H2OParsedData", function(x, name) {
+  myNames = names(x)
+  if(!(name %in% myNames)) {
+    print("Column", as.character(name), "not present in expression"); return(NULL)
+  } else {
+    # x[match(name, myNames)]
+    expr = paste(x@key, "$", name, sep="")
+    res = h2o.__exec(x@h2o, expr)
+    new("H2OParsedData", h2o=x@h2o, key=res)
+  }
+})
+
 setMethod("colnames", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key)
   unlist(lapply(res$cols, function(y) y$name))
@@ -77,6 +111,9 @@ setMethod("summary", "H2OParsedData", function(object) {
   for(i in 1:length(res)) {
     cnames = c(cnames, paste("      ", res[[i]]$name, sep=""))
     if(res[[i]]$type == "number") {
+      if(is.null(res[[i]]$min) || length(res[[i]]$min) == 0) res[[i]]$min = NaN
+      if(is.null(res[[i]]$max) || length(res[[i]]$max) == 0) res[[i]]$max = NaN
+      if(is.null(res[[i]]$mean) || length(res[[i]]$mean) == 0) res[[i]]$mean = NaN
       if(is.null(res[[i]]$percentiles))
         params = format(rep(round(as.numeric(res[[i]]$mean), 3), 6), nsmall = 3)
       else
@@ -108,6 +145,21 @@ setMethod("as.data.frame", "H2OParsedData", function(x) {
   x.df
 })
 
+setMethod("head", "H2OParsedData", function(x, n = 6L, ...) {
+  if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
+  n = round(n)
+  if(n > 0) as.data.frame(x[1:n,])
+  else as.data.frame(x[1:(nrow(x)+n),])
+})
+
+setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
+  if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
+  n = round(n)
+  if(n > 0) opt = paste(x@key, nrow(x)-n, sep=",")
+  else opt = paste(x@key, abs(n), sep=",")
+  res = h2o.__exec(x@h2o, paste("slice(", opt, ")", sep=""))
+  as.data.frame(new("H2OParsedData", h2o=x@h2o, key=res))
+})
 
 setMethod("show", "H2OGLMGridModel", function(object) {
   print(object@data)

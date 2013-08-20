@@ -358,17 +358,24 @@ class DTree extends Iced {
           DHistogram nhs[] = hcs[nid-leaf];
           if( nhs == null ) {     // Lazily manifest this histogram for 'nid'
             nhs = hcs[nid-leaf] = new DHistogram[_ncols];
-            int sCols[] = tree.undecided(nid)._scoreCols;
             DHistogram ohs[] = tree.undecided(nid)._hs; // The existing column of Histograms
-            // For just the selected columns make Big Histograms
-            for( int j=0; j<sCols.length; j++ ) { // Make private copies
-              int idx = sCols[j];                 // Just the selected columns
-              nhs[idx] = ohs[idx].bigCopy();
+            int sCols[] = tree.undecided(nid)._scoreCols;
+            if( sCols != null ) {
+              // For just the selected columns make Big Histograms
+              for( int j=0; j<sCols.length; j++ ) { // Make private copies
+                int idx = sCols[j];                 // Just the selected columns
+                nhs[idx] = ohs[idx].bigCopy();
+              }
+              // For all the rest make small Histograms
+              for( int j=0; j<nhs.length; j++ )
+                if( ohs[j] != null && nhs[j]==null )
+                  nhs[j] = ohs[j].smallCopy();
+            } else {
+              // Default: make big copies of all
+              for( int j=0; j<nhs.length; j++ )
+                if( ohs[j] != null )
+                  nhs[j] = ohs[j].bigCopy();
             }
-            // For all the rest make small Histograms
-            for( int j=0; j<nhs.length; j++ )
-              if( ohs[j] != null && nhs[j]==null )
-                nhs[j] = ohs[j].smallCopy();
           }
         }
           

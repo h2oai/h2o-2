@@ -8,10 +8,13 @@ import java.util.zip.*;
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
+import water.fvec.Frame;
+import water.parser.CustomParser.PSetupGuess;
 import water.parser.CustomParser.ParserSetup;
 import water.parser.CustomParser.ParserType;
 import water.parser.DParseTask.Pass;
 import water.util.*;
+import water.util.Utils.IcedArrayList;
 
 import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
@@ -41,12 +44,173 @@ public final class ParseDataset extends Job {
     UKV.put(_progress, new Progress(0,total));
   }
 
-  public static ParserSetup guessSetup(byte [] bits){
+  public static PSetupGuess guessSetup(byte [] bits){
     return guessSetup(bits,new ParserSetup(),true);
   }
 
-  public static ParserSetup guessSetup(byte [] bits, ParserSetup setup, boolean checkHeader){
-    ParserSetup res = null;
+
+  public static class GuessSetupTsk extends MRTask<GuessSetupTsk> {
+    final CustomParser.ParserSetup _userSetup;
+    final boolean _checkHeader;
+    Key _setupFromFile;
+    Key _hdrFromFile;
+    PSetupGuess _gSetup;
+    IcedArrayList<Key> _failedSetup;
+    IcedArrayList<Key> _conflicts;
+
+    public GuessSetupTsk(CustomParser.ParserSetup userSetup, boolean checkHeader){
+      _userSetup = userSetup;
+      _checkHeader = checkHeader;
+    }
+    public static final int MAX_ERRORS = 64;
+    @Override public void map(Key key) {
+      _failedSetup = new IcedArrayList<Key>();
+      _conflicts = new IcedArrayList<Key>();
+      byte [] bits = Utils.getFirstUnzipedBytes(key);
+      _gSetup = ParseDataset.guessSetup(bits, _userSetup, _checkHeader);
+      if(_gSetup == null || !_gSetup.valid())
+        _failedSetup.add(key);
+      else {
+        _setupFromFile = key;
+        if(_checkHeader && _gSetup._setup._header)
+          _hdrFromFile = key;
+      }
+    }
+
+    @Override public void reduce(GuessSetupTsk drt) {
+
+      if(_gSetup == null || !_gSetup.valid()){
+        _gSetup = drt._gSetup;
+        _hdrFromFile = drt._hdrFromFile;
+        _setupFromFile = drt._setupFromFile;
+      } else if(drt._gSetup.valid() && !_gSetup._setup.isCompatible(drt._gSetup._setup) ){
+        _conflicts.add(_setupFromFile);
+        _conflicts.add(drt._setupFromFile);
+        if(Math.random() > 0.5){
+          _gSetup = drt._gSetup; // setups are not compatible, select random setup to send up (thus, the most common setup should make it to the top)
+          _setupFromFile = drt._setupFromFile;
+          _hdrFromFile = drt._hdrFromFile;
+        }
+      } else if(drt._gSetup.valid()){ // merge the two setups
+        if(!_gSetup._setup._header && drt._gSetup._setup._header){
+          _gSetup._setup._header = true;
+          _hdrFromFile = drt._hdrFromFile;
+          _gSetup._setup._columnNames = drt._gSetup._setup._columnNames;
+        }
+        if(_gSetup._data.length < CustomParser.MAX_PREVIEW_LINES){
+          int n = _gSetup._data.length;
+          int m = Math.min(CustomParser.MAX_PREVIEW_LINES, n + drt._gSetup._data.length-1);
+          _gSetup._data = Arrays.copyOf(_gSetup._data, m);
+          for(int i = n; i < m; ++i){
+            _gSetup._data[i] = drt._gSetup._data[i-n+1];
+          }
+        }
+      }
+      // merge failures
+      if(_failedSetup == null){
+        _failedSetup = drt._failedSetup;
+        _conflicts = drt._conflicts;
+      } else {
+        _failedSetup.addAll(drt._failedSetup);
+        _conflicts.addAll(drt._conflicts);
+      }
+    }
+  }
+
+  public static CustomParser.PSetupGuess guessSetup(ArrayList<Key> keys,Key headerKey, CustomParser.ParserSetup setup, boolean checkHeader){
+    String [] colNames = null;
+    CustomParser.PSetupGuess gSetup = null;
+    boolean headerKeyPartOfParse = false;
+    if(headerKey != null ){
+      if(keys.contains(headerKey)){
+        headerKeyPartOfParse = true;
+        keys.remove(headerKey); // process the header key separately
+      }
+    }
+    if(keys.size() > 1){
+      GuessSetupTsk t = new GuessSetupTsk(setup,checkHeader);
+      Key [] ks = new Key[keys.size()];
+      keys.toArray(ks);
+      t.invoke(ks);
+      gSetup = t._gSetup;
+      if(!gSetup.valid())
+        throw new IllegalArgumentException("<h3>Can not parse:</h3>" +( setup._pType == CustomParser.ParserType.AUTO?"Did not finad any matching consistent parser setup, please specify manually":"None of the files is consistent with the given setup!"));
+      if((!t._failedSetup.isEmpty() || !t._conflicts.isEmpty())){
+        StringBuilder sb = new StringBuilder();
+        // run guess setup once more, this time knowing the global setup to get rid of conflicts (turns them into failures) and bogus failures (i.e. single line files with unexpected separator)
+        GuessSetupTsk t2 = new GuessSetupTsk(gSetup._setup, checkHeader);
+        Key [] keys2 = new Key[t._conflicts.size() + t._failedSetup.size()];
+        int i = 0;
+        for(Key k:t._conflicts)keys2[i++] = k;
+        for(Key k:t._failedSetup)keys2[i++] = k;
+        t2.invoke(keys2);
+        t._failedSetup = t2._failedSetup;
+        t._conflicts = t2._conflicts;
+      }
+      if(!t._conflicts.isEmpty())
+        System.out.println(setup);
+      assert t._conflicts.isEmpty(); // we should not have any conflicts here, either we failed to find any valid global setup, or conflicts should've been converted into failures in the second pass
+      if(!t._failedSetup.isEmpty()){
+        StringBuilder sb = new StringBuilder("<div>\n<b>Found " + t._failedSetup.size() + " files which are not compatible with the given setup:</b></div>");
+        if(t._failedSetup.size() > 5){
+          int n = t._failedSetup.size();
+          sb.append("<div>" + t._failedSetup.get(0) + "</div>");
+          sb.append("<div>" + t._failedSetup.get(1) + "</div>");
+          sb.append("<div>...</div>");
+          sb.append("<div>" + t._failedSetup.get(n-2) + "</div>");
+          sb.append("<div>" + t._failedSetup.get(n-1) + "</div>");
+        } else for(int i = 0; i < t._failedSetup.size();++i)
+          sb.append("<div>" + t._failedSetup.get(i) + "</div>");
+        throw new IllegalArgumentException("<h3>Can not parse:</h3>" + sb.toString());
+      }
+    } else
+      gSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(keys.get(0)),setup,checkHeader);
+    if(headerKey != null){ // separate headerKey
+      Value v = DKV.get(headerKey);
+      if(!v.isRawData()){ // either ValueArray or a Frame, just extract the headers
+        if(v.isArray()){
+          ValueArray ary = v.get();
+          colNames = ary.colNames();
+        } else if(v.isFrame()){
+          Frame fr = v.get();
+          colNames = fr._names;
+        } else
+          throw new IllegalArgumentException("Headers can only come from unparsed data, ValueArray or a frame. Got " + v.newInstance().getClass().getSimpleName());
+      } else { // check the hdr setup by parsing first bytes
+        CustomParser.ParserSetup lSetup = gSetup._setup.clone();
+        lSetup._header = true;
+        PSetupGuess hSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(headerKey),lSetup,false);
+        if(hSetup == null || hSetup._setup._ncols != setup._ncols) { // no match with global setup, try once more with general setup (e.g. header file can have different separator than the rest)
+          ParserSetup stp = new ParserSetup();
+          stp._header = true;
+          hSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(headerKey),stp,false);
+        }
+        if(hSetup._data != null && hSetup._data.length > 1){// the hdr file had both hdr and data, it better be part of the parse and represent the global parser setup
+          if(!headerKeyPartOfParse) throw new IllegalArgumentException(headerKey + " can not be used as a header file. Please either parse it separately first or include the file in the parse. Raw (unparsed) files can only be used as headers if they are included in the parse or they contain ONLY the header and NO DATA.");
+          else if(gSetup._setup.isCompatible(hSetup._setup)){
+            gSetup = hSetup;
+            keys.add(headerKey); // put the key back so the file is parsed!
+          }else
+            throw new IllegalArgumentException("Header file is not compatible with the other files.");
+        } else if(hSetup != null && hSetup._setup._columnNames != null)
+          colNames = hSetup._setup._columnNames;
+        else
+          throw new IllegalArgumentException("Invalid header file. I did not find any column names.");
+      }
+    }
+    // now set the header info in the final setup
+    if(colNames != null){
+      gSetup._setup._header = true;
+      gSetup._setup._columnNames = colNames;
+    }
+    return gSetup;
+  }
+
+
+
+  public static PSetupGuess guessSetup(byte [] bits, ParserSetup setup, boolean checkHeader){
+    ArrayList<PSetupGuess> guesses = new ArrayList<CustomParser.PSetupGuess>();
+    PSetupGuess res = null;
     if(setup == null)setup = new ParserSetup();
     switch(setup._pType){
       case CSV:
@@ -57,19 +221,23 @@ public final class ParseDataset extends Job {
         return XlsParser.guessSetup(bits);
       case AUTO:
         try{
-          if((res = XlsParser.guessSetup(bits)) != null)
-            return res;
+          if((res = XlsParser.guessSetup(bits)) != null && res.valid())
+            if(!res.hasErrors())return res;
+            else guesses.add(res);
         }catch(Exception e){}
         try{
-          if((res = SVMLightParser.guessSetup(bits)) != null)
-            return res;
+          if((res = SVMLightParser.guessSetup(bits)) != null && res.valid())
+            if(!res.hasErrors())return res;
+            else guesses.add(res);
         }catch(Exception e){}
         try{
-          return CsvParser.guessSetup(bits,setup,true);
-        }catch(Exception e){e.printStackTrace();}
-        throw new RuntimeException("Can't recognize the file type.");
+          if((res = CsvParser.guessSetup(bits,setup,checkHeader)) != null && res.valid())
+            if(!res.hasErrors())return res;
+            else guesses.add(res);
+        }catch(Exception e){}
+        return res;
       default:
-        throw H2O.unimpl();
+        throw new IllegalArgumentException(setup._pType + " is not implemented.");
     }
   }
 
@@ -84,8 +252,13 @@ public final class ParseDataset extends Job {
   }
 
   public static void parse(ParseDataset job, Key [] keys, CustomParser.ParserSetup setup){
-    if(setup == null)
-      setup = guessSetup(Utils.getFirstUnzipedBytes(keys[0]));
+    if(setup == null){
+      ArrayList<Key> ks = new ArrayList<Key>(keys.length);
+      for (Key k:keys)ks.add(k);
+      PSetupGuess guess = guessSetup(ks, null, null, true);
+      if(!guess.valid())throw new RuntimeException("can not parse ethis dataset, did not find working setup");
+      setup = guess._setup;
+    }
     int j = 0;
     UKV.remove(job.dest());// remove any previous instance and insert a sentinel (to ensure no one has been writing to the same keys during our parse!
     Key [] nonEmptyKeys = new Key[keys.length];
@@ -218,7 +391,7 @@ public final class ParseDataset extends Job {
     public DRemoteTask dfork( Key... keys ) {
       _keys = keys;
       if(_parserSetup == null)
-        _parserSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(keys[0]));
+        _parserSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(keys[0]))._setup;
       H2O.submitTask(this);
       return this;
     }
@@ -250,7 +423,7 @@ public final class ParseDataset extends Job {
         final Key key = _keys[_idx];
         Value v = DKV.get(key);
         assert v != null;
-        ParserSetup localSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(v), _parserSetup,true);
+        ParserSetup localSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(v), _parserSetup,false)._setup;
         if(!_parserSetup.isCompatible(localSetup))throw new ParseException("Parsing incompatible files. " + _parserSetup.toString() + " is not compatible with " + localSetup.toString());
         _fileInfo[_idx] = new FileInfo();
         _fileInfo[_idx]._ikey = key;

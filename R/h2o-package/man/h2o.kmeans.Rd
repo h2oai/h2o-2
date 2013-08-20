@@ -57,11 +57,14 @@ An object of class \code{\linkS4class{H2OKMeansModel}} with slots key, data, and
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-prostate.hex = h2o.importFile(localH2O, path = "../smalldata/logreg/prostate.csv")
+localH2O = new("H2OClient")
+h2o.checkClient(localH2O)
+prosPath = system.file("extdata", "prostate.csv", package="h2o")
+prostate.hex = h2o.importFile(localH2O, path = prosPath)
 h2o.kmeans(data = prostate.hex, centers = 10, cols = c("AGE", "RACE", "VOL", "GLEASON"))
-
-covtype.hex = h2o.importFile(localH2O, path = "../smalldata/covtype/covtype.20k.data")
-covtype.km = h2o.kmeans(data = covtype.hex, centers = 10, cols = c(1, 2, 3))
+covPath = system.file("extdata", "covtype.csv", package="h2o")
+covtype.hex = h2o.importFile(localH2O, path = covPath)
+covtype.km = h2o.kmeans(data = covtype.hex, centers = 5, cols = c(1, 2, 3))
 print(covtype.km)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

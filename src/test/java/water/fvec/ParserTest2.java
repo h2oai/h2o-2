@@ -397,11 +397,11 @@ public class ParserTest2 extends TestUtil {
     assertEquals(9,nlines);
     for(int i = 0; i < nlines-2; ++i)
       for(Vec v:fr._vecs)
-        assertTrue("error at line "+i+", vec " + v.elem2BV(0).getClass().getSimpleName(),!v.isNA(v.at(i)) && !v.isNA(v.at8(i)));
+        assertTrue("error at line "+i+", vec " + v.elem2BV(0).getClass().getSimpleName(),!v.valueIsNA(v.at(i)) && !v.valueIsNA(v.at8(i)));
     int j = 0;
     for(Vec v:fr._vecs){
       for(int i = nlines-2; i < nlines; ++i){
-        assertTrue(i + ", " + j + ":" + v.at(i) + ", " + v.at8(i),v.isNA(v.at(i)) && v.isNA(v.at8(i)));
+        assertTrue(i + ", " + j + ":" + v.at(i) + ", " + v.at8(i),v.valueIsNA(v.at(i)) && v.valueIsNA(v.at8(i)));
 //        v.replaceNAs(1.0, 2);
 //        assertTrue(!v.isNA(v.at(i)) && !v.isNA(v.at8(i)));
 //        assertTrue(v.at(i) == 1.0 && v.at8(i) == 2);

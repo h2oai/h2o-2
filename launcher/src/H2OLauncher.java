@@ -1,523 +1,338 @@
-import java.net.URI;
-import java.util.Random;
-import java.awt.*;
-import java.awt.event.*;
 import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
-import java.io.IOException;
+import java.net.URI;
+import java.util.Random;
 
-public class H2OLauncher extends JPanel implements ActionListener {
-	private static H2OLauncher h2oLauncher;
-	
-	protected JTextField cloudField;
-	protected JLabel h2oStatusLabel;
-	protected JTextField portField;
-	protected JTextField xmxField;
-	protected JButton startButton;
-	protected JButton stopButton;
-	protected JTextField browserField;
-	protected JTextField resultField;
-	protected JTextArea textArea;
+/**
+ * Created with IntelliJ IDEA.
+ * User: tomk
+ * Date: 8/15/13
+ * Time: 12:40 AM
+ * To change this template use File | Settings | File Templates.
+ */
+public class H2OLauncher implements ActionListener {
+  // Stuff managed by the GUI builder BEGIN.
+  private JTextField xmxField;
+  private JButton hexdataButton;
+  private JButton startStopButton;
+  private JPanel panel;
+  // Stuff managed by the GUI builder END.
 
-	private Thread procManagerThread;
-	private Process proc;
-	
-	private final static String CLOUD_COMMAND = "cloud";
-	private final static String PORT_COMMAND = "port";
-	private final static String XMX_COMMAND = "xmx";
-	private final static String START_COMMAND = "start";
-	private final static String STOP_COMMAND = "stop";
+  private static H2OLauncher h2oLauncher;
 
-	private enum H2oStatus {
-		RUNNING,
-		NOT_RUNNING
-	}
+  private static Thread procManagerThread;
+  private static Process proc;
 
-	private final static String H2O_STATUS_RUNNING = "H2O status:  Running";
-	private final static String H2O_STATUS_NOT_RUNNING = "H2O status:  Not running";
+  private final static String XMX_COMMAND = "xmx";
+  private final static String START_COMMAND = "start";
+  private final static String STOP_COMMAND = "stop";
 
-	private H2oStatus status;
+  private enum H2oStatus {
+    RUNNING,
+    NOT_RUNNING
+  }
 
-	private boolean isPortTaken (int port) {
-		boolean portTaken = false;
-		
-		ServerSocket socket = null;
-		try {
-			socket = new ServerSocket(port);
-		}
-		catch (IOException e) {
-			portTaken = true;
-		}
-		finally {
-			if (socket != null) {
-				try {
-					socket.close();
-				} catch (IOException e) {
+  private static H2oStatus status;
+
+  public H2OLauncher() {
+    startStopButton.addActionListener(new ActionListener() {
+      @Override
+      public void actionPerformed(ActionEvent actionEvent) {
+        //To change body of implemented methods use File | Settings | File Templates.
+        if (status == H2oStatus.RUNNING) {
+          stopProcess();
+        }
+        else {
+          startProcess();
+        }
+        recalcInBackground();
+      }
+    });
+    xmxField.addActionListener(new ActionListener() {
+      @Override
+      public void actionPerformed(ActionEvent actionEvent) {
+        //To change body of implemented methods use File | Settings | File Templates.
+        String s = xmxField.getText();
+        String s2 = s.trim();
+        if (s2.matches("^[1-9][0-9]*$")) {
+          updateResult ("Xmx set successfully");
+        }
+        else {
+          xmxField.setText("1");
+          updateResult("Xmx must be of the form nnnm or nnng (e.g. 1024m, 2g)");
+        }
+        recalcInBackground();
+      }
+    });
+    hexdataButton.addActionListener(new ActionListener() {
+      @Override
+      public void actionPerformed(ActionEvent actionEvent) {
+        try {
+          URI uri = new URI("http://docs.0xdata.com");
+          Desktop.getDesktop().browse(uri);
+        } catch (Exception e) {
+        }
+      }
+    });
+  }
+
+  private boolean isPortTaken (int port) {
+    boolean portTaken = false;
+
+    ServerSocket socket = null;
+    try {
+      socket = new ServerSocket(port);
+    }
+    catch (IOException e) {
+      portTaken = true;
+    }
+    finally {
+      if (socket != null) {
+        try {
+          socket.close();
+        } catch (IOException e) {
 					/* e.printStackTrace(); */
-				}
-			}
-		}
-		
-		return portTaken;
-	}
+        }
+      }
+    }
 
-	private class ProcManagerThread extends Thread {
-		private H2OLauncher _launcher;
-		private Process _p;
-		
-		ProcManagerThread (H2OLauncher launcher, Process p) {
-			_launcher = launcher;
-			_p = p;
-		}
-		
-		public void run() {			
-			BufferedReader r = new BufferedReader (new InputStreamReader (_p.getInputStream()));
-			while (true) {
-				try {
-					String s = r.readLine();
-					if (s == null) {
-						_p.waitFor();
-						_launcher.notifyProcessExit();
-						break;
-					}
-					
-					notifyProcessOutput (s + "\n");
-					
-					if (s.contains("Listening for HTTP and REST traffic")) {
-						String s2 = s.replaceFirst ("^.*http", "http");
-						_launcher.notifyHttp (s2);						
-					}
-				}	
-				catch (Exception e) {
-					_p.destroy();
-					_launcher.notifyProcessExit();
-					break;
-				}
-			}			
-	    }
-	}
+    return portTaken;
+  }
 
-	private void recalcInBackground() {
-		javax.swing.SwingUtilities.invokeLater(new Runnable() {
-			public void run() {
-				recalc();
-			}
-		});		
-	}
-	
-	public void notifyProcessOutput(final String s) {
-		javax.swing.SwingUtilities.invokeLater(new Runnable() {
-			public void run() {
-				textArea.append(s);
-			}
-		});
-	}
-	
-	public void notifyHttp(final String s) {
-		javax.swing.SwingUtilities.invokeLater(new Runnable() {
-			public void run() {
-				browserField.setText(s);
-                try {
-                    URI uri = new URI(s);
-                    Desktop.getDesktop().browse(uri);
-                }
-                catch (Exception e) {
-                }
-			}
-		});
-	}
-	
-	public void notifyProcessExit() {
-		synchronized (this) {
-			procManagerThread = null;
-			proc = null;
-			status = H2oStatus.NOT_RUNNING;
-		}
-		
-		notifyProcessOutput ("\nH2O PROCESS EXITED\n\n");
-		notifyHttp("");
-		recalcInBackground();
-	}
-	
-	private void startProcess() {
-		synchronized (this) {
-			if (procManagerThread != null) {
-				updateResult ("Error: procManagerThread already exists");
-				return;
-			}
-		}
-		
-		try {
-			File currentDirectory = new File(new File(".").getAbsolutePath());
-                        String javaHome = System.getProperty("java.home");
-			String javaBinary = javaHome + File.separator + "bin" + File.separator + "java";
-			String h2oJar = currentDirectory.getAbsolutePath().toString() + File.separator + "h2o.jar";
-			ProcessBuilder pb = new ProcessBuilder(
-					javaBinary,
-					"-Xmx" + xmxField.getText().trim(),
-					"-jar", h2oJar,
-					"-name", cloudField.getText().trim(),
-					"-port", portField.getText().trim()
-					);
-			pb.redirectErrorStream(true);
-			
-			Process p = pb.start();
-			synchronized (this) {
-				proc = p;
-				ProcManagerThread t;
-				t = new ProcManagerThread (this, proc);
-				t.start();
-				procManagerThread = t;
-				status = H2oStatus.RUNNING;
-			}
-			
-			updateResult("H2O started");
-		}
-		catch (Exception e) {
-			updateResult ("Failed to start H2O (process start failed)");
-			String s = e.getMessage() + "\n" + e.getStackTrace();
-			textArea.setText(s);
-		}
-	}
-	
-	private void stopProcess() {
-		synchronized (this) {
-			if (procManagerThread == null) {
-				updateResult ("Error: procManagerThread does not");
-			}
-			
-			if (proc == null) {
-				updateResult ("Error: proc does not exist, cleaning up as best as possible");
-				procManagerThread = null;
-				status = H2oStatus.NOT_RUNNING;
-				return;
-			}
+  private class ProcManagerThread extends Thread {
+    private H2OLauncher _launcher;
+    private Process _p;
 
-			proc.destroy();
+    ProcManagerThread (H2OLauncher launcher, Process p) {
+      _launcher = launcher;
+      _p = p;
+    }
 
-			updateResult("H2O stopped");
-			notifyHttp("");
-		}
-	}
-	
-	// Called when this JVM is exiting.
-	public void destroyProcess() {
-		synchronized (this) {
-			if (proc == null) {
-				return;
-			}
+    public void run() {
+      BufferedReader r = new BufferedReader (new InputStreamReader(_p.getInputStream()));
+      while (true) {
+        try {
+          String s = r.readLine();
+          if (s == null) {
+            _p.waitFor();
+            _launcher.notifyProcessExit();
+            break;
+          }
 
-			proc.destroy();
-		}
-	}
-	
-	private GridBagConstraints makeConstraints() {
-		GridBagConstraints c = new GridBagConstraints();    	
-		c.insets = new Insets(0, 10, 10, 10);
-		return c;
-	}
+          notifyProcessOutput (s + "\n");
 
-	private GridBagConstraints makeLabelConstraints() {
-		GridBagConstraints c = makeConstraints();
-		c.anchor = GridBagConstraints.EAST;
-		c.gridx = 0;
-		return c;
-	}    
+          if (s.contains("Listening for HTTP and REST traffic")) {
+            String s2 = s.replaceFirst ("^.*http", "http");
+            _launcher.notifyHttp (s2);
+          }
+        }
+        catch (Exception e) {
+          _p.destroy();
+          _launcher.notifyProcessExit();
+          break;
+        }
+      }
+    }
+  }
 
-	private GridBagConstraints makeFieldConstraints() {
-		GridBagConstraints c = makeConstraints();
-		c.anchor = GridBagConstraints.WEST;
-		c.gridx = 1;
-		return c;
-	}    
+  private void recalcInBackground() {
+    javax.swing.SwingUtilities.invokeLater(new Runnable() {
+      public void run() {
+        recalc();
+      }
+    });
+  }
 
-	private GridBagConstraints makeButtonConstraints() {
-		GridBagConstraints c = new GridBagConstraints();
-		c.anchor = GridBagConstraints.CENTER;
-		c.gridx = 2;
-		return c;
-	}
+  public void notifyProcessOutput(final String s) {
+    javax.swing.SwingUtilities.invokeLater(new Runnable() {
+      public void run() {
+        // textArea.append(s);
+      }
+    });
+  }
 
-	private void myAdd(Component a, Object b) {
-		add (a, b);
-	}
+  public void notifyHttp(final String s) {
+    javax.swing.SwingUtilities.invokeLater(new Runnable() {
+      public void run() {
+        // browserField.setText(s);
+        if ((s != null) && (s.length() > 0)) {
+          try {
+            URI uri = new URI(s);
+            Desktop.getDesktop().browse(uri);
+          } catch (Exception e) {
+          }
+        }
+      }
+    });
+  }
 
-	private void addPadding() {
-		{
-			JLabel padding = new JLabel (" ");
-			GridBagConstraints c = makeLabelConstraints();
-			c.gridwidth = GridBagConstraints.REMAINDER;
-			c.fill = GridBagConstraints.HORIZONTAL;
-			myAdd(padding, c);
-		}
-	}
+  public void notifyProcessExit() {
+    synchronized (this) {
+      procManagerThread = null;
+      proc = null;
+      status = H2oStatus.NOT_RUNNING;
+    }
 
-	public H2OLauncher() {
-		super(new GridBagLayout());
+    notifyProcessOutput ("\nH2O PROCESS EXITED\n\n");
+    notifyHttp("");
+    recalcInBackground();
+  }
 
-		status = H2oStatus.NOT_RUNNING;
+  private void startProcess() {
+    synchronized (this) {
+      if (procManagerThread != null) {
+        updateResult ("Error: procManagerThread already exists");
+        return;
+      }
+    }
 
-		Color colorNotEditable = new Color (230, 230, 230);
+    try {
+      String cloudName;
+      {
+        Random r = new Random();
+        Integer randValue = new Integer(r.nextInt());
+        if (randValue < 0) {
+          randValue = -randValue;
+        }
+        cloudName = "h2o_cluster_" + (randValue.toString());
+      }
 
-		addPadding();
+      File currentDirectory = new File(new File(".").getAbsolutePath());
+      String javaHome = System.getProperty("java.home");
+      String javaBinary = javaHome + File.separator + "bin" + File.separator + "java";
+      String h2oJar = currentDirectory.getAbsolutePath().toString() + File.separator + "h2o.jar";
+      // String h2oJar = "/Users/tomk/0xdata/ws/h2o/target/h2o.jar";
+      ProcessBuilder pb = new ProcessBuilder(
+              javaBinary,
+              "-Xmx" + xmxField.getText().trim() + "g",
+              "-jar", h2oJar,
+              "-name", cloudName,
+              "-ip", "127.0.0.1",
+              "-port", "54321"
+      );
+      pb.redirectErrorStream(true);
 
-		JLabel cloudLabel;
-		cloudLabel = new JLabel ("H2O cluster name");
-		cloudField = new JTextField (20);
-		cloudField.setToolTipText("H2O nodes must have the same cluster name in order to form a cluster.  By default, a random name is chosen to prevent you from accidentally joining an existing cluster.");
-		cloudField.addActionListener(this);
-		cloudField.setActionCommand(CLOUD_COMMAND);
-		{
-			Random r = new Random();
-			Integer randValue = new Integer(r.nextInt());
-			if (randValue < 0) {
-				randValue = -randValue;
-			}
-			String s = "h2o_cluster_" + (randValue.toString());
-			cloudField.setText (s);
+      Process p = pb.start();
+      synchronized (this) {
+        proc = p;
+        ProcManagerThread t;
+        t = new ProcManagerThread (this, proc);
+        t.start();
+        procManagerThread = t;
+        status = H2oStatus.RUNNING;
+      }
 
-			myAdd(cloudLabel, makeLabelConstraints());
-			myAdd(cloudField, makeFieldConstraints());
-		}
+      updateResult("H2O started");
+    }
+    catch (Exception e) {
+      updateResult ("Failed to start H2O (process start failed)");
+      String s = e.getMessage() + "\n" + e.getStackTrace();
+      // textArea.setText(s);
+    }
+  }
 
-		JLabel portLabel;
-		portLabel = new JLabel ("Browser port");
-		portField = new JTextField (6);
-		portField.setToolTipText("The embedded web server inside the H2O node will listen on this port.");
-		portField.setText ("54321");
-		portField.addActionListener(this);
-		portField.setActionCommand(PORT_COMMAND);
-		{
-			myAdd(portLabel, makeLabelConstraints());
-			myAdd(portField, makeFieldConstraints());
-		}
+  private void stopProcess() {
+    synchronized (this) {
+      //if (procManagerThread == null) {
+      //  updateResult ("Error: procManagerThread does not");
+      //}
 
-		JLabel xmxLabel = new JLabel ("H2O Java heap size (Xmx)");
-		xmxField = new JTextField (6);
-		xmxField.setToolTipText("For best performance, this value should be at least roughly four times the size of your data set.");
-		xmxField.setText("2g");
-		xmxField.addActionListener(this);
-		xmxField.setActionCommand(XMX_COMMAND);
-		{
-			myAdd(xmxLabel, makeLabelConstraints());
-			myAdd(xmxField, makeFieldConstraints());
-		}
+      if (proc == null) {
+        updateResult ("Error: proc does not exist, cleaning up as best as possible");
+        procManagerThread = null;
+        status = H2oStatus.NOT_RUNNING;
+        return;
+      }
 
-		// Buttons and status.
-		{
-            float buttonFontSize = 20f;
+      proc.destroy();
 
-			startButton = new JButton ("Start H2O");
-            startButton.setFont(startButton.getFont().deriveFont(buttonFontSize));
-			startButton.setToolTipText("Start a new Java process running H2O.");
-			startButton.addActionListener(this);
-			startButton.setActionCommand (START_COMMAND);
-			int y = 1;
-			{
-				GridBagConstraints c = makeButtonConstraints();
-				c.gridy = y++;
-				myAdd(startButton, c);        	
-			}
-			
-			stopButton = new JButton ("Stop H2O");
-            stopButton.setFont(stopButton.getFont().deriveFont(buttonFontSize));
-			stopButton.setToolTipText("Stop the currently running H2O Java process.");
-			stopButton.addActionListener(this);
-			stopButton.setActionCommand (STOP_COMMAND);
-			{
-				GridBagConstraints c = makeButtonConstraints();
-				c.gridy = y++;
-				myAdd(stopButton, c);        	
-			}
+      updateResult("H2O stopped");
+      notifyHttp("");
+    }
+  }
 
-			h2oStatusLabel = new JLabel ("Blah blah");
-			{
-				GridBagConstraints c = makeButtonConstraints();
-				c.gridy = y++;
-				myAdd(h2oStatusLabel, c);
-			}
-		}
+  // Called when this JVM is exiting.
+  public void destroyProcess() {
+    synchronized (this) {
+      if (proc == null) {
+        return;
+      }
 
-		addPadding();
+      proc.destroy();
+    }
+  }
 
-                final int textAreaHeightInLines = 12;
-		final int textAreaWidthInCharacters = 60;
-		final int wideFieldDiffInCharacters = 0;
+  private void updateResult (String s) {
+    // resultField.setText(s);
+  }
 
-		JLabel browserLabel = new JLabel("H2O browser URL");
-		browserField = new JTextField(textAreaWidthInCharacters-wideFieldDiffInCharacters);
-		browserField.setToolTipText("After starting H2O, point your browser to this URL to interact with it.");
-		browserField.setEditable(false);
-		browserField.setBackground(colorNotEditable);
-		{
-			myAdd(browserLabel, makeLabelConstraints());
+  public void actionPerformed(ActionEvent evt) {
+    String actionCommand = evt.getActionCommand();
 
-			GridBagConstraints c = makeFieldConstraints();
-			c.gridwidth = GridBagConstraints.REMAINDER;
-			c.fill = GridBagConstraints.BOTH;
-			myAdd(browserField,c);
-		}
+    if (actionCommand.equals (XMX_COMMAND)) {
+      String s = xmxField.getText();
+      String s2 = s.trim();
+      if (s2.matches("^[1-9][0-9]*$")) {
+        updateResult ("Xmx set successfully");
+      }
+      else {
+        updateResult ("Xmx must be of the form nnnm or nnng (e.g. 1024m, 2g)");
+      }
+    }
+    else if (actionCommand.equals (START_COMMAND)) {
+      startProcess();
+    }
+    else if (actionCommand.equals (STOP_COMMAND)) {
+      stopProcess();
+    }
+    else {
+      System.err.println ("Unknown actionCommand");
+    }
 
-		JLabel resultLabel = new JLabel("Last operation result");
-		resultField = new JTextField(textAreaWidthInCharacters-wideFieldDiffInCharacters);
-		resultField.setToolTipText("Information about whether the last thing you did succeeded or not");
-		resultField.setEditable(false);
-		resultField.setBackground(colorNotEditable);
-		{
-			myAdd(resultLabel, makeLabelConstraints());
+    recalcInBackground();
+  }
 
-			GridBagConstraints c = makeFieldConstraints();
-			c.gridwidth = GridBagConstraints.REMAINDER;
-			c.fill = GridBagConstraints.BOTH;
-			myAdd(resultField, c);
-		}
+  private void recalc() {
+    if (status == H2oStatus.RUNNING) {
+      // h2oStatusLabel.setText(H2O_STATUS_RUNNING);
+      startStopButton.setText("Stop H2O");
+    }
+    else if (status == H2oStatus.NOT_RUNNING) {
+      // h2oStatusLabel.setText(H2O_STATUS_NOT_RUNNING);
+      startStopButton.setText("Start H2O");
+    }
 
-		addPadding();
+    startStopButton.requestFocusInWindow();
+  }
 
-		{
-			JLabel outputLabel = new JLabel("(H2O stdout and stderr output)");
-			myAdd(outputLabel, makeLabelConstraints());
-		}
+  public static void main(String[] args) {
+    JFrame frame = new JFrame("H2O");
+    h2oLauncher = new H2OLauncher();
+    frame.setContentPane(h2oLauncher.panel);
+    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    frame.pack();
+    frame.setVisible(true);
 
-		textArea = new JTextArea(textAreaHeightInLines, textAreaWidthInCharacters);
-		textArea.setEditable(false);
-		JScrollPane scrollPane = new JScrollPane(textArea);
-		scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-		{
-			GridBagConstraints c = makeLabelConstraints();
-			c.gridwidth = GridBagConstraints.REMAINDER;
-			c.fill = GridBagConstraints.BOTH;
-			myAdd(scrollPane, c);
-		}
+    status = H2oStatus.NOT_RUNNING;
+    h2oLauncher.recalcInBackground();
 
-		validatePort();
-		recalcInBackground();
-	}
-
-	private void updateResult (String s) {
-		resultField.setText(s);
-	}
-	
-	private boolean validatePort() {
-		int port = Integer.parseInt(portField.getText().trim());
-		if (isPortTaken (port)) {
-			updateResult ("Port " + portField.getText().trim() + " is already taken by an existing process.  Is H2O already running?");
-			return false;
-		}
-		
-		return true;
-	}
-	
-	public void actionPerformed(ActionEvent evt) {
-		String actionCommand = evt.getActionCommand();
-
-		if (actionCommand.equals (CLOUD_COMMAND)) {
-			String s = cloudField.getText();
-			String s2 = s.trim();
-			if (s2.matches("^[a-zA-Z][a-zA-Z0-9_]*$")) {
-				updateResult ("Cloud name set successfully");
-			}
-			else {
-				updateResult ("Cloud name must start with a letter and contain only letters, numbers and underscores");
-			}
-		}
-		else if (actionCommand.equals (PORT_COMMAND)) {
-			String s = portField.getText();
-			String s2 = s.trim();
-			Integer i = Integer.parseInt (s);
-			String s3 = i.toString();
-			
-			if (! s2.equals (s3)) {
-				updateResult ("Illegal characters in port");
-			}
-			else if (i < 1) {
-				updateResult ("Port must be greater than 0");
-			}
-			else if (i >= 65535) {
-				updateResult ("Port must be less than 65535");
-			}
-			else if (! validatePort()) {
-				// no nothing, validatePort calls updateResult directly.
-			}
-			else {
-				updateResult ("Port set successfully");
-			}
-		}
-		else if (actionCommand.equals (XMX_COMMAND)) {
-			String s = xmxField.getText();
-			String s2 = s.trim();
-			if (s2.matches("^[1-9][0-9]*[MGmg]$")) {
-				updateResult ("Xmx set successfully");
-			}
-			else {
-				updateResult ("Xmx must be of the form nnnm or nnng (e.g. 1024m, 2g)");
-			}
-		}
-		else if (actionCommand.equals (START_COMMAND)) {
-			startProcess();
-		}
-		else if (actionCommand.equals (STOP_COMMAND)) {
-			stopProcess();
-		}
-		else {
-			System.err.println ("Unknown actionCommand");
-		}
-
-		recalcInBackground();
-	}
-
-	private void recalc() {
-		if (status == H2oStatus.RUNNING) {
-			h2oStatusLabel.setText(H2O_STATUS_RUNNING);
-			startButton.setEnabled(false);
-			stopButton.setEnabled(true);
-			stopButton.requestFocusInWindow();
-		}
-		else if (status == H2oStatus.NOT_RUNNING) {
-			h2oStatusLabel.setText(H2O_STATUS_NOT_RUNNING);
-			startButton.setEnabled(true);
-			stopButton.setEnabled(false);
-			startButton.requestFocusInWindow();
-		}		
-	}
-
-	// Call this from UI thread.
-	private static void createAndShowGUI() {
-		//Create and set up the window.
-		JFrame frame = new JFrame("H2O Launcher");
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-		//Add contents to the window.
-		h2oLauncher = new H2OLauncher();
-		frame.add(h2oLauncher);
-
-		//Display the window.
-		frame.pack();
-		frame.setVisible(true);
-	}
-
-	public static void main(String[] args) {
-		//Schedule a job for the event dispatch thread:
-		//creating and showing this application's GUI.
-		javax.swing.SwingUtilities.invokeLater(new Runnable() {
-			public void run() {
-				createAndShowGUI();
-			}
-		});
-		
-		final Thread mainThread = Thread.currentThread();
-		Runtime.getRuntime().addShutdownHook(new Thread() {
-		    public void run() {
-		    	try {
-		    		h2oLauncher.destroyProcess();
-		    		mainThread.join();
-		    	}
-		    	catch (Exception e) {
-		    	}
-		    }
-		});
-	}
+    final Thread mainThread = Thread.currentThread();
+    Runtime.getRuntime().addShutdownHook(new Thread() {
+      public void run() {
+        try {
+          h2oLauncher.destroyProcess();
+          mainThread.join();
+        }
+        catch (Exception e) {
+        }
+      }
+    });
+  }
 }

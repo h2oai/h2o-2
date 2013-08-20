@@ -53,8 +53,10 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 }
 \examples{
 localH2O = new("H2OClient", ip = "localhost", port = 54321)
-benign.hex = h2o.importFile(localH2O, path = "../smalldata/logreg/benign.csv", key = "benign.hex")
-summary(benign.hex)
+h2o.checkClient(localH2O)
+irisPath = system.file("extdata", "iris.csv", package="h2o")
+iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
+summary(iris.hex)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

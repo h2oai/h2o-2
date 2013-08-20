@@ -288,7 +288,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
           try { Thread.sleep(500); } catch (InterruptedException ie) {}
         }
       } // end of while(true)
-      if( dt instanceof DRemoteTask || dt instanceof MRTask2 )
+      if( (dt instanceof DRemoteTask || dt instanceof MRTask2) && dt.logVerbose() )
         Log.info("Done  remote task#"+_tsknum+" "+dt.getClass()+" to "+_client);
       _client.record_task_answer(this); // Setup for retrying Ack & AckAck
     }
@@ -371,7 +371,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       }
       RPCCall rpc2 = ab._h2o.record_task(rpc);
       if( rpc2==null ) {        // Atomically insert (to avoid double-work)
-        if( rpc._dt instanceof DRemoteTask || rpc._dt instanceof MRTask2 )
+        if( (rpc._dt instanceof DRemoteTask || rpc._dt instanceof MRTask2) && rpc._dt.logVerbose() )
           Log.info("Start remote task#"+task+" "+rpc._dt.getClass()+" from "+ab._h2o);
         H2O.submitTask(rpc);    // And execute!
       } else {                  // Else lost the task-insertion race

@@ -315,7 +315,6 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     if(t._parser._setup != null) {
       t._ncolumns = parser._setup._ncols;
       t._colNames = parser._setup._columnNames;
-      System.out.println("Column names = " + Arrays.toString(parser._setup._columnNames));
     }
     return t;
   }
@@ -334,8 +333,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
    * @throws Exception
    */
   public void passOne() {
-    boolean arraylet;
-    if((arraylet =  _sourceDataset.isArray())) {
+    if((_sourceDataset.isArray())) {
       ValueArray ary = _sourceDataset.get();
       _nrows = new long[(int)ary.chunks()+1];
     } else
@@ -1098,6 +1096,6 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     return new GregorianCalendar(yy,MM,dd).getTimeInMillis();
   }
 
-  @Override public void invalidLine(int lineNum) {} //TODO
+  @Override public void invalidLine(String err) {newLine();} //TODO
   @Override public void invalidValue(int line, int col) {} //TODO
 }

@@ -20,14 +20,18 @@ public final class ParseDataset2 extends Job {
   public final Key  _progress;  // Job progress Key
 
   // --------------------------------------------------------------------------
-  // Parse an array of csv input/file keys into an array of distributed output Vecs.
+  // Parse an array of csv input/file keys into an array of distributed output Vecs
   public static Frame parse(Key okey, Key [] keys) {
     // TODO, get global setup from all files!
     Key k = keys[0];
     ByteVec v = (ByteVec)getVec(k);
     byte [] bits = v.elem2BV(0)._mem;
     Compression cpr = Utils.guessCompressionMethod(bits);
-    CustomParser.ParserSetup globalSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), new ParserSetup(),true);
+    CustomParser.ParserSetup globalSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), new ParserSetup(),true)._setup;
+    return forkParseDataset(okey, keys, globalSetup).get();
+  }
+
+  public static Frame parse(Key okey, Key [] keys, CustomParser.ParserSetup globalSetup) {
     return forkParseDataset(okey, keys, globalSetup).get();
   }
   // Same parse, as a backgroundable Job
@@ -235,7 +239,7 @@ public final class ParseDataset2 extends Job {
     int [] ecols = uzpt.enumCols();
     String[] names = new String[uzpt._vecs.length];
     for( int i=0; i<names.length; i++ )
-      names[i] = setup._header ? setup._data[0][i] : (""+i);
+      names[i] = setup._header ? setup._columnNames[i] : (""+i);
 
     // Rollup all the enum columns; uniformly renumber enums per chunk, etc.
     if( ecols != null && ecols.length > 0 ) {
@@ -257,7 +261,7 @@ public final class ParseDataset2 extends Job {
     ByteVec vec = (ByteVec) getVec(key);
     byte [] bits = vec.elem2BV(0)._mem;
     Compression cpr = Utils.guessCompressionMethod(bits);
-    return ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), setup,checkHeader);
+    return ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), setup,checkHeader)._setup;
   }
   // --------------------------------------------------------------------------
   // We want to do a standard MRTask with a collection of file-keys (so the
@@ -281,7 +285,7 @@ public final class ParseDataset2 extends Job {
       ByteVec vec = (ByteVec) getVec(key);
       byte [] bits = vec.elem2BV(0)._mem;
       Compression cpr = Utils.guessCompressionMethod(bits);
-      CustomParser.ParserSetup localSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), _setup,true);
+      CustomParser.ParserSetup localSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), _setup,false)._setup;
       // Local setup: nearly the same as the global all-files setup, but maybe
       // has the header-flag changed.
       if(!_setup.isCompatible(localSetup)) {
@@ -295,7 +299,7 @@ public final class ParseDataset2 extends Job {
           has_hdr = localSetup._columnNames[i].equalsIgnoreCase(_setup._columnNames[i]);
         if( !has_hdr )          // Headers not compatible?
           // Then treat as no-headers, i.e., parse it as a normal row
-          localSetup = new CustomParser.ParserSetup(ParserType.CSV,localSetup._separator, false, localSetup._data);
+          localSetup = new CustomParser.ParserSetup(ParserType.CSV,localSetup._separator, false);
       }
       final int ncols = _setup._ncols;
       _vecs = new Vec[ncols];
@@ -517,7 +521,9 @@ public final class ParseDataset2 extends Job {
     }
     public void setColumnNames(String [] names){}
     @Override public final void rollbackLine() {}
-    @Override public void invalidLine(int lineNum) {} // TODO
+    @Override public void invalidLine(String err) {
+      newLine();
+    } // TODO
     @Override public void invalidValue(int line, int col) {} // TODO
   }
 

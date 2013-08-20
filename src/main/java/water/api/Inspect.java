@@ -4,17 +4,14 @@ import hex.DGLM.GLMModel;
 import hex.*;
 import hex.rf.RFModel;
 
-import java.io.*;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.zip.*;
+
 import water.*;
 import water.ValueArray.Column;
 import water.api.GLMProgressPage.GLMBuilder;
 import water.fvec.*;
 import water.parser.*;
-
-import water.util.Log;
+import water.parser.CustomParser.PSetupGuess;
 import water.util.Utils;
 
 import com.google.gson.*;
@@ -136,15 +133,15 @@ public class Inspect extends Request {
     result.addProperty(VALUE_TYPE, "unparsed");
     byte [] bits = v.getFirstBytes();
     bits = Utils.unzipBytes(bits, Utils.guessCompressionMethod(bits));
-    CustomParser.ParserSetup setup = ParseDataset.guessSetup(bits);
-    if( setup._data != null && setup._data[1].length > 0 ) { // Able to parse sanely?
+    PSetupGuess sguess = ParseDataset.guessSetup(bits);
+    if(sguess != null && sguess._data != null && sguess._data[1].length > 0 ) { // Able to parse sanely?
       int zipped_len = v.getFirstBytes().length;
-      double bytes_per_row = (double) zipped_len / setup._data.length;
+      double bytes_per_row = (double) zipped_len / sguess._data.length;
       long rows = (long) (v.length() / bytes_per_row);
       result.addProperty(NUM_ROWS, "~" + rows); // approx rows
-      result.addProperty(NUM_COLS, setup._data[1].length);
+      result.addProperty(NUM_COLS, sguess._data[1].length);
 
-      result.add(ROWS, new Gson().toJsonTree(setup._data));
+      result.add(ROWS, new Gson().toJsonTree(sguess._data));
     } else {
       result.addProperty(NUM_ROWS, "unknown");
       result.addProperty(NUM_COLS, "unknown");
@@ -269,6 +266,9 @@ public class Inspect extends Request {
       return;
     String name = f._names[colIdx] != null ? f._names[colIdx] : "" + colIdx;
     switch(v.dtype()) {
+      case bad:
+        obj.addProperty(name, "Bad");
+        break;
       case U:
         obj.addProperty(name, "Unknown");
         break;
