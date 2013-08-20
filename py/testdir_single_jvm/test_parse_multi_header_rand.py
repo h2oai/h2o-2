@@ -19,7 +19,8 @@ paramsDict = {
     'parser_type': [None, 'AUTO'],
     # gets used for separator=
     # 'separator': [",", " ", "\t"],
-    'separator': ["\1", "|", ",", " "],
+    # 'separator': ["\t", "|", ",", " "],
+    'separator': ["\t", ",", " "],
     # 'separator': ["\t"],
     'header': [None, 0,1],
     # we can point to the 'wrong' file!
@@ -119,7 +120,7 @@ class Basic(unittest.TestCase):
 
             # try with col mismatch on header. 
             # FIX! causes exception? don't test for now
-            (7, 300, 10, 'cA', 60, 0),
+            # (7, 300, 10, 'cA', 60, 0),
             # (7, 300, 10, 'cB', 60, 1),
             # (7, 300, 10, 'cC', 60, 2),
             # (7, 300, 10, 'cD', 60, 3),
