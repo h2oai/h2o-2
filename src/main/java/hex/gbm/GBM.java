@@ -48,7 +48,12 @@ public class GBM extends Job {
     assert !vresponse._isInt || (vresponse.max() - vresponse.min()) < 10000; // Too many classes?
     int ymin = (int)vresponse.min();
     short nclass = vresponse._isInt ? (short)(vresponse.max()-ymin+1) : 0;
-    //if( nclass == 2 ) nclass = 0; // Specifically force 2 classes into a regression
+
+    // Make a new Vec to hold the %-tage of correct prediction for each row
+    // (initially all zero).  The value will vary from 0 to 1, where 1 is
+    // prefectly predicted and zero is not predicted at all.
+    //Vec vpred = Vec.makeZero(vs[0]);
+    //fr.add("Predict",vpred);
 
     // Make a new Vec to hold the split-number for each row (initially all zero).
     Vec vnids = Vec.makeZero(vs[0]);
@@ -88,13 +93,14 @@ public class GBM extends Job {
       for( ; leaf<tmax; leaf++ ) {
         //System.out.println(tree.undecided(leaf));
         // Replace the Undecided with the Split decision
-        new GBMDecidedNode((GBMUndecidedNode)tree.undecided(leaf));
+        GBMDecidedNode dn = new GBMDecidedNode((GBMUndecidedNode)tree.undecided(leaf));
+        //System.out.println(dn);
       }
 
       // If we did not make any new splits, then the tree is split-to-death
       if( tmax == tree._len ) break;
       
-      //new BulkScore(new DTree[]{tree},ncols,nclass,ymin,1.0).doAll(fr).report( Sys.GBM__, nrows, depth );
+      //new BulkScore(new DTree[]{tree},ncols,nclass,ymin,1.0f).doAll(fr).report( Sys.GBM__, nrows, depth );
     }
     Log.info(Sys.GBM__,"GBM done in "+t_gbm);
 
@@ -116,7 +122,8 @@ public class GBM extends Job {
       return new GBMUndecidedNode(tree,nid,nhists); 
     }
 
-    // Find the column with the best split (lowest score).
+    // Find the column with the best split (lowest score).  Unlike RF, GBM
+    // scores on all columns and selects splits on all columns.
     @Override int bestCol( GBMUndecidedNode u ) {
       DHistogram hs[] = u._hs;
       double bs = Double.MAX_VALUE; // Best score
@@ -137,6 +144,7 @@ public class GBM extends Job {
     GBMUndecidedNode( DTree tree, int pid, DHistogram hs[] ) { super(tree,pid,hs); }
 
     // Randomly select mtry columns to 'score' in following pass over the data.
+    // In GBM, we use all columns (as opposed to RF, which uses a random subset).
     @Override int[] scoreCols( DHistogram[] hs ) { return null; }
   }
 }

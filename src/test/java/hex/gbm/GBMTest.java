@@ -12,23 +12,35 @@ public class GBMTest extends TestUtil {
 
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
-  // ==========================================================================
+  private abstract class PrepData { abstract void prep(Frame fr); }
+
   @Test public void testBasicGBM() {
-    File file = TestUtil.find_test_file("./smalldata/logreg/prostate.csv");
+    basicGBM("./smalldata/test/test_tree.csv","tree.hex",
+             new PrepData() { void prep(Frame fr) { } 
+             });
+    basicGBM("./smalldata/logreg/prostate.csv","prostate.hex",
+             new PrepData() {
+               void prep(Frame fr) { 
+                 assertEquals(380,fr._vecs[0].length());
+                 // Prostate: predict on CAPSULE which is in column #1; move it to last column
+                 UKV.remove(fr.remove("ID")._key);   // Remove patient ID vector
+                 Vec capsule = fr.remove("CAPSULE"); // Remove capsule
+                 fr.add("CAPSULE",capsule);          // Move it to the end
+               }
+             });
+  }
+
+  // ==========================================================================
+  public void basicGBM(String fname, String hexname, PrepData prep) {
+    File file = TestUtil.find_test_file(fname);
     Key fkey = NFSFileVec.make(file);
-    Key dest = Key.make("prostate.hex");
+    Key dest = Key.make(hexname);
     Frame fr = ParseDataset2.parse(dest,new Key[]{fkey});
     UKV.remove(fkey);
     GBM gbm = null;
     try {
-      assertEquals(380,fr._vecs[0].length());
-
-      // Prostate: predict on CAPSULE which is in column #1; move it to last column
-      UKV.remove(fr.remove("ID")._key);   // Remove patient ID vector
-      Vec capsule = fr.remove("CAPSULE"); // Remove capsule
-      fr.add("CAPSULE",capsule);          // Move it to the end
-
-      gbm = GBM.start(GBM.makeKey(),fr,10);
+      prep.prep(fr);
+      gbm = GBM.start(GBM.makeKey(),fr,5);
       gbm.get();                  // Block for result
       UKV.remove(gbm.destination_key);
     } finally {

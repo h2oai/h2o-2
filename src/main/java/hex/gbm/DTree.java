@@ -193,14 +193,18 @@ class DTree extends Iced {
 
       // If I have 2 identical predictor rows leading to 2 different responses,
       // then this dataset cannot distinguish these rows... and we have to bail
-      // out here.  Note that the column picked here is strictly to grab the
-      // average prediction; we will not split.
-      boolean canDecide = true;
+      // out here.
       if( col == -1 ) {
-        canDecide = false;
-        for( int i=0; i<n._hs.length; i++ )
-          if( n._hs[i]!=null && n._hs[i].nbins() > 1 )
-            { col = i; break; } // Take some random junky column
+        DecidedNode p = n._tree.decided(_pid);
+        _col  = p._col;  // Just copy the parent data over, for the predictions
+        _min  = p._min;
+        _step = p._step;
+        _mins = p._mins;
+        _maxs = p._maxs;
+        _ns = new int[_mins.length];  Arrays.fill(_ns,-1); // No further splits
+        _ycls = p._ycls;
+        _pred = p._pred;
+        return;
       }
       _col = col;
 
@@ -220,7 +224,7 @@ class DTree extends Iced {
       int ncols = _tree._ncols;     // ncols: all columns, minus response
       for( int i=0; i<nums; i++ ) { // For all split-points
         // Setup for children splits
-        DHistogram nhists[] = canDecide ? splitH.split(_col,i,n._hs,_tree._names,ncols) : null;
+        DHistogram nhists[] = splitH.split(_col,i,n._hs,_tree._names,ncols);
         assert nhists==null || nhists.length==ncols;
         _ns[i] = nhists == null ? -1 : makeUndecidedNode(_tree,_nid,nhists)._nid;
         // Also setup predictions locally
@@ -411,19 +415,11 @@ class DTree extends Iced {
         DHistogram nhs[] = hcs[nid-leaf];
         int ycls = (int)ys.at80(i) - _ymin;
 
-        //int sCols[] = tree.undecided(nid)._scoreCols;
-        //for( int idx=0; idx<sCols.length; idx++) { // For all columns
-        //  int j = sCols[idx];                      // Just the selected columns
-        //  DHistogram nh = nhs[j];
-        //  float f = (float)chks[j].at0(i);
-        //  nh.incr(f);
-        //  ((DBinHistogram)nh).incr(f,ycls);
-        //}
         for( int j=0; j<_ncols; j++) { // For all columns
           DHistogram nh = nhs[j];
-          if( nh != null ) {
+          if( nh != null ) {    // Tracking this column?
             float f = (float)chks[j].at0(i);
-            nh.incr(f);
+            nh.incr(f);         // Small histogram
             if( nh instanceof DBinHistogram ) ((DBinHistogram)nh).incr(f,ycls);
           }
         }
