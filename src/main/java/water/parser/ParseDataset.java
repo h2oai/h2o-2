@@ -60,7 +60,9 @@ public final class ParseDataset extends Job {
 
     public GuessSetupTsk(CustomParser.ParserSetup userSetup, boolean checkHeader){
       _userSetup = userSetup;
+      assert _userSetup != null;
       _checkHeader = checkHeader;
+      assert !_userSetup._header || !checkHeader;
     }
     public static final int MAX_ERRORS = 64;
     @Override public void map(Key key) {
@@ -78,7 +80,6 @@ public final class ParseDataset extends Job {
     }
 
     @Override public void reduce(GuessSetupTsk drt) {
-
       if(_gSetup == null || !_gSetup.valid()){
         _gSetup = drt._gSetup;
         _hdrFromFile = drt._hdrFromFile;
@@ -138,7 +139,7 @@ public final class ParseDataset extends Job {
       if((!t._failedSetup.isEmpty() || !t._conflicts.isEmpty())){
         StringBuilder sb = new StringBuilder();
         // run guess setup once more, this time knowing the global setup to get rid of conflicts (turns them into failures) and bogus failures (i.e. single line files with unexpected separator)
-        GuessSetupTsk t2 = new GuessSetupTsk(gSetup._setup, checkHeader);
+        GuessSetupTsk t2 = new GuessSetupTsk(gSetup._setup, !gSetup._setup._header);
         Key [] keys2 = new Key[t._conflicts.size() + t._failedSetup.size()];
         int i = 0;
         for(Key k:t._conflicts)keys2[i++] = k;
@@ -147,8 +148,6 @@ public final class ParseDataset extends Job {
         t._failedSetup = t2._failedSetup;
         t._conflicts = t2._conflicts;
       }
-      if(!t._conflicts.isEmpty())
-        System.out.println(setup);
       assert t._conflicts.isEmpty(); // we should not have any conflicts here, either we failed to find any valid global setup, or conflicts should've been converted into failures in the second pass
       if(!t._failedSetup.isEmpty()){
         StringBuilder sb = new StringBuilder("<div>\n<b>Found " + t._failedSetup.size() + " files which are not compatible with the given setup:</b></div>");
