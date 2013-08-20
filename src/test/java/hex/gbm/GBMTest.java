@@ -13,12 +13,13 @@ public class GBMTest extends TestUtil {
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   // ==========================================================================
-  /*@Test*/ public void testBasicGBM() {
+  @Test public void testBasicGBM() {
     File file = TestUtil.find_test_file("./smalldata/logreg/prostate.csv");
     Key fkey = NFSFileVec.make(file);
     Key dest = Key.make("prostate.hex");
     Frame fr = ParseDataset2.parse(dest,new Key[]{fkey});
     UKV.remove(fkey);
+    GBM gbm = null;
     try {
       assertEquals(380,fr._vecs[0].length());
 
@@ -27,11 +28,12 @@ public class GBMTest extends TestUtil {
       Vec capsule = fr.remove("CAPSULE"); // Remove capsule
       fr.add("CAPSULE",capsule);          // Move it to the end
 
-      GBM gbm = GBM.start(GBM.makeKey(),fr,11);
+      gbm = GBM.start(GBM.makeKey(),fr,10);
       gbm.get();                  // Block for result
       UKV.remove(gbm.destination_key);
     } finally {
       UKV.remove(dest);
+      if( gbm != null ) gbm.remove();
     }
   }
 
@@ -50,7 +52,7 @@ public class GBMTest extends TestUtil {
       assertEquals(581012,fr._vecs[0].length());
 
       // Covtype: predict on last column
-      GBM gbm = GBM.start(GBM.makeKey(),fr,30);
+      GBM gbm = GBM.start(GBM.makeKey(),fr,10);
       gbm.get();                  // Block for result
       UKV.remove(gbm.destination_key);
     } finally {
@@ -82,7 +84,7 @@ public class GBMTest extends TestUtil {
     }
   }
 
-  @Test public void testCovtypeDRF() {
+  /*@Test*/ public void testCovtypeDRF() {
     File file = TestUtil.find_test_file("../datasets/UCI/UCI-large/covtype/covtype.data");
     if( file == null ) return;  // Silently abort test if the large covtype is missing
     Key fkey = NFSFileVec.make(file);
