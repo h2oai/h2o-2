@@ -138,15 +138,14 @@ public class Inspect extends Request {
     byte [] bits = v.getFirstBytes();
     bits = Utils.unzipBytes(bits, Utils.guessCompressionMethod(bits));
     PSetupGuess sguess = ParseDataset.guessSetup(bits);
-    CustomParser.ParserSetup setup = sguess != null?sguess._setup:null;
-    if(setup != null && setup._data != null && setup._data[1].length > 0 ) { // Able to parse sanely?
+    if(sguess != null && sguess._data != null && sguess._data[1].length > 0 ) { // Able to parse sanely?
       int zipped_len = v.getFirstBytes().length;
-      double bytes_per_row = (double) zipped_len / setup._data.length;
+      double bytes_per_row = (double) zipped_len / sguess._data.length;
       long rows = (long) (v.length() / bytes_per_row);
       result.addProperty(NUM_ROWS, "~" + rows); // approx rows
-      result.addProperty(NUM_COLS, setup._data[1].length);
+      result.addProperty(NUM_COLS, sguess._data[1].length);
 
-      result.add(ROWS, new Gson().toJsonTree(setup._data));
+      result.add(ROWS, new Gson().toJsonTree(sguess._data));
     } else {
       result.addProperty(NUM_ROWS, "unknown");
       result.addProperty(NUM_COLS, "unknown");
