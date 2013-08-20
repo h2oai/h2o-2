@@ -84,7 +84,7 @@ def simpleCheckGLMScore(self, glmScore, family='gaussian', allowFailWarning=Fals
         raise Exception(emsg)
 
 def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False,
-    prettyPrint=False, noPrint=False, maxExpectedIterations=None, **kwargs):
+    prettyPrint=False, noPrint=False, maxExpectedIterations=None, doNormalized=False, **kwargs):
     # if we hit the max_iter, that means it probably didn't converge. should be 1-maxExpectedIter
 
     # h2o GLM will verboseprint the result and print errors. 
@@ -169,7 +169,11 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         raise Exception(emsg)
 
     # get a copy, so we don't destroy the original when we pop the intercept
-    coefficients = GLMModel['coefficients'].copy()
+    if doNormalized:
+        coefficients = GLMModel['normalized_coefficients'].copy()
+    else:
+        coefficients = GLMModel['coefficients'].copy()
+
     column_names = GLMModel['column_names']
     # get the intercept out of there into it's own dictionary
     intercept = coefficients.pop('Intercept', None)

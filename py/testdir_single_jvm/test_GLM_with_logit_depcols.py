@@ -6,6 +6,7 @@ import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
 
 BINS = 100
 if 1==0: # works
+    ALGO = 'binomial'
     DATA_VALUE_MIN = -1
     DATA_VALUE_MAX = 1
     COEFF_VALUE_MIN = -1
@@ -16,44 +17,60 @@ if 1==0: # works
     COL_DATA_DISTS = 'SAME'
 
 if 1==0: # works
-    DATA_VALUE_MIN = -1
-    DATA_VALUE_MAX = 0
-    COEFF_VALUE_MIN = -1
-    COEFF_VALUE_MAX = 1
-    INTCPT_VALUE_MIN = -1
-    INTCPT_VALUE_MAX = 1
+    ALGO = 'binomial'
+    DATA_VALUE_MIN = -1.0
+    DATA_VALUE_MAX = 0.0
+    COEFF_VALUE_MIN = -1.0
+    COEFF_VALUE_MAX = 1.0
+    INTCPT_VALUE_MIN = -1.0
+    INTCPT_VALUE_MAX = 1.0
     # COL_DATA_DISTS = 'UNIQUE'
     COL_DATA_DISTS = 'SAME'
 
 if 1==0: # works
-    DATA_VALUE_MIN = -1
-    DATA_VALUE_MAX = 1
-    COEFF_VALUE_MIN = 0.1
-    COEFF_VALUE_MAX = 1
-    INTCPT_VALUE_MIN = -1
-    INTCPT_VALUE_MAX = 1
+    ALGO = 'binomial'
+    DATA_VALUE_MIN = -1.0
+    DATA_VALUE_MAX = 1.0
+    COEFF_VALUE_MIN = 1.0
+    COEFF_VALUE_MAX = 1.0
+    INTCPT_VALUE_MIN = -1.0
+    INTCPT_VALUE_MAX = 1.0
     # COL_DATA_DISTS = 'UNIQUE'
     COL_DATA_DISTS = 'SAME'
 
 if 1==0: # works
-    DATA_VALUE_MIN = -1
-    DATA_VALUE_MAX = 1
+    ALGO = 'binomial'
+    DATA_VALUE_MIN = -1.0
+    DATA_VALUE_MAX = 1.0
     COEFF_VALUE_MIN = 0.5
-    COEFF_VALUE_MAX = 1
-    INTCPT_VALUE_MIN = -1
-    INTCPT_VALUE_MAX = 1
+    COEFF_VALUE_MAX = 1.0
+    INTCPT_VALUE_MIN = -1.0
+    INTCPT_VALUE_MAX = 1.0
+    # COL_DATA_DISTS = 'UNIQUE'
+    COL_DATA_DISTS = 'SAME'
+
+if 1==0: # works
+    ALGO = 'binomial'
+    DATA_VALUE_MIN = 0.0
+    DATA_VALUE_MAX = 1.0
+    COEFF_VALUE_MIN = -1.0
+    COEFF_VALUE_MAX = 1.0
+    INTCPT_VALUE_MIN = -1.0
+    INTCPT_VALUE_MAX = 1.0
     # COL_DATA_DISTS = 'UNIQUE'
     COL_DATA_DISTS = 'SAME'
 
 if 1==1:
-    DATA_VALUE_MIN = 0
-    DATA_VALUE_MAX = 1
-    COEFF_VALUE_MIN = -1
-    COEFF_VALUE_MAX = 1
-    INTCPT_VALUE_MIN = -1
-    INTCPT_VALUE_MAX = 1
-    # COL_DATA_DISTS = 'UNIQUE'
-    COL_DATA_DISTS = 'SAME'
+    # ALGO = 'poisson'
+    ALGO = 'poisson'
+    DATA_VALUE_MIN = 0.0
+    DATA_VALUE_MAX = 1.0
+    COEFF_VALUE_MIN = 0.0
+    COEFF_VALUE_MAX = 1.0
+    INTCPT_VALUE_MIN = 0.0
+    INTCPT_VALUE_MAX = 1.0
+    COL_DATA_DISTS = 'UNIQUE'
+    # COL_DATA_DISTS = 'SAME'
 
 
 modeString = \
@@ -92,9 +109,17 @@ def gen_rand_equation(colCount, SEED):
 def yFromEqnAndData(coefficients, intercept, rowData):
     # FIX! think about using noise on some of the rowData
     cx = [a*b for a,b in zip(coefficients, rowData)]
-    y = 1/(1 + math.exp(-(sum(cx) + intercept)))
-    if (y<0 or y>1):
-        raise Exception("Generated y result is should be between 0 and 1: " + y)
+    if ALGO=='binomial':
+        y = 1/(1 + math.exp(-(sum(cx) + intercept)))
+        if (y<0 or y>1):
+            raise Exception("Generated y result is should be between 0 and 1: %s" % y)
+    elif ALGO=='poisson':
+        y = math.exp(sum(cx) + intercept)
+        if (y<0):
+            raise Exception("Generated y result is should be > 0: %s" % y)
+    else:
+        raise Exception('Unknown ALGO: %s' % ALGO)
+
     return y
 
 def write_syn_dataset(csvPathname, rowCount, colCount, coefficients, intercept, SEED, noise=0.05):
@@ -135,17 +160,24 @@ def write_syn_dataset(csvPathname, rowCount, colCount, coefficients, intercept, 
         # writing 0 or 1 depending on whether you are below or above the probability
         # coarse approximation to get better coefficient match in GLM
         y = yFromEqnAndData(coefficients, intercept, rowData)
-
         if yMin is None or y<yMin: yMin = y
         if yMax is None or y>yMax: yMax = y
-        
-        for i in range(1,BINS+1): # 10 bins
-            if y > (i + 0.0)/BINS:
-                binomial = 1
-            else:
-                binomial = 0
-            rowDataCsv = ",".join(map(str,rowData + [binomial]))
+
+        if ALGO=='binomial':
+            for i in range(1,BINS+1): # 10 bins
+                if y > (i + 0.0)/BINS:
+                    binomial = 1
+                else:
+                    binomial = 0
+                rowDataCsv = ",".join(map(str,rowData + [binomial]))
+                dsf.write(rowDataCsv + "\n")
+
+        elif ALGO=='poisson':
+            rowDataCsv = ",".join(map(str,rowData + [int(y)]))
             dsf.write(rowDataCsv + "\n")
+
+        else:
+            raise Exception('Unknown ALGO: %s' % ALGO)
 
     dsf.close()
     print "yMin:", yMin, " yMax:", yMax
@@ -172,18 +204,24 @@ class Basic(unittest.TestCase):
 
     def test_GLM_with_logit_depcols(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
-        tryList = [
-            # (100, 1, 'cA', 300), 
-            # (100, 25, 'cB', 300), 
-            # (1000, 25, 'cC', 300), 
-            # 50 fails, 40 fails
-            # (10000, 50, 'cD', 300), 
-            # 30 passes
-            # (10000, 30, 'cD', 300), 
-            # 50 passed if I made the data distributions per col, unique by guaranteeing different triangular modes per col
-            (500, 200, 'cD', 300), 
-            (500, 200, 'cD', 300), 
-            ]
+        if ALGO=='poisson':
+            tryList = [
+                (50000, 50, 'cD', 300), 
+                (50000, 50, 'cD', 300), 
+                ]
+        else:
+            tryList = [
+                # (100, 1, 'cA', 300), 
+                # (100, 25, 'cB', 300), 
+                # (1000, 25, 'cC', 300), 
+                # 50 fails, 40 fails
+                # (10000, 50, 'cD', 300), 
+                # 30 passes
+                # (10000, 30, 'cD', 300), 
+                # 200 passed
+                (500, 30, 'cD', 300), 
+                (500, 30, 'cD', 300), 
+                ]
 
         ### h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
@@ -210,6 +248,7 @@ class Basic(unittest.TestCase):
             y = colCount
             print "GLM is ignoring the thresholds I give it? deciding what's best?"
             kwargs = {
+                    'family': ALGO,
                     'y': y, 
                     'max_iter': 60, 
                     'lambda': 0.0,
@@ -225,16 +264,23 @@ class Basic(unittest.TestCase):
             (warnings, coefficients, intercept) = h2o_glm.simpleCheckGLM(self, glm, 0, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
 
+            if ALGO=='binomial':
+                deltaCoeff = 0.1
+                deltaIntcpt = 0.2
+            else: # poisson needs more? 
+                deltaCoeff = 0.4
+                deltaIntcpt = 1.0
+
             for i,c in enumerate(coefficients):
                 g = coefficientsGen[i] # generated
-                print "coefficient[%d]: %8.4f generated: %8.4f delta: %8.4f" % (i, c, g, abs(g-c))
-                self.assertAlmostEqual(c, g, delta=.1, msg="not close enough. coefficient[%d]: %s generated %s" % (i, c, g))
+                print "coefficient[%d]: %8.4f,    generated: %8.4f,    delta: %8.4f" % (i, c, g, abs(g-c))
+                self.assertAlmostEqual(c, g, delta=deltaCoeff, msg="not close enough. coefficient[%d]: %s,    generated %s" % (i, c, g))
 
             c = intercept
             g = interceptGen
-            print "intercept: %8.4f generated: %8.4f delta: %8.4f" % (c, g, abs(g-c))
+            print "intercept: %8.4f,    generated: %8.4f,    delta: %8.4f" % (c, g, abs(g-c))
             print "need a larger delta compare for intercept?"
-            self.assertAlmostEqual(c, g, delta=.2, msg="not close enough. intercept: %s generated %s" % (c, g))
+            self.assertAlmostEqual(c, g, delta=deltaIntcpt, msg="not close enough. intercept: %s,    generated %s" % (c, g))
             
 
 if __name__ == '__main__':
