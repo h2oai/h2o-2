@@ -75,7 +75,7 @@ public class H2OLauncher implements ActionListener {
       @Override
       public void actionPerformed(ActionEvent actionEvent) {
         try {
-          URI uri = new URI("http://0xdata.com");
+          URI uri = new URI("http://docs.0xdata.com");
           Desktop.getDesktop().browse(uri);
         } catch (Exception e) {
         }
@@ -162,10 +162,12 @@ public class H2OLauncher implements ActionListener {
     javax.swing.SwingUtilities.invokeLater(new Runnable() {
       public void run() {
         // browserField.setText(s);
-        try {
-          URI uri = new URI(s);
-          Desktop.getDesktop().browse(uri);
-        } catch (Exception e) {
+        if ((s != null) && (s.length() > 0)) {
+          try {
+            URI uri = new URI(s);
+            Desktop.getDesktop().browse(uri);
+          } catch (Exception e) {
+          }
         }
       }
     });
