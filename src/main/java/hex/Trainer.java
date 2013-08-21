@@ -61,7 +61,7 @@ public abstract class Trainer {
       }
 
       bprop();
-      input._n = input._n == input._count - 1 ? 0 : input._n + 1;
+      input.move();
     }
 
     final void adjust(long n) {
@@ -132,7 +132,7 @@ public abstract class Trainer {
         _trainers[t] = new Base(clones);
         Input input = (Input) _trainers[t]._ls[0];
         int chunks = nodes * _trainers.length;
-        input._n = (int) (input._count * ((long) index * _trainers.length + t) / chunks);
+        input._pos = input._off + (input._len * ((long) index * _trainers.length + t) / chunks);
 
         final Base trainer = _trainers[t];
         _threads[t] = new Thread("H2O Trainer " + t) {
@@ -399,7 +399,7 @@ public abstract class Trainer {
 
           for( int y = _ls.length - 1; y > 0; y-- )
             queue.put1DRangeKernel(bprops[y], 0, _ls[y]._a.length, group);
-          input._n = input._n == input._count - 1 ? 0 : input._n + 1;
+          input.move();
         }
       } catch( IOException ex ) {
         throw new RuntimeException(ex);

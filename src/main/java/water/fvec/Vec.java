@@ -299,12 +299,12 @@ public class Vec extends Iced {
   public Chunk elem2BV( int cidx ) {
     long start = chunk2StartElem(cidx); // Chunk# to chunk starting element#
     Value dvec = chunkIdx(cidx);        // Chunk# to chunk data
-    Chunk bv = dvec.get();              // Chunk data to compression wrapper
-    if( bv._start == start ) return bv; // Already filled-in
-    assert bv._start == -1;
-    bv._start = start;          // Fields not filled in by unpacking from Value
-    bv._vec = this;             // Fields not filled in by unpacking from Value
-    return bv;
+    Chunk c = dvec.get();               // Chunk data to compression wrapper
+    if( c._start == start ) return c;   // Already filled-in
+    assert c._start == -1;
+    c._start = start;          // Fields not filled in by unpacking from Value
+    c._vec = this;             // Fields not filled in by unpacking from Value
+    return c;
   }
   /** The Chunk for a row#.  Warning: this loads the data locally!  */
   public final Chunk chunk( long i ) {

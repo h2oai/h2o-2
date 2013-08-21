@@ -165,8 +165,8 @@ public class NeuralNetMnistTest extends NeuralNetTest {
         throw new RuntimeException(e);
       }
 
-      Error train = eval(_train);
-      Error test = eval(_test);
+      Error train = eval(_ls, _train);
+      Error test = eval(_ls, _test);
       long time = System.nanoTime();
       double delta = (time - lastTime) / 1e9;
       double total = (time - start) / 1e9;

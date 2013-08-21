@@ -11,21 +11,21 @@ import water.fvec.*;
 import com.google.gson.*;
 
 /**
- * Neural network layer, can be used as one level of Perceptron, AA or RBM.
+ * Neural network layer.
  */
 public abstract class Layer extends Iced {
   // Initial parameters
-  float _rate = .01f;
-  float _rateAnnealing = 0;
+  float _rate;
+  float _rateAnnealing;
 
   @ParamsSearch.Info(origin = 1)
-  float _momentum = 0;
-  float _momentumAnnealing = 0;
+  float _momentum;
+  float _momentumAnnealing;
 
-  float _perWeight = 0;
-  float _perWeightAnnealing = 0;
+  float _perWeight;
+  float _perWeightAnnealing;
 
-  float _l2 = .0001f;
+  float _l2;
 
   // Current rate and momentum
   transient float _r, _m;
@@ -45,11 +45,11 @@ public abstract class Layer extends Iced {
   // Optional visible units bias, e.g. for pre-training
   transient float[] _v, _gv;
 
-  void init(Layer in, int len) {
-    _w = new float[len * in._a.length];
-    _b = new float[len];
-    _a = new float[len];
-    _e = new float[len];
+  void init(Layer in, int units) {
+    _w = new float[units * in._a.length];
+    _b = new float[units];
+    _a = new float[units];
+    _e = new float[units];
     _wSpeed = new float[_w.length];
     _bSpeed = new float[_b.length];
     _in = in;
@@ -138,17 +138,24 @@ public abstract class Layer extends Iced {
   }
 
   public static abstract class Input extends Layer {
-    long _count;
-    long _n;
+    long _off, _len, _pos;
 
-    @Override void init(Layer in, int len) {
-      _a = new float[len];
+    @Override void init(Layer in, int units) {
+      _a = new float[units];
     }
 
     abstract int label();
 
     @Override void bprop() {
       throw new UnsupportedOperationException();
+    }
+
+    public final long limit() {
+      return _off + _len;
+    }
+
+    public final long move() {
+      return _pos = _pos == limit() - 1 ? _off : _pos + 1;
     }
   }
 
@@ -160,20 +167,21 @@ public abstract class Layer extends Iced {
     public FrameInput() {
     }
 
-    public FrameInput(Frame frame, boolean normalize) {
+    public FrameInput(Frame frame, long off, long len, boolean normalize) {
       _frame = frame;
       _normalize = normalize;
-      _count = frame.numRows();
+      _off = off;
+      _len = len;
     }
 
     @Override int label() {
-      return (int) _frame._vecs[_frame.numCols() - 1].at8(_n);
+      return (int) _frame._vecs[_frame.numCols() - 1].at8(_pos);
     }
 
     @Override void fprop() {
       for( int i = 0; i < _a.length; i++ ) {
-        Chunk chunk = chunk(i, _n);
-        double d = chunk.at(_n);
+        Chunk chunk = chunk(i, _pos);
+        double d = chunk.at(_pos);
         if( _normalize ) {
           Vec v = _frame._vecs[i];
           d = (d - v.mean()) / v.sigma();

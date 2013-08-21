@@ -27,12 +27,12 @@ public class NeuralNetTest {
     }
   }
 
-  Error eval(Input input) {
-    Layer[] clones = new Layer[_ls.length];
+  static Error eval(Layer[] ls, Input input) {
+    Layer[] clones = new Layer[ls.length];
     clones[0] = Utils.clone(input);
-    for( int i = 1; i < _ls.length; i++ )
-      clones[i] = Utils.deepClone(_ls[i], "_in");
-    for( int i = 1; i < _ls.length; i++ )
+    for( int i = 1; i < ls.length; i++ )
+      clones[i] = Utils.deepClone(ls[i], "_in");
+    for( int i = 1; i < ls.length; i++ )
       clones[i]._in = clones[i - 1];
 
     Error error = new Error();

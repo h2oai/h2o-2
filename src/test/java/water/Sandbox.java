@@ -23,8 +23,8 @@ public class Sandbox {
     public static void main(String[] args) throws Exception {
       localCloud(1, true, args);
 
-      File f = new File("lib/resources/datasets/gaussian.csv");
-      // File f = new File("smalldata/covtype/covtype.20k.data");
+      // File f = new File("lib/resources/datasets/gaussian.csv");
+      File f = new File("smalldata/covtype/covtype.20k.data");
       // File f = new File("syn_5853362476331324036_100x11.csv");
       // File f = new File("../../aaaa/datasets/millionx7_logreg.data.gz");
       // File f = new File("smalldata/test/rmodels/iris_x-iris-1-4_y-species_ntree-500.rdata");
@@ -113,11 +113,6 @@ public class Sandbox {
     }
     H2O.main(args(args, local, port, flatfile));
     TestUtil.stall_till_cloudsize(1 + workers.length);
-  }
-
-  public static void remoteCloud(String[] hosts, String[] java_args, String[] args) {
-    Cloud c = new Cloud(hosts, hosts);
-    c.start(null, null, java_args, args);
   }
 
   private static String[] args(String[] args, String ip, int port, String flatfile) {

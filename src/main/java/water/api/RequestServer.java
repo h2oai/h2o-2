@@ -1,7 +1,7 @@
 package water.api;
 
-import hex.KMeans2;
-import hex.KMeansGrid;
+import hex.*;
+import hex.NeuralNet.NeuralNetProgress;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -86,12 +86,13 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new TutorialGLMProstate()), "GLM Tutorial",           "Help");
     Request.addToNavbar(registerRequest(new TutorialKMeans()),      "KMeans Tutorial",        "Help");
 
-    Request.addToNavbar(registerRequest(new ImportFiles2()),"Import Files2","Beta (FluidVecs!)");
-    Request.addToNavbar(registerRequest(new Parse2()),      "Parse2"       ,"Beta (FluidVecs!)");
-    Request.addToNavbar(registerRequest(new Inspect2()),    "Inspect",      "Beta (FluidVecs!)");
-    Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2"      ,"Beta (FluidVecs!)");
-    Request.addToNavbar(registerRequest(new DRF2()),        "DRF2"         ,"Beta (FluidVecs!)");
-    Request.addToNavbar(registerRequest(new hex.LR2()), "Linear Regression2" ,"Beta (FluidVecs!)");
+    Request.addToNavbar(registerRequest(new ImportFiles2()),"Import Files2",  "Beta (FluidVecs!)");
+    Request.addToNavbar(registerRequest(new Parse2()),      "Parse2"       ,  "Beta (FluidVecs!)");
+    Request.addToNavbar(registerRequest(new Inspect2()),    "Inspect",        "Beta (FluidVecs!)");
+    Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2"      ,  "Beta (FluidVecs!)");
+    Request.addToNavbar(registerRequest(new DRF2()),        "DRF2"         ,  "Beta (FluidVecs!)");
+    Request.addToNavbar(registerRequest(new hex.LR2()), "Linear Regression2", "Beta (FluidVecs!)");
+    Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network", "Beta (FluidVecs!)");
 
     // internal handlers
     //registerRequest(new StaticHTMLPage("/h2o/CoefficientChart.html","chart"));
@@ -107,6 +108,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new PostFile());
     registerRequest(new Progress());
     registerRequest(new Progress2());
+    registerRequest(new NeuralNetProgress());
     registerRequest(new PutValue());
     registerRequest(new PutVector());
     registerRequest(new Remove());
