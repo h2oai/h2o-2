@@ -33,11 +33,15 @@ def yFromEqnAndData(coefficients, intercept, rowData, DATA_DISTS, ALGO):
     # FIX! think about using noise on some of the rowData
     cx = [a*b for a,b in zip(coefficients, rowData)]
     if ALGO=='binomial':
-        y = 1/(1 + math.exp(-(sum(cx) + intercept)))
+        y = 1.0/(1.0 + math.exp(-(sum(cx) + intercept)))
         if y<0 or y>1:
             raise Exception("Generated y result is should be between 0 and 1: %s" % y)
     elif ALGO=='poisson':
         y = math.exp(sum(cx) + intercept)
+        if y<0:
+            raise Exception("Generated y result is should be >= 0: %s" % y)
+    elif ALGO=='gamma':
+        y = 1.0/(sum(cx) + intercept)
         if y<0:
             raise Exception("Generated y result is should be >= 0: %s" % y)
     else:
@@ -102,6 +106,10 @@ def write_syn_dataset(csvPathname, rowCount, colCount, coefficients, intercept,
 
         elif ALGO=='poisson':
             rowDataCsv = ",".join(map(str,rowData + [int(y)]))
+            dsf.write(rowDataCsv + "\n")
+
+        elif ALGO=='gamma':
+            rowDataCsv = ",".join(map(str,rowData + [y]))
             dsf.write(rowDataCsv + "\n")
 
         else:
@@ -272,6 +280,16 @@ class Basic(unittest.TestCase):
         # y seems to be tightly clamped between 0 and 1 if you have coefficient range from -1 to 0
         self.GLM_syn_eqns_data(
             ALGO='poisson', 
+            DATA_VALUE_MIN=0, DATA_VALUE_MAX=2,
+            COEFF_VALUE_MIN=-.2, COEFF_VALUE_MAX=2, 
+            INTCPT_VALUE_MIN=-.2, INTCPT_VALUE_MAX=2,
+            DATA_DISTS='random')
+
+    def test_GLM_syn_eqns_data_F(self):
+        # data and y have to be 0 to N for poisson
+        # y seems to be tightly clamped between 0 and 1 if you have coefficient range from -1 to 0
+        self.GLM_syn_eqns_data(
+            ALGO='gamma', 
             DATA_VALUE_MIN=0, DATA_VALUE_MAX=2,
             COEFF_VALUE_MIN=-.2, COEFF_VALUE_MAX=2, 
             INTCPT_VALUE_MIN=-.2, INTCPT_VALUE_MAX=2,
