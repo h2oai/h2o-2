@@ -12,8 +12,6 @@ import water.util.Log;
 import water.util.Log.Tag.Sys;
 
 class DABuilder {
-  private static final Key[] NO_KEYS = new Key[] {};
-
   protected final DRFTask _drf;
 
   static DABuilder create(final DRFTask drf) {
@@ -28,7 +26,7 @@ class DABuilder {
 
   DABuilder(final DRFTask drf) { _drf = drf;  }
 
-  final DataAdapter build(Key [] keys) { return inhaleData(keys); }
+  final DataAdapter build(Key[] lkeys, Key[] rkeys) { return inhaleData(lkeys, rkeys); }
 
   /** Check that we have proper number of valid columns vs. features selected, if not cap*/
   private final void checkAndLimitFeatureUsedPerSplit(final DataAdapter dapt) {
@@ -54,37 +52,8 @@ class DABuilder {
     throw new Error("No key on this node");
   }
 
-  /** Return a list of chunk keys which can be loaded from other nodes. */
-  private Key[] getNonLocalChunks(ValueArray ary, Key[] localCKeys) {
-    Log.info(Sys.RANDF, "Use non-local data: " + _drf._params._useNonLocalData);
-    if (_drf._params._useNonLocalData) {
-      final float OVERHEAD_MAGIC = 3/8.f; // magic !
-      long totalmem = Runtime.getRuntime().totalMemory();
-      long localChunks = localCKeys.length * ValueArray.CHUNK_SZ;
-      long availMem = (long) (OVERHEAD_MAGIC * totalmem) - localChunks; // theoretically available memory
-
-      if (availMem > 0) {
-        // Try to fill the memory up to ratio 3/8
-        int numkeys = Math.min( (int) (availMem / ValueArray.CHUNK_SZ), (int) (ary.chunks()-localCKeys.length));
-        Log.info(Sys.RANDF, "Avail. mem: " + PrettyPrint.bytes(availMem));
-        Log.info(Sys.RANDF, "Can load keys: " + numkeys);
-        if (numkeys>0) {
-          Key[] rkeys = new Key[numkeys];
-          int c = 0;
-          for(int i=0; i<ary.chunks(); i++) {
-            Key k = ary.getChunkKey(i);
-            if (!k.home()) rkeys[c++] = k;
-            if (c == numkeys) break;
-          }
-          return rkeys;
-        }
-      }
-    }
-    return NO_KEYS;
-  }
-
   /** Build data adapter for given array */
-  protected  DataAdapter inhaleData(Key [] lkeys) {
+  protected  DataAdapter inhaleData(Key[] lkeys, Key[] rkeys) {
     Timer t_inhale = new Timer();
     RFModel rfmodel = _drf._rfmodel;
     final ValueArray ary = UKV.get(rfmodel._dataKey);
@@ -93,8 +62,6 @@ class DABuilder {
     // data being ignored.  This is a map from the model's columns to the
     // building dataset's columns.
     final int[] modelDataMap = rfmodel.columnMapping(ary.colNames());
-    // list of non-local keys which should be load in case of request to load remote keys
-    final Key[] rkeys   = getNonLocalChunks(ary, lkeys);
     final int totalRows = getRowCount(ary, lkeys, rkeys);
     final DataAdapter dapt = new DataAdapter( ary, rfmodel, modelDataMap,
                                               totalRows,
@@ -114,17 +81,19 @@ class DABuilder {
       final int S = start_row;
       if (!k.home()) continue;     // This is not necessary, but for sure skip no local keys (we only inhale local data)
       final int rows = ary.rpc(ValueArray.getChunkIndex(k));
+      Log.info(Sys.RANDF,"* loading local key: ", k, " start_row: ", S);
       dataInhaleJobs.add( loadChunkAction(dapt, ary, k, modelDataMap, ncolumns, rows, S, totalRows) );
       start_row += rows;
     }
     // Collects jobs loading remote chunks
     for (final Key k : rkeys) {
-      Log.info(Sys.RANDF,"-> reloading more keys: " + k + " from " + k.home_node());
       final int S = start_row;
       final int rows = ary.rpc(ValueArray.getChunkIndex(k));
+      Log.info(Sys.RANDF,"!!! loading remote key: " + k + " from " + k.home_node(), " start_row: " + S);
       dataInhaleJobs.add( loadChunkAction(dapt, ary, k, modelDataMap, ncolumns, rows, S, totalRows) );
       start_row += rows;
     }
+    Log.info(Sys.RANDF, "All loaded row: ", start_row, '/', totalRows);
     // And invoke collected jobs (load all local data)
     ForkJoinTask.invokeAll(dataInhaleJobs);
 

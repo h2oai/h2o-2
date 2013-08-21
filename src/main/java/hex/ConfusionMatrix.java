@@ -86,9 +86,7 @@ public final class ConfusionMatrix extends Iced {
 
   public void add(ConfusionMatrix other){
     _n += other._n;
-    for(int i = 0; i < _arr.length; ++i)
-      for(int j = 0; j < _arr.length; ++j)
-        _arr[i][j] += other._arr[i][j];
+    water.util.Utils.add(_arr,other._arr);
   }
 
   @Override

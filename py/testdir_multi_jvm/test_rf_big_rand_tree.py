@@ -26,6 +26,8 @@ def write_syn_dataset(csvPathname, rowCount, colCount):
         # output depends on all the inputs (xor)
         # rowData.append(rowSum % 2) 
         rowData.append(random.randint(0,253))
+        # 32 output classes
+        # rowData.append(rowSum % 32) 
         rowData = ','.join(map(str, rowData)) + "\n"
         dsf.write(rowData)
 
@@ -41,7 +43,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1, java_heap_GB=14)
+            h2o.build_cloud(2, java_heap_GB=7)
         else:
             import h2o_hosts
             h2o_hosts.build_cloud_with_hosts()
@@ -55,7 +57,7 @@ class Basic(unittest.TestCase):
         csvFilename = "syn.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
-        rowCount = 1000
+        rowCount = 5000
         colCount = 1000
         write_syn_dataset(csvPathname, rowCount, colCount)
 
@@ -67,10 +69,10 @@ class Basic(unittest.TestCase):
             seed = random.randint(0,sys.maxint)
             # some cols can be dropped due to constant 0 or 1. make sure data set has all 0's and all 1's above
             # to guarantee no dropped cols!
-            kwargs = {'ntree': 3, 'depth': None, 'seed': seed, 'features': colCount}
+            kwargs = {'ntree': 3, 'depth': 50, 'seed': seed}
             start = time.time()
             key = h2o_cmd.runRF(csvPathname=csvPathname, key=key, key2=key2, 
-                timeoutSecs=60, pollTimeoutSecs=5, **kwargs)
+                timeoutSecs=180, pollTimeoutSecs=5, **kwargs)
             print "trial #", trial, "rowCount:", rowCount, "colCount:", colCount, "RF end on ", csvFilename, \
                 'took', time.time() - start, 'seconds'
 
@@ -81,7 +83,8 @@ class Basic(unittest.TestCase):
                 colType = c['type']
                 colSize = c['size']
                 self.assertEqual(colType, 'int', msg="col %d should be type in: %s" % (i, colType))
-                self.assertEqual(colSize, 1, msg="col %d should be size 1: %d" % (i, colSize))
+                self.assertEqual(colSize, 2, msg="col %d should be size 2: %d" % (i, colSize))
+                
 
             h2o.check_sandbox_for_errors()
 

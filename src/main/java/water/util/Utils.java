@@ -8,13 +8,13 @@ import java.io.*;
 import java.net.Socket;
 import java.security.SecureRandom;
 import java.text.DecimalFormat;
-import java.util.Arrays;
-import java.util.Random;
+import java.util.*;
 import java.util.zip.*;
 
 import org.apache.commons.lang.ArrayUtils;
 
 import water.*;
+import water.api.DocGen.FieldDoc;
 import water.parser.ParseDataset;
 import water.parser.ParseDataset.Compression;
 
@@ -289,6 +289,31 @@ public class Utils {
     return (T[]) ArrayUtils.remove(a, i);
   }
 
+  public static int[] add(int[] a, int[] b) {
+    for(int i = 0; i < a.length; i++ ) a[i] += b[i];
+    return a;
+  }
+  public static int[][] add(int[][] a, int[][] b) {
+    for(int i = 0; i < a.length; i++ ) add(a[i],b[i]);
+    return a;
+  }
+  public static long[] add(long[] a, long[] b) {
+    for(int i = 0; i < a.length; i++ ) a[i] += b[i];
+    return a;
+  }
+  public static long[][] add(long[][] a, long[][] b) {
+    for(int i = 0; i < a.length; i++ ) add(a[i],b[i]);
+    return a;
+  }
+  public static double[] add(double[] a, double[] b) {
+    for(int i = 0; i < a.length; i++ ) a[i] += b[i];
+    return a;
+  }
+  public static double[][] add(double[][] a, double[][] b) {
+    for(int i = 0; i < a.length; i++ ) add(a[i],b[i]);
+    return a;
+  }
+
   public static void clearFolder(String folder) {
     clearFolder(new File(folder));
   }
@@ -325,7 +350,9 @@ public class Utils {
   }
   public static byte [] getFirstUnzipedBytes(Value v){
     byte [] bits = v.getFirstBytes();
-    return unzipBytes(bits, guessCompressionMethod(bits));
+    try{
+      return unzipBytes(bits, guessCompressionMethod(bits));
+    } catch(Exception e){return null;}
   }
 
   public static Compression guessCompressionMethod(byte [] bits){
@@ -358,10 +385,12 @@ public class Utils {
       case GZIP:
         is = new GZIPInputStream(new ByteArrayInputStream(bs));
         break;
+      default:
+        assert false:"cmp = " + cmp;
       }
       // If reading from a compressed stream, estimate we can read 2x uncompressed
-      if( is != null )
-        bs = new byte[bs.length * 2];
+      assert( is != null ):"is is NULL, cmp = " + cmp;
+      bs = new byte[bs.length * 2];
       // Now read from the (possibly compressed) stream
       while( off < bs.length ) {
         int len = is.read(bs, off, bs.length - off);
@@ -380,6 +409,43 @@ public class Utils {
       Utils.close(is);
     }
     return bs;
+  }
+
+  /**
+   * Simple wrapper around ArrayList with support for H2O serialization
+   * @author tomasnykodym
+   * @param <T>
+   */
+  public static class IcedArrayList<T extends Iced> extends ArrayList<T> implements Freezable {
+    private static final int I;
+    static {
+      I = TypeMap.onLoad(IcedArrayList.class.getName());
+    }
+    @Override public AutoBuffer write(AutoBuffer bb) {
+      bb.put4(size());
+      for(T t:this)
+        bb.put(t);
+      return bb;
+    }
+    @Override public IcedArrayList<T> read(AutoBuffer bb) {
+      int n = bb.get4();
+      for(int i = 0; i < n; ++i)
+        add(bb.<T>get());
+      return this;
+    }
+
+    @Override public <T2 extends Freezable> T2 newInstance() {
+      return (T2)new IcedArrayList<T>();
+    }
+    @Override public int frozenType() {
+      return I;
+    }
+    @Override public AutoBuffer writeJSONFields(AutoBuffer bb) {
+      return bb;
+    }
+    @Override public FieldDoc[] toDocField() {
+      return null;
+    }
   }
 
 }

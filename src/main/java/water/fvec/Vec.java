@@ -75,15 +75,33 @@ public class Vec extends Iced {
 
   /** Make a new vector with the same size and data layout as the old one, and
    *  initialized to zero. */
-  static public Vec makeZero( Vec v ) {
+  public Vec makeZero() { return makeCon(0); }
+  /** Make a new vector with the same size and data layout as the old one, and
+   *  initialized to a constant. */
+  public Vec makeCon( final long l ) {
     Futures fs = new Futures();
-    if( v._espc == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
-    int nchunks = v.nChunks();
-    Vec v0 = new Vec(v.group().addVecs(1)[0],v._espc,true,0);
+    if( _espc == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
+    int nchunks = nChunks();
+    Vec v0 = new Vec(group().addVecs(1)[0],_espc,true,0);
     long row=0;                 // Start row
     for( int i=0; i<nchunks; i++ ) {
-      long nrow = v.chunk2StartElem(i+1); // Next row
-      DKV.put(v0.chunkKey(i),new C0LChunk(0L,(int)(nrow-row)),fs);
+      long nrow = chunk2StartElem(i+1); // Next row
+      DKV.put(v0.chunkKey(i),new C0LChunk(l,(int)(nrow-row)),fs);
+      row = nrow;
+    }
+    DKV.put(v0._key,v0,fs);
+    fs.blockForPending();
+    return v0;
+  }
+  public Vec makeCon( final double d ) {
+    Futures fs = new Futures();
+    if( _espc == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
+    int nchunks = nChunks();
+    Vec v0 = new Vec(group().addVecs(1)[0],_espc,true,0);
+    long row=0;                 // Start row
+    for( int i=0; i<nchunks; i++ ) {
+      long nrow = chunk2StartElem(i+1); // Next row
+      DKV.put(v0.chunkKey(i),new C0DChunk(d,(int)(nrow-row)),fs);
       row = nrow;
     }
     DKV.put(v0._key,v0,fs);
@@ -315,6 +333,8 @@ public class Vec extends Iced {
   public long   set8( long i, long   l) { return elem2BV(elem2ChunkIdx(i)).set8(i,l); }
   /** Write element the slow way, as a double */
   public double set8( long i, double d) { return elem2BV(elem2ChunkIdx(i)).set8(i,d); }
+  /** Write element the slow way, as a float */
+  public float  set4( long i, float f) { return elem2BV(elem2ChunkIdx(i)).set4(i,f); }
 
   /** handling of NAs: pick a value in the same dataspace but unlikely to
    *  collide with user data. */

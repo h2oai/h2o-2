@@ -152,21 +152,20 @@ public class StoreView extends Request {
     if( rows == -1 ) {
       byte [] bits = Utils.getFirstUnzipedBytes(val);
       PSetupGuess sguess = ParseDataset.guessSetup(bits);
-      CustomParser.ParserSetup setup = (sguess != null)?sguess._setup:null;
-      if(setup != null &&  setup._data != null && setup._ncols > 0 ) { // Able to parse sanely?
+      if(sguess != null &&  sguess.valid() && sguess._data != null && sguess._data.length >= 4 && sguess._setup._ncols > 0 ) { // Able to parse sanely?
         int zipped_len = val.getFirstBytes().length;
-        double bytes_per_row = (double) zipped_len / setup._data.length;
+        double bytes_per_row = (double) zipped_len / sguess._data.length;
         rows = (long) (val.length() / bytes_per_row);
-        cols = setup._ncols;
+        cols = sguess._setup._ncols;
         result.addProperty(ROWS, "~" + rows);
         result.addProperty(COLS, cols);
-        final int len = setup._data.length;
+        final int len = sguess._data.length;
         for( int i=0; i<Math.min(cols,jcols.length); i++ ) {
           JsonObject col = new JsonObject();
-          if(len > 0) col.addProperty(HEADER,setup._data[0][i]); // First 4 rows, including labels
-          if(len > 1) col.addProperty(MIN   ,setup._data[1][i]); // as MIN/MEAN/MAX
-          if(len > 2) col.addProperty(MEAN  ,setup._data[2][i]);
-          if(len > 3) col.addProperty(MAX   ,setup._data[3][i]);
+          if(len > 0 && i < sguess._data[0].length) col.addProperty(HEADER,sguess._data[0][i]); // First 4 rows, including labels
+          if(len > 1 && i < sguess._data[1].length) col.addProperty(MIN   ,sguess._data[1][i]); // as MIN/MEAN/MAX
+          if(len > 2 && i < sguess._data[2].length) col.addProperty(MEAN  ,sguess._data[2][i]);
+          if(len > 3 && i < sguess._data[3].length) col.addProperty(MAX   ,sguess._data[3][i]);
           jcols[i] = col;
         }
       } else {

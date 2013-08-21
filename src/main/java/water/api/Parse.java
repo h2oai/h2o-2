@@ -1,13 +1,13 @@
 package water.api;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.regex.Pattern;
 
 import water.*;
-import water.fvec.Frame;
 import water.parser.*;
+import water.parser.ParseDataset.ParseSetupGuessException;
 import water.util.RString;
-import water.util.Utils;
 
 import com.google.gson.JsonObject;
 
@@ -24,60 +24,34 @@ public class Parse extends Request {
   private   final Preview        _preview   = new Preview(PREVIEW);
 
   public Parse() {
-    _hdrFrom.addPrerequisite(_header);
     _excludeExpression.setRefreshOnChange();
-    _excludeExpression._hideInQuery = true;
   }
 
-
-  protected CustomParser.PSetupGuess guessSetup(ArrayList<Key> keys,Key headerKey, CustomParser.ParserSetup setup, boolean checkHeader){
-    String [] colNames = null;
-    CustomParser.PSetupGuess gSetup = null, hSetup = null;
-    if(headerKey != null){ // handle the header file!
-      Value v = DKV.get(headerKey);
-      if(!v.isRawData()){ // either ValueArray or a Frame, just extract the headers
-        if(v.isArray()){
-          ValueArray ary = v.get();
-          colNames = ary.colNames();
-        } else if(v.isFrame()){
-          Frame fr = v.get();
-          colNames = fr._names;
-        } else
-          throw new IllegalArgumentException("Headers can only come from unparsed data, ValueArray or a frame. Got " + v.newInstance().getClass().getSimpleName());
-      } else { // check the hdr setup by parsing first bytes
-        hSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(headerKey),setup,checkHeader);
-        if(hSetup == null || hSetup._setup._ncols != setup._ncols) // no match with global setup, try once more with general setup (e.g. header file can have different separator than the rest)
-          hSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(headerKey),new CustomParser.ParserSetup(),checkHeader);
-        else if(hSetup._setup._data != null && hSetup._setup._data.length > 1){ // the hdr file had both hdr and data, it better be part of the parse and represent the global parser setup
-          if(keys.contains(headerKey))
-            gSetup = hSetup; // else we got a global setup file all other files must comply with!
-          else throw new IllegalArgumentException(headerKey + " can not be used as a header file. Please either parse it separately first or include the file in the parse. Raw (unparsed) files can only be used as headers if they are included in the parse or they contain ONLY the header and NO DATA.");
-        }
-        if(hSetup != null)
-          colNames = hSetup._setup._columnNames;
-      }
-    }
-    if(gSetup == null){ // we did not get global setup
-      Key k = keys.get(0);
-      if(headerKey != null && k.equals(headerKey) && keys.size() > 1)
-        k = keys.get(1);
-      gSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(k), setup, checkHeader && headerKey == null);
-      if(gSetup == null) throw new IllegalArgumentException(setup._pType == water.parser.CustomParser.ParserType.AUTO?"Does not recognize the type of " + k:"File " + k + " is not in " + setup._pType + " format.");
-      if(colNames != null && colNames.length != gSetup._setup._ncols) throw new IllegalArgumentException("number of columns in the header file and the parsed files don't match!");
-    }
-    // now set the header info in the final setup
-    if(colNames != null){
-      gSetup._setup._header = true;
-      gSetup._setup._columnNames = colNames;
-    }
-    return gSetup;
-  }
-
+//  private static String toHTML(ParseSetupGuessException e){
+//    StringBuilder sb = new StringBuilder("<h3>Unable to Parse</h3>");
+//    if(!e.getMessage().isEmpty())sb.append("<div>" + e.getMessage() + "</div>");
+//    if(e._failed != null && e._failed.length > 0){
+//      sb.append("<div>\n<b>Found " + e._failed.length + " files which are not compatible with the given setup:</b></div>");
+//      int n = e._failed.length;
+//      if(n > 5){
+//        sb.append("<div>" + e._failed[0] + "</div>");
+//        sb.append("<div>" + e._failed[1] + "</div>");
+//        sb.append("<div>...</div>");
+//        sb.append("<div>" + e._failed[n-2] + "</div>");
+//        sb.append("<div>" + e._failed[n-1] + "</div>");
+//      } else for(int i = 0; i < n;++i)
+//        sb.append("<div>" + e._failed[n-1] + "</div>");
+//    } else if(e._gSetup == null || !e._gSetup.valid()) {
+//      sb.append("Failed to find consistent parser setup for the given files!");
+//    }
+//    return sb.toString();
+//  }
 
   protected static class PSetup {
     final transient ArrayList<Key> _keys;
+    final transient Key [] _failedKeys;
     final CustomParser.PSetupGuess _setup;
-    PSetup( ArrayList<Key> keys, CustomParser.PSetupGuess pguess) { _keys=keys; _setup = pguess; }
+    PSetup( ArrayList<Key> keys, Key [] fkeys, CustomParser.PSetupGuess pguess) { _keys=keys; _failedKeys = fkeys; _setup = pguess; }
   };
   // An H2O Key Query, which runs the basic CSV parsing heuristics.  Accepts
   // Key wildcards, and gathers all matching Keys for simultaneous parsing.
@@ -94,6 +68,8 @@ public class Parse extends Request {
     @Override protected PSetup parse(String input) throws IllegalArgumentException {
       Pattern p = makePattern(input);
       Pattern exclude = null;
+      if(_hdrFrom.specified())
+        _header.setValue(true);
       if(_excludeExpression.specified())
         exclude = makePattern(_excludeExpression.value());
       ArrayList<Key> keys = new ArrayList();
@@ -115,24 +91,32 @@ public class Parse extends Request {
       Collections.sort(keys);   // Sort all the keys, except the 1 header guy
       // now we assume the first key has the header
       Key hKey = null;
-      if(_hdrFrom.specified())
+      if(_hdrFrom.specified()){
         hKey = _hdrFrom.value()._key;
+        _header.setValue(true);
+      }
       boolean checkHeader = !_header.specified();
       boolean hasHeader = _header.value();
-      CustomParser.PSetupGuess setup = guessSetup(keys, hKey, new CustomParser.ParserSetup(_parserType.value(),_separator.value(),hasHeader),checkHeader);
-      if(setup == null)
-        throw new IllegalArgumentException("I do not recognize the file " + keys.get(0) + "; Please select the parse setup manually.");
-      if(!_header.specified())
-        _header.setValue(setup._setup._header);
-      else
-        setup._setup._header = _header.value();
-      if(!_header.value())
-        _hdrFrom.disable("Header is disabled.");
-      PSetup res = new PSetup(keys,setup);
-      _parserType.setValue(setup._setup._pType);
-      _separator.setValue(setup._setup._separator);
-      _hdrFrom._hideInQuery = _header._hideInQuery = _separator._hideInQuery = setup._setup._pType != CustomParser.ParserType.CSV;
-      return res;
+      try{
+        CustomParser.PSetupGuess setup = ParseDataset.guessSetup(keys, hKey, new CustomParser.ParserSetup(_parserType.value(),_separator.value(),hasHeader),checkHeader);
+        if(setup._hdrFromFile != null)
+          _hdrFrom.setValue(DKV.get(setup._hdrFromFile));
+        if(!_header.specified())
+          _header.setValue(setup._setup._header);
+        else
+          setup._setup._header = _header.value();
+        if(!_header.value())
+          _hdrFrom.disable("Header is disabled.");
+        PSetup res = new PSetup(keys,null,setup);
+        _parserType.setValue(setup._setup._pType);
+        _separator.setValue(setup._setup._separator);
+        _hdrFrom._hideInQuery = _header._hideInQuery = _separator._hideInQuery = setup._setup._pType != CustomParser.ParserType.CSV;
+        return res;
+      }catch(ParseSetupGuessException e){
+        if(e._gSetup != null)
+          record()._value = new PSetup(keys, e._failed,e._gSetup);
+        throw new IllegalArgumentException(e.getMessage());
+      }
     }
 
     private final String keyRow(Key k){
@@ -222,10 +206,10 @@ public class Parse extends Request {
   public class Preview extends Argument {
       Preview(String name) {
       super(name,false);
-      addPrerequisite(_source);
-      addPrerequisite(_separator);
-      addPrerequisite(_parserType);
-      addPrerequisite(_header);
+//      addPrerequisite(_source);
+//      addPrerequisite(_separator);
+//      addPrerequisite(_parserType);
+//      addPrerequisite(_header);
       setRefreshOnChange();
     }
     @Override protected String queryElement() {
@@ -233,16 +217,33 @@ public class Parse extends Request {
       // if no original value was supplied, use the provided one
       String[][] data = null;
       PSetup psetup = _source.value();
+      if(psetup == null)
+        return _source.specified()?"<div class='alert alert-error'><b>Found no valid setup!</b></div>":"";
+      StringBuilder sb = new StringBuilder();
+      if(psetup._failedKeys != null){
+        sb.append("<div class='alert alert-error'>");
+        sb.append("<div>\n<b>Found " + psetup._failedKeys.length + " files which are not compatible with the given setup:</b></div>");
+        int n = psetup._failedKeys.length;
+        if(n > 5){
+          sb.append("<div>" + psetup._failedKeys[0] + "</div>\n");
+          sb.append("<div>" + psetup._failedKeys[1] + "</div>\n");
+          sb.append("<div>...</div>");
+          sb.append("<div>" + psetup._failedKeys[n-2] + "</div>\n");
+          sb.append("<div>" + psetup._failedKeys[n-1] + "</div>\n");
+        } else for(int i = 0; i < n;++i)
+          sb.append("<div>" + psetup._failedKeys[n-1] + "</div>\n");
+        sb.append("</div>\n");
+      }
       String [] err = psetup._setup._errors;
       boolean hasErrors = err != null && err.length > 0;
       boolean parsedOk = psetup._setup.valid();
       String parseMsgType = hasErrors?parsedOk?"warning":"error":"success";
-      StringBuilder sb = new StringBuilder("<div class='alert alert-" + parseMsgType + "'><b>" + psetup._setup.toString() + "</b>");
+      sb.append("<div class='alert alert-" + parseMsgType + "'><b>" + psetup._setup.toString() + "</b>");
       if(hasErrors)
         for(String s:err)sb.append("<div>" + s + "</div>");
       sb.append("</div>");
       if(psetup._setup != null)
-        data = psetup._setup._setup._data;
+        data = psetup._setup._data;
       String [] header = psetup._setup._setup._columnNames;
 
       if( data != null ) {
@@ -331,10 +332,11 @@ public class Parse extends Request {
     public ParserType(String name) {
       super(name,false);
       setRefreshOnChange();
-      _values = new String [CustomParser.ParserType.values().length];
+      _values = new String [CustomParser.ParserType.values().length-1];
       int i = 0;
       for(CustomParser.ParserType t:CustomParser.ParserType.values())
-        _values[i++] = t.name();
+        if(t != CustomParser.ParserType.XLSX)
+          _values[i++] = t.name();
     }
     private final String [] _values;
     @Override protected String   queryDescription() { return "File type"; }

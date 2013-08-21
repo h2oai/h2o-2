@@ -1,9 +1,9 @@
 package water.api;
 
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.Properties;
 
+import water.Iced;
 import water.util.RString;
 
 /**

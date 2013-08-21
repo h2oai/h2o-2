@@ -143,7 +143,6 @@ function build_initializer() {
 }
 
 function build_jar() {
-    JAR_TIME=`date "+%H.%M.%S-%m%d%y"`
     echo "creating jar file... ${JAR_FILE}"
     # include all libraries
     cd ${JAR_ROOT}
@@ -152,8 +151,6 @@ function build_jar() {
     # include H2O classes
     "$JAR" uf ${JAR_FILE} -C "${CLASSES}"   .
     "$ZIP" -qd ${JAR_FILE} javassist.jar 
-    echo "copying jar file... ${JAR_FILE} to ${OUTDIR}/h2o-${JAR_TIME}.jar"
-    cp ${JAR_FILE} ${OUTDIR}/h2o-${JAR_TIME}.jar
 }
 
 function build_src_jar() {
@@ -161,8 +158,6 @@ function build_src_jar() {
     # include H2O source files
     "$JAR" cf ${SRC_JAR_FILE} -C "${SRC}" .
     "$JAR" uf ${SRC_JAR_FILE} -C "${TESTSRC}" .
-    echo "copying jar file... ${SRC_JAR_FILE} to ${OUTDIR}/h2o-sources-${JAR_TIME}.jar"
-    cp ${SRC_JAR_FILE} ${OUTDIR}/h2o-sources-${JAR_TIME}.jar
 }
 
 function build_javadoc() {

@@ -131,7 +131,7 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(None, rfView, **params)
             print "classification error is expected to be low because we included the test data in with the training!"
-            self.assertAlmostEqual(classification_error, 0.0004, delta=0.0003, msg="Classification error %s differs too much" % classification_error)
+            self.assertAlmostEqual(classification_error, 0.0003, delta=0.0003, msg="Classification error %s differs too much" % classification_error)
         
             leaves = rfView['trees']['leaves']
             # Expected values are from this case:

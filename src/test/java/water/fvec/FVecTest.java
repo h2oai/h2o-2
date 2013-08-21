@@ -156,7 +156,7 @@ public class FVecTest extends TestUtil {
       // Create a temp column of zeros
       Vec v0 = fr._vecs[0];
       Vec v1 = fr._vecs[1];
-      Vec vz = Vec.makeZero(v0);
+      Vec vz = v0.makeZero();
       // Add column 0 & 1 into the temp column
       new PairSum().doAll(vz,v0,v1);
       // Add the temp to frame

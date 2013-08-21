@@ -38,6 +38,8 @@ public class RFModel extends Model implements Progress {
   public Key[]     _tkeys;
   /** Local forests produced by nodes */
   public Key[][]   _localForests;
+  /** Remote chunks' keys used by individual nodes */
+  public Key[][]   _remoteChunksKeys;
   /** Total time in seconds to produce model */
   public long      _time;
 
@@ -59,9 +61,12 @@ public class RFModel extends Model implements Progress {
     _tkeys = tkeys;
     _strataSamples = strataSamples;
     _samplingStrategy = samplingStrategy;
-    _nodesSplitFeatures = new int[H2O.CLOUD.size()];
-    _localForests       = new Key[H2O.CLOUD.size()][];
-    for(int i=0;i<H2O.CLOUD.size();i++) _localForests[i] = new Key[0];
+    int csize = H2O.CLOUD.size();
+    _nodesSplitFeatures = new int[csize];
+    _localForests       = new Key[csize][];
+    _remoteChunksKeys   = new Key[csize][];
+    for(int i=0;i<csize;i++) _localForests    [i] = new Key[0];
+    for(int i=0;i<csize;i++) _remoteChunksKeys[i] = new Key[0];
     for( Key tkey : _tkeys ) assert DKV.get(tkey)!=null;
   }
 
@@ -73,9 +78,12 @@ public class RFModel extends Model implements Progress {
     _totalTrees     = tkeys.length;
     _tkeys          = tkeys;
     _samplingStrategy   = Sampling.Strategy.RANDOM;
-    _nodesSplitFeatures = new int[H2O.CLOUD.size()];
-    _localForests       = new Key[H2O.CLOUD.size()][];
-    for(int i=0;i<H2O.CLOUD.size();i++) _localForests[i] = new Key[0];
+    int csize = H2O.CLOUD.size();
+    _nodesSplitFeatures = new int[csize];
+    _localForests       = new Key[csize][];
+    _remoteChunksKeys   = new Key[csize][];
+    for(int i=0;i<csize;i++) _localForests    [i] = new Key[0];
+    for(int i=0;i<csize;i++) _remoteChunksKeys[i] = new Key[0];
     for( Key tkey : _tkeys ) assert DKV.get(tkey)!=null;
     assert classes() > 0;
   }
@@ -176,9 +184,9 @@ public class RFModel extends Model implements Progress {
   }
 
   // The seed for a given tree
-  long seed(int ntree) {
-    return UDP.get8(tree(ntree), 4);
-  }
+  long seed(int ntree) { return UDP.get8(tree(ntree), 4); }
+  // The producer for a given tree
+  byte producerId(int ntree) { return tree(ntree)[12]; }
 
   // Lazy initialization of tree leaves, depth
   private transient Counter _tl, _td;
