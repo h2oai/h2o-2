@@ -315,6 +315,8 @@ public class Vec extends Iced {
   public long   set8( long i, long   l) { return elem2BV(elem2ChunkIdx(i)).set8(i,l); }
   /** Write element the slow way, as a double */
   public double set8( long i, double d) { return elem2BV(elem2ChunkIdx(i)).set8(i,d); }
+  /** Write element the slow way, as a float */
+  public float  set4( long i, float f) { return elem2BV(elem2ChunkIdx(i)).set4(i,f); }
 
   /** handling of NAs: pick a value in the same dataspace but unlikely to
    *  collide with user data. */

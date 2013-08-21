@@ -56,7 +56,12 @@ public class DRF extends Job {
     assert !vresponse._isInt || (vresponse.max() - vresponse.min()) < 10000; // Too many classes?
     int ymin = (int)vresponse.min();
     short nclass = vresponse._isInt ? (short)(vresponse.max()-ymin+1) : 0;
-    //if( nclass == 2 ) nclass = 0; // Specifically force 2 classes into a regression
+
+    // Make a new Vec to hold the %-tage of correct prediction for each row
+    // (initially all zero).  The value will vary from 0 to 1, where 1 is
+    // prefectly predicted and zero is not predicted at all.
+    Vec vpred = Vec.makeZero(vs[0]);
+    fr.add("Predict",vpred);
 
     // The RNG used to pick split columns
     Random rand = new MersenneTwisterRNG(new int[]{(int)(seed>>32L),(int)seed});
@@ -92,7 +97,7 @@ public class DRF extends Job {
       if( d>depth ) depth=d;    // Actual max depth used
 
       // Remove temp vectors; cleanup the Frame
-      while( fr.numCols() > ncols+1 )
+      for( int t=0; t<xtrees; t++ )
         UKV.remove(fr.remove(fr.numCols()-1)._key);
     }
     Log.info(Sys.DRF__,"DRF done in "+t_drf);

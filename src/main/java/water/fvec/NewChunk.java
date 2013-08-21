@@ -123,8 +123,12 @@ public class NewChunk extends Chunk {
     }
     // If the data was set8 as doubles, we (weanily) give up on compression and
     // just store it as a pile-o-doubles.
-    if( _ds != null )
-      return new C8DChunk(bufF(3));
+    if( _ds != null ) {
+      for( int i=0; i<_len; i++ ) // Attempt to inject all doubles into floats
+        if( (double)(float)_ds[i] != _ds[i] )
+          return new C8DChunk(bufF(3));
+      return new C4FChunk(bufF(2));
+    }
 
     // Look at the min & max & scaling.  See if we can sanely normalize the
     // data in some fixed-point format.
@@ -312,6 +316,11 @@ public class NewChunk extends Chunk {
     return true;
   }
   @Override boolean set8_impl(int i, double d) {
+    if( _ls != null ) throw H2O.unimpl();
+    _ds[i]=d;
+    return true;
+  }
+  @Override boolean set4_impl(int i, float d) {
     if( _ls != null ) throw H2O.unimpl();
     _ds[i]=d;
     return true;
