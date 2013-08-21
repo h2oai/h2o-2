@@ -10,6 +10,7 @@ import water.ValueArray.Column;
 import water.api.Constants;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
+import water.util.Utils;
 
 import com.google.gson.*;
 
@@ -156,10 +157,8 @@ public class KMeansModel extends Model implements Progress {
         _rows = kms._rows;
         _dist = kms._dist;
       } else {
-        for( int i = 0; i < _rows.length; i++ ) {
-          _rows[i] += kms._rows[i];
-          _dist[i] += kms._dist[i];
-        }
+        Utils.add(_rows,kms._rows);
+        Utils.add(_dist,kms._dist);
       }
     }
 

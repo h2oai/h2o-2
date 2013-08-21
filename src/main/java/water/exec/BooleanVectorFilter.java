@@ -1,6 +1,7 @@
 package water.exec;
 
 import water.*;
+import water.util.Utils;
 
 /**
  * @author peta
@@ -53,8 +54,6 @@ public class BooleanVectorFilter extends MRTask {
   @Override public void reduce(DRemoteTask drt) {
     BooleanVectorFilter other = (BooleanVectorFilter) drt;
     if( _rpc == null ) _rpc = other._rpc;
-    else
-      for( int i=0; i<_rpc.length; i++ )
-        _rpc[i] += other._rpc[i];
+    else Utils.add(_rpc,other._rpc);
   }
 }

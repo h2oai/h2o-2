@@ -132,8 +132,7 @@ public class Summary extends Iced {
       _nzero += other._nzero;
       _n_na += other._n_na;
 
-      for (int i = 0; i < _bins.length; i++)
-        _bins[i] += other._bins[i];
+      Utils.add(_bins,other._bins);
       if(_min != null){
         int j = 0, k = 0;
         double [] min = _min.clone();

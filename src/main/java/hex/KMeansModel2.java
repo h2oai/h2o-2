@@ -145,10 +145,8 @@ public class KMeansModel2 extends Model {
         _rows = kms._rows;
         _dist = kms._dist;
       } else {
-        for( int i = 0; i < _rows.length; i++ ) {
-          _rows[i] += kms._rows[i];
-          _dist[i] += kms._dist[i];
-        }
+        Utils.add(_rows,kms._rows);
+        Utils.add(_dist,kms._dist);
       }
     }
 

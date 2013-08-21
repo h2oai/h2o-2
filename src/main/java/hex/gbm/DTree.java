@@ -7,6 +7,7 @@ import water.H2O.H2OCountedCompleter;
 import water.fvec.*;
 import water.util.Log.Tag.Sys;
 import water.util.Log;
+import water.util.Utils;
 
 /**
    A Decision Tree, laid over a Frame of Vecs, and built distributed.
@@ -507,9 +508,7 @@ class DTree extends Iced {
     @Override public void reduce( BulkScore t ) { 
       _sum += t._sum; 
       _err += t._err; 
-      for( int i=0; i<_nclass; i++ )
-        for( int j=0; j<_nclass; j++ )
-          _cm[i][j] += t._cm[i][j];
+      Utils.add(_cm,t._cm);
     }
 
     // Return a relative error.  For regression it's y-mean.  For classification, 
@@ -618,9 +617,6 @@ class DTree extends Iced {
       for( int i=0; i<cr._len; i++ )
         _cs[(int)cr.at80(i)]++;
     }
-    @Override public void reduce( ClassDist cd ) {
-      for( int i=0; i<_cs.length; i++ )
-        _cs[i] += cd._cs[i];
-    }
+    @Override public void reduce( ClassDist cd ) { Utils.add(_cs,cd._cs); }
   }
 }
