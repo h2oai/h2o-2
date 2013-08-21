@@ -4,6 +4,12 @@ if(!"rjson" %in% rownames(installed.packages())) install.packages(rjson)
 library(RCurl)
 library(rjson)
 
+# Hack to get around Exec.json always dumping to same Result.hex key
+pkg.env = new.env()
+pkg.env$result_count = 0
+RESULT_MAX = 100
+LOGICAL_OPERATORS = c("==", ">", "<", "!=", ">=", "<=")
+
 # Internal functions & declarations
 h2o.__PAGE_CLOUD = "Cloud.json"
 h2o.__PAGE_EXEC = "Exec.json"
@@ -113,7 +119,9 @@ h2o.__exec <- function(client, expr) {
   type = tryCatch({ typeof(expr) }, error = function(e) { "expr" })
   if (type != "character")
     expr = deparse(substitute(expr))
-  res = h2o.__remoteSend(client, h2o.__PAGE_EXEC, expression=expr)
+  destKey = paste("Result_", pkg.env$result_count, ".hex", sep="")
+  res = h2o.__remoteSend(client, h2o.__PAGE_EXEC, expression=expr, destination_key=destKey)
+  pkg.env$result_count = (pkg.env$result_count + 1) %% RESULT_MAX
   res$key
 }
 
@@ -126,7 +134,10 @@ h2o.__operator <- function(op, x, y) {
   if(class(x) == "H2OParsedData") myClient = x@h2o
   else myClient = y@h2o
   res = h2o.__exec(myClient, expr)
-  new("H2OParsedData", h2o=myClient, key=res)
+  if(op %in% LOGICAL_OPERATORS)
+    new("H2OLogicalData", h2o=myClient, key=res)
+  else
+    new("H2OParsedData", h2o=myClient, key=res)
 }
 
 h2o.__func <- function(fname, x, type) {

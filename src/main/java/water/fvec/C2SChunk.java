@@ -34,6 +34,7 @@ public class C2SChunk extends Chunk {
     throw H2O.unimpl();
     //return false; 
   }
+  @Override boolean set4_impl(int i, float f ) { return false; }
   @Override boolean hasFloat() { return _scale < 1.0; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
   @Override public C2SChunk read(AutoBuffer bb) {

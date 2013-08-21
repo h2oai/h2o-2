@@ -20,6 +20,7 @@ public class C4Chunk extends Chunk {
     return true; 
   }
   @Override boolean set8_impl(int i, double d) { return false; }
+  @Override boolean set4_impl(int i, float f ) { return false; }
   @Override boolean hasFloat() { return false; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
   @Override public C4Chunk read(AutoBuffer bb) {
