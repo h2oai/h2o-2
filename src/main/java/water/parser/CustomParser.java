@@ -32,6 +32,8 @@ public abstract class CustomParser extends Iced {
     public final int _invalidLines;
     public final int _validLines;
     public final String []   _errors;
+    public Key _setupFromFile;
+    public Key _hdrFromFile;
     public String [][] _data;
     public PSetupGuess(ParserSetup ps, int vlines, int ilines, String [][] data, String [] errors){
       _setup = ps;
@@ -41,7 +43,7 @@ public abstract class CustomParser extends Iced {
       _data = data;
     }
     public final boolean valid(){
-      return _invalidLines < _validLines;
+      return _validLines > 0 && _invalidLines < _validLines;
     }
     public final boolean hasErrors(){
       return _errors != null && _errors.length > 0;

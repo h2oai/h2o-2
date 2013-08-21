@@ -83,6 +83,8 @@ public class Parse extends Request {
       CustomParser.PSetupGuess setup = ParseDataset.guessSetup(keys, hKey, new CustomParser.ParserSetup(_parserType.value(),_separator.value(),hasHeader),checkHeader);
       if(setup == null)
         throw new IllegalArgumentException("I do not recognize the file " + keys.get(0) + "; Please select the parse setup manually.");
+      if(setup._hdrFromFile != null)
+        _hdrFrom.setValue(DKV.get(setup._hdrFromFile));
       if(!_header.specified())
         _header.setValue(setup._setup._header);
       else
