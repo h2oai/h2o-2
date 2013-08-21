@@ -325,7 +325,9 @@ public class Utils {
   }
   public static byte [] getFirstUnzipedBytes(Value v){
     byte [] bits = v.getFirstBytes();
-    return unzipBytes(bits, guessCompressionMethod(bits));
+    try{
+      return unzipBytes(bits, guessCompressionMethod(bits));
+    } catch(Exception e){return null;}
   }
 
   public static Compression guessCompressionMethod(byte [] bits){

@@ -1,15 +1,13 @@
 package water.api;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.regex.Pattern;
 
 import water.*;
-import water.fvec.Frame;
 import water.parser.*;
-import water.parser.CustomParser.PSetupGuess;
-import water.parser.CustomParser.ParserSetup;
-import water.util.*;
-import water.util.Utils.IcedArrayList;
+import water.parser.ParseDataset.ParseSetupGuessException;
+import water.util.RString;
 
 import com.google.gson.JsonObject;
 
@@ -29,12 +27,31 @@ public class Parse extends Request {
     _excludeExpression.setRefreshOnChange();
   }
 
-
+//  private static String toHTML(ParseSetupGuessException e){
+//    StringBuilder sb = new StringBuilder("<h3>Unable to Parse</h3>");
+//    if(!e.getMessage().isEmpty())sb.append("<div>" + e.getMessage() + "</div>");
+//    if(e._failed != null && e._failed.length > 0){
+//      sb.append("<div>\n<b>Found " + e._failed.length + " files which are not compatible with the given setup:</b></div>");
+//      int n = e._failed.length;
+//      if(n > 5){
+//        sb.append("<div>" + e._failed[0] + "</div>");
+//        sb.append("<div>" + e._failed[1] + "</div>");
+//        sb.append("<div>...</div>");
+//        sb.append("<div>" + e._failed[n-2] + "</div>");
+//        sb.append("<div>" + e._failed[n-1] + "</div>");
+//      } else for(int i = 0; i < n;++i)
+//        sb.append("<div>" + e._failed[n-1] + "</div>");
+//    } else if(e._gSetup == null || !e._gSetup.valid()) {
+//      sb.append("Failed to find consistent parser setup for the given files!");
+//    }
+//    return sb.toString();
+//  }
 
   protected static class PSetup {
     final transient ArrayList<Key> _keys;
+    final transient Key [] _failedKeys;
     final CustomParser.PSetupGuess _setup;
-    PSetup( ArrayList<Key> keys, CustomParser.PSetupGuess pguess) { _keys=keys; _setup = pguess; }
+    PSetup( ArrayList<Key> keys, Key [] fkeys, CustomParser.PSetupGuess pguess) { _keys=keys; _failedKeys = fkeys; _setup = pguess; }
   };
   // An H2O Key Query, which runs the basic CSV parsing heuristics.  Accepts
   // Key wildcards, and gathers all matching Keys for simultaneous parsing.
@@ -80,22 +97,26 @@ public class Parse extends Request {
       }
       boolean checkHeader = !_header.specified();
       boolean hasHeader = _header.value();
-      CustomParser.PSetupGuess setup = ParseDataset.guessSetup(keys, hKey, new CustomParser.ParserSetup(_parserType.value(),_separator.value(),hasHeader),checkHeader);
-      if(setup == null)
-        throw new IllegalArgumentException("I do not recognize the file " + keys.get(0) + "; Please select the parse setup manually.");
-      if(setup._hdrFromFile != null)
-        _hdrFrom.setValue(DKV.get(setup._hdrFromFile));
-      if(!_header.specified())
-        _header.setValue(setup._setup._header);
-      else
-        setup._setup._header = _header.value();
-      if(!_header.value())
-        _hdrFrom.disable("Header is disabled.");
-      PSetup res = new PSetup(keys,setup);
-      _parserType.setValue(setup._setup._pType);
-      _separator.setValue(setup._setup._separator);
-      _hdrFrom._hideInQuery = _header._hideInQuery = _separator._hideInQuery = setup._setup._pType != CustomParser.ParserType.CSV;
-      return res;
+      try{
+        CustomParser.PSetupGuess setup = ParseDataset.guessSetup(keys, hKey, new CustomParser.ParserSetup(_parserType.value(),_separator.value(),hasHeader),checkHeader);
+        if(setup._hdrFromFile != null)
+          _hdrFrom.setValue(DKV.get(setup._hdrFromFile));
+        if(!_header.specified())
+          _header.setValue(setup._setup._header);
+        else
+          setup._setup._header = _header.value();
+        if(!_header.value())
+          _hdrFrom.disable("Header is disabled.");
+        PSetup res = new PSetup(keys,null,setup);
+        _parserType.setValue(setup._setup._pType);
+        _separator.setValue(setup._setup._separator);
+        _hdrFrom._hideInQuery = _header._hideInQuery = _separator._hideInQuery = setup._setup._pType != CustomParser.ParserType.CSV;
+        return res;
+      }catch(ParseSetupGuessException e){
+        if(e._gSetup != null)
+          record()._value = new PSetup(keys, e._failed,e._gSetup);
+        throw new IllegalArgumentException(e.getMessage());
+      }
     }
 
     private final String keyRow(Key k){
@@ -185,10 +206,10 @@ public class Parse extends Request {
   public class Preview extends Argument {
       Preview(String name) {
       super(name,false);
-      addPrerequisite(_source);
-      addPrerequisite(_separator);
-      addPrerequisite(_parserType);
-      addPrerequisite(_header);
+//      addPrerequisite(_source);
+//      addPrerequisite(_separator);
+//      addPrerequisite(_parserType);
+//      addPrerequisite(_header);
       setRefreshOnChange();
     }
     @Override protected String queryElement() {
@@ -196,11 +217,28 @@ public class Parse extends Request {
       // if no original value was supplied, use the provided one
       String[][] data = null;
       PSetup psetup = _source.value();
+      if(psetup == null)
+        return _source.specified()?"<div class='alert alert-error'><b>Found no valid setup!</b></div>":"";
+      StringBuilder sb = new StringBuilder();
+      if(psetup._failedKeys != null){
+        sb.append("<div class='alert alert-error'>");
+        sb.append("<div>\n<b>Found " + psetup._failedKeys.length + " files which are not compatible with the given setup:</b></div>");
+        int n = psetup._failedKeys.length;
+        if(n > 5){
+          sb.append("<div>" + psetup._failedKeys[0] + "</div>\n");
+          sb.append("<div>" + psetup._failedKeys[1] + "</div>\n");
+          sb.append("<div>...</div>");
+          sb.append("<div>" + psetup._failedKeys[n-2] + "</div>\n");
+          sb.append("<div>" + psetup._failedKeys[n-1] + "</div>\n");
+        } else for(int i = 0; i < n;++i)
+          sb.append("<div>" + psetup._failedKeys[n-1] + "</div>\n");
+        sb.append("</div>\n");
+      }
       String [] err = psetup._setup._errors;
       boolean hasErrors = err != null && err.length > 0;
       boolean parsedOk = psetup._setup.valid();
       String parseMsgType = hasErrors?parsedOk?"warning":"error":"success";
-      StringBuilder sb = new StringBuilder("<div class='alert alert-" + parseMsgType + "'><b>" + psetup._setup.toString() + "</b>");
+      sb.append("<div class='alert alert-" + parseMsgType + "'><b>" + psetup._setup.toString() + "</b>");
       if(hasErrors)
         for(String s:err)sb.append("<div>" + s + "</div>");
       sb.append("</div>");

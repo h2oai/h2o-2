@@ -117,7 +117,18 @@ public final class ParseDataset extends Job {
     }
   }
 
-  public static CustomParser.PSetupGuess guessSetup(ArrayList<Key> keys,Key headerKey, CustomParser.ParserSetup setup, boolean checkHeader){
+  public static class ParseSetupGuessException extends RuntimeException {
+    public final PSetupGuess _gSetup;
+    public final Key [] _failed;
+
+    public ParseSetupGuessException(String msg, PSetupGuess gSetup, Key [] failed){
+      super(msg);
+      _gSetup = gSetup;
+      _failed = failed;
+    }
+  }
+
+  public static CustomParser.PSetupGuess guessSetup(ArrayList<Key> keys,Key headerKey, CustomParser.ParserSetup setup, boolean checkHeader)  {
     String [] colNames = null;
     CustomParser.PSetupGuess gSetup = null;
     boolean headerKeyPartOfParse = false;
@@ -151,22 +162,13 @@ public final class ParseDataset extends Job {
       }
       assert t._conflicts.isEmpty(); // we should not have any conflicts here, either we failed to find any valid global setup, or conflicts should've been converted into failures in the second pass
       if(!t._failedSetup.isEmpty()){
-        StringBuilder sb = new StringBuilder("<div>\n<b>Found " + t._failedSetup.size() + " files which are not compatible with the given setup:</b></div>");
-        if(t._failedSetup.size() > 5){
-          int n = t._failedSetup.size();
-          sb.append("<div>" + t._failedSetup.get(0) + "</div>");
-          sb.append("<div>" + t._failedSetup.get(1) + "</div>");
-          sb.append("<div>...</div>");
-          sb.append("<div>" + t._failedSetup.get(n-2) + "</div>");
-          sb.append("<div>" + t._failedSetup.get(n-1) + "</div>");
-        } else for(int i = 0; i < t._failedSetup.size();++i)
-          sb.append("<div>" + t._failedSetup.get(i) + "</div>");
-        throw new IllegalArgumentException("<h3>Can not parse:</h3>" + sb.toString());
+        Key [] fks = new Key[t._failedSetup.size()];
+        throw new ParseSetupGuessException("Can not parse: Got incompatible files.", gSetup, t._failedSetup.toArray(fks));
       }
     } else if(!keys.isEmpty())
       gSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(keys.get(0)),setup,checkHeader);
     if(!gSetup.valid())
-      throw new IllegalArgumentException("<h3>Can not parse:</h3>" +( setup._pType == CustomParser.ParserType.AUTO?"Did not finad any matching consistent parser setup, please specify manually":"None of the files is consistent with the given setup!"));
+      throw new ParseSetupGuessException("",gSetup,null);
     if(headerKey != null){ // separate headerKey
       Value v = DKV.get(headerKey);
       if(!v.isRawData()){ // either ValueArray or a Frame, just extract the headers
@@ -177,7 +179,7 @@ public final class ParseDataset extends Job {
           Frame fr = v.get();
           colNames = fr._names;
         } else
-          throw new IllegalArgumentException("Headers can only come from unparsed data, ValueArray or a frame. Got " + v.newInstance().getClass().getSimpleName());
+          throw new ParseSetupGuessException("Headers can only come from unparsed data, ValueArray or a frame. Got " + v.newInstance().getClass().getSimpleName(),gSetup,null);
       } else { // check the hdr setup by parsing first bytes
         CustomParser.ParserSetup lSetup = gSetup._setup.clone();
         lSetup._header = true;
@@ -188,20 +190,20 @@ public final class ParseDataset extends Job {
           hSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(headerKey),stp,false);
         }
         if(!hSetup.valid() || hSetup._setup._columnNames == null)
-          throw new IllegalArgumentException("Invalid header file. I did not find any column names.");
+          throw new ParseSetupGuessException("Invalid header file. I did not find any column names.",gSetup,null);
         if(hSetup._setup._ncols != gSetup._setup._ncols)
-          throw new IllegalArgumentException("Header file has different number of columns than the rest!, expected " + gSetup._setup._ncols + " columns, got " + hSetup._setup._ncols + ", header: " + Arrays.toString(hSetup._setup._columnNames));
+          throw new ParseSetupGuessException("Header file has different number of columns than the rest!, expected " + gSetup._setup._ncols + " columns, got " + hSetup._setup._ncols + ", header: " + Arrays.toString(hSetup._setup._columnNames),gSetup,null);
         if(hSetup._data != null && hSetup._data.length > 1){// the hdr file had both hdr and data, it better be part of the parse and represent the global parser setup
-          if(!headerKeyPartOfParse) throw new IllegalArgumentException(headerKey + " can not be used as a header file. Please either parse it separately first or include the file in the parse. Raw (unparsed) files can only be used as headers if they are included in the parse or they contain ONLY the header and NO DATA.");
+          if(!headerKeyPartOfParse) throw new ParseSetupGuessException(headerKey + " can not be used as a header file. Please either parse it separately first or include the file in the parse. Raw (unparsed) files can only be used as headers if they are included in the parse or they contain ONLY the header and NO DATA.",gSetup,null);
           else if(gSetup._setup.isCompatible(hSetup._setup)){
             gSetup = hSetup;
             keys.add(headerKey); // put the key back so the file is parsed!
           }else
-            throw new IllegalArgumentException("Header file is not compatible with the other files.");
+            throw new ParseSetupGuessException("Header file is not compatible with the other files.",gSetup, null);
         } else if(hSetup != null && hSetup._setup._columnNames != null)
           colNames = hSetup._setup._columnNames;
         else
-          throw new IllegalArgumentException("Invalid header file. I did not find any column names.");
+          throw new ParseSetupGuessException("Invalid header file. I did not find any column names.",gSetup,null);
       }
     }
     // now set the header info in the final setup
@@ -216,6 +218,7 @@ public final class ParseDataset extends Job {
 
 
   public static PSetupGuess guessSetup(byte [] bits, ParserSetup setup, boolean checkHeader){
+    if(bits == null)return new PSetupGuess(new ParserSetup(), 0, 0, null, null);
     ArrayList<PSetupGuess> guesses = new ArrayList<CustomParser.PSetupGuess>();
     PSetupGuess res = null;
     if(setup == null)setup = new ParserSetup();
@@ -250,7 +253,7 @@ public final class ParseDataset extends Job {
         assert res != null;
         return res;
       default:
-        throw new IllegalArgumentException(setup._pType + " is not implemented.");
+        throw H2O.unimpl();
     }
   }
 
@@ -264,7 +267,7 @@ public final class ParseDataset extends Job {
     return t;
   }
 
-  public static void parse(ParseDataset job, Key [] keys, CustomParser.ParserSetup setup){
+  public static void parse(ParseDataset job, Key [] keys, CustomParser.ParserSetup setup) {
     if(setup == null){
       ArrayList<Key> ks = new ArrayList<Key>(keys.length);
       for (Key k:keys)ks.add(k);
