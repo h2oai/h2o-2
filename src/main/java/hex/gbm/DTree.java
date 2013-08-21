@@ -32,7 +32,9 @@ class DTree extends Iced {
   private Node[] _ns;    // All the nodes in the tree.  Node 0 is the root.
   int _len;              // Resizable array
   DTree( String[] names, int ncols, int nclass ) { _names = names; _ncols = ncols; _nclass=nclass; _ns = new Node[1]; }
-
+  
+  boolean isRegression() { return _nclass==1; }
+  boolean isClassification() { return _nclass>1; }
   public final Node root() { return _ns[0]; }
 
   // Return Node i
@@ -107,7 +109,7 @@ class DTree extends Iced {
         p(sb,"cnt" ,cntW).append('/');
         p(sb,"min" ,mmmW).append('/');
         p(sb,"max" ,mmmW).append('/');
-        if( _tree._nclass == 0 ) {
+        if( _tree.isRegression() ) {
           p(sb,"mean",mmmW).append('/');
           p(sb,"var" ,varW).append(colPad);
         } else {
@@ -123,7 +125,7 @@ class DTree extends Iced {
             p(sb,Long.toString(_hs[j].bins(i)),cntW).append('/');
             p(sb,              _hs[j].mins(i) ,mmmW).append('/');
             p(sb,              _hs[j].maxs(i) ,mmmW).append('/');
-            if( _tree._nclass==0 ) {  // Regression
+            if( _tree.isRegression() ) { // Regression
               p(sb,              _hs[j]. mean(i) ,mmmW).append('/');
               p(sb,              _hs[j]. var (i) ,varW).append(colPad);
             } else {            // Classification
@@ -218,8 +220,8 @@ class DTree extends Iced {
       _mins = splitH._mins;     // Hang onto for printing purposes
       _maxs = splitH._maxs;     // Hang onto for printing purposes
       _ns = new int[nums];
-      int nclass = _tree._nclass; // Number of classes
-      _ycls = new long[nums][nclass==0 ? 1 : nclass];
+      int nclass = _tree._nclass;
+      _ycls = new long[nums][nclass];
       _pred = new float[nums];
       int ncols = _tree._ncols;     // ncols: all columns, minus response
       for( int i=0; i<nums; i++ ) { // For all split-points
@@ -228,7 +230,7 @@ class DTree extends Iced {
         assert nhists==null || nhists.length==ncols;
         _ns[i] = nhists == null ? -1 : makeUndecidedNode(_tree,_nid,nhists)._nid;
         // Also setup predictions locally
-        if( nclass == 0 )  {                     // Regression?
+        if( _tree.isRegression() )  {            // Regression?
           _ycls[i] = new long[]{splitH.bins(i)}; // Number of entries in bin
           _pred[i] = splitH. mean(i);            // Prediction is mean of bin
         } else {                                 // Classification?
@@ -266,7 +268,6 @@ class DTree extends Iced {
       throw H2O.fail();
     }    
   }
-
 
   // --------------------------------------------------------------------------
   // Fuse 2 conceptual passes into one:
@@ -308,6 +309,8 @@ class DTree extends Iced {
       _fr = fr;
     }
 
+    private boolean isRegression() { return _nclass==1; }
+
     // Init all the internal tree fields after shipping over the wire
     @Override public void init( ) {
       for( DTree dt : _trees )
@@ -328,8 +331,8 @@ class DTree extends Iced {
     }
 
     @Override public void map( Chunk[] chks ) {
-      assert _ncols+1/*response variable*/+1/*error*/+_trees.length == chks.length 
-        : "Missing columns?  ncols="+_ncols+", 1 for response, 1 for errors, ntrees="+_trees.length+", and found "+chks.length+" vecs";
+      assert _ncols+1/*response variable*/+_nclass/*residuals*/+_trees.length == chks.length 
+        : "Missing columns?  ncols="+_ncols+", "+_nclass+" for residuals, ntrees="+_trees.length+", and found "+chks.length+" vecs";
       Chunk ys = chks[_ncols];
 
       // We need private (local) space to gather the histograms.
@@ -342,7 +345,7 @@ class DTree extends Iced {
         final int leaf = _leafs[t];
         // A leaf-biased array of all active histograms
         final DHistogram hcs[][] = _hcs[t] = new DHistogram[tree._len-leaf][]; 
-        final Chunk nids = chks[_ncols+1/*response col*/+1/*errors*/+t];
+        final Chunk nids = chks[_ncols+1/*response col*/+_nclass/*residual*/+t];
 
         // Pass 1 & 2
         for( int i=0; i<nids._len; i++ ) {
@@ -384,8 +387,8 @@ class DTree extends Iced {
         }
           
         // Pass 2
-        if( _nclass == 0 ) countRegression(tree,nids,ys,chks,hcs,leaf);
-        else               countClasses   (tree,nids,ys,chks,hcs,leaf);
+        if( isRegression() ) countRegression(tree,nids,ys,chks,hcs,leaf);
+        else                 countClasses   (tree,nids,ys,chks,hcs,leaf);
       }
     }
 
@@ -470,6 +473,8 @@ class DTree extends Iced {
       _rate = sampleRate;
     }
 
+    private boolean isRegression() { return _nclass==1; }
+
     // Init all the internal tree fields after shipping over the wire
     @Override public void init( ) {
       for( DTree dt : _trees )
@@ -479,7 +484,6 @@ class DTree extends Iced {
 
     @Override public void map( Chunk chks[] ) {
       Chunk ys = chks[_ncols+0]; // Response
-      Chunk es = chks[_ncols+1]; // Error
       _cm = new long[_nclass][_nclass];
 
       // Get an array of RNGs to replay the sampling in reverse, only for OOBEE.
@@ -497,7 +501,6 @@ class DTree extends Iced {
         float err = score0( chks, i, (float)ys.at0(i), clss, rands );
         assert 0.0f <= err && err <= 1.0f;
         _sum += err*err;        // Squared error
-        es.set80(i,1.0f-err);   // Remember 1-error (so zero is max error, and 1.0 is perfect predict)
       }
     }
 
@@ -534,7 +537,7 @@ class DTree extends Iced {
           assert node._tree==tree;
         }
         // We hit the end of the tree walk.  Get this tree's prediction
-        if( _nclass == 0 ) {    // Regression?
+        if( isRegression() ) {  // Regression?
           sum += regressScore(prev,clss,chks,i,true,sum);
         } else {                // Classification?
           classScore(prev,clss,chks,i,true);
@@ -543,7 +546,7 @@ class DTree extends Iced {
 
       // Having computed the votes across all trees, find the majority class
       // and it's error rate.
-      if( _nclass == 0 ) {
+      if( isRegression() ) {
         long rows = clss[0];         // Find total rows trained
         if( clss[0] == 0 ) return 0; // OOBEE: all rows trained, so no rows scored
         float prediction = sum/rows; // Average of trees is prediction
@@ -602,6 +605,22 @@ class DTree extends Iced {
       Log.info(tag,"Average squared prediction error for tree of depth "+depth+" is "+(_sum/nrows));
       Log.info(tag,"Total of "+_err+" errors on "+nrows+" rows, with "+_trees.length+" trees (average of "+((float)lcnt/_trees.length)+" nodes)");
       return this;
+    }
+  }
+
+  // Compute class distributions
+  static class ClassDist extends MRTask2<ClassDist> {
+    final short _nclass;
+    long _cs[];
+    ClassDist( short nclass ) { _nclass = nclass; }
+    @Override public void map( Chunk cr ) {
+      _cs = new long[_nclass];
+      for( int i=0; i<cr._len; i++ )
+        _cs[(int)cr.at80(i)]++;
+    }
+    @Override public void reduce( ClassDist cd ) {
+      for( int i=0; i<_cs.length; i++ )
+        _cs[i] += cd._cs[i];
     }
   }
 }
