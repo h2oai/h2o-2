@@ -9,7 +9,7 @@ import water.DTask;
  * @version 1.0
  */
 
-public abstract class Atomic extends DTask {
+public abstract class Atomic<T extends Atomic> extends DTask {
   public Key _key;              // Transaction key
 
   // User's function to be run atomically.  The Key's Value is fetched from the
@@ -27,14 +27,13 @@ public abstract class Atomic extends DTask {
   public void onSuccess(){}
 
   /** Block until it completes, even if run remotely */
-  public final Atomic invoke( Key key ) {
-    RPC<Atomic> rpc = fork(key);
-    if( rpc != null ) rpc.get(); // Block for it
-    return this;
+  public final T invoke( Key key ) {
+    RPC<Atomic<T>> rpc = fork(key);
+    return (T)(rpc == null ? this : rpc.get()); // Block for it
   }
 
   // Fork off
-  public final RPC<Atomic> fork(Key key) {
+  public final RPC<Atomic<T>> fork(Key key) {
     _key = key;
     if( key.home() ) {          // Key is home?
       compute2();               // Also, run it blocking/now

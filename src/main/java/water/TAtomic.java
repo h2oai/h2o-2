@@ -3,7 +3,7 @@ package water;
 /**
  * A typed atomic update.
  */
-public abstract class TAtomic<T extends Iced> extends Atomic {
+public abstract class TAtomic<T extends Iced> extends Atomic<TAtomic<T>> {
   /** Atomically update an old value to a new one.
    * @param old  The old value, it may be null.  It is a defensive copy.
    * @return The new value; if null if this atomic update no longer needs to be run

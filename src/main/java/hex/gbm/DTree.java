@@ -193,14 +193,18 @@ class DTree extends Iced {
 
       // If I have 2 identical predictor rows leading to 2 different responses,
       // then this dataset cannot distinguish these rows... and we have to bail
-      // out here.  Note that the column picked here is strictly to grab the
-      // average prediction; we will not split.
-      boolean canDecide = true;
+      // out here.
       if( col == -1 ) {
-        canDecide = false;
-        for( int i=0; i<n._hs.length; i++ )
-          if( n._hs[i]!=null && n._hs[i].nbins() > 1 )
-            { col = i; break; } // Take some random junky column
+        DecidedNode p = n._tree.decided(_pid);
+        _col  = p._col;  // Just copy the parent data over, for the predictions
+        _min  = p._min;
+        _step = p._step;
+        _mins = p._mins;
+        _maxs = p._maxs;
+        _ns = new int[_mins.length];  Arrays.fill(_ns,-1); // No further splits
+        _ycls = p._ycls;
+        _pred = p._pred;
+        return;
       }
       _col = col;
 
@@ -220,7 +224,7 @@ class DTree extends Iced {
       int ncols = _tree._ncols;     // ncols: all columns, minus response
       for( int i=0; i<nums; i++ ) { // For all split-points
         // Setup for children splits
-        DHistogram nhists[] = canDecide ? splitH.split(_col,i,n._hs,_tree._names,ncols) : null;
+        DHistogram nhists[] = splitH.split(_col,i,n._hs,_tree._names,ncols);
         assert nhists==null || nhists.length==ncols;
         _ns[i] = nhists == null ? -1 : makeUndecidedNode(_tree,_nid,nhists)._nid;
         // Also setup predictions locally
@@ -324,8 +328,8 @@ class DTree extends Iced {
     }
 
     @Override public void map( Chunk[] chks ) {
-      assert _ncols+1/*response variable*/+_trees.length == chks.length 
-        : "Missing columns?  ncols="+_ncols+", 1 for response, ntrees="+_trees.length+", and found "+chks.length+" vecs";
+      assert _ncols+1/*response variable*/+1/*error*/+_trees.length == chks.length 
+        : "Missing columns?  ncols="+_ncols+", 1 for response, 1 for errors, ntrees="+_trees.length+", and found "+chks.length+" vecs";
       Chunk ys = chks[_ncols];
 
       // We need private (local) space to gather the histograms.
@@ -338,7 +342,7 @@ class DTree extends Iced {
         final int leaf = _leafs[t];
         // A leaf-biased array of all active histograms
         final DHistogram hcs[][] = _hcs[t] = new DHistogram[tree._len-leaf][]; 
-        final Chunk nids = chks[_ncols+1/*response col*/+t];
+        final Chunk nids = chks[_ncols+1/*response col*/+1/*errors*/+t];
 
         // Pass 1 & 2
         for( int i=0; i<nids._len; i++ ) {
@@ -358,17 +362,24 @@ class DTree extends Iced {
           DHistogram nhs[] = hcs[nid-leaf];
           if( nhs == null ) {     // Lazily manifest this histogram for 'nid'
             nhs = hcs[nid-leaf] = new DHistogram[_ncols];
-            int sCols[] = tree.undecided(nid)._scoreCols;
             DHistogram ohs[] = tree.undecided(nid)._hs; // The existing column of Histograms
-            // For just the selected columns make Big Histograms
-            for( int j=0; j<sCols.length; j++ ) { // Make private copies
-              int idx = sCols[j];                 // Just the selected columns
-              nhs[idx] = ohs[idx].bigCopy();
+            int sCols[] = tree.undecided(nid)._scoreCols;
+            if( sCols != null ) {
+              // For just the selected columns make Big Histograms
+              for( int j=0; j<sCols.length; j++ ) { // Make private copies
+                int idx = sCols[j];                 // Just the selected columns
+                nhs[idx] = ohs[idx].bigCopy();
+              }
+              // For all the rest make small Histograms
+              for( int j=0; j<nhs.length; j++ )
+                if( ohs[j] != null && nhs[j]==null )
+                  nhs[j] = ohs[j].smallCopy();
+            } else {
+              // Default: make big copies of all
+              for( int j=0; j<nhs.length; j++ )
+                if( ohs[j] != null )
+                  nhs[j] = ohs[j].bigCopy();
             }
-            // For all the rest make small Histograms
-            for( int j=0; j<nhs.length; j++ )
-              if( ohs[j] != null && nhs[j]==null )
-                nhs[j] = ohs[j].smallCopy();
           }
         }
           
@@ -404,19 +415,11 @@ class DTree extends Iced {
         DHistogram nhs[] = hcs[nid-leaf];
         int ycls = (int)ys.at80(i) - _ymin;
 
-        //int sCols[] = tree.undecided(nid)._scoreCols;
-        //for( int idx=0; idx<sCols.length; idx++) { // For all columns
-        //  int j = sCols[idx];                      // Just the selected columns
-        //  DHistogram nh = nhs[j];
-        //  float f = (float)chks[j].at0(i);
-        //  nh.incr(f);
-        //  ((DBinHistogram)nh).incr(f,ycls);
-        //}
         for( int j=0; j<_ncols; j++) { // For all columns
           DHistogram nh = nhs[j];
-          if( nh != null ) {
+          if( nh != null ) {    // Tracking this column?
             float f = (float)chks[j].at0(i);
-            nh.incr(f);
+            nh.incr(f);         // Small histogram
             if( nh instanceof DBinHistogram ) ((DBinHistogram)nh).incr(f,ycls);
           }
         }
@@ -475,7 +478,8 @@ class DTree extends Iced {
     }
 
     @Override public void map( Chunk chks[] ) {
-      Chunk ys = chks[_ncols];
+      Chunk ys = chks[_ncols+0]; // Response
+      Chunk es = chks[_ncols+1]; // Error
       _cm = new long[_nclass][_nclass];
 
       // Get an array of RNGs to replay the sampling in reverse, only for OOBEE.
@@ -491,7 +495,9 @@ class DTree extends Iced {
       long clss[] = new long[_nclass]; // Shared temp array for computing classes
       for( int i=0; i<ys._len; i++ ) {
         float err = score0( chks, i, (float)ys.at0(i), clss, rands );
+        assert 0.0f <= err && err <= 1.0f;
         _sum += err*err;        // Squared error
+        es.set80(i,1.0f-err);   // Remember 1-error
       }
     }
 

@@ -19,7 +19,8 @@ paramsDict = {
     'parser_type': [None, 'AUTO'],
     # gets used for separator=
     # 'separator': [",", " ", "\t"],
-    'separator': ["\1", "|", ",", " "],
+    # 'separator': ["\t", "|", ",", " "],
+    'separator': ["\t", ",", " "],
     # 'separator': ["\t"],
     'header': [None, 0,1],
     # we can point to the 'wrong' file!
@@ -96,19 +97,12 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
     
     def test_parse_multi_header_rand(self):
-        h2b.browseTheCloud()
+        ### h2b.browseTheCloud()
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn_ints.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
-        headerList = [
-            # consistent with A, so we can decide when A should have been used (see below)
-            ['aA','aB','aC','aD','aE','aF','aG','aH','aI','output'],
-            # FIX! don't mess with the header size to data size now (stack trace
-            # ['A','B2','C2','D2','E2','F2','G2','H2','I2','output2'],
-            # ['A','B','C','D','E','F','G','H','I'],
-            # ['A','B','C','D','E','F','G','H','I','output','junk'],
-        ]
+        headerChoices = ['aA','aB','aC','aD','aE','aF','aG','aH','aI', 'tomas']
 
         # cols must be 9 to match the header above, otherwise a different bug is hit
         # extra output is added, so it's 10 total
@@ -116,10 +110,11 @@ class Basic(unittest.TestCase):
             # FIX! one fails count for now
             # (1, 5, 9, 'cA', 60, 0),
             (1, 5, 9, 'cA', 60, 0),
+            (1, 5, 25, 'cA', 60, 0),
 
             # try with col mismatch on header. 
             # FIX! causes exception? don't test for now
-            (7, 300, 10, 'cA', 60, 0),
+            # (7, 300, 10, 'cA', 60, 0),
             # (7, 300, 10, 'cB', 60, 1),
             # (7, 300, 10, 'cC', 60, 2),
             # (7, 300, 10, 'cD', 60, 3),
@@ -131,7 +126,7 @@ class Basic(unittest.TestCase):
             ]
 
         # so many random combos..rather than walk tryList, just do random for some amount of time
-        for trial in range(20):
+        for trial in range(50):
             (fileNum, rowCount, colCount, key2, timeoutSecs, dataRowsWithHeader) = random.choice(tryList)
             print fileNum, rowCount, colCount, key2, timeoutSecs, dataRowsWithHeader
             # FIX! should we add a header to them randomly???
@@ -160,8 +155,12 @@ class Basic(unittest.TestCase):
             print 'SEP_CHAR_GEN:', SEP_CHAR_GEN
 
             # they need to both use the same separator (h2o rule)
-            headerForHeader = SEP_CHAR_GEN.join(random.choice(headerList))
-            headerForData = SEP_CHAR_GEN.join(random.choice(headerList))
+            hh = [random.choice(headerChoices) for h in range(colCount)] + ["output"]
+            print hh
+            headerForHeader = SEP_CHAR_GEN.join(hh)
+            # make these different
+            hh = [random.choice(headerChoices) for h in range(colCount)] + ["output"]
+            headerForData   = SEP_CHAR_GEN.join(hh)
 
             # random selection of parse param choices
             kwargs = {}
@@ -210,8 +209,8 @@ class Basic(unittest.TestCase):
             totalHeaderRows += headerRowsDone
 
             # make sure all key names are unique, when we re-put and re-parse (h2o caching issues)
-            key = "syn_" + str(trial)
-            key2 = "syn_" + str(trial) + ".hex"
+            key = "syn_dst" + str(trial)
+            key2 = "syn_dst" + str(trial) + ".hex"
 
             # DON"T get redirected to S3! (EC2 hack in config, remember!)
             # use it at the node level directly (because we gen'ed the files.
@@ -230,6 +229,10 @@ class Basic(unittest.TestCase):
             elif kwargs['header_from_file'] == 'syn_data':
                 kwargs['header_from_file'] = dataKey
 
+            # if there's no header in the header file, turn off the header_from_file
+            if not HEADER_HAS_HDR_ROW:
+                kwargs['header_from_file'] = None
+
             print "If header_from_file= is used, we are currently required to force header=1 for h2o"
             if kwargs['header_from_file']:
                 kwargs['header'] =  1
@@ -241,7 +244,7 @@ class Basic(unittest.TestCase):
 
             # may have error if h2o doesn't get anything!
             start = time.time()
-            if PARSE_PATTERN_INCLUDES_HEADER:
+            if PARSE_PATTERN_INCLUDES_HEADER and HEADER_HAS_HDR_ROW:
                 pattern = '*syn_*'+str(trial)+"_"+rowxcol+'*'
             else:
                 pattern = '*syn_data_*'+str(trial)+"_"+rowxcol+'*'
@@ -265,9 +268,16 @@ class Basic(unittest.TestCase):
 
             # do we end up parsing one data rows as a header because of mismatch in gen/param
             h2oLosesOneData = (headerRowsDone==0) and (kwargs['header']==1) and not DATA_HAS_HDR_ROW
+            # header in data file gets treated as data
+            h2oGainsOneData = (headerRowsDone!=0) and (kwargs['header']==1) and \
+                DATA_HAS_HDR_ROW and (kwargs['header_from_file'] is not None)
             print "h2oLosesOneData:", h2oLosesOneData
+            print "h2oGainsOneData:", h2oGainsOneData
+            ### print (headerRowsDone!=0), (kwargs['header']==1), DATA_HAS_HDR_ROW, (kwargs['header_from_file'] is not None)
             if h2oLosesOneData:
                 totalDataRows -= 1
+            if h2oGainsOneData:
+                totalDataRows += 1
                 
             self.assertEqual(inspect['num_rows'], totalDataRows,
                 "parse created result with the wrong number of rows (header rows don't count) h2o: %s gen'ed: %s" % \
@@ -275,7 +285,7 @@ class Basic(unittest.TestCase):
 
             # put in an ignore param, that will fail unless headers were parsed correctly
             # doesn't matter if the header got a comment, should see it
-            h2oShouldSeeHeader = (HEADER_HAS_HDR_ROW and (kwargs['header_from_file']==1)) or DATA_HAS_HDR_ROW
+            h2oShouldSeeHeader = (HEADER_HAS_HDR_ROW and (kwargs['header_from_file'] is not None)) or DATA_HAS_HDR_ROW
             if h2oShouldSeeHeader:
                 kwargs = {'sample': 75, 'depth': 25, 'ntree': 1, 'ignore': 'A'}
             else:
