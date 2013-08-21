@@ -108,7 +108,7 @@ public abstract class Trainer {
   public static class ParallelTrainers extends Trainer {
     final Base[] _trainers;
     final Thread[] _threads;
-    final int _stepsPerThreads;
+    final int _stepsPerThread;
     static final CyclicBarrier DONE = new CyclicBarrier(1);
     volatile CyclicBarrier _suspend;
     final CyclicBarrier _resume;
@@ -121,7 +121,7 @@ public abstract class Trainer {
     public ParallelTrainers(Layer[] ls, int nodes, int index, int steps) {
       _trainers = new Base[Runtime.getRuntime().availableProcessors()];
       _threads = new Thread[_trainers.length];
-      _stepsPerThreads = steps / _threads.length;
+      _stepsPerThread = steps / _threads.length;
       _resume = new CyclicBarrier(_threads.length + 1);
       for( int t = 0; t < _trainers.length; t++ ) {
         Layer[] clones = new Layer[ls.length];
@@ -137,7 +137,8 @@ public abstract class Trainer {
         final Base trainer = _trainers[t];
         _threads[t] = new Thread("H2O Trainer " + t) {
           @Override public void run() {
-            for( int i = 0; _stepsPerThreads == 0 || i < _stepsPerThreads; i++ ) {
+            Log.info("n:" + ((Input) trainer._ls[0])._n + ", for:" + _stepsPerThread);
+            for( int i = 0; _stepsPerThread == 0 || i < _stepsPerThread; i++ ) {
               CyclicBarrier b = _suspend;
               if( b == DONE )
                 break;
@@ -229,7 +230,8 @@ public abstract class Trainer {
     @Override void run() {
       for( ;; ) {
         int steps = 8192;
-        Task task = new Task(_ls, steps);
+        int stepsPerNode = steps / H2O.CLOUD._memary.length;
+        Task task = new Task(_ls, stepsPerNode);
         Key[] keys = new Key[H2O.CLOUD._memary.length];
         for( int i = 0; i < keys.length; i++ ) {
           String uid = UUID.randomUUID().toString();
@@ -246,7 +248,7 @@ public abstract class Trainer {
   static class Task extends DRemoteTask<Task> {
     Layer[] _ls;
     float[][] _ws, _bs;
-    int _stepsPerNode;
+    int _steps;
 
     Task(Layer[] ls, int steps) {
       _ls = ls;
@@ -256,7 +258,7 @@ public abstract class Trainer {
         _ws[y] = _ls[y]._w;
         _bs[y] = _ls[y]._b;
       }
-      _stepsPerNode = steps / H2O.CLOUD._memary.length;
+      _steps = steps;
     }
 
     @Override public void lcompute() {
@@ -268,7 +270,7 @@ public abstract class Trainer {
       }
       int nodes = H2O.CLOUD._memary.length;
       int index = H2O.SELF.index();
-      ParallelTrainers t = new ParallelTrainers(_ls, nodes, index, _stepsPerNode);
+      ParallelTrainers t = new ParallelTrainers(_ls, nodes, index, _steps);
       t.run();
       // Compute gradient as difference between start and end
       for( int y = 1; y < _ls.length; y++ ) {

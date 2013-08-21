@@ -1,21 +1,15 @@
 package hex;
 
-import water.*;
-import water.deploy.Cloud;
-import water.util.Log;
+import water.Sandbox;
 
 public class MnistDist extends MnistCanvas {
   public static void main(String[] args) throws Exception {
-    //water.Boot.main(UserMain.class, args);
-    cloud4();
+    water.Boot.main(UserMain.class, args);
   }
 
   public static class UserMain {
     public static void main(String[] args) throws Exception {
-      H2O.main(args);
-      TestUtil.stall_till_cloudsize(1);
-      Log.info("blah");
-      // localCloud();
+      Sandbox.localCloud(2, true, new String[0]);
 
       NeuralNetMnistTest mnist = new NeuralNetMnistTest();
       mnist.init();
@@ -32,23 +26,5 @@ public class MnistDist extends MnistCanvas {
 
       mnist.run();
     }
-  }
-
-  static void localCloud() {
-    Sandbox.localCloud(2, true, new String[0]);
-  }
-
-  static void cloud4() {
-    Cloud cloud = new Cloud();
-    for( int i = 0; i < 1; i++ )
-      cloud._publicIPs.add("192.168.1." + (161 + i));
-    cloud._clientRSyncIncludes.add("../libs/jdk");
-    cloud._clientRSyncIncludes.add("smalldata");
-    cloud._clientRSyncIncludes.add("experiments/target");
-    cloud._fannedRSyncIncludes.add("jdk");
-    cloud._fannedRSyncIncludes.add("smalldata");
-    String java = "-ea -Xmx12G -Dh2o.debug";
-    String args = "-mainClass " + MnistDist.UserMain.class.getName();
-    cloud.start(java.split(" "), args.split(" "));
   }
 }

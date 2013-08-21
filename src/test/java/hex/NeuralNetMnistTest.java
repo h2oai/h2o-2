@@ -69,8 +69,8 @@ public class NeuralNetMnistTest extends NeuralNetTest {
     }
 
 //    _trainer = new ParallelTrainers(_ls);
-//    _trainer = new Trainer.Distributed(_ls);
-    _trainer = new Trainer.OpenCL(_ls);
+    _trainer = new Trainer.Distributed(_ls);
+//    _trainer = new Trainer.OpenCL(_ls);
 
     if( pretrain ) {
       for( int i = 0; i < _ls.length; i++ ) {
