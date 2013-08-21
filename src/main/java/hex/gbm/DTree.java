@@ -497,7 +497,7 @@ class DTree extends Iced {
         float err = score0( chks, i, (float)ys.at0(i), clss, rands );
         assert 0.0f <= err && err <= 1.0f;
         _sum += err*err;        // Squared error
-        es.set80(i,1.0f-err);   // Remember 1-error
+        es.set80(i,1.0f-err);   // Remember 1-error (so zero is max error, and 1.0 is perfect predict)
       }
     }
 
@@ -547,7 +547,7 @@ class DTree extends Iced {
         long rows = clss[0];         // Find total rows trained
         if( clss[0] == 0 ) return 0; // OOBEE: all rows trained, so no rows scored
         float prediction = sum/rows; // Average of trees is prediction
-        return prediction - y;        // Error
+        return prediction - y;       // Error
       } else {
         long rows = clss[0];    // Find total rows trained
         int best=0;             // Find largest class across all trees
