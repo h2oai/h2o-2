@@ -5,87 +5,10 @@ import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
 
 
 BINS = 100
-if 1==0: # works
-    ALGO = 'binomial'
-    DATA_VALUE_MIN = -1
-    DATA_VALUE_MAX = 1
-    COEFF_VALUE_MIN = -1
-    COEFF_VALUE_MAX = 1
-    INTCPT_VALUE_MIN = -1
-    INTCPT_VALUE_MAX = 1
-    # COL_DATA_DISTS = 'UNIQUE'
-    COL_DATA_DISTS = 'SAME'
 
-if 1==0: # works
-    ALGO = 'binomial'
-    DATA_VALUE_MIN = -1.0
-    DATA_VALUE_MAX = 0.0
-    COEFF_VALUE_MIN = -1.0
-    COEFF_VALUE_MAX = 1.0
-    INTCPT_VALUE_MIN = -1.0
-    INTCPT_VALUE_MAX = 1.0
-    # COL_DATA_DISTS = 'UNIQUE'
-    COL_DATA_DISTS = 'SAME'
-
-if 1==0: # works
-    ALGO = 'binomial'
-    DATA_VALUE_MIN = -1.0
-    DATA_VALUE_MAX = 1.0
-    COEFF_VALUE_MIN = 1.0
-    COEFF_VALUE_MAX = 1.0
-    INTCPT_VALUE_MIN = -1.0
-    INTCPT_VALUE_MAX = 1.0
-    # COL_DATA_DISTS = 'UNIQUE'
-    COL_DATA_DISTS = 'SAME'
-
-if 1==0: # works
-    ALGO = 'binomial'
-    DATA_VALUE_MIN = -1.0
-    DATA_VALUE_MAX = 1.0
-    COEFF_VALUE_MIN = 0.5
-    COEFF_VALUE_MAX = 1.0
-    INTCPT_VALUE_MIN = -1.0
-    INTCPT_VALUE_MAX = 1.0
-    # COL_DATA_DISTS = 'UNIQUE'
-    COL_DATA_DISTS = 'SAME'
-
-if 1==0: # works
-    ALGO = 'binomial'
-    DATA_VALUE_MIN = 0.0
-    DATA_VALUE_MAX = 1.0
-    COEFF_VALUE_MIN = -1.0
-    COEFF_VALUE_MAX = 1.0
-    INTCPT_VALUE_MIN = -1.0
-    INTCPT_VALUE_MAX = 1.0
-    # COL_DATA_DISTS = 'UNIQUE'
-    COL_DATA_DISTS = 'SAME'
-
-if 1==1:
-    # ALGO = 'poisson'
-    ALGO = 'poisson'
-    DATA_VALUE_MIN = 0.0
-    DATA_VALUE_MAX = 1.0
-    COEFF_VALUE_MIN = 0.0
-    COEFF_VALUE_MAX = 1.0
-    INTCPT_VALUE_MIN = 0.0
-    INTCPT_VALUE_MAX = 1.0
-    COL_DATA_DISTS = 'UNIQUE'
-    # COL_DATA_DISTS = 'SAME'
-
-
-modeString = \
-    "_Bins" + str(BINS) + \
-    "_Dmin" + str(DATA_VALUE_MIN) + \
-    "_Dmax" + str(DATA_VALUE_MAX) + \
-    "_Cmin" + str(COEFF_VALUE_MIN) + \
-    "_Cmax" + str(COEFF_VALUE_MAX) + \
-    "_Imin" + str(INTCPT_VALUE_MIN) + \
-    "_Imax" + str(INTCPT_VALUE_MAX) + \
-    "_Ddist" + str(COL_DATA_DISTS)
-
-print "modeString:", modeString
-
-def gen_rand_equation(colCount, SEED):
+def gen_rand_equation(colCount,
+    INTCPT_VALUE_MIN, INTCPT_VALUE_MAX,
+    COEFF_VALUE_MIN, COEFF_VALUE_MAX, SEED):
     r1 = random.Random(SEED)
     coefficients = []
     # y = 1/(1 + exp(-(sum(coefficients*x)+intercept))
@@ -106,42 +29,54 @@ def gen_rand_equation(colCount, SEED):
 
 # FIX! random noise on coefficients? randomly force 5% to 0?  
 #y = 1/(1 + math.exp(-(sum(coefficients*x)+intercept)) 
-def yFromEqnAndData(coefficients, intercept, rowData):
+def yFromEqnAndData(coefficients, intercept, rowData, DATA_DISTS, ALGO):
     # FIX! think about using noise on some of the rowData
     cx = [a*b for a,b in zip(coefficients, rowData)]
     if ALGO=='binomial':
         y = 1/(1 + math.exp(-(sum(cx) + intercept)))
-        if (y<0 or y>1):
+        if y<0 or y>1:
             raise Exception("Generated y result is should be between 0 and 1: %s" % y)
     elif ALGO=='poisson':
         y = math.exp(sum(cx) + intercept)
-        if (y<0):
-            raise Exception("Generated y result is should be > 0: %s" % y)
+        if y<0:
+            raise Exception("Generated y result is should be >= 0: %s" % y)
     else:
         raise Exception('Unknown ALGO: %s' % ALGO)
 
     return y
 
-def write_syn_dataset(csvPathname, rowCount, colCount, coefficients, intercept, SEED, noise=0.05):
+def write_syn_dataset(csvPathname, rowCount, colCount, coefficients, intercept, 
+    DATA_VALUE_MIN, DATA_VALUE_MAX, DATA_DISTS, ALGO, SEED):
     r1 = random.Random(SEED)
     dsf = open(csvPathname, "w+")
 
     # assuming output is always last col
     yMin = None  
     yMax = None
-    print "gen'ed y will be a probability! generate 1/0 data rows to reflect that probability, binned to %d bins" % BINS
-    print "100 implies 2 places of accuracy in getting the probability." 
-    print  "this means we should get 1 place of accuracy in the result coefficients/intercept????"
     # generate a mode per column that is reused
     # this will make every column have a different data distribution
-    if COL_DATA_DISTS == 'UNIQUE':
-        colModes = [((random.randint(0,1) * -1) * j/colCount) for j in range(colCount)]
-    elif COL_DATA_DISTS == 'SAME':
+    if DATA_DISTS == 'unique_pos_neg':
+        d = DATA_VALUE_MIN
+        fullRange= DATA_VALUE_MAX - DATA_VALUE_MIN
+        colModes = []
+        for j in range(colCount):
+            colModes += [(random.randint(0,1) * -1) * (((float(j)/colCount) * fullRange) + DATA_VALUE_MIN)]
+
+    elif DATA_DISTS == 'mean':
         colDataMean = (DATA_VALUE_MIN + DATA_VALUE_MAX) / 2
         colModes = [colDataMean for j in range(colCount)]
-    else: # random
+
+    elif DATA_DISTS == 'random':
         colModes = [r1.uniform(DATA_VALUE_MIN, DATA_VALUE_MAX) for j in range(colCount)]
 
+    else: 
+        raise Exception('Unknown DATA_DIST: %s' % DATA_DIST)
+
+    print "\ncolModes:", colModes
+    if ALGO=='binomial':
+        print "gen'ed y is probability! generate 1/0 data rows wth that probability, binned to %d bins" % BINS
+        print "100 implies 2 places of accuracy in getting the probability." 
+        print  "this means we should get 1 place of accuracy in the result coefficients/intercept????"
     for i in range(rowCount):
         rowData = []
         for j in range(colCount):
@@ -149,17 +84,10 @@ def write_syn_dataset(csvPathname, rowCount, colCount, coefficients, intercept, 
             ri = r1.triangular(DATA_VALUE_MIN, DATA_VALUE_MAX, colModes[j])
             rowData.append(ri)
         
-        # flip if within the noise percentage
-        # FIX! not used right now
-        if (noise is not None) and (r1.random() <= noise): 
-            flip = True
-        else: 
-            flip = False
-        
         # Do a walk from 0 to 1 by .1
         # writing 0 or 1 depending on whether you are below or above the probability
         # coarse approximation to get better coefficient match in GLM
-        y = yFromEqnAndData(coefficients, intercept, rowData)
+        y = yFromEqnAndData(coefficients, intercept, rowData, DATA_DISTS, ALGO)
         if yMin is None or y<yMin: yMin = y
         if yMax is None or y>yMax: yMax = y
 
@@ -202,12 +130,19 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_GLM_with_logit_depcols(self):
+    #************************************************************************************
+    def GLM_syn_eqns_data(self,
+        ALGO='binomial', 
+        DATA_VALUE_MIN=-1, DATA_VALUE_MAX=1,
+        COEFF_VALUE_MIN=-1, COEFF_VALUE_MAX=1, 
+        INTCPT_VALUE_MIN=-1, INTCPT_VALUE_MAX=1,
+        DATA_DISTS='unique_pos_neg'):
+
         SYNDATASETS_DIR = h2o.make_syn_dir()
+
         if ALGO=='poisson':
             tryList = [
-                (50000, 50, 'cD', 300), 
-                (50000, 50, 'cD', 300), 
+                (50000, 5, 'cD', 300), 
                 ]
         else:
             tryList = [
@@ -227,15 +162,30 @@ class Basic(unittest.TestCase):
         lenNodes = len(h2o.nodes)
 
         for (rowCount, colCount, key2, timeoutSecs) in tryList:
+            modeString = \
+                "_Bins" + str(BINS) + \
+                "_Dmin" + str(DATA_VALUE_MIN) + \
+                "_Dmax" + str(DATA_VALUE_MAX) + \
+                "_Cmin" + str(COEFF_VALUE_MIN) + \
+                "_Cmax" + str(COEFF_VALUE_MAX) + \
+                "_Imin" + str(INTCPT_VALUE_MIN) + \
+                "_Imax" + str(INTCPT_VALUE_MAX) + \
+                "_Ddist" + str(DATA_DISTS)
+            print "modeString:", modeString
+
             SEEDPERFILE = random.randint(0, sys.maxint)
             csvFilename = 'syn_' + modeString + "_" + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
             print "Creating random", csvPathname, \
                 "using random coefficients and intercept and logit eqn. for output"
-            (coefficientsGen, interceptGen) = gen_rand_equation(colCount, SEEDPERFILE)
+            (coefficientsGen, interceptGen) = gen_rand_equation(colCount,
+                INTCPT_VALUE_MIN, INTCPT_VALUE_MAX,
+                COEFF_VALUE_MIN, COEFF_VALUE_MAX, SEEDPERFILE)
             print coefficientsGen, interceptGen
-            write_syn_dataset(csvPathname, rowCount, colCount, coefficientsGen, interceptGen, SEEDPERFILE)
+
+            write_syn_dataset(csvPathname, rowCount, colCount, coefficientsGen, interceptGen, 
+                DATA_VALUE_MIN, DATA_VALUE_MAX, DATA_DISTS, ALGO, SEED)
 
             parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=60)
             print csvFilename, 'parse time:', parseKey['response']['time']
@@ -250,9 +200,9 @@ class Basic(unittest.TestCase):
             kwargs = {
                     'family': ALGO,
                     'y': y, 
-                    'max_iter': 60, 
-                    'lambda': 0.0,
-                    'alpha': 0.0,
+                    'max_iter': 10, 
+                    'lambda': 0,
+                    'alpha': 0,
                     'weight': 1.0,
                     'n_folds': 0,
                     'beta_epsilon': 1e-4,
@@ -281,7 +231,51 @@ class Basic(unittest.TestCase):
             print "intercept: %8.4f,    generated: %8.4f,    delta: %8.4f" % (c, g, abs(g-c))
             print "need a larger delta compare for intercept?"
             self.assertAlmostEqual(c, g, delta=deltaIntcpt, msg="not close enough. intercept: %s,    generated %s" % (c, g))
+
+    #************************************************************************************
             
+    def test_GLM_syn_eqns_data_A(self):
+        self.GLM_syn_eqns_data(
+            ALGO='binomial', 
+            DATA_VALUE_MIN=-1, DATA_VALUE_MAX=1,
+            COEFF_VALUE_MIN=-1, COEFF_VALUE_MAX=1, 
+            INTCPT_VALUE_MIN=-1, INTCPT_VALUE_MAX=1,
+            DATA_DISTS='unique_pos_neg')
+
+    def test_GLM_syn_eqns_data_B(self):
+        self.GLM_syn_eqns_data(
+            ALGO='binomial', 
+            DATA_VALUE_MIN=-1, DATA_VALUE_MAX=1,
+            COEFF_VALUE_MIN=-1, COEFF_VALUE_MAX=1, 
+            INTCPT_VALUE_MIN=-1, INTCPT_VALUE_MAX=1,
+            DATA_DISTS='mean')
+
+    def test_GLM_syn_eqns_data_C(self):
+        self.GLM_syn_eqns_data(
+            ALGO='poisson', 
+            DATA_VALUE_MIN=0, DATA_VALUE_MAX=1,
+            COEFF_VALUE_MIN=0, COEFF_VALUE_MAX=1, 
+            INTCPT_VALUE_MIN=0, INTCPT_VALUE_MAX=1,
+            DATA_DISTS='mean')
+
+    def test_GLM_syn_eqns_data_D(self):
+        # data and y have to be 0 to N for poisson
+        self.GLM_syn_eqns_data(
+            ALGO='poisson', 
+            DATA_VALUE_MIN=0, DATA_VALUE_MAX=1,
+            COEFF_VALUE_MIN=0, COEFF_VALUE_MAX=1, 
+            INTCPT_VALUE_MIN=0, INTCPT_VALUE_MAX=1,
+            DATA_DISTS='unique_pos_neg')
+
+    def test_GLM_syn_eqns_data_E(self):
+        # data and y have to be 0 to N for poisson
+        # y seems to be tightly clamped between 0 and 1 if you have coefficient range from -1 to 0
+        self.GLM_syn_eqns_data(
+            ALGO='poisson', 
+            DATA_VALUE_MIN=0, DATA_VALUE_MAX=2,
+            COEFF_VALUE_MIN=-.2, COEFF_VALUE_MAX=2, 
+            INTCPT_VALUE_MIN=-.2, INTCPT_VALUE_MAX=2,
+            DATA_DISTS='random')
 
 if __name__ == '__main__':
     h2o.unit_main()
