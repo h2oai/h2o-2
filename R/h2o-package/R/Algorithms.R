@@ -172,12 +172,13 @@ setMethod("h2o.getTree", signature(forest="H2ORForestModel", k="numeric", plot="
 setMethod("h2o.getTree", signature(forest="H2ORForestModel", k="numeric", plot="missing"),
           function(forest, k) { h2o.getTree(forest, k, plot = FALSE) })
 
-# setMethod("predict", signature(object="H2OGLMModel"), 
-#          function(object) {
-#            res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT, model_key=object@key, data_key=object@data@key)
-#            res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT, key=res$response$redirect_request_args$key)
-#            result = new("H2OParsedData", h2o=object@data@h2o, key=res$key)
-#          })
+setMethod("predict", signature(object="H2OGLMModel"), 
+        function(object) {
+          res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT, model_key=object@key, data_key=object@data@key)
+          res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT, key=res$response$redirect_request_args$key)
+          result = new("H2OParsedData", h2o=object@data@h2o, key=res$key)
+          result
+        })
 
 
 setMethod("h2o.glmgrid", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="numeric", alpha="numeric", lambda="numeric"),
