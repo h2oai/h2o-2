@@ -328,8 +328,8 @@ class DTree extends Iced {
     }
 
     @Override public void map( Chunk[] chks ) {
-      assert _ncols+1/*response variable*/+_trees.length == chks.length 
-        : "Missing columns?  ncols="+_ncols+", 1 for response, ntrees="+_trees.length+", and found "+chks.length+" vecs";
+      assert _ncols+1/*response variable*/+1/*error*/+_trees.length == chks.length 
+        : "Missing columns?  ncols="+_ncols+", 1 for response, 1 for errors, ntrees="+_trees.length+", and found "+chks.length+" vecs";
       Chunk ys = chks[_ncols];
 
       // We need private (local) space to gather the histograms.
@@ -342,7 +342,7 @@ class DTree extends Iced {
         final int leaf = _leafs[t];
         // A leaf-biased array of all active histograms
         final DHistogram hcs[][] = _hcs[t] = new DHistogram[tree._len-leaf][]; 
-        final Chunk nids = chks[_ncols+1/*response col*/+t];
+        final Chunk nids = chks[_ncols+1/*response col*/+1/*errors*/+t];
 
         // Pass 1 & 2
         for( int i=0; i<nids._len; i++ ) {
@@ -478,7 +478,8 @@ class DTree extends Iced {
     }
 
     @Override public void map( Chunk chks[] ) {
-      Chunk ys = chks[_ncols];
+      Chunk ys = chks[_ncols+0]; // Response
+      Chunk es = chks[_ncols+1]; // Error
       _cm = new long[_nclass][_nclass];
 
       // Get an array of RNGs to replay the sampling in reverse, only for OOBEE.
@@ -494,7 +495,9 @@ class DTree extends Iced {
       long clss[] = new long[_nclass]; // Shared temp array for computing classes
       for( int i=0; i<ys._len; i++ ) {
         float err = score0( chks, i, (float)ys.at0(i), clss, rands );
+        assert 0.0f <= err && err <= 1.0f;
         _sum += err*err;        // Squared error
+        es.set80(i,1.0f-err);   // Remember 1-error
       }
     }
 

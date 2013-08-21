@@ -52,8 +52,8 @@ public class GBM extends Job {
     // Make a new Vec to hold the %-tage of correct prediction for each row
     // (initially all zero).  The value will vary from 0 to 1, where 1 is
     // prefectly predicted and zero is not predicted at all.
-    //Vec vpred = Vec.makeZero(vs[0]);
-    //fr.add("Predict",vpred);
+    Vec vpred = Vec.makeZero(vs[0]);
+    fr.add("Predict",vpred);
 
     // Make a new Vec to hold the split-number for each row (initially all zero).
     Vec vnids = Vec.makeZero(vs[0]);
@@ -110,6 +110,7 @@ public class GBM extends Job {
     Log.info(Sys.GBM__,"GBM score done in "+t_score);
 
     // Remove temp vector; cleanup the Frame
+    UKV.remove(fr.remove("Predict")._key);
     UKV.remove(fr.remove("NIDs")._key);
   }
   
