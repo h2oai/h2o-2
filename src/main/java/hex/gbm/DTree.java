@@ -35,7 +35,6 @@ class DTree extends Iced {
   DTree( String[] names, int ncols, int nclass ) { _names = names; _ncols = ncols; _nclass=nclass; _ns = new Node[1]; }
   
   boolean isRegression() { return _nclass==1; }
-  boolean isClassification() { return _nclass>1; }
   public final Node root() { return _ns[0]; }
 
   // Return Node i
@@ -181,7 +180,7 @@ class DTree extends Iced {
     //  pred[x] == split X's prediction, typically mean of response variable
     // For Classifications:
     //  ycls[x][] == Class distribution of leaves
-    final long  _ycls[/*split*/][/*class*/]; // Class distribution
+    final float _ycls[/*split*/][/*class*/]; // Class distribution
     final float _pred[/*split*/]; // Regression: this is the prediction
 
     // Make a correctly flavored Undecided
@@ -222,7 +221,7 @@ class DTree extends Iced {
       _maxs = splitH._maxs;     // Hang onto for printing purposes
       _ns = new int[nums];
       int nclass = _tree._nclass;
-      _ycls = new long[nums][nclass];
+      _ycls = new float[nums][nclass];
       _pred = new float[nums];
       int ncols = _tree._ncols;     // ncols: all columns, minus response
       for( int i=0; i<nums; i++ ) { // For all split-points
@@ -232,7 +231,7 @@ class DTree extends Iced {
         _ns[i] = nhists == null ? -1 : makeUndecidedNode(_tree,_nid,nhists)._nid;
         // Also setup predictions locally
         if( _tree.isRegression() )  {            // Regression?
-          _ycls[i] = new long[]{splitH.bins(i)}; // Number of entries in bin
+          _ycls[i] = new float[]{splitH.bins(i)}; // Number of entries in bin
           _pred[i] = splitH. mean(i);            // Prediction is mean of bin
         } else {                                 // Classification?
           for( int c=0; c<nclass; c++ )          // Copy the class counts into the decision
@@ -570,14 +569,15 @@ class DTree extends Iced {
     // bin is empty - we've got no distribution.  Go back up 1 layer and take
     // the (weaker) distribution from the parent.
     private void classScore( DecidedNode prev, long clss[], Chunk chks[], int i, boolean recur ) {
-      int bin = prev.bin(chks,i);    // Which bin did we decide on?
-      long[] ycls = prev._ycls[bin]; // Classes for that bin
-      long bits=0;
+      int bin = prev.bin(chks,i);     // Which bin did we decide on?
+      float[] ycls = prev._ycls[bin]; // Classes for that bin
+      boolean empty=true;
       for( int c=0; c<_nclass; c++ ) {
         clss[c] += ycls[c];     // Compute distribution
-        bits |= ycls[c];        // Detect empty distribution
+        if( empty && ycls[c] != 0.0f ) 
+          empty=false;          // Detect empty distribution
       }
-      if( bits == 0 && prev._pid != -1 ) { // No class prediction here, and we can back up a layer?
+      if( empty && prev._pid != -1 ) { // No class prediction here, and we can back up a layer?
         assert recur;
         prev = prev._tree.decided(prev._pid); // Backup 1 layer in tree
         classScore(prev,clss,chks,i,false);   // And predict again (weaker)
@@ -586,10 +586,10 @@ class DTree extends Iced {
 
     private float regressScore( DecidedNode prev, long clss[], Chunk chks[], int i, boolean recur, float sum ) {
       int bin = prev.bin(chks,i);    // Which bin did we decide on?
-      long[] ycls = prev._ycls[bin]; // Classes for that bin
-      long num = ycls[0];            // "classes" is really just bin-count
+      float[] ycls = prev._ycls[bin];// Classes for that bin
+      float num = ycls[0];           // "classes" is really just bin-count
       clss[0] += num;                // More total rows
-      sum += prev._pred[bin]*num;   // More total regression count
+      sum += prev._pred[bin]*num;    // More total regression count
       if( num==0 ) {
         prev = prev._tree.decided(prev._pid); // Backup 1 layer in tree
         return regressScore(prev,clss,chks,i,false,sum); // And predict again (weaker)
