@@ -57,6 +57,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new GLMGrid()),     "GLMGrid",       "Model");
     Request.addToNavbar(registerRequest(new KMeans()),      "KMeans",        "Model");
     Request.addToNavbar(registerRequest(new KMeansGrid()),  "KMeansGrid",    "Model");
+    Request.addToNavbar(registerRequest(new PCA()),         "PCA",           "Model");
     Request.addToNavbar(registerRequest(new Console()),     "Console",       "Model");
 
     Request.addToNavbar(registerRequest(new RFScore()),     "Random Forest", "Score");
