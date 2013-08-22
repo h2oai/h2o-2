@@ -509,7 +509,7 @@ public class RequestArguments extends RequestStatics {
           if(callInstance instanceof Request2)
             ((Request2) callInstance).set(this, record._value);
         } catch (IllegalArgumentException e) {
-          record._value = defaultValue();
+          //record._value = defaultValue();
           throw e;
         }
       }

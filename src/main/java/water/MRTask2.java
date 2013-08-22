@@ -15,7 +15,7 @@ import water.util.Log;
  * way back to the invoking node. When the last reduce method has been called, fields
  * of the initial MRTask2 instance contains the computation results.
  */
-public abstract class MRTask2<T extends MRTask2> extends DTask implements Cloneable {
+public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Cloneable {
 
   /** The Vectors to work on. */
   protected Frame _fr;       // Vectors to work on

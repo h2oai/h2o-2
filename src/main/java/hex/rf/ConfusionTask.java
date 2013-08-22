@@ -434,13 +434,8 @@ public class ConfusionTask extends MRTask {
     /** Add a confusion matrix. */
     public CM add(final CM cm) {
       if (cm!=null) {
-        long[][] m1 = _matrix;
-        long[][] m2 = cm._matrix;
-        if( m1 == null ) _matrix = m2;  // Take other work straight-up
-        else {
-          for( int i = 0; i < m1.length; i++ )
-            for( int j = 0; j < m1.length; j++ )  m1[i][j] += m2[i][j];
-        }
+        if( _matrix == null ) _matrix = cm._matrix;  // Take other work straight-up
+        else Utils.add(_matrix,cm._matrix);
         _rows    += cm._rows;
         _errors  += cm._errors;
         _skippedRows += cm._skippedRows;

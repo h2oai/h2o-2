@@ -289,6 +289,31 @@ public class Utils {
     return (T[]) ArrayUtils.remove(a, i);
   }
 
+  public static int[] add(int[] a, int[] b) {
+    for(int i = 0; i < a.length; i++ ) a[i] += b[i];
+    return a;
+  }
+  public static int[][] add(int[][] a, int[][] b) {
+    for(int i = 0; i < a.length; i++ ) add(a[i],b[i]);
+    return a;
+  }
+  public static long[] add(long[] a, long[] b) {
+    for(int i = 0; i < a.length; i++ ) a[i] += b[i];
+    return a;
+  }
+  public static long[][] add(long[][] a, long[][] b) {
+    for(int i = 0; i < a.length; i++ ) add(a[i],b[i]);
+    return a;
+  }
+  public static double[] add(double[] a, double[] b) {
+    for(int i = 0; i < a.length; i++ ) a[i] += b[i];
+    return a;
+  }
+  public static double[][] add(double[][] a, double[][] b) {
+    for(int i = 0; i < a.length; i++ ) add(a[i],b[i]);
+    return a;
+  }
+
   public static void clearFolder(String folder) {
     clearFolder(new File(folder));
   }
@@ -325,7 +350,9 @@ public class Utils {
   }
   public static byte [] getFirstUnzipedBytes(Value v){
     byte [] bits = v.getFirstBytes();
-    return unzipBytes(bits, guessCompressionMethod(bits));
+    try{
+      return unzipBytes(bits, guessCompressionMethod(bits));
+    } catch(Exception e){return null;}
   }
 
   public static Compression guessCompressionMethod(byte [] bits){
