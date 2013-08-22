@@ -43,14 +43,15 @@ public class UDPRebooted extends UDP {
       Log.info("Orderly shutdown command from "+killer);
       H2O.exit(0);
       return;
-    case oom:      m = "Out of Memory and no swap space left!"      ; break;
-    case error:    m = "Error leading to a cloud kill"              ; break;
-    case locked:   m = "Killed joining a locked cloud"              ; break;
-    case mismatch: m = "Killed joining a cloud with a different jar"; break;
-    default:       m = "Received kill "+cause                       ; break;
+    case oom:      m = "Out of Memory and no swap space left";                                      break;
+    case error:    m = "Error leading to a cloud kill";                                             break;
+    case locked:   m = "Attempting to join an H2O cloud that is no longer accepting new H2O nodes"; break;
+    case mismatch: m = "Attempting to join an H2O cloud with a different H2O version";              break;
+    default:       m = "Received kill " + cause;                                                    break;
     }
     closeAll();
-    Log.warn(m+" from "+killer);
+    Log.err(m+" from "+killer);
+    Log.err("Exiting.");
     H2O.exit(-1);
   }
 
