@@ -111,9 +111,12 @@ NEXT_CHAR:
             state = COND_QUOTE;
             break NEXT_CHAR;
           }
-          if ((quotes != 0) || ((!isEOL(c) && (c != CHAR_SEPARATOR)))) {
+          if (((!isEOL(c) && ((quotes != 0) || (c != CHAR_SEPARATOR))))) {
             _str.addChar();
             break NEXT_CHAR;
+          } else if(quotes != 0){ // quoted string spanning newline
+            state = EOL;
+            continue MAIN_LOOP;
           }
           // fallthrough to STRING_END
         // ---------------------------------------------------------------------
@@ -141,7 +144,12 @@ NEXT_CHAR:
           // fallthrough to EOL
         // ---------------------------------------------------------------------
         case EOL:
-          if (colIdx != 0) {
+          if(quotes != 0){
+            System.err.println("Umatched quote char " + ((char)quotes));
+            dout.invalidLine("Umatched quote char " + ((char)quotes));
+            colIdx = 0;
+            quotes = 0;
+          }else if (colIdx != 0) {
             colIdx = 0;
             dout.newLine();
           }
@@ -600,6 +608,27 @@ NEXT_CHAR:
   }
 
 
+  private static int guessNcols(ParserSetup setup,String [][] data){
+    int res = data[0].length;
+    if(setup._header)return res;
+    boolean samelen = true;
+    for(String [] s:data) samelen &= (s.length == res);
+    if(samelen)return res;
+    // we don't have lines of same length, pick the most common length
+    HashMap<Integer, Integer> lengths = new HashMap<Integer, Integer>();
+    for(String [] s:data){
+      if(!lengths.containsKey(s.length))lengths.put(s.length, 1);
+      else
+        lengths.put(s.length, lengths.get(s.length)+1);
+    }
+    int maxCnt = 0;
+    for(Map.Entry<Integer, Integer> e:lengths.entrySet())
+      if(e.getValue() > maxCnt){
+        maxCnt = e.getValue();
+        res = e.getKey();
+      }
+    return res;
+  }
 
   /** Determines the CSV parser setup from the first two lines.  Also parses
    *  the next few lines, tossing out comments and blank lines.
@@ -630,6 +659,8 @@ NEXT_CHAR:
     boolean hasHeader = false;
     byte sep = setup._separator;
     final String [][] data = new String[lines.size()][];
+    int ncols;
+
     if( lines.size() < 2 ) {
       if(sep == AUTO_SEP){
         if(lines.get(0).split(",").length > 2)
@@ -643,6 +674,7 @@ NEXT_CHAR:
       }
       if(lines.size() == 1)
         data[0] = determineTokens(lines.get(0), sep);
+      ncols = data[0].length;
       hasHeader = (checkHeader && allStrings(data[0])) || setup._header;
     } else {
       if(setup._separator == AUTO_SEP) // first guess the separator
@@ -650,6 +682,7 @@ NEXT_CHAR:
       for(int i = 0; i < lines.size(); ++i)
         data[i] = determineTokens(lines.get(i), sep);
       // we do not have enough lines to decide
+      ncols = (setup._ncols > 0)?setup._ncols:guessNcols(setup,data);
       if(checkHeader){
         assert !setup._header;
         assert setup._columnNames == null;
@@ -663,7 +696,6 @@ NEXT_CHAR:
           hasHeader = true;
       }
     }
-    int ncols = (setup._ncols > 0)?setup._ncols:data[0].length;
     ParserSetup resSetup = new ParserSetup(ParserType.CSV, sep, ncols,hasHeader, hasHeader?data[0]:null);
     ArrayList<String> errors = new ArrayList<String>();
     int ilines = 0;
