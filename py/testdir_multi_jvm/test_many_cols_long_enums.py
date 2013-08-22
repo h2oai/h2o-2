@@ -9,7 +9,7 @@ import codecs, string
 
 # MAX_CHAR = 255
 MAX_CHAR = 127
-ENUM_WIDTH = 4
+ENUM_WIDTH = 3
 JUST_EASY_CHARS = True
 JUST_EASIER_CHARS = True
 
@@ -28,7 +28,18 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
             # legalChars = string.letters
             # legalChars = "+-.$abcdABCDE01234"
             # legalChars = string.letters + '+-.,$ \t '
-            legalChars = string.letters + '+-.,$ \t '
+            # legalChars = string.letters + '+-.,$ \t '
+
+            # + and - may be considered numbers and flip cols to NA
+            # . apparently gets considered as num and can flip cols to NA
+            # legalChars = string.letters + "',$ \t +"
+            # legalChars = string.printable
+            print "Avoiding plus, minus and period and odd whitespace chars. % also..but $ okay?. Comma causes issues?"
+            # print string.punctuation
+            # !"#$%&'()*+,-./:;<=>?@[\]^_`{|}~
+
+            otherLegalPunctuation = "!#&()*/:;<=>?@[\]^_`{|}~"
+            legalChars = string.letters + string.digits + "'$ \t" + otherLegalPunctuation
         else:
             # same as this
             # legalChars = string.letters + string.punctuation + string.digits + string.whitespace
@@ -44,13 +55,14 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
                 else:
                     u = random.randint(0,MAX_CHAR)
                     uStr = str(unichr(u))
-                # we're using single quote below, so don't use that either! double quote is ok!
+                # we're using double quote below, so don't use that either! double quote is ok!
                 # comma is okay? we're going to force the separator below
-                if uStr=="\n" or uStr=="\r\n" or uStr=="\r" or uStr=="'":
+                # TEMP: take out period and plus minus for now
+                if uStr=='\n' or uStr=='\r\n' or uStr=='\r' or uStr=='"' or uStr=='+' or uStr=="-" or uStr==".":
                     # translate to 'a'
                     uStr = 'a'
                 longEnum += uStr
-            rowData.append("'" + longEnum + "'") # single quoted long enum
+            rowData.append('"' + longEnum + '"') # double quoted long enum
 
         # can't use ', ' ..illegal, has to be comma only
         rowDataCsv = ",".join(map(str,rowData))
@@ -82,14 +94,14 @@ class Basic(unittest.TestCase):
     def test_many_cols_with_syn(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (10, 100, 'cA', 5),
-            (10, 100, 'cA', 5),
-            (10, 100, 'cA', 5),
-            (10, 100, 'cA', 5),
-            (10, 100, 'cA', 5),
-            (10, 100, 'cA', 5),
-            (10, 100, 'cA', 5),
-            (10, 100, 'cA', 5),
+            (5, 7, 'cA', 5),
+            (5, 7, 'cA', 5),
+            (5, 7, 'cA', 5),
+            (5, 7, 'cA', 5),
+            (5, 7, 'cA', 5),
+            (5, 7, 'cA', 5),
+            (5, 7, 'cA', 5),
+            (5, 7, 'cA', 5),
             ]
 
         ### h2b.browseTheCloud()
