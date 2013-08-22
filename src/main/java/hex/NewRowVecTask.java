@@ -43,7 +43,7 @@ public class NewRowVecTask<T extends Iced> extends MRTask {
     public T apply(Job j, DataFrame data) throws JobCancelledException{
       NewRowVecTask<T> tsk = new NewRowVecTask<T>(j,this, data);
       tsk.invoke(data._ary._key);
-      if(j.cancelled())throw new JobCancelledException();
+      if(j != null && j.cancelled())throw new JobCancelledException();
       return tsk._result;
     }
 
@@ -230,12 +230,14 @@ ROW:
       ((ChunkProgressJob)_job).updateProgress(1);
   }
 
-  @Override
-  public void reduce(DRemoteTask drt) {
+  @Override public void reduce(DRemoteTask drt) {
     if(_job != null && _job.cancelled()) return;
     NewRowVecTask<T> rv = (NewRowVecTask<T>)drt;
     assert _result != rv._result;
     _result = (_result != null)?_func.reduce(_result, rv._result):rv._result;
     rv._result = null;
   }
+
+  /** Dial back default logging; these passes are common and rarely cause issues. */
+  @Override public boolean logVerbose() { return false; }
 }

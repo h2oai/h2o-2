@@ -41,10 +41,10 @@ public abstract class Paxos {
     // mismatched jars.
     if( !h2o._heartbeat.check_jar_md5() ) {
       if( H2O.CLOUD.size() > 1 ) {
-        Log.warn("Killing "+h2o+"  because of jar mismatch.");
+        Log.warn("Killing "+h2o+" because of H2O version mismatch (md5 differs).");
         UDPRebooted.T.mismatch.send(h2o);
       } else {
-        Log.warn("Attempting to join "+h2o+" with a jar mismatch. Killing self.");
+        Log.err("Attempting to join "+h2o+" with an H2O version mismatch (md5 differs).  Exiting.");
         H2O.exit(-1);
       }
       return 0;
@@ -53,7 +53,7 @@ public abstract class Paxos {
     // Never heard of this dude?  See if we want to kill him off for being cloud-locked
     if( !PROPOSED.contains(h2o) ) {
       if( _cloudLocked ) {
-        Log.warn("Killing "+h2o+" because the cloud is locked.");
+        Log.warn("Killing "+h2o+" because the cloud is no longer accepting new H2O nodes.");
         UDPRebooted.T.locked.send(h2o);
         return 0;
       }

@@ -8,6 +8,7 @@ import water.*;
 import water.ValueArray.Column;
 import water.parser.ParseDataset.FileInfo;
 import water.util.Log;
+import water.util.Utils;
 
 /** Class responsible for actual parsing of the datasets.
  *
@@ -613,12 +614,10 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
           _mean[i] += dpt._mean[i];
         }
       } else if(_phase == Pass.TWO) {
-        for(int i = 0; i < dpt._ncolumns; ++i)
-          _sigma[i] += dpt._sigma[i];
+        Utils.add(_sigma,dpt._sigma);
       } else
         assert false:"unexpected _phase value:" + _phase;
-      for(int i = 0; i < dpt._ncolumns; ++i)
-        _invalidValues[i] += dpt._invalidValues[i];
+      Utils.add(_invalidValues,dpt._invalidValues);
     }
     _numRows += dpt._numRows;
     if(_error == null)_error = dpt._error;

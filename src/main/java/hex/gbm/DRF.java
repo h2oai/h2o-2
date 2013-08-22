@@ -55,8 +55,18 @@ public class DRF extends Job {
     final long nrows = vresponse.length();
     assert !vresponse._isInt || (vresponse.max() - vresponse.min()) < 10000; // Too many classes?
     int ymin = (int)vresponse.min();
-    short nclass = vresponse._isInt ? (short)(vresponse.max()-ymin+1) : 0;
-    //if( nclass == 2 ) nclass = 0; // Specifically force 2 classes into a regression
+    short nclass = vresponse._isInt ? (short)(vresponse.max()-ymin+1) : 1;
+
+    // Find the initial prediction - the current average response variable.
+    if( nclass == 1 ) {
+      fr.add("Residual-"+fr._names[ncols],vresponse.makeCon(vresponse.mean()));
+      throw H2O.unimpl();
+    } else {
+      long cs[] = new ClassDist(nclass).doAll(vresponse)._cs;
+      String[] domain = vresponse.domain();
+      for( int i=0; i<nclass; i++ ) 
+        fr.add("Residual-"+domain[i],vresponse.makeCon(1.0f-(float)cs[i]/nrows));
+    }
 
     // The RNG used to pick split columns
     Random rand = new MersenneTwisterRNG(new int[]{(int)(seed>>32L),(int)seed});
@@ -79,7 +89,7 @@ public class DRF extends Job {
       for( int t=0; t<xtrees; t++ ) {
         int idx = st+t;
         // Make a new Vec to hold the split-number for each row (initially all zero).
-        Vec vec = Vec.makeZero(vs[0]);
+        Vec vec = vs[0].makeZero();
         nids[idx] = vec;
         trees[idx] = someTrees[t] = new DRFTree(fr,ncols,nclass,hs,mtrys,rand.nextLong());
         if( sampleRate < 1.0 )
@@ -92,7 +102,7 @@ public class DRF extends Job {
       if( d>depth ) depth=d;    // Actual max depth used
 
       // Remove temp vectors; cleanup the Frame
-      while( fr.numCols() > ncols+1 )
+      for( int t=0; t<xtrees; t++ )
         UKV.remove(fr.remove(fr.numCols()-1)._key);
     }
     Log.info(Sys.DRF__,"DRF done in "+t_drf);

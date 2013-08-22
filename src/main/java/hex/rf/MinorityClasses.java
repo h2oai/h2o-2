@@ -4,6 +4,7 @@ import java.util.Arrays;
 
 import water.*;
 import water.ValueArray.Column;
+import water.util.Utils;
 
 /**
  * Contains methods for extracting minority classes out of value array and redistributing them to all nodes.
@@ -140,8 +141,7 @@ public class MinorityClasses {
   public static int [] globalHistogram(int [][] histogram){
     int [] h = new int[histogram[0].length];
     for(int i = 0; i < histogram.length; ++i)
-      for(int j = 0; j < histogram[i].length; ++j)
-        h[j] += histogram[i][j];
+      Utils.add(h,histogram[i]);
     return h;
   }
 
@@ -173,12 +173,8 @@ public class MinorityClasses {
     @Override
     public void reduce(DRemoteTask drt) {
       HistogramTask other = (HistogramTask)drt;
-      if(_histogram == null)
-        _histogram = other._histogram;
-      else
-        for(int i = 0; i < H2O.CLOUD.size(); ++i)
-          for(int j = 0; j < _histogram[0].length; ++j)
-            _histogram[i][j] += other._histogram[i][j];
+      if(_histogram == null) _histogram = other._histogram;
+      else Utils.add(_histogram,other._histogram);
     }
   }
 
@@ -276,8 +272,7 @@ public class MinorityClasses {
         _offsets = other._offsets;
         _histogram = other._histogram;
       } else {
-         for(int i = 0; i < _histogram.length; ++i)
-          _histogram[i] += other._histogram[i];
+        Utils.add(_histogram,other._histogram);
         for(int i = 0; i < _bufs.length; ++i){
           if(_offsets[i] == 0) {
             _bufs[i] = other._bufs[i];

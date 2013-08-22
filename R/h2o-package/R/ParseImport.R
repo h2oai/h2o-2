@@ -13,10 +13,10 @@ setGeneric("h2o.setColNames", function(data, col.names) { standardGeneric("h2o.s
 # Unique methods to H2O
 # H2O client management operations
 h2o.startLauncher <- function() {
-  myOS = Sys.info()["sysname"]; myHome = Sys.getenv("HOME")
+  myOS = Sys.info()["sysname"]
   
-  if(myOS == "Windows") verPath = paste(myHome, "AppData/Roaming/h2o", sep="/")
-  else verPath = paste(myHome, "Library/Application Support/h2o", sep="/")
+  if(myOS == "Windows") verPath = paste(Sys.getenv("APPDATA"), "h2o", sep="/")
+  else verPath = paste(Sys.getenv("HOME"), "Library/Application Support/h2o", sep="/")
   myFiles = list.files(verPath)
   if(length(myFiles) == 0) stop("Cannot find location of H2O launcher. Please check that your H2O installation is complete.")
   # Must trim myFiles so all have format 1.2.3.45678.txt (use regexpr)!

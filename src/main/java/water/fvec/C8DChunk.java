@@ -18,6 +18,10 @@ public class C8DChunk extends Chunk {
     UDP.set8d(_mem,i<<3,d);
     return true;
   }
+  @Override boolean set4_impl(int i, float f ) { 
+    UDP.set8d(_mem,i<<3,f);
+    return true;
+  }
   @Override boolean hasFloat() { return true; }
   @Override public AutoBuffer write(AutoBuffer bb) {return bb.putA1(_mem,_mem.length);}
   @Override public C8DChunk read(AutoBuffer bb) {

@@ -41,11 +41,12 @@ public class Tree extends H2OCountedCompleter {
   final long     _seed;         // Pseudo random seed: used to playback sampling
   int            _exclusiveSplitLimit;
   int            _verbose;
+  final byte     _producerId;   // Id of node producing this tree
 
   /**
    * Constructor used to define the specs when building the tree from the top.
    */
-  public Tree(final Job job, final Data data, int maxDepth, StatType stat, int numSplitFeatures, long seed, int treeId, int exclusiveSplitLimit, final Sampling sampler, int verbose) {
+  public Tree(final Job job, final Data data, byte producerId, int maxDepth, StatType stat, int numSplitFeatures, long seed, int treeId, int exclusiveSplitLimit, final Sampling sampler, int verbose) {
     _job              = job;
     _data             = data;
     _type             = stat;
@@ -56,6 +57,7 @@ public class Tree extends H2OCountedCompleter {
     _sampler          = sampler;
     _exclusiveSplitLimit = exclusiveSplitLimit;
     _verbose          = verbose;
+    _producerId       = producerId;
   }
 
   // Oops, uncaught exception
@@ -367,6 +369,7 @@ public class Tree extends H2OCountedCompleter {
     AutoBuffer bs = new AutoBuffer();
     bs.put4(_data_id);
     bs.put8(_seed);
+    bs.put1(_producerId);
     _tree.write(bs);
     Key key = Key.make(UUID.randomUUID().toString(),(byte)1,Key.DFJ_INTERNAL_USER, H2O.SELF);
     DKV.put(key,new Value(key, bs.buf()));
@@ -379,6 +382,7 @@ public class Tree extends H2OCountedCompleter {
   public static short classify( AutoBuffer ts, ValueArray ary, AutoBuffer databits, int row, int modelDataMap[], short badData ) {
     ts.get4();    // Skip tree-id
     ts.get8();    // Skip seed
+    ts.get1();    // Skip producer id
     byte b;
 
     while( (b = (byte) ts.get1()) != '[' ) { // While not a leaf indicator
@@ -404,6 +408,7 @@ public class Tree extends H2OCountedCompleter {
   public static double classify( AutoBuffer ts, double[] ds, double badat ) {
     ts.get4();    // Skip tree-id
     ts.get8();    // Skip seed
+    ts.get1();    // Skip producer id
     byte b;
 
     while( (b = (byte) ts.get1()) != '[' ) { // While not a leaf indicator
@@ -427,6 +432,7 @@ public class Tree extends H2OCountedCompleter {
 
   public static int dataId( byte[] bits) { return UDP.get4(bits, 0); }
   public static long seed ( byte[] bits) { return UDP.get8(bits, 4); }
+  public static byte producerId( byte[] bits) { return bits[0+4+8]; }
 
   /** Abstract visitor class for serialized trees.*/
   public static abstract class TreeVisitor<T extends Exception> {
@@ -438,8 +444,9 @@ public class Tree extends H2OCountedCompleter {
     protected final AutoBuffer _ts;
     public TreeVisitor( AutoBuffer tbits ) {
       _ts = tbits;
-      _ts.get4();               // Skip tree ID
-      _ts.get8();               // Skip seed
+      _ts.get4(); // Skip tree ID
+      _ts.get8(); // Skip seed
+      _ts.get1(); // Skip producer id
     }
 
     public final TreeVisitor<T> visit() throws T {

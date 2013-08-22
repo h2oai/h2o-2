@@ -105,7 +105,7 @@ public class StratifiedDABuilder extends DABuilder {
    * data from other nodes in case of minority/unbalanced class.
    */
   @Override
-  protected final DataAdapter inhaleData(final Key [] keys) {
+  protected final DataAdapter inhaleData(final Key[] lkeys, final Key[] rkeys) {
     final ValueArray ary = DKV.get(_drf._rfmodel._dataKey).get();
     int   row_size        = ary.rowSize();
     int   rpc             = (int)ValueArray.CHUNK_SZ/row_size;
@@ -114,13 +114,13 @@ public class StratifiedDABuilder extends DABuilder {
     boolean []   unbalancedClasses = null;
     final int[] modelDataMap = _drf._rfmodel.columnMapping(ary.colNames());
 
-    final int [][] chunkHistogram = new int [keys.length+1][nclasses];
+    final int [][] chunkHistogram = new int [lkeys.length+1][nclasses];
 
     // first compute histogram of classes per chunk (for sorting purposes)
-    RecursiveAction [] htasks = new RecursiveAction[keys.length];
-    for(int i = 0; i < keys.length; ++i){
+    RecursiveAction [] htasks = new RecursiveAction[lkeys.length];
+    for(int i = 0; i < lkeys.length; ++i){
       final int chunkId  = i;
-      final Key chunkKey = keys[i];
+      final Key chunkKey = lkeys[i];
 
       htasks[i] = new RecursiveAction() {
         @Override
@@ -137,12 +137,11 @@ public class StratifiedDABuilder extends DABuilder {
     }
     ForkJoinTask.invokeAll(htasks);
     // compute sums of our class counts
-    for(int i = 0; i < keys.length; ++i)
-      for(int j = 0; j < nclasses; ++j)
-        chunkHistogram[keys.length][j] += chunkHistogram[i][j];
+    for(int i = 0; i < lkeys.length; ++i)
+      Utils.add(chunkHistogram[lkeys.length],chunkHistogram[i]);
 
     ArrayList<Key> myKeys = new ArrayList<Key>();
-    for(Key k : keys)myKeys.add(k);
+    for(Key k : lkeys)myKeys.add(k);
     if(/*FIXME _drf._params._uClasses != null*/ true) {
       // boolean array to keep track which classes to ignore when reading local keys
       unbalancedClasses = new boolean[nclasses];
@@ -178,17 +177,17 @@ public class StratifiedDABuilder extends DABuilder {
             indexes.set(i, indexes.get(last));
             indexes.remove(last);
           }
-          chunkHistogram[keys.length][c._c] = Math.min(r,nrows);
+          chunkHistogram[lkeys.length][c._c] = Math.min(r,nrows);
         }
       }
     }
 
     int totalRows = 0; // size of local DataAdapter
     for(int i = 0; i < nclasses;++i)
-      totalRows += chunkHistogram[keys.length][i];
+      totalRows += chunkHistogram[lkeys.length][i];
     final DataAdapter dapt = new DataAdapter(ary, _drf._rfmodel, modelDataMap,
                                             totalRows,
-                                            ValueArray.getChunkIndex(keys[0]),
+                                            ValueArray.getChunkIndex(lkeys[0]),
                                             _drf._params._seed,
                                             _drf._params._binLimit,
                                             _drf._params._classWt);
@@ -198,7 +197,7 @@ public class StratifiedDABuilder extends DABuilder {
 
 //    dapt.initIntervals(nclasses);
     for(int i = 1; i < nclasses; ++i){
-      startRows[i] = startRows[i-1] + chunkHistogram[keys.length][i-1];
+      startRows[i] = startRows[i-1] + chunkHistogram[lkeys.length][i-1];
 //      dapt.setIntervalStart(i, startRows[i]);
     }
     // cols that do not need binning
@@ -228,14 +227,14 @@ public class StratifiedDABuilder extends DABuilder {
           startRows.clone(),
           k,
           binCols.length > 0,
-          i < keys.length ? unbalancedClasses : null,
+          i < lkeys.length ? unbalancedClasses : null,
           binCols, rawCols, rawMins);
 
       inhaleJobs.add(job);
-      if(i < keys.length) // local (majority class) chunk
+      if(i < lkeys.length) // local (majority class) chunk
         for(int j = 0; j < nclasses; ++j){
           if(unbalancedClasses == null || !unbalancedClasses[j])
-            startRows[j] += chunkHistogram[i][j];
+            Utils.add(startRows,chunkHistogram[i]);
       } else { // chunk containing only single unbalanced class
         // find the unbalanced class
         int c = 0;

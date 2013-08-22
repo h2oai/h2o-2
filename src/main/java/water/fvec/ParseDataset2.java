@@ -239,7 +239,7 @@ public final class ParseDataset2 extends Job {
     int [] ecols = uzpt.enumCols();
     String[] names = new String[uzpt._vecs.length];
     for( int i=0; i<names.length; i++ )
-      names[i] = setup._header ? setup._data[0][i] : (""+i);
+      names[i] = setup._header ? setup._columnNames[i] : (""+i);
 
     // Rollup all the enum columns; uniformly renumber enums per chunk, etc.
     if( ecols != null && ecols.length > 0 ) {
@@ -285,7 +285,7 @@ public final class ParseDataset2 extends Job {
       ByteVec vec = (ByteVec) getVec(key);
       byte [] bits = vec.elem2BV(0)._mem;
       Compression cpr = Utils.guessCompressionMethod(bits);
-      CustomParser.ParserSetup localSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), _setup,true)._setup;
+      CustomParser.ParserSetup localSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), _setup,false)._setup;
       // Local setup: nearly the same as the global all-files setup, but maybe
       // has the header-flag changed.
       if(!_setup.isCompatible(localSetup)) {
@@ -299,7 +299,7 @@ public final class ParseDataset2 extends Job {
           has_hdr = localSetup._columnNames[i].equalsIgnoreCase(_setup._columnNames[i]);
         if( !has_hdr )          // Headers not compatible?
           // Then treat as no-headers, i.e., parse it as a normal row
-          localSetup = new CustomParser.ParserSetup(ParserType.CSV,localSetup._separator, false, localSetup._data);
+          localSetup = new CustomParser.ParserSetup(ParserType.CSV,localSetup._separator, false);
       }
       final int ncols = _setup._ncols;
       _vecs = new Vec[ncols];

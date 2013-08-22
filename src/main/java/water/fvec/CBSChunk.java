@@ -43,6 +43,7 @@ public class CBSChunk extends Chunk {
   }
   @Override boolean set8_impl(int idx, long l)   { return false; }
   @Override boolean set8_impl(int idx, double d) { return false; }
+  @Override boolean set4_impl(int idx, float f ) { return false; }
   @Override boolean hasFloat ()                  { return false; }
 
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem, _mem.length); }

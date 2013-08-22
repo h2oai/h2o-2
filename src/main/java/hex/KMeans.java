@@ -241,8 +241,7 @@ public class KMeans extends Job {
           continue; // Ignore broken row
 
         // Add values and increment counter for chosen cluster
-        for( int column = 0; column < values.length; column++ )
-          _sums[cluster][column] += values[column];
+        Utils.add(_sums[cluster],values);
         _counts[cluster]++;
       }
       _arykey = null;
@@ -257,11 +256,8 @@ public class KMeans extends Job {
         _counts = task._counts;
         _error = task._error;
       } else {
-        for( int cluster = 0; cluster < _counts.length; cluster++ ) {
-          for( int column = 0; column < _sums[0].length; column++ )
-            _sums[cluster][column] += task._sums[cluster][column];
-          _counts[cluster] += task._counts[cluster];
-        }
+        Utils.add(_sums  ,task._sums  );
+        Utils.add(_counts,task._counts);
         _error += task._error;
       }
     }

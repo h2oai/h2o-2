@@ -100,8 +100,8 @@ class Basic(unittest.TestCase):
                 "    num_cols:", "{:,}".format(num_cols)
 
             # all should have rowCount rows (due to the excludePattern
-            self.assertEqual(num_rows, (rowCount+1)*FILENUM, msg=("got num_rows: %s. Should be rowCount+1: %s * FILENUM: %s" % \
-                (num_rows, rowCount+1, FILENUM)))
+            self.assertEqual(num_rows, rowCount*FILENUM, msg=("got num_rows: %s. Should be rowCount: %s * FILENUM: %s" % \
+                (num_rows, rowCount, FILENUM)))
 
 if __name__ == '__main__':
     h2o.unit_main()

@@ -1,7 +1,6 @@
 package water.fvec;
 
 import java.util.Arrays;
-
 import water.AutoBuffer;
 import water.UDP;
 
@@ -18,6 +17,7 @@ public class C0DChunk extends Chunk {
   @Override protected final double atd_impl( int i ) {return Double.isNaN(_con)?_vec._fNA:_con;}
   @Override boolean set8_impl(int idx, long l) { return l==_con; }
   @Override boolean set8_impl(int i, double d) { return d==_con; }
+  @Override boolean set4_impl(int i, float f ) { return f==_con; }
   @Override boolean hasFloat() { return false; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
   @Override public C0DChunk read(AutoBuffer bb) {

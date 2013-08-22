@@ -23,7 +23,9 @@ class Basic(unittest.TestCase):
         for trial in range (1,5):
             csvPathname = h2o.find_file('smalldata/iris/iris2.csv')
             start = time.time()
-            kwargs = {'y':4, 'family': 'binomial', 'case': 1, 'case_mode': '>'}
+            # h2o.py now sets destination_key for a fixed default model name, 
+            # we want h2o to create model names for this test, so use none here
+            kwargs = {'destination_key': None, 'y':4, 'family': 'binomial', 'case': 1, 'case_mode': '>'}
             
             # make sure each parse is unique dest key (not in use
             key2 = "iris2_" + str(trial) + ".hex"

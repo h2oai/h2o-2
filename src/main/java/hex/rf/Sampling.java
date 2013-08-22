@@ -21,22 +21,20 @@ public abstract class Sampling {
       invalid rows (as-if not sampled), but maintain the sampling rate. */
   final static class Random extends Sampling {
     final double _bagSizePct;
-    final int    _rowsPerChunk;
+    final int[]  _rowsPerChunks;
 
-    public Random(double bagSizePct, int rowsPerChunk) { _bagSizePct = bagSizePct; _rowsPerChunk = rowsPerChunk; }
+    public Random(double bagSizePct, int[] rowsPerChunks) { _bagSizePct = bagSizePct; _rowsPerChunks = rowsPerChunks; }
 
     @Override Data sample(final Data data, long seed) {
       int [] sample;
-      sample = sampleFair(data,seed,_rowsPerChunk);
+      sample = sampleFair(data,seed,_rowsPerChunks);
       // add the remaining rows
       Arrays.sort(sample); // we want an ordered sample
       return new Subset(data, sample, 0, sample.length);
       }
 
     /** Roll a fair die for sampling, resetting the random die every numrows. */
-    private int[] sampleFair(final Data data, long seed, int rowsPerChunk ) {
-      // preconditions
-      assert rowsPerChunk != 0 : "RowsPerChunk contains 0! Not able to assure deterministic sampling!";
+    private int[] sampleFair(final Data data, long seed, int[] rowsPerChunks ) {
       // init
       java.util.Random rand = null;
       int   rows   = data.rows();
@@ -45,15 +43,16 @@ public abstract class Sampling {
       float f      = (float) _bagSizePct;
       int   cnt    = 0;  // Counter for resetting Random
       int   j      = 0;  // Number of selected samples
+      int   cidx   = 0;  // Chunks counter
       // compute
       for( int i=0; i<rows; i++ ) {
         if( cnt--==0 ) {
           /* NOTE: Before changing used generator think about which kind of random generator you need:
            * if always deterministic or non-deterministic version - see hex.rf.Utils.get{Deter}RNG */
           long chunkSamplingSeed = chunkSampleSeed(seed, i);
+          // DEBUG: System.err.println(seed + " : " + i + " (sampling)");
           rand = Utils.getDeterRNG(chunkSamplingSeed);
-          cnt  = rowsPerChunk-1;
-          if( i+2*rowsPerChunk > rows ) cnt = rows; // Last chunk is big
+          cnt  = rowsPerChunks[cidx++]-1;
         }
         float randFloat = rand.nextFloat();
         if( randFloat < f ) {

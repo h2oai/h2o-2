@@ -61,6 +61,8 @@ public class ConfusionTask extends MRTask {
   transient private Random    _rand;
   /** @LOCAL: Data to replay the sampling algorithm */
   transient private int[]     _chunk_row_mapping;
+  /** @LOCAL: Number of rows at each node */
+  transient private int[]     _rowsPerNode;
   /** @LOCAL: Computed mapping of model prediction classes to confusion matrix classes */
   transient private int[]     _model_classes_mapping;
   /** @LOCAL: Computed mapping of data prediction classes to confusion matrix classes */
@@ -148,7 +150,7 @@ public class ConfusionTask extends MRTask {
   /** Shared init: pre-compute local data for new Confusions, for remote Confusions*/
   private void shared_init() {
     _rand   = Utils.getRNG(0x92b5023f2cd40b7cL); // big random seed
-    _data   = DKV.get(_datakey).get();
+    _data   = UKV.get(_datakey);
     _model  = UKV.get(_modelKey);
     _modelDataMap = _model.columnMapping(_data.colNames());
     assert !_computeOOB || _model._dataKey.equals(_datakey) : !_computeOOB + " || " + _model._dataKey + " equals " + _datakey ;
@@ -193,6 +195,13 @@ public class ConfusionTask extends MRTask {
         _chunk_row_mapping[(int)l] = off;
         off += _data.rpc(l);
       }
+    // Initialize number of rows per node
+    _rowsPerNode = new int[H2O.CLOUD.size()];
+    long chunksCount = _data.chunks();
+    for(int ci=0; ci<chunksCount; ci++) {
+      Key cKey = _data.getChunkKey(ci);
+      _rowsPerNode[cKey.home_node().index()] += _data.rpc(ci);
+    }
   }
 
   /**A classic Map/Reduce style incremental computation of the confusion
@@ -213,12 +222,16 @@ public class ConfusionTask extends MRTask {
     // Replay the Data.java's "sample_fair" sampling algorithm to exclude data
     // we trained on during voting.
     for( int ntree = 0; ntree < _model.treeCount(); ntree++ ) {
-      long    seed        = _model.seed(ntree);
+      long    treeSeed    = _model.seed(ntree);
+      byte    producerId  = _model.producerId(ntree);
       int     init_row    = _chunk_row_mapping[nchk];
-      boolean isLocalTree = _computeOOB ? isLocalTree(ntree) : false;
+      boolean isLocalTree = _computeOOB ? isLocalTree(ntree, producerId) : false; // tree is local
+      boolean isRemoteTreeChunk = _computeOOB ? isRemoteChunk(producerId, chunkKey) : false; // this is chunk which was used for construction the tree by another node
+      if (isRemoteTreeChunk) init_row = _rowsPerNode[producerId] + producerRemoteRows(producerId, chunkKey);
       /* NOTE: Before changing used generator think about which kind of random generator you need:
        * if always deterministic or non-deterministic version - see hex.rf.Utils.get{Deter}RNG */
-      seed = Sampling.chunkSampleSeed(seed, init_row);
+      // DEBUG: if( _computeOOB && (isLocalTree || isRemoteTreeChunk)) System.err.println(treeSeed + " : " + init_row + " (CM) " + isRemoteTreeChunk);
+      long seed = Sampling.chunkSampleSeed(treeSeed, init_row);
       Random rand = Utils.getDeterRNG(seed);
       // Now for all rows, classify & vote!
       ROWS: for( int row = 0; row < rows; row++ ) {
@@ -230,7 +243,7 @@ public class ConfusionTask extends MRTask {
         // Do not skip yet the rows with NAs in the rest of columns
         if( _data.isNA(cdata, row, _classcol)) continue ROWS;
 
-        if( _computeOOB && isLocalTree) { // if OOBEE is computed then we need to take into account utilized sampling strategy
+        if( _computeOOB && (isLocalTree || isRemoteTreeChunk)) { // if OOBEE is computed then we need to take into account utilized sampling strategy
           switch( _model._samplingStrategy ) {
           case RANDOM          : if (sampledItem < _model._sample ) continue ROWS; break;
           case STRATIFIED_LOCAL:
@@ -261,15 +274,35 @@ public class ConfusionTask extends MRTask {
     }
   }
 
-  private boolean isLocalTree(int ntree) {
-    assert _computeOOB == true : "Make sense only for oobee";
+
+  /** Returns true if tree was produced by this node.
+   * Note: chunkKey is key stored at this local node */
+  private boolean isLocalTree(int ntree, byte treeProducerId) {
+    assert _computeOOB == true : "Calling this method makes sense only for oobee";
     int idx  = H2O.SELF.index();
-    Key tree = _model._tkeys[ntree];
-    Key[] localForest = _model._localForests[idx];
-    for(int i=0; i<localForest.length;i++) {
-      if (tree.equals(localForest[i])) return true;
-    }
+    return idx == treeProducerId;
+  }
+
+  /** Returns true if chunk was loaded during processing the tree. */
+  private boolean isRemoteChunk(byte treeProducerId, Key chunkKey) {
+    // it is not local tree => try to find if tree producer used chunk key for
+    // tree construction
+    Key[] remoteCKeys = _model._remoteChunksKeys[treeProducerId];
+    for (int i=0; i<remoteCKeys.length; i++)
+      if (chunkKey.equals(remoteCKeys[i])) return true;
     return false;
+  }
+
+  private int producerRemoteRows(byte treeProducerId, Key chunkKey) {
+    Key[] remoteCKeys = _model._remoteChunksKeys[treeProducerId];
+    int off = 0;
+    for (int i=0; i<remoteCKeys.length; i++) {
+      if (chunkKey.equals(remoteCKeys[i])) return off;
+      off += _data.rpc(ValueArray.getChunkIndex(remoteCKeys[i]));
+    }
+    assert false : "Never should be here!";
+    return off;
+
   }
 
   /** Reduction combines the confusion matrices. */
@@ -401,13 +434,8 @@ public class ConfusionTask extends MRTask {
     /** Add a confusion matrix. */
     public CM add(final CM cm) {
       if (cm!=null) {
-        long[][] m1 = _matrix;
-        long[][] m2 = cm._matrix;
-        if( m1 == null ) _matrix = m2;  // Take other work straight-up
-        else {
-          for( int i = 0; i < m1.length; i++ )
-            for( int j = 0; j < m1.length; j++ )  m1[i][j] += m2[i][j];
-        }
+        if( _matrix == null ) _matrix = cm._matrix;  // Take other work straight-up
+        else Utils.add(_matrix,cm._matrix);
         _rows    += cm._rows;
         _errors  += cm._errors;
         _skippedRows += cm._skippedRows;

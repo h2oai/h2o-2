@@ -19,7 +19,7 @@ public class XlsParser extends CustomParser implements HSSFListener {
   private transient final ValueString _str = new ValueString();
   private transient CustomParser.DataOut _dout;
 
-  public XlsParser(){super(new ParserSetup(ParserType.XLS,CsvParser.AUTO_SEP,false,null));}
+  public XlsParser(){super(new ParserSetup(ParserType.XLS,CsvParser.AUTO_SEP,0,false,null));}
   public XlsParser(CustomParser.ParserSetup setup){super(null);}
   public XlsParser clone(){return new XlsParser(_setup);}
 
@@ -50,7 +50,7 @@ public class XlsParser extends CustomParser implements HSSFListener {
     XlsParser p = new XlsParser();
     CustomInspectDataOut dout = new CustomInspectDataOut();
     try{p.streamParse(is, dout);}catch(Exception e){}
-    return (dout._ncols > 0 && dout._nlines > 0)?new PSetupGuess(new ParserSetup(ParserType.XLS,CsvParser.AUTO_SEP,dout._header,dout.data()),dout._nlines,dout._invalidLines,null):null;
+    return new PSetupGuess(new ParserSetup(ParserType.XLS,CsvParser.AUTO_SEP,dout._ncols, dout._header,dout._header?dout.data()[0]:null),dout._nlines,dout._invalidLines,dout.data(),null);
   }
 
   transient ArrayList<String> _columnNames = new ArrayList();
