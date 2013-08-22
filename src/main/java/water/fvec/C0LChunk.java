@@ -1,7 +1,8 @@
 package water.fvec;
 
 import java.util.Arrays;
-import water.*;
+import water.AutoBuffer;
+import water.UDP;
 
 // The constant column
 public class C0LChunk extends Chunk {

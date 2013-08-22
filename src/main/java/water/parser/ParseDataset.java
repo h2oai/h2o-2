@@ -15,6 +15,7 @@ import water.parser.CustomParser.ParserType;
 import water.parser.DParseTask.Pass;
 import water.util.*;
 import water.util.Utils.IcedArrayList;
+import water.util.Utils;
 
 import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
@@ -328,10 +329,8 @@ public final class ParseDataset extends Job {
       for(int i = 0; i < p2s.length; ++i){
         DParseTask t = p2s[i];
         p2s[i].get();
-        for (j = 0; j < phaseTwo._ncolumns; ++j) {
-          phaseTwo._sigma[j] += t._sigma[j];
-          phaseTwo._invalidValues[j] += t._invalidValues[j];
-        }
+        Utils.add(phaseTwo._sigma,t._sigma);
+        Utils.add(phaseTwo._invalidValues,t._invalidValues);
         if ((t._error != null) && !t._error.isEmpty()) {
           System.err.println(phaseTwo._error);
           throw new Exception("The dataset format is not recognized/supported");

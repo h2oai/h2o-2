@@ -26,7 +26,7 @@ public class FileIntegrityChecker extends DRemoteTask<FileIntegrityChecker> {
 
   @Override public void reduce(FileIntegrityChecker o) {
     if( _ok == null ) _ok = o._ok;
-    else for ( int i = 0; i < _ok.length; ++i ) _ok[i] += o._ok[i];
+    else Utils.add(_ok,o._ok);
   }
 
   @Override public byte priority() { return H2O.GUI_PRIORITY; }

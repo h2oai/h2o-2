@@ -3,6 +3,7 @@ package hex;
 
 import water.*;
 import water.ValueArray.Column;
+import water.util.Utils;
 
 public class ScoreTask extends MRTask {
 
@@ -82,7 +83,6 @@ public class ScoreTask extends MRTask {
     if(_rpc == null)
       _rpc = t._rpc;
     else if(_rpc != t._rpc)
-      for(int i = 0; i < _rpc.length; ++i)
-        _rpc[i] += t._rpc[i];
+      Utils.add(_rpc,t._rpc);
   }
 }

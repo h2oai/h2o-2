@@ -46,17 +46,21 @@ public class GBM extends Job {
     Vec vresponse = vs[ncols];
     final long nrows = vresponse.length();
     assert !vresponse._isInt || (vresponse.max() - vresponse.min()) < 10000; // Too many classes?
-    int ymin = (int)vresponse.min();
-    short nclass = vresponse._isInt ? (short)(vresponse.max()-ymin+1) : 0;
+    final int ymin = (int)vresponse.min();
+    short nclass = vresponse._isInt ? (short)(vresponse.max()-ymin+1) : 1;
+    assert 1 <= nclass && nclass < 1000; // Arbitrary cutoff for too many classes
 
-    // Make a new Vec to hold the %-tage of correct prediction for each row
-    // (initially all zero).  The value will vary from 0 to 1, where 1 is
-    // prefectly predicted and zero is not predicted at all.
-    Vec vpred = Vec.makeZero(vs[0]);
-    fr.add("Predict",vpred);
+    // Add in Vecs after the response column which holds the row-by-row
+    // residuals: the (actual minus prediction), for each class.  The
+    // prediction is a probability distribution across classes: every class is
+    // assigned a probability from 0.0 to 1.0, and the sum of probs is 1.0.
+    //
+    // The initial prediction is just the class distribution.  The initial
+    // residuals are then basically the actual class minus the average class.
+    buildResiduals(nclass,fr,ncols,nrows,vresponse,ymin);
 
     // Make a new Vec to hold the split-number for each row (initially all zero).
-    Vec vnids = Vec.makeZero(vs[0]);
+    Vec vnids = vresponse.makeZero();
     fr.add("NIDs",vnids);
 
     // Initially setup as-if an empty-split had just happened
@@ -100,7 +104,7 @@ public class GBM extends Job {
       // If we did not make any new splits, then the tree is split-to-death
       if( tmax == tree._len ) break;
       
-      //new BulkScore(new DTree[]{tree},ncols,nclass,ymin,1.0f).doAll(fr).report( Sys.GBM__, nrows, depth );
+      new BulkScore(new DTree[]{tree},ncols,nclass,ymin,1.0f).doAll(fr).report( Sys.GBM__, nrows, depth );
     }
     Log.info(Sys.GBM__,"GBM done in "+t_gbm);
 
@@ -110,10 +114,45 @@ public class GBM extends Job {
     Log.info(Sys.GBM__,"GBM score done in "+t_score);
 
     // Remove temp vector; cleanup the Frame
-    UKV.remove(fr.remove("Predict")._key);
-    UKV.remove(fr.remove("NIDs")._key);
+    while( fr.numCols() > ncols+1 )
+      UKV.remove(fr.remove(fr.numCols()-1)._key);
   }
-  
+
+  // Add in Vecs after the response column which holds the row-by-row
+  // residuals: the (actual minus prediction), for each class.  The
+  // prediction is a probability distribution across classes: every class is
+  // assigned a probability from 0.0 to 1.0, and the sum of probs is 1.0.
+  //
+  // The initial prediction is just the class distribution.  The initial
+  // residuals are then basically the actual class minus the average class.
+  private static void buildResiduals(short nclass, Frame fr, final int ncols, long nrows, Vec vresponse, final int ymin ) {
+    // Find the initial prediction - the current average response variable.
+    if( nclass == 1 ) {
+      fr.add("Residual-"+fr._names[ncols],vresponse.makeCon(vresponse.mean()));
+      throw H2O.unimpl();
+    } else {
+      long cs[] = new ClassDist(nclass).doAll(vresponse)._cs;
+      String[] domain = vresponse.domain();
+      for( int i=0; i<nclass; i++ )
+        fr.add("Residual-"+domain[i],vresponse.makeCon(-(float)cs[i]/nrows));
+    }
+
+    // Compute initial residuals with no trees: prediction-actual e.g. if the
+    // class choices are A,B,C with equal probability, and the row is actually
+    // a 'B', the residual is {-0.33,1-0.33,-0.33}
+    new MRTask2() {
+      @Override public void map( Chunk chks[] ) {
+        Chunk cy = chks[ncols];          // Response column
+        for( int i=0; i<cy._len; i++ ) { // For all rows
+          int cls = (int)cy.at80(i)-ymin;// Class
+          Chunk res = chks[ncols+1/*response*/+cls];
+          res.set80(i,1.0f+res.at0(i));  // Fix residual for actual class
+        }
+      }
+    }.doAll(fr);
+  }
+
+  // ---
   // GBM DTree decision node: same as the normal DecidedNode, but
   // specifies a decision algorithm given complete histograms on all
   // columns.  GBM algo: find the lowest error amongst *all* columns.
