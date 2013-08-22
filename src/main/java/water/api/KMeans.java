@@ -1,5 +1,6 @@
 package water.api;
 
+import hex.KMeans.Initialization;
 import hex.KMeansModel;
 
 import java.util.Random;
@@ -13,9 +14,6 @@ import com.google.gson.*;
 public class KMeans extends Request {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-
-  // This Request supports the HTML 'GET' command, and this is the help text
-  // for GET.
   static final String DOC_GET = "K-means algorithm";
 
   @API(help = "Key for input dataset")
@@ -24,11 +22,11 @@ public class KMeans extends Request {
   @API(help = "Number of clusters")
   final Int k = new Int("k");
 
-  @API(help = "Maximum number of iterations before stopping")
-  final Int max_iter = new Int("max_iter", 0);
+  @API(help = "Clusters initialization")
+  final EnumArgument<Initialization> initialization = new EnumArgument<Initialization>("initialization", Initialization.None);
 
-  @API(help = "Minimum change in clusters before stopping. Can be used instead of, or in addition to max_iter")
-  final Real epsilon = new Real("epsilon", 1e-4);
+  @API(help = "Maximum number of iterations before stopping")
+  final Int max_iter = new Int("max_iter", 100);
 
   @API(help = "Seed for the random number generator")
   final LongInt seed = new LongInt("seed", new Random().nextLong(), "");
@@ -62,7 +60,7 @@ public class KMeans extends Request {
   final hex.KMeans start(Key dest, int k, int maxIter) {
     ValueArray va = source_key.value();
     Key source = va._key;
-    double ep = epsilon.value();
+    Initialization init = initialization.value();
     long seed_ = seed.record()._valid ? seed.value() : seed._defaultValue;
     boolean norm = normalize.record()._valid ? normalize.value() : normalize._defaultValue;
     int[] columns = cols.value();
@@ -75,7 +73,7 @@ public class KMeans extends Request {
       dest = Key.make(n + Extensions.KMEANS);
     }
 
-    return hex.KMeans.start(dest, va, k, ep, maxIter, seed_, norm, columns);
+    return hex.KMeans.start(dest, va, k, init, maxIter, seed_, norm, columns);
   }
 
   // Make a link that lands on this page

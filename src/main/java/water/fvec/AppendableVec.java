@@ -82,6 +82,10 @@ public class AppendableVec extends Vec {
         _espc[i] = e1[i];
       _chunkTypes[i] |= t1[i];
     }
+    _hasFloat |= nv._hasFloat;
+    _missingCnt += nv._missingCnt;
+    _strCnt += nv._strCnt;
+    _totalCnt += nv._totalCnt;
   }
 
 

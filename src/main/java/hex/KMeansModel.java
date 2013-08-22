@@ -29,7 +29,7 @@ public class KMeansModel extends Model implements Progress {
 
   // Progress reporting for the job/progress page
   @Override public float progress() {
-    return Math.min(1f, _iteration / (float) 20);
+    return Math.min(1f, _iteration / (float) _maxIter);
   }
 
   // Accept only columns with a defined mean. Used during the Model.<init> call.

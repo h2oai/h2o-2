@@ -260,6 +260,23 @@ public class Utils {
     return file;
   }
 
+  public static void writeFileAndClose(File file, InputStream in) {
+    OutputStream out = null;
+    try {
+      out = new FileOutputStream(file);
+      byte[] buffer = new byte[1024];
+      int len = in.read(buffer);
+      while (len > 0) {
+        out.write(buffer, 0, len);
+        len = in.read(buffer);
+      }
+    } catch(IOException e) {
+      throw Log.errRTExcept(e);
+    } finally {
+      close(in, out);
+    }
+  }
+
   public static String readFile(File file) {
     FileReader r = null;
     try {
