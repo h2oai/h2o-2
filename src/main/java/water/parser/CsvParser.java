@@ -88,8 +88,8 @@ public class CsvParser extends CustomParser {
 
 MAIN_LOOP:
     while (true) {
+      //System.out.println("off = " + offset + ", char='" + (char)c  + "', state = " + state + ", quotes='" + (char)quotes+"'");
 NEXT_CHAR:
-
       switch (state) {
         // ---------------------------------------------------------------------
         case SKIP_LINE:
@@ -111,12 +111,9 @@ NEXT_CHAR:
             state = COND_QUOTE;
             break NEXT_CHAR;
           }
-          if (((!isEOL(c) && ((quotes != 0) || (c != CHAR_SEPARATOR))))) {
+          if (!isEOL(c) && ((quotes != 0) || (c != CHAR_SEPARATOR))) {
             _str.addChar();
             break NEXT_CHAR;
-          } else if(quotes != 0){ // quoted string spanning newline
-            state = EOL;
-            continue MAIN_LOOP;
           }
           // fallthrough to STRING_END
         // ---------------------------------------------------------------------
@@ -276,7 +273,7 @@ NEXT_CHAR:
           }
           // fallthrough NUMBER_END
         case NUMBER_END:
-          if (c == CHAR_SEPARATOR) {
+          if (c == CHAR_SEPARATOR && quotes == 0) {
             exp = exp - fractionDigits;
             dout.addNumCol(colIdx,number,exp);
             ++colIdx;
@@ -442,6 +439,9 @@ NEXT_CHAR:
           break MAIN_LOOP; // when the first character we see is a line end
       }
       c = bits[offset];
+      if(isEOL(c) && state != COND_QUOTE && quotes != 0) // quoted string having newline character => fail the line!
+        state = EOL;
+
     } // end MAIN_LOOP
     if (colIdx == 0)
       dout.rollbackLine();
@@ -686,7 +686,7 @@ NEXT_CHAR:
       if(checkHeader){
         assert !setup._header;
         assert setup._columnNames == null;
-        hasHeader = hasHeader(data[0],data[1]);
+        hasHeader = hasHeader(data[0],data[1]) && (data[0].length == ncols);
       } else if(setup._header){
         if(setup._columnNames != null){ // we know what the header looks like, check if the current file has matching header
           hasHeader = data[0].length == setup._columnNames.length;
