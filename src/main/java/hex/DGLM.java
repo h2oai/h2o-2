@@ -15,6 +15,7 @@ import java.util.*;
 import jsr166y.CountedCompleter;
 import jsr166y.RecursiveAction;
 import water.*;
+import water.util.Utils;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
 import water.ValueArray.Column;
@@ -46,10 +47,7 @@ public abstract class DGLM {
       _nobs = nobs;
     }
 
-    public void add(LambdaMax lm) {
-      for( int i = 0; i < _z.length; ++i )
-        _z[i] += lm._z[i];
-    }
+    public void add(LambdaMax lm) { Utils.add(_z,lm._z); }
 
     public double value() {
       double res = Math.abs(_z[0]);
@@ -617,16 +615,10 @@ public abstract class DGLM {
       assert N > 0;
       _yy += grm._yy;
       _nobs += grm._nobs;
-      for( int i = 0; i < _xx.length; ++i ) {
-        final int n = _xx[i].length;
-        for( int j = 0; j < n; ++j )
-          _xx[i][j] += grm._xx[i][j];
-      }
-      for( int i = 0; i < _xy.length; ++i )
-        _xy[i] += grm._xy[i];
+      Utils.add(_xx,grm._xx);
+      Utils.add(_xy,grm._xy);
       // add the diagonals
-      for( int i = 0; i < _diag.length; ++i )
-        _diag[i] += grm._diag[i];
+      Utils.add(_diag,grm._diag);
     }
 
     public final boolean hasNaNsOrInfs() {

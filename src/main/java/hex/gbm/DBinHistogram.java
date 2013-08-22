@@ -8,15 +8,14 @@ import water.util.Log;
 /**
    A DBinHistogram, computed in parallel over a Vec.
    <p>
-   A {@code DBinHistogram} bins (by default into {@value BINS} bins)
-   every value added to it, and computes a the min, max, and either
-   class distribution or mean & variance for each bin.  {@code
-   DBinHistogram}s are initialized with a min, max and number-of-elements
-   to be added (all of which are generally available from a Vec).
-   Bins normally run from min to max in uniform sizes, but if the
-   {@code DBinHistogram} can determine that fewer bins are needed
-   (e.g. boolean columns run from 0 to 1, but only ever take on 2
-   values, so only 2 bins are needed), then fewer bins are used.
+   A {@code DBinHistogram} bins (by default into {@value BINS} bins) every
+   value added to it, and computes a the min, max, and either class
+   distribution or mean & variance for each bin.  {@code DBinHistogram}s are
+   initialized with a min, max and number-of-elements to be added (all of which
+   are generally available from a Vec).  Bins normally run from min to max in
+   uniform sizes, but if the {@code DBinHistogram} can determine that fewer
+   bins are needed (e.g. boolean columns run from 0 to 1, but only ever take on
+   2 values, so only 2 bins are needed), then fewer bins are used.
    <p>
    If we are successively splitting rows (e.g. in a decision tree), then a
    fresh {@code DBinHistogram} for each split will dynamically re-bin the data.
@@ -32,22 +31,21 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   public final float   _step;        // Linear interpolation step per bin
   public final float   _bmin;        // Linear interpolation step per bin
   public final char    _nbins;       // Number of bins
+  public final short   _nclass;      // Number of classes
   public       long [] _bins;        // Bin counts
   public       float[] _mins, _maxs; // Min, Max, per-bin
   // For Regression trees, using mean & variance
   public       float[] _Ms;          // Rolling mean, per-bin
   public       float[] _Ss;          // Rolling var , per-bin
   public       float[] _MSEs;        // Rolling mean-square-error, per-bin; requires 2nd pass
-  // For Classification trees, use class-counts - which are held in
-  // a compressed format.  See end of this file for all accessors.
-  private      byte [][] _clss1;     // Class counts, per-bin
-  private      short[][] _clss2;     // Class counts, per-bin, overflow
-  private      int  [][] _clss4;     // Class counts, per-bin, overflow
-  private      long [][] _clss8;     // Class counts, per-bin, overflow
+  // For Classification trees, use class-counts - fractional estimates of a
+  // class.  For RF, class-counts will always be 1.0 for the response variable
+  // and zero otherwise.  For GBM, class-counts are the residuals by class.
+  private      float[/*bin*/][/*class*/] _clss; // Class counts, per-bin
 
   // Fill in read-only sharable values
   public DBinHistogram( String name, short nclass, boolean isInt, float min, float max, long nelems ) {
-    super(name,nclass,isInt,min,max);
+    super(name,isInt,min,max);
     assert nelems > 0;
     assert max > min : "Caller ensures "+max+">"+min+", since if max==min== the column "+name+" is all constants";
     int xbins = Math.max((int)Math.min(BINS,nelems),1); // Default bin count
@@ -57,14 +55,16 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     if( isInt && max-min < xbins )
       nbins = (int)((long)max-(long)min+1L); // Shrink bins
     _nbins = (char)nbins;
+    _nclass = nclass;
     _bmin = min;                // Bin-Min
     _step = (max-min)/_nbins;   // Step size for linear interpolation
   }
+  boolean isRegression() { return _nclass==1; }
 
   // Copy from the original DBinHistogram, but return a smaller non-binning DHistogram.
   // The new DHistogram will only collect more refined min/max values.
   @Override public DHistogram smallCopy( ) {
-    return new DHistogram(_name,_nclass,_isInt/*,_min,_max*/);
+    return new DHistogram(_name,_isInt/*,_min,_max*/);
   }
 
   // Copy from the original DBinHistogram, but then allocate private arrays
@@ -80,11 +80,11 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
       h._mins[j] =  Float.MAX_VALUE;
       h._maxs[j] = -Float.MAX_VALUE;
     }
-    if( _nclass == 0 ) {
+    if( isRegression() ) {
       h._Ms = MemoryManager.malloc4f(_nbins);
       h._Ss = MemoryManager.malloc4f(_nbins);
     } else {
-      h._clss1 = new byte[_nbins][];
+      h._clss = new float[_nbins][];
     }
     return h;
   }
@@ -103,7 +103,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
 
   // Compute a "score" for a column; lower score "wins" (is a better split).
   float score( ) {
-    return _nclass == 0 ? scoreRegression() : scoreClassification();
+    return isRegression() ? scoreRegression() : scoreClassification();
   }
 
   // Add 1 count to bin specified by float.  Simple linear interpolation to
@@ -136,12 +136,12 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
       if( _bins[i] <= 1 ) continue;
       // A little algebra, and the math we need is:
       //    N - (sum(clss^2)/N)
-      long err=0;
+      float err=0;
       for( int j=0; j<_nclass; j++ ) {
-        long c = clss(i,j);
+        float c = clss(i,j);
         err += c*c;
       }
-      sum += (float)_bins[i] - ((float)err/_bins[i]);
+      sum += (float)_bins[i] - (err/_bins[i]);
     }
     return sum;
   }
@@ -321,75 +321,25 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     sum += 8+byteSize(_Ms);
     sum += 8+byteSize(_Ss);
     sum += 8+byteSize(_MSEs);
-    sum += 8+byteSize(_clss1);
-    if( _clss1 != null )         // Have class data at all?
-      for( int i=0; i<_clss1.length; i++ )
-        sum += byteSize(_clss1[i]);
-    sum += 8+byteSize(_clss2);
-    if( _clss2 != null )         // Have class data at all?
-      for( int i=0; i<_clss2.length; i++ )
-        sum += byteSize(_clss2[i]);
-    sum += 8+byteSize(_clss4);
-    if( _clss4 != null )         // Have class data at all?
-      for( int i=0; i<_clss4.length; i++ )
-        sum += byteSize(_clss4[i]);
-    sum += 8+byteSize(_clss8);
-    if( _clss8 != null )        // Have class data at all?
-      for( int i=0; i<_clss8.length; i++ )
-        sum += byteSize(_clss8[i]);
+    sum += 8+byteSize(_clss);
+    if( _clss != null )         // Have class data at all?
+      for( int i=0; i<_clss.length; i++ )
+        sum += byteSize(_clss[i]);
     return sum;
   }
 
   // ------------------------------------------
   // For Classification trees, use class-counts
   //
-  // But class-counts are big with a wide dynamic range, we use a dynamic
-  // compression.  Counts are kept in bytes until they overflow, then chars,
-  // then ints, then longs.
-  //
-  // The base _clss field is an array of Objects, but each Object is just an
-  // array - but each a different type according to the largest count held there.
-
-  // Fetch a value
-  @Override long clss(int bin, int cls) { 
-    byte bs[] = _clss1[bin];
-    long x = bs==null ? 0 : bs[cls];
-    if( _clss2==null ) return x; // No overflow?  then done
-    short ss[] = _clss2[bin];    // Load the overflow
-    x += (ss==null ? 0 : ss[cls]);
-    if( _clss4==null ) return x; // No overflow?  then done
-    int is[] = _clss4[bin];      // Load the overflow
-    x += (is==null ? 0 : is[cls]);
-    if( _clss8==null ) return x; // No overflow?  then done
-    long ls[] = _clss8[bin];     // Load the overflow
-    return x+(ls==null ? 0 : ls[cls]);
+  // But class-counts are big with a wide dynamic range, we use floats.
+  @Override float clss(int bin, int cls) { 
+    float fs[] = _clss[bin];
+    return fs==null ? 0 : fs[cls];
   }
-
   // Increment a class-count, inflating the array flavor as needed.
-  long add_class( int bin, int cls, long v ) {
-    byte bs[] = _clss1[bin];
-    if( bs==null ) _clss1[bin] = bs = new byte[_nclass];
-    long x = bs[cls]+v;
-    if( x <= Byte.MAX_VALUE ) return (bs[cls]=(byte)x);
-    bs[cls]=0;                  // Reset byte counter; move counts to overflow
-
-    if( _clss2 == null ) _clss2 = new short[_nbins][];
-    short ss[] = _clss2[bin];
-    if( ss==null ) _clss2[bin] = ss = new short[_nclass];
-    long y = ss[cls] + x;
-    if( y <= Short.MAX_VALUE ) return (ss[cls]=(short)y);
-    ss[cls] = 0;                // Reset short counter; move counts to overflow
-
-    if( _clss4 == null ) _clss4 = new int[_nbins][];
-    int is[] = _clss4[bin];
-    if( is==null ) _clss4[bin] = is = new int[_nclass];
-    long z = is[cls] + y;
-    if( z <= Integer.MAX_VALUE ) return (is[cls]=(int)z);
-    is[cls] = 0;                // Reset int counter; move counts to overflow
-
-    if( _clss8 == null ) _clss8 = new long[_nbins][];
-    long ls[] = _clss8[bin];
-    if( ls==null ) _clss8[bin] = ls = new long[_nclass];
-    return (ls[cls] += z);
+  void add_class( int bin, int cls, float v ) {
+    float fs[] = _clss[bin];
+    if( fs == null ) _clss[bin]= fs = new float[_nclass];
+    fs[cls] += v;
   }
 }

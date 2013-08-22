@@ -620,8 +620,10 @@ NEXT_CHAR:
       if ((offset < bits.length) && (bits[offset] == CHAR_LF)) ++offset;
       if (bits[lineStart] == '#') continue; // Ignore      comment lines
       if (bits[lineStart] == '@') continue; // Ignore ARFF comment lines
-      if (lineEnd>lineStart)
-        lines.add(new String(bits,lineStart, lineEnd-lineStart));
+      if (lineEnd>lineStart){
+        String str = new String(bits, lineStart,lineEnd-lineStart).trim();
+        if(!str.isEmpty())lines.add(str);
+      }
     }
     if(lines.isEmpty())
       return new PSetupGuess(new ParserSetup(ParserType.AUTO,CsvParser.AUTO_SEP,0,false,null),0,0,null,null);
