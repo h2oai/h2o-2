@@ -1,6 +1,7 @@
 package hex;
 
 import hex.KMeans.ClusterDist;
+import hex.KMeans.Initialization;
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
@@ -8,9 +9,8 @@ import water.Job.ChunkProgressJob;
 import water.Job.Progress;
 import water.ValueArray.Column;
 import water.api.Constants;
-import water.util.Log;
+import water.util.*;
 import water.util.Log.Tag.Sys;
-import water.util.Utils;
 
 import com.google.gson.*;
 
@@ -19,7 +19,7 @@ public class KMeansModel extends Model implements Progress {
   public double[][] _clusters; // The cluster centers, normalized according to _va
   public double _error; // Sum of min square distances
   public int _iteration;
-  public double _epsilon;
+  public Initialization _initialization;
   public int _maxIter;
   public long _randSeed;
   public boolean _normalized;
@@ -43,6 +43,7 @@ public class KMeansModel extends Model implements Progress {
     JsonObject res = new JsonObject();
     res.addProperty(Constants.VERSION, H2O.VERSION);
     res.addProperty(Constants.TYPE, KMeansModel.class.getName());
+    res.addProperty(Constants.ERROR, _error);
     JsonArray ary = new JsonArray();
     for( double[] dd : clusters() ) {
       JsonArray ary2 = new JsonArray();

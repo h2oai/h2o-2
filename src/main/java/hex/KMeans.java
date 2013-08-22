@@ -40,6 +40,7 @@ public class KMeans extends Job {
     res._normalized = normalize;
     res._randSeed = randSeed;
     res._maxIter = maxIter;
+    res._initialization = init;
     UKV.put(job.dest(), res);
     // Updated column mapping selection after removing various junk columns
     final int[] filteredCols = res.columnMapping(va.colNames());
@@ -241,7 +242,7 @@ public class KMeans extends Job {
           continue; // Ignore broken row
 
         // Add values and increment counter for chosen cluster
-        Utils.add(_sums[cluster],values);
+        Utils.add(_sums[cluster], values);
         _counts[cluster]++;
       }
       _arykey = null;
@@ -256,8 +257,8 @@ public class KMeans extends Job {
         _counts = task._counts;
         _error = task._error;
       } else {
-        Utils.add(_sums  ,task._sums  );
-        Utils.add(_counts,task._counts);
+        Utils.add(_sums, task._sums);
+        Utils.add(_counts, task._counts);
         _error += task._error;
       }
     }

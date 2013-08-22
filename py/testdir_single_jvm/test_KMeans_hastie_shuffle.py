@@ -28,7 +28,7 @@ def kmeans_doit(self, csvFilename, csvPathname, num_rows, timeoutSecs=30):
     cols = ",".join(map(str,range(11)))
     kwargs = {
         'k': 1, 
-        'epsilon': 1e-6,
+        'initialization': 'Furthest',
         'cols': cols, 
         'destination_key': 'KMeansModel.hex',
         # reuse the same seed, to get deterministic results (otherwise sometimes fails

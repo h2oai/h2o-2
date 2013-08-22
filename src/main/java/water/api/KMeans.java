@@ -104,6 +104,7 @@ public class KMeans extends Request {
       sb.append("<div class='alert'>Actions: " + KMeansScore.link(m._selfKey, "Score on dataset") + ", "
           + KMeansApply.link(m._selfKey, "Apply to dataset") + ", " + KMeans.link(m._dataKey, "Compute new model")
           + "</div>");
+      DocGen.HTML.section(sb, "Error: " +  _m._error);
       sb.append("<span style='display: inline-block;'>");
       sb.append("<table class='table table-striped table-bordered'>");
       sb.append("<tr>");
