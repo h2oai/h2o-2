@@ -9,6 +9,7 @@ import codecs, string
 
 # MAX_CHAR = 255
 MAX_CHAR = 127
+ENUM_WIDTH = 4
 JUST_EASY_CHARS = True
 JUST_EASIER_CHARS = True
 
@@ -23,7 +24,11 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     for i in range(rowCount):
         rowData = []
         if JUST_EASIER_CHARS:
-            legalChars = string.letters + string.punctuation + string.digits
+            # just letters works okay
+            # legalChars = string.letters
+            # legalChars = "+-.$abcdABCDE01234"
+            # legalChars = string.letters + '+-.,$ \t '
+            legalChars = string.letters + '+-.,$ \t '
         else:
             # same as this
             # legalChars = string.letters + string.punctuation + string.digits + string.whitespace
@@ -33,7 +38,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
             # should be able to handle any character in a quoted stringexcept our 3 eol chars
             # create a random length enum. start with 1024 everywhere
             longEnum = ""
-            for k in range(3):
+            for k in range(ENUM_WIDTH):
                 if JUST_EASY_CHARS | JUST_EASIER_CHARS:
                     uStr = random.choice(legalChars)
                 else:
