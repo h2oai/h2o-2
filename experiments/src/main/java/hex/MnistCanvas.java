@@ -10,17 +10,26 @@ import java.util.Random;
 
 import javax.swing.*;
 
+import water.H2O;
+
 public class MnistCanvas extends Canvas {
   static NeuralNetTest _test;
   static Random _rand = new Random();
   static int _level = 1;
 
   public static void main(String[] args) throws Exception {
-    NeuralNetMnistTest mnist = new NeuralNetMnistTest();
-    mnist.init();
-    _test = mnist;
+    water.Boot.main(UserCode.class, args);
+  }
 
-    // Basic visualization of images and weights
+  public static class UserCode {
+    // Entry point can be called 'main' or 'userMain'
+    public static void userMain(String[] args) throws Exception {
+      H2O.main(args);
+      NeuralNetMnistTest mnist = new NeuralNetMnistTest();
+      mnist.init();
+      _test = mnist;
+
+      // Basic visualization of images and weights
 //    JFrame frame = new JFrame("H2O");
 //    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 //    MnistCanvas canvas = new MnistCanvas();
@@ -29,7 +38,8 @@ public class MnistCanvas extends Canvas {
 //    frame.setLocationRelativeTo(null);
 //    frame.setVisible(true);
 
-    mnist.run();
+      mnist.run();
+    }
   }
 
   JPanel init() {
@@ -76,7 +86,7 @@ public class MnistCanvas extends Canvas {
 
       // Input
       int[] pix = new int[NeuralNetMnistTest.PIXELS];
-      input._n = rand;
+      input._row = rand;
       input.fprop();
       for( int i = 0; i < pix.length; i++ )
         pix[i] = (int) (input._a[i] * 255f);

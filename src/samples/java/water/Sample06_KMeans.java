@@ -8,14 +8,13 @@ import java.util.Random;
 /**
  * Simplified version of H2O k-means algorithm for better readability.
  */
-public class Part05_KMeans {
-  // Ignore this boilerplate main, c.f. previous samples
+public class Sample06_KMeans {
   public static void main(String[] args) throws Exception {
-    water.Boot.main(UserMain.class, args);
+    water.Boot.main(UserCode.class, args);
   }
 
-  public static class UserMain {
-    public static void main(String[] args) throws Exception {
+  public static class UserCode {
+    public static void userMain(String[] args) throws Exception {
       // Starts a one node cluster
       H2O.main(args);
 
@@ -75,7 +74,8 @@ public class Part05_KMeans {
       model._clusters = clusters;
       UKV.put(model._selfKey, model);
       System.out.println("Plot:");
-      System.out.println("http://127.0.0.1:54321/Plot.png?source_key=test.hex&cols=0%2C1&clusters=test.kmeans");
+      String host = "http://127.0.0.1:" + H2O.API_PORT;
+      System.out.println(host + "/Plot.png?source_key=test.hex&cols=0%2C1&clusters=test.kmeans");
     }
   }
 

@@ -1,5 +1,7 @@
 package hex;
 
+import hex.Layer.ChunksInput;
+import hex.Layer.FrameInput;
 import hex.Layer.Input;
 
 import java.io.IOException;
@@ -11,6 +13,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import water.*;
 import water.fvec.Chunk;
+import water.fvec.Frame;
 import water.util.Log;
 import water.util.Utils;
 
@@ -105,7 +108,7 @@ public abstract class Trainer {
    * Runs several trainers in parallel on the same weights. There might be lost updates, but seems
    * to work well in practice. Cyclic barriers are used to suspend computation.
    */
-  public static class ParallelTrainers extends Trainer {
+  public static class ThreadedTrainers extends Trainer {
     final Base[] _trainers;
     final Thread[] _threads;
     final int _stepsPerThread;
@@ -114,11 +117,11 @@ public abstract class Trainer {
     final CyclicBarrier _resume;
     final AtomicLong _steps = new AtomicLong();
 
-    public ParallelTrainers(Layer[] ls) {
+    public ThreadedTrainers(Layer[] ls) {
       this(ls, 1, 0, 0);
     }
 
-    public ParallelTrainers(Layer[] ls, int nodes, int index, int steps) {
+    public ThreadedTrainers(Layer[] ls, int nodes, int index, int steps) {
       _trainers = new Base[Runtime.getRuntime().availableProcessors()];
       _threads = new Thread[_trainers.length];
       _stepsPerThread = steps / _threads.length;
@@ -132,12 +135,12 @@ public abstract class Trainer {
         _trainers[t] = new Base(clones);
         Input input = (Input) _trainers[t]._ls[0];
         int chunks = nodes * _trainers.length;
-        input._pos = input._off + (input._len * ((long) index * _trainers.length + t) / chunks);
+        input._row = input._off + (input._len * ((long) index * _trainers.length + t) / chunks);
 
         final Base trainer = _trainers[t];
         _threads[t] = new Thread("H2O Trainer " + t) {
           @Override public void run() {
-            Log.info("n:" + ((Input) trainer._ls[0])._n + ", for:" + _stepsPerThread);
+            Log.info("pos:" + ((Input) trainer._ls[0])._row + ", for:" + _stepsPerThread);
             for( int i = 0; _stepsPerThread == 0 || i < _stepsPerThread; i++ ) {
               CyclicBarrier b = _suspend;
               if( b == DONE )
@@ -214,6 +217,7 @@ public abstract class Trainer {
   public static class Distributed extends Trainer {
     private Layer[] _ls;
     private long _count;
+    private long limit;
 
     public Distributed(Layer[] ls) {
       _ls = ls;
@@ -228,18 +232,19 @@ public abstract class Trainer {
     }
 
     @Override void run() {
-      for( ;; ) {
-        int steps = 8192;
+      int steps = 8192;
+      int tasks = (int) (limit / steps);
+      for( int task = 0; task < tasks; task++ ) {
         int stepsPerNode = steps / H2O.CLOUD._memary.length;
-        Task task = new Task(_ls, stepsPerNode);
+        Task t = new Task(_ls, task, stepsPerNode);
         Key[] keys = new Key[H2O.CLOUD._memary.length];
         for( int i = 0; i < keys.length; i++ ) {
           String uid = UUID.randomUUID().toString();
           H2ONode node = H2O.CLOUD._memary[i];
           keys[i] = Key.make(uid, (byte) 1, Key.DFJ_INTERNAL_USER, node);
         }
-        task.dfork(keys);
-        task.join();
+        t.dfork(keys);
+        t.join();
         _count += steps;
       }
     }
@@ -247,18 +252,20 @@ public abstract class Trainer {
 
   static class Task extends DRemoteTask<Task> {
     Layer[] _ls;
-    float[][] _ws, _bs;
+    int _index;
     int _steps;
+    float[][] _ws, _bs;
 
-    Task(Layer[] ls, int steps) {
+    Task(Layer[] ls, int index, int steps) {
       _ls = ls;
+      _index = index;
+      _steps = steps;
       _ws = new float[_ls.length][];
       _bs = new float[_ls.length][];
       for( int y = 1; y < _ls.length; y++ ) {
         _ws[y] = _ls[y]._w;
         _bs[y] = _ls[y]._b;
       }
-      _steps = steps;
     }
 
     @Override public void lcompute() {
@@ -270,7 +277,7 @@ public abstract class Trainer {
       }
       int nodes = H2O.CLOUD._memary.length;
       int index = H2O.SELF.index();
-      ParallelTrainers t = new ParallelTrainers(_ls, nodes, index, _steps);
+      ThreadedTrainers t = new ThreadedTrainers(_ls, nodes, index, _steps);
       t.run();
       // Compute gradient as difference between start and end
       for( int y = 1; y < _ls.length; y++ ) {
@@ -296,10 +303,12 @@ public abstract class Trainer {
    *
    */
   public static class TrainerMR extends Trainer {
-    private Layer[] _ls;
+    Layer[] _ls;
+    int _epochs;
 
-    public TrainerMR(Layer[] ls) {
+    public TrainerMR(Layer[] ls, int epochs) {
       _ls = ls;
+      _epochs = epochs;
     }
 
     @Override Layer[] layers() {
@@ -307,23 +316,70 @@ public abstract class Trainer {
     }
 
     @Override void run() {
-      Pass pass = new Pass();
-      //w._w =
-      Key ls = Key.make();
-      UKV.put(ls, pass);
-      //pass.doAll(X,Y);
+      Weights weights = new Weights();
+      for( int y = 1; y < _ls.length; y++ ) {
+        weights._ws[y] = _ls[y]._w;
+        weights._bs[y] = _ls[y]._b;
+      }
+
+      String uid = UUID.randomUUID().toString();
+      for( int i = 0; i < H2O.CLOUD._memary.length; i++ ) {
+        Key key = key(uid, i);
+        UKV.put(key, weights);
+      }
+
+      Frame frame = ((FrameInput) _ls[0])._frame;
+      assert _ls[0]._a.length == frame._vecs.length - 1;
+
+      for( int i = 0; _epochs == 0 || i < _epochs; i++ ) {
+        Pass pass = new Pass();
+        pass._uid = uid;
+        pass._ls = _ls;
+        pass.doAll(frame);
+      }
+
+      for( int i = 0; i < H2O.CLOUD._memary.length; i++ ) {
+        Key key = key(uid, i);
+        UKV.remove(key);
+      }
+    }
+
+    static Key key(String uid, int node) {
+      return Key.make(uid + node, (byte) 1, Key.DFJ_INTERNAL_USER, H2O.CLOUD._memary[node]);
     }
   }
 
-  static class Pass extends MRTask2<Pass> {
-    Key _ls;
+  static class Weights extends Iced {
+    float[][] _ws, _bs;
+  }
 
-    @Override public void map(Chunk[] bvs) {
-      ;
+  static class Pass extends MRTask2<Pass> {
+    String _uid;
+    Layer[] _ls;
+
+    @Override public void map(Chunk[] cs) {
+      Layer[] clones = new Layer[_ls.length];
+      ChunksInput input = new ChunksInput(cs, true);
+      input.init(null, cs.length - 1);
+      clones[0] = input;
+
+      Weights weights = UKV.get(TrainerMR.key(_uid, H2O.SELF.index()));
+      for( int y = 1; y < _ls.length; y++ ) {
+        clones[y] = Utils.newInstance(_ls[y]);
+        clones[y].init(clones[y - 1], weights._bs[y].length);
+      }
+      for( int y = 1; y < _ls.length; y++ ) {
+        _ls[y]._w = weights._ws[y];
+        _ls[y]._b = weights._bs[y];
+      }
+      Base base = new Base(clones);
+      Log.info("pos:" + cs[0]._start + ", for:" + cs[0]._len);
+      for( int i = 0; i < cs[0]._len; i++ ) {
+        base.step();
+      }
     }
 
     @Override public void reduce(Pass mrt) {
-      ;
     }
   }
 

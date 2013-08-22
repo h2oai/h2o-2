@@ -376,6 +376,17 @@ public class Utils {
     return bs;
   }
 
+  public static <T> T newInstance(T o) {
+    Class c = o.getClass();
+    try {
+      Constructor ctor = c.getDeclaredConstructor();
+      ctor.setAccessible(true);
+      return (T) ctor.newInstance();
+    } catch( Exception e ) {
+      throw new RuntimeException(e);
+    }
+  }
+
   public static <T> T clone(T o) {
     return clone(o, false);
   }

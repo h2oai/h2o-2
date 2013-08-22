@@ -24,28 +24,28 @@ public abstract class MRTask2<T extends MRTask2> extends DTask implements Clonea
    *  <strong>local</strong> Chunk.  It is meant for map/reduce jobs that use a
    *  single column in a Frame.  All map variants are called, but only one is
    *  expected to be overridden. */
-  public void map( Chunk bv ) { }
+  public void map( Chunk c ) { }
 
   /** Override with your map implementation.  This overload is given two
    *  <strong>local</strong> Chunks.  All map variants are called, but only one
    *  is expected to be overridden. */
-  public void map( Chunk bv0, Chunk bv1 ) { }
+  public void map( Chunk c0, Chunk c1 ) { }
 
   /** Override with your map implementation.  This overload is designed to
    *  efficiently modify or append data to the first column.  All map variants
    *  are called, but only one is expected to be overridden. */
-  public void map( NewChunk bv0, Chunk bv1 ) { }
+  public void map( NewChunk c0, Chunk c1 ) { }
 
   /** Override with your map implementation.  This overload is given three
    * <strong>local</strong> Chunks.  All map variants are called, but only one
    * is expected to be overridden. */
-  public void map(    Chunk bv0, Chunk bv1, Chunk bv2 ) { }
+  public void map(    Chunk c0, Chunk c1, Chunk c2 ) { }
 
   /** Override with your map implementation.  This overload is given an array
    *  of <strong>local</strong> Chunks, for Frames with arbitrary column
    *  numbers.  All map variants are called, but only one is expected to be
    *  overridden. */
-  public void map(    Chunk bvs[] ) { }
+  public void map(    Chunk cs[] ) { }
 
   /** Override to combine results from 'mrt' into 'this' MRTask2.  Both 'this'
    *  and 'mrt' are guaranteed to either have map() run on them, or be the

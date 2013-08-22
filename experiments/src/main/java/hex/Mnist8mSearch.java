@@ -2,7 +2,7 @@ package hex;
 
 import hex.Mnist8m.TestInput;
 import hex.Mnist8m.Train8mInput;
-import hex.Trainer.ParallelTrainers;
+import hex.Trainer.ThreadedTrainers;
 import water.deploy.VM;
 
 public class Mnist8mSearch {
@@ -29,7 +29,7 @@ public class Mnist8mSearch {
       for( int i = 0; i < ls.length; i++ )
         ls[i].init(false);
 
-      Trainer trainer = new ParallelTrainers(ls);
+      Trainer trainer = new ThreadedTrainers(ls);
       //trainer._batches = Mnist8m.COUNT / trainer._batch;
       trainer._batches = 10;
       search.run(ls[1], ls[2]);

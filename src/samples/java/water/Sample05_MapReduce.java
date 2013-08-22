@@ -3,14 +3,13 @@ package water;
 /**
  * Runs a map reduce task over a dataset and sums elements of a column.
  */
-public class Part04_MapReduce {
-  // Ignore this boilerplate main, c.f. previous samples
+public class Sample05_MapReduce {
   public static void main(String[] args) throws Exception {
-    water.Boot.main(UserMain.class, args);
+    water.Boot.main(UserCode.class, args);
   }
 
-  public static class UserMain {
-    public static void main(String[] args) throws Exception {
+  public static class UserCode {
+    public static void userMain(String[] args) throws Exception {
       /*
        * Starts an H2O instance in the local JVM. This method is the one invoked by default when no
        * '-mainClass' parameter is specified.

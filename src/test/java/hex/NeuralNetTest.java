@@ -8,7 +8,7 @@ import water.util.Utils;
 
 public class NeuralNetTest {
   static final DecimalFormat _format = new DecimalFormat("0.000");
-  static final int MAX_TEST_COUNT = 1000;
+  static final int MAX_EVAL_COUNT = 1000;
   Layer[] _ls;
   Trainer _trainer;
 
@@ -41,17 +41,18 @@ public class NeuralNetTest {
   }
 
   static void eval(Layer[] ls, Error error) {
-    int count = (int) Math.min(((Input) ls[0])._count, MAX_TEST_COUNT);
+    Input input = (Input) ls[0];
+    long off = input._off;
+    long len = (int) Math.min(input._len, MAX_EVAL_COUNT);
     int correct = 0;
-    for( int n = 0; n < count; n++ )
-      if( correct(ls, n, error) )
+    for( input._row = off; input._row < off + len; input._row++ )
+      if( correct(ls, error) )
         correct++;
-    error.Value = (count - (double) correct) / count;
+    error.Value = (len - (double) correct) / len;
   }
 
-  private static boolean correct(Layer[] ls, int n, Error error) {
+  private static boolean correct(Layer[] ls, Error error) {
     Input input = (Input) ls[0];
-    input._n = n;
     for( int i = 0; i < ls.length; i++ )
       ls[i].fprop();
     float[] out = ls[ls.length - 1]._a;

@@ -138,8 +138,6 @@ public abstract class Layer extends Iced {
   }
 
   public static abstract class Input extends Layer {
-    long _off, _len, _pos;
-
     @Override void init(Layer in, int units) {
       _a = new float[units];
     }
@@ -150,42 +148,37 @@ public abstract class Layer extends Iced {
       throw new UnsupportedOperationException();
     }
 
-    public final long limit() {
-      return _off + _len;
-    }
-
-    public final long move() {
-      return _pos = _pos == limit() - 1 ? _off : _pos + 1;
-    }
+    abstract long move();
   }
 
   public static class FrameInput extends Input {
     Frame _frame;
-    boolean _normalize;
+    long _off, _len, _row;
     transient Chunk[] _caches;
 
     public FrameInput() {
     }
 
-    public FrameInput(Frame frame, long off, long len, boolean normalize) {
+    public FrameInput(Frame frame) {
+      this(frame, 0, frame.numRows());
+    }
+
+    public FrameInput(Frame frame, long off, long len) {
       _frame = frame;
-      _normalize = normalize;
       _off = off;
       _len = len;
     }
 
     @Override int label() {
-      return (int) _frame._vecs[_frame.numCols() - 1].at8(_pos);
+      return (int) _frame._vecs[_frame.numCols() - 1].at8(_row);
     }
 
     @Override void fprop() {
       for( int i = 0; i < _a.length; i++ ) {
-        Chunk chunk = chunk(i, _pos);
-        double d = chunk.at(_pos);
-        if( _normalize ) {
-          Vec v = _frame._vecs[i];
-          d = (d - v.mean()) / v.sigma();
-        }
+        Chunk chunk = chunk(i, _row);
+        double d = chunk.at(_row);
+        Vec v = _frame._vecs[i];
+        d = (d - v.mean()) / v.sigma();
         _a[i] = (float) d;
       }
     }
@@ -197,6 +190,47 @@ public abstract class Layer extends Iced {
       if( c != null && c._start <= n && n < c._start + c._len )
         return c;
       return _caches[i] = _frame._vecs[i].chunk(n);
+    }
+
+    public final long limit() {
+      return _off + _len;
+    }
+
+    @Override public long move() {
+      return _row = _row == limit() - 1 ? _off : _row + 1;
+    }
+  }
+
+  public static class ChunksInput extends Input {
+    Chunk[] _chunks;
+    int _row;
+    boolean _normalize;
+
+    public ChunksInput() {
+    }
+
+    public ChunksInput(Chunk[] chunks, boolean normalize) {
+      _chunks = chunks;
+      _normalize = normalize;
+    }
+
+    @Override int label() {
+      return (int) _chunks[_chunks.length - 1].at80(_row);
+    }
+
+    @Override void fprop() {
+      for( int i = 0; i < _a.length; i++ ) {
+        double d = _chunks[i].at0(_row);
+        if( _normalize ) {
+          Vec v = _chunks[i]._vec;
+          d = (d - v.mean()) / v.sigma();
+        }
+        _a[i] = (float) d;
+      }
+    }
+
+    @Override public long move() {
+      throw new UnsupportedOperationException();
     }
   }
 

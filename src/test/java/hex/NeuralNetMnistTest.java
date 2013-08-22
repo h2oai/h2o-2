@@ -1,43 +1,30 @@
 package hex;
 
-import hex.Layer.Input;
-import hex.Trainer.ParallelTrainers;
+import hex.Layer.FrameInput;
 import hex.rng.MersenneTwisterRNG;
 
 import java.io.*;
+import java.util.UUID;
 import java.util.zip.GZIPInputStream;
 
+import water.fvec.*;
 import water.util.Utils;
 
 public class NeuralNetMnistTest extends NeuralNetTest {
   static final int PIXELS = 784, EDGE = 28;
   static final String PATH = "smalldata/mnist70k/";
 
-  MnistInput _train, _test;
-
-  public static class MnistInput extends Input {
-    float[] _images;
-    byte[] _labels;
-
-    @Override int label() {
-      return _labels[(int) _n];
-    }
-
-    @Override void fprop() {
-      System.arraycopy(_images, (int) _n * PIXELS, _a, 0, PIXELS);
-    }
-  }
+  Frame _train, _test;
 
   @Override void init() {
     super.init();
     _train = loadZip(PATH + "train-images-idx3-ubyte.gz", PATH + "train-labels-idx1-ubyte.gz");
     _test = loadZip(PATH + "t10k-images-idx3-ubyte.gz", PATH + "t10k-labels-idx1-ubyte.gz");
-    normalize();
 
     boolean rectifier = false;
     {
       _ls = new Layer[3];
-      _ls[0] = _train;
+      _ls[0] = new FrameInput(_train);
       if( rectifier ) {
         _ls[1] = new Layer.Rectifier();
         _ls[2] = new Layer.Softmax();
@@ -69,8 +56,9 @@ public class NeuralNetMnistTest extends NeuralNetTest {
     }
 
 //    _trainer = new ParallelTrainers(_ls);
-    _trainer = new Trainer.Distributed(_ls);
+//    _trainer = new Trainer.Distributed(_ls);
 //    _trainer = new Trainer.OpenCL(_ls);
+    _trainer = new Trainer.TrainerMR(_ls, 0);
 
     if( pretrain ) {
       for( int i = 0; i < _ls.length; i++ ) {
@@ -165,8 +153,8 @@ public class NeuralNetMnistTest extends NeuralNetTest {
         throw new RuntimeException(e);
       }
 
-      Error train = eval(_ls, _train);
-      Error test = eval(_ls, _test);
+      Error train = eval(_ls, new FrameInput(_train));
+      Error test = eval(_ls, new FrameInput(_test));
       long time = System.nanoTime();
       double delta = (time - lastTime) / 1e9;
       double total = (time - start) / 1e9;
@@ -184,7 +172,7 @@ public class NeuralNetMnistTest extends NeuralNetTest {
     return (b & 0xff) / 255f;
   }
 
-  static MnistInput loadZip(String images, String labels) {
+  static Frame loadZip(String images, String labels) {
     DataInputStream imagesBuf = null, labelsBuf = null;
     try {
       imagesBuf = new DataInputStream(new GZIPInputStream(new FileInputStream(new File(images))));
@@ -207,55 +195,36 @@ public class NeuralNetMnistTest extends NeuralNetTest {
       }
 
       MersenneTwisterRNG rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-      for( int i = count - 1; i >= 0; i-- ) {
-        int shuffle = rand.nextInt(i + 1);
+      for( int n = count - 1; n >= 0; n-- ) {
+        int shuffle = rand.nextInt(n + 1);
         byte[] image = rawI[shuffle];
-        rawI[shuffle] = rawI[i];
-        rawI[i] = image;
+        rawI[shuffle] = rawI[n];
+        rawI[n] = image;
         byte label = rawL[shuffle];
-        rawL[shuffle] = rawL[i];
-        rawL[i] = label;
+        rawL[shuffle] = rawL[n];
+        rawL[n] = label;
       }
 
-      MnistInput input = new MnistInput();
-      input.init(null, PIXELS);
-      input._images = new float[count * PIXELS];
-      input._labels = rawL;
-      input._count = rawL.length;
-      for( int n = 0; n < count; n++ )
-        for( int i = 0; i < PIXELS; i++ )
-          input._images[n * PIXELS + i] = convert(rawI[n][i]);
-      return input;
+      Vec[] vecs = new Vec[PIXELS + 1];
+      NewChunk[] chunks = new NewChunk[vecs.length];
+      for( int v = 0; v < vecs.length; v++ ) {
+        AppendableVec vec = new AppendableVec(UUID.randomUUID().toString());
+        chunks[v] = new NewChunk(vec, 0);
+      }
+      for( int n = 0; n < count; n++ ) {
+        for( int v = 0; v < vecs.length - 1; v++ )
+          chunks[v].addNum(convert(rawI[n][v]));
+        chunks[chunks.length - 1].addNum(rawL[n], 0);
+      }
+      for( int v = 0; v < vecs.length; v++ ) {
+        chunks[v].close(0, null);
+        vecs[v] = ((AppendableVec) vecs[v]).close(null);
+      }
+      return new Frame(null, vecs);
     } catch( Exception e ) {
       throw new RuntimeException(e);
     } finally {
       Utils.close(labelsBuf, imagesBuf);
     }
-  }
-
-  private void normalize() {
-    for( int i = 0; i < PIXELS; i++ ) {
-      double mean = 0, sigma = 0;
-      for( int n = 0; n < _train._labels.length; n++ )
-        mean += _train._images[n * PIXELS + i];
-      mean /= _train._images.length;
-      for( int n = 0; n < _train._labels.length; n++ ) {
-        double d = _train._images[n * PIXELS + i] - mean;
-        sigma += d * d;
-      }
-      sigma = Math.sqrt(sigma / (_train._labels.length - 1));
-
-      for( int n = 0; n < _train._labels.length; n++ )
-        normalize(_train._images, n, i, mean, sigma);
-      for( int n = 0; n < _test._labels.length; n++ )
-        normalize(_test._images, n, i, mean, sigma);
-    }
-  }
-
-  static void normalize(float[] values, int n, int i, double mean, double sigma) {
-    double d = values[n * PIXELS + i];
-    d -= mean;
-    d = sigma > 1e-4 ? d / sigma : d;
-    values[n * PIXELS + i] = (float) d;
   }
 }

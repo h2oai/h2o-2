@@ -10,14 +10,13 @@ import water.util.Utils;
 /**
  * Simplified version of H2O k-means algorithm for better readability.
  */
-public class Part05_KMeansNewAPI {
-  // Ignore this boilerplate main, c.f. previous samples
+public class Sample06_KMeansNewAPI {
   public static void main(String[] args) throws Exception {
-    water.Boot.main(UserMain.class, args);
+    water.Boot.main(UserCode.class, args);
   }
 
-  public static class UserMain {
-    public static void main(String[] args) throws Exception {
+  public static class UserCode {
+    public static void userMain(String[] args) throws Exception {
       H2O.main(args);
 
       // Load and parse a file. Data is distributed to other nodes in a round-robin way

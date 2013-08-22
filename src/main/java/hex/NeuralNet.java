@@ -3,7 +3,7 @@ package hex;
 import hex.Layer.FrameInput;
 import hex.Layer.Input;
 import hex.NeuralNetTest.Error;
-import hex.Trainer.ParallelTrainers;
+import hex.Trainer.ThreadedTrainers;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -79,7 +79,7 @@ public class NeuralNet extends Job {
     for( int i = 1; i < _ls.length; i++ )
       _ls[i].randomize();
 
-    ParallelTrainers trainer = new ParallelTrainers(_ls);
+    ThreadedTrainers trainer = new ThreadedTrainers(_ls);
     trainer.start();
     _trainers.put(destination_key, trainer);
   }
