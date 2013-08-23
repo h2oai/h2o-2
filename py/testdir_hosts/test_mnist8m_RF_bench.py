@@ -53,9 +53,8 @@ class Basic(unittest.TestCase):
             output.write(','.join(csv_header)+'\n')
         else:
             output = open('rfbench.csv','a')
-            csvWrt = csv.DictWriter(output, fieldnames=csv_header, restval=None, 
-                dialect='excel', extrasaction='ignore',delimiter=',')
-            csvWrt.writeheader()
+        csvWrt = csv.DictWriter(output, fieldnames=csv_header, restval=None, 
+                        dialect='excel', extrasaction='ignore',delimiter=',')
         try:
             java_heap_GB = h2o.nodes[0].java_heap_GB
             #Train File Parsing#
