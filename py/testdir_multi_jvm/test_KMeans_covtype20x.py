@@ -51,7 +51,7 @@ class Basic(unittest.TestCase):
 
             kwargs = {
                 'cols': None,
-                'epsilon': 1e-4,
+                'initialization': 'Furthest',
                 'k': 2, 
                 # reuse the same seed, to get deterministic results (otherwise sometimes fails
                 'seed': 265211114317615310,

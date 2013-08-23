@@ -59,6 +59,7 @@ public class NewChunk extends Chunk {
     }
     _ds[_len] = d;
     _len++;
+    _hasFloat = true;
   }
 
   // Fast-path append long data

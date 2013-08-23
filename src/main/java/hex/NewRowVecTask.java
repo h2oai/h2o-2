@@ -43,7 +43,7 @@ public class NewRowVecTask<T extends Iced> extends MRTask {
     public T apply(Job j, DataFrame data) throws JobCancelledException{
       NewRowVecTask<T> tsk = new NewRowVecTask<T>(j,this, data);
       tsk.invoke(data._ary._key);
-      if(j.cancelled())throw new JobCancelledException();
+      if(j != null && j.cancelled())throw new JobCancelledException();
       return tsk._result;
     }
 

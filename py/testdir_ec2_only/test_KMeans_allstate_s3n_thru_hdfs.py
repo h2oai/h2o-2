@@ -66,7 +66,7 @@ class Basic(unittest.TestCase):
 
             kwargs = {
                 'cols': None,
-                'epsilon': 1e-6,
+                'initialization': 'Furthest',
                 'k': 12
             }
 

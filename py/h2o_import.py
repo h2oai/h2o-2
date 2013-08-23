@@ -154,7 +154,7 @@ def parseImportHdfsFile(node=None, csvFilename=None, path='/datasets', key2=None
     elif schema == "hdfs":
         hdfsPrefix = schema + "://" + node.hdfs_name_node
     else: 
-        raise Exception('Uknown schema: ' + schema + ' in parseImportHdfsFile')
+        raise Exception('Unknown schema: ' + schema + ' in parseImportHdfsFile')
 
     if path is None:
         URI = hdfsPrefix + '/datasets'

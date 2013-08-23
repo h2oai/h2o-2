@@ -60,7 +60,6 @@ public class Constants extends Iced {
   public static final String DTHRESHOLDS           = "thresholds";
   public static final String END_TIME              = "end_time";
   public static final String ENUM_DOMAIN_SIZE      = "enum_domain_size";
-  public static final String EPSILON               = "epsilon";
   public static final String ERROR                 = "error";
   public static final String ESCAPE_NAN            = "escape_nan";
   public static final String EXCLUSIVE_SPLIT_LIMIT = "exclusive_split_limit";

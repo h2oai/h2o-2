@@ -7,12 +7,11 @@ import h2o, h2o_cmd, h2o_hosts
 import h2o_kmeans, h2o_import as h2i
 
 def define_params(SEED):
-    print "Restricting epsilon to 1e-6 and up. Too slow otherwise and no stopping condition?"
     paramDict = {
         'k': [2, 5], # seems two slow tih 12 clusters if all cols
-        'epsilon': [1e-6, 1e-2, 1, 10],
+        'initialization': ['None', 'PlusPlus', 'Furthest'],
         'cols': [None, "0", "3", "0,1,2,3,4,5,6"],
-        'max_iter': [None, 0, 1, 5, 10],
+        'max_iter': [1, 5, 10, 100],
         'seed': [None, 12345678, SEED],
         'normalize': [None, 0, 1],
         # 'destination_key:': "junk",

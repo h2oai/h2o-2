@@ -89,10 +89,14 @@ class Basic(unittest.TestCase):
         print "\nStarting", csvFilename
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
 
-
         for trial in range(10):
             # reuse the same seed, to get deterministic results (otherwise sometimes fails
-            kwargs = {'k': 3, 'epsilon': 1e-6, 'cols': None, 'destination_key': 'spheres3.hex', 
+            kwargs = {
+                'k': 3, 
+                'initialization': 'Furthest',
+                'epsilon': 1e-6, 
+                'cols': None, 
+                'destination_key': 'spheres3.hex', 
                 # 'seed': 265211114317615310,
                 'seed': 0,
                 }

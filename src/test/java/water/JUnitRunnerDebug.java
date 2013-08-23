@@ -1,5 +1,7 @@
 package water;
 
+import hex.KMeansTest;
+
 import java.util.ArrayList;
 
 import org.junit.runner.Result;
@@ -27,7 +29,10 @@ public class JUnitRunnerDebug {
       new NodeCL(("-ip 127.0.0.1 -port 54325 -flatfile " + flat).split(" ")).start();
 
       ArrayList<Class> tests = new ArrayList<Class>();
-      tests.add(ValueArrayToFrameTest.class);
+
+      // Test classes to run:
+      tests.add(KMeansTest.class);
+
       Result result = org.junit.runner.JUnitCore.runClasses(tests.toArray(new Class[0]));
       if( result.getFailures().size() == 0 )
         System.out.println("Success!");
