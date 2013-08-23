@@ -12,20 +12,28 @@ public class GBMTest extends TestUtil {
 
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
-  private abstract class PrepData { abstract void prep(Frame fr); }
+  private abstract class PrepData { abstract Vec prep(Frame fr); }
 
   @Test public void testBasicGBM() {
     basicGBM("./smalldata/test/test_tree.csv","tree.hex",
-             new PrepData() { void prep(Frame fr) { } 
+             new PrepData() { Vec prep(Frame fr) { return fr.remove(1); } 
              });
     basicGBM("./smalldata/logreg/prostate.csv","prostate.hex",
              new PrepData() {
-               void prep(Frame fr) { 
-                 assertEquals(380,fr._vecs[0].length());
-                 // Prostate: predict on CAPSULE which is in column #1; move it to last column
-                 UKV.remove(fr.remove("ID")._key);   // Remove patient ID vector
-                 Vec capsule = fr.remove("CAPSULE"); // Remove capsule
-                 fr.add("CAPSULE",capsule);          // Move it to the end
+               Vec prep(Frame fr) { 
+                 assertEquals(380,fr.numRows());
+                 // Remove patient ID vector
+                 UKV.remove(fr.remove("ID")._key); 
+                 // Prostate: predict on CAPSULE
+                 return fr.remove("CAPSULE");
+               }
+             });
+    basicGBM("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
+             new PrepData() {
+               Vec prep(Frame fr) { 
+                 assertEquals(581012,fr.numRows());
+                 // Covtype: predict on last column
+                 return fr.remove(54);
                }
              });
   }
@@ -33,66 +41,68 @@ public class GBMTest extends TestUtil {
   // ==========================================================================
   public void basicGBM(String fname, String hexname, PrepData prep) {
     File file = TestUtil.find_test_file(fname);
+    if( file == null ) return;  // Silently abort test if the file is missing
     Key fkey = NFSFileVec.make(file);
     Key dest = Key.make(hexname);
     Frame fr = ParseDataset2.parse(dest,new Key[]{fkey});
     UKV.remove(fkey);
+    Vec vresponse = null;
     GBM gbm = null;
     try {
-      prep.prep(fr);
-      gbm = GBM.start(GBM.makeKey(),fr,5);
+      vresponse = prep.prep(fr);
+      gbm = GBM.start(GBM.makeKey(),fr,vresponse,5);
       gbm.get();                  // Block for result
-      UKV.remove(gbm.destination_key);
     } finally {
-      UKV.remove(dest);
+      UKV.remove(dest);         // Remove whole frame
+      UKV.remove(vresponse._key);
       if( gbm != null ) gbm.remove();
     }
   }
 
-  /*@Test*/ public void testCovtypeGBM() {
-    File file = TestUtil.find_test_file("../datasets/UCI/UCI-large/covtype/covtype.data");
-    if( file == null ) return;  // Silently abort test if the large covtype is missing
-    Key fkey = NFSFileVec.make(file);
-    Key dest = Key.make("cov1.hex");
-    Frame fr = ParseDataset2.parse(dest,new Key[]{fkey});
-    UKV.remove(fkey);
-    System.out.println("Parsed into "+fr);
-    for( int i=0; i<fr._vecs.length; i++ )
-      System.out.println("Vec "+i+" = "+fr._vecs[i]);
-
-    try {
-      assertEquals(581012,fr._vecs[0].length());
-
-      // Covtype: predict on last column
-      GBM gbm = GBM.start(GBM.makeKey(),fr,10);
-      gbm.get();                  // Block for result
-      UKV.remove(gbm.destination_key);
-    } finally {
-      UKV.remove(dest);
-    }
+  @Test public void testBasicDRF() {
+    basicDRF("./smalldata/test/test_tree.csv","tree.hex",
+             new PrepData() { Vec prep(Frame fr) { return fr.remove(1); } 
+             });
+    basicDRF("./smalldata/logreg/prostate.csv","prostate.hex",
+             new PrepData() {
+               Vec prep(Frame fr) { 
+                 assertEquals(380,fr.numRows());
+                 // Remove patient ID vector
+                 UKV.remove(fr.remove("ID")._key); 
+                 // Prostate: predict on CAPSULE
+                 return fr.remove("CAPSULE");
+               }
+             });
+    basicDRF("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
+             new PrepData() {
+               Vec prep(Frame fr) { 
+                 assertEquals(581012,fr.numRows());
+                 // Covtype: predict on last column
+                 return fr.remove(54);
+               }
+             });
   }
 
-  @Test public void testBasicDRF() {
-    File file = TestUtil.find_test_file("./smalldata/logreg/prostate.csv");
+  public void basicDRF(String fname, String hexname, PrepData prep) {
+    File file = TestUtil.find_test_file(fname);
+    if( file == null ) return;  // Silently abort test if the file is missing
     Key fkey = NFSFileVec.make(file);
-    Key dest = Key.make("prostate.hex");
+    Key dest = Key.make(hexname);
     Frame fr = ParseDataset2.parse(dest,new Key[]{fkey});
     UKV.remove(fkey);
+    Vec vresponse = null;
+    DRF drf = null;
     try {
-      assertEquals(380,fr._vecs[0].length());
-
-      // Prostate: predict on CAPSULE which is in column #1; move it to last column
-      UKV.remove(fr.remove("ID")._key);   // Remove patient ID vector
-      Vec capsule = fr.remove("CAPSULE"); // Remove capsule
-      fr.add("CAPSULE",capsule);          // Move it to the end
+      vresponse = prep.prep(fr);
       int mtrys = Math.max((int)Math.sqrt(fr.numCols()),1);
       long seed = (1L<<32)|2;
 
-      DRF drf = DRF.start(DRF.makeKey(),fr,/*maxdepth*/50,/*ntrees*/5,mtrys,/*sampleRate*/0.67,seed);
+      drf = DRF.start(DRF.makeKey(),fr,vresponse,/*maxdepth*/50,/*ntrees*/5,mtrys,/*sampleRate*/0.67,seed);
       drf.get();                  // Block for result
-      UKV.remove(drf.destination_key);
     } finally {
-      UKV.remove(dest);
+      UKV.remove(dest);         // Remove whole frame
+      UKV.remove(vresponse._key);
+      if( drf != null ) drf.remove();
     }
   }
 
@@ -120,10 +130,11 @@ public class GBMTest extends TestUtil {
       assertTrue("Expecting to find distribution",found || H2O.CLOUD.size()==1);
 
       // Covtype: predict on last column
+      Vec vy = fr.remove(54);
       int mtrys = Math.max((int)Math.sqrt(fr.numCols()),1);
       long seed = (1L<<32)|2;
 
-      DRF drf = DRF.start(DRF.makeKey(),fr,/*maxdepth*/50,/*ntrees*/5,mtrys,/*sampleRate*/0.67,seed);
+      DRF drf = DRF.start(DRF.makeKey(),fr,vy,/*maxdepth*/50,/*ntrees*/5,mtrys,/*sampleRate*/0.67,seed);
       drf.get();                  // Block for result
       UKV.remove(drf.destination_key);
     } finally {

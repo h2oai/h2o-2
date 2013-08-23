@@ -16,10 +16,10 @@ public class GBM extends Job {
   public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
   private GBM(Key dest, Frame fr) { super("GBM "+fr, dest); }
   // Called from a non-FJ thread; makea a GBM and hands it over to FJ threads
-  public static GBM start(Key dest, final Frame fr, final int maxDepth) {
+  public static GBM start(Key dest, final Frame fr, final Vec vresponse, final int maxDepth) {
     final GBM job = new GBM(dest, fr);
     H2O.submitTask(job.start(new H2OCountedCompleter() {
-        @Override public void compute2() { job.run(fr,maxDepth); tryComplete(); }
+        @Override public void compute2() { job.run(fr,vresponse,maxDepth); tryComplete(); }
       })); 
     return job;
   }
@@ -36,16 +36,11 @@ public class GBM extends Job {
 
   // Compute a single GBM tree from the Frame.  Last column is the response
   // variable.  Depth is capped at maxDepth.
-  private void run(Frame fr, int maxDepth) {
+  private void run(Frame fr, Vec vresponse, int maxDepth) {
     Timer t_gbm = new Timer();
     final String names[] = fr._names;
-    Vec vs[] = fr._vecs;
-    final int ncols = vs.length-1; // Last column is the response column
-
-    // Response column is the last one in the frame
-    Vec vresponse = vs[ncols];
-    final long nrows = vresponse.length();
-    assert !vresponse._isInt || (vresponse.max() - vresponse.min()) < 10000; // Too many classes?
+    final int  ncols = fr.numCols();
+    final long nrows = fr.numRows();
     final int ymin = (int)vresponse.min();
     short nclass = vresponse._isInt ? (short)(vresponse.max()-ymin+1) : 1;
     assert 1 <= nclass && nclass < 1000; // Arbitrary cutoff for too many classes
@@ -57,7 +52,9 @@ public class GBM extends Job {
     //
     // The initial prediction is just the class distribution.  The initial
     // residuals are then basically the actual class minus the average class.
-    buildResiduals(nclass,fr,ncols,nrows,vresponse,ymin);
+    float preds[] = buildResiduals(nclass,fr,ncols,nrows,vresponse,ymin);
+    DTree init_tree = new DTree(names,ncols,nclass);
+    new GBMDecidedNode(init_tree,preds);
 
     // Make a new Vec to hold the split-number for each row (initially all zero).
     Vec vnids = vresponse.makeZero();
@@ -67,6 +64,8 @@ public class GBM extends Job {
     DTree tree = new DTree(names,ncols,nclass);
     new GBMUndecidedNode(tree,-1,DBinHistogram.initialHist(fr,ncols,nclass)); // The "root" node
     int leaf = 0; // Define a "working set" of leaf splits, from here to tree._len
+
+    DTree forest[] = new DTree[] {init_tree,tree};
 
     // ----
     // One Big Loop till the tree is of proper depth.
@@ -104,13 +103,13 @@ public class GBM extends Job {
       // If we did not make any new splits, then the tree is split-to-death
       if( tmax == tree._len ) break;
       
-      new BulkScore(new DTree[]{tree},ncols,nclass,ymin,1.0f).doAll(fr).report( Sys.GBM__, nrows, depth );
+      //new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, depth );
     }
     Log.info(Sys.GBM__,"GBM done in "+t_gbm);
 
     // One more pass for final prediction error
     Timer t_score = new Timer();
-    new BulkScore(new DTree[]{tree},ncols,nclass,ymin,1.0f).doAll(fr).report( Sys.GBM__, nrows, depth );
+    new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, depth );
     Log.info(Sys.GBM__,"GBM score done in "+t_score);
 
     // Remove temp vector; cleanup the Frame
@@ -125,31 +124,38 @@ public class GBM extends Job {
   //
   // The initial prediction is just the class distribution.  The initial
   // residuals are then basically the actual class minus the average class.
-  private static void buildResiduals(short nclass, Frame fr, final int ncols, long nrows, Vec vresponse, final int ymin ) {
+  private static float[] buildResiduals(short nclass, final Frame fr, final int ncols, long nrows, Vec vresponse, final int ymin ) {
     // Find the initial prediction - the current average response variable.
+    float preds[] = new float[nclass];
     if( nclass == 1 ) {
       fr.add("Residual-"+fr._names[ncols],vresponse.makeCon(vresponse.mean()));
       throw H2O.unimpl();
     } else {
-      long cs[] = new ClassDist(nclass).doAll(vresponse)._cs;
+      long cs[] = new ClassDist(nclass,ymin).doAll(vresponse)._cs;
       String[] domain = vresponse.domain();
-      for( int i=0; i<nclass; i++ )
-        fr.add("Residual-"+domain[i],vresponse.makeCon(-(float)cs[i]/nrows));
+      for( int i=0; i<nclass; i++ ) {
+        preds[i] = (float)cs[i]/nrows; // Prediction is just class average
+        fr.add("Residual-"+domain[i],vresponse.makeCon(-preds[i]));
+      }
     }
 
     // Compute initial residuals with no trees: prediction-actual e.g. if the
     // class choices are A,B,C with equal probability, and the row is actually
     // a 'B', the residual is {-0.33,1-0.33,-0.33}
+    fr.add("response",vresponse);
     new MRTask2() {
       @Override public void map( Chunk chks[] ) {
-        Chunk cy = chks[ncols];          // Response column
-        for( int i=0; i<cy._len; i++ ) { // For all rows
-          int cls = (int)cy.at80(i)-ymin;// Class
-          Chunk res = chks[ncols+1/*response*/+cls];
-          res.set80(i,1.0f+res.at0(i));  // Fix residual for actual class
+        Chunk cy = chks[chks.length-1];   // Response as last chunk
+        for( int i=0; i<cy._len; i++ ) {  // For all rows
+          int cls = (int)cy.at80(i)-ymin; // Class
+          Chunk res = chks[ncols+cls];    // Residual column for this class
+          res.set80(i,1.0f+res.at0(i));   // Fix residual for actual class
         }
       }
     }.doAll(fr);
+    fr.remove(ncols+nclass);    // Remove last (response) col
+
+    return preds;
   }
 
   // ---
@@ -158,6 +164,8 @@ public class GBM extends Job {
   // columns.  GBM algo: find the lowest error amongst *all* columns.
   static class GBMDecidedNode extends DecidedNode<GBMUndecidedNode> {
     GBMDecidedNode( GBMUndecidedNode n ) { super(n); }
+    GBMDecidedNode( DTree t, float[] p ) { super(t,p); }
+
     @Override GBMUndecidedNode makeUndecidedNode(DTree tree, int nid, DHistogram[] nhists ) { 
       return new GBMUndecidedNode(tree,nid,nhists); 
     }

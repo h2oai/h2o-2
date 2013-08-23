@@ -322,6 +322,14 @@ public class Utils {
     for(int i = 0; i < a.length; i++ ) add(a[i],b[i]);
     return a;
   }
+  public static float[] add(float[] a, float[] b) {
+    for(int i = 0; i < a.length; i++ ) a[i] += b[i];
+    return a;
+  }
+  public static float[][] add(float[][] a, float[][] b) {
+    for(int i = 0; i < a.length; i++ ) add(a[i],b[i]);
+    return a;
+  }
   public static double[] add(double[] a, double[] b) {
     for(int i = 0; i < a.length; i++ ) a[i] += b[i];
     return a;

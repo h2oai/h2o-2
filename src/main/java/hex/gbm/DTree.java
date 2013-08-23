@@ -34,7 +34,6 @@ class DTree extends Iced {
   int _len;              // Resizable array
   DTree( String[] names, int ncols, int nclass ) { _names = names; _ncols = ncols; _nclass=nclass; _ns = new Node[1]; }
   
-  boolean isRegression() { return _nclass==1; }
   public final Node root() { return _ns[0]; }
 
   // Return Node i
@@ -93,48 +92,39 @@ class DTree extends Iced {
     abstract int[] scoreCols( DHistogram[] hs );
 
     @Override public String toString() {
+      final int nclass = _tree._nclass;
       final String colPad="  ";
-      final int cntW=4, mmmW=4, varW=4;
-      final int colW=cntW+1+mmmW+1+mmmW+1+mmmW+1+varW;
+      final int cntW=4, mmmW=4, menW=3, varW=4;
+      final int colW=cntW+1+mmmW+1+mmmW+1+nclass*(menW+1)+varW;
       StringBuilder sb = new StringBuilder();
       sb.append("Nid# ").append(_nid).append(", ");
       printLine(sb).append("\n");
       final int ncols = _hs.length;
       for( int j=0; j<ncols; j++ )
         if( _hs[j] != null )
-          p(sb,_hs[j]._name+String.format(", err=%5.2f %f",_hs[j].score(),_hs[j]._min),colW).append(colPad);
+          p(sb,_hs[j]._name+String.format(", err=%5.2f %4.1f",_hs[j].score(),_hs[j]._min),colW).append(colPad);
       sb.append('\n');
       for( int j=0; j<ncols; j++ ) {
         if( _hs[j] == null ) continue;
         p(sb,"cnt" ,cntW).append('/');
         p(sb,"min" ,mmmW).append('/');
         p(sb,"max" ,mmmW).append('/');
-        if( _tree.isRegression() ) {
-          p(sb,"mean",mmmW).append('/');
-          p(sb,"var" ,varW).append(colPad);
-        } else {
-          p(sb,"C0",mmmW).append('-');
-          p(sb,"C"+(_tree._nclass-1),varW).append(colPad);
-        }
+        for( int c=0; c<nclass; c++ )
+          p(sb,Integer.toString(c),menW).append('/');
+        p(sb,"var" ,varW).append(colPad);
       }
       sb.append('\n');
       for( int i=0; i<DHistogram.BINS; i++ ) {
         for( int j=0; j<ncols; j++ ) {
-          if( _hs[j] == null ) continue;
-          if( i < _hs[j].nbins() ) {
-            p(sb,Long.toString(_hs[j].bins(i)),cntW).append('/');
-            p(sb,              _hs[j].mins(i) ,mmmW).append('/');
-            p(sb,              _hs[j].maxs(i) ,mmmW).append('/');
-            if( _tree.isRegression() ) { // Regression
-              p(sb,              _hs[j]. mean(i) ,mmmW).append('/');
-              p(sb,              _hs[j]. var (i) ,varW).append(colPad);
-            } else {            // Classification
-              StringBuilder sb2 = new StringBuilder();
-              long N = _hs[j].bins(i);
-              for( int k = 0; k<_tree._nclass; k++ )
-                sb2.append(_hs[j].clss(i,k)).append(',');
-              p(sb,sb2.toString(),mmmW+1+varW).append(colPad);
-            }
+          DHistogram h = _hs[j];
+          if( h == null ) continue;
+          if( i < h.nbins() ) {
+            p(sb, h.bins(i),cntW).append('/');
+            p(sb, h.mins(i),mmmW).append('/');
+            p(sb, h.maxs(i),mmmW).append('/');
+            for( int c=0; c<nclass; c++ )
+              p(sb,h.mean(i,c),menW).append('/');
+            p(sb, h.var (i),varW).append(colPad);
           } else {
             p(sb,"",colW).append(colPad);
           }
@@ -147,15 +137,20 @@ class DTree extends Iced {
     static private StringBuilder p(StringBuilder sb, String s, int w) {
       return sb.append(Log.fixedLength(s,w));
     }
+    static private StringBuilder p(StringBuilder sb, long l, int w) {
+      return p(sb,Long.toString(l),w);
+    }
     static private StringBuilder p(StringBuilder sb, float d, int w) {
-      String s = Double.isNaN(d) ? "NaN" :
+      String s = Float.isNaN(d) ? "NaN" :
         ((d==Float.MAX_VALUE || d==-Float.MAX_VALUE) ? " -" : 
-         Double.toString(d));
+         Float.toString(d));
       if( s.length() <= w ) return p(sb,s,w);
-      s = String.format("%4.1f",d);
+      s = String.format("%3.2f",d);
       if( s.length() > w )
-        s = String.format("%4.0f",d);
-      return sb.append(s);
+        s = String.format("%3.1f",d);
+      if( s.length() > w )
+        s = String.format("%3.0f",d);
+      return p(sb,s,w);
     }
   }
 
@@ -164,24 +159,13 @@ class DTree extends Iced {
   // Does not contain a histogram describing how the decision was made.
   static abstract class DecidedNode<UDN extends UndecidedNode> extends Node {
     final int _col;             // Column we split over
-    final float _min, _step;    // Binning info of column
+    final float _bmin, _step;   // Binning info of column
     // The following arrays are all based on a bin# extracted from linear
     // interpolation of _col, _min and _step.
-
-    // For classification, we return a zero-based class, and the prediction is
-    // a value from zero to 1 describing how weak our guess is.  For instance,
-    // during tree-building we decide to build a DecidedNode from 10 rows; 8
-    // rows are class A, and 2 rows are class B.  Then our class is A, but our
-    // error is 0.2 (2 out of 10 wrong).
-    final int   _ns[];            // An n-way split node
-    final float _mins[], _maxs[]; // Hang onto for printing purposes
-    // For Regressions:
-    //  ycls[x][0] == count of rows for this leaf
-    //  pred[x] == split X's prediction, typically mean of response variable
-    // For Classifications:
-    //  ycls[x][] == Class distribution of leaves
-    final float _ycls[/*split*/][/*class*/]; // Class distribution
-    final float _pred[/*split*/]; // Regression: this is the prediction
+    final int   _nids[];          // Children NIDS for an n-way split
+    // A prediction class-vector for each split.  Can be NULL if we have a
+    // child (which carries his own prediction).
+    final float _pred[/*split*/][/*class*/];
 
     // Make a correctly flavored Undecided
     abstract UDN makeUndecidedNode(DTree tree, int nid, DHistogram[] nhists );
@@ -199,72 +183,92 @@ class DTree extends Iced {
       if( col == -1 ) {
         DecidedNode p = n._tree.decided(_pid);
         _col  = p._col;  // Just copy the parent data over, for the predictions
-        _min  = p._min;
+        _bmin = p._bmin;
         _step = p._step;
-        _mins = p._mins;
-        _maxs = p._maxs;
-        _ns = new int[_mins.length];  Arrays.fill(_ns,-1); // No further splits
-        _ycls = p._ycls;
+        _nids = new int[p._nids.length];  
+        Arrays.fill(_nids,-1);  // No further splits
         _pred = p._pred;
         return;
       }
-      _col = col;
+      _col = col;               // Assign split-column choice
 
       // From the splitting Undecided, get the column, min, max
-      DBinHistogram splitH = (DBinHistogram)n._hs[_col];// DHistogram of the column being split
-      int nums = splitH.nbins(); // Number of split choices
-      assert nums > 1;           // Should always be some bins to split between
-      _min  = splitH._bmin;      // Binning info
+      DHistogram uhs[] = n._hs; // Histogram from Undecided
+      DBinHistogram splitH = (DBinHistogram)uhs[_col];// DHistogram of the column being split
+      assert splitH._nbins > 1; // Should always be some bins to split between
+      assert splitH._step  > 0;
+      int nbins = splitH._nbins;// Number of split choices
+      _bmin = splitH._bmin;     // Binning info
       _step = splitH._step;
-      assert _step > 0;
-      _mins = splitH._mins;     // Hang onto for printing purposes
-      _maxs = splitH._maxs;     // Hang onto for printing purposes
-      _ns = new int[nums];
+      _nids = new int[nbins];
       int nclass = _tree._nclass;
-      _ycls = new float[nums][nclass];
-      _pred = new float[nums];
-      int ncols = _tree._ncols;     // ncols: all columns, minus response
-      for( int i=0; i<nums; i++ ) { // For all split-points
+      _pred = new float[nbins][nclass];
+      int ncols = _tree._ncols;      // ncols: all predictor columns
+      for( int b=0; b<nbins; b++ ) { // For all split-points
         // Setup for children splits
-        DHistogram nhists[] = splitH.split(_col,i,n._hs,_tree._names,ncols);
+        DHistogram nhists[] = splitH.split(col,b,uhs,_tree._names,ncols);
         assert nhists==null || nhists.length==ncols;
-        _ns[i] = nhists == null ? -1 : makeUndecidedNode(_tree,_nid,nhists)._nid;
+        _nids[b] = nhists == null ? -1 : makeUndecidedNode(_tree,_nid,nhists)._nid;
         // Also setup predictions locally
-        if( _tree.isRegression() )  {            // Regression?
-          _ycls[i] = new float[]{splitH.bins(i)}; // Number of entries in bin
-          _pred[i] = splitH. mean(i);            // Prediction is mean of bin
-        } else {                                 // Classification?
-          for( int c=0; c<nclass; c++ )          // Copy the class counts into the decision
-            _ycls[i][c] = splitH.clss(i,c);
+        for( int c=0; c<nclass; c++ ) // Copy the class counts into the decision
+          _pred[b][c] = splitH.mean(b,c);
+        // If the split has no counts for a bin, that just means no training
+        // data landed there.  Actual (or test) data certainly can land in that
+        // bin - so give it a prediction from the parent.
+        if( splitH._bins[b] == 0 ) {
+          // Tree root (no parent) and no training data?
+          if( _pid == -1 ) {
+            Arrays.fill(_pred[b],1.0f/nclass);
+          } else {     // Else get parent & use parent's prediction for our bin
+            _pred[b] = null;
+            DecidedNode p = n._tree.decided(_pid);
+            for( int i=0; i<p._nids.length; i++ ) 
+              if( p._nids[i]==_nid ) {
+                _pred[b] = p._pred[i];
+                break;
+              }
+            assert _pred[b] != null;
+          }
         }
       }
+    }
+    
+    // DecidedNode with a pre-cooked response and no children
+    DecidedNode( DTree tree, float pred[] ) {
+      super(tree,-1,tree.newIdx());
+      _col = -1;
+      _bmin = _step = Float.NaN;
+      _nids = new int[] { -1 }; // 1 bin, no children
+      _pred = new float[][] { pred };
     }
 
     // Bin #.
     public int bin( Chunk chks[], int i ) {
+      if( _nids.length == 1 ) return 0;
       float d = (float)chks[_col].at0(i); // Value to split on for this row
       // Note that during *scoring* (as opposed to training), we can be exposed
       // to data which is outside the bin limits, so we must cap at both ends.
-      int idx1 = (int)((d-_min)/_step);     // Interpolate bin#
-      int bin = Math.max(Math.min(idx1,_ns.length-1),0);// Cap at length
+      int idx1 = (int)((d-_bmin)/_step); // Interpolate bin#
+      int bin = Math.max(Math.min(idx1,_nids.length-1),0);// Cap at length
       return bin;
     }
 
-    public int ns( Chunk chks[], int i ) { return _ns[bin(chks,i)]; }
+    public int ns( Chunk chks[], int i ) { return _nids[bin(chks,i)]; }
 
     @Override public String toString() {
-      String n= " <= "+_tree._names[_col]+" <= ";
+      String n= " <= "+_tree._names[_col]+" < ";
       String s = new String();
-      for( int i=0; i<_ns.length; i++ ) 
-        s += _mins[i]+n+_maxs[i]+" = "+Arrays.toString(_ycls[i])+"\n";
-      return s+" "+_min+" "+_step;
+      float f = _bmin;
+      for( int i=0; i<_nids.length; i++ )
+        s += f+n+(f+=_step)+" = "+Arrays.toString(_pred[i])+"\n";
+      return s;
     }
 
     StringBuilder printChild( StringBuilder sb, int nid ) {
-      for( int i=0; i<_ns.length; i++ ) 
-        if( _ns[i]==nid ) 
-          return sb.append("[").append(_mins[i]).append(" <= ").
-            append(_tree._names[_col]).append(" <= ").append(_maxs[i]).append("]");
+      for( int i=0; i<_nids.length; i++ ) 
+        if( _nids[i]==nid ) 
+          return sb.append("[").append(_bmin+i*_step).append(" <= ").
+            append(_tree._names[_col]).append(" < ").append(_bmin+(i+1)*_step).append("]");
       throw H2O.fail();
     }    
   }
@@ -309,8 +313,6 @@ class DTree extends Iced {
       _fr = fr;
     }
 
-    private boolean isRegression() { return _nclass==1; }
-
     // Init all the internal tree fields after shipping over the wire
     @Override public void init( ) {
       for( DTree dt : _trees )
@@ -331,9 +333,8 @@ class DTree extends Iced {
     }
 
     @Override public void map( Chunk[] chks ) {
-      assert _ncols+1/*response variable*/+_nclass/*residuals*/+_trees.length == chks.length 
-        : "Missing columns?  ncols="+_ncols+", "+_nclass+" for residuals, ntrees="+_trees.length+", and found "+chks.length+" vecs";
-      Chunk ys = chks[_ncols];
+      assert _ncols+_nclass/*response-vector*/+_trees.length == chks.length 
+        : "Missing columns?  ncols="+_ncols+", "+_nclass+" for response-vector, ntrees="+_trees.length+", and found "+chks.length+" vecs";
 
       // We need private (local) space to gather the histograms.
       // Make local clones of all the histograms that appear in this chunk.
@@ -345,14 +346,18 @@ class DTree extends Iced {
         final int leaf = _leafs[t];
         // A leaf-biased array of all active histograms
         final DHistogram hcs[][] = _hcs[t] = new DHistogram[tree._len-leaf][]; 
-        final Chunk nids = chks[_ncols+1/*response col*/+_nclass/*residual*/+t];
+        final Chunk nids = chks[_ncols+_nclass/*response-vector*/+t];
 
-        // Pass 1 & 2
+        // Pass 1: Score a prior partially-built tree model, and make new Node
+        // assignments to every row.  This involves pulling out the current
+        // assigned DecidedNode, "scoring" the row against that Node's decision
+        // criteria, and assigning the row to a new child UndecidedNode (and
+        // giving it an improved prediction).
         for( int i=0; i<nids._len; i++ ) {
           int nid = (int)nids.at80(i); // Get Node to decide from
           if( nid<0 ) continue; // row already predicts perfectly or sampled away
           
-          // Pass 1: Score row against current decisions & assign new split
+          // Score row against current decisions & assign new split
           int oldnid=nid;
           if( leaf > 0 )        // Prior pass exists?
             nids.set80(i,nid = tree.decided(nid).ns(chks,i));
@@ -386,49 +391,26 @@ class DTree extends Iced {
           }
         }
           
-        // Pass 2
-        if( isRegression() ) countRegression(tree,nids,ys,chks,hcs,leaf);
-        else                 countClasses   (tree,nids,ys,chks,hcs,leaf);
-      }
-    }
+        // Pass 2: Build new summary DHistograms on the new child
+        // UndecidedNodes every row got assigned into.  Collect counts, mean,
+        // variance, min, max per bin, per column.
+        for( int i=0; i<nids._len; i++ ) { // For all rows
+          int nid = (int)nids.at80(i);     // Get Node to decide from
+          if( nid<0 ) continue; // row already predicts perfectly or sampled away
+          DHistogram nhs[] = hcs[nid-leaf];
 
-    // Pass 2: Count Regression for rows & columns
-    private void countRegression( DTree tree, Chunk nids, Chunk ys, Chunk chks[], DHistogram hcs[][], int leaf ) {
-      for( int i=0; i<nids._len; i++ ) { // Bump the local histogram counts
-        int nid = (int)nids.at80(i);     // Get Node to decide from
-        if( nid<0 ) continue; // row already predicts perfectly or sampled away
-        DHistogram nhs[] = hcs[nid-leaf];
-        float y = (float)ys.at0(i);
-        for( int j=0; j<_ncols; j++) { // For all columns
-          DHistogram nh = nhs[j];
-          if( nh != null ) {
-            float f = (float)chks[j].at0(i);
-            nh.incr(f);
-            if( nh instanceof DBinHistogram ) ((DBinHistogram)nh).incr(f,y);
+          for( int j=0; j<_ncols; j++) { // For all columns
+            DHistogram nh = nhs[j];
+            if( nh != null ) {    // Tracking this column?
+              float f = (float)chks[j].at0(i);
+              nh.incr(f);         // Small histogram
+              if( nh instanceof DBinHistogram ) // Big histogram/
+                ((DBinHistogram)nh).incr(i,f,chks,_ncols);
+            }
           }
         }
       }
     }
-
-    // Pass 2: Count Classes for rows & columns
-    private void countClasses( DTree tree, Chunk nids, Chunk ys, Chunk chks[], DHistogram hcs[][], int leaf ) {
-      for( int i=0; i<nids._len; i++ ) { // Bump the local histogram counts
-        int nid = (int)nids.at80(i);     // Get Node to decide from
-        if( nid<0 ) continue; // row already predicts perfectly or sampled away
-        DHistogram nhs[] = hcs[nid-leaf];
-        int ycls = (int)ys.at80(i) - _ymin;
-
-        for( int j=0; j<_ncols; j++) { // For all columns
-          DHistogram nh = nhs[j];
-          if( nh != null ) {    // Tracking this column?
-            float f = (float)chks[j].at0(i);
-            nh.incr(f);         // Small histogram
-            if( nh instanceof DBinHistogram ) ((DBinHistogram)nh).incr(f,ycls);
-          }
-        }
-      }
-    }
-
 
     @Override public void reduce( ScoreBuildHistogram sbh ) {
       // Merge histograms
@@ -451,8 +433,8 @@ class DTree extends Iced {
   // Compute sum-squared-error.  Should use the recursive-mean technique.
   public static class BulkScore extends MRTask2<BulkScore> {
     final DTree _trees[]; // Read-only, shared (except at the histograms in the Nodes)
-    final int _ncols;     // Number of columns actively being worked
-    final int _nclass;    // Zero for regression, else #classes
+    final int _ncols;     // Number of predictor columns
+    final int _nclass;    // Number of classes
     // Bias classes to zero; e.g. covtype classes range from 1-7 so this is 1.
     // e.g. prostate classes range 0-1 so this is 0
     final int _ymin;
@@ -461,19 +443,28 @@ class DTree extends Iced {
     // trained, which only makes sense when scoring the Forest while the
     // training data is handy, i.e., scoring during & after training.
     // Pass in a 1.0 if turned off.
-    final float _rate;
+    final float _sampleRate;
+    // Scoring is based on average of all trees - or just the plain sum?
+    final boolean _doAvg;
     // OUTPUT fields
     long _cm[/*actual*/][/*predicted*/]; // Confusion matrix
     double _sum;                // Sum-squared-error
     long _err;                  // Total absolute errors
 
-    BulkScore( DTree trees[], int ncols, int nclass, int ymin, float sampleRate ) { 
+    BulkScore( DTree trees[], int ncols, int nclass, int ymin, float sampleRate, boolean doAvg ) { 
       _trees = trees; _ncols = ncols; 
       _nclass = nclass; _ymin = ymin; 
-      _rate = sampleRate;
+      _sampleRate = sampleRate; _doAvg = doAvg;
     }
 
-    private boolean isRegression() { return _nclass==1; }
+    // Compare the vresponse Vec passed in against our prediction.
+    public BulkScore doIt( Frame fr, Vec vresp ) {
+      assert fr.numCols() >= _ncols+_nclass;
+      fr.add("response",vresp);
+      doAll(fr);
+      fr.remove(fr.numCols()-1);
+      return this;
+    }
 
     // Init all the internal tree fields after shipping over the wire
     @Override public void init( ) {
@@ -483,22 +474,22 @@ class DTree extends Iced {
     }
 
     @Override public void map( Chunk chks[] ) {
-      Chunk ys = chks[_ncols+0]; // Response
+      Chunk ys = chks[chks.length-1]; // Response
       _cm = new long[_nclass][_nclass];
 
       // Get an array of RNGs to replay the sampling in reverse, only for OOBEE.
       // Note the fairly expense MerseenTwisterRNG built per-tree (per-chunk).
       Random rands[] = null;
-      if( _rate < 1.0f ) {      // oobee vs full scoring?
+      if( _sampleRate < 1.0f ) {      // oobee vs full scoring?
         rands = new Random[_trees.length];
         for( int t=0; t<_trees.length; t++ )
           rands[t] = _trees[t].rngForChunk(ys.cidx());
       }
-
+   
       // Score all Rows
-      long clss[] = new long[_nclass]; // Shared temp array for computing classes
+      float pred[] = new float[_nclass]; // Shared temp array for computing predictions
       for( int i=0; i<ys._len; i++ ) {
-        float err = score0( chks, i, (float)ys.at0(i), clss, rands );
+        float err = score0( chks, i, (float)(ys.at0(i)-_ymin), pred, rands );
         assert 0.0f <= err && err <= 1.0f;
         _sum += err*err;        // Squared error
       }
@@ -510,18 +501,21 @@ class DTree extends Iced {
       Utils.add(_cm,t._cm);
     }
 
-    // Return a relative error.  For regression it's y-mean.  For classification, 
-    // it's the %-tage of the response class out of all rows in the leaf, plus
-    // a count of absolute errors when we predict the majority class.
-    private float score0( Chunk chks[], int i, float y, long clss[], Random rands[] ) {
-      float sum=0;             // Regression: average across trees
-      Arrays.fill(clss,0);      // Recycled temp array
+    // Return a relative error: response-prediction.  The prediction is a
+    // vector; typically a class distribution.  If the response is also a
+    // vector we return the Euclidean distance.  If the response is a single
+    // class variable we instead return the squared-error of the prediction for
+    // the class.  We also count absolute errors when we predict the majority class.
+    private float score0( Chunk chks[], int i, float y, float pred[], Random rands[] ) {
+      Arrays.fill(pred,0);      // Recycled temp array
+      int nt = 0;               // Number of trees not sampled-away
 
       // For all trees
       for( int t=0; t<_trees.length; t++ ) {
         // For OOBEE error, do not score rows on trees trained on that row
-        if( rands != null && !(rands[t].nextFloat() >= _rate) ) continue;
+        if( rands != null && !(rands[t].nextFloat() >= _sampleRate) ) continue;
 
+        nt++;
         final DTree tree = _trees[t];
         // "score" this row on this tree.  Apply the tree decisions at each
         // point, walking down the tree to a leaf.
@@ -534,67 +528,43 @@ class DTree extends Iced {
           node = tree.node(nid);
           assert node._tree==tree;
         }
-        // We hit the end of the tree walk.  Get this tree's prediction
-        if( isRegression() ) {  // Regression?
-          sum += regressScore(prev,clss,chks,i,true,sum);
-        } else {                // Classification?
-          classScore(prev,clss,chks,i,true);
-        }
+        // We hit the end of the tree walk.  Get this tree's prediction.
+        int bin = prev.bin(chks,i);    // Which bin did we decide on?
+        Utils.add(pred,prev._pred[bin]); // Add the prediction vectors, tree-by-tree
       } // End of for-all trees
+      //for( int x=0; x<chks.length; x++ )
+      //  System.out.print(chks[x].at(i)+",");
+      //System.out.println(" pred="+Arrays.toString(pred));
 
       // Having computed the votes across all trees, find the majority class
       // and it's error rate.
-      if( isRegression() ) {
-        long rows = clss[0];         // Find total rows trained
-        if( clss[0] == 0 ) return 0; // OOBEE: all rows trained, so no rows scored
-        float prediction = sum/rows; // Average of trees is prediction
-        return prediction - y;       // Error
-      } else {
-        long rows = clss[0];    // Find total rows trained
-        int best=0;             // Find largest class across all trees
-        for( int c=1; c<_nclass; c++ ) {
-          rows += clss[c];      // Total rows trained
-          if( clss[c] > clss[best] ) best=c;
-        }
-        if( rows == 0 ) return 0;  // OOBEE: all rows trained, so no rows scored
-        int ycls = (int)y-_ymin;   // Zero-based response class
-        if( best != ycls ) _err++; // Absolute prediction error
-        _cm[ycls][best]++;         // Confusion Matrix
-        return (float)(rows-clss[ycls])/rows; // Error
-      }
-    }
+      if( nt == 0 ) return 0;   // OOBEE: all rows trained, so no rows scored
 
-    // Compute classification score: add this leaf decision node's response-
-    // variable distribution to the total forest distribution.  If the selected
-    // bin is empty - we've got no distribution.  Go back up 1 layer and take
-    // the (weaker) distribution from the parent.
-    private void classScore( DecidedNode prev, long clss[], Chunk chks[], int i, boolean recur ) {
-      int bin = prev.bin(chks,i);     // Which bin did we decide on?
-      float[] ycls = prev._ycls[bin]; // Classes for that bin
-      boolean empty=true;
-      for( int c=0; c<_nclass; c++ ) {
-        clss[c] += ycls[c];     // Compute distribution
-        if( empty && ycls[c] != 0.0f ) 
-          empty=false;          // Detect empty distribution
-      }
-      if( empty && prev._pid != -1 ) { // No class prediction here, and we can back up a layer?
-        assert recur;
-        prev = prev._tree.decided(prev._pid); // Backup 1 layer in tree
-        classScore(prev,clss,chks,i,false);   // And predict again (weaker)
-      }
-    }
+      if( _doAvg )              // Average (or not) sum of trees?
+        for( int c=0; c<_nclass; c++ )
+          pred[c] /= nt;        // Average every prediction across trees
 
-    private float regressScore( DecidedNode prev, long clss[], Chunk chks[], int i, boolean recur, float sum ) {
-      int bin = prev.bin(chks,i);    // Which bin did we decide on?
-      float[] ycls = prev._ycls[bin];// Classes for that bin
-      float num = ycls[0];           // "classes" is really just bin-count
-      clss[0] += num;                // More total rows
-      sum += prev._pred[bin]*num;    // More total regression count
-      if( num==0 ) {
-        prev = prev._tree.decided(prev._pid); // Backup 1 layer in tree
-        return regressScore(prev,clss,chks,i,false,sum); // And predict again (weaker)
+      // Regression?
+      if( _nclass == 1 )        // Single-class ==> Regression?
+        return y-pred[0];       // Prediction: sum of trees
+
+      // Classification?
+      // Pick max class in predicted response vector
+      int best=0;               // Find largest class
+      float sum=pred[0];        // Also compute sum of classes
+      for( int c=1; c<_nclass; c++ ) {
+        sum += pred[c];
+        if( pred[c] > pred[best] ) best=c;
       }
-      return sum;
+
+      assert 1-.00001 <= sum && sum <= 1+.00001 : "Expect predictions to be a probability distribution but found "+Arrays.toString(pred)+", scoring row "+i;
+      int ycls = (int)y;         // Response class from 0 to nclass-1
+      assert 0 <= ycls && ycls < _nclass : "weird ycls="+ycls+", y="+y+", ymin="+_ymin;
+      if( best != ycls ) _err++; // Absolute prediction error; off-diagonal sum
+      _cm[ycls][best]++;         // Confusion Matrix
+      float ypred = pred[ycls];  // Predict max class
+      if( ypred > 1.0f ) ypred = 1.0f;
+      return 1.0f - ypred;       // Error from 0 to 1.0
     }
 
     public BulkScore report( Sys tag, long nrows, int depth ) {
@@ -610,12 +580,13 @@ class DTree extends Iced {
   // Compute class distributions
   static class ClassDist extends MRTask2<ClassDist> {
     final short _nclass;
+    final int _ymin;
     long _cs[];
-    ClassDist( short nclass ) { _nclass = nclass; }
+    ClassDist( short nclass, int ymin ) { _nclass = nclass; _ymin = ymin; }
     @Override public void map( Chunk cr ) {
       _cs = new long[_nclass];
       for( int i=0; i<cr._len; i++ )
-        _cs[(int)cr.at80(i)]++;
+        _cs[(int)cr.at80(i)-_ymin]++;
     }
     @Override public void reduce( ClassDist cd ) { Utils.add(_cs,cd._cs); }
   }

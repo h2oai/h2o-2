@@ -68,9 +68,8 @@ public class DRF2 extends Request {
     int[] idxs = vecs.value();
     for( int idx : idxs )       // The selected frame columns
       fr2.add(fr._names[idx],fr._vecs[idx]);
-    // Add the class-vec last
+    // Collect class-names
     Vec cvec = class_vec.value();
-    fr2.add(fr._names[class_vec._colIdx.get()],cvec);
     domain = cvec.domain();     // Class/enum/factor names
     mtrys = features.value()==null 
       ? (int)(Math.sqrt(idxs.length)+0.5) 
@@ -78,6 +77,7 @@ public class DRF2 extends Request {
 
     DRF drf = DRF.start(DRF.makeKey(),
                         fr2,
+                        cvec,
                         depth.value(),
                         ntrees.value(),
                         mtrys,
