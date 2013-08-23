@@ -76,7 +76,7 @@ class Basic(unittest.TestCase):
             for trial in range(2):
                 kwargs = {
                     'k': 3, 
-                    'epsilon': 1e-6, 
+                    'initialization': 'Furthest',
                     # 'cols': 2, 
                     # 'max_iter': 10,
                     # 'normalize': 0,

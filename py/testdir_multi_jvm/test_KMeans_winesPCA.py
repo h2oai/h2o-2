@@ -39,7 +39,7 @@ class Basic(unittest.TestCase):
         kwargs = {
             #appears not to take 'cols'?
             'cols': None,
-            'epsilon': 1e-6,
+            'initialization': 'Furthest',
             'k': 3,
             # reuse the same seed, to get deterministic results (otherwise sometimes fails
             'seed': 265211114317615310,

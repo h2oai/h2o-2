@@ -90,7 +90,7 @@ class Basic(unittest.TestCase):
 
         # try 5 times, to see if all inits by h2o are good
         for trial in range(5):
-            kwargs = {'k': CLUSTERS, 'epsilon': 1e-6, 'cols': None, 'destination_key': 'syn_spheres100.hex'}
+            kwargs = {'k': CLUSTERS, 'initialization': 'Furthest', 'cols': None, 'destination_key': 'syn_spheres100.hex'}
             timeoutSecs = 30
             start = time.time()
             kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)

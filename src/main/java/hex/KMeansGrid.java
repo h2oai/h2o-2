@@ -17,7 +17,7 @@ public class KMeansGrid extends KMeansShared {
   int[] k;
   class kFilter extends RSeq { public kFilter() { super("2:10:1", false); } }
 
-  @API(help = "Maximum number of iterations before stopping", required = true, filter = max_iterFilter.class)
+  @API(help = "Maximum number of iterations", required = true, filter = max_iterFilter.class)
   int[] max_iter;
   class max_iterFilter extends RSeq { public max_iterFilter() { super("10:100:10", true); } }
 
@@ -50,13 +50,13 @@ public class KMeansGrid extends KMeansShared {
 
   @Override protected void run() {
     ValueArray va = DKV.get(source_key).get();
-    hex.KMeans first = hex.KMeans.start(Key.make(), va, k[0], 0, max_iter[0], seed, normalize, cols);
+    hex.KMeans first = hex.KMeans.start(Key.make(), va, k[0], initialization, max_iter[0], seed, normalize, cols);
     KMeansModel model = first.get();
     errors = new double[k.length][max_iter.length];
     for( int ki = 0; ki < k.length; ki++ ) {
       for( int mi = 0; mi < max_iter.length; mi++ ) {
         if( ki != 0 || mi != 0 ) {
-          KMeans job = KMeans.start(first.dest(), va, k[mi], 0, max_iter[mi], seed, normalize, cols);
+          KMeans job = KMeans.start(first.dest(), va, k[mi], initialization, max_iter[mi], seed, normalize, cols);
           model = job.get();
         }
         errors[ki][mi] = model._error;

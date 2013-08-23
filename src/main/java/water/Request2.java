@@ -59,6 +59,12 @@ public abstract class Request2 extends Request {
               arg = new Bool(f.getName(), val, api.help());
             }
 
+            // Enum
+            else if( Enum.class.isAssignableFrom(f.getType()) ) {
+              Enum val = (Enum) defaultValue;
+              arg = new EnumArgument(f.getName(), val);
+            }
+
             // Key
             else if( f.getType() == Key.class )
               arg = new H2OKey(f.getName(), api.required());
@@ -138,6 +144,8 @@ public abstract class Request2 extends Request {
     try {
       if( arg._field.getType() == Key.class && value instanceof ValueArray )
         value = ((ValueArray) value)._key;
+      if( arg._field.getType() == Frame.class && value instanceof ValueArray )
+        value = ((ValueArray) value).asFrame();
       if( arg._field.getType() == Frame.class && value instanceof Key )
         value = UKV.get((Key) value);
       if( arg._field.getType() == int.class && value instanceof Long )

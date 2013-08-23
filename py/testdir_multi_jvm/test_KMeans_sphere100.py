@@ -159,7 +159,7 @@ class Basic(unittest.TestCase):
         for trial in range(10):
             kwargs = {
                 'k': CLUSTERS, 
-                'epsilon': 1e-6, 
+                'initialization': 'Furthest', 
                 'cols': cols,
                 'destination_key': 'syn_spheres100.hex'
             }

@@ -979,7 +979,7 @@ class H2O(object):
         # KMeans2 has these params?
         # max_iter=100&max_iter2=1&iterations=0
         params_dict = {
-            'epsilon': 1e-6,
+            'initialization': 'Furthest',
             'k': 1,
             'source_key': key,
             'destination_key': None,
@@ -1010,7 +1010,7 @@ class H2O(object):
         **kwargs):
         # defaults
         params_dict = {
-            'epsilon': 1e-6,
+            'initialization': 'Furthest',
             'k': 1,
             'max_iter': 10,
             'source_key': key,

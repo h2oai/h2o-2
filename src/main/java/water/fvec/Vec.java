@@ -33,7 +33,7 @@ public class Vec extends Iced {
    *  such as file-backed Vecs. */
   final private long _espc[];
   /** Enum/factor/catagorical names. */
-  String [] _domain;
+  public String [] _domain;
   /** If we have active writers, then all cached roll-ups/reductions
    *  (e.g. _min, _max) unavailable.  We won't even try to compute them (under
    *  the assumption that we'll about to see a zillions writes/sec). */
@@ -432,9 +432,6 @@ public class Vec extends Iced {
       byte [] bits = _key._kb.clone();
       UDP.set4(bits,2,vecId);//
       return Key.make(bits);
-    }
-    private int vecIdx(Key k){
-      return UDP.get4(k._kb, 2);
     }
 
     /**

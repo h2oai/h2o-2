@@ -115,8 +115,8 @@ public class Job extends Request2 {
   // Overriden for Parse
   public float progress() {
     Freezable f = UKV.get(destination_key);
-    if( f instanceof Job )
-      return ((Job.Progress) f).progress();
+    if( f instanceof Progress )
+      return ((Progress) f).progress();
     return 0;
   }
 

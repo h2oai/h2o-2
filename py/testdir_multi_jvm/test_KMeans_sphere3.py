@@ -90,7 +90,7 @@ class Basic(unittest.TestCase):
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
 
         # reuse the same seed, to get deterministic results (otherwise sometimes fails
-        kwargs = {'k': 3, 'epsilon': 1e-6, 'cols': None, 'destination_key': 'spheres3.hex', 'seed': 265211114317615310}
+        kwargs = {'k': 3, 'initialization': 'Furthest', 'cols': None, 'destination_key': 'spheres3.hex', 'seed': 265211114317615310}
 
         timeoutSecs = 30
         start = time.time()

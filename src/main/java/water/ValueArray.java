@@ -473,9 +473,6 @@ public class ValueArray extends Iced implements Cloneable {
     private int _i,_rid, _numrows;
 
     public CsvVAStream(ValueArray ary, ProgressMonitor pm){
-      this(ary,pm,true);
-    }
-    public CsvVAStream(ValueArray ary, ProgressMonitor pm, boolean header){
       super(ary,pm);
       StringBuilder sb = new StringBuilder('"' + ary._cols[0]._name + '"');
       for(int i = 1; i < ary._cols.length; ++i)
@@ -541,9 +538,12 @@ public class ValueArray extends Iced implements Cloneable {
     task._vaKey = _key;
     task._vecs = avs;
     task.invoke(_key);
+    avs = task._vecs;
     Vec[] vecs = new Vec[avs.length];
-    for(int i = 0; i < avs.length; ++i)
+    for(int i = 0; i < avs.length; ++i) {
       vecs[i] = avs[i].close(null);
+      vecs[i]._domain = _cols[i]._domain;
+    }
     return new Frame(names, vecs);
   }
 
@@ -552,26 +552,33 @@ public class ValueArray extends Iced implements Cloneable {
     AppendableVec[] _vecs;
 
     @Override public void map(Key key) {
-      NewChunk [] chunks = new NewChunk[_vecs.length];
-      for(int i = 0; i < _vecs.length; ++i)
-        chunks[i] = new NewChunk(_vecs[i], i);
-
       ValueArray va = DKV.get(_vaKey).get();
       AutoBuffer bits = va.getChunk(key);
       int cidx = (int) ValueArray.getChunkIndex(key);
       int rows = va.rpc(cidx);
 
+      NewChunk[] chunks = new NewChunk[_vecs.length];
+      for(int i = 0; i < _vecs.length; ++i)
+        chunks[i] = new NewChunk(_vecs[i], cidx);
+
       for( int row = 0; row < rows; row++ ) {
         for( int i = 0; i < _vecs.length; i++ ) {
           ValueArray.Column c = va._cols[i];
-          if(va.isNA(row, i))
-            chunks[i].addNA();
-          else if(va._cols[i]._domain != null)
-            chunks[i].addEnum((int) va.data(bits, row, c));
-          else if(va._cols[i].isFloat())
-            chunks[i].addNum(va.datad(bits, row, c));
-          else
-            chunks[i].addNum(va.data(bits, row, c), 0);
+          if( !va.isNA(bits, row, i) ) {
+            if(va._cols[i]._domain != null)
+              chunks[i].addEnum((int) va.data(bits, row, c));
+            else if(va._cols[i].isFloat())
+              chunks[i].addNum(va.datad(bits, row, c));
+            else
+              chunks[i].addNum(va.data(bits, row, c), 0);
+          } else {
+            if( !va._cols[i].isFloat() )
+              chunks[i].addNA();
+            else {
+              // Don't use addNA() for doubles, as NewChunk uses separate array
+              chunks[i].addNum(Double.NaN);
+            }
+          }
         }
       }
       for(int i = 0; i < _vecs.length; ++i)

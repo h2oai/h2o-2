@@ -75,7 +75,7 @@ class Basic(unittest.TestCase):
         # all are multipliers of expected tuple value
         allowedDelta = (0.01, 0.01, 0.01)
         for trial in range(2):
-            kwargs = {'k': 3, 'epsilon': 1e-6, 'cols': 2, 'destination_key': 'prostate_k.hex',
+            kwargs = {'k': 3, 'initialization': 'Furthest', 'cols': 2, 'destination_key': 'prostate_k.hex',
                 # reuse the same seed, to get deterministic results (otherwise sometimes fails
                 'seed': 265211114317615310}
 
