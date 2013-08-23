@@ -25,7 +25,8 @@ public class Sandbox {
 //      ValueArrayToFrameTest.test("smalldata/datagen1.csv");
 //      System.out.println("Success!");
 
-      File f = new File("lib/resources/datasets/gaussian.csv");
+      //File f = new File("lib/resources/datasets/gaussian.csv");
+      File f = new File("smalldata/Twitter2DB.txt");
       // File f = new File("smalldata/covtype/covtype.20k.data");
       // File f = new File("syn_5853362476331324036_100x11.csv");
       // File f = new File("../../aaaa/datasets/millionx7_logreg.data.gz");

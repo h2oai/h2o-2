@@ -23,7 +23,8 @@ public class KMeans extends Request {
   final Int k = new Int("k");
 
   @API(help = "Clusters initialization")
-  final EnumArgument<Initialization> initialization = new EnumArgument<Initialization>("initialization", Initialization.None);
+  final EnumArgument<Initialization> initialization = new EnumArgument<Initialization>("initialization",
+      Initialization.None);
 
   @API(help = "Maximum number of iterations before stopping")
   final Int max_iter = new Int("max_iter", 100);
@@ -42,6 +43,8 @@ public class KMeans extends Request {
 
   @Override protected Response serve() {
     try {
+      if( destination_key.record()._originalValue.equals(source_key.record()._originalValue) )
+        throw new IllegalArgumentException("destination_key cannot be source_key");
       hex.KMeans job = start(destination_key.value(), k.value(), max_iter.value());
       JsonObject response = new JsonObject();
       response.addProperty(JOB, job.self().toString());
@@ -104,7 +107,7 @@ public class KMeans extends Request {
       sb.append("<div class='alert'>Actions: " + KMeansScore.link(m._selfKey, "Score on dataset") + ", "
           + KMeansApply.link(m._selfKey, "Apply to dataset") + ", " + KMeans.link(m._dataKey, "Compute new model")
           + "</div>");
-      DocGen.HTML.section(sb, "Error: " +  _m._error);
+      DocGen.HTML.section(sb, "Error: " + _m._error);
       sb.append("<span style='display: inline-block;'>");
       sb.append("<table class='table table-striped table-bordered'>");
       sb.append("<tr>");

@@ -34,6 +34,11 @@ public class KMeans extends Job {
     // response-column to train. This also means the clusters are not classes
     // (although, if a class/response is associated with each
     // row we could count the number of each class in each cluster).
+    if( cols == null || cols.length == 0 ) {
+      cols = new int[va._cols.length - 1];
+      for( int i = 0; i < cols.length; i++ )
+        cols[i] = i;
+    }
     int cols2[] = Arrays.copyOf(cols, cols.length + 1);
     cols2[cols.length] = -1;  // No response column
     final KMeansModel res = new KMeansModel(job.dest(), cols2, va._key);
