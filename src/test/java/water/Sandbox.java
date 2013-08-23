@@ -7,8 +7,7 @@ import java.util.Arrays;
 import org.apache.commons.lang.ArrayUtils;
 
 import water.deploy.*;
-import water.fvec.NFSFileVec;
-import water.fvec.ParseDataset2;
+import water.parser.ParseDataset;
 import water.util.Utils;
 
 public class Sandbox {
@@ -21,7 +20,10 @@ public class Sandbox {
 
   public static class UserMain {
     public static void main(String[] args) throws Exception {
-      localCloud(1, true, args);
+      localCloud(3, true, args);
+
+//      ValueArrayToFrameTest.test("smalldata/datagen1.csv");
+//      System.out.println("Success!");
 
       File f = new File("lib/resources/datasets/gaussian.csv");
       // File f = new File("smalldata/covtype/covtype.20k.data");
@@ -31,13 +33,15 @@ public class Sandbox {
       // File f = new File("py/testdir_single_jvm/syn_datasets/hastie_4x.data");
       Key dest = Key.make("test.hex");
 
-      Key fkey = NFSFileVec.make(f);
-      ParseDataset2.parse(dest, new Key[] { fkey });
-      Utils.readConsole();
+//      Key fkey = NFSFileVec.make(f);
+//      ParseDataset2.parse(dest, new Key[] { fkey });
 
-//      Key key = TestUtil.load_test_file(f, "test");
-//      ParseDataset.parse(dest, new Key[] { key });
-//      ValueArray va = (ValueArray) UKV.get(dest);
+
+      Key key = TestUtil.load_test_file(f, "test");
+      ParseDataset.parse(dest, new Key[] { key });
+      ValueArray va = (ValueArray) UKV.get(dest);
+
+      Utils.readConsole();
 
       // @formatter:off
 //      double[][] array = new double[][] {

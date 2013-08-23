@@ -1,8 +1,11 @@
 package water.fvec;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 
 import water.*;
+import water.fvec.Vec.DType;
 import water.fvec.Vec.VectorGroup;
 
 /**
@@ -170,5 +173,66 @@ public class Frame extends Iced {
     for( int i=1; i<_names.length; i++ )
        s += ","+toStr(idx,i);
     return s+"}";
+  }
+
+  public InputStream toCSV(boolean headers) {
+    return new CSVStream(headers);
+  }
+
+  private class CSVStream extends InputStream {
+    byte[] _line;
+    int _position;
+    long _row;
+
+    CSVStream(boolean headers) {
+      StringBuilder sb = new StringBuilder();
+      if( headers ) {
+        sb.append('"' + _names[0] + '"');
+        for(int i = 1; i < _vecs.length; i++)
+          sb.append(',').append('"' + _names[i] + '"');
+        sb.append('\n');
+      }
+      _line = sb.toString().getBytes();
+    }
+
+    @Override public int available() throws IOException {
+      if(_position == _line.length) {
+        if(_row == numRows())
+          return 0;
+        StringBuilder sb = new StringBuilder();
+        for( int i = 0; i < _vecs.length; i++ ) {
+          if(i > 0) sb.append(',');
+          if(!_vecs[i].isNA(_row)) {
+            if(_vecs[i].isEnum()) sb.append('"' + _vecs[i]._domain[(int) _vecs[i].at8(_row)] + '"');
+            else if(_vecs[i].dtype() == DType.F) sb.append(_vecs[i].at(_row));
+            else sb.append(_vecs[i].at8(_row));
+          }
+        }
+        sb.append('\n');
+        _line = sb.toString().getBytes();
+        _position = 0;
+        _row++;
+      }
+      return _line.length - _position;
+    }
+
+    @Override public void close() throws IOException {
+      super.close();
+      _line = null;
+    }
+
+    @Override public int read() throws IOException {
+      return available() == 0 ? -1 : _line[_position++];
+    }
+
+    @Override public int read(byte[] b, int off, int len) throws IOException {
+      int n = available();
+      if(n > 0) {
+        n = Math.min(n, len);
+        System.arraycopy(_line, _position, b, off, n);
+        _position += n;
+      }
+      return n;
+    }
   }
 }

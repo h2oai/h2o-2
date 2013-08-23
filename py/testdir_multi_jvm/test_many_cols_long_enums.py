@@ -39,7 +39,10 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
             # !"#$%&'()*+,-./:;<=>?@[\]^_`{|}~
 
             otherLegalPunctuation = "!#&()*/:;<=>?@[\]^_`{|}~"
-            legalChars = string.letters + string.digits + "'$ \t" + otherLegalPunctuation
+            # legalChars = string.letters + string.digits
+            # legalChars = '01234' + "$. "
+            # legalChars = '01234' + "+-.,$ \t"
+            legalChars = string.letters + string.digits + "+-.,$' \t" + otherLegalPunctuation
         else:
             # same as this
             # legalChars = string.letters + string.punctuation + string.digits + string.whitespace
@@ -94,14 +97,14 @@ class Basic(unittest.TestCase):
     def test_many_cols_with_syn(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (5, 7, 'cA', 5),
-            (5, 7, 'cA', 5),
-            (5, 7, 'cA', 5),
-            (5, 7, 'cA', 5),
-            (5, 7, 'cA', 5),
-            (5, 7, 'cA', 5),
-            (5, 7, 'cA', 5),
-            (5, 7, 'cA', 5),
+            (5, 100, 'cA', 5),
+            (5, 100, 'cA', 5),
+            (5, 100, 'cA', 5),
+            (5, 100, 'cA', 5),
+            (5, 100, 'cA', 5),
+            (5, 100, 'cA', 5),
+            (5, 100, 'cA', 5),
+            (5, 100, 'cA', 5),
             ]
 
         ### h2b.browseTheCloud()
@@ -117,7 +120,8 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, rowCount, colCount, SEED)
 
             SEPARATOR = ord(',')
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10, separator=SEPARATOR)
+            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10, 
+                separator=SEPARATOR, header=1)
             print csvFilename, 'parse time:', parseKey['response']['time']
             print "Parse result['destination_key']:", parseKey['destination_key']
 
