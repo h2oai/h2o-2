@@ -64,7 +64,7 @@ class Basic(unittest.TestCase):
             destKey = files['train'] + '.hex'
             parseKey = h2i.parseImportFolderFile(None,csvPathname,
                             importFolderPath,key2=destKey,
-                            timeoutSecs=300,retryDelaySecs=5,pollTimeoutSecs=120)
+                            timeoutSecs=3600,retryDelaySecs=5,pollTimeoutSecs=120)
             trainParseWallTime = time.time() - trainParseWallStart
             #End Train File Parse#
     
@@ -93,7 +93,7 @@ class Basic(unittest.TestCase):
             destKey = files['test'] + '.hex'
             parseKey = h2i.parseImportFolderFile(None,csvPathname,
                                importFolderPath,key2=destKey,
-                               timeoutSecs=300,retryDelaySecs=5,pollTimeoutSecs=120)
+                               timeoutSecs=3600,retryDelaySecs=5,pollTimeoutSecs=120)
             testParseWallTime = time.time() - testParseWallStart
             #End Test File Parse#
             inspect = h2o.nodes[0].inspect(parseKey['destination_key'])
@@ -106,7 +106,7 @@ class Basic(unittest.TestCase):
             testRFStart = time.time()
             kwargs.update({'model_key':modelKey,'ntree':10,
                             'out_of_bag_error_estimate': 1})
-            rfView = h2o_cmd.runRFView(data_key=destKey,timeoutSecs=180,
+            rfView = h2o_cmd.runRFView(data_key=destKey,timeoutSecs=3600,
                                                doSimpleCheck=False,**kwargs)
             testViewTime = time.time() - testRFStart
             #End RFView (score on test)#
