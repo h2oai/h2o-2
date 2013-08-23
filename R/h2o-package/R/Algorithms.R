@@ -14,7 +14,7 @@ setMethod("prcomp", signature(x="H2OParsedData"), function(x, ...) {
   # result$rotation = do.call(rbind, res$eigenvectors)
   temp = t(do.call(rbind, res$eigenvectors))
   colnames(temp) = paste("PC", seq(1, ncol(temp)), sep="")
-  result$rotation = temp
+  result$rotation = as.data.frame(temp)
   result
 })
 

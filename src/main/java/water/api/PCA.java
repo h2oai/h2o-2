@@ -12,7 +12,7 @@ import water.util.RString;
 import com.google.gson.*;
 
 public class PCA extends Request {
-  protected final H2OKey _dest = new H2OKey(DEST_KEY, false);
+  protected final H2OKey _dest = new H2OKey(DEST_KEY, PCAModel.makeKey());
   protected final H2OHexKey _key = new H2OHexKey(KEY);
   protected final Int _num_pc = new Int("num_pc", 10, 1, 10000);
 
@@ -53,7 +53,6 @@ public class PCA extends Request {
       for( int i = 0; i < cols.length; i++ ) cols[i] = i;
       DataFrame data = DGLM.getData(ary, cols, null, true);
 
-      /*
       PCAJob job = DPCA.startPCAJob(dest, data, pcaParams);
       j.addProperty(JOB, job.self().toString());
       j.addProperty(DEST_KEY, job.dest().toString());
@@ -61,11 +60,12 @@ public class PCA extends Request {
       Response r = Progress.redirect(j, job.self(), job.dest());
       r.setBuilder(Constants.DEST_KEY, new KeyElementBuilder());
       return r;
-      */
 
+      /*
       JsonObject resPCA = DPCA.buildModel(null, dest, data, pcaParams._num_pc).toJson();
       Response r = Response.done(resPCA);
       return r;
+      */
     } catch(RuntimeException e) {
       Log.err(e);
       return Response.error(e.getMessage());
@@ -89,22 +89,28 @@ public class PCA extends Request {
     }
 
     private void modelHTML(PCAModel m, JsonObject json, StringBuilder sb) {
-      JsonArray rows = json.getAsJsonArray("eigenvectors");
-
       sb.append("<span style='display: inline-block;'>");
       sb.append("<table class='table table-striped table-bordered'>");
       sb.append("<tr>");
-      sb.append("<th>Eigenvectors</th>");
-      for( int i = 0; i < m._va._cols.length - 1; i++ )
-        sb.append("<th>").append(m._va._cols[i]._name).append("</th>");
+      sb.append("<th>Feature</th>");
+      for( int i = 0; i < m._pcaParams._num_pc; i++)
+        sb.append("<th>").append("PC" + i).append("</th>");
       sb.append("</tr>");
 
-      for( int r = 0; r < rows.size(); r++ ) {
+      // Row of standard deviation values
+      sb.append("<tr class='warning'>");
+      sb.append("<td>").append("&sigma;").append("</td>");
+      for(int c = 0; c < m._sdev.length; c++)
+        sb.append("<td>").append(ElementBuilder.format(m._sdev[c])).append("</td>");
+      sb.append("</tr>");
+
+      // Each row is component of eigenvector
+      for( int r = 0; r < m._va._cols.length; r++ ) {
         sb.append("<tr>");
-        sb.append("<td>").append(r).append("</td>");
-        for( int c = 0; c < m._eigVec[0].length - 1; c++ ) {
-          JsonElement e = rows.get(r).getAsJsonArray().get(c);
-          sb.append("<td>").append(ElementBuilder.format(e.getAsDouble())).append("</td>");
+        sb.append("<th>").append(m._va._cols[r]._name).append("</th>");
+        for( int c = 0; c < m._pcaParams._num_pc; c++ ) {
+          double e = m._eigVec[c][r];
+          sb.append("<td>").append(ElementBuilder.format(e)).append("</td>");
         }
         sb.append("</tr>");
       }

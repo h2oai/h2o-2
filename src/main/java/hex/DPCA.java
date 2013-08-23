@@ -53,6 +53,7 @@ public abstract class DPCA {
     final int _response;
     public final PCAParams _pcaParams;
     public final double[] _sdev;
+    public final double[] _propVar;
     public final double[][] _eigVec;
 
     public Status status() {
@@ -66,26 +67,32 @@ public abstract class DPCA {
     public static final String NAME = PCAModel.class.getSimpleName();
     public static final String KEY_PREFIX = "__PCAModel_";
 
+    public static final Key makeKey() {
+      return Key.make(KEY_PREFIX + Key.make());
+    }
+
     public PCAModel() {
       _status = Status.NotStarted;
       _colCatMap = null;
       _sdev = null;
+      _propVar = null;
       _eigVec = null;
       _response = 0;
       _pcaParams = null;
     }
 
-    public PCAModel(Status status, float progress, Key k, DataFrame data, double[] sdev, double[][] eigVec, int response,
-        PCAParams pcaps) {
-      this(status, progress, k, data._ary, data._modelDataMap, data._colCatMap, sdev, eigVec, response, pcaps);
+    public PCAModel(Status status, float progress, Key k, DataFrame data, double[] sdev, double[] propVar,
+        double[][] eigVec, int response, PCAParams pcaps) {
+      this(status, progress, k, data._ary, data._modelDataMap, data._colCatMap, sdev, propVar, eigVec, response, pcaps);
     }
 
     public PCAModel(Status status, float progress, Key k, ValueArray ary, int[] colIds, int[] colCatMap, double[] sdev,
-        double[][] eigVec, int response, PCAParams pcap) {
+        double[] propVar, double[][] eigVec, int response, PCAParams pcap) {
       super(k, colIds, ary._key);
       _status = status;
       _colCatMap = colCatMap;
       _sdev = sdev;
+      _propVar = propVar;
       _eigVec = eigVec;
       _response = response;
       _pcaParams = pcap;
@@ -108,10 +115,13 @@ public abstract class DPCA {
 
       // Add standard deviation to output
       JsonObject sdev = new JsonObject();
-      for(int i = 0; i < _sdev.length; i++)
-        // sdev.addProperty(_va._cols[i]._name, _sdev[i]);
-        sdev.addProperty("PC_" + i, _sdev[i]);
+      JsonObject prop = new JsonObject();
+      for(int i = 0; i < _sdev.length; i++) {
+        sdev.addProperty("PC" + i, _sdev[i]);
+        prop.addProperty("PC" + i, _propVar[i]);
+      }
       res.add("stdDev", sdev);
+      res.add("propVar", prop);
 
       // Add eigenvectors to output
       // Singular values ordered in weakly descending order
@@ -128,12 +138,13 @@ public abstract class DPCA {
   }
 
   public static PCAJob startPCAJob(Key dest, final DataFrame data, final PCAParams params) {
-    if(dest == null) dest = Key.make("Result.pca");
+    if(dest == null) dest = PCAModel.makeKey();
     final PCAJob job = new PCAJob(data._ary, dest);
     final double[] sdev = null;
+    final double[] propVar = null;
     final double[][] eigVec = null;
 
-    UKV.put(job.dest(), new PCAModel(Status.ComputingModel, 0.0f, job.dest(), data, sdev, eigVec, 0, params));
+    UKV.put(job.dest(), new PCAModel(Status.ComputingModel, 0.0f, job.dest(), data, sdev, propVar, eigVec, 0, params));
     final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
       @Override public void compute2() {
         try {
@@ -156,9 +167,10 @@ public abstract class DPCA {
   }
 
   public static PCAModel buildModel(Job job, Key resKey, DataFrame data, int num_pc) throws JobCancelledException {
+    if(resKey == null) resKey = PCAModel.makeKey();
+
     // Run SVD on Gram matrix
-    GLMParams temp = new GLMParams(Family.gaussian);
-    GramMatrixFunc gramF = new GramMatrixFunc(data, temp, null);
+    GramMatrixFunc gramF = new GramMatrixFunc(data, new GLMParams(Family.gaussian), null);
     Gram gram = gramF.apply(job, data);
     Matrix myGram = new Matrix(gram.getXX());
     SingularValueDecomposition mySVD = myGram.svd();
@@ -166,22 +178,28 @@ public abstract class DPCA {
     // Compute standard deviation from eigenvalues
     double[] Sval = mySVD.getSingularValues();
     int ncomp = Math.min(num_pc, Sval.length);
-    final double[] sdev = new double[ncomp];
-    for(int i = 0; i < ncomp; i++)
+    double[] sdev = new double[ncomp];
+    double totVar = 0;
+    for(int i = 0; i < ncomp; i++) {
       sdev[i] = Math.sqrt(Sval[i]);
+      totVar += Sval[i];
+    }
 
     // Extract eigenvectors
     Matrix eigV = mySVD.getV();
     int nfeat = eigV.getRowDimension();
-    double[][] eigVsub = new double[ncomp][nfeat];
+    double[][] eigVec = new double[ncomp][nfeat];
+    double[] propVar = new double[ncomp];    // Proportion of total variance
 
     // Singular values ordered in weakly descending order
     for(int i = 0; i < ncomp; i++) {
-      eigVsub[i] = eigV.getMatrix(0,nfeat-1,i,i).getColumnPackedCopy();
+      eigVec[i] = eigV.getMatrix(0,nfeat-1,i,i).getColumnPackedCopy();
+      propVar[i] = Sval[i]/totVar;
     }
 
     PCAParams params = new PCAParams(ncomp);
-    PCAModel myModel = new PCAModel(Status.Done, 0.0f, resKey, data, sdev, eigVsub, 0, params);
+    PCAModel myModel = new PCAModel(Status.Done, 0.0f, resKey, data, sdev, propVar, eigVec, 0, params);
+    myModel.store();
     return myModel;
   }
 }
