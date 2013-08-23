@@ -24,16 +24,18 @@ class Basic(unittest.TestCase):
         print "\nStarting", csvFilename
         csvPathname = h2o.find_file('smalldata/' + csvFilename)
 
-        h2b.browseTheCloud()
+        # h2b.browseTheCloud()
+        # parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", separator=9) # force tab sep
         parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
 
         # loop, to see if we get same centers
         # should check the means?
         # FIX! have to fix these to right answers
         expected = [
-                ([5647967.1, 40487.76], 1000000,   60028168),
-                ([21765291.7, 93129.26], 2000000,  479913618),
-                ([310527.2, 13433.89], 3000000, 1619244994),
+                # expected centers are from R. rest is just from h2o
+                ([310527.2, 13433.89], 11340, None),
+                ([5647967.1, 40487.76], 550, None),
+                ([21765291.7, 93129.26], 14,  None),
             ]
         # all are multipliers of expected tuple value
         allowedDelta = (0.01, 0.01, 0.01)
@@ -45,7 +47,8 @@ class Basic(unittest.TestCase):
                 'normalize': 0,
                 'cols': '0,1',
                 'initialization': 'Furthest', 
-                'destination_key': parseKey['destination_key'],
+                # 'initialization': 'PlusPlus',
+                'destination_key': 'kmeans_dest_key',
                 # reuse the same seed, to get deterministic results (otherwise sometimes fails
                 'seed': 265211114317615310
             }
@@ -53,7 +56,14 @@ class Basic(unittest.TestCase):
             kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=5, **kwargs)
             (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
 
+            if 1==0:
+                h2b.browseJsonHistoryAsUrlLastMatch("KMeansScore")
+                h2b.browseJsonHistoryAsUrlLastMatch("KMeansApply")
+                h2b.browseJsonHistoryAsUrlLastMatch("KMeans")
+                time.sleep(3600)
+
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
+
 
 
 if __name__ == '__main__':
