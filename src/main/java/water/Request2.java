@@ -6,7 +6,6 @@ import java.util.*;
 
 import water.api.Request;
 import water.api.RequestArguments;
-import water.fvec.Frame;
 
 public abstract class Request2 extends Request {
   @Override protected void registered() {
@@ -38,33 +37,38 @@ public abstract class Request2 extends Request {
           // Create an Argument instance to reuse existing Web framework for now
           Argument arg = null;
 
+          // simplest case, filter is an Argument
           if( Argument.class.isAssignableFrom(api.filter()) )
             arg = (Argument) newInstance(api);
-          else {
-            // Real
-            if( f.getType() == float.class || f.getType() == double.class ) {
-              double val = ((Number) defaultValue).doubleValue();
-              arg = new Real(f.getName(), api.required(), val, null, null, api.help());
-            }
 
-            // LongInt
-            else if( f.getType() == int.class || f.getType() == long.class ) {
-              long val = ((Number) defaultValue).longValue();
-              arg = new LongInt(f.getName(), api.required(), val, null, null, api.help());
-            }
-
-            // Bool
-            else if( f.getType() == boolean.class ) {
-              boolean val = (Boolean) defaultValue;
-              arg = new Bool(f.getName(), val, api.help());
-            }
-
-            // Key
-            else if( f.getType() == Key.class )
-              arg = new H2OKey(f.getName(), api.required());
+          // Real
+          else if( f.getType() == float.class || f.getType() == double.class ) {
+            double val = ((Number) defaultValue).doubleValue();
+            arg = new Real(f.getName(), api.required(), val, null, null, api.help());
           }
 
-          if( ColumnSelect.class.isAssignableFrom(api.filter()) ) {
+          // LongInt
+          else if( f.getType() == int.class || f.getType() == long.class ) {
+            long val = ((Number) defaultValue).longValue();
+            arg = new LongInt(f.getName(), api.required(), val, null, null, api.help());
+          }
+
+          // Bool
+          else if( f.getType() == boolean.class ) {
+            boolean val = (Boolean) defaultValue;
+            arg = new Bool(f.getName(), val, api.help());
+          }
+
+          // Key
+          else if( f.getType() == Key.class )
+            arg = new H2OKey(f.getName(), api.required());
+
+          // Auto-cast from key to Iced field
+          else if( Freezable.class.isAssignableFrom(f.getType()) && api.filter() == Default.class )
+            arg = new H2OKey(f.getName(), api.required());
+
+          //
+          else if( ColumnSelect.class.isAssignableFrom(api.filter()) ) {
             ColumnSelect name = (ColumnSelect) newInstance(api);
             H2OHexKey key = null;
             for( Argument a : _arguments )
@@ -72,7 +76,9 @@ public abstract class Request2 extends Request {
                 key = (H2OHexKey) a;
             arg = new HexAllColumnSelect(f.getName(), key);
           }
-          if( VecSelect.class.isAssignableFrom(api.filter()) ) {
+
+          //
+          else if( VecSelect.class.isAssignableFrom(api.filter()) ) {
             VecSelect name = (VecSelect) newInstance(api);
             FrameKey key = null;
             for( Argument a : _arguments )
@@ -138,13 +144,20 @@ public abstract class Request2 extends Request {
     try {
       if( arg._field.getType() == Key.class && value instanceof ValueArray )
         value = ((ValueArray) value)._key;
-      if( arg._field.getType() == Frame.class && value instanceof Key )
-        value = UKV.get((Key) value);
-      if( arg._field.getType() == int.class && value instanceof Long )
+      //
+      else if( arg._field.getType() == int.class && value instanceof Long )
         value = ((Long) value).intValue();
-      if( arg._field.getType() == float.class && value instanceof Double )
+      //
+      else if( arg._field.getType() == float.class && value instanceof Double )
         value = ((Double) value).floatValue();
-      if( value instanceof NumberSequence ) {
+      //
+      else if( arg._field.getType() != Key.class && //
+          Freezable.class.isAssignableFrom(arg._field.getType()) && //
+          value instanceof Key )
+        value = UKV.get((Key) value);
+
+      //
+      else if( value instanceof NumberSequence ) {
         double[] ds = ((NumberSequence) value)._arr;
         if( arg._field.getType() == int[].class ) {
           int[] is = new int[ds.length];

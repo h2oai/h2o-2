@@ -27,6 +27,10 @@ public class NeuralNetTest {
     }
   }
 
+  static Error eval(Layer[] ls) {
+    return eval(ls, (Input) ls[0]);
+  }
+
   static Error eval(Layer[] ls, Input input) {
     Layer[] clones = new Layer[ls.length];
     clones[0] = Utils.clone(input);

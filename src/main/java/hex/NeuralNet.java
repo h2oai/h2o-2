@@ -7,16 +7,16 @@ import hex.Trainer.ThreadedTrainers;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-import water.Job;
-import water.Key;
+import water.*;
 import water.api.DocGen;
 import water.api.Progress2;
 import water.fvec.Frame;
+import water.util.Utils;
 
 public class NeuralNet extends Job {
   static final int API_WEAVER = 1;
   static public DocGen.FieldDoc[] DOC_FIELDS;
-  static final String DOC_GET = "Neural Network";
+  static final String DOC_GET = "Neural network";
 
   @API(help = "Data Frame", required = true, filter = FrameKey.class)
   public Frame source;
@@ -41,52 +41,74 @@ public class NeuralNet extends Job {
   @API(help = "L2 regularization", filter = Default.class)
   public double l2 = .0001;
 
-  @API(help = "How much of the training set is used for validation", filter = Default.class)
-  public double validation_ratio = .2;
+// TODO
+//  @API(help = "How much of the training set is used for validation", filter = Default.class)
+//  public double validation_ratio = .2;
 
   //
 
-  transient Layer[] _ls;
+  @API(help = "Layers")
+  public Layer[] layers;
+
+  /**
+   * Stores weights separately to avoid sending megabytes of JSON.
+   */
+  public static class Weights extends Iced {
+    float[][] _ws, _bs;
+
+    public static Weights get(Layer[] ls) {
+      Weights weights = new Weights();
+      for( int y = 1; y < ls.length; y++ ) {
+        weights._ws[y] = ls[y]._w;
+        weights._bs[y] = ls[y]._b;
+      }
+      return weights;
+    }
+
+    public void set(Layer[] ls) {
+      for( int y = 1; y < ls.length; y++ ) {
+        ls[y]._w = _ws[y];
+        ls[y]._b = _bs[y];
+      }
+    }
+  }
+
+  @API(help = "Layers weights")
+  public Key weights;
 
   // TODO remove static
   static final ConcurrentHashMap<Key, Trainer> _trainers = new ConcurrentHashMap<Key, Trainer>();
 
-  long validation() {
-    return (long) (source.numRows() * validation_ratio);
-  }
-
   @Override protected void run() {
-    _ls = new Layer[3];
+    layers = new Layer[3];
 
-    long test = source.numRows() - validation();
-    _ls[0] = new FrameInput(source, 0, test, true);
-    _ls[0].init(null, source.numCols() - 1);
+    layers[0] = new FrameInput(source);
+    layers[0].init(null, source.numCols() - 1);
     for( int i = 0; i < hidden.length; i++ ) {
       if( activation == Activation.Rectifier )
-        _ls[i + 1] = new Layer.Rectifier();
+        layers[i + 1] = new Layer.Rectifier();
       else
-        _ls[i + 1] = new Layer.Tanh();
-      _ls[i + 1]._rate = (float) rate;
-      _ls[i + 1]._l2 = (float) l2;
-      _ls[i + 1].init(_ls[i], hidden[i]);
+        layers[i + 1] = new Layer.Tanh();
+      layers[i + 1]._rate = (float) rate;
+      layers[i + 1]._l2 = (float) l2;
+      layers[i + 1].init(layers[i], hidden[i]);
     }
-    _ls[_ls.length - 1] = new Layer.Softmax();
-    _ls[_ls.length - 1]._rate = (float) rate;
-    _ls[_ls.length - 1]._l2 = (float) l2;
+    layers[layers.length - 1] = new Layer.Softmax();
+    layers[layers.length - 1]._rate = (float) rate;
+    layers[layers.length - 1]._l2 = (float) l2;
     int classes = source._vecs[source._vecs.length - 1].domain().length;
-    _ls[_ls.length - 1].init(_ls[_ls.length - 2], classes);
+    layers[layers.length - 1].init(layers[layers.length - 2], classes);
 
-    for( int i = 1; i < _ls.length; i++ )
-      _ls[i].randomize();
+    for( int i = 1; i < layers.length; i++ )
+      layers[i].randomize();
 
-    ThreadedTrainers trainer = new ThreadedTrainers(_ls);
-    trainer.start();
+    ThreadedTrainers trainer = new ThreadedTrainers(layers);
     _trainers.put(destination_key, trainer);
-  }
-
-  @Override public void remove() {
-    super.remove();
+    trainer.run();
     _trainers.remove(destination_key);
+
+    weights = Key.make(destination_key.toString() + "_weights");
+    UKV.put(weights, Weights.get(layers));
   }
 
   @Override protected Response redirect() {
@@ -99,11 +121,11 @@ public class NeuralNet extends Job {
     static public DocGen.FieldDoc[] DOC_FIELDS;
     static final String DOC_GET = "Neural Network progress";
 
-    @API(help = "Classification error on the test set (Estimation)")
-    public double test_classification_error;
+    @API(help = "Classification error on the training set (Estimation)")
+    public double train_classification_error;
 
-    @API(help = "Square distance error on the test set (Estimation)")
-    public double test_sqr_error;
+    @API(help = "Square distance error on the training set (Estimation)")
+    public double train_sqr_error;
 
     @API(help = "Classification error on the validation set (Estimation)")
     public double validation_classification_error;
@@ -114,41 +136,39 @@ public class NeuralNet extends Job {
     @Override protected Response serve() {
       Trainer trainer = _trainers.get(Key.make(dst_key.value()));
       if( trainer != null ) {
-        Layer[] ls = trainer.layers();
-        Input test = (Input) ls[0];
-        long off = _net.validation();
-        long len = _net.source.numRows() - off;
-        Input validation = new FrameInput(_net.source, off, len, true);
+        Error trainErr = NeuralNetTest.eval(trainer.layers());
+        train_classification_error = trainErr.Value;
+        train_sqr_error = trainErr.SqrDist;
 
-        Error testErr = NeuralNetTest.eval(_net._ls, test);
-        test_classification_error = testErr.Value;
-        test_sqr_error = testErr.SqrDist;
-
-        Error validationErr = NeuralNetTest.eval(_net._ls, validation);
-        validation_classification_error = validationErr.Value;
-        validation_sqr_error = validationErr.SqrDist;
+        // TODO
+//        Error validationErr = NeuralNetTest.eval(_net._ls, validation);
+//        validation_classification_error = validationErr.Value;
+//        validation_sqr_error = validationErr.SqrDist;
       }
       // TODO
       return new Response(Response.Status.done, this, -1, -1, null);
     }
 
     @Override public boolean toHTML(StringBuilder sb) {
-      sb.append("<h3>Confusion Matrix</h3>");
-      sb.append("<dl class='dl-horizontal'>");
-      sb.append("<dt>Test error</dt>");
-      sb.append("<dd>").append(String.format("%5.3f %%", 100 * test_classification_error)).append("</dd>");
-      sb.append("<dt>Validation error</dt>");
-      sb.append("<dd>").append(String.format("%5.3f %%", 100 * validation_classification_error)).append("</dd>");;
-      sb.append("</dl>");
-      sb.append("<table class='table table-striped table-bordered table-condensed'>");
-      sb.append("<tr><th>Actual \\ Predicted</th>");
-      String[] classes = _net.source._vecs[_net.source._vecs.length - 1].domain();
-      for( String c : classes )
-        sb.append("<th>" + c + "</th>");
-      sb.append("<th>Error</th></tr>");
-      long[] totals = new long[classes.length];
-      long sumTotal = 0;
-      long sumError = 0;
+      Trainer trainer = _trainers.get(Key.make(dst_key.value()));
+      if( trainer != null ) {
+        sb.append("<h3>Confusion Matrix</h3>");
+        sb.append("<dl class='dl-horizontal'>");
+        sb.append("<dt>Test error</dt>");
+        sb.append("<dd>").append(String.format("%5.3f %%", 100 * train_classification_error)).append("</dd>");
+        sb.append("<dt>Validation error</dt>");
+        sb.append("<dd>").append(String.format("%5.3f %%", 100 * validation_classification_error)).append("</dd>");;
+        sb.append("</dl>");
+        sb.append("<table class='table table-striped table-bordered table-condensed'>");
+        sb.append("<tr><th>Actual \\ Predicted</th>");
+//        Frame frame = trainer.layers()
+//        String[] classes = _net.source._vecs[_net.source._vecs.length - 1].domain();
+//        for( String c : classes )
+//          sb.append("<th>" + c + "</th>");
+//        sb.append("<th>Error</th></tr>");
+//        long[] totals = new long[classes.length];
+//        long sumTotal = 0;
+//        long sumError = 0;
 //      for( int crow = 0; crow < classes; ++crow ) {
 //        JsonArray row = (JsonArray) matrix.get(crow);
 //        long total = 0;
@@ -173,14 +193,62 @@ public class NeuralNet extends Job {
 //        sumTotal += total;
 //        sumError += error;
 //      }
-      sb.append("<tr><th>Totals</th>");
-      for( int i = 0; i < totals.length; ++i )
-        sb.append("<td>" + totals[i] + "</td>");
-      sb.append("<td><b>");
-      sb.append(String.format("%5.3f = %d / %d", (double) sumError / sumTotal, sumError, sumTotal));
-      sb.append("</b></td></tr>");
-      sb.append("</table>");
+//        sb.append("<tr><th>Totals</th>");
+//        for( int i = 0; i < totals.length; ++i )
+//          sb.append("<td>" + totals[i] + "</td>");
+//        sb.append("<td><b>");
+//        sb.append(String.format("%5.3f = %d / %d", (double) sumError / sumTotal, sumError, sumTotal));
+//        sb.append("</b></td></tr>");
+//        sb.append("</table>");
+      }
       return true;
+    }
+  }
+
+  public static class NeuralNetScore extends FrameJob {
+    static final int API_WEAVER = 1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
+    static final String DOC_GET = "Neural network scoring";
+
+    @API(help = "Model", filter = Default.class)
+    public NeuralNet model;
+
+    @API(help = "Rows to consider for scoring, 0 (default) means the whole frame", filter = Default.class)
+    public long max_rows;
+
+    @API(help = "Classification error")
+    public double classification_error;
+
+    @API(help = "Square distance error")
+    public double sqr_error;
+
+    @Override protected Response serve() {
+      Layer[] ls = model.layers;
+      Layer[] clones = new Layer[ls.length];
+      clones[0] = Utils.clone(ls[0]); // TODO clean
+      clones[0]._a = ls[0]._a.clone();
+      for( int i = 1; i < ls.length; i++ )
+        clones[i] = Utils.deepClone(ls[i], "_in");
+      for( int i = 1; i < ls.length; i++ )
+        clones[i]._in = clones[i - 1];
+
+      Weights weights = UKV.get(model.weights);
+      weights.set(ls);
+      Input test = (Input) ls[0];
+      long off = _net.validation();
+      long len = _net.source.numRows() - off;
+      Input validation = new FrameInput(_net.source, off, len, true);
+
+      Error testErr = NeuralNetTest.eval(_net._ls, test);
+      test_classification_error = testErr.Value;
+      test_sqr_error = testErr.SqrDist;
+
+      Error validationErr = NeuralNetTest.eval(_net._ls, validation);
+      validation_classification_error = validationErr.Value;
+      validation_sqr_error = validationErr.SqrDist;
+
+      // TODO
+      return new Response(Response.Status.done, this, -1, -1, null);
     }
   }
 }

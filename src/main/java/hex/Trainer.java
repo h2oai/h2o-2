@@ -3,6 +3,7 @@ package hex;
 import hex.Layer.ChunksInput;
 import hex.Layer.FrameInput;
 import hex.Layer.Input;
+import hex.NeuralNet.Weights;
 
 import java.io.IOException;
 import java.nio.FloatBuffer;
@@ -316,12 +317,7 @@ public abstract class Trainer {
     }
 
     @Override void run() {
-      Weights weights = new Weights();
-      for( int y = 1; y < _ls.length; y++ ) {
-        weights._ws[y] = _ls[y]._w;
-        weights._bs[y] = _ls[y]._b;
-      }
-
+      Weights weights = Weights.get(_ls);
       String uid = UUID.randomUUID().toString();
       for( int i = 0; i < H2O.CLOUD._memary.length; i++ ) {
         Key key = key(uid, i);
@@ -349,10 +345,6 @@ public abstract class Trainer {
     }
   }
 
-  static class Weights extends Iced {
-    float[][] _ws, _bs;
-  }
-
   static class Pass extends MRTask2<Pass> {
     String _uid;
     Layer[] _ls;
@@ -368,10 +360,7 @@ public abstract class Trainer {
         clones[y] = Utils.newInstance(_ls[y]);
         clones[y].init(clones[y - 1], weights._bs[y].length);
       }
-      for( int y = 1; y < _ls.length; y++ ) {
-        _ls[y]._w = weights._ws[y];
-        _ls[y]._b = weights._bs[y];
-      }
+      weights.set(_ls);
       Base base = new Base(clones);
       Log.info("pos:" + cs[0]._start + ", for:" + cs[0]._len);
       for( int i = 0; i < cs[0]._len; i++ ) {

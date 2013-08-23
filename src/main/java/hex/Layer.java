@@ -123,7 +123,7 @@ public abstract class Layer extends Iced {
     }
 
     if( prev != null ) {
-      // Nesterov Accelerated Gradient
+      // Nesterov's Accelerated Gradient
       float v = (w[i] - prev[i]) * _m;
       prev[i] = w[i];
       w[i] += coef * v;
@@ -153,20 +153,14 @@ public abstract class Layer extends Iced {
 
   public static class FrameInput extends Input {
     Frame _frame;
-    long _off, _len, _row;
+    long _row;
     transient Chunk[] _caches;
 
     public FrameInput() {
     }
 
     public FrameInput(Frame frame) {
-      this(frame, 0, frame.numRows());
-    }
-
-    public FrameInput(Frame frame, long off, long len) {
       _frame = frame;
-      _off = off;
-      _len = len;
     }
 
     @Override int label() {
@@ -192,12 +186,8 @@ public abstract class Layer extends Iced {
       return _caches[i] = _frame._vecs[i].chunk(n);
     }
 
-    public final long limit() {
-      return _off + _len;
-    }
-
     @Override public long move() {
-      return _row = _row == limit() - 1 ? _off : _row + 1;
+      return _row = _row == _frame.numRows() - 1 ? 0 : _row + 1;
     }
   }
 
@@ -360,11 +350,11 @@ public abstract class Layer extends Iced {
    * mean 0 and variance 1 / ( 1 + e-x )
    */
   void contrastiveDivergence(float[] in) {
-    float[] v1 = in;
-    float[] h1 = new float[_b.length];
+//    float[] v1 = in;
+//    float[] h1 = new float[_b.length];
 //    fprop(v1, h1);
-    float[] v2 = generate(h1);
-    float[] h2 = new float[_b.length];
+//    float[] v2 = generate(h1);
+//    float[] h2 = new float[_b.length];
 //    fprop(v2, h2);
 
 //    for( int o = 0; o < _b.length; o++ )
@@ -374,8 +364,8 @@ public abstract class Layer extends Iced {
 //    for( int o = 0; o < _gb.length; o++ )
 //      _gb[o] += _rate * (h1[o] - h2[o]);
 
-    for( int i = 0; i < _gv.length; i++ )
-      _gv[i] += _rate * (v1[i] - v2[i]);
+//    for( int i = 0; i < _gv.length; i++ )
+//      _gv[i] += _rate * (v1[i] - v2[i]);
   }
 
   final void adjustVisible() {

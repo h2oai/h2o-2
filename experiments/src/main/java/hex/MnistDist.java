@@ -4,11 +4,11 @@ import water.Sandbox;
 
 public class MnistDist extends MnistCanvas {
   public static void main(String[] args) throws Exception {
-    water.Boot.main(UserMain.class, args);
+    water.Boot.main(UserCode.class, args);
   }
 
-  public static class UserMain {
-    public static void main(String[] args) throws Exception {
+  public static class UserCode {
+    public static void userMain(String[] args) throws Exception {
       Sandbox.localCloud(2, true, new String[0]);
 
       NeuralNetMnistTest mnist = new NeuralNetMnistTest();
