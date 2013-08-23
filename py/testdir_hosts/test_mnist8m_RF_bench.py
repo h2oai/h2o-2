@@ -27,7 +27,7 @@ configs = {
                 'model_key': 'RF_model',
                 'bin_limit': 1024,
                 'seed': 784834182943470027,
-                'parallel': 1,
+                'parallel': 0,
                 'use_non_local_data': 0,
                 'class_weights': '0=1.0,1=1.0,2=1.0,3=1.0,4=1.0,5=1.0,6=1.0,7=1.0,8=1.0,9=1.0',
                 }
@@ -104,7 +104,8 @@ class Basic(unittest.TestCase):
             #RFView (score on test)#
             kwargs = configs.copy()
             testRFStart = time.time()
-            kwargs.update({'model_key':modelKey,'ntree':10})
+            kwargs.update({'model_key':modelKey,'ntree':10,
+                            'out_of_bag_error_estimate': 1})
             rfView = h2o_cmd.runRFView(data_key=destKey,timeoutSecs=180,
                                                doSimpleCheck=False,**kwargs)
             testViewTime = time.time() - testRFStart
