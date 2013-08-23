@@ -6,6 +6,18 @@ setGeneric("h2o.randomForest", function(y, x_ignore = "", data, ntree, depth, cl
 setGeneric("h2o.getTree", function(forest, k, plot = FALSE) { standardGeneric("h2o.getTree") })
 setGeneric("h2o.glmgrid", function(x, y, data, family, nfolds = 10, alpha = c(0.25,0.5), lambda = 1.0e-5) { standardGeneric("h2o.glmgrid") })
 
+setMethod("prcomp", signature(x="H2OParsedData"), function(x, ...) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_PCA, key = x@key, num_pc = ncol(x))
+  while(h2o.__poll(x@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
+  result = list()
+  result$sdev = as.numeric(unlist(res$stdDev))
+  # result$rotation = do.call(rbind, res$eigenvectors)
+  temp = t(do.call(rbind, res$eigenvectors))
+  colnames(temp) = paste("PC", seq(1, ncol(temp)), sep="")
+  result$rotation = temp
+  result
+})
+
 setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="numeric", alpha="numeric", lambda="numeric"),
           function(x, y, data, family, nfolds, alpha, lambda) {
             # res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key = data@key, y = y, x = paste(x, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda)
