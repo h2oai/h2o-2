@@ -1,10 +1,16 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_rf, h2o_util
+import getpass
 
 # set to true, if the files are available locally in /home/0xdiag/datasets/standard
 # will parse from there with import 
-USE_LOCAL=True
+
+# hack to make ec2 redirect to s3. (not using the normal methods below)
+if getpass.getuser() == 'jenkins':
+    USE_LOCAL=False
+else:
+    USE_LOCAL=True
 
 # RF train parameters
 print "Try params to get best result on build_cloud(1) local (1 jvm) "
