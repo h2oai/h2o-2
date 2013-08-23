@@ -11,7 +11,7 @@ def define_params(SEED):
         'k': [2, 5], # seems two slow tih 12 clusters if all cols
         'initialization': ['None', 'PlusPlus', 'Furthest'],
         'cols': [None, "0", "3", "0,1,2,3,4,5,6"],
-        'max_iter': [1, 5, 10, 100],
+        'max_iter': [1, 5, 10, 20],
         'seed': [None, 12345678, SEED],
         'normalize': [None, 0, 1],
         # 'destination_key:': "junk",
@@ -29,7 +29,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1,java_heap_GB=4)
+            h2o.build_cloud(3,java_heap_GB=4)
         else:
             h2o_hosts.build_cloud_with_hosts()
 

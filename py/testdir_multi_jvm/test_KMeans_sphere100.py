@@ -8,13 +8,13 @@ import h2o_util
 # he offers the exact solution: http://stackoverflow.com/questions/918736/random-number-generator-that-produces-a-power-law-distribution/918782#918782
 # In spherical coordinates, taking advantage of the sampling rule:
 # http://stackoverflow.com/questions/2106503/pseudorandom-number-generator-exponential-distribution/2106568#2106568
-CLUSTERS = 3
+CLUSTERS = 8
 SPHERE_PTS = 10000
 RANDOMIZE_SPHERE_PTS = True
-DIMENSIONS = 3 # 1,2 or 3
+DIMENSIONS = 4 # 1,2 or 3
 JUMP_RANDOM_ALL_DIRS = True
 # should do this, but does it make h2o kmeans fail?
-SHUFFLE_SPHERES = False
+SHUFFLE_SPHERES = True
 R_NOISE = True
 ALLOWED_CENTER_DELTA = 1
 
@@ -124,9 +124,9 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1)
+            h2o.build_cloud(2, java_heap_GB=7)
         else:
-            h2o_hosts.build_cloud_with_hosts(1)
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
