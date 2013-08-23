@@ -17,7 +17,7 @@ configs = {
                 'response_variable': 0,
                 'ntree': 10,
                 'iterative_cm': 0,
-                'out_of_bag_error_estimate': 1,
+                'out_of_bag_error_estimate': 0,
                 'features': 37,
                 'exclusive_split_limit': None,
                 'depth': 2147483647,
