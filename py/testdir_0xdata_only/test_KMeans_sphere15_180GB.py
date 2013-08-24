@@ -2,12 +2,9 @@ import unittest, time, sys, random, math
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import as h2i
 
-
 # kevin@mr-0xb1:~/h2o/py/testdir_hosts$ ls -ltr /home3/0xdiag/datasets/kmeans_big
 # -rw-rw-r-- 1 0xdiag 0xdiag 183538602156 Aug 24 11:43 syn_sphere15_2711545732row_6col_180GB_from_7x.csv
 # -rwxrwxr-x 1 0xdiag 0xdiag         1947 Aug 24 12:21 sphere15_makeit
-
-
 FROM_HDFS = False
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -19,9 +16,10 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1, java_heap_GB=240)
+            h2o.build_cloud(1, java_heap_GB=240, enable_benchmark_log=True)
+            # h2o.build_cloud(1, java_heap_GB=28, enable_benchmark_log=True)
         else:
-            h2o_hosts.build_cloud_with_hosts()
+            h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
 
     @classmethod
     def tearDownClass(cls):
@@ -55,6 +53,11 @@ class Basic(unittest.TestCase):
             ([36.0, -4.173732335827099, 37.271374409504695, 1629.8530097520427, 13546347.0, 18548.0], 49323, 510001.2618453919) ,
         ]
 
+        benchmarkLogging = ['cpu','disk', 'network', 'iostats', 'jstack']
+        benchmarkLogging = ['cpu','disk', 'network', 'iostats']
+        # IOStatus can hang?
+        benchmarkLogging = ['cpu', 'disk' 'network']
+
         for trial in range(6):
             # IMPORT**********************************************
             # since H2O deletes the source key, re-import every iteration.
@@ -71,10 +74,13 @@ class Basic(unittest.TestCase):
             kwargs = {}
             if FROM_HDFS:
                 parseKey = h2i.parseImportHdfsFile(None, csvFilename, importFolderPath, key2=key2,
-                    timeoutSecs=timeoutSecs, pollTimeoutsecs=60, retryDelaySecs=2, **kwargs)
+                    timeoutSecs=timeoutSecs, pollTimeoutsecs=60, retryDelaySecs=2,
+                    benchmarkLogging=benchmarkLogging, **kwargs)
+
             else:
                 parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2,
-                    timeoutSecs=timeoutSecs, pollTimeoutsecs=60, retryDelaySecs=2, **kwargs)
+                    timeoutSecs=timeoutSecs, pollTimeoutsecs=60, retryDelaySecs=2,
+                    benchmarkLogging=benchmarkLogging, **kwargs)
 
             # KMeans ****************************************
             print "col 0 is enum in " + csvFilename + " but KMeans should skip that automatically?? or no?"
@@ -97,7 +103,8 @@ class Basic(unittest.TestCase):
 
             timeoutSecs = 3600
             start = time.time()
-            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=timeoutSecs,
+                    benchmarkLogging=benchmarkLogging, **kwargs)
             elapsed = time.time() - start
             print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 
