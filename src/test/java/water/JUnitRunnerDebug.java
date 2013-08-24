@@ -1,6 +1,6 @@
 package water;
 
-import hex.KMeansTest;
+import hex.NeuralNetIrisTest;
 
 import java.util.ArrayList;
 
@@ -13,11 +13,11 @@ import water.util.Utils;
 
 public class JUnitRunnerDebug {
   public static void main(String[] args) throws Exception {
-    water.Boot.main(Master.class, args);
+    water.Boot.main(UserCode.class, args);
   }
 
-  public static class Master {
-    public static void main(String[] args) {
+  public static class UserCode {
+    public static void userMain(String[] args) {
       String flat = "";
       flat += "127.0.0.1:54321\n";
       flat += "127.0.0.1:54323\n";
@@ -30,17 +30,18 @@ public class JUnitRunnerDebug {
 
       ArrayList<Class> tests = new ArrayList<Class>();
 
-      // Test classes to run:
-      tests.add(KMeansTest.class);
+      // Classes to test:
+      tests.add(NeuralNetIrisTest.class);
 
       Result result = org.junit.runner.JUnitCore.runClasses(tests.toArray(new Class[0]));
       if( result.getFailures().size() == 0 )
         System.out.println("Success!");
-      else
+      else {
         for( Failure f : result.getFailures() ) {
           Log.info(f.getDescription());
           f.getException().printStackTrace();;
         }
+      }
     }
   }
 }

@@ -1,6 +1,7 @@
 package water;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -9,6 +10,7 @@ import java.util.Arrays;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
+import water.fvec.*;
 import water.parser.ParseDataset;
 import water.util.Log;
 
@@ -33,9 +35,13 @@ public class TestUtil {
     DKV.remove(Log.LOG_KEY);
     DKV.write_barrier();
     int leaked_keys = H2O.store_size() - _initial_keycnt;
-    if( leaked_keys > 0 )
-      for( Key k : H2O.keySet() )
-        System.err.println("Leaked key: " + k);
+    if( leaked_keys > 0 ) {
+      for( Key k : H2O.keySet() ) {
+        Value value = DKV.get(k);
+        Object o = value.type() != TypeMap.PRIM_B ? value.get() : "byte[]";
+        System.err.println("Leaked key: " + k + " = " + o);
+      }
+    }
     assertTrue("No keys leaked", leaked_keys<=0);
     _initial_keycnt = H2O.store_size();
   }
@@ -322,5 +328,13 @@ public class TestUtil {
       arys[i] = x[i];
     arys[M] = d;
     return va_maker(key, arys);
+  }
+
+  // Fluid Vectors
+
+  public static Frame parseFrame(String path) {
+    File file = new File(path);
+    Key fkey = NFSFileVec.make(file);
+    return ParseDataset2.parse(Key.make(file.getName()), new Key[] { fkey });
   }
 }

@@ -5,6 +5,7 @@ import hex.rng.H2ORandomRNG.RNGKind;
 import hex.rng.H2ORandomRNG.RNGType;
 
 import java.io.*;
+import java.lang.reflect.*;
 import java.net.Socket;
 import java.security.SecureRandom;
 import java.text.DecimalFormat;
@@ -26,15 +27,6 @@ public class Utils {
   public static int maxIndex(int[] from, Random rand) {
     assert rand != null;
     int result = 0;
-    boolean tie=false;
-    for( int i = 1; i < from.length; ++i ) {
-      if( from[i] > from[result] ) { result = i; tie = false; }
-      else if( from[i] == from[result] ) { tie = true; }
-    }
-    if( !tie ) return result;
-
-    // Retry, randomly picking from ties
-    result = 0;
     int maxCount = 0; // count of maximal element for a 1 item reservoir sample
     for( int i = 1; i < from.length; ++i ) {
       if( from[i] > from[result] ) {
@@ -126,7 +118,7 @@ public class Utils {
   }
 
   /* Returns the configured random generator */
-  public static Random getRNG(long... seed) {
+  public synchronized static Random getRNG(long... seed) {
     assert _rngType != null : "Random generator type has to be configured";
     switch (_rngType) {
     case JavaRNG:
@@ -136,12 +128,11 @@ public class Utils {
       // do not copy the seeds - use them, and initialize the first two ints by seeds based given argument
       // the call is locked, and also MersenneTwisterRNG will just copy the seeds into its datastructures
       assert seed.length == 1;
-      long s = seed[0];
-      synchronized(Utils.class) {
-        MersenneTwisterRNG.SEEDS[0] = (int)(s&0xffffffffL);
-        MersenneTwisterRNG.SEEDS[1] = (int)(s>>32);
-        return new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-      }
+      int[] seeds    = MersenneTwisterRNG.SEEDS;
+      int[] inSeeds = unpackInts(seed);
+      seeds[0] = inSeeds[0];
+      seeds[1] = inSeeds[1];
+      return new MersenneTwisterRNG(seeds);
     case XorShiftRNG:
       assert seed.length >= 1;
       return new XorShiftRNG(seed[0]);
@@ -292,8 +283,12 @@ public class Utils {
   }
 
   public static String join(char sep, Object[] array) {
+    return join(sep, Arrays.asList(array));
+  }
+
+  public static String join(char sep, Iterable it) {
     String s = "";
-    for( Object o : array )
+    for( Object o : it )
       s += (s.length() == 0 ? "" : sep) + o.toString();
     return s;
   }
@@ -364,7 +359,7 @@ public class Utils {
     Futures fs = new Futures();
     Key k = c.importFile(0, fs);
     fs.blockForPending();
-    ParseDataset.forkParseDataset(okey, new Key[]{k}, null).get();
+    ParseDataset.forkParseDataset(okey, new Key[] { k }, null).get();
     UKV.remove(k);
     ValueArray res = DKV.get(okey).get();
     return res;
@@ -390,7 +385,7 @@ public class Utils {
     return Compression.NONE;
   }
 
-  public static byte [] unzipBytes(byte [] bs, Compression cmp){
+  public static byte [] unzipBytes(byte [] bs, Compression cmp) {
     InputStream is = null;
     int off = 0;
     try {
@@ -436,6 +431,76 @@ public class Utils {
     return bs;
   }
 
+  public static <T> T newInstance(T o) {
+    Class c = o.getClass();
+    try {
+      Constructor ctor = c.getDeclaredConstructor();
+      ctor.setAccessible(true);
+      return (T) ctor.newInstance();
+    } catch( Exception e ) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static <T> T clone(T o) {
+    return clone(o, false);
+  }
+
+  public static <T> T deepClone(T o, String... except) {
+    return clone(o, true, except);
+  }
+
+  private static <T> T clone(T o, boolean deep, String... except) {
+    Class c = o.getClass();
+    try {
+      Constructor ctor = c.getDeclaredConstructor();
+      ctor.setAccessible(true);
+      Object clone = ctor.newInstance();
+      ArrayList<Field> fields = new ArrayList<Field>();
+      HashSet<String> excepts = new HashSet<String>(Arrays.asList(except));
+      getAllFields(fields, c);
+      for( Field f : fields ) {
+        f.setAccessible(true);
+        if( !Modifier.isStatic(f.getModifiers()) ) {
+          Object v = f.get(o);
+          boolean except_ = excepts.remove(f.getName());
+          if( v != null ) {
+            if( !deep || except_ )
+              f.set(clone, v);
+            else if( v instanceof Number ) f.set(clone, v);
+            else if( v instanceof Boolean ) f.set(clone, v);
+            else if( v instanceof float[] ) f.set(clone, ((float[]) v).clone());
+            else if( v instanceof int[] ) f.set(clone, ((int[]) v).clone());
+            else if( v instanceof float[][] ) {
+              float[][] a = (float[][]) v;
+              float[][] t = new float[a.length][];
+              for( int i = 0; i < a.length; i++ )
+                t[i] = a[i].clone();
+              f.set(clone, t);
+            } else if( v instanceof int[][] ) {
+              int[][] a = (int[][]) v;
+              int[][] t = new int[a.length][];
+              for( int i = 0; i < a.length; i++ )
+                t[i] = a[i].clone();
+              f.set(clone, t);
+            }
+            // TODO other types
+            else throw new RuntimeException("Field " + f + " cannot be cloned");
+          }
+        }
+      }
+      return (T) clone;
+    } catch( Exception e ) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static void getAllFields(List<Field> fields, Class<?> type) {
+    for( Field field : type.getDeclaredFields() )
+      fields.add(field);
+    if( type.getSuperclass() != null ) getAllFields(fields, type.getSuperclass());
+  }
+
   /**
    * Simple wrapper around ArrayList with support for H2O serialization
    * @author tomasnykodym
@@ -472,5 +537,4 @@ public class Utils {
       return null;
     }
   }
-
 }

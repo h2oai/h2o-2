@@ -7,7 +7,6 @@ import java.util.Locale;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.PropertyConfigurator;
 
-import org.omg.PortableServer.ThreadPolicyOperations;
 import water.*;
 import water.api.Constants.Schemes;
 import water.util.Log.Tag.Kind;
@@ -220,7 +219,7 @@ public abstract class Log {
       String headers = _longHeaders;
       if(headers == null) {
         String host = H2O.SELF_ADDRESS != null ? H2O.SELF_ADDRESS.getHostAddress() : "";
-        headers = fixedLength(host + " ", 16) + fixedLength(PID + " ", 6);
+        headers = fixedLength(host + ":" + H2O.API_PORT + " ", 22) + fixedLength(PID + " ", 6);
         if(H2O.SELF_ADDRESS != null) _longHeaders = headers;
       }
       buf.append(when.startAsString()).append(" ").append(headers);

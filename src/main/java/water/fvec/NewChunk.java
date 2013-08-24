@@ -39,12 +39,12 @@ public class NewChunk extends Chunk {
     append2(0,Integer.MIN_VALUE); ++_naCnt;
   }
   private boolean _hasFloat;
-  public void addNum(long val, int exp){
+  public void addNum(long val, int exp) {
     if(val == 0)exp = 0;
     _hasFloat |= (exp < 0);
     append2(val,exp);
   }
-  public void addEnum(int e){
+  public void addEnum(int e) {
     append2(0,e); ++_strCnt;
   }
   public void addNum(double d) {

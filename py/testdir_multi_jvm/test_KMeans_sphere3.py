@@ -101,7 +101,7 @@ class Basic(unittest.TestCase):
                 'seed': 0,
                 }
 
-            timeoutSecs = 30
+            timeoutSecs = 90
             start = time.time()
             kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start

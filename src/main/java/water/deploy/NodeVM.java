@@ -11,7 +11,7 @@ public class NodeVM extends VM implements Node {
   }
 
   public NodeVM(String[] args) {
-    super(cloneParams(), args);
+    super(javaArgs(NodeVM.class.getName()), args);
   }
 
   public static void main(String[] args) throws Exception {

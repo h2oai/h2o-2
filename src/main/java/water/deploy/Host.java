@@ -49,60 +49,58 @@ public class Host {
     return _key;
   }
 
-  public static String[] defaultIncludes() {
-    ArrayList<String> l = new ArrayList<String>();
+  public static Set<String> defaultIncludes() {
+    Set<String> set = new HashSet<String>();
     if( Boot._init.fromJar() ) {
-      if( new File("target/h2o.jar").exists() ) l.add("target/h2o.jar");
-      else l.add("h2o.jar");
+      if( new File("target/h2o.jar").exists() )
+        set.add("target/h2o.jar");
+      else
+        set.add("h2o.jar");
     } else {
-      l.add("target");
-      l.add("lib");
+      set.add("target");
+      set.add("lib");
     }
-    return l.toArray(new String[0]);
+    return set;
   }
 
-  public static String[] defaultExcludes() {
-    ArrayList<String> l = new ArrayList<String>();
+  public static Set<String> defaultExcludes() {
+    Set<String> set = new HashSet<String>();
     if( !Boot._init.fromJar() ) {
-      l.add("target/*.jar");
-      l.add("lib/javassist");
-      l.add("**/*-sources.jar");
+      set.add("target/*.jar");
+      set.add("target/javadoc/**");
+      set.add("lib/javassist");
+      set.add("**/*-sources.jar");
     }
-    return l.toArray(new String[0]);
+    return set;
   }
 
-  public void rsync(Collection<String> includes, Collection<String> excludes) {
-    rsync(includes.toArray(new String[0]), excludes != null ? excludes.toArray(new String[0]) : null);
+  public void rsync() {
+    rsync(defaultIncludes(), defaultExcludes(), false);
   }
 
-  public void rsync(String[] includes, String[] excludes) {
+  public void rsync(Set<String> includes, Set<String> excludes, boolean delete) {
     Process process = null;
     try {
       ArrayList<String> args = new ArrayList<String>();
-      File onWindows = new File("C:/cygwin/bin/rsync.exe");
-      args.add(onWindows.exists() ? onWindows.getAbsolutePath() : "rsync");
-      args.add("-" + (H2O.DEBUG ? "" : "q") + "vrzute");
+      args.add("rsync");
+      args.add("-vrzute");
       args.add(sshWithArgs());
       args.add("--chmod=u=rwx");
 
-      for( int i = 0; i < includes.length; i++ ) {
-        String path = new File(includes[i]).getAbsolutePath();
-        // Adapts paths in case running on Windows
-        includes[i] = path.replace('\\', '/').replace("C:/", "/cygdrive/c/");
-      }
-      args.addAll(Arrays.asList(includes));
+      for( String s : includes )
+        args.add(new File(s).getCanonicalPath());
 
       // --exclude seems ignored on Linux (?) so use --exclude-from
       File file = Utils.writeFile(Utils.join('\n', excludes));
       args.add("--exclude-from");
-      args.add(file.getAbsolutePath());
+      args.add(file.getCanonicalPath());
+      if( delete )
+        args.add("--delete");
 
       args.add(_address + ":" + "/home/" + _user + "/" + FOLDER);
       ProcessBuilder builder = new ProcessBuilder(args);
-      builder.environment().put("CYGWIN", "nodosfilewarning");
       process = builder.start();
-      String log = "rsync " + VM.localIP() + " -> " + _address;
-      if( !H2O.DEBUG ) Log.debug(log);
+      String log = "rsync " + H2O.findInetAddressForSelf() + " -> " + _address;
       NodeVM.inheritIO(process, Log.padRight(log + ": ", 24));
       process.waitFor();
     } catch( Exception ex ) {
@@ -111,19 +109,26 @@ public class Host {
       if( process != null ) {
         try {
           process.destroy();
-        } catch( Exception _ ) { /* ignore */}
+        } catch( Exception _ ) {
+          // Ignore
+        }
       }
     }
   }
 
-  public static void rsync(final Host[] hosts, final String[] includes, final String[] excludes) {
+  public static void rsync(final Host... hosts) {
+    rsync(hosts, defaultIncludes(), defaultExcludes(), false);
+  }
+
+  public static void rsync(final Host[] hosts, final Set<String> includes, final Set<String> excludes,
+      final boolean delete) {
     ArrayList<Thread> threads = new ArrayList<Thread>();
 
     for( int i = 0; i < hosts.length; i++ ) {
       final int i_ = i;
       Thread t = new Thread() {
         @Override public void run() {
-          hosts[i_].rsync(includes, excludes);
+          hosts[i_].rsync(includes, excludes, delete);
         }
       };
       t.setDaemon(true);
@@ -140,20 +145,6 @@ public class Host {
     }
   }
 
-  static String ssh() {
-    String ssh = "ssh";
-    File onWindows = new File("C:/cygwin/bin/ssh.exe");
-    if( onWindows.exists() ) {
-      // Permissions are not always set correctly
-      // TODO automate:
-      // cd .ssh
-      // chgrp Users id_rsa
-      // chmod 600 id_rsa
-      ssh = onWindows.getPath();
-    }
-    return ssh;
-  }
-
   String sshWithArgs() {
     String k = "";
     if( _key != null ) {
@@ -167,6 +158,10 @@ public class Host {
       }
       k = " -i " + _key;
     }
-    return ssh() + " -l " + _user + " -A" + k + SSH_OPTS;
+    return "ssh -l " + _user + " -A" + k + SSH_OPTS;
+  }
+
+  @Override public String toString() {
+    return "Host " + _address;
   }
 }

@@ -67,13 +67,13 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
     // Which forks, then QUIETLY join to not propagate local exceptions out.
     if( _exception != null )    // Propagate a Distro exception if one is available
       throw _exception.toEx();
-    return self(); 
+    return self();
   }
 
   // Decide to do local-work or remote-work
   @Override public final void compute2() {
     if( _is_local ) {
-      try { lcompute(); } 
+      try { lcompute(); }
       catch( RuntimeException e ) { _exception = new DException(e); completeExceptionally(e); }
       catch( AssertionError   e ) { _exception = new DException(e); completeExceptionally(e); }
       catch( OutOfMemoryError e ) { _exception = new DException(e); completeExceptionally(e); }
@@ -167,7 +167,7 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
     if( drt == null ) return;
     if( drt._exception != null ) // Capture other-side exception and start ignoring all
       _exception = drt._exception;
-    else 
+    else
       reduce(drt);
   }
 
@@ -202,13 +202,6 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
       if( k._kb[0] == Key.KEY_OF_KEYS )
         return true;
     return false;
-  }
-
-  private byte has_remote_keys( ) {
-    for( Key k : _keys )
-      if( !k.home() )
-        return 1;
-    return 2;
   }
 
   public Futures getFutures() {

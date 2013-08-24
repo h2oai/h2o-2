@@ -48,10 +48,9 @@ public class RandomForestTest extends TestUtil {
   }
 
   /*@org.junit.Test*/ public void covtype() {
-    //Key okey = loadAndParseFile("covtype.hex", "smalldata/covtype/covtype.20k.data");
+    Key okey = loadAndParseFile("covtype.hex", "smalldata/covtype/covtype.20k.data");
     //Key okey = loadAndParseFile("covtype.hex", "../datasets/UCI/UCI-large/covtype/covtype.data");
     //Key okey = loadAndParseFile("covtype.hex", "/home/0xdiag/datasets/standard/covtype.data");
-    Key okey = loadAndParseFile("mnist.hex", "smalldata/mnist/mnist8m.10k.csv.gz");
     //Key okey = loadAndParseFile("mnist.hex", "/home/0xdiag/datasets/mnist/mnist8m.csv");
     ValueArray val = UKV.get(okey);
 
