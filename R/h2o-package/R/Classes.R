@@ -4,7 +4,7 @@ setClass("H2ORawData", representation(h2o="H2OClient", key="character"))
 setClass("H2OParsedData", representation(h2o="H2OClient", key="character"))
 setClass("H2OLogicalData", contains="H2OParsedData")
 setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", "VIRTUAL"))
-setClass("H2OGLMModel", contains="H2OModel")
+setClass("H2OGLMModel", representation(xval="list"), contains="H2OModel")
 setClass("H2OKMeansModel", contains="H2OModel")
 setClass("H2ORForestModel", contains="H2OModel")
 setClass("H2OGLMGridModel", contains="H2OModel")
@@ -38,6 +38,17 @@ setMethod("show", "H2OGLMModel", function(object) {
   cat("\n\nAvg Training Error:", model$training.err)
   cat("\nBest Threshold:", model$threshold, " AUC:", model$auc)
   cat("\n\nConfusion Matrix:\n"); print(model$confusion)
+  
+  if(length(object@xval) > 0) {
+    cat("\nCross-Validation:\n")
+    xval = sapply(object@xval, function(x) {
+      c(x@model$threshold, x@model$auc, x@model$confusion[1,3], x@model$confusion[2,3])
+    })
+    xval = t(xval)
+    colnames(xval) = c("Best Threshold", "AUC", "Err(0)", "Err(1)")
+    rownames(xval) = paste("Model", 1:nrow(xval))
+    print(xval)
+  }
 })
 
 setMethod("show", "H2OKMeansModel", function(object) {

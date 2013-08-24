@@ -16,37 +16,47 @@ setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData
             res = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=res$destination_key)
             res = res$GLMModel
             
-            # Parameters matching those in R
-            result = list()
-            result$coefficients = unlist(res$coefficients)
-            result$rank = res$nCols
-            result$family = family   # Need to convert to family object
-            result$deviance = res$validations[[1]]$resDev
-            result$aic = res$validations[[1]]$aic
-            result$null.deviance = res$validations[[1]]$nullDev
-            result$iter = res$iterations
-            result$df.residual = res$dof
-            result$df.null = res$dof + result$rank
-            result$y = y
-            result$x = x
+            # Put model results in a pretty format
+            parseGLMResults = function(res) {
+              # Parameters matching those in R
+              result = list()
+              result$coefficients = unlist(res$coefficients)
+              result$rank = res$nCols
+              result$family = family   # Need to convert to family object
+              result$deviance = res$validations[[1]]$resDev
+              result$aic = res$validations[[1]]$aic
+              result$null.deviance = res$validations[[1]]$nullDev
+              result$iter = res$iterations
+              result$df.residual = res$dof
+              result$df.null = res$dof + result$rank
+              result$y = y
+              result$x = x
             
-            # Additional parameters from H2O
-            result$auc = res$validations[[1]]$auc
-            result$training.err = res$validations[[1]]$err
-            result$threshold = res$validations[[1]]$threshold
+              # Additional parameters from H2O
+              result$auc = res$validations[[1]]$auc
+              result$training.err = res$validations[[1]]$err
+              result$threshold = res$validations[[1]]$threshold
             
-            # Build confusion matrix
-            temp = res$validations[[1]]$cm
-            temp[[1]] = NULL; temp = lapply(temp, function(x) { x[[1]] = NULL; x })
-            result$confusion = t(matrix(unlist(temp), nrow = length(temp)))
-            myNames = c("False", "True", "Error")
-            dimnames(result$confusion) = list(Actual = myNames, Predicted = myNames)
+              # Build confusion matrix
+              temp = res$validations[[1]]$cm
+              temp[[1]] = NULL; temp = lapply(temp, function(x) { x[[1]] = NULL; x })
+              result$confusion = t(matrix(unlist(temp), nrow = length(temp)))
+              myNames = c("False", "True", "Error")
+              dimnames(result$confusion) = list(Actual = myNames, Predicted = myNames)
+              result
+            }
             
-            # Need to list all cross-validation models if nfolds > 0
-            # Maybe create list of H2OGLMModel objects? Make xval optional parameter
-            # temp = res$validations[[1]]$xval_models
+            # Save cross-validation models as separate objects in a list
+            xtemp = res$validations[[1]]$xval_models
+            if(is.null(xtemp)) cross = list()    # Should this be empty list or null when nfolds = 0?
+            else {
+              cross = lapply(1:length(xtemp), function(i) {
+                xres = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=xtemp[i])
+                new("H2OGLMModel", key=xtemp[i], data=data, model=parseGLMResults(xres$GLMModel), xval=list())
+              })
+            }
             
-            resGLMModel = new("H2OGLMModel", key=destKey, data=data, model=result)
+            resGLMModel = new("H2OGLMModel", key=destKey, data=data, model=parseGLMResults(res), xval=cross)
             resGLMModel
           })
 
