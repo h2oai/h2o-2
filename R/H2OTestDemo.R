@@ -45,4 +45,6 @@ print(prostate.glmgrid)
 
 # Test of PCA using prostate cancer data set
 prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
-prostate.pca = prcomp(prostate.hex)
+prostate.pca = h2o.prcomp(prostate.hex)
+print(prostate.pca)
+summary(prostate.pca)

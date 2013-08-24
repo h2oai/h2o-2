@@ -1,22 +1,31 @@
 # Model-building operations and algorithms
 setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5) { standardGeneric("h2o.glm") })
 setGeneric("h2o.kmeans", function(data, centers, cols = "", iter.max = 10) { standardGeneric("h2o.kmeans") })
+setGeneric("h2o.prcomp", function(data, num_pc) { standardGeneric("h2o.prcomp") })
 setGeneric("h2o.randomForest", function(y, x_ignore = "", data, ntree, depth, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 # setGeneric("h2o.randomForest", function(y, data, ntree, depth, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 setGeneric("h2o.getTree", function(forest, k, plot = FALSE) { standardGeneric("h2o.getTree") })
 setGeneric("h2o.glmgrid", function(x, y, data, family, nfolds = 10, alpha = c(0.25,0.5), lambda = 1.0e-5) { standardGeneric("h2o.glmgrid") })
 
-setMethod("prcomp", signature(x="H2OParsedData"), function(x, ...) {
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_PCA, key = x@key, num_pc = ncol(x))
-  while(h2o.__poll(x@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
+setMethod("h2o.prcomp", signature(data = "H2OParsedData", num_pc = "numeric"), function(data, num_pc) {
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, key = data@key, num_pc = num_pc)
+  while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
+  destKey = res$destination_key
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=destKey)
+  res = res$PCAModel
+  
   result = list()
   result$sdev = as.numeric(unlist(res$stdDev))
   # result$rotation = do.call(rbind, res$eigenvectors)
   temp = t(do.call(rbind, res$eigenvectors))
   colnames(temp) = paste("PC", seq(1, ncol(temp)), sep="")
-  result$rotation = as.data.frame(temp)
-  result
+  result$rotation = format(as.data.frame(temp), nsmall = 10)
+  
+  new("H2OPCAModel", key=destKey, data=data, model=result)
 })
+
+setMethod("h2o.prcomp", signature(data = "H2OParsedData", num_pc = "missing"), 
+  function(data) { h2o.prcomp(data, ncol(data)) })
 
 setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="numeric", alpha="numeric", lambda="numeric"),
           function(x, y, data, family, nfolds, alpha, lambda) {

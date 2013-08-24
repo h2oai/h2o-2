@@ -3,10 +3,12 @@ setClass("H2OClient", representation(ip="character", port="numeric"), prototype(
 setClass("H2ORawData", representation(h2o="H2OClient", key="character"))
 setClass("H2OParsedData", representation(h2o="H2OClient", key="character"))
 setClass("H2OLogicalData", contains="H2OParsedData")
-setClass("H2OGLMModel", representation(key="character", data="H2OParsedData", model="list"))
-setClass("H2OKMeansModel", representation(key="character", data="H2OParsedData", model="list"))
-setClass("H2ORForestModel", representation(key="character", data="H2OParsedData", model="list"))
-setClass("H2OGLMGridModel", representation(key="character", data="H2OParsedData", model="list"))
+setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", "VIRTUAL"))
+setClass("H2OGLMModel", contains="H2OModel")
+setClass("H2OKMeansModel", contains="H2OModel")
+setClass("H2ORForestModel", contains="H2OModel")
+setClass("H2OGLMGridModel", contains="H2OModel")
+setClass("H2OPCAModel", contains="H2OModel")
 
 # Class display functions
 setMethod("show", "H2OClient", function(object) {
@@ -56,6 +58,15 @@ setMethod("show", "H2ORForestModel", function(object) {
   cat("\nNumber of trees:", model$ntree)
   cat("\n\nOOB estimate of error rate: ", round(100*model$oob_err, 2), "%", sep = "")
   cat("\nConfusion matrix:\n"); print(model$confusion)
+})
+
+setMethod("show", "H2OPCAModel", function(object) {
+  print(object@data)
+  cat("PCA Model Key:", object@key)
+  
+  model = object@model
+  cat("\n\nStandard deviations:\n", model$sdev)
+  cat("\n\nRotation:\n"); print(model$rotation)
 })
 
 setMethod("+", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator("+", e1, e2) })
@@ -188,6 +199,18 @@ setMethod("summary", "H2OParsedData", function(object) {
   rownames(result) <- rep("", 6)
   colnames(result) <- cnames
   result
+})
+
+setMethod("summary", "H2OPCAModel", function(object) {
+  # We probably want to compute all this on the Java side for speedup
+  myVar = object@model$sdev^2
+  myProp = myVar/sum(myVar)
+  result = rbind(object@model$sdev, myProp, cumsum(myProp))   # Need to limit decimal places to 4
+  colnames(result) = paste("PC", seq(1, length(myVar)), sep="")
+  rownames(result) = c("Standard deviation", "Proportion of Variance", "Cumulative Proportion")
+  
+  cat("Importance of components:\n")
+  print(result)
 })
 
 setMethod("as.data.frame", "H2OParsedData", function(x) {
