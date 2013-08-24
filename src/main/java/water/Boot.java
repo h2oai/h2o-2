@@ -168,7 +168,15 @@ public class Boot extends ClassLoader {
 
     Class mainClazz = _init.loadClass(mainClass,true);
     Log.POST(20, "before (in run) mainClass invoke " + mainClazz.getName());
-    mainClazz.getMethod("main",String[].class).invoke(null,(Object)args);
+
+    Method main = null;
+    try {
+      // First look for 'userMain', so that user code only exposes one 'main'
+      // method. Problem showed up on samples where users launched the wrong one.
+      main = mainClazz.getMethod("userMain", String[].class);
+    } catch(NoSuchMethodException ex) {}
+    if(main == null) main = mainClazz.getMethod("main", String[].class);
+    main.invoke(null,(Object)args);
     Log.POST(20, "after (in run) mainClass invoke "+ mainClazz.getName());
 
     int index = Arrays.asList(args).indexOf("-runClass");

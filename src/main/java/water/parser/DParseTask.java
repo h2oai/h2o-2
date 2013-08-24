@@ -214,10 +214,10 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
   protected OutputStreamRecord[] createRecords(long firstRow, int rowsToParse) {
     assert (_rowsize != 0);
     ArrayList<OutputStreamRecord> result = new ArrayList();
-    long rpc = (int) (ValueArray.CHUNK_SZ / _rowsize);
-    int rowInChunk = (int)(firstRow % rpc);
+    int rpc = (int) ValueArray.CHUNK_SZ / _rowsize;
+    int rowInChunk = (int)firstRow % rpc;
     long lastChunk = Math.max(1,this._numRows / rpc) - 1; // index of the last chunk in the VA
-    int chunkIndex = (int)(firstRow/rpc); // index of the chunk I am writing to
+    int chunkIndex = (int)firstRow/rpc; // index of the chunk I am writing to
     if (chunkIndex > lastChunk) { // we can be writing to the second chunk after its real boundary
       assert (chunkIndex == lastChunk + 1);
       rowInChunk += rpc;
@@ -226,8 +226,8 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     do {
       // number of rows that go the the current chunk - all remaining rows for the
       // last chunk, or the number of rows that can go to the chunk
-      int rowsToChunk = (int)((chunkIndex == lastChunk) ? rowsToParse : Math.min(rowsToParse, rpc - rowInChunk));
-      // add the output stream record
+      int rowsToChunk = (chunkIndex == lastChunk) ? rowsToParse : Math.min(rowsToParse, rpc - rowInChunk);
+      // add the output stream reacord
       result.add(new OutputStreamRecord(chunkIndex, rowInChunk * _rowsize, rowsToChunk));
       // update the running variables
       if (chunkIndex < lastChunk) {

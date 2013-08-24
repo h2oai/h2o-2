@@ -14,19 +14,21 @@ public class Sandbox {
   public static void main(String[] args) throws Exception {
     ArrayList<String> l = new ArrayList<String>(Arrays.asList(args));
     l.add(0, "-mainClass");
-    l.add(1, UserMain.class.getName());
+    l.add(1, UserCode.class.getName());
     Boot._init.boot2(l.toArray(new String[0]));
   }
 
-  public static class UserMain {
-    public static void main(String[] args) throws Exception {
-      localCloud(3, true, args);
+  @SuppressWarnings("unused")
+  public static class UserCode {
+    public static void userMain(String[] args) throws Exception {
+      localCloud(1, true, args);
 
-//      ValueArrayToFrameTest.test("smalldata/datagen1.csv");
-//      System.out.println("Success!");
+      TestUtil.parseFrame("smalldata/mnist/train.csv.gz");
+      TestUtil.parseFrame("smalldata/mnist/test.csv.gz");
 
-      //File f = new File("lib/resources/datasets/gaussian.csv");
-      File f = new File("smalldata/Twitter2DB.txt");
+      Utils.readConsole();
+
+      File f = new File("lib/resources/datasets/gaussian.csv");
       // File f = new File("smalldata/covtype/covtype.20k.data");
       // File f = new File("syn_5853362476331324036_100x11.csv");
       // File f = new File("../../aaaa/datasets/millionx7_logreg.data.gz");
@@ -36,7 +38,6 @@ public class Sandbox {
 
 //      Key fkey = NFSFileVec.make(f);
 //      ParseDataset2.parse(dest, new Key[] { fkey });
-
 
       Key key = TestUtil.load_test_file(f, "test");
       ParseDataset.parse(dest, new Key[] { key });
@@ -80,49 +81,48 @@ public class Sandbox {
 
       System.out.println("Done!");
     }
+  }
 
-    public static void localCloud(int nodes, boolean inProcess, String[] args) {
-      String ip = "127.0.0.1";
-      int port = 54321;
-      String flat = "";
-      for( int i = 0; i < nodes; i++ )
-        flat += ip + ":" + (port + i * 2) + '\n';
-      String flatfile = Utils.writeFile(flat).getAbsolutePath();
-      for( int i = 1; i < nodes; i++ ) {
-        String[] a = args(args, ip, (port + i * 2), flatfile);
-        Node worker = inProcess ? new NodeCL(a) : new NodeVM(a);
-        worker.inheritIO();
-        worker.start();
-      }
-      H2O.main(args(args, ip, port, flatfile));
-      TestUtil.stall_till_cloudsize(nodes);
+  /**
+   * Creates nodes on local machines. For in-process, launch H2O in debug to avoid conflicts with
+   * multiple instances of log4j, e.g. "-ea -Xmx12G -Dh2o.debug".
+   */
+  public static void localCloud(int nodes, boolean inProcess, String[] args) {
+    String ip = "127.0.0.1";
+    int port = 54321;
+    String flat = "";
+    for( int i = 0; i < nodes; i++ )
+      flat += ip + ":" + (port + i * 2) + '\n';
+    String flatfile = Utils.writeFile(flat).getAbsolutePath();
+    for( int i = 1; i < nodes; i++ ) {
+      String[] a = args(args, ip, (port + i * 2), flatfile);
+      Node worker = inProcess ? new NodeCL(a) : new NodeVM(a);
+      worker.inheritIO();
+      worker.start();
     }
+    H2O.main(args(args, ip, port, flatfile));
+    TestUtil.stall_till_cloudsize(nodes);
+  }
 
-    public static void localMasterRemoteWorkers(String[] workers, String[] args) {
-      String local = H2O.SELF_ADDRESS.getHostAddress();
-      int port = 54321;
-      String flat = local + ":" + port + '\n';
-      for( int i = 0; i < workers.length; i++ )
-        flat += workers[i] + ":" + port + '\n';
-      String flatfile = Utils.writeFile(flat).getAbsolutePath();
-      for( int i = 0; i < 0; i++ ) {
-        Host host = new Host("192.168.1.15" + (i + 1));
-        Node worker = new NodeHost(host, args(args, host.address(), port, flatfile));
-        worker.inheritIO();
-        worker.start();
-      }
-      H2O.main(args(args, local, port, flatfile));
-      TestUtil.stall_till_cloudsize(1 + workers.length);
+  public static void localMasterRemoteWorkers(String[] workers, String[] args) {
+    String local = H2O.SELF_ADDRESS.getHostAddress();
+    int port = 54321;
+    String flat = local + ":" + port + '\n';
+    for( int i = 0; i < workers.length; i++ )
+      flat += workers[i] + ":" + port + '\n';
+    String flatfile = Utils.writeFile(flat).getAbsolutePath();
+    for( int i = 0; i < 0; i++ ) {
+      Host host = new Host("192.168.1.15" + (i + 1));
+      Node worker = new NodeHost(host, args(args, host.address(), port, flatfile));
+      worker.inheritIO();
+      worker.start();
     }
+    H2O.main(args(args, local, port, flatfile));
+    TestUtil.stall_till_cloudsize(1 + workers.length);
+  }
 
-    public static void remoteCloud(String[] hosts, String[] java_args, String[] args) {
-      Cloud c = new Cloud(hosts, hosts);
-      c.start(null, null, java_args, args);
-    }
-
-    private static String[] args(String[] args, String ip, int port, String flatfile) {
-      return (String[]) ArrayUtils.addAll(args, new String[] { //
-          "-ip", ip, "-port", "" + port, "-flatfile", flatfile });
-    }
+  private static String[] args(String[] args, String ip, int port, String flatfile) {
+    return (String[]) ArrayUtils.addAll(args, new String[] { //
+        "-ip", ip, "-port", "" + port, "-flatfile", flatfile });
   }
 }

@@ -223,6 +223,10 @@ public class Job extends Request2 {
       }
     };
     H2O.submitTask(start(task));
+    return redirect();
+  }
+
+  protected Response redirect() {
     return Progress2.redirect(this, job_key, destination_key);
   }
 
