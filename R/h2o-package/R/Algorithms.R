@@ -16,6 +16,7 @@ setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData
             res = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=res$destination_key)
             res = res$GLMModel
             
+            # Parameters matching those in R
             result = list()
             result$coefficients = unlist(res$coefficients)
             result$rank = res$nCols
@@ -28,6 +29,22 @@ setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData
             result$df.null = res$dof + result$rank
             result$y = y
             result$x = x
+            
+            # Additional parameters from H2O
+            result$auc = res$validations[[1]]$auc
+            result$training.err = res$validations[[1]]$err
+            result$threshold = res$validations[[1]]$threshold
+            
+            # Build confusion matrix
+            temp = res$validations[[1]]$cm
+            temp[[1]] = NULL; temp = lapply(temp, function(x) { x[[1]] = NULL; x })
+            result$confusion = t(matrix(unlist(temp), nrow = length(temp)))
+            myNames = c("False", "True", "Error")
+            dimnames(result$confusion) = list(Actual = myNames, Predicted = myNames)
+            
+            # Need to list all cross-validation models if nfolds > 0
+            # Maybe create list of H2OGLMModel objects? Make xval optional parameter
+            # temp = res$validations[[1]]$xval_models
             
             resGLMModel = new("H2OGLMModel", key=destKey, data=data, model=result)
             resGLMModel

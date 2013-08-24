@@ -3,10 +3,11 @@ setClass("H2OClient", representation(ip="character", port="numeric"), prototype(
 setClass("H2ORawData", representation(h2o="H2OClient", key="character"))
 setClass("H2OParsedData", representation(h2o="H2OClient", key="character"))
 setClass("H2OLogicalData", contains="H2OParsedData")
-setClass("H2OGLMModel", representation(key="character", data="H2OParsedData", model="list"))
-setClass("H2OKMeansModel", representation(key="character", data="H2OParsedData", model="list"))
-setClass("H2ORForestModel", representation(key="character", data="H2OParsedData", model="list"))
-setClass("H2OGLMGridModel", representation(key="character", data="H2OParsedData", model="list"))
+setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", "VIRTUAL"))
+setClass("H2OGLMModel", contains="H2OModel")
+setClass("H2OKMeansModel", contains="H2OModel")
+setClass("H2ORForestModel", contains="H2OModel")
+setClass("H2OGLMGridModel", contains="H2OModel")
 
 # Class display functions
 setMethod("show", "H2OClient", function(object) {
@@ -30,9 +31,13 @@ setMethod("show", "H2OGLMModel", function(object) {
   
   model = object@model
   print(round(model$coefficients,5))
-  cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual\n")
-  cat("Null Deviance:    ", round(model$null.deviance,1), "\n")
-  cat("Residual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1))
+  cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual")
+  cat("\nNull Deviance:    ", round(model$null.deviance,1))
+  cat("\nResidual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1))
+  
+  cat("\n\nAvg Training Error:", model$training.err)
+  cat("\nBest Threshold:", model$threshold, " AUC:", model$auc)
+  cat("\n\nConfusion Matrix:\n"); print(model$confusion)
 })
 
 setMethod("show", "H2OKMeansModel", function(object) {
