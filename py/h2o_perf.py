@@ -73,10 +73,11 @@ class PerfH2O(object):
         if nioc:
             self.pollStats['bytes_sent'] =  nioc.bytes_sent
             self.pollStats['bytes_recv'] =  nioc.bytes_recv
-            # self.pollStats['dropin'] =  nioc.dropin
-            # self.pollStats['dropout'] =  nioc.dropout
-            # self.pollStats['errin'] =  nioc.errin
-            # self.pollStats['errout'] =  nioc.errout
+            if 1==1: # bad on some?
+                self.pollStats['dropin'] =  nioc.dropin
+                self.pollStats['dropout'] =  nioc.dropout
+                self.pollStats['errin'] =  nioc.errin
+                self.pollStats['errout'] =  nioc.errout
         if jstack:
             self.pollStats['lastJstackTime'] = self.snapshotTime
         if iostats:
@@ -161,16 +162,17 @@ class PerfH2O(object):
         nioc = psutil.network_io_counters()
         niocSpotSentMBSec = (nioc.bytes_sent - self.pollStats['bytes_sent'])/(1e6 * self.elapsedTime)
         niocSpotRecvMBSec = (nioc.bytes_recv - self.pollStats['bytes_recv'])/(1e6 * self.elapsedTime)
-        # niocSpotDropIn = nioc.dropin -  self.pollStats['dropin']
-        # niocSpotDropOut = nioc.dropout -  self.pollStats['dropout']
-        # niocSpotErrIn = nioc.errin -  self.pollStats['errin']
-        # niocSpotErrOut = nioc.errout -  self.pollStats['errout']
-
-        # stuff doesn't exist on ec2?
-        niocSpotDropIn = 0
-        niocSpotDropOut = 0
-        niocSpotErrIn = 0
-        niocSpotErrOut = 0
+        if 1==1: # some don't work but we'll enable here
+            niocSpotDropIn = nioc.dropin -  self.pollStats['dropin']
+            niocSpotDropOut = nioc.dropout -  self.pollStats['dropout']
+            niocSpotErrIn = nioc.errin -  self.pollStats['errin']
+            niocSpotErrOut = nioc.errout -  self.pollStats['errout']
+        else:
+            # stuff doesn't exist on ec2?
+            niocSpotDropIn = 0
+            niocSpotDropOut = 0
+            niocSpotErrIn = 0
+            niocSpotErrOut = 0
 
         l = "Network. Spot RecvMB/s: {:>6.2f} Spot SentMB/s: {:>6.2f} {!s} {!s} {!s} {!s}".format(
             niocSpotRecvMBSec, niocSpotSentMBSec,\

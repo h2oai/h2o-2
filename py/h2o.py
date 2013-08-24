@@ -973,7 +973,7 @@ class H2O(object):
     # don't need to include in params_dict it doesn't need a default
     def kmeans(self, key, key2=None, 
         timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
-        **kwargs):
+        noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
         # defaults
         # KMeans has more params than shown here
         # KMeans2 has these params?
@@ -988,15 +988,21 @@ class H2O(object):
         browseAlso = kwargs.get('browseAlso', False)
         params_dict.update(kwargs)
         print "\nKMeans params list:", params_dict
-        a = self.__do_json_request('KMeans2.json' if beta_features else 'KMeans.json', timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('KMeans2.json' if beta_features else 'KMeans.json', 
+            timeout=timeoutSecs, params=params_dict)
 
         # Check that the response has the right Progress url it's going to steer us to.
         if a['response']['redirect_request']!='Progress':
             print dump_json(a)
             raise Exception('H2O kmeans redirect is not Progress. KMeans json response precedes.')
+
+        if noPoll:
+            return a
+
         a = self.poll_url(a['response'],
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
-            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+            noise=noise, benchmarkLogging=benchmarkLogging)
         verboseprint("\nKMeans result:", dump_json(a))
 
         if (browseAlso | browse_json):
