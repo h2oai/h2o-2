@@ -70,7 +70,7 @@ class Basic(unittest.TestCase):
             print "Parse starting: " + csvFilename
             key2 = csvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            timeoutSecs = 3600
+            timeoutSecs = 2 * 3600
             kwargs = {}
             if FROM_HDFS:
                 parseKey = h2i.parseImportHdfsFile(None, csvFilename, importFolderPath, key2=key2,
@@ -101,7 +101,7 @@ class Basic(unittest.TestCase):
             else:
                 kwargs['initialization'] = None
 
-            timeoutSecs = 3600
+            timeoutSecs = 4 * 3600
             start = time.time()
             kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=timeoutSecs,
                     benchmarkLogging=benchmarkLogging, **kwargs)
