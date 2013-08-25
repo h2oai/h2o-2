@@ -5,6 +5,13 @@ import os
 # hdfs/maprfs/s3/s3n paths should be absolute from the bucket (top level)
 # so only walk around for local
 def find_folder_path_and_pattern(bucket, pathWithRegex):
+
+    # strip the common mistake of leading "/" in path, if bucket is specified too
+    print "pathWithRegex:", pathWithRegex
+    if re.match("/", pathWithRegex):
+        print "You said bucket:", bucket, "so stripping incorrect leading '/' from", pathWithRegex
+        pathWithRegex = pathWithRegex.lstrip('/')
+
     if bucket is None:  # good for absolute path name
         bucketPath = ""
 
@@ -13,7 +20,7 @@ def find_folder_path_and_pattern(bucket, pathWithRegex):
 
     # does it work to use bucket "." to get current directory
     elif os.environ.get('H2O_BUCKETS_ROOT'):
-        h2oBucketsRoot = os.eniron.get('H2O_BUCKETS_ROOT')
+        h2oBucketsRoot = os.environ.get('H2O_BUCKETS_ROOT')
         print "Using H2O_BUCKETS_ROOT environment variable:", h2oBucketsRoot
 
         rootPath = os.path.abspath(h2oBucketsRoot)
@@ -36,6 +43,7 @@ def find_folder_path_and_pattern(bucket, pathWithRegex):
             if (levels==10):
                 raise Exception("unable to find bucket: %s" % bucket)
 
+        print "Did find", tail, "at", head
         bucketPath = os.path.join(head, tail)
 
     # if there's no path, just return the bucketPath
@@ -88,25 +96,28 @@ def import_only(node=None, schema="put", bucket=None, path=None,
         return (None, key)
 
     elif schema=='s3' or node.redirect_import_folder_to_s3_path:
+        folderURI = "s3://" + bucket + "/" + head
         importResult = node.import_s3(bucket, timeoutSecs=timeoutSecs)
 
     elif schema=='s3n':
-        URI = schema + "://" + bucket + "/" + head
-        importResult = node.import_hdfs(URI, timeoutSecs=timeoutSecs)
+        folderURI = "s3n://" + bucket + "/" + head
+        importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
 
     elif schema=='maprfs':
-        URI = schema + "://" + bucket + "/" + head
-        importResult = node.import_hdfs(URI, timeoutSecs=timeoutSecs)
+        folderURI = "maprfs://" + bucket + "/" + head
+        importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
 
     elif schema=='hdfs' or node.redirect_import_folder_to_s3n_path:
-        URI = schema + "://" + node.hdfs_name_node + "/" + bucket + "/" + head
-        importResult = node.import_hdfs(URI, timeoutSecs=timeoutSecs)
+        folderURI = "hdfs://" + node.hdfs_name_node + "/" + bucket + "/" + head
+        importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
 
     elif schema=='local':
         (folderPath, pattern) = find_folder_path_and_pattern(bucket, path)
+        folderURI = 'nfs:/' + folderPath
         importResult = node.import_files(folderPath, timeoutSecs=timeoutSecs)
 
-    return (importResult, pattern)
+    importPattern = folderURI + "/" + pattern
+    return (importResult, importPattern)
 
 # can take header, header_from_file, exclude params
 def parse(node=None, pattern=None, hex_key=None,
@@ -130,13 +141,13 @@ def import_parse(node=None, schema="put", bucket=None, path=None,
 
     if not node: node = h2o.nodes[0]
 
-    (importResult, pattern) = import_only(node, schema, bucket, path,
+    (importResult, importPattern) = import_only(node, schema, bucket, path,
         timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs, noise, noPoll, **kwargs)
 
-    print "pattern:", pattern
+    print "importPattern:", importPattern
     print "importResult", h2o.dump_json(importResult)
 
-    parseResult = node.parse(pattern, hex_key,
+    parseResult = node.parse(importPattern, hex_key,
         timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs, noise, noPoll, **kwargs)
     print "parseResult:", h2o.dump_json(parseResult)
 

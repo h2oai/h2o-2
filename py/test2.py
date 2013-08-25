@@ -1,4 +1,4 @@
-import unittest, time, sys
+import unittest, time, sys, os
 # not needed, but in case you move it down to subdir
 sys.path.extend(['.','..'])
 import h2o_cmd
@@ -13,31 +13,37 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         h2o.build_cloud(node_count=1,java_heap_GB=1)
+        h2b.browseTheCloud()
 
     @classmethod
     def tearDownClass(cls):
-        time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_A_Basic(self):
-
-        h2b.browseTheCloud()
-        ## put file and parse, starting from the current wd
+    def notest_A_Basic(self):
+        # put file and parse, starting from the current wd
         h2i.import_parse(path="testdir_multi_jvm/syn_sphere_gen.csv", schema='put')
 
-        #
-        ## put file and parse, will walk path looking upwards till it finds 'my-bucket' directory.
-        ## Getting the absolute path for mydata/file.csv starts there
-        ## default bucket name is 'home-0xdiag-datasets' (we can change that eventually)
-        #import(path=mydata/file.csv, bucket='my-bucket', schema='put')
-        #
-        ## this will do an import folder and parse. schema='local' is default. doesn't need to be specified
-        ## I guess this will be relative to current wd
-        #import(path=mydata/file.csv, schema='local')
-        #
-        ## this can be an absolute path for the local system
-        #import(path=/mydata/file.csv, schema='local')
-        #
+    def notest_B_Basic(self):
+        # put file and parse, will walk path looking upwards till it finds 'my-bucket' directory.
+        # Getting the absolute path for mydata/file.csv starts there
+        # default bucket name is 'home-0xdiag-datasets' (we can change that eventually)
+        h2i.import_parse(path='dir2/syn_sphere_gen2.csv', bucket='my-bucket2', schema='put')
+        
+    def notest_C_Basic(self):
+        # this will do an import folder and parse. schema='local' is default. doesn't need to be specified
+        # I guess this will be relative to current wd
+        os.environ['H2O_BUCKETS_ROOT'] = '/home'
+        h2i.import_parse(path='dir3/syn_sphere_gen3.csv', bucket='my-bucket3', schema='local')
+        del os.environ['H2O_BUCKETS_ROOT'] 
+        
+    def notest_D_Basic(self):
+        # this can be an absolute path for the local system
+        h2i.import_parse(path='/home/my-bucket2/dir2/syn_sphere_gen2.csv', schema='local')
+
+    def test_E_Basic(self):
+        # what happens here..abs path plus bucket. error?
+        h2i.import_parse(path='/dir3/syn_sphere_gen3.csv', bucket='my-bucket3', schema='local')
+        
         ## if os env variable H2O_BUCKETS_ROOT is set, it will start looking there for bucket, then path
         ## that covers the case where "walking upward" is not sufficient for where you but the bucket (locally)
         #import(path=mydata/file.csv, bucket='my-bucket')
