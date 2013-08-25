@@ -8,21 +8,21 @@ def find_folder_path_and_pattern(bucket, pathWithRegex):
     if bucket is None:  # good for absolute path name
         bucketPath = ""
 
-    if bucket = "."
+    elif bucket == ".":
         bucketPath = os.getcwd()
 
     # does it work to use bucket "." to get current directory
-    elif os.environ['H2O_BUCKETS_ROOT']:
-        h2oBucketsRoot = os.environ(['H2O_BUCKETS_ROOT']
+    elif os.environ.get('H2O_BUCKETS_ROOT'):
+        h2oBucketsRoot = os.eniron.get('H2O_BUCKETS_ROOT')
         print "Using H2O_BUCKETS_ROOT environment variable:", h2oBucketsRoot
 
         rootPath = os.path.abspath(h2oBucketsRoot)
-        if not (os.path.exists(rootPath)
-            raise Exception("H2O_BUCKETS_ROOT in env but %s doesn't exist." % rootPath
+        if not (os.path.exists(rootPath)):
+            raise Exception("H2O_BUCKETS_ROOT in env but %s doesn't exist." % rootPath)
 
         bucketPath = os.path.join(rootPath, bucket)
-        if not (os.path.exists(bucketPath)
-            raise Exception("H2O_BUCKETS_ROOT and path used to form %s which doesn't exist." % bucketPath
+        if not (os.path.exists(bucketPath)):
+            raise Exception("H2O_BUCKETS_ROOT and path used to form %s which doesn't exist." % bucketPath)
 
     else:
         (head, tail) = os.path.split(os.path.abspath(bucket))
@@ -50,12 +50,13 @@ def find_folder_path_and_pattern(bucket, pathWithRegex):
     elif "/" in pathWithRegex:
         (head, tail) = os.path.split(pathWithRegex)
         folderPath = os.path.join(bucketPath, head)
-        if not (os.path.exists(folderPath):
+        if not os.path.exists(folderPath):
             raise Exception("%s doesn't exist. %s under %s may be wrong?" % (folderPath, head, bucketPath))
     else:
         folderPath = bucketPath
         tail = pathWithRegex
         
+    print "folderPath:", folderPath, "tail:", tail
     return (folderPath, tail)
 
 
@@ -65,24 +66,24 @@ def find_folder_path_and_pattern(bucket, pathWithRegex):
 # exclude
 # src_key can be a pattern
 # can import with path= a folder or just one file
-def import_only(node=None, schema="put", bucket="datasets" path=None, 
+def import_only(node=None, schema="put", bucket=None, path=None,
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
-    noPoll=False, doSummary=True, **kwargs):
+    noPoll=False, doSummary=True, src_key='python_src_key', **kwargs):
 
     # no bucket is sometimes legal (fixed path)
     if not node: node = h2o.nodes[0]
-    if not bucket:
-        bucket = "home-0xdiag-datasets"
 
-    if "/" in path
+    if "/" in path:
         (head, pattern) = os.path.split(path)
-    else
+    else:
         (head, pattern)  = ("", path)
 
     if schema=='put':
         if not path: raise Exception('path=, No file to putfile')
         (folderPath, filename) = find_folder_path_and_pattern(bucket, path)
-        filePath = os.join(folderPath, filename)
+        print "folderPath:", folderPath, "filename:", filename
+        filePath = os.path.join(folderPath, filename)
+        print 'filePath:', filePath
         key = node.put_file(filePath, key=src_key, timeoutSecs=timeoutSecs)
         return (None, key)
 
@@ -108,38 +109,35 @@ def import_only(node=None, schema="put", bucket="datasets" path=None,
     return (importResult, pattern)
 
 # can take header, header_from_file, exclude params
-def parse(node=None, pattern=None, hex_key=None, ,
+def parse(node=None, pattern=None, hex_key=None,
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
     noPoll=False, **kwargs):
-    if hex_key is None:
-        # don't rely on h2o default key name
-        key2 = key + '.hex'
-    else:
-        key2 = hex_key
 
-    parseResult = parse(node, pattern, hex_key,
+    if not node: node = h2o.nodes[0]
+
+    parseResult = node.parse(node, pattern, hex_key,
         timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs, noise,
-        noPoll, **kwargs):
+        noPoll, **kwargs)
 
     parseResult['python_source'] = pattern
     return parseResult
 
 
-def import(node=None, schema="put", bucket="datasets" path=None, 
+def import_parse(node=None, schema="put", bucket=None, path=None,
     src_key=None, hex_key=None, 
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
     noPoll=False, doSummary=False, **kwargs):
 
+    if not node: node = h2o.nodes[0]
+
     (importResult, pattern) = import_only(node, schema, bucket, path,
-        timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs, noise,
-        noPoll, **kwargs):
+        timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs, noise, noPoll, **kwargs)
 
     print "pattern:", pattern
     print "importResult", h2o.dump_json(importResult)
 
-    parseResult = parse(node, pattern, hex_key,
-        timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs, noise,
-        noPoll, **kwargs):
+    parseResult = node.parse(pattern, hex_key,
+        timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs, noise, noPoll, **kwargs)
     print "parseResult:", h2o.dump_json(parseResult)
 
     # do SummaryPage here too, just to get some coverage
