@@ -666,7 +666,12 @@ public final class H2O {
 
   public static boolean IS_SYSTEM_RUNNING = false;
 
-  private static void sayHi() {
+  /**
+   * If logging has not been setup yet, then Log.info will only print to stdout.
+   * This allows for early processing of the '-version' option without unpacking
+   * the jar file and other startup stuff.
+   */
+  public static void printAndLogVersion() {
     String build_branch = "(unknown)";
     String build_hash = "(unknown)";
     String build_describe = "(unknown)";
@@ -732,17 +737,7 @@ public final class H2O {
     arguments.extract(OPT_ARGS);
     ARGS = arguments.toStringArray();
 
-    if ((OPT_ARGS.h != null) || (OPT_ARGS.help != null)) {
-      printHelp();
-      H2O.exit (0);
-    }
-
-    if (OPT_ARGS.version != null) {
-      sayHi();
-      H2O.exit (0);
-    }
-
-    sayHi();
+    printAndLogVersion();
 
     // Get ice path before loading Log or Persist class
     String ice = DEFAULT_ICE_ROOT;
