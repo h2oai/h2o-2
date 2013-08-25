@@ -6,7 +6,7 @@ import socket
 # kevin@mr-0xb1:~/h2o/py/testdir_hosts$ ls -ltr /home3/0xdiag/datasets/kmeans_big
 # -rw-rw-r-- 1 0xdiag 0xdiag 183538602156 Aug 24 11:43 syn_sphere15_2711545732row_6col_180GB_from_7x.csv
 # -rwxrwxr-x 1 0xdiag 0xdiag         1947 Aug 24 12:21 sphere15_makeit
-FROM_HDFS = True
+FROM_HDFS = 'CDH3'
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -19,13 +19,16 @@ class Basic(unittest.TestCase):
         if (localhost):
             if 'Kevin' in socket.gethostname(): # for testing with little files on a little machine
                 global FROM_HDFS
-                FROM_HDFS = False
-                java_heap_GB = 28
+                FROM_HDFS = None
+                java_heap_GB = 20
             else:
                 java_heap_GB = 240
             h2o.build_cloud(1, java_heap_GB=java_heap_GB, enable_benchmark_log=True)
         else:
-            if FROM_HDFS:
+            if FROM_HDFS == 'CDH3':
+                h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True,
+                    use_hdfs=True, hdfs_version='cdh3', hdfs_name_node="192.168.1.176") # override the config file
+            elif FROM_HDFS == 'CDH4':
                 h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True,
                     use_hdfs=True, hdfs_version='cdh4', hdfs_name_node="192.168.1.161") # override the config file
             else:
@@ -69,6 +72,7 @@ class Basic(unittest.TestCase):
         benchmarkLogging = ['cpu','disk', 'network', 'iostats']
         # IOStatus can hang?
         benchmarkLogging = ['cpu', 'disk', 'network']
+        benchmarkLogging = []
 
         for trial in range(6):
             # IMPORT**********************************************
