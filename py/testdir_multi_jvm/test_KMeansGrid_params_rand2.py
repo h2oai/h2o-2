@@ -9,10 +9,10 @@ import h2o_kmeans, h2o_import as h2i
 def define_params(SEED):
     paramDict = {
         'k': [2, 5], # FIX! comma separated or range from:to:step
-        'epsilon': [1e-6, 1e-2],
+        'initialization': ['None', 'PlusPlus', 'Furthest'],
         # not used in Grid?
         # 'cols': [None, "0", "3", "0,1,2,3,4,5,6"],
-        'max_iter': [None, 1, 5, 10], # FIX! comma separated or range from:to:step. Fail on 0?
+        'max_iter': [1, 5, 10, 20], # FIX! comma separated or range from:to:step.
         'seed': [None, 12345678, SEED],
         'normalize': [None, 0, 1],
         # 'destination_key:': "junk",
@@ -30,7 +30,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1,java_heap_GB=4)
+            h2o.build_cloud(2,java_heap_GB=4)
         else:
             h2o_hosts.build_cloud_with_hosts()
 

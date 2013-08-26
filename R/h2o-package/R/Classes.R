@@ -2,10 +2,12 @@
 setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321))
 setClass("H2ORawData", representation(h2o="H2OClient", key="character"))
 setClass("H2OParsedData", representation(h2o="H2OClient", key="character"))
-setClass("H2OGLMModel", representation(key="character", data="H2OParsedData", model="list"))
-setClass("H2OKMeansModel", representation(key="character", data="H2OParsedData", model="list"))
-setClass("H2ORForestModel", representation(key="character", data="H2OParsedData", model="list"))
-setClass("H2OGLMGridModel", representation(key="character", data="H2OParsedData", model="list"))
+setClass("H2OLogicalData", contains="H2OParsedData")
+setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", "VIRTUAL"))
+setClass("H2OGLMModel", representation(xval="list"), contains="H2OModel")
+setClass("H2OKMeansModel", contains="H2OModel")
+setClass("H2ORForestModel", contains="H2OModel")
+setClass("H2OGLMGridModel", contains="H2OModel")
 
 # Class display functions
 setMethod("show", "H2OClient", function(object) {
@@ -29,9 +31,24 @@ setMethod("show", "H2OGLMModel", function(object) {
   
   model = object@model
   print(round(model$coefficients,5))
-  cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual\n")
-  cat("Null Deviance:    ", round(model$null.deviance,1), "\n")
-  cat("Residual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1))
+  cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual")
+  cat("\nNull Deviance:    ", round(model$null.deviance,1))
+  cat("\nResidual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1))
+  
+  cat("\n\nAvg Training Error:", model$training.err)
+  cat("\nBest Threshold:", model$threshold, " AUC:", model$auc)
+  cat("\n\nConfusion Matrix:\n"); print(model$confusion)
+  
+  if(length(object@xval) > 0) {
+    cat("\nCross-Validation:\n")
+    xval = sapply(object@xval, function(x) {
+      c(x@model$threshold, x@model$auc, x@model$confusion[1,3], x@model$confusion[2,3])
+    })
+    xval = t(xval)
+    colnames(xval) = c("Best Threshold", "AUC", "Err(0)", "Err(1)")
+    rownames(xval) = paste("Model", 1:nrow(xval))
+    print(xval)
+  }
 })
 
 setMethod("show", "H2OKMeansModel", function(object) {
@@ -57,6 +74,48 @@ setMethod("show", "H2ORForestModel", function(object) {
   cat("\nConfusion matrix:\n"); print(model$confusion)
 })
 
+setMethod("+", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator("+", e1, e2) })
+setMethod("-", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator("-", e1, e2) })
+setMethod("*", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator("*", e1, e2) })
+setMethod("/", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator("/", e1, e2) })
+setMethod("%%", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator("%", e1, e2) })
+setMethod("==", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator("==", e1, e2) })
+setMethod(">", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator(">", e1, e2) })
+setMethod("<", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator("<", e1, e2) })
+setMethod("!=", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator("!=", e1, e2) })
+setMethod(">=", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator(">=", e1, e2) })
+setMethod("<=", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator("<=", e1, e2) })
+
+setMethod("+", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__operator("+", e1, e2) })
+setMethod("-", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__operator("-", e1, e2) })
+setMethod("*", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__operator("*", e1, e2) })
+setMethod("/", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__operator("/", e1, e2) })
+setMethod("%%", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__operator("%", e1, e2) })
+setMethod("==", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__operator("==", e1, e2) })
+setMethod(">", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__operator(">", e1, e2) })
+setMethod("<", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__operator("<", e1, e2) })
+setMethod("!=", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__operator("!=", e1, e2) })
+setMethod(">=", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__operator(">=", e1, e2) })
+setMethod("<=", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__operator("<=", e1, e2) })
+
+setMethod("+", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__operator("+", e1, e2) })
+setMethod("-", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__operator("-", e1, e2) })
+setMethod("*", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__operator("*", e1, e2) })
+setMethod("/", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__operator("/", e1, e2) })
+setMethod("%%", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__operator("%", e1, e2) })
+setMethod("==", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__operator("==", e1, e2) })
+setMethod(">", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__operator(">", e1, e2) })
+setMethod("<", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__operator("<", e1, e2) })
+setMethod("!=", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__operator("!=", e1, e2) })
+setMethod(">=", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__operator(">=", e1, e2) })
+setMethod("<=", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__operator("<=", e1, e2) })
+
+setMethod("min", "H2OParsedData", function(x) { h2o.__func("min", x, "Number") })
+setMethod("max", "H2OParsedData", function(x) { h2o.__func("max", x, "Number") })
+setMethod("mean", "H2OParsedData", function(x) { h2o.__func("mean", x, "Number") })
+setMethod("sum", "H2OParsedData", function(x) { h2o.__func("sum", x, "Number") })
+setMethod("log2", "H2OParsedData", function(x) { h2o.__func("log", x, "Vector") })
+
 setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
   # Currently, you can only select one column at a time
   if(!missing(j) && length(j) > 1) stop("Currently, can only select one column at a time")
@@ -65,15 +124,26 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
     if(is.character(j)) return(do.call("$", c(x, j)))
     expr = paste(x@key, "[", j-1, "]", sep="")
   } else {
-    if(!is.numeric(i)) stop("Can only select rows by index values")
-    start = min(i); i_off = i - start + 1;
-    opt = paste(x@key, start-1, max(i_off), sep=",")
-    if(missing(j))
-      expr = paste("slice(", opt, ")", sep="")
-    else if(is.character(j))
-      expr = paste("slice(", opt, ")$", j, sep="")
-    else
-      expr = paste("slice(", opt, ")[", j-1, "]", sep="")
+    if(class(i) == "H2OLogicalData") {
+      opt = paste(x@key, i@key, sep=",")
+      if(missing(j))
+        expr = paste("filter(", opt, ")", sep="")
+      else if(is.character(j))
+        expr = paste("filter(", opt, ")$", j, sep="")
+      else if(is.numeric(j))
+        expr = paste("filter(", opt, ")[", j-1, "]", sep="")
+      else stop("Rows must be numeric or column names")
+    }
+    else if(is.numeric(i)) {
+      start = min(i); i_off = i - start + 1;
+      opt = paste(x@key, start-1, max(i_off), sep=",")
+      if(missing(j))
+        expr = paste("slice(", opt, ")", sep="")
+      else if(is.character(j))
+        expr = paste("slice(", opt, ")$", j, sep="")
+      else if(is.numeric(j))
+        expr = paste("slice(", opt, ")[", j-1, "]", sep="")
+    } else stop("Rows must be numeric or column names")
   }
   res = h2o.__exec(x@h2o, expr)
   new("H2OParsedData", h2o=x@h2o, key=res)

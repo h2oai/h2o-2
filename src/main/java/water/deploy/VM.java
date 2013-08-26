@@ -8,7 +8,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.binary.StringUtils;
 
+import water.Boot;
 import water.H2O;
 import water.util.Log;
 
@@ -24,7 +26,6 @@ public abstract class VM {
   public VM(String[] java, String[] args) {
     _args = new ArrayList<String>();
     _args.add(System.getProperty("java.home") + "/bin/java");
-    if( java != null ) _args.addAll(Arrays.asList(java));
 
     // Iterate on URIs in case jar has been unpacked by Boot
     _args.add("-cp");
@@ -37,15 +38,19 @@ public abstract class VM {
       }
     }
     _args.add(cp);
-    _args.add(getClass().getName());
-    if( args != null ) _args.addAll(Arrays.asList(args));
+    _args.addAll(Arrays.asList(java));
+    if( args != null )
+      _args.addAll(Arrays.asList(args));
   }
 
-  static String[] cloneParams() {
+  static String[] javaArgs(String main) {
     RuntimeMXBean r = ManagementFactory.getRuntimeMXBean();
     ArrayList<String> list = new ArrayList<String>();
     for( String s : r.getInputArguments() )
-      if( !s.startsWith("-agentlib") ) list.add(s);
+      if( !s.startsWith("-agentlib") )
+        if( !s.startsWith("-Xbootclasspath") )
+          list.add(s);
+    list.add(main);
     return list.toArray(new String[list.size()]);
   }
 
@@ -67,8 +72,10 @@ public abstract class VM {
     try {
       assert !_inherit || (_out == null);
       _process = builder.start();
-      if( _inherit ) inheritIO(_process, null);
-      if( _out != null ) persistIO(_process, _out, _err);
+      if( _inherit )
+        inheritIO(_process, null);
+      if( _out != null )
+        persistIO(_process, _out, _err);
     } catch( IOException e ) {
       throw Log.errRTExcept(e);
     }
@@ -144,7 +151,8 @@ public abstract class VM {
         try {
           for( ;; ) {
             String line = source_.readLine();
-            if( line == null ) break;
+            if( line == null )
+              break;
             String s = header == null ? line : header + line;
             Log.unwrap(target, s);
           }
@@ -156,22 +164,17 @@ public abstract class VM {
     thread.start();
   }
 
-  public static String localIP() {
-    return H2O.SELF_ADDRESS.getHostAddress();
-  }
-
   /**
    * A VM whose only job is to wait for its parent to be gone, then kill its child process.
    * Otherwise every killed test leaves a bunch of orphan ssh and java processes.
    */
-  static class Watchdog extends VM {
+  public static class Watchdog extends VM {
     public Watchdog(String[] java, String[] node) {
       super(java, node);
     }
 
     protected static void exec(ArrayList<String> list) throws Exception {
       ProcessBuilder builder = new ProcessBuilder(list);
-      builder.environment().put("CYGWIN", "nodosfilewarning");
       final Process process = builder.start();
       NodeVM.inheritIO(process, null);
       Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -186,40 +189,109 @@ public abstract class VM {
   static class Params implements Serializable {
     String[] _host, _java, _node;
 
-    public Params(Host host, String[] java, String[] node) {
+    Params(Host host, String[] java, String[] node) {
       _host = new String[] { host.address(), host.user(), host.key() };
       _java = java;
       _node = node;
     }
+  }
 
-    String write() {
-      try {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutput out = null;
-        try {
-          out = new ObjectOutputStream(bos);
-          out.writeObject(this);
-          return Base64.encodeBase64String(bos.toByteArray());
-        } finally {
-          out.close();
-          bos.close();
-        }
-      } catch( Exception ex ) {
-        throw Log.errRTExcept(ex);
-      }
+  /**
+   * A remote JVM, launched over SSH.
+   */
+  public static class SSH extends Watchdog {
+    Host _host;
+    Thread _thread;
+
+    public SSH(Host host, String[] java, String[] node) {
+      this(new String[] { SSH.class.getName() }, host, java, node);
     }
 
-    static Params read(String s) {
-      try {
-        ObjectInput in = new ObjectInputStream(new ByteArrayInputStream(Base64.decodeBase64(s)));
-        try {
-          return (Params) in.readObject();
-        } finally {
-          in.close();
+    public SSH(String[] localJava, Host host, String[] java, String[] node) {
+      super(localJava, new String[] { write(new Params(host, java, node)) });
+      _host = host;
+    }
+
+    public Host host() {
+      return _host;
+    }
+
+    final void startThread() {
+      _thread = new Thread() {
+        @Override public void run() {
+          try {
+            SSH.this.start();
+            SSH.this.waitFor();
+          } catch( Exception ex ) {
+            Log.err(ex);
+          }
         }
-      } catch( Exception ex ) {
-        throw Log.errRTExcept(ex);
+      };
+      _thread.setDaemon(true);
+      _thread.start();
+    }
+
+    public static void main(String[] args) throws Exception {
+      exitWithParent();
+      Params p = read(args[0]);
+      Host host = new Host(p._host[0], p._host[1], p._host[2]);
+      ArrayList<String> list = new ArrayList<String>();
+      list.addAll(Arrays.asList(host.sshWithArgs().split(" ")));
+      list.add(host.address());
+      list.add(command(p._java, p._node));
+      exec(list);
+    }
+
+    static String command(String[] javaArgs, String[] nodeArgs) {
+      String cp = "";
+      try {
+        int shared = new File(".").getCanonicalPath().length() + 1;
+        for( String s : System.getProperty("java.class.path").split(File.pathSeparator) ) {
+          cp += cp.length() != 0 ? ":" : "";
+          if( Boot._init.fromJar() )
+            cp += new File(s).getName();
+          else
+            cp += new File(s).getCanonicalPath().substring(shared).replace('\\', '/');
+        }
+      } catch( IOException e ) {
+        throw Log.errRTExcept(e);
       }
+      String command = "cd " + Host.FOLDER + ";jdk/jre/bin/java -cp " + cp;
+      for( String s : javaArgs )
+        command += " " + s;
+      for( String s : nodeArgs )
+        command += " " + s;
+      return command.replace("$", "\\$");
+    }
+  }
+
+  static String write(Serializable s) {
+    try {
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      ObjectOutput out = null;
+      try {
+        out = new ObjectOutputStream(bos);
+        out.writeObject(s);
+        return StringUtils.newStringUtf8(Base64.encodeBase64(bos.toByteArray(), false));
+      } finally {
+        out.close();
+        bos.close();
+      }
+    } catch( Exception ex ) {
+      throw Log.errRTExcept(ex);
+    }
+  }
+
+  static <T> T read(String s) {
+    try {
+      ObjectInput in = new ObjectInputStream(new ByteArrayInputStream(Base64.decodeBase64(s)));
+      try {
+        return (T) in.readObject();
+      } finally {
+        in.close();
+      }
+    } catch( Exception ex ) {
+      throw Log.errRTExcept(ex);
     }
   }
 }

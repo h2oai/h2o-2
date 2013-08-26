@@ -69,9 +69,9 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1)
+            h2o.build_cloud(2)
         else:
-            h2o_hosts.build_cloud_with_hosts(1)
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
@@ -90,7 +90,7 @@ class Basic(unittest.TestCase):
 
         # try 5 times, to see if all inits by h2o are good
         for trial in range(5):
-            kwargs = {'k': CLUSTERS, 'epsilon': 1e-6, 'cols': None, 'destination_key': 'syn_spheres100.hex'}
+            kwargs = {'k': CLUSTERS, 'initialization': 'Furthest', 'cols': None, 'destination_key': 'syn_spheres100.hex'}
             timeoutSecs = 30
             start = time.time()
             kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)

@@ -15,6 +15,9 @@ public class C4FChunk extends Chunk {
   }
   @Override boolean set8_impl(int idx, long l) { return false; }
   @Override boolean set8_impl(int i, double d) { return false; }
+  @Override boolean set4_impl(int i, float f ) { 
+    throw H2O.unimpl();
+  }
   @Override boolean hasFloat() { return true; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
   @Override public C4FChunk read(AutoBuffer bb) {

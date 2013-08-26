@@ -436,7 +436,7 @@ public class RequestArguments extends RequestStatics {
      * specified, or defaultValue. Note that default value is returned also for
      * invalid arguments.
      */
-    final T value() {
+    public final T value() {
       return record()._value;
     }
 
@@ -509,7 +509,7 @@ public class RequestArguments extends RequestStatics {
           if(callInstance instanceof Request2)
             ((Request2) callInstance).set(this, record._value);
         } catch (IllegalArgumentException e) {
-          record._value = defaultValue();
+          //record._value = defaultValue();
           throw e;
         }
       }
@@ -1404,7 +1404,9 @@ public class RequestArguments extends RequestStatics {
     protected transient final Class<T> _enumClass;
     private transient final T _defaultValue;
 
-
+    public EnumArgument(T defaultValue) {
+      this("", defaultValue, false);
+    }
     public EnumArgument(String name, T defaultValue, boolean refreshOnChange) {
       this(name,defaultValue);
       if(refreshOnChange)setRefreshOnChange();

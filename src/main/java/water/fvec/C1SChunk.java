@@ -31,6 +31,7 @@ public class C1SChunk extends Chunk {
     return true; 
   }
   @Override boolean set8_impl(int i, double d) { return false; }
+  @Override boolean set4_impl(int i, float f ) { return false; }
   @Override boolean hasFloat() { return _scale < 1.0; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
   @Override public C1SChunk read(AutoBuffer bb) {

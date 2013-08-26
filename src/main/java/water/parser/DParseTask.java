@@ -8,6 +8,7 @@ import water.*;
 import water.ValueArray.Column;
 import water.parser.ParseDataset.FileInfo;
 import water.util.Log;
+import water.util.Utils;
 
 /** Class responsible for actual parsing of the datasets.
  *
@@ -213,10 +214,10 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
   protected OutputStreamRecord[] createRecords(long firstRow, int rowsToParse) {
     assert (_rowsize != 0);
     ArrayList<OutputStreamRecord> result = new ArrayList();
-    int rpc = (int) ValueArray.CHUNK_SZ / _rowsize;
-    int rowInChunk = (int)firstRow % rpc;
+    long rpc = (int) (ValueArray.CHUNK_SZ / _rowsize);
+    int rowInChunk = (int)(firstRow % rpc);
     long lastChunk = Math.max(1,this._numRows / rpc) - 1; // index of the last chunk in the VA
-    int chunkIndex = (int)firstRow/rpc; // index of the chunk I am writing to
+    int chunkIndex = (int)(firstRow/rpc); // index of the chunk I am writing to
     if (chunkIndex > lastChunk) { // we can be writing to the second chunk after its real boundary
       assert (chunkIndex == lastChunk + 1);
       rowInChunk += rpc;
@@ -225,8 +226,8 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     do {
       // number of rows that go the the current chunk - all remaining rows for the
       // last chunk, or the number of rows that can go to the chunk
-      int rowsToChunk = (chunkIndex == lastChunk) ? rowsToParse : Math.min(rowsToParse, rpc - rowInChunk);
-      // add the output stream reacord
+      int rowsToChunk = (int)((chunkIndex == lastChunk) ? rowsToParse : Math.min(rowsToParse, rpc - rowInChunk));
+      // add the output stream record
       result.add(new OutputStreamRecord(chunkIndex, rowInChunk * _rowsize, rowsToChunk));
       // update the running variables
       if (chunkIndex < lastChunk) {
@@ -613,12 +614,10 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
           _mean[i] += dpt._mean[i];
         }
       } else if(_phase == Pass.TWO) {
-        for(int i = 0; i < dpt._ncolumns; ++i)
-          _sigma[i] += dpt._sigma[i];
+        Utils.add(_sigma,dpt._sigma);
       } else
         assert false:"unexpected _phase value:" + _phase;
-      for(int i = 0; i < dpt._ncolumns; ++i)
-        _invalidValues[i] += dpt._invalidValues[i];
+      Utils.add(_invalidValues,dpt._invalidValues);
     }
     _numRows += dpt._numRows;
     if(_error == null)_error = dpt._error;

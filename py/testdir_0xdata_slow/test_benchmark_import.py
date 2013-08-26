@@ -166,7 +166,7 @@ class Basic(unittest.TestCase):
         benchmarkLogging = ['cpu','disk', 'network', 'iostats', 'jstack']
         benchmarkLogging = ['cpu','disk', 'network', 'iostats']
         # IOStatus can hang?
-        benchmarkLogging = ['cpu', 'disk' 'network']
+        benchmarkLogging = ['cpu', 'disk', 'network']
         pollTimeoutSecs = 120
         retryDelaySecs = 10
 

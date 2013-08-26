@@ -12,10 +12,10 @@ public class Progress2 extends Request {
   static final String DOC_GET = "Track progress of an ongoing Job";
 
   @API(help="The Job id being tracked.")
-  final Str job = new Str("job");
+  public final Str job = new Str("job");
 
   @API(help="The destination key being produced.")
-  final Str dst_key = new Str("dst_key");
+  public final Str dst_key = new Str("dst_key");
 
   public static Response redirect(Request req, Key jobkey, Key dest) {
     return new Response(Response.Status.redirect, req, -1, -1, "Progress2", "job", jobkey, "dst_key", dest );

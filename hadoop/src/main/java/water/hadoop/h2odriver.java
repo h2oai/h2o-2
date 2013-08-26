@@ -31,12 +31,14 @@ import java.util.regex.Pattern;
 public class h2odriver extends Configured implements Tool {
   final static int DEFAULT_CLOUD_FORMATION_TIMEOUT_SECONDS = 120;
   final static int CLOUD_FORMATION_SETTLE_DOWN_SECONDS = 2;
+  final static int DEFAULT_EXTRA_MEM_PERCENT = 10;
 
   // Options that are parsed by the main thread before other threads are created.
   static String jobtrackerName = null;
   static int numNodes = -1;
   static String outputPath = null;
   static String mapperXmx = null;
+  static int extraMemPercent = -1;            // Between 0 and 10, typically.  Cannot be negative.
   static String driverCallbackIp = null;
   static int driverCallbackPort = 0;          // By default, let the system pick the port.
   static boolean disown = false;
@@ -357,6 +359,7 @@ public class h2odriver extends Configured implements Tool {
                     "          [-disown]\n" +
                     "          [-notify <notification file name>]\n" +
                     "          -mapperXmx <per mapper Java Xmx heap size>\n" +
+                    "          [-extramempercent <0 to 20>]\n" +
                     "          -n | -nodes <number of H2O nodes (i.e. mappers) to create>\n" +
                     "          -o | -output <hdfs output dir>\n" +
                     "\n" +
@@ -369,6 +372,9 @@ public class h2odriver extends Configured implements Tool {
                     "\n" +
                     "          o  -mapperXmx is set to both Xms and Xmx of the mapper to reserve\n" +
                     "             memory up front.\n" +
+                    "          o  -extramempercent is a percentage of mapperXmx.  (Default: \" + DEFAULT_EXTRA_MEM_PERCENT + \")\n" +
+                    "             Extra memory for internal JVM use outside of Java heap.\n" +
+                    "                 mapreduce.map.memory.mb = mapperXmx * (1 + extramempercent/100)\n" +
                     "          o  -libjars with an h2o.jar is required.\n" +
                     "          o  -driverif and -driverport let the user optionally specify the\n" +
                     "             network interface and port (on the driver host) for callback\n" +
@@ -445,6 +451,10 @@ public class h2odriver extends Configured implements Tool {
         i++; if (i >= args.length) { usage(); }
         mapperXmx = args[i];
       }
+      else if (s.equals("-extramempercent")) {
+        i++; if (i >= args.length) { usage(); }
+        extraMemPercent = Integer.parseInt(args[i]);
+      }
       else if (s.equals("-driverif")) {
         i++; if (i >= args.length) { usage(); }
         driverCallbackIp = args[i];
@@ -485,6 +495,10 @@ public class h2odriver extends Configured implements Tool {
     // Check for sane arguments.
     if (! mapperXmx.matches("[1-9][0-9]*[mgMG]")) {
       error("-mapperXmx invalid (try something like -mapperXmx 4g)");
+    }
+
+    if (extraMemPercent < 0) {
+      extraMemPercent = DEFAULT_EXTRA_MEM_PERCENT;
     }
 
     if (jobtrackerName == null) {
@@ -609,11 +623,26 @@ public class h2odriver extends Configured implements Tool {
       if (units.equals("g") || units.equals("G")) {
         megabytes = megabytes * 1024;
       }
+
+      // YARN container must be sized greater than Xmx.
+      // YARN will kill the application if the RSS of the process is larger than
+      // mapreduce.map.memory.mb.
+      long jvmInternalMemoryMegabytes = (long) ((double)megabytes * ((double)extraMemPercent)/100.0);
+      long processTotalPhysicalMemoryMegabytes = megabytes + jvmInternalMemoryMegabytes;
       conf.set("mapreduce.job.ubertask.enable", "false");
-      conf.set("mapreduce.map.memory.mb", Long.toString(megabytes));
+      String mapreduceMapMemoryMb = Long.toString(processTotalPhysicalMemoryMegabytes);
+      conf.set("mapreduce.map.memory.mb", mapreduceMapMemoryMb);
+
+      // MRv1 standard options, but also required for YARN.
       String mapChildJavaOpts = "-Xms" + mapperXmx + " -Xmx" + mapperXmx;
       conf.set("mapred.child.java.opts", mapChildJavaOpts);
       conf.set("mapred.map.child.java.opts", mapChildJavaOpts);       // MapR 2.x requires this.
+
+      System.out.println("Memory Settings:");
+      System.out.println("    mapred.child.java.opts:      " + mapChildJavaOpts);
+      System.out.println("    mapred.map.child.java.opts:  " + mapChildJavaOpts);
+      System.out.println("    Extra memory percent:        " + extraMemPercent);
+      System.out.println("    mapreduce.map.memory.mb:     " + mapreduceMapMemoryMb);
     }
 
     // Sometimes for debugging purposes, it helps to jam stuff in to the Java command

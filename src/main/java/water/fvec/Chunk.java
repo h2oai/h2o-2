@@ -12,7 +12,7 @@ public abstract class Chunk extends Iced implements Cloneable {
   public int _len;              // Number of elements in this chunk
   Chunk _chk;                   // Normally==this, changed if chunk is written to
   byte[] _mem; // Short-cut to the embedded memory; WARNING: holds onto a large array
-  Vec _vec;    // Owning Vec; filled after AutoBuffer.read
+  public Vec _vec;              // Owning Vec; filled after AutoBuffer.read
   Chunk() { _chk=this; }
 
   // The zero-based API.  Somewhere between 10% to 30% faster in a tight-loop
@@ -109,6 +109,31 @@ public abstract class Chunk extends Iced implements Cloneable {
     return d;
   }
 
+  public final float set4(long i, float d) {
+    long x = i-_start;
+    if( !(0 <= x && x < _len) ) return _vec.set4(i,d); // Go Slow
+    return set40((int)x,d);
+  }
+  public final float set40(int idx, float d) {
+    if( _chk==this ) {
+      assert !(this instanceof NewChunk) : "Cannot direct-write into a NewChunk, only append";
+      _vec.startWriting();      // One-shot writing-init
+      _chk = clone();           // Flag this chunk as having been written into
+      _chk._chk = _chk;         // Clone has NOT been written into
+    }
+    if( _chk.set4_impl(idx,d) ) return d;
+    // Must inflate the chunk
+    NewChunk nc = new NewChunk(null/*_vec*/,_vec.elem2ChunkIdx(_start));
+    nc._vec = _vec;
+    nc._ls = null;
+    nc._xs = null;
+    nc._ds = new double[_len];
+    nc._len= _len;
+    _chk = inflate_impl(nc);
+    nc.set4_impl(idx,d);
+    return d;
+  }
+
   // After writing we must call close() to register the bulk changes
   public void close( int cidx, Futures fs ) {
     if( _chk instanceof NewChunk )_chk = ((NewChunk)_chk).close(fs);
@@ -125,6 +150,7 @@ public abstract class Chunk extends Iced implements Cloneable {
   // current compression scheme.
   abstract boolean set8_impl (int idx, long l );
   abstract boolean set8_impl (int idx, double d );
+  abstract boolean set4_impl (int idx, float f );
   // Chunk-specific bulk inflator back to NewChunk.  Used when writing into a
   // chunk and written value is out-of-range for an update-in-place operation.
   // Bulk copy from the compressed form into the nc._ls array.

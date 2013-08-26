@@ -138,8 +138,7 @@ public class StratifiedDABuilder extends DABuilder {
     ForkJoinTask.invokeAll(htasks);
     // compute sums of our class counts
     for(int i = 0; i < lkeys.length; ++i)
-      for(int j = 0; j < nclasses; ++j)
-        chunkHistogram[lkeys.length][j] += chunkHistogram[i][j];
+      Utils.add(chunkHistogram[lkeys.length],chunkHistogram[i]);
 
     ArrayList<Key> myKeys = new ArrayList<Key>();
     for(Key k : lkeys)myKeys.add(k);
@@ -235,7 +234,7 @@ public class StratifiedDABuilder extends DABuilder {
       if(i < lkeys.length) // local (majority class) chunk
         for(int j = 0; j < nclasses; ++j){
           if(unbalancedClasses == null || !unbalancedClasses[j])
-            startRows[j] += chunkHistogram[i][j];
+            Utils.add(startRows,chunkHistogram[i]);
       } else { // chunk containing only single unbalanced class
         // find the unbalanced class
         int c = 0;

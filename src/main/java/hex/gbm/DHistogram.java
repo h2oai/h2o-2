@@ -31,18 +31,16 @@ import water.util.Log;
 public class DHistogram<T extends DHistogram> extends Iced {
   public static final int BINS=4;
   transient final String _name; // Column name, for pretty-printing
-  final short _nclass;          // Number of classes
   final boolean _isInt;         // Column only holds integers
   float _min, _max;             // Lower-end of binning
-  public DHistogram( String name, short nclass, boolean isInt, float min, float max ) {
+  public DHistogram( String name, boolean isInt, float min, float max ) {
     _name = name;
-    _nclass = nclass;
     _isInt = isInt;
     _min = min;
     _max = max;
   }
-  public DHistogram( String name, short nclass, boolean isInt ) {
-    this(name,nclass,isInt,Float.MAX_VALUE,-Float.MAX_VALUE);
+  public DHistogram( String name, boolean isInt ) {
+    this(name,isInt,Float.MAX_VALUE,-Float.MAX_VALUE);
   }
 
   // All these functions are overridden in subclasses
@@ -71,7 +69,7 @@ public class DHistogram<T extends DHistogram> extends Iced {
   // Number of rows in this bin.
   long bins(int i) { return 0; }
   // Number of rows with class 'c' in this bin
-  long clss(int i, int c) { return 0; }
+  float clss(int i, int c) { return 0; }
   // Smallest value in bin i
   float mins(int i) { return _min; }
   // Largest value in bin i
@@ -80,6 +78,7 @@ public class DHistogram<T extends DHistogram> extends Iced {
   float score( ) { return Float.NaN; }
   // Do not ask for 'mean' from a non-scoring histogram
   float mean( int bin ) { return Float.NaN; }
+  float mean( int bin, int cls ) { return Float.NaN; }
   // Do not ask for 'var' from a non-scoring histogram
   float var( int bin ) { return Float.NaN; }
 

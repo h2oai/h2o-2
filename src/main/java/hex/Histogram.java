@@ -2,6 +2,7 @@ package hex;
 
 import com.google.gson.JsonObject;
 import water.*;
+import water.util.Utils;
 
 public abstract class Histogram {
 
@@ -76,8 +77,7 @@ public abstract class Histogram {
          assert _bins.length == other._bins.length;
          assert Math.abs(_start - other._start) < 0.000001;
          assert Math.abs(_binsz - other._binsz) < 0.000000001;
-         for (int i = 0; i < _bins.length; i++)
-            _bins[i] += other._bins[i];
+         Utils.add(_bins,other._bins);
       }
 
       void add(double val) {

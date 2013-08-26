@@ -1,5 +1,7 @@
 package water;
 
+import hex.NeuralNetIrisTest;
+
 import java.util.ArrayList;
 
 import org.junit.runner.Result;
@@ -11,11 +13,11 @@ import water.util.Utils;
 
 public class JUnitRunnerDebug {
   public static void main(String[] args) throws Exception {
-    water.Boot.main(Master.class, args);
+    water.Boot.main(UserCode.class, args);
   }
 
-  public static class Master {
-    public static void main(String[] args) {
+  public static class UserCode {
+    public static void userMain(String[] args) {
       String flat = "";
       flat += "127.0.0.1:54321\n";
       flat += "127.0.0.1:54323\n";
@@ -27,15 +29,19 @@ public class JUnitRunnerDebug {
       new NodeCL(("-ip 127.0.0.1 -port 54325 -flatfile " + flat).split(" ")).start();
 
       ArrayList<Class> tests = new ArrayList<Class>();
-      tests.add(ValueArrayToFrameTest.class);
+
+      // Classes to test:
+      tests.add(NeuralNetIrisTest.class);
+
       Result result = org.junit.runner.JUnitCore.runClasses(tests.toArray(new Class[0]));
       if( result.getFailures().size() == 0 )
         System.out.println("Success!");
-      else
+      else {
         for( Failure f : result.getFailures() ) {
           Log.info(f.getDescription());
           f.getException().printStackTrace();;
         }
+      }
     }
   }
 }

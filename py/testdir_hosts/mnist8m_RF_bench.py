@@ -12,18 +12,18 @@ csv_header = ('java_heap_GB','dataset','nTrainRows','nTestRows','nCols',
               'testViewTime','overallWallTime','errRate')
 local_files = {'train':'mnist8m-train-1.csv',
                'test':'mnist8m-test-1.csv'}
-def run_rf(files,configs,s3n):
+def run_rf(files,configs):
     overallWallStart = time.time()
     importFolderPath = '/home/0xdiag/datasets/mnist/mnist8m'
     importFolderResult = h2i.setupImportFolder(None, importFolderPath)
     output = None
-    if not os.path.exists('rfbench.csv'):
-        output = open('rfbench.csv','w')
-        output.write(','.join(csv_header)+'\n')
-    else:
-        output = open('rfbench.csv','a')
-    csvWrt = csv.DictWriter(output, fieldnames=csv_header, restval=None, 
-                dialect='excel', extrasaction='ignore',delimiter=',')
+    #if not os.path.exists('rfbench.csv'):
+    #    output = open('rfbench.csv','w')
+    #    output.write(','.join(csv_header)+'\n')
+    #else:
+    #    output = open('rfbench.csv','a')
+    #csvWrt = csv.DictWriter(output, fieldnames=csv_header, restval=None, 
+    #            dialect='excel', extrasaction='ignore',delimiter=',')
     #csvWrt.writeheader()
     try:
         java_heap_GB = h2o.nodes[0].java_heap_GB
@@ -85,7 +85,8 @@ def run_rf(files,configs,s3n):
         overallWallTime = time.time() - overallWallStart 
         row.update({'overallWallTime':overallWallTime})
         row.update({'errRate':errRate})
-        csvWrt.writerow(row)
+        print row
+        #csvWrt.writerow(row)
         #h2o.nodes[0].remove_key(k)
     finally:
         output.close()
@@ -110,12 +111,6 @@ if __name__ == '__main__':
                 'use_non_local_data': 0,
                 'class_weights': '0=1.0,1=1.0,2=1.0,3=1.0,4=1.0,5=1.0,6=1.0,7=1.0,8=1.0,9=1.0',
                 }
-    files = None
-    s3n = 0
-    #if use_s3n():
-    #    files = s3n_files
-    #    s3n = 1
-    #else:
     files = local_files
-    run_rf(files,params,s3n)
+    run_rf(files,params)
     h2o.tear_down_cloud()

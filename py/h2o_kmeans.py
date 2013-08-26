@@ -71,7 +71,7 @@ def bigCheckResults(self, kmeans, csvPathname, parseKey, applyDestinationKey, **
 # ]
 # delta is a tuple of multipliers against the tupleResult for abs delta
 # allowedDelta = (0.01, 0.1, 0.01)
-def compareResultsToExpected(self, tupleResultList, expected=None, allowedDelta=None, trial=0):
+def compareResultsToExpected(self, tupleResultList, expected=None, allowedDelta=None, allowError=False, trial=0):
     # sort the tuple list by center for the comparison. (this will be visible to the caller?)
     from operator import itemgetter
     tupleResultList.sort(key=itemgetter(0))
@@ -88,7 +88,7 @@ def compareResultsToExpected(self, tupleResultList, expected=None, allowedDelta=
     for t in tupleResultList:
         print t, "," # so can cut and paste and put results in an expected = [..] list
 
-    if expected is not None: # allowedDelta must exist if expected exists
+    if expected is not None and not allowError: # allowedDelta must exist if expected exists
         for i, (expCenter, expRows, expError)  in enumerate(expected):
             (actCenter, actRows, actError) = tupleResultList[i]
 

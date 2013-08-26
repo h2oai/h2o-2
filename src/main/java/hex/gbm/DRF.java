@@ -20,10 +20,10 @@ public class DRF extends Job {
   public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
   private DRF(Key dest, Frame fr) { super("DRF "+fr, dest); }
   // Called from a non-FJ thread; makea a DRF and hands it over to FJ threads
-  public static DRF start(Key dest, final Frame fr, final int maxDepth, final int ntrees, final int mtrys, final double sampleRate, final long seed) {
+  public static DRF start(Key dest, final Frame fr, final Vec vresponse, final int maxDepth, final int ntrees, final int mtrys, final double sampleRate, final long seed) {
     final DRF job = new DRF(dest, fr);
     H2O.submitTask(job.start(new H2OCountedCompleter() {
-        @Override public void compute2() { job.run(fr,maxDepth,ntrees,mtrys,(float)sampleRate,seed); tryComplete(); }
+        @Override public void compute2() { job.run(fr,vresponse,maxDepth,ntrees,mtrys,(float)sampleRate,seed); tryComplete(); }
       })); 
     return job;
   }
@@ -40,36 +40,54 @@ public class DRF extends Job {
 
   // Compute a single DRF tree from the Frame.  Last column is the response
   // variable.  Depth is capped at maxDepth.
-  private void run(Frame fr, int maxDepth, int ntrees, int mtrys, float sampleRate, long seed ) {
+  private void run(final Frame fr, Vec vresponse, int maxDepth, int ntrees, int mtrys, float sampleRate, long seed ) {
     Timer t_drf = new Timer();
     assert 0 <= ntrees && ntrees < 1000000;
-    assert 0 <= mtrys && mtrys < fr.numCols();
+    assert 1 <= mtrys && mtrys <= fr.numCols() : "Too large mtrys="+mtrys+", ncols="+fr.numCols();
     assert 0.0 < sampleRate && sampleRate <= 1.0;
-
     final String names[] = fr._names;
-    Vec vs[] = fr._vecs;
-    final int ncols = vs.length-1; // Last column is the response column
+    final int  ncols = fr.numCols();
+    final long nrows = fr.numRows();
+    final int  ymin  = (int)vresponse.min();
+    short nclass = vresponse._isInt ? (short)(vresponse.max()-ymin+1) : 1;
+    assert 1 <= nclass && nclass < 1000; // Arbitrary cutoff for too many classes
 
-    // Response column is the last one in the frame
-    Vec vresponse = vs[ncols];
-    final long nrows = vresponse.length();
-    assert !vresponse._isInt || (vresponse.max() - vresponse.min()) < 10000; // Too many classes?
-    int ymin = (int)vresponse.min();
-    short nclass = vresponse._isInt ? (short)(vresponse.max()-ymin+1) : 0;
-    //if( nclass == 2 ) nclass = 0; // Specifically force 2 classes into a regression
+    // Fill in the response variable column(s)
+    if( nclass == 1 ) {
+      fr.add("Residual-"+fr._names[ncols],vresponse.makeCon(vresponse.mean()));
+      throw H2O.unimpl();
+    } else {
+      // A vector of {0,..,0,1,0,...}
+      // A single 1.0 in the actual class.
+      String[] domain = vresponse.domain();
+      for( int i=0; i<nclass; i++ ) 
+        fr.add(domain[i],vresponse.makeZero());
+      fr.add("response",vresponse);
+      // Set a single 1.0 in the response for that class
+      new MRTask2() {
+        @Override public void map( Chunk chks[] ) {
+          Chunk cy = chks[chks.length-1];
+          for( int i=0; i<cy._len; i++ ) {
+            int cls = (int)cy.at80(i) - ymin;
+            chks[ncols+cls].set80(i,1.0f);
+          }
+        }
+      }.doAll(fr);
+      fr.remove(ncols+nclass);
+    }
 
     // The RNG used to pick split columns
     Random rand = new MersenneTwisterRNG(new int[]{(int)(seed>>32L),(int)seed});
 
     // Initially setup as-if an empty-split had just happened
     DHistogram hs[] = DBinHistogram.initialHist(fr,ncols,nclass);
-    DRFTree trees[] = new DRFTree[ntrees];
+    DRFTree forest[] = new DRFTree[ntrees];
     Vec[] nids = new Vec[ntrees];
 
     // ----
     // Only work on so many trees at once, else get GC issues.
     // Hand the inner loop a smaller set of trees.
-    final int NTREE=1;          // Limit of 5 trees at once
+    final int NTREE=2;          // Limit of 5 trees at once
     int depth=0;
     for( int st = 0; st < ntrees; st+= NTREE ) {
       int xtrees = Math.min(NTREE,ntrees-st);
@@ -79,32 +97,32 @@ public class DRF extends Job {
       for( int t=0; t<xtrees; t++ ) {
         int idx = st+t;
         // Make a new Vec to hold the split-number for each row (initially all zero).
-        Vec vec = Vec.makeZero(vs[0]);
+        Vec vec = vresponse.makeZero();
         nids[idx] = vec;
-        trees[idx] = someTrees[t] = new DRFTree(fr,ncols,nclass,hs,mtrys,rand.nextLong());
+        forest[idx] = someTrees[t] = new DRFTree(fr,ncols,nclass,hs,mtrys,rand.nextLong());
         if( sampleRate < 1.0 )
           new Sample(someTrees[t],sampleRate).doAll(vec);
         fr.add("NIDs"+t,vec);
       }
 
       // Make NTREE trees at once
-      int d = makeSomeTrees(st, someTrees,someLeafs, xtrees, maxDepth, fr, ncols, nclass, ymin, nrows, sampleRate);
+      int d = makeSomeTrees(st, someTrees,someLeafs, xtrees, maxDepth, fr, vresponse, ncols, nclass, ymin, nrows, sampleRate);
       if( d>depth ) depth=d;    // Actual max depth used
 
       // Remove temp vectors; cleanup the Frame
-      while( fr.numCols() > ncols+1 )
+      for( int t=0; t<xtrees; t++ )
         UKV.remove(fr.remove(fr.numCols()-1)._key);
     }
     Log.info(Sys.DRF__,"DRF done in "+t_drf);
 
     // One more pass for final prediction error
-    _cm = new BulkScore(trees,ncols,nclass,ymin,sampleRate).doAll(fr).report( Sys.DRF__, nrows, depth )._cm;
+    _cm = new BulkScore(forest,ncols,nclass,ymin,sampleRate,true).doIt(fr,vresponse).report( Sys.DRF__, nrows, depth )._cm;
   }
 
   // ----
   // One Big Loop till the tree is of proper depth.
   // Adds a layer to the tree each pass.
-  public int makeSomeTrees( int st, DRFTree trees[], int leafs[], int ntrees, int maxDepth, Frame fr, int ncols, short nclass, int ymin, long nrows, double sampleRate ) {
+  public int makeSomeTrees( int st, DRFTree trees[], int leafs[], int ntrees, int maxDepth, Frame fr, Vec vresponse, int ncols, short nclass, int ymin, long nrows, double sampleRate ) {
     for( int depth=0; depth<maxDepth; depth++ ) {
       Timer t_pass = new Timer();
 
@@ -124,8 +142,8 @@ public class DRF extends Job {
         final DTree tree = trees[t];
         long sum=0;
         for( int i=leafs[t]; i<tmax; i++ ) {
-          tree.undecided(i)._hs = sbh.getFinalHisto(t,i);
-          DHistogram hs[] = tree.undecided(i)._hs;
+          DHistogram hs[] = sbh.getFinalHisto(t,i);
+          tree.undecided(i)._hs = hs;
           for( DHistogram h : hs )
             if( h != null ) sum += h.byteSize();
         }
@@ -153,7 +171,7 @@ public class DRF extends Job {
 
       // If all trees are done, then so are we
       if( !still_splitting ) return depth;
-      //new BulkScore(trees,ncols,nclass,ymin,(float)sampleRate).doAll(fr).report( Sys.DRF__, nrows, depth );
+      //new BulkScore(trees,ncols,nclass,ymin,(float)sampleRate,true).doIt(fr,vresponse).report( Sys.DRF__, nrows, depth );
     }
     return maxDepth;
   }
@@ -195,31 +213,6 @@ public class DRF extends Job {
 
     // Find the column with the best split (lowest score).
     @Override int bestCol( DRFUndecidedNode u ) {
-      //DRFTree tree = (DRFTree)_tree;
-      //int[] cols = new int[hs.length];
-      //int len=0;
-      //// Gather all active columns to choose from.  Ignore columns we
-      //// previously ignored, or columns with 1 bin (nothing to split), or
-      //// histogramed bin min==max (means the predictors are constant).
-      //for( int i=0; i<hs.length; i++ ) {
-      //  if( hs[i]==null || hs[i].nbins() <= 1 ) continue; // Ignore not-tracked cols, or cols with 1 bin (will not split)
-      //  if( hs[i]._min == hs[i]._max ) continue; // predictor min==max, does not distinguish
-      //  cols[len++] = i;        // Gather active column
-      //}
-      //
-      //// Draw up to mtry columns at random without replacement.
-      //// Take the best one.
-      //double bs = Double.MAX_VALUE; // Best score
-      //int idx = -1;                 // Column to split on
-      //for( int i=0; i<tree._mtrys; i++ ) {
-      //  if( len == 0 ) break;   // Out of choices!
-      //  int idx2 = tree._rand.nextInt(len);
-      //  int col = cols[idx2];     // The chosen column
-      //  cols[idx2] = cols[--len]; // Compress out of array; do not choose again
-      //  double s = hs[col].score();
-      //  if( s < bs ) { bs = s; idx = col; }
-      //  if( s <= 0 ) break;     // No point in looking further!
-      //}
       double bs = Double.MAX_VALUE; // Best score
       int idx = -1;                 // Column to split on
       for( int i=0; i<u._scoreCols.length; i++ ) {
@@ -262,7 +255,7 @@ public class DRF extends Job {
           else if( hs[i] instanceof DBinHistogram && hs[i].nbins() <= 1 ) 
             s="nbins="+hs[i].nbins();
           else s="unk";
-          System.out.println(s);
+          System.out.println("No choices, hists="+s);
         }
       }
       assert choices > 0;

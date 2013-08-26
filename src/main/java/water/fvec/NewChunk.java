@@ -39,12 +39,12 @@ public class NewChunk extends Chunk {
     append2(0,Integer.MIN_VALUE); ++_naCnt;
   }
   private boolean _hasFloat;
-  public void addNum(long val, int exp){
+  public void addNum(long val, int exp) {
     if(val == 0)exp = 0;
     _hasFloat |= (exp < 0);
     append2(val,exp);
   }
-  public void addEnum(int e){
+  public void addEnum(int e) {
     append2(0,e); ++_strCnt;
   }
   public void addNum(double d) {
@@ -59,6 +59,7 @@ public class NewChunk extends Chunk {
     }
     _ds[_len] = d;
     _len++;
+    _hasFloat = true;
   }
 
   // Fast-path append long data
@@ -123,8 +124,12 @@ public class NewChunk extends Chunk {
     }
     // If the data was set8 as doubles, we (weanily) give up on compression and
     // just store it as a pile-o-doubles.
-    if( _ds != null )
-      return new C8DChunk(bufF(3));
+    if( _ds != null ) {
+      for( int i=0; i<_len; i++ ) // Attempt to inject all doubles into floats
+        if( (double)(float)_ds[i] != _ds[i] )
+          return new C8DChunk(bufF(3));
+      return new C4FChunk(bufF(2));
+    }
 
     // Look at the min & max & scaling.  See if we can sanely normalize the
     // data in some fixed-point format.
@@ -316,8 +321,19 @@ public class NewChunk extends Chunk {
     _ds[i]=d;
     return true;
   }
-  @Override public long   at8_impl( int i ) { assert _xs[i]==0 && _ds==null; return _ls[i]; }
-  @Override public double atd_impl( int i ) { assert _xs==null; return _ds[i]; }
+  @Override boolean set4_impl(int i, float d) {
+    if( _ls != null ) throw H2O.unimpl();
+    _ds[i]=d;
+    return true;
+  }
+  @Override public long   at8_impl( int i ) { 
+    if( _ls == null ) return (long)_ds[i];
+    assert _xs[i]==0; return _ls[i]; 
+  }
+  @Override public double atd_impl( int i ) { 
+    if( _ds == null ) return at8_impl(i);
+    assert _xs==null; return _ds[i]; 
+  }
   @Override boolean hasFloat() { return _hasFloat; }
   @Override public AutoBuffer write(AutoBuffer bb) { throw H2O.fail(); }
   @Override public NewChunk read(AutoBuffer bb) { throw H2O.fail(); }
