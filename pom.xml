@@ -323,4 +323,16 @@
   	<connection>scm:git:https://github.com/0xdata/h2o.git</connection>
   	<developerConnection>scm:git:git@github.com:0xdata/h2o.git</developerConnection>
   </scm>
+  <distributionManagement>
+    <repository>
+      <id>0xdata-release-repo</id>
+      <name>0xdata Release Repository</name>
+      <url>s3://distribution.bucket/release</url>
+    </repository>
+    <snapshotRepository>
+      <id>0xdata-snapshot-repo</id>
+      <name>0xdata Snapshot Repository</name>
+      <url>s3://distribution.bucket/snapshot</url>
+    </snapshotRepository>
+  </distributionManagement>
 </project>
