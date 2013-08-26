@@ -38,7 +38,6 @@ public class GBM extends Job {
   // variable.  Depth is capped at maxDepth.
   private void run(Frame fr, Vec vresponse, int maxDepth) {
     Timer t_gbm = new Timer();
-    final String names[] = fr._names;
     final int  ncols = fr.numCols();
     final long nrows = fr.numRows();
     final int ymin = (int)vresponse.min();
@@ -53,19 +52,43 @@ public class GBM extends Job {
     // The initial prediction is just the class distribution.  The initial
     // residuals are then basically the actual class minus the average class.
     float preds[] = buildResiduals(nclass,fr,ncols,nrows,vresponse,ymin);
-    DTree init_tree = new DTree(names,ncols,nclass);
+    DTree init_tree = new DTree(fr._names,ncols,nclass);
     new GBMDecidedNode(init_tree,preds);
 
+    DTree forest[] = new DTree[] {init_tree};
+    // Initial scoring
+    //new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, maxDepth );
+
+    // Build trees until we hit the limit
+    for( int tid=1; tid<20; tid++)
+      forest = buildNextTree(fr,vresponse,forest,ncols,nrows,nclass,ymin,maxDepth,1);
+
+    Log.info(Sys.GBM__,"GBM Modeling done in "+t_gbm);
+
+    // One more pass for final prediction error
+    Timer t_score = new Timer();
+    new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, maxDepth );
+    Log.info(Sys.GBM__,"GBM final Scoring done in "+t_score);
+
+    // Remove temp vector; cleanup the Frame
+    while( fr.numCols() > ncols+1 )
+      UKV.remove(fr.remove(fr.numCols()-1)._key);
+  }
+
+
+  // Build the next tree, which is trying to correct the residual error from the prior trees.
+  private static DTree[] buildNextTree(Frame fr, Vec vresponse, DTree forest[], final int ncols, long nrows, final short nclass, int ymin, int maxDepth, final int tid) {
     // Make a new Vec to hold the split-number for each row (initially all zero).
     Vec vnids = vresponse.makeZero();
     fr.add("NIDs",vnids);
 
     // Initially setup as-if an empty-split had just happened
-    DTree tree = new DTree(names,ncols,nclass);
+    final DTree tree = new DTree(fr._names,ncols,nclass);
     new GBMUndecidedNode(tree,-1,DBinHistogram.initialHist(fr,ncols,nclass)); // The "root" node
     int leaf = 0; // Define a "working set" of leaf splits, from here to tree._len
-
-    DTree forest[] = new DTree[] {init_tree,tree};
+    // Add tree to the end of the forest
+    forest = Arrays.copyOf(forest,forest.length+1);
+    forest[forest.length-1] = tree;
 
     // ----
     // One Big Loop till the tree is of proper depth.
@@ -74,14 +97,13 @@ public class GBM extends Job {
     for( ; depth<maxDepth; depth++ ) {
 
       // Fuse 2 conceptual passes into one:
-      // Pass 1: Score a prior DHistogram, and make new DTree.Node
-      // assignments to every row.  This involves pulling out the
-      // current assigned Node, "scoring" the row against that Node's
-      // decision criteria, and assigning the row to a new child Node
-      // (and giving it an improved prediction).
-      // Pass 2: Build new summary DHistograms on the new child Nodes
-      // every row got assigned into.  Collect counts, mean, variance,
-      // min, max per bin, per column.
+      // Pass 1: Score a prior DHistogram, and make new DTree.Node assignments
+      // to every row.  This involves pulling out the current assigned Node,
+      // "scoring" the row against that Node's decision criteria, and assigning
+      // the row to a new child Node (and giving it an improved prediction).
+      // Pass 2: Build new summary DHistograms on the new child Nodes every row
+      // got assigned into.  Collect counts, mean, variance, min, max per bin,
+      // per column.
       ScoreBuildHistogram sbh = new ScoreBuildHistogram(new DTree[]{tree},new int[]{leaf},ncols,nclass,ymin,fr).doAll(fr);
 
       // Reassign the new DHistogram back into the DTree
@@ -100,22 +122,44 @@ public class GBM extends Job {
         //System.out.println(dn);
       }
 
+      // Level-by-level scoring, within a tree.
+      //new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, depth );
+
       // If we did not make any new splits, then the tree is split-to-death
       if( tmax == tree._len ) break;
-      
-      //new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, depth );
     }
-    Log.info(Sys.GBM__,"GBM done in "+t_gbm);
 
-    // One more pass for final prediction error
-    Timer t_score = new Timer();
+    // For each observation, find the residual(error) between predicted and desired.
+    // Desired is in the old residual columns; predicted is in the decision nodes.
+    // Replace the old residual columns with new residuals.
+    new MRTask2() {
+      @Override public void map( Chunk chks[] ) {
+        Chunk ns = chks[chks.length-1];
+        for( int i=0; i<ns._len; i++ ) {  // For all rows
+          boolean frunk = (tid==1) && (ns.at80(i)==41);
+          DecidedNode node = tree.decided((int)ns.at80(i));
+          float preds[] = node._pred[node.bin(chks,i)];
+          for( int c=0; c<nclass; c++ ) {
+            double actual = chks[ncols+c].at0(i);
+            double residual = actual-preds[c];
+            chks[ncols+c].set40(i,(float)residual);
+          }
+        }
+      }
+    }.doAll(fr);
+
+    // Remove the NIDs column
+    assert fr._names[fr.numCols()-1].equals("NIDs");
+    UKV.remove(fr.remove(fr.numCols()-1)._key);
+
+    // Print the generated tree
+    //System.out.println(tree.root().toString2(new StringBuilder(),0));
+    
+    // Tree-by-tree scoring
     new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, depth );
-    Log.info(Sys.GBM__,"GBM score done in "+t_score);
-
-    // Remove temp vector; cleanup the Frame
-    while( fr.numCols() > ncols+1 )
-      UKV.remove(fr.remove(fr.numCols()-1)._key);
+    return forest;
   }
+
 
   // Add in Vecs after the response column which holds the row-by-row
   // residuals: the (actual minus prediction), for each class.  The

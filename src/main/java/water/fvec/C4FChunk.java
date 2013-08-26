@@ -11,12 +11,13 @@ public class C4FChunk extends Chunk {
   }
   @Override protected final double atd_impl( int i ) {
     float res = UDP.get4f(_mem,i<<2);
-    return Float.isNaN(res)?_vec._fNA:res;
+    return Float.isNaN(res)?Vec.DEFAULT_NA:res;
   }
   @Override boolean set8_impl(int idx, long l) { return false; }
   @Override boolean set8_impl(int i, double d) { return false; }
   @Override boolean set4_impl(int i, float f ) { 
-    throw H2O.unimpl();
+    UDP.set4f(_mem,i<<2,f);
+    return true;
   }
   @Override boolean hasFloat() { return true; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }

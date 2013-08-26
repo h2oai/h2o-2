@@ -13,7 +13,7 @@ public class C2Chunk extends Chunk {
   }
   @Override protected final double atd_impl( int    i ) {
     int res = UDP.get2(_mem,(i<<1)+OFF);
-    return res == _NA?_vec._fNA:res;
+    return res == _NA?Vec.DEFAULT_NA:res;
   }
   @Override boolean set8_impl(int idx, long l) {
     if( !(Short.MIN_VALUE < l && l <= Short.MAX_VALUE) ) return false;

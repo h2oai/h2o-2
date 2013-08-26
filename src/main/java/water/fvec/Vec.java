@@ -351,49 +351,20 @@ public class Vec extends Iced {
 
   /** handling of NAs: pick a value in the same dataspace but unlikely to
    *  collide with user data. */
-  long   _iNA = Long.MIN_VALUE+111; // "random" small number, not to clash with the MIN value
-  /** handling of NAs: pick a value in the same dataspace but unlikely to
-   *  collide with user data. */
-  double _fNA = Double.NaN;
-  private boolean _replaceNAs;
-
-  final void setNAs(double fNA, long iNa){
-    _replaceNAs = false;
-    _iNA = iNa;
-    _fNA = fNA;
-  }
+  static final long DEFAULT_NA = Long.MIN_VALUE+111; // "random" small number, not to clash with the MIN value
+  long _iNA = DEFAULT_NA; // "random" small number, not to clash with the MIN value
   /**
    * NAs can be replaced on the fly by user supplied value.
-   * @param fval
    * @param ival
    */
-  final void replaceNAs(double fval, long ival){
-    _replaceNAs = true;
-    _iNA = ival;
-    _fNA = fval;
-  }
-  final void replaceNAs(double fval){
-    if(!Double.isNaN(fval))replaceNAs(fval,(long)fval);
-    else {
-      _fNA = fval;
-      _replaceNAs = false;
-    }
-  }
-  final void replaceNAs(long ival){replaceNAs(ival, ival);}
+  final void replaceNAs(long ival) { _iNA = ival; }
 
-  public final boolean isNA(long row){
-    return chunk(row).isNA(row);
-  }
+  public final boolean isNA(long row){ return chunk(row).isNA(row); }
 
   /** True if this value is the canonical "missing element" sentinel. */
-  final boolean valueIsNA(long l){
-    return !_replaceNAs && l == _iNA;
-  }
-
+  final boolean valueIsNA(long l) { return l == _iNA; }
   /** True if this value is the canonical "missing element" sentinel. */
-  final boolean valueIsNA(double d){
-    return !_replaceNAs && (Double.isNaN(d) || d == _fNA);
-  }
+  final boolean valueIsNA(double d){ return Double.isNaN(d); }
 
   /** Pretty print the Vec: [#elems, min/mean/max]{chunks,...} */
   @Override public String toString() {

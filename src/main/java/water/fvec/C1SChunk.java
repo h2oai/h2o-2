@@ -20,7 +20,7 @@ public class C1SChunk extends Chunk {
   }
   @Override protected final double atd_impl( int i ) {
     long res = 0xFF&_mem[i+OFF];
-    return (res == _NA)?_vec._fNA:(res+_bias)*_scale;
+    return (res == _NA)?Vec.DEFAULT_NA:(res+_bias)*_scale;
   }
   @Override boolean set8_impl(int i, long l) { 
     long res = (long)(l/_scale)-_bias; // Compressed value

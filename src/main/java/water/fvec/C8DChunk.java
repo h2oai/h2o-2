@@ -11,7 +11,7 @@ public class C8DChunk extends Chunk {
   }
   @Override protected final double atd_impl( int i ) {
     double res = UDP.get8d(_mem,i<<3);
-    return Double.isNaN(res)?_vec._fNA:res;
+    return res;
   }
   @Override boolean set8_impl(int idx, long l) { return false; }
   @Override boolean set8_impl(int i, double d) {
