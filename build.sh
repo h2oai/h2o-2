@@ -150,8 +150,11 @@ function build_jar() {
     cd ..
     # include H2O classes
     "$JAR" uf ${JAR_FILE} -C "${CLASSES}"   .
-    "$JAR" uf ${JAR_FILE} -C tmp  .
-    rm -fr tmp
+    # Pick up R jars
+    if [ -d tmp ]; then
+      "$JAR" uf ${JAR_FILE} -C tmp  .
+      rm -fr tmp
+    fi
     "$ZIP" -qd ${JAR_FILE} javassist.jar 
 }
 
