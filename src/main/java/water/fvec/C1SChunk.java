@@ -9,7 +9,6 @@ public class C1SChunk extends Chunk {
   public double _scale;
   int _bias;
   C1SChunk( byte[] bs, int bias, double scale ) { _mem=bs; _start = -1; _len = _mem.length-OFF;
-    System.out.println("c1s bias"+bias+", scale="+scale+" buf="+java.util.Arrays.toString(bs));
     _bias = bias; _scale = scale;
     UDP.set8d(_mem,0,scale);
     UDP.set4 (_mem,8,bias );
