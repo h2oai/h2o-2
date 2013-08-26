@@ -54,7 +54,6 @@ An object of class \code{\linkS4class{H2OGLMModel}} with slots key, data, model 
 \item{threshold }{Best threshold.}
 \item{confusion }{Confusion matrix.}
 The slot xval is a list of \code{\linkS4class{H2OGLMModel}} objects representing the cross-validation models. (Each of these objects themselves has xval equal to an empty list).
-\item{}
 %%  ~Describe the value returned
 %%  If it is a LIST, use
 %%  \item{comp1 }{Description of 'comp1'}
