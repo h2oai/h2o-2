@@ -44,18 +44,23 @@ public class GBMTest extends TestUtil {
     if( file == null ) return;  // Silently abort test if the file is missing
     Key fkey = NFSFileVec.make(file);
     Key dest = Key.make(hexname);
-    Frame fr = ParseDataset2.parse(dest,new Key[]{fkey});
-    UKV.remove(fkey);
-    Vec vresponse = null;
     GBM gbm = null;
     try {
-      vresponse = prep.prep(fr);
-      gbm = GBM.start(GBM.makeKey(),fr,vresponse,5);
-      gbm.get();                  // Block for result
+      gbm = new GBM();
+      gbm.source = ParseDataset2.parse(dest,new Key[]{fkey});
+      UKV.remove(fkey);
+      gbm.vresponse = prep.prep(gbm.source);
+      gbm.ntrees = 5;
+      gbm.max_depth = 8;
+      gbm.serve();
+
     } finally {
       UKV.remove(dest);         // Remove whole frame
-      UKV.remove(vresponse._key);
-      if( gbm != null ) gbm.remove();
+      if( gbm != null ) {
+        gbm.source.remove();
+        UKV.remove(gbm.vresponse._key);
+        gbm.remove();
+      }
     }
   }
 
