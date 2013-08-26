@@ -119,7 +119,8 @@ def find_dataset(f):
         head = os.path.split(head)[0]
         levels += 1
         if (levels==10): 
-            raise Exception("unable to find datasets. Did you git it?")
+            raise Exception("unable to find datasets. Did you 'git clone https://github.com/0xdata/datasets.git' parallel to the h2o dir?")
+
 
     return os.path.join(head, tail, f)
 
