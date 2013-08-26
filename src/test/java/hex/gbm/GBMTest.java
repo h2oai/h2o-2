@@ -98,7 +98,7 @@ public class GBMTest extends TestUtil {
       drf.max_depth = 50;
       drf.mtries = -1;
       drf.seed = (1L<<32)|2;
-      drf.run();
+      drf.serve();
 
     } finally {
       UKV.remove(dest);         // Remove whole frame

@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.Random;
 import water.*;
 import water.api.DocGen;
+import water.Job.FrameJob;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
@@ -14,12 +15,9 @@ import water.util.Log;
 import water.util.RString;
 
 // Random Forest Trees
-public class DRF extends Job {
+public class DRF extends FrameJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-
-  @API(help="Data Frame", required=true, filter=FrameKey.class)
-  Frame source;
 
   @API(help="", required=true, filter=DRFVecSelect.class)
   Vec vresponse;
@@ -84,6 +82,52 @@ public class DRF extends Job {
     return rs.toString();
   }
 
+  @Override public boolean toHTML( StringBuilder sb ) {
+    DocGen.HTML.title(sb,description);
+    DocGen.HTML.section(sb,"Confusion Matrix");
+
+    // Top row of CM
+    DocGen.HTML.arrayHead(sb);
+    sb.append("<tr class='warning'>");
+    sb.append("<th>Actual / Predicted</th>"); // Row header
+    for( int i=0; i<domain.length; i++ )
+      sb.append("<th>").append(domain[i]).append("</th>");
+    sb.append("<th>Error</th>");
+    sb.append("</tr>");
+
+    // Main CM Body
+    long tsum=0, terr=0;                   // Total observations & errors
+    for( int i=0; i<domain.length; i++ ) { // Actual loop
+      sb.append("<tr>");
+      sb.append("<th>").append(domain[i]).append("</th>");// Row header
+      long sum=0, err=0;                     // Per-class observations & errors
+      for( int j=0; j<domain.length; j++ ) { // Predicted loop
+        sb.append(i==j ? "<td style='background-color:LightGreen'>":"<td>");
+        sb.append(_cm[i][j]).append("</td>");
+        sum += _cm[i][j];       // Per-class observations
+        if( i != j ) err += _cm[i][j]; // and errors
+      }
+      sb.append(String.format("<th>%5.3f = %d / %d</th>", (double)err/sum, err, sum));
+      tsum += sum;  terr += err; // Bump totals
+    }
+    sb.append("</tr>");
+
+    // Last row of CM
+    sb.append("<tr>");
+    sb.append("<th>Totals</th>");// Row header
+    for( int j=0; j<domain.length; j++ ) { // Predicted loop
+      long sum=0;
+      for( int i=0; i<domain.length; i++ ) sum += _cm[i][j];
+      sb.append("<td>").append(sum).append("</td>");
+    }
+    sb.append(String.format("<th>%5.3f = %d / %d</th>", (double)terr/tsum, terr, tsum));
+    sb.append("</tr>");
+
+    DocGen.HTML.arrayTail(sb);
+    return true;
+  }
+
+
   // ==========================================================================
 
   // Compute a DRF tree.  
@@ -96,9 +140,16 @@ public class DRF extends Job {
 
   // Compute a single DRF tree from the Frame.  Last column is the response
   // variable.  Depth is capped at max_depth.
-  @Override protected void run() {
+  @Override protected Response serve() {
     Timer t_drf = new Timer();
     final Frame fr = source;    // Better name
+    // While I'd like the Frames built custom for each call, with excluded
+    // columns already removed - for now check to see if the response column is
+    // part of the frame and remove it up front.
+    for( int i=0; i<fr.numCols(); i++ )
+      if( fr._vecs[i]==vresponse )
+        fr.remove(i);
+
     final int mtrys = (mtries==-1) ? Math.max((int)Math.sqrt(fr.numCols()),1) : mtries;
     assert 0 <= ntrees && ntrees < 1000000;
     assert 1 <= mtrys && mtrys <= fr.numCols() : "Too large mtrys="+mtrys+", ncols="+fr.numCols();
@@ -177,6 +228,8 @@ public class DRF extends Job {
 
     // One more pass for final prediction error
     _cm = new BulkScore(forest,ncols,nclass,ymin,sample_rate,true).doIt(fr,vresponse).report( Sys.DRF__, nrows, depth )._cm;
+    
+    return new Response(Response.Status.done, this, -1, -1, null);
   }
 
   // ----
