@@ -34,7 +34,7 @@ Number of trees to grow. (Must be a nonnegative integer).
 Currently, only classification regression trees are supported. Note that indexing begins at zero, so for example, to specify the first column as the response variable, set \code{y = 0}.
 }
 \value{
-An object of class \code{\linkS4class{H2ORForestModel}} with slots key, data, and rf, where the last is a list of the following components:
+An object of class \code{\linkS4class{H2ORForestModel}} with slots key, data, and model, where the last is a list of the following components:
 \item{type }{The type of the tree, which at this point must be classification.}
 \item{ntree }{Number of trees grown.}
 \item{oob_err }{Out of bag error rate.}

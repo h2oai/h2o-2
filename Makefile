@@ -57,9 +57,9 @@ nightly_build_stuff:
 	$(MAKE) build_installer PROJECT_VERSION=$(PROJECT_VERSION)
 
 build:
+	$(MAKE) -C R build PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) build_h2o PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) -C hadoop build PROJECT_VERSION=$(PROJECT_VERSION)
-	$(MAKE) -C R build PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) -C launcher build PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) package
 

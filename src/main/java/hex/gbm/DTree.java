@@ -252,6 +252,7 @@ class DTree extends Iced {
     // Bin #.
     public int bin( Chunk chks[], int i ) {
       if( _nids.length == 1 ) return 0;
+      if( chks[_col].isNA0(i) ) throw H2O.unimpl();
       float d = (float)chks[_col].at0(i); // Value to split on for this row
       // Note that during *scoring* (as opposed to training), we can be exposed
       // to data which is outside the bin limits, so we must cap at both ends.
@@ -417,6 +418,7 @@ class DTree extends Iced {
           for( int j=0; j<_ncols; j++) { // For all columns
             DHistogram nh = nhs[j];
             if( nh != null ) {    // Tracking this column?
+              if( chks[j].isNA0(i) ) throw H2O.unimpl();
               float f = (float)chks[j].at0(i);
               nh.incr(f);         // Small histogram
               if( nh instanceof DBinHistogram ) // Big histogram/
@@ -528,7 +530,7 @@ class DTree extends Iced {
       for( int t=0; t<_trees.length; t++ ) {
         // For OOBEE error, do not score rows on trees trained on that row
         if( rands != null && !(rands[t].nextFloat() >= _sampleRate) ) continue;
-
+        if( Float.isNaN(y) ) continue; // Ignore missing response vars
         nt++;
         final DTree tree = _trees[t];
         // "score" this row on this tree.  Apply the tree decisions at each

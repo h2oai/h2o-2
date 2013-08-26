@@ -29,7 +29,7 @@ The maximum number of iterations allowed.
 %%  ~~ If necessary, more details than the description above ~~
 }
 \value{
-An object of class \code{\linkS4class{H2OKMeansModel}} with slots key, data, and km, where the last is a list of the following components:
+An object of class \code{\linkS4class{H2OKMeansModel}} with slots key, data, and model, where the last is a list of the following components:
 \item{centers }{A matrix of cluster centers.}
 \item{cluster }{A \code{\linkS4class{H2OParsedData}} object containing the vector of integers (from 1 to k), which indicate the cluster to which each point is allocated.}
 \item{size }{The number of points in each cluster.}
