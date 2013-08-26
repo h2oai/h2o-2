@@ -11,7 +11,7 @@ public class C4FChunk extends Chunk {
   }
   @Override protected final double atd_impl( int i ) {
     float res = UDP.get4f(_mem,i<<2);
-    return Float.isNaN(res)?Vec.DEFAULT_NA:res;
+    return Float.isNaN(res)?Double.NaN:res;
   }
   @Override boolean set8_impl(int idx, long l) { return false; }
   @Override boolean set8_impl(int i, double d) { return false; }

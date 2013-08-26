@@ -5,22 +5,22 @@ import water.parser.DParseTask;
 
 // The scale/bias function, where data is in SIGNED bytes before scaling
 public class C1SChunk extends Chunk {
-  static private final long _NA = 0xFF;
   static final int OFF=8+4;
   public double _scale;
   int _bias;
   C1SChunk( byte[] bs, int bias, double scale ) { _mem=bs; _start = -1; _len = _mem.length-OFF;
+    System.out.println("c1s bias"+bias+", scale="+scale+" buf="+java.util.Arrays.toString(bs));
     _bias = bias; _scale = scale;
     UDP.set8d(_mem,0,scale);
     UDP.set4 (_mem,8,bias );
   }
   @Override protected final long at8_impl( int i ) {
     long res = 0xFF&_mem[i+OFF];
-    return res == _NA?_vec._iNA:(long)((res+_bias)*_scale);
+    return res == C1Chunk._NA?_vec._iNA:(long)((res+_bias)*_scale);
   }
   @Override protected final double atd_impl( int i ) {
     long res = 0xFF&_mem[i+OFF];
-    return (res == _NA)?Vec.DEFAULT_NA:(res+_bias)*_scale;
+    return (res == C1Chunk._NA)?Double.NaN:(res+_bias)*_scale;
   }
   @Override boolean set8_impl(int i, long l) { 
     long res = (long)(l/_scale)-_bias; // Compressed value
@@ -48,7 +48,7 @@ public class C1SChunk extends Chunk {
     if( DParseTask.pow10i(x) != _scale ) throw H2O.unimpl();
     for( int i=0; i<_len; i++ ) {
       long res = 0xFF&_mem[i+OFF];
-      if( res == _NA ) nc.setInvalid(i);
+      if( res == C1Chunk._NA ) nc.setInvalid(i);
       else {
         nc._ls[i] = res+_bias;
         nc._xs[i] = x;

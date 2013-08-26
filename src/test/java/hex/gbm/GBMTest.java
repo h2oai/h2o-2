@@ -50,7 +50,7 @@ public class GBMTest extends TestUtil {
     GBM gbm = null;
     try {
       vresponse = prep.prep(fr);
-      gbm = GBM.start(GBM.makeKey(),fr,vresponse,8);
+      gbm = GBM.start(GBM.makeKey(),fr,vresponse,5);
       gbm.get();                  // Block for result
     } finally {
       UKV.remove(dest);         // Remove whole frame

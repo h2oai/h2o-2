@@ -12,7 +12,7 @@ public class C4Chunk extends Chunk {
   }
   @Override protected final double atd_impl( int i ) {
     long res = UDP.get4(_mem,i<<2);
-    return res == _NA?Vec.DEFAULT_NA:res;
+    return res == _NA?Double.NaN:res;
   }
   @Override boolean set8_impl(int idx, long l) { 
     if( !(Integer.MIN_VALUE < l && l <= Integer.MAX_VALUE) ) return false;

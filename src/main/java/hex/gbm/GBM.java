@@ -60,7 +60,7 @@ public class GBM extends Job {
     //new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, maxDepth );
 
     // Build trees until we hit the limit
-    for( int tid=1; tid<20; tid++)
+    for( int tid=1; tid<5/*20?*/; tid++)
       forest = buildNextTree(fr,vresponse,forest,ncols,nrows,nclass,ymin,maxDepth,1);
 
     Log.info(Sys.GBM__,"GBM Modeling done in "+t_gbm);

@@ -93,6 +93,9 @@ public class NewChunk extends Chunk {
   // Return the data so compressed.
   static final int MAX_FLOAT_MANTISSA = 0x7FFFFF;
   Chunk compress() {
+    System.out.println("ds="+Arrays.toString(_ds));
+    System.out.println("xs="+Arrays.toString(_xs));
+    System.out.println("ls="+Arrays.toString(_ls));
     // See if we can sanely normalize all the data to the same fixed-point.
     int  xmin = Integer.MAX_VALUE;   // min exponent found
     long lemin= 0, lemax=lemin; // min/max at xmin fixed-point

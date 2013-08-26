@@ -13,7 +13,7 @@ public class C1Chunk extends Chunk {
   }
   @Override protected final double atd_impl( int i ) {
     long res = 0xFF&_mem[i+OFF];
-    return (res == _NA)?Vec.DEFAULT_NA:res;
+    return (res == _NA)?Double.NaN:res;
   }
   @Override boolean hasFloat() { return false; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
