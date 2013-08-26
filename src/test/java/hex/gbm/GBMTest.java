@@ -59,7 +59,7 @@ public class GBMTest extends TestUtil {
     }
   }
 
-  /*@Test*/ public void testBasicDRF() {
+  @Test public void testBasicDRF() {
     basicDRF("./smalldata/test/test_tree.csv","tree.hex",
              new PrepData() { Vec prep(Frame fr) { return fr.remove(1); } 
              });
@@ -88,21 +88,25 @@ public class GBMTest extends TestUtil {
     if( file == null ) return;  // Silently abort test if the file is missing
     Key fkey = NFSFileVec.make(file);
     Key dest = Key.make(hexname);
-    Frame fr = ParseDataset2.parse(dest,new Key[]{fkey});
-    UKV.remove(fkey);
-    Vec vresponse = null;
     DRF drf = null;
     try {
-      vresponse = prep.prep(fr);
-      int mtrys = Math.max((int)Math.sqrt(fr.numCols()),1);
-      long seed = (1L<<32)|2;
+      drf = new DRF();
+      drf.source = ParseDataset2.parse(dest,new Key[]{fkey});
+      UKV.remove(fkey);
+      drf.vresponse = prep.prep(drf.source);
+      drf.ntrees = 5;
+      drf.max_depth = 50;
+      drf.mtries = -1;
+      drf.seed = (1L<<32)|2;
+      drf.run();
 
-      drf = DRF.start(DRF.makeKey(),fr,vresponse,/*maxdepth*/50,/*ntrees*/5,mtrys,/*sampleRate*/0.67,seed);
-      drf.get();                  // Block for result
     } finally {
       UKV.remove(dest);         // Remove whole frame
-      UKV.remove(vresponse._key);
-      if( drf != null ) drf.remove();
+      if( drf != null ) {
+        drf.source.remove();
+        UKV.remove(drf.vresponse._key);
+        drf.remove();
+      }
     }
   }
 }

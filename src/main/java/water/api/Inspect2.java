@@ -2,6 +2,7 @@ package water.api;
 
 import water.*;
 import water.fvec.*;
+import hex.gbm.DRF;
 
 public class Inspect2 extends Request {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
@@ -84,7 +85,7 @@ public class Inspect2 extends Request {
     sb.append("<div class='alert'>" +
               //"View " + SummaryPage2.link(key, "Summary") +
               "<br/>Build models using " +
-              DRF2.link(src_key.value(), "Distributed Random Forest") +
+              DRF.link(src_key.value(), "Distributed Random Forest") +", "+
               hex.LR2.link(src_key.value(), "Linear Regression") +
               "</div>");
 

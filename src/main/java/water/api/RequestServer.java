@@ -92,7 +92,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new Parse2()),      "Parse2"       ,  "Beta (FluidVecs!)");
     Request.addToNavbar(registerRequest(new Inspect2()),    "Inspect",        "Beta (FluidVecs!)");
     Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2"      ,  "Beta (FluidVecs!)");
-    Request.addToNavbar(registerRequest(new DRF2()),        "DRF2"         ,  "Beta (FluidVecs!)");
+    Request.addToNavbar(registerRequest(new hex.gbm.DRF()), "DRF2"         ,  "Beta (FluidVecs!)");
     Request.addToNavbar(registerRequest(new hex.LR2()), "Linear Regression2", "Beta (FluidVecs!)");
     Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network", "Beta (FluidVecs!)");
     Request.addToNavbar(registerRequest(new NeuralNetScore()), "Neural Network Score", "Beta (FluidVecs!)");

@@ -5,27 +5,83 @@ import hex.rng.MersenneTwisterRNG;
 import java.util.Arrays;
 import java.util.Random;
 import water.*;
-import water.H2O.H2OCountedCompleter;
-import water.fvec.*;
+import water.api.DocGen;
+import water.fvec.Chunk;
+import water.fvec.Frame;
+import water.fvec.Vec;
 import water.util.Log.Tag.Sys;
 import water.util.Log;
+import water.util.RString;
 
 // Random Forest Trees
 public class DRF extends Job {
-  public static final String KEY_PREFIX = "__DRFModel_";
+  static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+  static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
+  @API(help="Data Frame", required=true, filter=FrameKey.class)
+  Frame source;
+
+  @API(help="", required=true, filter=DRFVecSelect.class)
+  Vec vresponse;
+  class DRFVecSelect extends VecSelect { DRFVecSelect() { super("source"); } }
+
+  @API(help = "Number of trees", filter = NtreesFilter.class)
+  int ntrees = 50;
+  public class NtreesFilter implements Filter {
+    @Override public boolean run(Object value) { 
+      int ntrees = (Integer)value; 
+      return 1 <= ntrees && ntrees <= 1000000;
+    }
+  }
+
+  @API(help = "Maximum tree depth", filter = MaxDepthFilter.class)
+  int max_depth = 50;
+  public class MaxDepthFilter implements Filter {
+    @Override public boolean run(Object value) { return 1 <= (Integer)value; }
+  }
+
+  @API(help = "Columns to randomly select at each level, or -1 for sqrt(#cols)", filter = MTriesFilter.class)
+  int mtries = -1;
+  public class MTriesFilter implements Filter {
+    @Override public boolean run(Object value) { 
+      int mtries = (Integer)value; 
+      if( mtries == -1 ) return true;
+      if( mtries <=  0 ) return false;
+      return mtries <= source.numCols();
+    }
+  }
+
+  @API(help = "Sample rate, from 0. to 1.0", filter = SampleRateFilter.class)
+  float sample_rate = 0.6666667f;
+  public class SampleRateFilter implements Filter {
+    @Override public boolean run(Object value) { 
+      float sample_rate = (Float)value; 
+      return 0.0 < sample_rate && sample_rate <= 1.0;
+    }
+  }
+
+  @API(help = "Seed for the random number generator", filter = Default.class)
+  long seed = new Random().nextLong();
+
+
+  // JSON Output Fields
+  @API(help="Classes")
+  public String domain[];
+  
+  @API(help="Confusion Matrix")
   long _cm[/*actual*/][/*predicted*/]; // Confusion matrix
   public long[][] cm() { return _cm; }
 
+  public static final String KEY_PREFIX = "__DRFModel_";
   public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
-  private DRF(Key dest, Frame fr) { super("DRF "+fr, dest); }
-  // Called from a non-FJ thread; makea a DRF and hands it over to FJ threads
-  public static DRF start(Key dest, final Frame fr, final Vec vresponse, final int maxDepth, final int ntrees, final int mtrys, final double sampleRate, final long seed) {
-    final DRF job = new DRF(dest, fr);
-    H2O.submitTask(job.start(new H2OCountedCompleter() {
-        @Override public void compute2() { job.run(fr,vresponse,maxDepth,ntrees,mtrys,(float)sampleRate,seed); tryComplete(); }
-      })); 
-    return job;
+  public DRF() { super("Distributed Random Forest",makeKey()); }
+
+  /** Return the query link to this page */
+  public static String link(Key k, String content) {
+    RString rs = new RString("<a href='DRF.query?source=%$key'>%content</a>");
+    rs.replace("key", k.toString());
+    rs.replace("content", content);
+    return rs.toString();
   }
 
   // ==========================================================================
@@ -39,18 +95,21 @@ public class DRF extends Job {
   // variance.
 
   // Compute a single DRF tree from the Frame.  Last column is the response
-  // variable.  Depth is capped at maxDepth.
-  private void run(final Frame fr, Vec vresponse, int maxDepth, int ntrees, int mtrys, float sampleRate, long seed ) {
+  // variable.  Depth is capped at max_depth.
+  @Override protected void run() {
     Timer t_drf = new Timer();
+    final Frame fr = source;    // Better name
+    final int mtrys = (mtries==-1) ? Math.max((int)Math.sqrt(fr.numCols()),1) : mtries;
     assert 0 <= ntrees && ntrees < 1000000;
     assert 1 <= mtrys && mtrys <= fr.numCols() : "Too large mtrys="+mtrys+", ncols="+fr.numCols();
-    assert 0.0 < sampleRate && sampleRate <= 1.0;
+    assert 0.0 < sample_rate && sample_rate <= 1.0;
     final String names[] = fr._names;
     final int  ncols = fr.numCols();
     final long nrows = fr.numRows();
     final int  ymin  = (int)vresponse.min();
     short nclass = vresponse._isInt ? (short)(vresponse.max()-ymin+1) : 1;
     assert 1 <= nclass && nclass < 1000; // Arbitrary cutoff for too many classes
+    domain = vresponse.domain();
 
     // Fill in the response variable column(s)
     if( nclass == 1 ) {
@@ -68,6 +127,7 @@ public class DRF extends Job {
         @Override public void map( Chunk chks[] ) {
           Chunk cy = chks[chks.length-1];
           for( int i=0; i<cy._len; i++ ) {
+            if( cy.isNA0(i) ) continue;
             int cls = (int)cy.at80(i) - ymin;
             chks[ncols+cls].set80(i,1.0f);
           }
@@ -100,13 +160,13 @@ public class DRF extends Job {
         Vec vec = vresponse.makeZero();
         nids[idx] = vec;
         forest[idx] = someTrees[t] = new DRFTree(fr,ncols,nclass,hs,mtrys,rand.nextLong());
-        if( sampleRate < 1.0 )
-          new Sample(someTrees[t],sampleRate).doAll(vec);
+        if( sample_rate < 1.0 )
+          new Sample(someTrees[t],sample_rate).doAll(vec);
         fr.add("NIDs"+t,vec);
       }
 
       // Make NTREE trees at once
-      int d = makeSomeTrees(st, someTrees,someLeafs, xtrees, maxDepth, fr, vresponse, ncols, nclass, ymin, nrows, sampleRate);
+      int d = makeSomeTrees(st, someTrees,someLeafs, xtrees, max_depth, fr, vresponse, ncols, nclass, ymin, nrows, sample_rate);
       if( d>depth ) depth=d;    // Actual max depth used
 
       // Remove temp vectors; cleanup the Frame
@@ -116,14 +176,14 @@ public class DRF extends Job {
     Log.info(Sys.DRF__,"DRF done in "+t_drf);
 
     // One more pass for final prediction error
-    _cm = new BulkScore(forest,ncols,nclass,ymin,sampleRate,true).doIt(fr,vresponse).report( Sys.DRF__, nrows, depth )._cm;
+    _cm = new BulkScore(forest,ncols,nclass,ymin,sample_rate,true).doIt(fr,vresponse).report( Sys.DRF__, nrows, depth )._cm;
   }
 
   // ----
   // One Big Loop till the tree is of proper depth.
   // Adds a layer to the tree each pass.
-  public int makeSomeTrees( int st, DRFTree trees[], int leafs[], int ntrees, int maxDepth, Frame fr, Vec vresponse, int ncols, short nclass, int ymin, long nrows, double sampleRate ) {
-    for( int depth=0; depth<maxDepth; depth++ ) {
+  public int makeSomeTrees( int st, DRFTree trees[], int leafs[], int ntrees, int max_depth, Frame fr, Vec vresponse, int ncols, short nclass, int ymin, long nrows, double sample_rate ) {
+    for( int depth=0; depth<max_depth; depth++ ) {
       Timer t_pass = new Timer();
 
       // Fuse 2 conceptual passes into one:
@@ -171,9 +231,9 @@ public class DRF extends Job {
 
       // If all trees are done, then so are we
       if( !still_splitting ) return depth;
-      //new BulkScore(trees,ncols,nclass,ymin,(float)sampleRate,true).doIt(fr,vresponse).report( Sys.DRF__, nrows, depth );
+      //new BulkScore(trees,ncols,nclass,ymin,(float)sample_rate,true).doIt(fr,vresponse).report( Sys.DRF__, nrows, depth );
     }
-    return maxDepth;
+    return max_depth;
   }
 
   // A standard DTree with a few more bits.  Support for sampling during
