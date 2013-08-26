@@ -129,6 +129,9 @@ def find_file(base):
     if not os.path.exists(f): f = '../' + base
     if not os.path.exists(f): f = '../../' + base
     if not os.path.exists(f): f = 'py/' + base
+    # these 2 are for finding from h2o-perf
+    if not os.path.exists(f): f = '../h2o/' + base
+    if not os.path.exists(f): f = '../../h2o/' + base
     if not os.path.exists(f):
         raise Exception("unable to find file %s" % base)
     return f
