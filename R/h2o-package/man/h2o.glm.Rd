@@ -37,7 +37,7 @@ The elastic-net mixing parameter, which must be in [0,1]. The penalty is defined
 %%  ~~ If necessary, more details than the description above ~~
 }
 \value{
-An object of class \code{\linkS4class{H2OGLMModel}} with slots key, data, and glm, where the last is a list of the following components:
+An object of class \code{\linkS4class{H2OGLMModel}} with slots key, data, model and xval. The slot model is a list of the following components:
 \item{coefficients }{A named vector of the coefficients estimated in the model.}
 \item{rank }{The numeric rank of the fitted linear model.}
 \item{family }{The family of the error distribution.}
@@ -49,6 +49,12 @@ An object of class \code{\linkS4class{H2OGLMModel}} with slots key, data, and gl
 \item{df.null }{The residual degrees of freedom for the null model.}
 \item{y }{The response variable in the model.}
 \item{x }{A vector of the predictor variable(s) in the model.}
+\item{auc }{Area under the curve.}
+\item{training.err }{Average training error.}
+\item{threshold }{Best threshold.}
+\item{confusion }{Confusion matrix.}
+The slot xval is a list of \code{\linkS4class{H2OGLMModel}} objects representing the cross-validation models. (Each of these objects themselves has xval equal to an empty list).
+\item{}
 %%  ~Describe the value returned
 %%  If it is a LIST, use
 %%  \item{comp1 }{Description of 'comp1'}
