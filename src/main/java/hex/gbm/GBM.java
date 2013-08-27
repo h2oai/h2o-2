@@ -25,7 +25,7 @@ public class GBM extends FrameJob {
   class DRFVecSelect extends VecSelect { DRFVecSelect() { super("source"); } }
 
   @API(help = "Learning rate, from 0. to 1.0", filter = LearnRateFilter.class)
-  double learn_rate = 0.1f;
+  double learn_rate = 0.1;
   public class LearnRateFilter implements Filter {
     @Override public boolean run(Object value) { 
       double learn_rate = (Double)value; 
@@ -56,13 +56,13 @@ public class GBM extends FrameJob {
   @API(help="Confusion Matrix[actual_class][predicted_class]")
   long cm[/*actual*/][/*predicted*/]; // Confusion matrix
 
-  @API(help="Error by tree")
+  @API(help="Error rate by tree, from 0.0 to 1.0")
   float errs[/*ntrees*/]; // Error rate, as trees are added
 
 
   public static final String KEY_PREFIX = "__GBMModel_";
   public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
-  public GBM() { super("Distributed Gradiant Boosted Forest",makeKey()); }
+  public GBM() { super("Distributed GBM",makeKey()); }
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {
@@ -123,7 +123,7 @@ public class GBM extends FrameJob {
     sb.append("</tr>");
     sb.append("<tr><th class='warning'>Error Rate</th>");
     for( int i=0; i<errs.length; i++ )
-      sb.append("<td>").append(errs[i]).append("</td>");
+      sb.append(String.format("<td>%5.3f</td>",errs[i]));
     sb.append("</tr>");
 
     DocGen.HTML.arrayTail(sb);
@@ -167,7 +167,7 @@ public class GBM extends FrameJob {
     //
     // The initial prediction is just the class distribution.  The initial
     // residuals are then basically the actual class minus the average class.
-    float preds[] = buildResiduals(nclass,fr,ncols,nrows,vresponse,ymin);
+    float preds[] = buildResiduals(nclass,fr,ncols,nrows,ymin);
     DTree init_tree = new DTree(fr._names,ncols,nclass);
     new GBMDecidedNode(init_tree,preds);
 
@@ -177,7 +177,7 @@ public class GBM extends FrameJob {
 
     // Build trees until we hit the limit
     for( int tid=1; tid<ntrees; tid++)
-      forest = buildNextTree(fr,vresponse,forest,ncols,nrows,nclass,ymin,max_depth,1);
+      forest = buildNextTree(fr,forest,ncols,nrows,nclass,ymin);
 
     Log.info(Sys.GBM__,"GBM Modeling done in "+t_gbm);
 
@@ -195,7 +195,7 @@ public class GBM extends FrameJob {
 
 
   // Build the next tree, which is trying to correct the residual error from the prior trees.
-  private DTree[] buildNextTree(Frame fr, Vec vresponse, DTree forest[], final int ncols, long nrows, final short nclass, int ymin, int max_depth, final int tid) {
+  private DTree[] buildNextTree(Frame fr, DTree forest[], final int ncols, long nrows, final short nclass, int ymin) {
     // Make a new Vec to hold the split-number for each row (initially all zero).
     Vec vnids = vresponse.makeZero();
     fr.add("NIDs",vnids);
@@ -254,12 +254,11 @@ public class GBM extends FrameJob {
       @Override public void map( Chunk chks[] ) {
         Chunk ns = chks[chks.length-1];
         for( int i=0; i<ns._len; i++ ) {  // For all rows
-          boolean frunk = (tid==1) && (ns.at80(i)==41);
           DecidedNode node = tree.decided((int)ns.at80(i));
           float preds[] = node._pred[node.bin(chks,i)];
           for( int c=0; c<nclass; c++ ) {
             double actual = chks[ncols+c].at0(i);
-            double residual = actual-preds[c];
+            double residual = actual-preds[c]*learn_rate;
             chks[ncols+c].set40(i,(float)residual);
           }
         }
@@ -289,7 +288,7 @@ public class GBM extends FrameJob {
   //
   // The initial prediction is just the class distribution.  The initial
   // residuals are then basically the actual class minus the average class.
-  private static float[] buildResiduals(short nclass, final Frame fr, final int ncols, long nrows, Vec vresponse, final int ymin ) {
+  private float[] buildResiduals(short nclass, final Frame fr, final int ncols, long nrows, final int ymin ) {
     // Find the initial prediction - the current average response variable.
     float preds[] = new float[nclass];
     if( nclass == 1 ) {
