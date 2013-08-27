@@ -15,11 +15,11 @@ import java.util.*;
 import jsr166y.CountedCompleter;
 import jsr166y.RecursiveAction;
 import water.*;
-import water.util.Utils;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
 import water.ValueArray.Column;
 import water.api.Constants;
+import water.util.Utils;
 import Jama.CholeskyDecomposition;
 import Jama.Matrix;
 
@@ -208,6 +208,11 @@ public abstract class DGLM {
       }
       return res;
     }
+
+    public String toString2(){
+      return String.format("GLMParams: Family(%s) glmparams.Link(%s) _betaEps(%f) _maxIter(%d), _caseVal(%f), _caseWeight(%f), _caseMode(%s), _reweightGram(%s)",
+          _family, _link, _betaEps, _maxIter, _caseVal, _caseWeight, _caseMode, _reweightGram);
+    }
   }
 
   public enum CaseMode {
@@ -260,7 +265,7 @@ public abstract class DGLM {
     //    sqrt(0),
     inverse(0),
     //    oneOverMu2(0);
-    tweedie(0, -0.5 /* default: 1. - 1.5 */)
+    tweedie(0, Double.NaN /* default: 1. - 1.5 */)
     ;
     public final double defaultBeta;
     public double tweedieLinkPower;
@@ -348,6 +353,35 @@ public abstract class DGLM {
           throw new RuntimeException("unexpected link function id  " + this);
       }
     }
+
+    public String toString2(){
+      String s = "link(";
+      switch(this){
+        case identity:
+          s += "identity: "; break;
+        case logit:
+          s += "logit: "; break;
+        case log:
+          s += "log: "; break;
+        case inverse:
+          s += "inverse: "; break;
+        case tweedie:
+          s += "tweedie: "; break;
+        case familyDefault:
+          s += "familyDefault: "; break;
+        default:
+          s+= " BAD DEFAULT: "; break;
+      }
+      s += String.format("defaultBeta: %f", defaultBeta);
+
+      switch(this){
+        case tweedie: s += String.format("; tweedieLinkPower: %2.2f", tweedieLinkPower); break;
+        default: break;
+      }
+
+      s += ")";
+      return s;
+    }
   }
 
   // helper function
@@ -357,9 +391,9 @@ public abstract class DGLM {
   }
 
   // supported families
-  public static enum Family {
+  public enum Family {
     gaussian(Link.identity, null), binomial(Link.logit, new double[] { Double.NaN, 1.0, 0.5 }), poisson(Link.log, null),
-    gamma(Link.inverse, null), tweedie(Link.tweedie, null, 1.5);
+    gamma(Link.inverse, null), tweedie(Link.tweedie, null, Double.NaN);
     public Link defaultLink;
     public final double[] defaultArgs;
     public double tweedieVariancePower = Double.NaN;
@@ -441,6 +475,20 @@ public abstract class DGLM {
         default:
           throw new RuntimeException("unknown family Id " + this);
       }
+    }
+
+    public String toString2(){
+      String s = "family(";
+      switch(this){
+        case gaussian: s += "gaussian: "; break;
+        case binomial: s += "binomial: "; break;
+        case gamma: s += "gamma: "; break;
+        case poisson: s += "poisson: "; break;
+        case tweedie: s += String.format("tweedie: variancePower %2.2f", this.tweedieVariancePower); break;
+        default: s += "BAD UNKNOWN"; break;
+      }
+      s += String.format(", link: %s)", defaultLink);
+      return s;
     }
   }
 
@@ -1395,6 +1443,7 @@ public abstract class DGLM {
           y = eta + (y - mu) / dp;
         }
       }
+
       assert w >= 0 : "invalid weight " + w;
       gram._yy += 0.5 * w * y * y;
       double wy = w * y;
@@ -1639,6 +1688,7 @@ public abstract class DGLM {
 //        LambdaMaxFunc lmax = new LambdaMaxFunc(data, ymu, params._link,params._family);
 //        LambdaMax lm = lmax.apply(job, data);
 //        lsm._lambda *= lm.value();
+
     GramMatrixFunc gramF = new GramMatrixFunc(data, params, oldBeta);
     double[] newBeta = MemoryManager.malloc8d(data.expandedSz());
     boolean converged = true;
