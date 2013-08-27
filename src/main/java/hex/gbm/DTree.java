@@ -315,7 +315,7 @@ class DTree extends Iced {
     final DTree _trees[]; // Read-only, shared (except at the histograms in the Nodes)
     final int   _leafs[]; // Number of active leaves (per tree)
     final int _ncols;
-    final short _nclass;        // Zero for regression, else #classes
+    final short _nclass;        // One for regression, else #classes
     // Bias classes to zero; e.g. covtype classes range from 1-7 so this is 1.
     // e.g. prostate classes range 0-1 so this is 0
     final int _ymin;
@@ -421,7 +421,7 @@ class DTree extends Iced {
               if( chks[j].isNA0(i) ) throw H2O.unimpl();
               float f = (float)chks[j].at0(i);
               nh.incr(f);         // Small histogram
-              if( nh instanceof DBinHistogram ) // Big histogram/
+              if( nh instanceof DBinHistogram ) // Big histogram
                 ((DBinHistogram)nh).incr(i,f,chks,_ncols);
             }
           }

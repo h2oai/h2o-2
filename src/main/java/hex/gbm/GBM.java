@@ -119,7 +119,7 @@ public class GBM extends FrameJob {
   // variable.  Depth is capped at maxDepth.
   @Override protected Response serve() {
     Timer t_gbm = new Timer();
-    final Frame fr = source;    // Better name
+    final Frame fr = new Frame(source); // Local copy for local hacking
     // While I'd like the Frames built custom for each call, with excluded
     // columns already removed - for now check to see if the response column is
     // part of the frame and remove it up front.
@@ -285,7 +285,7 @@ public class GBM extends FrameJob {
         for( int i=0; i<cy._len; i++ ) {  // For all rows
           int cls = (int)cy.at80(i)-ymin; // Class
           Chunk res = chks[ncols+cls];    // Residual column for this class
-          res.set80(i,1.0f+res.at0(i));   // Fix residual for actual class
+          res.set40(i,1.0f+(float)res.at0(i));   // Fix residual for actual class
         }
       }
     }.doAll(fr);
