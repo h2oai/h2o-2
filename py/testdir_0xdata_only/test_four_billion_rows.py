@@ -40,6 +40,8 @@ class Basic(unittest.TestCase):
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
             start = time.time()
+
+            # Parse*********************************
             parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=60)
             elapsed = time.time() - start
@@ -47,24 +49,66 @@ class Basic(unittest.TestCase):
             print "Parse result['destination_key']:", parseKey['destination_key']
             print csvFilename, "completed in", elapsed, "seconds.", "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
+            # Inspect*********************************
             # We should be able to see the parse result?
             inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
+            num_cols = inspect['num_cols']
+            num_rows = inspect['num_rows']
+            value_size_bytes = inspect['value_size_bytes']
+            row_size = inspect['row_size']
+            print "\n" + csvFilename, \
+                "    num_rows:", "{:,}".format(num_rows), \
+                "    num_cols:", "{:,}".format(num_cols), \
+                "    value_size_bytes:", "{:,}".format(value_size_bytes), \
+                "    row_size:", "{:,}".format(row_size)
 
+            expectedRowSize = num_cols * 1 # plus output
+            expectedValueSize = expectedRowSize * num_rows
+            self.assertEqual(row_size, expectedRowSize,
+                msg='row_size %s is not expected num_cols * 1 byte: %s' % \
+                (row_size, expectedRowSize))
+            self.assertEqual(value_size_bytes, expectedValueSize,
+                msg='value_size_bytes %s is not expected row_size * rows: %s' % \
+                (value_size_bytes, expectedValueSize))
+
+            summaryResult = h2o_cmd.runSummary(key=parseKey['destination_key'], timeoutSecs=timeoutSecs)
+            h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
+
+            self.assertEqual(2, num_cols,
+                msg="generated %s cols (including output).  parsed to %s cols" % (2, num_cols))
+            self.assertEqual(4*1000000000, num_rows,
+                msg="generated %s rows, parsed to %s rows" % (4*1000000000, num_rows))
+
+            # KMeans*********************************
+            kwargs = {
+                'k': 3,
+                'initialization': 'Furthest',
+                'epsilon': 1e-6,
+                'max_iter': 20,
+                'cols': None,
+                'normalize': 0,
+                'destination_key': 'junk.hex',
+                'seed': 265211114317615310,
+                }
+
+            timeoutSecs = 900
+            start = time.time()
+            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+
+            # GLM*********************************
             print "\n" + csvFilename
             kwargs = {'x': 0, 'y': 1, 'n_folds': 0, 'case_mode': '=', 'case': 1}
             # one coefficient is checked a little more
             colX = 0
 
             # L2 
+            timeoutSecs = 900
             kwargs.update({'alpha': 0, 'lambda': 0})
             start = time.time()
             glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "glm (L2) end on ", csvFilename, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             h2o_glm.simpleCheckGLM(self, glm, colX, **kwargs)
-
-            sys.stdout.write('\n.')
-            sys.stdout.flush() 
 
 if __name__ == '__main__':
     h2o.unit_main()

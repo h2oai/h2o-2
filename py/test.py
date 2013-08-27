@@ -39,7 +39,10 @@ class Basic(unittest.TestCase):
         inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], offset=-1, view=5)
 
     def test_F_StoreView(self):
-        storeView = h2o.nodes[0].store_view()
+        storeViewResult = h2o_cmd.runStoreView(timeoutSecs=30)
+        keys = storeViewResult['keys']
+        for k in keys:
+            h2o.nodes[0].remove_key(k['key'])
 
     def test_G_RF_covtype(self):
         h2o_cmd.runRF(trees=6, timeoutSecs=35, retryDelaySecs=0.5,
