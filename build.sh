@@ -182,7 +182,11 @@ function junit() {
     "$JAVA" -ea -cp ${JAR_FILE} water.Boot -mainClass water.JUnitRunner
 }
 
-clean
+if [ "$1" = "noclean" ]; then
+    shift
+else
+    clean
+fi
 if [ "$1" = "clean" ]; then exit 0; fi
 build_classes
 if [ "$1" = "compile" ]; then exit 0; fi
