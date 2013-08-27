@@ -24,6 +24,15 @@ public class GBM extends FrameJob {
   Vec vresponse;
   class DRFVecSelect extends VecSelect { DRFVecSelect() { super("source"); } }
 
+  @API(help = "Learning rate, from 0. to 1.0", filter = LearnRateFilter.class)
+  double learn_rate = 0.1f;
+  public class LearnRateFilter implements Filter {
+    @Override public boolean run(Object value) { 
+      double learn_rate = (Double)value; 
+      return 0.0 < learn_rate && learn_rate <= 1.0;
+    }
+  }
+
   @API(help = "Number of trees", filter = NtreesFilter.class)
   int ntrees = 10;
   public class NtreesFilter implements Filter {
@@ -41,12 +50,15 @@ public class GBM extends FrameJob {
 
 
   // JSON Output Fields
-  @API(help="Classes")
+  @API(help="Class names")
   public String domain[];
   
-  @API(help="Confusion Matrix")
-  long _cm[/*actual*/][/*predicted*/]; // Confusion matrix
-  public long[][] cm() { return _cm; }
+  @API(help="Confusion Matrix[actual_class][predicted_class]")
+  long cm[/*actual*/][/*predicted*/]; // Confusion matrix
+
+  @API(help="Error by tree")
+  float errs[/*ntrees*/]; // Error rate, as trees are added
+
 
   public static final String KEY_PREFIX = "__GBMModel_";
   public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
@@ -81,9 +93,9 @@ public class GBM extends FrameJob {
       long sum=0, err=0;                     // Per-class observations & errors
       for( int j=0; j<domain.length; j++ ) { // Predicted loop
         sb.append(i==j ? "<td style='background-color:LightGreen'>":"<td>");
-        sb.append(_cm[i][j]).append("</td>");
-        sum += _cm[i][j];       // Per-class observations
-        if( i != j ) err += _cm[i][j]; // and errors
+        sb.append(cm[i][j]).append("</td>");
+        sum += cm[i][j];              // Per-class observations
+        if( i != j ) err += cm[i][j]; // and errors
       }
       sb.append(String.format("<th>%5.3f = %d / %d</th>", (double)err/sum, err, sum));
       tsum += sum;  terr += err; // Bump totals
@@ -95,10 +107,23 @@ public class GBM extends FrameJob {
     sb.append("<th>Totals</th>");// Row header
     for( int j=0; j<domain.length; j++ ) { // Predicted loop
       long sum=0;
-      for( int i=0; i<domain.length; i++ ) sum += _cm[i][j];
+      for( int i=0; i<domain.length; i++ ) sum += cm[i][j];
       sb.append("<td>").append(sum).append("</td>");
     }
     sb.append(String.format("<th>%5.3f = %d / %d</th>", (double)terr/tsum, terr, tsum));
+    sb.append("</tr>");
+
+    DocGen.HTML.arrayTail(sb);
+
+    DocGen.HTML.section(sb,"Error Rate by Tree");
+    DocGen.HTML.arrayHead(sb);
+    sb.append("<tr><th>Trees</th>");
+    for( int i=0; i<errs.length; i++ )
+      sb.append("<td>").append(i+1).append("</td>");
+    sb.append("</tr>");
+    sb.append("<tr><th class='warning'>Error Rate</th>");
+    for( int i=0; i<errs.length; i++ )
+      sb.append("<td>").append(errs[i]).append("</td>");
     sb.append("</tr>");
 
     DocGen.HTML.arrayTail(sb);
@@ -133,6 +158,7 @@ public class GBM extends FrameJob {
     short nclass = vresponse._isInt ? (short)(vresponse.max()-ymin+1) : 1;
     assert 1 <= nclass && nclass < 1000; // Arbitrary cutoff for too many classes
     domain = vresponse.domain();
+    errs = new float[0];         // No trees yet
 
     // Add in Vecs after the response column which holds the row-by-row
     // residuals: the (actual minus prediction), for each class.  The
@@ -157,7 +183,7 @@ public class GBM extends FrameJob {
 
     // One more pass for final prediction error
     Timer t_score = new Timer();
-    _cm = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, max_depth )._cm;
+    cm = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, max_depth )._cm;
     Log.info(Sys.GBM__,"GBM final Scoring done in "+t_score);
 
     // Remove temp vectors; cleanup the Frame
@@ -169,7 +195,7 @@ public class GBM extends FrameJob {
 
 
   // Build the next tree, which is trying to correct the residual error from the prior trees.
-  private static DTree[] buildNextTree(Frame fr, Vec vresponse, DTree forest[], final int ncols, long nrows, final short nclass, int ymin, int max_depth, final int tid) {
+  private DTree[] buildNextTree(Frame fr, Vec vresponse, DTree forest[], final int ncols, long nrows, final short nclass, int ymin, int max_depth, final int tid) {
     // Make a new Vec to hold the split-number for each row (initially all zero).
     Vec vnids = vresponse.makeZero();
     fr.add("NIDs",vnids);
@@ -248,7 +274,10 @@ public class GBM extends FrameJob {
     //System.out.println(tree.root().toString2(new StringBuilder(),0));
     
     // Tree-by-tree scoring
-    new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, depth );
+    long err = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, depth )._err;
+    errs = Arrays.copyOf(errs,errs.length+1);
+    errs[errs.length-1] = (float)err/nrows;
+
     return forest;
   }
 
