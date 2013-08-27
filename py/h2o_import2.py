@@ -1,6 +1,4 @@
-import h2o, h2o_cmd, h2o_jobs
-import time, re, getpass
-import os
+import h2o, re, os
 
 # hdfs/maprfs/s3/s3n paths should be absolute from the bucket (top level)
 # so only walk around for local
