@@ -25,7 +25,7 @@ public class GBM extends FrameJob {
   class DRFVecSelect extends VecSelect { DRFVecSelect() { super("source"); } }
 
   @API(help = "Number of trees", filter = NtreesFilter.class)
-  int ntrees = 5;
+  int ntrees = 10;
   public class NtreesFilter implements Filter {
     @Override public boolean run(Object value) { 
       int ntrees = (Integer)value; 
@@ -160,8 +160,8 @@ public class GBM extends FrameJob {
     _cm = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, max_depth )._cm;
     Log.info(Sys.GBM__,"GBM final Scoring done in "+t_score);
 
-    // Remove temp vector; cleanup the Frame
-    while( fr.numCols() > ncols+1 )
+    // Remove temp vectors; cleanup the Frame
+    while( fr.numCols() > ncols )
       UKV.remove(fr.remove(fr.numCols()-1)._key);
 
     return new Response(Response.Status.done, this, -1, -1, null);
