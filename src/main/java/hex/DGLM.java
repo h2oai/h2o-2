@@ -184,6 +184,13 @@ public abstract class DGLM {
               "Invalid response variable " + ycol._name
                   + ", Binomial family requires response to be from [0,1] or have Case predicate. ");
           break;
+        case tweedie:
+          if( ycol._min < 0 ) throw new GLMException("Invalid response variable " + ycol._name
+              + ", Tweedie family requires response to be >= 0. ");
+          if( ycol._domain != null && ycol._domain.length > 0 ) throw new GLMException("Invalid response variable "
+              + ycol._name + ", Tweedie family requires response to be a number >= 0. Got categorical.");
+          break;
+
         default:
           //pass
       }
@@ -253,11 +260,17 @@ public abstract class DGLM {
     //    sqrt(0),
     inverse(0),
     //    oneOverMu2(0);
+    tweedie(0, -0.5 /* default: 1. - 1.5 */)
     ;
     public final double defaultBeta;
+    public double tweedieLinkPower;
 
     Link(double b) {
       defaultBeta = b;
+    }
+    Link(double b, double tweedieLinkPower){
+      defaultBeta = b;
+      this.tweedieLinkPower = tweedieLinkPower;
     }
 
     public final double link(double x) {
@@ -272,6 +285,8 @@ public abstract class DGLM {
         case inverse:
           double xx = (x < 0) ? Math.min(-1e-5, x) : Math.max(1e-5, x);
           return 1.0 / xx;
+        case tweedie:
+          return Math.pow(x, tweedieLinkPower);
         default:
           throw new RuntimeException("unsupported link function id  " + this);
       }
@@ -287,6 +302,8 @@ public abstract class DGLM {
           return 1.0 / x;
         case inverse:
           return -1.0 / (x * x);
+        case tweedie:
+          return tweedieLinkPower * Math.pow(x, tweedieLinkPower - 1.);
         default:
           throw H2O.unimpl();
       }
@@ -303,6 +320,8 @@ public abstract class DGLM {
         case inverse:
           double xx = (x < 0) ? Math.min(-1e-5, x) : Math.max(1e-5, x);
           return 1.0 / xx;
+        case tweedie:
+          return Math.pow(x, 1./tweedieLinkPower);
         default:
           throw new RuntimeException("unexpected link function id  " + this);
       }
@@ -322,6 +341,9 @@ public abstract class DGLM {
         case inverse:
           double xx = (x < 0) ? Math.min(-1e-5, x) : Math.max(1e-5, x);
           return -1 / (xx * xx);
+        case tweedie:
+          double vp = (1. - tweedieLinkPower) / tweedieLinkPower;
+          return (1./tweedieLinkPower) * Math.pow(x, vp);
         default:
           throw new RuntimeException("unexpected link function id  " + this);
       }
@@ -336,14 +358,21 @@ public abstract class DGLM {
 
   // supported families
   public static enum Family {
-    gaussian(Link.identity, null), binomial(Link.logit, new double[] { Double.NaN, 1.0, 0.5 }), poisson(Link.log, null), gamma(
-        Link.inverse, null);
-    public final Link defaultLink;
+    gaussian(Link.identity, null), binomial(Link.logit, new double[] { Double.NaN, 1.0, 0.5 }), poisson(Link.log, null),
+    gamma(Link.inverse, null), tweedie(Link.tweedie, null, 1.5);
+    public Link defaultLink;
     public final double[] defaultArgs;
+    public double tweedieVariancePower = Double.NaN;
 
     Family(Link l, double[] d) {
       defaultLink = l;
       defaultArgs = d;
+    }
+
+    Family(Link link, double[] d, double tweedieVariancePower){
+      defaultLink = link;
+      defaultArgs = d;
+      this.tweedieVariancePower = tweedieVariancePower;
     }
 
     public double mustart(double y) {
@@ -356,6 +385,8 @@ public abstract class DGLM {
           return y + 0.1;
         case gamma:
           return y;
+        case tweedie:
+          return y + (y==0. ? 0.1 : 0.);
         default:
           throw new RuntimeException("unimplemented");
       }
@@ -372,6 +403,8 @@ public abstract class DGLM {
           return mu;
         case gamma:
           return mu * mu;
+        case tweedie:
+          return Math.pow(mu, tweedieVariancePower);
         default:
           throw new RuntimeException("unknown family Id " + this);
       }
@@ -397,6 +430,14 @@ public abstract class DGLM {
         case gamma:
           if( yr == 0 ) return -2;
           return -2 * (Math.log(yr / ym) - (yr - ym) / ym);
+        case tweedie:
+          // Theory of Dispersion Models: Jorgensen
+          // pg49: $$ d(y;\mu) = 2 [ y \cdot \left(\tau^{-1}(y) - \tau^{-1}(\mu) \right) - \kappa \{ \tau^{-1}(y)\} + \kappa \{ \tau^{-1}(\mu)\} ] $$
+          // pg133: $$ \frac{ y^{2 - p} }{ (1 - p) (2-p) }  - \frac{y \cdot \mu^{1-p}}{ 1-p} + \frac{ \mu^{2-p} }{ 2 - p }$$
+          double one_minus_p = 1. - tweedieVariancePower;
+          double two_minus_p = 2. - tweedieVariancePower;
+          return Math.pow(yr, two_minus_p) / (one_minus_p * two_minus_p) - (yr * (Math.pow(ym, one_minus_p)))/one_minus_p + Math.pow(ym, two_minus_p)/two_minus_p;
+
         default:
           throw new RuntimeException("unknown family Id " + this);
       }
@@ -1459,6 +1500,9 @@ public abstract class DGLM {
         case gamma:
           res._aic = Double.NaN;
           break; // aic for gamma is not computed
+        case tweedie:
+          res._aic = Double.NaN;
+          break;
         default:
           assert false : "missing implementation for family " + _glmp._family;
       }

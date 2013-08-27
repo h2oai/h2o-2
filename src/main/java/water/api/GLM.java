@@ -35,6 +35,7 @@ public class GLM extends Request {
   protected final Real _lambda = new Real(LAMBDA, 1e-5); // TODO I do not know the bounds
   protected final Real _alpha = new Real(ALPHA, 0.5, 0, 1, "");
   protected final Real _caseWeight = new Real(WEIGHT,1.0);
+  protected final Real _tweediePower = new Real(TWEEDIE_POWER, 1.5);
   protected final CaseModeSelect _caseMode = new CaseModeSelect(_key,_y,_family, CASE_MODE,CaseMode.none);
   protected final CaseSelect _case = new CaseSelect(_key,_y,_caseMode,CASE);
   protected final Int _xval = new Int(XVAL, 10, 0, 1000000);
@@ -135,6 +136,9 @@ public class GLM extends Request {
         _caseWeight.disable("Only for family binomial");
         _thresholds.disable("Only for family binomial");
       }
+      if (_family.value() != Family.tweedie){
+        _tweediePower.disable("Only for family tweedie");
+      }
     } else if (arg == _expertSettings){
       if(_expertSettings.value()){
         _lsmSolver._hideInQuery = false;
@@ -179,8 +183,28 @@ public class GLM extends Request {
   }
 
   GLMParams getGLMParams(){
-    GLMParams res = new GLMParams(_family.value(),_link.value());
-    if( res._link == Link.familyDefault )
+    Family family = _family.value();
+    Link link = _link.value();
+    if( family == Family.tweedie && !(link == Link.tweedie || link == Link.familyDefault)){
+      return null;
+    }
+
+    GLMParams res;
+    if (family != Family.tweedie)
+      res = new GLMParams(_family.value(),_link.value());
+    else {
+      double variancePower = _tweediePower.value();
+      //TODO let tweedie also control link power
+      Link l = Link.tweedie;
+      l.tweedieLinkPower = 1. - variancePower;
+
+      Family f = Family.tweedie;
+      f.defaultLink = l;
+      f.tweedieVariancePower = variancePower;
+      res = new GLMParams(f, l);
+    }
+
+    if( res._link == Link.familyDefault && res._link != Link.tweedie )
       res._link = res._family.defaultLink;
     res._maxIter = _maxIter.value();
     res._betaEps = _betaEps.value();
@@ -202,6 +226,21 @@ public class GLM extends Request {
       res.addProperty("key", ary._key.toString());
       res.addProperty("h2o", H2O.SELF.toString());
       GLMParams glmParams = getGLMParams();
+      if (glmParams == null){
+        if (_family.value() == Family.tweedie && _link.value() == Link.tweedie){
+          return Response.error("tweedie family requires tweedie link");
+        }
+        return Response.error("error reading glm parameters");
+      }
+
+      if (glmParams._family == Family.tweedie){
+        double p = _tweediePower.value();
+        if (! ((1. < p && p < 2.) || (2. < p && p < 3.) || (3. < p && p < 20.)) ){
+          return Response.error("tweedie family specified but invalid tweedie power: must be in (1,2) + (2,3) + (3,20)");
+        }
+      }
+
+
       DataFrame data = DGLM.getData(ary, columns, null, _standardize.value());
       LSMSolver lsm = null;
       switch(_lsmSolver.value()){

@@ -207,6 +207,7 @@ public class GLMProgressPage extends Request {
       case logit:    eq = new RString("y = 1/(1 + Math.exp(-(%equation)))");  break;
       case log:      eq = new RString("y = Math.exp((%equation)))");  break;
       case inverse:  eq = new RString("y = 1/(%equation)");  break;
+      case tweedie:  eq = new RString("y = (%equation)^(1 - " + m._glmParams._family.defaultLink.tweedieLinkPower + ")"); break;
       default:       eq = new RString("equation display not implemented"); break;
       }
       StringBuilder sb = new StringBuilder();
