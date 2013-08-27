@@ -65,11 +65,11 @@ def find_folder_path_and_pattern(bucket, pathWithRegex):
 
 
 # passes additional params thru kwargs for parse
-# use_header_file
-# header
-# exclude
-# src_key can be a pattern
-# can import with path= a folder or just one file
+# use_header_file=
+# header=
+# exclude=
+# src_key= only used if for put file key name (optional)
+# path should point to a file or regex of files. (maybe folder works? but unnecessary
 def import_only(node=None, schema='local', bucket=None, path=None,
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
     noPoll=False, doSummary=True, src_key='python_src_key', **kwargs):
@@ -146,6 +146,7 @@ def import_only(node=None, schema='local', bucket=None, path=None,
     importPattern = folderURI + "/" + pattern
     return (importResult, importPattern)
 
+
 # can take header, header_from_file, exclude params
 def parse_only(node=None, pattern=None, hex_key=None,
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
@@ -159,6 +160,7 @@ def parse_only(node=None, pattern=None, hex_key=None,
 
     parseResult['python_source'] = pattern
     return parseResult
+
 
 def import_parse(node=None, schema='local', bucket=None, path=None,
     src_key=None, hex_key=None, 
