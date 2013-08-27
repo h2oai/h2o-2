@@ -2,7 +2,7 @@ import unittest, time, sys, os
 # not needed, but in case you move it down to subdir
 sys.path.extend(['.','..'])
 import h2o_cmd
-import h2o
+import h2o, h2o_hosts
 import h2o_browse as h2b
 import h2o_import2 as h2i
 
@@ -12,10 +12,12 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        h2o.build_cloud(1,java_heap_GB=1, 
-            use_hdfs=True, hdfs_name_node='192.168.1.176', hdfs_version='cdh3')
-
-        h2b.browseTheCloud()
+        global localhost
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(node_count=1)
+        else:
+            h2o_hosts.build_cloud_with_hosts(node_count=1)
 
     @classmethod
     def tearDownClass(cls):
@@ -23,18 +25,17 @@ class Basic(unittest.TestCase):
 
     def test3(self):
         # h2i.import_parse(path='standard/covtype.data', bucket='home-0xdiag-datasets', schema="s3n", timeoutSecs=60)
+        ## This will get it from import hdfs with s3n. the hdfs_name_node and hdfs_version for s3 
+        # will have been passed at build_cloud, either from the test, or the <config>.json
         h2i.import_parse(path='standard/benign.csv', bucket='home-0xdiag-datasets', schema='s3n', timeoutSecs=60)
 
-        h2i.import_parse(path='leads.csv', bucket='datasets', schema="hdfs", timeoutSecs=60)
+        # h2i.import_parse(path='leads.csv', bucket='datasets', schema="hdfs", timeoutSecs=60)
         # h2i.import_parse(path='/datasets/leads.csv', schema="hdfs", timeoutSecs=60)
         # h2i.import_parse(path='datasets/leads.csv', schema="hdfs", timeoutSecs=60)
 
         ## This will get it from import s3.
+        h2i.import_parse(path='standard/benign.csv', bucket='home-0xdiag-datasets', schema='s3', timeoutSecs=60)
         #import(path=junkdir/junk.csv, bucket="home-0xdiag-datasets", schema="s3")
-        #
-        ## This will get it from import hdfs with s3n. the hdfs_name_node and hdfs_version for s3 
-        # will have been passed at build_cloud, either from the test, or the <config>.json
-        #import(path=junkdir/junk.csv, bucket="home-0xdiag-datasets", schema="s3n")
         #
         ## this will get it from hdfs. the hdfs_name_node and hdfs_version for hdfs will 
         # have been passed at build_cloud, either from the test, or the <config>.json.

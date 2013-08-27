@@ -85,7 +85,7 @@ def import_only(node=None, schema='local', bucket=None, path=None,
         (head, pattern)  = ("", path)
 
     print "head:", head
-    print "pattern;", pattern
+    print "pattern:", pattern
 
     # to train users / okay here
     if re.search(r"[\*<>{}[\]~`]", head):
