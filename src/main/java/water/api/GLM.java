@@ -236,7 +236,7 @@ public class GLM extends Request {
       if (glmParams._family == Family.tweedie){
         double p = _tweediePower.value();
         if (! ((1. < p && p < 2.) || (2. < p && p < 3.) || (3. < p && p < 20.)) ){
-          return Response.error("tweedie family specified but invalid tweedie power: must be in (1,2) + (2,3) + (3,20)");
+          return Response.error("tweedie family specified but invalid tweedie power: must be in (1,2)");
         }
       }
 
