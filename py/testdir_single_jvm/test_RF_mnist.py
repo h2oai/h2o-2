@@ -52,31 +52,31 @@ class Basic(unittest.TestCase):
             # PARSE test****************************************
             testKey2 = testCsvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseKey = h2i.parseImportFolderFile(None, testCsvFilename, importFolderPath,
+            parseResult = h2i.parseImportFolderFile(None, testCsvFilename, importFolderPath,
                 key2=testKey2, timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
             print "parse end on ", testCsvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-            print "parse result:", parseKey['destination_key']
+            print "parse result:", parseResult['destination_key']
 
             print "We won't use this pruning of x on test data. See if it prunes the same as the training"
             y = 0 # first column is pixel value
             print "y:"
-            x = h2o_glm.goodXFromColumnInfo(y, key=parseKey['destination_key'], timeoutSecs=300)
+            x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300)
 
             # PARSE train****************************************
             trainKey2 = trainCsvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseKey = h2i.parseImportFolderFile(None, trainCsvFilename, importFolderPath,
+            parseResult = h2i.parseImportFolderFile(None, trainCsvFilename, importFolderPath,
                 key2=trainKey2, timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
             print "parse end on ", trainCsvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-            print "parse result:", parseKey['destination_key']
+            print "parse result:", parseResult['destination_key']
 
             # RF+RFView (train)****************************************
             print "This is the 'ignore=' we'll use"
-            ignore_x = h2o_glm.goodXFromColumnInfo(y, key=parseKey['destination_key'], timeoutSecs=300, forRF=True)
+            ignore_x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300, forRF=True)
             ntree = 10
             params = {
                 'response_variable': 0,
@@ -103,7 +103,7 @@ class Basic(unittest.TestCase):
             kwargs = params.copy()
             timeoutSecs = 1800
             start = time.time()
-            rfView = h2o_cmd.runRFOnly(parseKey=parseKey, rfView=True,
+            rfView = h2o_cmd.runRFOnly(parseResult=parseKey, rfView=True,
                 timeoutSecs=timeoutSecs, pollTimeoutsecs=60, retryDelaySecs=2, **kwargs)
             elapsed = time.time() - start
             print "RF completed in", elapsed, "seconds.", \

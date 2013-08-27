@@ -87,12 +87,12 @@ class Basic(unittest.TestCase):
             print "\nCreating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=30)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "\nParse result['destination_key']:", parseKey['destination_key']
+            parseResult = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=30)
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "\nParse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
 
             paramDict2 = {}
@@ -104,7 +104,7 @@ class Basic(unittest.TestCase):
             kwargs.update(paramDict2)
 
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, 8, **kwargs)
 

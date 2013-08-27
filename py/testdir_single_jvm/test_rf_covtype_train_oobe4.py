@@ -52,10 +52,10 @@ class Basic(unittest.TestCase):
 
         h2i.setupImportFolder(None, importFolderPath)
         print "\nUsing header=0 on the normal covtype.data"
-        parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2,
+        parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2,
             header=0, timeoutSecs=100)
 
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\n" + csvPathname, \
             "    num_rows:", "{:,}".format(inspect['num_rows']), \
             "    num_cols:", "{:,}".format(inspect['num_cols'])
@@ -102,7 +102,7 @@ class Basic(unittest.TestCase):
             execExpr = resultKey + "=slice(" + dataKeyTrain + ",1," + str(rowsToUse) + ")"
             print "execExpr:", execExpr
             h2o_exec.exec_expr(None, execExpr, resultKey=resultKey, timeoutSecs=10)
-            parseKey['destination_key'] = resultKey
+            parseResult['destination_key'] = resultKey
 
             # adjust timeoutSecs with the number of trees
             # seems ec2 can be really slow
@@ -113,7 +113,7 @@ class Basic(unittest.TestCase):
             kwargs['out_of_bag_error_estimate'] = 1
             kwargs['model_key'] = "model_" + str(trial)
             
-            rfv = h2o_cmd.runRFOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            rfv = h2o_cmd.runRFOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "RF end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)

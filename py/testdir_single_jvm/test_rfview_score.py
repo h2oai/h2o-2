@@ -59,13 +59,13 @@ class Basic(unittest.TestCase):
     def test_rfview_score(self):
         csvPathnameTrain = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
         print "Train with:", csvPathnameTrain
-        parseKeyTrain = h2o_cmd.parseFile(csvPathname=csvPathnameTrain, key2="covtype.hex", timeoutSecs=15)
-        dataKeyTrain = parseKeyTrain['destination_key']
+        parseResultTrain = h2o_cmd.parseFile(csvPathname=csvPathnameTrain, key2="covtype.hex", timeoutSecs=15)
+        dataKeyTrain = parseResultTrain['destination_key']
 
         csvPathnameTest = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
         print "Test with:", csvPathnameTest
-        parseKeyTest = h2o_cmd.parseFile(csvPathname=csvPathnameTrain, key2="covtype.hex", timeoutSecs=15)
-        dataKeyTest = parseKeyTest['destination_key']
+        parseResultTest = h2o_cmd.parseFile(csvPathname=csvPathnameTrain, key2="covtype.hex", timeoutSecs=15)
+        dataKeyTest = parseResultTest['destination_key']
 
         for trial in range(5):
             # params is mutable. This is default.
@@ -75,7 +75,7 @@ class Basic(unittest.TestCase):
             # adjust timeoutSecs with the number of trees
             # seems ec2 can be really slow
             timeoutSecs = 30 + kwargs['ntree'] * 10 * (kwargs['parallel'] and 1 or 5)
-            rfv = h2o_cmd.runRFOnly(parseKey=parseKeyTrain, timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)
+            rfv = h2o_cmd.runRFOnly(parseResult=parseKeyTrain, timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)
     
             ### print "rf response:", h2o.dump_json(rfv)
 

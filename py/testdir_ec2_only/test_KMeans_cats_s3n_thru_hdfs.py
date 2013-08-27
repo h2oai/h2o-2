@@ -54,14 +54,14 @@ class Basic(unittest.TestCase):
             # should be less on more nodes?
             timeoutSecs = 600
             start = time.time()
-            parseKey = h2o.nodes[0].parse(s3nKey, key2,
+            parseResult = h2o.nodes[0].parse(s3nKey, key2,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60, noise=('JStack', None))
             elapsed = time.time() - start
-            print s3nKey, 'h2o reported parse time:', parseKey['response']['time']
+            print s3nKey, 'h2o reported parse time:', parseResult['response']['time']
             print "parse end on ", s3nKey, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
-            print "parse result:", parseKey['destination_key']
+            print "parse result:", parseResult['destination_key']
 
             kwargs = {
                 'cols': None,
@@ -70,7 +70,7 @@ class Basic(unittest.TestCase):
             }
 
             start = time.time()
-            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, \
+            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseKey, \
                 timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=120, **kwargs)
             elapsed = time.time() - start
             print "kmeans end on ", csvFilename, 'took', elapsed, 'seconds.', \

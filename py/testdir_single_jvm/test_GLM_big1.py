@@ -26,7 +26,7 @@ class Basic(unittest.TestCase):
 
         y = "106"
         x = ""
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, timeoutSecs=15)
+        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, timeoutSecs=15)
 
         for trial in xrange(3):
             sys.stdout.write('.')
@@ -36,7 +36,7 @@ class Basic(unittest.TestCase):
 
             start = time.time()
             kwargs = {'x': x, 'y': y, 'n_folds': 6}
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=300, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=300, **kwargs)
 
             # pass the kwargs with all the params, so we know what we asked for!
             h2o_glm.simpleCheckGLM(self, glm, 57, **kwargs)

@@ -49,10 +49,10 @@ class Basic(unittest.TestCase):
         h2i.setupImportFolder(None, importFolderPath)
 
         print "\nUsing header=0 on the normal covtype.data"
-        parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2,
+        parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2,
             header=0, timeoutSecs=180)
 
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
 
         rfViewInitial = []
         for jobDispatch in range(1):
@@ -66,7 +66,7 @@ class Basic(unittest.TestCase):
             kwargs['model_key'] = "model_" + str(jobDispatch)
             
             # don't poll for fvec 
-            rfResult = h2o_cmd.runRFOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, noPoll=True, rfView=False, **kwargs)
+            rfResult = h2o_cmd.runRFOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, noPoll=True, rfView=False, **kwargs)
             elapsed = time.time() - start
             print "RF dispatch end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)

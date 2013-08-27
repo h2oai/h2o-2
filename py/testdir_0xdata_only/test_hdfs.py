@@ -75,13 +75,13 @@ class Basic(unittest.TestCase):
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in hdfs dir 
             print "Loading", csvFilename, 'from HDFS'
-            parseKey = h2i.parseImportHdfsFile(csvFilename=csvFilename, path='/datasets', timeoutSecs=1000)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "parse result:", parseKey['destination_key']
+            parseResult = h2i.parseImportHdfsFile(csvFilename=csvFilename, path='/datasets', timeoutSecs=1000)
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "parse result:", parseResult['destination_key']
 
             print "\n" + csvFilename
             start = time.time()
-            RFview = h2o_cmd.runRFOnly(trees=1,parseKey=parseKey,timeoutSecs=2000)
+            RFview = h2o_cmd.runRFOnly(trees=1,parseResult=parseKey,timeoutSecs=2000)
             # h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
 

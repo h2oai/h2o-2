@@ -52,9 +52,9 @@ class Basic(unittest.TestCase):
         h2i.setupImportFolder(None, importFolderPath)
         for csvFilename, timeoutSecs in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath,
+            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath,
                 timeoutSecs=2000, pollTimeoutSecs=60)
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             csvPathname = importFolderPath + "/" + csvFilename
             print "\n" + csvPathname, \
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \
@@ -69,7 +69,7 @@ class Basic(unittest.TestCase):
                 kwargs = params.copy()
 
                 start = time.time()
-                kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, \
+                kmeans = h2o_cmd.runKMeansOnly(parseResult=parseKey, \
                     timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=60, **kwargs)
                 elapsed = time.time() - start
                 print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', \

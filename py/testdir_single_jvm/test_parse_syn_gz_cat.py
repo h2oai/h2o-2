@@ -82,18 +82,18 @@ class Basic(unittest.TestCase):
 
             start = time.time()
             print "Parse start:", csvPathnameReplgz
-            parseKey = h2o_cmd.parseFile(None, csvPathnameReplgz, key2=key2, timeoutSecs=timeoutSecs, doSummary=DOSUMMARY)
-            print csvFilenameReplgz, 'parse time:', parseKey['response']['time']
+            parseResult = h2o_cmd.parseFile(None, csvPathnameReplgz, key2=key2, timeoutSecs=timeoutSecs, doSummary=DOSUMMARY)
+            print csvFilenameReplgz, 'parse time:', parseResult['response']['time']
             if DOSUMMARY:
                 algo = "Parse and Summary:"
             else:
                 algo = "Parse:"
-            print algo , parseKey['destination_key'], "took", time.time() - start, "seconds"
+            print algo , parseResult['destination_key'], "took", time.time() - start, "seconds"
 
             print "Inspecting.."
             start = time.time()
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=timeoutSecs)
-            print "Inspect:", parseKey['destination_key'], "took", time.time() - start, "seconds"
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=timeoutSecs)
+            print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspect, csvPathname)
             print "\n" + csvPathname, \
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \

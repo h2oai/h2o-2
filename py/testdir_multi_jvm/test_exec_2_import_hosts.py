@@ -75,11 +75,11 @@ class Basic(unittest.TestCase):
         for (csvFilename, key2, timeoutSecs) in csvFilenameList:
             SEEDPERFILE = random.randint(0, sys.maxint)
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
+            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
                 key2=key2, timeoutSecs=2000)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['desination_key']:", parseKey['destination_key']
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['desination_key']:", parseResult['destination_key']
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
 
             print "\n" + csvFilename
             h2e.exec_zero_list(zeroList)

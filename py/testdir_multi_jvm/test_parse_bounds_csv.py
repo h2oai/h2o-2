@@ -77,11 +77,11 @@ class Basic(unittest.TestCase):
                 synSumList = write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
                 # PARSE**********************
-                parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=timeoutSecs, doSummary=False)
-                print "Parse result['destination_key']:", parseKey['destination_key']
+                parseResult = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=timeoutSecs, doSummary=False)
+                print "Parse result['destination_key']:", parseResult['destination_key']
 
                 # INSPECT*******************
-                inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], max_column_display=colCount, timeoutSecs=timeoutSecs)
+                inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], max_column_display=colCount, timeoutSecs=timeoutSecs)
                 num_cols = inspect['num_cols']
                 num_rows = inspect['num_rows']
                 row_size = inspect['row_size']

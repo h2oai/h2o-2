@@ -24,7 +24,7 @@ class Basic(unittest.TestCase):
 
     def test_fail1_100x1100(self):
         csvPathname=h2o.find_file('smalldata/fail1_100x11000.csv.gz')
-        parseKey = h2o_cmd.parseFile(None, csvPathname, timeoutSecs=10, retryDelaySecs=0.15)
+        parseResult = h2o_cmd.parseFile(None, csvPathname, timeoutSecs=10, retryDelaySecs=0.15)
 
 if __name__ == '__main__':
     h2o.unit_main()

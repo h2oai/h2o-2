@@ -58,10 +58,10 @@ class Basic(unittest.TestCase):
         h2i.setupImportFolder(None, importFolderPath)
 
         print "\nUsing header=0 on", csvFilename
-        parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2,
+        parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2,
             header=0, timeoutSecs=180)
 
-        inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
+        inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
         print "\n" + csvPathname, \
             "    num_rows:", "{:,}".format(inspect['num_rows']), \
             "    num_cols:", "{:,}".format(inspect['num_cols'])
@@ -100,7 +100,7 @@ class Basic(unittest.TestCase):
             h2o_exec.exec_expr(None, execExpr, resultKey=resultKey, timeoutSecs=10)
             # hack so the RF will use the sliced result
             # FIX! don't use the sliced bit..use the whole data for rf training below
-            ### parseKey['destination_key'] = resultKey
+            ### parseResult['destination_key'] = resultKey
 
             # adjust timeoutSecs with the number of trees
             # seems ec2 can be really slow
@@ -111,11 +111,11 @@ class Basic(unittest.TestCase):
             kwargs['model_key'] = "model_" + csvFilename + "_" + str(trial)
             # kwargs['model_key'] = "model"
             # double check the rows/cols
-            inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
             h2o_cmd.infoFromInspect(inspect, "going into RF")
             
             start = time.time()
-            rfv = h2o_cmd.runRFOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            rfv = h2o_cmd.runRFOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "RF end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)

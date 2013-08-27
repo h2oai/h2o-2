@@ -42,12 +42,12 @@ class Basic(unittest.TestCase):
             csvPathname = importFolderPath + "/" + csvFilename
             # creates csvFilename.hex from file in importFolder dir 
             start = time.time()
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
+            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
                 timeoutSecs=2000, key2=key2, noise=('JStack', None))
             print "parse end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o.check_sandbox_for_errors()
 
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvPathname, \
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \
                 "    num_cols:", "{:,}".format(inspect['num_cols'])
@@ -78,7 +78,7 @@ class Basic(unittest.TestCase):
             # L2 
             kwargs.update({'alpha': 0, 'lambda': 0})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, noise=('JStack', None), **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, noise=('JStack', None), **kwargs)
             print "glm (L2) end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
             h2o.check_sandbox_for_errors()
@@ -86,7 +86,7 @@ class Basic(unittest.TestCase):
             # Elastic
             kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, noise=('JStack', None), **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, noise=('JStack', None), **kwargs)
             print "glm (Elastic) end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
             h2o.check_sandbox_for_errors()
@@ -94,7 +94,7 @@ class Basic(unittest.TestCase):
             # L1
             kwargs.update({'alpha': 1.0, 'lambda': 1e-4})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, noise=('JStack', None), **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, noise=('JStack', None), **kwargs)
             print "glm (L1) end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
             h2o.check_sandbox_for_errors()

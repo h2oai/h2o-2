@@ -48,7 +48,7 @@ class Basic(unittest.TestCase):
             key = csvFilename
             for trial in range(5):
                 key2 = csvFilename + "_" + str(trial) + ".hex"
-                parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2)
+                parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2)
 
                 sys.stdout.write('.')
                 sys.stdout.flush()

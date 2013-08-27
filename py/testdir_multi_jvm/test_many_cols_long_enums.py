@@ -120,13 +120,13 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, rowCount, colCount, SEED)
 
             SEPARATOR = ord(',')
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10, 
+            parseResult = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10, 
                 separator=SEPARATOR, header=1)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
 
             if not h2o.browse_disable:
@@ -134,7 +134,7 @@ class Basic(unittest.TestCase):
                 time.sleep(5)
 
             # try new offset/view
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
 
 
 if __name__ == '__main__':

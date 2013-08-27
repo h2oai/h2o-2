@@ -75,14 +75,14 @@ class Basic(unittest.TestCase):
             h2i.setupImportFolder(None, importFolderPath)
             csvPathname = importFolderPath + "/" + csvFilename
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2, timeoutSecs=2000)
-            print csvPathname, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2, timeoutSecs=2000)
+            print csvPathname, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
 
             # INSPECT******************************************
             start = time.time()
-            inspectFirst = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=360)
-            print "Inspect:", parseKey['destination_key'], "took", time.time() - start, "seconds"
+            inspectFirst = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=360)
+            print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspectFirst, csvFilename)
             # look at the min/max for the target col (0) and compare to expected for the dataset
             
@@ -101,12 +101,12 @@ class Basic(unittest.TestCase):
             # SUMMARY****************************************
             # gives us some reporting on missing values, constant values, 
             # to see if we have x specified well
-            # figures out everything from parseKey['destination_key']
+            # figures out everything from parseResult['destination_key']
             # needs y to avoid output column (which can be index or name)
             # assume all the configs have the same y..just check with the firs tone
             if DO_SUMMARY:
                 goodX = h2o_glm.goodXFromColumnInfo(y=0,
-                    key=parseKey['destination_key'], timeoutSecs=300, noPrint=True)
+                    key=parseResult['destination_key'], timeoutSecs=300, noPrint=True)
                 summaryResult = h2o_cmd.runSummary(key=key2, timeoutSecs=360)
                 h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
 
@@ -127,7 +127,7 @@ class Basic(unittest.TestCase):
                 # h2o.nodes[0].remove_key(key2)
                 start = time.time()
                 key2B = key2 + "_B"
-                parseKeyB = h2o_cmd.parseFile(csvPathname=csvDownloadPathname, key2=key2B)
+                parseResultB = h2o_cmd.parseFile(csvPathname=csvDownloadPathname, key2=key2B)
                 print csvDownloadPathname, "download/reparse (B) parse end. Original data from", \
                     csvFilename, 'took', time.time() - start, 'seconds'
                 inspect = h2o_cmd.runInspect(key=key2B)

@@ -40,9 +40,9 @@ class Basic(unittest.TestCase):
         h2i.setupImportFolder(None, importFolderPath)
         for csvFilename, timeoutSecs in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
+            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
                 timeoutSecs=2000, pollTimeoutSecs=60)
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             csvPathname = importFolderPath + "/" + csvFilename
             print "\n" + csvPathname, \
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \
@@ -74,7 +74,7 @@ class Basic(unittest.TestCase):
             # L2 
             kwargs.update({'alpha': 0, 'lambda': 0})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "glm (L2) end on ", csvPathname, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
@@ -82,7 +82,7 @@ class Basic(unittest.TestCase):
             # Elastic
             kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "glm (Elastic) end on ", csvPathname, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
@@ -90,7 +90,7 @@ class Basic(unittest.TestCase):
             # L1
             kwargs.update({'alpha': 1.0, 'lambda': 1e-4})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "glm (L1) end on ", csvPathname, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)

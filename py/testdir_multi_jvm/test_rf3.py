@@ -39,10 +39,10 @@ class Basic(unittest.TestCase):
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
             # broke out the put separately so we can iterate a test just on the RF
-            parseKey = h2o_cmd.parseFile(None, csvPathname)
+            parseResult = h2o_cmd.parseFile(None, csvPathname)
 
             h2o.verboseprint("Trial", trial)
-            h2o_cmd.runRFOnly(parseKey=parseKey, trees=237, depth=45, timeoutSecs=120)
+            h2o_cmd.runRFOnly(parseResult=parseKey, trees=237, depth=45, timeoutSecs=120)
 
             # don't change tree count yet
             ## trees += 10

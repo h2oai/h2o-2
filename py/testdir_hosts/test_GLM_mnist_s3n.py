@@ -50,31 +50,31 @@ class Basic(unittest.TestCase):
             testKey2 = testCsvFilename + "_" + str(trial) + ".hex"
             print "Loading s3n key: ", s3nKey, 'thru HDFS'
             start = time.time()
-            parseKey = h2o.nodes[0].parse(s3nKey, testKey2,
+            parseResult = h2o.nodes[0].parse(s3nKey, testKey2,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=120)
             elapsed = time.time() - start
             print "parse end on ", s3nKey, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-            print "parse result:", parseKey['destination_key']
+            print "parse result:", parseResult['destination_key']
 
             # PARSE train****************************************
             s3nKey = URI + trainCsvFilename
             trainKey2 = trainCsvFilename + "_" + str(trial) + ".hex"
             print "Loading s3n key: ", s3nKey, 'thru HDFS'
             start = time.time()
-            parseKey = h2o.nodes[0].parse(s3nKey, trainKey2,
+            parseResult = h2o.nodes[0].parse(s3nKey, trainKey2,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=120)
             elapsed = time.time() - start
             print "parse end on ", s3nKey, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-            print "parse result:", parseKey['destination_key']
+            print "parse result:", parseResult['destination_key']
 
 
             # GLM****************************************
             y = 0 # first column is pixel value
             print "y:"
             # don't need the intermediate Dicts produced from columnInfoFromInspect
-            x = h2o_glm.goodXFromColumnInfo(y, key=parseKey['destination_key'], timeoutSecs=300)
+            x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300)
             print "x:", x
 
             kwargs = {
@@ -94,7 +94,7 @@ class Basic(unittest.TestCase):
 
             timeoutSecs = 1800
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutsecs=60, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, pollTimeoutsecs=60, **kwargs)
             elapsed = time.time() - start
             print "GLM completed in", elapsed, "seconds.", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)

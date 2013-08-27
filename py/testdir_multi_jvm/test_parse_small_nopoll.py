@@ -52,7 +52,7 @@ class Basic(unittest.TestCase):
                 # have to put the file repeatedly since it gets deleted after parse now
                 # just parse, without polling, except for last one..will that make prior ones complete too?
                 noPoll = trial==(trialMax-1)
-                parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2, timeoutSecs=30)
+                parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2, timeoutSecs=30)
 
                 if not trial%10:
                     sys.stdout.write('.')

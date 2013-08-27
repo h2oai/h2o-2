@@ -82,11 +82,11 @@ class Basic(unittest.TestCase):
             # import each time, because h2o deletes source file after parse
             h2i.setupImportFolder(None, importFolderPath)
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
+            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
                 key2=key2, timeoutSecs=2000)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['Key']:", parseKey['destination_key']
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['Key']:", parseResult['destination_key']
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
 
             print "\n" + csvFilename
             h2e.exec_zero_list(zeroList)

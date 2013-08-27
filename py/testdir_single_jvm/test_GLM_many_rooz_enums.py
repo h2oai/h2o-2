@@ -165,17 +165,17 @@ class Basic(unittest.TestCase):
 
             # FIX! does 'separator=' take ints or ?? hex format
             # looks like it takes the hex string (two chars)
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, 
+            parseResult = h2o_cmd.parseFile(None, csvPathname, key2=key2, 
                 timeoutSecs=30, separator=colSepInt)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
-            ### inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            ### inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
             # we allow some NAs in the list above
             (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
-                h2o_cmd.columnInfoFromInspect(parseKey['destination_key'],exceptionOnMissingValues=False)
+                h2o_cmd.columnInfoFromInspect(parseResult['destination_key'],exceptionOnMissingValues=False)
 
             y = colCount
             x = range(colCount)
@@ -183,7 +183,7 @@ class Basic(unittest.TestCase):
             # kwargs = {'x': x, 'y': y, 'max_iter': 6, 'n_folds': 1, 'alpha': 0.1, 'lambda': 1e-5, 'family': 'poisson', 'case_mode': '=', 'case': 0}
             kwargs = {'y': y, 'max_iter': 6, 'n_folds': 1, 'alpha': 0.1, 'lambda': 1e-5, 'family': 'poisson', 'case_mode': '=', 'case': 0}
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 

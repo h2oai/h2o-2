@@ -65,12 +65,12 @@ class Basic(unittest.TestCase):
             start = time.time()
             timeoutSecs = 30
             print "Force it to think there's a header. using comma forced as separator"
-            parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2,
+            parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2,
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=30, header=1, separator=44)
-            print "parseKey['destination_key']: " + parseKey['destination_key']
-            print 'parse time:', parseKey['response']['time']
+            print "parseResult['destination_key']: " + parseKey['destination_key']
+            print 'parse time:', parseResult['response']['time']
 
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             h2o_cmd.infoFromInspect(inspect, csvPathname)
             print "\n" + csvPathname, \
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \
@@ -84,7 +84,7 @@ class Basic(unittest.TestCase):
 
             kwargs = {'sample': 75, 'depth': 25, 'ntree': 1}
             start = time.time()
-            rfv = h2o_cmd.runRFOnly(parseKey=parseKey, timeoutSecs=30, **kwargs)
+            rfv = h2o_cmd.runRFOnly(parseResult=parseKey, timeoutSecs=30, **kwargs)
             elapsed = time.time() - start
             print "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             print "trial #", trial, "totalRows:", totalRows, "parse end on ", csvFilename, \

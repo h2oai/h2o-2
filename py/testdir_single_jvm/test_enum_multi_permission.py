@@ -77,16 +77,16 @@ class Basic(unittest.TestCase):
             # use it at the node level directly (because we gen'ed the files.
             h2o.nodes[0].import_files(SYNDATASETS_DIR)
             # use regex. the only files in the dir will be the ones we just created with  *fileN* match
-            parseKey = h2o.nodes[0].parse('*'+rowxcol+'*', key2=key2, exclude=None, header=1, timeoutSecs=timeoutSecs)
-            print "parseKey['destination_key']: " + parseKey['destination_key']
-            print 'parse time:', parseKey['response']['time']
+            parseResult = h2o.nodes[0].parse('*'+rowxcol+'*', key2=key2, exclude=None, header=1, timeoutSecs=timeoutSecs)
+            print "parseResult['destination_key']: " + parseKey['destination_key']
+            print 'parse time:', parseResult['response']['time']
 
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             h2o_cmd.infoFromInspect(inspect, csvPathname)
 
 
             # FIX! h2o strips one of the headers, but treats all the other files with headers as data
-            print "\n" + parseKey['destination_key'] + ":", \
+            print "\n" + parseResult['destination_key'] + ":", \
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \
                 "    num_cols:", "{:,}".format(inspect['num_cols'])
 
@@ -105,22 +105,22 @@ class Basic(unittest.TestCase):
             # os.chmod(badPathname, stat.S_IRWXU | stat.S_IRWXO)
             # always have to re-import because source key is deleted by h2o
             h2o.nodes[0].import_files(SYNDATASETS_DIR)
-            parseKey = h2o.nodes[0].parse('*'+rowxcol+'*', key2=key2 + "_3", exclude=None, header=1, timeoutSecs=timeoutSecs)
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            parseResult = h2o.nodes[0].parse('*'+rowxcol+'*', key2=key2 + "_3", exclude=None, header=1, timeoutSecs=timeoutSecs)
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             h2o_cmd.infoFromInspect(inspect, csvPathname)
 
             print "write by owner, only, and parse"
             os.chmod(badPathname, stat.S_IWRITE)
             h2o.nodes[0].import_files(SYNDATASETS_DIR)
-            parseKey = h2o.nodes[0].parse('*'+rowxcol+'*', key2=key2 + "_1", exclude=None, header=1, timeoutSecs=timeoutSecs)
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            parseResult = h2o.nodes[0].parse('*'+rowxcol+'*', key2=key2 + "_1", exclude=None, header=1, timeoutSecs=timeoutSecs)
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             h2o_cmd.infoFromInspect(inspect, csvPathname)
 
             print "execute by owner, only, and parse"
             os.chmod(badPathname, stat.S_IEXEC)
             h2o.nodes[0].import_files(SYNDATASETS_DIR)
-            parseKey = h2o.nodes[0].parse('*'+rowxcol+'*', key2=key2 + "_2", exclude=None, header=1, timeoutSecs=timeoutSecs)
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            parseResult = h2o.nodes[0].parse('*'+rowxcol+'*', key2=key2 + "_2", exclude=None, header=1, timeoutSecs=timeoutSecs)
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             h2o_cmd.infoFromInspect(inspect, csvPathname)
 
             # change back to normal
@@ -134,11 +134,11 @@ class Basic(unittest.TestCase):
 
                 print "parsing after one bad uid"
                 os.chown(badPathname, badUid, origGid)
-                parseKey = h2o.nodes[0].parse('*'+rowxcol+'*', key2=key2, exclude=None, header=1, timeoutSecs=timeoutSecs)
+                parseResult = h2o.nodes[0].parse('*'+rowxcol+'*', key2=key2, exclude=None, header=1, timeoutSecs=timeoutSecs)
 
                 print "parsing after one bad gid"
                 os.chown(badPathname, origUid, badGid)
-                parseKey = h2o.nodes[0].parse('*'+rowxcol+'*', key2=key2, exclude=None, header=1, timeoutSecs=timeoutSecs)
+                parseResult = h2o.nodes[0].parse('*'+rowxcol+'*', key2=key2, exclude=None, header=1, timeoutSecs=timeoutSecs)
 
                 os.chown(badPathname, origUid, origGid)
 

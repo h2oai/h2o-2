@@ -31,7 +31,7 @@ class Basic(unittest.TestCase):
                 # import each time, because h2o deletes source file after parse
                 h2i.setupImportFolder(None, importFolderPath)
                 key2 = csvFilename + "_" + str(trial) + ".hex"
-                parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2, timeoutSecs=20)
+                parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2, timeoutSecs=20)
             # sticky ports?
             h2o.tear_down_cloud()
             time.sleep(5)

@@ -78,10 +78,10 @@ class Basic(unittest.TestCase):
                 csvFilename = 'failtoconverge_100x50.csv'
                 csvPathname = h2o.find_file('smalldata/logreg/' + csvFilename)
 
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            parseResult = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10)
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
 
             y = colCount
@@ -105,7 +105,7 @@ class Basic(unittest.TestCase):
             for i in range(2):
                 start = time.time()
                 # get rid of the Jstack polling
-                glm = h2o_cmd.runGLMGridOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+                glm = h2o_cmd.runGLMGridOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, **kwargs)
                 print 'glm #', i, 'end on', csvPathname, 'took', time.time() - start, 'seconds'
                 # we can pass the warning, without stopping in the test, so we can 
                 # redo it in the browser for comparison

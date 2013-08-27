@@ -22,8 +22,8 @@ class Basic(unittest.TestCase):
     def test_mixed_causes_NA(self):
         csvFilename = 'mixed_causes_NA.csv'
         csvPathname = h2o.find_file('smalldata/' + csvFilename)
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, timeoutSecs=15)
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, timeoutSecs=15)
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         missingValuesList = h2o_cmd.infoFromInspect(inspect, csvPathname)
         print missingValuesList
         self.assertEqual(sum(missingValuesList), 0,

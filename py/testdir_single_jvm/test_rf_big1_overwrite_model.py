@@ -34,7 +34,7 @@ class Basic(unittest.TestCase):
         
         print "\n" + csvPathname
 
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, timeoutSecs=15)
+        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, timeoutSecs=15)
         firstRfView = None
         # dispatch multiple jobs back to back
         for jobDispatch in range(3):
@@ -58,7 +58,7 @@ class Basic(unittest.TestCase):
 
             # FIX! what model keys do these get?
             randomNode = h2o.nodes[random.randint(0,len(h2o.nodes)-1)]
-            h2o_cmd.runRFOnly(node=randomNode, parseKey=parseKey, model_key=model_key, timeoutSecs=300,
+            h2o_cmd.runRFOnly(node=randomNode, parseResult=parseKey, model_key=model_key, timeoutSecs=300,
                  noPoll=True, **kwargs)
             # FIX! are these already in there?
             rfView = {}

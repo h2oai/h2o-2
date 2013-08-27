@@ -130,7 +130,7 @@ class Basic(unittest.TestCase):
                     key2 = csvFilename + "_" + str(trial) + ".hex"
                     print "Loading", protocol, "key:", s3nKey, "to", key2
                     start = time.time()
-                    parseKey = h2o.nodes[0].parse(s3nKey, key2,
+                    parseResult = h2o.nodes[0].parse(s3nKey, key2,
                         timeoutSecs=timeoutSecs, 
                         retryDelaySecs=retryDelaySecs,
                         pollTimeoutSecs=pollTimeoutSecs,
@@ -167,8 +167,8 @@ class Basic(unittest.TestCase):
                                 benchmarkLogging=benchmarkLogging)
 
                     elapsed = time.time() - start
-                    print s3nKey, 'parse time:', parseKey['response']['time']
-                    print "parse result:", parseKey['destination_key']
+                    print s3nKey, 'parse time:', parseResult['response']['time']
+                    print "parse result:", parseResult['destination_key']
                     print "Parse #", trial, "completed in", "%6.2f" % elapsed, "seconds.", \
                         "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
@@ -193,7 +193,7 @@ class Basic(unittest.TestCase):
 
                     y = 378
                     if not noPoll:
-                        x = h2o_glm.goodXFromColumnInfo(y, key=parseKey['destination_key'], timeoutSecs=300)
+                        x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300)
 
 
                     #**********************************************************************************
@@ -212,7 +212,7 @@ class Basic(unittest.TestCase):
                             GLMkwargs = {'x': x, 'y': y, 'case': 15, 'case_mode': '>', 'family': 'binomial',
                                 'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
                             start = time.time()
-                            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, 
+                            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, 
                                 timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                                 pollTimeoutSecs=pollTimeoutSecs,
                                 benchmarkLogging=benchmarkLogging, **GLMkwargs)
@@ -228,7 +228,7 @@ class Basic(unittest.TestCase):
                                 'thresholds': '0.5'
                                 }
                             start = time.time()
-                            glm = h2o_cmd.runGLMGridOnly(parseKey=parseKey,
+                            glm = h2o_cmd.runGLMGridOnly(parseResult=parseKey,
                                 timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                                 pollTimeoutSecs=pollTimeoutSecs,
                                 benchmarkLogging=benchmarkLogging, **GLMkwargs)

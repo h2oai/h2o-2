@@ -101,7 +101,7 @@ class Basic(unittest.TestCase):
             key2 = csvFilename + "_" + str(trial) + ".hex"
 
             start = time.time()
-            parseKeyA = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2)
+            parseResultA = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2)
             print "\nA trial #", trial, "parse end on ", csvFilename, 'took', time.time() - start, 'seconds'
 
             inspect = h2o_cmd.runInspect(key=key2)
@@ -125,7 +125,7 @@ class Basic(unittest.TestCase):
             h2o.nodes[0].remove_key(key2)
             # interesting. what happens when we do csv download with time data?
             start = time.time()
-            parseKeyB = h2o_cmd.parseFile(csvPathname=csvDownloadPathname, key=key, key2=key2)
+            parseResultB = h2o_cmd.parseFile(csvPathname=csvDownloadPathname, key=key, key2=key2)
             print "B trial #", trial, "parse end on ", csvFilename, 'took', time.time() - start, 'seconds'
             inspect = h2o_cmd.runInspect(key=key2)
             missingValuesListB = h2o_cmd.infoFromInspect(inspect, csvPathname)

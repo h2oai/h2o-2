@@ -78,9 +78,9 @@ class Basic(unittest.TestCase):
         h2i.setupImportFolder(None, importFolderPath)
         for csvFilename, timeoutSecs, key2 in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2,
+            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2,
                 timeoutSecs=2000, retryDelaySecs=5, initialDelaySecs=10, pollTimeoutSecs=60)
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             csvPathname = importFolderPath + "/" + csvFilename
             num_rows = inspect['num_rows']
             num_cols = inspect['num_cols']
@@ -103,7 +103,7 @@ class Basic(unittest.TestCase):
 
             for trial in range(3):
                 start = time.time()
-                glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+                glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, **kwargs)
                 elapsed = time.time() - start
                 print "glm", trial, "end on ", csvPathname, 'took', elapsed, 'seconds.',
                 print "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)

@@ -23,7 +23,7 @@ class Basic(unittest.TestCase):
         csvFilename = "benign.csv"
         print "\nStarting", csvFilename
         csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
 
         expected = [
             ([24.538961038961038, 2.772727272727273, 46.89032467532467, 0.1266233766233766, 12.012142857142857, 1.0105194805194804, 1.5222727272727272, 22.26039690646432, 12.582467532467534, 0.5275062016635049, 2.9477601050634767, 162.52136363636365, 41.94558441558441, 1.661883116883117], 77, 46889.32010560476) ,
@@ -40,8 +40,8 @@ class Basic(unittest.TestCase):
                 # reuse the same seed, to get deterministic results (otherwise sometimes fails
                 'seed': 265211114317615310}
 
-            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=5, **kwargs)
-            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
+            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseKey, timeoutSecs=5, **kwargs)
+            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
 
 
@@ -49,7 +49,7 @@ class Basic(unittest.TestCase):
         csvFilename = "prostate.csv"
         print "\nStarting", csvFilename
         csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
 
         # loop, to see if we get same centers
         expected = [
@@ -65,8 +65,8 @@ class Basic(unittest.TestCase):
                 # reuse the same seed, to get deterministic results (otherwise sometimes fails
                 'seed': 265211114317615310}
 
-            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=5, **kwargs)
-            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
+            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseKey, timeoutSecs=5, **kwargs)
+            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
 
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
 

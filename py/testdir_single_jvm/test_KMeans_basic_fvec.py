@@ -26,9 +26,9 @@ class Basic(unittest.TestCase):
         key2 = "benign.hex"
         csvPathname = importFolderPath + "/" + csvFilename
         h2i.setupImportFolder(None, importFolderPath)
-        # FIX! key2 isn't working with Parse2 ? parseKey['destination_key'] not right?
-        parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2, header=1, timeoutSecs=180)
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        # FIX! key2 isn't working with Parse2 ? parseResult['destination_key'] not right?
+        parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2, header=1, timeoutSecs=180)
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\nStarting", csvFilename
 
         expected = [
@@ -49,8 +49,8 @@ class Basic(unittest.TestCase):
             # for fvec only?
             kwargs.update({'max_iter': 50, 'max_iter2': 1, 'iterations': 5})
 
-            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=5, **kwargs)
-            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
+            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseKey, timeoutSecs=5, **kwargs)
+            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
 
 
@@ -61,8 +61,8 @@ class Basic(unittest.TestCase):
         key2 = "prostate.hex"
         csvPathname = importFolderPath + "/" + csvFilename
         h2i.setupImportFolder(None, importFolderPath)
-        parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2, header=1, timeoutSecs=180)
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2, header=1, timeoutSecs=180)
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\nStarting", csvFilename
 
         # loop, to see if we get same centers
@@ -82,8 +82,8 @@ class Basic(unittest.TestCase):
             # for fvec only?
             kwargs.update({'max_iter': 50, 'max_iter2': 1, 'iterations': 5})
 
-            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=5, **kwargs)
-            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
+            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseKey, timeoutSecs=5, **kwargs)
+            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
 
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
 

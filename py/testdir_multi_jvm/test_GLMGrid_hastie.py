@@ -15,7 +15,7 @@ import h2o, h2o_cmd, h2o_glm, h2o_util, h2o_hosts
 
 def glm_doit(self, csvFilename, csvPathname, timeoutSecs=30):
     print "\nStarting parse of", csvFilename
-    parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", timeoutSecs=10)
+    parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", timeoutSecs=10)
     y = "10"
     x = ""
     # NOTE: hastie has two values, -1 and 1. To make H2O work if two valued and not 0,1 have
@@ -36,7 +36,7 @@ def glm_doit(self, csvFilename, csvPathname, timeoutSecs=30):
 
     start = time.time() 
     print "\nStarting GLMGrid of", csvFilename
-    glmGridResult = h2o_cmd.runGLMGridOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+    glmGridResult = h2o_cmd.runGLMGridOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, **kwargs)
     print "GLMGrid in",  (time.time() - start), "secs (python)"
 
     # still get zero coeffs..best model is AUC = 0.5 with intercept only.

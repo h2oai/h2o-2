@@ -48,19 +48,19 @@ class Basic(unittest.TestCase):
             # is removed and if we re-parse it, it's not there
             h2i.setupImportFolder(None, importFolderPath, timeoutSecs=60)
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=2000)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=2000)
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
-            inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
             print "\n" + csvFilename
 
             start = time.time()
             # can't pass lamba as kwarg because it's a python reserved word
             # FIX! just look at X=0:1 for speed, for now
             kwargs = {'y': 54, 'n_folds': 2, 'family': "binomial", 'case': 1}
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=2000, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=2000, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
             h2o.verboseprint("\nglm:", glm)

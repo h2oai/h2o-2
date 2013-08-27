@@ -53,32 +53,32 @@ class Basic(unittest.TestCase):
             # PARSE test****************************************
             testKey2 = testCsvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseKey = h2i.parseImportFolderFile(None, testCsvFilename, importFolderPath,
+            parseResult = h2i.parseImportFolderFile(None, testCsvFilename, importFolderPath,
                 key2=testKey2, timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
             print "parse end on ", testCsvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-            print "parse result:", parseKey['destination_key']
+            print "parse result:", parseResult['destination_key']
 
             print "We won't use this pruning of x on test data. See if it prunes the same as the training"
             y = 0 # first column is pixel value
             print "y:"
-            x = h2o_glm.goodXFromColumnInfo(y, key=parseKey['destination_key'], timeoutSecs=300)
+            x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300)
 
             # PARSE train****************************************
             trainKey2 = trainCsvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseKey = h2i.parseImportFolderFile(None, trainCsvFilename, importFolderPath,
+            parseResult = h2i.parseImportFolderFile(None, trainCsvFilename, importFolderPath,
                 key2=trainKey2, timeoutSecs=timeoutSecs, noise=('StoreView', None))
 
             elapsed = time.time() - start
             print "parse end on ", trainCsvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-            print "parse result:", parseKey['destination_key']
+            print "parse result:", parseResult['destination_key']
 
             # GLM****************************************
             print "This is the pruned x we'll use"
-            x = h2o_glm.goodXFromColumnInfo(y, key=parseKey['destination_key'], timeoutSecs=300)
+            x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300)
             print "x:", x
 
             params = {
@@ -103,7 +103,7 @@ class Basic(unittest.TestCase):
 
                 timeoutSecs = 1800
                 start = time.time()
-                glm = h2o_cmd.runGLMOnly(parseKey=parseKey, 
+                glm = h2o_cmd.runGLMOnly(parseResult=parseKey, 
                     timeoutSecs=timeoutSecs, pollTimeoutsecs=60, noise=('StoreView', None), **kwargs)
                 elapsed = time.time() - start
                 print "GLM completed in", elapsed, "seconds.", \

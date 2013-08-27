@@ -159,9 +159,9 @@ class Basic(unittest.TestCase):
             h2o_util.file_clean_for_R(csvPathname1, csvPathname2)
 
             # we can inspect this to get the number of cols in the dataset (trust H2O here)
-            parseKey = h2o_cmd.parseFile(None, csvPathname2, key=csvFilename, timeoutSecs=10)
+            parseResult = h2o_cmd.parseFile(None, csvPathname2, key=csvFilename, timeoutSecs=10)
             # we could specify key2 above but this is fine
-            destination_key = parseKey['destination_key']
+            destination_key = parseResult['destination_key']
             inspect = h2o_cmd.runInspect(None, destination_key)
             num_cols = inspect['num_cols']
             num_rows = inspect['num_rows']
@@ -202,7 +202,7 @@ class Basic(unittest.TestCase):
                 'beta_epsilon': 1.0E-4, 'max_iter': 50 }
 
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, **kwargs)
 
             print "glm end (w/check) on ", csvPathname2, 'took', time.time()-start, 'seconds'
             h2oResults = h2o_glm.simpleCheckGLM(self, glm, None, prettyPrint=True, **kwargs)

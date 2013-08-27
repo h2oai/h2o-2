@@ -98,7 +98,7 @@ class Basic(unittest.TestCase):
                 h2o.cloudPerfH2O.message("")
                 h2o.cloudPerfH2O.message("Parse " + csvFilename + " Start--------------------------------")
                 start = time.time()
-                parseKey = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
+                parseResult = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
                     key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                     retryDelaySecs=retryDelaySecs,
                     pollTimeoutSecs=pollTimeoutSecs,
@@ -127,12 +127,12 @@ class Basic(unittest.TestCase):
                     print l
                     h2o.cloudPerfH2O.message(l)
 
-                print csvFilepattern, 'parse time:', parseKey['response']['time']
-                print "Parse result['destination_key']:", parseKey['destination_key']
+                print csvFilepattern, 'parse time:', parseResult['response']['time']
+                print "Parse result['destination_key']:", parseResult['destination_key']
 
                 # BUG here?
                 if not noPoll:
-                    h2o_cmd.get_columnInfoFromInspect(parseKey['destination_key'], exceptionOnMissingValues=True)
+                    h2o_cmd.get_columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=True)
                         
                 print "\n" + csvFilepattern
 
@@ -143,7 +143,7 @@ class Basic(unittest.TestCase):
                     GLMkwargs = {'y': 0, 'case': 1, 'case_mode': '>',
                         'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
                     start = time.time()
-                    glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **GLMkwargs)
+                    glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, **GLMkwargs)
                     h2o_glm.simpleCheckGLM(self, glm, None, **GLMkwargs)
                     elapsed = time.time() - start
                     h2o.check_sandbox_for_errors()

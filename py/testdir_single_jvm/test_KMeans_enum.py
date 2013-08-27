@@ -64,12 +64,12 @@ class Basic(unittest.TestCase):
 
             print "Creating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, SEED)
-            parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+            print "Parse result['destination_key']:", parseResult['destination_key']
 
             kwargs = {'k': 2, 'initialization': 'Furthest', 'cols': None, 'destination_key': 'benign_k.hex'}
-            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=5, **kwargs)
-            h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
+            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseKey, timeoutSecs=5, **kwargs)
+            h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
 
 if __name__ == '__main__':
     h2o.unit_main()

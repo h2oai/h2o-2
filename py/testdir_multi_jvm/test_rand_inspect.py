@@ -43,9 +43,9 @@ class Basic(unittest.TestCase):
         csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/'+ csvFilename)
         print "\n" + csvPathname
 
-        parseKey = h2o_cmd.parseFile(None, csvPathname, key=csvFilename, timeoutSecs=10)
-        destination_key = parseKey['destination_key']
-        print csvFilename, 'parse time:', parseKey['response']['time']
+        parseResult = h2o_cmd.parseFile(None, csvPathname, key=csvFilename, timeoutSecs=10)
+        destination_key = parseResult['destination_key']
+        print csvFilename, 'parse time:', parseResult['response']['time']
         print "Parse result['destination_key']:", destination_key 
 
         def inspect_and_check(nodeX,destination_key,offset,view,inspect=None):

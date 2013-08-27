@@ -28,7 +28,7 @@ class Basic(unittest.TestCase):
 
         y = "106"
         x = ""
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, timeoutSecs=15)
+        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, timeoutSecs=15)
 
         glmInitial = []
         # dispatch multiple jobs back to back
@@ -36,7 +36,7 @@ class Basic(unittest.TestCase):
         for jobDispatch in range(40):
             kwargs = {'x': x, 'y': y, 'n_folds': 1}
             # FIX! what model keys do these get?
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=300, noPoll=True, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=300, noPoll=True, **kwargs)
             glmInitial.append(glm)
             print "glm job dispatch end on ", csvPathname, 'took', time.time() - start, 'seconds'
             print "\njobDispatch #", jobDispatch

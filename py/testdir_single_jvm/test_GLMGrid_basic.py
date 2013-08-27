@@ -25,7 +25,7 @@ class Basic(unittest.TestCase):
         csvFilename = "benign.csv"
         print "\nStarting", csvFilename 
         csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
         # columns start at 0
         # cols 0-13. 3 is output
         # no member id in this one
@@ -48,7 +48,7 @@ class Basic(unittest.TestCase):
         # fails with n_folds
         print "Not doing n_folds with benign. Fails with 'unable to solve?'"
 
-        gg = h2o_cmd.runGLMGridOnly(parseKey=parseKey, timeoutSecs=120, **kwargs)
+        gg = h2o_cmd.runGLMGridOnly(parseResult=parseKey, timeoutSecs=120, **kwargs)
         # check the first in the models list. It should be the best
         colNames = [ 'STR','OBS','AGMT','FNDX','HIGD','DEG','CHK',
                      'AGP1','AGMN','NLV','LIV','WT','AGLP','MST' ]
@@ -60,7 +60,7 @@ class Basic(unittest.TestCase):
         print "\nStarting", csvFilename
         # columns start at 0
         csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
 
         y = "1"
         x = range(9)
@@ -84,7 +84,7 @@ class Basic(unittest.TestCase):
             'thresholds': '0:1:0.01'
             }
 
-        gg = h2o_cmd.runGLMGridOnly(parseKey=parseKey, timeoutSecs=120, **kwargs)
+        gg = h2o_cmd.runGLMGridOnly(parseResult=parseKey, timeoutSecs=120, **kwargs)
         colNames = ['D','CAPSULE','AGE','RACE','DPROS','DCAPS','PSA','VOL','GLEASON']
         # h2o_glm.simpleCheckGLMGrid(self, gg, colNames[xList[0]], **kwargs)
         h2o_glm.simpleCheckGLMGrid(self, gg, None, **kwargs)

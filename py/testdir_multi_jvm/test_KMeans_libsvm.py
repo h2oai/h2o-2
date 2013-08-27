@@ -61,15 +61,15 @@ class Basic(unittest.TestCase):
 
             # PARSE******************************************
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
+            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
                 key2=key2, timeoutSecs=2000)
-            print csvPathname, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            print csvPathname, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
 
             # INSPECT******************************************
             start = time.time()
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=360)
-            print "Inspect:", parseKey['destination_key'], "took", time.time() - start, "seconds"
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=360)
+            print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspect, csvFilename)
 
             # KMEANS******************************************
@@ -85,18 +85,18 @@ class Basic(unittest.TestCase):
                 }
 
                 # fails if I put this in kwargs..i.e. source = dest
-                # 'destination_key': parseKey['destination_key'],
+                # 'destination_key': parseResult['destination_key'],
 
                 timeoutSecs = 600
                 start = time.time()
-                kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+                kmeans = h2o_cmd.runKMeansOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, **kwargs)
                 elapsed = time.time() - start
                 print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', \
                     "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
                 # this does an inspect of the model and prints the clusters
                 h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
 
-                (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
+                (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
 
 
 

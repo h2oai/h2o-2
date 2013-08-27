@@ -37,18 +37,18 @@ class Basic(unittest.TestCase):
 
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=500)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=500)
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
-            inspect = h2o_cmd.runInspect(None,parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None,parseResult['destination_key'])
 
             print "\n" + csvFilename
             start = time.time()
             # poker and the water.UDP.set3(UDP.java) fail issue..
             # constrain depth to 25
-            RFview = h2o_cmd.runRFOnly(trees=1,depth=25,parseKey=parseKey,
+            RFview = h2o_cmd.runRFOnly(trees=1,depth=25,parseResult=parseKey,
                 timeoutSecs=timeoutSecs)
 
             h2b.browseJsonHistoryAsUrlLastMatch("RFView")

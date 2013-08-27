@@ -60,12 +60,12 @@ class Basic(unittest.TestCase):
                 time.sleep(5)
                 print "Loading from hdfs:", importFolderPath + "/" + csvFilePattern
                 start = time.time()
-                parseKey = h2i.parseImportHdfsFile(csvFilename=csvFilePattern, path=importFolderPath,
+                parseResult = h2i.parseImportHdfsFile(csvFilename=csvFilePattern, path=importFolderPath,
                     key2=key2, timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
                 elapsed = time.time() - start
 
-                print hdfsKey, 'parse time:', parseKey['response']['time']
-                print "parse result:", parseKey['destination_key']
+                print hdfsKey, 'parse time:', parseResult['response']['time']
+                print "parse result:", parseResult['destination_key']
                 print "Parse #", trial, "completed in", "%6.2f" % elapsed, "seconds.", \
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 

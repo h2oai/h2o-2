@@ -42,16 +42,16 @@ class Basic(unittest.TestCase):
             start = time.time()
 
             # Parse*********************************
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
+            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=60)
             elapsed = time.time() - start
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
             print csvFilename, "completed in", elapsed, "seconds.", "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
             # Inspect*********************************
             # We should be able to see the parse result?
-            inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
             num_cols = inspect['num_cols']
             num_rows = inspect['num_rows']
             value_size_bytes = inspect['value_size_bytes']
@@ -71,7 +71,7 @@ class Basic(unittest.TestCase):
                 msg='value_size_bytes %s is not expected row_size * rows: %s' % \
                 (value_size_bytes, expectedValueSize))
 
-            summaryResult = h2o_cmd.runSummary(key=parseKey['destination_key'], timeoutSecs=timeoutSecs)
+            summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'], timeoutSecs=timeoutSecs)
             h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
 
             self.assertEqual(2, num_cols,
@@ -93,7 +93,7 @@ class Basic(unittest.TestCase):
 
             timeoutSecs = 900
             start = time.time()
-            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, **kwargs)
 
             # GLM*********************************
             print "\n" + csvFilename
@@ -105,7 +105,7 @@ class Basic(unittest.TestCase):
             timeoutSecs = 900
             kwargs.update({'alpha': 0, 'lambda': 0})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "glm (L2) end on ", csvFilename, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             h2o_glm.simpleCheckGLM(self, glm, colX, **kwargs)
