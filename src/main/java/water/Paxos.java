@@ -44,7 +44,7 @@ public abstract class Paxos {
         Log.warn("Killing "+h2o+" because of H2O version mismatch (md5 differs).");
         UDPRebooted.T.mismatch.send(h2o);
       } else {
-        Log.err("Attempting to join "+h2o+" with an H2O version mismatch (md5 differs).  Exiting.");
+        Log.err("Attempting to join "+h2o+" with an H2O version mismatch (md5 differs).  (Is H2O already running?)  Exiting.");
         H2O.exit(-1);
       }
       return 0;
