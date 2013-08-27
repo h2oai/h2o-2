@@ -12,8 +12,8 @@ else
 	R CMD Rd2pdf --force --output="h2o-package/h2o_package.pdf" --title="Package 'h2o'" --no-index --no-preview h2o-package/man 1> /dev/null
 endif
 	R CMD build h2o-package
-	mkdir -p ../tmp/resources/R
-	cp -p h2o_$(PROJECT_VERSION).tar.gz ../tmp/resources/R
+	mkdir -p ../r_pack_tmp/resources/R
+	cp -p h2o_$(PROJECT_VERSION).tar.gz ../r_pack_tmp/resources/R
 	mkdir -p ../target/R
 	cp -p README.txt ../target/R
 	mv h2o_$(PROJECT_VERSION).tar.gz ../target/R
