@@ -103,7 +103,7 @@ class Basic(unittest.TestCase):
             kwargs.update(paramDict2)
 
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
             # only col y-1 (next to last)doesn't get renamed in coefficients 
             # due to enum/categorical expansion

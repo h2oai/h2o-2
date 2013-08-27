@@ -183,7 +183,7 @@ class Basic(unittest.TestCase):
             # kwargs = {'x': x, 'y': y, 'max_iter': 6, 'n_folds': 1, 'alpha': 0.1, 'lambda': 1e-5, 'family': 'poisson', 'case_mode': '=', 'case': 0}
             kwargs = {'y': y, 'max_iter': 6, 'n_folds': 1, 'alpha': 0.1, 'lambda': 1e-5, 'family': 'poisson', 'case_mode': '=', 'case': 0}
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 

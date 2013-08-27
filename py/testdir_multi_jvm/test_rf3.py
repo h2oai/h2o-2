@@ -42,7 +42,7 @@ class Basic(unittest.TestCase):
             parseResult = h2o_cmd.parseFile(None, csvPathname)
 
             h2o.verboseprint("Trial", trial)
-            h2o_cmd.runRFOnly(parseResult=parseKey, trees=237, depth=45, timeoutSecs=120)
+            h2o_cmd.runRFOnly(parseResult=parseResult, trees=237, depth=45, timeoutSecs=120)
 
             # don't change tree count yet
             ## trees += 10

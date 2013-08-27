@@ -107,7 +107,7 @@ class Basic(unittest.TestCase):
         timeoutSecs = 30 + kwargs['ntree'] * 60 * (kwargs['parallel'] and 1 or 5)
 
         start = time.time()
-        rfv = h2o_cmd.runRFOnly(parseResult=parseKeyTrain,
+        rfv = h2o_cmd.runRFOnly(parseResult=parseResultTrain,
             timeoutSecs=timeoutSecs, retryDelaySecs=1, noPoll=True, **kwargs)
         print "rf job dispatch end on ", dataKeyTrain, 'took', time.time() - start, 'seconds'
         ### print "rf response:", h2o.dump_json(rfv)

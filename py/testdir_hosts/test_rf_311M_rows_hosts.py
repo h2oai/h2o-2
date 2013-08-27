@@ -34,7 +34,7 @@ class Basic(unittest.TestCase):
 
             print "\n" + csvFilename
             start = time.time()
-            RFview = h2o_cmd.runRFOnly(trees=5,depth=5,parseResult=parseKey, 
+            RFview = h2o_cmd.runRFOnly(trees=5,depth=5,parseResult=parseResult, 
                 timeoutSecs=600, retryDelaySecs=10.0)
             print "RF end on ", csvFilename, 'took', time.time() - start, 'seconds'
 

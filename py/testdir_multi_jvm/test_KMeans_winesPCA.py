@@ -51,7 +51,7 @@ class Basic(unittest.TestCase):
         for trial in range (10):
             start = time.time()
 
-            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseKey, \
+            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, \
                 timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=60, **kwargs)
             elapsed = time.time() - start
             print "kmeans #", trial, "end on ", csvPathname, 'took', elapsed, 'seconds.', \

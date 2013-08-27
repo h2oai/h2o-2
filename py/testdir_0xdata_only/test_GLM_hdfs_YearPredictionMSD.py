@@ -57,7 +57,7 @@ class Basic(unittest.TestCase):
             # can't pass lamba as kwarg because it's a python reserved word
             # FIX! just look at X=0:1 for speed, for now
             kwargs = {'y': 54, 'n_folds': 2, 'family': "binomial", 'case': 1}
-            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=500, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=500, **kwargs)
 
             # different when n_foldsidation is used? No trainingErrorDetails?
             h2o.verboseprint("\nglm:", glm)

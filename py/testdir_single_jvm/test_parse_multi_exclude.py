@@ -85,7 +85,7 @@ class Basic(unittest.TestCase):
             h2o.nodes[0].import_files(SYNDATASETS_DIR)
             # pattern match all, then use exclude
             parseResult = h2o.nodes[0].parse('*', key2=key2, exclude=excludePattern, header=1, timeoutSecs=timeoutSecs)
-            print "parseResult['destination_key']: " + parseKey['destination_key']
+            print "parseResult['destination_key']: " + parseResult['destination_key']
             print 'parse time:', parseResult['response']['time']
 
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])

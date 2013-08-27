@@ -75,7 +75,7 @@ class Basic(unittest.TestCase):
             # adjust timeoutSecs with the number of trees
             # seems ec2 can be really slow
             timeoutSecs = 30 + kwargs['ntree'] * 10 * (kwargs['parallel'] and 1 or 5)
-            rfv = h2o_cmd.runRFOnly(parseResult=parseKeyTrain, timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)
+            rfv = h2o_cmd.runRFOnly(parseResult=parseResultTrain, timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)
     
             ### print "rf response:", h2o.dump_json(rfv)
 

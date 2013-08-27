@@ -42,7 +42,7 @@ class Basic(unittest.TestCase):
 
             start = time.time()
             kwargs = {'y': y}
-            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=200, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=200, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, 57, **kwargs)
             h2o.check_sandbox_for_errors()
             ### h2b.browseJsonHistoryAsUrlLastMatch("GLM")

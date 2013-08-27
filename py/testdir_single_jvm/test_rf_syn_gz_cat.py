@@ -157,7 +157,7 @@ class Basic(unittest.TestCase):
             kwargs = paramDict.copy()
 
             start = time.time()
-            rfView = h2o_cmd.runRFOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            rfView = h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "RF end on ", parseResult['python_source_key'], 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
@@ -169,7 +169,7 @@ class Basic(unittest.TestCase):
             l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs. trees: {:d} Error: {:6.2f} \
                 num_rows: {:d} num_cols: {:d} value_size_bytes: {:d}'.format(
                 len(h2o.nodes), tryHeap, algo, parseResult['python_source_key'], elapsed, kwargs['ntree'], \
-                classification_error, parseResult['num_rows'], parseKey['num_cols'], parseKey['value_size_bytes'])
+                classification_error, parseResult['num_rows'], parseResult['num_cols'], parseResult['value_size_bytes'])
             print l
             h2o.cloudPerfH2O.message(l)
 

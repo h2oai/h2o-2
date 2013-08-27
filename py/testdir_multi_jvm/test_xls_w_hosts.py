@@ -34,7 +34,7 @@ class TestExcel(unittest.TestCase):
         # break it out for pollTimeoutSecs
         parseResult = h2o_cmd.parseFile(None, h2o.find_dataset('poker/poker-hand-testing.xlsx'),
             timeoutSecs=120, pollTimeoutSecs=60)
-        h2o_cmd.runRFOnly(None, parseResult=parseKey, trees=31, timeoutSecs=120)
+        h2o_cmd.runRFOnly(None, parseResult=parseResult, trees=31, timeoutSecs=120)
 
 
 if __name__ == '__main__':

@@ -63,7 +63,7 @@ class Basic(unittest.TestCase):
             # in case exec is used to change the parseResult
             # in any case, the destination_key in parseResult was what was updated
             # so if we Exec, it's correct.
-            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=300, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=300, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
 
@@ -82,7 +82,7 @@ class Basic(unittest.TestCase):
         if (1==1):
             start = time.time()
             kwargs = {'y': 13, 'n_folds': 6}
-            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=300, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=300, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
 

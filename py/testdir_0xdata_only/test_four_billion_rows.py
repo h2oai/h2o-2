@@ -93,7 +93,7 @@ class Basic(unittest.TestCase):
 
             timeoutSecs = 900
             start = time.time()
-            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
 
             # GLM*********************************
             print "\n" + csvFilename
@@ -105,7 +105,7 @@ class Basic(unittest.TestCase):
             timeoutSecs = 900
             kwargs.update({'alpha': 0, 'lambda': 0})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "glm (L2) end on ", csvFilename, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             h2o_glm.simpleCheckGLM(self, glm, colX, **kwargs)

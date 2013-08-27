@@ -108,7 +108,7 @@ class Basic(unittest.TestCase):
             }
 
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             h2o.check_sandbox_for_errors()
             print "glm end on ", csvPathname, 'took', elapsed, 'seconds', \

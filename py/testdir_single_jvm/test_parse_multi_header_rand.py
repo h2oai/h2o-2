@@ -250,7 +250,7 @@ class Basic(unittest.TestCase):
                 pattern = '*syn_data_*'+str(trial)+"_"+rowxcol+'*'
             parseResult = h2o.nodes[0].parse(pattern, key2=key2, timeoutSecs=timeoutSecs, **kwargs)
 
-            print "parseResult['destination_key']: " + parseKey['destination_key']
+            print "parseResult['destination_key']: " + parseResult['destination_key']
             print 'parse time:', parseResult['response']['time']
 
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])

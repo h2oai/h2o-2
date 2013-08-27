@@ -156,7 +156,7 @@ def runRFOnly(node=None, parseResult=None, trees=5,
     if not parseResult: raise Exception('No parsed key for RF specified')
     if not node: node = h2o.nodes[0]
     #! FIX! what else is in parseResult that we should check?
-    h2o.verboseprint("runRFOnly parseResult:", parseKey)
+    h2o.verboseprint("runRFOnly parseResult:", parseResult)
     Key = parseResult['destination_key']
     rf = node.random_forest(Key, trees, timeoutSecs, **kwargs)
 

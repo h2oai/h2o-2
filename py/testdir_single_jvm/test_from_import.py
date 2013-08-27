@@ -54,7 +54,7 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
 
             if not h2o.beta_features:
-                RFview = h2o_cmd.runRFOnly(trees=1,depth=25,parseResult=parseKey, timeoutSecs=timeoutSecs)
+                RFview = h2o_cmd.runRFOnly(trees=1,depth=25,parseResult=parseResult, timeoutSecs=timeoutSecs)
 
             ## h2b.browseJsonHistoryAsUrlLastMatch("RFView")
             ## time.sleep(10)

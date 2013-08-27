@@ -106,7 +106,7 @@ class Basic(unittest.TestCase):
             kwargs['out_of_bag_error_estimate'] = 1
             kwargs['model_key'] = "model_" + str(trial)
             
-            rfv = h2o_cmd.runRFOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            rfv = h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "RF end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)

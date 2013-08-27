@@ -60,7 +60,7 @@ class Basic(unittest.TestCase):
             # can't pass lamba as kwarg because it's a python reserved word
             # FIX! just look at X=0:1 for speed, for now
             kwargs = {'y': 54, 'n_folds': 2, 'family': "binomial", 'case': 1}
-            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=2000, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=2000, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
             h2o.verboseprint("\nglm:", glm)

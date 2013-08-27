@@ -66,7 +66,7 @@ class Basic(unittest.TestCase):
             kwargs['model_key'] = "model_" + str(jobDispatch)
             
             # don't poll for fvec 
-            rfResult = h2o_cmd.runRFOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, noPoll=True, rfView=False, **kwargs)
+            rfResult = h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, rfView=False, **kwargs)
             elapsed = time.time() - start
             print "RF dispatch end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)

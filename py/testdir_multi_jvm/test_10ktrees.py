@@ -41,7 +41,7 @@ class Basic(unittest.TestCase):
 
             h2o.verboseprint("Trial", trial)
             start = time.time()
-            h2o_cmd.runRFOnly(parseResult=parseKey, trees=10000, depth=2, timeoutSecs=600, retryDelaySecs=3)
+            h2o_cmd.runRFOnly(parseResult=parseResult, trees=10000, depth=2, timeoutSecs=600, retryDelaySecs=3)
             print "RF #", trial,  "end on ", csvFilename, 'took', time.time() - start, 'seconds'
 
         print "Waiting 60 secs for TIME_WAIT sockets to go away"

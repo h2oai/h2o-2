@@ -55,7 +55,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             # constrain depth to 25
             if trees is not None:
-                RFview = h2o_cmd.runRFOnly(trees=trees,depth=25,parseResult=parseKey,
+                RFview = h2o_cmd.runRFOnly(trees=trees,depth=25,parseResult=parseResult,
                     timeoutSecs=timeoutSecs)
 
             sys.stdout.write('.')

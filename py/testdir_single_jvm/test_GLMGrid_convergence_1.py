@@ -105,7 +105,7 @@ class Basic(unittest.TestCase):
             for i in range(2):
                 start = time.time()
                 # get rid of the Jstack polling
-                glm = h2o_cmd.runGLMGridOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+                glm = h2o_cmd.runGLMGridOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
                 print 'glm #', i, 'end on', csvPathname, 'took', time.time() - start, 'seconds'
                 # we can pass the warning, without stopping in the test, so we can 
                 # redo it in the browser for comparison

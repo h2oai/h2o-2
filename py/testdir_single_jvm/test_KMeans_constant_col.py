@@ -70,7 +70,7 @@ class Basic(unittest.TestCase):
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             kwargs = {'k': 2, 'initialization': 'Furthest', 'cols': None, 'destination_key': 'benign_k.hex'}
-            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseKey, timeoutSecs=5, **kwargs)
+            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, timeoutSecs=5, **kwargs)
             (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
 
             # check center list (first center) has same number of cols as source data

@@ -115,7 +115,7 @@ class Basic(unittest.TestCase):
             h2o_cmd.infoFromInspect(inspect, "going into RF")
             
             start = time.time()
-            rfv = h2o_cmd.runRFOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            rfv = h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "RF end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)

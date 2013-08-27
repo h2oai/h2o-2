@@ -20,7 +20,7 @@ def glm_doit(self, csvFilename, csvPathname, timeoutSecs, pollTimeoutSecs, **kwa
         timeoutSecs=60, pollTimeoutSecs=pollTimeoutSecs)
 
     start = time.time()
-    glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+    glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
     print "GLM in",  (time.time() - start), "secs (python)"
     h2o_glm.simpleCheckGLM(self, glm, 7, **kwargs)
 

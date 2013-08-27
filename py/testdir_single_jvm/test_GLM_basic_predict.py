@@ -40,7 +40,7 @@ class Basic(unittest.TestCase):
 
             kwargs = {'x': x, 'y':  y}
             # fails with n_folds
-            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=15, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=15, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             GLMModel = glm['GLMModel']
             modelKey = GLMModel['model_key']
@@ -67,7 +67,7 @@ class Basic(unittest.TestCase):
             print "y:", y
 
             kwargs = {'x': x, 'y':  y, 'n_folds': 5}
-            glm = h2o_cmd.runGLMOnly(parseResult=parseKey, timeoutSecs=15, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=15, **kwargs)
             # ID,CAPSULE,AGE,RACE,DPROS,DCAPS,PSA,VOL,GLEASON
             h2o_glm.simpleCheckGLM(self, glm, 'AGE', **kwargs)
             GLMModel = glm['GLMModel']

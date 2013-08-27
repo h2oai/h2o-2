@@ -89,7 +89,7 @@ class Basic(unittest.TestCase):
 
                 timeoutSecs = 600
                 start = time.time()
-                kmeans = h2o_cmd.runKMeansOnly(parseResult=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+                kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
                 elapsed = time.time() - start
                 print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', \
                     "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)

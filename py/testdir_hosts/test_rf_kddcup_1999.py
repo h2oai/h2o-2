@@ -67,7 +67,7 @@ class Basic(unittest.TestCase):
                 kwargs['out_of_bag_error_estimate'] = 1
 
             start = time.time()
-            RFview = h2o_cmd.runRFOnly(trees=50,parseResult=parseKey, 
+            RFview = h2o_cmd.runRFOnly(trees=50,parseResult=parseResult, 
                 timeoutSecs=300, retryDelaySecs=1.0, **kwargs)
             print "RF end on ", csvFilename, 'took', time.time() - start, 'seconds'
 

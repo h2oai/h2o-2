@@ -35,7 +35,7 @@ def kmeans_doit(self, csvFilename, csvPathname, num_rows, timeoutSecs=30):
         'seed': 265211114317615310,
     }
     start = time.time()
-    kmeans = h2o_cmd.runKMeansOnly(parseResult=parseKey, \
+    kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, \
         timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=60, **kwargs)
     elapsed = time.time() - start
     print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', \
