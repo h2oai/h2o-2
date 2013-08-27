@@ -45,8 +45,8 @@ class Basic(unittest.TestCase):
         csvFilename = 'allyears2k.csv'
         csvPathname = importFolderPath + "/" + csvFilename
         h2i.setupImportFolder(None, importFolderPath)
-        parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=60)
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=60)
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         h2o_cmd.infoFromInspect(inspect, csvPathname)
 
         for trial in range(10):
@@ -56,7 +56,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             # randomize the node
             node = h2o.nodes[random.randint(0,len(h2o.nodes)-1)]
-            rfView = h2o_cmd.runRFOnly(node=node, parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            rfView = h2o_cmd.runRFOnly(node=node, parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "RF end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)

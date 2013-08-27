@@ -26,7 +26,7 @@ class Basic(unittest.TestCase):
         print "\nStarting benign.csv"
         csvFilename = "benign.csv"
         csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
         # columns start at 0
         y = "3"
         # cols 0-13. 3 is output
@@ -39,7 +39,7 @@ class Basic(unittest.TestCase):
             print "y:", y
 
             kwargs = {'x': x, 'y':  y}
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=15, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=15, **kwargs)
             # no longer look at STR?
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             sys.stdout.write('.')
@@ -55,7 +55,7 @@ class Basic(unittest.TestCase):
         x = ""
         csvFilename = "prostate.csv"
         csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
 
         for maxx in range(2,6):
             x = range(maxx)
@@ -66,7 +66,7 @@ class Basic(unittest.TestCase):
             print "y:", y
 
             kwargs = {'x': x, 'y':  y, 'n_folds': 5}
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=15, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=15, **kwargs)
             # ID,CAPSULE,AGE,RACE,DPROS,DCAPS,PSA,VOL,GLEASON
             h2o_glm.simpleCheckGLM(self, glm, 'AGE', **kwargs)
             sys.stdout.write('.')

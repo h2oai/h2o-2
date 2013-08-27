@@ -57,25 +57,25 @@ class Basic(unittest.TestCase):
             key2 = csvFilename + "_" + str(trial) + ".hex"
             print "Loading s3n key: ", s3nKey, 'thru HDFS'
             start = time.time()
-            parseKey = h2o.nodes[0].parse(s3nKey, key2,
+            parseResult = h2o.nodes[0].parse(s3nKey, key2,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=120)
             elapsed = time.time() - start
             print "parse end on ", s3nKey, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-            print "parse result:", parseKey['destination_key']
+            print "parse result:", parseResult['destination_key']
 
             # INSPECT******************************************
             # We should be able to see the parse result?
             start = time.time()
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=360)
-            print "Inspect:", parseKey['destination_key'], "took", time.time() - start, "seconds"
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=360)
+            print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspect, csvPathname)
 
             # gives us some reporting on missing values, constant values, to see if we have x specified well
-            # figures out everything from parseKey['destination_key']
+            # figures out everything from parseResult['destination_key']
             # needs y to avoid output column (which can be index or name)
             # assume all the configs have the same y..just check with the firs tone
-            goodX = h2o_glm.goodXFromColumnInfo(y='IsArrDelayed', key=parseKey['destination_key'], timeoutSecs=300)
+            goodX = h2o_glm.goodXFromColumnInfo(y='IsArrDelayed', key=parseResult['destination_key'], timeoutSecs=300)
 
             # SUMMARY****************************************
             summaryResult = h2o_cmd.runSummary(key=key2, timeoutSecs=360)

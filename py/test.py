@@ -20,8 +20,8 @@ class Basic(unittest.TestCase):
         h2o.verify_cloud_size()
 
     def test_B_RF_iris2(self):
-        parseKey = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
-        h2o_cmd.runRFOnly(parseKey=parseKey, trees=6, timeoutSecs=10)
+        parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
+        h2o_cmd.runRFOnly(parseResult=parseResult, trees=6, timeoutSecs=10)
 
     def test_C_RF_poker100(self):
         h2o_cmd.runRF(trees=6, timeoutSecs=10,
@@ -34,8 +34,8 @@ class Basic(unittest.TestCase):
 
     def test_E_ParseManyCols(self):
         csvPathname=h2o.find_file('smalldata/fail1_100x11000.csv.gz')
-        parseKey = h2o_cmd.parseFile(None, csvPathname, timeoutSecs=10)
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], offset=-1, view=5)
+        parseResult = h2o_cmd.parseFile(None, csvPathname, timeoutSecs=10)
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], offset=-1, view=5)
 
     def test_F_StoreView(self):
         storeViewResult = h2o_cmd.runStoreView(timeoutSecs=30)

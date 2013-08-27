@@ -45,19 +45,19 @@ class Basic(unittest.TestCase):
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
             h2i.setupImportHdfs()
-            parseKey = h2i.parseImportHdfsFile(csvFilename=csvFilename, path='/datasets', timeoutSecs=60)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            parseResult = h2i.parseImportHdfsFile(csvFilename=csvFilename, path='/datasets', timeoutSecs=60)
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
-            inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
             print "\n" + csvFilename
 
             start = time.time()
             # can't pass lamba as kwarg because it's a python reserved word
             # FIX! just look at X=0:1 for speed, for now
             kwargs = {'y': 54, 'n_folds': 2, 'family': "binomial", 'case': 1}
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=500, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=500, **kwargs)
 
             # different when n_foldsidation is used? No trainingErrorDetails?
             h2o.verboseprint("\nglm:", glm)

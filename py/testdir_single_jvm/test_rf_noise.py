@@ -40,9 +40,9 @@ class Basic(unittest.TestCase):
 
     def test_E_ParseManyCols(self):
         csvPathname=h2o.find_file('smalldata/fail1_100x11000.csv.gz')
-        parseKey = h2o_cmd.parseFile(None, csvPathname, timeoutSecs=10, retryDelaySecs=0.15,
+        parseResult = h2o_cmd.parseFile(None, csvPathname, timeoutSecs=10, retryDelaySecs=0.15,
             noise=('StoreView', None))
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], offset=-1, view=5)
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], offset=-1, view=5)
 
     def test_F_StoreView(self):
         storeView = h2o.nodes[0].store_view()

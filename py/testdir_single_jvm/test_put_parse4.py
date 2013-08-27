@@ -28,7 +28,7 @@ class Basic(unittest.TestCase):
             # csvPathname = h2o.find_file("smalldata/hhp_107_01.data.gz")
             csvPathname = h2o.find_file('smalldata/iris/iris_wheader.csv.gz')
             key2 = "iris" + "_" + str(x) + ".hex"
-            parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, doSummary=False)
+            parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, doSummary=False)
             h2o_cmd.runSummary(key=key2, doPrint=True)
             trial += 1
 

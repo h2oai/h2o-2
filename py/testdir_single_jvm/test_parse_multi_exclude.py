@@ -84,18 +84,18 @@ class Basic(unittest.TestCase):
             # use it at the node level directly (because we gen'ed the files.
             h2o.nodes[0].import_files(SYNDATASETS_DIR)
             # pattern match all, then use exclude
-            parseKey = h2o.nodes[0].parse('*', key2=key2, exclude=excludePattern, header=1, timeoutSecs=timeoutSecs)
-            print "parseKey['destination_key']: " + parseKey['destination_key']
-            print 'parse time:', parseKey['response']['time']
+            parseResult = h2o.nodes[0].parse('*', key2=key2, exclude=excludePattern, header=1, timeoutSecs=timeoutSecs)
+            print "parseResult['destination_key']: " + parseResult['destination_key']
+            print 'parse time:', parseResult['response']['time']
 
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             h2o_cmd.infoFromInspect(inspect, csvPathname)
 
 
             # FIX! h2o strips one of the headers, but treats all the other files with headers as data
             num_rows = inspect['num_rows']
             num_cols = inspect['num_cols']
-            print "\n" + parseKey['destination_key'] + ":", \
+            print "\n" + parseResult['destination_key'] + ":", \
                 "    num_rows:", "{:,}".format(num_rows), \
                 "    num_cols:", "{:,}".format(num_cols)
 

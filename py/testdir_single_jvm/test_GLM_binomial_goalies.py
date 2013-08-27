@@ -42,8 +42,8 @@ class Basic(unittest.TestCase):
     def test_GLM_binomial_goalies(self):
         csvPathname = h2o.find_file('smalldata/poisson/Goalies.csv')
         print "\nParsing", csvPathname
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname)
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname)
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         # need more info about the dataset for debug
         h2o_cmd.infoFromInspect(inspect, csvPathname)
 
@@ -76,7 +76,7 @@ class Basic(unittest.TestCase):
 
             start = time.time()
             print "May not solve. Expanded categorical columns causing a large # cols, small # of rows"
-            glm = h2o_cmd.runGLMOnly(timeoutSecs=timeoutSecs, parseKey=parseKey, **kwargs)
+            glm = h2o_cmd.runGLMOnly(timeoutSecs=timeoutSecs, parseResult=parseResult, **kwargs)
             elapsed = time.time()-start
             print "glm end on ", csvPathname, "Trial #", trial, "completed in", elapsed, "seconds.",\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)

@@ -28,10 +28,10 @@ class Basic(unittest.TestCase):
     def test_KMeans_winesPCA(self):
         csvPathname = h2o.find_file('smalldata/winesPCA.csv')
         start = time.time()
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, timeoutSecs=10)
+        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, timeoutSecs=10)
         print "parse end on ", csvPathname, 'took', time.time() - start, 'seconds'
         h2o.check_sandbox_for_errors()
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\n" + csvPathname, \
             "    num_rows:", "{:,}".format(inspect['num_rows']), \
             "    num_cols:", "{:,}".format(inspect['num_cols'])
@@ -51,14 +51,14 @@ class Basic(unittest.TestCase):
         for trial in range (10):
             start = time.time()
 
-            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, \
+            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, \
                 timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=60, **kwargs)
             elapsed = time.time() - start
             print "kmeans #", trial, "end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
             (centers, tupleResultList) = \
-                h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
+                h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
 
             # tupleResultList has tuples = center, rows_per_cluster, sqr_error_per_cluster
 

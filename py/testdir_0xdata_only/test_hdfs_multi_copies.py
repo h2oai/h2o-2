@@ -29,10 +29,10 @@ class Basic(unittest.TestCase):
         h2b.browseTheCloud()
         # defaults to /datasets
         h2i.setupImportHdfs()
-        parseKey = h2i.parseImportHdfsFile(csvFilename='*covtype10x_copies*', key2='copies.hex', 
+        parseResult = h2i.parseImportHdfsFile(csvFilename='*covtype10x_copies*', key2='copies.hex', 
             exclude=None, header=None, timeoutSecs=600)
-        print "*copies* regex to hdfs /datasets", 'parse time:', parseKey['response']['time']
-        print "parse result:", parseKey['destination_key']
+        print "*copies* regex to hdfs /datasets", 'parse time:', parseResult['response']['time']
+        print "parse result:", parseResult['destination_key']
         sys.stdout.flush() 
 
 if __name__ == '__main__':

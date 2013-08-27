@@ -41,12 +41,12 @@ class Basic(unittest.TestCase):
         csvPathname = "smalldata/logreg/" + csvFilename
         key2 = csvFilename + ".hex"
 
-        parseKey = h2o_cmd.parseFile(None, h2o.find_file(csvPathname), key2=key2, timeoutSecs=10)
-        print csvFilename, 'parse time:', parseKey['response']['time']
-        print "Parse result['destination_key']:", parseKey['destination_key']
+        parseResult = h2o_cmd.parseFile(None, h2o.find_file(csvPathname), key2=key2, timeoutSecs=10)
+        print csvFilename, 'parse time:', parseResult['response']['time']
+        print "Parse result['destination_key']:", parseResult['destination_key']
 
         # We should be able to see the parse result?
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\n" + csvFilename
 
         paramDict = define_params()
@@ -61,7 +61,7 @@ class Basic(unittest.TestCase):
         kwargs.update(paramDict2)
 
         start = time.time()
-        glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=20, **kwargs)
+        glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=20, **kwargs)
         print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
         h2o_glm.simpleCheckGLM(self, glm, 8, **kwargs)
 

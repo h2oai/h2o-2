@@ -58,11 +58,11 @@ class Basic(unittest.TestCase):
 
         firstDone = False
         for (csvPathname, key2, timeoutSecs, resultMult) in csvAll:
-            parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, timeoutSecs=2000)
-            print "Parse result['Key']:", parseKey['destination_key']
+            parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, timeoutSecs=2000)
+            print "Parse result['Key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
 
             print "\n" + csvPathname
             h2o_exec.exec_zero_list(zeroList)

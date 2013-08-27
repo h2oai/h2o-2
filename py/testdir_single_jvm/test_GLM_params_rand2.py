@@ -42,7 +42,7 @@ class Basic(unittest.TestCase):
     def test_GLM_params_rand2(self):
         # csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
         csvPathname = h2o.find_file('smalldata/covtype/covtype.20k.data')
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key="covtype.20k")
+        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key="covtype.20k")
         paramDict = define_params()
         for trial in range(20):
             # params is mutable. This is default.
@@ -50,7 +50,7 @@ class Basic(unittest.TestCase):
             colX = h2o_glm.pickRandGlmParams(paramDict, params)
             kwargs = params.copy()
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(timeoutSecs=70, parseKey=parseKey, **kwargs)
+            glm = h2o_cmd.runGLMOnly(timeoutSecs=70, parseResult=parseResult, **kwargs)
             # pass the kwargs with all the params, so we know what we asked for!
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             h2o.check_sandbox_for_errors()

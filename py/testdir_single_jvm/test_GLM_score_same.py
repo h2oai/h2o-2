@@ -16,11 +16,11 @@ import h2o, h2o_cmd, h2o_glm, h2o_util, h2o_hosts
 
 def glm_doit(self, csvFilename, csvPathname, timeoutSecs, pollTimeoutSecs, **kwargs):
     print "\nStarting GLM of", csvFilename
-    parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", 
+    parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", 
         timeoutSecs=60, pollTimeoutSecs=pollTimeoutSecs)
 
     start = time.time()
-    glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+    glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
     print "GLM in",  (time.time() - start), "secs (python)"
     h2o_glm.simpleCheckGLM(self, glm, 7, **kwargs)
 
@@ -36,7 +36,7 @@ def glm_score(self, csvFilename, csvPathname, modelKey, thresholds="0.5",
     timeoutSecs=30, pollTimeoutSecs=30):
     print "\nStarting GLM score of", csvFilename
     key2 = csvFilename + ".hex"
-    parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, 
+    parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, 
         timeoutSecs=timeoutSecs, pollTimeoutSecs=pollTimeoutSecs)
     y = "10"
     x = ""

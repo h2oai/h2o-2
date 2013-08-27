@@ -65,11 +65,11 @@ class Basic(unittest.TestCase):
 
             # creates csvFilename.hex from file in hdfs dir 
             print "Loading s3n key: ", s3nKey, 'thru HDFS'
-            parseKey = h2o.nodes[0].parse(s3nKey, s3nFilename + ".hex",
+            parseResult = h2o.nodes[0].parse(s3nKey, s3nFilename + ".hex",
                 timeoutSecs=500, retryDelaySecs=10, pollTimeoutSecs=60)
 
-            print s3nFilename, 'parse time:', parseKey['response']['time']
-            print "parse result:", parseKey['destination_key']
+            print s3nFilename, 'parse time:', parseResult['response']['time']
+            print "parse result:", parseResult['destination_key']
 
             start = time.time()
             sys.stdout.flush() 

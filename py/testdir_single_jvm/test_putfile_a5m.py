@@ -37,16 +37,16 @@ class Basic(unittest.TestCase):
             csvPathname = h2o.find_dataset(csvFilename)
 
             # creates csvFilename and csvFilename.hex  keys
-            parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, timeoutSecs=500)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
-            inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
+            parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, timeoutSecs=500)
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
+            inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
 
             print "\n" + csvFilename
             start = time.time()
             # constrain depth to 25
             if trees is not None:
-                RFview = h2o_cmd.runRFOnly(trees=trees,depth=25,parseKey=parseKey,
+                RFview = h2o_cmd.runRFOnly(trees=trees,depth=25,parseResult=parseResult,
                     timeoutSecs=timeoutSecs)
 
             h2b.browseJsonHistoryAsUrlLastMatch("RFView")

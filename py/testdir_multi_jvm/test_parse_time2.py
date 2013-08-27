@@ -125,7 +125,7 @@ class Basic(unittest.TestCase):
             key2 = csvFilename + "_" + str(trial) + ".hex"
 
             start = time.time()
-            parseKeyA = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2)
+            parseResultA = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2)
             print "\nA trial #", trial, "parse end on ", csvFilename, 'took', time.time() - start, 'seconds'
 
             inspect = h2o_cmd.runInspect(key=key2)

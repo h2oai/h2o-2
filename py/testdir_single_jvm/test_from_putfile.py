@@ -45,17 +45,17 @@ class Basic(unittest.TestCase):
             # so we test that
             inspect1 = h2o_cmd.runInspect(key=csvFilename)
 
-            parseKey = node.parse(key, timeoutSecs=500)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            parseResult = node.parse(key, timeoutSecs=500)
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
             # We should be able to see the parse result?
-            inspect2 = h2o_cmd.runInspect(key=parseKey['destination_key'])
+            inspect2 = h2o_cmd.runInspect(key=parseResult['destination_key'])
 
             print "\n" + csvFilename
             start = time.time()
             # constrain depth to 25
             if trees is not None:
-                RFview = h2o_cmd.runRFOnly(trees=trees,depth=25,parseKey=parseKey,
+                RFview = h2o_cmd.runRFOnly(trees=trees,depth=25,parseResult=parseResult,
                     timeoutSecs=timeoutSecs)
 
             sys.stdout.write('.')
