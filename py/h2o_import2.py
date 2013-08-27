@@ -84,6 +84,9 @@ def import_only(node=None, schema='local', bucket=None, path=None,
     else:
         (head, pattern)  = ("", path)
 
+    print "head:", head
+    print "pattern;", pattern
+
     # to train users / okay here
     if re.search(r"[\*<>{}[\]~`]", head):
        raise Exception("h2o folder path %s can't be regex. path= was %s" % (head, path))
@@ -114,8 +117,10 @@ def import_only(node=None, schema='local', bucket=None, path=None,
             head = head.lstrip('/')
     
         # strip leading / in head if present
-        if bucket:
+        if bucket and head!="":
             folderOffset = bucket + "/" + head
+        elif bucket:
+            folderOffset = bucket
         else:
             folderOffset = head
 
@@ -133,6 +138,7 @@ def import_only(node=None, schema='local', bucket=None, path=None,
 
         elif schema=='hdfs' or node.redirect_import_folder_to_s3n_path:
             print h2o.nodes[0].hdfs_name_node
+            print "folderOffset;", folderOffset
             folderURI = "hdfs://" + h2o.nodes[0].hdfs_name_node + "/" + folderOffset
             importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
 
@@ -193,8 +199,4 @@ def find_key(filter):
         print "Warning: multiple imported keys match the key pattern given, Using: %s" % keys[0]['key']
 
     return keys[0]['key']
-    
-    
-
-
 

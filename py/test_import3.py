@@ -22,9 +22,12 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test3(self):
+        # h2i.import_parse(path='standard/covtype.data', bucket='home-0xdiag-datasets', schema="s3n", timeoutSecs=60)
+        h2i.import_parse(path='standard/benign.csv', bucket='home-0xdiag-datasets', schema='s3n', timeoutSecs=60)
+
         h2i.import_parse(path='leads.csv', bucket='datasets', schema="hdfs", timeoutSecs=60)
-        h2i.import_parse(path='/datasets/leads.csv', schema="hdfs", timeoutSecs=60)
-        h2i.import_parse(path='datasets/leads.csv', schema="hdfs", timeoutSecs=60)
+        # h2i.import_parse(path='/datasets/leads.csv', schema="hdfs", timeoutSecs=60)
+        # h2i.import_parse(path='datasets/leads.csv', schema="hdfs", timeoutSecs=60)
 
         ## This will get it from import s3.
         #import(path=junkdir/junk.csv, bucket="home-0xdiag-datasets", schema="s3")
