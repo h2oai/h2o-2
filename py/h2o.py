@@ -1138,10 +1138,18 @@ class H2O(object):
         return a
 
     # can take a useful 'filter'
+    # FIX! current hack to h2o to make sure we get "all" rather than just 
+    # default 20 the browser gets. set to max # by default (1024)
+    # There is a offset= param that's useful also, and filter=
     def store_view(self, timeoutSecs=60, **kwargs):
-        params = kwargs
+        params_dict = {
+            'view': 1024,
+            }
+        params_dict.update(kwargs)
+
+        print "\nStoreView params list:", params_dict
         a = self.__do_json_request('StoreView.json', 
-            params=params,
+            params=params_dict,
             timeout=timeoutSecs)
         # print dump_json(a)
         return a

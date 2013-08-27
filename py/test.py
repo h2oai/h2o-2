@@ -24,28 +24,23 @@ class Basic(unittest.TestCase):
         h2o_cmd.runRFOnly(parseResult=parseResult, trees=6, timeoutSecs=10)
 
     def test_C_RF_poker100(self):
-        h2o_cmd.runRF(trees=6, timeoutSecs=10,
-                csvPathname = h2o.find_file('smalldata/poker/poker100'))
+        parseResult = h2i.import_parse(bucket='smalldata', path='poker/poker100', schema='put')
+        h2o_cmd.runRFOnly(parseResult=parseResult, trees=6, timeoutSecs=10)
 
     def test_D_GenParity1(self):
-        trees = 50
-        h2o_cmd.runRF(trees=50, timeoutSecs=15, 
-                csvPathname = h2o.find_file('smalldata/parity_128_4_100_quad.data'))
+        parseResult = h2i.import_parse(bucket='smalldata', path='parity_128_4_100_quad.data', schema='put')
+        h2o_cmd.runRFOnly(parseResult=parseResult, trees=50, timeoutSecs=15)
 
     def test_E_ParseManyCols(self):
-        csvPathname=h2o.find_file('smalldata/fail1_100x11000.csv.gz')
-        parseResult = h2o_cmd.parseFile(None, csvPathname, timeoutSecs=10)
-        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], offset=-1, view=5)
+        parseResult = h2i.import_parse(bucket='smalldata', path='fail1_100x11000.csv.gz', schema='put', timeoutSecs=10)
+        inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
 
-    def test_F_StoreView(self):
-        storeViewResult = h2o_cmd.runStoreView(timeoutSecs=30)
-        keys = storeViewResult['keys']
-        for k in keys:
-            h2o.nodes[0].remove_key(k['key'])
+    def test_F_RF_covtype(self):
+        parseResult = h2i.import_parse(bucket='datasets', path='UCI/UCI-large/covtype/covtype.data', schema='put', timeoutSecs=30)
+        h2o_cmd.runRFOnly(parseResult=parseResult, trees=6, timeoutSecs=35, retryDelaySecs=0.5)
 
-    def test_G_RF_covtype(self):
-        h2o_cmd.runRF(trees=6, timeoutSecs=35, retryDelaySecs=0.5,
-                csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data'))
+    def test_G_StoreView(self):
+        h2i.delete_all_keys_at_all_nodes(timeoutSecs=30)
 
     def test_H_Slower_JUNIT(self):
         h2o.tear_down_cloud()

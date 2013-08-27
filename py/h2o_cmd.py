@@ -248,13 +248,15 @@ def runRFView(node=None, data_key=None, model_key=None, ntree=None,
         h2f.simpleCheckRFView(node, rfView, noPrint=noPrint)
     return rfView
 
-def runStoreView(node=None, timeoutSecs=30):
+def runStoreView(node=None, timeoutSecs=30, **kwargs):
     if not node: node = h2o.nodes[0]
-    storeView = node.store_view(timeoutSecs)
+    storeView = node.store_view(timeoutSecs, **kwargs)
+    print "\n"
     for s in storeView['keys']:
-        print "\nStoreView: key:", s['key']
+        print "StoreView: key:", s['key']
         if 'rows' in s: 
-            print "StoreView: rows:", s['rows'], "value_size_bytes:", s['value_size_bytes']
+            h2o.verboseprint("StoreView: rows:", s['rows'], "value_size_bytes:", s['value_size_bytes'])
+    print 'storeView has', len(storeView['keys']), 'keys'
     return storeView
 
 def port_live(ip, port):

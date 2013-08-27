@@ -1,4 +1,4 @@
-import h2o, re, os
+import h2o, h2o_cmd, re, os
 
 # hdfs/maprfs/s3/s3n paths should be absolute from the bucket (top level)
 # so only walk around for local
@@ -201,3 +201,28 @@ def find_key(filter):
 
     return keys[0]['key']
 
+
+# the storeViewResult for every node may or may not be the same
+# supposed to be the same? In any case
+def delete_all_keys(node=None, timeoutSecs=30):
+    if not node: node = h2o.nodes[0]
+    storeViewResult = h2o_cmd.runStoreView(node, timeoutSecs=timeoutSecs)
+    keys = storeViewResult['keys']
+    for k in keys:
+        node.remove_key(k['key'])
+    deletedCnt = len(keys)
+    print "Deleted", deletedCnt, "keys at", node
+    return deletedCnt
+
+def delete_all_keys_at_all_nodes(node=None, timeoutSecs=30):
+    if not node: node = h2o.nodes[0]
+    totalDeletedCnt = 0
+    # do it in reverse order, since we always talk to 0 for other stuff
+    # this will be interesting if the others don't have a complete set
+    # theoretically, the deletes should be 0 after the first node 
+    # since the deletes should be global
+    for node in reversed(h2o.nodes):
+        deletedCnt = delete_all_keys(node, timeoutSecs=timeoutSecs)
+        totalDeletedCnt += deletedCnt
+    print "\nTotal: Deleted", totalDeletedCnt, "keys at", len(h2o.nodes), "nodes"
+    return totalDeletedCnt
