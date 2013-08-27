@@ -1,8 +1,7 @@
 import unittest, time, sys
 # not needed, but in case you move it down to subdir
 sys.path.extend(['.','..'])
-import h2o_cmd
-import h2o
+import h2o, h2o_cmd, h2o_import2 as h2i
 import h2o_browse as h2b
 
 class Basic(unittest.TestCase):
@@ -21,8 +20,8 @@ class Basic(unittest.TestCase):
         h2o.verify_cloud_size()
 
     def test_B_RF_iris2(self):
-        h2o_cmd.runRF(trees=6, timeoutSecs=10,
-                csvPathname = h2o.find_file('smalldata/iris/iris2.csv'))
+        parseKey = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
+        h2o_cmd.runRFOnly(parseKey=parseKey, trees=6, timeoutSecs=10)
 
     def test_C_RF_poker100(self):
         h2o_cmd.runRF(trees=6, timeoutSecs=10,
@@ -39,7 +38,10 @@ class Basic(unittest.TestCase):
         inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], offset=-1, view=5)
 
     def test_F_StoreView(self):
-        storeView = h2o.nodes[0].store_view()
+        storeViewResult = h2o_cmd.runStoreView(timeoutSecs=30)
+        keys = storeViewResult['keys']
+        for k in keys:
+            h2o.nodes[0].remove_key(k['key'])
 
     def test_G_RF_covtype(self):
         h2o_cmd.runRF(trees=6, timeoutSecs=35, retryDelaySecs=0.5,

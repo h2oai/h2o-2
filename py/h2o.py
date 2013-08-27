@@ -1048,6 +1048,7 @@ class H2O(object):
 
     # params: 
     # header=1, 
+    # header_from_file
     # separator=1 (hex encode?
     # exclude=
     # noise is a 2-tuple: ("StoreView",params_dict)
@@ -1071,6 +1072,10 @@ class H2O(object):
             }
         params_dict.update(kwargs)
         print "\nParse params list:", params_dict
+
+        # h2o requires header=1 if header_from_file is used. Force it here to avoid bad test issues
+        if kwargs.get('header_from_file'): # default None
+            kwargs['header'] = 1
 
         if benchmarkLogging:
             cloudPerfH2O.get_log_save(initOnly=True)
@@ -1132,8 +1137,12 @@ class H2O(object):
             )
         return a
 
-    def store_view(self, timeoutSecs=60):
-        a = self.__do_json_request('StoreView.json', timeout=timeoutSecs)
+    # can take a useful 'filter'
+    def store_view(self, timeoutSecs=60, **kwargs):
+        params = kwargs
+        a = self.__do_json_request('StoreView.json', 
+            params=params,
+            timeout=timeoutSecs)
         # print dump_json(a)
         return a
 

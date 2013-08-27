@@ -32,6 +32,9 @@ class Basic(unittest.TestCase):
     def notest_C_Basic(self):
         # this will do an import folder and parse. schema='local' is default. doesn't need to be specified
         # I guess this will be relative to current wd
+
+        ## if os env variable H2O_BUCKETS_ROOT is set, it will start looking there for bucket, then path
+        ## that covers the case where "walking upward" is not sufficient for where you but the bucket (locally)
         os.environ['H2O_BUCKETS_ROOT'] = '/home'
         h2i.import_parse(path='dir3/syn_sphere_gen3.csv', bucket='my-bucket3', schema='local')
         del os.environ['H2O_BUCKETS_ROOT'] 
@@ -44,33 +47,45 @@ class Basic(unittest.TestCase):
         # what happens here..abs path plus bucket. error?
         h2i.import_parse(path='/dir3/syn_sphere_gen3.csv', bucket='my-bucket3', schema='local')
         
-        ## if os env variable H2O_BUCKETS_ROOT is set, it will start looking there for bucket, then path
-        ## that covers the case where "walking upward" is not sufficient for where you but the bucket (locally)
-        #import(path=mydata/file.csv, bucket='my-bucket')
-        #
-        ## same as above  except the import folder path stops one level above the pattern match,
-        ## and parse will use the last part for the pattern match. It's all done with one parameter, rather than #
-        ## separate import folder paths and regex pattern
-        #import(path=mydata/file[0-5]*.csv)
-        #
+    def test_F_Basic(self):
+        # causes exception
+        # h2i.import_parse(path="testdir_multi_jvm/syn_[1-2].csv", schema='put')
+
+        # no exception
+        h2i.import_parse(path="testdir_multi_jvm/syn[1-2].csv", schema='local')
+
         ## for specifying header_from_file...
         ## As long as header.csv was in the same directory (mydata), it will have been imported correctly.
         ## if not, another import_only step can be done (import itself does an import_only() step and a parse() step)
-        #import_only(path=mydata/header.csv)
-        #import(path=mydata/file[0-5]*.csv, header=1, header_from_file=header.hex)
-        #
-        #
-        ## separator, exclude params can be passed for the parse
-        #import(path=mydata/file[0-5]*.csv, header=1, header_from_file=header.hex, separator=49)
-        #
-        #
+
+    def test_G_Basic(self):
+        # defaults to import folder (schema='local')
+        h2i.import_parse(path="testdir_multi_jvm/syn[1-2].csv")
+
+    def test_H_Basic(self):
+        # maybe best to extra the key from an import? first?
+        # this isn't used much, maybe we don't care about this
+
+        h2i.import_only(path="testdir_multi_jvm/syn_test/syn_header.csv")
+        headerKey = h2i.find_key('syn_header.csv')
+        # comma 44 is separator
+        h2i.import_parse(path="testdir_multi_jvm/syn_test/syn[1-2].csv", header=1, header_from_file=headerKey, separator=44)
+    
+   
+        # symbolic links work
+        # ln -s /home/0xdiag/datasets home-0xdiag-datasets
+        # lrwxrwxrwx 1 kevin kevin     21 Aug 26 22:05 home-0xdiag-datasets -> /home/0xdiag/datasets
+        h2i.import_parse(path="standard/covtype.data", bucket="home-0xdiag-datasets")
+
         ## This will get it from import s3.
         #import(path=junkdir/junk.csv, bucket="home-0xdiag-datasets", schema="s3")
         #
-        ## This will get it from import hdfs with s3n. the hdfs_name_node and hdfs_version for s3 will have been passed at build_cloud, either from the test, or the <config>.json
+        ## This will get it from import hdfs with s3n. the hdfs_name_node and hdfs_version for s3 
+        # will have been passed at build_cloud, either from the test, or the <config>.json
         #import(path=junkdir/junk.csv, bucket="home-0xdiag-datasets", schema="s3n")
         #
-        ## this will get it from hdfs. the hdfs_name_node and hdfs_version for hdfs will have been passed at build_cloud, either from the test, or the <config>.json.
+        ## this will get it from hdfs. the hdfs_name_node and hdfs_version for hdfs will 
+        # have been passed at build_cloud, either from the test, or the <config>.json.
         ## It defaults to the local 192.168.1.176 cdh3 hdfs
         ## I guess -hdfs_root behavior works, but shouldn't be necessary (full path will be sent to h2o)
         #import(path=junkdir/junk.csv, bucket="home-0xdiag-datasets", schema="hdfs")
@@ -83,7 +98,6 @@ class Basic(unittest.TestCase):
         # redirect schema='local' to schema='s3n'
         # node.redirect_import_folder_to_s3_path
         # node.redirect_import_folder_to_s3n_path
-
 
 
 if __name__ == '__main__':
