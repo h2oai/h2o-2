@@ -3,6 +3,7 @@ import h2o, h2o_cmd, re, os
 # hdfs/maprfs/s3/s3n paths should be absolute from the bucket (top level)
 # so only walk around for local
 def find_folder_path_and_pattern(bucket, pathWithRegex):
+    checkPath = True
     # strip the common mistake of leading "/" in path, if bucket is specified too
     if bucket is not None and re.match("/", pathWithRegex):
         h2o.verboseprint("You said bucket:", bucket, "so stripping incorrect leading '/' from", pathWithRegex)
@@ -14,12 +15,18 @@ def find_folder_path_and_pattern(bucket, pathWithRegex):
     elif bucket == ".":
         bucketPath = os.getcwd()
 
+    # only use if the build_cloud was for remote H2O
+    elif h2o.nodes[0].remoteH2O and os.environ.get('H2O_REMOTE_BUCKETS_ROOT'):
+        # we may use this to force remote paths, so don't look locally for file
+        rootPath = os.environ.get('H2O_REMOTE_BUCKETS_ROOT')
+        bucketPath = os.path.join(rootPath, bucket)
+        checkpath = False
+
     # does it work to use bucket "." to get current directory
     elif os.environ.get('H2O_BUCKETS_ROOT'):
-        h2oBucketsRoot = os.environ.get('H2O_BUCKETS_ROOT')
-        print "Using H2O_BUCKETS_ROOT environment variable:", h2oBucketsRoot
+        rootPath = os.environ.get('H2O_BUCKETS_ROOT')
+        print "Using H2O_BUCKETS_ROOT environment variable:", rootPath
 
-        rootPath = os.path.abspath(h2oBucketsRoot)
         if not (os.path.exists(rootPath)):
             raise Exception("H2O_BUCKETS_ROOT in env but %s doesn't exist." % rootPath)
 
@@ -37,19 +44,19 @@ def find_folder_path_and_pattern(bucket, pathWithRegex):
 
         # want to check the username being used remotely first. should exist here too if going to use
         possibleUsers = ["~"]
-        print "username:", h2o.nodes[0].username
+        print "h2o.nodes[0].username:", h2o.nodes[0].username
         if h2o.nodes[0].username:
             possibleUsers.insert(0, "~" + h2o.nodes[0].username)
 
         for u in possibleUsers:
-            rootPath= os.path.expanduser(u)
+            rootPath = os.path.expanduser(u)
             bucketPath = os.path.join(rootPath, bucket)
-            print "Checking bucketPath:", bucketPath, 'assuming home is', rootPath
+            h2o.verboseprint("Checking bucketPath:", bucketPath, 'assuming home is', rootPath)
             if os.path.exists(bucketPath):
-                print "Did find", bucket, "at", rootPath
+                print "search A did find", bucket, "at", rootPath
                 break
-
         else:
+            # last chance to find it by snooping around
             rootPath = os.getcwd()
             h2o.verboseprint("find_bucket looking upwards from", rootPath, "for", bucket)
             # don't spin forever 
@@ -61,7 +68,7 @@ def find_folder_path_and_pattern(bucket, pathWithRegex):
                 if (levels==6):
                     raise Exception("unable to find bucket: %s" % bucket)
 
-            print "Did find", bucket, "at", rootPath
+            print "search B did find", bucket, "at", rootPath
             bucketPath = os.path.join(rootPath, bucket)
 
     # if there's no path, just return the bucketPath
@@ -76,7 +83,7 @@ def find_folder_path_and_pattern(bucket, pathWithRegex):
     elif "/" in pathWithRegex:
         (head, tail) = os.path.split(pathWithRegex)
         folderPath = os.path.abspath(os.path.join(bucketPath, head))
-        if not os.path.exists(folderPath):
+        if checkPath and not os.path.exists(folderPath):
             raise Exception("%s doesn't exist. %s under %s may be wrong?" % (folderPath, head, bucketPath))
     else:
         folderPath = bucketPath
@@ -84,7 +91,6 @@ def find_folder_path_and_pattern(bucket, pathWithRegex):
         
     h2o.verboseprint("folderPath:", folderPath, "tail:", tail)
     return (folderPath, tail)
-
 
 # passes additional params thru kwargs for parse
 # use_header_file=

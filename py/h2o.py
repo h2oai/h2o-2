@@ -1811,6 +1811,7 @@ class LocalH2O(H2O):
             logPrefix = 'local-h2o-' + str(self.node_id)
         else:
             logPrefix = 'local-h2o'
+        self.remoteH2O = False # so we can tell if we're remote or local
         check_port_group(self.port)
         spawn = spawn_cmd(logPrefix, self.get_args(), capture_output=self.capture_output)
         self.ps = spawn[0]
@@ -1958,6 +1959,7 @@ class RemoteH2O(H2O):
     def __init__(self, host, *args, **kwargs):
         super(RemoteH2O, self).__init__(*args, **kwargs)
 
+        self.remoteH2O = True # so we can tell if we're remote or local
         self.jar = host.upload_file('target/h2o.jar')
         # need to copy the flatfile. We don't always use it (depends on h2o args)
         self.flatfile = host.upload_file(flatfile_name())
