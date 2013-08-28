@@ -69,18 +69,18 @@ public class Quantiles extends Request2 {
   class QVecSelect extends VecSelect { QVecSelect() { super("source"); } }
 
   // API can't handle declaring these as double[]
-  @API(help="QuantileA", required=true, filter=Default.class)  // BUG: filter=Real.class doesn't appear
-  double quantileA = .05;
-  @API(help="QuantileB", required=true, filter=Default.class)
-  double quantileB = .1;
-  @API(help="QuantileC", required=true, filter=Default.class)
-  double quantileC = .15;
-  @API(help="QuantileD", required=true, filter=Default.class)
-  double quantileD = .85;
-  @API(help="QuantileE", required=true, filter=Default.class)
-  double quantileE = .9;
-  @API(help="QuantileF", required=true, filter=Default.class)
-  double quantileF = .95;
+  @API(help="Quantile_a", required=true, filter=Default.class)  // BUG: filter=Real.class doesn't appear
+  double quantile_a = .05;
+  @API(help="Quantile_b", required=true, filter=Default.class)
+  double quantile_b = .1;
+  @API(help="Quantile_c", required=true, filter=Default.class)
+  double quantile_c = .15;
+  @API(help="Quantile_d", required=true, filter=Default.class)
+  double quantile_d = .85;
+  @API(help="Quantile_e", required=true, filter=Default.class)
+  double quantile_e = .9;
+  @API(help="Quantile_f", required=true, filter=Default.class)
+  double quantile_f = .95;
 
   //REMOVE @API(help="Buffer size, k")  long k;
   @API(help="Pass 1 msec")     long pass1time;
