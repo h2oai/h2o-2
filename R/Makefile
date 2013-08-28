@@ -16,12 +16,12 @@ endif
 
 	# Create temporary directory for jarring later
 	mkdir -p ../r_pack_tmp/resources/R
-	cp -p md5.txt > ../r_pack_tmp/resources/R/md5.txt
+	cp -p md5.txt ../r_pack_tmp/resources/R/md5.txt
 	cp -p h2o_$(PROJECT_VERSION).tar.gz ../r_pack_tmp/resources/R
 	
 	# Add to resources directory
 	mkdir -p ../lib/resources/R
-	md5 -q md5.txt > ../lib/resources/R/md5.txt
+	cp -p md5.txt ../lib/resources/R/md5.txt
 	cp -p h2o_$(PROJECT_VERSION).tar.gz ../lib/resources/R	
 
 	mkdir -p ../target/R
