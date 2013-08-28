@@ -24,7 +24,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_KMeans_params_rand2(self):
+    def test_KMeansGrid_basic(self):
         if localhost:
             csvFilenameList = [
                 # ('covtype.data', 60),
