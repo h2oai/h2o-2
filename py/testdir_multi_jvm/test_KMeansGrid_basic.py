@@ -35,14 +35,14 @@ class Basic(unittest.TestCase):
                 ('covtype.data', 800),
                 ]
 
-        importFolderPath = '/home/0xdiag/datasets/standard'
         for csvFilename, timeoutSecs in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path='standard/covtype.data',
                 timeoutSecs=2000, pollTimeoutSecs=60)
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
+            print "python_source:", parseResult['python_source']
             csvPathname = parseResult['python_source']
-
+            
             print "\n" + csvPathname, \
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \
                 "    num_cols:", "{:,}".format(inspect['num_cols'])
