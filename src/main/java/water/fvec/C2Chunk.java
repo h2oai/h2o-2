@@ -32,6 +32,8 @@ public class C2Chunk extends Chunk {
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
+    if (nc == null) { System.err.println("DEBUG: Bad Chunk ns"); System.err.flush();} // DEBUG
+
     for( int i=0; i<_len; i++ ) {
       long res = at8_impl(i);
       if( _vec.valueIsNA(res) ) nc.setInvalid(i);
