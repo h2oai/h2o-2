@@ -142,7 +142,7 @@ public class DRF extends FrameJob {
   // variable.  Depth is capped at max_depth.
   @Override protected Response serve() {
     Timer t_drf = new Timer();
-    final Frame fr = source;    // Better name
+    final Frame fr = new Frame(source); // Local copy for local hacking
     // While I'd like the Frames built custom for each call, with excluded
     // columns already removed - for now check to see if the response column is
     // part of the frame and remove it up front.
