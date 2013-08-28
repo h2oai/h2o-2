@@ -132,7 +132,8 @@ def import_only(node=None, schema='local', bucket=None, path=None,
         key = node.put_file(filePath, key=src_key, timeoutSecs=timeoutSecs)
         return (None, key)
 
-    if schema=='local':
+    if schema=='local' and not \
+            (node.redirect_import_folder_to_s3_path or node.redirect_import_folder_to_s3n_path):
         (folderPath, pattern) = find_folder_path_and_pattern(bucket, path)
         folderURI = 'nfs:/' + folderPath
         importResult = node.import_files(folderPath, timeoutSecs=timeoutSecs)
@@ -154,7 +155,7 @@ def import_only(node=None, schema='local', bucket=None, path=None,
             folderURI = "s3://" + folderOffset
             importResult = node.import_s3(bucket, timeoutSecs=timeoutSecs)
 
-        elif schema=='s3n':
+        elif schema=='s3n' or node.redirect_import_folder_to_s3n_path:
             folderURI = "s3n://" + folderOffset
             importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
 
@@ -162,7 +163,7 @@ def import_only(node=None, schema='local', bucket=None, path=None,
             folderURI = "hdfs:///" + folderOffset
             importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
 
-        elif schema=='hdfs' or node.redirect_import_folder_to_s3n_path:
+        elif schema=='hdfs':
             h2o.verboseprint(h2o.nodes[0].hdfs_name_node)
             h2o.verboseprint("folderOffset;", folderOffset)
             folderURI = "hdfs://" + h2o.nodes[0].hdfs_name_node + "/" + folderOffset
