@@ -39,7 +39,6 @@ def find_folder_path_and_pattern(bucket, pathWithRegex):
         possibleUsers = ["~"]
         print "username:", h2o.nodes[0].username
         if h2o.nodes[0].username:
-            print "remote username:", h2o.nodes[0].username
             possibleUsers.insert(0, "~" + h2o.nodes[0].username)
 
         for u in possibleUsers:

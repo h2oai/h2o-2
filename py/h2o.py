@@ -1767,7 +1767,11 @@ class H2O(object):
 
         self.use_home_for_ice = use_home_for_ice
         self.node_id = node_id
-        self.username = username
+
+        if username:
+            self.username = username
+        else:
+            self.username = getpass.getuser()
 
         # don't want multiple reports from tearDown and tearDownClass
         # have nodes[0] remember (0 always exists)
