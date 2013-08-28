@@ -1024,7 +1024,7 @@ class H2O(object):
             'k': 1,
             'max_iter': 10,
             'source_key': key,
-            'destination_key': 'python_KMeans_Grid_destination',
+            'destination_key': 'python_KMeans_Grid_destination.hex',
             }
         browseAlso = kwargs.get('browseAlso', False)
         params_dict.update(kwargs)

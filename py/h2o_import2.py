@@ -28,19 +28,26 @@ def find_folder_path_and_pattern(bucket, pathWithRegex):
             raise Exception("H2O_BUCKETS_ROOT and path used to form %s which doesn't exist." % bucketPath)
 
     else:
-        (head, tail) = os.path.split(os.path.abspath(bucket))
-        h2o.verboseprint("find_bucket looking upwards from", head, "for", tail)
-        # don't spin forever 
-        levels = 0
-        while not (os.path.exists(os.path.join(head, tail))):
-            h2o.verboseprint("Didn't find", tail, "at", head)
-            head = os.path.split(head)[0]
-            levels += 1
-            if (levels==10):
-                raise Exception("unable to find bucket: %s" % bucket)
+        # check home directory first. Might have a link
+        rootPath= os.path.expanduser("~")
+        if os.path.exists(os.path.join(rootPath, bucket)):
+            print "Did find", bucket, "at", rootPath
+            bucketPath = os.path.join(rootPath, bucket)
 
-        print "Did find", tail, "at", head
-        bucketPath = os.path.join(head, tail)
+        else:
+            rootPath = os.getcwd()
+            h2o.verboseprint("find_bucket looking upwards from", rootPath, "for", bucket)
+            # don't spin forever 
+            levels = 0
+            while not (os.path.exists(os.path.join(rootPath, bucket))):
+                h2o.verboseprint("Didn't find", bucket, "at", rootPath)
+                rootPath = os.path.split(rootPath)[0]
+                levels += 1
+                if (levels==6):
+                    raise Exception("unable to find bucket: %s" % bucket)
+
+            print "Did find", bucket, "at", rootPath
+            bucketPath = os.path.join(rootPath, bucket)
 
     # if there's no path, just return the bucketPath
     # but what about cases with a header in the folder too? (not putfile)
