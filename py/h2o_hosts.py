@@ -106,7 +106,9 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
 
     # done with these, don't pass to build_cloud
     paramsToUse.pop('ip') # this was the list of ip's from the config file, replaced by 'hosts' to build_cloud
-    paramsToUse.pop('username')
+
+    # we want to save username in the node info. don't pop
+    # paramsToUse.pop('username')
     paramsToUse.pop('password')
     paramsToUse.pop('key_filename')
    

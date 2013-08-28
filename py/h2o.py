@@ -1918,7 +1918,7 @@ class RemoteHost(object):
         #paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
         self.addr = addr
         self.http_addr = addr
-        self.username = username
+        self.username = username # this works, but it's host state
         self.ssh = paramiko.SSHClient()
 
         # don't require keys. If no password, assume passwordless setup was done

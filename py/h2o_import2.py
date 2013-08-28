@@ -28,11 +28,27 @@ def find_folder_path_and_pattern(bucket, pathWithRegex):
             raise Exception("H2O_BUCKETS_ROOT and path used to form %s which doesn't exist." % bucketPath)
 
     else:
-        # check home directory first. Might have a link
-        rootPath= os.path.expanduser("~")
-        if os.path.exists(os.path.join(rootPath, bucket)):
-            print "Did find", bucket, "at", rootPath
+        # if we run remotely, we're assuming the import folder path on the remote machine
+        # matches what we find on our local machine. But maybe the local user doesn't exist remotely 
+        # so using his path won't work. 
+        # Resolve by looking for special state in the config. If user = 0xdiag, just force the bucket location
+        # This is a lot like knowing about fixed paths with s3 and hdfs
+        # Otherwise the remote path needs to match the local discovered path.
+
+        # want to check the username being used remotely first. should exist here too if going to use
+        possibleUsers = ["~"]
+        print "username:", h2o.nodes[0].username
+        if h2o.nodes[0].username:
+            print "remote username:", h2o.nodes[0].username
+            possibleUsers.insert(0, "~" + h2o.nodes[0].username)
+
+        for u in possibleUsers:
+            rootPath= os.path.expanduser(u)
             bucketPath = os.path.join(rootPath, bucket)
+            print "Checking bucketPath:", bucketPath, 'assuming home is', rootPath
+            if os.path.exists(bucketPath):
+                print "Did find", bucket, "at", rootPath
+                break
 
         else:
             rootPath = os.getcwd()
