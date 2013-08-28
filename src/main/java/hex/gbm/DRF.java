@@ -160,16 +160,14 @@ public class DRF extends FrameJob {
     final int  ymin  = (int)vresponse.min();
     short nclass = vresponse._isInt ? (short)(vresponse.max()-ymin+1) : 1;
     assert 1 <= nclass && nclass < 1000; // Arbitrary cutoff for too many classes
-    domain = vresponse.domain();
+    domain = nclass > 1 ? vresponse.domain() : null;
 
     // Fill in the response variable column(s)
     if( nclass == 1 ) {
-      fr.add("Residual-"+fr._names[ncols],vresponse.makeCon(vresponse.mean()));
-      throw H2O.unimpl();
+      fr.add("response",vresponse);
     } else {
       // A vector of {0,..,0,1,0,...}
       // A single 1.0 in the actual class.
-      String[] domain = vresponse.domain();
       for( int i=0; i<nclass; i++ ) 
         fr.add(domain[i],vresponse.makeZero());
       fr.add("response",vresponse);
@@ -260,7 +258,7 @@ public class DRF extends FrameJob {
           for( DHistogram h : hs )
             if( h != null ) sum += h.byteSize();
         }
-        //System.out.println("Tree#"+(st+t)+", leaves="+(trees[t]._len-leafs[t])+", histo size="+PrettyPrint.bytes(sum)+", time="+t_pass);
+        System.out.println("Tree#"+(st+t)+", leaves="+(trees[t]._len-leafs[t])+", histo size="+PrettyPrint.bytes(sum)+", time="+t_pass);
       }
 
       // Build up the next-generation tree splits from the current histograms.
@@ -273,7 +271,7 @@ public class DRF extends FrameJob {
         final int tmax = tree._len; // Number of total splits
         int leaf = leafs[t];
         for( ; leaf<tmax; leaf++ ) {
-          //System.out.println("Tree#"+(st+t)+", "+tree.undecided(leaf));
+          System.out.println("Tree#"+(st+t)+", "+tree.undecided(leaf));
           // Replace the Undecided with the Split decision
           new DRFDecidedNode((DRFUndecidedNode)tree.undecided(leaf));
         }

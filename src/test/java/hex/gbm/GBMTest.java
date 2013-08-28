@@ -15,6 +15,12 @@ public class GBMTest extends TestUtil {
   private abstract class PrepData { abstract Vec prep(Frame fr); }
 
   @Test public void testBasicGBM() {
+    //basicDRF("./smalldata/cars.csv","cars.hex",
+    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); } 
+    //         });
+    //basicGBM("./smalldata/cars.csv","cars.hex",
+    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); } 
+    //         });
     basicGBM("./smalldata/cars.csv","cars.hex",
              new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); } 
              });
@@ -68,6 +74,9 @@ public class GBMTest extends TestUtil {
   }
 
   @Test public void testBasicDRF() {
+    //basicDRF("./smalldata/cars.csv","cars.hex",
+    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); } 
+    //         });
     basicDRF("./smalldata/cars.csv","cars.hex",
              new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); } 
              });

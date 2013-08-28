@@ -58,6 +58,9 @@ public abstract class Chunk extends Iced implements Cloneable {
   }
   public final boolean isNA_slow( long i ) { return valueIsNA(at8_slow(i)); }
 
+  public final boolean readable( ) { return _vec.readable(); }
+  public final boolean writable( ) { return _vec.writable(); }
+
   // Write into a chunk.  May rewrite/replace chunks if the chunk needs to be
   // "inflated" to hold larger values.  Returns the input value.
   public final long set8(long i, long l) {
@@ -73,14 +76,15 @@ public abstract class Chunk extends Iced implements Cloneable {
       _chk._chk = _chk;         // Clone has NOT been written into
     }
     if( _chk.set8_impl(idx,l) ) return l;
+    _vec.set_type(Vec.DType.I);
     // Must inflate the chunk
-    NewChunk nc = new NewChunk(null/*_vec*/,_vec.elem2ChunkIdx(_start));
-    nc._vec = _vec;
+    NewChunk nc = new NewChunk(_vec,_vec.elem2ChunkIdx(_start));
+
     nc._ls = new long[_len];
     nc._xs = new int [_len];
     nc._len= _len;
     _chk = inflate_impl(nc);
-    nc.set8_impl(idx,l);
+    _chk.set8_impl(idx,l);
     return l;
   }
 
@@ -97,9 +101,9 @@ public abstract class Chunk extends Iced implements Cloneable {
       _chk._chk = _chk;         // Clone has NOT been written into
     }
     if( _chk.set8_impl(idx,d) ) return d;
+    _vec.set_type(Vec.DType.F);
     // Must inflate the chunk
-    NewChunk nc = new NewChunk(null/*_vec*/,_vec.elem2ChunkIdx(_start));
-    nc._vec = _vec;
+    NewChunk nc = new NewChunk(_vec,_vec.elem2ChunkIdx(_start));
     nc._ls = null;
     nc._xs = null;
     nc._ds = new double[_len];
@@ -123,8 +127,7 @@ public abstract class Chunk extends Iced implements Cloneable {
     }
     if( _chk.set4_impl(idx,d) ) return d;
     // Must inflate the chunk
-    NewChunk nc = new NewChunk(null/*_vec*/,_vec.elem2ChunkIdx(_start));
-    nc._vec = _vec;
+    NewChunk nc = new NewChunk(_vec,_vec.elem2ChunkIdx(_start));
     nc._ls = null;
     nc._xs = null;
     nc._ds = new double[_len];
@@ -151,6 +154,8 @@ public abstract class Chunk extends Iced implements Cloneable {
   abstract boolean set8_impl (int idx, long l );
   abstract boolean set8_impl (int idx, double d );
   abstract boolean set4_impl (int idx, float f );
+  abstract boolean setNA_impl(int idx);
+
   // Chunk-specific bulk inflator back to NewChunk.  Used when writing into a
   // chunk and written value is out-of-range for an update-in-place operation.
   // Bulk copy from the compressed form into the nc._ls array.

@@ -157,7 +157,7 @@ public class GBM extends FrameJob {
     final int ymin = (int)vresponse.min();
     short nclass = vresponse._isInt ? (short)(vresponse.max()-ymin+1) : 1;
     assert 1 <= nclass && nclass < 1000; // Arbitrary cutoff for too many classes
-    domain = vresponse.domain();
+    domain = nclass > 1 ? vresponse.domain() : null;
     errs = new float[0];         // No trees yet
 
     // Add in Vecs after the response column which holds the row-by-row
@@ -292,7 +292,7 @@ public class GBM extends FrameJob {
     // Find the initial prediction - the current average response variable.
     float preds[] = new float[nclass];
     if( nclass == 1 ) {
-      fr.add("Residual-"+fr._names[ncols],vresponse.makeCon(vresponse.mean()));
+      fr.add("Residual",vresponse.makeCon(vresponse.mean()));
       throw H2O.unimpl();
     } else {
       long cs[] = new ClassDist(nclass,ymin).doAll(vresponse)._cs;

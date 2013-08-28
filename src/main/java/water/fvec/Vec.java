@@ -110,6 +110,13 @@ public class Vec extends Iced {
     return v0;
   }
 
+  void set_type(DType t) {
+    if( _dtype == t ) return;
+    if( _dtype == Vec.DType.U ) { _dtype = t; return; }
+    System.out.println("mixing writes of type "+t+" into a Vec of type "+_dtype);
+    throw H2O.unimpl(); // Missing doubles into a non-double column?
+  }
+
   /** Number of elements in the vector.  Overridden by subclasses that compute
    *  length in an alternative way, such as file-backed Vecs. */
   public long length() { return _espc[_espc.length-1]; }

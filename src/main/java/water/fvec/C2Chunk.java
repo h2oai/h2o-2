@@ -20,7 +20,15 @@ public class C2Chunk extends Chunk {
     UDP.set2(_mem,(idx<<1)+OFF,(short)l);
     return true;
   }
-  @Override boolean set8_impl(int i, double d) { return false; }
+  @Override boolean setNA_impl(int idx) {
+    UDP.set2(_mem,(idx<<1)+OFF,_NA);
+    return true;
+  }
+  @Override boolean set8_impl(int idx, double d) { 
+    if( Double.isNaN(d) ) return setNA_impl(idx);
+    long l = (long)d;
+    return l==d ? set8_impl(idx,l) : false;
+  }
   @Override boolean set4_impl(int i, float f ) { return false; }
   @Override boolean hasFloat() { return false; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
