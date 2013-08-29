@@ -202,12 +202,12 @@ public class GLMProgressPage extends Request {
     // Pretty equations
     private static String equationHTML( GLMModel m, JsonObject coefs ) {
       RString eq = null;
-      switch( m._glmParams._link ) {
+      switch( m._glmParams._link._link ) {
       case identity: eq = new RString("y = %equation");   break;
       case logit:    eq = new RString("y = 1/(1 + Math.exp(-(%equation)))");  break;
       case log:      eq = new RString("y = Math.exp((%equation)))");  break;
       case inverse:  eq = new RString("y = 1/(%equation)");  break;
-      case tweedie:  eq = new RString("y = (%equation)^(1 - " + m._glmParams._family.defaultLink.tweedieLinkPower + ")"); break;
+      case tweedie:  eq = new RString("y = (%equation)^(1 - " + m._glmParams._link._tweedieLinkPower + ")"); break;
       default:       eq = new RString("equation display not implemented"); break;
       }
       StringBuilder sb = new StringBuilder();
@@ -233,7 +233,7 @@ public class GLMProgressPage extends Request {
       int i=0;
       for( Entry<String,JsonElement> e : ee )
         cs[i++] = new Coef(e);
-      if( m._glmParams._family == Family.binomial )
+      if( m._glmParams._family._family == Family.binomial )
         Arrays.sort(cs,new Comparator<Coef>() {
             @Override public int compare(Coef c0, Coef c1) { return (c0._d<c1._d) ? 1 : (c0._d==c1._d?0:-1);}
           });

@@ -40,8 +40,14 @@ public class GLMTest extends TestUtil {
     }
 
     // Now a Gaussian GLM model for the same thing
-    GLMParams glmp = new GLMParams(family);
-    glmp._link = glmp._family.defaultLink;
+    GLMParams glmp;
+    switch( family ){
+      default:
+        glmp = new GLMParams(family); break;
+      case tweedie:
+        glmp = new GLMParams( family, family.defaultLink, family.tweedieVariancePower, family.defaultLink.tweedieLinkPower );
+    }
+    glmp._link = new LinkIced(glmp._family._family.defaultLink, family.defaultLink.tweedieLinkPower);
     //glmp._familyamilyArgs = glmp._family.defaultArgs;
     glmp._betaEps = 0.000001;
     glmp._maxIter = 100;
@@ -551,7 +557,7 @@ public class GLMTest extends TestUtil {
     LSMSolver lsms = new ADMMSolver(0.0001/*lambda*/,1/*alpha*/);
     // Now a Gaussian GLM model for the same thing
     GLMParams glmp = new GLMParams(Family.gaussian);
-    glmp._link = glmp._family.defaultLink;
+    glmp._link = new LinkIced( glmp._family._family.defaultLink );
     glmp._betaEps = 0.000001;
     glmp._maxIter = 50;
 

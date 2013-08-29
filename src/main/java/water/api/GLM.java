@@ -8,6 +8,7 @@ import hex.DGLM.GLMJob;
 import hex.DGLM.GLMModel;
 import hex.DGLM.GLMParams;
 import hex.DGLM.Link;
+import hex.DGLM.LinkIced;
 import hex.DLSM.ADMMSolver;
 import hex.DLSM.GeneralizedGradientSolver;
 import hex.DLSM.LSMSolver;
@@ -204,8 +205,8 @@ public class GLM extends Request {
       res = new GLMParams(f, l);
     }
 
-    if( res._link == Link.familyDefault && res._link != Link.tweedie )
-      res._link = res._family.defaultLink;
+    if( res._link._link == Link.familyDefault && res._link._link != Link.tweedie )
+      res._link = new LinkIced( res._family._family.defaultLink );
     res._maxIter = _maxIter.value();
     res._betaEps = _betaEps.value();
     if(_caseWeight.valid())
@@ -233,7 +234,7 @@ public class GLM extends Request {
         return Response.error("error reading glm parameters");
       }
 
-      if (glmParams._family == Family.tweedie){
+      if (glmParams._family._family == Family.tweedie){
         double p = _tweediePower.value();
         if (! ((1. < p && p < 2.) || (2. < p && p < 3.) || (3. < p && p < 20.)) ){
           return Response.error("tweedie family specified but invalid tweedie power: must be in (1,2)");
