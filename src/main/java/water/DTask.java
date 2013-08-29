@@ -24,12 +24,12 @@ import water.H2O.H2OCountedCompleter;
 public abstract class DTask<T extends DTask> extends H2OCountedCompleter implements Freezable {
   // NOTE: DTask CAN NOT have any ICED members (FetchId is DTask, causes DEADLOCK in multinode environment)
   // exception info, it must be unrolled here
-  private String _exception;
-  private String _msg;
-  private String _eFromNode; // Node where the exception originated
+  protected String _exception;
+  protected String _msg;
+  protected String _eFromNode; // Node where the exception originated
   // stackTrace info
-  private int [] _lineNum;
-  private String [] _cls, _mth, _fname;
+  protected int [] _lineNum;
+  protected String [] _cls, _mth, _fname;
 
   public void setException(Throwable ex){
     _exception = ex.getClass().getName();
