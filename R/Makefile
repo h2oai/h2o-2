@@ -12,17 +12,16 @@ else
 	R CMD Rd2pdf --force --output="h2o-package/h2o_package.pdf" --title="Package 'h2o'" --no-index --no-preview h2o-package/man 1> /dev/null
 endif
 	R CMD build h2o-package
-	# md5 -q h2o_$(PROJECT_VERSION).tar.gz > md5.txt
-	openssl md5 h2o_$(PROJECT_VERSION).tar.gz > md5.txt
-
+	echo h2o_$(PROJECT_VERSION).tar.gz > info.txt
+	openssl md5 h2o_$(PROJECT_VERSION).tar.gz | sed 's/.*= //' >> info.txt
 	# Create temporary directory for jarring later
 	mkdir -p ../r_pack_tmp/resources/R
-	cp -p md5.txt ../r_pack_tmp/resources/R/md5.txt
+	cp -p info.txt ../r_pack_tmp/resources/R/info.txt
 	cp -p h2o_$(PROJECT_VERSION).tar.gz ../r_pack_tmp/resources/R
 	
 	# Add to resources directory
 	mkdir -p ../lib/resources/R
-	mv md5.txt ../lib/resources/R/md5.txt
+	mv info.txt ../lib/resources/R/info.txt
 	cp -p h2o_$(PROJECT_VERSION).tar.gz ../lib/resources/R	
 
 	mkdir -p ../target/R
