@@ -1,8 +1,9 @@
 package water;
 
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import jsr166y.CountedCompleter;
@@ -251,6 +252,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     long _started;              // Retry fields for the ackack
     long _retry;
     volatile boolean _computed; // One time transition from false to true
+    transient AtomicBoolean _firstException = new AtomicBoolean(false);
     // To help with asserts, record the size of the sent DTask - if we resend
     // if should remain the same size.
     int _size;
@@ -292,8 +294,12 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
         Log.info("Done  remote task#"+_tsknum+" "+dt.getClass()+" to "+_client);
       _client.record_task_answer(this); // Setup for retrying Ack & AckAck
     }
+    // exception occured when processing this task locally, set exception and send it back to the caller
     @Override public boolean onExceptionalCompletion( Throwable ex, CountedCompleter caller ) {
-      System.out.println("RPC sees an exceptional completion");
+      if(!_firstException.getAndSet(true)){
+        _dt.setException(ex);
+        onCompletion(caller);
+      }
       return true;
     }
     // Re-send strictly the ack, because we're missing an AckAck
@@ -457,11 +463,20 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       _done = true;             // Only read one (of many) response packets
       ab._h2o.taskRemove(_tasknum); // Flag as task-completed, even if the result is null
       notifyAll();              // And notify in any case
+      final Exception e = _dt.getDException();
       // Also notify any and all pending completion-style tasks
       if( _fjtasks != null )
         for( final H2OCountedCompleter task : _fjtasks )
           H2O.submitTask(new H2OCountedCompleter() {
-              @Override public void compute2() { task.tryComplete(); }
+              @Override public void compute2() {
+                if(e != null) // re-throw exception on this side as if it happened locally
+                  task.completeExceptionally(e);
+                else try {
+                  task.tryComplete();
+                } catch(Throwable e){
+                  task.completeExceptionally(e);
+                }
+              }
               @Override public byte priority() { return task.priority(); }
             });
     }

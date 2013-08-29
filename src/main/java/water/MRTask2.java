@@ -263,13 +263,13 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   /** Cancel/kill all work as we can, then rethrow... do not invisibly swallow
    *  exceptions (which is the F/J default).  Called internal by F/J.  Not
    *  expected to be user-called.  */
-  @Override public final boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller ) {
-    if( _nleft != null ) _nleft.cancel(true); _nleft = null;
-    if( _nrite != null ) _nrite.cancel(true); _nrite = null;
-    _left = null;
-    _rite = null;
-    return super.onExceptionalCompletion(ex, caller);
-  }
+//  @Override public final boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller ) {
+//    if( _nleft != null ) _nleft.cancel(true); _nleft = null;
+//    if( _nrite != null ) _nrite.cancel(true); _nrite = null;
+//    _left = null;
+//    _rite = null;
+//    return super.onExceptionalCompletion(ex, caller);
+//  }
 
   /** Local Clone - setting final-field completer */
   @Override public T clone() {
