@@ -97,7 +97,7 @@ class Basic(unittest.TestCase):
             (importFolderPath, csvFilename) = os.path.split("/" + localbucket + pathname)
             h2i.setupImportFolder(None, importFolderPath)
             start = time.time()
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=180)
+            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=180)
 
         else:
             schema = "s3n://"
@@ -105,12 +105,12 @@ class Basic(unittest.TestCase):
             URI = schema + bucket + pathname
             importResult = h2o.nodes[0].import_hdfs(URI)
             start      = time.time()
-            parseKey = h2o.nodes[0].parse("*" + pathname, timeoutSecs=timeoutSecs, header=header)
+            parseResult = h2o.nodes[0].parse("*" + pathname, timeoutSecs=timeoutSecs, header=header)
 
         parse_time = time.time() - start 
         h2o.verboseprint("py-S3 parse took {0} sec".format(parse_time))
-        parseKey['python_call_timer'] = parse_time
-        return parseKey
+        parseResult['python_call_timer'] = parse_time
+        return parseResult
 
     def loadData(self, params):
         kwargs   = params.copy()

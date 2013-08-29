@@ -24,8 +24,8 @@ class Basic(unittest.TestCase):
 
     def test_exec_covtype_cols(self):
         csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
-        parseKey = h2o_cmd.parseFile(None, csvPathname, 'covtype.data', 'c.hex', 10)
-        print "\nParse key is:", parseKey['destination_key']
+        parseResult = h2o_cmd.parseFile(None, csvPathname, 'covtype.data', 'c.hex', 10)
+        print "\nParse key is:", parseResult['destination_key']
 
         ### h2b.browseTheCloud()
         start = time.time()

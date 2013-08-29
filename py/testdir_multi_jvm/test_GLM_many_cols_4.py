@@ -80,12 +80,12 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, translateList)
 
             print "\nUpload and parse", csvPathname
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=240, retryDelaySecs=0.5)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            parseResult = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=240, retryDelaySecs=0.5)
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
 
             paramDict2 = {}
@@ -98,7 +98,7 @@ class Basic(unittest.TestCase):
             kwargs.update(paramDict2)
 
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
             # only col Y-1 (next to last)doesn't get renamed in coefficients due to enum/categorical expansion
             print "y:", y 

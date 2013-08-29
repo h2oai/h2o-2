@@ -1,6 +1,6 @@
 import unittest, time, sys, random, logging
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_glm
+import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_hosts, h2o_glm
 import h2o_exec as h2e, h2o_jobs
 
 class Basic(unittest.TestCase):
@@ -94,9 +94,10 @@ class Basic(unittest.TestCase):
             ### base_port += 2
 
             for trial in range(trialMax):
-                importFolderResult = h2i.setupImportFolder(None, importFolderPath)
-                importFullList = importFolderResult['files']
-                importFailList = importFolderResult['fails']
+                (importResult, importPattern) = h2i.import_only(path=importFolderPath+"/*")
+
+                importFullList = importResult['files']
+                importFailList = importResult['fails']
                 print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
                 # creates csvFilename.hex from file in importFolder dir 
 
@@ -104,8 +105,8 @@ class Basic(unittest.TestCase):
                 h2o.cloudPerfH2O.message("")
                 h2o.cloudPerfH2O.message("Parse " + csvFilename + " Start--------------------------------")
                 start = time.time()
-                parseKey = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
-                    key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
+                parseResult = h2i.import_parse(path=importFolderPath+"/*",
+                    hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                     retryDelaySecs=retryDelaySecs,
                     pollTimeoutSecs=pollTimeoutSecs,
                     noPoll=noPoll,
@@ -116,8 +117,8 @@ class Basic(unittest.TestCase):
                         time.sleep(1)
                         h2o.check_sandbox_for_errors()
                         (csvFilepattern, csvFilename, totalBytes2, timeoutSecs) = csvFilenameList[i+1]
-                        parseKey = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
-                            key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
+                        parseResult = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
+                            hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                             retryDelaySecs=retryDelaySecs,
                             pollTimeoutSecs=pollTimeoutSecs,
                             noPoll=noPoll,
@@ -127,8 +128,8 @@ class Basic(unittest.TestCase):
                         time.sleep(1)
                         h2o.check_sandbox_for_errors()
                         (csvFilepattern, csvFilename, totalBytes3, timeoutSecs) = csvFilenameList[i+2]
-                        parseKey = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
-                            key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
+                        parseResult = h2i.import_parse(path=importFolderPath+"/*",
+                            hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                             retryDelaySecs=retryDelaySecs,
                             pollTimeoutSecs=pollTimeoutSecs,
                             noPoll=noPoll,
@@ -158,28 +159,28 @@ class Basic(unittest.TestCase):
                     print l
                     h2o.cloudPerfH2O.message(l)
 
-                print csvFilepattern, 'parse time:', parseKey['response']['time']
-                print "Parse result['destination_key']:", parseKey['destination_key']
+                print csvFilepattern, 'parse time:', parseResult['response']['time']
+                print "Parse result['destination_key']:", parseResult['destination_key']
 
                 # BUG here?
                 if not noPoll:
                     # We should be able to see the parse result?
-                    h2o_cmd.check_enums_from_inspect(parseKey)
+                    h2o_cmd.check_enums_from_inspect(parseResult)
                         
                 # the nflx data doesn't have a small enough # of classes in any col
                 # use exec to randomFilter out 200 rows for a quick RF. that should work for everyone?
-                origKey = parseKey['destination_key']
+                origKey = parseResult['destination_key']
                 # execExpr = 'a = randomFilter('+origKey+',200,12345678)' 
                 execExpr = 'a = slice('+origKey+',1,200)' 
                 h2e.exec_expr(h2o.nodes[0], execExpr, "a", timeoutSecs=30)
-                # runRFOnly takes the parseKey directly
+                # runRFOnly takes the parseResult directly
                 newParseKey = {'destination_key': 'a'}
 
                 print "\n" + csvFilepattern
                 # poker and the water.UDP.set3(UDP.java) fail issue..
                 # constrain depth to 25
                 print "Temporarily hacking to do nothing instead of RF on the parsed file"
-                ### RFview = h2o_cmd.runRFOnly(trees=1,depth=25,parseKey=newParseKey, timeoutSecs=timeoutSecs)
+                ### RFview = h2o_cmd.runRFOnly(trees=1,depth=25,parseResult=newParseKey, timeoutSecs=timeoutSecs)
                 ### h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
                 #**********************************************************************************
@@ -196,7 +197,7 @@ class Basic(unittest.TestCase):
                     GLMkwargs = {'x': x, 'y': 378, 'case': 15, 'case_mode': '>',
                         'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
                     start = time.time()
-                    glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **GLMkwargs)
+                    glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **GLMkwargs)
                     h2o_glm.simpleCheckGLM(self, glm, None, **GLMkwargs)
                     elapsed = time.time() - start
                     h2o.check_sandbox_for_errors()
@@ -207,7 +208,8 @@ class Basic(unittest.TestCase):
 
                 #**********************************************************************************
                 h2o_cmd.checkKeyDistribution()
-                h2o_cmd.deleteCsvKey(csvFilename, importFolderResult)
+                h2i.delete_keys_from_import_result(pattern=csvFilename, importResult=importResult)
+
                 ### time.sleep(3600)
                 h2o.tear_down_cloud()
                 if not localhost:

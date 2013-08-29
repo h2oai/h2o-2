@@ -32,7 +32,7 @@ def run_glms(file,configs):
         java_heap_GB = h2o.nodes[0].java_heap_GB
         k = parse_file(file)
         # gives us some reporting on missing values, constant values, to see if we have x specified well
-        # figures out everything from parseKey['destination_key']
+        # figures out everything from parseResult['destination_key']
         # needs y to avoid output column (which can be index or name)
         # assume all the configs have the same y..just check with the firs tone
         goodX = h2o_glm.goodXFromColumnInfo(y=configs[0]['y'], key=k, timeoutSecs=300)

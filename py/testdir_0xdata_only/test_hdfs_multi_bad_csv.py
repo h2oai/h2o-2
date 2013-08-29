@@ -40,9 +40,9 @@ class Basic(unittest.TestCase):
 # -rw-r--r--   3 hduser supergroup  12155501626 2013-02-23 15:59 /datasets/airlines_all.csv
 # -rw-r--r--   3 hduser supergroup 133710514626 2013-02-23 15:21 /datasets/airlines_all_11x.csv
 
-        parseKey = h2i.parseImportHdfsFile(csvFilename='airline_116M.csv', key2='random_csv.hex', timeoutSecs=600)
-        print "*csv* regex to hdfs /datasets", 'parse time:', parseKey['response']['time']
-        print "parse result:", parseKey['destination_key']
+        parseResult = h2i.parseImportHdfsFile(csvFilename='airline_116M.csv', key2='random_csv.hex', timeoutSecs=600)
+        print "*csv* regex to hdfs /datasets", 'parse time:', parseResult['response']['time']
+        print "parse result:", parseResult['destination_key']
         sys.stdout.flush() 
 
 if __name__ == '__main__':

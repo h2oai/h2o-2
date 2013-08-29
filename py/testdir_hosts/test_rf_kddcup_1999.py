@@ -31,10 +31,10 @@ class Basic(unittest.TestCase):
             "compared to running with the parameters specified and matching the browser RF query defaults. " +\
             "Also run the param for full scoring vs OOBE scoring."
 
-        parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=300)
-        print csvFilename, 'parse time:', parseKey['response']['time']
-        print "Parse result['destination_key']:", parseKey['destination_key']
-        inspect = h2o_cmd.runInspect(None,parseKey['destination_key'])
+        parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=300)
+        print csvFilename, 'parse time:', parseResult['response']['time']
+        print "Parse result['destination_key']:", parseResult['destination_key']
+        inspect = h2o_cmd.runInspect(None,parseResult['destination_key'])
 
         for trials in range(4):
             print "\n" + csvFilename, "Trial #", trials
@@ -67,7 +67,7 @@ class Basic(unittest.TestCase):
                 kwargs['out_of_bag_error_estimate'] = 1
 
             start = time.time()
-            RFview = h2o_cmd.runRFOnly(trees=50,parseKey=parseKey, 
+            RFview = h2o_cmd.runRFOnly(trees=50,parseResult=parseResult, 
                 timeoutSecs=300, retryDelaySecs=1.0, **kwargs)
             print "RF end on ", csvFilename, 'took', time.time() - start, 'seconds'
 

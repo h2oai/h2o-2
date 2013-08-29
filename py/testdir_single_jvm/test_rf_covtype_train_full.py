@@ -45,7 +45,7 @@ class Basic(unittest.TestCase):
         csvFilename = 'train.csv'
         csvPathname = h2o.find_dataset('bench/covtype/h2o/' + csvFilename)
         print "\nUsing header=1 even though I shouldn't have to. Otherwise I get NA in first row and RF bad\n"
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", header=1, 
+        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", header=1, 
             timeoutSecs=180)
 
         for trial in range(1):

@@ -37,11 +37,11 @@ class Basic(unittest.TestCase):
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
             key2 = csvFilename + "_" + str(trial) + ".hex"
-            parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, timeoutSecs=30)
+            parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, timeoutSecs=30)
 
             h2o.verboseprint("Trial", trial)
             start = time.time()
-            h2o_cmd.runRFOnly(parseKey=parseKey, trees=10000, depth=2, timeoutSecs=600, retryDelaySecs=3)
+            h2o_cmd.runRFOnly(parseResult=parseResult, trees=10000, depth=2, timeoutSecs=600, retryDelaySecs=3)
             print "RF #", trial,  "end on ", csvFilename, 'took', time.time() - start, 'seconds'
 
         print "Waiting 60 secs for TIME_WAIT sockets to go away"

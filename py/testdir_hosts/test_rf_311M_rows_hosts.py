@@ -27,14 +27,14 @@ class Basic(unittest.TestCase):
 
         csvFilename = 'new-poker-hand.full.311M.txt.gz'
         for trials in range(2):
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=500)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
-            inspect = h2o_cmd.runInspect(None,parseKey['destination_key'])
+            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=500)
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
+            inspect = h2o_cmd.runInspect(None,parseResult['destination_key'])
 
             print "\n" + csvFilename
             start = time.time()
-            RFview = h2o_cmd.runRFOnly(trees=5,depth=5,parseKey=parseKey, 
+            RFview = h2o_cmd.runRFOnly(trees=5,depth=5,parseResult=parseResult, 
                 timeoutSecs=600, retryDelaySecs=10.0)
             print "RF end on ", csvFilename, 'took', time.time() - start, 'seconds'
 

@@ -129,6 +129,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new TypeaheadRFModelKeyRequest());
     registerRequest(new TypeaheadGLMModelKeyRequest());
     registerRequest(new SetColumnNames());
+    registerRequest(new RPackage());
     // testing hooks
     registerRequest(new TestPoll());
     registerRequest(new TestRedirect());

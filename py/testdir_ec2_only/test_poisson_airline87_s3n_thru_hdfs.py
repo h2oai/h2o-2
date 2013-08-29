@@ -59,14 +59,14 @@ class Basic(unittest.TestCase):
             # should be less on more nodes?
             timeoutSecs = 500
             start = time.time()
-            parseKey = h2o.nodes[0].parse(s3nKey, key2,
+            parseResult = h2o.nodes[0].parse(s3nKey, key2,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=1200, noise=('JStack', None))
             elapsed = time.time() - start
-            print s3nKey, 'h2o reported parse time:', parseKey['response']['time']
+            print s3nKey, 'h2o reported parse time:', parseResult['response']['time']
             print "parse end on ", s3nKey, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
-            print "parse result:", parseKey['destination_key']
+            print "parse result:", parseResult['destination_key']
 
             kwargs = {
                 # will fail if categorical is chosen
@@ -84,7 +84,7 @@ class Basic(unittest.TestCase):
             # L2 
             kwargs.update({'alpha': 0, 'lambda': 0})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, 
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, 
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=120, noise=('JStack', None), **kwargs)
             elapsed = time.time() - start
             print "glm (L2) end on ", csvPathname, 'took', elapsed, 'seconds',\
@@ -95,7 +95,7 @@ class Basic(unittest.TestCase):
             # Elastic
             kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey,
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult,
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=60, noise=('JStack', None), **kwargs)
             elapsed = time.time() - start
             print "glm (Elastic) end on ", csvPathname, 'took', elapsed, 'seconds',\
@@ -106,7 +106,7 @@ class Basic(unittest.TestCase):
             # L1
             kwargs.update({'alpha': 1.0, 'lambda': 1e-4})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey,
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult,
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=60, noise=('JStack', None), **kwargs)
             elapsed = time.time() - start
             print "glm (L1) end on ", csvPathname, 'took', elapsed, 'seconds',\

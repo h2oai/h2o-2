@@ -87,7 +87,7 @@ public class Inspect2 extends Request {
               //"View " + SummaryPage2.link(key, "Summary") +
               "<br/>Build models using " +
               DRF.link(src_key.value(), "Distributed Random Forest") +", "+
-              GBM.link(src_key.value(), "Distributed Gradiant Boosting Forest") +", "+
+              GBM.link(src_key.value(), "Distributed GBM") +", "+
               hex.LR2.link(src_key.value(), "Linear Regression") +
               "</div>");
 

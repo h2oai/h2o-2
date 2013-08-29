@@ -90,7 +90,7 @@ class Basic(unittest.TestCase):
                     key2 = csvFilename + "_" + str(trial) + ".hex"
                     print "Loading", protocol, "key:", s3nKey, "to", key2
                     start = time.time()
-                    parseKey = h2o.nodes[0].parse(s3nKey, key2,
+                    parseResult = h2o.nodes[0].parse(s3nKey, key2,
                         timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60,
                         noPoll=noPoll,
                         benchmarkLogging=benchmarkLogging)
@@ -119,8 +119,8 @@ class Basic(unittest.TestCase):
                             benchmarkLogging=benchmarkLogging)
 
                     elapsed = time.time() - start
-                    print s3nKey, 'parse time:', parseKey['response']['time']
-                    print "parse result:", parseKey['destination_key']
+                    print s3nKey, 'parse time:', parseResult['response']['time']
+                    print "parse result:", parseResult['destination_key']
                     print "Parse #", trial, "completed in", "%6.2f" % elapsed, "seconds.", \
                         "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
@@ -145,7 +145,7 @@ class Basic(unittest.TestCase):
                     # BUG here?
                     if not noPoll:
                         # We should be able to see the parse result?
-                        inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
+                        inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
 
                     print "Deleting key in H2O so we get it from S3 (if ec2) or nfs again.", \
                           "Otherwise it would just parse the cached key."

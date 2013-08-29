@@ -39,12 +39,12 @@ class Basic(unittest.TestCase):
             csvPathname = importFolderPath + "/" + csvFilename
             # creates csvFilename.hex from file in importFolder dir 
             start = time.time()
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
+            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
                 timeoutSecs=2000, key2=key2) # noise=('JStack', None)
             print "parse end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o.check_sandbox_for_errors()
 
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvPathname, \
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \
                 "    num_cols:", "{:,}".format(inspect['num_cols'])
@@ -58,13 +58,13 @@ class Basic(unittest.TestCase):
             }
 
             start = time.time()
-            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, \
+            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, \
                 timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=60, **kwargs)
             elapsed = time.time() - start
             print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
-            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
+            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
 
 if __name__ == '__main__':
     h2o.unit_main()

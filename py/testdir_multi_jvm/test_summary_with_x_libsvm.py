@@ -76,9 +76,9 @@ class Basic(unittest.TestCase):
                 # dict of col sums for comparison to exec col sums below
                 (colNumberMax, synColSumDict) = write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
-                parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=timeoutSecs, doSummary=False)
-                print "Parse result['destination_key']:", parseKey['destination_key']
-                inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], max_column_display=colNumberMax+1, timeoutSecs=timeoutSecs)
+                parseResult = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=timeoutSecs, doSummary=False)
+                print "Parse result['destination_key']:", parseResult['destination_key']
+                inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], max_column_display=colNumberMax+1, timeoutSecs=timeoutSecs)
                 num_cols = inspect['num_cols']
                 num_rows = inspect['num_rows']
 

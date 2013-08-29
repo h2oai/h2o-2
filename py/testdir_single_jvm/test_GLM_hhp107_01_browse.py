@@ -43,7 +43,7 @@ class Basic(unittest.TestCase):
     def test_hhp_107_01_browse(self):
         csvPathname = h2o.find_file("smalldata/hhp_107_01.data.gz")
         print "\n" + csvPathname
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2="hhp_107_01.data.hex", timeoutSecs=15)
+        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2="hhp_107_01.data.hex", timeoutSecs=15)
 
         # pop open a browser on the cloud
         h2b.browseTheCloud()
@@ -53,7 +53,7 @@ class Basic(unittest.TestCase):
             kwargs = argcase
             print 'y:', kwargs['y']
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, browseAlso=True, timeoutSecs=200, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, browseAlso=True, timeoutSecs=200, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
             print "\nTrial #", trial

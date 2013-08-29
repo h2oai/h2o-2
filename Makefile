@@ -64,7 +64,7 @@ build:
 	$(MAKE) package
 
 build_h2o:
-	(export PROJECT_VERSION=$(PROJECT_VERSION); ./build.sh doc)
+	(export PROJECT_VERSION=$(PROJECT_VERSION); ./build.sh noclean doc)
 
 package:
 	rm -fr target/h2o-$(PROJECT_VERSION)

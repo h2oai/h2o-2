@@ -62,12 +62,12 @@ class Basic(unittest.TestCase):
             print "Creating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=30)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            parseResult = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=30)
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=120)
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=120)
             print "\n" + csvFilename
 
             if not h2o.browse_disable:

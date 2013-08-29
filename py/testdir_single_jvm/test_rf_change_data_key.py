@@ -61,21 +61,21 @@ class Basic(unittest.TestCase):
         importFolderResult = h2i.setupImportFolder(None, importFolderPath)
 
         csvFilenameTrain = 'covtype.data'
-        parseKeyTrain = h2i.parseImportFolderFile(None, csvFilenameTrain, importFolderPath, timeoutSecs=500)
-        print csvFilenameTrain, 'parse time:', parseKeyTrain['response']['time']
-        inspect = h2o_cmd.runInspect(key=parseKeyTrain['destination_key'])
-        dataKeyTrain = parseKeyTrain['destination_key']
+        parseResultTrain = h2i.parseImportFolderFile(None, csvFilenameTrain, importFolderPath, timeoutSecs=500)
+        print csvFilenameTrain, 'parse time:', parseResultTrain['response']['time']
+        inspect = h2o_cmd.runInspect(key=parseResultTrain['destination_key'])
+        dataKeyTrain = parseResultTrain['destination_key']
         print "Parse end", dataKeyTrain
 
         # we could train on covtype, and then use covtype20x for test? or vice versa
-        # parseKey = parseKey
+        # parseResult = parseResult
         # dataKeyTest = dataKeyTrain
         csvFilenameTest = 'covtype20x.data'
-        parseKeyTest = h2i.parseImportFolderFile(None, csvFilenameTest, importFolderPath, timeoutSecs=500)
-        print csvFilenameTest, 'parse time:', parseKeyTest['response']['time']
-        print "Parse result['destination_key']:", parseKeyTest['destination_key']
-        inspect = h2o_cmd.runInspect(key=parseKeyTest['destination_key'])
-        dataKeyTest = parseKeyTest['destination_key']
+        parseResultTest = h2i.parseImportFolderFile(None, csvFilenameTest, importFolderPath, timeoutSecs=500)
+        print csvFilenameTest, 'parse time:', parseResultTest['response']['time']
+        print "Parse result['destination_key']:", parseResultTest['destination_key']
+        inspect = h2o_cmd.runInspect(key=parseResultTest['destination_key'])
+        dataKeyTest = parseResultTest['destination_key']
 
         print "Parse end", dataKeyTest
 
@@ -101,7 +101,7 @@ class Basic(unittest.TestCase):
         timeoutSecs = 30 + kwargs['ntree'] * 60 * (kwargs['parallel'] and 1 or 5)
 
         start = time.time()
-        rfv = h2o_cmd.runRFOnly(parseKey=parseKeyTrain,
+        rfv = h2o_cmd.runRFOnly(parseResult=parseResultTrain,
             timeoutSecs=timeoutSecs, retryDelaySecs=1, noPoll=True, **kwargs)
         print "rf job dispatch end on ", dataKeyTrain, 'took', time.time() - start, 'seconds'
         ### print "rf response:", h2o.dump_json(rfv)

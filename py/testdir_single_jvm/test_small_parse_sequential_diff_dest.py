@@ -29,7 +29,7 @@ class Basic(unittest.TestCase):
 			csvFilename = csvPathname + '/' + 'poker-hand-testing.data'
 			key = csvFilename + "_" + str(num_trials)
 			key2 = csvFilename + '.hex'
-			parseKey = h2o_cmd.parseFile(csvPathname=csvFilename, 
+			parseResult = h2o_cmd.parseFile(csvPathname=csvFilename, 
     			key=key, key2=key2, timeoutSecs=timeoutSecs, noPoll=noPoll,
     			doSummary=False)
 			num_trials += 1

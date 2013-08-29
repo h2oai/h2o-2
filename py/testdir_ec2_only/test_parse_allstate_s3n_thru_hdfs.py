@@ -60,14 +60,14 @@ class Basic(unittest.TestCase):
             # should be less on more nodes?
             timeoutSecs = 500
             start = time.time()
-            parseKey = h2o.nodes[0].parse(s3nKey, key2,
+            parseResult = h2o.nodes[0].parse(s3nKey, key2,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60, noise=('JStack', none))
             elapsed = time.time() - start
-            print s3nKey, 'h2o reported parse time:', parseKey['response']['time']
+            print s3nKey, 'h2o reported parse time:', parseResult['response']['time']
             print "parse end on ", s3nKey, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
-            print "parse result:", parseKey['destination_key']
+            print "parse result:", parseResult['destination_key']
 
             print "Deleting key in H2O so we get it from S3 (if ec2) or nfs again.", \
                   "Otherwise it would just parse the cached key."
