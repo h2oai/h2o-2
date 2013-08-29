@@ -1,4 +1,5 @@
 import h2o, h2o_cmd, re, os
+import getpass
 
 # hdfs/maprfs/s3/s3n paths should be absolute from the bucket (top level)
 # so only walk around for local
@@ -44,13 +45,17 @@ def find_folder_and_filename(bucket, pathWithRegex):
         # Otherwise the remote path needs to match the local discovered path.
 
         # want to check the username being used remotely first. should exist here too if going to use
-        possibleUsers = ["~"]
-        h2o.verboseprint("h2o.nodes[0].username:", h2o.nodes[0].username)
-        if h2o.nodes[0].username:
-            possibleUsers.insert(0, "~" + h2o.nodes[0].username)
+        username = getpass.getuser()
+        h2oUsername = h2o.nodes[0].username
+        h2o.verboseprint("username:", username, "h2oUsername:", h2oUsername)
+        # resolved in order, looking for bucket (ln -s will work) in these home dirs.
+        if h2oUsername != username:
+            possibleUsers = [username, h2oUsername, "0xdiag"]
+        else:
+            possibleUsers = [username, "0xdiag"]
 
         for u in possibleUsers:
-            rootPath = os.path.expanduser(u)
+            rootPath = os.path.expanduser("~" + u)
             bucketPath = os.path.join(rootPath, bucket)
             h2o.verboseprint("Checking bucketPath:", bucketPath, 'assuming home is', rootPath)
             if os.path.exists(bucketPath):
