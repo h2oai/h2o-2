@@ -118,7 +118,7 @@ public class GLMGrid extends Request {
     glmp._caseMode = _caseMode.valid()?_caseMode.value():CaseMode.none;
     glmp._caseVal = _case.valid()?_case.value():Double.NaN;
     Key dest = Key.make();
-    double [] ts = glmp._family == Family.binomial?_thresholds.value()._arr:null;
+    double [] ts = glmp._family._family == Family.binomial?_thresholds.value()._arr:null;
     hex.GLMGrid job = new hex.GLMGrid(dest,
                         _key.value(), // Hex data
                         glmp,

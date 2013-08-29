@@ -1,8 +1,8 @@
 package water.api;
 
 import hex.*;
-//import hex.NeuralNet.NeuralNetProgress;
-//import hex.NeuralNet.NeuralNetScore;
+import hex.NeuralNet.NeuralNetProgress;
+import hex.NeuralNet.NeuralNetScore;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -96,8 +96,8 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new hex.gbm.GBM()), "GBM2"         ,  "Beta (FluidVecs!)");
     Request.addToNavbar(registerRequest(new hex.LR2()), "Linear Regression2", "Beta (FluidVecs!)");
     //Request.addToNavbar(registerRequest(new water.api.Quantiles()), "Quantiles",    "Beta (FluidVecs!)");
-    //Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network", "Beta (FluidVecs!)");
-    //Request.addToNavbar(registerRequest(new NeuralNetScore()), "Neural Network Score", "Beta (FluidVecs!)");
+    Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network", "Beta (FluidVecs!)");
+    Request.addToNavbar(registerRequest(new NeuralNetScore()), "Neural Network Score", "Beta (FluidVecs!)");
 
     // internal handlers
     //registerRequest(new StaticHTMLPage("/h2o/CoefficientChart.html","chart"));
@@ -113,7 +113,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new PostFile());
     registerRequest(new Progress());
     registerRequest(new Progress2());
-    //registerRequest(new NeuralNetProgress());
+    registerRequest(new NeuralNetProgress());
     registerRequest(new PutValue());
     registerRequest(new PutVector());
     registerRequest(new Remove());
