@@ -1,5 +1,7 @@
 package water;
 
+import jsr166y.CountedCompleter;
+import water.DException.DistributedException;
 import water.H2O.H2OCountedCompleter;
 
 /** Objects which are passed & remotely executed.<p>
@@ -17,8 +19,49 @@ import water.H2O.H2OCountedCompleter;
  * <li>On the local vm, the {@link #onAck()} method will be executed.</li>
  * <li>On the remote, the {@link #onAckAck()} method will be executed.</li>
  * </ol>
+ *
  */
 public abstract class DTask<T extends DTask> extends H2OCountedCompleter implements Freezable {
+  // NOTE: DTask CAN NOT have any ICED members (FetchId is DTask, causes DEADLOCK in multinode environment)
+  // exception info, it must be unrolled here
+  private String _exception;
+  private String _msg;
+  private String _eFromNode; // Node where the exception originated
+  // stackTrace info
+  private int [] _lineNum;
+  private String [] _cls, _mth, _fname;
+
+  public void setException(Throwable ex){
+    _exception = ex.getClass().getName();
+    _msg = ex.getMessage();
+    _eFromNode = H2O.SELF.toString();
+    StackTraceElement[]  stk = ex.getStackTrace();
+    _lineNum = new int[stk.length];
+    _cls = new String[stk.length];
+    _mth = new String[stk.length];
+    _fname = new String[stk.length];
+    for(int i = 0; i < stk.length; ++i){
+      _lineNum[i] = stk[i].getLineNumber();
+      _cls[i] = stk[i].getClassName();
+      _mth[i] = stk[i].getMethodName();
+      _fname[i] = stk[i].getFileName();
+    }
+  }
+
+  public boolean hasException(){
+    return _exception != null;
+  }
+
+  public RuntimeException getDException() {
+    if(!hasException())return null;
+    StackTraceElement [] stk = new StackTraceElement[_cls.length];
+    for(int i = 0; i < _cls.length; ++i)
+      stk[i] = new StackTraceElement(_cls[i],_mth[i], _fname[i], _lineNum[i]);
+    DistributedException dex = new DistributedException("DistributedException("  + _exception + ") from " + _eFromNode + ": " +  _msg, null);
+    dex.setStackTrace(stk);
+    return dex;
+  }
+
   // Track if the reply came via TCP - which means a timeout on ACKing the TCP
   // result does NOT need to get the entire result again, just that the client
   // needs more time to process the TCP result.
@@ -44,22 +87,51 @@ public abstract class DTask<T extends DTask> extends H2OCountedCompleter impleme
    *  will swamp all other logging output. */
   public boolean logVerbose() { return true; }
 
-  // The abstract methods to be filled in by subclasses.  These are automatically
-  // filled in by any subclass of DTask during class-load-time, unless one
-  // is already defined.  These methods are NOT DECLARED ABSTRACT, because javac
-  // thinks they will be called by subclasses relying on the auto-gen.
-  private RuntimeException barf() {
-    return new RuntimeException(getClass().toString()+" should be automatically overridden in the subclass by the auto-serialization code");
+  // the exception should be forwarded and handled later, do not do anything here (mask stack trace printing of H2OCountedCompleter)
+  public boolean onExceptionalCompletion( Throwable ex, CountedCompleter caller ) {
+    return true;
   }
-  @Override public AutoBuffer write(AutoBuffer bb) { throw barf(); }
-  @Override public <F extends Freezable> F read(AutoBuffer bb) { throw barf(); }
-  @Override public <F extends Freezable> F newInstance() { throw barf(); }
-  @Override public int frozenType() { throw barf(); }
-  @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { throw barf(); }
+
+  @Override public AutoBuffer write(AutoBuffer bb) {
+    return
+        bb
+        .putStr(_exception)
+        .putStr(_msg)
+        .putStr(_eFromNode)
+        .putA4(_lineNum)
+        .putAStr(_fname)
+        .putAStr(_cls)
+        .putAStr(_mth);
+  }
+  @Override public <F extends Freezable> F read(AutoBuffer bb) {
+    _exception = bb.getStr();
+    _msg       = bb.getStr();
+    _eFromNode = bb.getStr();
+    _lineNum   = bb.getA4();
+    _fname     = bb.getAStr();
+    _cls       = bb.getAStr();
+    _mth       = bb.getAStr();
+    return (F)this;
+  }
+  @Override public <F extends Freezable> F newInstance() { throw barf("newInstance"); }
+  @Override public int frozenType() {throw barf("frozeType");}
+  @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { return bb; }
   @Override public water.api.DocGen.FieldDoc[] toDocField() { return null; }
-  public void copyOver(T that) { throw barf(); }
+  public void copyOver(T that) {
+    that._exception = _exception;
+    that._msg = _msg;
+    that._eFromNode = _eFromNode;
+    that._lineNum = _lineNum;
+    that._fname = _fname;
+    that._cls = _cls;
+    that._mth = _mth;
+  }
   @Override public DTask clone() {
     try { return (DTask)super.clone(); }
     catch( CloneNotSupportedException e ) { throw water.util.Log.errRTExcept(e); }
   }
+  private RuntimeException barf(String method) {
+    return new RuntimeException(H2O.SELF + ":" + getClass().toString()+ " " + method +  " should be automatically overridden in the subclass by the auto-serialization code");
+  }
+
 }

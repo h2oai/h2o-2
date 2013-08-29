@@ -283,31 +283,6 @@ def wait_for_live_port(ip, port, retries=3):
         raise Exception("[h2o_cmd] Error waiting for {0}:{1} {2}times...".format(ip,port,retries))
 
 
-# looks for the key that matches the pattern, in the keys you saved from the 
-# import (that you saved from import of the folder/s3/hdfs)
-# I guess I should change to just be the raw result of the import? not sure
-# see how it's used in tests named above
-def deleteCsvKey(csvFilename, importFullList):
-    # remove the original data key
-    # the list could be from hdfs/s3 or local. They have to different list structures
-    if 'succeeded' in importFullList:
-        kDict = importFullList['succeeded']
-        for k in kDict:
-            key = k['key']
-            if csvFilename in key:
-                print "\nRemoving", key
-                removeKeyResult = h2o.nodes[0].remove_key(key=key)
-    elif 'keys' in importFullList:
-        kDict = importFullList['keys']
-        for k in kDict:
-            key = k
-            if csvFilename in key:
-                print "\nRemoving", key
-                removeKeyResult = h2o.nodes[0].remove_key(key=key)
-    else:
-        raise Exception ("Can't find 'files' or 'succeeded' in your file dict. why? not from hdfs/s3 or local?")
-
-
 # checks the key distribution in the cloud, and prints warning if delta against avg
 # is > expected
 def checkKeyDistribution():

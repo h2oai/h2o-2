@@ -125,7 +125,7 @@ class Basic(unittest.TestCase):
             (100, 1000000, 'cO', 30, 120),
             ]
         
-        for (rowCount, colCount, key2, timeoutSecs, timeoutSecs2) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs, timeoutSecs2) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
             sel = 0
             csvFilename = "syn_%s_%s_%s_%s.csv" % (SEEDPERFILE, sel, rowCount, colCount)
@@ -136,7 +136,7 @@ class Basic(unittest.TestCase):
 
             start = time.time()
             print csvFilename, "parse starting"
-            parseResult = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=timeoutSecs, doSummary=True)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=timeoutSecs, doSummary=True)
             h2o.check_sandbox_for_errors()
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse and summary:", parseResult['destination_key'], "took", time.time() - start, "seconds"

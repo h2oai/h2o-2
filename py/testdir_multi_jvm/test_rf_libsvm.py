@@ -2,7 +2,7 @@ import unittest
 import random, sys, time, os
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_kmeans
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -20,13 +20,10 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        # wait while I inspect things
-        # time.sleep(1500)
         h2o.tear_down_cloud()
 
     def test_parse_bounds_libsvm(self):
         # just do the import folder once
-        importFolderPath = "/home/0xdiag/datasets/libsvm"
 
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
@@ -55,15 +52,13 @@ class Basic(unittest.TestCase):
         lenNodes = len(h2o.nodes)
 
         firstDone = False
-        for (csvFilename, key2, timeoutSecs, resultMult) in csvFilenameList:
+        for (csvFilename, hex_key, timeoutSecs, resultMult) in csvFilenameList:
             # have to import each time, because h2o deletes source after parse
-            h2i.setupImportFolder(None, importFolderPath)
-            csvPathname = importFolderPath + "/" + csvFilename
+            bucket = "home-0xdiag-datasets"
+            csvPathname = "libsvm/" + csvFilename
 
             # PARSE******************************************
-            # creates csvFilename.hex from file in importFolder dir 
-            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
-                key2=key2, timeoutSecs=2000)
+            parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, hex_key=hex_key, timeoutSecs=2000)
             print csvPathname, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
@@ -85,7 +80,6 @@ class Basic(unittest.TestCase):
             elapsed = time.time() - start
             print "rf end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
-
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_kmeans, h2o_hosts
+import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -22,8 +22,7 @@ class Basic(unittest.TestCase):
     def test_B_kmeans_benign(self):
         csvFilename = "benign.csv"
         print "\nStarting", csvFilename
-        csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
-        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+        parseResult = h2i.import_parse(bucket='smalldata', path='logreg/'+csvFilename, schema='put', hex_key=csvFilename+".hex")
 
         expected = [
             ([24.538961038961038, 2.772727272727273, 46.89032467532467, 0.1266233766233766, 12.012142857142857, 1.0105194805194804, 1.5222727272727272, 22.26039690646432, 12.582467532467534, 0.5275062016635049, 2.9477601050634767, 162.52136363636365, 41.94558441558441, 1.661883116883117], 77, 46889.32010560476) ,
@@ -41,15 +40,14 @@ class Basic(unittest.TestCase):
                 'seed': 265211114317615310}
 
             kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, timeoutSecs=5, **kwargs)
-            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
+            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvFilename, parseResult, 'd', **kwargs)
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
 
 
     def test_C_kmeans_prostate(self):
         csvFilename = "prostate.csv"
         print "\nStarting", csvFilename
-        csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
-        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+        parseResult = h2i.import_parse(bucket='smalldata', path='logreg/'+csvFilename, schema='put', hex_key=csvFilename+".hex")
 
         # loop, to see if we get same centers
         expected = [
@@ -66,7 +64,7 @@ class Basic(unittest.TestCase):
                 'seed': 265211114317615310}
 
             kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, timeoutSecs=5, **kwargs)
-            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
+            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvFilename, parseResult, 'd', **kwargs)
 
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
 

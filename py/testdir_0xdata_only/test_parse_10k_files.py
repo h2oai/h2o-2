@@ -1,6 +1,6 @@
 import unittest, time, sys, time, random, logging, gzip, os
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_glm
+import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_hosts, h2o_glm
 import h2o_exec as h2e, h2o_jobs
 import h2o, h2o_cmd
 import h2o_browse as h2b
@@ -87,10 +87,13 @@ class Basic(unittest.TestCase):
             h2o.nodes[0].redirect_import_folder_to_s3n_path = False
 
             for trial in range(trialMax):
-                importFolderResult = h2i.setupImportFolder(None, importFolderPath)
-                importFullList = importFolderResult['files']
+                # nice to have the list of what got imported, so we delete "just that" down below
+                # doing this just so we can see what we import
+                (importResult, importPattern) = h2i.import_only(path=importFolderPath+"/*")
+
+                importFullList = importResult['files']
                 print "importFullList:", importFullList
-                importFailList = importFolderResult['fails']
+                importFailList = importResult['fails']
                 print "importFailList:", importFailList
                 print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
 
@@ -98,8 +101,8 @@ class Basic(unittest.TestCase):
                 h2o.cloudPerfH2O.message("")
                 h2o.cloudPerfH2O.message("Parse " + csvFilename + " Start--------------------------------")
                 start = time.time()
-                parseResult = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
-                    key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
+                parseResult = h2i.import_parse(path=importFolderPath+"/*",
+                    hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                     retryDelaySecs=retryDelaySecs,
                     pollTimeoutSecs=pollTimeoutSecs,
                     noPoll=noPoll,
@@ -155,7 +158,7 @@ class Basic(unittest.TestCase):
                 #**********************************************************************************
 
                 h2o_cmd.checkKeyDistribution()
-                h2o_cmd.deleteCsvKey(csvFilename, importFolderResult)
+                h2i.delete_keys_from_import_result(pattern=csvFilename, importResult=importResult)
 
                 h2o.tear_down_cloud()
                 if not localhost:
