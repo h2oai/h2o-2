@@ -39,7 +39,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
     
-    def test_commented_header(self):
+    def test_parse_commented_header(self):
         print "If header=1, and the first char of first line is #, the # should be removed/ignored" + \
             "and the line parsed normally as a header"
         SYNDATASETS_DIR = h2o.make_syn_dir()
@@ -87,7 +87,7 @@ class Basic(unittest.TestCase):
 
             # use regex. the only files in the dir will be the ones we just created with  *fileN* match
             start = time.time()
-            parseResult = h2i.import_parse(path=SYNDATASETS_DIR + '/*'+rowxcol+'*', schema='put',
+            parseResult = h2i.import_parse(path=SYNDATASETS_DIR + '/*'+rowxcol+'*', 
                 hex_key=hex_key, header=1, timeoutSecs=timeoutSecs)
             print "parseResult['destination_key']: " + parseResult['destination_key']
             print 'parse time:', parseResult['response']['time']
