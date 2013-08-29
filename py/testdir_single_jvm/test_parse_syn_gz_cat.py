@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e, h2o_util
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_exec as h2e, h2o_util
 
 print "Create csv with lots of same data (95% 0?), so gz will have high compression ratio"
 print "Cat a bunch of them together, to get an effective large blow up inside h2o"
@@ -54,7 +54,7 @@ class Basic(unittest.TestCase):
         FILEREPL = 200
         DOSUMMARY = True
         # h2b.browseTheCloud()
-        for (rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
 
             csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
@@ -82,7 +82,8 @@ class Basic(unittest.TestCase):
 
             start = time.time()
             print "Parse start:", csvPathnameReplgz
-            parseResult = h2o_cmd.parseFile(None, csvPathnameReplgz, key2=key2, timeoutSecs=timeoutSecs, doSummary=DOSUMMARY)
+            parseResult = h2i.import_parse(path=csvPathnameReplgz, schema='put', hex_key=hex_key, 
+                timeoutSecs=timeoutSecs, doSummary=DOSUMMARY)
             print csvFilenameReplgz, 'parse time:', parseResult['response']['time']
             if DOSUMMARY:
                 algo = "Parse and Summary:"

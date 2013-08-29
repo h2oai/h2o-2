@@ -169,7 +169,7 @@ function build_javadoc() {
     echo "creating javadoc files..."
     local CLASSPATH="${JAR_ROOT}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/*"
     mkdir -p target/logs
-    "${JAVADOC}" -classpath "${CLASSPATH}" -d "${OUTDIR}"/javadoc -sourcepath "${SRC}" -subpackages hex:water >& target/logs/javadoc_build.log
+    "${JAVADOC}" -overview ${SRC}/overview.html -classpath "${CLASSPATH}" -d "${OUTDIR}"/javadoc -sourcepath "${SRC}" -subpackages hex:water >& target/logs/javadoc_build.log
 }
 
 function build_package() {
@@ -182,6 +182,10 @@ function junit() {
     "$JAVA" -ea -cp ${JAR_FILE} water.Boot -mainClass water.JUnitRunner
 }
 
+if [ "$1" = "onlydoc" ]; then
+    build_javadoc
+    exit 0
+fi
 if [ "$1" = "noclean" ]; then
     shift
 else

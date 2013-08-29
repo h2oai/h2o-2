@@ -17,7 +17,7 @@ import h2o, h2o_cmd, h2o_glm, h2o_util, h2o_hosts, h2o_import2 as h2i
 def glm_doit(self, csvFilename, bucket, csvPathname, timeoutSecs, pollTimeoutSecs, **kwargs):
     print "\nStarting GLM of", csvFilename
     hex_key = csvFilename + ".hex"
-    parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, hex_key=hex_key,
+    parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=hex_key,
         timeoutSecs=60, pollTimeoutSecs=pollTimeoutSecs)
 
     start = time.time()
@@ -37,7 +37,7 @@ def glm_score(self, csvFilename, bucket, csvPathname, modelKey, thresholds="0.5"
     timeoutSecs=30, pollTimeoutSecs=30):
     print "\nStarting GLM score of", csvFilename
     hex_key = csvFilename + ".hex"
-    parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, hex_key=hex_key, 
+    parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=hex_key, 
         timeoutSecs=timeoutSecs, pollTimeoutSecs=pollTimeoutSecs)
     y = "10"
     x = ""

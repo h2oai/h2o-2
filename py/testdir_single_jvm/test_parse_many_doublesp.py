@@ -1,6 +1,6 @@
 import unittest, re, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -209,8 +209,8 @@ class Basic(unittest.TestCase):
                         str(sepCase) + \
                         '.data'
                     self.writeRows(csvPathname,newRows2,eol)
-                    h2o_cmd.runRF(trees=1, csvPathname=csvPathname,
-                        timeoutSecs=30, retryDelaySecs=0.1)
+                    parseResult = h2i.import_parse(path=csvPathname, schema='put')
+                    h2o_cmd.runRFOnly(parseResult=parseResult, trees=1, timeoutSecs=30, retryDelaySecs=0.1)
                     h2o.verboseprint("Set", set)
                     sys.stdout.write('.')
                     sys.stdout.flush()

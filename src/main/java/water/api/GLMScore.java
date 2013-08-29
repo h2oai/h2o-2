@@ -29,7 +29,7 @@ public class GLMScore extends Request {
   protected void queryArgumentValueSet(water.api.RequestArguments.Argument arg, java.util.Properties inputArgs) {
     if(arg == _modelKey && _modelKey.specified()){
       GLMModel m = _modelKey.value();
-      if(m._glmParams._family == Family.binomial){
+      if(m._glmParams._family._family == Family.binomial){
         _thresholds._hideInQuery = false;
       }else{
         _thresholds.disable("only for binomial");

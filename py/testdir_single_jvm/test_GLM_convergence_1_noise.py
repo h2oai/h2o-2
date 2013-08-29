@@ -1,7 +1,7 @@
 import unittest, random, sys, time, re
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_import2 as h2i
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     # FIX! all this fanciness shouldn't be needed. GLM shouldn't be able to learn
@@ -77,7 +77,7 @@ class Basic(unittest.TestCase):
         lenNodes = len(h2o.nodes)
 
         USEKNOWNFAILURE = False
-        for (rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
             csvFilename = 'syn_%s_%sx%s.csv' % (SEEDPERFILE,rowCount,colCount)
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
@@ -86,9 +86,9 @@ class Basic(unittest.TestCase):
 
             if USEKNOWNFAILURE:
                 csvFilename = 'failtoconverge_100x50.csv'
-                csvPathname = h2o.find_file('smalldata/logreg/' + csvFilename)
+                csvPathname = 'logreg/' + csvFilename
 
-            parseResult = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10)
+            parseResult = h2i.import_parse(path=csvPathname, hex_key=hex_key, timeoutSecs=10, schema='put')
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])

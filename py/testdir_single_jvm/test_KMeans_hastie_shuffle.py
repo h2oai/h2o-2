@@ -15,14 +15,13 @@
 # y.shape = (i,1)
 # Y = np.hstack((X,y))
 # np.savetxt('./1mx' + str(f) + '_hastie_10_2.data', Y, delimiter=',', fmt='%.2f');
-
 import unittest, time, sys, copy
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_kmeans, h2o_util, h2o_hosts
+import h2o, h2o_cmd, h2o_kmeans, h2o_util, h2o_hosts, h2o_import2 as h2i
 
-def kmeans_doit(self, csvFilename, csvPathname, num_rows, timeoutSecs=30):
+def kmeans_doit(self, csvFilename, bucket, csvPathname, num_rows, timeoutSecs=30):
     print "\nStarting KMeans of", csvFilename
-    parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", timeoutSecs=10)
+    parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=csvFilename + ".hex", timeoutSecs=10)
     # hastie has two values, 1 and -1.
     # we could not specify cols, but this is more fun
     cols = ",".join(map(str,range(11)))
@@ -91,8 +90,8 @@ class Basic(unittest.TestCase):
 
         # This test also adds file shuffling, to see that row order doesn't matter
         csvFilename = "1mx10_hastie_10_2.data.gz"
-        csvPathname = h2o.find_dataset('logreg' + '/' + csvFilename)
-        kmeans_doit(self, csvFilename, csvPathname, num_rows=1000000, timeoutSecs=60)
+        csvPathname = 'logreg' + '/' + csvFilename)
+        kmeans_doit(self, csvFilename, 'datasets', csvPathname, num_rows=1000000, timeoutSecs=60)
 
         filename1x = "hastie_1x.data"
         pathname1x = SYNDATASETS_DIR + '/' + filename1x
@@ -109,7 +108,7 @@ class Basic(unittest.TestCase):
         filename2xShuf = "hastie_2x.data_shuf"
         pathname2xShuf = SYNDATASETS_DIR + '/' + filename2xShuf
         h2o_util.file_shuffle(pathname2x, pathname2xShuf)
-        kmeans_doit(self, filename2xShuf, pathname2xShuf, num_rows=2000000, timeoutSecs=90)
+        kmeans_doit(self, filename2xShuf, None, pathname2xShuf, num_rows=2000000, timeoutSecs=90)
 
         # too big to shuffle?
         filename4x = "hastie_4x.data"

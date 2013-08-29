@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_glm
 
 def write_syn_libsvm_dataset(csvPathname, rowCount, colCount, SEED):
     r1 = random.Random(SEED)
@@ -21,7 +21,6 @@ def write_syn_libsvm_dataset(csvPathname, rowCount, colCount, SEED):
         dsf.write(rowDataCsv + "\n")
 
     dsf.close()
-
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -55,16 +54,15 @@ class Basic(unittest.TestCase):
         ### h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
 
-        for (rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
-            # csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvFilename = 'syn_' + "binary" + "_" + str(rowCount) + 'x' + str(colCount) + '.svm'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
             print "Creating random libsvm:", csvPathname
             write_syn_libsvm_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
-            parseResult = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10)
+            parseResult = h2i.import_parse(path=csvPathname, hex_key=hex_key, schema='put', timeoutSecs=10)
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
@@ -83,10 +81,6 @@ class Basic(unittest.TestCase):
             glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
-
-            # if not h2o.browse_disable:
-            #     h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
-            #     time.sleep(5)
 
 
 if __name__ == '__main__':

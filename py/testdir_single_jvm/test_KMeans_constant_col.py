@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i
 import h2o_kmeans
 import h2o_exec as h2e
 
@@ -58,7 +58,7 @@ class Basic(unittest.TestCase):
         lenNodes = len(h2o.nodes)
 
         cnum = 0
-        for (rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             print "Generate synthetic dataset with first column constant = 0 and see what KMeans does"
             cnum += 1
             csvFilename = 'syn_' + str(SEED) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
@@ -66,7 +66,7 @@ class Basic(unittest.TestCase):
 
             print "Creating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, SEED)
-            parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=csvFilename + ".hex")
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             kwargs = {'k': 2, 'initialization': 'Furthest', 'cols': None, 'destination_key': 'benign_k.hex'}

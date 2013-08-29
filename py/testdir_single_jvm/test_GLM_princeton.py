@@ -1,7 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-
-import h2o, h2o_cmd, h2o_glm, h2o_util, h2o_hosts
+import h2o, h2o_cmd, h2o_glm, h2o_util, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -34,13 +33,15 @@ class Basic(unittest.TestCase):
 
         trial = 0
         for (csvFilename, family, y, timeoutSecs) in csvFilenameList:
-            csvPathname1 = h2o.find_file("smalldata/logreg/princeton/" + csvFilename)
+            csvPathname1 = 'logreg/princeton/' + csvFilename)
+            (folderPath, filename) = h2i.find_folder_and_filename('smalldata', csvPathname1)
             csvPathname2 = SYNDATASETS_DIR + '/' + csvFilename + '_stripped.csv'
-            h2o_util.file_strip_trailing_spaces(csvPathname1, csvPathname2)
+            h2o_util.file_strip_trailing_spaces(folderPath + "/" + filename, csvPathname2)
 
             kwargs = {'n_folds': 0, 'family': family, 'link': 'familyDefault', 'y': y}
+            parseResult = h2i.import_parse(path=csvPathname2, schema='put', timeoutSecs=timeoutSecs, **kwargs)
             start = time.time()
-            glm = h2o_cmd.runGLM(csvPathname=csvPathname2, key=csvFilename, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             print "glm end (w/check) on ", csvPathname2, 'took', time.time() - start, 'seconds'
             trial += 1

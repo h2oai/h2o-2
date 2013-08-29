@@ -1,7 +1,7 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec, h2o_glm
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i, h2o_exec, h2o_glm
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -21,15 +21,13 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM_covtype_train(self):
-        print "\nMichal will hate me for another file needed: covtype.shuffled.data"
-        importFolderPath = "/home/0xdiag/datasets/standard"
+        importFolderPath = "standard"
         csvFilename = 'covtype.shuffled.data'
         csvPathname = importFolderPath + "/" + csvFilename
-        key2 = csvFilename + ".hex"
-        h2i.setupImportFolder(None, importFolderPath)
+        hex_key = csvFilename + ".hex"
 
         print "\nUsing header=0 on the normal covtype.data"
-        parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2,
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', hex_key=hex_key,
             header=0, timeoutSecs=180)
 
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
@@ -52,7 +50,7 @@ class Basic(unittest.TestCase):
         dataKeyTest = "rTest"
         # start at 90% rows + 1
         
-        execExpr = dataKeyTest + " = slice(" + key2 + "," + str(rowsForPct[9]+1) + ")"
+        execExpr = dataKeyTest + " = slice(" + hex_key + "," + str(rowsForPct[9]+1) + ")"
         h2o_exec.exec_expr(None, execExpr, resultKey=dataKeyTest, timeoutSecs=10)
 
         kwargs = {
@@ -72,7 +70,7 @@ class Basic(unittest.TestCase):
             # always slice from the beginning
             rowsToUse = rowsForPct[trial%10] 
             resultKey = "r" + str(trial)
-            execExpr = resultKey + " = slice(" + key2 + ",1," + str(rowsToUse) + ")"
+            execExpr = resultKey + " = slice(" + hex_key + ",1," + str(rowsToUse) + ")"
             h2o_exec.exec_expr(None, execExpr, resultKey=resultKey, timeoutSecs=10)
             parseResult['destination_key'] = resultKey
             # adjust timeoutSecs with the number of trees

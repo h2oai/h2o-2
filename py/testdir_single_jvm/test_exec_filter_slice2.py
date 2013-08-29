@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_exec as h2e
 
 exprList = [
     # "rTest=randomFilter(<keyX>,58101,12345)",
@@ -29,9 +29,9 @@ class Basic(unittest.TestCase):
     def test_exec_filter_slice2(self):
         timeoutSecs = 10
         csvFilename = "covtype.data"
-        csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
-        key2 = "c"
-        parseResult = h2o_cmd.parseFile(None, csvPathname, 'covtype.data', 'c', 10)
+        csvPathname = 'UCI/UCI-large/covtype/covtype.data'
+
+        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', hex_key='c', timeoutSecs=10)
         print csvFilename, 'parse time:', parseResult['response']['time']
         print "Parse result['desination_key']:", parseResult['destination_key']
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])

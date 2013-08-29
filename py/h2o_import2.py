@@ -1,4 +1,5 @@
 import h2o, h2o_cmd, re, os
+import getpass
 
 # hdfs/maprfs/s3/s3n paths should be absolute from the bucket (top level)
 # so only walk around for local
@@ -16,7 +17,8 @@ def find_folder_and_filename(bucket, pathWithRegex):
         bucketPath = os.getcwd()
 
     # only use if the build_cloud was for remote H2O
-    elif h2o.nodes[0].remoteH2O and os.environ.get('H2O_REMOTE_BUCKETS_ROOT'):
+    # Never use the var for remote, if you're doing a put! (which always sources local)
+    elif h2o.nodes[0].remoteH2O and schema!='put' and os.environ.get('H2O_REMOTE_BUCKETS_ROOT'):
         # we may use this to force remote paths, so don't look locally for file
         rootPath = os.environ.get('H2O_REMOTE_BUCKETS_ROOT')
         bucketPath = os.path.join(rootPath, bucket)
@@ -43,13 +45,17 @@ def find_folder_and_filename(bucket, pathWithRegex):
         # Otherwise the remote path needs to match the local discovered path.
 
         # want to check the username being used remotely first. should exist here too if going to use
-        possibleUsers = ["~"]
-        h2o.verboseprint("h2o.nodes[0].username:", h2o.nodes[0].username)
-        if h2o.nodes[0].username:
-            possibleUsers.insert(0, "~" + h2o.nodes[0].username)
+        username = getpass.getuser()
+        h2oUsername = h2o.nodes[0].username
+        h2o.verboseprint("username:", username, "h2oUsername:", h2oUsername)
+        # resolved in order, looking for bucket (ln -s will work) in these home dirs.
+        if h2oUsername != username:
+            possibleUsers = [username, h2oUsername, "0xdiag"]
+        else:
+            possibleUsers = [username, "0xdiag"]
 
         for u in possibleUsers:
-            rootPath = os.path.expanduser(u)
+            rootPath = os.path.expanduser("~" + u)
             bucketPath = os.path.join(rootPath, bucket)
             h2o.verboseprint("Checking bucketPath:", bucketPath, 'assuming home is', rootPath)
             if os.path.exists(bucketPath):
@@ -104,6 +110,9 @@ def import_only(node=None, schema='local', bucket=None, path=None,
 
     # no bucket is sometimes legal (fixed path)
     if not node: node = h2o.nodes[0]
+
+    if path is None:
+        raise Exception("import_only: path parameter needs to be specified")
 
     if "/" in path:
         (head, pattern) = os.path.split(path)

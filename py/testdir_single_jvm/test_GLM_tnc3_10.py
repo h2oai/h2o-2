@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import2 as h2i
 import h2o_browse as h2b
 import h2o_exec as h2e
 
@@ -39,12 +39,11 @@ class Basic(unittest.TestCase):
 
     def test_GLM_tnc3_10(self):
         csvFilename = 'tnc3_10.csv'
-        csvPathname = h2o.find_file('smalldata/' + csvFilename)
-        print "\n" + csvPathname
-        key2 = "tnc3.hex"
+        print "\n" + csvFilename
+        hex_key = "tnc3.hex"
         h2b.browseTheCloud()
 
-        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, timeoutSecs=10)
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvFilename, schema='put', hex_key=hex_key, timeoutSecs=10)
         print "Parse result['Key']:", parseResult['destination_key']
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
@@ -52,7 +51,7 @@ class Basic(unittest.TestCase):
 
         if (1==0):
             lenNodes = len(h2o.nodes)
-            colResultList = h2e.exec_expr_list_across_cols(lenNodes, numExprList, key2, maxCol=10,
+            colResultList = h2e.exec_expr_list_across_cols(lenNodes, numExprList, hex_key, maxCol=10,
                 incrementingResult=False, timeoutSecs=10)
             print "\ncolResultList after num swap", colResultList
 
@@ -65,7 +64,7 @@ class Basic(unittest.TestCase):
             # so if we Exec, it's correct.
             glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=300, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
-            print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
+            print "glm end on ", csvFilename, 'took', time.time() - start, 'seconds'
 
 
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
@@ -75,7 +74,7 @@ class Basic(unittest.TestCase):
 
         #******************
         if (1==0):
-            colResultList = h2e.exec_expr_list_across_cols(lenNodes, charExprList, key2, maxCol=10,
+            colResultList = h2e.exec_expr_list_across_cols(lenNodes, charExprList, hex_key, maxCol=10,
                 incrementingResult=False, timeoutSecs=10)
             print "\ncolResultList after char swap", colResultList
 
@@ -84,7 +83,7 @@ class Basic(unittest.TestCase):
             kwargs = {'y': 13, 'n_folds': 6}
             glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=300, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
-            print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
+            print "glm end on ", csvFilename, 'took', time.time() - start, 'seconds'
 
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")

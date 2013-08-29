@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -22,11 +22,12 @@ class Basic(unittest.TestCase):
         modelKeyDict = {}
         for trial in range (1,5):
             if trial == 1:
-                csvPathname = h2o.find_file('smalldata/iris/iris.csv')
+                csvPathname = 'iris/iris.csv'
             else:
-                csvPathname = h2o.find_file('smalldata/iris/iris2.csv')
+                csvPathname = 'iris/iris2.csv'
             start = time.time()
-            rfResult = h2o_cmd.runRF(trees=6, timeoutSecs=10, rfView=False, csvPathname=csvPathname)
+            h2i.import_parse(bucket='smalldata', path='csvPathname', schema='put')
+            rfResult = h2o_cmd.runRFOnly(parseResult=parseResult, trees=6, timeoutSecs=10, rfView=False)
             print "RF #%d" % trial,  "started on ", csvPathname, 'took', time.time() - start, 'seconds'
             model_key = rfResult['model_key']
             print "model_key:", model_key

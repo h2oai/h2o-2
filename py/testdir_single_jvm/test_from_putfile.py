@@ -1,8 +1,7 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 import h2o_browse as h2b
-import h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -38,14 +37,7 @@ class Basic(unittest.TestCase):
         for (csvFilename, datasetPath, trees) in csvFilenameList:
             csvPathname = h2o.find_dataset(datasetPath)
 
-            # creates csvFilename and csvFilename.hex  keys
-            node = h2o.nodes[0]
-            key = node.put_file(csvPathname, key=csvFilename, timeoutSecs=timeoutSecs)
-            # not using parseFile...used to be a bug if we inspect the file we just put
-            # so we test that
-            inspect1 = h2o_cmd.runInspect(key=csvFilename)
-
-            parseResult = node.parse(key, timeoutSecs=500)
+            parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, timeoutSecs=500, schema='put')
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
             # We should be able to see the parse result?

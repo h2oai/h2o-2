@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -25,8 +25,8 @@ class Basic(unittest.TestCase):
 
         print "\nStarting benign.csv"
         csvFilename = "benign.csv"
-        csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
-        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+        csvPathname = 'logreg' + '/' + csvFilename
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
         # columns start at 0
         y = "3"
         # cols 0-13. 3 is output
@@ -55,8 +55,8 @@ class Basic(unittest.TestCase):
         y = "1"
         x = ""
         csvFilename = "prostate.csv"
-        csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
-        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+        csvPathname = 'logreg' + '/' + csvFilename)
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
 
         for maxx in range(2,6):
             x = range(maxx)
