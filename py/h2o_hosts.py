@@ -28,7 +28,6 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
     allParamsDefault = {
         'use_flatfile': None,
         'use_hdfs': True, # default to true, so when we flip import folder to hdfs+s3n import on ec2, the cloud is built correctly
-        'hadoop': False,
         'hdfs_name_node': None, 
         'hdfs_config': None,
         'hdfs_version': None,
@@ -57,6 +56,7 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
         'redirect_import_folder_to_s3n_path': None,
         'disable_h2o_log': False,
         'enable_benchmark_log': False,
+        'fake_cloud': False,
     }
     # initialize the default values
     paramsToUse = {}
@@ -120,7 +120,7 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
         rand_shuffle=paramsToUse['rand_shuffle']
         )
 
-    if not paramsToUse['hadoop'] and hosts is not None:
+    if not paramsToUse['fake_cloud'] and hosts is not None:
         # this uploads the flatfile too
         h2o.upload_jar_to_remote_hosts(hosts, slow_connection=paramsToUse['slow_connection'])
         # timeout wants to be larger for large numbers of hosts * h2oPerHost
