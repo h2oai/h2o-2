@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import jsr166y.CountedCompleter;
 import jsr166y.ForkJoinPool;
+import water.DException.DistributedException;
 import water.H2O.FJWThr;
 import water.H2O.H2OCountedCompleter;
 import water.util.Log;
@@ -175,7 +176,11 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       throw Log.err(t);
     }
   }
-
+  private V result(){
+    Throwable t = _dt.getException();
+    if(t != null)throw  new RuntimeException(t);
+    return _dt;
+  }
   // Similar to FutureTask.get() but does not throw any exceptions.  Returns
   // null for canceled tasks, including those where the target dies.
   public V get() {
@@ -184,11 +189,11 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     int priority = (cThr instanceof FJWThr) ? ((FJWThr)cThr)._priority : 0;
     assert _dt.priority() > priority || (_dt.priority() == priority && (_dt instanceof DRemoteTask || _dt instanceof MRTask2))
       : "*** Attempting to block on task (" + _dt.getClass() + ") with equal or lower priority. Can lead to deadlock! " + _dt.priority() + " <=  " + priority;
-    if( _done ) return _dt; // Fast-path shortcut
+    if( _done ) return result(); // Fast-path shortcut
     // Use FJP ManagedBlock for this blocking-wait - so the FJP can spawn
     // another thread if needed.
     try { ForkJoinPool.managedBlock(this); } catch( InterruptedException e ) { }
-    if( _done ) return _dt; // Fast-path shortcut
+    if( _done ) return result(); // Fast-path shortcut
     assert isCancelled();
     return null;
   }
