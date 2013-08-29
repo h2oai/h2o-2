@@ -260,3 +260,30 @@ def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=30):
         totalDeletedCnt += deletedCnt
     print "\nTotal: Deleted", totalDeletedCnt, "keys at", len(h2o.nodes), "nodes"
     return totalDeletedCnt
+
+# Since we can't trust a single node storeview list, this will get keys that match text
+# for deleting, from a list saved from an import
+def delete_keys_from_import_result(node=None, pattern=None, importResult=None, timeoutSecs=30):
+    if not node: node = h2o.nodes[0]
+    # the list could be from hdfs/s3 or local. They have to different list structures
+    deletedCnt = 0
+    if 'succeeded' in importResult:
+        kDict = importResult['succeeded']
+        for k in kDict:
+            key = k['key']
+            if (pattern in key) or pattern is None:
+                print "\nRemoving", key
+                removeKeyResult = node.remove_key(key=key)
+                deletedCnt += 1
+    elif 'keys' in importResult:
+        kDict = importResult['keys']
+        for k in kDict:
+            key = k
+            if (pattern in key) or pattern is None:
+                print "\nRemoving", key
+                removeKeyResult = node.remove_key(key=key)
+                deletedCnt += 1
+    else:
+        raise Exception ("Can't find 'files' or 'succeeded' in your file dict. why? not from hdfs/s3 or local?")
+    print "Deleted", deletedCnt, "keys at", node
+    return deletedCnt
