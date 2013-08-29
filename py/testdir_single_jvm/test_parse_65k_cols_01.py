@@ -43,7 +43,7 @@ class Basic(unittest.TestCase):
             ]
 
         h2b.browseTheCloud()
-        for (rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
 
             csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
@@ -54,7 +54,8 @@ class Basic(unittest.TestCase):
 
             start = time.time()
             print "Summary should work with 65k"
-            parseResult = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=timeoutSecs, doSummary=True)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, 
+                timeoutSecs=timeoutSecs, doSummary=True)
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse and summary:", parseResult['destination_key'], "took", time.time() - start, "seconds"
 

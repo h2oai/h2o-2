@@ -1,6 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -20,8 +20,8 @@ class Basic(unittest.TestCase):
 
     def test_GLM_covtype_1(self):
         csvFilename = 'covtype.data'
-        csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/' + csvFilename)
-        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname,timeoutSecs=10)
+        csvPathname = 'UCI/UCI-large/covtype/' + csvFilename
+        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', timeoutSecs=10)
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\n" + csvPathname, \
             "    num_rows:", "{:,}".format(inspect['num_rows']), \

@@ -45,10 +45,10 @@ class Basic(unittest.TestCase):
             csvFilename = "p" + "_" + str(size)
             csvPathname = SYNDATASETS_DIR + "/" + csvFilename
             writeRows(csvPathname,row,eol,size)
-            key = csvFilename
+            src_key = csvFilename
             for trial in range(5):
-                key2 = csvFilename + "_" + str(trial) + ".hex"
-                parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2)
+                hex_key = csvFilename + "_" + str(trial) + ".hex"
+                parseResult = h2i.import_parse(path=csvPathname, schema='put', src_key=src_key, hex_key=hex_key)
 
                 sys.stdout.write('.')
                 sys.stdout.flush()

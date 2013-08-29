@@ -54,7 +54,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rf_params_rand2(self):
-        csvPathname = h2o.find_file('/home/0xdiag/datasets/ncaa/Players.csv')
+        csvPathname = 'ncaa/Players.csv'
         for trial in range(10):
             # params is mutable. This is default.
             params = {'ntree': 13, 'parallel': 1, 'features': 4}
@@ -64,8 +64,9 @@ class Basic(unittest.TestCase):
             # seems ec2 can be really slow
             timeoutSecs = 30 + ((kwargs['ntree']*20) * max(1,kwargs['features']/15) * (kwargs['parallel'] and 1 or 3))
 
+            h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put')
             start = time.time()
-            h2o_cmd.runRF(timeoutSecs=timeoutSecs, retryDelaySecs=1, csvPathname=csvPathname, **kwargs)
+            h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)
             elapsed = time.time()-start
             print "Trial #", trial, "completed in", elapsed, "seconds.", "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 

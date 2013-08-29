@@ -33,8 +33,8 @@ class Basic(unittest.TestCase):
         for csvFilename in csvFilenameAll:
             # creates csvFilename.hex from file in importFolder dir 
             hex_key = csvFilename + '.hex'
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', 
-                path="standard/" + csvFilename, hex_key=hex_key, timeoutSecs=500)
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path="standard/" + csvFilename, schema='put',
+                hex_key=hex_key, timeoutSecs=500)
             if not h2o.beta_features:
                 print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']

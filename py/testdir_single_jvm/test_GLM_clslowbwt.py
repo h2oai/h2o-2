@@ -1,7 +1,7 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_glm, h2o_hosts
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -29,13 +29,13 @@ class Basic(unittest.TestCase):
 
         trial = 0
         for (csvFilename, y, timeoutSecs) in csvFilenameList:
-            csvPathname = h2o.find_file("smalldata/logreg/umass_statdata/" + csvFilename)
-            print "\n" + csvPathname
+            print "\n" + csvFilename
             kwargs = {'n_folds': 0, 'family': 'binomial', 'link': 'familyDefault', 'y': y}
             start = time.time()
-            glm = h2o_cmd.runGLM(csvPathname=csvPathname, key=csvFilename, timeoutSecs=timeoutSecs, **kwargs)
+            parseResult = h2i.import_parse(bucket='smalldata', path='logreg/umass_statdata/' + csvFilename, schema='put')
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
-            print "glm end (w/check) on ", csvPathname, 'took', time.time() - start, 'seconds'
+            print "glm end (w/check) on ", csvFilename, 'took', time.time() - start, 'seconds'
             trial += 1
             print "\nTrial #", trial
 

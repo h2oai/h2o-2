@@ -2,7 +2,7 @@ import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_glm, h2o_hosts
-import h2o_browse as h2b, h2o_import as h2i
+import h2o_browse as h2b, h2o_import2 as h2i
 
 
 class Basic(unittest.TestCase):
@@ -36,14 +36,12 @@ class Basic(unittest.TestCase):
         # a browser window too, just because we can
         h2b.browseTheCloud()
 
-        importFolderPath = '/home/0xdiag/datasets/standard'
-        h2i.setupImportFolder(None, importFolderPath)
+        importFolderPath = 'standard'
         for csvFilename, timeoutSecs in csvFilenameList:
-            # creates csvFilename.hex from file in importFolder dir 
-            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
+            csvPathname = importFolderPath + "/" + csvFilename
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put',
                 timeoutSecs=2000, pollTimeoutSecs=60)
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
-            csvPathname = importFolderPath + "/" + csvFilename
             print "\n" + csvPathname, \
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \
                 "    num_cols:", "{:,}".format(inspect['num_cols'])

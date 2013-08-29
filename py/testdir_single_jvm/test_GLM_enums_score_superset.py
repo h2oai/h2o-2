@@ -1,7 +1,7 @@
 import unittest, random, sys, time, re
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_glm, h2o_util
 
 # use randChars for the random chars to use
 def random_enum(randChars, maxEnumSize):
@@ -63,7 +63,7 @@ class Basic(unittest.TestCase):
             (n, 6, 'cI', 300), 
             ]
 
-        for (rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             # using the comma is nice to ensure no craziness
             colSepHexString = '2c' # comma
             colSepChar = colSepHexString.decode('hex')
@@ -95,7 +95,7 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvScorePathname, enumListForScore, rowCount, colCount, SEEDPERFILE, 
                 colSepChar=colSepChar, rowSepChar=rowSepChar)
 
-            parseResult = h2o_cmd.parseFile(None, csvPathname, key2=key2, 
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key,
                 timeoutSecs=30, separator=colSepInt)
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
@@ -115,7 +115,7 @@ class Basic(unittest.TestCase):
             GLMModel = glm['GLMModel']
             modelKey = GLMModel['model_key']
 
-            parseResult = h2o_cmd.parseFile(None, csvScorePathname, key2="score_" + key2, 
+            parseResult = h2i.import_parse(path=csvScorePathname, schema='put', hex_key="score_" + hex_key, 
                 timeoutSecs=30, separator=colSepInt)
 
             start = time.time()

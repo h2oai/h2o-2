@@ -1,6 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2
 import h2o_browse as h2b
 
 # for test debug
@@ -70,7 +70,7 @@ class Basic(unittest.TestCase):
             ]
 
         trial = 0
-        for (fileNum, rowCount, colCount, key2, timeoutSecs, dataRowsWithHeader) in tryList:
+        for (fileNum, rowCount, colCount, hex_key, timeoutSecs, dataRowsWithHeader) in tryList:
             trial += 1
             # FIX! should we add a header to them randomly???
             print "Wait while", fileNum, "synthetic files are created in", SYNDATASETS_DIR
@@ -93,18 +93,21 @@ class Basic(unittest.TestCase):
                 totalDataRows += dataRowsDone
 
             # make sure all key names are unique, when we re-put and re-parse (h2o caching issues)
-            key = "syn_" + str(trial)
-            key2 = "syn_" + str(trial) + ".hex"
+            src_key = "syn_" + str(trial)
+            hex_key = "syn_" + str(trial) + ".hex"
 
             # DON"T get redirected to S3! (EC2 hack in config, remember!)
             # use it at the node level directly (because we gen'ed the files.
             # I suppose we could force the redirect state bits in h2o.nodes[0] to False, instead?:w
-            xs = h2o.nodes[0].import_files(SYNDATASETS_DIR)['keys']
-            header = [x for x in xs if 'header' in x][0]
+            h2i.import_only(path=SYNDATASETS_DIR + '/*')
+            header = h2i.find_key('syn_header')
+
             # use regex. the only files in the dir will be the ones we just created with  *fileN* match
             print "Header Key = " + header
             start = time.time()
-            parseResult = h2o.nodes[0].parse('*'+rowxcol+'*', key2=key2, timeoutSecs=timeoutSecs,header="1",header_from_file=header)
+            parseResult = h2i.import_parse(path=SYNDATASETS_DIR + '/*'+rowxcol+'*', schema='put',
+                src_key=src_key, hex_key=hex_key, timeoutSecs=timeoutSecs, header="1", header_from_file=header)
+
             print "parseResult['destination_key']: " + parseResult['destination_key']
             print 'parse time:', parseResult['response']['time']
 

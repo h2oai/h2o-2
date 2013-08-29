@@ -1,6 +1,6 @@
 import unittest, random, sys, time, math
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec as h2e, h2o_util
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i, h2o_exec as h2e, h2o_util
 
 print "Create csv with lots of same data (95% 0?), so gz will have high compression ratio"
 print "Cat a bunch of them together, to get an effective large blow up inside h2o"
@@ -37,7 +37,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
 
     dsf.close()
 
-def make_datasetgz_and_parse(SYNDATASETS_DIR, csvFilename, key2, rowCount, colCount, FILEREPL, SEEDPERFILE, timeoutSecs):
+def make_datasetgz_and_parse(SYNDATASETS_DIR, csvFilename, hex_key, rowCount, colCount, FILEREPL, SEEDPERFILE, timeoutSecs):
     csvPathname = SYNDATASETS_DIR + '/' + csvFilename
     print "Creating random", csvPathname
     write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
@@ -62,7 +62,8 @@ def make_datasetgz_and_parse(SYNDATASETS_DIR, csvFilename, key2, rowCount, colCo
     start = time.time()
     print "Parse start:", csvPathnameReplgz
     doSummary = False
-    parseResult = h2o_cmd.parseFile(None, csvPathnameReplgz, key2=key2, timeoutSecs=timeoutSecs, pollTimeoutSecs=120, doSummary=doSummary)
+    parseResult = h2i.import_parse(path=csvPathnameReplgz, schema='put', hex_key=hex_key, 
+        timeoutSecs=timeoutSecs, pollTimeoutSecs=120, doSummary=doSummary)
     print csvFilenameReplgz, 'parse time:', parseResult['response']['time']
     if doSummary:
         algo = "Parse and Summary:"
@@ -143,13 +144,13 @@ class Basic(unittest.TestCase):
 
 
         trial = 0
-        for (FILEREPL, rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (FILEREPL, rowCount, colCount, hex_key, timeoutSecs) in tryList:
             trial += 1
 
             SEEDPERFILE = random.randint(0, sys.maxint)
             csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
-            parseResult = make_datasetgz_and_parse(SYNDATASETS_DIR, csvFilename, key2, rowCount, colCount, FILEREPL, SEEDPERFILE, timeoutSecs)
+            parseResult = make_datasetgz_and_parse(SYNDATASETS_DIR, csvFilename, hex_key, rowCount, colCount, FILEREPL, SEEDPERFILE, timeoutSecs)
 
             paramDict['response_variable'] = colCount - 1
             paramDict['features'] = 9

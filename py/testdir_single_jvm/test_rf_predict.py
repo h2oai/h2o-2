@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -22,14 +22,14 @@ class Basic(unittest.TestCase):
     def test_rf_predict(self):
         trees = 6
         timeoutSecs = 20
-        h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
+        hex_key = 'iris2.csv.hex'
+        parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put', hex_key=hex_key)
         h2o_cmd.runRFOnly(parseResult=parseResult, trees=trees, model_key="iris_rf_model", timeoutSecs=timeoutSecs)
         print "\Use H2O GeneratePredictionsPage with a H2O generated model and the same data key. Inspect/Summary result"
 
         start = time.time()
-        key2 = "iris2.csv.hex"
-        predict = h2o.nodes[0].generate_predictions(model_key="iris_rf_model", data_key=key2)
-        print "generate_predictions end on ",  key2, " took", time.time() - start, 'seconds'
+        predict = h2o.nodes[0].generate_predictions(model_key="iris_rf_model", data_key=hex_key)
+        print "generate_predictions end on ", hex_key, " took", time.time() - start, 'seconds'
 
         # print h2o.dump_json(predict)
         expectedCols = {

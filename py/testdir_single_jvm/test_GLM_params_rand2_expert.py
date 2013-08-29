@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_glm
+import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_import2 as h2i
 
 def define_params(): 
     paramDict = {
@@ -46,10 +46,9 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM_params_rand2_newargs(self):
-        # csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
-        csvPathname = h2o.find_file('smalldata/covtype/covtype.20k.data')
-        key = 'covtype.20k'
-        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key=key)
+        csvPathname = 'covtype/covtype.20k.data'
+        hex_key = 'covtype.20k.hex'
+        parseResult = h2o.import_parse(bucket='smalldata', path=csvPathname, hex_key=hex_key, schema='put')
         paramDict = define_params()
 
         for trial in range(50):

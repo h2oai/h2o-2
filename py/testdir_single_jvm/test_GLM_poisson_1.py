@@ -29,7 +29,6 @@ class Basic(unittest.TestCase):
 
         if (1==0):
             print "WARNING: just doing the first 33 features, for comparison to ??? numbers"
-            # pythonic!
             x = ",".join(map(str,range(33)))
         else:
             x = ""

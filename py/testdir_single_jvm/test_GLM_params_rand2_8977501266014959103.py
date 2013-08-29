@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_glm
+import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_import2 as h2i
 
 def define_params():
     paramDict = {
@@ -43,8 +43,8 @@ class Basic(unittest.TestCase):
 
     def test_GLM_params_rand2_8977501266014959103(self):
         # csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
-        csvPathname = h2o.find_file('smalldata/covtype/covtype.20k.data')
-        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname)
+        csvPathname = 'covtype/covtype.20k.data')
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
         paramDict = define_params()
         for trial in range(20):
             # params is mutable. This is default.

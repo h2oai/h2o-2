@@ -24,9 +24,9 @@ class Basic(unittest.TestCase):
 
         print "Sets h2o.beat_features like -bf at command line"
         print "this will redirect import and parse to the 2 variants"
-        h2o.beta_features = True # this will redirect import and parse to the 2 variants
+        h2o.beta_features = True
 
-        importFolderPath = '/home/0xdiag/datasets/standard'
+        importFolderPath = 'standard'
         timeoutSecs = 500
         csvFilenameAll = [
             "covtype.data",
@@ -41,7 +41,7 @@ class Basic(unittest.TestCase):
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
             (importResult, importPattern) = h2i.import_only(path=importFolderPath+"/"+csvFilename, timeoutSecs=50)
-            parseResult = h2i.import_parse(path=importFolderPath+"/"+csvFilename, timeoutSecs=500)
+            parseResult = h2i.import_parse(path=importFolderPath+"/"+csvFilename, schema='put', timeoutSecs=500)
             if not h2o.beta_features:
                 print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']

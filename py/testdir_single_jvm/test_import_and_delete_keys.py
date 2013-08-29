@@ -21,32 +21,20 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_from_import(self):
-        importFolderPath = '/home/0xdiag/datasets/standard'
+        importFolderPath = 'standard'
         timeoutSecs = 500
 
         csvFilenameAll = [
             "covtype.data",
             "covtype20x.data",
-            # "covtype200x.data",
-            # "100million_rows.csv",
-            # "200million_rows.csv",
-            # "a5m.csv",
-            # "a10m.csv",
-            # "a100m.csv",
-            # "a200m.csv",
-            # "a400m.csv",
-            # "a600m.csv",
-            # "billion_rows.csv.gz",
-            # "new-poker-hand.full.311M.txt.gz",
             ]
         # csvFilenameList = random.sample(csvFilenameAll,1)
         csvFilenameList = csvFilenameAll
         for trial in range(3):
             for csvFilename in csvFilenameList:
-                h2i.setupImportFolder(None, importFolderPath)
                 # creates csvFilename.hex from file in importFolder dir 
                 start = time.time()
-                parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=500)
+                parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvFilename, timeoutSecs=500)
                 elapsed = time.time() - start
                 print csvFilename, "parsed in", elapsed, "seconds.", "%d pct. of timeout" % ((elapsed*100)/timeoutSecs), "\n"
                 print csvFilename, 'H2O reports parse time:', parseResult['response']['time']

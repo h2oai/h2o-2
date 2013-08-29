@@ -16,7 +16,8 @@ def find_folder_and_filename(bucket, pathWithRegex):
         bucketPath = os.getcwd()
 
     # only use if the build_cloud was for remote H2O
-    elif h2o.nodes[0].remoteH2O and os.environ.get('H2O_REMOTE_BUCKETS_ROOT'):
+    # Never use the var for remote, if you're doing a put! (which always sources local)
+    elif h2o.nodes[0].remoteH2O and schema!='put' and os.environ.get('H2O_REMOTE_BUCKETS_ROOT'):
         # we may use this to force remote paths, so don't look locally for file
         rootPath = os.environ.get('H2O_REMOTE_BUCKETS_ROOT')
         bucketPath = os.path.join(rootPath, bucket)

@@ -1,7 +1,7 @@
 import unittest, sys
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -21,17 +21,16 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_tree_view_wrong_model(self):
-        csvFilename = "poker1000"
-        csvPathname = h2o.find_file('smalldata/poker/' + csvFilename)
+        csvPathname = 'poker/poker1000'
+        hex_key = csvPathname + ".hex"
         # tree view failed with poker1000, passed with iris
-        h2o_cmd.runRF(trees=1, csvPathname=csvPathname, key=csvFilename, 
-            model_key="model0", timeoutSecs=10)
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10)
+        h2o_cmd.runRFOnly(parseResult=parseResult, trees=1, model_key="model0", timeoutSecs=10)
 
         for n in range(1):
             # Give it the wrong model_key name. This caused a stack track
             a = h2o_cmd.runRFTreeView(n=n, 
-                data_key=csvFilename + ".hex", model_key="wrong_model_name", timeoutSecs=10,
-                ignoreH2oError=True)
+                data_key=hex_key, model_key="wrong_model_name", timeoutSecs=10, ignoreH2oError=True)
             # FIX! we could check the return message, but for now, just not crashing is good
             # already printed in check_request
             ## print (h2o.dump_json(a))

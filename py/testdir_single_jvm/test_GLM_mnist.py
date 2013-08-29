@@ -27,13 +27,11 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM_mnist(self):
-        importFolderPath = "/home/0xdiag/datasets/mnist"
         csvFilelist = [
             ("mnist_training.csv.gz", "mnist_testing.csv.gz",    600), 
         ]
         # IMPORT**********************************************
         # since H2O deletes the source key, we should re-import every iteration if we re-use the src in the list
-        importFolderResult = h2i.setupImportFolder(None, importFolderPath)
         ### print "importHDFSResult:", h2o.dump_json(importFolderResult)
         if 'files' in importFolderResult:
             succeededList = importFolderResult['files']
@@ -53,8 +51,8 @@ class Basic(unittest.TestCase):
             # PARSE test****************************************
             testKey2 = testCsvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseResult = h2i.parseImportFolderFile(None, testCsvFilename, importFolderPath,
-                key2=testKey2, timeoutSecs=timeoutSecs)
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path="mnist/" + testCsvFilename, schema='put',
+                hex_key=testKey2, timeoutSecs=timeoutSecs, noise=('StoreView', None))
             elapsed = time.time() - start
             print "parse end on ", testCsvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -68,9 +66,8 @@ class Basic(unittest.TestCase):
             # PARSE train****************************************
             trainKey2 = trainCsvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseResult = h2i.parseImportFolderFile(None, trainCsvFilename, importFolderPath,
-                key2=trainKey2, timeoutSecs=timeoutSecs, noise=('StoreView', None))
-
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path="mnist/" + trainCsvFilename, 
+                hex_key=trainKey2, timeoutSecs=timeoutSecs, noise=('StoreView', None))
             elapsed = time.time() - start
             print "parse end on ", trainCsvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)

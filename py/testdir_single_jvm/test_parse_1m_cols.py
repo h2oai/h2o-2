@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_exec as h2e
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     # 8 random generatators, 1 per column
@@ -50,7 +50,7 @@ class Basic(unittest.TestCase):
             ]
 
         ### h2b.browseTheCloud()
-        for (rowCount, colCount, key2, timeoutSecs, timeoutSecs2) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs, timeoutSecs2) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
 
             csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
@@ -60,7 +60,8 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
             start = time.time()
-            parseResult = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=timeoutSecs, doSummary=False)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, 
+                timeoutSecs=timeoutSecs, doSummary=False)
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse:", parseResult['destination_key'], "took", time.time() - start, "seconds"
 

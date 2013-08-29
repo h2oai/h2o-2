@@ -1,5 +1,6 @@
 import unittest, sys
 sys.path.extend(['.','..','py'])
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 
 # we have this rule for NUL. This test is not really following the  rule (afte eol)
 # so will say it's not a valid test.
@@ -8,7 +9,6 @@ sys.path.extend(['.','..','py'])
 # NUL is not a end of line character, though. 
 # verify: NUL (0x00) can be used as a character in tokens, and not be ignored. 
 
-import h2o, h2o_cmd, h2o_hosts
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -32,8 +32,9 @@ class Basic(unittest.TestCase):
         print "They were created by a dd that filled out to buffer boundary with <NUL>"
         print "They are visible using vim/vi"
         
-        csvPathname = h2o.find_file('smalldata/badchars.csv')
-        h2o_cmd.runRF(trees=50, timeoutSecs=10, csvPathname=csvPathname)
+        csvPathname = 'badchars.csv'
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
+        h2o_cmd.runRFOnly(parseResult=parseResult, trees=50, timeoutSecs=10)
 
 if __name__ == '__main__':
     h2o.unit_main()

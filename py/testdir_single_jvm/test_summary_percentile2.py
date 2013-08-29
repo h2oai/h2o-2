@@ -1,6 +1,6 @@
 import unittest, time, sys, random, math
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 
 def generate_scipy_comparison(csvPathname):
     # this is some hack code for reading the csv and doing some percentile stuff in scipy
@@ -86,7 +86,7 @@ class Basic(unittest.TestCase):
         lenNodes = len(h2o.nodes)
 
         x = 0
-        for (rowCount, colCount, key2, timeoutSecs, expectedMin, expectedMax) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs, expectedMin, expectedMax) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
             x += 1
 
@@ -99,7 +99,7 @@ class Basic(unittest.TestCase):
                 legalValues[x] = x
         
             write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEEDPERFILE)
-            parseResult = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10, doSummary=False)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10, doSummary=False)
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
@@ -107,7 +107,7 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
 
-            summaryResult = h2o_cmd.runSummary(key=key2)
+            summaryResult = h2o_cmd.runSummary(key=hex_key)
             h2o_cmd.infoFromSummary(summaryResult, noPrint=False)
             # remove bin_names because it's too big (256?) and bins
             # just touch all the stuff returned
