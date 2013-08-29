@@ -2244,9 +2244,7 @@ public class RequestArguments extends RequestStatics {
       if( !filter(vec) ) throw new IllegalArgumentException(errors()[0]);
       return vec;
     }
-    private boolean filter( Vec vec ) {
-      return vec.dtype() == Vec.DType.I || vec.dtype() == Vec.DType.S;
-    }
+    private boolean filter( Vec vec ) { return vec.isInt();  }
     @Override protected Vec defaultValue() { return null; }
     @Override protected String[] errors() { return new String[] { "Only integer or enum/factor columns can be classified" }; }
   }
@@ -2294,7 +2292,7 @@ public class RequestArguments extends RequestStatics {
       for( int i=0; i<len(is); i++ ) {
         Vec vec = fr.vecs()[is[i]];
         String name = fr._names[is[i]];
-        double ratio = (double)vec.NAcnt()/vec.length();
+        double ratio = (double)vec.naCnt()/vec.length();
         res[i] = name + (ratio > 0.01 ? (" (" + Math.round(ratio*100) + "% NAs)") : "");
       }
       return res;

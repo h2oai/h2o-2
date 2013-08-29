@@ -155,7 +155,7 @@ public class GBM extends FrameJob {
     final int  ncols = fr.numCols();
     final long nrows = fr.numRows();
     final int ymin = (int)vresponse.min();
-    short nclass = vresponse._isInt ? (short)(vresponse.max()-ymin+1) : 1;
+    short nclass = vresponse.isInt() ? (short)(vresponse.max()-ymin+1) : 1;
     assert 1 <= nclass && nclass < 1000; // Arbitrary cutoff for too many classes
     domain = nclass > 1 ? vresponse.domain() : null;
     errs = new float[0];         // No trees yet
@@ -259,7 +259,7 @@ public class GBM extends FrameJob {
           for( int c=0; c<nclass; c++ ) {
             double actual = chks[ncols+c].at0(i);
             double residual = actual-preds[c]*learn_rate;
-            chks[ncols+c].set40(i,(float)residual);
+            chks[ncols+c].set0(i,(float)residual);
           }
         }
       }
@@ -313,7 +313,7 @@ public class GBM extends FrameJob {
         for( int i=0; i<cy._len; i++ ) {  // For all rows
           int cls = (int)cy.at80(i)-ymin; // Class
           Chunk res = chks[ncols+cls];    // Residual column for this class
-          res.set40(i,1.0f+(float)res.at0(i));   // Fix residual for actual class
+          res.set0(i,1.0f+(float)res.at0(i));   // Fix residual for actual class
         }
       }
     }.doAll(fr);

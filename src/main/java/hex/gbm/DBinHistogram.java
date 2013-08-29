@@ -226,7 +226,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     for( int j=0; j<ncols; j++ ) {
       Vec v = vs[j];
       hists[j] = v.min()==v.max() ? null 
-        : new DBinHistogram(fr._names[j],nclass,v._isInt,(float)v.min(),(float)v.max(),v.length());
+        : new DBinHistogram(fr._names[j],nclass,v.isInt(),(float)v.min(),(float)v.max(),v.length());
     }
     return hists;
   }

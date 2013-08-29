@@ -158,7 +158,7 @@ public class DRF extends FrameJob {
     final int  ncols = fr.numCols();
     final long nrows = fr.numRows();
     final int  ymin  = (int)vresponse.min();
-    short nclass = vresponse._isInt ? (short)(vresponse.max()-ymin+1) : 1;
+    short nclass = vresponse.isInt() ? (short)(vresponse.max()-ymin+1) : 1;
     assert 1 <= nclass && nclass < 1000; // Arbitrary cutoff for too many classes
     domain = nclass > 1 ? vresponse.domain() : null;
 
@@ -178,7 +178,7 @@ public class DRF extends FrameJob {
           for( int i=0; i<cy._len; i++ ) {
             if( cy.isNA0(i) ) continue;
             int cls = (int)cy.at80(i) - ymin;
-            chks[ncols+cls].set80(i,1.0f);
+            chks[ncols+cls].set0(i,1.0f);
           }
         }
       }.doAll(fr);
@@ -394,7 +394,7 @@ public class DRF extends FrameJob {
       Random rand = _tree.rngForChunk(nids.cidx());
       for( int i=0; i<nids._len; i++ )
         if( rand.nextFloat() >= _rate )
-          nids.set80(i,-2);     // Flag row as being ignored by sampling
+          nids.set0(i,-2);     // Flag row as being ignored by sampling
     }
   }
 }

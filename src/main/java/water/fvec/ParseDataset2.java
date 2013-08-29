@@ -139,10 +139,10 @@ public final class ParseDataset2 extends Job {
       if(_run)
       for(int i = 0; i < chks.length; ++i){
         for( int j = 0; j < chks[i]._len; ++j){
+          if( chks[i].isNA0(j) ) continue;
           long l = chks[i].at80(j);
-          if( chks[i].valueIsNA(l) ) continue;
           assert _emap[i][(int)l] >= 0:H2O.SELF.toString() + ": missing enum at col:" + i + ", line: " + j + ", val = " + l + "chunk=" + chks[i].getClass().getSimpleName();
-          chks[i].set80(j, _emap[i][(int)l]);
+          chks[i].set0(j, _emap[i][(int)l]);
         }
       }
     }
@@ -434,12 +434,11 @@ public final class ParseDataset2 extends Job {
       int [] res = new int[_vecs.length];
       int n = 0;
       for(int i = 0; i < _vecs.length; ++i)
-        if(_vecs[i].dtype() == Vec.DType.S)
+        if( _vecs[i].isEnum() )
           res[n++] = i;
       return Arrays.copyOf(res, n);
     }
   }
-
 
   /**
    * Parsed data output specialized for fluid vecs.

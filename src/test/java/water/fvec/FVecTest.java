@@ -85,7 +85,7 @@ public class FVecTest extends TestUtil {
       double d=c._vec.min();
       for( int i=0; i<c._len; i++ ) {
         double e = c.at0(i);
-        c.set80(i,d);
+        c.set0(i,d);
         d=e;
       }
     }
@@ -214,7 +214,7 @@ public class FVecTest extends TestUtil {
   private static class PairSum extends MRTask2<Sum> {
     @Override public void map( Chunk out, Chunk in1, Chunk in2 ) {
       for( int i=0; i<out._len; i++ )
-        out.set80(i,in1.at80(i)+in2.at80(i));
+        out.set0(i,in1.at80(i)+in2.at80(i));
     }
   }
 }
