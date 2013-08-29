@@ -44,10 +44,11 @@ public class Job extends Request2 {
   public static abstract class FrameJob extends Job {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+    public FrameJob(String desc, Key dest) { super(desc,dest); }
 
     @API(help = "Source frame", required = true, filter = sourceFilter.class)
     public Frame source;
-    class sourceFilter extends FrameKey { public sourceFilter() { super(""); } }
+    class sourceFilter extends FrameKey { public sourceFilter() { super("source"); } }
   }
 
   public static abstract class HexJob extends Job {
@@ -118,7 +119,7 @@ public class Job extends Request2 {
     return fjtask;
   }
 
-  // Overriden for Parse
+  // Overridden for Parse
   public float progress() {
     Freezable f = UKV.get(destination_key);
     if( f instanceof Progress )

@@ -150,6 +150,11 @@ function build_jar() {
     cd ..
     # include H2O classes
     "$JAR" uf ${JAR_FILE} -C "${CLASSES}"   .
+    # Pick up R jars
+    if [ -d r_pack_tmp ]; then
+      "$JAR" uf ${JAR_FILE} -C r_pack_tmp  .
+      rm -fr r_pack_tmp
+    fi
     "$ZIP" -qd ${JAR_FILE} javassist.jar 
 }
 
@@ -177,7 +182,11 @@ function junit() {
     "$JAVA" -ea -cp ${JAR_FILE} water.Boot -mainClass water.JUnitRunner
 }
 
-clean
+if [ "$1" = "noclean" ]; then
+    shift
+else
+    clean
+fi
 if [ "$1" = "clean" ]; then exit 0; fi
 build_classes
 if [ "$1" = "compile" ]; then exit 0; fi

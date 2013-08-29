@@ -48,16 +48,16 @@ class Basic(unittest.TestCase):
             key2 = "syn_datasets_" + str(trial) + ".hex"
             print "Loading s3n key: ", s3nKey, 'thru HDFS'
             start = time.time()
-            parseKey = h2o.nodes[0].parse(s3nKey, key2,
+            parseResult = h2o.nodes[0].parse(s3nKey, key2,
                 timeoutSecs=500, retryDelaySecs=10, pollTimeoutSecs=60)
             elapsed = time.time() - start
 
-            print s3nKey, 'parse time:', parseKey['response']['time']
-            print "parse result:", parseKey['destination_key']
+            print s3nKey, 'parse time:', parseResult['response']['time']
+            print "parse result:", parseResult['destination_key']
             print "Trial #", trial, "completed in", elapsed, "seconds.", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + key2 + \
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \
                 "    num_cols:", "{:,}".format(inspect['num_cols'])

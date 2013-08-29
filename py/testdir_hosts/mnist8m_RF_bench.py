@@ -32,13 +32,13 @@ def run_rf(files,configs):
         print "Training file is: ", files['train']
         csvPathname = files['train']
         destKey = files['train'] + '.hex'
-        parseKey = h2i.parseImportFolderFile(None,csvPathname,
+        parseResult = h2i.parseImportFolderFile(None,csvPathname,
                         importFolderPath,key2=destKey,
                         timeoutSecs=300,retryDelaySecs=5,pollTimeoutSecs=120)
         trainParseWallTime = time.time() - trainParseWallStart
         #End Train File Parse#
 
-        inspect = h2o.nodes[0].inspect(parseKey['destination_key'])
+        inspect = h2o.nodes[0].inspect(parseResult['destination_key'])
         row = {'java_heap_GB':java_heap_GB,'dataset':'mnist8m',
                 'nTrainRows': inspect['num_rows'],'nCols':inspect['num_cols'],
                 #'nIgnoredCols':nIgnoredCols,'ignoredCols':ignoredCols,
@@ -47,7 +47,7 @@ def run_rf(files,configs):
         #RF+RFView (train)#
         kwargs = configs.copy()
         trainRFStart = time.time()
-        rfView = h2o_cmd.runRFOnly(parseKey=parseKey,rfView=True,
+        rfView = h2o_cmd.runRFOnly(parseResult=parseResult,rfView=True,
              timeoutSecs= 3600,pollTimeoutSecs= 60,retryDelaySecs = 2, **kwargs)
         trainViewTime = time.time() - trainRFStart
         #End RF+RFView (train)#
@@ -61,12 +61,12 @@ def run_rf(files,configs):
         print "Testing file is: ", files['test']
         csvPathname = files['test']
         destKey = files['test'] + '.hex'
-        parseKey = h2i.parseImportFolderFile(None,csvPathname,
+        parseResult = h2i.parseImportFolderFile(None,csvPathname,
                            importFolderPath,key2=destKey,
                            timeoutSecs=300,retryDelaySecs=5,pollTimeoutSecs=120)
         testParseWallTime = time.time() - testParseWallStart
         #End Test File Parse#
-        inspect = h2o.nodes[0].inspect(parseKey['destination_key'])
+        inspect = h2o.nodes[0].inspect(parseResult['destination_key'])
         row.update({'nTestRows':inspect['num_rows']})
         row.update({'testParseWallTime':testParseWallTime})
         modelKey = rfView['model_key']

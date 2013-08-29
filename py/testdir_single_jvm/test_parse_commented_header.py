@@ -86,11 +86,11 @@ class Basic(unittest.TestCase):
             h2o.nodes[0].import_files(SYNDATASETS_DIR)
             # use regex. the only files in the dir will be the ones we just created with  *fileN* match
             start = time.time()
-            parseKey = h2o.nodes[0].parse('*'+rowxcol+'*', key2=key2, header=1, timeoutSecs=timeoutSecs)
-            print "parseKey['destination_key']: " + parseKey['destination_key']
-            print 'parse time:', parseKey['response']['time']
+            parseResult = h2o.nodes[0].parse('*'+rowxcol+'*', key2=key2, header=1, timeoutSecs=timeoutSecs)
+            print "parseResult['destination_key']: " + parseResult['destination_key']
+            print 'parse time:', parseResult['response']['time']
 
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             h2o_cmd.infoFromInspect(inspect, csvPathname)
             print "\n" + csvPathname, \
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \
@@ -106,7 +106,7 @@ class Basic(unittest.TestCase):
             kwargs = {'sample': 75, 'depth': 25, 'ntree': 1, 'ignore': 'ID,CAPSULE'}
 
             start = time.time()
-            rfv = h2o_cmd.runRFOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            rfv = h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             print "trial #", trial, "totalRows:", totalRows, "parse end on ", csvFilename, \

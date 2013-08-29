@@ -62,8 +62,8 @@ class Basic(unittest.TestCase):
         lenNodes = len(h2o.nodes)
         csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
         key2 = 'c.hex'
-        parseKey = h2o_cmd.parseFile(None, csvPathname, 'covtype.data', key2, 10)
-        print "\nParse key is:", parseKey['destination_key']
+        parseResult = h2o_cmd.parseFile(None, csvPathname, 'covtype.data', key2, 10)
+        print "\nParse key is:", parseResult['destination_key']
 
         h2b.browseTheCloud()
         # for trial in range(53):

@@ -22,7 +22,7 @@ import h2o, h2o_cmd, h2o_kmeans, h2o_util, h2o_hosts
 
 def kmeans_doit(self, csvFilename, csvPathname, num_rows, timeoutSecs=30):
     print "\nStarting KMeans of", csvFilename
-    parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", timeoutSecs=10)
+    parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", timeoutSecs=10)
     # hastie has two values, 1 and -1.
     # we could not specify cols, but this is more fun
     cols = ",".join(map(str,range(11)))
@@ -35,13 +35,13 @@ def kmeans_doit(self, csvFilename, csvPathname, num_rows, timeoutSecs=30):
         'seed': 265211114317615310,
     }
     start = time.time()
-    kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, \
+    kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, \
         timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=60, **kwargs)
     elapsed = time.time() - start
     print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', \
         "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 
-    (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
+    (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
 
     expected = [
         ([-0.0006628900000000158, -0.0004671200060434639, 0.0009330300069879741, 0.0007883800000000272, 0.0007548200000000111, 0.0005617899864856153, 0.0013246499999999897, 0.0004036299999999859, -0.0014307100000000314, 0.0021324000161308796, 0.00154], num_rows, None)

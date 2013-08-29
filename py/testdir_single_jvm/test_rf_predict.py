@@ -22,8 +22,8 @@ class Basic(unittest.TestCase):
     def test_rf_predict(self):
         trees = 6
         timeoutSecs = 20
-        csvPathname = h2o.find_file('smalldata/iris/iris2.csv')
-        h2o_cmd.runRF(trees=trees, model_key="iris_rf_model", timeoutSecs=timeoutSecs, csvPathname=csvPathname)
+        h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
+        h2o_cmd.runRFOnly(parseResult=parseResult, trees=trees, model_key="iris_rf_model", timeoutSecs=timeoutSecs)
         print "\Use H2O GeneratePredictionsPage with a H2O generated model and the same data key. Inspect/Summary result"
 
         start = time.time()

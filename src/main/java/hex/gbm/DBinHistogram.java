@@ -2,9 +2,7 @@ package hex.gbm;
 
 import java.util.Arrays;
 import water.*;
-import water.fvec.Chunk;
-import water.fvec.Frame;
-import water.fvec.Vec;
+import water.fvec.*;
 import water.util.Log;
 
 /**
@@ -150,9 +148,11 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   void incr( int row, float d, Chunk[] chks, int ychk ) {
     int b = bin(d);             // Compute bin# via linear interpolation
     // Lazily allocate storage the first time a bin recieves any counts.
-    if( _Ms[b] == null ) {
-      _Ms[b] = MemoryManager.malloc4f(_nclass);
-      _Ss[b] = MemoryManager.malloc4f(_nclass);
+    float Ms[] = _Ms[b];
+    float Ss[] = _Ss[b];
+    if( Ms == null ) {
+      _Ms[b] = Ms = MemoryManager.malloc4f(_nclass);
+      _Ss[b] = Ss = MemoryManager.malloc4f(_nclass);
     }
     _bins[b]++;                 // Bump count in bin
     long k = _bins[b];          // Row count for bin b
@@ -162,10 +162,18 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     // Recursive mean & variance of response vector
     //    http://www.johndcook.com/standard_deviation.html
     for( int c=0; c<_nclass; c++ ) {
-      float y = (float)chks[ychk+c].at0(row);
-      float oldM = _Ms[b][c];   // Old mean
-      float newM = _Ms[b][c] = oldM + (y-oldM)/k;
-      _Ss[b][c] += (y-oldM)*(y-newM);
+      Chunk chk = chks[ychk+c];
+      if( chk instanceof C4FChunk ) { // Help inline common case
+        float y = (float)((C4FChunk)chk).at0(row);
+        float oldM = Ms[c];   // Old mean
+        float newM = Ms[c] = oldM + (y-oldM)/k;
+        Ss[c] += (y-oldM)*(y-newM);
+      } else {
+        float y = (float)chk.at0(row);
+        float oldM = Ms[c];   // Old mean
+        float newM = Ms[c] = oldM + (y-oldM)/k;
+        Ss[c] += (y-oldM)*(y-newM);
+      }
     }
   }
 

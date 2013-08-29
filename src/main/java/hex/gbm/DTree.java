@@ -252,7 +252,7 @@ class DTree extends Iced {
     // Bin #.
     public int bin( Chunk chks[], int i ) {
       if( _nids.length == 1 ) return 0;
-      if( chks[_col].isNA0(i) ) throw H2O.unimpl();
+      if( chks[_col].isNA0(i) ) return i%_nids.length; // Missing data: pseudo-random bin select
       float d = (float)chks[_col].at0(i); // Value to split on for this row
       // Note that during *scoring* (as opposed to training), we can be exposed
       // to data which is outside the bin limits, so we must cap at both ends.
@@ -315,7 +315,7 @@ class DTree extends Iced {
     final DTree _trees[]; // Read-only, shared (except at the histograms in the Nodes)
     final int   _leafs[]; // Number of active leaves (per tree)
     final int _ncols;
-    final short _nclass;        // Zero for regression, else #classes
+    final short _nclass;        // One for regression, else #classes
     // Bias classes to zero; e.g. covtype classes range from 1-7 so this is 1.
     // e.g. prostate classes range 0-1 so this is 0
     final int _ymin;
@@ -417,13 +417,12 @@ class DTree extends Iced {
 
           for( int j=0; j<_ncols; j++) { // For all columns
             DHistogram nh = nhs[j];
-            if( nh != null ) {    // Tracking this column?
-              if( chks[j].isNA0(i) ) throw H2O.unimpl();
-              float f = (float)chks[j].at0(i);
-              nh.incr(f);         // Small histogram
-              if( nh instanceof DBinHistogram ) // Big histogram/
-                ((DBinHistogram)nh).incr(i,f,chks,_ncols);
-            }
+            if( nh == null ) continue; // Not tracking this column?
+            if( chks[j].isNA0(i) ) continue; // No data this row/column?
+            float f = (float)chks[j].at0(i);
+            nh.incr(f);         // Small histogram
+            if( nh instanceof DBinHistogram ) // Big histogram
+              ((DBinHistogram)nh).incr(i,f,chks,_ncols);
           }
         }
       }

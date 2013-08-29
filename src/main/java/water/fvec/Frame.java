@@ -18,14 +18,13 @@ import water.fvec.Vec.VectorGroup;
 public class Frame extends Iced {
   public String[] _names;
   public Vec[] _vecs;
-  public Vec _col0;             // First readable vec
+  Vec _col0;             // First readable vec
 
-  public Frame( String[] names, Vec[] vecs ) {
-    _names=names; _vecs=vecs;
-  }
+  public Frame( String[] names, Vec[] vecs ) { _names=names; _vecs=vecs; }
+  public Frame( Frame fr ) { _names=fr._names.clone(); _vecs=fr._vecs.clone(); _col0 = fr._col0; }
 
   /**
-   * Finds a named column.
+   * Finds the first column with a matching name.
    */
   public int find( String name ) {
     for( int i=0; i<_names.length; i++ )
@@ -46,7 +45,7 @@ public class Frame extends Iced {
   }
 
   /**
-   * Removes a named column.
+   * Removes the first column with a matching name.
    */
   public Vec remove( String name ) { return remove(find(name)); }
 
@@ -61,12 +60,12 @@ public class Frame extends Iced {
     System.arraycopy(_vecs ,idx+1,_vecs ,idx,len-idx-1);
     _names = Arrays.copyOf(_names,len-1);
     _vecs  = Arrays.copyOf(_vecs ,len-1);
+    if( v == _col0 ) _col0 = null;
     return v;
   }
 
-  public final Vec[] vecs() {
-    return _vecs;
-  }
+  public final Vec[] vecs() { return _vecs; }
+  public final String[] names() { return _names; }
   public int  numCols() { return _vecs.length; }
   public long numRows(){ return _vecs[0].length();}
 

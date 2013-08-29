@@ -15,6 +15,9 @@ public class GBMTest extends TestUtil {
   private abstract class PrepData { abstract Vec prep(Frame fr); }
 
   @Test public void testBasicGBM() {
+    basicGBM("./smalldata/cars.csv","cars.hex",
+             new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); } 
+             });
     basicGBM("./smalldata/test/test_tree.csv","tree.hex",
              new PrepData() { Vec prep(Frame fr) { return fr.remove(1); } 
              });
@@ -44,22 +47,30 @@ public class GBMTest extends TestUtil {
     if( file == null ) return;  // Silently abort test if the file is missing
     Key fkey = NFSFileVec.make(file);
     Key dest = Key.make(hexname);
-    Frame fr = ParseDataset2.parse(dest,new Key[]{fkey});
-    UKV.remove(fkey);
-    Vec vresponse = null;
     GBM gbm = null;
     try {
-      vresponse = prep.prep(fr);
-      gbm = GBM.start(GBM.makeKey(),fr,vresponse,5);
-      gbm.get();                  // Block for result
+      gbm = new GBM();
+      gbm.source = ParseDataset2.parse(dest,new Key[]{fkey});
+      UKV.remove(fkey);
+      gbm.vresponse = prep.prep(gbm.source);
+      gbm.ntrees = 5;
+      gbm.max_depth = 8;
+      gbm.serve();
+
     } finally {
-      UKV.remove(dest);         // Remove whole frame
-      UKV.remove(vresponse._key);
-      if( gbm != null ) gbm.remove();
+      UKV.remove(dest);         // Remove original hex frame key
+      if( gbm != null ) {
+        gbm.source.remove();    // Remove hex frame internal guts
+        UKV.remove(gbm.vresponse._key);
+        gbm.remove();           // Remove GBM Job
+      }
     }
   }
 
   @Test public void testBasicDRF() {
+    basicDRF("./smalldata/cars.csv","cars.hex",
+             new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); } 
+             });
     basicDRF("./smalldata/test/test_tree.csv","tree.hex",
              new PrepData() { Vec prep(Frame fr) { return fr.remove(1); } 
              });
@@ -98,7 +109,7 @@ public class GBMTest extends TestUtil {
       drf.max_depth = 50;
       drf.mtries = -1;
       drf.seed = (1L<<32)|2;
-      drf.run();
+      drf.serve();
 
     } finally {
       UKV.remove(dest);         // Remove whole frame

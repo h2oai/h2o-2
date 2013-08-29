@@ -44,7 +44,7 @@ class Basic(unittest.TestCase):
 
     def test_GLM_gaussian_rand2(self):
         csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname)
+        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname)
         paramDict = define_params()
         for trial in range(20):
             # params is mutable. This is default.
@@ -53,7 +53,7 @@ class Basic(unittest.TestCase):
             kwargs = params.copy()
 
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(timeoutSecs=120, parseKey=parseKey, **kwargs)
+            glm = h2o_cmd.runGLMOnly(timeoutSecs=120, parseResult=parseResult, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
 
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)

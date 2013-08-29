@@ -57,27 +57,27 @@ class Basic(unittest.TestCase):
             key2 = csvFilename + "_" + str(trial) + ".hex"
             print "parse start on:", csvFilename
             start = time.time()
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath,
+            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath,
                 key2=key2, timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
             print "parse end on ", csvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-            print "parse result:", parseKey['destination_key']
+            print "parse result:", parseResult['destination_key']
 
             # INSPECT******************************************
             start = time.time()
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=360)
-            print "Inspect:", parseKey['destination_key'], "took", time.time() - start, "seconds"
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=360)
+            print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspect, csvPathname)
 
             # SUMMARY****************************************
             # gives us some reporting on missing values, constant values, 
             # to see if we have x specified well
-            # figures out everything from parseKey['destination_key']
+            # figures out everything from parseResult['destination_key']
             # needs y to avoid output column (which can be index or name)
             # assume all the configs have the same y..just check with the firs tone
             goodX = h2o_glm.goodXFromColumnInfo(y=0,
-                key=parseKey['destination_key'], timeoutSecs=300)
+                key=parseResult['destination_key'], timeoutSecs=300)
             summaryResult = h2o_cmd.runSummary(key=key2, timeoutSecs=360)
             h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
 

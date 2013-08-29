@@ -68,7 +68,7 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, rowCount, colCount, SEED)
 
             start = time.time()
-            parseKeyA = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, timeoutSecs=timeoutSecs)
+            parseResultA = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, timeoutSecs=timeoutSecs)
             print "\nA Trial #", trial, "rowCount:", rowCount, "colCount:", colCount, "parse end on ", \
                 csvFilename, 'took', time.time() - start, 'seconds'
 
@@ -89,7 +89,7 @@ class Basic(unittest.TestCase):
             # remove the original parsed key. source was already removed by h2o
             h2o.nodes[0].remove_key(key2)
             start = time.time()
-            parseKeyB = h2o_cmd.parseFile(csvPathname=csvDownloadPathname, key2=key2, timeoutSecs=timeoutSecs)
+            parseResultB = h2o_cmd.parseFile(csvPathname=csvDownloadPathname, key2=key2, timeoutSecs=timeoutSecs)
             print "\nB Trial #", trial, "rowCount:", rowCount, "colCount:", colCount, "parse end on ", \
                 csvFilename, 'took', time.time() - start, 'seconds'
             inspect = h2o_cmd.runInspect(key=key2)

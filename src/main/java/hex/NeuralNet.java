@@ -239,6 +239,7 @@ public class NeuralNet extends Job {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
     static final String DOC_GET = "Neural network scoring";
+    public NeuralNetScore() { super("Neural Net",null); }
 
     @API(help = "Model", required = true, filter = Default.class)
     public NeuralNet model;

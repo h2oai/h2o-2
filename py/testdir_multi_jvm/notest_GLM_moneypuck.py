@@ -61,8 +61,8 @@ class Basic(unittest.TestCase):
         h2i.setupImportFolder(None, importFolderPath)
         for csvFilename, timeoutSecs, key2 in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=2000, key2=key2)
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=2000, key2=key2)
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             csvPathname = importFolderPath + "/" + csvFilename
             num_rows = inspect['num_rows']
             num_cols = inspect['num_cols']
@@ -86,7 +86,7 @@ class Basic(unittest.TestCase):
             if 1==0:
                 kwargs.update({'alpha': 0, 'lambda': 0})
                 start = time.time()
-                glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+                glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
                 print "glm (L2) end on ", csvPathname, 'took', time.time() - start, 'seconds'
                 # assume each one has a header and you have to indirect thru 'column_names'
                 column_names = glm['GLMModel']['column_names']
@@ -98,14 +98,14 @@ class Basic(unittest.TestCase):
             # Elastic
             kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "glm (Elastic) end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
             # L1
             kwargs.update({'alpha': 1.0, 'lambda': 1e-4})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "glm (L1) end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 

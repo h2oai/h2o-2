@@ -57,14 +57,14 @@ nightly_build_stuff:
 	$(MAKE) build_installer PROJECT_VERSION=$(PROJECT_VERSION)
 
 build:
+	$(MAKE) -C R build PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) build_h2o PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) -C hadoop build PROJECT_VERSION=$(PROJECT_VERSION)
-	$(MAKE) -C R build PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) -C launcher build PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) package
 
 build_h2o:
-	(export PROJECT_VERSION=$(PROJECT_VERSION); ./build.sh doc)
+	(export PROJECT_VERSION=$(PROJECT_VERSION); ./build.sh noclean doc)
 
 package:
 	rm -fr target/h2o-$(PROJECT_VERSION)

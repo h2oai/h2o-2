@@ -89,11 +89,11 @@ class Basic(unittest.TestCase):
             timeoutSecs = 2 * 3600
             kwargs = {}
             if FROM_HDFS:
-                parseKey = h2i.parseImportHdfsFile(None, csvFilename, importFolderPath, key2=key2,
+                parseResult = h2i.parseImportHdfsFile(None, csvFilename, importFolderPath, key2=key2,
                     timeoutSecs=timeoutSecs, pollTimeoutsecs=60, retryDelaySecs=2,
                     benchmarkLogging=benchmarkLogging, **kwargs)
             else:
-                parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2,
+                parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2,
                     timeoutSecs=timeoutSecs, pollTimeoutsecs=60, retryDelaySecs=2,
                     benchmarkLogging=benchmarkLogging, **kwargs)
 
@@ -128,7 +128,7 @@ class Basic(unittest.TestCase):
             paramsString = json.dumps(params)
 
             start = time.time()
-            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=timeoutSecs,
+            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, timeoutSecs=timeoutSecs,
                     benchmarkLogging=benchmarkLogging, **kwargs)
             elapsed = time.time() - start
             print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
@@ -138,7 +138,7 @@ class Basic(unittest.TestCase):
             print l
             h2o.cloudPerfH2O.message(l)
 
-            (centers, tupleResultList)  = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
+            (centers, tupleResultList)  = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
             # all are multipliers of expected tuple value
             allowedDelta = (0.01, 0.01, 0.01) 
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, allowError=True, trial=trial)
