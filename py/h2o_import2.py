@@ -111,6 +111,9 @@ def import_only(node=None, schema='local', bucket=None, path=None,
     # no bucket is sometimes legal (fixed path)
     if not node: node = h2o.nodes[0]
 
+    if path is None:
+        raise Exception("import_only: path parameter needs to be specified")
+
     if "/" in path:
         (head, pattern) = os.path.split(path)
     else:
