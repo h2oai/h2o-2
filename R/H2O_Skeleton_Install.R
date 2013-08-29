@@ -28,7 +28,7 @@ if(!("h2o" %in% myPackages && packageVersion("h2o") == H2OVersion)) {
   if(url.exists(paste(myURL, "R/md5.txt", sep="/"))) {
     library(tools)
     serverMD5 = read.table(url(paste(myURL, "R/md5.txt", sep="/")))
-    if(as.character(serverMD5[1,1]) != as.character(md5sum(paste(getwd(), myFile, sep="/"))))
+    if(as.character(serverMD5[1,2]) != as.character(md5sum(paste(getwd(), myFile, sep="/"))))
       warning("Mismatched MD5 hash! Check you have downloaded the complete R package.")
   }
   install.packages(paste(getwd(), myFile, sep="/"), repos = NULL, type = "source")
