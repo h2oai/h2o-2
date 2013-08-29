@@ -202,7 +202,7 @@ public class GLM extends Request {
       Family f = Family.tweedie;
       f.defaultLink = l;
       f.tweedieVariancePower = variancePower;
-      res = new GLMParams(f, l);
+      res = new GLMParams(f, l, f.tweedieVariancePower, l.tweedieLinkPower);
     }
 
     if( res._link._link == Link.familyDefault && res._link._link != Link.tweedie )
