@@ -38,11 +38,13 @@ setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData
               result$threshold = res$validations[[1]]$threshold
             
               # Build confusion matrix
-              temp = res$validations[[1]]$cm
-              temp[[1]] = NULL; temp = lapply(temp, function(x) { x[[1]] = NULL; x })
-              result$confusion = t(matrix(unlist(temp), nrow = length(temp)))
-              myNames = c("False", "True", "Error")
-              dimnames(result$confusion) = list(Actual = myNames, Predicted = myNames)
+              if(family == "binomial") {
+                temp = res$validations[[1]]$cm
+                temp[[1]] = NULL; temp = lapply(temp, function(x) { x[[1]] = NULL; x })
+                result$confusion = t(matrix(unlist(temp), nrow = length(temp)))
+                myNames = c("False", "True", "Error")
+                dimnames(result$confusion) = list(Actual = myNames, Predicted = myNames)
+              }
               result
             }
             
