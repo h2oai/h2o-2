@@ -3,7 +3,7 @@ import getpass
 
 # hdfs/maprfs/s3/s3n paths should be absolute from the bucket (top level)
 # so only walk around for local
-def find_folder_and_filename(bucket, pathWithRegex):
+def find_folder_and_filename(bucket, pathWithRegex, schema=None):
     checkPath = True
     # strip the common mistake of leading "/" in path, if bucket is specified too
     if bucket is not None and re.match("/", pathWithRegex):
@@ -134,7 +134,7 @@ def import_only(node=None, schema='local', bucket=None, path=None,
         if not path: 
             raise Exception("path= didn't say what file to put")
 
-        (folderPath, filename) = find_folder_and_filename(bucket, path)
+        (folderPath, filename) = find_folder_and_filename(bucket, path, schema)
         h2o.verboseprint("folderPath:", folderPath, "filename:", filename)
         filePath = os.path.join(folderPath, filename)
         h2o.verboseprint('filePath:', filePath)
@@ -143,7 +143,7 @@ def import_only(node=None, schema='local', bucket=None, path=None,
 
     if schema=='local' and not \
             (node.redirect_import_folder_to_s3_path or node.redirect_import_folder_to_s3n_path):
-        (folderPath, pattern) = find_folder_and_filename(bucket, path)
+        (folderPath, pattern) = find_folder_and_filename(bucket, path, schema)
         folderURI = 'nfs:/' + folderPath
         importResult = node.import_files(folderPath, timeoutSecs=timeoutSecs)
 

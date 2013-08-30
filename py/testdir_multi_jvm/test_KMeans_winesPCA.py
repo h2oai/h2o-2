@@ -1,12 +1,10 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_kmeans
-import h2o_browse as h2b, h2o_import as h2i
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_kmeans, h2o_browse as h2b, h2o_import2 as h2i
 
 #uses the wines data from http://archive.ics.uci.edu/ml/datasets/Wine
 #PCA performed to collect data into 2 rows.
 #3 groups, small & easy
-
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -26,9 +24,9 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_KMeans_winesPCA(self):
-        csvPathname = h2o.find_file('smalldata/winesPCA.csv')
+        csvPathname = 'winesPCA.csv'
         start = time.time()
-        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, timeoutSecs=10)
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', timeoutSecs=10)
         print "parse end on ", csvPathname, 'took', time.time() - start, 'seconds'
         h2o.check_sandbox_for_errors()
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])

@@ -3,7 +3,7 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd
 import h2o_hosts, h2o_glm
 import h2o_browse as h2b
-import h2o_import as h2i
+import h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -38,17 +38,15 @@ class Basic(unittest.TestCase):
                 ]
 
         # a browser window too, just because we can
-        h2b.browseTheCloud()
-
-        importFolderPath = '/home/0xdiag/datasets/standard'
+        ## h2b.browseTheCloud()
+        importFolderPath = "standard"
         validations1= {}
         coefficients1= {}
         for csvFilename in csvFilenameList:
             # have to re-import each iteration now, since the source key
             # is removed and if we re-parse it, it's not there
-            h2i.setupImportFolder(None, importFolderPath, timeoutSecs=60)
-            # creates csvFilename.hex from file in importFolder dir 
-            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=2000)
+            csvPathname = importFolderPath + "/" + csvFilename
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, timeoutSecs=2000)
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
