@@ -44,8 +44,8 @@ class Basic(unittest.TestCase):
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
         csvFilenameList = [
-            ("covtype.binary.svm", "cC", 30, 1, 2, True, True),
             ("mnist_train.svm", "cM", 30, 0, 9, False, False),
+            ("covtype.binary.svm", "cC", 30, 1, 2, True, True),
             # multi-label target like 1,2,5 ..not sure what that means
             # ("tmc2007_train.svm",  "cJ", 30, 0, 21.0, False, False),
             # illegal non-ascending cols

@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 
 class glm_same_parse(unittest.TestCase):
     def tearDown(self):
@@ -22,7 +22,7 @@ class glm_same_parse(unittest.TestCase):
         print "\nput and parse of same file, but both key and key2 are the h2o defaults..always different"
         for trial in range (10):
             start = time.time()
-            key = h2o_cmd.parseFile(csvPathname=h2o.find_file("smalldata/logreg/prostate_long.csv.gz"))
+            parseResult = h2i.import_parse(bucket='smalldata', path='logreg/prostate_long.csv.gz', schema='put')
             print "trial #", trial, "parse end on ", "prostate_long.csv.gz" , 'took', time.time() - start, 'seconds'
             h2o.check_sandbox_for_errors()
 
