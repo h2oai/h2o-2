@@ -78,6 +78,8 @@ package:
 	cp -p LICENSE.txt target/h2o-$(PROJECT_VERSION)
 	(cd target; zip -r h2o-$(PROJECT_VERSION).zip h2o-$(PROJECT_VERSION))
 	rm -fr target/h2o-$(PROJECT_VERSION)
+	rm -fr target/ci
+	cp -rp ci target
 
 # Most people won't have the BitRock InstallBuilder software
 # installed, which is OK.  It will harmlessly do nothing for that
