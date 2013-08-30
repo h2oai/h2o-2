@@ -74,6 +74,7 @@ package:
 	cp -p target/h2o.jar target/h2o-$(PROJECT_VERSION)
 	cp -p target/h2o-sources.jar target/h2o-$(PROJECT_VERSION)
 	cp -p packaging/README.txt target/h2o-$(PROJECT_VERSION)
+	sed "s/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/g" packaging/index.html > target/index.html
 	cp -p LICENSE.txt target/h2o-$(PROJECT_VERSION)
 	(cd target; zip -r h2o-$(PROJECT_VERSION).zip h2o-$(PROJECT_VERSION))
 	rm -fr target/h2o-$(PROJECT_VERSION)
