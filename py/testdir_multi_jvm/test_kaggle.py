@@ -1,9 +1,6 @@
-import unittest, sys
+import unittest, sys, time
 sys.path.extend(['.','..','py'])
-
-import h2o, h2o_cmd, h2o_hosts
-import h2o_browse as h2b
-import time
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i
 
 class TestKaggle(unittest.TestCase):
     def tearDown(self):
@@ -16,7 +13,6 @@ class TestKaggle(unittest.TestCase):
             h2o.build_cloud(2)
         else:
             h2o_hosts.build_cloud_with_hosts()
-
         ### h2b.browseTheCloud()
 
     @classmethod
@@ -24,13 +20,15 @@ class TestKaggle(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_cs_training(self):
-        h2o_cmd.runRF(trees=100, depth=100, csvPathname=h2o.find_file('smalldata/kaggle/creditsample-training.csv.gz'),timeoutSecs=300, response_variable=1)
+        parseResult = h2i.import_parse(bucket='smalldata', path='kaggle/creditsample-training.csv.gz', schema='put')
+        h2o_cmd.runRFOnly(parseResult=parseResult, trees=100, depth=100, timeoutSecs=300, response_variable=1)
         # h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
     def test_cs_test(self):
-        h2o_cmd.runRF(trees=100, depth=100, csvPathname=h2o.find_file('smalldata/kaggle/creditsample-training.csv.gz'),timeoutSecs=300, response_variable=1)
-
+        parseResult = h2i.import_parse(bucket='smalldata', path='kaggle/creditsample-training.csv.gz', schema='put')
+        h2o_cmd.runRFOnly(parseResult=parseResult, trees=100, depth=100, timeoutSecs=300, response_variable=1)
         # h2b.browseJsonHistoryAsUrlLastMatch("RFView")
+
         time.sleep(5)
 
 if __name__ == '__main__':

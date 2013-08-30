@@ -1,9 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-
-import h2o, h2o_cmd, h2o_glm, h2o_hosts
-import h2o_browse as h2b
-import h2o_jobs
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_browse as h2b, h2o_jobs, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -23,12 +20,12 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM_big1_nopoll(self):
-        csvPathname = h2o.find_file("smalldata/hhp_107_01.data.gz")
+        csvPathname = 'hhp_107_01.data.gz'
         print "\n" + csvPathname
 
         y = "106"
         x = ""
-        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, timeoutSecs=15)
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', timeoutSecs=15)
 
         glmInitial = []
         # dispatch multiple jobs back to back

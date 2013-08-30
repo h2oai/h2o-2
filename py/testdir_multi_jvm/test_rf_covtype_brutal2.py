@@ -1,6 +1,6 @@
 import unittest, time, sys, os
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_rf, h2o_util, h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_rf, h2o_util, h2o_import2 as h2i
 
 USE_LOCAL=True
 
@@ -42,32 +42,28 @@ paramsScoreRF = {
         }
 
 trainDS1 = {
-        's3bucket'    : 'home-0xdiag-datasets',
-        'localbucket' : 'home/0xdiag/datasets',
+        'bucket'      : 'home-0xdiag-datasets',
         'pathname'    : '/standard/covtype.shuffled.90pct.sorted.data',
         'timeoutSecs' : 300,
         'header'      : 0
         }
 
 scoreDS1 = {
-        's3bucket'    : 'home-0xdiag-datasets',
-        'localbucket' : 'home/0xdiag/datasets',
+        'bucket'      : 'home-0xdiag-datasets',
         'pathname'    : '/standard/covtype.shuffled.10pct.sorted.data',
         'timeoutSecs' : 300,
         'header'      : 0
         }
 
 trainDS2 = {
-        's3bucket'    : 'home-0xdiag-datasets',
-        'localbucket' : 'home/0xdiag/datasets',
+        'bucket'      : 'home-0xdiag-datasets',
         'pathname'    : '/standard/covtype.shuffled.90pct.data',
         'timeoutSecs' : 300,
         'header'      : 0
         }
 
 scoreDS2 = {
-        's3bucket'    : 'home-0xdiag-datasets',
-        'localbucket' : 'home/0xdiag/datasets',
+        'bucket'      : 'home-0xdiag-datasets',
         'pathname'    : '/standard/covtype.shuffled.10pct.data',
         'timeoutSecs' : 300,
         'header'      : 0
@@ -92,23 +88,17 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
         
-    def parseFile(self, s3bucket, localbucket, pathname, timeoutSecs, header, **kwargs):
-        if USE_LOCAL: # this can get redirected to s3/s3n by jenkins
-            (importFolderPath, csvFilename) = os.path.split("/" + localbucket + pathname)
-            h2i.setupImportFolder(None, importFolderPath)
-            start = time.time()
-            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=180)
-
+    def parseFile(self, bucket, pathname, timeoutSecs, header, **kwargs):
+        # this can get redirected
+        if USE_LOCAL:
+            schema = None
         else:
-            schema = "s3n://"
-            bucket = s3bucket
-            URI = schema + bucket + pathname
-            importResult = h2o.nodes[0].import_hdfs(URI)
-            start      = time.time()
-            parseResult = h2o.nodes[0].parse("*" + pathname, timeoutSecs=timeoutSecs, header=header)
+            schema = 's3n'
 
-        parse_time = time.time() - start 
-        h2o.verboseprint("py-S3 parse took {0} sec".format(parse_time))
+        start = time.time()
+        parseResult = h2i.import_parse(bucket=bucket, path=pathname, timeoutSecs=180)
+        parse_time = time.time() - start
+        h2o.verboseprint("parse took {0} sec".format(parse_time))
         parseResult['python_call_timer'] = parse_time
         return parseResult
 
