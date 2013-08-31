@@ -1,6 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 import h2o_browse as h2b
 
 # ord('a') gives 97. Use that when you pass it as url param to h2o
@@ -127,8 +127,8 @@ class Basic(unittest.TestCase):
 
         # so many random combos..rather than walk tryList, just do random for some amount of time
         for trial in range(50):
-            (fileNum, rowCount, colCount, key2, timeoutSecs, dataRowsWithHeader) = random.choice(tryList)
-            print fileNum, rowCount, colCount, key2, timeoutSecs, dataRowsWithHeader
+            (fileNum, rowCount, colCount, hex_key, timeoutSecs, dataRowsWithHeader) = random.choice(tryList)
+            print fileNum, rowCount, colCount, hex_key, timeoutSecs, dataRowsWithHeader
             # FIX! should we add a header to them randomly???
             print "Wait while", fileNum, "synthetic files are created in", SYNDATASETS_DIR
             rowxcol = str(rowCount) + 'x' + str(colCount)
@@ -209,8 +209,7 @@ class Basic(unittest.TestCase):
             totalHeaderRows += headerRowsDone
 
             # make sure all key names are unique, when we re-put and re-parse (h2o caching issues)
-            key = "syn_dst" + str(trial)
-            key2 = "syn_dst" + str(trial) + ".hex"
+            hex_key = "syn_dst" + str(trial) + ".hex"
 
             # DON"T get redirected to S3! (EC2 hack in config, remember!)
             # use it at the node level directly (because we gen'ed the files.
@@ -248,19 +247,19 @@ class Basic(unittest.TestCase):
                 pattern = '*syn_*'+str(trial)+"_"+rowxcol+'*'
             else:
                 pattern = '*syn_data_*'+str(trial)+"_"+rowxcol+'*'
-            parseKey = h2o.nodes[0].parse(pattern, key2=key2, timeoutSecs=timeoutSecs, **kwargs)
+            parseResult = h2o.nodes[0].parse(pattern, hex_key=hex_key, timeoutSecs=timeoutSecs, **kwargs)
 
-            print "parseKey['destination_key']: " + parseKey['destination_key']
-            print 'parse time:', parseKey['response']['time']
+            print "parseResult['destination_key']: " + parseResult['destination_key']
+            print 'parse time:', parseResult['response']['time']
 
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             h2o_cmd.infoFromInspect(inspect, csvPathname)
             print "\n" + csvPathname, \
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \
                 "    num_cols:", "{:,}".format(inspect['num_cols'])
 
             # more reporting: (we can error here if extra col in header, causes all NA for missing col of data)
-            h2o_cmd.columnInfoFromInspect(parseKey['destination_key'], exceptionOnMissingValues=False)
+            h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=False)
 
             # should match # of cols in header or ??
             self.assertEqual(inspect['num_cols'], totalCols, \

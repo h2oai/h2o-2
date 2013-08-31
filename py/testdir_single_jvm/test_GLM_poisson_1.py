@@ -1,6 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -20,16 +20,15 @@ class Basic(unittest.TestCase):
 
     def test_GLM_poisson_1(self):
         csvFilename = 'covtype.data'
-        csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/' + csvFilename)
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname,timeoutSecs=10)
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        csvPathname = 'UCI/UCI-large/covtype/' + csvFilename
+        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', timeoutSecs=10)
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\n" + csvPathname, \
             "    num_rows:", "{:,}".format(inspect['num_rows']), \
             "    num_cols:", "{:,}".format(inspect['num_cols'])
 
         if (1==0):
             print "WARNING: just doing the first 33 features, for comparison to ??? numbers"
-            # pythonic!
             x = ",".join(map(str,range(33)))
         else:
             x = ""
@@ -51,21 +50,21 @@ class Basic(unittest.TestCase):
         # L2 
         start = time.time()
         kwargs.update({'alpha': 0, 'lambda': 0})
-        glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+        glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
         print "glm (L2) end on ", csvPathname, 'took', time.time() - start, 'seconds'
         h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
 
         # Elastic
         kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
         start = time.time()
-        glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+        glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
         print "glm (Elastic) end on ", csvPathname, 'took', time.time() - start, 'seconds'
         h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
 
         # L1
         kwargs.update({'alpha': 1, 'lambda': 1e-4})
         start = time.time()
-        glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+        glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
         print "glm (L1) end on ", csvPathname, 'took', time.time() - start, 'seconds'
         h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
 

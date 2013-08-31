@@ -1,6 +1,6 @@
-import unittest, random, sys, time, getpass
+import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_glm
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     # 8 random generatators, 1 per column
@@ -51,23 +51,13 @@ class Basic(unittest.TestCase):
 
     def test_GLM_many_cols_real(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
-        if getpass.getuser() == 'kevin': # longer run
-            tryList = [
-                (100, 1000, 'cA', 100),
-                (100, 3000, 'cB', 300),
-                (100, 5000, 'cC', 1500),
-                (100, 7000, 'cD', 3600),
-                (100, 9000, 'cE', 3600),
-                (100, 10000, 'cF', 3600),
-                ]
-        else:
-            tryList = [
-                (100, 1000, 'cA', 100),
-                (100, 3000, 'cB', 300),
-                ]
+        tryList = [
+            (100, 1000, 'cA', 100),
+            (100, 3000, 'cB', 300),
+            ]
 
         ### h2b.browseTheCloud()
-        for (rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
             csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
@@ -76,10 +66,10 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
             start = time.time()
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10)
             elapsed = time.time() - start
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
 
             algo = "Parse"
             l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
@@ -88,7 +78,7 @@ class Basic(unittest.TestCase):
             h2o.cloudPerfH2O.message(l)
 
             # We should be able to see the parse result?
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
 
             y = colCount
@@ -108,7 +98,7 @@ class Basic(unittest.TestCase):
             }
 
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             h2o.check_sandbox_for_errors()
             print "glm end on ", csvPathname, 'took', elapsed, 'seconds', \

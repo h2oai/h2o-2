@@ -23,7 +23,7 @@ public class CBSChunk extends Chunk {
   }
   @Override protected double atd_impl(int idx) {
     byte b = atb(idx);
-    return b == _NA ? _vec._fNA : b;
+    return b == _NA ? Double.NaN : b;
   }
   @Override protected long at8_impl(int idx) {
     byte b = atb(idx);

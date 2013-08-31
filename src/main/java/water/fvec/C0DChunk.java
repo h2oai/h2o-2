@@ -14,7 +14,7 @@ public class C0DChunk extends Chunk {
     UDP.set4(_mem,8,len);
   }
   @Override protected final long at8_impl( int i ) { return Double.isNaN(_con)?_vec._iNA:(long)_con;}
-  @Override protected final double atd_impl( int i ) {return Double.isNaN(_con)?_vec._fNA:_con;}
+  @Override protected final double atd_impl( int i ) {return _con;}
   @Override boolean set8_impl(int idx, long l) { return l==_con; }
   @Override boolean set8_impl(int i, double d) { return d==_con; }
   @Override boolean set4_impl(int i, float f ) { return f==_con; }

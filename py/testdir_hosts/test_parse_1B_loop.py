@@ -31,7 +31,7 @@ class Basic(unittest.TestCase):
 
                 key2 = csvFilename + "_" + str(trial) + ".hex"
                 start = time.time()
-                parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2, 
+                parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2, 
                     timeoutSecs=timeoutSecs, retryDelaySecs=4, pollTimeoutSecs=60)
                 elapsed = time.time() - start
                 print "Trial #", trial, "completed in", elapsed, "seconds.", \
@@ -42,8 +42,8 @@ class Basic(unittest.TestCase):
                 storeView = h2o.nodes[0].store_view()
                 ### print "storeView:", h2o.dump_json(storeView)
                 # h2o removes key after parse now
-                ## print "Removing", parseKey['python_source_key']
-                ## removeKeyResult = h2o.nodes[0].remove_key(key=parseKey['python_source_key'])
+                ## print "Removing", parseResult['python_source_key']
+                ## removeKeyResult = h2o.nodes[0].remove_key(key=parseResult['python_source_key'])
                 ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
 
             # sticky ports?

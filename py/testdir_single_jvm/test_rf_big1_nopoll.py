@@ -1,6 +1,6 @@
 import unittest, time, sys, random, json
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_util
+import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_util, h2o_import2 as h2i
 import h2o_browse as h2b
 import h2o_jobs
 
@@ -29,12 +29,11 @@ class Basic(unittest.TestCase):
 
     def test_rf_big1_nopoll(self):
         csvFilename = 'hhp_107_01.data.gz'
-        csvPathname = h2o.find_file("smalldata/" + csvFilename)
-        key2 = csvFilename + ".hex"
+        hex_key = csvFilename + ".hex"
         
-        print "\n" + csvPathname
+        print "\n" + csvFilename
 
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, timeoutSecs=15)
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvFilename, hex_key=hex_key, timeoutSecs=15, schema='put')
         rfViewInitial = []
         # dispatch multiple jobs back to back
         for jobDispatch in range(3):
@@ -56,16 +55,16 @@ class Basic(unittest.TestCase):
 
             # FIX! what model keys do these get?
             randomNode = h2o.nodes[random.randint(0,len(h2o.nodes)-1)]
-            h2o_cmd.runRFOnly(node=randomNode, parseKey=parseKey, model_key=model_key, timeoutSecs=300,
+            h2o_cmd.runRFOnly(node=randomNode, parseResult=parseResult, model_key=model_key, timeoutSecs=300,
                  noPoll=False if OVERWRITE_RF_MODEL else True, **kwargs)
             # FIX! are these already in there?
             rfView = {}
-            rfView['data_key'] = key2
+            rfView['data_key'] = hex_key
             rfView['model_key'] = model_key
             rfView['ntree'] = kwargs['ntree']
             rfViewInitial.append(rfView)
 
-            print "rf job dispatch end on ", csvPathname, 'took', time.time() - start, 'seconds'
+            print "rf job dispatch end on ", csvFilename, 'took', time.time() - start, 'seconds'
             print "\njobDispatch #", jobDispatch
 
         h2o_jobs.pollWaitJobs(pattern='RF_model', timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)

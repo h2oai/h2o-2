@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_glm
 
 def define_params():
     paramDict = {
@@ -38,15 +38,15 @@ class Basic(unittest.TestCase):
         ### h2b.browseTheCloud()
 
         csvFilename = "logreg_trisum_int_cat_10000x10.csv"
-        csvPathname = "smalldata/logreg/" + csvFilename
-        key2 = csvFilename + ".hex"
+        csvPathname = "logreg/" + csvFilename
+        hex_key = csvFilename + ".hex"
 
-        parseKey = h2o_cmd.parseFile(None, h2o.find_file(csvPathname), key2=key2, timeoutSecs=10)
-        print csvFilename, 'parse time:', parseKey['response']['time']
-        print "Parse result['destination_key']:", parseKey['destination_key']
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=hex_key, timeoutSecs=10, schema='put')
+        print csvFilename, 'parse time:', parseResult['response']['time']
+        print "Parse result['destination_key']:", parseResult['destination_key']
 
         # We should be able to see the parse result?
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\n" + csvFilename
 
         paramDict = define_params()
@@ -61,7 +61,7 @@ class Basic(unittest.TestCase):
         kwargs.update(paramDict2)
 
         start = time.time()
-        glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=20, **kwargs)
+        glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=20, **kwargs)
         print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
         h2o_glm.simpleCheckGLM(self, glm, 8, **kwargs)
 

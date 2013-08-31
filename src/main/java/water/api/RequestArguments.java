@@ -1480,8 +1480,9 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
   public class H2OKey extends InputText<Key> {
     public final Key _defaultValue;
-    public H2OKey(String name, boolean required) { super(name, required); _defaultValue = null; }
-    public H2OKey(String name, Key key) { super(name, false); _defaultValue = key;  }
+    public H2OKey(String name, boolean required) { this(name,null,required); }
+    public H2OKey(String name, Key key) { this(name,key,false); }
+    public H2OKey(String name, Key key, boolean req) { super(name, req); _defaultValue = key; }
     @Override protected Key parse(String input) { return Key.make(input); }
     @Override protected Key defaultValue() { return _defaultValue; }
     @Override protected String queryDescription() { return "Valid H2O key"; }

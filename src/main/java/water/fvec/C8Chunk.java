@@ -12,7 +12,7 @@ public class C8Chunk extends Chunk {
   }
   @Override protected final double atd_impl( int i ) {
     long res = UDP.get8(_mem,i<<3);
-    return res == _NA?_vec._fNA:res;
+    return res == _NA?Double.NaN:res;
   }
   @Override boolean set8_impl(int idx, long l) { return false; }
   @Override boolean set8_impl(int i, double d) { return false; }

@@ -68,7 +68,7 @@ public abstract class Request2 extends Request {
 
           // Key
           else if( f.getType() == Key.class )
-            arg = new H2OKey(f.getName(), api.required());
+            arg = new H2OKey(f.getName(),(Key)defaultValue, api.required());
 
           // Auto-cast from key to Iced field
           else if( Freezable.class.isAssignableFrom(f.getType()) && api.filter() == Default.class )

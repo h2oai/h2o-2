@@ -86,14 +86,14 @@ class Basic(unittest.TestCase):
         centersList = write_spheres_dataset(csvPathname, CLUSTERS, SPHERE_PTS)
 
         print "\nStarting", csvFilename
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
 
         # try 5 times, to see if all inits by h2o are good
         for trial in range(5):
             kwargs = {'k': CLUSTERS, 'initialization': 'Furthest', 'cols': None, 'destination_key': 'syn_spheres100.hex'}
             timeoutSecs = 30
             start = time.time()
-            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.',\
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)

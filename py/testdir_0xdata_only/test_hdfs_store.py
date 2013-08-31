@@ -75,15 +75,15 @@ class Basic(unittest.TestCase):
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in hdfs dir 
             print "Loading", csvFilename, 'from HDFS'
-            parseKey = h2i.parseImportHdfsFile(csvFilename=csvFilename, path='/datasets', timeoutSecs=1000)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "parse result:", parseKey['destination_key']
+            parseResult = h2i.parseImportHdfsFile(csvFilename=csvFilename, path='/datasets', timeoutSecs=1000)
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "parse result:", parseResult['destination_key']
 
             print "\n" + csvFilename
             start = time.time()
-            print "Storing", parseKey['destination_key'], 'to HDFS'
+            print "Storing", parseResult['destination_key'], 'to HDFS'
             ### print "FIX! temporarily disabling since it causes HDFS corruption"
-            storeKey = h2o_cmd.runStore2HDFS(key=parseKey['destination_key'], timeoutSecs=1000)
+            storeKey = h2o_cmd.runStore2HDFS(key=parseResult['destination_key'], timeoutSecs=1000)
             # h2b.browseJsonHistoryAsUrlLastMatch("Parse")
 
 if __name__ == '__main__':

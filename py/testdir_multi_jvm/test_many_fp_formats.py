@@ -125,10 +125,10 @@ class Basic(unittest.TestCase):
                 write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel)
 
                 selKey2 = key2 + "_" + str(sel)
-                parseKey = h2o_cmd.parseFile(None, csvPathname, key2=selKey2, timeoutSecs=timeoutSecs)
-                print csvFilename, 'parse time:', parseKey['response']['time']
-                print "Parse result['destination_key']:", parseKey['destination_key']
-                inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+                parseResult = h2o_cmd.parseFile(None, csvPathname, key2=selKey2, timeoutSecs=timeoutSecs)
+                print csvFilename, 'parse time:', parseResult['response']['time']
+                print "Parse result['destination_key']:", parseResult['destination_key']
+                inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
                 print "\n" + csvFilename
 
                 # if not h2o.browse_disable:

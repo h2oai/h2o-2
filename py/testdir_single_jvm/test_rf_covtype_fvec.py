@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import as h2i, h2o_exec, h2o_jobs
+import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import2 as h2i, h2o_exec, h2o_jobs
 
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
 # only classes 1-7 in the 55th col
@@ -42,17 +42,15 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rf_covtype_fvec(self):
-        importFolderPath = "/home/0xdiag/datasets/standard"
+        importFolderPath = "standard"
         csvFilename = 'covtype.data'
         csvPathname = importFolderPath + "/" + csvFilename
-        key2 = csvFilename + ".hex"
-        h2i.setupImportFolder(None, importFolderPath)
+        hex_key = csvFilename + ".hex"
 
         print "\nUsing header=0 on the normal covtype.data"
-        parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2,
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key,
             header=0, timeoutSecs=180)
-
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
 
         rfViewInitial = []
         for jobDispatch in range(1):
@@ -66,7 +64,7 @@ class Basic(unittest.TestCase):
             kwargs['model_key'] = "model_" + str(jobDispatch)
             
             # don't poll for fvec 
-            rfResult = h2o_cmd.runRFOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, noPoll=True, rfView=False, **kwargs)
+            rfResult = h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, rfView=False, **kwargs)
             elapsed = time.time() - start
             print "RF dispatch end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
@@ -74,7 +72,7 @@ class Basic(unittest.TestCase):
             print h2o.dump_json(rfResult)
             # FIX! are these already in there?
             rfView = {}
-            rfView['data_key'] = key2
+            rfView['data_key'] = hex_key
             rfView['model_key'] = kwargs['model_key']
             rfView['ntree'] = kwargs['ntree']
             rfViewInitial.append(rfView)

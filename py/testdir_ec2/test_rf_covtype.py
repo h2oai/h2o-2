@@ -55,11 +55,11 @@ class Basic(unittest.TestCase):
         
     def parseS3File(self, s3bucket, filename, **kwargs):
         start      = time.time()
-        parseKey   = h2o_cmd.parseS3File(bucket=s3bucket, filename=filename, **kwargs)
+        parseResult   = h2o_cmd.parseS3File(bucket=s3bucket, filename=filename, **kwargs)
         parse_time = time.time() - start 
         h2o.verboseprint("py-S3 parse took {0} sec".format(parse_time))
-        parseKey['python_call_timer'] = parse_time
-        return parseKey
+        parseResult['python_call_timer'] = parse_time
+        return parseResult
 
     def loadTrainData(self):
         kwargs   = trainDS.copy()

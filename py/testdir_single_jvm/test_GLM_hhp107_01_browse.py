@@ -1,14 +1,9 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_glm
+import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_import2 as h2i
 import h2o_browse as h2b
 
-# can expand this with specific combinations
-# I suppose these args will be ignored with old??
 argcaseList = [
-# FIX! we get stack trace if we specify a column that was dropped because it's constant
-# for instance, column 9
-###    {   'x': '0,1,2,3,4,5,6,7,8,9,10,11',
     {   
         'x': '0,1,2,3,4,5,6,7,8,10,11',
         'y': 106,
@@ -41,21 +36,21 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_hhp_107_01_browse(self):
-        csvPathname = h2o.find_file("smalldata/hhp_107_01.data.gz")
+        csvPathname = 'hhp_107_01.data.gz'
         print "\n" + csvPathname
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2="hhp_107_01.data.hex", timeoutSecs=15)
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put',
+            hex_key="hhp_107_01.data.hex", timeoutSecs=15)
 
         # pop open a browser on the cloud
-        h2b.browseTheCloud()
+        # h2b.browseTheCloud()
         trial = 0
         for argcase in argcaseList:
             print "\nTrial #", trial, "start"
             kwargs = argcase
             print 'y:', kwargs['y']
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, browseAlso=True, timeoutSecs=200, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, browseAlso=True, timeoutSecs=200, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
-
             print "\nTrial #", trial
 
 

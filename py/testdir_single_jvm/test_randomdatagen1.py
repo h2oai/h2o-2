@@ -1,6 +1,6 @@
 import unittest, re, os, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 
 # test some random csv data, and some lineend combinations
 class Basic(unittest.TestCase):
@@ -23,17 +23,21 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_A_randomdata2(self):
-        print "Using smalldata/datagen1.csv as is"
-        csvPathname = h2o.find_file('smalldata/datagen1.csv')
+        print "Using datagen1.csv as-is"
+        csvPathname = 'datagen1.csv'
         # have to give the separator == comma...otherwise H2O can't deduce it on this dataset
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, timeoutSecs=10, header=1, separator=44)
-        h2o_cmd.runRFOnly(parseKey=parseKey, trees=1, response_variable=2, timeoutSecs=20, csvPathname=csvPathname)
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put',
+            timeoutSecs=10, header=1, separator=44)
+        h2o_cmd.runRFOnly(parseResult=parseResult, trees=1, response_variable=2, timeoutSecs=20)
 
     def test_B_randomdata2_1_lineend(self):
-        print "Using smalldata/datagen1.csv to create", SYNDATASETS_DIR, "/datagen1.csv with different line ending" 
+        csvPathname = 'datagen1.csv'
+        print "Using datagen1.csv to create", SYNDATASETS_DIR, "/datagen1.csv with different line ending" 
         # change lineend, case 1
-        csvPathname1 = h2o.find_file('smalldata/datagen1.csv')
+        (folderPath, filename) = h2i.find_folder_and_filename('smalldata', csvPathname)
+        csvPathname1 = folderPath + "/" + filename
         csvPathname2 = SYNDATASETS_DIR + '/datagen1_crlf.csv'
+
         infile = open(csvPathname1, 'r') 
         outfile = open(csvPathname2,'w') # existing file gets erased
 
@@ -45,8 +49,9 @@ class Basic(unittest.TestCase):
         infile.close()
         outfile.close()
 
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname2, timeoutSecs=10, header=1, separator=44)
-        h2o_cmd.runRFOnly(parseKey=parseKey, trees=1, response_variable=2, timeoutSecs=20, csvPathname=csvPathname2)
+        parseResult = h2i.import_parse(path=csvPathname2, schema='put', 
+            timeoutSecs=10, header=1, separator=44)
+        h2o_cmd.runRFOnly(parseResult=parseResult, trees=1, response_variable=2, timeoutSecs=20)
 
 
 if __name__ == '__main__':

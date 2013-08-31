@@ -1,8 +1,6 @@
-import unittest
-import random, sys, time
+import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_exec as h2e
 
 zeroList = [
         'Result0 = 0',
@@ -23,11 +21,11 @@ class Basic(unittest.TestCase):
     def setUpClass(cls):
         global SEED, localhost
         SEED = h2o.setup_random_seed()
+        localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(2)
         else:
             h2o_hosts.build_cloud_with_hosts()
-
 
     @classmethod
     def tearDownClass(cls):
@@ -36,9 +34,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_sum_import_hosts(self):
-        # just do the import folder once
-        importFolderPath = "/home/0xdiag/datasets/standard"
-
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
         #    ("covtype20x.data", "cD", 50, 20),
@@ -51,25 +46,26 @@ class Basic(unittest.TestCase):
 
         ### csvFilenameList = random.sample(csvFilenameAll,1)
         csvFilenameList = csvFilenameAll
-        h2b.browseTheCloud()
+        ## h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
+        importFolderPath = "standard"
 
         firstDone = False
-        for (csvFilename, key2, timeoutSecs, resultMult) in csvFilenameList:
+        for (csvFilename, hex_key, timeoutSecs, resultMult) in csvFilenameList:
             # have to import each time, because h2o deletes source after parse
-            h2i.setupImportFolder(None, importFolderPath)
+            csvPathname = importFolderPath + "/" + csvFilename
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
-                key2=key2, timeoutSecs=2000)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, 
+                hex_key=hex_key, timeoutSecs=2000)
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
 
             print "\n" + csvFilename
             h2e.exec_zero_list(zeroList)
-            colResultList = h2e.exec_expr_list_across_cols(lenNodes, exprList, key2, 
+            colResultList = h2e.exec_expr_list_across_cols(lenNodes, exprList, hex_key, 
                 minCol=0, maxCol=54, timeoutSecs=timeoutSecs)
             print "\ncolResultList", colResultList
 

@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 import h2o_browse as h2b
 import h2o_exec as h2e
 
@@ -38,45 +38,45 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_tnc3_ignore(self):
-        csvFilename = 'tnc3.csv'
-        csvPathname = h2o.find_file('smalldata/' + csvFilename)
+        csvPathname = 'tnc3.csv'
         print "\n" + csvPathname
-        key2 = "tnc3.hex"
+        hex_key = "tnc3.hex"
         h2b.browseTheCloud()
 
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, timeoutSecs=10, header=1)
-        print "Parse result['Key']:", parseKey['destination_key']
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=hex_key, schema='put', 
+            timeoutSecs=10, header=1)
+        print "Parse result['Key']:", parseResult['destination_key']
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
         ### time.sleep(10)
 
         if 1==1:
             lenNodes = len(h2o.nodes)
-            colResultList = h2e.exec_expr_list_across_cols(lenNodes, numExprList, key2, maxCol=10,
+            colResultList = h2e.exec_expr_list_across_cols(lenNodes, numExprList, hex_key, maxCol=10,
                 incrementingResult=False, timeoutSecs=10)
             print "\ncolResultList after num swap", colResultList
 
         if (1==1):
             print "\nWe're not CM data getting back from RFView.json that we can check!. so look at the browser"
             print 'The good case with ignore="boat,body"'
-            rfv = h2o_cmd.runRF(trees=5, timeoutSecs=10, ignore="boat,body", csvPathname=csvPathname)
+            rfv = h2o_cmd.runRFOnly(parseResult=parseResult, trees=5, timeoutSecs=10, ignore="boat,body")
 
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
         ### time.sleep(3600)
         h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
         #******************
         if 1==0:
-            colResultList = h2e.exec_expr_list_across_cols(lenNodes, charExprList, key2, maxCol=10,
+            colResultList = h2e.exec_expr_list_across_cols(lenNodes, charExprList, hex_key, maxCol=10,
                 incrementingResult=False, timeoutSecs=10)
             print "\ncolResultList after char swap", colResultList
 
         if 1==1:
             print "\nNow the bad case (no ignore)"
-            rfv = h2o_cmd.runRF(trees=5, timeoutSecs=10, csvPathname=csvPathname)
+            rfv = h2o_cmd.runRFOnly(parseResult=parseResult, trees=5, timeoutSecs=10)
 
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
         ### time.sleep(3600)
         h2b.browseJsonHistoryAsUrlLastMatch("RFView")

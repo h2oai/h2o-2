@@ -1,7 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o_cmd, h2o, h2o_hosts
-import h2o_browse as h2b
+import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -23,14 +22,7 @@ class Basic(unittest.TestCase):
 
     def test_RF_poker_1m_rf_w_browser(self):
         h2b.browseTheCloud()
-        # csvPathname = '../smalldata/poker/poker1000'
-        # h2o_cmd.runRF(trees=10000, timeoutSecs=300, csvPathname=csvPathname)
-        # h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
-        # browseJsonHistoryAsUrl()
-
-        # hang for many hour, so you can play with the browser
-        # FIX!, should be able to do something that waits till browser is quit?
         if not h2o.browse_disable:
             time.sleep(500000)
 

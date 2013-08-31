@@ -1,6 +1,6 @@
 import unittest, re, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 
 def writeRows(csvPathname,row,eol,repeat):
     f = open(csvPathname, 'w')
@@ -45,10 +45,10 @@ class Basic(unittest.TestCase):
             csvFilename = "p" + "_" + str(size)
             csvPathname = SYNDATASETS_DIR + "/" + csvFilename
             writeRows(csvPathname,row,eol,size)
-            key = csvFilename
+            src_key = csvFilename
             for trial in range(5):
-                key2 = csvFilename + "_" + str(trial) + ".hex"
-                parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2)
+                hex_key = csvFilename + "_" + str(trial) + ".hex"
+                parseResult = h2i.import_parse(path=csvPathname, schema='put', src_key=src_key, hex_key=hex_key)
 
                 sys.stdout.write('.')
                 sys.stdout.flush()

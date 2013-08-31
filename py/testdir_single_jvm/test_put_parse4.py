@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_hosts, h2o_cmd
+import h2o, h2o_hosts, h2o_cmd, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -25,11 +25,10 @@ class Basic(unittest.TestCase):
         n = h2o.nodes[0]
         for x in xrange (2):
             print 'Trial:', trial
-            # csvPathname = h2o.find_file("smalldata/hhp_107_01.data.gz")
-            csvPathname = h2o.find_file('smalldata/iris/iris_wheader.csv.gz')
-            key2 = "iris" + "_" + str(x) + ".hex"
-            parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, doSummary=False)
-            h2o_cmd.runSummary(key=key2, doPrint=True)
+            csvPathname = 'iris/iris_wheader.csv.gz'
+            hex_key = "iris" + "_" + str(x) + ".hex"
+            parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=hex_key, doSummary=False, schema='put')
+            h2o_cmd.runSummary(key=hex_key, doPrint=True)
             trial += 1
 
 

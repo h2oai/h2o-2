@@ -1,6 +1,6 @@
 import unittest, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf, h2o_hosts
+import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import2 as h2i
 
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
 # only classes 1-7 in the 55th col
@@ -46,7 +46,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rf_params_rand2(self):
-        csvPathname = h2o.find_file('smalldata/space_shuttle_damage.csv')
+        csvPathname = 'space_shuttle_damage.csv'
         for trial in range(10):
             # params is mutable. This is default.
             params = {
@@ -68,7 +68,8 @@ class Basic(unittest.TestCase):
             # seems ec2 can be really slow
             timeoutSecs = 30 + 15 * (kwargs['parallel'] and 6 or 10)
             start = time.time()
-            rfView = h2o_cmd.runRF(timeoutSecs=timeoutSecs, retryDelaySecs=1, csvPathname=csvPathname, **kwargs)
+            parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
+            rfView = h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)
             elapsed = time.time()-start
             # just to get the list of per class errors
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(None, rfView, noPrint=True)

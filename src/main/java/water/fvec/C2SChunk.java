@@ -20,7 +20,7 @@ public class C2SChunk extends Chunk {
   }
   @Override protected final double atd_impl( int i ) {
     long res = UDP.get2(_mem,(i<<1)+OFF);
-    return (res == _NA)?_vec._fNA:(res + _bias)*_scale;
+    return (res == _NA)?Double.NaN:(res + _bias)*_scale;
   }
   @Override boolean set8_impl(int idx, long l) { 
     long res = (long)(l/_scale)-_bias; // Compressed value

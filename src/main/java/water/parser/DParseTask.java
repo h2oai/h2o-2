@@ -614,10 +614,12 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
           _mean[i] += dpt._mean[i];
         }
       } else if(_phase == Pass.TWO) {
-        Utils.add(_sigma,dpt._sigma);
+        for(int i = 0; i < dpt._ncolumns; ++i)
+          _sigma[i] += dpt._sigma[i];
       } else
         assert false:"unexpected _phase value:" + _phase;
-      Utils.add(_invalidValues,dpt._invalidValues);
+      for(int i = 0; i < dpt._ncolumns; ++i)
+        _invalidValues[i] += dpt._invalidValues[i];
     }
     _numRows += dpt._numRows;
     if(_error == null)_error = dpt._error;

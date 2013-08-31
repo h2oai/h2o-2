@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import as h2i, h2o_jobs
+import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import2 as h2i, h2o_jobs
 
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
 # only classes 1-7 in the 55th col
@@ -56,27 +56,27 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rf_covtype20x(self):
-        importFolderPath = '/home/0xdiag/datasets/standard'
+        importFolderPath = 'standard'
 
-        importFolderResult = h2i.setupImportFolder(None, importFolderPath)
         csvFilenameTrain = 'covtype20x.data'
-        key2 = 'covtype20x.data.A.hex'
-        parseKeyTrain = h2i.parseImportFolderFile(None, csvFilenameTrain, importFolderPath, key2=key2, timeoutSecs=500)
-        print csvFilenameTrain, 'parse time:', parseKeyTrain['response']['time']
-        inspect = h2o_cmd.runInspect(key=parseKeyTrain['destination_key'])
-        dataKeyTrain = parseKeyTrain['destination_key']
+        csvPathname = importFolderPath + "/" + csvFilenameTrain
+        hex_key = 'covtype20x.data.A.hex'
+        parseResultTrain = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, timeoutSecs=500)
+        print csvFilenameTrain, 'parse time:', parseResultTrain['response']['time']
+        inspect = h2o_cmd.runInspect(key=parseResultTrain['destination_key'])
+        dataKeyTrain = parseResultTrain['destination_key']
         print "Parse end", dataKeyTrain
 
         # have to re import since source key is gone
         # we could just copy the key, but sometimes we change the test/train data  to covtype.data
-        importFolderResult = h2i.setupImportFolder(None, importFolderPath)
         csvFilenameTest = 'covtype20x.data'
-        key2 = 'covtype20x.data.B.hex'
-        parseKeyTest = h2i.parseImportFolderFile(None, csvFilenameTest, importFolderPath, key2=key2, timeoutSecs=500)
-        print csvFilenameTest, 'parse time:', parseKeyTest['response']['time']
-        print "Parse result['destination_key']:", parseKeyTest['destination_key']
-        inspect = h2o_cmd.runInspect(key=parseKeyTest['destination_key'])
-        dataKeyTest = parseKeyTest['destination_key']
+        csvPathname = importFolderPath + "/" + csvFilenameTest
+        hex_key = 'covtype20x.data.B.hex'
+        parseResultTest = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, timeoutSecs=500)
+        print csvFilenameTest, 'parse time:', parseResultTest['response']['time']
+        print "Parse result['destination_key']:", parseResultTest['destination_key']
+        inspect = h2o_cmd.runInspect(key=parseResultTest['destination_key'])
+        dataKeyTest = parseResultTest['destination_key']
         dataKeyTest2 = 'covtype20x.data.C.hex'
 
         print "Parse end", dataKeyTest
@@ -107,7 +107,7 @@ class Basic(unittest.TestCase):
         timeoutSecs = 30 + kwargs['ntree'] * 60 * (kwargs['parallel'] and 1 or 5)
 
         start = time.time()
-        rfv = h2o_cmd.runRFOnly(parseKey=parseKeyTrain,
+        rfv = h2o_cmd.runRFOnly(parseResult=parseResultTrain,
             timeoutSecs=timeoutSecs, retryDelaySecs=1, noPoll=True, **kwargs)
         print "rf job dispatch end on ", dataKeyTrain, 'took', time.time() - start, 'seconds'
         ### print "rf response:", h2o.dump_json(rfv)

@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -14,16 +14,15 @@ class Basic(unittest.TestCase):
         else:
             h2o_hosts.build_cloud_with_hosts()
 
-
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_RFhhp(self):
         # NAs cause CM to zero..don't run for now
-        ### csvPathnamegz = h2o.find_file('smalldata/hhp_9_17_12.predict.100rows.data.gz')
-        csvPathnamegz = h2o.find_file('smalldata/hhp_9_17_12.predict.data.gz')
-        h2o_cmd.runRF(trees=6, timeoutSecs=30, csvPathname=csvPathnamegz)
+        csvPathname = 'hhp_9_17_12.predict.data.gz'
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
+        h2o_cmd.runRFOnly(parseResult=parseResult, trees=6, timeoutSecs=30)
 
 if __name__ == '__main__':
     h2o.unit_main()

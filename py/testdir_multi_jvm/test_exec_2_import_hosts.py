@@ -1,8 +1,7 @@
 import unittest
 import random, sys, time, os
 sys.path.extend(['.','..','py'])
-
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_exec as h2e
 
 zeroList = []
 for i in range(5):
@@ -49,9 +48,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_exec_import_hosts(self):
-        # just do the import folder once
-        importFolderPath = "/home/0xdiag/datasets/standard"
-        h2i.setupImportFolder(None, importFolderPath)
 
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
@@ -69,24 +65,25 @@ class Basic(unittest.TestCase):
 
         ### csvFilenameList = random.sample(csvFilenameAll,1)
         csvFilenameList = csvFilenameAll
-        h2b.browseTheCloud()
+        ## h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
+        importFolderPath = "standard"
 
-        for (csvFilename, key2, timeoutSecs) in csvFilenameList:
+        for (csvFilename, hex_key, timeoutSecs) in csvFilenameList:
             SEEDPERFILE = random.randint(0, sys.maxint)
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
-                key2=key2, timeoutSecs=2000)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['desination_key']:", parseKey['destination_key']
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            csvPathname = importFolderPath + "/" + csvFilename
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, 
+                hex_key=hex_key, timeoutSecs=2000)
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['desination_key']:", parseResult['destination_key']
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
 
             print "\n" + csvFilename
             h2e.exec_zero_list(zeroList)
             # we use colX+1 so keep it to 53
-            h2e.exec_expr_list_rand(lenNodes, exprList, key2, 
+            h2e.exec_expr_list_rand(lenNodes, exprList, hex_key, 
                 maxCol=53, maxRow=400000, maxTrials=maxTrials, timeoutSecs=timeoutSecs)
-
 
 if __name__ == '__main__':
     h2o.unit_main()

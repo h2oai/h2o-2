@@ -1,7 +1,7 @@
 import unittest, sys
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -21,17 +21,11 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_tree_view(self):
-        csvFilename = "poker1000"
-        csvPathname = h2o.find_file('smalldata/poker/' + csvFilename)
-        # tree view failed with poker1000, passed with iris
-        h2o_cmd.runRF(trees=50, csvPathname=csvPathname, key=csvFilename, 
-            model_key="model0", timeoutSecs=10)
+        parseResult = h2i.import_parse(bucket='smalldata', path='poker/poker1000', hex_key='poker1000.hex', schema='put')
+        h2o_cmd.runRFOnly(parseResult=parseResult, trees=50, model_key="model0", timeoutSecs=10)
 
         for n in range(1):
-            # the default model_key  is "model". 
-            #and we know the data_key from parseFile will be poker1000.hex
-            a = h2o_cmd.runRFTreeView(n=n, 
-                data_key=csvFilename + ".hex", model_key="model0", timeoutSecs=10)
+            a = h2o_cmd.runRFTreeView(n=n, data_key='poker1000.hex', model_key="model0", timeoutSecs=10)
             print (h2o.dump_json(a))
 
 if __name__ == '__main__':

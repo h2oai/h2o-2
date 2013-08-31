@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import2 as h2i
 
 def define_params():
 
@@ -42,9 +42,9 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM_poisson_goalies_gg(self):
-        csvPathname = h2o.find_file('smalldata/poisson/Goalies.csv')
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname)
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        csvPathname = 'poisson/Goalies.csv'
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         h2o_cmd.infoFromInspect(inspect, csvPathname)
         paramDict = define_params()
         for trial in range(5):
@@ -73,7 +73,7 @@ class Basic(unittest.TestCase):
 
             start = time.time()
             print "May not solve. Expanded categorical columns causing a large # cols, small # of rows"
-            glm = h2o_cmd.runGLMOnly(timeoutSecs=timeoutSecs, parseKey=parseKey, **kwargs)
+            glm = h2o_cmd.runGLMOnly(timeoutSecs=timeoutSecs, parseResult=parseResult, **kwargs)
             elapsed = time.time()-start
             print "glm end on ", csvPathname, "Trial #", trial, "completed in", elapsed, "seconds.",\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)

@@ -1,7 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-
-import h2o, h2o_cmd, h2o_glm, h2o_hosts
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import2 as h2i
 
 def define_params():
     paramDict = {
@@ -44,8 +43,8 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM_gamma_rand2(self):
-        csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname)
+        csvPathname = 'UCI/UCI-large/covtype/covtype.data'
+        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put')
         paramDict = define_params()
         for trial in range(10):
             # params is mutable. This is default.
@@ -54,12 +53,11 @@ class Basic(unittest.TestCase):
             kwargs = params.copy()
 
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(timeoutSecs=300, parseKey=parseKey, **kwargs)
+            glm = h2o_cmd.runGLMOnly(timeoutSecs=300, parseResult=parseResult, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
 
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             print "Trial #", trial, "completed\n"
-
 
 if __name__ == '__main__':
     h2o.unit_main()

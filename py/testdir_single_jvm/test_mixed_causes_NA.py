@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -21,10 +21,9 @@ class Basic(unittest.TestCase):
 
     def test_mixed_causes_NA(self):
         csvFilename = 'mixed_causes_NA.csv'
-        csvPathname = h2o.find_file('smalldata/' + csvFilename)
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, timeoutSecs=15)
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
-        missingValuesList = h2o_cmd.infoFromInspect(inspect, csvPathname)
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvFilename, timeoutSecs=15, schema='put')
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
+        missingValuesList = h2o_cmd.infoFromInspect(inspect, csvFilename)
         print missingValuesList
         self.assertEqual(sum(missingValuesList), 0,
                 "Single column of data with mixed number/string should not have NAs")

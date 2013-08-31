@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_exec as h2e
 
 def write_syn_dataset(csvPathname, rowCount, SEED):
     # 8 random generatators, 1 per column
@@ -64,23 +64,23 @@ class Basic(unittest.TestCase):
         csvFilenameList = csvFilenameAll
         ### h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
-        for (csvFilename, key2, timeoutSecs) in csvFilenameList:
+        for (csvFilename, hex_key, timeoutSecs) in csvFilenameList:
             SEEDPERFILE = random.randint(0, sys.maxint)
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
             print "Creating random 1mx8 csv"
             write_syn_dataset(csvPathname, 1000000, SEEDPERFILE)
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=2000)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=2000)
 
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             h2o_cmd.infoFromInspect(inspect, csvPathname)
 
             print "\n" + csvFilename
             h2e.exec_zero_list(zeroList)
             # does n+1 so use maxCol 6
-            h2e.exec_expr_list_rand(lenNodes, exprList, key2, 
+            h2e.exec_expr_list_rand(lenNodes, exprList, hex_key, 
                 maxCol=6, maxRow=400000, maxTrials=200, timeoutSecs=timeoutSecs)
 
 

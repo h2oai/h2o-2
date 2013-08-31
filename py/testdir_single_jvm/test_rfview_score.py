@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf, h2o_hosts
+import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import2 as h2i
 
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
 # only classes 1-7 in the 55th col
@@ -57,15 +57,17 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rfview_score(self):
-        csvPathnameTrain = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
+        csvPathnameTrain = 'UCI/UCI-large/covtype/covtype.data'
         print "Train with:", csvPathnameTrain
-        parseKeyTrain = h2o_cmd.parseFile(csvPathname=csvPathnameTrain, key2="covtype.hex", timeoutSecs=15)
-        dataKeyTrain = parseKeyTrain['destination_key']
+        parseResultTrain = h2i.import_parse(bucket='datasets', path=csvPathnameTrain, schema='put', 
+            hex_key="covtype.hex", timeoutSecs=15)
+        dataKeyTrain = parseResultTrain['destination_key']
 
-        csvPathnameTest = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
+        csvPathnameTest = 'UCI/UCI-large/covtype/covtype.data'
         print "Test with:", csvPathnameTest
-        parseKeyTest = h2o_cmd.parseFile(csvPathname=csvPathnameTrain, key2="covtype.hex", timeoutSecs=15)
-        dataKeyTest = parseKeyTest['destination_key']
+        parseResultTest = h2i.import_parse(bucket='datasets', path=csvPathnameTest, schema='put', 
+            hex_key="covtype.hex", timeoutSecs=15)
+        dataKeyTest = parseResultTest['destination_key']
 
         for trial in range(5):
             # params is mutable. This is default.
@@ -75,8 +77,7 @@ class Basic(unittest.TestCase):
             # adjust timeoutSecs with the number of trees
             # seems ec2 can be really slow
             timeoutSecs = 30 + kwargs['ntree'] * 10 * (kwargs['parallel'] and 1 or 5)
-            rfv = h2o_cmd.runRFOnly(parseKey=parseKeyTrain, timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)
-    
+            rfv = h2o_cmd.runRFOnly(parseResult=parseResultTrain, timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)
             ### print "rf response:", h2o.dump_json(rfv)
 
             model_key = rfv['model_key']

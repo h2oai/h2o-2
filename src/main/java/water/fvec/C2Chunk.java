@@ -13,7 +13,7 @@ public class C2Chunk extends Chunk {
   }
   @Override protected final double atd_impl( int    i ) {
     int res = UDP.get2(_mem,(i<<1)+OFF);
-    return res == _NA?_vec._fNA:res;
+    return res == _NA?Double.NaN:res;
   }
   @Override boolean set8_impl(int idx, long l) {
     if( !(Short.MIN_VALUE < l && l <= Short.MAX_VALUE) ) return false;
@@ -32,6 +32,8 @@ public class C2Chunk extends Chunk {
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
+    if (nc == null) { System.err.println("DEBUG: Bad Chunk ns"); System.err.flush();} // DEBUG
+
     for( int i=0; i<_len; i++ ) {
       long res = at8_impl(i);
       if( _vec.valueIsNA(res) ) nc.setInvalid(i);

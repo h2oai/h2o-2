@@ -53,20 +53,20 @@ class Basic(unittest.TestCase):
             # have to import each time, because h2o deletes source after parse
             h2i.setupImportFolder(None, importFolderPath, timeoutSecs=90)
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2="syn_datasets.hex",
+            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2="syn_datasets.hex",
                 timeoutSecs=500)
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             csvPathname = importFolderPath + "/" + csvFilename
             print "\n" + csvPathname, \
                 "from all files num_rows:", "{:,}".format(inspect['num_rows']), \
                 "num_cols:", "{:,}".format(inspect['num_cols'])
 
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
 
             kwargs = {'sample': 75, 'depth': 25, 'ntree': 1}
             start = time.time()
-            RFview = h2o_cmd.runRFOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            RFview = h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 

@@ -77,16 +77,16 @@ def runKMeans(node=None, csvPathname=None, key=None, key2=None,
     # use 1/5th the KMeans timeoutSecs for allowed parse time.
     pto = max(timeoutSecs/5,10)
     noise = kwargs.pop('noise',None)
-    parseKey = parseFile(node, csvPathname, key, key2=key2, timeoutSecs=pto, noise=noise)
-    kmeans = runKMeansOnly(node, parseKey, timeoutSecs, retryDelaySecs, **kwargs)
+    parseResult = parseFile(node, csvPathname, key, key2=key2, timeoutSecs=pto, noise=noise)
+    kmeans = runKMeansOnly(node, parseResult, timeoutSecs, retryDelaySecs, **kwargs)
     return kmeans
 
-def runKMeansOnly(node=None, parseKey=None, 
+def runKMeansOnly(node=None, parseResult=None, 
         timeoutSecs=20, retryDelaySecs=2, **kwargs):
-    if not parseKey: raise Exception('No parsed key for KMeans specified')
+    if not parseResult: raise Exception('No parsed key for KMeans specified')
     if not node: node = h2o.nodes[0]
-    print parseKey['destination_key']
-    return node.kmeans(parseKey['destination_key'], None, 
+    print parseResult['destination_key']
+    return node.kmeans(parseResult['destination_key'], None, 
         timeoutSecs, retryDelaySecs, **kwargs)
 
 def runKMeansGrid(node=None, csvPathname=None, key=None, key2=None,
@@ -94,30 +94,30 @@ def runKMeansGrid(node=None, csvPathname=None, key=None, key2=None,
     # use 1/5th the KMeans timeoutSecs for allowed parse time.
     pto = max(timeoutSecs/5,10)
     noise = kwargs.pop('noise',None)
-    parseKey = parseFile(node, csvPathname, key, key=key2, timeoutSecs=pto, noise=noise)
-    return runKMeansGridOnly(node, parseKey, 
+    parseResult = parseFile(node, csvPathname, key, key=key2, timeoutSecs=pto, noise=noise)
+    return runKMeansGridOnly(node, parseResult, 
         timeoutSecs, retryDelaySecs, noise=noise, **kwargs)
 
-def runKMeansGridOnly(node=None, parseKey=None,
+def runKMeansGridOnly(node=None, parseResult=None,
         timeoutSecs=60, retryDelaySecs=2, noise=None, **kwargs):
-    if not parseKey: raise Exception('No parsed key for KMeansGrid specified')
+    if not parseResult: raise Exception('No parsed key for KMeansGrid specified')
     if not node: node = h2o.nodes[0]
     # no such thing as KMeansGridView..don't use retryDelaySecs
-    return node.kmeans_grid(parseKey['destination_key'], timeoutSecs, **kwargs)
+    return node.kmeans_grid(parseResult['destination_key'], timeoutSecs, **kwargs)
 
 def runGLM(node=None, csvPathname=None, key=None, key2=None, 
         timeoutSecs=20, retryDelaySecs=2, noise=None, **kwargs):
     # use 1/5th the GLM timeoutSecs for allowed parse time.
     pto = max(timeoutSecs/5,10)
     noise = kwargs.pop('noise',None)
-    parseKey = parseFile(node, csvPathname, key, key2=key2, timeoutSecs=pto, noise=noise)
-    return runGLMOnly(node, parseKey, timeoutSecs, retryDelaySecs, noise=noise, **kwargs)
+    parseResult = parseFile(node, csvPathname, key, key2=key2, timeoutSecs=pto, noise=noise)
+    return runGLMOnly(node, parseResult, timeoutSecs, retryDelaySecs, noise=noise, **kwargs)
 
-def runGLMOnly(node=None, parseKey=None, 
+def runGLMOnly(node=None, parseResult=None, 
         timeoutSecs=20, retryDelaySecs=2, noise=None, **kwargs):
-    if not parseKey: raise Exception('No parsed key for GLM specified')
+    if not parseResult: raise Exception('No parsed key for GLM specified')
     if not node: node = h2o.nodes[0]
-    return node.GLM(parseKey['destination_key'], 
+    return node.GLM(parseResult['destination_key'], 
         timeoutSecs, retryDelaySecs, noise=noise, **kwargs)
 
 def runGLMScore(node=None, key=None, model_key=None, timeoutSecs=20, **kwargs):
@@ -129,35 +129,35 @@ def runGLMGrid(node=None, csvPathname=None, key=None, key2=None,
     # use 1/5th the GLM timeoutSecs for allowed parse time.
     pto = max(timeoutSecs/5,10)
     noise = kwargs.pop('noise',None)
-    parseKey = parseFile(node, csvPathname, key, key=key2, timeoutSecs=pto, noise=noise)
-    return runGLMGridOnly(node, parseKey, 
+    parseResult = parseFile(node, csvPathname, key, key=key2, timeoutSecs=pto, noise=noise)
+    return runGLMGridOnly(node, parseResult, 
         timeoutSecs, retryDelaySecs, noise=noise, **kwargs)
 
-def runGLMGridOnly(node=None, parseKey=None,
+def runGLMGridOnly(node=None, parseResult=None,
         timeoutSecs=60, retryDelaySecs=2, noise=None, **kwargs):
-    if not parseKey: raise Exception('No parsed key for GLMGrid specified')
+    if not parseResult: raise Exception('No parsed key for GLMGrid specified')
     if not node: node = h2o.nodes[0]
     # no such thing as GLMGridView..don't use retryDelaySecs
-    return node.GLMGrid(parseKey['destination_key'], timeoutSecs, **kwargs)
+    return node.GLMGrid(parseResult['destination_key'], timeoutSecs, **kwargs)
 
 def runRF(node=None, csvPathname=None, trees=5, key=None, key2=None,
         timeoutSecs=20, retryDelaySecs=2, rfView=True, noise=None, **kwargs):
     # use 1/5th the RF timeoutSecs for allowed parse time.
     pto = max(timeoutSecs/5,30)
     noise = kwargs.pop('noise',None)
-    parseKey = parseFile(node, csvPathname, key, key2=key2, timeoutSecs=pto, noise=noise)
-    return runRFOnly(node, parseKey, trees, timeoutSecs, retryDelaySecs, 
+    parseResult = parseFile(node, csvPathname, key, key2=key2, timeoutSecs=pto, noise=noise)
+    return runRFOnly(node, parseResult, trees, timeoutSecs, retryDelaySecs, 
         rfView=rfView, noise=noise, **kwargs)
 
 # rfView can be used to skip the rf completion view
 # for creating multiple rf jobs
-def runRFOnly(node=None, parseKey=None, trees=5, 
+def runRFOnly(node=None, parseResult=None, trees=5, 
         timeoutSecs=20, retryDelaySecs=2, rfView=True, noise=None, noPrint=False, **kwargs):
-    if not parseKey: raise Exception('No parsed key for RF specified')
+    if not parseResult: raise Exception('No parsed key for RF specified')
     if not node: node = h2o.nodes[0]
-    #! FIX! what else is in parseKey that we should check?
-    h2o.verboseprint("runRFOnly parseKey:", parseKey)
-    Key = parseKey['destination_key']
+    #! FIX! what else is in parseResult that we should check?
+    h2o.verboseprint("runRFOnly parseResult:", parseResult)
+    Key = parseResult['destination_key']
     rf = node.random_forest(Key, trees, timeoutSecs, **kwargs)
 
     if h2o.beta_features and rfView==False:
@@ -248,13 +248,15 @@ def runRFView(node=None, data_key=None, model_key=None, ntree=None,
         h2f.simpleCheckRFView(node, rfView, noPrint=noPrint)
     return rfView
 
-def runStoreView(node=None, timeoutSecs=30):
+def runStoreView(node=None, timeoutSecs=30, **kwargs):
     if not node: node = h2o.nodes[0]
-    storeView = node.store_view(timeoutSecs)
+    storeView = node.store_view(timeoutSecs, **kwargs)
+    print "\n"
     for s in storeView['keys']:
-        print "\nStoreView: key:", s['key']
+        print "StoreView: key:", s['key']
         if 'rows' in s: 
-            print "StoreView: rows:", s['rows'], "value_size_bytes:", s['value_size_bytes']
+            h2o.verboseprint("StoreView: rows:", s['rows'], "value_size_bytes:", s['value_size_bytes'])
+    print 'storeView has', len(storeView['keys']), 'keys'
     return storeView
 
 def port_live(ip, port):
@@ -279,31 +281,6 @@ def wait_for_live_port(ip, port, retries=3):
             dot()
     if not port_live(ip,port):
         raise Exception("[h2o_cmd] Error waiting for {0}:{1} {2}times...".format(ip,port,retries))
-
-
-# looks for the key that matches the pattern, in the keys you saved from the 
-# import (that you saved from import of the folder/s3/hdfs)
-# I guess I should change to just be the raw result of the import? not sure
-# see how it's used in tests named above
-def deleteCsvKey(csvFilename, importFullList):
-    # remove the original data key
-    # the list could be from hdfs/s3 or local. They have to different list structures
-    if 'succeeded' in importFullList:
-        kDict = importFullList['succeeded']
-        for k in kDict:
-            key = k['key']
-            if csvFilename in key:
-                print "\nRemoving", key
-                removeKeyResult = h2o.nodes[0].remove_key(key=key)
-    elif 'keys' in importFullList:
-        kDict = importFullList['keys']
-        for k in kDict:
-            key = k
-            if csvFilename in key:
-                print "\nRemoving", key
-                removeKeyResult = h2o.nodes[0].remove_key(key=key)
-    else:
-        raise Exception ("Can't find 'files' or 'succeeded' in your file dict. why? not from hdfs/s3 or local?")
 
 
 # checks the key distribution in the cloud, and prints warning if delta against avg

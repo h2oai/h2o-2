@@ -3,7 +3,7 @@ sys.path.extend(['.','..','py'])
 
 # FIX! add cases with shuffled data!
 import h2o, h2o_cmd, h2o_hosts, h2o_glm
-import h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
+import h2o_browse as h2b, h2o_import2 as h2i, h2o_exec as h2e
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED, translateList):
     # do we need more than one random generator?
@@ -84,7 +84,7 @@ class Basic(unittest.TestCase):
 
         ### h2b.browseTheCloud()
 
-        for (rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
             csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
@@ -93,11 +93,11 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, translateList)
 
             start = time.time()
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=30)
+            parseResult = h2i.import_parse(path=csvPathname, hex_key=hex_key, schema='put', timeoutSecs=30)
             elapsed = time.time() - start
 
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
 
             algo = "Parse"
             l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
@@ -106,7 +106,7 @@ class Basic(unittest.TestCase):
             h2o.cloudPerfH2O.message(l)
 
             # We should be able to see the parse result?
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
 
             y = colCount
@@ -126,7 +126,7 @@ class Basic(unittest.TestCase):
             }
 
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
 
             h2o.check_sandbox_for_errors()

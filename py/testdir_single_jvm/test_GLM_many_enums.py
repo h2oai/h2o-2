@@ -1,6 +1,6 @@
 import unittest, random, sys, time, re
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_glm, h2o_util
 
 # details:
 # Apparently we don't have any new EOL separators for hive?, just new column separator
@@ -121,7 +121,7 @@ class Basic(unittest.TestCase):
                 ]
 
         ### h2b.browseTheCloud()
-        for (rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             # just randomly pick the row and col cases.
             colSepCase = random.randint(0,1)
             colSepCase = 1
@@ -158,22 +158,22 @@ class Basic(unittest.TestCase):
 
             # FIX! does 'separator=' take ints or ?? hex format
             # looks like it takes the hex string (two chars)
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, 
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, 
                 timeoutSecs=30, separator=colSepInt)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
-            ### inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            ### inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
             (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
-                h2o_cmd.columnInfoFromInspect(parseKey['destination_key'], exceptionOnMissingValues=True)
+                h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=True)
 
             y = colCount
             kwargs = {'y': y, 'max_iter': 1, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5, 
                 'case_mode': '=', 'case': 0}
             start = time.time()
-            ### glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
+            ### glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
             ### h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 

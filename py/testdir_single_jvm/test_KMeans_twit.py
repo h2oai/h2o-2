@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_browse as h2b
+import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -22,11 +22,9 @@ class Basic(unittest.TestCase):
     def test_KMeans_twit(self):
         csvFilename = "Twitter2DB.txt"
         print "\nStarting", csvFilename
-        csvPathname = h2o.find_file('smalldata/' + csvFilename)
 
         # h2b.browseTheCloud()
-        # parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", separator=9) # force tab sep
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvFilename, hex_key=csvFilename + ".hex", schema='put')
 
         # loop, to see if we get same centers
         # should check the means?
@@ -53,8 +51,8 @@ class Basic(unittest.TestCase):
                 'seed': 265211114317615310
             }
 
-            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=5, **kwargs)
-            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
+            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, timeoutSecs=5, **kwargs)
+            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvFilename, parseResult, 'd', **kwargs)
 
             if 1==0:
                 h2b.browseJsonHistoryAsUrlLastMatch("KMeansScore")

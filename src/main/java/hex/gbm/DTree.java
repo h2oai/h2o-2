@@ -72,6 +72,7 @@ class DTree extends Iced {
       parent.printLine(sb).append(" to ");
       return parent.printChild(sb,_nid);
     }
+    abstract public StringBuilder toString2(StringBuilder sb, int depth);
   }
 
   // An UndecidedNode: Has a DHistogram which is filled in (in parallel with other
@@ -94,7 +95,7 @@ class DTree extends Iced {
     @Override public String toString() {
       final int nclass = _tree._nclass;
       final String colPad="  ";
-      final int cntW=4, mmmW=4, menW=3, varW=4;
+      final int cntW=4, mmmW=4, menW=4, varW=4;
       final int colW=cntW+1+mmmW+1+mmmW+1+nclass*(menW+1)+varW;
       StringBuilder sb = new StringBuilder();
       sb.append("Nid# ").append(_nid).append(", ");
@@ -145,12 +146,18 @@ class DTree extends Iced {
         ((d==Float.MAX_VALUE || d==-Float.MAX_VALUE) ? " -" : 
          Float.toString(d));
       if( s.length() <= w ) return p(sb,s,w);
-      s = String.format("%3.2f",d);
+      s = String.format("%4.2f",d);
       if( s.length() > w )
-        s = String.format("%3.1f",d);
+        s = String.format("%4.1f",d);
       if( s.length() > w )
-        s = String.format("%3.0f",d);
+        s = String.format("%4.0f",d);
       return p(sb,s,w);
+    }
+
+    @Override public StringBuilder toString2(StringBuilder sb, int depth) {
+      for( int d=0; d<depth; d++ ) sb.append("  ");
+      sb.append("Undecided\n");
+      return sb;
     }
   }
 
@@ -245,6 +252,7 @@ class DTree extends Iced {
     // Bin #.
     public int bin( Chunk chks[], int i ) {
       if( _nids.length == 1 ) return 0;
+      if( chks[_col].isNA0(i) ) return i%_nids.length; // Missing data: pseudo-random bin select
       float d = (float)chks[_col].at0(i); // Value to split on for this row
       // Note that during *scoring* (as opposed to training), we can be exposed
       // to data which is outside the bin limits, so we must cap at both ends.
@@ -271,6 +279,15 @@ class DTree extends Iced {
             append(_tree._names[_col]).append(" < ").append(_bmin+(i+1)*_step).append("]");
       throw H2O.fail();
     }    
+
+    @Override public StringBuilder toString2(StringBuilder sb, int depth) {
+      for( int i=0; i<_nids.length; i++ ) {
+        for( int d=0; d<depth; d++ ) sb.append("  ");
+        (_col >= 0 ? sb.append(_tree._names[_col]).append(" < ").append(_bmin+_step*(1+i)) : sb.append("init")).append(":").append(Arrays.toString(_pred[i])).append("\n");
+        if( _nids[i] >= 0 ) _tree.node(_nids[i]).toString2(sb,depth+1);
+      }
+      return sb;
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -298,7 +315,7 @@ class DTree extends Iced {
     final DTree _trees[]; // Read-only, shared (except at the histograms in the Nodes)
     final int   _leafs[]; // Number of active leaves (per tree)
     final int _ncols;
-    final short _nclass;        // Zero for regression, else #classes
+    final short _nclass;        // One for regression, else #classes
     // Bias classes to zero; e.g. covtype classes range from 1-7 so this is 1.
     // e.g. prostate classes range 0-1 so this is 0
     final int _ymin;
@@ -355,15 +372,14 @@ class DTree extends Iced {
         // giving it an improved prediction).
         for( int i=0; i<nids._len; i++ ) {
           int nid = (int)nids.at80(i); // Get Node to decide from
-          if( nid<0 ) continue; // row already predicts perfectly or sampled away
+          if( nid==-2 ) continue; // sampled away
           
           // Score row against current decisions & assign new split
-          int oldnid=nid;
-          if( leaf > 0 )        // Prior pass exists?
-            nids.set80(i,nid = tree.decided(nid).ns(chks,i));
+          if( leaf > 0 && (nid = tree.decided(nid).ns(chks,i)) != -1 ) // Prior pass exists?
+            nids.set80(i,nid);
           
           // Pass 1.9
-          if( nid==-1 ) continue;         // row already predicts perfectly
+          if( nid < leaf ) continue; // row already predicts perfectly
           
           // We need private (local) space to gather the histograms.
           // Make local clones of all the histograms that appear in this chunk.
@@ -396,17 +412,17 @@ class DTree extends Iced {
         // variance, min, max per bin, per column.
         for( int i=0; i<nids._len; i++ ) { // For all rows
           int nid = (int)nids.at80(i);     // Get Node to decide from
-          if( nid<0 ) continue; // row already predicts perfectly or sampled away
+          if( nid<leaf ) continue; // row already predicts perfectly or sampled away
           DHistogram nhs[] = hcs[nid-leaf];
 
           for( int j=0; j<_ncols; j++) { // For all columns
             DHistogram nh = nhs[j];
-            if( nh != null ) {    // Tracking this column?
-              float f = (float)chks[j].at0(i);
-              nh.incr(f);         // Small histogram
-              if( nh instanceof DBinHistogram ) // Big histogram/
-                ((DBinHistogram)nh).incr(i,f,chks,_ncols);
-            }
+            if( nh == null ) continue; // Not tracking this column?
+            if( chks[j].isNA0(i) ) continue; // No data this row/column?
+            float f = (float)chks[j].at0(i);
+            nh.incr(f);         // Small histogram
+            if( nh instanceof DBinHistogram ) // Big histogram
+              ((DBinHistogram)nh).incr(i,f,chks,_ncols);
           }
         }
       }
@@ -490,7 +506,6 @@ class DTree extends Iced {
       float pred[] = new float[_nclass]; // Shared temp array for computing predictions
       for( int i=0; i<ys._len; i++ ) {
         float err = score0( chks, i, (float)(ys.at0(i)-_ymin), pred, rands );
-        assert 0.0f <= err && err <= 1.0f;
         _sum += err*err;        // Squared error
       }
     }
@@ -514,7 +529,7 @@ class DTree extends Iced {
       for( int t=0; t<_trees.length; t++ ) {
         // For OOBEE error, do not score rows on trees trained on that row
         if( rands != null && !(rands[t].nextFloat() >= _sampleRate) ) continue;
-
+        if( Float.isNaN(y) ) continue; // Ignore missing response vars
         nt++;
         final DTree tree = _trees[t];
         // "score" this row on this tree.  Apply the tree decisions at each
@@ -532,9 +547,6 @@ class DTree extends Iced {
         int bin = prev.bin(chks,i);    // Which bin did we decide on?
         Utils.add(pred,prev._pred[bin]); // Add the prediction vectors, tree-by-tree
       } // End of for-all trees
-      //for( int x=0; x<chks.length; x++ )
-      //  System.out.print(chks[x].at(i)+",");
-      //System.out.println(" pred="+Arrays.toString(pred));
 
       // Having computed the votes across all trees, find the majority class
       // and it's error rate.
@@ -562,6 +574,9 @@ class DTree extends Iced {
       assert 0 <= ycls && ycls < _nclass : "weird ycls="+ycls+", y="+y+", ymin="+_ymin;
       if( best != ycls ) _err++; // Absolute prediction error; off-diagonal sum
       _cm[ycls][best]++;         // Confusion Matrix
+      //for( int x=0; x<chks.length; x++ )
+      //  System.out.print(chks[x].at(i)+",");
+      //System.out.println(" pred="+Arrays.toString(pred)+(best==ycls?"":", ERROR"));
       float ypred = pred[ycls];  // Predict max class
       if( ypred > 1.0f ) ypred = 1.0f;
       return 1.0f - ypred;       // Error from 0 to 1.0

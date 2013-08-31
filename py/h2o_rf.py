@@ -165,7 +165,7 @@ def simpleCheckRFView(node, rfv, noPrint=False, **kwargs):
 def trainRF(trainParseKey, **kwargs):
     # Train RF
     start = time.time()
-    trainResult = h2o_cmd.runRFOnly(parseKey=trainParseKey, **kwargs)
+    trainResult = h2o_cmd.runRFOnly(parseResult=trainParseKey, **kwargs)
     rftime      = time.time()-start 
     h2o.verboseprint("RF train results: ", trainResult)
     h2o.verboseprint("RF computation took {0} sec".format(rftime))

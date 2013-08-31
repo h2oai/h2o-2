@@ -1,11 +1,10 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
-
 
     @classmethod
     def setUpClass(cls):
@@ -24,8 +23,8 @@ class Basic(unittest.TestCase):
     def test_GLMGrid_basic_benign(self):
         csvFilename = "benign.csv"
         print "\nStarting", csvFilename 
-        csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+        csvPathname = 'logreg/' + csvFilename
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
         # columns start at 0
         # cols 0-13. 3 is output
         # no member id in this one
@@ -47,8 +46,7 @@ class Basic(unittest.TestCase):
             }
         # fails with n_folds
         print "Not doing n_folds with benign. Fails with 'unable to solve?'"
-
-        gg = h2o_cmd.runGLMGridOnly(parseKey=parseKey, timeoutSecs=120, **kwargs)
+        gg = h2o_cmd.runGLMGridOnly(parseResult=parseResult, timeoutSecs=120, **kwargs)
         # check the first in the models list. It should be the best
         colNames = [ 'STR','OBS','AGMT','FNDX','HIGD','DEG','CHK',
                      'AGP1','AGMN','NLV','LIV','WT','AGLP','MST' ]
@@ -59,8 +57,8 @@ class Basic(unittest.TestCase):
         csvFilename = "prostate.csv"
         print "\nStarting", csvFilename
         # columns start at 0
-        csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+        csvPathname = 'logreg/' + csvFilename
+        parseResult = h2o_cmd.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
 
         y = "1"
         x = range(9)
@@ -84,7 +82,7 @@ class Basic(unittest.TestCase):
             'thresholds': '0:1:0.01'
             }
 
-        gg = h2o_cmd.runGLMGridOnly(parseKey=parseKey, timeoutSecs=120, **kwargs)
+        gg = h2o_cmd.runGLMGridOnly(parseResult=parseResult, timeoutSecs=120, **kwargs)
         colNames = ['D','CAPSULE','AGE','RACE','DPROS','DCAPS','PSA','VOL','GLEASON']
         # h2o_glm.simpleCheckGLMGrid(self, gg, colNames[xList[0]], **kwargs)
         h2o_glm.simpleCheckGLMGrid(self, gg, None, **kwargs)

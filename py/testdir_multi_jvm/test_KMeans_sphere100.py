@@ -149,7 +149,7 @@ class Basic(unittest.TestCase):
             csvPathname2 = csvPathname
 
         print "\nStarting", csvFilename
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname2, key2=csvFilename2 + ".hex")
+        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname2, key2=csvFilename2 + ".hex")
 
         ### h2b.browseTheCloud()
 
@@ -165,7 +165,7 @@ class Basic(unittest.TestCase):
             }
             timeoutSecs = 100
             start = time.time()
-            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.',\
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)

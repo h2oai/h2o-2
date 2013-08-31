@@ -1077,6 +1077,19 @@ public final class AutoBuffer {
     return put1(']');
   }
 
+  public AutoBuffer putJSON4f ( float f ) { return putStr2(Float.toString(f)); }
+  public AutoBuffer putJSON4f ( String name, float f ) { return putJSONStr(name).put1(':').putJSON4f(f); }
+  public AutoBuffer putJSONA4f(String name, float[] a) {
+    putJSONStr(name).put1(':');
+    if( a == null ) return putNULL();
+    put1('[');
+    for( int i=0; i<a.length; i++ ) {
+      if( i>0 ) put1(',');
+      putJSON4f(a[i]);
+    }
+    return put1(']');
+  }
+
   public AutoBuffer putJSON8d( double d ) { return putStr2(Double .toString(d)); }
   public AutoBuffer putJSON8d( String name, double d ) { return putJSONStr(name).put1(':').putJSON8d(d); }
   public AutoBuffer putJSONA8d( double[] a ) {

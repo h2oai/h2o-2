@@ -1,10 +1,6 @@
-import unittest
-import random, sys, time
+import unittest, random, sys, time, json
 sys.path.extend(['.','..','py'])
-import json
-
-import h2o, h2o_cmd, h2o_hosts
-import h2o_kmeans, h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_kmeans, h2o_import2 as h2i
 
 def define_params(SEED):
     paramDict = {
@@ -48,14 +44,13 @@ class Basic(unittest.TestCase):
                 ('covtype20x.data', 800),
                 ]
 
-        importFolderPath = '/home/0xdiag/datasets/standard'
-        h2i.setupImportFolder(None, importFolderPath)
+        importFolderPath = "standard"
         for csvFilename, timeoutSecs in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath,
-                timeoutSecs=2000, pollTimeoutSecs=60)
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             csvPathname = importFolderPath + "/" + csvFilename
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname,
+                timeoutSecs=2000, pollTimeoutSecs=60)
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvPathname, \
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \
                 "    num_cols:", "{:,}".format(inspect['num_cols'])
@@ -69,7 +64,7 @@ class Basic(unittest.TestCase):
                 kwargs = params.copy()
 
                 start = time.time()
-                kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, \
+                kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, \
                     timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=60, **kwargs)
                 elapsed = time.time() - start
                 print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', \

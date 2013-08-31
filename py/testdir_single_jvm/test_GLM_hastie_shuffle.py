@@ -18,11 +18,11 @@
 
 import unittest, time, sys, copy
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_util, h2o_hosts
+import h2o, h2o_cmd, h2o_glm, h2o_util, h2o_hosts, h2o_import2 as h2i
 
 def glm_doit(self, csvFilename, csvPathname, timeoutSecs=30):
     print "\nStarting GLM of", csvFilename
-    parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", timeoutSecs=10)
+    parseResult = h2i.import_parse(path=csvPathname, hex_key=csvFilename + ".hex", schema='put', timeoutSecs=10)
     y = "10"
     x = ""
     # Took n_folds out, because GLM doesn't include n_folds time and it's slow
@@ -31,7 +31,7 @@ def glm_doit(self, csvFilename, csvPathname, timeoutSecs=30):
     kwargs = {'x': x, 'y':  y, 'case': -1}
 
     start = time.time()
-    glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+    glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
     print "GLM in",  (time.time() - start), "secs (python measured)"
     h2o_glm.simpleCheckGLM(self, glm, 7, **kwargs)
 
