@@ -43,7 +43,7 @@ public class KMeans extends Request {
 
   @Override protected Response serve() {
     try {
-      if( destination_key.record()._originalValue.equals(source_key.record()._originalValue) )
+      if( destination_key.record()._originalValue != null && destination_key.record()._originalValue.equals(source_key.record()._originalValue) )
         throw new IllegalArgumentException("destination_key cannot be source_key");
       hex.KMeans job = start(destination_key.value(), k.value(), max_iter.value());
       JsonObject response = new JsonObject();

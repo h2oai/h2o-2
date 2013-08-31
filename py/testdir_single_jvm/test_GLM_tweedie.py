@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import2 as h2i, h2o_util
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -19,14 +19,11 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_B_benign(self):
-        h2o.nodes[0].log_view()
-        namelist = h2o.nodes[0].log_download()
-
-        print "\nStarting tweede.csv"
+    def test_GLM_tweedie(self):
         csvFilename = "AutoClaim.csv"
-        csvPathname = h2o.find_dataset('tweedie/' + csvFilename)
-        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+        csvPathname = 'tweedie/' + csvFilename
+        print "\nStarting", csvPathname
+        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put')
         # columns start at 0
         # regress: glm(CLM_AMT ~ CAR_USE + REVOLKED + GENDER + AREA + MARRIED + CAR_TYPE, data=AutoClaim, family=tweedie(1.34))
         # 
@@ -58,13 +55,6 @@ class Basic(unittest.TestCase):
             g = coefTruth[ i ]
             print "coefficient[%d]: %8.4f,    truth: %8.4f,    delta: %8.4f" % (i, c, g, abs(g-c))
             self.assertAlmostEqual(c, g, delta=deltaCoeff, msg="not close enough. coefficient[%d]: %s,    generated %s" % (i, c, g))
-
-        sys.stdout.write('.')
-        sys.stdout.flush() 
-
-
-        h2o.nodes[0].log_view()
-        namelist = h2o.nodes[0].log_download()
 
 if __name__ == '__main__':
     h2o.unit_main()

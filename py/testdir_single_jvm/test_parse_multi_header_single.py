@@ -1,6 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import2
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 import h2o_browse as h2b
 
 # for test debug
@@ -105,7 +105,7 @@ class Basic(unittest.TestCase):
             # use regex. the only files in the dir will be the ones we just created with  *fileN* match
             print "Header Key = " + header
             start = time.time()
-            parseResult = h2i.import_parse(path=SYNDATASETS_DIR + '/*'+rowxcol+'*', schema='put',
+            parseResult = h2i.import_parse(path=SYNDATASETS_DIR + '/*'+rowxcol+'*',
                 src_key=src_key, hex_key=hex_key, timeoutSecs=timeoutSecs, header="1", header_from_file=header)
 
             print "parseResult['destination_key']: " + parseResult['destination_key']

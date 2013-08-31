@@ -1,8 +1,6 @@
 import unittest, time, random, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
-import h2o_browse as h2b
-import h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -26,11 +24,13 @@ class Basic(unittest.TestCase):
         print "Walk storeview using offset, and just view=1"
         print "Do an import to get keys"
         # importFolderPath = "/home/0xdiag/datasets/manyfiles-nflx-gz"
-        # importFolderPath = "/home/0xdiag/datasets/more1_1200_link"
-        importFolderPath = "/home/0xdiag/datasets/syn_datasets"
+        # importFolderPath = "more1_1200_link"
+        importFolderPath = "syn_datasets"
 
         # IMPORT**********************************************
-        importFolderResult = h2i.setupImportFolder(None, importFolderPath)
+        csvPathname = importFolderPath + "/*"
+        (importFolderResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', path=csvPathname)
+
         # the list could be from hdfs/s3 (ec2 remap) or local. They have to different list structures
         if 'succeeded' in importFolderResult:
             succeededList = importFolderResult['succeeded']

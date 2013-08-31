@@ -1,8 +1,9 @@
 import h2o, h2o_cmd, re, os
+import getpass
 
 # hdfs/maprfs/s3/s3n paths should be absolute from the bucket (top level)
 # so only walk around for local
-def find_folder_and_filename(bucket, pathWithRegex):
+def find_folder_and_filename(bucket, pathWithRegex, schema=None):
     checkPath = True
     # strip the common mistake of leading "/" in path, if bucket is specified too
     if bucket is not None and re.match("/", pathWithRegex):
@@ -44,13 +45,17 @@ def find_folder_and_filename(bucket, pathWithRegex):
         # Otherwise the remote path needs to match the local discovered path.
 
         # want to check the username being used remotely first. should exist here too if going to use
-        possibleUsers = ["~"]
-        h2o.verboseprint("h2o.nodes[0].username:", h2o.nodes[0].username)
-        if h2o.nodes[0].username:
-            possibleUsers.insert(0, "~" + h2o.nodes[0].username)
+        username = getpass.getuser()
+        h2oUsername = h2o.nodes[0].username
+        h2o.verboseprint("username:", username, "h2oUsername:", h2oUsername)
+        # resolved in order, looking for bucket (ln -s will work) in these home dirs.
+        if h2oUsername != username:
+            possibleUsers = [username, h2oUsername, "0xdiag"]
+        else:
+            possibleUsers = [username, "0xdiag"]
 
         for u in possibleUsers:
-            rootPath = os.path.expanduser(u)
+            rootPath = os.path.expanduser("~" + u)
             bucketPath = os.path.join(rootPath, bucket)
             h2o.verboseprint("Checking bucketPath:", bucketPath, 'assuming home is', rootPath)
             if os.path.exists(bucketPath):
@@ -106,6 +111,9 @@ def import_only(node=None, schema='local', bucket=None, path=None,
     # no bucket is sometimes legal (fixed path)
     if not node: node = h2o.nodes[0]
 
+    if path is None:
+        raise Exception("import_only: path parameter needs to be specified")
+
     if "/" in path:
         (head, pattern) = os.path.split(path)
     else:
@@ -126,7 +134,7 @@ def import_only(node=None, schema='local', bucket=None, path=None,
         if not path: 
             raise Exception("path= didn't say what file to put")
 
-        (folderPath, filename) = find_folder_and_filename(bucket, path)
+        (folderPath, filename) = find_folder_and_filename(bucket, path, schema)
         h2o.verboseprint("folderPath:", folderPath, "filename:", filename)
         filePath = os.path.join(folderPath, filename)
         h2o.verboseprint('filePath:', filePath)
@@ -135,7 +143,7 @@ def import_only(node=None, schema='local', bucket=None, path=None,
 
     if schema=='local' and not \
             (node.redirect_import_folder_to_s3_path or node.redirect_import_folder_to_s3n_path):
-        (folderPath, pattern) = find_folder_and_filename(bucket, path)
+        (folderPath, pattern) = find_folder_and_filename(bucket, path, schema)
         folderURI = 'nfs:/' + folderPath
         importResult = node.import_files(folderPath, timeoutSecs=timeoutSecs)
 
