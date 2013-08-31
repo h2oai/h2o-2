@@ -11,6 +11,7 @@ import hex.rf.RFModel;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import water.*;
 import water.ValueArray.Column;
@@ -2187,6 +2188,12 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
   // Fluid Vec Arguments
   // ---------------------------------------------------------------------------
+  /** Locally synchronize VA to FVec conversions within this node. */
+  final static Object conversionLock = new Object();
+
+  /** Conversion number is only for logging. */
+  static AtomicInteger conversionNumber = new AtomicInteger(0);
+
   /**
    * A Frame Key
    * If necessary, a conversion (i.e. a "casting") of ValueArray to Frame
@@ -2206,26 +2213,30 @@ public class RequestArguments extends RequestStatics {
       // If the key exists but it refers to a ValueArray, then see if we have
       // a cached conversion in DKV already.
       if (v.isArray()) {
-        ValueArray va = v.get();
-        String frameKeyString = DKV.calcConvertedFrameKeyString(input);
-        Key k2 = Key.make(frameKeyString);
-        Value v2 = DKV.get(k2);
-        if (v2 != null) {
-          // If the thing that aliases with the cached conversion name is not
-          // a Frame, then throw an error.
-          if (! v2.isFrame()) {
-            throw new IllegalArgumentException(input+":"+errors()[1]);
+        // Serialize conversions to one at a time.
+        synchronized (conversionLock) {
+          ValueArray va = v.get();
+          String frameKeyString = DKV.calcConvertedFrameKeyString(input);
+          Key k2 = Key.make(frameKeyString);
+          Value v2 = DKV.get(k2);
+          if (v2 != null) {
+            // If the thing that aliases with the cached conversion name is not
+            // a Frame, then throw an error.
+            if (! v2.isFrame()) {
+              throw new IllegalArgumentException(input+":"+errors()[1]);
+            }
+            Log.info("Using existing cached Frame conversion (" + frameKeyString + ").");
+            return k2;
           }
-          Log.info("Using existing cached Frame conversion (" + frameKeyString + ").");
+
+          // No cached conversion.  Make one and store it in DKV.
+          int cn = conversionNumber.getAndIncrement();
+          Log.info("Converting ValueArray to Frame: node(" + H2O.SELF + ") convNum(" + cn + ") key(" + frameKeyString + ")...");
+          Frame f2 = va.asFrame();
+          DKV.put(k2,f2);
+          Log.info("Conversion " + cn + " complete.");
           return k2;
         }
-
-        // No cached conversion.  Make one and store it in DKV.
-        Log.info("Converting ValueArray to Frame (" + frameKeyString + ")...");
-        Frame f2 = va.asFrame();
-        DKV.put(k2,f2);
-        Log.info("Conversion complete.");
-        return k2;
       }
 
       // If not VA and not Frame, then it's an error.
