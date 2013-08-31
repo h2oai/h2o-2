@@ -71,7 +71,8 @@ class Basic(unittest.TestCase):
         for (csvFilename, hex_key, timeoutSecs, expectedCol0Min, expectedCol0Max, enableDownloadReparse, enableSizeChecks) in csvFilenameList:
             # have to import each time, because h2o deletes source after parse
             csvPathname = importFolderPath + "/" + csvFilename
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, timeoutSecs=2000)
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, 
+                hex_key=hex_key, timeoutSecs=2000)
             print csvPathname, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
@@ -123,7 +124,7 @@ class Basic(unittest.TestCase):
                 # h2o.nodes[0].remove_key(hex_key)
                 start = time.time()
                 hex_keyB = hex_key + "_B"
-                parseResultB = h2o_cmd.parseFile(csvPathname=csvDownloadPathname, hex_key=hex_keyB)
+                parseResultB = h2o_cmd.parseResult = h2i.import_parse(path=csvDownloadPathname, schema='put', hex_key=hex_keyB)
                 print csvDownloadPathname, "download/reparse (B) parse end. Original data from", \
                     csvFilename, 'took', time.time() - start, 'seconds'
                 inspect = h2o_cmd.runInspect(key=hex_keyB)
@@ -174,8 +175,6 @@ class Basic(unittest.TestCase):
 
             ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
             h2o.check_sandbox_for_errors()
-
-
 
 if __name__ == '__main__':
     h2o.unit_main()

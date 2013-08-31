@@ -30,28 +30,28 @@ paramsScoreRF = {
         }
 
 trainDS1 = {
-        'bucket'    : 'home-0xdiag-datasets',
+        'bucket'      : 'home-0xdiag-datasets',
         'pathname'    : 'standard/covtype.shuffled.90pct.sorted.data',
         'timeoutSecs' : 60,
         'header'      : 0
         }
 
 scoreDS1 = {
-        'bucket'    : 'home-0xdiag-datasets',
+        'bucket'      : 'home-0xdiag-datasets',
         'pathname'    : 'standard/covtype.shuffled.10pct.sorted.data',
         'timeoutSecs' : 60,
         'header'      : 0
         }
 
 trainDS2 = {
-        'bucket'    : 'home-0xdiag-datasets',
+        'bucket'      : 'home-0xdiag-datasets',
         'pathname'    : 'standard/covtype.shuffled.90pct.data',
         'timeoutSecs' : 60,
         'header'      : 0
         }
 
 scoreDS2 = {
-        'bucket'    : 'home-0xdiag-datasets',
+        'bucket'      : 'home-0xdiag-datasets',
         'pathname'    : 'standard/covtype.shuffled.10pct.data',
         'timeoutSecs' : 60,
         'header'      : 0

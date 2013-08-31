@@ -43,28 +43,28 @@ paramsScoreRF = {
 
 trainDS1 = {
         'bucket'      : 'home-0xdiag-datasets',
-        'pathname'    : '/standard/covtype.shuffled.90pct.sorted.data',
+        'pathname'    : 'standard/covtype.shuffled.90pct.sorted.data',
         'timeoutSecs' : 300,
         'header'      : 0
         }
 
 scoreDS1 = {
         'bucket'      : 'home-0xdiag-datasets',
-        'pathname'    : '/standard/covtype.shuffled.10pct.sorted.data',
+        'pathname'    : 'standard/covtype.shuffled.10pct.sorted.data',
         'timeoutSecs' : 300,
         'header'      : 0
         }
 
 trainDS2 = {
         'bucket'      : 'home-0xdiag-datasets',
-        'pathname'    : '/standard/covtype.shuffled.90pct.data',
+        'pathname'    : 'standard/covtype.shuffled.90pct.data',
         'timeoutSecs' : 300,
         'header'      : 0
         }
 
 scoreDS2 = {
         'bucket'      : 'home-0xdiag-datasets',
-        'pathname'    : '/standard/covtype.shuffled.10pct.data',
+        'pathname'    : 'standard/covtype.shuffled.10pct.data',
         'timeoutSecs' : 300,
         'header'      : 0
         }
@@ -96,7 +96,7 @@ class Basic(unittest.TestCase):
             schema = 's3n'
 
         start = time.time()
-        parseResult = h2i.import_parse(bucket=bucket, path=pathname, timeoutSecs=180)
+        parseResult = h2i.import_parse(bucket=bucket, path=pathname, schema='put', timeoutSecs=180)
         parse_time = time.time() - start
         h2o.verboseprint("parse took {0} sec".format(parse_time))
         parseResult['python_call_timer'] = parse_time
@@ -135,7 +135,6 @@ class Basic(unittest.TestCase):
         print "\nScoring: JsonDiff sorted data results, to non-sorted results (json responses)"
         df = h2o_util.JsonDiff(scoreResult1, scoreResult2, with_values=True)
         print "df.difference:", h2o.dump_json(df.difference)
-
 
 if __name__ == '__main__':
     h2o.unit_main()
