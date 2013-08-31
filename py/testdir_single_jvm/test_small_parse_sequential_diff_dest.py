@@ -22,10 +22,9 @@ class Basic(unittest.TestCase):
     def test_small_parse_sequential_diff_dest(self):
         csvPathname = 'poker/poker-hand-testing.data'
         for trials in range(100):
-            src_key = csvPathname
             hex_key = csvPathname + "_" + str(trials)
             parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put',
-                src_key=src_key, hex_key=hex_key, timeoutSecs=180, noPoll=False, doSummary=False)
+                hex_key=hex_key, timeoutSecs=180, noPoll=False, doSummary=False)
 
 if __name__ == "__main__":
 	h2o.unit_main()

@@ -28,7 +28,7 @@ exprList = [
     ]
 exprErrorCaseList = [
         # error case: more rows than in dataset?
-        'MatrixRes<n> = slice(<hex_keyX>[<col1>],1,1000000)',
+        'MatrixRes<n> = slice(<keyX>[<col1>],1,1000000)',
     ]
 
 class Basic(unittest.TestCase):
