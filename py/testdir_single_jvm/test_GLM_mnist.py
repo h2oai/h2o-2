@@ -29,19 +29,6 @@ class Basic(unittest.TestCase):
         csvFilelist = [
             ("mnist_training.csv.gz", "mnist_testing.csv.gz",    600), 
         ]
-        # IMPORT**********************************************
-        # since H2O deletes the source key, we should re-import every iteration if we re-use the src in the list
-        ### print "importHDFSResult:", h2o.dump_json(importFolderResult)
-        if 'files' in importFolderResult:
-            succeededList = importFolderResult['files']
-        else:
-            succeededList = importFolderResult['succeeded']
-        ### print "succeededList:", h2o.dump_json(succeededList)
-
-        self.assertGreater(len(succeededList),1,"Should see more than 1 files in the import?")
-        # why does this hang? can't look at storeview after import?
-        print "\nTrying StoreView after the import folder"
-        h2o_cmd.runStoreView(timeoutSecs=30)
 
         trial = 0
         for (trainCsvFilename, testCsvFilename, timeoutSecs) in csvFilelist:

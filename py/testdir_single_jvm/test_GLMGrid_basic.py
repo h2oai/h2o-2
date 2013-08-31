@@ -23,7 +23,7 @@ class Basic(unittest.TestCase):
     def test_GLMGrid_basic_benign(self):
         csvFilename = "benign.csv"
         print "\nStarting", csvFilename 
-        csvPathname = 'logreg' + '/' + csvFilename)
+        csvPathname = 'logreg/' + csvFilename
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
         # columns start at 0
         # cols 0-13. 3 is output
@@ -57,7 +57,7 @@ class Basic(unittest.TestCase):
         csvFilename = "prostate.csv"
         print "\nStarting", csvFilename
         # columns start at 0
-        csvPathname = 'logreg/csvFilename'
+        csvPathname = 'logreg/' + csvFilename
         parseResult = h2o_cmd.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
 
         y = "1"

@@ -44,8 +44,8 @@ class Basic(unittest.TestCase):
                 key = "ResultUnparsed" + str(i)
                 put = h2o.nodes[0].put_value(i, key=key, repl=None)
                 # have to parse the key after you put_value it. put_value should parse the result first!
-                key2 = "Result" + str(i) 
-                parse = h2o.nodes[0].parse(put['key'], key2, timeoutSecs=10)
+                hex_key = "Result" + str(i) 
+                parse = h2o.nodes[0].parse(put['key'], hex_key, timeoutSecs=10)
 
         start = time.time()
         h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=200, timeoutSecs=10)

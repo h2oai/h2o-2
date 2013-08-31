@@ -18,7 +18,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_glm_model_key_unique(self):
+    def test_GLM_model_key_unique(self):
         modelKeyDict = {}
         for trial in range (1,5):
             csvPathname = 'iris/iris2.csv'

@@ -33,7 +33,7 @@ class Basic(unittest.TestCase):
 
         trial = 0
         for (csvFilename, family, y, timeoutSecs) in csvFilenameList:
-            csvPathname1 = 'logreg/princeton/' + csvFilename)
+            csvPathname1 = 'logreg/princeton/' + csvFilename
             (folderPath, filename) = h2i.find_folder_and_filename('smalldata', csvPathname1)
             csvPathname2 = SYNDATASETS_DIR + '/' + csvFilename + '_stripped.csv'
             h2o_util.file_strip_trailing_spaces(folderPath + "/" + filename, csvPathname2)

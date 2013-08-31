@@ -73,7 +73,7 @@ class Basic(unittest.TestCase):
 
             if USEKNOWNFAILURE:
                 csvFilename = 'failtoconverge_100x50.csv'
-                csvPathname = 'logreg/' + csvFilename)
+                csvPathname = 'logreg/' + csvFilename
 
             parseResult = h2i.import_parse(path=csvPathname, hex_key=hex_key, timeoutSecs=10, schema='put')
             print csvFilename, 'parse time:', parseResult['response']['time']

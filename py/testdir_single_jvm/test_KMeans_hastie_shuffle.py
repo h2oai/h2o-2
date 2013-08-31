@@ -90,7 +90,7 @@ class Basic(unittest.TestCase):
 
         # This test also adds file shuffling, to see that row order doesn't matter
         csvFilename = "1mx10_hastie_10_2.data.gz"
-        csvPathname = 'logreg' + '/' + csvFilename)
+        csvPathname = 'logreg/' + csvFilename
         kmeans_doit(self, csvFilename, 'datasets', csvPathname, num_rows=1000000, timeoutSecs=60)
 
         filename1x = "hastie_1x.data"

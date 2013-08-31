@@ -25,7 +25,7 @@ class Basic(unittest.TestCase):
 
         print "\nStarting benign.csv"
         csvFilename = "benign.csv"
-        csvPathname = 'logreg' + '/' + csvFilename
+        csvPathname = 'logreg/' + csvFilename
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
         # columns start at 0
         y = "3"
@@ -55,7 +55,7 @@ class Basic(unittest.TestCase):
         y = "1"
         x = ""
         csvFilename = "prostate.csv"
-        csvPathname = 'logreg' + '/' + csvFilename)
+        csvPathname = 'logreg/' + csvFilename
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
 
         for maxx in range(2,6):

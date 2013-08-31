@@ -22,7 +22,7 @@ class Basic(unittest.TestCase):
     def test_B_benign(self):
         print "\nStarting benign.csv"
         csvFilename = "benign.csv"
-        csvPathname = 'logreg' + '/' + csvFilename)
+        csvPathname = 'logreg/' + csvFilename
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
         # columns start at 0
         y = "3"
@@ -52,7 +52,7 @@ class Basic(unittest.TestCase):
         # columns start at 0
         y = "1"
         csvFilename = "prostate.csv"
-        csvPathname = 'logreg/csvFilename'
+        csvPathname = 'logreg/' + csvFilename
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
 
         for maxx in range(2,9):
