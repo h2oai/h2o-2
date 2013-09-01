@@ -242,7 +242,7 @@ def import_parse(node=None, schema='local', bucket=None, path=None,
 # returns full key name, from current store view
 def find_key(pattern=None):
     found = None
-    kwargs = {'filter': None}
+    kwargs = {'filter': pattern}
     storeViewResult = h2o.nodes[0].store_view(**kwargs)
     keys = storeViewResult['keys']
     if len(keys) == 0:

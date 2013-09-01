@@ -40,7 +40,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM_params_rand2(self):
-        # csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
         csvPathname = 'covtype/covtype.20k.data'
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', hex_key="covtype.20k")
         paramDict = define_params()

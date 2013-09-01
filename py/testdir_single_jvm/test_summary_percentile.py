@@ -64,7 +64,7 @@ class Basic(unittest.TestCase):
                 low=expectedMin, high=expectedMax, mode=mode,
                 SEED=SEEDPERFILE)
 
-            parseResult = h2i.import_parse(None, csvPathname, schema='put', hex_key=hex_key, 
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, 
                 timeoutSecs=10, doSummary=False)
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']

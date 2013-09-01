@@ -19,11 +19,11 @@ class TestExcel(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_iris_xls(self):
-        parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris.xls', schema='put')
+        parseResult = h2i.import_parse(bucket='datasets', path='iris/iris.xls', schema='put')
         h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=5)
 
     def test_iris_xlsx(self):
-        parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris.xlsx', schema='put')
+        parseResult = h2i.import_parse(bucket='datasets', path='iris/iris.xlsx', schema='put')
         h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=5)
 
     def test_poker_xls(self):

@@ -80,7 +80,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rf_params_rand2_7066883810153380318(self):
-        csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
+        csvPathname = 'UCI/UCI-large/covtype/covtype.data'
         for trial in range(10):
             # params is mutable. This is default.
             params = {'ntree': 23, 'parallel': 1, 'features': 7}

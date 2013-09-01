@@ -1,9 +1,6 @@
-import unittest
-import random, sys, time
+import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-
-import h2o, h2o_cmd, h2o_rf as h2f, h2o_hosts
-import h2o_import as h2i
+import h2o, h2o_cmd, h2o_rf as h2f, h2o_hosts, h2o_import2 as h2i
 
 # output is last col (we created the last two cols at 0xdata? not in orig dataset)
 paramDict = {
@@ -41,11 +38,10 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rf_allyears2k_oobe(self):
-        importFolderPath = '/home/0xdiag/datasets/standard'
+        importFolderPath = 'standard'
         csvFilename = 'allyears2k.csv'
         csvPathname = importFolderPath + "/" + csvFilename
-        h2i.setupImportFolder(None, importFolderPath)
-        parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=60)
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', timeoutSecs=60)
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         h2o_cmd.infoFromInspect(inspect, csvPathname)
 

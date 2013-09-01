@@ -64,7 +64,7 @@ class Basic(unittest.TestCase):
             # seems ec2 can be really slow
             timeoutSecs = 30 + ((kwargs['ntree']*20) * max(1,kwargs['features']/15) * (kwargs['parallel'] and 1 or 3))
 
-            h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put')
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put')
             start = time.time()
             h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)
             elapsed = time.time()-start

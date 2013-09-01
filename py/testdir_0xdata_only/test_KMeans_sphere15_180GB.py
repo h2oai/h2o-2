@@ -1,6 +1,6 @@
 import unittest, time, sys, random, math, json
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import as h2i
+import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import2 as h2i
 import socket
 
 # kevin@mr-0xb1:~/h2o/py/testdir_hosts$ ls -ltr /home3/0xdiag/datasets/kmeans_big
@@ -42,8 +42,8 @@ class Basic(unittest.TestCase):
         csvFilename = 'syn_sphere15_2711545732row_6col_180GB_from_7x.csv'
         totalBytes = 183538602156
         if FROM_HDFS:
-            importFolderPath = "/datasets/kmeans_big"
-            csvPathname = "hdfs://" + importFolderPath + '/' + csvFilename
+            importFolderPath = "datasets/kmeans_big"
+            csvPathname = importFolderPath + '/' + csvFilename
         else:
             importFolderPath = "/home3/0xdiag/datasets/kmeans_big"
             csvPathname = importFolderPath + '/' + csvFilename
@@ -77,23 +77,18 @@ class Basic(unittest.TestCase):
         for trial in range(6):
             # IMPORT**********************************************
             # since H2O deletes the source key, re-import every iteration.
-            if FROM_HDFS:
-                importFolderResult = h2i.setupImportHdfs(None, importFolderPath)
-            else:
-                importFolderResult = h2i.setupImportFolder(None, importFolderPath)
-
             # PARSE ****************************************
             print "Parse starting: " + csvFilename
-            key2 = csvFilename + "_" + str(trial) + ".hex"
+            hex_key = csvFilename + "_" + str(trial) + ".hex"
             start = time.time()
             timeoutSecs = 2 * 3600
             kwargs = {}
             if FROM_HDFS:
-                parseResult = h2i.parseImportHdfsFile(None, csvFilename, importFolderPath, key2=key2,
+                parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=hex_key,
                     timeoutSecs=timeoutSecs, pollTimeoutsecs=60, retryDelaySecs=2,
                     benchmarkLogging=benchmarkLogging, **kwargs)
             else:
-                parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2,
+                parseResult = h2i.import_parse(path=csvPathname, schema='local', hex_key=hex_key,
                     timeoutSecs=timeoutSecs, pollTimeoutsecs=60, retryDelaySecs=2,
                     benchmarkLogging=benchmarkLogging, **kwargs)
 

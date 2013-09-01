@@ -13,9 +13,9 @@ import unittest, time, sys, copy
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_glm, h2o_util, h2o_hosts, h2o_import2 as h2i
 
-def glm_doit(self, csvFilename, csvPathname, timeoutSecs=30):
+def glm_doit(self, csvFilename, bucket, csvPathname, timeoutSecs=30):
     print "\nStarting GLM of", csvFilename
-    parseResult = h2i.import_parse(path=csvPathname, hex_key=csvFilename + ".hex", schema='put', timeoutSecs=30)
+    parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, hex_key=csvFilename + ".hex", schema='put', timeoutSecs=30)
     y = "10"
     x = ""
     # Took n_folds out, because GLM doesn't include n_folds time and it's slow
@@ -66,18 +66,20 @@ class Basic(unittest.TestCase):
         # gunzip it and cat it to create 2x and 4x replications in SYNDATASETS_DIR
         # FIX! eventually we'll compare the 1x, 2x and 4x results like we do
         # in other tests. (catdata?)
+        bucket = 'datasets'
         csvFilename = "1mx10_hastie_10_2.data.gz"
-        csvPathname = h2o.find_dataset('logreg' + '/' + csvFilename)
-        glm_doit(self,csvFilename, csvPathname, timeoutSecs=75)
+        csvPathname = 'logreg' + '/' + csvFilename
+        glm_doit(self, csvFilename, bucket, csvPathname, timeoutSecs=75)
+        fullPathname = h2i.find_folder_and_filename(bucket, csvPathname, returnFullPath=True)
 
         filename1x = "hastie_1x.data"
         pathname1x = SYNDATASETS_DIR + '/' + filename1x
-        h2o_util.file_gunzip(csvPathname, pathname1x)
+        h2o_util.file_gunzip(fullPathname, pathname1x)
 
         filename2x = "hastie_2x.data"
         pathname2x = SYNDATASETS_DIR + '/' + filename2x
         h2o_util.file_cat(pathname1x,pathname1x,pathname2x)
-        glm_doit(self,filename2x, pathname2x, timeoutSecs=75)
+        glm_doit(self,filename2x, None, pathname2x, timeoutSecs=75)
 
         filename4x = "hastie_4x.data"
         pathname4x = SYNDATASETS_DIR + '/' + filename4x
