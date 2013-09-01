@@ -9,6 +9,20 @@ package water;
  * @version 1.0
  */
 public abstract class DKV {
+  /**
+   * Return the calculated name of a Frame Key given a ValueArray Key.
+   */
+  static public String calcConvertedFrameKeyString (String valueArrayKeyString) {
+    String s = valueArrayKeyString + ".autoframe";
+    return s;
+  }
+
+  /**
+   * Return true if a string is a calculated Frame Key string; false otherwise.
+   */
+  static private boolean isConvertedFrameKeyString (String s) {
+    return s.endsWith(".autoframe");
+  }
 
   // This put is a top-level user-update, and not a reflected or retried
   // update.  i.e., The User has initiated a change against the K/V store.
@@ -45,6 +59,15 @@ public abstract class DKV {
     return DputIfMatch(key, val, old, fs, false);
   }
   static public Value DputIfMatch( Key key, Value val, Value old, Futures fs, boolean dontCache ) {
+    // TEMPORARY DURING VALUEARRAY TO FLUIDVEC TRANSITION.
+    // When ValueArray object writes occur to DKV, whack any possible associated
+    // auto-converted Frame object.
+    if (! isConvertedFrameKeyString(key.toString())) {
+      String frameKeyString = calcConvertedFrameKeyString(key.toString());
+      Key k = Key.make(frameKeyString);
+      remove(k);
+    }
+
     // First: I must block repeated remote PUTs to the same Key until all prior
     // ones complete - the home node needs to see these PUTs in order.
     // Repeated PUTs on the home node are already ordered.
