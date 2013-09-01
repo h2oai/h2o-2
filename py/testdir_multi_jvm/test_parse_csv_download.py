@@ -1,8 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-
-import h2o, h2o_cmd
-import h2o_browse as h2b
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import2 as h2i
 
 def write_syn_dataset(csvPathname, rowCount, headerData, rowData):
     dsf = open(csvPathname, "w+")
@@ -72,15 +70,15 @@ class parse_rand_schmoo(unittest.TestCase):
             totalRows += num
 
             # make sure all key names are unique, when we re-put and re-parse (h2o caching issues)
-            key = csvFilename + "_" + str(trial)
-            key2 = csvFilename + "_" + str(trial) + ".hex"
+            src_key = csvFilename + "_" + str(trial)
+            hex_key = csvFilename + "_" + str(trial) + ".hex"
 
             start = time.time()
-            parseResultA = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2)
+            parseResultA = h2i.import_parse(path=csvPathname, schema='put', src_key=src_key, hex_key=hex_key)
             print "\nA trial #", trial, "totalRows:", totalRows, "parse end on ", \
                 csvFilename, 'took', time.time() - start, 'seconds'
 
-            inspect = h2o_cmd.runInspect(key=key2)
+            inspect = h2o_cmd.runInspect(key=hex_key)
             missingValuesListA = h2o_cmd.infoFromInspect(inspect, csvPathname)
             num_colsA = inspect['num_cols']
             num_rowsA = inspect['num_rows']
@@ -89,15 +87,15 @@ class parse_rand_schmoo(unittest.TestCase):
 
             # do a little testing of saving the key as a csv
             csvDownloadPathname = SYNDATASETS_DIR + "/csvDownload.csv"
-            h2o.nodes[0].csv_download(key=key2, csvPathname=csvDownloadPathname)
+            h2o.nodes[0].csv_download(key=hex_key, csvPathname=csvDownloadPathname)
 
             # remove the original parsed key. source was already removed by h2o
-            h2o.nodes[0].remove_key(key2)
+            h2o.nodes[0].remove_key(hex_key)
             start = time.time()
-            parseResultB = h2o_cmd.parseFile(csvPathname=csvDownloadPathname, key=key, key2=key2)
+            parseResultB = h2i.import_parse(path=csvDownloadPathname, schema='put', key=key, hex_key=hex_key)
             print "B trial #", trial, "totalRows:", totalRows, "parse end on ", \
                 csvFilename, 'took', time.time() - start, 'seconds'
-            inspect = h2o_cmd.runInspect(key=key2)
+            inspect = h2o_cmd.runInspect(key=hex_key)
             missingValuesListB = h2o_cmd.infoFromInspect(inspect, csvPathname)
             num_colsB = inspect['num_cols']
             num_rowsB = inspect['num_rows']

@@ -1,7 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -40,8 +39,8 @@ class Basic(unittest.TestCase):
             sys.stdout.flush()
             csvFilename = "parity_128_4_" + "100" + "_quad.data"  
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
-            h2o_cmd.runRF(csvPathname=csvPathname, trees=100,
-                    timeoutSecs=5, retryDelaySecs=0.1)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put')
+            h2o_cmd.runRFOnly(parseResult=parseResult, trees=100, timeoutSecs=5, retryDelaySecs=0.1)
 
 if __name__ == '__main__':
     h2o.unit_main()

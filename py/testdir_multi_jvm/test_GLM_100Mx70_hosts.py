@@ -41,17 +41,17 @@ class Basic(unittest.TestCase):
 
     def test_GLM_100Mx70_hosts(self):
         # enable this if you need to re-create the file
-        if 1==0:
+        if 1==1:
             SYNDATASETS_DIR = h2o.make_syn_dir()
             createList = [
                 (100000000, 70, 'cA', 10000), 
                 ]
 
             for (rowCount, colCount, hex_key, timeoutSecs) in createList:
+                SEEDPERFILE = random.randint(0, sys.maxint)
                 csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
                 csvPathname = SYNDATASETS_DIR + '/' + csvFilename
                 print "Creating random", csvPathname
-                SEEDPERFILE = random.randint(0, sys.maxint)
                 write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
             # Have to copy it to /home/0xdiag/datasets!
 
@@ -60,23 +60,22 @@ class Basic(unittest.TestCase):
             csvFilenameList = [
                 # ('rand_logreg_500Kx70.csv.gz', 500, 'rand_500Kx70'),
                 # ('rand_logreg_1Mx70.csv.gz', 500, 'rand_1Mx70'),
-                ('rand_logreg_100000000x70.csv.gz', 500, 'rand_100Mx70.hex'),
+                ('rand_logreg_100000000x70.csv', 500, 'rand_100Mx70.hex'),
                 ]
         else:
             # None is okay for hex_key
             csvFilenameList = [
                 # ('rand_logreg_500Kx70.csv.gz', 500, 'rand_500Kx70'),
                 # ('rand_logreg_1Mx70.csv.gz', 500, 'rand_1Mx70'),
-                ('rand_logreg_100000000x70.csv.gz', 500, 'rand_100Mx70.hex'),
+                ('rand_logreg_100000000x70.csv', 500, 'rand_100Mx70.hex'),
                 ]
 
         ### h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
-        importFolderPath = "standard"
 
         for csvFilename, timeoutSecs, hex_key in csvFilenameList:
-            csvPathname = importFolderPath + "/" + csvFilename
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key,
+            csvPathname = SYNDATASETS_DIR + '/' + csvFilename
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key,
                 timeoutSecs=2000, retryDelaySecs=5, initialDelaySecs=10, pollTimeoutSecs=60)
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             csvPathname = importFolderPath + "/" + csvFilename

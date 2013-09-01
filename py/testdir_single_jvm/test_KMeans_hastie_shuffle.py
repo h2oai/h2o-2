@@ -91,11 +91,13 @@ class Basic(unittest.TestCase):
         # This test also adds file shuffling, to see that row order doesn't matter
         csvFilename = "1mx10_hastie_10_2.data.gz"
         csvPathname = 'logreg/' + csvFilename
-        kmeans_doit(self, csvFilename, 'datasets', csvPathname, num_rows=1000000, timeoutSecs=60)
+        bucket = 'datasets'
+        kmeans_doit(self, csvFilename, bucket, csvPathname, num_rows=1000000, timeoutSecs=60)
+        fullPathname = h2i.find_folder_and_filename(bucket, csvPathname, returnFullPath=True)
 
         filename1x = "hastie_1x.data"
         pathname1x = SYNDATASETS_DIR + '/' + filename1x
-        h2o_util.file_gunzip(csvPathname, pathname1x)
+        h2o_util.file_gunzip(fullPathname, pathname1x)
         
         filename1xShuf = "hastie_1x.data_shuf"
         pathname1xShuf = SYNDATASETS_DIR + '/' + filename1xShuf

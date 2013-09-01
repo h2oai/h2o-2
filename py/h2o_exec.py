@@ -76,7 +76,7 @@ def checkScalarResult(resultInspect, resultKey):
 
     return min_value
 
-def fill_in_expr_template(exprTemplate, colX=None, n=None, row=None, key2=None, m=None):
+def fill_in_expr_template(exprTemplate, colX=None, n=None, row=None, keyX=None, m=None):
     # FIX! does this push col2 too far? past the output col?
     # just a string? 
     execExpr = exprTemplate
@@ -89,7 +89,7 @@ def fill_in_expr_template(exprTemplate, colX=None, n=None, row=None, key2=None, 
     if row is not None:
         execExpr = re.sub('<row>', str(row), execExpr)
     if key2 is not None:
-        execExpr = re.sub('<keyX>', str(key2), execExpr)
+        execExpr = re.sub('<keyX>', str(keyX), execExpr)
     if m is not None:
         execExpr = re.sub('<m>', str(m), execExpr)
         execExpr = re.sub('<m-1>', str(m-1), execExpr)

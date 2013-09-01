@@ -25,12 +25,17 @@ class Basic(unittest.TestCase):
         print "Do an import to get keys"
         # importFolderPath = "/home/0xdiag/datasets/manyfiles-nflx-gz"
         # importFolderPath = "more1_1200_link"
-        importFolderPath = "syn_datasets"
+        # FIX! storeview is really slow looking at the 1201 files in more1_1200_link
+        if 1==0:
+            MAX_FILE_NUM = 1201
+            importFolderPath = "more1_1200_link"
+        else:
+            MAX_FILE_NUM = 235
+            importFolderPath = "manyfiles-nflx-gz"
 
         # IMPORT**********************************************
         csvPathname = importFolderPath + "/*"
         (importFolderResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', path=csvPathname)
-
         # the list could be from hdfs/s3 (ec2 remap) or local. They have to different list structures
         if 'succeeded' in importFolderResult:
             succeededList = importFolderResult['succeeded']
@@ -41,7 +46,8 @@ class Basic(unittest.TestCase):
 
         ### print "succeededList:", h2o.dump_json(succeededList)
         print len(succeededList), "keys reported by import result"
-        self.assertEqual(len(succeededList), 100, "There should be 100 files imported as keys")
+        self.assertEqual(len(succeededList), MAX_FILE_NUM, 
+                "There should be %s files imported as keys" % MAX_FILE_NUM)
 
         print "\nTrying StoreView after the import folder"
         # look at all? How do I know how many there are?
@@ -51,21 +57,21 @@ class Basic(unittest.TestCase):
         print "Check 1:", l, "%s keys if view= not used" % l
         self.assertEqual(20, l, "Expect 20 (default) for view= not used")
 
-        # can't handle 1201 in storeView. max is 1024
+        # can't handle MAX_FILE_NUM in storeView. max is 1024
         storeViewResult = h2o_cmd.runStoreView(offset=0, view=1024, timeoutSecs=60)
         l = len(storeViewResult['keys'])
         print "Check 2:", l, "%s keys if view=1024" % l
-        self.assertEqual(100, l, "Expect 100 for view=1024")
-
-        storeViewResult = h2o_cmd.runStoreView(offset=0, view=100, timeoutSecs=60)
-        l = len(storeViewResult['keys'])
-        print "Check 3:", l, "%s keys if view= expected number", len(succeededList)
-        self.assertEqual(100, l, "Expect 100 for view=100")
+        self.assertEqual(MAX_FILE_NUM, l, "Expect 1024 for view=1024")
 
         storeViewResult = h2o_cmd.runStoreView(offset=0, view=0, timeoutSecs=60)
         l = len(storeViewResult['keys'])
-        print "Check 4:", l, "%s keys if view= 0" % l
+        print "Check 3:", l, "%s keys if view= 0" % l
         self.assertEqual(0, l, "Expect 0 for view=0")
+
+        storeViewResult = h2o_cmd.runStoreView(offset=0, view=MAX_FILE_NUM, timeoutSecs=60)
+        l = len(storeViewResult['keys'])
+        print "Check 4:", l, "%s keys if view= number of files in the dir", MAX_FILE_NUM
+        self.assertEqual(MAX_FILE_NUM, l, "Expect %s for view=%s" % (MAX_FILE_NUM, MAX_FILE_NUM))
 
         keys = storeViewResult['keys']
         # look at one at a time

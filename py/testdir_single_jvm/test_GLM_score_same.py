@@ -87,9 +87,9 @@ class Basic(unittest.TestCase):
 
     def test_GLM_score_same(self):
         # gunzip it and cat it to create 2x and 4x replications in SYNDATASETS_DIR
+        bucket = 'datasets'
         csvFilename = "1mx10_hastie_10_2.data.gz"
         csvPathname = 'logreg' + '/' + csvFilename
-        bucket = 'datasets'
 
         y = "10"
         x = ""
@@ -102,8 +102,8 @@ class Basic(unittest.TestCase):
         filename1x = "hastie_1x.data"
         pathname1x = SYNDATASETS_DIR + '/' + filename1x
 
-        (folderPath, filename) = h2i.find_folder_and_filename(bucket, csvPathname)
-        h2o_util.file_gunzip(folderPath + '/' + filename, pathname1x)
+        fullPathname = h2i.find_folder_and_filename(bucket, csvPathname, returnFullPath=True)
+        h2o_util.file_gunzip(fullPathname, pathname1x)
 
         filename2x = "hastie_2x.data"
         pathname2x = SYNDATASETS_DIR + '/' + filename2x

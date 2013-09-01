@@ -6,16 +6,18 @@
 ./n0.doit test_arity.py
 ./n0.doit test_bad_nofinaltrees.py
 # ./n0.doit test_big_local_cloud.py
-# ./n0.doit test_build_cloud_relaxed.py
 # ./n0.doit test_cloud_127_2_loop.py
 # ./n0.doit test_cloud_127.py
 # ./n0.doit test_cloud_17to25.py
 # ./n0.doit test_cloud_5_loop.py
 # ./n0.doit test_cloud.py
 # ./n0.doit test_cloud_udp_drop.py
+./n0.doit test_csv_download_libsvm.py
+./n0.doit test_dead_node_status.py
 ./n0.doit test_dkv.py
 ./n0.doit test_exec_2_import_hosts.py
 ./n0.doit test_exec_3_import_hosts.py
+./n0.doit test_exec_arith_precedence.py
 ./n0.doit test_exec_assign_one_node.py
 ./n0.doit test_exec_assign.py
 ./n0.doit test_exec_col_scalar.py
@@ -53,6 +55,9 @@
 ./n0.doit test_jstack.py
 ./n0.doit test_kaggle.py
 ./n0.doit test_KMeans_covtype20x.py
+./n0.doit test_KMeansGrid_basic.py
+./n0.doit test_KMeansGrid_params_rand2.py
+./n0.doit test_KMeans_libsvm.py
 ./n0.doit test_KMeans_params_rand2.py
 ./n0.doit test_KMeans_sphere100.py
 ./n0.doit test_KMeans_sphere3.py
@@ -62,11 +67,18 @@
 ./n0.doit test_many_cols_01.py
 ./n0.doit test_many_cols_0.py
 ./n0.doit test_many_cols_and_types.py
+./n0.doit test_many_cols_csv_download.py
+./n0.doit test_many_cols_long_enums.py
+./n0.doit test_many_fp_formats_libsvm_2.py
+./n0.doit test_many_fp_formats_libsvm.py
 ./n0.doit test_many_fp_formats.py
 ./n0.doit test_multi_with_a_browser.py
+./n0.doit test_parse_bounds_csv.py
+./n0.doit test_parse_bounds_libsvm.py
 ./n0.doit test_parse_csv_download.py
 ./n0.doit test_parse_file_loop.py
 ./n0.doit test_parse_fs_schmoo.py
+./n0.doit test_parse_libsvm.py
 ./n0.doit test_parse_many_cols.py
 ./n0.doit test_parse_rand_schmoo2.py
 ./n0.doit test_parse_rand_schmoo3.py
@@ -81,20 +93,29 @@
 ./n0.doit test_putfile.py
 ./n0.doit test_rand_inspect.py
 ./n0.doit test_RF200x4.py
-./n0.doit test_rf2a.py
 ./n0.doit test_rf2.py
 ./n0.doit test_rf3.py
+./n0.doit test_rf_big_rand_tree.py
+./n0.doit test_rf_covtype_brutal2.py
+./n0.doit test_rf_covtype_brutal.py
+./n0.doit test_rf_covtype_train_oobe.py
 ./n0.doit test_rf_float_many_bins.py
 ./n0.doit test_rf_float_rand2.py
 ./n0.doit test_rf_float_rand.py
+./n0.doit test_rf_hhp_2a.py
+./n0.doit test_rf_libsvm.py
 ./n0.doit test_rf_sample.py
 ./n0.doit test_same_parse.py
+./n0.doit test_script_download.py
 ./n0.doit test_sigar.py
 ./n0.doit test_stedo.py
+./n0.doit test_storeview_diff.py
 ./n0.doit test_storeview_import.py
+./n0.doit test_storeview_walk.py
 ./n0.doit test_sum_dkv_fail.py
 ./n0.doit test_sum_import_hosts.py
 ./n0.doit test_summary_percentile_hosts.py
+./n0.doit test_summary_with_x_libsvm.py
 ./n0.doit test_sum.py
 ./n0.doit test_xls.py
 ./n0.doit test_xls_w_hosts.py

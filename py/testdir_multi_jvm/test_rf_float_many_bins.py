@@ -1,7 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd
-import h2o_browse as h2b
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import2 as h2i
 
 def write_syn_dataset(csvPathname, rowCount, headerData):
     dsf = open(csvPathname, "w+")
@@ -73,16 +72,15 @@ class Basic(unittest.TestCase):
             start = time.time()
 
             # make sure all key names are unique, when we re-put and re-parse (h2o caching issues)
-            key = csvFilename + "_" + str(trial)
-            key2 = csvFilename + "_" + str(trial) + ".hex"
+            hex_key = csvFilename + "_" + str(trial) + ".hex"
             # On EC2 once we get to 30 trials or so, do we see polling hang? GC or spill of heap or ??
             kwargs = {'ntree': 5, 'depth': 5, 'bin_limit': 32000}
-
-            key = h2o_cmd.runRF(csvPathname=csvPathname, key=key, key2=key2, 
+            parseResult = h2i.import_parse(path=csvPathname, schema='put')
+            h2o_cmd.runRFOnly(parseResult=parseResult, hex_key=hex_key, 
                 timeoutSecs=10, pollTimeoutSecs=5, **kwargs)
             print "trial #", trial, "totalRows:", totalRows, "num:", num, "RF end on ", csvFilename, \
                 'took', time.time() - start, 'seconds'
-            ### h2o_cmd.runInspect(key=key2)
+            ### h2o_cmd.runInspect(key=hex_key)
             ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
             h2o.check_sandbox_for_errors()
 

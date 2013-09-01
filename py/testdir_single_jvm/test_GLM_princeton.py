@@ -34,9 +34,9 @@ class Basic(unittest.TestCase):
         trial = 0
         for (csvFilename, family, y, timeoutSecs) in csvFilenameList:
             csvPathname1 = 'logreg/princeton/' + csvFilename
-            (folderPath, filename) = h2i.find_folder_and_filename('smalldata', csvPathname1)
+            fullPathname1 = h2i.find_folder_and_filename('smalldata', csvPathname1, returnFullPath=True)
             csvPathname2 = SYNDATASETS_DIR + '/' + csvFilename + '_stripped.csv'
-            h2o_util.file_strip_trailing_spaces(folderPath + "/" + filename, csvPathname2)
+            h2o_util.file_strip_trailing_spaces(fullPathname1, csvPathname2)
 
             kwargs = {'n_folds': 0, 'family': family, 'link': 'familyDefault', 'y': y}
             parseResult = h2i.import_parse(path=csvPathname2, schema='put', timeoutSecs=timeoutSecs, **kwargs)

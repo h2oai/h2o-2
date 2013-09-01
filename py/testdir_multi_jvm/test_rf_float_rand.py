@@ -23,7 +23,6 @@ def append_syn_dataset(csvPathname, num):
             rowData = rand_rowData()
             dsf.write(rowData + "\n")
 
-
 def rand_rowData():
     # UPDATE: maybe because of byte buffer boundary issues, single byte
     # data is best? if we put all 0s or 1, then I guess it will be bits?
@@ -61,12 +60,9 @@ class Basic(unittest.TestCase):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn_prostate.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename
-
         headerData = "ID,CAPSULE,AGE,RACE,DPROS,DCAPS,PSA,VOL,GLEASON"
-
         totalRows = 1000
         write_syn_dataset(csvPathname, totalRows, headerData)
-
 
         for trial in range (5):
             rowData = rand_rowData()
@@ -75,17 +71,17 @@ class Basic(unittest.TestCase):
             totalRows += num
 
             # make sure all key names are unique, when we re-put and re-parse (h2o caching issues)
-            key = csvFilename + "_" + str(trial)
-            key2 = csvFilename + "_" + str(trial) + ".hex"
+            hex_key = csvFilename + "_" + str(trial) + ".hex"
             # On EC2 once we get to 30 trials or so, do we see polling hang? GC or spill of heap or ??
             kwargs = {'ntree': 5, 'depth': 5}
             start = time.time()
-            key = h2o_cmd.runRF(csvPathname=csvPathname, key=key, key2=key2, 
+            parseResult = h2i.import_parse(path=csvPathname, schema='put')
+            h2o_cmd.runRFOnly(parseResult=parseResult, hex_key=hex_key, 
                 timeoutSecs=15, pollTimeoutSecs=5, **kwargs)
             print "trial #", trial, "totalRows:", totalRows, "num:", num, "RF end on ", csvFilename, \
                 'took', time.time() - start, 'seconds'
 
-            inspect = h2o_cmd.runInspect(key=key2)
+            inspect = h2o_cmd.runInspect(key=hex_key)
             cols = inspect['cols']
             num_cols = inspect['num_cols']
             for i,c in enumerate(cols):
@@ -95,7 +91,7 @@ class Basic(unittest.TestCase):
                     self.assertEqual(colType, 'float', msg="col %d should be type float: %s" % (i, colType))
                     self.assertEqual(colSize, 8, msg="col %d should be size 8: %d" % (i, colSize))
 
-            ### h2o_cmd.runInspect(key=key2)
+            ### h2o_cmd.runInspect(key=hex_key)
             ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
             h2o.check_sandbox_for_errors()
 
