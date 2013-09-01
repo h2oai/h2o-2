@@ -20,11 +20,12 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
  
     def test_small_parse_sequential_same_dest_del(self):
-        csvPathname = 'poker/poker-hand-testing.data'
+        csvFilename = 'poker-hand-testing.data'
+        csvPathname = 'poker/' + csvFilename
         for trials in range(100):
             src_key = csvPathname
             hex_key = csvPathname + '.hex'
-            parseResult = h2i.import_parse(path=csvPathname, schema='put',
+            parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put',
                 src_key=src_key, hex_key=hex_key, timeoutSecs=180, noPoll=False, doSummary=False)
             h2o.nodes[0].remove_key(src_key)
             h2o.nodes[0].remove_key(hex_key)

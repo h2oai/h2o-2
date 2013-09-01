@@ -3,7 +3,7 @@ import getpass
 
 # hdfs/maprfs/s3/s3n paths should be absolute from the bucket (top level)
 # so only walk around for local
-def find_folder_and_filename(bucket, pathWithRegex, schema=None):
+def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=False):
     checkPath = True
     # strip the common mistake of leading "/" in path, if bucket is specified too
     if bucket is not None and re.match("/", pathWithRegex):
@@ -24,8 +24,14 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None):
         bucketPath = os.path.join(rootPath, bucket)
         checkpath = False
 
+    elif h2o.nodes[0].remoteH2O and schema!='put' and h2o.nodes[0].h2o_remote_buckets_root:
+        # we may use this to force remote paths, so don't look locally for file
+        rootPath = h2o.nodes[0].h2o_remote_buckets_root
+        bucketPath = os.path.join(rootPath, bucket)
+        checkpath = False
+
     # does it work to use bucket "." to get current directory
-    elif os.environ.get('H2O_BUCKETS_ROOT'):
+    elif (not h2o.nodes[0].remoteH2O or schema=='put') and os.environ.get('H2O_BUCKETS_ROOT'):
         rootPath = os.environ.get('H2O_BUCKETS_ROOT')
         print "Using H2O_BUCKETS_ROOT environment variable:", rootPath
 
@@ -80,7 +86,10 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None):
     # if there's no path, just return the bucketPath
     # but what about cases with a header in the folder too? (not putfile)
     if pathWithRegex is None:
-        return (bucketPath, None)
+        if returnFullPath:
+            return bucketPath
+        else:
+            return (bucketPath, None)
 
     # if there is a "/" in the path, that means it's not just a pattern
     # split it
@@ -96,7 +105,10 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None):
         tail = pathWithRegex
         
     h2o.verboseprint("folderPath:", folderPath, "tail:", tail)
-    return (folderPath, tail)
+    if returnFullPath:
+        return os.path.join(folderPath, tail)
+    else:
+        return (folderPath, tail)
 
 # passes additional params thru kwargs for parse
 # use_header_file=

@@ -32,10 +32,9 @@ class Basic(unittest.TestCase):
 
     def test_B_randomdata2_1_lineend(self):
         csvPathname = 'datagen1.csv'
-        print "Using datagen1.csv to create", SYNDATASETS_DIR, "/datagen1.csv with different line ending" 
         # change lineend, case 1
-        (folderPath, filename) = h2i.find_folder_and_filename('smalldata', csvPathname)
-        csvPathname1 = folderPath + "/" + filename
+        csvPathname1 = h2i.find_folder_and_filename('smalldata', csvPathname, returnFullPath=True)
+        print "Using datagen1.csv to create", SYNDATASETS_DIR, "/datagen1.csv with different line ending" 
         csvPathname2 = SYNDATASETS_DIR + '/datagen1_crlf.csv'
 
         infile = open(csvPathname1, 'r') 

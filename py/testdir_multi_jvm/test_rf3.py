@@ -39,7 +39,7 @@ class Basic(unittest.TestCase):
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
             # broke out the put separately so we can iterate a test just on the RF
-            parseResult = h2i.import_parse(path=csvPathname)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put')
 
             h2o.verboseprint("Trial", trial)
             h2o_cmd.runRFOnly(parseResult=parseResult, trees=237, depth=45, timeoutSecs=120)

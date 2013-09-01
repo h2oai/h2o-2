@@ -25,7 +25,7 @@ class Basic(unittest.TestCase):
         print "Do an import to get keys"
         # importFolderPath = "/home/0xdiag/datasets/manyfiles-nflx-gz"
         # importFolderPath = "more1_1200_link"
-        importFolderPath = "syn_datasets"
+        importFolderPath = "more1_1200_link"
 
         # IMPORT**********************************************
         csvPathname = importFolderPath + "/*"

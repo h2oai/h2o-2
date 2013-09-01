@@ -1,8 +1,7 @@
 import unittest
 import random, sys, time, os
 sys.path.extend(['.','..','py'])
-
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE):
     # we can do all sorts of methods off the r object
@@ -67,7 +66,7 @@ class Basic(unittest.TestCase):
             ]
 
         # h2b.browseTheCloud()
-        for (rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
                 SEEDPERFILE = random.randint(0, sys.maxint)
                 csvFilename = "syn_%s_%s_%s.csv" % (SEEDPERFILE, rowCount, colCount)
                 csvPathname = SYNDATASETS_DIR + '/' + csvFilename
@@ -76,7 +75,7 @@ class Basic(unittest.TestCase):
                 # dict of col sums for comparison to exec col sums below
                 (colNumberMax, synColSumDict) = write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
-                parseResult = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=timeoutSecs, doSummary=False)
+                parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=timeoutSecs, doSummary=False)
                 print "Parse result['destination_key']:", parseResult['destination_key']
                 inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], max_column_display=colNumberMax+1, timeoutSecs=timeoutSecs)
                 num_cols = inspect['num_cols']
@@ -90,7 +89,7 @@ class Basic(unittest.TestCase):
                 # just want to see if we stack trace on these
                 for x in range(num_cols):
                     print "Doing summary with x=%s" % x
-                    summaryResult = h2o_cmd.runSummary(key=key2, x=x, timeoutSecs=timeoutSecs)
+                    summaryResult = h2o_cmd.runSummary(key=hex_key, x=x, timeoutSecs=timeoutSecs)
                     # skip the infoFromSummary check
 
                     if x==0:
@@ -98,14 +97,14 @@ class Basic(unittest.TestCase):
                     else:
                         colName = "V" + str(x)
                     print "Doing summary with col name x=%s" % colName
-                    summaryResult = h2o_cmd.runSummary(key=key2, x=x, timeoutSecs=timeoutSecs)
+                    summaryResult = h2o_cmd.runSummary(key=hex_key, x=x, timeoutSecs=timeoutSecs)
                     # skip the infoFromSummary check
 
 
                 # do a final one with all columns for the current check below
                 # FIX! we should update the check to check each individual summary result
                 print "Doing and checking summary with no x=%s" % x
-                summaryResult = h2o_cmd.runSummary(key=key2, max_column_display=colNumberMax+1, timeoutSecs=timeoutSecs)
+                summaryResult = h2o_cmd.runSummary(key=hex_key, max_column_display=colNumberMax+1, timeoutSecs=timeoutSecs)
                 h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
 
                 summary = summaryResult['summary']

@@ -68,7 +68,7 @@ class Basic(unittest.TestCase):
                 print "StoreView node %s:%s" % (node.http_addr, node.port)
                 storeViewResult = h2o_cmd.runStoreView(node, timeoutSecs=30)
                 f = open(SYNDATASETS_DIR + "/storeview_" + str(n) + ".txt", "w" )
-                result = json.dump(storeViewResult, f, indent=4, sort_keys=True, default=str)
+                result = h2o.dump_json(storeViewResult)
                 f.close()
                 lastStoreViewResult = storeViewResult
             

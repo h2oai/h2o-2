@@ -1,8 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
-import h2o_browse as h2b
-import h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -19,25 +17,23 @@ class Basic(unittest.TestCase):
     def test_rf_from_import_hosts(self):
 
         # just do the import folder once
-        importFolderPath = "/home/0xdiag/datasets/standard"
-        h2i.setupImportFolder(None, importFolderPath)
         timeoutSecs = 500
         #    "covtype169x.data",
         #    "covtype.13x.shuffle.data",
         #    "3G_poker_shuffle"
-        csvFilenameAll = [
+        csvFilenameList = [
             "billion_rows.csv.gz",
             # "covtype20x.data", 
             ]
-        # csvFilenameList = random.sample(csvFilenameAll,1)
-        csvFilenameList = csvFilenameAll
 
+        importFolderPath = "standard"
         # pop open a browser on the cloud
         ### h2b.browseTheCloud()
 
         for csvFilename in csvFilenameList:
+            csvPathname = importFolderPath + "/" + csvFilename
             # creates csvFilename.hex from file in importFolder dir 
-            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=500)
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname,  timeoutSecs=500)
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
