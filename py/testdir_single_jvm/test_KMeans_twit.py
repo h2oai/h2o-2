@@ -58,7 +58,8 @@ class Basic(unittest.TestCase):
                 h2b.browseJsonHistoryAsUrlLastMatch("KMeansScore")
                 h2b.browseJsonHistoryAsUrlLastMatch("KMeansApply")
                 h2b.browseJsonHistoryAsUrlLastMatch("KMeans")
-                time.sleep(3600)
+                # Comment sleep out to get a clean grep.
+                # time.sleep(3600)
 
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
 
