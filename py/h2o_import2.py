@@ -54,8 +54,15 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=
         username = getpass.getuser()
         h2oUsername = h2o.nodes[0].username
         h2o.verboseprint("username:", username, "h2oUsername:", h2oUsername)
+
+        # bucket named "datasets" is special. Don't want to find it in /home/0xdiag/datasets
+        # needs to be the git clone 'datasets'. Find it by walking upwards below
+        # disable it from this looking in home dir. Could change priority order?
         # resolved in order, looking for bucket (ln -s will work) in these home dirs.
-        if h2oUsername != username:
+
+        if bucket=='datasets': # special case 
+            possibleUsers = []
+        elif h2oUsername != username:
             possibleUsers = [username, h2oUsername, "0xdiag"]
         else:
             possibleUsers = [username, "0xdiag"]
