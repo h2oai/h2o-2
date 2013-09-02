@@ -73,6 +73,7 @@ debugger = False
 random_udp_drop = False
 random_seed = None
 beta_features = False
+sleep_at_tear_down = False
 # jenkins gets this assign, but not the unit_main one?
 python_test_name = inspect.stack()[1][1]
 
@@ -88,10 +89,12 @@ def parse_our_args():
     parser.add_argument('-rud', '--random_udp_drop', help='Drop 20 pct. of the UDP packets at the receive side', action='store_true')
     parser.add_argument('-s', '--random_seed', type=int, help='initialize SEED (64-bit integer) for random generators')
     parser.add_argument('-bf', '--beta_features', help='enable or switch to beta features (import2/parse2)', action='store_true')
+    parser.add_argument('-slp', '--sleep_at_tear_down', help='open browser and time.sleep(3600) at tear_down_cloud() (typical test end/fail)', action='store_true')
     parser.add_argument('unittest_args', nargs='*')
 
     args = parser.parse_args()
-    global browse_disable, browse_json, verbose, ipaddr, config_json, debugger, random_udp_drop, random_seed, beta_features
+    global browse_disable, browse_json, verbose, ipaddr, config_json, debugger, random_udp_drop
+    global random_seed, beta_features, sleep_at_tear_down
 
     browse_disable = args.browse_disable or getpass.getuser()=='jenkins'
     browse_json = args.browse_json
@@ -102,6 +105,7 @@ def parse_our_args():
     random_udp_drop = args.random_udp_drop
     random_seed = args.random_seed
     beta_features = args.beta_features
+    sleep_at_tear_down = args.sleep_at_tear_down
 
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
     # FIX! this isn't working to grab the args we don't care about
@@ -629,6 +633,12 @@ def check_sandbox_for_errors(sandbox_ignore_errors=False):
                 raise Exception(python_test_name + emsg1 + emsg2)
 
 def tear_down_cloud(nodeList=None, sandbox_ignore_errors=False):
+    if sleep_at_tear_down: 
+        print "Opening browser to cloud, and sleeping for 3600 secs, before cloud teardown (for debug)"
+        import h2o_browse
+        h2b.browseTheCloud()
+        sleep(3600)
+
     if not nodeList: nodeList = nodes
     try:
         for n in nodeList:
