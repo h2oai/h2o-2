@@ -13,6 +13,16 @@ import requests, zipfile, StringIO
 # For checking ports in use, using netstat thru a subprocess.
 from subprocess import Popen, PIPE
 
+
+def sleep(secs):
+    if getpass.getuser()=='jenkins':
+        period = max(secs,120)
+    else:
+        period = secs
+    # if jenkins, don't let it sleep more than 2 minutes
+    # due to left over h2o.sleep(3600)
+    time.sleep(period)
+
 # The cloud is uniquely named per user (only)
 # Fine to uniquely identify the flatfile by name only also?
 # Both are the user that runs the test. The config might have a different username on the

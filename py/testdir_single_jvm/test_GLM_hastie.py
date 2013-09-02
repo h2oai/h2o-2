@@ -88,7 +88,7 @@ class Basic(unittest.TestCase):
         print "Iterating 3 times on this last one for perf compare"
         for i in range(3):
             print "\nTrial #", i, "of", filename4x
-            glm_doit(self,filename4x, pathname4x, timeoutSecs=150)
+            glm_doit(self, filename4x, None, pathname4x, timeoutSecs=150)
 
 if __name__ == '__main__':
     h2o.unit_main()

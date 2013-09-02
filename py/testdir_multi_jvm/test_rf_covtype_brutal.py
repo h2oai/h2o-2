@@ -84,7 +84,7 @@ class Basic(unittest.TestCase):
             schema = 's3n'
 
         start = time.time()
-        parseResult = h2i.import_parse(bucket=bucket, path=pathname, timeoutSecs=180)
+        parseResult = h2i.import_parse(bucket=bucket, path=pathname, schema='local', timeoutSecs=180)
         parse_time = time.time() - start 
         h2o.verboseprint("parse took {0} sec".format(parse_time))
         parseResult['python_call_timer'] = parse_time

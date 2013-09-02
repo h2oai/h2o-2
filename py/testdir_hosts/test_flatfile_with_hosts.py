@@ -18,11 +18,11 @@ class Basic(unittest.TestCase):
         h2o.verify_cloud_size()
 
     def test_B_RF_iris2(self):
-        parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='local')
+        parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
         h2o_cmd.runRFOnly(parseResult=parseResult, trees=6, timeoutSecs=10)
 
     def test_C_RF_poker100(self):
-        parseResult = h2i.import_parse(bucket='smalldata', path='poker/poker100', schema='local')
+        parseResult = h2i.import_parse(bucket='smalldata', path='poker/poker100', schema='put')
         h2o_cmd.runRFOnly(parseResult=parseResult, trees=6, timeoutSecs=10)
 
         SYNDATASETS_DIR = h2o.make_syn_dir()

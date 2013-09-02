@@ -88,7 +88,7 @@ def fill_in_expr_template(exprTemplate, colX=None, n=None, row=None, keyX=None, 
         execExpr = re.sub('<n-1>', str(n-1), execExpr)
     if row is not None:
         execExpr = re.sub('<row>', str(row), execExpr)
-    if key2 is not None:
+    if keyX is not None:
         execExpr = re.sub('<keyX>', str(keyX), execExpr)
     if m is not None:
         execExpr = re.sub('<m>', str(m), execExpr)
@@ -128,7 +128,7 @@ def exec_zero_list(zeroList):
         ### print "\nexecResult:", execResult
 
 
-def exec_expr_list_rand(lenNodes, exprList, key2, 
+def exec_expr_list_rand(lenNodes, exprList, keyX, 
     minCol=0, maxCol=54, minRow=1, maxRow=400000, maxTrials=200, 
     timeoutSecs=10, ignoreH2oError=False):
 
@@ -151,7 +151,7 @@ def exec_expr_list_rand(lenNodes, exprList, key2,
         # FIX! should tune this for covtype20x vs 200x vs covtype.data..but for now
         row = str(random.randint(minRow,maxRow))
 
-        execExpr = fill_in_expr_template(exprTemplate, colX, ((trial+1)%4)+1, row, key2)
+        execExpr = fill_in_expr_template(exprTemplate, colX, ((trial+1)%4)+1, row, keyX)
         execResultInspect = exec_expr(h2o.nodes[execNode], execExpr, "Result.hex", 
             timeoutSecs, ignoreH2oError)
         ### print "\nexecResult:", execResultInspect
@@ -169,7 +169,7 @@ def exec_expr_list_rand(lenNodes, exprList, key2,
         trial += 1
         print "Trial #", trial, "completed\n"
 
-def exec_expr_list_across_cols(lenNodes, exprList, key2, 
+def exec_expr_list_across_cols(lenNodes, exprList, keyX, 
     minCol=0, maxCol=54, timeoutSecs=10, incrementingResult=True):
     colResultList = []
     for colX in range(minCol, maxCol):
@@ -185,11 +185,11 @@ def exec_expr_list_across_cols(lenNodes, exprList, key2,
                 ### print execNode
                 execNode = 0
 
-            execExpr = fill_in_expr_template(exprTemplate, colX, colX, 0, key2)
+            execExpr = fill_in_expr_template(exprTemplate, colX, colX, 0, keyX)
             if incrementingResult: # the Result<col> pattern
                 resultKey = "Result"+str(colX)
             else: # assume it's a re-assign to self
-                resultKey = key2
+                resultKey = keyX
 
             # kbn
 

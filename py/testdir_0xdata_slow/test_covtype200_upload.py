@@ -1,7 +1,6 @@
 import unittest, time, sys, random, logging
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_glm
-import h2o_exec as h2e, h2o_jobs
+import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_hosts, h2o_glm, h2o_exec as h2e, h2o_jobs
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -32,6 +31,9 @@ class Basic(unittest.TestCase):
         benchmarkLogging = ['cpu', 'disk' 'network']
         pollTimeoutSecs = 120
         retryDelaySecs = 10
+        bucket = 'home-0xdiag-datasets'
+        importFolderPath = 'standard'
+
         for i,(csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
             localhost = h2o.decide_if_localhost()
             if (localhost):
@@ -42,15 +44,15 @@ class Basic(unittest.TestCase):
                     enable_benchmark_log=True)
 
             for trial in range(trialMax):
-                csvPathname = "/home/0xdiag/datasets/standard/" + csvFilepattern
+                csvPathname = importFolderPath + "/" + csvFilepattern
 
                 h2o.cloudPerfH2O.change_logfile(csvFilename)
                 h2o.cloudPerfH2O.message("")
                 h2o.cloudPerfH2O.message("Parse " + csvFilename + " Start--------------------------------")
 
                 start = time.time()
-                parseResult = h2o_cmd.parseFile(csvPathname=csvPathname,
-                    key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
+                parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local', hex_key=csvFilename + ".hex", 
+                    timeoutSecs=timeoutSecs, 
                     retryDelaySecs=retryDelaySecs,
                     pollTimeoutSecs=pollTimeoutSecs,
                     noPoll=noPoll,

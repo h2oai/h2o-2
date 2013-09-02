@@ -159,7 +159,7 @@ class Basic(unittest.TestCase):
             h2o_util.file_clean_for_R(csvPathname1, csvPathname2)
 
             # we can inspect this to get the number of cols in the dataset (trust H2O here)
-            parseResult = h2o_cmd.parseFile(None, csvPathname2, key=csvFilename, timeoutSecs=10)
+            parseResult = h2o_cmd.import_parse(path=csvPathname2, schema='put', hex_key=csvFilename, timeoutSecs=10)
             # we could specify key2 above but this is fine
             destination_key = parseResult['destination_key']
             inspect = h2o_cmd.runInspect(None, destination_key)

@@ -1,8 +1,6 @@
 import unittest, sys, random, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_browse as h2b, h2o_import2 as h2i, h2o_hosts, h2o_glm
-import h2o_jobs
-import logging
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import2 as h2i, h2o_hosts, h2o_glm, h2o_jobs, logging
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -156,7 +154,6 @@ class Basic(unittest.TestCase):
                             src_key = URI + csvFilepattern
                             hex_key = csvFilename + "_" + str(trial) + ".hex"
                             print "Loading", protocol, "key:", src_key, "to", hex_key
-                            parse3Key = h2o.nodes[0].parse(src_key, hex_key,
                             parse3Result = h2i.import_parse(bucket='home-0xdiag-datasets', path=importFolderPath+"/*",
                                 timeoutSecs=timeoutSecs, 
                                 retryDelaySecs=retryDelaySecs,

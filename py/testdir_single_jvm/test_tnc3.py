@@ -41,7 +41,7 @@ class Basic(unittest.TestCase):
         csvPathname = 'tnc3.csv'
         print "\n" + csvPathname
         hex_key = "tnc3.hex"
-        h2b.browseTheCloud()
+        ### h2b.browseTheCloud()
 
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=hex_key, schema='put', 
             timeoutSecs=10, header=1)

@@ -55,7 +55,7 @@ class Basic(unittest.TestCase):
                 timeoutSecs = 20 + 5*(len(h2o.nodes))
                 model_key = csvFilename + "_" + str(trials)
 
-                parseResult = h2i.import_parse(path=nulPathname, schema='local')
+                parseResult = h2i.import_parse(path=nulPathname, schema='put')
                 h2o_cmd.runRFOnly(parseResult = trees=trees, model_key=model_key, timeoutSecs=timeoutSecs, retryDelaySecs=1)
                 sys.stdout.write('.')
                 sys.stdout.flush()

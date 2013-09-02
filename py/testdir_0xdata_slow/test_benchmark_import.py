@@ -1,7 +1,6 @@
 import unittest, time, sys, random, logging
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_hosts, h2o_glm
-import h2o_exec as h2e, h2o_jobs
+import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_hosts, h2o_glm, h2o_exec as h2e, h2o_jobs
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -185,8 +184,12 @@ class Basic(unittest.TestCase):
             # to avoid sticky ports?
             ### base_port += 2
 
+            bucket = 'home-0xdiag-datasets'
+            importFolderPath = 'manyfiles-nflx-gz'
+
             for trial in range(trialMax):
-                (importResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', path=importFolderPath+"/*")
+                csvPathname = importFolderPath + "/" + csvFilePattern
+                (importResult, importPattern) = h2i.import_only(bucket=bucket, path=csvPathname, schema='local')
                 importFullList = importResult['files']
                 importFailList = importResult['fails']
                 print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
@@ -195,8 +198,9 @@ class Basic(unittest.TestCase):
                 h2o.cloudPerfH2O.change_logfile(csvFilename)
                 h2o.cloudPerfH2O.message("")
                 h2o.cloudPerfH2O.message("Parse " + csvFilename + " Start--------------------------------")
+                csvPathname = importFolderPath + "/" + csvFilePattern
                 start = time.time()
-                parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=importFolderPath+"/*",
+                parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local'),
                     hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                     retryDelaySecs=retryDelaySecs,
                     pollTimeoutSecs=pollTimeoutSecs,
@@ -208,7 +212,8 @@ class Basic(unittest.TestCase):
                         time.sleep(1)
                         h2o.check_sandbox_for_errors()
                         (csvFilepattern, csvFilename, totalBytes2, timeoutSecs) = csvFilenameList[i+1]
-                        parseResult = h2i.import_parse(path=importFolderPath+"/*",
+                        csvPathname = importFolderPath + "/" + csvFilePattern
+                        parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local'),
                             hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                             retryDelaySecs=retryDelaySecs,
                             pollTimeoutSecs=pollTimeoutSecs,
@@ -219,7 +224,8 @@ class Basic(unittest.TestCase):
                         time.sleep(1)
                         h2o.check_sandbox_for_errors()
                         (csvFilepattern, csvFilename, totalBytes3, timeoutSecs) = csvFilenameList[i+2]
-                        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=importFolderPath+"/*",
+                        csvPathname = importFolderPath + "/" + csvFilePattern
+                        parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local'),
                             hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                             retryDelaySecs=retryDelaySecs,
                             pollTimeoutSecs=pollTimeoutSecs,
