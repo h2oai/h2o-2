@@ -20,9 +20,9 @@ import unittest, time, sys, copy
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_glm, h2o_util, h2o_hosts, h2o_import2 as h2i
 
-def glm_doit(self, csvFilename, csvPathname, timeoutSecs=30):
+def glm_doit(self, csvFilename, bucket, csvPathname, timeoutSecs=30):
     print "\nStarting GLM of", csvFilename
-    parseResult = h2i.import_parse(path=csvPathname, hex_key=csvFilename + ".hex", schema='put', timeoutSecs=10)
+    parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, hex_key=csvFilename + ".hex", schema='put', timeoutSecs=10)
     y = "10"
     x = ""
     # Took n_folds out, because GLM doesn't include n_folds time and it's slow
@@ -74,12 +74,15 @@ class Basic(unittest.TestCase):
 
         # This test also adds file shuffling, to see that row order doesn't matter
         csvFilename = "1mx10_hastie_10_2.data.gz"
-        csvPathname = h2o.find_dataset('logreg' + '/' + csvFilename)
-        glm_doit(self,csvFilename, csvPathname, timeoutSecs=30)
+        bucket = 'datasets'
+        csvPathname = 'logreg' + '/' + csvFilename
+        fullPathname = h2i.find_folder_and_filename(bucket, csvPathname, returnFullPath=True)
+
+        glm_doit(self,csvFilename, bucket, csvPathname, timeoutSecs=30)
 
         filename1x = "hastie_1x.data"
         pathname1x = SYNDATASETS_DIR + '/' + filename1x
-        h2o_util.file_gunzip(csvPathname, pathname1x)
+        h2o_util.file_gunzip(fullPathname, pathname1x)
         
         filename1xShuf = "hastie_1x.data_shuf"
         pathname1xShuf = SYNDATASETS_DIR + '/' + filename1xShuf

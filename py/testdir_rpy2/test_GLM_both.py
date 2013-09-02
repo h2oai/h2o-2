@@ -154,7 +154,9 @@ class Basic(unittest.TestCase):
         for (csvFilename, family, y, timeoutSecs, header) in csvFilenameList:
 
             # FIX! do something about this file munging
-            csvPathname1 = h2o.find_file("smalldata/logreg/umass_statdata/" + csvFilename)
+            csvPathname1 = 'logreg/umass_statdata/' + csvFilename
+            fullPathname = h2i.find_folder_and_filename('smalldata', csvPathname, returnFullPath=True)
+
             csvPathname2 = SYNDATASETS_DIR + '/' + csvFilename + '_2.csv'
             h2o_util.file_clean_for_R(csvPathname1, csvPathname2)
 

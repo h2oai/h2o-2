@@ -34,9 +34,7 @@ class Basic(unittest.TestCase):
         # pop open a browser on the cloud
         h2b.browseTheCloud()
 
-        for (csvFilename, datasetPath, trees) in csvFilenameList:
-            csvPathname = h2o.find_dataset(datasetPath)
-
+        for (csvFilename, csvPathname, trees) in csvFilenameList:
             parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, timeoutSecs=500, schema='put')
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
