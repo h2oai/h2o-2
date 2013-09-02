@@ -28,7 +28,6 @@ public class KMeans extends Job {
 
   public static KMeans start(Key dest, final ValueArray va, final int k, final Initialization init, //
       final int maxIter, long randSeed, boolean normalize, int... cols) {
-    final KMeans job = new KMeans(dest, k, cols);
 
     // k-means is an unsupervised learning algorithm and does not require a
     // response-column to train. This also means the clusters are not classes
@@ -41,6 +40,8 @@ public class KMeans extends Job {
     }
     int cols2[] = Arrays.copyOf(cols, cols.length + 1);
     cols2[cols.length] = -1;  // No response column
+
+    final KMeans job = new KMeans(dest, k, cols);
     final KMeansModel res = new KMeansModel(job.dest(), cols2, va._key);
     res._normalized = normalize;
     res._randSeed = randSeed;

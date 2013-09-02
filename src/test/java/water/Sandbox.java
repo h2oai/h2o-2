@@ -23,11 +23,6 @@ public class Sandbox {
     public static void userMain(String[] args) throws Exception {
       localCloud(1, true, args);
 
-      TestUtil.parseFrame("smalldata/mnist/train.csv.gz");
-      TestUtil.parseFrame("smalldata/mnist/test.csv.gz");
-
-      Utils.readConsole();
-
       File f = new File("lib/resources/datasets/gaussian.csv");
       // File f = new File("smalldata/covtype/covtype.20k.data");
       // File f = new File("syn_5853362476331324036_100x11.csv");
