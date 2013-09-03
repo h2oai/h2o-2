@@ -100,26 +100,26 @@ public class NewVectorTest extends TestUtil {
       assertEquals(0, c0.at0(i), c0.at0(i)*EPSILON);
 
     // Now write a zero into slot 0
-    vec.set8(0,0);
+    vec.set(0,0);
     assertEquals(0,vec.at8(0));
     Chunk c1 = vec.elem2BV(0);
     assertTrue( "Found chunk class "+c1.getClass()+" but expected C0LChunk", c1 instanceof C0LChunk );
 
     // Now write a one into slot 1; chunk should inflate into boolean vector.
-    c1.set8(1,1);
+    c1.set(1,1);
     assertEquals(1,vec.at8(1)); // Immediate visibility in current thread
     c1.close(0,null);           // Done writing into chunk
     Chunk c2 = vec.elem2BV(0);  // Look again at the installed chunk
     assertTrue( "Found chunk class "+c2.getClass()+" but expected CBSChunk", c2 instanceof CBSChunk );
 
     // Now write a two into slot 2; chunk should inflate into byte vector
-    c2.set8(2,2);
+    c2.set(2,2);
     assertEquals(2,vec.at8(2)); // Immediate visibility in current thread
     c2.close(0,null);           // Done writing into chunk
     Chunk c3 = vec.elem2BV(0);  // Look again at the installed chunk
     assertTrue( "Found chunk class "+c3.getClass()+" but expected C1NChunk", c3 instanceof C1NChunk );
 
-    c3.set8(3,3);
+    c3.set(3,3);
     assertEquals(3,vec.at8(3)); // Immediate visibility in current thread
     c3.close(0,null);           // Done writing into chunk
     Chunk c4 = vec.elem2BV(0);  // Look again at the installed chunk

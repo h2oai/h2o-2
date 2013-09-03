@@ -9,19 +9,26 @@ public class C2Chunk extends Chunk {
   C2Chunk( byte[] bs ) { _mem=bs; _start = -1; _len = _mem.length>>1; }
   @Override protected final long at8_impl( int i ) {
     int res = UDP.get2(_mem,(i<<1)+OFF);
-    return res == _NA?_vec._iNA:res;
+    if( res == _NA ) throw new IllegalArgumentException("at8 but value is missing");
+    return res;
   }
-  @Override protected final double atd_impl( int    i ) {
+  @Override protected final double atd_impl( int i ) {
     int res = UDP.get2(_mem,(i<<1)+OFF);
     return res == _NA?Double.NaN:res;
   }
-  @Override boolean set8_impl(int idx, long l) {
+  @Override protected final boolean isNA_impl( int i ) { return (0xFF&_mem[i+OFF]) == _NA; }
+  @Override boolean set_impl(int idx, long l) {
     if( !(Short.MIN_VALUE < l && l <= Short.MAX_VALUE) ) return false;
     UDP.set2(_mem,(idx<<1)+OFF,(short)l);
     return true;
   }
-  @Override boolean set8_impl(int i, double d) { return false; }
-  @Override boolean set4_impl(int i, float f ) { return false; }
+  @Override boolean set_impl(int idx, double d) { 
+    if( Double.isNaN(d) ) return setNA_impl(idx);
+    long l = (long)d;
+    return l==d ? set_impl(idx,l) : false;
+  }
+  @Override boolean set_impl(int i, float f ) { return set_impl(i,(double)f); }
+  @Override boolean setNA_impl(int idx) { UDP.set2(_mem,(idx<<1)+OFF,(short)_NA); return true; }
   @Override boolean hasFloat() { return false; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
   @Override public C2Chunk read(AutoBuffer bb) {
@@ -35,9 +42,8 @@ public class C2Chunk extends Chunk {
     if (nc == null) { System.err.println("DEBUG: Bad Chunk ns"); System.err.flush();} // DEBUG
 
     for( int i=0; i<_len; i++ ) {
-      long res = at8_impl(i);
-      if( _vec.valueIsNA(res) ) nc.setInvalid(i);
-      else nc._ls[i] = res;
+      if( isNA_impl(i) ) nc.setInvalid(i);
+      else nc._ls[i] = at8_impl(i);
     }
     return nc;
   }

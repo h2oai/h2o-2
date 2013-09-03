@@ -5,7 +5,6 @@ import java.io.InputStream;
 import java.util.Arrays;
 
 import water.*;
-import water.fvec.Vec.DType;
 import water.fvec.Vec.VectorGroup;
 
 /**
@@ -203,8 +202,8 @@ public class Frame extends Iced {
           if(i > 0) sb.append(',');
           if(!_vecs[i].isNA(_row)) {
             if(_vecs[i].isEnum()) sb.append('"' + _vecs[i]._domain[(int) _vecs[i].at8(_row)] + '"');
-            else if(_vecs[i].dtype() == DType.F) sb.append(_vecs[i].at(_row));
-            else sb.append(_vecs[i].at8(_row));
+            else if(_vecs[i].isInt()) sb.append(_vecs[i].at8(_row));
+            else sb.append(_vecs[i].at(_row));
           }
         }
         sb.append('\n');

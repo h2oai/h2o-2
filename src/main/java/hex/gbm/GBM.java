@@ -20,9 +20,9 @@ public class GBM extends FrameJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @API(help="", required=true, filter=DRFVecSelect.class)
+  @API(help="", required=true, filter=GBMVecSelect.class)
   Vec vresponse;
-  class DRFVecSelect extends VecSelect { DRFVecSelect() { super("source"); } }
+  class GBMVecSelect extends VecSelect { GBMVecSelect() { super("source"); } }
 
   @API(help = "Learning rate, from 0. to 1.0", filter = LearnRateFilter.class)
   double learn_rate = 0.1;
@@ -145,6 +145,7 @@ public class GBM extends FrameJob {
   @Override protected Response serve() {
     Timer t_gbm = new Timer();
     final Frame fr = new Frame(source); // Local copy for local hacking
+    if( !vresponse.isEnum() ) vresponse.asEnum();
     // While I'd like the Frames built custom for each call, with excluded
     // columns already removed - for now check to see if the response column is
     // part of the frame and remove it up front.
@@ -155,9 +156,9 @@ public class GBM extends FrameJob {
     final int  ncols = fr.numCols();
     final long nrows = fr.numRows();
     final int ymin = (int)vresponse.min();
-    short nclass = vresponse._isInt ? (short)(vresponse.max()-ymin+1) : 1;
+    short nclass = vresponse.isInt() ? (short)(vresponse.max()-ymin+1) : 1;
     assert 1 <= nclass && nclass < 1000; // Arbitrary cutoff for too many classes
-    domain = vresponse.domain();
+    domain = nclass > 1 ? vresponse.domain() : null;
     errs = new float[0];         // No trees yet
 
     // Add in Vecs after the response column which holds the row-by-row
@@ -259,7 +260,7 @@ public class GBM extends FrameJob {
           for( int c=0; c<nclass; c++ ) {
             double actual = chks[ncols+c].at0(i);
             double residual = actual-preds[c]*learn_rate;
-            chks[ncols+c].set40(i,(float)residual);
+            chks[ncols+c].set0(i,(float)residual);
           }
         }
       }
@@ -292,7 +293,7 @@ public class GBM extends FrameJob {
     // Find the initial prediction - the current average response variable.
     float preds[] = new float[nclass];
     if( nclass == 1 ) {
-      fr.add("Residual-"+fr._names[ncols],vresponse.makeCon(vresponse.mean()));
+      fr.add("Residual",vresponse.makeCon(vresponse.mean()));
       throw H2O.unimpl();
     } else {
       long cs[] = new ClassDist(nclass,ymin).doAll(vresponse)._cs;
@@ -313,7 +314,7 @@ public class GBM extends FrameJob {
         for( int i=0; i<cy._len; i++ ) {  // For all rows
           int cls = (int)cy.at80(i)-ymin; // Class
           Chunk res = chks[ncols+cls];    // Residual column for this class
-          res.set40(i,1.0f+(float)res.at0(i));   // Fix residual for actual class
+          res.set0(i,1.0f+(float)res.at0(i));   // Fix residual for actual class
         }
       }
     }.doAll(fr);

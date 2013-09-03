@@ -265,26 +265,10 @@ public class Inspect extends Request {
     if( rowIdx < 0 || rowIdx >= v.length() )
       return;
     String name = f._names[colIdx] != null ? f._names[colIdx] : "" + colIdx;
-    switch(v.dtype()) {
-      case bad:
-        obj.addProperty(name, "Bad");
-        break;
-      case U:
-        obj.addProperty(name, "Unknown");
-        break;
-      case NA:
-        obj.addProperty(name, "NA");
-        break;
-      case S:
-        // TODO enums
-        break;
-      case I:
-        obj.addProperty(name, v.at8(rowIdx));
-        break;
-      case F:
-        obj.addProperty(name, v.at(rowIdx));
-        break;
-    }
+    if( v.isNA(rowIdx) ) obj.addProperty(name, "NA");
+    else if( v.isEnum() ) obj.addProperty(name, v.domain((int)v.at8(rowIdx)));
+    else if( v.isInt() ) obj.addProperty(name, v.at8(rowIdx));
+    else obj.addProperty(name, v.at(rowIdx));
   }
 
   private final String html(Key key, long rows, int cols, int bytesPerRow, long bytes) {

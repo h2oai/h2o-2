@@ -21,14 +21,16 @@ public class CBSChunk extends Chunk {
     _mem = bs; _start = -1; _gap = gap; _bpv = bpv;
     _len = ((_mem.length - OFF)*8 - _gap) / _bpv; // number of boolean items
   }
+  @Override protected long at8_impl(int idx) {
+    byte b = atb(idx);
+    if( b == _NA ) throw new IllegalArgumentException("at8 but value is missing");
+    return b;
+  }
   @Override protected double atd_impl(int idx) {
     byte b = atb(idx);
     return b == _NA ? Double.NaN : b;
   }
-  @Override protected long at8_impl(int idx) {
-    byte b = atb(idx);
-    return b == _NA ? _vec._iNA : b;
-  }
+  @Override protected final boolean isNA_impl( int i ) { return atb(i)==_NA; }
   protected byte atb(int idx) {
     int vpb = 8 / _bpv;  // values per byte
     int bix = OFF + idx / vpb; // byte index
@@ -41,13 +43,15 @@ public class CBSChunk extends Chunk {
     }
     return -1;
   }
-  @Override boolean set8_impl(int idx, long l)   { return false; }
-  @Override boolean set8_impl(int idx, double d) { return false; }
-  @Override boolean set4_impl(int idx, float f ) { return false; }
+  @Override boolean set_impl(int idx, long l)   { return false; }
+  @Override boolean set_impl(int idx, double d) { return false; }
+  @Override boolean set_impl(int idx, float f ) { return false; }
+  @Override boolean setNA_impl(int idx) { 
+    if( _bpv == 1 ) return false;
+    throw H2O.unimpl();
+  }
   @Override boolean hasFloat ()                  { return false; }
-
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem, _mem.length); }
-
   @Override public Chunk read(AutoBuffer bb) {
     _mem   = bb.bufClose();
     _start = -1;
@@ -56,7 +60,6 @@ public class CBSChunk extends Chunk {
     _len = ((_mem.length - OFF)*8 - _gap) / _bpv;
     return this;
   }
-
   @Override NewChunk inflate_impl(NewChunk nc) {
     for (int i=0; i<_len; i++) {
       long res = at8_impl(i);
