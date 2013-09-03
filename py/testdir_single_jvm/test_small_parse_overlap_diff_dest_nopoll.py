@@ -21,7 +21,6 @@ class Basic(unittest.TestCase):
  
     def test_small_parse_overlap_same_dest(self):
         noPoll = True
-        timeoutSecs = 180
         num_trials = 0
         stallForNJobs = 100
         for i in range(50):
@@ -31,10 +30,10 @@ class Basic(unittest.TestCase):
                 src_key = csvFilename + "_" + str(i) + "_" + str(j)
                 hex_key =  csvFilename + "_" + str(num_trials) + '.hex'
                 parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put',
-                    src_key=src_key, hex_key=hex_key, timeoutSecs=timeoutSecs, noPoll=noPoll,
+                    src_key=src_key, hex_key=hex_key, timeoutSecs=120, noPoll=noPoll,
                     doSummary=False)
                 num_trials += 1
-            h2o_jobs.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=120, retryDelaySecs=5,stallForNJobs=stallForNJobs)
+            h2o_jobs.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=300, retryDelaySecs=5,stallForNJobs=stallForNJobs)
 
 if __name__ == "__main__":
     h2o.unit_main()

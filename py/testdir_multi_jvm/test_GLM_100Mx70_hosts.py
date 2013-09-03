@@ -41,7 +41,7 @@ class Basic(unittest.TestCase):
 
     def test_GLM_100Mx70_hosts(self):
         # enable this if you need to re-create the file
-        if 1==1:
+        if 1==0:
             SYNDATASETS_DIR = h2o.make_syn_dir()
             createList = [
                 (100000000, 70, 'cA', 10000), 

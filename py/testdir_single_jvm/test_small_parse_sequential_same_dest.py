@@ -25,7 +25,7 @@ class Basic(unittest.TestCase):
             src_key = csvPathname
             hex_key = csvPathname + '.hex'
             parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put',
-                src_key=src_key, hex_key=hex_key, timeoutSecs=timeoutSecs, noPoll=False, doSummary=False)
+                src_key=src_key, hex_key=hex_key, timeoutSecs=120, noPoll=False, doSummary=False)
 
 if __name__ == "__main__":
 	h2o.unit_main()

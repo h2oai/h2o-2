@@ -1,7 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd
-import h2o_browse as h2b
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import2 as h2i
 
 # fyi max FP single precision (hex rep. 7f7f ffff) approx. 3.4028234 * 10**38"
 

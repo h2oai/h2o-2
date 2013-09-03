@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_util
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_util, h2o_import2 as h2i
 
 def ch1(n):
     return 0

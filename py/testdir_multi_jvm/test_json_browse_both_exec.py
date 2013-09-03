@@ -59,7 +59,7 @@ class Basic(unittest.TestCase):
         lenNodes = len(h2o.nodes)
         csvPathname = 'UCI/UCI-large/covtype/covtype.data'
         hex_key = 'c.hex'
-        parseResult = h2i.import_parse('datasets', path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10)
+        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10)
         print "\nParse key is:", parseResult['destination_key']
 
         ## h2b.browseTheCloud()

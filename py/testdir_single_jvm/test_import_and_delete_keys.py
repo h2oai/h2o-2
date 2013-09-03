@@ -31,9 +31,9 @@ class Basic(unittest.TestCase):
         csvFilenameList = csvFilenameAll
         for trial in range(3):
             for csvFilename in csvFilenameList:
-                # creates csvFilename.hex from file in importFolder dir 
+                csvPathname = importFolderPath + "/" + csvFilename
                 start = time.time()
-                parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvFilename, timeoutSecs=500)
+                parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, timeoutSecs=500)
                 elapsed = time.time() - start
                 print csvFilename, "parsed in", elapsed, "seconds.", "%d pct. of timeout" % ((elapsed*100)/timeoutSecs), "\n"
                 print csvFilename, 'H2O reports parse time:', parseResult['response']['time']

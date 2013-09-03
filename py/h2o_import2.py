@@ -112,6 +112,7 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=
         tail = pathWithRegex
         
     h2o.verboseprint("folderPath:", folderPath, "tail:", tail)
+
     if returnFullPath:
         return os.path.join(folderPath, tail)
     else:
@@ -157,12 +158,20 @@ def import_only(node=None, schema='local', bucket=None, path=None,
         h2o.verboseprint("folderPath:", folderPath, "filename:", filename)
         filePath = os.path.join(folderPath, filename)
         h2o.verboseprint('filePath:', filePath)
+        if h2o.abort_after_import:
+            print h2o.python_test_name, "first uses put:/" + filePath
+            raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
+    
         key = node.put_file(filePath, key=src_key, timeoutSecs=timeoutSecs)
         return (None, key)
 
     if schema=='local' and not \
             (node.redirect_import_folder_to_s3_path or node.redirect_import_folder_to_s3n_path):
         (folderPath, pattern) = find_folder_and_filename(bucket, path, schema)
+        if h2o.abort_after_import:
+            print h2o.python_test_name, "first uses local:/" + os.path.join(folderPath, pattern)
+            raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
+
         folderURI = 'nfs:/' + folderPath
         importResult = node.import_files(folderPath, timeoutSecs=timeoutSecs)
 
@@ -178,6 +187,10 @@ def import_only(node=None, schema='local', bucket=None, path=None,
             folderOffset = bucket
         else:
             folderOffset = head
+
+        if h2o.abort_after_import:
+            print h2o.python_test_name, schema, "first uses", schema + "://" + folderOffset + "/" + pattern
+            raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
 
         if schema=='s3' or node.redirect_import_folder_to_s3_path:
             folderURI = "s3://" + folderOffset
@@ -201,6 +214,7 @@ def import_only(node=None, schema='local', bucket=None, path=None,
             raise Exception("schema not understood: %s" % schema)
 
     importPattern = folderURI + "/" + pattern
+
     return (importResult, importPattern)
 
 

@@ -58,7 +58,7 @@ class Basic(unittest.TestCase):
         print "\nStarting", csvFilename
         # columns start at 0
         csvPathname = 'logreg/' + csvFilename
-        parseResult = h2o_cmd.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
 
         y = "1"
         x = range(9)

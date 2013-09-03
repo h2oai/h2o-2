@@ -92,7 +92,7 @@ class parse_rand_schmoo(unittest.TestCase):
             # remove the original parsed key. source was already removed by h2o
             h2o.nodes[0].remove_key(hex_key)
             start = time.time()
-            parseResultB = h2i.import_parse(path=csvDownloadPathname, schema='put', key=key, hex_key=hex_key)
+            parseResultB = h2i.import_parse(path=csvDownloadPathname, schema='put', src_key=src_key, hex_key=hex_key)
             print "B trial #", trial, "totalRows:", totalRows, "parse end on ", \
                 csvFilename, 'took', time.time() - start, 'seconds'
             inspect = h2o_cmd.runInspect(key=hex_key)

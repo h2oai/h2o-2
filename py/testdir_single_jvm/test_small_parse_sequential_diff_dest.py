@@ -24,7 +24,7 @@ class Basic(unittest.TestCase):
         for trials in range(100):
             hex_key = csvPathname + "_" + str(trials)
             parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put',
-                hex_key=hex_key, timeoutSecs=180, noPoll=False, doSummary=False)
+                hex_key=hex_key, timeoutSecs=120, noPoll=False, doSummary=False)
 
 if __name__ == "__main__":
 	h2o.unit_main()

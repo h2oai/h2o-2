@@ -74,6 +74,7 @@ random_udp_drop = False
 random_seed = None
 beta_features = False
 sleep_at_tear_down = False
+abort_after_import = False
 # jenkins gets this assign, but not the unit_main one?
 python_test_name = inspect.stack()[1][1]
 
@@ -90,11 +91,12 @@ def parse_our_args():
     parser.add_argument('-s', '--random_seed', type=int, help='initialize SEED (64-bit integer) for random generators')
     parser.add_argument('-bf', '--beta_features', help='enable or switch to beta features (import2/parse2)', action='store_true')
     parser.add_argument('-slp', '--sleep_at_tear_down', help='open browser and time.sleep(3600) at tear_down_cloud() (typical test end/fail)', action='store_true')
+    parser.add_argument('-aai', '--abort_after_import', help='abort the test after printing the full path to the first dataset used by import_parse/import_only', action='store_true')
     parser.add_argument('unittest_args', nargs='*')
 
     args = parser.parse_args()
     global browse_disable, browse_json, verbose, ipaddr, config_json, debugger, random_udp_drop
-    global random_seed, beta_features, sleep_at_tear_down
+    global random_seed, beta_features, sleep_at_tear_down, abort_after_import
 
     browse_disable = args.browse_disable or getpass.getuser()=='jenkins'
     browse_json = args.browse_json
@@ -106,6 +108,7 @@ def parse_our_args():
     random_seed = args.random_seed
     beta_features = args.beta_features
     sleep_at_tear_down = args.sleep_at_tear_down
+    abort_after_import = args.abort_after_import
 
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
     # FIX! this isn't working to grab the args we don't care about

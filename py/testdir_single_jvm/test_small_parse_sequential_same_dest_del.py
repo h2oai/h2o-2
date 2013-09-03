@@ -26,7 +26,7 @@ class Basic(unittest.TestCase):
             src_key = csvPathname
             hex_key = csvPathname + '.hex'
             parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put',
-                src_key=src_key, hex_key=hex_key, timeoutSecs=180, noPoll=False, doSummary=False)
+                src_key=src_key, hex_key=hex_key, timeoutSecs=120, noPoll=False, doSummary=False)
             h2o.nodes[0].remove_key(src_key)
             h2o.nodes[0].remove_key(hex_key)
 

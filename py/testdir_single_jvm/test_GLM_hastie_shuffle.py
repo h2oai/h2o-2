@@ -78,7 +78,7 @@ class Basic(unittest.TestCase):
         csvPathname = 'logreg' + '/' + csvFilename
         fullPathname = h2i.find_folder_and_filename(bucket, csvPathname, returnFullPath=True)
 
-        glm_doit(self,csvFilename, bucket, csvPathname, timeoutSecs=30)
+        glm_doit(self, csvFilename, bucket, csvPathname, timeoutSecs=30)
 
         filename1x = "hastie_1x.data"
         pathname1x = SYNDATASETS_DIR + '/' + filename1x
@@ -90,18 +90,18 @@ class Basic(unittest.TestCase):
 
         filename2x = "hastie_2x.data"
         pathname2x = SYNDATASETS_DIR + '/' + filename2x
-        h2o_util.file_cat(pathname1xShuf,pathname1xShuf,pathname2x)
+        h2o_util.file_cat(pathname1xShuf, pathname1xShuf, pathname2x)
 
         filename2xShuf = "hastie_2x.data_shuf"
         pathname2xShuf = SYNDATASETS_DIR + '/' + filename2xShuf
         h2o_util.file_shuffle(pathname2x, pathname2xShuf)
-        glm_doit(self,filename2xShuf, pathname2xShuf, timeoutSecs=45)
+        glm_doit(self, filename2xShuf, None, pathname2xShuf, timeoutSecs=45)
 
         # too big to shuffle?
         filename4x = "hastie_4x.data"
         pathname4x = SYNDATASETS_DIR + '/' + filename4x
         h2o_util.file_cat(pathname2xShuf,pathname2xShuf,pathname4x)
-        glm_doit(self,filename4x, pathname4x, timeoutSecs=120)
+        glm_doit(self,filename4x, None, pathname4x, timeoutSecs=120)
 
 if __name__ == '__main__':
     h2o.unit_main()

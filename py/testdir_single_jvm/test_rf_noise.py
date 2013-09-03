@@ -29,11 +29,11 @@ class Basic(unittest.TestCase):
         h2o_cmd.runRFOnly(parseResult=parseResult, trees=6, timeoutSecs=10)
 
     def test_C_RF_poker100(self):
-        parseResult = h2i.import_parse(bucket='smalldata', path='poker/poker100.csv', schema='put', noise=('StoreView',None))
+        parseResult = h2i.import_parse(bucket='smalldata', path='poker/poker100', schema='put', noise=('StoreView',None))
         h2o_cmd.runRFOnly(parseResult=parseResult, trees=6, timeoutSecs=10)
 
     def test_D_GenParity1(self):
-        parseResult = h2i.import_parse(bucket='smalldata', path='parity_128_4_100_quad_data', schema='put', noise=('StoreView',None))
+        parseResult = h2i.import_parse(bucket='smalldata', path='parity_128_4_100_quad.data', schema='put', noise=('StoreView',None))
         h2o_cmd.runRFOnly(parseResult=parseResult, trees=50, timeoutSecs=10)
 
     def test_E_ParseManyCols(self):
