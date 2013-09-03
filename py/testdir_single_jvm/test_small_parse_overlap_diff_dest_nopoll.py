@@ -33,7 +33,7 @@ class Basic(unittest.TestCase):
                     src_key=src_key, hex_key=hex_key, timeoutSecs=120, noPoll=noPoll,
                     doSummary=False)
                 num_trials += 1
-            h2o_jobs.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=300, retryDelaySecs=5,stallForNJobs=stallForNJobs)
+            h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=300, retryDelaySecs=5,stallForNJobs=stallForNJobs)
 
 if __name__ == "__main__":
     h2o.unit_main()
