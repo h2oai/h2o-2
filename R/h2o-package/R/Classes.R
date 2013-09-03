@@ -239,6 +239,22 @@ setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
   as.data.frame(new("H2OParsedData", h2o=x@h2o, key=res))
 })
 
+setGeneric("h2o.factor", function(data, col) { standardGeneric("h2o.factor") })
+setMethod("h2o.factor", signature(data="H2OParsedData", col="numeric"),
+          function(data, col) {
+            newCol = paste("factor(", data@key, "[", col, "])", sep="")
+            expr = paste("colSwap(", data@key, ",", col, ",", newCol, ")", sep="")
+            res = h2o.__exec(data@h2o, paste(data@key, expr, sep="="))
+            data
+          })
+
+setMethod("h2o.factor", signature(data="H2OParsedData", col="character"), 
+          function(data, col) {
+            ind = match(col, colnames(data))
+            if(is.na(ind)) stop("Column ", col, " does not exist in ", data@key)
+            h2o.factor(data, ind-1)
+          })
+
 setMethod("show", "H2OGLMGridModel", function(object) {
   print(object@data)
   cat("GLMGrid Model Key:", object@key, "\n\nSummary\n")
