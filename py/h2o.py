@@ -568,6 +568,9 @@ def check_sandbox_for_errors(sandbox_ignore_errors=False):
                     # don't detect these class loader info messags as errors
                     #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
                     foundBad = regex1.search(line) and not (
+                        # R stdout confusion matrix. Probably need to figure out how to exclude R logs
+                        ('Training Error' in line) or
+                        ('Error' in line and 'Actual' in line) or
                         # fvec
                         ('prediction error' in line) or ('errors on' in line) or
                         # R

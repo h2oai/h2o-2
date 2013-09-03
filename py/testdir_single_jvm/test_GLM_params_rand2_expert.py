@@ -48,7 +48,7 @@ class Basic(unittest.TestCase):
     def test_GLM_params_rand2_newargs(self):
         csvPathname = 'covtype/covtype.20k.data'
         hex_key = 'covtype.20k.hex'
-        parseResult = h2o.import_parse(bucket='smalldata', path=csvPathname, hex_key=hex_key, schema='put')
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=hex_key, schema='put')
         paramDict = define_params()
 
         for trial in range(50):

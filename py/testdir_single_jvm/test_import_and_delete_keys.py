@@ -38,17 +38,9 @@ class Basic(unittest.TestCase):
                 print csvFilename, "parsed in", elapsed, "seconds.", "%d pct. of timeout" % ((elapsed*100)/timeoutSecs), "\n"
                 print csvFilename, 'H2O reports parse time:', parseResult['response']['time']
 
-                # h2o doesn't produce this, but h2o_import.py adds it for us.
-                print "Parse result['python_source_key']:", parseResult['python_source_key']
                 print "Parse result['destination_key']:", parseResult['destination_key']
                 print "\n" + csvFilename
 
-                storeView = h2o.nodes[0].store_view()
-                print "storeView:", h2o.dump_json(storeView)
-                # h2o deletes key after parse now
-                ## print "Removing", parseResult['python_source_key'], "so we can re-import it"
-                ## removeKeyResult = h2o.nodes[0].remove_key(key=parseResult['python_source_key'])
-                ## print "removeKeyResult:", h2o.dump_json(removeKeyResult)
 
             print "\nTrial", trial, "completed\n"
 

@@ -25,7 +25,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             # h2o.py now sets destination_key for a fixed default model name, 
             # we want h2o to create model names for this test, so use none here
-            kwargs = {'y':4, 'family': 'binomial', 'case': 1, 'case_mode': '>'}
+            kwargs = {'destination_key': None, 'y':4, 'family': 'binomial', 'case': 1, 'case_mode': '>'}
             
             # make sure each parse is unique dest key (not in use
             hex_key = "iris2_" + str(trial) + ".hex"
