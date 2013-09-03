@@ -12,7 +12,6 @@ def wcl(csvPathname):
         f = open(csvPathname)
         for line in f:
             lines += 1
-        
         f.close()
         return lines
 
@@ -39,7 +38,6 @@ class Basic(unittest.TestCase):
         # count lines in input file - there is no header for poker 1000
         fullPathname = h2i.find_folder_and_filename('smalldata', csvPathname, returnFullPath=True)
         rows = wcl(fullPathname)
-
         self.assertEqual(rows, ary['num_rows'])
         self.assertEqual(11, ary['num_cols'])
 
@@ -79,7 +77,11 @@ class Basic(unittest.TestCase):
     # Shared test implementation for smalldata/test/test_26cols_*.csv
     def inspect_columns(self, bucket, csvPathname, rows=1, cols=26, columnNames=crange('A', 'Z'), columnTypes=None):
         res = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put')
+<<<<<<< Updated upstream
         ary  = h2o_cmd.runInspect(key=res['destination_key'])
+=======
+        ary  = node.inspect(res['destination_key'])
+>>>>>>> Stashed changes
 
         self.assertEqual(rows, ary['num_rows'])
         self.assertEqual(cols, ary['num_cols'])

@@ -16,7 +16,6 @@ def append_syn_dataset(csvPathname, rowData, num):
         for i in range(num):
             dsf.write(rowData + "\n")
 
-
 def rand_rowData():
     # UPDATE: maybe because of byte buffer boundary issues, single byte
     # data is best? if we put all 0s or 1, then I guess it will be bits?
@@ -43,10 +42,6 @@ class parse_rand_schmoo(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        if not h2o.browse_disable:
-            # time.sleep(500000)
-            pass
-
         h2o.tear_down_cloud(h2o.nodes)
     
     def test_parse_csv_download(self):

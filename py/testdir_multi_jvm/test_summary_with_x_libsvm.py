@@ -74,10 +74,11 @@ class Basic(unittest.TestCase):
                 print "Creating random", csvPathname
                 # dict of col sums for comparison to exec col sums below
                 (colNumberMax, synColSumDict) = write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
-
-                parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=timeoutSecs, doSummary=False)
+                parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=timeoutSecs, 
+                    doSummary=False)
                 print "Parse result['destination_key']:", parseResult['destination_key']
-                inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], max_column_display=colNumberMax+1, timeoutSecs=timeoutSecs)
+                inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], max_column_display=colNumberMax+1, 
+                    timeoutSecs=timeoutSecs)
                 num_cols = inspect['num_cols']
                 num_rows = inspect['num_rows']
 
@@ -86,7 +87,6 @@ class Basic(unittest.TestCase):
                 self.assertEqual(rowCount, num_rows, 
                     msg="generated %s rows, parsed to %s rows" % (rowCount, num_rows))
 
-                # just want to see if we stack trace on these
                 for x in range(num_cols):
                     print "Doing summary with x=%s" % x
                     summaryResult = h2o_cmd.runSummary(key=hex_key, x=x, timeoutSecs=timeoutSecs)
@@ -98,8 +98,6 @@ class Basic(unittest.TestCase):
                         colName = "V" + str(x)
                     print "Doing summary with col name x=%s" % colName
                     summaryResult = h2o_cmd.runSummary(key=hex_key, x=x, timeoutSecs=timeoutSecs)
-                    # skip the infoFromSummary check
-
 
                 # do a final one with all columns for the current check below
                 # FIX! we should update the check to check each individual summary result
@@ -145,15 +143,11 @@ class Basic(unittest.TestCase):
 
                     self.assertEqual(float(mean), synMean,
                         msg='col %s mean %s is not equal to generated mean %s' % (name, mean, 0))
-
                     # why are min/max one-entry lists in summary result. Oh..it puts N min, N max
                     self.assertEqual(smin, synMin,
-
                         msg='col %s min %s is not equal to generated min %s' % (name, smin, synMin))
-
                     self.assertEqual(smax, synMax,
                         msg='col %s max %s is not equal to generated max %s' % (name, smax, synMax))
-
                     self.assertEqual(0, na,
                         msg='col %s num_missing_values %d should be 0' % (name, na))
 
