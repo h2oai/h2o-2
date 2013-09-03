@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import as h2i
+import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -21,13 +21,12 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_B_kmeans_benign(self):
-        importFolderPath = "/home/0xdiag/datasets/standard"
+        importFolderPath = "standard"
         csvFilename = "benign.csv"
-        key2 = "benign.hex"
+        hex_key = "benign.hex"
         csvPathname = importFolderPath + "/" + csvFilename
-        h2i.setupImportFolder(None, importFolderPath)
-        # FIX! key2 isn't working with Parse2 ? parseResult['destination_key'] not right?
-        parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2, header=1, timeoutSecs=180)
+        # FIX! hex_key isn't working with Parse2 ? parseResult['destination_key'] not right?
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, header=1, timeoutSecs=180)
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\nStarting", csvFilename
 
@@ -56,12 +55,11 @@ class Basic(unittest.TestCase):
 
     def test_C_kmeans_prostate(self):
 
-        importFolderPath = "/home/0xdiag/datasets/standard"
+        importFolderPath = "standard"
         csvFilename = "prostate.csv"
-        key2 = "prostate.hex"
+        hex_key = "prostate.hex"
         csvPathname = importFolderPath + "/" + csvFilename
-        h2i.setupImportFolder(None, importFolderPath)
-        parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2, header=1, timeoutSecs=180)
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, header=1, timeoutSecs=180)
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\nStarting", csvFilename
 

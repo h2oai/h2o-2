@@ -1,8 +1,10 @@
 import h2o, h2o_cmd, re, os
+import getpass
 
 # hdfs/maprfs/s3/s3n paths should be absolute from the bucket (top level)
 # so only walk around for local
-def find_folder_path_and_pattern(bucket, pathWithRegex):
+def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=False):
+    checkPath = True
     # strip the common mistake of leading "/" in path, if bucket is specified too
     if bucket is not None and re.match("/", pathWithRegex):
         h2o.verboseprint("You said bucket:", bucket, "so stripping incorrect leading '/' from", pathWithRegex)
@@ -14,12 +16,25 @@ def find_folder_path_and_pattern(bucket, pathWithRegex):
     elif bucket == ".":
         bucketPath = os.getcwd()
 
-    # does it work to use bucket "." to get current directory
-    elif os.environ.get('H2O_BUCKETS_ROOT'):
-        h2oBucketsRoot = os.environ.get('H2O_BUCKETS_ROOT')
-        print "Using H2O_BUCKETS_ROOT environment variable:", h2oBucketsRoot
+    # only use if the build_cloud was for remote H2O
+    # Never use the var for remote, if you're doing a put! (which always sources local)
+    elif h2o.nodes[0].remoteH2O and schema!='put' and os.environ.get('H2O_REMOTE_BUCKETS_ROOT'):
+        # we may use this to force remote paths, so don't look locally for file
+        rootPath = os.environ.get('H2O_REMOTE_BUCKETS_ROOT')
+        bucketPath = os.path.join(rootPath, bucket)
+        checkpath = False
 
-        rootPath = os.path.abspath(h2oBucketsRoot)
+    elif h2o.nodes[0].remoteH2O and schema!='put' and h2o.nodes[0].h2o_remote_buckets_root:
+        # we may use this to force remote paths, so don't look locally for file
+        rootPath = h2o.nodes[0].h2o_remote_buckets_root
+        bucketPath = os.path.join(rootPath, bucket)
+        checkpath = False
+
+    # does it work to use bucket "." to get current directory
+    elif (not h2o.nodes[0].remoteH2O or schema=='put') and os.environ.get('H2O_BUCKETS_ROOT'):
+        rootPath = os.environ.get('H2O_BUCKETS_ROOT')
+        print "Using H2O_BUCKETS_ROOT environment variable:", rootPath
+
         if not (os.path.exists(rootPath)):
             raise Exception("H2O_BUCKETS_ROOT in env but %s doesn't exist." % rootPath)
 
@@ -28,13 +43,39 @@ def find_folder_path_and_pattern(bucket, pathWithRegex):
             raise Exception("H2O_BUCKETS_ROOT and path used to form %s which doesn't exist." % bucketPath)
 
     else:
-        # check home directory first. Might have a link
-        rootPath= os.path.expanduser("~")
-        if os.path.exists(os.path.join(rootPath, bucket)):
-            print "Did find", bucket, "at", rootPath
-            bucketPath = os.path.join(rootPath, bucket)
+        # if we run remotely, we're assuming the import folder path on the remote machine
+        # matches what we find on our local machine. But maybe the local user doesn't exist remotely 
+        # so using his path won't work. 
+        # Resolve by looking for special state in the config. If user = 0xdiag, just force the bucket location
+        # This is a lot like knowing about fixed paths with s3 and hdfs
+        # Otherwise the remote path needs to match the local discovered path.
 
+        # want to check the username being used remotely first. should exist here too if going to use
+        username = getpass.getuser()
+        h2oUsername = h2o.nodes[0].username
+        h2o.verboseprint("username:", username, "h2oUsername:", h2oUsername)
+
+        # bucket named "datasets" is special. Don't want to find it in /home/0xdiag/datasets
+        # needs to be the git clone 'datasets'. Find it by walking upwards below
+        # disable it from this looking in home dir. Could change priority order?
+        # resolved in order, looking for bucket (ln -s will work) in these home dirs.
+
+        if bucket=='datasets': # special case 
+            possibleUsers = []
+        elif h2oUsername != username:
+            possibleUsers = [username, h2oUsername, "0xdiag"]
         else:
+            possibleUsers = [username, "0xdiag"]
+
+        for u in possibleUsers:
+            rootPath = os.path.expanduser("~" + u)
+            bucketPath = os.path.join(rootPath, bucket)
+            h2o.verboseprint("Checking bucketPath:", bucketPath, 'assuming home is', rootPath)
+            if os.path.exists(bucketPath):
+                h2o.verboseprint("search A did find", bucket, "at", rootPath)
+                break
+        else:
+            # last chance to find it by snooping around
             rootPath = os.getcwd()
             h2o.verboseprint("find_bucket looking upwards from", rootPath, "for", bucket)
             # don't spin forever 
@@ -46,13 +87,16 @@ def find_folder_path_and_pattern(bucket, pathWithRegex):
                 if (levels==6):
                     raise Exception("unable to find bucket: %s" % bucket)
 
-            print "Did find", bucket, "at", rootPath
+            h2o.verboseprint("search B did find", bucket, "at", rootPath)
             bucketPath = os.path.join(rootPath, bucket)
 
     # if there's no path, just return the bucketPath
     # but what about cases with a header in the folder too? (not putfile)
     if pathWithRegex is None:
-        return (bucketPath, None)
+        if returnFullPath:
+            return bucketPath
+        else:
+            return (bucketPath, None)
 
     # if there is a "/" in the path, that means it's not just a pattern
     # split it
@@ -61,15 +105,18 @@ def find_folder_path_and_pattern(bucket, pathWithRegex):
     elif "/" in pathWithRegex:
         (head, tail) = os.path.split(pathWithRegex)
         folderPath = os.path.abspath(os.path.join(bucketPath, head))
-        if not os.path.exists(folderPath):
+        if checkPath and not os.path.exists(folderPath):
             raise Exception("%s doesn't exist. %s under %s may be wrong?" % (folderPath, head, bucketPath))
     else:
         folderPath = bucketPath
         tail = pathWithRegex
         
     h2o.verboseprint("folderPath:", folderPath, "tail:", tail)
-    return (folderPath, tail)
 
+    if returnFullPath:
+        return os.path.join(folderPath, tail)
+    else:
+        return (folderPath, tail)
 
 # passes additional params thru kwargs for parse
 # use_header_file=
@@ -79,10 +126,13 @@ def find_folder_path_and_pattern(bucket, pathWithRegex):
 # path should point to a file or regex of files. (maybe folder works? but unnecessary
 def import_only(node=None, schema='local', bucket=None, path=None,
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
-    noPoll=False, doSummary=True, src_key='python_src_key', **kwargs):
+    benchmarkLogging=None, noPoll=False, doSummary=True, src_key='python_src_key', **kwargs):
 
     # no bucket is sometimes legal (fixed path)
     if not node: node = h2o.nodes[0]
+
+    if path is None:
+        raise Exception("import_only: path parameter needs to be specified")
 
     if "/" in path:
         (head, pattern) = os.path.split(path)
@@ -104,15 +154,23 @@ def import_only(node=None, schema='local', bucket=None, path=None,
         if not path: 
             raise Exception("path= didn't say what file to put")
 
-        (folderPath, filename) = find_folder_path_and_pattern(bucket, path)
-        h2o.verboseprint("folderPath:", folderPath, "filename:", filename)
+        (folderPath, filename) = find_folder_and_filename(bucket, path, schema)
         filePath = os.path.join(folderPath, filename)
-        h2o.verboseprint('filePath:', filePath)
+        h2o.verboseprint("put filename:", filename, "folderPath:", folderPath, "filePath:", filePath)
+        print "\nimport_only:", h2o.python_test_name, "uses put:/" + filePath
+        if h2o.abort_after_import:
+            raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
+    
         key = node.put_file(filePath, key=src_key, timeoutSecs=timeoutSecs)
         return (None, key)
 
-    if schema=='local':
-        (folderPath, pattern) = find_folder_path_and_pattern(bucket, path)
+    if schema=='local' and not \
+            (node.redirect_import_folder_to_s3_path or node.redirect_import_folder_to_s3n_path):
+        (folderPath, pattern) = find_folder_and_filename(bucket, path, schema)
+        print "\nimport_only:", h2o.python_test_name, "uses local:/" + os.path.join(folderPath, pattern)
+        if h2o.abort_after_import:
+            raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
+
         folderURI = 'nfs:/' + folderPath
         importResult = node.import_files(folderPath, timeoutSecs=timeoutSecs)
 
@@ -124,24 +182,30 @@ def import_only(node=None, schema='local', bucket=None, path=None,
         # strip leading / in head if present
         if bucket and head!="":
             folderOffset = bucket + "/" + head
+            print 1
         elif bucket:
             folderOffset = bucket
+            print 2
         else:
             folderOffset = head
+
+        print "\nimport_only:", h2o.python_test_name, schema, "uses", schema + "://" + folderOffset + "/" + pattern
+        if h2o.abort_after_import:
+            raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
 
         if schema=='s3' or node.redirect_import_folder_to_s3_path:
             folderURI = "s3://" + folderOffset
             importResult = node.import_s3(bucket, timeoutSecs=timeoutSecs)
 
-        elif schema=='s3n':
+        elif schema=='s3n' or node.redirect_import_folder_to_s3n_path:
             folderURI = "s3n://" + folderOffset
             importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
 
         elif schema=='maprfs':
-            folderURI = "hdfs:///" + folderOffset
+            folderURI = "maprfs:///" + folderOffset
             importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
 
-        elif schema=='hdfs' or node.redirect_import_folder_to_s3n_path:
+        elif schema=='hdfs':
             h2o.verboseprint(h2o.nodes[0].hdfs_name_node)
             h2o.verboseprint("folderOffset;", folderOffset)
             folderURI = "hdfs://" + h2o.nodes[0].hdfs_name_node + "/" + folderOffset
@@ -157,13 +221,14 @@ def import_only(node=None, schema='local', bucket=None, path=None,
 # can take header, header_from_file, exclude params
 def parse_only(node=None, pattern=None, hex_key=None,
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
-    noPoll=False, **kwargs):
+    benchmarkLogging=None, noPoll=False, **kwargs):
 
     if not node: node = h2o.nodes[0]
 
-    parseResult = node.parse(pattern, hex_key,
-        timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs, noise,
-        noPoll, **kwargs)
+    parseResult = node.parse(key=pattern, key2=hex_key,
+        timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
+        initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs, noise=noise,
+        benchmarkLogging=None, noPoll=noPoll, **kwargs)
 
     parseResult['python_source'] = pattern
     return parseResult
@@ -172,33 +237,34 @@ def parse_only(node=None, pattern=None, hex_key=None,
 def import_parse(node=None, schema='local', bucket=None, path=None,
     src_key=None, hex_key=None, 
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
-    noPoll=False, doSummary=False, **kwargs):
+    benchmarkLogging=None, noPoll=False, doSummary=True, **kwargs):
 
     if not node: node = h2o.nodes[0]
 
     (importResult, importPattern) = import_only(node, schema, bucket, path,
         timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs, noise, 
-        noPoll, doSummary, src_key, **kwargs)
+        benchmarkLogging, noPoll, doSummary, src_key, **kwargs)
 
     h2o.verboseprint("importPattern:", importPattern)
     h2o.verboseprint("importResult", h2o.dump_json(importResult))
 
     parseResult = parse_only(node, importPattern, hex_key,
         timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs, noise, 
-        noPoll, **kwargs)
+        benchmarkLogging, noPoll, **kwargs)
     h2o.verboseprint("parseResult:", h2o.dump_json(parseResult))
 
     # do SummaryPage here too, just to get some coverage
     if doSummary:
-        node.summary_page(myKey2, timeoutSecs=timeoutSecs)
+        node.summary_page(parseResult['destination_key'], timeoutSecs=timeoutSecs)
 
     return parseResult
 
 
 # returns full key name, from current store view
-def find_key(filter):
+def find_key(pattern=None):
     found = None
-    storeViewResult = h2o.nodes[0].store_view(filter=filter)
+    kwargs = {'filter': pattern}
+    storeViewResult = h2o.nodes[0].store_view(**kwargs)
     keys = storeViewResult['keys']
     if len(keys) == 0:
         return None
@@ -211,9 +277,12 @@ def find_key(filter):
 
 # the storeViewResult for every node may or may not be the same
 # supposed to be the same? In any case
-def delete_all_keys(node=None, timeoutSecs=30):
+# pattern can't be regex to h2o?
+# None should be same as no pattern
+def delete_keys(node=None, pattern=None, timeoutSecs=30):
     if not node: node = h2o.nodes[0]
-    storeViewResult = h2o_cmd.runStoreView(node, timeoutSecs=timeoutSecs)
+    kwargs = {'filter': pattern}
+    storeViewResult = h2o_cmd.runStoreView(node, timeoutSecs=timeoutSecs, **kwargs)
     keys = storeViewResult['keys']
     for k in keys:
         node.remove_key(k['key'])
@@ -221,7 +290,7 @@ def delete_all_keys(node=None, timeoutSecs=30):
     print "Deleted", deletedCnt, "keys at", node
     return deletedCnt
 
-def delete_all_keys_at_all_nodes(node=None, timeoutSecs=30):
+def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=30):
     if not node: node = h2o.nodes[0]
     totalDeletedCnt = 0
     # do it in reverse order, since we always talk to 0 for other stuff
@@ -229,7 +298,34 @@ def delete_all_keys_at_all_nodes(node=None, timeoutSecs=30):
     # theoretically, the deletes should be 0 after the first node 
     # since the deletes should be global
     for node in reversed(h2o.nodes):
-        deletedCnt = delete_all_keys(node, timeoutSecs=timeoutSecs)
+        deletedCnt = delete_keys(node, pattern=pattern, timeoutSecs=timeoutSecs)
         totalDeletedCnt += deletedCnt
     print "\nTotal: Deleted", totalDeletedCnt, "keys at", len(h2o.nodes), "nodes"
     return totalDeletedCnt
+
+# Since we can't trust a single node storeview list, this will get keys that match text
+# for deleting, from a list saved from an import
+def delete_keys_from_import_result(node=None, pattern=None, importResult=None, timeoutSecs=30):
+    if not node: node = h2o.nodes[0]
+    # the list could be from hdfs/s3 or local. They have to different list structures
+    deletedCnt = 0
+    if 'succeeded' in importResult:
+        kDict = importResult['succeeded']
+        for k in kDict:
+            key = k['key']
+            if (pattern in key) or pattern is None:
+                print "\nRemoving", key
+                removeKeyResult = node.remove_key(key=key)
+                deletedCnt += 1
+    elif 'keys' in importResult:
+        kDict = importResult['keys']
+        for k in kDict:
+            key = k
+            if (pattern in key) or pattern is None:
+                print "\nRemoving", key
+                removeKeyResult = node.remove_key(key=key)
+                deletedCnt += 1
+    else:
+        raise Exception ("Can't find 'files' or 'succeeded' in your file dict. why? not from hdfs/s3 or local?")
+    print "Deleted", deletedCnt, "keys at", node
+    return deletedCnt

@@ -72,15 +72,6 @@ def runExecOnly(node=None, timeoutSecs=20, **kwargs):
     # no such thing as GLMView..don't use retryDelaySecs
     return node.exec_query(timeoutSecs, **kwargs)
 
-def runKMeans(node=None, csvPathname=None, key=None, key2=None,
-        timeoutSecs=20, retryDelaySecs=2, **kwargs):
-    # use 1/5th the KMeans timeoutSecs for allowed parse time.
-    pto = max(timeoutSecs/5,10)
-    noise = kwargs.pop('noise',None)
-    parseResult = parseFile(node, csvPathname, key, key2=key2, timeoutSecs=pto, noise=noise)
-    kmeans = runKMeansOnly(node, parseResult, timeoutSecs, retryDelaySecs, **kwargs)
-    return kmeans
-
 def runKMeansOnly(node=None, parseResult=None, 
         timeoutSecs=20, retryDelaySecs=2, **kwargs):
     if not parseResult: raise Exception('No parsed key for KMeans specified')
@@ -89,29 +80,12 @@ def runKMeansOnly(node=None, parseResult=None,
     return node.kmeans(parseResult['destination_key'], None, 
         timeoutSecs, retryDelaySecs, **kwargs)
 
-def runKMeansGrid(node=None, csvPathname=None, key=None, key2=None,
-        timeoutSecs=60, retryDelaySecs=2, noise=None, **kwargs):
-    # use 1/5th the KMeans timeoutSecs for allowed parse time.
-    pto = max(timeoutSecs/5,10)
-    noise = kwargs.pop('noise',None)
-    parseResult = parseFile(node, csvPathname, key, key=key2, timeoutSecs=pto, noise=noise)
-    return runKMeansGridOnly(node, parseResult, 
-        timeoutSecs, retryDelaySecs, noise=noise, **kwargs)
-
 def runKMeansGridOnly(node=None, parseResult=None,
         timeoutSecs=60, retryDelaySecs=2, noise=None, **kwargs):
     if not parseResult: raise Exception('No parsed key for KMeansGrid specified')
     if not node: node = h2o.nodes[0]
     # no such thing as KMeansGridView..don't use retryDelaySecs
     return node.kmeans_grid(parseResult['destination_key'], timeoutSecs, **kwargs)
-
-def runGLM(node=None, csvPathname=None, key=None, key2=None, 
-        timeoutSecs=20, retryDelaySecs=2, noise=None, **kwargs):
-    # use 1/5th the GLM timeoutSecs for allowed parse time.
-    pto = max(timeoutSecs/5,10)
-    noise = kwargs.pop('noise',None)
-    parseResult = parseFile(node, csvPathname, key, key2=key2, timeoutSecs=pto, noise=noise)
-    return runGLMOnly(node, parseResult, timeoutSecs, retryDelaySecs, noise=noise, **kwargs)
 
 def runGLMOnly(node=None, parseResult=None, 
         timeoutSecs=20, retryDelaySecs=2, noise=None, **kwargs):
@@ -124,30 +98,12 @@ def runGLMScore(node=None, key=None, model_key=None, timeoutSecs=20, **kwargs):
     if not node: node = h2o.nodes[0]
     return node.GLMScore(key, model_key, timeoutSecs, **kwargs)
 
-def runGLMGrid(node=None, csvPathname=None, key=None, key2=None,
-        timeoutSecs=60, retryDelaySecs=2, noise=None, **kwargs):
-    # use 1/5th the GLM timeoutSecs for allowed parse time.
-    pto = max(timeoutSecs/5,10)
-    noise = kwargs.pop('noise',None)
-    parseResult = parseFile(node, csvPathname, key, key=key2, timeoutSecs=pto, noise=noise)
-    return runGLMGridOnly(node, parseResult, 
-        timeoutSecs, retryDelaySecs, noise=noise, **kwargs)
-
 def runGLMGridOnly(node=None, parseResult=None,
         timeoutSecs=60, retryDelaySecs=2, noise=None, **kwargs):
     if not parseResult: raise Exception('No parsed key for GLMGrid specified')
     if not node: node = h2o.nodes[0]
     # no such thing as GLMGridView..don't use retryDelaySecs
     return node.GLMGrid(parseResult['destination_key'], timeoutSecs, **kwargs)
-
-def runRF(node=None, csvPathname=None, trees=5, key=None, key2=None,
-        timeoutSecs=20, retryDelaySecs=2, rfView=True, noise=None, **kwargs):
-    # use 1/5th the RF timeoutSecs for allowed parse time.
-    pto = max(timeoutSecs/5,30)
-    noise = kwargs.pop('noise',None)
-    parseResult = parseFile(node, csvPathname, key, key2=key2, timeoutSecs=pto, noise=noise)
-    return runRFOnly(node, parseResult, trees, timeoutSecs, retryDelaySecs, 
-        rfView=rfView, noise=noise, **kwargs)
 
 # rfView can be used to skip the rf completion view
 # for creating multiple rf jobs
@@ -281,31 +237,6 @@ def wait_for_live_port(ip, port, retries=3):
             dot()
     if not port_live(ip,port):
         raise Exception("[h2o_cmd] Error waiting for {0}:{1} {2}times...".format(ip,port,retries))
-
-
-# looks for the key that matches the pattern, in the keys you saved from the 
-# import (that you saved from import of the folder/s3/hdfs)
-# I guess I should change to just be the raw result of the import? not sure
-# see how it's used in tests named above
-def deleteCsvKey(csvFilename, importFullList):
-    # remove the original data key
-    # the list could be from hdfs/s3 or local. They have to different list structures
-    if 'succeeded' in importFullList:
-        kDict = importFullList['succeeded']
-        for k in kDict:
-            key = k['key']
-            if csvFilename in key:
-                print "\nRemoving", key
-                removeKeyResult = h2o.nodes[0].remove_key(key=key)
-    elif 'keys' in importFullList:
-        kDict = importFullList['keys']
-        for k in kDict:
-            key = k
-            if csvFilename in key:
-                print "\nRemoving", key
-                removeKeyResult = h2o.nodes[0].remove_key(key=key)
-    else:
-        raise Exception ("Can't find 'files' or 'succeeded' in your file dict. why? not from hdfs/s3 or local?")
 
 
 # checks the key distribution in the cloud, and prints warning if delta against avg

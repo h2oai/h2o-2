@@ -1,7 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_glm
-import h2o_browse as h2b, h2o_import as h2i
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -21,7 +20,7 @@ class Basic(unittest.TestCase):
 
     def test_GLM_moneypuck(self):
         if 1==1:
-            # None is okay for key2
+            # None is okay for hex_key
             csvFilenameList = [
                 # ('hdb-2007-02-05/Goalies.csv',240,'Goalies'),
                 # ('hdb-2007-02-05/GoaliesSC.csv',240,'GoaliesSC'),
@@ -57,13 +56,12 @@ class Basic(unittest.TestCase):
         # a browser window too, just because we can
         h2b.browseTheCloud()
 
-        importFolderPath = '/home/0xdiag/datasets/hockey'
-        h2i.setupImportFolder(None, importFolderPath)
-        for csvFilename, timeoutSecs, key2 in csvFilenameList:
+        importFolderPath = "hockey"
+        for csvFilename, timeoutSecs, hex_key in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
-            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=2000, key2=key2)
-            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             csvPathname = importFolderPath + "/" + csvFilename
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, timeoutSecs=2000, hex_key=hex_key)
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             num_rows = inspect['num_rows']
             num_cols = inspect['num_cols']
 

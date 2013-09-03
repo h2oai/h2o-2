@@ -159,7 +159,7 @@ public class GLMGrid extends Job {
             return -1;
           GLMModel m1 = v1.get();
           GLMModel m2 = v2.get();
-          if( m1._glmParams._family == Family.binomial ) {
+          if( m1._glmParams._family._family == Family.binomial ) {
             double cval1 = m1._vals[0].AUC(), cval2 = m2._vals[0].AUC();
             if( cval1 == cval2 ) {
               if( m1._vals[0].classError() != null ) {

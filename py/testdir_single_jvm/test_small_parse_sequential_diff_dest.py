@@ -1,6 +1,6 @@
 import sys, unittest, random, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -19,20 +19,12 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls): 
         h2o.tear_down_cloud()
  
-    def test_small_parse_overlap_same_dest(self):
-		noPoll = False
-		timeoutSecs = 180
-		num_trials = 0
-		trial_max = 100
-		while num_trials < trial_max:
-			csvPathname = h2o.find_file('smalldata/poker')
-			csvFilename = csvPathname + '/' + 'poker-hand-testing.data'
-			key = csvFilename + "_" + str(num_trials)
-			key2 = csvFilename + '.hex'
-			parseResult = h2o_cmd.parseFile(csvPathname=csvFilename, 
-    			key=key, key2=key2, timeoutSecs=timeoutSecs, noPoll=noPoll,
-    			doSummary=False)
-			num_trials += 1
+    def test_small_parse_sequential_diff_dest(self):
+        csvPathname = 'poker/poker-hand-testing.data'
+        for trials in range(100):
+            hex_key = csvPathname + "_" + str(trials)
+            parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put',
+                hex_key=hex_key, timeoutSecs=120, noPoll=False, doSummary=False)
 
 if __name__ == "__main__":
 	h2o.unit_main()

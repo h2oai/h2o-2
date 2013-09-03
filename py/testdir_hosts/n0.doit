@@ -1,6 +1,18 @@
+#!/bin/sh
 
-# sleep 10
-sleep 5
-# nosetests $1 --nologcapture --with-xunit --xunit-file=$1.nosetests.xml
-nosetests $1 --nologcapture
+echo
+echo ======================================================================
+echo ======================================================================
+echo ======================================================================
+echo
+echo RUNNING $1
+echo 
+echo ======================================================================
+echo 
+
+date
+echo 
+time nosetests --verbose --stop --nocapture --nologcapture --with-xunit --xunit-file=$1.nosetests.xml --tests=$1
+echo 
+date
 

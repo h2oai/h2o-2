@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import as h2i, h2o_jobs
+import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import2 as h2i, h2o_jobs
 
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
 # only classes 1-7 in the 55th col
@@ -57,11 +57,11 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rf_change_data_key(self):
-        importFolderPath = '/home/0xdiag/datasets/standard'
-        importFolderResult = h2i.setupImportFolder(None, importFolderPath)
+        importFolderPath = 'standard'
 
         csvFilenameTrain = 'covtype.data'
-        parseResultTrain = h2i.parseImportFolderFile(None, csvFilenameTrain, importFolderPath, timeoutSecs=500)
+        csvPathname = importFolderPath + "/" + csvFilenameTrain
+        parseResultTrain = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, timeoutSecs=500)
         print csvFilenameTrain, 'parse time:', parseResultTrain['response']['time']
         inspect = h2o_cmd.runInspect(key=parseResultTrain['destination_key'])
         dataKeyTrain = parseResultTrain['destination_key']
@@ -71,7 +71,8 @@ class Basic(unittest.TestCase):
         # parseResult = parseResult
         # dataKeyTest = dataKeyTrain
         csvFilenameTest = 'covtype20x.data'
-        parseResultTest = h2i.parseImportFolderFile(None, csvFilenameTest, importFolderPath, timeoutSecs=500)
+        csvPathname = importFolderPath + "/" + csvFilenameTest
+        parseResultTest = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, timeoutSecs=500)
         print csvFilenameTest, 'parse time:', parseResultTest['response']['time']
         print "Parse result['destination_key']:", parseResultTest['destination_key']
         inspect = h2o_cmd.runInspect(key=parseResultTest['destination_key'])

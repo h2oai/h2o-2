@@ -1,8 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
-import h2o_browse as h2b
-import h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -34,10 +32,10 @@ class Basic(unittest.TestCase):
         h2b.browseTheCloud()
 
         for (csvFilename, key, trees) in csvFilenameList:
-            csvPathname = h2o.find_dataset(csvFilename)
+            csvPathname = csvFilename
 
             # creates csvFilename and csvFilename.hex  keys
-            parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, timeoutSecs=500)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', timeoutSecs=500)
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
             inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])

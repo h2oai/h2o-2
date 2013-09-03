@@ -1,7 +1,6 @@
 import unittest, time, sys, re
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_glm
-import h2o_browse as h2b
+import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import2 as h2i
 
 def write_syn_dataset(csvPathname, rowCount, rowDataTrue, rowDataFalse, outputTrue, outputFalse):
     dsf = open(csvPathname, "w+")
@@ -91,11 +90,12 @@ class GLM_twovalues(unittest.TestCase):
                 rowDataTrue, rowDataFalse, str(outputTrue), str(outputFalse))
 
             start = time.time()
-            key = csvFilename + "_" + str(trial)
+            hex_key = csvFilename + "_" + str(trial)
             kwargs = {'case': case, 'y': 10, 'family': 'binomial', 'alpha': 0, 'beta_epsilon': 0.0002}
 
             # default takes 39 iterations? play with alpha/beta
-            glm = h2o_cmd.runGLM(csvPathname=csvPathname, key=key)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult)
             h2o_glm.simpleCheckGLM(self, glm, 0, **kwargs)
 
             # check that the number of entries in coefficients is right (12 with intercept)

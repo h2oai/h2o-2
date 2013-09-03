@@ -1,6 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 import h2o_browse as h2b
 
 def write_syn_dataset(csvPathname, rowCount, headerData, rList):
@@ -41,7 +41,6 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        time.sleep(3600)
         h2o.tear_down_cloud(h2o.nodes)
     
     def test_parse_header_rows_mismatch(self):
@@ -59,13 +58,13 @@ class Basic(unittest.TestCase):
 
         for trial in range (2):
             # make sure all key names are unique, when we re-put and re-parse (h2o caching issues)
-            key = csvFilename + "_" + str(trial)
-            key2 = csvFilename + "_" + str(trial) + ".hex"
+            src_key = csvFilename + "_" + str(trial)
+            hex_key = csvFilename + "_" + str(trial) + ".hex"
 
             start = time.time()
             timeoutSecs = 30
             print "Force it to think there's a header. using comma forced as separator"
-            parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2,
+            parseResult = h2i.import_parse(path=csvPathname, src_key=src_key, schema='put', hex_key=hex_key,
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=30, header=1, separator=44)
             print "parseResult['destination_key']: " + parseResult['destination_key']
             print 'parse time:', parseResult['response']['time']

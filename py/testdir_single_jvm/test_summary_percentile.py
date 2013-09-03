@@ -1,6 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 
 def randint_triangular(low, high, mode): # inclusive bounds
     t = random.triangular(low, high, mode)
@@ -46,7 +46,7 @@ class Basic(unittest.TestCase):
 
         timeoutSecs = 10
         trial = 1
-        for (rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             print 'Trial:', trial
             SEEDPERFILE = random.randint(0, sys.maxint)
             csvFilename = 'syn_' + "binary" + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
@@ -64,7 +64,8 @@ class Basic(unittest.TestCase):
                 low=expectedMin, high=expectedMax, mode=mode,
                 SEED=SEEDPERFILE)
 
-            parseResult = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10, doSummary=False)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, 
+                timeoutSecs=10, doSummary=False)
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
@@ -72,7 +73,7 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
 
-            summaryResult = h2o_cmd.runSummary(key=key2)
+            summaryResult = h2o_cmd.runSummary(key=hex_key)
             # remove bin_names because it's too big (256?) and bins
             # just touch all the stuff returned
             h2o_cmd.infoFromSummary(summaryResult, noPrint=False)

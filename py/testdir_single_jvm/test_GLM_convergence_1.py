@@ -1,7 +1,7 @@
 import unittest, random, sys, time, re
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_glm
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     # FIX! all this fanciness shouldn't be needed. GLM shouldn't be able to learn
@@ -63,19 +63,14 @@ class Basic(unittest.TestCase):
         ### h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
 
-        USEKNOWNFAILURE = False
-        for (rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
             csvFilename = 'syn_%s_%sx%s.csv' % (SEEDPERFILE,rowCount,colCount)
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
             print "\nCreating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
-            if USEKNOWNFAILURE:
-                csvFilename = 'failtoconverge_100x50.csv'
-                csvPathname = h2o.find_file('smalldata/logreg/' + csvFilename)
-
-            parseResult = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10)
+            parseResult = h2i.import_parse(path=csvPathname, hex_key=hex_key, timeoutSecs=10, schema='put')
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
@@ -93,11 +88,7 @@ class Basic(unittest.TestCase):
                     'thresholds': '0:1:0.01',
                     }
 
-            if USEKNOWNFAILURE:
-                kwargs['y'] = 50
-            else:
-                kwargs['y'] = y
-
+            kwargs['y'] = y
             emsg = None
             # FIX! how much should we loop here. 
             for i in range(3):
@@ -113,10 +104,7 @@ class Basic(unittest.TestCase):
                     print "\n", "\ncoefficients in col order:"
                     # since we're loading the x50 file all the time..the real colCount 
                     # should be 50 (0 to 49)
-                    if USEKNOWNFAILURE:
-                        showCols = 50
-                    else:
-                        showCols = colCount
+                    showCols = colCount
                     for c in range(showCols):
                         print "%s:\t%.6e" % (c, coefficients[c])
                     print "intercept:\t %.6e" % intercept

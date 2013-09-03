@@ -1,6 +1,6 @@
 import unittest, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 
 # test some random csv data, and some lineend combinations
 class Basic(unittest.TestCase):
@@ -22,8 +22,8 @@ class Basic(unittest.TestCase):
 
     # believe the interesting thing is the NaN in the csv
     def test_A_parse6(self):
-        csvPathname = h2o.find_file('smalldata/parse6.csv')
-        h2o_cmd.runRF(trees=37, timeoutSecs=10, csvPathname=csvPathname)
+        parseResult = h2i.import_parse(bucket='smalldata', path='parse6.csv', schema='put')
+        h2o_cmd.runRFOnly(parseResult=parseResult, trees=37, timeoutSecs=10)
 
 if __name__ == '__main__':
     h2o.unit_main()

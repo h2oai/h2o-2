@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import2 as h2i
 
 def define_params():
 
@@ -42,8 +42,8 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM_poisson_goalies_gg(self):
-        csvPathname = h2o.find_file('smalldata/poisson/Goalies.csv')
-        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname)
+        csvPathname = 'poisson/Goalies.csv'
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         h2o_cmd.infoFromInspect(inspect, csvPathname)
         paramDict = define_params()

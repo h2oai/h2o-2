@@ -1,7 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
-import h2o_browse as h2b
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i, h2o_browse as h2b
 
 def write_syn_dataset(csvPathname, rowCount, headerData, rList):
     dsf = open(csvPathname, "w+")
@@ -57,12 +56,12 @@ class Basic(unittest.TestCase):
 
         for trial in range (2):
             # make sure all key names are unique, when we re-put and re-parse (h2o caching issues)
-            key = csvFilename + "_" + str(trial)
-            key2 = csvFilename + "_" + str(trial) + ".hex"
+            src_key = csvFilename + "_" + str(trial)
+            hex_key = csvFilename + "_" + str(trial) + ".hex"
 
             start = time.time()
             timeoutSecs = 30
-            parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2, 
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', src_key=src_key, hex_key=hex_key, 
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=30, header=1)
             print "parse end on ", csvPathname, 'took', time.time() - start, 'seconds'
 
@@ -93,7 +92,6 @@ class Basic(unittest.TestCase):
             ## print "Allowing delta of 0-2"
             ## print "predicted CM rows (rowsNotUsed):", rowsNotUsed, "actually:", totalRows - rows_skipped, "rows_skipped:", rows_skipped
             ## self.assertAlmostEqual(rowsNotUsed, totalRows - rows_skipped, delta=2)
-
             h2o.check_sandbox_for_errors()
 
 

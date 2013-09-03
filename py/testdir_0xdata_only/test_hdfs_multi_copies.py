@@ -1,8 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
-import h2o_browse as h2b
-import h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -26,10 +24,9 @@ class Basic(unittest.TestCase):
         print "\nUse the new regex capabilities for selecting hdfs: try *copies* at /datasets"
         print "This should match to a folder with about twenty covtype10x?"
         # pop open a browser on the cloud
-        h2b.browseTheCloud()
+        # h2b.browseTheCloud()
         # defaults to /datasets
-        h2i.setupImportHdfs()
-        parseResult = h2i.parseImportHdfsFile(csvFilename='*covtype10x_copies*', key2='copies.hex', 
+        parseResult = h2i.import_parse(csvPathname='datasets/*covtype10x_copies*', schema='hdfs', hex_key='copies.hex', 
             exclude=None, header=None, timeoutSecs=600)
         print "*copies* regex to hdfs /datasets", 'parse time:', parseResult['response']['time']
         print "parse result:", parseResult['destination_key']

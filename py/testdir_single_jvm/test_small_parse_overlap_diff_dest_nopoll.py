@@ -1,7 +1,6 @@
 import sys, unittest, random, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_jobs
-
+import h2o, h2o_cmd, h2o_hosts, h2o_jobs, h2o_import2 as h2i 
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -22,20 +21,19 @@ class Basic(unittest.TestCase):
  
     def test_small_parse_overlap_same_dest(self):
         noPoll = True
-        timeoutSecs = 180
         num_trials = 0
         stallForNJobs = 100
         for i in range(50):
             for j in range(200):
-                csvPathname = h2o.find_file('smalldata/poker')
-                csvFilename = csvPathname + '/' + 'poker-hand-testing.data'
-                key = csvFilename + "_" + str(i) + "_" + str(j)
-                key2 =  key + "_" + str(num_trials) + '.hex'
-                parseResult = h2o_cmd.parseFile(csvPathname=csvFilename, 
-                    key=key, key2=key2, timeoutSecs=timeoutSecs, noPoll=noPoll,
+                csvFilename = 'poker-hand-testing.data'
+                csvPathname = 'poker/' + csvFilename
+                src_key = csvFilename + "_" + str(i) + "_" + str(j)
+                hex_key =  csvFilename + "_" + str(num_trials) + '.hex'
+                parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put',
+                    src_key=src_key, hex_key=hex_key, timeoutSecs=120, noPoll=noPoll,
                     doSummary=False)
                 num_trials += 1
-            h2o_jobs.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=120, retryDelaySecs=5,stallForNJobs=stallForNJobs)
+            h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=300, retryDelaySecs=5,stallForNJobs=stallForNJobs)
 
 if __name__ == "__main__":
     h2o.unit_main()

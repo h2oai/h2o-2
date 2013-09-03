@@ -1,8 +1,7 @@
-import unittest
-import random, sys, time, re
+import unittest, random, sys, time, re
 sys.path.extend(['.','..','py'])
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_glm, h2o_util
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -27,24 +26,9 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM_mnist(self):
-        importFolderPath = "/home/0xdiag/datasets/mnist"
         csvFilelist = [
             ("mnist_training.csv.gz", "mnist_testing.csv.gz",    600), 
         ]
-        # IMPORT**********************************************
-        # since H2O deletes the source key, we should re-import every iteration if we re-use the src in the list
-        importFolderResult = h2i.setupImportFolder(None, importFolderPath)
-        ### print "importHDFSResult:", h2o.dump_json(importFolderResult)
-        if 'files' in importFolderResult:
-            succeededList = importFolderResult['files']
-        else:
-            succeededList = importFolderResult['succeeded']
-        ### print "succeededList:", h2o.dump_json(succeededList)
-
-        self.assertGreater(len(succeededList),1,"Should see more than 1 files in the import?")
-        # why does this hang? can't look at storeview after import?
-        print "\nTrying StoreView after the import folder"
-        h2o_cmd.runStoreView(timeoutSecs=30)
 
         trial = 0
         for (trainCsvFilename, testCsvFilename, timeoutSecs) in csvFilelist:
@@ -53,8 +37,8 @@ class Basic(unittest.TestCase):
             # PARSE test****************************************
             testKey2 = testCsvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseResult = h2i.parseImportFolderFile(None, testCsvFilename, importFolderPath,
-                key2=testKey2, timeoutSecs=timeoutSecs)
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path="mnist/" + testCsvFilename, schema='put',
+                hex_key=testKey2, timeoutSecs=timeoutSecs, noise=('StoreView', None))
             elapsed = time.time() - start
             print "parse end on ", testCsvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -68,9 +52,8 @@ class Basic(unittest.TestCase):
             # PARSE train****************************************
             trainKey2 = trainCsvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseResult = h2i.parseImportFolderFile(None, trainCsvFilename, importFolderPath,
-                key2=trainKey2, timeoutSecs=timeoutSecs, noise=('StoreView', None))
-
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path="mnist/" + trainCsvFilename, 
+                hex_key=trainKey2, timeoutSecs=timeoutSecs, noise=('StoreView', None))
             elapsed = time.time() - start
             print "parse end on ", trainCsvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)

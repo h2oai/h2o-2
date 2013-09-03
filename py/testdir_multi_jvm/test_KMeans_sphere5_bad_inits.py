@@ -1,6 +1,6 @@
 import unittest, time, sys, random, math
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_kmeans, h2o_hosts
+import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import2 as h2i
 from operator import itemgetter
 
 # a truly uniform sphere
@@ -86,7 +86,7 @@ class Basic(unittest.TestCase):
         centersList = write_spheres_dataset(csvPathname, CLUSTERS, SPHERE_PTS)
 
         print "\nStarting", csvFilename
-        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+        parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=csvFilename + ".hex")
 
         # try 5 times, to see if all inits by h2o are good
         for trial in range(5):
@@ -126,9 +126,6 @@ class Basic(unittest.TestCase):
                 self.assertAlmostEqual(a[2], b[2], delta=1, msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+" z not correct.")
 
             print "Trial #", trial, "completed"
-
-
-
 
 if __name__ == '__main__':
     h2o.unit_main()

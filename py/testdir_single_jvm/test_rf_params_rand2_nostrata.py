@@ -1,6 +1,6 @@
 import unittest, random, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf, h2o_hosts
+import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import2 as h2i
 
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
 # only classes 1-7 in the 55th col
@@ -43,7 +43,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_loop_random_param_covtype(self):
-        csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
+        csvPathname = 'UCI/UCI-large/covtype/covtype.data'
         for trial in range(10):
             # params is mutable. This is default.
             params= {'ntree': 23, 'parallel': 1, 'features': 7}
@@ -53,7 +53,9 @@ class Basic(unittest.TestCase):
             # adjust timeoutSecs with the number of trees
             # seems ec2 can be really slow
             timeoutSecs = 30 + ((kwargs['ntree']*20) * max(1,kwargs['features']/15) * (kwargs['parallel'] and 1 or 3))
-            h2o_cmd.runRF(timeoutSecs=timeoutSecs, csvPathname=csvPathname, **kwargs)
+            parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put')
+            h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+
             print "Trial #", trial, "completed"
 
 if __name__ == '__main__':

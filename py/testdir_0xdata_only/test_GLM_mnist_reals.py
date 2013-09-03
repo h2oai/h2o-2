@@ -1,8 +1,7 @@
-import unittest
-import random, sys, time, re
+import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_glm, h2o_util
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -16,42 +15,27 @@ class Basic(unittest.TestCase):
             h2o.build_cloud(1)
         else:
             # all hdfs info is done thru the hdfs_config michal's ec2 config sets up?
-            h2o_hosts.build_cloud_with_hosts(1, 
-                # this is for our amazon ec hdfs
-                # see https://github.com/0xdata/h2o/wiki/H2O-and-s3n
-                hdfs_name_node='10.78.14.235:9000',
-                hdfs_version='0.20.2')
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_GLM_mnist_reals(self):
-        importFolderPath = "/home/0xdiag/datasets/mnist"
+        importFolderPath = "mnist"
         csvFilelist = [
             ("mnist_reals_training.csv.gz", "mnist_reals_testing.csv.gz",    600), 
         ]
-        # IMPORT**********************************************
-        # since H2O deletes the source key, we should re-import every iteration if we re-use the src in the list
-        importFolderResult = h2i.setupImportFolder(None, importFolderPath)
-        ### print "importHDFSResult:", h2o.dump_json(importFolderResult)
-        succeededList = importFolderResult['files']
-        ### print "succeededList:", h2o.dump_json(succeededList)
-
-        self.assertGreater(len(succeededList),1,"Should see more than 1 files in the import?")
-        # why does this hang? can't look at storeview after import?
-        print "\nTrying StoreView after the import folder"
-        h2o_cmd.runStoreView(timeoutSecs=30)
-
         trial = 0
         for (trainCsvFilename, testCsvFilename, timeoutSecs) in csvFilelist:
             trialStart = time.time()
 
             # PARSE test****************************************
-            testKey2 = testCsvFilename + "_" + str(trial) + ".hex"
+            csvPathname = importFolderPath + "/" + testCsvFilename
+            testKey = testCsvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseResult = h2i.parseImportFolderFile(None, testCsvFilename, importFolderPath,
-                key2=testKey2, timeoutSecs=timeoutSecs)
+            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=testKey,
+                key2=testKey, timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
             print "parse end on ", testCsvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -63,10 +47,11 @@ class Basic(unittest.TestCase):
             x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300)
 
             # PARSE train****************************************
-            trainKey2 = trainCsvFilename + "_" + str(trial) + ".hex"
+            trainKey = trainCsvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseResult = h2i.parseImportFolderFile(None, trainCsvFilename, importFolderPath,
-                key2=trainKey2, timeoutSecs=timeoutSecs)
+            csvPathname = importFolderPath + "/" + trainCsvFilename
+            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=trainKey,
+                key2=trainKey, timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
             print "parse end on ", trainCsvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -109,7 +94,7 @@ class Basic(unittest.TestCase):
                 modelKey = GLMModel['model_key']
 
                 start = time.time()
-                glmScore = h2o_cmd.runGLMScore(key=testKey2, model_key=modelKey, thresholds="0.5",
+                glmScore = h2o_cmd.runGLMScore(key=testKey, model_key=modelKey, thresholds="0.5",
                     timeoutSecs=60)
                 elapsed = time.time() - start
                 print "GLMScore in",  elapsed, "secs", \

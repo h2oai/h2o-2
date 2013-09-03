@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -23,8 +23,8 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_exec_covtype_cols(self):
-        csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
-        parseResult = h2o_cmd.parseFile(None, csvPathname, 'covtype.data', 'c.hex', 10)
+        csvPathname = 'UCI/UCI-large/covtype/covtype.data'
+        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', hex_key='c.hex', timeoutSecs=10)
         print "\nParse key is:", parseResult['destination_key']
 
         ### h2b.browseTheCloud()

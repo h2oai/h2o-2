@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -36,8 +36,8 @@ class Basic(unittest.TestCase):
             csvFilename = "parity_128_4_" + str(1000) + "_quad.data"  
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
-            key2 = csvFilename + "_" + str(trial) + ".hex"
-            parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, timeoutSecs=30)
+            hex_key = csvFilename + "_" + str(trial) + ".hex"
+            parseResult = h2o_cmd.parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30)
 
             h2o.verboseprint("Trial", trial)
             start = time.time()
@@ -47,7 +47,5 @@ class Basic(unittest.TestCase):
         print "Waiting 60 secs for TIME_WAIT sockets to go away"
         time.sleep(60)
 
-
 if __name__ == '__main__':
     h2o.unit_main()
-

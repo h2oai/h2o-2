@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import as h2i, h2o_exec
+import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import2 as h2i, h2o_exec
 import h2o_browse as h2b
 
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
@@ -43,16 +43,13 @@ class Basic(unittest.TestCase):
 
     def test_rf_covtype_train_oobe4(self):
         print "\nUse randomFilter to sample the dataset, then slice it"
-        importFolderPath = "/home/0xdiag/datasets/standard"
-        # get different results
-        ### csvFilename = 'covtype.shuffled.data'
+        importFolderPath = "standard"
         csvFilename = 'covtype.data'
         csvPathname = importFolderPath + "/" + csvFilename
-        key2 = csvFilename + ".hex"
+        hex_key = csvFilename + ".hex"
 
-        h2i.setupImportFolder(None, importFolderPath)
         print "\nUsing header=0 on the normal covtype.data"
-        parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2,
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, 
             header=0, timeoutSecs=100)
 
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
@@ -80,14 +77,14 @@ class Basic(unittest.TestCase):
 
         # Just for test purposes, create these using randomFilter..they overlap, so not valid for really test/train
         # FIX! too many digits (10) in the 2nd param seems to cause stack trace
-        ### execExpr = dataKeyTest + "=randomFilter(" + key2 + "," + str(pct10) + ",12345)"
-        execExpr = dataKeyTest + "=" + key2
+        ### execExpr = dataKeyTest + "=randomFilter(" + hex_key + "," + str(pct10) + ",12345)"
+        execExpr = dataKeyTest + "=" + hex_key
         h2o_exec.exec_expr(None, execExpr, resultKey=dataKeyTest, timeoutSecs=10)
 
-        execExpr = dataKeyTrain + "=randomFilter(" + key2 + "," + str(rowsForPct[9]) + ",12345)"
+        execExpr = dataKeyTrain + "=randomFilter(" + hex_key + "," + str(rowsForPct[9]) + ",12345)"
         # FIX! don't do the randFilter for now. 
         print "This generation of test/train isn't stats-legal since they overlap"
-        execExpr = dataKeyTrain + "=" + key2
+        execExpr = dataKeyTrain + "=" + hex_key
         h2o_exec.exec_expr(None, execExpr, resultKey=dataKeyTrain, timeoutSecs=10)
 
         # keep the 0 entry empty

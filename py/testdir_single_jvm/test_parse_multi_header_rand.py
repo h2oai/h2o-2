@@ -1,6 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 import h2o_browse as h2b
 
 # ord('a') gives 97. Use that when you pass it as url param to h2o
@@ -127,8 +127,8 @@ class Basic(unittest.TestCase):
 
         # so many random combos..rather than walk tryList, just do random for some amount of time
         for trial in range(50):
-            (fileNum, rowCount, colCount, key2, timeoutSecs, dataRowsWithHeader) = random.choice(tryList)
-            print fileNum, rowCount, colCount, key2, timeoutSecs, dataRowsWithHeader
+            (fileNum, rowCount, colCount, hex_key, timeoutSecs, dataRowsWithHeader) = random.choice(tryList)
+            print fileNum, rowCount, colCount, hex_key, timeoutSecs, dataRowsWithHeader
             # FIX! should we add a header to them randomly???
             print "Wait while", fileNum, "synthetic files are created in", SYNDATASETS_DIR
             rowxcol = str(rowCount) + 'x' + str(colCount)
@@ -209,8 +209,7 @@ class Basic(unittest.TestCase):
             totalHeaderRows += headerRowsDone
 
             # make sure all key names are unique, when we re-put and re-parse (h2o caching issues)
-            key = "syn_dst" + str(trial)
-            key2 = "syn_dst" + str(trial) + ".hex"
+            hex_key = "syn_dst" + str(trial) + ".hex"
 
             # DON"T get redirected to S3! (EC2 hack in config, remember!)
             # use it at the node level directly (because we gen'ed the files.
@@ -248,7 +247,7 @@ class Basic(unittest.TestCase):
                 pattern = '*syn_*'+str(trial)+"_"+rowxcol+'*'
             else:
                 pattern = '*syn_data_*'+str(trial)+"_"+rowxcol+'*'
-            parseResult = h2o.nodes[0].parse(pattern, key2=key2, timeoutSecs=timeoutSecs, **kwargs)
+            parseResult = h2o.nodes[0].parse(pattern, hex_key=hex_key, timeoutSecs=timeoutSecs, **kwargs)
 
             print "parseResult['destination_key']: " + parseResult['destination_key']
             print 'parse time:', parseResult['response']['time']

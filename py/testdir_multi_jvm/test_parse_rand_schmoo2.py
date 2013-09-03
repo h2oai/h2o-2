@@ -1,7 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd
-import h2o_browse as h2b
+import h2o, h2o_hosts, h2o_cmd, h2o_browse as h2b, h2o_import2 as h2i
 
 def write_syn_dataset(csvPathname, rowCount, headerData, rowData):
     dsf = open(csvPathname, "w+")
@@ -17,7 +16,6 @@ def append_syn_dataset(csvPathname, rowData, num):
         for i in range(num):
             dsf.write(rowData + "\n")
 
-
 def rand_rowData():
     # UPDATE: maybe because of byte buffer boundary issues, single byte
     # data is best? if we put all 0s or 1, then I guess it will be bits?
@@ -26,7 +24,7 @@ def rand_rowData():
         rowData = rowData + "," + str(random.uniform(-1e59,1e59))
     return rowData
 
-class parse_rand_schmoo(unittest.TestCase):
+class test_parse_rand_schmoo2(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
@@ -38,16 +36,11 @@ class parse_rand_schmoo(unittest.TestCase):
         if (localhost):
             h2o.build_cloud(2,java_heap_GB=4,use_flatfile=True)
         else:
-            import h2o_hosts
             h2o_hosts.build_cloud_with_hosts()
         h2b.browseTheCloud()
 
     @classmethod
     def tearDownClass(cls):
-        if not h2o.browse_disable:
-            # time.sleep(500000)
-            pass
-
         h2o.tear_down_cloud(h2o.nodes)
     
     def test_sort_of_prostate_with_row_schmoo(self):
@@ -64,7 +57,6 @@ class parse_rand_schmoo(unittest.TestCase):
         print "This is the same format/data file used by test_same_parse, but the non-gzed version"
         print "\nSchmoo the # of rows"
         for trial in range (100):
-
             rowData = rand_rowData()
             num = random.randint(1, 10096)
             append_syn_dataset(csvPathname, rowData, num)
@@ -73,12 +65,12 @@ class parse_rand_schmoo(unittest.TestCase):
 
             # make sure all key names are unique, when we re-put and re-parse (h2o caching issues)
             key = csvFilename + "_" + str(trial)
-            key2 = csvFilename + "_" + str(trial) + ".hex"
-            key = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2, 
+            hex_key = csvFilename + "_" + str(trial) + ".hex"
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, 
                 timeoutSecs=70, pollTimeoutSecs=150)
             print "trial #", trial, "totalRows:", totalRows, "last num:", num, \
                 "parse end on ", csvFilename, 'took', time.time() - start, 'seconds'
-            ### h2o_cmd.runInspect(key=key2)
+            ### h2o_cmd.runInspect(key=hex_key)
             ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
             h2o.check_sandbox_for_errors()
 

@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.UUID;
 import java.util.zip.*;
 
+import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.nbhm.NonBlockingHashMap;
@@ -63,6 +64,14 @@ public final class ParseDataset2 extends Job {
       parse_impl(_job, _keys, _setup);
       tryComplete();
     }
+
+    @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
+      if(_job != null){
+        _job.cancel(ex.toString());
+      }
+      ex.printStackTrace();
+      return true;
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -70,6 +79,7 @@ public final class ParseDataset2 extends Job {
   static class ParseProgress extends Iced {
     final long _total;
     long _value;
+    DException _ex;
     ParseProgress(long val, long total){_value = val; _total = total;}
     // Total number of steps is equal to total bytecount across files
     static ParseProgress make( Key[] fkeys ) {
@@ -78,6 +88,8 @@ public final class ParseDataset2 extends Job {
         total += getVec(fkey).length();
       return new ParseProgress(0,total);
     }
+    public void setException(DException ex){_ex = ex;}
+    public DException getException(){return _ex;}
   }
   static final void onProgress(final long len, final Key progress) {
     new TAtomic<ParseProgress>() {
@@ -234,8 +246,6 @@ public final class ParseDataset2 extends Job {
       return;
     }
     MultiFileParseTask uzpt = new MultiFileParseTask(setup,job._progress).invoke(fkeys);
-    if( uzpt._parserr != null )
-      throw new ParseException(uzpt._parserr);
     int [] ecols = uzpt.enumCols();
     String[] names = new String[uzpt._vecs.length];
     for( int i=0; i<names.length; i++ )

@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
+import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_hosts
 import time, random
 
 class Basic(unittest.TestCase):
@@ -21,33 +21,20 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_from_import(self):
-        importFolderPath = '/home/0xdiag/datasets/standard'
-        importFolderResult = h2i.setupImportFolder(None, importFolderPath)
         timeoutSecs = 500
         csvFilenameAll = [
             "covtype.data",
             "covtype20x.data",
-            # "covtype200x.data",
-            # "100million_rows.csv",
-            # "200million_rows.csv",
-            # "a5m.csv",
-            # "a10m.csv",
-            # "a100m.csv",
-            # "a200m.csv",
-            # "a400m.csv",
-            # "a600m.csv",
-            # "billion_rows.csv.gz",
-            # "new-poker-hand.full.311M.txt.gz",
             ]
-        # csvFilenameList = random.sample(csvFilenameAll,1)
-        csvFilenameList = csvFilenameAll
 
         # pop open a browser on the cloud
-        h2b.browseTheCloud()
+        # h2b.browseTheCloud()
 
-        for csvFilename in csvFilenameList:
+        for csvFilename in csvFilenameAll:
             # creates csvFilename.hex from file in importFolder dir 
-            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=500)
+            hex_key = csvFilename + '.hex'
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path="standard/" + csvFilename, schema='put',
+                hex_key=hex_key, timeoutSecs=500)
             if not h2o.beta_features:
                 print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
@@ -60,10 +47,7 @@ class Basic(unittest.TestCase):
             ## time.sleep(10)
 
             # just to make sure we test this
-            h2o_cmd.deleteCsvKey(csvFilename, importFolderResult)
-
-            sys.stdout.write('.')
-            sys.stdout.flush() 
+            h2i.delete_keys_at_all_nodes(pattern=hex_key)
 
 if __name__ == '__main__':
     h2o.unit_main()

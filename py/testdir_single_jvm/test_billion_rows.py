@@ -2,7 +2,7 @@ import unittest, time, sys
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_glm
 import h2o_browse as h2b
-import h2o_import as h2i
+import h2o_import2 as h2i
 import time, random
 
 class Basic(unittest.TestCase):
@@ -24,8 +24,6 @@ class Basic(unittest.TestCase):
 
     def test_B_importFolder_files(self):
         # just do the import folder once
-        importFolderPath = "/home/0xdiag/datasets/standard"
-        h2i.setupImportFolder(None, importFolderPath)
         timeoutSecs = 1500
 
         csvFilenameAll = [
@@ -43,7 +41,7 @@ class Basic(unittest.TestCase):
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
             start = time.time()
-            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path='standard/' + csvFilename,
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=60)
             elapsed = time.time() - start
             print csvFilename, 'parse time:', parseResult['response']['time']
