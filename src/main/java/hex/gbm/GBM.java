@@ -20,9 +20,9 @@ public class GBM extends FrameJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @API(help="", required=true, filter=DRFVecSelect.class)
+  @API(help="", required=true, filter=GBMVecSelect.class)
   Vec vresponse;
-  class DRFVecSelect extends VecSelect { DRFVecSelect() { super("source"); } }
+  class GBMVecSelect extends VecSelect { GBMVecSelect() { super("source"); } }
 
   @API(help = "Learning rate, from 0. to 1.0", filter = LearnRateFilter.class)
   double learn_rate = 0.1;
@@ -145,6 +145,7 @@ public class GBM extends FrameJob {
   @Override protected Response serve() {
     Timer t_gbm = new Timer();
     final Frame fr = new Frame(source); // Local copy for local hacking
+    if( !vresponse.isEnum() ) vresponse.asEnum();
     // While I'd like the Frames built custom for each call, with excluded
     // columns already removed - for now check to see if the response column is
     // part of the frame and remove it up front.

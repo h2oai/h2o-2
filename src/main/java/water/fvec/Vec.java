@@ -112,15 +112,29 @@ public class Vec extends Iced {
    *  alternative way, such as file-backed Vecs. */
   public int nChunks() { return _espc.length-1; }
 
-  /** Is the column a factor/catagorical/enum? */
+  /** Is the column a factor/catagorical/enum?  Note: all "isEnum()" columns
+   *  are are also "isInt()" but not vice-versa. */
   public final boolean isEnum(){return _domain != null;}
-  /** Map the integer value for a enum/factor/catagorical to it's String */
+
+  /** Map the integer value for a enum/factor/catagorical to it's String.
+   *  Error if it is not an ENUM.  */
   public String domain(long i) { return _domain[(int)i]; }
 
-  /** Return an array of domains.  This is eagerly manifested for
-   *  enum/catagorical columns, and lazily manifested for integer columns with
-   *  a min-to-max range of < 10000.  */
+  /** Return an array of domains.  This is eagerly manifested for enum or
+   *  catagorical columns.  */
   public String[] domain() { return _domain; }
+
+  /** Convert an integer column to an enum column, with just number strings for
+   *  the factors or levels.  */
+  public void asEnum() {
+    if( _domain!=null ) return;
+    if( !isInt() ) throw new IllegalArgumentException("Cannot convert a float column to an enum.");
+    long min = (long)min(), max = (long)max();
+    if( min < 0 || max > 10000L ) throw H2O.unimpl();
+    _domain = new String[(int)max];
+    for( int i=0; i<(int)max; i++ )
+      _domain[i] = Integer.toString(i);
+  }
 
   /** Default read/write behavior for Vecs.  File-backed Vecs are read-only. */
   protected boolean readable() { return true ; }
