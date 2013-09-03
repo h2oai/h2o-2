@@ -32,12 +32,9 @@ class TestExcel(unittest.TestCase):
         h2o_cmd.runRFOnly(parseResult=parseResult, trees=100, timeoutSecs=10)
 
     def test_poker_xlsx(self):
-        # maybe can get stuck during polling for parse progress?
-        # break it out for pollTimeoutSecs
         parseResult = h2i.import_parse(bucket='datasets', path='poker/poker-hand-testing.xlsx', schema='put',
             timeoutSecs=120, pollTimeoutSecs=60)
         h2o_cmd.runRFOnly(None, parseResult=parseResult, trees=100, timeoutSecs=120)
-
 
 if __name__ == '__main__':
     h2o.unit_main()
