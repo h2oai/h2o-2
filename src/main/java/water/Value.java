@@ -284,7 +284,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
 
   // Heuristic to guess if this is unparsed CSV text or not
   public boolean isHex() {
-    if( !isArray() ) return false;
+    assert isArray();
     ValueArray va = get();
     if( va._cols == null || va._cols.length == 0 ) return false;
     if( va._cols.length > 1 ) return true;

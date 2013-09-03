@@ -112,7 +112,8 @@ public class Vec extends Iced {
    *  alternative way, such as file-backed Vecs. */
   public int nChunks() { return _espc.length-1; }
 
-  /** Is the column a factor/catagorical/enum? */
+  /** Is the column a factor/catagorical/enum?  Note: all "isEnum()" columns
+   *  are are also "isInt()" but not vice-versa. */
   public final boolean isEnum(){return _domain != null;}
 
   /** Map the integer value for a enum/factor/catagorical to it's String.
