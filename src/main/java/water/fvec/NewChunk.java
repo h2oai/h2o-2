@@ -24,6 +24,21 @@ public class NewChunk extends Chunk {
     _max = -Double.MAX_VALUE;
   }
 
+  // Constructor used when inflating a Chunk
+  public NewChunk( Chunk C ) {
+    _vec = C._vec;
+    _cidx = _vec.elem2ChunkIdx(C._start); // This chunk#
+    _len = C._len;
+    if( C.hasFloat() ) {
+      _ds = MemoryManager.malloc8d(_len);
+    } else {
+      _ls = MemoryManager.malloc8 (_len);
+      _xs = MemoryManager.malloc4 (_len);
+    }
+    _min =  Double.MAX_VALUE;
+    _max = -Double.MAX_VALUE;
+  }
+
   public byte type(){
     if(_naCnt == _len)
       return AppendableVec.NA;
@@ -39,12 +54,12 @@ public class NewChunk extends Chunk {
     append2(0,Integer.MIN_VALUE); ++_naCnt;
   }
   private boolean _hasFloat;
-  public void addNum(long val, int exp){
+  public void addNum(long val, int exp) {
     if(val == 0)exp = 0;
     _hasFloat |= (exp < 0);
     append2(val,exp);
   }
-  public void addEnum(int e){
+  public void addEnum(int e) {
     append2(0,e); ++_strCnt;
   }
   public void addNum(double d) {
@@ -59,6 +74,7 @@ public class NewChunk extends Chunk {
     }
     _ds[_len] = d;
     _len++;
+    _hasFloat = true;
   }
 
   // Fast-path append long data
@@ -310,25 +326,39 @@ public class NewChunk extends Chunk {
   // chunk.  At this point the NewChunk is full size, no more appends allowed,
   // and the xs exponent array should be only full of zeros.  Accesses must be
   // in-range and refer to the inflated values of the original Chunk.
-  @Override boolean set8_impl(int i, long l) {
+  @Override boolean set_impl(int i, long l) {
     if( _ds != null ) throw H2O.unimpl();
     _ls[i]=l; _xs[i]=0;
     return true;
   }
-  @Override boolean set8_impl(int i, double d) {
+  @Override boolean set_impl(int i, double d) {
     if( _ls != null ) throw H2O.unimpl();
     _ds[i]=d;
     return true;
   }
-  @Override boolean set4_impl(int i, float d) {
+  @Override boolean set_impl(int i, float f) {
     if( _ls != null ) throw H2O.unimpl();
-    _ds[i]=d;
+    _ds[i]=f;
     return true;
   }
-  @Override public long   at8_impl( int i ) { assert _xs[i]==0 && _ds==null; return _ls[i]; }
-  @Override public double atd_impl( int i ) { assert _xs==null; return _ds[i]; }
-  @Override boolean hasFloat() { return _hasFloat; }
+  @Override boolean setNA_impl(int i) {
+    if( isNA(i) ) return true;
+    if( _ls != null ) { _ls[i] = 0; _xs[i] = Integer.MIN_VALUE; }
+    if( _ds != null ) { _ds[i] = Double.NaN; }
+    _naCnt++;
+    return true;
+  }
+  @Override public long   at8_impl( int i ) { 
+    if( _ls == null ) return (long)_ds[i];
+    assert _xs[i]==0; return _ls[i]; 
+  }
+  @Override public double atd_impl( int i ) { 
+    if( _ds == null ) return at8_impl(i);
+    assert _xs==null; return _ds[i]; 
+  }
+  @Override public boolean isNA_impl( int i ) { return isNA(i); }
   @Override public AutoBuffer write(AutoBuffer bb) { throw H2O.fail(); }
   @Override public NewChunk read(AutoBuffer bb) { throw H2O.fail(); }
   @Override NewChunk inflate_impl(NewChunk nc) { throw H2O.fail(); }
+  @Override boolean hasFloat() { throw H2O.fail(); }
 }

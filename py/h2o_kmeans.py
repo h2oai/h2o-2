@@ -35,20 +35,20 @@ def simpleCheckKMeans(self, kmeans, **kwargs):
     return warnings
 
 
-def bigCheckResults(self, kmeans, csvPathname, parseKey, applyDestinationKey, **kwargs):
+def bigCheckResults(self, kmeans, csvPathname, parseResult, applyDestinationKey, **kwargs):
     simpleCheckKMeans(self, kmeans, **kwargs)
     model_key = kmeans['destination_key']
     kmeansResult = h2o_cmd.runInspect(key=model_key)
     centers = kmeansResult['KMeansModel']['clusters']
 
     kmeansApplyResult = h2o.nodes[0].kmeans_apply(
-        data_key=parseKey['destination_key'], model_key=model_key,
+        data_key=parseResult['destination_key'], model_key=model_key,
         destination_key=applyDestinationKey)
     inspect = h2o_cmd.runInspect(None, applyDestinationKey)
     h2o_cmd.infoFromInspect(inspect, csvPathname)
 
     kmeansScoreResult = h2o.nodes[0].kmeans_score(
-        key=parseKey['destination_key'], model_key=model_key)
+        key=parseResult['destination_key'], model_key=model_key)
     score = kmeansScoreResult['score']
     rows_per_cluster = score['rows_per_cluster']
     sqr_error_per_cluster = score['sqr_error_per_cluster']
@@ -71,7 +71,7 @@ def bigCheckResults(self, kmeans, csvPathname, parseKey, applyDestinationKey, **
 # ]
 # delta is a tuple of multipliers against the tupleResult for abs delta
 # allowedDelta = (0.01, 0.1, 0.01)
-def compareResultsToExpected(self, tupleResultList, expected=None, allowedDelta=None, trial=0):
+def compareResultsToExpected(self, tupleResultList, expected=None, allowedDelta=None, allowError=False, trial=0):
     # sort the tuple list by center for the comparison. (this will be visible to the caller?)
     from operator import itemgetter
     tupleResultList.sort(key=itemgetter(0))
@@ -88,7 +88,7 @@ def compareResultsToExpected(self, tupleResultList, expected=None, allowedDelta=
     for t in tupleResultList:
         print t, "," # so can cut and paste and put results in an expected = [..] list
 
-    if expected is not None: # allowedDelta must exist if expected exists
+    if expected is not None and not allowError: # allowedDelta must exist if expected exists
         for i, (expCenter, expRows, expError)  in enumerate(expected):
             (actCenter, actRows, actError) = tupleResultList[i]
 

@@ -82,7 +82,7 @@ public class Parse extends Request {
         if(exclude != null && exclude.matcher(ks).matches())
           continue;
         Value v2 = DKV.get(key);  // Look at it
-        if(v2.isHex())// filter common mistake such as *filename* with filename.hex already present
+        if( !v2.isRawData() ) // filter common mistake such as *filename* with filename.hex already present
           continue;
         keys.add(key);        // Add to list
       }

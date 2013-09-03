@@ -1,11 +1,6 @@
-import unittest
-import random, sys, time
+import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_util
-
-# the shared exec expression creator and executor
-import h2o_exec
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_util, h2o_exec
 
 zeroList = [
         'Result0 = 0',
@@ -42,10 +37,10 @@ class Basic(unittest.TestCase):
     def test_sum(self):
         print "Replicating covtype.data by 2x for results comparison to 1x"
         filename1x = 'covtype.data'
-        pathname1x = h2o.find_dataset('UCI/UCI-large/covtype' + '/' + filename1x)
+        pathname1x = h2i.find_folder_and_filename('datasets', 'UCI/UCI-large/covtype/covtype.data', returnFullPath=True)
         filename2x = "covtype_2x.data"
         pathname2x = SYNDATASETS_DIR + '/' + filename2x
-        h2o_util.file_cat(pathname1x,pathname1x,pathname2x)
+        h2o_util.file_cat(pathname1x, pathname1x, pathname2x)
 
         csvAll = [
             (pathname1x, "cA", 5,  1),
@@ -57,16 +52,16 @@ class Basic(unittest.TestCase):
         lenNodes = len(h2o.nodes)
 
         firstDone = False
-        for (csvPathname, key2, timeoutSecs, resultMult) in csvAll:
-            parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, timeoutSecs=2000)
-            print "Parse result['Key']:", parseKey['destination_key']
+        for (csvPathname, hex_key, timeoutSecs, resultMult) in csvAll:
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=2000)
+            print "Parse result['Key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
 
             print "\n" + csvPathname
             h2o_exec.exec_zero_list(zeroList)
-            colResultList = h2o_exec.exec_expr_list_across_cols(lenNodes, exprList, key2, maxCol=54, 
+            colResultList = h2o_exec.exec_expr_list_across_cols(lenNodes, exprList, hex_key, maxCol=54, 
                 timeoutSecs=timeoutSecs)
             print "\ncolResultList", colResultList
 
@@ -80,7 +75,6 @@ class Basic(unittest.TestCase):
                 compare = [float(x)/resultMult for x in colResultList] 
                 print "\n", good, "\n", compare
                 self.assertEqual(good, compare, 'compare is not equal to good (first try * resultMult)')
-        
 
 if __name__ == '__main__':
     h2o.unit_main()

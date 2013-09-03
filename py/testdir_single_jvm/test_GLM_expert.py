@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -22,8 +22,8 @@ class Basic(unittest.TestCase):
     def test_B_benign(self):
         print "\nStarting benign.csv"
         csvFilename = "benign.csv"
-        csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+        csvPathname = 'logreg/' + csvFilename
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
         # columns start at 0
         y = "3"
         # cols 0-13. 3 is output
@@ -40,7 +40,7 @@ class Basic(unittest.TestCase):
                  'expert': 1, 'lsm_solver': 'GenGradient', 'standardize': 1, 'n_folds': 1}
             # fails with n_folds
             print "Not doing n_folds with benign. Fails with 'unable to solve?'"
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=30, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=30, **kwargs)
             # no longer look at STR?
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             h2o.check_sandbox_for_errors()
@@ -52,8 +52,8 @@ class Basic(unittest.TestCase):
         # columns start at 0
         y = "1"
         csvFilename = "prostate.csv"
-        csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+        csvPathname = 'logreg/' + csvFilename
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
 
         for maxx in range(2,9):
             x = range(maxx)
@@ -66,7 +66,7 @@ class Basic(unittest.TestCase):
             # solver can be ADMM. standardize normalizes the data.
             kwargs = {'x': x, 'y':  y, 'n_folds': 5,\
                 'expert': 1, 'lsm_solver': 'GenGradient', 'standardize':1}
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=30, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=30, **kwargs)
             # ID,CAPSULE,AGE,RACE,DPROS,DCAPS,PSA,VOL,GLEASON
             h2o_glm.simpleCheckGLM(self, glm, 'AGE', **kwargs)
             h2o.check_sandbox_for_errors()

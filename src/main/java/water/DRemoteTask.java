@@ -2,11 +2,10 @@ package water;
 
 import java.util.ArrayList;
 import java.util.UUID;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 import jsr166y.CountedCompleter;
+import water.DException.DistributedException;
 import water.util.Log;
 
 /**  A Distributed DTask.
@@ -31,9 +30,6 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
 
   // Combine results from 'drt' into 'this' DRemoteTask
   abstract public void reduce( T drt );
-
-  // Any exception from local work
-  protected DException _exception;
 
   // Support for fluid-programming with strong types
   private final T self() { return (T)this; }
@@ -60,24 +56,21 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
   public void keys( Key... keys ) { _keys = flatten(keys); }
   public T invoke( Key... keys ) {
     try { dfork(keys).get(); }
-    catch(ExecutionException    eex) { }
+    catch(ExecutionException eex) { // skip the execution part
+      throw new DException(eex.getCause()).toEx();
+    }
     catch(InterruptedException  iex) { Log.errRTExcept(iex); }
     catch(CancellationException cex) { Log.errRTExcept(cex); }
     // Intent was to quietlyJoin();
     // Which forks, then QUIETLY join to not propagate local exceptions out.
-    if( _exception != null )    // Propagate a Distro exception if one is available
-      throw _exception.toEx();
-    return self(); 
+    return self();
   }
 
   // Decide to do local-work or remote-work
   @Override public final void compute2() {
-    if( _is_local ) {
-      try { lcompute(); } 
-      catch( RuntimeException e ) { _exception = new DException(e); completeExceptionally(e); }
-      catch( AssertionError   e ) { _exception = new DException(e); completeExceptionally(e); }
-      catch( OutOfMemoryError e ) { _exception = new DException(e); completeExceptionally(e); }
-    } else
+    if( _is_local )
+      lcompute();
+    else
       dcompute();
   }
 
@@ -85,17 +78,6 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
   @Override public final void onCompletion( CountedCompleter caller ) {
     if( _is_local ) lonCompletion(caller);
     else            donCompletion(caller);
-  }
-  // Exception completion from local work.
-  // If coming from local work, propagate exception.
-  // If coming from distr work, complete "normally" with an exception string.
-  @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller ) {
-    if( _exception == null && caller instanceof DRemoteTask )
-      _exception = ((DRemoteTask)caller)._exception;
-    if( _exception == null ) _exception = new DException(ex);
-    if( _is_local ) return true;
-    tryComplete();              // This completer completes *normally*
-    return false;               // This completer completes *normally*
   }
 
   // Real Work(tm)!
@@ -156,19 +138,15 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
     // However, that would require sending "isDone" flags over the wire also.
     // MUCH simpler to just block for them all now, and send over the empty set
     // of not-yet-blocked things.
-    if( _exception == null && _local != null && _local._fs != null )
+    if(_local != null && _local._fs != null )
       _local._fs.blockForPending(); // Block on all other pending tasks, also
     _keys = null;                   // Do not return _keys over wire
   };
 
   // 'Reduce' left and right answers.  Gather exceptions
   private void reduce2( T drt ) {
-    if( _exception != null ) return; // Ignore all, if already have an exception
     if( drt == null ) return;
-    if( drt._exception != null ) // Capture other-side exception and start ignoring all
-      _exception = drt._exception;
-    else 
-      reduce(drt);
+    reduce(drt);
   }
 
   private final RPC<T> remote_compute( ArrayList<Key> keys ) {
@@ -202,13 +180,6 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
       if( k._kb[0] == Key.KEY_OF_KEYS )
         return true;
     return false;
-  }
-
-  private byte has_remote_keys( ) {
-    for( Key k : _keys )
-      if( !k.home() )
-        return 1;
-    return 2;
   }
 
   public Futures getFutures() {

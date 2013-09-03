@@ -1,7 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o_cmd
-import h2o, h2o_hosts
+import h2o_cmd, h2o, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -16,20 +15,16 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_A_Basic(self):
-        for n in h2o.nodes:
-            c = n.get_cloud()
-            self.assertEqual(c['cloud_size'], len(h2o.nodes), 'inconsistent cloud size')
+        h2o.verify_cloud_size()
 
     def test_B_RF_iris2(self):
-        # FIX! will check some results with RFview
-        RFview = h2o_cmd.runRF(trees=6, timeoutSecs=10,
-                csvPathname=h2o.find_file('smalldata/iris/iris2.csv'))
+        parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
+        h2o_cmd.runRFOnly(parseResult=parseResult, trees=6, timeoutSecs=10)
 
     def test_C_RF_poker100(self):
-        h2o_cmd.runRF(trees=6, timeoutSecs=10,
-                csvPathname=h2o.find_file('smalldata/poker/poker100'))
+        parseResult = h2i.import_parse(bucket='smalldata', path='poker/poker100', schema='put')
+        h2o_cmd.runRFOnly(parseResult=parseResult, trees=6, timeoutSecs=10)
 
-    def test_D_GenParity1(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         # always match the run below!
         for x in xrange (11,100,10):
@@ -48,7 +43,8 @@ class Basic(unittest.TestCase):
             sys.stdout.flush()
             csvFilename = "parity_128_4_" + str(x) + "_quad.data"  
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
-            h2o_cmd.runRF( trees=trees, timeoutSecs=timeoutSecs, csvPathname=csvPathname)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put')
+            h2o_cmd.runRFOnly(parseResult=parseResult, trees=trees, timeoutSecs=timeoutSecs)
             trees += 10
 
 if __name__ == '__main__':

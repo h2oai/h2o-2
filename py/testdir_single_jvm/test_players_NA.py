@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd
+import h2o, h2o_cmd, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -20,9 +20,9 @@ class Basic(unittest.TestCase):
 
     def test_players_NA(self):
         csvFilename = 'Players.csv'
-        csvPathname = h2o.find_file('/home/0xdiag/datasets/ncaa/' + csvFilename)
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, timeoutSecs=15)
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        csvPathname = 'ncaa/' + csvFilename
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', timeoutSecs=15)
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         missingValuesList = h2o_cmd.infoFromInspect(inspect, csvPathname)
         print missingValuesList
         # There should be only one col with missing values (the first col, 0)

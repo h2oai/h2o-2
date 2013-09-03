@@ -1,18 +1,13 @@
-import unittest
-import random, sys, time
+import unittest, random, sys, time, json
 sys.path.extend(['.','..','py'])
-import json
-
-import h2o, h2o_cmd, h2o_hosts
-import h2o_kmeans, h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_kmeans, h2o_import2 as h2i
 
 def define_params(SEED):
-    print "Restricting epsilon to 1e-6 and up. Too slow otherwise and no stopping condition?"
     paramDict = {
         'k': [2, 5], # seems two slow tih 12 clusters if all cols
-        'epsilon': [1e-6, 1e-2, 1, 10],
+        'initialization': ['None', 'PlusPlus', 'Furthest'],
         'cols': [None, "0", "3", "0,1,2,3,4,5,6"],
-        'max_iter': [None, 0, 1, 5, 10],
+        'max_iter': [1, 5, 10, 20],
         'seed': [None, 12345678, SEED],
         'normalize': [None, 0, 1],
         # 'destination_key:': "junk",
@@ -30,7 +25,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1,java_heap_GB=4)
+            h2o.build_cloud(3,java_heap_GB=4)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -49,14 +44,13 @@ class Basic(unittest.TestCase):
                 ('covtype20x.data', 800),
                 ]
 
-        importFolderPath = '/home/0xdiag/datasets/standard'
-        h2i.setupImportFolder(None, importFolderPath)
+        importFolderPath = "standard"
         for csvFilename, timeoutSecs in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath,
-                timeoutSecs=2000, pollTimeoutSecs=60)
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             csvPathname = importFolderPath + "/" + csvFilename
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname,
+                timeoutSecs=2000, pollTimeoutSecs=60)
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvPathname, \
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \
                 "    num_cols:", "{:,}".format(inspect['num_cols'])
@@ -70,7 +64,7 @@ class Basic(unittest.TestCase):
                 kwargs = params.copy()
 
                 start = time.time()
-                kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, \
+                kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, \
                     timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=60, **kwargs)
                 elapsed = time.time() - start
                 print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', \

@@ -1,6 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 import h2o_browse as h2b
 
 def write_syn_dataset(csvPathname, rowCount, headerData, rList):
@@ -39,7 +39,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
     
-    def test_commented_header(self):
+    def test_parse_commented_header(self):
         print "If header=1, and the first char of first line is #, the # should be removed/ignored" + \
             "and the line parsed normally as a header"
         SYNDATASETS_DIR = h2o.make_syn_dir()
@@ -60,7 +60,7 @@ class Basic(unittest.TestCase):
             ]
 
         trial = 0
-        for (fileNum, rowCount, colCount, key2, timeoutSecs, headerPrefix) in tryList:
+        for (fileNum, rowCount, colCount, hex_key, timeoutSecs, headerPrefix) in tryList:
             trial += 1
             # FIX! should we add a header to them randomly???
             print "Wait while", fileNum, "synthetic files are created in", SYNDATASETS_DIR
@@ -78,19 +78,21 @@ class Basic(unittest.TestCase):
 
             # make sure all key names are unique, when we re-put and re-parse (h2o caching issues)
             key = "syn_" + str(trial)
-            key2 = "syn_" + str(trial) + ".hex"
+            hex_key = "syn_" + str(trial) + ".hex"
 
             # DON"T get redirected to S3! (EC2 hack in config, remember!)
             # use it at the node level directly (because we gen'ed the files.
             # I suppose we could force the redirect state bits in h2o.nodes[0] to False, instead?:w
-            h2o.nodes[0].import_files(SYNDATASETS_DIR)
+            h2i.import_only(path=SYNDATASETS_DIR + '/*')
+
             # use regex. the only files in the dir will be the ones we just created with  *fileN* match
             start = time.time()
-            parseKey = h2o.nodes[0].parse('*'+rowxcol+'*', key2=key2, header=1, timeoutSecs=timeoutSecs)
-            print "parseKey['destination_key']: " + parseKey['destination_key']
-            print 'parse time:', parseKey['response']['time']
+            parseResult = h2i.import_parse(path=SYNDATASETS_DIR + '/*'+rowxcol+'*', 
+                hex_key=hex_key, header=1, timeoutSecs=timeoutSecs)
+            print "parseResult['destination_key']: " + parseResult['destination_key']
+            print 'parse time:', parseResult['response']['time']
 
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             h2o_cmd.infoFromInspect(inspect, csvPathname)
             print "\n" + csvPathname, \
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \
@@ -106,7 +108,7 @@ class Basic(unittest.TestCase):
             kwargs = {'sample': 75, 'depth': 25, 'ntree': 1, 'ignore': 'ID,CAPSULE'}
 
             start = time.time()
-            rfv = h2o_cmd.runRFOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            rfv = h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             print "trial #", trial, "totalRows:", totalRows, "parse end on ", csvFilename, \

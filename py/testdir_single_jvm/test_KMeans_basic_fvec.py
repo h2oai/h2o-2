@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import as h2i
+import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -21,14 +21,13 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_B_kmeans_benign(self):
-        importFolderPath = "/home/0xdiag/datasets/standard"
+        importFolderPath = "standard"
         csvFilename = "benign.csv"
-        key2 = "benign.hex"
+        hex_key = "benign.hex"
         csvPathname = importFolderPath + "/" + csvFilename
-        h2i.setupImportFolder(None, importFolderPath)
-        # FIX! key2 isn't working with Parse2 ? parseKey['destination_key'] not right?
-        parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2, header=1, timeoutSecs=180)
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        # FIX! hex_key isn't working with Parse2 ? parseResult['destination_key'] not right?
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, header=1, timeoutSecs=180)
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\nStarting", csvFilename
 
         expected = [
@@ -49,20 +48,19 @@ class Basic(unittest.TestCase):
             # for fvec only?
             kwargs.update({'max_iter': 50, 'max_iter2': 1, 'iterations': 5})
 
-            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=5, **kwargs)
-            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
+            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, timeoutSecs=5, **kwargs)
+            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
 
 
     def test_C_kmeans_prostate(self):
 
-        importFolderPath = "/home/0xdiag/datasets/standard"
+        importFolderPath = "standard"
         csvFilename = "prostate.csv"
-        key2 = "prostate.hex"
+        hex_key = "prostate.hex"
         csvPathname = importFolderPath + "/" + csvFilename
-        h2i.setupImportFolder(None, importFolderPath)
-        parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2, header=1, timeoutSecs=180)
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, header=1, timeoutSecs=180)
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\nStarting", csvFilename
 
         # loop, to see if we get same centers
@@ -75,15 +73,15 @@ class Basic(unittest.TestCase):
         # all are multipliers of expected tuple value
         allowedDelta = (0.01, 0.01, 0.01)
         for trial in range(2):
-            kwargs = {'k': 3, 'epsilon': 1e-6, 'cols': 2, 'destination_key': 'prostate_k.hex',
+            kwargs = {'k': 3, 'initialization': 'Furthest', 'cols': 2, 'destination_key': 'prostate_k.hex',
                 # reuse the same seed, to get deterministic results (otherwise sometimes fails
                 'seed': 265211114317615310}
 
             # for fvec only?
             kwargs.update({'max_iter': 50, 'max_iter2': 1, 'iterations': 5})
 
-            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=5, **kwargs)
-            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
+            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, timeoutSecs=5, **kwargs)
+            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
 
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
 

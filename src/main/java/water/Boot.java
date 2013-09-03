@@ -111,9 +111,27 @@ public class Boot extends ClassLoader {
 
   public void boot2( String[] args ) throws Exception {
     // Catch some log setup stuff before anything else can happen.
+    boolean help = false;
+    boolean version = false;
     for (int i = 0; i < args.length; i++) {
       String arg = args[i];
       Log.POST(110, arg == null ? "(arg is null)" : "arg is: " + arg);
+      if (arg.equals("-h") || arg.equals("--h") || arg.equals("-help") || arg.equals ("--help")) {
+        help = true;
+      }
+      if (arg.equals("-version") || arg.equals ("--version")) {
+        version = true;
+      }
+    }
+
+    if (help) {
+      H2O.printHelp();
+      H2O.exit (0);
+    }
+
+    if (version) {
+      H2O.printAndLogVersion();
+      H2O.exit (0);
     }
 
     if( fromJar() ) {
@@ -168,7 +186,15 @@ public class Boot extends ClassLoader {
 
     Class mainClazz = _init.loadClass(mainClass,true);
     Log.POST(20, "before (in run) mainClass invoke " + mainClazz.getName());
-    mainClazz.getMethod("main",String[].class).invoke(null,(Object)args);
+
+    Method main = null;
+    try {
+      // First look for 'userMain', so that user code only exposes one 'main'
+      // method. Problem showed up on samples where users launched the wrong one.
+      main = mainClazz.getMethod("userMain", String[].class);
+    } catch(NoSuchMethodException ex) {}
+    if(main == null) main = mainClazz.getMethod("main", String[].class);
+    main.invoke(null,(Object)args);
     Log.POST(20, "after (in run) mainClass invoke "+ mainClazz.getName());
 
     int index = Arrays.asList(args).indexOf("-runClass");

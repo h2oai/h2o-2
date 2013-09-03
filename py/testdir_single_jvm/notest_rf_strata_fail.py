@@ -1,6 +1,6 @@
 import unittest, random, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf, h2o_hosts
+import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -20,7 +20,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rf_strata_fail(self):
-        csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
+        csvPathname ='UCI/UCI-large/covtype/covtype.data'
         timeoutSecs = 60
         kwargs = {
             'response_variable': 54,
@@ -42,7 +42,8 @@ class Basic(unittest.TestCase):
             'iterative_cm': 1,
             'use_non_local_data': 0,
         }
-        h2o_cmd.runRF(timeoutSecs=timeoutSecs, csvPathname=csvPathname, **kwargs)
+        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put')
+        h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
 
 if __name__ == '__main__':
     h2o.unit_main()

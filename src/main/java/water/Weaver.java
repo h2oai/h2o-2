@@ -359,9 +359,8 @@ public class Weaver {
     // fail).  But we DO need to call the super-chain of serialization methods
     // - stopping at DTask.
     boolean callsuper = true;
-    for( CtClass base : _serBases )
-      if( cc.getSuperclass() == base ) callsuper = false;
-
+//    for( CtClass base : _serBases )
+//      if( cc.getSuperclass() == base ) callsuper = false;
     // Running example is:
     //   class Crunk extends DTask {
     //     int _x;  int _xs[];  double _d;

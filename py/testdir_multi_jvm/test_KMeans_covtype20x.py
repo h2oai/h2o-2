@@ -1,7 +1,7 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_kmeans
-import h2o_browse as h2b, h2o_import as h2i
+import h2o_browse as h2b, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -27,44 +27,43 @@ class Basic(unittest.TestCase):
                 ('covtype20x.data', 480, 'cA'),
                 ]
         else:
-            # None is okay for key2
+            # None is okay for hex_key
             csvFilenameList = [
                 ('covtype20x.data', 480,'cA'),
                 # ('covtype200x.data', 1000,'cE'),
                 ]
 
-        importFolderPath = '/home/0xdiag/datasets/standard'
-        h2i.setupImportFolder(None, importFolderPath)
-        for csvFilename, timeoutSecs, key2 in csvFilenameList:
+        importFolderPath = "standard"
+        for csvFilename, timeoutSecs, hex_key in csvFilenameList:
             csvPathname = importFolderPath + "/" + csvFilename
             # creates csvFilename.hex from file in importFolder dir 
             start = time.time()
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
-                timeoutSecs=2000, key2=key2) # noise=('JStack', None)
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, 
+                timeoutSecs=2000, hex_key=hex_key) # noise=('JStack', None)
             print "parse end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o.check_sandbox_for_errors()
 
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvPathname, \
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \
                 "    num_cols:", "{:,}".format(inspect['num_cols'])
 
             kwargs = {
                 'cols': None,
-                'epsilon': 1e-4,
+                'initialization': 'Furthest',
                 'k': 2, 
                 # reuse the same seed, to get deterministic results (otherwise sometimes fails
                 'seed': 265211114317615310,
             }
 
             start = time.time()
-            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, \
+            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, \
                 timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=60, **kwargs)
             elapsed = time.time() - start
             print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
-            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
+            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
 
 if __name__ == '__main__':
     h2o.unit_main()

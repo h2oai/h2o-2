@@ -78,6 +78,7 @@ public class DHistogram<T extends DHistogram> extends Iced {
   float score( ) { return Float.NaN; }
   // Do not ask for 'mean' from a non-scoring histogram
   float mean( int bin ) { return Float.NaN; }
+  float mean( int bin, int cls ) { return Float.NaN; }
   // Do not ask for 'var' from a non-scoring histogram
   float var( int bin ) { return Float.NaN; }
 

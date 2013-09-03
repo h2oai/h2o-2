@@ -1,8 +1,6 @@
-import unittest, sys
+import unittest, sys, random, time
 sys.path.extend(['.','..','py'])
-
-import h2o, h2o_cmd, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts
-import random, sys, time
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts, h2o_import2 as h2i
 
 zeroList = [
         'Result0 = 0',
@@ -45,11 +43,11 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_loop_random_exec_covtype(self):
-        csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
-        parseKey = h2o_cmd.parseFile(None, csvPathname, 'covtype.data', 'c.hex', 15)
-        print "\nParse key is:", parseKey['destination_key']
+        csvPathname = 'UCI/UCI-large/covtype/covtype.data'
+        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', hex_key='c.hex', timeoutSecs=15)
+        print "\nParse key is:", parseResult['destination_key']
 
-        h2b.browseTheCloud()
+        # h2b.browseTheCloud()
         h2e.exec_zero_list(zeroList)
         start = time.time()
         h2e.exec_expr_list_rand(len(h2o.nodes), exprList, 'c.hex',

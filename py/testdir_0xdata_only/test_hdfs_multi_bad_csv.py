@@ -1,8 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
-import h2o_browse as h2b
-import h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -25,9 +23,8 @@ class Basic(unittest.TestCase):
     def test_hdfs_multi_bad_csv(self):
         print "\nUse the new regex capabilities for selecting hdfs: try *csv* at /datasets"
         # pop open a browser on the cloud
-        h2b.browseTheCloud()
+        ## h2b.browseTheCloud()
         # defaults to /datasets
-        h2i.setupImportHdfs()
         # path should default to /datasets
 
 # One .gz in with non .gz seems to cause a stack trace..so don't match to all (*airlines*).
@@ -40,9 +37,9 @@ class Basic(unittest.TestCase):
 # -rw-r--r--   3 hduser supergroup  12155501626 2013-02-23 15:59 /datasets/airlines_all.csv
 # -rw-r--r--   3 hduser supergroup 133710514626 2013-02-23 15:21 /datasets/airlines_all_11x.csv
 
-        parseKey = h2i.parseImportHdfsFile(csvFilename='airline_116M.csv', key2='random_csv.hex', timeoutSecs=600)
-        print "*csv* regex to hdfs /datasets", 'parse time:', parseKey['response']['time']
-        print "parse result:", parseKey['destination_key']
+        parseResult = h2i.import_parse(path='datasets/airline_116M.csv', hex_key='random_csv.hex', timeoutSecs=600)
+        print "*csv* regex to hdfs /datasets", 'parse time:', parseResult['response']['time']
+        print "parse result:", parseResult['destination_key']
         sys.stdout.flush() 
 
 if __name__ == '__main__':

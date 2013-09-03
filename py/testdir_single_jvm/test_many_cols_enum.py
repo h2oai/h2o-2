@@ -1,6 +1,6 @@
 import unittest, random, sys, time, os
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i
 import h2o_exec as h2e
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
@@ -55,7 +55,7 @@ class Basic(unittest.TestCase):
         lenNodes = len(h2o.nodes)
 
         cnum = 0
-        for (rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             cnum += 1
             csvFilename = 'syn_' + str(SEED) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
@@ -63,12 +63,12 @@ class Basic(unittest.TestCase):
             print "Creating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, SEED)
 
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10)
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
 
             if not h2o.browse_disable:
@@ -76,9 +76,9 @@ class Basic(unittest.TestCase):
                 time.sleep(5)
 
             # try new offset/view
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], offset=100, view=100)
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], offset=99, view=89)
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], offset=-1, view=53)
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], offset=100, view=100)
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], offset=99, view=89)
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], offset=-1, view=53)
 
 
 if __name__ == '__main__':

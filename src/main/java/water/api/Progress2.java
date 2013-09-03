@@ -12,10 +12,10 @@ public class Progress2 extends Request {
   static final String DOC_GET = "Track progress of an ongoing Job";
 
   @API(help="The Job id being tracked.")
-  final Str job = new Str("job");
+  public final Str job = new Str("job");
 
   @API(help="The destination key being produced.")
-  final Str dst_key = new Str("dst_key");
+  public final Str dst_key = new Str("dst_key");
 
   public static Response redirect(Request req, Key jobkey, Key dest) {
     return new Response(Response.Status.redirect, req, -1, -1, "Progress2", "job", jobkey, "dst_key", dest );
@@ -23,9 +23,9 @@ public class Progress2 extends Request {
 
   @Override protected Response serve() {
     Job jjob = Job.findJob(Key.make(job.value()));
-    return (jjob == null || jjob.end_time != 0 )
-      ? jobDone      (jjob, dst_key.value())
-      : jobInProgress(jjob, dst_key.value());
+    if(jjob == null || jjob.end_time > 0) return jobDone(jjob, dst_key.value());
+    if(jjob.exception != null)return Response.error(jjob.exception);
+    return jobInProgress(jjob, dst_key.value());
   }
 
   /** Return {@link Response} for finished job. */

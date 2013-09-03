@@ -1,7 +1,6 @@
-import unittest, time, sys
+import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
-import time, random
+import h2o, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -21,47 +20,27 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_from_import(self):
-        importFolderPath = '/home/0xdiag/datasets/standard'
+        importFolderPath = 'standard'
         timeoutSecs = 500
 
         csvFilenameAll = [
             "covtype.data",
             "covtype20x.data",
-            # "covtype200x.data",
-            # "100million_rows.csv",
-            # "200million_rows.csv",
-            # "a5m.csv",
-            # "a10m.csv",
-            # "a100m.csv",
-            # "a200m.csv",
-            # "a400m.csv",
-            # "a600m.csv",
-            # "billion_rows.csv.gz",
-            # "new-poker-hand.full.311M.txt.gz",
             ]
         # csvFilenameList = random.sample(csvFilenameAll,1)
         csvFilenameList = csvFilenameAll
         for trial in range(3):
             for csvFilename in csvFilenameList:
-                h2i.setupImportFolder(None, importFolderPath)
-                # creates csvFilename.hex from file in importFolder dir 
+                csvPathname = importFolderPath + "/" + csvFilename
                 start = time.time()
-                parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=500)
+                parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, timeoutSecs=500)
                 elapsed = time.time() - start
                 print csvFilename, "parsed in", elapsed, "seconds.", "%d pct. of timeout" % ((elapsed*100)/timeoutSecs), "\n"
-                print csvFilename, 'H2O reports parse time:', parseKey['response']['time']
+                print csvFilename, 'H2O reports parse time:', parseResult['response']['time']
 
-                # h2o doesn't produce this, but h2o_import.py adds it for us.
-                print "Parse result['python_source_key']:", parseKey['python_source_key']
-                print "Parse result['destination_key']:", parseKey['destination_key']
+                print "Parse result['destination_key']:", parseResult['destination_key']
                 print "\n" + csvFilename
 
-                storeView = h2o.nodes[0].store_view()
-                ### print "storeView:", h2o.dump_json(storeView)
-                # h2o deletes key after parse now
-                ## print "Removing", parseKey['python_source_key'], "so we can re-import it"
-                ## removeKeyResult = h2o.nodes[0].remove_key(key=parseKey['python_source_key'])
-                ## print "removeKeyResult:", h2o.dump_json(removeKeyResult)
 
             print "\nTrial", trial, "completed\n"
 

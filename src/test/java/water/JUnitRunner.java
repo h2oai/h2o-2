@@ -4,7 +4,7 @@ import hex.gbm.GBMTest;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.annotation.Annotation;
+import java.lang.annotation.*;
 import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.util.*;
@@ -23,11 +23,17 @@ import water.util.Log;
 import water.util.Utils;
 
 public class JUnitRunner {
+	// TODO
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface Nightly {
+  }
+
   private static void filter(List<Class> tests) {
     // Requires separate datasets project
     tests.remove(ParseFolderTestBig.class);
     // Too slow
     tests.remove(ConcurrentKeyTest.class);
+    tests.remove(ValueArrayToFrameTestAll.class);
     // Pure JUnit test
     tests.remove(CBSChunkTest.class);
     tests.remove(GBMTest.class);
@@ -85,7 +91,8 @@ public class JUnitRunner {
     }
     for( Node node : nodes )
       node.kill();
-    if( exit == 0 ) System.out.println("OK");
+    if( exit == 0 )
+      System.out.println("OK");
     System.exit(exit);
   }
 
@@ -97,7 +104,8 @@ public class JUnitRunner {
     } catch( IOException ex ) {
       return false;
     } finally {
-      if( s != null ) s.close();
+      if( s != null )
+        s.close();
     }
   }
 
@@ -112,10 +120,13 @@ public class JUnitRunner {
         for( String name : names ) {
           try {
             Class c = Class.forName(name);
-            if( isTest(c) ) tests.add(c);
-          } catch( Throwable _ ) {}
+            if( isTest(c) )
+              tests.add(c);
+          } catch( Throwable _ ) {
+          }
         }
-        if( tests.size() == 0 ) throw new Exception("Failed to find tests");
+        if( tests.size() == 0 )
+          throw new Exception("Failed to find tests");
 
         filter(tests);
         Result r = org.junit.runner.JUnitCore.runClasses(tests.toArray(new Class[0]));
@@ -126,7 +137,8 @@ public class JUnitRunner {
         } else {
           for( Failure f : r.getFailures() ) {
             System.err.println(f.getDescription());
-            if( f.getException() != null ) f.getException().printStackTrace();
+            if( f.getException() != null )
+              f.getException().printStackTrace();
           }
         }
         System.exit(r.getFailureCount());
@@ -138,10 +150,12 @@ public class JUnitRunner {
 
     private static boolean isTest(Class c) {
       for( Annotation a : c.getAnnotations() )
-        if( a instanceof Ignore ) return false;
+        if( a instanceof Ignore )
+          return false;
       for( Method m : c.getMethods() )
         for( Annotation a : m.getAnnotations() )
-          if( a instanceof Test ) return true;
+          if( a instanceof Test )
+            return true;
       return false;
     }
   }

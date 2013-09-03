@@ -57,14 +57,14 @@ nightly_build_stuff:
 	$(MAKE) build_installer PROJECT_VERSION=$(PROJECT_VERSION)
 
 build:
+	$(MAKE) -C R build PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) build_h2o PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) -C hadoop build PROJECT_VERSION=$(PROJECT_VERSION)
-	$(MAKE) -C R build PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) -C launcher build PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) package
 
 build_h2o:
-	(export PROJECT_VERSION=$(PROJECT_VERSION); ./build.sh doc)
+	(export PROJECT_VERSION=$(PROJECT_VERSION); ./build.sh noclean doc)
 
 package:
 	rm -fr target/h2o-$(PROJECT_VERSION)
@@ -74,9 +74,12 @@ package:
 	cp -p target/h2o.jar target/h2o-$(PROJECT_VERSION)
 	cp -p target/h2o-sources.jar target/h2o-$(PROJECT_VERSION)
 	cp -p packaging/README.txt target/h2o-$(PROJECT_VERSION)
+	sed "s/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/g" packaging/index.html > target/index.html
 	cp -p LICENSE.txt target/h2o-$(PROJECT_VERSION)
 	(cd target; zip -r h2o-$(PROJECT_VERSION).zip h2o-$(PROJECT_VERSION))
 	rm -fr target/h2o-$(PROJECT_VERSION)
+	rm -fr target/ci
+	cp -rp ci target
 
 # Most people won't have the BitRock InstallBuilder software
 # installed, which is OK.  It will harmlessly do nothing for that

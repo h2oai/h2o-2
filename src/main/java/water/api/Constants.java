@@ -60,7 +60,6 @@ public class Constants extends Iced {
   public static final String DTHRESHOLDS           = "thresholds";
   public static final String END_TIME              = "end_time";
   public static final String ENUM_DOMAIN_SIZE      = "enum_domain_size";
-  public static final String EPSILON               = "epsilon";
   public static final String ERROR                 = "error";
   public static final String ESCAPE_NAN            = "escape_nan";
   public static final String EXCLUSIVE_SPLIT_LIMIT = "exclusive_split_limit";
@@ -168,6 +167,7 @@ public class Constants extends Iced {
   public static final String TREE_LEAVES           = "leaves";
   public static final String TREE_NUM              = "tree_number";
   public static final String TREES                 = "trees";
+  public static final String TWEEDIE_POWER         = "tweedie_power";
   public static final String TYPE                  = "type";
   public static final String URL                   = "url";
   public static final String USE_NON_LOCAL_DATA    = "use_non_local_data";

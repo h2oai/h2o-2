@@ -1,8 +1,6 @@
 import unittest, sys, random, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
-import h2o_jobs
-import logging
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import2 as h2i, h2o_hosts, h2o_jobs
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -30,20 +28,11 @@ class Basic(unittest.TestCase):
         ]
 
         print "Using the -.gz files from s3"
-        # want just s3n://home-0xdiag-datasets/manyfiles-nflx-gz/file_1.dat.gz
     
         USE_S3 = False
         noPoll = True
         benchmarkLogging = ['cpu','disk']
         bucket = "flashgordon"
-        if USE_S3:
-            URI = "s3://" + bucket + "/"
-            protocol = "s3"
-        else:
-            URI = "s3n://" + bucket + "/" # FIX! s3n needs the trailing / now during an import?
-            protocol = "s3n/hdfs"
-
-        # split out the pattern match and the filename used for the hex
         trialMax = 1
         # use i to forward reference in the list, so we can do multiple outstanding parses below
         for i, (csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
@@ -52,12 +41,7 @@ class Basic(unittest.TestCase):
                 
                 print "\n", tryHeap,"GB heap, 1 jvm per host, import", protocol, "then parse"
                 h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap,
-                    enable_benchmark_log=True, timeoutSecs=120, retryDelaySecs=10,
-                    # all hdfs info is done thru the hdfs_config michal's ec2 config sets up?
-                    # this is for our amazon ec hdfs
-                    # see https://github.com/0xdata/h2o/wiki/H2O-and-s3n
-                    hdfs_name_node='10.78.14.235:9000',
-                    hdfs_version='0.20.2')
+                    enable_benchmark_log=True, timeoutSecs=120, retryDelaySecs=10)
 
                 # don't raise exception if we find something bad in h2o stdout/stderr?
                 h2o.nodes[0].sandbox_ignore_errors = True
@@ -66,31 +50,13 @@ class Basic(unittest.TestCase):
                     # since we delete the key, we have to re-import every iteration, to get it again
                     # s3n URI thru HDFS is not typical.
                     if USE_S3:
-                        importResult = h2o.nodes[0].import_s3(bucket)
+                        schema = 's3'
                     else:
-                        importResult = h2o.nodes[0].import_hdfs(URI)
+                        schema = 's3n'
 
-                    s3nFullList = importResult['succeeded']
-                    for key in importResult:
-                        # just print the first tile
-                        # if 'nflx' in key and 'file_1.dat.gz' in key: 
-                        if csvFilepattern in key:
-                            # should be s3n://home-0xdiag-datasets/manyfiles-nflx-gz/file_1.dat.gz
-                            print "example file we'll use:", key
-                            break
-                        else:
-                            ### print key
-                            pass
-
-                    ### print "s3nFullList:", h2o.dump_json(s3nFullList)
-                    # error if none? 
-                    self.assertGreater(len(s3nFullList),1,"Didn't see more than 1 file in s3n?")
-
-                    s3nKey = URI + csvFilepattern
-                    key2 = csvFilename + "_" + str(trial) + ".hex"
-                    print "Loading", protocol, "key:", s3nKey, "to", key2
+                    hex_key = csvFilename + "_" + str(trial) + ".hex"
                     start = time.time()
-                    parseKey = h2o.nodes[0].parse(s3nKey, key2,
+                    parseResult = h2i.import_parse(bucket=bucket, path=csvFilepattern, schema=schema, hex_key=hex_key,
                         timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60,
                         noPoll=noPoll,
                         benchmarkLogging=benchmarkLogging)
@@ -99,10 +65,8 @@ class Basic(unittest.TestCase):
                         time.sleep(1)
                         h2o.check_sandbox_for_errors()
                         (csvFilepattern, csvFilename, totalBytes2, timeoutSecs) = csvFilenameList[i+1]
-                        s3nKey = URI + csvFilepattern
-                        key2 = csvFilename + "_" + str(trial) + ".hex"
-                        print "Loading", protocol, "key:", s3nKey, "to", key2
-                        parse2Key = h2o.nodes[0].parse(s3nKey, key2,
+                        hex_key = csvFilename + "_" + str(trial) + ".hex"
+                        parseResult = h2i.import_parse(bucket=bucket, path=csvFilepattern, schema=schema, hex_key=hex_key,
                             timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60,
                             noPoll=noPoll,
                             benchmarkLogging=benchmarkLogging)
@@ -111,16 +75,14 @@ class Basic(unittest.TestCase):
                         h2o.check_sandbox_for_errors()
                         (csvFilepattern, csvFilename, totalBytes3, timeoutSecs) = csvFilenameList[i+2]
                         s3nKey = URI + csvFilepattern
-                        key2 = csvFilename + "_" + str(trial) + ".hex"
-                        print "Loading", protocol, "key:", s3nKey, "to", key2
-                        parse3Key = h2o.nodes[0].parse(s3nKey, key2,
+                        hex_key = csvFilename + "_" + str(trial) + ".hex"
+                        parseResult = h2i.import_parse(bucket=bucket, path=csvFilepattern, schema=schema, hex_key=hex_key,
                             timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60,
                             noPoll=noPoll,
                             benchmarkLogging=benchmarkLogging)
 
                     elapsed = time.time() - start
-                    print s3nKey, 'parse time:', parseKey['response']['time']
-                    print "parse result:", parseKey['destination_key']
+                    print "parse result:", parseResult['destination_key']
                     print "Parse #", trial, "completed in", "%6.2f" % elapsed, "seconds.", \
                         "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
@@ -145,26 +107,7 @@ class Basic(unittest.TestCase):
                     # BUG here?
                     if not noPoll:
                         # We should be able to see the parse result?
-                        inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
-
-                    print "Deleting key in H2O so we get it from S3 (if ec2) or nfs again.", \
-                          "Otherwise it would just parse the cached key."
-
-                    storeView = h2o.nodes[0].store_view()
-                    ### print "storeView:", h2o.dump_json(storeView)
-                    # "key": "s3n://home-0xdiag-datasets/manyfiles-nflx-gz/file_84.dat.gz"
-                    # have to do the pattern match ourself, to figure out what keys to delete
-                    # we're deleting the keys in the initial import. We leave the keys we created
-                    # by the parse. We use unique dest keys for those, so no worries.
-                    # Leaving them is good because things fill up! (spill)
-                    for k in s3nFullList:
-                        deleteKey = k['key']
-                        if csvFilename in deleteKey and not ".hex" in key:      
-                            pass
-                            # h2o removes key after parse now
-                            ### print "Removing", deleteKey
-                            ### removeKeyResult = h2o.nodes[0].remove_key(key=deleteKey)
-                            ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
+                        inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
 
                 h2o.tear_down_cloud()
                 # sticky ports? wait a bit.

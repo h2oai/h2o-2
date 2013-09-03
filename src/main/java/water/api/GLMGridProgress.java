@@ -52,7 +52,7 @@ public class GLMGridProgress extends Request {
       o.addProperty(KEY, m._selfKey.toString());
       o.addProperty(LAMBDA, lsm._lambda);
       o.addProperty(ALPHA, lsm._alpha);
-      if(m._glmParams._family == Family.binomial) {
+      if(m._glmParams._family._family == Family.binomial) {
         o.addProperty(BEST_THRESHOLD, m._vals[0].bestThreshold());
         o.addProperty(AUC, m._vals[0].AUC());
         double[] classErr = m._vals[0].classError();

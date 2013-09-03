@@ -2,7 +2,7 @@ import unittest
 import random, sys, time, os, math
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i
 
 DO_MEAN = False
 DO_NAN = False
@@ -67,7 +67,7 @@ class Basic(unittest.TestCase):
             ]
 
         # h2b.browseTheCloud()
-        for (rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
                 SEEDPERFILE = random.randint(0, sys.maxint)
                 csvFilename = "syn_%s_%s_%s.csv" % (SEEDPERFILE, rowCount, colCount)
                 csvPathname = SYNDATASETS_DIR + '/' + csvFilename
@@ -77,11 +77,13 @@ class Basic(unittest.TestCase):
                 synSumList = write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
                 # PARSE**********************
-                parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=timeoutSecs, doSummary=False)
-                print "Parse result['destination_key']:", parseKey['destination_key']
+                parseResult = h2i.import_parse(path=csvPathname, hex_key=hex_key, schema='put', 
+                    timeoutSecs=timeoutSecs, doSummary=False)
+                print "Parse result['destination_key']:", parseResult['destination_key']
 
                 # INSPECT*******************
-                inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], max_column_display=colCount, timeoutSecs=timeoutSecs)
+                inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], 
+                    max_column_display=colCount, timeoutSecs=timeoutSecs)
                 num_cols = inspect['num_cols']
                 num_rows = inspect['num_rows']
                 row_size = inspect['row_size']
@@ -117,7 +119,7 @@ class Basic(unittest.TestCase):
                     iVariance = iColDict['variance']
 
                 # SUMMARY********************************
-                summaryResult = h2o_cmd.runSummary(key=key2, max_column_display=colCount, timeoutSecs=timeoutSecs)
+                summaryResult = h2o_cmd.runSummary(key=hex_key, max_column_display=colCount, timeoutSecs=timeoutSecs)
                 h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
 
                 self.assertEqual(rowCount, num_rows, 

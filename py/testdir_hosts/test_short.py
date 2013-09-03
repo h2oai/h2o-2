@@ -1,8 +1,7 @@
-import unittest
-import random, sys, time, re
+import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_glm, h2o_util
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -25,24 +24,23 @@ class Basic(unittest.TestCase):
     def test_short(self):
             csvFilename = 'part-00000b'
             ### csvFilename = 'short'
+            print "this data is only on 0xdata machines"
             importFolderPath = '/home/hduser/data'
-            importFolderResult = h2i.setupImportFolder(None, importFolderPath)
             csvPathname = importFolderPath + "/" + csvFilename
 
             # FIX! does 'separator=' take ints or ?? hex format
             # looks like it takes the hex string (two chars)
             start = time.time()
             # hardwire TAB as a separator, as opposed to white space (9)
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
-                timeoutSecs=500, separator=9)
-            print "Parse of", parseKey['destination_key'], "took", time.time() - start, "seconds"
+            parseResult = h2i.import_parse(path=csvPathname, schema='local', timeoutSecs=500, separator=9)
+            print "Parse of", parseResult['destination_key'], "took", time.time() - start, "seconds"
 
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
 
             start = time.time()
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=500)
-            print "Inspect:", parseKey['destination_key'], "took", time.time() - start, "seconds"
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=500)
+            print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspect, csvPathname)
             # num_rows = inspect['num_rows']
             # num_cols = inspect['num_cols']
@@ -51,7 +49,7 @@ class Basic(unittest.TestCase):
             y = "is_purchase"
             print "y:", y
             # don't need the intermediate Dicts produced from columnInfoFromInspect
-            x = h2o_glm.goodXFromColumnInfo(y, keepPattern=keepPattern, key=parseKey['destination_key'], timeoutSecs=300)
+            x = h2o_glm.goodXFromColumnInfo(y, keepPattern=keepPattern, key=parseResult['destination_key'], timeoutSecs=300)
             print "x:", x
 
             kwargs = {
@@ -71,7 +69,7 @@ class Basic(unittest.TestCase):
 
             timeoutSecs = 1800
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutsecs=60, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutsecs=60, **kwargs)
             elapsed = time.time() - start
             print "glm completed in", elapsed, "seconds.", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)

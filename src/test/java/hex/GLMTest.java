@@ -40,8 +40,14 @@ public class GLMTest extends TestUtil {
     }
 
     // Now a Gaussian GLM model for the same thing
-    GLMParams glmp = new GLMParams(family);
-    glmp._link = glmp._family.defaultLink;
+    GLMParams glmp;
+    switch( family ){
+      default:
+        glmp = new GLMParams(family); break;
+      case tweedie:
+        glmp = new GLMParams( family, family.defaultLink, family.tweedieVariancePower, family.defaultLink.tweedieLinkPower );
+    }
+    glmp._link = new LinkIced(glmp._family._family.defaultLink, family.defaultLink.tweedieLinkPower);
     //glmp._familyamilyArgs = glmp._family.defaultArgs;
     glmp._betaEps = 0.000001;
     glmp._maxIter = 100;
@@ -269,6 +275,38 @@ public class GLMTest extends TestUtil {
       UKV.remove(datakey);
     }
   }
+
+
+  // simple tweedie test
+  @Test public void testTweedieRegression() {
+    Key datakey = Key.make("datakey");
+    try {
+      // Make some data to test with.
+      // Equation is: y = 0.1*x+0
+      ValueArray va =
+        va_maker(datakey,
+                 new byte []{  0 ,  1 ,  2 ,  3 ,  4 ,  5 ,  6 ,  7 ,  8 ,  9,  0 ,  1 ,  2 ,  3 ,  4 ,  5 ,  6 ,  7 ,  8 ,  9 },
+                 new float[]{0.0f,0.1f,0.2f,0.3f,0.4f,0.5f,0.6f,0.7f,0.8f,0.9f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f});
+      LSMSolver lsms = new ADMMSolver(0,0);
+      double[] var_powers = new double[]{ 1.5,    1.1,     1.9, };
+      double[] beta0s = new double[]{     3.643,  1.318,   9.154,};
+      double[] beta1s = new double[]{    -0.260, -0.0284, -0.853,};
+      for(int test=0; test < var_powers.length; test++){
+        Family family = Family.tweedie;
+        family.tweedieVariancePower = var_powers[ test ];
+        family.defaultLink = Link.tweedie;
+        family.defaultLink.tweedieLinkPower = 1. - var_powers[ test ];
+        JsonObject glm = computeGLM(family, lsms, va, null); // Solve it!
+        JsonObject coefs = glm.get("coefficients").getAsJsonObject();
+        assertEquals( "tweedie test variance power = " + var_powers[ test ], beta0s[ test ], coefs.get("Intercept").getAsDouble(), 0.001);
+        assertEquals( "tweedie test variance power = " + var_powers[ test ], beta1s[ test ], coefs.get("0")        .getAsDouble(), 0.001);
+        UKV.remove(Key.make(glm.get(Constants.MODEL_KEY).getAsString()));
+      }
+    } finally {
+      UKV.remove(datakey);
+    }
+  }
+
 
   // Now try with a more complex binomial regression
   @Test public void testLogReg_Basic() {
@@ -519,7 +557,7 @@ public class GLMTest extends TestUtil {
     LSMSolver lsms = new ADMMSolver(0.0001/*lambda*/,1/*alpha*/);
     // Now a Gaussian GLM model for the same thing
     GLMParams glmp = new GLMParams(Family.gaussian);
-    glmp._link = glmp._family.defaultLink;
+    glmp._link = new LinkIced( glmp._family._family.defaultLink );
     glmp._betaEps = 0.000001;
     glmp._maxIter = 50;
 

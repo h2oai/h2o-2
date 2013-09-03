@@ -2,12 +2,12 @@ package water.util;
 
 import java.io.*;
 import java.lang.management.ManagementFactory;
+import java.util.ArrayList;
 import java.util.Locale;
 
 import org.apache.log4j.LogManager;
 import org.apache.log4j.PropertyConfigurator;
 
-import org.omg.PortableServer.ThreadPolicyOperations;
 import water.*;
 import water.api.Constants.Schemes;
 import water.util.Log.Tag.Kind;
@@ -220,7 +220,7 @@ public abstract class Log {
       String headers = _longHeaders;
       if(headers == null) {
         String host = H2O.SELF_ADDRESS != null ? H2O.SELF_ADDRESS.getHostAddress() : "";
-        headers = fixedLength(host + " ", 16) + fixedLength(PID + " ", 6);
+        headers = fixedLength(host + ":" + H2O.API_PORT + " ", 22) + fixedLength(PID + " ", 6);
         if(H2O.SELF_ADDRESS != null) _longHeaders = headers;
       }
       buf.append(when.startAsString()).append(" ").append(headers);
@@ -343,6 +343,26 @@ public abstract class Log {
 
   static volatile boolean loggerCreateWasCalled = false;
 
+  static private Object startupLogEventsLock = new Object();
+  static volatile private ArrayList<Event> startupLogEvents = new ArrayList<Event>();
+
+  private static void log0(org.apache.log4j.Logger l4j, Event e) {
+    String s = e.toString();
+    if (e.kind == Kind.ERRR) {
+      l4j.error(s);
+    }
+    else if (e.kind == Kind.WARN) {
+      l4j.warn(s);
+    }
+    else if (e.kind == Kind.INFO) {
+      l4j.info(s);
+    }
+    else {
+      // Choose error by default if we can't figure out the right logging level.
+      l4j.error(s);
+    }
+  }
+
   /** the actual write code. */
   private static void write0(Event e, boolean printOnOut) {
     org.apache.log4j.Logger l4j = getLog4jLogger();
@@ -363,23 +383,39 @@ public abstract class Log {
       }
     }
 
-    String s = e.toString();
+    // Log if we can, buffer if we cannot.
+    if (l4j == null) {
+      // Calling toString has side-effects about how the output looks.  So call
+      // it early here, even if we're just going to buffer the event.
+      String s = e.toString();
 
-    // Log if we can.
-    if (l4j != null) {
-      if (e.kind == Kind.ERRR) {
-        l4j.error(s);
+      // buffer.
+      synchronized (startupLogEventsLock) {
+        if (startupLogEvents != null) {
+          startupLogEvents.add(e);
+        }
+        else {
+          // there is an inherent race condition here where we might drop a message
+          // during startup.  this is only a danger in multithreaded situations.
+          // it's ok, just be aware of it.
+        }
       }
-      else if (e.kind == Kind.WARN) {
-        l4j.warn(s);
+    }
+    else {
+      // drain buffer if it exists.  for performance reasons, don't enter
+      // lock unless the buffer exists.
+      if (startupLogEvents != null) {
+        synchronized (startupLogEventsLock) {
+          for (int i = 0; i < startupLogEvents.size(); i++) {
+            Event bufferedEvent = startupLogEvents.get(i);
+            log0(l4j, bufferedEvent);
+          }
+          startupLogEvents = null;
+        }
       }
-      else if (e.kind == Kind.INFO) {
-        l4j.info(s);
-      }
-      else {
-        // Choose error by default if we can't figure out the right logging level.
-        l4j.error(s);
-      }
+
+      // log.
+      log0(l4j, e);
     }
 
     if( Paxos._cloudLocked ) logToKV(e.when.startAsString(), e.thread, e.kind, e.sys, e.body(0));

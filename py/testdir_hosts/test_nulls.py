@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o_cmd, h2o, h2o_hosts
+import h2o_cmd, h2o, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -23,13 +23,15 @@ class Basic(unittest.TestCase):
         # I suppose the <NUL> are thrown away by parse, so doesn't change
         # chunk boundary stuff. (i.e. not interesting test for RF)
         csvFilename = 'poker1000'
-        csvPathname = h2o.find_file('smalldata/poker/' + csvFilename)
+        csvPathname = 'poker/' + csvFilename
+        fullPathname = h2i.find_folder_and_filename('smalldata', csvPathname, returnFullPath=true)
+
         nulFilename = "syn_nul.data"
         nulPathname = SYNDATASETS_DIR + '/' + nulFilename
 
         piece_size = 4096 # 4 KiB
 
-        with open(csvPathname, "rb") as in_file:
+        with open(fullPathname, "rb") as in_file:
             with open(nulPathname, "wb") as out_file:
                 while True:
                     piece = in_file.read(103)
@@ -51,10 +53,10 @@ class Basic(unittest.TestCase):
                 print "\nTrial:", trials, ", y:", y
 
                 timeoutSecs = 20 + 5*(len(h2o.nodes))
-                
                 model_key = csvFilename + "_" + str(trials)
-                h2o_cmd.runRF(trees=trees, model_key=model_key, csvPathname=nulPathname,
-                    timeoutSecs=timeoutSecs, retryDelaySecs=1)
+
+                parseResult = h2i.import_parse(path=nulPathname, schema='put')
+                h2o_cmd.runRFOnly(parseResult = trees=trees, model_key=model_key, timeoutSecs=timeoutSecs, retryDelaySecs=1)
                 sys.stdout.write('.')
                 sys.stdout.flush()
 

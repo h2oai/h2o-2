@@ -1,7 +1,7 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_glm, h2o_hosts
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -21,12 +21,12 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_C_hhp_107_01(self):
-        csvPathname = h2o.find_file("smalldata/hhp_107_01.data.gz")
+        csvPathname = 'hhp_107_01.data.gz'
         print "\n" + csvPathname
 
         y = "106"
         x = ""
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, timeoutSecs=15)
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, timeoutSecs=15, schema='put')
 
         for trial in xrange(3):
             sys.stdout.write('.')
@@ -36,7 +36,7 @@ class Basic(unittest.TestCase):
 
             start = time.time()
             kwargs = {'x': x, 'y': y, 'n_folds': 6}
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=300, **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=300, **kwargs)
 
             # pass the kwargs with all the params, so we know what we asked for!
             h2o_glm.simpleCheckGLM(self, glm, 57, **kwargs)

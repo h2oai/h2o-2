@@ -1,9 +1,6 @@
-import unittest
-import random, sys, time, webbrowser, re
+import unittest, random, sys, time, re
 sys.path.extend(['.','..','py'])
-
-import h2o, h2o_cmd, h2o_browse as h2b, h2o_hosts
-
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_hosts, h2o_import2 as h2i
 # Result from exec is an interesting key because it changes shape depending on the operation
 # it's hard to overwrite keys with other operations. so exec gives us that, which allows us
 # to test key atomicity. (value plus size plus other aspects)
@@ -58,14 +55,14 @@ class Basic(unittest.TestCase):
         # time.sleep(1500)
         h2o.tear_down_cloud()
 
-    def test_loop_random_exec_covtype(self):
+    def test_json_browse_both_exec(self):
         lenNodes = len(h2o.nodes)
-        csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
-        key2 = 'c.hex'
-        parseKey = h2o_cmd.parseFile(None, csvPathname, 'covtype.data', key2, 10)
-        print "\nParse key is:", parseKey['destination_key']
+        csvPathname = 'UCI/UCI-large/covtype/covtype.data'
+        hex_key = 'c.hex'
+        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10)
+        print "\nParse key is:", parseResult['destination_key']
 
-        h2b.browseTheCloud()
+        ## h2b.browseTheCloud()
         # for trial in range(53):
         trial = 0
         while (trial < 100):
@@ -80,7 +77,7 @@ class Basic(unittest.TestCase):
                 execExpr = re.sub('<col2>',str(colX+1),execExpr)
                 execExpr = re.sub('<n>',str(n),execExpr)
                 execExpr = re.sub('<row>',str(row),execExpr)
-                execExpr = re.sub('<keyX>',str(key2),execExpr)
+                execExpr = re.sub('<keyX>',str(hex_key),execExpr)
 
                 # pick a random node to execute it on
                 randNode = random.randint(0,lenNodes-1)
@@ -113,11 +110,6 @@ class Basic(unittest.TestCase):
                 # just look at the last inspect, which should be the resultInspect!
                 # h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
                 h2b.browseJsonHistoryAsUrlLastMatch("Exec")
-                # url = "http://192.168.0.37:54321/Exec?Expr=Result3+%3D+c.hex%5B26%5D+%2B+Result1&Key=Result"
-                # webbrowser.open_new_tab(url)
-
-                # FIX! I suppose we have the problem of stdout/stderr not having flushed?
-                # should hook in some way of flushing the remote node stdout/stderr
                 h2o.check_sandbox_for_errors()
                 print "exec end on ", "covtype.data" , 'took', time.time() - start, 'seconds'
                 print "Trial #", trial, "completed\n"

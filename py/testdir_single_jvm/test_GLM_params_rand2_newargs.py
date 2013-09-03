@@ -1,10 +1,10 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_glm
+import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_import2 as h2i
 
 # none is illegal for threshold
 # always run with n_folds, to make sure we get the trainingErrorDetails
-# FIX! we'll have to do something for gaussian. It doesn't return the ted keys below
+# FIX! we'll have to do something for gaussian. It doesn't return the ted hex_keys below
 
 # some newer args for new port
 # made this a separate test, so the coarse failures don't impede other random testing
@@ -47,10 +47,9 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM_params_rand2_newargs(self):
-        # csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
-        csvPathname = h2o.find_file('smalldata/covtype/covtype.20k.data')
-        key = 'covtype.20k'
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key=key)
+        csvPathname = 'covtype/covtype.20k.data'
+        hex_key = 'covtype.20k.hex'
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=hex_key, schema='put')
         paramDict = define_params()
         for trial in range(20):
             # params is mutable. This is default.
@@ -58,7 +57,7 @@ class Basic(unittest.TestCase):
             colX = h2o_glm.pickRandGlmParams(paramDict, params)
             kwargs = params.copy()
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(timeoutSecs=70, parseKey=parseKey, **kwargs)
+            glm = h2o_cmd.runGLMOnly(timeoutSecs=70, parseResult=parseResult, **kwargs)
             # pass the kwargs with all the params, so we know what we asked for!
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             h2o.check_sandbox_for_errors()

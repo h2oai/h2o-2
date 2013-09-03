@@ -15,11 +15,11 @@ import java.util.*;
 import jsr166y.CountedCompleter;
 import jsr166y.RecursiveAction;
 import water.*;
-import water.util.Utils;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
 import water.ValueArray.Column;
 import water.api.Constants;
+import water.util.Utils;
 import Jama.CholeskyDecomposition;
 import Jama.Matrix;
 
@@ -130,7 +130,7 @@ public abstract class DGLM {
   public static class GLMJob extends ChunkProgressJob {
     public GLMJob(ValueArray data, Key dest, int xval, GLMParams params) {
       // approximate the total number of computed chunks as 25 per normal model computation + 10 iterations per xval model)
-      super("GLM(" + data._key.toString() + ")", dest, (params._family == Family.gaussian) ? data.chunks() * (xval + 1)
+      super("GLM(" + data._key.toString() + ")", dest, (params._family._family == Family.gaussian) ? data.chunks() * (xval + 1)
           : data.chunks() * (20 + 4 * xval));
     }
 
@@ -145,8 +145,9 @@ public abstract class DGLM {
   }
 
   public static class GLMParams extends Iced {
-    public Family _family = Family.gaussian;
-    public Link _link;
+//    public Family _family = Family.gaussian;
+    public FamilyIced _family = new FamilyIced(Family.gaussian);
+    public LinkIced _link;
     public double _betaEps = 1e-4;
     public int _maxIter = 50;
     public double _caseVal;
@@ -159,12 +160,17 @@ public abstract class DGLM {
     }
 
     public GLMParams(Family family, Link link) {
-      _family = family;
-      _link = link;
+      _family = new FamilyIced( family );
+      _link = new LinkIced( link );
+    }
+
+    public GLMParams(Family family, Link link, double tweedieVariancePower, double tweedieLinkPower){
+      _family = new FamilyIced( family, tweedieVariancePower );
+      _link = new LinkIced( _family._family.defaultLink, tweedieLinkPower );
     }
 
     public void checkResponseCol(Column ycol, ArrayList<String> warnings) {
-      switch( _family ) {
+      switch( _family._family ) {
         case poisson:
           if( ycol._min < 0 ) throw new GLMException("Invalid response variable " + ycol._name
               + ", Poisson family requires response to be >= 0. ");
@@ -184,6 +190,13 @@ public abstract class DGLM {
               "Invalid response variable " + ycol._name
                   + ", Binomial family requires response to be from [0,1] or have Case predicate. ");
           break;
+        case tweedie:
+          if( ycol._min < 0 ) throw new GLMException("Invalid response variable " + ycol._name
+              + ", Tweedie family requires response to be >= 0. ");
+          if( ycol._domain != null && ycol._domain.length > 0 ) throw new GLMException("Invalid response variable "
+              + ycol._name + ", Tweedie family requires response to be a number >= 0. Got categorical.");
+          break;
+
         default:
           //pass
       }
@@ -200,6 +213,11 @@ public abstract class DGLM {
         res.addProperty("weight", _caseWeight);
       }
       return res;
+    }
+
+    public String toString2(){
+      return String.format("GLMParams: Family(%s) glmparams.Link(%s) _betaEps(%f) _maxIter(%d), _caseVal(%f), _caseWeight(%f), _caseMode(%s), _reweightGram(%s)",
+          _family, _link, _betaEps, _maxIter, _caseVal, _caseWeight, _caseMode, _reweightGram);
     }
   }
 
@@ -245,6 +263,64 @@ public abstract class DGLM {
     }
   }
 
+  /**
+   * passthrough class around Link that supports Icing
+   */
+  public static class LinkIced extends Iced {
+    public final Link _link;
+    public final double _tweedieLinkPower;
+
+    public LinkIced( Link link ){
+      _link = link;
+      _tweedieLinkPower = Double.NaN;
+    }
+    public LinkIced( Link link, Double tweedieLinkPower ){
+      _link = link;
+      _tweedieLinkPower = tweedieLinkPower;
+    }
+
+    public final double link(double x) {
+      switch( _link ) {
+        default:
+          return _link.link( x );
+        case tweedie:
+          return Math.pow(x, _tweedieLinkPower);
+      }
+    }
+
+    public final double linkDeriv(double x) {
+      switch( _link ) {
+        default:
+          return _link.linkDeriv( x );
+        case tweedie:
+          return _tweedieLinkPower * Math.pow(x, _tweedieLinkPower - 1.);
+      }
+    }
+
+    public final double linkInv(double x) {
+      switch( _link ) {
+        default:
+          return _link.linkInv( x );
+        case tweedie:
+          return Math.pow(x, 1./_tweedieLinkPower);
+      }
+    }
+
+    public final double linkInvDeriv(double x) {
+      switch( _link ) {
+        default:
+          return _link.linkInvDeriv( x );
+        case tweedie:
+          double vp = (1. - _tweedieLinkPower) / _tweedieLinkPower;
+          return (1./_tweedieLinkPower) * Math.pow(x, vp);
+      }
+    }
+
+    public String toString2(){
+      return String.format("LinkIced link(%s; _tweedieLinkPower %f)", _link.toString2(), _tweedieLinkPower);
+    }
+  }
+
   public static enum Link {
     familyDefault(0), identity(0), logit(0), log(0.1),
     //    probit(0),
@@ -253,11 +329,17 @@ public abstract class DGLM {
     //    sqrt(0),
     inverse(0),
     //    oneOverMu2(0);
+    tweedie(0, Double.NaN /* default: 1. - 1.5 */)
     ;
     public final double defaultBeta;
+    public double tweedieLinkPower;
 
     Link(double b) {
       defaultBeta = b;
+    }
+    Link(double b, double tweedieLinkPower){
+      defaultBeta = b;
+      this.tweedieLinkPower = tweedieLinkPower;
     }
 
     public final double link(double x) {
@@ -272,6 +354,8 @@ public abstract class DGLM {
         case inverse:
           double xx = (x < 0) ? Math.min(-1e-5, x) : Math.max(1e-5, x);
           return 1.0 / xx;
+        case tweedie:
+          return Math.pow(x, tweedieLinkPower);
         default:
           throw new RuntimeException("unsupported link function id  " + this);
       }
@@ -287,6 +371,8 @@ public abstract class DGLM {
           return 1.0 / x;
         case inverse:
           return -1.0 / (x * x);
+        case tweedie:
+          return tweedieLinkPower * Math.pow(x, tweedieLinkPower - 1.);
         default:
           throw H2O.unimpl();
       }
@@ -303,6 +389,8 @@ public abstract class DGLM {
         case inverse:
           double xx = (x < 0) ? Math.min(-1e-5, x) : Math.max(1e-5, x);
           return 1.0 / xx;
+        case tweedie:
+          return Math.pow(x, 1./tweedieLinkPower);
         default:
           throw new RuntimeException("unexpected link function id  " + this);
       }
@@ -322,9 +410,41 @@ public abstract class DGLM {
         case inverse:
           double xx = (x < 0) ? Math.min(-1e-5, x) : Math.max(1e-5, x);
           return -1 / (xx * xx);
+        case tweedie:
+          double vp = (1. - tweedieLinkPower) / tweedieLinkPower;
+          return (1./tweedieLinkPower) * Math.pow(x, vp);
         default:
           throw new RuntimeException("unexpected link function id  " + this);
       }
+    }
+
+    public String toString2(){
+      String s = "link(";
+      switch(this){
+        case identity:
+          s += "identity: "; break;
+        case logit:
+          s += "logit: "; break;
+        case log:
+          s += "log: "; break;
+        case inverse:
+          s += "inverse: "; break;
+        case tweedie:
+          s += "tweedie: "; break;
+        case familyDefault:
+          s += "familyDefault: "; break;
+        default:
+          s+= " BAD DEFAULT: "; break;
+      }
+      s += String.format("defaultBeta: %f", defaultBeta);
+
+      switch(this){
+        case tweedie: s += String.format("; tweedieLinkPower: %2.2f", tweedieLinkPower); break;
+        default: break;
+      }
+
+      s += ")";
+      return s;
     }
   }
 
@@ -334,16 +454,73 @@ public abstract class DGLM {
     return (y != 0) ? (y * Math.log(y / mu)) : 0;
   }
 
+
+  /**
+   * passthrough class around family that properly supports icing
+   */
+  public static class FamilyIced extends Iced {
+    public final double _tweedieVariancePower;
+    public final Family _family;
+
+    public FamilyIced( Family family ){
+      _family = family;
+      _tweedieVariancePower = Double.NaN;
+    }
+    public FamilyIced( Family family, double tweedieVariancePower ){
+      _family = family;
+      _tweedieVariancePower = tweedieVariancePower;
+    }
+
+    public double mustart(double y) {
+      return _family.mustart(y);
+    }
+    public double variance(double mu) {
+      switch( _family ){
+        default:
+          return _family.variance( mu );
+        case tweedie:
+          return Math.pow(mu, _tweedieVariancePower);
+      }
+
+    }
+    public double deviance(double yr, double ym){
+      switch( _family ){
+        case gaussian:
+        case binomial:
+        case poisson:
+        case gamma:
+          return _family.deviance(yr,  ym);
+        case tweedie:
+          double one_minus_p = 1. - _tweedieVariancePower;
+          double two_minus_p = 2. - _tweedieVariancePower;
+          return Math.pow(yr, two_minus_p) / (one_minus_p * two_minus_p) - (yr * (Math.pow(ym, one_minus_p)))/one_minus_p + Math.pow(ym, two_minus_p)/two_minus_p;
+        default:
+          throw new RuntimeException("FamilyIced.deviance unknown family");
+      }
+    }
+
+    public String toString2(){
+      return String.format("FamilyIced(_family %s; tweedievp %f)", _family.toString2(), _tweedieVariancePower);
+    }
+  }
+
   // supported families
-  public static enum Family {
-    gaussian(Link.identity, null), binomial(Link.logit, new double[] { Double.NaN, 1.0, 0.5 }), poisson(Link.log, null), gamma(
-        Link.inverse, null);
-    public final Link defaultLink;
+  public enum Family {
+    gaussian(Link.identity, null), binomial(Link.logit, new double[] { Double.NaN, 1.0, 0.5 }), poisson(Link.log, null),
+    gamma(Link.inverse, null), tweedie(Link.tweedie, null, Double.NaN);
+    public Link defaultLink;
     public final double[] defaultArgs;
+    public double tweedieVariancePower = Double.NaN;
 
     Family(Link l, double[] d) {
       defaultLink = l;
       defaultArgs = d;
+    }
+
+    Family(Link link, double[] d, double tweedieVariancePower){
+      defaultLink = link;
+      defaultArgs = d;
+      this.tweedieVariancePower = tweedieVariancePower;
     }
 
     public double mustart(double y) {
@@ -356,6 +533,8 @@ public abstract class DGLM {
           return y + 0.1;
         case gamma:
           return y;
+        case tweedie:
+          return y + (y==0. ? 0.1 : 0.);
         default:
           throw new RuntimeException("unimplemented");
       }
@@ -372,6 +551,8 @@ public abstract class DGLM {
           return mu;
         case gamma:
           return mu * mu;
+        case tweedie:
+          return Math.pow(mu, tweedieVariancePower);
         default:
           throw new RuntimeException("unknown family Id " + this);
       }
@@ -397,9 +578,31 @@ public abstract class DGLM {
         case gamma:
           if( yr == 0 ) return -2;
           return -2 * (Math.log(yr / ym) - (yr - ym) / ym);
+        case tweedie:
+          // Theory of Dispersion Models: Jorgensen
+          // pg49: $$ d(y;\mu) = 2 [ y \cdot \left(\tau^{-1}(y) - \tau^{-1}(\mu) \right) - \kappa \{ \tau^{-1}(y)\} + \kappa \{ \tau^{-1}(\mu)\} ] $$
+          // pg133: $$ \frac{ y^{2 - p} }{ (1 - p) (2-p) }  - \frac{y \cdot \mu^{1-p}}{ 1-p} + \frac{ \mu^{2-p} }{ 2 - p }$$
+          double one_minus_p = 1. - tweedieVariancePower;
+          double two_minus_p = 2. - tweedieVariancePower;
+          return Math.pow(yr, two_minus_p) / (one_minus_p * two_minus_p) - (yr * (Math.pow(ym, one_minus_p)))/one_minus_p + Math.pow(ym, two_minus_p)/two_minus_p;
+
         default:
           throw new RuntimeException("unknown family Id " + this);
       }
+    }
+
+    public String toString2(){
+      String s = "family(";
+      switch(this){
+        case gaussian: s += "gaussian: "; break;
+        case binomial: s += "binomial: "; break;
+        case gamma: s += "gamma: "; break;
+        case poisson: s += "poisson: "; break;
+        case tweedie: s += String.format("tweedie: variancePower %2.2f", this.tweedieVariancePower); break;
+        default: s += "BAD UNKNOWN"; break;
+      }
+      s += String.format(", link: %s)", defaultLink);
+      return s;
     }
   }
 
@@ -1017,7 +1220,7 @@ public abstract class DGLM {
       }
       p += _beta[_beta.length - 1]; // And the intercept as the last beta
       double pp = _glmParams._link.linkInv(p);
-      if( _glmParams._family == Family.binomial ) return pp >= _vals[0].bestThreshold() ? 1.0 : 0.0;
+      if( _glmParams._family._family == Family.binomial ) return pp >= _vals[0].bestThreshold() ? 1.0 : 0.0;
       return pp;
     }
 
@@ -1293,8 +1496,8 @@ public abstract class DGLM {
     final long _nobs; // number of observations in the dataset
     boolean _computeXX = true;
     final boolean _weighted;
-    final Family _family;
-    final Link _link;
+    final FamilyIced _family;
+    final LinkIced _link;
     double[] _beta;
     final CaseMode _cMode;
     final double _cVal;
@@ -1303,7 +1506,7 @@ public abstract class DGLM {
       _nobs = data._nobs;
       _beta = beta;
       _dense = data.dense();
-      _weighted = glmp._family != Family.gaussian;
+      _weighted = glmp._family._family != Family.gaussian;
       _family = glmp._family;
       _link = glmp._link;
       _cMode = glmp._caseMode;
@@ -1331,7 +1534,7 @@ public abstract class DGLM {
 
     @Override public final void processRow(Gram gram, double[] x, int[] indexes) {
       double y = x[_response];
-      assert ((_family != Family.gamma) || y > 0) : "illegal response column, y must be > 0  for family=Gamma.";
+      assert ((_family._family != Family.gamma) || y > 0) : "illegal response column, y must be > 0  for family=Gamma.";
       x[_response] = 1; // put intercept in place of y
       if( _cMode != CaseMode.none ) y = (_cMode.isCase(y, _cVal)) ? 1 : 0;
       double w = 1;
@@ -1345,7 +1548,7 @@ public abstract class DGLM {
           mu = _link.linkInv(eta);
         }
         var = Math.max(1e-5, _family.variance(mu)); // avoid numerical problems with 0 variance
-        if( _family == Family.binomial || _family == Family.poisson ) {
+        if( _family._family == Family.binomial || _family._family == Family.poisson ) {
           w = var;
           y = eta + (y - mu) / var;
         } else {
@@ -1354,6 +1557,7 @@ public abstract class DGLM {
           y = eta + (y - mu) / dp;
         }
       }
+
       assert w >= 0 : "invalid weight " + w;
       gram._yy += 0.5 * w * y * y;
       double wy = w * y;
@@ -1440,13 +1644,13 @@ public abstract class DGLM {
       if( job != null && job.cancelled() ) throw new JobCancelledException();
       GLMValidation res = tsk._result;
       res._time = System.currentTimeMillis() - t1;
-      if( _glmp._family != Family.binomial ) res._err = Math.sqrt(res._err / res._n);
+      if( _glmp._family._family != Family.binomial ) res._err = Math.sqrt(res._err / res._n);
       res._dataKey = data._ary._key;
       res._thresholds = _thresholds;
       res._s = data.getSampling();
       res.computeBestThreshold(ErrMetric.SUMC);
       res.computeAUC();
-      switch( _glmp._family ) {
+      switch( _glmp._family._family ) {
         case gaussian:
           res._aic = res._n * (Math.log(res._deviance / res._n * 2 * Math.PI) + 1) + 2;
           break;
@@ -1459,6 +1663,9 @@ public abstract class DGLM {
         case gamma:
           res._aic = Double.NaN;
           break; // aic for gamma is not computed
+        case tweedie:
+          res._aic = Double.NaN;
+          break;
         default:
           assert false : "missing implementation for family " + _glmp._family;
       }
@@ -1468,7 +1675,7 @@ public abstract class DGLM {
 
     @Override public GLMValidation newResult() {
       GLMValidation res = new GLMValidation();
-      if( _glmp._family == Family.binomial ) {
+      if( _glmp._family._family == Family.binomial ) {
         res._cm = new ConfusionMatrix[_thresholds.length];
         for( int i = 0; i < _thresholds.length; ++i )
           res._cm[i] = new ConfusionMatrix(2);
@@ -1488,14 +1695,14 @@ public abstract class DGLM {
       ym = _glmp._link.linkInv(ym);
       res._deviance += _glmp._family.deviance(yr, ym);
       res._nullDeviance += _glmp._family.deviance(yr, _ymu);
-      if( _glmp._family == Family.poisson ) { // aic for poisson
+      if( _glmp._family._family == Family.poisson ) { // aic for poisson
         res._err += (ym - yr) * (ym - yr);
         long y = Math.round(yr);
         double logfactorial = 0;
         for( long i = 2; i <= y; ++i )
           logfactorial += Math.log(i);
         res._aic += (yr * Math.log(ym) - logfactorial - ym);
-      } else if( _glmp._family == Family.binomial ) { // cm computation for binomial
+      } else if( _glmp._family._family == Family.binomial ) { // cm computation for binomial
         if( yr < 0 || yr > 1 ) throw new RuntimeException("response variable value out of range: " + yr);
         int i = 0;
         for( double t : _thresholds ) {
@@ -1595,6 +1802,7 @@ public abstract class DGLM {
 //        LambdaMaxFunc lmax = new LambdaMaxFunc(data, ymu, params._link,params._family);
 //        LambdaMax lm = lmax.apply(job, data);
 //        lsm._lambda *= lm.value();
+
     GramMatrixFunc gramF = new GramMatrixFunc(data, params, oldBeta);
     double[] newBeta = MemoryManager.malloc8d(data.expandedSz());
     boolean converged = true;
@@ -1606,7 +1814,7 @@ public abstract class DGLM {
     lsmSolveTime += System.currentTimeMillis() - t;
     currentModel = new GLMModel(Status.ComputingValidation, 0.0f, resKey, data, data.denormalizeBeta(newBeta), newBeta,
         params, lsm, gram._nobs, newBeta.length, converged, iter, System.currentTimeMillis() - t1, null);
-    if( params._family != Family.gaussian ) do { // IRLSM
+    if( params._family._family != Family.gaussian ) do { // IRLSM
       if( oldBeta == null ) oldBeta = MemoryManager.malloc8d(data.expandedSz());
       if( job.cancelled() ) throw new JobCancelledException();
       double[] b = oldBeta;

@@ -1,7 +1,7 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_glm, h2o_hosts
-import h2o_browse as h2b, h2o_import as h2i
+import h2o_browse as h2b, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -27,7 +27,7 @@ class Basic(unittest.TestCase):
                 ('covtype20x.data', 480, 'cA'),
                 ]
         else:
-            # None is okay for key2
+            # None is okay for hex_key
             csvFilenameList = [
                 ('covtype20x.data', 480,'cA'),
                 # ('covtype200x.data', 1000,'cE'),
@@ -35,19 +35,16 @@ class Basic(unittest.TestCase):
 
         # a browser window too, just because we can
         ### h2b.browseTheCloud()
-
-        importFolderPath = '/home/0xdiag/datasets/standard'
-        h2i.setupImportFolder(None, importFolderPath)
-        for csvFilename, timeoutSecs, key2 in csvFilenameList:
+        importFolderPath = "standard"
+        for csvFilename, timeoutSecs, hex_key in csvFilenameList:
             csvPathname = importFolderPath + "/" + csvFilename
-            # creates csvFilename.hex from file in importFolder dir 
             start = time.time()
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
-                timeoutSecs=2000, key2=key2, noise=('JStack', None))
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, 
+                timeoutSecs=2000, hex_key=hex_key, noise=('JStack', None))
             print "parse end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o.check_sandbox_for_errors()
 
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvPathname, \
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \
                 "    num_cols:", "{:,}".format(inspect['num_cols'])
@@ -78,7 +75,7 @@ class Basic(unittest.TestCase):
             # L2 
             kwargs.update({'alpha': 0, 'lambda': 0})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, noise=('JStack', None), **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, noise=('JStack', None), **kwargs)
             print "glm (L2) end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
             h2o.check_sandbox_for_errors()
@@ -86,7 +83,7 @@ class Basic(unittest.TestCase):
             # Elastic
             kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, noise=('JStack', None), **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, noise=('JStack', None), **kwargs)
             print "glm (Elastic) end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
             h2o.check_sandbox_for_errors()
@@ -94,7 +91,7 @@ class Basic(unittest.TestCase):
             # L1
             kwargs.update({'alpha': 1.0, 'lambda': 1e-4})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, noise=('JStack', None), **kwargs)
+            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, noise=('JStack', None), **kwargs)
             print "glm (L1) end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
             h2o.check_sandbox_for_errors()

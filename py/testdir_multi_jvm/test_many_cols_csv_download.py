@@ -1,9 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
-
-# the shared exec expression creator and executor
-import h2o_exec as h2e
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_exec as h2e
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     r1 = random.Random(SEED)
@@ -34,7 +31,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1,java_heap_GB=14)
+            h2o.build_cloud(2,java_heap_GB=7)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -59,7 +56,7 @@ class Basic(unittest.TestCase):
         lenNodes = len(h2o.nodes)
 
         trial = 0
-        for (rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             trial += 1
             csvFilename = 'syn_' + str(SEED) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
@@ -68,11 +65,11 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, rowCount, colCount, SEED)
 
             start = time.time()
-            parseKeyA = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, timeoutSecs=timeoutSecs)
+            parseResultA = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=timeoutSecs)
             print "\nA Trial #", trial, "rowCount:", rowCount, "colCount:", colCount, "parse end on ", \
                 csvFilename, 'took', time.time() - start, 'seconds'
 
-            inspect = h2o_cmd.runInspect(key=key2)
+            inspect = h2o_cmd.runInspect(key=hex_key)
             missingValuesListA = h2o_cmd.infoFromInspect(inspect, csvPathname)
             num_colsA = inspect['num_cols']
             num_rowsA = inspect['num_rows']
@@ -83,16 +80,16 @@ class Basic(unittest.TestCase):
             csvDownloadPathname = SYNDATASETS_DIR + "/csvDownload.csv"
             print "\nStarting csv download to",  csvDownloadPathname, "rowCount:", rowCount, "colCount:", colCount
             start = time.time()
-            h2o.nodes[0].csv_download(key=key2, csvPathname=csvDownloadPathname)
+            h2o.nodes[0].csv_download(key=hex_key, csvPathname=csvDownloadPathname)
             print "csv_download end.", 'took', time.time() - start, 'seconds. Originally from:', csvFilename
 
             # remove the original parsed key. source was already removed by h2o
-            h2o.nodes[0].remove_key(key2)
+            h2o.nodes[0].remove_key(hex_key)
             start = time.time()
-            parseKeyB = h2o_cmd.parseFile(csvPathname=csvDownloadPathname, key2=key2, timeoutSecs=timeoutSecs)
+            parseResultB = h2i.import_parse(path=csvDownloadPathname, schema='put', hex_key=hex_key, timeoutSecs=timeoutSecs)
             print "\nB Trial #", trial, "rowCount:", rowCount, "colCount:", colCount, "parse end on ", \
                 csvFilename, 'took', time.time() - start, 'seconds'
-            inspect = h2o_cmd.runInspect(key=key2)
+            inspect = h2o_cmd.runInspect(key=hex_key)
             missingValuesListB = h2o_cmd.infoFromInspect(inspect, csvPathname)
             num_colsB = inspect['num_cols']
             num_rowsB = inspect['num_rows']

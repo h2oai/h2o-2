@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -39,10 +39,10 @@ class Basic(unittest.TestCase):
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
             # broke out the put separately so we can iterate a test just on the RF
-            parseKey = h2o_cmd.parseFile(None, csvPathname)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put')
 
             h2o.verboseprint("Trial", trial)
-            h2o_cmd.runRFOnly(parseKey=parseKey, trees=237, depth=45, timeoutSecs=120)
+            h2o_cmd.runRFOnly(parseResult=parseResult, trees=237, depth=45, timeoutSecs=120)
 
             # don't change tree count yet
             ## trees += 10

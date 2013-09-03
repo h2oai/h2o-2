@@ -1,6 +1,7 @@
 package water.fvec;
 
 import java.util.Arrays;
+
 import water.*;
 
 /**
@@ -9,13 +10,31 @@ import water.*;
  * A distributed vector has a count of elements, an element-to-chunk mapping, a
  * Java type (mostly determines rounding on store and display), and functions
  * to directly load elements without further indirections.  The data is
- * compressed, or backed by disk or both.  *Writing* to elements may if the
+ * compressed, or backed by disk or both.  *Writing* to elements may throw if the
  * backing data is read-only (file backed).
  * <p>
  * <pre>
  *  Vec Key format is: Key. VEC - byte, 0 - byte,   0    - int, normal Key bytes.
  * DVec Key format is: Key.DVEC - byte, 0 - byte, chunk# - int, normal Key bytes.
  * </pre>
+ *
+ * The main API is at, set, and isNA:<br>
+ *<pre>
+ *   double  at  ( long row );  // Returns the value expressed as a double.  NaN if missing.
+ *   long    at8 ( long row );  // Returns the value expressed as a long.  Throws if missing.
+ *   boolean isNA( long row );  // True if the value is missing.
+ *   set( long row, double d ); // Stores a double; NaN will be treated as missing.
+ *   set( long row, long l );   // Stores a long; throws if l exceeds what fits in a double & any floats are ever set.
+ *   setNA( long row );         // Sets the value as missing.
+ * </pre>
+ *
+ * Note this dangerous scenario: loading a missing value as a double, and
+ * setting it as a long: <pre>
+ *   set(row,(long)at(row)); // Danger!
+ *</pre>
+ * The cast from a Double.NaN to a long produces a zero!  This code will
+ * replace a missing value with a zero.
+ *
  * @author Cliff Click
  */
 public class Vec extends Iced {
@@ -33,44 +52,20 @@ public class Vec extends Iced {
    *  such as file-backed Vecs. */
   final private long _espc[];
   /** Enum/factor/catagorical names. */
-  String [] _domain;
+  public String [] _domain;
   /** If we have active writers, then all cached roll-ups/reductions
    *  (e.g. _min, _max) unavailable.  We won't even try to compute them (under
    *  the assumption that we'll about to see a zillions writes/sec). */
   private boolean _activeWrites;
-  /** Short-cut for all integer data */
-  public final boolean _isInt;  // true if column is all integer data
-  /** min/max/mean of this Vec lazily computed.  _min is set to Double.NaN if
-   *  any of these are not computed. */
-  private double _min, _max, _mean;
-  /** Count of missing elements, lazily computed.  */
-  private long _nas;            // Count of NA's, lazily computed
-  /** Bytesize of all data, lazily computed. */
-  private long _byteSize;
-
-  /** Base datatype of the entire column.<nl>
-   *  Decided on when we close an AppendableVec. */
-  public enum DType { bad,
-      /** Unknown (or empty)*/ U,
-      /** Integer/Long*/ I,
-      /** Float/Double */ F,
-      /** String/Enum/Factor */ S,
-      /** All missing data */ NA
-      };
-  /** Base datatype for whole Vec. */
-  DType _dtype = DType.U;
-  /** Base datatype for whole Vec.  Overridden in AppendableVec. */
-  public DType dtype() { return _dtype; }
+  /** min/max/mean of this Vec lazily computed.  */
+  private RollupStats _rs;
 
   /** Main default constructor; requires the caller understand Chunk layout
    *  already, along with count of missing elements.  */
-  Vec( Key key, long espc[], boolean isInt, long NAs ) {
+  Vec( Key key, long espc[] ) {
     assert key._kb[0]==Key.VEC;
     _key = key;
     _espc = espc;
-    _isInt = isInt;
-    _min = Double.NaN;
-    _nas = NAs;
   }
 
   /** Make a new vector with the same size and data layout as the old one, and
@@ -82,7 +77,7 @@ public class Vec extends Iced {
     Futures fs = new Futures();
     if( _espc == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
     int nchunks = nChunks();
-    Vec v0 = new Vec(group().addVecs(1)[0],_espc,true,0);
+    Vec v0 = new Vec(group().addVecs(1)[0],_espc);
     long row=0;                 // Start row
     for( int i=0; i<nchunks; i++ ) {
       long nrow = chunk2StartElem(i+1); // Next row
@@ -97,7 +92,7 @@ public class Vec extends Iced {
     Futures fs = new Futures();
     if( _espc == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
     int nchunks = nChunks();
-    Vec v0 = new Vec(group().addVecs(1)[0],_espc,true,0);
+    Vec v0 = new Vec(group().addVecs(1)[0],_espc);
     long row=0;                 // Start row
     for( int i=0; i<nchunks; i++ ) {
       long nrow = chunk2StartElem(i+1); // Next row
@@ -117,23 +112,28 @@ public class Vec extends Iced {
    *  alternative way, such as file-backed Vecs. */
   public int nChunks() { return _espc.length-1; }
 
-  /** Map the integer value for a enum/factor/catagorical to it's String */
+  /** Is the column a factor/catagorical/enum?  Note: all "isEnum()" columns
+   *  are are also "isInt()" but not vice-versa. */
+  public final boolean isEnum(){return _domain != null;}
+
+  /** Map the integer value for a enum/factor/catagorical to it's String.
+   *  Error if it is not an ENUM.  */
   public String domain(long i) { return _domain[(int)i]; }
 
-  public final boolean isEnum(){return _domain != null;}
-  /** Return an array of domains.  This is eagerly manifested for
-   *  enum/catagorical columns, and lazily manifested for integer columns with
-   *  a min-to-max range of < 10000.  */
-  public String[] domain() {
-    if( _domain != null ) return _domain;
-    assert _dtype == DType.I;
-    long min = (long)min();
-    long max = (long)max();
-    int len = (int)(max-min+1);
-    _domain = new String[len];
-    for( int i=0; i<len; i++ )
-      _domain[i] = Long.toString(i+min);
-    return _domain;
+  /** Return an array of domains.  This is eagerly manifested for enum or
+   *  catagorical columns.  */
+  public String[] domain() { return _domain; }
+
+  /** Convert an integer column to an enum column, with just number strings for
+   *  the factors or levels.  */
+  public void asEnum() {
+    if( _domain!=null ) return;
+    if( !isInt() ) throw new IllegalArgumentException("Cannot convert a float column to an enum.");
+    long min = (long)min(), max = (long)max();
+    if( min < 0 || max > 10000L ) throw H2O.unimpl();
+    _domain = new String[(int)max];
+    for( int i=0; i<(int)max; i++ )
+      _domain[i] = Integer.toString(i);
   }
 
   /** Default read/write behavior for Vecs.  File-backed Vecs are read-only. */
@@ -142,65 +142,78 @@ public class Vec extends Iced {
   protected boolean writable() { return true; }
 
   /** Return column min - lazily computed as needed. */
-  public double min() {
-    if( Double.isNaN(_min) ) {
-      RollupStats rs = new RollupStats().doAll(this);
-      _min = rs._min;
-      _max = rs._max;
-      _mean= rs._mean;
-      _nas = rs._nas;
-      _byteSize = rs._size;
-    }
-    return _min;
-  }
+  public double min()  { return rollupStats()._min; }
   /** Return column max - lazily computed as needed. */
-  public double max () { if( Double.isNaN(_min) ) min(); return _max;  }
+  public double max()  { return rollupStats()._max; }
   /** Return column mean - lazily computed as needed. */
-  public double mean() { if( Double.isNaN(_min) ) min(); return _mean; }
+  public double mean() { return rollupStats()._mean; }
+  /** Return column standard deviation - lazily computed as needed. */
+  public double sigma(){ return rollupStats()._sigma; }
   /** Return column missing-element-count - lazily computed as needed. */
-  public long  NAcnt() { if( Double.isNaN(_min) ) min(); return _nas;  }
+  public long  naCnt() { return rollupStats()._naCnt; }
+  /** Is all integers? */
+  public boolean isInt(){return rollupStats()._isInt; }
   /** Size of compressed vector data. */
-  public long byteSize(){if( Double.isNaN(_min) ) min(); return _byteSize;  }
+  public long byteSize(){return rollupStats()._size; }
 
 
   /** A private class to compute the rollup stats */
+  RollupStats rollupStats() {
+    if( _rs != null ) return _rs;
+    if( _activeWrites ) throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
+    return (_rs=new RollupStats().doAll(this));
+  }  
+
   private static class RollupStats extends MRTask2<RollupStats> {
-    double _min=Double.MAX_VALUE, _max=-Double.MAX_VALUE, _mean;
-    long _rows, _nas, _size;
+    double _min=Double.MAX_VALUE, _max=-Double.MAX_VALUE, _mean, _sigma;
+    long _rows, _naCnt, _size;
+    boolean _isInt=true;
     @Override public void map( Chunk c ) {
       _size = c.byteSize();
       for( int i=0; i<c._len; i++ ) {
-        if( c.isNA0(i) ) _nas++;
+        double d = c.at0(i);
+        if( Double.isNaN(d) ) _naCnt++;
         else {
-          double d= c.at0(i);
           if( d < _min ) _min = d;
           if( d > _max ) _max = d;
           _mean += d;
           _rows++;
+          if( _isInt && ((long)d) != d ) _isInt = false;
         }
       }
-      _mean = _mean/_rows;
+      _mean = _mean / _rows;
+      for( int i=0; i<c._len; i++ ) {
+        if( !c.isNA0(i) ) {
+          double d = c.at0(i);
+          _sigma += (d - _mean) * (d - _mean);
+        }
+      }
+      _sigma = Math.sqrt(_sigma / (_rows - 1));
     }
     @Override public void reduce( RollupStats rs ) {
       _min = Math.min(_min,rs._min);
       _max = Math.max(_max,rs._max);
-      _nas += rs._nas;
-      _mean = (_mean*_rows + rs._mean*rs._rows)/(_rows+rs._rows);
+      _naCnt += rs._naCnt;
+      _mean = (_mean*_rows + rs._mean*rs._rows)/(_rows + rs._rows);
+      double delta = _mean - rs._mean;
+      _sigma = _sigma + rs._sigma + delta*delta * _rows*rs._rows / (_rows+rs._rows);
       _rows += rs._rows;
       _size += rs._size;
+      _isInt &= rs._isInt;
     }
   }
 
   /** Mark this vector as being actively written into, and clear the rollup stats. */
-  private void setActiveWrites() { _activeWrites = true; _min = _max = Double.NaN; }
+  private void setActiveWrites() { _activeWrites = true;  _rs = null; }
+
   /** Writing into this Vector from *some* chunk.  Immediately clear all caches
    *  (_min, _max, _mean, etc).  Can be called repeatedly from one or all
    *  chunks.  Per-chunk row-counts will not be changing, just row contents and
    *  caches of row contents. */
-  void startWriting() {
-    if( _activeWrites ) return;      // Already set
+  void startWriting( ) {
+    if( _activeWrites ) return; // Already set
     if( !writable() ) throw new IllegalArgumentException("Vector not writable");
-    setActiveWrites();               // Set locally eagerly
+    setActiveWrites();          // Set locally eagerly
     // Set remotely lazily.  This will trigger a cloud-wide invalidate of the
     // existing Vec, and eventually we'll have to load a fresh copy of the Vec
     // with activeWrites turned on, and caching disabled.  This TAtomic is not
@@ -292,7 +305,7 @@ public class Vec extends Iced {
    *
    * @return VectorGroup this vector belongs to.
    */
-  VectorGroup group() {
+  final VectorGroup group() {
     Key gKey = groupKey();
     Value v = DKV.get(gKey);
     if(v != null)return v.get(VectorGroup.class);
@@ -304,87 +317,53 @@ public class Vec extends Iced {
   public Chunk elem2BV( int cidx ) {
     long start = chunk2StartElem(cidx); // Chunk# to chunk starting element#
     Value dvec = chunkIdx(cidx);        // Chunk# to chunk data
-    Chunk bv = dvec.get();              // Chunk data to compression wrapper
-    if( bv._start == start ) return bv; // Already filled-in
-    assert bv._start == -1;
-    bv._start = start;          // Fields not filled in by unpacking from Value
-    bv._vec = this;             // Fields not filled in by unpacking from Value
-    return bv;
+    Chunk c = dvec.get();               // Chunk data to compression wrapper
+    if( c._start == start ) return c;   // Already filled-in
+    assert c._start == -1 || c._start == start; // Second term in case multi-thread access
+    c._start = start;          // Fields not filled in by unpacking from Value
+    c._vec = this;             // Fields not filled in by unpacking from Value
+    return c;
   }
   /** The Chunk for a row#.  Warning: this loads the data locally!  */
-  public Chunk chunk( long i ) {
+  public final Chunk chunk( long i ) {
     return elem2BV(elem2ChunkIdx(i));
   }
 
   /** Next Chunk from the current one. */
-  Chunk nextBV( Chunk bv ) {
+  final Chunk nextBV( Chunk bv ) {
     int cidx = bv.cidx()+1;
     Chunk next =  cidx == nChunks() ? null : elem2BV(cidx);
     assert next == null || next.cidx() == cidx;
     return next;
   }
 
-  /** Fetch element the slow way, as a long */
-  public long  at8( long i ) { return elem2BV(elem2ChunkIdx(i)).at8(i); }
-  /** Fetch element the slow way, as a double */
-  public double at( long i ) { return elem2BV(elem2ChunkIdx(i)).at (i); }
+  /** Fetch element the slow way, as a long.  Floating point values are
+   *  silently rounded to an integer.  Throws if the value is missing. */
+  public final long  at8( long i ) { return chunk(i).at8(i); }
+  /** Fetch element the slow way, as a double.  Missing values are
+   *  returned as Double.NaN instead of throwing. */
+  public final double at( long i ) { return chunk(i).at (i); }
+  /** Fetch the missing-status the slow way. */
+  public final boolean isNA(long row){ return chunk(row).isNA(row); }
 
-  /** Write element the slow way, as a long */
-  public long   set8( long i, long   l) { return elem2BV(elem2ChunkIdx(i)).set8(i,l); }
-  /** Write element the slow way, as a double */
-  public double set8( long i, double d) { return elem2BV(elem2ChunkIdx(i)).set8(i,d); }
-  /** Write element the slow way, as a float */
-  public float  set4( long i, float f) { return elem2BV(elem2ChunkIdx(i)).set4(i,f); }
-
-  /** handling of NAs: pick a value in the same dataspace but unlikely to
-   *  collide with user data. */
-  long   _iNA = Long.MIN_VALUE+111; // "random" small number, not to clash with the MIN value
-  /** handling of NAs: pick a value in the same dataspace but unlikely to
-   *  collide with user data. */
-  double _fNA = Double.NaN;
-  private boolean _replaceNAs;
-
-  final void setNAs(double fNA, long iNa){
-    _replaceNAs = false;
-    _iNA = iNa;
-    _fNA = fNA;
-  }
-  /**
-   * NAs can be replaced on the fly by user supplied value.
-   * @param fval
-   * @param ival
-   */
-  final void replaceNAs(double fval, long ival){
-    _replaceNAs = true;
-    _iNA = ival;
-    _fNA = fval;
-  }
-  final void replaceNAs(double fval){
-    if(!Double.isNaN(fval))replaceNAs(fval,(long)fval);
-    else {
-      _fNA = fval;
-      _replaceNAs = false;
-    }
-  }
-  final void replaceNAs(long ival){replaceNAs(ival, ival);}
-
-  public final boolean isNA(long row){
-    return chunk(row).isNA(row);
-  }
-
-  /** True if this value is the canonical "missing element" sentinel. */
-  final boolean valueIsNA(long l){
-    return !_replaceNAs && l == _iNA;
-  }
-
-  /** True if this value is the canonical "missing element" sentinel. */
-  final boolean valueIsNA(double d){
-    return !_replaceNAs && (Double.isNaN(d) || d == _fNA);
-  }
+  /** Write element the slow way, as a long.  There is no way to write a
+   *  missing value with this call.  Under rare circumstances this can throw:
+   *  if the long does not fit in a double (value is larger magnitude than
+   *  2^52), AND float values are stored in Vector.  In this case, there is no
+   *  common compatible data representation. */
+  public final long   set( long i, long   l) { return chunk(i).set(i,l); }
+  /** Write element the slow way, as a double.  Double.NaN will be treated as
+   *  a set of a missing element. */
+  public final double set( long i, double d) { return chunk(i).set(i,d); }
+  /** Write element the slow way, as a float.  Float.NaN will be treated as
+   *  a set of a missing element. */
+  public final float  set( long i, float  f) { return chunk(i).set(i,f); }
+  /** Set the element as missing the slow way.  */
+  public final boolean setNA( long i ) { return chunk(i).setNA(i); }
 
   /** Pretty print the Vec: [#elems, min/mean/max]{chunks,...} */
   @Override public String toString() {
-    String s = "["+length()+(Double.isNaN(_min) ? "" : ","+_min+"/"+_mean+"/"+_max+", "+PrettyPrint.bytes(byteSize())+", {");
+    String s = "["+length()+(_rs==null ? "" : ","+_rs._min+"/"+_rs._mean+"/"+_rs._max+", "+PrettyPrint.bytes(_rs._size)+", {");
     int nc = nChunks();
     for( int i=0; i<nc; i++ ) {
       s += chunkKey(i).home_node()+":"+chunk2StartElem(i)+":";
@@ -432,9 +411,6 @@ public class Vec extends Iced {
       byte [] bits = _key._kb.clone();
       UDP.set4(bits,2,vecId);//
       return Key.make(bits);
-    }
-    private int vecIdx(Key k){
-      return UDP.get4(k._kb, 2);
     }
 
     /**

@@ -30,7 +30,6 @@ public class CBSChunkTest {
     // Create an expectation - I know what should I expect
     // after closing the appendable vector.
     Vec vv = mock(Vec.class);
-    vv.setNAs(Double.NaN, Long.MIN_VALUE);
     when(av.close(any(Futures.class))).thenReturn(vv);
 
     // Create a new chunk

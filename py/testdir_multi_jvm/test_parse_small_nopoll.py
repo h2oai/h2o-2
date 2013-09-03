@@ -1,6 +1,6 @@
 import sys, unittest, random, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 
 def writeRows(csvPathname,row,eol,repeat):
     f = open(csvPathname, 'w')
@@ -47,12 +47,11 @@ class Basic(unittest.TestCase):
             
             trialMax = 100
             for trial in range(trialMax):
-                key = csvFilename + "_" + str(trial)
-                key2 = csvFilename + "_" + str(trial) + ".hex"
+                hex_key = csvFilename + "_" + str(trial) + ".hex"
                 # have to put the file repeatedly since it gets deleted after parse now
                 # just parse, without polling, except for last one..will that make prior ones complete too?
                 noPoll = trial==(trialMax-1)
-                parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2, timeoutSecs=30)
+                parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30)
 
                 if not trial%10:
                     sys.stdout.write('.')

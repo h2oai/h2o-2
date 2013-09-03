@@ -27,8 +27,7 @@ public class KMeansModel2 extends Model {
     return !Double.isNaN(C._mean);
   }
 
-  @Override
-  public JsonObject toJson() {
+  @Override public JsonObject toJson() {
     JsonObject res = new JsonObject();
     res.addProperty(Constants.VERSION, H2O.VERSION);
     res.addProperty(Constants.TYPE, KMeansModel2.class.getName());
@@ -52,7 +51,8 @@ public class KMeansModel2 extends Model {
         ValueArray.Column C = _va._cols[i];
         double d = ds[i];
         if( _job.normalize ) {
-          if( C._sigma != 0.0 && !Double.isNaN(C._sigma) ) d *= C._sigma;
+          if( C._sigma != 0.0 && !Double.isNaN(C._sigma) )
+            d *= C._sigma;
           d += C._mean;
         }
         dd[j][i] = d;
@@ -72,7 +72,8 @@ public class KMeansModel2 extends Model {
       double d = data[i];
       if( _job.normalize ) {
         d -= C._mean;
-        if( C._sigma != 0.0 && !Double.isNaN(C._sigma) ) d /= C._sigma;
+        if( C._sigma != 0.0 && !Double.isNaN(C._sigma) )
+          d /= C._sigma;
       }
       data[i] = d;
     }
@@ -146,8 +147,8 @@ public class KMeansModel2 extends Model {
         _rows = kms._rows;
         _dist = kms._dist;
       } else {
-        Utils.add(_rows,kms._rows);
-        Utils.add(_dist,kms._dist);
+        Utils.add(_rows, kms._rows);
+        Utils.add(_dist, kms._dist);
       }
     }
 
@@ -246,7 +247,8 @@ public class KMeansModel2 extends Model {
           }
           clusters[count++] = cd._cluster;
         }
-        if( count > 0 ) updateClusters(clusters, count, chunk, va.numRows(), rpc, updatedRow);
+        if( count > 0 )
+          updateClusters(clusters, count, chunk, va.numRows(), rpc, updatedRow);
         _job.updateProgress(1);
       }
       _job = null;
@@ -255,13 +257,15 @@ public class KMeansModel2 extends Model {
       _clusters = null;
     }
 
-    @Override public void reduce(DRemoteTask rt) {}
+    @Override public void reduce(DRemoteTask rt) {
+    }
 
     private void updateClusters(int[] clusters, int count, long chunk, long numrows, int rpc, long updatedRow) {
       final int offset = (int) (updatedRow - (rpc * chunk));
       final Key chunkKey = ValueArray.getChunkKey(chunk, _job.dest());
       final int[] message;
-      if( count == clusters.length ) message = clusters;
+      if( count == clusters.length )
+        message = clusters;
       else {
         message = new int[count];
         System.arraycopy(clusters, 0, message, 0, message.length);
@@ -271,7 +275,8 @@ public class KMeansModel2 extends Model {
         @Override public Value atomic(Value val) {
           assert val == null || val._key.equals(chunkKey);
           AutoBuffer b = new AutoBuffer(rows * ROW_SIZE);
-          if( val != null ) b._bb.put(val.memOrLoad());
+          if( val != null )
+            b._bb.put(val.memOrLoad());
           for( int i = 0; i < message.length; i++ )
             b.put4((offset + i) * 4, message[i]);
           b.position(b.limit());

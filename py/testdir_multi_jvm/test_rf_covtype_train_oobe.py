@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import as h2i, h2o_exec, h2o_util
+import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import2 as h2i, h2o_exec, h2o_util
 
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
 # only classes 1-7 in the 55th col
@@ -40,7 +40,7 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(node_count=2, java_heap_GB=7)
+            h2o.build_cloud(2, java_heap_GB=7)
         else:
             h2o_hosts.build_cloud_with_hosts(java_heap_GB=10)
 
@@ -52,16 +52,14 @@ class Basic(unittest.TestCase):
         # the expected results are only for the shuffled version
         # since getting 10% samples etc of the smallish dataset will vary between 
         # shuffled and non-shuffled datasets
-        importFolderPath = "/home/0xdiag/datasets/standard"
+        importFolderPath = "standard"
         csvPathname = importFolderPath + "/" + csvFilename
-        key2 = csvFilename + ".hex"
-        h2i.setupImportFolder(None, importFolderPath)
-
+        hex_key = csvFilename + ".hex"
         print "\nUsing header=0 on", csvFilename
-        parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2,
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key,
             header=0, timeoutSecs=180)
 
-        inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
+        inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
         print "\n" + csvPathname, \
             "    num_rows:", "{:,}".format(inspect['num_rows']), \
             "    num_cols:", "{:,}".format(inspect['num_cols'])
@@ -84,7 +82,7 @@ class Basic(unittest.TestCase):
         print "Creating the key of the last 10% data, for scoring"
         dataKeyTest = "rTest"
         # start at 90% rows + 1
-        execExpr = dataKeyTest + " = slice(" + key2 + "," + str(rowsForPct[9]+1) + ")"
+        execExpr = dataKeyTest + " = slice(" + hex_key + "," + str(rowsForPct[9]+1) + ")"
         h2o_exec.exec_expr(None, execExpr, resultKey=dataKeyTest, timeoutSecs=10)
 
         # keep the 0 entry empty
@@ -96,11 +94,11 @@ class Basic(unittest.TestCase):
             # always slice from the beginning
             rowsToUse = rowsForPct[trial%10] 
             resultKey = "r_" + csvFilename + "_" + str(trial)
-            execExpr = resultKey + " = slice(" + key2 + ",1," + str(rowsToUse) + ")"
+            execExpr = resultKey + " = slice(" + hex_key + ",1," + str(rowsToUse) + ")"
             h2o_exec.exec_expr(None, execExpr, resultKey=resultKey, timeoutSecs=10)
             # hack so the RF will use the sliced result
             # FIX! don't use the sliced bit..use the whole data for rf training below
-            ### parseKey['destination_key'] = resultKey
+            ### parseResult['destination_key'] = resultKey
 
             # adjust timeoutSecs with the number of trees
             # seems ec2 can be really slow
@@ -111,11 +109,11 @@ class Basic(unittest.TestCase):
             kwargs['model_key'] = "model_" + csvFilename + "_" + str(trial)
             # kwargs['model_key'] = "model"
             # double check the rows/cols
-            inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
             h2o_cmd.infoFromInspect(inspect, "going into RF")
             
             start = time.time()
-            rfv = h2o_cmd.runRFOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            rfv = h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "RF end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)

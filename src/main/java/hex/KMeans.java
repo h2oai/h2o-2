@@ -14,6 +14,10 @@ import water.util.Utils;
 public class KMeans extends Job {
   public static final String KEY_PREFIX = "__KMeansModel_";
 
+  public enum Initialization {
+    None, PlusPlus, Furthest
+  };
+
   public static final Key makeKey() {
     return Key.make(KEY_PREFIX + Key.make());
   }
@@ -22,27 +26,34 @@ public class KMeans extends Job {
     super("KMeans K: " + k + ", Cols: " + cols.length, dest);
   }
 
-  public static KMeans start(Key dest, final ValueArray va, final int k, final double epsilon, final int maxIter,
-      long randSeed, boolean normalize, int... cols) {
-    final KMeans job = new KMeans(dest, k, cols);
+  public static KMeans start(Key dest, final ValueArray va, final int k, final Initialization init, //
+      final int maxIter, long randSeed, boolean normalize, int... cols) {
 
     // k-means is an unsupervised learning algorithm and does not require a
     // response-column to train. This also means the clusters are not classes
     // (although, if a class/response is associated with each
     // row we could count the number of each class in each cluster).
+    if( cols == null || cols.length == 0 ) {
+      cols = new int[va._cols.length - 1];
+      for( int i = 0; i < cols.length; i++ )
+        cols[i] = i;
+    }
     int cols2[] = Arrays.copyOf(cols, cols.length + 1);
     cols2[cols.length] = -1;  // No response column
+
+    final KMeans job = new KMeans(dest, k, cols);
     final KMeansModel res = new KMeansModel(job.dest(), cols2, va._key);
     res._normalized = normalize;
     res._randSeed = randSeed;
     res._maxIter = maxIter;
+    res._initialization = init;
     UKV.put(job.dest(), res);
     // Updated column mapping selection after removing various junk columns
     final int[] filteredCols = res.columnMapping(va.colNames());
 
     H2OCountedCompleter task = new H2OCountedCompleter() {
       @Override public void compute2() {
-        job.run(res, va, k, epsilon, filteredCols);
+        job.run(res, va, k, init, filteredCols);
         tryComplete();
       }
     };
@@ -50,52 +61,66 @@ public class KMeans extends Job {
     return job;
   }
 
-  private void run(KMeansModel res, ValueArray va, int k, double epsilon, int[] cols) {
-    // -1 to be different from all chunk indexes (C.f. Sampler)
-    Random rand = Utils.getRNG(res._randSeed - 1);
-    // Initialize first cluster to random row
-    double[][] clusters = new double[1][];
-    clusters[0] = new double[cols.length - 1];
+  private void randomRow(ValueArray va, int[] cols, Random rand, boolean normalize, double[] cluster) {
     long row = Math.max(0, (long) (rand.nextDouble() * va._numrows) - 1);
     AutoBuffer bits = va.getChunk(va.chknum(row));
-    datad(va, bits, va.rowInChunk(va.chknum(row), row), cols, res._normalized, clusters[0]);
+    datad(va, bits, va.rowInChunk(va.chknum(row), row), cols, normalize, cluster);
+  }
 
-    while( res._iteration < 5 ) {
-      // Sum squares distances to clusters
-      Sqr sqr = new Sqr();
-      sqr._arykey = va._key;
-      sqr._cols = cols;
-      sqr._clusters = clusters;
-      sqr._normalize = res._normalized;
-      sqr.invoke(va._key);
+  private void run(KMeansModel res, ValueArray va, int k, Initialization init, int[] cols) {
+    // -1 to be different from all chunk indexes (C.f. Sampler)
+    Random rand = Utils.getRNG(res._randSeed - 1);
+    double[][] clusters;
 
-      // Sample with probability inverse to square distance
-      Sampler sampler = new Sampler();
-      sampler._arykey = va._key;
-      sampler._cols = cols;
-      sampler._clusters = clusters;
-      sampler._normalize = res._normalized;
-      sampler._sqr = sqr._sqr;
-      sampler._probability = k * 3; // Over-sampling
-      sampler._seed = res._randSeed;
-      sampler.invoke(va._key);
-      clusters = DRemoteTask.merge(clusters, sampler._clust2);
+    if( init == Initialization.None ) {
+      // Initialize all clusters to random rows
+      clusters = new double[k][];
+      for( int i = 0; i < clusters.length; i++ ) {
+        clusters[i] = new double[cols.length - 1];
+        randomRow(va, cols, rand, res._normalized, clusters[i]);
+      }
+    } else {
+      // Initialize first cluster to random row
+      clusters = new double[1][];
+      clusters[0] = new double[cols.length - 1];
+      randomRow(va, cols, rand, res._normalized, clusters[0]);
 
-      if( cancelled() ) {
-        remove();
-        return;
+      while( res._iteration < 5 ) {
+        // Sum squares distances to clusters
+        Sqr sqr = new Sqr();
+        sqr._arykey = va._key;
+        sqr._cols = cols;
+        sqr._clusters = clusters;
+        sqr._normalize = res._normalized;
+        sqr.invoke(va._key);
+
+        // Sample with probability inverse to square distance
+        Sampler sampler = new Sampler();
+        sampler._arykey = va._key;
+        sampler._cols = cols;
+        sampler._clusters = clusters;
+        sampler._normalize = res._normalized;
+        sampler._sqr = sqr._sqr;
+        sampler._probability = k * 3; // Over-sampling
+        sampler._seed = res._randSeed;
+        sampler.invoke(va._key);
+        clusters = DRemoteTask.merge(clusters, sampler._clust2);
+
+        if( cancelled() ) {
+          remove();
+          return;
+        }
+
+        res._iteration++;
+        res._clusters = clusters;
+        UKV.put(dest(), res);
       }
 
-      res._iteration++;
-      res._clusters = clusters;
-      UKV.put(dest(), res);
+      clusters = recluster(clusters, k, rand, init);
     }
-
-    clusters = recluster(clusters, k, rand);
     res._clusters = clusters;
 
     for( ;; ) {
-      boolean moved = false;
       Lloyds task = new Lloyds();
       task._arykey = va._key;
       task._cols = cols;
@@ -107,9 +132,6 @@ public class KMeans extends Job {
         if( task._counts[cluster] > 0 ) {
           for( int column = 0; column < cols.length - 1; column++ ) {
             double value = task._sums[cluster][column] / task._counts[cluster];
-            if( Math.abs(value - clusters[cluster][column]) > epsilon ) {
-              moved = true;
-            }
             clusters[cluster][column] = value;
           }
         }
@@ -117,12 +139,10 @@ public class KMeans extends Job {
       res._error = task._error;
       res._iteration++;
       UKV.put(dest(), res);
-      // Iterate until no cluster mean moves more than epsilon,
-      if( !moved ) break;
-      // reached max iterations,
-      if( res._maxIter != 0 && res._iteration >= res._maxIter ) break;
-      // or job cancelled
-      if( cancelled() ) break;
+      if( res._iteration >= res._maxIter )
+        break;
+      if( cancelled() )
+        break;
     }
 
     remove();
@@ -179,7 +199,8 @@ public class KMeans extends Job {
 
       for( int row = 0; row < rows; row++ ) {
         double sqr = minSqr(_clusters, datad(va, bits, row, _cols, _normalize, values), cd);
-        if( _probability * sqr > rand.nextDouble() * _sqr ) list.add(values.clone());
+        if( _probability * sqr > rand.nextDouble() * _sqr )
+          list.add(values.clone());
       }
 
       _clust2 = new double[list.size()][];
@@ -223,10 +244,11 @@ public class KMeans extends Job {
         closest(_clusters, values, cd);
         int cluster = cd._cluster;
         _error += cd._dist;
-        if( cluster == -1 ) continue; // Ignore broken row
+        if( cluster == -1 )
+          continue; // Ignore broken row
 
         // Add values and increment counter for chosen cluster
-        Utils.add(_sums[cluster],values);
+        Utils.add(_sums[cluster], values);
         _counts[cluster]++;
       }
       _arykey = null;
@@ -241,8 +263,8 @@ public class KMeans extends Job {
         _counts = task._counts;
         _error = task._error;
       } else {
-        Utils.add(_sums  ,task._sums  );
-        Utils.add(_counts,task._counts);
+        Utils.add(_sums, task._sums);
+        Utils.add(_counts, task._counts);
         _error += task._error;
       }
     }
@@ -288,7 +310,8 @@ public class KMeans extends Job {
       // average of other error terms.  Same math another way:
       //   double avg_dist = sqr / pts; // average distance per feature/column/dimension
       //   sqr = sqr * point.length;    // Total dist is average*#dimensions
-      if( pts < point.length ) sqr *= point.length / pts;
+      if( pts < point.length )
+        sqr *= point.length / pts;
       if( sqr < minSqr ) {
         min = cluster;
         minSqr = sqr;
@@ -300,37 +323,45 @@ public class KMeans extends Job {
   }
 
   // KMeans++ re-clustering
-  public static double[][] recluster(double[][] points, int k, Random rand) {
+  public static double[][] recluster(double[][] points, int k, Random rand, Initialization init) {
     double[][] res = new double[k][];
     res[0] = points[0];
     int count = 1;
     ClusterDist cd = new ClusterDist();
+    switch( init ) {
+      case PlusPlus: { // k-means++
+        while( count < res.length ) {
+          double sum = 0;
+          for( int i = 0; i < points.length; i++ )
+            sum += minSqr(res, points[i], cd, count);
 
-    while( count < res.length ) {
-//      // Original k-means++, doesn't seem to help in many cases
-//      double sum = 0;
-//      for( int i = 0; i < points.length; i++ )
-//        sum += minSqr(res, points[i], cd, count);
-//
-//      for( int i = 0; i < points.length; i++ ) {
-//        if( minSqr(res, points[i], cd, count) >= rand.nextDouble() * sum ) {
-//          res[count++] = points[i];
-//          break;
-//        }
-//      }
-      // Takes cluster further from any already chosen ones
-      double max = 0;
-      int index = 0;
-      for( int i = 0; i < points.length; i++ ) {
-        double sqr = minSqr(res, points[i], cd, count);
-        if( sqr > max ) {
-          max = sqr;
-          index = i;
+          for( int i = 0; i < points.length; i++ ) {
+            if( minSqr(res, points[i], cd, count) >= rand.nextDouble() * sum ) {
+              res[count++] = points[i];
+              break;
+            }
+          }
         }
+        break;
       }
-      res[count++] = points[index];
+      case Furthest: { // Takes cluster further from any already chosen ones
+        while( count < res.length ) {
+          double max = 0;
+          int index = 0;
+          for( int i = 0; i < points.length; i++ ) {
+            double sqr = minSqr(res, points[i], cd, count);
+            if( sqr > max ) {
+              max = sqr;
+              index = i;
+            }
+          }
+          res[count++] = points[index];
+        }
+        break;
+      }
+      default:
+        throw new IllegalStateException();
     }
-
     return res;
   }
 

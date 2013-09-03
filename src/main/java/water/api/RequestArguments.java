@@ -11,6 +11,7 @@ import hex.rf.RFModel;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import water.*;
 import water.ValueArray.Column;
@@ -436,7 +437,7 @@ public class RequestArguments extends RequestStatics {
      * specified, or defaultValue. Note that default value is returned also for
      * invalid arguments.
      */
-    final T value() {
+    public final T value() {
       return record()._value;
     }
 
@@ -1404,7 +1405,9 @@ public class RequestArguments extends RequestStatics {
     protected transient final Class<T> _enumClass;
     private transient final T _defaultValue;
 
-
+    public EnumArgument(T defaultValue) {
+      this("", defaultValue, false);
+    }
     public EnumArgument(String name, T defaultValue, boolean refreshOnChange) {
       this(name,defaultValue);
       if(refreshOnChange)setRefreshOnChange();
@@ -1478,8 +1481,9 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
   public class H2OKey extends InputText<Key> {
     public final Key _defaultValue;
-    public H2OKey(String name, boolean required) { super(name, required); _defaultValue = null; }
-    public H2OKey(String name, Key key) { super(name, false); _defaultValue = key;  }
+    public H2OKey(String name, boolean required) { this(name,null,required); }
+    public H2OKey(String name, Key key) { this(name,key,false); }
+    public H2OKey(String name, Key key, boolean req) { super(name, req); _defaultValue = key; }
     @Override protected Key parse(String input) { return Key.make(input); }
     @Override protected Key defaultValue() { return _defaultValue; }
     @Override protected String queryDescription() { return "Valid H2O key"; }
@@ -2184,17 +2188,62 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
   // Fluid Vec Arguments
   // ---------------------------------------------------------------------------
-  /** A Frame Key */
+  /** Locally synchronize VA to FVec conversions within this node. */
+  final static Object conversionLock = new Object();
+
+  /** Conversion number is only for logging. */
+  static AtomicInteger conversionNumber = new AtomicInteger(0);
+
+  /**
+   * A Frame Key
+   * If necessary, a conversion (i.e. a "casting") of ValueArray to Frame
+   * is performed.
+   * */
   public class FrameKey extends H2OKey {
     public FrameKey() { this(""); }
     public FrameKey(String name) { super(name,true); }
     @Override protected Key parse(String input) {
       Key k = Key.make(input);
       Value v = DKV.get(k);
+
+      // If the key does not exist, return an error.
       if( v == null )
         throw new IllegalArgumentException(input+":"+errors()[0]);
-      if( v.type() != TypeMap.onLoad(Frame.class.getName()) )
+
+      // If the key exists but it refers to a ValueArray, then see if we have
+      // a cached conversion in DKV already.
+      if (v.isArray()) {
+        // Serialize conversions to one at a time.
+        synchronized (conversionLock) {
+          ValueArray va = v.get();
+          String frameKeyString = DKV.calcConvertedFrameKeyString(input);
+          Key k2 = Key.make(frameKeyString);
+          Value v2 = DKV.get(k2);
+          if (v2 != null) {
+            // If the thing that aliases with the cached conversion name is not
+            // a Frame, then throw an error.
+            if (! v2.isFrame()) {
+              throw new IllegalArgumentException(input+":"+errors()[1]);
+            }
+            Log.info("Using existing cached Frame conversion (" + frameKeyString + ").");
+            return k2;
+          }
+
+          // No cached conversion.  Make one and store it in DKV.
+          int cn = conversionNumber.getAndIncrement();
+          Log.info("Converting ValueArray to Frame: node(" + H2O.SELF + ") convNum(" + cn + ") key(" + frameKeyString + ")...");
+          Frame f2 = va.asFrame();
+          DKV.put(k2,f2);
+          Log.info("Conversion " + cn + " complete.");
+          return k2;
+        }
+      }
+
+      // If not VA and not Frame, then it's an error.
+      if (! v.isFrame()) {
         throw new IllegalArgumentException(input+":"+errors()[1]);
+      }
+
       return k;
     }
     @Override protected String queryDescription() { return "An existing H2O Frame key."; }
@@ -2241,9 +2290,7 @@ public class RequestArguments extends RequestStatics {
       if( !filter(vec) ) throw new IllegalArgumentException(errors()[0]);
       return vec;
     }
-    private boolean filter( Vec vec ) {
-      return vec.dtype() == Vec.DType.I || vec.dtype() == Vec.DType.S;
-    }
+    private boolean filter( Vec vec ) { return vec.isInt();  }
     @Override protected Vec defaultValue() { return null; }
     @Override protected String[] errors() { return new String[] { "Only integer or enum/factor columns can be classified" }; }
   }
@@ -2291,7 +2338,7 @@ public class RequestArguments extends RequestStatics {
       for( int i=0; i<len(is); i++ ) {
         Vec vec = fr.vecs()[is[i]];
         String name = fr._names[is[i]];
-        double ratio = (double)vec.NAcnt()/vec.length();
+        double ratio = (double)vec.naCnt()/vec.length();
         res[i] = name + (ratio > 0.01 ? (" (" + Math.round(ratio*100) + "% NAs)") : "");
       }
       return res;

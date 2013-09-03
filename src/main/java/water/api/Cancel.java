@@ -21,7 +21,7 @@ public class Cancel extends Request {
   protected Response serve() {
     String key = _key.value();
     try {
-      Job.cancel(Key.make(key));
+      Job.cancel(Key.make(key),"cancelled by user");
     } catch( Exception e ) {
       return Response.error(e.getMessage());
     }

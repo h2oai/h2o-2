@@ -1,8 +1,6 @@
-import unittest
-import os, time, sys
+import unittest, os, time, sys
 sys.path.extend(['.','..','py'])
-
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 
 def runLinuxCmds(cmds):
     for c in cmds:
@@ -151,11 +149,11 @@ class Basic(unittest.TestCase):
         allAcceptIptables()
         multicastDropReceiveIptables()
         showIptables()
-        csvPathname = h2o.find_file('smalldata/poker/poker1000')
 
         for x in range(1,5):
             h2o_hosts.build_cloud_with_hosts(nodes_per_host, use_flatfile=True)
-            h2o_cmd.runRF(trees=50, timeoutSecs=10, csvPathname=csvPathname)
+            parseResult = h2i.import_parse(bucket='smalldata', path='poker/poker1000', schema='put')
+            h2o_cmd.runRFOnly(parseResult=parseResult, trees=50, timeoutSecs=10)
             h2o.tear_down_cloud()
             h2o.verboseprint("Waiting", nodes_per_host,
                 "seconds to avoid OS sticky port problem")

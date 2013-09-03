@@ -1,10 +1,6 @@
-import random
-
-import unittest, time, sys
+import unittest, random, time, sys
 sys.path.extend(['.','..','py'])
-
-import h2o, h2o_cmd
-import h2o_browse as h2b
+import h2o, h2o_hosts, h2o_cmd, h2o_browse as h2b, h2o_import2 as h2i
 
 # some dates are "wrong"..i.e. the date should be constrained
 # depending on month and year.. Assume 1-31 is legal
@@ -75,7 +71,6 @@ class Basic(unittest.TestCase):
         if (localhost):
             h2o.build_cloud(2,java_heap_GB=10,use_flatfile=True)
         else:
-            import h2o_hosts
             h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
@@ -97,14 +92,14 @@ class Basic(unittest.TestCase):
         for trial in range (20):
             rowData = rand_rowData()
             # make sure all key names are unique, when we re-put and re-parse (h2o caching issues)
-            key = csvFilename + "_" + str(trial)
-            key2 = csvFilename + "_" + str(trial) + ".hex"
+            src_key = csvFilename + "_" + str(trial)
+            hex_key = csvFilename + "_" + str(trial) + ".hex"
 
             start = time.time()
-            parseKeyA = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2)
+            parseResultA = h2i.import_parse(path=csvPathname, schema='put', src_key=src_key, hex_key=hex_key)
             print "\nA trial #", trial, "parse end on ", csvFilename, 'took', time.time() - start, 'seconds'
 
-            inspect = h2o_cmd.runInspect(key=key2)
+            inspect = h2o_cmd.runInspect(key=hex_key)
             missingValuesListA = h2o_cmd.infoFromInspect(inspect, csvPathname)
             print "missingValuesListA", missingValuesListA
 
@@ -119,15 +114,15 @@ class Basic(unittest.TestCase):
 
             # do a little testing of saving the key as a csv
             csvDownloadPathname = SYNDATASETS_DIR + "/csvDownload.csv"
-            h2o.nodes[0].csv_download(key=key2, csvPathname=csvDownloadPathname)
+            h2o.nodes[0].csv_download(key=hex_key, csvPathname=csvDownloadPathname)
 
             # remove the original parsed key. source was already removed by h2o
-            h2o.nodes[0].remove_key(key2)
+            h2o.nodes[0].remove_key(hex_key)
             # interesting. what happens when we do csv download with time data?
             start = time.time()
-            parseKeyB = h2o_cmd.parseFile(csvPathname=csvDownloadPathname, key=key, key2=key2)
+            parseResultB = h2i.import_parse(path=csvDownloadPathname, schema='put', src_key=src_key, hex_key=hex_key)
             print "B trial #", trial, "parse end on ", csvFilename, 'took', time.time() - start, 'seconds'
-            inspect = h2o_cmd.runInspect(key=key2)
+            inspect = h2o_cmd.runInspect(key=hex_key)
             missingValuesListB = h2o_cmd.infoFromInspect(inspect, csvPathname)
             print "missingValuesListB", missingValuesListB
 

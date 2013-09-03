@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import2 as h2i
 
 params = {
     'y': 1049, 
@@ -33,18 +33,18 @@ class Basic(unittest.TestCase):
 
     def test_GLM_syn_2659x1049(self):
         csvFilename = "syn_2659x1049.csv"
-        csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+        csvPathname = 'logreg' + '/' + csvFilename
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
         kwargs = params
-        glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=120, **kwargs)
+        glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=120, **kwargs)
         h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
     def test_GLM_syn_2659x1049x2enum(self):
         csvFilename = "syn_2659x1049x2enum.csv"
-        csvPathname = h2o.find_file('smalldata/logreg' + '/' + csvFilename)
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+        csvPathname = 'logreg' + '/' + csvFilename
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
         kwargs = params
-        glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=240, **kwargs)
+        glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=240, **kwargs)
         h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
 if __name__ == '__main__':

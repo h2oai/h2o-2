@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import as h2i, h2o_exec
+import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import2 as h2i, h2o_exec
 import h2o_browse as h2b
 
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
@@ -43,17 +43,16 @@ class Basic(unittest.TestCase):
 
     def test_rf_covtype_train_oobe2(self):
         print "\nUse randomBitVector and filter to separate the dataset randomly"
-        importFolderPath = "/home/0xdiag/datasets/standard"
+        importFolderPath = "standard"
         csvFilename = 'covtype.data'
         csvPathname = importFolderPath + "/" + csvFilename
-        key2 = csvFilename + ".hex"
+        hex_key = csvFilename + ".hex"
 
-        h2i.setupImportFolder(None, importFolderPath)
         print "\nUsing header=0 on the normal covtype.data"
-        parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2,
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key,
             header=0, timeoutSecs=100)
 
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\n" + csvPathname, \
             "    num_rows:", "{:,}".format(inspect['num_rows']), \
             "    num_cols:", "{:,}".format(inspect['num_cols'])
@@ -88,10 +87,10 @@ class Basic(unittest.TestCase):
         execExpr = "not_rbv=colSwap(rbv,0,rbv[0]==0?1:0)"
         h2o_exec.exec_expr(None, execExpr, resultKey="not_rbv", timeoutSecs=10)
 
-        execExpr = dataKeyTest + "=filter(" + key2 + ",rbv)"
+        execExpr = dataKeyTest + "=filter(" + hex_key + ",rbv)"
         h2o_exec.exec_expr(None, execExpr, resultKey=dataKeyTest, timeoutSecs=10)
 
-        execExpr = dataKeyTrain + "=filter(" + key2 + ",not_rbv)"
+        execExpr = dataKeyTrain + "=filter(" + hex_key + ",not_rbv)"
         h2o_exec.exec_expr(None, execExpr, resultKey=dataKeyTrain, timeoutSecs=10)
 
         ### time.sleep(3600)
@@ -106,7 +105,7 @@ class Basic(unittest.TestCase):
             execExpr = resultKey + "=slice(" + dataKeyTrain + ",1," + str(rowsToUse) + ")"
             # execExpr = resultKey + "=slice(" + dataKeyTrain + ",1)"
             h2o_exec.exec_expr(None, execExpr, resultKey=resultKey, timeoutSecs=10)
-            parseKey['destination_key'] = resultKey
+            parseResult['destination_key'] = resultKey
 
             # adjust timeoutSecs with the number of trees
             # seems ec2 can be really slow
@@ -117,7 +116,7 @@ class Basic(unittest.TestCase):
             kwargs['out_of_bag_error_estimate'] = 1
             kwargs['model_key'] = "model_" + str(trial)
             
-            rfv = h2o_cmd.runRFOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            rfv = h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "RF end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)

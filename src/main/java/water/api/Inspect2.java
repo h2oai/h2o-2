@@ -2,6 +2,8 @@ package water.api;
 
 import water.*;
 import water.fvec.*;
+import hex.gbm.DRF;
+import hex.gbm.GBM;
 
 public class Inspect2 extends Request {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
@@ -22,6 +24,7 @@ public class Inspect2 extends Request {
   @API(help="byte size in memory.") long byteSize;
 
   // An internal JSON-output-only class
+  @SuppressWarnings("unused")
   private static class ColSummary extends Iced {
     static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
@@ -30,16 +33,13 @@ public class Inspect2 extends Request {
       this.min  = vec.min();
       this.max  = vec.max();
       this.mean = vec.mean();
-      this.NAcnt= vec.NAcnt();
-      this.type = vec.dtype();
+      this.naCnt= vec.naCnt();
     }
     @API(help="Label."           ) final String name;
     @API(help="min."             ) final double min;
     @API(help="max."             ) final double max;
     @API(help="mean."            ) final double mean;
-    @API(help="Missing elements.") final long   NAcnt;
-    @API(help="Data type, one of I=Integer, F=Float, S=String, NA=all rows missing.")
-    final Vec.DType type;
+    @API(help="Missing elements.") final long   naCnt;
   }
 
   @API(help="Array of Column Summaries.")
@@ -71,19 +71,20 @@ public class Inspect2 extends Request {
     final long off = offset.value();
 
     // Missing/NA count
-    long NAcnt = 0;
+    long naCnt = 0;
     for( int i=0; i<cols.length; i++ )
-      NAcnt += cols[i].NAcnt;
+      naCnt += cols[i].naCnt;
 
     DocGen.HTML.title(sb,skey.toString());
     DocGen.HTML.section(sb,""+numCols+" columns, "+numRows+" rows, "+
                         PrettyPrint.bytes(byteSize)+" bytes, "+
-                        (NAcnt== 0 ? "no":PrettyPrint.bytes(NAcnt))+" missing elements");
+                        (naCnt== 0 ? "no":PrettyPrint.bytes(naCnt))+" missing elements");
 
     sb.append("<div class='alert'>" +
               //"View " + SummaryPage2.link(key, "Summary") +
-              "<br/>Build models using " + 
-              DRF2.link(src_key.value(), "Distributed Random Forest") +
+              "<br/>Build models using " +
+              DRF.link(src_key.value(), "Distributed Random Forest") +", "+
+              GBM.link(src_key.value(), "Distributed GBM") +", "+
               hex.LR2.link(src_key.value(), "Linear Regression") +
               "</div>");
 
@@ -120,18 +121,12 @@ public class Inspect2 extends Request {
       sb.append("<td>").append(String.format("%5.3f",cols[i].mean)).append("</td>");
     sb.append("</tr>");
 
-    sb.append("<tr class='warning'>");
-    sb.append("<td>").append("Type").append("</td>");
-    for( int i=0; i<cols.length; i++ )
-      sb.append("<td>").append(cols[i].type).append("</td>");
-    sb.append("</tr>");
-
     // Missing / NA row is optional; skip it if the entire dataset is clean
-    if( NAcnt > 0 ) {
+    if( naCnt > 0 ) {
       sb.append("<tr class='warning'>");
       sb.append("<td>").append("Missing").append("</td>");
       for( int i=0; i<cols.length; i++ )
-        sb.append("<td>").append(cols[i].NAcnt > 0 ? Long.toString(cols[i].NAcnt) : "").append("</td>");
+        sb.append("<td>").append(cols[i].naCnt > 0 ? Long.toString(cols[i].naCnt) : "").append("</td>");
       sb.append("</tr>");
     }
 
@@ -186,20 +181,13 @@ public class Inspect2 extends Request {
   private String x1( Vec v, int row, double d ) {
     if( (row >= 0 && v.isNA(row)) || Double.isNaN(d) )
       return "-";               // Display of missing elements
-    switch( v.dtype() ) {
-    case I:
-      return Long.toString(row >= 0 ? v.at8(row) : (long)d);
-    case F: {
-      Chunk c = v.elem2BV(0);
-      Class Cc = c.getClass();
-      if( Cc == C1SChunk.class ) return x2(d,((C1SChunk)c)._scale);
-      if( Cc == C2SChunk.class ) return x2(d,((C2SChunk)c)._scale);
-      return Double.toString(d);
-    }
-    case S:
-      return row >= 0 ? v.domain(v.at8(row)) : Long.toString((long)d);
-    default: throw H2O.unimpl();
-    }
+    if( v.isEnum() ) return row >= 0 ? v.domain(v.at8(row)) : Long.toString((long)d);
+    if( v.isInt() )  return Long.toString(row >= 0 ? v.at8(row) : (long)d);
+    Chunk c = v.elem2BV(0);
+    Class Cc = c.getClass();
+    if( Cc == C1SChunk.class ) return x2(d,((C1SChunk)c)._scale);
+    if( Cc == C2SChunk.class ) return x2(d,((C2SChunk)c)._scale);
+    return Double.toString(d);
   }
 
   private String x2( double d, double scale ) {

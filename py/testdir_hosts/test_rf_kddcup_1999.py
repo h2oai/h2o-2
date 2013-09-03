@@ -2,7 +2,7 @@ import unittest, sys, time
 sys.path.extend(['.','..','py'])
 
 import h2o_cmd, h2o, h2o_hosts
-import h2o_browse as h2b, h2o_import as h2i
+import h2o_browse as h2b, h2o_import2 as h2i
 
 # Uses your username specific json: pytest_config-<username>.json
 # copy pytest_config-simple.json and modify to your needs.
@@ -21,20 +21,20 @@ class Basic(unittest.TestCase):
 
     def test_rf_kddcup_1999(self):
         # since we'll be waiting, pop a browser
-        h2b.browseTheCloud()
+        # h2b.browseTheCloud()
 
-        importFolderPath = '/home/0xdiag/datasets/standard'
-        h2i.setupImportFolder(None, importFolderPath)
+        importFolderPath = 'standard'
+        csvPathname = importFolderPath + "/" + csvFilename
         csvFilename = 'kddcup_1999.data.gz'
 
         print "Want to see that I get similar results when using H2O RF defaults (no params to json)" +\
             "compared to running with the parameters specified and matching the browser RF query defaults. " +\
             "Also run the param for full scoring vs OOBE scoring."
-
-        parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=300)
-        print csvFilename, 'parse time:', parseKey['response']['time']
-        print "Parse result['destination_key']:", parseKey['destination_key']
-        inspect = h2o_cmd.runInspect(None,parseKey['destination_key'])
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local',
+            timeoutSecs=300)
+        print csvFilename, 'parse time:', parseResult['response']['time']
+        print "Parse result['destination_key']:", parseResult['destination_key']
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
 
         for trials in range(4):
             print "\n" + csvFilename, "Trial #", trials
@@ -67,11 +67,11 @@ class Basic(unittest.TestCase):
                 kwargs['out_of_bag_error_estimate'] = 1
 
             start = time.time()
-            RFview = h2o_cmd.runRFOnly(trees=50,parseKey=parseKey, 
+            RFview = h2o_cmd.runRFOnly(parseResult=parseResult, trees=50
                 timeoutSecs=300, retryDelaySecs=1.0, **kwargs)
             print "RF end on ", csvFilename, 'took', time.time() - start, 'seconds'
 
-            h2b.browseJsonHistoryAsUrlLastMatch("RFView")
+            ### h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
 if __name__ == '__main__':
     h2o.unit_main()

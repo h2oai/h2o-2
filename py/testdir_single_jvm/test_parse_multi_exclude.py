@@ -1,6 +1,6 @@
 import unittest, random, sys, time, os, stat, pwd, grp
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_exec as h2e
 
 FILENUM=2
 
@@ -65,10 +65,10 @@ class Basic(unittest.TestCase):
             (340, 500, 'cE', 60, '*x[1-4]*'),
             ]
 
-        h2b.browseTheCloud()
+        ## h2b.browseTheCloud()
         cnum = 0
         # create them all first
-        for (rowCount, colCount, key2, timeoutSecs, excludePattern) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs, excludePattern) in tryList:
             cnum += 1
             # FIX! should we add a header to them randomly???
             print "Wait while", FILENUM, "synthetic files are created in", SYNDATASETS_DIR
@@ -78,24 +78,26 @@ class Basic(unittest.TestCase):
                 csvPathname = SYNDATASETS_DIR + '/' + csvFilename
                 write_syn_dataset(csvPathname, rowCount, colCount, SEED, translateList)
 
-        for (rowCount, colCount, key2, timeoutSecs, excludePattern) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs, excludePattern) in tryList:
             cnum += 1
             # DON"T get redirected to S3! (EC2 hack in config, remember!)
             # use it at the node level directly (because we gen'ed the files.
-            h2o.nodes[0].import_files(SYNDATASETS_DIR)
-            # pattern match all, then use exclude
-            parseKey = h2o.nodes[0].parse('*', key2=key2, exclude=excludePattern, header=1, timeoutSecs=timeoutSecs)
-            print "parseKey['destination_key']: " + parseKey['destination_key']
-            print 'parse time:', parseKey['response']['time']
+            h2i.import_only(path=SYNDATASETS_DIR + '/*')
 
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            # pattern match all, then use exclude
+            parseResult = h2i.import_parse(path=SYNDATASETS_DIR + '/*', schema='local', 
+                hex_key=hex_key, exclude=excludePattern, header=1, timeoutSecs=timeoutSecs)
+            print "parseResult['destination_key']: " + parseResult['destination_key']
+            print 'parse time:', parseResult['response']['time']
+
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             h2o_cmd.infoFromInspect(inspect, csvPathname)
 
 
             # FIX! h2o strips one of the headers, but treats all the other files with headers as data
             num_rows = inspect['num_rows']
             num_cols = inspect['num_cols']
-            print "\n" + parseKey['destination_key'] + ":", \
+            print "\n" + parseResult['destination_key'] + ":", \
                 "    num_rows:", "{:,}".format(num_rows), \
                 "    num_cols:", "{:,}".format(num_cols)
 

@@ -1,7 +1,7 @@
 import unittest, sys
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -21,8 +21,9 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_hex_443(self):
-        csvPathname = h2o.find_file('smalldata/hex-443.parsetmp_1_0_0_0.data')
-        h2o_cmd.runRF(trees=1, timeoutSecs=5, csvPathname=csvPathname)
+        csvPathname = 'hex-443.parsetmp_1_0_0_0.data'
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
+        h2o_cmd.runRFOnly(parseResult=parseResult, trees=1, timeoutSecs=5)
 
 if __name__ == '__main__':
     h2o.unit_main()

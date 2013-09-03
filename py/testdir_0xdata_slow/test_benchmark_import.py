@@ -1,7 +1,6 @@
 import unittest, time, sys, random, logging
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_glm
-import h2o_exec as h2e, h2o_jobs
+import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_hosts, h2o_glm, h2o_exec as h2e, h2o_jobs
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -24,7 +23,7 @@ class Basic(unittest.TestCase):
         covtype200xSize = 15033863400
         synSize =  183
         if 1==0:
-            importFolderPath = '/home/0xdiag/datasets/more1_1200_link'
+            importFolderPath = 'more1_1200_link'
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
                 # this should hit the "more" files too?
@@ -40,7 +39,7 @@ class Basic(unittest.TestCase):
             ]
 
         if 1==1:
-            importFolderPath = '/home/0xdiag/datasets/more1_1200_link'
+            importFolderPath = 'more1_1200_link'
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
                 # this should hit the "more" files too?
@@ -83,7 +82,7 @@ class Basic(unittest.TestCase):
             ]
 
         if 1==0:
-            importFolderPath = '/home/0xdiag/datasets/manyfiles-nflx-gz'
+            importFolderPath = 'manyfiles-nflx-gz'
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
                 # this should hit the "more" files too?
@@ -91,22 +90,8 @@ class Basic(unittest.TestCase):
                 ("*_[1][5-9][0-9]*.dat.gz", "file_100.dat.gz", 50 * avgMichalSize, 3600),
             ]
 
-        if 1==0:
-            importFolderPath = '/home2/0xdiag/datasets'
-            print "Using non-.gz'ed files in", importFolderPath
-            csvFilenameAll = [
-                # I use different files to avoid OS caching effects
-                ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSizeUncompressed, 700),
-                ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSizeUncompressed, 700),
-                ("manyfiles-nflx/file_[0-9][0-9]*.dat", "file_100.dat", 100 * avgMichalSizeUncompressed, 700),
-                # ("onefile-nflx/file_1_to_100.dat", "file_single.dat", 100 * avgMichalSizeUncompressed, 1200),
-                # ("manyfiles-nflx/file_1.dat", "file_1.dat", 1 * avgMichalSizeUncompressed, 700),
-                # ("manyfiles-nflx/file_[2][0-9].dat", "file_10.dat", 10 * avgMichalSizeUncompressed, 700),
-                # ("manyfiles-nflx/file_[34][0-9].dat", "file_20.dat", 20 * avgMichalSizeUncompressed, 700),
-                # ("manyfiles-nflx/file_[5-9][0-9].dat", "file_50.dat", 50 * avgMichalSizeUncompressed, 700),
-            ]
         if 1==0: 
-            importFolderPath = '/home/0xdiag/datasets/standard'
+            importFolderPath = 'standard'
             print "Using .gz'ed files in", importFolderPath
             # all exactly the same prior to gzip!
             # could use this, but remember import folder -> import folder s3 for jenkins?
@@ -166,7 +151,7 @@ class Basic(unittest.TestCase):
         benchmarkLogging = ['cpu','disk', 'network', 'iostats', 'jstack']
         benchmarkLogging = ['cpu','disk', 'network', 'iostats']
         # IOStatus can hang?
-        benchmarkLogging = ['cpu', 'disk' 'network']
+        benchmarkLogging = ['cpu', 'disk', 'network']
         pollTimeoutSecs = 120
         retryDelaySecs = 10
 
@@ -199,19 +184,24 @@ class Basic(unittest.TestCase):
             # to avoid sticky ports?
             ### base_port += 2
 
+            bucket = 'home-0xdiag-datasets'
+            importFolderPath = 'manyfiles-nflx-gz'
+
             for trial in range(trialMax):
-                importFolderResult = h2i.setupImportFolder(None, importFolderPath)
-                importFullList = importFolderResult['files']
-                importFailList = importFolderResult['fails']
+                csvPathname = importFolderPath + "/" + csvFilePattern
+                (importResult, importPattern) = h2i.import_only(bucket=bucket, path=csvPathname, schema='local')
+                importFullList = importResult['files']
+                importFailList = importResult['fails']
                 print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
                 # creates csvFilename.hex from file in importFolder dir 
 
                 h2o.cloudPerfH2O.change_logfile(csvFilename)
                 h2o.cloudPerfH2O.message("")
                 h2o.cloudPerfH2O.message("Parse " + csvFilename + " Start--------------------------------")
+                csvPathname = importFolderPath + "/" + csvFilePattern
                 start = time.time()
-                parseKey = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
-                    key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
+                parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local'),
+                    hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                     retryDelaySecs=retryDelaySecs,
                     pollTimeoutSecs=pollTimeoutSecs,
                     noPoll=noPoll,
@@ -222,8 +212,9 @@ class Basic(unittest.TestCase):
                         time.sleep(1)
                         h2o.check_sandbox_for_errors()
                         (csvFilepattern, csvFilename, totalBytes2, timeoutSecs) = csvFilenameList[i+1]
-                        parseKey = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
-                            key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
+                        csvPathname = importFolderPath + "/" + csvFilePattern
+                        parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local'),
+                            hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                             retryDelaySecs=retryDelaySecs,
                             pollTimeoutSecs=pollTimeoutSecs,
                             noPoll=noPoll,
@@ -233,8 +224,9 @@ class Basic(unittest.TestCase):
                         time.sleep(1)
                         h2o.check_sandbox_for_errors()
                         (csvFilepattern, csvFilename, totalBytes3, timeoutSecs) = csvFilenameList[i+2]
-                        parseKey = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
-                            key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
+                        csvPathname = importFolderPath + "/" + csvFilePattern
+                        parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local'),
+                            hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                             retryDelaySecs=retryDelaySecs,
                             pollTimeoutSecs=pollTimeoutSecs,
                             noPoll=noPoll,
@@ -264,29 +256,29 @@ class Basic(unittest.TestCase):
                     print l
                     h2o.cloudPerfH2O.message(l)
 
-                print csvFilepattern, 'parse time:', parseKey['response']['time']
-                print "Parse result['destination_key']:", parseKey['destination_key']
+                print csvFilepattern, 'parse time:', parseResult['response']['time']
+                print "Parse result['destination_key']:", parseResult['destination_key']
 
                 # BUG here?
                 if not noPoll:
                     # We should be able to see the parse result?
-                    h2o_cmd.columnInfoFromInspect(parseKey['destination_key'], exceptionOnMissingValues=False)
+                    h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=False)
 
                         
                 # the nflx data doesn't have a small enough # of classes in any col
                 # use exec to randomFilter out 200 rows for a quick RF. that should work for everyone?
-                origKey = parseKey['destination_key']
+                origKey = parseResult['destination_key']
                 # execExpr = 'a = randomFilter('+origKey+',200,12345678)' 
                 execExpr = 'a = slice('+origKey+',1,200)' 
                 h2e.exec_expr(h2o.nodes[0], execExpr, "a", timeoutSecs=30)
-                # runRFOnly takes the parseKey directly
+                # runRFOnly takes the parseResult directly
                 newParseKey = {'destination_key': 'a'}
 
                 print "\n" + csvFilepattern
                 # poker and the water.UDP.set3(UDP.java) fail issue..
                 # constrain depth to 25
                 print "Temporarily hacking to do nothing instead of RF on the parsed file"
-                ### RFview = h2o_cmd.runRFOnly(trees=1,depth=25,parseKey=newParseKey, timeoutSecs=timeoutSecs)
+                ### RFview = h2o_cmd.runRFOnly(trees=1,depth=25,parseResult=newParseKey, timeoutSecs=timeoutSecs)
                 ### h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
                 #**********************************************************************************
@@ -303,7 +295,7 @@ class Basic(unittest.TestCase):
                     GLMkwargs = {'x': x, 'y': 378, 'case': 15, 'case_mode': '>',
                         'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
                     start = time.time()
-                    glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **GLMkwargs)
+                    glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **GLMkwargs)
                     h2o_glm.simpleCheckGLM(self, glm, None, **GLMkwargs)
                     elapsed = time.time() - start
                     h2o.check_sandbox_for_errors()
@@ -315,7 +307,8 @@ class Basic(unittest.TestCase):
                 #**********************************************************************************
 
                 h2o_cmd.checkKeyDistribution()
-                h2o_cmd.deleteCsvKey(csvFilename, importFolderResult)
+                h2i.delete_keys_from_import_result(pattern=csvFilename, importResult=importResult)
+
                 ### time.sleep(3600)
                 h2o.tear_down_cloud()
                 if not localhost:

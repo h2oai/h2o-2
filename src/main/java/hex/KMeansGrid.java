@@ -1,8 +1,12 @@
 package hex;
 
+import java.util.UUID;
+
 import water.*;
 import water.api.DocGen;
+import water.fvec.*;
 import water.util.RString;
+import water.util.Utils;
 
 public class KMeansGrid extends KMeansShared {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -14,20 +18,21 @@ public class KMeansGrid extends KMeansShared {
 
 //@formatter:off
   @API(help = "Number of clusters", required = true, filter = kFilter.class)
-  int[] k;
+  public int[] k;
   class kFilter extends RSeq { public kFilter() { super("2:10:1", false); } }
 
-  @API(help = "Maximum number of iterations before stopping", required = true, filter = max_iterFilter.class)
-  int[] max_iter;
+  @API(help = "Maximum number of iterations", required = true, filter = max_iterFilter.class)
+  public int[] max_iter;
   class max_iterFilter extends RSeq { public max_iterFilter() { super("10:100:10", true); } }
 
   @API(help = "Columns to use as input")
-  int[] cols;
+  public int[] cols;
   class colsFilter extends ColumnSelect { public colsFilter() { super("source_key"); } }
-
-  @API(help = "Square error for each parameter combination")
-  double[][] errors;
 //@formatter:on
+
+  public KMeansGrid() {
+    description = DOC_GET;
+  }
 
   public static String link(Key k, String content) {
     RString rs = new RString("<a href='KMeansGrid.query?%key_param=%$key'>%content</a>");
@@ -50,18 +55,41 @@ public class KMeansGrid extends KMeansShared {
 
   @Override protected void run() {
     ValueArray va = DKV.get(source_key).get();
-    hex.KMeans first = hex.KMeans.start(Key.make(), va, k[0], 0, max_iter[0], seed, normalize, cols);
-    KMeansModel model = first.get();
-    errors = new double[k.length][max_iter.length];
-    for( int ki = 0; ki < k.length; ki++ ) {
-      for( int mi = 0; mi < max_iter.length; mi++ ) {
-        if( ki != 0 || mi != 0 ) {
-          KMeans job = KMeans.start(first.dest(), va, k[mi], 0, max_iter[mi], seed, normalize, cols);
-          model = job.get();
-        }
-        errors[ki][mi] = model._error;
+    Key temp = null;
+    try {
+      temp = Key.make(UUID.randomUUID().toString(), (byte) 1, Key.DFJ_INTERNAL_USER);
+      hex.KMeans first = hex.KMeans.start(temp, va, k[0], initialization, max_iter[0], seed, normalize, cols);
+      KMeansModel model = first.get();
+
+      String[] names = new String[3];
+      Vec[] vecs = new Vec[names.length];
+      NewChunk[] chunks = new NewChunk[names.length];
+      for( int c = 0; c < chunks.length; c++ ) {
+        vecs[c] = new AppendableVec(UUID.randomUUID().toString());
+        chunks[c] = new NewChunk(vecs[c], 0);
       }
-      remove();
+      names[0] = "k";
+      names[1] = "max_iter";
+      names[2] = "error";
+      for( int ki = 0; ki < k.length; ki++ ) {
+        for( int mi = 0; mi < max_iter.length; mi++ ) {
+          if( ki != 0 || mi != 0 ) {
+            KMeans job = KMeans.start(first.dest(), va, k[ki], initialization, max_iter[mi], seed, normalize, cols);
+            model = job.get();
+          }
+          chunks[0].addNum(k[ki]);
+          chunks[1].addNum(max_iter[mi]);
+          chunks[2].addNum(model._error);
+        }
+      }
+      for( int c = 0; c < vecs.length; c++ ) {
+        chunks[c].close(0, null);
+        vecs[c] = ((AppendableVec) vecs[c]).close(null);
+      }
+      UKV.put(destination_key, new Frame(names, vecs));
+    } finally {
+      UKV.remove(temp);
     }
+    remove();
   }
 }

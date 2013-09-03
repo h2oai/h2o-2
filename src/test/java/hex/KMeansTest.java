@@ -1,5 +1,7 @@
 package hex;
 
+import hex.KMeans.Initialization;
+
 import java.util.Random;
 
 import org.junit.*;
@@ -23,7 +25,7 @@ public class KMeansTest extends TestUtil {
       ValueArray va = va_maker(source, //
           new double[] { 1.2, 5.6, 3.7, 0.6, 0.1, 2.6 });
 
-      KMeans.start(target, va, 2, 1e-6, 0, SEED, false, 0).get();
+      KMeans.start(target, va, 2, Initialization.Furthest, 100, SEED, false, 0).get();
       KMeansModel res = UKV.get(target);
       double[][] clusters = res.clusters();
 
@@ -54,7 +56,7 @@ public class KMeansTest extends TestUtil {
 
       ValueArray va = va_maker(source, (Object[]) array);
       Timer t = new Timer();
-      KMeans.start(target, va, goals.length, 1e-6, 0, SEED, false, cols).get();
+      KMeans.start(target, va, goals.length, Initialization.Furthest, 100, SEED, false, cols).get();
       Log.debug(Sys.KMEAN, " testGaussian rows:" + rows + ", ms:" + t);
       KMeansModel res = UKV.get(target);
       double[][] clusters = res.clusters();
@@ -97,7 +99,8 @@ public class KMeansTest extends TestUtil {
 
   static boolean match(double[] cluster, double[] goal) {
     for( int i = 0; i < cluster.length; i++ )
-      if( Math.abs(cluster[i] - goal[i]) > 1 ) return false;
+      if( Math.abs(cluster[i] - goal[i]) > 1 )
+        return false;
     return true;
   }
 
@@ -115,7 +118,7 @@ public class KMeansTest extends TestUtil {
     Key target = Key.make("air.kmeans");
     ValueArray va = UKV.get(k1);
     Timer t = new Timer();
-    KMeans.start(target, va, 8, 1e-2, 0, SEED, false, 0).get();
+    KMeans.start(target, va, 8, Initialization.Furthest, 100, SEED, false, 0).get();
     Log.debug(Sys.KMEAN, "ms= " + t);
     KMeansModel res = UKV.get(target);
     res.clusters();
@@ -127,7 +130,7 @@ public class KMeansTest extends TestUtil {
     Key k1 = loadAndParseFile("syn_sphere3.hex", "smalldata/syn_sphere3.csv");
     Key target = Key.make(KMeans.KEY_PREFIX + "sphere");
     ValueArray va = UKV.get(k1);
-    KMeans.start(target, va, 3, 1e-2, 0, SEED, false, 0, 1, 2).get();
+    KMeans.start(target, va, 3, Initialization.Furthest, 100, SEED, false, 0, 1, 2).get();
     KMeansModel res = UKV.get(target);
     res.clusters();
     UKV.remove(k1);
