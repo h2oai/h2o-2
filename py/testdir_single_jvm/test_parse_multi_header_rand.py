@@ -102,7 +102,12 @@ class Basic(unittest.TestCase):
         csvFilename = "syn_ints.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
-        headerChoices = ['aA','aB','aC','aD','aE','aF','aG','aH','aI', 'tomas']
+        allowedLetters = 'abcdeABCDE01234[]'
+        headerChoices = []
+        for n in range(20):
+            l = random.randint(1,64) # random length headers
+            headerName = ''.join([random.choice(allowedLetters) for _ in range(l)])
+            headerChoices.append(headerName)
 
         # cols must be 9 to match the header above, otherwise a different bug is hit
         # extra output is added, so it's 10 total
@@ -157,7 +162,9 @@ class Basic(unittest.TestCase):
             # they need to both use the same separator (h2o rule)
             hh = [random.choice(headerChoices) for h in range(colCount)] + ["output"]
             print hh
-            headerForHeader = SEP_CHAR_GEN.join(hh)
+            # UPDATE: always use comma or space for header separator?? it should work no matter what 
+            # separator the data uses?
+            headerForHeader = ",".join(hh)
             # make these different
             hh = [random.choice(headerChoices) for h in range(colCount)] + ["output"]
             headerForData   = SEP_CHAR_GEN.join(hh)
