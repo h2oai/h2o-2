@@ -58,7 +58,7 @@ class Basic(unittest.TestCase):
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in hdfs dir 
             print "Loading", csvFilename, 'from HDFS'
-            parseResult = h2i.import_parse(path="datasets/standard" + csvFilename, schema="maprfs", timeoutSecs=1000)
+            parseResult = h2i.import_parse(path="datasets/standard/" + csvFilename, schema="maprfs", timeoutSecs=1000)
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "parse result:", parseResult['destination_key']
 

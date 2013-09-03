@@ -155,11 +155,10 @@ def import_only(node=None, schema='local', bucket=None, path=None,
             raise Exception("path= didn't say what file to put")
 
         (folderPath, filename) = find_folder_and_filename(bucket, path, schema)
-        h2o.verboseprint("folderPath:", folderPath, "filename:", filename)
         filePath = os.path.join(folderPath, filename)
-        h2o.verboseprint('filePath:', filePath)
+        h2o.verboseprint("put filename:", filename, "folderPath:", folderPath, "filePath:", filePath)
+        print "\nimport_only:", h2o.python_test_name, "uses put:/" + filePath
         if h2o.abort_after_import:
-            print h2o.python_test_name, "first uses put:/" + filePath
             raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
     
         key = node.put_file(filePath, key=src_key, timeoutSecs=timeoutSecs)
@@ -168,8 +167,8 @@ def import_only(node=None, schema='local', bucket=None, path=None,
     if schema=='local' and not \
             (node.redirect_import_folder_to_s3_path or node.redirect_import_folder_to_s3n_path):
         (folderPath, pattern) = find_folder_and_filename(bucket, path, schema)
+        print "\nimport_only:", h2o.python_test_name, "uses local:/" + os.path.join(folderPath, pattern)
         if h2o.abort_after_import:
-            print h2o.python_test_name, "first uses local:/" + os.path.join(folderPath, pattern)
             raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
 
         folderURI = 'nfs:/' + folderPath
@@ -183,13 +182,15 @@ def import_only(node=None, schema='local', bucket=None, path=None,
         # strip leading / in head if present
         if bucket and head!="":
             folderOffset = bucket + "/" + head
+            print 1
         elif bucket:
             folderOffset = bucket
+            print 2
         else:
             folderOffset = head
 
+        print "\nimport_only:", h2o.python_test_name, schema, "uses", schema + "://" + folderOffset + "/" + pattern
         if h2o.abort_after_import:
-            print h2o.python_test_name, schema, "first uses", schema + "://" + folderOffset + "/" + pattern
             raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
 
         if schema=='s3' or node.redirect_import_folder_to_s3_path:
@@ -201,7 +202,7 @@ def import_only(node=None, schema='local', bucket=None, path=None,
             importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
 
         elif schema=='maprfs':
-            folderURI = "hdfs:///" + folderOffset
+            folderURI = "maprfs:///" + folderOffset
             importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
 
         elif schema=='hdfs':
@@ -214,7 +215,6 @@ def import_only(node=None, schema='local', bucket=None, path=None,
             raise Exception("schema not understood: %s" % schema)
 
     importPattern = folderURI + "/" + pattern
-
     return (importResult, importPattern)
 
 
