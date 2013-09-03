@@ -58,6 +58,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new GLMGrid()),     "GLMGrid",       "Model");
     Request.addToNavbar(registerRequest(new KMeans()),      "KMeans",        "Model");
     Request.addToNavbar(registerRequest(new KMeansGrid()),  "KMeansGrid",    "Model");
+    Request.addToNavbar(registerRequest(new hex.gbm.GBM()), "GBM (Beta)",    "Model");
     Request.addToNavbar(registerRequest(new Console()),     "Console",       "Model");
 
     Request.addToNavbar(registerRequest(new RFScore()),     "Random Forest", "Score");
@@ -88,16 +89,17 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new TutorialGLMProstate()), "GLM Tutorial",           "Help");
     Request.addToNavbar(registerRequest(new TutorialKMeans()),      "KMeans Tutorial",        "Help");
 
-    Request.addToNavbar(registerRequest(new ImportFiles2()),"Import Files2",  "Beta (FluidVecs!)");
-    Request.addToNavbar(registerRequest(new Parse2()),      "Parse2"       ,  "Beta (FluidVecs!)");
-    Request.addToNavbar(registerRequest(new Inspect2()),    "Inspect",        "Beta (FluidVecs!)");
-    Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2"      ,  "Beta (FluidVecs!)");
-    Request.addToNavbar(registerRequest(new hex.gbm.DRF()), "DRF2"         ,  "Beta (FluidVecs!)");
-    Request.addToNavbar(registerRequest(new hex.gbm.GBM()), "GBM2"         ,  "Beta (FluidVecs!)");
-    Request.addToNavbar(registerRequest(new hex.LR2()), "Linear Regression2", "Beta (FluidVecs!)");
-    //Request.addToNavbar(registerRequest(new water.api.Quantiles()), "Quantiles",    "Beta (FluidVecs!)");
-    Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network", "Beta (FluidVecs!)");
-    Request.addToNavbar(registerRequest(new NeuralNetScore()), "Neural Network Score", "Beta (FluidVecs!)");
+    if(H2O.OPT_ARGS.beta != null) {
+      Request.addToNavbar(registerRequest(new ImportFiles2()),"Import Files2",  "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new Parse2()),      "Parse2"       ,  "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new Inspect2()),    "Inspect",        "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2"      ,  "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new hex.gbm.DRF()), "DRF2"         ,  "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new hex.LR2()), "Linear Regression2", "Beta (FluidVecs!)");
+      //Request.addToNavbar(registerRequest(new water.api.Quantiles()), "Quantiles",    "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network", "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new NeuralNetScore()), "Neural Network Score", "Beta (FluidVecs!)");
+    }
 
     // internal handlers
     //registerRequest(new StaticHTMLPage("/h2o/CoefficientChart.html","chart"));
