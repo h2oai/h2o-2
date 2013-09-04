@@ -16,7 +16,6 @@ def append_syn_dataset(csvPathname, rowData, num):
         for i in range(num):
             dsf.write(rowData + "\n")
 
-
 def rand_rowData():
     # UPDATE: maybe because of byte buffer boundary issues, single byte
     # data is best? if we put all 0s or 1, then I guess it will be bits?
@@ -42,10 +41,6 @@ class test_parse_rand_schmoo(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        if not h2o.browse_disable:
-            # time.sleep(500000)
-            pass
-
         h2o.tear_down_cloud(h2o.nodes)
     
     def test_sort_of_prostate_with_row_schmoo(self):
@@ -63,7 +58,6 @@ class test_parse_rand_schmoo(unittest.TestCase):
         print "\nSchmoo the # of rows"
         # used to fail around 50 iterations..python memory problem
         for trial in range (40):
-
             rowData = rand_rowData()
             num = random.randint(4096, 10096)
             append_syn_dataset(csvPathname, rowData, num)

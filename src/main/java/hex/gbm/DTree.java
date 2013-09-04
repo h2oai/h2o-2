@@ -376,7 +376,7 @@ class DTree extends Iced {
           
           // Score row against current decisions & assign new split
           if( leaf > 0 && (nid = tree.decided(nid).ns(chks,i)) != -1 ) // Prior pass exists?
-            nids.set80(i,nid);
+            nids.set0(i,nid);
           
           // Pass 1.9
           if( nid < leaf ) continue; // row already predicts perfectly

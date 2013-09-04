@@ -212,7 +212,7 @@ public final class H2O {
   public int D( Key key, int repl ) {
     if( repl >= size() ) return -1;
 
-    // Distribution of Fluid Vectors is a special case.  
+    // Distribution of Fluid Vectors is a special case.
     // Fluid Vectors are grouped into vector groups, each of which must have
     // the same distribution of chunks so that MRTask2 run over group of
     // vectors will keep data-locality.  The fluid vecs from the same group
@@ -607,6 +607,7 @@ public final class H2O {
     public String h = null;
     public String help = null;
     public String version = null;
+    public String beta = null;
   }
 
   public static void printHelp() {

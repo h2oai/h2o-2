@@ -64,7 +64,6 @@ class Basic(unittest.TestCase):
             # make sure all key names are unique, when we re-put and re-parse (h2o caching issues)
             src_key = csvFilename + "_" + str(trial)
             hex_key = csvFilename + "_" + str(trial) + ".hex"
-            # no restriction on depth
             seed = random.randint(0,sys.maxint)
             # some cols can be dropped due to constant 0 or 1. make sure data set has all 0's and all 1's above
             # to guarantee no dropped cols!

@@ -41,10 +41,6 @@ class test_parse_rand_schmoo2(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        if not h2o.browse_disable:
-            # time.sleep(500000)
-            pass
-
         h2o.tear_down_cloud(h2o.nodes)
     
     def test_sort_of_prostate_with_row_schmoo(self):
@@ -61,7 +57,6 @@ class test_parse_rand_schmoo2(unittest.TestCase):
         print "This is the same format/data file used by test_same_parse, but the non-gzed version"
         print "\nSchmoo the # of rows"
         for trial in range (100):
-
             rowData = rand_rowData()
             num = random.randint(1, 10096)
             append_syn_dataset(csvPathname, rowData, num)
