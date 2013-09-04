@@ -234,6 +234,10 @@ public class DRF extends FrameJob {
     // One more pass for final prediction error
     _cm = new BulkScore(forest,ncols,nclass,ymin,sample_rate,true).doIt(fr,vresponse).report( Sys.DRF__, nrows, depth )._cm;
 
+    // Remove temp vectors; cleanup the Frame
+    while( fr.numCols() > ncols )
+      UKV.remove(fr.remove(fr.numCols()-1)._key);
+
     return new Response(Response.Status.done, this, -1, -1, null);
   }
 
