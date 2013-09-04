@@ -1,15 +1,14 @@
-<<<<<<< HEAD
 # Model-building operations and algorithms
 setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5) { standardGeneric("h2o.glm") })
 setGeneric("h2o.kmeans", function(data, centers, cols = "", iter.max = 10) { standardGeneric("h2o.kmeans") })
-setGeneric("h2o.prcomp", function(data, num_pc) { standardGeneric("h2o.prcomp") })
+setGeneric("h2o.prcomp", function(data, tol = 0) { standardGeneric("h2o.prcomp") })
 setGeneric("h2o.randomForest", function(y, x_ignore = "", data, ntree, depth, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 # setGeneric("h2o.randomForest", function(y, data, ntree, depth, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 setGeneric("h2o.getTree", function(forest, k, plot = FALSE) { standardGeneric("h2o.getTree") })
 setGeneric("h2o.glmgrid", function(x, y, data, family, nfolds = 10, alpha = c(0.25,0.5), lambda = 1.0e-5) { standardGeneric("h2o.glmgrid") })
 
-setMethod("h2o.prcomp", signature(data = "H2OParsedData", num_pc = "numeric"), function(data, num_pc) {
-  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, key = data@key, num_pc = num_pc)
+setMethod("h2o.prcomp", signature(data = "H2OParsedData", tol = "numeric"), function(data, tol) {
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, key = data@key, tolerance = tol)
   while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
   destKey = res$destination_key
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=destKey)
@@ -25,8 +24,8 @@ setMethod("h2o.prcomp", signature(data = "H2OParsedData", num_pc = "numeric"), f
   new("H2OPCAModel", key=destKey, data=data, model=result)
 })
 
-setMethod("h2o.prcomp", signature(data = "H2OParsedData", num_pc = "missing"), 
-  function(data) { h2o.prcomp(data, ncol(data)) })
+setMethod("h2o.prcomp", signature(data = "H2OParsedData", tol = "missing"), 
+  function(data) { h2o.prcomp(data, 0) })
 
 setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="numeric", alpha="numeric", lambda="numeric"),
           function(x, y, data, family, nfolds, alpha, lambda) {
@@ -248,7 +247,7 @@ setMethod("h2o.glmgrid", signature(x="character", y="character", data="H2OParsed
               stop(paste("lambda cannot be of class", class(lambda)))
             h2o.glmgrid(x, y, data, family, nfolds, alpha, lambda) 
           })
-=======
+
 # Model-building operations and algorithms
 setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5) { standardGeneric("h2o.glm") })
 setGeneric("h2o.kmeans", function(data, centers, cols = "", iter.max = 10) { standardGeneric("h2o.kmeans") })
@@ -506,4 +505,3 @@ setMethod("h2o.glmgrid", signature(x="character", y="character", data="H2OParsed
               stop(paste("lambda cannot be of class", class(lambda)))
             h2o.glmgrid(x, y, data, family, nfolds, alpha, lambda) 
           })
->>>>>>> 2b25e039a68214b5401eca437ab111d3132881ce

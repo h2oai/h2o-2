@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Class definitions
 setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321))
 setClass("H2ORawData", representation(h2o="H2OClient", key="character"))
@@ -246,7 +245,7 @@ setMethod("show", "H2OGLMGridModel", function(object) {
   model = object@model
   print(model$Summary)
   })
-=======
+
 # Class definitions
 setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321))
 setClass("H2ORawData", representation(h2o="H2OClient", key="character"))
@@ -511,4 +510,3 @@ setMethod("show", "H2OGLMGridModel", function(object) {
   model = object@model
   print(model$Summary)
   })
->>>>>>> 2b25e039a68214b5401eca437ab111d3132881ce
