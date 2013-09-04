@@ -15,9 +15,7 @@ public class C4Chunk extends Chunk {
     long res = UDP.get4(_mem,i<<2);
     return res == _NA?Double.NaN:res;
   }
-  @Override protected final boolean isNA_impl( int i ) { 
-    long res = UDP.get4(_mem,i<<2);
-    return res == _NA; }
+  @Override protected final boolean isNA_impl( int i ) { return UDP.get4(_mem,i<<2) == _NA; }
   @Override boolean set_impl(int idx, long l) { 
     if( !(Integer.MIN_VALUE < l && l <= Integer.MAX_VALUE) ) return false;
     UDP.set4(_mem,idx<<2,(int)l);

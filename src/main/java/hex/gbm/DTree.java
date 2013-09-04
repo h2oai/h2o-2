@@ -572,7 +572,7 @@ class DTree extends Iced {
         if( pred[c] > pred[best] ) best=c;
       }
 
-      assert 1-.00001 <= sum && sum <= 1+.00001 : "Expect predictions to be a probability distribution but found "+Arrays.toString(pred)+", scoring row "+i;
+      assert 1-.00001 <= sum && sum <= 1+.00001 : "Expect predictions to be a probability distribution but found "+Arrays.toString(pred)+"="+sum+", scoring row "+i;
       int ycls = (int)y;         // Response class from 0 to nclass-1
       assert 0 <= ycls && ycls < _nclass : "weird ycls="+ycls+", y="+y+", ymin="+_ymin;
       if( best != ycls ) _err++; // Absolute prediction error; off-diagonal sum

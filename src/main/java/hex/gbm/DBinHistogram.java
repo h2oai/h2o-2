@@ -146,6 +146,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   // Response-vector is specified as _nclass values in Chunks, from ychk to
   // ychk+_nclass-1.
   void incr( int row, float d, Chunk[] chks, int ychk ) {
+    assert !Float.isNaN(d);
     int b = bin(d);             // Compute bin# via linear interpolation
     // Lazily allocate storage the first time a bin recieves any counts.
     float Ms[] = _Ms[b];
@@ -181,7 +182,8 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   // After having filled in histogram bins, compute tighter min/max bounds.
   @Override public void tightenMinMax() {
     int n = 0;
-    while( _bins[n]==0 ) n++;   // First non-empty bin
+    while( n < _bins.length && _bins[n]==0 ) n++;   // First non-empty bin
+    if( n == _bins.length ) return;                 // All bins are empty???
     _min = _mins[n];    // Take min from 1st  non-empty bin
     int x = _bins.length-1;     // Last bin
     while( _bins[x]==0 ) x--;   // Last non-empty bin
@@ -213,6 +215,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
       // DBinHistogram's bound are the bins' min & max.
       if( col==j ) { min=h.mins(b); max=h.maxs(b); }
       if( min == max ) continue; // This column will not split again
+      if( min >  max ) continue; // Happens for all NA subsplits
       nhists[j] = new DBinHistogram(names[j],_nclass,hs[j]._isInt,min,max,_bins[b]);
       cnt++;                    // At least some chance of splitting
     }

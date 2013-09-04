@@ -55,6 +55,7 @@ public class DHistogram<T extends DHistogram> extends Iced {
   // Add 1 count to bin specified by float.
   // For non-tracking columns, just min/max
   void incr( float d ) {
+    assert !Float.isNaN(d);
     if( d < _min ) _min = d;
     if( d > _max ) _max = d;
   }

@@ -258,12 +258,12 @@ public class DRF extends FrameJob {
       for( int t=0; t<ntrees; t++ ) {
         final int tmax = trees[t]._len; // Number of total splits
         final DTree tree = trees[t];
-        long sum=0;
+        //long sum=0;
         for( int i=leafs[t]; i<tmax; i++ ) {
           DHistogram hs[] = sbh.getFinalHisto(t,i);
           tree.undecided(i)._hs = hs;
-          for( DHistogram h : hs )
-            if( h != null ) sum += h.byteSize();
+          //for( DHistogram h : hs )
+          //  if( h != null ) sum += h.byteSize();
         }
         //System.out.println("Tree#"+(st+t)+", leaves="+(trees[t]._len-leafs[t])+", histo size="+PrettyPrint.bytes(sum)+", time="+t_pass);
       }
