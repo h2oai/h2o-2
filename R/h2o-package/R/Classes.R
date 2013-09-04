@@ -34,7 +34,7 @@ setMethod("show", "H2OGLMModel", function(object) {
   print(round(model$coefficients,5))
   cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual\n")
   cat("Null Deviance:    ", round(model$null.deviance,1), "\n")
-  cat("Residual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1))
+  cat("Residual Deviance:", round(model$deviance,1), " AIC:", ifelse( is.numeric(model$aic), round(model$aic,1), 'NaN'), "\n")
 })
 
 setMethod("show", "H2OKMeansModel", function(object) {
