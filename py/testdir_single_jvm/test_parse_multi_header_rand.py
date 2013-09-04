@@ -111,8 +111,8 @@ class Basic(unittest.TestCase):
         # extra output is added, so it's 10 total
         tryList = [
             (1, 5, 9, 'cA', 60, 0),
-            # (1, 5, 25, 'cA', 60, 0),
-            # (10, 100, 500, 'cA', 60, 0),
+            (1, 5, 25, 'cA', 60, 0),
+            (10, 100, 500, 'cA', 60, 0),
             ]
 
         for trial in range(50):
