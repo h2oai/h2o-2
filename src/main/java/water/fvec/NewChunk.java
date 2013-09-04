@@ -332,15 +332,19 @@ public class NewChunk extends Chunk {
     return true;
   }
   @Override boolean set_impl(int i, double d) {
-    if( _ls != null ) throw H2O.unimpl();
+    if( _ls != null ) {
+      _ds = MemoryManager.malloc8d(_len);
+      for( int j = 0; j<_len; j++ ) {
+        long l = at8_impl(j);
+        _ds[j] = l;
+        if( _ds[j] != l )  throw H2O.unimpl();
+      }
+      _ls = null;  _xs = null;
+    }
     _ds[i]=d;
     return true;
   }
-  @Override boolean set_impl(int i, float f) {
-    if( _ls != null ) throw H2O.unimpl();
-    _ds[i]=f;
-    return true;
-  }
+  @Override boolean set_impl(int i, float f) {  return set_impl(i,(double)f); }
   @Override boolean setNA_impl(int i) {
     if( isNA(i) ) return true;
     if( _ls != null ) { _ls[i] = 0; _xs[i] = Integer.MIN_VALUE; }

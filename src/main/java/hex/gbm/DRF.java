@@ -143,6 +143,7 @@ public class DRF extends FrameJob {
   @Override protected Response serve() {
     Timer t_drf = new Timer();
     final Frame fr = new Frame(source); // Local copy for local hacking
+    if( !vresponse.isEnum() ) vresponse.asEnum();
     // While I'd like the Frames built custom for each call, with excluded
     // columns already removed - for now check to see if the response column is
     // part of the frame and remove it up front.
@@ -258,7 +259,7 @@ public class DRF extends FrameJob {
           for( DHistogram h : hs )
             if( h != null ) sum += h.byteSize();
         }
-        System.out.println("Tree#"+(st+t)+", leaves="+(trees[t]._len-leafs[t])+", histo size="+PrettyPrint.bytes(sum)+", time="+t_pass);
+        //System.out.println("Tree#"+(st+t)+", leaves="+(trees[t]._len-leafs[t])+", histo size="+PrettyPrint.bytes(sum)+", time="+t_pass);
       }
 
       // Build up the next-generation tree splits from the current histograms.
@@ -271,7 +272,7 @@ public class DRF extends FrameJob {
         final int tmax = tree._len; // Number of total splits
         int leaf = leafs[t];
         for( ; leaf<tmax; leaf++ ) {
-          System.out.println("Tree#"+(st+t)+", "+tree.undecided(leaf));
+          //System.out.println("Tree#"+(st+t)+", "+tree.undecided(leaf));
           // Replace the Undecided with the Split decision
           new DRFDecidedNode((DRFUndecidedNode)tree.undecided(leaf));
         }
