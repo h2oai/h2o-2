@@ -29,17 +29,19 @@ import water.util.Utils;
 class DTree extends Iced {
   final String[] _names; // Column names
   final int _ncols;      // Active training columns
-  final int _nclass;     // #classes, or 0 for regression rtees
+  final int _nclass;     // #classes, or 0 for regression trees
+  final int _min_rows;   // Fewest allowed rows in any split
   private Node[] _ns;    // All the nodes in the tree.  Node 0 is the root.
   int _len;              // Resizable array
-  DTree( String[] names, int ncols, int nclass ) { _names = names; _ncols = ncols; _nclass=nclass; _ns = new Node[1]; }
-  
+  DTree( String[] names, int ncols, int nclass, int min_rows ) { 
+    _names = names; _ncols = ncols; _nclass=nclass; _min_rows = min_rows; _ns = new Node[1]; }
+
   public final Node root() { return _ns[0]; }
 
   // Return Node i
-  public final Node node( int i ) { 
-    if( i >= _len ) throw new ArrayIndexOutOfBoundsException(i); 
-    return _ns[i]; 
+  public final Node node( int i ) {
+    if( i >= _len ) throw new ArrayIndexOutOfBoundsException(i);
+    return _ns[i];
   }
   public final UndecidedNode undecided( int i ) { return (UndecidedNode)node(i); }
   public final   DecidedNode   decided( int i ) { return (  DecidedNode)node(i); }
@@ -59,8 +61,8 @@ class DTree extends Iced {
     transient DTree _tree;    // Make transient, lest we clone the whole tree
     final int _pid;           // Parent node id, root has no parent and uses -1
     final int _nid;           // My node-ID, 0 is root
-    Node( DTree tree, int pid, int nid ) { 
-      _tree = tree; 
+    Node( DTree tree, int pid, int nid ) {
+      _tree = tree;
       _pid=pid;
       tree._ns[_nid=nid] = this;
     }
@@ -81,9 +83,9 @@ class DTree extends Iced {
   static abstract class UndecidedNode extends Node {
     DHistogram _hs[];            // DHistograms per column
     int _scoreCols[];            // A list of columns to score; could be null for all
-    UndecidedNode( DTree tree, int pid, DHistogram hs[] ) { 
-      super(tree,pid,tree.newIdx()); 
-      _hs=hs; 
+    UndecidedNode( DTree tree, int pid, DHistogram hs[] ) {
+      super(tree,pid,tree.newIdx());
+      _hs=hs;
       assert hs.length==tree._ncols;
       _scoreCols = scoreCols(hs);
     }
@@ -143,7 +145,7 @@ class DTree extends Iced {
     }
     static private StringBuilder p(StringBuilder sb, float d, int w) {
       String s = Float.isNaN(d) ? "NaN" :
-        ((d==Float.MAX_VALUE || d==-Float.MAX_VALUE) ? " -" : 
+        ((d==Float.MAX_VALUE || d==-Float.MAX_VALUE) ? " -" :
          Float.toString(d));
       if( s.length() <= w ) return p(sb,s,w);
       s = String.format("%4.2f",d);
@@ -192,7 +194,7 @@ class DTree extends Iced {
         _col  = p._col;  // Just copy the parent data over, for the predictions
         _bmin = p._bmin;
         _step = p._step;
-        _nids = new int[p._nids.length];  
+        _nids = new int[p._nids.length];
         Arrays.fill(_nids,-1);  // No further splits
         _pred = p._pred;
         return;
@@ -211,9 +213,10 @@ class DTree extends Iced {
       int nclass = _tree._nclass;
       _pred = new float[nbins][nclass];
       int ncols = _tree._ncols;      // ncols: all predictor columns
+      int min_rows = _tree._min_rows;
       for( int b=0; b<nbins; b++ ) { // For all split-points
         // Setup for children splits
-        DHistogram nhists[] = splitH.split(col,b,uhs,_tree._names,ncols);
+        DHistogram nhists[] = splitH.split(col,b,uhs,_tree._names,ncols,min_rows);
         assert nhists==null || nhists.length==ncols;
         _nids[b] = nhists == null ? -1 : makeUndecidedNode(_tree,_nid,nhists)._nid;
         // Also setup predictions locally
@@ -229,7 +232,7 @@ class DTree extends Iced {
           } else {     // Else get parent & use parent's prediction for our bin
             _pred[b] = null;
             DecidedNode p = n._tree.decided(_pid);
-            for( int i=0; i<p._nids.length; i++ ) 
+            for( int i=0; i<p._nids.length; i++ )
               if( p._nids[i]==_nid ) {
                 _pred[b] = p._pred[i];
                 break;
@@ -239,7 +242,7 @@ class DTree extends Iced {
         }
       }
     }
-    
+  
     // DecidedNode with a pre-cooked response and no children
     DecidedNode( DTree tree, float pred[] ) {
       super(tree,-1,tree.newIdx());
@@ -273,12 +276,12 @@ class DTree extends Iced {
     }
 
     StringBuilder printChild( StringBuilder sb, int nid ) {
-      for( int i=0; i<_nids.length; i++ ) 
-        if( _nids[i]==nid ) 
+      for( int i=0; i<_nids.length; i++ )
+        if( _nids[i]==nid )
           return sb.append("[").append(_bmin+i*_step).append(" <= ").
             append(_tree._names[_col]).append(" < ").append(_bmin+(i+1)*_step).append("]");
       throw H2O.fail();
-    }    
+    }  
 
     @Override public StringBuilder toString2(StringBuilder sb, int depth) {
       for( int i=0; i<_nids.length; i++ ) {
@@ -321,11 +324,11 @@ class DTree extends Iced {
     final int _ymin;
     // Histograms for every tree, split & active column
     DHistogram _hcs[/*tree id*/][/*tree-relative node-id*/][/*column*/];
-    ScoreBuildHistogram(DTree trees[], int leafs[], int ncols, short nclass, int ymin, Frame fr) { 
-      _trees=trees; 
-      _leafs=leafs; 
-      _ncols=ncols; 
-      _nclass = nclass; 
+    ScoreBuildHistogram(DTree trees[], int leafs[], int ncols, short nclass, int ymin, Frame fr) {
+      _trees=trees;
+      _leafs=leafs;
+      _ncols=ncols;
+      _nclass = nclass;
       _ymin = ymin;
       _fr = fr;
     }
@@ -350,7 +353,7 @@ class DTree extends Iced {
     }
 
     @Override public void map( Chunk[] chks ) {
-      assert _ncols+_nclass/*response-vector*/+_trees.length == chks.length 
+      assert _ncols+_nclass/*response-vector*/+_trees.length == chks.length
         : "Missing columns?  ncols="+_ncols+", "+_nclass+" for response-vector, ntrees="+_trees.length+", and found "+chks.length+" vecs";
 
       // We need private (local) space to gather the histograms.
@@ -362,7 +365,7 @@ class DTree extends Iced {
         final DTree tree = _trees[t];
         final int leaf = _leafs[t];
         // A leaf-biased array of all active histograms
-        final DHistogram hcs[][] = _hcs[t] = new DHistogram[tree._len-leaf][]; 
+        final DHistogram hcs[][] = _hcs[t] = new DHistogram[tree._len-leaf][];
         final Chunk nids = chks[_ncols+_nclass/*response-vector*/+t];
 
         // Pass 1: Score a prior partially-built tree model, and make new Node
@@ -373,14 +376,14 @@ class DTree extends Iced {
         for( int i=0; i<nids._len; i++ ) {
           int nid = (int)nids.at80(i); // Get Node to decide from
           if( nid==-2 ) continue; // sampled away
-          
+        
           // Score row against current decisions & assign new split
           if( leaf > 0 && (nid = tree.decided(nid).ns(chks,i)) != -1 ) // Prior pass exists?
             nids.set0(i,nid);
-          
+        
           // Pass 1.9
           if( nid < leaf ) continue; // row already predicts perfectly
-          
+        
           // We need private (local) space to gather the histograms.
           // Make local clones of all the histograms that appear in this chunk.
           DHistogram nhs[] = hcs[nid-leaf];
@@ -406,7 +409,7 @@ class DTree extends Iced {
             }
           }
         }
-          
+        
         // Pass 2: Build new summary DHistograms on the new child
         // UndecidedNodes every row got assigned into.  Collect counts, mean,
         // variance, min, max per bin, per column.
@@ -467,9 +470,9 @@ class DTree extends Iced {
     double _sum;                // Sum-squared-error
     long _err;                  // Total absolute errors
 
-    BulkScore( DTree trees[], int ncols, int nclass, int ymin, float sampleRate, boolean doAvg ) { 
-      _trees = trees; _ncols = ncols; 
-      _nclass = nclass; _ymin = ymin; 
+    BulkScore( DTree trees[], int ncols, int nclass, int ymin, float sampleRate, boolean doAvg ) {
+      _trees = trees; _ncols = ncols;
+      _nclass = nclass; _ymin = ymin;
       _sampleRate = sampleRate; _doAvg = doAvg;
     }
 
@@ -501,7 +504,7 @@ class DTree extends Iced {
         for( int t=0; t<_trees.length; t++ )
           rands[t] = _trees[t].rngForChunk(ys.cidx());
       }
-   
+ 
       // Score all Rows
       float pred[] = new float[_nclass]; // Shared temp array for computing predictions
       for( int i=0; i<ys._len; i++ ) {
@@ -510,9 +513,9 @@ class DTree extends Iced {
       }
     }
 
-    @Override public void reduce( BulkScore t ) { 
-      _sum += t._sum; 
-      _err += t._err; 
+    @Override public void reduce( BulkScore t ) {
+      _sum += t._sum;
+      _err += t._err;
       Utils.add(_cm,t._cm);
     }
 

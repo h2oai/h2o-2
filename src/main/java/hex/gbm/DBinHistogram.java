@@ -43,7 +43,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   public       float[] _mins, _maxs; // Min, Max, per-bin
   // Average response-vector for the rows in this split.
   // For RF, this will be 1.0 for the response variable and zero otherwise.
-  // For GBM, these are the residuals by class.  
+  // For GBM, these are the residuals by class. 
   // For Regression trees, there is but one "class".
   // For Classification trees, there can be many classes.
   // At points during data gather, this data is the sum of responses instead of
@@ -59,7 +59,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     int xbins = Math.max((int)Math.min(BINS,nelems),1); // Default bin count
     // See if we can show there are fewer unique elements than nbins.
     // Common for e.g. boolean columns, or near leaves.
-    int nbins = xbins;      // Default size for most columns        
+    int nbins = xbins;      // Default size for most columns       
     if( isInt && max-min < xbins )
       nbins = (int)((long)max-(long)min+1L); // Shrink bins
     _nbins = (char)nbins;
@@ -105,16 +105,16 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   @Override long  bins(int b) { return _bins[b]; }
   @Override float mins(int b) { return _mins[b]; }
   @Override float maxs(int b) { return _maxs[b]; }
-  float mean(int b, int cls) { 
+  float mean(int b, int cls) {
     if( _Ms[b] == null ) return 0;
-    return _Ms[b][cls]; 
+    return _Ms[b][cls];
   }
-  float var (int b, int cls) { 
-    return _bins[b] > 1 ? _Ss[b][cls]/(_bins[b]-1) : 0; 
+  float var (int b, int cls) {
+    return _bins[b] > 1 ? _Ss[b][cls]/(_bins[b]-1) : 0;
   }
   // Mean of response-vector.  Since vector values are already normalized we
   // just average the vector contents.
-  float mean(int b) { 
+  float mean(int b) {
     if( _Ms[b] == null ) return 0;
     float sum=0;
     for( int c=0; c<_nclass; c++ )
@@ -195,9 +195,9 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   // constant data, or was not being tracked by a prior DBinHistogram (for being
   // constant data from a prior split), then that column will be null in the
   // returned array.
-  public DBinHistogram[] split( int col, int b, DHistogram hs[], String[] names, int ncols ) {
+  public DBinHistogram[] split( int col, int b, DHistogram hs[], String[] names, int ncols, int min_rows ) {
     assert hs[col] == this;
-    if( _bins[b] <= 1 ) return null; // Zero or 1 elements
+    if( _bins[b] <= min_rows ) return null; // Too few elements
     if( var(b) == 0.0 ) return null; // No point in splitting a perfect prediction
 
     // Build a next-gen split point from the splitting bin
@@ -225,7 +225,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     Vec[] vs = fr._vecs;
     for( int j=0; j<ncols; j++ ) {
       Vec v = vs[j];
-      hists[j] = v.min()==v.max() ? null 
+      hists[j] = v.min()==v.max() ? null
         : new DBinHistogram(fr._names[j],nclass,v.isInt(),(float)v.min(),(float)v.max(),v.length());
     }
     return hists;

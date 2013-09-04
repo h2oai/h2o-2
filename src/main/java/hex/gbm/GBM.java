@@ -27,8 +27,8 @@ public class GBM extends FrameJob {
   @API(help = "Learning rate, from 0. to 1.0", filter = LearnRateFilter.class)
   double learn_rate = 0.1;
   public class LearnRateFilter implements Filter {
-    @Override public boolean run(Object value) { 
-      double learn_rate = (Double)value; 
+    @Override public boolean run(Object value) {
+      double learn_rate = (Double)value;
       return 0.0 < learn_rate && learn_rate <= 1.0;
     }
   }
@@ -36,8 +36,8 @@ public class GBM extends FrameJob {
   @API(help = "Number of trees", filter = NtreesFilter.class)
   int ntrees = 10;
   public class NtreesFilter implements Filter {
-    @Override public boolean run(Object value) { 
-      int ntrees = (Integer)value; 
+    @Override public boolean run(Object value) {
+      int ntrees = (Integer)value;
       return 1 <= ntrees && ntrees <= 1000000;
     }
   }
@@ -48,11 +48,16 @@ public class GBM extends FrameJob {
     @Override public boolean run(Object value) { return 1 <= (Integer)value; }
   }
 
+  @API(help = "Fewest allowed observations in a leaf", filter = MinRowsFilter.class)
+  int min_rows = 5;
+  public class MinRowsFilter implements Filter {
+    @Override public boolean run(Object value) { return (Integer)value >= 1; }
+  }
 
   // JSON Output Fields
   @API(help="Class names")
   public String domain[];
-  
+
   @API(help="Confusion Matrix[actual_class][predicted_class]")
   long cm[/*actual*/][/*predicted*/]; // Confusion matrix
 
@@ -132,7 +137,7 @@ public class GBM extends FrameJob {
 
   // ==========================================================================
 
-  // Compute a GBM tree.  
+  // Compute a GBM tree.
 
   // Start by splitting all the data according to some criteria (minimize
   // variance at the leaves).  Record on each row which split it goes to, and
@@ -169,7 +174,7 @@ public class GBM extends FrameJob {
     // The initial prediction is just the class distribution.  The initial
     // residuals are then basically the actual class minus the average class.
     float preds[] = buildResiduals(nclass,fr,ncols,nrows,ymin);
-    DTree init_tree = new DTree(fr._names,ncols,nclass);
+    DTree init_tree = new DTree(fr._names,ncols,nclass,min_rows);
     new GBMDecidedNode(init_tree,preds);
 
     DTree forest[] = new DTree[] {init_tree};
@@ -202,7 +207,7 @@ public class GBM extends FrameJob {
     fr.add("NIDs",vnids);
 
     // Initially setup as-if an empty-split had just happened
-    final DTree tree = new DTree(fr._names,ncols,nclass);
+    final DTree tree = new DTree(fr._names,ncols,nclass,min_rows);
     new GBMUndecidedNode(tree,-1,DBinHistogram.initialHist(fr,ncols,nclass)); // The "root" node
     int leaf = 0; // Define a "working set" of leaf splits, from here to tree._len
     // Add tree to the end of the forest
@@ -272,7 +277,7 @@ public class GBM extends FrameJob {
 
     // Print the generated tree
     //System.out.println(tree.root().toString2(new StringBuilder(),0));
-    
+  
     // Tree-by-tree scoring
     long err = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, depth )._err;
     errs = Arrays.copyOf(errs,errs.length+1);
@@ -331,8 +336,8 @@ public class GBM extends FrameJob {
     GBMDecidedNode( GBMUndecidedNode n ) { super(n); }
     GBMDecidedNode( DTree t, float[] p ) { super(t,p); }
 
-    @Override GBMUndecidedNode makeUndecidedNode(DTree tree, int nid, DHistogram[] nhists ) { 
-      return new GBMUndecidedNode(tree,nid,nhists); 
+    @Override GBMUndecidedNode makeUndecidedNode(DTree tree, int nid, DHistogram[] nhists ) {
+      return new GBMUndecidedNode(tree,nid,nhists);
     }
 
     // Find the column with the best split (lowest score).  Unlike RF, GBM
