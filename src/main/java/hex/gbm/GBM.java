@@ -346,6 +346,7 @@ public class GBM extends FrameJob {
       DHistogram hs[] = u._hs;
       double bs = Double.MAX_VALUE; // Best score
       int idx = -1;             // Column to split on
+      if( u._hs == null ) return idx;
       for( int i=0; i<hs.length; i++ ) {
         if( hs[i]==null || hs[i].nbins() <= 1 ) continue;
         double s = hs[i].score();

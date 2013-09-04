@@ -146,7 +146,6 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   // Response-vector is specified as _nclass values in Chunks, from ychk to
   // ychk+_nclass-1.
   void incr( int row, float d, Chunk[] chks, int ychk ) {
-    assert !Float.isNaN(d);
     int b = bin(d);             // Compute bin# via linear interpolation
     // Lazily allocate storage the first time a bin recieves any counts.
     float Ms[] = _Ms[b];

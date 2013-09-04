@@ -342,7 +342,7 @@ class DTree extends Iced {
 
     public DHistogram[] getFinalHisto( int tid, int nid ) {
       DHistogram hs[] = _hcs[tid][nid-_leafs[tid]];
-      assert hs != null : "no histo tree "+tid+" nid="+nid+", pid="+_trees[tid].node(nid)._pid;
+      if( hs == null ) return null; // Can happen if the split is all NA's
       // Having gather min/max/mean/class/etc on all the data, we can now
       // tighten the min & max numbers.
       for( int j=0; j<hs.length; j++ ) {
@@ -421,7 +421,6 @@ class DTree extends Iced {
           for( int j=0; j<_ncols; j++) { // For all columns
             DHistogram nh = nhs[j];
             if( nh == null ) continue; // Not tracking this column?
-            if( chks[j].isNA0(i) ) continue; // No data this row/column?
             float f = (float)chks[j].at0(i);
             nh.incr(f);         // Small histogram
             if( nh instanceof DBinHistogram ) // Big histogram

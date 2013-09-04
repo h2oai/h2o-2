@@ -266,7 +266,7 @@ public class DRF extends FrameJob {
         for( int i=leafs[t]; i<tmax; i++ ) {
           DHistogram hs[] = sbh.getFinalHisto(t,i);
           tree.undecided(i)._hs = hs;
-          //for( DHistogram h : hs )
+          //if( hs != null ) for( DHistogram h : hs )
           //  if( h != null ) sum += h.byteSize();
         }
         //System.out.println("Tree#"+(st+t)+", leaves="+(trees[t]._len-leafs[t])+", histo size="+PrettyPrint.bytes(sum)+", time="+t_pass);
@@ -337,6 +337,7 @@ public class DRF extends FrameJob {
     @Override int bestCol( DRFUndecidedNode u ) {
       double bs = Double.MAX_VALUE; // Best score
       int idx = -1;                 // Column to split on
+      if( u._hs == null ) return idx;
       for( int i=0; i<u._scoreCols.length; i++ ) {
         int col = u._scoreCols[i];
         double s = u._hs[col].score();

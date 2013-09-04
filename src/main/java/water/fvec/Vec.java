@@ -131,8 +131,8 @@ public class Vec extends Iced {
     if( !isInt() ) throw new IllegalArgumentException("Cannot convert a float column to an enum.");
     long min = (long)min(), max = (long)max();
     if( min < 0 || max > 10000L ) throw H2O.unimpl();
-    _domain = new String[(int)max];
-    for( int i=0; i<(int)max; i++ )
+    _domain = new String[(int)max+1];
+    for( int i=0; i<(int)max+1; i++ )
       _domain[i] = Integer.toString(i);
   }
 
