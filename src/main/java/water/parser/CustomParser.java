@@ -94,7 +94,7 @@ public abstract class CustomParser extends Iced {
       _columnNames = columnNames;
     }
     public ParserSetup clone(){
-      return new ParserSetup(_pType, _separator, _header);
+      return new ParserSetup(_pType, _separator, _ncols,_header,null);
     }
     public boolean isCompatible(ParserSetup other){
       if(other == null || _pType != other._pType)return false;
