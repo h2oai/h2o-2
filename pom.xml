@@ -1,53 +1,43 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
+  <!-- Share H2O-parent POM -->
+  <parent>
+    <groupId>com.Oxdata</groupId>
+    <artifactId>h2o-parent</artifactId>
+    <version>0.3-SNAPSHOT</version>
+    <relativePath>./parent-pom.xml</relativePath>
+  </parent>
 
-  <groupId>com.0xdata</groupId>
-  <artifactId>h2o</artifactId>
-  <version>0.3-SNAPSHOT</version>
+  <!-- This artifact setup. 
+  		NOTE: groupId, version are inherited from parent POM 
+  -->
+  <artifactId>h2o-core</artifactId>
   <packaging>jar</packaging>
+  <name>H2O Core</name>
+  <description>A core of distributed platform for large data analysis.</description>
   
-  <name>h2o</name>
-  <description>A distributed platform for large data analysis.</description>
-  <url>http://0xdata.com/</url>
-  <organization>
-    <name>0xdata</name>
-    <url>http://0xdata.com/</url>
-  </organization>
-  <inceptionYear>2013</inceptionYear>
-  <licenses>
-    <license>
-      <name>Apache License, Version 2.0</name>
-      <url>http://www.apache.org/licenses/LICENSE-2.0</url>
-      <distribution>repo</distribution>
-    </license>
-  </licenses>
   <!-- List of build properties. -->
   <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <!-- Default compile time version of Hadoop client: in directory structured referenced as cdh3. -->
     <h2o.hadoop.version>0.20.2-cdh3u6</h2o.hadoop.version>
-    <!-- Java version used by javac for -source/-target parameters.-->
-    <h2o.java.version>1.6</h2o.java.version>
-    <!-- Skip all unit tests by default -->
-    <h2o.skipTests>false</h2o.skipTests>
   </properties>
 
   <!-- 
   = Repositories =
    -->
   <repositories>
-  	<!-- In project repository
-  		* a way of having project specific jars bundled with project
-  		See http://charlie.cu.cc/2012/06/how-add-external-libraries-maven/
-  	-->
-  	<repository>
-  		<id>in-project</id>
-  		<name>This project in repository.</name>
-  		<url>file://${project.basedir}/lib</url>
-  	</repository>
-  	<!-- Cloudera release repository -->
-  	<repository>
+    <!-- In project repository
+      * a way of having project specific jars bundled with project
+      See http://charlie.cu.cc/2012/06/how-add-external-libraries-maven/
+    -->
+    <repository>
+      <id>in-project</id>
+      <name>This project in repository.</name>
+      <url>file://${project.basedir}/lib</url>
+    </repository>
+    <!-- Cloudera release repository -->
+    <repository>
         <id>cloudera-releases</id>
         <url>https://repository.cloudera.com/artifactory/cloudera-repos</url>
         <releases>
@@ -63,7 +53,7 @@
   = Project dependencies =
    -->
   <dependencies>
-  	<!-- =Test dependencies= -->
+    <!-- =Test dependencies= -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
@@ -71,209 +61,168 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-		<groupId>org.mockito</groupId>
-		<artifactId>mockito-core</artifactId>
-		<version>1.9.5</version>
-		<scope>test</scope>
-	</dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>1.9.5</version>
+      <scope>test</scope>
+    </dependency>
     
     <!-- =Compile time dependencies= -->
     <!-- ==Apache dependencies== -->
-	<dependency>
-		<groupId>commons-lang</groupId>
-		<artifactId>commons-lang</artifactId>
-		<version>2.4</version>
-		<scope>compile</scope>
-	</dependency>
-	<dependency>
-		<groupId>org.apache.httpcomponents</groupId>
-		<artifactId>httpclient</artifactId>
-		<version>4.1.1</version>
-		<scope>compile</scope>
-	</dependency>
-	<dependency>
-		<groupId>log4j</groupId>
-		<artifactId>log4j</artifactId>
-		<version>1.2.15</version>
-		<scope>compile</scope>
-		<exclusions>
-			<exclusion>
-				<artifactId>mail</artifactId>
-				<groupId>javax.mail</groupId>
-			</exclusion>
-			<exclusion>
-				<artifactId>jms</artifactId>
-				<groupId>javax.jms</groupId>
-			</exclusion>
-			<exclusion>
-				<artifactId>jmxtools</artifactId>
-				<groupId>com.sun.jdmk</groupId>
-			</exclusion>
-			<exclusion>
-				<artifactId>jmxri</artifactId>
-				<groupId>com.sun.jmx</groupId>
-			</exclusion>
-		</exclusions>
-	</dependency>            
-	<!-- ==Google dependencies== -->
-	<dependency>
-		<groupId>com.google.guava</groupId>
-		<artifactId>guava</artifactId>
-		<version>12.0.1</version>
-		<scope>compile</scope>
-	</dependency>
-	<dependency>
-		<groupId>com.google.code.gson</groupId>
-		<artifactId>gson</artifactId>
-		<version>2.2.2</version>
-		<scope>compile</scope>
-	</dependency>
-	
-	<!-- ==Jama is given explicitely - it was modified and compiled by @tomas == -->
-	<dependency>
-		<groupId>gov.nist.math</groupId>
-		<artifactId>jama</artifactId>
-		<version>1.0.2-modified</version>
-		<scope>compile</scope>
-	</dependency>
-	<!-- ==POI dependencies== -->
-	<dependency>
-		<groupId>org.apache.poi</groupId>
-		<artifactId>poi-ooxml</artifactId>
-		<version>3.8</version>
-		<scope>compile</scope>
-	</dependency>
-	<!-- ==jets3t dependencies== -->
-	<dependency>
-		<groupId>net.java.dev.jets3t</groupId>
-		<artifactId>jets3t</artifactId>
-		<version>0.6.1</version>
-		<scope>compile</scope>
-	</dependency>
-	<!-- ==Java AWS SDK dependencies== -->
-	<dependency>
-		<groupId>com.amazonaws</groupId>
-		<artifactId>aws-java-sdk</artifactId>
-		<version>1.3.27</version>
-		<scope>compile</scope>
-	</dependency>		
-	<!-- ==Javassist dependency -->
-	<dependency>
-		<groupId>org.javassist</groupId>
-		<artifactId>javassist</artifactId>
-		<version>3.16.1-GA</version>
-		<scope>compile</scope>
-	</dependency>
-	<!-- ==Jogamp dependencies for NN== -->
-	<dependency>
-		<groupId>org.jogamp.gluegen</groupId>
-		<artifactId>gluegen-rt-main</artifactId>
-		<version>2.0.2-rc12</version>
-		<scope>compile</scope>
-	</dependency>
-	<dependency>
-		<groupId>org.jogamp.jocl</groupId>
-		<artifactId>jocl</artifactId>
-		<version>2.0.2-rc12</version>
-	</dependency>
-	<!-- ==Hadoop core dependencies== -->
-	<dependency>
-		<groupId>org.apache.hadoop</groupId>
-		<artifactId>hadoop-client</artifactId>
-		<version>${h2o.hadoop.version}</version>
-		<scope>compile</scope>
-	</dependency>
-	
+    <dependency>
+      <groupId>commons-lang</groupId>
+      <artifactId>commons-lang</artifactId>
+      <version>2.4</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
+      <version>4.1.1</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <version>1.2.15</version>
+      <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <artifactId>mail</artifactId>
+          <groupId>javax.mail</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jms</artifactId>
+          <groupId>javax.jms</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jmxtools</artifactId>
+          <groupId>com.sun.jdmk</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jmxri</artifactId>
+          <groupId>com.sun.jmx</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency>            
+    <!-- ==Google dependencies== -->
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>12.0.1</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>2.2.2</version>
+      <scope>compile</scope>
+    </dependency>
+    <!-- ==Jama is given explicitely - it was modified and compiled by @tomas == -->
+    <dependency>
+      <groupId>gov.nist.math</groupId>
+      <artifactId>jama</artifactId>
+      <version>1.0.2-modified</version>
+      <scope>compile</scope>
+    </dependency>
+    <!-- ==POI dependencies== -->
+    <dependency>
+      <groupId>org.apache.poi</groupId>
+      <artifactId>poi-ooxml</artifactId>
+      <version>3.8</version>
+      <scope>compile</scope>
+    </dependency>
+    <!-- ==jets3t dependencies== -->
+    <dependency>
+      <groupId>net.java.dev.jets3t</groupId>
+      <artifactId>jets3t</artifactId>
+      <version>0.6.1</version>
+      <scope>compile</scope>
+    </dependency>
+    <!-- ==Java AWS SDK dependencies== -->
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk</artifactId>
+      <version>1.3.27</version>
+      <scope>compile</scope>
+    </dependency>   
+    <!-- ==Javassist dependency -->
+    <dependency>
+      <groupId>org.javassist</groupId>
+      <artifactId>javassist</artifactId>
+      <version>3.16.1-GA</version>
+      <scope>compile</scope>
+    </dependency>
+    <!-- ==Jogamp dependencies for NN== -->
+    <dependency>
+      <groupId>org.jogamp.gluegen</groupId>
+      <artifactId>gluegen-rt-main</artifactId>
+      <version>2.0.2-rc12</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jogamp.jocl</groupId>
+      <artifactId>jocl</artifactId>
+      <version>2.0.2-rc12</version>
+    </dependency>
+    <!-- ==Hadoop core dependencies== -->
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-client</artifactId>
+      <version>${h2o.hadoop.version}</version>
+      <scope>compile</scope>
+    </dependency>
   </dependencies>
   
   <!-- Configure build -->
   <build>
     <defaultGoal>package</defaultGoal>
     <!-- Setup plugins for this POM and all kids POMs. -->
-  	<pluginManagement>
-  	<plugins>
-  	  <!-- Enforce compiler version - see http://stackoverflow.com/questions/3138384/java-warning-build-path-specifies-execution-environment-j2se-1-4 -->
-  	  <plugin>
-  	    <groupId>org.apache.maven.plugins</groupId>
-  	    <artifactId>maven-compiler-plugin</artifactId>
-  	    <version>3.1</version>
-  	    <configuration>
-  	      <source>${h2o.java.version}</source>
-  	      <target>${h2o.java.version}</target>
-  	      <verbose>false</verbose>
- 		  <compilerArgs>
- 		  	<arg>-XDignore.symbol.file</arg>
- 		  	<arg>-Xlint:all</arg>
- 		  	<arg>-Xlint:-deprecation</arg>
- 		  	<arg>-Xlint:-serial</arg>
- 		  	<arg>-Xlint:-rawtypes</arg>
- 		  	<arg>-Xlint:-unchecked</arg>
- 		  </compilerArgs>
-  	    </configuration>
-  	  </plugin>
-  	  <!-- Enfore the Java version -->
-  	  <plugin>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <version>1.3</version>
+    <pluginManagement>
+    <plugins>
+      <!-- Assembly the resulting project structure -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+        <descriptors>
+          <descriptor>src/main/assembly/bin.xml</descriptor>
+          <!-- <descriptor>src/main/assembly/src.xml</descriptor> -->
+        </descriptors>
+        <descriptorRefs>
+          <!-- <descriptorRef>src</descriptorRef> -->
+        </descriptorRefs>
+        <archive>
+          <!-- Setup manifest -->
+          <manifest>
+            <mainClass>water.Boot</mainClass>
+          </manifest>
+        </archive>
+        </configuration>
+        <!-- Execute goal assembly:single during life-cycle phase 'package' -->
         <executions>
           <execution>
-            <id>enforce-versions</id>
+            <id>create-executable-jar</id>
+            <phase>package</phase>
             <goals>
-              <goal>enforce</goal>
+              <goal>single</goal>
             </goals>
-            <configuration>
-              <rules>
-                <requireJavaVersion>
-                  <version>${h2o.java.version}</version>
-                </requireJavaVersion>
-              </rules>
-            </configuration>
           </execution>
         </executions>
       </plugin>
-      <!-- Assembly the resulting project structure -->
-      <plugin>
-      	<groupId>org.apache.maven.plugins</groupId>
-      	<artifactId>maven-assembly-plugin</artifactId>
-      	<configuration>
-     		<descriptors>
-     			<descriptor>src/main/assembly/bin.xml</descriptor>
-     			<!-- <descriptor>src/main/assembly/src.xml</descriptor> -->
-     		</descriptors>
-    		<descriptorRefs>
-    			<!-- <descriptorRef>src</descriptorRef> -->
-    		</descriptorRefs>
-     		<archive>
-     			<!-- Setup manifest -->
-     			<manifest>
-     				<mainClass>water.Boot</mainClass>
-     			</manifest>
-     		</archive>
-      	</configuration>
-      	<!-- Execute goal assembly:single during life-cycle phase 'package' -->
-      	<executions>
-      		<execution>
-      			<id>create-executable-jar</id>
-      			<phase>package</phase>
-      			<goals>
-      				<goal>single</goal>
-      			</goals>
-      		</execution>
-      	</executions>
-      </plugin>
       <!-- Configuration of JAR packaging -->
       <plugin>
-      	<groupId>org.apache.maven.plugins</groupId>
-      	<artifactId>maven-jar-plugin</artifactId>
-      	<version>2.4</version>
-      	<configuration>
-     		<archive>
-     			<!-- Setup manifest -->
-     			<manifest>
-     				<mainClass>water.Boot</mainClass>
-     			</manifest>
-     		</archive>
-      	</configuration>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>2.4</version>
+        <configuration>
+        <archive>
+          <!-- Setup manifest -->
+          <manifest>
+            <mainClass>water.Boot</mainClass>
+          </manifest>
+        </archive>
+        </configuration>
       </plugin>
       <!-- Configure creation of source package. -->
       <plugin>
@@ -298,17 +247,16 @@
          <artifactId>maven-surefire-plugin</artifactId>
          <version>2.12.4</version>
          <configuration>
-           <!-- Uses scalatest instead -->
-           <skipTests>${h2o.skipTests}</skipTests>          
-	       <includes>
-	       	 <include>**/CBSChunkTest.java</include>
-	       </includes>
+           <!-- <skipTests>${h2o.skipTests}</skipTests> -->          
+           <includes>
+             <include>**/CBSChunkTest.java</include>
+           </includes>
          </configuration>
        </plugin>
-  	</plugins>
-  	</pluginManagement>
-  	<!-- activating plugins -->
-  	<plugins>
+    </plugins>
+    </pluginManagement>
+    <!-- activating plugins -->
+    <plugins>
         <plugin>
             <artifactId>maven-assembly-plugin</artifactId>
         </plugin>
@@ -327,23 +275,4 @@
       </activation>
     </profile>
   </profiles>-->
-  
-  <!-- GitHub is H2O primary SCM -->
-  <scm>
-  	<url>https://github.com/0xdata/h2o</url>
-  	<connection>scm:git:https://github.com/0xdata/h2o.git</connection>
-  	<developerConnection>scm:git:git@github.com:0xdata/h2o.git</developerConnection>
-  </scm>
-  <distributionManagement>
-    <repository>
-      <id>0xdata-release-repo</id>
-      <name>0xdata Release Repository</name>
-      <url>s3://distribution.bucket/release</url>
-    </repository>
-    <snapshotRepository>
-      <id>0xdata-snapshot-repo</id>
-      <name>0xdata Snapshot Repository</name>
-      <url>s3://distribution.bucket/snapshot</url>
-    </snapshotRepository>
-  </distributionManagement>
 </project>

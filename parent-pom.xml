@@ -1,0 +1,137 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.Oxdata</groupId>
+  <artifactId>h2o-parent</artifactId>
+  <version>0.3-SNAPSHOT</version>
+  <packaging>pom</packaging>
+  
+  <name>H2O Project Parent POM</name>
+  <description>H2O - the distributed platform for large data analysis.</description>
+  <url>http://0xdata.com/</url>
+  <organization>
+    <name>0xdata</name>
+    <url>http://0xdata.com/</url>
+  </organization>
+  <inceptionYear>2013</inceptionYear>
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <!-- We support only new version of Mave -->
+  <prerequisites>
+    <maven>3.0.0</maven>
+  </prerequisites>
+
+  <!-- List of common build properties. -->
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <!-- Java version used by javac for -source/-target parameters.-->
+    <h2o.java.version>1.6</h2o.java.version>
+    <!-- Skip all unit tests by default -->
+    <h2o.skipTests>false</h2o.skipTests>
+  </properties>
+  
+  <!-- GitHub is H2O primary SCM -->
+  <scm>
+    <url>https://github.com/0xdata/h2o</url>
+    <connection>scm:git:https://github.com/0xdata/h2o.git</connection>
+    <developerConnection>scm:git:git@github.com:0xdata/h2o.git</developerConnection>
+  </scm>
+
+  <!-- 0xdata S3-based release repository for maven artifacts.
+       Note: to allow for write access into S3 you need to put your credentials into 
+             ~/.m2/settings.xml
+       See also: http://tech-frontlines.blogspot.com/2012/02/hosting-maven-repository-on-amazons-s3.html
+  -->
+  <distributionManagement>
+    <repository>
+      <id>0xdata-releases-repo</id>
+      <name>0xdata Release Repository</name>
+      <url>s3://repo.0xdata.com/releases</url>
+    </repository>
+    <snapshotRepository>
+      <id>0xdata-snapshots-repo</id>
+      <name>0xdata Snapshot Repository</name>
+      <url>s3://repo.0xdata.com/snapshots</url>
+    </snapshotRepository>
+  </distributionManagement>
+
+  <issueManagement>
+    <system>jira</system>
+    <url>http://jira.0xdata.com/</url>
+  </issueManagement>
+
+  <!-- Pre-configure build dependencies -->
+  <build>
+    <!-- Setup plugins for this POM and all kids POMs. -->
+    <pluginManagement>
+      <plugins>
+        <!-- Enforce compiler version - see http://stackoverflow.com/questions/3138384/java-warning-build-path-specifies-execution-environment-j2se-1-4 -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.1</version>
+          <configuration>
+            <source>${h2o.java.version}</source>
+            <target>${h2o.java.version}</target>
+            <verbose>false</verbose>
+              <compilerArgs>
+                <arg>-XDignore.symbol.file</arg>
+                <arg>-Xlint:all</arg>
+                <arg>-Xlint:-deprecation</arg>
+                <arg>-Xlint:-serial</arg>
+                <arg>-Xlint:-rawtypes</arg>
+                <arg>-Xlint:-unchecked</arg>
+              </compilerArgs>
+          </configuration>
+        </plugin>
+        <!-- Enfore the Java version -->
+        <plugin>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <version>1.3</version>
+          <executions>
+            <execution>
+              <id>enforce-versions</id>
+              <goals>
+                <goal>enforce</goal>
+              </goals>
+              <configuration>
+                <rules>
+                  <requireJavaVersion>
+                    <version>${h2o.java.version}</version>
+                  </requireJavaVersion>
+                </rules>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+        <!-- Configure invocation of tests. -->        
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>2.12.4</version>
+          <configuration>
+            <!-- Uses scalatest instead -->
+            <skipTests>${h2o.skipTests}</skipTests>          
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+    <!-- Add S3 wagoon for uploading artifacts into S3 repository. -->
+    <extensions>  
+      <extension>  
+        <groupId>org.springframework.build.aws</groupId>  
+        <artifactId>org.springframework.build.aws.maven</artifactId>  
+        <version>3.0.0.RELEASE</version>  
+      </extension>  
+    </extensions>
+  </build>
+
+</project>
