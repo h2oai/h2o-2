@@ -1,5 +1,10 @@
 package hex;
 
+import java.util.Arrays;
+import java.util.Comparator;
+
+import org.apache.commons.lang.ArrayUtils;
+
 import jsr166y.CountedCompleter;
 import hex.DGLM.*;
 import hex.DGLM.GLMModel.Status;
@@ -33,15 +38,16 @@ public abstract class DPCA {
   }
 
   public static class PCAParams extends Iced {
-    public int _num_pc = 5;
+    public double _tol = 0;
 
-    public PCAParams(int num_pc) {
-      _num_pc = num_pc;
+    public PCAParams(double tol) {
+      _tol = tol;
     }
 
     public JsonObject toJson() {
       JsonObject res = new JsonObject();
-      res.addProperty("numPC", _num_pc);
+      // res.addProperty("numPC", _num_pc);
+      res.addProperty("tolerance", _tol);
       return res;
     }
   }
@@ -51,6 +57,9 @@ public abstract class DPCA {
     Status _status;
     final int[] _colCatMap;
     final int _response;
+    public final boolean _standardized;
+
+    public final int _num_pc;
     public final PCAParams _pcaParams;
     public final double[] _sdev;
     public final double[] _propVar;
@@ -78,16 +87,19 @@ public abstract class DPCA {
       _propVar = null;
       _eigVec = null;
       _response = 0;
+      _num_pc = 1;
+      _standardized = true;
       _pcaParams = null;
     }
 
     public PCAModel(Status status, float progress, Key k, DataFrame data, double[] sdev, double[] propVar,
-        double[][] eigVec, int response, PCAParams pcaps) {
-      this(status, progress, k, data._ary, data._modelDataMap, data._colCatMap, sdev, propVar, eigVec, response, pcaps);
+        double[][] eigVec, int response, int num_pc, PCAParams pcaps) {
+      this(status, progress, k, data._ary, data._modelDataMap, data._colCatMap, sdev, propVar, eigVec, response,
+          data._standardized, num_pc, pcaps);
     }
 
     public PCAModel(Status status, float progress, Key k, ValueArray ary, int[] colIds, int[] colCatMap, double[] sdev,
-        double[] propVar, double[][] eigVec, int response, PCAParams pcap) {
+        double[] propVar, double[][] eigVec, int response, boolean standardized, int num_pc, PCAParams pcap) {
       super(k, colIds, ary._key);
       _status = status;
       _colCatMap = colCatMap;
@@ -95,6 +107,8 @@ public abstract class DPCA {
       _propVar = propVar;
       _eigVec = eigVec;
       _response = response;
+      _standardized = standardized;
+      _num_pc = num_pc;
       _pcaParams = pcap;
     }
 
@@ -126,7 +140,7 @@ public abstract class DPCA {
       // Add eigenvectors to output
       // Singular values ordered in weakly descending order
       JsonArray eigvec = new JsonArray();
-      for(int i = 0; i < _pcaParams._num_pc; i++) {
+      for(int i = 0; i < _eigVec.length; i++) {
         JsonObject vec = new JsonObject();
         for(int j = 0; j < _eigVec[i].length; j++)
           vec.addProperty(_va._cols[j]._name, _eigVec[i][j]);
@@ -137,6 +151,19 @@ public abstract class DPCA {
     };
   }
 
+  static class reverseDouble implements Comparator<Double> {
+    public int compare(Double a, Double b) {
+        return b.compareTo(a);
+    }
+  }
+
+  private static int getNumPC(double[] sdev, double tol) {
+    if(sdev == null) return 0;
+    double cutoff = Math.pow(tol,2)*sdev[0];
+    int ind = Arrays.binarySearch(ArrayUtils.toObject(sdev), cutoff, new reverseDouble());
+    return Math.abs(ind+1);
+  }
+
   public static PCAJob startPCAJob(Key dest, final DataFrame data, final PCAParams params) {
     if(dest == null) dest = PCAModel.makeKey();
     final PCAJob job = new PCAJob(data._ary, dest);
@@ -144,11 +171,11 @@ public abstract class DPCA {
     final double[] propVar = null;
     final double[][] eigVec = null;
 
-    UKV.put(job.dest(), new PCAModel(Status.ComputingModel, 0.0f, job.dest(), data, sdev, propVar, eigVec, 0, params));
+    UKV.put(job.dest(), new PCAModel(Status.ComputingModel, 0.0f, job.dest(), data, sdev, propVar, eigVec, 0, 1, params));
     final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
       @Override public void compute2() {
         try {
-          buildModel(job, job.dest(), data, params._num_pc);
+          buildModel(job, job.dest(), data, params);
           assert !job.cancelled();
           job.remove();
         } catch( JobCancelledException e ) {
@@ -166,7 +193,7 @@ public abstract class DPCA {
     return job;
   }
 
-  public static PCAModel buildModel(Job job, Key resKey, DataFrame data, int num_pc) throws JobCancelledException {
+  public static PCAModel buildModel(Job job, Key resKey, DataFrame data, PCAParams params) throws JobCancelledException {
     if(resKey == null) resKey = PCAModel.makeKey();
 
     // Run SVD on Gram matrix
@@ -177,7 +204,8 @@ public abstract class DPCA {
 
     // Compute standard deviation from eigenvalues
     double[] Sval = mySVD.getSingularValues();
-    int ncomp = Math.min(num_pc, Sval.length);
+    // int ncomp = Math.min(num_pc, Sval.length);
+    int ncomp = getNumPC(Sval, params._tol);
     double[] sdev = new double[ncomp];
     double totVar = 0;
     for(int i = 0; i < ncomp; i++) {
@@ -197,8 +225,7 @@ public abstract class DPCA {
       propVar[i] = Sval[i]/totVar;
     }
 
-    PCAParams params = new PCAParams(ncomp);
-    PCAModel myModel = new PCAModel(Status.Done, 0.0f, resKey, data, sdev, propVar, eigVec, 0, params);
+    PCAModel myModel = new PCAModel(Status.Done, 0.0f, resKey, data, sdev, propVar, eigVec, 0, ncomp, params);
     myModel.store();
     return myModel;
   }
