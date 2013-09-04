@@ -1,12 +1,8 @@
 package water.api;
 
-//import hex.Quantiles.QVecSelect;
 import hex.Quantiles;
 import water.Key;
 import water.Request2;
-//import water.api.Request.*;
-//import water.api.RequestArguments.FrameKey;
-//import water.api.RequestBuilders.Response;
 import water.fvec.*;
 import water.util.RString;
 
@@ -44,6 +40,7 @@ public class QuantilesPage extends Request2 {
   @API(help="Quantile_f", required=true, filter=Default.class)
   double quantile_f = .95;
 
+  @API(help="Quantiles") 
   double[] quantiles = new double[]{quantile_a, quantile_b, quantile_c, quantile_d, quantile_e, quantile_f};
 
   @API(help="Pass 1 msec")     long pass1time;
