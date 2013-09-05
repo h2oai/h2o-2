@@ -8,6 +8,8 @@ import water.*;
 import water.api.RequestArguments.Argument;
 import water.util.Log;
 
+import hex.gbm.*;
+
 /**
  * Auto-gen doc support, for JSON & REST API docs
  * @author <a href="mailto:cliffc@0xdata.com"></a>
@@ -31,16 +33,25 @@ public abstract class DocGen {
   }
 
   public static void createReSTFilesInCwd() {
+    /*
     createFile("ImportFiles.rst", new ImportFiles().ReSTHelp());
     createFile("ImportFiles2.rst", new ImportFiles2().ReSTHelp());
     createFile("Parse2.rst", new Parse2().ReSTHelp());
+    */
+    createFile("GBM.rst", new GBM().ReSTHelp());
   }
 
-  public static void main(String[] args) {
-    H2O.main(args);
-    TestUtil.stall_till_cloudsize(1);
-    createReSTFilesInCwd();
-    H2O.exit(0);
+  public static void main(String[] args) throws Exception {
+    water.Boot.main(UserCode.class, args);
+  }
+
+  public static class UserCode {
+      public static void userMain(String[] args) throws Exception {
+          H2O.main(args);
+          TestUtil.stall_till_cloudsize(1);
+          createReSTFilesInCwd();
+          H2O.exit(0);
+      }
   }
 
   // Class describing meta-info about H2O queries and results.

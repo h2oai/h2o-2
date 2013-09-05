@@ -34,7 +34,7 @@ setMethod("show", "H2OGLMModel", function(object) {
   print(round(model$coefficients,5))
   cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual\n")
   cat("Null Deviance:    ", round(model$null.deviance,1), "\n")
-  cat("Residual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1))
+  cat("Residual Deviance:", round(model$deviance,1), " AIC:", ifelse( is.numeric(model$aic), round(model$aic,1), 'NaN'), "\n")
 })
 
 setMethod("show", "H2OKMeansModel", function(object) {
@@ -245,3 +245,22 @@ setMethod("show", "H2OGLMGridModel", function(object) {
   model = object@model
   print(model$Summary)
   })
+
+
+
+setGeneric("h2o.factor", function(data, col) { standardGeneric("h2o.factor") })
+setMethod("h2o.factor", signature(data="H2OParsedData", col="numeric"),
+   function(data, col) {
+      newCol = paste("factor(", data@key, "[", col, "])", sep="")
+      expr = paste("colSwap(", data@key, ",", col, ",", newCol, ")", sep="")
+      res = h2o.__exec(data@h2o, paste(data@key, expr, sep="="))
+      data
+})
+
+setMethod("h2o.factor", signature(data="H2OParsedData", col="character"), 
+   function(data, col) {
+      ind = match(col, colnames(data))
+      if(is.na(ind)) stop("Column ", col, " does not exist in ", data@key)
+      h2o.factor(data, ind-1)
+})
+

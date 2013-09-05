@@ -1533,9 +1533,12 @@ public abstract class DGLM {
     }
 
     @Override public final void processRow(Gram gram, double[] x, int[] indexes) {
-      double y = x[_response];
-      assert ((_family._family != Family.gamma) || y > 0) : "illegal response column, y must be > 0  for family=Gamma.";
-      x[_response] = 1; // put intercept in place of y
+      double y = 0;
+      if(_response != -1){
+        y = x[_response];
+        assert ((_family._family != Family.gamma) || y > 0) : "illegal response column, y must be > 0  for family=Gamma.";
+        x[_response] = 1; // put intercept in place of y
+      }
       if( _cMode != CaseMode.none ) y = (_cMode.isCase(y, _cVal)) ? 1 : 0;
       double w = 1;
       if( _weighted ) {
