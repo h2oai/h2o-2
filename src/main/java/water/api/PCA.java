@@ -1,28 +1,36 @@
 package water.api;
 
+import java.util.*;
+
 import hex.*;
 import hex.DPCA.*;
 import hex.NewRowVecTask.DataFrame;
-
 import water.*;
+import water.api.RF.RFColumnSelect;
+import water.api.RequestArguments.*;
 import water.api.RequestBuilders.*;
 import water.util.Log;
 import water.util.RString;
 
+import com.google.common.primitives.Ints;
 import com.google.gson.*;
 
 public class PCA extends Request {
   protected final H2OKey _dest = new H2OKey(DEST_KEY, PCAModel.makeKey());
   protected final H2OHexKey _key = new H2OHexKey(KEY);
-  protected final Int _num_pc = new Int("num_pc", 10, 1, 10000);
+  protected final HexColumnSelect _ignore = new PCAColumnSelect(IGNORE, _key);
+  // protected final Int _num_pc = new Int("num_pc", 10, 1, 10000);
+  protected final Real _tol = new Real("tolerance", 0, 1);
+  protected final Bool _standardize = new Bool("standardize", true, "Set to standardize (0 mean, unit variance) the data before training.");
 
   public PCA() {
     _requestHelp = "Compute principal components of a data set.";
-    _num_pc._requestHelp = "Number of principal components.";
+    _ignore._requestHelp = "A list of ignored columns (specified by name or 0-based index).";
+    _tol._requestHelp = "Components omitted if their standard deviations are <= tol times standard deviation of first component.";
   }
 
   PCAParams getPCAParams() {
-    PCAParams res = new PCAParams(_num_pc.value());
+    PCAParams res = new PCAParams(_tol.value());
     return res;
   }
 
@@ -34,12 +42,24 @@ public class PCA extends Request {
     return rs.toString();
   }
 
-  public static String link(Key k, int num_pc, String content) {
+  public static String link(Key k, double tol, String content) {
     StringBuilder sb = new StringBuilder("<a href='PCA.query?");
     sb.append(KEY + "=" + k.toString());
-    sb.append("&num_pc=" + num_pc);
+    sb.append("&tolerance=" + tol);
     sb.append("'>" + content + "</a>");
     return sb.toString();
+  }
+
+  private int[] createColumns(ValueArray ary) {
+    BitSet bs = new BitSet();
+    bs.set(0, ary._cols.length);
+    for( int i : _ignore.value() ) bs.clear(i);
+    int cols[] = new int[bs.cardinality()];
+    int idx = 0;
+    for( int i=bs.nextSetBit(0); i >= 0; i=bs.nextSetBit(i+1))
+      cols[idx++] = i;
+    assert idx==cols.length;
+    return cols;
   }
 
   @Override protected Response serve() {
@@ -49,9 +69,11 @@ public class PCA extends Request {
       ValueArray ary = _key.value();
 
       PCAParams pcaParams = getPCAParams();
-      int[] cols = new int[ary._cols.length];
-      for( int i = 0; i < cols.length; i++ ) cols[i] = i;
-      DataFrame data = DataFrame.makePCAData(ary, cols, true);// .getData(ary, cols, null, true);
+      // int[] cols = new int[ary._cols.length];
+      // for( int i = 0; i < cols.length; i++ ) cols[i] = i;
+
+      // DataFrame data = DataFrame.makePCAData(ary, cols, true);
+      DataFrame data = DataFrame.makePCAData(ary, createColumns(ary), _standardize.value());
       PCAJob job = DPCA.startPCAJob(dest, data, pcaParams);
       j.addProperty(JOB, job.self().toString());
       j.addProperty(DEST_KEY, job.dest().toString());
@@ -59,12 +81,6 @@ public class PCA extends Request {
       Response r = Progress.redirect(j, job.self(), job.dest());
       r.setBuilder(Constants.DEST_KEY, new KeyElementBuilder());
       return r;
-
-      /*
-      JsonObject resPCA = DPCA.buildModel(null, dest, data, pcaParams._num_pc).toJson();
-      Response r = Response.done(resPCA);
-      return r;
-      */
     } catch(RuntimeException e) {
       Log.err(e);
       return Response.error(e.getMessage());
@@ -92,7 +108,7 @@ public class PCA extends Request {
       sb.append("<table class='table table-striped table-bordered'>");
       sb.append("<tr>");
       sb.append("<th>Feature</th>");
-      for( int i = 0; i < m._pcaParams._num_pc; i++)
+      for(int i = 0; i < m._num_pc; i++)
         sb.append("<th>").append("PC" + i).append("</th>");
       sb.append("</tr>");
 
@@ -107,7 +123,7 @@ public class PCA extends Request {
       for( int r = 0; r < m._va._cols.length; r++ ) {
         sb.append("<tr>");
         sb.append("<th>").append(m._va._cols[r]._name).append("</th>");
-        for( int c = 0; c < m._pcaParams._num_pc; c++ ) {
+        for( int c = 0; c < m._num_pc; c++ ) {
           double e = m._eigVec[c][r];
           sb.append("<td>").append(ElementBuilder.format(e)).append("</td>");
         }
@@ -116,4 +132,27 @@ public class PCA extends Request {
       sb.append("</table></span>");
     }
   }
+
+  //By default ignore all non-numeric columns
+  class PCAColumnSelect extends HexColumnSelect {
+   public PCAColumnSelect(String name, H2OHexKey key) {
+     super(name, key);
+   }
+
+   @Override protected int[] defaultValue() {
+     ValueArray va = _key.value();
+     int [] res = new int[va._cols.length];
+     int selected = 0;
+     for(int i = 0; i < va._cols.length; ++i) {
+       if(va._cols[i]._domain != null)
+         res[selected++] = i;
+     }
+     return Arrays.copyOfRange(res,0,selected);
+   }
+
+   @Override protected int[] parse(String input) throws IllegalArgumentException {
+     int[] result = super.parse(input);
+     return Ints.concat(result, defaultValue());
+   }
+ }
 }
