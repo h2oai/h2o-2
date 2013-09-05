@@ -15,6 +15,7 @@ setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="numeric", standardi
   res = res$PCAModel
   
   result = list()
+  result$standardized = standardize
   result$sdev = as.numeric(unlist(res$stdDev))
   # result$rotation = do.call(rbind, res$eigenvectors)
   temp = t(do.call(rbind, res$eigenvectors))
