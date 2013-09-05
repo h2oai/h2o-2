@@ -1,6 +1,6 @@
 import unittest, time, sys, time, itertools
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import2
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 
 def file_to_put():
     # kbn fails 10/15/12

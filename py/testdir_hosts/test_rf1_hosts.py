@@ -1,7 +1,6 @@
 import unittest, sys
 sys.path.extend(['.','..','py'])
-
-import h2o_cmd, h2o, h2o_hosts
+import h2o_cmd, h2o, h2o_hosts, h2o_import2 as h2i
 
 # Uses your username specific json: pytest_config-<username>.json
 # copy pytest_config-simple.json and modify to your needs.
