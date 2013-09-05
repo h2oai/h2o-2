@@ -2,6 +2,8 @@ import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_exec as h2e
 
+H2O_SUPPORTS_OVER_100K_COLS = False
+
 print "Stress the # of cols with fp reals here." 
 print "Can pick fp format but will start with just the first (e0)"
 def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel):
@@ -114,16 +116,24 @@ class Basic(unittest.TestCase):
             (100, 70000, 'cD', 30, 120),
             (100, 90000, 'cE', 30, 120),
             (100, 100000, 'cF', 30, 120),
-            (100, 200000, 'cG', 30, 120),
-            (100, 300000, 'cH', 30, 120),
-            (100, 400000, 'cI', 30, 120),
-            (100, 500000, 'cJ', 30, 120),
-            (100, 600000, 'cK', 30, 120),
-            (100, 700000, 'cL', 30, 120),
-            (100, 800000, 'cM', 30, 120),
-            (100, 900000, 'cN', 30, 120),
-            (100, 1000000, 'cO', 30, 120),
+        ]
+
+        if not H2O_SUPPORTS_OVER_100K_COLS:
+            print "Restricting number of columns tested to 100,000"
+        else:
+            tryList = tryList + [
+                (100, 200000, 'cG', 30, 120),
+                (100, 300000, 'cH', 30, 120),
+                (100, 400000, 'cI', 30, 120),
+                (100, 500000, 'cJ', 30, 120),
+                (100, 600000, 'cK', 30, 120),
+                (100, 700000, 'cL', 30, 120),
+                (100, 800000, 'cM', 30, 120),
+                (100, 900000, 'cN', 30, 120),
+                (100, 1000000, 'cO', 30, 120),
             ]
+
+
         
         for (rowCount, colCount, hex_key, timeoutSecs, timeoutSecs2) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)

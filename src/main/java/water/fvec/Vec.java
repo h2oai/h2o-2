@@ -170,7 +170,7 @@ public class Vec extends Iced {
     _isInt= rs._isInt;
     _naCnt= rs._naCnt;          // Volatile write last to announce all stats ready
     return this;
-  }  
+  }
 
   /** A private class to compute the rollup stats */
   private static class RollupStats extends MRTask2<RollupStats> {
