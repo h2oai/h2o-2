@@ -73,6 +73,38 @@ public class NewRowVecTask<T extends Iced> extends MRTask {
     final long _nobs;
     public final boolean _standardized;
 
+    public static DataFrame makePCAData(ValueArray ary, int [] colIds, boolean standardize){
+      for(int i = 0; i < colIds.length-1; ++i){
+        int c = colIds[i];
+        if(ary._cols[c]._domain != null)
+          throw new RuntimeException("categorical columns can not be used with PCA!");
+      }
+      return new DataFrame(ary,colIds,standardize);
+    }
+    private DataFrame(ValueArray ary, int [] colIds, boolean standardize){
+      _ary = ary;
+      _s = null;
+      _response = -1;
+      _colCatMap = new int[colIds.length+1];
+      for(int i = 0; i < _colCatMap.length;++i)
+        _colCatMap[i] = i;
+      _modelDataMap = colIds;
+      _dense = colIds.length;
+      _normSub = new double[colIds.length];
+      _normMul = new double[colIds.length];
+      Arrays.fill(_normMul, 1);
+      if(standardize )for(int i = 0; i < colIds.length; ++i){
+        Column col = ary._cols[colIds[i]];
+        if(col._domain == null){
+          int ii = _colCatMap[i];
+          _normSub[ii] = col._mean;
+          _normMul[ii] = 1.0/col._sigma;
+        }
+      }
+      _standardized = standardize;
+      _nobs = ary._numrows;
+    }
+
     public DataFrame(ValueArray ary, int [] colIds, Sampling s, boolean standardize, boolean expandCat){
       ArrayList<Integer> numeric = new ArrayList<Integer>();
       ArrayList<Integer> categorical = new ArrayList<Integer>();

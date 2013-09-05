@@ -51,8 +51,7 @@ public class PCA extends Request {
       PCAParams pcaParams = getPCAParams();
       int[] cols = new int[ary._cols.length];
       for( int i = 0; i < cols.length; i++ ) cols[i] = i;
-      DataFrame data = DGLM.getData(ary, cols, null, true);
-
+      DataFrame data = DataFrame.makePCAData(ary, cols, true);// .getData(ary, cols, null, true);
       PCAJob job = DPCA.startPCAJob(dest, data, pcaParams);
       j.addProperty(JOB, job.self().toString());
       j.addProperty(DEST_KEY, job.dest().toString());
