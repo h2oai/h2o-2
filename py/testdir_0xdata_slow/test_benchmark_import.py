@@ -23,6 +23,7 @@ class Basic(unittest.TestCase):
         covtype200xSize = 15033863400
         synSize =  183
         if 1==0:
+            bucket = 'home-0xdiag-datasets'
             importFolderPath = 'more1_1200_link'
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
@@ -39,6 +40,7 @@ class Basic(unittest.TestCase):
             ]
 
         if 1==1:
+            bucket = 'home-0xdiag-datasets'
             importFolderPath = 'more1_1200_link'
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
@@ -82,6 +84,7 @@ class Basic(unittest.TestCase):
             ]
 
         if 1==0:
+            bucket = 'home-0xdiag-datasets'
             importFolderPath = 'manyfiles-nflx-gz'
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
@@ -91,6 +94,7 @@ class Basic(unittest.TestCase):
             ]
 
         if 1==0: 
+            bucket = 'home-0xdiag-datasets'
             importFolderPath = 'standard'
             print "Using .gz'ed files in", importFolderPath
             # all exactly the same prior to gzip!
@@ -168,9 +172,6 @@ class Basic(unittest.TestCase):
 
             # to avoid sticky ports?
             ### base_port += 2
-
-            bucket = 'home-0xdiag-datasets'
-            importFolderPath = 'manyfiles-nflx-gz'
 
             for trial in range(trialMax):
                 csvPathname = importFolderPath + "/" + csvFilepattern
