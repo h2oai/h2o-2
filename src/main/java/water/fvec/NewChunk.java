@@ -191,7 +191,7 @@ public class NewChunk extends Chunk {
 
     // Boolean column? (or in general two value column)
     if (lemax-lemin == 1 && lemin == 0 && xmin == 0) {
-      int bpv = _naCnt > 0 ? 2 : 1;
+      int bpv = _strCnt+_naCnt > 0 ? 2 : 1;
       byte[] cbuf = bufB(CBSChunk.OFF, bpv);
       return new CBSChunk(cbuf, cbuf[0], cbuf[1]);
     }
@@ -303,9 +303,9 @@ public class NewChunk extends Chunk {
     for (int i=0; i<_len; i++) {
       byte val = isNA(i) ? CBSChunk._NA : (byte) _ls[i];
       switch (bpv) {
-        case 1: assert val!=CBSChunk._NA;
-                b = CBSChunk.write1b(b, val, boff); break;
-        case 2: b = CBSChunk.write2b(b, val, boff); break;
+      case 1: assert val!=CBSChunk._NA : "Found NA row "+i+", naCnt="+_naCnt+", strcnt="+_strCnt;
+              b = CBSChunk.write1b(b, val, boff); break;
+      case 2: b = CBSChunk.write2b(b, val, boff); break;
       }
       boff += bpv;
       if (boff>8-bpv) { bs[idx] = b; boff = 0; b = 0; idx++; }
@@ -332,15 +332,19 @@ public class NewChunk extends Chunk {
     return true;
   }
   @Override boolean set_impl(int i, double d) {
-    if( _ls != null ) throw H2O.unimpl();
+    if( _ls != null ) {
+      _ds = MemoryManager.malloc8d(_len);
+      for( int j = 0; j<_len; j++ ) {
+        long l = at8_impl(j);
+        _ds[j] = l;
+        if( _ds[j] != l )  throw H2O.unimpl();
+      }
+      _ls = null;  _xs = null;
+    }
     _ds[i]=d;
     return true;
   }
-  @Override boolean set_impl(int i, float f) {
-    if( _ls != null ) throw H2O.unimpl();
-    _ds[i]=f;
-    return true;
-  }
+  @Override boolean set_impl(int i, float f) {  return set_impl(i,(double)f); }
   @Override boolean setNA_impl(int i) {
     if( isNA(i) ) return true;
     if( _ls != null ) { _ls[i] = 0; _xs[i] = Integer.MIN_VALUE; }

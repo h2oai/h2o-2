@@ -302,6 +302,7 @@ public final class PersistHdfs extends Persist {
           }
           val.setdsk();
           DKV.put(k, val);
+          Log.info("PersistHdfs: DKV.put(" + k + ")");
 
           JsonObject o = new JsonObject();
           o.addProperty(Constants.KEY, k.toString());

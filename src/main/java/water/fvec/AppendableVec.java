@@ -9,12 +9,11 @@ import java.util.Arrays;
  *
  * The NEW vector has no data, and takes no space.  It supports distributed
  * parallel writes to it, via calls to append2.  Such writes happen in parallel
- * and no guarantees about order are made.  Writes *will* be local to the node
- * doing them, specifically to allow control over locality.  By default, writes
- * will go local-homed chunks with no compression; there is a final 'close' to
- * the NEW vector which may do compression, and will collect info like row-
- * counts-per-chunk, min/max/mean, etc.; the final 'close' will return some
- * other Vec type.  NEW Vectors do NOT support reads!
+ * and all writes are ordered.  Writes *will* be local to the node doing them,
+ * specifically to allow control over locality.  By default, writes will go
+ * local-homed chunks with no compression; there is a final 'close' to the NEW
+ * vector which may do compression; the final 'close' will return some other
+ * Vec type.  NEW Vectors do NOT support reads!
  */
 public class AppendableVec extends Vec {
   long _espc[];
@@ -25,6 +24,7 @@ public class AppendableVec extends Vec {
   long _missingCnt;
   long _strCnt;
   long _totalCnt;
+  transient Vec _vec;           // Result vector after 'close'
 
   public AppendableVec( String keyName ) {
     this(Key.make(keyName, (byte) 0, Key.VEC));
@@ -89,6 +89,7 @@ public class AppendableVec extends Vec {
   // "Close" out a NEW vector - rewrite it to a plain Vec that supports random
   // reads, plus computes rows-per-chunk, min/max/mean, etc.
   public Vec close(Futures fs) {
+    if( _vec != null ) return _vec;
     // Compute #chunks
     int nchunk = _espc.length;
     while( nchunk > 0 && _espc[nchunk-1] == 0 ) nchunk--;
@@ -117,10 +118,10 @@ public class AppendableVec extends Vec {
     }
     espc[nchunk]=x;             // Total element count in last
     // Replacement plain Vec for AppendableVec.
-    Vec vec = new Vec(_key, espc);
-    if( shouldBeEnum() ) vec._domain = new String[0];
-    DKV.put(_key,vec,fs);       // Inject the header
-    return vec;
+    _vec = new Vec(_key, espc);
+    if( shouldBeEnum() ) _vec._domain = new String[0];
+    DKV.put(_key,_vec,fs);      // Inject the header
+    return _vec;
   }
 
   // Default read/write behavior for AppendableVecs
