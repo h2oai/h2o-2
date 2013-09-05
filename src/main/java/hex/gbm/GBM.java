@@ -229,6 +229,17 @@ public class GBM extends FrameJob {
       if( tmax == tree._len ) break;
     }
 
+    // Scale the tree down by the learning rate
+    for( int i=0; i<tree._len; i++ ) {
+      if( tree.node(i) instanceof DecidedNode ) {
+        float pred[][] = tree.decided(i)._pred;
+        if( pred != null )
+          for( int b=0; b<pred.length; b++ )
+            for( int c=0; c<pred[b].length; c++ )
+              pred[b][c] *= learn_rate;
+      }
+    }
+
     // For each observation, find the residual(error) between predicted and desired.
     // Desired is in the old residual columns; predicted is in the decision nodes.
     // Replace the old residual columns with new residuals.
@@ -240,7 +251,7 @@ public class GBM extends FrameJob {
           float preds[] = node._pred[node.bin(chks,i)];
           for( int c=0; c<nclass; c++ ) {
             double actual = chks[ncols+c].at0(i);
-            double residual = actual-preds[c]*learn_rate;
+            double residual = actual-preds[c];
             chks[ncols+c].set0(i,(float)residual);
           }
         }
@@ -292,7 +303,7 @@ public class GBM extends FrameJob {
         for( int i=0; i<cy._len; i++ ) {  // For all rows
           int cls = (int)cy.at80(i)-ymin; // Class
           Chunk res = chks[ncols+cls];    // Residual column for this class
-          res.set0(i,1.0f+(float)res.at0(i));   // Fix residual for actual class
+          res.set0(i,1.0f+(float)res.at0(i)); // Fix residual for actual class
         }
       }
     }.doAll(fr);

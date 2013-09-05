@@ -1383,7 +1383,7 @@ class H2O(object):
             time.sleep(3) # to be able to see it
         return a
 
-    def GBM(self, data_key, timeoutSecs=600, **kwargs):
+    def gbm(self, data_key, timeoutSecs=600, **kwargs):
         params_dict = {
             'destination_key':None,
             'source':data_key,
@@ -1394,19 +1394,21 @@ class H2O(object):
             'vresponse':None
         }        
         params_dict.update(kwargs)
-        a = self.__do_json_request('GBM.json',timeout=timeoutSecs,params=params_dict)        
+        a = self.__do_json_request('GBM.json',timeout=timeoutSecs,params=params_dict)
+        verboseprint("\nGBM result:", dump_json(a))
         return a
 
-    def PCA(self, data_key, timeoutSecs=600, **kwargs):
+    def pca(self, data_key, timeoutSecs=600, **kwargs):
         params_dict = {
             'destination_key':None,
-            'key':None,
+            'key':data_key,
             'ignore':None,
             'tolerance':None,
             'standardize':None
         }
         params_dict.update(kwargs)
         a = self.__do_json_request('PCA.json',timeout=timeoutSecs,params=params_dict)
+        verboseprint("\npca result:", dump_json(a))
         return a
 
     def summary_page(self, key, max_column_display=1000, timeoutSecs=60, noPrint=True, **kwargs):

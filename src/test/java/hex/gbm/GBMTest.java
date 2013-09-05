@@ -64,6 +64,8 @@ public class GBMTest extends TestUtil {
       gbm.vresponse = prep.prep(gbm.source);
       gbm.ntrees = 5;
       gbm.max_depth = 8;
+      gbm.learn_rate = 0.1f;
+      gbm.min_rows=1;
       gbm.serve();
 
     } finally {
