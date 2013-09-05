@@ -1,14 +1,14 @@
 # Model-building operations and algorithms
 setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p=ifelse(family=='tweedie', 1.5, NA)) { standardGeneric("h2o.glm") })
 setGeneric("h2o.kmeans", function(data, centers, cols = "", iter.max = 10) { standardGeneric("h2o.kmeans") })
-setGeneric("h2o.prcomp", function(data, tol = 0) { standardGeneric("h2o.prcomp") })
+setGeneric("h2o.prcomp", function(data, tol = 0, standardize = TRUE) { standardGeneric("h2o.prcomp") })
 setGeneric("h2o.randomForest", function(y, x_ignore = "", data, ntree, depth, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 # setGeneric("h2o.randomForest", function(y, data, ntree, depth, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 setGeneric("h2o.getTree", function(forest, k, plot = FALSE) { standardGeneric("h2o.getTree") })
 setGeneric("h2o.glmgrid", function(x, y, data, family, nfolds = 10, alpha = c(0.25,0.5), lambda = 1.0e-5) { standardGeneric("h2o.glmgrid") })
 
-setMethod("h2o.prcomp", signature(data = "H2OParsedData", tol = "numeric"), function(data, tol) {
-  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, key = data@key, tolerance = tol)
+setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="numeric", standardize="logical"), function(data, tol, standardize) {
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, key=data@key, tolerance=tol, standardize=as.numeric(standardize))
   while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
   destKey = res$destination_key
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=destKey)
@@ -24,11 +24,14 @@ setMethod("h2o.prcomp", signature(data = "H2OParsedData", tol = "numeric"), func
   new("H2OPCAModel", key=destKey, data=data, model=result)
 })
 
-setMethod("h2o.prcomp", signature(data = "H2OParsedData", tol = "missing"), 
-  function(data) { h2o.prcomp(data, 0) })
-
-
-
+setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="ANY", standardize="ANY"), 
+  function(data, tol, standardize) {
+    if(!(missing(tol) || class(tol) == "numeric"))
+      stop("tol cannot be of class", class(tol))
+    if(!(missing(standardize) || class(standardize) == "logical"))
+      stop("standardize cannot be of class", class(standardize))
+    h2o.prcomp(data, tol, standardize)
+  })
 
 # internally called glm to allow games with method dispatch
 h2o.glm.internal <- function(x, y, data, family, nfolds, alpha, lambda, tweedie.p) {
