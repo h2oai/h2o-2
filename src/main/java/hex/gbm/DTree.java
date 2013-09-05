@@ -576,9 +576,14 @@ class DTree extends Iced {
       assert 0 <= ycls && ycls < _nclass : "weird ycls="+ycls+", y="+y+", ymin="+_ymin;
       if( best != ycls ) _err++; // Absolute prediction error; off-diagonal sum
       _cm[ycls][best]++;         // Confusion Matrix
-      //for( int x=0; x<chks.length; x++ )
-      //  System.out.print(chks[x].at(i)+",");
-      //System.out.println(" pred="+Arrays.toString(pred)+(best==ycls?"":", ERROR"));
+
+      //for( int x=0; x<_ncols; x++ )
+      //  System.out.print(String.format("%5.2f,",chks[x].at(i)));
+      //System.out.print(" | ");
+      //for( int x=_ncols; x<chks.length; x++ )
+      //  System.out.print(String.format("%5.2f,",chks[x].at(i)));
+      //System.out.println(" pred="+pred[ycls]+(best==ycls?"":", ERROR"));
+
       float ypred = pred[ycls];  // Predict max class
       if( ypred > 1.0f ) ypred = 1.0f;
       return 1.0f - ypred;       // Error from 0 to 1.0
