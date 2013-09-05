@@ -10,7 +10,6 @@ import hex.DGLM.*;
 import hex.DGLM.GLMModel.Status;
 import hex.NewRowVecTask.DataFrame;
 import hex.NewRowVecTask.JobCancelledException;
-
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
@@ -46,7 +45,6 @@ public abstract class DPCA {
 
     public JsonObject toJson() {
       JsonObject res = new JsonObject();
-      // res.addProperty("numPC", _num_pc);
       res.addProperty("tolerance", _tol);
       return res;
     }
@@ -57,13 +55,13 @@ public abstract class DPCA {
     Status _status;
     final int[] _colCatMap;
     final int _response;
-    public final boolean _standardized;
 
-    public final int _num_pc;
     public final PCAParams _pcaParams;
     public final double[] _sdev;
     public final double[] _propVar;
     public final double[][] _eigVec;
+    public final int _num_pc;
+    public final boolean _standardized;
 
     public Status status() {
       return _status;
@@ -87,15 +85,14 @@ public abstract class DPCA {
       _propVar = null;
       _eigVec = null;
       _response = 0;
+      _pcaParams = null;
       _num_pc = 1;
       _standardized = true;
-      _pcaParams = null;
     }
 
     public PCAModel(Status status, float progress, Key k, DataFrame data, double[] sdev, double[] propVar,
         double[][] eigVec, int response, int num_pc, PCAParams pcaps) {
-      this(status, progress, k, data._ary, data._modelDataMap, data._colCatMap, sdev, propVar, eigVec, response,
-          data._standardized, num_pc, pcaps);
+      this(status, progress, k, data._ary, data._modelDataMap, data._colCatMap, sdev, propVar, eigVec, response, data._standardized, num_pc, pcaps);
     }
 
     public PCAModel(Status status, float progress, Key k, ValueArray ary, int[] colIds, int[] colCatMap, double[] sdev,
@@ -107,9 +104,9 @@ public abstract class DPCA {
       _propVar = propVar;
       _eigVec = eigVec;
       _response = response;
-      _standardized = standardized;
-      _num_pc = num_pc;
       _pcaParams = pcap;
+      _num_pc = num_pc;
+      _standardized = standardized;
     }
 
     public void store() {
@@ -154,8 +151,8 @@ public abstract class DPCA {
   static class reverseDouble implements Comparator<Double> {
     public int compare(Double a, Double b) {
         return b.compareTo(a);
+      }
     }
-  }
 
   private static int getNumPC(double[] sdev, double tol) {
     if(sdev == null) return 0;
@@ -171,7 +168,7 @@ public abstract class DPCA {
     final double[] propVar = null;
     final double[][] eigVec = null;
 
-    UKV.put(job.dest(), new PCAModel(Status.ComputingModel, 0.0f, job.dest(), data, sdev, propVar, eigVec, 0, 1, params));
+    UKV.put(job.dest(), new PCAModel(Status.ComputingModel, 0.0f, job.dest(), data, sdev, propVar, eigVec, 0, 0, params));
     final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
       @Override public void compute2() {
         try {
@@ -199,12 +196,12 @@ public abstract class DPCA {
     // Run SVD on Gram matrix
     GramMatrixFunc gramF = new GramMatrixFunc(data, new GLMParams(Family.gaussian), null);
     Gram gram = gramF.apply(job, data);
-    Matrix myGram = new Matrix(gram.getXX());
+    Matrix myGram = new Matrix(gram.getXX());   // X'X/n where n = num rows
+    int nfeat = myGram.getRowDimension();
     SingularValueDecomposition mySVD = myGram.svd();
 
     // Compute standard deviation from eigenvalues
     double[] Sval = mySVD.getSingularValues();
-    // int ncomp = Math.min(num_pc, Sval.length);
     int ncomp = getNumPC(Sval, params._tol);
     double[] sdev = new double[ncomp];
     double totVar = 0;
@@ -215,13 +212,12 @@ public abstract class DPCA {
 
     // Extract eigenvectors
     Matrix eigV = mySVD.getV();
-    int nfeat = eigV.getRowDimension();
-    double[][] eigVec = new double[ncomp][nfeat];
-    double[] propVar = new double[ncomp];    // Proportion of total variance
+    double[][] eigVec = eigV.getMatrix(0,nfeat-1,0,ncomp-1).transpose().getArray();
 
     // Singular values ordered in weakly descending order
+    double[] propVar = new double[ncomp];    // Proportion of total variance
     for(int i = 0; i < ncomp; i++) {
-      eigVec[i] = eigV.getMatrix(0,nfeat-1,i,i).getColumnPackedCopy();
+      // eigVec[i] = eigV.getMatrix(0,nfeat-1,i,i).getColumnPackedCopy();
       propVar[i] = Sval[i]/totVar;
     }
 

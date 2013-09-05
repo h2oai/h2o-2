@@ -37,6 +37,9 @@ public class GBMTest extends TestUtil {
                  return fr.remove("CAPSULE");
                }
              });
+    basicGBM("./smalldata/airlines/allyears2k_headers.zip","air.hex",
+             new PrepData() { Vec prep(Frame fr) { return fr.remove("IsDepDelayed"); }
+             });
     basicGBM("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
              new PrepData() {
                Vec prep(Frame fr) { 
@@ -92,6 +95,9 @@ public class GBMTest extends TestUtil {
                  // Prostate: predict on CAPSULE
                  return fr.remove("CAPSULE");
                }
+             });
+    basicDRF("./smalldata/airlines/allyears2k_headers.zip","air.hex",
+             new PrepData() { Vec prep(Frame fr) { return fr.remove("IsDepDelayed"); }
              });
     basicDRF("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
              new PrepData() {

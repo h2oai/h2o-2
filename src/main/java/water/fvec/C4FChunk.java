@@ -14,7 +14,7 @@ public class C4FChunk extends Chunk {
     float res = UDP.get4f(_mem,i<<2);
     return Float.isNaN(res)?Double.NaN:res;
   }
-  @Override protected final boolean isNA_impl( int i ) { return Float.isNaN(UDP.get4(_mem,i<<2)); }
+  @Override protected final boolean isNA_impl( int i ) { return Float.isNaN(UDP.get4f(_mem,i<<2)); }
   @Override boolean set_impl(int idx, long l) { return false; }
   @Override boolean set_impl(int i, double d) { return false; }
   @Override boolean set_impl(int i, float f ) { 

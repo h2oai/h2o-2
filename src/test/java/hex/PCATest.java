@@ -25,15 +25,13 @@ public class PCATest extends TestUtil {
     ValueArray va = DKV.get(ksrc).get();
     int[] cols = new int[va._cols.length];
     for( int i = 0; i < cols.length; i++ ) cols[i] = i;
-    DataFrame df = DGLM.getData(va, cols, null, true);
+    DataFrame df = DataFrame.makePCAData(va, cols, true);
 
-    // int num_pc = 3;
     double tol = 0.25;
     Key kdst = Key.make("prostate.pca");
 
     // PCAJob job = DPCA.startPCAJob(kdst, df, new PCAParams(num_pc));
-    PCAParams params = new PCAParams(tol);
-    JsonObject resPCA = DPCA.buildModel(null, kdst, df, params).toJson();
+    JsonObject resPCA = DPCA.buildModel(null, kdst, df, new PCAParams(tol)).toJson();
     System.out.println(resPCA.toString());
 
     UKV.remove(ksrc);

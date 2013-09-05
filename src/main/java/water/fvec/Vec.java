@@ -132,7 +132,7 @@ public class Vec extends Iced {
     long min = (long)min(), max = (long)max();
     if( min < 0 || max > 10000L ) throw H2O.unimpl();
     _domain = new String[(int)max+1];
-    for( int i=0; i<=(int)max; i++ )
+    for( int i=0; i<(int)max+1; i++ )
       _domain[i] = Integer.toString(i);
   }
 
@@ -162,7 +162,7 @@ public class Vec extends Iced {
     if( _rs != null ) return _rs;
     if( _activeWrites ) throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
     return (_rs=new RollupStats().doAll(this));
-  }  
+  }
 
   private static class RollupStats extends MRTask2<RollupStats> {
     double _min=Double.MAX_VALUE, _max=-Double.MAX_VALUE, _mean, _sigma;

@@ -70,6 +70,11 @@ public class GBM extends FrameJob {
     @Override public boolean run(Object value) { return 1 <= (Integer)value; }
   }
 
+  @API(help = "Fewest allowed observations in a leaf", filter = MinRowsFilter.class)
+  int min_rows = 5;
+  public class MinRowsFilter implements Filter {
+    @Override public boolean run(Object value) { return (Integer)value >= 1; }
+  }
 
 
   // JSON Output Fields
@@ -141,9 +146,8 @@ public class GBM extends FrameJob {
         // The initial prediction is just the class distribution.  The initial
         // residuals are then basically the actual class minus the average class.
         float preds[] = buildResiduals(nclass,fr,ncols,nrows,ymin);
-        DTree init_tree = new DTree(fr._names,ncols,nclass);
+        DTree init_tree = new DTree(fr._names,ncols,nclass,min_rows);
         new GBMDecidedNode(init_tree,preds);
-
         DTree forest[] = new DTree[] {init_tree};
         cm = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, max_depth )._cm;
         DKV.put(outputKey, new GBMModel(ntrees, domain, preds,cm,forest));
@@ -179,7 +183,7 @@ public class GBM extends FrameJob {
     Vec vnids = vresponse.makeZero();
     fr.add("NIDs",vnids);
     // Initially setup as-if an empty-split had just happened
-    final DTree tree = new DTree(fr._names,ncols,nclass);
+    final DTree tree = new DTree(fr._names,ncols,nclass,min_rows);
     new GBMUndecidedNode(tree,-1,DBinHistogram.initialHist(fr,ncols,nclass)); // The "root" node
     int leaf = 0; // Define a "working set" of leaf splits, from here to tree._len
     // Add tree to the end of the forest
@@ -246,15 +250,12 @@ public class GBM extends FrameJob {
     // Remove the NIDs column
     assert fr._names[fr.numCols()-1].equals("NIDs");
     UKV.remove(fr.remove(fr.numCols()-1)._key);
-
     // Print the generated tree
     //System.out.println(tree.root().toString2(new StringBuilder(),0));
-
     // Tree-by-tree scoring
     long err = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, depth )._err;
     errs = Arrays.copyOf(errs,errs.length+1);
     errs[errs.length-1] = (float)err/nrows;
-
     return forest;
   }
 
@@ -318,6 +319,7 @@ public class GBM extends FrameJob {
       DHistogram hs[] = u._hs;
       double bs = Double.MAX_VALUE; // Best score
       int idx = -1;             // Column to split on
+      if( u._hs == null ) return idx;
       for( int i=0; i<hs.length; i++ ) {
         if( hs[i]==null || hs[i].nbins() <= 1 ) continue;
         double s = hs[i].score();

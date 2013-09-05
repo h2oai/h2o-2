@@ -48,7 +48,7 @@ public class DHistogram<T extends DHistogram> extends Iced {
   // Return a copy that is ready to be updated and/or collect binning info.
   public DHistogram smallCopy( ) { return (DHistogram)clone(); }
 
-  public DHistogram bigCopy( ) { 
+  public DHistogram bigCopy( ) {
     throw H2O.unimpl();
   }
 

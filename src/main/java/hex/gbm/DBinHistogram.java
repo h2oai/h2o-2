@@ -43,7 +43,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   public       float[] _mins, _maxs; // Min, Max, per-bin
   // Average response-vector for the rows in this split.
   // For RF, this will be 1.0 for the response variable and zero otherwise.
-  // For GBM, these are the residuals by class.  
+  // For GBM, these are the residuals by class. 
   // For Regression trees, there is but one "class".
   // For Classification trees, there can be many classes.
   // At points during data gather, this data is the sum of responses instead of
@@ -59,7 +59,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     int xbins = Math.max((int)Math.min(BINS,nelems),1); // Default bin count
     // See if we can show there are fewer unique elements than nbins.
     // Common for e.g. boolean columns, or near leaves.
-    int nbins = xbins;      // Default size for most columns        
+    int nbins = xbins;      // Default size for most columns       
     if( isInt && max-min < xbins )
       nbins = (int)((long)max-(long)min+1L); // Shrink bins
     _nbins = (char)nbins;
@@ -105,16 +105,16 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   @Override long  bins(int b) { return _bins[b]; }
   @Override float mins(int b) { return _mins[b]; }
   @Override float maxs(int b) { return _maxs[b]; }
-  float mean(int b, int cls) { 
+  float mean(int b, int cls) {
     if( _Ms[b] == null ) return 0;
-    return _Ms[b][cls]; 
+    return _Ms[b][cls];
   }
-  float var (int b, int cls) { 
-    return _bins[b] > 1 ? _Ss[b][cls]/(_bins[b]-1) : 0; 
+  float var (int b, int cls) {
+    return _bins[b] > 1 ? _Ss[b][cls]/(_bins[b]-1) : 0;
   }
   // Mean of response-vector.  Since vector values are already normalized we
   // just average the vector contents.
-  float mean(int b) { 
+  float mean(int b) {
     if( _Ms[b] == null ) return 0;
     float sum=0;
     for( int c=0; c<_nclass; c++ )
@@ -181,7 +181,8 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   // After having filled in histogram bins, compute tighter min/max bounds.
   @Override public void tightenMinMax() {
     int n = 0;
-    while( _bins[n]==0 ) n++;   // First non-empty bin
+    while( n < _bins.length && _bins[n]==0 ) n++;   // First non-empty bin
+    if( n == _bins.length ) return;                 // All bins are empty???
     _min = _mins[n];    // Take min from 1st  non-empty bin
     int x = _bins.length-1;     // Last bin
     while( _bins[x]==0 ) x--;   // Last non-empty bin
@@ -195,9 +196,9 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   // constant data, or was not being tracked by a prior DBinHistogram (for being
   // constant data from a prior split), then that column will be null in the
   // returned array.
-  public DBinHistogram[] split( int col, int b, DHistogram hs[], String[] names, int ncols ) {
+  public DBinHistogram[] split( int col, int b, DHistogram hs[], String[] names, int ncols, int min_rows ) {
     assert hs[col] == this;
-    if( _bins[b] <= 1 ) return null; // Zero or 1 elements
+    if( _bins[b] <= min_rows ) return null; // Too few elements
     if( var(b) == 0.0 ) return null; // No point in splitting a perfect prediction
 
     // Build a next-gen split point from the splitting bin
@@ -213,6 +214,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
       // DBinHistogram's bound are the bins' min & max.
       if( col==j ) { min=h.mins(b); max=h.maxs(b); }
       if( min == max ) continue; // This column will not split again
+      if( min >  max ) continue; // Happens for all NA subsplits
       nhists[j] = new DBinHistogram(names[j],_nclass,hs[j]._isInt,min,max,_bins[b]);
       cnt++;                    // At least some chance of splitting
     }
@@ -225,7 +227,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     Vec[] vs = fr._vecs;
     for( int j=0; j<ncols; j++ ) {
       Vec v = vs[j];
-      hists[j] = v.min()==v.max() ? null 
+      hists[j] = v.min()==v.max() ? null
         : new DBinHistogram(fr._names[j],nclass,v.isInt(),(float)v.min(),(float)v.max(),v.length());
     }
     return hists;
