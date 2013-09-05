@@ -15,39 +15,35 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GBM_mnist(self):
-        importFolderPath = "mnist"
-        csvFilename = "train.csv.gz"
-        timeoutSecs=1800
+    def test_PCA_UCIwine(self):
+        csvFilename = "wine.data"
+        timeoutSecs=180
         trialStart = time.time()
 
-        # PARSE train****************************************
+        # PARSE ****************************************
         trainKey = csvFilename + "_" + ".hex"
         start = time.time()
-        parseResult = h2i.import_parse(bucket='smalldata', path=importFolderPath + "/" + csvFilename,
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvFilename,
             hex_key=trainKey, timeoutSecs=timeoutSecs)
         elapsed = time.time() - start
         print "parse end on ", csvFilename, 'took', elapsed, 'seconds',\
             "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
         print "parse result:", parseResult['destination_key']
 
-        # GBM (train)****************************************
+        # PCA****************************************
         params = { 
-            'destination_key': "GBMKEY",
-            'learn_rate':.1,
-            'ntrees':10,
-            'max_depth':8,
-            'min_rows':1,
-            'vresponse':784
+            'destination_key': "python_PCA_key",
+            'ignore':0,
+            'tolerance':0.0,
+            'standardize':1
             }   
 
         kwargs = params.copy()
-        timeoutSecs = 1800
         start = time.time()
         node = h2o.nodes[0]
-        GBMResult = node.gbm(data_key=trainKey, **kwargs)
+        PCAResult = node.pca(data_key=trainKey, **kwargs)
         elapsed = time.time() - start
-        print "GBM completed in", elapsed, "seconds.", \
+        print "PCA completed in", elapsed, "seconds.", \
             "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
 if __name__ == '__main__':
