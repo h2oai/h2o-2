@@ -331,7 +331,7 @@ public final class ParseDataset2 extends Job {
             // After the MRTask2, the input Vec array has all the AppendableVecs
             // closed() and rewritten as plain Vecs.  Copy those back into the _cols
             // array.
-            for( int i=0; i<_vecs.length; i++ ) _vecs[i] = bvs[i];
+            for( int i=0; i<_vecs.length; i++ ) _vecs[i] = dp.vecs(i);
           } else {
             // Parallel decompress of SVMLight
             SVMLightDParse sdp = new SVMLightDParse().doAll(vec);

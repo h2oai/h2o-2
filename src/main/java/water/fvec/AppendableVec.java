@@ -24,7 +24,6 @@ public class AppendableVec extends Vec {
   long _missingCnt;
   long _strCnt;
   long _totalCnt;
-  transient Vec _vec;           // Result vector after 'close'
 
   public AppendableVec( String keyName ) {
     this(Key.make(keyName, (byte) 0, Key.VEC));
@@ -89,7 +88,6 @@ public class AppendableVec extends Vec {
   // "Close" out a NEW vector - rewrite it to a plain Vec that supports random
   // reads, plus computes rows-per-chunk, min/max/mean, etc.
   public Vec close(Futures fs) {
-    if( _vec != null ) return _vec;
     // Compute #chunks
     int nchunk = _espc.length;
     while( nchunk > 0 && _espc[nchunk-1] == 0 ) nchunk--;
@@ -118,10 +116,10 @@ public class AppendableVec extends Vec {
     }
     espc[nchunk]=x;             // Total element count in last
     // Replacement plain Vec for AppendableVec.
-    _vec = new Vec(_key, espc);
-    if( shouldBeEnum() ) _vec._domain = new String[0];
-    DKV.put(_key,_vec,fs);      // Inject the header
-    return _vec;
+    Vec vec = new Vec(_key, espc);
+    if( shouldBeEnum() ) vec._domain = new String[0];
+    DKV.put(_key,vec,fs);      // Inject the header
+    return vec;
   }
 
   // Default read/write behavior for AppendableVecs

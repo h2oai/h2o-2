@@ -57,8 +57,11 @@ public class Vec extends Iced {
    *  (e.g. _min, _max) unavailable.  We won't even try to compute them (under
    *  the assumption that we'll about to see a zillions writes/sec). */
   private boolean _activeWrites;
-  /** min/max/mean of this Vec lazily computed.  */
-  private RollupStats _rs;
+  /** RollupStats: min/max/mean of this Vec lazily computed.  */
+  double _min, _max, _mean, _sigma;
+  long _rows, _size;
+  boolean _isInt;
+  volatile long _naCnt=-1;      // Also flag for "rollup stats computed"
 
   /** Main default constructor; requires the caller understand Chunk layout
    *  already, along with count of missing elements.  */
@@ -156,14 +159,20 @@ public class Vec extends Iced {
   /** Size of compressed vector data. */
   public long byteSize(){return rollupStats()._size; }
 
-
-  /** A private class to compute the rollup stats */
-  RollupStats rollupStats() {
-    if( _rs != null ) return _rs;
+  /** Compute the roll-up stats as-needed, and copy into the Vec object */
+  Vec rollupStats() {
+    if( _naCnt >= 0 ) return this;
     if( _activeWrites ) throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
-    return (_rs=new RollupStats().doAll(this));
+    RollupStats rs = new RollupStats().doAll(this);
+    _min  = rs._min;  _max  =rs._max;  
+    _mean = rs._mean; _sigma=rs._sigma;
+    _rows = rs._rows; _size =rs._size;
+    _isInt= rs._isInt;
+    _naCnt= rs._naCnt;          // Volatile write last to announce all stats ready
+    return this;
   }  
 
+  /** A private class to compute the rollup stats */
   private static class RollupStats extends MRTask2<RollupStats> {
     double _min=Double.MAX_VALUE, _max=-Double.MAX_VALUE, _mean, _sigma;
     long _rows, _naCnt, _size;
@@ -204,7 +213,7 @@ public class Vec extends Iced {
   }
 
   /** Mark this vector as being actively written into, and clear the rollup stats. */
-  private void setActiveWrites() { _activeWrites = true;  _rs = null; }
+  private void setActiveWrites() { _activeWrites = true;  _naCnt = -1; }
 
   /** Writing into this Vector from *some* chunk.  Immediately clear all caches
    *  (_min, _max, _mean, etc).  Can be called repeatedly from one or all
@@ -363,7 +372,7 @@ public class Vec extends Iced {
 
   /** Pretty print the Vec: [#elems, min/mean/max]{chunks,...} */
   @Override public String toString() {
-    String s = "["+length()+(_rs==null ? "" : ","+_rs._min+"/"+_rs._mean+"/"+_rs._max+", "+PrettyPrint.bytes(_rs._size)+", {");
+    String s = "["+length()+(_naCnt<0 ? "" : ","+_min+"/"+_mean+"/"+_max+", "+PrettyPrint.bytes(_size)+", {");
     int nc = nChunks();
     for( int i=0; i<nc; i++ ) {
       s += chunkKey(i).home_node()+":"+chunk2StartElem(i)+":";

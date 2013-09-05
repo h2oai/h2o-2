@@ -100,8 +100,7 @@ public class FVecTest extends TestUtil {
     NFSFileVec nfs=DKV.get(key).get();
     Key key2 = Key.make("newKey",(byte)0,Key.VEC);
     AppendableVec nv = new AppendableVec(key2);
-    new TestNewVec().doAll(nv,nfs);
-    Vec res = nv.close(null);
+    Vec res = new TestNewVec().doAll(nv,nfs).vecs(0);
     assertEquals(nfs.at8(0)+1,res.at8(0));
     assertEquals(nfs.at8(1)+1,res.at8(1));
     assertEquals(nfs.at8(2)+1,res.at8(2));
