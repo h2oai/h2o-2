@@ -162,7 +162,7 @@ public class Vec extends Iced {
     if( _rs != null ) return _rs;
     if( _activeWrites ) throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
     return (_rs=new RollupStats().doAll(this));
-  }  
+  }
 
   private static class RollupStats extends MRTask2<RollupStats> {
     double _min=Double.MAX_VALUE, _max=-Double.MAX_VALUE, _mean, _sigma;

@@ -110,6 +110,8 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new ExportS3Progress());
     registerRequest(new GLMGridProgress());
     registerRequest(new GLMProgressPage());
+    registerRequest(new GBMProgressPage());
+    registerRequest(new GBMModelView());
     registerRequest(new GetVector());
     registerRequest(new LogView.LogDownload());
     registerRequest(new RReaderProgress());
