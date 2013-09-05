@@ -140,7 +140,7 @@ public class GBM extends FrameJob {
         new GBMDecidedNode(init_tree,preds);
         DTree forest[] = new DTree[] {init_tree};
         BulkScore bs = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, max_depth );
-        _errs = new float[]{bs._err/nrows}; // Errors for exactly 1 tree
+        _errs = new float[]{(float)bs._err/nrows}; // Errors for exactly 1 tree
         DKV.put(outputKey, new GBMModel(ntrees,forest, domain, ymin,bs._cm, _errs));
 
         // Build trees until we hit the limit
