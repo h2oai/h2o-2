@@ -24,18 +24,18 @@ public class GBMModelView extends Request2 {
     DocGen.HTML.arrayHead(sb);
     sb.append("<tr class='warning'>");
     sb.append("<th>Actual / Predicted</th>"); // Row header
-    for( int i=0; i<m.domain.length; i++ )
-      sb.append("<th>").append(m.domain[i]).append("</th>");
+    for( int i=0; i<m.cm.length; i++ )
+      sb.append("<th>").append(m.domain[i+m.ymin]).append("</th>");
     sb.append("<th>Error</th>");
     sb.append("</tr>");
 
     // Main CM Body
     long tsum=0, terr=0;                   // Total observations & errors
-    for( int i=0; i<m.domain.length; i++ ) { // Actual loop
+    for( int i=0; i<m.cm.length; i++ ) { // Actual loop
       sb.append("<tr>");
-      sb.append("<th>").append(m.domain[i]).append("</th>");// Row header
+      sb.append("<th>").append(m.domain[i+m.ymin]).append("</th>");// Row header
       long sum=0, err=0;                     // Per-class observations & errors
-      for( int j=0; j<m.domain.length; j++ ) { // Predicted loop
+      for( int j=0; j<m.cm[i].length; j++ ) { // Predicted loop
         sb.append(i==j ? "<td style='background-color:LightGreen'>":"<td>");
         sb.append(m.cm[i][j]).append("</td>");
         sum += m.cm[i][j];              // Per-class observations
@@ -49,9 +49,9 @@ public class GBMModelView extends Request2 {
     // Last row of CM
     sb.append("<tr>");
     sb.append("<th>Totals</th>");// Row header
-    for( int j=0; j<m.domain.length; j++ ) { // Predicted loop
+    for( int j=0; j<m.cm.length; j++ ) { // Predicted loop
       long sum=0;
-      for( int i=0; i<m.domain.length; i++ ) sum += m.cm[i][j];
+      for( int i=0; i<m.cm.length; i++ ) sum += m.cm[i][j];
       sb.append("<td>").append(sum).append("</td>");
     }
     sb.append(String.format("<th>%5.3f = %d / %d</th>", (double)terr/tsum, terr, tsum));
