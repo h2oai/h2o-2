@@ -37,7 +37,7 @@ public abstract class DPCA {
   }
 
   public static class PCAParams extends Iced {
-    public double _tol = 0.0;
+    public double _tol = 0;
 
     public PCAParams(double tol) {
       _tol = tol;
@@ -60,7 +60,7 @@ public abstract class DPCA {
     public final double[] _sdev;
     public final double[] _propVar;
     public final double[][] _eigVec;
-    public final double _num_pc;
+    public final int _num_pc;
     public final boolean _standardized;
 
     public Status status() {
@@ -158,7 +158,7 @@ public abstract class DPCA {
     if(sdev == null) return 0;
     double cutoff = Math.pow(tol,2)*sdev[0];
     int ind = Arrays.binarySearch(ArrayUtils.toObject(sdev), cutoff, new reverseDouble());
-    return Math.abs(ind + 1);
+    return Math.abs(ind+1);
   }
 
   public static PCAJob startPCAJob(Key dest, final DataFrame data, final PCAParams params) {

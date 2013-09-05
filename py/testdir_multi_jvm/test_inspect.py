@@ -77,11 +77,7 @@ class Basic(unittest.TestCase):
     # Shared test implementation for smalldata/test/test_26cols_*.csv
     def inspect_columns(self, bucket, csvPathname, rows=1, cols=26, columnNames=crange('A', 'Z'), columnTypes=None):
         res = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put')
-<<<<<<< Updated upstream
         ary  = h2o_cmd.runInspect(key=res['destination_key'])
-=======
-        ary  = node.inspect(res['destination_key'])
->>>>>>> Stashed changes
 
         self.assertEqual(rows, ary['num_rows'])
         self.assertEqual(cols, ary['num_cols'])

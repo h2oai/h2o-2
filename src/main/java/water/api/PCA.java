@@ -6,8 +6,7 @@ import hex.*;
 import hex.DPCA.*;
 import hex.NewRowVecTask.DataFrame;
 import water.*;
-import water.api.RF.RFColumnSelect;
-import water.api.RequestArguments.*;
+import water.api.RequestArguments.Bool;
 import water.api.RequestBuilders.*;
 import water.util.Log;
 import water.util.RString;
@@ -19,7 +18,6 @@ public class PCA extends Request {
   protected final H2OKey _dest = new H2OKey(DEST_KEY, PCAModel.makeKey());
   protected final H2OHexKey _key = new H2OHexKey(KEY);
   protected final HexColumnSelect _ignore = new PCAColumnSelect(IGNORE, _key);
-  // protected final Int _num_pc = new Int("num_pc", 10, 1, 10000);
   protected final Real _tol = new Real("tolerance", 0, 1);
   protected final Bool _standardize = new Bool("standardize", true, "Set to standardize (0 mean, unit variance) the data before training.");
 
@@ -29,7 +27,9 @@ public class PCA extends Request {
     _tol._requestHelp = "Components omitted if their standard deviations are <= tol times standard deviation of first component.";
   }
 
+
   PCAParams getPCAParams() {
+    // PCAParams res = new PCAParams(_num_pc.value());
     PCAParams res = new PCAParams(_tol.value());
     return res;
   }

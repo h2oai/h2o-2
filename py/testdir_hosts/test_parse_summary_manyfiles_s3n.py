@@ -21,31 +21,28 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_parse_summary_airline_s3n(self):
-        csvFilelist = [
-            ("allyears2k.csv",   300), #4.4MB
-            ("year1987.csv",     600), #130MB
-            ("allyears.csv",     900), #12GB
-            # ("allyears_10.csv", 1800), #119.98GB
+    def test_parse_summary_manyfiles_s3n(self):
+        # these will be used as directory imports/parse
+        csvDirlist = [
+            ("1k_small_gz",   300),
+            ("10k_small_gz",     600),
         ]
-
-        (importHDFSResult, importPattern) = h2i.import_only(bucket='h2o-airlines-unpacked', path="*", schema='s3n')
-        s3nFullList = importHDFSResult['succeeded']
-        self.assertGreater(len(s3nFullList),1,"Should see more than 1 files in s3n?")
-
-        print "\nTrying StoreView after the import hdfs"
-        h2o_cmd.runStoreView(timeoutSecs=120)
-
         trial = 0
-        for (csvFilename, timeoutSecs) in csvFilelist:
-            trialStart = time.time()
-            csvPathname = csvFilename
+        for (csvDirname, timeoutSecs) in csvDirlist:
 
+            (importHDFSResult, importPattern) = h2i.import_only(bucket='home2-0xdiag-datasets', 
+                    path=csvDirname, schema='s3n', timeoutSecs = timeoutSecs)
+            s3nFullList = importHDFSResult['succeeded']
+            self.assertGreater(len(s3nFullList),1,"Should see more than 1 files in s3n?")
+
+            print "\nTrying StoreView after the import hdfs"
+            h2o_cmd.runStoreView(timeoutSecs=120)
+
+            trialStart = time.time()
             # PARSE****************************************
-            csvPathname = csvFilename
-            hex_key = csvFilename + "_" + str(trial) + ".hex"
+            hex_key = csvDirname + "_" + str(trial) + ".hex"
             start = time.time()
-            parseResult = h2i.import_parse(bucket='h2o-airlines-unpacked', path=csvPathname, hex_key=hex_key,
+            parseResult = h2i.import_parse(bucket='h2o-datasets', path=csvDirname + "/*", hex_key=hex_key,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=120)
             elapsed = time.time() - start
             print "parse end on ", parseResult['destination_key'], 'took', elapsed, 'seconds',\

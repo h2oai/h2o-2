@@ -16,7 +16,7 @@ public class C2Chunk extends Chunk {
     int res = UDP.get2(_mem,(i<<1)+OFF);
     return res == _NA?Double.NaN:res;
   }
-  @Override protected final boolean isNA_impl( int i ) { return (0xFF&_mem[i+OFF]) == _NA; }
+  @Override protected final boolean isNA_impl( int i ) { return UDP.get2(_mem,(i<<1)+OFF) == _NA; }
   @Override boolean set_impl(int idx, long l) {
     if( !(Short.MIN_VALUE < l && l <= Short.MAX_VALUE) ) return false;
     UDP.set2(_mem,(idx<<1)+OFF,(short)l);

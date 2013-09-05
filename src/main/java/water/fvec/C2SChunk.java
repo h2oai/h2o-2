@@ -23,9 +23,7 @@ public class C2SChunk extends Chunk {
     long res = UDP.get2(_mem,(i<<1)+OFF);
     return (res == _NA)?Double.NaN:(res + _bias)*_scale;
   }
-  @Override protected final boolean isNA_impl( int i ) { 
-    long res = UDP.get2(_mem,(i<<1)+OFF);
-    return res == _NA; }
+  @Override protected final boolean isNA_impl( int i ) { return UDP.get2(_mem,(i<<1)+OFF) == _NA; }
   @Override boolean set_impl(int idx, long l) { 
     long res = (long)(l/_scale)-_bias; // Compressed value
     double d = (res+_bias)*_scale;     // Reverse it

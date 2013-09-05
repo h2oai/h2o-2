@@ -23,7 +23,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_simple_w_hosts(self):
-        csvPathname = 'smalldata/poker/poker1000'
+        csvPathname = 'poker/poker1000'
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
         h2o_cmd.runRFOnly(parseResult=parseResult, trees=50, timeoutSecs=60)
 
