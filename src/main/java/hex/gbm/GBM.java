@@ -21,24 +21,6 @@ import com.google.gson.JsonObject;
 
 // Gradient Boosted Trees
 public class GBM extends FrameJob {
-  public float progress(){
-    GBMModel m = DKV.get(dest()).get();
-    return m.forest.length/(float)m.N;
-  }
-  public static class GBMModel extends Model{
-    public final String [] domain;
-    public final long [][] cm;
-    public final float [] errs;
-    public final DTree forest[];
-    public final int N;
-
-    public GBMModel(int ntrees, String [] domain, float [] errs, long [][] cm, DTree[] forest){
-      this.N = ntrees; this.domain = domain; this.errs = errs; this.cm = cm; this.forest = forest;
-    }
-    @Override protected double score0(double[] data) {
-      throw new RuntimeException("TODO Auto-generated method stub");
-    }
-  }
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
@@ -76,16 +58,28 @@ public class GBM extends FrameJob {
     @Override public boolean run(Object value) { return (Integer)value >= 1; }
   }
 
+  // Overall prediction error as I add trees
+  transient private float _errs[];
 
-  // JSON Output Fields
-  @API(help="Class names")
-  public String domain[];
+  public float progress(){
+    GBMModel m = DKV.get(dest()).get();
+    return m.forest.length/(float)m.N;
+  }
+  public static class GBMModel extends Model {
+    public final int N;         // Expected max trees
+    public final DTree forest[];// Actual trees built
+    public final String [] domain; // Validation of the model
+    public final int ymin;
+    public final long [][] cm;
+    public final float [] errs;
 
-  @API(help="Confusion Matrix[actual_class][predicted_class]")
-  long cm[/*actual*/][/*predicted*/]; // Confusion matrix
-
-  @API(help="Error rate by tree, from 0.0 to 1.0")
-  float errs[/*ntrees*/]; // Error rate, as trees are added
+    public GBMModel(int ntrees, DTree[] forest, String [] domain, int ymin, long [][] cm, float [] errs){
+      this.N = ntrees; this.forest = forest; this.domain = domain; this.ymin = ymin; this.cm = cm; this.errs = errs;
+    }
+    @Override protected double score0(double[] data) {
+      throw new RuntimeException("TODO Auto-generated method stub");
+    }
+  }
 
   public static final String KEY_PREFIX = "__GBMModel_";
   public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
@@ -97,10 +91,6 @@ public class GBM extends FrameJob {
     rs.replace("key", k.toString());
     rs.replace("content", content);
     return rs.toString();
-  }
-
-  @Override public boolean toHTML( StringBuilder sb ) {
-    return true;
   }
 
   // ==========================================================================
@@ -133,9 +123,9 @@ public class GBM extends FrameJob {
     final int ymin = (int)vresponse.min();
     final short nclass = vresponse.isInt() ? (short)(vresponse.max()-ymin+1) : 1;
     assert 1 <= nclass && nclass < 1000; // Arbitrary cutoff for too many classes
-    domain = nclass > 1 ? vresponse.domain() : null;
-    errs = new float[0];         // No trees yet
-    DKV.put(outputKey, new GBMModel(ntrees, domain, new float[]{-1},cm,new DTree[0]));
+    final String domain[] = nclass > 1 ? vresponse.domain() : null;
+    _errs = new float[0];     // No trees yet
+    DKV.put(outputKey, new GBMModel(ntrees,new DTree[0], domain, ymin, null,null));
     H2O.submitTask(start(new H2OCountedCompleter() {
       @Override public void compute2() {
         // Add in Vecs after the response column which holds the row-by-row
@@ -149,17 +139,21 @@ public class GBM extends FrameJob {
         DTree init_tree = new DTree(fr._names,ncols,nclass,min_rows);
         new GBMDecidedNode(init_tree,preds);
         DTree forest[] = new DTree[] {init_tree};
-        cm = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, max_depth )._cm;
-        DKV.put(outputKey, new GBMModel(ntrees, domain, preds,cm,forest));
-        // Initial scoring
-        //new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, maxDepth );
+        BulkScore bs = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, max_depth );
+        _errs = new float[]{(float)bs._err/nrows}; // Errors for exactly 1 tree
+        DKV.put(outputKey, new GBMModel(ntrees,forest, domain, ymin,bs._cm, _errs));
+
         // Build trees until we hit the limit
         for( int tid=1; tid<ntrees; tid++) {
           if(GBM.this.cancelled())break;
           forest = buildNextTree(fr,forest,ncols,nrows,nclass,ymin);
+
+          // Tree-by-tree scoring
           Timer t_score = new Timer();
-          cm = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, max_depth )._cm;
-          DKV.put(outputKey, new GBMModel(ntrees, domain, errs,cm,forest));
+          BulkScore bs2 = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, max_depth );
+          _errs = Arrays.copyOf(_errs,_errs.length+1);
+          _errs[_errs.length-1] = (float)bs2._err/nrows;
+          DKV.put(outputKey, new GBMModel(ntrees,forest, domain, ymin,bs2._cm, _errs));
           Log.info(Sys.GBM__,"GBM final Scoring done in "+t_score);
         }
         Log.info(Sys.GBM__,"GBM Modeling done in "+t_gbm);
@@ -261,12 +255,10 @@ public class GBM extends FrameJob {
     // Remove the NIDs column
     assert fr._names[fr.numCols()-1].equals("NIDs");
     UKV.remove(fr.remove(fr.numCols()-1)._key);
+
     // Print the generated tree
     //System.out.println(tree.root().toString2(new StringBuilder(),0));
-    // Tree-by-tree scoring
-    long err = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, depth )._err;
-    errs = Arrays.copyOf(errs,errs.length+1);
-    errs[errs.length-1] = (float)err/nrows;
+
     return forest;
   }
 
