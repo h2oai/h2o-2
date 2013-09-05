@@ -119,21 +119,6 @@ class Basic(unittest.TestCase):
                 ("manyfiles-nflx-gz/file_[12]?[0-9][0-9].dat.gz", "file_300.dat.gz", 50 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_*.dat.gz", "file_384.dat.gz", 100 * avgMichalSize, 1200),
                 ("covtype200x.data", "covtype200x.data", covtype200xSize, 700),
-
-                # do it twice
-                # ("covtype.data", "covtype.data"),
-                # ("covtype20x.data", "covtype20x.data"),
-                # "covtype200x.data",
-                # "100million_rows.csv",
-                # "200million_rows.csv",
-                # "a5m.csv",
-                # "a10m.csv",
-                # "a100m.csv",
-                # "a200m.csv",
-                # "a400m.csv",
-                # "a600m.csv",
-                # "billion_rows.csv.gz",
-                # "new-poker-hand.full.311M.txt.gz",
                 ]
         # csvFilenameList = random.sample(csvFilenameAll,1)
         csvFilenameList = csvFilenameAll
@@ -166,7 +151,7 @@ class Basic(unittest.TestCase):
         jea = ' -Dlog.printAll=true'
 
 
-        for i,(csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
+        for i, (csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
             localhost = h2o.decide_if_localhost()
             if (localhost):
                 h2o.build_cloud(2,java_heap_GB=tryHeap, base_port=base_port,
@@ -188,7 +173,7 @@ class Basic(unittest.TestCase):
             importFolderPath = 'manyfiles-nflx-gz'
 
             for trial in range(trialMax):
-                csvPathname = importFolderPath + "/" + csvFilePattern
+                csvPathname = importFolderPath + "/" + csvFilepattern
                 (importResult, importPattern) = h2i.import_only(bucket=bucket, path=csvPathname, schema='local')
                 importFullList = importResult['files']
                 importFailList = importResult['fails']
@@ -198,9 +183,9 @@ class Basic(unittest.TestCase):
                 h2o.cloudPerfH2O.change_logfile(csvFilename)
                 h2o.cloudPerfH2O.message("")
                 h2o.cloudPerfH2O.message("Parse " + csvFilename + " Start--------------------------------")
-                csvPathname = importFolderPath + "/" + csvFilePattern
+                csvPathname = importFolderPath + "/" + csvFilepattern
                 start = time.time()
-                parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local'),
+                parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local',
                     hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                     retryDelaySecs=retryDelaySecs,
                     pollTimeoutSecs=pollTimeoutSecs,
@@ -212,8 +197,8 @@ class Basic(unittest.TestCase):
                         time.sleep(1)
                         h2o.check_sandbox_for_errors()
                         (csvFilepattern, csvFilename, totalBytes2, timeoutSecs) = csvFilenameList[i+1]
-                        csvPathname = importFolderPath + "/" + csvFilePattern
-                        parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local'),
+                        csvPathname = importFolderPath + "/" + csvFilepattern
+                        parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local',
                             hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                             retryDelaySecs=retryDelaySecs,
                             pollTimeoutSecs=pollTimeoutSecs,
@@ -224,8 +209,8 @@ class Basic(unittest.TestCase):
                         time.sleep(1)
                         h2o.check_sandbox_for_errors()
                         (csvFilepattern, csvFilename, totalBytes3, timeoutSecs) = csvFilenameList[i+2]
-                        csvPathname = importFolderPath + "/" + csvFilePattern
-                        parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local'),
+                        csvPathname = importFolderPath + "/" + csvFilepattern
+                        parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local',
                             hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                             retryDelaySecs=retryDelaySecs,
                             pollTimeoutSecs=pollTimeoutSecs,
