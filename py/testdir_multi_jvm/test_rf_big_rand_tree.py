@@ -69,9 +69,8 @@ class Basic(unittest.TestCase):
             # to guarantee no dropped cols!
             kwargs = {'ntree': 3, 'depth': 50, 'seed': seed}
             start = time.time()
-            parseResult = h2i.import_parse(path=csvPathname, schema='put')
-            h2o_cmd.runRFOnly(parseResult=parseResult, src_key=src_key, hex_key=hex_key, 
-                timeoutSecs=180, pollTimeoutSecs=5, **kwargs)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key)
+            h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=180, pollTimeoutSecs=5, **kwargs)
             print "trial #", trial, "rowCount:", rowCount, "colCount:", colCount, "RF end on ", csvFilename, \
                 'took', time.time() - start, 'seconds'
 
