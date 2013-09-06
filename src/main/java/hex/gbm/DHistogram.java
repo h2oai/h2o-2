@@ -29,7 +29,6 @@ import water.util.Log;
    @author Cliff Click
 */
 public class DHistogram<T extends DHistogram> extends Iced {
-  public static final int BINS=4;
   transient final String _name; // Column name, for pretty-printing
   final boolean _isInt;         // Column only holds integers
   float _min, _max;             // Lower-end of binning
@@ -64,7 +63,7 @@ public class DHistogram<T extends DHistogram> extends Iced {
     if( h._max > _max ) _max = h._max;
   }
 
-  // Number of active bins (generally BINS, but can be from 1 to BINS).
+  // Number of active bins
   int nbins() { return 1; }
   // Number of rows in this bin.
   long bins(int i) { return 0; }

@@ -29,12 +29,13 @@ import water.api.DocGen;
 class DTree extends Iced {
   final String[] _names; // Column names
   final int _ncols;      // Active training columns
-  final int _nclass;     // #classes, or 0 for regression trees
+  final char _nbins;     // Max number of bins to split over
+  final char _nclass;    // #classes, or 1 for regression trees
   final int _min_rows;   // Fewest allowed rows in any split
   private Node[] _ns;    // All the nodes in the tree.  Node 0 is the root.
   int _len;              // Resizable array
-  DTree( String[] names, int ncols, int nclass, int min_rows ) { 
-    _names = names; _ncols = ncols; _nclass=nclass; _min_rows = min_rows; _ns = new Node[1]; }
+  DTree( String[] names, int ncols, char nbins, char nclass, int min_rows ) { 
+    _names = names; _ncols = ncols; _nbins=nbins; _nclass=nclass; _min_rows = min_rows; _ns = new Node[1]; }
 
   public final Node root() { return _ns[0]; }
 
@@ -117,7 +118,13 @@ class DTree extends Iced {
         p(sb,"var" ,varW).append(colPad);
       }
       sb.append('\n');
-      for( int i=0; i<DHistogram.BINS; i++ ) {
+
+      // Max bins
+      int nbins=0;
+      for( int j=0; j<ncols; j++ )
+        if( _hs[j] != null && _hs[j].nbins() > nbins ) nbins = _hs[j].nbins();
+
+      for( int i=0; i<nbins; i++ ) {
         for( int j=0; j<ncols; j++ ) {
           DHistogram h = _hs[j];
           if( h == null ) continue;
@@ -217,7 +224,7 @@ class DTree extends Iced {
       int min_rows = _tree._min_rows;
       for( int b=0; b<nbins; b++ ) { // For all split-points
         // Setup for children splits
-        DHistogram nhists[] = splitH.split(col,b,uhs,_tree._names,ncols,min_rows);
+        DHistogram nhists[] = splitH.split(col,b,uhs,_tree._names,_tree._nbins,ncols,min_rows);
         assert nhists==null || nhists.length==ncols;
         _nids[b] = nhists == null ? -1 : makeUndecidedNode(_tree,_nid,nhists)._nid;
         // Also setup predictions locally
@@ -334,13 +341,13 @@ class DTree extends Iced {
     final DTree _trees[]; // Read-only, shared (except at the histograms in the Nodes)
     final int   _leafs[]; // Number of active leaves (per tree)
     final int _ncols;
-    final short _nclass;        // One for regression, else #classes
+    final char _nclass;         // One for regression, else #classes
     // Bias classes to zero; e.g. covtype classes range from 1-7 so this is 1.
     // e.g. prostate classes range 0-1 so this is 0
     final int _ymin;
     // Histograms for every tree, split & active column
     DHistogram _hcs[/*tree id*/][/*tree-relative node-id*/][/*column*/];
-    ScoreBuildHistogram(DTree trees[], int leafs[], int ncols, short nclass, int ymin, Frame fr) {
+    ScoreBuildHistogram(DTree trees[], int leafs[], int ncols, char nclass, int ymin, Frame fr) {
       _trees=trees;
       _leafs=leafs;
       _ncols=ncols;
@@ -633,10 +640,10 @@ class DTree extends Iced {
 
   // Compute class distributions
   static class ClassDist extends MRTask2<ClassDist> {
-    final short _nclass;
+    final char _nclass;
     final int _ymin;
     long _cs[];
-    ClassDist( short nclass, int ymin ) { _nclass = nclass; _ymin = ymin; }
+    ClassDist( char nclass, int ymin ) { _nclass = nclass; _ymin = ymin; }
     @Override public void map( Chunk cr ) {
       _cs = new long[_nclass];
       for( int i=0; i<cr._len; i++ )

@@ -8,15 +8,14 @@ import water.util.Log;
 /**
    A Histogram, computed in parallel over a Vec.
    <p>
-   A {@code DBinHistogram} bins (by default into {@value BINS} bins) every
-   value added to it, and computes a the vec min & max (for use in the next
-   split), and response-Vec mean & variance for each bin.  {@code DBinHistogram}s
-   are initialized with a min, max and number-of-elements to be added (all of
-   which are generally available from a Vec).  Bins run from min to max in
-   uniform sizes.  If the {@code DBinHistogram} can determine that fewer bins
-   are needed (e.g. boolean columns run from 0 to 1, but only ever take on 2
-   values, so only 2 bins are needed), then fewer than {@value BINS} bins are
-   used.
+   A {@code DBinHistogram} bins every value added to it, and computes a the vec
+   min & max (for use in the next split), and response-Vec mean & variance for
+   each bin.  {@code DBinHistogram}s are initialized with a min, max and
+   number-of-elements to be added (all of which are generally available from a
+   Vec).  Bins run from min to max in uniform sizes.  If the {@code
+   DBinHistogram} can determine that fewer bins are needed (e.g. boolean
+   columns run from 0 to 1, but only ever take on 2 values, so only 2 bins are
+   needed), then fewer bins are used.
    <p>
    If we are successively splitting rows (e.g. in a decision tree), then a
    fresh {@code DBinHistogram} for each split will dynamically re-bin the data.
@@ -38,7 +37,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   public final float   _step;        // Linear interpolation step per bin
   public final float   _bmin;        // Linear interpolation min  per bin
   public final char    _nbins;       // Number of bins
-  public final short   _nclass;      // Number of classes
+  public final char    _nclass;      // Number of classes
   public       long [] _bins;        // Number of rows in each bin
   public       float[] _mins, _maxs; // Min, Max, per-bin
   // Average response-vector for the rows in this split.
@@ -52,17 +51,16 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   private      float[/*bin*/][/*class*/] _Ss; // Variance, per-bin per-class
 
   // Fill in read-only sharable values
-  public DBinHistogram( String name, short nclass, boolean isInt, float min, float max, long nelems ) {
+  public DBinHistogram( String name, final char nbins, char nclass, boolean isInt, float min, float max, long nelems ) {
     super(name,isInt,min,max);
     assert nelems > 0;
     assert max > min : "Caller ensures "+max+">"+min+", since if max==min== the column "+name+" is all constants";
-    int xbins = Math.max((int)Math.min(BINS,nelems),1); // Default bin count
+    char xbins = (char)Math.max((char)Math.min(nbins,nelems),1); // Default bin count
     // See if we can show there are fewer unique elements than nbins.
     // Common for e.g. boolean columns, or near leaves.
-    int nbins = xbins;      // Default size for most columns       
     if( isInt && max-min < xbins )
-      nbins = (int)((long)max-(long)min+1L); // Shrink bins
-    _nbins = (char)nbins;
+      xbins = (char)((long)max-(long)min+1L); // Shrink bins
+    _nbins = xbins;
     _nclass = nclass;
     _bmin = min;                // Bin-Min
     float step = (max-min)/_nbins; // Step size for linear interpolation
@@ -196,7 +194,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   // constant data, or was not being tracked by a prior DBinHistogram (for being
   // constant data from a prior split), then that column will be null in the
   // returned array.
-  public DBinHistogram[] split( int col, int b, DHistogram hs[], String[] names, int ncols, int min_rows ) {
+  public DBinHistogram[] split( int col, int b, DHistogram hs[], String[] names, char nbins, int ncols, int min_rows ) {
     assert hs[col] == this;
     if( _bins[b] <= min_rows ) return null; // Too few elements
     if( var(b) == 0.0 ) return null; // No point in splitting a perfect prediction
@@ -215,20 +213,20 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
       if( col==j ) { min=h.mins(b); max=h.maxs(b); }
       if( min == max ) continue; // This column will not split again
       if( min >  max ) continue; // Happens for all NA subsplits
-      nhists[j] = new DBinHistogram(names[j],_nclass,hs[j]._isInt,min,max,_bins[b]);
+      nhists[j] = new DBinHistogram(names[j],nbins,_nclass,hs[j]._isInt,min,max,_bins[b]);
       cnt++;                    // At least some chance of splitting
     }
     return cnt == 0 ? null : nhists;
   }
 
   // An initial set of DBinHistograms (one per column) for this column set
-  public static DBinHistogram[] initialHist( Frame fr, int ncols, short nclass ) {
+  public static DBinHistogram[] initialHist( Frame fr, int ncols, char nbins, char nclass ) {
     DBinHistogram hists[] = new DBinHistogram[ncols];
     Vec[] vs = fr._vecs;
     for( int j=0; j<ncols; j++ ) {
       Vec v = vs[j];
       hists[j] = v.min()==v.max() ? null
-        : new DBinHistogram(fr._names[j],nclass,v.isInt(),(float)v.min(),(float)v.max(),v.length());
+        : new DBinHistogram(fr._names[j],nbins,nclass,v.isInt(),(float)v.min(),(float)v.max(),v.length());
     }
     return hists;
   }

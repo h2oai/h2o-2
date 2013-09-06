@@ -47,6 +47,12 @@ public class DRF extends FrameJob {
     @Override public boolean run(Object value) { return (Integer)value >= 1; }
   }
 
+  @API(help = "Number of bins to split the column", filter = NBinsFilter.class)
+  char nbins = 50;
+  public class NBinsFilter implements Filter {
+    @Override public boolean run(Object value) { return (Integer)value >= 2; }
+  }
+
   @API(help = "Columns to randomly select at each level, or -1 for sqrt(#cols)", filter = MTriesFilter.class)
   int mtries = -1;
   public class MTriesFilter implements Filter {
@@ -130,7 +136,7 @@ public class DRF extends FrameJob {
     final int  ncols = fr.numCols();
     final long nrows = fr.numRows();
     final int ymin = (int)vresponse.min();
-    final short nclass = vresponse.isInt() ? (short)(vresponse.max()-ymin+1) : 1;
+    final char nclass = vresponse.isInt() ? (char)(vresponse.max()-ymin+1) : 1;
     assert 1 <= nclass && nclass < 1000; // Arbitrary cutoff for too many classes
     final String domain[] = nclass > 1 ? vresponse.domain() : null;
     _errs = new float[0];     // No trees yet
@@ -158,7 +164,7 @@ public class DRF extends FrameJob {
         Random rand = new MersenneTwisterRNG(new int[]{(int)(seed>>32L),(int)seed});
         
         // Initially setup as-if an empty-split had just happened
-        DHistogram hs[] = DBinHistogram.initialHist(fr,ncols,nclass);
+        DHistogram hs[] = DBinHistogram.initialHist(fr,ncols,nbins,nclass);
         DRFTree forest[] = new DRFTree[0];
 
         // ----
@@ -177,7 +183,7 @@ public class DRF extends FrameJob {
             int idx = st+t;
             // Make a new Vec to hold the split-number for each row (initially all zero).
             Vec vec = vresponse.makeZero();
-            forest[idx] = someTrees[t] = new DRFTree(fr,ncols,nclass,min_rows,hs,mtrys,rand.nextLong());
+            forest[idx] = someTrees[t] = new DRFTree(fr,ncols,nbins,nclass,min_rows,hs,mtrys,rand.nextLong());
             if( sample_rate < 1.0 )
               new Sample(someTrees[t],sample_rate).doAll(vec);
             fr.add("NIDs"+t,vec);
@@ -231,7 +237,7 @@ public class DRF extends FrameJob {
   // ----
   // One Big Loop till the tree is of proper depth.
   // Adds a layer to the tree each pass.
-  public int makeSomeTrees( int st, DRFTree trees[], int leafs[], int ntrees, int max_depth, Frame fr, Vec vresponse, int ncols, short nclass, int ymin, long nrows, double sample_rate ) {
+  public int makeSomeTrees( int st, DRFTree trees[], int leafs[], int ntrees, int max_depth, Frame fr, Vec vresponse, int ncols, char nclass, int ymin, long nrows, double sample_rate ) {
     int depth=0;
     for( ; depth<max_depth; depth++ ) {
       Timer t_pass = new Timer();
@@ -299,8 +305,8 @@ public class DRF extends FrameJob {
     final long _seed;           // RNG seed; drives sampling seeds
     final long _seeds[];        // One seed for each chunk, for sampling
     final transient Random _rand; // RNG for split decisions & sampling
-    DRFTree( Frame fr, int ncols, int nclass, int min_rows, DHistogram hs[], int mtrys, long seed ) {
-      super(fr._names, ncols, nclass, min_rows);
+    DRFTree( Frame fr, int ncols, char nbins, char nclass, int min_rows, DHistogram hs[], int mtrys, long seed ) {
+      super(fr._names, ncols, nbins, nclass, min_rows);
       _mtrys = mtrys;
       _seed = seed;                  // Save for any replay scenarios
       _rand = new MersenneTwisterRNG(new int[]{(int)(seed>>32),(int)seed});

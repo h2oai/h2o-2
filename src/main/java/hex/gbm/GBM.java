@@ -41,6 +41,12 @@ public class GBM extends FrameJob {
     @Override public boolean run(Object value) { return (Integer)value >= 1; }
   }
 
+  @API(help = "Number of bins to split the column", filter = NBinsFilter.class)
+  char nbins = 50;
+  public class NBinsFilter implements Filter {
+    @Override public boolean run(Object value) { return (Integer)value >= 2; }
+  }
+
   @API(help = "Learning rate, from 0. to 1.0", filter = LearnRateFilter.class)
   double learn_rate = 0.1;
   public class LearnRateFilter implements Filter {
@@ -105,7 +111,7 @@ public class GBM extends FrameJob {
     final int  ncols = fr.numCols();
     final long nrows = fr.numRows();
     final int ymin = (int)vresponse.min();
-    final short nclass = vresponse.isInt() ? (short)(vresponse.max()-ymin+1) : 1;
+    final char nclass = vresponse.isInt() ? (char)(vresponse.max()-ymin+1) : 1;
     assert 1 <= nclass && nclass < 1000; // Arbitrary cutoff for too many classes
     final String domain[] = nclass > 1 ? vresponse.domain() : null;
     _errs = new float[0];     // No trees yet
@@ -122,7 +128,7 @@ public class GBM extends FrameJob {
         // The initial prediction is just the class distribution.  The initial
         // residuals are then basically the actual class minus the average class.
         float preds[] = buildResiduals(nclass,fr,ncols,nrows,ymin);
-        DTree init_tree = new DTree(fr._names,ncols,nclass,min_rows);
+        DTree init_tree = new DTree(fr._names,ncols,nbins,nclass,min_rows);
         new GBMDecidedNode(init_tree,preds);
         DTree forest[] = new DTree[] {init_tree};
         BulkScore bs = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, 0 );
@@ -159,13 +165,13 @@ public class GBM extends FrameJob {
   }
 
   // Build the next tree, which is trying to correct the residual error from the prior trees.
-  private DTree[] buildNextTree(Frame fr, DTree forest[], final int ncols, long nrows, final short nclass, int ymin) {
+  private DTree[] buildNextTree(Frame fr, DTree forest[], final int ncols, long nrows, final char nclass, int ymin) {
     // Make a new Vec to hold the split-number for each row (initially all zero).
     Vec vnids = vresponse.makeZero();
     fr.add("NIDs",vnids);
     // Initially setup as-if an empty-split had just happened
-    final DTree tree = new DTree(fr._names,ncols,nclass,min_rows);
-    new GBMUndecidedNode(tree,-1,DBinHistogram.initialHist(fr,ncols,nclass)); // The "root" node
+    final DTree tree = new DTree(fr._names,ncols,nbins,nclass,min_rows);
+    new GBMUndecidedNode(tree,-1,DBinHistogram.initialHist(fr,ncols,nbins,nclass)); // The "root" node
     int leaf = 0; // Define a "working set" of leaf splits, from here to tree._len
     // Add tree to the end of the forest
     forest = Arrays.copyOf(forest,forest.length+1);
@@ -257,7 +263,7 @@ public class GBM extends FrameJob {
   //
   // The initial prediction is just the class distribution.  The initial
   // residuals are then basically the actual class minus the average class.
-  private float[] buildResiduals(short nclass, final Frame fr, final int ncols, long nrows, final int ymin ) {
+  private float[] buildResiduals(char nclass, final Frame fr, final int ncols, long nrows, final int ymin ) {
     // Find the initial prediction - the current average response variable.
     float preds[] = new float[nclass];
     if( nclass == 1 ) {
