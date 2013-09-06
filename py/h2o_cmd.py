@@ -2,28 +2,6 @@ import os, json, unittest, time, shutil, sys, socket
 import h2o
 import h2o_browse as h2b, h2o_rf as h2f
 
-# header, separator, exclude params are passed thru kwargs to node.parse
-def parseFile(node=None, csvPathname=None, key=None, key2=None, 
-    timeoutSecs=30, retryDelaySecs=0.5, pollTimeoutSecs=30,
-    noise=None, noPoll=None, doSummary=True, **kwargs):
-    if not csvPathname: raise Exception('No file name specified')
-    if not node: node = h2o.nodes[0]
-    ### print "parseFile pollTimeoutSecs:", pollTimeoutSecs
-    key = node.put_file(csvPathname, key=key, timeoutSecs=timeoutSecs)
-    if key2 is None:
-        # don't rely on h2o default key name
-        myKey2 = key + '.hex'
-    else:
-        myKey2 = key2
-    p = node.parse(key, myKey2, 
-        timeoutSecs, retryDelaySecs, 
-        pollTimeoutSecs=pollTimeoutSecs, noise=noise, noPoll=noPoll, **kwargs)
-
-    # do SummaryPage here too, just to get some coverage
-    if doSummary:
-        node.summary_page(myKey2, timeoutSecs=timeoutSecs)
-    return p
-
 def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, 
     timeoutSecs=20, retryDelaySecs=2, pollTimeoutSecs=30, 
     noise=None, noPoll=None, **kwargs):

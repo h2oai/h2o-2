@@ -162,10 +162,10 @@ def simpleCheckRFView(node, rfv, noPrint=False, **kwargs):
 
     return (classification_error, classErrorPctList, totalScores)
 
-def trainRF(trainParseKey, **kwargs):
+def trainRF(trainParseResult, **kwargs):
     # Train RF
     start = time.time()
-    trainResult = h2o_cmd.runRFOnly(parseResult=trainParseKey, **kwargs)
+    trainResult = h2o_cmd.runRFOnly(parseResult=trainParseResult, **kwargs)
     rftime      = time.time()-start 
     h2o.verboseprint("RF train results: ", trainResult)
     h2o.verboseprint("RF computation took {0} sec".format(rftime))
@@ -173,15 +173,15 @@ def trainRF(trainParseKey, **kwargs):
     trainResult['python_call_timer'] = rftime
     return trainResult
 
-def scoreRF(scoreParseKey, trainResult, **kwargs):
+def scoreRF(scoreParseResult, trainResult, **kwargs):
     # Run validation on dataset
     rfModelKey  = trainResult['model_key']
     ntree       = trainResult['ntree']
     
     start = time.time()
-    data_key = scoreParseKey['destination_key']
+    parseKey = scoreParseResult['destination_key']
     # NOTE: response_variable is required, and passed from kwargs here
-    scoreResult = h2o_cmd.runRFView(None, data_key, rfModelKey, ntree, **kwargs)
+    scoreResult = h2o_cmd.runRFView(None, parseKey, rfModelKey, ntree, **kwargs)
 
     rftime      = time.time()-start 
     h2o.verboseprint("RF score results: ", scoreResult)
