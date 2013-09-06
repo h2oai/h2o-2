@@ -281,7 +281,7 @@ public class Vec extends Iced {
    *  probably trigger an OOM!  */
   public Value chunkIdx( int cidx ) {
     Value val = DKV.get(chunkKey(cidx));
-    assert val != null;
+    assert val != null : "Missing chunk "+cidx+" for "+_key;
     return val;
   }
 

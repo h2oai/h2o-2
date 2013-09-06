@@ -3,11 +3,11 @@ package hex.gbm;
 import java.util.Arrays;
 import java.util.Random;
 import water.*;
-import water.H2O.H2OCountedCompleter;
 import water.fvec.*;
 import water.util.Log.Tag.Sys;
 import water.util.Log;
 import water.util.Utils;
+import water.api.DocGen;
 
 /**
    A Decision Tree, laid over a Frame of Vecs, and built distributed.
@@ -191,7 +191,7 @@ class DTree extends Iced {
       // out here.
       if( col == -1 ) {
         DecidedNode p = n._tree.decided(_pid);
-        assert checkDistro(p._pred);
+        //assert checkDistro(p._pred); // Only for GBM
         _col  = p._col;  // Just copy the parent data over, for the predictions
         _bmin = p._bmin;
         _step = p._step;
@@ -242,7 +242,7 @@ class DTree extends Iced {
           }
         }
       }
-      assert checkDistro(_pred) : Arrays.deepToString(_pred);
+      //assert checkDistro(_pred) : Arrays.deepToString(_pred); // Only for GBM
     }
   
     // DecidedNode with a pre-cooked response and no children
@@ -300,7 +300,10 @@ class DTree extends Iced {
         if( fs == null ) continue;
         float sum=0;
         for( float f : fs ) sum += f;
-        if( !(-0.00001 < sum && sum < 0.00001) ) return false;
+        if( !(-0.0001 < sum && sum < 0.0001) ) {
+          System.out.println("crap distro: "+Arrays.toString(fs)+"="+sum);
+          return false;
+        }
       }
       return true;
     }
@@ -588,7 +591,7 @@ class DTree extends Iced {
         if( pred[c] > pred[best] ) best=c;
       }
 
-      assert 1-.00001 <= sum && sum <= 1+.00001 : crashReport(i,sum,pred,nids);
+      //assert 1-.00001 <= sum && sum <= 1+.00001 : crashReport(i,sum,pred,nids); // Only for GBM
       int ycls = (int)y;         // Response class from 0 to nclass-1
       assert 0 <= ycls && ycls < _nclass : "weird ycls="+ycls+", y="+y+", ymin="+_ymin;
       if( best != ycls ) _err++; // Absolute prediction error; off-diagonal sum
@@ -640,5 +643,79 @@ class DTree extends Iced {
         _cs[(int)cr.at80(i)-_ymin]++;
     }
     @Override public void reduce( ClassDist cd ) { Utils.add(_cs,cd._cs); }
+  }
+
+  public static abstract class TreeModel extends Model {
+    public final int N;         // Expected max trees
+    public final DTree forest[];// Actual trees built (probably < N)
+    public final float [] errs; // Error rate as trees are added
+    // For classification models, we'll do a Confusion Matrix right in the
+    // model (for now - really should be seperate).
+    public final String [] domain; // Actual String domain
+    public final int ymin;         // Smallest class - to zero-bias the CM
+    public final long [/*actual*/][/*predicted*/] cm;
+
+    public TreeModel(int ntrees, DTree[] forest, float [] errs, String [] domain, int ymin, long [][] cm) {
+      this.N = ntrees; this.forest = forest; this.errs = errs; this.domain = domain; this.ymin = ymin; this.cm = cm;
+    }
+
+    public void generateHTML(String title, StringBuilder sb) {
+      DocGen.HTML.title(sb,title);
+
+      // Top row of CM
+      if( cm != null ) {
+        DocGen.HTML.section(sb,"Confusion Matrix");
+        DocGen.HTML.arrayHead(sb);
+        sb.append("<tr class='warning'>");
+        sb.append("<th>Actual / Predicted</th>"); // Row header
+        for( int i=0; i<cm.length; i++ )
+          sb.append("<th>").append(domain[i+ymin]).append("</th>");
+        sb.append("<th>Error</th>");
+        sb.append("</tr>");
+
+        // Main CM Body
+        long tsum=0, terr=0;                   // Total observations & errors
+        for( int i=0; i<cm.length; i++ ) { // Actual loop
+          sb.append("<tr>");
+          sb.append("<th>").append(domain[i+ymin]).append("</th>");// Row header
+          long sum=0, err=0;                     // Per-class observations & errors
+          for( int j=0; j<cm[i].length; j++ ) { // Predicted loop
+            sb.append(i==j ? "<td style='background-color:LightGreen'>":"<td>");
+            sb.append(cm[i][j]).append("</td>");
+            sum += cm[i][j];              // Per-class observations
+            if( i != j ) err += cm[i][j]; // and errors
+          }
+          sb.append(String.format("<th>%5.3f = %d / %d</th>", (double)err/sum, err, sum));
+          tsum += sum;  terr += err; // Bump totals
+        }
+        sb.append("</tr>");
+
+        // Last row of CM
+        sb.append("<tr>");
+        sb.append("<th>Totals</th>");// Row header
+        for( int j=0; j<cm.length; j++ ) { // Predicted loop
+          long sum=0;
+          for( int i=0; i<cm.length; i++ ) sum += cm[i][j];
+          sb.append("<td>").append(sum).append("</td>");
+        }
+        sb.append(String.format("<th>%5.3f = %d / %d</th>", (double)terr/tsum, terr, tsum));
+        sb.append("</tr>");
+        DocGen.HTML.arrayTail(sb);
+      }
+
+      if( errs != null ) {
+        DocGen.HTML.section(sb,"Error Rate by Tree");
+        DocGen.HTML.arrayHead(sb);
+        sb.append("<tr><th>Trees</th>");
+        for( int i=0; i<errs.length; i++ )
+          sb.append("<td>").append(i+1).append("</td>");
+        sb.append("</tr>");
+        sb.append("<tr><th class='warning'>Error Rate</th>");
+        for( int i=0; i<errs.length; i++ )
+          sb.append(String.format("<td>%5.3f</td>",errs[i]));
+        sb.append("</tr>");
+        DocGen.HTML.arrayTail(sb);
+      }
+    }
   }
 }

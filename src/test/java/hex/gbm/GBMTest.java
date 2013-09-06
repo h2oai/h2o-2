@@ -6,6 +6,7 @@ import java.io.File;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import water.*;
+import water.api.RequestBuilders.Response;
 import water.fvec.*;
 
 public class GBMTest extends TestUtil {
@@ -66,12 +67,13 @@ public class GBMTest extends TestUtil {
       gbm.max_depth = 8;
       gbm.learn_rate = 0.1f;
       gbm.min_rows=1;
-      gbm.serve();
+      gbm.serve();              // Start it
+      gbm.get();                // Block for it
 
     } finally {
       UKV.remove(dest);         // Remove original hex frame key
       if( gbm != null ) {
-        gbm.source.remove();    // Remove hex frame internal guts
+        UKV.remove(gbm.dest()); // Remove the model
         UKV.remove(gbm.vresponse._key);
         gbm.remove();           // Remove GBM Job
       }
@@ -124,14 +126,16 @@ public class GBMTest extends TestUtil {
       drf.vresponse = prep.prep(drf.source);
       drf.ntrees = 5;
       drf.max_depth = 50;
+      drf.min_rows=1;
       drf.mtries = -1;
       drf.seed = (1L<<32)|2;
-      drf.serve();
+      drf.serve();              // Start it
+      drf.get();                // Block for it
 
     } finally {
       UKV.remove(dest);         // Remove whole frame
       if( drf != null ) {
-        drf.source.remove();
+        UKV.remove(drf.dest()); // Remove the model
         UKV.remove(drf.vresponse._key);
         drf.remove();
       }
