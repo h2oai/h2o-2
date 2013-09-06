@@ -191,6 +191,7 @@ class DTree extends Iced {
       // out here.
       if( col == -1 ) {
         DecidedNode p = n._tree.decided(_pid);
+        assert checkDistro(p._pred);
         _col  = p._col;  // Just copy the parent data over, for the predictions
         _bmin = p._bmin;
         _step = p._step;
@@ -228,7 +229,7 @@ class DTree extends Iced {
         if( splitH._bins[b] == 0 ) {
           // Tree root (no parent) and no training data?
           if( _pid == -1 ) {
-            Arrays.fill(_pred[b],1.0f/nclass);
+            Arrays.fill(_pred[b],0);
           } else {     // Else get parent & use parent's prediction for our bin
             _pred[b] = null;
             DecidedNode p = n._tree.decided(_pid);
@@ -241,6 +242,7 @@ class DTree extends Iced {
           }
         }
       }
+      assert checkDistro(_pred) : Arrays.deepToString(_pred);
     }
   
     // DecidedNode with a pre-cooked response and no children
@@ -267,6 +269,7 @@ class DTree extends Iced {
     public int ns( Chunk chks[], int i ) { return _nids[bin(chks,i)]; }
 
     @Override public String toString() {
+      if( _col == -1 ) return "Decided has col = -1";
       String n= " <= "+_tree._names[_col]+" < ";
       String s = new String();
       float f = _bmin;
@@ -290,6 +293,16 @@ class DTree extends Iced {
         if( _nids[i] >= 0 ) _tree.node(_nids[i]).toString2(sb,depth+1);
       }
       return sb;
+    }
+
+    static private boolean checkDistro( float[/*split*/][/*class*/] fss ) {
+      for( float fs[] : fss ) {
+        if( fs == null ) continue;
+        float sum=0;
+        for( float f : fs ) sum += f;
+        if( !(-0.00001 < sum && sum < 0.00001) ) return false;
+      }
+      return true;
     }
   }
 
@@ -505,9 +518,10 @@ class DTree extends Iced {
       }
  
       // Score all Rows
-      float pred[] = new float[_nclass]; // Shared temp array for computing predictions
+      float pred[] = new float[_nclass];  // Shared temp array for computing predictions
+      int nids[] = new int[_trees.length];// Shared temp array for better error reporting
       for( int i=0; i<ys._len; i++ ) {
-        float err = score0( chks, i, (float)(ys.at0(i)-_ymin), pred, rands );
+        float err = score0( chks, i, (float)(ys.at0(i)-_ymin), pred, nids, rands );
         _sum += err*err;        // Squared error
       }
     }
@@ -523,12 +537,13 @@ class DTree extends Iced {
     // vector we return the Euclidean distance.  If the response is a single
     // class variable we instead return the squared-error of the prediction for
     // the class.  We also count absolute errors when we predict the majority class.
-    private float score0( Chunk chks[], int i, float y, float pred[], Random rands[] ) {
+    private float score0( Chunk chks[], int i, float y, float pred[], int nids[], Random rands[] ) {
       Arrays.fill(pred,0);      // Recycled temp array
       int nt = 0;               // Number of trees not sampled-away
 
       // For all trees
       for( int t=0; t<_trees.length; t++ ) {
+        nids[t] = -1;           // Reset shared temp array
         // For OOBEE error, do not score rows on trees trained on that row
         if( rands != null && !(rands[t].nextFloat() >= _sampleRate) ) continue;
         if( Float.isNaN(y) ) continue; // Ignore missing response vars
@@ -538,9 +553,11 @@ class DTree extends Iced {
         // point, walking down the tree to a leaf.
         DecidedNode prev = null;
         Node node = tree.root();
+        int nid = 0;
         while( node instanceof DecidedNode ) { // While tree-walking
+          nids[t] = nid;
           prev = (DecidedNode)node;
-          int nid = prev.ns(chks,i);
+          nid = prev.ns(chks,i);
           if( nid == -1 ) break;
           node = tree.node(nid);
           assert node._tree==tree;
@@ -571,7 +588,7 @@ class DTree extends Iced {
         if( pred[c] > pred[best] ) best=c;
       }
 
-      assert 1-.00001 <= sum && sum <= 1+.00001 : "Expect predictions to be a probability distribution but found "+Arrays.toString(pred)+"="+sum+", scoring row "+i;
+      assert 1-.00001 <= sum && sum <= 1+.00001 : crashReport(i,sum,pred,nids);
       int ycls = (int)y;         // Response class from 0 to nclass-1
       assert 0 <= ycls && ycls < _nclass : "weird ycls="+ycls+", y="+y+", ymin="+_ymin;
       if( best != ycls ) _err++; // Absolute prediction error; off-diagonal sum
@@ -596,6 +613,18 @@ class DTree extends Iced {
       Log.info(tag,"Average squared prediction error for tree of depth "+depth+" is "+(_sum/nrows));
       Log.info(tag,"Total of "+_err+" errors on "+nrows+" rows, with "+_trees.length+" trees (average of "+((float)lcnt/_trees.length)+" nodes)");
       return this;
+    }
+
+    private String crashReport( int row, float sum, float[] pred, int[] nids ) {
+      String s = "Expect predictions to be a probability distribution but found "+Arrays.toString(pred)+"="+sum+", scoring row "+row+"\n";
+      for( int t=0; t<nids.length; t++ ) {
+        if( nids[t]== -1 ) s += "Skipping tree "+t+"\n";
+        else {
+          DecidedNode dn = _trees[t].decided(nids[t]);
+          s += "Tree "+t+" = "+dn + "\n";
+        }
+      }
+      return s;
     }
   }
 
