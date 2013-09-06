@@ -32,7 +32,7 @@ public class PCA extends Request {
 
   PCAParams getPCAParams() {
     // PCAParams res = new PCAParams(_numPC.value());
-    PCAParams res = new PCAParams(_tol.value());
+    PCAParams res = new PCAParams(_tol.value(),_standardize.value());
     return res;
   }
 

@@ -38,14 +38,17 @@ public abstract class DPCA {
 
   public static class PCAParams extends Iced {
     public double _tol = 0;
+    public boolean _standardize = true;
 
-    public PCAParams(double tol) {
+    public PCAParams(double tol, boolean standardize) {
       _tol = tol;
+      _standardize = standardize;
     }
 
     public JsonObject toJson() {
       JsonObject res = new JsonObject();
       res.addProperty("tolerance", _tol);
+      res.addProperty("standardize",_standardize);
       return res;
     }
   }
