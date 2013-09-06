@@ -31,7 +31,7 @@ public class PCATest extends TestUtil {
     Key kdst = Key.make("prostate.pca");
 
     // PCAJob job = DPCA.startPCAJob(kdst, df, new PCAParams(num_pc));
-    JsonObject resPCA = DPCA.buildModel(null, kdst, df, new PCAParams(tol)).toJson();
+    JsonObject resPCA = DPCA.buildModel(null, kdst, df, new PCAParams(tol,true)).toJson();
     System.out.println(resPCA.toString());
 
     UKV.remove(ksrc);
