@@ -117,31 +117,20 @@ public class Boot extends ClassLoader {
    * Intent is to delete the unpacked jar files, not the log files or ICE files.
    */
   class DeleteDirHandler extends Thread {
-    volatile String _dir;
-
-    public void setDir(String value) {
-      _dir = value;
-    }
-
+    final String _dir;
+    DeleteDirHandler(String dir) { _dir=dir; }
     void delete(File f) throws IOException {
-      if (f.isDirectory()) {
-        for (File c : f.listFiles()) {
+      if (f.isDirectory())
+        for (File c : f.listFiles())
           delete(c);
-        }
-      }
       if (!f.delete())
         throw new FileNotFoundException("Failed to delete file: " + f);
     }
 
     @Override
     public void run() {
-      try {
-        File f = new File (_dir);
-        delete (f);
-      }
-      catch (Exception e) {
-        e.printStackTrace();
-      }
+      try { delete (new File (_dir)); }
+      catch (Exception e) { /* silent lossage because we tried but cannot help */ }
     }
   }
 
@@ -217,9 +206,7 @@ public class Boot extends ClassLoader {
 
       // This causes the tmp JAR unpack dir to delete on exit.
       // It does not delete logs or ICE stuff.
-      DeleteDirHandler deleteDirHandler = new DeleteDirHandler();
-      deleteDirHandler.setDir(dir.toString());
-      Runtime.getRuntime().addShutdownHook(deleteDirHandler);
+      Runtime.getRuntime().addShutdownHook(new DeleteDirHandler(dir.toString()));
 
       _parentDir = dir;         // Set a global instead of passing the dir about?
       Log.debug("Extracting jar into " + _parentDir);
