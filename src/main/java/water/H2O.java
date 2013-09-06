@@ -52,7 +52,11 @@ public final class H2O {
 
   public static String DEFAULT_ICE_ROOT() {
     String username = System.getProperty("user.name");
-    if ((username == null) || (username.length() == 0)) {
+    if (username == null) {
+      username = "";
+    }
+    String u2 = username.replaceAll(" ", "_");
+    if (username.length() == 0) {
       username = "unknown";
     }
     String s = "/tmp/h2o-" + username;

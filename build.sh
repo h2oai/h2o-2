@@ -72,11 +72,11 @@ WIPE_TMP=true
 # Calculate MYNAME based on platform.
 if [ ! -z "$LOGNAME" ]; then
     # Unix
-    MYNAME=${LOGNAME}
+    MYNAME=`echo ${LOGNAME} | sed 's/ /_/g'`
 else
     if [ ! -z "$USERNAME" ]; then
         # Windows
-        MYNAME=${USERNAME}
+        MYNAME=`echo ${USERNAME} | sed 's/ /_/g'`
     else
         MYNAME="UnknownLogin"
     fi
