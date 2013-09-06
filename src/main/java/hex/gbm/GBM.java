@@ -1,13 +1,7 @@
 package hex.gbm;
 
-import hex.gbm.DTree.BulkScore;
-import hex.gbm.DTree.ClassDist;
-import hex.gbm.DTree.DecidedNode;
-import hex.gbm.DTree.ScoreBuildHistogram;
-import hex.gbm.DTree.UndecidedNode;
-
+import hex.gbm.DTree.*;
 import java.util.Arrays;
-
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
@@ -17,8 +11,6 @@ import water.fvec.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
-import com.google.gson.JsonObject;
-
 // Gradient Boosted Trees
 public class GBM extends FrameJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -27,15 +19,6 @@ public class GBM extends FrameJob {
   @API(help="", required=true, filter=GBMVecSelect.class)
   Vec vresponse;
   class GBMVecSelect extends VecSelect { GBMVecSelect() { super("source"); } }
-
-  @API(help = "Learning rate, from 0. to 1.0", filter = LearnRateFilter.class)
-  double learn_rate = 0.1;
-  public class LearnRateFilter implements Filter {
-    @Override public boolean run(Object value) {
-      double learn_rate = (Double)value;
-      return 0.0 < learn_rate && learn_rate <= 1.0;
-    }
-  }
 
   @API(help = "Number of trees", filter = NtreesFilter.class)
   int ntrees = 10;
@@ -58,23 +41,25 @@ public class GBM extends FrameJob {
     @Override public boolean run(Object value) { return (Integer)value >= 1; }
   }
 
+  @API(help = "Learning rate, from 0. to 1.0", filter = LearnRateFilter.class)
+  double learn_rate = 0.1;
+  public class LearnRateFilter implements Filter {
+    @Override public boolean run(Object value) {
+      double learn_rate = (Double)value;
+      return 0.0 < learn_rate && learn_rate <= 1.0;
+    }
+  }
+
   // Overall prediction error as I add trees
   transient private float _errs[];
 
   public float progress(){
-    GBMModel m = DKV.get(dest()).get();
+    DTree.TreeModel m = DKV.get(dest()).get();
     return m.forest.length/(float)m.N;
   }
-  public static class GBMModel extends Model {
-    public final int N;         // Expected max trees
-    public final DTree forest[];// Actual trees built
-    public final String [] domain; // Validation of the model
-    public final int ymin;
-    public final long [][] cm;
-    public final float [] errs;
-
-    public GBMModel(int ntrees, DTree[] forest, String [] domain, int ymin, long [][] cm, float [] errs){
-      this.N = ntrees; this.forest = forest; this.domain = domain; this.ymin = ymin; this.cm = cm; this.errs = errs;
+  public static class GBMModel extends DTree.TreeModel {
+    public GBMModel(int ntrees, DTree[] forest, float [] errs, String [] domain, int ymin, long [][] cm){
+      super(ntrees,forest,errs,domain,ymin,cm);
     }
     @Override protected double score0(double[] data) {
       throw new RuntimeException("TODO Auto-generated method stub");
@@ -106,11 +91,9 @@ public class GBM extends FrameJob {
   // Compute a single GBM tree from the Frame.  Last column is the response
   // variable.  Depth is capped at maxDepth.
   @Override protected Response serve() {
-    final Key outputKey = dest();
     final Timer t_gbm = new Timer();
     final Frame fr = new Frame(source); // Local copy for local hacking
-    if( !vresponse.isEnum() )
-      vresponse.asEnum();
+    if( !vresponse.isEnum() ) vresponse.asEnum();
     // While I'd like the Frames built custom for each call, with excluded
     // columns already removed - for now check to see if the response column is
     // part of the frame and remove it up front.
@@ -118,6 +101,7 @@ public class GBM extends FrameJob {
       if( fr._vecs[i]==vresponse )
         fr.remove(i);
 
+    assert 1 <= min_rows;
     final int  ncols = fr.numCols();
     final long nrows = fr.numRows();
     final int ymin = (int)vresponse.min();
@@ -125,7 +109,9 @@ public class GBM extends FrameJob {
     assert 1 <= nclass && nclass < 1000; // Arbitrary cutoff for too many classes
     final String domain[] = nclass > 1 ? vresponse.domain() : null;
     _errs = new float[0];     // No trees yet
-    DKV.put(outputKey, new GBMModel(ntrees,new DTree[0], domain, ymin, null,null));
+    final Key outputKey = dest();
+    DKV.put(outputKey, new GBMModel(ntrees,new DTree[0], null, domain, ymin, null));
+
     H2O.submitTask(start(new H2OCountedCompleter() {
       @Override public void compute2() {
         // Add in Vecs after the response column which holds the row-by-row
@@ -139,9 +125,9 @@ public class GBM extends FrameJob {
         DTree init_tree = new DTree(fr._names,ncols,nclass,min_rows);
         new GBMDecidedNode(init_tree,preds);
         DTree forest[] = new DTree[] {init_tree};
-        BulkScore bs = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, max_depth );
+        BulkScore bs = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, 0 );
         _errs = new float[]{(float)bs._err/nrows}; // Errors for exactly 1 tree
-        DKV.put(outputKey, new GBMModel(ntrees,forest, domain, ymin,bs._cm, _errs));
+        DKV.put(outputKey, new GBMModel(ntrees,forest, _errs, domain, ymin,bs._cm));
 
         // Build trees until we hit the limit
         for( int tid=1; tid<ntrees; tid++) {
@@ -153,7 +139,7 @@ public class GBM extends FrameJob {
           BulkScore bs2 = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, max_depth );
           _errs = Arrays.copyOf(_errs,_errs.length+1);
           _errs[_errs.length-1] = (float)bs2._err/nrows;
-          DKV.put(outputKey, new GBMModel(ntrees,forest, domain, ymin,bs2._cm, _errs));
+          DKV.put(outputKey, new GBMModel(ntrees,forest, _errs, domain, ymin,bs2._cm));
           Log.info(Sys.GBM__,"GBM final Scoring done in "+t_score);
         }
         Log.info(Sys.GBM__,"GBM Modeling done in "+t_gbm);
@@ -161,6 +147,7 @@ public class GBM extends FrameJob {
         while( fr.numCols() > ncols )
           UKV.remove(fr.remove(fr.numCols()-1)._key);
         GBM.this.remove();
+        tryComplete();
       }
       @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
         ex.printStackTrace();
