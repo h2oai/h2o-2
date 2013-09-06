@@ -218,7 +218,8 @@ public abstract class Model extends Iced {
     @Override public double score(ValueArray data, AutoBuffer ab, int row) {
       int j = 0;
       for(int i = 0; i < _xCols.length; ++i)
-        _row[j++] = (_catMap == null || _catMap[i] == null)
+        _row[j++] = data.isNA(ab, row, _xCols[i])?Double.NaN:
+        (_catMap == null || _catMap[i] == null)
           ?data.datad(ab,row, _xCols[i])
               :translateCat(i,(int)data.data(ab,row, _xCols[i]));
       return M.score0(_row);
