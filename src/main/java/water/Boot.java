@@ -1,12 +1,15 @@
 package water;
 
 import java.io.*;
+import java.lang.management.ManagementFactory;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -109,6 +112,39 @@ public class Boot extends ClassLoader {
     }
   }
 
+  /**
+   * Shutdown hook to delete tmp directory on exit.
+   * Intent is to delete the unpacked jar files, not the log files or ICE files.
+   */
+  class DeleteDirHandler extends Thread {
+    volatile String _dir;
+
+    public void setDir(String value) {
+      _dir = value;
+    }
+
+    void delete(File f) throws IOException {
+      if (f.isDirectory()) {
+        for (File c : f.listFiles()) {
+          delete(c);
+        }
+      }
+      if (!f.delete())
+        throw new FileNotFoundException("Failed to delete file: " + f);
+    }
+
+    @Override
+    public void run() {
+      try {
+        File f = new File (_dir);
+        delete (f);
+      }
+      catch (Exception e) {
+        e.printStackTrace();
+      }
+    }
+  }
+
   public void boot2( String[] args ) throws Exception {
     // Catch some log setup stuff before anything else can happen.
     boolean help = false;
@@ -139,22 +175,52 @@ public class Boot extends ClassLoader {
       _addUrl = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
       _addUrl.setAccessible(true);
 
-      // Find --ice_root and use it to set the unpack directory
-      String sroot = System.getProperty("java.io.tmpdir");
-      for( int i=0; i<args.length; i++ )
-        if( args[i].startsWith("--ice_root=") ) sroot = args[i].substring(11);
-        else if( args[i].startsWith("-ice_root=") ) sroot = args[i].substring(10);
-        else if( (args[i].equals("--ice_root") || args[i].startsWith("-ice_root")) && i < args.length-1 )
-          sroot = args[i+1];
+      // Calculate directory name of where to unpack JAR file stuff.
+      String tmproottmpdir;
+      {
+        // Get --ice_root.
+        String ice_root;
+        {
+          ice_root = H2O.DEFAULT_ICE_ROOT();
+          for( int i=0; i<args.length; i++ )
+            if( args[i].startsWith("--ice_root=") ) ice_root = args[i].substring(11);
+            else if( args[i].startsWith("-ice_root=") ) ice_root = args[i].substring(10);
+            else if( (args[i].equals("--ice_root") || args[i].equals("-ice_root")) && (i < args.length-1) )
+              ice_root = args[i+1];
+        }
 
-      // Make a tmp directory in --ice_root (or java.io.tmpdir) to unpack into
-      File tmproot = new File(sroot);
-      if( !tmproot.mkdirs() && !tmproot.isDirectory() )  throw new IOException("Unable to create ice root: "  + tmproot.getAbsolutePath());
+        // Make a tmp directory in ice_root.
+        File tmproot = new File(ice_root);
+        if( !tmproot.mkdirs() && !tmproot.isDirectory() ) throw new IOException("Unable to create ice root: " + tmproot.getAbsolutePath());
 
-      File dir = File.createTempFile("h2o-temp-", "", tmproot);
-      if( !dir.delete() ) throw new IOException("Failed to remove tmp file: " + dir.getAbsolutePath());
+        long now = System.currentTimeMillis();
+        String pid = "unknown";
+        try {
+          String s = ManagementFactory.getRuntimeMXBean().getName();
+          Pattern p = Pattern.compile("([0-9]*).*");
+          Matcher m = p.matcher(s);
+          boolean b = m.matches();
+          if (b == true) {
+            pid = m.group(1);
+          }
+        }
+        catch (Exception _) {}
+
+        tmproottmpdir = tmproot + File.separator + "h2o-temp-" + now + "-" + pid;
+      }
+
+      File dir = new File (tmproottmpdir);
+      if (dir.exists()) {
+        if( !dir.delete() ) throw new IOException("Failed to remove tmp file: " + dir.getAbsolutePath());
+      }
       if( !dir.mkdir() )  throw new IOException("Failed to create tmp dir: "  + dir.getAbsolutePath());
-      dir.deleteOnExit();
+
+      // This causes the tmp JAR unpack dir to delete on exit.
+      // It does not delete logs or ICE stuff.
+      DeleteDirHandler deleteDirHandler = new DeleteDirHandler();
+      deleteDirHandler.setDir(dir.toString());
+      Runtime.getRuntime().addShutdownHook(deleteDirHandler);
+
       _parentDir = dir;         // Set a global instead of passing the dir about?
       Log.debug("Extracting jar into " + _parentDir);
 
