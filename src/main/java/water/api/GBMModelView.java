@@ -18,10 +18,10 @@ public class GBMModelView extends Request2 {
 
   public static void generateHTML(GBMModel m, StringBuilder sb){
     DocGen.HTML.title(sb,"GBM Model");
-    DocGen.HTML.section(sb,"Confusion Matrix");
 
     // Top row of CM
     if( m.cm != null ) {
+      DocGen.HTML.section(sb,"Confusion Matrix");
       DocGen.HTML.arrayHead(sb);
       sb.append("<tr class='warning'>");
       sb.append("<th>Actual / Predicted</th>"); // Row header
@@ -60,17 +60,19 @@ public class GBMModelView extends Request2 {
       DocGen.HTML.arrayTail(sb);
     }
 
-    DocGen.HTML.section(sb,"Error Rate by Tree");
-    DocGen.HTML.arrayHead(sb);
-    sb.append("<tr><th>Trees</th>");
-    for( int i=0; i<m.errs.length; i++ )
-      sb.append("<td>").append(i+1).append("</td>");
-    sb.append("</tr>");
-    sb.append("<tr><th class='warning'>Error Rate</th>");
-    for( int i=0; i<m.errs.length; i++ )
-      sb.append(String.format("<td>%5.3f</td>",m.errs[i]));
-    sb.append("</tr>");
-    DocGen.HTML.arrayTail(sb);
+    if( m.errs != null ) {
+      DocGen.HTML.section(sb,"Error Rate by Tree");
+      DocGen.HTML.arrayHead(sb);
+      sb.append("<tr><th>Trees</th>");
+      for( int i=0; i<m.errs.length; i++ )
+        sb.append("<td>").append(i+1).append("</td>");
+      sb.append("</tr>");
+      sb.append("<tr><th class='warning'>Error Rate</th>");
+      for( int i=0; i<m.errs.length; i++ )
+        sb.append(String.format("<td>%5.3f</td>",m.errs[i]));
+      sb.append("</tr>");
+      DocGen.HTML.arrayTail(sb);
+    }
   }
   public boolean toHTML(StringBuilder sb){
     GBMModel m = DKV.get(_modelKey).get();
