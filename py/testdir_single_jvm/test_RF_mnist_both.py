@@ -69,7 +69,7 @@ class Basic(unittest.TestCase):
             print "Use multi-file parse to grab both the mnist_testing.csv.gz and mnist_training.csv.gz for training"
             trainKey2 = trainCsvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=importFolderPath+"/"+trainCsvFilename,
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=importFolderPath+"/"+parsePattern,
                 hex_key=trainKey2, timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
             print "parse end on ", trainCsvFilename, 'took', elapsed, 'seconds',\
@@ -131,7 +131,7 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(None, rfView, **params)
             print "classification error is expected to be low because we included the test data in with the training!"
-            self.assertAlmostEqual(classification_error, 0.01, delta=0.005, msg="Classification error %s differs too much" % classification_error)
+            self.assertAlmostEqual(classification_error, 0.0003, delta=0.0003, msg="Classification error %s differs too much" % classification_error)
         
             leaves = rfView['trees']['leaves']
             # Expected values are from this case:
