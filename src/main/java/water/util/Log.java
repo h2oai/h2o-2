@@ -376,7 +376,7 @@ public abstract class Log {
         if( H2O.ICE_ROOT.getScheme() == null || Schemes.FILE.equals(H2O.ICE_ROOT.getScheme()) )
           dir = new File(H2O.ICE_ROOT.getPath());
         else
-          dir = new File(H2O.DEFAULT_ICE_ROOT);
+          dir = new File(H2O.DEFAULT_ICE_ROOT());
 
         loggerCreateWasCalled = true;
         l4j = createLog4jLogger(dir.toString());

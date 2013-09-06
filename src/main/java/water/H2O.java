@@ -50,7 +50,15 @@ public final class H2O {
   public static H2ONode SELF = null;
   public static InetAddress SELF_ADDRESS;
 
-  public static final String DEFAULT_ICE_ROOT = "/tmp";
+  public static String DEFAULT_ICE_ROOT() {
+    String username = System.getProperty("user.name");
+    if ((username == null) || (username.length() == 0)) {
+      username = "unknown";
+    }
+    String s = "/tmp/h2o-" + username;
+    return s;
+  }
+
   public static URI ICE_ROOT;
 
   // Initial arguments
@@ -640,7 +648,7 @@ public final class H2O {
     "\n" +
     "    -ice_root <fileSystemPath>\n" +
     "          The directory where H2O spills temporary data to disk.\n" +
-    "          (The default is '" + DEFAULT_ICE_ROOT + "'.)\n" +
+    "          (The default is '" + DEFAULT_ICE_ROOT() + "'.)\n" +
     "\n" +
     "Cloud formation behavior:\n" +
     "\n" +
@@ -741,7 +749,7 @@ public final class H2O {
     printAndLogVersion();
 
     // Get ice path before loading Log or Persist class
-    String ice = DEFAULT_ICE_ROOT;
+    String ice = DEFAULT_ICE_ROOT();
     if( OPT_ARGS.ice_root != null ) ice = OPT_ARGS.ice_root.replace("\\", "/");
     try {
       ICE_ROOT = new URI(ice);

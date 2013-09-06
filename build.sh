@@ -69,6 +69,19 @@ VERSION_PROPERTIES="${CLASSES}/version.properties"
 # Note: /tmp is specific for Linux.
 WIPE_TMP=true
 
+# Calculate MYNAME based on platform.
+if [ ! -z "$LOGNAME" ]; then
+    # Unix
+    MYNAME=${LOGNAME}
+else
+    if [ ! -z "$USERNAME" ]; then
+        # Windows
+        MYNAME=${USERNAME}
+    else
+        MYNAME="UnknownLogin"
+    fi
+fi
+
 # Load user-specific properties if they are exist.
 # The properties can override the settings above.
 LOCAL_PROPERTIES_FILE="./build.local.conf"
@@ -83,8 +96,7 @@ function clean() {
     rm -fr ${OUTDIR}
     if [ "$WIPE_TMP" = "true" ]; then
         echo " - wiping tmp..."
-        rm -fr /tmp/h2o-temp-*
-        rm -fr /tmp/File*tmp
+        rm -fr /tmp/h2o-"${MYNAME}"/h2o-temp-*
     fi
     mkdir ${OUTDIR}
     mkdir ${CLASSES}
