@@ -1399,7 +1399,7 @@ class H2O(object):
             time.sleep(3) # to be able to see it
         return a
 
-    def gbm(self, data_key, timeoutSecs=600, **kwargs):
+    def gbm(self, data_key, timeoutSecs=600, retryDelaySecs=50,initialDelaySecs=100,pollTimeoutSecs=180,**kwargs):
         params_dict = {
             'destination_key':None,
             'source':data_key,
@@ -1414,7 +1414,7 @@ class H2O(object):
         verboseprint("\nGBM result:", dump_json(a))
         return a
 
-    def pca(self, data_key, timeoutSecs=600, **kwargs):
+    def pca(self, data_key, timeoutSecs=600, retryDelaySecs=1,initialDelaySecs=5,pollTimeoutSecs=30,**kwargs):
         params_dict = {
             'destination_key':None,
             'key':data_key,
@@ -1424,7 +1424,9 @@ class H2O(object):
         }
         params_dict.update(kwargs)
         a = self.__do_json_request('PCA.json',timeout=timeoutSecs,params=params_dict)
-        verboseprint("\npca result:", dump_json(a))
+        verboseprint("\nPCA result:", dump_json(a))
+        a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+                          initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         return a
 
     def summary_page(self, key, max_column_display=1000, timeoutSecs=60, noPrint=True, **kwargs):
