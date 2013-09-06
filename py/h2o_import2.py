@@ -255,7 +255,13 @@ def import_parse(node=None, schema='local', bucket=None, path=None,
 
     # do SummaryPage here too, just to get some coverage
     if doSummary:
+        # if parse blows up, we want error isolation ..i.e. find stack traces here, rather than the next guy blowing up
+        h2o.check_sandbox_for_errors()
         node.summary_page(parseResult['destination_key'], timeoutSecs=timeoutSecs)
+        # for now, don't worry about error isolating summary 
+    else:
+        # isolate a parse from the next thing
+        h2o.check_sandbox_for_errors()
 
     return parseResult
 
