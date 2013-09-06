@@ -2,7 +2,7 @@ import unittest
 import random, sys, time, re
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_glm, h2o_util, h2o_rf
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_glm, h2o_util, h2o_rf, h2o_pca, h2o_jobs as h2j
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -45,6 +45,10 @@ class Basic(unittest.TestCase):
         elapsed = time.time() - start
         print "PCA completed in", elapsed, "seconds.", \
             "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+        h2j.pollWaitJobs(pattern="python_PCA_key")
+        h2o_pca.simpleCheckPCA(self,PCAResult)
+        h2o_pca.resultsCheckPCA(self,PCAResult)
+
 
 if __name__ == '__main__':
     h2o.unit_main()
