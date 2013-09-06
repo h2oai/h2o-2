@@ -53,7 +53,7 @@ def resultsCheckPCA(self, pca, **kwargs):
     self.assertAlmostEqual(sum_,0,msg="PropVar does not sum to 1.")
     
     if pcaResult["PCAModel"]["PCAParams"]["tolerance"] != 0.0 or \
-       pcaResult["PCAModel"]["PCAParams"]["standardize"] != "true": return
+       pcaResult["PCAModel"]["PCAParams"]["standardized"] != "true": return
     print "Checking that sdevs^2 sums to number of variables"
     #if not standardized or tolerance != 0, don't do check
     sdevs = pcaResult["PCAModel"]["stdDev"]
