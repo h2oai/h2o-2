@@ -6,6 +6,7 @@ import hex.*;
 import hex.DPCA.*;
 import hex.NewRowVecTask.DataFrame;
 import water.*;
+import water.ValueArray.Column;
 import water.api.RequestArguments.Argument;
 import water.util.Log;
 import water.util.RString;
@@ -17,7 +18,7 @@ import com.google.gson.*;
 public class PCA extends Request {
   protected final H2OKey _dest = new H2OKey(DEST_KEY, PCAModel.makeKey());
   protected final H2OHexKey _key = new H2OHexKey(KEY);
-  protected final HexColumnSelect _ignore = new PCAColumnSelect(IGNORE, _key);
+  protected final HexColumnSelect _ignore = new HexPCAColumnSelect(IGNORE, _key);
   // protected final Int _numPC = new Int("num_pc", 10, 1, 1000000);
   protected final Real _tol = new Real("tolerance", 0.0, 0, 1, "Omit components with std dev <= tol times std dev of first component");
   protected final Bool _standardize = new Bool("standardize", true, "Set to standardize (0 mean, unit variance) the data before training.");
@@ -32,7 +33,7 @@ public class PCA extends Request {
 
   PCAParams getPCAParams() {
     // PCAParams res = new PCAParams(_numPC.value());
-    PCAParams res = new PCAParams(_tol.value(),_standardize.value());
+    PCAParams res = new PCAParams(_tol.value(), _standardize.value());
     return res;
   }
 
@@ -60,7 +61,7 @@ public class PCA extends Request {
     int idx = 0;
     for( int i=bs.nextSetBit(0); i >= 0; i=bs.nextSetBit(i+1))
       cols[idx++] = i;
-    assert idx==cols.length;
+    assert idx == cols.length;
     return cols;
   }
 
@@ -155,40 +156,5 @@ public class PCA extends Request {
       }
       sb.append("</table></span>");
     }
-  }
-
-  // By default, ignore all non-numeric columns
-  class PCAColumnSelect extends HexColumnSelect {
-     // double _maxNAsRatio = 0.1;
-     transient ThreadLocal<TreeSet<String>> _nonNumColumns = new ThreadLocal<TreeSet<String>>();
-
-     public PCAColumnSelect(String name, H2OHexKey key) {
-       super(name, key);
-     }
-
-     @Override protected int[] defaultValue() {
-       ValueArray va = _key.value();
-       int [] res = new int[va._cols.length];
-       int selected = 0;
-       for(int i = 0; i < va._cols.length; ++i) {
-         if(va._cols[i]._domain != null) {
-           res[selected++] = i;
-           if(_nonNumColumns.get() == null)
-             _nonNumColumns.set(new TreeSet<String>());
-           _nonNumColumns.get().add(Objects.firstNonNull(va._cols[i]._name, String.valueOf(i)));
-         }
-       }
-       return Arrays.copyOfRange(res,0,selected);
-     }
-
-     @Override protected String queryDescription() {
-       return "Columns to ignore";
-     }
-
-     public String queryComment() {
-       if(_nonNumColumns.get() == null || _nonNumColumns.get().isEmpty()) return "";
-       TreeSet<String> ignoredCols = _nonNumColumns.get();
-       return "<div class='alert'><b>Ignoring " + _nonNumColumns.get().size() + " non-numeric columns</b>: " + ignoredCols.toString() +"</div>";
-     }
   }
 }
