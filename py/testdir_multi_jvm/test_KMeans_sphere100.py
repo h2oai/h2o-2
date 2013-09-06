@@ -15,7 +15,7 @@ JUMP_RANDOM_ALL_DIRS = True
 # should do this, but does it make h2o kmeans fail?
 SHUFFLE_SPHERES = True
 R_NOISE = True
-ALLOWED_CENTER_DELTA = 1
+ALLOWED_CENTER_DELTA = 3
 
 def get_xyz_sphere(R):
     u = random.random() # 0 to 1

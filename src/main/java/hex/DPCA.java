@@ -38,14 +38,17 @@ public abstract class DPCA {
 
   public static class PCAParams extends Iced {
     public double _tol = 0;
+    public boolean _standardize = true;
 
-    public PCAParams(double tol) {
+    public PCAParams(double tol, boolean standardize) {
       _tol = tol;
+      _standardize = standardize;
     }
 
     public JsonObject toJson() {
       JsonObject res = new JsonObject();
       res.addProperty("tolerance", _tol);
+      res.addProperty("standardize",_standardize);
       return res;
     }
   }
@@ -122,6 +125,7 @@ public abstract class DPCA {
       res.addProperty(Constants.VERSION, H2O.VERSION);
       res.addProperty(Constants.TYPE, PCAModel.class.getName());
       res.addProperty(Constants.MODEL_KEY, _selfKey.toString());
+      res.addProperty("standardized", _standardized);
       res.add("PCAParams", _pcaParams.toJson());
 
       // Add standard deviation to output
@@ -203,6 +207,8 @@ public abstract class DPCA {
     // Compute standard deviation from eigenvalues
     double[] Sval = mySVD.getSingularValues();
     int ncomp = getNumPC(Sval, params._tol);
+    // int ncomp = Math.min(getNumPC(Sval, params._tol), (int)data._nobs-1);
+    // int ncomp = Math.min(params._num_pc, Sval.length);
     double[] sdev = new double[ncomp];
     double totVar = 0;
     for(int i = 0; i < ncomp; i++) {

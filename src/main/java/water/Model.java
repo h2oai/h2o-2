@@ -297,7 +297,7 @@ public abstract class Model extends Iced {
     throw new RuntimeException("Should never be called on non-adapted model. Call Model.adapt(ValueArray) first!");
   }
 
-  public abstract JsonObject toJson();
+  public JsonObject toJson(){return new JsonObject();}
 
   public void fromJson(JsonObject json) {
     // TODO

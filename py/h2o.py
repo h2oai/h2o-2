@@ -13,7 +13,6 @@ import requests, zipfile, StringIO
 # For checking ports in use, using netstat thru a subprocess.
 from subprocess import Popen, PIPE
 
-
 def sleep(secs):
     if getpass.getuser()=='jenkins':
         period = max(secs,120)
@@ -267,27 +266,31 @@ def get_ip_address():
     verboseprint("get_ip_address:", ip) 
     return ip
 
-def spawn_cmd(name, args, capture_output=True):
+# can't have a list of cmds, because cmd is a list
+# cmdBefore gets executed first, and we wait for it to complete
+def spawn_cmd(name, cmd, capture_output=True, **kwargs):
     if capture_output:
-        outfd,outpath = tmp_file(name + '.stdout.', '.log')
-        errfd,errpath = tmp_file(name + '.stderr.', '.log')
-        ps = psutil.Popen(args, stdin=None, stdout=outfd, stderr=errfd)
+        outfd, outpath = tmp_file(name + '.stdout.', '.log')
+        errfd, errpath = tmp_file(name + '.stderr.', '.log')
+        ps = psutil.Popen(cmd, stdin=None, stdout=outfd, stderr=errfd, **kwargs)
     else:
         outpath = '<stdout>'
         errpath = '<stderr>'
-        ps = psutil.Popen(args)
+        ps = psutil.Popen(cmd, **kwargs)
 
     comment = 'PID %d, stdout %s, stderr %s' % (
         ps.pid, os.path.basename(outpath), os.path.basename(errpath))
-    log(' '.join(args), comment=comment)
+    log(' '.join(cmd), comment=comment)
     return (ps, outpath, errpath)
 
-def spawn_wait(ps, stdout, stderr, timeout=None):
+def spawn_wait(ps, stdout, stderr, capture_output=True, timeout=None):
     rc = ps.wait(timeout)
-    out = file(stdout).read()
-    err = file(stderr).read()
-    ## print out
-    ## print err
+    if capture_output:
+        out = file(stdout).read()
+        err = file(stderr).read()
+    else:
+        out = 'stdout not captured'
+        err = 'stderr not captured'
 
     if rc is None:
         ps.terminate()
@@ -297,9 +300,9 @@ def spawn_wait(ps, stdout, stderr, timeout=None):
         raise Exception("%s %s failed.\nstdout:\n%s\n\nstderr:\n%s" % (ps.name, ps.cmdline, out, err))
     return rc
 
-def spawn_cmd_and_wait(name, args, timeout=None):
-    (ps, stdout, stderr) = spawn_cmd(name, args)
-    spawn_wait(ps, stdout, stderr, timeout=None)
+def spawn_cmd_and_wait(name, cmd, capture_output=True, timeout=None, **kwargs):
+    (ps, stdout, stderr) = spawn_cmd(name, cmd, capture_output, **kwargs)
+    spawn_wait(ps, stdout, stderr, capture_output, timeout)
 
 def kill_process_tree(pid, including_parent=True):    
     parent = psutil.Process(pid)
@@ -367,6 +370,16 @@ def check_port_group(base_port):
             output = p2.communicate()[0]
             print output
 
+def check_h2o_version():
+        # assumes you want to know about 3 ports starting at base_port
+        command1Split = ['java', '-jar', find_file('target/h2o.jar'), '--version']
+        command2Split = ['egrep', '-v', '( Java | started)']
+        print "Running h2o to get java version"
+        p1 = Popen(command1Split, stdout=PIPE)
+        p2 = Popen(command2Split, stdin=p1.stdout, stdout=PIPE)
+        output = p2.communicate()[0]
+        print output
+
 def default_hosts_file():
     return 'pytest_config-{0}.json'.format(getpass.getuser())
 
@@ -404,6 +417,9 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         fake_cloud=False, conservative=False, **kwargs):
     # moved to here from unit_main. so will run with nosetests too!
     clean_sandbox()
+    # start up h2o to report the java version (once). output to python stdout
+    check_h2o_version()
+
     # keep this param in kwargs, because we pass to the H2O node build, so state
     # is created that polling and other normal things can check, to decide to dump 
     # info to benchmark.log
@@ -1383,7 +1399,7 @@ class H2O(object):
             time.sleep(3) # to be able to see it
         return a
 
-    def GBM(self, data_key, timeoutSecs=600, **kwargs):
+    def gbm(self, data_key, timeoutSecs=600, retryDelaySecs=50,initialDelaySecs=100,pollTimeoutSecs=180,**kwargs):
         params_dict = {
             'destination_key':None,
             'source':data_key,
@@ -1394,19 +1410,23 @@ class H2O(object):
             'vresponse':None
         }        
         params_dict.update(kwargs)
-        a = self.__do_json_request('GBM.json',timeout=timeoutSecs,params=params_dict)        
+        a = self.__do_json_request('GBM.json',timeout=timeoutSecs,params=params_dict)
+        verboseprint("\nGBM result:", dump_json(a))
         return a
 
-    def PCA(self, data_key, timeoutSecs=600, **kwargs):
+    def pca(self, data_key, timeoutSecs=600, retryDelaySecs=1,initialDelaySecs=5,pollTimeoutSecs=30,**kwargs):
         params_dict = {
             'destination_key':None,
-            'key':None,
+            'key':data_key,
             'ignore':None,
             'tolerance':None,
             'standardize':None
         }
         params_dict.update(kwargs)
         a = self.__do_json_request('PCA.json',timeout=timeoutSecs,params=params_dict)
+        verboseprint("\nPCA result:", dump_json(a))
+        a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+                          initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         return a
 
     def summary_page(self, key, max_column_display=1000, timeoutSecs=60, noPrint=True, **kwargs):
@@ -1644,10 +1664,9 @@ class H2O(object):
         return (self.sandbox_error_was_reported)
 
     def get_args(self):
-        #! FIX! is this used for both local and remote? 
-        # I guess it doesn't matter if we use flatfile for both now
-        args = [ 'java' ]
+        args = ['java']
 
+        # I guess it doesn't matter if we use flatfile for both now
         # defaults to not specifying
 	# FIX! we need to check that it's not outside the limits of the dram of the machine it's running on?
         if self.java_heap_GB is not None:
@@ -1867,7 +1886,7 @@ class LocalH2O(H2O):
         if self.fake_cloud: # we use fake_cloud for when we run on externally built cloud like Hadoop
             self.ps = None
         else:
-            spawn = spawn_cmd(logPrefix, self.get_args(), capture_output=self.capture_output)
+            spawn = spawn_cmd(logPrefix, cmd=self.get_args(), capture_output=self.capture_output)
             self.ps = spawn[0]
 
     def get_h2o_jar(self):
@@ -2051,8 +2070,10 @@ class RemoteH2O(H2O):
         # This hack only works when the dest is /tmp/h2o*jar. It's okay to execute
         # with pwd = /tmp. If /tmp/ isn't in the jar path, I guess things will be the same as
         # normal.
-        self.channel.exec_command("cd /tmp; ls -ltr "+self.jar+"; "+ \
-            re.sub("/tmp/","",cmd)) # removing the /tmp/ we know is in there
+        cmdList = ["cd /tmp"] # separate by ;<space> when we join
+        cmdList += ["ls -ltr " + self.jar]
+        cmdList += [re.sub("/tmp/", "", cmd)]
+        self.channel.exec_command("; ".join(cmdList))
 
         if self.capture_output:
             if self.node_id is not None:

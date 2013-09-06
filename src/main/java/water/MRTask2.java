@@ -18,7 +18,7 @@ import water.util.Log;
 public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Cloneable {
 
   /** The Vectors to work on. */
-  protected Frame _fr;       // Vectors to work on
+  public Frame _fr;
 
   /** Override with your map implementation.  This overload is given a single
    *  <strong>local</strong> Chunk.  It is meant for map/reduce jobs that use a
@@ -113,7 +113,6 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     // Do any post-writing work (zap rollup fields, etc)
     for( int i=0; i<_fr.numCols(); i++ )
       _fr._vecs[i].postWrite();
-    _fr = null;
     return self();
   }
 
