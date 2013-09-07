@@ -58,6 +58,8 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
         'enable_benchmark_log': False,
         'fake_cloud': False,
         'h2o_remote_buckets_root': None,
+        'conservative': False,
+        'create_json': False,
     }
     # initialize the default values
     paramsToUse = {}
