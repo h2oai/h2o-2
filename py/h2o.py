@@ -411,6 +411,22 @@ def setup_random_seed(seed=None):
     print "\nUsing random seed:", SEED
     return SEED
 
+# assume h2o_nodes_json file in the current directory
+def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
+    with open(h2o_nodes_json, 'rb') as f:
+        nodeStateList = json.load(f)
+
+    nodeList = []
+    for nodeState in nodeStateList:
+        print "Cloning state for node", nodeState['node_id'], 'from', h2o_nodes_json
+        newNode = ExternalH2O(nodeState)
+        nodeList.append(newNode)
+
+    # h2o.nodes[:] = nodeList
+    print len(nodeList), "total nodes in H2O cloud state ingested from json"
+    nodes[:] = nodeList
+    return nodeList
+
 # node_count is per host if hosts is specified.
 def build_cloud(node_count=2, base_port=54321, hosts=None, 
         timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True, 
@@ -1874,6 +1890,7 @@ class H2O(object):
         return '%s - http://%s:%d/' % (type(self), self.http_addr, self.port)
 
 
+#*****************************************************************
 class LocalH2O(H2O):
     '''An H2O instance launched by the python framework on the local host using psutil'''
     def __init__(self, *args, **kwargs):
@@ -1943,6 +1960,7 @@ class LocalH2O(H2O):
     def stack_dump(self):
         self.ps.send_signal(signal.SIGQUIT)
 
+#*****************************************************************
 class RemoteHost(object):
     def upload_file(self, f, progress=None):
         # FIX! we won't find it here if it's hdfs://192.168.1.151/ file
@@ -2035,7 +2053,8 @@ class RemoteHost(object):
     def __str__(self):
         return 'ssh://%s@%s' % (self.username, self.addr)
 
-
+        
+#*****************************************************************
 class RemoteH2O(H2O):
     '''An H2O instance launched by the python framework on a specified host using openssh'''
     def __init__(self, host, *args, **kwargs):
@@ -2140,3 +2159,40 @@ class RemoteH2O(H2O):
         self.shutdown_all()
         self.terminate_self_only()
     
+#*****************************************************************
+class ExternalH2O(H2O):
+    '''A cloned H2O instance assumed to be created by others, that we can interact with via json requests (urls)
+       Gets initialized with state from json created by another build_cloud, so all methods should work 'as-if" 
+       the cloud was built by the test (normally).
+       The normal build_cloud() parameters aren't passed here, the final node state is! (and used for init)
+       The list should be complete, as long as created by build_cloud(create_json=True) or build_cloud_with_hosts(create_json=True)
+       Obviously, no psutil or paramiko work done here.
+    '''
+    def __init__(self, nodeState):
+        for k,v in nodeState.iteritems():
+            print "init:", k, v
+            setattr(self, k, v) # achieves self.k = v
+
+    def get_h2o_jar(self):
+        return self.jar
+
+    def get_flatfile(self):
+        return self.flatfile
+
+    def get_ice_dir(self):
+        return self.ice
+
+    def is_alive(self):
+        verboseprint("Doing is_alive check for ExternalH2O")
+        try:
+            self.get_cloud()
+            return True
+        except:
+            return False
+
+    # no terminate_self_only method
+    def terminate_self_only(self):
+        raise Exception("terminate_self_only() not supported for ExternalH2O")
+
+    def terminate(self):
+        self.shutdown_all()
