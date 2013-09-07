@@ -430,7 +430,7 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
 # node_count is per host if hosts is specified.
 def build_cloud(node_count=2, base_port=54321, hosts=None, 
         timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True, 
-        fake_cloud=False, conservative=False, create_json=False, **kwargs):
+        conservative=False, create_json=False, **kwargs):
     # moved to here from unit_main. so will run with nosetests too!
     clean_sandbox()
     # start up h2o to report the java version (once). output to python stdout
@@ -549,15 +549,6 @@ def upload_jar_to_remote_hosts(hosts, slow_connection=False):
         hosts[0].push_file_to_remotes(f, hosts[1:])
 
 def check_sandbox_for_errors(sandbox_ignore_errors=False):
-    # FIX! if we didn't build a real cloud, how do we probe stdout/stderr logs from h2o?
-    # do we dump the logs just at the very end (since it's costly)
-    # maybe we only do that at terminate (shutdown time). But hangs are painful then 
-    # Think about stack trace in the middle of a parse with a long timeout (hour)
-    if nodes: 
-        if nodes[0].fake_cloud:
-            print "fake_cloud. So check_sandbox_for_errors didn't check any stdout/stderr from h2o"
-            return
-
     if not os.path.exists(LOG_DIR):
         return
     # dont' have both tearDown and tearDownClass report the same found error
@@ -1802,7 +1793,6 @@ class H2O(object):
         redirect_import_folder_to_s3n_path=None,
         disable_h2o_log=False, 
         enable_benchmark_log=False,
-        fake_cloud=False,
         h2o_remote_buckets_root=None,
         ):
 
@@ -1883,7 +1873,6 @@ class H2O(object):
 
         # this dumps stats from tests, and perf stats while polling to benchmark.log
         self.enable_benchmark_log = enable_benchmark_log
-        self.fake_cloud = fake_cloud
         self.h2o_remote_buckets_root = h2o_remote_buckets_root
 
     def __str__(self):
@@ -1907,11 +1896,8 @@ class LocalH2O(H2O):
         else:
             logPrefix = 'local-h2o'
 
-        if self.fake_cloud: # we use fake_cloud for when we run on externally built cloud like Hadoop
-            self.ps = None
-        else:
-            spawn = spawn_cmd(logPrefix, cmd=self.get_args(), capture_output=self.capture_output)
-            self.ps = spawn[0]
+        spawn = spawn_cmd(logPrefix, cmd=self.get_args(), capture_output=self.capture_output)
+        self.ps = spawn[0]
 
     def get_h2o_jar(self):
         return find_file('target/h2o.jar')
@@ -1928,8 +1914,6 @@ class LocalH2O(H2O):
         return self.wait(0) is None
 
     def terminate_self_only(self):
-        if self.fake_cloud:
-            return
         try:
             if self.is_alive(): self.ps.kill()
             if self.is_alive(): self.ps.terminate()
@@ -1947,8 +1931,6 @@ class LocalH2O(H2O):
         self.terminate_self_only()
 
     def wait(self, timeout=0):
-        if self.fake_cloud:
-            return
         if self.rc is not None: 
             return self.rc
         try:
@@ -2077,11 +2059,6 @@ class RemoteH2O(H2O):
         else:
             self.ice = '/tmp/ice.%d.%s' % (self.port, time.time())
 
-        if self.fake_cloud:
-            comment = 'Fake Remote on %s' % self.addr
-            log(cmd, comment=comment)
-            return
-
         self.channel = host.open_channel()
         ### FIX! TODO...we don't check on remote hosts yet
        
@@ -2134,9 +2111,8 @@ class RemoteH2O(H2O):
 
     def is_alive(self):
         verboseprint("Doing is_alive check for RemoteH2O")
-        if not self.fake_cloud:
-            if self.channel.closed: return False
-            if self.channel.exit_status_ready(): return False
+        if self.channel.closed: return False
+        if self.channel.exit_status_ready(): return False
         try:
             self.get_cloud()
             return True
@@ -2144,9 +2120,8 @@ class RemoteH2O(H2O):
             return False
 
     def terminate_self_only(self):
-        if not self.fake_cloud:
-            self.channel.close()
-            time.sleep(1) # a little delay needed?
+        self.channel.close()
+        time.sleep(1) # a little delay needed?
         # kbn: it should be dead now? want to make sure we don't have zombies
         # we should get a connection error. doing a is_alive subset.
         try:
@@ -2172,15 +2147,6 @@ class ExternalH2O(H2O):
         for k,v in nodeState.iteritems():
             print "init:", k, v
             setattr(self, k, v) # achieves self.k = v
-
-    def get_h2o_jar(self):
-        return self.jar
-
-    def get_flatfile(self):
-        return self.flatfile
-
-    def get_ice_dir(self):
-        return self.ice
 
     def is_alive(self):
         verboseprint("Doing is_alive check for ExternalH2O")
