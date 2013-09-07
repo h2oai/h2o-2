@@ -14,15 +14,6 @@ def choice_with_probability(tupleList):
             raise Exception("h2o_util.choice_with_probability() error, prob's sum > 1")
     return item
 
-# since we hang if hosts has bad IP addresses, thought it'd be nice
-# to have simple obvious feedback to user if he's running with -v 
-# and machines are down or his hosts definition has bad IPs.
-# FIX! currently not used
-def ping_host_if_verbose(host):
-    # if (h2o.verbose) 
-    ping = subprocess.Popen( ["ping", "-c", "4", host]) 
-    ping.communicate()
-
 def file_line_count(fname):
     return sum(1 for line in open(fname))
 
@@ -301,20 +292,19 @@ class JsonDiff(object):
         if diff_message not in self.difference:
             self.difference.append(message)
 
-
-
 # per Alex Kotliarov
 # http://stackoverflow.com/questions/2343535/easiest-way-to-serialize-a-simple-class-object-with-simplejson
 #This function will produce JSON-formatted string for
 #    an instance of a custom class,
 #    a dictionary that have instances of custom classes as leaves,
 #    a list of instances of custom classes
+# added depth limiting to original
 def json_repr(obj, curr_depth=0, max_depth=4):
     """Represent instance of a class as JSON.
     Arguments:
     obj -- any object
     Return:
-    String that reprent JSON-encoded object.
+    String that represent JSON-encoded object.
     """
     def serialize(obj, curr_depth):
         """Recursively walk object's hierarchy. Limit to max_depth"""

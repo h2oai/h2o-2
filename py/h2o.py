@@ -1,6 +1,6 @@
 import time, os, json, signal, tempfile, shutil, datetime, inspect, threading, getpass
 import requests, psutil, argparse, sys, unittest, glob
-import h2o_browse as h2b, h2o_perf, h2o_util, h2o_cmd
+import h2o_browse as h2b, h2o_perf, h2o_util, h2o_cmd, h2o_os_util
 import re, webbrowser, random
 # used in shutil.rmtree permission hack for windows
 import errno
@@ -349,27 +349,6 @@ def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True)
     pff.close()
 
 
-def check_port_group(base_port):
-    # disabled
-    if (1==0):
-        username = getpass.getuser()
-        if username=='jenkins' or username=='kevin' or username=='michal':
-            # assumes you want to know about 3 ports starting at base_port
-            command1Split = ['netstat', '-anp']
-            command2Split = ['egrep']
-            # colon so only match ports. space at end? so no submatches
-            command2Split.append("(%s | %s)" % (base_port, base_port+1) )
-            command3Split = ['wc','-l']
-
-            print "Checking 2 ports starting at ", base_port
-            print ' '.join(command2Split)
-
-            # use netstat thru subprocess
-            p1 = Popen(command1Split, stdout=PIPE)
-            p2 = Popen(command2Split, stdin=p1.stdout, stdout=PIPE)
-            output = p2.communicate()[0]
-            print output
-
 def check_h2o_version():
         # assumes you want to know about 3 ports starting at base_port
         command1Split = ['java', '-jar', find_file('target/h2o.jar'), '--version']
@@ -413,12 +392,19 @@ def setup_random_seed(seed=None):
 
 # assume h2o_nodes_json file in the current directory
 def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
+
+    print "This only makes sense if h2o is running as defined by", h2o_nodes_json
+    print "For now, assuming it's a cloud on this machine, and here's info on h2o processes running here"
+    print "No output means no h2o here! Some other info about stuff on the system is printed first though."
+    import h2o_os_util
+    h2o_os_util.show_h2o_processes()
+
     with open(h2o_nodes_json, 'rb') as f:
         nodeStateList = json.load(f)
 
     nodeList = []
     for nodeState in nodeStateList:
-        print "Cloning state for node", nodeState['node_id'], 'from', h2o_nodes_json
+        print "\nCloning state for node", nodeState['node_id'], 'from', h2o_nodes_json
         newNode = ExternalH2O(nodeState)
         nodeList.append(newNode)
 
@@ -548,7 +534,7 @@ def upload_jar_to_remote_hosts(hosts, slow_connection=False):
         hosts[0].upload_file(f, progress=prog)
         hosts[0].push_file_to_remotes(f, hosts[1:])
 
-def check_sandbox_for_errors(sandbox_ignore_errors=False):
+def check_sandbox_for_errors(sandboxIgnoreErrors=False, cloudShutdownIsError=False):
     if not os.path.exists(LOG_DIR):
         return
     # dont' have both tearDown and tearDownClass report the same found error
@@ -568,9 +554,10 @@ def check_sandbox_for_errors(sandbox_ignore_errors=False):
             # just in case error/assert is lower or upper case
             # FIX! aren't we going to get the cloud building info failure messages
             # oh well...if so ..it's a bug! "killing" is temp to detect jar mismatch error
-            regex1 = re.compile(
-                'found multiple|exception|error|ERRR|assert|killing|killed|required ports',
-                re.IGNORECASE)
+            regex1String = 'found multiple|exception|error|ERRR|assert|killing|killed|required ports'
+            if cloudShutdownIsError:
+                regex1String += '|shutdown command' 
+            regex1 = re.compile(regex1String, re.IGNORECASE)
             regex2 = re.compile('Caused',re.IGNORECASE)
             regex3 = re.compile('warn|info|TCP', re.IGNORECASE)
 
@@ -663,12 +650,12 @@ def check_sandbox_for_errors(sandbox_ignore_errors=False):
             # Can build a cloud that ignores all sandbox things that normally fatal the test
             # Kludge, test will set this directly if it wants, rather than thru build_cloud parameter. 
             # we need the sandbox_ignore_errors, for the test teardown_cloud..the state disappears!
-            if sandbox_ignore_errors or (nodes and nodes[0].sandbox_ignore_errors):
+            if sandboxIgnoreErrors or (nodes and nodes[0].sandbox_ignore_errors):
                 pass
             else:
                 raise Exception(python_test_name + emsg1 + emsg2)
 
-def tear_down_cloud(nodeList=None, sandbox_ignore_errors=False):
+def tear_down_cloud(nodeList=None, sandboxIgnoreErrors=False):
     if sleep_at_tear_down: 
         print "Opening browser to cloud, and sleeping for 3600 secs, before cloud teardown (for debug)"
         import h2o_browse
@@ -681,7 +668,7 @@ def tear_down_cloud(nodeList=None, sandbox_ignore_errors=False):
             n.terminate()
             verboseprint("tear_down_cloud n:", n)
     finally:
-        check_sandbox_for_errors(sandbox_ignore_errors=sandbox_ignore_errors)
+        check_sandbox_for_errors(sandboxIgnoreErrors=sandboxIgnoreErrors)
         nodeList[:] = []
 
 # don't need any more? 
@@ -1890,7 +1877,7 @@ class LocalH2O(H2O):
         self.flatfile = flatfile_name()
         self.remoteH2O = False # so we can tell if we're remote or local
 
-        check_port_group(self.port)
+        h2o_os_util.check_port_group(self.port)
         if self.node_id is not None:
             logPrefix = 'local-h2o-' + str(self.node_id)
         else:
@@ -2146,6 +2133,11 @@ class ExternalH2O(H2O):
     def __init__(self, nodeState):
         for k,v in nodeState.iteritems():
             print "init:", k, v
+            # hack because it looks like the json is currently created with "None" for values of None
+            # rather than worrying about that, just translate "None" to None here. "None" shouldn't exist
+            # for any other reason.
+            if v == "None":
+                v = None
             setattr(self, k, v) # achieves self.k = v
 
     def is_alive(self):
