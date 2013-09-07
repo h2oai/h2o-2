@@ -110,6 +110,12 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   float var (int b, int cls) {
     return _bins[b] > 1 ? _Ss[b][cls]/(_bins[b]-1) : 0;
   }
+
+  // Mean Squared Error: sum(X^2)-Mean^2*n = Var + Mean^2*n*(n-1)
+  double mse( int b, int cls ) { return mseVar(mean(b,cls),var(b,cls),_bins[b]); }
+  double mseVar( double mean, double var, long n ) { return var+n*(n-1)*mean*mean; }
+  double mseSQ( double sum, double ssq, long n ) { return ssq - sum*sum/n; }
+
   // Mean of response-vector.  Since vector values are already normalized we
   // just average the vector contents.
   float mean(int b) {
@@ -128,14 +134,92 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     return sum;
   }
 
+  // MSE of response-vector.  Sum of MSE of the vector elements.
+  float mse( int b ) {
+    float sum=0;
+    for( int i=0; i<_nclass; i++ )
+      sum += mse(b,i);
+    return sum;
+  }
+
   // Compute a "score" for a column; lower score "wins" (is a better split).
-  // Score is the sum of variances.  Another good "score" is Mean Squared
-  // Error, but this requires another pass.
+  // Score is the sum of MSE.
   float score( ) {
     float sum = 0;
     for( int i=0; i<_bins.length; i++ )
-      sum += var(i)*_bins[i];
+      sum += mse(i);
     return sum;
+  }
+
+  // Compute a "score" for a column; lower score "wins" (is a better split).
+  // Score is the sum of the MSEs when the data is split at a single point.
+  // mses[1] == MSE for splitting between bins  0  and 1.
+  // mses[n] == MSE for splitting between bins n-1 and n.
+  // Returns index of smallest MSE, ranges from 1 to nbins-1.
+  int scoreMSE( ) {
+    assert _nbins > 1;
+
+    // Compute the sum & sum-of-squares from mean & variance - across the
+    // prediction vector.  Really we've used the mean & variance to track the
+    // sum & sum-of-squares in a numerically stable way; mean & variance are
+    // much less subject to overflow & roundoff errors.
+
+    // Mean-Squared-Error of a prediction vector: the error is the Euclidean
+    // distance (square-root of sum of distances squared), so the MSE is the
+    // mean of the sum of distances-squared.  We compute the squared error per
+    // class and sum them.
+    double sums[] = new double[_nbins];
+    double ssqs[] = new double[_nbins];
+    for( int b=0; b<_nbins; b++ ) { // Sum/Ssq per bin
+      long n = _bins[b];
+      double mse0=0;
+      for( int c=0; c<_nclass; c++ ) { // And summed across prediction vector
+        double mse = _Ss[b][c]/n;
+        mse0 += mse; // correct mse!!!
+        .... sums & ssqs no good because summing across class loses variance w/in class estimator
+        double mean = mean(b,c);
+        double ssq = _Ss[b][c]+n*mean*mean;
+        sums[b] += mean*n;
+        ssqs[b] += ssq;
+      }
+      double mse1 = ssqs[b]/n - (sums[b]*sums[b]/n/n);
+      System.out.println("bin: "+b+", n="+n+", sum="+sums[b]+", ssq="+ssqs[b]+", mse0="+mse0+", mse1="+mse1);
+    }
+...do recursive mean & variance to get MSE across all bins when lumped together...
+
+    // Split zero bins to the left, all bins to the right
+    // Left stack of bins
+    double sum0=0, ssq0=0;
+    long n0 = 0;
+    // Right stack of bins
+    double sum1=0, ssq1=0;
+    long n1 = 0;
+    // In this gather a total sum and total sum-squares
+    for( int b=0; b<_nbins; b++ ) {
+      sum1 += sums[b];
+      ssq1 += ssqs[b];
+      n1  += _bins[b];
+    }
+
+    // Now roll the split-point across the bins
+    double mse0=0;
+    assert (mse0 = mseSQ(sum1,ssq1,n1))==mse0 || true;
+    int best=0;  double best_mse=Double.MAX_VALUE;
+    for( int b=0; b<_nbins; b++ ) {
+      double mse = mseSQ(sum0+sum1,ssq0+ssq1,n0+n1);
+      if( mse < best_mse ) { best = b; best_mse = mse; }
+      System.out.println("bin: "+b+", mse="+mse+", best="+best);
+      // Move MSE across the split-point
+      n0   +=_bins[b];  n1   -=_bins[b];
+      sum0 += sums[b];  sum1 -= sums[b];
+      ssq0 += ssqs[b];  ssq1 -= ssqs[b];
+    }
+    // MSE for the final "split" should equal the first "split" - as both are
+    // non-splits: either ALL data to the left or ALL data to the right.
+    assert n1==0 && sum1==0 && ssq1==0 : "Expect zero: "+n1+","+sum1+","+ssq1;
+    assert mse0 == mseSQ(sum0,ssq0,n0) : mse0 + " ? " + mseSQ(sum0,ssq0,n0);
+
+    return best;
   }
 
   // Add one row to a bin found via simple linear interpolation.
@@ -161,17 +245,15 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     //    http://www.johndcook.com/standard_deviation.html
     for( int c=0; c<_nclass; c++ ) {
       Chunk chk = chks[ychk+c];
+      float y;
       if( chk instanceof C4FChunk ) { // Help inline common case
-        float y = (float)((C4FChunk)chk).at0(row);
-        float oldM = Ms[c];   // Old mean
-        float newM = Ms[c] = oldM + (y-oldM)/k;
-        Ss[c] += (y-oldM)*(y-newM);
+        y = (float)((C4FChunk)chk).at0(row);
       } else {
-        float y = (float)chk.at0(row);
-        float oldM = Ms[c];   // Old mean
-        float newM = Ms[c] = oldM + (y-oldM)/k;
-        Ss[c] += (y-oldM)*(y-newM);
+        y = (float)chk.at0(row);
       }
+      float oldM = Ms[c];   // Old mean
+      float newM = Ms[c] = oldM + (y-oldM)/k;
+      Ss[c] += (y-oldM)*(y-newM);
     }
   }
 
@@ -188,12 +270,12 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   }
 
   // Split bin 'i' of this DBinHistogram.  Return null if there is no point in
-  // splitting this bin further (such as there's only 1 element, or zero
-  // variance in the response column).  Return an array of DBinHistograms (one per
-  // column), which are bounded by the split bin-limits.  If the column has
-  // constant data, or was not being tracked by a prior DBinHistogram (for being
-  // constant data from a prior split), then that column will be null in the
-  // returned array.
+  // splitting this bin further (such as there's fewer than min_row elements,
+  // or zero variance in the response column).  Return an array of
+  // DBinHistograms (one per column), which are bounded by the split
+  // bin-limits.  If the column has constant data, or was not being tracked by
+  // a prior DBinHistogram (for being constant data from a prior split), then
+  // that column will be null in the returned array.
   public DBinHistogram[] split( int col, int b, DHistogram hs[], String[] names, char nbins, int ncols, int min_rows ) {
     assert hs[col] == this;
     if( _bins[b] <= min_rows ) return null; // Too few elements

@@ -339,6 +339,9 @@ public class DRF extends FrameJob {
       if( u._hs == null ) return idx;
       for( int i=0; i<u._scoreCols.length; i++ ) {
         int col = u._scoreCols[i];
+        System.out.println("MSE Score "+_tree._names[col]);
+        int best=u._hs[col].scoreMSE();
+
         double s = u._hs[col].score();
         if( s < bs ) { bs = s; idx = col; }
         if( s <= 0 ) break;     // No point in looking further!
