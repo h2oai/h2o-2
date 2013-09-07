@@ -414,7 +414,7 @@ def setup_random_seed(seed=None):
 # node_count is per host if hosts is specified.
 def build_cloud(node_count=2, base_port=54321, hosts=None, 
         timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True, 
-        fake_cloud=False, conservative=False, **kwargs):
+        fake_cloud=False, conservative=False, create_json=False, **kwargs):
     # moved to here from unit_main. so will run with nosetests too!
     clean_sandbox()
     # start up h2o to report the java version (once). output to python stdout
@@ -499,6 +499,13 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
     # this is just in case they don't assign the return to the nodes global?
     nodes[:] = nodeList
     print len(nodeList), "total jvms in H2O cloud"
+
+    # dump the h2o.nodes state to a json file
+    if create_json:
+        p = h2o_util.json_repr(nodes)
+        with open('h2o-nodes.json', 'w+') as f:
+            f.write(json.dumps(p, indent=4))
+
     return nodeList
 
 def upload_jar_to_remote_hosts(hosts, slow_connection=False):

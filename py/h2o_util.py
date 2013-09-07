@@ -1,6 +1,6 @@
 import subprocess
 import gzip, shutil, random, time, re
-import os, zipfile
+import os, zipfile, simplejson as json
 import h2o
 
 # x = choice_with_probability( [('one',0.25), ('two',0.25), ('three',0.5)] )
@@ -300,4 +300,59 @@ class JsonDiff(object):
         message = '%s: %s' % (type_, diff_message)
         if diff_message not in self.difference:
             self.difference.append(message)
+
+
+
+# per Alex Kotliarov
+# http://stackoverflow.com/questions/2343535/easiest-way-to-serialize-a-simple-class-object-with-simplejson
+#This function will produce JSON-formatted string for
+#    an instance of a custom class,
+#    a dictionary that have instances of custom classes as leaves,
+#    a list of instances of custom classes
+def json_repr(obj):
+    """Represent instance of a class as JSON.
+    Arguments:
+    obj -- any object
+    Return:
+    String that reprent JSON-encoded object.
+    """
+    def serialize(obj):
+        """Recursively walk object's hierarchy."""
+        if isinstance(obj, (bool, int, long, float, basestring)):
+            return obj
+        elif isinstance(obj, dict):
+            obj = obj.copy()
+            for key in obj:
+                obj[key] = serialize(obj[key])
+            return obj
+        elif isinstance(obj, list):
+            return [serialize(item) for item in obj]
+        elif isinstance(obj, tuple):
+            return tuple(serialize([item for item in obj]))
+        elif hasattr(obj, '__dict__'):
+            return serialize(obj.__dict__)
+        else:
+            return repr(obj) # Don't know how to handle, convert to string
+    a = serialize(obj)
+    # b = convert_json(a, 'ascii')
+
+    # a = json.dumps(serialize(obj))
+    # c = json.loads(a)
+    return a
+      
+# Mark Amery
+# http://stackoverflow.com/questions/956867/how-to-get-string-objects-instead-unicode-ones-from-json-in-python
+# here's no built-in option to make the json module functions return byte 
+# strings instead of unicode strings. 
+# This recursive function will convert any decoded JSON object 
+# from using unicode strings to UTF-8-encoded byte strings:
+def convert_json(input, new_type='utf-8'):
+    if isinstance(input, dict):
+        return {convert_json(key, new_type): convert_json(value, new_type) for key, value in input.iteritems()}
+    elif isinstance(input, list):
+        return [convert_json(element, new_type) for element in input]
+    elif isinstance(input, unicode):
+        return input.encode(new_type)
+    else:
+        return input
 
