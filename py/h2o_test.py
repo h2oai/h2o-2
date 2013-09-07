@@ -55,5 +55,5 @@ class TestConfig(object):
             if v == "None":
                 v = None
             setattr(self, k, v) # achieves self.k = v
-        print "Cloned", len(testConfig), "things for a h2o testConfig"
+        print "Created", len(testConfig), "things for a h2o testConfig"
 

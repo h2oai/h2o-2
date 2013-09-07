@@ -15,6 +15,7 @@ for t in h2o_test.configs:
     print "\nTest config_name:", t.config_name
     print "trees:", t.trees
     print "params:", t.params
+    print "params['timeoutSecs']:", t.params['timeoutSecs']
 
 
 
