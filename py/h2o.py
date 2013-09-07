@@ -2132,13 +2132,14 @@ class ExternalH2O(H2O):
     '''
     def __init__(self, nodeState):
         for k,v in nodeState.iteritems():
-            print "init:", k, v
+            verboseprint("init:", k, v)
             # hack because it looks like the json is currently created with "None" for values of None
             # rather than worrying about that, just translate "None" to None here. "None" shouldn't exist
             # for any other reason.
             if v == "None":
                 v = None
             setattr(self, k, v) # achieves self.k = v
+        print "Cloned", len(nodeState), "things for a h2o node"
 
     def is_alive(self):
         verboseprint("Doing is_alive check for ExternalH2O")
