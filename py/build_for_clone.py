@@ -3,7 +3,7 @@ import unittest, time, sys, random
 sys.path.extend(['.','..','py','../h2o/py','../../h2o/py'])
 import h2o, h2o_cmd
 
-start = time.time()
+beginning = time.time()
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -11,7 +11,6 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-
         global SEED, localhost
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
@@ -25,7 +24,8 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_build_for_clone(self):
-        elapsed = time.time() - start
+        # python gets confused about which 'start' if I used start here
+        elapsed = time.time() - beginning
         print "\n%0.2f seconds to get here from start" % elapsed
 
         maxTime = 4*3600
@@ -45,9 +45,9 @@ class Basic(unittest.TestCase):
             print "Checking sandbox log files"
             h2o.check_sandbox_for_errors(cloudShutdownIsError=True)
 
-        start2 = time.time()
+        start = time.time()
         h2i.delete_keys_at_all_nodes()
-        elapsed = time.time() - start2
+        elapsed = time.time() - start
         print "delete_keys_at_all_nodes(): took", elapsed, "secs"
 
 if __name__ == '__main__':

@@ -16,12 +16,21 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        pass
         # DON"T
         ### h2o.tear_down_cloud()
 
+        # Instead: All tests should delete their keys..i.e. leave things clean for the next test
+        start = time.time()
+        h2i.delete_keys_at_all_nodes()
+        elapsed = time.time() - start
+        print "delete_keys_at_all_nodes(): took", elapsed, "secs"
+
     def test_clone_basic(self):
         h2o.verify_cloud_size()
+
+    def test_B_RF_iris2(self):
+        parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
+        h2o_cmd.runRFOnly(parseResult=parseResult, trees=6, timeoutSecs=10)
 
 if __name__ == '__main__':
     h2o.unit_main()
