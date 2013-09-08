@@ -1783,6 +1783,7 @@ class H2O(object):
         disable_h2o_log=False, 
         enable_benchmark_log=False,
         h2o_remote_buckets_root=None,
+        delete_keys_at_teardown=False,
         ):
 
         if use_hdfs:
@@ -1863,6 +1864,7 @@ class H2O(object):
         # this dumps stats from tests, and perf stats while polling to benchmark.log
         self.enable_benchmark_log = enable_benchmark_log
         self.h2o_remote_buckets_root = h2o_remote_buckets_root
+        self.delete_keys_at_teardown = delete_keys_at_teardown
 
     def __str__(self):
         return '%s - http://%s:%d/' % (type(self), self.http_addr, self.port)

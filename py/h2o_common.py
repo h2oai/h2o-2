@@ -19,11 +19,15 @@ class ReleaseCommon(object):
         # DON"T
         ### h2o.tear_down_cloud()
 
-        # All tests should delete their keys..i.e. leave things clean for the next test
-        start = time.time()
-        h2i.delete_keys_at_all_nodes()
-        elapsed = time.time() - start
-        print "delete_keys_at_all_nodes(): took", elapsed, "secs"
+        # try to download the logs...may fail again!
+        h2o.nodes[0].log_download()
+
+        # this could fail too
+        if h2o.nodes[0].delete_keys_at_teardown:
+            start = time.time()
+            h2i.delete_keys_at_all_nodes()
+            elapsed = time.time() - start
+            print "delete_keys_at_all_nodes(): took", elapsed, "secs"
 
 #***********************
 # Notes:
