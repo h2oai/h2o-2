@@ -47,7 +47,7 @@ class Basic(unittest.TestCase):
 
         trees = 15
         timeoutSecs = 120
-        if 1==1:
+        if 1==0:
             csvPathname = 'standard/covtype.data'
             hexKey = 'covtype.data.hex'
         else:
