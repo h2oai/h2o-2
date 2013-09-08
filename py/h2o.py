@@ -392,7 +392,6 @@ def setup_random_seed(seed=None):
 
 # assume h2o_nodes_json file in the current directory
 def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
-
     print "This only makes sense if h2o is running as defined by", h2o_nodes_json
     print "For now, assuming it's a cloud on this machine, and here's info on h2o processes running here"
     print "No output means no h2o here! Some other info about stuff on the system is printed first though."
@@ -408,7 +407,6 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
         newNode = ExternalH2O(nodeState)
         nodeList.append(newNode)
 
-    # h2o.nodes[:] = nodeList
     print len(nodeList), "total nodes in H2O cloud state ingested from json"
     nodes[:] = nodeList
     return nodeList
