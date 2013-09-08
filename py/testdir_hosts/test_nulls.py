@@ -24,7 +24,7 @@ class Basic(unittest.TestCase):
         # chunk boundary stuff. (i.e. not interesting test for RF)
         csvFilename = 'poker1000'
         csvPathname = 'poker/' + csvFilename
-        fullPathname = h2i.find_folder_and_filename('smalldata', csvPathname, returnFullPath=true)
+        fullPathname = h2i.find_folder_and_filename('smalldata', csvPathname, returnFullPath=True)
 
         nulFilename = "syn_nul.data"
         nulPathname = SYNDATASETS_DIR + '/' + nulFilename

@@ -29,7 +29,8 @@ class Basic(unittest.TestCase):
             # ("allyears_10.csv", 1800), #119.98GB
         ]
 
-        (importHDFSResult, importPattern) = h2i.import_only(bucket='h2o-airlines-unpacked', path="*", schema='s3n')
+        print "Need the trailing / on the bucket, to avoid 'Path must be absolute error'"
+        (importHDFSResult, importPattern) = h2i.import_only(bucket='h2o-airlines-unpacked/', path="*", schema='s3n')
         s3nFullList = importHDFSResult['succeeded']
         self.assertGreater(len(s3nFullList),1,"Should see more than 1 files in s3n?")
 
