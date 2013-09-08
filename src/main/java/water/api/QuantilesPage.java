@@ -1,9 +1,10 @@
 package water.api;
 
-//import hex.Quantiles.QVecSelect;
 import hex.Quantiles;
 import water.Key;
 import water.Request2;
+//import water.api.Request.API;
+//import water.api.Request.VecSelect;
 //import water.api.Request.*;
 //import water.api.RequestArguments.FrameKey;
 //import water.api.RequestBuilders.Response;
@@ -16,7 +17,7 @@ public class QuantilesPage extends Request2 {
 
   // This Request supports the HTML 'GET' command, and this is the help text
   // for GET.
-  static final String DOC_GET = "Quantiles (epsilon-approximate) on arbitrary column";
+  static final String DOC_GET = "Quantiles on column";
 
   @API(help="Data Frame", required=true, filter=FrameKey.class)
   Frame frm;
@@ -28,7 +29,7 @@ public class QuantilesPage extends Request2 {
   @API(help="Column", required=true, filter=QVecSelect.class)
   Vec vec;
   // Cliff says could add _vec here, initialize it from every map() call
-  class QVecSelect extends VecSelect { QVecSelect() { super("source"); } }
+  class QVecSelect extends VecSelect { QVecSelect() { super("frm"); } }
 
   // API can't handle declaring these as double[] // KMeansGrid: parse double[] from String
   @API(help="Quantile_a", required=true, filter=Default.class)  // BUG: filter=Real.class doesn't appear
@@ -44,19 +45,29 @@ public class QuantilesPage extends Request2 {
   @API(help="Quantile_f", required=true, filter=Default.class)
   double quantile_f = .95;
 
-  double[] quantiles = new double[]{quantile_a, quantile_b, quantile_c, quantile_d, quantile_e, quantile_f};
+  //transient double[] quantiles = new double[]{quantile_a, quantile_b, quantile_c, quantile_d, quantile_e, quantile_f};
 
   @API(help="Pass 1 msec")     long pass1time;
   @API(help="Pass 2 msec")     long pass2time;
   @API(help="Pass 3 msec")     long pass3time;
-  @API(help="nrows (N)")       long nrows;
+  @API(help="nrows")           long nrows;
+  @API(help="qval_a")          double qval_a;
+  @API(help="qval_b")          double qval_b;
+  @API(help="qval_c")          double qval_c;
+  @API(help="qval_d")          double qval_d;
+  @API(help="qval_e")          double qval_e;
+  @API(help="qval_f")          double qval_f;
 
   @Override public Response serve() {
-    //locals
 
-    Quantiles qq = new Quantiles(frm, vec, quantiles);
+    Quantiles qq = new Quantiles(vec, quantile_a,quantile_b,quantile_c,quantile_d,quantile_e,quantile_f);
 
-    //passes
+    qval_a = qq.qval[0];
+    qval_b = qq.qval[1];
+    qval_c = qq.qval[2];
+    qval_d = qq.qval[3];
+    qval_e = qq.qval[4];
+    qval_f = qq.qval[5];
 
     return new Response(Response.Status.done, this, -1, -1, null);
   }

@@ -95,7 +95,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new hex.gbm.DRF()), "DRF2"         ,  "Beta (FluidVecs!)");
     Request.addToNavbar(registerRequest(new hex.gbm.GBM()), "GBM2"         ,  "Beta (FluidVecs!)");
     Request.addToNavbar(registerRequest(new hex.LR2()), "Linear Regression2", "Beta (FluidVecs!)");
-    //Request.addToNavbar(registerRequest(new water.api.Quantiles()), "Quantiles",    "Beta (FluidVecs!)");
+    Request.addToNavbar(registerRequest(new QuantilesPage()), "Quantiles",    "Beta (FluidVecs!)");
     Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network", "Beta (FluidVecs!)");
     Request.addToNavbar(registerRequest(new NeuralNetScore()), "Neural Network Score", "Beta (FluidVecs!)");
 
