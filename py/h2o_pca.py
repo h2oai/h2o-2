@@ -13,8 +13,8 @@ def simpleCheckPCA(self, pca, **kwargs):
 
     # Check other things in the json response dictionary 'pca' here
     destination_key = pca['destination_key']
-    pcaResult = h2o_cmd.runInspect(key=destination_key, **{'view':100})
-    #print h2o.dump_json(pcaResult)
+    pcaResult = h2o_cmd.runInspect(key=destination_key, view=100)
+    h2o.verboseprint('pcaResult Inspect:', h2o.dump_json(pcaResult))
     
     #Check no NaN in sdevs, propVars, or in PCs 
     print "Checking sdevs..."
@@ -53,7 +53,7 @@ def resultsCheckPCA(self, pca, **kwargs):
     self.assertAlmostEqual(sum_,0,msg="PropVar does not sum to 1.")
     
     if pcaResult["PCAModel"]["PCAParams"]["tolerance"] != 0.0 or \
-       pcaResult["PCAModel"]["PCAParams"]["standardize"] != "true": return
+       pcaResult["PCAModel"]["PCAParams"]["standardized"] != "true": return
     print "Checking that sdevs^2 sums to number of variables"
     #if not standardized or tolerance != 0, don't do check
     sdevs = pcaResult["PCAModel"]["stdDev"]
