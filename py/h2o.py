@@ -411,6 +411,11 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
     nodes[:] = nodeList
     return nodeList
 
+def setup_benchmark_log():
+        # an object to keep stuff out of h2o.py        
+        global cloudPerfH2O
+        cloudPerfH2O = h2o_perf.PerfH2O(python_test_name)
+
 # node_count is per host if hosts is specified.
 def build_cloud(node_count=2, base_port=54321, hosts=None, 
         timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True, 
@@ -420,13 +425,11 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
     # start up h2o to report the java version (once). output to python stdout
     check_h2o_version()
 
-    # keep this param in kwargs, because we pass to the H2O node build, so state
+    # keep this param in kwargs, because we pass it to the H2O node build, so state
     # is created that polling and other normal things can check, to decide to dump 
     # info to benchmark.log
     if kwargs.setdefault('enable_benchmark_log', False):
-        # an object to keep stuff out of h2o.py        
-        global cloudPerfH2O
-        cloudPerfH2O = h2o_perf.PerfH2O(python_test_name)
+        setup_benchmark_log()
 
     ports_per_node = 2 
     nodeList = []

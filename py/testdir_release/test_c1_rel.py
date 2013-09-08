@@ -1,6 +1,6 @@
 import unittest, time, sys, random, logging
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_import2 as h2i, h2o_glm, h2o_common, h2o_perf
+import h2o, h2o_cmd, h2o_import2 as h2i, h2o_glm, h2o_common
 
 print "Assumes you ran ../build_for_clone.py in this directory"
 print "Creating a h2o-nodes.json to use. Also a sandbox dir!"
@@ -11,6 +11,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         h2o_cmd.runRFOnly(parseResult=parseResult, trees=6, timeoutSecs=10)
 
     def test_B_c1_rel_long(self):
+        # a kludge
+        h2o.setup_benchmark_log()
+
         avgMichalSize = 116561140 
         bucket = 'home-0xdiag-datasets'
         importFolderPath = 'more1_1200_link'
@@ -21,8 +24,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
         tryHeap = 28
         DO_GLM = False
+        LOG_MACHINE_STATS = False
 
-        if h2o.nodes[0].enable_benchmark_log:
+        if LOG_MACHINE_STATS:
             benchmarkLogging = ['cpu', 'disk', 'network']
         else:
             benchmarkLogging = []
@@ -40,10 +44,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
                 # this accumulates performance stats into a benchmark log over multiple runs 
                 # good for tracking whether we're getting slower or faster
-                if h2o.nodes[0].enable_benchmark_log:
-                    h2o.cloudPerfH2O.change_logfile(csvFilename)
-                    h2o.cloudPerfH2O.message("")
-                    h2o.cloudPerfH2O.message("Parse " + csvFilename + " Start--------------------------------")
+                h2o.cloudPerfH2O.change_logfile(csvFilename)
+                h2o.cloudPerfH2O.message("")
+                h2o.cloudPerfH2O.message("Parse " + csvFilename + " Start--------------------------------")
 
                 start = time.time()
                 parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local',
@@ -64,8 +67,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     msg = '{!s} jvms, {!s}GB heap, {:s} {:s} {:6.2f} MB/sec for {:.2f} secs'.format(
                         len(h2o.nodes), h2o.nodes[0].java_heap_GB, csvFilepattern, csvFilename, fileMBS, elapsed)
                     print msg
-                    if h2o.nodes[0].enable_benchmark_log:
-                        h2o.cloudPerfH2O.message(msg)
+                    h2o.cloudPerfH2O.message(msg)
 
                 if DO_GLM:
                     # these are all the columns that are enums in the dataset...too many for GLM!
@@ -87,8 +89,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     msg = '{:d} jvms, {:d}GB heap, {:s} {:s} GLM: {:6.2f} secs'.format(
                         len(h2o.nodes), h2o.nodes[0].java_heap_GB, csvFilepattern, csvFilename, elapsed)
                     print msg
-                    if h2o.nodes[0].enable_benchmark_log:
-                        h2o.cloudPerfH2O.message(msg)
+                    h2o.cloudPerfH2O.message(msg)
 
                 h2o_cmd.checkKeyDistribution()
 
