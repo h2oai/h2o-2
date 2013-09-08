@@ -1353,10 +1353,11 @@ class H2O(object):
             h2b.browseJsonHistoryAsUrlLastMatch("RFView")
         return a
 
-    def generate_predictions(self, data_key, model_key, timeoutSecs=300, print_params=True, **kwargs):
+    def generate_predictions(self, data_key, model_key, destination_key, timeoutSecs=300, print_params=True, **kwargs):
         params_dict = {
             'data_key': data_key,
             'model_key': model_key,
+            'destination_key': destination_key,
             }
         browseAlso = kwargs.pop('browseAlso',False)
 
@@ -1375,7 +1376,6 @@ class H2O(object):
 
         if (browseAlso | browse_json):
             h2b.browseJsonHistoryAsUrlLastMatch("GeneratePredictionsPage")
-
 
         # it will redirect to an inspect, so let's get that inspect stuff
         resultKey = a['response']['redirect_request_args']['key']
