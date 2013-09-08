@@ -30,7 +30,7 @@ class Basic(unittest.TestCase):
             MAX_FILE_NUM = 1201
             importFolderPath = "more1_1200_link"
         else:
-            MAX_FILE_NUM = 235
+            MAX_FILE_NUM = 385
             importFolderPath = "manyfiles-nflx-gz"
 
         # IMPORT**********************************************

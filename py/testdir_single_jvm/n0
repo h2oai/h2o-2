@@ -13,6 +13,7 @@
 ./n0.doit test_from_import_fvec.py
 ./n0.doit test_from_import.py
 ./n0.doit test_from_putfile.py
+./n0.doit test_GBM_mnist.py
 ./n0.doit test_GLM_basic_predict.py
 ./n0.doit test_GLM_basic.py
 ./n0.doit test_GLM_big1.py
@@ -86,8 +87,9 @@
 ./n0.doit test_parse_multi_header_single.py
 ./n0.doit test_parse_small_many.py
 ./n0.doit test_parse_syn_gz_cat.py
+./n0.doit test_parse_tab_data_comma_header.py
+./n0.doit test_PCA_UCIwine.py
 ./n0.doit test_players_NA.py
-./n0.doit test_putfile_a5m.py
 ./n0.doit test_put_parse4.py
 ./n0.doit test_put_value5.py
 ./n0.doit test_randomBitVector.py

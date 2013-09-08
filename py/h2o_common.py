@@ -1,6 +1,9 @@
 import time
 import h2o, h2o_import2 as h2i
 
+# typical use in a unittest:
+# class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
+# see multiple inheritance at http://docs.python.org/release/1.5/tut/node66.html
 class ReleaseCommon(object):
     def tearDown(self):
         print "tearDown"
@@ -12,6 +15,10 @@ class ReleaseCommon(object):
         # standard method for being able to reproduce the random.* seed
         h2o.setup_random_seed()
         h2o.build_cloud_with_json()
+        # if you're fast with a test and cloud building, you may need to wait for cloud to stabilize
+        # normally this is baked into build_cloud, but let's leave it here for now
+        h2o.stabilize_cloud(h2o.nodes[0], node_count=len(h2o.nodes), timeoutSecs=90)
+
 
     @classmethod
     def tearDownClass(cls):
@@ -19,11 +26,15 @@ class ReleaseCommon(object):
         # DON"T
         ### h2o.tear_down_cloud()
 
-        # All tests should delete their keys..i.e. leave things clean for the next test
-        start = time.time()
-        h2i.delete_keys_at_all_nodes()
-        elapsed = time.time() - start
-        print "delete_keys_at_all_nodes(): took", elapsed, "secs"
+        # try to download the logs...may fail again!
+        h2o.nodes[0].log_download()
+
+        # this could fail too
+        if h2o.nodes[0].delete_keys_at_teardown:
+            start = time.time()
+            h2i.delete_keys_at_all_nodes()
+            elapsed = time.time() - start
+            print "delete_keys_at_all_nodes(): took", elapsed, "secs"
 
 #***********************
 # Notes:

@@ -13,8 +13,8 @@ def simpleCheckPCA(self, pca, **kwargs):
 
     # Check other things in the json response dictionary 'pca' here
     destination_key = pca['destination_key']
-    pcaResult = h2o_cmd.runInspect(key=destination_key, **{'view':100})
-    #print h2o.dump_json(pcaResult)
+    pcaResult = h2o_cmd.runInspect(key=destination_key, view=100)
+    h2o.verboseprint('pcaResult Inspect:', h2o.dump_json(pcaResult))
     
     #Check no NaN in sdevs, propVars, or in PCs 
     print "Checking sdevs..."

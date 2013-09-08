@@ -411,6 +411,11 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
     nodes[:] = nodeList
     return nodeList
 
+def setup_benchmark_log():
+        # an object to keep stuff out of h2o.py        
+        global cloudPerfH2O
+        cloudPerfH2O = h2o_perf.PerfH2O(python_test_name)
+
 # node_count is per host if hosts is specified.
 def build_cloud(node_count=2, base_port=54321, hosts=None, 
         timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True, 
@@ -420,13 +425,11 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
     # start up h2o to report the java version (once). output to python stdout
     check_h2o_version()
 
-    # keep this param in kwargs, because we pass to the H2O node build, so state
+    # keep this param in kwargs, because we pass it to the H2O node build, so state
     # is created that polling and other normal things can check, to decide to dump 
     # info to benchmark.log
     if kwargs.setdefault('enable_benchmark_log', False):
-        # an object to keep stuff out of h2o.py        
-        global cloudPerfH2O
-        cloudPerfH2O = h2o_perf.PerfH2O(python_test_name)
+        setup_benchmark_log()
 
     ports_per_node = 2 
     nodeList = []
@@ -1350,10 +1353,11 @@ class H2O(object):
             h2b.browseJsonHistoryAsUrlLastMatch("RFView")
         return a
 
-    def generate_predictions(self, data_key, model_key, timeoutSecs=300, print_params=True, **kwargs):
+    def generate_predictions(self, data_key, model_key, destination_key, timeoutSecs=300, print_params=True, **kwargs):
         params_dict = {
             'data_key': data_key,
             'model_key': model_key,
+            'destination_key': destination_key,
             }
         browseAlso = kwargs.pop('browseAlso',False)
 
@@ -1372,7 +1376,6 @@ class H2O(object):
 
         if (browseAlso | browse_json):
             h2b.browseJsonHistoryAsUrlLastMatch("GeneratePredictionsPage")
-
 
         # it will redirect to an inspect, so let's get that inspect stuff
         resultKey = a['response']['redirect_request_args']['key']
@@ -1417,7 +1420,7 @@ class H2O(object):
         verboseprint("\nGBM result:", dump_json(a))
         return a
 
-    def pca(self, data_key, timeoutSecs=600, retryDelaySecs=1,initialDelaySecs=5,pollTimeoutSecs=30,**kwargs):
+    def pca(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, noPoll=False, **kwargs):
         params_dict = {
             'destination_key':None,
             'key':data_key,
@@ -1427,9 +1430,13 @@ class H2O(object):
         }
         params_dict.update(kwargs)
         a = self.__do_json_request('PCA.json',timeout=timeoutSecs,params=params_dict)
-        verboseprint("\nPCA result:", dump_json(a))
+
+        if noPoll:
+            return a
+
         a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                           initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+        verboseprint("\nPCA result:", dump_json(a))
         return a
 
     def summary_page(self, key, max_column_display=1000, timeoutSecs=60, noPrint=True, **kwargs):
@@ -1783,6 +1790,7 @@ class H2O(object):
         disable_h2o_log=False, 
         enable_benchmark_log=False,
         h2o_remote_buckets_root=None,
+        delete_keys_at_teardown=False,
         ):
 
         if use_hdfs:
@@ -1863,6 +1871,7 @@ class H2O(object):
         # this dumps stats from tests, and perf stats while polling to benchmark.log
         self.enable_benchmark_log = enable_benchmark_log
         self.h2o_remote_buckets_root = h2o_remote_buckets_root
+        self.delete_keys_at_teardown = delete_keys_at_teardown
 
     def __str__(self):
         return '%s - http://%s:%d/' % (type(self), self.http_addr, self.port)

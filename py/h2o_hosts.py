@@ -59,6 +59,9 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
         'h2o_remote_buckets_root': None,
         'conservative': False,
         'create_json': False,
+        # pass this from cloud building to the common "release" h2o_test.py classes
+        # for deciding whether keys should be deleted when a test ends.
+        'delete_keys_at_teardown': False, 
     }
     # initialize the default values
     paramsToUse = {}

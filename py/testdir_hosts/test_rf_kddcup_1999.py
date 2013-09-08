@@ -24,8 +24,8 @@ class Basic(unittest.TestCase):
         # h2b.browseTheCloud()
 
         importFolderPath = 'standard'
-        csvPathname = importFolderPath + "/" + csvFilename
         csvFilename = 'kddcup_1999.data.gz'
+        csvPathname = importFolderPath + "/" + csvFilename
 
         print "Want to see that I get similar results when using H2O RF defaults (no params to json)" +\
             "compared to running with the parameters specified and matching the browser RF query defaults. " +\
