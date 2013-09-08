@@ -119,13 +119,16 @@ class Basic(unittest.TestCase):
             print "wrong/Total * 100 ", pctWrong
             # I looked at what h2o can do for modelling with binomial and it should get better than 25% error?
             if pctWrong > 2.0:
-                raise Exception("pct wrong too high. Expect < 2% error")
+                raise Exception("pct wrong too high. Expect < 2% error because it's reusing training data")
+
 
         #*****************************************************************************
 
         parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=hexKey)
-        rfResult = h2o_cmd.runRFOnly(parseResult=parseResult, trees=trees, 
-            model_key="iris_rf_model", timeoutSecs=timeoutSecs)
+        kwargs = {'use_non_local_data': 1}
+        rfResult = h2o_cmd.runRFOnly(parseResult=parseResult, trees=trees,
+            model_key="rf_model", timeoutSecs=timeoutSecs, **kwargs)
+
 
         print "Use H2O GeneratePredictionsPage with a H2O generated model and the same data key."
         print "Does this work? (feeding in same data key)if you're predicting, "
