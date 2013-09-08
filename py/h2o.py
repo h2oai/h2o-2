@@ -678,12 +678,15 @@ def touch_cloud(nodeList=None):
     for n in nodeList:
         n.is_alive()
 
-def verify_cloud_size(nodeList=None, verbose=False):
+# timeoutSecs is per individual node get_cloud()
+def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10):
     if not nodeList: nodeList = nodes
 
     expectedSize = len(nodeList)
-    cloudSizes = [n.get_cloud()['cloud_size'] for n in nodeList]
-    cloudConsensus = [n.get_cloud()['consensus'] for n in nodeList]
+    # cloud size and consensus have to reflect a single grab of information from a node.
+    cloudStatus = [n.get_cloud(timeoutSecs=timeoutSecs) for n in nodeList]
+    cloudSizes = [c['cloud_size'] for c in cloudStatus]
+    cloudConsensus = [c['consensus'] for c in cloudStatus]
 
     if expectedSize==0 or len(cloudSizes)==0 or len(cloudConsensus)==0:
         print "\nexpectedSize:", expectedSize
@@ -822,8 +825,9 @@ class H2O(object):
     def test_poll(self, args):
         return self.__do_json_request('TestPoll.json', params=args)
 
-    def get_cloud(self):
-        a = self.__do_json_request('Cloud.json')
+    def get_cloud(self, timeoutSecs=10):
+        # hardwire it to allow a 60 second timeout
+        a = self.__do_json_request('Cloud.json', timeout=timeoutSecs)
 
         consensus  = a['consensus']
         locked     = a['locked']
