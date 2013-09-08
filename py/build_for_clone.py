@@ -1,9 +1,12 @@
 #!/usr/bin/python
 import unittest, time, sys, random
 sys.path.extend(['.','..','py','../h2o/py','../../h2o/py'])
-import h2o, h2o_cmd
+import h2o, h2o_cmd, h2o_browse as h2b
 
 beginning = time.time()
+def log(msg):
+    print "\033[92m[0xdata] \033[0m", msg
+
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -27,6 +30,12 @@ class Basic(unittest.TestCase):
         # python gets confused about which 'start' if I used start here
         elapsed = time.time() - beginning
         print "\n%0.2f seconds to get here from start" % elapsed
+
+        # might as well open a browser on it? (because the ip/port will vary
+        # maybe just print the ip/port for now
+        ## h2b.browseTheCloud()
+        log("To watch cloud in browser follow address:")
+        log("   http://{0}:{1}/Cloud.html".format(h2o.nodes[0].http_addr, h2o.nodes[0].port))
 
         maxTime = 4*3600
         totalTime = 0

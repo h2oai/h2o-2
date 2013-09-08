@@ -14,7 +14,7 @@ def browseTheCloud():
         cloud_url = "http://" + h2o.nodes[0].http_addr + ":" + str(port) + "/Cloud.html"
 
         # Open URL in new window, raising the window if possible.
-        h2o.verboseprint("browseTheCloud:", cloud_url)
+        print "\nbrowseTheCloud using this url:", cloud_url
         webbrowser.open_new(cloud_url)
 
 # match the first, swap the 2nd
