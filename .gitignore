@@ -26,3 +26,4 @@ target/
 /libpeerconnection.log
 src/main/java/water/BuildVersion.java
 hadoop/build.log
+.DS_Store

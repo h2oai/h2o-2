@@ -13,7 +13,7 @@ class Basic(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         # the node state is gone when we tear down the cloud, so pass the ignore here also.
-        h2o.tear_down_cloud(sandbox_ignore_errors=True)
+        h2o.tear_down_cloud(sandboxIgnoreErrors=True)
 
     def test_parse_covtype20x_loop_s3n_hdfs(self):
         bucket = 'home-0xdiag-datasets'
@@ -27,7 +27,7 @@ class Basic(unittest.TestCase):
                 "then parse 'covtype20x.data'"
             h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap)
             # don't raise exception if we find something bad in h2o stdout/stderr?
-            h2o.nodes[0].sandbox_ignore_errors = True
+            h2o.nodes[0].sandboxIgnoreErrors = True
 
             for trial in range(trialMax):
                 hex_key = csvFilename + ".hex"

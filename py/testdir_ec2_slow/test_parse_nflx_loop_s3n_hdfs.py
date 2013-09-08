@@ -15,7 +15,7 @@ class Basic(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         # the node state is gone when we tear down the cloud, so pass the ignore here also.
-        h2o.tear_down_cloud(sandbox_ignore_errors=True)
+        h2o.tear_down_cloud(sandboxIgnoreErrors=True)
 
     def test_parse_nflx_loop_s3n_hdfs(self):
         DO_GLM = True
@@ -89,7 +89,7 @@ class Basic(unittest.TestCase):
                     hdfs_version='0.20.2')
 
                 # don't raise exception if we find something bad in h2o stdout/stderr?
-                h2o.nodes[0].sandbox_ignore_errors = True
+                h2o.nodes[0].sandboxIgnoreErrors = True
 
                 for trial in range(trialMax):
                     # import a list of folders, one at a time (hdfs import can't take pattern match
