@@ -48,7 +48,7 @@ class Basic(unittest.TestCase):
         predictHexKey = 'predict.hex'
         predictCsv = 'predict.csv'
 
-        if 1==0:
+        if 1==1:
             skipSrcHeader = True
             trees = 6
             bucket = 'smalldata'

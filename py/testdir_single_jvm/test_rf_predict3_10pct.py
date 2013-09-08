@@ -55,7 +55,7 @@ class Basic(unittest.TestCase):
             csvPathname = 'iris/iris2.csv'
             hexKey = 'iris2.csv.hex'
             translate = {'setosa': 0.0, 'versicolor': 1.0, 'virginica': 2.0}
-        elif 1==0:
+        elif 1==1:
             skipSrcHeader = False
             trees = 6
             # try smaller data set compared to covtype
