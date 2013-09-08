@@ -1,6 +1,9 @@
 import time
 import h2o, h2o_import2 as h2i
 
+# typical use in a unittest:
+# class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
+# see multiple inheritance at http://docs.python.org/release/1.5/tut/node66.html
 class ReleaseCommon(object):
     def tearDown(self):
         print "tearDown"
