@@ -173,14 +173,14 @@ class Basic(unittest.TestCase):
                 # execExpr = 'a = randomFilter('+origKey+',200,12345678)' 
                 execExpr = 'a = slice('+origKey+',1,200)' 
                 h2e.exec_expr(h2o.nodes[0], execExpr, "a", timeoutSecs=30)
-                # runRFOnly takes the parseResult directly
+                # runRF takes the parseResult directly
                 newParseKey = {'destination_key': 'a'}
 
                 print "\n" + csvFilepattern
                 # poker and the water.UDP.set3(UDP.java) fail issue..
                 # constrain depth to 25
                 print "Temporarily hacking to do nothing instead of RF on the parsed file"
-                ### RFview = h2o_cmd.runRFOnly(trees=1,depth=25,parseResult=newParseKey, timeoutSecs=timeoutSecs)
+                ### RFview = h2o_cmd.runRF(trees=1,depth=25,parseResult=newParseKey, timeoutSecs=timeoutSecs)
                 ### h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
                 #**********************************************************************************
@@ -197,7 +197,7 @@ class Basic(unittest.TestCase):
                     GLMkwargs = {'x': x, 'y': 378, 'case': 15, 'case_mode': '>',
                         'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
                     start = time.time()
-                    glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **GLMkwargs)
+                    glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **GLMkwargs)
                     h2o_glm.simpleCheckGLM(self, glm, None, **GLMkwargs)
                     elapsed = time.time() - start
                     h2o.check_sandbox_for_errors()

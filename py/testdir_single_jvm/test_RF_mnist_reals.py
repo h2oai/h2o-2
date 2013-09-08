@@ -89,7 +89,7 @@ class Basic(unittest.TestCase):
             print "Trying rf"
             timeoutSecs = 1800
             start = time.time()
-            rfView = h2o_cmd.runRFOnly(parseResult=parseResult, rfView=True,
+            rfView = h2o_cmd.runRF(parseResult=parseResult, rfView=True,
                 timeoutSecs=timeoutSecs, pollTimeoutsecs=60, retryDelaySecs=2, **kwargs)
             elapsed = time.time() - start
             print "RF completed in", elapsed, "seconds.", \

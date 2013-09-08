@@ -67,7 +67,7 @@ class Basic(unittest.TestCase):
                 kwargs['out_of_bag_error_estimate'] = 1
 
             start = time.time()
-            RFview = h2o_cmd.runRFOnly(parseResult=parseResult, trees=50, timeoutSecs=300, retryDelaySecs=1.0, **kwargs)
+            RFview = h2o_cmd.runRF(parseResult=parseResult, trees=50, timeoutSecs=300, retryDelaySecs=1.0, **kwargs)
             print "RF end on ", csvFilename, 'took', time.time() - start, 'seconds'
 
             ### h2b.browseJsonHistoryAsUrlLastMatch("RFView")

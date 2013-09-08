@@ -31,7 +31,7 @@ class Basic(unittest.TestCase):
             hex_key = "iris2_" + str(trial) + ".hex"
             parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', hex_key=hex_key,
                 timeoutSecs=10, noPoll=False, **kwargs )
-            glmResult = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=10, noPoll=True, **kwargs )
+            glmResult = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=10, noPoll=True, **kwargs )
             print "GLM #%d" % trial,  "started on ", csvPathname, 'took', time.time() - start, 'seconds'
 
             model_key = glmResult['destination_key']

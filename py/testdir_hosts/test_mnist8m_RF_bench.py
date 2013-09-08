@@ -72,7 +72,7 @@ class Basic(unittest.TestCase):
             #RF+RFView (train)#
             kwargs = configs.copy()
             trainRFStart = time.time()
-            rfView = h2o_cmd.runRFOnly(parseResult=parseResult,rfView=True,
+            rfView = h2o_cmd.runRF(parseResult=parseResult,rfView=True,
                      timeoutSecs= 3600,pollTimeoutSecs= 60,retryDelaySecs = 2, **kwargs)
             trainViewTime = time.time() - trainRFStart
             #End RF+RFView (train)#

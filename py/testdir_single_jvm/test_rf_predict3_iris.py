@@ -125,7 +125,7 @@ class Basic(unittest.TestCase):
 
         parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=hexKey)
         kwargs = {'use_non_local_data': 1}
-        rfResult = h2o_cmd.runRFOnly(parseResult=parseResult, trees=trees,
+        rfResult = h2o_cmd.runRF(parseResult=parseResult, trees=trees,
             model_key="rf_model", timeoutSecs=timeoutSecs, **kwargs)
 
 

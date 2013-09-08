@@ -55,7 +55,7 @@ class Basic(unittest.TestCase):
 
             # FIX! what model keys do these get?
             randomNode = h2o.nodes[random.randint(0,len(h2o.nodes)-1)]
-            h2o_cmd.runRFOnly(node=randomNode, parseResult=parseResult, model_key=model_key, timeoutSecs=300,
+            h2o_cmd.runRF(node=randomNode, parseResult=parseResult, model_key=model_key, timeoutSecs=300,
                  noPoll=False if OVERWRITE_RF_MODEL else True, **kwargs)
             # FIX! are these already in there?
             rfView = {}

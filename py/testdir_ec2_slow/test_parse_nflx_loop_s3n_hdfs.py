@@ -207,7 +207,7 @@ class Basic(unittest.TestCase):
                             GLMkwargs = {'x': x, 'y': y, 'case': 15, 'case_mode': '>', 'family': 'binomial',
                                 'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
                             start = time.time()
-                            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, 
+                            glm = h2o_cmd.runGLM(parseResult=parseResult, 
                                 timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                                 pollTimeoutSecs=pollTimeoutSecs,
                                 benchmarkLogging=benchmarkLogging, **GLMkwargs)
@@ -223,7 +223,7 @@ class Basic(unittest.TestCase):
                                 'thresholds': '0.5'
                                 }
                             start = time.time()
-                            glm = h2o_cmd.runGLMGridOnly(parseResult=parseResult,
+                            glm = h2o_cmd.runGLMGrid(parseResult=parseResult,
                                 timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                                 pollTimeoutSecs=pollTimeoutSecs,
                                 benchmarkLogging=benchmarkLogging, **GLMkwargs)

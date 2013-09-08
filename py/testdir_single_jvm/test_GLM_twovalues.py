@@ -95,7 +95,7 @@ class GLM_twovalues(unittest.TestCase):
 
             # default takes 39 iterations? play with alpha/beta
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key)
-            glm = h2o_cmd.runGLMOnly(parseResult=parseResult)
+            glm = h2o_cmd.runGLM(parseResult=parseResult)
             h2o_glm.simpleCheckGLM(self, glm, 0, **kwargs)
 
             # check that the number of entries in coefficients is right (12 with intercept)

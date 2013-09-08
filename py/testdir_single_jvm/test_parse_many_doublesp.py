@@ -210,7 +210,7 @@ class Basic(unittest.TestCase):
                         '.data'
                     self.writeRows(csvPathname,newRows2,eol)
                     parseResult = h2i.import_parse(path=csvPathname, schema='put')
-                    h2o_cmd.runRFOnly(parseResult=parseResult, trees=1, timeoutSecs=30, retryDelaySecs=0.1)
+                    h2o_cmd.runRF(parseResult=parseResult, trees=1, timeoutSecs=30, retryDelaySecs=0.1)
                     h2o.verboseprint("Set", set)
                     sys.stdout.write('.')
                     sys.stdout.flush()

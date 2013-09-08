@@ -30,15 +30,15 @@ class Basic(unittest.TestCase):
 
     def test_B_RF_iris2(self):
         parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
-        h2o_cmd.runRFOnly(parseResult=parseResult, trees=6, timeoutSecs=10)
+        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10)
 
     def test_C_RF_poker100(self):
         parseResult = h2i.import_parse(bucket='smalldata', path='poker/poker100', schema='put')
-        h2o_cmd.runRFOnly(parseResult=parseResult, trees=6, timeoutSecs=10)
+        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10)
 
     def test_D_GenParity1(self):
         parseResult = h2i.import_parse(bucket='smalldata', path='parity_128_4_100_quad.data', schema='put')
-        h2o_cmd.runRFOnly(parseResult=parseResult, trees=50, timeoutSecs=15)
+        h2o_cmd.runRF(parseResult=parseResult, trees=50, timeoutSecs=15)
 
     def test_E_ParseManyCols(self):
         parseResult = h2i.import_parse(bucket='smalldata', path='fail1_100x11000.csv.gz', schema='put', timeoutSecs=10)
@@ -46,7 +46,7 @@ class Basic(unittest.TestCase):
 
     def test_F_RF_covtype(self):
         parseResult = h2i.import_parse(bucket='datasets', path='UCI/UCI-large/covtype/covtype.data', schema='put', timeoutSecs=30)
-        h2o_cmd.runRFOnly(parseResult=parseResult, trees=6, timeoutSecs=35, retryDelaySecs=0.5)
+        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=35, retryDelaySecs=0.5)
 
 if __name__ == '__main__':
     h2o.unit_main()

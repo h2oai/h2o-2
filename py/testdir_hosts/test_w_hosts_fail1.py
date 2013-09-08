@@ -60,7 +60,7 @@ class Basic(unittest.TestCase):
                 # change the model name each iteration, so they stay in h2o
                 model_key = csvFilename + "_" + str(trials)
                 parseResult = h2i.import_parse(path=csvPathname, schema='put')
-                h2o_cmd.runRFOnly(parseResult=parseResult, trees=trees, model_key=model_key, 
+                h2o_cmd.runRF(parseResult=parseResult, trees=trees, model_key=model_key, 
                     timeoutSecs=timeoutSecs, retryDelaySecs=1)
                 sys.stdout.write('.')
                 sys.stdout.flush()

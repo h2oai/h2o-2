@@ -105,7 +105,7 @@ class test_GLM_prob_cols_4(unittest.TestCase):
             kwargs.update(paramDict2)
 
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
             # only col Y-1 (next to last)doesn't get renamed in coefficients due to enum/categorical expansion
             print "y:", y 
