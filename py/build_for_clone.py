@@ -35,7 +35,7 @@ class Basic(unittest.TestCase):
         print "Will check h2o logs every", incrTime, "seconds"
         print "Should be able to run another test using h2o-nodes.json to clone cloud"
         print "i.e. h2o.build_cloud_with_json()"
-        print "Error if a running test shuts down the cloud. I'm supposed to!"
+        print "Bad test if a running test shuts down the cloud. I'm supposed to!"
         while (totalTime<maxTime): # die after 4 hours
             h2o.sleep(incrTime)
             totalTime += incrTime
