@@ -81,13 +81,7 @@ class Basic(unittest.TestCase):
                 # jea = "-Dh2o.find-ByteBuffer-leaks=true"
                 h2o_hosts.build_cloud_with_hosts(h2oPerNode, java_heap_GB=tryHeap,
                     # java_extra_args=jea,
-                    enable_benchmark_log=True, timeoutSecs=120, retryDelaySecs=10,
-                    # all hdfs info is done thru the hdfs_config michal's ec2 config sets up?
-                    # this is for our amazon ec hdfs
-                    # see https://github.com/0xdata/h2o/wiki/H2O-and-s3n
-                    hdfs_name_node='10.78.14.235:9000',
-                    hdfs_version='0.20.2')
-
+                    enable_benchmark_log=True, timeoutSecs=120, retryDelaySecs=10)
                 # don't raise exception if we find something bad in h2o stdout/stderr?
                 h2o.nodes[0].sandboxIgnoreErrors = True
 
