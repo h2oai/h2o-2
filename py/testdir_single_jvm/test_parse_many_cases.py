@@ -224,7 +224,7 @@ class Basic(unittest.TestCase):
                         '.data'
                     self.writeRows(csvPathname,newRows2,eol)
                     parseResult = h2i.import_parse(path=csvPathname, schema='put')
-                    h2o_cmd.runRFOnly(parseResult=parseResult, trees=1,
+                    h2o_cmd.runRF(parseResult=parseResult, trees=1,
                         timeoutSecs=10, retryDelaySecs=0.1, noPrint=True, print_params=False)
                     h2o.verboseprint("Set", set)
                     h2o.check_sandbox_for_errors()

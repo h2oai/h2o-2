@@ -8,7 +8,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_A_c1_rel_short(self):
         parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
-        h2o_cmd.runRFOnly(parseResult=parseResult, trees=6, timeoutSecs=10)
+        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10)
 
     def test_B_c1_rel_long(self):
         # a kludge
@@ -81,7 +81,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                         'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
 
                     start = time.time()
-                    glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **GLMkwargs)
+                    glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **GLMkwargs)
                     elapsed = time.time() - start
                     h2o.check_sandbox_for_errors()
 

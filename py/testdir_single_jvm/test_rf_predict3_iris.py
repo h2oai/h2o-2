@@ -48,7 +48,7 @@ class Basic(unittest.TestCase):
         predictHexKey = 'predict.hex'
         predictCsv = 'predict.csv'
 
-        if 1==0:
+        if 1==1:
             skipSrcHeader = True
             trees = 6
             bucket = 'smalldata'
@@ -120,7 +120,6 @@ class Basic(unittest.TestCase):
             # I looked at what h2o can do for modelling with binomial and it should get better than 25% error?
             if pctWrong > 2.0:
                 raise Exception("pct wrong too high. Expect < 2% error because it's reusing training data")
-
 
         #*****************************************************************************
 

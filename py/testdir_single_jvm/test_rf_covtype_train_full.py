@@ -55,7 +55,7 @@ class Basic(unittest.TestCase):
             # seems ec2 can be really slow
             timeoutSecs = 30 + kwargs['ntree'] * 20
             start = time.time()
-            rfView = h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            rfView = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "RF end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)

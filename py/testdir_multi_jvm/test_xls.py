@@ -20,22 +20,22 @@ class TestExcel(unittest.TestCase):
 
     def test_iris_xls(self):
         parseResult = h2i.import_parse(bucket='datasets', path='iris/iris.xls', schema='put')
-        h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=5)
+        h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=5)
 
     def test_iris_xlsx(self):
         parseResult = h2i.import_parse(bucket='datasets', path='iris/iris.xlsx', schema='put')
-        h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=5)
+        h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=5)
 
     def test_poker_xls(self):
         parseResult = h2i.import_parse(bucket='datasets', path='poker/poker-hand-testing.xls', schema='put')
-        h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=10)
+        h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=10)
 
     def test_poker_xlsx(self):
         # maybe can get stuck during polling for parse progress?
         # break it out for pollTimeoutSecs
         parseResult = h2i.import_parse(bucket='datasets', path='poker/poker-hand-testing.xlsx', schema='put',
             timeoutSecs=120, pollTimeoutSecs=60)
-        h2o_cmd.runRFOnly(None, parseResult=parseResult, timeoutSecs=120)
+        h2o_cmd.runRF(None, parseResult=parseResult, timeoutSecs=120)
 
 if __name__ == '__main__':
     h2o.unit_main()

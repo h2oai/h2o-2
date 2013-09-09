@@ -24,7 +24,7 @@ class Basic(unittest.TestCase):
         timeoutSecs = 20
         hex_key = 'iris2.csv.hex'
         parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put', hex_key=hex_key)
-        h2o_cmd.runRFOnly(parseResult=parseResult, trees=trees, model_key="iris_rf_model", timeoutSecs=timeoutSecs)
+        h2o_cmd.runRF(parseResult=parseResult, trees=trees, model_key="iris_rf_model", timeoutSecs=timeoutSecs)
         print "Use H2O GeneratePredictionsPage with a H2O generated model and the same data key. Inspect/Summary result"
 
         start = time.time()

@@ -64,7 +64,7 @@ class Basic(unittest.TestCase):
             kwargs['model_key'] = "model_" + str(jobDispatch)
             
             # don't poll for fvec 
-            rfResult = h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, rfView=False, **kwargs)
+            rfResult = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, rfView=False, **kwargs)
             elapsed = time.time() - start
             print "RF dispatch end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
@@ -94,7 +94,13 @@ class Basic(unittest.TestCase):
             model_key = rfView['model_key']
             ntree = rfView['ntree']
             # allow it to poll to complete
-            rfViewResult = h2o_cmd.runRFView(None, data_key, model_key, ntree=ntree, timeoutSecs=60, noPoll=False)
+            rfView = rfViewResult = h2o_cmd.runRFView(None, data_key, 
+                model_key, ntree=ntree, timeoutSecs=60, noPoll=False)
+
+            # FIX! should update this expected classification error
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntree)
+            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=data_key)
 
 
 if __name__ == '__main__':

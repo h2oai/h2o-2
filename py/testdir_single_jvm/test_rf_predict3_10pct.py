@@ -55,7 +55,7 @@ class Basic(unittest.TestCase):
             csvPathname = 'iris/iris2.csv'
             hexKey = 'iris2.csv.hex'
             translate = {'setosa': 0.0, 'versicolor': 1.0, 'virginica': 2.0}
-        elif 1==0:
+        elif 1==1:
             skipSrcHeader = False
             trees = 6
             # try smaller data set compared to covtype
@@ -121,14 +121,12 @@ class Basic(unittest.TestCase):
             if pctWrong > 2.0:
                 raise Exception("pct wrong too high. Expect < 2% error because it's reusing training data")
 
-
         #*****************************************************************************
 
         parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=hexKey)
         kwargs = {'use_non_local_data': 1}
-        rfResult = h2o_cmd.runRF(parseResult=parseResult, trees=trees,
+        rfResult = h2o_cmd.runRF(parseResult=parseResult, trees=trees, 
             model_key="rf_model", timeoutSecs=timeoutSecs, **kwargs)
-
 
         print "Use H2O GeneratePredictionsPage with a H2O generated model and the same data key."
         print "Does this work? (feeding in same data key)if you're predicting, "

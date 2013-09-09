@@ -44,7 +44,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             # poker and the water.UDP.set3(UDP.java) fail issue..
             # constrain depth to 25
-            RFview = h2o_cmd.runRFOnly(trees=1,depth=25,parseResult=parseResult,
+            RFview = h2o_cmd.runRF(trees=1,depth=25,parseResult=parseResult,
                 timeoutSecs=timeoutSecs)
 
             h2b.browseJsonHistoryAsUrlLastMatch("RFView")

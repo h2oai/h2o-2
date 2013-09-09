@@ -27,7 +27,7 @@ class Basic(unittest.TestCase):
                 csvPathname = 'iris/iris2.csv'
             start = time.time()
             parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
-            rfResult = h2o_cmd.runRFOnly(parseResult=parseResult, trees=6, timeoutSecs=10, rfView=False)
+            rfResult = h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10, rfView=False)
             print "RF #%d" % trial,  "started on ", csvPathname, 'took', time.time() - start, 'seconds'
             model_key = rfResult['model_key']
             print "model_key:", model_key

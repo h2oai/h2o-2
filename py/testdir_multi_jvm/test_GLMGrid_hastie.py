@@ -35,7 +35,7 @@ def glm_doit(self, csvFilename, bucket, csvPathname, timeoutSecs=30):
 
     start = time.time() 
     print "\nStarting GLMGrid of", csvFilename
-    glmGridResult = h2o_cmd.runGLMGridOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+    glmGridResult = h2o_cmd.runGLMGrid(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
     print "GLMGrid in",  (time.time() - start), "secs (python)"
 
     # still get zero coeffs..best model is AUC = 0.5 with intercept only.

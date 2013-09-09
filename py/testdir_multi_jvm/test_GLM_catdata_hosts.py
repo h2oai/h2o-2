@@ -41,7 +41,7 @@ class Basic(unittest.TestCase):
             # 0 by itself is okay?
             kwargs = {'y': 7, 'x': '1,2,3,4,5,6', 'family': "binomial", 'n_folds': 3, 'lambda': 1e-4}
             timeoutSecs = 200
-            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, 6, **kwargs)
 
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'

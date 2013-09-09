@@ -62,6 +62,7 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
         # pass this from cloud building to the common "release" h2o_test.py classes
         # for deciding whether keys should be deleted when a test ends.
         'delete_keys_at_teardown': False, 
+        'clone_cloud': False,
     }
     # initialize the default values
     paramsToUse = {}

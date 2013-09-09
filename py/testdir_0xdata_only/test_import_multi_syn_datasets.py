@@ -62,7 +62,7 @@ class Basic(unittest.TestCase):
 
             kwargs = {'sample': 75, 'depth': 25, 'ntree': 1}
             start = time.time()
-            RFview = h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            RFview = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 

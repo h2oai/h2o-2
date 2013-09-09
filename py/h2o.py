@@ -74,6 +74,7 @@ random_seed = None
 beta_features = False
 sleep_at_tear_down = False
 abort_after_import = False
+clone_cloud_json = None
 # jenkins gets this assign, but not the unit_main one?
 python_test_name = inspect.stack()[1][1]
 
@@ -91,11 +92,12 @@ def parse_our_args():
     parser.add_argument('-bf', '--beta_features', help='enable or switch to beta features (import2/parse2)', action='store_true')
     parser.add_argument('-slp', '--sleep_at_tear_down', help='open browser and time.sleep(3600) at tear_down_cloud() (typical test end/fail)', action='store_true')
     parser.add_argument('-aai', '--abort_after_import', help='abort the test after printing the full path to the first dataset used by import_parse/import_only', action='store_true')
+    parser.add_argument('-ccj', '--clone_cloud_json', type=str, help='a h2o-nodes.json file can be passed (see build_cloud(create_json=True). This will create a cloned set of node objects, so any test that builds a cloud, can also be run on an existing cloud without changing the test')
     parser.add_argument('unittest_args', nargs='*')
 
     args = parser.parse_args()
     global browse_disable, browse_json, verbose, ipaddr, config_json, debugger, random_udp_drop
-    global random_seed, beta_features, sleep_at_tear_down, abort_after_import
+    global random_seed, beta_features, sleep_at_tear_down, abort_after_import, clone_cloud_json
 
     browse_disable = args.browse_disable or getpass.getuser()=='jenkins'
     browse_json = args.browse_json
@@ -108,6 +110,7 @@ def parse_our_args():
     beta_features = args.beta_features
     sleep_at_tear_down = args.sleep_at_tear_down
     abort_after_import = args.abort_after_import
+    clone_cloud_json = args.clone_cloud_json
 
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
     # FIX! this isn't working to grab the args we don't care about
@@ -125,20 +128,6 @@ def verboseprint(*args, **kwargs):
         print
         # so we can see problems when hung?
         sys.stdout.flush()
-
-def find_dataset(f):
-    (head, tail) = os.path.split(os.path.abspath('datasets'))
-    verboseprint("find_dataset looking upwards from", head, "for", tail)
-    # don't spin forever 
-    levels = 0
-    while not (os.path.exists(os.path.join(head, tail))):
-        head = os.path.split(head)[0]
-        levels += 1
-        if (levels==10): 
-            raise Exception("unable to find datasets. Did you 'git clone https://github.com/0xdata/datasets.git' parallel to the h2o dir?")
-
-
-    return os.path.join(head, tail, f)
 
 def find_file(base):
     f = base
@@ -396,6 +385,9 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
     print "For now, assuming it's a cloud on this machine, and here's info on h2o processes running here"
     print "No output means no h2o here! Some other info about stuff on the system is printed first though."
     import h2o_os_util
+    if not os.path.exists(h2o_nodes_json):
+        raise Exception("build_cloud_with_json: Can't find "+h2o_nodes_json+" file")
+
     h2o_os_util.show_h2o_processes()
 
     with open(h2o_nodes_json, 'rb') as f:
@@ -412,14 +404,25 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
     return nodeList
 
 def setup_benchmark_log():
-        # an object to keep stuff out of h2o.py        
-        global cloudPerfH2O
-        cloudPerfH2O = h2o_perf.PerfH2O(python_test_name)
+    # an object to keep stuff out of h2o.py        
+    global cloudPerfH2O
+    cloudPerfH2O = h2o_perf.PerfH2O(python_test_name)
 
 # node_count is per host if hosts is specified.
 def build_cloud(node_count=2, base_port=54321, hosts=None, 
-        timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True, 
-        conservative=False, create_json=False, **kwargs):
+    timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True, 
+    conservative=False, create_json=False, clone_cloud=None, **kwargs):
+
+    # redirect to build_cloud_with_json if a command line arg
+    # wants to force a test to ignore it's build_cloud/build_cloud_with_hosts
+    # (both come thru here)
+    # clone_cloud is just another way to get the effect (maybe ec2 config file thru 
+    # build_cloud_with_hosts?
+    if clone_cloud_json or clone_cloud:
+        nodeList = build_cloud_with_json(
+            h2o_nodes_json=clone_cloud_json if clone_cloud_json else clone_cloud)
+        return nodeList
+
     # moved to here from unit_main. so will run with nosetests too!
     clean_sandbox()
     # start up h2o to report the java version (once). output to python stdout
@@ -1353,7 +1356,7 @@ class H2O(object):
             h2b.browseJsonHistoryAsUrlLastMatch("RFView")
         return a
 
-    def generate_predictions(self, data_key, model_key, destination_key, timeoutSecs=300, print_params=True, **kwargs):
+    def generate_predictions(self, data_key, model_key, destination_key=None, timeoutSecs=300, print_params=True, **kwargs):
         params_dict = {
             'data_key': data_key,
             'model_key': model_key,

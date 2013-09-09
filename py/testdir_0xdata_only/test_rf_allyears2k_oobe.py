@@ -52,7 +52,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             # randomize the node
             node = h2o.nodes[random.randint(0,len(h2o.nodes)-1)]
-            rfView = h2o_cmd.runRFOnly(node=node, parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            rfView = h2o_cmd.runRF(node=node, parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "RF end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
