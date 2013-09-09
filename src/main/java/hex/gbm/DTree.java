@@ -78,6 +78,59 @@ class DTree extends Iced {
     abstract public StringBuilder toString2(StringBuilder sb, int depth);
   }
 
+  // Records a column, a bin to split at within the column, and the MSE.
+  static class Split { 
+    final int _col, _bin;       // Column to split, bin where being split
+    final float _splat;         // Split-At point
+    final long _nrows[];        // Rows in each final split
+    final double _mses[];       // MSE  of each final split
+    final float _preds[][/*nclass*/]; // Prediction (by class) for each split
+    DHistogram _hs[/*cols*/];   // Histogram being split
+    Split( int col, int bin, long n0, long n1, double mse0, double mse1, float preds0[], float preds1[], DHistogram[] hs ) { 
+      _col = col; 
+      _bin = bin; 
+      _splat = ((DBinHistogram)hs[col]).binAt(bin);
+      _nrows = new long[] { n0, n1 };
+      _mses  = new double[] { mse0, mse1 };
+      _preds = new float[][] { preds0, preds1 };
+      _hs = hs;
+    }
+
+    // Split a DBinHistogram.  Return null if there is no point in splitting
+    // this bin further (such as there's fewer than min_row elements, or zero
+    // errpr in the response column).  Return an array of DBinHistograms (one
+    // per column), which are bounded by the split bin-limits.  If the column
+    // has constant data, or was not being tracked by a prior DBinHistogram
+    // (for being constant data from a prior split), then that column will be
+    // null in the returned array.
+    public DBinHistogram[] split( int splat, char nbins, int min_rows ) {
+      if( _nrows[splat] <= min_rows ) return null; // Too few elements
+      if( _mses[splat] <= 1e-8 ) return null; // No point in splitting a perfect prediction
+      
+      // Build a next-gen split point from the splitting bin
+      int cnt=0;                  // Count of possible splits
+      DBinHistogram nhists[] = new DBinHistogram[_hs.length]; // A new histogram set
+      for( int j=0; j<_hs.length; j++ ) { // For every column in the new split
+        DHistogram h = _hs[j];            // Old histogram of column
+        if( h == null ) continue;    // Column was not being tracked?
+        // min & max come from the original column data, since splitting on an
+        // unrelated column will not change the j'th columns min/max.
+        float min = h._min, max = h._max;
+        // Tighter bounds on the column getting split: exactly each new
+        // DBinHistogram's bound are the bins' min & max.
+        if( _col==j ) {
+          if( splat == 0 ) max = h.maxs(_bin-1);
+          else             min = h.mins(_bin  );
+        }
+        if( min == max ) continue; // This column will not split again
+        if( min >  max ) continue; // Happens for all-NA subsplits
+        nhists[j] = new DBinHistogram(h._name,nbins,(char)_preds[0].length,h._isInt,min,max,_nrows[splat]);
+        cnt++;                    // At least some chance of splitting
+      }
+      return cnt == 0 ? null : nhists;
+    }
+  }
+
   // An UndecidedNode: Has a DHistogram which is filled in (in parallel with other
   // histograms) in a single pass over the data.  Does not contain any
   // split-decision.
@@ -175,114 +228,93 @@ class DTree extends Iced {
   // Does not contain a histogram describing how the decision was made.
   static abstract class DecidedNode<UDN extends UndecidedNode> extends Node {
     final int _col;             // Column we split over
-    final float _bmin, _step;   // Binning info of column
+    final float _splat;         // Split At point
     // The following arrays are all based on a bin# extracted from linear
     // interpolation of _col, _min and _step.
     final int   _nids[];          // Children NIDS for an n-way split
     // A prediction class-vector for each split.  Can be NULL if we have a
     // child (which carries his own prediction).
-    final float _pred[/*split*/][/*class*/];
+    final float _pred[/*splat*/][/*class*/];
 
     // Make a correctly flavored Undecided
     abstract UDN makeUndecidedNode(DTree tree, int nid, DHistogram[] nhists );
 
     // Pick the best column from the given histograms
-    abstract int bestCol( UDN udn );
+    abstract Split bestCol( UDN udn );
 
     DecidedNode( UDN n ) {
       super(n._tree,n._pid,n._nid); // Replace Undecided with this DecidedNode
-      int col = bestCol(n);         // Best split-point for this tree
+      Split spl = bestCol(n);       // Best split-point for this tree
 
       // If I have 2 identical predictor rows leading to 2 different responses,
       // then this dataset cannot distinguish these rows... and we have to bail
       // out here.
-      if( col == -1 ) {
+      if( spl._col == -1 ) {
         DecidedNode p = n._tree.decided(_pid);
-        //assert checkDistro(p._pred); // Only for GBM
         _col  = p._col;  // Just copy the parent data over, for the predictions
-        _bmin = p._bmin;
-        _step = p._step;
+        _splat = p._splat;
         _nids = new int[p._nids.length];
         Arrays.fill(_nids,-1);  // No further splits
         _pred = p._pred;
         return;
       }
-      _col = col;               // Assign split-column choice
+      _col = spl._col;          // Assign split-column choice
+      _splat = spl._splat;      // Split-at value
+      _nids = new int[2];       // Split into 2 subsets
+      final char nclass  = _tree._nclass;
+      final char nbins   = _tree._nbins;
+      final int min_rows = _tree._min_rows;
+      _pred = new float[2][nclass];
 
-      // From the splitting Undecided, get the column, min, max
-      DHistogram uhs[] = n._hs; // Histogram from Undecided
-      DBinHistogram splitH = (DBinHistogram)uhs[_col];// DHistogram of the column being split
-      assert splitH._nbins > 1; // Should always be some bins to split between
-      assert splitH._step  > 0;
-      int nbins = splitH._nbins;// Number of split choices
-      _bmin = splitH._bmin;     // Binning info
-      _step = splitH._step;
-      _nids = new int[nbins];
-      int nclass = _tree._nclass;
-      _pred = new float[nbins][nclass];
-      int ncols = _tree._ncols;      // ncols: all predictor columns
-      int min_rows = _tree._min_rows;
-      for( int b=0; b<nbins; b++ ) { // For all split-points
+      for( int b=0; b<2; b++ ) { // For all split-points
         // Setup for children splits
-        DHistogram nhists[] = splitH.split(col,b,uhs,_tree._names,_tree._nbins,ncols,min_rows);
-        assert nhists==null || nhists.length==ncols;
+        DHistogram nhists[] = spl.split(b,nbins,min_rows);
+        assert nhists==null || nhists.length==_tree._ncols;
         _nids[b] = nhists == null ? -1 : makeUndecidedNode(_tree,_nid,nhists)._nid;
-        // Also setup predictions locally
-        for( int c=0; c<nclass; c++ ) // Copy the class counts into the decision
-          _pred[b][c] = splitH.mean(b,c);
         // If the split has no counts for a bin, that just means no training
         // data landed there.  Actual (or test) data certainly can land in that
         // bin - so give it a prediction from the parent.
-        if( splitH._bins[b] == 0 ) {
-          // Tree root (no parent) and no training data?
-          if( _pid == -1 ) {
-            Arrays.fill(_pred[b],0);
-          } else {     // Else get parent & use parent's prediction for our bin
-            _pred[b] = null;
-            DecidedNode p = n._tree.decided(_pid);
-            for( int i=0; i<p._nids.length; i++ )
-              if( p._nids[i]==_nid ) {
-                _pred[b] = p._pred[i];
-                break;
-              }
-            assert _pred[b] != null;
-          }
+        if( spl._nrows[b] > 0 ) {   // Have some rows?
+          _pred[b] = spl._preds[b]; // Take prediction from Split
+        } else if( _pid >= 0 ) {    // Have a parent?
+          int i;                    // Use parents prediction for child
+          DecidedNode p = n._tree.decided(_pid);
+          for( i=0; i<p._nids.length; i++ )
+            if( p._nids[i]==_nid ) // Split-specific prediction
+              break;
+          _pred[b] = p._pred[i];
+        } else {                // Tree root (no parent) and no training data?
+          _pred[b] = new float[nclass]; // Zero prediction
         }
       }
-      //assert checkDistro(_pred) : Arrays.deepToString(_pred); // Only for GBM
     }
   
     // DecidedNode with a pre-cooked response and no children
     DecidedNode( DTree tree, float pred[] ) {
       super(tree,-1,tree.newIdx());
       _col = -1;
-      _bmin = _step = Float.NaN;
+      _splat = Float.NaN;
       _nids = new int[] { -1 }; // 1 bin, no children
       _pred = new float[][] { pred };
     }
 
     // Bin #.
     public int bin( Chunk chks[], int i ) {
-      if( _nids.length == 1 ) return 0;
+      assert _nids.length == 2;
       if( chks[_col].isNA0(i) ) return i%_nids.length; // Missing data: pseudo-random bin select
       float d = (float)chks[_col].at0(i); // Value to split on for this row
       // Note that during *scoring* (as opposed to training), we can be exposed
-      // to data which is outside the bin limits, so we must cap at both ends.
-      int idx1 = (int)((d-_bmin)/_step); // Interpolate bin#
-      int bin = Math.max(Math.min(idx1,_nids.length-1),0);// Cap at length
-      return bin;
+      // to data which is outside the bin limits.
+      return d < _splat ? 0 : 1;
     }
 
     public int ns( Chunk chks[], int i ) { return _nids[bin(chks,i)]; }
 
     @Override public String toString() {
       if( _col == -1 ) return "Decided has col = -1";
-      String n= " <= "+_tree._names[_col]+" < ";
-      String s = new String();
-      float f = _bmin;
-      for( int i=0; i<_nids.length; i++ )
-        s += f+n+(f+=_step)+" = "+Arrays.toString(_pred[i])+"\n";
-      return s;
+      return 
+        _tree._names[_col]+" < "+_splat+" = "+Arrays.toString(_pred[0])+"\n"+
+        _splat+" <="+_tree._names[_col]+" = "+Arrays.toString(_pred[1])+"\n";
     }
 
     StringBuilder printChild( StringBuilder sb, int nid ) {

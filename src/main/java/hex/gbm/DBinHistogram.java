@@ -98,6 +98,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     int idx2  = Math.max(Math.min(idx1,_nbins-1),0); // saturate at bounds
     return idx2;
   }
+  float binAt( int b ) { return b*_step+_bmin; }
 
   @Override int  nbins(     ) { return _nbins  ; }
   @Override long  bins(int b) { return _bins[b]; }
@@ -112,9 +113,18 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   }
 
   // Mean Squared Error: sum(X^2)-Mean^2*n = Var + Mean^2*n*(n-1)
-  double mse( int b, int cls ) { return mseVar(mean(b,cls),var(b,cls),_bins[b]); }
-  double mseVar( double mean, double var, long n ) { return var+n*(n-1)*mean*mean; }
-  double mseSQ( double sum, double ssq, long n ) { return ssq - sum*sum/n; }
+  // But predicting the Mean, so MSE is Var.
+  double mse   ( int b, int c ) { return _Ss[b][c]/_bins[b]; }
+  double mseVar( double mean, double var, long n ) { return n==0 ? 0 : var*(n-1)/n; }
+  double mseSQ ( double sum , double ssq, long n ) { return ssq - sum*sum/n; }
+
+  float mse( float Ms[], float Ss[], long n ) {
+    float sum=0;
+    for( int i=0; i<_nclass; i++ )
+      if( n > 0 ) sum += Ss[i]/n;
+    return sum;
+  }
+
 
   // Mean of response-vector.  Since vector values are already normalized we
   // just average the vector contents.
@@ -137,8 +147,8 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   // MSE of response-vector.  Sum of MSE of the vector elements.
   float mse( int b ) {
     float sum=0;
-    for( int i=0; i<_nclass; i++ )
-      sum += mse(b,i);
+    for( int c=0; c<_nclass; c++ )
+      sum += mse(b,c);
     return sum;
   }
 
@@ -156,69 +166,44 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   // mses[1] == MSE for splitting between bins  0  and 1.
   // mses[n] == MSE for splitting between bins n-1 and n.
   // Returns index of smallest MSE, ranges from 1 to nbins-1.
-  int scoreMSE( ) {
+  //
+  // Mean-Squared-Error of a prediction vector: the error is the Euclidean
+  // distance (square-root of sum of distances squared), so the MSE is the mean
+  // of the sum of distances-squared.  This is almost exactly the variance.  We
+  // compute the squared error per class and sum them.
+  int scoreMSE( double bestMSE[] ) {
     assert _nbins > 1;
-
-    // Compute the sum & sum-of-squares from mean & variance - across the
-    // prediction vector.  Really we've used the mean & variance to track the
-    // sum & sum-of-squares in a numerically stable way; mean & variance are
-    // much less subject to overflow & roundoff errors.
-
-    // Mean-Squared-Error of a prediction vector: the error is the Euclidean
-    // distance (square-root of sum of distances squared), so the MSE is the
-    // mean of the sum of distances-squared.  We compute the squared error per
-    // class and sum them.
-    double sums[] = new double[_nbins];
-    double ssqs[] = new double[_nbins];
-    for( int b=0; b<_nbins; b++ ) { // Sum/Ssq per bin
-      long n = _bins[b];
-      double mse0=0;
-      for( int c=0; c<_nclass; c++ ) { // And summed across prediction vector
-        double mse = _Ss[b][c]/n;
-        mse0 += mse; // correct mse!!!
-        .... sums & ssqs no good because summing across class loses variance w/in class estimator
-        double mean = mean(b,c);
-        double ssq = _Ss[b][c]+n*mean*mean;
-        sums[b] += mean*n;
-        ssqs[b] += ssq;
-      }
-      double mse1 = ssqs[b]/n - (sums[b]*sums[b]/n/n);
-      System.out.println("bin: "+b+", n="+n+", sum="+sums[b]+", ssq="+ssqs[b]+", mse0="+mse0+", mse1="+mse1);
-    }
-...do recursive mean & variance to get MSE across all bins when lumped together...
 
     // Split zero bins to the left, all bins to the right
     // Left stack of bins
-    double sum0=0, ssq0=0;
+    float M0[] = new float[_nclass], S0[] = new float[_nclass];
     long n0 = 0;
     // Right stack of bins
-    double sum1=0, ssq1=0;
+    float M1[] = new float[_nclass], S1[] = new float[_nclass];
     long n1 = 0;
-    // In this gather a total sum and total sum-squares
-    for( int b=0; b<_nbins; b++ ) {
-      sum1 += sums[b];
-      ssq1 += ssqs[b];
-      n1  += _bins[b];
-    }
+    for( int b=0; b<_nbins; b++ )
+      n1 = add(M1,S1,n1,_Ms[b],_Ss[b],_bins[b]);
 
     // Now roll the split-point across the bins
-    double mse0=0;
-    assert (mse0 = mseSQ(sum1,ssq1,n1))==mse0 || true;
+    double mseAll=0;
+    assert (mseAll = mse(M1,S1,n1))==mseAll || true;
     int best=0;  double best_mse=Double.MAX_VALUE;
     for( int b=0; b<_nbins; b++ ) {
-      double mse = mseSQ(sum0+sum1,ssq0+ssq1,n0+n1);
+      double mse0 = mse(M0,S0,n0);
+      double mse1 = mse(M1,S1,n1);
+      double mse  = mse0+mse1;
       if( mse < best_mse ) { best = b; best_mse = mse; }
-      System.out.println("bin: "+b+", mse="+mse+", best="+best);
-      // Move MSE across the split-point
-      n0   +=_bins[b];  n1   -=_bins[b];
-      sum0 += sums[b];  sum1 -= sums[b];
-      ssq0 += ssqs[b];  ssq1 -= ssqs[b];
+      System.out.println("bin: "+b+", mse0="+mse0+", mse1="+mse1+", best="+best);
+      // Move mean/var across split point
+      n0 = add( M0, S0, n0, _Ms[b], _Ss[b],  _bins[b]);
+      n1 = add( M1, S1, n1, _Ms[b], _Ss[b], -_bins[b]);
     }
     // MSE for the final "split" should equal the first "split" - as both are
     // non-splits: either ALL data to the left or ALL data to the right.
-    assert n1==0 && sum1==0 && ssq1==0 : "Expect zero: "+n1+","+sum1+","+ssq1;
-    assert mse0 == mseSQ(sum0,ssq0,n0) : mse0 + " ? " + mseSQ(sum0,ssq0,n0);
+    assert n1==0;
+    assert mseAll == mse(M0,S0,n0);
 
+    bestMSE[0] = best_mse;
     return best;
   }
 
@@ -269,38 +254,6 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     _max = _maxs[x];    // Take max from last non-empty bin
   }
 
-  // Split bin 'i' of this DBinHistogram.  Return null if there is no point in
-  // splitting this bin further (such as there's fewer than min_row elements,
-  // or zero variance in the response column).  Return an array of
-  // DBinHistograms (one per column), which are bounded by the split
-  // bin-limits.  If the column has constant data, or was not being tracked by
-  // a prior DBinHistogram (for being constant data from a prior split), then
-  // that column will be null in the returned array.
-  public DBinHistogram[] split( int col, int b, DHistogram hs[], String[] names, char nbins, int ncols, int min_rows ) {
-    assert hs[col] == this;
-    if( _bins[b] <= min_rows ) return null; // Too few elements
-    if( var(b) == 0.0 ) return null; // No point in splitting a perfect prediction
-
-    // Build a next-gen split point from the splitting bin
-    int cnt=0;                  // Count of possible splits
-    DBinHistogram nhists[] = new DBinHistogram[ncols]; // A new histogram set
-    for( int j=0; j<ncols; j++ ) { // For every column in the new split
-      DHistogram h = hs[j];        // Old histogram of column
-      if( h == null ) continue;    // Column was not being tracked?
-      // min & max come from the original column data, since splitting on an
-      // unrelated column will not change the j'th columns min/max.
-      float min = h._min, max = h._max;
-      // Tighter bounds on the column getting split: exactly each new
-      // DBinHistogram's bound are the bins' min & max.
-      if( col==j ) { min=h.mins(b); max=h.maxs(b); }
-      if( min == max ) continue; // This column will not split again
-      if( min >  max ) continue; // Happens for all NA subsplits
-      nhists[j] = new DBinHistogram(names[j],nbins,_nclass,hs[j]._isInt,min,max,_bins[b]);
-      cnt++;                    // At least some chance of splitting
-    }
-    return cnt == 0 ? null : nhists;
-  }
-
   // An initial set of DBinHistograms (one per column) for this column set
   public static DBinHistogram[] initialHist( Frame fr, int ncols, char nbins, char nclass ) {
     DBinHistogram hists[] = new DBinHistogram[ncols];
@@ -324,22 +277,26 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
       _bins[b]=k1+k2;
       if( h._mins[b] < _mins[b] ) _mins[b] = h._mins[b];
       if( h._maxs[b] > _maxs[b] ) _maxs[b] = h._maxs[b];
-      // Recursive mean & variance
-      //    http://www.johndcook.com/standard_deviation.html
-      //    http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
-      for( int c = 0; c<_nclass; c++ ) {
-        assert _Ms[b] != null || k1 == 0;
-        if( h._Ms[b] == null ) { assert k2 == 0; }
-        else if( _Ms[b] == null ) { assert k1==0;  _Ms[b] = h._Ms[b];  _Ss[b] = h._Ss[b]; }
-        else {
-          float m1 = _Ms[b][c],  m2 = h._Ms[b][c];
-          float s1 = _Ss[b][c],  s2 = h._Ss[b][c];
-          float delta=m2-m1;
-          _Ms[b][c] = (k1*m1+k2*m2)/(k1+k2); // Mean
-          _Ss[b][c] = s1+s2+delta*delta*k1*k2/(k1+k2); // 2nd moment
-        }
-      }
+      assert _Ms[b] != null || k1 == 0;
+      if( h._Ms[b] == null ) { assert k2 == 0; }
+      else if( _Ms[b] == null ) { assert k1==0;  _Ms[b] = h._Ms[b];  _Ss[b] = h._Ss[b]; }
+      add(_Ms[b],_Ss[b],k1,h._Ms[b],h._Ss[b],k2);
     }
+  }
+
+  // Recursive mean & variance
+  //    http://www.johndcook.com/standard_deviation.html
+  //    http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+  long add( float Ms0[], float Ss0[], long n0, float Ms1[], float Ss1[], long n1 ) {
+    if( Ms1 != null ) 
+      for( int c = 0; c<_nclass; c++ ) {
+        float m0 = Ms0[c],  m1 = Ms1[c];
+        float s0 = Ss0[c],  s1 = Ss1[c];
+        float delta=m1-m0;
+        Ms0[c] = (n0*m0+n1*m1)/(n0+n1); // Mean
+        Ss0[c] = s0+s1+delta*delta*n0*n1/(n0+n1); // 2nd moment
+      }
+    return n0+n1;
   }
 
   // Pretty-print a histogram

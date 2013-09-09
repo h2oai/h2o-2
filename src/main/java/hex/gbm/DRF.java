@@ -333,20 +333,17 @@ public class DRF extends FrameJob {
     }
 
     // Find the column with the best split (lowest score).
-    @Override int bestCol( DRFUndecidedNode u ) {
-      double bs = Double.MAX_VALUE; // Best score
-      int idx = -1;                 // Column to split on
-      if( u._hs == null ) return idx;
+    @Override DTree.Split bestCol( DRFUndecidedNode u ) {
+      DTree.Split best = new DTree.Split(-1,-1,Double.MAX_VALUE);
+      if( u._hs == null ) return best;
+      DTree.Split s = new DTree.Split();
       for( int i=0; i<u._scoreCols.length; i++ ) {
-        int col = u._scoreCols[i];
-        System.out.println("MSE Score "+_tree._names[col]);
-        int best=u._hs[col].scoreMSE();
-
-        double s = u._hs[col].score();
-        if( s < bs ) { bs = s; idx = col; }
-        if( s <= 0 ) break;     // No point in looking further!
+        s._col = u._scoreCols[i];
+        u._hs[s._col].scoreMSE(s);
+        if( s._mse < best._mse ) { best._col = s._col;  best._bin = s._bin;  best._mse = s._mse; }
+        if( s._mse <= 0 ) break; // No point in looking further!
       }
-      return idx;
+      return best;
     }
   }
 
