@@ -51,12 +51,13 @@ public class ScoreTask extends MRTask {
     super.init();
   }
   @Override public void map(Key key) {
+    final Model m = (Model)_M.clone();
     ValueArray ary = DKV.get(ValueArray.getArrayKey(key)).get();
     AutoBuffer bits = new AutoBuffer(DKV.get(key).memOrLoad());
     int nrows = bits.remaining()/ary._rowsize;
     AutoBuffer res = new AutoBuffer(nrows<<3);
     for(int i = 0; i< nrows; ++i){
-      double p = _M.score(ary, bits, i);
+      double p = m.score(ary, bits, i);
       if(p < _min)_min = p;
       if(p > _max)_max = p;
 
