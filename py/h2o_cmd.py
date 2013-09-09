@@ -83,6 +83,18 @@ def runGLMGrid(node=None, parseResult=None,
     # no such thing as GLMGridView..don't use retryDelaySecs
     return node.GLMGrid(parseResult['destination_key'], timeoutSecs, **kwargs)
 
+def runPCA(node=None,parseResult=None,timeoutSecs=600, **kwargs):
+    if not parseResult: raise Exception('No parsed key for PCA specified')
+    if not node: node = h2o.nodes[0]
+    data_key = parseResult['destination_key']
+    return node.pca(data_key=data_key,**kwargs)
+
+def runGBM(node=None, parseResult=None, timeoutSecs=500, **kwargs):
+    if not parseResult: raise Exception('No parsed key for GBM specified')
+    if not node: node = h2o.nodes[0]
+    data_key = parseResult['destination_key']
+    return node.gbm(data_key=data_key,**kwargs) 
+
 # rfView can be used to skip the rf completion view
 # for creating multiple rf jobs
 def runRF(node=None, parseResult=None, trees=5, 

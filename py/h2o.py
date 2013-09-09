@@ -792,7 +792,7 @@ class H2O(object):
             r = requests.post(url, timeout=timeout, params=params, **kwargs)
         else:
             r = requests.get(url, timeout=timeout, params=params, **kwargs)
-
+        
         # fatal if no response
         if not beta_features and not r: 
             raise Exception("Maybe bad url? no r in __do_json_request in %s:" % inspect.stack()[1][3])
@@ -1408,7 +1408,7 @@ class H2O(object):
             time.sleep(3) # to be able to see it
         return a
 
-    def gbm(self, data_key, timeoutSecs=600, retryDelaySecs=50,initialDelaySecs=100,pollTimeoutSecs=180,**kwargs):
+    def gbm(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, noPoll=False, **kwargs):
         params_dict = {
             'destination_key':None,
             'source':data_key,
@@ -1417,10 +1417,19 @@ class H2O(object):
             'max_depth':None,
             'min_rows':None,
             'vresponse':None
-        }        
+        }
         params_dict.update(kwargs)
+        start = time.time()
         a = self.__do_json_request('GBM.json',timeout=timeoutSecs,params=params_dict)
+        if noPoll:
+            a['python_elapsed'] = time.time() - start
+            a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
+            return a
+        a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+                          initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs) 
         verboseprint("\nGBM result:", dump_json(a))
+        a['python_elapsed'] = time.time() - start
+        a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
         return a
 
     def pca(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, noPoll=False, **kwargs):
@@ -1432,14 +1441,19 @@ class H2O(object):
             'standardize':None
         }
         params_dict.update(kwargs)
+        start = time.time()
         a = self.__do_json_request('PCA.json',timeout=timeoutSecs,params=params_dict)
 
         if noPoll:
+            a['python_elapsed'] = time.time() - start
+            a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
             return a
 
         a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                           initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nPCA result:", dump_json(a))
+        a['python_elapsed'] = time.time() - start
+        a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
         return a
 
     def summary_page(self, key, max_column_display=1000, timeoutSecs=60, noPrint=True, **kwargs):
