@@ -31,9 +31,9 @@ public class Inspect extends Request {
 
   static {
     _displayNames.put(ENUM_DOMAIN_SIZE, "Enum Domain");
-    _displayNames.put(MEAN, "&mu;");
+    _displayNames.put(MEAN, "avg");
     _displayNames.put(NUM_MISSING_VALUES, "Missing");
-    _displayNames.put(VARIANCE, "&sigma;");
+    _displayNames.put(VARIANCE, "sd");
   }
 
   // Constructor called from 'Exec' query instead of the direct view links
