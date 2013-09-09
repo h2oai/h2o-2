@@ -39,9 +39,10 @@ class Basic(unittest.TestCase):
             'max_depth':8,
             'min_rows':1,
             'vresponse':784
-            }   
+            }
 
         kwargs = params.copy()
+        h2o.beta_features = True
         timeoutSecs = 1800
         start = time.time()
         node = h2o.nodes[0]
